@@ -1,21 +1,24 @@
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
 import { useMemo, useRef } from "react";
-import { dispatchActions } from "../actions/dispatch.js";
+import {
+  dispatchActions,
+  type DispatchSuccessCallback,
+} from "../actions/dispatch.js";
 
 /** Dispatches actions.
  *
  * Once the write lands, `onErrors` runs first, with an `OperationRejectedError` per action
  * the document did not apply; it is skipped when every action applied. Then `onSuccess`
- * runs with the document, whether or not any action was rejected, so it does not mean the
- * actions applied: clear a form's input or error before dispatching, not in `onSuccess`.
+ * runs with the document and an outcome, whether or not any action was rejected:
+ * `outcome.rejected` holds the same errors, and is empty only when every action applied.
  * If `onErrors` throws, `onSuccess` does not run.
  *
  * When nothing lands (no document, no reactor, a failed write), only `onErrors` runs, with why. */
 export type DispatchFn<TAction> = (
   actionOrActions: TAction[] | TAction | undefined,
   onErrors?: (errors: Error[]) => void,
-  onSuccess?: (result: PHDocument) => void,
+  onSuccess?: DispatchSuccessCallback,
 ) => void;
 
 export type UseDispatchResult<TDocument, TAction> = readonly [
@@ -34,7 +37,7 @@ export function createDispatch<TDocument = PHDocument, TAction = Action>(
    * document did not apply, or with the failure when the dispatch itself did not complete.
    * Runs before `onSuccess`.
    * @param onSuccess - Callback invoked with the document once the write lands, after
-   * `onErrors` and also when an action was rejected.
+   * `onErrors` and also when an action was rejected; `outcome.rejected` lists the rejections.
    */
   return function dispatch(actionOrActions, onErrors, onSuccess) {
     // A caller waiting on a callback hears exactly once, even on a rejection.
@@ -45,11 +48,11 @@ export function createDispatch<TDocument = PHDocument, TAction = Action>(
         answered = true;
         onErrors(errors);
       });
-    const reportSuccess =
+    const reportSuccess: DispatchSuccessCallback | undefined =
       onSuccess &&
-      ((result: PHDocument) => {
+      ((result, outcome) => {
         answered = true;
-        onSuccess(result);
+        onSuccess(result, outcome);
       });
     dispatchActions(
       actionOrActions,

@@ -26,6 +26,11 @@ exports[`emitted JSON Schema fragment > matches the pinned fragment 1`] = `
           "description": "Base path Connect is mounted under (e.g. '/connect' for subpath deploys). Normalised at runtime to start and end with '/'. Defaults to the build-time BASE_URL.",
           "type": "string",
         },
+        "cookieBanner": {
+          "default": true,
+          "description": "Show the analytics cookie consent banner on a first visit, when a plugin that needs consent (Sentry, OpenPanel) is active. When false, no banner is shown and analytics consent stays rejected. \`ph vetra\` turns it off for its local Studio; true by default.",
+          "type": "boolean",
+        },
         "logLevel": {
           "default": "info",
           "description": "Log level applied by Connect's logger at boot. Affects browser-side output only.",

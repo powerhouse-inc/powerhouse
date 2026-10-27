@@ -143,7 +143,9 @@ export async function addDefaultDrive(
   }
 
   try {
-    await client.create(document);
+    await (
+      await client.write.create(document)
+    ).readable;
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
     if (!errorMessage.includes("already exists")) {
@@ -220,7 +222,9 @@ export async function addDefaultReactorDrive(
   }
 
   try {
-    await client.create(document);
+    await (
+      await client.write.create(document)
+    ).readable;
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
     if (!errorMessage.includes("already exists")) {

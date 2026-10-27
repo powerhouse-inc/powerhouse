@@ -10,8 +10,13 @@ import type {
 } from "../../../../document-models/processor-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
-import type { CodegenInput } from "../types.js";
+import type { CodegenInput, CodegenJob, GenerateResult } from "../types.js";
 import { installFeatureDependencies, minimalBackupDocument } from "./utils.js";
+
+const PROCESSOR_TYPES = {
+  analytics: "analytics",
+  relational: "relationalDb",
+} as const;
 
 /**
  * Generator for processor documents
@@ -19,9 +24,6 @@ import { installFeatureDependencies, minimalBackupDocument } from "./utils.js";
 export class ProcessorGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/processor";
 
-  /**
-   * Parse and extract the global state from the serialized state string
-   */
   private extractGlobalState(
     input: CodegenInput,
   ): ProcessorModuleState | undefined {
@@ -32,162 +34,98 @@ export class ProcessorGenerator extends BaseDocumentGen {
     return fullState.global;
   }
 
-  /**
-   * Validate if this processor strand should be processed
-   */
-  shouldProcess(input: CodegenInput): boolean {
-    // First run base validation
-    if (!super.shouldProcess(input)) {
-      return false;
-    }
+  skipReason(input: CodegenInput): string | undefined {
+    const base = super.skipReason(input);
+    if (base) return base;
 
+    const reason = invalidReason(this.extractGlobalState(input));
+    if (reason) logger.debug(reason);
+    return reason;
+  }
+
+  async generate(
+    input: CodegenInput,
+    job?: CodegenJob,
+  ): Promise<GenerateResult> {
     const state = this.extractGlobalState(input);
-    if (!state) {
-      logger.debug(`No state found for processor: ${input.documentId}`);
-      return false;
+    const reason = this.skipReason(input);
+    if (!state || reason) {
+      return { skipped: reason ?? "The processor has no state" };
     }
-
-    // Check if we have a valid processor name, type, document types, and it's confirmed
-    if (!state.name) {
-      logger.debug(`No name found for processor: ${input.documentId}`);
-      return false;
-    }
-
-    if (!state.type) {
-      logger.debug(`No type found for processor: ${state.name}`);
-      return false;
-    }
-
-    if (!state.documentTypes || state.documentTypes.length === 0) {
-      logger.debug(`No document types found for processor: ${state.name}`);
-      return false;
-    }
-
-    if (!state.processorApps || state.processorApps.length === 0) {
-      logger.debug(`No processor apps found for processor: ${state.name}`);
-      return false;
-    }
-
-    if (state.status !== "CONFIRMED") {
-      logger.debug(
-        `Processor not confirmed: ${state.name} (status: ${state.status})`,
+    const processorType =
+      PROCESSOR_TYPES[state.type as keyof typeof PROCESSOR_TYPES];
+    const processorApps = state.processorApps as ProcessorApps;
+    logger.info(`🔄 Starting processor generation for: ${state.name}`);
+    try {
+      const features: Feature[] =
+        processorType === "analytics"
+          ? ["analyticsProcessor"]
+          : ["relationalDbProcessor"];
+      await installFeatureDependencies(
+        features,
+        this.config.CURRENT_WORKING_DIR,
+        `processor "${state.name}"`,
+        job,
       );
-      return false;
+
+      await generateProcessor(
+        {
+          processorName: state.name,
+          processorType,
+          documentTypes: state.documentTypes.map((dt) => dt.documentType),
+          processorApps,
+        },
+        this.project,
+      );
+      await this.project.save();
+    } catch (error) {
+      logger.error(
+        `❌ Error during processor generation for ${state.name}:`,
+        error,
+      );
+      throw error;
     }
 
-    return true;
+    logger.info(
+      `✅ Processor generation completed successfully for: ${state.name}`,
+    );
+
+    await minimalBackupDocument(
+      {
+        documentId: input.documentId,
+        documentType: input.documentType,
+        branch: input.branch,
+        state: input.state as ProcessorModulePHState,
+        name: state.name,
+      },
+      this.config.CURRENT_WORKING_DIR,
+    );
   }
+}
 
-  async generate(input: CodegenInput): Promise<void> {
-    const state = this.extractGlobalState(input);
-    if (!state) {
-      logger.error(`No state found for processor: ${input.documentId}`);
-      return;
-    }
-
-    // Check if we have a valid processor name, type, document types, and it's confirmed
-    if (
-      state.name &&
-      state.type &&
-      state.documentTypes.length > 0 &&
-      state.processorApps.length > 0 &&
-      state.status === "CONFIRMED"
-    ) {
-      logger.info(`🔄 Starting processor generation for: ${state.name}`);
-      try {
-        // Map the type value from document state to generateProcessor expected values
-        let processorType: "analytics" | "relationalDb";
-        if (state.type === "analytics") {
-          processorType = "analytics";
-        } else if (state.type === "relational") {
-          processorType = "relationalDb";
-        } else {
-          logger.error(`❌ Unsupported processor type: ${state.type}`);
-          return;
-        }
-
-        // Extract document types from the state
-        const documentTypes = state.documentTypes.map((dt) => dt.documentType);
-
-        const processorApps = state.processorApps;
-
-        if (!isProcessorApps(processorApps)) {
-          logger.error(
-            `❌ Unsupported processor apps: ${processorApps.join(", ")}`,
-          );
-          return;
-        }
-
-        const features: Feature[] =
-          processorType === "analytics"
-            ? ["analyticsProcessor"]
-            : ["relationalDbProcessor"];
-        await installFeatureDependencies(
-          features,
-          this.config.CURRENT_WORKING_DIR,
-        );
-
-        // Generate the processor using the codegen function
-        await generateProcessor(
-          {
-            processorName: state.name,
-            processorType,
-            documentTypes,
-            processorApps,
-          },
-          this.project,
-        );
-        await this.project.save();
-
-        logger.info(
-          `✅ Processor generation completed successfully for: ${state.name}`,
-        );
-
-        // Backup the document
-        const fullState = input.state as ProcessorModulePHState;
-        await minimalBackupDocument(
-          {
-            documentId: input.documentId,
-            documentType: input.documentType,
-            branch: input.branch,
-            state: fullState,
-            name: state.name,
-          },
-          this.config.CURRENT_WORKING_DIR,
-        );
-      } catch (error) {
-        logger.error(
-          `❌ Error during processor generation for ${state.name}:`,
-          error,
-        );
-        if (error instanceof Error) {
-          logger.error(`❌ Error message: ${error.message}`);
-        }
-      }
-    } else {
-      if (!state.name) {
-        logger.error(
-          `❌ Skipping processor generation - missing name for processor`,
-        );
-        return;
-      } else if (!state.type) {
-        logger.error(
-          `❌ Skipping processor generation - missing type for processor "${state.name}"`,
-        );
-        return;
-      } else if (state.documentTypes.length === 0) {
-        logger.error(
-          `❌ Skipping processor generation - missing document types for processor "${state.name}"`,
-        );
-        return;
-      } else if (state.status !== "CONFIRMED") {
-        logger.error(
-          `❌ Skipping processor generation - processor "${state.name}" is not confirmed (status: ${state.status})`,
-        );
-        return;
-      }
-    }
+function invalidReason(
+  state: ProcessorModuleState | undefined,
+): string | undefined {
+  if (!state) return "The processor has no state";
+  if (!state.name) return "The processor has no name";
+  const processor = `Processor "${state.name}"`;
+  if (!state.type) return `${processor} has no type`;
+  if (!(state.type in PROCESSOR_TYPES)) {
+    return `${processor} has the unsupported type "${state.type}"; use ${Object.keys(PROCESSOR_TYPES).join(" or ")}`;
   }
+  if (state.documentTypes.length === 0) {
+    return `${processor} has no document types`;
+  }
+  if (state.processorApps.length === 0) {
+    return `${processor} has no processor apps`;
+  }
+  if (!isProcessorApps(state.processorApps)) {
+    return `${processor} has unsupported processor apps (${state.processorApps.join(", ")}); use ${PROCESSOR_APPS.join(", ")}, each once`;
+  }
+  if (state.status !== "CONFIRMED") {
+    return `${processor} is not confirmed (status: ${state.status}); codegen runs once it is CONFIRMED`;
+  }
+  return undefined;
 }
 
 function isProcessorApps(input: readonly string[]): input is ProcessorApps {

@@ -205,6 +205,11 @@ export type PowerhouseConfig = {
     driveId?: string;
     driveUrl?: string;
     connectPort?: number;
+    /** The Vetra Preview drive `ph vetra` creates in watch mode. */
+    previewDrive?: {
+      /** The id of the drive app the drive opens in, set each time `ph vetra` starts. */
+      app?: string;
+    };
   };
   // The project's agent host (hosts/assistant, clint mastra-runner).
   assistant?: {

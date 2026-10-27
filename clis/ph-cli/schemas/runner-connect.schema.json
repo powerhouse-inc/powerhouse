@@ -408,6 +408,11 @@
               "default": false,
               "type": "boolean"
             },
+            "cookieBanner": {
+              "description": "Show the analytics cookie consent banner on a first visit, when a plugin that needs consent (Sentry, OpenPanel) is active. When false, no banner is shown and analytics consent stays rejected. `ph vetra` turns it off for its local Studio; true by default.",
+              "default": true,
+              "type": "boolean"
+            },
             "workflowsEnabled": {
               "description": "Powerhouse workflows in Connect. When true the tab loads the @powerhousedao/workflow package (workflow + connection documents, their editors and Workflow Studio) and the reactor worker registers its document models. Falls back to the top-level `workflows.enabled`; set it to override that for Connect. Independent of studioMode. False when neither is set.",
               "type": "boolean"

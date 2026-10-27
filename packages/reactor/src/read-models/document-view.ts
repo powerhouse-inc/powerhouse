@@ -9,6 +9,7 @@ import {
   createAuthState,
   isDenied,
   isPurgeMarker,
+  withScopeRevisions,
 } from "@powerhousedao/shared/document-model";
 import { childLogger, type ILogger } from "document-model";
 import type { Kysely, Transaction } from "kysely";
@@ -572,6 +573,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
           ? createAuthState(snapshot.content as Partial<PHAuthState>)
           : snapshot.content;
     }
+    header.revision = withScopeRevisions(header.revision, state);
 
     const document: PHDocument = {
       header,
@@ -683,6 +685,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             ? createAuthState(snapshot.content as Partial<PHAuthState>)
             : snapshot.content;
       }
+      header.revision = withScopeRevisions(header.revision, state);
 
       const document: PHDocument = {
         header,

@@ -1,5 +1,5 @@
 import { type PHConnectPwa } from "@powerhousedao/shared/connect";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin, PluginOption } from "vite";
@@ -156,6 +156,18 @@ export const BASE_PRECACHE: ConnectPrecacheOptions = {
   ],
 };
 
+/** The files under `dir` (a project's public/), by path relative to it. */
+export function staticFilesIn(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) =>
+      join(entry.parentPath, entry.name)
+        .slice(dir.length + 1)
+        .replaceAll("\\", "/"),
+    );
+}
+
 const SW_FILENAME = "service-worker.ts";
 
 /**
@@ -229,8 +241,10 @@ export function connectPwaPlugins(options: {
   pwa?: PHConnectPwa;
   /** The project's name and icons in place of Connect's. */
   brand?: ProjectPwaBrand;
+  /** The project's public/ files, relative to it, which no navigation gets the shell for. */
+  staticFiles?: string[];
 }): PluginOption[] {
-  const { offlineEnabled, pwa, brand } = options;
+  const { offlineEnabled, pwa, brand, staticFiles = [] } = options;
 
   if (!offlineEnabled) {
     return [
@@ -257,6 +271,7 @@ export function connectPwaPlugins(options: {
     EMBEDDED_BASE_MANIFEST: manifest,
     EXTRA_RUNTIME_CACHING: pwa?.runtimeCaching ?? [],
     NAVIGATE_FALLBACK_DENYLIST_EXTRA: pwa?.navigateFallbackDenylist ?? [],
+    STATIC_FILES: staticFiles,
   };
 
   return [

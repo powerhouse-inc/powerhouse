@@ -92,11 +92,11 @@ async function makeCustomSubgraphFiles(
   dirPath: string,
   v: { pascalCaseName: string; camelCaseName: string },
 ) {
-  // Schema — skip prettier, contains gql tagged template literal
   const schemaPath = path.join(dirPath, "schema.ts");
   const schema = getOrCreateSourceFile(project, schemaPath);
   if (!schema.alreadyExists) {
     schema.sourceFile.replaceWithText(customSubgraphSchemaTemplate(v));
+    await formatSourceFileWithPrettier(schema.sourceFile);
   }
 
   // Resolvers

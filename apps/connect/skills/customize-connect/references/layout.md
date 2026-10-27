@@ -2,11 +2,17 @@
 
 A project's `_app.tsx` replaces the layout around Connect's pages: keep Connect's and change its sidebar, or build another from its parts. The layout is also the loading screen.
 
+## Contents
+
+- [Replace the sidebar](#replace-the-sidebar)
+- [Replace the layout](#replace-the-layout)
+- [The loading screen](#the-loading-screen)
+
 ## Replace the sidebar
 
 A project's `_app.tsx` replaces Connect's `_app` layout. Connect's routes and the project's `_app/` routes then render inside it.
 
-To keep Connect's layout and change only the sidebar, render `AppLayout` with your own `sidebar`. `ConnectSidebar` is Connect's sidebar; `extraItems` go after the drives and nav links. Both are the generic plugin's UI, exported from `@powerhousedao/connect/generic` with core's parts:
+To keep Connect's layout and add a header or footer bar, render `AppLayout` with `header` and `footer`; to change only the sidebar, pass your own `sidebar`. In a layout of your own, `useConnectChrome()` gives `{ embedded, sidebarHidden, sidebarCollapsed }`. `ConnectSidebar` is Connect's sidebar; `extraItems` go after the drives and nav links. Both are the generic plugin's UI, exported from `@powerhousedao/connect/generic` with core's parts:
 
 ```tsx
 // hosts/connect/routes/_app.tsx

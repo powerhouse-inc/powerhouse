@@ -40,7 +40,6 @@
     "es-module-lexer": "^2.0.0",
     "magic-string": "^0.30.21",
     "vite": "catalog:",
-    "vite-plugin-html": "catalog:",
     "vite-plugin-pwa": "catalog:",
     "workbox-cacheable-response": "catalog:",
     "workbox-core": "catalog:",

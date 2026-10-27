@@ -283,6 +283,26 @@ export class BaseSubgraph implements ISubgraph {
     return this.authorizationService.canRead(documentId, ctx.user?.address);
   }
 
+  /** The ids or slugs in `ids` that {@link assertCanRead} admits, in order; the rest are dropped. */
+  async filterReadableDocumentIds(
+    ids: readonly string[],
+    ctx: Context,
+  ): Promise<string[]> {
+    const readable: string[] = [];
+    for (const id of ids) {
+      try {
+        await this.assertCanRead(id, ctx);
+      } catch (error) {
+        if (error instanceof ForbiddenError) {
+          continue;
+        }
+        throw error;
+      }
+      readable.push(id);
+    }
+    return readable;
+  }
+
   /** Drops the items the host's own ACL refuses the caller. */
   async readableByHost<T extends { id: string }>(
     items: readonly T[],

@@ -1,8 +1,17 @@
 # Override Connect's routes, loading, not found and errors
 
+## Contents
+
+- [Override a Connect route](#override-a-connect-route)
+  - [Build on the home page](#build-on-the-home-page)
+- [Loading, not found and errors](#loading-not-found-and-errors)
+  - [Slow routes](#slow-routes)
+  - [Not found](#not-found)
+  - [Errors](#errors)
+
 ## Override a Connect route
 
-Every page Connect shows is a file route in `@powerhousedao/connect`'s `src/routes/` (`node_modules/@powerhousedao/connect/src/routes/` in a project). A project file at the same path replaces Connect's file. Each of Connect's files exports `options`: everything but the component (loader, search params, pending view, title). An override spreads them and sets its own `component`:
+Every page Connect shows is a file route in `@powerhousedao/connect`'s `src/routes/` (`node_modules/@powerhousedao/connect/src/routes/` in a project). A project file at the same path replaces Connect's file. Each of Connect's files exports `options`: everything but the component (loader, search params, pending view, title). Every route option key is present, typed `undefined` where the route doesn't set it. An override spreads them and sets its own `component`; don't call `options.loader` directly, since a loader can be an object with a `handler`:
 
 ```tsx
 // hosts/connect/routes/_app/d/$driveSlug.tsx

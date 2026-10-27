@@ -11,8 +11,6 @@
   "files": [
     "dist",
     "skills",
-    "docs",
-    "RUNTIME-CONFIG.md",
     "src/routes",
     "src/router",
     "src/route-tree.ts",

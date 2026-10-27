@@ -23,8 +23,12 @@ await build({
     "document-model/version.ts",
     "document-model/errors.ts",
     "document-model/action-id.ts",
+    // Its own declaration file, so editors' `dispatch` type is readable by name.
+    "document-model/dispatch.ts",
     "document-drive/index.ts",
     "processors/index.ts",
+    // Test helpers; their PGlite peers are optional.
+    "processors/testing.ts",
     "registry/index.ts",
     // Browser-safe deep entries: Connect and the design system import these
     // directly so they don't pull the registry barrel's node:fs helpers into

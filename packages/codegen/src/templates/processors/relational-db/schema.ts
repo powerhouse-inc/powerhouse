@@ -2,13 +2,13 @@ import { ts } from "@tmpl/core";
 
 export const relationalDbSchemaTemplate = () =>
   ts`
-export interface Todo {
+export interface DocumentsTable {
   document_id: string;
-  status: boolean | null;
-  task: string;
+  document_type: string;
+  updated_at: string;
 }
 
 export interface DB {
-  todo: Todo;
+  documents: DocumentsTable;
 }
 `.raw;

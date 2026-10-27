@@ -13,6 +13,7 @@ import {
   driveDocumentModelModule,
 } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
+import { getCodegenStatusRegistry } from "@powerhousedao/shared/processors";
 import {
   generateId,
   setAuthorName,
@@ -148,10 +149,33 @@ describe("codegen processor drive scope", () => {
     const otherDriveId = await createDrive(client, "stockroom-north");
     await waitForProcessor(vetraDriveId);
 
-    await addSpecSheet(client, otherDriveId);
+    const documentId = await addSpecSheet(client, otherDriveId);
     await new Promise((resolve) => setTimeout(resolve, DEBOUNCE_SETTLED_MS));
 
     expect(skippedMessages(info)).toEqual([]);
+    expect(getCodegenStatusRegistry().get(documentId)).toBeUndefined();
+  });
+
+  it("records why a model in the Vetra drive was skipped, for getCodegenStatus", async () => {
+    const { client } = await setup();
+    const vetraDriveId = await createDrive(client, "vetra-scope");
+    await waitForProcessor(vetraDriveId);
+
+    const documentId = await addSpecSheet(client, vetraDriveId);
+
+    const status = getCodegenStatusRegistry();
+    expect(status.watches("powerhouse/document-model")).toBe(true);
+    await vi.waitFor(
+      () => expect(status.get(documentId)?.state).toBe("skipped"),
+      { timeout: 10_000 },
+    );
+    expect(status.get(documentId)).toMatchObject({
+      documentType: "powerhouse/document-model",
+      name: "Spec sheet",
+    });
+    expect(status.get(documentId)?.message).toContain(
+      "at least one module defined",
+    );
   });
 
   it("logs a skipped batch once, for its final state", async () => {

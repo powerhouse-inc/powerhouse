@@ -15,7 +15,6 @@ The build generates `.ph/connect-routes.gen.ts`: the route tree of Connect's rou
 | Symptom | Cause |
 | --- | --- |
 | `Connect could not mount the routes in hosts/connect/routes/` | A route outside `_app/` collides with one of Connect's, or two project files have one path. The message names the files. |
-| A new routes folder is ignored by a running `ph connect studio` | Connect checks for the folder at startup. Restart it. |
 | `tsc` reports `TS2883: The inferred type of 'Route' cannot be named without a reference to 'ConnectRouterContext'` | The route tree hasn't been generated yet. Run `ph build` (or start Studio) once; the error goes with the unknown route ids. |
 | `createFileRoute("/_app/x")` is a type error | The tree is not generated yet, or the tsconfig lacks the `route-tree` path. See [Types](#types). |
 | A sidebar link reloads the whole app | It is a plain `href`. Navigate through the router; see [Replace the sidebar](./layout.md#replace-the-sidebar). |

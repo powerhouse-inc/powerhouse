@@ -4,8 +4,12 @@ export { SidebarItem } from "@powerhousedao/design-system/connect";
 export {
   ContentOutlet,
   ModalDialog,
+  useConnectChrome,
   useDriveRouteData,
   useNavRoutes,
   useSidebarMode,
 } from "@powerhousedao/connect-core/router";
-export type { ModalFrameProps } from "@powerhousedao/connect-core/router";
+export type {
+  ConnectChrome,
+  ModalFrameProps,
+} from "@powerhousedao/connect-core/router";

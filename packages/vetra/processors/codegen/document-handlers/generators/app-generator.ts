@@ -6,7 +6,7 @@ import type {
 import { kebabCase } from "change-case";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
-import type { CodegenInput } from "../types.js";
+import type { CodegenInput, GenerateResult } from "../types.js";
 import { minimalBackupDocument } from "./utils.js";
 
 /**
@@ -15,9 +15,6 @@ import { minimalBackupDocument } from "./utils.js";
 export class AppGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/app";
 
-  /**
-   * Parse and extract the global state from the serialized state string
-   */
   private extractGlobalState(
     input: CodegenInput,
   ): AppModuleGlobalState | undefined {
@@ -28,98 +25,62 @@ export class AppGenerator extends BaseDocumentGen {
     return fullState.global;
   }
 
-  /**
-   * Validate if this app strand should be processed
-   */
-  shouldProcess(input: CodegenInput): boolean {
-    // First run base validation
-    if (!super.shouldProcess(input)) {
-      return false;
-    }
+  skipReason(input: CodegenInput): string | undefined {
+    const base = super.skipReason(input);
+    if (base) return base;
 
     const state = this.extractGlobalState(input);
-    if (!state) {
-      logger.debug(`No state found for app: ${input.documentId}`);
-      return false;
+    let reason: string | undefined;
+    if (!state) reason = "The app has no state";
+    else if (!state.name) reason = "The app has no name";
+    else if (state.status !== "CONFIRMED") {
+      reason = `App "${state.name}" is not confirmed (status: ${state.status}); codegen runs once it is CONFIRMED`;
     }
-
-    // Check if we have a valid app name and it's confirmed
-    if (!state.name) {
-      logger.debug(`No name found for app: ${input.documentId}`);
-      return false;
-    }
-
-    if (state.status !== "CONFIRMED") {
-      logger.debug(
-        `App not confirmed: ${state.name} (status: ${state.status})`,
-      );
-      return false;
-    }
-
-    return true;
+    if (reason) logger.debug(reason);
+    return reason;
   }
 
-  async generate(input: CodegenInput): Promise<void> {
+  async generate(input: CodegenInput): Promise<GenerateResult> {
     const state = this.extractGlobalState(input);
-    if (!state) {
-      logger.error(`No state found for app: ${input.documentId}`);
-      return;
+    const reason = this.skipReason(input);
+    if (!state || reason) {
+      return { skipped: reason ?? "The app has no state" };
     }
 
-    // Check if we have a valid app name and it's confirmed
-    if (state.name && state.status === "CONFIRMED") {
-      logger.info(`🔄 Starting app generation for app: ${state.name}`);
-      try {
-        // Generate app ID using kebabCase
-        const appId: string = kebabCase(state.name);
-        // Generate the app using the codegen function
-        await generateApp(
-          {
-            ...this.config.PH_CONFIG,
-            appName: state.name,
-            appId: appId,
-            allowedDocumentTypes: state.allowedDocumentTypes ?? [],
-            isDragAndDropEnabled: state.isDragAndDropEnabled,
-          },
-          this.project,
-        );
-        await this.project.save();
-
-        logger.info(
-          `✅ App generation completed successfully for app: ${state.name}`,
-        );
-
-        // Backup the document
-        const fullState = input.state as AppModulePHState;
-        await minimalBackupDocument(
-          {
-            documentId: input.documentId,
-            documentType: input.documentType,
-            branch: input.branch,
-            state: fullState,
-            name: state.name,
-          },
-          this.config.CURRENT_WORKING_DIR,
-        );
-      } catch (error) {
-        logger.error(
-          `❌ Error during app generation for app ${state.name}:`,
-          error,
-        );
-        if (error instanceof Error) {
-          logger.error(`❌ Error message: ${error.message}`);
-        }
-      }
-    } else {
-      if (!state.name) {
-        logger.error(`❌ Skipping app generation - missing name for app`);
-        return;
-      } else if (state.status !== "CONFIRMED") {
-        logger.error(
-          `❌ Skipping app generation - app "${state.name}" is not confirmed (status: ${state.status})`,
-        );
-        return;
-      }
+    logger.info(`🔄 Starting app generation for app: ${state.name}`);
+    try {
+      await generateApp(
+        {
+          ...this.config.PH_CONFIG,
+          appName: state.name,
+          appId: kebabCase(state.name),
+          allowedDocumentTypes: state.allowedDocumentTypes ?? [],
+          isDragAndDropEnabled: state.isDragAndDropEnabled,
+        },
+        this.project,
+      );
+      await this.project.save();
+    } catch (error) {
+      logger.error(
+        `❌ Error during app generation for app ${state.name}:`,
+        error,
+      );
+      throw error;
     }
+
+    logger.info(
+      `✅ App generation completed successfully for app: ${state.name}`,
+    );
+
+    await minimalBackupDocument(
+      {
+        documentId: input.documentId,
+        documentType: input.documentType,
+        branch: input.branch,
+        state: input.state as AppModulePHState,
+        name: state.name,
+      },
+      this.config.CURRENT_WORKING_DIR,
+    );
   }
 }

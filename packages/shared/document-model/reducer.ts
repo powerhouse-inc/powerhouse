@@ -613,7 +613,11 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
           { cause: error },
         );
       }
-      draftScopeOps[lastOperationIndex].error = (error as Error).message;
+      const failed = draftScopeOps[lastOperationIndex];
+      failed.error = (error as Error).message;
+      const { name, code } = reducerErrorIdentity(error);
+      if (name !== undefined) failed.errorName = name;
+      if (code !== undefined) failed.errorCode = code;
 
       draftScopeOps[lastOperationIndex].skip = 0;
 
@@ -788,3 +792,25 @@ export function createReducer<TState extends PHBaseState = PHBaseState>(
 }
 
 export { stateReducerOf } from "./state-reducer.js";
+
+/** A thrown error's class name and generated `errorCode`, where it has them. */
+function reducerErrorIdentity(error: unknown): {
+  name?: string;
+  code?: string;
+} {
+  if (typeof error !== "object" || error === null) return {};
+  const { name, errorCode } = error as { name?: unknown; errorCode?: unknown };
+  // Generated error classes leave `name` as "Error"; their class has the name.
+  const className = (error as object).constructor.name;
+  const named = [name, className].find(
+    (candidate): candidate is string =>
+      typeof candidate === "string" &&
+      candidate !== "" &&
+      candidate !== "Error" &&
+      candidate !== "Object",
+  );
+  return {
+    ...(named !== undefined && { name: named }),
+    ...(typeof errorCode === "string" && { code: errorCode }),
+  };
+}
