@@ -44,7 +44,7 @@ const document = await client.read.newDocument("powerhouse/todo-list", {
 await client.write.drives.addFile(driveId, document);
 ```
 
-A document headed outside a client, such as one from a model's `utils.createDocument()`, takes version 2, and keeps it when it is created or added to a drive. `IReactor.create` refuses a header without protocol versions.
+A document headed outside a client, such as one from a model's `utils.createDocument()`, takes version 2, and keeps it when it is created or added to a drive. `IReactor.create` gives a header without protocol versions the versions the reactor selects for its type, as `newDocument` does: 3 for a `createReducer` model with `undoV3` on, otherwise 2. A stored history or an imported `.phd` file keeps the versions it carries, and a `.phd` file without them is replayed at version 1.
 
 The GraphQL light client takes the Switchboard's `createDefaults` answer for the document's type and parent as given, so a remote document's version follows the Switchboard's `undoV3`. It caps the answer at the versions its own build runs, so a newer Switchboard's base-reducer 4 becomes 3, and refuses a malformed answer or a version of another known protocol it does not run. It then fits base-reducer down to what its own `documentModels` can run. A Switchboard from before per-type selection answers for every type; against one without the query the client picks version 2, but cannot create there: it also reads the signature policy from that query.
 

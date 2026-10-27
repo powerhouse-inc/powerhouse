@@ -198,7 +198,8 @@ Decisions:
 - `fitCreateBaseReducer` moved to `@powerhousedao/shared/document-model` so
   the light client can use it without the reactor.
 - Superseded by the architecture fixes: headerless creates no longer reach
-  `Reactor.create`, which refuses a header without versions.
+  `Reactor.create`, which refused a header without versions until landing
+  round 2 (Decision 3), when it took the reactor's own selection for the type.
 - The creator chooses a new document's protocol versions, capped at what
   the receiving peer agrees to: base-reducer is the lower of the creator's
   own support (tagged reducer with `undoV3` on: 3; otherwise 2) and the
@@ -293,8 +294,9 @@ Who decides a document's version, and who signs its undo.
   `create`, and `create` takes a header as given. Shared `creationActions` is
   the one CREATE + UPGRADE builder and shared `createVersionsOf` the one
   fallback for a versionless legacy header (round 2 moved both from the
-  reactor). `Reactor.create` refuses a header without
-  versions. First-party creates (Connect's actions, the reactor-api
+  reactor). `Reactor.create` gives a header without versions the reactor's
+  `CreateProtocolSelector` selection for its type (landing round 2,
+  Decision 3; it refused such a header before). First-party creates (Connect's actions, the reactor-api
   resolvers, Switchboard's default drives, MCP, clint, the reactor piece)
   build headers with `newDocument`. Fixed drift: the piece and Connect's
   `addDrive` in light mode created at the flagless 2, and the
