@@ -151,7 +151,7 @@ The durable NodeFS subclass and the conversion live in `@powerhousedao/reactor-a
 ### BUG FIXES AND IMPROVEMENTS
 
 - When an action with a skip throws, the base reducer now keeps the rewound state and the skip, for every base-reducer version. It used to restore the pre-skip state and zero the skip while the stored operation kept it, so replicas holding the same log could end with different states after a load reshuffle.
-- Existing v1/v2 documents whose stored history has a failed operation with a skip converge on their next cold rebuild. Their document view may stay stale until then.
+- Existing documents whose stored history has a failed operation with a skip keep their old state while a write-cache keyframe at or after that operation exists. They converge once those keyframes are rebuilt (inspector admin op `rebuildKeyframes`, then the next cold rebuild) or the document is synced fresh. The document view catches up on the next write to that scope.
 
 ---
 
