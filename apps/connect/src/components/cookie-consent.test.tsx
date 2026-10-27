@@ -38,7 +38,8 @@ afterEach(cleanup);
 const banner = () =>
   screen.findByRole("button", { name: /accept/i }, { timeout: 10_000 });
 
-describe("the cookie banner", () => {
+// The first test loads the plugins' UI cold, slow on Windows runners.
+describe("the cookie banner", { timeout: 20_000 }, () => {
   it("shows on a first visit with the openpanel plugin", async () => {
     await serve([{ module: OPENPANEL }]);
     render(<PluginRoots />);
