@@ -7,20 +7,30 @@ describe("resolvePgliteStorageDirs", () => {
   const phDir = path.join("/proj", ".ph");
 
   it("keeps the classic literals verbatim without a user-data root", () => {
-    const saved = process.env.PH_USER_DATA_DIR;
-    delete process.env.PH_USER_DATA_DIR;
-    try {
-      const dirs = resolvePgliteStorageDirs({
-        dbPath: undefined,
-        reactorDbUrl: undefined,
-        callerReactor: false,
-      });
-      expect(dirs.reactorPgliteDir).toBe("./.ph/reactor-storage");
-      expect(dirs.readModelPgliteDir).toBe(".ph/read-storage");
-      expect(dirs.sharedPgliteDir).toBeNull();
-    } finally {
-      if (saved !== undefined) process.env.PH_USER_DATA_DIR = saved;
-    }
+    const dirs = resolvePgliteStorageDirs({
+      dbPath: undefined,
+      reactorDbUrl: undefined,
+      callerReactor: false,
+    });
+    expect(dirs.reactorPgliteDir).toBe("./.ph/reactor-storage");
+    expect(dirs.readModelPgliteDir).toBe(".ph/read-storage");
+    expect(dirs.sharedPgliteDir).toBeNull();
+  });
+
+  it("moves the defaults under the user-data root", () => {
+    const userData = path.join("/home", "user");
+    const dirs = resolvePgliteStorageDirs({
+      dbPath: undefined,
+      reactorDbUrl: undefined,
+      callerReactor: false,
+      userDataDir: userData,
+    });
+    expect(dirs.reactorPgliteDir).toBe(
+      path.join(userData, ".ph", "reactor-storage"),
+    );
+    expect(dirs.readModelPgliteDir).toBe(
+      path.join(userData, ".ph", "read-storage"),
+    );
   });
 
   it("defaults to the classic split under the .ph tree", () => {

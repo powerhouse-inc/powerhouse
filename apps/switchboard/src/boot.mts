@@ -34,21 +34,9 @@ const silent: ILogger = {
   child: () => silent,
 };
 
-let renownConfigLoad: Promise<typeof resolveRenownConfig> | undefined;
-
-/** reactor-api's root loads the cwd .env into process.env at import; undo that. */
-function loadResolveRenownConfig(): Promise<typeof resolveRenownConfig> {
-  return (renownConfigLoad ??= (async () => {
-    const before = { ...process.env };
-    try {
-      return (await import("@powerhousedao/reactor-api")).resolveRenownConfig;
-    } finally {
-      for (const name of Object.keys(process.env)) {
-        if (!(name in before)) delete process.env[name];
-      }
-      Object.assign(process.env, before);
-    }
-  })());
+// Loaded lazily: the boot preconditions stay importable without reactor-api.
+async function loadResolveRenownConfig(): Promise<typeof resolveRenownConfig> {
+  return (await import("@powerhousedao/reactor-api")).resolveRenownConfig;
 }
 
 export interface BootFactsOptions {

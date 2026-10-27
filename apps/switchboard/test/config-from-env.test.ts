@@ -21,11 +21,10 @@ import {
   type SwitchboardConfig,
 } from "../src/config/schema.js";
 import { resolveCreateSignaturePolicy } from "../src/create-signature-policy.mjs";
-import { initFeatureFlags } from "../src/feature-flags.js";
-import { resolveInspectionEnabled } from "../src/inspection-flag.mjs";
+import { EnvVarProvider } from "@openfeature/env-var-provider";
+import { OpenFeature } from "@openfeature/server-sdk";
+import { binSwitchboardConfig } from "../src/config/bin.js";
 import { inspectionThrottleFromEnv } from "../src/inspection-throttle.mjs";
-import { resolveMcpEnabled } from "../src/mcp-flag.mjs";
-import { resolvePgliteWorkersEnabled } from "../src/pglite-store.mjs";
 import { isPluginHostEnabled } from "../src/plugin-host.mjs";
 import { resolvePrivacy } from "../src/privacy.mjs";
 import { resolveProjectionWorkerOptions } from "../src/projection-worker.mjs";
@@ -35,10 +34,24 @@ import {
   resolveHostPoolSize,
   resolveWorkerPoolOptions,
 } from "../src/worker-pool.mjs";
-import {
-  resolveWorkflowsEnabled,
-  type BooleanFlagSource,
-} from "../src/workflow-runtime.mjs";
+
+// The OpenFeature client the boot read these switches through before the config.
+type BooleanFlagSource = {
+  getBooleanValue(flagKey: string, defaultValue: boolean): Promise<boolean>;
+};
+
+async function initFeatureFlags(): Promise<BooleanFlagSource> {
+  await OpenFeature.setProviderAndWait(new EnvVarProvider());
+  return OpenFeature.getClient();
+}
+
+// PH_WORKFLOWS_ENABLED's 1/0 forms, then the client, then the config file's (off).
+function workflowsBefore(featureFlags: BooleanFlagSource, env: Env) {
+  const raw = env.PH_WORKFLOWS_ENABLED?.trim();
+  if (raw === "1") return Promise.resolve(true);
+  if (raw === "0") return Promise.resolve(false);
+  return featureFlags.getBooleanValue("PH_WORKFLOWS_ENABLED", false);
+}
 
 type Env = Record<string, string | undefined>;
 
@@ -281,18 +294,18 @@ describe("switchboardConfigFromEnv matches today's env reads", () => {
     it("feature switches, as the OpenFeature client reads them", async () => {
       stubRow(row);
       const config = mapped(row);
-      await expect(resolvePgliteWorkersEnabled({ featureFlags })).resolves.toBe(
-        config.storage.pglite.workers,
-      );
-      await expect(resolveInspectionEnabled({ featureFlags })).resolves.toBe(
-        config.inspection.enabled,
-      );
-      await expect(resolveMcpEnabled({ featureFlags })).resolves.toBe(
-        config.features.mcp ?? true,
-      );
       await expect(
-        resolveWorkflowsEnabled({ featureFlags, env: row }),
-      ).resolves.toBe(config.features.workflows ?? false);
+        featureFlags.getBooleanValue("PH_PGLITE_WORKERS", true),
+      ).resolves.toBe(config.storage.pglite.workers);
+      await expect(
+        featureFlags.getBooleanValue("INSPECTION_ENABLED", true),
+      ).resolves.toBe(config.inspection.enabled);
+      await expect(
+        featureFlags.getBooleanValue("MCP_ENABLED", true),
+      ).resolves.toBe(config.features.mcp ?? true);
+      await expect(workflowsBefore(featureFlags, row)).resolves.toBe(
+        config.features.workflows ?? false,
+      );
       await expect(
         featureFlags.getBooleanValue("DOCUMENT_MODEL_SUBGRAPHS_ENABLED", true),
       ).resolves.toBe(config.features.documentModelSubgraphs);
@@ -657,39 +670,76 @@ describe("switchboardConfigFromEnv for the bin", () => {
     vi.resetModules();
   });
 
-  const binRows: Env[] = [
-    {},
-    { PORT: "5000" },
-    { PH_SWITCHBOARD_PORT: "4100", PORT: "5000" },
-    { PH_SWITCHBOARD_PORT: "abc" },
-    {
-      PH_MIGRATE_PGLITE: "true",
-      PH_FORCE_PG_VERSION: "16",
-      PH_DEFAULT_DRIVE_TYPE: "powerhouse/reactor-drive",
-    },
+  // What sb/config.ts gave for each row, before the bin moved to the config.
+  const binRows: [
+    Env,
+    { port: number; migrate: boolean; pg?: 16 | 17; drive?: string },
+  ][] = [
+    [{}, { port: 4001, migrate: false }],
+    [{ PORT: "5000" }, { port: 4001, migrate: false }],
+    [
+      { PH_SWITCHBOARD_PORT: "4100", PORT: "5000" },
+      { port: 4100, migrate: false },
+    ],
+    [{ PH_SWITCHBOARD_PORT: "abc" }, { port: 4001, migrate: false }],
+    [{ PH_SWITCHBOARD_PORT: " " }, { port: 0, migrate: false }],
+    [
+      {
+        PH_MIGRATE_PGLITE: "true",
+        PH_FORCE_PG_VERSION: "16",
+        PH_DEFAULT_DRIVE_TYPE: "powerhouse/reactor-drive",
+      },
+      { port: 4001, migrate: true, pg: 16, drive: "powerhouse/reactor-drive" },
+    ],
   ];
 
-  it.each(binRows)("matches sb/config.ts for %o", async (row) => {
-    for (const key of [
-      "PORT",
-      "PH_SWITCHBOARD_PORT",
-      "PH_MIGRATE_PGLITE",
-      "PH_FORCE_PG_VERSION",
-      "PH_DEFAULT_DRIVE_TYPE",
-    ]) {
-      vi.stubEnv(key, row[key]);
-    }
-    vi.stubEnv("PH_NO_DOTENV", "1");
-    vi.resetModules();
-    const { config: today } = await import("../src/config.js");
+  it.each(binRows)("matches sb/config.ts for %o", (row, before) => {
     const config = switchboardConfigSchema.parse(
       switchboardConfigFromEnv(row, { bin: true, logger: silent }),
     );
-    // Unset falls to the config file's switchboard.port, then 4001.
-    expect(config.server.port).toBe(today.port);
-    expect(config.storage.migratePglite).toBe(today.migratePglite);
-    expect(config.storage.forcePgVersion ?? null).toBe(today.forcePgVersion);
-    expect(config.drive?.documentType).toBe(today.drive.documentType);
+    expect(config.server.port).toBe(before.port);
+    expect(config.storage.migratePglite).toBe(before.migrate);
+    expect(config.storage.forcePgVersion).toBe(before.pg);
+    expect(config.drive?.documentType).toBe(before.drive);
+  });
+
+  it("puts the config file's port under PH_SWITCHBOARD_PORT", () => {
+    const at = (env: Env) =>
+      switchboardConfigSchema.parse(
+        binSwitchboardConfig(env, {
+          filePort: 4200,
+          migratePglite: false,
+          logger: silent,
+        }),
+      ).server.port;
+    expect(at({})).toBe(4200);
+    expect(at({ PH_SWITCHBOARD_PORT: "abc" })).toBe(4200);
+    expect(at({ PH_SWITCHBOARD_PORT: "4100" })).toBe(4100);
+  });
+
+  it("keeps the bin's mcp, drive and --migrate-pglite over the env", () => {
+    const config = switchboardConfigSchema.parse(
+      binSwitchboardConfig(
+        {
+          MCP_ENABLED: "false",
+          PH_DEFAULT_DRIVE_TYPE: "powerhouse/reactor-drive",
+        },
+        { migratePglite: true, logger: silent },
+      ),
+    );
+    expect(config.features.mcp).toBe(false);
+    expect(config.storage.migratePglite).toBe(true);
+    expect(config.drive).toMatchObject({
+      id: "powerhouse",
+      slug: "powerhouse",
+      documentType: "powerhouse/reactor-drive",
+      global: { name: "Powerhouse" },
+    });
+    expect(
+      switchboardConfigSchema.parse(
+        binSwitchboardConfig({}, { migratePglite: false, logger: silent }),
+      ).features.mcp,
+    ).toBe(true);
   });
 
   it("throws the bin's errors only for the bin", () => {

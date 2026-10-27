@@ -30,6 +30,11 @@ export type PrivacyOptions = {
   deploymentSecret?: string;
   /** The reactor's signer, for a caller-provided reactor. */
   signer?: ISigner;
+  /** Each wins over its PH_PRIVACY_* env var. */
+  intervalMs?: number;
+  deadlineMs?: number;
+  markerGraceMs?: number;
+  purgeTimeoutMs?: number;
 };
 
 export type ResolvedPrivacy =
@@ -83,7 +88,15 @@ export function resolvePrivacy(
       `PH_PRIVACY_ENABLED needs PH_PRIVACY_DEPLOYMENT_SECRET of at least ${MIN_DEPLOYMENT_SECRET_BYTES} bytes`,
     );
   }
-  return { enabled: true, deploymentSecret, ...privacyTimingsFromEnv(env) };
+  const fromEnv = privacyTimingsFromEnv(env);
+  return {
+    enabled: true,
+    deploymentSecret,
+    intervalMs: options?.intervalMs ?? fromEnv.intervalMs,
+    deadlineMs: options?.deadlineMs ?? fromEnv.deadlineMs,
+    markerGraceMs: options?.markerGraceMs ?? fromEnv.markerGraceMs,
+    purgeTimeoutMs: options?.purgeTimeoutMs ?? fromEnv.purgeTimeoutMs,
+  };
 }
 
 /** The erasure timings from PH_PRIVACY_*, in ms; each unset one is undefined. */

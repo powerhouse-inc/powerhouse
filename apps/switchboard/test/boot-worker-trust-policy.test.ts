@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as RenownModule from "../src/renown.js";
-import { startSwitchboard } from "../src/server.mjs";
+import { bootSwitchboard } from "./boot-helpers.js";
 
 vi.mock("../src/renown.js", async (importOriginal) => ({
   ...(await importOriginal<typeof RenownModule>()),
@@ -57,15 +57,16 @@ describe("booting with pooled workers under authEnforcement", () => {
   });
 
   function boot(numWorkers: number) {
-    return startSwitchboard({
-      workflows: { enabled: false },
-      dbPath: join(tempRoot, "read-model"),
-      port: 0,
-      mcp: false,
-      disableLocalPackages: true,
-      logger: stubLogger(),
-      workerPool: { numWorkers },
-    });
+    return bootSwitchboard(
+      {
+        server: { port: 0 },
+        storage: { readModel: { url: join(tempRoot, "read-model") } },
+        features: { workflows: false, mcp: false },
+        packages: { disableLocal: true },
+        workers: { executor: { count: numWorkers } },
+      },
+      { logger: stubLogger() },
+    );
   }
 
   it("fails with a self Renown source", async () => {
