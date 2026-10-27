@@ -70,13 +70,6 @@ function matches(pattern: Pattern, rest: readonly string[]): boolean {
 
 const REMOTE_URL: Pattern = ["reactor", "backends", "*", "remote", "url"];
 const DATA_DIR: Pattern = ["reactor", "backends", "*", "storage", "dataDir"];
-const READ_MODEL_URL: Pattern = [
-  "reactor",
-  "backends",
-  "*",
-  "readModel",
-  "url",
-];
 
 /**
  * A folder under the project's `.ph/` or the instance's user data. Only those
@@ -95,8 +88,6 @@ export function isContainedPath(value: string): boolean {
 export const FOLDER_REASONS = {
   dataDir:
     "The storage folder has to be inside the project's .ph folder, like .ph/reactor-storage.",
-  readModel:
-    "The search and list data folder has to be inside the project's .ph folder, like .ph/read-storage.",
 } as const;
 
 function folderVerdict(value: unknown, reason: string): PolicyVerdict {
@@ -112,7 +103,6 @@ const SETTABLE: Pattern[] = [
   ["reactor", "backends", "*", "kind"],
   ["reactor", "backends", "*", "storage", "kind"],
   ["reactor", "backends", "*", "storage", "dataDir"],
-  ["reactor", "backends", "*", "readModel", "url"],
   REMOTE_URL,
   ["reactor", "namespace"],
   ["reactor", "placement", "primary"],
@@ -126,6 +116,8 @@ const DELETABLE: Pattern[] = [
   ["reactor", "backends", "*", "storage"],
   ["reactor", "backends", "*", "storage", "url"],
   ["reactor", "backends", "*", "readModel"],
+  // A switchboard keeps all its data there, so the builder only removes it.
+  ["reactor", "backends", "*", "readModel", "url"],
   ["reactor", "backends", "*", "remote"],
   ["reactor", "placement"],
 ];
@@ -214,10 +206,8 @@ function leafVerdict(
     if (matches(pattern, rest)) return { ok: false, reason };
   }
   if (matches(REMOTE_URL, rest)) return remoteUrlVerdict(value, envelope);
-  if (matches(DATA_DIR, rest))
+  if (matches(DATA_DIR, rest)) {
     return folderVerdict(value, FOLDER_REASONS.dataDir);
-  if (matches(READ_MODEL_URL, rest)) {
-    return folderVerdict(value, FOLDER_REASONS.readModel);
   }
   if (SETTABLE.some((pattern) => matches(pattern, rest))) return OK;
   const hint = rest.join(".");

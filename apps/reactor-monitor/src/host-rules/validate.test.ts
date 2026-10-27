@@ -307,7 +307,7 @@ describe("validateDraft", () => {
       expect(issues(draft(postgres), workers("2"))).toEqual([]);
     });
 
-    it("needs the search data in Postgres too", () => {
+    it("reports a search data folder once, as storage", () => {
       const envelope = draft({
         [`${SB_REACTOR}.backends.main`]: {
           kind: "in-process",
@@ -316,7 +316,11 @@ describe("validateDraft", () => {
         },
       });
       expect(issues(envelope, workers("2"))).toEqual([
-        ["workers", `${SB}.env.REACTOR_WORKERS`, REASONS.workersReadModel],
+        [
+          "storage",
+          `${SB_REACTOR}.backends.main.readModel.url`,
+          REASONS.readModel,
+        ],
       ]);
     });
 
@@ -523,11 +527,35 @@ describe("validateDraft", () => {
         ],
         [
           `${SB_REACTOR}.backends.main.readModel.url`,
-          FOLDER_REASONS.readModel,
+          REASONS.readModel,
           "postgres://evil.example:5432/x",
         ],
       ]);
     });
+
+    it.each([
+      ["Postgres", { kind: "postgres" }],
+      ["a folder", { kind: "path", dataDir: ".ph/store" }],
+      ["the default folder", undefined],
+    ])(
+      "reports a search data folder that moves the store off %s",
+      (_name, storage) => {
+        const envelope = draft({
+          [`${SB_REACTOR}.backends.main`]: {
+            kind: "in-process",
+            ...(storage ? { storage } : {}),
+            readModel: { url: ".ph/read" },
+          },
+        });
+        expect(issues(envelope)).toEqual([
+          [
+            "storage",
+            `${SB_REACTOR}.backends.main.readModel.url`,
+            REASONS.readModel,
+          ],
+        ]);
+      },
+    );
 
     it("checks a storage folder taken from env against the member's env", () => {
       const envelope = draft({
@@ -550,6 +578,16 @@ describe("validateDraft", () => {
           "The storage folder comes from REACTOR_DATA_DIR, which isn't set for sb.",
         ],
       ]);
+      const optional = draft({
+        [`${SB_REACTOR}.backends.main`]: {
+          kind: "in-process",
+          storage: {
+            kind: "path",
+            dataDir: { $env: { name: "REACTOR_DATA_DIR", optional: true } },
+          },
+        },
+      });
+      expect(issues(optional)).toEqual([]);
     });
 
     it("says when a member's own members aren't checked", () => {

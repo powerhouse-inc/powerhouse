@@ -25,7 +25,6 @@ const SETTABLE: [string, unknown][] = [
   ["reactor.backends.main.kind", "worker"],
   ["reactor.backends.main.storage.kind", "idb"],
   ["reactor.backends.main.storage.dataDir", ".ph/reactor-storage"],
-  ["reactor.backends.main.readModel.url", ".ph/read-storage"],
   ["reactor.namespace", "ns"],
   ["reactor.placement.primary", "main"],
   ["runner.port", 4001],
@@ -37,6 +36,7 @@ const DELETE_ONLY = [
   "reactor.backends.main.storage",
   "reactor.backends.main.storage.url",
   "reactor.backends.main.readModel",
+  "reactor.backends.main.readModel.url",
   "reactor.backends.main.remote",
   "reactor.placement",
 ];
@@ -228,13 +228,7 @@ describe("checkSetter", () => {
     ["reactor.backends.main.storage.dataDir", "${userData}/../x", false],
     ["reactor.backends.main.storage.dataDir", "C:\\data", false],
     ["reactor.backends.main.storage.dataDir", 42, false],
-    ["reactor.backends.main.readModel.url", ".ph/read-storage", true],
-    [
-      "reactor.backends.main.readModel.url",
-      "postgres://evil.example:5432/x",
-      false,
-    ],
-    ["reactor.backends.main.readModel.url", { $env: "REACTOR_READ" }, false],
+    ["reactor.backends.main.readModel.url", ".ph/read-storage", false],
   ])("keeps %s = %j inside the project: %s", (rest, value, ok) => {
     expect(
       checkSetter({ path: `host.${rest}`, value: value as Setter["value"] }).ok,

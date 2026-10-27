@@ -64,8 +64,6 @@ export const REASONS = {
     "Background workers can't check signatures when permissions are on and this switchboard holds the signer credentials. Get credentials from a Renown service, or turn permissions off.",
   workersStorage:
     "Background workers need Postgres storage. The built-in database can't be shared between workers.",
-  workersReadModel:
-    "Background workers need the search and list data in Postgres too. Clear its folder so it uses the same database.",
   workersValue: "Background workers must be a whole number or auto.",
   workersNotSwitchboard: "Only a switchboard runs background workers.",
   projectionDev:
@@ -75,6 +73,8 @@ export const REASONS = {
   projectionValue: "Turn the separate thread for search data on or off.",
   projectionNotSwitchboard:
     "Only a switchboard has a separate thread for search data.",
+  readModel:
+    "The switchboard would keep all its data in the search and list data folder and ignore the storage chosen here. Remove that folder.",
   oneSwitchboard:
     "A host can run only one switchboard. Its reactors share one process, so a second switchboard shares the first one's database and settings.",
   nested:
@@ -410,12 +410,13 @@ function storageRule(
           dataDir.value,
         );
       }
-      if (typeof readModel === "string" && !isContainedPath(readModel)) {
+      // The switchboard prefers it over its storage, for both stores.
+      if (readModel !== undefined) {
         report(
           "storage",
           `${backend.at}.readModel.url`,
-          FOLDER_REASONS.readModel,
-          readModel,
+          REASONS.readModel,
+          typeof readModel === "string" ? readModel : undefined,
         );
       }
       if (kind !== "postgres") continue;
@@ -450,15 +451,10 @@ function resolvedDataDir(
   return optional ? {} : { unset: name };
 }
 
-/** Why the switchboard's reactor database can't be shared, if it can't. */
-function sharedDbProblem(member: Member): "storage" | "readModel" | undefined {
+/** The switchboard's database can only be shared when it is in Postgres. */
+function sharedDb(member: Member): boolean {
   const primary = member.backends.find((backend) => backend.primary);
-  if (primary?.storage !== "postgres") return "storage";
-  // A readModel.url is the dbPath the switchboard prefers, and it is a folder.
-  const readModel = isRecord(primary.body.readModel)
-    ? primary.body.readModel.url
-    : undefined;
-  return typeof readModel === "string" ? "readModel" : undefined;
+  return primary?.storage === "postgres";
 }
 
 function workersRule(
@@ -469,12 +465,11 @@ function workersRule(
   for (const member of members) {
     if (member.role !== "switchboard") continue;
     // A missing primary backend is reported once, as the placement.
-    const db = member.placementMissing ? undefined : sharedDbProblem(member);
+    const unshared = !member.placementMissing && !sharedDb(member);
     const count = workerCount(envValue(member, "REACTOR_WORKERS") ?? "");
     if (count !== undefined && count > 0) {
       const path = envPath(member, "REACTOR_WORKERS");
-      if (db === "storage") report("workers", path, REASONS.workersStorage);
-      if (db === "readModel") report("workers", path, REASONS.workersReadModel);
+      if (unshared) report("workers", path, REASONS.workersStorage);
       if (member.dev) report("workers", path, REASONS.workersDev);
       if (
         flagsOf(member).flags.authEnforcement &&
@@ -485,7 +480,7 @@ function workersRule(
     }
     if (onOff(envValue(member, "REACTOR_PROJECTION_WORKER")) === true) {
       const path = envPath(member, "REACTOR_PROJECTION_WORKER");
-      if (db) report("workers", path, REASONS.projectionStorage);
+      if (unshared) report("workers", path, REASONS.projectionStorage);
       if (member.dev) report("workers", path, REASONS.projectionDev);
     }
   }
