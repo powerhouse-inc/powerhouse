@@ -1,4 +1,9 @@
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type {
+  IReactorClient,
+  ISyncManager,
+  JobFailedError,
+  PagingOptions,
+} from "@powerhousedao/reactor";
 import { DriveCollectionId } from "@powerhousedao/reactor";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import {
@@ -11,10 +16,15 @@ import type {
   Action,
   AuthSubject,
   DocumentModelModule,
+  OperationOutcome,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { createAction } from "@powerhousedao/shared/document-model";
+import {
+  createAction,
+  operationOutcome,
+} from "@powerhousedao/shared/document-model";
 import { z } from "zod";
+import { compactDocumentModelSchema } from "./compact-schema.js";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import {
   createBaseAction,
@@ -23,6 +33,89 @@ import {
 } from "./utils.js";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
+
+/** The parameter every tool names its target document or drive by. */
+const TARGET = "documentId";
+
+const targetParam = (what: string) =>
+  z.string().optional().describe(`ID or slug of the ${what}. Required.`);
+const aliasParam = z.string().optional().describe(`Alias of \`${TARGET}\``);
+
+/** The target named by `documentId` or one of its aliases; they must agree. */
+function targetId(
+  tool: string,
+  params: Record<string, unknown>,
+  aliases: string[],
+): string {
+  const given = new Set(
+    [TARGET, ...aliases]
+      .map((name) => params[name])
+      .filter((id): id is string => typeof id === "string" && id !== ""),
+  );
+  if (given.size > 1) {
+    throw new Error(
+      `${tool} got different IDs in \`${TARGET}\` and its aliases (${aliases.map((a) => `\`${a}\``).join(", ")}); pass only \`${TARGET}\``,
+    );
+  }
+  const [id] = given;
+  if (!id) {
+    throw new Error(`${tool} needs the target's ID in \`${TARGET}\``);
+  }
+  return id;
+}
+
+/** The value `addDrive` got for a field in any of its shapes; they must agree. */
+function driveField<T>(
+  field: string,
+  values: (T | null | undefined)[],
+): T | undefined {
+  const given = new Set(
+    values.filter((value): value is T => value != null && value !== ""),
+  );
+  if (given.size > 1) {
+    throw new Error(
+      `addDrive got different values for \`${field}\`; pass it once, at the top level`,
+    );
+  }
+  const [value] = given;
+  return value;
+}
+
+/** What became of one submitted action: its operation's index and outcome. */
+type StoredOutcome = { index: number } & OperationOutcome;
+
+type ActionError = {
+  kind: "reducer-error" | "denied" | "not-applied";
+  message: string;
+};
+
+function outcomeError(
+  outcome: StoredOutcome | undefined,
+): ActionError | undefined {
+  if (!outcome) {
+    return {
+      kind: "not-applied",
+      message: "The reactor stored no operation for this action",
+    };
+  }
+  switch (outcome.kind) {
+    case "applied":
+      return undefined;
+    case "reducer-error":
+      return { kind: outcome.kind, message: outcome.message };
+    case "denied":
+      return { kind: outcome.kind, message: outcome.reason };
+  }
+}
+
+/** A job the auth policy refused at admission; such a job writes nothing. */
+function isDeniedJob(error: unknown): error is JobFailedError {
+  return (
+    error instanceof Error &&
+    error.name === "JobFailedError" &&
+    (error as JobFailedError).job.error?.name === "AuthorizationDeniedError"
+  );
+}
 
 export type ReactorMcpProviderOptions = {
   client: IReactorClient;
@@ -68,11 +161,10 @@ export const createDocumentTool = {
 
 export const getDocumentTool = {
   name: "getDocument",
-  description:
-    "Retrieve a document by its ID, passed as `id` (or `documentId`, as the other document tools name it)",
+  description: "Retrieve a document or drive by its ID, passed as `documentId`",
   inputSchema: {
-    id: z.string().optional().describe("ID of the document to retrieve"),
-    documentId: z.string().optional().describe("Alias of `id`"),
+    documentId: targetParam("document to retrieve"),
+    id: aliasParam,
   },
   outputSchema: {
     document: z.unknown().describe("The retrieved Document"),
@@ -81,9 +173,11 @@ export const getDocumentTool = {
 
 export const getDocumentsTool = {
   name: "getDocuments",
-  description: "List documents in a drive",
+  description: "List documents in a drive, passed as `documentId`",
   inputSchema: {
-    parentId: z.string().describe("ID of the drive"),
+    documentId: targetParam("drive whose documents to list"),
+    driveId: aliasParam,
+    parentId: aliasParam,
   },
   outputSchema: {
     documentIds: z.array(z.string()).describe("Array of document IDs"),
@@ -92,21 +186,34 @@ export const getDocumentsTool = {
 
 export const deleteDocumentTool = {
   name: "deleteDocument",
-  description: "Delete a document",
+  description: "Delete a document, passed as `documentId`",
   inputSchema: {
-    documentId: z.string().describe("ID of the document to delete"),
+    documentId: targetParam("document to delete"),
+    id: aliasParam,
   },
   outputSchema: {
     success: z.boolean().describe("Whether the deletion was successful"),
   },
 } as const satisfies ToolSchema;
 
+const actionErrorSchema = z
+  .object({
+    kind: z
+      .enum(["reducer-error", "denied", "not-applied"])
+      .describe(
+        "reducer-error: the reducer threw; denied: an auth policy refused it; not-applied: it was not written, e.g. because another action of the batch was denied",
+      ),
+    message: z.string().describe("Why the action was not applied"),
+  })
+  .describe("Present when the action was not applied");
+
 export const addActionsTool = {
   name: "addActions",
   description:
-    "Adds actions to a document. Prefer adding multiples actions at once to reduce the number of steps. Besides the document model's operations, accepts the base actions SET_NAME (scope global, input: the name), SET_PREFERRED_EDITOR (scope header, input: { preferredEditor }), UNDO and REDO (input: { count }) and NOOP.",
+    "Adds actions to a document. Prefer adding multiples actions at once to reduce the number of steps. Besides the document model's operations, accepts the base actions SET_NAME (scope global, input: the name), SET_PREFERRED_EDITOR (scope header, input: { preferredEditor }), UNDO and REDO (input: { count }) and NOOP. Returns one result per action, in input order; `success` is false when any result carries an `error`. An action its reducer rejected is stored as an operation that changes nothing, and the rest of the batch still applies. When a policy denies an action, the whole batch is refused: the denied action's error has kind `denied` and the others `not-applied`.",
   inputSchema: {
-    documentId: z.string().describe("ID of the document"),
+    documentId: targetParam("document or drive to change"),
+    id: aliasParam,
     actions: z
       .array(
         z
@@ -124,7 +231,21 @@ export const addActionsTool = {
       .describe("Action to add to the document"),
   },
   outputSchema: {
-    success: z.boolean().describe("Whether the actions were added"),
+    success: z.boolean().describe("False when any action was not applied"),
+    results: z
+      .array(
+        z.object({
+          index: z.number().describe("Position of the action in `actions`"),
+          type: z.string().describe("The action's type"),
+          scope: z.string().describe("The action's scope"),
+          operationIndex: z
+            .number()
+            .optional()
+            .describe("Index of the operation the action was stored as"),
+          error: actionErrorSchema.optional(),
+        }),
+      )
+      .describe("One result per action, in the order they were given"),
   },
 } as const satisfies ToolSchema;
 
@@ -185,28 +306,39 @@ export const getDrivesTool = {
   },
 } as const satisfies ToolSchema;
 
+const driveName = z.string().optional().describe("Name of the drive");
+const driveIcon = z
+  .string()
+  .nullable()
+  .optional()
+  .describe("Optional icon for the drive");
+const drivePreferredEditor = z
+  .string()
+  .optional()
+  .describe(
+    "Optional app/editor module id recorded as the drive's preferred editor",
+  );
+
 export const addDriveTool = {
   name: "addDrive",
-  description: "Create a new drive",
+  description:
+    "Create a new drive. Pass `name` and, optionally, `icon` and `preferredEditor` at the top level. The older `driveInput` object is still accepted.",
   inputSchema: {
+    name: z.string().optional().describe("Name of the drive. Required."),
+    icon: driveIcon,
+    preferredEditor: drivePreferredEditor,
     driveInput: z
       .object({
+        name: driveName,
+        icon: driveIcon,
         global: z
           .object({
             name: z.string().describe("Name of the drive"),
-            icon: z
-              .string()
-              .nullable()
-              .optional()
-              .describe("Optional icon for the drive"),
+            icon: driveIcon,
           })
-          .describe("Global drive properties"),
-        preferredEditor: z
-          .string()
           .optional()
-          .describe(
-            "Optional app/editor module id recorded as the drive's preferred editor",
-          ),
+          .describe("Global drive properties"),
+        preferredEditor: drivePreferredEditor,
         local: z
           .object({
             availableOffline: z
@@ -222,7 +354,10 @@ export const addDriveTool = {
           .optional()
           .describe("Optional local state properties"),
       })
-      .describe("Drive configuration"),
+      .optional()
+      .describe(
+        "Older form of the drive configuration; prefer the top-level fields",
+      ),
   },
   outputSchema: {
     driveId: z.string().describe("ID of the created drive"),
@@ -231,9 +366,11 @@ export const addDriveTool = {
 
 export const getDriveTool = {
   name: "getDrive",
-  description: "Get a specific drive",
+  description: "Get a specific drive, passed as `documentId`",
   inputSchema: {
-    driveId: z.string().describe("ID of the drive to retrieve"),
+    documentId: targetParam("drive to retrieve"),
+    driveId: aliasParam,
+    id: aliasParam,
     options: z
       .object({
         revisions: z
@@ -253,9 +390,11 @@ export const getDriveTool = {
 
 export const deleteDriveTool = {
   name: "deleteDrive",
-  description: "Delete a drive",
+  description: "Delete a drive, passed as `documentId`",
   inputSchema: {
-    driveId: z.string().describe("ID of the drive to delete"),
+    documentId: targetParam("drive to delete"),
+    driveId: aliasParam,
+    id: aliasParam,
   },
   outputSchema: {
     success: z.boolean().describe("Whether the deletion was successful"),
@@ -312,9 +451,16 @@ export const addRemoteDriveTool = {
 
 export const getDocumentModelSchemaTool = {
   name: "getDocumentModelSchema",
-  description: "Get the schema of a document model",
+  description:
+    "Get the schema of a document model. Pass `compact: true` before addActions: it returns only each action's type, scope and GraphQL input definition, and the enums and types those inputs use. Omit it for the full model, with state schemas, descriptions, errors and examples.",
   inputSchema: {
     type: z.string().describe("Type of the document model"),
+    compact: z
+      .boolean()
+      .optional()
+      .describe(
+        "Return only the actions' types, scopes and input definitions. Defaults to false.",
+      ),
   },
   outputSchema: {
     schema: z.unknown().describe("Schema of the document model"),
@@ -375,14 +521,69 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
     return client.getDocumentModelModule(documentType);
   }
 
+  /** Names the denied actions of a refused batch; the others were not written either. */
+  async function denialErrors(
+    documentId: string,
+    actions: Action[],
+    message: string,
+  ): Promise<ActionError[]> {
+    const notApplied: ActionError = {
+      kind: "not-applied",
+      message: `The batch was refused, so nothing in it was written: ${message}`,
+    };
+    try {
+      const { evaluations } = await client.evaluateActions(
+        documentId,
+        "main",
+        actions.map(({ scope, type, input }) => ({ scope, type, input })),
+      );
+      return evaluations.map((evaluation) =>
+        evaluation.decision === "deny"
+          ? { kind: "denied", message: evaluation.reason }
+          : notApplied,
+      );
+    } catch {
+      return actions.map(() => notApplied);
+    }
+  }
+
+  /** For clients whose jobs carry no result: reads the operations the write appended. */
+  async function readOutcomes(
+    documentId: string,
+    before: PHDocument,
+    actions: Action[],
+  ): Promise<Map<string, StoredOutcome>> {
+    const ids = new Set(actions.map((action) => action.id));
+    const outcomes = new Map<string, StoredOutcome>();
+    for (const scope of new Set(actions.map((action) => action.scope))) {
+      let paging: PagingOptions | undefined;
+      do {
+        const page = await client.getOperations(
+          documentId,
+          { ...view, branch: "main", scopes: [scope] },
+          { sinceRevision: before.header.revision[scope] ?? 0 },
+          paging,
+        );
+        for (const operation of page.results) {
+          if (ids.has(operation.action.id)) {
+            outcomes.set(operation.action.id, {
+              index: operation.index,
+              ...operationOutcome(operation),
+            });
+          }
+        }
+        paging =
+          page.nextCursor && page.results.length
+            ? { cursor: page.nextCursor, limit: page.options.limit }
+            : undefined;
+      } while (paging);
+    }
+    return outcomes;
+  }
+
   const tools = {
     getDocument: toolWithCallback(getDocumentTool, async (params) => {
-      const id = params.id ?? params.documentId;
-      if (!id) {
-        throw new Error(
-          "getDocument needs the document's ID in `id` (or `documentId`)",
-        );
-      }
+      const id = targetId("getDocument", params, ["id"]);
       const document = await client.get<PHDocument>(id, view);
       return { document: { header: document.header, state: document.state } };
     }),
@@ -406,8 +607,9 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
     }),
 
     getDocuments: toolWithCallback(getDocumentsTool, async (params) => {
+      const driveId = targetId("getDocuments", params, ["driveId", "parentId"]);
       const result = await client.getOutgoingRelationships(
-        params.parentId,
+        driveId,
         "child",
         view,
       );
@@ -416,22 +618,20 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
     }),
 
     deleteDocument: toolWithCallback(deleteDocumentTool, async (params) => {
+      const documentId = targetId("deleteDocument", params, ["id"]);
       try {
         // Routes the delete through the drive; nothing read here is returned.
         const incoming = await client.getIncomingRelationships(
-          params.documentId,
+          documentId,
           "child",
         );
         const driveParent = incoming.results.find(
           (p) => p.header.documentType === DRIVE_DOCUMENT_TYPE,
         );
         if (driveParent) {
-          await client.drives.removeNode(
-            driveParent.header.id,
-            params.documentId,
-          );
+          await client.drives.removeNode(driveParent.header.id, documentId);
         } else {
-          await client.deleteDocument(params.documentId);
+          await client.deleteDocument(documentId);
         }
         return { success: true };
       } catch {
@@ -440,7 +640,8 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
     }),
 
     addActions: toolWithCallback(addActionsTool, async (params) => {
-      const document = await client.get<PHDocument>(params.documentId, view);
+      const documentId = targetId("addActions", params, ["id"]);
+      const document = await client.get<PHDocument>(documentId, view);
       const documentModel = await getDocumentModelModule(
         document.header.documentType,
       );
@@ -482,17 +683,43 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
         return action;
       });
 
-      // Execute actions on the document using the "main" branch
-      await client.execute(
-        params.documentId,
-        "main",
-        actions,
-        undefined,
-        subject,
-      );
-
+      const handle = await client.write.execute(documentId, "main", actions);
+      let results: {
+        index: number;
+        type: string;
+        scope: string;
+        operationIndex?: number;
+        error?: ActionError;
+      }[];
+      try {
+        const receipt = await handle.readable;
+        const outcomes = receipt.job.result
+          ? new Map(receipt.job.result.actions.map((a) => [a.actionId, a]))
+          : await readOutcomes(receipt.documentId, document, actions);
+        results = actions.map((action, index) => {
+          const outcome = outcomes.get(action.id);
+          const error = outcomeError(outcome);
+          return {
+            index,
+            type: action.type,
+            scope: action.scope,
+            ...(outcome && { operationIndex: outcome.index }),
+            ...(error && { error }),
+          };
+        });
+      } catch (error) {
+        if (!isDeniedJob(error)) throw error;
+        const errors = await denialErrors(documentId, actions, error.message);
+        results = actions.map((action, index) => ({
+          index,
+          type: action.type,
+          scope: action.scope,
+          error: errors[index],
+        }));
+      }
       return {
-        success: true,
+        success: results.every((result) => !result.error),
+        results,
       };
     }),
 
@@ -506,6 +733,24 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
 
     addDrive: toolWithCallback(addDriveTool, async (params) => {
       const { driveInput } = params;
+      const name = driveField("name", [
+        params.name,
+        driveInput?.name,
+        driveInput?.global?.name,
+      ]);
+      if (!name) {
+        throw new Error("addDrive needs the drive's `name`");
+      }
+      const icon = driveField("icon", [
+        params.icon,
+        driveInput?.icon,
+        driveInput?.global?.icon,
+      ]);
+      const preferredEditor = driveField("preferredEditor", [
+        params.preferredEditor,
+        driveInput?.preferredEditor,
+      ]);
+
       const drive = await client.createEmpty<DocumentDriveDocument>(
         DRIVE_DOCUMENT_TYPE,
         {},
@@ -513,49 +758,41 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
       const driveId = drive.header.id;
 
       // Before the rename, so reactors without the document-view name fix keep it.
-      if (driveInput.preferredEditor) {
-        await client.setPreferredEditor(driveId, driveInput.preferredEditor);
+      if (preferredEditor) {
+        await client.setPreferredEditor(driveId, preferredEditor);
       }
-      if (driveInput.global.name) {
-        await client.rename(driveId, driveInput.global.name);
-      }
+      await client.rename(driveId, name);
 
-      const actions: Action[] = [];
-      if (driveInput.global.name) {
-        actions.push(setDriveName({ name: driveInput.global.name }));
+      const actions: Action[] = [setDriveName({ name })];
+      if (icon) {
+        actions.push(setDriveIcon({ icon }));
       }
-      if (driveInput.global.icon) {
-        actions.push(setDriveIcon({ icon: driveInput.global.icon }));
-      }
-      if (driveInput.local?.sharingType) {
+      if (driveInput?.local?.sharingType) {
         actions.push(setSharingType({ type: driveInput.local.sharingType }));
       }
-      if (driveInput.local?.availableOffline !== undefined) {
+      if (driveInput?.local?.availableOffline !== undefined) {
         actions.push(
           setAvailableOffline({
             availableOffline: driveInput.local.availableOffline,
           }),
         );
       }
-      if (actions.length > 0) {
-        await client.execute(driveId, "main", actions, undefined, subject);
-      }
+      await client.execute(driveId, "main", actions, undefined, subject);
 
       return { driveId };
     }),
 
     getDrive: toolWithCallback(getDriveTool, async (params) => {
-      const drive = await client.get<DocumentDriveDocument>(
-        params.driveId,
-        view,
-      );
+      const driveId = targetId("getDrive", params, ["driveId", "id"]);
+      const drive = await client.get<DocumentDriveDocument>(driveId, view);
       return { drive: { header: drive.header, state: drive.state } };
     }),
 
     deleteDrive: toolWithCallback(deleteDriveTool, async (params) => {
+      const driveId = targetId("deleteDrive", params, ["driveId", "id"]);
       try {
         // Use CASCADE to delete the drive and all its contents
-        await client.deleteDocument(params.driveId);
+        await client.deleteDocument(driveId);
         return { success: true };
       } catch {
         return { success: false };
@@ -628,7 +865,9 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
         if (!schema) {
           throw new Error(`Document model '${params.type}' not found`);
         }
-        return { schema };
+        return {
+          schema: params.compact ? compactDocumentModelSchema(schema) : schema,
+        };
       },
     ),
   } as const;

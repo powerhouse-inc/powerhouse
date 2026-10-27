@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "6.2.3-dev.77",
+  "version": "6.2.3-dev.78",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -43,6 +43,7 @@
     "build": "tsdown"
   },
   "dependencies": {
+    "@electric-sql/pglite": "catalog:",
     "@graphql-codegen/add": "catalog:",
     "@graphql-codegen/cli": "catalog:",
     "@graphql-codegen/typescript": "catalog:",
@@ -55,6 +56,8 @@
     "change-case": "catalog:",
     "document-model": "workspace:*",
     "graphql-codegen-typescript-validation-schema": "catalog:",
+    "kysely": "catalog:",
+    "kysely-pglite": "catalog:",
     "load-json-file": "^7.0.1",
     "npm-registry-fetch": "^19.1.1",
     "oxfmt": "catalog:",

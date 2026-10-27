@@ -61,7 +61,7 @@ export const packageJsonTemplate = (
     "lint:fix": "oxlint --type-aware --type-check --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
-    "tsc": "tsc",
+    "tsc": "ph-cli generate connect-routes && tsc",
     "tsc:watch": "tsc --watch",
     "check-circular-imports": "npx dpdm -T ./index.ts",
     "generate": "ph-cli generate",

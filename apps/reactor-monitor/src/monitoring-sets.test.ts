@@ -219,4 +219,57 @@ describe("MonitoringSetsStore", () => {
 
     expect(store.getActiveSetName()).toBe("only");
   });
+
+  it("imports a set without activating it and uniquifies its name", () => {
+    const { storage } = fakeStorage();
+    const store = new MonitoringSetsStore(storage);
+
+    expect(store.importSet("cli", [remoteDescriptor])).toBe("cli");
+    expect(store.importSet("cli", [])).toBe("cli-2");
+    expect(store.importSet("cli", [])).toBe("cli-3");
+
+    expect(store.getActiveSetName()).toBe(DEFAULT_SET_NAME);
+    expect(store.listSetNames()).toEqual([
+      DEFAULT_SET_NAME,
+      "cli",
+      "cli-2",
+      "cli-3",
+    ]);
+    expect(store.switchActiveSet("cli")).toEqual([remoteDescriptor]);
+  });
+
+  it("round-trips an imported set's source and unknown descriptor fields", () => {
+    const { storage } = fakeStorage();
+    const source = { project: { name: "p", root: "/project" }, host: "cli" };
+    const managed = { ...remoteDescriptor, managedBy: { id: "sb-1" } };
+    new MonitoringSetsStore(storage).importSet("cli", [managed], source);
+
+    const reloaded = new MonitoringSetsStore(storage);
+
+    expect(reloaded.getSetSource("cli")).toEqual(source);
+    expect(reloaded.getSetSource(DEFAULT_SET_NAME)).toBeUndefined();
+    expect(reloaded.switchActiveSet("cli")).toEqual([managed]);
+  });
+
+  it("keeps a set whose stored source is malformed, without the source", () => {
+    const { storage, cells } = fakeStorage();
+    cells.set(
+      MONITORING_SETS_STORAGE_KEY,
+      JSON.stringify({
+        sets: [
+          {
+            name: "cli",
+            descriptors: [remoteDescriptor],
+            source: { project: "p", host: 3 },
+          },
+        ],
+        activeSetName: "cli",
+      }),
+    );
+
+    const store = new MonitoringSetsStore(storage);
+
+    expect(store.getActiveDescriptors()).toEqual([remoteDescriptor]);
+    expect(store.getSetSource("cli")).toBeUndefined();
+  });
 });

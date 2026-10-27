@@ -30,6 +30,8 @@ const EXTRA_BUILD_DEPS: Record<string, string[]> = {
     "@powerhousedao/clint",
     "@powerhousedao/connect",
   ],
+  // The controller e2e spawns real switchboards through ph-cli's dist.
+  "@powerhousedao/reactor-monitor-app": ["@powerhousedao/ph-cli"],
 };
 
 // Read from the script so a package added there lands in a shard automatically.

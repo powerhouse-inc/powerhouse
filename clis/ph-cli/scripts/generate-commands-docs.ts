@@ -4,6 +4,7 @@ import { build as buildCmd } from "../src/commands/build.js";
 import { build, connect, preview, studio } from "../src/commands/connect.js";
 import { generateAllCmd } from "../src/commands/generate-all.js";
 import { generateAppCmd } from "../src/commands/generate-app.js";
+import { generateConnectRoutesCmd } from "../src/commands/generate-connect-routes.js";
 import { generateDocumentModelCmd } from "../src/commands/generate-document-model.js";
 import { generateEditorCmd } from "../src/commands/generate-editor.js";
 import { generateMigrationFileCmd } from "../src/commands/generate-migration-file.js";
@@ -35,6 +36,7 @@ const commands = [
   { name: "piece-action", command: generatePieceActionCmd },
   { name: "piece-trigger", command: generatePieceTriggerCmd },
   { name: "migration-file", command: generateMigrationFileCmd },
+  { name: "connect-routes", command: generateConnectRoutesCmd },
   { name: "vetra", command: vetra },
   { name: "build", command: buildCmd },
   { name: "connect", command: connect },

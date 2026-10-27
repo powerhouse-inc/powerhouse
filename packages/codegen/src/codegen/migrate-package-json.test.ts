@@ -1,5 +1,9 @@
-import { packageJsonExports } from "@powerhousedao/shared/clis/constants";
+import {
+  packageJsonExports,
+  packageScripts,
+} from "@powerhousedao/shared/clis/constants";
 import type { PackageJson } from "read-pkg";
+import { packageJsonTemplate } from "templates";
 import { describe, expect, it } from "vitest";
 import { migratedPackageJson } from "./migrate.js";
 
@@ -20,7 +24,7 @@ const generatedBefore = {
       node: "./dist/node/subgraphs/index.mjs",
     },
   },
-  scripts: { custom: "echo custom" },
+  scripts: { custom: "echo custom", tsc: "tsc && tsc -p hosts" },
   dependencies: { leftover: "1.0.0" },
 } as unknown as PackageJson;
 
@@ -52,5 +56,19 @@ describe("migratedPackageJson", () => {
     });
     expect(migrated.scripts).toHaveProperty("custom", "echo custom");
     expect(migrated).not.toHaveProperty("dependencies");
+  });
+});
+
+describe("the tsc script", () => {
+  it("generates the Connect route tree before tsc, in new and migrated projects", () => {
+    const migrated = migratedPackageJson(generatedBefore, {});
+    const scaffolded = JSON.parse(
+      packageJsonTemplate("new-project", {}, {}),
+    ) as {
+      scripts: Record<string, string>;
+    };
+
+    expect(migrated.scripts?.tsc).toBe("ph-cli generate connect-routes && tsc");
+    expect(scaffolded.scripts.tsc).toBe(packageScripts.tsc);
   });
 });

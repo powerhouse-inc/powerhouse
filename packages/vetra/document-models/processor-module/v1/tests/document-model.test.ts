@@ -68,9 +68,9 @@ describe("Processor Module Document Model", () => {
 
       updatedDoc = reducer(
         updatedDoc,
-        setProcessorType({ type: "data-analytics" }),
+        setProcessorType({ type: "relational" }),
       );
-      expect(updatedDoc.state.global.type).toBe("data-analytics");
+      expect(updatedDoc.state.global.type).toBe("relational");
 
       // Step 2: Add document types
       updatedDoc = reducer(
