@@ -72,19 +72,27 @@ export function reactorBlockConflicts(member: SwitchboardMember): string[] {
 
 /**
  * The member's switchboard config under the runner's own arguments: its
- * reactor block, then `config.switchboard`, then the operator's env over both
- * (an env var the operator set wins, as it did when the block was written to
- * the env set-if-absent). Reads `env`; writes nothing.
+ * reactor block, then `config.switchboard`, then the operator's env over both.
+ * The block keeps the precedence it had as set-if-absent env and `dbPath`:
+ * only PH_REACTOR_DATABASE_URL overrides its store, and no env var overrides
+ * its read model. Reads `env`; writes nothing.
  */
 export function memberSwitchboardConfig(
   member: SwitchboardMember,
   env: Env,
   options: { pluginHost: boolean; logger?: ILogger },
 ): SwitchboardConfigInput {
+  const block = reactorBlockToSwitchboardConfig(member.reactor);
+  const fromEnv = switchboardConfigFromEnv(env, { logger: options.logger });
+  const storage = { ...fromEnv.storage };
+  if (block.storage?.reactor && env.PH_REACTOR_DATABASE_URL === undefined) {
+    delete storage.reactor;
+  }
+  if (block.storage?.readModel) delete storage.readModel;
   return mergeSwitchboardConfig(
-    reactorBlockToSwitchboardConfig(member.reactor),
+    block,
     member.config?.switchboard ?? {},
-    switchboardConfigFromEnv(env, { logger: options.logger }),
+    { ...fromEnv, storage },
     // A declared composition turns the plugin host on, whatever the env says.
     options.pluginHost ? { features: { pluginHost: true } } : {},
   );
