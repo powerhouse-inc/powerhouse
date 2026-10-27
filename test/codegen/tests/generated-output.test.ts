@@ -16,7 +16,7 @@ import { beforeAll, describe, expect, it } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import {
   TEST_OUTPUT,
   WITH_DOCUMENT_MODELS_SPEC_2,
@@ -43,7 +43,10 @@ function readTree(dir: string, files = new Map<string, string>()) {
     if (entry.name === ".git" || entry.name === "node_modules") continue;
     const path = join(dir, entry.name);
     if (entry.isDirectory()) readTree(path, files);
-    else files.set(relative(projectDir, path), readFileSync(path, "utf8"));
+    else {
+      const key = relative(projectDir, path).split(sep).join("/");
+      files.set(key, readFileSync(path, "utf8"));
+    }
   }
   return files;
 }

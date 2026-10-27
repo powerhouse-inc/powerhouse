@@ -5,7 +5,7 @@ import { DocumentModelGlobalStateSchema } from "document-model";
 import { loadJsonFileSync } from "load-json-file";
 import { existsSync, readdirSync, statSync, type PathLike } from "node:fs";
 import { cp, mkdir, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import path from "path";
 import { filter, map, pipe } from "remeda";
@@ -63,6 +63,12 @@ export async function cpForce(source: string | URL, destination: string | URL) {
 }
 
 export async function rmForce(path: PathLike) {
+  // buildTsMorphProject chdirs into the project, and Windows can't remove the cwd
+  const target = path instanceof URL ? fileURLToPath(path) : path.toString();
+  const fromTarget = relative(target, process.cwd());
+  if (!fromTarget.startsWith("..") && !isAbsolute(fromTarget)) {
+    process.chdir(dirname(target));
+  }
   await rm(path, {
     recursive: true,
     force: true,
