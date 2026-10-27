@@ -1377,6 +1377,29 @@ describe("RemoteDocumentController.from without a documentId", () => {
     );
   });
 
+  it("gives a legacy wrapped header a derived id under a v2-required host", async () => {
+    // Imported here so the file's import block stays as it is.
+    const { withSignaturePolicy } =
+      await import("@powerhousedao/shared/document-model");
+    const client = createMockClient();
+    const local = new DocumentModelController(
+      withSignaturePolicy(
+        new DocumentModelController().module.utils.createDocument(),
+        "legacy",
+      ) as never,
+    );
+    expect(local.header.protocolVersions).not.toHaveProperty("signature");
+    const controller = RemoteDocumentController.from(local, { client });
+
+    controller.setName({ name: "re-headed" });
+    await controller.push();
+
+    const created = createdDocument(client).header;
+    expect(created.protocolVersions).toHaveProperty("signature", 2);
+    expect(created.id).not.toBe(local.header.id);
+    expect(controller.status.documentId).toBe(created.id);
+  });
+
   it("creates through CreateEmptyDocument on a Switchboard without createDefaults", async () => {
     const client = createMockClient({
       GetCreateDefaults: vi.fn().mockRejectedValue(
