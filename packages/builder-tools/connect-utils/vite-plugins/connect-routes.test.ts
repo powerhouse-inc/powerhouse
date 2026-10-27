@@ -231,13 +231,17 @@ describe("connectRoutesWatcher", () => {
       ],
       server: { middlewareMode: true, ws: false },
     });
+    // Files added before the initial scan ends count as initial and fire no events.
+    const watcher = server.watcher as typeof server.watcher & {
+      _readyEmitted?: boolean;
+    };
+    const ready = watcher._readyEmitted
+      ? Promise.resolve()
+      : new Promise((resolve) => watcher.once("ready", resolve));
     const tree = join(project, CONNECT_ROUTES_GEN);
     const wait = { timeout: 15_000, interval: 100 };
     try {
-      await vi.waitFor(
-        () => expect(server.watcher.getWatched()).not.toEqual({}),
-        wait,
-      );
+      await ready;
       // Connect's routes alone until the folder appears.
       await vi.waitFor(
         () => expect(readFileSync(tree, "utf8")).toContain('"/d/$driveSlug"'),
