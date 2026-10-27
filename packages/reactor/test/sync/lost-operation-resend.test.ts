@@ -576,7 +576,6 @@ describe("a sender's same-millisecond batches", () => {
     h = undefined;
   });
 
-  // Action ids interleave across the batches; the receiver keeps A's order.
   it("keep the sender's order across batches", async () => {
     h = await buildHarness();
     const drive = driveDocumentModelModule.utils.createDocument();
@@ -605,4 +604,39 @@ describe("a sender's same-millisecond batches", () => {
     expect(a.slice(-4)).toEqual(["m-1", "z-1", "a-2", "n-2"]);
     expect(await live(h.b, id)).toEqual(a);
   }, 30_000);
+});
+
+describe("an author's backdated execute", () => {
+  let h: Harness | undefined;
+  afterEach(() => {
+    h?.a.reactor.kill();
+    h?.b.reactor.kill();
+    h = undefined;
+  });
+
+  it.each([false, true])(
+    "converges with documentDecisions %s",
+    async (documentDecisions) => {
+      h = await buildHarness({ documentDecisions });
+      const drive = driveDocumentModelModule.utils.createDocument();
+      const id = drive.header.id;
+      await connect(h, id);
+      await h.a.client.create(drive);
+      await eventually(() =>
+        h!.b.reactor.get(id, { branch: "main" }).then(
+          () => true,
+          () => false,
+        ),
+      );
+      await quiesce(h, id);
+      const base = Date.now();
+      await executeOn(h.a, id, "p", new Date(base).toISOString());
+      await quiesce(h, id);
+      await executeOn(h.a, id, "q", new Date(base - 5_000).toISOString());
+      await quiesce(h, id);
+
+      expect(await live(h.b, id)).toEqual(await live(h.a, id));
+    },
+    30_000,
+  );
 });
