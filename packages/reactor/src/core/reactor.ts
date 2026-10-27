@@ -9,7 +9,7 @@ import { creationActions } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import type { CatchUpScheduler } from "../catch-up/scheduler.js";
-import type { CreateProtocolSelector } from "../client/create-protocol.js";
+import type { CreateVersionSelector } from "./types.js";
 import {
   addRelationshipAction,
   deleteDocumentAction,
@@ -94,7 +94,7 @@ export class Reactor implements IReactor {
   private eventBus: IEventBus;
   private executorManager: IJobExecutorManager;
   private catchUp: CatchUpScheduler | undefined;
-  private createProtocol: Pick<CreateProtocolSelector, "select"> | undefined;
+  private createProtocol: CreateVersionSelector | undefined;
 
   constructor(
     logger: ILogger,
@@ -499,7 +499,7 @@ export class Reactor implements IReactor {
   }
 
   /** Where `create` selects versions for a header that carries none. */
-  setCreateProtocol(selector: Pick<CreateProtocolSelector, "select">): void {
+  setCreateProtocol(selector: CreateVersionSelector): void {
     this.createProtocol = selector;
   }
 

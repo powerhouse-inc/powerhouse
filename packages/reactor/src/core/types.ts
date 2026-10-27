@@ -138,6 +138,15 @@ export type BatchLoadResult = {
   jobs: Record<string, JobInfo>;
 };
 
+/** Selects a new document's protocol versions for its type; owned by core so the facade does not import the client layer. */
+export type CreateVersionSelector = {
+  select(
+    options: { documentType: string },
+    flags: { loadModel?: boolean },
+    signal?: AbortSignal,
+  ): Promise<NonNullable<PHDocument["header"]["protocolVersions"]>>;
+};
+
 /**
  * The main Reactor interface that serves as a facade for document operations.
  * This interface provides a unified API for document management, including
