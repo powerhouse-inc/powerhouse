@@ -162,7 +162,10 @@ import type {
   UpdateStateExampleAction,
   UpdateStateExampleInput,
 } from "./types.js";
-import { deriveOperationId, generateId } from "./utils.js";
+import { nextAuthTimestamp } from "./action-id.js";
+import { deriveOperationId, generateActionId } from "./utils.js";
+
+export { nextAuthTimestamp };
 
 /**
  * Cancels the last `count` operations.
@@ -233,8 +236,9 @@ export function createAction<TAction extends Action>(
     throw new Error(`Invalid action type: ${JSON.stringify(type)}`);
 
   const action: Action = {
-    id: generateId(),
-    timestampUtcMs: new Date().toISOString(),
+    id: generateActionId(),
+    timestampUtcMs:
+      scope === "auth" ? nextAuthTimestamp() : new Date().toISOString(),
     type,
     input,
     scope,
