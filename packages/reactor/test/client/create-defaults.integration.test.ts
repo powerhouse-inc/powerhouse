@@ -107,10 +107,10 @@ describe.each<{ flags: Partial<ReactorFeatureFlags>; expected: number }>([
     const file = await client.drives.addFile(drive.header.id, unversioned());
     expect(baseReducer(await client.get(file.header.id))).toBe(expected);
 
-    // The reactor core takes a header as given and selects nothing.
-    await expect(reactor.create(unversioned())).rejects.toThrow(
-      "carries no protocolVersions",
-    );
+    // The reactor core selects for a versionless header as a client does.
+    const direct = unversioned();
+    await client.waitForJob(await reactor.create(direct));
+    expect(baseReducer(await client.get(direct.header.id))).toBe(expected);
   });
 
   it("lets an explicit version win", async () => {
