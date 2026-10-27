@@ -78,32 +78,32 @@ const READ_MODEL_URL: Pattern = [
   "url",
 ];
 
-const USER_DATA = "${userData}/";
-
-/** A folder inside the project (or the instance's user data), never elsewhere. */
+/**
+ * A folder under the project's `.ph/` or the instance's user data. Only those
+ * stay out of the user's repo when the project is materialised by symlinks.
+ */
 export function isContainedPath(value: string): boolean {
-  const rest = value.startsWith(USER_DATA)
-    ? value.slice(USER_DATA.length)
-    : value;
-  if (rest.trim() === "" || rest.includes("://") || rest.includes("$"))
-    return false;
-  if (/^([/\\]|[A-Za-z]:)/.test(rest)) return false;
-  return !rest.split(/[/\\]/).includes("..");
+  const parts = value
+    .split(/[/\\]+/)
+    .filter((part) => part !== "" && part !== ".");
+  if (parts.includes("..") || /^([/\\~]|[A-Za-z]:)/.test(value)) return false;
+  const [root, ...rest] = parts;
+  if (rest.length === 0 || rest.some((part) => /[$:]/.test(part))) return false;
+  return root === ".ph" || root === "${userData}";
 }
 
 export const FOLDER_REASONS = {
   dataDir:
-    "The storage folder has to be inside the project, like .ph/reactor-storage.",
+    "The storage folder has to be inside the project's .ph folder, like .ph/reactor-storage.",
   readModel:
-    "The search and list data folder has to be inside the project. Its database can't be somewhere else.",
+    "The search and list data folder has to be inside the project's .ph folder, like .ph/read-storage.",
 } as const;
 
 function folderVerdict(value: unknown, reason: string): PolicyVerdict {
-  if (typeof value === "string") {
-    return isContainedPath(value) ? OK : { ok: false, reason, hint: value };
-  }
-  // An `$env` token resolves later; checkSetterValue vetted its name.
-  return tokenKeyOf(value) === "$env" ? OK : { ok: false, reason };
+  if (typeof value === "string" && isContainedPath(value)) return OK;
+  return typeof value === "string"
+    ? { ok: false, reason, hint: value }
+    : { ok: false, reason };
 }
 
 /** Leaf paths a value may be written at. */
@@ -217,9 +217,7 @@ function leafVerdict(
   if (matches(DATA_DIR, rest))
     return folderVerdict(value, FOLDER_REASONS.dataDir);
   if (matches(READ_MODEL_URL, rest)) {
-    return typeof value === "string"
-      ? folderVerdict(value, FOLDER_REASONS.readModel)
-      : { ok: false, reason: FOLDER_REASONS.readModel };
+    return folderVerdict(value, FOLDER_REASONS.readModel);
   }
   if (SETTABLE.some((pattern) => matches(pattern, rest))) return OK;
   const hint = rest.join(".");

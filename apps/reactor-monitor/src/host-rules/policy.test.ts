@@ -24,7 +24,7 @@ const SETTABLE: [string, unknown][] = [
   ["reactor.protocol.createSignaturePolicy", "legacy"],
   ["reactor.backends.main.kind", "worker"],
   ["reactor.backends.main.storage.kind", "idb"],
-  ["reactor.backends.main.storage.dataDir", { $env: "REACTOR_DATA_DIR" }],
+  ["reactor.backends.main.storage.dataDir", ".ph/reactor-storage"],
   ["reactor.backends.main.readModel.url", ".ph/read-storage"],
   ["reactor.namespace", "ns"],
   ["reactor.placement.primary", "main"],
@@ -217,7 +217,7 @@ describe("checkSetter", () => {
     [
       "reactor.backends.main.storage.dataDir",
       { $env: "REACTOR_DATA_DIR" },
-      true,
+      false,
     ],
     [
       "reactor.backends.main.storage.dataDir",
@@ -329,14 +329,26 @@ describe("checkEnvKey", () => {
 describe("isContainedPath", () => {
   it.each<[string, boolean]>([
     [".ph/reactor-storage", true],
-    ["./data", true],
+    ["./.ph/x", true],
+    [".ph/./x", true],
     ["${userData}/.ph/x", true],
+    ["${userData}/x", true],
     ["", false],
+    [".", false],
+    [".ph", false],
+    ["${userData}", false],
+    ["./data", false],
+    ["src/data", false],
+    ["node_modules/x", false],
+    ["hosts/x", false],
+    ["~/x", false],
     ["/abs", false],
     ["\\\\share\\x", false],
-    ["a/../../b", false],
+    ["C:\\data", false],
+    [".ph/../src", false],
+    ["${userData}/../x", false],
     ["https://x", false],
-    ["${HOME}/x", false],
+    [".ph/${HOME}", false],
   ])("%s → %s", (path, ok) => {
     expect(isContainedPath(path)).toBe(ok);
   });
