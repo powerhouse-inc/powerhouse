@@ -44,7 +44,11 @@ describe.each<SignaturePolicy>(["v2-required", "legacy"])(
     it("selects the pre-feature versions everywhere", async () => {
       const reactor = await client();
 
-      expect(await reactor.getCreateProtocolVersions()).toEqual({
+      expect(
+        await reactor.getCreateProtocolVersions({
+          documentType: DOCUMENT_MODEL,
+        }),
+      ).toEqual({
         "base-reducer": 2,
       });
 

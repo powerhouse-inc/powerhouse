@@ -1,10 +1,13 @@
 import {
+  createEmptyDocument,
   selectDocumentModelModule,
   type ConsistencyToken,
+  type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type DocumentRelationship,
   type IReactorReadClient,
   type JobInfo,
+  type NewDocumentOptions,
   type OperationFilter,
   type PagedResults,
   type PagingOptions,
@@ -161,24 +164,48 @@ export class RoutingReadClient implements IReactorReadClient {
 
   /** Asked of the parent's backend: the answer is about its collections. */
   getCreateProtocolVersions(
-    parentIdentifier?: string,
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
+    const parentIdentifier = options.parentIdentifier;
     if (parentIdentifier === undefined) {
       return this.dispatcher.onBackend(
         "getCreateProtocolVersions",
         this.dispatcher.primary,
-        (backend) => backend.api.getCreateProtocolVersions(undefined, signal),
+        (backend) => backend.api.getCreateProtocolVersions(options, signal),
         ATTEMPT.read,
       );
     }
     return this.dispatcher.onDocument(
       "getCreateProtocolVersions",
       parentIdentifier,
-      (backend) =>
-        backend.api.getCreateProtocolVersions(parentIdentifier, signal),
+      (backend) => backend.api.getCreateProtocolVersions(options, signal),
       ATTEMPT.read,
     );
+  }
+
+  /** Versions from the parent's backend, the module from this client's models. */
+  async newDocument<TDocument extends PHDocument = PHDocument>(
+    documentModelType: string,
+    options?: NewDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const module = selectDocumentModelModule(
+      await this.allModules(signal),
+      documentModelType,
+      options?.documentModelVersion,
+    );
+    const [policy, versions] = await Promise.all([
+      options?.signaturePolicy ?? this.getCreateSignaturePolicy(),
+      this.getCreateProtocolVersions(
+        {
+          documentType: documentModelType,
+          parentIdentifier: options?.parentIdentifier,
+        },
+        signal,
+      ),
+    ]);
+    return createEmptyDocument(module, options, policy, versions) as TDocument;
   }
 
   // Documents

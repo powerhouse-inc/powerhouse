@@ -23,6 +23,8 @@ export type RemoteControllerGraphQLClient = Pick<
   | "MutateDocument"
   | "CreateDocument"
   | "CreateEmptyDocument"
+  | "GetCreateDefaults"
+  | "GetCreateProtocolVersions"
   | "DeleteDocument"
   | "BatchGetDocumentOperations"
   | "BatchGetDocumentWithOperations"

@@ -94,6 +94,7 @@ import type {
 import {
   DocumentModelResolver,
   NullDocumentModelResolver,
+  type IDocumentModelResolver,
 } from "../registry/document-model-resolver.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
 import type {
@@ -159,6 +160,7 @@ import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
 import { resolveModelSources } from "./model-sources.js";
 import type { DocumentModelSource } from "./model-sources.js";
 import { Reactor } from "./reactor.js";
+import { CreateProtocolSelector } from "../client/create-protocol.js";
 import type {
   Database,
   DegradedComponent,
@@ -459,6 +461,11 @@ export class ReactorBuilder {
   }
 
   /** The registry plus any capabilities added with withPeerCapabilities. */
+  /** The loader-backed resolver the CREATE gate uses; undefined without a loader. */
+  getModelResolver(): IDocumentModelResolver | undefined {
+    return this.modelResolver;
+  }
+
   getPeerCapabilities(): readonly PeerCapability[] {
     return mergePeerCapabilities(PEER_CAPABILITIES, this.extraPeerCapabilities);
   }
@@ -1393,6 +1400,25 @@ export class ReactorBuilder {
       catchUp,
       [unsubscribeMarkerEviction],
       [() => processorManager.shutdown()],
+    );
+    const createModelResolver = this.modelResolver;
+    reactor.setCreateProtocol(
+      new CreateProtocolSelector({
+        selection: {
+          capabilities: this.getPeerCapabilities(),
+          flags: featureFlags,
+          collectionsOf: () => Promise.resolve({}),
+          loadModel: createModelResolver
+            ? (documentType) =>
+                createModelResolver.ensureModelLoaded(documentType)
+            : undefined,
+        },
+        resolveParent: () => Promise.resolve(undefined),
+        modules: async (documentType, signal) =>
+          (await reactor.getDocumentModels(documentType, undefined, signal))
+            .results,
+        logger: this.logger,
+      }),
     );
 
     const localPeer: LocalPeer = {

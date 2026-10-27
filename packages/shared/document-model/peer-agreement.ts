@@ -292,3 +292,39 @@ export function selectProtocolVersions(input: {
   }
   return { ...selected, ...input.requested };
 }
+
+/**
+ * Another reactor's selection for a new document, within `supports`: a
+ * negotiated protocol drops to the highest supported version at or below it,
+ * or takes its baseline when absent; another known protocol must be
+ * supported; an unknown one passes, as refusalFor admits it.
+ */
+export function capSelection(
+  selected: { readonly [protocol: string]: number } | undefined,
+  capabilities: readonly PeerCapability[],
+  supports: Supports,
+): { [protocol: string]: number } {
+  const capped: { [protocol: string]: number } = { ...selected };
+  for (const capability of capabilities) {
+    if (capability.kind !== "protocol") continue;
+    const runs = supports.protocols[capability.name] ?? [];
+    const version = capped[capability.name];
+    if (capability.preferred) {
+      const fits =
+        version === undefined
+          ? capability.baseline.filter((v) => runs.includes(v))
+          : runs.filter((v) => v <= version);
+      if (fits.length === 0) {
+        throw new Error(
+          `Cannot create at ${capability.name} ${version ?? "baseline"}: this client runs ${runs.join(", ") || "none"}`,
+        );
+      }
+      capped[capability.name] = Math.max(...fits);
+    } else if (version !== undefined && !runs.includes(version)) {
+      throw new Error(
+        `Cannot create at ${capability.name} ${version}: this client runs ${runs.join(", ") || "none"}`,
+      );
+    }
+  }
+  return capped;
+}

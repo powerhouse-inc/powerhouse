@@ -1,4 +1,5 @@
 import type {
+  CopyNodeOptions,
   IDriveClient,
   IDriveWriteStrategy,
   IReactorClient,
@@ -15,10 +16,9 @@ import type {
   FolderNode,
   Node,
 } from "@powerhousedao/shared/document-drive";
-import {
-  requestedSignaturePolicy,
-  withSignaturePolicy,
-  type PHDocument,
+import type {
+  PHBaseState,
+  PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { REACTOR_DRIVE_DOCUMENT_TYPE } from "../constants.js";
 import {
@@ -27,7 +27,6 @@ import {
   setDriveNameAction,
   setSharingTypeAction,
 } from "../actions.js";
-import { reactorDriveCreateDocument } from "../module.js";
 import type { IDriveReadModel } from "../read-model/interfaces.js";
 import type {
   ReactorDriveFileNode,
@@ -89,18 +88,19 @@ export class ReactorDriveClient implements IDriveClient {
     input: DriveInput,
     signal?: AbortSignal,
   ): Promise<DocumentDriveDocument> {
-    const driveDoc = withSignaturePolicy(
-      reactorDriveCreateDocument({
-        global: {
-          name: input.global.name,
-          icon: input.global.icon ?? null,
-        },
-      }),
-      requestedSignaturePolicy(
-        input,
-        await this.read.getCreateSignaturePolicy(),
-      ),
-      { protocolVersions: input.protocolVersions },
+    const driveDoc = await this.read.newDocument<DocumentDriveDocument>(
+      REACTOR_DRIVE_DOCUMENT_TYPE,
+      {
+        initialState: {
+          global: {
+            name: input.global.name,
+            icon: input.global.icon ?? null,
+          },
+        } as Partial<PHBaseState>,
+        signaturePolicy: input.signaturePolicy,
+        protocolVersions: input.protocolVersions,
+      },
+      signal,
     );
     if (input.local) {
       if (typeof input.local.sharingType === "string") {
@@ -233,12 +233,14 @@ export class ReactorDriveClient implements IDriveClient {
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<DocumentDriveDocument> {
     const handle = await this.strategy.copyNode(
       driveIdentifier,
       srcNodeId,
       targetParentFolderId,
       signal,
+      options,
     );
     return this.readDriveAfter(handle, driveIdentifier, signal);
   }

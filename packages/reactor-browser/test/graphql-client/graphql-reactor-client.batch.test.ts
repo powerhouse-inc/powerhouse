@@ -34,6 +34,7 @@ type MockSdk = {
   GetDocument: ReturnType<typeof vi.fn>;
   SetPreferredEditor: ReturnType<typeof vi.fn>;
   GetCreateDefaults: ReturnType<typeof vi.fn>;
+  GetCreateProtocolVersions: ReturnType<typeof vi.fn>;
 };
 
 /** A drive the `get` adapter can rebuild. */
@@ -87,6 +88,7 @@ function createMockSdk(overrides: Partial<MockSdk> = {}): MockSdk {
       .fn()
       .mockResolvedValue({ setPreferredEditor: editorDocument }),
     GetCreateDefaults: vi.fn(),
+    GetCreateProtocolVersions: vi.fn(),
     ...overrides,
   };
 }
@@ -714,30 +716,49 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
 
     expect(policy).toBe("legacy");
     expect(sdk.GetCreateDefaults).toHaveBeenCalledWith(
-      { parentIdOrSlug: undefined },
+      {},
       undefined,
       undefined,
     );
   });
 
-  it("reads create protocol versions under the parent from createDefaults", async () => {
+  it("takes the Switchboard's selection under the parent when no type is named", async () => {
+    const signal = new AbortController().signal;
     const sdk = createMockSdk({
-      GetCreateDefaults: defaults("v2-required", { signature: 2 }),
+      GetCreateDefaults: defaults("v2-required", { "base-reducer": 2 }),
     });
-    const controller = new AbortController();
 
     const versions = await createClientWith(sdk).getCreateProtocolVersions(
-      "parent-1",
-      controller.signal,
+      { documentType: undefined, parentIdentifier: "parent-1" },
+      signal,
     );
 
-    expect(versions).toEqual({ signature: 2 });
+    expect(versions).toEqual({ "base-reducer": 2 });
     expect(sdk.GetCreateDefaults).toHaveBeenCalledWith(
       { parentIdOrSlug: "parent-1" },
       undefined,
-      controller.signal,
+      signal,
     );
+    expect(sdk.GetCreateProtocolVersions).not.toHaveBeenCalled();
     expect(sdk.GetDocument).not.toHaveBeenCalled();
+  });
+
+  it("passes on a createDefaults failure when selecting create protocol versions", async () => {
+    const refused = Object.assign(new Error("forbidden"), {
+      response: {
+        status: 200,
+        errors: [{ message: "Forbidden", extensions: { code: "FORBIDDEN" } }],
+      },
+    });
+    const sdk = createMockSdk({
+      GetCreateDefaults: vi.fn().mockRejectedValue(refused),
+    });
+
+    await expect(
+      createClientWith(sdk).getCreateProtocolVersions({
+        documentType: undefined,
+      }),
+    ).rejects.toBe(refused);
   });
 
   it("refuses a signature policy it does not know rather than defaulting", async () => {
@@ -748,19 +769,7 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
     ).rejects.toThrow("unknown create signature policy: v3-maybe");
   });
 
-  it("refuses malformed protocol versions", async () => {
-    for (const malformed of [null, ["signature"], { signature: "2" }]) {
-      const sdk = createMockSdk({
-        GetCreateDefaults: defaults("v2-required", malformed),
-      });
-
-      await expect(
-        createClientWith(sdk).getCreateProtocolVersions(),
-      ).rejects.toThrow("malformed");
-    }
-  });
-
-  it("refuses create defaults with a typed error against a Switchboard without createDefaults", async () => {
+  it("refuses the create signature policy with a typed error against a Switchboard without createDefaults", async () => {
     const olderServer = Object.assign(new Error("validation failed"), {
       response: {
         status: 400,
@@ -779,16 +788,12 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
     const client = createClientWith(sdk);
 
     const policy = client.getCreateSignaturePolicy();
-    const versions = client.getCreateProtocolVersions("parent-1");
 
     await expect(policy).rejects.toBeInstanceOf(
       GraphQLOperationNotSupportedError,
     );
     await expect(policy).rejects.toMatchObject({
       operation: "getCreateSignaturePolicy",
-    });
-    await expect(versions).rejects.toMatchObject({
-      operation: "getCreateProtocolVersions",
     });
   });
 
@@ -803,9 +808,9 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
       GetCreateDefaults: vi.fn().mockRejectedValue(refused),
     });
 
-    await expect(
-      createClientWith(sdk).getCreateProtocolVersions("parent-1"),
-    ).rejects.toBe(refused);
+    await expect(createClientWith(sdk).getCreateSignaturePolicy()).rejects.toBe(
+      refused,
+    );
   });
 
   it("sets the preferred editor as a signed action through execute", async () => {
