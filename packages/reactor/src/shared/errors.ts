@@ -143,15 +143,25 @@ export class UnsupportedProtocolVersionError extends Error {
   public readonly documentId: string;
   public readonly protocol: string;
   public readonly version: number;
+  /** Set when the reactor runs the version, but not for this document type. */
+  public readonly documentType?: string;
 
-  constructor(documentId: string, protocol: string, version: number) {
+  constructor(
+    documentId: string,
+    protocol: string,
+    version: number,
+    documentType?: string,
+  ) {
     super(
-      `Document ${documentId} requires ${protocol} ${version}, which this reactor does not support`,
+      documentType === undefined
+        ? `Document ${documentId} requires ${protocol} ${version}, which this reactor does not support`
+        : `Document ${documentId} requires ${protocol} ${version}, which this reactor cannot run for ${documentType}`,
     );
     this.name = "UnsupportedProtocolVersionError";
     this.documentId = documentId;
     this.protocol = protocol;
     this.version = version;
+    this.documentType = documentType;
 
     Error.captureStackTrace(this, UnsupportedProtocolVersionError);
   }
@@ -394,6 +404,33 @@ export class PurgeTooLargeError extends Error {
   }
 }
 
+export type RetractionRefusalReason = "target-missing" | "target-retracted";
+
+/** A submitted RETRACT whose target is absent or already retracted; terminal. */
+export class RetractionRefusedError extends Error {
+  public readonly documentId: string;
+  public readonly target: string;
+  public readonly reason: RetractionRefusalReason;
+
+  constructor(
+    documentId: string,
+    target: string,
+    reason: RetractionRefusalReason,
+  ) {
+    super(`RETRACT of ${target} refused in document ${documentId}: ${reason}`);
+    this.name = "RetractionRefusedError";
+    this.documentId = documentId;
+    this.target = target;
+    this.reason = reason;
+
+    Error.captureStackTrace(this, RetractionRefusedError);
+  }
+
+  static isError(error: unknown): error is RetractionRefusedError {
+    return Error.isError(error) && error.name === "RetractionRefusedError";
+  }
+}
+
 /** A regular write carried an action type only the reactor issues. Terminal. */
 export class ReservedActionError extends Error {
   public readonly documentId: string;
@@ -414,6 +451,9 @@ export class ReservedActionError extends Error {
     return Error.isError(error) && error.name === "ReservedActionError";
   }
 }
+
+// Shared, so the reducer refuses the same input with the same error.
+export { SubmittedUndoRefusedError } from "@powerhousedao/shared/document-model";
 
 /**
  * An authorization preflight was asked for while the reactor's decision model
@@ -480,18 +520,31 @@ export class RelationshipNotFoundError extends Error {
   }
 }
 
+export type StoredProtocolRefusal = {
+  protocol: string;
+  version: number;
+  documentType?: string;
+};
+
+/** "base-reducer 3", or "base-reducer 3 for <type>" when only that model cannot run it. */
+export function storedRefusalName({
+  protocol,
+  version,
+  documentType,
+}: StoredProtocolRefusal): string {
+  return documentType === undefined
+    ? `${protocol} ${version}`
+    : `${protocol} ${version} for ${documentType}`;
+}
+
 /** The store holds documents at protocol versions this reactor does not run. */
 export class UnsupportedStoredProtocolError extends Error {
-  public readonly versions: readonly { protocol: string; version: number }[];
+  /** `documentType` is set when the reactor runs the version, but not for that model. */
+  public readonly versions: readonly StoredProtocolRefusal[];
   public readonly documents: number;
 
-  constructor(
-    versions: readonly { protocol: string; version: number }[],
-    documents: number,
-  ) {
-    const named = versions
-      .map(({ protocol, version }) => `${protocol} ${version}`)
-      .join(", ");
+  constructor(versions: readonly StoredProtocolRefusal[], documents: number) {
+    const named = versions.map(storedRefusalName).join(", ");
     super(
       `${documents} stored document(s) require ${named}, which this reactor does not run. Start a build that runs them, or accept them read-only with withUnsupportedStoredDocuments("read-only")`,
     );

@@ -20,6 +20,7 @@ import {
   type OperationFilter,
 } from "../interfaces.js";
 import { AtomicTransaction } from "../txn.js";
+import { MAX_BIND_PARAMETERS } from "./bind-parameters.js";
 import { findPurged } from "./document-purges.js";
 import type { Database, InsertableOperation, OperationRow } from "./types.js";
 
@@ -764,6 +765,53 @@ export class KyselyOperationStore implements IOperationStore {
     return latest?.latestTimestamp
       ? new Date(latest.latestTimestamp).toISOString()
       : undefined;
+  }
+
+  async findReferencing(
+    documentId: string,
+    scope: string,
+    branch: string,
+    actionIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Set<string>> {
+    throwIfAborted(signal);
+
+    const found = new Set<string>();
+    if (actionIds.length === 0) {
+      return found;
+    }
+
+    // Each id binds twice, hashed and exact, beside the three stream slots.
+    const chunkSize = Math.floor((MAX_BIND_PARAMETERS - 3) / 2);
+    const target = sql<string>`action->'input'->>'target'`;
+    for (let i = 0; i < actionIds.length; i += chunkSize) {
+      throwIfAborted(signal);
+      const chunk = actionIds.slice(i, i + chunkSize);
+      // actionReferences, as SQL over idx_operation_retracts; a conformance test
+      // holds the two equal. The type stays a literal so a generic plan can use
+      // the partial index; the exact match guards md5 collisions.
+      const rows = await this.queryExecutor
+        .selectFrom("Operation")
+        .select(target.as("target"))
+        .distinct()
+        .where("documentId", "=", documentId)
+        .where("scope", "=", scope)
+        .where("branch", "=", branch)
+        .where(sql<boolean>`action->>'type' = 'RETRACT'`)
+        .where(
+          sql<string>`md5(action->'input'->>'target')`,
+          "in",
+          chunk.map((id) => sql<string>`md5(${id})`),
+        )
+        .where(target, "in", chunk)
+        .where(sql<boolean>`jsonb_typeof(action->'input'->'target') = 'string'`)
+        .execute();
+      for (const row of rows) {
+        found.add(row.target);
+      }
+    }
+
+    return found;
   }
 
   async findOperationIds(

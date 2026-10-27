@@ -1,5 +1,9 @@
 import type { Operation } from "@powerhousedao/shared/document-model";
 import { deriveOperationId } from "@powerhousedao/shared/document-model";
+import {
+  compareCanonical,
+  createActionIdGenerator,
+} from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import {
   reshuffleByTimestamp,
@@ -192,6 +196,127 @@ describe("Reshuffle Functions", () => {
         expect(result).toMatchObject(testInput.expected);
       },
     );
+  });
+
+  describe("reshuffleByTimestamp, canonical", () => {
+    const at = "2021-01-01T00:00:00.000Z";
+    const folder = (actionId: string, index: number, skip: number) =>
+      buildOperation({
+        index,
+        skip,
+        timestampUtcMs: at,
+        action: {
+          id: actionId,
+          type: "ADD_FOLDER",
+          input: {},
+          scope: "global",
+          timestampUtcMs: at,
+        },
+      });
+
+    // The logical index is replica-local, so it never breaks a tie.
+    it("orders tied structure actions by action id, not logical index", () => {
+      const early = folder("action-B", 1, 0);
+      const late = folder("action-A", 9, 0);
+      for (const [a, b] of [
+        [[early], [late]],
+        [[late], [early]],
+      ]) {
+        expect(
+          reshuffleByTimestamp({ index: 10, skip: 0 }, a, b, "canonical").map(
+            (op) => op.action.id,
+          ),
+        ).toEqual(["action-A", "action-B"]);
+      }
+      expect(
+        reshuffleByTimestamp({ index: 10, skip: 0 }, [early], [late]).map(
+          (op) => op.action.id,
+        ),
+      ).toEqual(["action-B", "action-A"]);
+    });
+
+    // Only the v2 order ranks structure actions first.
+    it("orders a tied structure action against other actions by action id", () => {
+      const other = buildOperation({
+        index: 0,
+        skip: 0,
+        timestampUtcMs: at,
+        action: {
+          id: "action-0",
+          type: "SET_NAME",
+          input: {},
+          scope: "global",
+          timestampUtcMs: at,
+        },
+      });
+      expect(
+        reshuffleByTimestamp(
+          { index: 10, skip: 0 },
+          [other],
+          [folder("action-Z", 5, 0)],
+          "canonical",
+        ).map((op) => op.action.id),
+      ).toEqual(["action-0", "action-Z"]);
+      expect(
+        reshuffleByTimestamp(
+          { index: 10, skip: 0 },
+          [other],
+          [folder("action-Z", 5, 0)],
+        ).map((op) => op.action.id),
+      ).toEqual(["action-Z", "action-0"]);
+    });
+  });
+
+  describe("compareCanonical", () => {
+    const at = "2021-01-01T00:00:00.000Z";
+    const row = (actionId: string, id = `op-${actionId}`) => ({
+      ...buildOperation({
+        index: 0,
+        skip: 0,
+        timestampUtcMs: at,
+        action: {
+          id: actionId,
+          type: "TEST",
+          input: {},
+          scope: "global",
+          timestampUtcMs: at,
+        },
+      }),
+      id,
+    });
+
+    // Danish collation reads "aa" as å, after z; the order must not follow it.
+    it("compares action ids and operation ids by code unit", () => {
+      expect("aa".localeCompare("ab", "da")).toBe(1);
+      expect(compareCanonical(row("aa"), row("ab"))).toBeLessThan(0);
+      expect(compareCanonical(row("ab"), row("aa"))).toBeGreaterThan(0);
+      expect(compareCanonical(row("x", "aa"), row("x", "ab"))).toBeLessThan(0);
+      expect(compareCanonical(row("B"), row("a"))).toBeLessThan(0);
+    });
+
+    it("keeps same-millisecond v7 ids in creation order", () => {
+      let seed = 1;
+      const next = createActionIdGenerator({
+        now: () => Date.parse(at),
+        random: (bytes) => {
+          for (let i = 0; i < bytes.length; i++) {
+            seed = (seed * 1103515245 + 12345) % 2 ** 31;
+            bytes[i] = seed & 0xff;
+          }
+        },
+      });
+      const rows = Array.from({ length: 2_000 }, () => row(next()));
+      const ids = rows.map((r) => r.action.id);
+      const danish = new Intl.Collator("da");
+
+      expect(
+        [...rows]
+          .reverse()
+          .sort(compareCanonical)
+          .map((r) => r.action.id),
+      ).toEqual(ids);
+      expect([...ids].sort(danish.compare)).not.toEqual(ids);
+    });
   });
 
   describe("reshuffleByTimestamp with identical timestamps", () => {

@@ -35,6 +35,12 @@ export interface SlugMappingTable {
   updatedAt: Generated<Date>;
 }
 
+/**
+ * Marks a ViewState row as a skipped document of the read model before it,
+ * not a cursor. The row's lastOrdinal is the first ordinal skipped.
+ */
+export const SKIPPED_DOCUMENT_MARKER = "/skipped-unsupported/";
+
 /** A cursor row whose factory is unregistered; it only records a drive's data. */
 export const RELEASED_CURSOR_STATUS = "released";
 

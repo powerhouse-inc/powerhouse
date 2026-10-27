@@ -6,12 +6,13 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
-  actions,
   createPresignedHeader,
   deriveOperationId,
+  hashBrowser,
   noop,
   redo,
   setModelName,
+  synthesizedActionId,
   undo,
   v2RequiredProtocolVersions,
 } from "@powerhousedao/shared/document-model";
@@ -27,7 +28,6 @@ import {
   type SignatureRefusedEvent,
 } from "../../src/events/types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
-import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
 import type { Job } from "../../src/queue/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import { verifyActionSignature } from "../../src/signer/verify-action-signature.js";
@@ -120,8 +120,14 @@ describe("synthesized operations", () => {
   }
 
   /** Creates a document, renames it, and undoes the rename. */
-  async function undoRename(module: InProcessReactorModule): Promise<string> {
-    const document = createDocModelDocument({ signaturePolicy: "legacy" });
+  async function undoRename(
+    module: InProcessReactorModule,
+    version: 2 | 3,
+  ): Promise<string> {
+    const document = createDocModelDocument({
+      signaturePolicy: "legacy",
+      protocolVersions: { "base-reducer": version },
+    });
     const documentId = document.header.id;
     const { reactor } = module;
     expect((await settle(reactor, await reactor.create(document))).status).toBe(
@@ -149,15 +155,97 @@ describe("synthesized operations", () => {
     return documentId;
   }
 
-  async function storedNoop(
+  async function storedOfType(
+    type: "NOOP" | "RETRACT",
     reactor: IReactor,
     documentId: string,
   ): Promise<Operation> {
-    const noops = (await scopeOperations(reactor, documentId, "global")).filter(
-      (operation) => operation.action.type === "NOOP",
+    const found = (await scopeOperations(reactor, documentId, "global")).filter(
+      (operation) => operation.action.type === type,
     );
-    expect(noops).toHaveLength(1);
-    return noops[0];
+    expect(found).toHaveLength(1);
+    return found[0];
+  }
+
+  const storedNoop = (reactor: IReactor, documentId: string) =>
+    storedOfType("NOOP", reactor, documentId);
+
+  /** A document renamed twice, with one of the renames undone by `undone`. */
+  async function undoneOnce(
+    module: InProcessReactorModule,
+    version: 2 | 3,
+  ): Promise<{
+    documentId: string;
+    undone: Action;
+  }> {
+    const document = createDocModelDocument({
+      signaturePolicy: "legacy",
+      protocolVersions: { "base-reducer": version },
+    });
+    const documentId = document.header.id;
+    const { reactor } = module;
+    await settle(reactor, await reactor.create(document));
+    for (const name of ["first", "second"]) {
+      const renamed = await settle(
+        reactor,
+        await reactor.execute(documentId, "main", [
+          await clientSigned(setModelName({ name }), documentId),
+        ]),
+      );
+      expect(renamed.status).toBe(JobStatus.READ_READY);
+    }
+    const undone = await clientSigned(undo(), documentId);
+    const job = await settle(
+      reactor,
+      await reactor.execute(documentId, "main", [undone]),
+    );
+    expect(job.status).toBe(JobStatus.READ_READY);
+    return { documentId, undone };
+  }
+
+  /** Re-runs the job that executed `undone`, as the queue does after losing it. */
+  async function retryUndo(
+    module: InProcessReactorModule,
+    documentId: string,
+    undone: Action,
+  ): Promise<JobInfo> {
+    const createdAtUtcIso = new Date().toISOString();
+    const job: Job = {
+      id: `retry-${undone.id}`,
+      kind: "mutation",
+      documentId,
+      scope: "global",
+      branch: "main",
+      actions: [undone],
+      operations: [],
+      createdAt: createdAtUtcIso,
+      queueHint: [],
+      maxRetries: 3,
+      retryCount: 1,
+      errorHistory: [
+        { name: "WorkerExitedError", message: "worker exited", stack: "" },
+      ],
+      meta: { batchId: "retry", batchJobIds: [`retry-${undone.id}`] },
+    };
+    const info: JobInfo = {
+      id: job.id,
+      documentId,
+      status: JobStatus.PENDING,
+      createdAtUtcIso,
+      consistencyToken: { version: 1, createdAtUtcIso, coordinates: [] },
+      meta: job.meta,
+    };
+    module.jobTracker.registerJob(info);
+    await module.queue.enqueue(job);
+    return settle(module.reactor, info);
+  }
+
+  async function modelName(
+    reactor: IReactor,
+    documentId: string,
+  ): Promise<string> {
+    const { state } = await reactor.get(documentId);
+    return (state as unknown as { global: { name: string } }).global.name;
   }
 
   /** Loads every document and global operation of `from` into `to`. */
@@ -176,69 +264,145 @@ describe("synthesized operations", () => {
     }
   }
 
-  it("stores the NOOP an UNDO becomes signed v2 by the reactor's key", async () => {
+  describe("base-reducer 2", () => {
+    it("stores the NOOP an UNDO becomes signed v2 by the reactor's key", async () => {
+      const module = await build(reactorKey.asISigner([], REACTOR_USER));
+      const documentId = await undoRename(module, 2);
+
+      const operation = await storedNoop(module.reactor, documentId);
+      const signer = operation.action.context?.signer;
+      expect(signer?.app.key).toBe(reactorKey.did);
+      expect(signer?.user).toEqual(REACTOR_USER);
+      expect(signer?.signatures).toHaveLength(1);
+      expect(signer?.signatures[0][2]).toMatch(/^v2:/);
+      expect(operation.id).toBe(
+        deriveOperationId(documentId, "global", "main", operation.action.id),
+      );
+      expect(Date.parse(operation.timestampUtcMs)).toBe(
+        Date.parse(operation.action.timestampUtcMs),
+      );
+
+      const verdict = await verifyActionSignature(
+        operation.action,
+        { documentId, branch: "main" },
+        "load",
+        operation,
+      );
+      expect(verdict).toEqual({ ok: true, scheme: "v2" });
+    });
+
+    it("lets a peer admit the signed NOOP under enforce without re-signing it", async () => {
+      const origin = await build(reactorKey.asISigner([], REACTOR_USER));
+      const documentId = await undoRename(origin, 2);
+      const signed = await storedNoop(origin.reactor, documentId);
+
+      const peerKey = await TestP256Signer.create();
+      const peerTargets: unknown[] = [];
+      const peer = await build(peerKey.asISigner(peerTargets as never));
+      const refusals = refusalsOf(peer);
+
+      await replicate(origin.reactor, peer.reactor, documentId);
+
+      expect(refusals).toEqual([]);
+      expect(peerTargets).toEqual([]);
+      const loaded = await storedNoop(peer.reactor, documentId);
+      expect(loaded.id).toBe(signed.id);
+      expect(loaded.action).toEqual(signed.action);
+    });
+
+    it("stores the NOOP with an empty tuple when no signer is configured, which a peer admits", async () => {
+      const origin = await build();
+      const documentId = await undoRename(origin, 2);
+
+      const operation = await storedNoop(origin.reactor, documentId);
+      expect(operation.action.context?.signer?.app.key).toBe("");
+      expect(operation.action.context?.signer?.signatures).toEqual([
+        ["", "", "", "", ""],
+      ]);
+
+      const peer = await build();
+      const refusals = refusalsOf(peer);
+      await replicate(origin.reactor, peer.reactor, documentId);
+
+      expect(refusals).toEqual([]);
+      expect((await storedNoop(peer.reactor, documentId)).action).toEqual(
+        operation.action,
+      );
+    });
+
+    describe("a submitted UNDO", () => {
+      it("stores its NOOP under an id derived from the submitted one", async () => {
+        const module = await build(reactorKey.asISigner([], REACTOR_USER));
+        const { documentId, undone } = await undoneOnce(module, 2);
+
+        const operation = await storedNoop(module.reactor, documentId);
+        expect(operation.action.id).toBe(
+          hashBrowser(`synthesized:${undone.id}`, "sha1", "hex").slice(0, 32),
+        );
+        expect(operation.action.id).toBe(
+          synthesizedActionId(undone.id, "hashed"),
+        );
+      });
+
+      it("is refused as DUPLICATE_ACTION when resubmitted", async () => {
+        const module = await build(reactorKey.asISigner([], REACTOR_USER));
+        const refusals = refusalsOf(module);
+        const { documentId, undone } = await undoneOnce(module, 2);
+
+        const replayed = await settle(
+          module.reactor,
+          await module.reactor.execute(documentId, "main", [undone]),
+        );
+
+        expect(replayed.status).toBe(JobStatus.FAILED);
+        expect(replayed.error?.message).toContain("[DUPLICATE_ACTION]");
+        expect(refusals).toMatchObject([
+          { actionId: undone.id, code: "DUPLICATE_ACTION" },
+        ]);
+        await storedNoop(module.reactor, documentId);
+      });
+
+      it("succeeds once, idempotently, when its committed job is retried", async () => {
+        const module = await build(reactorKey.asISigner([], REACTOR_USER));
+        const refusals = refusalsOf(module);
+        const { documentId, undone } = await undoneOnce(module, 2);
+
+        const retried = await retryUndo(module, documentId, undone);
+
+        expect(retried.error).toBeUndefined();
+        expect(retried.status).toBe(JobStatus.READ_READY);
+        expect(refusals).toEqual([]);
+        await storedNoop(module.reactor, documentId);
+        expect(await modelName(module.reactor, documentId)).toBe("first");
+      });
+    });
+  });
+
+  it("synthesizes nothing on base-reducer 3, which refuses a submitted UNDO", async () => {
     const module = await build(reactorKey.asISigner([], REACTOR_USER));
-    const documentId = await undoRename(module);
-
-    const operation = await storedNoop(module.reactor, documentId);
-    const signer = operation.action.context?.signer;
-    expect(signer?.app.key).toBe(reactorKey.did);
-    expect(signer?.user).toEqual(REACTOR_USER);
-    expect(signer?.signatures).toHaveLength(1);
-    expect(signer?.signatures[0][2]).toMatch(/^v2:/);
-    expect(operation.id).toBe(
-      deriveOperationId(documentId, "global", "main", operation.action.id),
+    const document = createDocModelDocument({
+      signaturePolicy: "legacy",
+      protocolVersions: { "base-reducer": 3 },
+    });
+    const documentId = document.header.id;
+    const { reactor } = module;
+    await settle(reactor, await reactor.create(document));
+    await settle(
+      reactor,
+      await reactor.execute(documentId, "main", [
+        await clientSigned(setModelName({ name: "renamed" }), documentId),
+      ]),
     );
-    expect(Date.parse(operation.timestampUtcMs)).toBe(
-      Date.parse(operation.action.timestampUtcMs),
+
+    const refused = await settle(
+      reactor,
+      await reactor.execute(documentId, "main", [
+        await clientSigned(undo(), documentId),
+      ]),
     );
 
-    const verdict = await verifyActionSignature(
-      operation.action,
-      { documentId, branch: "main" },
-      "load",
-      operation,
-    );
-    expect(verdict).toEqual({ ok: true, scheme: "v2" });
-  });
-
-  it("lets a peer admit the signed NOOP under enforce without re-signing it", async () => {
-    const origin = await build(reactorKey.asISigner([], REACTOR_USER));
-    const documentId = await undoRename(origin);
-    const signed = await storedNoop(origin.reactor, documentId);
-
-    const peerKey = await TestP256Signer.create();
-    const peerTargets: unknown[] = [];
-    const peer = await build(peerKey.asISigner(peerTargets as never));
-    const refusals = refusalsOf(peer);
-
-    await replicate(origin.reactor, peer.reactor, documentId);
-
-    expect(refusals).toEqual([]);
-    expect(peerTargets).toEqual([]);
-    const loaded = await storedNoop(peer.reactor, documentId);
-    expect(loaded.id).toBe(signed.id);
-    expect(loaded.action).toEqual(signed.action);
-  });
-
-  it("stores the NOOP with an empty tuple when no signer is configured, which a peer admits", async () => {
-    const origin = await build();
-    const documentId = await undoRename(origin);
-
-    const operation = await storedNoop(origin.reactor, documentId);
-    expect(operation.action.context?.signer?.app.key).toBe("");
-    expect(operation.action.context?.signer?.signatures).toEqual([
-      ["", "", "", "", ""],
-    ]);
-
-    const peer = await build();
-    const refusals = refusalsOf(peer);
-    await replicate(origin.reactor, peer.reactor, documentId);
-
-    expect(refusals).toEqual([]);
-    expect((await storedNoop(peer.reactor, documentId)).action).toEqual(
-      operation.action,
-    );
+    expect(refused.error?.name).toBe("SubmittedUndoRefusedError");
+    expect(await modelName(reactor, documentId)).toBe("renamed");
   });
 
   it("does not re-sign a NOOP the client submitted signed", async () => {
@@ -258,107 +422,6 @@ describe("synthesized operations", () => {
 
     expect(targets).toEqual([]);
     expect((await storedNoop(reactor, documentId)).action).toEqual(submitted);
-  });
-
-  describe("a submitted UNDO", () => {
-    /** A document renamed twice, with one of the renames undone by `undone`. */
-    async function undoneOnce(module: InProcessReactorModule): Promise<{
-      documentId: string;
-      undone: Action;
-    }> {
-      const document = createDocModelDocument({ signaturePolicy: "legacy" });
-      const documentId = document.header.id;
-      const { reactor } = module;
-      await settle(reactor, await reactor.create(document));
-      for (const name of ["first", "second"]) {
-        const renamed = await settle(
-          reactor,
-          await reactor.execute(documentId, "main", [
-            await clientSigned(setModelName({ name }), documentId),
-          ]),
-        );
-        expect(renamed.status).toBe(JobStatus.READ_READY);
-      }
-      const undone = await clientSigned(undo(), documentId);
-      const job = await settle(
-        reactor,
-        await reactor.execute(documentId, "main", [undone]),
-      );
-      expect(job.status).toBe(JobStatus.READ_READY);
-      return { documentId, undone };
-    }
-
-    it("stores its NOOP under an id derived from the submitted one", async () => {
-      const module = await build(reactorKey.asISigner([], REACTOR_USER));
-      const { documentId, undone } = await undoneOnce(module);
-
-      const operation = await storedNoop(module.reactor, documentId);
-      expect(operation.action.id).toBe(synthesizedActionId(undone.id));
-      expect(operation.action.id).not.toBe(undone.id);
-    });
-
-    it("is refused as DUPLICATE_ACTION when resubmitted", async () => {
-      const module = await build(reactorKey.asISigner([], REACTOR_USER));
-      const refusals = refusalsOf(module);
-      const { documentId, undone } = await undoneOnce(module);
-
-      const replayed = await settle(
-        module.reactor,
-        await module.reactor.execute(documentId, "main", [undone]),
-      );
-
-      expect(replayed.status).toBe(JobStatus.FAILED);
-      expect(replayed.error?.message).toContain("[DUPLICATE_ACTION]");
-      expect(refusals).toMatchObject([
-        { actionId: undone.id, code: "DUPLICATE_ACTION" },
-      ]);
-      await storedNoop(module.reactor, documentId);
-    });
-
-    it("succeeds once, idempotently, when its committed job is retried", async () => {
-      const module = await build(reactorKey.asISigner([], REACTOR_USER));
-      const refusals = refusalsOf(module);
-      const { documentId, undone } = await undoneOnce(module);
-
-      const createdAtUtcIso = new Date().toISOString();
-      const job: Job = {
-        id: `retry-${undone.id}`,
-        kind: "mutation",
-        documentId,
-        scope: "global",
-        branch: "main",
-        actions: [undone],
-        operations: [],
-        createdAt: createdAtUtcIso,
-        queueHint: [],
-        maxRetries: 3,
-        retryCount: 1,
-        errorHistory: [
-          { name: "WorkerExitedError", message: "worker exited", stack: "" },
-        ],
-        meta: { batchId: "retry", batchJobIds: [`retry-${undone.id}`] },
-      };
-      const info: JobInfo = {
-        id: job.id,
-        documentId,
-        status: JobStatus.PENDING,
-        createdAtUtcIso,
-        consistencyToken: { version: 1, createdAtUtcIso, coordinates: [] },
-        meta: job.meta,
-      };
-      module.jobTracker.registerJob(info);
-      await module.queue.enqueue(job);
-      const retried = await settle(module.reactor, info);
-
-      expect(retried.error).toBeUndefined();
-      expect(retried.status).toBe(JobStatus.READ_READY);
-      expect(refusals).toEqual([]);
-      await storedNoop(module.reactor, documentId);
-      const { state } = await module.reactor.get(documentId);
-      expect(
-        (state as unknown as { global: { name: string } }).global.name,
-      ).toBe("first");
-    });
   });
 
   describe("on a v2-required document", () => {
@@ -448,12 +511,14 @@ describe("synthesized operations", () => {
       .buildModule();
     const reactor = clientModule.reactor;
     try {
+      // Base-reducer 2: 3 refuses a submitted UNDO, so it synthesizes nothing.
       const document = await clientModule.client.createEmpty(
         "powerhouse/document-model",
+        { protocolVersions: { "base-reducer": 2 } },
       );
       const documentId = document.header.id;
       await clientModule.client.execute(documentId, "main", [
-        actions.setName("renamed"),
+        setModelName({ name: "renamed" }),
       ]);
       targets.length = 0;
 

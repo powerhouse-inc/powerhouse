@@ -8,11 +8,15 @@ import type {
   Operation,
   OperationContext,
   PHDocument,
+  ProtocolVersions,
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
+  capabilitiesOf,
   deriveOperationId,
   generateId,
+  signaturePolicyOf,
+  undoRedoActions,
   withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -32,11 +36,13 @@ import type {
 } from "../src/cache/document-meta-cache-types.js";
 import { KyselyOperationIndex } from "../src/cache/kysely-operation-index.js";
 import type { IWriteCache } from "../src/cache/write/interfaces.js";
-import type { ReactorFeatures } from "../src/core/types.js";
+import { ReactorBuilder } from "../src/core/reactor-builder.js";
+import type { IReactor, ReactorFeatures } from "../src/core/types.js";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
 import { SimpleJobExecutorManager } from "../src/executor/simple-job-executor-manager.js";
+import type { ReactorFeatureFlags } from "../src/executor/types.js";
 import { InMemoryJobTracker } from "../src/job-tracker/in-memory-job-tracker.js";
 import type { IJobTracker } from "../src/job-tracker/interfaces.js";
 import type { IQueue } from "../src/queue/interfaces.js";
@@ -399,7 +405,7 @@ export function createCreateDocumentOperation(
         documentId,
         model: documentType,
         version: 0,
-        protocolVersions: { "base-reducer": 2 },
+        protocolVersions: { "base-reducer": 3 },
         ...inputOverrides,
       },
     } as Action,
@@ -529,14 +535,24 @@ export function createDocModelDocument(
     documentType?: string;
     state?: any;
     signaturePolicy?: SignaturePolicy;
+    /** Merged over base-reducer 3; the policy defaults to theirs. */
+    protocolVersions?: ProtocolVersions;
   } = {},
 ): PHDocument {
-  // A fixed id cannot be content-addressed, so it defaults to legacy.
-  const policy = overrides.signaturePolicy ?? (overrides.id ? "legacy" : null);
+  const { protocolVersions } = overrides;
   const created = documentModelDocumentModelModule.utils.createDocument();
-  const baseDocument = policy
-    ? withSignaturePolicy(created, policy, { id: overrides.id })
-    : created;
+  // A fixed id cannot be content-addressed, so it defaults to legacy.
+  const policy =
+    overrides.signaturePolicy ??
+    (overrides.id
+      ? "legacy"
+      : protocolVersions
+        ? signaturePolicyOf(protocolVersions)
+        : signaturePolicyOf(created.header));
+  const baseDocument = withSignaturePolicy(created, policy, {
+    id: overrides.id,
+    protocolVersions: { "base-reducer": 3, ...protocolVersions },
+  });
 
   if (overrides.slug) {
     baseDocument.header.slug = overrides.slug;
@@ -678,6 +694,7 @@ export function createMockOperationStore(
     }),
     getStreamLatestTimestamp: vi.fn().mockResolvedValue(undefined),
     findOperationIds: vi.fn().mockResolvedValue(new Set()),
+    findReferencing: vi.fn().mockResolvedValue(new Set()),
     getOperationsByIds: vi.fn().mockResolvedValue([]),
     ...overrides,
   } as unknown as IOperationStore;
@@ -1180,4 +1197,76 @@ export function createTestChannelFactory(
       return channel;
     },
   };
+}
+
+/** Base-reducer 3 under the default signature policy. */
+export const BASE_REDUCER_3_VERSIONS: ProtocolVersions = {
+  "base-reducer": 3,
+  signature: 2,
+};
+
+/**
+ * A document-model document headed at base-reducer 3. v2-required unless
+ * `signaturePolicy: "legacy"` is passed, which unsigned executes need.
+ */
+export function createBaseReducer3Document(
+  overrides: Parameters<typeof createDocModelDocument>[0] = {},
+): PHDocument {
+  return createDocModelDocument({
+    ...overrides,
+    protocolVersions: {
+      ...BASE_REDUCER_3_VERSIONS,
+      ...overrides.protocolVersions,
+    },
+  });
+}
+
+/** Re-heads any uncreated document at base-reducer 3; the policy defaults to its own. */
+export function withBaseReducer3<TDocument extends PHDocument>(
+  document: TDocument,
+  policy: SignaturePolicy = signaturePolicyOf(document.header),
+  options: { id?: string } = {},
+): TDocument {
+  return withSignaturePolicy(document, policy, {
+    id: options.id,
+    protocolVersions: { "base-reducer": 3 },
+  });
+}
+
+/**
+ * What IReactorClient.undo or redo submits on base-reducer 3: a RETRACT of the
+ * target the reactor resolves, which the author signs. Throws when there is
+ * none.
+ */
+export async function authorRetraction(
+  reactor: Pick<IReactor, "resolveUndoRedo">,
+  documentId: string,
+  type: "UNDO" | "REDO" = "UNDO",
+  scope = "global",
+  branch = "main",
+): Promise<Action> {
+  const targets = await reactor.resolveUndoRedo(documentId, scope, branch);
+  return undoRedoActions(capabilitiesOf(3), type, scope, targets)[0];
+}
+
+/** `featureFlags` with `undoV3` on; a reactor refuses base-reducer 3 without it. */
+export function undoV3Flags(
+  featureFlags: Partial<ReactorFeatureFlags> = {},
+): Partial<ReactorFeatureFlags> {
+  return { ...featureFlags, undoV3: true };
+}
+
+/** A builder with `undoV3` on, the document model and any extra modules. */
+export function createUndoV3ReactorBuilder(
+  options: {
+    featureFlags?: Partial<ReactorFeatureFlags>;
+    modules?: DocumentModelModule<any>[];
+  } = {},
+): ReactorBuilder {
+  return new ReactorBuilder()
+    .withDocumentModelSources([
+      documentModelDocumentModelModule as never,
+      ...((options.modules ?? []) as never[]),
+    ])
+    .withExecutorConfig({ featureFlags: undoV3Flags(options.featureFlags) });
 }

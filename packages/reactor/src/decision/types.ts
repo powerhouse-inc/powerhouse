@@ -1,6 +1,7 @@
 import type {
   Operation,
   PHDocument,
+  ReducerFor,
 } from "@powerhousedao/shared/document-model";
 import type {
   AuthRequest,
@@ -107,6 +108,13 @@ export type Projection<M> = {
 
   /** Applies one of this stream's operations while deciding. */
   apply: (document: PHDocument, operation: Operation) => PHDocument;
+
+  /**
+   * Base-reducer 3: the state reducers a derived stream's rule scope derives
+   * with in the walk, resolved for the stream's starting document. With them
+   * the walk reads the stream's every row, not only its deciding actions.
+   */
+  scopeReducer?: (document: PHDocument) => ReducerFor;
 };
 
 /**
@@ -142,6 +150,13 @@ export type DecisionModel<M> = {
     document: PHDocument,
     operation: Operation,
   ) => PHDocument;
+
+  /**
+   * Base-reducer 3: the state reducers the walk derives the evaluated scope
+   * with in place of `foldEvaluatedScope`, resolved for the walk's starting
+   * document.
+   */
+  evaluatedScopeReducer?: (document: PHDocument) => ReducerFor;
 
   /**
    * Whether or not this model decides about operations in a given scope. That

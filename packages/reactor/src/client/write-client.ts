@@ -3,9 +3,16 @@ import type {
   AuthSubject,
   ISigner,
   PHDocument,
-  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
-import { actions } from "@powerhousedao/shared/document-model";
+import {
+  actions,
+  baseReducerCapabilities,
+  createVersionsOf,
+  serializeByKey,
+  undoNeedsTargets,
+  undoRedoActions,
+  undoRedoAvailabilityOf,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type {
   BatchExecutionRequest,
@@ -14,6 +21,7 @@ import type {
   BatchLoadResult,
   ExecutionJobPlan,
   IReactor,
+  UndoRedoTargets,
 } from "../core/types.js";
 import { signActions } from "../core/utils.js";
 import { buildDecisionModel } from "../decision/build-decision-model.js";
@@ -28,6 +36,7 @@ import {
   PropagationMode,
   type ConsistencyToken,
   type JobInfo,
+  type ViewFilter,
 } from "../shared/types.js";
 import { DocumentExistence } from "../storage/interfaces.js";
 import type {
@@ -35,12 +44,7 @@ import type {
   IDocumentIndexer,
   IDocumentView,
 } from "../storage/interfaces.js";
-import {
-  buildCreateJobs,
-  createEmptyDocument,
-  selectDocumentModelModule,
-  upgradeDocumentJob,
-} from "./derivations.js";
+import { buildCreateJobs, upgradeDocumentJob } from "./derivations.js";
 import type { IDriveWriteStrategy } from "./drive-nodes.js";
 import { DriveWriteClient } from "./drive-write-client.js";
 import {
@@ -65,10 +69,11 @@ import type {
   ActionCandidate,
   ActionEvaluations,
   BatchWriteHandle,
-  CreateDocumentOptions,
   IDriveWriteClient,
   IReactorWriteClient,
   MoveRelationshipHandles,
+  NewDocumentOptions,
+  UndoRedoAvailability,
   UpgradeDocumentOptions,
   WriteHandle,
   WriteTargetDescription,
@@ -103,8 +108,9 @@ export class ReactorWriteClient implements IReactorWriteClient {
   private readonly targets: WriteTargets;
   private readonly handles: WriteHandleFactory;
   private readonly actionEvaluation: ActionEvaluationConfig | undefined;
-  private readonly createSignaturePolicy: SignaturePolicy;
   private readonly read: ReactorReadClient;
+  // Tail of each (document, scope, branch) undo/redo chain.
+  private readonly undoRedoChains = new Map<string, Promise<unknown>>();
 
   constructor(parts: ReactorClientParts, read: ReactorReadClient) {
     this.logger = parts.logger;
@@ -126,7 +132,6 @@ export class ReactorWriteClient implements IReactorWriteClient {
     );
     this.handles = new WriteHandleFactory(awaiterStagePort(parts.jobAwaiter));
     this.actionEvaluation = parts.actionEvaluation;
-    this.createSignaturePolicy = parts.createSignaturePolicy;
     this.read = read;
     this.drives = new DriveWriteClient(
       this,
@@ -144,6 +149,8 @@ export class ReactorWriteClient implements IReactorWriteClient {
         describe: (identifier, signal) =>
           this.targets.describe(identifier, "main", signal),
       },
+      (options, signal) =>
+        read.createProtocol.select(options, { loadModel: true }, signal),
     );
   }
 
@@ -299,13 +306,25 @@ export class ReactorWriteClient implements IReactorWriteClient {
     const parentId = parentIdentifier
       ? await this.targets.resolveReference(parentIdentifier, "main", signal)
       : undefined;
-    const jobs = await buildCreateJobs(document, parentId, this.signer, signal);
+    const protocolVersions = await createVersionsOf(
+      document,
+      (options) =>
+        this.read.createProtocol.select(options, { loadModel: true }, signal),
+      parentIdentifier,
+    );
+    const jobs = await buildCreateJobs(
+      document,
+      protocolVersions,
+      parentId,
+      this.signer,
+      signal,
+    );
     return this.reactor.executeBatch({ jobs }, signal);
   }
 
   async createEmpty(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<WriteHandle> {
     this.logger.verbose(
@@ -313,40 +332,12 @@ export class ReactorWriteClient implements IReactorWriteClient {
       documentModelType,
       options,
     );
-    const document = await this.emptyDocument(
+    const document = await this.read.newDocument(
       documentModelType,
       options,
       signal,
     );
     return this.create(document, options?.parentIdentifier, signal);
-  }
-
-  /** A new, empty document of the type, under this client's create defaults. */
-  async emptyDocument(
-    documentModelType: string,
-    options: CreateDocumentOptions | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<PHDocument> {
-    const modulesResult = await this.reactor.getDocumentModels(
-      undefined,
-      undefined,
-      signal,
-    );
-    const module = selectDocumentModelModule(
-      modulesResult.results,
-      documentModelType,
-      options?.documentModelVersion,
-    );
-    const base = await this.read.getCreateProtocolVersions(
-      options?.parentIdentifier,
-      signal,
-    );
-    return createEmptyDocument(
-      module,
-      options,
-      this.createSignaturePolicy,
-      base,
-    );
   }
 
   async upgradeDocument(
@@ -943,6 +934,86 @@ export class ReactorWriteClient implements IReactorWriteClient {
     );
   }
 
+  undo(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    return this.undoOrRedo("UNDO", documentIdentifier, scope, branch, signal);
+  }
+
+  redo(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    return this.undoOrRedo("REDO", documentIdentifier, scope, branch, signal);
+  }
+
+  async undoRedoAvailability(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability> {
+    const documentId = await this.targets.resolveReference(
+      documentIdentifier,
+      branch,
+      signal,
+    );
+    const document = await this.undoRedoDocument(
+      documentId,
+      scope,
+      branch,
+      signal,
+    );
+    const caps = baseReducerCapabilities(document.header);
+    const readable = (
+      await this.gating.readableScopes(document, { branch }, signal)
+    )(scope);
+    const targets =
+      readable && undoNeedsTargets(caps)
+        ? await this.reactor.resolveUndoRedo(documentId, scope, branch, signal)
+        : undefined;
+    return undoRedoAvailabilityOf(
+      caps,
+      targets,
+      document.header.revision[scope] ?? 0,
+      readable,
+    );
+  }
+
+  async undoRedoTargets(
+    documentIdentifier: string,
+    scope: string = "global",
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets> {
+    const branch = view?.branch ?? "main";
+    const documentId = await this.targets.resolveReference(
+      documentIdentifier,
+      branch,
+      signal,
+    );
+    const document = await this.undoRedoDocument(
+      documentId,
+      scope,
+      branch,
+      signal,
+    );
+    const readable = await this.gating.readableScopes(
+      document,
+      { branch, subject: view?.subject },
+      signal,
+    );
+    if (!readable(scope)) {
+      return {};
+    }
+    return this.reactor.resolveUndoRedo(documentId, scope, branch, signal);
+  }
+
   /** The id a document reference names; see {@link WriteTargets}. */
   resolveReference(
     identifier: string,
@@ -950,6 +1021,87 @@ export class ReactorWriteClient implements IReactorWriteClient {
     signal?: AbortSignal,
   ): Promise<string> {
     return this.targets.resolveReference(identifier, branch, signal);
+  }
+
+  /**
+   * One at a time per (identifier, scope, branch), in call order, so each
+   * resolves against the write before it. A slug and its id are not
+   * serialized against each other.
+   */
+  private undoOrRedo(
+    type: "UNDO" | "REDO",
+    documentIdentifier: string,
+    scope: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+  ): Promise<WriteHandle> {
+    return serializeByKey(
+      this.undoRedoChains,
+      JSON.stringify([documentIdentifier, scope, branch]),
+      async () => {
+        const handle = await this.resolveAndSubmitUndoOrRedo(
+          type,
+          documentIdentifier,
+          scope,
+          branch,
+          signal,
+        );
+        // The next call in the chain resolves against this write.
+        await handle.readable.catch(() => undefined);
+        return handle;
+      },
+    );
+  }
+
+  private async resolveAndSubmitUndoOrRedo(
+    type: "UNDO" | "REDO",
+    documentIdentifier: string,
+    scope: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+  ): Promise<WriteHandle> {
+    this.logger.verbose(
+      "undoOrRedo(@type, @documentIdentifier, @scope, @branch)",
+      type,
+      documentIdentifier,
+      scope,
+      branch,
+    );
+    const documentId = await this.targets.resolveReference(
+      documentIdentifier,
+      branch,
+      signal,
+    );
+    const document = await this.undoRedoDocument(
+      documentId,
+      scope,
+      branch,
+      signal,
+    );
+    const caps = baseReducerCapabilities(document.header);
+    const targets = undoNeedsTargets(caps)
+      ? await this.undoRedoTargets(documentId, scope, { branch }, signal)
+      : undefined;
+    return this.execute(
+      documentId,
+      branch,
+      undoRedoActions(caps, type, scope, targets),
+      signal,
+    );
+  }
+
+  private undoRedoDocument(
+    documentId: string,
+    scope: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+  ): Promise<PHDocument> {
+    return this.reactor.getByIdOrSlug<PHDocument>(
+      documentId,
+      withAuthScope({ branch, scopes: [scope] }),
+      undefined,
+      signal,
+    );
   }
 
   /**

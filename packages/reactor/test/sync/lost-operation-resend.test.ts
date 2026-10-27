@@ -1,9 +1,16 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type { ISigner, Operation } from "@powerhousedao/shared/document-model";
+import type {
+  ISigner,
+  Operation,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import {
+  appliedOperations,
   garbageCollect,
   sortOperations,
+  stateReducerOf,
   undo,
+  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { DriveCollectionId } from "../../src/cache/operation-index-types.js";
@@ -20,6 +27,8 @@ import type {
   RemoteOptions,
   SyncEnvelope,
 } from "../../src/sync/types.js";
+import { assertOneRuleAgreement } from "../executor/one-rule-agreement.js";
+import { BASE_REDUCER_3_VERSIONS, undoV3Flags } from "../factories.js";
 import { TestP256Signer } from "../utils/p256-signer.js";
 import { TestChannel } from "./channels/test-channel.js";
 
@@ -45,8 +54,10 @@ type Harness = {
   channels: Map<string, TestChannel>;
 };
 
+/** `v3`: undoV3 on, manifests exchanged so base-reducer 3 is not held. */
 async function buildHarness(
   featureFlags: Partial<ReactorFeatureFlags> = {},
+  options: { v3?: boolean } = {},
 ): Promise<Harness> {
   const channels = new Map<string, TestChannel>();
   const peerMapping = new Map<string, string>();
@@ -77,6 +88,14 @@ async function buildHarness(
         remoteName,
         cursorStorage,
         send,
+        options.v3
+          ? {
+              peer: () => {
+                const peerName = peerMapping.get(remoteName);
+                return peerName ? channels.get(peerName) : undefined;
+              },
+            }
+          : {},
       );
       channels.set(remoteName, channel);
       return channel;
@@ -85,15 +104,19 @@ async function buildHarness(
 
   const build = async (): Promise<Peer> => {
     const signer = (await TestP256Signer.create()).asISigner();
+    const reactorBuilder = new ReactorBuilder()
+      .withDocumentModelSources([driveDocumentModelModule as never])
+      .withExecutorConfig({
+        featureFlags: options.v3 ? undoV3Flags(featureFlags) : featureFlags,
+      })
+      // On demand only: a tick serves a pending echo ahead of A's next write.
+      .withCatchUp({ intervalMs: 3_600_000 })
+      .withSync(new SyncBuilder().withChannelFactory(channelFactory()));
+    if (options.v3) {
+      reactorBuilder.withWriteCacheConfig({ keyframeInterval: 2 });
+    }
     const built = await new ReactorClientBuilder()
-      .withReactorBuilder(
-        new ReactorBuilder()
-          .withDocumentModelSources([driveDocumentModelModule as never])
-          .withExecutorConfig({ featureFlags })
-          // On demand only: a tick serves a pending echo ahead of A's next write.
-          .withCatchUp({ intervalMs: 3_600_000 })
-          .withSync(new SyncBuilder().withChannelFactory(channelFactory())),
-      )
+      .withReactorBuilder(reactorBuilder)
       .withSigner(signer)
       .buildModule();
     return {
@@ -111,6 +134,22 @@ async function buildHarness(
     held,
     channels,
   };
+}
+
+function baseReducer2Drive() {
+  return withSignaturePolicy(
+    driveDocumentModelModule.utils.createDocument(),
+    "v2-required",
+    { protocolVersions: { "base-reducer": 2, signature: 2 } },
+  );
+}
+
+function baseReducer3Drive() {
+  return withSignaturePolicy(
+    driveDocumentModelModule.utils.createDocument(),
+    "v2-required",
+    { protocolVersions: BASE_REDUCER_3_VERSIONS },
+  );
 }
 
 function toA(id: string): string {
@@ -243,8 +282,11 @@ type Damaged = {
 };
 
 /** A as the pre-fix load of y left it; `pendingEcho` leaves its echo unsent. */
-async function damaged(h: Harness, pendingEcho = false): Promise<Damaged> {
-  const drive = driveDocumentModelModule.utils.createDocument();
+async function damaged(
+  h: Harness,
+  pendingEcho = false,
+  drive: PHDocument = baseReducer2Drive(),
+): Promise<Damaged> {
   const id = drive.header.id;
   const collectionId = DriveCollectionId.forDrive(id);
   await connect(h, id);
@@ -325,245 +367,377 @@ async function sourceRemoteOnB(
     .map((entry) => entry.sourceRemote);
 }
 
-describe("a replica that lost a live operation of its own (#6)", () => {
-  let h: Harness | undefined;
+describe("base-reducer 2", () => {
+  describe("a replica that lost a live operation of its own (#6)", () => {
+    let h: Harness | undefined;
 
-  afterEach(() => {
-    h?.a.reactor.kill();
-    h?.b.reactor.kill();
-    h = undefined;
-  });
+    afterEach(() => {
+      h?.a.reactor.kill();
+      h?.b.reactor.kill();
+      h = undefined;
+    });
 
-  it("B holds x stamped with A as its source, which its outbox to A excludes", async () => {
-    h = await buildHarness();
-    const { id, x } = await damaged(h);
+    it("B holds x stamped with A as its source, which its outbox to A excludes", async () => {
+      h = await buildHarness();
+      const { id, x } = await damaged(h);
 
-    // Excluded by find(excludeSourceRemote) at sync-manager.ts:1348.
-    expect(await sourceRemoteOnB(h, id, x)).toEqual([toA(id)]);
-  }, 30_000);
+      // Excluded by find(excludeSourceRemote) at sync-manager.ts:1348.
+      expect(await sourceRemoteOnB(h, id, x)).toEqual([toA(id)]);
+    }, 30_000);
 
-  // BUG #6: B never re-sends a lost op to its source; a quiet pair diverges.
-  it.fails("converges once a quiet pair reaches a fixed point", async () => {
-    h = await buildHarness();
-    const { id, x } = await damaged(h);
+    // BUG #6: B never re-sends a lost op to its source; a quiet pair diverges.
+    it.fails("converges once a quiet pair reaches a fixed point", async () => {
+      h = await buildHarness();
+      const { id, x } = await damaged(h);
 
-    await quiesce(h, id);
+      await quiesce(h, id);
 
-    expect(await live(h.a, id)).toContain(x);
-    expect(await live(h.a, id)).toEqual(await live(h.b, id));
-  }, 30_000);
+      expect(await live(h.a, id)).toContain(x);
+      expect(await live(h.a, id)).toEqual(await live(h.b, id));
+    }, 30_000);
 
-  // BUG #6: non-conflicting traffic in both directions does not re-send it either.
-  it.fails("converges under ongoing non-conflicting traffic both ways", async () => {
-    h = await buildHarness();
-    const { id, x } = await damaged(h);
+    // BUG #6: non-conflicting traffic in both directions does not re-send it either.
+    it.fails("converges under ongoing non-conflicting traffic both ways", async () => {
+      h = await buildHarness();
+      const { id, x } = await damaged(h);
 
-    for (let i = 0; i < 3; i++) {
-      await executeOn(h.a, id, `a-${i}`, new Date().toISOString());
-      await executeOn(h.b, id, `b-${i}`, new Date().toISOString());
-    }
-    await quiesce(h, id);
+      for (let i = 0; i < 3; i++) {
+        await executeOn(h.a, id, `a-${i}`, new Date().toISOString());
+        await executeOn(h.b, id, `b-${i}`, new Date().toISOString());
+      }
+      await quiesce(h, id);
 
-    expect(await live(h.a, id)).toContain(x);
-    expect(await live(h.a, id)).toEqual(await live(h.b, id));
-  }, 30_000);
+      expect(await live(h.a, id)).toContain(x);
+      expect(await live(h.a, id)).toEqual(await live(h.b, id));
+    }, 30_000);
 
-  // BUG #6: B appends an older op from A as a predecessor; x stays unsent.
-  it.fails("converges after A writes an op older than x", async () => {
-    h = await buildHarness();
-    const { id, base, x } = await damaged(h);
+    // BUG #6: B appends an older op from A as a predecessor; x stays unsent.
+    it.fails("converges after A writes an op older than x", async () => {
+      h = await buildHarness();
+      const { id, base, x } = await damaged(h);
 
-    await executeOn(h.a, id, "v", new Date(base - 5_000).toISOString());
-    await quiesce(h, id);
+      await executeOn(h.a, id, "v", new Date(base - 5_000).toISOString());
+      await quiesce(h, id);
 
-    expect(await live(h.a, id)).toContain(x);
-    expect(await live(h.a, id)).toEqual(await live(h.b, id));
-  }, 30_000);
+      expect(await live(h.a, id)).toContain(x);
+      expect(await live(h.a, id)).toEqual(await live(h.b, id));
+    }, 30_000);
 
-  it("is re-sent when B's own backdated write re-appends x (documentDecisions)", async () => {
-    h = await buildHarness({ documentDecisions: true });
-    const { id, base, x } = await damaged(h);
+    it("is re-sent when B's own backdated write re-appends x (documentDecisions)", async () => {
+      h = await buildHarness({ documentDecisions: true });
+      const { id, base, x } = await damaged(h);
 
-    await executeOn(h.b, id, "z", new Date(base - 5_000).toISOString());
-    // The operation index lags the operation store, so poll what is asserted.
-    await eventually(async () =>
-      (await sourceRemoteOnB(h!, id, x)).includes(""),
-    );
-    await eventually(async () => (await live(h!.a, id)).includes(x));
-  }, 30_000);
-
-  // BUG (b): a trivial-append load keeps the sender's skip; z retracts A's y.
-  it.fails("converges after B's own backdated write re-sends x (documentDecisions)", async () => {
-    h = await buildHarness({ documentDecisions: true });
-    const { id, base, y } = await damaged(h);
-
-    await executeOn(h.b, id, "z", new Date(base - 5_000).toISOString());
-    await quiesce(h, id);
-
-    expect(await live(h.a, id)).toContain(y);
-    expect(await live(h.a, id)).toEqual(await live(h.b, id));
-  }, 30_000);
-
-  it("is repaired when A's reshuffle echo reaches B after the fix", async () => {
-    h = await buildHarness();
-    const { id, x } = await damaged(h, true);
-
-    // A's next write serves the echo; B reshuffles on its matching action id.
-    await executeOn(h.a, id, "w", new Date().toISOString());
-    await eventually(async () =>
-      (await sourceRemoteOnB(h!, id, x)).includes(""),
-    );
-    await quiesce(h, id);
-
-    expect(await live(h.a, id)).toEqual(await live(h.b, id));
-  }, 30_000);
-
-  // BUG: B already holds y, so an echo arriving alone moves nothing on B.
-  it.fails("is repaired when A's reshuffle echo reaches B alone", async () => {
-    h = await buildHarness();
-    const { id, x } = await damaged(h, true);
-
-    hold(h, toB(id));
-    await h.a.module.catchUp.sweepNow();
-    await eventually(() =>
-      Promise.resolve((h!.held.get(toB(id))?.length ?? 0) > 0),
-    );
-    release(h, toB(id));
-    await executeOn(h.a, id, "w", new Date().toISOString());
-
-    await eventually(
-      async () => (await sourceRemoteOnB(h!, id, x)).includes(""),
-      5_000,
-    );
-  }, 30_000);
-});
-
-describe("repair paths for a store damaged before the fix (#6c)", () => {
-  let h: Harness | undefined;
-
-  afterEach(() => {
-    h?.a.reactor.kill();
-    h?.b.reactor.kill();
-    h = undefined;
-  });
-
-  // BUG #6: a full backfill under the old name still excludes x.
-  it.fails("converges after both remotes are removed and re-added (full backfill, same names)", async () => {
-    h = await buildHarness();
-    const { id, collectionId, x } = await damaged(h);
-
-    await h.a.module.syncModule!.syncManager.remove(toB(id));
-    await h.b.module.syncModule!.syncManager.remove(toA(id));
-    await h.a.module.syncModule!.syncManager.add(
-      toB(id),
-      collectionId,
-      { type: "internal", parameters: {} },
-      FILTER,
-    );
-    await h.b.module.syncModule!.syncManager.add(
-      toA(id),
-      collectionId,
-      { type: "internal", parameters: {} },
-      FILTER,
-    );
-    await quiesce(h, id);
-
-    expect(await live(h.a, id)).toContain(x);
-    expect(await live(h.a, id)).toEqual(await live(h.b, id));
-  }, 30_000);
-
-  it("converges when B serves A under a new remote name from timestamp 0", async () => {
-    h = await buildHarness();
-    const { id, collectionId, x } = await damaged(h);
-
-    // A fresh GQL channel id, without the client's since-timestamp.
-    await h.b.module.syncModule!.syncManager.remove(toA(id));
-    const renamed = `toA2-${id}`;
-    h.peerMapping.set(renamed, toB(id));
-    h.peerMapping.set(toB(id), renamed);
-    await h.b.module.syncModule!.syncManager.add(
-      renamed,
-      collectionId,
-      { type: "internal", parameters: {} },
-      FILTER,
-    );
-    await quiesce(h, id);
-
-    expect(await live(h.a, id)).toContain(x);
-    expect(await live(h.a, id)).toEqual(await live(h.b, id));
-  }, 30_000);
-
-  // BUG #6: touchChannel's since-timestamp (A's newest indexed op) filters x out.
-  it.fails("converges when B serves A under a new remote name from the client's since-timestamp", async () => {
-    h = await buildHarness();
-    const { id, collectionId, x } = await damaged(h);
-
-    await executeOn(h.a, id, "w", new Date().toISOString());
-    await quiesce(h, id);
-
-    const since =
-      await h.a.module.operationIndex.getLatestTimestampForCollection(
-        collectionId.key,
+      await executeOn(h.b, id, "z", new Date(base - 5_000).toISOString());
+      // The operation index lags the operation store, so poll what is asserted.
+      await eventually(async () =>
+        (await sourceRemoteOnB(h!, id, x)).includes(""),
       );
-    await h.b.module.syncModule!.syncManager.remove(toA(id));
-    const renamed = `toA2-${id}`;
-    h.peerMapping.set(renamed, toB(id));
-    h.peerMapping.set(toB(id), renamed);
-    const options: RemoteOptions = { sinceTimestampUtcMs: since ?? "0" };
-    await h.b.module.syncModule!.syncManager.add(
-      renamed,
-      collectionId,
-      { type: "internal", parameters: {} },
-      FILTER,
-      options,
-    );
-    await quiesce(h, id);
+      await eventually(async () => (await live(h!.a, id)).includes(x));
+    }, 30_000);
 
-    expect(await live(h.a, id)).toContain(x);
-    expect(await live(h.a, id)).toEqual(await live(h.b, id));
-  }, 30_000);
-});
+    // BUG (b): a trivial-append load keeps the sender's skip; z retracts A's y.
+    it.fails("converges after B's own backdated write re-sends x (documentDecisions)", async () => {
+      h = await buildHarness({ documentDecisions: true });
+      const { id, base, y } = await damaged(h);
 
-describe("losing a live row on current main (#6b)", () => {
-  let h: Harness | undefined;
+      await executeOn(h.b, id, "z", new Date(base - 5_000).toISOString());
+      await quiesce(h, id);
 
-  afterEach(() => {
-    h?.a.reactor.kill();
-    h?.b.reactor.kill();
-    h = undefined;
+      expect(await live(h.a, id)).toContain(y);
+      expect(await live(h.a, id)).toEqual(await live(h.b, id));
+    }, 30_000);
+
+    it("is repaired when A's reshuffle echo reaches B after the fix", async () => {
+      h = await buildHarness();
+      const { id, x } = await damaged(h, true);
+
+      // A's next write serves the echo; B reshuffles on its matching action id.
+      await executeOn(h.a, id, "w", new Date().toISOString());
+      await eventually(async () =>
+        (await sourceRemoteOnB(h!, id, x)).includes(""),
+      );
+      await quiesce(h, id);
+
+      expect(await live(h.a, id)).toEqual(await live(h.b, id));
+    }, 30_000);
+
+    // BUG: B already holds y, so an echo arriving alone moves nothing on B.
+    it.fails("is repaired when A's reshuffle echo reaches B alone", async () => {
+      h = await buildHarness();
+      const { id, x } = await damaged(h, true);
+
+      hold(h, toB(id));
+      await h.a.module.catchUp.sweepNow();
+      await eventually(() =>
+        Promise.resolve((h!.held.get(toB(id))?.length ?? 0) > 0),
+      );
+      release(h, toB(id));
+      await executeOn(h.a, id, "w", new Date().toISOString());
+
+      await eventually(
+        async () => (await sourceRemoteOnB(h!, id, x)).includes(""),
+        5_000,
+      );
+    }, 30_000);
   });
 
-  async function connected(harness: Harness): Promise<string> {
-    const drive = driveDocumentModelModule.utils.createDocument();
-    const id = drive.header.id;
-    await connect(harness, id);
-    await harness.a.client.create(drive);
-    await eventually(() =>
-      harness.b.reactor.get(id, { branch: "main" }).then(
-        () => true,
-        () => false,
-      ),
-    );
-    await quiesce(harness, id);
-    return id;
-  }
+  describe("repair paths for a store damaged before the fix (#6c)", () => {
+    let h: Harness | undefined;
 
-  // BUG (b): B's UNDO reaches A as a trivial append; its skip retracts a1.
-  it.fails("keeps A's own op live when B undoes an op concurrently", async () => {
-    h = await buildHarness();
-    const id = await connected(h);
-    await executeOn(h.b, id, "b1", new Date().toISOString());
-    await eventually(async () => (await live(h!.a, id)).length === 1);
+    afterEach(() => {
+      h?.a.reactor.kill();
+      h?.b.reactor.kill();
+      h = undefined;
+    });
 
-    hold(h, toB(id));
-    const a1 = await executeOn(h.a, id, "a1", new Date().toISOString());
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    await h.b.client.execute(id, "main", [undo()]);
-    await quiesce(h, id);
-    release(h, toB(id));
-    await quiesce(h, id);
+    // BUG #6: a full backfill under the old name still excludes x.
+    it.fails("converges after both remotes are removed and re-added (full backfill, same names)", async () => {
+      h = await buildHarness();
+      const { id, collectionId, x } = await damaged(h);
 
-    expect(await live(h.a, id)).toContain(a1);
-    expect(await live(h.a, id)).toEqual(await live(h.b, id));
-  }, 30_000);
+      await h.a.module.syncModule!.syncManager.remove(toB(id));
+      await h.b.module.syncModule!.syncManager.remove(toA(id));
+      await h.a.module.syncModule!.syncManager.add(
+        toB(id),
+        collectionId,
+        { type: "internal", parameters: {} },
+        FILTER,
+      );
+      await h.b.module.syncModule!.syncManager.add(
+        toA(id),
+        collectionId,
+        { type: "internal", parameters: {} },
+        FILTER,
+      );
+      await quiesce(h, id);
+
+      expect(await live(h.a, id)).toContain(x);
+      expect(await live(h.a, id)).toEqual(await live(h.b, id));
+    }, 30_000);
+
+    it("converges when B serves A under a new remote name from timestamp 0", async () => {
+      h = await buildHarness();
+      const { id, collectionId, x } = await damaged(h);
+
+      // A fresh GQL channel id, without the client's since-timestamp.
+      await h.b.module.syncModule!.syncManager.remove(toA(id));
+      const renamed = `toA2-${id}`;
+      h.peerMapping.set(renamed, toB(id));
+      h.peerMapping.set(toB(id), renamed);
+      await h.b.module.syncModule!.syncManager.add(
+        renamed,
+        collectionId,
+        { type: "internal", parameters: {} },
+        FILTER,
+      );
+      await quiesce(h, id);
+
+      expect(await live(h.a, id)).toContain(x);
+      expect(await live(h.a, id)).toEqual(await live(h.b, id));
+    }, 30_000);
+
+    // BUG #6: touchChannel's since-timestamp (A's newest indexed op) filters x out.
+    it.fails("converges when B serves A under a new remote name from the client's since-timestamp", async () => {
+      h = await buildHarness();
+      const { id, collectionId, x } = await damaged(h);
+
+      await executeOn(h.a, id, "w", new Date().toISOString());
+      await quiesce(h, id);
+
+      const since =
+        await h.a.module.operationIndex.getLatestTimestampForCollection(
+          collectionId.key,
+        );
+      await h.b.module.syncModule!.syncManager.remove(toA(id));
+      const renamed = `toA2-${id}`;
+      h.peerMapping.set(renamed, toB(id));
+      h.peerMapping.set(toB(id), renamed);
+      const options: RemoteOptions = { sinceTimestampUtcMs: since ?? "0" };
+      await h.b.module.syncModule!.syncManager.add(
+        renamed,
+        collectionId,
+        { type: "internal", parameters: {} },
+        FILTER,
+        options,
+      );
+      await quiesce(h, id);
+
+      expect(await live(h.a, id)).toContain(x);
+      expect(await live(h.a, id)).toEqual(await live(h.b, id));
+    }, 30_000);
+  });
+
+  describe("losing a live row on current main (#6b)", () => {
+    let h: Harness | undefined;
+
+    afterEach(() => {
+      h?.a.reactor.kill();
+      h?.b.reactor.kill();
+      h = undefined;
+    });
+
+    async function connected(harness: Harness): Promise<string> {
+      const drive = baseReducer2Drive();
+      const id = drive.header.id;
+      await connect(harness, id);
+      await harness.a.client.create(drive);
+      await eventually(() =>
+        harness.b.reactor.get(id, { branch: "main" }).then(
+          () => true,
+          () => false,
+        ),
+      );
+      await quiesce(harness, id);
+      return id;
+    }
+
+    // BUG (b): B's UNDO reaches A as a trivial append; its skip retracts a1.
+    it.fails("keeps A's own op live when B undoes an op concurrently", async () => {
+      h = await buildHarness();
+      const id = await connected(h);
+      await executeOn(h.b, id, "b1", new Date().toISOString());
+      await eventually(async () => (await live(h!.a, id)).length === 1);
+
+      hold(h, toB(id));
+      const a1 = await executeOn(h.a, id, "a1", new Date().toISOString());
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await h.b.client.execute(id, "main", [undo()]);
+      await quiesce(h, id);
+      release(h, toB(id));
+      await quiesce(h, id);
+
+      expect(await live(h.a, id)).toContain(a1);
+      expect(await live(h.a, id)).toEqual(await live(h.b, id));
+    }, 30_000);
+  });
+});
+
+/** The action ids the stored global stream applies, in order. */
+async function applied(peer: Peer, id: string): Promise<string[]> {
+  return appliedOperations(await stored(peer, id)).map(
+    (operation) => operation.action.id,
+  );
+}
+
+async function agree(peer: Peer, document: PHDocument): Promise<void> {
+  await assertOneRuleAgreement({
+    module: peer.module,
+    document,
+    reducer: driveDocumentModelModule.reducer as never,
+    reducerFor: () => stateReducerOf(driveDocumentModelModule.reducer) as never,
+  });
+}
+
+describe("base-reducer 3", () => {
+  describe("a replica that lost a live operation of its own (#6)", () => {
+    let h: Harness | undefined;
+
+    afterEach(() => {
+      h?.a.reactor.kill();
+      h?.b.reactor.kill();
+      h = undefined;
+    });
+
+    // A trivial append writes skip 0, so B's rewind skip on z retracts nothing on A.
+    it("converges after B's own backdated write re-sends x (documentDecisions)", async () => {
+      h = await buildHarness({ documentDecisions: true }, { v3: true });
+      const drive = baseReducer3Drive();
+      const { id, base, y } = await damaged(h, false, drive);
+
+      await executeOn(h.b, id, "z", new Date(base - 5_000).toISOString());
+      await quiesce(h, id);
+
+      expect(await applied(h.a, id)).toContain(y);
+      expect(await applied(h.a, id)).toEqual(await applied(h.b, id));
+      await agree(h.a, drive);
+      await agree(h.b, drive);
+    }, 30_000);
+
+    // The pin below starts from this state; a broken setup fails here, visibly.
+    it("B holds x stamped with A as its source, with A's echo pending", async () => {
+      h = await buildHarness({}, { v3: true });
+      const { id, x } = await damaged(h, true, baseReducer3Drive());
+
+      expect(await sourceRemoteOnB(h, id, x)).toEqual([toA(id)]);
+    }, 30_000);
+
+    // BUG: v3 has no lost-operation resend either; B keeps x stamped with A.
+    // A setup failure returns, so it turns the pin red instead of satisfying it.
+    it.fails("is repaired when A's reshuffle echo reaches B alone", async () => {
+      let id: string;
+      let x: string;
+      try {
+        h = await buildHarness({}, { v3: true });
+        ({ id, x } = await damaged(h, true, baseReducer3Drive()));
+        const stamped = await sourceRemoteOnB(h, id, x);
+        if (stamped.length !== 1 || stamped[0] !== toA(id)) {
+          console.error("precondition broken: x on B is stamped", stamped);
+          return;
+        }
+
+        hold(h, toB(id));
+        await h.a.module.catchUp.sweepNow();
+        await eventually(() =>
+          Promise.resolve((h!.held.get(toB(id))?.length ?? 0) > 0),
+        );
+        release(h, toB(id));
+        await executeOn(h.a, id, "w", new Date().toISOString());
+      } catch (error) {
+        console.error("setup failed before the pinned wait", error);
+        return;
+      }
+
+      await eventually(
+        async () => (await sourceRemoteOnB(h!, id, x)).includes(""),
+        5_000,
+      );
+    }, 30_000);
+  });
+
+  describe("losing a live row on current main (#6b)", () => {
+    let h: Harness | undefined;
+
+    afterEach(() => {
+      h?.a.reactor.kill();
+      h?.b.reactor.kill();
+      h = undefined;
+    });
+
+    async function connected(harness: Harness, drive: PHDocument) {
+      const id = drive.header.id;
+      await connect(harness, id);
+      await harness.a.client.create(drive);
+      await eventually(() =>
+        harness.b.reactor.get(id, { branch: "main" }).then(
+          () => true,
+          () => false,
+        ),
+      );
+      await quiesce(harness, id);
+      return id;
+    }
+
+    // B's UNDO is a RETRACT naming b1, whatever row it lands after on A.
+    it("keeps A's own op live when B undoes an op concurrently", async () => {
+      h = await buildHarness({}, { v3: true });
+      const drive = baseReducer3Drive();
+      const id = await connected(h, drive);
+      const b1 = await executeOn(h.b, id, "b1", new Date().toISOString());
+      await eventually(async () => (await applied(h!.a, id)).length === 1);
+
+      hold(h, toB(id));
+      const a1 = await executeOn(h.a, id, "a1", new Date().toISOString());
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await h.b.client.undo(id);
+      await quiesce(h, id);
+      release(h, toB(id));
+      await quiesce(h, id);
+
+      expect(await applied(h.a, id)).toContain(a1);
+      expect(await applied(h.a, id)).not.toContain(b1);
+      expect(await applied(h.a, id)).toEqual(await applied(h.b, id));
+      await agree(h.a, drive);
+      await agree(h.b, drive);
+    }, 30_000);
+  });
 });

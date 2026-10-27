@@ -8,21 +8,29 @@ import {
   useSetSelectedNode,
 } from "@powerhousedao/reactor-browser";
 import {
-  baseReducerVersion,
+  assertNever,
+  optionalBaseReducerCapabilities,
   undo,
+  undoNeedsTargets,
   type Action,
+  type BaseReducerCapabilities,
   type Operation,
   type PHDocument,
+  type UndoModel,
 } from "@powerhousedao/shared/document-model";
 import { useEffect, useRef, useState } from "react";
 import { Button, IconButton } from "./controls.js";
 import { Icon } from "./icons.js";
 import {
+  canUndoOn3,
   editedSince,
   effectiveOperations,
   headIndex,
+  planRetraction,
   planUndo,
   redoActions,
+  retractions,
+  undoCapabilities,
   type UndoPolicy,
 } from "./undo-plan.js";
 import { ITEM_PARAM } from "./url-param.js";
@@ -47,14 +55,6 @@ export function BackButton(props: { documentId: string; label?: string }) {
 
 const NO_SKIP: UndoPolicy = { skip: new Set() };
 
-function protocolVersion(document: PHDocument): number {
-  try {
-    return baseReducerVersion(document.header);
-  } catch {
-    return 1;
-  }
-}
-
 const PAGE = 500;
 
 // Documents in the cache carry no history, so undo reads it when pressed.
@@ -75,6 +75,36 @@ async function globalHistory(documentId: string): Promise<Operation[]> {
   return all;
 }
 
+// The document's CREATE_DOCUMENT, from the cache or else read: a header from
+// an older Switchboard carries no protocol versions.
+async function creation(document: PHDocument): Promise<Operation | undefined> {
+  const operations: Record<string, Operation[] | undefined> =
+    document.operations;
+  const cached = operations.document?.at(0);
+  if (cached) return cached;
+  const client = getPHStore()?.reactorClient;
+  if (!client) return undefined;
+  const page = await client.getOperations(
+    document.header.id,
+    { branch: "main", scopes: ["document"] },
+    undefined,
+    { cursor: "0", limit: 1 },
+  );
+  return page.results.at(0);
+}
+
+// Undefined when the header names no known version.
+function headerCapabilities(
+  document: PHDocument | undefined,
+): BaseReducerCapabilities | undefined {
+  if (!document) return undefined;
+  try {
+    return optionalBaseReducerCapabilities(document.header);
+  } catch {
+    return undefined;
+  }
+}
+
 // Text fields keep the browser's own undo.
 function isEditable(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -89,9 +119,23 @@ function isEditable(target: EventTarget | null): boolean {
 export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
   const [document, dispatch] = useDocumentById(props.documentId);
   const policy = props.policy ?? NO_SKIP;
-  const canUndo = Object.values(document?.header.revision ?? {}).some(Boolean);
+  const known = headerCapabilities(document);
+  const [read, setRead] = useState<{
+    documentId: string;
+    caps: BaseReducerCapabilities;
+  }>();
+  const caps =
+    known ?? (read?.documentId === props.documentId ? read.caps : undefined);
+  const targeted = caps !== undefined && undoNeedsTargets(caps);
+  // A targeted undo reads it from the history, which the cache doesn't hold.
+  const [canUndoTargeted, setCanUndoTargeted] = useState(false);
+  const canUndo = targeted
+    ? canUndoTargeted
+    : Object.values(document?.header.revision ?? {}).some(Boolean);
   // Edits undone here, newest last: the reactor keeps no clipboard to redo
-  // from. Any other edit after `head` voids them.
+  // from. Any other edit after `head` voids them. On base-reducer 3 an entry
+  // holds the RETRACTs the undo sent, which redo retracts by id, so the
+  // edit's own rows come back.
   const [undone, setUndone] = useState<Action[][]>([]);
   const head = useRef(-1);
   const own = useRef(new Set<string>());
@@ -128,20 +172,58 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
       });
   };
 
+  const versionNow = async (): Promise<BaseReducerCapabilities> =>
+    caps ?? undoCapabilities(document!.header, await creation(document!));
+  // The actions an undo sends, and what redo takes back; null if nothing.
+  const undoOf = (
+    history: Operation[],
+    model: UndoModel,
+  ): { send: Action[]; undone: Action[] } | null => {
+    switch (model) {
+      case "skip":
+      case "noop-chain": {
+        const plan = planUndo(effectiveOperations(history, model), policy);
+        if (!plan) return null;
+        return {
+          send: [
+            ...Array.from({ length: plan.undos }, () => undo()),
+            ...plan.replay,
+          ],
+          undone: plan.undone,
+        };
+      }
+      case "retraction": {
+        const targets = planRetraction(history, policy);
+        if (!targets) return null;
+        const sent = retractions(targets);
+        return { send: sent, undone: sent };
+      }
+      default:
+        return assertNever(model, "undo model");
+    }
+  };
+  // What a redo of `last` sends.
+  const redoOf = (last: Action[], model: UndoModel): Action[] => {
+    switch (model) {
+      case "skip":
+      case "noop-chain":
+        return redoActions(last);
+      case "retraction":
+        return retractions(last.map((action) => action.id));
+      default:
+        return assertNever(model, "undo model");
+    }
+  };
+
   const doUndo = () =>
     run(async () => {
+      const { undo: model } = await versionNow();
       const history = await globalHistory(props.documentId);
-      const plan = planUndo(
-        effectiveOperations(history, protocolVersion(document!)),
-        policy,
-      );
+      const plan = undoOf(history, model);
       if (!plan) return;
       const keep = !stale(history);
       try {
-        await send([
-          ...Array.from({ length: plan.undos }, () => undo()),
-          ...plan.replay,
-        ]);
+        await send(plan.send);
       } finally {
         if (await settle(headIndex(history))) {
           setUndone((list) => [...(keep ? list : []), plan.undone]);
@@ -152,12 +234,13 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
     run(async () => {
       const last = undone.at(-1);
       if (!last) return;
+      const { undo: model } = await versionNow();
       const history = await globalHistory(props.documentId);
       if (stale(history)) {
         setUndone([]);
         return;
       }
-      const again = redoActions(last);
+      const again = redoOf(last, model);
       for (const action of again) own.current.add(action.id);
       try {
         await send(again);
@@ -169,9 +252,9 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
     });
 
   // Read by the key handler and the effects, which don't rerun for them.
-  const latest = useRef({ doUndo, doRedo, stale });
+  const latest = useRef({ doUndo, doRedo, stale, versionNow, policy });
   useEffect(() => {
-    latest.current = { doUndo, doRedo, stale };
+    latest.current = { doUndo, doRedo, stale, versionNow, policy };
   });
 
   // An edit made elsewhere voids what is left to redo.
@@ -189,6 +272,39 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
       active = false;
     };
   }, [revision, pending, props.documentId]);
+  const hasDocument = document !== undefined;
+  useEffect(() => {
+    if (!hasDocument || known !== undefined) return;
+    let active = true;
+    const documentId = props.documentId;
+    void latest.current
+      .versionNow()
+      .then((value) => {
+        if (active) setRead({ documentId, caps: value });
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to read the base-reducer version:", error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [hasDocument, known, props.documentId]);
+  useEffect(() => {
+    if (!targeted) return;
+    let active = true;
+    void globalHistory(props.documentId)
+      .then((history) => {
+        if (active) {
+          setCanUndoTargeted(canUndoOn3(history, latest.current.policy));
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to read undo availability:", error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [revision, targeted, props.documentId]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey) return;

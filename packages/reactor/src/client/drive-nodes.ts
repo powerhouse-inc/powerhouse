@@ -1,6 +1,7 @@
 import type { ISigner, PHDocument } from "@powerhousedao/shared/document-model";
 import type { PagedResults, PagingOptions } from "../shared/types.js";
 import type {
+  CopyNodeOptions,
   IReactorReadClient,
   IReactorWriteClient,
   NodeWriteHandle,
@@ -110,11 +111,13 @@ export interface IDriveWriteStrategy {
     signal?: AbortSignal,
   ): Promise<WriteHandle>;
 
+  /** A copy keeps its source's versions unless `options` overrides them. */
   copyNode(
     driveIdentifier: string,
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<WriteHandle>;
 }
 

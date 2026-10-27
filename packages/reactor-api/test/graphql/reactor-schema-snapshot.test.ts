@@ -24,7 +24,8 @@ const SOURCE = readFileSync(
 const schema = buildSchema(SOURCE);
 
 /**
- * The SDL before the read/write split, sorted. The only change the split may
+ * The SDL before the read/write split, with undo v3's `createDefaults`
+ * `documentType` argument and `undoRedoTargets` query, sorted. The only change the split may
  * make to the wire is {@link CONSISTENCY_FIELDS} taking a `consistency`
  * argument and the two input types it needs.
  */

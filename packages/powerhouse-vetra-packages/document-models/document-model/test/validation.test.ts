@@ -462,6 +462,13 @@ describe("DocumentModel Validation Error", () => {
         expect(isReservedOperationName("Set_Name")).toBe(true);
       });
 
+      it("should return true for names that constant-case to a reserved name", () => {
+        expect(isReservedOperationName("setName")).toBe(true);
+        expect(isReservedOperationName("purgeDocument")).toBe(true);
+        expect(isReservedOperationName("retract ")).toBe(true);
+        expect(isReservedOperationName("set-preferred-editor")).toBe(true);
+      });
+
       it("should return false for non-reserved names", () => {
         expect(isReservedOperationName("CREATE_USER")).toBe(false);
         expect(isReservedOperationName("UPDATE")).toBe(false);

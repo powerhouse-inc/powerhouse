@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BASE_REDUCER_VERSIONS } from "./base-reducer-protocol.js";
 import {
   coversLocal,
   holdReason,
@@ -10,8 +11,11 @@ import {
   mergePeerCapabilities,
   peerSupports,
   readPeerManifest,
+  capSelection,
   selectProtocolVersions,
   type PeerCapability,
+  type PeerCapabilityFlags,
+  type ProtocolCapability,
   type Supports,
 } from "./peer-agreement.js";
 
@@ -33,6 +37,72 @@ describe("peer capabilities", () => {
         "document-purge": [1],
       },
       features: { "marker-refusal": [1] },
+    });
+  });
+
+  describe("base-reducer under undoV3", () => {
+    const undoV3 = { undoV3: true };
+
+    it("supports [1, 2, 3] with the flag on and [1, 2] with it off", () => {
+      expect(
+        localSupports(PEER_CAPABILITIES, undoV3).protocols["base-reducer"],
+      ).toEqual([1, 2, 3]);
+      expect(
+        localSupports(PEER_CAPABILITIES, { undoV3: false }).protocols[
+          "base-reducer"
+        ],
+      ).toEqual([1, 2]);
+    });
+
+    it("keeps the baseline at [1, 2] for a silent peer", () => {
+      expect(
+        legacySupports(PEER_CAPABILITIES).protocols["base-reducer"],
+      ).toEqual([1, 2]);
+    });
+
+    it("prefers 3 with the flag on and 2 otherwise, from the capability table", () => {
+      const baseReducer = PEER_CAPABILITIES.find(
+        (capability) => capability.name === "base-reducer",
+      ) as ProtocolCapability;
+      expect(baseReducer.preferred!({})).toBe(2);
+      expect(baseReducer.preferred!({ undoV3: false })).toBe(2);
+      expect(baseReducer.preferred!(undoV3)).toBe(3);
+      for (const version of baseReducer.baseline) {
+        expect(BASE_REDUCER_VERSIONS).toContain(version);
+      }
+    });
+
+    // The creator chooses; a member that cannot run 3 is held from it.
+    it("selects the creator's preference whatever the members support", () => {
+      const select = (
+        members: Supports[],
+        flags: PeerCapabilityFlags = undoV3,
+      ) =>
+        selectProtocolVersions({
+          capabilities: PEER_CAPABILITIES,
+          flags,
+          members,
+        })["base-reducer"];
+      const on = localSupports(PEER_CAPABILITIES, undoV3);
+      const off = localSupports(PEER_CAPABILITIES, {});
+      expect(select([])).toBe(3);
+      expect(select([on])).toBe(3);
+      expect(select([legacySupports(PEER_CAPABILITIES)])).toBe(3);
+      expect(select([on, off])).toBe(3);
+      expect(select([on], {})).toBe(2);
+    });
+
+    it("holds a base-reducer 3 document from a peer without the flag", () => {
+      const on = localSupports(PEER_CAPABILITIES, undoV3);
+      const off = localSupports(PEER_CAPABILITIES, {});
+      expect(coversLocal(off, on, PEER_CAPABILITIES)).toBe(false);
+      expect(coversLocal(on, off, PEER_CAPABILITIES)).toBe(true);
+      expect(holdReason(off, { "base-reducer": 3 }, PEER_CAPABILITIES)).toEqual(
+        { protocol: "base-reducer", version: 3, peerSupports: [1, 2] },
+      );
+      expect(
+        holdReason(on, { "base-reducer": 3 }, PEER_CAPABILITIES),
+      ).toBeUndefined();
     });
   });
 
@@ -300,5 +370,66 @@ describe("selectProtocolVersions", () => {
       extra: true,
     })!;
     expect(select([member])["test-protocol"]).toBe(2);
+  });
+});
+
+describe("selection rules", () => {
+  const select = (capability: PeerCapability, members: Supports[]) =>
+    selectProtocolVersions({
+      capabilities: [capability],
+      flags: { testProtocol: true },
+      members,
+    })["test-protocol"];
+  const runsOne: Supports = {
+    protocols: { "test-protocol": [1] },
+    features: {},
+  };
+
+  it("narrows an agreed protocol by its members, and not a creator-chosen one", () => {
+    expect(select(TEST_PROTOCOL, [runsOne])).toBe(1);
+    expect(select({ ...TEST_PROTOCOL, selection: "agreed" }, [runsOne])).toBe(
+      1,
+    );
+    expect(select({ ...TEST_PROTOCOL, selection: "creator" }, [runsOne])).toBe(
+      2,
+    );
+  });
+});
+
+describe("capSelection", () => {
+  const runsAll = localSupports(PEER_CAPABILITIES, { undoV3: true });
+  const cap = (selected: Record<string, number> | undefined) =>
+    capSelection(selected, PEER_CAPABILITIES, runsAll);
+
+  it("takes a negotiated version this build runs as given", () => {
+    expect(cap({ "base-reducer": 3 })).toEqual({ "base-reducer": 3 });
+    expect(cap({ "base-reducer": 2 })).toEqual({ "base-reducer": 2 });
+    expect(cap({ "base-reducer": 1 })).toEqual({ "base-reducer": 1 });
+  });
+
+  it("drops a newer negotiated version to the highest it runs, and fills an absent one from the baseline", () => {
+    expect(cap({ "base-reducer": 4 })).toEqual({ "base-reducer": 3 });
+    expect(cap({})).toEqual({ "base-reducer": 2 });
+    expect(cap(undefined)).toEqual({ "base-reducer": 2 });
+  });
+
+  it("refuses another known protocol at a version it does not run, and passes an unknown one", () => {
+    expect(cap({ "base-reducer": 3, signature: 2 })).toEqual({
+      "base-reducer": 3,
+      signature: 2,
+    });
+    expect(() => cap({ "base-reducer": 3, signature: 3 })).toThrow(
+      "Cannot create at signature 3",
+    );
+    expect(cap({ "base-reducer": 3, "future-protocol": 7 })).toEqual({
+      "base-reducer": 3,
+      "future-protocol": 7,
+    });
+  });
+
+  it("refuses a negotiated version below everything it runs", () => {
+    expect(() => cap({ "base-reducer": 0 })).toThrow(
+      "Cannot create at base-reducer 0",
+    );
   });
 });

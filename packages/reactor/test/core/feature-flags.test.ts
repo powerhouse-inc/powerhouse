@@ -74,6 +74,7 @@ describe("feature flag validation", () => {
       "authEnforcement",
       "authGroups",
       "authConditions",
+      "undoV3",
     ]);
   });
 
@@ -171,12 +172,13 @@ describe("feature flag validation", () => {
  * one of them, so the resolution is shared rather than repeated.
  */
 describe("resolveFeatureFlags", () => {
-  it("defaults every flag off", () => {
+  it("defaults every flag off except undoV3", () => {
     expect(resolveFeatureFlags()).toEqual({
       documentDecisions: false,
       authEnforcement: false,
       authGroups: false,
       authConditions: false,
+      undoV3: true,
     });
     expect(resolveFeatureFlags({})).toEqual(resolveFeatureFlags());
   });
@@ -187,6 +189,7 @@ describe("resolveFeatureFlags", () => {
       authEnforcement: false,
       authGroups: false,
       authConditions: false,
+      undoV3: true,
     });
   });
 
@@ -215,6 +218,7 @@ describe("resolveFeatureFlags", () => {
       authEnforcement: true,
       authGroups: false,
       authConditions: false,
+      undoV3: true,
     });
 
     module.reactor.kill();

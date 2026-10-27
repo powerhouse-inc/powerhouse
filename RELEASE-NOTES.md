@@ -147,6 +147,95 @@ The durable NodeFS subclass and the conversion live in `@powerhousedao/reactor-a
 
 ---
 
+## 🚀 **Unreleased** — undo v3 (#3259)
+
+### ✨ Highlights
+
+1. **New documents undo by retraction** — a document created on this release is base-reducer 3: `UNDO` becomes a signed `RETRACT { target }` that names the undone action by id, so replicas holding the same operations derive the same state whatever order they arrived in
+2. **Upgrade Switchboard first** — a peer below this release cannot run base-reducer 3 and is held from those documents until it upgrades
+3. **`undoV3=false` is not a rollback once a version 3 document exists** — the host refuses to start; see the migration guide for the read-only escape and for reverting the binary
+
+---
+
+### BREAKING CHANGES
+
+#### New documents are base-reducer 3, and older peers are held from them
+
+`undoV3` defaults to on, so a client's `newDocument` and `createEmpty` head a new document at base-reducer 3 when the model's reducer is built by `createReducer`. A peer below this release does not announce base-reducer 3, so sync holds every version 3 document from it: the document, and every operation on it, stays on the reactors that run this release until that peer upgrades. A Connect build on this release syncing a drive with an older Switchboard keeps the documents it creates to itself. Existing documents keep their version.
+
+#### With a version 3 document stored, `undoV3=false` refuses to start
+
+A host that stores a base-reducer 3 document and runs with `undoV3` off (`REACTOR_UNDO_V3=false`, `connect.reactor.featureFlags.undoV3: false`) refuses to start with `UnsupportedStoredProtocolError` and names the types. `REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only` (Switchboard) or `withUnsupportedStoredDocuments("read-only")` (library) starts it with those documents read-only. The previous release (6.2.3) refuses them the same way, with the same escape.
+
+#### Migrations 030 and 031 block the previous binary
+
+Migration 030 adds `idx_operation_retracts`, and 031 replaces 023's created-protocol-versions index with one keyed by model. Kysely refuses to start a binary that does not know a migration the database has run, whatever `allowUnorderedMigrations` says. Running the previous release therefore needs every migration it does not list reverted first: the reactor's (024 to 031 since 6.2.3) and reactor-drive's (0003 to 0005), whose node processor fails to start on the same check. See the migration guide. 030, 031 and reactor-drive's three are index-only.
+
+#### A repeated action id is refused in log mode on version 3
+
+On a base-reducer 3 document, outside its `document` and `auth` scopes, admission refuses an action id the stream already holds as `DUPLICATE_ACTION` under `signatureVerification: "log"` too, whatever the action's signature: a mutation fails and a load drops the operation. Version 3 undoes by action id, so a stored repeat would change what a retraction undoes. Versions 1 and 2 still only log it.
+
+A database that ran a pre-release build of this change in log mode may already hold such a repeat. The write cache and undo targets then apply rows after it one by one where a full derivation treats a RETRACT whose id repeats as inert, so the two can disagree. No released database is affected (6.2.3 has no base-reducer 3); recreate such a pre-release database.
+
+#### `IOperationStore.findReferencing`
+
+`IOperationStore` gains an optional `findReferencing(documentId, scope, branch, actionIds, signal?)`: the ids among `actionIds` that some stored row in the stream references through `actionReferences(row.action)`, rewound rows included. A store without it keeps compiling and working, but the reactor then scans the whole stream for every base-reducer 3 write. Index the references (the Kysely store reads them through migration 030's `idx_operation_retracts`; Hypercore keys one entry per reference).
+
+### MIGRATION GUIDE
+
+1. Upgrade every Switchboard to this release before Connect builds and other clients. Until then, documents created on upgraded clients stay on them.
+2. To stop creating version 3 documents, set `undoV3` off only while none is stored. Once one exists, the host needs `REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only` to start with the flag off, and those documents are read-only there.
+3. To run the previous release on a database this release migrated, stop the host and migrate each migrator down to the last migration the previous release lists. For 6.2.3 that is the reactor's `023_index_created_protocol_versions` and reactor-drive's `0002_document_name`. The names are in `packages/reactor/src/storage/migrations/migrator.ts` and `packages/reactor-drive/src/schema/migrations/migrator.ts` of the release you go back to. Run it with this release's packages, which hold the `down()` of the newer migrations; the previous release does not. Reverting a migration that created a table drops the table and its rows (since 6.2.3: document purges, sync markers, purge refusals, remote persistence, write identity and permission tables), so check what they hold first. reactor-privacy and other migrators with their own table that the previous release does not run need nothing.
+
+   ```typescript
+   import { REACTOR_SCHEMA, runMigrations } from "@powerhousedao/reactor";
+   import { runReactorDriveMigrations } from "@powerhousedao/reactor-drive";
+   import type { Kysely } from "kysely";
+
+   // 6.2.3's last migrations; use the previous release's.
+   export async function revert(db: Kysely<any>): Promise<void> {
+     const reactor = await runMigrations(db, REACTOR_SCHEMA, "023_index_created_protocol_versions");
+     if (!reactor.success) throw reactor.error;
+     const drive = await runReactorDriveMigrations(db, REACTOR_SCHEMA, "0002_document_name");
+     if (!drive.success) throw drive.error;
+   }
+   ```
+
+   On Postgres, pass a Kysely over the reactor database:
+
+   ```typescript
+   import { Kysely, PostgresDialect } from "kysely";
+   import { Pool } from "pg";
+
+   const db = new Kysely<any>({
+     dialect: new PostgresDialect({
+       pool: new Pool({ connectionString: process.env.PH_REACTOR_DATABASE_URL }),
+     }),
+   });
+   await revert(db);
+   await db.destroy();
+   ```
+
+   On an embedded PGlite store (Switchboard or `ph vetra` without a Postgres URL), open the reactor store directory, `.ph/reactor-storage` by default, with the host stopped:
+
+   ```typescript
+   import { PGlite } from "@electric-sql/pglite";
+   import { NodeFS } from "@electric-sql/pglite/nodefs";
+   import { Kysely } from "kysely";
+   import { PGliteDialect } from "kysely-pglite-dialect";
+
+   const db = new Kysely<any>({
+     dialect: new PGliteDialect(new PGlite({ fs: new NodeFS(".ph/reactor-storage") })),
+   });
+   await revert(db);
+   await db.destroy();
+   ```
+
+   A store whose `PG_VERSION` is 16 opens with the PG16 build instead (`pglite-legacy-02` and `pglite-legacy-02/nodefs`, as Switchboard loads it). Then start the previous release with `REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only` if any version 3 document is stored: 6.2.3 runs base-reducer 1 and 2 only and refuses to start otherwise. Running this release again re-applies the reverted migrations.
+4. Store implementers outside this repository: implement `findReferencing` over an index of `actionReferences`. Nothing else in `IOperationStore` changed.
+
+---
+
 ## 🚀 **Unreleased** — action signature integrity (#2894)
 
 ### ✨ Highlights

@@ -54,6 +54,7 @@ import {
   SetOperationScopeInputSchema,
   SetOperationTemplateInputSchema,
   SetStateSchemaInputSchema,
+  RetractActionInputSchema,
   UndoActionInputSchema,
   UpdateChangeLogItemInputSchema,
   UpdateOperationExampleInputSchema,
@@ -97,6 +98,7 @@ import type {
   MoveOperationAction,
   MoveOperationInput,
   NOOPAction,
+  RetractAction,
   RedoAction,
   Reducer,
   ReleaseNewVersionAction,
@@ -162,7 +164,10 @@ import type {
   UpdateStateExampleAction,
   UpdateStateExampleInput,
 } from "./types.js";
-import { deriveOperationId, generateId } from "./utils.js";
+import { nextAuthTimestamp } from "./action-id.js";
+import { deriveOperationId, generateActionId } from "./utils.js";
+
+export { nextAuthTimestamp };
 
 /**
  * Cancels the last `count` operations.
@@ -196,6 +201,20 @@ export const redo = (count = 1, scope = "global") =>
 
 export const noop = (scope = "global") =>
   createAction<NOOPAction>("NOOP", {}, undefined, undefined, scope);
+
+/**
+ * Retracts the action with id `target` on base-reducer 3.
+ *
+ * @category Actions
+ */
+export const retract = (target: string, scope = "global") =>
+  createAction<RetractAction>(
+    "RETRACT",
+    { target },
+    undefined,
+    RetractActionInputSchema,
+    scope,
+  );
 
 // TODO improve base actions type
 
@@ -233,8 +252,9 @@ export function createAction<TAction extends Action>(
     throw new Error(`Invalid action type: ${JSON.stringify(type)}`);
 
   const action: Action = {
-    id: generateId(),
-    timestampUtcMs: new Date().toISOString(),
+    id: generateActionId(),
+    timestampUtcMs:
+      scope === "auth" ? nextAuthTimestamp() : new Date().toISOString(),
     type,
     input,
     scope,

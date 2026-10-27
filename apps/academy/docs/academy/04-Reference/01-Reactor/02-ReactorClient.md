@@ -100,14 +100,19 @@ enum PropagationMode {
 }
 ```
 
-### `CreateDocumentOptions`
+### `NewDocumentOptions`
 
-Options for `createEmpty()`.
+Options for `newDocument()` and `createEmpty()`.
 
 ```typescript
-type CreateDocumentOptions = {
+type NewDocumentOptions = {
   parentIdentifier?: string; // id or slug of parent document
   documentModelVersion?: number; // defaults to latest
+  protocolVersions?: { [protocol: string]: number }; // merged over the selection
+  signaturePolicy?: SignaturePolicy; // overrides the client's default
+  initialState?: Partial<PHBaseState>; // passed to the model's createDocument
+  name?: string;
+  id?: string; // kept only under the legacy policy
 };
 ```
 
@@ -471,6 +476,20 @@ getDocumentModelModule(
 
 ---
 
+### `newDocument`
+
+Head a new, uncreated document of a type with the protocol versions this client selects for it and its parent, and the client's create signature policy. It is the one place a client chooses a new document's versions; pass the result to `client.write.create` or `client.write.drives.addFile`. It builds the header and enqueues nothing, so it is on the read half: `client.read.newDocument(...)`, or `client.newDocument(...)`.
+
+```typescript
+newDocument<TDocument extends PHDocument = PHDocument>(
+  documentType: string,
+  options?: NewDocumentOptions,
+  signal?: AbortSignal,
+): Promise<TDocument>
+```
+
+---
+
 ### `evaluateActions`
 
 On `client.write`: it is a write-side read that decides through the same model that admits a write. Ask what the reactor **would** decide about a set of candidate operations, without submitting any of them. Use it to disable a control rather than offer an action that fails on submit.
@@ -592,7 +611,7 @@ type WriteReceipt = {
 
 ### `create`
 
-Create a document from a full `PHDocument` object. With a parent, the handle's stages also wait for the relationship job on the parent.
+Create a document from a full `PHDocument` object. Its header's signature policy, id and protocol versions are taken as given; a header from a model's `utils.createDocument()` is created at base-reducer 2. Build the header with [`newDocument`](#newdocument). With a parent, the handle's stages also wait for the relationship job on the parent.
 
 ```typescript
 create(
@@ -614,12 +633,12 @@ create(
 
 ### `createEmpty`
 
-Create an empty document of a given type.
+Create the document [`newDocument`](#newdocument) builds.
 
 ```typescript
 createEmpty(
   documentModelType: string,
-  options?: CreateDocumentOptions,
+  options?: NewDocumentOptions,
   signal?: AbortSignal,
 ): Promise<WriteHandle>
 ```
@@ -629,7 +648,7 @@ createEmpty(
 | Name                | Type                    | Required | Description                            |
 | ------------------- | ----------------------- | -------- | -------------------------------------- |
 | `documentModelType` | `string`                | Yes      | e.g. `"powerhouse/todo-list"`          |
-| `options`           | `CreateDocumentOptions` | No       | Parent identifier and/or model version |
+| `options`           | `NewDocumentOptions`    | No       | Parent identifier, model version and the rest of `newDocument`'s options |
 | `signal`            | `AbortSignal`           | No       | Cancel the request                     |
 
 ---
@@ -661,6 +680,8 @@ execute(
 | `branch`             | `string`      | Yes      | Branch to apply actions to (e.g. `"main"`) |
 | `actions`            | `Action[]`    | Yes      | List of actions to apply                   |
 | `signal`             | `AbortSignal` | No       | Cancel the request                         |
+
+On a version 3 document the actions run in canonical order, not array order: by timestamp, then by action id. Action creators give ids that sort in creation order within one process, so actions created in sequence keep that order. An action built with another id, such as `crypto.randomUUID()`, can run before an action listed ahead of it in the same millisecond. A submitted `UNDO` or `REDO` on base-reducer 3 is refused with `SubmittedUndoRefusedError`; use [`undo`](#undo) and [`redo`](#redo).
 
 **Example:**
 
@@ -723,6 +744,87 @@ setPreferredEditor(
 | `preferredEditor`    | `string \| null` | Yes      | Editor id, or `null` to clear it  |
 | `branch`             | `string`         | No       | Defaults to `"main"`              |
 | `signal`             | `AbortSignal`    | No       | Cancel the request                |
+
+---
+
+### `undo`
+
+Submit the undo of a scope's last applied operation.
+
+```typescript
+undo(
+  documentIdentifier: string,
+  scope?: string,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<WriteHandle>
+```
+
+**Parameters:**
+
+| Name                 | Type          | Required | Description            |
+| -------------------- | ------------- | -------- | ---------------------- |
+| `documentIdentifier` | `string`      | Yes      | Document id or slug    |
+| `scope`              | `string`      | No       | Defaults to `"global"` |
+| `branch`             | `string`      | No       | Defaults to `"main"`   |
+| `signal`             | `AbortSignal` | No       | Cancel the request     |
+
+On a base-reducer 3 document the client resolves the target with [`undoRedoTargets`](#undoredotargets) and submits a `RETRACT` of it signed by its own signer. With nothing to undo it throws `NoUndoRedoTargetError` before submitting. The `RETRACT` names the row the call saw, so an edit landing in between is not undone. A target retracted or gone by then fails the job with `RetractionRefusedError`, and nothing is resolved again: the handle's stages reject with `JobFailedError`, whose `job.error.name` is `RetractionRefusedError`. On base-reducer 1 and 2 it submits `UNDO`.
+
+Calls on one document, scope and branch run one at a time: each resolves once its write is readable, so the next resolves against it. `handle.document()` is the updated document. See [Undo and redo](/academy/Reference/Reactor/UndoRedo).
+
+---
+
+### `redo`
+
+Submit the redo of a scope's last undo. Same parameters as [`undo`](#undo).
+
+```typescript
+redo(
+  documentIdentifier: string,
+  scope?: string,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<WriteHandle>
+```
+
+On base-reducer 3 the client resolves the last live retraction with [`undoRedoTargets`](#undoredotargets) and submits a `RETRACT` of it signed by its own signer, under `undo`'s race rule. Content applied after the undo leaves nothing to redo. On base-reducer 1 and 2 it submits `REDO`.
+
+---
+
+### `undoRedoTargets`
+
+The rows a base-reducer 3 `undo` and `redo` of a scope would retract now, resolved by the reactor through the read gate. A scope the subject may not read has none, nor does the `auth` or `document` scope; below base-reducer 3 there are none. It reads the operation log, so it is on the write half, as `evaluateActions` is.
+
+```typescript
+undoRedoTargets(
+  documentIdentifier: string,
+  scope?: string, // defaults to "global"
+  view?: ViewFilter, // branch and subject
+  signal?: AbortSignal,
+): Promise<UndoRedoTargets>
+
+type UndoRedoTargets = { undoTarget?: string; redoTarget?: string };
+```
+
+---
+
+### `undoRedoAvailability`
+
+Report whether `undo` and `redo` would find a target in a scope now. Same parameters as [`undo`](#undo); a write-side read like [`undoRedoTargets`](#undoredotargets).
+
+```typescript
+undoRedoAvailability(
+  documentIdentifier: string,
+  scope?: string,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<UndoRedoAvailability>
+
+type UndoRedoAvailability = { canUndo: boolean; canRedo: boolean };
+```
+
+Exact on base-reducer 3. On base-reducer 1 and 2, `canUndo` is whether the scope has any operation and `canRedo` is always `false`. A scope the caller may not read reports neither.
 
 ---
 
@@ -1043,7 +1145,7 @@ moveNode(
 
 ### `write.drives.copyNode`
 
-Copy a node, and its subtree if it is a folder, within a drive. Each file is duplicated (completed), then the drive's nodes are copied. The handle's document is the drive.
+Copy a node, and its subtree if it is a folder, within a drive. Each file is duplicated (completed), then the drive's nodes are copied. The handle's document is the drive. A copied file keeps its source's `protocolVersions` unless `options.protocolVersions` overrides them; a reactor-drive refuses the override. See [Undo and redo](/academy/Reference/Reactor/UndoRedo) for copying a document to base-reducer 3.
 
 ```typescript
 copyNode(
@@ -1051,6 +1153,7 @@ copyNode(
   srcNodeId: string,
   targetParentFolderId: string | undefined,
   signal?: AbortSignal,
+  options?: { protocolVersions?: ProtocolVersions },
 ): Promise<WriteHandle>
 ```
 

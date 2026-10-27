@@ -305,7 +305,7 @@ Under `v2-required` a given `id` is ignored and the id is derived, so code that 
 
 A `CREATE_DOCUMENT` whose id does not recompute from its own input is refused as `ID_MISMATCH`, and so is a legacy `CREATE_DOCUMENT` that takes an id of that shape. A copy of a v2-required document is v2-required, under a new derived id. A copy of a legacy document is created under the creation default below. An imported `.phd` keeps the policy it was exported with.
 
-The NOOP an `UNDO` becomes and the action a `REDO` rebuilds are signed by the reactor's own signer. A reactor with no signer stores them unsigned, and every peer refuses them on a v2-required document, so a host that writes to v2-required documents must be given a signer. A client with no signer cannot create a v2-required document at all: its `CREATE_DOCUMENT` is unsigned.
+A submitted `UNDO` or `REDO` is resolved by the reactor, which signs the result with its own signer: the NOOP or rebuilt action on base-reducer 1 and 2, the `RETRACT` on base-reducer 3. A reactor with no signer stores them unsigned, and every peer refuses them on a v2-required document, so a host that writes to v2-required documents must be given a signer. On base-reducer 3, `IReactorClient.undo` and `redo` submit a `RETRACT` the client signs instead; see [Undo and redo](/academy/Reference/Reactor/UndoRedo). A client with no signer cannot create a v2-required document at all: its `CREATE_DOCUMENT` is unsigned.
 
 ### The creation default
 
@@ -344,7 +344,7 @@ const reactorBuilder = new ReactorBuilder().withExecutorConfig({
 ```
 
 - `enforce` (the default) refuses the write.
-- `log` records every refusal and stores the write anyway.
+- `log` records every refusal and stores the write anyway, except a `DUPLICATE_ACTION` on a base-reducer 3 document outside its `document` and `auth` scopes. Undo there works by action id, so a repeated id is refused in both modes.
 
 Each refusal emits a `SIGNATURE_REFUSED` event on the reactor event bus, with the refusal `code`, the signature `scheme`, the admission `path` (`mutation` or `load`), and whether it was `enforced`. `@powerhousedao/opentelemetry-instrumentation-reactor` counts these as `reactor.signature.refusals`.
 

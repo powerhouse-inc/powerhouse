@@ -1,0 +1,31 @@
+{
+  // The v4 cascade check (shared/document-model/base-reducer-protocol.v4-cascade.test.ts):
+  // this package's sources with a fake version on every capability axis.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "../..",
+    "composite": false,
+    "incremental": false,
+    "declaration": false,
+    "declarationMap": false,
+    "declarationDir": null,
+    "emitDeclarationOnly": false,
+    "sourceMap": false,
+    // Shared's own aliases, which its sources use when compiled here.
+    "paths": {
+      "types": ["../shared/types/index.ts"],
+      "processors": ["../shared/processors/index.ts"]
+    }
+  },
+  "files": ["../shared/v4-cascade/v4.ts"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    ".tsbuild",
+    "bench/host",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.stories.tsx"
+  ]
+}

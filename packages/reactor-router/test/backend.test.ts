@@ -20,6 +20,9 @@ describe("fromReactorClient", () => {
       "moveRelationship",
       "getDocumentModelModules",
       "getDocumentModelModule",
+      "undo",
+      "redo",
+      "undoRedoAvailability",
     ]) {
       expect(
         typeof (backend as unknown as Record<string, unknown>)[member],

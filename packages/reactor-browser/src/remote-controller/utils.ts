@@ -4,7 +4,13 @@ import type {
   PHBaseState,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { deserializeSignature } from "@powerhousedao/shared/document-model";
+import type { SignaturePolicy } from "@powerhousedao/shared/document-model";
+import {
+  creationState,
+  deserializeSignature,
+  signaturePolicyOf,
+  withSignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import type {
   ConflictInfo,
   RemoteDocumentData,
@@ -81,7 +87,11 @@ export function convertRemoteOperations(
   return operations;
 }
 
-/** Reconstruct a PHDocument from remote document data and operations. */
+/**
+ * Reconstruct a PHDocument from remote document data and operations; the
+ * header carries the remote protocol versions. `initialDoc` supplies the rest
+ * of the header, and the initial state when the operations do not record one.
+ */
 export function buildPulledDocument(
   remoteDoc: RemoteDocumentData,
   operations: DocumentOperations,
@@ -107,12 +117,51 @@ export function buildPulledDocument(
         remoteDoc.revisionsList.map((r) => [r.scope, r.revision]),
       ),
       branch,
+      // The creator chose these; the local reducer must run what the host runs.
+      ...(remoteDoc.protocolVersions != null
+        ? {
+            protocolVersions: remoteDoc.protocolVersions as Record<
+              string,
+              number
+            >,
+          }
+        : {}),
     },
     state: remoteDoc.state as PHBaseState,
-    initialState: initialDoc.initialState,
+    // Undo re-derives a scope from here, so it must be the state the creator recorded.
+    initialState:
+      creationState(operations.document ?? []) ?? initialDoc.initialState,
     operations,
     clipboard: [],
   };
+}
+
+/** `document` as created: its header and initial state, without scope operations. */
+export function uncreatedDocument(
+  document: PHDocument<PHBaseState>,
+): PHDocument<PHBaseState> {
+  const { header, initialState } = structuredClone({
+    header: document.header,
+    initialState: document.initialState,
+  });
+  return {
+    header,
+    state: initialState,
+    initialState,
+    operations: {},
+    clipboard: [],
+  };
+}
+
+/** An uncreated `document` under `policy`; a legacy one keeps its id. */
+export function underSignaturePolicy(
+  document: PHDocument<PHBaseState>,
+  policy: SignaturePolicy,
+): PHDocument<PHBaseState> {
+  if (signaturePolicyOf(document.header) === policy) {
+    return document;
+  }
+  return withSignaturePolicy(document, policy, { id: document.header.id });
 }
 
 /** Extract revision map from a remote document's revisionsList. */

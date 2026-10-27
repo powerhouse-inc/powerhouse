@@ -25,7 +25,7 @@
   },
   // include all files in this package's root
   "include": ["**/*"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["dist", "node_modules", "v4-cascade"]
   // No project references: `document-model` is a thin re-export of this
   // package's own ./document-model, so referencing it would form a circular
   // project graph (TS6202). Imports of "document-model" here resolve to our own

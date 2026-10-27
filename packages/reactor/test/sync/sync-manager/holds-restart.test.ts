@@ -5,7 +5,7 @@ import {
   PEER_CAPABILITIES,
   type PeerCapability,
 } from "@powerhousedao/shared/document-model";
-import { ConsoleLogger } from "document-model";
+import { ConsoleLogger, type ILogger } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
@@ -56,9 +56,12 @@ describe.each(testSyncStorageBackends)(
         ),
     } as unknown as IChannelFactory;
 
-    async function start(bus = new EventBus()): Promise<SyncManager> {
+    async function start(
+      bus = new EventBus(),
+      logger: ILogger = new ConsoleLogger(["SyncManager"]),
+    ): Promise<SyncManager> {
       const manager = new SyncManager(
-        new ConsoleLogger(["SyncManager"]),
+        logger,
         storage.syncRemoteStorage,
         storage.syncCursorStorage,
         storage.syncDeadLetterStorage,
@@ -130,6 +133,35 @@ describe.each(testSyncStorageBackends)(
         await manager.shutdown().completed;
       }
       await storage.cleanup();
+    });
+
+    it("logs why it holds a document", async () => {
+      const bus = new EventBus();
+      const held = new Promise<void>((resolve) => {
+        bus.subscribe(SyncEventTypes.SYNC_HELD, () => resolve());
+      });
+      const logger = new ConsoleLogger(["SyncManager"]);
+      const info = vi.spyOn(logger, "info");
+      const manager = await start(bus, logger);
+      await manager.add(
+        "client",
+        COLLECTION,
+        { type: "polling", parameters: {} },
+        FILTER,
+        {},
+        "c1",
+        null,
+      );
+      await held;
+
+      expect(info).toHaveBeenCalledWith(
+        expect.stringContaining("Holding"),
+        "held-doc",
+        "client",
+        "test-protocol",
+        2,
+        "1",
+      );
     });
 
     it("keeps the hold, and releases it when the peer widens after the restart", async () => {

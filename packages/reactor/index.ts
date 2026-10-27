@@ -88,7 +88,10 @@ export {
   type ActionCandidate,
   type ActionEvaluations,
   type CreateDocumentOptions,
+  type NewDocumentOptions,
+  type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
+  type CopyNodeOptions,
   type IDriveClient,
   type IDriveReadClient,
   type IDriveWriteClient,
@@ -102,6 +105,7 @@ export {
   type WriteReceipt,
   type WriteTargetDescription,
   type ProtocolSelection,
+  type UndoRedoAvailability,
   type UpgradeDocumentOptions,
 } from "./src/client/types.js";
 export {
@@ -151,6 +155,7 @@ export {
   type ReactorFeatures,
   type ReactorModule,
   type SyncModule,
+  type UndoRedoTargets,
 } from "./src/core/types.js";
 export {
   JobAwaiter,
@@ -175,7 +180,11 @@ export {
   InvalidSignatureError,
   JOB_NOT_FOUND_ERROR_NAME,
   RelationshipNotFoundError,
+  storedRefusalName,
+  SubmittedUndoRefusedError,
+  UnsupportedProtocolVersionError,
   UnsupportedStoredProtocolError,
+  type StoredProtocolRefusal,
 } from "./src/shared/errors.js";
 export type { UnsupportedStoredDocuments } from "./src/core/stored-protocol-check.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
@@ -228,6 +237,7 @@ export {
   EventBusAggregateError,
   ReactorEventTypes,
   type ModelLoadedEvent,
+  type StoredModelRefusedEvent,
   type JobPendingEvent,
   type JobReadReadyEvent,
   type JobRunningEvent,
@@ -710,6 +720,8 @@ export {
   GroupInUseError,
   PurgeTooLargeError,
   ReservedActionError,
+  RetractionRefusedError,
+  type RetractionRefusalReason,
 } from "./src/shared/errors.js";
 export {
   acquirePurgeLocks,

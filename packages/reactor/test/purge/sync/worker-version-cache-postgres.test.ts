@@ -189,8 +189,16 @@ describe("the host sync manager under the worker pool [Postgres]", () => {
     );
     const driveId = drive.header.id;
     await settled((await reactor.create(drive)).id);
+    // Within the baseline, so the silent peer is held only from the marker.
     await settled(
-      (await reactor.create(createDocModelDocument({ id: CHILD }))).id,
+      (
+        await reactor.create(
+          createDocModelDocument({
+            id: CHILD,
+            protocolVersions: { "base-reducer": 2 },
+          }),
+        )
+      ).id,
     );
     await settled(
       (

@@ -191,6 +191,7 @@ export class TestChannel implements IChannel {
         channelMeta: { id: this.channelId },
         operations: syncOp.operations,
       });
+      syncOp.pushed();
     }
   }
 
@@ -253,6 +254,7 @@ export class TestChannel implements IChannel {
       };
 
       this.send(envelope);
+      syncOp.pushed();
 
       if (this.options.acked) {
         syncOp.transported();

@@ -51,7 +51,9 @@ Four actions write the `auth` scope:
 | `REMOVE_GRANT`     | Removes a grant by `id`                           |
 | `MOVE_GRANT`       | Reorders a grant, which can change the outcome    |
 
-`UNDO` and `REDO` are refused on the `auth` scope.
+`UNDO`, `REDO` and `RETRACT` are refused on the `auth` scope.
+
+A policy grants or refuses `RETRACT` like any other operation type. It cannot condition on who wrote the retracted operation. A denied `RETRACT` retracts nothing; see [Undo and redo](/academy/Reference/Reactor/UndoRedo).
 
 The creators are exported from `document-model` (and `@powerhousedao/shared/document-model`) alongside `Grant`:
 
@@ -109,6 +111,10 @@ Three rules are easy to miss:
 - **An allow on `execute` confers `read` of that scope.** A grant of `{ can: "execute", scope: "*" }` therefore publishes every domain scope to whoever it names. Grant administration on `scope: "auth"` rather than `"*"`.
 - **A grant that cannot apply is skipped, not honoured.** Below `authGroups` a `{ group }` principal never matches; below `authConditions` a `where` clause never holds. Both fail closed, so a policy relying on a conditional *deny* is weaker than it reads on a reactor that cannot evaluate it.
 - **The creator keeps the auth scope.** The key that signed the document's header may always execute in `scope: "auth"`, so a policy cannot lock its own owner out. On an unsigned document there is no creator, and validation instead refuses any policy that would leave nobody able to administer it.
+
+### Timestamps in the auth scope
+
+A reactor refuses an auth operation whose timestamp does not exceed the newest one in the scope. Auth actions made in one process are stamped 1 ms apart when the clock has not moved, so a burst such as `initializeAuth` followed by two `setGrant` calls in one millisecond is admitted. Other actions keep the wall-clock time. A content action made in the same millisecond as such a burst therefore sorts before the burst's later grants, and is denied if it needs them.
 
 ## Scopes every holder reads
 

@@ -1,4 +1,5 @@
 import {
+  actionReferences,
   isPurgeMarker,
   type Operation,
   type OperationWithContext,
@@ -32,6 +33,7 @@ import {
   ordinalKey,
   ordinalPrefix,
   pad,
+  referenceKey,
 } from "./key-encoding.js";
 import type { HeadEntryValue, OrdinalEntry } from "./key-encoding.js";
 import type { StoredOperation } from "./types.js";
@@ -185,6 +187,13 @@ export class HypercoreOperationStore implements IOperationStore {
       await batch.put(ordinalKey(nextOrdinal), ordEntry);
 
       await batch.put(duplicateKey(op.id, op.index, op.skip), "");
+
+      for (const referenced of actionReferences(op.action)) {
+        await batch.put(
+          referenceKey(documentId, scope, branch, referenced),
+          "",
+        );
+      }
 
       nextOrdinal++;
     }
@@ -567,6 +576,28 @@ export class HypercoreOperationStore implements IOperationStore {
     }
 
     return latest;
+  }
+
+  async findReferencing(
+    documentId: string,
+    scope: string,
+    branch: string,
+    actionIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Set<string>> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const found = new Set<string>();
+    for (const actionId of new Set(actionIds)) {
+      if (
+        await this.bee.get(referenceKey(documentId, scope, branch, actionId))
+      ) {
+        found.add(actionId);
+      }
+    }
+    return found;
   }
 
   async findOperationIds(

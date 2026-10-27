@@ -1,3 +1,4 @@
+import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type {
   Action,
   AuthSubject,
@@ -19,6 +20,7 @@ import type {
   BatchLoadRequest,
   BatchLoadResult,
   IReactor,
+  UndoRedoTargets,
 } from "../core/types.js";
 import type { IReadGate } from "../decision/read-gate.js";
 import { BareReadGate } from "../decision/read-gate.js";
@@ -49,11 +51,13 @@ import { ReactorReadClient } from "./read-client.js";
 import type {
   ActionCandidate,
   ActionEvaluations,
-  CreateDocumentOptions,
+  CreateProtocolVersionsOptions,
   DocumentChangeEvent,
   IDriveClient,
   IReactorClient,
+  NewDocumentOptions,
   ProtocolSelection,
+  UndoRedoAvailability,
   UpgradeDocumentOptions,
 } from "./types.js";
 import { ReactorWriteClient } from "./write-client.js";
@@ -125,7 +129,7 @@ export class ReactorClient implements IReactorClient {
     createSignaturePolicy: SignaturePolicy = DEFAULT_SIGNATURE_POLICY,
     protocolSelection: ProtocolSelection = {
       capabilities: PEER_CAPABILITIES,
-      flags: {},
+      flags: resolveFeatureFlags(),
       collectionsOf: () => Promise.resolve({}),
     },
     writeSide?: WriteSideParts,
@@ -345,10 +349,18 @@ export class ReactorClient implements IReactorClient {
   }
 
   getCreateProtocolVersions(
-    parentIdentifier?: string,
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    return this.read.getCreateProtocolVersions(parentIdentifier, signal);
+    return this.read.getCreateProtocolVersions(options, signal);
+  }
+
+  newDocument<TDocument extends PHDocument = PHDocument>(
+    documentType: string,
+    options?: NewDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.read.newDocument<TDocument>(documentType, options, signal);
   }
 
   /**
@@ -382,7 +394,7 @@ export class ReactorClient implements IReactorClient {
    */
   async createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
     warnOnce(
@@ -400,7 +412,7 @@ export class ReactorClient implements IReactorClient {
 
   async createEmptyAsync(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
     this.logger.verbose(
@@ -408,7 +420,7 @@ export class ReactorClient implements IReactorClient {
       documentModelType,
       options,
     );
-    const document = await this.write.emptyDocument(
+    const document = await this.read.newDocument(
       documentModelType,
       options,
       signal,
@@ -524,6 +536,59 @@ export class ReactorClient implements IReactorClient {
     const batch = await this.write.executeBatch(request, signal);
     await batch.readable;
     return { jobs: batch.jobs };
+  }
+
+  async undo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const handle = await this.write.undo(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+    return handle.document<TDocument>(undefined, signal);
+  }
+
+  async redo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const handle = await this.write.redo(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+    return handle.document<TDocument>(undefined, signal);
+  }
+
+  undoRedoTargets(
+    documentIdentifier: string,
+    scope?: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets> {
+    return this.write.undoRedoTargets(documentIdentifier, scope, view, signal);
+  }
+
+  undoRedoAvailability(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability> {
+    return this.write.undoRedoAvailability(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
   }
 
   /**

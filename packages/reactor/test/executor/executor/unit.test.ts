@@ -2085,6 +2085,66 @@ describe("SimpleJobExecutor", () => {
       expect(result.success).toBe(true);
       expect(result.operations).toEqual([]);
     });
+
+    // A base-reducer 3 document read as base-reducer 2 would take the v2 load path.
+    it("fails a load whose document meta read fails for any reason but absence", async () => {
+      const failing = new SimpleJobExecutor(
+        createMockLogger(),
+        registry,
+        mockOperationStore,
+        createTestEventBus(),
+        mockWriteCache,
+        {
+          start: vi.fn(),
+          commit: vi.fn(),
+          find: vi.fn(),
+          getCollectionsForDocuments: vi.fn(),
+          getGroupReferencers: vi.fn(),
+        } as any,
+        createMockDocumentMetaCache({
+          getDocumentMeta: vi
+            .fn()
+            .mockRejectedValue(new Error("meta read failed")),
+        }),
+        createMockCollectionMembershipCache(),
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+        {},
+      );
+      mockOperationStore.getConflicting = vi.fn();
+
+      const result = await failing.executeJob({
+        kind: "load",
+        id: "meta-error-load-job",
+        documentId: "doc-1",
+        scope: "global",
+        branch: "main",
+        actions: [],
+        operations: [
+          {
+            index: 0,
+            skip: 0,
+            hash: "",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            id: "op-incoming",
+            action: {
+              id: "incoming-action",
+              type: "SET_NAME",
+              scope: "global",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
+              input: { name: "Test" },
+            },
+          },
+        ],
+        createdAt: "1234567890",
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["meta-error-load-job"] },
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toBe("meta read failed");
+      expect(mockOperationStore.getConflicting).not.toHaveBeenCalled();
+    });
   });
 
   describe("JOB_WRITE_READY emit failure", () => {

@@ -8,6 +8,7 @@ import {
   localSupports,
   mergePeerCapabilities,
   PEER_CAPABILITIES,
+  refusalFor,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
@@ -44,10 +45,16 @@ import { EventBus } from "../events/event-bus.js";
 import { resolveFeatureFlags } from "./feature-flags.js";
 import {
   checkStoredProtocols,
+  storedModelRefusals,
   type UnsupportedStoredDocuments,
 } from "./stored-protocol-check.js";
 import type { IEventBus } from "../events/interfaces.js";
-import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
+import {
+  ReactorEventTypes,
+  type JobWriteReadyEvent,
+  type StoredModelRefusedEvent,
+} from "../events/types.js";
+import { storedRefusalName } from "../shared/errors.js";
 import {
   KyselyExecutionScope,
   type IExecutionScope,
@@ -94,6 +101,7 @@ import type {
 import {
   DocumentModelResolver,
   NullDocumentModelResolver,
+  type IDocumentModelResolver,
 } from "../registry/document-model-resolver.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
 import type {
@@ -159,6 +167,7 @@ import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
 import { resolveModelSources } from "./model-sources.js";
 import type { DocumentModelSource } from "./model-sources.js";
 import { Reactor } from "./reactor.js";
+import { CreateProtocolSelector } from "../client/create-protocol.js";
 import type {
   Database,
   DegradedComponent,
@@ -167,6 +176,7 @@ import type {
   IReactor,
   ReactorFeatures,
 } from "./types.js";
+import { createProtocolGate } from "../protocol/gate.js";
 
 /**
  * Dependencies provided to read-model factories registered via
@@ -459,6 +469,11 @@ export class ReactorBuilder {
   }
 
   /** The registry plus any capabilities added with withPeerCapabilities. */
+  /** The loader-backed resolver the CREATE gate uses; undefined without a loader. */
+  getModelResolver(): IDocumentModelResolver | undefined {
+    return this.modelResolver;
+  }
+
   getPeerCapabilities(): readonly PeerCapability[] {
     return mergePeerCapabilities(PEER_CAPABILITIES, this.extraPeerCapabilities);
   }
@@ -944,6 +959,11 @@ export class ReactorBuilder {
     this.moduleOnlyModelKeys = resolvedSources.moduleOnlyKeys;
 
     const documentModelRegistry = new DocumentModelRegistry();
+    const protocolGate = createProtocolGate(
+      this.executorConfig.protocolSupport ?? {},
+      documentModelRegistry,
+      this.logger,
+    );
     if (this.upgradeManifests.length > 0) {
       const results = documentModelRegistry.registerUpgradeManifests(
         ...this.upgradeManifests,
@@ -995,12 +1015,13 @@ export class ReactorBuilder {
     // The schema is no acknowledgment, but nothing would re-pull it.
     await groupCommit?.flusher.flush();
 
-    await checkStoredProtocols(
+    const deferredStoredModels = await checkStoredProtocols(
       baseDatabase,
       REACTOR_SCHEMA,
       this.executorConfig.protocolSupport ?? {},
       this.unsupportedStoredDocuments,
       this.logger,
+      (documentType) => protocolGate.registeredModules(documentType),
     );
 
     const database = baseDatabase.withSchema(REACTOR_SCHEMA);
@@ -1020,9 +1041,29 @@ export class ReactorBuilder {
         )
       : new NullDocumentModelResolver(documentModelRegistry);
     if (resolver instanceof DocumentModelResolver) {
-      resolver.setModelLoadedHook((documentType) =>
-        eventBus.emit(ReactorEventTypes.MODEL_LOADED, { documentType }),
-      );
+      const logger = this.logger;
+      resolver.setModelLoadedHook(async (documentType) => {
+        // Reported first, so a failing MODEL_LOADED subscriber cannot hide it.
+        const refusals = storedModelRefusals(
+          documentType,
+          deferredStoredModels,
+          protocolGate.support,
+          protocolGate.registeredModules(documentType),
+        );
+        if (refusals.length > 0) {
+          // Writes are refused per job; this only tells the operator.
+          logger.error(
+            "Loaded model @documentType cannot run its stored documents (@refusals); they stay read-only",
+            documentType,
+            refusals.map(storedRefusalName).join(", "),
+          );
+          await eventBus.emit(ReactorEventTypes.STORED_MODEL_REFUSED, {
+            documentType,
+            refusals,
+          } satisfies StoredModelRefusedEvent);
+        }
+        await eventBus.emit(ReactorEventTypes.MODEL_LOADED, { documentType });
+      });
       resolver.rememberManifest(this.resolvedModelManifest ?? []);
       this.modelResolver = resolver;
     }
@@ -1033,6 +1074,7 @@ export class ReactorBuilder {
       maxDocuments: this.writeCacheConfig?.maxDocuments ?? 100,
       ringBufferSize: this.writeCacheConfig?.ringBufferSize ?? 10,
       keyframeInterval: this.writeCacheConfig?.keyframeInterval ?? 10,
+      gate: protocolGate,
     };
 
     const writeCache = new KyselyWriteCache(
@@ -1393,6 +1435,26 @@ export class ReactorBuilder {
       catchUp,
       [unsubscribeMarkerEviction],
       [() => processorManager.shutdown()],
+      protocolGate,
+    );
+    const createModelResolver = this.modelResolver;
+    reactor.setCreateProtocol(
+      new CreateProtocolSelector({
+        selection: {
+          capabilities: this.getPeerCapabilities(),
+          flags: featureFlags,
+          collectionsOf: () => Promise.resolve({}),
+          loadModel: createModelResolver
+            ? (documentType) =>
+                createModelResolver.ensureModelLoaded(documentType)
+            : undefined,
+        },
+        resolveParent: () => Promise.resolve(undefined),
+        modules: async (documentType, signal) =>
+          (await reactor.getDocumentModels(documentType, undefined, signal))
+            .results,
+        logger: this.logger,
+      }),
     );
 
     const localPeer: LocalPeer = {
@@ -1413,6 +1475,13 @@ export class ReactorBuilder {
       forgetDocument: (documentId) => {
         documentMetaCache.invalidate(documentId);
       },
+      modelRefusal: (documentType, versions) =>
+        refusalFor(
+          documentType,
+          versions,
+          protocolGate.support,
+          protocolGate.registeredModules(documentType),
+        ),
     };
     let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {
@@ -1454,6 +1523,8 @@ export class ReactorBuilder {
         queue,
         operationIndex,
         database as unknown as Kysely<DocumentViewDatabase>,
+        operationStore,
+        documentMetaCache,
       );
       groupReevaluationTrigger.attachCatchUp(
         settledWatermark,
@@ -1467,6 +1538,7 @@ export class ReactorBuilder {
       eventBus,
       documentModelRegistry,
       featureFlags,
+      protocolSupport: this.executorConfig.protocolSupport ?? {},
       queue,
       jobTracker,
       executorManager,
@@ -1684,6 +1756,7 @@ export class ReactorBuilder {
       postReadyKinds: config.postReadyKinds,
       indexing,
       catchUp: this.catchUpConfig,
+      protocolSupport: this.executorConfig.protocolSupport,
       factory,
       logger: this.logger!,
       hostBus: eventBus,

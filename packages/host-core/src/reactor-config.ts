@@ -51,6 +51,7 @@ const FLAG_ENV: Record<
   authEnforcement: "REACTOR_AUTH_ENFORCEMENT",
   authGroups: "REACTOR_AUTH_GROUPS",
   authConditions: "REACTOR_AUTH_CONDITIONS",
+  undoV3: "REACTOR_UNDO_V3",
 };
 
 /** The env vars a protocol block maps onto, with their string values. Only
@@ -180,7 +181,13 @@ export function protocolConflicts(
   return Object.entries(protocolEnv(protocol)).flatMap(
     ([varName, hostValue]) => {
       const envValue = env[varName];
-      if (envValue === undefined || envValue === hostValue) return [];
+      if (envValue === undefined) return [];
+      // The switchboard reads undoV3 as on unless the value is exactly "false".
+      const agrees =
+        varName === FLAG_ENV.undoV3
+          ? (envValue !== "false") === (hostValue === "true")
+          : envValue === hostValue;
+      if (agrees) return [];
       return [
         `reactor.protocol conflict: ${varName} is "${envValue}" in the environment ` +
           `but "${hostValue}" in ${hostFile}. These are fleet-consensus settings — ` +

@@ -4,13 +4,20 @@ import type {
   CreateDocumentActionInput,
   ISigner,
   Operation,
+  ProtocolVersions,
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
   actionSigningTarget,
   canonicalJson,
+  capabilitiesFor,
   deriveOperationId,
+  derivesByRule,
+  positionalOperations,
+  retractedActionIds,
+  RULE_EXEMPT_SCOPES,
   signaturePolicyOf,
+  synthesizedActionId,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IEventBus } from "../events/interfaces.js";
@@ -34,10 +41,8 @@ import type {
   SignatureVerificationMode,
 } from "../signer/types.js";
 import { verifyActionSignature } from "../signer/verify-action-signature.js";
-import {
-  SYNTHESIZING_TYPES,
-  synthesizedActionId,
-} from "./synthesized-signing.js";
+import { SYNTHESIZING_TYPES } from "./synthesized-signing.js";
+import { findReferencing } from "../storage/find-referencing.js";
 import type { IOperationStore } from "../storage/interfaces.js";
 
 type Stream = { documentId: string; scope: string; branch: string };
@@ -46,8 +51,8 @@ type Candidate = {
   action: Action;
   stream: Stream;
   opId: string;
-  /** The operation the reducer stores in place of a submitted UNDO or REDO. */
-  synthesizedOpId?: string;
+  /** Where a v1/v2 UNDO or REDO's synthesized operation is stored. */
+  synthesizedOpIds: string[];
   operation?: Operation;
   policy?: SignaturePolicy;
 };
@@ -114,10 +119,14 @@ export class SignatureAdmission {
     this.trustTimeoutMs = trust.timeoutMs;
   }
 
-  /** The first refusal of a mutation's submitted actions, when enforcing. */
+  /**
+   * The first refusal of a mutation's submitted actions, when enforcing.
+   * `refuseRepeats` refuses a repeated action id in every mode.
+   */
   async admitMutation(
     job: Job,
     stores: AdmissionStores,
+    refuseRepeats: boolean,
     signal?: AbortSignal,
   ): Promise<MutationAdmission> {
     const { operationStore } = stores;
@@ -136,7 +145,7 @@ export class SignatureAdmission {
       candidates,
       live,
       isRetry(job),
-      operationStore,
+      stores,
       signal,
     );
 
@@ -153,13 +162,20 @@ export class SignatureAdmission {
         live,
         submitted,
         "mutation",
+        refuseRepeats,
         signal,
       );
       submitted.add(entry.opId);
       if (verdict.ok) {
         continue;
       }
-      const refusal = this.record(job, entry, verdict, "mutation");
+      const refusal = this.record(
+        job,
+        entry,
+        verdict,
+        "mutation",
+        this.enforces(verdict, refuseRepeats),
+      );
       if (refusal) {
         return { kind: "refused", error: refusal };
       }
@@ -167,11 +183,15 @@ export class SignatureAdmission {
     return { kind: "admitted", committed: [...committed.values()] };
   }
 
-  /** The incoming operations a load drops, empty unless enforcing. */
+  /**
+   * The incoming operations a load drops, empty unless enforcing.
+   * `refuseRepeats` drops a repeated action id in every mode.
+   */
   async admitLoad(
     job: Job,
     operations: Operation[],
     stores: AdmissionStores,
+    refuseRepeats: boolean,
     signal?: AbortSignal,
   ): Promise<Set<Operation>> {
     const { operationStore } = stores;
@@ -204,19 +224,30 @@ export class SignatureAdmission {
         storedPolicy(stores, this.policySource, documentId, branch, signal),
     );
     const dropped = new Set<Operation>();
+    const received = new Set<string>();
     for (let i = 0; i < candidates.length; i++) {
       const verdict = await this.verdict(
         candidates[i],
         live,
-        undefined,
+        received,
         "load",
+        refuseRepeats,
         signal,
         redelivered.has(candidates[i]),
       );
+      received.add(candidates[i].opId);
       if (verdict.ok) {
         continue;
       }
-      if (this.record(job, candidates[i], verdict, "load")) {
+      if (
+        this.record(
+          job,
+          candidates[i],
+          verdict,
+          "load",
+          this.enforces(verdict, refuseRepeats),
+        )
+      ) {
         dropped.add(operations[i]);
       }
     }
@@ -243,6 +274,7 @@ export class SignatureAdmission {
       new Set(),
       undefined,
       "load",
+      false,
       signal,
     );
     if (verdict.ok) {
@@ -251,11 +283,13 @@ export class SignatureAdmission {
     return this.record(job, entry, verdict, "load", true)!;
   }
 
+  /** With `refuseRepeats`, a repeated id is DUPLICATE_ACTION whatever the signature. */
   private async verdict(
     entry: Candidate,
     live: Set<string>,
     submitted: Set<string> | undefined,
     path: AdmissionPath,
+    refuseRepeats: boolean,
     signal?: AbortSignal,
     known = false,
   ): Promise<SignatureVerdict> {
@@ -269,10 +303,12 @@ export class SignatureAdmission {
       path,
       entry.operation,
     );
-    if (!verdict.ok) {
+    const repeated =
+      !known && (isLive(entry, live) || submitted?.has(entry.opId) === true);
+    if (!verdict.ok && !(repeated && refuseRepeats)) {
       return verdict;
     }
-    if (!known && (isLive(entry, live) || submitted?.has(entry.opId))) {
+    if (repeated) {
       return {
         ok: false,
         scheme: verdict.scheme,
@@ -355,7 +391,8 @@ export class SignatureAdmission {
   /**
    * The live candidates stored exactly as submitted and still standing: one
    * an undo or a reshuffle has since superseded is refused, not re-emitted with
-   * the state it once produced. A synthesized operation
+   * the state it once produced; on base-reducer 3 that includes one a live
+   * RETRACT names. A synthesized operation
    * holds another action, so it cannot be compared; only a retry, whose first
    * attempt this job was, takes it as committed.
    */
@@ -363,15 +400,17 @@ export class SignatureAdmission {
     candidates: Candidate[],
     live: Set<string>,
     retry: boolean,
-    operationStore: IOperationStore,
+    stores: AdmissionStores,
     signal?: AbortSignal,
   ): Promise<Map<Candidate, CommittedWrite>> {
+    const { operationStore } = stores;
     const committed = new Map<Candidate, CommittedWrite>();
     const toCompare: Candidate[] = [];
     for (const entry of candidates) {
-      if (entry.synthesizedOpId && live.has(entry.synthesizedOpId)) {
+      const synthesizedOpId = liveSynthesizedOpId(entry, live);
+      if (synthesizedOpId) {
         if (retry) {
-          committed.set(entry, committedWrite(entry, entry.synthesizedOpId));
+          committed.set(entry, committedWrite(entry, synthesizedOpId));
         }
       } else if (live.has(entry.opId)) {
         toCompare.push(entry);
@@ -404,13 +443,67 @@ export class SignatureAdmission {
         undefined,
         signal,
       );
+      const retracted = await this.retractedAmong(
+        stream,
+        matching,
+        stores,
+        signal,
+      );
       for (const entry of matching) {
-        if (!isSuperseded(byId.get(entry.opId)!, later.results)) {
+        if (
+          !isSuperseded(byId.get(entry.opId)!, later.results) &&
+          !retracted.has(entry.action.id)
+        ) {
           committed.set(entry, committedWrite(entry, entry.opId));
         }
       }
     }
     return committed;
+  }
+
+  /** The ids among `entries` the base-reducer 3 rule retracts; empty before 3. */
+  private async retractedAmong(
+    stream: Stream,
+    entries: Candidate[],
+    stores: AdmissionStores,
+    signal?: AbortSignal,
+  ): Promise<Set<string>> {
+    if (RULE_EXEMPT_SCOPES.has(stream.scope)) {
+      return new Set();
+    }
+    const stored = await storedVersions(
+      stores,
+      this.policySource,
+      stream.documentId,
+      stream.branch,
+      signal,
+    );
+    if (!derivesByRule(capabilitiesFor(stored?.versions), stream.scope)) {
+      return new Set();
+    }
+    const { operationStore } = stores;
+    const named = await findReferencing(
+      operationStore,
+      stream.documentId,
+      stream.scope,
+      stream.branch,
+      entries.map((entry) => entry.action.id),
+      signal,
+    );
+    if (named.size === 0) {
+      return named;
+    }
+    const all = await operationStore.getSince(
+      stream.documentId,
+      stream.scope,
+      stream.branch,
+      -1,
+      undefined,
+      undefined,
+      signal,
+    );
+    const retracted = retractedActionIds(positionalOperations(all.results));
+    return new Set([...named].filter((id) => retracted.has(id)));
   }
 
   /**
@@ -425,9 +518,7 @@ export class SignatureAdmission {
   ): Promise<Set<Candidate>> {
     const found = new Set<Candidate>();
     const toCompare = candidates.filter(
-      (entry) =>
-        live.has(entry.opId) &&
-        !(entry.synthesizedOpId && live.has(entry.synthesizedOpId)),
+      (entry) => live.has(entry.opId) && !liveSynthesizedOpId(entry, live),
     );
     for (const [stream, entries] of byStream(toCompare)) {
       const stored = await operationStore.getOperationsByIds(
@@ -465,11 +556,7 @@ export class SignatureAdmission {
         stream.documentId,
         stream.scope,
         stream.branch,
-        entries.flatMap((entry) =>
-          entry.synthesizedOpId
-            ? [entry.opId, entry.synthesizedOpId]
-            : [entry.opId],
-        ),
+        entries.flatMap((entry) => [entry.opId, ...entry.synthesizedOpIds]),
         signal,
       );
       for (const opId of found) {
@@ -477,6 +564,17 @@ export class SignatureAdmission {
       }
     }
     return live;
+  }
+
+  /**
+   * Whether a refusal is enforced. Base-reducer 3 derives by action id, so a
+   * rule scope refuses a repeated id whatever the mode.
+   */
+  private enforces(refusal: Refusal, refuseRepeats: boolean): boolean {
+    return (
+      this.mode === "enforce" ||
+      (refuseRepeats && refusal.code === "DUPLICATE_ACTION")
+    );
   }
 
   /** Logs and counts a refusal; returns the error only when enforcing. */
@@ -562,6 +660,24 @@ async function storedPolicy(
   branch: string,
   signal?: AbortSignal,
 ): Promise<SignaturePolicy | undefined> {
+  const stored = await storedVersions(
+    stores,
+    source,
+    documentId,
+    branch,
+    signal,
+  );
+  return stored && signaturePolicyOf(stored.versions);
+}
+
+/** The stored document's protocol versions; undefined when it is not stored. */
+async function storedVersions(
+  stores: AdmissionStores,
+  source: PolicySource,
+  documentId: string,
+  branch: string,
+  signal?: AbortSignal,
+): Promise<{ versions: ProtocolVersions | undefined } | undefined> {
   try {
     if (source === "write-cache") {
       const document = await stores.writeCache.getState(
@@ -571,14 +687,14 @@ async function storedPolicy(
         undefined,
         signal,
       );
-      return signaturePolicyOf(document.header);
+      return { versions: document.header.protocolVersions ?? undefined };
     }
     const meta = await stores.documentMetaCache.getDocumentMeta(
       documentId,
       branch,
       signal,
     );
-    return signaturePolicyOf(meta.protocolVersions);
+    return { versions: meta.protocolVersions };
   } catch (error) {
     if (DocumentNotFoundError.isError(error)) {
       return undefined;
@@ -611,17 +727,22 @@ function candidate(action: Action, stream: Stream): Candidate {
     action,
     stream,
     opId: opId(action.id),
-    synthesizedOpId: SYNTHESIZING_TYPES.has(action.type)
-      ? opId(synthesizedActionId(action.id))
-      : undefined,
+    // Only base-reducer 1 and 2 synthesize, under the hashed id.
+    synthesizedOpIds: SYNTHESIZING_TYPES.has(action.type)
+      ? [opId(synthesizedActionId(action.id, "hashed"))]
+      : [],
   };
 }
 
+function liveSynthesizedOpId(
+  entry: Candidate,
+  live: Set<string>,
+): string | undefined {
+  return entry.synthesizedOpIds.find((id) => live.has(id));
+}
+
 function isLive(entry: Candidate, live: Set<string>): boolean {
-  return (
-    live.has(entry.opId) ||
-    (entry.synthesizedOpId !== undefined && live.has(entry.synthesizedOpId))
-  );
+  return live.has(entry.opId) || liveSynthesizedOpId(entry, live) !== undefined;
 }
 
 function mutationStream(action: Action, job: Job): Stream {

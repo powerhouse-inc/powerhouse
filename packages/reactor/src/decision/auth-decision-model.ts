@@ -8,6 +8,7 @@ import type {
   PHAuthState,
   PHDocument,
   PHDocumentState,
+  ReducerFor,
 } from "@powerhousedao/shared/document-model";
 import {
   applyAuthAction,
@@ -24,6 +25,7 @@ import {
   normalizeDocumentModelVersion,
   referencedGroupIds,
 } from "@powerhousedao/shared/document-model";
+import { stateReducerOrRefusal } from "../protocol/gate.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type {
   DecisionModel,
@@ -182,6 +184,29 @@ function applyModelOperation(
 }
 
 /**
+ * Base-reducer 3: the state reducer registered for the document's own type, at
+ * its stamped version. Unresolvable, it throws as the executor does, rather
+ * than applying nothing and letting the base state satisfy a condition.
+ */
+function modelStateReducers(
+  registry: IDocumentModelRegistry,
+  document: PHDocument,
+): ReducerFor {
+  const version = normalizeDocumentModelVersion(
+    (document.state as { document?: { version?: number } }).document?.version,
+  );
+  const module = registry.getModule(document.header.documentType, version);
+  const reducer = stateReducerOrRefusal(
+    module.reducer,
+    document.header.id,
+    document.header.documentType,
+    version,
+    document.header.protocolVersions,
+  );
+  return () => reducer;
+}
+
+/**
  * The auth model extended with a derived groups projection: the streams it
  * reads are the group documents the folded grant list names, so adding a
  * grant that names a new group pulls that group's stream into the read-set.
@@ -196,6 +221,8 @@ function groupsProjection(
 
     apply: (document, operation) =>
       applyGroupOperation(registry, document, operation),
+
+    scopeReducer: (document) => modelStateReducers(registry, document),
 
     query: (model) =>
       referencedGroupIds(model.auth?.grants ?? []).map((id) => ({
@@ -269,6 +296,8 @@ export function authConditionsDecisionModel(
 
     foldEvaluatedScope: (document, operation) =>
       applyModelOperation(registry, document, operation),
+
+    evaluatedScopeReducer: (document) => modelStateReducers(registry, document),
 
     evaluatesScope() {
       return true;

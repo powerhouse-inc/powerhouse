@@ -20,6 +20,7 @@ import { Pool } from "pg";
 import { expect, vi } from "vitest";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { ReactorClient } from "../../../src/client/reactor-client.js";
+import { resolveFeatureFlags } from "../../../src/core/feature-flags.js";
 import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../../src/core/reactor-client-builder.js";
 import type {
@@ -1120,7 +1121,12 @@ export function manifestWithout(protocol: string, sequence = 0): PeerManifest {
 
 /** The full local manifest, as the same peer announces it after upgrading. */
 export function fullManifest(sequence = 1): PeerManifest {
-  return localPeerManifest(PEER_CAPABILITIES, {}, undefined, sequence);
+  return localPeerManifest(
+    PEER_CAPABILITIES,
+    resolveFeatureFlags(),
+    undefined,
+    sequence,
+  );
 }
 
 export const WRITE_READY = ReactorEventTypes.JOB_WRITE_READY;

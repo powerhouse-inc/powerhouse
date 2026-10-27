@@ -1,6 +1,7 @@
 import {
   DriveClient,
   DriveClientFacade,
+  type CopyNodeOptions,
   type IDriveReadClient,
   type IDriveWriteClient,
   type NodeWriteHandle,
@@ -260,9 +261,16 @@ export class RoutingDriveWriteClient implements IDriveWriteClient {
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<WriteHandle> {
     return this.onDrive("drives.copyNode", driveIdentifier, (drives) =>
-      drives.copyNode(driveIdentifier, srcNodeId, targetParentFolderId, signal),
+      drives.copyNode(
+        driveIdentifier,
+        srcNodeId,
+        targetParentFolderId,
+        signal,
+        options,
+      ),
     );
   }
 

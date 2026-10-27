@@ -1,6 +1,8 @@
-import type {
-  Operation,
-  PHDocument,
+import {
+  createReducer,
+  type Operation,
+  type PHDocument,
+  type Reducer,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,15 +23,15 @@ import {
 
 const DOC_TYPE = "powerhouse/document-model";
 
+/** Applies every operation and leaves state as it was. */
+const keepsState = createReducer(() => undefined);
+
 function makeConfig(): WriteCacheConfig {
   return { maxDocuments: 10, ringBufferSize: 5, keyframeInterval: 100 };
 }
 
 function makeVersionedRegistry(
-  getModuleFn: (
-    docType: string,
-    version?: number,
-  ) => { reducer: (doc: PHDocument) => PHDocument },
+  getModuleFn: (docType: string, version?: number) => { reducer: Reducer },
   computeUpgradePathFn?: (
     docType: string,
     from: number,
@@ -84,8 +86,8 @@ describe("KyselyWriteCache D7 - cold rebuild with validated upgrades", () => {
   it("uses upgradePath when manifest is registered and fromVersion>0", async () => {
     const docId = "d7-manifest-test";
 
-    const spyV1Reducer = vi.fn().mockImplementation((doc: PHDocument) => doc);
-    const spyV2Reducer = vi.fn().mockImplementation((doc: PHDocument) => doc);
+    const spyV1Reducer = createReducer(vi.fn());
+    const spyV2Reducer = createReducer(vi.fn());
 
     const getModuleFn = vi
       .fn()
@@ -179,7 +181,7 @@ describe("KyselyWriteCache D7 - cold rebuild with validated upgrades", () => {
     const docId = "d7-no-manifest-with-state";
 
     const registry = makeVersionedRegistry((_dt, _v) => ({
-      reducer: (doc: PHDocument) => doc,
+      reducer: keepsState,
     }));
 
     cache = new KyselyWriteCache(
@@ -219,7 +221,7 @@ describe("KyselyWriteCache D7 - cold rebuild with validated upgrades", () => {
     const docId = "d7-no-manifest-no-state";
 
     const registry = makeVersionedRegistry((_dt, _v) => ({
-      reducer: (doc: PHDocument) => doc,
+      reducer: keepsState,
     }));
 
     cache = new KyselyWriteCache(
@@ -269,22 +271,14 @@ describe("KyselyWriteCache D7 - cold rebuild with validated upgrades", () => {
     const v1ReducerCalls: number[] = [];
     const v2ReducerCalls: number[] = [];
 
-    const v1Reducer = vi
-      .fn()
-      .mockImplementation(
-        (doc: PHDocument, action: { input: { index?: number } }) => {
-          v1ReducerCalls.push(action?.input?.index ?? -1);
-          return doc;
-        },
-      );
-    const v2Reducer = vi
-      .fn()
-      .mockImplementation(
-        (doc: PHDocument, action: { input: { index?: number } }) => {
-          v2ReducerCalls.push(action?.input?.index ?? -1);
-          return doc;
-        },
-      );
+    const v1Reducer = createReducer((_state, action) => {
+      v1ReducerCalls.push((action.input as { index?: number })?.index ?? -1);
+      return undefined;
+    });
+    const v2Reducer = createReducer((_state, action) => {
+      v2ReducerCalls.push((action.input as { index?: number })?.index ?? -1);
+      return undefined;
+    });
 
     const getModuleFn = vi
       .fn()
@@ -408,7 +402,7 @@ describe("KyselyWriteCache D8 - warm rebuild version pinning", () => {
     const getModuleFn = vi
       .fn()
       .mockImplementation((_dt: string, version?: number) => ({
-        reducer: (doc: PHDocument) => doc,
+        reducer: keepsState,
         version,
       }));
 
@@ -481,10 +475,10 @@ describe("KyselyWriteCache D8 - warm rebuild version pinning", () => {
     const getModuleFn = vi
       .fn()
       .mockImplementation((_dt: string, _version?: number) => ({
-        reducer: (doc: PHDocument) => {
+        reducer: createReducer(() => {
           coldRebuildSpy();
-          return doc;
-        },
+          return undefined;
+        }),
       }));
 
     const registry = makeVersionedRegistry(
@@ -576,7 +570,7 @@ describe("KyselyWriteCache D8 - warm rebuild version pinning", () => {
     const getModuleFn = vi
       .fn()
       .mockImplementation((_dt: string, _version?: number) => ({
-        reducer: (doc: PHDocument) => doc,
+        reducer: keepsState,
       }));
 
     const registry = makeVersionedRegistry(
@@ -660,17 +654,13 @@ describe("KyselyWriteCache D9 - upgrade reducers run at the boundary", () => {
   it("applies the upgrade reducer to boundary state, not initial state", async () => {
     const docId = "d9-boundary-state";
 
-    const v1Reducer = vi.fn().mockImplementation((doc: PHDocument) => {
-      const state = doc.state as unknown as { global: { items: string[] } };
-      return {
-        ...doc,
-        state: {
-          ...doc.state,
-          global: { ...state.global, items: [...state.global.items, "x"] },
-        },
-      } as PHDocument;
+    const v1Reducer = createReducer((state) => {
+      (state as unknown as { global: { items: string[] } }).global.items.push(
+        "x",
+      );
+      return undefined;
     });
-    const v2Reducer = vi.fn().mockImplementation((doc: PHDocument) => doc);
+    const v2Reducer = keepsState;
 
     const upgradeReducer = (doc: PHDocument) => {
       const state = doc.state as unknown as {
@@ -826,7 +816,7 @@ describe("KyselyWriteCache - held-back upgrades respect document-scope order", (
 
     // no manifest: the validated upgrade falls back to its initialState
     const registry = makeVersionedRegistry((_dt, _v) => ({
-      reducer: (doc: PHDocument) => doc,
+      reducer: keepsState,
     }));
 
     cache = new KyselyWriteCache(
@@ -886,7 +876,7 @@ describe("KyselyWriteCache - held-back upgrades respect document-scope order", (
     const docId = "order-delete-after-upgrade-global";
 
     const registry = makeVersionedRegistry((_dt, _v) => ({
-      reducer: (doc: PHDocument) => doc,
+      reducer: keepsState,
     }));
 
     cache = new KyselyWriteCache(
@@ -1038,7 +1028,7 @@ describe("KyselyWriteCache - positional reads below the upgrade boundary", () =>
     const docId = "positional-below-boundary";
 
     const registry = makeVersionedRegistry(
-      (_dt, _v) => ({ reducer: (doc: PHDocument) => doc }),
+      (_dt, _v) => ({ reducer: keepsState }),
       () => [],
     );
 
@@ -1064,7 +1054,7 @@ describe("KyselyWriteCache - positional reads below the upgrade boundary", () =>
     const docId = "positional-head-read";
 
     const registry = makeVersionedRegistry(
-      (_dt, _v) => ({ reducer: (doc: PHDocument) => doc }),
+      (_dt, _v) => ({ reducer: keepsState }),
       () => [],
     );
 
@@ -1088,7 +1078,7 @@ describe("KyselyWriteCache - positional reads below the upgrade boundary", () =>
     const docId = "positional-at-boundary";
 
     const registry = makeVersionedRegistry(
-      (_dt, _v) => ({ reducer: (doc: PHDocument) => doc }),
+      (_dt, _v) => ({ reducer: keepsState }),
       () => [],
     );
 

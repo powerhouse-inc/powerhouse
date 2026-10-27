@@ -1,9 +1,12 @@
 import { getPHStore } from "../hooks/ph-store.js";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   BatchExecutionRequest,
   BatchExecutionResult,
   ConsistencyToken,
+  CreateProtocolVersionsOptions,
   DocumentChangeEvent,
+  NewDocumentOptions,
   DocumentChangeType,
   DocumentRelationship,
   ExecutionJobPlan,
@@ -17,11 +20,15 @@ import type {
   PagingOptions,
   PropagationMode,
   SearchFilter,
+  UndoRedoAvailability,
+  UndoRedoTargets,
   ViewFilter,
   WriteHandle,
   WriteReceipt,
 } from "@powerhousedao/reactor";
 import type {
+  BaseReducerCapabilities,
+  CreateDocumentActionInput,
   ISigner,
   PHDocumentState,
   ProtocolVersions,
@@ -30,8 +37,16 @@ import type {
 import {
   actions,
   actionSigningTarget,
-  isSignaturePolicy,
+  headNewDocument,
   normalizeDocumentModelVersion,
+  capabilitiesOf,
+  optionalBaseReducerCapabilities,
+  serializeByKey,
+  undoCapabilitiesOf,
+  undoNeedsTargets,
+  undoRedoActions,
+  undoRedoAvailabilityOf,
+  selectDocumentModelModule,
   toTransportAction,
 } from "@powerhousedao/shared/document-model";
 import type {
@@ -49,7 +64,6 @@ import {
   PropagationMode as GqlPropagationMode,
   PhDocumentFieldsFragmentDoc,
   type DocumentRelationshipFieldsFragment,
-  type GetCreateDefaultsQuery,
   type GetDocumentQuery,
   type JobInfoFieldsFragment,
   type OperationsFilterInput,
@@ -78,6 +92,10 @@ import {
   type BearerTokenProvider,
 } from "./auth.js";
 import {
+  readCreateProtocolVersions,
+  readCreateSignaturePolicy,
+} from "./create-defaults.js";
+import {
   GraphQLDriveNodeSource,
   GraphQLDriveReadClient,
 } from "./drive-nodes.js";
@@ -85,6 +103,7 @@ import {
   BatchJobFailedError,
   GraphQLOperationNotSupportedError,
   GraphQLWrongBackendError,
+  queriesUnknownField,
 } from "./errors.js";
 import {
   GetDocumentAtConsistencyDocument,
@@ -213,6 +232,11 @@ export type GraphQLReactorClientOptions = {
   driveIdFor?: (call: DriveIdCall) => string | undefined;
 };
 
+// Always known here, so a light client can head a drive without registering it.
+const BUILT_IN_MODELS = [
+  driveDocumentModelModule as unknown as DocumentModelModule,
+];
+
 /** Paging defaults, matching the reactor's own client. */
 const defaultPaging: PagingOptions = { cursor: "0", limit: 100 };
 
@@ -269,6 +293,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private readonly documentModels: () => readonly DocumentModelModule<any>[];
   private readonly signer: ISigner | undefined;
   private readonly driveIdFor: GraphQLReactorClientOptions["driveIdFor"];
+  private readonly undoRedoChains = new Map<string, Promise<unknown>>();
   private stopRealtime: (() => void) | undefined;
   private realtimeStarted = false;
   private realtimeGeneration = 0;
@@ -846,6 +871,172 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   }
 
   /**
+   * Undoes the last applied operation of `scope` under this client's own
+   * signature: UNDO below base-reducer 3; on it, a RETRACT of the target the
+   * Switchboard resolves with {@link undoRedoTargets}. One at a time per
+   * document, scope and branch. A stale target is refused, not re-resolved.
+   */
+  undo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.undoOrRedo<TDocument>(
+      "UNDO",
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+  }
+
+  /** Redoes the last undo of `scope`; see {@link undo}. */
+  redo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.undoOrRedo<TDocument>(
+      "REDO",
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+  }
+
+  /** Exact on base-reducer 3, from the targets the Switchboard resolves. */
+  async undoRedoAvailability(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability> {
+    const { caps, header } = await this.undoCapabilities(
+      documentIdentifier,
+      branch,
+      signal,
+    );
+    const targets = undoNeedsTargets(caps)
+      ? await this.undoRedoTargets(
+          documentIdentifier,
+          scope,
+          { branch },
+          signal,
+        )
+      : undefined;
+    // The Switchboard serves only what the caller may read.
+    return undoRedoAvailabilityOf(
+      caps,
+      targets,
+      header.revision[scope] ?? 0,
+      true,
+    );
+  }
+
+  /**
+   * The rows a base-reducer 3 undo and redo would retract, resolved by the
+   * Switchboard as the caller. A Switchboard without the query is refused
+   * with {@link GraphQLOperationNotSupportedError}. `view.subject` is not
+   * sent: the Switchboard reads the caller from the bearer.
+   */
+  async undoRedoTargets(
+    documentIdentifier: string,
+    scope: string = "global",
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets> {
+    try {
+      const { undoRedoTargets } = await this.sdk.GetUndoRedoTargets(
+        { documentIdOrSlug: documentIdentifier, scope, branch: view?.branch },
+        undefined,
+        signal,
+      );
+      return {
+        ...(undoRedoTargets.undoTarget
+          ? { undoTarget: undoRedoTargets.undoTarget }
+          : {}),
+        ...(undoRedoTargets.redoTarget
+          ? { redoTarget: undoRedoTargets.redoTarget }
+          : {}),
+      };
+    } catch (error) {
+      if (queriesUnknownField(error, "undoRedoTargets")) {
+        throw new GraphQLOperationNotSupportedError(
+          "undoRedoTargets",
+          "the Switchboard predates the undoRedoTargets query",
+        );
+      }
+      throw error;
+    }
+  }
+
+  private undoOrRedo<TDocument extends PHDocument>(
+    type: "UNDO" | "REDO",
+    documentIdentifier: string,
+    scope: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+  ): Promise<TDocument> {
+    return serializeByKey(
+      this.undoRedoChains,
+      JSON.stringify([documentIdentifier, scope, branch]),
+      async () => {
+        const { caps } = await this.undoCapabilities(
+          documentIdentifier,
+          branch,
+          signal,
+        );
+        const targets = undoNeedsTargets(caps)
+          ? await this.undoRedoTargets(
+              documentIdentifier,
+              scope,
+              { branch },
+              signal,
+            )
+          : undefined;
+        return this.execute<TDocument>(
+          documentIdentifier,
+          branch,
+          undoRedoActions(caps, type, scope, targets),
+          signal,
+        );
+      },
+    );
+  }
+
+  /** An older Switchboard serves no header versions; then CREATE_DOCUMENT names them, else it is 1. */
+  private async undoCapabilities(
+    documentIdentifier: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+  ): Promise<{ caps: BaseReducerCapabilities; header: PHDocument["header"] }> {
+    const { header } = await this.get(documentIdentifier, { branch }, signal);
+    const fromHeader = optionalBaseReducerCapabilities(header);
+    if (fromHeader) {
+      return { caps: fromHeader, header };
+    }
+    const page = await this.getOperations(
+      documentIdentifier,
+      { branch, scopes: ["document"] },
+      undefined,
+      { cursor: "0", limit: 1 },
+      signal,
+    );
+    const create = page.results.at(0)?.action;
+    const input =
+      create?.type === "CREATE_DOCUMENT"
+        ? (create.input as Partial<CreateDocumentActionInput>)
+        : undefined;
+    return {
+      caps: undoCapabilitiesOf(header, input) ?? capabilitiesOf(1),
+      header,
+    };
+  }
+
+  /**
    * Runs multiple mutation jobs in dependency order over the Switchboard's
    * `executeBatch` mutation and waits for all to settle, returning the result
    * shaped like `IReactor.executeBatch`'s so the reference `DriveClient`
@@ -959,70 +1150,43 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     }
   }
 
-  /**
-   * The policy the Switchboard gives a new document, read from its
-   * `createDefaults` query. A Switchboard without that query is refused with
-   * {@link GraphQLOperationNotSupportedError}: a guessed default would
-   * under-sign on a stricter host.
-   */
-  async getCreateSignaturePolicy(): Promise<SignaturePolicy> {
-    const defaults = await this.createDefaults("getCreateSignaturePolicy");
-    return defaults.signaturePolicy;
+  /** See {@link readCreateSignaturePolicy}. */
+  getCreateSignaturePolicy(): Promise<SignaturePolicy> {
+    return readCreateSignaturePolicy(this.sdk);
   }
 
-  /**
-   * The protocol versions the Switchboard selects for a new document under
-   * `parentIdentifier`, read from its `createDefaults` query. A parent the
-   * caller may not read is refused by the server, never answered as if none
-   * was named; a Switchboard without the query is refused with
-   * {@link GraphQLOperationNotSupportedError}.
-   */
-  async getCreateProtocolVersions(
-    parentIdentifier?: string,
+  /** See {@link readCreateProtocolVersions}; fitted to `documentModels`. */
+  getCreateProtocolVersions(
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    const defaults = await this.createDefaults(
-      "getCreateProtocolVersions",
-      parentIdentifier,
+    return readCreateProtocolVersions(
+      this.sdk,
+      options,
+      this.documentModels(),
       signal,
     );
-    return defaults.protocolVersions;
   }
 
-  private async createDefaults(
-    operation: string,
-    parentIdOrSlug?: string,
+  /** See {@link IReactorClient.newDocument}; the module comes from `documentModels`. */
+  async newDocument<TDocument extends PHDocument = PHDocument>(
+    documentType: string,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
-  ): Promise<{
-    signaturePolicy: SignaturePolicy;
-    protocolVersions: ProtocolVersions;
-  }> {
-    let result: GetCreateDefaultsQuery;
-    try {
-      result = await this.sdk.GetCreateDefaults(
-        { parentIdOrSlug },
-        undefined,
+  ): Promise<TDocument> {
+    const module = selectDocumentModelModule(
+      [...this.documentModels(), ...BUILT_IN_MODELS],
+      documentType,
+      options?.documentModelVersion,
+    );
+    const [policy, versions] = await Promise.all([
+      options?.signaturePolicy ?? this.getCreateSignaturePolicy(),
+      this.getCreateProtocolVersions(
+        { documentType, parentIdentifier: options?.parentIdentifier },
         signal,
-      );
-    } catch (error) {
-      if (queriesUnknownField(error, "createDefaults")) {
-        throw new GraphQLOperationNotSupportedError(
-          operation,
-          "the Switchboard predates the createDefaults query",
-        );
-      }
-      throw error;
-    }
-    const { signaturePolicy, protocolVersions } = result.createDefaults;
-    if (!isSignaturePolicy(signaturePolicy)) {
-      throw new Error(
-        `The Switchboard answered an unknown create signature policy: ${signaturePolicy}`,
-      );
-    }
-    return {
-      signaturePolicy,
-      protocolVersions: protocolVersionsFrom(protocolVersions),
-    };
+      ),
+    ]);
+    return headNewDocument(module, options, policy, versions) as TDocument;
   }
 
   /**
@@ -2249,25 +2413,6 @@ function jobInfoFromGql(job: JobInfoFieldsFragment): JobInfo {
 }
 
 /**
- * Whether a request failed because the server's schema has no such root field:
- * a Switchboard older than the field. graphql-js validation words this the same
- * under every gateway the Switchboard can run.
- */
-function queriesUnknownField(error: unknown, field: string): boolean {
-  const errors = (error as { response?: { errors?: unknown } } | null)?.response
-    ?.errors;
-  if (!Array.isArray(errors)) {
-    return false;
-  }
-  const prefix = `Cannot query field "${field}" on type "`;
-  return errors.some(
-    (entry) =>
-      typeof (entry as { message?: unknown } | null)?.message === "string" &&
-      (entry as { message: string }).message.startsWith(prefix),
-  );
-}
-
-/**
  * The header a Switchboard's drive middleware and load balancer key on. A
  * request carries it only when it is known to belong to that one drive: the
  * server answers any drive it does not own with 421.
@@ -2325,25 +2470,6 @@ function wrongBackendErrorOf(
     payload,
     { cause: error },
   );
-}
-
-/** Protocol versions as the server sent them; anything but a version map throws. */
-function protocolVersionsFrom(value: unknown): ProtocolVersions {
-  if (!isPlainObject(value)) {
-    throw new Error(
-      "The Switchboard answered malformed create protocol versions",
-    );
-  }
-  const versions: ProtocolVersions = {};
-  for (const [protocol, version] of Object.entries(value)) {
-    if (typeof version !== "number" || !Number.isInteger(version)) {
-      throw new Error(
-        `The Switchboard answered a malformed version for protocol ${protocol}`,
-      );
-    }
-    versions[protocol] = version;
-  }
-  return versions;
 }
 
 function isSettled(job: JobInfo): boolean {

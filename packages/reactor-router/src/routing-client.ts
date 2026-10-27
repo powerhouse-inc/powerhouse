@@ -7,16 +7,19 @@ import {
   type BatchLoadRequest,
   type BatchLoadResult,
   type ConsistencyToken,
-  type CreateDocumentOptions,
+  type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type DocumentRelationship,
   type IReactorClient,
   type JobInfo,
+  type NewDocumentOptions,
   type OperationFilter,
   type PagedResults,
   type PagingOptions,
   type PropagationMode,
   type SearchFilter,
+  type UndoRedoAvailability,
+  type UndoRedoTargets,
   type UpgradeDocumentOptions,
   type ViewFilter,
 } from "@powerhousedao/reactor";
@@ -169,10 +172,18 @@ export class RoutingReactorClient implements IReactorClient {
   }
 
   getCreateProtocolVersions(
-    parentIdentifier?: string,
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    return this.read.getCreateProtocolVersions(parentIdentifier, signal);
+    return this.read.getCreateProtocolVersions(options, signal);
+  }
+
+  newDocument<TDocument extends PHDocument = PHDocument>(
+    documentModelType: string,
+    options?: NewDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.read.newDocument<TDocument>(documentModelType, options, signal);
   }
 
   getMany<TDocument extends PHDocument>(
@@ -354,7 +365,7 @@ export class RoutingReactorClient implements IReactorClient {
    */
   async createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
     warnOnce(
@@ -372,10 +383,10 @@ export class RoutingReactorClient implements IReactorClient {
 
   async createEmptyAsync(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    const document = await this.write.emptyDocument(
+    const document = await this.read.newDocument(
       documentModelType,
       options,
       signal,
@@ -486,6 +497,61 @@ export class RoutingReactorClient implements IReactorClient {
     const batch = await this.write.executeBatch(request, signal);
     await batch.readable;
     return { jobs: batch.jobs };
+  }
+
+  /** The owning backend resolves the target and signs the write. */
+  async undo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const handle = await this.write.undo(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+    return handle.document<TDocument>(undefined, signal);
+  }
+
+  /** See {@link undo}. */
+  async redo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const handle = await this.write.redo(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+    return handle.document<TDocument>(undefined, signal);
+  }
+
+  undoRedoTargets(
+    documentIdentifier: string,
+    scope?: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets> {
+    return this.write.undoRedoTargets(documentIdentifier, scope, view, signal);
+  }
+
+  undoRedoAvailability(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability> {
+    return this.write.undoRedoAvailability(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
   }
 
   /**

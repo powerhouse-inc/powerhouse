@@ -1,15 +1,27 @@
-import type { Action, Operation } from "@powerhousedao/shared/document-model";
+import {
+  compareActionIds,
+  generateActionId,
+  undoTarget,
+  type Action,
+  type Operation,
+  type PHDocumentHeader,
+} from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import {
+  canUndoOn3,
   editedSince,
   effectiveOperations,
   groupedAction,
   headIndex,
+  liveOperations,
   newUndoGroup,
+  planRetraction,
   planUndo,
   redoAction,
   redoActions,
+  retractions,
   undoGroupOf,
+  undoCapabilities,
   type UndoPolicy,
 } from "./undo-plan.js";
 
@@ -149,6 +161,18 @@ describe("grouped edits", () => {
     expect(undoGroupOf(op(0, "ADD_STEP").action)).toBeUndefined();
   });
 
+  it("reads the group of an id stored with the old prefix", () => {
+    const action = { ...op(0, "ADD_STEP").action, id: "undo-group:g1:x" };
+    expect(undoGroupOf(action)).toBe("g1");
+  });
+
+  it("leads a grouped id with a fresh action id, so it sorts by creation", () => {
+    const grouped = groupedAction(op(0, "ADD_STEP").action, newUndoGroup());
+    const plain = generateActionId();
+    expect(compareActionIds(grouped.id, plain)).toBe(-1);
+    expect(grouped.id.split("~ug:")[0]).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
   it("redoes a group as a new group of fresh actions", () => {
     const actions = [
       groupedAction(op(0, "ADD_STEP").action, "g1"),
@@ -176,10 +200,165 @@ describe("effectiveOperations", () => {
       op(4, "NOOP"),
     ];
     expect(
-      effectiveOperations(ops, 2).map((entry) => entry.action.type),
+      effectiveOperations(ops, "noop-chain").map((entry) => entry.action.type),
     ).toEqual(["ADD_STEP"]);
     // So the next undo reaches the step itself.
-    expect(planUndo(effectiveOperations(ops, 2), policy)?.undos).toBe(1);
+    expect(
+      planUndo(effectiveOperations(ops, "noop-chain"), policy)?.undos,
+    ).toBe(1);
+  });
+});
+
+describe("planRetraction on base-reducer 3", () => {
+  // Skip is only a reshuffle's rewind on base-reducer 3, so 0 on every row.
+  const row = (index: number, type: string, extra: Partial<Operation> = {}) =>
+    op(index, type, { skip: 0, ...extra });
+  const retraction = (index: number, target: string): Operation => {
+    const base = row(index, "RETRACT");
+    return { ...base, action: { ...base.action, input: { target } } };
+  };
+  const ids = (operations: readonly Operation[]) =>
+    operations.map((operation) => operation.action.id);
+  const grouped = (operation: Operation, group: string): Operation => ({
+    ...operation,
+    action: groupedAction(operation.action, group),
+  });
+  // Appends one RETRACT per target, as the batch the editor sends lands.
+  const land = (stream: readonly Operation[], targets: readonly string[]) => {
+    const next = [...stream];
+    for (const target of targets) {
+      next.push(retraction(headIndex(next) + 1, target));
+    }
+    return next;
+  };
+
+  it("retracts the last edit by id", () => {
+    const ops = [row(0, "ADD_STEP"), row(1, "SET_STEP_CONFIG")];
+    expect(ids(liveOperations(ops))).toEqual(["action-0", "action-1"]);
+    expect(planRetraction(ops, policy)).toEqual(["action-1"]);
+  });
+
+  it("drops retracted rows and the RETRACTs themselves", () => {
+    const ops = [
+      row(0, "ADD_STEP"),
+      row(1, "SET_STEP_CONFIG"),
+      retraction(2, "action-1"),
+    ];
+    expect(ids(liveOperations(ops))).toEqual(["action-0"]);
+    expect(planRetraction(ops, policy)).toEqual(["action-0"]);
+  });
+
+  it("keeps a row a redo revived", () => {
+    const ops = [
+      row(0, "ADD_STEP"),
+      row(1, "SET_STEP_CONFIG"),
+      retraction(2, "action-1"),
+      retraction(3, "action-2"),
+    ];
+    expect(ids(liveOperations(ops))).toEqual(["action-0", "action-1"]);
+    expect(planRetraction(ops, policy)).toEqual(["action-1"]);
+  });
+
+  it("passes over denied rows, NOOPs and the runtime's facts", () => {
+    const denied = { deniedReason: "no grant permits this operation" };
+    const ops = [
+      row(0, "ADD_STEP"),
+      row(1, "UPDATE_STEP"),
+      row(2, "SET_STEP_CONFIG", denied),
+      row(3, "NOOP"),
+      row(4, "SET_LAST_TEST"),
+      row(5, "SET_LAST_RUN"),
+    ];
+    expect(planRetraction(ops, policy)).toEqual(["action-1"]);
+  });
+
+  it("never retracts a base action", () => {
+    const ops = [
+      row(0, "ADD_STEP"),
+      row(1, "SET_NAME"),
+      row(2, "SET_PREFERRED_EDITOR"),
+    ];
+    expect(ids(liveOperations(ops))).toEqual(["action-0"]);
+    expect(planRetraction(ops, policy)).toEqual(["action-0"]);
+  });
+
+  it("retracts a live row whether or not it threw", () => {
+    const ops = [
+      row(0, "ADD_STEP"),
+      row(1, "SET_STEP_CONFIG", { error: "Step not found" }),
+    ];
+    expect(planRetraction(ops, policy)).toEqual(["action-1"]);
+  });
+
+  it("retracts every live row of the last edit's group together", () => {
+    const group = newUndoGroup();
+    const ops = [
+      row(0, "SET_WORKFLOW_NAME"),
+      grouped(row(1, "ADD_STEP"), group),
+      row(2, "SET_LAST_TEST"),
+      grouped(row(3, "ADD_EDGE"), group),
+      row(4, "SET_LAST_RUN"),
+    ];
+    const targets = planRetraction(ops, policy)!;
+    expect(targets).toEqual([ops[1].action.id, ops[3].action.id]);
+    expect(planRetraction(land(ops, targets), policy)).toEqual(["action-0"]);
+  });
+
+  // A rename sends SET_WORKFLOW_NAME, then SET_NAME, ungrouped.
+  it("undoes a rename and then the grouped edit before it, as the reactor would", () => {
+    const group = newUndoGroup();
+    const ops = [
+      grouped(row(0, "ADD_STEP"), group),
+      grouped(row(1, "ADD_EDGE"), group),
+      row(2, "SET_WORKFLOW_NAME"),
+      row(3, "SET_NAME"),
+    ];
+    const all = new Set(ids(ops));
+    expect(planRetraction(ops, policy)).toEqual(["action-2"]);
+    expect(undoTarget(ops, all)).toBe("action-2");
+
+    const after = land(ops, ["action-2"]);
+    expect(planRetraction(after, policy)).toEqual([
+      ops[0].action.id,
+      ops[1].action.id,
+    ]);
+  });
+
+  it("brings the edit back when redo retracts the undo's RETRACTs", () => {
+    const group = newUndoGroup();
+    const ops = [
+      row(0, "SET_WORKFLOW_NAME"),
+      grouped(row(1, "ADD_STEP"), group),
+      grouped(row(2, "ADD_EDGE"), group),
+    ];
+    const targets = planRetraction(ops, policy)!;
+    const undone = land(ops, targets);
+    expect(ids(liveOperations(undone))).toEqual(["action-0"]);
+
+    const undoRows = undone.slice(ops.length).map((entry) => entry.action.id);
+    const redone = land(undone, undoRows);
+    expect(ids(liveOperations(redone))).toEqual(ids(ops));
+    expect(planRetraction(redone, policy)).toEqual(targets);
+  });
+
+  it("can undo while a live edit is left", () => {
+    const ops = [row(0, "ADD_STEP"), row(1, "SET_LAST_RUN")];
+    expect(canUndoOn3([...ops, row(2, "NOOP")], policy)).toBe(true);
+    expect(canUndoOn3([...ops, retraction(2, "action-0")], policy)).toBe(false);
+    expect(canUndoOn3([], policy)).toBe(false);
+  });
+
+  it("sends one RETRACT per id", () => {
+    expect(
+      retractions(["action-1", "action-2"]).map((action) => [
+        action.type,
+        action.scope,
+        action.input,
+      ]),
+    ).toEqual([
+      ["RETRACT", "global", { target: "action-1" }],
+      ["RETRACT", "global", { target: "action-2" }],
+    ]);
   });
 });
 
@@ -205,5 +384,47 @@ describe("redo", () => {
       input: undone.input,
     });
     expect(again.id).not.toBe(undone.id);
+  });
+});
+
+describe("undoCapabilities", () => {
+  const header = (protocolVersions?: Record<string, number>) =>
+    ({ id: "doc", protocolVersions }) as PHDocumentHeader;
+
+  it("reads a header without a base-reducer version as 1", () => {
+    expect(undoCapabilities(header()).version).toBe(1);
+    expect(undoCapabilities(header({})).version).toBe(1);
+  });
+
+  it("reads a known version", () => {
+    expect(undoCapabilities(header({ "base-reducer": 2 })).version).toBe(2);
+    expect(undoCapabilities(header({ "base-reducer": 3 })).version).toBe(3);
+  });
+
+  it("refuses an unknown version", () => {
+    expect(
+      () => undoCapabilities(header({ "base-reducer": 7 })).version,
+    ).toThrow("unknown base-reducer protocol version 7");
+  });
+
+  it("reads a header without a version from CREATE_DOCUMENT", () => {
+    const create = (input: unknown): Operation => {
+      const base = op(0, "CREATE_DOCUMENT");
+      return { ...base, action: { ...base.action, input } };
+    };
+    expect(
+      undoCapabilities(
+        header(),
+        create({ protocolVersions: { "base-reducer": 3 } }),
+      ).version,
+    ).toBe(3);
+    expect(undoCapabilities(header(), create({})).version).toBe(1);
+    expect(
+      undoCapabilities(
+        header({ "base-reducer": 2 }),
+        create({ protocolVersions: { "base-reducer": 3 } }),
+      ).version,
+    ).toBe(2);
+    expect(undoCapabilities(header(), op(0, "ADD_STEP")).version).toBe(1);
   });
 });

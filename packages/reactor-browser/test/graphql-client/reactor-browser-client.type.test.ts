@@ -18,15 +18,20 @@ describe("IReactorBrowserClient", () => {
     expect(true).toBe(true);
   });
 
-  it("exposes the seven agreed facade members and the two halves", () => {
+  it("exposes the agreed facade members and the two halves", () => {
     expectTypeOf<keyof IReactorBrowserClient>().toEqualTypeOf<
       | "get"
       | "find"
       | "subscribe"
       | "execute"
       | "getOperations"
+      | "newDocument"
       | "create"
       | "deleteDocument"
+      | "undo"
+      | "redo"
+      | "undoRedoTargets"
+      | "undoRedoAvailability"
       | "read"
       | "write"
     >();

@@ -13,6 +13,7 @@ import { vi, type Mock } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import type { ISettledWatermark } from "../../../src/catch-up/types.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
+import { resolveFeatureFlags } from "../../../src/core/feature-flags.js";
 import type { IReactor } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import { ReactorEventTypes } from "../../../src/events/types.js";
@@ -50,7 +51,7 @@ export const MANIFEST_WITHOUT_PURGE: PeerManifest = localPeerManifest(
 );
 export const FULL_MANIFEST: PeerManifest = localPeerManifest(
   PEER_CAPABILITIES,
-  {},
+  resolveFeatureFlags(),
 );
 
 export type MockReactor = {

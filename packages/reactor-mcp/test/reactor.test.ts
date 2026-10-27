@@ -12,6 +12,11 @@ import {
   type CompactDocumentModelSchema,
 } from "@powerhousedao/reactor-mcp";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type { Action } from "@powerhousedao/shared/document-model";
+import {
+  retract,
+  withSignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelDocument,
@@ -221,6 +226,7 @@ describe("ReactorMcpProvider", () => {
       const doc = await client.get(documentId);
       expect(doc).toBeDefined();
       expect(doc.header.documentType).toBe("powerhouse/document-model");
+      expect(doc.header.protocolVersions?.["base-reducer"]).toBe(3);
     });
 
     it("should create a document in a drive with parentFolder", async () => {
@@ -648,6 +654,360 @@ describe("ReactorMcpProvider", () => {
       expect(result.isError).toBe(true);
       expect(getTextContent(result)).toContain(
         `Action scope "global" does not match operation scope "header"`,
+      );
+    });
+
+    describe("UNDO and REDO", () => {
+      const setName = (name: string) =>
+        documentModelDocumentModelModule.actions.setModelName({ name });
+      const nameOf = async (documentId: string) =>
+        (
+          (await client.get<PHDocument>(documentId)).state as unknown as {
+            global: { name: string };
+          }
+        ).global.name;
+      const globalRows = async (documentId: string) =>
+        (await client.getOperations(documentId, { scopes: ["global"] }))
+          .results;
+      const targetOf = (action: Action) =>
+        (action.input as { target: string }).target;
+
+      async function v3Document(...names: string[]) {
+        const document = await client.createEmpty<PHDocument>(
+          "powerhouse/document-model",
+        );
+        expect(document.header.protocolVersions?.["base-reducer"]).toBe(3);
+        if (names.length > 0) {
+          await client.execute(document.header.id, "main", names.map(setName));
+        }
+        return document.header.id;
+      }
+
+      it("submits one job on base-reducer 3, each step a RETRACT", async () => {
+        const documentId = await v3Document();
+        const execute = vi.spyOn(client.write, "execute");
+        const provider = await createReactorMcpProvider({ client });
+        const result = await provider.tools.addActions.callback({
+          documentId,
+          actions: [
+            setName("first"),
+            setName("second"),
+            setName("third"),
+            { type: "UNDO", input: { count: 2 }, scope: "global" },
+            { type: "REDO", input: {}, scope: "global" },
+          ],
+        });
+
+        expect(result.isError).toBeUndefined();
+        expect(execute).toHaveBeenCalledTimes(1);
+        expect(await nameOf(documentId)).toBe("second");
+        const rows = await globalRows(documentId);
+        expect(rows.map((row) => row.action.type)).toEqual([
+          "SET_MODEL_NAME",
+          "SET_MODEL_NAME",
+          "SET_MODEL_NAME",
+          "RETRACT",
+          "RETRACT",
+          "RETRACT",
+        ]);
+        const [, second, third, undoThird, undoSecond, redo] = rows.map(
+          (row) => row.action,
+        );
+        expect(targetOf(undoThird)).toBe(third.id);
+        expect(targetOf(undoSecond)).toBe(second.id);
+        expect(targetOf(redo)).toBe(undoSecond.id);
+        // One result per input action; the counted UNDO reports its last row.
+        const { results } = result.structuredContent as {
+          results: { index: number; type: string; operationIndex?: number }[];
+        };
+        expect(
+          results.map(({ index, type, operationIndex }) => [
+            index,
+            type,
+            operationIndex,
+          ]),
+        ).toEqual([
+          [0, "SET_MODEL_NAME", 0],
+          [1, "SET_MODEL_NAME", 1],
+          [2, "SET_MODEL_NAME", 2],
+          [3, "UNDO", 4],
+          [4, "REDO", 5],
+        ]);
+      });
+
+      it("resolves the target from the state the document was created with", async () => {
+        const documentId = await v3Document();
+        const { setModelDescription, addModule } =
+          documentModelDocumentModelModule.actions;
+        await client.execute(documentId, "main", [
+          setModelDescription({ description: "d" }),
+          addModule({ id: "m1", name: "m1" }),
+        ]);
+        const provider = await createReactorMcpProvider({ client });
+
+        // Re-applied over the head state, ADD_MODULE throws on its own module.
+        const result = await provider.tools.addActions.callback({
+          documentId,
+          actions: [{ type: "UNDO", input: {}, scope: "global" }],
+        });
+
+        expect(result.isError).toBeUndefined();
+        const [, added, undo] = (await globalRows(documentId)).map(
+          (row) => row.action,
+        );
+        expect(added.type).toBe("ADD_MODULE");
+        expect(targetOf(undo)).toBe(added.id);
+        const { global } = (await client.get<PHDocument>(documentId))
+          .state as unknown as {
+          global: {
+            description: string;
+            specifications: { modules: unknown[] }[];
+          };
+        };
+        expect(global.description).toBe("d");
+        expect(global.specifications[0].modules).toEqual([]);
+      });
+
+      it("retracts an action from earlier in the same call", async () => {
+        const documentId = await v3Document("stored");
+        const provider = await createReactorMcpProvider({ client });
+        const result = await provider.tools.addActions.callback({
+          documentId,
+          actions: [
+            setName("a"),
+            { type: "UNDO", input: {}, scope: "global" },
+            setName("b"),
+          ],
+        });
+
+        expect(result.isError).toBeUndefined();
+        expect(await nameOf(documentId)).toBe("b");
+        const [, a, undo, b] = (await globalRows(documentId)).map(
+          (row) => row.action,
+        );
+        expect([a.type, undo.type, b.type]).toEqual([
+          "SET_MODEL_NAME",
+          "RETRACT",
+          "SET_MODEL_NAME",
+        ]);
+        expect(targetOf(undo)).toBe(a.id);
+
+        // b follows the undo, so there is nothing left to redo.
+        const redo = await provider.tools.addActions.callback({
+          documentId,
+          actions: [{ type: "REDO", input: {}, scope: "global" }],
+        });
+        expect(redo.isError).toBe(true);
+        expect(getTextContent(redo)).toContain(
+          "Cannot redo: nothing to redo in scope history",
+        );
+      });
+
+      it("undoes the call's own rows first, then stored ones, for a count", async () => {
+        const documentId = await v3Document("x");
+        const provider = await createReactorMcpProvider({ client });
+        const result = await provider.tools.addActions.callback({
+          documentId,
+          actions: [
+            setName("a"),
+            { type: "UNDO", input: { count: 2 }, scope: "global" },
+          ],
+        });
+
+        expect(result.isError).toBeUndefined();
+        expect(await nameOf(documentId)).toBe("");
+        const [x, a, undoA, undoX] = (await globalRows(documentId)).map(
+          (row) => row.action,
+        );
+        expect(targetOf(undoA)).toBe(a.id);
+        expect(targetOf(undoX)).toBe(x.id);
+      });
+
+      it("redoes stored undos and the call's own, latest first", async () => {
+        const documentId = await v3Document("x", "y");
+        const provider = await createReactorMcpProvider({ client });
+        const undone = await provider.tools.addActions.callback({
+          documentId,
+          actions: [{ type: "UNDO", input: { count: 2 }, scope: "global" }],
+        });
+        expect(undone.isError).toBeUndefined();
+        expect(await nameOf(documentId)).toBe("");
+
+        const result = await provider.tools.addActions.callback({
+          documentId,
+          actions: [
+            { type: "REDO", input: {}, scope: "global" },
+            { type: "UNDO", input: {}, scope: "global" },
+            { type: "REDO", input: { count: 2 }, scope: "global" },
+          ],
+        });
+
+        expect(result.isError).toBeUndefined();
+        expect(await nameOf(documentId)).toBe("y");
+        const [x, , undoY, undoX, redoX, undoAgain, redoAgain, redoY] = (
+          await globalRows(documentId)
+        ).map((row) => row.action);
+        expect(targetOf(redoX)).toBe(undoX.id);
+        expect(targetOf(undoAgain)).toBe(x.id);
+        expect(targetOf(redoAgain)).toBe(undoAgain.id);
+        expect(targetOf(redoY)).toBe(undoY.id);
+      });
+
+      it("does not undo a base action", async () => {
+        const documentId = await v3Document("x");
+        const provider = await createReactorMcpProvider({ client });
+        const result = await provider.tools.addActions.callback({
+          documentId,
+          actions: [
+            { type: "SET_NAME", input: "renamed", scope: "global" },
+            { type: "UNDO", input: {}, scope: "global" },
+          ],
+        });
+
+        expect(result.isError).toBeUndefined();
+        expect(await nameOf(documentId)).toBe("");
+        const updated = await client.get<PHDocument>(documentId);
+        expect(updated.header.name).toBe("renamed");
+        const [x, , undo] = (await globalRows(documentId)).map(
+          (row) => row.action,
+        );
+        expect(targetOf(undo)).toBe(x.id);
+      });
+
+      it("writes nothing when the job is refused for a later action", async () => {
+        const documentId = await v3Document("x");
+        const before = await globalRows(documentId);
+        const execute = client.write.execute.bind(client.write);
+        vi.spyOn(client.write, "execute").mockImplementation(
+          async (id, branch, actions, ...rest) => {
+            if (actions.some((action) => action.type === "SET_STATE_SCHEMA")) {
+              throw new Error("refused: b");
+            }
+            return execute(id, branch, actions, ...rest);
+          },
+        );
+        const provider = await createReactorMcpProvider({ client });
+        const result = await provider.tools.addActions.callback({
+          documentId,
+          actions: [
+            setName("a"),
+            { type: "UNDO", input: {}, scope: "global" },
+            documentModelDocumentModelModule.actions.setStateSchema({
+              scope: "global",
+              schema: "type B { b: String }",
+            }),
+          ],
+        });
+
+        expect(result.isError).toBe(true);
+        expect(getTextContent(result)).toContain("refused: b");
+        expect(await globalRows(documentId)).toEqual(before);
+        expect(await nameOf(documentId)).toBe("x");
+      });
+
+      it("writes nothing when the reactor refuses a stale target", async () => {
+        const documentId = await v3Document("x");
+        const [x] = (await globalRows(documentId)).map((row) => row.action);
+        // Another writer's retraction of x, created before the call and
+        // landing after its targets are resolved.
+        const external = retract(x.id, "global");
+        const execute = client.write.execute.bind(client.write);
+        let interfered = false;
+        vi.spyOn(client.write, "execute").mockImplementation(
+          async (id, branch, actions, ...rest) => {
+            const retractsX = actions.some(
+              (action) =>
+                action.type === "RETRACT" && targetOf(action) === x.id,
+            );
+            if (retractsX && !interfered) {
+              interfered = true;
+              await (
+                await execute(id, "main", [external])
+              ).readable;
+            }
+            return execute(id, branch, actions, ...rest);
+          },
+        );
+        const provider = await createReactorMcpProvider({ client });
+        const result = await provider.tools.addActions.callback({
+          documentId,
+          actions: [
+            setName("a"),
+            { type: "UNDO", input: { count: 2 }, scope: "global" },
+            setName("b"),
+          ],
+        });
+
+        expect(interfered).toBe(true);
+        expect(result.isError).toBe(true);
+        expect(getTextContent(result)).toContain("target-retracted");
+        expect(
+          (await globalRows(documentId)).map((row) => row.action.type),
+        ).toEqual(["SET_MODEL_NAME", "RETRACT"]);
+        expect(await nameOf(documentId)).toBe("");
+      });
+
+      it("refuses with nothing to undo and writes nothing", async () => {
+        const documentId = await v3Document();
+        const execute = vi.spyOn(client.write, "execute");
+        const provider = await createReactorMcpProvider({ client });
+        const result = await provider.tools.addActions.callback({
+          documentId,
+          actions: [
+            setName("a"),
+            { type: "UNDO", input: { count: 2 }, scope: "global" },
+          ],
+        });
+
+        expect(result.isError).toBe(true);
+        expect(getTextContent(result)).toContain(
+          "Cannot undo: nothing to undo in scope history",
+        );
+        expect(execute).not.toHaveBeenCalled();
+        expect(await globalRows(documentId)).toEqual([]);
+      });
+
+      it.each([1, 2] as const)(
+        "submits one UNDO with its count in one job on base-reducer %i",
+        async (version) => {
+          const created = documentModelCreateDocument();
+          const document =
+            version === 1
+              ? withSignaturePolicy(created, "legacy", {
+                  protocolVersions: { "base-reducer": 1 },
+                })
+              : created;
+          await client.create(document);
+          const documentId = document.header.id;
+          expect(
+            (await client.get<PHDocument>(documentId)).header
+              .protocolVersions?.["base-reducer"],
+          ).toBe(version);
+          const execute = vi.spyOn(client.write, "execute");
+          const provider = await createReactorMcpProvider({ client });
+          const result = await provider.tools.addActions.callback({
+            documentId,
+            actions: [
+              setName("a"),
+              setName("b"),
+              { type: "UNDO", input: { count: 1 }, scope: "global" },
+            ],
+          });
+
+          expect(result.isError).toBeUndefined();
+          expect(execute).toHaveBeenCalledTimes(1);
+          expect(
+            execute.mock.calls[0][2].map(({ type, input }) => ({
+              type,
+              input,
+            })),
+          ).toEqual([
+            { type: "SET_MODEL_NAME", input: { name: "a" } },
+            { type: "SET_MODEL_NAME", input: { name: "b" } },
+            { type: "UNDO", input: { count: 1 } },
+          ]);
+          expect(await nameOf(documentId)).toBe("a");
+        },
       );
     });
 

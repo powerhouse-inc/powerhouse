@@ -151,6 +151,10 @@ export function UndoActionInputSchema() {
   return z.object({ count: z.number() });
 }
 
+export function RetractActionInputSchema() {
+  return z.object({ target: z.string() });
+}
+
 export function UndoActionSchema(): z.ZodObject<Properties<SchemaUndoAction>> {
   return z.object({
     id: z.string(),

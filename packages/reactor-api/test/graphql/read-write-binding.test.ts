@@ -114,6 +114,7 @@ const READS: Record<string, (...args: unknown[]) => unknown> = {
   getDocumentModelModuleForDocument: () => Promise.resolve(MODEL),
   getCreateSignaturePolicy: () => Promise.resolve("legacy"),
   getCreateProtocolVersions: () => Promise.resolve({}),
+  newDocument: () => Promise.resolve(structuredClone(stubDocument)),
   subscribe: () => () => undefined,
 };
 
@@ -421,8 +422,12 @@ describe("the stitched schema binds queries to the read half and mutations to th
       "peerAgreement",
       "pollSyncEnvelopes",
       "syncHolds",
+      "undoRedoTargets",
     ]);
-    expect(WRITE_HALF_QUERIES).toEqual(["Query.evaluateActions"]);
+    expect(WRITE_HALF_QUERIES).toEqual([
+      "Query.evaluateActions",
+      "Query.undoRedoTargets",
+    ]);
   });
 
   it("no query or subscription resolver reaches for the write half", async () => {

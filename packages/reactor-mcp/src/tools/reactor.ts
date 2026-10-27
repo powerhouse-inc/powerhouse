@@ -18,13 +18,18 @@ import type {
   Action,
   AuthSubject,
   DocumentModelModule,
+  Operation,
   OperationOutcome,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
   createAction,
+  creationState,
   operationOutcome,
-  withSignaturePolicy,
+  optionalBaseReducerCapabilities,
+  stateReducerOf,
+  undoNeedsTargets,
+  undoRedoBatch,
 } from "@powerhousedao/shared/document-model";
 import {
   type CodegenStatusRegistry,
@@ -258,6 +263,14 @@ export const deleteDocumentTool = {
   },
 } as const satisfies ToolSchema;
 
+type ParamAction = { type: string; input?: unknown; scope: string };
+
+function isUndoRedo(
+  action: ParamAction,
+): action is ParamAction & { type: "UNDO" | "REDO" } {
+  return action.type === "UNDO" || action.type === "REDO";
+}
+
 const actionErrorSchema = z
   .object({
     kind: z
@@ -284,7 +297,7 @@ const actionErrorSchema = z
 export const addActionsTool = {
   name: "addActions",
   description:
-    "Adds actions to a document. Prefer adding multiples actions at once to reduce the number of steps. Besides the document model's operations, accepts the base actions SET_NAME (scope global, input: the name), SET_PREFERRED_EDITOR (scope header, input: { preferredEditor }), UNDO and REDO (input: { count }) and NOOP. Returns one result per action, in input order; `success` is false when any result carries an `error`. An action its reducer rejected is stored as an operation that changes nothing, and the rest of the batch still applies. When a policy denies an action, the whole batch is refused: the denied action's error has kind `denied` and the others `not-applied`.",
+    "Adds actions to a document. Prefer adding multiples actions at once to reduce the number of steps. Besides the document model's operations, accepts the base actions SET_NAME (scope global, input: the name), SET_PREFERRED_EDITOR (scope header, input: { preferredEditor }), UNDO and REDO (input: { count }; on base-reducer 3 each step retracts one row, counting rows added earlier in the same call) and NOOP. Returns one result per action, in input order; `success` is false when any result carries an `error`. An action its reducer rejected is stored as an operation that changes nothing, and the rest of the batch still applies. When a policy denies an action, the whole batch is refused: the denied action's error has kind `denied` and the others `not-applied`.",
   inputSchema: {
     documentId: targetParam("document or drive to change"),
     id: aliasParam,
@@ -696,6 +709,26 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
     return client.getDocumentModelModule(documentType);
   }
 
+  /** Every stored row of one scope, through the read gate. */
+  async function scopeOperations(
+    documentId: string,
+    scope: string,
+  ): Promise<Operation[]> {
+    const rows: Operation[] = [];
+    let cursor = "";
+    do {
+      const page = await client.getOperations(
+        documentId,
+        { ...view, branch: "main", scopes: [scope] },
+        undefined,
+        { cursor, limit: 500 },
+      );
+      rows.push(...page.results);
+      cursor = page.nextCursor ?? "";
+    } while (cursor);
+    return rows;
+  }
+
   /** Names the denied actions of a refused batch; the others were not written either. */
   async function denialErrors(
     documentId: string,
@@ -765,19 +798,10 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
 
     createDocument: toolWithCallback(createDocumentTool, async (params) => {
       if (params.driveId) {
-        const module = await getDocumentModelModule(params.documentType);
-        if (!module) {
-          throw new Error(
-            `Document model for type '${params.documentType}' not found`,
-          );
-        }
-        const document = withSignaturePolicy(
-          module.utils.createDocument(),
-          await client.getCreateSignaturePolicy(),
-        );
-        if (params.name) {
-          document.header.name = params.name;
-        }
+        const document = await client.newDocument(params.documentType, {
+          parentIdentifier: params.driveId,
+          name: params.name || undefined,
+        });
         const created = await client.drives.addFile(
           params.driveId,
           document,
@@ -836,7 +860,7 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
           `Document model for document type '${document.header.documentType}' not found`,
         );
       }
-      const actions: Action[] = params.actions.map((paramAction) => {
+      const buildAction = (paramAction: ParamAction): Action => {
         const baseAction = createBaseAction(
           paramAction.type,
           paramAction.input,
@@ -867,7 +891,56 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
           );
         }
         return action;
-      });
+      };
+
+      const caps = optionalBaseReducerCapabilities(document.header);
+      const undoSteps = params.actions.filter(isUndoRedo);
+      let actions: Action[];
+      // The position in `params.actions` each submitted action came from.
+      let sources: number[];
+      if (caps === undefined || !undoNeedsTargets(caps) || !undoSteps.length) {
+        actions = params.actions.map(buildAction);
+        sources = actions.map((_, index) => index);
+      } else {
+        // Each step retracts a target resolved over the stored rows and the earlier actions.
+        const reducer = stateReducerOf(documentModel.reducer);
+        if (reducer === undefined) {
+          throw new Error(
+            `Document model ${document.header.documentType} has no state reducer to resolve undo targets with`,
+          );
+        }
+        const operations: Record<string, Operation[]> = {};
+        for (const scope of new Set(undoSteps.map((step) => step.scope))) {
+          operations[scope] = await scopeOperations(documentId, scope);
+        }
+        // The served document's initialState is its head state; a scope re-derives from creation.
+        const initialState =
+          creationState(await scopeOperations(documentId, "document")) ??
+          (documentModel.utils.createDocument() as PHDocument).initialState;
+        const batch = undoRedoBatch(
+          { ...document, initialState, operations },
+          caps,
+          reducer,
+        );
+        sources = [];
+        for (const [index, paramAction] of params.actions.entries()) {
+          const before = batch.actions.length;
+          if (isUndoRedo(paramAction)) {
+            const { count } = buildAction(paramAction).input as {
+              count: number;
+            };
+            for (let i = 0; i < count; i++) {
+              batch.undoOrRedo(paramAction.type, paramAction.scope);
+            }
+          } else {
+            batch.add(buildAction(paramAction));
+          }
+          for (let i = before; i < batch.actions.length; i++) {
+            sources.push(index);
+          }
+        }
+        actions = [...batch.actions];
+      }
 
       const handle = await client.write.execute(documentId, "main", actions);
       let results: {
@@ -907,9 +980,26 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
         }));
       }
       const hint = codegenHint(document, results);
+      // A counted UNDO or REDO is submitted as one action per step; it reports once.
+      const reported = params.actions.map((paramAction, index) => {
+        const steps = results.filter(
+          (result) => sources[result.index] === index,
+        );
+        const operationIndex = steps.at(-1)?.operationIndex;
+        const error =
+          steps.find((step) => step.error?.kind === "denied")?.error ??
+          steps.find((step) => step.error)?.error;
+        return {
+          index,
+          type: paramAction.type,
+          scope: paramAction.scope,
+          ...(operationIndex !== undefined && { operationIndex }),
+          ...(error && { error }),
+        };
+      });
       return {
-        success: results.every((result) => !result.error),
-        results,
+        success: reported.every((result) => !result.error),
+        results: reported,
         ...(hint && { codegen: hint }),
       };
     }),

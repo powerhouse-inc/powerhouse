@@ -27,6 +27,7 @@ export type ReadMethods =
 // but with the job instead of the document: the write for a caller that has
 // no use for the document, such as a file added to a large drive.
 export type WriteMethods =
+  | "newDocument"
   | "create"
   | "createEmpty"
   | "execute"
@@ -56,6 +57,11 @@ export type RefusedMethods =
   | "isServed"
   | "getCreateSignaturePolicy"
   | "getCreateProtocolVersions"
+  // Pieces build their own undo with the model's action creators.
+  | "undo"
+  | "redo"
+  | "undoRedoTargets"
+  | "undoRedoAvailability"
   // The client's halves; a piece reaches the reactor through the listed methods.
   | "read"
   | "write"

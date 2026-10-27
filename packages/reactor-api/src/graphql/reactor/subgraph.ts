@@ -581,9 +581,29 @@ export class ReactorSubgraph extends BaseSubgraph {
           return await resolvers.createDefaults(
             this.clientsOf(ctx).read,
             parentIdOrSlug,
+            args.documentType ?? undefined,
           );
         } catch (error) {
           this.logger.error("Error in createDefaults: @Error", error);
+          throw error;
+        }
+      },
+
+      undoRedoTargets: async (_parent, args, ctx: Context) => {
+        this.logger.debug("undoRedoTargets(@args)", args);
+        try {
+          const handle = await this.assertCanRead(args.documentIdOrSlug, ctx);
+          return await resolvers.undoRedoTargets(
+            this.clientsOf(ctx).write,
+            {
+              documentIdOrSlug: handle.fetchIdentifier,
+              scope: args.scope,
+              branch: args.branch,
+            },
+            this.viewSubject(ctx),
+          );
+        } catch (error) {
+          this.logger.error("Error in undoRedoTargets: @Error", error);
           throw error;
         }
       },

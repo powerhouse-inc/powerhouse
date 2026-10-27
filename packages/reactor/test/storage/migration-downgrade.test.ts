@@ -43,4 +43,28 @@ describe("a pre-feature build over a store this build migrated", () => {
       "corrupted migrations: previously executed migration 021_add_sync_remote_peer is missing",
     );
   });
+
+  it("starts once migrated down to the older build's last migration", async () => {
+    const LAST_IN_6_2_3 = "023_index_created_protocol_versions";
+    const down = await runMigrations(db, REACTOR_SCHEMA, LAST_IN_6_2_3);
+    expect(down.error).toBeUndefined();
+
+    const executed = await getMigrationStatus(db, REACTOR_SCHEMA);
+    const older: Record<string, Migration> = Object.fromEntries(
+      executed
+        .filter((migration) => migration.name <= LAST_IN_6_2_3)
+        .map((migration) => [migration.name, { up: () => Promise.resolve() }]),
+    );
+    const { error } = await new Migrator({
+      db: db.withSchema(REACTOR_SCHEMA),
+      provider: { getMigrations: () => Promise.resolve(older) },
+      migrationTableSchema: REACTOR_SCHEMA,
+    }).migrateToLatest();
+
+    expect(error).toBeUndefined();
+    expect(
+      executed.filter((migration) => migration.executedAt !== undefined).at(-1)
+        ?.name,
+    ).toBe(LAST_IN_6_2_3);
+  });
 });

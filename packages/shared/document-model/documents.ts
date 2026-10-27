@@ -1,10 +1,29 @@
 import { stringify } from "safe-stable-stringify";
 import type { Action } from "./actions.js";
+import {
+  derivesByRule,
+  optionalBaseReducerCapabilities,
+  usesRetractionRule,
+  type BaseReducerCapabilities,
+} from "./base-reducer-protocol.js";
 import { hashBrowser } from "./crypto.js";
 import { isDenied } from "./denied.js";
-import { HashMismatchError } from "./errors.js";
+import { FLAGLESS_BASE_REDUCER_VERSION } from "./peer-agreement.js";
+import { HashMismatchError, MissingStateReducerError } from "./errors.js";
 import { createPresignedHeader } from "./header.js";
 import type { DocumentOperations, Operation } from "./operations.js";
+import {
+  garbageCollect,
+  isDocumentAction,
+  nextSkipNumber,
+  sortOperations,
+} from "./operation-order.js";
+import { stateReducerOf } from "./state-reducer.js";
+import {
+  deriveScope,
+  positionalOperations,
+  type ReducerFor,
+} from "./retraction.js";
 import {
   protocolVersionsFor,
   signaturePolicyOf,
@@ -27,11 +46,12 @@ import type {
   SignalDispatch,
   SkipHeaderOperationIndex,
   SkipHeaderOperations,
+  StateReducer,
   UndoAction,
   UndoRedoAction,
   UpgradeDocumentActionInput,
 } from "./types.js";
-import { deriveOperationId, generateId } from "./utils.js";
+import { deriveOperationId, generateActionId, generateId } from "./utils.js";
 
 /** Meta information about the document. */
 export type PHDocumentMeta = {
@@ -174,12 +194,6 @@ export function isUndo(action: Action): action is UndoAction {
   return action.type === "UNDO";
 }
 
-export function isDocumentAction(action: Action): action is DocumentAction {
-  return ["SET_NAME", "SET_PREFERRED_EDITOR", "UNDO", "REDO"].includes(
-    action.type,
-  );
-}
-
 /**
  * The document-scope operations a reactor mints on `create`, so a standalone
  * document carries its initial state when exported outside a reactor.
@@ -203,7 +217,9 @@ function createDocumentScopeOperations<TState extends PHBaseState>(
     name: header.name,
     branch: header.branch,
     meta: header.meta,
-    protocolVersions: header.protocolVersions ?? { "base-reducer": 2 },
+    protocolVersions: header.protocolVersions ?? {
+      "base-reducer": FLAGLESS_BASE_REDUCER_VERSION,
+    },
   };
   const upgradeInput: UpgradeDocumentActionInput = {
     model: header.documentType,
@@ -215,14 +231,14 @@ function createDocumentScopeOperations<TState extends PHBaseState>(
 
   const actions: Action[] = [
     {
-      id: generateId(),
+      id: generateActionId(),
       type: "CREATE_DOCUMENT",
       scope: "document",
       timestampUtcMs: header.createdAtUtcIso,
       input: createInput,
     },
     {
-      id: generateId(),
+      id: generateActionId(),
       type: "UPGRADE_DOCUMENT",
       scope: "document",
       timestampUtcMs: header.createdAtUtcIso,
@@ -264,7 +280,7 @@ export function baseCreateDocument<TState extends PHBaseState = PHBaseState>(
     documentType,
     protocolVersions === undefined
       ? protocolVersionsFor("v2-required")
-      : { "base-reducer": 2, ...protocolVersions },
+      : { "base-reducer": FLAGLESS_BASE_REDUCER_VERSION, ...protocolVersions },
   );
 
   header.revision = withScopeRevisions(header.revision, state);
@@ -438,25 +454,6 @@ export function mapSkippedOperationsV2(
  * Uses the V2 model where consecutive NOOPs form chains.
  * Unlike V1 garbageCollect, this preserves ALL operations but marks which to apply.
  */
-/**
- * The base-reducer protocol version a document is written against. Every
- * document carries one, set from the CREATE_DOCUMENT input. A header without
- * one was built outside that path, and choosing a version on its behalf would
- * replay the document through a reducer it was not written for, so it is an
- * error rather than a default.
- */
-export function baseReducerVersion(header: PHDocumentHeader): number {
-  const version = header.protocolVersions?.["base-reducer"];
-
-  if (typeof version !== "number") {
-    throw new Error(
-      `Document ${header.id} carries no base-reducer protocol version`,
-    );
-  }
-
-  return version;
-}
-
 export function garbageCollectV2<TOpIndex extends OperationIndex>(
   sortedOperations: TOpIndex[],
 ): TOpIndex[] {
@@ -527,6 +524,122 @@ export function appendWithoutApplying<TState extends PHBaseState>(
   };
 }
 
+/** The state reducer base-reducer 3 derives with; throws when `reducer` wraps none. */
+export function requireStateReducer<TState extends PHBaseState = PHBaseState>(
+  reducer: Reducer<TState>,
+  documentType: string,
+  version?: number,
+): StateReducer<TState> {
+  const stateReducer = stateReducerOf(reducer);
+  if (stateReducer === undefined) {
+    throw new MissingStateReducerError(documentType, version);
+  }
+  return stateReducer;
+}
+
+function replayOperation<TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  operation: Operation,
+  reducer: Reducer<TState>,
+  dispatch: SignalDispatch | undefined,
+  checkHashes: boolean,
+  skipIndexValidation: boolean | undefined,
+): PHDocument<TState> {
+  // Denied: holds its index and applies nothing, as on the reactor's rebuilds.
+  if (isDenied(operation)) {
+    return updateHeaderRevision(
+      appendWithoutApplying(document, operation),
+      operation.action.scope,
+      operation.timestampUtcMs,
+    ) as PHDocument<TState>;
+  }
+
+  return reducer(document, operation.action, dispatch, {
+    ignoreSkipOperations: true,
+    checkHashes,
+    skipIndexValidation,
+    replayOptions: {
+      operation,
+    },
+  });
+}
+
+/** Rejects the index gaps the reducer rejects when it appends a replayed row. */
+export function assertReplayIndices(operations: readonly Operation[]): void {
+  let lastIndex = -1;
+  for (const operation of operations) {
+    if (operation.index - operation.skip > lastIndex + 1) {
+      throw new Error(
+        `Missing operations: expected ${lastIndex + 1} with skip 0 or equivalent, got index ${operation.index} with skip ${operation.skip}`,
+      );
+    }
+    lastIndex = operation.index;
+  }
+}
+
+/** Base-reducer 3: rows stored as given, one derivation per ruled scope. */
+function replayRetractionScopes<TState extends PHBaseState>(
+  caps: BaseReducerCapabilities,
+  document: PHDocument<TState>,
+  operations: DocumentOperations,
+  reducer: Reducer<TState>,
+  dispatch: SignalDispatch | undefined,
+  checkHashes: boolean,
+  skipIndexValidation: boolean | undefined,
+): PHDocument<TState> {
+  let reducerFor: ReducerFor<TState> | undefined;
+  let result = document;
+  for (const [scope, rows = []] of Object.entries(operations)) {
+    if (rows.length === 0) {
+      continue;
+    }
+    if (!derivesByRule(caps, scope)) {
+      for (const operation of rows) {
+        result = replayOperation(
+          result,
+          operation,
+          reducer,
+          dispatch,
+          checkHashes,
+          skipIndexValidation,
+        );
+      }
+      continue;
+    }
+    if (!skipIndexValidation) {
+      assertReplayIndices(rows);
+    }
+    result = updateHeaderRevision(
+      appendRows(result, scope, rows),
+      scope,
+      rows.at(-1)!.timestampUtcMs,
+    ) as PHDocument<TState>;
+    if (reducerFor === undefined) {
+      const stateReducer = requireStateReducer(
+        reducer,
+        document.header.documentType,
+      );
+      reducerFor = () => stateReducer;
+    }
+    result = deriveScope(result, rows, reducerFor, scope).document;
+  }
+  return result;
+}
+
+export function appendRows<TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  scope: string,
+  rows: readonly Operation[],
+): PHDocument<TState> {
+  return {
+    ...document,
+    operations: {
+      ...document.operations,
+      [scope]: [...(document.operations[scope] ?? []), ...rows],
+    },
+  };
+}
+
 // Runs the operations on the initial data using the
 // provided document reducer.
 // This rebuilds the document according to the provided actions.
@@ -545,6 +658,8 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
     operationResultingStateParser = parseResultingState,
     skipIndexValidation,
   } = options || {};
+  const caps = optionalBaseReducerCapabilities(header);
+  const retraction = usesRetractionRule(caps);
 
   const backfilledInitialState = backfillAuthState(initialState);
   let documentState = backfilledInitialState;
@@ -560,7 +675,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
   // looks for the last operation with state of each
   // scope to use it as the starting point and only
   // replay operations that follow it
-  if (reuseOperationResultingState) {
+  if (reuseOperationResultingState && !retraction) {
     for (const [scope, scopeOperations] of Object.entries(operations)) {
       if (!scopeOperations) {
         continue;
@@ -610,31 +725,29 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
 
   // if there are operations left without resulting state
   // then replays them
-  if (operationsToReplay.length) {
-    result = operationsToReplay.reduce((document, operation) => {
-      // A denied operation holds its position without contributing state. The
-      // reactor skips it on every rebuild, so a replay that applied it would
-      // produce different state from the reactor that served the history. It
-      // still occupies its index, so the scope's revision counts it.
-      if (isDenied(operation)) {
-        return updateHeaderRevision(
-          appendWithoutApplying(document, operation),
-          operation.action.scope,
-          operation.timestampUtcMs,
-        ) as PHDocument<TState>;
-      }
-
-      const doc = reducer(document, operation.action, dispatch, {
-        ignoreSkipOperations: true,
-        checkHashes,
-        skipIndexValidation,
-        replayOptions: {
+  if (operationsToReplay.length && caps && usesRetractionRule(caps)) {
+    result = replayRetractionScopes(
+      caps,
+      document,
+      operations,
+      reducer,
+      dispatch,
+      checkHashes,
+      skipIndexValidation,
+    );
+  } else if (operationsToReplay.length) {
+    result = operationsToReplay.reduce(
+      (document, operation) =>
+        replayOperation(
+          document,
           operation,
-        },
-      });
-
-      return doc;
-    }, document);
+          reducer,
+          dispatch,
+          checkHashes,
+          skipIndexValidation,
+        ),
+      document,
+    );
   }
   // if not then updates the document header according
   // to the latest operation of each scope
@@ -656,7 +769,17 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
 
   // if hash generation was skipped then checks if the hash
   // of each scope matches the hash of last operation
-  if (!checkHashes) {
+  if (!checkHashes && retraction) {
+    for (const scope of Object.keys(result.state)) {
+      const operation = positionalOperations(operations[scope] ?? []).at(-1);
+      if (
+        operation &&
+        operation.hash !== hashDocumentStateForScope(result, scope)
+      ) {
+        throw new HashMismatchError(scope, result, operation);
+      }
+    }
+  } else if (!checkHashes) {
     for (const scope of Object.keys(result.state)) {
       for (let i = operationsToReplay.length - 1; i >= 0; i--) {
         const operation = operationsToReplay[i];
@@ -830,28 +953,6 @@ export function checkCleanedOperationsIntegrity(
 // 0:0 1:0 2:0 => 0:0 1:0 2:0, removals 0, no issues
 // 0:0 1:0 2:0 => 0:0 1:0 2:0, removals 0, no issues
 
-export function garbageCollect<TOpIndex extends OperationIndex>(
-  sortedOperations: TOpIndex[],
-) {
-  const result: TOpIndex[] = [];
-
-  let i = sortedOperations.length - 1;
-
-  while (i > -1) {
-    result.unshift(sortedOperations[i]);
-    const skipUntil =
-      (sortedOperations[i]?.index || 0) - (sortedOperations[i]?.skip || 0) - 1;
-
-    let j = i - 1;
-    while (j > -1 && (sortedOperations[j]?.index || 0) > skipUntil) {
-      j--;
-    }
-
-    i = j;
-  }
-
-  return result;
-}
 export function addUndo(sortedOperations: Operation[]) {
   const operationsCopy = [...sortedOperations];
   const latestOperation = operationsCopy[operationsCopy.length - 1];
@@ -867,7 +968,7 @@ export function addUndo(sortedOperations: Operation[]) {
         ...latestOperation.action,
 
         // TODO: this will break the signature...
-        id: generateId(),
+        id: generateActionId(),
         timestampUtcMs: new Date().toISOString(),
         type: "NOOP",
       },
@@ -880,7 +981,7 @@ export function addUndo(sortedOperations: Operation[]) {
       skip: 1,
       hash: latestOperation.hash,
       action: {
-        id: generateId(),
+        id: generateActionId(),
         timestampUtcMs: new Date().toISOString(),
         type: "NOOP",
         input: {},
@@ -894,14 +995,6 @@ export function addUndo(sortedOperations: Operation[]) {
 
 // [0:0 2:0 1:0 3:3 3:1] => [0:0 1:0 2:0 3:1 3:3]
 // Sort by index _and_ skip number
-export function sortOperations<TOpIndex extends OperationIndex>(
-  operations: TOpIndex[],
-): TOpIndex[] {
-  return operations
-    .slice()
-    .sort((a, b) => a.skip - b.skip)
-    .sort((a, b) => a.index - b.index);
-}
 
 // [0:0, 1:0, 2:0, A3:0, A4:0, A5:0] + [0:0, 1:0, 2:0, B3:0, B4:2, B5:0]
 // GC               => [0:0, 1:0, 2:0, A3:0, A4:0, A5:0] + [0:0, 1:0, B4:2, B5:0]
@@ -1164,26 +1257,6 @@ function getMaxIndex(sortedOperations: OperationIndex[]) {
 // [0:0 1:1 2:0 3:1] => 3
 // [0:0 1:1 2:0 3:3] => -1
 // [50:50 100:50 150:50 151:0 152:0 153:0 154:3] => 53
-
-export function nextSkipNumber(sortedOperations: OperationIndex[]) {
-  if (sortedOperations.length < 1) {
-    return -1;
-  }
-
-  const cleanedOperations = garbageCollect(sortedOperations);
-
-  let nextSkip =
-    (cleanedOperations[cleanedOperations.length - 1]?.skip || 0) + 1;
-
-  if (cleanedOperations.length > 1) {
-    nextSkip += cleanedOperations[cleanedOperations.length - 2]?.skip || 0;
-  }
-
-  return (cleanedOperations[cleanedOperations.length - 1]?.index || -1) <
-    nextSkip
-    ? -1
-    : nextSkip;
-}
 
 export function checkOperationsIntegrity(operations: Operation[]) {
   return checkCleanedOperationsIntegrity(
@@ -1496,3 +1569,5 @@ export function updateHeaderRevision(
     header,
   };
 }
+
+export { garbageCollect, isDocumentAction, nextSkipNumber, sortOperations };

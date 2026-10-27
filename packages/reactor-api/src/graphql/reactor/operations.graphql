@@ -281,6 +281,30 @@ query GetCreateDefaults($parentIdOrSlug: String) {
   }
 }
 
+query GetCreateProtocolVersions(
+  $parentIdOrSlug: String
+  $documentType: String!
+) {
+  createDefaults(parentIdOrSlug: $parentIdOrSlug, documentType: $documentType) {
+    protocolVersions
+  }
+}
+
+query GetUndoRedoTargets(
+  $documentIdOrSlug: String!
+  $scope: String
+  $branch: String
+) {
+  undoRedoTargets(
+    documentIdOrSlug: $documentIdOrSlug
+    scope: $scope
+    branch: $branch
+  ) {
+    undoTarget
+    redoTarget
+  }
+}
+
 fragment DriveNodeFields on DriveNode {
   ... on DriveFileNode {
     id
