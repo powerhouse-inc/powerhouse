@@ -70,7 +70,7 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
     name: string;
     reactor: ReactorConfig | undefined;
     env: Env;
-    /** The reactor store, where readModel.url no longer moves it. */
+    /** The reactor store, where it differs from the removed path. */
     reactorStore?: string;
   }[] = [
     { name: "no block, no env", reactor: undefined, env: {} },
@@ -109,6 +109,31 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
       name: "postgres block under PH_SWITCHBOARD_DATABASE_URL",
       reactor: postgresBlock,
       env: { PH_SWITCHBOARD_DATABASE_URL: "postgres://host/env" },
+    },
+    {
+      name: "readModel-only block, no env",
+      reactor: {
+        backends: {
+          main: {
+            kind: "in-process",
+            readModel: { url: "postgres://host/db" },
+          },
+        },
+      },
+      env: {},
+    },
+    {
+      name: "readModel-only block under PH_SWITCHBOARD_DATABASE_URL",
+      reactor: {
+        backends: {
+          main: {
+            kind: "in-process",
+            readModel: { url: "postgres://host/db" },
+          },
+        },
+      },
+      env: { PH_SWITCHBOARD_DATABASE_URL: "postgres://host/env" },
+      reactorStore: "postgres://host/env",
     },
     {
       name: "postgres block under DATABASE_URL",

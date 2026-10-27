@@ -376,27 +376,25 @@ describe("switchboard bridge runner", () => {
     const parsed = switchboardHostSchema.safeParse({
       name: "lab-switchboard",
       runner: { module: "m" },
-      reactor: { protocol: { featureFlags: { authGroups: true } } },
-      config: {
-        switchboard: {
-          protocol: {
-            featureFlags: { authGroups: false, authEnforcement: true },
-          },
-        },
-      },
+      reactor: { workflows: true },
+      config: { switchboard: { features: { workflows: false } } },
     });
     expect(parsed.success).toBe(false);
     expect(parsed.error?.issues.map((i) => i.message)).toEqual([
-      "config.switchboard.protocol.featureFlags.authGroups is also set by the reactor block; set it in one place.",
+      "config.switchboard.features.workflows is also set by the reactor block; set it in one place.",
     ]);
   });
 
-  it("refuses a config.switchboard key the runner owns", () => {
+  it("refuses a config.switchboard key the runner or the reactor block owns", () => {
     for (const config of [
       { server: { port: 1 } },
       { drive: {} },
       { features: { pluginHost: true } },
       { auth: { unknown: true } },
+      { protocol: { featureFlags: { authEnforcement: true } } },
+      { storage: { reactor: { url: "postgres://host/db" } } },
+      { storage: { readModel: { url: "postgres://host/db" } } },
+      { packages: { dynamic: true } },
     ]) {
       expect(
         switchboardHostSchema.safeParse({
@@ -405,6 +403,56 @@ describe("switchboard bridge runner", () => {
           config: { switchboard: config },
         }).success,
       ).toBe(false);
+    }
+  });
+
+  it("keeps a readModel-only block's reactor store on readModel.url, with a warning", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const readModelOnly = switchboard({
+      name: "lab-switchboard",
+      runner: { module: "m" },
+      reactor: {
+        backends: {
+          main: {
+            kind: "in-process",
+            readModel: { url: "postgres://host/db" },
+          },
+        },
+      },
+    });
+    try {
+      vi.mocked(startSwitchboard).mockClear();
+      await runner.run(readModelOnly, ctx);
+      expect(vi.mocked(startSwitchboard).mock.calls[0][2]).toMatchObject({
+        storage: {
+          reactor: { url: "postgres://host/db" },
+          readModel: { url: "postgres://host/db" },
+        },
+      });
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /readModel\.url .*also holds the reactor store.*deprecated/,
+        ),
+      );
+
+      // An env var that names the store takes it, and nothing is deprecated.
+      warn.mockClear();
+      vi.mocked(startSwitchboard).mockClear();
+      await runner.run(readModelOnly, {
+        ...ctx,
+        env: { PH_SWITCHBOARD_DATABASE_URL: "postgres://host/env" },
+      });
+      expect(vi.mocked(startSwitchboard).mock.calls[0][2]).toMatchObject({
+        storage: {
+          reactor: { url: "postgres://host/env" },
+          readModel: { url: "postgres://host/db" },
+        },
+      });
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
     }
   });
 

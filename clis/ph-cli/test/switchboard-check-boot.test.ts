@@ -102,14 +102,17 @@ describe("switchboard runner checkBoot", () => {
     ]);
   });
 
-  it("reads workers and storage from config.switchboard", async () => {
+  it("reads workers from config.switchboard, under the env", async () => {
     const member = host({
-      config: {
-        switchboard: {
-          storage: { reactor: { url: POSTGRES } },
-          workers: { executor: { count: 2 } },
+      reactor: {
+        backends: {
+          main: {
+            kind: "in-process",
+            storage: { kind: "postgres", url: POSTGRES },
+          },
         },
       },
+      config: { switchboard: { workers: { executor: { count: 2 } } } },
     });
     expect(await issuesOf(member, {})).toEqual([]);
     expect(
@@ -117,6 +120,22 @@ describe("switchboard runner checkBoot", () => {
     ).toEqual([
       expect.stringMatching(/REACTOR_WORKERS\) requires a Postgres reactor/),
     ]);
+  });
+
+  it("reports a readModel-only block, whose reactor store stays on readModel.url", async () => {
+    const readModelOnly = host({
+      reactor: {
+        backends: {
+          main: { kind: "in-process", readModel: { url: POSTGRES } },
+        },
+      },
+    });
+    expect(await issuesOf(readModelOnly, { REACTOR_WORKERS: "2" })).toEqual([
+      expect.stringMatching(/also holds the reactor store.*deprecated/),
+    ]);
+    expect(
+      await issuesOf(readModelOnly, { PH_REACTOR_DATABASE_URL: POSTGRES }),
+    ).toEqual([]);
   });
 
   it("refuses workers under auth enforcement with a self Renown source", async () => {

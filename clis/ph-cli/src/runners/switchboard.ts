@@ -20,6 +20,7 @@ import {
   memberSwitchboardConfigSchema,
   prepareMemberStorage,
   reactorBlockConflicts,
+  readModelAsReactorStore,
   switchboardDevMode,
 } from "./member-config.js";
 import { z } from "zod";
@@ -291,7 +292,10 @@ async function start(
   ctx: RunnerContext,
   devMode: boolean,
 ): Promise<SwitchboardHandle> {
-  prepareMemberStorage(host.reactor, ctx.env, `hosts/${host.name}/host.js`);
+  const hostFile = `hosts/${host.name}/host.js`;
+  prepareMemberStorage(host.reactor, ctx.env, hostFile);
+  const legacyStore = readModelAsReactorStore(host.reactor, ctx.env, hostFile);
+  if (legacyStore) console.warn(legacyStore.warning);
   const { startSwitchboard } = await import("../services/switchboard.js");
   const entries = host.runner.plugins;
   const entriesDeclared = entries !== undefined;
@@ -477,6 +481,10 @@ export async function checkBoot(
     ctx.env,
     ctx.file,
   ).map((message) => ({ path: "reactor.protocol", message }));
+  const legacyStore = readModelAsReactorStore(host.reactor, ctx.env, ctx.file);
+  if (legacyStore) {
+    issues.push({ path: "reactor.backends", message: legacyStore.warning });
+  }
   const { getConfig } = await import("@powerhousedao/config/node");
   const { switchboardBootFactsOf, switchboardBootIssues } =
     await import("@powerhousedao/switchboard/boot");

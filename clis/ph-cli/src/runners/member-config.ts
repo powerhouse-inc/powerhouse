@@ -15,13 +15,17 @@ import type { ILogger } from "document-model";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
-/** `config.switchboard`: a member's own switchboard config. The runner owns
- * the omitted keys (runner.port, the dev verb, reactor.drives, runner.plugins);
- * the log level and processor config are process-wide or not JSON. */
+/** `config.switchboard`: a member's own switchboard config. The omitted keys
+ * live in the reactor block (storage, protocol, dynamic packages) or the
+ * runner (port, dev verb, drives, plugins), or are process-wide or not JSON. */
 export const memberSwitchboardConfigSchema = switchboardConfigLayerSchema([
   "logLevel",
   "server.port",
   "server.dev",
+  "storage.reactor",
+  "storage.readModel",
+  "protocol",
+  "packages.dynamic",
   "drive",
   "remoteDrives",
   "features.pluginHost",
@@ -71,6 +75,34 @@ export function reactorBlockConflicts(member: SwitchboardMember): string[] {
 }
 
 /**
+ * The deprecation notice for a block whose `readModel.url` still names the
+ * reactor store too: nothing else names the store, as it did when
+ * readModel.url rode `dbPath`.
+ */
+export function readModelAsReactorStore(
+  reactor: ReactorConfig | undefined,
+  env: Env,
+  hostFileLabel: string,
+): { url: string; warning: string } | undefined {
+  const storage = reactorBlockToSwitchboardConfig(reactor).storage;
+  const url = storage?.readModel?.url;
+  if (
+    !url ||
+    storage.reactor ||
+    env.PH_REACTOR_DATABASE_URL !== undefined ||
+    env.PH_SWITCHBOARD_DATABASE_URL !== undefined
+  ) {
+    return undefined;
+  }
+  return {
+    url,
+    warning:
+      `${hostFileLabel}: reactor readModel.url (${url}) also holds the reactor store, because no storage names one. ` +
+      "This is deprecated: set the backend's storage explicitly (the same Postgres url, or a path dataDir).",
+  };
+}
+
+/**
  * The member's switchboard config under the runner's own arguments: its
  * reactor block, then `config.switchboard`, then the operator's env over both.
  * The block keeps the precedence it had as set-if-absent env and `dbPath`:
@@ -83,6 +115,10 @@ export function memberSwitchboardConfig(
   options: { pluginHost: boolean; logger?: ILogger },
 ): SwitchboardConfigInput {
   const block = reactorBlockToSwitchboardConfig(member.reactor);
+  const legacy = readModelAsReactorStore(member.reactor, env, "");
+  if (legacy) {
+    block.storage = { ...block.storage, reactor: { url: legacy.url } };
+  }
   const fromEnv = switchboardConfigFromEnv(env, { logger: options.logger });
   const storage = { ...fromEnv.storage };
   if (block.storage?.reactor && env.PH_REACTOR_DATABASE_URL === undefined) {
