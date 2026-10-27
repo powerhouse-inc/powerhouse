@@ -2279,8 +2279,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     stores: ExecutionStores,
     signal?: AbortSignal,
   ): Promise<PositionedWrites> {
+    let inOrder = job.actions;
     const plain = (): PositionedWrites => ({
-      writes: job.actions.map((action) => ({
+      writes: inOrder.map((action) => ({
         action,
         skip: 0,
         sourceRemote: "",
@@ -2291,6 +2292,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (!this.featureFlags.documentDecisions || job.actions.length === 0) {
       return plain();
     }
+
+    inOrder = [...job.actions].sort(
+      (a, b) => Date.parse(a.timestampUtcMs) - Date.parse(b.timestampUtcMs),
+    );
 
     // Parsed, not compared as strings, here and below: a submitted timestamp
     // may carry second precision, and "…:00Z" sorts after "…:00.000Z"
