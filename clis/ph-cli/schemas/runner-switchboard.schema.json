@@ -133,26 +133,6 @@
             "storage": {
               "type": "object",
               "properties": {
-                "reactor": {
-                  "type": "object",
-                  "properties": {
-                    "url": {
-                      "type": "string",
-                      "minLength": 1
-                    }
-                  },
-                  "additionalProperties": false
-                },
-                "readModel": {
-                  "type": "object",
-                  "properties": {
-                    "url": {
-                      "type": "string",
-                      "minLength": 1
-                    }
-                  },
-                  "additionalProperties": false
-                },
                 "inMemory": {
                   "type": "boolean"
                 },
@@ -211,59 +191,6 @@
                     {
                       "type": "number",
                       "const": 17
-                    }
-                  ]
-                }
-              },
-              "additionalProperties": false
-            },
-            "protocol": {
-              "type": "object",
-              "properties": {
-                "featureFlags": {
-                  "type": "object",
-                  "properties": {
-                    "documentDecisions": {
-                      "type": "boolean"
-                    },
-                    "authEnforcement": {
-                      "type": "boolean"
-                    },
-                    "authGroups": {
-                      "type": "boolean"
-                    },
-                    "authConditions": {
-                      "type": "boolean"
-                    }
-                  },
-                  "additionalProperties": false
-                },
-                "createSignaturePolicy": {
-                  "type": "string",
-                  "enum": ["legacy", "v2-required"]
-                },
-                "unsupportedStoredDocuments": {
-                  "type": "string",
-                  "enum": ["refuse", "read-only"]
-                },
-                "legacyProcessorIds": {
-                  "type": "boolean"
-                },
-                "maxSkipThreshold": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 9007199254740991
-                },
-                "catchUpPriority": {
-                  "anyOf": [
-                    {
-                      "type": "string",
-                      "const": "dynamic"
-                    },
-                    {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 7
                     }
                   ]
                 }
@@ -428,9 +355,6 @@
                   "items": {
                     "type": "string"
                   }
-                },
-                "dynamic": {
-                  "type": "boolean"
                 },
                 "list": {
                   "type": "array",
