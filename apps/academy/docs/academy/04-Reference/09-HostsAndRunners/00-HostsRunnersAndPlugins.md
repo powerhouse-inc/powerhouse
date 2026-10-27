@@ -181,6 +181,34 @@ provenance before running anything:
 ph run switchboard --explain drives
 ```
 
+## Switchboard settings (`config.switchboard`)
+
+A switchboard host sets the rest of its server config, such as auth,
+inspection and workers, under `config.switchboard`. It takes the keys of
+`@powerhousedao/switchboard/config`, except the ones the host file already
+sets elsewhere (`runner.port`, the `dev` verb, `reactor.drives`,
+`runner.plugins`):
+
+```js
+config: {
+  switchboard: {
+    auth: { admins: ["0x…"], defaultProtection: true },
+    inspection: { enabled: false },
+    workers: { executor: { count: 2 } },
+  },
+},
+```
+
+Each switchboard gets its own config, so two switchboards in one compound can
+use different stores, ports and settings. A key set in both `reactor` and
+`config.switchboard` fails validation.
+
+An environment variable the operator sets still wins over both blocks, for
+example `PH_REACTOR_DATABASE_URL` over the reactor's storage. A
+`DATABASE_URL` does not override `reactor.backends.*.readModel.url`, and
+`readModel.url` names only the read model, never the reactor store. An
+environment variable that contradicts `reactor.protocol` fails the boot.
+
 ## The plugin shape
 
 A plugin module default-exports either a `HostPlugin` object or — when it
