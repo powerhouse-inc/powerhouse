@@ -4,7 +4,13 @@ import { BARE, FULL, hostExport, stack } from "./__fixtures__/hosts.js";
 import { ladderFlags } from "./flags.js";
 import type { HostRulesContext, MemberEnv } from "./schema.js";
 import { applySetters } from "./setters.js";
-import { REASONS, validateDraft, workerCount } from "./validate.js";
+import {
+  onOff,
+  REASONS,
+  shapeWording,
+  validateDraft,
+  workerCount,
+} from "./validate.js";
 
 const SB = "host.children.sb";
 const SB_REACTOR = "members.switchboard.reactor";
@@ -66,7 +72,7 @@ describe("validateDraft", () => {
         [
           "env",
           "host.children.ghost.env",
-          "There is no reactor at host.children.ghost, so its environment is not used.",
+          "There is no reactor here, so this environment is not used.",
         ],
         [
           "env",
@@ -380,9 +386,168 @@ describe("validateDraft", () => {
         [
           "shape",
           "host.config.startOrder.1",
-          expect.stringContaining('"ghost", which is not a member') as string,
+          "The start order names a reactor this host doesn't have, or one twice.",
         ],
       ]);
+    });
+  });
+
+  describe("round 2", () => {
+    it("reads worker env exactly as the switchboard does", () => {
+      expect(workerCount("007")).toBeUndefined();
+      expect(issues(stack(), { [SB]: { REACTOR_WORKERS: "007" } })).toEqual([
+        ["env", `${SB}.env.REACTOR_WORKERS`, REASONS.workersValue],
+      ]);
+      expect([
+        onOff("Yes"),
+        onOff(" off "),
+        onOff(""),
+        onOff(undefined),
+        onOff("maybe"),
+      ]).toEqual([true, false, false, false, undefined]);
+      expect(
+        issues(stack(), { [SB]: { REACTOR_PROJECTION_WORKER: "maybe" } }),
+      ).toEqual([
+        ["env", `${SB}.env.REACTOR_PROJECTION_WORKER`, REASONS.projectionValue],
+      ]);
+      expect(
+        issues(stack(), { [SB]: { REACTOR_PROJECTION_WORKER: "false" } }),
+      ).toEqual([]);
+    });
+
+    it("tells Connect env apart from switchboard env", () => {
+      expect(
+        issues(stack(), {
+          "host.children.ui": {
+            REACTOR_AUTH_GROUPS: "true",
+            REACTOR_WORKERS: "2",
+            REACTOR_PROJECTION_WORKER: "on",
+          },
+        }),
+      ).toEqual([
+        [
+          "env",
+          "host.children.ui.env.REACTOR_WORKERS",
+          REASONS.workersNotSwitchboard,
+        ],
+        [
+          "env",
+          "host.children.ui.env.REACTOR_PROJECTION_WORKER",
+          REASONS.projectionNotSwitchboard,
+        ],
+        [
+          "env",
+          "host.children.ui.env.REACTOR_AUTH_GROUPS",
+          "ui doesn't read this; it takes it from the host's settings.",
+        ],
+      ]);
+    });
+
+    it("reports a main backend that doesn't exist, once", () => {
+      const envelope = draft({
+        ...postgres,
+        [`${SB_REACTOR}.placement.primary`]: "nope",
+      });
+      expect(issues(envelope, { [SB]: { REACTOR_WORKERS: "2" } })).toEqual([
+        [
+          "storage",
+          `${SB_REACTOR}.placement.primary`,
+          'The main backend is set to "nope", which sb doesn\'t have, so sb would ignore its backends.',
+        ],
+      ]);
+    });
+
+    it("refuses two switchboards on one store", () => {
+      const shared = draft({ "host.children.sb2": { host: "switchboard" } });
+      expect(issues(shared)).toEqual([
+        [
+          "storage",
+          "host.children.sb2",
+          "sb2 and sb share one set of reactor settings, so they would use the same database. Give sb2 its own.",
+        ],
+      ]);
+      const sameFolder = draft({
+        "host.children.sb2": {
+          host: "switchboard",
+          reactor: {
+            backends: {
+              main: { kind: "in-process", storage: { kind: "path" } },
+            },
+          },
+        },
+      });
+      expect(issues(sameFolder).filter(([rule]) => rule === "storage")).toEqual(
+        [
+          [
+            "storage",
+            "host.children.sb2",
+            "sb2 and sb would store in the same folder, which corrupts both. Give sb2 its own folder.",
+          ],
+        ],
+      );
+    });
+
+    it("keeps a switchboard's folders inside the project", () => {
+      const envelope = draft({
+        [`${SB_REACTOR}.backends.main`]: {
+          kind: "in-process",
+          storage: {
+            kind: "path",
+            dataDir: "/Users/someone/repo/.ph/reactor-storage",
+          },
+          readModel: { url: "postgres://evil.example:5432/x" },
+        },
+      });
+      const found = validateDraft({ envelope }, FULL).issues;
+      expect(
+        found.map(({ path, message, hint }) => [path, message, hint]),
+      ).toEqual([
+        [
+          `${SB_REACTOR}.backends.main.storage.dataDir`,
+          "The storage folder has to be inside the project, like .ph/reactor-storage.",
+          "/Users/someone/repo/.ph/reactor-storage",
+        ],
+        [
+          `${SB_REACTOR}.backends.main.readModel.url`,
+          "The search and list data folder has to be inside the project. Its database can't be somewhere else.",
+          "postgres://evil.example:5432/x",
+        ],
+      ]);
+    });
+
+    it("says when a member's own members aren't checked", () => {
+      const envelope = draft(
+        { "host.children.nested": { host: "cli" } },
+        hostExport("cli"),
+      );
+      (envelope.members as Record<string, unknown>).cli = {
+        name: "cli",
+        runner: { module: "@powerhousedao/host-core/runners/compound" },
+        children: { inner: { host: "switchboard" } },
+      };
+      expect(issues(envelope)).toContainEqual([
+        "scope",
+        "host.children.nested",
+        REASONS.nested,
+      ]);
+    });
+
+    it("words schema messages for people and keeps the original as a hint", () => {
+      expect(shapeWording('Unrecognized key: "__proto__"')).toEqual({
+        message: "A host file can't contain this setting.",
+        hint: 'Unrecognized key: "__proto__"',
+      });
+      expect(shapeWording("Too small: expected number to be >0").message).toBe(
+        "This value is out of range.",
+      );
+      expect(shapeWording("Invalid input: expected string").message).toBe(
+        "This value isn't valid here.",
+      );
+      expect(
+        shapeWording("readModel.url must not be the reactor's storage dir"),
+      ).toEqual({
+        message: "readModel.url must not be the reactor's storage dir",
+      });
     });
   });
 

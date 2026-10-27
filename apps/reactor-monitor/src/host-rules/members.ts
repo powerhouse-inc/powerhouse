@@ -35,6 +35,8 @@ export type Member = {
   dev: boolean;
   env: Record<string, string>;
   backends: MemberBackend[];
+  /** placement.primary names no backend, so a switchboard ignores them all. */
+  placementMissing: boolean;
 };
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -64,12 +66,25 @@ export function primaryBackendName(
   return names[0];
 }
 
+function placementMissing(
+  reactor: Record<string, unknown> | undefined,
+): boolean {
+  const name = primaryBackendName(reactor);
+  return (
+    name !== undefined &&
+    isRecord(reactor?.backends) &&
+    !Object.hasOwn(reactor.backends, name)
+  );
+}
+
 function modeOf(
   role: MemberRole,
   kind: unknown,
   primary: boolean,
+  missing: boolean,
 ): BackendMode {
   if (kind === "remote") return "remote";
+  if (role === "switchboard" && missing) return "unmanaged";
   if (role === "switchboard") return primary ? "controller" : "browser";
   if (role === "connect") return "browser";
   return "unmanaged";
@@ -82,6 +97,7 @@ function backendsOf(
 ): MemberBackend[] {
   if (!reactor || !isRecord(reactor.backends)) return [];
   const primary = primaryBackendName(reactor);
+  const missing = placementMissing(reactor);
   return Object.entries(reactor.backends).flatMap(([name, body]) => {
     if (!isRecord(body)) return [];
     const storage = isRecord(body.storage) ? body.storage.kind : undefined;
@@ -93,7 +109,7 @@ function backendsOf(
         kind,
         storage: typeof storage === "string" ? storage : undefined,
         primary: name === primary,
-        mode: modeOf(role, kind, name === primary),
+        mode: modeOf(role, kind, name === primary, missing),
         body,
       },
     ];
@@ -112,7 +128,10 @@ export function hostVerb(
 
 function member(
   draft: HostDraft,
-  fields: Omit<Member, "role" | "dev" | "env" | "backends">,
+  fields: Omit<
+    Member,
+    "role" | "dev" | "env" | "backends" | "placementMissing"
+  >,
   verb: string,
 ): Member {
   const role = roleOf(fields.runner);
@@ -122,6 +141,7 @@ function member(
     dev: verb === "dev" || fields.runner.dev === true,
     env: draft.env?.[fields.path] ?? {},
     backends: backendsOf(role, fields.reactor, fields.reactorAt),
+    placementMissing: placementMissing(fields.reactor),
   };
 }
 
@@ -181,6 +201,22 @@ export function membersOf(
         verb,
       ),
     ];
+  });
+}
+
+/** Children whose folder is itself a compound: membersOf does not walk them. */
+export function nestedChildren(envelope: HostExport): string[] {
+  const host = envelope.host as unknown;
+  if (!isRecord(host) || !isRecord(host.children)) return [];
+  const members = isRecord(envelope.members) ? envelope.members : {};
+  return Object.entries(host.children).flatMap(([key, wrapper]) => {
+    if (!isRecord(wrapper) || typeof wrapper.host !== "string") return [];
+    const body = Object.hasOwn(members, wrapper.host)
+      ? members[wrapper.host]
+      : undefined;
+    return isRecord(body) && isRecord(body.children)
+      ? [`host.children.${key}`]
+      : [];
   });
 }
 
