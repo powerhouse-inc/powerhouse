@@ -24,9 +24,6 @@ const STATUS: Record<ErrorCode, number> = {
   check_failed: 422,
   instance_limit: 409,
   shutting_down: 503,
-  matrix_invalid: 400,
-  matrix_limit: 409,
-  run_not_found: 404,
   internal: 500,
 };
 

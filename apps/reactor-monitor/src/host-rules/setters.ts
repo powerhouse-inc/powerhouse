@@ -4,7 +4,7 @@ import {
   type HostExport,
 } from "@powerhousedao/host-core/schema";
 import { parsePath } from "./policy.js";
-import { isDelete, type MatrixIssue, type Setter } from "./schema.js";
+import { isDelete, type HostRuleIssue, type Setter } from "./schema.js";
 
 type Container = Record<string, unknown> | unknown[];
 
@@ -29,9 +29,13 @@ function indexError(container: Container, segment: string): string | undefined {
   if (!Array.isArray(container)) return undefined;
   const index = Number(segment);
   if (!Number.isInteger(index) || index < 0 || index >= container.length) {
-    return `no index ${segment} (length ${container.length})`;
+    return `has no item ${segment}`;
   }
   return undefined;
+}
+
+function opaque(path: readonly string[]): string {
+  return `${path.join(".")} is filled in from a token, so its parts can't be changed.`;
 }
 
 /** Applies one setter in place; returns why it could not. */
@@ -39,38 +43,40 @@ function applyOne(root: Container, setter: Setter): string | undefined {
   const parsed = parsePath(setter.path);
   if ("error" in parsed) return parsed.error;
   const { segments, subject } = parsed;
+  const remove = isDelete(setter.value);
   let current: Container = root;
   for (let index = 0; index < segments.length - 1; index++) {
     const segment = segments[index];
     const at = segments.slice(0, index + 1).join(".");
-    if (isOpaque(current))
-      return `${segments.slice(0, index).join(".")} is a token`;
+    if (isOpaque(current)) return opaque(segments.slice(0, index));
     const missing = indexError(current, segment);
-    if (missing) return `${at}: ${missing}`;
+    if (missing) return `${segments.slice(0, index).join(".")} ${missing}.`;
     let next = child(current, segment);
     if (next === undefined) {
-      if (index < subject.length) return `${at} does not exist`;
-      if (isDelete(setter.value)) return undefined;
+      if (index < subject.length) return `There is no ${at} in this host.`;
+      if (remove) return undefined;
       next = {};
       (current as Record<string, unknown>)[segment] = next;
     }
-    if (!isContainer(next)) return `${at} is not an object`;
+    if (!isContainer(next))
+      return `${at} is a single value, not a group of settings.`;
     current = next;
   }
   const last = segments[segments.length - 1];
-  if (isOpaque(current)) return `${segments.slice(0, -1).join(".")} is a token`;
+  if (isOpaque(current)) return opaque(segments.slice(0, -1));
   const missing = indexError(current, last);
-  if (missing) return `${setter.path}: ${missing}`;
-  if (
-    segments.length === subject.length &&
-    child(current, last) === undefined
-  ) {
-    return `${setter.path} does not exist`;
-  }
-  if (isDelete(setter.value)) {
-    if (Array.isArray(current)) return "an array element cannot be deleted";
-    delete current[last];
+  if (missing) return `${segments.slice(0, -1).join(".")} ${missing}.`;
+  const exists = child(current, last) !== undefined;
+  if (remove) {
+    if (Array.isArray(current))
+      return "Items in a list can't be removed one by one.";
+    if (exists) delete current[last];
     return undefined;
+  }
+  // A new member may be added by setting its whole wrapper; a host or folder may not.
+  const addsMember = subject.at(-2) === "children";
+  if (segments.length === subject.length && !exists && !addsMember) {
+    return `There is no ${setter.path} in this host.`;
   }
   const value = structuredClone(setter.value);
   if (Array.isArray(current)) current[Number(last)] = value;
@@ -78,25 +84,18 @@ function applyOne(root: Container, setter: Setter): string | undefined {
   return undefined;
 }
 
-export type SetterSource = { axis?: string; value?: string };
-
-/** In order, on a copy; `sources[i]` names where setter i came from. */
+/** In order, on a copy; each setter that cannot apply is reported and skipped. */
 export function applySetters(
   envelope: HostExport,
   setters: readonly Setter[],
-  sources: readonly SetterSource[] = [],
-): { envelope: HostExport; issues: MatrixIssue[] } {
+): { envelope: HostExport; issues: HostRuleIssue[] } {
   const copy = structuredClone(envelope) as HostExport;
-  const issues: MatrixIssue[] = [];
-  setters.forEach((setter, index) => {
+  const issues: HostRuleIssue[] = [];
+  for (const setter of setters) {
     const error = applyOne(copy as unknown as Container, setter);
-    if (error === undefined) return;
-    issues.push({
-      stage: "setter",
-      path: setter.path,
-      message: error,
-      ...sources[index],
-    });
-  });
+    if (error !== undefined) {
+      issues.push({ rule: "setter", path: setter.path, message: error });
+    }
+  }
   return { envelope: copy, issues };
 }

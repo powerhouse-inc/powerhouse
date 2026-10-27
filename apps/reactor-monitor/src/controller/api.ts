@@ -100,21 +100,11 @@ export const instanceOutputsSchema = z.object({
 });
 export type InstanceOutputs = z.infer<typeof instanceOutputsSchema>;
 
-/** Set on instances a matrix run started; manual starts carry none. */
-export const instanceOwnerSchema = z.strictObject({
-  kind: z.literal("matrix"),
-  runId: z.string(),
-  cellId: z.string(),
-  rep: z.int().min(1),
-});
-export type InstanceOwner = z.infer<typeof instanceOwnerSchema>;
-
 export const instanceSchema = z.object({
   id: z.string(),
   project: z.string(),
   host: z.string(),
   status: instanceStatusSchema,
-  owner: instanceOwnerSchema.optional(),
   startedAt: z.string(),
   pid: z.number().int().optional(),
   outputs: instanceOutputsSchema.optional(),
@@ -161,9 +151,6 @@ export const errorCodeSchema = z.enum([
   "check_failed",
   "instance_limit",
   "shutting_down",
-  "matrix_invalid",
-  "matrix_limit",
-  "run_not_found",
   "internal",
 ]);
 export type ErrorCode = z.infer<typeof errorCodeSchema>;

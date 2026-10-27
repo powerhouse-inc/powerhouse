@@ -121,94 +121,110 @@ describe("applySetters", () => {
 
   it.each<[string, Setter, string]>([
     [
-      "a path inside a token",
-      {
-        path: "members.switchboard.reactor.backends.main.storage.dataDir.$env",
-        value: "X",
-      },
-      "members.switchboard.reactor.backends.main.storage.dataDir is a token",
-    ],
-    [
       "a path through a token",
       {
-        path: "members.switchboard.reactor.backends.main.storage.dataDir.$env.name",
+        path: `${SB}.reactor.backends.main.storage.dataDir.name`,
         value: "X",
       },
-      "storage.dataDir is a token",
+      `${SB}.reactor.backends.main.storage.dataDir is filled in from a token, so its parts can't be changed.`,
+    ],
+    [
+      "a path inside a token",
+      { path: `${SB}.reactor.backends.main.storage.dataDir.$env`, value: "X" },
+      "points inside a token",
     ],
     [
       "an index past the end",
-      { path: "members.switchboard.reactor.drives.1.name", value: "x" },
-      "no index 1 (length 1)",
+      { path: `${SB}.reactor.drives.1.name`, value: "x" },
+      `${SB}.reactor.drives has no item 1.`,
     ],
     [
       "a non-numeric index",
-      { path: "members.switchboard.reactor.drives.first", value: "x" },
-      "no index first",
+      { path: `${SB}.reactor.drives.first`, value: "x" },
+      "has no item first.",
     ],
     [
       "a last index past the end",
-      { path: "members.switchboard.reactor.drives.3", value: {} },
-      "no index 3",
+      { path: `${SB}.reactor.drives.3`, value: {} },
+      "has no item 3.",
     ],
     [
       "deleting an array element",
-      {
-        path: "members.switchboard.reactor.drives.0",
-        value: { $delete: true },
-      },
-      "an array element cannot be deleted",
+      { path: `${SB}.reactor.drives.0`, value: { $delete: true } },
+      "Items in a list can't be removed one by one.",
     ],
     [
       "a path through a primitive",
-      { path: "members.switchboard.runner.port.value", value: 1 },
-      "members.switchboard.runner.port is not an object",
+      { path: `${SB}.runner.port.value`, value: 1 },
+      `${SB}.runner.port is a single value, not a group of settings.`,
     ],
     [
       "a missing member",
       { path: "members.ghost.runner.port", value: 1 },
-      "members.ghost does not exist",
+      "There is no members.ghost in this host.",
     ],
     [
-      "a missing child",
+      "a whole missing member folder",
+      { path: "members.ghost", value: {} },
+      "There is no members.ghost in this host.",
+    ],
+    [
+      "a field of a missing child",
       { path: "host.children.ghost.runner.port", value: 1 },
-      "host.children.ghost does not exist",
+      "There is no host.children.ghost in this host.",
     ],
     [
       "a prototype segment",
       { path: "host.__proto__.polluted", value: true },
-      'segment "__proto__"',
+      'reserved name "__proto__"',
     ],
     [
       "a constructor segment",
       { path: "host.constructor.x", value: true },
-      'segment "constructor"',
+      'reserved name "constructor"',
     ],
     ["a bad root", { path: "project.root", value: "/" }, "must start at host"],
   ])("refuses %s", (_name, setter, message) => {
     const result = apply(setter);
     expect(result.issues).toEqual([
       {
-        stage: "setter",
+        rule: "setter",
         path: setter.path,
         message: expect.stringContaining(message) as string,
       },
     ]);
   });
 
-  it("reports every failing setter with its source and keeps the rest", () => {
-    const result = applySetters(
-      envelope(),
-      [
-        { path: "members.ghost.runner.port", value: 1 },
-        { path: "members.switchboard.runner.port", value: 7 },
-        { path: "members.switchboard.reactor.drives.9", value: 1 },
-      ],
-      [{ axis: "a", value: "x" }, {}, { axis: "b", value: "y" }],
+  it("treats an inherited name as missing", () => {
+    const result = apply({ path: "host.reactor.toString.x", value: 1 });
+    expect(result.issues).toEqual([]);
+    expect(at(result, "host.reactor.toString")).toEqual({ x: 1 });
+  });
+
+  it("adds a whole member and removes one, missing or not", () => {
+    const added = apply({
+      path: "host.children.sb2",
+      value: { host: "switchboard" },
+    });
+    expect(added.issues).toEqual([]);
+    expect(at(added, "host.children.sb2")).toEqual({ host: "switchboard" });
+    const removed = apply(
+      { path: "host.children.sb", value: { $delete: true } },
+      { path: "host.children.ghost", value: { $delete: true } },
     );
-    expect(result.issues.map(({ axis, value }) => [axis, value])).toEqual([
-      ["a", "x"],
-      ["b", "y"],
+    expect(removed.issues).toEqual([]);
+    expect(at(removed, "host.children")).toEqual({});
+  });
+
+  it("reports every failing setter and keeps the rest", () => {
+    const result = applySetters(envelope(), [
+      { path: "members.ghost.runner.port", value: 1 },
+      { path: `${SB}.runner.port`, value: 7 },
+      { path: `${SB}.reactor.drives.9`, value: 1 },
+    ]);
+    expect(result.issues.map((issue) => issue.path)).toEqual([
+      "members.ghost.runner.port",
+      `${SB}.reactor.drives.9`,
     ]);
     expect(at(result, `${SB}.runner.port`)).toBe(7);
   });
