@@ -32,14 +32,7 @@ import {
  * - onShutdown               — first in the subsystem-ordered teardown
  */
 
-export const PLUGIN_HOST_FLAG = "FEATURE_PLUGIN_HOST_ENABLED";
-
-export function isPluginHostEnabled(
-  env: Record<string, string | undefined> = process.env,
-): boolean {
-  const value = env[PLUGIN_HOST_FLAG]?.trim().toLowerCase();
-  return value === "1" || value === "true";
-}
+export { isPluginHostEnabled, PLUGIN_HOST_FLAG } from "./plugin-host-flag.mjs";
 
 /**
  * The context plugins receive. Fields are populated as the boot spine reaches
