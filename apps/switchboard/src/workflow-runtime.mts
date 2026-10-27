@@ -39,7 +39,10 @@ import type {
   IWebhookScope,
   ScopedRouteHandle,
 } from "@powerhousedao/shared/processors";
-import type { Principal } from "@powerhousedao/shared/document-model";
+import type {
+  Principal,
+  UserActionSigner,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import {
@@ -420,27 +423,39 @@ export function reactorAccessOf(
  * through the same GraphQL manager that serves the index over HTTP. The
  * request's caller is the run user's address on the host's own network and
  * chain, what a Renown bearer for that address would carry; the index's
- * access declarations decide from the address. A run with no user reads
- * anonymously, which the authenticated-caller floor refuses as it would an
- * anonymous HTTP request.
+ * access declarations decide from the address.
+ *
+ * A run with no user (its publish was unsigned or host-signed) is refused
+ * before this under enforcement. With enforcement off the host acts for such
+ * a run already, signing its writes with its own key, so its index reads are
+ * the host's too: the request's caller is the host's signed-in address. A
+ * host with no signed-in identity reads anonymously, which the
+ * authenticated-caller floor refuses as it would an anonymous HTTP request.
  */
 export function indexQueryFor(
   manager: Pick<GraphQLManager, "executeSubgraph">,
   clientModule: InProcessReactorClientModule | undefined,
 ): NonNullable<WorkflowEngine.WorkflowRuntimeHostDeps["queryIndex"]> {
-  const network = clientModule?.signer.user;
+  const signer = clientModule?.signer;
+  const host = signer?.user as Partial<UserActionSigner> | undefined;
+  const hostKey = signer?.app?.key ?? "";
+  const chainId = host?.chainId ?? 1;
+  const networkId = host?.networkId ?? "eip155";
   return async (request, runUser) => {
+    const user = runUser
+      ? {
+          address: runUser.address,
+          chainId,
+          networkId,
+          appKey: runUser.subject.key ?? hostKey,
+        }
+      : host?.address
+        ? { address: host.address, chainId, networkId, appKey: hostKey }
+        : undefined;
     const result = await manager.executeSubgraph(request.subgraph, {
       query: request.query,
       variables: request.variables,
-      user: runUser
-        ? {
-            address: runUser.address,
-            chainId: network?.chainId ?? 1,
-            networkId: network?.networkId ?? "eip155",
-            appKey: runUser.subject.key ?? clientModule?.signer.app?.key ?? "",
-          }
-        : undefined,
+      user,
     });
     return {
       data: (result.data as Record<string, unknown> | null | undefined) ?? null,
