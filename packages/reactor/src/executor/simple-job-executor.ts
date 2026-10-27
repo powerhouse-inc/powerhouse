@@ -2716,6 +2716,16 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (!canonical && !this.featureFlags.documentDecisions) {
       return plain();
     }
+
+    if (!canonical) {
+      job = {
+        ...job,
+        actions: [...job.actions].sort(
+          (a, b) => Date.parse(a.timestampUtcMs) - Date.parse(b.timestampUtcMs),
+        ),
+      };
+    }
+
     // Parsed, not compared as strings, here and below: a submitted timestamp
     // may carry second precision, and "…:00Z" sorts after "…:00.000Z"
     // lexically though it is the earlier instant. Selecting the minimum by
