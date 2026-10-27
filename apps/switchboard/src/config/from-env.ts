@@ -54,7 +54,7 @@ export function switchboardConfigFromEnv(
       ...api.server,
       port: options.bin
         ? binPortFromEnv(env.PH_SWITCHBOARD_PORT)
-        : portFromEnv(env.PORT),
+        : portFromEnv(env.PORT, logger),
     },
     storage: {
       reactor: { url: reactorUrl },
@@ -225,13 +225,16 @@ function logLevelFromEnv(
   return undefined;
 }
 
-function portFromEnv(raw: string | undefined): number | undefined {
+// Most edges pass a port of their own, so a bad PORT must not fail their boot.
+function portFromEnv(
+  raw: string | undefined,
+  logger: Logger,
+): number | undefined {
   if (!raw) return undefined;
   const port = Number(raw);
-  if (!Number.isInteger(port) || port < 0 || port > 65535) {
-    throw new Error(`PORT must be a port number, got "${raw}"`);
-  }
-  return port;
+  if (Number.isInteger(port) && port >= 0 && port <= 65535) return port;
+  logger.warn(`Ignoring invalid PORT="${raw}" (expected a port number)`);
+  return undefined;
 }
 
 // Not a number falls through to the config file, as the bin's own config does.

@@ -646,6 +646,7 @@ describe("switchboardConfigFromEnv warnings", () => {
     ],
     ["GATEWAY_ADAPTER", { GATEWAY_ADAPTER: "nginx" }, (l) => l.server],
     ["LOG_LEVEL", { LOG_LEVEL: "INFO" }, (l) => l.logLevel],
+    ["PORT", { PORT: "http" }, (l) => l.server],
     [
       "WS_CREDENTIAL_RECHECK_INTERVAL_MS",
       { WS_CREDENTIAL_RECHECK_INTERVAL_MS: "soon" },
