@@ -22,10 +22,15 @@ describe("an execute batch stamped out of order, delivered split", () => {
     receiver = undefined;
   });
 
-  function build(documentDecisions: boolean): Promise<InProcessReactorModule> {
+  function build(
+    documentDecisions: boolean,
+    authEnforcement: boolean,
+  ): Promise<InProcessReactorModule> {
     return new ReactorBuilder()
       .withDocumentModelSources([documentModelDocumentModelModule as never])
-      .withExecutorConfig({ featureFlags: { documentDecisions } })
+      .withExecutorConfig({
+        featureFlags: { documentDecisions, authEnforcement },
+      })
       .buildModule();
   }
 
@@ -70,11 +75,17 @@ describe("an execute batch stamped out of order, delivered split", () => {
     ).map((operation) => (operation.action.input as { id: string }).id);
   }
 
-  it.each([false, true])(
-    "converges with documentDecisions %s",
-    async (documentDecisions) => {
-      author = await build(documentDecisions);
-      receiver = await build(documentDecisions);
+  it.each([
+    { documentDecisions: false, authEnforcement: false, offsetMs: 60_000 },
+    { documentDecisions: true, authEnforcement: false, offsetMs: 60_000 },
+    { documentDecisions: true, authEnforcement: false, offsetMs: -60_000 },
+    { documentDecisions: true, authEnforcement: true, offsetMs: 60_000 },
+    { documentDecisions: true, authEnforcement: true, offsetMs: -60_000 },
+  ])(
+    "converges with documentDecisions $documentDecisions, authEnforcement $authEnforcement, stamped $offsetMs ms from now",
+    async ({ documentDecisions, authEnforcement, offsetMs }) => {
+      author = await build(documentDecisions, authEnforcement);
+      receiver = await build(documentDecisions, authEnforcement);
       const document = createDocModelDocument({ signaturePolicy: "legacy" });
       const docId = document.header.id;
       await run(author, author.reactor.create(document));
@@ -87,7 +98,7 @@ describe("an execute batch stamped out of order, delivered split", () => {
         ),
       );
 
-      const base = Date.now() + 60_000;
+      const base = Date.now() + offsetMs;
       const stamped = (id: string, offsetMs: number): Action => ({
         ...addModule({ id, name: id }),
         timestampUtcMs: new Date(base + offsetMs).toISOString(),

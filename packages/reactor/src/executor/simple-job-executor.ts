@@ -2275,13 +2275,13 @@ export class SimpleJobExecutor implements IJobExecutor {
    * would overwrite the verdict every other replica computes for it.
    */
   private async positionByTimestamp(
-    job: Job,
+    submitted: Job,
     stores: ExecutionStores,
     signal?: AbortSignal,
   ): Promise<PositionedWrites> {
-    let inOrder = job.actions;
+    let job = submitted;
     const plain = (): PositionedWrites => ({
-      writes: inOrder.map((action) => ({
+      writes: job.actions.map((action) => ({
         action,
         skip: 0,
         sourceRemote: "",
@@ -2293,9 +2293,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       return plain();
     }
 
-    inOrder = [...job.actions].sort(
-      (a, b) => Date.parse(a.timestampUtcMs) - Date.parse(b.timestampUtcMs),
-    );
+    job = {
+      ...job,
+      actions: [...job.actions].sort(
+        (a, b) => Date.parse(a.timestampUtcMs) - Date.parse(b.timestampUtcMs),
+      ),
+    };
 
     // Parsed, not compared as strings, here and below: a submitted timestamp
     // may carry second precision, and "…:00Z" sorts after "…:00.000Z"
