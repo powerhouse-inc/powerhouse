@@ -229,3 +229,77 @@ describe("RunScopedReactorClient's drives", () => {
     expect(inner.addFolder).not.toHaveBeenCalled();
   });
 });
+
+describe("ctx.reactor.query: a read-model index read, answered by the host", () => {
+  const request = {
+    subgraph: "key-index",
+    query: "query ($k: [String!]!) { keyIndex { find(keys: $k) { key } } }",
+    variables: { k: ["a"] },
+  };
+
+  it("is served, and refused by name on a host that answers no index", async () => {
+    const query = vi.fn(() =>
+      Promise.resolve({ data: { keyIndex: { find: [] } } }),
+    );
+    const served = servedClient({
+      ...fakeReactorClient(),
+      query,
+    } as ReactorClient);
+    expect(await served.query(request)).toEqual({
+      data: { keyIndex: { find: [] } },
+    });
+    expect(query).toHaveBeenCalledWith(request);
+
+    const inner = fakeInner("powerhouse/document-drive");
+    const none = servedClient(runScoped(inner, "read"));
+    await expect(none.query(request)).rejects.toThrow(
+      /serves no read-model indexes to pieces/,
+    );
+  });
+
+  it("asks the host as the run user, within the step's deadline", async () => {
+    const inner = fakeInner("powerhouse/document-drive");
+    const queryIndex = vi.fn(() => Promise.resolve({ data: { ok: true } }));
+    const client = new RunScopedReactorClient(
+      inner.client,
+      {
+        runUser: { address: "0xrun", subject },
+        requireReactor: "read",
+        connection: { access: "read" },
+        deadline: Date.now() + 30_000,
+        journal: { recordDocuments: vi.fn(), recordJob: vi.fn() },
+      },
+      { authEnforcement: true, queryIndex },
+    );
+    expect(await servedClient(client).query(request)).toEqual({
+      data: { ok: true },
+    });
+    expect(queryIndex).toHaveBeenCalledTimes(1);
+    const [sent, runUser, signal] = queryIndex.mock.calls[0] as unknown as [
+      typeof request,
+      { address: string },
+      AbortSignal,
+    ];
+    expect(sent).toEqual(request);
+    expect(runUser.address).toBe("0xrun");
+    expect(signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("reads nothing for a run with no user under enforcement, like every other read", async () => {
+    const inner = fakeInner("powerhouse/document-drive");
+    const queryIndex = vi.fn(() => Promise.resolve({ data: {} }));
+    const client = new RunScopedReactorClient(
+      inner.client,
+      {
+        runUser: null,
+        requireReactor: "read",
+        connection: { access: "read" },
+        deadline: Date.now() + 30_000,
+        journal: { recordDocuments: vi.fn(), recordJob: vi.fn() },
+      },
+      { authEnforcement: true, queryIndex },
+    );
+    await expect(servedClient(client).query(request)).rejects.toThrow();
+    expect(queryIndex).not.toHaveBeenCalled();
+  });
+});

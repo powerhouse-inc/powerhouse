@@ -1,6 +1,10 @@
 // The reactor client one piece step gets: the host's client, acting as the
 // run user within the step's declaration, connection and deadline (ADR 0005).
-import type { ReactorClient } from "@powerhousedao/pieces-framework";
+import type {
+  IndexQueryRequest,
+  IndexQueryResult,
+  ReactorClient,
+} from "@powerhousedao/pieces-framework";
 import {
   createEmptyDocument,
   deleteDocumentAction,
@@ -44,7 +48,7 @@ import type { RunScope } from "./run-scope.js";
 
 export type RunScopedHostDeps = Pick<
   WorkflowRuntimeHostDeps,
-  "authEnforcement"
+  "authEnforcement" | "queryIndex"
 >;
 
 export interface RunScopedReactorClientOptions {
@@ -359,6 +363,23 @@ export class RunScopedReactorClient implements ReactorClient {
         this.signal(signal),
       ),
     );
+  }
+
+  // A read-model index, answered by the host as the run user: the index's own
+  // access declarations decide, as they would for the same user over HTTP.
+  // No run user under enforcement reads nothing, as every other read.
+  async query(
+    request: IndexQueryRequest,
+    signal?: AbortSignal,
+  ): Promise<IndexQueryResult> {
+    const queryIndex = this.host.queryIndex;
+    if (!queryIndex) {
+      throw accessDenied(
+        "This host serves no read-model indexes to pieces (reactor.query)",
+      );
+    }
+    this.assertAccess();
+    return queryIndex(request, this.scope.runUser, this.signal(signal));
   }
 
   // --- Writes ------------------------------------------------------------

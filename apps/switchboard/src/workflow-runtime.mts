@@ -18,6 +18,7 @@ import {
   createCanonicalDocumentIdResolver,
   type CanonicalDocumentId,
   type Context,
+  type GraphQLManager,
   type IAttachmentAccessService,
   type IAuthorizationService,
   type IPackagePieceSource,
@@ -270,6 +271,10 @@ export interface ComposeWorkflowRuntimeDeps {
    * Absent leaves OAuth2 connections unable to sign in. */
   http?: IHttpScope;
   authorizationService: IAuthorizationService;
+  /** Answers a piece's read of a read-model index (`ctx.reactor.query`) in
+   * process, as the run's user: the GraphQL manager that serves the same
+   * subgraphs over HTTP. Absent, pieces get the method refused by name. */
+  indexQueries?: Pick<GraphQLManager, "executeSubgraph">;
   /** Where the pieces installed packages ship come from; absent leaves the
    * runtime with none and only published bundles resolvable. */
   pieces?: IPackagePieceSource;
@@ -407,6 +412,42 @@ export function reactorAccessOf(
     authEnforcement: flags ? flags.authEnforcement : true,
     authConditions: flags?.authConditions === true,
     identity,
+  };
+}
+
+/**
+ * A piece's read of a read-model index, run in process as the run's user
+ * through the same GraphQL manager that serves the index over HTTP. The
+ * request's caller is the run user's address on the host's own network and
+ * chain, what a Renown bearer for that address would carry; the index's
+ * access declarations decide from the address. A run with no user reads
+ * anonymously, which the authenticated-caller floor refuses as it would an
+ * anonymous HTTP request.
+ */
+export function indexQueryFor(
+  manager: Pick<GraphQLManager, "executeSubgraph">,
+  clientModule: InProcessReactorClientModule | undefined,
+): NonNullable<WorkflowEngine.WorkflowRuntimeHostDeps["queryIndex"]> {
+  const network = clientModule?.signer.user;
+  return async (request, runUser) => {
+    const result = await manager.executeSubgraph(request.subgraph, {
+      query: request.query,
+      variables: request.variables,
+      user: runUser
+        ? {
+            address: runUser.address,
+            chainId: network?.chainId ?? 1,
+            networkId: network?.networkId ?? "eip155",
+            appKey: runUser.subject.key ?? clientModule?.signer.app?.key ?? "",
+          }
+        : undefined,
+    });
+    return {
+      data: (result.data as Record<string, unknown> | null | undefined) ?? null,
+      ...(result.errors
+        ? { errors: result.errors.map((e) => ({ message: e.message })) }
+        : {}),
+    };
   };
 }
 
@@ -660,6 +701,9 @@ async function composeClaimed(
       : {}),
     hostPrincipal: hostPrincipalOf(access),
     hostIdentity: hostIdentityOf(access),
+    ...(deps.indexQueries
+      ? { queryIndex: indexQueryFor(deps.indexQueries, deps.clientModule) }
+      : {}),
     ...(models
       ? {
           modelManifest: () => models.modelManifest(),

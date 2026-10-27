@@ -205,6 +205,12 @@ export const archiveInvoice = createAction({
   refuses document lifecycle actions, and the client's convenience writes
   (`rename`, relationships, upgrades, batches, `drives`) are refused. Read a
   drive's nodes from `get(driveId)`.
+- `query({ subgraph, query, variables })` (`IndexQueryMethods`, on both
+  types) reads a read-model index the host serves as a GraphQL subgraph, by
+  the name the host registers it under, with the host's own permission rules
+  applied for the run user. It answers `{ data, errors? }` and takes queries
+  only; a mutation is refused. A host that serves no indexes refuses the
+  method by name.
 - The types come from `@powerhousedao/reactor` and `@powerhousedao/shared`,
   which are optional, type-only peer dependencies. The build emits no import
   of either.

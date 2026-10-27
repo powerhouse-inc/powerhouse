@@ -272,7 +272,7 @@ describe("ctx.reactor follows the declaration", () => {
       props: {},
       run(ctx) {
         expectTypeOf<keyof typeof ctx.reactor>().toEqualTypeOf<
-          ReadMethods | "drives"
+          ReadMethods | "drives" | "query"
         >();
         expectTypeOf<
           Extract<keyof typeof ctx.reactor, WriteMethods>

@@ -90,13 +90,42 @@ export type UnlistedDriveMethods<C> = Exclude<
 >;
 export type ListedDriveClient = Listed<UnlistedDriveMethods<IDriveClient>>;
 
-export type ReactorReadClient = Pick<IReactorClient, ReadMethods> & {
-  readonly drives: Pick<IDriveClient, DriveReadMethods>;
-};
+/**
+ * A read of a read-model index (a custom subgraph such as a key index),
+ * answered in the host process as the run's user: the index's own access
+ * declarations decide what the user sees, exactly as over HTTP, and no
+ * credential or URL reaches the piece.
+ */
+export interface IndexQueryRequest {
+  /** The subgraph's name, as registered on the host (`key-index`). */
+  subgraph: string;
+  /** A GraphQL query document; mutations are refused. */
+  query: string;
+  variables?: Record<string, unknown>;
+}
 
-export type ReactorClient = Pick<IReactorClient, ReadMethods | WriteMethods> & {
-  readonly drives: Pick<IDriveClient, DriveReadMethods | DriveWriteMethods>;
-};
+export interface IndexQueryResult {
+  data?: Record<string, unknown> | null;
+  errors?: { message: string }[];
+}
+
+/** The read-model query a piece with reactor access may run. */
+export interface IndexQueryMethods {
+  query(
+    request: IndexQueryRequest,
+    signal?: AbortSignal,
+  ): Promise<IndexQueryResult>;
+}
+
+export type ReactorReadClient = Pick<IReactorClient, ReadMethods> &
+  IndexQueryMethods & {
+    readonly drives: Pick<IDriveClient, DriveReadMethods>;
+  };
+
+export type ReactorClient = Pick<IReactorClient, ReadMethods | WriteMethods> &
+  IndexQueryMethods & {
+    readonly drives: Pick<IDriveClient, DriveReadMethods | DriveWriteMethods>;
+  };
 
 // The client a declaration grants.
 export type ReactorClientFor<R extends RequireReactor> = R extends "write"

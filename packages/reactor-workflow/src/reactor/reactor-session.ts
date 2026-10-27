@@ -3,6 +3,7 @@
 import type {
   DriveReadMethods,
   DriveWriteMethods,
+  IndexQueryMethods,
   ReactorClient,
   ReadMethods,
   RefusedDriveMethods,
@@ -33,14 +34,16 @@ type WorkerMethods =
   | "getDocumentModelModule"
   | "getDocumentModelModuleForDocument";
 
-// A key per method, so a list change fails to compile.
+// A key per method, so a list change fails to compile. `query` is the
+// read-model index read the framework adds beside the client's own methods.
 const SERVED: Record<
-  Exclude<ReadMethods | WriteMethods, WorkerMethods>,
+  Exclude<ReadMethods | WriteMethods, WorkerMethods> | keyof IndexQueryMethods,
   true
 > = {
   get: true,
   resolveIdOrSlug: true,
   find: true,
+  query: true,
   getOperations: true,
   getOutgoingRelationships: true,
   getIncomingRelationships: true,
@@ -101,7 +104,9 @@ type AnyMethod = (...args: unknown[]) => unknown;
 
 // The server calls any method of the client it holds, so it holds only these:
 // no prototype, and none of the wrapper's internals.
-export function servedClient(client: ReactorClient): IReactorClient {
+export function servedClient(
+  client: ReactorClient,
+): IReactorClient & IndexQueryMethods {
   const facade = served(
     client as unknown as Record<string, AnyMethod>,
     SERVED,
@@ -114,7 +119,7 @@ export function servedClient(client: ReactorClient): IReactorClient {
     REFUSED_DRIVES,
     "drives.",
   );
-  return facade as unknown as IReactorClient;
+  return facade as unknown as IReactorClient & IndexQueryMethods;
 }
 
 function served(

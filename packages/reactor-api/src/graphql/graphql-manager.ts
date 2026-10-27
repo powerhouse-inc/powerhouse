@@ -25,9 +25,12 @@ import {
   getOperationAST,
   type GraphQLSchema,
   Kind,
+  OperationTypeNode,
+  parse,
   print,
   visit,
 } from "graphql";
+import { AuthenticationRequiredError } from "./errors.js";
 import type { IncomingHttpHeaders } from "http";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type http from "node:http";
@@ -103,6 +106,7 @@ import {
 import { filterBuildableSubgraphs } from "./gateway/adapter-gateway-stitching.js";
 import {
   getAuthContext,
+  setAuthContext,
   type AuthFetchMiddleware,
 } from "./gateway/auth-middleware.js";
 import {
@@ -928,6 +932,88 @@ export class GraphQLManager {
       if (found) return found;
     }
     return undefined;
+  }
+
+  /**
+   * Runs a query against one registered subgraph in process, as `user`:
+   * the same resolvers, the same request context and the same
+   * authenticated-caller floor an HTTP request to `/graphql/<name>` gets,
+   * without HTTP. For a host-side caller that acts for a principal (the
+   * workflow runtime, for a piece's index lookup as the run's user).
+   *
+   * Only `query` operations: a mutation is a write, and writes go through
+   * the write half, which signs and journals them.
+   */
+  async executeSubgraph(
+    name: string,
+    request: {
+      query: string;
+      variables?: Record<string, unknown>;
+      user?: Context["user"];
+    },
+  ): Promise<{
+    data?: Record<string, unknown> | null;
+    errors?: { message: string }[];
+  }> {
+    const entry = this.#internalSubgraphHandlers.get(name);
+    if (!entry) {
+      throw new Error(
+        this.getSubgraphByName(name)
+          ? `Subgraph "${name}" is registered but has no handler yet`
+          : `Unknown subgraph: ${name}`,
+      );
+    }
+    if (this.#requireAuthMiddleware !== undefined && !request.user) {
+      throw new AuthenticationRequiredError();
+    }
+    const operation = getOperationAST(parse(request.query), undefined);
+    if (operation?.operation !== OperationTypeNode.QUERY) {
+      throw new Error(
+        `executeSubgraph runs queries only; ${operation?.operation ?? "no operation"} refused`,
+      );
+    }
+    // The subgraph's own handler at its real mount path, as
+    // `executeSubgraphQuery` addresses it; the principal is recorded on the
+    // request as the auth middleware would have recorded a bearer's.
+    const url = new URL(entry.path, `http://localhost:${this.port}/`);
+    const http = new Request(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({
+        query: request.query,
+        variables: request.variables ?? {},
+      }),
+    });
+    if (request.user) {
+      setAuthContext(http, {
+        user: request.user,
+        admins: this.authorizationService.config.admins,
+        auth_enabled: this.authService !== undefined,
+      });
+    }
+    const response = await entry.handler(http);
+    const body = (await response.json().catch(() => undefined)) as
+      | {
+          data?: Record<string, unknown> | null;
+          errors?: { message: string }[];
+        }
+      | undefined;
+    if (!response.ok && !body?.errors?.length) {
+      throw new Error(
+        `Subgraph "${name}" query failed: ${response.status}${
+          body ? ` ${JSON.stringify(body)}` : ""
+        }`,
+      );
+    }
+    return {
+      data: body?.data ?? null,
+      ...(body?.errors?.length
+        ? { errors: body.errors.map((e) => ({ message: e.message })) }
+        : {}),
+    };
   }
 
   /** Every registered subgraph named `name`, core or not, in any bucket: the

@@ -295,6 +295,15 @@ the request settles. The boot document models reach the child on fork as
 up with a `model-entries` host call the first time a piece asks for it. Either
 way the model is imported on first use.
 
+`ctx.reactor.query` is served the same way, by the host's optional
+`queryIndex` dep (`WorkflowRuntimeHostDeps`): a read of a read-model index the
+host registers as a GraphQL subgraph, run in the host process as the run user,
+so the index's own access rules decide as they do over HTTP. A host that hands
+over no `queryIndex` refuses the method by name, and a run with no user is
+refused under enforcement like every other read. Switchboard answers it from
+the GraphQL manager (`executeSubgraph`), so a piece never needs the
+switchboard's URL or a bearer of its own to read an index.
+
 ## Blocks
 
 A step names its block the way Activepieces does, with three fields:

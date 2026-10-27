@@ -19,6 +19,9 @@ export type { PackagePiece } from "./package-piece.js";
 export type {
   DriveReadMethods,
   DriveWriteMethods,
+  IndexQueryMethods,
+  IndexQueryRequest,
+  IndexQueryResult,
   ReactorClient,
   ReactorClientFor,
   ReactorContext,

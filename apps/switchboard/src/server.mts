@@ -1274,6 +1274,9 @@ async function initServer(
       webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
       http: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME),
       authorizationService: api.authorizationService,
+      // The manager that serves this reactor's subgraphs: a piece's index read
+      // runs through it in process, as the run's user.
+      indexQueries: api.graphqlManager,
       // The manager that already loads this reactor's packages: the project it
       // runs in is one of them, so its own pieces arrive with the rest.
       pieces: api.packageManager,

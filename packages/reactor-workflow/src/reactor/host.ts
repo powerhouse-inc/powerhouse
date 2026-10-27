@@ -12,6 +12,10 @@ import type {
   IRelationalDb,
   IWebhookScope,
 } from "@powerhousedao/shared/processors";
+import type {
+  IndexQueryRequest,
+  IndexQueryResult,
+} from "@powerhousedao/pieces-framework";
 import type { ILogger } from "document-model";
 import type { AttachmentClientLike } from "./attachment-port.js";
 import type { RunUser } from "./run-scope.js";
@@ -54,6 +58,14 @@ export interface WorkflowRuntimeHostDeps {
   hostPrincipal?: Principal;
   // Who the host signs as. A publish under its key has no run user.
   hostIdentity?: HostIdentity;
+  // Answers a piece's read of a read-model index (`ctx.reactor.query`) in
+  // the host process, as the run's user: the index's own access rules
+  // decide, as over HTTP. Absent, the method is refused by name.
+  queryIndex?(
+    request: IndexQueryRequest,
+    runUser: RunUser | null,
+    signal?: AbortSignal,
+  ): Promise<IndexQueryResult>;
   // Importable document models sent to piece workers on fork. Absent, pieces
   // get DocumentModelUnavailableError for every type modelEntries lacks too.
   modelManifest?(): ModelManifestEntry[];
