@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { hostExport, stack } from "./__fixtures__/hosts.js";
-import { fileOf, membersOf, primaryBackendName } from "./members.js";
+import {
+  fileOf,
+  membersOf,
+  primaryBackendName,
+  switchboardSettings,
+  valueAt,
+} from "./members.js";
 
 function summary(name: Parameters<typeof hostExport>[0]) {
   return membersOf({ envelope: hostExport(name) }).map((member) => ({
@@ -113,6 +119,35 @@ describe("membersOf", () => {
       true,
       false,
     ]);
+  });
+
+  it("uses a wrapper's config in place of the member's", () => {
+    const envelope = stack();
+    const members = (
+      envelope as { members: Record<string, Record<string, unknown>> }
+    ).members;
+    members.switchboard.config = {
+      switchboard: { inspection: { admin: true } },
+    };
+    const children = (
+      envelope.host as { children: Record<string, Record<string, unknown>> }
+    ).children;
+    children.sb2 = {
+      host: "switchboard",
+      config: { switchboard: { workers: { executor: { count: 2 } } } },
+    };
+    const [sb, , sb2] = membersOf({ envelope });
+    expect([sb.configAt, sb2.configAt]).toEqual([
+      "members.switchboard.config",
+      "host.children.sb2.config",
+    ]);
+    expect(switchboardSettings(sb)).toEqual({ inspection: { admin: true } });
+    expect(
+      valueAt(switchboardSettings(sb2), ["workers", "executor", "count"]),
+    ).toBe(2);
+    expect(
+      valueAt(switchboardSettings(sb2), ["inspection", "admin"]),
+    ).toBeUndefined();
   });
 
   it("names the file a path lives in", () => {
