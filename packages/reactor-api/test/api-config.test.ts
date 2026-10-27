@@ -5,6 +5,9 @@ import {
   ReactorClientBuilder,
 } from "@powerhousedao/reactor";
 import type { DocumentModelModule, ILogger } from "document-model";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   reactorApiConfigFromEnv,
@@ -295,6 +298,37 @@ describe("server settings from options and env", () => {
     const api = await boot({ auth: { enabled: false, admins: ["0xoption"] } });
     expect(api.authorizationService.config.policy).toBe("ADMIN_ONLY");
     expect(api.authorizationService.config.admins).toEqual(["0xenv"]);
+  });
+
+  it("lets a set auth option win over the config file's", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "reactor-api-auth-"));
+    const configFile = join(dir, "powerhouse.config.json");
+    writeFileSync(
+      configFile,
+      JSON.stringify({ auth: { enabled: false, admins: ["0xFile"] } }),
+    );
+    try {
+      const fromOptions = await boot({
+        configFile,
+        auth: { enabled: true, admins: ["0xOption"] },
+      });
+      expect(fromOptions.authorizationService.config.policy).toBe("ADMIN_ONLY");
+      expect(fromOptions.authorizationService.config.admins).toEqual([
+        "0xoption",
+      ]);
+      await dispose?.();
+      dispose = undefined;
+
+      writeFileSync(
+        configFile,
+        JSON.stringify({ auth: { enabled: true, admins: ["0xFile"] } }),
+      );
+      const fromFile = await boot({ configFile });
+      expect(fromFile.authorizationService.config.policy).toBe("ADMIN_ONLY");
+      expect(fromFile.authorizationService.config.admins).toEqual(["0xfile"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("takes document permissions from options without env", async () => {

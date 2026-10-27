@@ -112,6 +112,7 @@ import {
 import { initProfilerFromEnv } from "./profiler.js";
 import { switchboardConfigFromEnv } from "./config/from-env.js";
 import {
+  mergeSwitchboardConfig,
   switchboardConfigSchema,
   type SwitchboardConfig,
   type SwitchboardConfigInput,
@@ -1675,7 +1676,20 @@ export const startSwitchboard = async (
   deps: SwitchboardDeps = {},
 ): Promise<SwitchboardReactor> => {
   assertConfigShape(input);
-  const config = switchboardConfigSchema.parse(input);
+  const configPath = resolveConfigPath(input.configFile);
+  const fileConfig = getConfig(configPath);
+  // The file's auth lies under the env and the caller, as under the env vars.
+  const config = switchboardConfigSchema.parse(
+    mergeSwitchboardConfig(
+      {
+        auth: {
+          enabled: fileConfig.auth?.enabled,
+          admins: fileConfig.auth?.admins,
+        },
+      },
+      input,
+    ),
+  );
   const logger = deps.logger ?? defaultLogger;
   if (disableWasmWrapperTiering()) {
     logger.info("Wasm wrapper tier-up off on Node 24 (nodejs/node#66366)");
@@ -1693,7 +1707,6 @@ export const startSwitchboard = async (
   );
 
   const options = serverOptionsOf(config, deps);
-  const configPath = resolveConfigPath(config.configFile);
   // CLASSIC resolution of the carved subsystems' switches — flag-on, the
   // plugins own these (presence is activation): an ABSENT plugin can actually
   // deactivate its subsystem (initServer normalizes unset values to off after
@@ -1709,7 +1722,7 @@ export const startSwitchboard = async (
   // This switchboard's own identity authenticates against the same Renown
   // instance it verifies incoming credentials against, unless told otherwise.
   const renownConfig = resolveRenownConfig(
-    renownLayers(getConfig(configPath).auth?.renown, config.auth.renown),
+    renownLayers(fileConfig.auth?.renown, config.auth.renown),
     {},
     logger,
   );
