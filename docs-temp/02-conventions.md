@@ -274,7 +274,7 @@ Several packages carry a `CLAUDE.md` with package-specific rules: `shared`,
 | `packages/builder-tools/connect-utils/runtime-config.schema.json` | the same |
 | `clis/ph-cli/COMMANDS.md`, `COMMANDS-LEGACY.md` | `postbuild` → `bun generate-docs` |
 | `clis/ph-cmd/COMMANDS.md`, `COMMANDS-LEGACY.md` | the same |
-| `apps/academy/ACADEMY_LLM_COMPLETE.md` | `generate:llm-docs`, plus a pre-commit hook |
+| `apps/academy/static/llms.txt`, `llms-full.txt` (gitignored) | `generate:llm-docs`, run by the academy `build` |
 | `packages/reactor-api/src/graphql/reactor/gen/*` | `pnpm codegen` (graphql-codegen) |
 | `packages/reactor-browser/src/graphql/gen/*` | the same |
 | `document-models/**/gen/*` in every model package | `ph-cli generate` |

@@ -38,11 +38,12 @@ curl https://academy.vetra.io/llms-full.txt
 
 ## Regenerating the files
 
-The files are generated from the academy source docs by the script at `scripts/generate-llm-docs.ts`.
-Run it with:
+The site build generates the files from the academy source docs with the script at `scripts/generate-llm-docs.ts`. They are not committed to the repository.
+
+To generate them locally, run:
 
 ```bash
-npm run generate:llm-docs
+pnpm generate:llm-docs
 ```
 
-This writes both `static/llms.txt` and `static/llms-full.txt`, which Docusaurus serves at the site root.
+This writes `static/llms.txt` and `static/llms-full.txt`, which Docusaurus serves at the site root.
