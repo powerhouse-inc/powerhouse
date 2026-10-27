@@ -39,7 +39,6 @@ import {
   type DocumentPermissionDatabase,
   type IPackageLoader,
   type PgliteFactory,
-  type RenownConfig,
   type ResolvedRenownConfig,
 } from "@powerhousedao/reactor-api";
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
