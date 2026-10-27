@@ -15,6 +15,7 @@ export default defineConfig({
     include: [
       "src/codegen/features.test.ts",
       "src/utils/validation.test.ts",
+      "src/utils/source-files.test.ts",
       "src/create-lib/initial-commit.test.ts",
       "src/codegen/generate-apps.test.ts",
       "src/codegen/generate-processors.test.ts",

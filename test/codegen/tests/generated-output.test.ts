@@ -43,7 +43,10 @@ function readTree(dir: string, files = new Map<string, string>()) {
     if (entry.name === ".git" || entry.name === "node_modules") continue;
     const path = join(dir, entry.name);
     if (entry.isDirectory()) readTree(path, files);
-    else files.set(relative(projectDir, path), readFileSync(path, "utf8"));
+    else {
+      const key = relative(projectDir, path).replaceAll("\\", "/");
+      files.set(key, readFileSync(path, "utf8"));
+    }
   }
   return files;
 }

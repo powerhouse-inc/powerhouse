@@ -109,10 +109,12 @@ export function getPreviousVersionSourceFile(args: {
   const { project, version, filePath } = args;
   const previousVersion = version - 1;
   if (previousVersion < 1) return;
+  // Either separator: path.join gives backslashes on Windows.
   const previousVersionFilePath = filePath.replace(
-    `/v${version}/`,
-    `/v${previousVersion}/`,
+    new RegExp(`([\\\\/])v${version}([\\\\/])`),
+    `$1v${previousVersion}$2`,
   );
+  if (previousVersionFilePath === filePath) return;
 
   // With skipAddingFilesFromTsConfig, the file isn't in the project yet;
   // add it from disk so getSourceFile can find it instead of returning undefined.

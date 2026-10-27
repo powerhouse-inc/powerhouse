@@ -63,9 +63,11 @@ export async function cpForce(source: string | URL, destination: string | URL) {
 }
 
 export async function rmForce(path: PathLike) {
+  // Windows can hold a just-written folder briefly (EBUSY).
   await rm(path, {
     recursive: true,
     force: true,
+    maxRetries: 10,
   });
 }
 
