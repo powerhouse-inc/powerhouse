@@ -50,11 +50,13 @@
   "keywords": [],
   "author": "",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "catalog:",
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-mcp": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
     "@powerhousedao/vetra": "workspace:*",

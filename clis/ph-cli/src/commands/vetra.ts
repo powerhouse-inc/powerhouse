@@ -38,8 +38,9 @@ the field the drive keeps the app it has.
 One Vetra per project:
 A running Vetra is recorded in .ph/vetra-runtime.json (its pid and the
 Connect, Switchboard and MCP URLs); a second \`ph vetra\` prints those and
-exits. --restart stops the recorded Vetra first, then starts this one.
-Studio restarts by itself when powerhouse.config.json changes.
+exits. --restart stops the recorded Vetra first, then starts this one; the
+\`ph mcp\` launcher reconnects to it on its next tool call. Studio restarts
+by itself when powerhouse.config.json changes.
 `,
   args: vetraArgs,
   handler: async (args) => {

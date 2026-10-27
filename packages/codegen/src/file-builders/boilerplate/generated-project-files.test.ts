@@ -1,18 +1,25 @@
 import { packageJsonExports } from "@powerhousedao/shared/clis/constants";
+import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { packageJsonTemplate } from "templates";
+import {
+  cursorReactorMcpServer,
+  packageJsonTemplate,
+  reactorMcpServer,
+} from "templates";
 import { detectFeatures } from "../../codegen/features.js";
 import {
+  migrateReactorMcpEntries,
   writeAiConfigFiles,
   writeModuleFiles,
 } from "./generated-project-files.js";
@@ -156,9 +163,7 @@ describe("writeAiConfigFiles", () => {
     expect(read(dir, "AGENTS.md")).toContain("ph vetra");
     expect(read(dir, "CLAUDE.md")).toMatch(/^@AGENTS\.md\n/);
     const reactorMcp = {
-      mcpServers: {
-        "reactor-mcp": { type: "http", url: "http://localhost:4001/mcp" },
-      },
+      mcpServers: { "reactor-mcp": { type: "stdio", command: "node" } },
     };
     expect(readJson(dir, ".mcp.json")).toMatchObject(reactorMcp);
     expect(readJson(dir, ".cursor/mcp.json")).toMatchObject(reactorMcp);
@@ -180,7 +185,9 @@ describe("writeAiConfigFiles", () => {
     });
     expect(readJson(dir, ".gemini/settings.json")).toEqual({
       context: { fileName: ["AGENTS.md", "GEMINI.md"] },
-      ...reactorMcp,
+      mcpServers: {
+        "reactor-mcp": { command: "node", args: ["--run", "mcp"] },
+      },
     });
   });
 
@@ -276,8 +283,9 @@ describe("writeAiConfigFiles", () => {
     });
     expect(readJson(dir, ".gemini/settings.json")).toEqual({
       context: { fileName: ["CONTEXT.md", "AGENTS.md", "GEMINI.md"] },
+      // The old local-URL entry moves to the `ph mcp` launcher.
       mcpServers: {
-        "reactor-mcp": { type: "http", url: "http://localhost:4123/mcp" },
+        "reactor-mcp": { command: "node", args: ["--run", "mcp"] },
       },
       theme: "dark",
     });
@@ -317,5 +325,131 @@ describe("writeAiConfigFiles", () => {
     const file = "C:\\project\\.claude\\settings.json";
     expect(mergedJsonSettings(file, "{ not json\n", {})).toBeUndefined();
     expect(mergedJsonSettings(file, "{}\n", { a: 1 })).toBe('{\n  "a": 1\n}\n');
+  });
+});
+
+// Projects scaffolded before `ph mcp` point reactor-mcp at Vetra's HTTP URL.
+describe("migrateReactorMcpEntries", () => {
+  const httpEntry = { type: "http", url: "http://localhost:41837/mcp" };
+
+  function writeJson(dir: string, rel: string, value: unknown) {
+    mkdirSync(join(dir, rel, ".."), { recursive: true });
+    writeFileSync(join(dir, rel), JSON.stringify(value, null, 2));
+  }
+
+  const readServers = (dir: string, rel: string) =>
+    (
+      JSON.parse(readFileSync(join(dir, rel), "utf-8")) as {
+        mcpServers: Record<string, unknown>;
+      }
+    ).mcpServers;
+
+  it("rewrites only the reactor-mcp entry of each client config", async () => {
+    const dir = makeTempProject("ph-migrate-mcp-");
+    const other = { command: "my-server", args: ["--x"] };
+    writeJson(dir, ".mcp.json", {
+      mcpServers: { "reactor-mcp": httpEntry, other },
+      extra: true,
+    });
+    writeJson(dir, join(".cursor", "mcp.json"), {
+      mcpServers: { "reactor-mcp": httpEntry },
+    });
+    writeJson(dir, join(".gemini", "settings.json"), {
+      theme: "dark",
+      mcpServers: {
+        "reactor-mcp": { httpUrl: "http://127.0.0.1:4001/mcp" },
+      },
+    });
+
+    expect(await migrateReactorMcpEntries(dir)).toEqual([
+      { path: ".mcp.json", action: "updated" },
+      { path: ".cursor/mcp.json", action: "updated" },
+      { path: ".gemini/settings.json", action: "updated" },
+    ]);
+
+    expect(readServers(dir, ".mcp.json")).toEqual({
+      "reactor-mcp": { type: "stdio", command: "node", args: ["--run", "mcp"] },
+      other,
+    });
+    expect(
+      JSON.parse(readFileSync(join(dir, ".mcp.json"), "utf-8")),
+    ).toMatchObject({ extra: true });
+    expect(readServers(dir, join(".cursor", "mcp.json"))).toEqual({
+      "reactor-mcp": cursorReactorMcpServer,
+    });
+    expect(readServers(dir, join(".gemini", "settings.json"))).toEqual({
+      "reactor-mcp": { command: "node", args: ["--run", "mcp"] },
+    });
+  });
+
+  it("moves the npx launcher to node --run, and adds the mcp script it runs", async () => {
+    const dir = makeTempProject("ph-migrate-mcp-npx-");
+    const npx = ["--no", "ph-cli", "mcp"];
+    writeJson(dir, "package.json", { name: "x", scripts: { vetra: "v" } });
+    writeJson(dir, ".mcp.json", {
+      mcpServers: {
+        "reactor-mcp": { type: "stdio", command: "npx", args: npx },
+      },
+    });
+    writeJson(dir, join(".gemini", "settings.json"), {
+      mcpServers: { "reactor-mcp": { command: "npx", args: npx } },
+    });
+    // Someone's own launcher stays.
+    const own = { type: "stdio", command: "npx", args: ["ph-cli", "mcp"] };
+    writeJson(dir, join(".cursor", "mcp.json"), {
+      mcpServers: { "reactor-mcp": own },
+    });
+
+    expect(await migrateReactorMcpEntries(dir)).toEqual([
+      { path: ".mcp.json", action: "updated" },
+      { path: ".gemini/settings.json", action: "updated" },
+    ]);
+    expect(readServers(dir, ".mcp.json")).toEqual({
+      "reactor-mcp": { type: "stdio", command: "node", args: ["--run", "mcp"] },
+    });
+    expect(readServers(dir, join(".cursor", "mcp.json"))).toEqual({
+      "reactor-mcp": own,
+    });
+    expect(
+      JSON.parse(readFileSync(join(dir, "package.json"), "utf-8")),
+    ).toEqual({ name: "x", scripts: { vetra: "v", mcp: "ph-cli mcp" } });
+  });
+
+  it("runs the project's launcher through node, from a subfolder too", () => {
+    const dir = makeTempProject("ph-mcp-node-run-");
+    writeJson(dir, "package.json", {
+      name: "x",
+      scripts: { mcp: `node -e "console.log(process.cwd())"` },
+    });
+    mkdirSync(join(dir, "editors"));
+    const { command, args } = reactorMcpServer;
+    const output = execFileSync(command, args, {
+      cwd: join(dir, "editors"),
+      encoding: "utf8",
+    });
+    expect(realpathSync(output.trim())).toBe(realpathSync(dir));
+  });
+
+  it("leaves remote, already-migrated and unparseable entries alone", async () => {
+    const dir = makeTempProject("ph-migrate-mcp-keep-");
+    const remote = { type: "http", url: "https://switchboard.example/mcp" };
+    writeJson(dir, ".mcp.json", { mcpServers: { "reactor-mcp": remote } });
+    writeJson(dir, join(".cursor", "mcp.json"), {
+      mcpServers: { other: httpEntry },
+    });
+    mkdirSync(join(dir, ".gemini"));
+    writeFileSync(join(dir, ".gemini", "settings.json"), "{not json");
+
+    expect(await migrateReactorMcpEntries(dir)).toEqual([]);
+    expect(readServers(dir, ".mcp.json")).toEqual({ "reactor-mcp": remote });
+    expect(readServers(dir, join(".cursor", "mcp.json"))).toEqual({
+      other: httpEntry,
+    });
+  });
+
+  it("is a no-op on a fresh scaffold", async () => {
+    const dir = makeTempProject("ph-init-mcp-");
+    await writeAiConfigFiles(dir);
+    expect(await migrateReactorMcpEntries(dir)).toEqual([]);
   });
 });

@@ -41,8 +41,7 @@ export async function buildPowerhouseConfigTemplate(
   args: BuildPowerhouseConfigTemplateArgs,
 ): Promise<string> {
   // Ports are assigned per project rather than fixed at 3000/4001, so two
-  // projects can run at once and an agent's MCP URL can be baked into
-  // .mcp.json before its session starts. Overridable via PH_SWITCHBOARD_PORT /
+  // projects can run at once. Overridable via PH_SWITCHBOARD_PORT /
   // PH_VETRA_CONNECT_PORT in .env.local, or the CLI flags.
   const ports = deriveProjectPorts(args.name);
 
