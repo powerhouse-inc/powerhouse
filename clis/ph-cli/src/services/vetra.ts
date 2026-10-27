@@ -25,6 +25,7 @@ import { parseDefaultDrivesUrl } from "../utils/parse-default-drives.js";
 import { resolveSwitchboardPort } from "../utils/resolve-switchboard-port.js";
 import {
   clearVetraRuntime,
+  legacyMcpConfigs,
   probeVetraRuntime,
   syncMcpPort,
   writeVetraRuntime,
@@ -465,6 +466,13 @@ export async function startVetra(args: VetraArgs) {
           `Updated ${driftedMcpFiles.join(" and ")} to port ${actualSwitchboardPort}. ` +
             `Reconnect your MCP client (/mcp) to pick it up. ` +
             `This edit is local — do not commit it.`,
+        ),
+      );
+    }
+    if (legacyMcpConfigs(projectDir).length > 0) {
+      console.log(
+        yellow(
+          "reactor-mcp still points at a URL; run `ph migrate` to switch it to the `ph mcp` launcher.",
         ),
       );
     }

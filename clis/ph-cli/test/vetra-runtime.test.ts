@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clearVetraRuntime,
+  legacyMcpConfigs,
   probeVetraRuntime,
   readVetraRuntime,
   syncMcpPort,
@@ -185,6 +186,27 @@ describe("syncMcpPort", () => {
     );
     expect(mcp.mcpServers.other.url).toBe("http://localhost:9999/mcp");
     expect(mcp.mcpServers["reactor-mcp"].type).toBe("http");
+  });
+
+  it("leaves a ph mcp stdio entry alone and lists only URL entries for migrate", () => {
+    const dir = tmp();
+    const stdio = {
+      mcpServers: {
+        "reactor-mcp": { type: "stdio", command: "npx", args: ["ph-cli"] },
+      },
+    };
+    writeFileSync(join(dir, ".mcp.json"), JSON.stringify(stdio, null, 2));
+    mkdirSync(join(dir, ".cursor"), { recursive: true });
+    writeFileSync(
+      join(dir, ".cursor", "mcp.json"),
+      JSON.stringify(body(4001), null, 2),
+    );
+
+    expect(syncMcpPort(dir, 41837)).toEqual([join(".cursor", "mcp.json")]);
+    expect(JSON.parse(readFileSync(join(dir, ".mcp.json"), "utf8"))).toEqual(
+      stdio,
+    );
+    expect(legacyMcpConfigs(dir)).toEqual([join(".cursor", "mcp.json")]);
   });
 
   it("skips a missing or unparseable file without throwing", () => {

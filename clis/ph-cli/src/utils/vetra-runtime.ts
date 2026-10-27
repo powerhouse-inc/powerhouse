@@ -136,36 +136,48 @@ const MCP_FILES = [
   path.join(".gemini", "settings.json"),
 ];
 
-/**
- * Point every generated MCP config at `port`, returning the files changed.
- *
- * An MCP client resolves these files at session start and cannot read the
- * project config or `.env`, so when an override moves the port the literal
- * has to be corrected on disk. Rewrites in place rather than regenerating,
- * so any other servers or hand-added keys survive.
- */
-export function syncMcpPort(projectDir: string, port: number): string[] {
-  const changed: string[] = [];
+type McpConfig = { mcpServers?: Record<string, { url?: string }> };
+type UrlMcpConfig = [string, McpConfig, { url?: string }];
+
+/** Each MCP config whose `reactor-mcp` entry still points at a URL. */
+function urlMcpConfigs(projectDir: string): UrlMcpConfig[] {
+  const found: UrlMcpConfig[] = [];
   for (const rel of MCP_FILES) {
     const target = path.join(projectDir, rel);
     if (!fs.existsSync(target)) continue;
-
-    let parsed: { mcpServers?: Record<string, { url?: string }> };
+    let parsed: McpConfig;
     try {
-      parsed = JSON.parse(fs.readFileSync(target, "utf8")) as typeof parsed;
+      parsed = JSON.parse(fs.readFileSync(target, "utf8")) as McpConfig;
     } catch {
       // Hand-broken JSON is the author's to fix; don't clobber it.
       continue;
     }
-
     const server = parsed.mcpServers?.["reactor-mcp"];
-    if (!server?.url) continue;
+    if (server?.url) found.push([rel, parsed, server]);
+  }
+  return found;
+}
 
-    const wanted = `http://localhost:${port}/mcp`;
+/** The MCP configs `ph migrate` would move to the `ph mcp` launcher. */
+export function legacyMcpConfigs(projectDir: string): string[] {
+  return urlMcpConfigs(projectDir).map(([rel]) => rel);
+}
+
+/**
+ * Point every URL-style `reactor-mcp` entry at `port`, returning the files
+ * changed. Stdio entries (`ph mcp`) carry no port and are left alone; this
+ * keeps projects that have not run `ph migrate` working.
+ */
+export function syncMcpPort(projectDir: string, port: number): string[] {
+  const changed: string[] = [];
+  const wanted = `http://localhost:${port}/mcp`;
+  for (const [rel, parsed, server] of urlMcpConfigs(projectDir)) {
     if (server.url === wanted) continue;
-
     server.url = wanted;
-    fs.writeFileSync(target, `${JSON.stringify(parsed, null, 2)}\n`);
+    fs.writeFileSync(
+      path.join(projectDir, rel),
+      `${JSON.stringify(parsed, null, 2)}\n`,
+    );
     changed.push(rel);
   }
   return changed;

@@ -293,6 +293,8 @@ export const packageScripts = {
   reactor: "ph-cli reactor",
   service: "ph-cli service",
   vetra: "ph-cli vetra",
+  // The MCP configs run it as `node --run mcp`, which needs no shell on Windows.
+  mcp: "ph-cli mcp",
   "service-startup":
     "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
   "service-unstartup":
