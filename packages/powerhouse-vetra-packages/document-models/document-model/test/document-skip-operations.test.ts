@@ -675,7 +675,7 @@ describe("skip operations", () => {
       expect(replayedDoc.operations.global!.length).toBe(3);
     });
 
-    it("keeps the skip of an operation that throws an error", () => {
+    it("should not process and skip operation that throws an error", () => {
       const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
       let document = baseCreateDocument<CountPHState>(
@@ -689,8 +689,8 @@ describe("skip operations", () => {
         skip: 1,
       });
 
-      expect(document.state.global.count).toBe(1);
-      expect(document.operations.global!.length).toBe(2);
+      expect(document.state.global.count).toBe(2);
+      expect(document.operations.global!.length).toBe(3);
 
       expect(document.operations.global!).toMatchObject([
         {
@@ -700,8 +700,14 @@ describe("skip operations", () => {
           error: undefined,
         },
         {
+          type: "INCREMENT",
+          skip: 0,
+          index: 1,
+          error: undefined,
+        },
+        {
           type: "ERROR",
-          skip: 1,
+          skip: 0,
           index: 2,
           error: "Error action",
         },
