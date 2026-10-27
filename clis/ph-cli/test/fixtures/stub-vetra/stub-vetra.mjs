@@ -1,0 +1,28 @@
+// Stands in for `ph vetra`: `node stub-vetra.mjs <port> <projectName>`.
+import fs from "node:fs";
+import http from "node:http";
+import path from "node:path";
+
+const [port, projectName] = process.argv.slice(2);
+
+const bootedAt = Date.now();
+const server = http.createServer((req, res) => {
+  const ready = Date.now() - bootedAt > 400;
+  res.writeHead(req.url === "/ready" && !ready ? 503 : 200).end("OK");
+});
+server.listen(Number(port), () => {
+  const record = {
+    pid: process.pid,
+    projectName,
+    switchboardPort: Number(port),
+    connectPort: 0,
+    mcpUrl: `http://localhost:${port}/mcp`,
+    startedAt: new Date().toISOString(),
+  };
+  fs.mkdirSync(path.join(process.cwd(), ".ph"), { recursive: true });
+  fs.writeFileSync(
+    path.join(process.cwd(), ".ph", "vetra-runtime.json"),
+    JSON.stringify(record),
+  );
+});
+process.on("SIGTERM", () => process.exit(0));

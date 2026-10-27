@@ -5,6 +5,7 @@ import {
   packageJsonTemplate,
   toYarnResolutions,
 } from "templates";
+import { buildBoilerplatePackageJson } from "./package.json.js";
 
 describe("boilerplate dependency overrides", () => {
   it("renders the override pins as pnpm overrides in pnpm-workspace.yaml", () => {
@@ -65,6 +66,23 @@ describe("boilerplate release-age policy", () => {
         '  - "@renown/*"',
         "  - document-model",
       ].join("\n"),
+    );
+  });
+});
+
+describe("the scaffold's connect-core", () => {
+  it("pins connect-core in devDependencies and peers it at Connect's version", async () => {
+    const parsed = JSON.parse(
+      await buildBoilerplatePackageJson({ name: "p", version: "6.3.0-dev.1" }),
+    ) as {
+      peerDependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+    expect(parsed.devDependencies["@powerhousedao/connect-core"]).toBe(
+      parsed.devDependencies["@powerhousedao/connect"],
+    );
+    expect(parsed.peerDependencies["@powerhousedao/connect-core"]).toBe(
+      "6.3.0-dev.1",
     );
   });
 });

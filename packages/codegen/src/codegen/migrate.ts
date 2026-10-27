@@ -13,8 +13,12 @@ import {
   VERSIONED_DEV_DEPENDENCIES,
   VERSIONED_PEER_DEPENDENCIES,
 } from "@powerhousedao/shared/clis";
-import console from "console";
-import { writeAllGeneratedProjectFiles } from "file-builders";
+import {
+  assertAgentFilesCommitted,
+  managedAgentPaths,
+  syncPackageSkills,
+  writeAllGeneratedProjectFiles,
+} from "file-builders";
 import { cpSync, mkdirSync, readdirSync, rmSync, statSync } from "fs";
 import npmFetch from "npm-registry-fetch";
 import { join } from "path";
@@ -36,6 +40,7 @@ import { buildTsMorphProject, fixGenerateMockImports } from "utils";
 import { writePackage } from "write-package";
 import { detectFeatures, type Feature } from "./features.js";
 import { generateAll } from "./generate.js";
+import { migratePowerhouseConfig } from "./migrate-powerhouse-config.js";
 import { migrateTsconfigFiles } from "./migrate-tsconfig.js";
 import { sortByKey } from "./utils.js";
 
@@ -281,6 +286,8 @@ export async function migrate(
   projectDir = process.cwd(),
   options: { skipInstall?: boolean } = {},
 ) {
+  // Before any write, so a stop leaves the project untouched.
+  assertAgentFilesCommitted(projectDir, managedAgentPaths(projectDir));
   const fullyQualifiedVersion =
     await getFullyQualifiedWorkspacePackageVersion(version);
 
@@ -309,10 +316,15 @@ export async function migrate(
   console.log("Removing legacy lint/format config files...");
   removeLegacyLintFormatFiles(projectDir);
   console.log("Overwriting project root files...");
-  await writeAllGeneratedProjectFiles(projectDir);
+  const agentFiles = await writeAllGeneratedProjectFiles(projectDir);
   console.log("Removing compiler options TypeScript 7 dropped...");
   for (const file of migrateTsconfigFiles(projectDir)) {
     console.log(`  updated ${file}`);
+  }
+  if (migratePowerhouseConfig(projectDir)) {
+    console.log(
+      "Removed the scaffolded connect.instance defaults from powerhouse.config.json, so Vetra Studio picks its reactor client",
+    );
   }
   console.log("Moving unversioned document models...");
   moveLegacyDocumentModels(projectDir);
@@ -322,6 +334,15 @@ export async function migrate(
   if (!options.skipInstall) {
     console.log("Installing dependencies...");
     await installProjectDependencies(projectDir);
+  }
+  // Packages' skills come from the versions just installed.
+  agentFiles.push(...(await syncPackageSkills(projectDir)));
+  console.log("Agent files (review with git diff):");
+  for (const { path, action } of agentFiles) {
+    console.log(`  ${path}: ${action}`);
+  }
+  for (const { notice } of agentFiles) {
+    if (notice) console.warn(notice);
   }
   console.log("Re-generating code...");
   await generateAll(project);

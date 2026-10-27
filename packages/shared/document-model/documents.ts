@@ -267,6 +267,8 @@ export function baseCreateDocument<TState extends PHBaseState = PHBaseState>(
       : { "base-reducer": 2, ...protocolVersions },
   );
 
+  header.revision = withScopeRevisions(header.revision, state);
+
   const phDocument: PHDocument<TState> = {
     header,
     state,
@@ -1430,6 +1432,20 @@ export function getDocumentLastModified(document: PHDocument) {
   }
 
   return latest?.timestampUtcMs || document.header.lastModifiedAtUtcIso;
+}
+
+/** `revision` with a 0 for each scope of `state` it lacks; auth is not a model scope, so it is left out. */
+export function withScopeRevisions(
+  revision: PHDocumentHeader["revision"],
+  state: object,
+): PHDocumentHeader["revision"] {
+  const seeded: PHDocumentHeader["revision"] = {};
+  for (const scope of Object.keys(state)) {
+    if (scope !== "auth") {
+      seeded[scope] = 0;
+    }
+  }
+  return { ...seeded, ...revision };
 }
 
 /**

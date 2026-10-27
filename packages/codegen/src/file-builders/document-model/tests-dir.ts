@@ -3,15 +3,15 @@ import type {
   DocumentModelModuleFileMakerArgs,
 } from "@powerhousedao/codegen";
 import { ts } from "@tmpl/core";
-import { camelCase, kebabCase, pascalCase } from "change-case";
+import { camelCase, constantCase, kebabCase, pascalCase } from "change-case";
 import path from "path";
-import { filter, map, pipe } from "remeda";
+import { map, pipe } from "remeda";
 import {
   documentModelTestFileTemplate,
   makeOperationImportNames,
   makeTestCaseForOperation,
 } from "templates";
-import { SyntaxKind } from "ts-morph";
+import { Node, SyntaxKind } from "ts-morph";
 import {
   getInputFieldNames,
   getMockOverrideFieldNames,
@@ -116,6 +116,40 @@ export async function makeOperationModuleTestFile(
     }
   }
 
+  // An operation is tested once a test of the scaffold's name is in the file,
+  // or anything in it calls its action creator or names its action type.
+  const testCaseNames = sourceFile
+    .getDescendantsOfKind(SyntaxKind.CallExpression)
+    .filter((call) => {
+      const expressionText = call.getExpression().getText();
+      return expressionText === "it" || expressionText === "test";
+    })
+    .map((c) => literalText(c.getArguments()[0]));
+  const calledNames = new Set(
+    sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression).map((call) => {
+      const callee = call.getExpression();
+      if (Node.isIdentifier(callee)) return callee.getText();
+      if (Node.isPropertyAccessExpression(callee)) return callee.getName();
+      return undefined;
+    }),
+  );
+
+  const strings = new Set(
+    sourceFile
+      .getDescendantsOfKind(SyntaxKind.StringLiteral)
+      .map((literal) => literal.getLiteralValue()),
+  );
+
+  const untested = module.operations.filter((o) => {
+    const opCamelCase = camelCase(o.name ?? "");
+    const expectedTestCaseName = `should handle ${opCamelCase} operation`;
+    return (
+      !testCaseNames.includes(expectedTestCaseName) &&
+      !calledNames.has(opCamelCase) &&
+      !strings.has(constantCase(o.name ?? ""))
+    );
+  });
+
   const describeCall = sourceFile
     .getDescendantsOfKind(SyntaxKind.CallExpression)
     .find((call) => {
@@ -128,45 +162,15 @@ export async function makeOperationModuleTestFile(
       );
     });
 
-  if (!describeCall) {
+  if (!describeCall && untested.length > 0) {
     console.error(
       `Test file at path ${filePath} has no describe block for ${moduleOperationsTypeName}`,
     );
     return;
   }
 
-  const describeCallBody = describeCall
-    .getArguments()[1]
-    .asKindOrThrow(SyntaxKind.ArrowFunction);
-
-  const testCaseNames = describeCall
-    .getDescendantsOfKind(SyntaxKind.CallExpression)
-    .filter((call) => {
-      const expressionText = call.getExpression().getText();
-      return expressionText === "it" || expressionText === "test";
-    })
-    // Use the literal value of the description so it doesn't include the
-    // surrounding quotes — otherwise the dedup check below never matches.
-    .map((c) => {
-      const firstArg = c.getArguments()[0];
-      const stringLiteral = firstArg.asKind(SyntaxKind.StringLiteral);
-      if (stringLiteral) return stringLiteral.getLiteralValue();
-      const noSubstitutionTemplate = firstArg.asKind(
-        SyntaxKind.NoSubstitutionTemplateLiteral,
-      );
-      if (noSubstitutionTemplate)
-        return noSubstitutionTemplate.getLiteralValue();
-      return firstArg.getText();
-    });
-
-  // Skip operations whose generated test description is already present
   const testCasesToAdd = pipe(
-    module.operations,
-    filter((o) => {
-      const opCamelCase = camelCase(o.name ?? "");
-      const expectedTestCaseName = `should handle ${opCamelCase} operation`;
-      return !testCaseNames.some((name) => name === expectedTestCaseName);
-    }),
+    untested,
     map((o) => {
       const overrideStateFields =
         o.scope === "local"
@@ -186,7 +190,12 @@ export async function makeOperationModuleTestFile(
     }),
   );
 
-  describeCallBody.addStatements(testCasesToAdd);
+  if (describeCall && testCasesToAdd.length > 0) {
+    describeCall
+      .getArguments()[1]
+      .asKindOrThrow(SyntaxKind.ArrowFunction)
+      .addStatements(testCasesToAdd);
+  }
 
   if (sourceFile.getText().includes(GENERATE_MOCK_NAME)) {
     fixGenerateMockImports(sourceFile);
@@ -200,6 +209,18 @@ export async function makeOperationModuleTestFile(
 
   sourceFile.fixUnusedIdentifiers();
   await formatSourceFileWithPrettier(sourceFile);
+}
+
+// A test's description as written: a string's value, else its source.
+function literalText(node: Node | undefined) {
+  if (!node) return "";
+  if (
+    Node.isStringLiteral(node) ||
+    Node.isNoSubstitutionTemplateLiteral(node)
+  ) {
+    return node.getLiteralValue();
+  }
+  return node.getText();
 }
 
 export async function makeDocumentModelTestFile(

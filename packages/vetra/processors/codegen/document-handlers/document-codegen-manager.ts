@@ -1,11 +1,25 @@
+import { afterPendingInstalls, installsPending } from "@powerhousedao/codegen";
+import {
+  type CodegenState,
+  type CodegenStatusRegistry,
+  getCodegenStatusRegistry,
+} from "@powerhousedao/shared/processors";
 import type { Project } from "ts-morph";
 import type { QueuedStrand } from "../interactive-manager.js";
 import { InteractiveManager } from "../interactive-manager.js";
 import { logger } from "../logger.js";
+import { filesWrittenSince } from "../written-files.js";
 import type { BaseDocumentGen } from "./base-document-gen.js";
-import type { CodegenInput, Config } from "./types.js";
+import type { CodegenInput, CodegenJob, Config } from "./types.js";
 
 const DEFAULT_DEBOUNCE_TIME = 1000; // wait 1 second between codegen calls
+const MODULE_NOT_FOUND_CODES = new Set([
+  "ERR_MODULE_NOT_FOUND",
+  "MODULE_NOT_FOUND",
+  "ERR_PACKAGE_PATH_NOT_EXPORTED",
+]);
+const MODULE_NOT_FOUND_MESSAGE =
+  /Cannot find (module|package)|Failed to resolve (import|entry)|Failed to load url/;
 
 /** Whether a document belongs to what this manager generates from. */
 export type DocumentScope = (documentId: string) => Promise<boolean>;
@@ -18,17 +32,25 @@ export class DocumentCodegenManager {
   project: Project;
   private generators = new Map<string, BaseDocumentGen>();
   private debounceTimers = new Map<string, NodeJS.Timeout>();
-  private processingQueue: Promise<void> = Promise.resolve();
+  // One job at a time, so none runs while another job's install relinks node_modules.
+  private jobs: Promise<void> = Promise.resolve();
+  private queuedJobs = new Map<string, CodegenInput>();
+  private runningJobs = 0;
+  /** The wait before retrying a module-resolution failure when no install is queued. */
+  retryDelayMs = 3000;
   private interactiveManager: InteractiveManager;
   private isInScope: DocumentScope = () => Promise.resolve(true);
+  readonly status: CodegenStatusRegistry;
 
   constructor(
     private config: Config,
     project: Project,
     interactiveMode = false,
+    status: CodegenStatusRegistry = getCodegenStatusRegistry(),
   ) {
     this.project = project;
     this.interactiveManager = new InteractiveManager(interactiveMode);
+    this.status = status;
   }
 
   /**
@@ -128,6 +150,14 @@ export class DocumentCodegenManager {
 
     // Scope and validation are checked when the debounce fires, on the
     // document's final state.
+    this.status.set({
+      documentId: strand.documentId,
+      documentType,
+      state: "queued",
+      message: this.interactiveManager.isInteractive()
+        ? "Waiting for confirmation in the terminal running Vetra"
+        : "Waiting for the document's changes to settle",
+    });
     // Different flow for interactive vs non-interactive mode
     if (this.interactiveManager.isInteractive()) {
       // Interactive mode: queue strands and use debounce timer to trigger batch processing
@@ -158,6 +188,11 @@ export class DocumentCodegenManager {
           await this.interactiveManager.processQueueWithConfirmation(
             async (queuedStrands: QueuedStrand[]) => {
               await this.processQueuedStrands(queuedStrands);
+            },
+            (cancelled) => {
+              for (const { strand } of cancelled) {
+                this.setStatus(strand, "skipped", "Cancelled in the terminal");
+              }
             },
           );
         } catch (error) {
@@ -192,18 +227,7 @@ export class DocumentCodegenManager {
           logger.debug(
             `🔄 Routing document type "${documentType}" to generator (debounced)`,
           );
-
-          // Direct generation, no interactive confirmation
-          await generator.generate(strand);
-          logger.debug(
-            `✅ Successfully generated code for document type: ${documentType}`,
-          );
-        } catch (error) {
-          logger.error(
-            `❌ Error generating code for document type "${documentType}":`,
-            error,
-          );
-          // Don't throw - let codegen continue with other documents
+          await this.enqueueJob(strand);
         } finally {
           // Clean up the timer reference
           this.debounceTimers.delete(timerKey);
@@ -224,9 +248,143 @@ export class DocumentCodegenManager {
       logger.debug(
         `Document ${strand.documentId} is not in the Vetra drive, skipping codegen`,
       );
+      this.status.delete(strand.documentId);
+      this.queuedJobs.delete(strand.documentId);
       return false;
     }
-    return generator.shouldProcess(strand);
+    const reason = generator.skipReason(strand);
+    if (reason !== undefined) {
+      this.setStatus(strand, "skipped", reason);
+      this.queuedJobs.delete(strand.documentId);
+      return false;
+    }
+    return true;
+  }
+
+  /** Queues a job; one already queued for the document runs the latest strand. */
+  private enqueueJob(strand: CodegenInput): Promise<void> {
+    const { documentId } = strand;
+    const alreadyQueued = this.queuedJobs.has(documentId);
+    this.queuedJobs.set(documentId, strand);
+    if (this.runningJobs > 0) {
+      this.setStatus(
+        strand,
+        "queued",
+        "Waiting for codegen of other documents to finish",
+      );
+    }
+    if (alreadyQueued) return this.jobs;
+    this.jobs = this.jobs.then(async () => {
+      const latest = this.queuedJobs.get(documentId);
+      this.queuedJobs.delete(documentId);
+      const generator = latest && this.getGenerator(latest.documentType);
+      if (!latest || !generator) return;
+      this.runningJobs++;
+      try {
+        await this.runJob(latest, generator);
+      } finally {
+        this.runningJobs--;
+      }
+    });
+    return this.jobs;
+  }
+
+  /** Runs a job after pending installs, once more after a module-resolution failure. */
+  private async runJob(
+    strand: CodegenInput,
+    generator: BaseDocumentGen,
+  ): Promise<void> {
+    await this.afterInstalls(
+      strand,
+      "Waiting for a dependency install to finish",
+    );
+    const error = await this.attempt(strand, generator);
+    if (error === undefined) return;
+    if (!isModuleResolutionError(error)) {
+      this.setStatus(strand, "failed", errorMessage(error));
+      return;
+    }
+    logger.warn(
+      `Codegen for ${strand.documentType} ${strand.documentId} could not resolve a module; retrying once installs finish: ${errorMessage(error)}`,
+    );
+    const waited = await this.afterInstalls(
+      strand,
+      `Retrying once dependency installs finish, after: ${errorMessage(error)}`,
+    );
+    if (!waited) {
+      await new Promise((resolve) => setTimeout(resolve, this.retryDelayMs));
+    }
+    const retryError = await this.attempt(strand, generator);
+    if (retryError !== undefined) {
+      this.setStatus(
+        strand,
+        "failed",
+        `${errorMessage(retryError)} (also after a retry; if an install is running, run it to the end, then change the document again)`,
+      );
+    }
+  }
+
+  /** Waits for queued installs, saying so; resolves to whether any was queued. */
+  private async afterInstalls(
+    strand: CodegenInput,
+    message: string,
+  ): Promise<boolean> {
+    if (!installsPending()) return false;
+    this.setStatus(strand, "waiting-for-install", message);
+    await afterPendingInstalls();
+    return true;
+  }
+
+  /** Generates once; records done or skipped, or resolves to the error. */
+  private async attempt(
+    strand: CodegenInput,
+    generator: BaseDocumentGen,
+  ): Promise<unknown> {
+    const startedAt = Date.now();
+    const job: CodegenJob = {
+      waitingForInstall: (message) =>
+        this.setStatus(strand, "waiting-for-install", message),
+      running: () => this.setStatus(strand, "running"),
+    };
+    job.running();
+    try {
+      const result = await generator.generate(strand, job);
+      if (result) {
+        this.setStatus(strand, "skipped", result.skipped);
+        return;
+      }
+      const files = await filesWrittenSince(
+        this.config.CURRENT_WORKING_DIR,
+        startedAt,
+      );
+      this.setStatus(strand, "done", undefined, files);
+      logger.debug(
+        `✅ Successfully generated code for document type: ${strand.documentType}`,
+      );
+      return undefined;
+    } catch (error) {
+      logger.error(
+        `❌ Error generating code for document type "${strand.documentType}":`,
+        error,
+      );
+      return error ?? new Error("Codegen failed");
+    }
+  }
+
+  private setStatus(
+    strand: CodegenInput,
+    state: CodegenState,
+    message?: string,
+    files?: string[],
+  ): void {
+    this.status.set({
+      documentId: strand.documentId,
+      documentType: strand.documentType,
+      name: this.getGenerator(strand.documentType)?.moduleName(strand),
+      state,
+      message,
+      files,
+    });
   }
 
   /**
@@ -274,19 +432,8 @@ export class DocumentCodegenManager {
       return;
     }
 
-    try {
-      logger.debug(`🔄 Generating code for document type: ${documentType}`);
-      await generator.generate(strand);
-      logger.debug(
-        `✅ Successfully generated code for document type: ${documentType}`,
-      );
-    } catch (error) {
-      logger.error(
-        `❌ Error generating code for document type "${documentType}":`,
-        error,
-      );
-      // Don't throw here to allow other strands to be processed
-    }
+    logger.debug(`🔄 Generating code for document type: ${documentType}`);
+    await this.enqueueJob(strand);
   }
 
   /**
@@ -327,4 +474,19 @@ export class DocumentCodegenManager {
   isProcessingInteractive(): boolean {
     return this.interactiveManager.isProcessing();
   }
+}
+
+function isModuleResolutionError(error: unknown): boolean {
+  for (let cause = error; cause instanceof Error; cause = cause.cause) {
+    const code = (cause as NodeJS.ErrnoException).code;
+    if (code && MODULE_NOT_FOUND_CODES.has(code)) return true;
+    if (MODULE_NOT_FOUND_MESSAGE.test(cause.message)) return true;
+  }
+  return false;
+}
+
+function errorMessage(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const cause = error.cause instanceof Error ? `: ${error.cause.message}` : "";
+  return `${error.message}${cause}`;
 }

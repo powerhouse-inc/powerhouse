@@ -4,3 +4,4 @@ export * from "./relational/types.js";
 export * from "./relational/utils.js";
 export type * from "./http.js";
 export type * from "./types.js";
+export * from "./codegen-status.js";

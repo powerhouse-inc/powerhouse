@@ -2,6 +2,17 @@
 
 How a route loads data, reads the open drive and document, types its search params, and how editors and packages navigate without knowing the routes.
 
+## Contents
+
+- [Load data](#load-data)
+  - [Documents of one type, across drives](#documents-of-one-type-across-drives)
+  - [The open drive and document](#the-open-drive-and-document)
+  - [Editors read their document from props](#editors-read-their-document-from-props)
+  - [Show that an action was rejected](#show-that-an-action-was-rejected)
+  - [Render an editor or a drive app yourself](#render-an-editor-or-a-drive-app-yourself)
+- [Read and write search params](#read-and-write-search-params)
+- [Navigate from an editor](#navigate-from-an-editor)
+
 ## Load data
 
 A route's `loader` runs before the route renders, and on every navigation to it. Its `context` is Connect's router context (`ConnectRouterContext`):
@@ -9,9 +20,9 @@ A route's `loader` runs before the route renders, and on every navigation to it.
 | Field | What it is |
 | --- | --- |
 | `store` | The app's PH store: `drives`, `reactorClient`, `documentCache`, and the rest of `PHGlobal`. |
-| `arrivals` | Whether drives are still arriving, e.g. right after boot. |
+| `arrivals` | Whether drives are still arriving, e.g. right after boot (`isPending()`, `isDrivePending(driveId)`, `subscribe`). |
 | `appName` | `connect.branding.appName`, if set. |
-| `components` | What Connect's own routes render. A project route does not need it. |
+| `shell` | `true` while `ph connect build` prerenders the loading screen: a layout shows its `pendingComponent`. |
 
 This loader reads a document through the reactor client:
 
@@ -95,17 +106,18 @@ function LedgerRow({ id, name }: { id: string; name: string }) {
 - Each document is checked against the module's schema. Documents of the type that fail it, e.g. written by another version of the model, are in `invalid`, not in `documents`.
 - The list follows documents being created and deleted, and each document updates as it changes.
 - In a Connect with a local reactor, the list is what the browser has synced so far.
-- `useDocumentLinkProps(id)` links any document by id through the drive that lists it, and `useDocumentTarget(id)` gives its `{ driveSlug, nodeSlug }`.
+- `useDocumentLinkProps(id)` links any document by id through the drive that lists it, and `useDocumentTarget(id)` gives its `{ driveSlug, nodeSlug }`. `driveSlug` is the drive's URL slug (e.g. `book-club-<id>`), not its `header.slug`. A node's URL slug is `makeNodeSlug(node)`, its name's slug plus its id, not the bare document id.
+- To create a document from your own page, call `addDocument(driveId, name, documentType)` from `@powerhousedao/reactor-browser`, then open it with `useDocumentLinkProps(id)` or its node slug. In event handlers, call navigation as `() => void navigate(...)`.
 
 ### The open drive and document
 
-A view reads the drive route's drive, folder and document with `useDriveRouteData()` from `@powerhousedao/connect/layout`:
+A view reads the drive route's drive, folder and document with `useDriveRouteData()` from `@powerhousedao/connect/layout` (`@powerhousedao/connect-core/router` in a package's routes):
 
 ```tsx
 const { drive, folder, documentId } = useDriveRouteData();
 ```
 
-- `useDriveRouteIds()` gives the ids alone, from the matched route's loader.
+- `useDriveRouteIds()`, from `@powerhousedao/connect/router` or `@powerhousedao/connect-core/router`, gives the ids alone, from the matched route's loader.
 - A drive app gets the drive and a `dispatch` bound to it as props, and its `useSelectedDrive`, `useSelectedFolder` and `useSelectedNode` read the route it is shown in, through a drive context (below).
 - An editor gets the route's document and a `dispatch` bound to it as props, and the `useSelected*Document` hooks inside it read that document. See [Editors read their document from props](#editors-read-their-document-from-props).
 - Connect still writes the route's ids to the app-wide selection (`store.selectedDriveId`, `store.selectedNodeId`) for code outside a route, such as a sidebar widget.

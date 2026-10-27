@@ -474,12 +474,15 @@ describe("generate processor", () => {
       "switchboard",
     );
 
-    // The scaffolded migration creates the `todo` table. Nothing in the runtime
-    // calls initAndUpgrade(), so this query only succeeds if the factory did.
+    // The scaffolded migration creates the `documents` table. Nothing in the
+    // runtime calls initAndUpgrade(), so this query only succeeds if the factory did.
     const processor = records[0]!.processor as IRelationalDbProcessor<{
-      todo: { task: string; status: boolean | null };
+      documents: { document_id: string };
     }>;
-    const rows = await processor.query.selectFrom("todo").selectAll().execute();
+    const rows = await processor.query
+      .selectFrom("documents")
+      .selectAll()
+      .execute();
     expect(rows).toEqual([]);
   });
 
@@ -598,24 +601,30 @@ describe("generate processor", () => {
         "switchboard",
       );
       const processor = record!.processor as IRelationalDbProcessor<{
-        todo: { document_id: string; task: string; status: boolean | null };
+        documents: { document_id: string };
       }>;
       const schema = hashNamespace(processor.namespace);
-      const todo = () =>
-        pgLite.query<{ document_id: string; task: string }>(
-          `select document_id, task from "${schema}".todo order by task`,
+      const documents = () =>
+        pgLite.query<{ document_id: string }>(
+          `select document_id from "${schema}".documents order by document_id`,
         );
       await pgLite.query(
-        `insert into "${schema}".todo (document_id, task, status)
-         values ('doc-a', 'a1', null), ('doc-a', 'a2', null),
-                ('doc-b', 'b1', null), ('doc-c', 'c1', null)`,
+        `insert into "${schema}".documents (document_id, document_type, updated_at)
+         values ('doc-a', 'billing-statement', ''),
+                ('doc-b', 'billing-statement', ''),
+                ('doc-c', 'billing-statement', '')`,
       );
 
       await processor.onOperations([deletionOp("doc-a", "billing-statement")]);
-      expect((await todo()).rows.map((row) => row.task)).toEqual(["b1", "c1"]);
+      expect((await documents()).rows.map((row) => row.document_id)).toEqual([
+        "doc-b",
+        "doc-c",
+      ]);
 
       await processor.onOperations([markerOp("doc-b", "billing-statement")]);
-      expect((await todo()).rows.map((row) => row.task)).toEqual(["c1"]);
+      expect((await documents()).rows.map((row) => row.document_id)).toEqual([
+        "doc-c",
+      ]);
 
       await processor.onOperations([
         deletionOp(driveId, "powerhouse/document-drive"),
@@ -626,6 +635,66 @@ describe("generate processor", () => {
         [schema],
       );
       expect(schemas.rows).toEqual([]);
+      await pgLite.close();
+    });
+
+    it("should write a row for a document that was only created", async () => {
+      const dir = await generateInto(
+        "relational-db-created",
+        "relational-created",
+        "relationalDb",
+      );
+      const { pgLite, relationalDb } = await getDb();
+      const { store } = await createAnalyticsStore({ pgLite });
+      const { relationalCreatedFactoryBuilder: factoryBuilder } = (await import(
+        join(dir, "factory.ts")
+      )) as {
+        relationalCreatedFactoryBuilder: ProcessorFactoryBuilder;
+      };
+      const factory = await factoryBuilder(hostModule(relationalDb, store));
+      const [record] = await factory(
+        { id: "created-drive" } as PHDocumentHeader,
+        "switchboard",
+      );
+      const processor = record!.processor as IRelationalDbProcessor<{
+        documents: { document_id: string; document_type: string };
+      }>;
+      const timestampUtcMs = new Date().toISOString();
+
+      // CREATE_DOCUMENT alone, in scope "document": no global operation yet.
+      await processor.onOperations([
+        {
+          operation: {
+            id: "create-doc-new",
+            index: 0,
+            skip: 0,
+            hash: "",
+            timestampUtcMs,
+            action: {
+              id: "create-action-doc-new",
+              type: "CREATE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs,
+              input: { model: "billing-statement", version: 0 },
+            },
+          },
+          context: {
+            documentId: "doc-new",
+            documentType: "billing-statement",
+            scope: "document",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ]);
+
+      const rows = await processor.query
+        .selectFrom("documents")
+        .select(["document_id", "document_type"])
+        .execute();
+      expect(rows).toEqual([
+        { document_id: "doc-new", document_type: "billing-statement" },
+      ]);
       await pgLite.close();
     });
 

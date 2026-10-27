@@ -216,6 +216,11 @@ export const connectAppSchema = z
         "Studio mode. Enables builder-only capabilities: Connect loads the vetra package and exposes DocumentModel (and vetra spec types) as creatable documents. Forced on by `ph vetra` / `ph connect studio`; false by default.",
       default: false,
     }),
+    cookieBanner: z.boolean().optional().meta({
+      description:
+        "Show the analytics cookie consent banner on a first visit, when a plugin that needs consent (Sentry, OpenPanel) is active. When false, no banner is shown and analytics consent stays rejected. `ph vetra` turns it off for its local Studio; true by default.",
+      default: true,
+    }),
     workflowsEnabled: z
       .boolean()
       .optional()

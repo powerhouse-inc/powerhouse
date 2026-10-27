@@ -2025,6 +2025,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
+    // The store keeps a reducer error's message only; its class and code stay
+    // in memory, for the job's result.
+    storedOperations = storedOperations.map((operation, position) =>
+      withReducerErrorIdentity(operation, operations[position]),
+    );
+
     const head = storedOperations[storedOperations.length - 1];
 
     last.updatedDocument.header.revision = {
@@ -3332,4 +3338,22 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
     return null;
   }
+}
+
+function withReducerErrorIdentity(
+  stored: Operation,
+  applied: Operation | undefined,
+): Operation {
+  if (
+    applied === undefined ||
+    stored.error === undefined ||
+    (applied.errorName === undefined && applied.errorCode === undefined)
+  ) {
+    return stored;
+  }
+  return {
+    ...stored,
+    ...(applied.errorName !== undefined && { errorName: applied.errorName }),
+    ...(applied.errorCode !== undefined && { errorCode: applied.errorCode }),
+  };
 }

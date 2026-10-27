@@ -14,21 +14,14 @@ import { minimalBackupDocument } from "./utils.js";
 export class PackageGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/package";
 
-  /**
-   * Validate if this package strand should be processed
-   */
-  shouldProcess(input: CodegenInput): boolean {
-    // First run base validation
-    if (!super.shouldProcess(input)) {
-      return false;
-    }
-
+  skipReason(input: CodegenInput): string | undefined {
+    const base = super.skipReason(input);
+    if (base) return base;
     if (!input.state) {
       logger.debug(`>>> No state found for package: ${input.documentId}`);
-      return false;
+      return "The package has no state";
     }
-
-    return true;
+    return undefined;
   }
 
   async generate(input: CodegenInput): Promise<void> {
