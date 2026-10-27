@@ -5,13 +5,14 @@ import type { ConnectRouterContext } from "@powerhousedao/connect-core/router";
 import {
   appTitle,
   connectSearchMiddlewares,
+  coreRouteOptions,
   coreView,
   notFoundTitle,
   validateConnectSearch,
 } from "@powerhousedao/connect-core/router";
 
 /** The root's options: search params and the app's title. */
-export const options = {
+export const options = coreRouteOptions({
   // Passes every param through; only the global ones outlive a navigation.
   // Inline type: project declaration emit can't name this module's types.
   validateSearch: (search: Record<string, unknown>) =>
@@ -33,7 +34,7 @@ export const options = {
       },
     ],
   }),
-};
+});
 
 // The page in the theme, with the matched routes' head.
 export const Route = createRootRouteWithContext<ConnectRouterContext>()({

@@ -1,3 +1,31 @@
+## 6.2.3-dev.78 (2026-10-27)
+
+### 🚀 Features
+
+- **portle:** scaffold @powerhousedao/portle, the switchboard plugin that gates publication through Portle ([68ab561f7d](https://github.com/powerhouse-inc/powerhouse/commit/68ab561f7d))
+- **reactor-browser,connect-core,connect:** read drive nodes from read.drives through a per-drive cache, not from the drive document ([c51c39602e](https://github.com/powerhouse-inc/powerhouse/commit/c51c39602e))
+- **reactor-api,reactor-browser,switchboard:** type-neutral drive node queries and read.drives on the remote client ([b8a09950c0](https://github.com/powerhouse-inc/powerhouse/commit/b8a09950c0))
+- **reactor-api,switchboard:** vacuum full policy knob, no forced rewrite under load by default ([d6dcbf5cd0](https://github.com/powerhouse-inc/powerhouse/commit/d6dcbf5cd0))
+
+### 🩹 Fixes
+
+- **reactor-browser:** addDocument caches the new file's drive node ([2edd19f221](https://github.com/powerhouse-inc/powerhouse/commit/2edd19f221))
+- **registry:** a failed tarball write no longer records its attachment ([5d3ae94bd8](https://github.com/powerhouse-inc/powerhouse/commit/5d3ae94bd8))
+- **reactor-browser:** a node this tab writes shows at once, not after the drive's refresh interval ([d363830d67](https://github.com/powerhouse-inc/powerhouse/commit/d363830d67))
+- **reactor-api:** the one-time VACUUM FULL is off by default; quiet and forced are opt-ins ([fd7c19e313](https://github.com/powerhouse-inc/powerhouse/commit/fd7c19e313))
+
+### 🔥 Performance
+
+- **reactor-browser,reactor-router,connect-core:** batch multi-document reads into getMany ([5b7cdef949](https://github.com/powerhouse-inc/powerhouse/commit/5b7cdef949))
+- **reactor-browser,connect:** refresh one drive on change instead of re-listing every drive ([221593d6ae](https://github.com/powerhouse-inc/powerhouse/commit/221593d6ae))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.77 (2026-10-26)
 
 ### 🚀 Features

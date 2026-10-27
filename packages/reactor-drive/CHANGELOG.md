@@ -1,3 +1,26 @@
+## 6.2.3-dev.78 (2026-10-27)
+
+### 🚀 Features
+
+- **portle:** scaffold @powerhousedao/portle, the switchboard plugin that gates publication through Portle ([68ab561f7d](https://github.com/powerhouse-inc/powerhouse/commit/68ab561f7d))
+- **reactor,reactor-drive,reactor-api:** drive clients pick the write path by drive type and read nodes from one source ([3f9bee0c2b](https://github.com/powerhouse-inc/powerhouse/commit/3f9bee0c2b))
+- **reactor-drive:** project legacy document-drive nodes into DriveNode, backfill at init, indexed sibling check ([7b99ea3731](https://github.com/powerhouse-inc/powerhouse/commit/7b99ea3731))
+- **reactor-api,switchboard:** vacuum full policy knob, no forced rewrite under load by default ([d6dcbf5cd0](https://github.com/powerhouse-inc/powerhouse/commit/d6dcbf5cd0))
+
+### 🩹 Fixes
+
+- **registry:** a failed tarball write no longer records its attachment ([5d3ae94bd8](https://github.com/powerhouse-inc/powerhouse/commit/5d3ae94bd8))
+- **reactor-drive:** legacy node actions on a reactor-drive project instead of erroring the read model ([cdedbc7012](https://github.com/powerhouse-inc/powerhouse/commit/cdedbc7012))
+- **reactor-api:** the one-time VACUUM FULL is off by default; quiet and forced are opt-ins ([fd7c19e313](https://github.com/powerhouse-inc/powerhouse/commit/fd7c19e313))
+- **reactor-drive:** a linked file takes its name from the link, the name row or the document's header ([9d45e880b5](https://github.com/powerhouse-inc/powerhouse/commit/9d45e880b5))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.77 (2026-10-26)
 
 ### 🚀 Features

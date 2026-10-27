@@ -277,6 +277,12 @@ export type Operation = {
   /** Error message for a failed action */
   error?: string;
 
+  /** The name of the error a reducer threw, e.g. "BookNotStartedError"; not stored. */
+  errorName?: string;
+
+  /** The `errorCode` of the error a reducer threw, e.g. "BOOK_NOT_STARTED"; not stored. */
+  errorCode?: string;
+
   /**
    * If authorization rejected the action, this records the reason why.
    */
@@ -307,7 +313,7 @@ export type DocumentOperations = Record<string, Operation[]>;
  */
 export type OperationOutcome =
   | { kind: "applied" }
-  | { kind: "reducer-error"; message: string }
+  | { kind: "reducer-error"; message: string; name?: string; code?: string }
   | { kind: "denied"; reason: string };
 
 /**
@@ -320,7 +326,12 @@ export function operationOutcome(operation: Operation): OperationOutcome {
   }
 
   if (operation.error !== undefined) {
-    return { kind: "reducer-error", message: operation.error };
+    return {
+      kind: "reducer-error",
+      message: operation.error,
+      ...(operation.errorName !== undefined && { name: operation.errorName }),
+      ...(operation.errorCode !== undefined && { code: operation.errorCode }),
+    };
   }
 
   return { kind: "applied" };

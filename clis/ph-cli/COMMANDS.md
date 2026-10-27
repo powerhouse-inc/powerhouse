@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.3-dev.77)<br>
+# Powerhouse CLI Commands (6.2.3-dev.78)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -13,6 +13,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Piece Action](#piece-action)
 - [Piece Trigger](#piece-trigger)
 - [Migration File](#migration-file)
+- [Connect Routes](#connect-routes)
 - [Vetra](#vetra)
 - [Build](#build)
 - [Connect](#connect)
@@ -377,6 +378,22 @@ Path to the output file. Defaults to './schema.ts'<br><br>
 
 
 ### flags
+#### Skip Install <br>
+Don't install the dependencies the command adds to package.json<br><br>
+**usage:** `--skip-install`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Connect Routes
+Generate .ph/connect-routes.gen.ts, the route tree hosts/connect/routes/ type-checks against, and fail if a route the package offers imports @powerhousedao/connect
+### flags
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
@@ -405,6 +422,25 @@ connect.drives.defaultDrives in powerhouse.config.json - de-duplicated by
 URL, so configuring project drives does not cost you the Vetra drive.
 An explicit --default-drives-url is appended to that list (de-duplicated);
 it never replaces the Vetra drive.
+
+Every drive on the local Switchboard:
+Studio has no reactor of its own: it reads and writes on the local
+Switchboard (connect.instance.reactorClient "remote"), so it lists every
+drive there, such as one an agent adds through MCP, and a drive created in
+Studio lands there too. Not with --remote-drive, or when the project sets
+connect.instance.multiReactor or reactorClient itself.
+
+Preview drive app:
+Set vetra.previewDrive.app in powerhouse.config.json to the id of a drive
+app, and ph vetra --watch opens the Vetra Preview drive in that app: it sets
+the drive's app when it creates the drive and each time it starts. Without
+the field the drive keeps the app it has.
+
+One Vetra per project:
+A running Vetra is recorded in .ph/vetra-runtime.json (its pid and the
+Connect, Switchboard and MCP URLs); a second `ph vetra` prints those and
+exits. --restart stops the recorded Vetra first, then starts this one.
+Studio restarts by itself when powerhouse.config.json changes.
 
 ### options
 #### Switchboard Port <br>
@@ -484,6 +520,10 @@ Enable dynamic loading for document-models and editors in connect-studio and swi
 #### Logs <br>
 Show additional logs<br><br>
 **usage:** `--logs`<br>
+**default**: `false`
+#### Restart <br>
+Stop this project's running Vetra first (the pid in .ph/vetra-runtime.json), then start<br><br>
+**usage:** `--restart`<br>
 **default**: `false`
 #### Disable Connect <br>
 Skip Connect initialization (only start switchboard and reactor)<br><br>

@@ -122,6 +122,7 @@ export async function tsMorphGenerateApp({
       editorId,
       editorDirPath,
       documentModelId: "powerhouse/document-drive",
+      writtenOnce: true,
     });
   }
 

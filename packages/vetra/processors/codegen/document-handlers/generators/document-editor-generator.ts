@@ -6,7 +6,7 @@ import type {
 } from "../../../../document-models/document-editor/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
-import type { CodegenInput } from "../types.js";
+import type { CodegenInput, GenerateResult } from "../types.js";
 import { minimalBackupDocument } from "./utils.js";
 
 /**
@@ -15,9 +15,6 @@ import { minimalBackupDocument } from "./utils.js";
 export class DocumentEditorGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/document-editor";
 
-  /**
-   * Parse and extract the global state from the serialized state string
-   */
   private extractGlobalState(
     input: CodegenInput,
   ): DocumentEditorState | undefined {
@@ -28,98 +25,62 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
     return fullState.global;
   }
 
-  /**
-   * Validate if this document editor strand should be processed
-   */
-  shouldProcess(input: CodegenInput): boolean {
-    // First run base validation
-    if (!super.shouldProcess(input)) {
-      return false;
-    }
+  skipReason(input: CodegenInput): string | undefined {
+    const base = super.skipReason(input);
+    if (base) return base;
 
     const state = this.extractGlobalState(input);
-    if (!state) {
-      logger.debug(`No state found for document editor: ${input.documentId}`);
-      return false;
+    let reason: string | undefined;
+    if (!state) reason = "The editor has no state";
+    else if (!state.name) reason = "The editor has no name";
+    else if (state.documentTypes.length === 0) {
+      reason = `Editor "${state.name}" has no document types`;
+    } else if (state.status !== "CONFIRMED") {
+      reason = `Editor "${state.name}" is not confirmed (status: ${state.status}); codegen runs once it is CONFIRMED`;
     }
-
-    // Check if we have a valid editor name, document types, and it's confirmed
-    if (!state.name) {
-      logger.debug(`No name found for document editor: ${input.documentId}`);
-      return false;
-    }
-
-    if (!state.documentTypes || state.documentTypes.length === 0) {
-      logger.debug(
-        `No document types found for document editor: ${state.name}`,
-      );
-      return false;
-    }
-
-    if (state.status !== "CONFIRMED") {
-      logger.debug(
-        `Document editor not confirmed: ${state.name} (status: ${state.status})`,
-      );
-      return false;
-    }
-
-    return true;
+    if (reason) logger.debug(reason);
+    return reason;
   }
 
-  async generate(input: CodegenInput): Promise<void> {
+  async generate(input: CodegenInput): Promise<GenerateResult> {
     const state = this.extractGlobalState(input);
     if (!state) {
-      logger.error(`No state found for document editor: ${input.documentId}`);
-      return;
+      return { skipped: "The editor has no state" };
     }
 
-    // Validation is already done in shouldProcess, so we can proceed directly
     logger.info(`🔄 Starting editor generation for: ${state.name}`);
     try {
-      // Extract document types from the state
-      const documentTypes = state.documentTypes.map((dt) => dt.documentType);
-
-      // Generate editor ID using kebabCase
-      const editorId: string = kebabCase(state.name);
-
-      // Generate the editor using the codegen function
       await generateEditor(
         {
           ...this.config.PH_CONFIG,
           editorName: state.name,
-          documentTypes: documentTypes,
-          editorId: editorId,
+          documentTypes: state.documentTypes.map((dt) => dt.documentType),
+          editorId: kebabCase(state.name),
         },
         this.project,
       );
       await this.project.save();
-
-      logger.info(
-        `✅ Editor generation completed successfully for: ${state.name}`,
-      );
-
-      // Backup the document
-      const fullState = input.state as DocumentEditorPHState;
-      await minimalBackupDocument(
-        {
-          documentId: input.documentId,
-          documentType: input.documentType,
-          branch: input.branch,
-          state: fullState,
-          name: state.name,
-        },
-        this.config.CURRENT_WORKING_DIR,
-      );
     } catch (error) {
       logger.error(
         `❌ Error during editor generation for ${state.name}:`,
         error,
       );
-      if (error instanceof Error) {
-        logger.error(`❌ Error message: ${error.message}`);
-      }
-      // Don't throw - let codegen continue with other documents
-      return;
+      throw error;
     }
+
+    logger.info(
+      `✅ Editor generation completed successfully for: ${state.name}`,
+    );
+
+    await minimalBackupDocument(
+      {
+        documentId: input.documentId,
+        documentType: input.documentType,
+        branch: input.branch,
+        state: input.state as DocumentEditorPHState,
+        name: state.name,
+      },
+      this.config.CURRENT_WORKING_DIR,
+    );
   }
 }

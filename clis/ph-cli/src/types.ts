@@ -11,6 +11,7 @@ import type {
 import type { generateAppCmd } from "./commands/generate-app.js";
 import type { generateDocumentModelCmd } from "./commands/generate-document-model.js";
 import type { generateEditorCmd } from "./commands/generate-editor.js";
+import type { generateMigrationFileCmd } from "./commands/generate-migration-file.js";
 import type { generatePieceActionCmd } from "./commands/generate-piece-action.js";
 import type { generatePieceTriggerCmd } from "./commands/generate-piece-trigger.js";
 import type { generatePieceCmd } from "./commands/generate-piece.js";
@@ -42,6 +43,9 @@ export type GenerateProcessorArgs = ParsedCmdResult<
   typeof generateProcessorCmd
 >;
 export type GenerateSubgraphArgs = ParsedCmdResult<typeof generateSubgraphCmd>;
+export type GenerateMigrationFileArgs = ParsedCmdResult<
+  typeof generateMigrationFileCmd
+>;
 export type GeneratePieceArgs = ParsedCmdResult<typeof generatePieceCmd>;
 export type GeneratePieceActionArgs = ParsedCmdResult<
   typeof generatePieceActionCmd

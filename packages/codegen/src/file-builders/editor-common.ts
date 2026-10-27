@@ -1,7 +1,11 @@
 import { pascalCase } from "change-case";
 import path from "path";
 import { filter, forEach, isTruthy, map, pipe, uniqueBy } from "remeda";
-import { documentEditorModuleFileTemplate, editorsTemplate } from "templates";
+import {
+  documentEditorModuleFileTemplate,
+  editorsIndexTemplate,
+  editorsTemplate,
+} from "templates";
 import { SyntaxKind, type Project } from "ts-morph";
 import {
   formatSourceFileWithPrettier,
@@ -21,6 +25,7 @@ type MakeEditorModuleFileArgs = {
     actionTypeName: string;
     importPath: string;
   };
+  writtenOnce?: boolean;
 };
 /** Generates the `module.ts` file for a document editor or app */
 export async function makeEditorModuleFile({
@@ -31,6 +36,7 @@ export async function makeEditorModuleFile({
   editorId,
   legacyMultipleDocumentTypes,
   documentModel,
+  writtenOnce,
 }: MakeEditorModuleFileArgs) {
   if (documentModelId && !!legacyMultipleDocumentTypes) {
     throw new Error(
@@ -53,6 +59,7 @@ export async function makeEditorModuleFile({
     pascalCaseEditorName,
     documentTypes,
     documentModel,
+    writtenOnce,
   });
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);
@@ -116,7 +123,7 @@ export async function makeEditorsIndexFile(args: {
   project.addSourceFilesAtPaths(path.join(editorsDirPath, "**", "module.ts"));
   const sourceFile = project.createSourceFile(
     path.join(editorsDirPath, "index.ts"),
-    "",
+    editorsIndexTemplate,
     { overwrite: true },
   );
 

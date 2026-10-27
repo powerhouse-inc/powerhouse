@@ -10,7 +10,31 @@ export const oxlintConfigTemplate = json`
     "**/dist/**",
     "**/.ph/**",
     "**/storybook-static/**",
-    "**/.vite/**"
+    "**/.vite/**",
+    // Codegen writes these over on every run; lint fixes in them are lost or break it.
+    "**/gen/**",
+    "/index.ts",
+    "/main.tsx",
+    "reactor/index.ts",
+    "document-models/document-models.ts",
+    "document-models/index.ts",
+    "document-models/upgrade-manifests.ts",
+    "document-models/*/index.ts",
+    "document-models/*/upgrades/index.ts",
+    "document-models/*/upgrades/upgrade-manifest.ts",
+    "document-models/*/upgrades/versions.ts",
+    "document-models/*/v*/actions.ts",
+    "document-models/*/v*/hooks.ts",
+    "document-models/*/v*/index.ts",
+    "document-models/*/v*/module.ts",
+    "document-models/*/v*/utils.ts",
+    "document-models/*/v*/src/index.ts",
+    "editors/editors.ts",
+    "editors/index.ts",
+    "editors/*/module.ts",
+    "subgraphs/index.ts",
+    "processors/{index,factory,connect,switchboard}.ts",
+    "processors/*/index.ts"
   ],
   "rules": {
     "typescript/await-thenable": "error",
@@ -124,6 +148,7 @@ export const oxlintConfigTemplate = json`
 export const oxfmtConfigTemplate = json`
 {
   "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxfmt/configuration_schema.json",
-  "printWidth": 80
+  "printWidth": 80,
+  "ignorePatterns": ["AGENTS.md", "CLAUDE.md", ".agents/", ".claude/skills/"]
 }
 `.raw;

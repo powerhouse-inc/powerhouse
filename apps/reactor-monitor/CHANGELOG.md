@@ -1,3 +1,45 @@
+## 6.2.3-dev.78 (2026-10-27)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** mount the switchboards panel and gate managed remotes ([b1f656af9c](https://github.com/powerhouse-inc/powerhouse/commit/b1f656af9c))
+- **reactor-monitor-app:** switchboards panel over the controller ([ed242d12b5](https://github.com/powerhouse-inc/powerhouse/commit/ed242d12b5))
+- **reactor-monitor-app:** controller client and managed remote descriptors ([ae148ecf90](https://github.com/powerhouse-inc/powerhouse/commit/ae148ecf90))
+- **portle:** scaffold @powerhousedao/portle, the switchboard plugin that gates publication through Portle ([68ab561f7d](https://github.com/powerhouse-inc/powerhouse/commit/68ab561f7d))
+- **reactor-monitor-app:** host the controller in vite dev and a serve script ([8eb1ef41a5](https://github.com/powerhouse-inc/powerhouse/commit/8eb1ef41a5))
+- **reactor-monitor-app:** wire host import into App ([40eb392822](https://github.com/powerhouse-inc/powerhouse/commit/40eb392822))
+- **reactor-monitor-app:** controller HTTP routes behind host, origin and token guards ([67b653a0ba](https://github.com/powerhouse-inc/powerhouse/commit/67b653a0ba))
+- **reactor-monitor-app:** host import panel and drop zone ([a805ea0b3b](https://github.com/powerhouse-inc/powerhouse/commit/a805ea0b3b))
+- **reactor-monitor-app:** node controller over spawnHost and checkHost ([7066d843cb](https://github.com/powerhouse-inc/powerhouse/commit/7066d843cb))
+- **reactor-monitor-app:** controller wire schemas ([a9c71bf980](https://github.com/powerhouse-inc/powerhouse/commit/a9c71bf980))
+- **reactor-monitor-app:** importSet with provenance ([ccbfff454b](https://github.com/powerhouse-inc/powerhouse/commit/ccbfff454b))
+- **reactor-monitor-app:** parse and plan exported hosts ([8438ab491a](https://github.com/powerhouse-inc/powerhouse/commit/8438ab491a))
+- **reactor-api,switchboard:** vacuum full policy knob, no forced rewrite under load by default ([d6dcbf5cd0](https://github.com/powerhouse-inc/powerhouse/commit/d6dcbf5cd0))
+
+### 🩹 Fixes
+
+- **reactor-monitor-app:** back off the panel poll and forget vanished starts ([c398d4daa7](https://github.com/powerhouse-inc/powerhouse/commit/c398d4daa7))
+- **reactor-monitor-app:** re-probe managed remotes when their set returns ([70e1d0b111](https://github.com/powerhouse-inc/powerhouse/commit/70e1d0b111))
+- **reactor-monitor-app:** require an address for the admin preset's ADMINS ([aaceb8b9d4](https://github.com/powerhouse-inc/powerhouse/commit/aaceb8b9d4))
+- **reactor-monitor-app:** forget a probe whose descriptor left the active set ([c91edade73](https://github.com/powerhouse-inc/powerhouse/commit/c91edade73))
+- **reactor-monitor-app:** pick a project with hosts and keep the log tail in view ([e698ca2112](https://github.com/powerhouse-inc/powerhouse/commit/e698ca2112))
+- **reactor-monitor-app:** test the dev plugin's gates; operator env for both hosts ([2c4b3436c1](https://github.com/powerhouse-inc/powerhouse/commit/2c4b3436c1))
+- **reactor-monitor-app:** allowlist browser env and harden the controller ([ac2c23e6a4](https://github.com/powerhouse-inc/powerhouse/commit/ac2c23e6a4))
+- **reactor-monitor-app:** catch unreadable exports and require http(s) URLs ([eb37b2aba1](https://github.com/powerhouse-inc/powerhouse/commit/eb37b2aba1))
+- **reactor-monitor-app:** plan nested and malformed exports correctly ([f71159430b](https://github.com/powerhouse-inc/powerhouse/commit/f71159430b))
+- **reactor-monitor-app:** stop reading reactor.auth, which main removed ([982743f145](https://github.com/powerhouse-inc/powerhouse/commit/982743f145))
+- **reactor-monitor-app:** track page drags by enter/leave depth ([ee1aa95318](https://github.com/powerhouse-inc/powerhouse/commit/ee1aa95318))
+- **reactor-monitor-app:** type the origin cases and drop an always-true host test ([1493e70608](https://github.com/powerhouse-inc/powerhouse/commit/1493e70608))
+- **registry:** a failed tarball write no longer records its attachment ([5d3ae94bd8](https://github.com/powerhouse-inc/powerhouse/commit/5d3ae94bd8))
+- **reactor-api:** the one-time VACUUM FULL is off by default; quiet and forced are opt-ins ([fd7c19e313](https://github.com/powerhouse-inc/powerhouse/commit/fd7c19e313))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.77 (2026-10-26)
 
 ### 🚀 Features
