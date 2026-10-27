@@ -57,6 +57,7 @@ import type {
   IAuthorizationService,
 } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
+import type { ReadableDocumentsLike } from "../services/readable-documents.js";
 import {
   EMPTY_SCALAR_REGISTRY,
   type RegisteredScalar,
@@ -188,6 +189,8 @@ export type GraphQLManagerOptions = {
   /** Defaults to 4001. */
   port?: number;
   authorizationService: IAuthorizationService;
+  /** The readable-documents read model, handed to every subgraph. */
+  readableDocuments?: ReadableDocumentsLike;
   /** Resolvers dispatch to it for reactor-drive parents. */
   reactorDriveClient?: IDriveClient;
   /**
@@ -468,6 +471,7 @@ export class GraphQLManager {
   private readonly featureFlags: GraphqlManagerFeatureFlags;
   private readonly port: number;
   private readonly syncServingGate?: SyncScopeGate;
+  private readonly readableDocuments?: ReadableDocumentsLike;
   private readonly httpRoutes?: HttpRouteService;
   private readonly attachments?: IAttachmentClientProvider;
   private readonly inspection?: IReactorInspectionSource;
@@ -510,6 +514,7 @@ export class GraphQLManager {
     this.reactorDriveClient = options.reactorDriveClient;
     this.driveNodes = options.driveNodes;
     this.syncServingGate = options.syncServingGate;
+    this.readableDocuments = options.readableDocuments;
     this.httpRoutes = options.httpRoutes;
     this.attachments = options.attachments;
     this.inspection = options.inspection;
@@ -885,6 +890,7 @@ export class GraphQLManager {
             documentPermissionService: this.documentPermissionService,
             authorizationService: this.authorizationService,
             syncServingGate: this.syncServingGate,
+            readableDocuments: this.readableDocuments,
             attachments: this.attachments,
             inspection: this.inspection,
           },
@@ -1522,6 +1528,7 @@ export class GraphQLManager {
       documentPermissionService: this.documentPermissionService,
       authorizationService: this.authorizationService,
       syncServingGate: this.syncServingGate,
+      readableDocuments: this.readableDocuments,
       attachments: this.attachments,
       inspection: this.inspection,
       credentials: createCredentialInvalidator(this.authService),
