@@ -224,6 +224,49 @@ export const switchboardConfigSchema = z.object({
   processorConfig: z.map(z.string(), z.unknown()).optional(),
 });
 
+/**
+ * One layer's own schema: every key optional, no defaults (they would
+ * override the layers below), unknown keys refused. `omit` drops dotted
+ * paths the caller sets elsewhere.
+ */
+export function switchboardConfigLayerSchema(
+  omit: readonly string[] = [],
+): z.ZodType<SwitchboardConfigInput, SwitchboardConfigInput> {
+  return layerOf(switchboardConfigSchema, "", new Set(omit)) as z.ZodType<
+    SwitchboardConfigInput,
+    SwitchboardConfigInput
+  >;
+}
+
+function layerOf(
+  schema: z.ZodType,
+  path: string,
+  omit: Set<string>,
+): z.ZodType {
+  const def = schema.def as { type: string; innerType?: z.ZodType };
+  if (
+    (def.type === "default" ||
+      def.type === "prefault" ||
+      def.type === "optional") &&
+    def.innerType
+  ) {
+    return layerOf(def.innerType, path, omit);
+  }
+  if (!(schema instanceof z.ZodObject)) return schema;
+  const shape: Record<string, z.ZodType> = {};
+  for (const [key, field] of Object.entries(
+    schema.shape as Record<string, z.ZodType>,
+  )) {
+    const at = path ? `${path}.${key}` : key;
+    if (omit.has(at)) continue;
+    shape[key] = layerOf(field, at, omit).optional();
+  }
+  const catchall = schema.def.catchall as z.ZodType | undefined;
+  return catchall && catchall.def.type !== "never"
+    ? z.looseObject(shape)
+    : z.strictObject(shape);
+}
+
 export type SwitchboardConfig = z.output<typeof switchboardConfigSchema>;
 
 /** One configuration layer: any subset of {@link SwitchboardConfig}. */

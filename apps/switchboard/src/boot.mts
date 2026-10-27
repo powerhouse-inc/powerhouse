@@ -7,8 +7,13 @@ import {
   reactorDbUrlOf,
   type SwitchboardBootFacts,
 } from "./boot-preconditions.mjs";
+import {
+  switchboardConfigSchema,
+  type SwitchboardConfigInput,
+} from "./config/schema.js";
 import { resolveProjectionWorkerOptions } from "./projection-worker.mjs";
 import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
+import { renownLayers } from "./renown-layers.mjs";
 import { resolveWorkerPoolOptions } from "./worker-pool.mjs";
 
 // The boot preconditions without the server: importing this reads no .env.
@@ -76,4 +81,35 @@ export async function switchboardBootFactsFromEnv(
     renownSource: resolveRenown(options.configuredRenown, env, silent).source,
   };
   return { facts, issues };
+}
+
+export interface BootFactsOfOptions {
+  dev: boolean;
+  /** powerhouse.config.json `auth.renown`. */
+  configuredRenown?: RenownConfig;
+}
+
+/** The server's boot facts from the config it would start with. */
+export async function switchboardBootFactsOf(
+  input: SwitchboardConfigInput,
+  options: BootFactsOfOptions,
+): Promise<SwitchboardBootFacts> {
+  const resolveRenown = await loadResolveRenownConfig();
+  const config = switchboardConfigSchema.parse(input);
+  const pool = resolveWorkerPoolOptions(
+    { numWorkers: config.workers.executor.count },
+    {},
+  );
+  return {
+    dev: options.dev || config.server.dev,
+    workers: pool?.numWorkers ?? 0,
+    projectionWorker: config.workers.projection.enabled,
+    reactorDbUrl: config.storage.reactor.url,
+    authEnforcement: config.protocol.featureFlags.authEnforcement,
+    renownSource: resolveRenown(
+      renownLayers(options.configuredRenown, config.auth.renown),
+      {},
+      silent,
+    ).source,
+  };
 }

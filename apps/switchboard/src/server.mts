@@ -149,6 +149,7 @@ import {
 import { reactorFeatureFlagsOf } from "./reactor-feature-flags.mjs";
 import { createSignaturePolicyFor } from "./create-signature-policy.mjs";
 import { workerPoolIssues } from "./boot-preconditions.mjs";
+import { renownLayers } from "./renown-layers.mjs";
 import {
   getRenownSignerConfig,
   getRenownTrustPolicyConfig,
@@ -1866,21 +1867,6 @@ function serverOptionsOf(
       dbPoolSize: projection.poolSize,
     },
     unsupportedStoredDocuments: config.protocol.unsupportedStoredDocuments,
-  };
-}
-
-/** The config file's `auth.renown`, with the config's set keys over it. */
-function renownLayers(
-  file: RenownConfig | undefined,
-  config: SwitchboardConfig["auth"]["renown"],
-): RenownConfig {
-  return {
-    ...file,
-    ...(config.source !== undefined ? { source: config.source } : {}),
-    ...(config.url !== undefined ? { url: config.url } : {}),
-    ...(config.switchboardUrl !== undefined
-      ? { switchboardUrl: config.switchboardUrl }
-      : {}),
   };
 }
 
