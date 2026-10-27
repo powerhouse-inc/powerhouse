@@ -50,7 +50,11 @@ import {
   type ProcessorFactory,
 } from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
-import { config, coreSubgraphClasses } from "./config.js";
+import {
+  reactorApiConfigFromEnv,
+  type ReactorApiConfig,
+} from "./api-config.js";
+import { coreSubgraphClasses } from "./config.js";
 import { createStartupAttachmentBackend } from "./attachment-backend.js";
 import {
   AttachmentAccessService,
@@ -123,12 +127,10 @@ import { createMcpRequestAuthorizer } from "./services/mcp-request-authorizer.js
 import { buildSyncServingGate } from "./services/sync-serving-gate.js";
 import {
   assertCredentialVerifierForSource,
-  resolveCredentialCacheTtlMs,
   resolveRenownConfig,
   type RenownConfig,
   type ResolvedRenownConfig,
 } from "./services/renown-config.js";
-import { resolveWsCredentialRecheckIntervalMs } from "./graphql/ws-credential-monitor.js";
 import type {
   API,
   IPackageLoader,
@@ -166,9 +168,14 @@ type Options = {
   pgliteFactory?: PgliteFactory;
   configFile?: string;
   packages?: string[];
+  /** Route prefix, gateway and public origin; each key wins over its env var. */
+  server?: ReactorApiConfig["server"];
+  /** `enabled`, `admins` and the identity keys are ignored when `configFile`
+   *  is set, and their env vars override them. The remaining keys are read
+   *  regardless of `configFile` and win over their env vars. */
   auth?: {
-    enabled: boolean;
-    admins: string[];
+    enabled?: boolean;
+    admins?: string[];
     /** Read the bearer and populate `ctx.user` independently of `enabled`.
      *  Defaults to `enabled`; `RESOLVE_CALLER_IDENTITY` overrides either. */
     resolveIdentity?: boolean;
@@ -189,6 +196,11 @@ type Options = {
      *  enforcement, which is what supplies the model — refused at boot
      *  without it. */
     attachmentReadsFollowDocumentPolicy?: boolean;
+    defaultProtection?: boolean;
+    documentPermissions?: { enabled?: boolean; cacheTtlMs?: number };
+    skipCredentialVerification?: boolean;
+    credentialCacheTtlMs?: number;
+    wsRecheckMs?: number;
   };
   /** Renown coordinates the host already resolved, used verbatim instead of
    * resolving `auth.renown` and the env again (which would warn twice). */
@@ -225,6 +237,8 @@ type Options = {
    * or os.tmpdir() for in-memory DB deployments.
    */
   attachmentStoragePath?: string;
+  /** Wins over `PH_ATTACHMENT_STORAGE`; filesystem when neither is set. */
+  attachments?: ReactorApiConfig["attachments"];
   /** Storage health and workflow facts for the inspection subgraph; `false`
    * leaves it unmounted and `api.inspection` undefined. On by default. */
   inspection?: ReactorInspectionOptions | false;
@@ -478,31 +492,8 @@ function makeDbClosers(
   return closers;
 }
 
-/**
- * Resolves the gateway adapter type from the `GATEWAY_ADAPTER` env var.
- * Defaults to "apollo" (the federation gateway, production behavior).
- * "stitching" selects the in-process graphql-tools merge gateway (#1565
- * prototype); "mercurius" the Fastify federation gateway.
- */
-function resolveGatewayAdapterType(logger: ILogger): GatewayAdapterType {
-  const configured = process.env.GATEWAY_ADAPTER;
-  if (configured === undefined) {
-    return "apollo";
-  }
-  if (
-    configured === "apollo" ||
-    configured === "mercurius" ||
-    configured === "stitching"
-  ) {
-    return configured;
-  }
-  logger.warn(
-    `Unknown GATEWAY_ADAPTER="${configured}"; falling back to "apollo"`,
-  );
-  return "apollo";
-}
-
 type SetupGraphQLManagerOptions = {
+  settings: ServerSettings;
   httpAdapter: IHttpAdapter;
   authFetchMiddleware: AuthFetchMiddleware | undefined;
   requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
@@ -536,6 +527,7 @@ type SetupGraphQLManagerOptions = {
  * Sets up the subgraph manager and registers subgraphs
  */
 async function setupGraphQLManager({
+  settings,
   httpAdapter,
   authFetchMiddleware,
   requireAuthFetchMiddleware,
@@ -562,11 +554,8 @@ async function setupGraphQLManager({
   reportError,
 }: SetupGraphQLManagerOptions): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager({
-    wsCredentialRecheckIntervalMs: resolveWsCredentialRecheckIntervalMs(
-      process.env.WS_CREDENTIAL_RECHECK_INTERVAL_MS,
-      logger,
-    ),
-    path: config.basePath,
+    wsCredentialRecheckIntervalMs: settings.wsCredentialRecheckIntervalMs,
+    path: settings.basePath,
     httpServer,
     wsServer,
     readClient: clients.read,
@@ -577,10 +566,7 @@ async function setupGraphQLManager({
     syncManager,
     logger,
     httpAdapter,
-    gatewayAdapter: await createGatewayAdapter(
-      resolveGatewayAdapterType(logger),
-      logger,
-    ),
+    gatewayAdapter: await createGatewayAdapter(settings.gatewayAdapter, logger),
     authService,
     documentPermissionService,
     featureFlags: {
@@ -651,6 +637,15 @@ function boundPortOf(httpServer: http.Server): number {
   return address.port;
 }
 
+/** Per-server settings resolved once from options and env. */
+type ServerSettings = {
+  basePath: string;
+  gatewayAdapter: GatewayAdapterType;
+  wsCredentialRecheckIntervalMs: number | undefined;
+  /** The env layer only: `options.inspection.admin` is applied over it. */
+  inspectionAdmin: boolean;
+};
+
 /**
  * Private helper function that sets up common infrastructure before API initialization.
  * This includes auth configuration, database setup, and package manager initialization.
@@ -674,10 +669,24 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   readiness: ReadinessGate;
   httpRoutes: HttpRouteService;
   attachmentReadsFollowDocumentPolicy: boolean;
+  settings: ServerSettings;
 }> {
   const port = options.port ?? DEFAULT_PORT;
   const { adapter: httpAdapter } = await createHttpAdapter("express");
   const logger = options.logger ?? defaultLogger;
+  const fromEnv = reactorApiConfigFromEnv(process.env, logger);
+  const envAuth = fromEnv.auth ?? {};
+  const optionAuth = options.auth ?? {};
+  const settings: ServerSettings = {
+    basePath: options.server?.basePath ?? fromEnv.server?.basePath ?? "/",
+    gatewayAdapter:
+      options.server?.gatewayAdapter ??
+      fromEnv.server?.gatewayAdapter ??
+      "apollo",
+    wsCredentialRecheckIntervalMs:
+      optionAuth.wsRecheckMs ?? envAuth.wsRecheckMs,
+    inspectionAdmin: fromEnv.inspection?.admin ?? false,
+  };
 
   // Setup auth configuration
   let admins: string[] = [];
@@ -693,28 +702,16 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     authEnabled = config.auth?.enabled ?? false;
     configuredRenown = config.auth?.renown;
   } else if (options.auth) {
-    admins = options.auth.admins.map((a) => a.toLowerCase());
-    authEnabled = options.auth.enabled;
+    admins = (options.auth.admins ?? []).map((a) => a.toLowerCase());
+    authEnabled = options.auth.enabled ?? false;
     configuredResolveIdentity = options.auth.resolveIdentity;
     configuredRequireAuth = options.auth.requireAuthenticatedCaller;
     configuredExemptPaths = options.auth.requireAuthenticatedCallerExemptPaths;
     configuredAttachmentPolicyReads =
       options.auth.attachmentReadsFollowDocumentPolicy;
   }
-  const {
-    AUTH_ENABLED,
-    RESOLVE_CALLER_IDENTITY,
-    REQUIRE_AUTHENTICATED_CALLER,
-    REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS,
-    ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY,
-    ADMINS,
-    DEFAULT_PROTECTION,
-    DOCUMENT_PERMISSIONS_ENABLED,
-    SKIP_CREDENTIAL_VERIFICATION,
-    CREDENTIAL_VERIFICATION_CACHE_TTL_MS,
-  } = process.env;
-  if (AUTH_ENABLED !== undefined) {
-    authEnabled = AUTH_ENABLED === "true";
+  if (envAuth.enabled !== undefined) {
+    authEnabled = envAuth.enabled;
   }
 
   /**
@@ -728,10 +725,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
    * stays `OPEN`, which is the combination custom subgraphs need and the one
    * `AUTH_ENABLED` alone cannot express.
    */
-  let resolveCallerIdentity = configuredResolveIdentity ?? authEnabled;
-  if (RESOLVE_CALLER_IDENTITY !== undefined) {
-    resolveCallerIdentity = RESOLVE_CALLER_IDENTITY === "true";
-  }
+  const resolveCallerIdentity =
+    envAuth.resolveIdentity ?? configuredResolveIdentity ?? authEnabled;
 
   /**
    * Whether the require-authenticated-caller middleware is active: anonymous
@@ -747,10 +742,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
    * out every non-admin; this expresses "authenticated callers allowed,
    * anonymous not".
    */
-  let requireAuthenticatedCaller = configuredRequireAuth ?? false;
-  if (REQUIRE_AUTHENTICATED_CALLER !== undefined) {
-    requireAuthenticatedCaller = REQUIRE_AUTHENTICATED_CALLER === "true";
-  }
+  const requireAuthenticatedCaller =
+    envAuth.requireAuthenticatedCaller ?? configuredRequireAuth ?? false;
 
   /**
    * The paths the floor above does not apply to. Comma-separated, like
@@ -762,13 +755,10 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
    * cannot ever match is refused, in
    * {@link assertRequireAuthenticatedCallerAllowed}.
    */
-  let requireAuthenticatedCallerExemptPaths = configuredExemptPaths ?? [];
-  if (REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS !== undefined) {
-    requireAuthenticatedCallerExemptPaths =
-      REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS.split(",")
-        .map((path) => path.trim())
-        .filter((path) => path.length > 0);
-  }
+  const requireAuthenticatedCallerExemptPaths =
+    envAuth.requireAuthenticatedCallerExemptPaths ??
+    configuredExemptPaths ??
+    [];
 
   /**
    * Whether an attachment read is decided by the referencing document's own
@@ -780,30 +770,29 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
    * nothing keeps exactly the behaviour it has, and one that wants the change
    * asks for it and can take it back without disturbing anything else.
    */
-  let attachmentReadsFollowDocumentPolicy =
-    configuredAttachmentPolicyReads ?? false;
-  if (ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY !== undefined) {
-    attachmentReadsFollowDocumentPolicy =
-      ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY === "true";
+  const attachmentReadsFollowDocumentPolicy =
+    envAuth.attachmentReadsFollowDocumentPolicy ??
+    configuredAttachmentPolicyReads ??
+    false;
+
+  if (envAuth.admins !== undefined) {
+    admins = envAuth.admins;
   }
 
-  if (ADMINS !== undefined) {
-    admins = ADMINS.split(",").map((a) => a.toLowerCase());
-  }
-
-  let defaultProtection = false;
-  if (DEFAULT_PROTECTION !== undefined) {
-    defaultProtection = DEFAULT_PROTECTION.toLowerCase() === "true";
-  }
-
-  let skipCredentialVerification = false;
-  if (SKIP_CREDENTIAL_VERIFICATION !== undefined) {
-    skipCredentialVerification = SKIP_CREDENTIAL_VERIFICATION === "true";
-  }
+  const defaultProtection =
+    optionAuth.defaultProtection ?? envAuth.defaultProtection ?? false;
+  const skipCredentialVerification =
+    optionAuth.skipCredentialVerification ??
+    envAuth.skipCredentialVerification ??
+    false;
+  const documentPermissionsEnabled =
+    optionAuth.documentPermissions?.enabled ??
+    envAuth.documentPermissions?.enabled ??
+    false;
 
   const documentPermissionsRequested =
     options.documentPermissionService !== undefined ||
-    DOCUMENT_PERMISSIONS_ENABLED === "true";
+    documentPermissionsEnabled;
   assertAuthRequiredForDocumentPermissions(
     authEnabled,
     documentPermissionsRequested,
@@ -838,7 +827,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   );
 
   // Explorer route
-  const explorerPrefix = getExplorerPrefix(config.basePath);
+  const explorerPrefix = getExplorerPrefix(settings.basePath);
   httpAdapter.getRoute(`${explorerPrefix}/:endpoint?`, (request) => {
     const url = new URL(request.url);
     // Strip the prefix to find the optional :endpoint segment
@@ -896,11 +885,10 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       resolveIdentity: resolveCallerIdentity,
       admins,
       skipCredentialVerification,
-      credentialVerificationCacheTtlMs: resolveCredentialCacheTtlMs(
-        CREDENTIAL_VERIFICATION_CACHE_TTL_MS,
-        renown.source,
-        logger,
-      ),
+      credentialVerificationCacheTtlMs:
+        optionAuth.credentialCacheTtlMs ??
+        envAuth.credentialCacheTtlMs ??
+        (renown.source === "self" ? 0 : undefined),
       verifyCredential:
         options.verifyCredential ??
         (await createRenownCredentialVerifier({
@@ -959,13 +947,13 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   // over the reactor store the permission tables live in.
   const documentPermissionService = options.documentPermissionService;
   const ownDocumentPermissions: OwnDocumentPermissions | null =
-    !documentPermissionService && DOCUMENT_PERMISSIONS_ENABLED === "true"
+    !documentPermissionService && documentPermissionsEnabled
       ? {
           defaultProtection,
-          cacheTtlMs: resolvePermissionCacheTtlMs(
-            process.env.DOCUMENT_PERMISSION_CACHE_TTL_MS,
-            logger,
-          ),
+          cacheTtlMs:
+            optionAuth.documentPermissions?.cacheTtlMs ??
+            envAuth.documentPermissions?.cacheTtlMs ??
+            DEFAULT_PERMISSION_CACHE_TTL_MS,
         }
       : null;
 
@@ -997,6 +985,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   const ATTACHMENT_SWEEP_INTERVAL_MS = 60 * 60 * 1000; // hourly
   const attachmentBackend = await createStartupAttachmentBackend({
     db: attachmentDb as Kysely<AttachmentDatabase>,
+    storage: options.attachments?.storage ??
+      fromEnv.attachments?.storage ?? { kind: "filesystem" },
   });
   const attachmentBuilder = new AttachmentBuilder(
     attachmentDb,
@@ -1032,15 +1022,18 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   // a URL a provider has registered keeps working across a restart and any
   // replica can serve it.
   const listenPort: ListenPort = { current: port };
-  const publicUrl = resolvePublicOrigin(listenPort);
+  const publicUrl = resolvePublicOrigin(
+    options.server?.publicUrl ?? fromEnv.server?.publicUrl,
+    listenPort,
+  );
   const webhooks = new WebhookService({
     store: new RelationalWebhookStore(relationalDb),
-    basePath: config.basePath,
+    basePath: settings.basePath,
     publicUrl,
   });
   const httpRoutes = new HttpRouteService({
     httpAdapter,
-    basePath: config.basePath,
+    basePath: settings.basePath,
     authService,
     webhooks,
     publicUrl,
@@ -1053,7 +1046,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   webhooks.attach(
     httpRoutes.hostScope(
       CORE_PACKAGE_NAME,
-      path.posix.join("/", config.basePath ?? "/", WEBHOOK_SEGMENT),
+      path.posix.join("/", settings.basePath, WEBHOOK_SEGMENT),
     ),
   );
 
@@ -1076,6 +1069,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     dbClosers,
     readiness,
     attachmentReadsFollowDocumentPolicy,
+    settings,
   };
 }
 
@@ -1110,6 +1104,7 @@ async function _setupAPI(
   processors: Map<string, Processor>,
   subgraphs: Map<string, SubgraphClass[]>,
   options: Options,
+  settings: ServerSettings,
   processorApp: ProcessorApp,
   readModels: IReadModel[],
   attachments: AttachmentBuildResult,
@@ -1286,6 +1281,7 @@ async function _setupAPI(
   }
 
   const graphqlManager = await setupGraphQLManager({
+    settings,
     httpAdapter,
     authFetchMiddleware,
     requireAuthFetchMiddleware,
@@ -1538,27 +1534,7 @@ async function createOwnDocumentPermissionService(
   );
 }
 
-/**
- * The permission cache TTL from `DOCUMENT_PERMISSION_CACHE_TTL_MS`: a
- * non-negative integer of milliseconds, 0 disabling the cache. Anything else
- * falls back to the default with a warning.
- */
-export function resolvePermissionCacheTtlMs(
-  raw: string | undefined,
-  logger: ILogger,
-): number {
-  if (raw === undefined || raw.trim() === "") {
-    return DEFAULT_PERMISSION_CACHE_TTL_MS;
-  }
-  const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    logger.warn(
-      `Ignoring DOCUMENT_PERMISSION_CACHE_TTL_MS=${raw}: expected a non-negative integer; using ${DEFAULT_PERMISSION_CACHE_TTL_MS} ms`,
-    );
-    return DEFAULT_PERMISSION_CACHE_TTL_MS;
-  }
-  return parsed;
-}
+export { resolvePermissionCacheTtlMs } from "./api-config.js";
 
 export type { AttachmentReferenceProjectionCapability } from "./services/attachment-access.service.js";
 
@@ -1603,6 +1579,7 @@ export async function initializeAndStartAPI(
     dbClosers,
     readiness,
     attachmentReadsFollowDocumentPolicy,
+    settings,
   } = await _setupCommonInfrastructure(options);
 
   const { documentModels, upgradeManifests, processors, subgraphs } =
@@ -1687,6 +1664,7 @@ export async function initializeAndStartAPI(
     processors,
     subgraphs,
     options,
+    settings,
     processorApp,
     readModels,
     attachments,
@@ -1705,7 +1683,7 @@ export async function initializeAndStartAPI(
     attachmentReadsFollowDocumentPolicy,
     reactorClientModule.reactorModule && options.inspection !== false
       ? createReactorInspectionSource(reactorClientModule.reactorModule, {
-          admin: process.env.INSPECTION_ADMIN_ENABLED === "true",
+          admin: settings.inspectionAdmin,
           ...options.inspection,
           attachmentStore: attachmentInspectionStore(attachments),
         })
@@ -1737,11 +1715,11 @@ export async function initializeAndStartAPI(
  * dev` behind a tunnel and, at worst, obviously wrong rather than silently
  * unusable.
  */
-function resolvePublicOrigin(listenPort: ListenPort): PublicOrigin {
-  const explicit = process.env.PUBLIC_URL ?? process.env.RENDER_EXTERNAL_URL;
-  if (explicit) return withScheme(explicit);
-  const domain = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME;
-  if (domain) return withScheme(domain);
+function resolvePublicOrigin(
+  configured: string | undefined,
+  listenPort: ListenPort,
+): PublicOrigin {
+  if (configured) return withScheme(configured);
   // Read on use: the port is only known once the server listens.
   return () => `http://localhost:${listenPort.current}`;
 }
