@@ -6,6 +6,7 @@ import type {
   ProcessorRecord,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
+import { getCodegenStatusRegistry } from "@powerhousedao/shared/processors";
 import { logger } from "./logger.js";
 
 /**
@@ -78,20 +79,22 @@ export const codegenFactoryBuilder: ProcessorFactoryBuilder = (
       module.client,
       vetraConfig?.interactive,
     );
+    const documentTypes = [
+      "powerhouse/document-model",
+      "powerhouse/package",
+      "powerhouse/document-editor",
+      "powerhouse/subgraph",
+      "powerhouse/processor",
+      "powerhouse/app",
+    ];
+    getCodegenStatusRegistry().watch(documentTypes);
     return [
       {
         processor,
         filter: {
           branch: ["main"],
           documentId: ["*"],
-          documentType: [
-            "powerhouse/document-model",
-            "powerhouse/package",
-            "powerhouse/document-editor",
-            "powerhouse/subgraph",
-            "powerhouse/processor",
-            "powerhouse/app",
-          ],
+          documentType: documentTypes,
           scope: ["global"],
         },
       },

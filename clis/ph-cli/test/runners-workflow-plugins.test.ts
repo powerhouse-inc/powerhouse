@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type * as HostCore from "@powerhousedao/host-core";
 import type { ResolvedPlugin, RunnerContext } from "@powerhousedao/host-core";
+import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import {
   hostSchema as connectHostSchema,
   type ConnectHost,
@@ -353,7 +354,9 @@ describe("connect runner — workflows drive", () => {
       }),
       ctx,
     );
-    const override = vi.mocked(runConnectStudio).mock.calls[0][2];
+    const override = vi.mocked(runConnectStudio).mock.calls[0][2] as
+      | PHConnectRuntimeConfig
+      | undefined;
     expect(override?.composition).toEqual([
       {
         module: "@powerhousedao/connect/plugins/workflows",

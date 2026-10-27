@@ -2502,22 +2502,22 @@ An example of a builder team building on the Powerhouse Vetra Ecosystem and its 
 
 ### Connect Claude to the Reactor MCP
 
-Claude can connect directly to your running Reactor via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), giving it live access to your drives, documents, and document model operations.
+Claude can connect directly to your project's Reactor via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), giving it live access to your drives, documents, and document model operations.
 
-Add the following configuration to your Claude MCP settings (e.g. `~/.claude/mcp.json` for Claude Code, or the MCP servers section in Claude Desktop):
+`ph init` writes the configuration into the project: `.mcp.json` for Claude Code, `.cursor/mcp.json` for Cursor and `.gemini/settings.json` for Gemini CLI. The `.mcp.json` it writes is:
 
 ```json
 {
   "mcpServers": {
     "reactor-mcp": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:4001/mcp"]
+      "type": "http",
+      "url": "http://localhost:4001/mcp"
     }
   }
 }
 ```
 
-This connects Claude to the Reactor running at `http://localhost:4001`. Make sure `ph vetra --watch` (or `ph reactor`) is running before starting a Claude session that uses the MCP.
+The URL is Vetra Switchboard's `/mcp` endpoint on the project's Switchboard port (`reactor.port` in `powerhouse.config.json`), and `ph vetra` updates it if that port moves. The tools work while Vetra runs: start `ph vetra --watch` before a Claude session that uses them.
 
 → See [Connecting Claude with Reactor MCP](/academy/Cookbook#connecting-claude-with-reactor-mcp) for a step-by-step walkthrough.
 
@@ -2742,22 +2742,22 @@ A specialized AI agent that guides users through document model creation with re
 
 </details>
 
-#### 0. Configure the Reactor MCP
+#### 0. Check the Reactor MCP configuration
 
-Add the following to your Claude MCP settings (`~/.claude/mcp.json` for Claude Code, or the MCP servers section in Claude Desktop):
+`ph init` already wrote the Reactor MCP configuration into your project's `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "reactor-mcp": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:4001/mcp"]
+      "type": "http",
+      "url": "http://localhost:4001/mcp"
     }
   }
 }
 ```
 
-This only needs to be done once. Make sure `ph vetra` is running before starting a Claude session that uses the MCP.
+The URL is Vetra Switchboard's `/mcp` endpoint on the project's Switchboard port (`reactor.port` in `powerhouse.config.json`), and `ph vetra` updates it if that port moves. Make sure `ph vetra` is running before starting a Claude session that uses the MCP.
 
 #### 1. Start the Reactor MCP:
 
@@ -27847,22 +27847,22 @@ First, ensure Vetra Studio is running in your project directory:
 ph vetra --interactive --watch
 ```
 
-### Step 2: Configure the MCP Server (one-time setup)
+### Step 2: Check the MCP Server Configuration
 
-Add the Reactor MCP server to your Claude configuration. For Claude Code, add it to `~/.claude/mcp.json`; for Claude Desktop, add it under MCP Servers in settings:
+`ph init` writes the Reactor MCP server into the project's `.mcp.json`, which Claude Code reads when it starts in the project directory and asks you to approve the first time:
 
 ```json
 {
   "mcpServers": {
     "reactor-mcp": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:4001/mcp"]
+      "type": "http",
+      "url": "http://localhost:4001/mcp"
     }
   }
 }
 ```
 
-This tells Claude how to reach the Reactor MCP endpoint. You only need to do this once per machine.
+The URL is Vetra Switchboard's `/mcp` endpoint on the project's Switchboard port (`reactor.port` in `powerhouse.config.json`), and `ph vetra` updates it if that port moves.
 
 ### Step 3: Open a New Terminal and Navigate to Your Project
 
@@ -27904,7 +27904,7 @@ running and ready for document model operations.
 ### Common issues and solutions
 
 - **Issue**: MCP connection fails
-  - **Solution**: Ensure Vetra Studio is running before attempting to connect Claude. Restart both Vetra and Claude if needed.
+  - **Solution**: Ensure Vetra Studio is running before attempting to connect Claude, and that the port in `.mcp.json` is the one `ph vetra` prints for the Switchboard. Run `/mcp` in Claude to reconnect after Vetra starts.
 - **Issue**: Claude doesn't recognize reactor commands
   - **Solution**: Make sure you're in the correct project directory when starting Claude.
 - **Issue**: Drive not visible in Claude

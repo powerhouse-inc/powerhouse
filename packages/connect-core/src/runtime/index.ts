@@ -14,7 +14,11 @@ export {
   resolveReactorWorkerEnabled,
 } from "./reactor-worker-flag.js";
 export type { ReactorWorkerFlagInput } from "./reactor-worker-flag.js";
-export { resolveReactorClientMode } from "./reactor-client-mode.js";
+export {
+  REACTOR_CLIENT_QUERY_KEY,
+  REACTOR_CLIENT_STORAGE_KEY,
+  resolveReactorClientMode,
+} from "./reactor-client-mode.js";
 export type { ReactorClientMode } from "./reactor-client-mode.js";
 export {
   createAppReactorClient,

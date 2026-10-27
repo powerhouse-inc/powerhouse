@@ -185,6 +185,7 @@ describe("source-config schema", () => {
     expect(props.vetra.properties?.connectPort.type).toBe("integer");
     expect(props.vetra.properties?.driveId.type).toBe("string");
     expect(props.vetra.properties?.driveUrl.type).toBe("string");
+    expect(props.vetra.properties?.previewDrive.type).toBe("object");
   });
 
   it("assistant recognises port and requires no field", () => {

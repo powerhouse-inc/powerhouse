@@ -1,17 +1,17 @@
 import { tsx } from "@tmpl/core";
 
 export const folderTreeFileTemplate = tsx`
-  import {
+import {
   Sidebar,
   SidebarProvider,
   type SidebarNode,
 } from "@powerhousedao/document-engineering";
 import {
   getDriveName,
-  setSelectedNode,
   useNodesInSelectedDrive,
   useSelectedDrive,
   useSelectedNode,
+  useSetSelectedNode,
 } from "@powerhousedao/reactor-browser";
 import type { Node } from "@powerhousedao/shared/document-drive";
 import { useMemo } from "react";
@@ -67,10 +67,11 @@ export function FolderTree() {
   const [selectedDrive] = useSelectedDrive();
   const nodes = useNodesInSelectedDrive();
   const selectedNode = useSelectedNode();
-  const driveName = selectedDrive ? getDriveName(selectedDrive) : "";
+  const setSelectedNode = useSetSelectedNode();
+  const driveName = getDriveName(selectedDrive);
   // Transform Node[] to hierarchical SidebarNode structure
   const sidebarNodes = useMemo(
-    () => transformNodesToSidebarNodes(nodes || [], driveName),
+    () => transformNodesToSidebarNodes(nodes ?? [], driveName),
     [nodes, driveName],
   );
 
@@ -84,7 +85,7 @@ export function FolderTree() {
   };
   // Map selectedNodeId to activeNodeId (use "root" when undefined)
   const activeNodeId =
-    !selectedNode || selectedNode.id === selectedDrive?.header.id
+    !selectedNode || selectedNode.id === selectedDrive.header.id
       ? "root"
       : selectedNode.id;
 

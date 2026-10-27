@@ -2,6 +2,19 @@ import { deriveProjectPorts } from "@powerhousedao/shared/clis/project-ports";
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import { DEFAULT_REGISTRY_URL } from "@powerhousedao/shared/registry";
 
+const {
+  instance: _instance,
+  app: { cookieBanner: _cookieBanner, ...scaffoldedApp } = {},
+  ...scaffoldedConnect
+} = DEFAULT_CONNECT_CONFIG;
+const { appName, icon, ...branding } = scaffoldedConnect.branding ?? {};
+const SCAFFOLDED_CONNECT_CONFIG = {
+  ...scaffoldedConnect,
+  // A build input the runtime defaults leave out; listed so the key shows.
+  branding: { appName, icon, favicon: null, ...branding },
+  app: scaffoldedApp,
+};
+
 type BuildPowerhouseConfigTemplateArgs = {
   /** Project name, hashed to assign this project's dev-server ports. */
   name: string;
@@ -17,7 +30,9 @@ type BuildPowerhouseConfigTemplateArgs = {
  * The `connect` block is populated from `DEFAULT_CONNECT_CONFIG` so every
  * runtime field is present in the scaffolded file. Dev consumers that read
  * the source config directly (notably `ph vetra`, which has no dist file)
- * see fully-defined values instead of `undefined`.
+ * see fully-defined values instead of `undefined`. `connect.instance` and
+ * `connect.app.cookieBanner` are the exceptions: unset, `ph vetra` picks
+ * Studio's reactor client and turns the cookie banner off for it.
  */
 // Kept `async` for callsite signature compatibility (callers already
 // `await` the result). The body is synchronous.
@@ -42,7 +57,7 @@ export async function buildPowerhouseConfigTemplate(
     reactor: { port: ports.switchboardPort },
     packages: [],
     packageRegistryUrl: DEFAULT_REGISTRY_URL,
-    connect: DEFAULT_CONNECT_CONFIG,
+    connect: SCAFFOLDED_CONNECT_CONFIG,
   };
 
   const vetra: Record<string, unknown> = {

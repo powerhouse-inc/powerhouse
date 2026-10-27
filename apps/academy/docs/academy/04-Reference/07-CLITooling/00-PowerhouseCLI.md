@@ -555,7 +555,7 @@ Generate a migration file
 
 
 ## Connect Routes
-Generate .ph/connect-routes.gen.ts, the route tree hosts/connect/routes/ type-checks against
+Generate .ph/connect-routes.gen.ts, the route tree hosts/connect/routes/ type-checks against, and fail if a route the package offers imports @powerhousedao/connect
 
 
 
@@ -584,6 +584,25 @@ connect.drives.defaultDrives in powerhouse.config.json - de-duplicated by
 URL, so configuring project drives does not cost you the Vetra drive.
 An explicit --default-drives-url is appended to that list (de-duplicated);
 it never replaces the Vetra drive.
+
+Every drive on the local Switchboard:
+Studio has no reactor of its own: it reads and writes on the local
+Switchboard (connect.instance.reactorClient "remote"), so it lists every
+drive there, such as one an agent adds through MCP, and a drive created in
+Studio lands there too. Not with --remote-drive, or when the project sets
+connect.instance.multiReactor or reactorClient itself.
+
+Preview drive app:
+Set vetra.previewDrive.app in powerhouse.config.json to the id of a drive
+app, and ph vetra --watch opens the Vetra Preview drive in that app: it sets
+the drive's app when it creates the drive and each time it starts. Without
+the field the drive keeps the app it has.
+
+One Vetra per project:
+A running Vetra is recorded in .ph/vetra-runtime.json (its pid and the
+Connect, Switchboard and MCP URLs); a second `ph vetra` prints those and
+exits. --restart stops the recorded Vetra first, then starts this one.
+Studio restarts by itself when powerhouse.config.json changes.
 
 
 
@@ -637,6 +656,9 @@ it never replaces the Vetra drive.
 
 **Default:** `false`
 **Logs** - Show additional logs - Usage: `--logs`
+
+**Default:** `false`
+**Restart** - Stop this project's running Vetra first (the pid in .ph/vetra-runtime.json), then start - Usage: `--restart`
 
 **Default:** `false`
 **Disable Connect** - Skip Connect initialization (only start switchboard and reactor) - Usage: `--disable-connect`

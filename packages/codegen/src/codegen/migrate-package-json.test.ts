@@ -59,6 +59,24 @@ describe("migratedPackageJson", () => {
   });
 });
 
+describe("the lint scripts", () => {
+  it("generate the Connect route tree before the type-checked lint, in new and migrated projects", () => {
+    const migrated = migratedPackageJson(generatedBefore, {});
+    const scaffolded = JSON.parse(
+      packageJsonTemplate("new-project", {}, {}),
+    ) as {
+      scripts: Record<string, string>;
+    };
+
+    for (const script of ["lint", "lint:fix"] as const) {
+      expect(migrated.scripts?.[script]).toMatch(
+        /^ph-cli generate connect-routes && oxlint --type-aware --type-check/,
+      );
+      expect(scaffolded.scripts[script]).toBe(packageScripts[script]);
+    }
+  });
+});
+
 describe("the tsc script", () => {
   it("generates the Connect route tree before tsc, in new and migrated projects", () => {
     const migrated = migratedPackageJson(generatedBefore, {});

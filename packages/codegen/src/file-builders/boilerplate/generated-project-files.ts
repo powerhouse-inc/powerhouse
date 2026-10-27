@@ -14,14 +14,14 @@ import {
 } from "../hosts/host-typing-files.js";
 import { writeJsonFile } from "write-json-file";
 import {
-  agentsTemplate,
   buildCursorMcpTemplate,
   buildHostsTemplates,
   buildMcpTemplate,
   buildPowerhouseConfigTemplate,
   claudeSettingsLocalTemplate,
-  claudeTemplate,
+  claudeSettingsTemplate,
   connectEntrypointTemplate,
+  cursorCliTemplate,
   cursorMcpTemplate,
   dockerfileTemplate,
   documentModelsIndexTemplate,
@@ -38,6 +38,7 @@ import {
   mcpTemplate,
   nginxConfTemplate,
   npmrcTemplate,
+  obsoleteClaudeSettingsLocalRules,
   oxfmtConfigTemplate,
   oxlintConfigTemplate,
   pnpmWorkspaceTemplate,
@@ -56,7 +57,7 @@ import {
   HOST_STYLESHEET,
   localPackageNames,
 } from "@powerhousedao/shared/clis/package-style";
-import { formatSafe } from "utils";
+import { formatFileText, formatSafe } from "utils";
 import {
   connectThemeMessages,
   migratedStyle,
@@ -64,6 +65,14 @@ import {
   readStyle,
 } from "./migrate-style.js";
 import {
+  type AgentFileAction,
+  type AgentFileResult,
+  writeAgentInstructionFiles,
+} from "./agent-files.js";
+import { CODEGEN_PACKAGE, codegenSkills, syncSkills } from "./agent-skills.js";
+import {
+  type JsonObject,
+  mergedJsonSettings,
   mergedVitestConfig,
   readIfExists,
   withProjectArrayEntries,
@@ -94,7 +103,7 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
   );
   await writeFileEnsuringDir(
     join(projectDir, "main.tsx"),
-    await formatSafe(mainTsxTemplate),
+    await formatSafe(mainTsxTemplate, "tsx"),
   );
   const oxlintPath = join(projectDir, ".oxlintrc.json");
   await writeFileEnsuringDir(
@@ -342,18 +351,13 @@ async function writeHostsTypingFiles(projectDir: string) {
   await writeJsonFile(pkgPath, pkg, { indent: 2 });
 }
 
-export async function writeAiConfigFiles(projectDir = process.cwd()) {
-  // All six files are preserve-on-migrate; none is refresh. Per-file rationale:
-  //
-  // CLAUDE.md / AGENTS.md: project instructions for coding agents — prose the
-  // user extends by hand; nothing in the toolchain regenerates them.
-  await seedUserOwnedFile(
-    join(projectDir, "CLAUDE.md"),
-    claudeTemplate.trimStart(),
-  );
-  await seedUserOwnedFile(
-    join(projectDir, "AGENTS.md"),
-    agentsTemplate.trimStart(),
+/** The agent guidance and settings files, and what was done to each. */
+export async function writeAiConfigFiles(
+  projectDir = process.cwd(),
+): Promise<AgentFileResult[]> {
+  const results = await writeAgentInstructionFiles(projectDir);
+  results.push(
+    ...(await syncSkills(projectDir, codegenSkills(), CODEGEN_PACKAGE)),
   );
   // .mcp.json / .cursor/mcp.json: committed files carrying the project's
   // name-derived switchboard port as a literal (applyProjectCustomizations
@@ -369,19 +373,47 @@ export async function writeAiConfigFiles(projectDir = process.cwd()) {
     join(projectDir, ".cursor/mcp.json"),
     cursorMcpTemplate.trimStart(),
   );
-  // .gemini/settings.json: the user's Gemini CLI settings; nothing in the
-  // toolchain writes it after scaffolding.
-  await seedUserOwnedFile(
-    join(projectDir, ".gemini/settings.json"),
-    geminiSettingsTemplate.trimStart(),
-  );
-  // .claude/settings.local.json: per-machine state — Claude Code itself
-  // appends the permission grants the user approves during sessions, so an
-  // existing one holds accumulated approvals no template can reproduce.
-  await seedUserOwnedFile(
-    join(projectDir, ".claude/settings.local.json"),
-    claudeSettingsLocalTemplate.trimStart(),
-  );
+  // Agent settings gain the keys migrate owns; the user's own keys stay.
+  const { context } = JSON.parse(geminiSettingsTemplate) as JsonObject;
+  const settings: [string, string, JsonObject?, JsonObject?][] = [
+    [".claude/settings.json", claudeSettingsTemplate],
+    [".cursor/cli.json", cursorCliTemplate],
+    // Gemini's MCP servers stay the project's; migrate owns `context`.
+    [".gemini/settings.json", geminiSettingsTemplate, { context }],
+    // Claude Code appends the user's grants here; migrate only drops old rules.
+    [
+      ".claude/settings.local.json",
+      claudeSettingsLocalTemplate,
+      {},
+      { permissions: obsoleteClaudeSettingsLocalRules },
+    ],
+  ];
+  for (const [path, template, owned, obsolete] of settings) {
+    const action = await writeJsonSettings(
+      join(projectDir, path),
+      template,
+      owned,
+      obsolete,
+    );
+    results.push({ path, action });
+  }
+  return results;
+}
+
+async function writeJsonSettings(
+  filePath: string,
+  template: string,
+  owned = JSON.parse(template) as JsonObject,
+  obsolete?: JsonObject,
+): Promise<AgentFileAction> {
+  const existing = readIfExists(filePath);
+  const contents =
+    existing === undefined
+      ? template
+      : mergedJsonSettings(filePath, existing, owned, obsolete);
+  if (contents === undefined) return "left alone";
+  await writeFileEnsuringDir(filePath, await formatSafe(contents, "json"));
+  return existing === undefined ? "written" : "updated";
 }
 
 export async function writeProjectRootFiles(
@@ -488,7 +520,10 @@ export async function applyProjectCustomizations(args: {
 export async function writeCIFiles(projectDir = process.cwd()) {
   await writeFileEnsuringDir(
     join(projectDir, ".github/workflows/sync-and-publish.yml"),
-    syncAndPublishWorkflowTemplate,
+    await formatFileText(
+      "sync-and-publish.yml",
+      syncAndPublishWorkflowTemplate,
+    ),
   );
   await writeFileEnsuringDir(
     join(projectDir, "Dockerfile"),
@@ -508,11 +543,13 @@ export async function writeCIFiles(projectDir = process.cwd()) {
   );
 }
 
+/** Returns what was done to each agent file. */
 export async function writeAllGeneratedProjectFiles(
   projectDir = process.cwd(),
-) {
+): Promise<AgentFileResult[]> {
   await writeGeneratedProjectRootFiles(projectDir);
   await writeModuleFiles(projectDir);
-  await writeAiConfigFiles(projectDir);
+  const agentFiles = await writeAiConfigFiles(projectDir);
   await writeCIFiles(projectDir);
+  return agentFiles;
 }

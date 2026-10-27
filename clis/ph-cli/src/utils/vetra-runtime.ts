@@ -1,5 +1,6 @@
 import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import fs from "node:fs";
+import net from "node:net";
 import path from "node:path";
 
 export type VetraRuntimeRecord = {
@@ -7,13 +8,18 @@ export type VetraRuntimeRecord = {
   projectName: string;
   switchboardPort: number;
   connectPort: number;
+  /** The Switchboard's GraphQL endpoint; absent in records from before it was written. */
+  switchboardUrl?: string;
   mcpUrl: string;
+  /** Vetra Studio; absent with --disable-connect. */
+  connectUrl?: string;
   startedAt: string;
 };
 
 export type VetraProbe =
   | { status: "none" }
   | { status: "stale" }
+  | { status: "starting"; record: VetraRuntimeRecord }
   | { status: "live"; record: VetraRuntimeRecord }
   | { status: "foreign"; record: VetraRuntimeRecord };
 
@@ -45,7 +51,9 @@ export function writeVetraRuntime(
   fs.writeFileSync(target, `${JSON.stringify(record, null, 2)}\n`);
 }
 
-export function clearVetraRuntime(projectDir: string): void {
+/** Deletes the record; with `pid`, only the record of that process. */
+export function clearVetraRuntime(projectDir: string, pid?: number): void {
+  if (pid !== undefined && readVetraRuntime(projectDir)?.pid !== pid) return;
   try {
     fs.rmSync(recordPath(projectDir));
   } catch {
@@ -61,6 +69,17 @@ function isPidAlive(pid: number): boolean {
     // EPERM means the process exists but belongs to another user.
     return (error as NodeJS.ErrnoException).code === "EPERM";
   }
+}
+
+export function isPortInUse(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.connect({ port, host: "localhost" });
+    socket.once("connect", () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once("error", () => resolve(false));
+  });
 }
 
 async function isReady(port: number): Promise<boolean> {
@@ -95,7 +114,12 @@ export async function probeVetraRuntime(
   const record = readVetraRuntime(projectDir);
   if (!record) return { status: "none" };
 
-  if (!isPidAlive(record.pid) || !(await isReady(record.switchboardPort))) {
+  const alive = isPidAlive(record.pid);
+  const ready = alive && (await isReady(record.switchboardPort));
+  // The record lands once the port is bound; `/ready` turns 200 later.
+  const starting =
+    alive && !ready && (await isPortInUse(record.switchboardPort));
+  if (!ready && !starting) {
     clearVetraRuntime(projectDir);
     return { status: "stale" };
   }
@@ -103,10 +127,14 @@ export async function probeVetraRuntime(
   if (record.projectName !== projectName) {
     return { status: "foreign", record };
   }
-  return { status: "live", record };
+  return ready ? { status: "live", record } : { status: "starting", record };
 }
 
-const MCP_FILES = [".mcp.json", path.join(".cursor", "mcp.json")];
+const MCP_FILES = [
+  ".mcp.json",
+  path.join(".cursor", "mcp.json"),
+  path.join(".gemini", "settings.json"),
+];
 
 /**
  * Point every generated MCP config at `port`, returning the files changed.

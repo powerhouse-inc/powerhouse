@@ -101,6 +101,22 @@ export function ignoreBuildOutput(projectRoot: string) {
   };
 }
 
+/** Whether a watched path is in `routesDir` or is the folder itself. */
+function inRoutesDir(projectRoot: string, routesDir: string) {
+  let watchedAs: string[] | undefined;
+  return (file: string) => {
+    // The watcher may report real paths, e.g. /private/var for /var on macOS.
+    watchedAs ??= [
+      routesDir,
+      join(realpathSync(projectRoot), relative(projectRoot, routesDir)),
+    ];
+    const path = resolve(projectRoot, file);
+    return watchedAs.some(
+      (dir) => path === dir || path.startsWith(`${dir}${sep}`),
+    );
+  };
+}
+
 /** Connect's pathless sidebar layout; a project's routes in `_app/` render in it. */
 export const APP_LAYOUT = "_app";
 
@@ -349,10 +365,14 @@ export function connectRoutesGeneratorConfig(
             : []),
         ],
       ),
-      physical("", fromRoutes(projectRoutes)),
+      // Dev mounts the folder before it exists; see connectRoutesWatcher.
+      ...(existsSync(projectRoutes)
+        ? [physical("", fromRoutes(projectRoutes))]
+        : []),
     ]);
   };
   const generatedRouteTree = connectRoutesTreeOf(projectRoot, projectRoutes);
+  const inProjectRoutes = inRoutesDir(projectRoot, projectRoutes);
   // The router plugin parses a copy of its config; this reaches its generator's.
   const overrides: GeneratorPlugin = {
     name: "ph-connect-route-overrides",
@@ -363,6 +383,7 @@ export function connectRoutesGeneratorConfig(
         enumerable: true,
       });
       importConnectRoutesByPackage(generator, generatedRouteTree);
+      followProjectRoutes(generator, inProjectRoutes);
     },
   };
   // Only hosts/connect/routes/ is offered to other Connects; a host's own folder is not.
@@ -490,6 +511,21 @@ function importConnectRoutesByPackage(generator: unknown, treeFile: string) {
     );
     return write({ ...opts, newContent });
   };
+}
+
+type RelevanceCheck = {
+  isFileRelevantForRouteTreeGeneration: (file: string) => boolean;
+};
+
+// A generator drops events outside its last crawl, which may predate the project's folder.
+function followProjectRoutes(
+  generator: unknown,
+  inProjectRoutes: (file: string) => boolean,
+) {
+  const checker = generator as RelevanceCheck;
+  const relevant = checker.isFileRelevantForRouteTreeGeneration.bind(checker);
+  checker.isFileRelevantForRouteTreeGeneration = (file) =>
+    relevant(file) || inProjectRoutes(file);
 }
 
 // The plugin checks only leaf routes; a layout twice, e.g. settings.tsx, shows as one import name twice.
@@ -638,16 +674,23 @@ function escapeRegExp(text: string) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Generates the tree when the project has routes, else drops a stale one. */
+/** Generates the tree when the project has routes. Without them, a tree there
+ * is rewritten with Connect's routes only, never removed: Studio routes
+ * through it, and a removed folder's routes leave it, as tsc needs. */
 export async function syncConnectRoutes(
   projectRoot: string,
   routesDir = resolveConnectRoutesDir(projectRoot),
 ) {
   if (routesDir) {
     await generateConnectRoutes(projectRoot, routesDir);
-  } else {
-    rmSync(join(projectRoot, CONNECT_ROUTES_GEN), { force: true });
-    rmSync(join(projectRoot, PACKAGE_ROUTES_MODULE), { force: true });
+    return;
+  }
+  rmSync(join(projectRoot, PACKAGE_ROUTES_MODULE), { force: true });
+  if (existsSync(join(projectRoot, CONNECT_ROUTES_GEN))) {
+    await generateConnectRoutes(
+      projectRoot,
+      join(projectRoot, HOST_ROUTES_DIR),
+    );
   }
 }
 
@@ -687,7 +730,8 @@ export function connectRouteFileDeps(connectDir: string): string[] {
 }
 
 /** Mounts a project's routes folder over Connect's routes; without one,
- * Connect keeps its prebuilt tree and no router plugin runs. */
+ * Connect keeps its prebuilt tree and no router plugin runs. Dev may pass a
+ * folder that does not exist yet: it is mounted once it does. */
 export function connectRoutes(
   projectRoot: string,
   routesDir: string | false | undefined = resolveConnectRoutesDir(projectRoot),
@@ -696,10 +740,7 @@ export function connectRoutes(
   const find = ROUTE_TREE_FIND;
   const include = connectRouteFileDeps(connectDir);
   if (!routesDir) {
-    // Stale only without hosts/connect/routes/: a routeless host keeps the project's tree.
-    if (!resolveConnectRoutesDir(projectRoot)) {
-      rmSync(join(projectRoot, CONNECT_ROUTES_GEN), { force: true });
-    }
+    // The project's tree is left alone: a running Studio may route through it.
     // Connect's prebuilt tree, for core's types' specifier too.
     return {
       aliases: [{ find, replacement: join(connectDir, "dist/route-tree.js") }],
@@ -738,58 +779,31 @@ export function connectRoutes(
           dropsPlugin(projectRoot, routesDir, config.routesDirectory),
         ],
       }),
+      connectRoutesWatcher(projectRoot, routesDir, config),
     ],
     dedupe: ["@tanstack/react-router"],
     include,
   };
 }
 
-/** Dev, when hosts/connect/routes/ was missing at startup: keeps the tree tsc
- * types it against in step; Connect mounts the folder on its next start. */
+/** Dev: rewrites the tree as files and folders under the routes folder come and
+ * go, the folder itself included; the router plugin follows the tree. */
 export function connectRoutesWatcher(
   projectRoot: string,
-  connectDir = connectDirOf(projectRoot),
+  routesDir: string,
+  config: ReturnType<typeof connectRoutesGeneratorConfig>,
 ): Plugin {
-  const routesDir = join(projectRoot, HOST_ROUTES_DIR);
-  // The watcher may report real paths, e.g. /private/var for /var on macOS.
-  const watchedAs = [
-    routesDir,
-    join(realpathSync(projectRoot), HOST_ROUTES_DIR),
-  ];
-  const inRoutes = (file: string) => {
-    const path = resolve(projectRoot, file);
-    return watchedAs.some(
-      (dir) => path === dir || path.startsWith(`${dir}${sep}`),
-    );
-  };
+  const inRoutes = inRoutesDir(projectRoot, routesDir);
   return {
     name: "ph-connect-routes-watcher",
     apply: "serve",
     configureServer(server) {
       const { logger } = server.config;
-      let hinted = false;
       let queue = Promise.resolve();
-      const sync = async () => {
-        if (!existsSync(routesDir)) {
-          rmSync(join(projectRoot, CONNECT_ROUTES_GEN), { force: true });
-          rmSync(join(projectRoot, PACKAGE_ROUTES_MODULE), { force: true });
-          return;
-        }
-        await generateConnectRoutes(
-          projectRoot,
-          routesDir,
-          connectRoutesGeneratorConfig(connectDir, projectRoot, routesDir),
-        );
-        if (hinted) return;
-        hinted = true;
-        logger.info(
-          `[connect] Wrote ${CONNECT_ROUTES_GEN} for ${HOST_ROUTES_DIR}/. Restart to see its routes in Connect.`,
-        );
-      };
       const onEvent = (file: string) => {
         if (!inRoutes(file)) return;
         queue = queue
-          .then(sync)
+          .then(() => generateConnectRoutes(projectRoot, routesDir, config))
           .catch((error: Error) => logger.error(`[connect] ${error.message}`));
       };
       for (const event of ["add", "unlink", "addDir", "unlinkDir"] as const) {

@@ -200,6 +200,15 @@ Resolution order for the registry URL:
       throw error;
     }
 
+    if (args.local) {
+      // A local install puts the package in node_modules, skills included.
+      const { syncPackageSkills } =
+        await import("@powerhousedao/codegen/file-builders");
+      for (const { path, action } of await syncPackageSkills(projectPath)) {
+        console.log(`  ${path}: ${action}`);
+      }
+    }
+
     if (!args.local) {
       await warnAboutExternalDependencies(
         registryUrl,
