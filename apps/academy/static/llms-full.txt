@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-27T20:14:11.854Z
+> Generated: 2026-10-27T21:17:23.206Z
 > Total Documents: 120
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -17313,7 +17313,7 @@ export default {
     ],
   },
 
-  // 4. Runner-defined settings, handed to the runtime whole (loose by design)
+  // 4. Runner-defined settings (a switchboard reads `config.switchboard`)
   config: {},
 
   // 5. EITHER a reactor block (single-reactor host) ...

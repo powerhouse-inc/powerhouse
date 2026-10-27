@@ -56,7 +56,7 @@ export default {
     ],
   },
 
-  // 4. Runner-defined settings, handed to the runtime whole (loose by design)
+  // 4. Runner-defined settings (a switchboard reads `config.switchboard`)
   config: {},
 
   // 5. EITHER a reactor block (single-reactor host) ...
