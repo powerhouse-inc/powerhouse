@@ -143,10 +143,10 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
   ];
 
   for (const row of rows) {
-    it(row.name, () => {
+    it(row.name, async () => {
       const before = parse(envProjectionConfig(row.reactor, row.env));
       const after = parse(
-        memberSwitchboardConfig({ reactor: row.reactor }, row.env, {
+        await memberSwitchboardConfig({ reactor: row.reactor }, row.env, {
           pluginHost: false,
         }),
       );
@@ -160,9 +160,9 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
     });
   }
 
-  it("puts config.switchboard under the env", () => {
+  it("puts config.switchboard under the env", async () => {
     const config = parse(
-      memberSwitchboardConfig(
+      await memberSwitchboardConfig(
         {
           config: {
             switchboard: {

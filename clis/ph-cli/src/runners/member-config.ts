@@ -10,7 +10,6 @@ import {
   switchboardConfigLayerSchema,
   type SwitchboardConfigInput,
 } from "@powerhousedao/switchboard/config";
-import { switchboardConfigFromEnv } from "@powerhousedao/switchboard/config/env";
 import type { ILogger } from "document-model";
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -109,11 +108,14 @@ export function readModelAsReactorStore(
  * only PH_REACTOR_DATABASE_URL overrides its store, and no env var overrides
  * its read model. Reads `env`; writes nothing.
  */
-export function memberSwitchboardConfig(
+export async function memberSwitchboardConfig(
   member: SwitchboardMember,
   env: Env,
   options: { pluginHost: boolean; logger?: ILogger },
-): SwitchboardConfigInput {
+): Promise<SwitchboardConfigInput> {
+  // Lazy: the env mapping loads reactor-api, which the runner module must not.
+  const { switchboardConfigFromEnv } =
+    await import("@powerhousedao/switchboard/config/env");
   const block = reactorBlockToSwitchboardConfig(member.reactor);
   const legacy = readModelAsReactorStore(member.reactor, env, "");
   if (legacy) {

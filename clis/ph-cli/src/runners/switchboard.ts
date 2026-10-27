@@ -302,7 +302,7 @@ async function start(
   const args = await toSwitchboardArgs(host, devMode, entriesDeclared);
   // This member's own config, under the args: nothing is written to the
   // process env, so compound members do not see each other's settings.
-  const memberConfig = memberSwitchboardConfig(host, ctx.env, {
+  const memberConfig = await memberSwitchboardConfig(host, ctx.env, {
     pluginHost: entriesDeclared,
   });
 
@@ -491,7 +491,7 @@ export async function checkBoot(
   let config;
   try {
     // As `start` builds it; an env parse error becomes the issue.
-    config = memberSwitchboardConfig(host, ctx.env, {
+    config = await memberSwitchboardConfig(host, ctx.env, {
       pluginHost: host.runner.plugins !== undefined,
     });
   } catch (error) {
