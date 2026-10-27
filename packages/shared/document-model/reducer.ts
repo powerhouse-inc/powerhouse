@@ -597,7 +597,8 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
         // });
       }
     } catch (error) {
-      // A failed action keeps the prior state; with a skip, the rewound one.
+      // if the reducer throws an error then we should keep the previous state (before replayOperations)
+      // and remove skip number from action/operation
       const actionScopeOps = newDocument.operations[_action.scope];
       if (!actionScopeOps) {
         throw new Error(`No operations found for scope: ${_action.scope}`, {
@@ -614,12 +615,27 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
       }
       draftScopeOps[lastOperationIndex].error = (error as Error).message;
 
+      draftScopeOps[lastOperationIndex].skip = 0;
+
       if (shouldProcessSkipOperation) {
         draft.state = castDraft({
-          ...newDocument.state,
+          ...document.state,
         });
-      } else {
-        draftScopeOps[lastOperationIndex].skip = 0;
+        const documentScopeOps = document.operations[_action.scope];
+        if (!documentScopeOps) {
+          throw new Error(`No operations found for scope: ${_action.scope}`, {
+            cause: error,
+          });
+        }
+        draft.operations = castDraft({
+          ...document.operations,
+          [_action.scope]: [
+            ...documentScopeOps,
+            {
+              ...draftScopeOps[lastOperationIndex],
+            },
+          ],
+        });
       }
     }
   });
