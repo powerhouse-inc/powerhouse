@@ -85,7 +85,7 @@ describe("switchboard runner checkBoot", () => {
     expect(await issuesOf(postgres, { REACTOR_WORKERS: "2" })).toEqual([]);
   });
 
-  it("takes dbPath from a non-empty readModel.url", async () => {
+  it("never takes the reactor database from readModel.url", async () => {
     const readModel = host({
       reactor: {
         backends: {
@@ -97,7 +97,26 @@ describe("switchboard runner checkBoot", () => {
         },
       },
     });
-    expect(await issuesOf(readModel, { REACTOR_WORKERS: "2" })).toEqual([]);
+    expect(await issuesOf(readModel, { REACTOR_WORKERS: "2" })).toEqual([
+      expect.stringMatching(/REACTOR_WORKERS\) requires a Postgres reactor/),
+    ]);
+  });
+
+  it("reads workers and storage from config.switchboard", async () => {
+    const member = host({
+      config: {
+        switchboard: {
+          storage: { reactor: { url: POSTGRES } },
+          workers: { executor: { count: 2 } },
+        },
+      },
+    });
+    expect(await issuesOf(member, {})).toEqual([]);
+    expect(
+      await issuesOf(member, { PH_REACTOR_DATABASE_URL: "./.ph/r" }),
+    ).toEqual([
+      expect.stringMatching(/REACTOR_WORKERS\) requires a Postgres reactor/),
+    ]);
   });
 
   it("refuses workers under auth enforcement with a self Renown source", async () => {

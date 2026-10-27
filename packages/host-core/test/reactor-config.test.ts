@@ -3,8 +3,8 @@ import {
   assertProtocolConsistency,
   primaryBackend,
   projectReactorToConnect,
+  reactorBlockToSwitchboardConfig,
   reactorClientMode,
-  projectReactorToSwitchboard,
   protocolConflicts,
   protocolEnv,
   type ReactorConfig,
@@ -58,8 +58,8 @@ describe("protocolEnv", () => {
   });
 });
 
-describe("projectReactorToSwitchboard", () => {
-  it("projects protocol, storage, readModel, dynamic packages, workflows", () => {
+describe("reactorBlockToSwitchboardConfig", () => {
+  it("maps protocol, storage, readModel, dynamic packages, workflows", () => {
     const reactor: ReactorConfig = {
       backends: {
         main: {
@@ -72,34 +72,42 @@ describe("projectReactorToSwitchboard", () => {
       workflows: true,
       protocol: fullProtocol,
     };
-    const { env, options } = projectReactorToSwitchboard(reactor);
-    expect(env).toMatchObject({
-      REACTOR_DOCUMENT_DECISIONS: "true",
-      CREATE_SIGNATURE_POLICY: "legacy",
-      PH_REACTOR_DATABASE_URL: "/data/pglite",
-      DYNAMIC_MODEL_LOADING: "true",
-      PH_WORKFLOWS_ENABLED: "1",
+    expect(reactorBlockToSwitchboardConfig(reactor)).toEqual({
+      storage: {
+        reactor: { url: "/data/pglite" },
+        readModel: { url: "dev.db" },
+      },
+      protocol: fullProtocol,
+      packages: { dynamic: true },
+      features: { workflows: true },
     });
-    expect(options.dbPath).toBe("dev.db");
+  });
+
+  it("keeps the read model out of the reactor store", () => {
+    expect(
+      reactorBlockToSwitchboardConfig({
+        backends: {
+          main: { kind: "in-process", readModel: { url: "/data/read" } },
+        },
+      }),
+    ).toEqual({ storage: { readModel: { url: "/data/read" } } });
   });
 
   it("uses the postgres url for a postgres backend", () => {
-    const { env } = projectReactorToSwitchboard({
+    const layer = reactorBlockToSwitchboardConfig({
       backends: {
         main: {
           kind: "in-process",
           storage: { kind: "postgres", url: "postgres://x" },
+          readModel: { url: "" },
         },
       },
     });
-    expect(env.PH_REACTOR_DATABASE_URL).toBe("postgres://x");
+    expect(layer.storage).toEqual({ reactor: { url: "postgres://x" } });
   });
 
   it("emits nothing for an empty reactor block", () => {
-    expect(projectReactorToSwitchboard(undefined)).toEqual({
-      env: {},
-      options: {},
-    });
+    expect(reactorBlockToSwitchboardConfig(undefined)).toEqual({});
   });
 });
 

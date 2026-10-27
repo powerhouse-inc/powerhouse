@@ -271,17 +271,12 @@ describe("switchboard bridge runner", () => {
     expect(runner.dev).not.toBe(runner.run);
   });
 
-  it("projects reactor.protocol + storage into env, and dbPath into args (P2.4)", async () => {
+  it("passes the reactor block as the member's config, writing no env (P2.4)", async () => {
     const runner = await import("../src/runners/switchboard.js");
     const { startSwitchboard } = await import("../src/services/switchboard.js");
     vi.mocked(startSwitchboard).mockClear();
-    const saved = {
-      REACTOR_DOCUMENT_DECISIONS: process.env.REACTOR_DOCUMENT_DECISIONS,
-      PH_REACTOR_DATABASE_URL: process.env.PH_REACTOR_DATABASE_URL,
-    };
-    delete process.env.REACTOR_DOCUMENT_DECISIONS;
-    delete process.env.PH_REACTOR_DATABASE_URL;
-    // a real, writable path: the projection mkdirs a path-storage dataDir
+    const envBefore = { ...process.env };
+    // a real, writable path: the runner mkdirs a path-storage dataDir
     // before boot ("/data/pg" EACCESed on Linux CI)
     const dataDir = mkdtempSync(join(tmpdir(), "ph-bridge-datadir-"));
     try {
@@ -299,40 +294,132 @@ describe("switchboard bridge runner", () => {
             },
             protocol: { featureFlags: { documentDecisions: true } },
           },
+          config: { switchboard: { inspection: { enabled: false } } },
         }),
         ctx,
       );
-      expect(process.env.REACTOR_DOCUMENT_DECISIONS).toBe("true");
-      expect(process.env.PH_REACTOR_DATABASE_URL).toBe(dataDir);
-      expect(vi.mocked(startSwitchboard).mock.calls[0][0]).toMatchObject({
-        dbPath: "dev.db",
+      expect(process.env).toEqual(envBefore);
+      const [args, , member] = vi.mocked(startSwitchboard).mock.calls[0];
+      // The read model rides the config, never `dbPath` (which named both stores).
+      expect(args).toHaveProperty("dbPath", undefined);
+      expect(member).toEqual({
+        storage: {
+          reactor: { url: dataDir },
+          readModel: { url: "dev.db" },
+        },
+        protocol: { featureFlags: { documentDecisions: true } },
+        inspection: { enabled: false },
       });
     } finally {
-      process.env.REACTOR_DOCUMENT_DECISIONS = saved.REACTOR_DOCUMENT_DECISIONS;
-      process.env.PH_REACTOR_DATABASE_URL = saved.PH_REACTOR_DATABASE_URL;
       rmSync(dataDir, { recursive: true, force: true });
     }
   });
 
-  it("fails loudly when a pre-set env contradicts reactor.protocol (P2.6)", async () => {
+  it("lets the operator's env win over the member's config (D1)", async () => {
     const runner = await import("../src/runners/switchboard.js");
-    process.env.REACTOR_AUTH_ENFORCEMENT = "true";
-    try {
-      await expect(
-        runner.run(
-          switchboard({
-            name: "lab-switchboard",
-            runner: { module: "m" },
-            reactor: { protocol: { featureFlags: { authEnforcement: false } } },
-          }),
-          ctx,
-        ),
-      ).rejects.toThrow(
-        /reactor\.protocol conflict.*REACTOR_AUTH_ENFORCEMENT/s,
-      );
-    } finally {
-      delete process.env.REACTOR_AUTH_ENFORCEMENT;
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    vi.mocked(startSwitchboard).mockClear();
+    await runner.run(
+      switchboard({
+        name: "lab-switchboard",
+        runner: { module: "m" },
+        reactor: {
+          backends: {
+            main: {
+              kind: "in-process",
+              storage: { kind: "postgres", url: "postgres://host/block" },
+            },
+          },
+        },
+        config: {
+          switchboard: {
+            auth: { enabled: false, admins: ["0xmember"] },
+            inspection: { callsPerMinute: 5 },
+          },
+        },
+      }),
+      {
+        ...ctx,
+        env: {
+          PH_REACTOR_DATABASE_URL: "postgres://host/env",
+          AUTH_ENABLED: "true",
+          PH_INSPECTION_CALLS_PER_MINUTE: "9",
+        },
+      },
+    );
+    const member = vi.mocked(startSwitchboard).mock.calls[0][2];
+    expect(member).toMatchObject({
+      storage: { reactor: { url: "postgres://host/env" } },
+      auth: { enabled: true, admins: ["0xmember"] },
+      inspection: { callsPerMinute: 9 },
+    });
+  });
+
+  it("turns the plugin host on in the member's config, not the env", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    vi.mocked(startSwitchboard).mockClear();
+    await runner.run(
+      switchboard({
+        name: "lab-switchboard",
+        runner: { module: "m", plugins: [] },
+      }),
+      { ...ctx, env: { FEATURE_PLUGIN_HOST_ENABLED: "0" } },
+    );
+    expect(process.env.FEATURE_PLUGIN_HOST_ENABLED).toBeUndefined();
+    expect(vi.mocked(startSwitchboard).mock.calls[0][2]).toMatchObject({
+      features: { pluginHost: true },
+    });
+  });
+
+  it("refuses a config.switchboard key the reactor block sets", () => {
+    const parsed = switchboardHostSchema.safeParse({
+      name: "lab-switchboard",
+      runner: { module: "m" },
+      reactor: { protocol: { featureFlags: { authGroups: true } } },
+      config: {
+        switchboard: {
+          protocol: {
+            featureFlags: { authGroups: false, authEnforcement: true },
+          },
+        },
+      },
+    });
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues.map((i) => i.message)).toEqual([
+      "config.switchboard.protocol.featureFlags.authGroups is also set by the reactor block; set it in one place.",
+    ]);
+  });
+
+  it("refuses a config.switchboard key the runner owns", () => {
+    for (const config of [
+      { server: { port: 1 } },
+      { drive: {} },
+      { features: { pluginHost: true } },
+      { auth: { unknown: true } },
+    ]) {
+      expect(
+        switchboardHostSchema.safeParse({
+          name: "lab-switchboard",
+          runner: { module: "m" },
+          config: { switchboard: config },
+        }).success,
+      ).toBe(false);
     }
+  });
+
+  it("fails loudly when the env contradicts reactor.protocol (P2.6)", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    await expect(
+      runner.run(
+        switchboard({
+          name: "lab-switchboard",
+          runner: { module: "m" },
+          reactor: { protocol: { featureFlags: { authEnforcement: false } } },
+        }),
+        { ...ctx, env: { REACTOR_AUTH_ENFORCEMENT: "true" } },
+      ),
+    ).rejects.toThrow(/reactor\.protocol conflict.*REACTOR_AUTH_ENFORCEMENT/s);
   });
 });
 
