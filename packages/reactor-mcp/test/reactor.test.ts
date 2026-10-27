@@ -2,8 +2,15 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type {
   IReactorClient,
   InProcessReactorClientModule,
+  JobInfo,
+  WriteHandle,
 } from "@powerhousedao/reactor";
-import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
+import {
+  JobFailedError,
+  JobStatus,
+  ReactorBuilder,
+  ReactorClientBuilder,
+} from "@powerhousedao/reactor";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import {
@@ -875,23 +882,70 @@ describe("ReactorMcpProvider", () => {
       });
 
       it("writes nothing when the job is refused for a later action", async () => {
-        const documentId = await v3Document("x");
+        const documentId = await v3Document("x", "y");
         const before = await globalRows(documentId);
-        const execute = client.write.execute.bind(client.write);
-        vi.spyOn(client.write, "execute").mockImplementation(
-          async (id, branch, actions, ...rest) => {
-            if (actions.some((action) => action.type === "SET_STATE_SCHEMA")) {
-              throw new Error("refused: b");
-            }
-            return execute(id, branch, actions, ...rest);
+        let submitted: Action[] = [];
+        // As the reactor refuses a denied batch: the job fails and writes nothing.
+        const write = new Proxy(client.write, {
+          get(target, key, receiver) {
+            if (key !== "execute") return Reflect.get(target, key, receiver);
+            return (id: string, _branch: string, actions: Action[]) => {
+              submitted = actions;
+              const job: JobInfo = {
+                id: "refused",
+                documentId: id,
+                status: JobStatus.FAILED,
+                createdAtUtcIso: new Date().toISOString(),
+                consistencyToken: {
+                  version: 1,
+                  createdAtUtcIso: new Date().toISOString(),
+                  coordinates: [],
+                },
+                meta: { batchId: "refused", batchJobIds: ["refused"] },
+                error: {
+                  name: "AuthorizationDeniedError",
+                  message: "denied: b",
+                  stack: "",
+                },
+              };
+              return Promise.resolve({
+                readable: Promise.reject(new JobFailedError(job)),
+              } as unknown as WriteHandle);
+            };
           },
-        );
-        const provider = await createReactorMcpProvider({ client });
+        });
+        // Denies the counted UNDO's second step and the schema change.
+        const evaluateActions: IReactorClient["evaluateActions"] = (
+          _id,
+          _branch,
+          candidates,
+        ) => {
+          const evaluations = candidates.map((candidate, index) =>
+            index === 2 || candidate.type === "SET_STATE_SCHEMA"
+              ? { decision: "deny" as const, reason: `denied: ${index}` }
+              : { decision: "allow" as const },
+          );
+          return Promise.resolve({
+            evaluations,
+            allAllowed: false,
+            anyAllowed: true,
+            allDenied: false,
+            anyDenied: true,
+          });
+        };
+        const refusing = new Proxy(client, {
+          get(target, key, receiver) {
+            if (key === "write") return write;
+            if (key === "evaluateActions") return evaluateActions;
+            return Reflect.get(target, key, receiver);
+          },
+        });
+        const provider = await createReactorMcpProvider({ client: refusing });
         const result = await provider.tools.addActions.callback({
           documentId,
           actions: [
             setName("a"),
-            { type: "UNDO", input: {}, scope: "global" },
+            { type: "UNDO", input: { count: 2 }, scope: "global" },
             documentModelDocumentModelModule.actions.setStateSchema({
               scope: "global",
               schema: "type B { b: String }",
@@ -899,10 +953,143 @@ describe("ReactorMcpProvider", () => {
           ],
         });
 
-        expect(result.isError).toBe(true);
-        expect(getTextContent(result)).toContain("refused: b");
+        expect(submitted.map((action) => action.type)).toEqual([
+          "SET_MODEL_NAME",
+          "RETRACT",
+          "RETRACT",
+          "SET_STATE_SCHEMA",
+        ]);
+        expect(result.isError).toBeUndefined();
+        expect(result.structuredContent).toStrictEqual({
+          success: false,
+          results: [
+            {
+              index: 0,
+              type: "SET_MODEL_NAME",
+              scope: "global",
+              error: {
+                kind: "not-applied",
+                message:
+                  "The batch was refused, so nothing in it was written: denied: b",
+              },
+            },
+            {
+              index: 1,
+              type: "UNDO",
+              scope: "global",
+              error: { kind: "denied", message: "denied: 2" },
+            },
+            {
+              index: 2,
+              type: "SET_STATE_SCHEMA",
+              scope: "global",
+              error: { kind: "denied", message: "denied: 3" },
+            },
+          ],
+        });
         expect(await globalRows(documentId)).toEqual(before);
-        expect(await nameOf(documentId)).toBe("x");
+        expect(await nameOf(documentId)).toBe("y");
+      });
+
+      it("reports a reducer error by the input that caused it", async () => {
+        const documentId = await v3Document("x");
+        const { addModule } = documentModelDocumentModelModule.actions;
+        const provider = await createReactorMcpProvider({ client });
+        const result = await provider.tools.addActions.callback({
+          documentId,
+          actions: [
+            setName("a"),
+            { type: "UNDO", input: { count: 2 }, scope: "global" },
+            addModule({ id: "m1", name: "m1" }),
+            addModule({ id: "m1", name: "m1" }),
+          ],
+        });
+
+        expect(result.isError).toBeUndefined();
+        const { success, results } = result.structuredContent as {
+          success: boolean;
+          results: {
+            index: number;
+            type: string;
+            operationIndex?: number;
+            error?: { kind: string };
+          }[];
+        };
+        expect(success).toBe(false);
+        expect(
+          results.map(({ index, type, operationIndex, error }) => [
+            index,
+            type,
+            operationIndex,
+            error?.kind,
+          ]),
+        ).toEqual([
+          [0, "SET_MODEL_NAME", 1, undefined],
+          [1, "UNDO", 3, undefined],
+          [2, "ADD_MODULE", 4, undefined],
+          [3, "ADD_MODULE", 5, "reducer-error"],
+        ]);
+      });
+
+      it("reads a counted UNDO's last row back when the job carries no result", async () => {
+        const actions = [
+          setName("a"),
+          { type: "UNDO", input: { count: 2 }, scope: "global" },
+          setName("b"),
+        ];
+        const withResults = await createReactorMcpProvider({ client });
+        const expected = await withResults.tools.addActions.callback({
+          documentId: await v3Document("x"),
+          actions,
+        });
+
+        const write = new Proxy(client.write, {
+          get(target, key, receiver) {
+            if (key !== "execute") return Reflect.get(target, key, receiver);
+            return async (...args: Parameters<typeof target.execute>) => {
+              const handle = await target.execute(...args);
+              const readable = handle.readable.then((receipt) => ({
+                ...receipt,
+                job: { ...receipt.job, result: undefined },
+              }));
+              return { ...handle, readable };
+            };
+          },
+        });
+        const withoutResults = new Proxy(client, {
+          get: (target, key, receiver) =>
+            key === "write" ? write : Reflect.get(target, key, receiver),
+        });
+        const provider = await createReactorMcpProvider({
+          client: withoutResults,
+        });
+        const result = await provider.tools.addActions.callback({
+          documentId: await v3Document("x"),
+          actions,
+        });
+
+        expect(result.isError).toBeUndefined();
+        expect(result.structuredContent).toStrictEqual({
+          success: true,
+          results: [
+            {
+              index: 0,
+              type: "SET_MODEL_NAME",
+              scope: "global",
+              operationIndex: 1,
+            },
+            { index: 1, type: "UNDO", scope: "global", operationIndex: 3 },
+            {
+              index: 2,
+              type: "SET_MODEL_NAME",
+              scope: "global",
+              operationIndex: 4,
+            },
+          ],
+        });
+        expect(result.structuredContent).toStrictEqual(
+          expected.structuredContent,
+        );
       });
 
       it("writes nothing when the reactor refuses a stale target", async () => {
