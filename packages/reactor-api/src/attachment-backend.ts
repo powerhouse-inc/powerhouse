@@ -1,6 +1,5 @@
 import {
   createS3AttachmentBackend,
-  parseAttachmentStorageConfig,
   type AttachmentDatabase,
   type AttachmentStorageConfig,
   type IAttachmentBackend,
@@ -10,20 +9,17 @@ import type { Kysely } from "kysely";
 
 export type StartupAttachmentBackendOptions = {
   db: Kysely<AttachmentDatabase>;
-  /** Used as is; `env` is parsed only when this is absent. */
+  /** Filesystem when unset. */
   storage?: AttachmentStorageConfig;
-  env?: Readonly<Record<string, string | undefined>>;
   s3Dependencies?: S3AttachmentBackendDependencies;
 };
 
 /** Filesystem is the default; explicit S3 is readiness-gated without fallback. */
 export async function createStartupAttachmentBackend({
   db,
-  storage: configured,
-  env = process.env,
+  storage = { kind: "filesystem" },
   s3Dependencies,
 }: StartupAttachmentBackendOptions): Promise<IAttachmentBackend | undefined> {
-  const storage = configured ?? parseAttachmentStorageConfig(env);
   if (storage.kind === "filesystem") return undefined;
 
   const backend = createS3AttachmentBackend(

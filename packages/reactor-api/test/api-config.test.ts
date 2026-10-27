@@ -247,7 +247,7 @@ const initializeClient = async (documentModels: DocumentModelModule[]) => {
   return { module };
 };
 
-describe("server settings from options and env", () => {
+describe("server settings from options, not env", () => {
   let dispose: (() => Promise<void>) | undefined;
   afterEach(async () => {
     await dispose?.();
@@ -279,25 +279,26 @@ describe("server settings from options and env", () => {
     return response.status;
   }
 
-  it("reads BASE_PATH when the server starts, not when the module loads", async () => {
+  it("ignores BASE_PATH", async () => {
     vi.stubEnv("BASE_PATH", "/from-env");
     const api = await boot();
-    expect(await explorerStatus(api.port, "/from-env")).toBe(200);
+    expect(await explorerStatus(api.port, "")).toBe(200);
+    expect(await explorerStatus(api.port, "/from-env")).toBe(404);
   });
 
-  it("prefers server.basePath over BASE_PATH", async () => {
+  it("serves server.basePath", async () => {
     vi.stubEnv("BASE_PATH", "/from-env");
     const api = await boot({ server: { basePath: "/from-options" } });
     expect(await explorerStatus(api.port, "/from-options")).toBe(200);
     expect(await explorerStatus(api.port, "/from-env")).toBe(404);
   });
 
-  it("keeps AUTH_ENABLED and ADMINS overriding auth options", async () => {
+  it("ignores AUTH_ENABLED and ADMINS", async () => {
     vi.stubEnv("AUTH_ENABLED", "true");
     vi.stubEnv("ADMINS", "0xEnv");
     const api = await boot({ auth: { enabled: false, admins: ["0xoption"] } });
-    expect(api.authorizationService.config.policy).toBe("ADMIN_ONLY");
-    expect(api.authorizationService.config.admins).toEqual(["0xenv"]);
+    expect(api.authorizationService.config.policy).toBe("OPEN");
+    expect(api.authorizationService.config.admins).toEqual(["0xoption"]);
   });
 
   it("lets a set auth option win over the config file's", async () => {
@@ -344,23 +345,28 @@ describe("server settings from options and env", () => {
     expect(api.authorizationService.config.defaultProtection).toBe(true);
   });
 
-  it("prefers documentPermissions.enabled over DOCUMENT_PERMISSIONS_ENABLED", async () => {
+  it("ignores AUTH_ENABLED and DOCUMENT_PERMISSIONS_ENABLED", async () => {
     vi.stubEnv("AUTH_ENABLED", "true");
     vi.stubEnv("DOCUMENT_PERMISSIONS_ENABLED", "true");
-    const api = await boot({
-      auth: { documentPermissions: { enabled: false } },
-    });
-    expect(api.authorizationService.config.policy).toBe("ADMIN_ONLY");
+    const api = await boot();
+    expect(api.authorizationService.config.policy).toBe("OPEN");
   });
 
-  it("falls back to the default cache TTL for an invalid DOCUMENT_PERMISSION_CACHE_TTL_MS", async () => {
-    vi.stubEnv("AUTH_ENABLED", "true");
-    vi.stubEnv("DOCUMENT_PERMISSIONS_ENABLED", "true");
-    vi.stubEnv("DOCUMENT_PERMISSION_CACHE_TTL_MS", "soon");
+  it("falls back to the default cache TTL for an invalid DOCUMENT_PERMISSION_CACHE_TTL_MS mapped at the edge", async () => {
     const infos: string[] = [];
     const logger = recordingLogger();
     logger.info = (message: string) => void infos.push(message);
-    await boot({ logger });
+    await boot({
+      ...reactorApiConfigFromEnv(
+        {
+          AUTH_ENABLED: "true",
+          DOCUMENT_PERMISSIONS_ENABLED: "true",
+          DOCUMENT_PERMISSION_CACHE_TTL_MS: "soon",
+        },
+        logger,
+      ),
+      logger,
+    });
     expect(logger.warnings.some((w) => w.includes("soon"))).toBe(true);
     expect(infos.join("\n")).toContain(
       `cache TTL ${DEFAULT_PERMISSION_CACHE_TTL_MS} ms`,

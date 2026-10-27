@@ -22,6 +22,7 @@ import type { DocumentModelModule } from "document-model";
 import { logger } from "document-model";
 import dotenv from "dotenv";
 import { isDotenvDisabled } from "@powerhousedao/shared/clis/project-env";
+import { reactorApiConfigFromEnv } from "./api-config.js";
 import { initializeAndStartAPI } from "./server.js";
 import type { ClientInitializerDependencies } from "./server.js";
 
@@ -57,6 +58,7 @@ async function main() {
   await initializeAndStartAPI(
     initializeClient,
     {
+      ...reactorApiConfigFromEnv(process.env),
       port,
       dbPath,
       mcp: true,

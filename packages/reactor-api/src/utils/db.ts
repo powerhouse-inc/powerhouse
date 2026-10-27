@@ -12,7 +12,6 @@ import { PGLITE_UTC_PARSERS } from "../pglite/parsers.js";
 import type { PGliteLike } from "../pglite/pglite-like.js";
 import {
   createDurableNodeFs,
-  resolvePgliteFsync,
   resolvePgliteMaintenance,
 } from "../pglite/pglite-node.js";
 
@@ -111,9 +110,9 @@ export function getDbClient(
       ? pgliteFactory(connectionString)
       : connectionString
         ? new PGlite({
+            // Default settings; a host that tunes them passes `pgliteFactory`.
             fs: createDurableNodeFs(NodeFS, connectionString, {
-              fsync: resolvePgliteFsync(process.env),
-              ...resolvePgliteMaintenance(process.env),
+              ...resolvePgliteMaintenance({}),
               logger,
             }),
             parsers: PGLITE_UTC_PARSERS,
