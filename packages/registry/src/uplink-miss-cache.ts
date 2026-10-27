@@ -1,4 +1,4 @@
-import { API_ERROR, errorUtils } from "@verdaccio/core";
+import { API_ERROR, errorUtils, HTTP_STATUS } from "@verdaccio/core";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -8,11 +8,12 @@ import { pathToFileURL } from "node:url";
 export const UPLINK_MISS_CACHE_LIMIT = 10_000;
 
 const WRAPPED = Symbol.for("powerhouse.registry.uplinkMissCache");
+const FAILURES_WRAPPED = Symbol.for("powerhouse.registry.uplinkFailures");
 
 type GetRemoteMetadata = ((
   name: string,
   options: unknown,
-) => Promise<unknown>) & { [WRAPPED]?: true };
+) => Promise<unknown>) & { [WRAPPED]?: true; [FAILURES_WRAPPED]?: true };
 
 export interface ProxyStorageLike {
   maxage: number;
@@ -62,6 +63,7 @@ const isUplinkNotFound = (err: unknown) =>
   (err as { message?: string } | null)?.message ===
   API_ERROR.NOT_PACKAGE_UPLINK;
 
+// Remembers uplink 404s for `maxage`; Verdaccio caches only answers
 export function wrapGetRemoteMetadata(proto: ProxyStorageLike, limit: number) {
   const original = proto.getRemoteMetadata;
   if (typeof original !== "function") {
@@ -102,9 +104,37 @@ export function wrapGetRemoteMetadata(proto: ProxyStorageLike, limit: number) {
   proto.getRemoteMetadata = wrapped;
 }
 
-// Makes each Verdaccio uplink remember a 404 for `maxage`, as it does a hit;
-// Verdaccio records `_uplinks.fetched` only when the uplink answers.
-export async function installUplinkMissCache(
+// Verdaccio 404s any uplink error but a 503, and clients never retry a 404
+export function wrapUplinkFailures(proto: ProxyStorageLike) {
+  const original = proto.getRemoteMetadata;
+  if (original[FAILURES_WRAPPED]) return;
+
+  const wrapped: GetRemoteMetadata = async function (
+    this: ProxyStorageLike,
+    name,
+    options,
+  ) {
+    try {
+      return await original.call(this, name, options);
+    } catch (err) {
+      const code = (err as { code?: unknown } | null)?.code;
+      if (
+        isUplinkNotFound(err) ||
+        code === HTTP_STATUS.NOT_MODIFIED ||
+        code === HTTP_STATUS.SERVICE_UNAVAILABLE
+      ) {
+        throw err;
+      }
+      throw errorUtils.getServiceUnavailable(
+        (err as { message?: string } | null)?.message ?? String(err),
+      );
+    }
+  };
+  wrapped[FAILURES_WRAPPED] = true;
+  proto.getRemoteMetadata = wrapped;
+}
+
+export async function installUplinkWrappers(
   limit = UPLINK_MISS_CACHE_LIMIT,
 ): Promise<void> {
   // Follow Verdaccio's own resolution so the patched class is the one it loads
@@ -120,6 +150,7 @@ export async function installUplinkMissCache(
         "[registry] @verdaccio/proxy no longer exports ProxyStorage",
       );
     }
+    wrapUplinkFailures(mod.ProxyStorage.prototype);
     wrapGetRemoteMetadata(mod.ProxyStorage.prototype, limit);
   }
 }
