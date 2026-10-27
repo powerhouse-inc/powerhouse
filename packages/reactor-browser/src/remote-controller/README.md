@@ -119,7 +119,7 @@ remote.setModelName({ name: "MyModel" });
 await remote.push(); // creates on remote + pushes the SET_MODEL_NAME action
 ```
 
-Without a `documentId`, the first push creates the remote from the wrapped document's header and initial state, so the remote runs the versions that header names.
+Without a `documentId`, the first push creates the remote from the wrapped document's header and initial state under the host's create signature policy (read from `createDefaults`), so the remote runs the versions that header names. A legacy policy keeps the header's id; a Switchboard without `createDefaults` creates it with `CreateEmptyDocument` instead.
 
 ## Modes
 

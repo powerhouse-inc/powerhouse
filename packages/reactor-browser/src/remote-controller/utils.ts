@@ -4,9 +4,12 @@ import type {
   PHBaseState,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import type { SignaturePolicy } from "@powerhousedao/shared/document-model";
 import {
   creationState,
   deserializeSignature,
+  signaturePolicyOf,
+  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import type {
   ConflictInfo,
@@ -148,6 +151,17 @@ export function uncreatedDocument(
     operations: {},
     clipboard: [],
   };
+}
+
+/** An uncreated `document` under `policy`; a legacy one keeps its id. */
+export function underSignaturePolicy(
+  document: PHDocument<PHBaseState>,
+  policy: SignaturePolicy,
+): PHDocument<PHBaseState> {
+  if (signaturePolicyOf(document.header) === policy) {
+    return document;
+  }
+  return withSignaturePolicy(document, policy, { id: document.header.id });
 }
 
 /** Extract revision map from a remote document's revisionsList. */
