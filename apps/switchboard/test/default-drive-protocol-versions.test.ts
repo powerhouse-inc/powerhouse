@@ -37,9 +37,16 @@ function client(): { client: IReactorClient; created: PHDocument[] } {
             { "base-reducer": 3 },
           ),
         ),
-      create: (document: PHDocument) => {
-        created.push(document);
-        return Promise.resolve(document);
+      write: {
+        create: (document: PHDocument) => {
+          created.push(document);
+          return Promise.resolve({
+            readable: Promise.resolve({
+              documentId: document.header.id,
+              branch: "main",
+            }),
+          });
+        },
       },
     } as unknown as IReactorClient,
   };
