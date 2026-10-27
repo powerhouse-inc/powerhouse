@@ -128,6 +128,15 @@ export type LoadJobPlan = {
   externalDeps: string[];
 };
 
+/** Selects a new document's protocol versions for its type; owned by core so the facade does not import the client layer. */
+export type CreateVersionSelector = {
+  select(
+    options: { documentType: string },
+    flags: { loadModel?: boolean },
+    signal?: AbortSignal,
+  ): Promise<NonNullable<PHDocument["header"]["protocolVersions"]>>;
+};
+
 /**
  * Request for batch load operation.
  */
