@@ -8,7 +8,6 @@ import type {
 import {
   actions as documentActions,
   generateActionId,
-  generateId,
 } from "@powerhousedao/shared/document-model";
 
 export { documentActions };

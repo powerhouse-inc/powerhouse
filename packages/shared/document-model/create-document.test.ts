@@ -1,14 +1,38 @@
 import { describe, expect, it } from "vitest";
 import {
+  createDocumentAction,
   creationActions,
   creationState,
   documentFromCreation,
+  upgradeDocumentAction,
 } from "./create-document.js";
 import type { PHDocument } from "./documents.js";
 import { createPresignedHeader } from "./header.js";
 import type { Operation } from "./operations.js";
 import { defaultBaseState } from "./state.js";
 import type { CreateDocumentAction } from "./types.js";
+
+const UUID_V7 =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+describe("genesis action builders", () => {
+  it("give CREATE_DOCUMENT and UPGRADE_DOCUMENT increasing UUIDv7 ids", () => {
+    const create = createDocumentAction({
+      documentId: "doc",
+      model: "powerhouse/document-model",
+      version: 0,
+    });
+    const upgrade = upgradeDocumentAction({
+      documentId: "doc",
+      model: "powerhouse/document-model",
+      fromVersion: 0,
+      toVersion: 1,
+    });
+    expect(create.id).toMatch(UUID_V7);
+    expect(upgrade.id).toMatch(UUID_V7);
+    expect(create.id < upgrade.id).toBe(true);
+  });
+});
 
 describe("creationState", () => {
   const rows = (document: PHDocument): Operation[] =>

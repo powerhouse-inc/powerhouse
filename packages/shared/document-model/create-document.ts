@@ -10,12 +10,12 @@ import type {
   CreateDocumentActionInput,
   UpgradeDocumentActionInput,
 } from "./types.js";
-import { generateId } from "./utils.js";
+import { generateActionId } from "./utils.js";
 import { normalizeDocumentModelVersion } from "./version.js";
 
 export function createDocumentAction(input: CreateDocumentActionInput): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "CREATE_DOCUMENT",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
@@ -28,7 +28,7 @@ export function upgradeDocumentAction(
   input: UpgradeDocumentActionInput,
 ): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "UPGRADE_DOCUMENT",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
