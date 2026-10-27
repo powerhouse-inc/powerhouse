@@ -895,6 +895,14 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
 
       const caps = optionalBaseReducerCapabilities(document.header);
       const undoSteps = params.actions.filter(isUndoRedo);
+      for (const step of undoSteps) {
+        const { count } = buildAction(step).input as { count: number };
+        if (!Number.isInteger(count) || count < 1) {
+          throw new Error(
+            `Invalid action ${JSON.stringify(step)}: count must be a positive integer`,
+          );
+        }
+      }
       let actions: Action[];
       // The position in `params.actions` each submitted action came from.
       let sources: number[];

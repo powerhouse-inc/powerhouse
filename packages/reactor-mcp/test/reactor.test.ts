@@ -967,6 +967,31 @@ describe("ReactorMcpProvider", () => {
         expect(await globalRows(documentId)).toEqual([]);
       });
 
+      it.each([0, -1, 1.5])(
+        "refuses a count of %d before submitting anything",
+        async (count) => {
+          const documentId = await v3Document("x");
+          const execute = vi.spyOn(client.write, "execute");
+          const provider = await createReactorMcpProvider({ client });
+          for (const type of ["UNDO", "REDO"]) {
+            const result = await provider.tools.addActions.callback({
+              documentId,
+              actions: [
+                setName("a"),
+                { type, input: { count }, scope: "global" },
+              ],
+            });
+
+            expect(result.isError).toBe(true);
+            expect(getTextContent(result)).toContain(
+              "count must be a positive integer",
+            );
+          }
+          expect(execute).not.toHaveBeenCalled();
+          expect(await nameOf(documentId)).toBe("x");
+        },
+      );
+
       it.each([1, 2] as const)(
         "submits one UNDO with its count in one job on base-reducer %i",
         async (version) => {
