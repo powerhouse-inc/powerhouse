@@ -168,7 +168,9 @@ function Studio(props: { children?: ReactNode }) {
   );
 
   return (
-    <div className="flex h-full min-h-0">
+    // Below md the sidebar sits above the content: side by side, a phone
+    // leaves the content ~150px wide and the whole studio scrolls sideways.
+    <div className="flex h-full min-h-0 flex-col md:flex-row">
       <Sidebar
         workflows={workflows}
         connections={connections}
@@ -190,7 +192,7 @@ function Studio(props: { children?: ReactNode }) {
       />
       {/* Positioned, so absolute descendants (sr-only labels) overflow here,
           not into Connect's scroller around the studio. */}
-      <main className="relative min-w-0 flex-1 overflow-y-auto">
+      <main className="relative min-h-0 min-w-0 flex-1 overflow-y-auto">
         {editorOpen ? (
           <div className="flex h-full min-h-0 flex-col">
             <div className="flex min-h-0 flex-1 flex-col [&>#document-editor-container]:min-h-0">
@@ -205,7 +207,7 @@ function Studio(props: { children?: ReactNode }) {
             </div>
           </div>
         ) : (
-          <div className="mx-auto w-full max-w-6xl px-8 py-10">
+          <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-10">
             {liveTarget ? (
               <WorkflowHeader
                 key={liveTarget.id}
