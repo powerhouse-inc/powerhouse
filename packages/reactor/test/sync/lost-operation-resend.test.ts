@@ -639,4 +639,15 @@ describe("an author's backdated execute", () => {
     },
     30_000,
   );
+
+  it("converges after A writes an op older than x (documentDecisions)", async () => {
+    h = await buildHarness({ documentDecisions: true });
+    const { id, base, x } = await damaged(h);
+
+    await executeOn(h.a, id, "v", new Date(base - 5_000).toISOString());
+    await quiesce(h, id);
+
+    expect(await live(h.a, id)).toContain(x);
+    expect(await live(h.a, id)).toEqual(await live(h.b, id));
+  }, 30_000);
 });

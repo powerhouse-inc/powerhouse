@@ -16,8 +16,7 @@ import type { InProcessReactorModule } from "../../src/core/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
 
-// After reshuffles a peer's indexes say nothing about this reactor's order.
-describe("a load whose remote indexes run ahead of the local log", () => {
+describe("a load whose remote indexes run ahead of the local log (documentDecisions)", () => {
   let module: InProcessReactorModule | undefined;
   let docId: string;
   let base: number;
@@ -30,6 +29,7 @@ describe("a load whose remote indexes run ahead of the local log", () => {
   async function build(): Promise<void> {
     module = await new ReactorBuilder()
       .withDocumentModelSources([documentModelDocumentModelModule as never])
+      .withExecutorConfig({ featureFlags: { documentDecisions: true } })
       .buildModule();
     const document = createDocModelDocument({ signaturePolicy: "legacy" });
     docId = document.header.id;
@@ -39,11 +39,15 @@ describe("a load whose remote indexes run ahead of the local log", () => {
   }
 
   async function settle(job: JobInfo): Promise<JobInfo> {
+    const deadline = Date.now() + 10_000;
     let status = await module!.reactor.getJobStatus(job.id);
     while (
       status.status !== JobStatus.READ_READY &&
       status.status !== JobStatus.FAILED
     ) {
+      if (Date.now() > deadline) {
+        throw new Error(`job ${job.id} did not settle: ${status.status}`);
+      }
       await new Promise((resolve) => setTimeout(resolve, 5));
       status = await module!.reactor.getJobStatus(job.id);
     }
@@ -107,13 +111,11 @@ describe("a load whose remote indexes run ahead of the local log", () => {
     );
     expect(await live()).toEqual(["s1", "s2", "x1", "x2"]);
 
-    // The rest of the peer's batch, alone, at the peer's next index.
     await run(module!.reactor.load(docId, "main", [asOperation(s3, 953)]));
 
     expect(await live()).toEqual(["s1", "s2", "s3", "x1", "x2"]);
     expect(await modules()).toEqual(["s1", "s2", "s3", "x1", "x2"]);
 
-    // The peer's canonical order, re-delivered, changes nothing.
     await run(
       module!.reactor.load(docId, "main", [
         asOperation(s1, 1065),
