@@ -28,6 +28,8 @@ export default defineConfig({
   },
   test: {
     exclude: baseExclude,
+    // Node 24's V8 double-frees tiered wasm wrappers after a PGlite worker exits (nodejs/node#66366).
+    execArgv: ["--wasm-wrapper-tiering-budget=1000000000"],
     // PGLite WASM cold boot plus initdb's fsync pass can exceed the default
     // 5s testTimeout / 10s hookTimeout on CI runners under coverage
     // instrumentation. Same rationale as packages/reactor.

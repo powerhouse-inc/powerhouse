@@ -59,6 +59,8 @@ export default defineConfig({
     environment: "node",
     isolate: true,
     maxWorkers: 1,
+    // Node 24's V8 double-frees tiered wasm wrappers after a PGlite worker exits (nodejs/node#66366).
+    execArgv: ["--wasm-wrapper-tiering-budget=1000000000"],
     include: ["test/**/*.test.ts"],
   },
 });
