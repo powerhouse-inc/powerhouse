@@ -9,18 +9,20 @@ const CHILD_SCRIPT = path.join(__dirname, "wasm-tiering-child.mts");
 const PACKAGE_DIR = path.resolve(__dirname, "../..");
 const onNode24 = process.versions.node.split(".")[0] === "24";
 
+type Comparison = { before: number; after: number };
+
 type ChildReport = {
   applied: boolean;
   again: boolean;
-  main: number;
-  worker: number;
+  main: Comparison;
+  worker: Comparison;
 };
 
-// A fresh process each, since the vitest fork already runs with the flag.
-async function runChild(mode: "apply" | "control"): Promise<ChildReport> {
+// A fresh process, since the vitest fork already runs with the flag.
+async function runChild(): Promise<ChildReport> {
   const { stdout } = await promisify(execFile)(
     process.execPath,
-    ["--import", "tsx", "--no-warnings", CHILD_SCRIPT, mode],
+    ["--import", "tsx", "--no-warnings", CHILD_SCRIPT],
     { cwd: PACKAGE_DIR, env: { ...process.env, NODE_OPTIONS: "" } },
   );
   return JSON.parse(stdout.trim()) as ChildReport;
@@ -30,14 +32,13 @@ describe("disableWasmWrapperTiering", () => {
   it.runIf(onNode24)(
     "keeps wasm-to-JS calls on the untiered wrapper in the process and its workers",
     async () => {
-      const control = await runChild("control");
-      const applied = await runChild("apply");
+      const report = await runChild();
 
-      expect(applied.applied).toBe(true);
-      expect(applied.again).toBe(false);
+      expect(report.applied).toBe(true);
+      expect(report.again).toBe(false);
       // The generic wrapper costs several times a tiered one per call.
-      expect(applied.main).toBeGreaterThan(2 * control.main);
-      expect(applied.worker).toBeGreaterThan(2 * control.worker);
+      expect(report.main.after).toBeGreaterThan(2 * report.main.before);
+      expect(report.worker.after).toBeGreaterThan(2 * report.worker.before);
     },
     60_000,
   );
@@ -45,7 +46,7 @@ describe("disableWasmWrapperTiering", () => {
   it.skipIf(onNode24)(
     "leaves other Node versions alone",
     async () => {
-      const report = await runChild("apply");
+      const report = await runChild();
       expect(report.applied).toBe(false);
     },
     60_000,
