@@ -100,14 +100,19 @@ enum PropagationMode {
 }
 ```
 
-### `CreateDocumentOptions`
+### `NewDocumentOptions`
 
-Options for `createEmpty()`.
+Options for `newDocument()` and `createEmpty()`.
 
 ```typescript
-type CreateDocumentOptions = {
+type NewDocumentOptions = {
   parentIdentifier?: string; // id or slug of parent document
   documentModelVersion?: number; // defaults to latest
+  protocolVersions?: { [protocol: string]: number }; // merged over the selection
+  signaturePolicy?: SignaturePolicy; // overrides the client's default
+  initialState?: Partial<PHBaseState>; // passed to the model's createDocument
+  name?: string;
+  id?: string; // kept only under the legacy policy
 };
 ```
 
@@ -471,6 +476,20 @@ getDocumentModelModule(
 
 ---
 
+### `newDocument`
+
+Head a new, uncreated document of a type with the protocol versions this client selects for it and its parent, and the client's create signature policy. It is the one place a client chooses a new document's versions; pass the result to `client.write.create` or `client.write.drives.addFile`. It builds the header and enqueues nothing, so it is on the read half: `client.read.newDocument(...)`, or `client.newDocument(...)`.
+
+```typescript
+newDocument<TDocument extends PHDocument = PHDocument>(
+  documentType: string,
+  options?: NewDocumentOptions,
+  signal?: AbortSignal,
+): Promise<TDocument>
+```
+
+---
+
 ### `evaluateActions`
 
 On `client.write`: it is a write-side read that decides through the same model that admits a write. Ask what the reactor **would** decide about a set of candidate operations, without submitting any of them. Use it to disable a control rather than offer an action that fails on submit.
@@ -592,7 +611,7 @@ type WriteReceipt = {
 
 ### `create`
 
-Create a document from a full `PHDocument` object. With a parent, the handle's stages also wait for the relationship job on the parent.
+Create a document from a full `PHDocument` object. Its header's signature policy, id and protocol versions are taken as given; a header from a model's `utils.createDocument()` is created at base-reducer 2. Build the header with [`newDocument`](#newdocument). With a parent, the handle's stages also wait for the relationship job on the parent.
 
 ```typescript
 create(
@@ -614,12 +633,12 @@ create(
 
 ### `createEmpty`
 
-Create an empty document of a given type.
+Create the document [`newDocument`](#newdocument) builds.
 
 ```typescript
 createEmpty(
   documentModelType: string,
-  options?: CreateDocumentOptions,
+  options?: NewDocumentOptions,
   signal?: AbortSignal,
 ): Promise<WriteHandle>
 ```
@@ -629,7 +648,7 @@ createEmpty(
 | Name                | Type                    | Required | Description                            |
 | ------------------- | ----------------------- | -------- | -------------------------------------- |
 | `documentModelType` | `string`                | Yes      | e.g. `"powerhouse/todo-list"`          |
-| `options`           | `CreateDocumentOptions` | No       | Parent identifier and/or model version |
+| `options`           | `NewDocumentOptions`    | No       | Parent identifier, model version and the rest of `newDocument`'s options |
 | `signal`            | `AbortSignal`           | No       | Cancel the request                     |
 
 ---
@@ -1043,7 +1062,7 @@ moveNode(
 
 ### `write.drives.copyNode`
 
-Copy a node, and its subtree if it is a folder, within a drive. Each file is duplicated (completed), then the drive's nodes are copied. The handle's document is the drive.
+Copy a node, and its subtree if it is a folder, within a drive. Each file is duplicated (completed), then the drive's nodes are copied. The handle's document is the drive. A copied file keeps its source's `protocolVersions` unless `options.protocolVersions` overrides them; a reactor-drive refuses the override.
 
 ```typescript
 copyNode(
@@ -1051,6 +1070,7 @@ copyNode(
   srcNodeId: string,
   targetParentFolderId: string | undefined,
   signal?: AbortSignal,
+  options?: { protocolVersions?: ProtocolVersions },
 ): Promise<WriteHandle>
 ```
 

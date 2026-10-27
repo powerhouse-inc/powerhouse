@@ -134,6 +134,11 @@ export function switchboard(
             })),
           },
         });
+      case "GetJobStatus": {
+        // Every job this stub hands out settled at once, named `job-<documentId>`.
+        const jobId = variables.jobId as string;
+        return data({ jobStatus: settledJob(jobId.replace(/^job-/, "")) });
+      }
       case "FindDocuments":
         return data({
           findDocuments: {

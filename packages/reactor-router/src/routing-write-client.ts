@@ -1,8 +1,6 @@
 import {
   buildCreateJobs,
-  createEmptyDocument,
   JobStatus,
-  selectDocumentModelModule,
   upgradeDocumentJob,
   type ActionCandidate,
   type ActionEvaluations,
@@ -11,10 +9,10 @@ import {
   type BatchLoadRequest,
   type BatchLoadResult,
   type BatchWriteHandle,
-  type CreateDocumentOptions,
   type IReactorWriteClient,
   type JobInfo,
   type MoveRelationshipHandles,
+  type NewDocumentOptions,
   type PropagationMode,
   type UpgradeDocumentOptions,
   type WriteHandle,
@@ -22,6 +20,7 @@ import {
 } from "@powerhousedao/reactor";
 import {
   actions as documentActions,
+  createVersionsOf,
   type Action,
   type AuthSubject,
   type PHDocument,
@@ -274,10 +273,10 @@ export class RoutingWriteClient implements IReactorWriteClient {
 
   async createEmpty(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<WriteHandle> {
-    const document = await this.emptyDocument(
+    const document = await this.read.newDocument(
       documentModelType,
       options,
       signal,
@@ -671,8 +670,17 @@ export class RoutingWriteClient implements IReactorWriteClient {
             : await beforeSubmit(() =>
                 resolveOn(target, parentIdentifier, signal),
               );
+        const protocolVersions = await createVersionsOf(
+          document,
+          (options) =>
+            beforeSubmit(() =>
+              target.api.getCreateProtocolVersions(options, signal),
+            ),
+          parentId,
+        );
         const jobs = await buildCreateJobs(
           document,
+          protocolVersions,
           parentId,
           this.context.signer,
           signal,
@@ -723,24 +731,6 @@ export class RoutingWriteClient implements IReactorWriteClient {
     );
     this.dispatcher.recordJob(job.id, owner);
     return job;
-  }
-
-  /** A new empty document of the type, with the router's creation defaults. */
-  async emptyDocument(
-    documentModelType: string,
-    options: CreateDocumentOptions | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<PHDocument> {
-    const module = selectDocumentModelModule(
-      await this.read.allModules(signal),
-      documentModelType,
-      options?.documentModelVersion,
-    );
-    const [policy, versions] = await Promise.all([
-      this.read.getCreateSignaturePolicy(),
-      this.read.getCreateProtocolVersions(options?.parentIdentifier, signal),
-    ]);
-    return createEmptyDocument(module, options, policy, versions);
   }
 
   // Internals

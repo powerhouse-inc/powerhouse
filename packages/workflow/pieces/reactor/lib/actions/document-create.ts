@@ -107,9 +107,16 @@ async function createIn(
       target.kind === "parent" ? { parentIdentifier: target.parentId } : {},
     );
   }
-  const document = module.utils.createDocument() as PHDocument;
   // A drive node takes its name from the header.
-  if (name) document.header.name = name;
+  const document = await reactor.newDocument(documentType, {
+    parentIdentifier:
+      target.kind === "drive"
+        ? target.driveId
+        : target.kind === "parent"
+          ? target.parentId
+          : undefined,
+    name: name || undefined,
+  });
   if (target.kind === "drive") {
     // A drive file is a child document plus the drive's node for it.
     const created = await reactor.create(document, target.driveId);

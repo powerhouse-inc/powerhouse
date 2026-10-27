@@ -1,10 +1,9 @@
 import {
   addRelationshipAction,
-  createDocumentAction,
   mergeConsistencyTokens,
   removeRelationshipAction,
-  upgradeDocumentAction,
   type BatchExecutionRequest,
+  type CopyNodeOptions,
   type DriveNodeRecord,
   type ExecutionJobPlan,
   type IDriveNodeSource,
@@ -20,12 +19,14 @@ import {
 import {
   assertAuthPreservedOnDuplicate,
   createCopyHeader,
+  createVersionsOf,
+  creationActions,
   generateId,
   replayDocumentVersioned,
   type Action,
-  type CreateDocumentActionInput,
   type PHBaseState,
   type PHDocument,
+  type ProtocolVersions,
   type Reducer,
   type VersionedReplayConfig,
 } from "@powerhousedao/shared/document-model";
@@ -165,6 +166,11 @@ class ReactorDriveWriteStrategy implements IDriveWriteStrategy {
     signal?: AbortSignal,
   ): Promise<WriteHandle> {
     const documentId = document.header.id;
+    const protocolVersions = await createVersionsOf(
+      document,
+      (options) => this.read.getCreateProtocolVersions(options, signal),
+      driveIdentifier,
+    );
     const metadata: DriveChildFileMetadata = {
       kind: "file",
       parentFolderId: parentFolder ?? null,
@@ -177,16 +183,7 @@ class ReactorDriveWriteStrategy implements IDriveWriteStrategy {
           documentId,
           scope: "document",
           branch: "main",
-          actions: [
-            createDocumentAction(this.createInput(document, documentId)),
-            upgradeDocumentAction({
-              documentId,
-              model: document.header.documentType,
-              fromVersion: 0,
-              toVersion: document.state.document.version,
-              initialState: document.state,
-            }),
-          ],
+          actions: creationActions(document, protocolVersions),
           dependsOn: [],
         },
         {
@@ -383,7 +380,13 @@ class ReactorDriveWriteStrategy implements IDriveWriteStrategy {
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<WriteHandle> {
+    if (options?.protocolVersions) {
+      throw new Error(
+        "ReactorDriveClient.copyNode replays the source's operations and cannot override its protocolVersions",
+      );
+    }
     await this.requireNode(driveIdentifier, srcNodeId, signal);
     const subtree = await this.nodes.getDescendants(
       driveIdentifier,
@@ -405,6 +408,7 @@ class ReactorDriveWriteStrategy implements IDriveWriteStrategy {
       idMap.set(node.id, generateId());
     }
     const policy = await this.read.getCreateSignaturePolicy();
+    const selectedByType = new Map<string, ProtocolVersions>();
 
     const jobs: ExecutionJobPlan[] = [];
     const driveActions: Action[] = [];
@@ -461,7 +465,23 @@ class ReactorDriveWriteStrategy implements IDriveWriteStrategy {
         reducers[m.version ?? 1] = m.reducer as Reducer<PHBaseState>;
       }
       const config: VersionedReplayConfig = { reducers };
-      const replayHeader = createCopyHeader(srcDoc.header, newId, policy);
+      // A copy keeps its source's versions; selection fills the keys it lacks.
+      let selected = selectedByType.get(documentType);
+      if (selected === undefined) {
+        selected = await this.read.getCreateProtocolVersions(
+          { documentType, parentIdentifier: driveIdentifier },
+          signal,
+        );
+        selectedByType.set(documentType, selected);
+      }
+      const replayHeader = createCopyHeader(
+        {
+          documentType,
+          protocolVersions: { ...selected, ...srcDoc.header.protocolVersions },
+        },
+        newId,
+        policy,
+      );
       // A v2-required copy takes a derived id; files head no subtree.
       newId = replayHeader.id;
       const duplicated: PHDocument = replayDocumentVersioned(
@@ -483,16 +503,10 @@ class ReactorDriveWriteStrategy implements IDriveWriteStrategy {
         documentId: newId,
         scope: "document",
         branch: "main",
-        actions: [
-          createDocumentAction(this.createInput(duplicated, newId)),
-          upgradeDocumentAction({
-            documentId: newId,
-            model: duplicated.header.documentType,
-            fromVersion: 0,
-            toVersion: duplicated.state.document.version,
-            initialState: duplicated.state,
-          }),
-        ],
+        actions: creationActions(
+          duplicated,
+          duplicated.header.protocolVersions ?? selected,
+        ),
         dependsOn: [],
       });
       fileCreateKeys.push(createKey);
@@ -538,31 +552,6 @@ class ReactorDriveWriteStrategy implements IDriveWriteStrategy {
       throw new Error(`Node ${nodeId} not found in drive ${driveIdentifier}`);
     }
     return node;
-  }
-
-  private createInput(
-    document: PHDocument,
-    documentId: string,
-  ): CreateDocumentActionInput {
-    return {
-      model: document.header.documentType,
-      version: 0,
-      documentId,
-      signing: {
-        signature: documentId,
-        publicKey: document.header.sig.publicKey,
-        nonce: document.header.sig.nonce,
-        createdAtUtcIso: document.header.createdAtUtcIso,
-        documentType: document.header.documentType,
-      },
-      slug: document.header.slug,
-      name: document.header.name,
-      branch: document.header.branch,
-      meta: document.header.meta,
-      protocolVersions: document.header.protocolVersions ?? {
-        "base-reducer": 2,
-      },
-    };
   }
 }
 

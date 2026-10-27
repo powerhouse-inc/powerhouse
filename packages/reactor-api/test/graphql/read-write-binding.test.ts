@@ -114,6 +114,7 @@ const READS: Record<string, (...args: unknown[]) => unknown> = {
   getDocumentModelModuleForDocument: () => Promise.resolve(MODEL),
   getCreateSignaturePolicy: () => Promise.resolve("legacy"),
   getCreateProtocolVersions: () => Promise.resolve({}),
+  newDocument: () => Promise.resolve(structuredClone(stubDocument)),
   subscribe: () => () => undefined,
 };
 

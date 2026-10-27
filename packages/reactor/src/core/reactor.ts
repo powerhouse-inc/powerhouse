@@ -1,22 +1,20 @@
 import type {
   Action,
-  CreateDocumentActionInput,
   DocumentModelModule,
   ISigner,
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { normalizeDocumentModelVersion } from "@powerhousedao/shared/document-model";
+import { creationActions } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import type { CatchUpScheduler } from "../catch-up/scheduler.js";
+import type { CreateVersionSelector } from "./types.js";
 import {
   addRelationshipAction,
-  createDocumentAction,
   deleteDocumentAction,
   removeRelationshipAction,
   updateRelationshipAction,
-  upgradeDocumentAction,
 } from "../actions/index.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
@@ -96,6 +94,7 @@ export class Reactor implements IReactor {
   private eventBus: IEventBus;
   private executorManager: IJobExecutorManager;
   private catchUp: CatchUpScheduler | undefined;
+  private createProtocol: CreateVersionSelector | undefined;
 
   constructor(
     logger: ILogger,
@@ -499,6 +498,28 @@ export class Reactor implements IReactor {
     return results;
   }
 
+  /** Where `create` selects versions for a header that carries none. */
+  setCreateProtocol(selector: CreateVersionSelector): void {
+    this.createProtocol = selector;
+  }
+
+  /** A versionless header is a create: it takes this reactor's selection for its type. */
+  private selectCreateVersions(
+    document: PHDocument,
+    signal: AbortSignal | undefined,
+  ) {
+    if (!this.createProtocol) {
+      throw new Error(
+        `Document ${document.header.id} carries no protocolVersions and this reactor has no create protocol to select them: build it with IReactorClient.newDocument, create it through IReactorClient, or build the reactor with ReactorBuilder (or call setCreateProtocol)`,
+      );
+    }
+    return this.createProtocol.select(
+      { documentType: document.header.documentType },
+      { loadModel: true },
+      signal,
+    );
+  }
+
   async create(
     document: PHDocument,
     signer?: ISigner,
@@ -515,40 +536,12 @@ export class Reactor implements IReactor {
 
     throwIfAborted(signal, () => new AbortError());
 
-    const createInput: CreateDocumentActionInput = {
-      model: document.header.documentType,
-      version: 0,
-      documentId: document.header.id,
-      signing: {
-        signature: document.header.id,
-        publicKey: document.header.sig.publicKey,
-        nonce: document.header.sig.nonce,
-        createdAtUtcIso: document.header.createdAtUtcIso,
-        documentType: document.header.documentType,
-      },
-      slug: document.header.slug,
-      name: document.header.name,
-      branch: document.header.branch,
-      meta: document.header.meta,
-      protocolVersions: document.header.protocolVersions ?? {
-        "base-reducer": 2,
-      },
-    };
-
-    const createAction = createDocumentAction(createInput);
-    const upgradeAction = upgradeDocumentAction({
-      documentId: document.header.id,
-      model: document.header.documentType,
-      fromVersion: 0,
-      // imported documents may predate the document scope entirely
-      toVersion: normalizeDocumentModelVersion(
-        (document.state as Partial<typeof document.state>).document?.version,
-      ),
-      initialState: document.state,
-    });
+    const protocolVersions =
+      document.header.protocolVersions ??
+      (await this.selectCreateVersions(document, signal));
 
     const branch = document.header.branch || "main";
-    let actions: Action[] = [createAction, upgradeAction];
+    let actions: Action[] = creationActions(document, protocolVersions);
     if (signer) {
       actions = await signActions(
         actions,

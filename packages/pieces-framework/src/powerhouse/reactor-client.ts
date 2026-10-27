@@ -27,6 +27,7 @@ export type ReadMethods =
 // but with the job instead of the document: the write for a caller that has
 // no use for the document, such as a file added to a large drive.
 export type WriteMethods =
+  | "newDocument"
   | "create"
   | "createEmpty"
   | "execute"
