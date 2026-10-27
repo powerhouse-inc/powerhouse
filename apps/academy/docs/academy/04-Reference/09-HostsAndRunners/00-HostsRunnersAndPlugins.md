@@ -204,7 +204,8 @@ use different stores, ports and settings. A key set in both `reactor` and
 `config.switchboard` fails validation.
 
 An environment variable the operator sets still wins over both blocks, for
-example `PH_REACTOR_DATABASE_URL` over the reactor's storage. A
+example `PH_REACTOR_DATABASE_URL` over the reactor's storage. A value that
+only the project `.env` sets sits under both blocks. A
 `DATABASE_URL` does not override `reactor.backends.*.readModel.url`. An
 environment variable that contradicts `reactor.protocol` fails the boot.
 
