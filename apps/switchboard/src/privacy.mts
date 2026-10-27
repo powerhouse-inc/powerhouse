@@ -83,9 +83,12 @@ export function resolvePrivacy(
       `PH_PRIVACY_ENABLED needs PH_PRIVACY_DEPLOYMENT_SECRET of at least ${MIN_DEPLOYMENT_SECRET_BYTES} bytes`,
     );
   }
+  return { enabled: true, deploymentSecret, ...privacyTimingsFromEnv(env) };
+}
+
+/** The erasure timings from PH_PRIVACY_*, in ms; each unset one is undefined. */
+export function privacyTimingsFromEnv(env: NodeJS.ProcessEnv) {
   return {
-    enabled: true,
-    deploymentSecret,
     intervalMs: positive(env, "PH_PRIVACY_INTERVAL_MS", 1),
     deadlineMs: positive(env, "PH_PRIVACY_DEADLINE_DAYS", DAY_MS),
     markerGraceMs: positive(env, "PH_PRIVACY_MARKER_GRACE_DAYS", DAY_MS),

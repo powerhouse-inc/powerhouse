@@ -567,3 +567,91 @@ describe("losing a live row on current main (#6b)", () => {
     expect(await live(h.a, id)).toEqual(await live(h.b, id));
   }, 30_000);
 });
+
+describe("a sender's same-millisecond batches", () => {
+  let h: Harness | undefined;
+  afterEach(() => {
+    h?.a.reactor.kill();
+    h?.b.reactor.kill();
+    h = undefined;
+  });
+
+  it.each([false, true])(
+    "keep the sender's order across batches with documentDecisions %s",
+    async (documentDecisions) => {
+      h = await buildHarness({ documentDecisions });
+      const drive = driveDocumentModelModule.utils.createDocument();
+      const id = drive.header.id;
+      await connect(h, id);
+      await h.a.client.create(drive);
+      await eventually(() =>
+        h!.b.reactor.get(id, { branch: "main" }).then(
+          () => true,
+          () => false,
+        ),
+      );
+      await quiesce(h, id);
+      const t = new Date(Date.now() + 1_000).toISOString();
+      const named = (actionId: string) => ({
+        ...driveDocumentModelModule.actions.setDriveName({ name: actionId }),
+        id: actionId,
+        timestampUtcMs: t,
+      });
+      await h.a.client.execute(id, "main", [named("m-1"), named("z-1")]);
+      await quiesce(h, id);
+      await h.a.client.execute(id, "main", [named("a-2"), named("n-2")]);
+      await quiesce(h, id);
+
+      const a = await live(h.a, id);
+      expect(a.slice(-4)).toEqual(["m-1", "z-1", "a-2", "n-2"]);
+      expect(await live(h.b, id)).toEqual(a);
+    },
+    30_000,
+  );
+});
+
+describe("an author's backdated execute", () => {
+  let h: Harness | undefined;
+  afterEach(() => {
+    h?.a.reactor.kill();
+    h?.b.reactor.kill();
+    h = undefined;
+  });
+
+  it.each([false, true])(
+    "converges with documentDecisions %s",
+    async (documentDecisions) => {
+      h = await buildHarness({ documentDecisions });
+      const drive = driveDocumentModelModule.utils.createDocument();
+      const id = drive.header.id;
+      await connect(h, id);
+      await h.a.client.create(drive);
+      await eventually(() =>
+        h!.b.reactor.get(id, { branch: "main" }).then(
+          () => true,
+          () => false,
+        ),
+      );
+      await quiesce(h, id);
+      const base = Date.now();
+      await executeOn(h.a, id, "p", new Date(base).toISOString());
+      await quiesce(h, id);
+      await executeOn(h.a, id, "q", new Date(base - 5_000).toISOString());
+      await quiesce(h, id);
+
+      expect(await live(h.b, id)).toEqual(await live(h.a, id));
+    },
+    30_000,
+  );
+
+  it("converges after A writes an op older than x (documentDecisions)", async () => {
+    h = await buildHarness({ documentDecisions: true });
+    const { id, base, x } = await damaged(h);
+
+    await executeOn(h.a, id, "v", new Date(base - 5_000).toISOString());
+    await quiesce(h, id);
+
+    expect(await live(h.a, id)).toContain(x);
+    expect(await live(h.a, id)).toEqual(await live(h.b, id));
+  }, 30_000);
+});
