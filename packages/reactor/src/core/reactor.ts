@@ -510,7 +510,7 @@ export class Reactor implements IReactor {
   ) {
     if (!this.createProtocol) {
       throw new Error(
-        `Document ${document.header.id} carries no protocolVersions and this reactor has no create protocol to select them`,
+        `Document ${document.header.id} carries no protocolVersions and this reactor has no create protocol to select them: build it with IReactorClient.newDocument, create it through IReactorClient, or build the reactor with ReactorBuilder (or call setCreateProtocol)`,
       );
     }
     return this.createProtocol.select(
