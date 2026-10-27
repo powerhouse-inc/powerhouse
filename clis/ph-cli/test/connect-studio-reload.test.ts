@@ -2,8 +2,9 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { removeDir, stopProcess } from "./processes.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -42,8 +43,17 @@ function writeConfig(dir: string, appName: string) {
 }
 
 const OUTPUT_TAIL_CHARS = 16_384;
+const WAIT_MS = 60_000;
+const POLL_MS = 250;
+const FETCH_TIMEOUT_MS = 2_000;
 
-type Studio = { child: ChildProcess; output: () => string };
+type Studio = {
+  child: ChildProcess;
+  closed: Promise<void>;
+  output: () => string;
+  /** Why the last request for the config did not give an app name. */
+  lastProbe: string;
+};
 
 function startStudio(dir: string, port: number): Studio {
   const child = spawn(
@@ -61,50 +71,97 @@ function startStudio(dir: string, port: number): Studio {
     ],
     { cwd: dir, stdio: ["ignore", "pipe", "pipe"] },
   );
-  cleanups.push(() =>
-    stopProcess(child.exitCode === null ? child.pid : undefined),
-  );
+  const closed = new Promise<void>((resolve) => {
+    child.once("close", () => resolve());
+  });
+  cleanups.push(async () => {
+    await stopProcess(child.exitCode === null ? child.pid : undefined);
+    // Grandchildren (Vite's esbuild) can hold the pipes open.
+    child.stdout.destroy();
+    child.stderr.destroy();
+  });
   let tail = "";
   const keep = (chunk: string) => {
     tail = (tail + chunk).slice(-OUTPUT_TAIL_CHARS);
   };
   child.stdout.setEncoding("utf8").on("data", keep);
   child.stderr.setEncoding("utf8").on("data", keep);
-  return { child, output: () => tail };
+  return { child, closed, output: () => tail, lastProbe: "no request yet" };
 }
 
-/** vi.waitFor, with the studio's exit status and output tail on failure. */
+function hasExited(child: ChildProcess): boolean {
+  return child.exitCode !== null || child.signalCode !== null;
+}
+
+/** Polls until `assertion` passes; fails at once if the studio exits. */
 async function waitFor(studio: Studio, assertion: () => unknown) {
-  try {
-    await vi.waitFor(assertion, { timeout: 60_000, interval: 250 });
-  } catch (error) {
-    const { exitCode, signalCode } = studio.child;
-    const status =
-      exitCode === null && signalCode === null
-        ? "running"
-        : `exited (code ${exitCode}, signal ${signalCode})`;
-    const report = `\n\nstudio ${status}; output tail:\n${studio.output() || "(none)"}`;
-    if (error instanceof Error) {
-      error.message += report;
-      throw error;
+  const deadline = Date.now() + WAIT_MS;
+  for (;;) {
+    try {
+      await assertion();
+      return;
+    } catch (error) {
+      if (hasExited(studio.child) || Date.now() >= deadline) {
+        throw await withStudioReport(error, studio);
+      }
     }
-    throw new Error(String(error) + report, { cause: error });
+    await sleep(POLL_MS);
   }
 }
 
-async function servedAppName(port: number): Promise<string | undefined> {
+async function withStudioReport(error: unknown, studio: Studio) {
+  const { child } = studio;
+  let status = "running";
+  if (hasExited(child)) {
+    // The last stderr chunk can land after 'exit'.
+    await Promise.race([studio.closed, sleep(2_000)]);
+    status = `exited (code ${child.exitCode}, signal ${child.signalCode})`;
+  }
+  const report = `\n\nstudio ${status}; last request: ${studio.lastProbe}; output tail:\n${studio.output() || "(none)"}`;
+  if (error instanceof Error) {
+    error.message += report;
+    return error;
+  }
+  return new Error(String(error) + report, { cause: error });
+}
+
+function describeFetchError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  if (error.name === "TimeoutError") {
+    return `aborted after ${FETCH_TIMEOUT_MS} ms`;
+  }
+  const code = (error.cause as { code?: unknown } | undefined)?.code;
+  return typeof code === "string"
+    ? `${error.message} (${code})`
+    : error.message;
+}
+
+async function servedAppName(studio: Studio, port: number) {
+  let body: string;
   try {
     const response = await fetch(
       `http://localhost:${port}/powerhouse.config.json`,
-      { signal: AbortSignal.timeout(2_000) },
+      { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) },
     );
-    const config = (await response.json()) as {
-      connect?: { branding?: { appName?: string } };
-    };
-    return config.connect?.branding?.appName;
-  } catch {
+    body = await response.text();
+    if (!response.ok) {
+      studio.lastProbe = `HTTP ${response.status}`;
+      return undefined;
+    }
+  } catch (error) {
+    studio.lastProbe = describeFetchError(error);
     return undefined;
   }
+  let config: { connect?: { branding?: { appName?: string } } };
+  try {
+    config = JSON.parse(body) as typeof config;
+  } catch {
+    studio.lastProbe = `non-JSON body: ${body.slice(0, 200)}`;
+    return undefined;
+  }
+  const appName = config.connect?.branding?.appName;
+  studio.lastProbe = `appName ${JSON.stringify(appName)}`;
+  return appName;
 }
 
 describe("ph connect studio", () => {
@@ -114,11 +171,11 @@ describe("ph connect studio", () => {
     const studio = startStudio(dir, port);
 
     await waitFor(studio, async () =>
-      expect(await servedAppName(port)).toBe("Before"),
+      expect(await servedAppName(studio, port)).toBe("Before"),
     );
     writeConfig(dir, "After");
     await waitFor(studio, async () =>
-      expect(await servedAppName(port)).toBe("After"),
+      expect(await servedAppName(studio, port)).toBe("After"),
     );
 
     const routes = path.join(dir, "hosts/connect/routes");
@@ -131,5 +188,6 @@ describe("ph connect studio", () => {
     await waitFor(studio, () =>
       expect(readFileSync(tree, "utf8")).toContain('"/hello"'),
     );
-  }, 180_000);
+    // Three waits, each up to WAIT_MS plus a request and the report.
+  }, 240_000);
 });
