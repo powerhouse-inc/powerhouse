@@ -1,6 +1,12 @@
 import { hashBrowser } from "./crypto.js";
 import type { z } from "zod";
 
+export {
+  createActionIdGenerator,
+  generateActionId,
+  type ActionIdGeneratorOptions,
+} from "./action-id.js";
+
 export function generateId(method?: "UUIDv4"): string {
   if (method && method.toString() !== "UUIDv4") {
     throw new Error(
