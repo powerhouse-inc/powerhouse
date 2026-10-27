@@ -248,16 +248,20 @@ A reactor with no signer stores the operations it synthesizes from `UNDO` and `R
 
 ---
 
-## 🚀 **Unreleased** — sync places a late operation by timestamp, not by the sender's index
+## 🚀 **Unreleased** — with documentDecisions on, a load places a late operation by timestamp, not by the sender's index
 
-### 🔁 Replicas converge when a late operation arrives
+### 🔁 Fewer permanent divergences when a late operation arrives (documentDecisions on)
 
 When a reactor loaded operations from a peer, it treated a local operation as preceding the batch whenever its local index was below the batch's lowest index on the peer. After reshuffles the two index spaces are unrelated (a switchboard can run hundreds of indexes ahead of a spoke). So a late operation stamped before a spoke's own newer ones was appended behind them, and the spoke's document differed from everyone else's for good.
 
-- A local operation stamped after the earliest incoming operation is now always treated as concurrent, and the load reshuffles it into timestamp order.
-- Only operations on that same earliest timestamp still go by index. One execute batch's same-millisecond operations, and a catch-up that splits such a batch across loads, keep the sender's order exactly.
+With `documentDecisions` on (`REACTOR_DOCUMENT_DECISIONS=true` on switchboards; off by default), where every replica places its own writes by timestamp:
 
-**Trade-off:** a peer batch whose earliest operation is stamped before local operations now reshuffles them, even when the sender's index was ahead. The cost is a reshuffle, counted against `maxSkipThreshold`, where the old rule appended. Same-millisecond ties between different authors are still decided by index, as before.
+- A local operation stamped after the earliest incoming operation is now always treated as concurrent, and the load reshuffles it into timestamp order.
+- Operations on that same earliest timestamp still go by index. One execute batch's same-millisecond operations keep the sender's order, including when a catch-up splits the batch across loads, as long as the receiver has not reshuffled the first part. After such a reshuffle the rest of the batch falls back to the reshuffle's tie-break, action id, as before this change.
+
+With `documentDecisions` off, loads decide exactly as before.
+
+**Trade-off:** with the flag on, a peer batch whose earliest operation is stamped before local operations now reshuffles them, even when the sender's index was ahead. Where the old rule appended, such a load now costs a reshuffle. If that reshuffle moves more operations than `maxSkipThreshold` allows, for example a spoke holding over 1000 operations stamped after a long-delayed peer operation, the load fails with `EXCESSIVE_SHUFFLE` instead of appending. Same-millisecond ties between different authors are still decided by index, as before.
 
 ---
 
