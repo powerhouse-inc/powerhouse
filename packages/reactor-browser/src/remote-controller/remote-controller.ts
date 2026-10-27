@@ -44,6 +44,7 @@ import {
   hasRevisionConflict,
   screamingSnakeToCamel,
   uncreatedDocument,
+  underSignaturePolicy,
 } from "./utils.js";
 
 /** Extract TState from a PHDocumentController subclass. */
@@ -82,6 +83,8 @@ export class RemoteDocumentController<
   private remoteRevision: Record<string, number> = {};
   /** What the first push creates the remote from, until it has. */
   private uncreated?: PHDocument;
+  /** A wrapped new document takes the host's signature policy at its first push. */
+  private takesHostPolicy = false;
   private hasPulled = false;
   private pushScheduled = false;
   private pushQueue: Promise<void> = Promise.resolve();
@@ -280,17 +283,16 @@ export class RemoteDocumentController<
    * Wrap an existing controller instance with remote capabilities.
    * Pending local actions on the inner controller are NOT tracked
    * (only new actions through the remote controller are tracked).
-   * Without a `documentId`, the first push creates the remote under the
-   * wrapped document's header.
+   * Without a `documentId`, the first push creates the remote from the
+   * wrapped document's header, under the host's create signature policy.
    */
   static from<C extends PHDocumentController<any>>(
     controller: C,
     options: RemoteControllerOptions,
   ): RemoteDocumentControllerWith<C> {
-    return new RemoteDocumentController(
-      controller,
-      options,
-    ) as RemoteDocumentControllerWith<C>;
+    const remote = new RemoteDocumentController(controller, options);
+    remote.takesHostPolicy = remote.documentId === "";
+    return remote as RemoteDocumentControllerWith<C>;
   }
 
   // --- Private methods ---
@@ -326,6 +328,10 @@ export class RemoteDocumentController<
   /** Creates the remote from the local header, so both run the versions its creator chose. */
   private async ensureRemoteDocument(): Promise<void> {
     if (this.documentId !== "") return;
+    if (this.takesHostPolicy) {
+      await this.takeHostSignaturePolicy();
+      this.takesHostPolicy = false;
+    }
     const remoteDoc =
       this.uncreated === undefined
         ? await this.remoteClient.createEmptyDocument(
@@ -339,6 +345,20 @@ export class RemoteDocumentController<
     this.documentId = remoteDoc.id;
     this.canonicalDocumentId = remoteDoc.id;
     this.uncreated = undefined;
+  }
+
+  /** Puts the uncreated document under the host's policy; a host without `createDefaults` creates it with `createEmptyDocument`. */
+  private async takeHostSignaturePolicy(): Promise<void> {
+    if (this.uncreated === undefined) return;
+    let policy: SignaturePolicy;
+    try {
+      policy = await readCreateSignaturePolicy(this.options.client);
+    } catch (error) {
+      if (!GraphQLOperationNotSupportedError.isError(error)) throw error;
+      this.uncreated = undefined;
+      return;
+    }
+    this.uncreated = underSignaturePolicy(this.uncreated, policy);
   }
 
   /** Set up interceptors for all action methods on the inner controller. */

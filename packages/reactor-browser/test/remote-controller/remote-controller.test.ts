@@ -1338,3 +1338,74 @@ describe("RemoteDocumentController", () => {
     });
   });
 });
+
+describe("RemoteDocumentController.from without a documentId", () => {
+  it("creates the wrapped document under a legacy host's policy, so an unsigned client can push", async () => {
+    const client = createMockClient({
+      GetCreateDefaults: vi.fn().mockResolvedValue({
+        createDefaults: {
+          signaturePolicy: "legacy",
+          protocolVersions: { "base-reducer": 2 },
+        },
+      }),
+    });
+    const local = new DocumentModelController();
+    expect(local.header.protocolVersions).toHaveProperty("signature", 2);
+    const controller = RemoteDocumentController.from(local, { client });
+
+    controller.setName({ name: "unsigned" });
+    const result = await controller.push();
+
+    const created = createdDocument(client).header;
+    expect(created.protocolVersions).not.toHaveProperty("signature");
+    expect(created.id).toBe(local.header.id);
+    expect(client.MutateDocument).toHaveBeenCalledTimes(1);
+    expect(result.actionCount).toBe(1);
+  });
+
+  it("keeps the wrapped header under a host whose policy it already has", async () => {
+    const client = createMockClient();
+    const local = new DocumentModelController();
+    const controller = RemoteDocumentController.from(local, { client });
+
+    controller.setName({ name: "signed" });
+    await controller.push();
+
+    expect(createdDocument(client).header.id).toBe(local.header.id);
+    expect(createdDocument(client).header.protocolVersions).toEqual(
+      local.header.protocolVersions,
+    );
+  });
+
+  it("creates through CreateEmptyDocument on a Switchboard without createDefaults", async () => {
+    const client = createMockClient({
+      GetCreateDefaults: vi.fn().mockRejectedValue(
+        Object.assign(new Error("validation failed"), {
+          response: {
+            status: 400,
+            errors: [
+              {
+                message: 'Cannot query field "createDefaults" on type "Query".',
+                extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+              },
+            ],
+          },
+        }),
+      ),
+    });
+    const controller = RemoteDocumentController.from(
+      new DocumentModelController(),
+      { client, parentIdentifier: "drive-1" },
+    );
+
+    controller.setName({ name: "old host" });
+    await controller.push();
+
+    expect(client.CreateEmptyDocument).toHaveBeenCalledExactlyOnceWith({
+      documentType: "powerhouse/document-model",
+      parentIdentifier: "drive-1",
+    });
+    expect(client.CreateDocument).not.toHaveBeenCalled();
+    expect(controller.status.documentId).toBe("new-doc-1");
+  });
+});
