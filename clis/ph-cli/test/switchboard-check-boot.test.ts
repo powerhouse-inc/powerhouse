@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { rememberShellNames } from "../src/runners/member-config.js";
 import { checkBoot, hostSchema } from "../src/runners/switchboard.js";
 
 const temporary: string[] = [];
@@ -205,17 +206,16 @@ describe("switchboard runner checkBoot", () => {
     const protocolHost = host({
       reactor: { protocol: { featureFlags: { authEnforcement: true } } },
     });
-    // `ph host check` has loaded the .env into its env snapshot.
-    expect(
-      await issuesOf(
-        protocolHost,
-        { REACTOR_AUTH_ENFORCEMENT: "false" },
-        { root },
-      ),
-    ).toEqual([]);
-    expect(
-      await issuesOf(protocolHost, { REACTOR_AUTH_ENFORCEMENT: "0" }, { root }),
-    ).toEqual([expect.stringMatching(/reactor\.protocol conflict/)]);
+    // As `ph host check` passes it: the .env loaded, the shell's names recorded.
+    const loaded = { REACTOR_AUTH_ENFORCEMENT: "false" };
+    rememberShellNames(loaded, []);
+    expect(await issuesOf(protocolHost, loaded, { root })).toEqual([]);
+    // The shell set it, to the same value: the shell's, so a conflict.
+    const shell = { REACTOR_AUTH_ENFORCEMENT: "false" };
+    rememberShellNames(shell, ["REACTOR_AUTH_ENFORCEMENT"]);
+    expect(await issuesOf(protocolHost, shell, { root })).toEqual([
+      expect.stringMatching(/reactor\.protocol conflict/),
+    ]);
   });
 
   it("turns an env parse error into an issue", async () => {

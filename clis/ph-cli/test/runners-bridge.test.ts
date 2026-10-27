@@ -483,8 +483,10 @@ describe("switchboard bridge runner", () => {
       },
     });
     try {
-      // Before the server import loads the .env, and after (env holds its values).
-      for (const env of [{}, { REACTOR_AUTH_ENFORCEMENT: "false" }]) {
+      // One env, before and after the first server import loads the .env into it.
+      const env: Record<string, string> = {};
+      for (const loaded of [false, true]) {
+        if (loaded) env.REACTOR_AUTH_ENFORCEMENT = "false";
         vi.mocked(startSwitchboard).mockClear();
         await runner.run(host, { ...ctx, env });
         expect(vi.mocked(startSwitchboard).mock.calls[0][2]).toMatchObject({
@@ -501,6 +503,96 @@ describe("switchboard bridge runner", () => {
       });
       expect(vi.mocked(startSwitchboard).mock.calls[0][2]).toMatchObject({
         storage: { reactor: { url: "postgres://host/shell" } },
+      });
+    } finally {
+      cwd.mockRestore();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reads one env from the shell and the .env (S3 split across both)", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const dir = mkdtempSync(join(tmpdir(), "ph-bridge-dotenv-"));
+    writeFileSync(
+      join(dir, ".env"),
+      [
+        "PH_ATTACHMENT_S3_ENDPOINT=https://s3.example.com",
+        "PH_ATTACHMENT_S3_REGION=eu-west-1",
+        "PH_ATTACHMENT_S3_BUCKET=docs",
+        "PH_ATTACHMENT_S3_ACCESS_KEY_ID=key",
+        "PH_ATTACHMENT_S3_SECRET_ACCESS_KEY=secret",
+        "PH_REACTOR_DATABASE_URL=postgres://host/dotenv",
+      ].join("\n"),
+    );
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(dir);
+    try {
+      vi.mocked(startSwitchboard).mockClear();
+      await runner.run(
+        switchboard({ name: "lab-switchboard", runner: { module: "m" } }),
+        {
+          ...ctx,
+          env: {
+            PH_ATTACHMENT_STORAGE: "s3",
+            PH_SWITCHBOARD_DATABASE_URL: "postgres://host/shell",
+          },
+        },
+      );
+      expect(vi.mocked(startSwitchboard).mock.calls[0][2]).toMatchObject({
+        attachments: { storage: { kind: "s3", s3: { bucket: "docs" } } },
+        // PH_REACTOR ?? PH_SWITCHBOARD over the one env, as on main.
+        storage: {
+          reactor: { url: "postgres://host/dotenv" },
+          readModel: { url: "postgres://host/shell" },
+        },
+      });
+    } finally {
+      cwd.mockRestore();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a shell value the shell's even when the .env holds the same value", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const dir = mkdtempSync(join(tmpdir(), "ph-bridge-dotenv-"));
+    writeFileSync(
+      join(dir, ".env"),
+      "REACTOR_AUTH_ENFORCEMENT=false\nPH_REACTOR_DATABASE_URL=postgres://host/x\n",
+    );
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(dir);
+    const host = (protocol: boolean) =>
+      switchboard({
+        name: "lab-switchboard",
+        runner: { module: "m" },
+        reactor: {
+          backends: {
+            main: {
+              kind: "in-process",
+              storage: { kind: "postgres", url: "postgres://host/y" },
+            },
+          },
+          ...(protocol
+            ? { protocol: { featureFlags: { authEnforcement: true } } }
+            : {}),
+        },
+      });
+    try {
+      await expect(
+        runner.run(host(true), {
+          ...ctx,
+          env: { REACTOR_AUTH_ENFORCEMENT: "false" },
+        }),
+      ).rejects.toThrow(
+        /reactor\.protocol conflict.*REACTOR_AUTH_ENFORCEMENT/s,
+      );
+      vi.mocked(startSwitchboard).mockClear();
+      await runner.run(host(false), {
+        ...ctx,
+        env: { PH_REACTOR_DATABASE_URL: "postgres://host/x" },
+      });
+      expect(vi.mocked(startSwitchboard).mock.calls[0][2]).toMatchObject({
+        storage: { reactor: { url: "postgres://host/x" } },
       });
     } finally {
       cwd.mockRestore();

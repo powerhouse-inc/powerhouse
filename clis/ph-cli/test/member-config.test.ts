@@ -142,6 +142,27 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
       dotenv: { PH_SWITCHBOARD_DATABASE_URL: "postgres://host/dotenv" },
     },
     {
+      name: "shell and .env both feed one setting",
+      reactor: undefined,
+      env: {
+        PH_ATTACHMENT_STORAGE: "s3",
+        PH_SWITCHBOARD_DATABASE_URL: "postgres://host/shell",
+        PH_PRIVACY_ENABLED: "true",
+        REACTOR_WORKERS: "2",
+      },
+      dotenv: {
+        PH_ATTACHMENT_S3_ENDPOINT: "https://s3.example.com",
+        PH_ATTACHMENT_S3_REGION: "eu-west-1",
+        PH_ATTACHMENT_S3_BUCKET: "docs",
+        PH_ATTACHMENT_S3_ACCESS_KEY_ID: "key",
+        PH_ATTACHMENT_S3_SECRET_ACCESS_KEY: "secret",
+        PH_REACTOR_DATABASE_URL: "postgres://host/dotenv",
+        DATABASE_URL: "/dotenv/read",
+        PH_PRIVACY_INTERVAL_MS: "5000",
+        REACTOR_DB_POOL_SIZE_WORKER: "4",
+      },
+    },
+    {
       name: "postgres block under PH_SWITCHBOARD_DATABASE_URL",
       reactor: postgresBlock,
       env: { PH_SWITCHBOARD_DATABASE_URL: "postgres://host/env" },
@@ -232,13 +253,25 @@ describe("memberEnvOf", () => {
   });
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-  it("puts .env-only values, and values equal to the file's, in the .env layer", () => {
+  it("keeps the names the shell set, whatever the file says", () => {
     expect(
       memberEnvOf(
         { REACTOR_AUTH_ENFORCEMENT: "false", DATABASE_URL: "/shell/read" },
         dir,
       ),
     ).toEqual({
+      shell: { REACTOR_AUTH_ENFORCEMENT: "false", DATABASE_URL: "/shell/read" },
+      dotenv: {},
+    });
+  });
+
+  it("puts values loaded after the first look in the .env layer", () => {
+    const env: Record<string, string> = { DATABASE_URL: "/shell/read" };
+    expect(memberEnvOf(env, dir).dotenv).toEqual({
+      REACTOR_AUTH_ENFORCEMENT: "false",
+    });
+    env.REACTOR_AUTH_ENFORCEMENT = "false";
+    expect(memberEnvOf(env, dir)).toEqual({
       shell: { DATABASE_URL: "/shell/read" },
       dotenv: { REACTOR_AUTH_ENFORCEMENT: "false" },
     });
