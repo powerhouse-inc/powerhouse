@@ -227,7 +227,6 @@ describe("checkSetter", () => {
   it.each([
     ["host.reactor.renown.url", "reactor.renown.url"],
     ["host.reactor", "reactor"],
-    ["host.name", "name"],
     ["host.children", "children"],
   ])(
     "refuses the unlisted path %s, naming it only in the hint",
@@ -239,6 +238,10 @@ describe("checkSetter", () => {
       });
     },
   );
+
+  it.each(["host.name", "members.sb.name"])("sets the name at %s", (path) => {
+    expect(reason({ path, value: "Display name" })).toBeUndefined();
+  });
 
   it("removes a member folder but never the host", () => {
     expect(

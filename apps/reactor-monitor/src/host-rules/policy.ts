@@ -120,6 +120,7 @@ const SWITCHBOARD_SETTABLE: Pattern[] = [
 
 /** Leaf paths a value may be written at. */
 const SETTABLE: Pattern[] = [
+  ["name"],
   ["reactor", "protocol", "**"],
   ["reactor", "backends", "*", "kind"],
   ["reactor", "backends", "*", "storage", "kind"],
