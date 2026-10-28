@@ -240,10 +240,13 @@ describe.skipIf(process.platform === "win32")(
         existsSync(path.join(dataDir, ".ph", "run", `${HOST_NAME}.json`)),
       ).toBe(true);
 
+      const drive = Object.values(instance?.outputs?.drives ?? {}).at(0)?.url;
+      expect(drive).toMatch(/^http:\/\/[^/]+:\d+\/d\/[^/]+$/);
+
       const remote = await provisionRemote({
         name: "e2e",
         kind: "remote",
-        remote: { url: graphql },
+        remote: { url: drive ?? "" },
       });
       expect(remote.endpoint).toBe(`${graphql}/inspection`);
       expect(remote.info).toBeDefined();
@@ -311,13 +314,20 @@ describe.skipIf(process.platform === "win32")(
       expect(new Set(urls).size).toBe(2);
       expect(urls.filter((url) => url.includes(":7499/"))).toEqual([]);
 
-      for (const url of urls) {
+      const drives = Object.values(instance?.members ?? {}).flatMap((member) =>
+        Object.values(member.outputs?.drives ?? {})
+          .slice(0, 1)
+          .map((drive) => drive.url),
+      );
+      expect(drives).toHaveLength(2);
+      for (const [index, drive] of drives.entries()) {
         const remote = await provisionRemote({
-          name: url,
+          name: drive,
           kind: "remote",
-          remote: { url },
+          remote: { url: drive },
         });
-        expect(remote.endpoint).toBe(`${url}/inspection`);
+        expect(remote.url).toBe(urls[index]);
+        expect(remote.endpoint).toBe(`${urls[index]}/inspection`);
         expect(remote.info).toBeDefined();
         await remote.kill();
       }

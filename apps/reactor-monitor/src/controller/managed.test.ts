@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
 import type { Instance } from "./api.js";
-import { managedByOf, managedDescriptors, managedUrl } from "./managed.js";
+import {
+  managedByOf,
+  managedDescriptors,
+  servesDescriptor,
+} from "./managed.js";
 
 const outputsOf = (port: number) => ({
   origin: `http://127.0.0.1:${port}`,
   graphql: `http://127.0.0.1:${port}/graphql`,
-  drives: {},
+  drives: {
+    workflows: { id: "w", url: `http://127.0.0.1:${port}/d/workflows` },
+    powerhouse: { id: "p", url: `http://127.0.0.1:${port}/d/powerhouse` },
+  },
 });
 
 const base: Instance = {
@@ -26,7 +33,7 @@ describe("managed descriptors", () => {
     expect(descriptor).toMatchObject({
       kind: "remote",
       name: "sb-01234567",
-      remote: { url: "http://127.0.0.1:5001/graphql" },
+      remote: { url: "http://127.0.0.1:5001/d/powerhouse" },
       managedBy: { instanceId: base.id, project: base.project, host: "sb" },
     });
     expect(descriptor.managedBy).not.toHaveProperty("member");
@@ -45,15 +52,32 @@ describe("managed descriptors", () => {
     expect(
       descriptors.map((d) => [d.name, d.remote.url, d.managedBy.member]),
     ).toEqual([
-      ["a-01234567", "http://127.0.0.1:5001/graphql", "a"],
-      ["b-01234567-2", "http://127.0.0.1:5002/graphql", "b"],
+      ["a-01234567", "http://127.0.0.1:5001/d/powerhouse", "a"],
+      ["b-01234567-2", "http://127.0.0.1:5002/d/powerhouse", "b"],
     ]);
     for (const descriptor of descriptors) {
       expect(managedByOf(descriptor)).toEqual(descriptor.managedBy);
-      expect(managedUrl(instance, descriptor.managedBy)).toBe(
-        descriptor.remote.url,
-      );
+      expect(servesDescriptor(instance, descriptor)).toBe(true);
     }
+    const [a] = descriptors;
+    expect(
+      servesDescriptor(
+        {
+          ...instance,
+          members: { a: { host: "sb-a", outputs: outputsOf(6001) } },
+        },
+        a,
+      ),
+    ).toBe(false);
+  });
+
+  it("gives a switchboard that reports no drive no descriptor", () => {
+    expect(
+      managedDescriptors(
+        { ...base, outputs: { ...outputsOf(5001), drives: {} } },
+        [],
+      ),
+    ).toEqual([]);
   });
 
   it("gives an instance that is not running none", () => {
@@ -70,7 +94,7 @@ describe("managed descriptors", () => {
       managedByOf({
         kind: "remote",
         name: "x",
-        remote: { url: "http://h/graphql" },
+        remote: { url: "http://h/d/powerhouse" },
         managedBy: { instanceId: "i", project: "/p", host: "h", member: 1 },
       } as never),
     ).toBeUndefined();

@@ -131,7 +131,7 @@ export function isStructuralMultiReactor(
   );
 }
 
-/** The remote backends' urls, placement order — what the routing client dials. */
+/** The remote backends' drive addresses, placement order. */
 export function remoteBackendUrls(
   reactor: ReactorConfig | undefined,
 ): string[] {

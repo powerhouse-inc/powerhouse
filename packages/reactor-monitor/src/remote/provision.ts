@@ -1,3 +1,7 @@
+import {
+  driveAddressMessage,
+  switchboardOfDrive,
+} from "@powerhousedao/shared/host-tokens";
 import type {
   ManagedRemoteReactor,
   MonitorReactorInfo,
@@ -23,11 +27,17 @@ export async function provisionRemote(
   const remote = descriptor.remote;
   if (!remote) {
     throw new Error(
-      `Reactor ${JSON.stringify(descriptor.name)} is kind "remote" but carries no "remote" config: give it the reactor's GraphQL url`,
+      `Reactor ${JSON.stringify(descriptor.name)} is kind "remote" but carries no "remote" config: give it a switchboard drive address`,
+    );
+  }
+  const graphql = switchboardOfDrive(remote.url)?.graphql;
+  if (!graphql) {
+    throw new Error(
+      `Reactor ${JSON.stringify(descriptor.name)}: ${driveAddressMessage(remote.url)}`,
     );
   }
 
-  const endpoint = inspectionEndpoint(remote.url, remote.inspectionUrl);
+  const endpoint = inspectionEndpoint(graphql, remote.inspectionUrl);
   const client = new RemoteInspectorClient({
     url: endpoint,
     ...(remote.headers ? { headers: remote.headers } : {}),
@@ -36,7 +46,7 @@ export async function provisionRemote(
   });
 
   const levers = new RemoteProcessorLevers({
-    url: inspectionAdminEndpoint(remote.url),
+    url: inspectionAdminEndpoint(graphql),
     ...(remote.headers ? { headers: remote.headers } : {}),
     ...(remote.fetch ? { fetch: remote.fetch } : {}),
     ...(remote.timeoutMs !== undefined ? { timeoutMs: remote.timeoutMs } : {}),
@@ -67,7 +77,7 @@ export async function provisionRemote(
     kind: "remote",
     reach: { hosting: "remote", inspection: "rpc" },
     endpoint,
-    url: remote.url,
+    url: graphql,
     ...(remote.headers ? { headers: remote.headers } : {}),
     ...(remote.fetch ? { fetch: remote.fetch } : {}),
     get info() {

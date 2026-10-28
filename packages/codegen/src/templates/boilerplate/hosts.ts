@@ -47,13 +47,13 @@ functions); \`ph <host-name>\` is sugar for \`ph run <host-name>\` (built-in
 commands win name collisions).
 
 Another host's outputs (its URLs, drive ids, …) are read with output tokens,
-e.g. \`{ $output: { host: "switchboard", path: ["endpoints", "graphql"] } }\`,
+e.g. \`{ $output: { host: "switchboard", path: ["drives", "powerhouse", "url"] } }\`,
 resolved when the host starts (the producer must be running, or a member of
 the same compound). \`{ $map: { over, to } }\` renders a list from a
 collection output — e.g. one remote drive per drive the switchboard serves,
 with \`{ $key: true }\` and \`{ $item: ["url"] }\` naming each element.
 \`ph generate hosts\` writes each producer's
-\`outputs.js\` (typed shortcuts: \`switchboard.endpoints.graphql\`) and
+\`outputs.js\` (typed shortcuts: \`switchboard.drives.powerhouse.url\`) and
 \`types.d.ts\`; \`/** @satisfies {PHHost} */\` plus \`tsc -p hosts\` type-check
 every host file.
 
@@ -79,6 +79,11 @@ to the switchboard and stores nothing locally (no PGlite); a **synchronized
 remote drive** keeps a local replica and therefore needs PGlite by design.
 The \`in-process\` mode (main-thread reactor) is the fourth option — set one
 \`in-process\` backend instead of \`worker\`.
+
+A \`remote\` backend links to a switchboard by the address of one of its
+drives, \`<switchboard>/d/<slug>\` (\`switchboard.drives.powerhouse.url\`), never
+by its GraphQL endpoint. One switchboard is one remote backend; list its other
+drives under \`reactor.drives\`.
 
 Whichever client a host runs, it comes in two halves: reads go through
 \`read\` and writes through \`write\`, whose writes hand back a handle to wait
@@ -406,12 +411,12 @@ export default {
     backends: {
       switchboard: {
         kind: "remote",
-        // The running switchboard's GraphQL endpoint, read from its live
-        // outputs (after \`ph generate hosts\`: switchboard.endpoints.graphql
-        // from ../switchboard/outputs.js). A literal URL attaches to an
-        // external switchboard.
+        // A drive address on the running switchboard, read from its live
+        // outputs (after \`ph generate hosts\`: switchboard.drives.powerhouse.url
+        // from ../switchboard/outputs.js). A literal drive address
+        // (<switchboard>/d/<slug>) attaches to an external switchboard.
         remote: {
-          url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } },
+          url: { $output: { host: "switchboard", path: ["drives", "powerhouse", "url"] } },
         },
       },
     },
@@ -479,10 +484,11 @@ export default {
         // the override is a full statement: keep the connect host's protocol
         protocol: connect.reactor.protocol,
         backends: {
+          // The switchboard, by the address of its powerhouse drive.
           sb: {
             kind: "remote",
             remote: {
-              url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } },
+              url: { $output: { host: "switchboard", path: ["drives", "powerhouse", "url"] } },
             },
           },
         },

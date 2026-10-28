@@ -9,6 +9,12 @@ Status: **proposal**. Nothing implemented. Builds on `uniform-runners`
 (phases 0–3, R) and `workflow-plugins` (drive references). Paths are relative
 to the repo root; `HC` = `packages/host-core/src`.
 
+> **Superseded in part (2026-10-28, router decision D2).** A `remote` backend's
+> `remote.url` is a switchboard drive address (`switchboard.drives.<slug>.url`),
+> not `switchboard.endpoints.graphql`. host-core refuses the GraphQL form with
+> an error naming the drive form. The places below that use
+> `endpoints.graphql` for `remote.url` are marked.
+
 **Gated, with one consumer, so breaking changes are free.** The hosts system
 is off unless `FEATURE_UNIFORM_RUNNERS_ENABLED` is `1`/`true`
 (`packages/shared/clis/feature-flags.ts`, `isUniformRunnersEnabled`). Flag off,
@@ -339,7 +345,7 @@ import { outputs as switchboard } from "../switchboard/outputs.js";
   host: "connect",
   reactor: {
     protocol: connect.reactor.protocol,                  // restores what the full-statement override drops today
-    backends: { sb: { kind: "remote", remote: { url: switchboard.endpoints.graphql } } },
+    backends: { sb: { kind: "remote", remote: { url: switchboard.endpoints.graphql } } }, // superseded: switchboard.drives.<slug>.url (D2)
     drives: {
       $map: {
         over: { $output: { host: "switchboard", path: ["drives"] } },
@@ -391,7 +397,7 @@ Removed in **T3**, when the resolver that replaces them lands. The removed forms
 | Old | New | Stage |
 |---|---|---|
 | `{ from, slug }` (`HC/plugins.ts:59-78`, `compound.ts:144-186`; scaffold `hosts.ts:225,324,435`), and `driveUrls` with it | `$output` on `drives.<slug>.url` (`member: from` when two members share a host) | T3 |
-| `remote: { host }` | `remote: { url: <switchboard.endpoints.graphql> }` | T3 |
+| `remote: { host }` | `remote: { url: <switchboard.endpoints.graphql> }`; superseded by D2: `remote: { url: <switchboard.drives.<slug>.url> }` | T3 |
 | clint `agents.<x>.host`, proxy `routes.<p>.member` | `$output` | T3 |
 | `projectDrivesIntoConnect`, `drivesPublicBase`, `isConnectMember`, `isReactorFactMember` | tokens + `kind` | T3 |
 | template-literal sibling URLs, hardcoded URLs | `$output` / `$map` (not a detectable form; rewritten in the scaffold and Sektar) | T3 (connect, assistant), T4 (cli, desktop) |
@@ -450,12 +456,12 @@ gets the same change as the matching Sektar host in the same stage, and
 | T2 | `switchboard/host.js` | annotate only. `auth` stays in `powerhouse.config.json`: the switchboard runner does not read `reactor.auth` (no `auth` in `switchboard.ts`) |
 | T3 | all, scaffold | `/** @satisfies {PHHost} */`; add `hosts/tsconfig.json` + `types.d.ts`; `tsc` script covers `tsc -p hosts`; run `ph generate` for `outputs.js` |
 | T3 | `assistant/host.js` (model) | **bug:** `config.model` is `undefined` without `OPENROUTER_API_KEY` (:44-46), so the host fails the static gate, and it reads `process.env`, which T3 bans. Use a literal model plus `apiKey: { $env: "OPENROUTER_API_KEY" }` (required, not `optional`): without the key the host fails at resolve, naming `OPENROUTER_API_KEY` |
-| T3 | `assistant/host.js` (remote) | `remote: { host }` (:30-35) → `remote: { url: switchboard.endpoints.graphql }` |
+| T3 | `assistant/host.js` (remote) | `remote: { host }` (:30-35) → `remote: { url: switchboard.endpoints.graphql }` (superseded by D2: `switchboard.drives.powerhouse.url`) |
 | T3 | `assistant/host.js` (port) | port 4910 → `powerhouse.config.json` |
 | T3 | `connect/host.js` | workflows plugin `drive` → `switchboard.drives.workflows.url`, replacing the hardcoded `localhost:${config.reactor?.port ?? 4001}` URL (:35); `sektar` drive declaration → read from `switchboard.reactor.drives` (sibling import), not a copy (:66-71) |
 | T3 | scaffold vetra, desktop, cli | connect member's workflows `drive: { from, slug }` (`hosts.ts:225,324,435`) → `switchboard.drives.workflows.url` |
 | T3 | `vetra/host.js` | annotate. Confirm whether vetra-switchboard dropping the `sektar` drive (:33-43) is intended |
-| T4 | `cli/host.js`, scaffold | delete `serverPort`/`serverDrives` (:14-15); backend URL → `switchboard.endpoints.graphql`; drives → `$map` (3.4); **restore `protocol`**, which the full-statement override currently drops (:40-51) |
+| T4 | `cli/host.js`, scaffold | delete `serverPort`/`serverDrives` (:14-15); backend URL → `switchboard.endpoints.graphql` (superseded by D2: `switchboard.drives.powerhouse.url`); drives → `$map` (3.4); **restore `protocol`**, which the full-statement override currently drops (:40-51) |
 | T4 | `desktop/host.js`, scaffold | delete `serverPort`/`serverDrives` (:17-25); desktop-connect drives (:93-101) → `$map` over switchboard `drives` (as cli); drop redundant restatements (:64, :88) |
 | T4 | `hosts/README.md`, root `README.md` | fix drift: sibling imports and `outputs.js` are legal; `process.env` is not (use `$env`); connect is `in-process`, not `worker`; desktop is in-process + remote drives, not router |
 | follow-up | — | UI constants duplicating host data (`routes/-shared/products.ts:41-45,64`, `editors/sektar/kit/data.ts:48`) and the assistant instructions' hardcoded tool and drive names; `profile` vs `app.json` duplication in desktop |

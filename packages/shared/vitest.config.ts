@@ -46,6 +46,7 @@ export default defineConfig({
       "connect/shared-deps.test.ts",
       "connect/connect-config-schema.test.ts",
       "host-tokens/host-tokens.test.ts",
+      "host-tokens/drive-address.test.ts",
       "document-drive/**/*.test.ts",
       "document-model/action-id.test.ts",
       "document-model/action-signature.test.ts",

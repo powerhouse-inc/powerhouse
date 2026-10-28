@@ -169,6 +169,11 @@ export {
 } from "./host-schemas.js";
 export { hostExportSchema, type HostExport } from "./host-export-schema.js";
 export {
+  driveAddressMessage,
+  switchboardOfDrive,
+  type SwitchboardDrive,
+} from "@powerhousedao/shared/host-tokens";
+export {
   buildDriveDeclarationSchema,
   driveDeclarationSchema,
   drivesSchema,

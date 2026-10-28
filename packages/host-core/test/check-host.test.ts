@@ -112,6 +112,11 @@ describe("checkHost: one issue per stage", () => {
       /drive: \{ from, slug \} was removed/,
     ],
     ["unknown-runner-key", "runner", /Unrecognized key: "strictPortt"/],
+    [
+      "remote-graphql-url",
+      "reactor.backends.sb.remote.url",
+      /reads switchboard's endpoints\.graphql; it must be a switchboard drive address/,
+    ],
   ])("declared: %s", async (host, at, message) => {
     const result = await check("invariants", host);
     expectOne(result.issues, { stage: "declared", path: at }, message);
