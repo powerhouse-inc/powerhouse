@@ -541,11 +541,6 @@ export class TriggerSupervisor {
     });
   }
 
-  /** A re-publish past the parked version: on this lane, a park older than
-   * `publishedVersion` goes and a row it parked is ENABLED again, as it was
-   * before (only an ENABLED row is ever parked); a park as new stands. The
-   * next upsert of the same binding then arms rather than skipping as
-   * unchanged, and a retry held back by the park is due now. */
   /**
    * Makes an armed trigger due now and runs the due check at once, so a
    * schedule fires and a poll polls without waiting for its interval ("sync
@@ -569,6 +564,11 @@ export class TriggerSupervisor {
     return true;
   }
 
+  /** A re-publish past the parked version: on this lane, a park older than
+   * `publishedVersion` goes and a row it parked is ENABLED again, as it was
+   * before (only an ENABLED row is ever parked); a park as new stands. The
+   * next upsert of the same binding then arms rather than skipping as
+   * unchanged, and a retry held back by the park is due now. */
   unpark(workflowId: string, publishedVersion: number): Promise<void> {
     this.enabledOk.delete(workflowId);
     const retry = this.enableRetries.get(workflowId);
