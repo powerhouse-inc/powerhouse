@@ -26,6 +26,8 @@ export const GROUP_LABELS: Record<OptionGroup, string> = {
   workers: "Background workers",
   projectionWorker: "Separate thread for search data",
   add: "Add a reactor",
+  reach: "Where this app keeps its drives",
+  placement: "Where this drive opens",
 };
 
 export const NO_CONTROLLER =

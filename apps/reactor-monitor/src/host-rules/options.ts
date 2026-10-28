@@ -1,7 +1,19 @@
 import type { HostExport } from "@powerhousedao/host-core/schema";
 import { effectiveFlags, FLAG_LABELS, LADDER, ladderFlags } from "./flags.js";
-import { hostVerb, isRecord, membersOf, type Member } from "./members.js";
+import {
+  freshKey,
+  hostVerb,
+  isRecord,
+  membersOf,
+  type Member,
+} from "./members.js";
 import { checkSetter } from "./policy.js";
+import {
+  connectReaches,
+  placementSelected,
+  REACH_REASONS,
+  reachOptions,
+} from "./reach.js";
 import {
   hostRulesContextSchema,
   type HostDraft,
@@ -20,7 +32,9 @@ export type OptionGroup =
   | "hotReload"
   | "workers"
   | "projectionWorker"
-  | "add";
+  | "add"
+  | "reach"
+  | "placement";
 
 export type HostOption = {
   /** Unique per draft: `<member path or host>:<group>:[<backend>:]<value>`. */
@@ -31,7 +45,11 @@ export type HostOption = {
   member?: string;
   /** Envelope path of the backend the option changes. */
   backend?: string;
+  /** The drive slug a reach or placement option is about. */
+  drive?: string;
   setters: Setter[];
+  /** Why it can't be offered, known without trying it. */
+  blocked?: string;
 };
 
 export type OptionStatus = HostOption & {
@@ -247,13 +265,6 @@ function memberOptions(member: Member, members: Member[]): HostOption[] {
   return options;
 }
 
-function freshKey(taken: readonly string[], base: string): string {
-  if (!taken.includes(base)) return base;
-  let index = 2;
-  while (taken.includes(`${base}-${index}`)) index += 1;
-  return `${base}-${index}`;
-}
-
 /** The first member folder run by this kind of runner, if the project has one. */
 function folderFor(envelope: HostExport, role: "switchboard" | "connect") {
   const members = isRecord(envelope.members) ? envelope.members : {};
@@ -329,7 +340,10 @@ function addMemberOption(
   return option;
 }
 
-/** A browser reactor saved beside Connect, else beside the first member. */
+/**
+ * A browser reactor saved beside a Connect that keeps none, else beside the
+ * first switchboard: Connect runs one reactor in the browser.
+ */
 function addBrowserOption(members: Member[]): HostOption {
   const option: HostOption = {
     id: "host:add:browser",
@@ -338,10 +352,14 @@ function addBrowserOption(members: Member[]): HostOption {
     label: "Reactor in the browser",
     setters: [],
   };
+  const reaches = connectReaches(members);
   const owner =
-    members.find((member) => member.role === "connect") ??
+    reaches.find((reach) => reach.local.length === 0)?.member ??
     members.find((member) => member.role === "switchboard");
-  if (!owner) return option;
+  if (!owner) {
+    if (reaches.length > 0) option.blocked = REACH_REASONS.oneLocal;
+    return option;
+  }
   const taken = owner.backends.map((backend) => backend.name);
   const at = `${owner.reactorAt}.backends`;
   // A switchboard without backends would take the new one as its own store.
@@ -362,9 +380,12 @@ export function hostOptionList(
   context: Pick<HostRulesContext, "verb"> = {},
 ): HostOption[] {
   const members = membersOf(draft, context);
+  const host = draft.envelope.host as unknown;
+  const compound = isRecord(host) && isRecord(host.children);
   return [
     ...accessOptions(members),
     ...members.flatMap((member) => memberOptions(member, members)),
+    ...reachOptions(members, compound),
     addMemberOption(draft, members, "switchboard"),
     addMemberOption(draft, members, "connect"),
     addBrowserOption(members),
@@ -433,7 +454,10 @@ function isSelected(
         member !== undefined &&
         workerSettings(member, env).projection.value === (option.value === "on")
       );
+    case "placement":
+      return placementSelected(option, members);
     case "add":
+    case "reach":
       return false;
   }
 }
@@ -506,13 +530,14 @@ export function hostOptions(
     const selected = isSelected(option, base.members, draft.env ?? {});
     if (selected) return { ...option, selected, enabled: true };
     const ruled =
-      option.group === "add"
+      option.blocked ??
+      (option.group === "add"
         ? addReason(option, draft, context.controller)
         : option.group === "hotReload" && option.value === "off" && devHost
           ? HOT_RELOAD_REASONS.hostWide
           : setByEnv(option, base.members, draft.env ?? {})
             ? SETTING_REASONS.fromEnv
-            : undefined;
+            : undefined);
     if (ruled) return { ...option, selected, enabled: false, reason: ruled };
     const candidate = applyOption(draft, option);
     if (candidate.refused) {

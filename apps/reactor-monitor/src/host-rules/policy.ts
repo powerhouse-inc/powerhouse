@@ -278,7 +278,7 @@ export function memberDriveSlug(
   if (!token.success) return undefined;
   const { host, path } = token.data.$output;
   if (!memberFolders(envelope).includes(host)) return undefined;
-  const [drives, slug, url, ...rest] = path ?? [];
+  const [drives, slug, url, ...rest] = path;
   return drives === "drives" &&
     typeof slug === "string" &&
     slug !== "" &&
