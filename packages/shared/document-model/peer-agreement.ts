@@ -1,6 +1,11 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import { canonicalJson } from "./action-signature.js";
-import { baseReducerVersionsFor } from "./base-reducer-protocol.js";
+import {
+  assertNever,
+  baseReducerVersionsFor,
+  capabilitiesOf,
+  isBaseReducerVersion,
+} from "./base-reducer-protocol.js";
 import { bytesToBase64Url } from "./crypto.js";
 
 /** The reactor feature flags a capability's support is a function of. */
@@ -18,9 +23,19 @@ export type ProtocolCapability = {
   supported(flags: PeerCapabilityFlags): readonly number[];
   /** The version new documents take when peers agree. Absent: not negotiated. */
   preferred?(flags: PeerCapabilityFlags): number;
+  /** Who chooses a new document's version, given the creator's preference; absent: "agreed". */
+  selection?:
+    | ProtocolSelectionRule
+    | ((preferred: number) => ProtocolSelectionRule);
   /** A header may omit the key. */
   optional: boolean;
 };
+
+/**
+ * "agreed": the creator's preference narrowed to what every member supports.
+ * "creator": the creator's preference; a member that cannot run it is held.
+ */
+export type ProtocolSelectionRule = "agreed" | "creator";
 
 /** A feature that changes what a peer sends or expects on the wire. */
 export type FeatureCapability = {
@@ -47,6 +62,11 @@ export const PEER_CAPABILITIES: readonly PeerCapability[] = [
     supported: baseReducerVersionsFor,
     preferred: (flags: PeerCapabilityFlags) =>
       Math.max(...baseReducerVersionsFor(flags)),
+    selection: (preferred) =>
+      isBaseReducerVersion(preferred) &&
+      capabilitiesOf(preferred).gatedBy !== null
+        ? "creator"
+        : "agreed",
     optional: false,
   },
   {
@@ -294,7 +314,7 @@ export function selectProtocolVersions(input: {
     const preferred = capability.preferred(input.flags);
     const supported = capability.supported(input.flags);
     let agreed = supported.filter((version) => version <= preferred);
-    for (const member of members) {
+    for (const member of narrowedBy(capability, preferred, members)) {
       const theirs = member.protocols[capability.name] ?? [];
       agreed = agreed.filter((version) => theirs.includes(version));
     }
@@ -302,6 +322,25 @@ export function selectProtocolVersions(input: {
       agreed.length > 0 ? Math.max(...agreed) : Math.min(...supported);
   }
   return { ...selected, ...input.requested };
+}
+
+function narrowedBy(
+  capability: ProtocolCapability,
+  preferred: number,
+  members: readonly Supports[],
+): readonly Supports[] {
+  const rule =
+    typeof capability.selection === "function"
+      ? capability.selection(preferred)
+      : (capability.selection ?? "agreed");
+  switch (rule) {
+    case "agreed":
+      return members;
+    case "creator":
+      return [];
+    default:
+      return assertNever(rule, "protocol selection rule");
+  }
 }
 
 /**

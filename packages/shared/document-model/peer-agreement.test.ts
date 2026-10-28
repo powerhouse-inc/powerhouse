@@ -14,6 +14,7 @@ import {
   capSelection,
   selectProtocolVersions,
   type PeerCapability,
+  type PeerCapabilityFlags,
   type ProtocolCapability,
   type Supports,
 } from "./peer-agreement.js";
@@ -69,6 +70,38 @@ describe("peer capabilities", () => {
       for (const version of baseReducer.baseline) {
         expect(BASE_REDUCER_VERSIONS).toContain(version);
       }
+    });
+
+    // The creator chooses; a member that cannot run 3 is held from it.
+    it("selects the creator's preference whatever the members support", () => {
+      const select = (
+        members: Supports[],
+        flags: PeerCapabilityFlags = undoV3,
+      ) =>
+        selectProtocolVersions({
+          capabilities: PEER_CAPABILITIES,
+          flags,
+          members,
+        })["base-reducer"];
+      const on = localSupports(PEER_CAPABILITIES, undoV3);
+      const off = localSupports(PEER_CAPABILITIES, {});
+      expect(select([])).toBe(3);
+      expect(select([on])).toBe(3);
+      expect(select([legacySupports(PEER_CAPABILITIES)])).toBe(3);
+      expect(select([on, off])).toBe(3);
+      expect(select([on], {})).toBe(2);
+    });
+
+    // R5: without a gated preference the members narrow it, as before.
+    it("narrows an ungated preference by every member's support", () => {
+      const select = (members: Supports[]) =>
+        selectProtocolVersions({
+          capabilities: PEER_CAPABILITIES,
+          flags: {},
+          members,
+        })["base-reducer"];
+      expect(select([{ protocols: {}, features: {} }])).toBe(1);
+      expect(select([legacySupports(PEER_CAPABILITIES)])).toBe(2);
     });
 
     it("holds a base-reducer 3 document from a peer without the flag", () => {
@@ -349,6 +382,29 @@ describe("selectProtocolVersions", () => {
       extra: true,
     })!;
     expect(select([member])["test-protocol"]).toBe(2);
+  });
+});
+
+describe("selection rules", () => {
+  const select = (capability: PeerCapability, members: Supports[]) =>
+    selectProtocolVersions({
+      capabilities: [capability],
+      flags: { testProtocol: true },
+      members,
+    })["test-protocol"];
+  const runsOne: Supports = {
+    protocols: { "test-protocol": [1] },
+    features: {},
+  };
+
+  it("narrows an agreed protocol by its members, and not a creator-chosen one", () => {
+    expect(select(TEST_PROTOCOL, [runsOne])).toBe(1);
+    expect(select({ ...TEST_PROTOCOL, selection: "agreed" }, [runsOne])).toBe(
+      1,
+    );
+    expect(select({ ...TEST_PROTOCOL, selection: "creator" }, [runsOne])).toBe(
+      2,
+    );
   });
 });
 

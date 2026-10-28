@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { create, Fleet, manifestFor, NARROW, WIDE } from "./fleet.js";
+import { undoV3Flags } from "../../factories.js";
 
 const DOCUMENT_MODEL = "powerhouse/document-model";
 
@@ -52,6 +53,27 @@ describe("selecting protocol versions for new documents", () => {
       parentIdentifier: "drive",
     });
     expect(wideDoc.header.protocolVersions?.["test-protocol"]).toBe(2);
+  });
+
+  it("gives base-reducer the local preference whatever the parent's members support", async () => {
+    const a = await fleet.node("a", WIDE, undefined, undoV3Flags());
+    const b = await fleet.node("b", WIDE);
+    await fleet.link(a, b, "drive", {
+      b: { announce: () => manifestFor(NARROW) },
+    });
+    await create(a, "drive", { "test-protocol": 1 });
+
+    const selected = await a.client.getCreateProtocolVersions({
+      documentType: DOCUMENT_MODEL,
+      parentIdentifier: "drive",
+    });
+    expect(selected["base-reducer"]).toBe(3);
+    expect(selected["test-protocol"]).toBe(1);
+    const document = await a.client.createEmpty(DOCUMENT_MODEL, {
+      parentIdentifier: "drive",
+    });
+    const stored = await a.reactor.get(document.header.id);
+    expect(stored.header.protocolVersions?.["base-reducer"]).toBe(3);
   });
 
   it("lets explicit protocolVersions win", async () => {
