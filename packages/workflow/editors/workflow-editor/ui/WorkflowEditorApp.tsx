@@ -13,6 +13,7 @@ import {
 } from "./model.js";
 import {
   DraftBanner,
+  ManagedBanner,
   PublishButton,
   PublishedMissingNote,
   PublishState,
@@ -198,16 +199,20 @@ export function WorkflowEditorApp(props: {
               onSelect={setSelectedId}
             />
             <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center px-4">
-              <DraftBanner
-                model={model}
-                readiness={readiness}
-                publishing={publishing}
-                error={publishError}
-                onPublish={publish}
-                onDiscard={callbacks.discardChanges}
-                onSelect={setSelectedId}
-                signIn={signIn}
-              />
+              {model.managedBy ? (
+                <ManagedBanner model={model} />
+              ) : (
+                <DraftBanner
+                  model={model}
+                  readiness={readiness}
+                  publishing={publishing}
+                  error={publishError}
+                  onPublish={publish}
+                  onDiscard={callbacks.discardChanges}
+                  onSelect={setSelectedId}
+                  signIn={signIn}
+                />
+              )}
             </div>
           </div>
           {showVariables ? (
