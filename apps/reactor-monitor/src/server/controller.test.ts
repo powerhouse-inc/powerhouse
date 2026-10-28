@@ -1,3 +1,4 @@
+import type { HostExport } from "@powerhousedao/host-core/schema";
 import {
   SpawnHostError,
   type HostExit,
@@ -16,6 +17,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
+import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -29,13 +31,18 @@ import {
 import { LogRing } from "./logs.ts";
 import {
   BROWSER_ENV_ALLOWLIST,
+  baseDigest,
   CODE_LOADING_ENV,
   isBrowserEnvKey,
+  type DraftRequest,
 } from "../controller/api.ts";
 
 interface Launch {
   options: SpawnHostOptions;
-  ready(outputs?: Record<string, unknown>): void;
+  ready(
+    outputs?: Record<string, unknown>,
+    members?: SpawnedHost["members"],
+  ): void;
   fail(error: Error): void;
   exit(exit?: Partial<HostExit>): void;
   stop: ReturnType<typeof vi.fn>;
@@ -61,11 +68,12 @@ function fakeSpawn() {
       launches.push({
         options,
         stop,
-        ready: (outputs) =>
+        ready: (outputs, members) =>
           resolve({
             pid: nextPid++,
             dataDir: options.dataDir,
             outputs,
+            members,
             exited,
             stop,
           } as unknown as SpawnedHost),
@@ -81,6 +89,50 @@ const SWITCHBOARD_OUTPUTS = {
   endpoints: { graphql: "http://127.0.0.1:4801/graphql" },
   drives: { vetra: { id: "vetra", url: "http://127.0.0.1:4801/d/vetra" } },
 };
+
+const SWITCHBOARD = "@powerhousedao/ph-cli/runners/switchboard";
+
+function switchboardHost(name: string, port: number, dir: string) {
+  return {
+    name,
+    runner: { module: SWITCHBOARD, port },
+    reactor: {
+      backends: {
+        main: {
+          kind: "in-process",
+          storage: { kind: "path", dataDir: `./.ph/${dir}` },
+          readModel: { url: `./.ph/read-${dir}` },
+        },
+      },
+    },
+  };
+}
+
+/** A compound of two switchboards, as `ph host export` gives it. */
+function duoExport(root: string): HostExport {
+  return {
+    format: "ph-host-export",
+    version: 1,
+    project: { name: "p", root },
+    name: "duo",
+    host: {
+      name: "duo",
+      runner: { module: "@powerhousedao/host-core/runners/compound" },
+      children: { a: { host: "sb-a" }, b: { host: "sb-b" } },
+    },
+    members: {
+      "sb-a": switchboardHost("sb-a", 4801, "a"),
+      "sb-b": switchboardHost("sb-b", 4802, "b"),
+    },
+  } as HostExport;
+}
+
+function memberOutputs(port: number) {
+  return {
+    origin: `http://127.0.0.1:${port}`,
+    endpoints: { graphql: `http://127.0.0.1:${port}/graphql` },
+  };
+}
 
 const until = (predicate: () => boolean) =>
   vi.waitFor(() => {
@@ -119,6 +171,7 @@ describe("createMonitorController", () => {
   const create = (overrides: Partial<MonitorControllerOptions> = {}) => {
     const fake = fakeSpawn();
     const checks: CheckInput[] = [];
+    const exports: CheckInput[] = [];
     controller = createMonitorController({
       projectRoots: [allowed],
       tmpDir: tmp,
@@ -127,9 +180,13 @@ describe("createMonitorController", () => {
         checks.push(input);
         return Promise.resolve([]);
       },
+      exportHost: (input) => {
+        exports.push(input);
+        return Promise.resolve(duoExport(input.projectRoot));
+      },
       ...overrides,
     });
-    return { controller, launches: fake.launches, checks };
+    return { controller, launches: fake.launches, checks, exports };
   };
 
   const codeOf = async (promise: Promise<unknown>) => {
@@ -455,46 +512,52 @@ describe("createMonitorController", () => {
     expect(readdirSync(controller.tempRoot)).toEqual([]);
   });
 
-  it("sweeps temp roots whose owner is dead, SIGTERMing their hosts", async () => {
-    const deadOwner = spawnProcess(process.execPath, ["-e", ""]);
-    await new Promise((r) => deadOwner.once("exit", r));
-    const orphan = spawnProcess(process.execPath, [
-      "-e",
-      "setInterval(() => {}, 1000)",
-    ]);
-    const orphanExit = new Promise((r) => orphan.once("exit", r));
-    const record = {
-      version: 2,
-      host: "sb",
-      projectName: "p",
-      kind: "reactor",
-      verb: "run",
-      pid: orphan.pid,
-      startedAt: new Date().toISOString(),
-    };
-    const stale = path.join(tmp, `ph-monitor-${deadOwner.pid}-abc`);
-    mkdirSync(path.join(stale, "i1", ".ph", "run"), { recursive: true });
-    writeFileSync(
-      path.join(stale, "i1", ".ph", "run", "sb.json"),
-      JSON.stringify(record),
-    );
-    const live = path.join(tmp, `ph-monitor-${process.ppid}-def`);
-    mkdirSync(live);
-
-    try {
-      const { controller } = create();
-      expect(existsSync(stale)).toBe(false);
-      expect(existsSync(live)).toBe(true);
-      expect(existsSync(controller.tempRoot)).toBe(true);
-      expect(path.basename(controller.tempRoot)).toMatch(
-        new RegExp(`^ph-monitor-${process.pid}-`),
+  it.each([
+    ["an instance", "."],
+    ["a draft copy", "data"],
+  ])(
+    "sweeps temp roots whose owner is dead, SIGTERMing %s's hosts",
+    async (_, sub) => {
+      const deadOwner = spawnProcess(process.execPath, ["-e", ""]);
+      await new Promise((r) => deadOwner.once("exit", r));
+      const orphan = spawnProcess(process.execPath, [
+        "-e",
+        "setInterval(() => {}, 1000)",
+      ]);
+      const orphanExit = new Promise((r) => orphan.once("exit", r));
+      const record = {
+        version: 2,
+        host: "sb",
+        projectName: "p",
+        kind: "reactor",
+        verb: "run",
+        pid: orphan.pid,
+        startedAt: new Date().toISOString(),
+      };
+      const stale = path.join(tmp, `ph-monitor-${deadOwner.pid}-abc`);
+      mkdirSync(path.join(stale, "i1", sub, ".ph", "run"), { recursive: true });
+      writeFileSync(
+        path.join(stale, "i1", sub, ".ph", "run", "sb.json"),
+        JSON.stringify(record),
       );
-      await orphanExit;
-      expect(orphan.signalCode).toBe("SIGTERM");
-    } finally {
-      orphan.kill("SIGKILL");
-    }
-  });
+      const live = path.join(tmp, `ph-monitor-${process.ppid}-def`);
+      mkdirSync(live);
+
+      try {
+        const { controller } = create();
+        expect(existsSync(stale)).toBe(false);
+        expect(existsSync(live)).toBe(true);
+        expect(existsSync(controller.tempRoot)).toBe(true);
+        expect(path.basename(controller.tempRoot)).toMatch(
+          new RegExp(`^ph-monitor-${process.pid}-`),
+        );
+        await orphanExit;
+        expect(orphan.signalCode).toBe("SIGTERM");
+      } finally {
+        orphan.kill("SIGKILL");
+      }
+    },
+  );
 
   it("never signals pid <= 1 or itself, and skips symlinked roots", async () => {
     const deadOwner = spawnProcess(process.execPath, ["-e", ""]);
@@ -580,6 +643,277 @@ describe("createMonitorController", () => {
     expect(
       await codeOf(controller.start({ project: allowed, host: "sb" })),
     ).toBe("shutting_down");
+  });
+
+  describe("drafts", () => {
+    beforeEach(() => addHost(allowed, "duo"));
+
+    const draft = async (
+      overrides: Partial<DraftRequest> = {},
+    ): Promise<DraftRequest> => ({
+      project: allowed,
+      host: "duo",
+      baseDigest: await baseDigest(duoExport(allowed)),
+      setters: [],
+      ...overrides,
+    });
+
+    const errorOf = async (promise: Promise<unknown>) => {
+      try {
+        await promise;
+      } catch (error) {
+        if (error instanceof ControllerError) return error;
+        throw error;
+      }
+      throw new Error("resolved");
+    };
+
+    it("exports a project host with its digest", async () => {
+      const { controller, exports } = create();
+      const reply = await controller.exportHost(allowed, "duo");
+      expect(reply.export).toEqual(duoExport(allowed));
+      expect(reply.baseDigest).toBe(await baseDigest(duoExport(allowed)));
+      expect(exports[0]).toMatchObject({ projectRoot: allowed, host: "duo" });
+      expect(() =>
+        controller.exportHost(path.join(base, "outside"), "sb"),
+      ).toThrow(ControllerError);
+    });
+
+    it("starts a throwaway copy with free ports, inside its instance folder", async () => {
+      const { controller, launches, checks } = create();
+      const before = readdirSync(allowed, { recursive: true }).sort();
+      const started = await controller.startDraft(
+        await draft({
+          setters: [
+            {
+              path: "members.sb-b.reactor.protocol.createSignaturePolicy",
+              value: "v2-required",
+            },
+          ],
+        }),
+      );
+      const instanceDir = path.join(controller.tempRoot, started.id);
+      const project = path.join(instanceDir, "project");
+      expect(started).toMatchObject({
+        project,
+        host: "duo",
+        status: "starting",
+        source: { project: allowed, host: "duo" },
+      });
+      expect(readdirSync(allowed, { recursive: true }).sort()).toEqual(before);
+      expect(readdirSync(controller.tempRoot)).toEqual([started.id]);
+      expect(checks[0]).toMatchObject({ projectRoot: project, host: "duo" });
+      expect(launches[0].options).toMatchObject({
+        projectRoot: project,
+        host: "duo",
+        dataDir: path.join(instanceDir, "data"),
+      });
+      const sbB = readFileSync(
+        path.join(project, "hosts", "sb-b", "host.js"),
+        "utf8",
+      );
+      expect(sbB).toContain('"port": 0');
+      expect(sbB).toContain('"createSignaturePolicy": "v2-required"');
+    });
+
+    it("reports each member's outputs and removes the instance folder on stop", async () => {
+      const { controller, launches } = create();
+      const { id } = await controller.startDraft(await draft());
+      launches[0].ready(undefined, {
+        a: {
+          host: "sb-a",
+          runnerModule: SWITCHBOARD,
+          kind: "reactor",
+          verb: "run",
+          outputs: memberOutputs(5001),
+        },
+        b: {
+          host: "sb-b",
+          runnerModule: SWITCHBOARD,
+          kind: "reactor",
+          verb: "run",
+          outputs: memberOutputs(5002),
+        },
+      } as SpawnedHost["members"]);
+      await until(() => controller.get(id).status === "running");
+      expect(controller.get(id).outputs).toBeUndefined();
+      expect(controller.get(id).members).toEqual({
+        a: {
+          host: "sb-a",
+          outputs: {
+            origin: "http://127.0.0.1:5001",
+            graphql: "http://127.0.0.1:5001/graphql",
+            drives: {},
+          },
+        },
+        b: {
+          host: "sb-b",
+          outputs: {
+            origin: "http://127.0.0.1:5002",
+            graphql: "http://127.0.0.1:5002/graphql",
+            drives: {},
+          },
+        },
+      });
+      await controller.stop(id);
+      expect(existsSync(path.join(controller.tempRoot, id))).toBe(false);
+    });
+
+    it("refuses a draft whose base changed, starting nothing", async () => {
+      const { controller, launches, checks } = create();
+      const error = await errorOf(
+        controller.startDraft(await draft({ baseDigest: "0".repeat(64) })),
+      );
+      expect(error.code).toBe("base_changed");
+      expect(checks).toEqual([]);
+      expect(launches).toEqual([]);
+      expect(readdirSync(controller.tempRoot)).toEqual([]);
+    });
+
+    it("names every refused setter", async () => {
+      const { controller, launches } = create();
+      const error = await errorOf(
+        controller.startDraft(
+          await draft({
+            setters: [
+              { path: "host.runner.module", value: "evil" },
+              {
+                path: "members.sb-a.reactor.protocol.createSignaturePolicy",
+                value: "v2-required",
+              },
+              { path: "members.sb-a.name", value: "../../escape" },
+              {
+                path: "members.sb-b.reactor.backends.main.storage.dataDir",
+                value: "/etc",
+              },
+            ],
+          }),
+        ),
+      );
+      expect(error.code).toBe("setter_denied");
+      expect(error.setters?.map((s) => s.path)).toEqual([
+        "host.runner.module",
+        "members.sb-a.name",
+        "members.sb-b.reactor.backends.main.storage.dataDir",
+      ]);
+      expect(error.setters?.every((s) => s.reason.length > 0)).toBe(true);
+      expect(launches).toEqual([]);
+      expect(readdirSync(controller.tempRoot)).toEqual([]);
+    });
+
+    it("refuses a draft the host rules find problems in", async () => {
+      const { controller, launches, checks } = create();
+      const error = await errorOf(
+        controller.startDraft(
+          await draft({
+            setters: [
+              {
+                path: "members.sb-b.reactor.backends.main.storage.dataDir",
+                value: "./.ph/a",
+              },
+            ],
+          }),
+        ),
+      );
+      expect(error.code).toBe("check_failed");
+      expect(error.ruleIssues?.map((i) => i.rule)).toContain("storage");
+      expect(checks).toEqual([]);
+      expect(launches).toEqual([]);
+      expect(readdirSync(controller.tempRoot)).toEqual([]);
+    });
+
+    it("refuses denied env and unknown projects before exporting", async () => {
+      const { controller, exports } = create();
+      expect(
+        (
+          await errorOf(
+            controller.startDraft(
+              await draft({ env: { NODE_OPTIONS: "-r x" } }),
+            ),
+          )
+        ).code,
+      ).toBe("env_denied");
+      expect(
+        (
+          await errorOf(
+            controller.startDraft(
+              await draft({ project: path.join(base, "outside") }),
+            ),
+          )
+        ).code,
+      ).toBe("unknown_project");
+      expect(exports).toEqual([]);
+    });
+
+    it("passes the server env to the copy, and code-loading keys only from it", async () => {
+      const { controller, checks } = create({
+        serverEnv: { PH_PACKAGES: "@acme/models" },
+      });
+      await controller.startDraft(await draft({ env: { LOG_LEVEL: "debug" } }));
+      expect(checks[0].env).toMatchObject({
+        PH_PACKAGES: "@acme/models",
+        LOG_LEVEL: "debug",
+      });
+    });
+
+    it("removes the copy when checkHost refuses it", async () => {
+      const issue: HostIssue = {
+        stage: "boot",
+        file: "hosts/duo/host.js",
+        path: "",
+        message: "no",
+      };
+      const { controller, launches } = create({
+        check: () => Promise.resolve([issue]),
+      });
+      const error = await errorOf(controller.startDraft(await draft()));
+      expect(error.code).toBe("check_failed");
+      expect(error.issues).toEqual([issue]);
+      expect(launches).toEqual([]);
+      expect(readdirSync(controller.tempRoot)).toEqual([]);
+    });
+
+    it("checks a draft: rule issues alone, else checkHost on a removed copy", async () => {
+      const { controller, checks } = create();
+      const bad = await controller.checkDraft(
+        await draft({
+          setters: [
+            {
+              path: "members.sb-b.reactor.backends.main.storage.dataDir",
+              value: "./.ph/a",
+            },
+          ],
+        }),
+      );
+      expect(bad.ruleIssues.length).toBeGreaterThan(0);
+      expect(bad.issues).toEqual([]);
+      expect(checks).toEqual([]);
+
+      const good = await controller.checkDraft(await draft());
+      expect(good).toEqual({ ruleIssues: [], issues: [] });
+      expect(checks[0].projectRoot).toMatch(
+        new RegExp(`${controller.tempRoot}/check-[0-9a-f-]+/project$`),
+      );
+      expect(readdirSync(controller.tempRoot)).toEqual([]);
+    });
+
+    it("counts drafts against the instance limit", async () => {
+      const { controller } = create({ maxInstances: 1 });
+      await controller.startDraft(await draft());
+      expect((await errorOf(controller.startDraft(await draft()))).code).toBe(
+        "instance_limit",
+      );
+    });
+
+    it("dispose removes copies and its exit hook", async () => {
+      const listeners = process.listenerCount("exit");
+      const { controller } = create();
+      expect(process.listenerCount("exit")).toBe(listeners + 1);
+      await controller.startDraft(await draft());
+      await controller.dispose();
+      expect(existsSync(controller.tempRoot)).toBe(false);
+      expect(process.listenerCount("exit")).toBe(listeners);
+    });
   });
 
   it("dispose removes the temp root", async () => {

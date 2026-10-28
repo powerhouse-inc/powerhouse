@@ -1,15 +1,22 @@
-import { checkHost } from "@powerhousedao/host-core";
+import { checkHost, exportHost } from "@powerhousedao/host-core";
 import { parentPort, workerData } from "node:worker_threads";
-import type { CheckInput, CheckReply } from "./controller.ts";
+import type { CheckReply, WorkerInput } from "./controller.ts";
 
-const input = workerData as CheckInput;
+const input = workerData as WorkerInput;
 let reply: CheckReply;
 try {
-  const { issues } = await checkHost(input.host, {
-    projectRoot: input.projectRoot,
-    env: input.env,
-  });
-  reply = { ok: true, issues };
+  if (input.op === "export") {
+    reply = {
+      ok: true,
+      export: await exportHost(input.projectRoot, input.host),
+    };
+  } else {
+    const { issues } = await checkHost(input.host, {
+      projectRoot: input.projectRoot,
+      env: input.env,
+    });
+    reply = { ok: true, issues };
+  }
 } catch (error) {
   reply = {
     ok: false,
