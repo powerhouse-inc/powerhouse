@@ -76,10 +76,10 @@ async function pulled(
 
 /** Inspection levers for listed admins, kept apart from the read-only inspection subgraph. */
 export class InspectionAdminSubgraph extends BaseSubgraph {
-  name = "inspection-admin";
+  override name = "inspection-admin";
   hasSubscriptions = false;
-  typeDefs: DocumentNode = inspectionAdminTypeDefs;
-  resolvers: Record<string, any>;
+  override typeDefs: DocumentNode = inspectionAdminTypeDefs;
+  override resolvers: Record<string, any>;
 
   /** Overridable so a test need not wait out the real window. */
   protected answerWindowMs = LEVER_ANSWER_WINDOW_MS;
