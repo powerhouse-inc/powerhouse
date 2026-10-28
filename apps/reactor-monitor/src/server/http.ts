@@ -26,6 +26,7 @@ const STATUS: Record<ErrorCode, number> = {
   setter_denied: 400,
   base_changed: 409,
   instance_limit: 409,
+  port_taken: 409,
   shutting_down: 503,
   internal: 500,
 };

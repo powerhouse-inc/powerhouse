@@ -21,7 +21,8 @@ import type { BuilderEngine } from "./engine.js";
 const POLL_MS = 1000;
 const WATCH_MS = 3000;
 
-export type RunReactor = { name: string; url?: string };
+/** `url` is a switchboard's GraphQL URL; `app` a Connect's page. */
+export type RunReactor = { name: string; url?: string; app?: string };
 
 /** The copy Start launched; `id` is absent until the controller answers. */
 export type BuilderRun = {
@@ -93,12 +94,19 @@ export function monitoringSetOf(
 
 function reactorsOf(instance: Instance): RunReactor[] {
   return [
-    ...(instance.outputs
-      ? [{ name: instance.host, url: instance.outputs.graphql }]
+    ...(instance.outputs || instance.app
+      ? [
+          {
+            name: instance.host,
+            url: instance.outputs?.graphql,
+            app: instance.app,
+          },
+        ]
       : []),
     ...Object.entries(instance.members ?? {}).map(([name, member]) => ({
       name,
       url: member.outputs?.graphql,
+      app: member.app,
     })),
   ];
 }

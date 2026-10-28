@@ -1,9 +1,16 @@
-import { relative } from "node:path";
+import { relative, sep } from "node:path";
 import type { DepOptimizationOptions } from "vite";
 import {
   CORE_ROUTE_TREE_SPECIFIER,
   ROUTE_TREE_SPECIFIER,
 } from "./vite-plugins/connect-routes.js";
+
+/** The outermost node_modules in a package's real path; null outside one. */
+export function dependencyStoreOf(realPath: string): string | null {
+  const parts = realPath.split(sep);
+  const at = parts.indexOf("node_modules");
+  return at > 0 ? parts.slice(0, at + 1).join(sep) : null;
+}
 
 /** Pre-bundled deps for Connect's dev server, scanning the project's routes. */
 export function connectOptimizeDeps(
