@@ -373,8 +373,7 @@ function openOptions(
       options.push(option);
       const link = { url: driveToken(switchboard, slug) };
       if (home) {
-        const list = driveList(member);
-        if (!list) {
+        if (reach.mappedDrives) {
           option.setters = [];
           option.blocked = REACH_REASONS.mapped;
           continue;
@@ -382,7 +381,10 @@ function openOptions(
         option.setters.push(
           {
             path: `${at}.drives`,
-            value: [...list, { slug, remote: link }] as never,
+            value: [
+              ...(driveList(member) ?? []),
+              { slug, remote: link },
+            ] as never,
           },
           { path: `${at}.placement.drives.${slug}`, value: home.name },
         );

@@ -159,6 +159,19 @@ describe("linking a Connect to a switchboard's drives", () => {
     expect(issues(listed)).toEqual([]);
   });
 
+  it("starts a drive list for a Connect that declares none", () => {
+    let draft = withSetters(stack(), {
+      "members.connect.reactor": { backends: { main: { kind: "worker" } } },
+    });
+    draft = choose(draft, `${SB}:reach:addDrive`);
+    draft = choose(draft, `${UI}:reach:open:sb:powerhouse`);
+    draft = choose(draft, `${UI}:reach:open:sb:shared`);
+    expect(issues(draft)).toEqual([]);
+    expect(reachOf(draft).member.reactor?.drives).toEqual([
+      { slug: "shared", remote: { url: drive("shared") } },
+    ]);
+  });
+
   it("writes a reactor block host-core accepts once addresses are known", () => {
     let draft: HostDraft = { envelope: stack() };
     draft = choose(draft, `${SB}:reach:addDrive`);
