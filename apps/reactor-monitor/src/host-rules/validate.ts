@@ -262,32 +262,161 @@ function declaredFlags(member: Member): string {
   ).join(",");
 }
 
-/** The member folders whose outputs a value reads (`$output` tokens). */
-function outputHosts(value: unknown, into = new Set<string>()): Set<string> {
+type OutputRef = { host: string; member?: string };
+
+/** Each `$output` token in a value, with its path; `$$` escapes are data. */
+function outputSites(
+  value: unknown,
+  path: string,
+  into: { ref: OutputRef; path: string }[] = [],
+): { ref: OutputRef; path: string }[] {
   if (Array.isArray(value)) {
-    for (const item of value) outputHosts(item, into);
+    value.forEach((item, index) =>
+      outputSites(item, `${path}[${index}]`, into),
+    );
     return into;
   }
-  if (!isRecord(value)) return into;
+  if (!isRecord(value) || Object.hasOwn(value, "$$")) return into;
   const token = value.$output;
-  if (isRecord(token) && typeof token.host === "string") into.add(token.host);
-  for (const child of Object.values(value)) outputHosts(child, into);
+  if (isRecord(token) && typeof token.host === "string") {
+    into.push({
+      ref:
+        typeof token.member === "string"
+          ? { host: token.host, member: token.member }
+          : { host: token.host },
+      path,
+    });
+  }
+  for (const [key, child] of Object.entries(value)) {
+    outputSites(child, path ? `${path}.${key}` : key, into);
+  }
   return into;
 }
 
+function memberSites(member: Member): { ref: OutputRef; path: string }[] {
+  return [
+    ...outputSites(member.runner, "runner"),
+    ...outputSites(member.reactor, "reactor"),
+    ...outputSites(member.config, "config"),
+  ];
+}
+
+/** Every child of a compound as the resolver sees it, nested ones included. */
+function compoundChildren(envelope: HostDraft["envelope"]) {
+  const host = envelope.host as unknown;
+  if (!isRecord(host) || !isRecord(host.children)) return [];
+  return Object.entries(host.children).flatMap(([key, wrapper]) =>
+    isRecord(wrapper) && typeof wrapper.host === "string"
+      ? [{ key, folder: wrapper.host }]
+      : [],
+  );
+}
+
+type Producer =
+  | { key: string }
+  | { problem: "unknown" | "otherFolder" | "none"; folder?: string }
+  | { problem: "ambiguous"; keys: string[] };
+
+/** host-core memberForRef: `member` picks the key, else the one child that runs the folder. */
+function producerOf(
+  ref: OutputRef,
+  children: { key: string; folder: string }[],
+): Producer {
+  if (ref.member !== undefined) {
+    const named = children.find((child) => child.key === ref.member);
+    if (!named) return { problem: "unknown" };
+    return named.folder === ref.host
+      ? { key: named.key }
+      : { problem: "otherFolder", folder: named.folder };
+  }
+  const running = children.filter((child) => child.folder === ref.host);
+  if (running.length === 1) return { key: running[0].key };
+  return running.length === 0
+    ? { problem: "none" }
+    : { problem: "ambiguous", keys: running.map((child) => child.key) };
+}
+
+function listed(keys: string[]): string {
+  return keys.length < 2
+    ? keys.join("")
+    : `${keys.slice(0, -1).join(", ")} and ${keys.at(-1)}`;
+}
+
+function producerMessage(
+  member: Member,
+  ref: OutputRef,
+  producer: Exclude<Producer, { key: string }>,
+): string {
+  const stop = "so the host won't start.";
+  switch (producer.problem) {
+    case "ambiguous":
+      return `${member.key} reads from ${ref.host}, which ${listed(producer.keys)} ${producer.keys.length === 2 ? "both" : "all"} run, ${stop} ${member.key} has to name the one it uses.`;
+    case "none":
+      return `${member.key} reads from ${ref.host}, which no reactor in this host runs, ${stop}`;
+    case "unknown":
+      return `${member.key} reads from ${ref.member}, which isn't a reactor in this host, ${stop}`;
+    case "otherFolder":
+      return `${member.key} reads from ${ref.member} as ${ref.host}, but ${ref.member} runs ${producer.folder}, ${stop}`;
+  }
+}
+
+/** A compound starts only when every `$output` names exactly one other member. */
+function outputsRule(
+  envelope: HostDraft["envelope"],
+  members: Member[],
+  report: Report,
+): void {
+  const children = compoundChildren(envelope);
+  if (children.length === 0) return;
+  for (const member of members) {
+    for (const site of memberSites(member)) {
+      const producer = producerOf(site.ref, children);
+      if (!("key" in producer)) {
+        report(
+          "outputs",
+          member.path,
+          producerMessage(member, site.ref, producer),
+          site.path,
+        );
+      } else if (producer.key === member.key) {
+        report(
+          "outputs",
+          member.path,
+          `${member.key} reads its own outputs, so the host won't start.`,
+          site.path,
+        );
+      }
+    }
+  }
+}
+
 /** Each member paired with the members whose outputs it reads, so they sync. */
-function syncPairs(members: Member[]): [Member, Member][] {
+function syncPairs(
+  envelope: HostDraft["envelope"],
+  members: Member[],
+): [Member, Member][] {
+  const children = compoundChildren(envelope);
   return members.flatMap((member) => {
-    const hosts = outputHosts([member.runner, member.reactor, member.config]);
+    const keys = new Set(
+      memberSites(member).flatMap(({ ref }) => {
+        const producer = producerOf(ref, children);
+        return "key" in producer ? [producer.key] : [];
+      }),
+    );
     return members
-      .filter((other) => other !== member && hosts.has(other.folder))
+      .filter((other) => other !== member && keys.has(other.key))
       .map((other): [Member, Member] => [member, other]);
   });
 }
 
 /** Members that sync must agree on access control; env cannot bend it. */
-function protocolRule(members: Member[], env: HostEnv, report: Report): void {
-  for (const [member, other] of syncPairs(members)) {
+function protocolRule(
+  envelope: HostDraft["envelope"],
+  members: Member[],
+  env: HostEnv,
+  report: Report,
+): void {
+  for (const [member, other] of syncPairs(envelope, members)) {
     if (declaredFlags(member) === declaredFlags(other)) continue;
     report(
       "protocol",
@@ -766,7 +895,8 @@ export function validateDraft(
   };
   envRule(env, members, report);
   shapeRule(draft.envelope, report);
-  protocolRule(members, env, report);
+  outputsRule(draft.envelope, members, report);
+  protocolRule(draft.envelope, members, env, report);
   ladderRule(members, env, report);
   storageRule(members, env, context, report);
   storesRule(members, env, report);

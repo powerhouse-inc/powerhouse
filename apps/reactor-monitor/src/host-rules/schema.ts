@@ -63,6 +63,7 @@ export const RULES = [
   "setter",
   "env",
   "shape",
+  "outputs",
   "protocol",
   "ladder",
   "storage",
