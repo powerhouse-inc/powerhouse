@@ -2,6 +2,7 @@ import type {
   Action,
   BaseReducerCapabilities,
   CreateDocumentAction,
+  CreateDocumentActionInput,
   DeriveScope,
   DocumentModelModule,
   ISigner,
@@ -329,6 +330,27 @@ type StoredProtocol = {
   unreadable?: Error;
 };
 
+/** The CREATE_DOCUMENT a load job carries, if any. */
+function loadedCreation(job: Job): CreateDocumentActionInput | undefined {
+  if (job.kind !== "load") {
+    return undefined;
+  }
+  return job.operations
+    .map((operation) => operation.action)
+    .find(
+      (action): action is CreateDocumentAction =>
+        action.type === "CREATE_DOCUMENT",
+    )?.input;
+}
+
+/** Creation first, then its UPGRADE: a shared timestamp must not reorder them. */
+function genesisRank(operation: Operation): number {
+  if (operation.action.type === "CREATE_DOCUMENT") {
+    return 0;
+  }
+  return isGenesisOperation(operation) ? 1 : 2;
+}
+
 /**
  * An UNDO or REDO, submitted or loaded from a peer, where the version undoes by
  * RETRACT. A loaded one would make each replica mint its own RETRACT id.
@@ -343,12 +365,7 @@ function undoRedoRefusal(
     actions = job.actions;
   } else if (job.kind === "load") {
     actions = job.operations.map((operation) => operation.action);
-    caps ??= createdCapabilities(
-      actions.find(
-        (action): action is CreateDocumentAction =>
-          action.type === "CREATE_DOCUMENT",
-      )?.input,
-    );
+    caps ??= createdCapabilities(loadedCreation(job));
   } else {
     return undefined;
   }
@@ -3398,7 +3415,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     // Base-reducer 3 skips are this replica's own rewinds, never an undo, and
     // its conflict window is the receiver's.
-    const caps = stored.caps;
+    const caps = stored.caps ?? this.creationCaps(job);
     const canonical = sortsJobsCanonically(caps);
     const skipsMayUndo = skipMayUndo(caps);
 
@@ -3613,7 +3630,9 @@ export class SimpleJobExecutor implements IJobExecutor {
             .sort((a, b) =>
               // A sender's reshuffle puts its rows out of timestamp order,
               // and canonical order does not read the skip that orders them.
-              canonical ? compareCanonical(a, b) : a.index - b.index,
+              canonical
+                ? genesisRank(a) - genesisRank(b) || compareCanonical(a, b)
+                : a.index - b.index,
             )
             .map((operation, i) => ({
               ...operation,
@@ -3741,6 +3760,24 @@ export class SimpleJobExecutor implements IJobExecutor {
       ],
       duration: Date.now() - startTime,
     };
+  }
+
+  /**
+   * A fresh receiver's first load runs base-reducer 3 rules when the batch's
+   * CREATE_DOCUMENT names 3 and this reactor admits it; otherwise none, as before.
+   */
+  private creationCaps(job: Job): BaseReducerCapabilities | undefined {
+    const creation = loadedCreation(job);
+    const caps = createdCapabilities(creation);
+    if (!creation || !usesRetractionRule(caps)) {
+      return undefined;
+    }
+    const refusal = this.protocolGate.refusal(
+      job.documentId,
+      creation.protocolVersions,
+      creation.model,
+    );
+    return refusal ? undefined : caps;
   }
 
   /** The conflicting window a load opens, and which of its operations are new. */
