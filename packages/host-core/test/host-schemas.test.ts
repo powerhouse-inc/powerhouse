@@ -6,6 +6,7 @@ import {
   declaredHostSchemas,
   defineHostSchemas,
   hostNameSchema,
+  placementKeyIssues,
   profileSchema,
   reactorHostSchema,
   reactorBackendSchema,
@@ -367,6 +368,24 @@ describe("placement.drives keys (declared form, host level)", () => {
     ).toEqual([
       "reactor.placement.drives.typo: placement.drives.typo names no drive this host links to or declares (home, local, b).",
     ]);
+  });
+
+  it("gives the same issues through placementKeyIssues", () => {
+    expect(
+      placementKeyIssues(
+        host(linked({ placement: { drives: { typo: "sb" } } })),
+      ),
+    ).toEqual([
+      {
+        path: ["reactor", "placement", "drives", "typo"],
+        message:
+          "placement.drives.typo names no drive this host links to or declares (home, local, b).",
+      },
+    ]);
+    expect(
+      placementKeyIssues(host(linked({ placement: { drives: { b: "sb" } } }))),
+    ).toEqual([]);
+    expect(placementKeyIssues({ name: "app" })).toEqual([]);
   });
 
   it("knows a drive a plugin attaches by its config.drive link", () => {
