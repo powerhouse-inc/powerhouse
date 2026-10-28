@@ -10,10 +10,11 @@ import {
   type ViewFilter,
   type WriteHandle,
 } from "@powerhousedao/reactor";
-import type {
-  DocumentDriveDocument,
-  DriveInput,
-  Node,
+import {
+  driveDocumentType,
+  type DocumentDriveDocument,
+  type DriveInput,
+  type Node,
 } from "@powerhousedao/shared/document-drive";
 import type { ISigner, PHDocument } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -148,7 +149,12 @@ export class RoutingDriveWriteClient implements IDriveWriteClient {
     const handle = await this.dispatcher.onBackend(
       "drives.create",
       backend,
-      (target) => this.drives.writeOn(target).create(input, signal),
+      async (target) => {
+        await this.dispatcher.assertCreatable("drives.create", target, [
+          driveDocumentType,
+        ]);
+        return this.drives.writeOn(target).create(input, signal);
+      },
       ATTEMPT.write,
     );
     this.recordJobs(handle, backend.name);
@@ -174,6 +180,9 @@ export class RoutingDriveWriteClient implements IDriveWriteClient {
       DEFAULT_BRANCH,
       async (backend) => {
         owner = backend.name;
+        await this.dispatcher.assertCreatable("drives.addFile", backend, [
+          document.header.documentType,
+        ]);
         await this.dispatcher.assertCreatableBeside(
           "drives.addFile",
           backend,

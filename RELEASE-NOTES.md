@@ -24,6 +24,27 @@ The generated `assistant` and `cli` hosts use the new form. A project scaffolded
 
 ---
 
+## 🚀 **Unreleased** — router placement, deadlines and document-type facts (`@powerhousedao/reactor-router`)
+
+### ✨ Move a drive while the router runs
+
+`RoutingReactorClient.setPlacement(key, backend | undefined)` places a collection or drive on a backend for this client only, above the `collections` the router was built with; `undefined` removes it and the config applies again. `onRoutingChange(listener)` reports each placement, learned, corrected or forgotten collection route and returns the unsubscribe. Precedence is now corrected > runtime > config > learned > placed: a refusal still corrects either kind of placement, and a later `setPlacement` for that key replaces the correction. `describeRouting()` rows gain `origin` (`"config"` or `"runtime"`) and `configured` (the config's backend), so a client can show where it differs from its config. Nothing is persisted; the caller stores its own runtime placements.
+
+### ⚡ A hung or missing backend no longer stalls the others
+
+- **Probe deadline.** An ownership probe that does not answer within `probeTimeoutMs` (default 3 s) answers "unknown", so a local create finishes even while a remote hangs.
+- **Health.** A backend may declare `health(): "up" | "down"`. While it reports down, probes answer "unknown" without a request, and `describeRouting().health` lists each declared state.
+- **Provisional routes.** A route found on a backend while an earlier one in the order did not hold the document is probed again after `provisionalRouteMs` (default 30 s), so a document read from a remote during initial sync moves to the local copy once it arrives. Corrected routes and placements never expire.
+- **Routing by collection.** When several backends serve a document, it goes to its drive's corrected, placed or learned backend, so a stale local copy of a drive placed on a remote never wins.
+
+### ✨ Document-type facts and `locate`
+
+`RoutableBackendConfig.documentTypes?: () => Promise<readonly string[]>` is read with the facts and lands in `BackendFacts.documentTypes`. A failed read of the facts or of the types makes `known` false. A create of a type the target backend lacks (`create`, `createAsync`, a batch that creates, `drives.create`, `drives.addFile`) throws `UnsupportedByBackendError` before anything is sent. `locate(identifier, signal?)` names the backend a document routes to, for an attachment service that routes by document.
+
+✅ **What to try:** build a router over two backends with `collections: { [driveId]: "local" }`, call `setPlacement(driveId, "remote")`, and `describeRouting()` shows the drive on `remote` with `origin: "runtime"` and `configured: "local"`.
+
+---
+
 ## 🚀 **Unreleased** — UUIDv7 action ids and same-millisecond auth bursts
 
 ### ⚡ Action ids sort in creation order; auth bursts are admitted
