@@ -35,6 +35,7 @@ import {
 } from "./components/ProvisionPanel.js";
 import { RoutingPanel } from "./components/RoutingPanel.js";
 import { SwitchboardsPanel } from "./components/SwitchboardsPanel.js";
+import { HostBuilder } from "./builder/HostBuilder.js";
 import { useManagedDescriptors } from "./controller/use-managed-descriptors.js";
 import { MonitoringSetsStore } from "./monitoring-sets.js";
 import {
@@ -73,8 +74,9 @@ export const INSPECTOR_TABS = [
 
 export type InspectorTab = (typeof INSPECTOR_TABS)[number];
 
-/** "Inspect" is the per-reactor tab strip; "Router" spans the set of reactors. */
-export const APP_VIEWS = ["Inspect", "Router"] as const;
+/** "Inspect" is the per-reactor tab strip; "Router" spans the set of reactors;
+ * "Build host" edits a host config. */
+export const APP_VIEWS = ["Inspect", "Router", "Build host"] as const;
 
 export type AppView = (typeof APP_VIEWS)[number];
 
@@ -370,10 +372,12 @@ function AppBody({
               <InspectorPanel entry={entry} tab={activeTab} />
             </div>
           </>
-        ) : (
+        ) : view === "Router" ? (
           <div className="reactor-monitor__panel">
             <RoutingPanel />
           </div>
+        ) : (
+          <HostBuilder />
         )}
       </main>
     </div>
