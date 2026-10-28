@@ -9,13 +9,16 @@ import {
 import type { ReactorDescriptor } from "@powerhousedao/reactor-monitor";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
+import { DRAFT_STORAGE_KEY } from "./builder/draft.js";
 import {
+  baseDigest,
   CONTROLLER_PREFIX,
   TOKEN_HEADER,
   TOKEN_META_NAME,
   type Instance,
 } from "./controller/api.js";
 import { managedByOf } from "./controller/managed.js";
+import { hostExport } from "./host-rules/__fixtures__/hosts.js";
 import { MonitoringSetsStore } from "./monitoring-sets.js";
 import { REMOTE_BEARER_KEY_PREFIX } from "./provisioning.js";
 
@@ -115,6 +118,28 @@ function fakeController() {
       return json(200, { projects: [{ root: ROOT, name: "proj" }] });
     }
     if (path.startsWith("hosts?")) return json(200, { hosts: ["sb"] });
+    if (path === "capabilities") {
+      return json(200, { controller: true, postgres: false });
+    }
+    if (path.startsWith("export?")) {
+      const exported = {
+        ...hostExport("switchboard"),
+        project: { name: "proj", root: ROOT },
+      };
+      return json(200, {
+        export: exported,
+        baseDigest: await baseDigest(exported),
+      });
+    }
+    if (path === "drafts" && method === "POST") {
+      const id = `${String(nextId++).padStart(8, "0")}-0000-4000-8000-000000000000`;
+      const started = {
+        ...instance(id, "starting"),
+        source: { project: ROOT, host: "sb" },
+      };
+      instances.set(id, started);
+      return json(202, started);
+    }
     if (path === "instances" && method === "GET") {
       return json(200, { instances: [...instances.values()] });
     }
@@ -224,6 +249,7 @@ describe("App with controller-managed switchboards", () => {
       .forEach((meta) => meta.remove());
     vi.unstubAllGlobals();
     window.sessionStorage.clear();
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     vi.restoreAllMocks();
   });
 
@@ -508,4 +534,53 @@ describe("App with controller-managed switchboards", () => {
       attachesBefore,
     );
   });
+
+  it("starts a builder draft, attaches its switchboard and stops it from the builder", async () => {
+    mountController();
+    const store = freshStore();
+    const view = render(<App store={store} />);
+    fireEvent.click(view.getByRole("button", { name: "Build host" }));
+    const load = await waitFor(() => {
+      const button = view.getByRole("button", { name: "Load host" });
+      expect(button).toHaveProperty("disabled", false);
+      return button;
+    });
+    fireEvent.click(load);
+    await waitFor(() =>
+      expect(view.getByRole("heading", { name: "Host basics" })).toBeTruthy(),
+    );
+    const builder = within(
+      view.container.querySelector<HTMLElement>("[data-builder]")!,
+    );
+    const steps = within(builder.getByRole("navigation", { name: "Steps" }));
+    fireEvent.click(steps.getByRole("button", { name: /Use it/ }));
+    const start = await waitFor(() => {
+      const button = builder.getByRole("button", { name: "Start" });
+      expect(button).toHaveProperty("disabled", false);
+      return button;
+    }, WAIT);
+    fireEvent.click(start);
+    await waitFor(() => expect(controller.calls).toContain("POST drafts"));
+    const [id] = controller.instances.keys();
+    controller.instances.set(id, {
+      ...instance(id, "running", 5401),
+      source: { project: ROOT, host: "sb" },
+    });
+
+    const name = `sb-${id.slice(0, 8)}`;
+    await waitFor(
+      () => expect(within(reactorList(view)).getByText(name)).toBeTruthy(),
+      WAIT,
+    );
+    expect(store.getActiveDescriptors().map((d) => d.name)).toEqual([name]);
+
+    fireEvent.click(builder.getByRole("button", { name: "Stop" }));
+    await waitFor(() =>
+      expect(controller.calls).toContain(
+        `DELETE instances/${encodeURIComponent(id)}`,
+      ),
+    );
+    await waitFor(() => expect(store.getActiveDescriptors()).toEqual([]));
+    expect(builder.queryByLabelText("Running copy")).toBeNull();
+  }, 20_000);
 });
