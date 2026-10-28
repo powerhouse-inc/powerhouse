@@ -2,7 +2,7 @@ import { build } from "tsdown";
 import { dtsExportList } from "../../tsdown.dts.mjs";
 
 await build({
-  entry: ["index.ts", "mock.ts"],
+  entry: ["index.ts", "mock.ts", "scalars.ts"],
   outDir: "dist",
   platform: "neutral",
   clean: true,

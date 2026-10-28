@@ -37,7 +37,8 @@ export type FieldKind =
   | "json"
   | "unsupported";
 
-// Every scalar a document model can declare, by the value it carries.
+// Every built-in and catalog scalar, by the value it carries. A project's own
+// scalars are not known here, so their fields are unsupported.
 const SCALAR_KINDS: Record<string, FieldKind> = {
   String: "text",
   ID: "text",

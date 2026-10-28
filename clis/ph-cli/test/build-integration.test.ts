@@ -360,6 +360,8 @@ describe("runBuild on a package with no pieces", () => {
 
     // No piece directory, and the manifest copy is the source byte for byte.
     expect(existsSync(join(dist, "node", "pieces"))).toBe(false);
+    expect(existsSync(join(dist, "node", "scalars"))).toBe(false);
+    expect(existsSync(join(dist, "browser", "scalars"))).toBe(false);
     expect(
       readFileSync(join(dist, "powerhouse.manifest.json")).equals(
         readFileSync(sourceManifest),
@@ -758,6 +760,7 @@ describe("runBuild on a package with subgraphs and switchboard processors", () =
     tsconfig.include.push("subgraphs/**/*", "processors/**/*");
     write("tsconfig.json", JSON.stringify(tsconfig));
     write("subgraphs/index.ts", 'export * as Demo from "./demo/index.js";\n');
+    write("scalars/index.ts", 'export const Iban = { name: "Iban" };\n');
     write(
       "subgraphs/demo/index.ts",
       'export const resolve = () => "SUBGRAPH_MARKER";\n',
@@ -807,7 +810,7 @@ describe("runBuild on a package with subgraphs and switchboard processors", () =
     rmSync(fixture, { recursive: true, force: true });
   });
 
-  it("builds them for node only, and Connect's processors for both", async () => {
+  it("builds them for node only, and Connect's processors and scalars for both", async () => {
     process.chdir(fixture);
 
     await runBuild(args);
@@ -817,9 +820,11 @@ describe("runBuild on a package with subgraphs and switchboard processors", () =
     expect(browser).not.toContain("SUBGRAPH_MARKER");
     expect(browser).not.toContain("SWITCHBOARD_PROCESSOR_MARKER");
     expect(browser).toContain("CONNECT_PROCESSOR_MARKER");
+    expect(existsSync(join(dist, "browser", "scalars", "index.js"))).toBe(true);
 
     const node = code(join(dist, "node"));
     expect(existsSync(join(dist, "node", "subgraphs", "index.mjs"))).toBe(true);
+    expect(existsSync(join(dist, "node", "scalars", "index.mjs"))).toBe(true);
     expect(
       existsSync(join(dist, "node", "processors", "read-model", "index.mjs")),
     ).toBe(true);
@@ -1219,7 +1224,20 @@ describe("runBuild on a package whose node code has a native dependency", () => 
     process.chdir(fixture);
 
     await expect(runBuild(args)).rejects.toThrow(
-      /document-models\/index\.ts imports wasm-a, which needs the WebAssembly module \S*wasm_a_bg\.wasm\. Document models run in Connect and on every host/,
+      /document-models\/index\.ts imports wasm-a, which needs the WebAssembly module \S*wasm_a_bg\.wasm\. Document models and scalars run in Connect and on every host/,
+    );
+  }, 120_000);
+
+  it("fails when a scalar imports a WebAssembly package", async () => {
+    setUp({ dependencies: { ...NATIVE_A, ...WASM_A } });
+    write(
+      "scalars/index.ts",
+      'import { init } from "wasm-a";\n\nexport const Iban = { name: "Iban", init };\n',
+    );
+    process.chdir(fixture);
+
+    await expect(runBuild(args)).rejects.toThrow(
+      /scalars\/index\.ts imports wasm-a, which needs the WebAssembly module \S*wasm_a_bg\.wasm\. Document models and scalars run in Connect and on every host/,
     );
   }, 120_000);
 

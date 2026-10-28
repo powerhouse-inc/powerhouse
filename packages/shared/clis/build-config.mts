@@ -14,6 +14,7 @@ const entry = [
   "editors/*/index.ts",
   "editors/*/module.ts",
   "processors/index.ts",
+  "scalars/index.ts",
 ];
 
 // ./pieces is node-only for the same reason ./reactor is browser-only: a piece

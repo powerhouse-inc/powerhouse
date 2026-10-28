@@ -1,99 +1,49 @@
 import type { CodegenConfig } from "@graphql-codegen/cli";
 import { generate } from "@graphql-codegen/cli";
 import type { TypeScriptPluginConfig } from "@graphql-codegen/typescript";
-import {
-  generatorTypeDefs,
-  validationSchema,
-} from "@powerhousedao/document-engineering/graphql";
-import type {
-  DocumentSpecification,
-  ModuleSpecification,
-} from "@powerhousedao/shared/document-model";
+import { documentModelScalars, scalarCatalog } from "document-model/scalars";
 import type { DocumentModelFileMakerArgs } from "file-builders";
 import type { TypeNode } from "graphql";
 import { Kind, parse } from "graphql";
 import type { ValidationSchemaPluginConfig } from "graphql-codegen-typescript-validation-schema";
-import { realpathSync } from "node:fs";
 import fs from "node:fs/promises";
-import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 import { formatFileText } from "utils";
 import { format as oxfmtFormat } from "oxfmt";
+import {
+  getProjectScalarNames,
+  type ProjectScalars,
+  projectScalarCodegenConfig,
+  projectScalarsImportPath,
+} from "./project-scalars.js";
+import { resolveFromCodegen } from "./resolve-from-codegen.js";
+import { buildGraphqlDocumentStringForSpecification } from "./specification-schema.js";
 
-/* Resolve graphql-codegen plugins from this package's own install rather than
- * graphql-codegen's default loader. The default resolves relative to graphql-
- * codegen's location and is sensitive to the install layout (which cli copy,
- * cwd), so it can report "Unable to find template plugin matching '<name>'"
- * even when the plugins are installed. This package depends on its plugins
- * directly, so resolving from here is deterministic. (selfReal covers
- * --preserve-symlinks, where import.meta.url is the symlink path.) graphql-
- * codegen probes candidate names; unresolved ones throw MODULE_NOT_FOUND so it
- * falls through to the next candidate. */
 type PluginLoader = NonNullable<CodegenConfig["pluginLoader"]>;
 type CodegenPlugin = Awaited<ReturnType<PluginLoader>>;
-function makePluginLoader(): PluginLoader {
-  const selfPath = fileURLToPath(import.meta.url);
-  let selfReal = selfPath;
-  try {
-    selfReal = realpathSync(selfPath);
-  } catch {
-    // keep selfPath
-  }
-  const requirers = [createRequire(selfPath), createRequire(selfReal)];
-  return async (name: string) => {
-    let lastErr: unknown;
-    for (const requireFrom of requirers) {
-      try {
-        return (await import(
-          pathToFileURL(requireFrom.resolve(name)).href
-        )) as CodegenPlugin;
-      } catch (err) {
-        lastErr = err;
-      }
-    }
-    throw lastErr;
-  };
-}
+const pluginLoader: PluginLoader = async (name) =>
+  (await import(pathToFileURL(resolveFromCodegen(name)).href)) as CodegenPlugin;
 
-const pluginLoader = makePluginLoader();
+export const scalars = Object.fromEntries(
+  documentModelScalars.map(({ name, typescriptType }) => [
+    name,
+    typescriptType,
+  ]),
+);
 
-export const scalars = {
-  Unknown: "unknown",
-  DateTime: "string",
-  Address: "`${string}:0x${string}`",
-  AttachmentRef: "`attachment://v${number}:${string}`",
-  ...(generatorTypeDefs as Record<string, string>),
-};
-
-export const scalarsValidation = {
-  Unknown: "z.unknown()",
-  DateTime: "z.string().datetime()",
-  Address:
-    "z.custom<`${string}:0x${string}`>((val) => /^[a-zA-Z0-9]+:0x[a-fA-F0-9]{40}$/.test(val as string))",
-  AttachmentRef:
-    "z.custom<`attachment://v${number}:${string}`>((val) => /^attachment:\\/\\/v\\d+:.+$/.test(val as string))",
-  ...(validationSchema as Record<string, string>),
-};
+export const scalarsValidation = Object.fromEntries(
+  documentModelScalars.map(({ name, zodSource }) => [name, zodSource]),
+);
 
 // Scalars codegen validates with strict `z.iso.datetime()`.
 const DATE_LIKE_SCALARS = new Set(["Date", "DateTime"]);
 
-// State-field scalar -> valid mock literal (emitted verbatim into generated tests).
-//
-// Two groups need an entry here. The date-like and URL scalars validate more
-// strictly than zocker generates, so a literal keeps the generated test green.
-// `AttachmentRef` and `Address` are a harder case: they are the scalars in
-// `scalarsValidation` above that compile to `z.custom(...)`, and zocker cannot
-// synthesise a value satisfying an arbitrary predicate at all — without a
-// literal here the generated test throws on its first run.
-const SCALAR_MOCK_OVERRIDES: Record<string, string> = {
-  Date: `"2024-01-01T00:00:00.000Z"`,
-  DateTime: `"2024-01-01T00:00:00.000Z"`,
-  URL: `"https://example.com"`,
-  AttachmentRef: `"attachment://v1:${"a".repeat(64)}"`,
-  Address: `"eip155:0x${"0".repeat(40)}"`,
-};
+const SCALAR_MOCK_OVERRIDES: ReadonlyMap<string, string> = new Map(
+  scalarCatalog.flatMap(({ name, example }) =>
+    example === undefined ? [] : [[name, JSON.stringify(example)]],
+  ),
+);
 
 function unwrapNamedTypeName(type: TypeNode): string | null {
   if (type.kind === Kind.NAMED_TYPE) return type.name.value;
@@ -141,8 +91,9 @@ export function getMockOverrideFieldNames(
   for (const def of doc.definitions) {
     if (def.kind !== Kind.OBJECT_TYPE_DEFINITION) continue;
     for (const field of def.fields ?? []) {
-      const literal =
-        SCALAR_MOCK_OVERRIDES[unwrapNamedTypeName(field.type) ?? ""];
+      const literal = SCALAR_MOCK_OVERRIDES.get(
+        unwrapNamedTypeName(field.type) ?? "",
+      );
       if (literal) overrides.set(field.name.value, literal);
     }
   }
@@ -210,32 +161,6 @@ const validationSchemaConfig: ValidationSchemaPluginConfig = {
   maybeValue,
 };
 
-function buildSchemasForModules(modules: ModuleSpecification[]) {
-  const schemaStrings: string[] = [];
-  for (const module of modules) {
-    schemaStrings.push(`# ${module.name}`);
-    const operationsSchemas = module.operations
-      .map((operation) => operation.schema)
-      .filter((schema) => schema !== null);
-    schemaStrings.push(...operationsSchemas);
-  }
-  return schemaStrings;
-}
-
-function buildGraphqlDocumentStringForSpecification(
-  specification: DocumentSpecification,
-) {
-  const customScalarSchemas = Object.keys(scalars)
-    .map((k) => `scalar ${k}`)
-    .join("\n");
-  const stateSchemas = Object.values(specification.state).map(
-    (state) => state.schema,
-  );
-  const moduleSchemas = buildSchemasForModules(specification.modules);
-
-  return [customScalarSchemas, ...stateSchemas, ...moduleSchemas];
-}
-
 async function formatContent(path: string, content: string) {
   const result = await oxfmtFormat(path, content, { printWidth: 80 });
   return result.code;
@@ -244,11 +169,27 @@ async function formatContent(path: string, content: string) {
 type GenerateTypesAndZodSchemasFromGraphqlArgs = {
   schemaDirPath: string;
   schema: string;
+  projectScalars?: ProjectScalars;
 };
 export async function generateTypesAndZodSchemasFromGraphql(
   args: GenerateTypesAndZodSchemasFromGraphqlArgs,
 ) {
-  const { schemaDirPath, schema } = args;
+  const {
+    schemaDirPath,
+    schema,
+    projectScalars = { names: [], importPath: "" },
+  } = args;
+  const additions = projectScalarCodegenConfig(projectScalars);
+  const modelScalars = { ...scalars, ...additions.scalars };
+  const modelTypescriptConfig: TypeScriptPluginConfig = {
+    ...typescriptConfig,
+    scalars: modelScalars,
+  };
+  const modelValidationSchemaConfig: ValidationSchemaPluginConfig = {
+    ...validationSchemaConfig,
+    scalars: modelScalars,
+    scalarSchemas: { ...scalarsValidation, ...additions.scalarSchemas },
+  };
 
   const config: CodegenConfig = {
     overwrite: true,
@@ -260,16 +201,16 @@ export async function generateTypesAndZodSchemasFromGraphql(
     generates: {
       [`${schemaDirPath}/types.ts`]: {
         schema,
-        config: typescriptConfig,
+        config: modelTypescriptConfig,
         plugins: [
           {
-            typescript: typescriptConfig,
+            typescript: modelTypescriptConfig,
           },
         ],
       },
       [`${schemaDirPath}/zod.ts`]: {
         schema,
-        config: validationSchemaConfig,
+        config: modelValidationSchemaConfig,
         plugins: [
           {
             add: {
@@ -282,9 +223,12 @@ export async function generateTypesAndZodSchemasFromGraphql(
               content: "/* eslint-disable @typescript-eslint/no-unused-vars */",
             },
           },
+          ...(additions.zodImport
+            ? [{ add: { content: additions.zodImport } }]
+            : []),
           {
             "graphql-codegen-typescript-validation-schema":
-              validationSchemaConfig,
+              modelValidationSchemaConfig,
           },
         ],
       },
@@ -297,15 +241,17 @@ export async function generateTypesAndZodSchemasFromGraphql(
 export async function generateDocumentModelZodSchemas(
   args: DocumentModelFileMakerArgs,
 ) {
-  const { specification, schemaDirPath, versionDirPath } = args;
+  const { specification, schemaDirPath, versionDirPath, projectDir } = args;
 
-  const schema = buildGraphqlDocumentStringForSpecification(specification)
-    .filter(Boolean)
-    .join("\n\n");
+  const schema = buildGraphqlDocumentStringForSpecification(specification);
 
   await generateTypesAndZodSchemasFromGraphql({
     schemaDirPath,
     schema,
+    projectScalars: {
+      names: getProjectScalarNames(specification),
+      importPath: projectScalarsImportPath(schemaDirPath, projectDir),
+    },
   });
 
   await fs.writeFile(
