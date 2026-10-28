@@ -178,6 +178,7 @@ function execute(
       stores: harness.stores,
       replayingAcceptedHistory: false,
       evaluatedByPosition: false,
+      reappended: [],
       postCommitInvalidations: [],
       postCommitMembershipInvalidations: [],
       touchedStreams: new TouchedStreams(),

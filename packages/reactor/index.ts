@@ -154,6 +154,7 @@ export {
   type ReactorFeatures,
   type ReactorModule,
   type SyncModule,
+  type UndoRedoTargets,
 } from "./src/core/types.js";
 export {
   JobAwaiter,
@@ -178,6 +179,7 @@ export {
   InvalidSignatureError,
   JOB_NOT_FOUND_ERROR_NAME,
   RelationshipNotFoundError,
+  SubmittedUndoRefusedError,
   UnsupportedStoredProtocolError,
 } from "./src/shared/errors.js";
 export type { UnsupportedStoredDocuments } from "./src/core/stored-protocol-check.js";
@@ -713,6 +715,8 @@ export {
   GroupInUseError,
   PurgeTooLargeError,
   ReservedActionError,
+  RetractionRefusedError,
+  type RetractionRefusalReason,
 } from "./src/shared/errors.js";
 export {
   acquirePurgeLocks,

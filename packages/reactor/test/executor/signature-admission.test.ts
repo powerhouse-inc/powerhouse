@@ -37,6 +37,12 @@ import type {
 } from "../../src/signer/types.js";
 import { verifyActionSignature } from "../../src/signer/verify-action-signature.js";
 import { createDocModelDocument } from "../factories.js";
+import { createBaseReducer3Document, undoV3Flags } from "../factories.js";
+import {
+  positionalOperations,
+  retract,
+  retractedActionIds,
+} from "@powerhousedao/shared/document-model";
 import { TestP256Signer } from "../utils/p256-signer.js";
 
 const DOC_TYPE = "powerhouse/document-model";
@@ -96,6 +102,24 @@ describe("signature admission", () => {
     );
     base = Date.now() + 60_000;
     return module;
+  }
+
+  /** `build` with undoV3, then a base-reducer 3 document in place of its own. */
+  async function build3(
+    signatureVerification: SignatureVerificationMode,
+  ): Promise<void> {
+    await build(signatureVerification, undoV3Flags());
+    const document = createBaseReducer3Document({ signaturePolicy: "legacy" });
+    docId = document.header.id;
+    expect((await settle(await module!.reactor.create(document))).status).toBe(
+      JobStatus.READ_READY,
+    );
+    expect(
+      (await module!.reactor.get(docId)).header.protocolVersions?.[
+        "base-reducer"
+      ],
+    ).toBe(3);
+    base = Date.now() + 60_000;
   }
 
   async function settle(job: JobInfo): Promise<JobInfo> {
@@ -537,6 +561,148 @@ describe("signature admission", () => {
     });
   });
 
+  describe("a repeated action id on a base-reducer 3 rule scope", () => {
+    for (const mode of ["enforce", "log"] as const) {
+      it(`is dropped at load in ${mode} mode`, async () => {
+        await build3(mode);
+        const action = await renownSigned(moduleAction("m", 0));
+        expect((await load([asOperation(action, 0)])).status).toBe(
+          JobStatus.READ_READY,
+        );
+
+        const replay = { ...asOperation(action, 1), timestampUtcMs: at(5_000) };
+        expect((await load([replay])).status).toBe(JobStatus.READ_READY);
+
+        expect(await storedActionIds()).toEqual([action.id]);
+        expect(refusals).toMatchObject([
+          {
+            actionId: action.id,
+            code: "DUPLICATE_ACTION",
+            path: "load",
+            enforced: true,
+          },
+        ]);
+      });
+
+      it(`is dropped at load in ${mode} mode when it repeats a RETRACT`, async () => {
+        await build3(mode);
+        const a = await renownSigned(moduleAction("a", 0));
+        const undo = await renownSigned({
+          ...retract(a.id, "global"),
+          timestampUtcMs: at(10),
+        });
+        expect(
+          (await load([asOperation(a, 0), asOperation(undo, 1)])).status,
+        ).toBe(JobStatus.READ_READY);
+
+        const repeat = asOperation(
+          await renownSigned({ ...moduleAction("b", 20), id: undo.id }),
+          2,
+        );
+        expect((await load([repeat])).status).toBe(JobStatus.READ_READY);
+
+        expect(await storedActionIds()).toEqual([a.id, undo.id]);
+        expect(refusals).toMatchObject([
+          { actionId: undo.id, code: "DUPLICATE_ACTION", enforced: true },
+        ]);
+      });
+
+      it(`is dropped at load in ${mode} mode whatever its signature`, async () => {
+        await build3(mode);
+        const action = await renownSigned(moduleAction("m", 0));
+        expect((await load([asOperation(action, 0)])).status).toBe(
+          JobStatus.READ_READY,
+        );
+
+        // A v2 operation stamped later than its action fails TIMESTAMP_MISMATCH.
+        const replay = await v2Signed({
+          ...moduleAction("x", 0),
+          id: action.id,
+        });
+        expect(
+          (
+            await load([
+              { ...asOperation(replay, 1), timestampUtcMs: at(5_000) },
+            ])
+          ).status,
+        ).toBe(JobStatus.READ_READY);
+
+        expect(await storedActionIds()).toEqual([action.id]);
+        expect(refusals).toMatchObject([
+          { actionId: action.id, code: "DUPLICATE_ACTION", enforced: true },
+        ]);
+      });
+
+      it(`stores one of two operations sharing an id in one load in ${mode} mode`, async () => {
+        await build3(mode);
+        const first = await renownSigned(moduleAction("a", 0));
+        const second = await renownSigned({
+          ...moduleAction("b", 10),
+          id: first.id,
+        });
+
+        expect(
+          (await load([asOperation(first, 0), asOperation(second, 1)])).status,
+        ).toBe(JobStatus.READ_READY);
+
+        expect(await storedActionIds()).toEqual([first.id]);
+      });
+
+      it(`fails a mutation in ${mode} mode whatever its signature`, async () => {
+        await build3(mode);
+        const action = await renownSigned(moduleAction("m"));
+        expect((await execute([action])).status).toBe(JobStatus.READ_READY);
+
+        const again = await execute([
+          { ...(await tampered(moduleAction("m"))), id: action.id },
+        ]);
+
+        expect(again.status).toBe(JobStatus.FAILED);
+        expect(again.error?.message).toContain("[DUPLICATE_ACTION]");
+        expect(await storedActionIds()).toEqual([action.id]);
+      });
+
+      it(`fails a mutation in ${mode} mode`, async () => {
+        await build3(mode);
+        const action = await renownSigned(moduleAction("m"));
+        expect((await execute([action])).status).toBe(JobStatus.READ_READY);
+
+        const again = await execute([
+          await renownSigned({
+            ...moduleAction("m"),
+            id: action.id,
+            input: { id: "m", name: "changed" },
+          }),
+        ]);
+
+        expect(again.status).toBe(JobStatus.FAILED);
+        expect(again.error?.message).toContain("[DUPLICATE_ACTION]");
+        expect(await storedActionIds()).toEqual([action.id]);
+      });
+    }
+
+    it("is still only logged on base-reducer 2 in log mode", async () => {
+      await build("log");
+      expect(
+        (await module!.reactor.get(docId)).header.protocolVersions?.[
+          "base-reducer"
+        ],
+      ).toBe(2);
+      const action = await renownSigned(moduleAction("m", 0));
+      expect((await load([asOperation(action, 0)])).status).toBe(
+        JobStatus.READ_READY,
+      );
+
+      const replay = { ...asOperation(action, 1), timestampUtcMs: at(5_000) };
+      expect((await load([replay])).status).toBe(JobStatus.READ_READY);
+
+      expect(await storedActionIds()).toEqual([action.id, action.id]);
+      expect(refusals).toMatchObject([
+        { actionId: action.id, code: "DUPLICATE_ACTION", enforced: false },
+      ]);
+    });
+  });
+
   describe("an action the stream already holds", () => {
     async function liveActionIds(): Promise<string[]> {
       return garbageCollect(sortOperations(await stored())).map(
@@ -631,6 +797,49 @@ describe("signature admission", () => {
         expect(job.error?.message).toContain("[DUPLICATE_ACTION]");
         expect(await liveActionIds()).not.toContain(action.id);
         expect(await moduleIds()).toEqual([]);
+      });
+    });
+
+    describe("of an undone action on base-reducer 3", () => {
+      async function liveActionIds3(): Promise<string[]> {
+        const rows = positionalOperations(await stored());
+        const retracted = retractedActionIds(rows);
+        return rows
+          .map((operation) => operation.action.id)
+          .filter((id) => !retracted.has(id));
+      }
+
+      async function undone3(): Promise<Action> {
+        const action = await renownSigned(moduleAction("x", 0));
+        expect((await execute([action])).status).toBe(JobStatus.READ_READY);
+        expect(
+          (await execute([{ ...retract(action.id), timestampUtcMs: at(10) }]))
+            .status,
+        ).toBe(JobStatus.READ_READY);
+        expect(await moduleIds()).toEqual([]);
+        return action;
+      }
+
+      it("takes it as committed when resubmitted once a retraction revives it", async () => {
+        await build3("enforce");
+        const action = await undone3();
+        const undoing = (await stored()).at(-1)!;
+        expect(
+          (
+            await execute([
+              { ...retract(undoing.action.id), timestampUtcMs: at(20) },
+            ])
+          ).status,
+        ).toBe(JobStatus.READ_READY);
+        expect(await moduleIds()).toEqual(["x"]);
+
+        const job = await execute([action]);
+
+        expect(job.error).toBeUndefined();
+        expect(job.status).toBe(JobStatus.READ_READY);
+        expect(refusals).toEqual([]);
+        expect(await liveActionIds3()).toContain(action.id);
+        expect(await moduleIds()).toEqual(["x"]);
       });
     });
   });
