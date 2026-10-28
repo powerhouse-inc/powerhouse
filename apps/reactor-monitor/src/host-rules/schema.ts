@@ -53,7 +53,8 @@ export const hostRulesContextSchema = z.object({
 });
 export type HostRulesContext = z.input<typeof hostRulesContextSchema>;
 
-/** The host's environment: its reactors run in one process and share it. */
+/** The host's environment: its reactors run in one process and all read it. A
+ * key set here wins over each switchboard's own settings. */
 export type HostEnv = Record<string, string>;
 
 export type HostDraft = { envelope: HostExport; env?: HostEnv };
@@ -62,9 +63,12 @@ export const RULES = [
   "setter",
   "env",
   "shape",
+  "outputs",
   "protocol",
   "ladder",
   "storage",
+  "port",
+  "config",
   "postgres",
   "capability",
   "workers",

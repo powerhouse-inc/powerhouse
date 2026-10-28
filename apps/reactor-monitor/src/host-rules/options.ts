@@ -11,7 +11,7 @@ import {
   type Setter,
 } from "./schema.js";
 import { applySetters } from "./setters.js";
-import { onOff, REASONS, validateDraft, workerCount } from "./validate.js";
+import { REASONS, validateDraft, workerSettings } from "./validate.js";
 
 export type OptionGroup =
   | "access"
@@ -32,8 +32,6 @@ export type HostOption = {
   /** Envelope path of the backend the option changes. */
   backend?: string;
   setters: Setter[];
-  /** Keys of the host's env, which all its reactors share; null removes one. */
-  env?: Record<string, string | null>;
 };
 
 export type OptionStatus = HostOption & {
@@ -61,6 +59,11 @@ export const ADD_REASONS = {
     "Add a switchboard or Connect first. An in-browser reactor is saved with one of them.",
   noSwitchboard: "This project has no switchboard to add.",
   noConnect: "This project has no Connect to add.",
+} as const;
+
+export const SETTING_REASONS = {
+  fromEnv:
+    "The host's environment sets this for every switchboard, which overrides each one's own choice. Remove it from the environment to choose here.",
 } as const;
 
 export const HOT_RELOAD_REASONS = {
@@ -135,33 +138,86 @@ function switchboardOptions(member: Member): HostOption[] {
   return options;
 }
 
-/** Set in the host's env, and read by its switchboard. */
-function envOptions(members: Member[]): HostOption[] {
-  if (!members.some((member) => member.role === "switchboard")) return [];
+function withValue(
+  record: Record<string, unknown>,
+  [key, ...rest]: readonly string[],
+  value: unknown,
+): Record<string, unknown> {
+  const next = { ...record };
+  if (rest.length === 0) next[key] = value;
+  else {
+    const child = next[key];
+    next[key] = withValue(isRecord(child) ? child : {}, rest, value);
+  }
+  return next;
+}
+
+/**
+ * Writes one of a switchboard's own settings. When another member reads the
+ * same config, the change goes to this member's wrapper, which then holds a
+ * full copy: a wrapper's config replaces the folder's.
+ */
+function settingSetters(
+  member: Member,
+  members: Member[],
+  keys: readonly string[],
+  value: Setter["value"],
+): Setter[] {
+  const shared = members.some(
+    (other) => other !== member && other.configAt === member.configAt,
+  );
+  if (!shared || !member.path.startsWith("host.children.")) {
+    return [
+      { path: `${member.configAt}.switchboard.${keys.join(".")}`, value },
+    ];
+  }
+  const config = structuredClone(member.config ?? {});
+  return [
+    {
+      path: `${member.path}.config`,
+      value: withValue(config, ["switchboard", ...keys], value) as never,
+    },
+  ];
+}
+
+/** Background workers and the search thread, in each switchboard's own settings. */
+function workerOptions(member: Member, members: Member[]): HostOption[] {
   const options: HostOption[] = WORKER_COUNTS.map((count) => ({
-    id: `host:workers:${count}`,
+    id: `${member.path}:workers:${count}`,
     group: "workers",
     value: String(count),
     label: count === 0 ? "Off" : String(count),
-    setters: [],
-    env: { REACTOR_WORKERS: count === 0 ? null : String(count) },
+    member: member.path,
+    setters: settingSetters(
+      member,
+      members,
+      ["workers", "executor", "count"],
+      count,
+    ),
   }));
   for (const on of [false, true]) {
     options.push({
-      id: `host:projectionWorker:${on ? "on" : "off"}`,
+      id: `${member.path}:projectionWorker:${on ? "on" : "off"}`,
       group: "projectionWorker",
       value: on ? "on" : "off",
       label: on ? "On" : "Off",
-      setters: [],
-      env: { REACTOR_PROJECTION_WORKER: on ? "true" : null },
+      member: member.path,
+      setters: settingSetters(
+        member,
+        members,
+        ["workers", "projection", "enabled"],
+        on,
+      ),
     });
   }
   return options;
 }
 
-function memberOptions(member: Member): HostOption[] {
+function memberOptions(member: Member, members: Member[]): HostOption[] {
   const options =
-    member.role === "switchboard" ? switchboardOptions(member) : [];
+    member.role === "switchboard"
+      ? [...switchboardOptions(member), ...workerOptions(member, members)]
+      : [];
   for (const backend of member.backends) {
     if (backend.mode !== "browser") continue;
     const prefix = `${member.path}:storage:${backend.name}`;
@@ -213,7 +269,18 @@ function folderFor(envelope: HostExport, role: "switchboard" | "connect") {
   });
 }
 
-/** A new child; a second Connect of one folder gets its own reactor block. */
+/** Access control as the host already has it (BUILDER decision 2). */
+function hostProtocol(members: Member[]): Record<string, unknown> {
+  const protocol = members[0]?.reactor?.protocol;
+  return isRecord(protocol)
+    ? structuredClone(protocol)
+    : { featureFlags: effectiveFlags(undefined).flags };
+}
+
+/**
+ * A new child. A second Connect of one folder gets its own reactor block; a
+ * second switchboard gets its own block, folders and port.
+ */
 function addMemberOption(
   draft: HostDraft,
   members: Member[],
@@ -237,12 +304,25 @@ function addMemberOption(
     role === "connect" &&
     members.some((member) => member.folder === folder)
   ) {
-    const protocol = members[0]?.reactor?.protocol;
     wrapper.reactor = {
-      protocol: isRecord(protocol)
-        ? structuredClone(protocol)
-        : { featureFlags: effectiveFlags(undefined).flags },
+      protocol: hostProtocol(members),
       backends: { main: { kind: "worker", storage: { kind: "idb" } } },
+    };
+  }
+  if (
+    role === "switchboard" &&
+    members.some((member) => member.role === "switchboard")
+  ) {
+    wrapper.runner = { port: 0 };
+    wrapper.reactor = {
+      protocol: hostProtocol(members),
+      backends: {
+        main: {
+          kind: "in-process",
+          storage: { kind: "path", dataDir: `.ph/${key}/reactor-storage` },
+          readModel: { url: `.ph/${key}/read-storage` },
+        },
+      },
     };
   }
   option.setters = [{ path: `host.children.${key}`, value: wrapper as never }];
@@ -284,21 +364,11 @@ export function hostOptionList(
   const members = membersOf(draft, context);
   return [
     ...accessOptions(members),
-    ...members.flatMap(memberOptions),
-    ...envOptions(members),
+    ...members.flatMap((member) => memberOptions(member, members)),
     addMemberOption(draft, members, "switchboard"),
     addMemberOption(draft, members, "connect"),
     addBrowserOption(members),
   ];
-}
-
-function applyEnv(env: HostEnv | undefined, patch: HostOption["env"]): HostEnv {
-  const next: HostEnv = { ...env };
-  for (const [key, value] of Object.entries(patch ?? {})) {
-    if (value === null) delete next[key];
-    else next[key] = value;
-  }
-  return next;
 }
 
 /** The draft with an option chosen, or why it cannot be written. */
@@ -314,15 +384,13 @@ export function applyOption(
   if (applied.issues.length > 0) {
     return { draft, refused: applied.issues[0].message };
   }
-  return {
-    draft: { envelope: applied.envelope, env: applyEnv(draft.env, option.env) },
-  };
+  return { draft: { ...draft, envelope: applied.envelope } };
 }
 
 function isSelected(
   option: HostOption,
   members: Member[],
-  env: Partial<HostEnv>,
+  env: HostEnv,
 ): boolean {
   const member = members.find((candidate) => candidate.path === option.member);
   const backend = member?.backends.find(
@@ -356,9 +424,15 @@ function isSelected(
     case "hotReload":
       return member?.dev === (option.value === "on");
     case "workers":
-      return workerCount(env.REACTOR_WORKERS ?? "") === Number(option.value);
+      return (
+        member !== undefined &&
+        workerSettings(member, env).count.value === Number(option.value)
+      );
     case "projectionWorker":
-      return onOff(env.REACTOR_PROJECTION_WORKER) === (option.value === "on");
+      return (
+        member !== undefined &&
+        workerSettings(member, env).projection.value === (option.value === "on")
+      );
     case "add":
       return false;
   }
@@ -367,7 +441,6 @@ function isSelected(
 function addReason(
   option: HostOption,
   draft: HostDraft,
-  members: Member[],
   controller: boolean,
 ): string | undefined {
   const host = draft.envelope.host as unknown;
@@ -379,18 +452,29 @@ function addReason(
   if (option.value === "switchboard" && !controller) {
     return REASONS.noController;
   }
-  if (
-    option.value === "switchboard" &&
-    members.some((m) => m.role === "switchboard")
-  ) {
-    return REASONS.oneSwitchboard;
-  }
   if (option.setters.length === 0) {
     return option.value === "switchboard"
       ? ADD_REASONS.noSwitchboard
       : ADD_REASONS.noConnect;
   }
   return undefined;
+}
+
+/** A worker option the host's env overrides, so choosing it changes nothing. */
+function setByEnv(
+  option: HostOption,
+  members: Member[],
+  env: HostEnv,
+): boolean {
+  if (option.group !== "workers" && option.group !== "projectionWorker") {
+    return false;
+  }
+  const member = members.find((candidate) => candidate.path === option.member);
+  if (!member) return false;
+  const settings = workerSettings(member, env);
+  return option.group === "workers"
+    ? settings.count.fromEnv
+    : settings.projection.fromEnv;
 }
 
 function issueKey(issue: HostRuleIssue): string {
@@ -423,10 +507,12 @@ export function hostOptions(
     if (selected) return { ...option, selected, enabled: true };
     const ruled =
       option.group === "add"
-        ? addReason(option, draft, base.members, context.controller)
+        ? addReason(option, draft, context.controller)
         : option.group === "hotReload" && option.value === "off" && devHost
           ? HOT_RELOAD_REASONS.hostWide
-          : undefined;
+          : setByEnv(option, base.members, draft.env ?? {})
+            ? SETTING_REASONS.fromEnv
+            : undefined;
     if (ruled) return { ...option, selected, enabled: false, reason: ruled };
     const candidate = applyOption(draft, option);
     if (candidate.refused) {

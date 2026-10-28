@@ -2,7 +2,7 @@ import type { HostExport } from "@powerhousedao/host-core/schema";
 import { describe, expect, it } from "vitest";
 import { BARE, FULL, hostExport, stack } from "./__fixtures__/hosts.js";
 import { ladderFlags } from "./flags.js";
-import { FOLDER_REASONS } from "./policy.js";
+import { FOLDER_REASONS, SETTINGS_ELSEWHERE } from "./policy.js";
 import type { HostRulesContext, HostEnv } from "./schema.js";
 import { applySetters } from "./setters.js";
 import {
@@ -141,17 +141,42 @@ describe("validateDraft", () => {
       ]);
     });
 
-    it("keeps one setting for the whole host", () => {
-      const envelope = draft({
-        [`${SB_REACTOR}.protocol.featureFlags`]: ladderFlags(1),
-      });
+    it("keeps access control the same on reactors that sync", () => {
+      const envelope = draft(
+        { [`${SB_REACTOR}.protocol.featureFlags`]: ladderFlags(1) },
+        hostExport("cli"),
+      );
       expect(issues(envelope)).toEqual([
         [
           "protocol",
-          `${UI_REACTOR}.protocol.featureFlags`,
-          "Access control has to be the same for every reactor in the host, but ui differs from sb.",
+          "host.children.cli-connect.reactor.protocol.featureFlags",
+          "cli-connect syncs with cli-switchboard, so both need the same access control. Set cli-connect's to match cli-switchboard's.",
         ],
       ]);
+    });
+
+    it("lets reactors that don't sync differ", () => {
+      const envelope = draft({
+        [`${SB_REACTOR}.protocol.featureFlags`]: ladderFlags(1),
+      });
+      expect(issues(envelope)).toEqual([]);
+      const twoSwitchboards = draft({
+        "host.children.sb2": {
+          host: "switchboard",
+          runner: { port: 0 },
+          reactor: {
+            protocol: { featureFlags: ladderFlags(2) },
+            backends: {
+              main: {
+                kind: "in-process",
+                storage: { kind: "path", dataDir: ".ph/sb2/reactor-storage" },
+                readModel: { url: ".ph/sb2/read-storage" },
+              },
+            },
+          },
+        },
+      });
+      expect(issues(twoSwitchboards)).toEqual([]);
     });
 
     it("ignores a member block a wrapper replaces", () => {
@@ -295,7 +320,7 @@ describe("validateDraft", () => {
       expect(issues(draft(postgres), workers("2"))).toEqual([]);
     });
 
-    it("reports a search data folder once, as storage", () => {
+    it("keeps the search data folder apart from Postgres storage", () => {
       const envelope = draft({
         [`${SB_REACTOR}.backends.main`]: {
           kind: "in-process",
@@ -303,13 +328,35 @@ describe("validateDraft", () => {
           readModel: { url: "./.ph/read-storage" },
         },
       });
-      expect(issues(envelope, workers("2"))).toEqual([
+      expect(issues(envelope, workers("2"))).toEqual([]);
+    });
+
+    it("reads the switchboard's own settings, under the host's env", () => {
+      const at = "members.switchboard.config.switchboard";
+      const own = (workers: Record<string, unknown>) =>
+        draft({ "members.switchboard.config.switchboard.workers": workers });
+      expect(issues(own({ executor: { count: 2 } }))).toEqual([
+        ["workers", `${at}.workers.executor.count`, REASONS.workersStorage],
+      ]);
+      expect(issues(own({ projection: { enabled: true } }))).toEqual([
         [
-          "storage",
-          `${SB_REACTOR}.backends.main.readModel.url`,
-          REASONS.readModel,
+          "workers",
+          `${at}.workers.projection.enabled`,
+          REASONS.projectionStorage,
         ],
       ]);
+      expect(issues(own({ executor: { count: "auto" } }), {}, FULL)).toEqual([
+        ["workers", `${at}.workers.executor.count`, REASONS.workersStorage],
+      ]);
+      expect(issues(own({ executor: { count: 2 } }), workers("0"))).toEqual([]);
+      expect(
+        issues(
+          draft({
+            ...postgres,
+            "members.switchboard.config.switchboard.workers.executor.count": 2,
+          }),
+        ),
+      ).toEqual([]);
     });
 
     it("can't run with hot reload", () => {
@@ -339,6 +386,234 @@ describe("validateDraft", () => {
         ["workers", `env.REACTOR_PROJECTION_WORKER`, REASONS.projectionDev],
       ]);
       expect(issues(stack(), { REACTOR_PROJECTION_WORKER: "0" })).toEqual([]);
+    });
+  });
+
+  describe("several switchboards", () => {
+    const SB2 = "host.children.sb2";
+    const SB2_MAIN = `${SB2}.reactor.backends.main`;
+
+    function second(
+      main: Record<string, unknown>,
+      runner: Record<string, unknown> = { port: 0 },
+    ): HostExport {
+      return draft({
+        [SB2]: {
+          host: "switchboard",
+          runner,
+          reactor: { backends: { main: { kind: "in-process", ...main } } },
+        },
+      });
+    }
+
+    const own = {
+      storage: { kind: "path", dataDir: ".ph/sb2/reactor-storage" },
+      readModel: { url: ".ph/sb2/read-storage" },
+    };
+
+    it("runs two switchboards with their own stores and ports", () => {
+      expect(issues(second(own))).toEqual([]);
+      expect(issues(second(own, { port: 4002 }))).toEqual([]);
+      const builtIn = validateDraft({ envelope: second(own) }, FULL).members;
+      expect(builtIn.map((member) => member.role)).toEqual([
+        "switchboard",
+        "connect",
+        "switchboard",
+      ]);
+    });
+
+    it("refuses two switchboards that share a storage folder", () => {
+      const shared = second({
+        ...own,
+        storage: { kind: "path", dataDir: ".ph/reactor-storage" },
+      });
+      const found = validateDraft({ envelope: shared }, FULL).issues;
+      expect(
+        found.map(({ rule, path, message, hint }) => [
+          rule,
+          path,
+          message,
+          hint,
+        ]),
+      ).toEqual([
+        [
+          "storage",
+          `${SB2_MAIN}.storage.dataDir`,
+          "sb2 and sb would keep their data in the same folder, which corrupts both. Give sb2 its own storage folder.",
+          ".ph/reactor-storage",
+        ],
+      ]);
+      // ${userData} and the project root are one place under `ph run`.
+      expect(
+        issues(
+          second({
+            ...own,
+            storage: {
+              kind: "path",
+              dataDir: "${userData}/./.ph/reactor-storage/",
+            },
+          }),
+        ),
+      ).toHaveLength(1);
+    });
+
+    it("refuses two switchboards that share a search data folder", () => {
+      expect(
+        issues(second({ ...own, readModel: { url: ".ph/read-storage" } })),
+      ).toEqual([
+        [
+          "storage",
+          `${SB2_MAIN}.readModel.url`,
+          "sb2 and sb would keep their search data in the same folder, which corrupts both. Give sb2 its own search data folder.",
+        ],
+      ]);
+    });
+
+    it("refuses one switchboard's store in another's search data folder", () => {
+      expect(
+        issues(
+          second({
+            ...own,
+            storage: { kind: "path", dataDir: ".ph/read-storage" },
+          }),
+        ),
+      ).toEqual([
+        [
+          "storage",
+          `${SB2_MAIN}.storage.dataDir`,
+          "sb2 and sb would keep their data in the same folder, which corrupts both. Give sb2 its own storage folder.",
+        ],
+      ]);
+    });
+
+    it("refuses two switchboards on the default folders", () => {
+      expect(issues(second({}))).toEqual([
+        [
+          "storage",
+          SB2,
+          "sb2 and sb would keep their data in the same folder, which corrupts both. Give sb2 its own storage folder.",
+        ],
+        [
+          "storage",
+          SB2,
+          "sb2 and sb would keep their search data in the same folder, which corrupts both. Give sb2 its own search data folder.",
+        ],
+      ]);
+    });
+
+    it("refuses two switchboards with one set of reactor settings", () => {
+      const twin = draft({
+        [SB2]: { host: "switchboard", runner: { port: 0 } },
+      });
+      expect(issues(twin)).toEqual([
+        [
+          "storage",
+          SB2,
+          "sb2 and sb share one set of reactor settings, so they would keep their data in the same place, which corrupts both. Give sb2 its own reactor settings.",
+        ],
+      ]);
+    });
+
+    it("lets only one switchboard use the controller's Postgres", () => {
+      const both = draft(
+        postgres,
+        second({ ...own, storage: { kind: "postgres" } }),
+      );
+      expect(issues(both)).toEqual([
+        [
+          "storage",
+          `${SB2_MAIN}.storage.kind`,
+          "sb2 and sb would both keep their data in the controller's Postgres database, so each would change the other's documents. Only one switchboard in a host can use it.",
+        ],
+      ]);
+      expect(issues(draft(postgres, second(own)))).toEqual([]);
+    });
+
+    it("refuses two switchboards on one port", () => {
+      expect(issues(second(own, { port: 7491 }))).toEqual([
+        [
+          "port",
+          `${SB2}.runner.port`,
+          "sb2 and sb would both use port 7491. Give sb2 its own port.",
+        ],
+      ]);
+      expect(issues(second(own, { port: 6491 }))).toEqual([
+        [
+          "port",
+          `${SB2}.runner.port`,
+          "sb2 and ui would both use port 6491. Give sb2 its own port.",
+        ],
+      ]);
+    });
+
+    it("takes the default port when a switchboard names none", () => {
+      const defaults = draft(
+        { "members.switchboard.runner.port": { $delete: true } },
+        second(own, {}),
+      );
+      expect(issues(defaults)).toEqual([
+        [
+          "port",
+          `${SB2}.runner.port`,
+          "sb2 and sb would both use port 4001. Give sb2 its own port.",
+        ],
+      ]);
+    });
+  });
+
+  describe("switchboard settings", () => {
+    const AT = "members.switchboard.config.switchboard";
+
+    it.each(
+      SETTINGS_ELSEWHERE.map(([pattern, reason]) => [
+        pattern.filter((part) => part !== "**").join("."),
+        reason,
+      ]),
+    )("refuses %s, which the switchboard reads elsewhere", (key, reason) => {
+      const envelope = draft({ [`${AT}.${key}`]: true });
+      expect(issues(envelope)).toContainEqual([
+        "config",
+        `${AT}.${key}`,
+        reason,
+      ]);
+    });
+
+    it("checks the values the builder writes", () => {
+      expect(
+        issues(draft({ [`${AT}.workers.executor.count`]: "lots" })),
+      ).toEqual([
+        ["config", `${AT}.workers.executor.count`, REASONS.workersValue],
+      ]);
+      expect(
+        issues(draft({ [`${AT}.workers.projection.enabled`]: "yes" })),
+      ).toEqual([
+        ["config", `${AT}.workers.projection.enabled`, REASONS.projectionValue],
+      ]);
+    });
+
+    it("refuses workflows turned on or off in two places", () => {
+      const envelope = draft({
+        [`${AT}.features.workflows`]: true,
+        [`${SB_REACTOR}.workflows`]: false,
+      });
+      expect(issues(envelope)).toContainEqual([
+        "config",
+        `${AT}.features.workflows`,
+        REASONS.workflowsTwice,
+      ]);
+    });
+
+    it("says only a switchboard reads them", () => {
+      const envelope = draft({
+        "members.connect.config.switchboard.inspection.admin": true,
+      });
+      expect(issues(envelope)).toEqual([
+        [
+          "config",
+          "members.connect.config.switchboard",
+          REASONS.switchboardOnly,
+        ],
+      ]);
     });
   });
 
@@ -425,31 +700,6 @@ describe("validateDraft", () => {
       ]);
     });
 
-    it("runs one switchboard per host, whatever its storage", () => {
-      const message =
-        "A host can run only one switchboard for now. All its reactors share one process, so sb2 would use sb's database and settings.";
-      const shared = draft({ "host.children.sb2": { host: "switchboard" } });
-      expect(issues(shared)).toEqual([
-        ["storage", "host.children.sb2", message],
-      ]);
-      const ownFolder = draft({
-        "host.children.sb2": {
-          host: "switchboard",
-          reactor: {
-            backends: {
-              main: {
-                kind: "in-process",
-                storage: { kind: "path", dataDir: ".ph/sb2" },
-              },
-            },
-          },
-        },
-      });
-      expect(issues(ownFolder)).toEqual([
-        ["storage", "host.children.sb2", message],
-      ]);
-    });
-
     it("keeps a switchboard's folders inside the project's .ph folder", () => {
       const envelope = draft({
         [`${SB_REACTOR}.backends.main`]: {
@@ -469,19 +719,20 @@ describe("validateDraft", () => {
         ],
         [
           `${SB_REACTOR}.backends.main.readModel.url`,
-          REASONS.readModel,
+          FOLDER_REASONS.readModel,
           "postgres://evil.example:5432/x",
         ],
       ]);
     });
 
-    it.each([
-      ["Postgres", { kind: "postgres" }],
-      ["a folder", { kind: "path", dataDir: ".ph/store" }],
-      ["the default folder", undefined],
+    it.each<[string, Record<string, unknown> | undefined, boolean]>([
+      ["Postgres", { kind: "postgres" }, false],
+      ["a folder", { kind: "path", dataDir: ".ph/store" }, false],
+      ["a folder with no folder chosen", { kind: "path" }, true],
+      ["the default folder", undefined, true],
     ])(
-      "reports a search data folder that moves the store off %s",
-      (_name, storage) => {
+      "with %s, reports a search data folder that would hold the store: %s",
+      (_name, storage, moves) => {
         const envelope = draft({
           [`${SB_REACTOR}.backends.main`]: {
             kind: "in-process",
@@ -489,13 +740,17 @@ describe("validateDraft", () => {
             readModel: { url: ".ph/read" },
           },
         });
-        expect(issues(envelope)).toEqual([
-          [
-            "storage",
-            `${SB_REACTOR}.backends.main.readModel.url`,
-            REASONS.readModel,
-          ],
-        ]);
+        expect(issues(envelope)).toEqual(
+          moves
+            ? [
+                [
+                  "storage",
+                  `${SB_REACTOR}.backends.main.readModel.url`,
+                  REASONS.readModel,
+                ],
+              ]
+            : [],
+        );
       },
     );
 

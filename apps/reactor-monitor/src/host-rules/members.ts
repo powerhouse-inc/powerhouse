@@ -32,6 +32,10 @@ export type Member = {
   reactor: Record<string, unknown> | undefined;
   /** Where that block lives (or would be written). */
   reactorAt: string;
+  /** Effective runner config: a wrapper's replaces the member's. */
+  config: Record<string, unknown> | undefined;
+  /** Where that config lives (or would be written). */
+  configAt: string;
   dev: boolean;
   backends: MemberBackend[];
   /** placement.primary names no backend, so a switchboard ignores them all. */
@@ -47,6 +51,25 @@ function roleOf(runner: Record<string, unknown>): MemberRole {
   if (module.endsWith(SWITCHBOARD_RUNNER)) return "switchboard";
   if (module.endsWith(CONNECT_RUNNER)) return "connect";
   return "other";
+}
+
+/** The value at a dotted path inside a record, if every step is a record. */
+export function valueAt(
+  record: Record<string, unknown> | undefined,
+  path: readonly string[],
+): unknown {
+  let at: unknown = record;
+  for (const key of path) {
+    if (!isRecord(at) || !Object.hasOwn(at, key)) return undefined;
+    at = at[key];
+  }
+  return at;
+}
+
+/** A switchboard's own settings: its `config.switchboard`. */
+export function switchboardSettings(member: Member): Record<string, unknown> {
+  const own = member.config?.switchboard;
+  return isRecord(own) ? own : {};
 }
 
 /** host-core primaryBackend's pick, by name. */
@@ -158,6 +181,8 @@ export function membersOf(
           runner: isRecord(host.runner) ? host.runner : {},
           reactor: isRecord(host.reactor) ? host.reactor : undefined,
           reactorAt: "host.reactor",
+          config: isRecord(host.config) ? host.config : undefined,
+          configAt: "host.config",
         },
         verb,
       ),
@@ -172,6 +197,7 @@ export function membersOf(
     const own = isRecord(body.runner) ? body.runner : {};
     const over = isRecord(wrapper.runner) ? wrapper.runner : {};
     const wrapped = wrapper.reactor !== undefined;
+    const ownConfig = wrapper.config !== undefined;
     return [
       member(
         {
@@ -189,6 +215,16 @@ export function membersOf(
           reactorAt: wrapped
             ? `host.children.${key}.reactor`
             : `members.${folder}.reactor`,
+          config: ownConfig
+            ? isRecord(wrapper.config)
+              ? wrapper.config
+              : undefined
+            : isRecord(body.config)
+              ? body.config
+              : undefined,
+          configAt: ownConfig
+            ? `host.children.${key}.config`
+            : `members.${folder}.config`,
         },
         verb,
       ),
