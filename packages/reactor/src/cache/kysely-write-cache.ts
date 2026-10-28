@@ -12,13 +12,13 @@ import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
   baseReducerVersion,
+  documentFromCreation,
   isDenied,
   isPurgeMarker,
   normalizeDocumentModelVersion,
   PURGE_DOCUMENT,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
-import { createDocumentFromAction } from "../executor/util.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   DocumentNotFoundError,
@@ -900,7 +900,7 @@ export class KyselyWriteCache implements IWriteCache {
         );
       }
 
-      document = createDocumentFromAction(documentCreateAction);
+      document = documentFromCreation(documentCreateAction);
       lastDocumentScopeOperation = createOp;
 
       let docModule = this.registry.getModule(
