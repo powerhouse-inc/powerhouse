@@ -2,6 +2,7 @@ import type { HostExport } from "@powerhousedao/host-core/schema";
 import fs from "node:fs";
 import path from "node:path";
 import { isRecord, membersOf } from "../host-rules/members.ts";
+import { hostFiles } from "../lib/host-files.ts";
 
 /** A host folder: one safe path segment. */
 export const FOLDER_PATTERN = /^[a-z0-9][a-z0-9._-]*$/i;
@@ -121,16 +122,9 @@ function ensureRecordAt(
 /** `hosts/<folder>/host.js` for the host and every member: plain data. */
 export function renderHostFiles(envelope: HostExport): Map<string, string> {
   const files = new Map<string, string>();
-  const definitions: [string, unknown][] = [
-    [envelope.name, envelope.host],
-    ...Object.entries(envelope.members),
-  ];
-  for (const [folder, definition] of definitions) {
+  for (const { folder, content } of hostFiles(envelope)) {
     assertFolder(folder);
-    files.set(
-      folder,
-      `export default ${JSON.stringify(definition, null, 2)};\n`,
-    );
+    files.set(folder, content);
   }
   return files;
 }

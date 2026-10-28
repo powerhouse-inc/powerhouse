@@ -15,7 +15,13 @@ import {
   type ManagedReactorEntry,
   type ReactorDescriptor,
 } from "@powerhousedao/reactor-monitor";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   adminGateFor,
   OperatorGateNote,
@@ -36,7 +42,11 @@ import {
 import { RoutingPanel } from "./components/RoutingPanel.js";
 import { SwitchboardsPanel } from "./components/SwitchboardsPanel.js";
 import { HostBuilder } from "./builder/HostBuilder.js";
-import { useManagedDescriptors } from "./controller/use-managed-descriptors.js";
+import { useBuilderRun } from "./builder/run.js";
+import {
+  useManagedDescriptors,
+  type ManagedDescriptors,
+} from "./controller/use-managed-descriptors.js";
 import { MonitoringSetsStore } from "./monitoring-sets.js";
 import {
   buildDescriptor as buildDescriptorFromForm,
@@ -271,8 +281,12 @@ type AppBodyProps = {
   readonly onSwitchSet: (name: string) => void;
   readonly onCreateSet: (name: string) => void;
   readonly onDeleteSet: (name: string) => void;
-  readonly onImport: (request: HostImportRequest) => void;
+  /** Returns the name the set was saved under. */
+  readonly onImport: (request: HostImportRequest) => string;
   readonly switchboards: ReactNode;
+  readonly managed: ManagedDescriptors;
+  /** Adds descriptors to the active set, renaming any that clash. */
+  readonly onAddDescriptors: (descriptors: ReactorDescriptor[]) => void;
 };
 
 function AppBody({
@@ -287,12 +301,19 @@ function AppBody({
   onDeleteSet,
   onImport,
   switchboards,
+  managed,
+  onAddDescriptors,
 }: AppBodyProps) {
   const entries = useManagedReactors();
   const entry = useManagedReactorEntry(selected ?? "");
   const [activeTab, setActiveTab] = useState<InspectorTab>("Overview");
   const [view, setView] = useState<AppView>("Inspect");
   const registry = useReactorMonitorRegistry();
+  const builderRun = useBuilderRun({
+    client: managed.client,
+    managed,
+    onAddDescriptors,
+  });
 
   /**
    * Dev-only scripting handle: exposes the live registry on the window so
@@ -377,7 +398,13 @@ function AppBody({
             <RoutingPanel />
           </div>
         ) : (
-          <HostBuilder />
+          <HostBuilder
+            client={managed.client}
+            onSaveSet={onImport}
+            onStart={builderRun.start}
+            onStop={builderRun.stop}
+            run={builderRun.run}
+          />
         )}
       </main>
     </div>
@@ -512,8 +539,34 @@ export function App({
       if (request.activate) {
         handleSwitchSet(name);
       }
+      return name;
     },
     [store, handleSwitchSet],
+  );
+
+  const latest = useRef(descriptors);
+  useEffect(() => {
+    latest.current = descriptors;
+  }, [descriptors]);
+  const handleAddDescriptors = useCallback(
+    (added: ReactorDescriptor[]) => {
+      const taken = new Set(latest.current.map((d) => d.name));
+      const renamed = added.map((descriptor) => {
+        let name = descriptor.name;
+        for (let n = 2; taken.has(name); n++) name = `${descriptor.name}-${n}`;
+        taken.add(name);
+        return rehydrateDescriptor({ ...descriptor, name });
+      });
+      if (renamed.length > 0) {
+        latest.current = [...latest.current, ...renamed];
+        setDescriptors((previous) => {
+          const next = [...previous, ...renamed];
+          store.setActiveDescriptors(next);
+          return next;
+        });
+      }
+    },
+    [store],
   );
 
   return (
@@ -534,6 +587,8 @@ export function App({
           activeSetName={activeSetName}
           onCreateSet={handleCreateSet}
           onDeleteSet={handleDeleteSet}
+          managed={managed}
+          onAddDescriptors={handleAddDescriptors}
           onImport={handleImport}
           onKill={handleKill}
           onProvision={handleProvision}

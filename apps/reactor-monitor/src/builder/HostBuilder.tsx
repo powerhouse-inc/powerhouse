@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { HostImportRequest } from "../components/HostImportPanel.js";
 import { errorMessage } from "../controller/client.js";
 import type {
   HostRulesContext,
@@ -21,7 +22,8 @@ import {
   type DraftStorage,
   type StepId,
 } from "./draft.js";
-import { stepOf, useBuilderEngine } from "./engine.js";
+import { stepOf, useBuilderEngine, type BuilderEngine } from "./engine.js";
+import type { BuilderRun } from "./run.js";
 import { BasicsStep } from "./steps/BasicsStep.js";
 import { EnvironmentStep } from "./steps/EnvironmentStep.js";
 import { MembersStep } from "./steps/MembersStep.js";
@@ -75,14 +77,23 @@ export type HostBuilderProps = {
   /** Where the draft is kept across reloads; defaults to localStorage. */
   readonly storage?: DraftStorage;
   /** A rejection that `isBaseChanged` recognises offers to rebase the draft. */
-  readonly onStart?: (draft: BuilderDraft) => Promise<void> | void;
-  readonly onSaveSet?: (setName: string, draft: BuilderDraft) => void;
+  readonly onStart?: (
+    draft: BuilderDraft,
+    engine: BuilderEngine,
+  ) => Promise<void> | void;
+  /** The copy Start launched, while it runs. */
+  readonly run?: BuilderRun;
+  readonly onStop?: () => Promise<void>;
+  /** Returns the name the set was saved under. */
+  readonly onSaveSet?: (request: HostImportRequest) => string;
 };
 
 export function HostBuilder({
   client,
   storage: injected,
   onStart,
+  run,
+  onStop,
   onSaveSet,
 }: HostBuilderProps) {
   const [storage] = useState(() => injected ?? browserStorage());
@@ -257,6 +268,8 @@ export function HostBuilder({
                 onSaveSet={onSaveSet}
                 onBaseChanged={() => setBaseChanged(true)}
                 onStart={onStart}
+                onStop={onStop}
+                run={run}
               />
             )}
           </div>

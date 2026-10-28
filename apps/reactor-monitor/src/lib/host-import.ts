@@ -39,8 +39,9 @@ export type ImportRow = {
   /** The member's key path in the compound, or the host name standalone. */
   member: string;
   backend: string;
-  /** Remote rows only. `derived` marks a URL guessed from the producer. */
-  url?: { value?: string; derived: boolean };
+  /** Remote rows only. `derived` marks a URL guessed from the producer;
+   * `reason` says why there is no URL, when the declaration names one. */
+  url?: { value?: string; derived: boolean; reason?: string };
   /** Why the row cannot be imported; such a row stays excluded. */
   excluded?: string;
 };
@@ -501,7 +502,11 @@ function memberRows(
           name,
           remote: { url: resolved.value ?? "" },
         },
-        url: { value: resolved.value, derived: resolved.derived },
+        url: {
+          value: resolved.value,
+          derived: resolved.derived,
+          ...(resolved.reason ? { reason: resolved.reason } : {}),
+        },
       });
       continue;
     }

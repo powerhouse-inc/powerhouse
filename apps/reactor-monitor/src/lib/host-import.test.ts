@@ -245,7 +245,11 @@ describe("planImport", () => {
           name: "assistant.switchboard",
           remote: { url: "" },
         },
-        url: { value: undefined, derived: false },
+        url: {
+          value: undefined,
+          derived: false,
+          reason: expect.stringMatching(/names host "switchboard"/) as unknown,
+        },
       }),
     ]);
     const warning = issues.find(
@@ -264,7 +268,15 @@ describe("planImport", () => {
     const { rows, issues } = plan({ ...cli, host: { ...cli.host, children } });
     expect(rows.map((row) => [row.descriptor.name, row.url])).toEqual([
       ["cli-switchboard.main", { value: undefined, derived: false }],
-      ["cli-connect.sb", { value: undefined, derived: false }],
+      [
+        "cli-connect.sb",
+        {
+          value: undefined,
+          derived: false,
+          reason:
+            'member "cli-switchboard" is not a switchboard with a fixed port',
+        },
+      ],
     ]);
     // The 0 is the wrapper's, not the switchboard host's.
     expect(issues).toContainEqual(
