@@ -1,3 +1,4 @@
+import { hostname } from "node:os";
 import type {
   Context,
   IAuthorizationService,
@@ -420,6 +421,9 @@ export const getResolvers = (
       },
       secrets: async () => (await runtime.secrets()).list(),
       oauthRedirectUri: () => oauth?.callbackUrl ?? null,
+      // The runner id apps record (folder-sync and integrations): the
+      // machine, which processors can name too; they see no signing key.
+      host: () => ({ id: `switchboard@${hostname()}`, label: hostname() }),
       oauthAttempt: (_parent: unknown, args: { state: string }, ctx: Context) =>
         runtime.oauthAttempt(args.state, ctx),
       triggerStates: async (_parent: unknown, _args: unknown, ctx: Context) =>

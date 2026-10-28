@@ -159,9 +159,21 @@ export const schema: DocumentNode = gql`
     """
     oauthRedirectUri: String
     """
+    The switchboard this runtime lives in: what an app records as the runner
+    of the workflows and connections it sets up here.
+    """
+    host: RuntimeHost!
+    """
     How an OAuth2 sign-in opened by startOAuth stands; null when unknown.
     """
     oauthAttempt(state: String!): OAuthAttempt
+  }
+
+  type RuntimeHost {
+    "switchboard@<machine>: what apps record as the runner"
+    id: String!
+    "The machine's name, for people: where a sign-in has to happen"
+    label: String!
   }
 
   type OAuthAttempt {
