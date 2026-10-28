@@ -33,6 +33,17 @@ describe("remote bearers", () => {
     expect(remoteHeaders("http://other.test/graphql")).toEqual({});
   });
 
+  it("keys every drive address on a switchboard by its GraphQL url", () => {
+    setRemoteBearer("http://switchboard.test/d/a", "token-a");
+
+    expect(
+      window.sessionStorage.getItem(REMOTE_BEARER_KEY_PREFIX + URL_A),
+    ).toBe("token-a");
+    expect(remoteHeaders("http://switchboard.test/d/b")).toEqual({
+      Authorization: "Bearer token-a",
+    });
+  });
+
   it("reads a bearer a previous page load of this tab stored", () => {
     window.sessionStorage.setItem(REMOTE_BEARER_KEY_PREFIX + URL_A, "kept");
 
@@ -40,7 +51,7 @@ describe("remote bearers", () => {
       name: "after-reload",
       kind: "remote",
       syncMode: "local",
-      remoteUrl: URL_A,
+      remoteUrl: "http://switchboard.test/d/powerhouse",
     });
 
     expect(descriptor.remote?.headers?.()).toEqual({
