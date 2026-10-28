@@ -78,7 +78,7 @@ describe("UseStep", () => {
 
   it("starts a clean project draft when wired", async () => {
     const onStart = vi.fn();
-    const { view, draft } = renderStep(UseStep, {
+    const { view, draft, engine } = renderStep(UseStep, {
       envelope: hostExport("switchboard"),
       context: FULL,
       extra: { client: fakeBuilderClient().client, onStart },
@@ -87,7 +87,7 @@ describe("UseStep", () => {
       expect(startButton(view)).toHaveProperty("disabled", false),
     );
     fireEvent.click(startButton(view));
-    expect(onStart).toHaveBeenCalledWith(draft);
+    expect(onStart).toHaveBeenCalledWith(draft, engine);
   });
 
   it("hands a refused start over to the host-changed choices", async () => {

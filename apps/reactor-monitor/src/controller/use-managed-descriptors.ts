@@ -22,6 +22,7 @@ import {
 import {
   isManaged,
   managedDescriptors,
+  ownerOf,
   servesDescriptor,
   type ManagedBy,
   type ManagedDescriptor,
@@ -62,6 +63,8 @@ export interface ManagedDescriptors {
   withheld: readonly WithheldDescriptor[];
   /** Instance ids with a descriptor in the active set. */
   attachedIds: ReadonlySet<string>;
+  /** Browser reactors in the active set, by the instance that owns them. */
+  owned: ReadonlyMap<string, readonly string[]>;
   notices: readonly ManagedNotice[];
   dismissNotice: (id: number) => void;
   /** Adds a descriptor per switchboard the instance serves. */
@@ -69,6 +72,8 @@ export interface ManagedDescriptors {
   /** handleKill's managed branch: stops the descriptor's instance. */
   kill: (name: string) => void;
   stopInstance: (id: string) => Promise<void>;
+  /** Drops everything of an instance that is already gone. */
+  dropInstance: (id: string) => void;
   stopAll: () => Promise<void>;
   /** Drops released descriptors whose instance exited or is gone. */
   reconcile: (instances: readonly Instance[]) => void;
@@ -77,6 +82,8 @@ export interface ManagedDescriptors {
 
 const keyOf = (descriptor: ManagedDescriptor) =>
   `${descriptor.name}\u0000${descriptor.managedBy.instanceId}\u0000${descriptor.managedBy.member ?? ""}`;
+
+const LIVE = new Set(["starting", "running"]);
 
 /** One descriptor per (instance, member). */
 const targetOf = (managedBy: ManagedBy) =>
@@ -100,6 +107,8 @@ export function useManagedDescriptors(
   const failures = useRef(new Map<string, number>());
   /** Instances with a stop in flight: never released or attached. */
   const stopping = useRef(new Set<string>());
+  /** Owners of browser reactors: being asked about, or known to exist. */
+  const owners = useRef(new Map<string, "checking" | "live">());
   useEffect(() => {
     mounted.current = true;
     const pending = timers.current;
@@ -129,21 +138,33 @@ export function useManagedDescriptors(
     [setDescriptors, store],
   );
 
+  /** Drops matching managed descriptors, and the browser reactors of `gone`. */
   const drop = useCallback(
-    (match: (descriptor: ManagedDescriptor) => boolean, notice?: string) => {
-      const gone = latest.current.filter(isManaged).filter(match);
-      if (gone.length === 0) return;
-      for (const descriptor of gone) {
+    (
+      match: (descriptor: ManagedDescriptor) => boolean,
+      notice?: string,
+      gone: ReadonlySet<string> = new Set(),
+    ) => {
+      const ownedGone = (d: ReactorDescriptor) => {
+        const owner = ownerOf(d);
+        return owner !== undefined && gone.has(owner);
+      };
+      const dropped = latest.current.filter(isManaged).filter(match);
+      const owned = latest.current.filter(ownedGone);
+      if (dropped.length === 0 && owned.length === 0) return;
+      for (const descriptor of dropped) {
         probes.current.delete(keyOf(descriptor));
         setRemoteBearer(descriptor.remote.url, "");
       }
-      const names = new Set(gone.map((descriptor) => descriptor.name));
+      const names = new Set(
+        [...dropped, ...owned].map((descriptor) => descriptor.name),
+      );
       const kept = (d: ReactorDescriptor) =>
-        !(isManaged(d) && match(d) && names.has(d.name));
+        !(names.has(d.name) && ((isManaged(d) && match(d)) || ownedGone(d)));
       latest.current = latest.current.filter(kept);
       update((previous) => previous.filter(kept));
       if (notice) {
-        for (const descriptor of gone) {
+        for (const descriptor of dropped) {
           notify(`${descriptor.name}: ${notice}`);
         }
       }
@@ -171,7 +192,39 @@ export function useManagedDescriptors(
         failures.current.delete(key);
       }
     }
+    const ownerIds = new Set(descriptors.flatMap((d) => ownerOf(d) ?? []));
+    for (const id of owners.current.keys()) {
+      if (!ownerIds.has(id)) owners.current.delete(id);
+    }
     if (!client) return;
+    for (const id of ownerIds) {
+      if (owners.current.has(id)) continue;
+      owners.current.set(id, "checking");
+      void (async () => {
+        let live: boolean | undefined;
+        try {
+          live = LIVE.has((await client.get(id)).status);
+        } catch (error) {
+          live = isNotFound(error) ? false : undefined;
+        }
+        if (!mounted.current || owners.current.get(id) !== "checking") return;
+        if (live === true) {
+          owners.current.set(id, "live");
+        } else if (live === false) {
+          owners.current.delete(id);
+          drop(() => false, undefined, new Set([id]));
+        } else {
+          const timer = setTimeout(() => {
+            timers.current.delete(timer);
+            if (owners.current.get(id) === "checking") {
+              owners.current.delete(id);
+              bump();
+            }
+          }, reprobeMs);
+          timers.current.add(timer);
+        }
+      })();
+    }
     const reprobe = (descriptor: ManagedDescriptor, failed: boolean) => {
       const key = keyOf(descriptor);
       const count = failed ? (failures.current.get(key) ?? 0) + 1 : 0;
@@ -194,7 +247,7 @@ export function useManagedDescriptors(
       const sameDescriptor = (d: ManagedDescriptor) =>
         keyOf(d) === keyOf(descriptor);
       void (async () => {
-        let outcome: Probe | { drop: string };
+        let outcome: Probe | { drop: string; moved?: true };
         let failed = false;
         let fatal = false;
         try {
@@ -206,7 +259,10 @@ export function useManagedDescriptors(
               : instance.status !== "running"
                 ? { drop: `its switchboard is ${instance.status}` }
                 : !servesDescriptor(instance, descriptor)
-                  ? { drop: "its switchboard now serves another URL" }
+                  ? {
+                      drop: "its switchboard now serves another URL",
+                      moved: true,
+                    }
                   : { state: "released" };
         } catch (error) {
           failed = true;
@@ -224,7 +280,11 @@ export function useManagedDescriptors(
           return;
         }
         if ("drop" in outcome) {
-          drop(sameDescriptor, outcome.drop);
+          drop(
+            sameDescriptor,
+            outcome.drop,
+            outcome.moved ? undefined : new Set([instanceId]),
+          );
           return;
         }
         settle(descriptor, outcome);
@@ -255,6 +315,12 @@ export function useManagedDescriptors(
   const attachedIds = new Set(
     managedList.map((descriptor) => descriptor.managedBy.instanceId),
   );
+
+  const owned = new Map<string, string[]>();
+  for (const descriptor of descriptors) {
+    const owner = ownerOf(descriptor);
+    if (owner) owned.set(owner, [...(owned.get(owner) ?? []), descriptor.name]);
+  }
 
   const attach = useCallback(
     (instance: Instance) => {
@@ -289,7 +355,11 @@ export function useManagedDescriptors(
       const id = descriptor.managedBy.instanceId;
       stopping.current.add(id);
       // The caller drops `name`; its instance's other members go with it.
-      drop((d) => d.managedBy.instanceId === id && d.name !== name);
+      drop(
+        (d) => d.managedBy.instanceId === id && d.name !== name,
+        undefined,
+        new Set([id]),
+      );
       client
         .stop(id)
         .catch((error: unknown) => {
@@ -308,7 +378,7 @@ export function useManagedDescriptors(
       stopping.current.add(id);
       try {
         await client.stop(id);
-        drop((d) => d.managedBy.instanceId === id);
+        drop((d) => d.managedBy.instanceId === id, undefined, new Set([id]));
       } finally {
         stopping.current.delete(id);
       }
@@ -324,7 +394,7 @@ export function useManagedDescriptors(
     for (const id of attached) stopping.current.add(id);
     try {
       const stopped = new Set((await client.stopAll()).map((i) => i.id));
-      drop((d) => stopped.has(d.managedBy.instanceId));
+      drop((d) => stopped.has(d.managedBy.instanceId), undefined, stopped);
     } finally {
       for (const id of attached) stopping.current.delete(id);
     }
@@ -338,19 +408,36 @@ export function useManagedDescriptors(
           continue;
         }
         const instance = byId.get(descriptor.managedBy.instanceId);
+        const { instanceId } = descriptor.managedBy;
         if (instance?.status === "exited" || instance?.status === "failed") {
           drop(
             (d) => keyOf(d) === keyOf(descriptor),
             `its switchboard ${instance.status}`,
+            new Set([instanceId]),
           );
         } else if (!instance) {
           drop(
             (d) => keyOf(d) === keyOf(descriptor),
             "the controller no longer runs it",
+            new Set([instanceId]),
           );
         }
       }
+      // Only owners known to exist: a list sent before a start can't drop.
+      const gone = new Set(
+        [...owners.current]
+          .filter(([, state]) => state === "live")
+          .map(([id]) => id)
+          .filter((id) => !LIVE.has(byId.get(id)?.status ?? "")),
+      );
+      if (gone.size > 0) drop(() => false, undefined, gone);
     },
+    [drop],
+  );
+
+  const dropInstance = useCallback(
+    (id: string) =>
+      drop((d) => d.managedBy.instanceId === id, undefined, new Set([id])),
     [drop],
   );
 
@@ -368,11 +455,13 @@ export function useManagedDescriptors(
     visible,
     withheld,
     attachedIds,
+    owned,
     notices,
     dismissNotice,
     attach,
     kill,
     stopInstance,
+    dropInstance,
     stopAll,
     reconcile,
     forget,

@@ -40,8 +40,9 @@ export type ImportRow = {
   /** The member's key path in the compound, or the host name standalone. */
   member: string;
   backend: string;
-  /** Remote rows only. `derived` marks a URL guessed from the producer. */
-  url?: { value?: string; derived: boolean };
+  /** Remote rows only. `derived` marks a URL guessed from the producer;
+   * `reason` says why there is no URL, when the declaration names one. */
+  url?: { value?: string; derived: boolean; reason?: string };
   /** Why the row cannot be imported; such a row stays excluded. */
   excluded?: string;
 };
@@ -314,6 +315,8 @@ function switchboardPort(member: Member): number | undefined {
 }
 
 const DEFAULT_DRIVE_SLUG = "powerhouse";
+const HASHED_HOME =
+  "its drives' addresses are known only once it starts; enter one of them";
 
 /** The slug a switchboard member serves a declared drive under, when the
  * browser can know it: a `projectHash: true` drive is served hashed. */
@@ -499,7 +502,13 @@ function memberRows(
           descriptor: { kind: "remote", name, remote: { url: url ?? "" } },
           member: member.name,
           backend: MAIN_BACKEND,
-          url: { value: url, derived: url !== undefined },
+          url: {
+            value: url,
+            derived: url !== undefined,
+            ...(port !== undefined && slug === undefined
+              ? { reason: HASHED_HOME }
+              : {}),
+          },
         },
       ];
     }
@@ -546,7 +555,11 @@ function memberRows(
           name,
           remote: { url: resolved.value ?? "" },
         },
-        url: { value: resolved.value, derived: resolved.derived },
+        url: {
+          value: resolved.value,
+          derived: resolved.derived,
+          ...(resolved.reason ? { reason: resolved.reason } : {}),
+        },
       });
       continue;
     }

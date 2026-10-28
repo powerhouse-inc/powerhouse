@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { HostImportRequest } from "../../components/HostImportPanel.js";
 import { errorMessage } from "../../controller/client.js";
 import {
   changedFiles,
@@ -10,6 +11,8 @@ import type { BuilderClient } from "../client.js";
 import { fixIssuesFirst, START_BLOCKERS } from "../copy.js";
 import { downloadExport, exportFileName } from "../download.js";
 import { sourceOf, type BuilderDraft } from "../draft.js";
+import type { BuilderEngine } from "../engine.js";
+import { monitoringSetOf, type BuilderRun } from "../run.js";
 import type { StepProps } from "./types.js";
 
 /** Why Start is off, if it is; `served` is undefined while it's being checked. */
@@ -18,12 +21,15 @@ export function startBlocker({
   controller,
   served,
   wired,
+  running = false,
 }: {
   readonly issues: number;
   readonly controller: boolean;
   readonly served: boolean | undefined;
   readonly wired: boolean;
+  readonly running?: boolean;
 }): string | undefined {
+  if (running) return START_BLOCKERS.running;
   if (issues > 0) return fixIssuesFirst(issues);
   if (!controller) return START_BLOCKERS.noController;
   if (served === undefined) return START_BLOCKERS.checking;
@@ -76,31 +82,105 @@ function Blocked({ label, reason }: { label: string; reason?: string }) {
   ) : null;
 }
 
+function Running({
+  run,
+  onStop,
+}: {
+  readonly run: BuilderRun;
+  readonly onStop?: () => Promise<void>;
+}) {
+  const [problem, setProblem] = useState("");
+  const stop = async () => {
+    setProblem("");
+    try {
+      await onStop?.();
+    } catch (error) {
+      setProblem(`Couldn't stop it: ${errorMessage(error)}`);
+    }
+  };
+  return (
+    <div className="hb-sub" aria-label="Running copy">
+      <p className="hb-note" role="status">
+        {run.status === "starting"
+          ? "Starting a copy. This can take a minute."
+          : run.status === "stopping"
+            ? "Stopping the copy…"
+            : "Running a copy. Its reactors are in the reactor list."}
+      </p>
+      {run.problem ? (
+        <p className="hb-error">
+          Couldn't ask the controller about the copy: {run.problem} Still
+          trying.
+        </p>
+      ) : null}
+      <ul className="hb-list">
+        {run.reactors.map((reactor) => (
+          <li key={reactor.name}>
+            <b>{reactor.name}</b>{" "}
+            {reactor.url ? (
+              <span className="hb-mono hb-note">{reactor.url}</span>
+            ) : null}
+          </li>
+        ))}
+        {run.browser.map((name) => (
+          <li key={name}>
+            <b>{name}</b> <span className="hb-note">runs in this browser</span>
+          </li>
+        ))}
+      </ul>
+      <div>
+        <button
+          className="hb-btn"
+          disabled={run.status === "stopping" || run.id === undefined}
+          onClick={() => void stop()}
+          type="button"
+        >
+          Stop
+        </button>
+      </div>
+      {problem ? <p className="hb-error">{problem}</p> : null}
+    </div>
+  );
+}
+
 export function UseStep({
   client,
   draft,
   engine,
+  run,
   onStart,
+  onStop,
   onSaveSet,
   onBaseChanged = () => undefined,
 }: StepProps & {
   readonly client?: BuilderClient;
-  readonly onStart?: (draft: BuilderDraft) => Promise<void> | void;
+  readonly run?: BuilderRun;
+  readonly onStart?: (
+    draft: BuilderDraft,
+    engine: BuilderEngine,
+  ) => Promise<void> | void;
+  readonly onStop?: () => Promise<void>;
   readonly onBaseChanged?: () => void;
-  readonly onSaveSet?: (setName: string, draft: BuilderDraft) => void;
+  /** Returns the name the set was saved under. */
+  readonly onSaveSet?: (request: HostImportRequest) => string;
 }) {
   const served = useServed(client, draft);
   const [setName, setSetName] = useState(engine.envelope.name);
   const [status, setStatus] = useState("");
+  const [saved, setSaved] = useState<string[]>([]);
   const blocker = startBlocker({
     issues: engine.issues.length,
     controller: engine.context.controller,
     served,
     wired: onStart !== undefined,
+    running: run !== undefined,
   });
-  const saveBlocker = onSaveSet
-    ? undefined
-    : "Saving as a monitoring set from the builder isn't available yet.";
+  const set = monitoringSetOf(engine.envelope, setName.trim());
+  const saveBlocker = !onSaveSet
+    ? "Saving as a monitoring set from the builder isn't available yet."
+    : set.request.descriptors.length === 0
+      ? "Nothing in this host can be watched from the monitor."
+      : undefined;
   const exportFile = exportFileName(engine.envelope);
   const changed = changedFiles(engine.envelope, draft.setters);
   const copyable: HostFile[] =
@@ -110,11 +190,20 @@ export function UseStep({
     if (!onStart) return;
     setStatus("");
     try {
-      await onStart(draft);
+      await onStart(draft, engine);
     } catch (error) {
       if (isBaseChanged(error)) onBaseChanged();
       else setStatus(`Couldn't start: ${errorMessage(error)}`);
     }
+  };
+
+  const save = () => {
+    if (!onSaveSet) return;
+    const name = onSaveSet(set.request);
+    setSaved([
+      `Saved as the monitoring set "${name}".`,
+      ...set.left.map((row) => `${row.name} was left out: ${row.reason}`),
+    ]);
   };
 
   const copy = async (file: HostFile) => {
@@ -145,7 +234,8 @@ export function UseStep({
             Start
           </button>
         </div>
-        <Blocked label="Start" reason={blocker} />
+        {run ? null : <Blocked label="Start" reason={blocker} />}
+        {run ? <Running onStop={onStop} run={run} /> : null}
       </div>
       <div className="hb-card hb-sec">
         <label className="hb-field">
@@ -160,13 +250,20 @@ export function UseStep({
           <button
             className="hb-btn"
             disabled={saveBlocker !== undefined || setName.trim() === ""}
-            onClick={() => onSaveSet?.(setName.trim(), draft)}
+            onClick={save}
             type="button"
           >
             Save set
           </button>
         </div>
         <Blocked label="Save set" reason={saveBlocker} />
+        {saved.length > 0 ? (
+          <ul aria-label="Saved set" className="hb-list hb-note">
+            {saved.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        ) : null}
       </div>
       <div className="hb-card hb-sec">
         <div className="hb-flabel">Take the files</div>

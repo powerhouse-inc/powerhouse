@@ -245,7 +245,11 @@ describe("planImport", () => {
           name: "assistant.switchboard",
           remote: { url: "" },
         },
-        url: { value: undefined, derived: false },
+        url: {
+          value: undefined,
+          derived: false,
+          reason: expect.stringMatching(/names host "switchboard"/) as unknown,
+        },
       }),
     ]);
     const warning = issues.find(
@@ -264,7 +268,15 @@ describe("planImport", () => {
     const { rows, issues } = plan({ ...cli, host: { ...cli.host, children } });
     expect(rows.map((row) => [row.descriptor.name, row.url])).toEqual([
       ["cli-switchboard.main", { value: undefined, derived: false }],
-      ["cli-connect.sb", { value: undefined, derived: false }],
+      [
+        "cli-connect.sb",
+        {
+          value: undefined,
+          derived: false,
+          reason:
+            'member "cli-switchboard" is not a switchboard with a fixed port',
+        },
+      ],
     ]);
     // The 0 is the wrapper's, not the switchboard host's.
     expect(issues).toContainEqual(
@@ -298,7 +310,12 @@ describe("planImport", () => {
         },
       }),
     );
-    expect(rows[0].url).toEqual({ derived: false });
+    expect(rows[0].url).toEqual({
+      value: undefined,
+      derived: false,
+      reason:
+        "https://sb.example/graphql is not a switchboard drive address (<switchboard>/d/<slug>)",
+    });
     expect(issues.map((issue) => issue.message)).toContain(
       "solo.sb: enter a switchboard drive address (https://sb.example/graphql is not a switchboard drive address (<switchboard>/d/<slug>)).",
     );
@@ -402,7 +419,14 @@ describe("planImport", () => {
         },
       }),
     );
-    expect(rows.map((row) => row.url)).toEqual([{ derived: false }]);
+    expect(rows.map((row) => row.url)).toEqual([
+      {
+        value: undefined,
+        derived: false,
+        reason:
+          "its drives' addresses are known only once it starts; enter one of them",
+      },
+    ]);
     expect(issues.map((issue) => issue.message)).toContain(
       'Member "sb" serves no drive whose address is known before it starts; enter one of its drive addresses.',
     );
