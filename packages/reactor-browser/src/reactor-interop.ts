@@ -2,6 +2,7 @@ import type {
   DocumentChangeType,
   DuplicateManifestError,
   DuplicateModuleError,
+  JOB_NOT_FOUND_ERROR_NAME as ReactorJobNotFoundErrorName,
 } from "@powerhousedao/reactor";
 
 /**
@@ -78,3 +79,7 @@ export function isDuplicateManifestError(
 ): error is DuplicateManifestError {
   return Error.isError(error) && error.name === "DuplicateManifestError";
 }
+
+/** The error name a reactor reports for a job it does not know. */
+export const JOB_NOT_FOUND_ERROR_NAME: typeof ReactorJobNotFoundErrorName =
+  "JobNotFoundError";
