@@ -37,6 +37,7 @@ import {
   getVariableDeclarationByTypeName,
 } from "utils";
 import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
+import { assertProjectScalarsModuleExists } from "../../codegen/project-scalars.js";
 import {
   makeDocumentModelDocumentTypeFile,
   makeDocumentModelGenActionsFile,
@@ -90,6 +91,11 @@ export async function tsMorphGenerateDocumentModel(
   );
   const documentModelsDirPath = documentModelsDir.getPath();
   const projectDir = documentModelsDir.getParentOrThrow().getPath();
+  assertProjectScalarsModuleExists({
+    modelName: name,
+    specifications,
+    projectDir,
+  });
   const documentModelDirName = kebabCase(name);
   const documentModelDirPath = join(
     documentModelsDirPath,

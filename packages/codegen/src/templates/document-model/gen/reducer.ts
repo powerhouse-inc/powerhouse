@@ -57,13 +57,20 @@ function makeModulesOperationsImports(
     .join("\n");
 }
 
-function makeOperationInputSchemaInvocation(operation: OperationSpecification) {
+function makeOperationInputSchemaInvocation(
+  operation: OperationSpecification,
+  parsesInput: boolean,
+) {
   const operationInputSchema = makeOperationInputSchema(operation);
   const constantCaseOperationName = makeConstantCaseOperationName(operation);
   if (operation.schema === null) {
     return ts`
   if (Object.keys(action.input).length > 0) throw new Error("Expected empty input for action ${constantCaseOperationName}");
 `.raw;
+  }
+  if (parsesInput) {
+    return ts`const input = memoizedSchema(${operationInputSchema}).parse(action.input);`
+      .raw;
   }
   return ts`memoizedSchema(${operationInputSchema}).parse(action.input);`.raw;
 }
@@ -85,6 +92,7 @@ function makeOperationInvocation(
   module: ModuleSpecification,
   operation: OperationSpecification,
   camelCaseDocumentType: string,
+  parsesInput: boolean,
 ) {
   const operationsObjectName = makeOperationsObjectName(
     module,
@@ -93,9 +101,10 @@ function makeOperationInvocation(
   const operationName = makeOperationName(operation);
   const scope = operation.scope || "global";
   const actionTypeName = makeActionTypeName(operation);
+  const operationAction = parsesInput ? "{ ...action, input }" : "action";
 
   return ts`
-  ${operationsObjectName}.${operationName}(state.${scope}, action as ${actionTypeName}, dispatch);
+  ${operationsObjectName}.${operationName}(state.${scope}, ${operationAction} as ${actionTypeName}, dispatch);
   `.raw;
 }
 
@@ -117,28 +126,32 @@ function makeActionTypeImports(modules: ModuleSpecification[]) {
 function makeModuleOperationCaseStatement(
   module: ModuleSpecification,
   camelCaseDocumentType: string,
+  parsedInputOperations: ReadonlySet<string>,
 ) {
-  return module.operations.map(
-    (operation) =>
-      ts`
+  return module.operations.map((operation) => {
+    const parsesInput = parsedInputOperations.has(operation.name ?? "");
+    return ts`
       case "${makeConstantCaseOperationName(operation)}": {
-        ${makeOperationInputSchemaInvocation(operation)}
-        ${makeOperationInvocation(module, operation, camelCaseDocumentType)}
+        ${makeOperationInputSchemaInvocation(operation, parsesInput)}
+        ${makeOperationInvocation(module, operation, camelCaseDocumentType, parsesInput)}
         break;
       }
-      `.raw,
-  );
+      `.raw;
+  });
 }
 
 function makeModuleOperationsCaseStatements(
   modules: ModuleSpecification[],
   camelCaseDocumentType: string,
+  parsedInputOperations: ReadonlySet<string>,
 ) {
   return modules
     .map((module) =>
-      makeModuleOperationCaseStatement(module, camelCaseDocumentType).join(
-        "\n",
-      ),
+      makeModuleOperationCaseStatement(
+        module,
+        camelCaseDocumentType,
+        parsedInputOperations,
+      ).join("\n"),
     )
     .join("\n");
 }
@@ -166,6 +179,7 @@ function memoizedSchema<T>(makeSchema: () => T): T {
 
 export const documentModelGenReducerFileTemplate = (
   v: DocumentModelFileMakerArgs,
+  parsedInputOperations: ReadonlySet<string> = new Set(),
 ) =>
   ts`
 import type { Reducer, StateReducer } from "document-model";
@@ -185,7 +199,7 @@ const stateReducer: StateReducer<${v.phStateName}> =
             return state;
         }
         switch (action.type) {
-       ${makeModuleOperationsCaseStatements(v.specification.modules, v.camelCaseDocumentType)}
+       ${makeModuleOperationsCaseStatements(v.specification.modules, v.camelCaseDocumentType, parsedInputOperations)}
             default:
                 return state;
         }

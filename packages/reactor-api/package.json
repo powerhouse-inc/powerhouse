@@ -86,7 +86,6 @@
     "@powerhousedao/analytics-engine-graphql": "workspace:*",
     "@powerhousedao/analytics-engine-pg": "workspace:*",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-attachments": "workspace:*",
     "@powerhousedao/reactor-drive": "workspace:*",

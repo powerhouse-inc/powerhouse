@@ -17,6 +17,11 @@ export * from "./src/packages/http-loader.js";
 export * from "./src/packages/import-loader.js";
 export * from "./src/packages/package-manager.js";
 export * from "./src/packages/subgraph-extraction.js";
+export type { ScalarExport } from "./src/packages/scalar-exports.js";
+export type {
+  RegisteredScalar,
+  ScalarRegistry,
+} from "./src/utils/scalar-types.js";
 export * from "./src/server.js";
 export * from "./src/services/attachment-access.service.js";
 export * from "./src/services/authorized-attachment.service.js";

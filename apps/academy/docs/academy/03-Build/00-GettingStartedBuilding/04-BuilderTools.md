@@ -18,7 +18,7 @@ After installing `ph-cmd`, run `ph init` to initialize a project directory and s
 
 ## Design system
 
-The Powerhouse Design System is a collection of reusable front-end components based on GraphQL scalars, including custom scalars specific to the web3 ecosystem. It provides:
+The Powerhouse Design System is a collection of reusable front-end components based on GraphQL scalars, including Powerhouse built-in scalars such as `PHID` and `Amount`. It provides:
 
 - Consistent UI components across Powerhouse applications
 - Automatic inclusion as a dependency in new document model projects
