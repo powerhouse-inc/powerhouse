@@ -111,7 +111,12 @@ import { staticReadSet } from "../decision/build-decision-model.js";
 import { evaluateByPosition } from "../decision/evaluation.js";
 import { retractionSkip } from "../decision/merged-order.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
-import { createProtocolGate, type IProtocolGate } from "../protocol/gate.js";
+import {
+  createProtocolGate,
+  runnableBaseReducerCapabilities,
+  unknownBaseReducerRefusal,
+  type IProtocolGate,
+} from "../protocol/gate.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
 import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
@@ -1613,11 +1618,13 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
       return unreadable ? { unreadable } : {};
     }
-    const refusal = this.protocolGate.refusal(
-      job.documentId,
-      stored.protocolVersions,
-      stored.documentType,
-    );
+    const refusal =
+      unknownBaseReducerRefusal(job.documentId, stored.protocolVersions) ??
+      this.protocolGate.refusal(
+        job.documentId,
+        stored.protocolVersions,
+        stored.documentType,
+      );
     return refusal
       ? { refusal }
       : { caps: capabilitiesFor(stored.protocolVersions) };
@@ -1626,7 +1633,8 @@ export class SimpleJobExecutor implements IJobExecutor {
   /**
    * `error` when a header read failed and the stored CREATE_DOCUMENT runs the
    * retraction rule: going on would read the document as base-reducer 2.
-   * Undefined otherwise, including when that read fails too.
+   * Undefined otherwise, including when that read fails too. A creation at a
+   * base-reducer number this build does not know is refused typed.
    */
   private async unreadableRuleDocument(
     job: Job,
@@ -1648,6 +1656,13 @@ export class SimpleJobExecutor implements IJobExecutor {
       creation = page.results.at(0)?.action;
     } catch {
       return undefined;
+    }
+    if (creation?.type === "CREATE_DOCUMENT") {
+      const unknown = unknownBaseReducerRefusal(
+        job.documentId,
+        (creation as CreateDocumentAction).input.protocolVersions,
+      );
+      if (unknown) return unknown;
     }
     if (
       creation?.type !== "CREATE_DOCUMENT" ||
@@ -2277,7 +2292,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         }
       }
       try {
-        const caps = baseReducerCapabilities(document.header);
+        const caps = runnableBaseReducerCapabilities(document.header);
         const protocolVersion = caps.version;
         const ruleOptions = {
           ...(lookups === undefined ? {} : { targeted: lookups.targeted }),
@@ -2343,7 +2358,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           action,
           { documentId: job.documentId, scope, branch: job.branch },
           this.signer,
-          baseReducerCapabilities(document.header).synthesizedId,
+          runnableBaseReducerCapabilities(document.header).synthesizedId,
           signal,
         );
       } catch (error) {

@@ -1,12 +1,18 @@
 import type {
+  BaseReducerCapabilities,
+  BaseReducerVersion,
   CreateDocumentActionInput,
   DocumentModelModule,
+  PHDocumentHeader,
   ProtocolSupport,
   ProtocolVersions,
   StateReducer,
 } from "@powerhousedao/shared/document-model";
 import {
+  baseReducerVersion,
   capabilitiesFor,
+  capabilitiesOf,
+  isBaseReducerVersion,
   MissingStateReducerError,
   needsTaggedModel,
   refusalFor,
@@ -40,6 +46,33 @@ export function createNeedsModel(
   versions: ProtocolVersions | undefined,
 ): boolean {
   return needsTaggedModel(capabilitiesFor(versions));
+}
+
+/** A base-reducer number this build does not know; a missing one is not refused here. */
+export function unknownBaseReducerRefusal(
+  documentId: string,
+  versions: ProtocolVersions | undefined,
+): UnsupportedProtocolVersionError | undefined {
+  const version = versions?.["base-reducer"];
+  return typeof version === "number" && !isBaseReducerVersion(version)
+    ? new UnsupportedProtocolVersionError(documentId, "base-reducer", version)
+    : undefined;
+}
+
+/** `baseReducerVersion`, refusing an unknown number typed. */
+export function runnableBaseReducerVersion(
+  header: PHDocumentHeader,
+): BaseReducerVersion {
+  const refusal = unknownBaseReducerRefusal(header.id, header.protocolVersions);
+  if (refusal) throw refusal;
+  return baseReducerVersion(header);
+}
+
+/** `baseReducerCapabilities`, refusing an unknown number typed. */
+export function runnableBaseReducerCapabilities(
+  header: PHDocumentHeader,
+): BaseReducerCapabilities {
+  return capabilitiesOf(runnableBaseReducerVersion(header));
 }
 
 /** A create whose model cannot load: refused when its versions need the model. */

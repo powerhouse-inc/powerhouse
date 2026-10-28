@@ -11,14 +11,16 @@ import {
   documentFromCreation,
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
-  baseReducerVersion,
   isDenied,
   isPurgeMarker,
   normalizeDocumentModelVersion,
   PURGE_DOCUMENT,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
-import type { IProtocolGate } from "../protocol/gate.js";
+import {
+  runnableBaseReducerVersion,
+  type IProtocolGate,
+} from "../protocol/gate.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   DocumentNotFoundError,
@@ -345,7 +347,7 @@ export async function readDocumentScope(
         );
       }
     } else {
-      const protocolVersion = baseReducerVersion(document.header);
+      const protocolVersion = runnableBaseReducerVersion(document.header);
       document = withProtocolVersions(
         docModule.reducer(document, operation.action, undefined, {
           skip: operation.skip,

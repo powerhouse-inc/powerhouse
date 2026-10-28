@@ -329,3 +329,85 @@ describe("protocol admission", () => {
     expect(stored).not.toContain("shared-drive");
   });
 });
+
+describe("a stored document at a base-reducer number this build does not know", () => {
+  const reactors: IReactor[] = [];
+
+  afterEach(() => {
+    for (const reactor of reactors.splice(0)) {
+      reactor.kill();
+    }
+  });
+
+  async function stored(
+    id: string,
+    documentDecisions = false,
+  ): Promise<InProcessReactorModule> {
+    const module = await new ReactorBuilder()
+      .withDocumentModelSources([driveDocumentModelModule as never])
+      .withPeerCapabilities([BASE_REDUCER_7])
+      .withExecutorConfig({ featureFlags: { documentDecisions } })
+      .buildModule();
+    reactors.push(module.reactor);
+    const created = await module.reactor.create(
+      driveAt({ "base-reducer": 7 }, id),
+    );
+    expect((await settled(module.reactor, created.id)).status).toBe(
+      JobStatus.READ_READY,
+    );
+    const creation = await module.operationStore.getSince(
+      id,
+      "document",
+      "main",
+      -1,
+      undefined,
+      { cursor: "0", limit: 1 },
+    );
+    const input = creation.results[0].action.input as {
+      protocolVersions?: Record<string, number>;
+    };
+    expect(input.protocolVersions?.["base-reducer"]).toBe(7);
+    return module;
+  }
+
+  it.each([false, true])(
+    "refuses a write typed and without retrying it (documentDecisions %s)",
+    async (documentDecisions) => {
+      const { reactor } = await stored("br7-unknown", documentDecisions);
+
+      const write = await reactor.execute("br7-unknown", "main", [
+        addFolder({ id: generateId(), name: "unknown", parentFolder: null }),
+      ]);
+      const job = await settled(reactor, write.id);
+
+      expect(job.status).toBe(JobStatus.FAILED);
+      expect(job.error?.name).toBe("UnsupportedProtocolVersionError");
+      expect(job.errorHistory?.length ?? 0).toBeLessThanOrEqual(1);
+    },
+  );
+
+  it("refuses a cold rebuild typed", async () => {
+    const module = await stored("br7-cold");
+    const folder = addFolder({ id: generateId(), name: "stored" });
+    await module.operationStore.apply(
+      "br7-cold",
+      DRIVE,
+      "global",
+      "main",
+      0,
+      (txn) => {
+        txn.addOperations(
+          createTestOperation("br7-cold", {
+            index: 0,
+            action: { ...folder, scope: "global" },
+          }),
+        );
+      },
+    );
+    module.writeCache.clear();
+
+    await expect(
+      module.writeCache.getState("br7-cold", "global", "main"),
+    ).rejects.toMatchObject({ name: "UnsupportedProtocolVersionError" });
+  });
+});

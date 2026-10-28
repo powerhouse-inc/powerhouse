@@ -10,7 +10,6 @@ import {
   appendRows,
   appendWithoutApplying,
   applyDeleteDocumentAction,
-  baseReducerVersion,
   deriveScopeVersioned,
   capabilitiesFor,
   derivesByRule,
@@ -32,7 +31,11 @@ import {
   type PendingUpgrade,
   type ValidatedUpgrade,
 } from "../derivation/index.js";
-import { stateReducerOrRefusal, type IProtocolGate } from "../protocol/gate.js";
+import {
+  runnableBaseReducerVersion,
+  stateReducerOrRefusal,
+  type IProtocolGate,
+} from "../protocol/gate.js";
 import { UnsupportedProtocolVersionError } from "../shared/errors.js";
 import { findReferencing } from "../storage/find-referencing.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
@@ -1068,7 +1071,9 @@ export class KyselyWriteCache implements IWriteCache {
               document = appendWithoutApplying(document, operation, scope);
             } else {
               // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-              const protocolVersion = baseReducerVersion(document.header);
+              const protocolVersion = runnableBaseReducerVersion(
+                document.header,
+              );
               document = withProtocolVersions(
                 getModuleCached(moduleVersion).reducer(
                   document,
@@ -1390,7 +1395,7 @@ export class KyselyWriteCache implements IWriteCache {
             document = appendWithoutApplying(document, operation, scope);
           } else {
             // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-            const protocolVersion = baseReducerVersion(document.header);
+            const protocolVersion = runnableBaseReducerVersion(document.header);
             document = withProtocolVersions(
               module.reducer(document, operation.action, undefined, {
                 skip: operation.skip,
