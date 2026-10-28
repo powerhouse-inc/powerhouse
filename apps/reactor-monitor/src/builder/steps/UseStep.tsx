@@ -98,20 +98,21 @@ function Running({
       setProblem(`Couldn't stop it: ${errorMessage(error)}`);
     }
   };
-  if (run.status === "starting") {
-    return (
-      <p className="hb-note" role="status">
-        Starting a copy. This can take a minute.
-      </p>
-    );
-  }
   return (
     <div className="hb-sub" aria-label="Running copy">
       <p className="hb-note" role="status">
-        {run.status === "stopping"
-          ? "Stopping the copy…"
-          : "Running a copy. Its reactors are in the reactor list."}
+        {run.status === "starting"
+          ? "Starting a copy. This can take a minute."
+          : run.status === "stopping"
+            ? "Stopping the copy…"
+            : "Running a copy. Its reactors are in the reactor list."}
       </p>
+      {run.problem ? (
+        <p className="hb-error">
+          Couldn't ask the controller about the copy: {run.problem} Still
+          trying.
+        </p>
+      ) : null}
       <ul className="hb-list">
         {run.reactors.map((reactor) => (
           <li key={reactor.name}>
@@ -130,7 +131,7 @@ function Running({
       <div>
         <button
           className="hb-btn"
-          disabled={run.status === "stopping"}
+          disabled={run.status === "stopping" || run.id === undefined}
           onClick={() => void stop()}
           type="button"
         >

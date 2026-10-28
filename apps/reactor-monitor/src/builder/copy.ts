@@ -37,8 +37,10 @@ export const START_BLOCKERS = {
     "This host comes from a project the monitor can't start. Download it instead.",
   checking: "Checking whether the controller can start this host.",
   notWired: "Starting from the builder isn't available yet.",
-  running: "A copy of this host is already running. Stop it first.",
+  running: "A copy is already running. Stop it first.",
 } as const;
+
+export const START_GONE = "The controller no longer has the copy.";
 
 export const NO_ADDRESS_YET =
   "it has no fixed port, so its address is only known once it starts.";

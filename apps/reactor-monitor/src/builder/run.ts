@@ -4,15 +4,22 @@ import type { HostExport } from "@powerhousedao/host-core/schema";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { HostImportRequest } from "../components/HostImportPanel.js";
 import type { Instance } from "../controller/api.js";
-import type { ControllerClient } from "../controller/client.js";
+import {
+  backoffMs,
+  errorMessage,
+  isNotFound,
+  type ControllerClient,
+} from "../controller/client.js";
+import { withOwner } from "../controller/managed.js";
 import type { ManagedDescriptors } from "../controller/use-managed-descriptors.js";
 import type { Member } from "../host-rules/index.js";
 import { planImport } from "../lib/host-import.js";
-import { NO_ADDRESS_YET } from "./copy.js";
+import { NO_ADDRESS_YET, START_GONE } from "./copy.js";
 import { requestOf, type BuilderDraft } from "./draft.js";
 import type { BuilderEngine } from "./engine.js";
 
 const POLL_MS = 1000;
+const WATCH_MS = 3000;
 
 export type RunReactor = { name: string; url?: string };
 
@@ -23,6 +30,8 @@ export type BuilderRun = {
   reactors: RunReactor[];
   /** Descriptors provisioned in this browser, by name. */
   browser: string[];
+  /** The last failed status check; the copy is still followed. */
+  problem?: string;
 };
 
 /** The host's browser reactors; a switchboard's own store is not one. */
@@ -68,7 +77,7 @@ export function monitoringSetOf(
         remote: { url: row.url.value },
       } as ReactorDescriptor);
     } else {
-      left.push({ name, reason: NO_ADDRESS_YET });
+      left.push({ name, reason: row.url?.reason ?? NO_ADDRESS_YET });
     }
   }
   return {
@@ -95,12 +104,16 @@ function reactorsOf(instance: Instance): RunReactor[] {
 }
 
 export type BuilderRunOptions = {
-  client: Pick<ControllerClient, "startDraft" | "get"> | undefined;
-  managed: Pick<ManagedDescriptors, "attach" | "stopInstance" | "attachedIds">;
-  /** Adds browser descriptors to the active set; returns the names used. */
-  onAddDescriptors: (descriptors: ReactorDescriptor[]) => string[];
-  onKill: (name: string) => void;
+  client: Pick<ControllerClient, "startDraft" | "get" | "list"> | undefined;
+  managed: Pick<
+    ManagedDescriptors,
+    "attach" | "stopInstance" | "dropInstance" | "owned"
+  >;
+  /** Adds browser descriptors to the active set. */
+  onAddDescriptors: (descriptors: ReactorDescriptor[]) => void;
+  /** While starting; a running copy is checked every `watchMs`. */
   pollMs?: number;
+  watchMs?: number;
 };
 
 export type BuilderRunControls = {
@@ -110,15 +123,28 @@ export type BuilderRunControls = {
   stop: () => Promise<void>;
 };
 
+type RunState = Omit<BuilderRun, "browser">;
+
+const GONE = new Set(["exited", "failed"]);
+
+/** Builder-started copies the controller still runs, newest first. */
+function liveDrafts(instances: readonly Instance[]): Instance[] {
+  return instances
+    .filter(
+      (i) => i.source && (i.status === "starting" || i.status === "running"),
+    )
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+}
+
 export function useBuilderRun({
   client,
   managed,
   onAddDescriptors,
-  onKill,
   pollMs = POLL_MS,
+  watchMs = WATCH_MS,
 }: BuilderRunOptions): BuilderRunControls {
-  const [run, setRun] = useState<BuilderRun>();
-  // The run this hook follows; a poll for any other one stops quietly.
+  const [state, setState] = useState<RunState>();
+  // The run this hook follows; a loop for any other one stops quietly.
   const current = useRef<symbol | undefined>(undefined);
   const mounted = useRef(true);
   useEffect(() => {
@@ -129,22 +155,122 @@ export function useBuilderRun({
     };
   }, []);
 
-  const { attach, stopInstance, attachedIds } = managed;
+  const { attach, stopInstance, dropInstance, owned } = managed;
 
-  // Stopped elsewhere: its switchboards were attached and now none are.
-  const seen = useRef(false);
+  /** The instance once it leaves `starting`, or undefined if this run was let go. */
+  const settle = useCallback(
+    async (id: string, live: () => boolean): Promise<Instance | undefined> => {
+      if (!client) return undefined;
+      let failures = 0;
+      for (;;) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, backoffMs(pollMs, failures)),
+        );
+        if (!live()) return undefined;
+        try {
+          const instance = await client.get(id);
+          if (!live()) return undefined;
+          failures = 0;
+          setState(
+            (previous) => previous && { ...previous, problem: undefined },
+          );
+          if (instance.status !== "starting") return instance;
+        } catch (error) {
+          if (!live()) return undefined;
+          if (isNotFound(error)) throw new Error(START_GONE, { cause: error });
+          failures++;
+          const problem = errorMessage(error);
+          setState((previous) => previous && { ...previous, problem });
+        }
+      }
+    },
+    [client, pollMs],
+  );
+
+  // A running copy is followed by its status, wherever its descriptors are.
+  const watch = useCallback(
+    async (id: string, live: () => boolean) => {
+      if (!client) return;
+      let failures = 0;
+      while (live()) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, backoffMs(watchMs, failures)),
+        );
+        if (!live()) return;
+        let gone: boolean;
+        try {
+          const instance = await client.get(id);
+          gone = GONE.has(instance.status);
+          failures = 0;
+        } catch (error) {
+          gone = isNotFound(error);
+          if (!gone) failures++;
+        }
+        if (!live()) return;
+        if (gone) {
+          current.current = undefined;
+          dropInstance(id);
+          setState(undefined);
+          return;
+        }
+      }
+    },
+    [client, watchMs, dropInstance],
+  );
+
+  const running = useCallback(
+    (instance: Instance, token: symbol) => {
+      setState({
+        id: instance.id,
+        status: "running",
+        reactors: reactorsOf(instance),
+      });
+      void watch(
+        instance.id,
+        () => mounted.current && current.current === token,
+      );
+    },
+    [watch],
+  );
+
+  // After a reload, pick up the copy the controller still runs.
   useEffect(() => {
-    if (run?.status !== "running" || !run.id) {
-      seen.current = false;
-      return;
-    }
-    if (attachedIds.has(run.id)) seen.current = true;
-    else if (seen.current) {
-      seen.current = false;
-      current.current = undefined;
-      setRun(undefined);
-    }
-  }, [run, attachedIds]);
+    if (!client) return;
+    const abort = new AbortController();
+    void (async () => {
+      let found: Instance | undefined;
+      try {
+        found = liveDrafts(await client.list()).at(0);
+      } catch {
+        return;
+      }
+      if (abort.signal.aborted || !found || current.current) return;
+      const token = Symbol("run");
+      current.current = token;
+      const live = () => mounted.current && current.current === token;
+      if (found.status === "running") {
+        running(found, token);
+        return;
+      }
+      setState({ id: found.id, status: "starting", reactors: [] });
+      let settled: Instance | undefined;
+      try {
+        settled = await settle(found.id, live);
+      } catch {
+        settled = undefined;
+      }
+      if (!live()) return;
+      if (settled?.status === "running") {
+        attach(settled);
+        running(settled, token);
+      } else {
+        current.current = undefined;
+        dropInstance(found.id);
+        setState(undefined);
+      }
+    })();
+    return () => abort.abort();
+  }, [client, settle, running, attach, dropInstance]);
 
   const start = useCallback(
     async (draft: BuilderDraft, engine: BuilderEngine) => {
@@ -152,67 +278,71 @@ export function useBuilderRun({
       const token = Symbol("run");
       current.current = token;
       const live = () => mounted.current && current.current === token;
-      setRun({ status: "starting", reactors: [], browser: [] });
+      setState({ status: "starting", reactors: [] });
       let instance: Instance;
       try {
         instance = await client.startDraft(requestOf(draft));
-        if (!live()) return;
-        setRun({
-          id: instance.id,
-          status: "starting",
-          reactors: [],
-          browser: [],
-        });
-        while (instance.status === "starting") {
-          await new Promise((resolve) => setTimeout(resolve, pollMs));
-          if (!live()) return;
-          instance = await client.get(instance.id);
-          if (!live()) return;
-        }
       } catch (error) {
         if (live()) {
           current.current = undefined;
-          setRun(undefined);
+          setState(undefined);
         }
         throw error;
       }
-      if (instance.status !== "running") {
+      if (!live()) return;
+      const { id } = instance;
+      setState({ id, status: "starting", reactors: [] });
+      onAddDescriptors(
+        browserDescriptors(engine.envelope, engine.members).map((d) =>
+          withOwner(d, id),
+        ),
+      );
+      let settled: Instance | undefined;
+      try {
+        settled =
+          instance.status === "starting" ? await settle(id, live) : instance;
+      } catch (error) {
+        settled = undefined;
+        if (live()) {
+          current.current = undefined;
+          dropInstance(id);
+          setState(undefined);
+          throw error;
+        }
+      }
+      if (!settled || !live()) return;
+      if (settled.status !== "running") {
         current.current = undefined;
-        setRun(undefined);
+        dropInstance(id);
+        setState(undefined);
         throw new Error(
-          instance.error?.message ??
-            `The copy ${instance.status} while starting.`,
+          settled.error?.message ??
+            `The copy ${settled.status} while starting.`,
         );
       }
-      attach(instance);
-      const browser = onAddDescriptors(
-        browserDescriptors(engine.envelope, engine.members),
-      );
-      seen.current = false;
-      setRun({
-        id: instance.id,
-        status: "running",
-        reactors: reactorsOf(instance),
-        browser,
-      });
+      attach(settled);
+      running(settled, token);
     },
-    [client, pollMs, attach, onAddDescriptors],
+    [client, settle, running, attach, dropInstance, onAddDescriptors],
   );
 
   const stop = useCallback(async () => {
-    if (!run?.id) return;
-    const { id, browser } = run;
-    setRun({ ...run, status: "stopping" });
+    if (!state?.id) return;
+    const before = state;
+    setState({ ...before, status: "stopping" });
     try {
-      await stopInstance(id);
+      await stopInstance(before.id!);
     } catch (error) {
-      if (mounted.current) setRun({ ...run });
+      if (mounted.current) setState(before);
       throw error;
     }
-    for (const name of browser) onKill(name);
     current.current = undefined;
-    if (mounted.current) setRun(undefined);
-  }, [run, stopInstance, onKill]);
+    if (mounted.current) setState(undefined);
+  }, [state, stopInstance]);
 
+  const run: BuilderRun | undefined = state && {
+    ...state,
+    browser: state.id ? [...(owned.get(state.id) ?? [])] : [],
+  };
   return { run, start, stop };
 }

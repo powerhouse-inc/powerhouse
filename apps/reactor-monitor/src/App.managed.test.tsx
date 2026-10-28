@@ -18,7 +18,7 @@ import {
   type Instance,
 } from "./controller/api.js";
 import { managedByOf } from "./controller/managed.js";
-import { hostExport } from "./host-rules/__fixtures__/hosts.js";
+import { stack } from "./host-rules/__fixtures__/hosts.js";
 import { MonitoringSetsStore } from "./monitoring-sets.js";
 import { REMOTE_BEARER_KEY_PREFIX } from "./provisioning.js";
 
@@ -122,10 +122,7 @@ function fakeController() {
       return json(200, { controller: true, postgres: false });
     }
     if (path.startsWith("export?")) {
-      const exported = {
-        ...hostExport("switchboard"),
-        project: { name: "proj", root: ROOT },
-      };
+      const exported = { ...stack(), project: { name: "proj", root: ROOT } };
       return json(200, {
         export: exported,
         baseDigest: await baseDigest(exported),
@@ -535,22 +532,22 @@ describe("App with controller-managed switchboards", () => {
     );
   });
 
-  it("starts a builder draft, attaches its switchboard and stops it from the builder", async () => {
-    mountController();
-    const store = freshStore();
-    const view = render(<App store={store} />);
+  /** Build host → Load host → Use it → Start; the copy then runs `sb`. */
+  async function startFromBuilder(view: ReturnType<typeof render>) {
     fireEvent.click(view.getByRole("button", { name: "Build host" }));
+    const builder = within(
+      view.container.querySelector<HTMLElement>("[data-builder]")!,
+    );
     const load = await waitFor(() => {
-      const button = view.getByRole("button", { name: "Load host" });
+      const button = builder.getByRole("button", { name: "Load host" });
       expect(button).toHaveProperty("disabled", false);
       return button;
     });
     fireEvent.click(load);
     await waitFor(() =>
-      expect(view.getByRole("heading", { name: "Host basics" })).toBeTruthy(),
-    );
-    const builder = within(
-      view.container.querySelector<HTMLElement>("[data-builder]")!,
+      expect(
+        builder.getByRole("heading", { name: "Host basics" }),
+      ).toBeTruthy(),
     );
     const steps = within(builder.getByRole("navigation", { name: "Steps" }));
     fireEvent.click(steps.getByRole("button", { name: /Use it/ }));
@@ -563,16 +560,34 @@ describe("App with controller-managed switchboards", () => {
     await waitFor(() => expect(controller.calls).toContain("POST drafts"));
     const [id] = controller.instances.keys();
     controller.instances.set(id, {
-      ...instance(id, "running", 5401),
+      ...compound(id, "running", { sb: 5401 }),
+      host: "stack",
       source: { project: ROOT, host: "sb" },
     });
-
     const name = `sb-${id.slice(0, 8)}`;
     await waitFor(
       () => expect(within(reactorList(view)).getByText(name)).toBeTruthy(),
       WAIT,
     );
-    expect(store.getActiveDescriptors().map((d) => d.name)).toEqual([name]);
+    await waitFor(
+      () => expect(builder.getByLabelText("Running copy")).toBeTruthy(),
+      WAIT,
+    );
+    return { id, name, builder };
+  }
+
+  const activeNames = (store: MonitoringSetsStore) =>
+    store.getActiveDescriptors().map((d) => d.name);
+
+  it("starts a builder draft with its browser reactor, and Stop takes both away", async () => {
+    mountController();
+    const store = freshStore();
+    const view = render(<App store={store} />);
+    const { id, name, builder } = await startFromBuilder(view);
+    expect(activeNames(store)).toEqual(["ui.main", name]);
+    expect(
+      store.getActiveDescriptors().find((d) => d.name === "ui.main"),
+    ).toMatchObject({ kind: "worker", ownedBy: { instanceId: id } });
 
     fireEvent.click(builder.getByRole("button", { name: "Stop" }));
     await waitFor(() =>
@@ -580,7 +595,117 @@ describe("App with controller-managed switchboards", () => {
         `DELETE instances/${encodeURIComponent(id)}`,
       ),
     );
-    await waitFor(() => expect(store.getActiveDescriptors()).toEqual([]));
+    await waitFor(() => expect(activeNames(store)).toEqual([]));
     expect(builder.queryByLabelText("Running copy")).toBeNull();
-  }, 20_000);
+  }, 30_000);
+
+  it("removes the copy's browser reactor when its switchboard is killed in the sidebar", async () => {
+    mountController();
+    const store = freshStore();
+    const view = render(<App store={store} />);
+    const { name, builder } = await startFromBuilder(view);
+
+    const item = within(reactorList(view)).getByText(name).closest("li")!;
+    fireEvent.click(within(item).getByRole("button", { name: "Kill" }));
+    await waitFor(() => expect(activeNames(store)).toEqual([]));
+    await waitFor(
+      () => expect(builder.queryByLabelText("Running copy")).toBeNull(),
+      WAIT,
+    );
+  }, 30_000);
+
+  it("removes the copy's browser reactor when the Switchboards panel stops it", async () => {
+    mountController();
+    const store = freshStore();
+    const view = render(<App store={store} />);
+    const { builder } = await startFromBuilder(view);
+
+    const panel = view.getByLabelText("Switchboards");
+    fireEvent.click(
+      await waitFor(
+        () => within(panel).getByRole("button", { name: "Stop" }),
+        WAIT,
+      ),
+    );
+    await waitFor(() => expect(activeNames(store)).toEqual([]), WAIT);
+    await waitFor(
+      () => expect(builder.queryByLabelText("Running copy")).toBeNull(),
+      WAIT,
+    );
+  }, 30_000);
+
+  it("removes the copy's browser reactor when the controller no longer runs it", async () => {
+    mountController();
+    const store = freshStore();
+    const view = render(<App store={store} />);
+    const { id, builder } = await startFromBuilder(view);
+
+    controller.instances.delete(id);
+    await waitFor(() => expect(activeNames(store)).toEqual([]), WAIT);
+    await waitFor(
+      () => expect(builder.queryByLabelText("Running copy")).toBeNull(),
+      WAIT,
+    );
+  }, 30_000);
+
+  it("keeps the run across a set switch, and the old set lets go of it after Stop", async () => {
+    mountController();
+    const store = freshStore();
+    const view = render(<App store={store} />);
+    const { id, builder } = await startFromBuilder(view);
+
+    const sets = view.getByLabelText("Monitoring sets");
+    fireEvent.change(within(sets).getByPlaceholderText("new set"), {
+      target: { value: "other" },
+    });
+    fireEvent.click(within(sets).getByRole("button", { name: "Create set" }));
+    await waitFor(() => expect(store.getActiveSetName()).toBe("other"));
+    expect(builder.getByLabelText("Running copy")).toBeTruthy();
+
+    fireEvent.click(builder.getByRole("button", { name: "Stop" }));
+    await waitFor(() =>
+      expect(controller.calls).toContain(
+        `DELETE instances/${encodeURIComponent(id)}`,
+      ),
+    );
+    await waitFor(() =>
+      expect(builder.queryByLabelText("Running copy")).toBeNull(),
+    );
+
+    fireEvent.change(within(sets).getByLabelText("Active set"), {
+      target: { value: "default" },
+    });
+    await waitFor(() => expect(activeNames(store)).toEqual([]), WAIT);
+  }, 30_000);
+
+  it("picks the run up again after a reload, without a second browser reactor", async () => {
+    mountController();
+    const store = freshStore();
+    const first = render(<App store={store} />);
+    const { id, name } = await startFromBuilder(first);
+    first.unmount();
+
+    const view = render(<App store={store} />);
+    fireEvent.click(view.getByRole("button", { name: "Build host" }));
+    const builder = within(
+      view.container.querySelector<HTMLElement>("[data-builder]")!,
+    );
+    await waitFor(
+      () => expect(builder.getByLabelText("Running copy")).toBeTruthy(),
+      WAIT,
+    );
+    expect(builder.getByRole("button", { name: "Start" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    expect(activeNames(store)).toEqual(["ui.main", name]);
+
+    fireEvent.click(builder.getByRole("button", { name: "Stop" }));
+    await waitFor(() =>
+      expect(controller.calls).toContain(
+        `DELETE instances/${encodeURIComponent(id)}`,
+      ),
+    );
+    await waitFor(() => expect(activeNames(store)).toEqual([]));
+  }, 30_000);
 });

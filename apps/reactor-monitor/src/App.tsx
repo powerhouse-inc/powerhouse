@@ -285,8 +285,8 @@ type AppBodyProps = {
   readonly onImport: (request: HostImportRequest) => string;
   readonly switchboards: ReactNode;
   readonly managed: ManagedDescriptors;
-  /** Adds descriptors to the active set; returns the names they got. */
-  readonly onAddDescriptors: (descriptors: ReactorDescriptor[]) => string[];
+  /** Adds descriptors to the active set, renaming any that clash. */
+  readonly onAddDescriptors: (descriptors: ReactorDescriptor[]) => void;
 };
 
 function AppBody({
@@ -313,7 +313,6 @@ function AppBody({
     client: managed.client,
     managed,
     onAddDescriptors,
-    onKill,
   });
 
   /**
@@ -566,7 +565,6 @@ export function App({
           return next;
         });
       }
-      return renamed.map((descriptor) => descriptor.name);
     },
     [store],
   );
