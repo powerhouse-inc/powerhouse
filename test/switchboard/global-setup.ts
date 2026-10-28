@@ -8,24 +8,39 @@ const EXTERNAL_URL = process.env.SWITCHBOARD_URL;
 const PORT = process.env.SWITCHBOARD_PORT ?? "4001";
 const SWITCHBOARD_URL = EXTERNAL_URL ?? `http://localhost:${PORT}/graphql`;
 
-let proc: ChildProcess | undefined;
+const DRIVE_ID = process.env.SWITCHBOARD_DRIVE_ID ?? "powerhouse";
 
-async function waitForReady(url: string, timeoutMs = 30_000) {
+let proc: ChildProcess | undefined;
+let logs = "";
+
+/**
+ * Waits until the switchboard serves the drive the suites write into. The
+ * gateway answers, and `/ready` turns true, before the default drive exists.
+ */
+async function waitForDrive(url: string, timeoutMs = 120_000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: "{ __typename }" }),
+        body: JSON.stringify({
+          query: "query ($id: String!) { documentServed(idOrSlug: $id) }",
+          variables: { id: DRIVE_ID },
+        }),
       });
-      if (res.ok) return;
+      const body = (await res.json()) as {
+        data?: { documentServed?: boolean };
+      };
+      if (body.data?.documentServed) return;
     } catch {
-      // not ready yet
+      // not listening yet
     }
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 250));
   }
-  throw new Error(`Switchboard not ready after ${timeoutMs}ms`);
+  throw new Error(
+    `Switchboard did not serve drive ${DRIVE_ID} after ${timeoutMs}ms. Logs:\n${logs}`,
+  );
 }
 
 /** Remove stale PGlite postmaster.pid files that prevent startup. */
@@ -46,10 +61,19 @@ export async function setup() {
       env: { ...process.env, PH_SWITCHBOARD_PORT: PORT },
       stdio: ["ignore", "pipe", "pipe"],
     });
+    // Drained, or a full pipe would block the switchboard's writes.
+    proc.stdout?.on(
+      "data",
+      (chunk: Buffer) => (logs = (logs + chunk.toString()).slice(-65_536)),
+    );
+    proc.stderr?.on(
+      "data",
+      (chunk: Buffer) => (logs = (logs + chunk.toString()).slice(-65_536)),
+    );
     // Test workers start after this and read the suite's endpoint from here.
     process.env.SWITCHBOARD_URL = SWITCHBOARD_URL;
   }
-  await waitForReady(SWITCHBOARD_URL);
+  await waitForDrive(SWITCHBOARD_URL);
 }
 
 export async function teardown() {
