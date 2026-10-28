@@ -8,6 +8,7 @@ export function SummaryPanel({
   draft,
   engine,
   open,
+  inert,
   onClose,
   onStep,
   onUndo,
@@ -15,6 +16,7 @@ export function SummaryPanel({
   readonly draft?: BuilderDraft;
   readonly engine?: BuilderEngine;
   readonly open: boolean;
+  readonly inert?: boolean;
   readonly onClose: () => void;
   readonly onStep: (step: StepId) => void;
   readonly onUndo: () => void;
@@ -25,6 +27,7 @@ export function SummaryPanel({
       aria-label="Summary"
       className="hb-aside"
       data-open={open ? "true" : "false"}
+      inert={inert}
     >
       <div className="hb-row">
         <h2 className="hb-h2">Host so far</h2>

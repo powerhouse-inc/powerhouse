@@ -1,14 +1,9 @@
-import { useState } from "react";
+import type { HostExport } from "@powerhousedao/host-core/schema";
+import { useId, useState } from "react";
 import { ControllerRequestError, errorMessage } from "../controller/client.js";
 import type { BuilderClient } from "./client.js";
 import { downloadExport } from "./download.js";
-import {
-  newDraft,
-  rebaseDraft,
-  sourceOf,
-  type BuilderDraft,
-  type DroppedSetter,
-} from "./draft.js";
+import { newDraft, rebaseDraft, sourceOf, type BuilderDraft } from "./draft.js";
 import type { BuilderEngine } from "./engine.js";
 
 /** The controller refused the draft because its project host changed. */
@@ -18,7 +13,22 @@ export function isBaseChanged(error: unknown): boolean {
   );
 }
 
-type Preview = { draft: BuilderDraft; dropped: DroppedSetter[] };
+type Rebased = ReturnType<typeof rebaseDraft>;
+
+/** A rebase shown but not saved; `from` is the draft it was computed from. */
+type Preview = {
+  from: BuilderDraft;
+  export: HostExport;
+  digest: string;
+  result: Rebased;
+  changed?: boolean;
+};
+
+function sameResult(a: Rebased, b: Rebased): boolean {
+  const key = ({ draft, dropped }: Rebased) =>
+    JSON.stringify([draft.setters, draft.edits, draft.env, dropped]);
+  return key(a) === key(b);
+}
 
 type Outcome = { kind: "applied" } | { kind: "discarded" };
 
@@ -29,13 +39,17 @@ export function BaseChanged({
   engine,
   onDraft,
   onClose,
+  onLock,
 }: {
   readonly client?: BuilderClient;
   readonly draft: BuilderDraft;
   readonly engine: BuilderEngine;
   readonly onDraft: (draft: BuilderDraft) => void;
   readonly onClose: () => void;
+  /** True while the preview is open: nothing else may edit the draft. */
+  readonly onLock: (locked: boolean) => void;
 }) {
+  const titleId = useId();
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [preview, setPreview] = useState<Preview | undefined>();
@@ -52,11 +66,37 @@ export function BaseChanged({
     setStatus("");
     try {
       const fresh = await fetchNew();
-      setPreview(rebaseDraft(draft, fresh.export, fresh.baseDigest));
+      setPreview({
+        from: draft,
+        export: fresh.export,
+        digest: fresh.baseDigest,
+        result: rebaseDraft(draft, fresh.export, fresh.baseDigest),
+      });
+      onLock(true);
     } catch (error) {
       setStatus(`Couldn't load the new version: ${errorMessage(error)}`);
     }
     setBusy(false);
+  };
+
+  /** Saves only a rebase of the draft as it is now, and only if it was shown. */
+  const confirm = () => {
+    if (!preview) return;
+    const again = rebaseDraft(draft, preview.export, preview.digest);
+    if (!sameResult(again, preview.result)) {
+      setPreview({ ...preview, from: draft, result: again, changed: true });
+      return;
+    }
+    onDraft(again.draft);
+    setPreview(undefined);
+    setOutcome({ kind: "applied" });
+    onLock(false);
+  };
+
+  const cancel = () => {
+    setPreview(undefined);
+    setStatus("");
+    onLock(false);
   };
 
   const discard = async () => {
@@ -99,34 +139,48 @@ export function BaseChanged({
   }
 
   if (preview) {
-    const kept = preview.draft.setters;
+    const { from, result } = preview;
+    const kept = result.draft.setters;
     return (
-      <div className="hb-banner hb-rebase" role="alert">
-        <div className="hb-field">
-          <span className="hb-flabel">Your changes on the new version</span>
+      <div className="hb-modal">
+        <div
+          aria-labelledby={titleId}
+          aria-modal="true"
+          className="hb-dialog"
+          role="dialog"
+        >
+          <span className="hb-flabel" id={titleId}>
+            Your changes on the new version
+          </span>
+          {preview.changed ? (
+            <span className="hb-why">
+              Your draft changed while this was open, so this is the updated
+              result. Confirm again to save it.
+            </span>
+          ) : null}
           <span>
             Nothing is saved until you confirm. Your current draft stays as it
             is until then.
           </span>
           <span>
-            {kept.length === draft.setters.length
+            {kept.length === from.setters.length
               ? `All ${kept.length} of your changes carry over.`
-              : `${kept.length} of your ${draft.setters.length} changes carry over.`}
+              : `${kept.length} of your ${from.setters.length} changes carry over.`}
           </span>
           {kept.length > 0 ? (
-            <ul className="hb-list hb-fpath hb-mono" aria-label="Carried over">
+            <ul aria-label="Carried over" className="hb-list hb-fpath hb-mono">
               {kept.map((setter, index) => (
                 <li key={`${index}\0${setter.path}`}>{setter.path}</li>
               ))}
             </ul>
           ) : null}
-          {preview.dropped.length > 0 ? (
+          {result.dropped.length > 0 ? (
             <>
               <span>
                 These don't apply to the new version and would be lost:
               </span>
               <ul aria-label="Left out" className="hb-issues">
-                {preview.dropped.map((setter, index) => (
+                {result.dropped.map((setter, index) => (
                   <li className="hb-issue" key={`${index}\0${setter.path}`}>
                     <span>{setter.reason}</span>
                     <span className="hb-fpath hb-mono">{setter.path}</span>
@@ -138,11 +192,7 @@ export function BaseChanged({
           <div className="hb-opts">
             <button
               className="hb-btn hb-btn-primary"
-              onClick={() => {
-                onDraft(preview.draft);
-                setPreview(undefined);
-                setOutcome({ kind: "applied" });
-              }}
+              onClick={confirm}
               type="button"
             >
               Confirm
@@ -154,14 +204,7 @@ export function BaseChanged({
             >
               Download my old version
             </button>
-            <button
-              className="hb-btn"
-              onClick={() => {
-                setPreview(undefined);
-                setStatus("");
-              }}
-              type="button"
-            >
+            <button className="hb-btn" onClick={cancel} type="button">
               Cancel
             </button>
           </div>

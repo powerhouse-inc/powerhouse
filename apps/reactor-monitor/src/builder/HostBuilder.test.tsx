@@ -232,6 +232,36 @@ describe("HostBuilder", () => {
       expect(saved?.setters).toHaveLength(2);
     });
 
+    it("locks the builder while the preview is open", async () => {
+      const fresh = applySetters(stack(), [
+        { path: "members.switchboard.runner.port", value: 4555 },
+      ]).envelope;
+      const { view, storage, alert } = await changedHost(fresh);
+      const before = loadDraft(storage);
+      fireEvent.click(
+        alert.getByRole("button", {
+          name: "Apply my changes to the new version",
+        }),
+      );
+      await view.findByRole("dialog");
+      for (const selector of ["nav", ".hb-under", "aside", "footer"]) {
+        expect(
+          view.container.querySelector(selector)?.hasAttribute("inert"),
+        ).toBe(true);
+      }
+      fireEvent.click(
+        view.getByRole("button", { name: "Undo the last change" }),
+      );
+      fireEvent.click(view.getByRole("button", { name: /Environment/ }));
+      expect(loadDraft(storage)).toEqual(before);
+
+      fireEvent.click(view.getByRole("button", { name: "Confirm" }));
+      expect(loadDraft(storage)?.setters).toEqual(before?.setters);
+      expect(view.container.querySelector("nav")?.hasAttribute("inert")).toBe(
+        false,
+      );
+    });
+
     it("loses no edit that doesn't apply until Confirm, and none on Cancel", async () => {
       const created = vi.fn(() => "blob:draft");
       Object.assign(URL, {

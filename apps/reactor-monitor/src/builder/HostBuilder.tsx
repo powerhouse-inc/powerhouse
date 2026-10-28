@@ -91,6 +91,8 @@ export function HostBuilder({
   const [others, setOthers] = useState<number | undefined>();
   const [sheet, setSheet] = useState(false);
   const [baseChanged, setBaseChanged] = useState(false);
+  // A rebase preview is open: the rest of the builder is inert until it closes.
+  const [locked, setLocked] = useState(false);
   const { context, error: capabilityError } = useCapabilities(client);
   const engine = useBuilderEngine(
     context ? draft : undefined,
@@ -99,7 +101,10 @@ export function HostBuilder({
 
   const setDraft = (next: BuilderDraft | undefined) => {
     setDraftState(next);
-    if (!next) setBaseChanged(false);
+    if (!next) {
+      setBaseChanged(false);
+      setLocked(false);
+    }
     const saved = saveDraft(storage, next);
     setSaveProblem(saved.ok || !next ? "" : saved.reason);
   };
@@ -115,6 +120,7 @@ export function HostBuilder({
   }, [step]);
   const index = STEPS.indexOf(step);
   const goTo = (target: StepId) => {
+    if (locked) return;
     if (draft) setDraft(withStep(draft, target));
     setSheet(false);
     setOthers(undefined);
@@ -122,21 +128,25 @@ export function HostBuilder({
   const bad = new Set(engine?.issues.map((issue) => stepOf(issue.path)));
 
   const choose = (option: OptionStatus) => {
-    if (!draft || !engine || option.selected || !option.enabled) return;
+    if (locked || !draft || !engine || option.selected || !option.enabled) {
+      return;
+    }
     const changed = changedCount(engine.envelope, option.setters);
     setDraft(addEdit(draft, option.setters));
     setOthers(changed > 1 ? changed - 1 : undefined);
   };
   const edit = (setters: Setter[]) => {
-    if (!draft) return;
+    if (locked || !draft) return;
     setDraft(addEdit(draft, setters));
     setOthers(undefined);
   };
   const undo = () => {
+    if (locked) return;
     if (draft) setDraft(undoEdit(draft));
     setOthers(undefined);
   };
   const loaded = (next: BuilderDraft | undefined) => {
+    if (locked) return;
     setDraft(next);
     setOthers(undefined);
   };
@@ -148,7 +158,9 @@ export function HostBuilder({
           engine,
           onChoose: choose,
           onEdit: edit,
-          onDraft: setDraft,
+          onDraft: (next) => {
+            if (!locked) setDraft(next);
+          },
           onStep: goTo,
         }
       : undefined;
@@ -157,7 +169,12 @@ export function HostBuilder({
 
   return (
     <div className="hb" data-builder="">
-      <nav aria-label="Steps" className="hb-steps hb-hscroll" ref={nav}>
+      <nav
+        aria-label="Steps"
+        className="hb-steps hb-hscroll"
+        inert={locked}
+        ref={nav}
+      >
         {STEPS.map((id, at) => (
           <button
             aria-current={id === step ? "step" : undefined}
@@ -182,75 +199,79 @@ export function HostBuilder({
               engine={engine}
               onClose={() => setBaseChanged(false)}
               onDraft={setDraft}
+              onLock={setLocked}
             />
           ) : null}
-          {others ? (
-            <div className="hb-banner" role="status">
-              <span>
-                Your edit changed {others} other{" "}
-                {others === 1 ? "setting" : "settings"}.
-              </span>
-              <button className="hb-link" onClick={undo} type="button">
-                Undo
-              </button>
-              <button
-                className="hb-link"
-                onClick={() => setOthers(undefined)}
-                type="button"
-              >
-                Dismiss
-              </button>
-            </div>
-          ) : null}
-          {capabilityError ? (
-            <p className="hb-error">
-              Couldn't ask the controller what it offers: {capabilityError}
-            </p>
-          ) : null}
-          {saveProblem ? <p className="hb-note">{saveProblem}</p> : null}
-          {step !== "start" && draft && !props ? (
-            <p className="hb-note">Asking the controller what it offers…</p>
-          ) : step === "start" || !props ? (
-            <StartStep
-              client={client}
-              draft={draft}
-              onDiscard={() => loaded(undefined)}
-              onDraft={loaded}
-            />
-          ) : step === "basics" ? (
-            <BasicsStep {...props} />
-          ) : step === "members" ? (
-            <MembersStep {...props} />
-          ) : step === "reactor" ? (
-            <ReactorStep {...props} />
-          ) : step === "environment" ? (
-            <EnvironmentStep {...props} />
-          ) : step === "review" ? (
-            <ReviewStep
-              {...props}
-              client={client}
-              onBaseChanged={() => setBaseChanged(true)}
-            />
-          ) : (
-            <UseStep
-              {...props}
-              client={client}
-              onSaveSet={onSaveSet}
-              onBaseChanged={() => setBaseChanged(true)}
-              onStart={onStart}
-            />
-          )}
+          <div className="hb-under" inert={locked}>
+            {others ? (
+              <div className="hb-banner" role="status">
+                <span>
+                  Your edit changed {others} other{" "}
+                  {others === 1 ? "setting" : "settings"}.
+                </span>
+                <button className="hb-link" onClick={undo} type="button">
+                  Undo
+                </button>
+                <button
+                  className="hb-link"
+                  onClick={() => setOthers(undefined)}
+                  type="button"
+                >
+                  Dismiss
+                </button>
+              </div>
+            ) : null}
+            {capabilityError ? (
+              <p className="hb-error">
+                Couldn't ask the controller what it offers: {capabilityError}
+              </p>
+            ) : null}
+            {saveProblem ? <p className="hb-note">{saveProblem}</p> : null}
+            {step !== "start" && draft && !props ? (
+              <p className="hb-note">Asking the controller what it offers…</p>
+            ) : step === "start" || !props ? (
+              <StartStep
+                client={client}
+                draft={draft}
+                onDiscard={() => loaded(undefined)}
+                onDraft={loaded}
+              />
+            ) : step === "basics" ? (
+              <BasicsStep {...props} />
+            ) : step === "members" ? (
+              <MembersStep {...props} />
+            ) : step === "reactor" ? (
+              <ReactorStep {...props} />
+            ) : step === "environment" ? (
+              <EnvironmentStep {...props} />
+            ) : step === "review" ? (
+              <ReviewStep
+                {...props}
+                client={client}
+                onBaseChanged={() => setBaseChanged(true)}
+              />
+            ) : (
+              <UseStep
+                {...props}
+                client={client}
+                onSaveSet={onSaveSet}
+                onBaseChanged={() => setBaseChanged(true)}
+                onStart={onStart}
+              />
+            )}
+          </div>
         </div>
         <SummaryPanel
           draft={draft}
           engine={engine}
           onClose={() => setSheet(false)}
           onStep={goTo}
+          inert={locked}
           onUndo={undo}
           open={sheet}
         />
       </div>
-      <footer className="hb-foot">
+      <footer className="hb-foot" inert={locked}>
         <button
           className="hb-btn"
           disabled={!back || !draft}
