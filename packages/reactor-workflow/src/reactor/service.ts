@@ -247,6 +247,7 @@ import { ParkState } from "./park-state.js";
 import { decodeRunCursor, encodeRunCursor } from "./run-cursor.js";
 import {
   CANCELLED_RUN_STATUS,
+  concurrencyLimit,
   effectiveRunPolicy,
   type EffectiveRunPolicy,
 } from "./policy.js";
@@ -2375,6 +2376,7 @@ export class WorkflowRuntimeService {
       fire: (workflowId, payload, kind, runId) => {
         this.startFiring(workflowId, payload, kind, runId);
       },
+      pollHeld: (workflowId) => this.pollHeld(workflowId),
       webhookUrlFor: async (workflowId) =>
         (await this.mintWebhookEndpoint(workflowId))?.url,
       reactorAccess: (binding, requireReactor, runUser) =>
@@ -4535,35 +4537,50 @@ export class WorkflowRuntimeService {
       "trigger.kind": triggerKind,
       ...(resume ? { "run.rerun_of": resume.rerunOf } : {}),
     };
-    return this.telemetry.span("workflow.run", attributes, async (span) => {
-      const run: RunTrace = { span, refused: false };
-      let status = "FAILED";
-      try {
-        const result = await this.runFired(
-          run,
-          workflowId,
-          triggerPayload,
-          triggerKind,
-          resume,
-          ctx,
-          enqueuedRunId,
-        );
-        status = result.status;
-        if (status === "FAILED") {
-          span.setStatus({ code: SpanStatusCode.ERROR, message: status });
+    // Counted from here, before the gate: a firing still reading its workflow
+    // holds a slot's worth of work as much as one already admitted.
+    this.unsettledFirings.set(
+      workflowId,
+      (this.unsettledFirings.get(workflowId) ?? 0) + 1,
+    );
+    const traced = this.telemetry.span(
+      "workflow.run",
+      attributes,
+      async (span) => {
+        const run: RunTrace = { span, refused: false };
+        let status = "FAILED";
+        try {
+          const result = await this.runFired(
+            run,
+            workflowId,
+            triggerPayload,
+            triggerKind,
+            resume,
+            ctx,
+            enqueuedRunId,
+          );
+          status = result.status;
+          if (status === "FAILED") {
+            span.setStatus({ code: SpanStatusCode.ERROR, message: status });
+          }
+          return result;
+        } finally {
+          // Refused by access, type or status: not a failed run.
+          if (run.refused) status = "REFUSED";
+          span.setAttribute("run.status", status);
+          this.telemetry.recordRun(
+            performance.now() - started,
+            status,
+            triggerKind,
+          );
         }
-        return result;
-      } finally {
-        // Refused by access, type or status: not a failed run.
-        if (run.refused) status = "REFUSED";
-        span.setAttribute("run.status", status);
-        this.telemetry.recordRun(
-          performance.now() - started,
-          status,
-          triggerKind,
-        );
-      }
-    });
+      },
+    );
+    try {
+      return await traced;
+    } finally {
+      this.settleFiring(workflowId);
+    }
   }
 
   private async runFired(
@@ -4691,6 +4708,7 @@ export class WorkflowRuntimeService {
     // row is adopted, so a dropped firing is journaled as the CANCELLED run it
     // is rather than disappearing; QUEUE and a bounded PARALLEL wait.
     const policy = effectiveRunPolicy(runnable);
+    this.runLimits.set(workflowId, concurrencyLimit(policy));
     const deadline = policy.runTimeoutSeconds
       ? firedAt + policy.runTimeoutSeconds * 1000
       : undefined;
@@ -4992,6 +5010,34 @@ export class WorkflowRuntimeService {
 
   // Firings of one workflow at a time; see run-gate.ts.
   private readonly runGate = new WorkflowRunGate();
+  // Firings of each workflow not yet settled, from the moment they reach the
+  // runtime (before the gate) until their run ends, and each workflow's slot
+  // count as its last firing read it: together they hold a poll that could
+  // only hand out work to queue (pollHeld).
+  private readonly unsettledFirings = new Map<string, number>();
+  private readonly runLimits = new Map<string, number | null>();
+
+  /**
+   * Whether a due poll of this workflow's trigger should wait: its runs are
+   * serialised (QUEUE, SINGLETON, a bounded PARALLEL) and every slot is taken
+   * by a firing that has not settled. A polling trigger that hands out work
+   * advances its own position when polled (the backfill's for-every moves its
+   * cursor), so a poll now would only add a firing that waits in the queue,
+   * where it can expire past `runTimeoutSeconds` or be skipped by a park,
+   * with the position already gone. The supervisor leaves the poll due and
+   * looks again on its next tick.
+   */
+  private pollHeld(workflowId: string): boolean {
+    const limit = this.runLimits.get(workflowId);
+    if (limit === undefined || limit === null) return false;
+    return (this.unsettledFirings.get(workflowId) ?? 0) >= limit;
+  }
+
+  private settleFiring(workflowId: string): void {
+    const left = (this.unsettledFirings.get(workflowId) ?? 1) - 1;
+    if (left > 0) this.unsettledFirings.set(workflowId, left);
+    else this.unsettledFirings.delete(workflowId);
+  }
   // Sync deliveries still holding the sender's socket, by run. Taking one
   // commits the delivery to a 503, before a 504 can.
   private readonly heldReplies = new Map<string, () => boolean>();
