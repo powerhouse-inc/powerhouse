@@ -21,8 +21,8 @@ import {
 } from "./client.js";
 import {
   isManaged,
-  managedByOf,
-  managedDescriptor,
+  managedDescriptors,
+  managedUrl,
   type ManagedBy,
   type ManagedDescriptor,
 } from "./managed.js";
@@ -64,6 +64,7 @@ export interface ManagedDescriptors {
   attachedIds: ReadonlySet<string>;
   notices: readonly ManagedNotice[];
   dismissNotice: (id: number) => void;
+  /** Adds a descriptor per switchboard the instance serves. */
   attach: (instance: Instance) => void;
   /** handleKill's managed branch: stops the descriptor's instance. */
   kill: (name: string) => void;
@@ -75,7 +76,11 @@ export interface ManagedDescriptors {
 }
 
 const keyOf = (descriptor: ManagedDescriptor) =>
-  `${descriptor.name}\u0000${descriptor.managedBy.instanceId}`;
+  `${descriptor.name}\u0000${descriptor.managedBy.instanceId}\u0000${descriptor.managedBy.member ?? ""}`;
+
+/** One descriptor per (instance, member). */
+const targetOf = (managedBy: ManagedBy) =>
+  `${managedBy.instanceId}\u0000${managedBy.member ?? ""}`;
 
 export function useManagedDescriptors(
   options: UseManagedDescriptorsOptions,
@@ -200,7 +205,8 @@ export function useManagedDescriptors(
               ? { state: "withheld", reason: "still starting" }
               : instance.status !== "running"
                 ? { drop: `its switchboard is ${instance.status}` }
-                : instance.outputs?.graphql !== descriptor.remote.url
+                : managedUrl(instance, descriptor.managedBy) !==
+                    descriptor.remote.url
                   ? { drop: "its switchboard now serves another URL" }
                   : { state: "released" };
         } catch (error) {
@@ -254,22 +260,22 @@ export function useManagedDescriptors(
   const attach = useCallback(
     (instance: Instance) => {
       const current = latest.current;
-      if (
-        stopping.current.has(instance.id) ||
-        current.some((d) => managedByOf(d)?.instanceId === instance.id)
-      ) {
-        return;
-      }
-      const descriptor = managedDescriptor(
+      if (stopping.current.has(instance.id)) return;
+      const attached = new Set(
+        current.filter(isManaged).map((d) => targetOf(d.managedBy)),
+      );
+      const added = managedDescriptors(
         instance,
         current.map((d) => d.name),
-      );
-      if (!descriptor) return;
-      probes.current.set(keyOf(descriptor), { state: "released" });
-      latest.current = [...current, descriptor];
-      update((previous) => [...previous, descriptor]);
+      ).filter((descriptor) => !attached.has(targetOf(descriptor.managedBy)));
+      if (added.length === 0) return;
+      for (const descriptor of added) {
+        probes.current.set(keyOf(descriptor), { state: "released" });
+      }
+      latest.current = [...current, ...added];
+      update((previous) => [...previous, ...added]);
       bump();
-      onAttached?.(descriptor.name);
+      onAttached?.(added[0].name);
     },
     [onAttached, update],
   );
@@ -283,6 +289,8 @@ export function useManagedDescriptors(
       if (!client) return;
       const id = descriptor.managedBy.instanceId;
       stopping.current.add(id);
+      // The caller drops `name`; its instance's other members go with it.
+      drop((d) => d.managedBy.instanceId === id && d.name !== name);
       client
         .stop(id)
         .catch((error: unknown) => {
@@ -292,7 +300,7 @@ export function useManagedDescriptors(
         })
         .finally(() => stopping.current.delete(id));
     },
-    [client, notify],
+    [client, drop, notify],
   );
 
   const stopInstance = useCallback(

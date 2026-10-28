@@ -15,6 +15,7 @@ import {
   TOKEN_META_NAME,
   type Instance,
 } from "./controller/api.js";
+import { managedByOf } from "./controller/managed.js";
 import { MonitoringSetsStore } from "./monitoring-sets.js";
 import { REMOTE_BEARER_KEY_PREFIX } from "./provisioning.js";
 
@@ -67,6 +68,30 @@ function instance(
           },
         }
       : {}),
+  };
+}
+
+function compound(
+  id: string,
+  status: Instance["status"],
+  ports: Record<string, number>,
+): Instance {
+  return {
+    ...instance(id, status),
+    host: "duo",
+    members: Object.fromEntries(
+      Object.entries(ports).map(([member, port]) => [
+        member,
+        {
+          host: `sb-${member}`,
+          outputs: {
+            origin: `http://127.0.0.1:${port}`,
+            graphql: graphqlOf(port),
+            drives: {},
+          },
+        },
+      ]),
+    ),
   };
 }
 
@@ -250,6 +275,84 @@ describe("App with controller-managed switchboards", () => {
     expect(store.getActiveDescriptors()).toEqual([]);
     expect(view.queryByTestId("switchboards-notices")).toBeNull();
     expect(bearerOf(5101)).toBeNull();
+  });
+
+  it("attaches every member of a compound, and kill stops it and drops them all", async () => {
+    mountController();
+    const store = freshStore();
+    const view = render(<App store={store} />);
+    const panel = view.getByLabelText("Switchboards");
+    await waitFor(() =>
+      expect(
+        (within(panel).getByLabelText("Host") as HTMLSelectElement).value,
+      ).toBe("sb"),
+    );
+
+    fireEvent.click(within(panel).getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(controller.instances.size).toBe(1));
+    const [id] = controller.instances.keys();
+    controller.instances.set(id, compound(id, "running", { a: 5301, b: 5302 }));
+
+    const names = [`a-${id.slice(0, 8)}`, `b-${id.slice(0, 8)}`];
+    await waitFor(() => {
+      for (const name of names) {
+        expect(within(reactorList(view)).getByText(name)).toBeTruthy();
+      }
+    }, WAIT);
+    expect(
+      store
+        .getActiveDescriptors()
+        .map((d) => [d.name, d.remote?.url, managedByOf(d)?.member]),
+    ).toEqual([
+      [names[0], graphqlOf(5301), "a"],
+      [names[1], graphqlOf(5302), "b"],
+    ]);
+
+    const item = within(reactorList(view)).getByText(names[0]).closest("li")!;
+    fireEvent.click(within(item).getByRole("button", { name: "Kill" }));
+    await waitFor(() =>
+      expect(controller.calls).toContain(
+        `DELETE instances/${encodeURIComponent(id)}`,
+      ),
+    );
+    await waitFor(() => expect(store.getActiveDescriptors()).toEqual([]));
+    expect(view.queryByTestId("switchboards-notices")).toBeNull();
+  });
+
+  it("probes a rehydrated member descriptor against its own member's URL", async () => {
+    mountController();
+    controller.instances.set(
+      "duo",
+      compound("duo", "running", { a: 5311, b: 5399 }),
+    );
+    const member = (name: string, key: string, port: number) =>
+      ({
+        ...managedDescriptor(name, "duo", port),
+        managedBy: {
+          instanceId: "duo",
+          project: ROOT,
+          host: "duo",
+          member: key,
+        },
+      }) as ReactorDescriptor;
+    const store = storeWith(
+      member("a-duo", "a", 5311),
+      member("b-duo", "b", 5312),
+    );
+    const view = render(<App store={store} />);
+
+    await waitFor(
+      () => expect(within(reactorList(view)).getByText("a-duo")).toBeTruthy(),
+      WAIT,
+    );
+    await waitFor(() =>
+      expect(store.getActiveDescriptors().map((d) => d.name)).toEqual([
+        "a-duo",
+      ]),
+    );
+    expect(view.getByTestId("switchboards-notices").textContent).toMatch(
+      /b-duo: its switchboard now serves another URL/,
+    );
   });
 
   it("withholds a rehydrated managed descriptor until the controller confirms it", async () => {
