@@ -155,36 +155,42 @@ function endpointsGraphqlRef(
   return { host, ...(typeof member === "string" ? { member } : {}) };
 }
 
-/** The declared slugs a block names, or undefined when one is known only
- * at runtime (a `$map` drive list, a home drive behind another token). */
-function knownDriveSlugs(reactor: {
-  backends?: Record<string, { kind: string; remote?: { url: unknown } }>;
-  drives?: unknown;
-}): string[] | undefined {
+/** The slug a drive link names: a `drives.<slug>.url` token's slug or a
+ * literal address's served slug; undefined when only runtime knows it. */
+function linkedSlug(url: unknown): string | undefined {
+  if (typeof url === "string") return switchboardOfDrive(url)?.slug;
+  const ref =
+    typeof url === "object" && url !== null && "$output" in url
+      ? (url as { $output: { path?: unknown } }).$output
+      : undefined;
+  const path = Array.isArray(ref?.path) ? (ref.path as unknown[]) : [];
+  return path.length === 3 &&
+    path[0] === "drives" &&
+    typeof path[1] === "string" &&
+    path[2] === "url"
+    ? path[1]
+    : undefined;
+}
+
+interface DeclaredReactorHost {
+  runner?: { plugins?: unknown };
+  reactor?: {
+    backends?: Record<string, { kind: string; remote?: { url: unknown } }>;
+    placement?: { drives?: Record<string, string> };
+    drives?: unknown;
+  };
+}
+
+/** The drives a declared host names (home drives, `reactor.drives`, plugin
+ * `config.drive` links), or undefined when one is known only at runtime. */
+function knownDriveSlugs(host: DeclaredReactorHost): string[] | undefined {
+  const reactor = host.reactor ?? {};
   const slugs: string[] = [];
   for (const backend of Object.values(reactor.backends ?? {})) {
     if (backend.kind !== "remote") continue;
-    const url = backend.remote?.url;
-    if (typeof url === "string") {
-      const slug = switchboardOfDrive(url)?.slug;
-      if (slug === undefined) return undefined;
-      slugs.push(slug);
-      continue;
-    }
-    const ref =
-      typeof url === "object" && url !== null && "$output" in url
-        ? (url as { $output: { path?: unknown } }).$output
-        : undefined;
-    const path = Array.isArray(ref?.path) ? (ref.path as unknown[]) : [];
-    if (
-      path.length !== 3 ||
-      path[0] !== "drives" ||
-      typeof path[1] !== "string" ||
-      path[2] !== "url"
-    ) {
-      return undefined;
-    }
-    slugs.push(path[1]);
+    const slug = linkedSlug(backend.remote?.url);
+    if (slug === undefined) return undefined;
+    slugs.push(slug);
   }
   if (reactor.drives !== undefined) {
     if (!Array.isArray(reactor.drives)) return undefined;
@@ -192,27 +198,38 @@ function knownDriveSlugs(reactor: {
       if (typeof drive.slug === "string") slugs.push(drive.slug);
     }
   }
+  const plugins = Array.isArray(host.runner?.plugins)
+    ? (host.runner.plugins as unknown[])
+    : [];
+  for (const entry of plugins) {
+    const config =
+      typeof entry === "object" && entry !== null && "config" in entry
+        ? (entry as { config: unknown }).config
+        : undefined;
+    if (typeof config !== "object" || config === null) continue;
+    if (!("drive" in config) || config.drive === undefined) continue;
+    const slug = linkedSlug(config.drive);
+    if (slug === undefined) return undefined;
+    slugs.push(slug);
+  }
   return slugs;
 }
 
-/** Declared form: a placement key must name a drive the block names, when
- * every drive is knowable. A host with no remote backend is not checked:
- * its plugins may contribute drives the block does not name. */
+/** Declared form, at host level so plugin drives are seen: a placement key
+ * must name a drive the host names, when every drive is knowable. A host
+ * with no remote backend is not checked: its plugins may contribute drives
+ * (a switchboard's workflows drive) that no field names. */
 function refineDeclaredPlacementKeys(
-  reactor: {
-    backends?: Record<string, { kind: string; remote?: { url: unknown } }>;
-    placement?: { drives?: Record<string, string> };
-    drives?: unknown;
-  },
+  host: DeclaredReactorHost,
   ctx: z.RefinementCtx,
 ): void {
-  const placed = Object.keys(reactor.placement?.drives ?? {});
+  const placed = Object.keys(host.reactor?.placement?.drives ?? {});
   if (placed.length === 0) return;
-  const remote = Object.values(reactor.backends ?? {}).some(
+  const remote = Object.values(host.reactor?.backends ?? {}).some(
     (b) => b.kind === "remote",
   );
   if (!remote) return;
-  const known = knownDriveSlugs(reactor);
+  const known = knownDriveSlugs(host);
   if (!known) return;
   // A literal address may carry the hashed slug of a `projectHash` drive.
   const names = (slug: string, served: string) =>
@@ -223,7 +240,7 @@ function refineDeclaredPlacementKeys(
     if (known.some((served) => names(slug, served))) continue;
     ctx.addIssue({
       code: "custom",
-      path: ["placement", "drives", slug],
+      path: ["reactor", "placement", "drives", slug],
       message: `placement.drives.${slug} names no drive this host links to or declares (${[...new Set(known)].join(", ") || "none"}).`,
     });
   }
@@ -244,14 +261,17 @@ function refineResolvedReactor(
   const backends = reactor.backends ?? {};
   const baseOf = new Map<string, string>();
   const byBase = new Map<string, string>();
-  const homeBase = new Map<string, string>();
+  // Every switchboard a slug is linked on: one slug on two is ambiguous.
+  const linked = new Map<string, Set<string>>();
+  const link = (slug: string, base: string) =>
+    linked.set(slug, (linked.get(slug) ?? new Set()).add(base));
   for (const [name, backend] of Object.entries(backends)) {
     const url = backend.remote?.url;
     if (backend.kind !== "remote" || typeof url !== "string") continue;
     const home = switchboardOfDrive(url);
     if (!home) continue;
     baseOf.set(name, home.base);
-    if (!homeBase.has(home.slug)) homeBase.set(home.slug, home.base);
+    link(home.slug, home.base);
     const first = byBase.get(home.base);
     if (first === undefined) {
       byBase.set(home.base, name);
@@ -264,15 +284,45 @@ function refineResolvedReactor(
     });
   }
 
+  const kept = new Set<string>();
   const declared = Array.isArray(reactor.drives)
     ? (reactor.drives as { slug: string; remote?: { url: string } }[])
     : [];
+  declared.forEach((drive, index) => {
+    if (!drive.remote) {
+      kept.add(drive.slug);
+      return;
+    }
+    const at = switchboardOfDrive(drive.remote.url);
+    // An empty url already fails the field's own check.
+    if (at || drive.remote.url === "") {
+      if (at) link(drive.slug, at.base);
+      return;
+    }
+    ctx.addIssue({
+      code: "custom",
+      path: ["drives", index, "remote", "url"],
+      message: `remote.url must be a switchboard drive address (<switchboard>/d/<slug>), not ${drive.remote.url}: sync needs the drive. Use url: switchboard.drives.<slug>.url, or url: { $output: { host: "switchboard", path: ["drives", "<slug>", "url"] } }.`,
+    });
+  });
+
+  const nameOf = (base: string) => byBase.get(base) ?? base;
   for (const [slug, name] of Object.entries(reactor.placement?.drives ?? {})) {
     const base = baseOf.get(name);
     if (base === undefined) continue;
     const at = ["placement", "drives", slug];
-    const drive = declared.find((d) => d.slug === slug);
-    if (drive && !drive.remote) {
+    const on = [...(linked.get(slug) ?? [])];
+    if (on.length > 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: at,
+        message: `Drive "${slug}" is on both ${on.map(nameOf).join(" and ")}. Rename one, or link only one.`,
+      });
+      continue;
+    }
+    if (on.length === 0) {
+      // A key that names no drive here (a hashed home drive) is not checked.
+      if (!kept.has(slug)) continue;
       ctx.addIssue({
         code: "custom",
         path: at,
@@ -280,15 +330,11 @@ function refineResolvedReactor(
       });
       continue;
     }
-    const driveBase = drive?.remote
-      ? switchboardOfDrive(drive.remote.url)?.base
-      : homeBase.get(slug);
-    // A key that names no drive here (a hashed home drive) is not checked.
-    if (driveBase === undefined || driveBase === base) continue;
+    if (on[0] === base) continue;
     ctx.addIssue({
       code: "custom",
       path: at,
-      message: `placement.drives.${slug} opens drive "${slug}" on "${name}" (${base}), but the drive is on ${driveBase}. Place it on the backend for that switchboard.`,
+      message: `placement.drives.${slug} opens drive "${slug}" on "${name}" (${base}), but the drive is on ${on[0]}. Place it on the backend for that switchboard.`,
     });
   }
 }
@@ -418,7 +464,6 @@ function buildHostSchemas(tokenField: FieldWrappers) {
         });
       }
       if (resolved) refineResolvedReactor(reactor, ctx);
-      else refineDeclaredPlacementKeys(reactor, ctx);
     });
 
   /** Common runner options; runner modules extend it with their own. */
@@ -491,6 +536,16 @@ export function makeHostSchemas(options: { tokens: TokenMode }): HostSchemas {
   );
 }
 
+/** Adds the host-level placement key check to a runner's declared schema. */
+function withPlacementKeys<T>(schema: T): T {
+  if (!(schema instanceof z.ZodType)) return schema;
+  return schema.superRefine((host, ctx) => {
+    if (typeof host === "object" && host !== null && "reactor" in host) {
+      refineDeclaredPlacementKeys(host as DeclaredReactorHost, ctx);
+    }
+  }) as T;
+}
+
 /**
  * One runner definition, two schemas (3.5): `build` runs over the DECLARED
  * set (tokens allowed; its z.input types host files) and the RESOLVED set
@@ -504,7 +559,7 @@ export function defineHostSchemas<T>(build: (schemas: HostSchemas) => T): {
   hostSchema: T;
 } {
   return {
-    declaredHostSchema: build(declaredSchemas),
+    declaredHostSchema: withPlacementKeys(build(declaredSchemas)),
     hostSchema: build(resolvedSchemas),
   };
 }

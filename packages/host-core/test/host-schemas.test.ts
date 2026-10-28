@@ -4,6 +4,7 @@ import {
   childrenSchema,
   compoundHostSchema,
   declaredHostSchemas,
+  defineHostSchemas,
   hostNameSchema,
   profileSchema,
   reactorHostSchema,
@@ -328,10 +329,15 @@ describe("placement.drives", () => {
   });
 });
 
-describe("placement.drives keys (declared form)", () => {
-  const declared = declaredHostSchemas.reactorSchema;
+describe("placement.drives keys (declared form, host level)", () => {
+  const { declaredHostSchema } = defineHostSchemas((s) => s.reactorHostSchema);
   const token = (slug: string) => ({
     $output: { host: "s", path: ["drives", slug, "url"] },
+  });
+  const host = (reactor: Record<string, unknown>, plugins?: unknown[]) => ({
+    name: "app",
+    runner: { module: "m", ...(plugins ? { plugins } : {}) },
+    reactor,
   });
   const linked = (extra: Record<string, unknown>) => ({
     backends: {
@@ -341,33 +347,78 @@ describe("placement.drives keys (declared form)", () => {
     drives: [{ slug: "local" }, { slug: "b", remote: { url: token("b") } }],
     ...extra,
   });
+  const check = (value: unknown) => declaredHostSchema.safeParse(value);
 
   it("accepts a home drive by its token slug and a reactor.drives slug", () => {
     expect(
-      declared.safeParse(
-        linked({
-          placement: { drives: { home: "sb", b: "sb", local: "main" } },
-        }),
+      check(
+        host(
+          linked({
+            placement: { drives: { home: "sb", b: "sb", local: "main" } },
+          }),
+        ),
       ).success,
     ).toBe(true);
   });
 
   it("flags a key that names no drive, listing the known ones", () => {
     expect(
+      messages(check(host(linked({ placement: { drives: { typo: "sb" } } })))),
+    ).toEqual([
+      "reactor.placement.drives.typo: placement.drives.typo names no drive this host links to or declares (home, local, b).",
+    ]);
+  });
+
+  it("knows a drive a plugin attaches by its config.drive link", () => {
+    const workflows = {
+      module: "@powerhousedao/connect/plugins/workflows",
+      config: { drive: token("workflows") },
+    };
+    const reactor = {
+      backends: {
+        main: { kind: "worker" },
+        sb: { kind: "remote", remote: { url: token("b") } },
+      },
+      drives: [{ slug: "a" }],
+      placement: { drives: { workflows: "sb" } },
+    };
+    expect(check(host(reactor, [workflows])).success).toBe(true);
+    expect(
+      check(
+        host(reactor, [
+          { ...workflows, config: { drive: "http://h:1/d/workflows" } },
+        ]),
+      ).success,
+    ).toBe(true);
+    // a plugin drive only runtime knows: nothing is checked
+    expect(
+      check(
+        host({ ...reactor, placement: { drives: { other: "sb" } } }, [
+          { ...workflows, config: { drive: { $env: "DRIVE_URL" } } },
+        ]),
+      ).success,
+    ).toBe(true);
+    expect(
       messages(
-        declared.safeParse(linked({ placement: { drives: { typo: "sb" } } })),
+        check(
+          host({ ...reactor, placement: { drives: { other: "sb" } } }, [
+            workflows,
+          ]),
+        ),
       ),
     ).toEqual([
-      "placement.drives.typo: placement.drives.typo names no drive this host links to or declares (home, local, b).",
+      "reactor.placement.drives.other: placement.drives.other names no drive this host links to or declares (b, a, workflows).",
     ]);
   });
 
   it("matches a literal home address by its slug, hashed or not", () => {
     const literal = (url: string, key: string) =>
-      declared.safeParse({
-        backends: { sb: { kind: "remote", remote: { url } } },
-        placement: { drives: { [key]: "sb" } },
-      }).success;
+      check(
+        host({
+          backends: { sb: { kind: "remote", remote: { url } } },
+          placement: { drives: { [key]: "sb" } },
+        }),
+      ).success;
     expect(literal("http://h:1/d/b", "b")).toBe(true);
     expect(literal("http://h:1/d/vetra-0f1e2d3c", "vetra")).toBe(true);
     expect(literal("http://h:1/d/vetra-0f1e2d3c", "vet")).toBe(false);
@@ -387,13 +438,82 @@ describe("placement.drives keys (declared form)", () => {
       },
       placement: { drives: { anything: "sb" } },
     };
-    expect(declared.safeParse(concat).success).toBe(true);
-    // no remote backend: plugin-contributed drives are not named in the block
+    expect(check(host(concat)).success).toBe(true);
+    const mapped = {
+      ...linked({}),
+      drives: {
+        $map: {
+          over: { $output: { host: "s", path: ["drives"] } },
+          to: { slug: { $key: true }, remote: { url: { $item: ["url"] } } },
+        },
+      },
+      placement: { drives: { anything: "sb" } },
+    };
+    expect(check(host(mapped)).success).toBe(true);
+    // no remote backend: plugin-contributed drives are not named anywhere
     expect(
-      declared.safeParse({
-        backends: { main: { kind: "in-process" } },
-        placement: { drives: { workflows: "main" } },
-      }).success,
+      check(
+        host({
+          backends: { main: { kind: "in-process" } },
+          placement: { drives: { workflows: "main" } },
+        }),
+      ).success,
     ).toBe(true);
+  });
+});
+
+describe("placement.drives: one slug on two switchboards (resolved form)", () => {
+  it("refuses the key, naming both backends", () => {
+    const backends = {
+      main: { kind: "worker" },
+      sb1: { kind: "remote", remote: { url: "http://a:1/d/powerhouse" } },
+      sb2: { kind: "remote", remote: { url: "http://b:2/d/powerhouse" } },
+    };
+    for (const placed of ["sb1", "sb2"]) {
+      expect(
+        messages(
+          reactorSchema.safeParse({
+            backends,
+            placement: { drives: { powerhouse: placed } },
+          }),
+        ),
+      ).toEqual([
+        'placement.drives.powerhouse: Drive "powerhouse" is on both sb1 and sb2. Rename one, or link only one.',
+      ]);
+    }
+  });
+
+  it("sees a reactor.drives entry on another switchboard too", () => {
+    expect(
+      messages(
+        reactorSchema.safeParse({
+          backends: {
+            sb1: { kind: "remote", remote: { url: "http://a:1/d/home" } },
+            sb2: { kind: "remote", remote: { url: "http://b:2/d/home2" } },
+          },
+          drives: [
+            { slug: "x", remote: { url: "http://a:1/d/x" } },
+            { slug: "x", remote: { url: "http://b:2/d/x" } },
+          ],
+          placement: { drives: { x: "sb2" } },
+        }),
+      ),
+    ).toEqual([
+      'placement.drives.x: Drive "x" is on both sb1 and sb2. Rename one, or link only one.',
+    ]);
+  });
+});
+
+describe("reactor.drives[].remote.url is a drive address (resolved form)", () => {
+  it("refuses a GraphQL url", () => {
+    expect(
+      messages(
+        reactorSchema.safeParse({
+          drives: [{ slug: "b", remote: { url: "http://a:1/graphql" } }],
+        }),
+      ),
+    ).toEqual([
+      'drives.0.remote.url: remote.url must be a switchboard drive address (<switchboard>/d/<slug>), not http://a:1/graphql: sync needs the drive. Use url: switchboard.drives.<slug>.url, or url: { $output: { host: "switchboard", path: ["drives", "<slug>", "url"] } }.',
+    ]);
   });
 });
