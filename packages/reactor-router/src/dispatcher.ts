@@ -459,7 +459,7 @@ export class RouteDispatcher {
       this.table.recordDocument(
         identifier,
         holder.backend.name,
-        holder.provisional,
+        holder.expiresAt,
       );
       return holder.backend;
     }
@@ -508,7 +508,7 @@ export class RouteDispatcher {
       this.table.recordDocument(
         collection.driveId,
         serving[0].name,
-        provisional,
+        this.table.learnedExpiry(collection),
       );
       return serving[0];
     }
@@ -570,7 +570,7 @@ export class RouteDispatcher {
       this.table.recordDocument(
         identifier,
         holder.backend.name,
-        holder.provisional,
+        holder.expiresAt,
       );
       return { backend: holder.backend, cached: false };
     }
@@ -606,7 +606,7 @@ export class RouteDispatcher {
     this.table.recordDocument(
       identifier,
       holder.backend.name,
-      holder.provisional,
+      holder.expiresAt,
     );
     return holder.backend;
   }
@@ -615,26 +615,23 @@ export class RouteDispatcher {
    * The holder among `serving` (every one not excluded, in configuration
    * order). An id several backends hold goes to its collection's home; see
    * {@link homeOf}. Otherwise the first, provisional when an earlier backend
-   * did not hold it.
+   * did not hold it. `expiresAt` is set for a provisional holder: a home
+   * from a provisional collection route expires with that route.
    */
   private async chooseHolder(
     identifier: string,
     serving: readonly RouterBackend[],
     excluded: ReadonlySet<string>,
-  ): Promise<{
-    readonly backend: RouterBackend;
-    readonly provisional: boolean;
-  }> {
+  ): Promise<{ readonly backend: RouterBackend; readonly expiresAt?: number }> {
     if (serving.length > 1) {
-      const home = await this.homeOf(identifier, serving);
+      const home = await this.homeRouteOf(identifier, serving);
       if (home !== undefined) {
-        return { backend: home, provisional: false };
+        return home;
       }
     }
-    return {
-      backend: serving[0],
-      provisional: this.isProvisional(serving[0], excluded),
-    };
+    return this.isProvisional(serving[0], excluded)
+      ? { backend: serving[0], expiresAt: this.table.provisionalDeadline() }
+      : { backend: serving[0] };
   }
 
   /**
@@ -647,6 +644,16 @@ export class RouteDispatcher {
     identifier: string,
     serving: readonly RouterBackend[],
   ): Promise<RouterBackend | undefined> {
+    return (await this.homeRouteOf(identifier, serving))?.backend;
+  }
+
+  /** {@link homeOf}, with the expiry of a provisional route it came from. */
+  private async homeRouteOf(
+    identifier: string,
+    serving: readonly RouterBackend[],
+  ): Promise<
+    { readonly backend: RouterBackend; readonly expiresAt?: number } | undefined
+  > {
     const asker = serving.at(0);
     if (asker === undefined) {
       return undefined;
@@ -670,12 +677,20 @@ export class RouteDispatcher {
       );
       return undefined;
     }
-    const route = this.table.knownRoute(
-      this.collectionFor(drive, DEFAULT_BRANCH),
-    );
-    return route === undefined
-      ? undefined
-      : serving.find((backend) => backend.name === route.backend);
+    const collection = this.collectionFor(drive, DEFAULT_BRANCH);
+    const route = this.table.knownRoute(collection);
+    const backend =
+      route === undefined
+        ? undefined
+        : serving.find((candidate) => candidate.name === route.backend);
+    if (backend === undefined || route === undefined) {
+      return undefined;
+    }
+    const expiresAt =
+      route.source === "learned"
+        ? this.table.learnedExpiry(collection)
+        : undefined;
+    return expiresAt === undefined ? { backend } : { backend, expiresAt };
   }
 
   /**

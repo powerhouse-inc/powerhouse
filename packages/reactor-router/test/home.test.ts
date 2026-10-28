@@ -1,5 +1,7 @@
 import type { Action } from "@powerhousedao/shared/document-model";
+import { DriveCollectionId } from "@powerhousedao/reactor";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ATTEMPT, RouteDispatcher } from "../src/dispatcher.js";
 import { RoutingReactorClient } from "../src/routing-client.js";
 import { FakeBackend, fakeDocument, REMOTE, silent } from "./stubs.js";
 
@@ -156,6 +158,37 @@ describe("homeOf: an id several backends serve routes by its collection", () => 
 
       expect(local.count("get")).toBe(1);
       expect(remote.count("get")).toBe(1);
+    });
+
+    it("expires a home taken from a provisional drive route with that route", async () => {
+      const local = new FakeBackend("local");
+      const remote = new FakeBackend("remote", undefined, REMOTE);
+      holdDriveAndFile(remote);
+      const dispatcher = new RouteDispatcher(
+        [local.handle(), remote.handle()],
+        { onDiagnostic: silent },
+      );
+      const drive = DriveCollectionId.forDrive("drive");
+      const read = () =>
+        dispatcher.onDocument(
+          "get",
+          "file",
+          (backend) => backend.api.get("file").then(() => backend.name),
+          ATTEMPT.read,
+        );
+
+      expect((await dispatcher.resolveCollectionBackend(drive)).name).toBe(
+        "remote",
+      );
+      holdDriveAndFile(local);
+      expect(await read()).toBe("remote");
+
+      vi.advanceTimersByTime(300_000);
+
+      expect((await dispatcher.resolveCollectionBackend(drive)).name).toBe(
+        "local",
+      );
+      expect(await read()).toBe("local");
     });
   });
 });

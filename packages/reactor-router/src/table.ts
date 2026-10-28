@@ -55,6 +55,10 @@ export class BoundedMap<V = string> {
     this.entries.delete(key);
   }
 
+  clear(): void {
+    this.entries.clear();
+  }
+
   list(): readonly { key: string; value: V }[] {
     return [...this.entries].map(([key, value]) => ({ key, value }));
   }
@@ -154,6 +158,7 @@ export class RouterTable {
   private readonly documents: BoundedMap<CachedRoute>;
   private readonly jobs: BoundedMap;
   private readonly provisionalRouteMs: number;
+  private readonly seeds = new Map<string, string>();
 
   constructor(
     backends: readonly RouterBackend[],
@@ -216,8 +221,9 @@ export class RouterTable {
           `documents seed for ${JSON.stringify(identifier)}`,
         );
       }
-      this.documents.set(identifier, { backend });
+      this.seeds.set(identifier, backend);
     }
+    this.seedDocuments();
     this.jobs = new BoundedMap(options.jobCacheSize ?? DEFAULT_JOB_CACHE_SIZE);
   }
 
@@ -321,8 +327,10 @@ export class RouterTable {
    * Places a collection (a collection key or a bare drive id, as in
    * `collections`) on a backend at runtime, above the config; `undefined`
    * removes the runtime placement, so the config applies again. The routes
-   * learned or corrected for that collection, and the cached route of its
-   * drive, are dropped so the next call follows the new placement.
+   * learned or corrected for that collection are dropped, and so is every
+   * cached document route but the seeded ones, since a cached route does not
+   * say which drive holds its document: the next call for any document in
+   * the drive follows the new placement.
    */
   setPlacement(key: string, backend: string | undefined): void {
     if (key === "") {
@@ -352,7 +360,8 @@ export class RouterTable {
         this.learned.delete(learnedKey);
       }
     }
-    this.documents.delete(driveId || key);
+    this.documents.clear();
+    this.seedDocuments();
     this.notify({ key, reason: "placement" });
   }
 
@@ -434,23 +443,30 @@ export class RouterTable {
     return route.backend;
   }
 
+  /** When a provisional route recorded now expires. */
+  provisionalDeadline(): number {
+    return Date.now() + this.provisionalRouteMs;
+  }
+
+  /** When the collection's learned route expires, if it is provisional. */
+  learnedExpiry(collection: DriveCollectionId): number | undefined {
+    return this.learnedRoute(collection.key)?.expiresAt;
+  }
+
   /**
-   * A `provisional` route expires after `provisionalRouteMs`. Recording the
-   * backend a route already names keeps it as it is, provisional or not.
+   * A route with `expiresAt` (epoch ms) is provisional until then. Recording
+   * the backend a route already names, without one, keeps it as it is.
    */
   recordDocument(
     identifier: string,
     backend: string,
-    provisional = false,
+    expiresAt?: number,
   ): void {
     if (identifier === "" || backend === "") {
       return;
     }
-    if (provisional) {
-      this.documents.set(identifier, {
-        backend,
-        expiresAt: Date.now() + this.provisionalRouteMs,
-      });
+    if (expiresAt !== undefined) {
+      this.documents.set(identifier, { backend, expiresAt });
       return;
     }
     if (this.documents.get(identifier)?.backend === backend) {
@@ -548,6 +564,12 @@ export class RouterTable {
           error,
         );
       }
+    }
+  }
+
+  private seedDocuments(): void {
+    for (const [identifier, backend] of this.seeds) {
+      this.documents.set(identifier, { backend });
     }
   }
 
