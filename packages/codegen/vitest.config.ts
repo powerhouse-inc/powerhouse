@@ -29,6 +29,7 @@ export default defineConfig({
       "src/codegen/migrate.test.ts",
       "src/codegen/migrate-package-json.test.ts",
       "src/codegen/kysely.test.ts",
+      "src/file-builders/manifest.test.ts",
       "src/file-builders/pieces.test.ts",
       "src/file-builders/subgraphs.test.ts",
       "src/name-builders/derive-piece-id.test.ts",
