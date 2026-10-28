@@ -42,7 +42,9 @@ export class WriteClientUnavailableError extends Error {
     this.field = field;
   }
 
-  static isError(error: unknown): error is WriteClientUnavailableError {
+  static override isError(
+    error: unknown,
+  ): error is WriteClientUnavailableError {
     return (
       error instanceof Error && error.name === "WriteClientUnavailableError"
     );

@@ -1982,9 +1982,9 @@ describe("GraphQLManager", () => {
 
     function racer(field: string) {
       return class extends BaseSubgraph {
-        name = "racer";
-        typeDefs = parse(`type Query { ${field}: String }`);
-        resolvers = {};
+        override name = "racer";
+        override typeDefs = parse(`type Query { ${field}: String }`);
+        override resolvers = {};
       };
     }
 
@@ -2076,14 +2076,14 @@ describe("GraphQLManager", () => {
       serveSdl(harness.gatewayAdapter);
       await initAndFlush(harness.manager);
       class AlphaTools extends BaseSubgraph {
-        name = "alpha-tools";
-        typeDefs = parse(typeDefs);
-        resolvers = {};
+        override name = "alpha-tools";
+        override typeDefs = parse(typeDefs);
+        override resolvers = {};
       }
       class Plain extends BaseSubgraph {
-        name = "plain";
-        typeDefs = parse("type Query { ping: String }");
-        resolvers = {};
+        override name = "plain";
+        override typeDefs = parse("type Query { ping: String }");
+        override resolvers = {};
       }
       await harness.manager.applyPackageSubgraphs(
         new Map([["pkg", [AlphaTools, Plain]]]),
@@ -2269,9 +2269,9 @@ describe("GraphQLManager", () => {
       } = setup([alpha, beta]);
       await initAndFlush(manager);
       class BetaStandIn extends BaseSubgraph {
-        name = "beta";
-        typeDefs = parse("type Query { betaStandIn: String }");
-        resolvers = {};
+        override name = "beta";
+        override typeDefs = parse("type Query { betaStandIn: String }");
+        override resolvers = {};
       }
       await manager.applyPackageSubgraphs(new Map([["other", [BetaStandIn]]]));
       await vi.runAllTimersAsync();
@@ -2332,9 +2332,9 @@ describe("GraphQLManager", () => {
 
     describe("through the package manager", () => {
       class BetaStandIn extends BaseSubgraph {
-        name = "beta";
-        typeDefs = parse("type Query { betaStandIn: String }");
-        resolvers = {};
+        override name = "beta";
+        override typeDefs = parse("type Query { betaStandIn: String }");
+        override resolvers = {};
       }
 
       const missing = Object.assign(
@@ -2547,7 +2547,7 @@ describe("GraphQLManager", () => {
       const failure = new Error("router update failed");
       manager.updateRouter = vi.fn(() => Promise.reject(failure));
       class Widget extends BaseSubgraph {
-        name = "widget";
+        override name = "widget";
       }
 
       await manager.applyPackageSubgraphs(new Map([["pkg", [Widget]]]));
@@ -2570,15 +2570,15 @@ describe("GraphQLManager", () => {
     ): [typeof BaseSubgraph, string[]] {
       const disconnected: string[] = [];
       const SubgraphClass = class extends BaseSubgraph {
-        name = name;
+        override name = name;
         hasSubscriptions = opts.subscriptions ?? false;
-        typeDefs = gql`
+        override typeDefs = gql`
           type Query {
             ping: Boolean
           }
         `;
-        resolvers = { Query: { ping: () => true } };
-        onDisconnect = (): Promise<void> => {
+        override resolvers = { Query: { ping: () => true } };
+        override onDisconnect = (): Promise<void> => {
           disconnected.push(name);
           return Promise.resolve();
         };
@@ -2821,7 +2821,7 @@ describe("GraphQLManager", () => {
 
       let received: SubgraphArgs | undefined;
       class CapturingSubgraph extends BaseSubgraph {
-        name = "capturing";
+        override name = "capturing";
         constructor(args: SubgraphArgs) {
           super(args);
           received = args;
@@ -2865,8 +2865,8 @@ describe("GraphQLManager", () => {
     // A package subgraph trying to choose its own mount point: the field
     // initializers run after super() and overwrite the host-injected `path`.
     class EvilSubgraph extends BaseSubgraph {
-      name = "evil";
-      path = "/";
+      override name = "evil";
+      override path = "/";
     }
 
     it("mounts under the manager's base path even when the subgraph's `path` initializer overwrote the injected value", async () => {
@@ -2943,7 +2943,7 @@ describe("GraphQLManager", () => {
     // A core subgraph named "system" - the default BaseSubgraph name is
     // "example", so a subgraph named "system" is a deliberate collision.
     class SystemSubgraph extends BaseSubgraph {
-      name = "system";
+      override name = "system";
     }
 
     it("rejects a non-core subgraph that takes a registered core subgraph's name", async () => {
@@ -3041,7 +3041,7 @@ describe("GraphQLManager", () => {
       await manager.registerSubgraphInstance(plain, "graphql");
 
       class CoreSubgraph extends BaseSubgraph {
-        name = "early";
+        override name = "early";
       }
       await initAndFlush(manager, [CoreSubgraph]);
 
@@ -3075,7 +3075,7 @@ describe("GraphQLManager", () => {
     });
 
     class LateCore extends BaseSubgraph {
-      name = "late";
+      override name = "late";
     }
 
     async function registerLateCore(manager: GraphQLManager) {
@@ -3346,7 +3346,7 @@ describe("GraphQLManager", () => {
       const { manager } = makeHarness({ logger });
       await initAndFlush(manager);
       class Privacy extends BaseSubgraph {
-        name = "privacy";
+        override name = "privacy";
       }
       await manager.applyPackageSubgraphs(new Map([["pkg", [Privacy]]]));
 
@@ -3374,7 +3374,7 @@ describe("GraphQLManager", () => {
       const { manager } = makeHarness();
       await initAndFlush(manager);
       class Shared extends BaseSubgraph {
-        name = "shared";
+        override name = "shared";
       }
       await manager.applyPackageSubgraphs(new Map([["pkg", [Shared]]]));
       const host = makeWidgetSubgraph("shared");
@@ -3391,10 +3391,10 @@ describe("GraphQLManager", () => {
       const { manager } = makeHarness();
       await initAndFlush(manager);
       class FooA extends BaseSubgraph {
-        name = "foo";
+        override name = "foo";
       }
       class FooB extends BaseSubgraph {
-        name = "foo";
+        override name = "foo";
       }
       await manager.registerSubgraph(FooA, "graphql", false, "a");
       expect(
@@ -3411,10 +3411,10 @@ describe("GraphQLManager", () => {
       const { manager } = makeHarness();
       await initAndFlush(manager);
       class FooA extends BaseSubgraph {
-        name = "foo";
+        override name = "foo";
       }
       class FooB extends BaseSubgraph {
-        name = "foo";
+        override name = "foo";
       }
       await manager.registerSubgraph(FooA, "graphql", false, "a");
       await manager.registerSubgraph(FooB, "graphql", false, "b");
@@ -3462,10 +3462,10 @@ describe("GraphQLManager", () => {
       await initAndFlush(manager);
 
       class V1 extends BaseSubgraph {
-        name = "shared-name";
+        override name = "shared-name";
       }
       class V2 extends BaseSubgraph {
-        name = "shared-name";
+        override name = "shared-name";
       }
       const first = await manager.registerSubgraph(V1, "graphql", false, "a");
       const second = await manager.registerSubgraph(V2, "graphql", false, "a");
@@ -3497,7 +3497,7 @@ describe("GraphQLManager", () => {
       );
 
       class Squatter extends BaseSubgraph {
-        name = reactorDriveModelSubgraphName;
+        override name = reactorDriveModelSubgraphName;
       }
       const result = await manager.registerSubgraph(
         Squatter,
@@ -3630,18 +3630,18 @@ describe("GraphQLManager", () => {
       await initAndFlush(manager);
       const created = vi.fn();
       class Collider extends BaseSubgraph {
-        name = "collider";
-        typeDefs = makeWidgetSubgraph().typeDefs;
+        override name = "collider";
+        override typeDefs = makeWidgetSubgraph().typeDefs;
         constructor(...args: ConstructorParameters<typeof BaseSubgraph>) {
           super(...args);
           created();
         }
       }
       class Foo extends BaseSubgraph {
-        name = "foo";
+        override name = "foo";
       }
       class Bar extends BaseSubgraph {
-        name = "bar";
+        override name = "bar";
       }
       await manager.applyPackageSubgraphs(
         new Map<string, (typeof BaseSubgraph)[]>([
@@ -3733,10 +3733,10 @@ describe("GraphQLManager", () => {
       const { manager } = makeHarness({ logger });
       await initAndFlush(manager);
       class FooA extends BaseSubgraph {
-        name = "foo";
+        override name = "foo";
       }
       class FooB extends BaseSubgraph {
-        name = "foo";
+        override name = "foo";
       }
 
       await manager.applyPackageSubgraphs(new Map([["a", [FooA]]]));
@@ -3755,13 +3755,13 @@ describe("GraphQLManager", () => {
       const { manager } = makeHarness({ logger });
       await initAndFlush(manager);
       class FooA extends BaseSubgraph {
-        name = "foo";
+        override name = "foo";
       }
       class BarA extends BaseSubgraph {
-        name = "bar";
+        override name = "bar";
       }
       class FooB extends BaseSubgraph {
-        name = "foo";
+        override name = "foo";
       }
 
       await manager.applyPackageSubgraphs(new Map([["a", [FooA, BarA]]]));
@@ -3787,7 +3787,7 @@ describe("GraphQLManager", () => {
       });
       await initAndFlush(manager);
       class Squatter extends BaseSubgraph {
-        name = reactorDriveModelSubgraphName;
+        override name = reactorDriveModelSubgraphName;
       }
       await manager.applyPackageSubgraphs(new Map([["pkg", [Squatter]]]));
       expect(
@@ -3829,7 +3829,7 @@ describe("GraphQLManager", () => {
       });
       await initAndFlush(manager);
       class Owned extends BaseSubgraph {
-        name = "owned";
+        override name = "owned";
       }
       const owned = await manager.registerSubgraph(
         Owned,
@@ -3882,7 +3882,7 @@ describe("GraphQLManager", () => {
       const root = makeWidgetSubgraph("twin");
       await manager.registerSubgraphInstance(root, "");
       class Twin extends BaseSubgraph {
-        name = "twin";
+        override name = "twin";
       }
 
       await manager.applyPackageSubgraphs(new Map([["pkg", [Twin]]]));
@@ -3915,8 +3915,8 @@ describe("GraphQLManager", () => {
       const [AlphaA, alphaDisconnected] = (() => {
         const disconnected: string[] = [];
         class Alpha extends BaseSubgraph {
-          name = "alpha";
-          onDisconnect = () => {
+          override name = "alpha";
+          override onDisconnect = () => {
             disconnected.push("alpha");
             return Promise.resolve();
           };
@@ -3924,7 +3924,7 @@ describe("GraphQLManager", () => {
         return [Alpha, disconnected] as const;
       })();
       class BetaB extends BaseSubgraph {
-        name = "beta";
+        override name = "beta";
       }
       await manager.registerSubgraph(AlphaA, "graphql", false, "a");
       await manager.registerSubgraph(BetaB, "graphql", false, "b");
@@ -3944,8 +3944,9 @@ describe("GraphQLManager", () => {
       });
       await initAndFlush(manager);
       class Squatter extends BaseSubgraph {
-        name = reactorDriveModelSubgraphName;
-        onSetup = () => new Promise<void>((resolve) => setTimeout(resolve, 5));
+        override name = reactorDriveModelSubgraphName;
+        override onSetup = () =>
+          new Promise<void>((resolve) => setTimeout(resolve, 5));
       }
       vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
         results: [makeDriveModule(), reactorDriveModel],
@@ -3994,7 +3995,7 @@ describe("GraphQLManager", () => {
       });
       await initAndFlush(manager);
       class Squatter extends BaseSubgraph {
-        name = reactorDriveModelSubgraphName;
+        override name = reactorDriveModelSubgraphName;
       }
       await manager.applyPackageSubgraphs(new Map([["pkg", [Squatter]]]));
 
@@ -4033,7 +4034,7 @@ describe("GraphQLManager", () => {
       });
       await initAndFlush(manager);
       class Squatter extends BaseSubgraph {
-        name = reactorDriveModelSubgraphName;
+        override name = reactorDriveModelSubgraphName;
       }
       await manager.applyPackageSubgraphs(new Map([["pkg", [Squatter]]]));
       expect(
@@ -4055,11 +4056,11 @@ describe("GraphQLManager", () => {
       const { manager } = makeHarness();
       await initAndFlush(manager);
       class Inner extends BaseSubgraph {
-        name = "inner";
+        override name = "inner";
       }
       class Outer extends BaseSubgraph {
-        name = "outer";
-        onSetup = async () => {
+        override name = "outer";
+        override onSetup = async () => {
           await this.graphqlManager.registerSubgraph(
             Inner,
             "graphql",
@@ -4093,8 +4094,8 @@ describe("GraphQLManager", () => {
         timerFired = resolve;
       });
       class Starter extends BaseSubgraph {
-        name = "starter";
-        onSetup = () => {
+        override name = "starter";
+        override onSetup = () => {
           setTimeout(() => {
             detached = this.graphqlManager.registerSubgraphInstance(
               late,
@@ -4112,8 +4113,8 @@ describe("GraphQLManager", () => {
         release = resolve;
       });
       class Blocker extends BaseSubgraph {
-        name = "blocker";
-        onSetup = () => gate;
+        override name = "blocker";
+        override onSetup = () => gate;
       }
       const blocking = manager.registerSubgraph(
         Blocker,
@@ -4146,8 +4147,8 @@ describe("GraphQLManager", () => {
         timerFired = resolve;
       });
       class Starter extends BaseSubgraph {
-        name = "starter";
-        onSetup = () => {
+        override name = "starter";
+        override onSetup = () => {
           setTimeout(() => {
             detached = this.graphqlManager.registerSubgraphInstance(
               detachedSubgraph,
@@ -4163,8 +4164,8 @@ describe("GraphQLManager", () => {
         release = resolve;
       });
       class Blocker extends BaseSubgraph {
-        name = "blocker";
-        onSetup = () => gate;
+        override name = "blocker";
+        override onSetup = () => gate;
       }
 
       const change = manager.applyPackageSubgraphs(
@@ -4189,7 +4190,7 @@ describe("GraphQLManager", () => {
       const { manager } = makeHarness({ logger });
       await initAndFlush(manager);
       class Shared extends BaseSubgraph {
-        name = "shared";
+        override name = "shared";
       }
       await manager.applyPackageSubgraphs(new Map([["pkg", [Shared]]]));
       const held = manager.getSubgraphByName("shared");
@@ -4489,9 +4490,9 @@ describe("GraphQLManager", () => {
       subgraphTypeDefs: DocumentNode,
     ): SubgraphClass {
       return class extends BaseSubgraph {
-        name = subgraphName;
-        typeDefs = subgraphTypeDefs;
-        resolvers = {};
+        override name = subgraphName;
+        override typeDefs = subgraphTypeDefs;
+        override resolvers = {};
       };
     }
 
@@ -4751,12 +4752,12 @@ describe("GraphQLManager", () => {
         widgetSdl: string,
       ): SubgraphClass =>
         class extends BaseSubgraph {
-          name = subgraphName;
+          override name = subgraphName;
           hasSubscriptions = true;
-          typeDefs = gql(`${widgetSdl}
+          override typeDefs = gql(`${widgetSdl}
             type Query { ${field}Info: String }
             type Subscription { ${field}: Widget }`);
-          resolvers = {
+          override resolvers = {
             Subscription: {
               [field]: {
                 subscribe: async function* () {
@@ -4856,9 +4857,9 @@ describe("GraphQLManager", () => {
       await initAndFlush(harness.manager);
       const documentSubgraph = (subgraphName: string): SubgraphClass =>
         class extends BaseSubgraph {
-          name = subgraphName;
+          override name = subgraphName;
           hasSubscriptions = true;
-          typeDefs = gql`
+          override typeDefs = gql`
             type Query {
               document(id: String!): String
             }
@@ -4866,7 +4867,7 @@ describe("GraphQLManager", () => {
               ${subgraphName.replace("-", "")}: String
             }
           `;
-          resolvers = {
+          override resolvers = {
             Query: { document: () => subgraphName },
             Subscription: {},
           };

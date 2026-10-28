@@ -47,7 +47,7 @@ export class ReactorSubgraph extends BaseSubgraph {
     this.logger.verbose(`constructor()`);
   }
 
-  name = "r";
+  override name = "r";
   hasSubscriptions = true;
   /** See {@link resolvers.WRITE_SIDE_QUERIES}. */
   readonly writeSideQueries: readonly string[] =
@@ -257,9 +257,9 @@ export class ReactorSubgraph extends BaseSubgraph {
     return this.syncServingGate ? ctx.user?.address : undefined;
   }
 
-  typeDefs = gql(schemaSource);
+  override typeDefs = gql(schemaSource);
 
-  resolvers: Resolvers = {
+  override resolvers: Resolvers = {
     DriveNode: {
       __resolveType: (node) => driveNodeTypeName(node),
     },
@@ -1638,7 +1638,7 @@ export class ReactorSubgraph extends BaseSubgraph {
     },
   };
 
-  onSetup(): Promise<void> {
+  override onSetup(): Promise<void> {
     this.logger.debug("Setting up ReactorSubgraph");
 
     return Promise.resolve();

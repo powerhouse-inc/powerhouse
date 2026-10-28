@@ -156,7 +156,7 @@ abstract class BaseAuthorizationService implements IAuthorizationService {
 
 /** OPEN: authentication disabled — everyone (incl. anonymous) is allowed. */
 class OpenAuthorizationService extends BaseAuthorizationService {
-  isSupremeAdmin(): boolean {
+  override isSupremeAdmin(): boolean {
     return true;
   }
 

@@ -23,10 +23,10 @@ export function isListedAdmin(
 
 /** The read half of the reactor's inspection surface. */
 export class InspectionSubgraph extends BaseSubgraph {
-  name = "inspection";
+  override name = "inspection";
   hasSubscriptions = false;
-  typeDefs: DocumentNode = inspectionTypeDefs;
-  resolvers: Record<string, any>;
+  override typeDefs: DocumentNode = inspectionTypeDefs;
+  override resolvers: Record<string, any>;
 
   constructor(args: SubgraphArgs) {
     super(args);
