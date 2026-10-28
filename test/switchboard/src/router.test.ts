@@ -16,6 +16,7 @@ import {
   createSwitchboardBackend,
   GraphQLReactorClient,
   GraphQLWrongBackendError,
+  switchboardFetch,
   type SwitchboardBackend,
 } from "@powerhousedao/reactor-browser/graphql-client";
 import {
@@ -143,27 +144,16 @@ function routedTo(
 
 type SentCreate = { driveId: string | null; status: number };
 
-/**
- * A transport that records each CreateDocument's Drive-Id and status, and sends
- * the body as a stream. Node's fetch (undici 7) resends a 421 without
- * re-reading a string body, so the resend can fail with
- * RequestContentLengthMismatchError instead of returning the 421. It does not
- * resend a stream body. Browsers do not resend this way.
- */
+/** The default transport, recording each CreateDocument's Drive-Id and status. */
 function recordingFetch(sent: SentCreate[]): typeof fetch {
   return async (input, init) => {
-    const body = init?.body;
-    if (typeof body !== "string") {
-      return fetch(input, init);
-    }
-    const response = await fetch(input, {
-      ...init,
-      body: new Blob([body]).stream(),
-      duplex: "half",
-    } as RequestInit);
-    if (body.includes("mutation CreateDocument")) {
+    const response = await switchboardFetch(input, init);
+    if (
+      typeof init?.body === "string" &&
+      init.body.includes("mutation CreateDocument")
+    ) {
       sent.push({
-        driveId: new Headers(init?.headers).get("drive-id"),
+        driveId: new Headers(init.headers).get("drive-id"),
         status: response.status,
       });
     }

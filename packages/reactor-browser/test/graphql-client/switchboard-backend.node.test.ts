@@ -571,7 +571,8 @@ describe("createSwitchboardBackend Drive-Id", () => {
 
     await backend.create(modelDocument("doc-b"), "drive-1");
 
-    // fetch itself resends a 421 once on a new connection, so doc-a may go twice.
+    // Sent once: Node's fetch resends a 421 with a buffered body, and the
+    // backend streams bodies so the 421 comes back as itself.
     const driveIdsFor = (id: string) =>
       stub.received
         .filter(
@@ -581,7 +582,7 @@ describe("createSwitchboardBackend Drive-Id", () => {
               .document.header.id === id,
         )
         .map((r) => r.headers["drive-id"]);
-    expect(new Set(driveIdsFor("doc-a"))).toEqual(new Set(["drive-1"]));
+    expect(driveIdsFor("doc-a")).toEqual(["drive-1"]);
     expect(driveIdsFor("doc-b")).toEqual([undefined]);
   });
 });

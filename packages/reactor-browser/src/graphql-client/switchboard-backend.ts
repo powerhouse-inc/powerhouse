@@ -26,8 +26,8 @@ import {
   type DriveIdCall,
 } from "./graphql-reactor-client.js";
 import {
-  globalFetch,
   isDeadlineError,
+  switchboardFetch,
   type GraphQLFetch,
 } from "./transport.js";
 
@@ -49,7 +49,7 @@ export type SwitchboardBackendDescriptor = {
   readonly requestTimeoutMs?: number;
   /** Default `{failures: 3, openMs: 30_000}`. */
   readonly breaker?: { readonly failures: number; readonly openMs: number };
-  /** The transport under the deadline and the breaker; the global `fetch` by default. */
+  /** The transport under the deadline and the breaker; {@link switchboardFetch} by default. */
   readonly fetch?: GraphQLFetch;
 };
 
@@ -277,7 +277,7 @@ export function createSwitchboardBackend(
     realtime: descriptor.realtime,
     driveIdFor: drives.driveIdFor,
     requestTimeoutMs: descriptor.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
-    fetch: breaker.wrap(descriptor.fetch ?? globalFetch),
+    fetch: breaker.wrap(descriptor.fetch ?? switchboardFetch),
   });
   const backend: IRoutableBackend = {
     supports: { find: findIsServableOverGraphQL, pointInTimeViews: false },
