@@ -452,7 +452,11 @@ export class RouteDispatcher {
     }
     const serving = await this.servingBackends(identifier, excluded);
     if (serving.length > 0) {
-      this.table.recordDocument(identifier, serving[0].name);
+      this.table.recordDocument(
+        identifier,
+        serving[0].name,
+        this.isProvisional(serving[0], excluded),
+      );
       return serving[0];
     }
     return this.placeDocument(identifier, excluded);
@@ -490,8 +494,18 @@ export class RouteDispatcher {
     }
     const serving = await this.servingBackends(collection.driveId, excluded);
     if (serving.length > 0) {
-      this.table.recordCollection(collection, serving[0].name, "probed");
-      this.table.recordDocument(collection.driveId, serving[0].name);
+      const provisional = this.isProvisional(serving[0], excluded);
+      this.table.recordCollection(
+        collection,
+        serving[0].name,
+        "probed",
+        provisional,
+      );
+      this.table.recordDocument(
+        collection.driveId,
+        serving[0].name,
+        provisional,
+      );
       return serving[0];
     }
     return this.table.backend(
@@ -548,7 +562,11 @@ export class RouteDispatcher {
     const serving = this.backends.filter((_backend, i) => answers[i] === "yes");
     const holder = serving.find((backend) => !excluded.has(backend.name));
     if (holder !== undefined) {
-      this.table.recordDocument(identifier, holder.name);
+      this.table.recordDocument(
+        identifier,
+        holder.name,
+        this.isProvisional(holder, excluded),
+      );
       return { backend: holder, cached: false };
     }
     if (serving.length > 0) {
@@ -579,8 +597,25 @@ export class RouteDispatcher {
     if (holder === undefined) {
       return serving[0];
     }
-    this.table.recordDocument(identifier, holder.name);
+    this.table.recordDocument(
+      identifier,
+      holder.name,
+      this.isProvisional(holder, excluded),
+    );
     return holder;
+  }
+
+  /**
+   * A route found on a backend while an earlier one in the order, not
+   * excluded, did not answer yes; it is probed again once it expires.
+   */
+  private isProvisional(
+    holder: RouterBackend,
+    excluded: ReadonlySet<string>,
+  ): boolean {
+    return (
+      this.backends.find((backend) => !excluded.has(backend.name)) !== holder
+    );
   }
 
   /**

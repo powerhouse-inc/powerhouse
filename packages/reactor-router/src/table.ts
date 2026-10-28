@@ -6,6 +6,7 @@ import {
   collectionRequirements,
   DEFAULT_DOCUMENT_CACHE_SIZE,
   DEFAULT_JOB_CACHE_SIZE,
+  DEFAULT_PROVISIONAL_ROUTE_MS,
   NO_REQUIREMENTS,
   type CollectionRequirements,
   type RouterTableEntry,
@@ -15,8 +16,8 @@ import {
 } from "./types.js";
 
 /** Insertion-ordered and bounded; a read does not refresh an entry. */
-export class BoundedMap {
-  private readonly entries = new Map<string, string>();
+export class BoundedMap<V = string> {
+  private readonly entries = new Map<string, V>();
 
   constructor(private readonly limit: number) {}
 
@@ -24,11 +25,11 @@ export class BoundedMap {
     return this.entries.size;
   }
 
-  get(key: string): string {
-    return this.entries.get(key) ?? "";
+  get(key: string): V | undefined {
+    return this.entries.get(key);
   }
 
-  set(key: string, value: string): void {
+  set(key: string, value: V): void {
     if (this.limit < 1) {
       return;
     }
@@ -49,14 +50,25 @@ export class BoundedMap {
     this.entries.delete(key);
   }
 
-  list(): readonly { key: string; value: string }[] {
+  list(): readonly { key: string; value: V }[] {
     return [...this.entries].map(([key, value]) => ({ key, value }));
   }
 }
 
+/** A cached route; `expiresAt` (epoch ms) marks it provisional. */
+type CachedRoute = {
+  readonly backend: string;
+  readonly expiresAt?: number;
+};
+
+const expired = (route: CachedRoute, now: number): boolean =>
+  route.expiresAt !== undefined && now >= route.expiresAt;
+
 export type CollectionRoute = {
   readonly backend: string;
   readonly source: RouteSource;
+  /** Epoch ms after which a provisional route is probed again. */
+  readonly expiresAt?: number;
 };
 
 /**
@@ -72,12 +84,14 @@ export type RouteEvidence = "probed" | "accepted" | "refusal";
  * - only a refusal produces `corrected`;
  * - an acceptance keeps an entry naming the same backend, never downgrades a
  *   `corrected` entry, and otherwise records `learned`;
- * - a probe never replaces an entry; it only fills an empty one as `learned`.
+ * - a probe never replaces an entry; it only fills an empty one as `learned`,
+ *   provisional until `expiresAt` when one is given.
  */
 export function nextCollectionRoute(
   current: CollectionRoute | undefined,
   backend: string,
   evidence: RouteEvidence,
+  expiresAt?: number,
 ): CollectionRoute {
   if (evidence === "refusal") {
     return { backend, source: "corrected" };
@@ -90,7 +104,9 @@ export function nextCollectionRoute(
       return current;
     }
   }
-  return { backend, source: "learned" };
+  return evidence === "probed" && expiresAt !== undefined
+    ? { backend, source: "learned", expiresAt }
+    : { backend, source: "learned" };
 }
 
 /** Routing state. Any entry may be wrong; a refusal corrects it. */
@@ -101,8 +117,9 @@ export class RouterTable {
   private readonly requirements: ReadonlyMap<string, CollectionRequirements>;
   private readonly fallbackRequirements: CollectionRequirements;
   private readonly learned = new Map<string, CollectionRoute>();
-  private readonly documents: BoundedMap;
+  private readonly documents: BoundedMap<CachedRoute>;
   private readonly jobs: BoundedMap;
+  private readonly provisionalRouteMs: number;
 
   constructor(
     backends: readonly RouterBackend[],
@@ -149,7 +166,9 @@ export class RouterTable {
         ? NO_REQUIREMENTS
         : collectionRequirements(options.defaultRequirements);
 
-    this.documents = new BoundedMap(
+    this.provisionalRouteMs =
+      options.provisionalRouteMs ?? DEFAULT_PROVISIONAL_ROUTE_MS;
+    this.documents = new BoundedMap<CachedRoute>(
       options.documentCacheSize ?? DEFAULT_DOCUMENT_CACHE_SIZE,
     );
     for (const [identifier, backend] of Object.entries(
@@ -162,7 +181,7 @@ export class RouterTable {
           `documents seed for ${JSON.stringify(identifier)}`,
         );
       }
-      this.documents.set(identifier, backend);
+      this.documents.set(identifier, { backend });
     }
     this.jobs = new BoundedMap(options.jobCacheSize ?? DEFAULT_JOB_CACHE_SIZE);
   }
@@ -196,7 +215,7 @@ export class RouterTable {
     collection: DriveCollectionId,
     excluded: ReadonlySet<string> = new Set(),
   ): RouterTableEntry {
-    const learned = this.learned.get(collection.key);
+    const learned = this.learnedRoute(collection.key);
     if (
       learned !== undefined &&
       learned.source === "corrected" &&
@@ -245,15 +264,24 @@ export class RouterTable {
     };
   }
 
-  /** Records what an operation proved; see {@link nextCollectionRoute}. */
+  /**
+   * Records what an operation proved; see {@link nextCollectionRoute}. A
+   * `provisional` probe expires after `provisionalRouteMs`.
+   */
   recordCollection(
     collection: DriveCollectionId,
     backend: string,
     evidence: RouteEvidence,
+    provisional = false,
   ): void {
     this.learned.set(
       collection.key,
-      nextCollectionRoute(this.learned.get(collection.key), backend, evidence),
+      nextCollectionRoute(
+        this.learnedRoute(collection.key),
+        backend,
+        evidence,
+        provisional ? Date.now() + this.provisionalRouteMs : undefined,
+      ),
     );
   }
 
@@ -266,21 +294,48 @@ export class RouterTable {
   }
 
   forgetCollection(collection: DriveCollectionId, backend: string): void {
-    const learned = this.learned.get(collection.key);
+    const learned = this.learnedRoute(collection.key);
     if (learned !== undefined && learned.backend === backend) {
       this.learned.delete(collection.key);
     }
   }
 
+  /** The cached backend, or `""`; an expired provisional route is dropped. */
   documentBackend(identifier: string): string {
-    return this.documents.get(identifier);
+    const route = this.documents.get(identifier);
+    if (route === undefined) {
+      return "";
+    }
+    if (expired(route, Date.now())) {
+      this.documents.delete(identifier);
+      return "";
+    }
+    return route.backend;
   }
 
-  recordDocument(identifier: string, backend: string): void {
+  /**
+   * A `provisional` route expires after `provisionalRouteMs`. Recording the
+   * backend a route already names keeps it as it is, provisional or not.
+   */
+  recordDocument(
+    identifier: string,
+    backend: string,
+    provisional = false,
+  ): void {
     if (identifier === "" || backend === "") {
       return;
     }
-    this.documents.set(identifier, backend);
+    if (provisional) {
+      this.documents.set(identifier, {
+        backend,
+        expiresAt: Date.now() + this.provisionalRouteMs,
+      });
+      return;
+    }
+    if (this.documentBackend(identifier) === backend) {
+      return;
+    }
+    this.documents.set(identifier, { backend });
   }
 
   forgetDocument(identifier: string): void {
@@ -288,7 +343,7 @@ export class RouterTable {
   }
 
   jobBackend(jobId: string): string {
-    return this.jobs.get(jobId);
+    return this.jobs.get(jobId) ?? "";
   }
 
   recordJob(jobId: string, backend: string): void {
@@ -300,13 +355,14 @@ export class RouterTable {
 
   /** One row per collection key, labelled by the entry that wins. */
   describe(): RouterTableSnapshot {
+    const now = Date.now();
     const keys = new Set<string>([
       ...this.overrides.keys(),
       ...this.learned.keys(),
     ]);
     const collections: RouterTableEntry[] = [];
     for (const key of keys) {
-      const learned = this.learned.get(key);
+      const learned = this.learnedRoute(key);
       const override = this.overrides.get(key);
       if (learned !== undefined && learned.source === "corrected") {
         collections.push({
@@ -337,11 +393,25 @@ export class RouterTable {
       collections,
       documents: this.documents
         .list()
-        .map((entry) => ({ identifier: entry.key, backend: entry.value })),
+        .filter((entry) => !expired(entry.value, now))
+        .map((entry) => ({
+          identifier: entry.key,
+          backend: entry.value.backend,
+        })),
       jobs: this.jobs
         .list()
         .map((entry) => ({ jobId: entry.key, backend: entry.value })),
     };
+  }
+
+  /** The learned entry, dropping it once a provisional route has expired. */
+  private learnedRoute(key: string): CollectionRoute | undefined {
+    const route = this.learned.get(key);
+    if (route !== undefined && expired(route, Date.now())) {
+      this.learned.delete(key);
+      return undefined;
+    }
+    return route;
   }
 
   private isEligible(

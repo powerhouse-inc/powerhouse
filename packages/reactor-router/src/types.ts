@@ -102,6 +102,7 @@ export const DEFAULT_JOB_CACHE_SIZE = 2_000;
 export const DEFAULT_SUBSCRIPTION_DEDUP_SIZE = 2_048;
 export const DEFAULT_BRANCH = "main";
 export const DEFAULT_PROBE_TIMEOUT_MS = 3_000;
+export const DEFAULT_PROVISIONAL_ROUTE_MS = 30_000;
 
 /** Map keys are a collection id or a bare drive id (every branch). */
 export type RoutingOptions = {
@@ -120,6 +121,13 @@ export type RoutingOptions = {
    * `Infinity` waits for the answer.
    */
   readonly probeTimeoutMs?: number;
+  /**
+   * How long a provisional route stands before it is probed again: one found
+   * on a backend while an earlier backend in the order did not hold the
+   * document. Defaults to {@link DEFAULT_PROVISIONAL_ROUTE_MS}. Corrected
+   * routes and placements never expire.
+   */
+  readonly provisionalRouteMs?: number;
   readonly documentCacheSize?: number;
   readonly jobCacheSize?: number;
   readonly subscriptionDedupSize?: number;
