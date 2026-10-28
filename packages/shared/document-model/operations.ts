@@ -2,7 +2,7 @@ import type { Draft } from "mutative";
 import { castDraft, create } from "mutative";
 import type { Action } from "./actions.js";
 import type { PHDocument } from "./documents.js";
-import { nextSkipNumber, sortOperations } from "./documents.js";
+import { nextSkipNumber, sortOperations } from "./operation-order.js";
 import type { NOOPAction } from "./types.js";
 import { generateActionId } from "./utils.js";
 
