@@ -12,6 +12,7 @@ import {
   declaredHostSchemas,
   hostExportSchema,
   outputTokenSchema,
+  switchboardOfDrive,
   tokenKeyOf,
   type ChildWrapper,
   type HostDefinition,
@@ -312,8 +313,29 @@ function switchboardPort(member: Member): number | undefined {
     : undefined;
 }
 
-function graphqlUrl(port: number): string {
-  return `http://localhost:${port}/graphql`;
+const DEFAULT_DRIVE_SLUG = "powerhouse";
+
+/** The slug a switchboard member serves a declared drive under, when the
+ * browser can know it: a `projectHash: true` drive is served hashed. */
+function servedSlug(member: Member, slug: string): string | undefined {
+  const drives = (member.draft.reactor as ReactorConfig | undefined)?.drives;
+  if (!Array.isArray(drives)) return slug;
+  const declared = drives.find((drive) => drive.slug === slug);
+  return declared?.projectHash === true ? undefined : slug;
+}
+
+/** The drive a switchboard member is linked by: its first local declared
+ * drive, or the implicit default drive when it declares none. */
+function homeSlug(member: Member): string | undefined {
+  const drives = (member.draft.reactor as ReactorConfig | undefined)?.drives;
+  if (drives === undefined) return DEFAULT_DRIVE_SLUG;
+  if (!Array.isArray(drives)) return undefined;
+  const local = drives.find((drive) => drive.remote === undefined);
+  return local && servedSlug(member, local.slug);
+}
+
+function driveUrl(port: number, slug: string): string {
+  return `http://localhost:${port}/d/${encodeURIComponent(slug)}`;
 }
 
 /** A literal, a derived `$output`, or why the user must type one. */
@@ -322,7 +344,14 @@ function remoteUrl(
   consumer: Member,
   members: readonly Member[],
 ): { value?: string; derived: boolean; reason?: string } {
-  if (typeof value === "string") return { value, derived: false };
+  if (typeof value === "string") {
+    return switchboardOfDrive(value)
+      ? { value, derived: false }
+      : {
+          derived: false,
+          reason: `${value} is not a switchboard drive address (<switchboard>/d/<slug>)`,
+        };
+  }
   const token = outputTokenSchema.safeParse(value);
   if (!token.success) {
     const key = tokenKeyOf(value) ?? "a value";
@@ -332,10 +361,16 @@ function remoteUrl(
     };
   }
   const ref = token.data.$output;
-  if (ref.path.join(".") !== "endpoints.graphql") {
+  const [drives, slug, url, ...rest] = ref.path;
+  if (
+    drives !== "drives" ||
+    typeof slug !== "string" ||
+    url !== "url" ||
+    rest.length > 0
+  ) {
     return {
       derived: false,
-      reason: `$output path ${formatPath(ref.path)} is not endpoints.graphql`,
+      reason: `$output path ${formatPath(ref.path)} is not a switchboard drive address; use drives.<slug>.url`,
     };
   }
   const found = memberForRef(ref, consumer.siblings);
@@ -346,13 +381,20 @@ function remoteUrl(
     (member) => member.scope === consumer.scope && member.key === found.key,
   );
   const port = producer && switchboardPort(producer);
-  if (port === undefined) {
+  if (!producer || port === undefined) {
     return {
       derived: false,
       reason: `member "${found.key}" is not a switchboard with a fixed port`,
     };
   }
-  return { value: graphqlUrl(port), derived: true };
+  const served = servedSlug(producer, slug);
+  if (served === undefined) {
+    return {
+      derived: false,
+      reason: `drive "${slug}" is served under a hashed slug that only the running switchboard reports`,
+    };
+  }
+  return { value: driveUrl(port, served), derived: true };
 }
 
 // renown gets its own info issue.
@@ -432,29 +474,32 @@ function memberRows(
     const port = switchboardPort(member);
     if (member.draft.runner.module.endsWith(SWITCHBOARD_RUNNER)) {
       const name = `${member.name}.${MAIN_BACKEND}`;
-      if (port === undefined) {
+      const slug = homeSlug(member);
+      const url =
+        port === undefined || slug === undefined
+          ? undefined
+          : driveUrl(port, slug);
+      if (url === undefined) {
         issues.push({
           severity: "warning",
           stage: "declared",
-          file: member.portAt.file,
-          path: formatPath(member.portAt.path),
-          message: `Member "${member.name}" binds no fixed port; enter its GraphQL URL.`,
+          file: port === undefined ? member.portAt.file : at.file,
+          path: formatPath(
+            port === undefined ? member.portAt.path : [...at.path, "drives"],
+          ),
+          message:
+            port === undefined
+              ? `Member "${member.name}" binds no fixed port; enter one of its drive addresses.`
+              : `Member "${member.name}" serves no drive whose address is known before it starts; enter one of its drive addresses.`,
         });
       }
       return [
         {
           include: true,
-          descriptor: {
-            kind: "remote",
-            name,
-            remote: { url: port === undefined ? "" : graphqlUrl(port) },
-          },
+          descriptor: { kind: "remote", name, remote: { url: url ?? "" } },
           member: member.name,
           backend: MAIN_BACKEND,
-          url: {
-            value: port === undefined ? undefined : graphqlUrl(port),
-            derived: port !== undefined,
-          },
+          url: { value: url, derived: url !== undefined },
         },
       ];
     }
@@ -490,7 +535,7 @@ function memberRows(
         issue(
           "warning",
           [...path, "remote", "url"],
-          `${name}: enter its GraphQL URL (${resolved.reason}).`,
+          `${name}: enter a switchboard drive address (${resolved.reason}).`,
         );
       }
       rows.push({
@@ -543,27 +588,29 @@ function memberRows(
   return rows;
 }
 
-/** One set per export; remote rows deduplicated by URL, first name wins. */
+/** One set per export; remote rows deduplicated by switchboard, first name wins. */
 export function planImport(exp: HostExport): ImportPlan {
   const issues: ImportIssue[] = [];
   const members = walkMembers(exp, issues);
   const rows: ImportRow[] = [];
-  const byUrl = new Map<string, string>();
+  const byBase = new Map<string, string>();
   for (const member of members) {
     for (const row of memberRows(member, members, issues)) {
       const url = row.url?.value;
-      const kept = url === undefined ? undefined : byUrl.get(url);
+      const base =
+        url === undefined ? undefined : switchboardOfDrive(url)?.base;
+      const kept = base === undefined ? undefined : byBase.get(base);
       if (kept !== undefined) {
         issues.push({
           severity: "info",
           stage: "declared",
           file: hostFile(member.folder),
           path: "",
-          message: `${row.descriptor.name} attaches to ${url}, as ${kept} does; only ${kept} is imported.`,
+          message: `${row.descriptor.name} attaches to the switchboard at ${base}, as ${kept} does; only ${kept} is imported.`,
         });
         continue;
       }
-      if (url !== undefined) byUrl.set(url, row.descriptor.name);
+      if (base !== undefined) byBase.set(base, row.descriptor.name);
       rows.push(row);
     }
   }

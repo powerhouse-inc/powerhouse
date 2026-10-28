@@ -169,10 +169,13 @@ describe.skipIf(process.platform === "win32")(
         existsSync(path.join(dataDir, ".ph", "run", `${HOST_NAME}.json`)),
       ).toBe(true);
 
+      const drive = Object.values(instance?.outputs?.drives ?? {}).at(0)?.url;
+      expect(drive).toMatch(/^http:\/\/[^/]+:\d+\/d\/[^/]+$/);
+
       const remote = await provisionRemote({
         name: "e2e",
         kind: "remote",
-        remote: { url: graphql },
+        remote: { url: drive ?? "" },
       });
       expect(remote.endpoint).toBe(`${graphql}/inspection`);
       expect(remote.info).toBeDefined();

@@ -170,13 +170,13 @@ describe("planImport", () => {
         descriptor: {
           kind: "remote",
           name: "cli-switchboard.main",
-          remote: { url: "http://localhost:7491/graphql" },
+          remote: { url: "http://localhost:7491/d/powerhouse" },
         },
-        url: { value: "http://localhost:7491/graphql", derived: true },
+        url: { value: "http://localhost:7491/d/powerhouse", derived: true },
       }),
     ]);
     expect(issues.map((issue) => issue.message)).toContain(
-      "cli-connect.sb attaches to http://localhost:7491/graphql, as cli-switchboard.main does; only cli-switchboard.main is imported.",
+      "cli-connect.sb attaches to the switchboard at http://localhost:7491, as cli-switchboard.main does; only cli-switchboard.main is imported.",
     );
   });
 
@@ -276,18 +276,32 @@ describe("planImport", () => {
     );
   });
 
-  it("keeps a literal remote URL as given", () => {
+  it("keeps a literal drive address as given", () => {
     const { rows } = plan(
+      reactorHost({
+        backends: {
+          sb: { kind: "remote", remote: { url: "https://sb.example/d/b" } },
+        },
+      }),
+    );
+    expect(rows[0].url).toEqual({
+      value: "https://sb.example/d/b",
+      derived: false,
+    });
+  });
+
+  it("asks for a drive address in place of a GraphQL url", () => {
+    const { rows, issues } = plan(
       reactorHost({
         backends: {
           sb: { kind: "remote", remote: { url: "https://sb.example/graphql" } },
         },
       }),
     );
-    expect(rows[0].url).toEqual({
-      value: "https://sb.example/graphql",
-      derived: false,
-    });
+    expect(rows[0].url).toEqual({ derived: false });
+    expect(issues.map((issue) => issue.message)).toContain(
+      "solo.sb: enter a switchboard drive address (https://sb.example/graphql is not a switchboard drive address (<switchboard>/d/<slug>)).",
+    );
   });
 
   it("excludes an in-process postgres backend", () => {
@@ -359,7 +373,7 @@ describe("planImport", () => {
         r: {
           kind: "remote",
           remote: {
-            url: { $output: { host, path: ["endpoints", "graphql"] } },
+            url: { $output: { host, path: ["drives", "powerhouse", "url"] } },
           },
         },
       },
@@ -377,6 +391,21 @@ describe("planImport", () => {
     name: "outer",
     host,
     members,
+  });
+
+  it("leaves a hashed drive's address for the running switchboard", () => {
+    const { rows, issues } = plan(
+      envelope(compound("outer", { sb: { host: "switchboard" } }), {
+        switchboard: {
+          ...switchboard(7000),
+          reactor: { drives: [{ slug: "vetra", projectHash: true }] },
+        },
+      }),
+    );
+    expect(rows.map((row) => row.url)).toEqual([{ derived: false }]);
+    expect(issues.map((issue) => issue.message)).toContain(
+      'Member "sb" serves no drive whose address is known before it starts; enter one of its drive addresses.',
+    );
   });
 
   it("resolves a nested $output within its own compound", () => {
@@ -398,8 +427,8 @@ describe("planImport", () => {
       ),
     );
     expect(rows.map((row) => [row.descriptor.name, row.url?.value])).toEqual([
-      ["sb.main", "http://localhost:7000/graphql"],
-      ["i.sb.main", "http://localhost:8000/graphql"],
+      ["sb.main", "http://localhost:7000/d/powerhouse"],
+      ["i.sb.main", "http://localhost:8000/d/powerhouse"],
     ]);
   });
 
@@ -424,7 +453,7 @@ describe("planImport", () => {
       "sb.main",
       "i.sb.main",
     ]);
-    expect(rows[1].url?.value).toBe("http://localhost:8000/graphql");
+    expect(rows[1].url?.value).toBe("http://localhost:8000/d/powerhouse");
   });
 
   it("reports a child naming an inherited property instead of throwing", () => {
