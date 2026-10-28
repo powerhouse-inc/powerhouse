@@ -547,6 +547,80 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     ).toEqual([UNSUPPORTED, UNSUPPORTED]);
   });
 
+  it("serves a base-reducer 2 document at an unsupported other protocol and refuses its writes", async () => {
+    const id = "purge9-stored";
+    const db = await createDefaultDatabase();
+    const wide = await build((b) =>
+      b.withKysely(db).withPeerCapabilities([
+        {
+          kind: "protocol",
+          name: "document-purge",
+          baseline: [],
+          supported: () => [1, 9],
+          optional: true,
+        },
+      ]),
+    );
+    await succeeded(
+      wide.reactor,
+      await wide.reactor.create(
+        withSignaturePolicy(
+          driveDocumentModelModule.utils.createDocument(),
+          "legacy",
+          { id, protocolVersions: { "base-reducer": 2, "document-purge": 9 } },
+        ),
+      ),
+    );
+    await succeeded(
+      wide.reactor,
+      await wide.reactor.execute(id, "main", [
+        addFolder({ id: generateId(), name: "before", parentFolder: null }),
+      ]),
+    );
+    await wide.reactor.kill().completed;
+    reactors.splice(reactors.indexOf(wide.reactor), 1);
+    const schema = db.withSchema(REACTOR_SCHEMA);
+    await schema.updateTable("ViewState").set({ lastOrdinal: 0 }).execute();
+    await schema.deleteFrom("DocumentSnapshot").execute();
+
+    const narrow = await build((b) =>
+      b.withKysely(db).withUnsupportedStoredDocuments("read-only"),
+    );
+    const { reactor } = narrow;
+    await narrow.catchUp.sweepNow();
+
+    const stored =
+      await reactor.get<
+        ReturnType<typeof driveDocumentModelModule.utils.createDocument>
+      >(id);
+    expect(stored.header.protocolVersions).toEqual({
+      "base-reducer": 2,
+      "document-purge": 9,
+    });
+    expect(stored.state.global.nodes.map((node) => node.name)).toEqual([
+      "before",
+    ]);
+    expect(await skipped(db)).toEqual([]);
+    const integrity = new DocumentIntegrityService(
+      narrow.keyframeStore,
+      narrow.operationStore,
+      narrow.writeCache,
+      narrow.documentView,
+      narrow.documentModelRegistry,
+      { "base-reducer": [1, 2], "document-purge": [1] },
+    );
+    expect((await integrity.validateDocument(id)).unsupported).toBeUndefined();
+
+    const write = await settled(
+      reactor,
+      await reactor.execute(id, "main", [
+        addFolder({ id: generateId(), name: "after", parentFolder: null }),
+      ]),
+    );
+    expect(write.status).toBe(JobStatus.FAILED);
+    expect(write.error?.message).toMatch(/document-purge.*9/);
+  });
+
   it("skips a registered base-reducer number this build does not know", async () => {
     const { db, ordinals } = await storeWithUnsupported();
 

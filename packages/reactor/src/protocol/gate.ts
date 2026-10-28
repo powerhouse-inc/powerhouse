@@ -32,7 +32,13 @@ export interface IProtocolGate {
     versions: ProtocolVersions | undefined,
     documentType?: string,
   ): UnsupportedProtocolVersionError | undefined;
-  assertRunnable(
+  /** `refusal` of the base-reducer version alone: reads serve what writes refuse for other protocols. */
+  readRefusal(
+    documentId: string,
+    versions: ProtocolVersions | undefined,
+    documentType?: string,
+  ): UnsupportedProtocolVersionError | undefined;
+  assertReadable(
     documentId: string,
     versions: ProtocolVersions | undefined,
     documentType?: string,
@@ -167,11 +173,25 @@ export function createProtocolGate(
       : undefined;
   };
 
+  const readRefusal: IProtocolGate["readRefusal"] = (
+    documentId,
+    versions,
+    documentType,
+  ) => {
+    const version = versions?.["base-reducer"];
+    return refusal(
+      documentId,
+      version === undefined ? {} : { "base-reducer": version },
+      documentType,
+    );
+  };
+
   return {
     support,
     refusal,
-    assertRunnable(documentId, versions, documentType) {
-      const refused = refusal(documentId, versions, documentType);
+    readRefusal,
+    assertReadable(documentId, versions, documentType) {
+      const refused = readRefusal(documentId, versions, documentType);
       if (refused) throw refused;
     },
     registeredModules,

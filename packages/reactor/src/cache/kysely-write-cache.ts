@@ -195,12 +195,12 @@ export class KyselyWriteCache implements IWriteCache {
   }
 
   /**
-   * Refuses a document stored outside the supported versions by name, so read
-   * paths can tell it from a failed rebuild. Protocol-only: the hot path does
-   * no registry work, and derivation refuses an unrunnable model typed.
+   * Refuses a document stored at an unsupported base-reducer version by name,
+   * so read paths can tell it from a failed rebuild. Protocol-only: the hot
+   * path does no registry work, and derivation refuses an unrunnable model typed.
    */
   private assertSupported(documentId: string, document: PHDocument): void {
-    this.gate?.assertRunnable(documentId, document.header.protocolVersions);
+    this.gate?.assertReadable(documentId, document.header.protocolVersions);
   }
 
   withScopedStores(

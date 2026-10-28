@@ -221,7 +221,7 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
   }
 
   /**
-   * The gate's refusal of the stored CREATE_DOCUMENT, which fixes the
+   * The gate's read refusal of the stored CREATE_DOCUMENT, which fixes the
    * document's protocol versions. Undefined when that read fails: the
    * validation's own reads decide.
    */
@@ -251,7 +251,7 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
     const { protocolVersions, model } = creation.input;
     return (
       unknownBaseReducerRefusal(documentId, protocolVersions) ??
-      gate.refusal(documentId, protocolVersions, model)
+      gate.readRefusal(documentId, protocolVersions, model)
     );
   }
 

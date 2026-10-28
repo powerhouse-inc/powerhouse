@@ -250,7 +250,7 @@ export async function readDocumentScope(
   }
 
   document = documentFromCreation(documentCreateAction);
-  gate?.assertRunnable(documentId, document.header.protocolVersions);
+  gate?.assertReadable(documentId, document.header.protocolVersions);
   lastDocumentScopeOperation = createOp;
 
   let docModule = registry.getModule(

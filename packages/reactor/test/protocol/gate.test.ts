@@ -27,9 +27,21 @@ describe("the protocol gate", () => {
     const refusal = gate.refusal("doc", { "base-reducer": 3 }, MODEL);
     expect(refusal?.name).toBe("UnsupportedProtocolVersionError");
     expect(refusal?.documentType).toBeUndefined();
-    expect(() => gate.assertRunnable("doc", { "base-reducer": 3 })).toThrow(
+    expect(() => gate.assertReadable("doc", { "base-reducer": 3 })).toThrow(
       "which this reactor does not support",
     );
+  });
+
+  it("refuses reads on the base-reducer version alone", () => {
+    const gate = createProtocolGate(
+      { "base-reducer": [1, 2], signature: [2] },
+      createTestRegistry(),
+      createMockLogger(),
+    );
+    const versions = { "base-reducer": 2, signature: 9 };
+    expect(gate.refusal("doc", versions)?.protocol).toBe("signature");
+    expect(gate.readRefusal("doc", versions)).toBeUndefined();
+    expect(gate.readRefusal("doc", { "base-reducer": 9 })?.version).toBe(9);
   });
 
   it("refuses 3 for an untagged model and admits it for a tagged one", () => {
