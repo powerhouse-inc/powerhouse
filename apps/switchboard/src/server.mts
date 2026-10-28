@@ -263,6 +263,42 @@ function resolveConfigPath(configFile: string | undefined): string {
   return configFile ?? path.join(process.cwd(), "powerhouse.config.json");
 }
 
+/**
+ * The config file's `workflows.oauthApps`, client file paths made absolute
+ * from the config file's folder. An unreadable file or a malformed entry
+ * means none: a missing app is reported when a sign-in asks for it.
+ */
+function readConfigOAuthApps(
+  configPath: string,
+): { id: string; clients: { desktop?: string; web?: string } }[] {
+  let raw: unknown;
+  try {
+    raw = (getConfig(configPath) as { workflows?: { oauthApps?: unknown } })
+      .workflows?.oauthApps;
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(raw)) return [];
+  const dir = path.dirname(path.resolve(configPath));
+  const at = (p: unknown) =>
+    typeof p === "string" && p ? path.resolve(dir, p) : undefined;
+  return raw.flatMap((entry: unknown) => {
+    const app = (entry ?? {}) as {
+      id?: unknown;
+      clients?: { desktop?: unknown; web?: unknown };
+    };
+    if (typeof app.id !== "string" || !app.id) return [];
+    const desktop = at(app.clients?.desktop);
+    const web = at(app.clients?.web);
+    return [
+      {
+        id: app.id,
+        clients: { ...(desktop ? { desktop } : {}), ...(web ? { web } : {}) },
+      },
+    ];
+  });
+}
+
 // An unreadable config file means "not configured", not a boot failure:
 // workflows are opt-in.
 function readConfigWorkflowsEnabled(configPath: string): boolean {
@@ -498,7 +534,10 @@ async function initServer(
     // stays OFF. The mcp/workflows plugins set these true at
     // transformServerOptions; their absence must actually deactivate.
     options.mcp ??= false;
-    options.workflows = { enabled: options.workflows?.enabled === true };
+    options.workflows = {
+      ...options.workflows,
+      enabled: options.workflows?.enabled === true,
+    };
   }
   logger.level = config.logLevel;
   const dbPath = config.storage.readModel.url;
@@ -1285,6 +1324,11 @@ async function initServer(
       // under it, not under the reactor's.
       webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
       http: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME),
+      // The host's option, else the config file's: under uniform runners the
+      // plugins own the workflows switch and the classic config read is skipped.
+      oauthApps:
+        options.workflows?.oauthApps ??
+        readConfigOAuthApps(resolveConfigPath(options.configFile)),
       authorizationService: api.authorizationService,
       // The manager that serves this reactor's subgraphs: a piece's index read
       // runs through it in process, as the run's user.

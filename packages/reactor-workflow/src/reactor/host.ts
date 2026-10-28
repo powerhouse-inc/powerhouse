@@ -1,3 +1,4 @@
+import type { OAuthAppDefinition } from "./oauth-apps.js";
 // What the engine asks of whatever composes it. Structural on purpose: the
 // host that serves the runtime depends on this package, never the other way.
 import type {
@@ -82,6 +83,10 @@ export interface WorkflowRuntimeHostDeps {
   canReadAttachmentRef?(request: AttachmentReadRequest): Promise<boolean>;
   // Defaults to the relational store encrypted with the host's master key.
   secrets?: SecretStore;
+  // OAuth2 apps the publisher owns: a connection names one (`oauth_app`)
+  // instead of carrying a client id and secret. Their client secrets are
+  // loaded into the secret store on first use.
+  oauthApps?: readonly OAuthAppDefinition[];
   // Where that store generates a key when none is set; false requires one,
   // for a database that outlives the working directory.
   secretsKeyFile?: string | false;

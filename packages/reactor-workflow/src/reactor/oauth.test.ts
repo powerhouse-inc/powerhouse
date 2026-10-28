@@ -1,6 +1,9 @@
 // OAuth2 sign-in end to end: a fixture piece served by a local npm, a real
 // provider token endpoint on loopback, and a PGlite-backed secret store.
 import http from "node:http";
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { AddressInfo } from "node:net";
 import { createHash } from "node:crypto";
 import {
@@ -524,6 +527,107 @@ module.exports = { app };
     await expect(resolve()).rejects.toThrow(
       "Refreshing the OAuth2 token failed; reconnect",
     );
+  });
+  describe("through the publisher's app", () => {
+    const LOOPBACK =
+      "http://localhost:7540/api/@powerhousedao/workflow/oauth/callback";
+    let appService: WorkflowRuntimeService;
+
+    beforeAll(async () => {
+      const dir = await mkdtemp(join(tmpdir(), "oauth-apps-"));
+      const web = join(dir, "web.json");
+      const desktop = join(dir, "desktop.json");
+      await writeFile(
+        web,
+        JSON.stringify({
+          web: { client_id: "cid", client_secret: "app-secret" },
+        }),
+      );
+      await writeFile(
+        desktop,
+        JSON.stringify({
+          installed: { client_id: "desk-cid", client_secret: "desk-secret" },
+        }),
+      );
+      appService = testRuntime({
+        reactorClient: store.client,
+        relationalDb: createTestRelationalDb(),
+        oauthApps: [
+          { id: "sektar", clients: { web, desktop } },
+          { id: "web-only", clients: { web } },
+        ],
+      } as unknown as WorkflowRuntimeHostDeps);
+    });
+
+    it("signs in with the web client for a public callback, asking only the connection's scopes", async () => {
+      const id = connection({
+        oauth_app: "sektar",
+        oauth_scopes: "read",
+        subdomain: "acme",
+      });
+      const started = await appService.startOAuth(id, CTX, {
+        redirectUri: REDIRECT,
+      });
+      const url = new URL(started.authorizationUrl);
+      expect(url.searchParams.get("client_id")).toBe("cid");
+      expect(url.searchParams.get("scope")).toBe("read");
+      provider.issue("code-1", started.authorizationUrl);
+      await expect(
+        appService.completeOAuth({ state: started.state, code: "code-1" }),
+      ).resolves.toEqual({ ok: true, detail: null, returnUrl: null });
+
+      // The token remembers its client, and a refresh uses it: the
+      // connection itself holds no client id.
+      const document = store.documents.get(id)!;
+      const tokenRef = document.state.global.secretRefs.find(
+        (ref) => ref.name === OAUTH_TOKEN,
+      )!.ref;
+      const secrets = await appService.secrets();
+      const stored = JSON.parse(await secrets.get(tokenRef)) as OAuthTokenSet;
+      expect(stored.client_id).toBe("cid");
+      expect(stored.client_secret_ref).toMatch(/^secret:\/\/v1:/);
+      await secrets.rotate(
+        tokenRef,
+        JSON.stringify({ ...stored, claimed_at: stored.claimed_at - 3500 }),
+      );
+      const refresher = new StoreTokenRefresher(() => appService.secrets(), {
+        allowAddresses: ["127.0.0.1/32"],
+      });
+      const resolved = await resolveConnectionWithSecrets(
+        document,
+        secrets,
+        { piecePackage: PIECE.name },
+        refresher,
+      );
+      const auth = resolved.auth as { access_token?: unknown };
+      expect(String(auth.access_token)).toMatch(/^at-refreshed-/);
+      const refreshed = JSON.parse(
+        await secrets.get(tokenRef),
+      ) as OAuthTokenSet;
+      expect(refreshed.client_id).toBe("cid");
+    });
+
+    it("signs in with the desktop client and PKCE for a callback to this machine", async () => {
+      const id = connection({ oauth_app: "sektar", subdomain: "acme" });
+      const started = await appService.startOAuth(id, CTX, {
+        redirectUri: LOOPBACK,
+      });
+      const url = new URL(started.authorizationUrl);
+      expect(url.searchParams.get("client_id")).toBe("desk-cid");
+      expect(url.searchParams.get("redirect_uri")).toBe(LOOPBACK);
+      expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+      // No override: the piece's own scopes
+      expect(url.searchParams.get("scope")).toBe("read write");
+    });
+
+    it("refuses an app without a client of the kind the callback needs", async () => {
+      const id = connection({ oauth_app: "web-only", subdomain: "acme" });
+      await expect(
+        appService.startOAuth(id, CTX, { redirectUri: LOOPBACK }),
+      ).rejects.toThrow(
+        'The app "web-only" has no desktop client on this host',
+      );
+    });
   });
 });
 

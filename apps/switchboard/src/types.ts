@@ -154,6 +154,10 @@ export type StartServerOptions = {
    * document models. Wins over PH_WORKFLOWS_ENABLED and the config file. */
   workflows?: {
     enabled?: boolean;
+    /** OAuth2 apps the publisher owns (`oauth_app` on a connection): per app,
+     * the provider's client files by kind. Wins over the config file's
+     * `workflows.oauthApps`; relative paths there are from the config file. */
+    oauthApps?: { id: string; clients: { desktop?: string; web?: string } }[];
   };
   /** The GDPR add-on; off unless this or PH_PRIVACY_ENABLED turns it on. */
   privacy?: PrivacyOptions;

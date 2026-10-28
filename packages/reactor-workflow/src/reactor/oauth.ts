@@ -65,6 +65,10 @@ export interface OAuthTokenSet {
   token_url: string;
   authorization_method?: "HEADER" | "BODY";
   redirect_url: string;
+  // The client that obtained the token, when it came from the host's app
+  // registry rather than the connection: a refresh must use the same client.
+  client_id?: string;
+  client_secret_ref?: string;
   // The provider's whole token response; pieces read fields off it.
   data: Record<string, unknown>;
 }
@@ -129,6 +133,10 @@ export interface StartOAuthInput {
   clientSecretRef: string;
   redirectUri: string;
   returnUrl?: string;
+  /** Replaces the piece's scopes: the connection asks for exactly these. */
+  scopes?: string[];
+  /** Always PKCE, whatever the piece says: a desktop client cannot keep its secret. */
+  pkce?: boolean;
 }
 
 export interface OAuthStart {
@@ -170,7 +178,7 @@ export class OAuthAttemptStore {
 
     const { method } = input;
     const state = base64url(randomBytes(32));
-    const pkce = method.pkce === true;
+    const pkce = method.pkce === true || input.pkce === true;
     const verifier = pkce ? base64url(randomBytes(48)) : null;
     const authUrl = new URL(fillOAuthUrl(method.authUrl, input.props));
     const params = authUrl.searchParams;
@@ -178,7 +186,8 @@ export class OAuthAttemptStore {
     params.set("client_id", input.clientId);
     params.set("redirect_uri", input.redirectUri);
     params.set("state", state);
-    if (method.scope.length > 0) params.set("scope", method.scope.join(" "));
+    const scope = input.scopes ?? method.scope;
+    if (scope.length > 0) params.set("scope", scope.join(" "));
     // Activepieces' defaults: without them Google issues no refresh token.
     params.set("access_type", "offline");
     const prompt = method.prompt ?? "consent";
@@ -439,7 +448,11 @@ function tokenSetFrom(
   response: Record<string, unknown>,
   context: Pick<
     OAuthTokenSet,
-    "token_url" | "authorization_method" | "redirect_url"
+    | "token_url"
+    | "authorization_method"
+    | "redirect_url"
+    | "client_id"
+    | "client_secret_ref"
   >,
   previous?: OAuthTokenSet,
 ): OAuthTokenSet {
@@ -463,6 +476,15 @@ function tokenSetFrom(
       ? { authorization_method: context.authorization_method }
       : {}),
     redirect_url: context.redirect_url,
+    ...((context.client_id ?? previous?.client_id)
+      ? { client_id: context.client_id ?? previous?.client_id }
+      : {}),
+    ...((context.client_secret_ref ?? previous?.client_secret_ref)
+      ? {
+          client_secret_ref:
+            context.client_secret_ref ?? previous?.client_secret_ref,
+        }
+      : {}),
     data: { ...previous?.data, ...response },
   };
 }
@@ -472,6 +494,7 @@ export async function exchangeCode(
   code: string,
   clientSecret: string,
   egress?: EgressPolicy,
+  fromRegistry = false,
 ): Promise<OAuthTokenSet> {
   const method = authorizationMethod(attempt.authorization_method);
   const auth = clientAuth(method, attempt.client_id, clientSecret);
@@ -493,6 +516,12 @@ export async function exchangeCode(
     token_url: attempt.token_url,
     authorization_method: method,
     redirect_url: attempt.redirect_uri,
+    ...(fromRegistry
+      ? {
+          client_id: attempt.client_id,
+          client_secret_ref: attempt.client_secret_ref,
+        }
+      : {}),
   });
 }
 
@@ -542,14 +571,17 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
     const refOf = (name: string) =>
       source.secretRefs?.find((entry) => entry.name === name)?.ref;
     const tokenRef = refOf(OAUTH_TOKEN);
+    if (!tokenRef) return Promise.resolve();
+    // A connection's own app, or (absent) the registry client the token set names.
     const secretRef = refOf(OAUTH_CLIENT_SECRET);
-    const clientId = source.config?.[OAUTH_CLIENT_ID];
-    if (!tokenRef || !secretRef || typeof clientId !== "string") {
-      return Promise.resolve();
-    }
+    const configId = source.config?.[OAUTH_CLIENT_ID];
+    const own =
+      secretRef && typeof configId === "string"
+        ? { secretRef, clientId: configId }
+        : undefined;
     let pending = this.inFlight.get(tokenRef);
     if (!pending) {
-      pending = this.refresh(tokenRef, secretRef, clientId).finally(() =>
+      pending = this.refresh(tokenRef, own).finally(() =>
         this.inFlight.delete(tokenRef),
       );
       this.inFlight.set(tokenRef, pending);
@@ -559,12 +591,15 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
 
   private async refresh(
     tokenRef: string,
-    secretRef: string,
-    clientId: string,
+    own: { secretRef: string; clientId: string } | undefined,
   ): Promise<void> {
     const store = await this.secrets();
     const tokens = parseTokenSet(await store.get(tokenRef));
     if (!tokenDue(tokens, Math.round(Date.now() / 1000))) return;
+    const clientId = own?.clientId ?? tokens.client_id;
+    const secretRef = own?.secretRef ?? tokens.client_secret_ref;
+    // No client to refresh with: the token is used until it expires.
+    if (!clientId || !secretRef) return;
     const auth = clientAuth(
       tokens.authorization_method,
       clientId,

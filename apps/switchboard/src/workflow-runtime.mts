@@ -273,6 +273,8 @@ export interface ComposeWorkflowRuntimeDeps {
   /** The workflow package's HTTP namespace; the OAuth2 callback lives on it.
    * Absent leaves OAuth2 connections unable to sign in. */
   http?: IHttpScope;
+  /** The publisher's OAuth2 apps, by id: client file paths per kind. */
+  oauthApps?: { id: string; clients: { desktop?: string; web?: string } }[];
   authorizationService: IAuthorizationService;
   /** Answers a piece's read of a read-model index (`ctx.reactor.query`) in
    * process, as the run's user: the GraphQL manager that serves the same
@@ -703,6 +705,7 @@ async function composeClaimed(
   const runtime = engine.createWorkflowRuntime({
     relationalDb: deps.relationalDb,
     secretsKeyFile: deps.secretsKeyFile,
+    ...(deps.oauthApps?.length ? { oauthApps: deps.oauthApps } : {}),
     reactorClient: deps.reactorClient,
     assertCanRead: readAssertion(deps.authorizationService, deps.reactorClient),
     subjectOf: (caller) => callerSubject((caller as Context).user),

@@ -286,6 +286,14 @@ import {
   type LifecycleFilter,
   type TriggerKind,
 } from "./trigger-filters.js";
+import {
+  clientKindFor,
+  loadOAuthApps,
+  OAUTH_APP,
+  OAUTH_SCOPES,
+  scopesOverride,
+  type OAuthAppRegistry,
+} from "./oauth-apps.js";
 import { SpanStatusCode, type Span } from "@opentelemetry/api";
 import { tracedSteps, WorkflowTelemetry } from "../telemetry.js";
 
@@ -789,6 +797,7 @@ export class WorkflowRuntimeService {
   private secretsPromise?: Promise<SecretStore>;
   private oauthAttemptsPromise?: Promise<OAuthAttemptStore>;
   private tokenRefresher?: OAuthTokenRefresher;
+  private oauthAppsPromise?: Promise<OAuthAppRegistry>;
   private readonly registry = new Map<string, TriggerRegistration>();
   // Awaited before an endpoint answers: a delivery reaching an unseeded
   // registry is refused exactly as an unknown token is, so it looks like one.
@@ -940,6 +949,19 @@ export class WorkflowRuntimeService {
       this.host.relationalDb,
     );
     return this.oauthAttemptsPromise;
+  }
+
+  /** The host's OAuth2 apps, their client secrets loaded into the store once. */
+  private oauthApps(): Promise<OAuthAppRegistry> {
+    this.oauthAppsPromise ??= this.secrets().then((store) =>
+      loadOAuthApps(this.host.oauthApps ?? [], store, {
+        onSkip: (appId, kind, reason) =>
+          logger.warn(
+            `OAuth2 app "${appId}" has no usable ${kind} client: ${reason}`,
+          ),
+      }),
+    );
+    return this.oauthAppsPromise;
   }
 
   private oauthRefresher(): OAuthTokenRefresher {
@@ -3384,16 +3406,43 @@ export class WorkflowRuntimeService {
     if (state.authType !== "OAUTH2") {
       throw new OAuthError("This connection does not sign in with OAuth2");
     }
-    const { [OAUTH_CLIENT_ID]: clientId, ...props } = (state.config ??
-      {}) as Record<string, unknown>;
-    if (typeof clientId !== "string" || clientId === "") {
-      throw new OAuthError("Set the client ID before connecting");
-    }
-    const clientSecretRef = state.secretRefs.find(
-      (entry) => entry.name === OAUTH_CLIENT_SECRET,
-    )?.ref;
-    if (!clientSecretRef) {
-      throw new OAuthError("Save the client secret before connecting");
+    const {
+      [OAUTH_CLIENT_ID]: ownClientId,
+      [OAUTH_APP]: appId,
+      [OAUTH_SCOPES]: _scopes,
+      ...props
+    } = (state.config ?? {}) as Record<string, unknown>;
+    const scopes = scopesOverride(
+      (state.config ?? {}) as Record<string, unknown>,
+    );
+    let clientId: string;
+    let clientSecretRef: string;
+    let pkce = false;
+    if (typeof appId === "string" && appId !== "") {
+      // The publisher's app: its desktop client for a callback to this
+      // machine, its web client otherwise.
+      const kind = clientKindFor(options.redirectUri);
+      const client = (await this.oauthApps()).client(appId, kind);
+      if (!client) {
+        throw new OAuthError(
+          `The app "${appId}" has no ${kind} client on this host; configure it in workflows.oauthApps`,
+        );
+      }
+      clientId = client.clientId;
+      clientSecretRef = client.clientSecretRef;
+      pkce = kind === "desktop";
+    } else {
+      if (typeof ownClientId !== "string" || ownClientId === "") {
+        throw new OAuthError("Set the client ID before connecting");
+      }
+      const ref = state.secretRefs.find(
+        (entry) => entry.name === OAUTH_CLIENT_SECRET,
+      )?.ref;
+      if (!ref) {
+        throw new OAuthError("Save the client secret before connecting");
+      }
+      clientId = ownClientId;
+      clientSecretRef = ref;
     }
 
     const packageName = packageFromConnectorId(state.connectorId);
@@ -3429,6 +3478,8 @@ export class WorkflowRuntimeService {
       clientSecretRef,
       redirectUri: options.redirectUri,
       ...(options.returnUrl ? { returnUrl: options.returnUrl } : {}),
+      ...(scopes ? { scopes } : {}),
+      ...(pkce ? { pkce } : {}),
     });
   }
 
@@ -3483,9 +3534,16 @@ export class WorkflowRuntimeService {
       const config = (state.config ?? {}) as Record<string, unknown>;
       // Changed while the user was signing in: the token would belong to
       // another app than the one the connection now names.
+      const appId = config[OAUTH_APP];
+      const fromRegistry =
+        typeof appId === "string" &&
+        appId !== "" &&
+        (await this.oauthApps())
+          .clients(appId)
+          .some((c) => c.clientId === attempt.client_id);
       if (
         state.authType !== "OAUTH2" ||
-        config[OAUTH_CLIENT_ID] !== attempt.client_id
+        (!fromRegistry && config[OAUTH_CLIENT_ID] !== attempt.client_id)
       ) {
         return await fail("The connection changed during sign-in; try again");
       }
@@ -3495,6 +3553,7 @@ export class WorkflowRuntimeService {
         callback.code,
         await secrets.get(attempt.client_secret_ref),
         this.designEgress,
+        fromRegistry,
       );
       const value = JSON.stringify(tokens);
       const existing = state.secretRefs.find(
