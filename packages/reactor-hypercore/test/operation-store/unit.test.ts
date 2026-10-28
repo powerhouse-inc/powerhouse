@@ -1,5 +1,10 @@
 import type { Operation } from "@powerhousedao/shared/document-model";
 import { generateId } from "@powerhousedao/shared/document-model";
+import type { Action } from "@powerhousedao/shared/document-model";
+import {
+  actionReferences,
+  retract,
+} from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   AppendConditionFailedError,
@@ -374,6 +379,191 @@ describe("HypercoreOperationStore", () => {
       expect(found.map((operation) => [operation.id, operation.index])).toEqual(
         [[sharedOpId, 1]],
       );
+    });
+  });
+
+  describe("findReferencing", () => {
+    const documentType = "powerhouse/test-doc";
+
+    async function append(
+      documentId: string,
+      actions: Action[],
+      scope = "global",
+      branch = "main",
+    ): Promise<void> {
+      const { revision } = await store.getRevisions(documentId, branch);
+      const from = revision[scope] ?? 0;
+      await store.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        from,
+        (txn) => {
+          txn.addOperations(
+            ...actions.map((action, i) => makeOp(from + i, { action })),
+          );
+        },
+      );
+    }
+
+    it("agrees with actionReferences for every action shape", async () => {
+      const documentId = generateId();
+      const a = makeAction("TEST_ACTION");
+      const actions: Action[] = [
+        a,
+        retract(a.id),
+        makeAction("RETRACT", { target: 7 }),
+        makeAction("RETRACT"),
+        makeAction("SET_TARGET", { target: a.id }),
+        makeAction("UNDO", { count: 1 }),
+        makeAction("NOOP"),
+      ];
+      await append(documentId, actions);
+
+      const queried = [
+        ...actions.map((action) => action.id),
+        ...actions.flatMap(actionReferences),
+        "7",
+      ];
+      expect(
+        await store.findReferencing(documentId, "global", "main", queried),
+      ).toEqual(new Set(actions.flatMap(actionReferences)));
+    });
+
+    it("returns the ids a RETRACT in the stream names", async () => {
+      const documentId = generateId();
+      const a = makeAction("TEST_ACTION");
+      const b = makeAction("TEST_ACTION");
+      const c = makeAction("TEST_ACTION");
+      await append(documentId, [a, b, c, retract(a.id), retract(c.id)]);
+
+      const found = await store.findReferencing(documentId, "global", "main", [
+        a.id,
+        b.id,
+        c.id,
+      ]);
+
+      expect(found).toEqual(new Set([a.id, c.id]));
+    });
+
+    it("names a retraction itself when a later RETRACT targets it", async () => {
+      const documentId = generateId();
+      const a = makeAction("TEST_ACTION");
+      const undo = retract(a.id);
+      await append(documentId, [a, undo, retract(undo.id)]);
+
+      const found = await store.findReferencing(documentId, "global", "main", [
+        a.id,
+        undo.id,
+      ]);
+
+      expect(found).toEqual(new Set([a.id, undo.id]));
+    });
+
+    it("ignores RETRACTs in another document, scope or branch", async () => {
+      const documentId = generateId();
+      const a = makeAction("TEST_ACTION");
+      await append(documentId, [a]);
+      await append(generateId(), [retract(a.id)]);
+      await append(documentId, [retract(a.id, "local")], "local");
+      await append(documentId, [retract(a.id)], "global", "draft");
+
+      const found = await store.findReferencing(documentId, "global", "main", [
+        a.id,
+      ]);
+
+      expect(found.size).toBe(0);
+    });
+
+    it("ignores a row of another type with an input target", async () => {
+      const documentId = generateId();
+      const a = makeAction("TEST_ACTION");
+      await append(documentId, [a, makeAction("SET_TARGET", { target: a.id })]);
+
+      const found = await store.findReferencing(documentId, "global", "main", [
+        a.id,
+      ]);
+
+      expect(found.size).toBe(0);
+    });
+
+    it("ignores a RETRACT whose target is not a string", async () => {
+      const documentId = generateId();
+      await append(documentId, [
+        makeAction("TEST_ACTION"),
+        makeAction("RETRACT", { target: 5 }),
+      ]);
+
+      const found = await store.findReferencing(documentId, "global", "main", [
+        "5",
+      ]);
+
+      expect(found.size).toBe(0);
+    });
+
+    it("returns an id named by two RETRACTs once", async () => {
+      const documentId = generateId();
+      const a = makeAction("TEST_ACTION");
+      await append(documentId, [a, retract(a.id), retract(a.id)]);
+
+      const found = await store.findReferencing(documentId, "global", "main", [
+        a.id,
+      ]);
+
+      expect([...found]).toEqual([a.id]);
+    });
+
+    it("returns an empty set for no ids", async () => {
+      const documentId = generateId();
+      const a = makeAction("TEST_ACTION");
+      await append(documentId, [a, retract(a.id)]);
+
+      const found = await store.findReferencing(
+        documentId,
+        "global",
+        "main",
+        [],
+      );
+
+      expect(found.size).toBe(0);
+    });
+
+    it("finds targets in a list of 70k ids", async () => {
+      const documentId = generateId();
+      const ids = Array.from({ length: 70_000 }, () => generateId());
+      const named = [0, 32_763, 32_764, 65_528, 69_999].map((i) => ids[i]);
+      await append(documentId, [
+        makeAction("TEST_ACTION"),
+        ...named.map((target) => retract(target)),
+      ]);
+
+      const found = await store.findReferencing(
+        documentId,
+        "global",
+        "main",
+        ids,
+      );
+
+      expect(found).toEqual(new Set(named));
+    });
+
+    it("rejects when the signal is aborted", async () => {
+      const documentId = generateId();
+      const a = makeAction("TEST_ACTION");
+      await append(documentId, [a, retract(a.id)]);
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(
+        store.findReferencing(
+          documentId,
+          "global",
+          "main",
+          [a.id],
+          controller.signal,
+        ),
+      ).rejects.toThrow("Operation aborted");
     });
   });
 
