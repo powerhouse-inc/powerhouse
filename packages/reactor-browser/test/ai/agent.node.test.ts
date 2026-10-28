@@ -82,7 +82,10 @@ function makeTool(
     name,
     description: `test tool ${name}`,
     inputSchema: {},
-    annotations,
+    // Read tools are annotated read-only, as the reactor tools are.
+    annotations:
+      annotations ??
+      (name.startsWith("get") ? { readOnlyHint: true } : undefined),
     callback:
       callback ??
       (() =>
@@ -132,24 +135,11 @@ describe("unwrapToolResult", () => {
 });
 
 describe("isWriteTool", () => {
-  it("flags the built-in write tools", () => {
-    expect(isWriteTool("createDocument")).toBe(true);
-    expect(isWriteTool("deleteDrive")).toBe(true);
-  });
-
-  it("does not flag read tools or unknown tools", () => {
-    expect(isWriteTool("getDrives")).toBe(false);
-    expect(isWriteTool("getSwitchboardSchema")).toBe(false);
-    expect(isWriteTool("packageTool")).toBe(false);
-  });
-
-  it("flags tools annotated destructive", () => {
-    expect(isWriteTool("packageTool", { destructiveHint: true })).toBe(true);
-  });
-
-  it("ignores non-destructive annotations", () => {
-    expect(isWriteTool("packageTool", { readOnlyHint: true })).toBe(false);
-    expect(isWriteTool("packageTool", { destructiveHint: false })).toBe(false);
+  it("treats only tools annotated read-only as reads", () => {
+    expect(isWriteTool({ readOnlyHint: true })).toBe(false);
+    expect(isWriteTool({ readOnlyHint: false })).toBe(true);
+    expect(isWriteTool({ destructiveHint: true })).toBe(true);
+    expect(isWriteTool(undefined)).toBe(true);
   });
 });
 

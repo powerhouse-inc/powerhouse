@@ -54,7 +54,7 @@ export interface UseReactorChatResult {
  * Drives one in-browser chat conversation against the reactor tools.
  *
  * `toolsProvider` lazily resolves the tool descriptors (e.g. from
- * `createReactorMcpProvider` bound to `window.ph.reactorClient`) when the
+ * `toMcpTool` bound to `window.ph.reactorClient`) when the
  * user sends a message, so the reactor does not need to be ready at render
  * time.
  */

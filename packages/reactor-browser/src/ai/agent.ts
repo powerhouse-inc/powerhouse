@@ -364,7 +364,7 @@ export class ReactorChatAgent {
         );
         if (
           settings.autoApproveWrites ||
-          !isWriteTool(toolCall.toolName, descriptor?.annotations)
+          !isWriteTool(descriptor?.annotations)
         ) {
           return "not-applicable";
         }

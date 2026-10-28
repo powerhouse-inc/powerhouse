@@ -166,7 +166,9 @@ describe("ph mcp", { timeout: 60_000 }, () => {
       arguments: {},
     });
     expect(drives.isError).toBeFalsy();
-    expect(drives.structuredContent).toEqual({ driveIds: [SEEDED_DRIVE] });
+    expect(drives.structuredContent).toEqual({
+      drives: [expect.objectContaining({ id: SEEDED_DRIVE })],
+    });
     expect(drives).toEqual(
       await direct.callTool({ name: "getDrives", arguments: {} }),
     );

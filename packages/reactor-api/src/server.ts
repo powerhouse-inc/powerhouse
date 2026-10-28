@@ -1282,6 +1282,13 @@ async function _setupAPI(
         authorizeRequest: createMcpRequestAuthorizer(
           authService,
           authorizationService,
+          {
+            requireAuthenticatedCaller: floor,
+            resolveDocumentId: createCanonicalDocumentIdResolver({
+              read: clients.read,
+            }),
+            documentPermissionService,
+          },
         ),
       },
       httpAdapter,
