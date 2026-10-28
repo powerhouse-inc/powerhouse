@@ -8,7 +8,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ILogger } from "document-model";
 import { describe, expect, it, vi } from "vitest";
-import { startSwitchboard } from "../src/server.mjs";
+import type { startSwitchboard } from "../src/server.mjs";
+import { bootSwitchboard } from "./boot-helpers.js";
 
 function stubLogger(): ILogger {
   const logger = {
@@ -37,19 +38,20 @@ async function withSwitchboard(
   let switchboard: Awaited<ReturnType<typeof startSwitchboard>> | undefined;
 
   try {
-    switchboard = await startSwitchboard({
-      workflows: { enabled: false },
-      dbPath: join(tempRoot, "read-model"),
-      port: 0,
-      mcp: false,
-      disableLocalPackages: true,
-      identity: { keypairPath: join(tempRoot, "identity.json") },
-      drive: {
-        slug: "default-drive",
-        global: { name: "Default Drive" },
+    switchboard = await bootSwitchboard(
+      {
+        server: { port: 0 },
+        storage: { readModel: { url: join(tempRoot, "read-model") } },
+        features: { workflows: false, mcp: false },
+        packages: { disableLocal: true },
+        identity: { keypairPath: join(tempRoot, "identity.json") },
+        drive: {
+          slug: "default-drive",
+          global: { name: "Default Drive" },
+        },
       },
-      logger: stubLogger(),
-    });
+      { logger: stubLogger() },
+    );
     await run(switchboard);
     await switchboard.shutdown();
     switchboard = undefined;

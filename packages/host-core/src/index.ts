@@ -73,6 +73,7 @@ export {
   type CheckHostResult,
 } from "./check-host.js";
 export type { CheckStage, HostIssue } from "./host-issues.js";
+export { exportHost } from "./host-export.js";
 export {
   defaultUserDataDir,
   resolveUserDataPlaceholders,
@@ -162,6 +163,7 @@ export {
   type RunnerBase,
   type RunnerKind,
 } from "./host-schemas.js";
+export { hostExportSchema, type HostExport } from "./host-export-schema.js";
 export {
   buildDriveDeclarationSchema,
   driveDeclarationSchema,
@@ -219,13 +221,13 @@ export {
   assertProtocolConsistency,
   primaryBackend,
   projectReactorToConnect,
-  projectReactorToSwitchboard,
   protocolConflicts,
   protocolEnv,
+  reactorBlockToSwitchboardConfig,
   reactorClientMode,
   type ConnectReactorProjection,
   type ReactorClientMode,
-  type SwitchboardReactorProjection,
+  type SwitchboardReactorLayer,
 } from "./reactor-config.js";
 export {
   backendsToDescriptors,
@@ -235,6 +237,7 @@ export {
   type ProjectedDescriptor,
   type ProjectedStorage,
 } from "./backend-projection.js";
+export { applyChildWrapper, type MemberDraft } from "./child-wrapper.js";
 export {
   mergeDefaultDrives,
   projectDrivesIntoConnect,

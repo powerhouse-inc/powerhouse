@@ -56,7 +56,7 @@ export default {
     ],
   },
 
-  // 4. Runner-defined settings, handed to the runtime whole (loose by design)
+  // 4. Runner-defined settings (a switchboard reads `config.switchboard`)
   config: {},
 
   // 5. EITHER a reactor block (single-reactor host) ...
@@ -180,6 +180,40 @@ provenance before running anything:
 ```bash
 ph run switchboard --explain drives
 ```
+
+## Switchboard settings (`config.switchboard`)
+
+A switchboard host sets the rest of its server config, such as auth,
+inspection and workers, under `config.switchboard`. It takes the keys of
+`@powerhousedao/switchboard/config`, except the ones the host file already
+sets elsewhere: storage, protocol and dynamic packages in `reactor`, and
+`runner.port`, the `dev` verb, `reactor.drives` and `runner.plugins`:
+
+```js
+config: {
+  switchboard: {
+    auth: { admins: ["0x…"], defaultProtection: true },
+    inspection: { enabled: false },
+    workers: { executor: { count: 2 } },
+  },
+},
+```
+
+Each switchboard gets its own config, so two switchboards in one compound can
+use different stores, ports and settings. A key set in both `reactor` and
+`config.switchboard` fails validation.
+
+An environment variable the operator sets still wins over both blocks, for
+example `PH_REACTOR_DATABASE_URL` over the reactor's storage. A value that
+only the project `.env` sets loses to what `reactor` sets (protocol, storage,
+dynamic packages, workflows) but, like the shell's, wins over
+`config.switchboard`. A
+`DATABASE_URL` does not override `reactor.backends.*.readModel.url`. An
+environment variable that contradicts `reactor.protocol` fails the boot.
+
+A backend with a `readModel.url` and no `storage` still keeps its reactor
+store on that url when no environment variable names one. This is
+deprecated, and the switchboard warns at boot: set `storage` explicitly.
 
 ## The plugin shape
 
@@ -346,7 +380,7 @@ const configSchema = z.strictObject({
 type AuditConfig = z.infer<typeof configSchema>;
 
 export function createAuditPlugin(config: AuditConfig): HostPlugin<{
-  onReactorReady: (ctx: { client: unknown }) => Promise<void>;
+  onReactorReady: (ctx: { read: unknown }) => Promise<void>;
   onShutdown: () => Promise<void>;
 }> {
   let flush: (() => Promise<void>) | undefined;
@@ -356,7 +390,7 @@ export function createAuditPlugin(config: AuditConfig): HostPlugin<{
     configSchema,
     hooks: {
       onReactorReady: async (ctx) => {
-        flush = startAuditPipeline(ctx.client, config.sink, config.batchSize);
+        flush = startAuditPipeline(ctx.read, config.sink, config.batchSize);
       },
       onShutdown: async () => {
         await flush?.();

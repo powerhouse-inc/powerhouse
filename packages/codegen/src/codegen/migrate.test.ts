@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
@@ -11,7 +12,11 @@ import { dirname, join } from "node:path";
 import { ts } from "ts-morph";
 import { tsConfigTemplate } from "templates";
 import { buildTsMorphProject } from "utils";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  AGENTS_MD_REPLACED_NOTICE,
+  CLAUDE_MD_REPLACED_NOTICE,
+} from "../file-builders/boilerplate/agent-files.js";
 import { generateProcessor } from "./generate.js";
 import { migrate } from "./migrate.js";
 
@@ -123,7 +128,7 @@ async function makeProjectWithHelpers() {
   return dir;
 }
 
-describe("ph migrate on processors/", () => {
+describe("ph migrate on processors/", { timeout: 30_000 }, () => {
   it("leaves folders that hold no processor alone", async () => {
     const dir = await makeProjectWithHelpers();
 
@@ -136,6 +141,7 @@ describe("ph migrate on processors/", () => {
       "factory.ts",
       "index.ts",
       "migrations.ts",
+      "processor.test.ts",
       "processor.ts",
       "schema.ts",
     ]);
@@ -170,7 +176,7 @@ describe("ph migrate on processors/", () => {
   });
 });
 
-describe("ph migrate on config files", () => {
+describe("ph migrate on config files", { timeout: 30_000 }, () => {
   async function makeProjectWithConfig() {
     const dir = await makeProject();
     write(
@@ -232,14 +238,19 @@ export default defineConfig({
     );
 
     const oxlint = readJsonc(dir, ".oxlintrc.json");
-    expect(oxlint.ignorePatterns).toEqual([
+    const ignored = oxlint.ignorePatterns as string[];
+    expect(ignored.slice(0, 6)).toEqual([
       "**/node_modules/**",
       "**/dist/**",
       "**/.ph/**",
       "**/storybook-static/**",
       "**/.vite/**",
-      "hosts/lab/routes/**",
+      "**/gen/**",
     ]);
+    // What codegen writes over is left to it, and the project's entries stay.
+    expect(ignored).toContain("editors/editors.ts");
+    expect(ignored.at(-1)).toBe("hosts/lab/routes/**");
+    expect(ignored.filter((p) => p === "**/dist/**")).toHaveLength(1);
     expect(oxlint.rules).toHaveProperty("typescript/await-thenable");
 
     const vitest = read(dir, "vitest.config.ts");
@@ -252,6 +263,9 @@ export default defineConfig({
     );
     expect(vitest.match(/demo\/e2e/g)).toHaveLength(1);
     expect(vitest).toContain('provider: "v8"');
+    // Vite resolves the tsconfig paths itself; the plugin warns that it does.
+    expect(vitest).not.toContain("vite-tsconfig-paths");
+    expect(vitest).toContain("tsconfigPaths: true");
   });
 
   it("drops excludes earlier templates shipped and the current one removed", async () => {
@@ -282,5 +296,48 @@ export default mergeConfig(base, defineConfig({}));
     await migrate(VERSION, dir, { skipInstall: true });
 
     expect(read(dir, "vitest.config.ts")).toBe(custom);
+  });
+});
+
+describe("ph migrate on agent files", { timeout: 30_000 }, () => {
+  async function warningsOf(run: () => Promise<unknown>) {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      await run();
+      return warn.mock.calls.map(([message]) => String(message));
+    } finally {
+      warn.mockRestore();
+    }
+  }
+
+  it("says when it replaced an AGENTS.md and a CLAUDE.md of the format before", async () => {
+    const dir = await makeProject();
+    write(dir, "AGENTS.md", "# Guidance\n\nMy own notes.\n");
+    write(dir, "CLAUDE.md", "# Assistant\n\nMore notes.\n");
+    const git = (...args: string[]) =>
+      execFileSync(
+        "git",
+        ["-c", "user.name=test", "-c", "user.email=test@example.com", ...args],
+        { cwd: dir, stdio: "ignore" },
+      );
+    git("init", "-q");
+    git("add", "-A");
+    git("commit", "-q", "--no-verify", "-m", "init");
+    const warnings = await warningsOf(() =>
+      migrate(VERSION, dir, { skipInstall: true }),
+    );
+    expect(warnings).toContain(AGENTS_MD_REPLACED_NOTICE);
+    expect(warnings).toContain(CLAUDE_MD_REPLACED_NOTICE);
+    expect(read(dir, "AGENTS.md")).not.toContain("My own notes.");
+  });
+
+  it("says nothing of the kind when the files are current", async () => {
+    const dir = await makeProject();
+    await migrate(VERSION, dir, { skipInstall: true });
+    const warnings = await warningsOf(() =>
+      migrate(VERSION, dir, { skipInstall: true }),
+    );
+    expect(warnings).not.toContain(AGENTS_MD_REPLACED_NOTICE);
+    expect(warnings).not.toContain(CLAUDE_MD_REPLACED_NOTICE);
   });
 });

@@ -24,6 +24,8 @@ describe("ScalarsOperations", () => {
 
     expect(isScalarFixtureDocument(updatedDocument)).toBe(true);
     expect(updatedDocument.operations.global).toHaveLength(1);
+    // A rejected operation records its error; give it the state it needs.
+    expect(updatedDocument.operations.global[0].error).toBeUndefined();
     expect(updatedDocument.operations.global[0].action.type).toBe(
       "SET_SCALARS",
     );

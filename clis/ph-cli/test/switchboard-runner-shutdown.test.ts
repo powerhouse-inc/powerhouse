@@ -7,6 +7,10 @@ import {
   ReactorClientBuilder,
   type InProcessReactorClientModule,
 } from "@powerhousedao/reactor";
+import {
+  mergeSwitchboardConfig,
+  type SwitchboardConfigInput,
+} from "@powerhousedao/switchboard/config";
 import type * as SwitchboardServer from "@powerhousedao/switchboard/server";
 import type { ILogger } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -25,17 +29,21 @@ vi.mock("@powerhousedao/switchboard/server", async (importOriginal) => {
   const actual = await importOriginal<typeof SwitchboardServer>();
   return {
     ...actual,
-    startSwitchboard: (options: SwitchboardServer.StartServerOptions) =>
-      actual.startSwitchboard({
-        ...options,
-        dbPath: path.join(state.tempRoot, "read-model"),
-        identity: { keypairPath: path.join(state.tempRoot, "identity.json") },
-        disableLocalPackages: true,
-        packages: [],
-        workflows: { enabled: false },
-        fatalErrorShutdown: false,
-        logger: quietLogger(),
-      }),
+    startSwitchboard: (
+      config: SwitchboardConfigInput,
+      deps: SwitchboardServer.SwitchboardDeps = {},
+    ) =>
+      actual.startSwitchboard(
+        mergeSwitchboardConfig(config, {
+          storage: {
+            readModel: { url: path.join(state.tempRoot, "read-model") },
+          },
+          identity: { keypairPath: path.join(state.tempRoot, "identity.json") },
+          packages: { disableLocal: true, list: [] },
+          features: { workflows: false },
+        }),
+        { ...deps, fatalErrorShutdown: false, logger: quietLogger() },
+      ),
   };
 });
 
@@ -54,14 +62,6 @@ function quietLogger(): ILogger {
   return logger as unknown as ILogger;
 }
 
-async function ephemeralPort(): Promise<number> {
-  const server = net.createServer();
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const { port } = server.address() as net.AddressInfo;
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-  return port;
-}
-
 async function isFree(port: number): Promise<boolean> {
   const server = net.createServer();
   return new Promise((resolve) => {
@@ -70,8 +70,12 @@ async function isFree(port: number): Promise<boolean> {
   });
 }
 
+// The runner reads the context's env, not the process's.
+const reactorEnv = () => ({
+  PH_REACTOR_DATABASE_URL: path.join(state.tempRoot, "reactor-storage"),
+});
+
 describe("switchboard handle shutdown (real server)", () => {
-  let previousReactorDb: string | undefined;
   const signalsBefore = {
     SIGINT: new Set<NodeJS.SignalsListener>(),
     SIGTERM: new Set<NodeJS.SignalsListener>(),
@@ -83,11 +87,6 @@ describe("switchboard handle shutdown (real server)", () => {
 
   beforeEach(() => {
     state.tempRoot = mkdtempSync(path.join(tmpdir(), "ph-sb-shutdown-"));
-    previousReactorDb = process.env.PH_REACTOR_DATABASE_URL;
-    process.env.PH_REACTOR_DATABASE_URL = path.join(
-      state.tempRoot,
-      "reactor-storage",
-    );
     for (const signal of ["SIGINT", "SIGTERM"] as const) {
       signalsBefore[signal] = new Set(
         process.listeners(signal) as NodeJS.SignalsListener[],
@@ -102,11 +101,6 @@ describe("switchboard handle shutdown (real server)", () => {
       for (const listener of addedListeners(signal)) {
         process.removeListener(signal, listener);
       }
-    }
-    if (previousReactorDb === undefined) {
-      delete process.env.PH_REACTOR_DATABASE_URL;
-    } else {
-      process.env.PH_REACTOR_DATABASE_URL = previousReactorDb;
     }
     rmSync(state.tempRoot, { recursive: true, force: true });
   });
@@ -130,20 +124,21 @@ describe("switchboard handle shutdown (real server)", () => {
       throw new Error("shutdown() must not exit the process");
     });
 
-    const port = await ephemeralPort();
     const host = switchboardRunner.hostSchema.parse({
       name: "lab-switchboard",
-      runner: { module: "m", port },
+      runner: { module: "m", port: 0 },
     });
     const handle = toStartedHandle(
       await switchboardRunner.run(host, {
         projectRoot: state.tempRoot,
         verb: "run",
-        env: {},
+        env: reactorEnv(),
       } satisfies RunnerContext),
       "sb",
     );
     await handle.ready;
+    const { origin } = handle.outputs as switchboardRunner.SwitchboardOutputs;
+    const port = Number(new URL(origin).port);
     const reactorModule = owned?.reactorModule;
     if (!reactorModule) throw new Error("the server built no reactor module");
     const kill = vi.spyOn(reactorModule.reactor, "kill");
@@ -157,5 +152,42 @@ describe("switchboard handle shutdown (real server)", () => {
     expect(destroy).toHaveBeenCalledTimes(1);
     expect(await isFree(port)).toBe(true);
     expect(exit).not.toHaveBeenCalled();
+  }, 120_000);
+
+  it("reports the OS-picked port when the host asks for port 0", async () => {
+    const host = switchboardRunner.hostSchema.parse({
+      name: "lab-switchboard",
+      runner: { module: "m", port: 0 },
+    });
+    const handle = toStartedHandle(
+      await switchboardRunner.run(host, {
+        projectRoot: state.tempRoot,
+        verb: "run",
+        env: reactorEnv(),
+      } satisfies RunnerContext),
+      "sb",
+    );
+    try {
+      await handle.ready;
+      const outputs = handle.outputs as switchboardRunner.SwitchboardOutputs;
+      const port = Number(new URL(outputs.origin).port);
+      expect(port).toBeGreaterThan(0);
+      const graphql = await fetch(outputs.endpoints.graphql, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query: "{ system { __typename } }" }),
+      });
+      expect(await graphql.json()).toEqual({
+        data: { system: { __typename: "SystemInfo" } },
+      });
+      const drives = Object.values(outputs.drives);
+      expect(drives.length).toBeGreaterThan(0);
+      for (const drive of drives) {
+        expect(drive.url.startsWith(`${outputs.origin}/d/`)).toBe(true);
+        expect((await fetch(drive.url)).ok).toBe(true);
+      }
+    } finally {
+      await handle.shutdown?.();
+    }
   }, 120_000);
 });

@@ -6,6 +6,7 @@ import type {
   DriveRouteData,
 } from "@powerhousedao/connect-core/router";
 import {
+  coreRouteOptions,
   coreView,
   DRIVE_PENDING_MS,
   DrivePending,
@@ -16,7 +17,7 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 
 /** The node route's options: its loader, `?history` search and title. */
-export const options = {
+export const options = coreRouteOptions({
   // `?history` and its `historyPage`; inline type, as in __root.tsx.
   validateSearch: (search: Record<string, unknown>) =>
     validateDriveSearch(search) as Record<string, string | undefined>,
@@ -51,7 +52,7 @@ export const options = {
       },
     ],
   }),
-};
+});
 
 // The open document: its history, editor or JSON. Nothing on a folder or the drive's root.
 export const Route = createFileRoute("/_app/d/$driveSlug/{-$nodeSlug}")({

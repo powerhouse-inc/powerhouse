@@ -95,7 +95,7 @@ export function migrateTsconfigFiles(projectDir: string): string[] {
   for (const name of files) {
     const file = join(projectDir, name);
     const parsed = ts.parseConfigFileTextToJson(
-      file,
+      name,
       readFileSync(file, "utf8"),
     );
     const config: unknown = parsed.config;

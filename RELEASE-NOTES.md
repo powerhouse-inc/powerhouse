@@ -1,5 +1,51 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — UUIDv7 action ids and same-millisecond auth bursts
+
+### ⚡ Action ids sort in creation order; auth bursts are admitted
+
+Action ids are now UUIDv7 from `generateActionId` (`@powerhousedao/shared/document-model`), for every document version, including base-reducer 1 and 2 documents. Ids from one process strictly increase, so actions built in the same millisecond keep their creation order wherever the id breaks a tie. `createAction`, the genesis `CREATE_DOCUMENT`/`UPGRADE_DOCUMENT` actions, `purgeDocumentAction`, the base-reducer 1/2 undo marker, the reactor and drive action builders and the workflow piece's `plainAction` use it. Document, node and folder ids stay UUIDv4, and so do the workflow editors' undo-group and redo ids for now. Code that parsed action ids as v4 should treat them as opaque strings.
+
+Auth-scope actions are now stamped with `nextAuthTimestamp`, which strictly increases per process. A burst such as `initializeAuth` followed by `setGrant` built in one millisecond no longer fails with `AuthTimestampNotMonotonicError`. The error is still exported, and the executor still refuses an auth stamp at or below the stream's newest one, for example one set by hand or minted by another process. Every other scope keeps the wall clock. The auth clock is one per process, shared by every document, so a burst runs ahead by one millisecond per auth action built in the same millisecond, across all documents: granting 3 grants on each of 500 documents at once (`grantOnDocuments`) stamps the last grants about 1.5 s ahead. Content built before the clock catches up sorts before those grants and may be denied under `documentDecisions`; resubmit it once the clock passes the burst. If the wall clock steps back after a run-ahead, the process's auth writes are refused until the clock passes the highest stamp it sent. See ADR 0007.
+
+✅ **What to try:** with `documentDecisions` and `authEnforcement` on, execute `[initializeAuth(...), setGrant(...), setGrant(...)]` built in one tick: the job succeeds and the three auth operations carry stamps one millisecond apart.
+
+---
+
+## 🚀 **Unreleased** — PGlite maintenance no longer forces a VACUUM FULL under load
+
+### ⚡ VACUUM FULL waits for a quiet store, by default
+
+A PGlite store whose `base/` exceeds 256 MB at open gets a one-time `VACUUM FULL`. It used to run 30 minutes after open whether or not the store had gone quiet; on a 20 GB store that held the only connection for a quarter of an hour, every processor batch, workflow tick and request hit Knex's 60 s acquire timeout, and the directory needed about twice its size in free disk meanwhile. The one-time rewrite is now off by default: on a store that is live data rather than bloat it reclaims nothing, a minute of quiet arrives naturally between jobs, and the copies it writes need about twice the store's size in free disk. The new `PH_PGLITE_VACUUM_FULL` setting chooses the policy:
+
+```bash
+PH_PGLITE_VACUUM_FULL=off       # default: never (a rewrite needs twice the store's size in free disk)
+PH_PGLITE_VACUUM_FULL=quiet     # only after the quiet window, however long that takes
+PH_PGLITE_VACUUM_FULL=forced    # the previous behaviour: also 30 min after open, under load
+PH_PGLITE_VACUUM_FULL_ABOVE_MB=256        # the size that makes a store eligible
+PH_PGLITE_VACUUM_FULL_QUIET_MS=60000      # the quiet window
+PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS=0      # an explicit deadline overrides the mode
+```
+
+`resolvePgliteMaintenance(env)` in `@powerhousedao/reactor-api/pglite-node` reads them, and both the switchboard's stores and `getDbClient`'s read store apply them. A finished `VACUUM FULL` now logs its duration and the `base/` size before and after; before, only a failure was logged. An unknown mode refuses to boot, since the point is never to run the forced rewrite by accident.
+
+✅ **What to try:** boot a switchboard with `PH_PGLITE_VACUUM_FULL=quiet` on a store over 256 MB and watch the log: `VACUUM FULL waits until the store has had no writes for 60000 ms` with no `or at most ... from open` clause, then `VACUUM FULL finished in N ms; A -> B bytes` once the store has been idle a minute.
+
+---
+
+## 🚀 **Unreleased** — reactor fixes for base-reducer 1 and 2 documents
+
+### 🐛 Bug fixes (`@powerhousedao/reactor`)
+
+- **A cold read of revision 0 no longer serves a later keyframe's state.** `writeCache.getState(id, scope, branch, 0)` treated `0` as "no target", resumed from the newest keyframe and returned the head.
+- **A held document reaches the peer once that peer can run it.** A document held from a peer that could not run its protocol version was released with its original ordinals, below the peer's ack, and the next ack trim dropped it unsent. Release backfills now stay in the outbox until a push succeeds. This covers GraphQL peers. A local or worker peer (`LocalChannel`) still drops a push at or below its inbox ack, so a document released toward it never loads there yet.
+- **A stored refusal no longer re-holds a document after the peer restarts.** A receiver's `UNSUPPORTED_PROTOCOL` dead letter answered the reactor revision that wrote it; reloading it on restart reported it again and the sender held the document for good. Loading dead letters now drops and deletes those rows once this reactor can run the document; a refusal of a document it still cannot run is kept.
+- **Re-evaluated rows reach `reactor.get`.** With `documentDecisions` on, a write or load whose backdated auth change re-evaluated the document wrote the re-appended rows but left them out of the job result and `JOB_WRITE_READY`, so the document view kept serving the state from before the pass.
+
+✅ **What to try:** with `documentDecisions` and `authEnforcement` on, grant a writer, let it write, then remove the grant with an earlier timestamp: `reactor.get` now serves the document without the denied write.
+
+---
+
 ## 🚀 **Unreleased** — reactor client halves
 
 ### ✨ Highlights
@@ -18,9 +64,9 @@
 
 ```typescript
 const handle = await module.write.execute(invoiceId, "main", actions);
-const { token } = await handle.written;                 // operations are in the log
+const { token } = await handle.written; // operations are in the log
 const invoice = await module.read.get(invoiceId, undefined, undefined, token);
-const same = await handle.document();                   // readable, then the gated read-back
+const same = await handle.document(); // readable, then the gated read-back
 ```
 
 `written` and `readable` reject with `JobFailedError` only when the job itself failed; a reducer error stays on `receipt.job.result`. Over RPC the halves are `read.*` and `write.*` (protocol version 4); the router (`@powerhousedao/reactor-router`) exposes `RoutingReadClient` and `RoutingWriteClient`; `@powerhousedao/reactor-browser` and the GraphQL browser client carry `read` and `write` too, and `window.ph.reactor = { read, write }` sits beside `window.ph.reactorClient`.
@@ -33,7 +79,12 @@ const same = await handle.document();                   // readable, then the ga
 
 ```graphql
 query ($id: String!, $c: ConsistencyTokenInput!) {
-  document(idOrSlug: $id, consistency: $c) { document { id lastModifiedAtUtcIso } }
+  document(idOrSlug: $id, consistency: $c) {
+    document {
+      id
+      lastModifiedAtUtcIso
+    }
+  }
 }
 ```
 
@@ -66,6 +117,47 @@ None on the wire, and none at compile time for callers of `IReactorClient`. Beha
 ### DOCUMENTATION
 
 - `docs/adr/0006-reactor-client-halves.md` records the decision, the alternatives and the consequences.
+
+---
+
+## 🚀 **Unreleased** — new documents are headed with `newDocument`
+
+### ✨ Highlights
+
+1. **One place chooses a new document's versions** — `newDocument` heads a new, uncreated document with the protocol versions the client selects for its type and parent, and the client's create signature policy; every first-party create path goes through it
+2. **The reactor core selects like a client** — `IReactor.create` gives a header without `protocolVersions` the versions the reactor selects for its type, as `newDocument` would (base-reducer 2 in this release)
+3. **`RemoteDocumentController` falls back when a host has no `createDefaults`** — it creates through `createEmptyDocument`, as before. This client already needs a Switchboard that serves document `meta` and `protocolVersions`, which the released 6.2.3 does not, so the fallback does not make it work against 6.2.3
+
+---
+
+### NEW FEATURES
+
+#### 🧱 `newDocument`
+
+`IReactorReadClient.newDocument(documentType, options?, signal?)` (also on `IReactorClient`, the router client and `GraphQLReactorClient`) returns a document headed with the versions `getCreateProtocolVersions` selects and the client's create signature policy. `NewDocumentOptions` extends `CreateDocumentOptions` with `protocolVersions`, `signaturePolicy`, `initialState`, `name` and `id` (kept only under the legacy policy). Pass the result to `write.create` or `write.drives.addFile`. Every new document is base-reducer 2 in this release.
+
+`Query.createDefaults` takes an optional `documentType`; the light client asks with it and caps the answer at what it runs. A Switchboard that predates the argument answers reactor-wide, and one without `createDefaults` gives the baseline.
+
+`copyNode` takes an optional `CopyNodeOptions` whose `protocolVersions` override a copy's versions; `ReactorDriveClient` refuses the override.
+
+The `CREATE_DOCUMENT` codec (`createDocumentAction`, `upgradeDocumentAction`, `creationActions`, `creationState`, `documentFromCreation`) is exported from `@powerhousedao/shared/document-model`; `@powerhousedao/reactor` still re-exports the two action creators.
+
+### BREAKING CHANGES
+
+- `getCreateProtocolVersions(parentIdentifier?, signal?)` is now `getCreateProtocolVersions({ documentType, parentIdentifier }, signal?)` on `IReactorReadClient`, `IReactorClient` and `IRoutableBackend`.
+- `IReactorReadClient`, `IReactorClient` and `IReactorBrowserClient` declare `newDocument`; out-of-repo implementations must add it.
+- `IReactor.create` fills a header without `protocolVersions` with the reactor's selection for the document type instead of a fixed `{ "base-reducer": 2 }`; the clients (`create`, `write.create`, `write.drives.addFile`) do the same with their selection. A `Reactor` constructed by hand, outside `ReactorBuilder`, has no selector and refuses such a header.
+- `ReactorWriteClient.emptyDocument` and `RoutingWriteClient.emptyDocument` are removed; use `newDocument`.
+- `RemoteControllerGraphQLClient` adds `GetCreateDefaults` and `GetCreateProtocolVersions`. `RemoteDocumentController.pull` without a `documentId` heads the document with the host's `createDefaults`, so `pull()` itself now queries the host and can reject; the first push creates the remote with `CreateDocument` from that header instead of `CreateEmptyDocument`. `undo(count)` is unchanged.
+- `RemoteDocumentController.from(controller)` without a `documentId` reads the host's `createDefaults` at its first push, so that push can now reject on a failed read. It then creates the remote with `CreateDocument` from the wrapped document's id, initial state and protocol versions, under the host's signature policy, instead of `CreateEmptyDocument`. A legacy header under a v2-required host takes a new, derived id. A Switchboard without `createDefaults` still gets `CreateEmptyDocument`.
+- Importing a `.phd` file keeps the file's `protocolVersions`. A file without them keeps the loader's legacy baseline, base-reducer 1 (legacy replay), as an import is not a create; before this release it was created at base-reducer 2.
+
+### MIGRATION GUIDE
+
+1. Replace `getCreateProtocolVersions(parentId)` with `getCreateProtocolVersions({ documentType, parentIdentifier: parentId })`.
+2. Build new documents with `client.newDocument(type, options)` rather than `module.utils.createDocument()` plus `withSignaturePolicy`, and hand the result to `create` or `drives.addFile`.
+3. Code that constructs a `Reactor` by hand and creates versionless headers through it should build it with `ReactorBuilder`, call `reactor.setCreateProtocol(selector)` with a `CreateVersionSelector`, or give the header `protocolVersions`.
+4. A hand-built `RemoteControllerGraphQLClient` adds `GetCreateDefaults` and `GetCreateProtocolVersions`; one from the generated SDK has them.
 
 ---
 
@@ -118,6 +210,14 @@ The durable NodeFS subclass and the conversion live in `@powerhousedao/reactor-a
 - The "Removed stale PGLite lockfile" warning no longer fires on every boot; `postmaster.pid` and `pg_wal/xlogtemp.*` left by a clean close are removed before open.
 - A periodic VACUUM and CHECKPOINT still runs inside the store; the CHECKPOINT bounds how much WAL a reopen after a crash replays.
 - First boot of a new store and the one-time conversion sync the written tree once instead of after every file: a fresh store is ready in under a second instead of 8 s, and a 45 MB snapshot converts in 0.3 s instead of 5 s, with the same bytes on disk before the first write is acknowledged.
+
+---
+## 🚀 **Unreleased** — a failed action with a skip keeps the rewind
+
+### BUG FIXES AND IMPROVEMENTS
+
+- When an action with a skip throws, the base reducer now keeps the rewound state and the skip, for every base-reducer version. It used to restore the pre-skip state and zero the skip while the stored operation kept it, so replicas holding the same log could end with different states after a load reshuffle.
+- Existing documents whose stored history has a failed operation with a skip keep their old state while a write-cache keyframe at or after that operation exists. They converge once those keyframes are rebuilt (inspector admin op `rebuildKeyframes`, then the next cold rebuild) or the document is synced fresh. The document view catches up on the next write to that scope.
 
 ---
 
@@ -219,6 +319,24 @@ A reactor with no signer stores the operations it synthesizes from `UNDO` and `R
 3. Make sure every host that writes documents has a signer: switchboard needs a Renown identity (`ph login`), and a library host needs `withSigner`.
 4. Remove `REQUIRE_SIGNATURES` from deployments.
 5. Once the whole fleet runs this release, drop the legacy override; new documents are then v2-required.
+
+---
+
+## 🚀 **Unreleased** — with documentDecisions on, a load places a late operation by timestamp, not by the sender's index
+
+### 🔁 Fewer permanent divergences when a late operation arrives (documentDecisions on)
+
+When a reactor loaded operations from a peer, it treated a local operation as preceding the batch whenever its local index was below the batch's lowest index on the peer. After reshuffles the two index spaces are unrelated (a switchboard can run hundreds of indexes ahead of a spoke). So a late operation stamped before a spoke's own newer ones was appended behind them, and the spoke's document differed from everyone else's for good.
+
+With `documentDecisions` on (`REACTOR_DOCUMENT_DECISIONS=true`; off by default, and every replica that shares a document needs it, since each must place its own writes by timestamp):
+
+- A local operation stamped after the earliest incoming operation is now always treated as concurrent, and the load reshuffles it into timestamp order.
+- Operations on that same earliest timestamp still go by index, as before. A batch delivered whole keeps the sender's order unless the load reshuffles, which orders same-millisecond operations by action id, as before this change. When a catch-up splits a same-millisecond batch across loads, the sender's order holds only while the receiver's index for the first part is below the sender's index for the rest; otherwise the rest falls back to the reshuffle's tie-break, action id, as before this change.
+- An execute batch whose actions are stamped out of order (for example `[a@100, b@90]`) is now stored in timestamp order (`b, a`), the order a peer that receives it split or reshuffles it places it in. Actions with equal timestamps keep their batch order on the author; a peer whose load reshuffles them still orders them by action id, as before this change.
+
+With `documentDecisions` off, loads decide exactly as before.
+
+**Trade-off:** with the flag on, a peer batch whose earliest operation is stamped before local operations now reshuffles them, even when the sender's index was ahead. Where the old rule appended, such a load now costs a reshuffle. If that reshuffle moves more operations than `maxSkipThreshold` allows, for example a spoke holding over 1000 operations stamped after a long-delayed peer operation, the load fails with `EXCESSIVE_SHUFFLE` instead of appending. Same-millisecond ties between different authors are still decided by index, as before. An out-of-order execute batch now applies in timestamp order on its author too, so an action that depends on a later-stamped one in the same batch can fail there, as it already could on any peer that received the batch split or reshuffled it.
 
 ---
 

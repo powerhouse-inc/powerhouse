@@ -14,6 +14,7 @@ export type { WorkflowTriggersCapability };
 import type { IAttachmentService } from "@powerhousedao/reactor-attachments";
 import type { IRenown } from "@renown/sdk";
 import type { DriveInput } from "@powerhousedao/shared/document-drive";
+import type { ISigner } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 
 /**
@@ -50,6 +51,11 @@ export type IdentityOptions = {
   baseUrl?: string;
 };
 
+/**
+ * The options view of a switchboard's config and deps: what plugins'
+ * `transformServerOptions` hook receives. `startSwitchboard` takes the
+ * config (`@powerhousedao/switchboard/config`) and {@link SwitchboardDeps}.
+ */
 export type StartServerOptions = {
   /**
    * Pre-built ReactorClientModule (typically from
@@ -95,6 +101,12 @@ export type StartServerOptions = {
    */
   registryUrl?: string;
   configFile?: string;
+  /**
+   * 0 binds a port the OS picks, reported on the result's `port`: the only
+   * race-free choice when several instances start at once. A taken non-zero
+   * port falls back to the next free one, which another process can still
+   * claim between the probe and the bind.
+   */
   port?: number;
   /**
    * If true, fail immediately when the requested port is in use instead of
@@ -211,6 +223,23 @@ export type StartServerOptions = {
   unsupportedStoredDocuments?: UnsupportedStoredDocuments;
 };
 
+/** What a switchboard is started with that is not a setting. */
+export type SwitchboardDeps = {
+  logger?: ILogger;
+  /** See {@link StartServerOptions.reactor}. */
+  reactor?: InProcessReactorClientModule;
+  /** See {@link StartServerOptions.pluginComposition}. */
+  pluginComposition?: ResolvedPlugin[];
+  /** Receives failures in background work; Sentry by default. */
+  reportError?: (error: unknown) => void;
+  /** See {@link StartServerOptions.fatalErrorShutdown}. */
+  fatalErrorShutdown?: boolean;
+  /** See {@link StartServerOptions.signalHandlers}. */
+  signalHandlers?: boolean;
+  /** The privacy add-on's signer, for a caller-provided reactor. */
+  privacySigner?: ISigner;
+};
+
 export type SwitchboardReactor = {
   defaultDriveUrl: string | undefined;
   reactor: IReactorClient;
@@ -238,8 +267,8 @@ export type SwitchboardReactor = {
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
   /**
-   * Port the HTTP server actually bound to. May differ from the requested
-   * port when the requested port was in use and fallback kicked in.
+   * Port the HTTP server actually bound to: the OS-picked one when 0 was
+   * requested, the next free one when the requested port was in use.
    */
   port: number;
   /**

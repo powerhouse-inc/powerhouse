@@ -1,12 +1,17 @@
 import { getPHStore } from "../hooks/ph-store.js";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   BatchExecutionRequest,
   BatchExecutionResult,
   ConsistencyToken,
+  CreateProtocolVersionsOptions,
   DocumentChangeEvent,
+  NewDocumentOptions,
   DocumentChangeType,
   DocumentRelationship,
   ExecutionJobPlan,
+  IDriveNodeSource,
+  IDriveReadClient,
   JobInfo,
   JobResultSummary,
   JobStatus,
@@ -28,8 +33,9 @@ import type {
 import {
   actions,
   actionSigningTarget,
-  isSignaturePolicy,
+  headNewDocument,
   normalizeDocumentModelVersion,
+  selectDocumentModelModule,
   toTransportAction,
 } from "@powerhousedao/shared/document-model";
 import type {
@@ -39,13 +45,15 @@ import type {
   PHDocument,
 } from "document-model";
 import { logger } from "document-model";
+import { print } from "graphql";
 import type { Variables } from "graphql-request";
 import { createClient } from "../graphql/client.js";
 import {
   DocumentChangeType as GqlDocumentChangeType,
   PropagationMode as GqlPropagationMode,
+  PhDocumentFieldsFragmentDoc,
   type DocumentRelationshipFieldsFragment,
-  type GetCreateDefaultsQuery,
+  type GetDocumentQuery,
   type JobInfoFieldsFragment,
   type OperationsFilterInput,
   type PagingInput,
@@ -73,9 +81,18 @@ import {
   type BearerTokenProvider,
 } from "./auth.js";
 import {
+  readCreateProtocolVersions,
+  readCreateSignaturePolicy,
+} from "./create-defaults.js";
+import {
+  GraphQLDriveNodeSource,
+  GraphQLDriveReadClient,
+} from "./drive-nodes.js";
+import {
   BatchJobFailedError,
   GraphQLOperationNotSupportedError,
   GraphQLWrongBackendError,
+  queriesUnknownField,
 } from "./errors.js";
 import {
   GetDocumentAtConsistencyDocument,
@@ -204,6 +221,11 @@ export type GraphQLReactorClientOptions = {
   driveIdFor?: (call: DriveIdCall) => string | undefined;
 };
 
+// Always known here, so a light client can head a drive without registering it.
+const BUILT_IN_MODELS = [
+  driveDocumentModelModule as unknown as DocumentModelModule,
+];
+
 /** Paging defaults, matching the reactor's own client. */
 const defaultPaging: PagingOptions = { cursor: "0", limit: 100 };
 
@@ -234,6 +256,12 @@ type ChangeListener = {
  * and answers `false`. A branded property survives both.
  */
 const graphQLReactorClientBrand = "__powerhouseGraphQLReactorClient" as const;
+
+/** The read half of {@link GraphQLReactorClient}: the hooks' reads plus `drives`. */
+export interface GraphQLReactorReadClient extends IReactorBrowserReadClient {
+  /** A drive's nodes from the node queries, for every drive type. */
+  readonly drives: IDriveReadClient;
+}
 
 /**
  * A light implementation of {@link IReactorBrowserClient} that talks plain
@@ -266,12 +294,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private jobRealtimeBroken = false;
   /** Set once the Switchboard refused the `document` query's `consistency` argument. */
   private consistencyUnsupported = false;
+  private readonly driveNodes: GraphQLDriveNodeSource;
 
   /**
    * The read half: the reads the hooks make. Every method is this client's
    * own; nothing that writes is reachable from it.
    */
-  readonly read: IReactorBrowserReadClient;
+  readonly read: GraphQLReactorReadClient;
 
   /**
    * The write half. `execute` submits through `executeAsync` and hands back a
@@ -312,7 +341,8 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     // including when the reactor SDK above was injected: an injected SDK is a
     // test seam that owns its own transport, not a second endpoint.
     this.subgraphs = new SubgraphSdkRegistry(options.url, middleware);
-    this.read = new GraphQLReadHalf(this);
+    this.driveNodes = new GraphQLDriveNodeSource(this.sdk, driveIdHeaders);
+    this.read = new GraphQLReadHalf(this, this.driveNodes);
     this.write = {
       execute: (documentIdentifier, branch, actions, signal) =>
         this.submitExecute(documentIdentifier, branch, actions, signal),
@@ -321,6 +351,14 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       deleteDocument: (identifier, propagate, signal) =>
         this.submitDeleteDocument(identifier, propagate, signal),
     };
+  }
+
+  /**
+   * The Switchboard's drive node queries as a node source, for every drive
+   * type. `read.drives` answers from it.
+   */
+  nodeSource(): IDriveNodeSource {
+    return this.driveNodes;
   }
 
   /**
@@ -361,18 +399,104 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     );
   }
 
-  /** Reads documents by id, in the order given; throws if any is missing. */
+  /**
+   * Reads documents by id, in the order given; throws if any is missing. Each
+   * chunk of {@link GET_MANY_CHUNK_SIZE} ids is one request holding an aliased
+   * `document` field per id, with the selection and arguments `get` sends.
+   */
   async getMany<TDocument extends PHDocument>(
     documentIds: string[],
     view?: ViewFilter,
     signal?: AbortSignal,
     consistencyToken?: ConsistencyToken,
   ): Promise<TDocument[]> {
-    return Promise.all(
-      documentIds.map((id) =>
-        this.get<TDocument>(id, view, signal, consistencyToken),
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const token =
+      consistencyToken && consistencyToken.coordinates.length > 0
+        ? consistencyToken
+        : undefined;
+    const chunks: string[][] = [];
+    for (let i = 0; i < documentIds.length; i += GET_MANY_CHUNK_SIZE) {
+      chunks.push(documentIds.slice(i, i + GET_MANY_CHUNK_SIZE));
+    }
+    const pages = await Promise.all(
+      chunks.map((chunk) =>
+        this.getDocumentChunk(chunk, viewInput, token, signal),
       ),
     );
+    return pages
+      .flat()
+      .map((document) =>
+        phDocumentFromGetDocument<TDocument>(document, view?.branch),
+      );
+  }
+
+  /** One chunk of `getMany`, with the `consistency` argument while the Switchboard accepts it. */
+  private async getDocumentChunk(
+    identifiers: string[],
+    view: ViewFilterInput | undefined,
+    token: ConsistencyToken | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<PhDocumentFieldsFragment[]> {
+    if (token && !this.consistencyUnsupported) {
+      try {
+        return await this.runGetDocuments(
+          identifiers,
+          view,
+          consistencyInputFromToken(token),
+          signal,
+        );
+      } catch (error) {
+        if (!refusesConsistencyArgument(error)) {
+          throw error;
+        }
+        this.consistencyUnsupported = true;
+      }
+    }
+    return this.runGetDocuments(identifiers, view, undefined, signal);
+  }
+
+  private async runGetDocuments(
+    identifiers: string[],
+    view: ViewFilterInput | undefined,
+    consistency: GetDocumentAtConsistencyVariables["consistency"] | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<PhDocumentFieldsFragment[]> {
+    const variables: Record<string, unknown> = { view };
+    const definitions = ["$view: ViewFilterInput"];
+    let consistencyArgument = "";
+    if (consistency) {
+      variables.consistency = consistency;
+      definitions.push("$consistency: ConsistencyTokenInput");
+      consistencyArgument = ", consistency: $consistency";
+    }
+    const fields = identifiers.map((identifier, i) => {
+      variables[`id${i}`] = identifier;
+      definitions.push(`$id${i}: String!`);
+      return `d${i}: document(identifier: $id${i}, view: $view${consistencyArgument}) { document { ...PHDocumentFields } childIds }`;
+    });
+    const query = [
+      `query GetDocuments(${definitions.join(", ")}) {`,
+      ...fields,
+      "}",
+      PH_DOCUMENT_FIELDS_SOURCE,
+    ].join("\n");
+    const data = await this.sdk.RunDocument<
+      Record<string, GetDocumentQuery["document"]>
+    >({
+      operationName: "GetDocuments",
+      operationType: "query",
+      document: query,
+      variables,
+      signal,
+    });
+    return identifiers.map((identifier, i) => {
+      const result = data[`d${i}`];
+      if (!result) {
+        throw new Error(`Document not found: ${identifier}`);
+      }
+      return result.document;
+    });
   }
 
   /**
@@ -848,70 +972,43 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     }
   }
 
-  /**
-   * The policy the Switchboard gives a new document, read from its
-   * `createDefaults` query. A Switchboard without that query is refused with
-   * {@link GraphQLOperationNotSupportedError}: a guessed default would
-   * under-sign on a stricter host.
-   */
-  async getCreateSignaturePolicy(): Promise<SignaturePolicy> {
-    const defaults = await this.createDefaults("getCreateSignaturePolicy");
-    return defaults.signaturePolicy;
+  /** See {@link readCreateSignaturePolicy}. */
+  getCreateSignaturePolicy(): Promise<SignaturePolicy> {
+    return readCreateSignaturePolicy(this.sdk);
   }
 
-  /**
-   * The protocol versions the Switchboard selects for a new document under
-   * `parentIdentifier`, read from its `createDefaults` query. A parent the
-   * caller may not read is refused by the server, never answered as if none
-   * was named; a Switchboard without the query is refused with
-   * {@link GraphQLOperationNotSupportedError}.
-   */
-  async getCreateProtocolVersions(
-    parentIdentifier?: string,
+  /** See {@link readCreateProtocolVersions}; fitted to `documentModels`. */
+  getCreateProtocolVersions(
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    const defaults = await this.createDefaults(
-      "getCreateProtocolVersions",
-      parentIdentifier,
+    return readCreateProtocolVersions(
+      this.sdk,
+      options,
+      this.documentModels(),
       signal,
     );
-    return defaults.protocolVersions;
   }
 
-  private async createDefaults(
-    operation: string,
-    parentIdOrSlug?: string,
+  /** See {@link IReactorClient.newDocument}; the module comes from `documentModels`. */
+  async newDocument<TDocument extends PHDocument = PHDocument>(
+    documentType: string,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
-  ): Promise<{
-    signaturePolicy: SignaturePolicy;
-    protocolVersions: ProtocolVersions;
-  }> {
-    let result: GetCreateDefaultsQuery;
-    try {
-      result = await this.sdk.GetCreateDefaults(
-        { parentIdOrSlug },
-        undefined,
+  ): Promise<TDocument> {
+    const module = selectDocumentModelModule(
+      [...this.documentModels(), ...BUILT_IN_MODELS],
+      documentType,
+      options?.documentModelVersion,
+    );
+    const [policy, versions] = await Promise.all([
+      options?.signaturePolicy ?? this.getCreateSignaturePolicy(),
+      this.getCreateProtocolVersions(
+        { documentType, parentIdentifier: options?.parentIdentifier },
         signal,
-      );
-    } catch (error) {
-      if (queriesUnknownField(error, "createDefaults")) {
-        throw new GraphQLOperationNotSupportedError(
-          operation,
-          "the Switchboard predates the createDefaults query",
-        );
-      }
-      throw error;
-    }
-    const { signaturePolicy, protocolVersions } = result.createDefaults;
-    if (!isSignaturePolicy(signaturePolicy)) {
-      throw new Error(
-        `The Switchboard answered an unknown create signature policy: ${signaturePolicy}`,
-      );
-    }
-    return {
-      signaturePolicy,
-      protocolVersions: protocolVersionsFrom(protocolVersions),
-    };
+      ),
+    ]);
+    return headNewDocument(module, options, policy, versions) as TDocument;
   }
 
   /**
@@ -1486,16 +1583,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       const variables: GetDocumentAtConsistencyVariables = {
         identifier,
         view,
-        consistency: {
-          version: token.version,
-          createdAtUtcIso: token.createdAtUtcIso,
-          coordinates: token.coordinates.map((coordinate) => ({
-            documentId: coordinate.documentId,
-            scope: coordinate.scope,
-            branch: coordinate.branch,
-            operationIndex: coordinate.operationIndex,
-          })),
-        },
+        consistency: consistencyInputFromToken(token),
       };
       try {
         return await this.sdk.RunDocument<GetDocumentAtConsistencyResult>({
@@ -1677,8 +1765,15 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
  * The read half of {@link GraphQLReactorClient}: every read is the client's
  * own, and nothing that writes is reachable from it.
  */
-class GraphQLReadHalf implements IReactorBrowserReadClient {
-  constructor(private readonly client: GraphQLReactorClient) {}
+class GraphQLReadHalf implements GraphQLReactorReadClient {
+  readonly drives: IDriveReadClient;
+
+  constructor(
+    private readonly client: GraphQLReactorClient,
+    nodes: IDriveNodeSource,
+  ) {
+    this.drives = new GraphQLDriveReadClient(nodes);
+  }
 
   get<TDocument extends PHDocument>(
     identifier: string,
@@ -1787,6 +1882,26 @@ function sleepUntilWoken(
  * Whether a request failed because the Switchboard's `document` query has no
  * `consistency` argument, or its schema no `ConsistencyTokenInput`.
  */
+/** The most ids one `getMany` request reads. */
+const GET_MANY_CHUNK_SIZE = 50;
+
+const PH_DOCUMENT_FIELDS_SOURCE = print(PhDocumentFieldsFragmentDoc);
+
+function consistencyInputFromToken(
+  token: ConsistencyToken,
+): GetDocumentAtConsistencyVariables["consistency"] {
+  return {
+    version: token.version,
+    createdAtUtcIso: token.createdAtUtcIso,
+    coordinates: token.coordinates.map((coordinate) => ({
+      documentId: coordinate.documentId,
+      scope: coordinate.scope,
+      branch: coordinate.branch,
+      operationIndex: coordinate.operationIndex,
+    })),
+  };
+}
+
 function refusesConsistencyArgument(error: unknown): boolean {
   const errors = (error as { response?: { errors?: unknown } } | null)?.response
     ?.errors;
@@ -1801,6 +1916,13 @@ function refusesConsistencyArgument(error: unknown): boolean {
         message.includes('"ConsistencyTokenInput"'))
     );
   });
+}
+
+/** {@link GraphQLReactorClient.nodeSource}, as a function. */
+export function createGraphQLDriveNodeSource(
+  client: GraphQLReactorClient,
+): IDriveNodeSource {
+  return client.nodeSource();
 }
 
 /**
@@ -2113,25 +2235,6 @@ function jobInfoFromGql(job: JobInfoFieldsFragment): JobInfo {
 }
 
 /**
- * Whether a request failed because the server's schema has no such root field:
- * a Switchboard older than the field. graphql-js validation words this the same
- * under every gateway the Switchboard can run.
- */
-function queriesUnknownField(error: unknown, field: string): boolean {
-  const errors = (error as { response?: { errors?: unknown } } | null)?.response
-    ?.errors;
-  if (!Array.isArray(errors)) {
-    return false;
-  }
-  const prefix = `Cannot query field "${field}" on type "`;
-  return errors.some(
-    (entry) =>
-      typeof (entry as { message?: unknown } | null)?.message === "string" &&
-      (entry as { message: string }).message.startsWith(prefix),
-  );
-}
-
-/**
  * The header a Switchboard's drive middleware and load balancer key on. A
  * request carries it only when it is known to belong to that one drive: the
  * server answers any drive it does not own with 421.
@@ -2189,25 +2292,6 @@ function wrongBackendErrorOf(
     payload,
     { cause: error },
   );
-}
-
-/** Protocol versions as the server sent them; anything but a version map throws. */
-function protocolVersionsFrom(value: unknown): ProtocolVersions {
-  if (!isPlainObject(value)) {
-    throw new Error(
-      "The Switchboard answered malformed create protocol versions",
-    );
-  }
-  const versions: ProtocolVersions = {};
-  for (const [protocol, version] of Object.entries(value)) {
-    if (typeof version !== "number" || !Number.isInteger(version)) {
-      throw new Error(
-        `The Switchboard answered a malformed version for protocol ${protocol}`,
-      );
-    }
-    versions[protocol] = version;
-  }
-  return versions;
 }
 
 function isSettled(job: JobInfo): boolean {

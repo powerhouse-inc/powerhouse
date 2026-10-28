@@ -222,6 +222,26 @@ export const CreateDefaultsDTO = z
   })
   .strip();
 
+export const DriveNodeDTO = z
+  .object({
+    id: z.string(),
+    driveId: z.string(),
+    name: z.string(),
+    parentFolder: z.string().nullable().optional(),
+    documentType: z.string().optional(),
+  })
+  .strip();
+
+export const DriveNodeListDTO = z.array(DriveNodeDTO);
+
+export const DriveNodePageDTO = z
+  .object({
+    results: z.array(DriveNodeDTO),
+    nextCursor: z.string().nullable().optional(),
+    hasMore: z.boolean(),
+  })
+  .strip();
+
 export const ActionEvaluationDTO = z
   .object({
     decision: z.enum(["ALLOW", "DENY"]),

@@ -4,6 +4,7 @@ import { mountAuthenticatedNodeRoute } from "./mount-auth.js";
 import {
   makeDeleteReservationHandler,
   makeDownloadHandler,
+  downloadTargetTtlCapSeconds,
   makeDownloadTargetHandler,
   makeGetReservationHandler,
   makeReserveHandler,
@@ -21,6 +22,11 @@ const logger = childLogger(["switchboard", "attachments"]);
 export type RegisterAttachmentRoutesOptions = {
   /** Overrides the signer resolved from the environment; null disables signing. */
   urlSigner?: AttachmentUrlSigner | null;
+  /** The switchboard's settings; unset means their defaults. */
+  config?: {
+    urlSigningSecret?: string;
+    downloadTargetMaxTtlSeconds?: number;
+  };
 };
 
 export function registerAttachmentRoutes(
@@ -28,10 +34,17 @@ export function registerAttachmentRoutes(
   options: RegisterAttachmentRoutesOptions = {},
 ): void {
   const { attachments, attachmentAccess } = api;
+  const { config } = options;
   const urlSigner =
     options.urlSigner === undefined
-      ? signerFromEnvironment(attachments.backend?.kind ?? "filesystem")
+      ? signerFromEnvironment(attachments.backend?.kind ?? "filesystem", {
+          [ATTACHMENT_URL_SIGNING_SECRET_ENV]: config?.urlSigningSecret,
+          NODE_ENV: process.env.NODE_ENV,
+        })
       : options.urlSigner;
+  const ttlCapSeconds = downloadTargetTtlCapSeconds(
+    config?.downloadTargetMaxTtlSeconds,
+  );
 
   mountAuthenticatedNodeRoute(
     api,
@@ -77,7 +90,12 @@ export function registerAttachmentRoutes(
     api,
     "GET",
     "/attachments/:hash/download-target",
-    makeDownloadTargetHandler(attachments, attachmentAccess, urlSigner),
+    makeDownloadTargetHandler(
+      attachments,
+      attachmentAccess,
+      urlSigner,
+      ttlCapSeconds,
+    ),
     { allowAnonymous: true },
   );
 
@@ -92,8 +110,9 @@ export function registerAttachmentRoutes(
 
 function signerFromEnvironment(
   backend: "filesystem" | "s3",
+  env: Readonly<Record<string, string | undefined>>,
 ): AttachmentUrlSigner | null {
-  const signing = resolveAttachmentUrlSigning();
+  const signing = resolveAttachmentUrlSigning(env);
   if (signing.status === "unconfigured") {
     if (backend === "filesystem") {
       logger.error(

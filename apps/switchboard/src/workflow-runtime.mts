@@ -58,9 +58,6 @@ type WorkflowEngineModule = typeof WorkflowEngine;
 export const WORKFLOW_PACKAGE_NAME = "@powerhousedao/workflow";
 export const WORKFLOW_TELEMETRY_SCOPE = "@powerhousedao/reactor-workflow";
 
-/** The env var and OpenFeature flag key that turns workflows on. */
-export const PH_WORKFLOWS_ENABLED = "PH_WORKFLOWS_ENABLED";
-
 /** Whether the operation intake is indexing. Same shape as the attachment
  * reference projection, because it is the same limitation. */
 export type WorkflowTriggersCapability =
@@ -77,40 +74,6 @@ const SINGLETON_LOST: WorkflowTriggersCapability = {
   status: "unavailable",
   reason: "workflow-singleton-lost",
 };
-
-/** The slice of switchboard's OpenFeature client this needs. */
-export interface BooleanFlagSource {
-  getBooleanValue(flagKey: string, defaultValue: boolean): Promise<boolean>;
-}
-
-export interface WorkflowsFlagInput {
-  featureFlags: BooleanFlagSource;
-  /** The host's own answer; wins over everything. */
-  override?: boolean;
-  /** `workflows.enabled` from the powerhouse config file. */
-  configEnabled?: boolean;
-  /** Defaults to process.env; the tests pass their own. */
-  env?: Record<string, string | undefined>;
-}
-
-/** Precedence, unchanged from the reactor-api resolver this replaces: the
- * host's option, then PH_WORKFLOWS_ENABLED, then the config file, then off. */
-export async function resolveWorkflowsEnabled({
-  featureFlags,
-  override,
-  configEnabled = false,
-  env = process.env,
-}: WorkflowsFlagInput): Promise<boolean> {
-  if (override !== undefined) return override;
-
-  // The env layer is switchboard's OpenFeature client, which casts only
-  // "true"/"false": the numeric forms reactor-api took are answered here.
-  const raw = env[PH_WORKFLOWS_ENABLED]?.trim();
-  if (raw === "1") return true;
-  if (raw === "0") return false;
-
-  return featureFlags.getBooleanValue(PH_WORKFLOWS_ENABLED, configEnabled);
-}
 
 // The package manager reports an unresolvable package and continues; for one
 // the host added itself that is a misconfigured switchboard, not a degraded

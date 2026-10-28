@@ -499,6 +499,8 @@ jobs:
           ${{ github.event_name == 'pull_request' && '--skip drive-override' || '' }}
         env:
           RECIPES_DIR: ${{ github.workspace }}/recipes-checkout
+          # onnxruntime-node's postinstall otherwise fetches CUDA binaries from nuget
+          ONNXRUNTIME_NODE_INSTALL: skip
 
   notify-discord:
     if: always() && github.event_name != 'pull_request' && (needs.vetra-e2e-tests.result == 'failure' || needs.package-e2e-tests.result == 'failure' || needs.workflow-piece-e2e-tests.result == 'failure' || needs.recipes-e2e-tests.result == 'failure')
@@ -515,6 +517,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_FAILURES }}
           DISCORD_USER_MAPPING: ${{ secrets.DISCORD_USER_MAPPING }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
           # Aggregate over the dev/worker matrix; the run link shows which leg failed.
           VETRA_RESULT: ${{ needs.vetra-e2e-tests.result }}
           PACKAGE_RESULT: ${{ needs.package-e2e-tests.result }}
@@ -553,13 +556,15 @@ jobs:
             fi
           fi
 
-          curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
-            "embeds": [{
-              "title": "⚠️ E2E Tests Failed",
-              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed jobs:** '"${FAILED_JOBS}"'\n**Workflow run:** [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
-              "color": 16711680
-            }]
-          }'
+          # The message goes in through env and jq: quotes in it broke the shell and the JSON
+          COMMIT="${COMMIT_MESSAGE%%$'\n'*}"
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          DESCRIPTION=$(printf '**Author:** %s\n**Commit:** [`%s`](%s)\n**Failed jobs:** %s\n**Workflow run:** [${{ github.run_id }}](%s)' \
+            "$MENTION_STRING" "$COMMIT" "$COMMIT_URL" "$FAILED_JOBS" "$RUN_URL")
+          jq -n --arg description "$DESCRIPTION" \
+            '{embeds: [{title: "⚠️ E2E Tests Failed", description: $description, color: 16711680}]}' |
+            curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d @-
 
   duration-watch:
     name: CI duration watch

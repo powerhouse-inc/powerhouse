@@ -22,11 +22,20 @@ import type {
   IReactorBrowserReadClient,
 } from "./types/reactor-browser-client.js";
 
-/** The reads a {@link DocumentCache} makes. */
-export interface IDocumentCacheReader extends Pick<
-  IReactorBrowserReadClient,
-  "get" | "find" | "getOperations" | "subscribe"
-> {}
+/**
+ * The reads a {@link DocumentCache} makes. `getMany` is optional: without it,
+ * a batch reads each uncached id with `get`.
+ */
+export interface IDocumentCacheReader
+  extends
+    Pick<
+      IReactorBrowserReadClient,
+      "get" | "find" | "getOperations" | "subscribe"
+    >,
+    Partial<Pick<IReactorBrowserReadClient, "getMany">> {}
+
+/** The most ids one `getMany` call is asked for. */
+export const GET_MANY_CHUNK_SIZE = 100;
 
 export function addPromiseState<T>(promise: Promise<T>): PromiseWithState<T> {
   if ("status" in promise) {
@@ -124,6 +133,22 @@ export function isDocumentTypeCache(
     typeof candidate.loadMoreDocumentsOfType === "function" &&
     typeof candidate.subscribeDocumentsOfType === "function"
   );
+}
+
+type Deferred<T> = {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason: unknown) => void;
+};
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
 }
 
 /** A promise already settled with `value`, readable without awaiting. */
@@ -350,6 +375,9 @@ export class DocumentCache
     const cached = this.batchPromises.get(key);
 
     const hasDeletedDocuments = ids.some((id) => !this.documents.has(id));
+    if (hasDeletedDocuments) {
+      this.loadMany(ids);
+    }
     const currentPromises = ids.map((id) => this.get(id));
 
     if (hasDeletedDocuments) {
@@ -405,6 +433,83 @@ export class DocumentCache
       promise: batchPromise,
     });
     return batchPromise;
+  }
+
+  /**
+   * Reserves an entry for every id not yet cached and fills them from
+   * `getMany`, in chunks of {@link GET_MANY_CHUNK_SIZE}. Each id keeps its own
+   * entry, settled as `get` would settle it.
+   */
+  private loadMany(ids: string[]): void {
+    const getMany = this.client.getMany?.bind(this.client);
+    const missing = [...new Set(ids)].filter((id) => !this.documents.has(id));
+    if (!getMany || missing.length < 2) {
+      return;
+    }
+    const pending = new Map<string, Deferred<PHDocument>>();
+    for (const id of missing) {
+      const deferred = createDeferred<PHDocument>();
+      pending.set(id, deferred);
+      this.refetcher.forget(id);
+      this.documents.set(id, addPromiseState(deferred.promise));
+    }
+    for (let i = 0; i < missing.length; i += GET_MANY_CHUNK_SIZE) {
+      void this.settleMany(
+        missing.slice(i, i + GET_MANY_CHUNK_SIZE),
+        pending,
+        getMany,
+      );
+    }
+  }
+
+  /**
+   * `getMany` rejects when any id is unavailable, so a failed chunk is split
+   * in half and retried; a single id is read with `get`, so it settles exactly
+   * as a single read would.
+   */
+  private async settleMany(
+    ids: string[],
+    pending: Map<string, Deferred<PHDocument>>,
+    getMany: NonNullable<IDocumentCacheReader["getMany"]>,
+  ): Promise<void> {
+    if (ids.length === 1) {
+      const id = ids[0];
+      try {
+        this.settleFetched(id, await this.client.get(id), pending);
+      } catch (error) {
+        pending.get(id)?.reject(error);
+      }
+      return;
+    }
+    let documents: PHDocument[];
+    try {
+      documents = await getMany(ids);
+    } catch {
+      const half = Math.ceil(ids.length / 2);
+      await Promise.all([
+        this.settleMany(ids.slice(0, half), pending, getMany),
+        this.settleMany(ids.slice(half), pending, getMany),
+      ]);
+      return;
+    }
+    if (documents.length !== ids.length) {
+      await Promise.all(
+        ids.map((id) => this.settleMany([id], pending, getMany)),
+      );
+      return;
+    }
+    ids.forEach((id, i) => this.settleFetched(id, documents[i], pending));
+  }
+
+  private settleFetched(
+    id: string,
+    document: PHDocument,
+    pending: Map<string, Deferred<PHDocument>>,
+  ): void {
+    if (document.header.id !== id) {
+      this.recordAlias(document.header.id, id);
+    }
+    pending.get(id)?.resolve(document);
   }
 
   subscribe(id: string | string[], callback: () => void): () => void {

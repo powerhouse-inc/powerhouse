@@ -23,29 +23,63 @@ For the quickstart and how the entry stays browser-bundlable, see
 ## `IReactorBrowserClient`
 
 The contract the reactor-browser hooks depend on. It is declared as a `Pick` of
-the reactor's own `IReactorClient`, so the six member signatures cannot drift
-from the reactor's:
+the reactor's own interfaces, so the member signatures cannot drift from the
+reactor's:
 
 ```typescript
+export interface IReactorBrowserReadClient extends Pick<
+  IReactorReadClient,
+  | "get"
+  | "getMany"
+  | "find"
+  | "getOperations"
+  | "subscribe"
+  | "waitForJob"
+  | "getJobStatus"
+> {}
+
+export interface IReactorBrowserWriteClient extends Pick<
+  IReactorWriteClient,
+  "execute" | "create" | "deleteDocument"
+> {}
+
 export interface IReactorBrowserClient extends Pick<
   IReactorClient,
   | "get"
+  | "find"
   | "subscribe"
   | "execute"
   | "getOperations"
+  | "newDocument"
   | "create"
   | "deleteDocument"
-> {}
+> {
+  readonly read: IReactorBrowserReadClient;
+  readonly write: IReactorBrowserWriteClient;
+}
 ```
+
+`read` and `write` are the client halves the hooks use. Each `write` method
+resolves once its job is accepted and returns a `WriteHandle`; read the
+document back with `handle.document()`. Write through `write`; the picked
+top-level methods remain for callers that have not moved to the halves.
 
 Two implementations satisfy it: the full in-browser reactor client, which gets it
 for free by implementing `IReactorClient`, and `GraphQLReactorClient`.
 
-Everything outside those six members is deliberately excluded and not
-implemented here: `drives`, `find`, `resolveIdOrSlug`, relationships,
-`executeAsync`, `executeBatch`, jobs, `createEmpty`, `rename`,
-`evaluateActions`, and the document-model module getters. For the
-full-reactor versions of those, see
+On `GraphQLReactorClient`, `write.execute` submits the job and hands back a
+handle whose `written` and `readable` resolve from the job's status, woken by
+the `jobChanges` subscription when realtime is on. Its `document()` runs the
+`document` query bounded by the receipt's consistency token. `write.create` and
+`write.deleteDocument` run synchronous mutations and hand back a handle that has
+already settled.
+
+`newDocument` is a top-level member only.
+
+Everything outside these members is deliberately excluded from the interface:
+`drives`, `resolveIdOrSlug`, relationships, `executeAsync`, `executeBatch`,
+`createEmpty`, `rename`, `evaluateActions`, and the document-model module
+getters. For the full-reactor versions of those, see
 [IReactorClient](/academy/Reference/Reactor/ReactorClient).
 
 ### Methods
@@ -54,14 +88,16 @@ full-reactor versions of those, see
 | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `get(identifier, view?, signal?)`                             | Reads by id or slug. A `view.revision` throws: the GraphQL read API has no point-in-time reads.     |
 | `getOperations(identifier, view?, filter?, paging?, signal?)` | Paged. `next()` follows the returned cursor; the default page is `{ cursor: "0", limit: 100 }`.     |
-| `create(document, parentIdentifier?, signal?)`                | Creates the document and emits `Created`.                                                           |
+| `newDocument(documentType, options?, signal?)`                | Heads a new, uncreated document with the versions the Switchboard selects for the type and parent, and its create signature policy. |
+| `create(document, parentIdentifier?, signal?)`                | Creates the document as its header says and emits `Created`.                                        |
 | `execute(identifier, branch, actions, signal?)`               | Reads the document, stamps and signs a single action, pushes it, emits `Updated`. Two round trips.  |
 | `deleteDocument(identifier, propagate?, signal?)`             | Deletes and emits `Deleted` carrying the identifier it was called with.                             |
 | `subscribe(search, callback, view?)`                          | Registers a change subscriber and returns its unsubscribe function. `view` is accepted and ignored. |
 
-`execute` returns the updated document with the operations this call appended,
-which is how `useDispatch` reports per-action errors: `dispatchActions` scans the
-returned operations for the action it sent and reads its `error` field.
+`useDispatch` writes through `write.execute` and reads the result back with
+`handle.document()`. That is how it reports per-action errors: `dispatchActions`
+scans the read-back document's operations for the action it sent and reads its
+`error` field.
 
 ## `GraphQLReactorClient`
 

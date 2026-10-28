@@ -7,6 +7,7 @@ import type {
   DocumentModelModule,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
+import { getCodegenStatusRegistry } from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -319,12 +320,20 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   // failed load leaves the last good set.
   #watch<T>(
     label: string,
+    reported: { pkg: string; kind: string },
     matches: (changedPath: string) => unknown,
     load: () => Promise<T>,
     handler: (value: T) => void,
     options?: ISubscriptionOptions,
   ): () => void {
     let subscribed = true;
+    // Read by reactor-mcp's getCodegenStatus, e.g. for broken generated code.
+    const report = (failure?: string) =>
+      getCodegenStatusRegistry().reportLoad(
+        reported.pkg,
+        reported.kind,
+        failure,
+      );
     const reloadOnce = debounce(
       () =>
         runDetached(
@@ -336,10 +345,12 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
               value = await load();
             } catch (e) {
               if ((e as NodeJS.ErrnoException).code === PACKAGE_MODULE_FAILED) {
+                report(`[${this.name}] ${(e as Error).message}`);
                 return;
               }
               throw e;
             }
+            report();
             if (subscribed) handler(value);
           },
           { logger: this.logger, report: this.#reportError },
@@ -369,6 +380,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     ];
     return this.#watch(
       `Reloading the document models of ${identifier}`,
+      { pkg: identifier, kind: "document models" },
       (changedPath) => watched.some((dir) => isSubpath(dir, changedPath)),
       () => this.loadDocumentModels(identifier),
       handler,
@@ -384,6 +396,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     const subgraphsPath = this.getSubgraphsPath(identifier);
     return this.#watch(
       `Reloading the subgraphs of ${identifier}`,
+      { pkg: identifier, kind: "subgraphs" },
       (changedPath) => isSubpath(subgraphsPath, changedPath),
       () => this.loadSubgraphs(identifier),
       handler,
@@ -399,6 +412,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     const scalarsPath = this.getScalarsPath(identifier);
     return this.#watch(
       `Reloading the scalars of ${identifier}`,
+      { pkg: identifier, kind: "scalars" },
       (changedPath) => isSubpath(scalarsPath, changedPath),
       () => this.loadScalars(identifier),
       handler,
@@ -414,6 +428,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     const processorsPath = this.getProcessorsPath(identifier);
     return this.#watch(
       `Reloading the processors of ${identifier}`,
+      { pkg: identifier, kind: "processors" },
       (changedPath) => isSubpath(processorsPath, changedPath),
       () => this.loadProcessors(identifier),
       handler,
@@ -435,6 +450,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     }
     return this.#watch(
       `Reloading the pieces of ${identifier}`,
+      { pkg: identifier, kind: "pieces" },
       (changedPath) => watched.some((dir) => isSubpath(dir, changedPath)),
       () => this.loadPieces(identifier),
       handler,
@@ -478,10 +494,11 @@ export async function startViteServer(root: string, logger?: Logger) {
   const vite = await createServer({
     root,
     configFile: false,
-    logger,
+    customLogger: logger,
     server: {
       middlewareMode: true,
-      // It loads modules, never serves a page: no HMR port to collide on.
+      // It loads modules, never serves a page: no HMR, and no WebSocket port
+      // (24678 by default) for a second project's Vetra to collide on.
       hmr: false,
       ws: false,
       watch: { ignored: ["**/.ph/**", ignoreBuildOutputButPieces(root)] },

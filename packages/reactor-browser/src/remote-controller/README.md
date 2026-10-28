@@ -48,7 +48,7 @@ const client = createClient("https://switchboard.example.com/graphql");
 
 ### Create a new document
 
-Omit `documentId` and pass a `parentIdentifier` (the drive to create in):
+Omit `documentId` and pass a `parentIdentifier` (the drive to create in). `pull` heads the new document with the host's signature policy and protocol versions for its type, read from `createDefaults`, as `GraphQLReactorClient.newDocument` does. The first push creates the remote from that header, so the document runs the same versions before and after it. A Switchboard without `createDefaults` (6.2.3 and earlier) creates it with `CreateEmptyDocument` instead, at the versions it chooses:
 
 ```typescript
 const controller = await RemoteDocumentController.pull(
@@ -73,7 +73,7 @@ console.log(controller.status.pendingActionCount); // 3
 // Push all pending actions to the remote
 const result = await controller.push();
 console.log(result.actionCount); // 3
-console.log(controller.status.documentId); // "abc-123" (assigned by server)
+console.log(controller.status.documentId); // the id of the local header
 ```
 
 ### Pull an existing document
@@ -117,6 +117,8 @@ console.log(remote.header.name); // "Draft"
 remote.setModelName({ name: "MyModel" });
 await remote.push(); // creates on remote + pushes the SET_MODEL_NAME action
 ```
+
+Without a `documentId`, the first push creates the remote from the wrapped document's header and initial state under the host's create signature policy (read from `createDefaults`), so the remote runs the versions that header names. A legacy policy keeps the header's id; a Switchboard without `createDefaults` creates it with `CreateEmptyDocument` instead.
 
 ## Modes
 
@@ -271,16 +273,10 @@ const controller = await RemoteDocumentController.pull(
       console.log(conflict.remoteOperations);
       console.log(conflict.localActions);
 
-      // Return the actions you want to push
-      return [
-        {
-          type: "SET_NAME",
-          input: { name: "Merged result" },
-          scope: "global",
-          id: crypto.randomUUID(),
-          timestampUtcMs: Date.now().toString(),
-        },
-      ];
+      // Return the actions you want to push. Build them with an action
+      // creator (here `setName` from `document-model`), which gives a
+      // creation-ordered id and an ISO timestamp.
+      return [setName("Merged result")];
     },
   },
 );
@@ -364,7 +360,7 @@ type SyncStatus = {
 ### Push flow
 
 1. Flush pending actions from the tracker.
-2. If this is a new document (no `documentId`), create it on the remote via `CreateEmptyDocument`.
+2. If this is a new document (no `documentId`), create it on the remote via `CreateDocument` from the local header and initial state, or via `CreateEmptyDocument` on a Switchboard without `createDefaults`.
 3. If `onConflict` is set, check if the remote has new operations since the last pull. Handle conflicts according to the strategy (reject, rebase, or custom merge).
 4. If a signer is configured, sign each action with its `prevOpHash`.
 5. Send all actions in a single `MutateDocument` call.
@@ -374,7 +370,7 @@ type SyncStatus = {
 
 1. Fetch the document via `GetDocument`.
 2. Fetch all operations via paginated `GetDocumentOperations`.
-3. Reconstruct a `PHDocument` from the remote state and operations.
+3. Reconstruct a `PHDocument` from the remote state, operations and header protocol versions.
 4. Replace the inner controller with a new instance built from the pulled document.
 5. Clear the action tracker.
 

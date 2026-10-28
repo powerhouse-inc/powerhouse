@@ -3,6 +3,7 @@ import {
   FacadeWriteClient,
   warnOnce,
   type IDriveClient,
+  type IDriveNodeSource,
   type IReactorClient,
   type IReactorReadClient,
   type IReactorWriteClient,
@@ -189,6 +190,11 @@ export type GraphQLManagerOptions = {
   authorizationService: IAuthorizationService;
   /** Resolvers dispatch to it for reactor-drive parents. */
   reactorDriveClient?: IDriveClient;
+  /**
+   * Type-neutral drive node reads behind the reactor subgraph's `driveNodes`,
+   * `driveNode` and `driveDescendants`. Without it those fields refuse.
+   */
+  driveNodes?: IDriveNodeSource;
   syncServingGate?: SyncScopeGate;
   httpRoutes?: HttpRouteService;
   attachments?: IAttachmentClientProvider;
@@ -436,6 +442,8 @@ export class GraphQLManager {
    * it for reactor-drive parents.
    */
   readonly reactorDriveClient?: IDriveClient;
+  /** See {@link GraphQLManagerOptions.driveNodes}. */
+  readonly driveNodes?: IDriveNodeSource;
   private readonly authorizationService: IAuthorizationService;
   /** Route service in use: the injected one, or one built on first need. */
   #fallbackRoutes: HttpRouteService | undefined;
@@ -500,6 +508,7 @@ export class GraphQLManager {
     this.port = options.port ?? 4001;
     this.authorizationService = options.authorizationService;
     this.reactorDriveClient = options.reactorDriveClient;
+    this.driveNodes = options.driveNodes;
     this.syncServingGate = options.syncServingGate;
     this.httpRoutes = options.httpRoutes;
     this.attachments = options.attachments;

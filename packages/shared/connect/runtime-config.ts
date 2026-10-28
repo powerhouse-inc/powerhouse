@@ -31,6 +31,7 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
     basePath: "/",
     offline: true,
     studioMode: false,
+    cookieBanner: true,
   },
   ai: {
     assistantEnabled: false,

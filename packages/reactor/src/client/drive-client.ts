@@ -9,6 +9,7 @@ import type {
   Action,
   ISigner,
   PHDocument,
+  ProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IReactor } from "../core/types.js";
@@ -27,6 +28,8 @@ import {
 } from "./drive-write-client.js";
 import { WriteHandleFactory, type HandleReader } from "./internal/handles.js";
 import type {
+  CopyNodeOptions,
+  CreateProtocolVersionsOptions,
   IDriveClient,
   IDriveReadClient,
   IDriveWriteClient,
@@ -180,12 +183,14 @@ export class DriveClientFacade implements IDriveClient {
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<DocumentDriveDocument> {
     const handle = await this.writes.copyNode(
       driveIdentifier,
       srcNodeId,
       targetParentFolderId,
       signal,
+      options,
     );
     return this.documentOf<DocumentDriveDocument>(handle, signal);
   }
@@ -242,6 +247,10 @@ export class DriveClient extends DriveClientFacade {
       identifier: string,
       signal?: AbortSignal,
     ) => Promise<string>,
+    createProtocolVersions?: (
+      options: CreateProtocolVersionsOptions,
+      signal?: AbortSignal,
+    ) => Promise<ProtocolVersions>,
   ) {
     const handles = new WriteHandleFactory({
       waitForStage: (jobId, _stage, signal) => client.waitForJob(jobId, signal),
@@ -256,6 +265,9 @@ export class DriveClient extends DriveClientFacade {
         submitter,
         signer,
         resolveReference,
+        undefined,
+        undefined,
+        createProtocolVersions,
       ),
     );
   }

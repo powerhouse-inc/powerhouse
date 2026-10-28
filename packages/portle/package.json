@@ -1,0 +1,61 @@
+{
+  "name": "@powerhousedao/portle",
+  "version": "6.2.3-dev.78",
+  "description": "Publish a Powerhouse project through Portle: a switchboard host plugin that checks the host's authorization gate and, later, runs the site tunnel. EXPERIMENTAL.",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/portle"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
+    },
+    "./switchboard": {
+      "source": "./src/switchboard.ts",
+      "types": "./dist/switchboard.d.mts",
+      "import": "./dist/switchboard.mjs",
+      "default": "./dist/switchboard.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "cd ../.. && oxlint packages/portle",
+    "build": "tsdown",
+    "test": "vitest --run"
+  },
+  "dependencies": {
+    "graphql": "catalog:"
+  },
+  "peerDependencies": {
+    "@powerhousedao/host-core": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*"
+  },
+  "devDependencies": {
+    "@powerhousedao/host-core": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "keywords": [
+    "powerhouse",
+    "portle",
+    "switchboard",
+    "plugin",
+    "relay"
+  ]
+}

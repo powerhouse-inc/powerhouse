@@ -9,6 +9,7 @@ import {
   createAuthState,
   isDenied,
   isPurgeMarker,
+  withScopeRevisions,
 } from "@powerhousedao/shared/document-model";
 import { childLogger, type ILogger } from "document-model";
 import type { Kysely, Transaction } from "kysely";
@@ -571,6 +572,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
           ? createAuthState(snapshot.content as Partial<PHAuthState>)
           : snapshot.content;
     }
+    header.revision = withScopeRevisions(header.revision, state);
 
     const document: PHDocument = {
       header,
@@ -682,6 +684,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             ? createAuthState(snapshot.content as Partial<PHAuthState>)
             : snapshot.content;
       }
+      header.revision = withScopeRevisions(header.revision, state);
 
       const document: PHDocument = {
         header,
@@ -755,24 +758,16 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     const hasMore = rows.length > limit;
     const docsToFetch = rows.slice(0, limit).map((row) => row.documentId);
 
-    const documents: PHDocument[] = [];
-    for (const documentId of docsToFetch) {
-      if (signal?.aborted) {
-        throw new Error("Operation aborted");
-      }
-
-      try {
-        const document = await this.get<PHDocument>(
-          documentId,
-          view,
-          undefined,
-          signal,
-        );
-        documents.push(document);
-      } catch {
-        continue;
-      }
-    }
+    // One snapshot query for the page instead of one get per document: a
+    // drive listing of eight documents was 1 + 2N queries on the write lane.
+    // getMany keeps the page's order and skips a document deleted since the
+    // listing, as the per-document get did.
+    const documents = await this.getMany<PHDocument>(
+      docsToFetch,
+      view,
+      undefined,
+      signal,
+    );
 
     const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 

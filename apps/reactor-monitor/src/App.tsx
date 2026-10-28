@@ -23,6 +23,10 @@ import {
   processorGateFor,
   sqlGateFor,
 } from "./components/AdminGate.js";
+import {
+  HostImportPanel,
+  type HostImportRequest,
+} from "./components/HostImportPanel.js";
 import { LinkLocalSyncPanel } from "./components/LinkLocalSyncPanel.js";
 import { MonitoringSetsPanel } from "./components/MonitoringSetsPanel.js";
 import {
@@ -30,6 +34,8 @@ import {
   type ProvisionRequest,
 } from "./components/ProvisionPanel.js";
 import { RoutingPanel } from "./components/RoutingPanel.js";
+import { SwitchboardsPanel } from "./components/SwitchboardsPanel.js";
+import { useManagedDescriptors } from "./controller/use-managed-descriptors.js";
 import { MonitoringSetsStore } from "./monitoring-sets.js";
 import {
   buildDescriptor as buildDescriptorFromForm,
@@ -263,6 +269,8 @@ type AppBodyProps = {
   readonly onSwitchSet: (name: string) => void;
   readonly onCreateSet: (name: string) => void;
   readonly onDeleteSet: (name: string) => void;
+  readonly onImport: (request: HostImportRequest) => void;
+  readonly switchboards: ReactNode;
 };
 
 function AppBody({
@@ -275,6 +283,8 @@ function AppBody({
   onSwitchSet,
   onCreateSet,
   onDeleteSet,
+  onImport,
+  switchboards,
 }: AppBodyProps) {
   const entries = useManagedReactors();
   const entry = useManagedReactorEntry(selected ?? "");
@@ -308,6 +318,7 @@ function AppBody({
           onSwitch={onSwitchSet}
           setNames={setNames}
         />
+        <HostImportPanel onImport={onImport} />
         <ProvisionPanel
           entries={entries}
           onKill={onKill}
@@ -315,6 +326,7 @@ function AppBody({
           onSelect={onSelect}
           selected={selected}
         />
+        {switchboards}
       </div>
       <main className="reactor-monitor__main">
         <nav aria-label="Views" className="reactor-monitor__tabs">
@@ -422,6 +434,12 @@ export function App({
     store.getActiveDescriptors().map(rehydrateDescriptor),
   );
   const [selected, setSelected] = useState<string | undefined>();
+  const managed = useManagedDescriptors({
+    store,
+    descriptors,
+    setDescriptors,
+    onAttached: setSelected,
+  });
 
   const handleProvision = useCallback(
     (request: ProvisionRequest) => {
@@ -436,8 +454,10 @@ export function App({
     [buildDescriptor, store],
   );
 
+  const { kill: killManaged } = managed;
   const handleKill = useCallback(
     (name: string) => {
+      killManaged(name);
       setDescriptors((previous) => {
         const next = previous.filter((d) => d.name !== name);
         store.setActiveDescriptors(next);
@@ -445,7 +465,7 @@ export function App({
       });
       setSelected((current) => (current === name ? undefined : current));
     },
-    [store],
+    [store, killManaged],
   );
 
   const handleSwitchSet = useCallback(
@@ -477,13 +497,28 @@ export function App({
     [store],
   );
 
+  const handleImport = useCallback(
+    (request: HostImportRequest) => {
+      const name = store.importSet(
+        request.setName,
+        request.descriptors,
+        request.source,
+      );
+      setSetNames(store.listSetNames());
+      if (request.activate) {
+        handleSwitchSet(name);
+      }
+    },
+    [store, handleSwitchSet],
+  );
+
   return (
     <div className="reactor-monitor">
       <header className="reactor-monitor__header">
         <h1>Reactor Monitor</h1>
       </header>
       <ReactorMonitorProvider
-        descriptors={descriptors}
+        descriptors={managed.visible}
         onError={(error, descriptor) =>
           console.error(
             `[reactor-monitor] failed to provision "${descriptor.name}":`,
@@ -495,12 +530,19 @@ export function App({
           activeSetName={activeSetName}
           onCreateSet={handleCreateSet}
           onDeleteSet={handleDeleteSet}
+          onImport={handleImport}
           onKill={handleKill}
           onProvision={handleProvision}
           onSelect={setSelected}
           onSwitchSet={handleSwitchSet}
           selected={selected}
           setNames={setNames}
+          switchboards={
+            <SwitchboardsPanel
+              managed={managed}
+              source={store.getSetSource(activeSetName)}
+            />
+          }
         />
       </ReactorMonitorProvider>
     </div>

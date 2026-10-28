@@ -22,13 +22,25 @@ export {
 export { warnOnce } from "./src/client/deprecations.js";
 export {
   DriveReadClient,
+  toLegacyNode,
   type DriveReadDeps,
 } from "./src/client/drive-read-client.js";
 export {
   DriveWriteClient,
   type DriveWriteHalf,
   type DriveWriteReads,
+  type DriveWriteStrategies,
 } from "./src/client/drive-write-client.js";
+export type {
+  DriveClientOptions,
+  DriveNodeKind,
+  DriveNodePage,
+  DriveNodeRecord,
+  DriveWriteStrategyContext,
+  DriveWriteStrategyFactory,
+  IDriveNodeSource,
+  IDriveWriteStrategy,
+} from "./src/client/drive-nodes.js";
 export {
   buildCreateJobs,
   createEmptyDocument,
@@ -76,7 +88,10 @@ export {
   type ActionCandidate,
   type ActionEvaluations,
   type CreateDocumentOptions,
+  type NewDocumentOptions,
+  type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
+  type CopyNodeOptions,
   type IDriveClient,
   type IDriveReadClient,
   type IDriveWriteClient,

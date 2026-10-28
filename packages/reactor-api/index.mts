@@ -1,3 +1,4 @@
+export * from "./src/api-config.js";
 export * from "./src/graphql/index.js";
 export * from "./src/graphql/errors.js";
 export * from "./src/http/index.js";

@@ -76,6 +76,32 @@ export class BatchJobFailedError extends Error {
   }
 }
 
+/** A validation error naming root field `field` unknown: a host from before it. */
+export function queriesUnknownField(error: unknown, field: string): boolean {
+  return hasErrorStarting(error, `Cannot query field "${field}" on type "`);
+}
+
+/** A validation error naming `argument` unknown: a host from before it. */
+export function queriesUnknownArgument(
+  error: unknown,
+  argument: string,
+): boolean {
+  return hasErrorStarting(error, `Unknown argument "${argument}" on field "`);
+}
+
+function hasErrorStarting(error: unknown, prefix: string): boolean {
+  const errors = (error as { response?: { errors?: unknown } } | null)?.response
+    ?.errors;
+  if (!Array.isArray(errors)) {
+    return false;
+  }
+  return errors.some(
+    (entry) =>
+      typeof (entry as { message?: unknown } | null)?.message === "string" &&
+      (entry as { message: string }).message.startsWith(prefix),
+  );
+}
+
 /**
  * The reactor's `JobFailedError`, rebuilt from a job the Switchboard reported
  * FAILED; this entry imports the reactor for types only. A write handle's

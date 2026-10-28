@@ -20,7 +20,7 @@ export const documentModel: DocumentModelGlobalState = {
         },
         global: {
           schema:
-            '"""\nConfiguration for a processor contributed by the package. A processor receives\noperations from documents of matching types and runs server-side logic (e.g.\nbuilding a read model, indexing, syncing to an external system).\n"""\ntype ProcessorModuleState {\n  """Display name of the processor. Also determines the generated folder name under `processors/`."""\n  name: String!\n  """Processor implementation kind (e.g. \'read-model\', \'relational-db\'). Determines which scaffold codegen emits."""\n  type: String!\n  """Document types this processor subscribes to. Each entry has a stable id so it can be removed individually."""\n  documentTypes: [DocumentTypeItem!]!\n  """Lifecycle status. While DRAFT the processor definition is editable and codegen is skipped; switching to CONFIRMED triggers scaffold generation."""\n  status: StatusType!\n  """Drive-app names this processor is attached to. The processor runs in the context of each listed app."""\n  processorApps: [String!]!\n}\n\n"""A document type id (e.g. \'my-org/invoice\') attached to the processor with a stable entry id."""\ntype DocumentTypeItem {\n  """Stable identifier for the entry; used to remove it."""\n  id: OID!\n  """Document type id this processor subscribes to."""\n  documentType: String!\n}\n\n"""\nLifecycle status of a module definition.\n- DRAFT: still being edited; codegen does not run.\n- CONFIRMED: locked in; codegen produces the corresponding scaffold.\n"""\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}',
+            '"""\nConfiguration for a processor contributed by the package. A processor receives\noperations from documents of matching types and runs server-side logic (e.g.\nbuilding a read model, indexing, syncing to an external system).\n"""\ntype ProcessorModuleState {\n  """Display name of the processor. Also determines the generated folder name under `processors/`."""\n  name: String!\n  """Processor implementation kind: `analytics` or `relational`. Determines which scaffold codegen emits; codegen generates nothing for any other value."""\n  type: String!\n  """Document types this processor subscribes to. Each entry has a stable id so it can be removed individually."""\n  documentTypes: [DocumentTypeItem!]!\n  """Lifecycle status. While DRAFT the processor definition is editable and codegen is skipped; switching to CONFIRMED triggers scaffold generation."""\n  status: StatusType!\n  """Drive-app names this processor is attached to. The processor runs in the context of each listed app."""\n  processorApps: [String!]!\n}\n\n"""A document type id (e.g. \'my-org/invoice\') attached to the processor with a stable entry id."""\ntype DocumentTypeItem {\n  """Stable identifier for the entry; used to remove it."""\n  id: OID!\n  """Document type id this processor subscribes to."""\n  documentType: String!\n}\n\n"""\nLifecycle status of a module definition.\n- DRAFT: still being edited; codegen does not run.\n- CONFIRMED: locked in; codegen produces the corresponding scaffold.\n"""\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}',
           examples: [],
           initialValue:
             '{\n  "name": "",\n  "type": "",\n  "documentTypes": [],\n  "status": "DRAFT",\n "processorApps": []\n}',
@@ -49,11 +49,20 @@ export const documentModel: DocumentModelGlobalState = {
               id: "b8f28bb4-c6ae-40e6-86fa-29ef14ff8667",
               name: "SET_PROCESSOR_TYPE",
               description:
-                "Set the processor implementation kind (e.g. 'read-model', 'relational-db'). Determines which scaffold codegen emits.",
+                "Set the processor implementation kind: `analytics` or `relational`. Determines which scaffold codegen emits. Any other value is rejected with UnsupportedProcessorTypeError.",
               schema: "input SetProcessorTypeInput {\n  type: String!\n}",
               template: "",
               reducer: "",
-              errors: [],
+              errors: [
+                {
+                  id: "ac9b9586-e2d5-4676-8c06-22890adcc2fd",
+                  name: "UnsupportedProcessorTypeError",
+                  code: "UNSUPPORTED_PROCESSOR_TYPE",
+                  description:
+                    "The processor type is not `analytics` or `relational`, the kinds codegen can generate.",
+                  template: "",
+                },
+              ],
               examples: [],
               scope: "global",
             },

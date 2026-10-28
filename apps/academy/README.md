@@ -8,29 +8,13 @@ To contribute, edit the MDX under `docs/academy/` on a branch and open a PR agai
 
 ## 🤖 LLM-Optimized Documentation
 
-The academy includes automated generation of LLM-friendly documentation:
+`pnpm build` generates `static/llms.txt` and `static/llms-full.txt` from `docs/`. The site serves them at https://academy.vetra.io/llms.txt and https://academy.vetra.io/llms-full.txt.
+
+The files are gitignored and not committed. To produce them locally, for example to inspect them or before `pnpm dev` (which does not generate them), run:
 
 ```bash
-# Generate comprehensive markdown for AI systems
-pnpm run generate:llm-docs
+pnpm generate:llm-docs
 ```
-
-This creates `ACADEMY_LLM_COMPLETE.md` - a single, structured file containing all documentation optimized for:
-
-- RAG systems and vector databases
-- LLM training and fine-tuning
-- AI-powered documentation analysis
-- Automated support systems
-
-**Features:**
-
-- 📊 95+ documents combined into one file (1.1MB)
-- 🔗 Internal linking with semantic anchors
-- 📚 Category-based organization following site structure
-- 🎯 LLM-optimized formatting (enhanced headers, code blocks, cross-references)
-- ⚡ Up to 35% better RAG retrieval accuracy vs unstructured docs
-
-**Auto-regeneration:** The LLM documentation is automatically regenerated via git pre-commit hooks when any `.md` file in `apps/academy/docs/` is modified and committed.
 
 ### Installation
 

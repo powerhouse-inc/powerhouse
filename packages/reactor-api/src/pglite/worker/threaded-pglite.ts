@@ -5,6 +5,7 @@ import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { Worker, type ResourceLimits } from "node:worker_threads";
 import type { PGliteLike } from "../pglite-like.js";
+import { disableWasmWrapperTiering } from "../wasm-wrapper-tiering.js";
 import { fromPGliteErrorInfo } from "./error-info.js";
 import {
   PGliteWorkerClosedError,
@@ -116,6 +117,7 @@ export class ThreadedPGlite implements PGliteLike {
         "No PGlite worker script is available: build @powerhousedao/reactor-api or pass workerScript",
       );
     }
+    disableWasmWrapperTiering();
     this.worker = new Worker(workerScript, {
       name: `pglite:${this.label}`,
       resourceLimits: { maxOldGenerationSizeMb: memoryLimitMb },

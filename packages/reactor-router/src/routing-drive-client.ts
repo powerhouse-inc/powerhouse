@@ -1,6 +1,7 @@
 import {
   DriveClient,
   DriveClientFacade,
+  type CopyNodeOptions,
   type IDriveReadClient,
   type IDriveWriteClient,
   type NodeWriteHandle,
@@ -48,9 +49,10 @@ class FacadeDriveClient extends DriveClient {
 }
 
 /**
- * Each backend's drive halves: the backend's own `read.drives` and
- * `write.drives` when it has client halves, otherwise the drive client over
- * its facade members, built once on first use.
+ * Each backend's drive halves. Reads use the backend's `drives` node reads,
+ * else its `read.drives`; writes its `write.drives`. Without those, the drive
+ * client over its facade members, built once on first use, which reads nodes
+ * from the drive document's state.
  */
 export class BackendDrives {
   private readonly facades = new Map<string, FacadeDriveClient>();
@@ -61,7 +63,11 @@ export class BackendDrives {
   ) {}
 
   readOn(backend: RouterBackend): IDriveReadClient {
-    return backend.api.read?.drives ?? this.facadeOf(backend).readHalf;
+    return (
+      backend.api.drives ??
+      backend.api.read?.drives ??
+      this.facadeOf(backend).readHalf
+    );
   }
 
   writeOn(backend: RouterBackend): IDriveWriteClient {
@@ -106,7 +112,7 @@ export class RoutingDriveReadClient implements IDriveReadClient {
     );
   }
 
-  /** Read from the drive's own backend: its nodes live in that drive's state. */
+  /** Read from the drive's own backend, which holds that drive's nodes. */
   listNodes(
     driveIdentifier: string,
     parentFolder?: string | null,
@@ -255,9 +261,16 @@ export class RoutingDriveWriteClient implements IDriveWriteClient {
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<WriteHandle> {
     return this.onDrive("drives.copyNode", driveIdentifier, (drives) =>
-      drives.copyNode(driveIdentifier, srcNodeId, targetParentFolderId, signal),
+      drives.copyNode(
+        driveIdentifier,
+        srcNodeId,
+        targetParentFolderId,
+        signal,
+        options,
+      ),
     );
   }
 

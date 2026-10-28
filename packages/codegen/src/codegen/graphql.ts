@@ -9,6 +9,7 @@ import type { ValidationSchemaPluginConfig } from "graphql-codegen-typescript-va
 import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { formatFileText } from "utils";
 import { format as oxfmtFormat } from "oxfmt";
 import {
   getProjectScalarNames,
@@ -253,5 +254,8 @@ export async function generateDocumentModelZodSchemas(
     },
   });
 
-  await fs.writeFile(path.join(versionDirPath, "schema.graphql"), schema);
+  await fs.writeFile(
+    path.join(versionDirPath, "schema.graphql"),
+    await formatFileText("schema.graphql", schema),
+  );
 }

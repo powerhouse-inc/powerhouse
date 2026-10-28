@@ -127,6 +127,28 @@ describe("ph host check", () => {
     expect(projectEnv.output).toMatch(/REACTOR_WORKERS/);
   });
 
+  it("puts the project .env under reactor.protocol, as ph run does", async () => {
+    const dir = makeProject({
+      switchboard: switchboard({
+        ...pglite,
+        protocol: { featureFlags: { authEnforcement: true } },
+      }),
+    });
+    writeFileSync(path.join(dir, ".env"), "REACTOR_AUTH_ENFORCEMENT=false\n");
+    try {
+      const result = await runHostCheck({
+        host: "switchboard",
+        projectRoot: dir,
+      });
+      expect(result).toEqual({
+        output: "hosts/switchboard/host.js: ok",
+        exitCode: 0,
+      });
+    } finally {
+      delete process.env.REACTOR_AUTH_ENFORCEMENT;
+    }
+  });
+
   it("prints declared issues under their host file", async () => {
     const dir = makeProject({
       switchboard: switchboard(),

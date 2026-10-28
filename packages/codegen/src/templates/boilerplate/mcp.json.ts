@@ -1,24 +1,13 @@
-import { DEFAULT_SWITCHBOARD_PORT } from "@powerhousedao/shared/clis/constants";
-import { json } from "@tmpl/core";
+/** `ph mcp` through the project's `mcp` script: node needs no `cmd /c` on
+ * Windows, as npx does, and finds package.json from a subfolder. */
+export const reactorMcpServer = {
+  type: "stdio",
+  command: "node",
+  args: ["--run", "mcp"],
+};
 
-/**
- * Render `.mcp.json` for a project whose switchboard listens on `port`.
- *
- * The port is a literal rather than an env reference on purpose: an MCP
- * client resolves this file at session start and cannot read `.env` or
- * `powerhouse.config.json`. `ph vetra` reconciles the literal if an override
- * moves the port.
- */
-export const buildMcpTemplate = (port: number) =>
-  json`
-{
-  "mcpServers": {
-    "reactor-mcp": {
-      "type": "http",
-      "url": "http://localhost:${String(port)}/mcp"
-    }
-  }
-}
-`.raw;
-
-export const mcpTemplate = buildMcpTemplate(DEFAULT_SWITCHBOARD_PORT);
+export const mcpTemplate = `${JSON.stringify(
+  { mcpServers: { "reactor-mcp": reactorMcpServer } },
+  null,
+  2,
+)}\n`;

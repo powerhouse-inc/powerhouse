@@ -1,14 +1,19 @@
 export {
   createDurableNodeFs,
   resolvePgliteFsync,
+  resolvePgliteMaintenance,
   type DurableNodeFs,
   type DurableNodeFsOptions,
   type NodeFsClass,
+  type PgliteMaintenanceSettings,
+  type PgliteVacuumFullMode,
 } from "./durable-node-fs.js";
 export {
   DEFAULT_MAINTENANCE_INTERVAL_MS,
   DEFAULT_VACUUM_FULL_ABOVE_BYTES,
+  DEFAULT_VACUUM_FULL_MAX_DEFER_MS,
   DEFAULT_VACUUM_FULL_QUIET_MS,
+  FORCED_VACUUM_FULL_MAX_DEFER_MS,
   PgliteMaintenance,
   type MaintenanceGate,
   type MaintenanceLogger,
@@ -41,5 +46,9 @@ export {
   removeStalePgliteFiles,
 } from "./preflight.js";
 export { PGLITE_UTC_PARSERS } from "./parsers.js";
+export {
+  disableWasmWrapperTiering,
+  WASM_WRAPPER_TIERING_FLAG,
+} from "./wasm-wrapper-tiering.js";
 export * from "./worker/index.js";
 export type { PGliteLike } from "./pglite-like.js";

@@ -54,6 +54,7 @@ export const WORKSPACE_PUBLISH_PACKAGES = [
   "@powerhousedao/connect-core",
   "@powerhousedao/clint",
   "@powerhousedao/desktop",
+  "@powerhousedao/portle",
 ] as const;
 
 export interface PublishWorkspaceOptions {

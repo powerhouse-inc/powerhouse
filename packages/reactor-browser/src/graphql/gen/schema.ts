@@ -157,6 +157,14 @@ export type ConsistencyCoordinate = {
   readonly scope: Scalars["String"]["output"];
 };
 
+/** A consistency token's coordinate, as ConsistencyCoordinate reports it. */
+export type ConsistencyCoordinateInput = {
+  readonly branch: Scalars["String"]["input"];
+  readonly documentId: Scalars["String"]["input"];
+  readonly operationIndex: Scalars["Int"]["input"];
+  readonly scope: Scalars["String"]["input"];
+};
+
 /**
  * The write positions a job reached, for read-after-write. Only meaningful once
  * the job has completed.
@@ -165,6 +173,16 @@ export type ConsistencyToken = {
   readonly coordinates: ReadonlyArray<ConsistencyCoordinate>;
   readonly createdAtUtcIso: Scalars["String"]["output"];
   readonly version: Scalars["Int"]["output"];
+};
+
+/**
+ * A consistency token, as JobInfo.consistencyToken reports it. A read given one
+ * waits until the read models it reads from hold every coordinate it names.
+ */
+export type ConsistencyTokenInput = {
+  readonly coordinates: ReadonlyArray<ConsistencyCoordinateInput>;
+  readonly createdAtUtcIso: Scalars["String"]["input"];
+  readonly version: Scalars["Int"]["input"];
 };
 
 export type CreateDefaults = {
@@ -251,6 +269,34 @@ export type DocumentRelationshipResultPage = {
 export type DocumentWithChildren = {
   readonly childIds: ReadonlyArray<Scalars["String"]["output"]>;
   readonly document: PhDocument;
+};
+
+export type DriveFileNode = {
+  readonly documentType: Scalars["String"]["output"];
+  readonly driveId: Scalars["ID"]["output"];
+  readonly id: Scalars["ID"]["output"];
+  readonly name: Scalars["String"]["output"];
+  readonly parentFolder?: Maybe<Scalars["ID"]["output"]>;
+};
+
+export type DriveFolderNode = {
+  readonly driveId: Scalars["ID"]["output"];
+  readonly id: Scalars["ID"]["output"];
+  readonly name: Scalars["String"]["output"];
+  readonly parentFolder?: Maybe<Scalars["ID"]["output"]>;
+};
+
+export type DriveNode = DriveFileNode | DriveFolderNode;
+
+export enum DriveNodeKind {
+  File = "FILE",
+  Folder = "FOLDER",
+}
+
+export type DriveNodePage = {
+  readonly hasMore: Scalars["Boolean"]["output"];
+  readonly nextCursor?: Maybe<Scalars["String"]["output"]>;
+  readonly results: ReadonlyArray<DriveNode>;
 };
 
 /**
@@ -624,6 +670,9 @@ export type Query = {
   readonly documentOutgoingRelationshipEdges: DocumentRelationshipResultPage;
   readonly documentOutgoingRelationships: PhDocumentResultPage;
   readonly documentServed: Scalars["Boolean"]["output"];
+  readonly driveDescendants: ReadonlyArray<DriveNode>;
+  readonly driveNode?: Maybe<DriveNode>;
+  readonly driveNodes: DriveNodePage;
   /**
    * Predicts whether the calling subject would be admitted to execute each of a
    * set of candidate operations, without submitting any of them. A UI asks this to
@@ -671,16 +720,19 @@ export type Query = {
 };
 
 export type QueryCreateDefaultsArgs = {
+  documentType?: InputMaybe<Scalars["String"]["input"]>;
   parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type QueryDocumentArgs = {
+  consistency?: InputMaybe<ConsistencyTokenInput>;
   idOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   identifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
 export type QueryDocumentIncomingRelationshipEdgesArgs = {
+  consistency?: InputMaybe<ConsistencyTokenInput>;
   paging?: InputMaybe<PagingInput>;
   relationshipType?: InputMaybe<Scalars["String"]["input"]>;
   targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
@@ -689,6 +741,7 @@ export type QueryDocumentIncomingRelationshipEdgesArgs = {
 };
 
 export type QueryDocumentIncomingRelationshipsArgs = {
+  consistency?: InputMaybe<ConsistencyTokenInput>;
   paging?: InputMaybe<PagingInput>;
   relationshipType: Scalars["String"]["input"];
   targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
@@ -707,6 +760,7 @@ export type QueryDocumentOperationsArgs = {
 };
 
 export type QueryDocumentOutgoingRelationshipEdgesArgs = {
+  consistency?: InputMaybe<ConsistencyTokenInput>;
   paging?: InputMaybe<PagingInput>;
   relationshipType?: InputMaybe<Scalars["String"]["input"]>;
   sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
@@ -715,6 +769,7 @@ export type QueryDocumentOutgoingRelationshipEdgesArgs = {
 };
 
 export type QueryDocumentOutgoingRelationshipsArgs = {
+  consistency?: InputMaybe<ConsistencyTokenInput>;
   paging?: InputMaybe<PagingInput>;
   relationshipType: Scalars["String"]["input"];
   sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
@@ -727,6 +782,23 @@ export type QueryDocumentServedArgs = {
   view?: InputMaybe<ViewFilterInput>;
 };
 
+export type QueryDriveDescendantsArgs = {
+  driveId: Scalars["ID"]["input"];
+  root: Scalars["ID"]["input"];
+};
+
+export type QueryDriveNodeArgs = {
+  driveId: Scalars["ID"]["input"];
+  id: Scalars["ID"]["input"];
+};
+
+export type QueryDriveNodesArgs = {
+  driveId: Scalars["ID"]["input"];
+  kind?: InputMaybe<DriveNodeKind>;
+  paging?: InputMaybe<PagingInput>;
+  parentFolder?: InputMaybe<Scalars["ID"]["input"]>;
+};
+
 export type QueryEvaluateActionsArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   candidates: ReadonlyArray<ActionCandidateInput>;
@@ -735,6 +807,7 @@ export type QueryEvaluateActionsArgs = {
 };
 
 export type QueryFindDocumentsArgs = {
+  consistency?: InputMaybe<ConsistencyTokenInput>;
   paging?: InputMaybe<PagingInput>;
   search?: InputMaybe<SearchFilterInput>;
   view?: InputMaybe<ViewFilterInput>;
@@ -1339,6 +1412,110 @@ export type GetCreateDefaultsQuery = {
   };
 };
 
+export type GetCreateProtocolVersionsQueryVariables = Exact<{
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentType: Scalars["String"]["input"];
+}>;
+
+export type GetCreateProtocolVersionsQuery = {
+  readonly createDefaults: { readonly protocolVersions: NonNullable<unknown> };
+};
+
+type DriveNodeFields_DriveFileNode_Fragment = {
+  readonly id: string;
+  readonly driveId: string;
+  readonly name: string;
+  readonly parentFolder?: string | null | undefined;
+  readonly documentType: string;
+};
+
+type DriveNodeFields_DriveFolderNode_Fragment = {
+  readonly id: string;
+  readonly driveId: string;
+  readonly name: string;
+  readonly parentFolder?: string | null | undefined;
+};
+
+export type DriveNodeFieldsFragment =
+  | DriveNodeFields_DriveFileNode_Fragment
+  | DriveNodeFields_DriveFolderNode_Fragment;
+
+export type GetDriveNodesQueryVariables = Exact<{
+  driveId: Scalars["ID"]["input"];
+  parentFolder?: InputMaybe<Scalars["ID"]["input"]>;
+  paging?: InputMaybe<PagingInput>;
+  kind?: InputMaybe<DriveNodeKind>;
+}>;
+
+export type GetDriveNodesQuery = {
+  readonly driveNodes: {
+    readonly nextCursor?: string | null | undefined;
+    readonly hasMore: boolean;
+    readonly results: ReadonlyArray<
+      | {
+          readonly id: string;
+          readonly driveId: string;
+          readonly name: string;
+          readonly parentFolder?: string | null | undefined;
+          readonly documentType: string;
+        }
+      | {
+          readonly id: string;
+          readonly driveId: string;
+          readonly name: string;
+          readonly parentFolder?: string | null | undefined;
+        }
+    >;
+  };
+};
+
+export type GetDriveNodeQueryVariables = Exact<{
+  driveId: Scalars["ID"]["input"];
+  id: Scalars["ID"]["input"];
+}>;
+
+export type GetDriveNodeQuery = {
+  readonly driveNode?:
+    | {
+        readonly id: string;
+        readonly driveId: string;
+        readonly name: string;
+        readonly parentFolder?: string | null | undefined;
+        readonly documentType: string;
+      }
+    | {
+        readonly id: string;
+        readonly driveId: string;
+        readonly name: string;
+        readonly parentFolder?: string | null | undefined;
+      }
+    | null
+    | undefined;
+};
+
+export type GetDriveDescendantsQueryVariables = Exact<{
+  driveId: Scalars["ID"]["input"];
+  root: Scalars["ID"]["input"];
+}>;
+
+export type GetDriveDescendantsQuery = {
+  readonly driveDescendants: ReadonlyArray<
+    | {
+        readonly id: string;
+        readonly driveId: string;
+        readonly name: string;
+        readonly parentFolder?: string | null | undefined;
+        readonly documentType: string;
+      }
+    | {
+        readonly id: string;
+        readonly driveId: string;
+        readonly name: string;
+        readonly parentFolder?: string | null | undefined;
+      }
+  >;
+};
+
 export type EvaluateActionsQueryVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
   branch?: InputMaybe<Scalars["String"]["input"]>;
@@ -1883,6 +2060,23 @@ export const JobInfoFieldsFragmentDoc = gql`
     }
   }
 `;
+export const DriveNodeFieldsFragmentDoc = gql`
+  fragment DriveNodeFields on DriveNode {
+    ... on DriveFileNode {
+      id
+      driveId
+      name
+      parentFolder
+      documentType
+    }
+    ... on DriveFolderNode {
+      id
+      driveId
+      name
+      parentFolder
+    }
+  }
+`;
 export const GetDocumentModelsDocument = gql`
   query GetDocumentModels($namespace: String, $paging: PagingInput) {
     documentModels(namespace: $namespace, paging: $paging) {
@@ -2132,6 +2326,57 @@ export const GetCreateDefaultsDocument = gql`
       protocolVersions
     }
   }
+`;
+export const GetCreateProtocolVersionsDocument = gql`
+  query GetCreateProtocolVersions(
+    $parentIdOrSlug: String
+    $documentType: String!
+  ) {
+    createDefaults(
+      parentIdOrSlug: $parentIdOrSlug
+      documentType: $documentType
+    ) {
+      protocolVersions
+    }
+  }
+`;
+export const GetDriveNodesDocument = gql`
+  query GetDriveNodes(
+    $driveId: ID!
+    $parentFolder: ID
+    $paging: PagingInput
+    $kind: DriveNodeKind
+  ) {
+    driveNodes(
+      driveId: $driveId
+      parentFolder: $parentFolder
+      paging: $paging
+      kind: $kind
+    ) {
+      results {
+        ...DriveNodeFields
+      }
+      nextCursor
+      hasMore
+    }
+  }
+  ${DriveNodeFieldsFragmentDoc}
+`;
+export const GetDriveNodeDocument = gql`
+  query GetDriveNode($driveId: ID!, $id: ID!) {
+    driveNode(driveId: $driveId, id: $id) {
+      ...DriveNodeFields
+    }
+  }
+  ${DriveNodeFieldsFragmentDoc}
+`;
+export const GetDriveDescendantsDocument = gql`
+  query GetDriveDescendants($driveId: ID!, $root: ID!) {
+    driveDescendants(driveId: $driveId, root: $root) {
+      ...DriveNodeFields
+    }
+  }
+  ${DriveNodeFieldsFragmentDoc}
 `;
 export const EvaluateActionsDocument = gql`
   query EvaluateActions(
@@ -2708,6 +2953,78 @@ export function getSdk(
             signal,
           }),
         "GetCreateDefaults",
+        "query",
+        variables,
+      );
+    },
+    GetCreateProtocolVersions(
+      variables: GetCreateProtocolVersionsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetCreateProtocolVersionsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetCreateProtocolVersionsQuery>({
+            document: GetCreateProtocolVersionsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetCreateProtocolVersions",
+        "query",
+        variables,
+      );
+    },
+    GetDriveNodes(
+      variables: GetDriveNodesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetDriveNodesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDriveNodesQuery>({
+            document: GetDriveNodesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDriveNodes",
+        "query",
+        variables,
+      );
+    },
+    GetDriveNode(
+      variables: GetDriveNodeQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetDriveNodeQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDriveNodeQuery>({
+            document: GetDriveNodeDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDriveNode",
+        "query",
+        variables,
+      );
+    },
+    GetDriveDescendants(
+      variables: GetDriveDescendantsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetDriveDescendantsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDriveDescendantsQuery>({
+            document: GetDriveDescendantsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDriveDescendants",
         "query",
         variables,
       );

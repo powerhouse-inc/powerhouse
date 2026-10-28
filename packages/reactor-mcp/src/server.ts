@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type { AuthSubject } from "@powerhousedao/shared/document-model";
+import type { CodegenStatusRegistry } from "@powerhousedao/shared/processors";
 import { createReactorMcpProvider } from "./tools/reactor.js";
 
 export interface CreateServerOptions {
@@ -8,6 +9,8 @@ export interface CreateServerOptions {
   syncManager?: ISyncManager;
   /** Who the tools read as; omitted, the client's signer. */
   subject?: AuthSubject;
+  /** Vetra's codegen status; the process's registry by default. */
+  codegenStatus?: CodegenStatusRegistry;
 }
 
 export const ReactorMcpInstructions = `MUST BE USED when handling documents or document-models for the Powerhouse/Vetra ecosystem.
@@ -19,6 +22,8 @@ There are 5 main concepts to know of:
 - Operation: A change done to a document. It contains the action object plus additional metadata such as the index of the operation in the document history, the timestamp it was added, the hash of the resulting document data, the number of operations skipped, and the error message if the operation failed. Actions dispatched with "addActions" get converted into an operation.
 
 When planning to add multiple actions to a document, try to reduce the number of "addActions" calls to a minimum by adding multiple actions at once.
+"addActions" returns one result per action. When "success" is false, the results with an "error" say which actions were not applied and why.
+In Vetra, a change to a document model, editor, app, processor, subgraph or package document makes Vetra generate code from it a few seconds later; "getCodegenStatus" says when that is done, and why it failed or was skipped.
 Unless the user specifies otherwise, and a drive with slug "vetra" is available, create new documents inside it by passing its ID as the "driveId" parameter to "createDocument".
 
 Examples:
@@ -29,7 +34,7 @@ Examples:
 export async function createServer(
   options: CreateServerOptions,
 ): Promise<McpServer> {
-  const { client, syncManager, subject } = options;
+  const { client, syncManager, subject, codegenStatus } = options;
   const server = new McpServer(
     {
       name: "reactor-mcp-server",
@@ -72,6 +77,7 @@ export async function createServer(
     client,
     syncManager,
     subject,
+    codegenStatus,
   });
 
   // const { callback, ...toolSchema } = reactorProvider.tools.getDocumentModels;

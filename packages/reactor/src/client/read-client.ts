@@ -4,15 +4,12 @@ import type {
   PHDocument,
   ProtocolVersions,
   SignaturePolicy,
-  Supports,
 } from "@powerhousedao/shared/document-model";
 import {
   normalizeDocumentModelVersion,
-  selectProtocolVersions,
   UnsupportedDocumentModelVersionError,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
-import { DriveCollectionId } from "../cache/operation-index-types.js";
 import type { IReactor } from "../core/types.js";
 import { assertAbsent } from "../decision/read-gate.js";
 import type { IJobAwaiter } from "../shared/awaiter.js";
@@ -37,16 +34,22 @@ import {
   encodeCompositeCursor,
   isCompositeCursor,
 } from "./cursor.js";
+import { CreateProtocolSelector } from "./create-protocol.js";
+import {
+  createEmptyDocument,
+  selectDocumentModelModule,
+} from "./derivations.js";
 import { DriveReadClient } from "./drive-read-client.js";
 import { type EventReads, EventReadsSource } from "./event-reads.js";
 import { ReadGating } from "./internal/gating.js";
 import type { ReactorClientParts } from "./internal/parts.js";
 import {
   DocumentChangeType,
+  type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type IDriveReadClient,
   type IReactorReadClient,
-  type ProtocolSelection,
+  type NewDocumentOptions,
 } from "./types.js";
 import { withAllScopes, withAuthScope } from "./util.js";
 
@@ -67,7 +70,8 @@ export class ReactorReadClient implements IReactorReadClient {
   private readonly gating: ReadGating;
   private readonly eventReads: EventReadsSource;
   private readonly createSignaturePolicy: SignaturePolicy;
-  private readonly protocolSelection: ProtocolSelection;
+  /** Where this client chooses a new document's versions; the write half shares it. */
+  readonly createProtocol: CreateProtocolSelector;
 
   constructor(parts: ReactorClientParts) {
     this.logger = parts.logger;
@@ -88,8 +92,16 @@ export class ReactorReadClient implements IReactorReadClient {
       parts.readGate,
     );
     this.createSignaturePolicy = parts.createSignaturePolicy;
-    this.protocolSelection = parts.protocolSelection;
-    this.drives = new DriveReadClient(this, parts.logger);
+    this.createProtocol = new CreateProtocolSelector({
+      selection: parts.protocolSelection,
+      resolveParent: (identifier, signal) =>
+        this.resolveIdOrSlug(identifier, undefined, signal),
+      modules: async (documentType, signal) =>
+        (await parts.reactor.getDocumentModels(documentType, undefined, signal))
+          .results,
+      logger: parts.logger,
+    });
+    this.drives = new DriveReadClient(this, parts.logger, parts.drives.nodes);
   }
 
   async getDocumentModelModules(
@@ -522,34 +534,38 @@ export class ReactorReadClient implements IReactorReadClient {
     return Promise.resolve(this.createSignaturePolicy);
   }
 
-  async getCreateProtocolVersions(
-    parentIdentifier?: string,
+  getCreateProtocolVersions(
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    const { capabilities, flags, agreement, collectionsOf } =
-      this.protocolSelection;
-    let members: Supports[] = [];
-    if (parentIdentifier !== undefined && agreement) {
-      let parentId: string | undefined;
-      try {
-        parentId = await this.resolveIdOrSlug(
-          parentIdentifier,
-          undefined,
-          signal,
-        );
-      } catch {
-        parentId = undefined;
-      }
-      if (parentId !== undefined) {
-        const memberships = await collectionsOf([parentId]);
-        const collectionIds = [
-          ...(memberships[parentId] ?? []),
-          DriveCollectionId.forDrive(parentId).key,
-        ];
-        members = [...agreement().members(collectionIds).values()];
-      }
-    }
-    return selectProtocolVersions({ capabilities, flags, members });
+    return this.createProtocol.select(options, {}, signal);
+  }
+
+  async newDocument<TDocument extends PHDocument = PHDocument>(
+    documentType: string,
+    options?: NewDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const modulesResult = await this.reactor.getDocumentModels(
+      undefined,
+      undefined,
+      signal,
+    );
+    const module = selectDocumentModelModule(
+      modulesResult.results,
+      documentType,
+      options?.documentModelVersion,
+    );
+    const base = await this.getCreateProtocolVersions(
+      { documentType, parentIdentifier: options?.parentIdentifier },
+      signal,
+    );
+    return createEmptyDocument(
+      module,
+      options,
+      this.createSignaturePolicy,
+      base,
+    ) as TDocument;
   }
 
   async getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {

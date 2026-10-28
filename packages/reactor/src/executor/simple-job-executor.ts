@@ -826,16 +826,16 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     // Put here because a re-eval pass writes through the same db transaction.
-    const reevaluationError = await this.reevaluateIfCriteriaMet(
+    const reevaluation = await this.reevaluateIfCriteriaMet(
       { scope: job.scope, operations: actionResult.generatedOperations },
       executing,
     );
-    if (reevaluationError) {
+    if (reevaluation.error) {
       return {
         result: {
           job,
           success: false as const,
-          error: reevaluationError,
+          error: reevaluation.error,
           duration: Date.now() - startTime,
         },
       };
@@ -846,14 +846,22 @@ export class SimpleJobExecutor implements IJobExecutor {
       ...indexTxn.getMembershipInvalidations(),
     );
 
-    for (let i = 0; i < actionResult.operationsWithContext.length; i++) {
-      actionResult.operationsWithContext[i].context.ordinal = ordinals[i];
+    // The pass's rows follow the job's own in the index transaction.
+    const written = [
+      ...actionResult.operationsWithContext,
+      ...reevaluation.operationsWithContext,
+    ];
+    for (let i = 0; i < written.length; i++) {
+      written[i].context.ordinal = ordinals[i];
     }
     return this.committedOutcome(
       job,
       committed,
-      actionResult.operationsWithContext,
-      actionResult.generatedOperations,
+      written,
+      [
+        ...actionResult.generatedOperations,
+        ...reevaluation.operationsWithContext.map((owc) => owc.operation),
+      ],
       stores,
       startTime,
     );
@@ -2025,6 +2033,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
+    // The store keeps a reducer error's message only; its class and code stay
+    // in memory, for the job's result.
+    storedOperations = storedOperations.map((operation, position) =>
+      withReducerErrorIdentity(operation, operations[position]),
+    );
+
     const head = storedOperations[storedOperations.length - 1];
 
     last.updatedDocument.header.revision = {
@@ -2275,10 +2289,11 @@ export class SimpleJobExecutor implements IJobExecutor {
    * would overwrite the verdict every other replica computes for it.
    */
   private async positionByTimestamp(
-    job: Job,
+    submitted: Job,
     stores: ExecutionStores,
     signal?: AbortSignal,
   ): Promise<PositionedWrites> {
+    let job = submitted;
     const plain = (): PositionedWrites => ({
       writes: job.actions.map((action) => ({
         action,
@@ -2291,6 +2306,13 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (!this.featureFlags.documentDecisions || job.actions.length === 0) {
       return plain();
     }
+
+    job = {
+      ...job,
+      actions: [...job.actions].sort(
+        (a, b) => Date.parse(a.timestampUtcMs) - Date.parse(b.timestampUtcMs),
+      ),
+    };
 
     // Parsed, not compared as strings, here and below: a submitted timestamp
     // may carry second precision, and "…:00Z" sorts after "…:00.000Z"
@@ -2325,7 +2347,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         signal,
       );
       const violation = this.firstNonMonotonicTimestamp(
-        job.actions,
+        submitted.actions,
         newest,
         job.documentId,
         job.branch,
@@ -2621,9 +2643,10 @@ export class SimpleJobExecutor implements IJobExecutor {
   private async reevaluateIfCriteriaMet(
     criteria: EvaluationCriteria,
     executing: ExecutingJob,
-  ): Promise<Error | undefined> {
+  ): Promise<{ error?: Error; operationsWithContext: OperationWithContext[] }> {
+    const skipped = { operationsWithContext: [] };
     if (!this.featureFlags.documentDecisions) {
-      return undefined;
+      return skipped;
     }
 
     const { job, stores, signal } = executing;
@@ -2636,7 +2659,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         stream.query.branch === job.branch,
     );
     if (!inReadSet) {
-      return undefined;
+      return skipped;
     }
 
     const revisions = await stores.operationStore.getRevisions(
@@ -2650,11 +2673,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       (operation) => Date.parse(operation.timestampUtcMs) < latest,
     );
     if (!backdated) {
-      return undefined;
+      return skipped;
     }
 
-    const outcome = await this.reevaluateDocument(executing);
-    return outcome.error;
+    return this.reevaluateDocument(executing);
   }
 
   /**
@@ -3133,15 +3155,15 @@ export class SimpleJobExecutor implements IJobExecutor {
       stores.documentMetaCache.invalidate(job.documentId, job.branch);
     }
 
-    const reevaluationError = await this.reevaluateIfCriteriaMet(
+    const reevaluation = await this.reevaluateIfCriteriaMet(
       { scope, operations: result.generatedOperations },
       executing,
     );
-    if (reevaluationError) {
+    if (reevaluation.error) {
       return {
         job,
         success: false,
-        error: reevaluationError,
+        error: reevaluation.error,
         duration: Date.now() - startTime,
       };
     }
@@ -3149,8 +3171,14 @@ export class SimpleJobExecutor implements IJobExecutor {
     return {
       job,
       success: true,
-      operations: result.generatedOperations,
-      operationsWithContext: result.operationsWithContext,
+      operations: [
+        ...result.generatedOperations,
+        ...reevaluation.operationsWithContext.map((owc) => owc.operation),
+      ],
+      operationsWithContext: [
+        ...result.operationsWithContext,
+        ...reevaluation.operationsWithContext,
+      ],
       duration: Date.now() - startTime,
     };
   }
@@ -3235,6 +3263,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     // Held only in superseded rows: undone stays undone, rewound is re-applied.
     const undoneActionIds = new Set<string>();
+    const minIncomingTime = Date.parse(minIncomingTimestamp);
     let predecessorBound = minIncomingIndex;
     const rowsByActionId = new Map<string, Operation[]>();
     for (const op of conflictingOps) {
@@ -3266,14 +3295,20 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     const nonSupersededOps = conflictingOps.filter((op) => {
-      // A local op at an index below the incoming batch's lowest index with no
-      // overlapping action.id is a predecessor of the incoming ops, not a
-      // concurrent conflict. Including it would force a reshuffle that
-      // re-inserts identical history at new indices, which cascades when many
-      // ops share timestamps (bulk imports). Local ops whose action.id matches
-      // an incoming op are kept so dedup + reshuffle can remap them correctly
-      // (e.g. cross-reactor reshuffle rebroadcast).
-      if (op.index < predecessorBound && !incomingActionIds.has(op.action.id)) {
+      // A local op below the batch's lowest index with no overlapping
+      // action.id is a predecessor; reshuffling it would re-insert identical
+      // history, which cascades when many ops share a timestamp. With
+      // documentDecisions on, every replica places its own writes by
+      // timestamp, so a local op stamped after the batch's earliest op is
+      // concurrent whatever its index: the sender's indexes are its own.
+      // Local ops matching an incoming action.id stay so a rebroadcast can
+      // remap them.
+      if (
+        !incomingActionIds.has(op.action.id) &&
+        (!this.featureFlags.documentDecisions ||
+          Date.parse(op.timestampUtcMs) === minIncomingTime) &&
+        op.index < predecessorBound
+      ) {
         return false;
       }
       return liveOps.has(op);
@@ -3332,4 +3367,22 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
     return null;
   }
+}
+
+function withReducerErrorIdentity(
+  stored: Operation,
+  applied: Operation | undefined,
+): Operation {
+  if (
+    applied === undefined ||
+    stored.error === undefined ||
+    (applied.errorName === undefined && applied.errorCode === undefined)
+  ) {
+    return stored;
+  }
+  return {
+    ...stored,
+    ...(applied.errorName !== undefined && { errorName: applied.errorName }),
+    ...(applied.errorCode !== undefined && { errorCode: applied.errorCode }),
+  };
 }

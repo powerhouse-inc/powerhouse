@@ -41,6 +41,7 @@ import type {
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import { warnOnce } from "./deprecations.js";
 import { DriveClientFacade } from "./drive-client.js";
+import type { DriveClientOptions } from "./drive-nodes.js";
 import type { ActionEvaluationConfig } from "./internal/evaluation.js";
 import type { ReactorClientParts } from "./internal/parts.js";
 import type { WriteSideParts } from "./internal/targets.js";
@@ -48,10 +49,11 @@ import { ReactorReadClient } from "./read-client.js";
 import type {
   ActionCandidate,
   ActionEvaluations,
-  CreateDocumentOptions,
+  CreateProtocolVersionsOptions,
   DocumentChangeEvent,
   IDriveClient,
   IReactorClient,
+  NewDocumentOptions,
   ProtocolSelection,
   UpgradeDocumentOptions,
 } from "./types.js";
@@ -128,6 +130,7 @@ export class ReactorClient implements IReactorClient {
       collectionsOf: () => Promise.resolve({}),
     },
     writeSide?: WriteSideParts,
+    drives: DriveClientOptions = { strategies: new Map() },
   ) {
     const parts: ReactorClientParts = {
       logger,
@@ -142,6 +145,7 @@ export class ReactorClient implements IReactorClient {
       createSignaturePolicy,
       protocolSelection,
       writeSide,
+      drives,
     };
     this.logger = logger;
     this.reactor = reactor;
@@ -342,10 +346,18 @@ export class ReactorClient implements IReactorClient {
   }
 
   getCreateProtocolVersions(
-    parentIdentifier?: string,
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    return this.read.getCreateProtocolVersions(parentIdentifier, signal);
+    return this.read.getCreateProtocolVersions(options, signal);
+  }
+
+  newDocument<TDocument extends PHDocument = PHDocument>(
+    documentType: string,
+    options?: NewDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.read.newDocument<TDocument>(documentType, options, signal);
   }
 
   /**
@@ -379,7 +391,7 @@ export class ReactorClient implements IReactorClient {
    */
   async createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
     warnOnce(
@@ -397,7 +409,7 @@ export class ReactorClient implements IReactorClient {
 
   async createEmptyAsync(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
     this.logger.verbose(
@@ -405,7 +417,7 @@ export class ReactorClient implements IReactorClient {
       documentModelType,
       options,
     );
-    const document = await this.write.emptyDocument(
+    const document = await this.read.newDocument(
       documentModelType,
       options,
       signal,

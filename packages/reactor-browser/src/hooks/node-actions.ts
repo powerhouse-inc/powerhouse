@@ -7,6 +7,7 @@ import {
   renameDriveNode,
   renameNode,
 } from "../actions/document.js";
+import { getDriveNode } from "./drive-nodes.js";
 import { useDrives } from "./drives.js";
 import { useFolderById } from "./folder-by-id.js";
 import { useSelectedDriveSafe } from "./selected-drive.js";
@@ -139,16 +140,20 @@ export function useNodeActions() {
   ): Promise<void> {
     if (!drives) return;
 
-    // Find all drives that contain this node
-    const drivesWithNode = drives.filter((drive) =>
-      drive.state.global.nodes.some((n) => n.id === nodeId),
+    const holders = await Promise.all(
+      drives.map(async (drive) => {
+        const node = await getDriveNode(drive.header.id, nodeId).catch(
+          () => undefined,
+        );
+        return node ? drive.header.id : undefined;
+      }),
     );
 
     // Update node name in all parent drives
     await Promise.all(
-      drivesWithNode.map((drive) =>
-        renameDriveNode(drive.header.id, nodeId, newName),
-      ),
+      holders
+        .filter((driveId) => driveId !== undefined)
+        .map((driveId) => renameDriveNode(driveId, nodeId, newName)),
     );
   }
 

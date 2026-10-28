@@ -1,4 +1,7 @@
-import { documentModelDocumentModelModule } from "document-model";
+import {
+  documentModelDocumentModelModule,
+  generateActionId,
+} from "document-model";
 import { randomUUID } from "node:crypto";
 
 interface Args {
@@ -229,7 +232,7 @@ function fail(msg: string): never {
 
 function buildSetModelNameAction(name: string): Record<string, unknown> {
   return {
-    id: randomUUID(),
+    id: generateActionId(),
     type: "SET_MODEL_NAME",
     scope: "global",
     timestampUtcMs: new Date().toISOString(),

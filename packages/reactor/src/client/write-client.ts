@@ -3,9 +3,11 @@ import type {
   AuthSubject,
   ISigner,
   PHDocument,
-  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
-import { actions } from "@powerhousedao/shared/document-model";
+import {
+  actions,
+  createVersionsOf,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type {
   BatchExecutionRequest,
@@ -35,12 +37,8 @@ import type {
   IDocumentIndexer,
   IDocumentView,
 } from "../storage/interfaces.js";
-import {
-  buildCreateJobs,
-  createEmptyDocument,
-  selectDocumentModelModule,
-  upgradeDocumentJob,
-} from "./derivations.js";
+import { buildCreateJobs, upgradeDocumentJob } from "./derivations.js";
+import type { IDriveWriteStrategy } from "./drive-nodes.js";
 import { DriveWriteClient } from "./drive-write-client.js";
 import {
   decideCandidate,
@@ -64,10 +62,10 @@ import type {
   ActionCandidate,
   ActionEvaluations,
   BatchWriteHandle,
-  CreateDocumentOptions,
   IDriveWriteClient,
   IReactorWriteClient,
   MoveRelationshipHandles,
+  NewDocumentOptions,
   UpgradeDocumentOptions,
   WriteHandle,
   WriteTargetDescription,
@@ -102,7 +100,6 @@ export class ReactorWriteClient implements IReactorWriteClient {
   private readonly targets: WriteTargets;
   private readonly handles: WriteHandleFactory;
   private readonly actionEvaluation: ActionEvaluationConfig | undefined;
-  private readonly createSignaturePolicy: SignaturePolicy;
   private readonly read: ReactorReadClient;
 
   constructor(parts: ReactorClientParts, read: ReactorReadClient) {
@@ -125,7 +122,6 @@ export class ReactorWriteClient implements IReactorWriteClient {
     );
     this.handles = new WriteHandleFactory(awaiterStagePort(parts.jobAwaiter));
     this.actionEvaluation = parts.actionEvaluation;
-    this.createSignaturePolicy = parts.createSignaturePolicy;
     this.read = read;
     this.drives = new DriveWriteClient(
       this,
@@ -138,6 +134,13 @@ export class ReactorWriteClient implements IReactorWriteClient {
         this.targets.resolveReference(identifier, "main", signal),
       (identifier, signal) =>
         this.targets.lookupLiveDocument(identifier, "main", signal),
+      {
+        strategies: this.buildDriveStrategies(parts, read),
+        describe: (identifier, signal) =>
+          this.targets.describe(identifier, "main", signal),
+      },
+      (options, signal) =>
+        read.createProtocol.select(options, { loadModel: true }, signal),
     );
   }
 
@@ -293,13 +296,25 @@ export class ReactorWriteClient implements IReactorWriteClient {
     const parentId = parentIdentifier
       ? await this.targets.resolveReference(parentIdentifier, "main", signal)
       : undefined;
-    const jobs = await buildCreateJobs(document, parentId, this.signer, signal);
+    const protocolVersions = await createVersionsOf(
+      document,
+      (options) =>
+        this.read.createProtocol.select(options, { loadModel: true }, signal),
+      parentIdentifier,
+    );
+    const jobs = await buildCreateJobs(
+      document,
+      protocolVersions,
+      parentId,
+      this.signer,
+      signal,
+    );
     return this.reactor.executeBatch({ jobs }, signal);
   }
 
   async createEmpty(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<WriteHandle> {
     this.logger.verbose(
@@ -307,40 +322,12 @@ export class ReactorWriteClient implements IReactorWriteClient {
       documentModelType,
       options,
     );
-    const document = await this.emptyDocument(
+    const document = await this.read.newDocument(
       documentModelType,
       options,
       signal,
     );
     return this.create(document, options?.parentIdentifier, signal);
-  }
-
-  /** A new, empty document of the type, under this client's create defaults. */
-  async emptyDocument(
-    documentModelType: string,
-    options: CreateDocumentOptions | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<PHDocument> {
-    const modulesResult = await this.reactor.getDocumentModels(
-      undefined,
-      undefined,
-      signal,
-    );
-    const module = selectDocumentModelModule(
-      modulesResult.results,
-      documentModelType,
-      options?.documentModelVersion,
-    );
-    const base = await this.read.getCreateProtocolVersions(
-      options?.parentIdentifier,
-      signal,
-    );
-    return createEmptyDocument(
-      module,
-      options,
-      this.createSignaturePolicy,
-      base,
-    );
   }
 
   async upgradeDocument(
@@ -951,6 +938,26 @@ export class ReactorWriteClient implements IReactorWriteClient {
    * always made: by id, on the job's own completion, gated as the writer. With
    * a view it reads through that view, bounded by the receipt's token.
    */
+  /** One strategy per registered drive type, built over this client's halves. */
+  private buildDriveStrategies(
+    parts: ReactorClientParts,
+    read: ReactorReadClient,
+  ): Map<string, IDriveWriteStrategy> {
+    const strategies = new Map<string, IDriveWriteStrategy>();
+    for (const [documentType, factory] of parts.drives.strategies) {
+      strategies.set(
+        documentType,
+        factory({
+          read,
+          write: this,
+          nodes: parts.drives.nodes,
+          signer: parts.signer,
+        }),
+      );
+    }
+    return strategies;
+  }
+
   private createReader(): HandleReader {
     return async <T extends PHDocument>(
       receipt: { documentId: string; token: ConsistencyToken },

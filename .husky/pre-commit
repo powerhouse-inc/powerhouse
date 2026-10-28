@@ -7,15 +7,9 @@ ACADEMY_DIR="apps/academy"
 
 # Inputs that trigger regeneration
 CLI_MONITORED_FILES="clis/ph-cmd/COMMANDS.md clis/ph-cli/COMMANDS.md"
-LLM_MONITORED_PATTERN="^apps/academy/docs/.*\.md$"
 
-# Generated outputs, repo-root-relative. Must match what the generators write.
+# Generated outputs, repo-root-relative. Must match what the generator writes.
 CLI_DOC_OUTPUTS="apps/academy/docs/academy/04-Reference/07-CLITooling/00-PowerhouseCLI.md"
-# The legacy academy_LLM_docs.md pair is gitignored, so it is not listed here.
-LLM_DOC_OUTPUTS="apps/academy/llms.txt
-apps/academy/llms-full.txt
-apps/academy/static/llms.txt
-apps/academy/static/llms-full.txt"
 
 # Run an academy generator with the root tsx (they only use node builtins, so the
 # academy's own install isn't needed); abort the commit if it fails.
@@ -28,18 +22,16 @@ run_generator() {
 }
 
 # Stage each generated file that the generator actually changed.
-# Sets STAGED_GENERATED to the files it staged.
 stage_generated() {
-  STAGED_GENERATED=""
+  staged_any=false
   for output in $1; do
     if [ -n "$(git status --porcelain -- "$output")" ]; then
       git add -- "$output" || exit 1
       echo "  staged $output"
-      STAGED_GENERATED="$STAGED_GENERATED$output
-"
+      staged_any=true
     fi
   done
-  if [ -z "$STAGED_GENERATED" ]; then
+  if [ "$staged_any" = false ]; then
     echo "  already up to date"
   fi
 }
@@ -54,31 +46,12 @@ for monitored_file in $CLI_MONITORED_FILES; do
   fi
 done
 
-should_run_llm_docs_generation=false
-if echo "$STAGED_FILES" | grep -qE "$LLM_MONITORED_PATTERN"; then
-  should_run_llm_docs_generation=true
-fi
-
 if [ "$should_run_cli_docs_generation" = true ]; then
   echo "Relevant CLI COMMANDS.md file changed. Generating Academy CLI documentation..."
   run_generator generate-combined-cli-docs.ts
   stage_generated "$CLI_DOC_OUTPUTS"
-
-  # Regenerated CLI docs are themselves academy markdown, so the LLM docs are
-  # now stale too.
-  if [ -n "$STAGED_GENERATED" ]; then
-    should_run_llm_docs_generation=true
-  fi
 else
   echo "No relevant CLI COMMANDS.md changes detected. Skipping CLI documentation generation."
-fi
-
-if [ "$should_run_llm_docs_generation" = true ]; then
-  echo "Academy markdown files changed. Regenerating LLM-optimized documentation..."
-  run_generator generate-llm-docs.ts
-  stage_generated "$LLM_DOC_OUTPUTS"
-else
-  echo "No academy markdown changes detected. Skipping LLM documentation generation."
 fi
 
 # Add any other root-level pre-commit checks below if needed

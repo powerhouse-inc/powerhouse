@@ -5,22 +5,19 @@ export const relationalDbMigrationsTemplate = () =>
 import type { IRelationalDb } from "@powerhousedao/reactor-browser"
 
 export async function up(db: IRelationalDb<any>): Promise<void> {
-  // Create table 
+  // One row per document; replace it with your own tables.
   await db.schema
-    .createTable("todo")
+    .createTable("documents")
     // A document-id column: its rows are deleted with the document.
-    .addColumn("document_id", "varchar(255)", (col) => col.notNull())
-    .addColumn("task", "varchar(255)")
-    .addColumn("status", "boolean")
-    .addPrimaryKeyConstraint("todo_pkey", [
-      "task"
-    ])
+    .addColumn("document_id", "varchar(255)", (col) => col.primaryKey())
+    .addColumn("document_type", "varchar(255)", (col) => col.notNull())
+    .addColumn("updated_at", "varchar(32)", (col) => col.notNull())
     .ifNotExists()
     .execute();
 }
 
 export async function down(db: IRelationalDb<any>): Promise<void> {
   // drop table
-  await db.schema.dropTable("todo").execute();
+  await db.schema.dropTable("documents").execute();
 }
 `.raw;

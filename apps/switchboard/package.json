@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "6.2.3-dev.77",
+  "version": "6.2.3-dev.78",
   "main": "dist/index.mjs",
   "exports": {
     ".": {
@@ -18,6 +18,16 @@
       "source": "./src/utils.mts",
       "types": "./dist/utils.d.mts",
       "import": "./dist/utils.mjs"
+    },
+    "./config": {
+      "source": "./src/config/schema.ts",
+      "types": "./dist/config/schema.d.mts",
+      "import": "./dist/config/schema.mjs"
+    },
+    "./config/env": {
+      "source": "./src/config/from-env.ts",
+      "types": "./dist/config/from-env.d.mts",
+      "import": "./dist/config/from-env.mjs"
     },
     "./boot": {
       "source": "./src/boot.mts",
@@ -78,9 +88,6 @@
   "dependencies": {
     "@electric-sql/pglite": "catalog:",
     "@electric-sql/pglite-tools": "catalog:",
-    "@openfeature/core": "catalog:",
-    "@openfeature/env-var-provider": "catalog:",
-    "@openfeature/server-sdk": "catalog:",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.218.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.218.0",
@@ -125,6 +132,9 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@openfeature/core": "catalog:",
+    "@openfeature/env-var-provider": "catalog:",
+    "@openfeature/server-sdk": "catalog:",
     "@types/express": "^4.17.25",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",

@@ -161,8 +161,11 @@ ph switchboard
 ```
 
 The same settings are available programmatically via
-`startSwitchboard({ workerPool: { numWorkers, dbPoolSizePerWorker, acquireTimeoutMs } })`,
-which takes precedence over the environment variables.
+`startSwitchboard({ workers: { executor: { count, poolSize, acquireTimeoutMs } } })`.
+`startSwitchboard` reads only its config: map the environment with
+`switchboardConfigFromEnv` (`@powerhousedao/switchboard/config/env`) and lay
+your own layer over it with `callerOverEnv` (`@powerhousedao/switchboard/config`)
+to keep the environment variables working.
 
 ### Projection Worker
 
@@ -187,7 +190,7 @@ initialize at all — an unreachable database, an exhausted pooler, an
 unmigrated schema — boot fails immediately with the worker's own error and
 exits non-zero instead of waiting out the init timeout.
 
-Programmatically: `startSwitchboard({ projectionWorker: { enabled, dbPoolSize } })`.
+Programmatically: `startSwitchboard({ workers: { projection: { enabled, poolSize } } })`.
 
 ### Creation Signature Policy
 
@@ -221,7 +224,7 @@ With `read-only` it starts and logs a warning. Every write into those documents
 and every operation received for them is refused; the rest of the store works
 as usual. The check runs once on the host, so it covers the executor worker
 pool too. Any other value fails the boot. Programmatically:
-`startSwitchboard({ unsupportedStoredDocuments: "read-only" })`.
+`startSwitchboard({ protocol: { unsupportedStoredDocuments: "read-only" } })`.
 
 ### Reactor Enforcement Flags
 
@@ -240,7 +243,8 @@ These change replay outcomes, which are consensus outcomes, so **a flag flips
 for a whole document-sharing fleet, never per node**. Two nodes that share
 documents and disagree on the flags diverge, exactly as two nodes on
 incompatible versions would. Connect carries the same flags in
-`connect.reactor.featureFlags` (see `apps/connect/RUNTIME-CONFIG.md`); a fleet
+`connect.reactor.featureFlags` (see
+`apps/connect/skills/customize-connect/references/runtime-config.md`); a fleet
 that includes browser replicas has to set them there too.
 
 Sweep the store before enabling either auth flag — neither unsafe condition is

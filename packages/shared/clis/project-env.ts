@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import { join } from "node:path";
 
 let loadedFor: string | undefined;
+let namesBeforeLoad: ReadonlySet<string> | undefined;
 
 /** `PH_NO_DOTENV=1` (or `true`): no `.env` file is read, so a launcher's
  * explicit environment is the whole environment. */
@@ -28,15 +29,23 @@ export function loadProjectEnv(cwd: string = process.cwd()): void {
   if (isDotenvDisabled()) return;
   if (loadedFor === cwd) return;
   loadedFor = cwd;
+  namesBeforeLoad ??= new Set(Object.keys(process.env));
   // dotenv 16 logs nothing for a missing file, so no suppression option is
   // needed here (and none exists before dotenv 17).
   dotenv.config({ path: join(cwd, ".env.local") });
   dotenv.config({ path: join(cwd, ".env") });
 }
 
+/** The `process.env` names the shell set: those before the first
+ * {@link loadProjectEnv}. Undefined while no project `.env` was loaded. */
+export function envNamesBeforeProjectEnv(): ReadonlySet<string> | undefined {
+  return namesBeforeLoad;
+}
+
 /** Test seam: forget which directory has already been loaded. */
 export function resetProjectEnvForTests(): void {
   loadedFor = undefined;
+  namesBeforeLoad = undefined;
 }
 
 /**

@@ -22,3 +22,5 @@ yarn-error.log*
 # Generated LLM documentation
 academy_LLM_docs.md
 static/academy_LLM_docs.md
+static/llms.txt
+static/llms-full.txt

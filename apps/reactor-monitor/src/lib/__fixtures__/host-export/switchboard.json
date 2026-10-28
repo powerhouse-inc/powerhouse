@@ -1,0 +1,40 @@
+{
+  "format": "ph-host-export",
+  "version": 1,
+  "project": {
+    "name": "my-project",
+    "root": "/project"
+  },
+  "name": "switchboard",
+  "host": {
+    "name": "my-project-switchboard",
+    "runner": {
+      "module": "@powerhousedao/ph-cli/runners/switchboard",
+      "port": 7491,
+      "plugins": [
+        "@powerhousedao/switchboard/plugins/mcp",
+        "@powerhousedao/switchboard/plugins/attachments",
+        "@powerhousedao/switchboard/plugins/workflows"
+      ]
+    },
+    "reactor": {
+      "protocol": {
+        "featureFlags": {
+          "documentDecisions": false,
+          "authEnforcement": false,
+          "authGroups": false,
+          "authConditions": false
+        },
+        "createSignaturePolicy": "v2-required",
+        "unsupportedStoredDocuments": "refuse"
+      },
+      "drives": [
+        {
+          "slug": "powerhouse",
+          "name": "my-project"
+        }
+      ]
+    }
+  },
+  "members": {}
+}

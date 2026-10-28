@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/shared",
-  "version": "6.2.3-dev.77",
+  "version": "6.2.3-dev.78",
   "type": "module",
   "sideEffects": false,
   "publishConfig": {
@@ -147,6 +147,7 @@
     "enquirer": "catalog:",
     "fflate": "^0.8.2",
     "kysely": "catalog:",
+    "kysely-pglite-dialect": "catalog:",
     "luxon": "catalog:",
     "mutative": "catalog:",
     "npm-package-arg": "catalog:",
@@ -161,6 +162,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "catalog:",
     "@types/cross-spawn": "catalog:",
     "@sentry/node-core": "^10.52.0",
     "@types/bun": "catalog:",
@@ -175,10 +177,14 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
+    "@electric-sql/pglite": "^0.3.15",
     "@sentry/node-core": "^10.52.0",
     "rolldown": "catalog:"
   },
   "peerDependenciesMeta": {
+    "@electric-sql/pglite": {
+      "optional": true
+    },
     "@sentry/node-core": {
       "optional": true
     },

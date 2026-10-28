@@ -3,14 +3,15 @@ import {
   createDurableNodeFs,
   PGLITE_UTC_PARSERS,
   pgliteWorkerEntryPath,
-  resolvePgliteFsync,
-  resolvePgliteWorkerMemoryMb,
+  DEFAULT_PGLITE_WORKER_MEMORY_MB,
+  resolvePgliteMaintenance,
   ThreadedPGlite,
   type DurableNodeFs,
   type PGliteAbortListener,
   type PGliteExitListener,
   type PGliteLike,
   type PGliteParserPreset,
+  type PgliteMaintenanceSettings,
 } from "@powerhousedao/reactor-api/pglite-node";
 import type { HardenedPGliteDialectOptions } from "@powerhousedao/reactor";
 import type { ILogger } from "document-model";
@@ -21,34 +22,8 @@ import {
   pgliteModuleSpec,
   type SupportedPgMajor,
 } from "./pglite-version.js";
-import type { BooleanFlagSource } from "./workflow-runtime.mjs";
 
 type FatalProcess = Parameters<typeof triggerFatalShutdown>[2];
-
-/** The env var and OpenFeature flag key that moves each PGlite store into its own worker thread. */
-export const PH_PGLITE_WORKERS = "PH_PGLITE_WORKERS";
-
-/** Whether PGlite stores run in worker threads when neither the host nor PH_PGLITE_WORKERS says. */
-export const PGLITE_WORKERS_DEFAULT = true;
-
-export interface PgliteWorkersFlagInput {
-  featureFlags: BooleanFlagSource;
-  /** The host's `pgliteWorkers` option; wins either way. */
-  option?: boolean;
-}
-
-/** Whether each PGlite store opens in its own worker thread: the host's
- * option, else PH_PGLITE_WORKERS ("true"/"false"), else PGLITE_WORKERS_DEFAULT. */
-export async function resolvePgliteWorkersEnabled({
-  featureFlags,
-  option,
-}: PgliteWorkersFlagInput): Promise<boolean> {
-  if (option !== undefined) return option;
-  return featureFlags.getBooleanValue(
-    PH_PGLITE_WORKERS,
-    PGLITE_WORKERS_DEFAULT,
-  );
-}
 
 // A Postgres PANIC (ENOSPC on WAL, a failed fdatasync) aborts the wasm
 // runtime; the store is dead and the process must not keep accepting writes.
@@ -120,11 +95,11 @@ export function terminateOnPoisoned(
 // PG16 only checkpoints reach the host disk; commits are durable against an
 // app crash, not a power loss, until --migrate-pglite upgrades the dir.
 function pgliteFsyncFor(
+  wanted: boolean,
   major: SupportedPgMajor,
   dir: string,
   logger: ILogger,
 ): boolean {
-  const wanted = resolvePgliteFsync(process.env);
   if (wanted && major === 16) {
     logger.warn(
       `PGlite data dir ${dir} is PG16 on pglite-legacy-02, which does not sync commits to disk; only checkpoints are synced until --migrate-pglite upgrades it.`,
@@ -133,35 +108,47 @@ function pgliteFsyncFor(
   return wanted;
 }
 
-/** VACUUM FULL timing from the environment; unset or invalid keeps the defaults. */
-export function vacuumFullTimingFromEnv(env: NodeJS.ProcessEnv): {
-  vacuumFullQuietMs?: number;
-  vacuumFullMaxDeferMs?: number;
-} {
-  const ms = (value: string | undefined) => {
-    if (value === undefined || value.trim() === "") return undefined;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
-  };
-  const quiet = ms(env.PH_PGLITE_VACUUM_FULL_QUIET_MS);
-  const maxDefer = ms(env.PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS);
-  return {
-    ...(quiet === undefined ? {} : { vacuumFullQuietMs: quiet }),
-    ...(maxDefer === undefined ? {} : { vacuumFullMaxDeferMs: maxDefer }),
-  };
+/** The VACUUM FULL settings from the environment; see `resolvePgliteMaintenance`. */
+export const vacuumFullTimingFromEnv = resolvePgliteMaintenance;
+
+/** The VACUUM FULL settings a config asks for, with the env parser's rules. */
+export function vacuumFullTimingOf(vacuumFull: {
+  mode: "off" | "quiet" | "forced";
+  aboveMb?: number;
+  quietMs?: number;
+  maxDeferMs?: number;
+}): PgliteMaintenanceSettings {
+  return resolvePgliteMaintenance({
+    PH_PGLITE_VACUUM_FULL: vacuumFull.mode,
+    PH_PGLITE_VACUUM_FULL_ABOVE_MB: vacuumFull.aboveMb?.toString(),
+    PH_PGLITE_VACUUM_FULL_QUIET_MS: vacuumFull.quietMs?.toString(),
+    PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS: vacuumFull.maxDeferMs?.toString(),
+  });
 }
+
+/** How each PGlite store runs; unset fields take the defaults. */
+export interface PgliteStoreSettings {
+  fsync?: boolean;
+  maintenance?: PgliteMaintenanceSettings;
+  workerMemoryMb?: number;
+}
+
+const DEFAULT_MAINTENANCE: PgliteMaintenanceSettings = {
+  vacuumFullAboveBytes: 0,
+};
 
 /** Preloads the module's NodeFS so the returned factory can be synchronous. */
 export async function loadDurableFsFactory(
   major: SupportedPgMajor,
   logger: ILogger,
   proc?: FatalProcess,
+  settings: PgliteStoreSettings = {},
 ): Promise<(dir: string) => DurableNodeFs> {
   const NodeFS = await loadNodeFsClass(major);
-  const timing = vacuumFullTimingFromEnv(process.env);
+  const timing = settings.maintenance ?? DEFAULT_MAINTENANCE;
   return (dir) =>
     createDurableNodeFs(NodeFS, dir, {
-      fsync: pgliteFsyncFor(major, dir, logger),
+      fsync: pgliteFsyncFor(settings.fsync ?? true, major, dir, logger),
       ...timing,
       logger,
       onAbort: (what) => onPgliteAbort(logger, what, proc),
@@ -178,6 +165,7 @@ export interface PgliteStoreOptions {
   inMemory: boolean;
   /** Open the store in its own worker thread (PH_PGLITE_WORKERS / `pgliteWorkers`). */
   threaded: boolean;
+  settings?: PgliteStoreSettings;
   logger: ILogger;
   /** Where fatal conditions go; the process by default. */
   proc?: FatalProcess;
@@ -206,7 +194,9 @@ export async function createPgliteStoreFactory(
 
 function threadedStoreFactory(options: PgliteStoreOptions): PgliteStoreFactory {
   const { label, major, parsers, inMemory, logger, proc } = options;
-  const memoryLimitMb = resolvePgliteWorkerMemoryMb(process.env);
+  const settings = options.settings ?? {};
+  const memoryLimitMb =
+    settings.workerMemoryMb ?? DEFAULT_PGLITE_WORKER_MEMORY_MB;
   const module = pgliteModuleSpec(major);
   return (dir) => {
     const store = new ThreadedPGlite({
@@ -217,8 +207,8 @@ function threadedStoreFactory(options: PgliteStoreOptions): PgliteStoreFactory {
         durableFs: inMemory
           ? null
           : {
-              fsync: pgliteFsyncFor(major, dir, logger),
-              ...vacuumFullTimingFromEnv(process.env),
+              fsync: pgliteFsyncFor(settings.fsync ?? true, major, dir, logger),
+              ...(settings.maintenance ?? DEFAULT_MAINTENANCE),
             },
         parsers,
       },
@@ -240,7 +230,7 @@ async function mainThreadStoreFactory(
   const { PGlite } = await loadPGliteModule(major);
   const durableFs = inMemory
     ? null
-    : await loadDurableFsFactory(major, logger, proc);
+    : await loadDurableFsFactory(major, logger, proc, options.settings);
   const base: PGliteOptions =
     options.parsers === "utc-timestamps" ? { parsers: PGLITE_UTC_PARSERS } : {};
   return (dir) => {

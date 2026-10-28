@@ -19,6 +19,14 @@ import {
   toGqlDocumentChangeEvent,
 } from "./adapters.js";
 import { isDriveContainerType } from "./constants.js";
+import {
+  driveNodeTypeName,
+  getServedDescendants,
+  getServedNode,
+  listServedNodes,
+  requireDriveNodeSource,
+  type DriveNodeGate,
+} from "./drive-nodes.js";
 import type { Resolvers } from "./gen/graphql.js";
 import {
   DocumentChangeFeed,
@@ -75,6 +83,23 @@ export class ReactorSubgraph extends BaseSubgraph {
       );
     }
     return handle;
+  }
+
+  /**
+   * The read gate a drive node read passes, as the reactor-drive subgraph
+   * applies it: the drive is listed to the caller (reactor read gate, then the
+   * host's ACL); its nodes are then served as the legacy node list was.
+   */
+  #driveNodeGate(ctx: Context): DriveNodeGate {
+    return {
+      servesDrive: async (driveId) => {
+        try {
+          return await this.listsDocument(driveId, ctx);
+        } catch {
+          return false;
+        }
+      },
+    };
   }
 
   /**
@@ -235,6 +260,10 @@ export class ReactorSubgraph extends BaseSubgraph {
   typeDefs = gql(schemaSource);
 
   resolvers: Resolvers = {
+    DriveNode: {
+      __resolveType: (node) => driveNodeTypeName(node),
+    },
+
     // Field resolver for PHDocument.operations - fetches operations on demand
     PHDocument: {
       operations: async (parent, args, ctx: Context) => {
@@ -501,6 +530,43 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
+      driveNodes: async (_parent, args, ctx: Context) => {
+        this.logger.debug("driveNodes(@args)", args);
+        const source = requireDriveNodeSource(this.graphqlManager.driveNodes);
+        return listServedNodes(
+          source,
+          this.#driveNodeGate(ctx),
+          args.driveId,
+          "parentFolder" in args ? (args.parentFolder ?? null) : undefined,
+          args.paging,
+          args.kind,
+        );
+      },
+
+      driveNode: async (_parent, args, ctx: Context) => {
+        this.logger.debug("driveNode(@args)", args);
+        const source = requireDriveNodeSource(this.graphqlManager.driveNodes);
+        return (
+          (await getServedNode(
+            source,
+            this.#driveNodeGate(ctx),
+            args.driveId,
+            args.id,
+          )) ?? null
+        );
+      },
+
+      driveDescendants: async (_parent, args, ctx: Context) => {
+        this.logger.debug("driveDescendants(@args)", args);
+        const source = requireDriveNodeSource(this.graphqlManager.driveNodes);
+        return getServedDescendants(
+          source,
+          this.#driveNodeGate(ctx),
+          args.driveId,
+          args.root,
+        );
+      },
+
       createDefaults: async (_parent, args, ctx: Context) => {
         this.logger.debug("createDefaults(@args)", args);
         try {
@@ -515,6 +581,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           return await resolvers.createDefaults(
             this.clientsOf(ctx).read,
             parentIdOrSlug,
+            args.documentType ?? undefined,
           );
         } catch (error) {
           this.logger.error("Error in createDefaults: @Error", error);

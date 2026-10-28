@@ -25,8 +25,10 @@ export interface RenownOptions {
   requireExisting?: boolean;
   /** Base url of the Renown instance to use */
   baseUrl?: string;
-  /** Renown user storage. Defaults to .ph/.renown.json under PH_USER_DATA_DIR, else cwd */
+  /** Renown user storage; defaults to .ph/.renown.json under `userDataDir`, else renown's own default. */
   storagePath?: string;
+  /** The relocated `.ph` root (PH_USER_DATA_DIR at the edge). */
+  userDataDir?: string;
 }
 
 /**
@@ -41,8 +43,12 @@ export async function initRenown(
     keypairPath,
     requireExisting = false,
     baseUrl = DEFAULT_RENOWN_URL,
-    storagePath = process.env.PH_USER_DATA_DIR
-      ? join(resolvePhDir(), ".renown.json")
+    userDataDir,
+    storagePath = userDataDir
+      ? join(
+          resolvePhDir(undefined, { PH_USER_DATA_DIR: userDataDir }),
+          ".renown.json",
+        )
       : undefined,
   } = options;
 

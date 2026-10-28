@@ -3,11 +3,13 @@ import { useSupportedDocumentTypesInReactor } from "./supported-document-types.j
 
 /** Returns the document types a app supports.
  *
- * If present, uses the `allowedDocumentTypes` config value.
- * Otherwise, uses the supported document types from the reactor.
+ * Uses the `allowedDocumentTypes` config value when it lists any types.
+ * Unset or empty, it means every type, so the reactor's supported types are used.
  */
 export function useDocumentTypes() {
   const allowedDocumentTypes = useAllowedDocumentTypes();
   const supportedDocumentTypes = useSupportedDocumentTypesInReactor();
-  return allowedDocumentTypes ?? supportedDocumentTypes;
+  return allowedDocumentTypes?.length
+    ? allowedDocumentTypes
+    : supportedDocumentTypes;
 }

@@ -146,21 +146,6 @@ function buildHostSchemas(tokenField: FieldWrappers) {
       // The reactor to attach to, by URL: typically a producer's
       // `endpoints.graphql` output token. (`remote.host` was removed in T3.)
       remote: z.strictObject({ url: tokenField.any(z.url()) }).optional(),
-      // Deployment topology (R1): field names match the real switchboard
-      // options (projectionWorker / workerPool).
-      projection: z
-        .strictObject({
-          enabled: z.boolean().optional(),
-          dbPoolSize: z.number().int().positive().optional(),
-        })
-        .optional(),
-      executors: z
-        .strictObject({
-          numWorkers: z
-            .union([z.number().int().positive(), z.literal("auto")])
-            .optional(),
-        })
-        .optional(),
     })
     // Two PGlite instances on one data dir corrupt it: the reactor store
     // (storage.dataDir) and the read-model store (readModel.url) must differ.
@@ -200,17 +185,11 @@ function buildHostSchemas(tokenField: FieldWrappers) {
 
   const reactorSchema = z.strictObject({
     backends: z.record(z.string(), reactorBackendSchema).optional(),
-    placement: z
-      .strictObject({
-        primary: z.string().optional(),
-        default: z.looseObject({}).optional(),
-      })
-      .optional(),
+    placement: z.strictObject({ primary: z.string().optional() }).optional(),
     protocol: reactorProtocolSchema.optional(),
     /** DEPRECATED (dies in R2): workflows become a listed plugin. */
     workflows: z.boolean().optional(),
-    // R1 core keys: identity/signing, package registry, storage namespace,
-    // access control — capabilities and intrinsics of the reactor.
+    // R1 core keys: identity/signing and storage namespace.
     renown: z
       .strictObject({
         url: z.string().optional(),
@@ -218,15 +197,7 @@ function buildHostSchemas(tokenField: FieldWrappers) {
         chainId: z.number().int().optional(),
       })
       .optional(),
-    packages: z.strictObject({ registryUrl: z.string().optional() }).optional(),
     namespace: z.string().min(1).optional(),
-    auth: z
-      .strictObject({
-        enabled: z.boolean().optional(),
-        admins: z.array(z.string()).optional(),
-        renown: z.looseObject({}).optional(),
-      })
-      .optional(),
     // Core-declared, seeded by the host runtime. Token-able as a whole
     // (3.3): a `$map` over a producer's `drives` output (or an `$output` of
     // an array of declarations) renders the list at resolve time.
@@ -251,7 +222,11 @@ function buildHostSchemas(tokenField: FieldWrappers) {
    * (as on a standalone host); there is no wrapper-level `plugins`. */
   const childWrapperSchema = z.strictObject({
     host: z.string().min(1),
-    runner: runnerBaseSchema.partial().optional(),
+    // 0 passes here; the member runner's own schema decides whether it may.
+    runner: runnerBaseSchema
+      .partial()
+      .extend({ port: z.number().int().min(0).max(65535).optional() })
+      .optional(),
     config: z.looseObject({}).optional(),
     reactor: reactorSchema.optional(),
   });

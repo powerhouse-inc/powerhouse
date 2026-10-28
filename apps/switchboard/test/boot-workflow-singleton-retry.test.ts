@@ -2,7 +2,6 @@
 // starts workflows once the holder lets go. The runtime it composes then has
 // to be reachable: its GraphQL face mounted, not only registered.
 import { mkdtemp, rm } from "node:fs/promises";
-import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -17,7 +16,8 @@ import type { ILogger } from "document-model";
 import { Kysely, PostgresDialect } from "kysely";
 import pg from "pg";
 import { describe, expect, it, vi } from "vitest";
-import { startSwitchboard } from "../src/server.mjs";
+import type { startSwitchboard } from "../src/server.mjs";
+import { bootSwitchboard } from "./boot-helpers.js";
 
 const PG_URL = process.env.REACTOR_TEST_PG_URL;
 const DATABASE = "switchboard_workflow_retry";
@@ -33,17 +33,6 @@ function stubLogger(): ILogger {
   };
   logger.child.mockReturnValue(logger);
   return logger as unknown as ILogger;
-}
-
-async function freePort(): Promise<number> {
-  const server = createServer();
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const address = server.address();
-  await new Promise((resolve) => server.close(resolve));
-  if (address === null || typeof address === "string") {
-    throw new Error("no port");
-  }
-  return address.port;
 }
 
 async function queryHealth(port: number): Promise<string | undefined> {
@@ -86,16 +75,16 @@ describe.skipIf(!PG_URL)(
           owner: "the-other-host",
         });
 
-        switchboard = await startSwitchboard({
-          workflows: { enabled: true },
-          dbPath: readModelUrl,
-          port: await freePort(),
-          strictPort: true,
-          mcp: false,
-          disableLocalPackages: true,
-          identity: { keypairPath: join(tempRoot, "identity.json") },
-          logger: stubLogger(),
-        });
+        switchboard = await bootSwitchboard(
+          {
+            server: { port: 0 },
+            storage: { readModel: { url: readModelUrl } },
+            features: { workflows: true, mcp: false },
+            packages: { disableLocal: true },
+            identity: { keypairPath: join(tempRoot, "identity.json") },
+          },
+          { logger: stubLogger() },
+        );
         expect(switchboard.workflowTriggers).toBeUndefined();
         expect(await queryHealth(switchboard.port)).toBeUndefined();
 

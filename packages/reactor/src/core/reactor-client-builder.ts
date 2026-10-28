@@ -7,6 +7,10 @@ import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
 import type { ActionEvaluationConfig } from "../client/reactor-client.js";
 import { ReactorClient } from "../client/reactor-client.js";
+import type {
+  DriveWriteStrategyFactory,
+  IDriveNodeSource,
+} from "../client/drive-nodes.js";
 import type { ProtocolSelection } from "../client/types.js";
 import type { IReadGate } from "../decision/read-gate.js";
 import {
@@ -50,6 +54,11 @@ export class ReactorClientBuilder {
   private jobAwaiter?: IJobAwaiter;
   private documentModelLoader?: IDocumentModelLoader;
   private readGate?: IReadGate;
+  private driveNodeSource?: IDriveNodeSource;
+  private readonly driveWriteStrategies = new Map<
+    string,
+    DriveWriteStrategyFactory
+  >();
 
   /**
    * Sets the logger for the ReactorClient.
@@ -149,6 +158,29 @@ export class ReactorClientBuilder {
   }
 
   /**
+   * The projection `read.drives` answers node reads from, for every drive
+   * type, and that drive write strategies receive. Without one, node reads
+   * read the drive document.
+   */
+  public withDriveNodeSource(source: IDriveNodeSource): this {
+    this.driveNodeSource = source;
+    return this;
+  }
+
+  /**
+   * Registers the node writes for drives of `documentType`: `write.drives`
+   * delegates a node write on such a drive to the strategy the factory builds.
+   * Drives of an unregistered type take the document-drive path.
+   */
+  public withDriveWriteStrategy(
+    documentType: string,
+    factory: DriveWriteStrategyFactory,
+  ): this {
+    this.driveWriteStrategies.set(documentType, factory);
+    return this;
+  }
+
+  /**
    * The gate the resolved model calls for. Below authEnforcement there is no
    * model to enforce -- the registered one ignores the auth scope -- so the
    * policy is evaluated on its own, which is what reads did before the model
@@ -204,12 +236,16 @@ export class ReactorClientBuilder {
       return undefined;
     }
     const syncManager = reactorModule.syncModule?.syncManager;
+    const resolver = this.reactorBuilder.getModelResolver();
     return {
       capabilities: this.reactorBuilder.getPeerCapabilities(),
       flags: reactorModule.featureFlags,
       agreement: syncManager ? () => syncManager.agreement() : undefined,
       collectionsOf: (documentIds) =>
         reactorModule.operationIndex.getCollectionsForDocuments(documentIds),
+      loadModel: resolver
+        ? (documentType) => resolver.ensureModelLoaded(documentType)
+        : undefined,
     };
   }
 
@@ -303,6 +339,10 @@ export class ReactorClientBuilder {
             revisions: reactorModule.operationStore,
           }
         : undefined,
+      {
+        nodes: this.driveNodeSource,
+        strategies: new Map(this.driveWriteStrategies),
+      },
     );
 
     return {

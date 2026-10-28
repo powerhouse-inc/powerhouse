@@ -12,6 +12,7 @@ import {
   type MergedContribution,
   type ResolvedPlugin,
 } from "@powerhousedao/host-core";
+import type { SwitchboardConfig } from "./config/schema.js";
 
 /**
  * R2 — SwitchboardCore's plugin pipeline (rewire plan, carve map:
@@ -32,14 +33,7 @@ import {
  * - onShutdown               — first in the subsystem-ordered teardown
  */
 
-export const PLUGIN_HOST_FLAG = "FEATURE_PLUGIN_HOST_ENABLED";
-
-export function isPluginHostEnabled(
-  env: Record<string, string | undefined> = process.env,
-): boolean {
-  const value = env[PLUGIN_HOST_FLAG]?.trim().toLowerCase();
-  return value === "1" || value === "true";
-}
+export { isPluginHostEnabled, PLUGIN_HOST_FLAG } from "./plugin-host-flag.mjs";
 
 /**
  * The context plugins receive. Fields are populated as the boot spine reaches
@@ -51,6 +45,8 @@ export interface SwitchboardHostContext {
    * logger package in the scaffold — subsystem carves use it as-is. */
   logger: unknown;
   options: Record<string, unknown>;
+  /** The parsed config the switchboard booted with. */
+  config?: SwitchboardConfig;
   renown: unknown;
   serverPort?: number;
   /** Set by the attachments plugin at onHttpMounting; the boot reads it for

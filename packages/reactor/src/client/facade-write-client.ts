@@ -28,13 +28,14 @@ import type {
   ActionCandidate,
   ActionEvaluations,
   BatchWriteHandle,
-  CreateDocumentOptions,
+  CopyNodeOptions,
   IDriveClient,
   IDriveWriteClient,
   IReactorClient,
   NodeWriteHandle,
   IReactorWriteClient,
   MoveRelationshipHandles,
+  NewDocumentOptions,
   UpgradeDocumentOptions,
   WriteHandle,
   WriteTargetDescription,
@@ -148,12 +149,14 @@ class FacadeDriveWriteClient implements IDriveWriteClient {
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<WriteHandle> {
     const drive = await this.drives.copyNode(
       driveIdentifier,
       srcNodeId,
       targetParentFolderId,
       signal,
+      options,
     );
     return this.settled(drive.header.id);
   }
@@ -244,7 +247,7 @@ export class FacadeWriteClient implements IReactorWriteClient {
 
   async createEmpty(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<WriteHandle> {
     const batch = await this.client.createEmptyAsync(

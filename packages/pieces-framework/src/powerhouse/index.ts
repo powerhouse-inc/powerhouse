@@ -17,12 +17,15 @@ export {
 export type { ReactorErrorName } from "./errors.js";
 export type { PackagePiece } from "./package-piece.js";
 export type {
+  DriveReadMethods,
+  DriveWriteMethods,
   ReactorClient,
   ReactorClientFor,
   ReactorContext,
   ReactorDeclaration,
   ReactorReadClient,
   ReadMethods,
+  RefusedDriveMethods,
   RefusedMethods,
   RequireReactor,
   WriteMethods,

@@ -26,7 +26,7 @@ import {
   vi,
 } from "vitest";
 import { ClosablePGliteDialect } from "../src/pglite-dialect.js";
-import { startSwitchboard } from "../src/server.mjs";
+import { bootSwitchboard } from "./boot-helpers.js";
 import { StoredDocumentsRefusedError } from "../src/unsupported-stored-documents.mjs";
 
 const ENV_KEYS = [
@@ -143,14 +143,15 @@ describe("booting over documents this build does not run", () => {
   }, BOOT_TIMEOUT);
 
   function boot(logger: ILogger) {
-    return startSwitchboard({
-      workflows: { enabled: false },
-      port: 0,
-      mcp: false,
-      disableLocalPackages: true,
-      identity: { keypairPath: join(tempRoot, "identity.json") },
-      logger,
-    });
+    return bootSwitchboard(
+      {
+        server: { port: 0 },
+        features: { workflows: false, mcp: false },
+        packages: { disableLocal: true },
+        identity: { keypairPath: join(tempRoot, "identity.json") },
+      },
+      { logger },
+    );
   }
 
   it(

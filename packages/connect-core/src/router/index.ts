@@ -68,6 +68,8 @@ export { ConnectCoreApp } from "./core-app.js";
 export type { DocumentViewProps, DriveViewProps } from "./route-components.js";
 export { CORE_MODAL_VIEWS, ModalOutlet } from "./modals.js";
 export { ModalDialog, useModalFrame } from "./modal-frame.js";
+export { coreRouteOptions } from "./route-options.js";
+export type { CoreRouteOptions } from "./route-options.js";
 export type { ModalFrameProps } from "./modal-frame.js";
 export type { ConnectModals } from "./modals.js";
 export { bindConnectScroll, connectScrollRestoration } from "./scroll.js";
@@ -82,8 +84,18 @@ export {
   validateDriveSearch,
 } from "./search.js";
 export type { ConnectSearch } from "./search.js";
-export { navRoutes, useNavRoutes, useSidebarMode } from "./sidebar.js";
-export type { ConnectNavItem, NavRouteEntry, SidebarMode } from "./sidebar.js";
+export {
+  navRoutes,
+  useConnectChrome,
+  useNavRoutes,
+  useSidebarMode,
+} from "./sidebar.js";
+export type {
+  ConnectChrome,
+  ConnectNavItem,
+  NavRouteEntry,
+  SidebarMode,
+} from "./sidebar.js";
 export {
   keepOpenedFrom,
   redirectToSettingsTab,

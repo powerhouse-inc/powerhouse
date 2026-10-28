@@ -34,7 +34,8 @@ export type ModelLoadedBroadcastHook = (
  */
 export class DocumentModelResolver implements IDocumentModelResolver {
   private loadingModels = new Map<string, Promise<void>>();
-  private failedModelTypes = new Set<string>();
+  // Each type that failed to load, with the error it failed with.
+  private failedModelTypes = new Map<string, unknown>();
   private broadcastHook: ModelLoadedBroadcastHook | null = null;
   private modelLoadedHook: ((documentType: string) => Promise<void>) | null =
     null;
@@ -111,8 +112,10 @@ export class DocumentModelResolver implements IDocumentModelResolver {
     }
 
     if (this.failedModelTypes.has(documentType)) {
+      const cause = this.failedModelTypes.get(documentType);
       throw new Error(
-        `Document model type previously failed to load: ${documentType}`,
+        `Document model type previously failed to load: ${documentType}: ${cause instanceof Error ? cause.message : String(cause)}`,
+        { cause },
       );
     }
 
@@ -125,7 +128,7 @@ export class DocumentModelResolver implements IDocumentModelResolver {
       try {
         await this.loadRegisterAndBroadcast(documentType);
       } catch (error) {
-        this.failedModelTypes.add(documentType);
+        this.failedModelTypes.set(documentType, error);
         throw error;
       } finally {
         this.loadingModels.delete(documentType);

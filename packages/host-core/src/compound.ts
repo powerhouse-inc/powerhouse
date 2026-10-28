@@ -6,6 +6,7 @@ import {
   type HostDefinition,
   type RunnerKind,
 } from "./host-schemas.js";
+import { applyChildWrapper, type MemberDraft } from "./child-wrapper.js";
 import { substituteBuiltinEnv } from "./env-substitution.js";
 import { loadHost } from "./host-loader.js";
 import { declaresKey, outputSitesOf } from "./resolve/declared.js";
@@ -35,6 +36,7 @@ import {
   type RunnerModule,
 } from "./runner-resolver.js";
 
+export type { MemberDraft } from "./child-wrapper.js";
 export type { ChildWrapper, CompoundWiring } from "./host-schemas.js";
 export type { RunnerHandle, StartedHandle } from "./runner-handle.js";
 
@@ -66,13 +68,6 @@ interface StartedMember {
   outputs: Record<string, unknown>;
 }
 
-/** A member host before its runner validates it: the member's host.js with
- * the wrapper applied (tokens still in place). */
-export type MemberDraft = Record<string, unknown> & {
-  name: string;
-  runner: HostDefinition["runner"];
-};
-
 export interface PreparedMember {
   key: string;
   member: ChildWrapper;
@@ -82,23 +77,14 @@ export interface PreparedMember {
   file: string;
 }
 
-/** Build the member host object the member runner sees: the member's own
- * host.js with the wrapper applied. A wrapper SECTION is a FULL STATEMENT —
- * `reactor` and `config`, when present on the wrapper, replace the member's
- * wholesale; `runner` key-merges (wrappers override port, host, plugins…). */
 export async function memberDraft(
   projectRoot: string,
   member: ChildWrapper,
 ): Promise<MemberDraft> {
-  const base: HostDefinition = (await loadHost(projectRoot, member.host)).host;
-  const reactor = member.reactor ?? base.reactor;
-  const config = member.config ?? base.config;
-  return {
-    ...base,
-    runner: { ...base.runner, ...member.runner },
-    ...(config !== undefined ? { config } : {}),
-    ...(reactor !== undefined ? { reactor } : {}),
-  };
+  return applyChildWrapper(
+    (await loadHost(projectRoot, member.host)).host,
+    member,
+  );
 }
 
 /** Whether a member receives the compound's `cspRegistrySync` wiring (as

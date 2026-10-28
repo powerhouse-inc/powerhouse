@@ -1,3 +1,77 @@
+## 6.2.3-dev.78 (2026-10-27)
+
+### 🚀 Features
+
+- **apps-reactor-monitor:** import exported hosts as monitoring sets ([#3294](https://github.com/powerhouse-inc/powerhouse/pull/3294))
+- **apps-reactor-monitor:** node controller for real switchboards ([#3295](https://github.com/powerhouse-inc/powerhouse/pull/3295))
+- **apps-reactor-monitor:** start and attach switchboards from the UI ([#3299](https://github.com/powerhouse-inc/powerhouse/pull/3299))
+- **host-core:** hostExportSchema (./schema) and exportHost ([33d9fd6436](https://github.com/powerhouse-inc/powerhouse/commit/33d9fd6436))
+- **host-core:** exportHost and ph host export ([#3288](https://github.com/powerhouse-inc/powerhouse/pull/3288))
+- **ph-cli:** switchboard host accepts port 0 ([dc22abed82](https://github.com/powerhouse-inc/powerhouse/commit/dc22abed82))
+- **ph-cli,shared:** ph host export behind FEATURE_UNIFORM_RUNNERS_ENABLED ([6c78f617a8](https://github.com/powerhouse-inc/powerhouse/commit/6c78f617a8))
+- **pieces-framework,reactor-workflow:** pieces file documents through reactor.drives for either drive model ([0dc6fc73cb](https://github.com/powerhouse-inc/powerhouse/commit/0dc6fc73cb))
+- **portle:** scaffold @powerhousedao/portle, the switchboard plugin that gates publication through Portle ([68ab561f7d](https://github.com/powerhouse-inc/powerhouse/commit/68ab561f7d))
+- **reactor,reactor-drive,reactor-api:** drive clients pick the write path by drive type and read nodes from one source ([3f9bee0c2b](https://github.com/powerhouse-inc/powerhouse/commit/3f9bee0c2b))
+- **reactor-api:** report the bound port on the API ([fe28d4c64e](https://github.com/powerhouse-inc/powerhouse/commit/fe28d4c64e))
+- **reactor-api,reactor-browser,switchboard:** type-neutral drive node queries and read.drives on the remote client ([b8a09950c0](https://github.com/powerhouse-inc/powerhouse/commit/b8a09950c0))
+- **reactor-api,switchboard:** vacuum full policy knob, no forced rewrite under load by default ([d6dcbf5cd0](https://github.com/powerhouse-inc/powerhouse/commit/d6dcbf5cd0))
+- **reactor-browser,connect-core,connect:** read drive nodes from read.drives through a per-drive cache, not from the drive document ([c51c39602e](https://github.com/powerhouse-inc/powerhouse/commit/c51c39602e))
+- **reactor-drive:** project legacy document-drive nodes into DriveNode, backfill at init, indexed sibling check ([7b99ea3731](https://github.com/powerhouse-inc/powerhouse/commit/7b99ea3731))
+- **reactor-monitor-app:** parse and plan exported hosts ([8438ab491a](https://github.com/powerhouse-inc/powerhouse/commit/8438ab491a))
+- **reactor-monitor-app:** importSet with provenance ([ccbfff454b](https://github.com/powerhouse-inc/powerhouse/commit/ccbfff454b))
+- **reactor-monitor-app:** controller wire schemas ([a9c71bf980](https://github.com/powerhouse-inc/powerhouse/commit/a9c71bf980))
+- **reactor-monitor-app:** node controller over spawnHost and checkHost ([7066d843cb](https://github.com/powerhouse-inc/powerhouse/commit/7066d843cb))
+- **reactor-monitor-app:** host import panel and drop zone ([a805ea0b3b](https://github.com/powerhouse-inc/powerhouse/commit/a805ea0b3b))
+- **reactor-monitor-app:** controller HTTP routes behind host, origin and token guards ([67b653a0ba](https://github.com/powerhouse-inc/powerhouse/commit/67b653a0ba))
+- **reactor-monitor-app:** wire host import into App ([40eb392822](https://github.com/powerhouse-inc/powerhouse/commit/40eb392822))
+- **reactor-monitor-app:** host the controller in vite dev and a serve script ([8eb1ef41a5](https://github.com/powerhouse-inc/powerhouse/commit/8eb1ef41a5))
+- **reactor-monitor-app:** controller client and managed remote descriptors ([ae148ecf90](https://github.com/powerhouse-inc/powerhouse/commit/ae148ecf90))
+- **reactor-monitor-app:** switchboards panel over the controller ([ed242d12b5](https://github.com/powerhouse-inc/powerhouse/commit/ed242d12b5))
+- **reactor-monitor-app:** mount the switchboards panel and gate managed remotes ([b1f656af9c](https://github.com/powerhouse-inc/powerhouse/commit/b1f656af9c))
+- **reactor-router,connect-core:** routed drive node reads use the backend's node queries ([23b098a1c7](https://github.com/powerhouse-inc/powerhouse/commit/23b098a1c7))
+
+### 🩹 Fixes
+
+- **apps-switchboard:** report the bound port so port 0 works ([#3285](https://github.com/powerhouse-inc/powerhouse/pull/3285))
+- **codegen:** the sync-and-publish workflow reads its optional secrets in the prepare job ([e17811b0b2](https://github.com/powerhouse-inc/powerhouse/commit/e17811b0b2))
+- **host-core:** a compound wrapper may set a member's port to 0 ([1c9ce4624d](https://github.com/powerhouse-inc/powerhouse/commit/1c9ce4624d))
+- **host-core:** hostExportSchema names the failing field and refuses unreached members; cover exportHost's validation ([4d0243cb11](https://github.com/powerhouse-inc/powerhouse/commit/4d0243cb11))
+- **ph-cli:** ph host export resolves --out against the caller's cwd ([0856c41f7d](https://github.com/powerhouse-inc/powerhouse/commit/0856c41f7d))
+- **reactor-api:** public origin follows the bound port ([919c2bd2d1](https://github.com/powerhouse-inc/powerhouse/commit/919c2bd2d1))
+- **reactor-api:** the one-time VACUUM FULL is off by default; quiet and forced are opt-ins ([fd7c19e313](https://github.com/powerhouse-inc/powerhouse/commit/fd7c19e313))
+- **reactor-browser:** a node this tab writes shows at once, not after the drive's refresh interval ([d363830d67](https://github.com/powerhouse-inc/powerhouse/commit/d363830d67))
+- **reactor-browser:** addDocument caches the new file's drive node ([2edd19f221](https://github.com/powerhouse-inc/powerhouse/commit/2edd19f221))
+- **reactor-drive:** a linked file takes its name from the link, the name row or the document's header ([9d45e880b5](https://github.com/powerhouse-inc/powerhouse/commit/9d45e880b5))
+- **reactor-drive:** legacy node actions on a reactor-drive project instead of erroring the read model ([cdedbc7012](https://github.com/powerhouse-inc/powerhouse/commit/cdedbc7012))
+- **reactor-monitor-app:** type the origin cases and drop an always-true host test ([1493e70608](https://github.com/powerhouse-inc/powerhouse/commit/1493e70608))
+- **reactor-monitor-app:** track page drags by enter/leave depth ([ee1aa95318](https://github.com/powerhouse-inc/powerhouse/commit/ee1aa95318))
+- **reactor-monitor-app:** stop reading reactor.auth, which main removed ([982743f145](https://github.com/powerhouse-inc/powerhouse/commit/982743f145))
+- **reactor-monitor-app:** plan nested and malformed exports correctly ([f71159430b](https://github.com/powerhouse-inc/powerhouse/commit/f71159430b))
+- **reactor-monitor-app:** catch unreadable exports and require http(s) URLs ([eb37b2aba1](https://github.com/powerhouse-inc/powerhouse/commit/eb37b2aba1))
+- **reactor-monitor-app:** allowlist browser env and harden the controller ([ac2c23e6a4](https://github.com/powerhouse-inc/powerhouse/commit/ac2c23e6a4))
+- **reactor-monitor-app:** test the dev plugin's gates; operator env for both hosts ([2c4b3436c1](https://github.com/powerhouse-inc/powerhouse/commit/2c4b3436c1))
+- **reactor-monitor-app:** pick a project with hosts and keep the log tail in view ([e698ca2112](https://github.com/powerhouse-inc/powerhouse/commit/e698ca2112))
+- **reactor-monitor-app:** forget a probe whose descriptor left the active set ([c91edade73](https://github.com/powerhouse-inc/powerhouse/commit/c91edade73))
+- **reactor-monitor-app:** require an address for the admin preset's ADMINS ([aaceb8b9d4](https://github.com/powerhouse-inc/powerhouse/commit/aaceb8b9d4))
+- **reactor-monitor-app:** re-probe managed remotes when their set returns ([70e1d0b111](https://github.com/powerhouse-inc/powerhouse/commit/70e1d0b111))
+- **reactor-monitor-app:** back off the panel poll and forget vanished starts ([c398d4daa7](https://github.com/powerhouse-inc/powerhouse/commit/c398d4daa7))
+- **registry:** a failed tarball write no longer records its attachment ([5d3ae94bd8](https://github.com/powerhouse-inc/powerhouse/commit/5d3ae94bd8))
+- **switchboard:** port 0 reports the bound port ([3218c7105d](https://github.com/powerhouse-inc/powerhouse/commit/3218c7105d))
+
+### 🔥 Performance
+
+- **reactor:** findByType fetches its page with one getMany ([7f55ef254f](https://github.com/powerhouse-inc/powerhouse/commit/7f55ef254f))
+- **reactor-api:** gate drive node reads on the drive, not on every file's document ([0203ff2b6a](https://github.com/powerhouse-inc/powerhouse/commit/0203ff2b6a))
+- **reactor-browser,connect:** refresh one drive on change instead of re-listing every drive ([221593d6ae](https://github.com/powerhouse-inc/powerhouse/commit/221593d6ae))
+- **reactor-browser,reactor-router,connect-core:** batch multi-document reads into getMany ([5b7cdef949](https://github.com/powerhouse-inc/powerhouse/commit/5b7cdef949))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.77 (2026-10-26)
 
 ### 🚀 Features

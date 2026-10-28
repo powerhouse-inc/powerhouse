@@ -39,10 +39,7 @@ import type {
   PHDocument,
   ProtocolVersions,
 } from "@powerhousedao/shared/document-model";
-import {
-  readPeerManifest,
-  withSignaturePolicy,
-} from "@powerhousedao/shared/document-model";
+import { readPeerManifest } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 
 import {
@@ -51,8 +48,6 @@ import {
 } from "../errors.js";
 import type { RequestClients } from "../request-clients.js";
 import { isDriveContainerType } from "./constants.js";
-
-const REACTOR_DRIVE_DOCUMENT_TYPE = "powerhouse/reactor-drive";
 
 /** The branch a mutation applies to when the caller names none. */
 const DEFAULT_BRANCH = "main";
@@ -89,18 +84,6 @@ export const WRITE_CLIENT_QUERIES: readonly string[] = Object.entries(
   .filter(([, binding]) => binding === "write")
   .map(([field]) => field);
 
-/** The reactor-drive client a reactor-drive parent needs, or the refusal. */
-function requireReactorDriveClient(
-  reactorDriveClient: IDriveClient | undefined,
-): IDriveClient {
-  if (!reactorDriveClient) {
-    throw new GraphQLError(
-      "Reactor-drive parent encountered but no reactorDriveClient is configured on this switchboard",
-    );
-  }
-  return reactorDriveClient;
-}
-
 /**
  * What a document-returning mutation reads back: the document its write
  * targeted, on a branch, and the token bounding the read. A write receipt is
@@ -115,26 +98,13 @@ export type ReadBackTarget = {
 
 /**
  * Adds a document to a drive parent and returns what to read back once the
- * write is readable. Reactor-drive parents go through the reactor-drive
- * client, which still has the facade's waiting shape.
+ * write is readable. `write.drives` picks the drive type's strategy.
  */
 async function addFileToDrive(
   clients: RequestClients,
-  driveType: string,
   driveId: string,
   document: PHDocument,
-  reactorDriveClient: IDriveClient | undefined,
 ): Promise<ReadBackTarget> {
-  if (driveType === REACTOR_DRIVE_DOCUMENT_TYPE) {
-    const added = await requireReactorDriveClient(reactorDriveClient).addFile(
-      driveId,
-      document,
-    );
-    return {
-      documentId: added.header.id,
-      branch: added.header.branch || DEFAULT_BRANCH,
-    };
-  }
   const handle = await clients.write.drives.addFile(driveId, document);
   return handle.readable;
 }
@@ -142,18 +112,9 @@ async function addFileToDrive(
 /** Removes a drive parent's node, waiting until the removal is readable. */
 async function removeNodeFromDrive(
   clients: RequestClients,
-  driveType: string,
   driveId: string,
   nodeId: string,
-  reactorDriveClient: IDriveClient | undefined,
 ): Promise<void> {
-  if (driveType === REACTOR_DRIVE_DOCUMENT_TYPE) {
-    await requireReactorDriveClient(reactorDriveClient).removeNode(
-      driveId,
-      nodeId,
-    );
-    return;
-  }
   const handle = await clients.write.drives.removeNode(driveId, nodeId);
   await handle.readable;
 }
@@ -254,14 +215,22 @@ import type {
   ReactorOperationResultPage,
 } from "./gen/graphql.js";
 
-/** The defaults `create` gives a new document; the parent must already be gated. */
+/**
+ * The defaults `create` gives a new document; the parent must already be
+ * gated. A request without `documentType` predates it and gets the host's
+ * selection unfitted.
+ */
 export async function createDefaults(
   read: IReactorReadClient,
   parentIdOrSlug: string | undefined,
+  documentType: string | undefined,
 ): Promise<{ signaturePolicy: string; protocolVersions: ProtocolVersions }> {
   const [signaturePolicy, protocolVersions] = await Promise.all([
     read.getCreateSignaturePolicy(),
-    read.getCreateProtocolVersions(parentIdOrSlug),
+    read.getCreateProtocolVersions({
+      documentType,
+      parentIdentifier: parentIdOrSlug,
+    }),
   ]);
   return { signaturePolicy, protocolVersions };
 }
@@ -933,7 +902,8 @@ export async function createDocument(
     document: unknown;
     parentIdOrSlug?: string | null;
   },
-  reactorDriveClient?: IDriveClient,
+  /** @deprecated Unused: drive writes go through `clients.write.drives`. */
+  _reactorDriveClient?: IDriveClient,
   subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   // Validate that document is a PHDocument
@@ -963,13 +933,7 @@ export async function createDocument(
         subject && { subject },
       );
       if (isDriveContainerType(parent.header.documentType)) {
-        receipt = await addFileToDrive(
-          clients,
-          parent.header.documentType,
-          parent.header.id,
-          document,
-          reactorDriveClient,
-        );
+        receipt = await addFileToDrive(clients, parent.header.id, document);
       } else {
         const handle = await clients.write.create(document, parentIdOrSlug);
         receipt = await handle.readable;
@@ -1002,7 +966,8 @@ export async function createEmptyDocument(
     parentIdOrSlug?: string | null;
     name?: string | null;
   },
-  reactorDriveClient?: IDriveClient,
+  /** @deprecated Unused: drive writes go through `clients.write.drives`. */
+  _reactorDriveClient?: IDriveClient,
   subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const parentIdOrSlug = fromInputMaybe(args.parentIdOrSlug);
@@ -1016,23 +981,11 @@ export async function createEmptyDocument(
         subject && { subject },
       );
       if (isDriveContainerType(parent.header.documentType)) {
-        const module = await clients.read.getDocumentModelModule(
-          args.documentType,
-        );
-        const document = withSignaturePolicy(
-          module.utils.createDocument(),
-          await clients.read.getCreateSignaturePolicy(),
-        );
-        if (name) {
-          document.header.name = name;
-        }
-        receipt = await addFileToDrive(
-          clients,
-          parent.header.documentType,
-          parent.header.id,
-          document,
-          reactorDriveClient,
-        );
+        const document = await clients.read.newDocument(args.documentType, {
+          parentIdentifier: parent.header.id,
+          name: name || undefined,
+        });
+        receipt = await addFileToDrive(clients, parent.header.id, document);
       } else {
         const handle = await clients.write.createEmpty(args.documentType, {
           parentIdentifier: parentIdOrSlug,
@@ -1070,7 +1023,8 @@ export async function createDocumentWithInitialState(
     preferredEditor?: string | null;
     initialState: Record<string, Record<string, unknown>>;
   },
-  reactorDriveClient?: IDriveClient,
+  /** @deprecated Unused: drive writes go through `clients.write.drives`. */
+  _reactorDriveClient?: IDriveClient,
   subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const parentIdOrSlug = fromInputMaybe(args.parentIdOrSlug);
@@ -1087,10 +1041,9 @@ export async function createDocumentWithInitialState(
     );
   }
 
-  const document = withSignaturePolicy(
-    module.utils.createDocument(),
-    await clients.read.getCreateSignaturePolicy(),
-  );
+  const document = await clients.read.newDocument(args.documentType, {
+    parentIdentifier: parentIdOrSlug ?? undefined,
+  });
 
   // Only merge specification-defined scopes (e.g., global, local).
   // Protected scopes like "auth" and "document" are excluded.
@@ -1128,13 +1081,7 @@ export async function createDocumentWithInitialState(
 
     if (isDriveContainerType(parent.header.documentType)) {
       try {
-        receipt = await addFileToDrive(
-          clients,
-          parent.header.documentType,
-          parent.header.id,
-          document,
-          reactorDriveClient,
-        );
+        receipt = await addFileToDrive(clients, parent.header.id, document);
       } catch (error) {
         throw new GraphQLError(
           `Failed to create document in drive: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -1771,7 +1718,8 @@ export async function deleteDocument(
     idOrSlug: string;
     propagate?: GqlPropagationMode | null;
   },
-  reactorDriveClient?: IDriveClient,
+  /** @deprecated Unused: drive writes go through `clients.write.drives`. */
+  _reactorDriveClient?: IDriveClient,
 ): Promise<boolean> {
   const propagate = toReactorPropagationMode(args.propagate);
 
@@ -1786,13 +1734,7 @@ export async function deleteDocument(
     );
     if (driveParent) {
       const documentId = await clients.read.resolveIdOrSlug(args.idOrSlug);
-      await removeNodeFromDrive(
-        clients,
-        driveParent.header.documentType,
-        driveParent.header.id,
-        documentId,
-        reactorDriveClient,
-      );
+      await removeNodeFromDrive(clients, driveParent.header.id, documentId);
     } else {
       const handle = await clients.write.deleteDocument(
         args.idOrSlug,

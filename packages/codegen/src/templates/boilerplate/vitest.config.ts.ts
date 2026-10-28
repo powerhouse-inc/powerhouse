@@ -2,9 +2,10 @@ import { ts } from "@tmpl/core";
 
 export const vitestConfigTemplate = ts`
 import { defineConfig } from "vitest/config";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
+  // The tsconfig's paths, e.g. document-models/*, which tests import.
+  resolve: { tsconfigPaths: true },
   test: {
     globals: true,
     coverage: {
@@ -18,7 +19,6 @@ export default defineConfig({
       },
     },
   },
-  plugins: [tsconfigPaths()],
 });
 
 `.raw;

@@ -9,28 +9,15 @@ import { EventEmitter } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
-import { initFeatureFlags } from "../src/feature-flags.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { installFatalErrorShutdown } from "../src/fatal-shutdown.mjs";
 import {
   createPgliteStoreFactory,
-  PGLITE_WORKERS_DEFAULT,
-  PH_PGLITE_WORKERS,
-  resolvePgliteWorkersEnabled,
   routePgliteWorkerFailures,
   terminateOnPoisoned,
   type PgliteStoreOptions,
   vacuumFullTimingFromEnv,
 } from "../src/pglite-store.mjs";
-import type { BooleanFlagSource } from "../src/workflow-runtime.mjs";
 
 const BOOT = 90_000;
 
@@ -71,54 +58,6 @@ class FakeWorkerEvents {
     return () => undefined;
   }
 }
-
-describe("resolvePgliteWorkersEnabled", () => {
-  let featureFlags: BooleanFlagSource;
-
-  const previous = process.env[PH_PGLITE_WORKERS];
-
-  beforeAll(async () => {
-    featureFlags = await initFeatureFlags();
-  });
-
-  beforeEach(() => {
-    delete process.env[PH_PGLITE_WORKERS];
-  });
-
-  afterEach(() => {
-    if (previous === undefined) delete process.env[PH_PGLITE_WORKERS];
-    else process.env[PH_PGLITE_WORKERS] = previous;
-  });
-
-  it("falls back to the default constant", async () => {
-    expect(PGLITE_WORKERS_DEFAULT).toBe(true);
-    await expect(resolvePgliteWorkersEnabled({ featureFlags })).resolves.toBe(
-      PGLITE_WORKERS_DEFAULT,
-    );
-  });
-
-  it('is turned on by PH_PGLITE_WORKERS="true"', async () => {
-    process.env[PH_PGLITE_WORKERS] = "true";
-    await expect(resolvePgliteWorkersEnabled({ featureFlags })).resolves.toBe(
-      true,
-    );
-    process.env[PH_PGLITE_WORKERS] = "false";
-    await expect(resolvePgliteWorkersEnabled({ featureFlags })).resolves.toBe(
-      false,
-    );
-  });
-
-  it("lets the host option win either way", async () => {
-    process.env[PH_PGLITE_WORKERS] = "true";
-    await expect(
-      resolvePgliteWorkersEnabled({ featureFlags, option: false }),
-    ).resolves.toBe(false);
-    process.env[PH_PGLITE_WORKERS] = "false";
-    await expect(
-      resolvePgliteWorkersEnabled({ featureFlags, option: true }),
-    ).resolves.toBe(true);
-  });
-});
 
 describe("routePgliteWorkerFailures", () => {
   it("sends an abort to the fatal shutdown", () => {
@@ -296,16 +235,30 @@ describe("vacuumFullTimingFromEnv", () => {
   it("reads both timings, and leaves unset or invalid values to the defaults", () => {
     expect(
       vacuumFullTimingFromEnv({
+        PH_PGLITE_VACUUM_FULL: "quiet",
         PH_PGLITE_VACUUM_FULL_QUIET_MS: "0",
         PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS: "600000",
       }),
     ).toEqual({ vacuumFullQuietMs: 0, vacuumFullMaxDeferMs: 600_000 });
-    expect(vacuumFullTimingFromEnv({})).toEqual({});
+    expect(vacuumFullTimingFromEnv({})).toEqual({ vacuumFullAboveBytes: 0 });
     expect(
       vacuumFullTimingFromEnv({
+        PH_PGLITE_VACUUM_FULL: "quiet",
         PH_PGLITE_VACUUM_FULL_QUIET_MS: "soon",
         PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS: "-5",
       }),
     ).toEqual({});
+  });
+
+  it("turns the mode into the settings the stores open with", () => {
+    expect(vacuumFullTimingFromEnv({ PH_PGLITE_VACUUM_FULL: "off" })).toEqual({
+      vacuumFullAboveBytes: 0,
+    });
+    expect(
+      vacuumFullTimingFromEnv({ PH_PGLITE_VACUUM_FULL: "forced" }),
+    ).toEqual({ vacuumFullMaxDeferMs: 1_800_000 });
+    expect(() =>
+      vacuumFullTimingFromEnv({ PH_PGLITE_VACUUM_FULL: "sometimes" }),
+    ).toThrow(/PH_PGLITE_VACUUM_FULL/);
   });
 });

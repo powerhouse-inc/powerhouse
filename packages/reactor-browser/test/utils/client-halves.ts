@@ -22,6 +22,7 @@ const READ_METHODS = [
   "getDocumentModelModuleForDocument",
   "getCreateSignaturePolicy",
   "getCreateProtocolVersions",
+  "newDocument",
   "resolveIdOrSlug",
   "isServed",
 ];

@@ -99,11 +99,28 @@ function makeOperationInvocation(
     camelCaseDocumentType,
   );
   const operationName = makeOperationName(operation);
+  const scope = operation.scope || "global";
+  const actionTypeName = makeActionTypeName(operation);
   const operationAction = parsesInput ? "{ ...action, input }" : "action";
 
   return ts`
-  ${operationsObjectName}.${operationName}((state as any)[action.scope], ${operationAction} as any, dispatch);
+  ${operationsObjectName}.${operationName}(state.${scope}, ${operationAction} as ${actionTypeName}, dispatch);
   `.raw;
+}
+
+function makeActionTypeName(operation: OperationSpecification) {
+  return `${makePascalCaseOperationName(operation)}Action`;
+}
+
+// The operation reducers take their own action types; `action` is any Action.
+function makeActionTypeImports(modules: ModuleSpecification[]) {
+  return modules
+    .filter((module) => module.operations.length > 0)
+    .map(
+      (module) =>
+        `import type { ${module.operations.map(makeActionTypeName).join(", ")} } from "./${kebabCase(module.name)}/actions.js";`,
+    )
+    .join("\n");
 }
 
 function makeModuleOperationCaseStatement(
@@ -165,11 +182,10 @@ export const documentModelGenReducerFileTemplate = (
   parsedInputOperations: ReadonlySet<string> = new Set(),
 ) =>
   ts`
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { Reducer, StateReducer } from "document-model";
 import { isDocumentAction, createReducer } from "document-model";
 import type { ${v.phStateName} } from "${v.versionImportPath}";
+${makeActionTypeImports(v.specification.modules)}
 
 ${makeModulesOperationsImports(v.specification.modules, v.camelCaseDocumentType)}
 

@@ -570,7 +570,7 @@ enum PropagationMode {
 }
 
 type Query {
-  createDefaults(parentIdOrSlug: String): CreateDefaults!
+  createDefaults(documentType: String, parentIdOrSlug: String): CreateDefaults!
   document(
     idOrSlug: String
     identifier: String @deprecated(reason: "Use idOrSlug.")

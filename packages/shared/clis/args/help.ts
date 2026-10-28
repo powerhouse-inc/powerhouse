@@ -10,6 +10,7 @@ import { inspectArgs } from "./inspect.js";
 import { installArgs } from "./install.js";
 import { listArgs } from "./list.js";
 import { loginArgs } from "./login.js";
+import { mcpArgs } from "./mcp.js";
 import { migrateArgs } from "./migrate.js";
 import { publishArgs } from "./publish.js";
 import { registryLoginArgs } from "./registry.js";
@@ -48,7 +49,8 @@ const allPhCliHelpCommands = {
   host: helpCommand({
     name: "host",
     args: hostCheckArgs,
-    description: "Check a host from hosts/: `ph host check <host>`",
+    description:
+      "Check or export a host from hosts/: `ph host check|export <host>`",
     handler: () => {},
   }),
   generate: helpCommand({
@@ -107,6 +109,13 @@ const allPhCliHelpCommands = {
     aliases: ["is"],
     args: inspectArgs,
     description: "Inspect a package",
+    handler: () => {},
+  }),
+  mcp: helpCommand({
+    name: "mcp",
+    args: mcpArgs,
+    description:
+      "Serve the project's reactor-mcp tools over stdio, starting Vetra on the first tool call",
     handler: () => {},
   }),
   migrate: helpCommand({

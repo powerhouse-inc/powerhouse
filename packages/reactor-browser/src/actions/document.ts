@@ -1,3 +1,9 @@
+import {
+  dropDriveNode,
+  getDriveNode,
+  invalidateDriveNodes,
+  markLocalDriveWrite,
+} from "../hooks/drive-nodes.js";
 import { getPHStore } from "../hooks/ph-store.js";
 import type {
   IReactorReadClient,
@@ -43,6 +49,7 @@ import {
   createCopyHeader,
   createPresignedHeader,
   createZip,
+  creationState,
   documentModelDocumentType,
   generateId,
   hasDerivedDocumentId,
@@ -51,7 +58,6 @@ import {
   setPreferredEditor,
   signaturePolicyOf,
   UnsupportedDocumentModelVersionError,
-  withSignaturePolicy,
   type UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
@@ -63,10 +69,26 @@ import {
 import { showPHModal } from "../hooks/modals.js";
 import { getFullReactorClient } from "../hooks/reactor.js";
 import { isDocumentTypeSupported } from "../utils/documents.js";
+import { listAllDriveNodes } from "../utils/nodes.js";
 import { getUserPermissions } from "../utils/user.js";
 import { queueActions, queueOperations, uploadOperations } from "./queue.js";
 
 const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
+
+/** Puts a node this tab just wrote into its drive's cache, so hooks show it
+ * before the drive change that follows the write is processed. Best effort:
+ * a client without a node reader is left to that change. */
+async function rememberDriveNode(driveId: string, nodeId: string) {
+  try {
+    await getDriveNode(driveId, nodeId, { refresh: true });
+  } catch (error) {
+    logger.verbose(
+      "Caching the written node @id failed: @error",
+      nodeId,
+      error,
+    );
+  }
+}
 
 /** An unreadable drive cannot be shown to hold no duplicate, so reads throw. */
 async function isDocumentInLocation(
@@ -79,14 +101,14 @@ async function isDocumentInLocation(
   duplicateType?: "id" | "name";
   nodeId?: string;
 }> {
-  const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
+  const siblings = await listAllDriveNodes(reactorClient.drives, driveId, {
+    parentFolder: parentFolder ?? null,
+  });
 
   // Case 1: Check for duplicate by ID
-  const nodeById = drive.state.global.nodes.find(
-    (node: { id: string }) => node.id === document.header.id,
-  );
+  const nodeById = siblings.find((node) => node.id === document.header.id);
 
-  if (nodeById && nodeById.parentFolder === (parentFolder ?? null)) {
+  if (nodeById) {
     return {
       isDuplicate: true,
       duplicateType: "id",
@@ -95,12 +117,11 @@ async function isDocumentInLocation(
   }
 
   // Case 2: Check for duplicate by name + type in same parent folder
-  const nodeByNameAndType = drive.state.global.nodes.find(
+  const nodeByNameAndType = siblings.find(
     (node: Node) =>
       isFileNode(node) &&
       node.name === document.header.name &&
-      node.documentType === document.header.documentType &&
-      node.parentFolder === (parentFolder ?? null),
+      node.documentType === document.header.documentType,
   );
 
   if (nodeByNameAndType) {
@@ -234,25 +255,15 @@ export async function fetchDocumentOperations(
 export function extractInitialState(
   documentScopeOps: Operation[],
 ): PHBaseState {
-  const upgradeOp = documentScopeOps.find(
-    (op) => op.action.type === "UPGRADE_DOCUMENT",
+  const initialState = creationState(documentScopeOps);
+  if (initialState) {
+    return initialState;
+  }
+  throw new Error(
+    documentScopeOps.some((op) => op.action.type === "UPGRADE_DOCUMENT")
+      ? "UPGRADE_DOCUMENT operation has no initialState — document is invalid"
+      : "No UPGRADE_DOCUMENT operation found — document is invalid",
   );
-  if (!upgradeOp) {
-    throw new Error(
-      "No UPGRADE_DOCUMENT operation found — document is invalid",
-    );
-  }
-  const input = upgradeOp.action.input as {
-    initialState?: PHBaseState;
-    state?: PHBaseState;
-  };
-  const initialState = input.initialState ?? input.state;
-  if (!initialState) {
-    throw new Error(
-      "UPGRADE_DOCUMENT operation has no initialState — document is invalid",
-    );
-  }
-  return initialState;
 }
 
 export function filterDomainOperations(
@@ -470,37 +481,13 @@ export async function addDocument(
     throw new Error("ReactorClient not initialized");
   }
 
-  // get the module
-  let documentModelModule: DocumentModelModule;
-  if (documentModelVersion !== undefined) {
-    const { results: documentModelModules } =
-      await reactorClient.read.getDocumentModelModules();
-    const module = documentModelModules.find(
-      (m) =>
-        m.documentModel.global.id === documentType &&
-        (m.version ?? 1) === documentModelVersion,
-    );
-    if (!module) {
-      throw new Error(
-        `Document model not found for type: ${documentType} with version: ${documentModelVersion}`,
-      );
-    }
-    documentModelModule = module;
-  } else {
-    documentModelModule =
-      await reactorClient.read.getDocumentModelModule(documentType);
-  }
-
   // create - use passed document's state if available
   const newDocument =
     document ??
-    withSignaturePolicy(
-      documentModelModule.utils.createDocument(),
-      await reactorClient.read.getCreateSignaturePolicy(),
-    );
-  if (!document) {
-    newDocument.state.document.version = documentModelModule.version ?? 1;
-  }
+    (await reactorClient.read.newDocument(documentType, {
+      parentIdentifier: driveId,
+      documentModelVersion,
+    }));
   newDocument.header.name = name;
   if (preferredEditor) {
     newDocument.header.meta = {
@@ -509,7 +496,10 @@ export async function addDocument(
     };
   }
 
-  // Create document using ReactorClient
+  // Create document using ReactorClient. The new node shows at once: the
+  // drive change that follows this write re-reads the drive without waiting
+  // out the interval, and the node goes into the cache as soon as it exists.
+  markLocalDriveWrite(driveId);
   let newDoc: PHDocument;
   try {
     const added = await reactorClient.write.drives.addFile(
@@ -522,6 +512,12 @@ export async function addDocument(
     logger.error("Error adding document: @error", e);
     throw new Error("There was an error adding document", { cause: e });
   }
+  await rememberDriveNode(driveId, newDoc.header.id);
+
+  // The throttled drive refresh can lag; cache the new node now.
+  await getDriveNode(driveId, newDoc.header.id, { refresh: true }).catch(
+    () => undefined,
+  );
 
   // Return a file node structure for compatibility
   return {
@@ -589,7 +585,11 @@ async function createImportedDocument(
   for (let attempt = 1; ; attempt++) {
     let header: PHDocumentHeader;
     if (!v2Required) {
-      header = createPresignedHeader(documentId, document.header.documentType);
+      header = createPresignedHeader(
+        documentId,
+        document.header.documentType,
+        document.header.protocolVersions,
+      );
     } else if (keepsId && attempt === 1) {
       header = createPresignedHeader(documentId, document.header.documentType);
       header.createdAtUtcIso = document.header.createdAtUtcIso;
@@ -775,6 +775,7 @@ export async function addFileWithProgress(
     // Initializing stage (10-20%)
     onProgress?.({ stage: "initializing", progress: 10 });
 
+    markLocalDriveWrite(driveId);
     const created = await createImportedDocument(
       reactor.write,
       document,
@@ -784,6 +785,7 @@ export async function addFileWithProgress(
     );
     const documentId = created.documentId;
     const fileNode = created.fileNode;
+    await rememberDriveNode(driveId, documentId);
 
     onProgress?.({ stage: "initializing", progress: 20 });
 
@@ -892,7 +894,8 @@ export async function updateFile(
     throw new Error("User is not allowed to update files");
   }
   const drive = await reactor.read.get<DocumentDriveDocument>(driveId);
-  const unsafeCastAsDrive = (await queueActions(
+  markLocalDriveWrite(driveId);
+  await queueActions(
     drive,
     baseUpdateFile({
       id: nodeId,
@@ -900,11 +903,9 @@ export async function updateFile(
       parentFolder,
       documentType,
     }),
-  )) as DocumentDriveDocument;
-
-  const node = unsafeCastAsDrive.state.global.nodes.find(
-    (node) => node.id === nodeId,
   );
+
+  const node = await getDriveNode(driveId, nodeId, { refresh: true });
   if (!node || !isFileNode(node)) {
     throw new Error("There was an error updating document");
   }
@@ -929,6 +930,7 @@ export async function addFolder(
   // Get the drive document and add folder action
   const _drive = await reactorClient.read.get<DocumentDriveDocument>(driveId);
   const folderId = generateId();
+  markLocalDriveWrite(driveId);
   const added = await reactorClient.write.execute(driveId, "main", [
     baseAddFolder({
       id: folderId,
@@ -936,11 +938,9 @@ export async function addFolder(
       parentFolder,
     }),
   ]);
-  const updatedDrive = await added.document<DocumentDriveDocument>();
+  await added.readable;
 
-  const node = updatedDrive.state.global.nodes.find(
-    (node) => node.id === folderId,
-  );
+  const node = await getDriveNode(driveId, folderId, { refresh: true });
   if (!node || !isFolderNode(node)) {
     throw new Error("There was an error adding folder");
   }
@@ -959,8 +959,10 @@ export async function deleteNode(driveId: string, nodeId: string) {
     throw new Error("ReactorClient not initialized");
   }
 
+  markLocalDriveWrite(driveId);
   const removed = await reactorClient.write.drives.removeNode(driveId, nodeId);
   await removed.readable;
+  dropDriveNode(driveId, nodeId);
 }
 
 export async function renameNode(
@@ -988,12 +990,13 @@ export async function renameNode(
   }
 
   // Rename the node in the drive document using updateNode action
+  markLocalDriveWrite(driveId);
   const updated = await reactorClient.write.execute(driveId, "main", [
     updateNode({ id: nodeId, name }),
   ]);
-  const drive = await updated.document<DocumentDriveDocument>();
+  await updated.readable;
 
-  const node = drive.state.global.nodes.find((n) => n.id === nodeId);
+  const node = await getDriveNode(driveId, nodeId, { refresh: true });
   if (!node) {
     throw new Error("There was an error renaming node in the drive");
   }
@@ -1024,11 +1027,12 @@ export async function renameDriveNode(
     throw new Error("There was an error renaming the node");
   }
 
+  markLocalDriveWrite(driveId);
   const updated = await reactorClient.write.execute(driveId, "main", [
     updateNode({ id: nodeId, name }),
   ]);
-  const drive = await updated.document<DocumentDriveDocument>();
-  return drive.state.global.nodes.find((n: Node) => n.id === nodeId);
+  await updated.readable;
+  return getDriveNode(driveId, nodeId, { refresh: true });
 }
 
 export async function setPreferredEditorOnNode(
@@ -1077,13 +1081,16 @@ export async function moveNodeById(args: {
 
   if (isStrictEqual(targetParentFolder, srcId)) return;
 
+  markLocalDriveWrite(driveId);
   const handle = await reactorClient.write.execute(driveId, "main", [
     baseMoveNode({
       srcFolder: srcId,
       targetParentFolder,
     }),
   ]);
-  return handle.document();
+  const moved = await handle.document();
+  await rememberDriveNode(driveId, srcId);
+  return moved;
 }
 
 export async function moveNode(
@@ -1100,13 +1107,16 @@ export async function moveNode(
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
+  markLocalDriveWrite(driveId);
   const handle = await reactorClient.write.execute(driveId, "main", [
     baseMoveNode({
       srcFolder: src.id,
       targetParentFolder: target?.id,
     }),
   ]);
-  return handle.document();
+  const moved = await handle.document();
+  await rememberDriveNode(driveId, src.id);
+  return moved;
 }
 
 /**
@@ -1149,7 +1159,10 @@ async function _duplicateDocument(
 
   const config: VersionedReplayConfig = { reducers, upgradeManifest };
   // A copy keeps its source's versions; selection fills the keys it lacks.
-  const selected = await reactor.getCreateProtocolVersions(driveId);
+  const selected = await reactor.getCreateProtocolVersions({
+    documentType: document.header.documentType,
+    parentIdentifier: driveId,
+  });
   const header = createCopyHeader(
     {
       documentType: document.header.documentType,
@@ -1193,6 +1206,7 @@ export async function copyNode(
   }
 
   const drive = await reactor.read.get<DocumentDriveDocument>(driveId);
+  const driveNodes = await listAllDriveNodes(reactor.read.drives, driveId);
 
   const copyNodesInput = generateNodesCopy(
     {
@@ -1201,18 +1215,16 @@ export async function copyNode(
       targetName: src.name,
     },
     () => generateId(),
-    drive.state.global.nodes,
+    driveNodes,
   );
 
   // Pre-calculate collision-resolved names for all nodes to be copied
   const resolvedNamesMap = new Map<string, string>();
   for (const copyNodeInput of copyNodesInput) {
-    const node = drive.state.global.nodes.find(
-      (n) => n.id === copyNodeInput.srcId,
-    );
+    const node = driveNodes.find((n) => n.id === copyNodeInput.srcId);
     if (node) {
       const resolvedName = handleTargetNameCollisions({
-        nodes: drive.state.global.nodes,
+        nodes: driveNodes,
         srcName: copyNodeInput.targetName || node.name,
         srcKind: isFileNode(node) ? "file" : "folder",
         targetParentFolder: copyNodeInput.targetParentFolder || null,
@@ -1222,12 +1234,11 @@ export async function copyNode(
   }
 
   const fileNodesToCopy = copyNodesInput.filter((copyNodeInput) => {
-    const node = drive.state.global.nodes.find(
-      (node) => node.id === copyNodeInput.srcId,
-    );
+    const node = driveNodes.find((node) => node.id === copyNodeInput.srcId);
     return node !== undefined && isFileNode(node);
   });
 
+  markLocalDriveWrite(driveId);
   for (const fileNodeToCopy of fileNodesToCopy) {
     try {
       const document = await reactor.read.get(fileNodeToCopy.srcId);
@@ -1263,7 +1274,11 @@ export async function copyNode(
   const copyActions = copyNodesInput.map((copyNodeInput) =>
     baseCopyNode(copyNodeInput),
   );
-  return await queueActions(drive, copyActions);
+  // Many nodes land at once: re-list the drive rather than fetch each one.
+  markLocalDriveWrite(driveId);
+  const copied = await queueActions(drive, copyActions);
+  invalidateDriveNodes(driveId);
+  return copied;
 }
 
 /**
