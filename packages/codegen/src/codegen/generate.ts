@@ -36,6 +36,7 @@ import {
 } from "remeda";
 import type { Project } from "ts-morph";
 import {
+  assertNoReservedOperationNames,
   getAppMetadata,
   getEditorDirNames,
   getEditorMetadata,
@@ -54,6 +55,7 @@ export async function generateDocumentModel(
   documentModelState: DocumentModelGlobalState,
   project: Project,
 ) {
+  assertNoReservedOperationNames(documentModelState);
   await tsMorphGenerateDocumentModel(documentModelState, project);
 }
 
