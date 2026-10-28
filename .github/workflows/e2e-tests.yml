@@ -392,7 +392,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # The suites start their own switchboards on PGlite: the shared one on
-    # SWITCHBOARD_PORT, and renown-self-auth's on 4022 and 4023. No Postgres.
+    # SWITCHBOARD_PORT, renown-self-auth's on 4022 and 4023, and router's on 4024.
+    # No Postgres.
     env:
       SWITCHBOARD_PORT: 4001
     steps:

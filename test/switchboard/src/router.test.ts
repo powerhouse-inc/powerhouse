@@ -1,3 +1,7 @@
+import { spawn, type ChildProcess } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import type {
   DocumentChangeEvent,
   InProcessReactorClientModule,
@@ -17,6 +21,7 @@ import {
 import {
   fromReactorClient,
   RoutingReactorClient,
+  type RoutingClientOptions,
 } from "@powerhousedao/reactor-router";
 import {
   driveDocumentModelModule,
@@ -56,6 +61,13 @@ const models = () => [
   documentModelDocumentModelModule,
 ];
 
+// A switchboard of this suite's own, to stop mid-test.
+const OWN_PORT = Number(process.env.SWITCHBOARD_ROUTER_PORT ?? 4024);
+const SWITCHBOARD_BIN = resolve(
+  import.meta.dirname,
+  "../node_modules/.bin/switchboard",
+);
+
 const createdDocumentIds: string[] = [];
 const disposables: SwitchboardBackend[] = [];
 let local: InProcessReactorClientModule;
@@ -91,7 +103,10 @@ function switchboardAt(driveAddress: string): SwitchboardBackend {
 }
 
 /** The router Connect builds: the tab's reactor first, then the Switchboard. */
-async function routerOver(remote: SwitchboardBackend) {
+async function routerOver(
+  remote: SwitchboardBackend,
+  options: Partial<RoutingClientOptions> = {},
+) {
   const reactorModule = local.reactorModule;
   if (!reactorModule) {
     throw new Error("The local reactor exposes no module");
@@ -107,7 +122,7 @@ async function routerOver(remote: SwitchboardBackend) {
       },
       remote.config,
     ],
-    { primaryBackend: "local", signer, onDiagnostic: () => {} },
+    { primaryBackend: "local", signer, onDiagnostic: () => {}, ...options },
   );
   await router.refreshFacts();
   return router;
@@ -147,6 +162,42 @@ function recordCreates(): { sent: SentCreate[]; restore(): void } {
       globalThis.fetch = original;
     },
   };
+}
+
+async function startOwnSwitchboard(
+  port: number,
+): Promise<{ proc: ChildProcess; dir: string }> {
+  const dir = mkdtempSync(join(tmpdir(), "router-e2e-switchboard-"));
+  const proc = spawn(SWITCHBOARD_BIN, [], {
+    cwd: dir,
+    env: { ...process.env, PH_SWITCHBOARD_PORT: String(port) },
+    stdio: "ignore",
+  });
+  await vi.waitFor(
+    async () => {
+      const response = await fetch(`http://localhost:${port}/ready`);
+      expect(response.status).toBe(200);
+    },
+    { timeout: 90_000, interval: 250 },
+  );
+  return { proc, dir };
+}
+
+async function stopOwnSwitchboard(
+  run: { proc: ChildProcess; dir: string } | undefined,
+): Promise<void> {
+  if (!run) return;
+  if (run.proc.exitCode === null) {
+    await new Promise<void>((done) => {
+      run.proc.once("close", () => done());
+      run.proc.kill();
+      setTimeout(() => {
+        run.proc.kill("SIGKILL");
+        done();
+      }, 10_000).unref();
+    });
+  }
+  rmSync(run.dir, { recursive: true, force: true });
 }
 
 beforeAll(async () => {
@@ -338,4 +389,63 @@ describe("a router over a local reactor and a real Switchboard", () => {
     expect(creates.sent.at(-1)?.driveId).toBeNull();
     expect(creates.sent.at(-1)?.status).not.toBe(421);
   });
+
+  it("reads the Switchboard's facts, with the document models it serves", async () => {
+    const drive = await createDrive();
+    const router = await routerOver(switchboardAt(drive.address));
+    const remote = router.backends.find((backend) => backend.name === SB);
+
+    expect(remote?.facts.known).toBe(true);
+    expect(remote?.facts.reactor.storage.engine).toBeTruthy();
+    expect([...(remote?.facts.documentTypes ?? [])]).toEqual(
+      expect.arrayContaining([DRIVE_TYPE, MODEL_TYPE]),
+    );
+  });
+});
+
+describe("a router whose Switchboard stops", () => {
+  const PROBE_TIMEOUT_MS = 3_000;
+  let run: { proc: ChildProcess; dir: string } | undefined;
+
+  afterAll(async () => {
+    await stopOwnSwitchboard(run);
+  }, 30_000);
+
+  it("still completes local creates, and reports the Switchboard down", async () => {
+    run = await startOwnSwitchboard(OWN_PORT);
+    const ownUrl = `http://localhost:${OWN_PORT}`;
+    const remote = createSwitchboardBackend({
+      name: SB,
+      url: `${ownUrl}/graphql`,
+      tokenProvider: () => Promise.resolve(undefined),
+      signer,
+      documentModels: models,
+      realtime: false,
+      inspection: "none",
+    });
+    disposables.push(remote);
+    // As Connect places them: new collections on the inspectable local reactor.
+    const router = await routerOver(remote, {
+      probeTimeoutMs: PROBE_TIMEOUT_MS,
+      defaultRequirements: { inspectable: true },
+    });
+    expect(router.backends[1].facts.known).toBe(true);
+
+    await stopOwnSwitchboard(run);
+    run = undefined;
+
+    const started = Date.now();
+    const created = await router.createEmpty(MODEL_TYPE);
+    expect(Date.now() - started).toBeLessThan(PROBE_TIMEOUT_MS + 500);
+    expect(routedTo(router, created.header.id)).toBe("local");
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await remote.config.backend.isServed("any").catch(() => undefined);
+    }
+    expect(router.describeRouting().health).toEqual([
+      { backend: SB, health: "down" },
+    ]);
+    const second = await router.createEmpty(MODEL_TYPE);
+    expect(routedTo(router, second.header.id)).toBe("local");
+  }, 120_000);
 });

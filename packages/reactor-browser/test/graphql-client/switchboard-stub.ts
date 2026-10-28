@@ -1,5 +1,5 @@
 import http from "node:http";
-import type { AddressInfo } from "node:net";
+import type { AddressInfo, Socket } from "node:net";
 
 export type Received = {
   headers: http.IncomingHttpHeaders;
@@ -64,6 +64,31 @@ export const REMOTE_INFO = {
   syncChannels: ["gql"],
 };
 
+export const REMOTE_DOCUMENT_TYPES = [DRIVE_TYPE, "powerhouse/document-model"];
+
+/** The `SwitchboardFacts` answer; `over` replaces parts of it. */
+export function switchboardFacts(
+  over: {
+    info?: Record<string, unknown>;
+    documentTypes?: readonly string[];
+    queries?: readonly string[];
+  } = {},
+) {
+  return {
+    inspection: {
+      info: { ...REMOTE_INFO, access: null, ...over.info },
+      documentModels: (over.documentTypes ?? REMOTE_DOCUMENT_TYPES).map(
+        (documentType) => ({ documentType }),
+      ),
+    },
+    __type: {
+      fields: (
+        over.queries ?? ["documentServed", "createDefaults", "inspection"]
+      ).map((name) => ({ name })),
+    },
+  };
+}
+
 export function data(value: unknown): Reply {
   return { status: 200, body: JSON.stringify({ data: value }) };
 }
@@ -91,8 +116,8 @@ export function switchboard(
       unknown
     >;
     switch (received.body.operationName) {
-      case "RemoteReactorInfo":
-        return data({ inspection: { info: REMOTE_INFO } });
+      case "SwitchboardFacts":
+        return data(switchboardFacts());
       case "GetDocumentServed":
         return data({
           documentServed: (variables.idOrSlug as string) in documents,
@@ -219,4 +244,29 @@ export function driveIdOf(
     throw new Error(`${operationName} was not sent`);
   }
   return entry.headers["drive-id"] as string | undefined;
+}
+
+/** A server that accepts each request and never answers it. */
+export async function serveHanging(): Promise<StubSwitchboard> {
+  const sockets = new Set<Socket>();
+  const instance = http.createServer(() => {
+    // Never answered.
+  });
+  instance.on("connection", (socket) => {
+    sockets.add(socket);
+    socket.on("close", () => sockets.delete(socket));
+  });
+  await new Promise<void>((resolve) =>
+    instance.listen(0, "127.0.0.1", resolve),
+  );
+  const { port } = instance.address() as AddressInfo;
+  return {
+    url: `http://127.0.0.1:${port}/graphql`,
+    received: [],
+    close: () =>
+      new Promise<void>((resolve) => {
+        for (const socket of sockets) socket.destroy();
+        instance.close(() => resolve());
+      }),
+  };
 }

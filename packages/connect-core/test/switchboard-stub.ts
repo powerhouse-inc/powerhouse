@@ -64,6 +64,31 @@ export const REMOTE_INFO = {
   syncChannels: ["gql"],
 };
 
+export const REMOTE_DOCUMENT_TYPES = [DRIVE_TYPE, "powerhouse/document-model"];
+
+/** The `SwitchboardFacts` answer; `over` replaces parts of it. */
+export function switchboardFacts(
+  over: {
+    info?: Record<string, unknown>;
+    documentTypes?: readonly string[];
+    queries?: readonly string[];
+  } = {},
+) {
+  return {
+    inspection: {
+      info: { ...REMOTE_INFO, access: null, ...over.info },
+      documentModels: (over.documentTypes ?? REMOTE_DOCUMENT_TYPES).map(
+        (documentType) => ({ documentType }),
+      ),
+    },
+    __type: {
+      fields: (
+        over.queries ?? ["documentServed", "createDefaults", "inspection"]
+      ).map((name) => ({ name })),
+    },
+  };
+}
+
 export function data(value: unknown): Reply {
   return { status: 200, body: JSON.stringify({ data: value }) };
 }
@@ -91,8 +116,8 @@ export function switchboard(
       unknown
     >;
     switch (received.body.operationName) {
-      case "RemoteReactorInfo":
-        return data({ inspection: { info: REMOTE_INFO } });
+      case "SwitchboardFacts":
+        return data(switchboardFacts());
       case "GetDocumentServed":
         return data({
           documentServed: (variables.idOrSlug as string) in documents,

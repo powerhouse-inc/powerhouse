@@ -5,6 +5,7 @@ import type {
   ViewFilter,
 } from "@powerhousedao/reactor";
 import type {
+  BackendHealth,
   IRoutableBackend,
   ReactorReach,
   RoutableBackendConfig,
@@ -24,6 +25,11 @@ import {
   GraphQLReactorClient,
   type DriveIdCall,
 } from "./graphql-reactor-client.js";
+import {
+  globalFetch,
+  isDeadlineError,
+  type GraphQLFetch,
+} from "./transport.js";
 
 export type SwitchboardBackendDescriptor = {
   /** Router backend name; unique and stable for the router's life. */
@@ -39,7 +45,16 @@ export type SwitchboardBackendDescriptor = {
   readonly realtime?: boolean;
   /** Default `"rpc"`. */
   readonly inspection?: ReactorReach["inspection"];
+  /** Bound on one request, headers through body. Default 30_000. */
+  readonly requestTimeoutMs?: number;
+  /** Default `{failures: 3, openMs: 30_000}`. */
+  readonly breaker?: { readonly failures: number; readonly openMs: number };
+  /** The transport under the deadline and the breaker; the global `fetch` by default. */
+  readonly fetch?: GraphQLFetch;
 };
+
+export const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+export const DEFAULT_BREAKER = Object.freeze({ failures: 3, openMs: 30_000 });
 
 export type SwitchboardBackend = {
   /** reach `{hosting: "remote", inspection}`; `refusesMisroutes: false`. */
@@ -50,8 +65,8 @@ export type SwitchboardBackend = {
   dispose(): void;
 };
 
-const REMOTE_INFO_QUERY = /* GraphQL */ `
-  query RemoteReactorInfo {
+const FACTS_QUERY = /* GraphQL */ `
+  query SwitchboardFacts {
     inspection {
       info {
         storage {
@@ -67,17 +82,104 @@ const REMOTE_INFO_QUERY = /* GraphQL */ `
           sql
         }
       }
+      documentModels {
+        documentType
+      }
+    }
+    __type(name: "Query") {
+      fields {
+        name
+      }
     }
   }
 `;
 
-type RemoteReactorInfo = {
+type SwitchboardFacts = {
   inspection: {
     info: Omit<ReactorInfo, "access"> & {
       access: ReactorInfo["access"] | null;
     };
+    documentModels: readonly { documentType: string }[];
   };
+  __type: { fields: readonly { name: string }[] | null } | null;
 };
+
+/** Queries this backend sends that a Switchboard serves only from some version. */
+const REQUIRED_QUERIES = ["documentServed", "createDefaults", "inspection"];
+
+/** The Switchboard's circuit is open: nothing was sent. */
+export class SwitchboardUnreachableError extends Error {
+  override readonly name = "SwitchboardUnreachableError";
+
+  constructor(
+    readonly backend: string,
+    readonly retryAt: number,
+  ) {
+    super(
+      `Switchboard backend ${JSON.stringify(backend)} is unreachable; nothing is sent until ${new Date(retryAt).toISOString()}`,
+    );
+  }
+}
+
+/**
+ * Opens after `failures` transport failures in a row (a network error, a
+ * deadline or a 5xx) and sends nothing for `openMs`. Any other answer, a
+ * GraphQL error included, closes it. The first request after `openMs` goes
+ * through; one more failure opens it again.
+ */
+class Breaker {
+  private consecutive = 0;
+  private openUntil: number | undefined;
+
+  constructor(
+    private readonly backend: string,
+    private readonly settings: { failures: number; openMs: number },
+  ) {}
+
+  health(): BackendHealth {
+    return this.isOpen() ? "down" : "up";
+  }
+
+  wrap(inner: GraphQLFetch): GraphQLFetch {
+    return async (input, init) => {
+      const openUntil = this.openUntil;
+      if (openUntil !== undefined && Date.now() < openUntil) {
+        throw new SwitchboardUnreachableError(this.backend, openUntil);
+      }
+      let response: Response;
+      try {
+        response = await inner(input, init);
+      } catch (error) {
+        if (!abortedByCaller(init?.signal)) {
+          this.fail();
+        }
+        throw error;
+      }
+      if (response.status >= 500) {
+        this.fail();
+      } else {
+        this.consecutive = 0;
+        this.openUntil = undefined;
+      }
+      return response;
+    };
+  }
+
+  private isOpen(): boolean {
+    return this.openUntil !== undefined && Date.now() < this.openUntil;
+  }
+
+  private fail(): void {
+    this.consecutive += 1;
+    if (this.consecutive >= this.settings.failures) {
+      this.openUntil = Date.now() + this.settings.openMs;
+    }
+  }
+}
+
+function abortedByCaller(signal: AbortSignal | null | undefined): boolean {
+  return Boolean(signal?.aborted) && !isDeadlineError(signal?.reason);
+}
 
 const NO_ACCESS: ReactorInfo["access"] = Object.freeze({
   admin: false,
@@ -162,6 +264,10 @@ export function createSwitchboardBackend(
   descriptor: SwitchboardBackendDescriptor,
 ): SwitchboardBackend {
   const drives = new KnownDrives();
+  const breaker = new Breaker(
+    descriptor.name,
+    descriptor.breaker ?? DEFAULT_BREAKER,
+  );
   const signer = descriptor.signer;
   const gql = new GraphQLReactorClient({
     url: descriptor.url,
@@ -170,9 +276,12 @@ export function createSwitchboardBackend(
     documentModels: descriptor.documentModels,
     realtime: descriptor.realtime,
     driveIdFor: drives.driveIdFor,
+    requestTimeoutMs: descriptor.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
+    fetch: breaker.wrap(descriptor.fetch ?? globalFetch),
   });
   const backend: IRoutableBackend = {
     supports: { find: findIsServableOverGraphQL, pointInTimeViews: false },
+    health: () => breaker.health(),
     drives: gql.read.drives,
     get: async <TDocument extends PHDocument>(
       identifier: string,
@@ -239,20 +348,43 @@ export function createSwitchboardBackend(
     },
     waitForJob: (job, signal) => gql.waitForJob(job, signal),
   };
-  const facts = async (): Promise<ReactorInfo> => {
-    const { info } = (await gql.request<RemoteReactorInfo>(REMOTE_INFO_QUERY))
-      .inspection;
-    return { ...info, access: info.access ?? NO_ACCESS };
-  };
+  // The router reads the facts and the types together; they share one query.
+  let reading: Promise<SwitchboardFacts> | undefined;
+  const read = () =>
+    (reading ??= readFacts(gql, descriptor.url).finally(() => {
+      reading = undefined;
+    }));
   return {
     config: {
       name: descriptor.name,
       backend,
-      facts,
+      facts: async () => {
+        const { info } = (await read()).inspection;
+        return { ...info, access: info.access ?? NO_ACCESS };
+      },
+      documentTypes: async () =>
+        (await read()).inspection.documentModels.map(
+          (model) => model.documentType,
+        ),
       reach: { hosting: "remote", inspection: descriptor.inspection ?? "rpc" },
       refusesMisroutes: false,
     },
     notifyCredentialsChanged: () => gql.notifyCredentialsChanged(),
     dispose: () => gql.dispose(),
   };
+}
+
+async function readFacts(
+  gql: GraphQLReactorClient,
+  url: string,
+): Promise<SwitchboardFacts> {
+  const facts = await gql.request<SwitchboardFacts>(FACTS_QUERY);
+  const served = new Set(facts.__type?.fields?.map((field) => field.name));
+  const missing = REQUIRED_QUERIES.filter((query) => !served.has(query));
+  if (missing.length > 0) {
+    throw new Error(
+      `The Switchboard at ${url} does not serve ${missing.join(", ")}; it is older than this client`,
+    );
+  }
+  return facts;
 }

@@ -1,10 +1,16 @@
 import type { ReactorInfo } from "@powerhousedao/reactor";
-import { misrouteOf } from "@powerhousedao/reactor-router";
+import {
+  misrouteOf,
+  RoutingReactorClient,
+  UnsupportedByBackendError,
+  type RouterDiagnostic,
+} from "@powerhousedao/reactor-router";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
   actions,
   withSignaturePolicy,
   type Action,
+  type DocumentModelModule,
   type ISigner,
   type Signature,
 } from "@powerhousedao/shared/document-model";
@@ -12,8 +18,11 @@ import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createSwitchboardBackend,
+  SwitchboardUnreachableError,
+  type SwitchboardBackend,
   type SwitchboardBackendDescriptor,
 } from "../../src/graphql-client/switchboard-backend.js";
+import { isDeadlineError } from "../../src/graphql-client/transport.js";
 import { JOB_NOT_FOUND_ERROR_NAME } from "../../src/reactor-interop.js";
 import {
   data,
@@ -21,8 +30,10 @@ import {
   driveIdOf,
   REMOTE_INFO,
   serve,
+  serveHanging,
   settledJob,
   switchboard,
+  switchboardFacts,
   wrongShard,
   type Received,
   type StubSwitchboard,
@@ -53,6 +64,18 @@ async function backendOver(
     ...descriptor,
   });
   return { stub, remote, backend: remote.config.backend };
+}
+
+function routerOver(
+  remote: SwitchboardBackend,
+  onDiagnostic: RouterDiagnostic = () => {},
+) {
+  return new RoutingReactorClient([remote.config], {
+    onDiagnostic,
+    documentModelModules: [
+      documentModelDocumentModelModule as unknown as DocumentModelModule,
+    ],
+  });
 }
 
 function factsOf(remote: { config: { facts: unknown } }): Promise<ReactorInfo> {
@@ -191,12 +214,15 @@ describe("createSwitchboardBackend declares what GraphQL serves", () => {
 });
 
 describe("createSwitchboardBackend facts", () => {
+  const factsReply =
+    (over: Parameters<typeof switchboardFacts>[0]) =>
+    ({ body }: Received) =>
+      body.operationName === "SwitchboardFacts"
+        ? data(switchboardFacts(over))
+        : undefined;
+
   it("reads the Switchboard's facts from its inspection subgraph", async () => {
-    const { remote } = await backendOver({}, ({ body }) =>
-      body.operationName === "RemoteReactorInfo"
-        ? data({ inspection: { info: { ...REMOTE_INFO, access: null } } })
-        : undefined,
-    );
+    const { remote } = await backendOver({});
 
     expect(await factsOf(remote)).toEqual({
       ...REMOTE_INFO,
@@ -205,20 +231,192 @@ describe("createSwitchboardBackend facts", () => {
   });
 
   it("takes access from the server when it reports one", async () => {
-    const { remote } = await backendOver({}, ({ body }) =>
-      body.operationName === "RemoteReactorInfo"
-        ? data({
-            inspection: {
-              info: { ...REMOTE_INFO, access: { admin: true, sql: false } },
-            },
-          })
-        : undefined,
+    const { remote } = await backendOver(
+      {},
+      factsReply({ info: { access: { admin: true, sql: false } } }),
     );
 
     expect((await factsOf(remote)).access).toEqual({
       admin: true,
       sql: false,
     });
+  });
+
+  it("lists the Switchboard's document types, in the same request as its facts", async () => {
+    const { remote, stub } = await backendOver(
+      {},
+      factsReply({ documentTypes: [DRIVE_TYPE, "powerhouse/test"] }),
+    );
+    const router = routerOver(remote);
+
+    await router.refreshFacts();
+
+    expect([...(router.backends[0].facts.documentTypes ?? [])]).toEqual([
+      DRIVE_TYPE,
+      "powerhouse/test",
+    ]);
+    expect(router.backends[0].facts.known).toBe(true);
+    expect(
+      stub.received.filter((r) => r.body.operationName === "SwitchboardFacts"),
+    ).toHaveLength(1);
+  });
+
+  it("is unknown when the Switchboard lacks a query this backend sends", async () => {
+    const { remote } = await backendOver(
+      {},
+      factsReply({ queries: ["inspection", "createDefaults"] }),
+    );
+    const diagnostics: string[] = [];
+    const router = routerOver(remote, (message) => diagnostics.push(message));
+
+    await expect(factsOf(remote)).rejects.toThrow(
+      "does not serve documentServed",
+    );
+    await router.refreshFacts();
+
+    expect(router.backends[0].facts.known).toBe(false);
+    expect(diagnostics.join("\n")).toContain("documentServed");
+  });
+
+  it("refuses a create of a type the Switchboard lacks, sending nothing", async () => {
+    const { remote, stub } = await backendOver(
+      { "drive-1": DRIVE_TYPE },
+      factsReply({ documentTypes: [DRIVE_TYPE] }),
+    );
+    const router = routerOver(remote);
+    await router.refreshFacts();
+
+    await expect(
+      router.create(modelDocument("doc-new"), "drive-1"),
+    ).rejects.toThrow(UnsupportedByBackendError);
+    expect(
+      stub.received.some((r) => r.body.operationName === "CreateDocument"),
+    ).toBe(false);
+  });
+});
+
+describe("createSwitchboardBackend request deadline", () => {
+  it("rejects a request the Switchboard never answers at the deadline", async () => {
+    const hanging = await serveHanging();
+    const remote = createSwitchboardBackend({
+      name: "sb",
+      url: hanging.url,
+      tokenProvider: () => Promise.resolve(undefined),
+      signer: undefined,
+      documentModels: () => [],
+      realtime: false,
+      requestTimeoutMs: 200,
+    });
+    const started = Date.now();
+    try {
+      const error = await remote.config.backend.get("doc-1").then(
+        () => undefined,
+        (reason: unknown) => reason,
+      );
+
+      expect(isDeadlineError(error)).toBe(true);
+      expect(Date.now() - started).toBeLessThan(2_000);
+    } finally {
+      await hanging.close();
+    }
+  });
+});
+
+describe("createSwitchboardBackend breaker", () => {
+  const BREAKER = { failures: 3, openMs: 300 };
+  const serverError = { status: 500, body: "boom" };
+  const graphqlError = data(null);
+  const failing = (reply: { status: number; body: string }) => () => reply;
+
+  it("opens after three transport failures and sends nothing while open", async () => {
+    const { remote, backend, stub } = await backendOver(
+      {},
+      failing(serverError),
+      { breaker: BREAKER },
+    );
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await expect(backend.isServed("doc-1")).rejects.toThrow();
+    }
+    const sent = stub.received.length;
+
+    expect(backend.health?.()).toBe("down");
+    await expect(backend.isServed("doc-1")).rejects.toThrow(
+      SwitchboardUnreachableError,
+    );
+    await expect(factsOf(remote)).rejects.toThrow(SwitchboardUnreachableError);
+    expect(stub.received).toHaveLength(sent);
+  });
+
+  it("does not open on GraphQL errors, which are answers", async () => {
+    const { backend } = await backendOver({}, failing(graphqlError), {
+      breaker: BREAKER,
+    });
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await expect(backend.isServed("doc-1")).rejects.toThrow();
+    }
+
+    expect(backend.health?.()).toBe("up");
+  });
+
+  it("does not count a request its caller aborted", async () => {
+    const hanging = await serveHanging();
+    const remote = createSwitchboardBackend({
+      name: "sb",
+      url: hanging.url,
+      tokenProvider: () => Promise.resolve(undefined),
+      signer: undefined,
+      documentModels: () => [],
+      realtime: false,
+      breaker: { failures: 1, openMs: 60_000 },
+    });
+    try {
+      const controller = new AbortController();
+      const read = remote.config.backend.isServed(
+        "doc-1",
+        undefined,
+        controller.signal,
+      );
+      controller.abort();
+      await expect(read).rejects.toThrow();
+
+      expect(remote.config.backend.health?.()).toBe("up");
+    } finally {
+      await hanging.close();
+    }
+  });
+
+  it("lets a request through after openMs and closes when it is answered", async () => {
+    let broken = true;
+    const { backend } = await backendOver(
+      { "doc-1": MODEL_TYPE },
+      () => (broken ? serverError : undefined),
+      { breaker: BREAKER },
+    );
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await expect(backend.isServed("doc-1")).rejects.toThrow();
+    }
+    expect(backend.health?.()).toBe("down");
+
+    broken = false;
+    await new Promise((resolve) => setTimeout(resolve, BREAKER.openMs + 50));
+
+    expect(backend.health?.()).toBe("up");
+    expect(await backend.isServed("doc-1")).toBe(true);
+    expect(backend.health?.()).toBe("up");
+  });
+
+  it("opens again on the first failure after openMs", async () => {
+    const { backend } = await backendOver({}, failing(serverError), {
+      breaker: BREAKER,
+    });
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await expect(backend.isServed("doc-1")).rejects.toThrow();
+    }
+    await new Promise((resolve) => setTimeout(resolve, BREAKER.openMs + 50));
+
+    await expect(backend.isServed("doc-1")).rejects.toThrow();
+
+    expect(backend.health?.()).toBe("down");
   });
 });
 
