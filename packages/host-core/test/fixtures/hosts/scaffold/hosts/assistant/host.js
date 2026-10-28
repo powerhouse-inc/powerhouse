@@ -35,7 +35,10 @@ export default {
         // external switchboard.
         remote: {
           url: {
-            $output: { host: "switchboard", path: ["endpoints", "graphql"] },
+            $output: {
+              host: "switchboard",
+              path: ["drives", "powerhouse", "url"],
+            },
           },
         },
       },

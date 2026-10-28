@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { switchboardOfDrive } from "../src/schema.js";
 import {
   childrenSchema,
   compoundHostSchema,
+  declaredHostSchemas,
   hostNameSchema,
   profileSchema,
   reactorHostSchema,
@@ -19,9 +21,9 @@ describe("reactorSchema (strict per D2.d)", () => {
           readModel: { url: "dev.db" },
           packages: { dynamic: true },
         },
-        remote: { kind: "remote", remote: { url: "https://sb.example" } },
+        remote: { kind: "remote", remote: { url: "https://sb.example/d/b" } },
       },
-      placement: { primary: "main" },
+      placement: { primary: "main", drives: { b: "remote" } },
       workflows: true,
       protocol: {
         featureFlags: { documentDecisions: true },
@@ -175,5 +177,153 @@ describe("childrenSchema", () => {
         member: { host: "switchboard", runner: { port: 65536 } },
       }).success,
     ).toBe(false);
+  });
+});
+
+const messages = (result: {
+  error?: { issues: { path: PropertyKey[]; message: string }[] };
+}) =>
+  (result.error?.issues ?? []).map(
+    (i) => `${i.path.map(String).join(".")}: ${i.message}`,
+  );
+
+describe("remote.url is a switchboard drive address", () => {
+  const remote = (url: unknown) => ({
+    backends: { sb: { kind: "remote", remote: { url } } },
+  });
+
+  it("is re-exported from the neutral entry", () => {
+    expect(switchboardOfDrive("http://h:1/d/a")?.graphql).toBe(
+      "http://h:1/graphql",
+    );
+  });
+
+  it("accepts a drive address and refuses a GraphQL url (resolved form)", () => {
+    expect(
+      reactorSchema.safeParse(remote("http://localhost:4001/d/powerhouse"))
+        .success,
+    ).toBe(true);
+    expect(
+      messages(
+        reactorSchema.safeParse(remote("http://localhost:4001/graphql")),
+      ),
+    ).toEqual([
+      'backends.sb.remote.url: remote.url must be a switchboard drive address (<switchboard>/d/<slug>), not http://localhost:4001/graphql: sync needs the drive. Use remote: { url: switchboard.drives.<slug>.url } with switchboard from ../switchboard/outputs.js, or remote: { url: { $output: { host: "switchboard", path: ["drives", "<slug>", "url"] } } }.',
+    ]);
+  });
+
+  it("names the drive token that replaces an endpoints.graphql token (declared form)", () => {
+    const declared = declaredHostSchemas.reactorSchema;
+    expect(
+      messages(
+        declared.safeParse(
+          remote({
+            $output: {
+              host: "lab",
+              member: "sb-b",
+              path: ["endpoints", "graphql"],
+            },
+          }),
+        ),
+      ),
+    ).toEqual([
+      'backends.sb.remote.url: remote.url reads lab\'s endpoints.graphql; it must be a switchboard drive address (<switchboard>/d/<slug>): sync needs the drive. Use remote: { url: lab.drives.<slug>.url } with lab from ../lab/outputs.js, or remote: { url: { $output: { host: "lab", member: "sb-b", path: ["drives", "<slug>", "url"] } } }.',
+    ]);
+    expect(
+      declared.safeParse(
+        remote({ $output: { host: "lab", path: ["drives", "a", "url"] } }),
+      ).success,
+    ).toBe(true);
+  });
+
+  it("refuses two remote backends on the same switchboard", () => {
+    expect(
+      messages(
+        reactorSchema.safeParse({
+          backends: {
+            a: { kind: "remote", remote: { url: "http://h:1/api/d/x" } },
+            b: { kind: "remote", remote: { url: "http://h:1/api/d/y/" } },
+            c: { kind: "remote", remote: { url: "http://h:2/d/x" } },
+          },
+        }),
+      ),
+    ).toEqual([
+      'backends.b.remote.url: backends "a" and "b" both open drives on the same switchboard (http://h:1/api). Keep "a", and list the second drive under reactor.drives with its remote.url instead.',
+    ]);
+  });
+});
+
+describe("placement.drives", () => {
+  const backends = {
+    main: { kind: "worker" },
+    sb: { kind: "remote", remote: { url: "http://sb:1/d/home" } },
+    other: { kind: "remote", remote: { url: "http://other:1/d/x" } },
+  };
+  const drives = [
+    { slug: "local" },
+    { slug: "b", remote: { url: "http://sb:1/d/b" } },
+    { slug: "far", remote: { url: "http://other:1/d/far" } },
+  ];
+  const place = (placed: Record<string, string>) =>
+    reactorSchema.safeParse({
+      backends,
+      drives,
+      placement: { drives: placed },
+    });
+
+  it("accepts a drive on its own switchboard, a home drive and a local copy", () => {
+    expect(
+      place({ b: "sb", home: "sb", x: "other", far: "main" }).success,
+    ).toBe(true);
+  });
+
+  it("refuses a backend that does not exist", () => {
+    expect(messages(place({ b: "nope" }))).toEqual([
+      'placement.drives.b: placement.drives.b names backend "nope", which is not in backends (main, sb, other).',
+    ]);
+  });
+
+  it("refuses a drive on another switchboard's backend", () => {
+    expect(messages(place({ far: "sb", home: "other" }))).toEqual([
+      'placement.drives.far: placement.drives.far opens drive "far" on "sb" (http://sb:1), but the drive is on http://other:1. Place it on the backend for that switchboard.',
+      'placement.drives.home: placement.drives.home opens drive "home" on "other" (http://other:1), but the drive is on http://sb:1. Place it on the backend for that switchboard.',
+    ]);
+  });
+
+  it("refuses to open a drive this reactor keeps on a remote", () => {
+    expect(messages(place({ local: "sb" }))).toEqual([
+      'placement.drives.local: placement.drives.local opens drive "local" on "sb", but this reactor keeps that drive itself. Only a drive on a switchboard can open there without a copy.',
+    ]);
+  });
+
+  it("checks only backend names in the declared form", () => {
+    const declared = declaredHostSchemas.reactorSchema;
+    const mapped = {
+      backends: {
+        sb: {
+          kind: "remote",
+          remote: {
+            url: { $output: { host: "s", path: ["drives", "a", "url"] } },
+          },
+        },
+      },
+      drives: {
+        $map: {
+          over: { $output: { host: "s", path: ["drives"] } },
+          to: { slug: { $key: true }, remote: { url: { $item: ["url"] } } },
+        },
+      },
+    };
+    expect(
+      declared.safeParse({ ...mapped, placement: { drives: { b: "sb" } } })
+        .success,
+    ).toBe(true);
+    expect(
+      messages(
+        declared.safeParse({ ...mapped, placement: { drives: { b: "x" } } }),
+      ),
+    ).toEqual([
+      'placement.drives.b: placement.drives.b names backend "x", which is not in backends (sb).',
+    ]);
   });
 });
