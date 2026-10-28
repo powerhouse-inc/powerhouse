@@ -63,6 +63,10 @@ function fakeClient(overrides: Partial<ControllerClient> = {}) {
       instances.clear();
       return Promise.resolve(all);
     },
+    capabilities: () => Promise.reject(new Error("unused")),
+    exportHost: () => Promise.reject(new Error("unused")),
+    checkDraft: () => Promise.reject(new Error("unused")),
+    startDraft: () => Promise.reject(new Error("unused")),
     ...overrides,
   };
   const run = (id: string) => {
