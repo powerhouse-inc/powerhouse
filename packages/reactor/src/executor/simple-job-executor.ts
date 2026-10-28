@@ -321,7 +321,11 @@ type StoredProtocol = {
   refusal?: Error;
   /** Undefined when nothing is stored yet. */
   caps?: BaseReducerCapabilities;
-  /** The header read failed for a reason other than absence. */
+  /**
+   * The header read failed for a reason other than absence and the stored
+   * CREATE_DOCUMENT runs the retraction rule (that error), or names a
+   * base-reducer number this build does not know (a typed refusal).
+   */
   unreadable?: Error;
 };
 
