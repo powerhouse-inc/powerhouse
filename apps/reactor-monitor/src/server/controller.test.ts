@@ -449,6 +449,19 @@ describe("createMonitorController", () => {
     expect(await codeOf(controller.stop(started.id))).toBe("not_found");
   });
 
+  it("reports a standalone Connect's app URL, not as switchboard outputs", async () => {
+    const { controller, launches } = create();
+    const started = await controller.start({ project: allowed, host: "sb" });
+    launches[0].ready({
+      origin: "http://localhost:6491",
+      endpoints: { connect: "http://localhost:6491/" },
+    });
+    await until(() => controller.get(started.id).status === "running");
+    expect(controller.get(started.id).app).toBe("http://localhost:6491/");
+    expect(controller.get(started.id).outputs).toBeUndefined();
+    await controller.stop(started.id);
+  });
+
   it("aborts a start that is stopped before it is ready", async () => {
     const { controller, launches } = create();
     const started = await controller.start({ project: allowed, host: "sb" });
@@ -771,9 +784,20 @@ describe("createMonitorController", () => {
           verb: "run",
           outputs: memberOutputs(5002),
         },
+        ui: {
+          host: "ui",
+          runnerModule: "@powerhousedao/ph-cli/runners/connect",
+          kind: "reactor",
+          verb: "run",
+          outputs: {
+            origin: "http://localhost:6491",
+            endpoints: { connect: "http://localhost:6491/" },
+          },
+        },
       } as SpawnedHost["members"]);
       await until(() => controller.get(id).status === "running");
       expect(controller.get(id).outputs).toBeUndefined();
+      expect(controller.get(id).app).toBeUndefined();
       expect(controller.get(id).members).toEqual({
         a: {
           host: "sb-a",
@@ -791,6 +815,7 @@ describe("createMonitorController", () => {
             drives: {},
           },
         },
+        ui: { host: "ui", app: "http://localhost:6491/" },
       });
       await controller.stop(id);
       expect(existsSync(path.join(controller.tempRoot, id))).toBe(false);

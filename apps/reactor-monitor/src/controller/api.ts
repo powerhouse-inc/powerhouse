@@ -184,6 +184,8 @@ export type InstanceOutputs = z.infer<typeof instanceOutputsSchema>;
 export const instanceMemberSchema = z.object({
   host: z.string(),
   outputs: instanceOutputsSchema.optional(),
+  /** A Connect member's app URL. */
+  app: z.string().optional(),
 });
 export type InstanceMember = z.infer<typeof instanceMemberSchema>;
 
@@ -195,6 +197,8 @@ export const instanceSchema = z.object({
   startedAt: z.string(),
   pid: z.number().int().optional(),
   outputs: instanceOutputsSchema.optional(),
+  /** A standalone Connect's app URL. */
+  app: z.string().optional(),
   /** A compound's members; `outputs` above is a standalone host's only. */
   members: z.record(z.string(), instanceMemberSchema).optional(),
   /** A draft's project host; `project` above is then the throwaway copy. */

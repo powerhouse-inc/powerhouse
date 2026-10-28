@@ -282,6 +282,15 @@ function outputsOf(raw: unknown): InstanceOutputs | undefined {
   return { origin, graphql: endpoints.graphql, drives: drives ?? {} };
 }
 
+const connectOutputsSchema = z.object({
+  endpoints: z.object({ connect: z.string() }),
+});
+
+function appOf(raw: unknown): string | undefined {
+  const parsed = connectOutputsSchema.safeParse(raw);
+  return parsed.success ? parsed.data.endpoints.connect : undefined;
+}
+
 function membersOf(
   members: SpawnedHost["members"],
 ): Record<string, InstanceMember> | undefined {
@@ -289,7 +298,15 @@ function membersOf(
   return Object.fromEntries(
     Object.entries(members).map(([key, member]) => {
       const outputs = outputsOf(member.outputs);
-      return [key, { host: member.host, ...(outputs ? { outputs } : {}) }];
+      const app = appOf(member.outputs);
+      return [
+        key,
+        {
+          host: member.host,
+          ...(outputs ? { outputs } : {}),
+          ...(app ? { app } : {}),
+        },
+      ];
     }),
   );
 }
@@ -639,6 +656,8 @@ export function createMonitorController(
       entry.view.pid = spawned.pid;
       const outputs = outputsOf(spawned.outputs);
       if (outputs) entry.view.outputs = outputs;
+      const app = appOf(spawned.outputs);
+      if (app) entry.view.app = app;
       const members = membersOf(spawned.members);
       if (members) entry.view.members = members;
       if (entry.view.status === "starting") entry.view.status = "running";
