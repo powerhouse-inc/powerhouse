@@ -113,6 +113,50 @@ describe("setPlacement", () => {
     expect(local.count("execute")).toBe(1);
   });
 
+  it("moves the documents already routed in the drive", async () => {
+    const local = new FakeBackend("local");
+    const remote = new FakeBackend("remote", undefined, REMOTE);
+    for (const backend of [local, remote]) {
+      backend.seed(fakeDocument({ id: "drive" }));
+      backend.seed(fakeDocument({ id: "file" }));
+      backend.relationships.push({
+        sourceId: "drive",
+        targetId: "file",
+        relationshipType: "child",
+      });
+    }
+    const client = new RoutingReactorClient([local.config(), remote.config()], {
+      collections: { drive: "local" },
+      onDiagnostic: () => {},
+    });
+    await client.read.get("file");
+    expect(local.count("get")).toBe(1);
+
+    client.setPlacement("drive", "remote");
+    await client.read.get("file");
+
+    expect(remote.count("get")).toBe(1);
+    expect(local.count("get")).toBe(1);
+  });
+
+  it("keeps seeded document routes across a placement change", async () => {
+    const local = new FakeBackend("local");
+    const remote = new FakeBackend("remote", undefined, REMOTE);
+    const client = new RoutingReactorClient([local.config(), remote.config()], {
+      documents: { pinned: "remote" },
+      onDiagnostic: () => {},
+    });
+    local.seed(fakeDocument({ id: "other" }));
+    await client.locate("other");
+    expect(client.describeRouting().documents).toHaveLength(2);
+
+    client.setPlacement("drive", "remote");
+
+    expect(client.describeRouting().documents).toEqual([
+      { identifier: "pinned", backend: "remote" },
+    ]);
+  });
+
   it("refuses a backend the router does not hold", () => {
     const { client } = setup();
 
