@@ -241,7 +241,7 @@ describe("a router over a local reactor and a real Switchboard", () => {
     expect(written).toHaveLength(2);
     for (const operation of written) {
       expect(operation.error).toBeFalsy();
-      expect(operation.action.context?.signer?.app?.key).toBe(signer.app.key);
+      expect(operation.action.context?.signer?.app.key).toBe(signer.app.key);
       expect(
         operation.action.context?.signer?.signatures.length,
       ).toBeGreaterThan(0);
