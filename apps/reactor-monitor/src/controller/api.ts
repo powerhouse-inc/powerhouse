@@ -139,6 +139,13 @@ export const logsResponseSchema = z.object({
 });
 export type LogsResponse = z.infer<typeof logsResponseSchema>;
 
+export const refusedSetterSchema = z.object({
+  path: z.string(),
+  reason: z.string(),
+  hint: z.string().optional(),
+});
+export type RefusedSetter = z.infer<typeof refusedSetterSchema>;
+
 export const errorCodeSchema = z.enum([
   "bad_host",
   "bad_origin",
@@ -149,6 +156,8 @@ export const errorCodeSchema = z.enum([
   "unknown_host",
   "env_denied",
   "check_failed",
+  "setter_denied",
+  "base_changed",
   "instance_limit",
   "shutting_down",
   "internal",
@@ -160,6 +169,8 @@ export const errorResponseSchema = z.object({
     code: errorCodeSchema,
     message: z.string(),
     issues: z.array(hostIssueSchema).optional(),
+    /** `setter_denied`: every refused setter, not just the first. */
+    setters: z.array(refusedSetterSchema).optional(),
   }),
 });
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;
