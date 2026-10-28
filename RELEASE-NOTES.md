@@ -10,7 +10,7 @@
 - **Request deadline.** Each request is bounded, headers through body, at `requestTimeoutMs`, which defaults to 30 s. A request past the deadline rejects with a `TimeoutError`. `GraphQLReactorClient` takes the same option, plus `fetch` for the transport.
 - **Breaker and health.** Three transport failures in a row open the breaker for 30 s (configurable through `breaker`). A transport failure is a network error, a deadline or a 5xx. While the breaker is open, nothing is sent: every call throws `SwitchboardUnreachableError`, `health()` reports `"down"`, and the router stops probing the backend. A GraphQL error is an answer, so it does not count, and neither does an abort by the caller.
 - **Facts.** One `SwitchboardFacts` query reads the reactor info, including `access` from the server, and the document types the Switchboard serves. The router's create pre-check uses the types. A Switchboard that lacks `documentServed`, `createDefaults` or `inspection` fails the read, so the router holds its facts as unknown.
-- **421.** A refusal forgets the drive the request named, so the next request sends no stale `Drive-Id`.
+- **421.** A refusal forgets the drive the request named, so the next request sends no stale `Drive-Id`. Under Node, the default transport (`switchboardFetch`) sends request bodies as streams. Node's fetch resends a request that got a 421, and the resend of a buffered body can fail with a `TypeError` instead of returning the 421. Browsers keep buffered bodies.
 
 ### 🐛 Switchboard `/ready` waits for its drives
 
