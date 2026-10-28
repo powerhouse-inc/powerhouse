@@ -29,10 +29,10 @@ export default {
     backends: {
       switchboard: {
         kind: "remote",
-        // The running switchboard's GraphQL endpoint, read from its live
-        // outputs (after `ph generate hosts`: switchboard.endpoints.graphql
-        // from ../switchboard/outputs.js). A literal URL attaches to an
-        // external switchboard.
+        // A drive address on the running switchboard, read from its live
+        // outputs (after `ph generate hosts`: switchboard.drives.powerhouse.url
+        // from ../switchboard/outputs.js). A literal drive address
+        // (<switchboard>/d/<slug>) attaches to an external switchboard.
         remote: {
           url: {
             $output: {

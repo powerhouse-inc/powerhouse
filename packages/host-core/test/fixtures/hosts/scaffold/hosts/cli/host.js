@@ -54,6 +54,7 @@ export default {
         // the override is a full statement: keep the connect host's protocol
         protocol: connect.reactor.protocol,
         backends: {
+          // The switchboard, by the address of its powerhouse drive.
           sb: {
             kind: "remote",
             remote: {
