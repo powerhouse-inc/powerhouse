@@ -891,9 +891,12 @@ describe("createMonitorController", () => {
 
       const good = await controller.checkDraft(await draft());
       expect(good).toEqual({ ruleIssues: [], issues: [] });
-      expect(checks[0].projectRoot).toMatch(
-        new RegExp(`${controller.tempRoot}/check-[0-9a-f-]+/project$`),
+      const checked = checks[0].projectRoot;
+      expect(path.basename(checked)).toBe("project");
+      expect(path.basename(path.dirname(checked))).toMatch(
+        /^check-[0-9a-f-]+$/,
       );
+      expect(path.dirname(path.dirname(checked))).toBe(controller.tempRoot);
       expect(readdirSync(controller.tempRoot)).toEqual([]);
     });
 
