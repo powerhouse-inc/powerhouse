@@ -8,6 +8,7 @@ import { GROUP_LABELS, ROLE_LABELS } from "../copy.js";
 import { IssueList } from "../IssueList.js";
 import { OptionGroup } from "../OptionGroup.js";
 import { memberOf, stepOf } from "../engine.js";
+import { DrivesCard } from "./DrivesCard.js";
 import type { StepProps } from "./types.js";
 
 const MEMBER_GROUPS: Group[] = ["hotReload", "workers", "projectionWorker"];
@@ -111,14 +112,23 @@ export function ReactorStep({ engine, onChoose }: StepProps) {
           <div className="hb-flabel">
             {member.key} · {ROLE_LABELS[member.role]}
           </div>
-          <BackendOptions
-            member={member}
-            onChoose={onChoose}
-            options={own.filter(
-              (option) =>
-                option.group === "storage" || option.group === "backendKind",
-            )}
-          />
+          {member.role === "connect" ? (
+            <DrivesCard
+              member={member}
+              members={members}
+              onChoose={onChoose}
+              options={engine.options}
+            />
+          ) : (
+            <BackendOptions
+              member={member}
+              onChoose={onChoose}
+              options={own.filter(
+                (option) =>
+                  option.group === "storage" || option.group === "backendKind",
+              )}
+            />
+          )}
           {MEMBER_GROUPS.map((group) => (
             <OptionGroup
               key={group}

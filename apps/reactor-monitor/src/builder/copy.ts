@@ -30,6 +30,17 @@ export const GROUP_LABELS: Record<OptionGroup, string> = {
   placement: "Where this drive opens",
 };
 
+export const DRIVES_COPY = {
+  inBrowser: "In this browser",
+  defaultReactor:
+    "Connect keeps its own reactor here until you choose where it runs.",
+  onSwitchboard: (drive: string, switchboard: string) =>
+    `${drive} on ${switchboard}`,
+  add: "Add",
+  newDrives: "New drives are created in this browser.",
+  moveLater: "You can move drives in Router after starting.",
+} as const;
+
 export const NO_CONTROLLER =
   "This needs the monitor's controller, which isn't running.";
 
