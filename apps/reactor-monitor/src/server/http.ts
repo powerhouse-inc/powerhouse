@@ -78,7 +78,7 @@ function sendError(
   res: ServerResponse,
   code: ErrorCode,
   message: string,
-  extra: Pick<ErrorResponse["error"], "issues" | "setters"> = {},
+  extra: Pick<ErrorResponse["error"], "issues" | "ruleIssues" | "setters"> = {},
 ): void {
   sendJson(res, STATUS[code], { error: { code, message, ...extra } });
 }

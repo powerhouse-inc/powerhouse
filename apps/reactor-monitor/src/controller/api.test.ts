@@ -4,7 +4,9 @@ import { stack } from "../host-rules/__fixtures__/hosts.js";
 import {
   baseDigest,
   baseDigestSchema,
+  draftCheckResponseSchema,
   draftRequestSchema,
+  errorResponseSchema,
   hostRequestSchema,
 } from "./api.js";
 
@@ -66,5 +68,37 @@ describe("draftRequestSchema", () => {
     ],
   ])("refuses %s", (_name, body) => {
     expect(draftRequestSchema.safeParse(body).success).toBe(false);
+  });
+});
+
+describe("host-rules issues on the wire", () => {
+  const ruleIssue = {
+    rule: "shape",
+    path: "host.name",
+    message: "A host name is used as a file name.",
+    file: "hosts/stack/host.js",
+  };
+
+  it("carries them in a draft check and a check_failed error", () => {
+    expect(
+      draftCheckResponseSchema.safeParse({
+        ruleIssues: [ruleIssue],
+        issues: [],
+      }).success,
+    ).toBe(true);
+    expect(
+      errorResponseSchema.safeParse({
+        error: { code: "check_failed", message: "x", ruleIssues: [ruleIssue] },
+      }).success,
+    ).toBe(true);
+  });
+
+  it("refuses an unknown rule", () => {
+    expect(
+      draftCheckResponseSchema.safeParse({
+        ruleIssues: [{ ...ruleIssue, rule: "made-up" }],
+        issues: [],
+      }).success,
+    ).toBe(false);
   });
 });

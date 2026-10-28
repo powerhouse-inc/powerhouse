@@ -4,7 +4,12 @@ import {
   type HostIssue,
 } from "@powerhousedao/host-core/schema";
 import { z } from "zod";
-import { hostRulesContextSchema, setterSchema } from "../host-rules/schema.ts";
+import {
+  hostRulesContextSchema,
+  RULES,
+  setterSchema,
+  type HostRuleIssue,
+} from "../host-rules/schema.ts";
 
 /** Every controller route lives under this prefix. */
 export const CONTROLLER_PREFIX = "/__ph-monitor/";
@@ -105,9 +110,10 @@ export const exportResponseSchema = z.object({
 export type ExportResponse = z.infer<typeof exportResponseSchema>;
 
 /**
- * `POST drafts/check` and `POST drafts`: the project host's export with
- * `setters` applied in order. `baseDigest` is the export the setters were
- * written against; a different current export is refused as `base_changed`.
+ * `POST drafts/check` (→ `draftCheckResponseSchema`) and `POST drafts`
+ * (→ `Instance`): the project host's export with `setters` applied in order.
+ * `baseDigest` is the export the setters were written against; a different
+ * current export is refused as `base_changed`.
  */
 export const draftRequestSchema = z.strictObject({
   project: projectField,
@@ -140,6 +146,22 @@ export const checkResponseSchema = z.object({
   issues: z.array(hostIssueSchema),
 });
 export type CheckResponse = z.infer<typeof checkResponseSchema>;
+
+/** A host-rules finding (`validateDraft`); `path` is envelope-rooted. */
+export const hostRuleIssueSchema = z.object({
+  rule: z.enum(RULES),
+  path: z.string(),
+  message: z.string(),
+  file: z.string().optional(),
+  hint: z.string().optional(),
+});
+
+/** `POST drafts/check`: the host-rules findings, then `checkHost`'s stages. */
+export const draftCheckResponseSchema = z.object({
+  ruleIssues: z.array(hostRuleIssueSchema),
+  issues: z.array(hostIssueSchema),
+});
+export type DraftCheckResponse = z.infer<typeof draftCheckResponseSchema>;
 
 /** DELETE forgets an instance; failed and exited ones stay listed until then. */
 export const instanceStatusSchema = z.enum([
@@ -238,6 +260,8 @@ export const errorResponseSchema = z.object({
     code: errorCodeSchema,
     message: z.string(),
     issues: z.array(hostIssueSchema).optional(),
+    /** `check_failed` on a draft: its host-rules findings. */
+    ruleIssues: z.array(hostRuleIssueSchema).optional(),
     /** `setter_denied`: every refused setter, not just the first. */
     setters: z.array(refusedSetterSchema).optional(),
   }),
@@ -248,3 +272,8 @@ export type ErrorResponse = z.infer<typeof errorResponseSchema>;
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 const sameIssue: Same<z.infer<typeof hostIssueSchema>, HostIssue> = true;
 void sameIssue;
+const sameRuleIssue: Same<
+  z.infer<typeof hostRuleIssueSchema>,
+  HostRuleIssue
+> = true;
+void sameRuleIssue;
