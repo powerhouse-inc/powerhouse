@@ -2,8 +2,11 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 
-const SWITCHBOARD_URL =
-  process.env.SWITCHBOARD_URL ?? "http://localhost:4001/graphql";
+// SWITCHBOARD_URL targets a running switchboard; otherwise one is started on
+// SWITCHBOARD_PORT, so worktrees can run the suite side by side.
+const EXTERNAL_URL = process.env.SWITCHBOARD_URL;
+const PORT = process.env.SWITCHBOARD_PORT ?? "4001";
+const SWITCHBOARD_URL = EXTERNAL_URL ?? `http://localhost:${PORT}/graphql`;
 
 let proc: ChildProcess | undefined;
 
@@ -37,11 +40,14 @@ function cleanStaleLocks() {
 }
 
 export async function setup() {
-  if (!process.env.SWITCHBOARD_URL) {
+  if (!EXTERNAL_URL) {
     cleanStaleLocks();
     proc = spawn("pnpm", ["switchboard"], {
+      env: { ...process.env, PH_SWITCHBOARD_PORT: PORT },
       stdio: ["ignore", "pipe", "pipe"],
     });
+    // Test workers start after this and read the suite's endpoint from here.
+    process.env.SWITCHBOARD_URL = SWITCHBOARD_URL;
   }
   await waitForReady(SWITCHBOARD_URL);
 }
