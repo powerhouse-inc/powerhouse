@@ -59,6 +59,39 @@ describe("migratedPackageJson", () => {
   });
 });
 
+describe("a project's dependency pins", () => {
+  const pins = { "date-fns": "4.3.0", rolldown: "1.0.2", vite: "8.0.14" };
+  const refs = {
+    "date-fns": "$date-fns",
+    rolldown: "$rolldown",
+    vite: "$vite",
+  };
+
+  it("replaces the **/ resolutions earlier scaffolds wrote and keeps the project's own", () => {
+    const migrated = migratedPackageJson(
+      {
+        ...generatedBefore,
+        resolutions: {
+          "**/date-fns": "4.3.0",
+          "**/rolldown": "1.0.2",
+          "**/vite": "8.0.14",
+          "left-pad": "1.3.0",
+        },
+        overrides: { "left-pad": "1.3.0" },
+      } as unknown as PackageJson,
+      {},
+    );
+    expect(migrated.resolutions).toEqual({ "left-pad": "1.3.0", ...pins });
+    expect(migrated.overrides).toEqual({ "left-pad": "1.3.0", ...refs });
+  });
+
+  it("adds them to a project that has none", () => {
+    const migrated = migratedPackageJson(generatedBefore, {});
+    expect(migrated.resolutions).toEqual(pins);
+    expect(migrated.overrides).toEqual(refs);
+  });
+});
+
 describe("the lint scripts", () => {
   it("generate the Connect route tree before the type-checked lint, in new and migrated projects", () => {
     const migrated = migratedPackageJson(generatedBefore, {});

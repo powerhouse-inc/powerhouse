@@ -14,12 +14,9 @@ function sortedJsonBody(value: Record<string, string>): string {
 
 export const exportsTemplate = innerJsonBody(packageJsonExports);
 
-// Maps a bare-name override map (as pnpm `overrides` use) to yarn v1
-// `resolutions` form; the `**/` prefix applies the pin to transitive
-// occurrences. Yarn v1 cannot pin the project's own direct dependencies
-// (bare names normalize to `**/`, and root requests carry no parent
-// path for it to match), so a direct dep keeps resolving within its
-// declared range while transitive occurrences stay pinned.
+// The `**/`-prefixed `resolutions` keys scaffolds wrote before bare names.
+// Only yarn 1 and bun read them: pnpm 9 and 10 reject them, while npm, yarn 4
+// and pnpm 11 and later ignore them. `ph migrate` replaces them.
 export function toYarnResolutions(
   overrides: Record<string, string>,
 ): Record<string, string> {
@@ -33,13 +30,17 @@ export const packageJsonTemplate = (
   peerDependencies: Record<string, string>,
   devDependencies: Record<string, string>,
   resolutions?: Record<string, string>,
+  overrides?: Record<string, string>,
 ) => {
-  // Leading comma: the block follows the devDependencies close brace.
-  const resolutionsBody = resolutions
-    ? `,\n  "resolutions": {
-    ${sortedJsonBody(resolutions)}
+  // Leading comma: each block follows the previous close brace.
+  const block = (key: string, body?: Record<string, string>) =>
+    body
+      ? `,\n  "${key}": {
+    ${sortedJsonBody(body)}
   }`
-    : "";
+      : "";
+  const pinBlocks =
+    block("overrides", overrides) + block("resolutions", resolutions);
   return json`
 {
   "name": "${projectName}",
@@ -79,7 +80,7 @@ export const packageJsonTemplate = (
   },
   "devDependencies": {
     ${sortedJsonBody(devDependencies)}
-  }${resolutionsBody}
+  }${pinBlocks}
 }
 `.raw;
 };
