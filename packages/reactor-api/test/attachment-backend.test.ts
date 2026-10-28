@@ -1,14 +1,15 @@
+import { parseAttachmentStorageConfig } from "@powerhousedao/reactor-attachments";
 import { describe, expect, it, vi } from "vitest";
 import { createStartupAttachmentBackend } from "../src/attachment-backend.js";
 
-const S3_ENV = {
+const S3 = parseAttachmentStorageConfig({
   PH_ATTACHMENT_STORAGE: "s3",
   PH_ATTACHMENT_S3_ENDPOINT: "https://s3.example.test",
   PH_ATTACHMENT_S3_REGION: "eu-central",
   PH_ATTACHMENT_S3_BUCKET: "attachments",
   PH_ATTACHMENT_S3_ACCESS_KEY_ID: "test-key",
   PH_ATTACHMENT_S3_SECRET_ACCESS_KEY: "test-secret",
-};
+});
 const db = { withSchema: vi.fn().mockReturnValue({}) };
 
 describe("createStartupAttachmentBackend", () => {
@@ -17,7 +18,6 @@ describe("createStartupAttachmentBackend", () => {
     await expect(
       createStartupAttachmentBackend({
         db: db as never,
-        env: {},
         s3Dependencies: { client: { send } },
       }),
     ).resolves.toBeUndefined();
@@ -28,20 +28,11 @@ describe("createStartupAttachmentBackend", () => {
     const send = vi.fn().mockResolvedValue({});
     const backend = await createStartupAttachmentBackend({
       db: db as never,
-      env: S3_ENV,
+      storage: S3,
       s3Dependencies: { client: { send } },
     });
     expect(backend?.kind).toBe("s3");
     expect(send).toHaveBeenCalledOnce();
-  });
-
-  it("fails closed for invalid explicit S3 config", async () => {
-    await expect(
-      createStartupAttachmentBackend({
-        db: db as never,
-        env: { PH_ATTACHMENT_STORAGE: "s3" },
-      }),
-    ).rejects.toThrow("PH_ATTACHMENT_S3_ENDPOINT is required");
   });
 
   it.each([
@@ -57,7 +48,7 @@ describe("createStartupAttachmentBackend", () => {
     await expect(
       createStartupAttachmentBackend({
         db: db as never,
-        env: S3_ENV,
+        storage: S3,
         s3Dependencies: { client: { send } },
       }),
     ).rejects.toThrow("S3 attachment backend readiness check failed");

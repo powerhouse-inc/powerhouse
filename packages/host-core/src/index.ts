@@ -221,13 +221,13 @@ export {
   assertProtocolConsistency,
   primaryBackend,
   projectReactorToConnect,
-  projectReactorToSwitchboard,
   protocolConflicts,
   protocolEnv,
+  reactorBlockToSwitchboardConfig,
   reactorClientMode,
   type ConnectReactorProjection,
   type ReactorClientMode,
-  type SwitchboardReactorProjection,
+  type SwitchboardReactorLayer,
 } from "./reactor-config.js";
 export {
   backendsToDescriptors,

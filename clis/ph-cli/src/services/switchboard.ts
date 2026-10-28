@@ -93,6 +93,8 @@ export async function startSwitchboard(
     pluginComposition?: ResolvedPlugin[];
   },
   logger?: ILogger,
+  /** The layer under the command's options; default: this process's env. */
+  base?: SwitchboardConfigInput,
 ) {
   const {
     packages: packagesString,
@@ -146,9 +148,9 @@ export async function startSwitchboard(
           logger,
         };
 
-  // This process's env under the command's own options, as the server read them.
+  // The env (or the caller's base) under the command's own options.
   const config = callerOverEnv(
-    switchboardConfigFromEnv(process.env, { logger }),
+    base ?? switchboardConfigFromEnv(process.env, { logger }),
     configLayerOf(finalOptions, basePath),
   );
   initSwitchboardProcess(config);

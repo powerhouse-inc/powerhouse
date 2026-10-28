@@ -39,7 +39,6 @@ import {
   type DocumentPermissionDatabase,
   type IPackageLoader,
   type PgliteFactory,
-  type RenownConfig,
   type ResolvedRenownConfig,
 } from "@powerhousedao/reactor-api";
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
@@ -149,6 +148,7 @@ import {
 import { reactorFeatureFlagsOf } from "./reactor-feature-flags.mjs";
 import { createSignaturePolicyFor } from "./create-signature-policy.mjs";
 import { workerPoolIssues } from "./boot-preconditions.mjs";
+import { renownLayers } from "./renown-layers.mjs";
 import {
   getRenownSignerConfig,
   getRenownTrustPolicyConfig,
@@ -633,7 +633,15 @@ async function initServer(
   if (registryUrl) {
     // Register HTTP/HTTPS module loader hooks for dynamic package imports
     registerHttpsHooks();
-    httpLoader = new HttpPackageLoader({ registryUrl });
+    httpLoader = new HttpPackageLoader({
+      registryUrl,
+      cacheDir: path.join(
+        resolvePhDir(undefined, {
+          PH_USER_DATA_DIR: config.storage.userDataDir,
+        }),
+        "registry-packages",
+      ),
+    });
     for (const name of registryPackages) {
       if (!packages.includes(name)) {
         packages.push(name);
@@ -1866,21 +1874,6 @@ function serverOptionsOf(
       dbPoolSize: projection.poolSize,
     },
     unsupportedStoredDocuments: config.protocol.unsupportedStoredDocuments,
-  };
-}
-
-/** The config file's `auth.renown`, with the config's set keys over it. */
-function renownLayers(
-  file: RenownConfig | undefined,
-  config: SwitchboardConfig["auth"]["renown"],
-): RenownConfig {
-  return {
-    ...file,
-    ...(config.source !== undefined ? { source: config.source } : {}),
-    ...(config.url !== undefined ? { url: config.url } : {}),
-    ...(config.switchboardUrl !== undefined
-      ? { switchboardUrl: config.switchboardUrl }
-      : {}),
   };
 }
 

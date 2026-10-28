@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  envNamesBeforeProjectEnv,
   isDotenvDisabled,
   loadProjectEnv,
   readPortEnv,
@@ -51,6 +52,15 @@ describe("loadProjectEnv", () => {
     writeFileSync(join(dir, ".env.local"), "PH_SWITCHBOARD_PORT=41002\n");
     loadProjectEnv(dir);
     expect(process.env.PH_SWITCHBOARD_PORT).toBeUndefined();
+  });
+
+  it("records the names set before the first load", () => {
+    writeFileSync(join(dir, ".env"), "PH_SWITCHBOARD_PORT=41001\n");
+    expect(envNamesBeforeProjectEnv()).toBeUndefined();
+    loadProjectEnv(dir);
+    const names = envNamesBeforeProjectEnv();
+    expect(names?.has("PATH")).toBe(true);
+    expect(names?.has("PH_SWITCHBOARD_PORT")).toBe(false);
   });
 
   it("is a no-op when neither file exists", () => {

@@ -70,8 +70,12 @@ async function isFree(port: number): Promise<boolean> {
   });
 }
 
+// The runner reads the context's env, not the process's.
+const reactorEnv = () => ({
+  PH_REACTOR_DATABASE_URL: path.join(state.tempRoot, "reactor-storage"),
+});
+
 describe("switchboard handle shutdown (real server)", () => {
-  let previousReactorDb: string | undefined;
   const signalsBefore = {
     SIGINT: new Set<NodeJS.SignalsListener>(),
     SIGTERM: new Set<NodeJS.SignalsListener>(),
@@ -83,11 +87,6 @@ describe("switchboard handle shutdown (real server)", () => {
 
   beforeEach(() => {
     state.tempRoot = mkdtempSync(path.join(tmpdir(), "ph-sb-shutdown-"));
-    previousReactorDb = process.env.PH_REACTOR_DATABASE_URL;
-    process.env.PH_REACTOR_DATABASE_URL = path.join(
-      state.tempRoot,
-      "reactor-storage",
-    );
     for (const signal of ["SIGINT", "SIGTERM"] as const) {
       signalsBefore[signal] = new Set(
         process.listeners(signal) as NodeJS.SignalsListener[],
@@ -102,11 +101,6 @@ describe("switchboard handle shutdown (real server)", () => {
       for (const listener of addedListeners(signal)) {
         process.removeListener(signal, listener);
       }
-    }
-    if (previousReactorDb === undefined) {
-      delete process.env.PH_REACTOR_DATABASE_URL;
-    } else {
-      process.env.PH_REACTOR_DATABASE_URL = previousReactorDb;
     }
     rmSync(state.tempRoot, { recursive: true, force: true });
   });
@@ -138,7 +132,7 @@ describe("switchboard handle shutdown (real server)", () => {
       await switchboardRunner.run(host, {
         projectRoot: state.tempRoot,
         verb: "run",
-        env: {},
+        env: reactorEnv(),
       } satisfies RunnerContext),
       "sb",
     );
@@ -169,7 +163,7 @@ describe("switchboard handle shutdown (real server)", () => {
       await switchboardRunner.run(host, {
         projectRoot: state.tempRoot,
         verb: "run",
-        env: {},
+        env: reactorEnv(),
       } satisfies RunnerContext),
       "sb",
     );

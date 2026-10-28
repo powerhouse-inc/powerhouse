@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { rememberShellNames } from "../src/runners/member-config.js";
 import { checkBoot, hostSchema } from "../src/runners/switchboard.js";
 
 const temporary: string[] = [];
@@ -85,7 +86,7 @@ describe("switchboard runner checkBoot", () => {
     expect(await issuesOf(postgres, { REACTOR_WORKERS: "2" })).toEqual([]);
   });
 
-  it("takes dbPath from a non-empty readModel.url", async () => {
+  it("never takes the reactor database from readModel.url", async () => {
     const readModel = host({
       reactor: {
         backends: {
@@ -97,7 +98,45 @@ describe("switchboard runner checkBoot", () => {
         },
       },
     });
-    expect(await issuesOf(readModel, { REACTOR_WORKERS: "2" })).toEqual([]);
+    expect(await issuesOf(readModel, { REACTOR_WORKERS: "2" })).toEqual([
+      expect.stringMatching(/REACTOR_WORKERS\) requires a Postgres reactor/),
+    ]);
+  });
+
+  it("reads workers from config.switchboard, under the env", async () => {
+    const member = host({
+      reactor: {
+        backends: {
+          main: {
+            kind: "in-process",
+            storage: { kind: "postgres", url: POSTGRES },
+          },
+        },
+      },
+      config: { switchboard: { workers: { executor: { count: 2 } } } },
+    });
+    expect(await issuesOf(member, {})).toEqual([]);
+    expect(
+      await issuesOf(member, { PH_REACTOR_DATABASE_URL: "./.ph/r" }),
+    ).toEqual([
+      expect.stringMatching(/REACTOR_WORKERS\) requires a Postgres reactor/),
+    ]);
+  });
+
+  it("reports a readModel-only block, whose reactor store stays on readModel.url", async () => {
+    const readModelOnly = host({
+      reactor: {
+        backends: {
+          main: { kind: "in-process", readModel: { url: POSTGRES } },
+        },
+      },
+    });
+    expect(await issuesOf(readModelOnly, { REACTOR_WORKERS: "2" })).toEqual([
+      expect.stringMatching(/also holds the reactor store.*deprecated/),
+    ]);
+    expect(
+      await issuesOf(readModelOnly, { PH_REACTOR_DATABASE_URL: POSTGRES }),
+    ).toEqual([]);
   });
 
   it("refuses workers under auth enforcement with a self Renown source", async () => {
@@ -158,6 +197,24 @@ describe("switchboard runner checkBoot", () => {
           /REACTOR_AUTH_ENFORCEMENT is "false" in the environment but "true" in hosts\/switchboard\/host\.js/,
         ) as string,
       },
+    ]);
+  });
+
+  it("puts the project .env under reactor.protocol", async () => {
+    const root = projectRoot();
+    writeFileSync(path.join(root, ".env"), "REACTOR_AUTH_ENFORCEMENT=false\n");
+    const protocolHost = host({
+      reactor: { protocol: { featureFlags: { authEnforcement: true } } },
+    });
+    // As `ph host check` passes it: the .env loaded, the shell's names recorded.
+    const loaded = { REACTOR_AUTH_ENFORCEMENT: "false" };
+    rememberShellNames(loaded, []);
+    expect(await issuesOf(protocolHost, loaded, { root })).toEqual([]);
+    // The shell set it, to the same value: the shell's, so a conflict.
+    const shell = { REACTOR_AUTH_ENFORCEMENT: "false" };
+    rememberShellNames(shell, ["REACTOR_AUTH_ENFORCEMENT"]);
+    expect(await issuesOf(protocolHost, shell, { root })).toEqual([
+      expect.stringMatching(/reactor\.protocol conflict/),
     ]);
   });
 
