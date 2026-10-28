@@ -161,6 +161,18 @@ export class RoutingReactorClient implements IReactorClient {
     return this.dispatcher.table.onChange(listener);
   }
 
+  /**
+   * The name of the backend a call for this document would go to, by its
+   * route, a probe or, for an id no backend holds, its placement; it does
+   * not throw for an unknown id.
+   */
+  async locate(identifier: string, signal?: AbortSignal): Promise<string> {
+    signal?.throwIfAborted();
+    const backend = await this.dispatcher.resolveDocumentBackend(identifier);
+    signal?.throwIfAborted();
+    return backend.name;
+  }
+
   /** Re-reads the facts of the named backend, or of every backend. */
   refreshFacts(name?: string): Promise<void> {
     return this.dispatcher.refreshFacts(name);
