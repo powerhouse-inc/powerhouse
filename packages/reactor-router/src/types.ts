@@ -13,8 +13,17 @@ export type ReactorReach = {
 export type BackendFacts = {
   readonly reactor: ReactorInfo;
   readonly reach: ReactorReach;
-  /** False when the facts read failed and {@link UNKNOWN_REACTOR_INFO} stands in. */
+  /**
+   * False when the last facts read failed: {@link UNKNOWN_REACTOR_INFO} stands
+   * in for a reactor read that failed, and `documentTypes` is absent after a
+   * document-type read that failed.
+   */
   readonly known: boolean;
+  /**
+   * The document types the backend can create. Absent: not declared, not read
+   * yet, or the read failed; the router then does not constrain creates.
+   */
+  readonly documentTypes?: ReadonlySet<string>;
 };
 
 /** Stands in for a reactor whose facts could not be read; satisfies nothing. */
@@ -64,16 +73,37 @@ export function collectionRequirements(
 /** Evidence behind a route, weakest (`placed`) to strongest (`corrected`). */
 export type RouteSource = "override" | "placed" | "learned" | "corrected";
 
+/** Which layer a placement comes from; a runtime placement wins over config. */
+export type PlacementOrigin = "config" | "runtime";
+
 export type RouterTableEntry = {
   /** The canonical `DriveCollectionId.key`. */
   readonly collectionId: string;
   readonly backend: string;
   readonly source: RouteSource;
+  /** The layer of the placement for this key, when one is set. */
+  readonly origin?: PlacementOrigin;
+  /** The backend the config places this key on, when it places it. */
+  readonly configured?: string;
 };
+
+/** What changed in the collection table; see `onRoutingChange`. */
+export type RoutingChange = {
+  /** The collection key, or the placement key as it was set. */
+  readonly key: string;
+  readonly reason: "placement" | "learned" | "corrected" | "forgotten";
+};
+
+export type RoutingChangeListener = (change: RoutingChange) => void;
+
+/** A backend's own report of whether it can be reached; see `IRoutableBackend.health`. */
+export type BackendHealth = "up" | "down";
 
 export type RouterTableSnapshot = {
   /** Backend names in configuration order. */
   readonly backends: readonly string[];
+  /** One row per backend that declares `health`, in configuration order. */
+  readonly health: readonly { backend: string; health: BackendHealth }[];
   readonly collections: readonly RouterTableEntry[];
   readonly documents: readonly { identifier: string; backend: string }[];
   readonly jobs: readonly { jobId: string; backend: string }[];
@@ -82,15 +112,24 @@ export type RouterTableSnapshot = {
 /** Where the router reports what it handled instead of throwing. */
 export type RouterDiagnostic = (message: string, detail?: unknown) => void;
 
+export const warnDiagnostic: RouterDiagnostic = (message, detail) => {
+  console.warn(`[reactor-router] ${message}`, detail);
+};
+
 export const DEFAULT_MISROUTE_ATTEMPTS = 3;
 export const DEFAULT_DOCUMENT_CACHE_SIZE = 10_000;
 export const DEFAULT_JOB_CACHE_SIZE = 2_000;
 export const DEFAULT_SUBSCRIPTION_DEDUP_SIZE = 2_048;
 export const DEFAULT_BRANCH = "main";
+export const DEFAULT_PROBE_TIMEOUT_MS = 3_000;
+export const DEFAULT_PROVISIONAL_ROUTE_MS = 30_000;
 
 /** Map keys are a collection id or a bare drive id (every branch). */
 export type RoutingOptions = {
-  /** Placement overrides: collection or drive id -> backend name. Advisory. */
+  /**
+   * Placements from config: collection or drive id -> backend name. Advisory:
+   * a refusal corrects them. `setPlacement` layers runtime placements above.
+   */
   readonly collections?: Readonly<Record<string, string>>;
   readonly requirements?: Readonly<Record<string, CollectionRequirementsInput>>;
   readonly defaultRequirements?: CollectionRequirementsInput;
@@ -99,6 +138,19 @@ export type RoutingOptions = {
   /** Answers what no collection owns. Defaults to the first backend. */
   readonly primaryBackend?: string;
   readonly misrouteAttempts?: number;
+  /**
+   * Bound on one ownership probe; a probe that does not answer in time
+   * answers "unknown". Defaults to {@link DEFAULT_PROBE_TIMEOUT_MS}; `0` or
+   * `Infinity` waits for the answer.
+   */
+  readonly probeTimeoutMs?: number;
+  /**
+   * How long a provisional route stands before it is probed again: one found
+   * on a backend while an earlier backend in the order did not hold the
+   * document. Defaults to {@link DEFAULT_PROVISIONAL_ROUTE_MS}. Corrected
+   * routes and placements never expire.
+   */
+  readonly provisionalRouteMs?: number;
   readonly documentCacheSize?: number;
   readonly jobCacheSize?: number;
   readonly subscriptionDedupSize?: number;
