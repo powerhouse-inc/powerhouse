@@ -52,7 +52,7 @@ export class RenownBuilder extends BaseRenownBuilder {
 
   // Node scripts/CLI act on auth state once and exit, so revalidation must
   // finish before build() resolves — block on it (unlike the browser builder).
-  async build(): Promise<Renown> {
+  override async build(): Promise<Renown> {
     const renown = await super.build();
     if (this.#revalidate === "always" && renown.user) {
       await renown.revalidate();

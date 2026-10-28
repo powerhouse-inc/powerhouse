@@ -47,11 +47,11 @@ const IDLE_WINDOW_MS = 300_000;
  * why only the channel's own claim to a holder may decide a removal.
  */
 class HolderlessChannel extends GqlResponseChannel {
-  lastHolderPollUtcMs(): number | undefined {
+  override lastHolderPollUtcMs(): number | undefined {
     return undefined;
   }
 
-  getConnectionState(): ConnectionStateSnapshot {
+  override getConnectionState(): ConnectionStateSnapshot {
     return {
       ...super.getConnectionState(),
       lastSuccessUtcMs: Date.now() - 3_600_000,
@@ -61,7 +61,7 @@ class HolderlessChannel extends GqlResponseChannel {
 
 /** A served channel whose holder has already been gone for an hour. */
 class AbandonedChannel extends GqlResponseChannel {
-  lastHolderPollUtcMs(): number | undefined {
+  override lastHolderPollUtcMs(): number | undefined {
     return Date.now() - 3_600_000;
   }
 }

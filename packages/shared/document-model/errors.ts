@@ -192,7 +192,7 @@ export class UnsupportedDocumentModelVersionError extends Error {
     this.availableVersions = availableVersions;
   }
 
-  static isError(
+  static override isError(
     error: unknown,
   ): error is UnsupportedDocumentModelVersionError {
     return (

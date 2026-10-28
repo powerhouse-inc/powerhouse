@@ -40,7 +40,9 @@ export class StoredDocumentsRefusedError extends Error {
     this.documents = cause.documents;
   }
 
-  static isError(error: unknown): error is StoredDocumentsRefusedError {
+  static override isError(
+    error: unknown,
+  ): error is StoredDocumentsRefusedError {
     return Error.isError(error) && error.name === "StoredDocumentsRefusedError";
   }
 }

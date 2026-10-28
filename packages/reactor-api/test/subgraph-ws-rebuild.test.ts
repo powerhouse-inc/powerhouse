@@ -69,14 +69,14 @@ function feed(
   typeDefs = "",
 ): SubgraphClass {
   return class extends BaseSubgraph {
-    name = name;
+    override name = name;
     hasSubscriptions = true;
-    typeDefs = parse(`
+    override typeDefs = parse(`
       type Query { ${field}Ping: String }
       type Subscription { ${field}: Int }
       ${typeDefs}
     `);
-    resolvers = {
+    override resolvers = {
       Query: { [`${field}Ping`]: () => "pong" },
       Subscription: {
         [field]: {
@@ -98,9 +98,9 @@ const AlphaTools = feed("alpha-tools", "alphaTick", 0, ALPHA_TYPES);
 const AlphaToolsV2 = feed("alpha-tools", "alphaTick", 1000, ALPHA_TYPES);
 const CoreFeed = feed("core-feed", "coreTick");
 class CorePlain extends BaseSubgraph {
-  name = "core-plain";
-  typeDefs = parse("type Query { plainPing: String }");
-  resolvers = {};
+  override name = "core-plain";
+  override typeDefs = parse("type Query { plainPing: String }");
+  override resolvers = {};
 }
 
 type Subscription = {

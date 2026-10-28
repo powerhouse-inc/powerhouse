@@ -15,7 +15,7 @@ export class ModuleNotFoundError extends Error {
     this.requestedVersion = version;
   }
 
-  static isError(error: unknown): error is ModuleNotFoundError {
+  static override isError(error: unknown): error is ModuleNotFoundError {
     return Error.isError(error) && error.name === "ModuleNotFoundError";
   }
 }
@@ -33,7 +33,9 @@ export class ModelNotWorkerImportableError extends Error {
     this.documentType = documentType;
   }
 
-  static isError(error: unknown): error is ModelNotWorkerImportableError {
+  static override isError(
+    error: unknown,
+  ): error is ModelNotWorkerImportableError {
     return (
       Error.isError(error) && error.name === "ModelNotWorkerImportableError"
     );
@@ -52,7 +54,7 @@ export class DuplicateModuleError extends Error {
     this.name = "DuplicateModuleError";
   }
 
-  static isError(error: unknown): error is DuplicateModuleError {
+  static override isError(error: unknown): error is DuplicateModuleError {
     return Error.isError(error) && error.name === "DuplicateModuleError";
   }
 }
@@ -76,7 +78,7 @@ export class DuplicateManifestError extends Error {
     this.name = "DuplicateManifestError";
   }
 
-  static isError(error: unknown): error is DuplicateManifestError {
+  static override isError(error: unknown): error is DuplicateManifestError {
     return Error.isError(error) && error.name === "DuplicateManifestError";
   }
 }
