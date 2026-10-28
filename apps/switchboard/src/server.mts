@@ -21,6 +21,7 @@ import {
   type PoolInstrumentation,
   type ReactorStorageFacts,
   UnsupportedStoredProtocolError,
+  withProgressHeartbeat,
 } from "@powerhousedao/reactor";
 import {
   HttpPackageLoader,
@@ -957,7 +958,14 @@ async function initServer(
 
     let module: InProcessReactorClientModule;
     try {
-      module = await clientBuilder.buildModule();
+      module = await withProgressHeartbeat(
+        {
+          logger,
+          label:
+            "Starting the reactor (migrations, document view, indexer, processors)",
+        },
+        () => clientBuilder.buildModule(),
+      );
     } catch (error) {
       try {
         await baseKysely.destroy();
@@ -998,10 +1006,14 @@ async function initServer(
     const permissionsDb = baseKysely.withSchema(REACTOR_SCHEMA);
     try {
       if (readModelDb) {
-        await backfillPermissionTables(
-          readModelDb,
-          permissionsDb as unknown as Kysely<unknown>,
-          logger,
+        await withProgressHeartbeat(
+          { logger, label: "Moving the permission tables" },
+          () =>
+            backfillPermissionTables(
+              readModelDb,
+              permissionsDb as unknown as Kysely<unknown>,
+              logger,
+            ),
         );
       }
     } catch (error) {
@@ -1373,7 +1385,11 @@ async function initServer(
   }
   if (workflows) {
     lateSubgraphs.push(registerWorkflowSubgraph(workflows));
-    await workflows.start();
+    const runtime = workflows;
+    await withProgressHeartbeat(
+      { logger, label: "Starting the workflow runtime" },
+      () => runtime.start(),
+    );
     logger.info("Workflow runtime started");
     api.inspection?.facts.setWorkflows(true);
   }

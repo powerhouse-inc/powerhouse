@@ -738,3 +738,10 @@ export {
   DocumentPurgeService,
   type EnqueuePurgeOptions,
 } from "./src/admin/document-purge-service.js";
+export {
+  startProgressHeartbeat,
+  withProgressHeartbeat,
+  type ProgressHeartbeat,
+  type ProgressHeartbeatLogger,
+  type ProgressHeartbeatOptions,
+} from "./src/utils/progress-heartbeat.js";
