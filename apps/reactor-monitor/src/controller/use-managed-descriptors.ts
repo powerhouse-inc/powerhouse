@@ -22,8 +22,8 @@ import {
 import {
   isManaged,
   managedDescriptors,
-  managedUrl,
   ownerOf,
+  servesDescriptor,
   type ManagedBy,
   type ManagedDescriptor,
 } from "./managed.js";
@@ -258,8 +258,7 @@ export function useManagedDescriptors(
               ? { state: "withheld", reason: "still starting" }
               : instance.status !== "running"
                 ? { drop: `its switchboard is ${instance.status}` }
-                : managedUrl(instance, descriptor.managedBy) !==
-                    descriptor.remote.url
+                : !servesDescriptor(instance, descriptor)
                   ? {
                       drop: "its switchboard now serves another URL",
                       moved: true,

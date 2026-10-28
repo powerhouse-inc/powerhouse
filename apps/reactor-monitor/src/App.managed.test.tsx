@@ -50,6 +50,10 @@ function graphqlOf(port: number) {
   return `http://127.0.0.1:${port}/graphql`;
 }
 
+function driveOf(port: number) {
+  return `http://127.0.0.1:${port}/d/powerhouse`;
+}
+
 function instance(
   id: string,
   status: Instance["status"],
@@ -67,7 +71,7 @@ function instance(
           outputs: {
             origin: `http://127.0.0.1:${port}`,
             graphql: graphqlOf(port),
-            drives: {},
+            drives: { powerhouse: { id: "powerhouse", url: driveOf(port) } },
           },
         }
       : {}),
@@ -90,7 +94,7 @@ function compound(
           outputs: {
             origin: `http://127.0.0.1:${port}`,
             graphql: graphqlOf(port),
-            drives: {},
+            drives: { powerhouse: { id: "powerhouse", url: driveOf(port) } },
           },
         },
       ]),
@@ -211,7 +215,7 @@ function managedDescriptor(
   return {
     kind: "remote",
     name,
-    remote: { url: graphqlOf(port) },
+    remote: { url: driveOf(port) },
     managedBy: { instanceId, project: ROOT, host: "sb" },
   } as ReactorDescriptor;
 }
@@ -275,7 +279,7 @@ describe("App with controller-managed switchboards", () => {
       {
         kind: "remote",
         name,
-        remote: { url: graphqlOf(5101) },
+        remote: { url: driveOf(5101) },
         managedBy: { instanceId: id, project: ROOT, host: "sb" },
       },
     ]);
@@ -327,8 +331,8 @@ describe("App with controller-managed switchboards", () => {
         .getActiveDescriptors()
         .map((d) => [d.name, d.remote?.url, managedByOf(d)?.member]),
     ).toEqual([
-      [names[0], graphqlOf(5301), "a"],
-      [names[1], graphqlOf(5302), "b"],
+      [names[0], driveOf(5301), "a"],
+      [names[1], driveOf(5302), "b"],
     ]);
 
     const item = within(reactorList(view)).getByText(names[0]).closest("li")!;
@@ -441,7 +445,7 @@ describe("App with controller-managed switchboards", () => {
       managedDescriptor("sb-gone", "gone", 5103),
       managedDescriptor("sb-done", "done", 5104),
       managedDescriptor("sb-moved", "moved", 5105),
-      { kind: "remote", name: "plain", remote: { url: graphqlOf(5106) } },
+      { kind: "remote", name: "plain", remote: { url: driveOf(5106) } },
     );
     const view = render(<App store={store} />);
 

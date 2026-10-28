@@ -19,6 +19,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
+import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,6 +29,7 @@ import {
   type CheckInput,
   type MonitorController,
   type MonitorControllerOptions,
+  portFree,
   splitPackages,
 } from "./controller.ts";
 import { LogRing } from "./logs.ts";
@@ -449,6 +451,19 @@ describe("createMonitorController", () => {
     expect(await codeOf(controller.stop(started.id))).toBe("not_found");
   });
 
+  it("reports a standalone Connect's app URL, not as switchboard outputs", async () => {
+    const { controller, launches } = create();
+    const started = await controller.start({ project: allowed, host: "sb" });
+    launches[0].ready({
+      origin: "http://localhost:6491",
+      endpoints: { connect: "http://localhost:6491/" },
+    });
+    await until(() => controller.get(started.id).status === "running");
+    expect(controller.get(started.id).app).toBe("http://localhost:6491/");
+    expect(controller.get(started.id).outputs).toBeUndefined();
+    await controller.stop(started.id);
+  });
+
   it("aborts a start that is stopped before it is ready", async () => {
     const { controller, launches } = create();
     const started = await controller.start({ project: allowed, host: "sb" });
@@ -771,9 +786,20 @@ describe("createMonitorController", () => {
           verb: "run",
           outputs: memberOutputs(5002),
         },
+        ui: {
+          host: "ui",
+          runnerModule: "@powerhousedao/ph-cli/runners/connect",
+          kind: "reactor",
+          verb: "run",
+          outputs: {
+            origin: "http://localhost:6491",
+            endpoints: { connect: "http://localhost:6491/" },
+          },
+        },
       } as SpawnedHost["members"]);
       await until(() => controller.get(id).status === "running");
       expect(controller.get(id).outputs).toBeUndefined();
+      expect(controller.get(id).app).toBeUndefined();
       expect(controller.get(id).members).toEqual({
         a: {
           host: "sb-a",
@@ -791,6 +817,7 @@ describe("createMonitorController", () => {
             drives: {},
           },
         },
+        ui: { host: "ui", app: "http://localhost:6491/" },
       });
       await controller.stop(id);
       expect(existsSync(path.join(controller.tempRoot, id))).toBe(false);
@@ -981,10 +1008,12 @@ describe("createMonitorController", () => {
       expect(existsSync(path.join(project, ".env"))).toBe(false);
       expect(existsSync(path.join(project, "dist"))).toBe(false);
 
-      // Connect keeps what its host and the project configure.
-      expect(hostFileOf(project, "ui")).toEqual(
-        stackExport(allowed).members.ui,
-      );
+      // Connect keeps what its host and the project configure, on its copy port.
+      const ui = stackExport(allowed).members.ui as Record<string, unknown>;
+      expect(hostFileOf(project, "ui")).toEqual({
+        ...ui,
+        runner: { ...(ui.runner as object), port: 13001, strictPort: true },
+      });
       // Switchboards load the source's own package from the source root.
       expect(hostFileOf(project, "sb")).toMatchObject({
         config: {
@@ -997,6 +1026,49 @@ describe("createMonitorController", () => {
       mkdirSync(path.join(project, "node_modules", ".vite"));
       await controller.stop(id);
       expect(snapshot()).toEqual(before);
+    });
+
+    it("refuses a draft whose Connect copy port is taken, starting nothing", async () => {
+      mkdirSync(path.join(allowed, "hosts", "stack"), { recursive: true });
+      writeFileSync(
+        path.join(allowed, "hosts", "stack", "host.js"),
+        "export default {};",
+      );
+      const asked: number[] = [];
+      const { controller, launches } = create({
+        exportHost: () => Promise.resolve(stackExport(allowed)),
+        portFree: (port) => {
+          asked.push(port);
+          return Promise.resolve(false);
+        },
+      });
+      const request = await draft({
+        host: "stack",
+        baseDigest: await baseDigest(stackExport(allowed)),
+      });
+      let error: unknown;
+      try {
+        await controller.startDraft(request);
+      } catch (caught) {
+        error = caught;
+      }
+      expect(error).toBeInstanceOf(ControllerError);
+      expect((error as ControllerError).code).toBe("port_taken");
+      expect((error as ControllerError).message).toBe(
+        "The copy's Connect (ui) needs port 13001, and something else is using it, perhaps another running copy. Stop that, then start again.",
+      );
+      expect(asked).toEqual([13001]);
+      expect(launches).toEqual([]);
+      expect(readdirSync(controller.tempRoot)).toEqual([]);
+    });
+
+    it("sees a port another process listens on as taken", async () => {
+      const server = net.createServer();
+      await new Promise<void>((resolve) => server.listen(0, resolve));
+      const { port } = server.address() as net.AddressInfo;
+      expect(await portFree(port)).toBe(false);
+      await new Promise((resolve) => server.close(resolve));
+      expect(await portFree(port)).toBe(true);
     });
 
     it("splits PH_PACKAGES out of a draft's env", () => {

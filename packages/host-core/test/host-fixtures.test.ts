@@ -378,8 +378,8 @@ const reads = (
   ...(memberKey ? { member: memberKey } : {}),
   path: outputPath,
 });
-const graphql = (at: string, host = "switchboard") =>
-  reads(at, host, ["endpoints", "graphql"]);
+const driveUrl = (at: string, slug: string, host = "switchboard") =>
+  reads(at, host, ["drives", slug, "url"]);
 
 /* ---------------------------------------------------------------- scaffold */
 
@@ -430,10 +430,10 @@ const POSTGRES_ONLY_SERVER =
 const labUi = reactor({
   name: "lab-ui",
   dependsOn: ["switchboard"],
-  consumes: [graphql("reactor.backends.sb.remote.url")],
+  consumes: [driveUrl("reactor.backends.sb.remote.url", "lab")],
   clientMode: "remote",
   backends: [{ name: "sb", kind: "remote" }],
-  remotes: [`${LAB}/graphql`],
+  remotes: [`${LAB}/d/lab`],
   drives: [],
 });
 /** Every drive the lab switchboard reports, attached by URL, key-sorted. */
@@ -474,10 +474,12 @@ const ROWS: Row[] = [
     expected: reactor({
       name: "my-project-assistant",
       dependsOn: ["switchboard"],
-      consumes: [graphql("reactor.backends.switchboard.remote.url")],
+      consumes: [
+        driveUrl("reactor.backends.switchboard.remote.url", "powerhouse"),
+      ],
       clientMode: "remote",
       backends: [{ name: "switchboard", kind: "remote" }],
-      remotes: [`${SCAFFOLD_SB}/graphql`],
+      remotes: [`${SCAFFOLD_SB}/d/powerhouse`],
       drives: [],
     }),
   },
@@ -501,12 +503,12 @@ const ROWS: Row[] = [
                 "workflows",
                 "url",
               ]),
-              graphql("reactor.backends.sb.remote.url"),
+              driveUrl("reactor.backends.sb.remote.url", "powerhouse"),
               reads("reactor.drives.$map.over", "switchboard", ["drives"]),
             ],
             clientMode: "remote",
             backends: [{ name: "sb", kind: "remote" }],
-            remotes: [`${SCAFFOLD_SB}/graphql`],
+            remotes: [`${SCAFFOLD_SB}/d/powerhouse`],
             drives: scaffoldDrivesAsRemotes,
           }),
           ["cli-switchboard"],
@@ -660,7 +662,7 @@ const ROWS: Row[] = [
       name: "lab-connect-router",
       dependsOn: ["switchboard"],
       consumes: [
-        graphql("reactor.backends.sb.remote.url"),
+        driveUrl("reactor.backends.sb.remote.url", "lab"),
         reads("reactor.drives[0].remote.url", "switchboard", [
           "drives",
           "lab",
@@ -674,7 +676,7 @@ const ROWS: Row[] = [
         { name: "tab", kind: "in-process", storage: "idb" },
         { name: "sb", kind: "remote" },
       ],
-      remotes: [`${LAB}/graphql`],
+      remotes: [`${LAB}/d/lab`],
       drives: [
         remote("lab", `${LAB}/d/lab`),
         remote("public", "https://drives.example.com/d/public"),
@@ -705,7 +707,7 @@ const ROWS: Row[] = [
       ],
       clientMode: "remote",
       backends: [{ name: "sb", kind: "remote" }],
-      remotes: [`${LAB}/graphql`],
+      remotes: [`${LAB}/d/lab`],
       drives: [remote("vetra", `${LAB}/d/vetra-0f1e2d3c`)],
     }),
   },
@@ -736,11 +738,11 @@ const ROWS: Row[] = [
       name: "lab-assistant",
       verb: "serve",
       dependsOn: ["switchboard"],
-      consumes: [graphql("reactor.backends.switchboard.remote.url")],
+      consumes: [driveUrl("reactor.backends.switchboard.remote.url", "lab")],
       env: ["FIXTURE_API_KEY"],
       clientMode: "remote",
       backends: [{ name: "switchboard", kind: "remote" }],
-      remotes: [`${LAB}/graphql`],
+      remotes: [`${LAB}/d/lab`],
       drives: [],
     }),
   },
@@ -751,11 +753,11 @@ const ROWS: Row[] = [
     expected: reactor({
       name: "lab-assistant-keyless",
       dependsOn: ["switchboard"],
-      consumes: [graphql("reactor.backends.switchboard.remote.url")],
+      consumes: [driveUrl("reactor.backends.switchboard.remote.url", "lab")],
       env: ["FIXTURE_UNSET_KEY"],
       clientMode: "remote",
       backends: [{ name: "switchboard", kind: "remote" }],
-      remotes: [`${LAB}/graphql`],
+      remotes: [`${LAB}/d/lab`],
       drives: [],
     }),
   },
@@ -784,7 +786,7 @@ const ROWS: Row[] = [
               reads(
                 "reactor.backends.sb.remote.url",
                 "switchboard",
-                ["endpoints", "graphql"],
+                ["drives", "lab", "url"],
                 "sb-b",
               ),
             ],
@@ -809,7 +811,7 @@ const ROWS: Row[] = [
           {
             ...labUi,
             consumes: [
-              graphql("reactor.backends.sb.remote.url"),
+              driveUrl("reactor.backends.sb.remote.url", "lab"),
               reads("reactor.drives.$map.over", "switchboard", ["drives"]),
             ],
             drives: labDrivesAsRemotes,
@@ -835,7 +837,7 @@ const ROWS: Row[] = [
             verb: "serve",
             dependsOn: ["switchboard"],
             consumes: [
-              graphql("reactor.backends.sb.remote.url"),
+              driveUrl("reactor.backends.sb.remote.url", "lab"),
               reads("reactor.drives.$map.over", "switchboard", ["drives"]),
             ],
             clientMode: "router",
@@ -844,7 +846,7 @@ const ROWS: Row[] = [
               { name: "main", kind: "worker", storage: "idb" },
               { name: "sb", kind: "remote" },
             ],
-            remotes: [`${LAB}/graphql`],
+            remotes: [`${LAB}/d/lab`],
             drives: labDrivesAsRemotes,
           }),
           ["desktop-switchboard"],
@@ -1036,7 +1038,7 @@ const NEGATIVES: Negative[] = [
     host: "remote-without-block",
     invariant: "a remote backend needs remote.url (no remote block at all)",
     error:
-      /hosts\/remote-without-block\/host\.js failed validation[\s\S]*- reactor\.backends\.sb\.remote\.url: a "remote" backend needs remote\.url: remote: \{ url: switchboard\.endpoints\.graphql \}[\s\S]*\$output/,
+      /hosts\/remote-without-block\/host\.js failed validation[\s\S]*- reactor\.backends\.sb\.remote\.url: a "remote" backend needs remote\.url, a switchboard drive address: remote: \{ url: switchboard\.drives\.<slug>\.url \}[\s\S]*\$output/,
   },
   {
     host: "undefined-value",
@@ -1084,7 +1086,13 @@ const NEGATIVES: Negative[] = [
     host: "removed-remote-host",
     invariant: "no old cross-host forms (remote.host)",
     error:
-      /hosts\/removed-remote-host\/host\.js: removed form:\n {2}- reactor\.backends\.switchboard\.remote\.host: remote: \{ host \} was removed; use remote: \{ url: switchboard\.endpoints\.graphql \}/,
+      /hosts\/removed-remote-host\/host\.js: removed form:\n {2}- reactor\.backends\.switchboard\.remote\.host: remote: \{ host \} was removed; use a drive address: remote: \{ url: switchboard\.drives\.<slug>\.url \}/,
+  },
+  {
+    host: "remote-graphql-url",
+    invariant: "a remote link is a switchboard drive address",
+    error:
+      /hosts\/remote-graphql-url\/host\.js failed validation[\s\S]*- reactor\.backends\.sb\.remote\.url: remote\.url reads switchboard's endpoints\.graphql; it must be a switchboard drive address[\s\S]*path: \["drives", "<slug>", "url"\]/,
   },
   {
     host: "backend-kind-missing",

@@ -1,5 +1,8 @@
 import type { ReactorDescriptor } from "@powerhousedao/reactor-monitor";
-import type { HostExport } from "@powerhousedao/host-core/schema";
+import {
+  switchboardOfDrive,
+  type HostExport,
+} from "@powerhousedao/host-core/schema";
 import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import {
   EXPORT_FILE,
@@ -102,15 +105,6 @@ function loadResult(result: ReadResult): Loaded {
   return "error" in result ? readIssue(result.error) : load(result.text);
 }
 
-function isHttpUrl(value: string): boolean {
-  try {
-    const { protocol } = new URL(value);
-    return protocol === "http:" || protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 function blockers(rows: readonly RowState[]): string[] {
   const included = rows.filter((state) => state.include);
   if (included.length === 0) {
@@ -128,9 +122,11 @@ function blockers(rows: readonly RowState[]): string[] {
     seen.add(name);
     if (
       state.row.descriptor.kind === "remote" &&
-      !isHttpUrl(state.url.trim())
+      !switchboardOfDrive(state.url.trim())
     ) {
-      reasons.push(`${name || state.row.member} needs a GraphQL URL.`);
+      reasons.push(
+        `${name || state.row.member} needs a switchboard drive address (<switchboard>/d/<slug>).`,
+      );
     }
   }
   return reasons;
@@ -392,7 +388,7 @@ export function HostImportPanel({ onImport }: HostImportPanelProps) {
                               onChange={(event) =>
                                 updateRow(index, { url: event.target.value })
                               }
-                              placeholder="http://localhost:4001/graphql"
+                              placeholder="http://localhost:4001/d/powerhouse"
                               type="url"
                               value={state.url}
                             />

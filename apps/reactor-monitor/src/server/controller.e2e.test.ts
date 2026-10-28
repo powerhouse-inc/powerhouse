@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   realpathSync,
   rmSync,
   symlinkSync,
@@ -36,6 +37,7 @@ import { createControllerHandler } from "./http.ts";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PH_CLI_DIR = path.resolve(here, "../../../../clis/ph-cli");
 const HOST_CORE_DIR = path.resolve(here, "../../../../packages/host-core");
+const CONNECT_DIR = path.resolve(here, "../../../../apps/connect");
 const SCAFFOLD_CONFIG = path.resolve(
   here,
   "../../../../packages/host-core/test/fixtures/hosts/scaffold/powerhouse.config.json",
@@ -63,7 +65,40 @@ function makeProject(base: string): string {
     path.join(dir, "node_modules", "@powerhousedao", "host-core"),
     "dir",
   );
+  symlinkSync(
+    CONNECT_DIR,
+    path.join(dir, "node_modules", "@powerhousedao", "connect"),
+    "dir",
+  );
   copyFileSync(SCAFFOLD_CONFIG, path.join(dir, "powerhouse.config.json"));
+  const connectFiles: Record<string, string> = {
+    "index.html": `<!doctype html><html><body><div id="root"></div><script type="module" src="/main.tsx"></script></body></html>`,
+    "main.tsx": `import { startConnect } from "@powerhousedao/connect";\nstartConnect(() => import("./index.js"));\n`,
+    "index.ts": `export const documentModels = [];\nexport const editors = [];\n`,
+  };
+  for (const [file, content] of Object.entries(connectFiles)) {
+    writeFileSync(path.join(dir, file), content);
+  }
+  mkdirSync(path.join(dir, "hosts", "app"), { recursive: true });
+  writeFileSync(
+    path.join(dir, "hosts", "app", "host.js"),
+    `export default {
+  name: "monitor-e2e-app",
+  runner: { module: "@powerhousedao/ph-cli/runners/connect", port: 6498 },
+  reactor: { backends: { main: { kind: "worker" } } },
+};
+`,
+  );
+  mkdirSync(path.join(dir, "hosts", "web"));
+  writeFileSync(
+    path.join(dir, "hosts", "web", "host.js"),
+    `export default {
+  name: "monitor-e2e-web",
+  runner: { module: "@powerhousedao/host-core/runners/compound" },
+  children: { sb: { host: "member" }, app: { host: "app" } },
+};
+`,
+  );
   mkdirSync(path.join(dir, "hosts", "sb"), { recursive: true });
   writeFileSync(
     path.join(dir, "hosts", "sb", "host.js"),
@@ -205,10 +240,13 @@ describe.skipIf(process.platform === "win32")(
         existsSync(path.join(dataDir, ".ph", "run", `${HOST_NAME}.json`)),
       ).toBe(true);
 
+      const drive = Object.values(instance?.outputs?.drives ?? {}).at(0)?.url;
+      expect(drive).toMatch(/^http:\/\/[^/]+:\d+\/d\/[^/]+$/);
+
       const remote = await provisionRemote({
         name: "e2e",
         kind: "remote",
-        remote: { url: graphql },
+        remote: { url: drive ?? "" },
       });
       expect(remote.endpoint).toBe(`${graphql}/inspection`);
       expect(remote.info).toBeDefined();
@@ -276,13 +314,20 @@ describe.skipIf(process.platform === "win32")(
       expect(new Set(urls).size).toBe(2);
       expect(urls.filter((url) => url.includes(":7499/"))).toEqual([]);
 
-      for (const url of urls) {
+      const drives = Object.values(instance?.members ?? {}).flatMap((member) =>
+        Object.values(member.outputs?.drives ?? {})
+          .slice(0, 1)
+          .map((drive) => drive.url),
+      );
+      expect(drives).toHaveLength(2);
+      for (const [index, drive] of drives.entries()) {
         const remote = await provisionRemote({
-          name: url,
+          name: drive,
           kind: "remote",
-          remote: { url },
+          remote: { url: drive },
         });
-        expect(remote.endpoint).toBe(`${url}/inspection`);
+        expect(remote.url).toBe(urls[index]);
+        expect(remote.endpoint).toBe(`${urls[index]}/inspection`);
         expect(remote.info).toBeDefined();
         await remote.kill();
       }
@@ -295,5 +340,93 @@ describe.skipIf(process.platform === "win32")(
         await expect(fetch(url, { method: "POST" })).rejects.toThrow();
       }
     }, 300_000);
+
+    it("starts a draft with a Connect member from its throwaway copy, serves Connect, removes the copy on stop", async () => {
+      const exported = await call(
+        "GET",
+        `export?${new URLSearchParams({ project, host: "web" }).toString()}`,
+      );
+      expect(exported.status, JSON.stringify(exported.body)).toBe(200);
+      const { export: envelope, baseDigest } = exportResponseSchema.parse(
+        exported.body,
+      );
+      const draft = newDraft(
+        { kind: "project", project, host: "web", export: envelope },
+        baseDigest,
+      );
+
+      const started = await call("POST", "drafts", requestOf(draft));
+      expect(started.status, JSON.stringify(started.body)).toBe(202);
+      const { id } = instanceSchema.parse(started.body);
+      const instanceDir = path.join(controller.tempRoot, id);
+
+      let instance: Instance | undefined;
+      const deadline = Date.now() + 150_000;
+      while (Date.now() < deadline) {
+        instance = instanceSchema.parse(
+          (await call("GET", `instances/${id}`)).body,
+        );
+        if (instance.status !== "starting") break;
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      expect(instance?.error).toBeUndefined();
+      expect(instance?.status).toBe("running");
+      expect(instance?.members?.sb.outputs?.graphql).toMatch(
+        /^http:\/\/[^/]+:\d+\/graphql$/,
+      );
+      const member = instance?.members?.app;
+      expect(member?.outputs).toBeUndefined();
+      const app = member?.app ?? "";
+      // The copy's fixed Connect port: the host's 6498 plus the offset.
+      expect(new URL(app).port).toBe("16498");
+
+      const page = await fetch(app);
+      expect(page.status).toBe(200);
+      expect(await page.text()).toContain("/main.tsx");
+      const main = await fetch(new URL("main.tsx", app));
+      expect(main.status).toBe(200);
+      expect(await main.text()).toContain("/@fs/");
+      // Built on first request, inside the copy.
+      const worker = await fetch(
+        new URL("__reactor_worker__/worker-meta.json", app),
+      );
+      expect(worker.status, await worker.clone().text()).toBe(200);
+      expect(await worker.json()).toHaveProperty("sourceDigest");
+      expect(
+        existsSync(
+          path.join(
+            instanceDir,
+            "project",
+            "node_modules",
+            ".ph-reactor-worker",
+          ),
+        ),
+      ).toBe(true);
+
+      // A second copy can't take the same Connect port.
+      const second = await call("POST", "drafts", requestOf(draft));
+      expect(second.status).toBe(409);
+      expect(errorResponseSchema.parse(second.body).error.code).toBe(
+        "port_taken",
+      );
+      expect(controller.list()).toHaveLength(1);
+
+      const stopped = await call("DELETE", `instances/${id}`);
+      expect(instanceSchema.parse(stopped.body).status).toBe("exited");
+      expect(existsSync(instanceDir)).toBe(false);
+      for (const written of [
+        ".ph",
+        ".tanstack",
+        "node_modules/.ph-reactor-worker",
+      ]) {
+        expect(existsSync(path.join(project, written)), written).toBe(false);
+      }
+      expect(
+        readdirSync(path.join(project, "node_modules")).filter((name) =>
+          name.startsWith(".vite"),
+        ),
+      ).toEqual([]);
+      await expect(fetch(app)).rejects.toThrow();
+    }, 420_000);
   },
 );

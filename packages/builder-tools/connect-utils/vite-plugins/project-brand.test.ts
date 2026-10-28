@@ -1,11 +1,11 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
   PHBackgroundLayers,
   PHConnectBranding,
 } from "@powerhousedao/shared/clis";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   brandMetaTags,
   effectiveBranding,
@@ -33,8 +33,16 @@ function png(width: number, height: number): Buffer {
   return bytes;
 }
 
+const made: string[] = [];
+afterEach(() => {
+  for (const dir of made.splice(0)) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 function project(files: Record<string, Buffer | string>): string {
   const dir = mkdtempSync(join(tmpdir(), "ph-brand-"));
+  made.push(dir);
   for (const [rel, content] of Object.entries(files)) {
     const file = join(dir, rel);
     mkdirSync(join(file, ".."), { recursive: true });

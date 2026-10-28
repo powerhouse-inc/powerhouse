@@ -587,3 +587,9 @@ export function envTokenable<S extends z.ZodType>(
 ): TokenableSchema<S, EnvToken> {
   return z.union([schema, passthrough<EnvToken>(envTokenSchema)]);
 }
+
+export {
+  driveAddressMessage,
+  switchboardOfDrive,
+  type SwitchboardDrive,
+} from "./drive-address.js";

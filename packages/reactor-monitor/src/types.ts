@@ -98,11 +98,10 @@ export type ReactorSyncConfig = {
  */
 export type ReactorRemoteConfig = {
   /**
-   * The reactor's GraphQL endpoint -- the same URL the Sync tab's add-remote
-   * form takes, e.g. `http://localhost:4001/graphql`. The inspection subgraph
-   * is mounted beneath it at `/inspection`, which is what
-   * {@link inspectionEndpoint} derives unless {@link inspectionUrl} overrides
-   * it.
+   * A drive address on the switchboard, `<switchboard>/d/<slug>`, e.g.
+   * `http://localhost:4001/d/powerhouse`. Its GraphQL endpoint is
+   * `<switchboard>/graphql`, and the inspection subgraph is mounted beneath
+   * that at `/inspection` unless {@link inspectionUrl} overrides it.
    */
   url: string;
   /**
@@ -339,7 +338,8 @@ export interface ManagedRemoteReactor extends ManagedReactorBase {
   readonly syncAdmin?: undefined;
   /** The inspection endpoint this handle talks to. */
   readonly endpoint: string;
-  /** The descriptor's `remote.url`; sibling subgraphs derive from it. */
+  /** The switchboard's GraphQL endpoint, from the descriptor's drive
+   * address; sibling subgraphs derive from it. */
   readonly url: string;
   /** The inspection auth, for sibling subgraph reads of the same reactor. */
   readonly headers?: RemoteInspectionHeaders;
