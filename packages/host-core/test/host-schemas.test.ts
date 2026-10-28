@@ -463,13 +463,13 @@ describe("placement.drives keys (declared form, host level)", () => {
 });
 
 describe("placement.drives: one slug on two switchboards (resolved form)", () => {
-  it("refuses the key, naming both backends", () => {
+  it("refuses the key, naming both backends, whichever backend it names", () => {
     const backends = {
       main: { kind: "worker" },
       sb1: { kind: "remote", remote: { url: "http://a:1/d/powerhouse" } },
       sb2: { kind: "remote", remote: { url: "http://b:2/d/powerhouse" } },
     };
-    for (const placed of ["sb1", "sb2"]) {
+    for (const placed of ["sb1", "sb2", "main"]) {
       expect(
         messages(
           reactorSchema.safeParse({
@@ -479,6 +479,28 @@ describe("placement.drives: one slug on two switchboards (resolved form)", () =>
         ),
       ).toEqual([
         'placement.drives.powerhouse: Drive "powerhouse" is on both sb1 and sb2. Rename one, or link only one.',
+      ]);
+    }
+  });
+
+  it("refuses a slug that is both this reactor's own drive and on a switchboard", () => {
+    for (const placed of ["sb", "main"]) {
+      expect(
+        messages(
+          reactorSchema.safeParse({
+            backends: {
+              main: { kind: "worker" },
+              sb: {
+                kind: "remote",
+                remote: { url: "http://a:1/d/powerhouse" },
+              },
+            },
+            drives: [{ slug: "powerhouse" }],
+            placement: { drives: { powerhouse: placed } },
+          }),
+        ),
+      ).toEqual([
+        'placement.drives.powerhouse: Drive "powerhouse" is both this reactor\'s own drive and on sb. Rename one, or link only one.',
       ]);
     }
   });

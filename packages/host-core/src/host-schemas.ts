@@ -308,10 +308,17 @@ function refineResolvedReactor(
 
   const nameOf = (base: string) => byBase.get(base) ?? base;
   for (const [slug, name] of Object.entries(reactor.placement?.drives ?? {})) {
-    const base = baseOf.get(name);
-    if (base === undefined) continue;
     const at = ["placement", "drives", slug];
     const on = [...(linked.get(slug) ?? [])];
+    // Two drives answer to the key, whichever backend it names.
+    if (on.length > 0 && kept.has(slug)) {
+      ctx.addIssue({
+        code: "custom",
+        path: at,
+        message: `Drive "${slug}" is both this reactor's own drive and on ${on.map(nameOf).join(" and ")}. Rename one, or link only one.`,
+      });
+      continue;
+    }
     if (on.length > 1) {
       ctx.addIssue({
         code: "custom",
@@ -320,6 +327,8 @@ function refineResolvedReactor(
       });
       continue;
     }
+    const base = baseOf.get(name);
+    if (base === undefined) continue;
     if (on.length === 0) {
       // A key that names no drive here (a hashed home drive) is not checked.
       if (!kept.has(slug)) continue;
