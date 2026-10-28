@@ -117,6 +117,35 @@ function createdByLoad(request: BatchLoadRequest): Set<string> {
   );
 }
 
+/** The document type a CREATE_DOCUMENT input names, or `""`. */
+function modelOf(input: unknown): string {
+  if (typeof input !== "object" || input === null) {
+    return "";
+  }
+  const model = (input as { model?: unknown }).model;
+  return typeof model === "string" ? model : "";
+}
+
+function typesCreatedByExecution(request: BatchExecutionRequest): string[] {
+  return request.jobs.flatMap((job) =>
+    job.actions
+      .filter((action) => action.type === CREATE_DOCUMENT)
+      .map((action) => modelOf(action.input))
+      .filter((model) => model !== ""),
+  );
+}
+
+function typesCreatedByLoad(request: BatchLoadRequest): string[] {
+  return request.jobs.flatMap((job) => {
+    const first = job.operations.at(0);
+    const model =
+      first !== undefined && first.action.type === CREATE_DOCUMENT
+        ? modelOf(first.action.input)
+        : "";
+    return model === "" ? [] : [model];
+  });
+}
+
 /** The create job of a create batch first, then the rest. */
 function createJobsFirst(result: BatchExecutionResult): JobInfo[] {
   const jobs = Object.values(result.jobs);
@@ -240,6 +269,9 @@ export class RoutingWriteClient implements IReactorWriteClient {
       document.header.id,
       parentIdentifier,
       async (target) => {
+        await this.dispatcher.assertCreatable("create", target, [
+          document.header.documentType,
+        ]);
         const write = target.api.write;
         if (write !== undefined) {
           return write.create(document, parentIdentifier, signal);
@@ -368,7 +400,12 @@ export class RoutingWriteClient implements IReactorWriteClient {
     const { value: batch, backend } = await this.dispatcher.onDocuments(
       "executeBatch",
       identifiers,
-      (target) => {
+      async (target) => {
+        await this.dispatcher.assertCreatable(
+          "executeBatch",
+          target,
+          typesCreatedByExecution(request),
+        );
         const write = target.api.write;
         return write === undefined
           ? this.batchOn(target, request, signal)
@@ -391,7 +428,12 @@ export class RoutingWriteClient implements IReactorWriteClient {
     const { value: result, backend } = await this.dispatcher.onDocuments(
       "loadBatch",
       identifiers,
-      (target) => {
+      async (target) => {
+        await this.dispatcher.assertCreatable(
+          "loadBatch",
+          target,
+          typesCreatedByLoad(request),
+        );
         const write = target.api.write;
         return write === undefined
           ? declared(target, "loadBatch")(request, signal)
@@ -660,6 +702,9 @@ export class RoutingWriteClient implements IReactorWriteClient {
       document.header.id,
       parentIdentifier,
       async (target, beforeSubmit) => {
+        await this.dispatcher.assertCreatable("createAsync", target, [
+          document.header.documentType,
+        ]);
         const submit = target.api.submit;
         if (submit !== undefined) {
           return submit.create(document, parentIdentifier, signal);

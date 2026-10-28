@@ -1,5 +1,5 @@
 import { DriveCollectionId } from "@powerhousedao/reactor";
-import type { RouterBackend } from "./backend.js";
+import { UnsupportedByBackendError, type RouterBackend } from "./backend.js";
 import {
   CrossBackendBatchError,
   messageOf,
@@ -145,6 +145,35 @@ export class RouteDispatcher {
     await Promise.all(
       targets.map((backend) => backend.refreshFacts(this.onDiagnostic)),
     );
+  }
+
+  /**
+   * Refuses, before anything is sent, a create of a document type the backend
+   * declares it lacks. Its types are re-read once before refusing.
+   */
+  async assertCreatable(
+    operation: string,
+    backend: RouterBackend,
+    documentTypes: readonly string[],
+  ): Promise<void> {
+    const missing = (): string[] => {
+      const served = backend.facts.documentTypes;
+      return served === undefined
+        ? []
+        : [...new Set(documentTypes)].filter((type) => !served.has(type));
+    };
+    if (missing().length === 0) {
+      return;
+    }
+    await backend.refreshFacts(this.onDiagnostic);
+    const lacking = missing();
+    if (lacking.length > 0) {
+      throw new UnsupportedByBackendError(
+        backend.name,
+        operation,
+        `it has no document model for ${lacking.map((type) => JSON.stringify(type)).join(", ")}`,
+      );
+    }
   }
 
   collectionFor(driveIdentifier: string, branch: string): DriveCollectionId {

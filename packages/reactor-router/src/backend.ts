@@ -267,6 +267,11 @@ export type RoutableBackendConfig = {
   readonly reach: ReactorReach;
   /** True when the backend itself refuses a misroute with WrongBackendError. */
   readonly refusesMisroutes: boolean;
+  /**
+   * The document types the backend can create, read with the facts. Absent,
+   * the backend loads models on demand and creates are not checked.
+   */
+  readonly documentTypes?: () => Promise<readonly string[]>;
 };
 
 /** The backend cannot serve this call, by declaration. Nothing was sent. */
@@ -408,6 +413,7 @@ export class RouterBackend {
   readonly reach: ReactorReach;
   readonly refusesMisroutes: boolean;
   private readonly source: RoutableBackendConfig["facts"];
+  private readonly typesSource: RoutableBackendConfig["documentTypes"];
   private current: BackendFacts;
 
   constructor(config: RoutableBackendConfig) {
@@ -416,6 +422,7 @@ export class RouterBackend {
     this.reach = config.reach;
     this.refusesMisroutes = config.refusesMisroutes;
     this.source = config.facts;
+    this.typesSource = config.documentTypes;
     this.current =
       typeof config.facts === "function"
         ? { reactor: UNKNOWN_REACTOR_INFO, reach: config.reach, known: false }
@@ -433,22 +440,43 @@ export class RouterBackend {
 
   /** Re-reads the facts; a failed read leaves them unknown and says so. */
   async refreshFacts(onDiagnostic: RouterDiagnostic): Promise<void> {
-    if (typeof this.source !== "function") {
+    const source = this.source;
+    const typesSource = this.typesSource;
+    if (typeof source !== "function" && typesSource === undefined) {
       return;
     }
+    const [reactor, types] = await Promise.all([
+      typeof source === "function"
+        ? this.read("its facts", source, onDiagnostic)
+        : Promise.resolve(source),
+      typesSource === undefined
+        ? Promise.resolve(undefined)
+        : this.read("its document types", typesSource, onDiagnostic),
+    ]);
+    const known =
+      reactor !== undefined &&
+      (typesSource === undefined || types !== undefined);
+    this.current = {
+      reactor: reactor ?? UNKNOWN_REACTOR_INFO,
+      reach: this.reach,
+      known,
+      ...(types === undefined ? {} : { documentTypes: new Set(types) }),
+    };
+  }
+
+  private async read<T>(
+    what: string,
+    source: () => Promise<T>,
+    onDiagnostic: RouterDiagnostic,
+  ): Promise<T | undefined> {
     try {
-      const reactor = await this.source();
-      this.current = { reactor, reach: this.reach, known: true };
+      return await source();
     } catch (error) {
-      this.current = {
-        reactor: UNKNOWN_REACTOR_INFO,
-        reach: this.reach,
-        known: false,
-      };
       onDiagnostic(
-        `facts: backend ${this.name} could not report its facts (${messageOf(error)}); placing it as unknown`,
+        `facts: backend ${this.name} could not report ${what} (${messageOf(error)}); placing it as unknown`,
         error,
       );
+      return undefined;
     }
   }
 }

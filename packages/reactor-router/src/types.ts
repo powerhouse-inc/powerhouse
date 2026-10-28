@@ -13,8 +13,17 @@ export type ReactorReach = {
 export type BackendFacts = {
   readonly reactor: ReactorInfo;
   readonly reach: ReactorReach;
-  /** False when the facts read failed and {@link UNKNOWN_REACTOR_INFO} stands in. */
+  /**
+   * False when the last facts read failed: {@link UNKNOWN_REACTOR_INFO} stands
+   * in for a reactor read that failed, and `documentTypes` is absent after a
+   * document-type read that failed.
+   */
   readonly known: boolean;
+  /**
+   * The document types the backend can create. Absent: not declared, not read
+   * yet, or the read failed; the router then does not constrain creates.
+   */
+  readonly documentTypes?: ReadonlySet<string>;
 };
 
 /** Stands in for a reactor whose facts could not be read; satisfies nothing. */
