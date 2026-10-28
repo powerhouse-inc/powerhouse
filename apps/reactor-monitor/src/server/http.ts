@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { z } from "zod";
 import {
   CONTROLLER_PREFIX,
+  draftRequestSchema,
   hostRequestSchema,
   TOKEN_HEADER,
   type ErrorCode,
@@ -131,6 +132,26 @@ export function createControllerHandler(options: {
       const request = hostRequestSchema.parse(await readJson(req));
       return sendJson(res, 200, { issues: await controller.check(request) });
     }
+    if (resource === "capabilities" && parts.length === 1 && method === "GET") {
+      return sendJson(res, 200, controller.capabilities());
+    }
+    if (resource === "export" && parts.length === 1 && method === "GET") {
+      const project = url.searchParams.get("project");
+      const host = url.searchParams.get("host");
+      if (!project || !host)
+        throw new BadRequest("project and host are required");
+      return sendJson(res, 200, await controller.exportHost(project, host));
+    }
+    if (resource === "drafts" && method === "POST") {
+      if (parts.length === 1) {
+        const request = draftRequestSchema.parse(await readJson(req));
+        return sendJson(res, 202, await controller.startDraft(request));
+      }
+      if (id === "check" && parts.length === 2) {
+        const request = draftRequestSchema.parse(await readJson(req));
+        return sendJson(res, 200, await controller.checkDraft(request));
+      }
+    }
     if (resource !== "instances") {
       return sendError(res, "not_found", `No route ${method} ${url.pathname}`);
     }
@@ -173,12 +194,11 @@ export function createControllerHandler(options: {
     route(req, res, url).catch((error: unknown) => {
       if (res.headersSent) return;
       if (error instanceof ControllerError) {
-        sendError(
-          res,
-          error.code,
-          error.message,
-          error.issues ? { issues: error.issues } : {},
-        );
+        sendError(res, error.code, error.message, {
+          ...(error.issues ? { issues: error.issues } : {}),
+          ...(error.ruleIssues ? { ruleIssues: error.ruleIssues } : {}),
+          ...(error.setters ? { setters: error.setters } : {}),
+        });
       } else if (error instanceof z.ZodError || error instanceof BadRequest) {
         sendError(res, "bad_request", error.message);
       } else {

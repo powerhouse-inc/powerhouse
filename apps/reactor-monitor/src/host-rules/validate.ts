@@ -5,7 +5,7 @@ import {
   type ReactorProtocol,
 } from "@powerhousedao/host-core/schema";
 import type { z } from "zod";
-import { EXPORT_FILE, parseHostExport } from "../lib/host-import.js";
+import { EXPORT_FILE, parseHostExport } from "../lib/host-import.ts";
 import {
   effectiveFlags,
   FLAG_ENV,
@@ -13,7 +13,7 @@ import {
   ladderGaps,
   LADDER,
   type FeatureFlag,
-} from "./flags.js";
+} from "./flags.ts";
 import {
   fileOf,
   isRecord,
@@ -23,13 +23,13 @@ import {
   switchboardSettings,
   valueAt,
   type Member,
-} from "./members.js";
+} from "./members.ts";
 import {
   checkEnvKey,
   FOLDER_REASONS,
   isContainedPath,
   SETTINGS_ELSEWHERE,
-} from "./policy.js";
+} from "./policy.ts";
 import {
   hostRulesContextSchema,
   type HostDraft,
@@ -37,7 +37,7 @@ import {
   type HostRuleIssue,
   type HostRulesContext,
   type RuleName,
-} from "./schema.js";
+} from "./schema.ts";
 
 const STORAGE_KINDS = {
   controller: ["path", "postgres"],

@@ -306,11 +306,16 @@ async function start(
   const { startSwitchboard } = await import("../services/switchboard.js");
   const entries = host.runner.plugins;
   const entriesDeclared = entries !== undefined;
-  const args = await toSwitchboardArgs(host, devMode, entriesDeclared);
+  const classic = await toSwitchboardArgs(host, devMode, entriesDeclared);
+  // powerhouse.config.json `reactor.https` is a default, not a flag: it goes
+  // under the member's own config instead of over it.
+  const { https } = classic;
+  const args = { ...classic, https: undefined };
   // This member's own config, under the args: nothing is written to the
   // process env, so compound members do not see each other's settings.
   const memberConfig = await memberSwitchboardConfig(host, env, {
     pluginHost: entriesDeclared,
+    defaults: https === undefined ? {} : { server: { https } },
   });
 
   // R2 step 2: a declared composition activates the plugin pipeline — the

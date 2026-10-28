@@ -1,8 +1,12 @@
 import type { z } from "zod";
+import type { HostRuleIssue, HostRulesContext } from "../host-rules/schema.js";
 import {
+  capabilitiesResponseSchema,
   checkResponseSchema,
   CONTROLLER_PREFIX,
+  draftCheckResponseSchema,
   errorResponseSchema,
+  exportResponseSchema,
   type hostIssueSchema,
   hostsResponseSchema,
   instanceSchema,
@@ -11,11 +15,15 @@ import {
   projectsResponseSchema,
   TOKEN_HEADER,
   TOKEN_META_NAME,
+  type DraftCheckResponse,
+  type DraftRequest,
   type ErrorCode,
+  type ExportResponse,
   type HostRequest,
   type Instance,
   type LogsResponse,
   type Project,
+  type RefusedSetter,
 } from "./api.js";
 
 export type HostIssue = z.infer<typeof hostIssueSchema>;
@@ -27,6 +35,10 @@ export class ControllerRequestError extends Error {
     message: string,
     public readonly status?: number,
     public readonly issues?: readonly HostIssue[],
+    /** `check_failed` on a draft: its host-rules findings. */
+    public readonly ruleIssues?: readonly HostRuleIssue[],
+    /** `setter_denied`: every refused setter. */
+    public readonly setters?: readonly RefusedSetter[],
   ) {
     super(message);
     this.name = "ControllerRequestError";
@@ -53,6 +65,12 @@ export interface ControllerClient {
   hosts(project: string): Promise<string[]>;
   check(request: HostRequest): Promise<HostIssue[]>;
   start(request: HostRequest): Promise<Instance>;
+  capabilities(): Promise<HostRulesContext>;
+  /** A project host's declared export, and the digest drafts quote back. */
+  exportHost(project: string, host: string): Promise<ExportResponse>;
+  checkDraft(request: DraftRequest): Promise<DraftCheckResponse>;
+  /** Starts a throwaway copy of the draft's project; poll `get` until running. */
+  startDraft(request: DraftRequest): Promise<Instance>;
   list(): Promise<Instance[]>;
   get(id: string): Promise<Instance>;
   logs(id: string, since: number): Promise<LogsResponse>;
@@ -113,7 +131,7 @@ export function createControllerClient(
           response.status,
         );
       }
-      const { code, message, issues } = parsed.data.error;
+      const { code, message, issues, ruleIssues, setters } = parsed.data.error;
       throw new ControllerRequestError(
         code,
         code === "bad_token"
@@ -121,6 +139,8 @@ export function createControllerClient(
           : message,
         response.status,
         issues,
+        ruleIssues,
+        setters,
       );
     }
     const parsed = schema.safeParse(body);
@@ -155,6 +175,19 @@ export function createControllerClient(
       ).issues,
     start: (request) =>
       call(instanceSchema, "instances", { method: "POST", body: request }),
+    capabilities: () => call(capabilitiesResponseSchema, "capabilities"),
+    exportHost: (project, host) =>
+      call(
+        exportResponseSchema,
+        `export?${new URLSearchParams({ project, host }).toString()}`,
+      ),
+    checkDraft: (request) =>
+      call(draftCheckResponseSchema, "drafts/check", {
+        method: "POST",
+        body: request,
+      }),
+    startDraft: (request) =>
+      call(instanceSchema, "drafts", { method: "POST", body: request }),
     list: async () =>
       (await call(instancesResponseSchema, "instances")).instances,
     get: (id) => call(instanceSchema, instancePath(id)),

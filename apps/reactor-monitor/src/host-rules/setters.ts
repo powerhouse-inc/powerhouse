@@ -3,8 +3,8 @@ import {
   TOKEN_ESCAPE_KEY,
   type HostExport,
 } from "@powerhousedao/host-core/schema";
-import { parsePath } from "./policy.js";
-import { isDelete, type HostRuleIssue, type Setter } from "./schema.js";
+import { parsePath } from "./policy.ts";
+import { isDelete, type HostRuleIssue, type Setter } from "./schema.ts";
 
 type Container = Record<string, unknown> | unknown[];
 
