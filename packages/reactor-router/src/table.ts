@@ -215,6 +215,37 @@ export class RouterTable {
     collection: DriveCollectionId,
     excluded: ReadonlySet<string> = new Set(),
   ): RouterTableEntry {
+    const known = this.knownRoute(collection, excluded);
+    if (known !== undefined) {
+      return known;
+    }
+    const requirements = this.requirementsFor(collection);
+    const placed = placeCollection(collection, this.order, requirements);
+    if (!excluded.has(placed.name)) {
+      return {
+        collectionId: collection.key,
+        backend: placed.name,
+        source: "placed",
+      };
+    }
+    const alternative = this.order.find(
+      (backend) =>
+        !excluded.has(backend.name) &&
+        backend !== placed &&
+        this.isEligible(backend, requirements),
+    );
+    return {
+      collectionId: collection.key,
+      backend: (alternative ?? placed).name,
+      source: "placed",
+    };
+  }
+
+  /** The route the table holds evidence or config for, never a hash placement. */
+  knownRoute(
+    collection: DriveCollectionId,
+    excluded: ReadonlySet<string> = new Set(),
+  ): RouterTableEntry | undefined {
     const learned = this.learnedRoute(collection.key);
     if (
       learned !== undefined &&
@@ -242,26 +273,7 @@ export class RouterTable {
         source: learned.source,
       };
     }
-    const requirements = this.requirementsFor(collection);
-    const placed = placeCollection(collection, this.order, requirements);
-    if (!excluded.has(placed.name)) {
-      return {
-        collectionId: collection.key,
-        backend: placed.name,
-        source: "placed",
-      };
-    }
-    const alternative = this.order.find(
-      (backend) =>
-        !excluded.has(backend.name) &&
-        backend !== placed &&
-        this.isEligible(backend, requirements),
-    );
-    return {
-      collectionId: collection.key,
-      backend: (alternative ?? placed).name,
-      source: "placed",
-    };
+    return undefined;
   }
 
   /**

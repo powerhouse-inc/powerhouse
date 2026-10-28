@@ -34,6 +34,9 @@ interface RouteTarget {
 
 const NOT_FOUND_ERROR_NAME = "DocumentNotFoundError";
 
+/** The relationship a drive holds each of its documents by. */
+const CHILD_RELATIONSHIP = "child";
+
 const NONE: ReadonlySet<string> = new Set();
 
 const distinctIds = (identifiers: readonly string[]): string[] => [
@@ -452,12 +455,13 @@ export class RouteDispatcher {
     }
     const serving = await this.servingBackends(identifier, excluded);
     if (serving.length > 0) {
+      const holder = await this.chooseHolder(identifier, serving, excluded);
       this.table.recordDocument(
         identifier,
-        serving[0].name,
-        this.isProvisional(serving[0], excluded),
+        holder.backend.name,
+        holder.provisional,
       );
-      return serving[0];
+      return holder.backend;
     }
     return this.placeDocument(identifier, excluded);
   }
@@ -560,14 +564,15 @@ export class RouteDispatcher {
       this.backends.map((backend) => this.owns(backend, identifier)),
     );
     const serving = this.backends.filter((_backend, i) => answers[i] === "yes");
-    const holder = serving.find((backend) => !excluded.has(backend.name));
-    if (holder !== undefined) {
+    const eligible = serving.filter((backend) => !excluded.has(backend.name));
+    if (eligible.length > 0) {
+      const holder = await this.chooseHolder(identifier, eligible, excluded);
       this.table.recordDocument(
         identifier,
-        holder.name,
-        this.isProvisional(holder, excluded),
+        holder.backend.name,
+        holder.provisional,
       );
-      return { backend: holder, cached: false };
+      return { backend: holder.backend, cached: false };
     }
     if (serving.length > 0) {
       return { backend: serving[0], cached: false };
@@ -593,16 +598,84 @@ export class RouteDispatcher {
     }
     this.table.forgetDocument(identifier);
     this.guard.forget(cached, identifier);
-    const holder = serving.find((backend) => !excluded.has(backend.name));
-    if (holder === undefined) {
+    const eligible = serving.filter((backend) => !excluded.has(backend.name));
+    if (eligible.length === 0) {
       return serving[0];
     }
+    const holder = await this.chooseHolder(identifier, eligible, excluded);
     this.table.recordDocument(
       identifier,
-      holder.name,
-      this.isProvisional(holder, excluded),
+      holder.backend.name,
+      holder.provisional,
     );
-    return holder;
+    return holder.backend;
+  }
+
+  /**
+   * The holder among `serving` (every one not excluded, in configuration
+   * order). An id several backends hold goes to its collection's home; see
+   * {@link homeOf}. Otherwise the first, provisional when an earlier backend
+   * did not hold it.
+   */
+  private async chooseHolder(
+    identifier: string,
+    serving: readonly RouterBackend[],
+    excluded: ReadonlySet<string>,
+  ): Promise<{
+    readonly backend: RouterBackend;
+    readonly provisional: boolean;
+  }> {
+    if (serving.length > 1) {
+      const home = await this.homeOf(identifier, serving);
+      if (home !== undefined) {
+        return { backend: home, provisional: false };
+      }
+    }
+    return {
+      backend: serving[0],
+      provisional: this.isProvisional(serving[0], excluded),
+    };
+  }
+
+  /**
+   * The backend that holds an id's collection, when several serve the id: a
+   * drive is its own collection, any other document the drive that holds it
+   * as a child. Only a correction, a placement or a learned route names a
+   * home; with none, or when the home is not among `serving`, `undefined`.
+   */
+  async homeOf(
+    identifier: string,
+    serving: readonly RouterBackend[],
+  ): Promise<RouterBackend | undefined> {
+    const asker = serving.at(0);
+    if (asker === undefined) {
+      return undefined;
+    }
+    let drive: string;
+    try {
+      const parents = await withDeadline(this.probeTimeoutMs, (signal) =>
+        asker.api.getIncomingRelationships(
+          identifier,
+          CHILD_RELATIONSHIP,
+          undefined,
+          { cursor: "", limit: 1 },
+          signal,
+        ),
+      );
+      drive = parents.results.at(0)?.header.id ?? identifier;
+    } catch (error) {
+      this.onDiagnostic(
+        `home lookup: ${asker.name} could not name the drive that holds ${JSON.stringify(identifier)} (${messageOf(error)}); routing by backend order`,
+        error,
+      );
+      return undefined;
+    }
+    const route = this.table.knownRoute(
+      this.collectionFor(drive, DEFAULT_BRANCH),
+    );
+    return route === undefined
+      ? undefined
+      : serving.find((backend) => backend.name === route.backend);
   }
 
   /**

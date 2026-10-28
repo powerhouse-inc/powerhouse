@@ -218,10 +218,20 @@ export class FakeBackend {
           this.require(identifier, "getOutgoingRelationships");
           return { results: [], options: { cursor: "", limit: 0 } };
         }),
-      getIncomingRelationships: (identifier) =>
+      getIncomingRelationships: (identifier, relationshipType) =>
         this.run("getIncomingRelationships", [identifier], () => {
           this.require(identifier, "getIncomingRelationships");
-          return { results: [], options: { cursor: "", limit: 0 } };
+          const results = this.relationships
+            .filter(
+              (edge) =>
+                edge.targetId === identifier &&
+                edge.relationshipType === relationshipType,
+            )
+            .flatMap((edge) => {
+              const source = this.documents.get(edge.sourceId);
+              return source === undefined ? [] : [source];
+            });
+          return { results, options: { cursor: "", limit: results.length } };
         }),
       getOutgoingRelationshipEdges: (identifier) =>
         this.run("getOutgoingRelationshipEdges", [identifier], () => {
