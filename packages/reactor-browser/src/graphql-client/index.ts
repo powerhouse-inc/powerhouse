@@ -10,3 +10,4 @@ export * from "./static-package-manager.js";
 export * from "./subgraph.js";
 export * from "./subscriptions.js";
 export * from "./switchboard-backend.js";
+export * from "./transport.js";

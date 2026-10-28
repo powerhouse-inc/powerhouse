@@ -46,7 +46,7 @@ import type {
 } from "document-model";
 import { logger } from "document-model";
 import { print } from "graphql";
-import type { Variables } from "graphql-request";
+import { GraphQLClient, type Variables } from "graphql-request";
 import { createClient } from "../graphql/client.js";
 import {
   DocumentChangeType as GqlDocumentChangeType,
@@ -64,6 +64,7 @@ import {
 import type { ReactorGraphQLClient } from "../graphql/types.js";
 import { DRIVE_DOCUMENT_TYPES } from "../constants.js";
 import { DOCUMENT_CHANGE_TYPE } from "../reactor-interop.js";
+import { withRequestDeadline, type GraphQLFetch } from "./transport.js";
 import { remoteOperationToLocal } from "../remote-controller/utils.js";
 import type {
   IReactorBrowserClient,
@@ -221,6 +222,15 @@ export type GraphQLReactorClientOptions = {
    * the client has proof of its own and the two disagree, the proof is sent.
    */
   driveIdFor?: (call: DriveIdCall) => string | undefined;
+
+  /**
+   * Bounds each HTTP request, headers through body, in milliseconds; a request
+   * past it rejects with a `TimeoutError`. Unset, requests are unbounded.
+   */
+  requestTimeoutMs?: number;
+
+  /** The `fetch` every HTTP request goes through; the global one by default. */
+  fetch?: GraphQLFetch;
 };
 
 // Always known here, so a light client can head a drive without registering it.
@@ -344,11 +354,17 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     const middleware = withWrongBackendErrors(
       makeAuthMiddleware(this.tokenProvider),
     );
-    this.sdk = options.graphqlClient ?? createClient(options.url, middleware);
+    const fetch =
+      options.requestTimeoutMs === undefined
+        ? options.fetch
+        : withRequestDeadline(options.requestTimeoutMs, options.fetch);
+    this.sdk =
+      options.graphqlClient ??
+      createClient(new GraphQLClient(options.url, { fetch }), middleware);
     // Subgraph transports are always derived from `url` and always carry auth,
     // including when the reactor SDK above was injected: an injected SDK is a
     // test seam that owns its own transport, not a second endpoint.
-    this.subgraphs = new SubgraphSdkRegistry(options.url, middleware);
+    this.subgraphs = new SubgraphSdkRegistry(options.url, middleware, fetch);
     this.driveNodes = new GraphQLDriveNodeSource(this.sdk, driveIdHeaders);
     this.read = new GraphQLReadHalf(this, this.driveNodes);
     this.write = {
