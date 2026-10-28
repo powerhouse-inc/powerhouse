@@ -94,6 +94,11 @@ export type StartServerOptions = {
    */
   signalHandlers?: boolean;
   /**
+   * `/ready` waits for this too: drives the caller seeds after the server
+   * starts. A rejection leaves the server not ready.
+   */
+  readyAfter?: Promise<unknown>;
+  /**
    * Registry URL for the HttpPackageLoader. Enables `PackagesSubgraph`
    * (install/uninstall mutations) plus dynamic package resolution.
    * Falls back to PH_REGISTRY_URL env, then `packageRegistryUrl` in the
@@ -236,6 +241,8 @@ export type SwitchboardDeps = {
   fatalErrorShutdown?: boolean;
   /** See {@link StartServerOptions.signalHandlers}. */
   signalHandlers?: boolean;
+  /** See {@link StartServerOptions.readyAfter}. */
+  readyAfter?: Promise<unknown>;
   /** The privacy add-on's signer, for a caller-provided reactor. */
   privacySigner?: ISigner;
 };

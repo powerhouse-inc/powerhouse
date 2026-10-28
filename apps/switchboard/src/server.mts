@@ -1539,24 +1539,6 @@ async function initServer(
     );
   }
 
-  void runDetached(
-    "Marking the API ready",
-    async () => {
-      await Promise.allSettled(lateSubgraphs);
-      try {
-        await graphqlManager.updateRouter(true);
-      } catch (error) {
-        reportFailure(
-          reporting,
-          error,
-          "Final router update before readiness failed: @error",
-        );
-      }
-      api.readiness.markReady();
-    },
-    reporting,
-  );
-
   // Create default drive if provided
   if (options.drive) {
     if (!renown) {
@@ -1580,6 +1562,36 @@ async function initServer(
       );
     }
   }
+
+  // Ready once this server serves its own drives. Remote drives stay out: they
+  // replicate from another server, which may be down.
+  void runDetached(
+    "Marking the API ready",
+    async () => {
+      await Promise.allSettled(lateSubgraphs);
+      try {
+        await graphqlManager.updateRouter(true);
+      } catch (error) {
+        reportFailure(
+          reporting,
+          error,
+          "Final router update before readiness failed: @error",
+        );
+      }
+      try {
+        await options.readyAfter;
+      } catch (error) {
+        reportFailure(
+          reporting,
+          error,
+          "Not ready: the drives seeded after start failed: @error",
+        );
+        return;
+      }
+      api.readiness.markReady();
+    },
+    reporting,
+  );
 
   // add vite middleware after express app is initialized if applicable
   if (vite) {
@@ -1828,6 +1840,7 @@ function serverOptionsOf(
     reactor: deps.reactor,
     fatalErrorShutdown: deps.fatalErrorShutdown,
     signalHandlers: deps.signalHandlers,
+    readyAfter: deps.readyAfter,
     pluginComposition: deps.pluginComposition,
     logger: deps.logger,
     registryUrl: config.packages.registryUrl,
