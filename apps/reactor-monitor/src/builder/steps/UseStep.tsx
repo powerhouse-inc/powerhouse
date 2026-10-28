@@ -120,6 +120,11 @@ function Running({
             {reactor.url ? (
               <span className="hb-mono hb-note">{reactor.url}</span>
             ) : null}
+            {reactor.app ? (
+              <a href={reactor.app} rel="noreferrer" target="_blank">
+                Open Connect
+              </a>
+            ) : null}
           </li>
         ))}
         {run.browser.map((name) => (
