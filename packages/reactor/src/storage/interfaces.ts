@@ -63,7 +63,7 @@ export class DocumentAlreadyExistsError extends Error {
     this.documentId = documentId;
   }
 
-  static isError(error: unknown): error is DocumentAlreadyExistsError {
+  static override isError(error: unknown): error is DocumentAlreadyExistsError {
     return Error.isError(error) && error.name === "DocumentAlreadyExistsError";
   }
 }
@@ -105,7 +105,7 @@ export class AppendConditionFailedError extends Error {
     this.name = "AppendConditionFailedError";
   }
 
-  static isError(error: unknown): error is AppendConditionFailedError {
+  static override isError(error: unknown): error is AppendConditionFailedError {
     return Error.isError(error) && error.name === "AppendConditionFailedError";
   }
 

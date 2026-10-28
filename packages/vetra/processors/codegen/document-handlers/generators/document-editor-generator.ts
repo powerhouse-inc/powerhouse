@@ -25,7 +25,7 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
     return fullState.global;
   }
 
-  skipReason(input: CodegenInput): string | undefined {
+  override skipReason(input: CodegenInput): string | undefined {
     const base = super.skipReason(input);
     if (base) return base;
 

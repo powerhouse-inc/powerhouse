@@ -14,7 +14,7 @@ import { minimalBackupDocument } from "./utils.js";
 export class PackageGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/package";
 
-  skipReason(input: CodegenInput): string | undefined {
+  override skipReason(input: CodegenInput): string | undefined {
     const base = super.skipReason(input);
     if (base) return base;
     if (!input.state) {

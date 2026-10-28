@@ -59,7 +59,7 @@ function spyHostFs(): HostFsSpy {
     throw errnoError("EPERM", "EPERM: operation not permitted, fsync");
   };
   class Base extends NodeFS {
-    async init(pg: PGlite, opts: Parameters<NodeFS["init"]>[1]) {
+    override async init(pg: PGlite, opts: Parameters<NodeFS["init"]>[1]) {
       const { emscriptenOpts } = await super.init(pg, opts);
       const base = emscriptenOpts as { preRun?: ((mod: TrackedMod) => void)[] };
       const track = (mod: TrackedMod) => {
@@ -323,7 +323,7 @@ describe("createDurableNodeFs", () => {
 
   it("throws when the base options carry no instantiateWasm", async () => {
     class Bare extends NodeFS {
-      async init(pg: PGlite, opts: Parameters<NodeFS["init"]>[1]) {
+      override async init(pg: PGlite, opts: Parameters<NodeFS["init"]>[1]) {
         const { emscriptenOpts } = await super.init(pg, opts);
         const { instantiateWasm: _dropped, ...rest } = emscriptenOpts as Record<
           string,

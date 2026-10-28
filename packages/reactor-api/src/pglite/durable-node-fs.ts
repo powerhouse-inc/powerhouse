@@ -211,7 +211,7 @@ export function createDurableNodeFs(
     private hostSyncs = fsync;
     private freshInit = false;
 
-    async init(
+    override async init(
       pg: PGlite,
       opts: InitOpts,
     ): Promise<{ emscriptenOpts: InitOpts }> {
@@ -252,7 +252,7 @@ export function createDurableNodeFs(
       return { emscriptenOpts: emscriptenOpts as InitOpts };
     }
 
-    async initialSyncFs(): Promise<void> {
+    override async initialSyncFs(): Promise<void> {
       await super.initialSyncFs();
       // No PG_VERSION: initdb runs next; PGlite calls syncToFs once before ready.
       this.freshInit =
@@ -262,7 +262,7 @@ export function createDurableNodeFs(
       maintenance.start(this.pg!, resolvedDir, baseBytes);
     }
 
-    async syncToFs(relaxedDurability?: boolean): Promise<void> {
+    override async syncToFs(relaxedDurability?: boolean): Promise<void> {
       maintenance.noteSync();
       await super.syncToFs(relaxedDurability);
       if (!this.freshInit) return;
@@ -271,7 +271,7 @@ export function createDurableNodeFs(
       syncTree(resolvedDir, hostFs);
     }
 
-    async closeFs(): Promise<void> {
+    override async closeFs(): Promise<void> {
       try {
         await maintenance.stop();
       } finally {
