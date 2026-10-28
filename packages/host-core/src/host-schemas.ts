@@ -155,6 +155,80 @@ function endpointsGraphqlRef(
   return { host, ...(typeof member === "string" ? { member } : {}) };
 }
 
+/** The declared slugs a block names, or undefined when one is known only
+ * at runtime (a `$map` drive list, a home drive behind another token). */
+function knownDriveSlugs(reactor: {
+  backends?: Record<string, { kind: string; remote?: { url: unknown } }>;
+  drives?: unknown;
+}): string[] | undefined {
+  const slugs: string[] = [];
+  for (const backend of Object.values(reactor.backends ?? {})) {
+    if (backend.kind !== "remote") continue;
+    const url = backend.remote?.url;
+    if (typeof url === "string") {
+      const slug = switchboardOfDrive(url)?.slug;
+      if (slug === undefined) return undefined;
+      slugs.push(slug);
+      continue;
+    }
+    const ref =
+      typeof url === "object" && url !== null && "$output" in url
+        ? (url as { $output: { path?: unknown } }).$output
+        : undefined;
+    const path = Array.isArray(ref?.path) ? (ref.path as unknown[]) : [];
+    if (
+      path.length !== 3 ||
+      path[0] !== "drives" ||
+      typeof path[1] !== "string" ||
+      path[2] !== "url"
+    ) {
+      return undefined;
+    }
+    slugs.push(path[1]);
+  }
+  if (reactor.drives !== undefined) {
+    if (!Array.isArray(reactor.drives)) return undefined;
+    for (const drive of reactor.drives as { slug?: unknown }[]) {
+      if (typeof drive.slug === "string") slugs.push(drive.slug);
+    }
+  }
+  return slugs;
+}
+
+/** Declared form: a placement key must name a drive the block names, when
+ * every drive is knowable. A host with no remote backend is not checked:
+ * its plugins may contribute drives the block does not name. */
+function refineDeclaredPlacementKeys(
+  reactor: {
+    backends?: Record<string, { kind: string; remote?: { url: unknown } }>;
+    placement?: { drives?: Record<string, string> };
+    drives?: unknown;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const placed = Object.keys(reactor.placement?.drives ?? {});
+  if (placed.length === 0) return;
+  const remote = Object.values(reactor.backends ?? {}).some(
+    (b) => b.kind === "remote",
+  );
+  if (!remote) return;
+  const known = knownDriveSlugs(reactor);
+  if (!known) return;
+  // A literal address may carry the hashed slug of a `projectHash` drive.
+  const names = (slug: string, served: string) =>
+    served === slug ||
+    (served.startsWith(`${slug}-`) &&
+      /^[0-9a-f]{8}$/.test(served.slice(slug.length + 1)));
+  for (const slug of placed) {
+    if (known.some((served) => names(slug, served))) continue;
+    ctx.addIssue({
+      code: "custom",
+      path: ["placement", "drives", slug],
+      message: `placement.drives.${slug} names no drive this host links to or declares (${[...new Set(known)].join(", ") || "none"}).`,
+    });
+  }
+}
+
 interface ResolvedReactorBlock {
   backends?: Record<string, { kind: string; remote?: { url: unknown } }>;
   placement?: { drives?: Record<string, string> };
@@ -343,8 +417,8 @@ function buildHostSchemas(tokenField: FieldWrappers) {
           message: `placement.drives.${slug} names backend "${name}", which is not in backends (${Object.keys(backends).join(", ") || "none"}).`,
         });
       }
-      // Tokens are resolved only here; the declared form checks names.
       if (resolved) refineResolvedReactor(reactor, ctx);
+      else refineDeclaredPlacementKeys(reactor, ctx);
     });
 
   /** Common runner options; runner modules extend it with their own. */

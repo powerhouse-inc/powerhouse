@@ -296,7 +296,7 @@ describe("placement.drives", () => {
     ]);
   });
 
-  it("checks only backend names in the declared form", () => {
+  it("passes keys in the declared form while the drive list is a $map", () => {
     const declared = declaredHostSchemas.reactorSchema;
     const mapped = {
       backends: {
@@ -325,5 +325,75 @@ describe("placement.drives", () => {
     ).toEqual([
       'placement.drives.b: placement.drives.b names backend "x", which is not in backends (sb).',
     ]);
+  });
+});
+
+describe("placement.drives keys (declared form)", () => {
+  const declared = declaredHostSchemas.reactorSchema;
+  const token = (slug: string) => ({
+    $output: { host: "s", path: ["drives", slug, "url"] },
+  });
+  const linked = (extra: Record<string, unknown>) => ({
+    backends: {
+      main: { kind: "worker" },
+      sb: { kind: "remote", remote: { url: token("home") } },
+    },
+    drives: [{ slug: "local" }, { slug: "b", remote: { url: token("b") } }],
+    ...extra,
+  });
+
+  it("accepts a home drive by its token slug and a reactor.drives slug", () => {
+    expect(
+      declared.safeParse(
+        linked({
+          placement: { drives: { home: "sb", b: "sb", local: "main" } },
+        }),
+      ).success,
+    ).toBe(true);
+  });
+
+  it("flags a key that names no drive, listing the known ones", () => {
+    expect(
+      messages(
+        declared.safeParse(linked({ placement: { drives: { typo: "sb" } } })),
+      ),
+    ).toEqual([
+      "placement.drives.typo: placement.drives.typo names no drive this host links to or declares (home, local, b).",
+    ]);
+  });
+
+  it("matches a literal home address by its slug, hashed or not", () => {
+    const literal = (url: string, key: string) =>
+      declared.safeParse({
+        backends: { sb: { kind: "remote", remote: { url } } },
+        placement: { drives: { [key]: "sb" } },
+      }).success;
+    expect(literal("http://h:1/d/b", "b")).toBe(true);
+    expect(literal("http://h:1/d/vetra-0f1e2d3c", "vetra")).toBe(true);
+    expect(literal("http://h:1/d/vetra-0f1e2d3c", "vet")).toBe(false);
+  });
+
+  it("passes keys it cannot know until runtime", () => {
+    const concat = {
+      backends: {
+        sb: {
+          kind: "remote",
+          remote: {
+            url: {
+              $concat: [{ $output: { host: "s", path: ["origin"] } }, "/d/x"],
+            },
+          },
+        },
+      },
+      placement: { drives: { anything: "sb" } },
+    };
+    expect(declared.safeParse(concat).success).toBe(true);
+    // no remote backend: plugin-contributed drives are not named in the block
+    expect(
+      declared.safeParse({
+        backends: { main: { kind: "in-process" } },
+        placement: { drives: { workflows: "main" } },
+      }).success,
+    ).toBe(true);
   });
 });
