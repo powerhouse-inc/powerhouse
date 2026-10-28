@@ -129,6 +129,52 @@ describe("parseHostExport", () => {
     ]);
   });
 
+  it("names the folder when a wrapper's plugins leave its key unknown", () => {
+    const cli = fixture("cli");
+    const host = cli.host as { children: Record<string, unknown> };
+    const token = (slug: string) => ({
+      $output: { host: "switchboard", path: ["drives", slug, "url"] },
+    });
+    const connect = cli.members.connect as {
+      runner: { plugins: unknown[] };
+    };
+    const folder = {
+      ...connect,
+      runner: {
+        ...connect.runner,
+        plugins: [
+          {
+            module: "@powerhousedao/connect/plugins/workflows",
+            config: { drive: token("workflows") },
+          },
+        ],
+      },
+      reactor: {
+        backends: {
+          main: { kind: "worker" },
+          sb: { kind: "remote", remote: { url: token("powerhouse") } },
+        },
+        placement: { drives: { workflows: "sb" } },
+      },
+    };
+    const ui = { host: "connect", runner: { plugins: [] } };
+    const { issues } = parseHostExport(
+      JSON.stringify({
+        ...cli,
+        host: { ...host, children: { ...host.children, ui } },
+        members: { ...cli.members, connect: folder },
+      }),
+    );
+    expect(issues).toEqual([
+      expect.objectContaining({
+        file: "hosts/connect/host.js",
+        path: "reactor.placement.drives.workflows",
+        message:
+          "placement.drives.workflows names no drive this host links to or declares (powerhouse).",
+      }),
+    ]);
+  });
+
   it("names the field a member fails on", () => {
     const cli = fixture("cli");
     const connect = { ...cli.members.connect, reactr: {} };

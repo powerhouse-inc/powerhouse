@@ -212,9 +212,16 @@ function placementIssues(
         wrapper as ChildWrapper,
       );
       for (const issue of placementKeyIssues(merged)) {
-        const folderHas = own.get(wrapper.host)?.has(issue.message) === true;
-        if (wrapper.reactor === undefined && folderHas) continue;
-        push(hostFile(folder), ["children", key, ...issue.path], issue.message);
+        if (wrapper.reactor !== undefined) {
+          push(
+            hostFile(folder),
+            ["children", key, ...issue.path],
+            issue.message,
+          );
+        } else if (own.get(wrapper.host)?.has(issue.message) !== true) {
+          // The key is in the folder; the wrapper's plugins made it unknown.
+          push(hostFile(wrapper.host), issue.path, issue.message);
+        }
       }
     }
   }

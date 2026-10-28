@@ -227,8 +227,9 @@ describe("linking a Connect to a switchboard's drives", () => {
     let draft: HostDraft = { envelope: stack() };
     draft = choose(draft, "host:add:switchboard");
     draft = choose(draft, `${SB}:reach:addDrive`);
+    draft = choose(draft, "host.children.switchboard:reach:addDrive");
     draft = choose(draft, `${UI}:reach:open:sb:shared`);
-    expect(status(draft, `${UI}:reach:open:switchboard:powerhouse`)).toEqual(
+    expect(status(draft, `${UI}:reach:open:switchboard:shared-2`)).toEqual(
       off(REACH_REASONS.oneSwitchboard),
     );
   });
