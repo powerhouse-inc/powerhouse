@@ -1,5 +1,25 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — a Switchboard as a router backend (`@powerhousedao/reactor-browser`)
+
+### ✨ `createSwitchboardBackend`
+
+`createSwitchboardBackend({ name, url, tokenProvider, signer, documentModels, ... })` from `@powerhousedao/reactor-browser/graphql-client` returns `{ config, notifyCredentialsChanged, dispose }`. `config` is a `RoutableBackendConfig` for `RoutingReactorClient`, so a host other than Connect, such as the monitor, can route to a Switchboard. `url` is the Switchboard's GraphQL endpoint. Connect's own copy of this backend is gone, and Connect now builds its remote through this function.
+
+- **Explicit credentials.** The descriptor names its token provider and signer. `signer: undefined` pushes unsigned and never falls back to the logged-in Renown user. A function is read on every push. Connect passes `ambientRenownTokenProvider` and the new `ambientRenownSigner`, so it still signs only while someone is logged in. A `GraphQLReactorClient` `signer` option may also be such a function.
+- **Request deadline.** Each request is bounded, headers through body, at `requestTimeoutMs`, which defaults to 30 s. A request past the deadline rejects with a `TimeoutError`. `GraphQLReactorClient` takes the same option, plus `fetch` for the transport.
+- **Breaker and health.** Three transport failures in a row open the breaker for 30 s (configurable through `breaker`). A transport failure is a network error, a deadline or a 5xx. While the breaker is open, nothing is sent: every call throws `SwitchboardUnreachableError`, `health()` reports `"down"`, and the router stops probing the backend. A GraphQL error is an answer, so it does not count, and neither does an abort by the caller.
+- **Facts.** One `SwitchboardFacts` query reads the reactor info, including `access` from the server, and the document types the Switchboard serves. The router's create pre-check uses the types. A Switchboard that lacks `documentServed`, `createDefaults` or `inspection` fails the read, so the router holds its facts as unknown.
+- **421.** A refusal forgets the drive the request named, so the next request sends no stale `Drive-Id`.
+
+### 🐛 Switchboard `/ready` waits for its drives
+
+`/ready` used to answer 200 about 80 ms before the default drive existed, so a client that waited for `/ready` and then opened `/d/<slug>` could get a 404. It now turns 200 only once the default drive is served. Under `ph run`, it also waits for the drives the host declares and the drives its plugins contribute. `startSwitchboard` takes `readyAfter`, a promise that `/ready` also waits for; if it rejects, the server stays not ready. Remote drives don't hold readiness back, because they sync from another server that may be down.
+
+✅ **What to try:** start a Switchboard with `ph run`, poll `/ready`, and open `/d/<slug>` on the first 200: the drive is there.
+
+---
+
 ## 🚀 **Unreleased** — router placement, deadlines and document-type facts (`@powerhousedao/reactor-router`)
 
 ### ✨ Move a drive while the router runs
