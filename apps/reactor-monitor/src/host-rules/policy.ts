@@ -8,8 +8,8 @@ import {
   CODE_LOADING_ENV,
   ENV_KEY_PATTERN,
   isBrowserEnvKey,
-} from "../controller/api.js";
-import { HOST_RULES_LIMITS, isDelete, type Setter } from "./schema.js";
+} from "../controller/api.ts";
+import { HOST_RULES_LIMITS, isDelete, type Setter } from "./schema.ts";
 
 const FORBIDDEN_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
 
