@@ -141,15 +141,17 @@ describe("materialize", () => {
     expect(lstatSync(path.join(modules, "@scope")).isSymbolicLink()).toBe(
       false,
     );
-    expect(readlinkSync(path.join(modules, "dep"))).toBe(
-      path.join(base, "store", "dep"),
-    );
-    expect(readlinkSync(path.join(modules, "@scope", "pkg"))).toBe(
-      path.join(base, "store", "scoped"),
-    );
-    expect(readlinkSync(path.join(modules, "plain"))).toBe(
-      path.join(source, "node_modules", "plain"),
-    );
+    // Absolute links to real paths, never pnpm's relative ones.
+    const links = {
+      dep: path.join(base, "store", "dep"),
+      "@scope/pkg": path.join(base, "store", "scoped"),
+      plain: path.join(source, "node_modules", "plain"),
+    };
+    for (const [name, target] of Object.entries(links)) {
+      const link = path.join(modules, name);
+      expect(path.isAbsolute(readlinkSync(link))).toBe(true);
+      expect(realpathSync(link)).toBe(target);
+    }
     expect(existsSync(path.join(modules, ".pnpm"))).toBe(false);
     expect(existsSync(path.join(modules, "broken"))).toBe(false);
   });
