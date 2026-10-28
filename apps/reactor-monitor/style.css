@@ -55,6 +55,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .rm-sets {
@@ -1732,6 +1733,11 @@ body {
 }
 
 @media (max-width: 860px) {
+  /* The sidebar leaves a phone too little width to build in. */
+  .reactor-monitor__body:has(.hb) .reactor-monitor__sidebar-column {
+    display: none;
+  }
+
   .hb-aside {
     position: fixed;
     left: 0;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { errorMessage } from "../controller/client.js";
 import type {
   HostRulesContext,
@@ -101,10 +101,19 @@ export function HostBuilder({
   };
 
   const step: StepId = draft?.step ?? "start";
+  const nav = useRef<HTMLElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    scroller.current?.scrollTo({ top: 0 });
+    nav.current
+      ?.querySelector('[aria-current="step"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [step]);
   const index = STEPS.indexOf(step);
   const goTo = (target: StepId) => {
     if (draft) setDraft(withStep(draft, target));
     setSheet(false);
+    setOthers(undefined);
   };
   const bad = new Set(engine?.issues.map((issue) => stepOf(issue.path)));
 
@@ -144,7 +153,7 @@ export function HostBuilder({
 
   return (
     <div className="hb" data-builder="">
-      <nav aria-label="Steps" className="hb-steps hb-hscroll">
+      <nav aria-label="Steps" className="hb-steps hb-hscroll" ref={nav}>
         {STEPS.map((id, at) => (
           <button
             aria-current={id === step ? "step" : undefined}
@@ -161,7 +170,7 @@ export function HostBuilder({
         ))}
       </nav>
       <div className="hb-body">
-        <div className="hb-scroll" data-scroll="">
+        <div className="hb-scroll" data-scroll="" ref={scroller}>
           {others ? (
             <div className="hb-banner" role="status">
               <span>
