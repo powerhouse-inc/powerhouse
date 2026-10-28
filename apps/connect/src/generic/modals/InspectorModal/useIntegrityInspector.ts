@@ -22,6 +22,7 @@ export function useIntegrityInspector(): IntegrityInspectorProps | undefined {
       reactorModule.writeCache,
       reactorModule.documentView,
       reactorModule.documentModelRegistry,
+      reactorModule.protocolSupport,
     );
   }, [reactorModule]);
 
