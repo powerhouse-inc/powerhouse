@@ -185,9 +185,12 @@ export const archiveInvoice = createAction({
   async run(ctx) {
     const doc = await ctx.reactor.get(ctx.propsValue.invoiceId);
     const invoice = await ctx.reactor.getDocumentModelModuleForDocument(doc);
-    const updated = await ctx.reactor.execute(doc.header.id, "main", [
+    const handle = await ctx.reactor.write.execute(doc.header.id, "main", [
       invoice.actions.setStatus({ status: "ARCHIVED" }),
     ]);
+    const { job } = await handle.readable;
+    if (job.result?.allApplied === false) throw new Error("Not archived");
+    const updated = await handle.document();
     return { header: updated.header, state: updated.state };
   },
 });
@@ -197,14 +200,27 @@ export const archiveInvoice = createAction({
   `ReactorClient`. Both are `Pick`s of `IReactorClient`, with the client's own
   signatures; `ReadMethods`, `WriteMethods` and `RefusedMethods` name the
   methods. `false`, like no declaration, gives no `ctx.reactor`.
-- Writes are `create`, `createEmpty`, `execute` and `deleteDocument` (no
-  cascade). Build actions with the model's action creators, such as `setName`
-  from `@powerhousedao/shared/document-model`, `addFile` from
+- `ReactorClient.write` is `ReactorWriteClient`, a `Pick` of the reactor's
+  `IReactorWriteClient`: `create`, `createEmpty`, `execute`, `deleteDocument`
+  (no cascade), and `drives.addFile` and `drives.addFolder`
+  (`WriteHalfMethods`, `DriveWriteHalfMethods`). Each answers once its job is
+  accepted with a handle: `written`, `readable` (a receipt whose
+  `job.result.actions` holds each action's outcome) and `document(view?)`. A
+  reducer error is on the receipt, not thrown.
+- The facade's writes (`create`, `createEmpty`, `execute`, `executeAsync`,
+  `deleteDocument`, `drives.addFile`, `drives.addFolder`) are deprecated and
+  still served, so published pieces keep working. They return once applied and
+  throw `ReactorActionsFailedError` on a reducer error.
+- Build actions with the model's action creators, such as `setName` from
+  `@powerhousedao/shared/document-model`, `addFile` from
   `@powerhousedao/shared/document-drive`, or `module.actions.*` from
-  `getDocumentModelModuleForDocument`, and pass them to `execute`. `execute`
+  `getDocumentModelModuleForDocument`, and pass them to `write.execute`. It
   refuses document lifecycle actions, and the client's convenience writes
-  (`rename`, relationships, upgrades, batches, `drives`) are refused. Read a
-  drive's nodes from `get(driveId)`.
+  (`rename`, relationships, upgrades, batches, other drive writes) are refused,
+  on the facade and on `write`. Read a drive's nodes with `drives.listNodes`.
+- A write the run user may not make throws `ReactorAccessDeniedError` before
+  anything is submitted. Its message ends with
+  `denied action indexes: [0,2]`; `deniedActionIndexes(error)` reads them.
 - `query({ subgraph, query, variables })` (`IndexQueryMethods`, on both
   types) reads a read-model index the host serves as a GraphQL subgraph, by
   the name the host registers it under, with the host's own permission rules
@@ -226,8 +242,8 @@ export const archiveInvoice = createAction({
   writes them commented out, or set from `--default-timeout-seconds` and
   `--default-max-attempts`.
 - The host serves `ctx.reactor`. Each call acts as the workflow's run user,
-  within the step's reactor connection and deadline. Writes return once
-  applied.
+  within the step's reactor connection and deadline. A handle waits only for
+  its own step's jobs; a failed job rejects its stages with `JobFailedError`.
 - Errors cross the worker boundary by `name` and `message`, so compare
   `error.name` against the exported constants: `ReactorAccessDeniedError`,
   `ReactorJobFailedError`, `ReactorActionsFailedError`,

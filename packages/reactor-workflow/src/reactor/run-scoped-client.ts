@@ -1,27 +1,42 @@
 // The reactor client one piece step gets: the host's client, acting as the
 // run user within the step's declaration, connection and deadline (ADR 0005).
-import type {
-  IndexQueryRequest,
-  IndexQueryResult,
-  ReactorClient,
+import {
+  assertActionsApplied,
+  type IndexQueryRequest,
+  type IndexQueryResult,
+  type ReactorClient,
+  type ReactorWriteClient,
 } from "@powerhousedao/pieces-framework";
 import {
   createEmptyDocument,
   deleteDocumentAction,
+  jobIdsOf,
   JobStatus,
+  placeholderJob,
   PropagationMode,
+  remoteStagePort,
+  WriteHandleFactory,
   type ActionCandidate,
   type ActionEvaluations,
+  type ConsistencyToken,
   type DocumentRelationship,
+  type HandleReader,
   type IReactorClient,
   type JobInfo,
+  type NodeWriteHandle,
   type OperationFilter,
   type PagedResults,
   type PagingOptions,
+  type RemoteReads,
   type SearchFilter,
   type ViewFilter,
+  type WriteHandle,
 } from "@powerhousedao/reactor";
-import type { FolderNode, Node } from "@powerhousedao/shared/document-drive";
+import {
+  isFolderNode,
+  type FolderNode,
+  type Node,
+} from "@powerhousedao/shared/document-drive";
 import {
   DOCUMENT_SCOPE_ACTION_TYPES,
   initializeAuth,
@@ -39,7 +54,7 @@ import type { WorkflowRuntimeHostDeps } from "./host.js";
 import { authEnforced, NO_RUN_USER_DENIAL } from "./reactor-access.js";
 import {
   accessDenied,
-  ReactorActionsFailedError,
+  ReactorActionsDeniedError,
   ReactorError,
   ReactorJobFailedError,
   ReactorJobPendingError,
@@ -92,7 +107,10 @@ const AUTHORIZATION_DENIED = "AuthorizationDeniedError";
 function jobFailed(job: JobInfo): ReactorError {
   const error = job.error;
   // The reactor's message names the operation, scope and document.
-  if (error?.name === AUTHORIZATION_DENIED) {
+  if (
+    error?.name === AUTHORIZATION_DENIED ||
+    error?.message.startsWith("Authorization denied")
+  ) {
     return accessDenied(
       `The Switchboard has no grant for this operation: ${error.message}`,
     );
@@ -101,33 +119,6 @@ function jobFailed(job: JobInfo): ReactorError {
     ReactorJobFailedError,
     `Reactor job ${job.id} failed: ${job.error?.message ?? "unknown error"}`,
   );
-}
-
-// A reducer error or a denial does not fail the job, so each action is checked.
-function assertActionsApplied(job: JobInfo, actions?: readonly Action[]): void {
-  const outcomes = job.result?.actions ?? [];
-  const byId = new Map(outcomes.map((outcome) => [outcome.actionId, outcome]));
-  // Without `actions` (a create's own), each outcome names its action by id.
-  const named =
-    actions?.map((action) => ({ id: action.id, label: action.type })) ??
-    outcomes.map((outcome) => ({
-      id: outcome.actionId,
-      label: outcome.actionId,
-    }));
-  const failed = named.flatMap(({ id, label }) => {
-    const outcome = byId.get(id);
-    if (!outcome) return [`Action ${label} produced no operation`];
-    if (outcome.kind === "reducer-error") {
-      return [`Action ${label} failed: ${outcome.message}`];
-    }
-    if (outcome.kind === "denied") {
-      return [`Action ${label} was denied: ${outcome.reason}`];
-    }
-    return [];
-  });
-  if (failed.length > 0) {
-    throw new ReactorError(ReactorActionsFailedError, failed.join("; "));
-  }
 }
 
 const DOCUMENT_DRIVE = "powerhouse/document-drive";
@@ -187,10 +178,13 @@ function folderCandidate(
 }
 
 // The piece surface; `servedClient` refuses every other method. Reads pass
-// the run user as subject; `execute` passes `evaluateActions` as the run user.
+// the run user as subject; writes pass `evaluateActions` as the run user.
 export class RunScopedReactorClient implements ReactorClient {
   private readonly stopAt: number;
   private readonly maxPageLimit: number;
+  // Jobs this client submitted, the only ones `read` answers for.
+  private readonly jobs = new Set<string>();
+  private readonly handles: WriteHandleFactory;
 
   constructor(
     private readonly inner: IReactorClient,
@@ -200,6 +194,7 @@ export class RunScopedReactorClient implements ReactorClient {
   ) {
     this.stopAt = scope.deadline - deadlineMargin(scope.deadline - Date.now());
     this.maxPageLimit = options.maxPageLimit ?? DEFAULT_MAX_PAGE_LIMIT;
+    this.handles = new WriteHandleFactory(remoteStagePort(this.read));
   }
 
   // --- Reads -------------------------------------------------------------
@@ -235,11 +230,13 @@ export class RunScopedReactorClient implements ReactorClient {
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<TDocument> {
     const document = await this.inner.get<TDocument>(
       identifier,
       this.readView(view),
       this.signal(signal),
+      consistencyToken,
     );
     await this.scope.journal.recordDocuments([document.header.id]);
     return document;
@@ -384,6 +381,68 @@ export class RunScopedReactorClient implements ReactorClient {
 
   // --- Writes ------------------------------------------------------------
 
+  // The write half: each write answers once its jobs are accepted, with a
+  // handle over `read`. A reducer error is on the receipt, not thrown.
+  readonly write: ReactorWriteClient = {
+    create: (document, parentIdentifier, signal) =>
+      this.writeCreate(document, parentIdentifier, signal),
+    createEmpty: (documentModelType, options, signal) =>
+      this.writeCreateEmpty(
+        "write.createEmpty",
+        documentModelType,
+        options,
+        this.signal(signal),
+      ),
+    execute: (documentIdentifier, branch, actions, signal) =>
+      this.submitExecute(
+        "write.execute",
+        documentIdentifier,
+        branch,
+        actions,
+        this.signal(signal),
+      ),
+    deleteDocument: (identifier, propagate, signal) =>
+      this.submitDelete(
+        "write.deleteDocument",
+        identifier,
+        propagate,
+        this.signal(signal),
+      ),
+    drives: {
+      addFile: (driveIdentifier, document, parentFolder, signal) =>
+        this.submitAddFile(
+          "write.drives.addFile",
+          driveIdentifier,
+          document,
+          parentFolder,
+          this.signal(signal),
+        ),
+      addFolder: (driveIdentifier, name, parentFolder, signal) =>
+        this.submitAddFolder(
+          "write.drives.addFolder",
+          driveIdentifier,
+          name,
+          parentFolder,
+          this.signal(signal),
+        ),
+    },
+  };
+
+  // What a write handle reads through: this client's own jobs, within the
+  // deadline, and documents gated as `get` gates them.
+  readonly read: RemoteReads = {
+    waitForJob: async (jobId, signal) => {
+      this.assertOwnJob(jobId);
+      return this.settle(jobId, this.signal(signal));
+    },
+    getJobStatus: async (jobId, signal) => {
+      this.assertOwnJob(jobId);
+      return this.inner.getJobStatus(jobId, this.signal(signal));
+    },
+    get: (identifier, view, signal, consistencyToken) =>
+      this.get(identifier, view, signal, consistencyToken),
+  };
+
   async create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
     parentIdentifier?: string,
@@ -391,11 +450,9 @@ export class RunScopedReactorClient implements ReactorClient {
   ): Promise<TDocument> {
     this.assertWritable("create");
     const abort = this.signal(signal);
-    const parentId =
-      parentIdentifier === undefined
-        ? undefined
-        : await this.resolveReference(parentIdentifier, "main", abort);
-    return this.createDocument<TDocument>(document, parentId, abort);
+    const parentId = await this.parentOf(parentIdentifier, abort);
+    const handle = await this.submitCreate(document, parentId, abort);
+    return this.createdBack<TDocument>(handle, abort);
   }
 
   async newDocument<TDocument extends PHDocument = PHDocument>(
@@ -410,10 +467,7 @@ export class RunScopedReactorClient implements ReactorClient {
       options?.documentModelVersion,
       abort,
     );
-    const parentId =
-      options?.parentIdentifier === undefined
-        ? undefined
-        : await this.resolveReference(options.parentIdentifier, "main", abort);
+    const parentId = await this.parentOf(options?.parentIdentifier, abort);
     const base = await this.inner.getCreateProtocolVersions(
       { documentType: documentModelType, parentIdentifier: parentId },
       abort,
@@ -431,14 +485,14 @@ export class RunScopedReactorClient implements ReactorClient {
     options?: Parameters<IReactorClient["createEmpty"]>[1],
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    this.assertWritable("createEmpty");
     const abort = this.signal(signal);
-    const document = await this.newDocument(documentModelType, options, abort);
-    const parentId =
-      options?.parentIdentifier === undefined
-        ? undefined
-        : await this.resolveReference(options.parentIdentifier, "main", abort);
-    return this.createDocument<TDocument>(document, parentId, abort);
+    const handle = await this.writeCreateEmpty(
+      "createEmpty",
+      documentModelType,
+      options,
+      abort,
+    );
+    return this.createdBack<TDocument>(handle, abort);
   }
 
   async execute<TDocument extends PHDocument>(
@@ -452,19 +506,19 @@ export class RunScopedReactorClient implements ReactorClient {
       throw accessDenied("A piece may not choose the subject it reads as");
     }
     const abort = this.signal(signal);
-    const { id } = await this.apply(
+    const handle = await this.submitExecute(
       "execute",
       documentIdentifier,
       branch,
       actions,
       abort,
     );
-    return this.readBack<TDocument>(id, branch, abort);
+    await this.landed(handle, abort, actions);
+    return this.readBack<TDocument>(handle.documentId, branch, abort);
   }
 
   // As `execute`, and answered at the same point (every action applied, or a
-  // throw), but with the settled job and no read of the document: a drive's
-  // read-back is its whole state, every node, for a caller that drops it.
+  // throw), but with the settled job and no read of the document.
   async executeAsync(
     documentIdentifier: string,
     branch: string,
@@ -472,25 +526,62 @@ export class RunScopedReactorClient implements ReactorClient {
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     const abort = this.signal(signal);
-    const { job } = await this.apply(
+    const handle = await this.submitExecute(
       "executeAsync",
       documentIdentifier,
       branch,
       actions,
       abort,
     );
-    return job;
+    return this.landed(handle, abort, actions);
   }
 
-  // The write `execute` and `executeAsync` share: the checks, the gate, the
-  // job, settled. Answers the resolved document id and the settled job.
-  private async apply(
+  async deleteDocument(
+    identifier: string,
+    propagate?: PropagationMode,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    const abort = this.signal(signal);
+    const handle = await this.submitDelete(
+      "deleteDocument",
+      identifier,
+      propagate,
+      abort,
+    );
+    await this.landed(handle, abort);
+  }
+
+  private async writeCreate(
+    document: PHDocument,
+    parentIdentifier: string | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<WriteHandle> {
+    this.assertWritable("write.create");
+    const abort = this.signal(signal);
+    const parentId = await this.parentOf(parentIdentifier, abort);
+    return this.submitCreate(document, parentId, abort);
+  }
+
+  private async writeCreateEmpty(
+    method: string,
+    documentModelType: string,
+    options: Parameters<IReactorClient["createEmpty"]>[1],
+    abort: AbortSignal,
+  ): Promise<WriteHandle> {
+    this.assertWritable(method);
+    const document = await this.newDocument(documentModelType, options, abort);
+    const parentId = await this.parentOf(options?.parentIdentifier, abort);
+    return this.submitCreate(document, parentId, abort);
+  }
+
+  // The checks and the gate, then the job.
+  private async submitExecute(
     method: string,
     documentIdentifier: string,
     branch: string,
     actions: Action[],
     abort: AbortSignal,
-  ): Promise<{ id: string; job: JobInfo }> {
+  ): Promise<WriteHandle> {
     this.assertWritable(method);
     for (const action of actions) {
       if (action.context?.signer) {
@@ -507,46 +598,37 @@ export class RunScopedReactorClient implements ReactorClient {
     }
     const id = await this.resolveReference(documentIdentifier, branch, abort);
     await this.gate(id, branch, actions, abort);
-    const job = await this.run(id, branch, actions, abort);
-    return { id, job };
+    return this.submit(id, branch, actions, abort);
   }
 
   // The run user's DELETE_DOCUMENT passes the gate; the client's parent edge
   // removals ride on the Switchboard's grant.
-  async deleteDocument(
+  private async submitDelete(
+    method: string,
     identifier: string,
-    propagate?: PropagationMode,
-    signal?: AbortSignal,
-  ): Promise<void> {
-    this.assertWritable("deleteDocument");
+    propagate: PropagationMode | undefined,
+    abort: AbortSignal,
+  ): Promise<WriteHandle> {
+    this.assertWritable(method);
     if (propagate === PropagationMode.Cascade) {
       throw accessDenied("Cascade delete is not offered to pieces");
     }
-    const abort = this.signal(signal);
     const id = await this.resolveReference(identifier, "main", abort);
     await this.gate(id, "main", [deleteDocumentAction(id)], abort);
     this.assertTimeLeft("a delete");
     await this.scope.journal.recordDocuments([id]);
-    try {
-      await this.inner.deleteDocument(id, undefined, abort);
-    } catch (error) {
-      // The client rethrows a failed job's message alone.
-      const message = messageOf(error);
-      if (message.startsWith("Authorization denied")) {
-        throw accessDenied(
-          `The Switchboard has no grant for this operation: ${message}`,
-        );
-      }
-      throw error;
-    }
+    const submitted = await this.inner.write.deleteDocument(
+      id,
+      undefined,
+      abort,
+    );
+    return this.handle(submitted, await this.track(submitted, () => [id]));
   }
 
   // --- Drives ------------------------------------------------------------
 
-  // The inner client's drive writes sign as the host and submit their own
-  // batches, so each is checked here first: the drive is read as the run user,
-  // the drive-side action is gated for the run user, both documents are
-  // journaled, and a new file gets the run user's grant, as `create` does.
+  // Checked before the inner client signs as the host: the drive is read and
+  // the drive-side action gated as the run user; a new file gets its grant.
   readonly drives: ReactorClient["drives"] = {
     getNode: (driveIdentifier, nodeId, signal) =>
       this.getNode(driveIdentifier, nodeId, signal),
@@ -590,8 +672,50 @@ export class RunScopedReactorClient implements ReactorClient {
     parentFolder?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    this.assertWritable("drives.addFile");
     const abort = this.signal(signal);
+    const handle = await this.submitAddFile(
+      "drives.addFile",
+      driveIdentifier,
+      document,
+      parentFolder,
+      abort,
+    );
+    return this.createdBack<TDocument>(handle, abort, true);
+  }
+
+  private async addFolder(
+    driveIdentifier: string,
+    name: string,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<FolderNode> {
+    const abort = this.signal(signal);
+    const handle = await this.submitAddFolder(
+      "drives.addFolder",
+      driveIdentifier,
+      name,
+      parentFolder,
+      abort,
+    );
+    await this.landed(handle, abort);
+    const node = await this.inner.drives.getNode(
+      handle.documentId,
+      handle.nodeId,
+      abort,
+    );
+    if (!isFolderNode(node)) throw new Error("Folder creation failed");
+    return node;
+  }
+
+  // The document batch has completed when the inner write answers.
+  private async submitAddFile(
+    method: string,
+    driveIdentifier: string,
+    document: PHDocument,
+    parentFolder: string | undefined,
+    abort: AbortSignal,
+  ): Promise<WriteHandle> {
+    this.assertWritable(method);
     const drive = await this.readDrive(driveIdentifier, abort);
     const prepared = withSignaturePolicy(
       document,
@@ -606,30 +730,24 @@ export class RunScopedReactorClient implements ReactorClient {
     );
     this.assertTimeLeft(`a ${prepared.header.documentType} document`);
     await this.scope.journal.recordDocuments([drive.id, documentId]);
-    await this.inner.drives.addFile(drive.id, prepared, parentFolder, abort);
-    try {
-      await this.grantRunUser(documentId, abort);
-      return await this.readBack<TDocument>(
-        documentId,
-        prepared.header.branch || "main",
-        abort,
-      );
-    } catch (error) {
-      if (error instanceof Error) {
-        error.message = `Document ${documentId} was created, but: ${error.message}`;
-      }
-      throw error;
-    }
+    const submitted = await this.inner.write.drives.addFile(
+      drive.id,
+      prepared,
+      parentFolder,
+      abort,
+    );
+    const jobIds = await this.track(submitted, () => [drive.id, documentId]);
+    return this.withGrant(submitted, jobIds, abort, true);
   }
 
-  private async addFolder(
+  private async submitAddFolder(
+    method: string,
     driveIdentifier: string,
     name: string,
-    parentFolder?: string,
-    signal?: AbortSignal,
-  ): Promise<FolderNode> {
-    this.assertWritable("drives.addFolder");
-    const abort = this.signal(signal);
+    parentFolder: string | undefined,
+    abort: AbortSignal,
+  ): Promise<NodeWriteHandle> {
+    this.assertWritable(method);
     const drive = await this.readDrive(driveIdentifier, abort);
     await this.gateCandidates(
       drive.id,
@@ -639,7 +757,16 @@ export class RunScopedReactorClient implements ReactorClient {
     );
     this.assertTimeLeft("a folder");
     await this.scope.journal.recordDocuments([drive.id]);
-    return this.inner.drives.addFolder(drive.id, name, parentFolder, abort);
+    const submitted = await this.inner.write.drives.addFolder(
+      drive.id,
+      name,
+      parentFolder,
+      abort,
+    );
+    const jobIds = await this.track(submitted, () => [drive.id]);
+    return Object.assign(this.handle(submitted, jobIds), {
+      nodeId: submitted.nodeId,
+    });
   }
 
   // The drive's header, read as the run user; a type with no known node
@@ -752,38 +879,125 @@ export class RunScopedReactorClient implements ReactorClient {
     }
     const denied = answer.evaluations.flatMap((evaluation, index) =>
       evaluation.decision === "deny"
-        ? [`${candidates[index].type} (${evaluation.reason})`]
+        ? [{ index, type: candidates[index].type, reason: evaluation.reason }]
         : [],
     );
     if (denied.length > 0) {
-      throw accessDenied(
-        `The run user may not apply ${denied.join(", ")} to document ${documentId}`,
-      );
+      throw new ReactorActionsDeniedError(documentId, denied);
     }
   }
 
   // --- Write path ----------------------------------------------------------
 
-  // Submits actions and journals the job; throws unless every action applied.
-  // Answers the settled job.
+  private async submit(
+    documentId: string,
+    branch: string,
+    actions: Action[],
+    signal: AbortSignal,
+  ): Promise<WriteHandle> {
+    this.assertTimeLeft(`${actions.length} action(s)`);
+    const submitted = await this.inner.write.execute(
+      documentId,
+      branch,
+      actions,
+      signal,
+    );
+    return this.handle(
+      submitted,
+      await this.track(submitted, () => [documentId]),
+    );
+  }
+
+  // Submits actions; throws unless every action applied. Answers the job.
   private async run(
     documentId: string,
     branch: string,
     actions: Action[],
     signal: AbortSignal,
   ): Promise<JobInfo> {
-    this.assertTimeLeft(`${actions.length} action(s)`);
-    const info = await this.inner.executeAsync(
-      documentId,
-      branch,
-      actions,
-      signal,
-    );
-    await this.scope.journal.recordJob(info.id, [documentId]);
-    const settled = await this.settle(info.id, signal);
-    if (settled.status === JobStatus.FAILED) throw jobFailed(settled);
-    assertActionsApplied(settled, actions);
-    return settled;
+    const handle = await this.submit(documentId, branch, actions, signal);
+    return this.landed(handle, signal, actions);
+  }
+
+  // Journals a write's jobs at submit and opens them to `read`, own job first.
+  private async track(
+    submitted: WriteHandle,
+    documentsOf: (jobId: string) => string[],
+  ): Promise<string[]> {
+    const jobIds = [
+      submitted.jobId,
+      ...jobIdsOf(submitted).filter((jobId) => jobId !== submitted.jobId),
+    ].filter((jobId) => jobId !== "");
+    for (const jobId of jobIds) {
+      this.jobs.add(jobId);
+      await this.scope.journal.recordJob(jobId, documentsOf(jobId));
+    }
+    return jobIds;
+  }
+
+  // The handle a piece rebuilds: these jobs, read back through `read`.
+  private handle(submitted: WriteHandle, jobIds: string[]): WriteHandle {
+    const { documentId, branch } = submitted;
+    const reader: HandleReader = (receipt, view, signal) =>
+      this.get(
+        documentId,
+        { ...view, branch: receipt.branch },
+        signal,
+        receipt.token,
+      );
+    return jobIds.length === 0
+      ? this.handles.settled(documentId, branch, reader)
+      : this.handles.forJobs(
+          submitted.jobId,
+          jobIds.map((jobId) => placeholderJob(jobId, documentId)),
+          documentId,
+          branch,
+          undefined,
+          reader,
+        );
+  }
+
+  // The facade's wait: every job of the write settled and applied, or a
+  // throw. Answers the write's own job.
+  private async landed(
+    handle: WriteHandle,
+    signal: AbortSignal,
+    actions?: readonly Action[],
+    onLanded?: (jobId: string) => void,
+  ): Promise<JobInfo> {
+    let own: JobInfo | undefined;
+    for (const jobId of jobIdsOf(handle)) {
+      const job = await this.settle(jobId, signal);
+      if (job.status === JobStatus.FAILED) throw jobFailed(job);
+      assertActionsApplied(job, jobId === handle.jobId ? actions : undefined);
+      if (jobId === handle.jobId) own = job;
+      onLanded?.(jobId);
+    }
+    return own ?? (await handle.readable).job;
+  }
+
+  // The facade's read-back of a document a write created; once it exists, a
+  // later failure says so.
+  private async createdBack<TDocument extends PHDocument = PHDocument>(
+    handle: WriteHandle,
+    signal: AbortSignal,
+    created = false,
+  ): Promise<TDocument> {
+    try {
+      await this.landed(handle, signal, undefined, (jobId) => {
+        if (jobId === handle.jobId) created = true;
+      });
+      return await this.readBack<TDocument>(
+        handle.documentId,
+        handle.branch,
+        signal,
+      );
+    } catch (error) {
+      if (created && error instanceof Error) {
+        error.message = `Document ${handle.documentId} was created, but: ${error.message}`;
+      }
+      throw error;
+    }
   }
 
   private assertTimeLeft(what: string): void {
@@ -791,6 +1005,12 @@ export class RunScopedReactorClient implements ReactorClient {
       throw new Error(
         `No time was left before the step deadline to submit ${what}; nothing was submitted`,
       );
+    }
+  }
+
+  private assertOwnJob(jobId: string): void {
+    if (!this.jobs.has(jobId)) {
+      throw accessDenied(`Job ${String(jobId)} was not submitted by this step`);
     }
   }
 
@@ -805,7 +1025,8 @@ export class RunScopedReactorClient implements ReactorClient {
       try {
         job = await this.inner.waitForJob(jobId, wait);
       } catch (error) {
-        if (!wait.aborted) throw error;
+        // The caller's abort is its own; only the deadline reports pending.
+        if (!wait.aborted || signal.aborted) throw error;
         job = await this.inner.getJobStatus(jobId).catch(() => {
           throw jobPending(jobId, status);
         });
@@ -841,11 +1062,13 @@ export class RunScopedReactorClient implements ReactorClient {
     return document;
   }
 
-  private async createDocument<TDocument extends PHDocument = PHDocument>(
+  // Submits a create. With a run user, waits for it to land and grants the run
+  // user; the grant's job joins the handle.
+  private async submitCreate(
     document: PHDocument,
     parentId: string | undefined,
     signal: AbortSignal,
-  ): Promise<TDocument> {
+  ): Promise<WriteHandle> {
     // New documents get the host's create signature policy.
     const prepared = withSignaturePolicy(
       document,
@@ -853,37 +1076,36 @@ export class RunScopedReactorClient implements ReactorClient {
     );
     const documentId = prepared.header.id;
     this.assertTimeLeft(`a ${prepared.header.documentType} document`);
-    const { jobs } = await this.inner.createAsync(prepared, parentId, signal);
-    // The create first, so a failed create is the error reported.
-    const ordered = Object.entries(jobs).sort(
-      ([a], [b]) => Number(b === "create") - Number(a === "create"),
+    const submitted = await this.inner.write.create(prepared, parentId, signal);
+    const jobIds = await this.track(submitted, (jobId) =>
+      jobId === submitted.jobId || parentId === undefined
+        ? [documentId]
+        : [parentId, documentId],
     );
-    for (const [key, job] of ordered) {
-      await this.scope.journal.recordJob(
-        job.id,
-        key === "create" || parentId === undefined
-          ? [documentId]
-          : [parentId, documentId],
-      );
-    }
-    let landed = false;
+    return this.withGrant(submitted, jobIds, signal);
+  }
+
+  // Once every job has settled; a failed one is left for the handle to report.
+  private async withGrant(
+    submitted: WriteHandle,
+    jobIds: string[],
+    signal: AbortSignal,
+    created = false,
+  ): Promise<WriteHandle> {
+    if (!this.scope.runUser) return this.handle(submitted, jobIds);
     try {
-      for (const [, job] of ordered) {
-        const settled = await this.settle(job.id, signal);
-        if (settled.status === JobStatus.FAILED) throw jobFailed(settled);
-        assertActionsApplied(settled);
-        landed = true;
+      for (const jobId of jobIds) {
+        const job = await this.settle(jobId, signal);
+        if (job.status === JobStatus.FAILED) {
+          return this.handle(submitted, jobIds);
+        }
+        created = true;
       }
-      await this.grantRunUser(documentId, signal);
-      return await this.readBack<TDocument>(
-        documentId,
-        prepared.header.branch || "main",
-        signal,
-      );
+      const grant = await this.grantRunUser(submitted.documentId, signal);
+      return this.handle(submitted, grant ? [...jobIds, grant.id] : jobIds);
     } catch (error) {
-      // Once the create has landed, a later failure must still say it exists.
-      if (landed && error instanceof Error) {
-        error.message = `Document ${documentId} was created, but: ${error.message}`;
+      if (created && error instanceof Error) {
+        error.message = `Document ${submitted.documentId} was created, but: ${error.message}`;
       }
       throw error;
     }
@@ -893,11 +1115,11 @@ export class RunScopedReactorClient implements ReactorClient {
   private async grantRunUser(
     documentId: string,
     signal: AbortSignal,
-  ): Promise<void> {
+  ): Promise<JobInfo | undefined> {
     const runUser = this.scope.runUser;
-    if (!runUser) return;
+    if (!runUser) return undefined;
     const created = await this.inner.get(documentId, undefined, signal);
-    if (created.state.auth.version !== 0) return;
+    if (created.state.auth.version !== 0) return undefined;
     const grants: Grant[] = [
       {
         id: "run-user",
@@ -916,7 +1138,7 @@ export class RunScopedReactorClient implements ReactorClient {
         capability: { can: "execute" },
       });
     }
-    await this.run(
+    return this.run(
       documentId,
       "main",
       [initializeAuth({ version: 1, grants })],
@@ -925,6 +1147,15 @@ export class RunScopedReactorClient implements ReactorClient {
   }
 
   // --- Helpers -------------------------------------------------------------
+
+  private parentOf(
+    identifier: string | undefined,
+    signal: AbortSignal,
+  ): Promise<string | undefined> {
+    return identifier === undefined
+      ? Promise.resolve(undefined)
+      : this.resolveReference(identifier, "main", signal);
+  }
 
   // An id no document has is taken as given, as the client does.
   private async resolveReference(

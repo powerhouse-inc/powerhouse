@@ -1,6 +1,11 @@
 // What a piece reaches of the reactor: subsets of IReactorClient, with the
 // client's own signatures. Type-only, so the build emits no reactor import.
-import type { IDriveClient, IReactorClient } from "@powerhousedao/reactor";
+import type {
+  IDriveClient,
+  IDriveWriteClient,
+  IReactorClient,
+  IReactorWriteClient,
+} from "@powerhousedao/reactor";
 
 // The access an action or trigger declares; absent means no `ctx.reactor`.
 export type RequireReactor = "read" | "write";
@@ -21,11 +26,8 @@ export type ReadMethods =
   | "getDocumentModelModule"
   | "getDocumentModelModuleForDocument";
 
-// Pieces build actions with the model's action creators and pass them to
-// `execute`; `deleteDocument` refuses a cascade. `executeAsync` writes as
-// `execute` does and, for a piece, also answers once the actions are applied,
-// but with the job instead of the document: the write for a caller that has
-// no use for the document, such as a file added to a large drive.
+// The facade's writes, kept for pieces built against them; new pieces use
+// `write`. `executeAsync` answers, once applied, with the job, not the document.
 export type WriteMethods =
   | "newDocument"
   | "create"
@@ -57,10 +59,35 @@ export type RefusedMethods =
   | "isServed"
   | "getCreateSignaturePolicy"
   | "getCreateProtocolVersions"
-  // The client's halves; a piece reaches the reactor through the listed methods.
+  // The read half; a piece's write handles reach the few methods they need.
   | "read"
-  | "write"
   | "getMany";
+
+// The write half a piece gets as `write`: each write answers with a handle once
+// its job is accepted. Pieces build actions with the model's action creators.
+export type WriteHalfMethods =
+  | "create"
+  | "createEmpty"
+  | "execute"
+  | "deleteDocument";
+
+export type DriveWriteHalfMethods = "addFile" | "addFolder";
+
+// The write half's methods offered to no piece; the host throws for them.
+export type RefusedWriteHalfMethods =
+  | "isDocumentIdTaken"
+  | "describe"
+  | "evaluateActions"
+  | "upgradeDocument"
+  | "executeBatch"
+  | "rename"
+  | "setPreferredEditor"
+  | "addRelationship"
+  | "updateRelationship"
+  | "removeRelationship"
+  | "moveRelationship"
+  | "deleteDocuments"
+  | "loadBatch";
 
 // `drives` is served as an object of these; `addFile` files a document into a
 // drive of any drive type.
@@ -81,14 +108,24 @@ export type Listed<T extends never> = T;
 // The members of a client that no list names.
 export type UnlistedMethods<C> = Exclude<
   keyof C,
-  ReadMethods | WriteMethods | RefusedMethods | "drives"
+  ReadMethods | WriteMethods | RefusedMethods | "drives" | "write"
 >;
 export type ListedClient = Listed<UnlistedMethods<IReactorClient>>;
+export type UnlistedWriteHalfMethods<C> = Exclude<
+  keyof C,
+  WriteHalfMethods | RefusedWriteHalfMethods | "drives"
+>;
+export type ListedWriteClient = Listed<
+  UnlistedWriteHalfMethods<IReactorWriteClient>
+>;
 export type UnlistedDriveMethods<C> = Exclude<
   keyof C,
   DriveReadMethods | DriveWriteMethods | RefusedDriveMethods
 >;
 export type ListedDriveClient = Listed<UnlistedDriveMethods<IDriveClient>>;
+export type ListedDriveWriteClient = Listed<
+  Exclude<keyof IDriveWriteClient, DriveWriteHalfMethods | RefusedDriveMethods>
+>;
 
 /**
  * A read of a read-model index (a custom subgraph such as a key index),
@@ -122,9 +159,14 @@ export type ReactorReadClient = Pick<IReactorClient, ReadMethods> &
     readonly drives: Pick<IDriveClient, DriveReadMethods>;
   };
 
+export type ReactorWriteClient = Pick<IReactorWriteClient, WriteHalfMethods> & {
+  readonly drives: Pick<IDriveWriteClient, DriveWriteHalfMethods>;
+};
+
 export type ReactorClient = Pick<IReactorClient, ReadMethods | WriteMethods> &
   IndexQueryMethods & {
     readonly drives: Pick<IDriveClient, DriveReadMethods | DriveWriteMethods>;
+    readonly write: ReactorWriteClient;
   };
 
 // The client a declaration grants.
