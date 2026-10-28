@@ -11,6 +11,7 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
   getVariableDeclarationByTypeName,
+  projectPath,
 } from "utils";
 
 type MakeEditorModuleFileArgs = {
@@ -69,7 +70,8 @@ export async function makeEditorsFile(args: {
   project: Project;
   editorsDirPath: string;
 }) {
-  const { project, editorsDirPath } = args;
+  const { project } = args;
+  const editorsDirPath = projectPath(project, args.editorsDirPath);
   // With skipAddingFilesFromTsConfig, pre-existing module.ts files aren't in
   // the project; add them so existing editors/apps are preserved on rebuild.
   project.addSourceFilesAtPaths(path.join(editorsDirPath, "**", "module.ts"));
@@ -119,7 +121,8 @@ export async function makeEditorsIndexFile(args: {
   project: Project;
   editorsDirPath: string;
 }) {
-  const { project, editorsDirPath } = args;
+  const { project } = args;
+  const editorsDirPath = projectPath(project, args.editorsDirPath);
   project.addSourceFilesAtPaths(path.join(editorsDirPath, "**", "module.ts"));
   const sourceFile = project.createSourceFile(
     path.join(editorsDirPath, "index.ts"),

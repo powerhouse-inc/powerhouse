@@ -46,6 +46,7 @@ import {
   getSubgraphDirNames,
   getSubgraphMetadata,
   loadDocumentModelInDir,
+  projectPath,
   readPiecesList,
 } from "utils";
 import { loadDocumentModel } from "./utils.js";
@@ -97,7 +98,9 @@ export async function generateAllDocumentModels(project: Project) {
 }
 export async function generateFromFile(filePath: string, project: Project) {
   // load document model spec from file
-  const documentModelState = await loadDocumentModel(filePath);
+  const documentModelState = await loadDocumentModel(
+    projectPath(project, filePath),
+  );
 
   // delegate to shared generation function
   await generateDocumentModel(documentModelState, project);

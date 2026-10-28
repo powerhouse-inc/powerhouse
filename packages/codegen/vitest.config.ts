@@ -22,6 +22,7 @@ export default defineConfig({
       "src/create-lib/initial-commit.test.ts",
       "src/codegen/generate-apps.test.ts",
       "src/codegen/generate-processors.test.ts",
+      "src/codegen/project-dir.test.ts",
       "src/codegen/migrate-tsconfig.test.ts",
       "src/codegen/migrate-powerhouse-config.test.ts",
       "src/codegen/install-added-dependencies.test.ts",
