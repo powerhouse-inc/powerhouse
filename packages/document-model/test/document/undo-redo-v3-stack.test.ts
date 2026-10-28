@@ -21,12 +21,14 @@ import {
 } from "../helpers.js";
 
 function v3Document(): CountDocument {
-  return baseCreateDocument(
+  const document = baseCreateDocument(
     createCountDocumentState,
     testCreateBaseState({ count: 0 }, { name: "" }),
     "",
     { "base-reducer": 3 },
   );
+  expect(document.header.protocolVersions?.["base-reducer"]).toBe(3);
+  return document;
 }
 
 const lastRow = (document: CountDocument): Operation =>

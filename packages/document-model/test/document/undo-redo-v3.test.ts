@@ -38,6 +38,7 @@ function createV3Document(): CountDocument {
     ...document.header.protocolVersions,
     "base-reducer": 3,
   };
+  expect(document.header.protocolVersions?.["base-reducer"]).toBe(3);
   return document;
 }
 
