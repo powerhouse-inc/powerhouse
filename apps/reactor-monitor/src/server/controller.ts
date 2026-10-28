@@ -162,22 +162,22 @@ export function childEnv(
   };
 }
 
-/** The copy loads the source project's own package by its absolute root. */
-export function withSourcePackage(
-  env: Record<string, string>,
-  sourceRoot: string,
-): Record<string, string> {
-  if (!path.isAbsolute(sourceRoot) || sourceRoot.includes(",")) {
-    throw new ControllerError(
-      "bad_request",
-      `${sourceRoot} can't be loaded as a package: it must be absolute and free of commas (PH_PACKAGES is comma-separated).`,
-    );
-  }
-  const listed = ("PH_PACKAGES" in env ? env.PH_PACKAGES : "")
+/**
+ * A draft's env without PH_PACKAGES: Connect would read it in place of its
+ * configured packages, so its entries go to each switchboard's own list.
+ */
+export function splitPackages(env: Record<string, string>): {
+  env: Record<string, string>;
+  packages: string[];
+} {
+  const { PH_PACKAGES: listed, ...rest } = env as Partial<
+    Record<string, string>
+  >;
+  const packages = (listed ?? "")
     .split(",")
     .map((name) => name.trim())
-    .filter((name) => name.length > 0 && name !== sourceRoot);
-  return { ...env, PH_PACKAGES: [...listed, sourceRoot].join(",") };
+    .filter((name) => name.length > 0);
+  return { env: rest as Record<string, string>, packages };
 }
 
 export function deniedEnvKeys(env: Record<string, string>): string[] {
@@ -576,9 +576,10 @@ export function createMonitorController(
     instanceDir: string,
     root: string,
     envelope: HostExport,
+    packages: readonly string[],
   ) => {
     try {
-      return materialize(instanceDir, root, envelope);
+      return materialize(instanceDir, root, envelope, { packages });
     } catch (error) {
       if (error instanceof MaterializeError) {
         throw new ControllerError("bad_request", error.message);
@@ -781,12 +782,12 @@ export function createMonitorController(
     },
     checkDraft: async (request) => {
       const { root, host, env: resolved } = resolve(request);
-      const env = withSourcePackage(resolved, root);
+      const { env, packages } = splitPackages(resolved);
       const { envelope, ruleIssues } = await draftEnvelope(request, root, env);
       if (ruleIssues.length > 0) return { ruleIssues, issues: [] };
       const dir = path.join(tempRoot, `check-${randomUUID()}`);
       try {
-        const copy = materializeIn(dir, root, envelope);
+        const copy = materializeIn(dir, root, envelope, packages);
         const issues = await runCheck(copy.projectDir, host, env, copy.dataDir);
         return { ruleIssues: [], issues };
       } finally {
@@ -795,7 +796,7 @@ export function createMonitorController(
     },
     startDraft: async (request) => {
       const { root, host, env: resolved } = resolve(request);
-      const env = withSourcePackage(resolved, root);
+      const { env, packages } = splitPackages(resolved);
       return startResolved(host, env, async (instanceDir) => {
         const { envelope, ruleIssues } = await draftEnvelope(
           request,
@@ -810,7 +811,7 @@ export function createMonitorController(
             { ruleIssues },
           );
         }
-        const copy = materializeIn(instanceDir, root, envelope);
+        const copy = materializeIn(instanceDir, root, envelope, packages);
         return {
           root: copy.projectDir,
           dataDir: copy.dataDir,

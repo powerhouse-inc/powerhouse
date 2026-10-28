@@ -9,18 +9,18 @@ import {
 import { spawn as spawnProcess } from "node:child_process";
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ControllerError,
@@ -28,7 +28,7 @@ import {
   type CheckInput,
   type MonitorController,
   type MonitorControllerOptions,
-  withSourcePackage,
+  splitPackages,
 } from "./controller.ts";
 import { LogRing } from "./logs.ts";
 import {
@@ -127,6 +127,41 @@ function duoExport(root: string): HostExport {
       "sb-b": switchboardHost("sb-b", 4802, "b"),
     },
   } as HostExport;
+}
+
+/** A compound of a switchboard and a Connect member. */
+function stackExport(root: string): HostExport {
+  return {
+    format: "ph-host-export",
+    version: 1,
+    project: { name: "p", root },
+    name: "stack",
+    host: {
+      name: "stack",
+      runner: { module: "@powerhousedao/host-core/runners/compound" },
+      children: { sb: { host: "sb" }, ui: { host: "ui" } },
+    },
+    members: {
+      sb: switchboardHost("sb", 4801, "sb"),
+      ui: {
+        name: "ui",
+        runner: {
+          module: "@powerhousedao/ph-cli/runners/connect",
+          port: 3001,
+        },
+        config: { app: { offline: false } },
+        reactor: { backends: { main: { kind: "worker" } } },
+      },
+    },
+  } as HostExport;
+}
+
+function hostFileOf(project: string, folder: string): unknown {
+  const source = readFileSync(
+    path.join(project, "hosts", folder, "host.js"),
+    "utf8",
+  );
+  return JSON.parse(source.replace(/^export default /, "").replace(/;\n$/, ""));
 }
 
 function memberOutputs(port: number) {
@@ -847,67 +882,131 @@ describe("createMonitorController", () => {
       expect(exports).toEqual([]);
     });
 
-    it("passes the server env to the copy, and code-loading keys only from it", async () => {
-      const { controller, checks } = create({
-        serverEnv: { PH_PACKAGES: "@acme/models" },
+    it("gives the server's PH_PACKAGES to the switchboards, not the whole copy", async () => {
+      const { controller, checks, launches } = create({
+        serverEnv: { PH_PACKAGES: "@acme/models, @acme/more" },
       });
-      await controller.startDraft(await draft({ env: { LOG_LEVEL: "debug" } }));
-      expect(checks[0].env).toMatchObject({
-        PH_PACKAGES: `@acme/models,${allowed}`,
-        LOG_LEVEL: "debug",
-      });
-    });
-
-    it("loads the source project's own package from its files, not from the copy", async () => {
-      const subpaths = [
-        "document-models",
-        "editors",
-        "subgraphs",
-        "processors",
-      ];
-      writeFileSync(path.join(allowed, "package.json"), '{"name":"p"}');
-      for (const sub of subpaths) {
-        mkdirSync(path.join(allowed, sub));
-        writeFileSync(
-          path.join(allowed, sub, "index.js"),
-          `export const from = ${JSON.stringify(sub)};\n`,
-        );
+      const { id } = await controller.startDraft(
+        await draft({ env: { LOG_LEVEL: "debug" } }),
+      );
+      for (const env of [checks[0].env, launches[0].options.env ?? {}]) {
+        expect(env.LOG_LEVEL).toBe("debug");
+        expect(env).not.toHaveProperty("PH_PACKAGES");
       }
-      const { controller, launches, checks } = create();
-      const draftCheck = await controller.checkDraft(await draft());
-      expect(draftCheck).toEqual({ ruleIssues: [], issues: [] });
-      const { id } = await controller.startDraft(await draft());
       const project = path.join(controller.tempRoot, id, "project");
-      const env = launches[0].options.env ?? {};
-      expect(checks.map((c) => c.env.PH_PACKAGES)).toEqual([allowed, allowed]);
-      expect(env.PH_PACKAGES).toBe(allowed);
-      expect(launches[0].options.projectRoot).toBe(project);
-
-      // loadDependency's rule: an absolute name joins its subpath on disk.
-      const [root] = env.PH_PACKAGES.split(",");
-      for (const sub of subpaths) {
-        const file = path.join(root, sub, "index.js");
-        expect(realpathSync(file)).toBe(path.join(allowed, sub, "index.js"));
-        const loaded = (await import(pathToFileURL(file).href)) as {
-          from: string;
-        };
-        expect(loaded.from).toBe(sub);
-        // The copy holds no project sources, so it can't write them.
-        expect(existsSync(path.join(project, sub))).toBe(false);
+      for (const folder of ["sb-a", "sb-b"]) {
+        expect(hostFileOf(project, folder)).toMatchObject({
+          config: {
+            switchboard: {
+              packages: {
+                list: ["@acme/models", "@acme/more", allowed],
+                disableLocal: true,
+              },
+            },
+          },
+        });
       }
-      expect(readdirSync(project).sort()).toEqual([
-        "hosts",
-        "node_modules",
-        "package.json",
-      ]);
     });
 
-    it("refuses a source root PH_PACKAGES can't carry", () => {
-      expect(() => withSourcePackage({}, "/a,b")).toThrow(ControllerError);
-      expect(() => withSourcePackage({}, "relative")).toThrow(ControllerError);
+    it("serves Connect the project's own files from a copy, keeping its configured packages", async () => {
+      const files: Record<string, string> = {
+        "package.json": '{"name":"p","type":"module"}',
+        "powerhouse.config.json": JSON.stringify({
+          packages: [{ packageName: "@acme/models", provider: "registry" }],
+        }),
+        "index.html": "<script type=module src=/main.tsx></script>",
+        "main.tsx": 'import "./index.js";',
+        "index.ts": 'export * from "./document-models/index.js";',
+        "style.css": "@import 'tailwindcss';",
+        "document-models/index.ts": "export const models = [];",
+        "editors/index.ts": "export const editors = [];",
+        "subgraphs/index.ts": "export const subgraphs = [];",
+        "processors/index.ts": "export const processors = [];",
+        "public/icon.svg": "<svg/>",
+        "hosts/stack/routes/index.tsx": "export {};",
+        "hosts/stack/host.js": "export default {};",
+        ".env": "PH_PACKAGES=@evil/code",
+        "dist/document-models/index.js": "export const built = true;",
+      };
+      for (const [file, content] of Object.entries(files)) {
+        mkdirSync(path.dirname(path.join(allowed, file)), { recursive: true });
+        writeFileSync(path.join(allowed, file), content);
+      }
+      const snapshot = () =>
+        readdirSync(allowed, { recursive: true, encoding: "utf8" })
+          .filter((f) => !f.startsWith("node_modules"))
+          .sort()
+          .map((f) => {
+            const at = path.join(allowed, f);
+            return lstatSync(at).isFile()
+              ? `${f}=${readFileSync(at, "utf8")}`
+              : f;
+          });
+      const before = snapshot();
+
+      const { controller, checks, launches } = create({
+        exportHost: () => Promise.resolve(stackExport(allowed)),
+      });
+      const request = await draft({
+        host: "stack",
+        baseDigest: await baseDigest(stackExport(allowed)),
+      });
+      expect(await controller.checkDraft(request)).toEqual({
+        ruleIssues: [],
+        issues: [],
+      });
+      const { id } = await controller.startDraft(request);
+      const project = path.join(controller.tempRoot, id, "project");
+      expect(launches[0].options.projectRoot).toBe(project);
+      for (const env of [
+        ...checks.map((c) => c.env),
+        launches[0].options.env ?? {},
+      ]) {
+        expect(env).not.toHaveProperty("PH_PACKAGES");
+      }
+
+      // The project's own files are real copies in the copy.
+      for (const [file, content] of Object.entries(files)) {
+        const at = path.join(project, file);
+        if (
+          file === ".env" ||
+          file.startsWith("dist/") ||
+          file === "hosts/stack/host.js"
+        ) {
+          continue;
+        }
+        expect(lstatSync(at).isSymbolicLink()).toBe(false);
+        expect(readFileSync(at, "utf8")).toBe(content);
+      }
+      expect(existsSync(path.join(project, ".env"))).toBe(false);
+      expect(existsSync(path.join(project, "dist"))).toBe(false);
+
+      // Connect keeps what its host and the project configure.
+      expect(hostFileOf(project, "ui")).toEqual(
+        stackExport(allowed).members.ui,
+      );
+      // Switchboards load the source's own package from the source root.
+      expect(hostFileOf(project, "sb")).toMatchObject({
+        config: {
+          switchboard: { packages: { list: [allowed], disableLocal: true } },
+        },
+      });
+
+      // Writes land in the copy, never in the source.
+      writeFileSync(path.join(project, "editors", "index.ts"), "changed");
+      mkdirSync(path.join(project, "node_modules", ".vite"));
+      await controller.stop(id);
+      expect(snapshot()).toEqual(before);
+    });
+
+    it("splits PH_PACKAGES out of a draft's env", () => {
       expect(
-        withSourcePackage({ PH_PACKAGES: " /src , @acme/x ,," }, "/src"),
-      ).toEqual({ PH_PACKAGES: "@acme/x,/src" });
+        splitPackages({
+          PH_PACKAGES: " /src , @acme/x ,,",
+          LOG_LEVEL: "debug",
+        }),
+      ).toEqual({ env: { LOG_LEVEL: "debug" }, packages: ["/src", "@acme/x"] });
+      expect(splitPackages({})).toEqual({ env: {}, packages: [] });
     });
 
     it("removes the copy when checkHost refuses it", async () => {
