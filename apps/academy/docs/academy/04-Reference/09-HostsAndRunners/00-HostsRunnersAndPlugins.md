@@ -218,8 +218,10 @@ The map is checked when the host loads. Connect does not apply it yet.
 Validation refuses a remote link that is not a drive address (an
 `endpoints.graphql` token or a `/graphql` URL fails with an error naming the
 `drives.<slug>.url` form), two remote backends on the same switchboard, a
-placement that names a backend that does not exist, and a drive placed on a
-switchboard it is not on.
+placement that names a backend that does not exist, a drive placed on a
+switchboard it is not on, and a placement key that names no drive the host
+links to or declares. Keys for drives known only at runtime (a `$map` list)
+are not checked.
 
 ## Switchboard settings (`config.switchboard`)
 
