@@ -12,7 +12,8 @@ import {
   applyDeleteDocumentAction,
   baseReducerVersion,
   deriveScopeVersioned,
-  documentDerivesByRule,
+  capabilitiesFor,
+  derivesByRule,
   tailAppliesIncrementally,
   isDenied,
   PURGE_DOCUMENT,
@@ -91,6 +92,17 @@ function copyDocument(document: PHDocument): PHDocument {
     state: { ...document.state },
     operations: { ...document.operations },
   };
+}
+
+/**
+ * Whether the rule derives `scope`. An unknown version is not refused here:
+ * it rebuilds as before, and the stored protocol check names it.
+ */
+function derivesByRuleOrUnknown(
+  header: PHDocument["header"],
+  scope: string,
+): boolean {
+  return derivesByRule(capabilitiesFor(header.protocolVersions), scope);
 }
 
 /**
@@ -924,7 +936,7 @@ export class KyselyWriteCache implements IWriteCache {
 
     let needsFullReplay = false;
 
-    if (documentDerivesByRule(document.header, scope)) {
+    if (derivesByRuleOrUnknown(document.header, scope)) {
       const versions = scopeVersions(
         this.registry,
         document.header,
@@ -1289,7 +1301,7 @@ export class KyselyWriteCache implements IWriteCache {
         : undefined;
 
     try {
-      if (documentDerivesByRule(document.header, scope)) {
+      if (derivesByRuleOrUnknown(document.header, scope)) {
         const stateReducer = requireStateReducer(
           module.reducer,
           documentType,
