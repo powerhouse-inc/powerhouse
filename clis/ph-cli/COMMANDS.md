@@ -583,7 +583,8 @@ show help<br><br>
 ## Build
 
 Build a Powerhouse package for publishing: a browser bundle and a node bundle of its
-document models, editors, subgraphs and processors, type declarations, and its stylesheet.
+document models, scalars, editors, subgraphs and processors, type declarations, and its
+stylesheet.
 
 Pieces under pieces/ are built too, each into its own self-contained module under
 dist/node/pieces/<name>, with a descriptor.json and package.json written beside it and

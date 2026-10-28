@@ -3,7 +3,6 @@ import {
   type GraphQLResolverMap,
   type GraphQLSchemaModule,
 } from "@apollo/subgraph";
-import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import type { Context } from "@powerhousedao/reactor-api";
 import type {
   DocumentModelGlobalState,
@@ -25,8 +24,14 @@ import {
   visit,
 } from "graphql";
 import { gql } from "graphql-tag";
-import { GraphQLJSON, GraphQLJSONObject } from "graphql-type-json";
 import { createHash } from "node:crypto";
+import {
+  catalogResolvers,
+  catalogScalarSdl,
+  EMPTY_SCALAR_REGISTRY,
+  registeredScalarType,
+  type ScalarRegistry,
+} from "./scalar-types.js";
 
 const logger = childLogger(["reactor-api", "create-schema"]);
 
@@ -253,9 +258,14 @@ export type SubgraphSchemaOptions = {
    * subgraph has. These may repeat a generated definition, which is kept.
    */
   ownTypeNames?: ReadonlySet<string>;
-  /** Generated types already built for `documentModels`. */
-  generated?: GeneratedDocumentModelTypes;
-};
+} & (
+  | {
+      /** Generated types already built for `documentModels`, with their scalars. */
+      generated?: GeneratedDocumentModelTypes;
+      scalars?: never;
+    }
+  | { generated?: never; scalars?: ScalarRegistry }
+);
 
 export const buildSubgraphSchemaModule = (
   documentModels: DocumentModelModule[],
@@ -263,15 +273,25 @@ export const buildSubgraphSchemaModule = (
   typeDefs: DocumentNode,
   options: SubgraphSchemaOptions = {},
 ): GraphQLSchemaModule => {
+  const generated =
+    options.generated ??
+    getGeneratedDocumentModelTypes(documentModels, undefined, options.scalars);
   const newResolvers = {
+    ...catalogResolvers,
+    ...Object.fromEntries(
+      Array.from(generated.scalars, ([name, { definition }]) => [
+        name,
+        registeredScalarType(definition),
+      ]),
+    ),
     ...resolvers,
-    JSONObject: GraphQLJSONObject,
-    Unknown: GraphQLJSON,
+    JSONObject: catalogResolvers.JSONObject,
+    Unknown: catalogResolvers.Unknown,
   };
 
   return {
     typeDefs: assembleSubgraphTypeDefs(
-      options.generated ?? getGeneratedDocumentModelTypes(documentModels),
+      generated,
       typeDefs,
       options.ownTypeNames,
     ),
@@ -341,6 +361,7 @@ export function typeDefinitionNames(doc: DocumentNode): Set<string> {
 export type GeneratedDocumentModelTypes = {
   definitions: readonly DefinitionNode[];
   names: ReadonlySet<string>;
+  scalars: ScalarRegistry;
 };
 
 /** The definitions `documentModel` adds to the generated schema. */
@@ -444,15 +465,11 @@ export function reservedTypeNamesTaken(
     .map(([name]) => name);
 }
 
-// The generated schema around the document models' definitions.
-const GENERATED_HEAD = gql`
-  scalar JSONObject
-  scalar AttachmentRef
-  # Codegen scalars not in the document-engineering set.
-  scalar Unknown
-  scalar Address
-  ${scalarsTypeDefs.join("\n").replaceAll(";", "")}
+const CATALOG_SCALARS = gql`
+  ${catalogScalarSdl}
+`.definitions;
 
+const HOST_TYPES = gql`
   type PHOperationContext {
     signer: Signer
   }
@@ -498,6 +515,29 @@ const GENERATED_HEAD = gql`
   }
 `.definitions;
 
+/**
+ * A federation gateway composes this SDL, not the schema built from it, so the
+ * description is declared here as well as on the resolver.
+ */
+function generatedHead(scalars: ScalarRegistry): readonly DefinitionNode[] {
+  return [
+    ...CATALOG_SCALARS,
+    ...Array.from(scalars, ([name, { definition }]): DefinitionNode => ({
+      kind: Kind.SCALAR_TYPE_DEFINITION,
+      name: { kind: Kind.NAME, value: name },
+      description:
+        definition.description === undefined
+          ? undefined
+          : {
+              kind: Kind.STRING,
+              value: definition.description,
+              block: true,
+            },
+    })),
+    ...HOST_TYPES,
+  ];
+}
+
 const GENERATED_TAIL = gql`
   type GqlDocument implements IDocument {
     id: String!
@@ -529,12 +569,14 @@ const GENERATED_TAIL = gql`
 export function getGeneratedDocumentModelTypes(
   documentModels: readonly DocumentModelSource[],
   schemas?: ReadonlyMap<DocumentModelSource, DocumentModelSchema>,
+  scalars: ScalarRegistry = EMPTY_SCALAR_REGISTRY,
 ): GeneratedDocumentModelTypes {
   return generatedTypesFrom(
     documentModels.map((model) => ({
       global: model.documentModel.global,
       generated: schemas?.get(model)?.generated,
     })),
+    scalars,
   );
 }
 
@@ -542,7 +584,10 @@ export function getGeneratedDocumentModelTypes(
 export function generatedTypesOf(
   documentModels: readonly DocumentModelGlobalState[],
 ): GeneratedDocumentModelTypes {
-  return generatedTypesFrom(documentModels.map((global) => ({ global })));
+  return generatedTypesFrom(
+    documentModels.map((global) => ({ global })),
+    EMPTY_SCALAR_REGISTRY,
+  );
 }
 
 function generatedTypesFrom(
@@ -550,6 +595,7 @@ function generatedTypesFrom(
     global: DocumentModelGlobalState;
     generated?: readonly DefinitionNode[];
   }[],
+  scalars: ScalarRegistry,
 ): GeneratedDocumentModelTypes {
   const modelDefinitions: DefinitionNode[] = [];
   const addedDocumentModels = new Set<string>();
@@ -566,14 +612,14 @@ function generatedTypesFrom(
   });
 
   const definitions = dedupeTypeDefinitions([
-    ...GENERATED_HEAD,
+    ...generatedHead(scalars),
     ...modelDefinitions,
     ...GENERATED_TAIL,
   ]);
   const names = new Set(
     definitions.map(typeDefinitionName).filter((name) => name !== undefined),
   );
-  return { definitions, names };
+  return { definitions, names, scalars };
 }
 
 /** What a document model contributes to the GraphQL schema. */
@@ -727,7 +773,7 @@ export class DocumentModelSchemaCache<
  * never collide.
  */
 export function findSubgraphTypeCollisions(
-  generated: GeneratedDocumentModelTypes,
+  generated: Pick<GeneratedDocumentModelTypes, "names">,
   typeDefs: DocumentNode,
   ownTypeNames?: ReadonlySet<string>,
 ): string[] {
@@ -1355,9 +1401,7 @@ function generateNewApiSchema(
   );
 
   return gql`
-    scalar DateTime
-    scalar JSONObject
-    scalar AttachmentRef
+    ${catalogScalarSdl}
 
     ${revisionType}
 

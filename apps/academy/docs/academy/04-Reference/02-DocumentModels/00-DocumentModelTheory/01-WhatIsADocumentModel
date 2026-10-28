@@ -52,7 +52,7 @@ type LineItem {
 ### **State Schema Features:**
 
 - Uses **GraphQL-like definitions** for a **clear, structured schema**.
-- Supports **custom scalar types** like `OID`, `Currency`, and `DateTime`. Or other Web3 specific scalars
+- Supports **built-in scalars** by name, such as `OID`, `Currency`, and `DateTime`.
 - Allows **default values** using `@default(value: "DRAFT")`.
 - Defines **relationships** using object references (`OID!`).
 

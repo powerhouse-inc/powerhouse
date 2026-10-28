@@ -1,0 +1,64 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { Bic, Iban } from "../../../../../scalars/index.js";
+import * as z from "zod";
+import type {
+  BankInput,
+  PayeeInput,
+  PaymentFixtureState,
+  SetPaymentInput,
+} from "./types.js";
+
+type Properties<T> = Required<{
+  [K in keyof T]: z.ZodType<T[K]>;
+}>;
+
+type definedNonNullAny = {};
+
+export const isDefinedNonNullAny = (v: any): v is definedNonNullAny =>
+  v !== undefined && v !== null;
+
+export const definedNonNullAnySchema = z
+  .any()
+  .refine((v) => isDefinedNonNullAny(v));
+
+export function BankInputSchema(): z.ZodObject<Properties<BankInput>> {
+  return z.object({
+    bic: Bic.schema,
+  });
+}
+
+export function PayeeInputSchema(): z.ZodObject<Properties<PayeeInput>> {
+  return z.object({
+    bank: z.lazy(() => BankInputSchema().nullish()),
+    iban: Iban.schema,
+    name: z.string().nullish(),
+  });
+}
+
+export function PaymentFixtureStateSchema(): z.ZodObject<
+  Properties<PaymentFixtureState>
+> {
+  return z.object({
+    __typename: z.literal("PaymentFixtureState").optional(),
+    accounts: z.array(Iban.schema),
+    bic: Bic.schema.nullish(),
+    iban: Iban.schema.nullish(),
+  });
+}
+
+export function SetPaymentInputSchema(): z.ZodObject<
+  Properties<SetPaymentInput>
+> {
+  return z.object({
+    accounts: z.array(Iban.schema),
+    beneficiaries: z.array(z.lazy(() => PayeeInputSchema())).nullish(),
+    beneficiary: z.lazy(() => PayeeInputSchema()),
+    bic: Bic.schema,
+    iban: Iban.schema,
+    note: z.string().nullish(),
+    payee: Iban.schema.nullish(),
+    payeeGroups: z.array(z.array(Bic.schema)).nullish(),
+    payees: z.array(Iban.schema.nullable()).nullish(),
+  });
+}

@@ -48,7 +48,7 @@
     "@graphql-codegen/add": "catalog:",
     "@graphql-codegen/cli": "catalog:",
     "@graphql-codegen/typescript": "catalog:",
-    "@powerhousedao/document-engineering": "catalog:",
+    "@graphql-tools/merge": "catalog:",
     "@powerhousedao/host-core": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@types/node": "catalog:",

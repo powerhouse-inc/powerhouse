@@ -13,6 +13,11 @@
   },
   "type": "module",
   "exports": {
+    "./scalars": {
+      "source": "./scalars.ts",
+      "import": "./dist/scalars.js",
+      "types": "./dist/scalars.d.ts"
+    },
     ".": {
       "source": "./index.ts",
       "import": "./dist/index.js",
@@ -55,11 +60,11 @@
     "mutative": "^1.0.5",
     "tsdown": "catalog:",
     "tsx": "catalog:",
-    "vitest": "catalog:",
-    "zod": "catalog:"
+    "vitest": "catalog:"
   },
   "dependencies": {
-    "@powerhousedao/shared": "workspace:*"
+    "@powerhousedao/shared": "workspace:*",
+    "zod": "catalog:"
   },
   "description": "Powerhouse document model — foundational data structure for local-first, event-sourced documents with typed operations, reducers, and GraphQL schema validation.",
   "keywords": [
