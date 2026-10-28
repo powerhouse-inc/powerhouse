@@ -10,6 +10,11 @@ const SWITCHBOARD_URL = EXTERNAL_URL ?? `http://localhost:${PORT}/graphql`;
 
 const DRIVE_ID = process.env.SWITCHBOARD_DRIVE_ID ?? "powerhouse";
 
+const SWITCHBOARD_BIN = resolve(
+  import.meta.dirname,
+  "node_modules/.bin/switchboard",
+);
+
 let proc: ChildProcess | undefined;
 let logs = "";
 
@@ -58,7 +63,10 @@ function cleanStaleLocks() {
 export async function setup() {
   if (!EXTERNAL_URL) {
     cleanStaleLocks();
-    proc = spawn("pnpm", ["switchboard"], {
+    // The bin itself: a signal to `pnpm switchboard` does not reach the server
+    // on Linux, so teardown would wait on it forever.
+    proc = spawn(SWITCHBOARD_BIN, [], {
+      cwd: import.meta.dirname,
       env: { ...process.env, PH_SWITCHBOARD_PORT: PORT },
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -78,9 +86,15 @@ export async function setup() {
 }
 
 export async function teardown() {
-  if (!proc) return;
-  await new Promise<void>((resolve) => {
-    proc!.on("close", resolve);
-    proc!.kill();
+  const running = proc;
+  if (!running || running.exitCode !== null) return;
+  await new Promise<void>((done) => {
+    running.once("close", () => done());
+    running.kill();
+    // PGlite shutdown can hang; the suite's result is already in.
+    setTimeout(() => {
+      running.kill("SIGKILL");
+      done();
+    }, 10_000).unref();
   });
 }

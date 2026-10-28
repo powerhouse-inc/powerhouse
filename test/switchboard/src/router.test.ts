@@ -90,8 +90,12 @@ async function createDrive(): Promise<{ id: string; address: string }> {
   return { id, address: `${BASE_URL}/d/${slug ?? id}` };
 }
 
-function switchboardAt(driveAddress: string): SwitchboardBackend {
+function switchboardAt(
+  driveAddress: string,
+  transport?: typeof fetch,
+): SwitchboardBackend {
   const remote = createSwitchboardBackend({
+    fetch: transport,
     name: SB,
     url: graphqlUrlOfDrive(driveAddress),
     tokenProvider: () => Promise.resolve(undefined),
@@ -139,28 +143,31 @@ function routedTo(
 
 type SentCreate = { driveId: string | null; status: number };
 
-/** Records each CreateDocument request's Drive-Id and the status it got. */
-function recordCreates(): { sent: SentCreate[]; restore(): void } {
-  const sent: SentCreate[] = [];
-  const original = globalThis.fetch;
-  globalThis.fetch = async (input, init) => {
-    const response = await original(input, init);
-    if (
-      typeof init?.body === "string" &&
-      init.body.includes("mutation CreateDocument")
-    ) {
+/**
+ * A transport that records each CreateDocument's Drive-Id and status, and sends
+ * the body as a stream. Node's fetch (undici 7) resends a 421 without
+ * re-reading a string body, so the resend can fail with
+ * RequestContentLengthMismatchError instead of returning the 421. It does not
+ * resend a stream body. Browsers do not resend this way.
+ */
+function recordingFetch(sent: SentCreate[]): typeof fetch {
+  return async (input, init) => {
+    const body = init?.body;
+    if (typeof body !== "string") {
+      return fetch(input, init);
+    }
+    const response = await fetch(input, {
+      ...init,
+      body: new Blob([body]).stream(),
+      duplex: "half",
+    } as RequestInit);
+    if (body.includes("mutation CreateDocument")) {
       sent.push({
-        driveId: new Headers(init.headers).get("drive-id"),
+        driveId: new Headers(init?.headers).get("drive-id"),
         status: response.status,
       });
     }
     return response;
-  };
-  return {
-    sent,
-    restore: () => {
-      globalThis.fetch = original;
-    },
   };
 }
 
@@ -358,36 +365,38 @@ describe("a router over a local reactor and a real Switchboard", () => {
 
   it("gets a 421 for a drive deleted on the Switchboard, then stops naming it", async () => {
     const drive = await createDrive();
-    const remote = switchboardAt(drive.address);
+    const sent: SentCreate[] = [];
+    const remote = switchboardAt(drive.address, recordingFetch(sent));
     const router = await routerOver(remote);
     await router.get(drive.id);
     await sdk.DeleteDocument({ identifier: drive.id });
+    // The delete returns before every read path drops the drive.
+    await vi.waitFor(
+      async () => {
+        const served = await sdk.GetDocumentServed({ idOrSlug: drive.id });
+        expect(served.documentServed).toBe(false);
+      },
+      { timeout: 15_000, interval: 100 },
+    );
 
-    const creates = recordCreates();
-    try {
-      const refused = await remote.config.backend
-        .create(
-          documentModelDocumentModelModule.utils.createDocument(),
-          drive.id,
-        )
-        .then(
-          () => undefined,
-          (error: unknown) => error,
-        );
-      expect(GraphQLWrongBackendError.isError(refused)).toBe(true);
-      await remote.config.backend
-        .create(
-          documentModelDocumentModelModule.utils.createDocument(),
-          drive.id,
-        )
-        .catch(() => undefined);
-    } finally {
-      creates.restore();
-    }
+    const refused = await remote.config.backend
+      .create(documentModelDocumentModelModule.utils.createDocument(), drive.id)
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+    expect(
+      GraphQLWrongBackendError.isError(refused),
+      `expected a 421, got ${String(refused)}`,
+    ).toBe(true);
+    await remote.config.backend
+      .create(documentModelDocumentModelModule.utils.createDocument(), drive.id)
+      .catch(() => undefined);
 
-    expect(creates.sent[0]).toEqual({ driveId: drive.id, status: 421 });
-    expect(creates.sent.at(-1)?.driveId).toBeNull();
-    expect(creates.sent.at(-1)?.status).not.toBe(421);
+    expect(sent).toHaveLength(2);
+    expect(sent[0]).toEqual({ driveId: drive.id, status: 421 });
+    expect(sent[1].driveId).toBeNull();
+    expect(sent[1].status).not.toBe(421);
   });
 
   it("reads the Switchboard's facts, with the document models it serves", async () => {
