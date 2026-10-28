@@ -322,6 +322,8 @@ type StoredProtocol = {
   refusal?: Error;
   /** Undefined when nothing is stored yet. */
   caps?: BaseReducerCapabilities;
+  /** Nothing is stored yet. */
+  absent?: true;
   /**
    * The header read failed for a reason other than absence and the stored
    * CREATE_DOCUMENT runs the retraction rule (that error), or names a
@@ -1629,7 +1631,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       // Not stored yet, or unreadable: the job's own reads decide, unless the
       // stored creation runs the rule.
       if (DocumentNotFoundError.isError(error)) {
-        return {};
+        return { absent: true };
       }
       const unreadable = await this.unreadableRuleDocument(
         job,
@@ -3415,7 +3417,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     // Base-reducer 3 skips are this replica's own rewinds, never an undo, and
     // its conflict window is the receiver's.
-    const caps = stored.caps ?? this.creationCaps(job);
+    const caps = stored.absent ? this.creationCaps(job) : stored.caps;
     const canonical = sortsJobsCanonically(caps);
     const skipsMayUndo = skipMayUndo(caps);
 

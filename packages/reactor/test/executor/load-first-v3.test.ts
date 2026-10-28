@@ -144,6 +144,53 @@ describe("the first load of a document", () => {
     expect(await storedBaseReducer(receiver, id)).toBe(2);
   });
 
+  it("keeps a stored versionless document's rules when a later batch's CREATE names 3", async () => {
+    const { id, operations, later, earlier } = await sentHistory(2);
+    const [create, upgrade, ...relationships] = operations;
+    const legacyCreate = {
+      ...create,
+      action: {
+        ...create.action,
+        input: {
+          ...(create.action.input as object),
+          protocolVersions: undefined,
+        },
+      },
+    } as Operation;
+    const namingThree = {
+      ...create,
+      action: {
+        ...create.action,
+        input: {
+          ...(create.action.input as object),
+          protocolVersions: BASE_REDUCER_3_VERSIONS,
+        },
+      },
+    } as Operation;
+    const receiver = await createUndoV3ReactorBuilder().build();
+    reactors.push(receiver);
+    const first = await settled(
+      receiver,
+      (await receiver.load(id, "main", [legacyCreate, upgrade])).id,
+    );
+    expect(first.error?.message ?? first.status).toBe(JobStatus.READ_READY);
+    expect((await receiver.get(id)).header.protocolVersions).toBe(undefined);
+
+    const job = await settled(
+      receiver,
+      (await receiver.load(id, "main", [namingThree, ...relationships])).id,
+    );
+
+    expect(job.error?.message ?? job.status).toBe(JobStatus.READ_READY);
+    expect(await storedDocumentRows(receiver, id)).toEqual([
+      { index: 0, type: "CREATE_DOCUMENT", id: create.action.id },
+      { index: 1, type: "UPGRADE_DOCUMENT", id: upgrade.action.id },
+      { index: 2, type: "ADD_RELATIONSHIP", id: later },
+      { index: 3, type: "ADD_RELATIONSHIP", id: earlier },
+    ]);
+    expect(await storedBaseReducer(receiver, id)).toBeUndefined();
+  });
+
   it("refuses a base-reducer 3 creation on a receiver without undoV3", async () => {
     const { id, operations } = await sentHistory(3);
     const receiver = await new ReactorBuilder()
