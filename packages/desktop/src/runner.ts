@@ -11,7 +11,11 @@ import {
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
-import { defineHostSchemas } from "@powerhousedao/host-core/schema";
+import {
+  defineHostSchemas,
+  HOST_NAME_MESSAGE,
+  hostNameSchema,
+} from "@powerhousedao/host-core/schema";
 import { z } from "zod";
 import { APP_JSON_FILE, loadAppJson } from "./app-json.js";
 import { bundleStack } from "./bundle-stack.js";
@@ -138,7 +142,17 @@ function hostDirOf(
   host: Pick<DesktopHost, "name">,
   ctx: RunnerContext,
 ): string {
-  return path.join(ctx.projectRoot, "hosts", host.name);
+  const hostsDir = path.resolve(ctx.projectRoot, "hosts");
+  const dir = path.resolve(hostsDir, host.name);
+  if (
+    !hostNameSchema.safeParse(host.name).success ||
+    path.dirname(dir) !== hostsDir
+  ) {
+    throw new Error(
+      `"${host.name}" can't name a host folder. ${HOST_NAME_MESSAGE}`,
+    );
+  }
+  return dir;
 }
 
 /** The connect member's port — the shell's readiness probe and window URL. */
