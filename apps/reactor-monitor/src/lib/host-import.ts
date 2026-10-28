@@ -12,6 +12,7 @@ import {
   declaredHostSchemas,
   hostExportSchema,
   outputTokenSchema,
+  placementKeyIssues,
   switchboardOfDrive,
   tokenKeyOf,
   type ChildWrapper,
@@ -172,7 +173,52 @@ export function parseHostExport(text: string): {
       });
     }
   }
+  issues.push(...placementIssues(bodies, exp.members));
   return issues.length > 0 ? { issues } : { export: exp, issues };
+}
+
+/** `ph run`'s placement key check: each folder, and each child as merged. */
+function placementIssues(
+  bodies: readonly [string, unknown][],
+  members: HostExport["members"],
+): ImportIssue[] {
+  const issues: ImportIssue[] = [];
+  const own = new Map<string, Set<string>>();
+  const push = (file: string, path: (string | number)[], message: string) =>
+    issues.push({
+      severity: "error",
+      stage: "declared",
+      file,
+      path: formatPath(path),
+      message,
+    });
+  for (const [folder, body] of bodies) {
+    if (!isRecord(body) || "children" in body) continue;
+    const found = placementKeyIssues(body);
+    own.set(folder, new Set(found.map((issue) => issue.message)));
+    for (const issue of found)
+      push(hostFile(folder), issue.path, issue.message);
+  }
+  for (const [folder, body] of bodies) {
+    if (!isRecord(body) || !isRecord(body.children)) continue;
+    for (const [key, wrapper] of Object.entries(body.children)) {
+      if (!isRecord(wrapper) || typeof wrapper.host !== "string") continue;
+      const member = Object.hasOwn(members, wrapper.host)
+        ? members[wrapper.host]
+        : undefined;
+      if (!isRecord(member) || "children" in member) continue;
+      const merged = applyChildWrapper(
+        member as HostDefinition,
+        wrapper as ChildWrapper,
+      );
+      for (const issue of placementKeyIssues(merged)) {
+        const folderHas = own.get(wrapper.host)?.has(issue.message) === true;
+        if (wrapper.reactor === undefined && folderHas) continue;
+        push(hostFile(folder), ["children", key, ...issue.path], issue.message);
+      }
+    }
+  }
+  return issues;
 }
 
 type Site = { file: string; path: string[] };

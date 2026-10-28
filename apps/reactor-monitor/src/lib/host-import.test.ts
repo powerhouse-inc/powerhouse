@@ -91,6 +91,44 @@ describe("parseHostExport", () => {
     ]);
   });
 
+  it("refuses a placement key that names no drive, as ph run does", () => {
+    const cli = fixture("cli");
+    const host = cli.host as { children: Record<string, unknown> };
+    const link = {
+      $output: {
+        host: "switchboard",
+        member: "cli-switchboard",
+        path: ["drives", "powerhouse", "url"],
+      },
+    };
+    const wrapper = {
+      host: "connect",
+      reactor: {
+        backends: {
+          main: { kind: "worker" },
+          sb: { kind: "remote", remote: { url: link } },
+        },
+        placement: { drives: { powerhose: "sb", powerhouse: "sb" } },
+      },
+    };
+    const { export: exp, issues } = parseHostExport(
+      JSON.stringify({
+        ...cli,
+        host: { ...host, children: { ...host.children, ui: wrapper } },
+      }),
+    );
+    expect(exp).toBeUndefined();
+    expect(issues).toEqual([
+      expect.objectContaining({
+        severity: "error",
+        file: "hosts/cli/host.js",
+        path: "children.ui.reactor.placement.drives.powerhose",
+        message:
+          "placement.drives.powerhose names no drive this host links to or declares (powerhouse).",
+      }),
+    ]);
+  });
+
   it("names the field a member fails on", () => {
     const cli = fixture("cli");
     const connect = { ...cli.members.connect, reactr: {} };
