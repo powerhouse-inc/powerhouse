@@ -277,12 +277,20 @@ returns it when it settles: a step, a trigger hook, an editor's options or
 describe. A run holds no child between steps. Trigger hooks have children of
 their own, so a burst of runs can't delay a poll, and so does the editor (one
 child, which exits when idle). A child is retired when it
-dies or times out, when a request switches TLS verification off, past 80% of
+dies or times out, past 80% of
 its heap budget, after `PH_WORKFLOWS_WORKER_MAX_REQUESTS` requests, or after a
 minute idle above `PH_WORKFLOWS_WORKER_MIN`.
 
 Piece code is trusted: what a piece keeps in module state carries over to the
 next request its child serves, whichever workflow sent it.
+
+Certificate checks stay on in every child (`worker/tls-guard.ts`). Pieces
+bundled with an old pieces-common set `NODE_TLS_REJECT_UNAUTHORIZED=0` before
+every request, which would switch verification off process-wide; the guard
+gives every `tls.connect` an explicit `rejectUnauthorized: true` unless the
+caller explicitly asks for `false`, so fetch, https and the HTTP clients
+pieces bundle all verify. The worker still reports a request that set the
+variable (`tlsPoisoned`), but no longer retires the child for it.
 
 That entry is `src/worker/entry.ts`: the piece worker from `src/pieces`, plus
 `ctx.reactor` (`src/worker/reactor.ts`), which needs `@powerhousedao/reactor`

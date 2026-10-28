@@ -59,6 +59,7 @@ import {
   UnsupportedPieceFeatureError,
 } from "../unsupported.js";
 import { installEgressGuard, runWithEgressPolicy } from "./egress.js";
+import { installTlsGuard } from "./tls-guard.js";
 import {
   finishRequestTimings,
   markWorkerReady,
@@ -647,6 +648,8 @@ function dispatch(message: WorkerRequestMessage): Promise<WorkerResponse> {
 export function startPieceWorker(): void {
   // A piece cannot then keep a pristine copy of the socket layer.
   installEgressGuard();
+  // Nor switch certificate checks off for everyone (NODE_TLS_REJECT_UNAUTHORIZED=0)
+  installTlsGuard();
   process.on("message", onMessage);
   markWorkerReady();
 }
