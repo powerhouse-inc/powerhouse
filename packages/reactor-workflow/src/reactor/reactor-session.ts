@@ -2,15 +2,18 @@
 // RunScopedReactorClient over the request's IPC transport (ADR 0005 §3).
 import type {
   DriveReadMethods,
+  DriveWriteHalfMethods,
   DriveWriteMethods,
   IndexQueryMethods,
   ReactorClient,
   ReadMethods,
   RefusedDriveMethods,
   RefusedMethods,
+  RefusedWriteHalfMethods,
+  WriteHalfMethods,
   WriteMethods,
 } from "@powerhousedao/pieces-framework";
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type { IReactorClient, RemoteReads } from "@powerhousedao/reactor";
 import {
   ReactorHostServer,
   type IRpcTransport,
@@ -73,9 +76,43 @@ const REFUSED_DRIVES: Record<RefusedDriveMethods, true> = {
   setPreferredEditorOnNode: true,
 };
 
-// Refused by name, so a piece learns why. `read` and `write` have no methods
-// to call.
-const REFUSED: Record<Exclude<RefusedMethods, "read" | "write">, true> = {
+const SERVED_WRITE: Record<WriteHalfMethods, true> = {
+  create: true,
+  createEmpty: true,
+  execute: true,
+  deleteDocument: true,
+};
+
+const SERVED_DRIVE_WRITES: Record<DriveWriteHalfMethods, true> = {
+  addFile: true,
+  addFolder: true,
+};
+
+const REFUSED_WRITE: Record<RefusedWriteHalfMethods, true> = {
+  isDocumentIdTaken: true,
+  describe: true,
+  evaluateActions: true,
+  upgradeDocument: true,
+  executeBatch: true,
+  rename: true,
+  setPreferredEditor: true,
+  addRelationship: true,
+  updateRelationship: true,
+  removeRelationship: true,
+  moveRelationship: true,
+  deleteDocuments: true,
+  loadBatch: true,
+};
+
+// What the piece's write handles call; the client admits only its own jobs.
+const SERVED_READ: Record<keyof RemoteReads, true> = {
+  waitForJob: true,
+  getJobStatus: true,
+  get: true,
+};
+
+// Refused by name, so a piece learns why. `read` serves only its handles.
+const REFUSED: Record<Exclude<RefusedMethods, "read">, true> = {
   getMany: true,
   createDocumentInDrive: true,
   executeBatch: true,
@@ -105,7 +142,7 @@ type AnyMethod = (...args: unknown[]) => unknown;
 // The server calls any method of the client it holds, so it holds only these:
 // no prototype, and none of the wrapper's internals.
 export function servedClient(
-  client: ReactorClient,
+  client: ReactorClient & { read?: RemoteReads },
 ): IReactorClient & IndexQueryMethods {
   const facade = served(
     client as unknown as Record<string, AnyMethod>,
@@ -119,6 +156,27 @@ export function servedClient(
     REFUSED_DRIVES,
     "drives.",
   );
+  const write = served(
+    client.write as unknown as Record<string, AnyMethod>,
+    SERVED_WRITE,
+    REFUSED_WRITE,
+    "write.",
+  ) as Record<string, unknown>;
+  write.drives = served(
+    client.write.drives as unknown as Record<string, AnyMethod>,
+    SERVED_DRIVE_WRITES,
+    REFUSED_DRIVES,
+    "write.drives.",
+  );
+  facade.write = write;
+  if (client.read) {
+    facade.read = served(
+      client.read as unknown as Record<string, AnyMethod>,
+      SERVED_READ,
+      {},
+      "read.",
+    );
+  }
   return facade as unknown as IReactorClient & IndexQueryMethods;
 }
 
@@ -187,7 +245,11 @@ export function reactorTap(
       const parent = otelContext.active();
       const server = new ReactorHostServer(
         telemetry
-          ? tracedMethods(served, telemetry, "reactor", parent, ["drives"])
+          ? tracedMethods(served, telemetry, "reactor", parent, [
+              "drives",
+              "write",
+              "read",
+            ])
           : served,
         transport as unknown as IRpcTransport,
       );

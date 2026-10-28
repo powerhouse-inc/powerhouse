@@ -9,6 +9,9 @@ export type {
   Declared,
 } from "./create.js";
 export {
+  assertActionsApplied,
+  DENIED_ACTION_INDEXES,
+  deniedActionIndexes,
   DocumentModelUnavailableError,
   ReactorAccessDeniedError,
   ReactorActionsFailedError,
@@ -20,6 +23,7 @@ export type { ReactorErrorName } from "./errors.js";
 export type { PackagePiece } from "./package-piece.js";
 export type {
   DriveReadMethods,
+  DriveWriteHalfMethods,
   DriveWriteMethods,
   IndexQueryMethods,
   IndexQueryRequest,
@@ -32,6 +36,9 @@ export type {
   ReadMethods,
   RefusedDriveMethods,
   RefusedMethods,
+  RefusedWriteHalfMethods,
+  ReactorWriteClient,
   RequireReactor,
+  WriteHalfMethods,
   WriteMethods,
 } from "./reactor-client.js";

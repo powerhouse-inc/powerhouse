@@ -424,6 +424,7 @@ export function tracedMethods<T extends object>(
             telemetry,
             `${prefix}.${property}`,
             parent,
+            nested,
           );
           wrapped.set(property, inner);
         }
