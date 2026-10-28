@@ -369,8 +369,21 @@ async function start(
     ...(ctx.parent ? { signalHandlers: false } : {}),
   };
 
+  // `/ready` waits until the drives seeded below exist.
+  let seeded!: { resolve: () => void; reject: (error: unknown) => void };
+  const readyAfter = new Promise<void>((resolve, reject) => {
+    seeded = { resolve, reject };
+  });
+  const seeding = async <T>(work: Promise<T>): Promise<T> => {
+    try {
+      return await work;
+    } catch (error) {
+      seeded.reject(error);
+      throw error;
+    }
+  };
   const switchboard = await startSwitchboard(
-    serverArgs,
+    { ...serverArgs, readyAfter },
     undefined,
     memberConfig,
   );
@@ -391,9 +404,11 @@ async function start(
   const seededIds = new Map<string, string>();
   const localPlanned = planned.filter((p) => p.drive.kind === "local");
   if (localPlanned.length > 0) {
-    await seedDrives(
-      seederClient(switchboard.reactor, port, seededIds),
-      localPlanned.map((p) => p.drive),
+    await seeding(
+      seedDrives(
+        seederClient(switchboard.reactor, port, seededIds),
+        localPlanned.map((p) => p.drive),
+      ),
     );
   }
 
@@ -423,10 +438,11 @@ async function start(
   if (entries === undefined && switchboard.workflowsEnabled) {
     const { seedWorkflowsDrive } = await import("../services/vetra.js");
     const { generateProjectDriveId } = await import("../utils.js");
-    const url = await seedWorkflowsDrive(switchboard.reactor, port);
+    const url = await seeding(seedWorkflowsDrive(switchboard.reactor, port));
     if (url)
       drives.workflows = { id: generateProjectDriveId("workflows"), url };
   }
+  seeded.resolve();
 
   const ready = waitForDrive(driveUrl, 180_000);
   // A supervisor awaits `ready` and sees the rejection; an unsupervised caller

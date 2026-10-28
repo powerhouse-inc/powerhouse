@@ -279,6 +279,56 @@ describe("switchboard runner — plugin-contributed drives", () => {
   });
 });
 
+describe("switchboard runner — readiness", () => {
+  async function startHeld() {
+    const hostCore = await import("@powerhousedao/host-core");
+    vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(
+      workflowsComposition(),
+    );
+    const { addDefaultDrive } =
+      await import("@powerhousedao/switchboard/utils");
+    let finishSeeding!: (outcome: Error | undefined) => void;
+    vi.mocked(addDefaultDrive).mockImplementationOnce(
+      () =>
+        new Promise((resolve, reject) => {
+          finishSeeding = (error) =>
+            error ? reject(error) : resolve("http://localhost:7599/d/x");
+        }),
+    );
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    vi.mocked(startSwitchboard).mockClear();
+    const runner = await import("../src/runners/switchboard.js");
+    const running = runner.run(switchboardHost(), ctx);
+    await vi.waitFor(() => expect(finishSeeding).toBeDefined());
+    const { readyAfter } = vi.mocked(startSwitchboard).mock.calls[0][0];
+    if (!readyAfter) throw new Error("the runner passed no readyAfter");
+    let settled = false;
+    void readyAfter.then(
+      () => (settled = true),
+      () => (settled = true),
+    );
+    return { running, readyAfter, finishSeeding, settled: () => settled };
+  }
+
+  it("holds the server's /ready until the seeded drives exist", async () => {
+    const held = await startHeld();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(held.settled()).toBe(false);
+
+    held.finishSeeding(undefined);
+    await held.running;
+    await expect(held.readyAfter).resolves.toBeUndefined();
+  });
+
+  it("fails readiness when seeding fails", async () => {
+    const held = await startHeld();
+
+    held.finishSeeding(new Error("seed failed"));
+    await expect(held.running).rejects.toThrow("seed failed");
+    await expect(held.readyAfter).rejects.toThrow("seed failed");
+  });
+});
+
 describe("switchboard runner — signal ownership", () => {
   it("leaves SIGINT/SIGTERM to a supervising compound, keeps them standalone", async () => {
     const hostCore = await import("@powerhousedao/host-core");
