@@ -236,6 +236,11 @@ describe("Use it, wired", () => {
       expect(view.getByText("Couldn't stop it: no answer")).toBeTruthy(),
     );
     expect(runText(view)).toContain("Running a copy");
+
+    // Still followed: once the controller no longer has it, the run goes.
+    wiring.get.mockRejectedValue(notFound());
+    await waitFor(() => expect(runText(view)).toBe(""));
+    expect(wiring.managed.dropInstance).toHaveBeenCalledWith(ID);
   });
 
   it("keeps following a starting copy when one status check fails, and can stop it", async () => {
@@ -273,10 +278,34 @@ describe("Use it, wired", () => {
     expect(wiring.managed.attach).toHaveBeenCalledOnce();
   });
 
-  it("stops a copy that is still starting", async () => {
-    const { storage } = await storageWith(projectBase(stack()));
-    const wiring = setup({ get: () => Promise.resolve(instance("starting")) });
-    const view = render(<Wired storage={storage} wiring={wiring} />);
+  /** The copy reports `stopping` while Stop is in flight, then is gone. */
+  function stoppingWiring() {
+    let phase: "starting" | "stopping" | "gone" = "starting";
+    let finish!: () => void;
+    const seen = { stopping: 0 };
+    const wiring = setup({
+      // Answers 20 ms later with the phase by then, so a check sent before
+      // Stop comes back `stopping`.
+      get: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        if (phase === "gone") throw notFound();
+        if (phase === "stopping") seen.stopping++;
+        return instance(phase);
+      },
+    });
+    wiring.managed.stopInstance.mockImplementation(() => {
+      phase = "stopping";
+      return new Promise<void>((resolve) => {
+        finish = () => {
+          phase = "gone";
+          resolve();
+        };
+      });
+    });
+    return { wiring, seen, finish: () => finish() };
+  }
+
+  async function stopWhileStarting(view: ReturnType<typeof render>) {
     await waitFor(() =>
       expect(startButton(view)).toHaveProperty("disabled", false),
     );
@@ -287,10 +316,41 @@ describe("Use it, wired", () => {
       return button;
     });
     fireEvent.click(stop);
+    await waitFor(() => expect(runText(view)).toContain("Stopping the copy"));
+  }
+
+  it("stops a copy that is still starting without calling it a failed start", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const { wiring, seen, finish } = stoppingWiring();
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await stopWhileStarting(view);
+    await waitFor(() => expect(seen.stopping).toBeGreaterThan(0));
+    finish();
     await waitFor(() => expect(runText(view)).toBe(""));
+    await new Promise((resolve) => setTimeout(resolve, 20));
     expect(wiring.managed.stopInstance).toHaveBeenCalledWith(ID);
     expect(wiring.managed.attach).not.toHaveBeenCalled();
+    expect(wiring.managed.dropInstance).not.toHaveBeenCalled();
+    expect(view.queryByText(/Couldn't/)).toBe(null);
+    expect(startButton(view)).toHaveProperty("disabled", false);
+  });
+
+  it("keeps following a starting copy whose stop failed", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    let phase: "starting" | "running" = "starting";
+    const wiring = setup({ get: () => Promise.resolve(instance(phase)) });
+    wiring.managed.stopInstance.mockRejectedValueOnce(new Error("no answer"));
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await stopWhileStarting(view).catch(() => undefined);
+    await waitFor(() =>
+      expect(view.getByText("Couldn't stop it: no answer")).toBeTruthy(),
+    );
+    expect(runText(view)).toContain("Starting a copy");
     expect(view.queryByText(/Couldn't start/)).toBe(null);
+
+    phase = "running";
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"));
+    expect(wiring.managed.attach).toHaveBeenCalledOnce();
   });
 
   it("lets go of a copy the controller no longer has", async () => {

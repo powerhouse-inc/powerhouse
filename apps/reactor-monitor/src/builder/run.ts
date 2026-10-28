@@ -126,6 +126,7 @@ export type BuilderRunControls = {
 type RunState = Omit<BuilderRun, "browser">;
 
 const GONE = new Set(["exited", "failed"]);
+const BUSY = new Set(["starting", "stopping"]);
 
 /** Builder-started copies the controller still runs, newest first. */
 function liveDrafts(instances: readonly Instance[]): Instance[] {
@@ -174,7 +175,8 @@ export function useBuilderRun({
           setState(
             (previous) => previous && { ...previous, problem: undefined },
           );
-          if (instance.status !== "starting") return instance;
+          // A stop in flight passes through `stopping` on its way out.
+          if (!BUSY.has(instance.status)) return instance;
         } catch (error) {
           if (!live()) return undefined;
           if (isNotFound(error)) throw new Error(START_GONE, { cause: error });
@@ -233,6 +235,32 @@ export function useBuilderRun({
     [watch],
   );
 
+  /** Follows a starting copy it didn't just start; a failed one goes quietly. */
+  const followStarting = useCallback(
+    async (id: string) => {
+      const token = Symbol("run");
+      current.current = token;
+      const live = () => mounted.current && current.current === token;
+      setState({ id, status: "starting", reactors: [] });
+      let settled: Instance | undefined;
+      try {
+        settled = await settle(id, live);
+      } catch {
+        settled = undefined;
+      }
+      if (!live()) return;
+      if (settled?.status === "running") {
+        attach(settled);
+        running(settled, token);
+      } else {
+        current.current = undefined;
+        dropInstance(id);
+        setState(undefined);
+      }
+    },
+    [settle, running, attach, dropInstance],
+  );
+
   // After a reload, pick up the copy the controller still runs.
   useEffect(() => {
     if (!client) return;
@@ -245,32 +273,16 @@ export function useBuilderRun({
         return;
       }
       if (abort.signal.aborted || !found || current.current) return;
-      const token = Symbol("run");
-      current.current = token;
-      const live = () => mounted.current && current.current === token;
       if (found.status === "running") {
+        const token = Symbol("run");
+        current.current = token;
         running(found, token);
-        return;
-      }
-      setState({ id: found.id, status: "starting", reactors: [] });
-      let settled: Instance | undefined;
-      try {
-        settled = await settle(found.id, live);
-      } catch {
-        settled = undefined;
-      }
-      if (!live()) return;
-      if (settled?.status === "running") {
-        attach(settled);
-        running(settled, token);
       } else {
-        current.current = undefined;
-        dropInstance(found.id);
-        setState(undefined);
+        await followStarting(found.id);
       }
     })();
     return () => abort.abort();
-  }, [client, settle, running, attach, dropInstance]);
+  }, [client, running, followStarting]);
 
   const start = useCallback(
     async (draft: BuilderDraft, engine: BuilderEngine) => {
@@ -327,18 +339,28 @@ export function useBuilderRun({
   );
 
   const stop = useCallback(async () => {
-    if (!state?.id) return;
+    if (!state?.id || state.status === "stopping") return;
     const before = state;
+    const id = state.id;
+    // Let go first, so the loops following this run end quietly.
+    current.current = undefined;
     setState({ ...before, status: "stopping" });
     try {
-      await stopInstance(before.id!);
+      await stopInstance(id);
     } catch (error) {
-      if (mounted.current) setState(before);
+      // Still there: follow it afresh, since the old loops have ended.
+      if (mounted.current && before.status === "running") {
+        const token = Symbol("run");
+        current.current = token;
+        setState(before);
+        void watch(id, () => mounted.current && current.current === token);
+      } else if (mounted.current) {
+        void followStarting(id);
+      }
       throw error;
     }
-    current.current = undefined;
     if (mounted.current) setState(undefined);
-  }, [state, stopInstance]);
+  }, [state, stopInstance, watch, followStarting]);
 
   const run: BuilderRun | undefined = state && {
     ...state,
