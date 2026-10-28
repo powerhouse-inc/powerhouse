@@ -775,6 +775,24 @@ function runJournalName(
   return stateName?.trim() ? stateName : (documentName ?? "");
 }
 
+/**
+ * One workflow's trigger as the runtime holds it. `trigger` is null when the
+ * runtime holds no trigger row (never armed, or a webhook/schedule kind);
+ * `park` is set while a failed run keeps the trigger unarmed, until the
+ * workflow is re-enabled or re-published.
+ */
+export type WorkflowHealth = {
+  trigger: {
+    /** ENABLED | DISABLED | ERROR | PARKED */
+    status: string;
+    lastError: string | null;
+    lastPollAt: string | null;
+    nextPollAt: string | null;
+    consecutiveFailures: number;
+  } | null;
+  park: { reason: string; parkedAt: string; publishedVersion: number } | null;
+};
+
 export class WorkflowRuntimeService {
   private readonly host: WorkflowRuntimeHostDeps;
   private readonly logger: ILogger;
@@ -2475,6 +2493,39 @@ export class WorkflowRuntimeService {
     this.unobservePool?.();
     this.unobservePool = undefined;
     this.designWorker = undefined;
+  }
+
+  /**
+   * How one workflow's trigger stands, for host-side code that keeps
+   * workflows running (a processor reconciling the workflows it built): the
+   * trigger row, and the park that holds it unarmed. Not caller-filtered:
+   * GraphQL callers go through triggerStates.
+   */
+  async workflowHealth(workflowId: string): Promise<WorkflowHealth> {
+    const store = await this.store();
+    if (!store) return { trigger: null, park: null };
+    const [row, park] = await Promise.all([
+      store.getTriggerState(workflowId),
+      store.getWorkflowPark(workflowId),
+    ]);
+    return {
+      trigger: row
+        ? {
+            status: row.status,
+            lastError: row.last_error,
+            lastPollAt: row.last_poll_at,
+            nextPollAt: row.next_poll_at,
+            consecutiveFailures: row.consecutive_failures,
+          }
+        : null,
+      park: park
+        ? {
+            reason: park.reason,
+            parkedAt: park.parked_at,
+            publishedVersion: park.published_version,
+          }
+        : null,
+    };
   }
 
   // A trigger's state names its workflow and its last error, so the rows are

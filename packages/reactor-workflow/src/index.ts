@@ -63,7 +63,9 @@ export {
   WorkflowTriggersReadModel,
   WORKFLOW_TRIGGERS_READ_MODEL,
   WORKFLOW_TRIGGERS_READ_MODEL_STAGE,
+  type WorkflowHealthReader,
 } from "./reactor/workflow-triggers-read-model.js";
+export type { WorkflowHealth } from "./reactor/service.js";
 export type {
   PieceStoreRow,
   RunRow,
