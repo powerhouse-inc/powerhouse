@@ -96,6 +96,7 @@ function fakeManaged(
     visible: [],
     withheld: [],
     attachedIds: new Set(),
+    owned: new Map(),
     notices: [],
     dismissNotice: vi.fn(),
     attach: vi.fn(),
@@ -103,6 +104,7 @@ function fakeManaged(
     stopInstance: vi.fn(async (id: string) => {
       await client?.stop(id);
     }),
+    dropInstance: vi.fn(),
     stopAll: vi.fn(async () => {
       await client?.stopAll();
     }),

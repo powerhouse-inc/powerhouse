@@ -38,6 +38,26 @@ export function managedByOf(
   return { instanceId, project, host, ...(member ? { member } : {}) };
 }
 
+/** A browser reactor a builder copy brought along; it goes when the copy does. */
+export interface OwnedBy {
+  instanceId: string;
+}
+
+export function ownerOf(descriptor: ReactorDescriptor): string | undefined {
+  if (descriptor.kind === "remote") return undefined;
+  const marker = (descriptor as { ownedBy?: unknown }).ownedBy;
+  if (typeof marker !== "object" || marker === null) return undefined;
+  const { instanceId } = marker as Record<string, unknown>;
+  return typeof instanceId === "string" ? instanceId : undefined;
+}
+
+export function withOwner(
+  descriptor: ReactorDescriptor,
+  instanceId: string,
+): ReactorDescriptor {
+  return { ...descriptor, ownedBy: { instanceId } } as ReactorDescriptor;
+}
+
 export function isManaged(
   descriptor: ReactorDescriptor,
 ): descriptor is ManagedDescriptor {
