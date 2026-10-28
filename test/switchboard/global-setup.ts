@@ -14,8 +14,9 @@ let proc: ChildProcess | undefined;
 let logs = "";
 
 /**
- * Waits until the switchboard serves the drive the suites write into. The
- * gateway answers, and `/ready` turns true, before the default drive exists.
+ * Waits until the switchboard serves the drive the suites write into: the
+ * gateway answers before that drive exists, and SWITCHBOARD_DRIVE_ID may name
+ * one other than the default.
  */
 async function waitForDrive(url: string, timeoutMs = 120_000) {
   const start = Date.now();
