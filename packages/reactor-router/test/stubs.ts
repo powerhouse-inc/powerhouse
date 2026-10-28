@@ -80,6 +80,10 @@ export class FakeBackend {
   refuses = false;
   /** Declares a non-waiting submit. */
   submits = false;
+  /** Members that record the call and never answer. */
+  readonly hanging = new Set<string>();
+  /** Declares `health` with this answer. */
+  health: "up" | "down" | undefined = undefined;
 
   constructor(
     readonly name: string,
@@ -170,7 +174,15 @@ export class FakeBackend {
     return this.require(identifier, method);
   }
 
-  private run<T>(method: string, args: readonly unknown[], body: () => T) {
+  private run<T>(
+    method: string,
+    args: readonly unknown[],
+    body: () => T,
+  ): Promise<T> {
+    if (this.hanging.has(method)) {
+      this.calls.push({ method, args });
+      return new Promise<T>(() => {});
+    }
     return Promise.resolve().then(() => {
       this.record(method, args);
       return body();
@@ -401,6 +413,9 @@ export class FakeBackend {
             }),
         },
       });
+    }
+    if (this.health !== undefined) {
+      Object.assign(api, { health: () => this.health ?? "up" });
     }
     for (const member of this.undeclared) {
       delete (api as Partial<Record<Member, unknown>>)[member];

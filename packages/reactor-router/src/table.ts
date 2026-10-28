@@ -330,6 +330,10 @@ export class RouterTable {
     }
     return {
       backends: this.order.map((backend) => backend.name),
+      health: this.order.flatMap((backend) => {
+        const health = backend.health();
+        return health === undefined ? [] : [{ backend: backend.name, health }];
+      }),
       collections,
       documents: this.documents
         .list()

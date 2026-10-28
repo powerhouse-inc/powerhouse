@@ -37,6 +37,7 @@ import { messageOf } from "./errors.js";
 import {
   UNKNOWN_REACTOR_INFO,
   type BackendFacts,
+  type BackendHealth,
   type ReactorReach,
   type RouterDiagnostic,
 } from "./types.js";
@@ -89,6 +90,12 @@ export interface IRoutableBackend {
    * prefer it over `read.drives` and over the drive's state.
    */
   readonly drives?: IDriveReadClient;
+  /**
+   * Whether the backend can be reached now, without sending a request. While
+   * it answers "down", the router's ownership probes answer "unknown" without
+   * asking. Absent, the backend is probed every time.
+   */
+  readonly health?: () => BackendHealth;
 
   get<TDocument extends PHDocument>(
     identifier: string,
@@ -417,6 +424,11 @@ export class RouterBackend {
 
   get facts(): BackendFacts {
     return this.current;
+  }
+
+  /** The backend's own report, or `undefined` when it declares none. */
+  health(): BackendHealth | undefined {
+    return this.api.health?.();
   }
 
   /** Re-reads the facts; a failed read leaves them unknown and says so. */

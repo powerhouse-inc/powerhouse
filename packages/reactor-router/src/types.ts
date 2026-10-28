@@ -71,9 +71,14 @@ export type RouterTableEntry = {
   readonly source: RouteSource;
 };
 
+/** A backend's own report of whether it can be reached; see `IRoutableBackend.health`. */
+export type BackendHealth = "up" | "down";
+
 export type RouterTableSnapshot = {
   /** Backend names in configuration order. */
   readonly backends: readonly string[];
+  /** One row per backend that declares `health`, in configuration order. */
+  readonly health: readonly { backend: string; health: BackendHealth }[];
   readonly collections: readonly RouterTableEntry[];
   readonly documents: readonly { identifier: string; backend: string }[];
   readonly jobs: readonly { jobId: string; backend: string }[];
@@ -87,6 +92,7 @@ export const DEFAULT_DOCUMENT_CACHE_SIZE = 10_000;
 export const DEFAULT_JOB_CACHE_SIZE = 2_000;
 export const DEFAULT_SUBSCRIPTION_DEDUP_SIZE = 2_048;
 export const DEFAULT_BRANCH = "main";
+export const DEFAULT_PROBE_TIMEOUT_MS = 3_000;
 
 /** Map keys are a collection id or a bare drive id (every branch). */
 export type RoutingOptions = {
@@ -99,6 +105,12 @@ export type RoutingOptions = {
   /** Answers what no collection owns. Defaults to the first backend. */
   readonly primaryBackend?: string;
   readonly misrouteAttempts?: number;
+  /**
+   * Bound on one ownership probe; a probe that does not answer in time
+   * answers "unknown". Defaults to {@link DEFAULT_PROBE_TIMEOUT_MS}; `0` or
+   * `Infinity` waits for the answer.
+   */
+  readonly probeTimeoutMs?: number;
   readonly documentCacheSize?: number;
   readonly jobCacheSize?: number;
   readonly subscriptionDedupSize?: number;

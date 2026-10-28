@@ -16,6 +16,7 @@ import {
   DEFAULT_BRANCH,
   DEFAULT_DOCUMENT_CACHE_SIZE,
   DEFAULT_MISROUTE_ATTEMPTS,
+  DEFAULT_PROBE_TIMEOUT_MS,
   type RouterDiagnostic,
   type RoutingOptions,
 } from "./types.js";
@@ -39,6 +40,37 @@ const distinctIds = (identifiers: readonly string[]): string[] => [
   ...new Set(identifiers.filter((id) => id !== "")),
 ];
 
+class ProbeTimeoutError extends Error {
+  constructor(readonly timeoutMs: number) {
+    super(`did not answer within ${timeoutMs} ms`);
+    this.name = "ProbeTimeoutError";
+  }
+}
+
+/** Runs `step` with a signal that aborts at the deadline, and stops waiting then. */
+async function withDeadline<T>(
+  timeoutMs: number,
+  step: (signal: AbortSignal | undefined) => Promise<T>,
+): Promise<T> {
+  if (!(timeoutMs > 0) || !Number.isFinite(timeoutMs)) {
+    return step(undefined);
+  }
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      const error = new ProbeTimeoutError(timeoutMs);
+      controller.abort(error);
+      reject(error);
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([step(controller.signal), deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Marks a step that runs before anything is submitted. */
 export type BeforeSubmit = <T>(step: () => Promise<T>) => Promise<T>;
 
@@ -59,6 +91,7 @@ export class RouteDispatcher {
   private readonly attempts: number;
   private readonly primaryName: string;
   private readonly guard: OwnershipGuard;
+  private readonly probeTimeoutMs: number;
 
   constructor(
     backends: readonly RouterBackend[],
@@ -74,6 +107,7 @@ export class RouteDispatcher {
       1,
       options.misrouteAttempts ?? DEFAULT_MISROUTE_ATTEMPTS,
     );
+    this.probeTimeoutMs = options.probeTimeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS;
     this.guard = new OwnershipGuard(
       (backend, identifier) => this.owns(backend, identifier),
       (backend, identifier) =>
@@ -520,17 +554,25 @@ export class RouteDispatcher {
     return holder;
   }
 
-  /** isServed, then isDocumentIdTaken when declared. A failure is unknown. */
+  /**
+   * isServed, then isDocumentIdTaken when declared, within the probe timeout.
+   * A failure, a timeout or a backend that reports itself down is unknown.
+   */
   async owns(backend: RouterBackend, identifier: string): Promise<Ownership> {
+    if (backend.health() === "down") {
+      return "unknown";
+    }
+    const api = backend.api;
     try {
-      if (await backend.api.isServed(identifier)) {
-        return "yes";
-      }
-      const api = backend.api;
-      if (api.isDocumentIdTaken === undefined) {
-        return "no";
-      }
-      return (await api.isDocumentIdTaken(identifier)) ? "yes" : "no";
+      return await withDeadline(this.probeTimeoutMs, async (signal) => {
+        if (await api.isServed(identifier, undefined, signal)) {
+          return "yes";
+        }
+        if (api.isDocumentIdTaken === undefined) {
+          return "no";
+        }
+        return (await api.isDocumentIdTaken(identifier, signal)) ? "yes" : "no";
+      });
     } catch (error) {
       this.onDiagnostic(
         `ownership probe: ${backend.name} could not say whether it holds ${JSON.stringify(identifier)} (${messageOf(error)})`,
