@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   childrenSchema,
+  compoundHostSchema,
+  hostNameSchema,
   profileSchema,
+  reactorHostSchema,
   reactorBackendSchema,
   reactorSchema,
 } from "../src/host-schemas.js";
@@ -51,6 +54,42 @@ describe("reactorSchema (strict per D2.d)", () => {
       reactorSchema.safeParse({
         protocol: { createSignaturePolicy: "v3" },
       }).success,
+    ).toBe(false);
+  });
+});
+
+describe("hostNameSchema", () => {
+  it.each(["vetra", "my-project-switchboard", "Lab_2.v1"])(
+    "accepts %j",
+    (name) => {
+      expect(hostNameSchema.safeParse(name).success).toBe(true);
+    },
+  );
+
+  it.each([
+    "",
+    ".",
+    "..",
+    "../x",
+    "a/b",
+    "a\\b",
+    "/abs",
+    "C:x",
+    ".hidden",
+    "a b",
+    "x".repeat(129),
+  ])("refuses %j", (name) => {
+    expect(hostNameSchema.safeParse(name).success).toBe(false);
+  });
+
+  it("constrains both host shapes", () => {
+    const runner = { module: "m" };
+    expect(reactorHostSchema.safeParse({ name: "../x", runner }).success).toBe(
+      false,
+    );
+    expect(
+      compoundHostSchema.safeParse({ name: "../x", runner, children: {} })
+        .success,
     ).toBe(false);
   });
 });

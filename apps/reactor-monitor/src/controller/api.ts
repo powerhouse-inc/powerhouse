@@ -1,5 +1,15 @@
-import type { HostIssue } from "@powerhousedao/host-core/schema";
+import {
+  hostExportSchema,
+  type HostExport,
+  type HostIssue,
+} from "@powerhousedao/host-core/schema";
 import { z } from "zod";
+import {
+  hostRulesContextSchema,
+  RULES,
+  setterSchema,
+  type HostRuleIssue,
+} from "../host-rules/schema.ts";
 
 /** Every controller route lives under this prefix. */
 export const CONTROLLER_PREFIX = "/__ph-monitor/";
@@ -52,13 +62,67 @@ export const envSchema = z
     message: `at most ${MAX_ENV_ENTRIES} env entries`,
   });
 
+const projectField = z.string().min(1).max(4096);
+const hostField = z.string().min(1).max(255);
+
 /** `project` is a root from `GET projects`; `host` a folder under its hosts/. */
 export const hostRequestSchema = z.strictObject({
-  project: z.string().min(1).max(4096),
-  host: z.string().min(1).max(255),
+  project: projectField,
+  host: hostField,
   env: envSchema.optional(),
 });
 export type HostRequest = z.infer<typeof hostRequestSchema>;
+
+/** Lowercase hex sha256 of a host export; see `baseDigest`. */
+export const baseDigestSchema = z.string().regex(/^[0-9a-f]{64}$/);
+
+function sortedKeys(_key: string, value: unknown): unknown {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return value;
+  }
+  return Object.fromEntries(
+    Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+  );
+}
+
+/**
+ * sha256 of the export's JSON with object keys sorted. A `hostExportSchema`
+ * parse returns the same structure, so parsed and raw exports hash alike.
+ * Needs WebCrypto: Node, or a secure context (loopback is one).
+ */
+export async function baseDigest(envelope: HostExport): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(envelope, sortedKeys));
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
+/** `GET capabilities`: what the controller can offer a host it builds. */
+export const capabilitiesResponseSchema = hostRulesContextSchema;
+export type CapabilitiesResponse = z.input<typeof capabilitiesResponseSchema>;
+
+/** `GET export?project&host`: the host's declared export and its digest. */
+export const exportResponseSchema = z.object({
+  export: hostExportSchema,
+  baseDigest: baseDigestSchema,
+});
+export type ExportResponse = z.infer<typeof exportResponseSchema>;
+
+/**
+ * `POST drafts/check` (→ `draftCheckResponseSchema`) and `POST drafts`
+ * (→ `Instance`): the project host's export with `setters` applied in order.
+ * `baseDigest` is the export the setters were written against; a different
+ * current export is refused as `base_changed`.
+ */
+export const draftRequestSchema = z.strictObject({
+  project: projectField,
+  host: hostField,
+  baseDigest: baseDigestSchema,
+  setters: z.array(setterSchema),
+  env: envSchema.optional(),
+});
+export type DraftRequest = z.infer<typeof draftRequestSchema>;
 
 export const projectSchema = z.object({
   root: z.string(),
@@ -83,6 +147,22 @@ export const checkResponseSchema = z.object({
 });
 export type CheckResponse = z.infer<typeof checkResponseSchema>;
 
+/** A host-rules finding (`validateDraft`); `path` is envelope-rooted. */
+export const hostRuleIssueSchema = z.object({
+  rule: z.enum(RULES),
+  path: z.string(),
+  message: z.string(),
+  file: z.string().optional(),
+  hint: z.string().optional(),
+});
+
+/** `POST drafts/check`: the host-rules findings, then `checkHost`'s stages. */
+export const draftCheckResponseSchema = z.object({
+  ruleIssues: z.array(hostRuleIssueSchema),
+  issues: z.array(hostIssueSchema),
+});
+export type DraftCheckResponse = z.infer<typeof draftCheckResponseSchema>;
+
 /** DELETE forgets an instance; failed and exited ones stay listed until then. */
 export const instanceStatusSchema = z.enum([
   "starting",
@@ -100,6 +180,13 @@ export const instanceOutputsSchema = z.object({
 });
 export type InstanceOutputs = z.infer<typeof instanceOutputsSchema>;
 
+/** A compound's member, keyed by its child key; `host` is its folder. */
+export const instanceMemberSchema = z.object({
+  host: z.string(),
+  outputs: instanceOutputsSchema.optional(),
+});
+export type InstanceMember = z.infer<typeof instanceMemberSchema>;
+
 export const instanceSchema = z.object({
   id: z.string(),
   project: z.string(),
@@ -108,6 +195,10 @@ export const instanceSchema = z.object({
   startedAt: z.string(),
   pid: z.number().int().optional(),
   outputs: instanceOutputsSchema.optional(),
+  /** A compound's members; `outputs` above is a standalone host's only. */
+  members: z.record(z.string(), instanceMemberSchema).optional(),
+  /** A draft's project host; `project` above is then the throwaway copy. */
+  source: z.object({ project: z.string(), host: z.string() }).optional(),
   exit: z
     .object({
       code: z.number().int().nullable(),
@@ -139,6 +230,13 @@ export const logsResponseSchema = z.object({
 });
 export type LogsResponse = z.infer<typeof logsResponseSchema>;
 
+export const refusedSetterSchema = z.object({
+  path: z.string(),
+  reason: z.string(),
+  hint: z.string().optional(),
+});
+export type RefusedSetter = z.infer<typeof refusedSetterSchema>;
+
 export const errorCodeSchema = z.enum([
   "bad_host",
   "bad_origin",
@@ -149,6 +247,8 @@ export const errorCodeSchema = z.enum([
   "unknown_host",
   "env_denied",
   "check_failed",
+  "setter_denied",
+  "base_changed",
   "instance_limit",
   "shutting_down",
   "internal",
@@ -160,6 +260,10 @@ export const errorResponseSchema = z.object({
     code: errorCodeSchema,
     message: z.string(),
     issues: z.array(hostIssueSchema).optional(),
+    /** `check_failed` on a draft: its host-rules findings. */
+    ruleIssues: z.array(hostRuleIssueSchema).optional(),
+    /** `setter_denied`: every refused setter, not just the first. */
+    setters: z.array(refusedSetterSchema).optional(),
   }),
 });
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;
@@ -168,3 +272,8 @@ export type ErrorResponse = z.infer<typeof errorResponseSchema>;
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 const sameIssue: Same<z.infer<typeof hostIssueSchema>, HostIssue> = true;
 void sameIssue;
+const sameRuleIssue: Same<
+  z.infer<typeof hostRuleIssueSchema>,
+  HostRuleIssue
+> = true;
+void sameRuleIssue;

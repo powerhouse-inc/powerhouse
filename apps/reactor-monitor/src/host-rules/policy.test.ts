@@ -5,6 +5,7 @@ import {
   checkSetter,
   checkSetterValue,
   isContainedPath,
+  NAME_REASON,
   parsePath,
 } from "./policy.js";
 import type { Setter } from "./schema.js";
@@ -227,7 +228,6 @@ describe("checkSetter", () => {
   it.each([
     ["host.reactor.renown.url", "reactor.renown.url"],
     ["host.reactor", "reactor"],
-    ["host.name", "name"],
     ["host.children", "children"],
   ])(
     "refuses the unlisted path %s, naming it only in the hint",
@@ -239,6 +239,31 @@ describe("checkSetter", () => {
       });
     },
   );
+
+  it.each(["host.name", "members.sb.name"])("sets the name at %s", (path) => {
+    expect(reason({ path, value: "renamed-host_2.v1" })).toBeUndefined();
+  });
+
+  it.each<[string, unknown]>([
+    ["..", ".."],
+    ["a parent path", "../../../some/dir/package"],
+    ["a slash", "a/b"],
+    ["a backslash", "a\\b"],
+    ["an absolute path", "/etc/passwd"],
+    ["a drive path", "C:x"],
+    ["a leading dot", ".hidden"],
+    ["a space", "my host"],
+    ["an empty name", ""],
+    ["an over-long name", "x".repeat(129)],
+    ["an $env token", { $env: "LOG_LEVEL" }],
+    ["a number", 7],
+  ])("refuses a name with %s", (_name, value) => {
+    for (const path of ["host.name", "members.sb.name"]) {
+      expect(reason({ path, value: value as Setter["value"] })).toBe(
+        NAME_REASON,
+      );
+    }
+  });
 
   it("removes a member folder but never the host", () => {
     expect(

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { runnerKindSchema } from "./host-schemas.js";
+import { hostNameSchema, runnerKindSchema } from "./host-schemas.js";
 
 /**
  * `.ph/run/<host>.json`, version 2 (typed-host-configs 3.6): what a running
@@ -22,7 +22,7 @@ export const runRecordMemberSchema = z.strictObject({
 
 export const runRecordSchema = z.strictObject({
   version: z.literal(2),
-  host: z.string().min(1),
+  host: hostNameSchema,
   projectName: z.string(),
   kind: runnerKindSchema,
   verb: z.string().min(1),

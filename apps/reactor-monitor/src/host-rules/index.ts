@@ -43,6 +43,7 @@ export {
   checkSetter,
   checkSetterValue,
   FOLDER_REASONS,
+  NAME_REASON,
   isContainedPath,
   parsePath,
   SETTINGS_ELSEWHERE,

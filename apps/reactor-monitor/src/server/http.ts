@@ -22,6 +22,8 @@ const STATUS: Record<ErrorCode, number> = {
   unknown_host: 404,
   env_denied: 400,
   check_failed: 422,
+  setter_denied: 400,
+  base_changed: 409,
   instance_limit: 409,
   shutting_down: 503,
   internal: 500,
@@ -76,7 +78,7 @@ function sendError(
   res: ServerResponse,
   code: ErrorCode,
   message: string,
-  extra: Pick<ErrorResponse["error"], "issues"> = {},
+  extra: Pick<ErrorResponse["error"], "issues" | "ruleIssues" | "setters"> = {},
 ): void {
   sendJson(res, STATUS[code], { error: { code, message, ...extra } });
 }

@@ -1,6 +1,7 @@
 import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import fs from "node:fs";
 import path from "node:path";
+import { HOST_NAME_MESSAGE, hostNameSchema } from "./host-schemas.js";
 import { runRecordSchema, type RunRecord } from "./run-record-schema.js";
 
 export {
@@ -27,8 +28,19 @@ type Env = Readonly<Record<string, string | undefined>>;
 // readers take `env` so a launcher can read a child's records.
 const runDir = (projectDir: string, env: Env = process.env) =>
   path.join(resolvePhDir(projectDir, env), "run");
-const recordPath = (projectDir: string, hostName: string, env?: Env) =>
-  path.join(runDir(projectDir, env), `${hostName}.json`);
+function recordPath(projectDir: string, hostName: string, env?: Env): string {
+  const dir = runDir(projectDir, env);
+  const file = path.resolve(dir, `${hostName}.json`);
+  if (
+    !hostNameSchema.safeParse(hostName).success ||
+    path.dirname(file) !== path.resolve(dir)
+  ) {
+    throw new Error(
+      `"${hostName}" can't name a run record. ${HOST_NAME_MESSAGE}`,
+    );
+  }
+  return file;
+}
 
 export function readRunRecord(
   projectDir: string,
