@@ -56,6 +56,16 @@ describe("validateDraft", () => {
     expect(issues(hostExport("connect"))).toEqual([]);
   });
 
+  it("refuses a host name that would escape the run folder", () => {
+    for (const path of ["host.name", "members.switchboard.name"]) {
+      expect(
+        issues(draft({ [path]: "../../escape" })).filter(
+          ([rule, at]) => rule === "shape" && at === path,
+        ),
+      ).toHaveLength(1);
+    }
+  });
+
   it("needs a controller to start a switchboard", () => {
     expect(issues(stack(), {}, { postgres: true, controller: false })).toEqual([
       ["capability", SB, REASONS.noController],

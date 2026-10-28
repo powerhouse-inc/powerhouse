@@ -1,5 +1,9 @@
 // Which setters and env the monitor may apply to a host. Browser-safe.
-import { outputTokenSchema, tokenKeyOf } from "@powerhousedao/host-core/schema";
+import {
+  hostNameSchema,
+  outputTokenSchema,
+  tokenKeyOf,
+} from "@powerhousedao/host-core/schema";
 import {
   CODE_LOADING_ENV,
   ENV_KEY_PATTERN,
@@ -68,6 +72,10 @@ function matches(pattern: Pattern, rest: readonly string[]): boolean {
   return pattern.length === rest.length;
 }
 
+/** A host's name keys its run record file, so it stays one safe segment. */
+const NAME: Pattern = ["name"];
+export const NAME_REASON =
+  "The name becomes a file name, so use only letters, digits, '.', '_' and '-', start with a letter or digit, and keep it to 128 characters.";
 const REMOTE_URL: Pattern = ["reactor", "backends", "*", "remote", "url"];
 const DATA_DIR: Pattern = ["reactor", "backends", "*", "storage", "dataDir"];
 const READ_MODEL: Pattern = ["reactor", "backends", "*", "readModel", "url"];
@@ -120,7 +128,7 @@ const SWITCHBOARD_SETTABLE: Pattern[] = [
 
 /** Leaf paths a value may be written at. */
 const SETTABLE: Pattern[] = [
-  ["name"],
+  NAME,
   ["reactor", "protocol", "**"],
   ["reactor", "backends", "*", "kind"],
   ["reactor", "backends", "*", "storage", "kind"],
@@ -291,6 +299,11 @@ function leafVerdict(
     if (matches(pattern, rest)) return { ok: false, reason };
   }
   if (matches(REMOTE_URL, rest)) return remoteUrlVerdict(value, envelope);
+  if (matches(NAME, rest)) {
+    return typeof value === "string" && hostNameSchema.safeParse(value).success
+      ? OK
+      : { ok: false, reason: NAME_REASON };
+  }
   if (matches(DATA_DIR, rest)) {
     return folderVerdict(value, FOLDER_REASONS.dataDir);
   }
