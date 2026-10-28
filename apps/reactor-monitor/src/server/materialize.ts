@@ -39,7 +39,7 @@ function assertFolder(name: string): void {
 export function withFreePorts(envelope: HostExport): HostExport {
   const copy = structuredClone(envelope);
   const host = copy.host as unknown as Record<string, unknown>;
-  const members = (copy.members ?? {}) as Record<string, unknown>;
+  const members = copy.members as Record<string, unknown>;
   const children = isRecord(host.children) ? host.children : {};
   const setPort = (definition: unknown) => {
     if (!isRecord(definition)) return;
