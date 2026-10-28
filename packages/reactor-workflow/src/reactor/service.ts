@@ -81,6 +81,7 @@ import {
   parseReactorConnectionConfig,
   type ConnectionDocument,
 } from "@powerhousedao/workflow/document-models/connection";
+import { idTokenEmail } from "./id-token.js";
 import {
   exchangeCode,
   OAUTH_CLIENT_ID,
@@ -3439,7 +3440,10 @@ export class WorkflowRuntimeService {
       detail: outcome.declared
         ? null
         : "piece declares no auth.validate; credentials resolved",
-      accountLabel: outcome.accountLabel ?? accountLabel,
+      // The piece's own label first; else the account the sign-in's ID token
+      // names (asked for with `openid email`); else the one it had.
+      accountLabel:
+        outcome.accountLabel ?? idTokenEmail(shapedAuth) ?? accountLabel,
     });
   }
 
