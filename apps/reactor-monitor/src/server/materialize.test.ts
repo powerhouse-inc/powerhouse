@@ -194,12 +194,15 @@ describe("materialize", () => {
     ["../escape", "name"],
   ])("refuses the folder %j (%s) and writes nothing", (folder, where) => {
     const envelope = duo(source);
-    const broken =
+    const broken: HostExport =
       where === "name"
         ? { ...envelope, name: folder }
         : {
             ...envelope,
-            members: { ...envelope.members, [folder]: switchboard("x", 1) },
+            members: {
+              ...envelope.members,
+              [folder]: switchboard("x", 1) as HostExport["host"],
+            },
           };
     expect(() => materialize(instanceDir, source, broken)).toThrow(
       MaterializeError,
