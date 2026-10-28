@@ -39,32 +39,70 @@ function assertFolder(name: string): void {
   }
 }
 
-/** Every switchboard listens on a free port, so copies never collide. */
+/** Clear of a scaffold's own ports: its switchboard sits at studio + 1000. */
+export const COPY_CONNECT_PORT_OFFSET = 10_000;
+// The ph-cli Connect runner's default port.
+const CONNECT_DEFAULT_PORT = 3000;
+
+export type CopyConnectPort = { member: string; port: number };
+
+/** Each Connect member's fixed port in a copy: its own plus the offset. */
+export function copyConnectPorts(envelope: HostExport): CopyConnectPort[] {
+  return membersOf({ envelope })
+    .filter((member) => member.role === "connect")
+    .map((member) => {
+      const own =
+        typeof member.runner.port === "number"
+          ? member.runner.port
+          : CONNECT_DEFAULT_PORT;
+      const port = own + COPY_CONNECT_PORT_OFFSET;
+      if (port > 65_535) {
+        throw new MaterializeError(
+          `${member.key} uses port ${own}, so a copy has no port for its Connect (${port} is too high). Give it a port below ${65_536 - COPY_CONNECT_PORT_OFFSET}.`,
+        );
+      }
+      return { member: member.key, port };
+    });
+}
+
+/** Free switchboard ports; Connect's copy port keeps its own browser storage. */
 export function withFreePorts(envelope: HostExport): HostExport {
   const copy = structuredClone(envelope);
   const host = copy.host as unknown as Record<string, unknown>;
   const members = copy.members as Record<string, unknown>;
   const children = isRecord(host.children) ? host.children : {};
-  const setPort = (definition: unknown) => {
+  const connectPorts = new Map(
+    copyConnectPorts(envelope).map(({ member, port }) => [member, port]),
+  );
+  const setPort = (definition: unknown, runner: Record<string, unknown>) => {
     if (!isRecord(definition)) return;
     definition.runner = {
       ...(isRecord(definition.runner) ? definition.runner : {}),
-      port: 0,
+      ...runner,
     };
   };
   for (const member of membersOf({ envelope: copy })) {
-    if (member.role !== "switchboard") continue;
+    const port = connectPorts.get(member.key);
+    const runner =
+      member.role === "switchboard"
+        ? { port: 0 }
+        : port === undefined
+          ? undefined
+          : { port, strictPort: true };
+    if (!runner) continue;
     if (member.path === "host") {
-      setPort(host);
+      setPort(host, runner);
       continue;
     }
     setPort(
       Object.hasOwn(members, member.folder)
         ? members[member.folder]
         : undefined,
+      runner,
     );
     setPort(
       Object.hasOwn(children, member.key) ? children[member.key] : undefined,
+      runner,
     );
   }
   return copy;

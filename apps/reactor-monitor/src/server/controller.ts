@@ -13,6 +13,7 @@ import {
 import type { HostExport } from "@powerhousedao/host-core/schema";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { Worker } from "node:worker_threads";
@@ -39,7 +40,11 @@ import type { HostRuleIssue, HostRulesContext } from "../host-rules/schema.ts";
 import { applySetters } from "../host-rules/setters.ts";
 import { validateDraft } from "../host-rules/validate.ts";
 import { LogRing } from "./logs.ts";
-import { MaterializeError, materialize } from "./materialize.ts";
+import {
+  copyConnectPorts,
+  MaterializeError,
+  materialize,
+} from "./materialize.ts";
 
 export class ControllerError extends Error {
   readonly code: ErrorCode;
@@ -88,6 +93,8 @@ export interface MonitorControllerOptions {
   tmpDir?: string;
   readyTimeoutMs?: number;
   stopTimeoutMs?: number;
+  /** Whether nothing listens on `port`; default: try to listen on it. */
+  portFree?: (port: number) => Promise<boolean>;
 }
 
 export interface MonitorController {
@@ -194,6 +201,27 @@ export function assertServerEnv(env: Record<string, string>): void {
   if (bad.length > 0) {
     throw new Error(`Server env may not set: ${bad.join(", ")}.`);
   }
+}
+
+function listensOn(port: number, host?: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once("error", (error: NodeJS.ErrnoException) => {
+      // No such address here (IPv6 off): nothing can listen on it.
+      resolve(error.code === "EADDRINUSE" || error.code === "EACCES");
+    });
+    server.listen({ port, host, exclusive: true }, () => {
+      server.close(() => resolve(false));
+    });
+  });
+}
+
+/** Nothing listens on `port`: vite's "localhost" may be either loopback. */
+export async function portFree(port: number): Promise<boolean> {
+  for (const host of ["127.0.0.1", "::1", undefined]) {
+    if (await listensOn(port, host)) return false;
+  }
+  return true;
 }
 
 function runWorker(
@@ -424,6 +452,7 @@ export function createMonitorController(
   const workerFile =
     options.checkWorker ?? new URL("./check-worker.ts", import.meta.url);
   const check = options.check ?? workerCheck(workerFile);
+  const isPortFree = options.portFree ?? portFree;
   const exporter = options.exportHost ?? workerExport(workerFile);
   const parent = options.tmpDir ?? os.tmpdir();
   sweepTempRoots(parent);
@@ -587,6 +616,26 @@ export function createMonitorController(
       capabilities(),
     );
     return { envelope, ruleIssues: [...applied, ...issues] };
+  };
+
+  /** A copy's Connect keeps its fixed port, so a taken one fails the start. */
+  const assertCopyPortsFree = async (envelope: HostExport) => {
+    let ports: ReturnType<typeof copyConnectPorts>;
+    try {
+      ports = copyConnectPorts(envelope);
+    } catch (error) {
+      if (error instanceof MaterializeError) {
+        throw new ControllerError("bad_request", error.message);
+      }
+      throw error;
+    }
+    for (const { member, port } of ports) {
+      if (await isPortFree(port)) continue;
+      throw new ControllerError(
+        "port_taken",
+        `The copy's Connect (${member}) needs port ${port}, and something else is using it, perhaps another running copy. Stop that, then start again.`,
+      );
+    }
   };
 
   const materializeIn = (
@@ -830,6 +879,7 @@ export function createMonitorController(
             { ruleIssues },
           );
         }
+        await assertCopyPortsFree(envelope);
         const copy = materializeIn(instanceDir, root, envelope, packages);
         return {
           root: copy.projectDir,

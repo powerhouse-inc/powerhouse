@@ -21,6 +21,8 @@ import {
   materialize,
   renderHostFiles,
   withFreePorts,
+  copyConnectPorts,
+  COPY_CONNECT_PORT_OFFSET,
   withSourcePackages,
 } from "./materialize.ts";
 
@@ -163,16 +165,39 @@ describe("materialize", () => {
       runner: { module: SWITCHBOARD, port: 0 },
     });
     expect(hostFile(projectDir, "sb-b")).toMatchObject({ runner: { port: 0 } });
+    // Connect's effective port is its wrapper's 3000, plus the copy offset.
     expect(hostFile(projectDir, "ui")).toMatchObject({
-      runner: { port: 3001 },
+      runner: { port: 13000, strictPort: true },
     });
     expect(hostFile(projectDir, "duo")).toMatchObject({
       children: {
         a: { host: "sb-a", runner: { port: 0 } },
         b: { host: "sb-b", runner: { port: 0 } },
-        ui: { host: "ui", runner: { port: 3000 } },
+        ui: { host: "ui", runner: { port: 13000, strictPort: true } },
       },
     });
+  });
+
+  it("gives Connect the runner's default port plus the offset when it sets none", () => {
+    const envelope = duo(source);
+    const host = envelope.host as unknown as Record<string, unknown>;
+    const children = host.children as Record<string, Record<string, unknown>>;
+    delete children.ui.runner;
+    const ui = envelope.members.ui as unknown as Record<string, unknown>;
+    ui.runner = { ...(ui.runner as object), port: undefined };
+    expect(copyConnectPorts(envelope)).toEqual([
+      { member: "ui", port: 3000 + COPY_CONNECT_PORT_OFFSET },
+    ]);
+  });
+
+  it("refuses a Connect port with no room for the offset", () => {
+    const envelope = duo(source);
+    const host = envelope.host as unknown as Record<string, unknown>;
+    const children = host.children as Record<string, Record<string, unknown>>;
+    children.ui.runner = { port: 60_000 };
+    expect(() => copyConnectPorts(envelope)).toThrow(
+      "ui uses port 60000, so a copy has no port for its Connect (70000 is too high). Give it a port below 55536.",
+    );
   });
 
   it("rewrites a standalone switchboard's port", () => {

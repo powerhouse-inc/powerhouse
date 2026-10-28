@@ -254,6 +254,7 @@ export const errorCodeSchema = z.enum([
   "setter_denied",
   "base_changed",
   "instance_limit",
+  "port_taken",
   "shutting_down",
   "internal",
 ]);

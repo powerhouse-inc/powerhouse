@@ -367,7 +367,8 @@ describe.skipIf(process.platform === "win32")(
       const member = instance?.members?.app;
       expect(member?.outputs).toBeUndefined();
       const app = member?.app ?? "";
-      expect(app).toMatch(/^http:\/\/[^/]+:\d+\/$/);
+      // The copy's fixed Connect port: the host's 6498 plus the offset.
+      expect(new URL(app).port).toBe("16498");
 
       const page = await fetch(app);
       expect(page.status).toBe(200);
@@ -391,6 +392,14 @@ describe.skipIf(process.platform === "win32")(
           ),
         ),
       ).toBe(true);
+
+      // A second copy can't take the same Connect port.
+      const second = await call("POST", "drafts", requestOf(draft));
+      expect(second.status).toBe(409);
+      expect(errorResponseSchema.parse(second.body).error.code).toBe(
+        "port_taken",
+      );
+      expect(controller.list()).toHaveLength(1);
 
       const stopped = await call("DELETE", `instances/${id}`);
       expect(instanceSchema.parse(stopped.body).status).toBe("exited");
