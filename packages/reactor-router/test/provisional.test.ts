@@ -65,6 +65,34 @@ describe("provisional routes", () => {
     expect(await read(dispatcher, "doc")).toBe("local");
   });
 
+  it("keeps a document route expired when an acceptance lands after the TTL", async () => {
+    const { local, remote, dispatcher } = pair();
+    remote.seed(fakeDocument({ id: "doc" }));
+    await read(dispatcher, "doc");
+    local.seed(fakeDocument({ id: "doc" }));
+
+    vi.advanceTimersByTime(TTL);
+    dispatcher.table.recordDocument("doc", "remote");
+
+    expect(await read(dispatcher, "doc")).toBe("local");
+  });
+
+  it("keeps a collection route expired when an acceptance lands after the TTL", async () => {
+    const { local, remote, dispatcher } = pair();
+    remote.seed(fakeDocument({ id: "drive" }));
+    const collection = DriveCollectionId.forDrive("drive");
+    await dispatcher.resolveCollectionBackend(collection);
+    local.seed(fakeDocument({ id: "drive" }));
+
+    vi.advanceTimersByTime(TTL);
+    dispatcher.table.recordCollection(collection, "remote", "accepted");
+    dispatcher.table.recordDocument("drive", "remote");
+
+    expect((await dispatcher.resolveCollectionBackend(collection)).name).toBe(
+      "local",
+    );
+  });
+
   it("never expires a route on the first backend", async () => {
     const { local, remote, dispatcher } = pair();
     local.seed(fakeDocument({ id: "doc" }));

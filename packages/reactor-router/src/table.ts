@@ -390,7 +390,8 @@ export class RouterTable {
     evidence: RouteEvidence,
     provisional = false,
   ): void {
-    const current = this.learnedRoute(collection.key);
+    // The raw entry: an expired one stays expired until the next lookup.
+    const current = this.learned.get(collection.key);
     const next = nextCollectionRoute(
       current,
       backend,
@@ -452,7 +453,7 @@ export class RouterTable {
       });
       return;
     }
-    if (this.documentBackend(identifier) === backend) {
+    if (this.documents.get(identifier)?.backend === backend) {
       return;
     }
     this.documents.set(identifier, { backend });
