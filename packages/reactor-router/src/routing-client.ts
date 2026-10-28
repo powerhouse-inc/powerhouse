@@ -40,6 +40,7 @@ import { RoutingWriteClient } from "./routing-write-client.js";
 import {
   DEFAULT_SUBSCRIPTION_DEDUP_SIZE,
   type RouterTableSnapshot,
+  type RoutingChangeListener,
   type RoutingOptions,
 } from "./types.js";
 
@@ -138,6 +139,26 @@ export class RoutingReactorClient implements IReactorClient {
 
   describeRouting(): RouterTableSnapshot {
     return this.dispatcher.table.describe();
+  }
+
+  /**
+   * Places a collection (a collection key or a bare drive id, as in
+   * `collections`) on a backend for this client only, above the config;
+   * `undefined` removes the runtime placement. Precedence: corrected, runtime,
+   * config, learned, placed. A refusal still corrects it, and a later
+   * `setPlacement` for the same key replaces that correction.
+   */
+  setPlacement(key: string, backend: string | undefined): void {
+    this.dispatcher.table.setPlacement(key, backend);
+  }
+
+  /**
+   * Calls `listener` whenever a collection route changes: a placement, a
+   * learned or corrected route, or a route forgotten after a refusal.
+   * Returns the unsubscribe.
+   */
+  onRoutingChange(listener: RoutingChangeListener): () => void {
+    return this.dispatcher.table.onChange(listener);
   }
 
   /** Re-reads the facts of the named backend, or of every backend. */

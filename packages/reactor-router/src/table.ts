@@ -1,6 +1,6 @@
-import type { DriveCollectionId } from "@powerhousedao/reactor";
+import { DriveCollectionId } from "@powerhousedao/reactor";
 import type { RouterBackend } from "./backend.js";
-import { UnknownBackendError } from "./errors.js";
+import { messageOf, UnknownBackendError } from "./errors.js";
 import { ineligibleReason, placeCollection } from "./placement.js";
 import {
   collectionRequirements,
@@ -8,10 +8,15 @@ import {
   DEFAULT_JOB_CACHE_SIZE,
   DEFAULT_PROVISIONAL_ROUTE_MS,
   NO_REQUIREMENTS,
+  warnDiagnostic,
   type CollectionRequirements,
+  type PlacementOrigin,
+  type RouterDiagnostic,
   type RouterTableEntry,
   type RouterTableSnapshot,
   type RouteSource,
+  type RoutingChange,
+  type RoutingChangeListener,
   type RoutingOptions,
 } from "./types.js";
 
@@ -64,6 +69,32 @@ type CachedRoute = {
 const expired = (route: CachedRoute, now: number): boolean =>
   route.expiresAt !== undefined && now >= route.expiresAt;
 
+/** The drive id of a collection key, or `""` for a bare drive id. */
+function driveIdOf(key: string): string {
+  try {
+    return DriveCollectionId.fromKey(key).driveId;
+  } catch {
+    return "";
+  }
+}
+
+/** The placement layers for one key, as a table entry's annotation. */
+function placementAnnotation(
+  runtime: string | undefined,
+  configured: string | undefined,
+): Pick<RouterTableEntry, "origin" | "configured"> {
+  const origin: PlacementOrigin | undefined =
+    runtime !== undefined
+      ? "runtime"
+      : configured !== undefined
+        ? "config"
+        : undefined;
+  return {
+    ...(origin === undefined ? {} : { origin }),
+    ...(configured === undefined ? {} : { configured }),
+  };
+}
+
 export type CollectionRoute = {
   readonly backend: string;
   readonly source: RouteSource;
@@ -113,7 +144,10 @@ export function nextCollectionRoute(
 export class RouterTable {
   private readonly order: readonly RouterBackend[];
   private readonly byName: ReadonlyMap<string, RouterBackend>;
-  private readonly overrides: ReadonlyMap<string, string>;
+  private readonly configured: ReadonlyMap<string, string>;
+  private readonly runtime = new Map<string, string>();
+  private readonly listeners = new Set<RoutingChangeListener>();
+  private readonly onDiagnostic: RouterDiagnostic;
   private readonly requirements: ReadonlyMap<string, CollectionRequirements>;
   private readonly fallbackRequirements: CollectionRequirements;
   private readonly learned = new Map<string, CollectionRoute>();
@@ -142,6 +176,7 @@ export class RouterTable {
     }
     this.order = [...backends];
     this.byName = byName;
+    this.onDiagnostic = options.onDiagnostic ?? warnDiagnostic;
 
     const overrides = new Map<string, string>();
     for (const [key, backend] of Object.entries(options.collections ?? {})) {
@@ -154,7 +189,7 @@ export class RouterTable {
       }
       overrides.set(key, backend);
     }
-    this.overrides = overrides;
+    this.configured = overrides;
 
     const requirements = new Map<string, CollectionRequirements>();
     for (const [key, input] of Object.entries(options.requirements ?? {})) {
@@ -247,6 +282,9 @@ export class RouterTable {
     excluded: ReadonlySet<string> = new Set(),
   ): RouterTableEntry | undefined {
     const learned = this.learnedRoute(collection.key);
+    const runtime = this.layerFor(this.runtime, collection);
+    const configured = this.layerFor(this.configured, collection);
+    const annotation = placementAnnotation(runtime, configured);
     if (
       learned !== undefined &&
       learned.source === "corrected" &&
@@ -256,14 +294,16 @@ export class RouterTable {
         collectionId: collection.key,
         backend: learned.backend,
         source: "corrected",
+        ...annotation,
       };
     }
-    const override = this.overrideFor(collection);
-    if (override !== "" && !excluded.has(override)) {
+    const override = runtime ?? configured;
+    if (override !== undefined && !excluded.has(override)) {
       return {
         collectionId: collection.key,
         backend: override,
         source: "override",
+        ...annotation,
       };
     }
     if (learned !== undefined && !excluded.has(learned.backend)) {
@@ -271,9 +311,73 @@ export class RouterTable {
         collectionId: collection.key,
         backend: learned.backend,
         source: learned.source,
+        ...annotation,
       };
     }
     return undefined;
+  }
+
+  /**
+   * Places a collection (a collection key or a bare drive id, as in
+   * `collections`) on a backend at runtime, above the config; `undefined`
+   * removes the runtime placement, so the config applies again. The routes
+   * learned or corrected for that collection, and the cached route of its
+   * drive, are dropped so the next call follows the new placement.
+   */
+  setPlacement(key: string, backend: string | undefined): void {
+    if (key === "") {
+      throw new Error("A placement needs a collection key or a drive id");
+    }
+    if (backend !== undefined && !this.byName.has(backend)) {
+      throw new UnknownBackendError(
+        backend,
+        [...this.byName.keys()],
+        `setPlacement for ${JSON.stringify(key)}`,
+      );
+    }
+    if (this.runtime.get(key) === backend) {
+      return;
+    }
+    if (backend === undefined) {
+      this.runtime.delete(key);
+    } else {
+      this.runtime.set(key, backend);
+    }
+    const driveId = driveIdOf(key);
+    for (const learnedKey of [...this.learned.keys()]) {
+      if (
+        learnedKey === key ||
+        (driveId === "" && driveIdOf(learnedKey) === key)
+      ) {
+        this.learned.delete(learnedKey);
+      }
+    }
+    this.documents.delete(driveId || key);
+    this.notify({ key, reason: "placement" });
+  }
+
+  /** The placement that applies to a collection, and its layer. */
+  placementFor(
+    collection: DriveCollectionId,
+  ):
+    | { readonly backend: string; readonly origin: PlacementOrigin }
+    | undefined {
+    const runtime = this.layerFor(this.runtime, collection);
+    if (runtime !== undefined) {
+      return { backend: runtime, origin: "runtime" };
+    }
+    const configured = this.layerFor(this.configured, collection);
+    return configured === undefined
+      ? undefined
+      : { backend: configured, origin: "config" };
+  }
+
+  /** Calls `listener` on every change to the collection table. */
+  onChange(listener: RoutingChangeListener): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 
   /**
@@ -286,29 +390,33 @@ export class RouterTable {
     evidence: RouteEvidence,
     provisional = false,
   ): void {
-    this.learned.set(
-      collection.key,
-      nextCollectionRoute(
-        this.learnedRoute(collection.key),
-        backend,
-        evidence,
-        provisional ? Date.now() + this.provisionalRouteMs : undefined,
-      ),
+    const current = this.learnedRoute(collection.key);
+    const next = nextCollectionRoute(
+      current,
+      backend,
+      evidence,
+      provisional ? Date.now() + this.provisionalRouteMs : undefined,
     );
+    if (next === current) {
+      return;
+    }
+    this.learned.set(collection.key, next);
+    this.notify({
+      key: collection.key,
+      reason: next.source === "corrected" ? "corrected" : "learned",
+    });
   }
 
+  /** The backend the placement names (runtime, else config), or `""`. */
   overrideFor(collection: DriveCollectionId): string {
-    return (
-      this.overrides.get(collection.key) ??
-      this.overrides.get(collection.driveId) ??
-      ""
-    );
+    return this.placementFor(collection)?.backend ?? "";
   }
 
   forgetCollection(collection: DriveCollectionId, backend: string): void {
     const learned = this.learnedRoute(collection.key);
     if (learned !== undefined && learned.backend === backend) {
       this.learned.delete(collection.key);
+      this.notify({ key: collection.key, reason: "forgotten" });
     }
   }
 
@@ -369,24 +477,30 @@ export class RouterTable {
   describe(): RouterTableSnapshot {
     const now = Date.now();
     const keys = new Set<string>([
-      ...this.overrides.keys(),
+      ...this.configured.keys(),
+      ...this.runtime.keys(),
       ...this.learned.keys(),
     ]);
     const collections: RouterTableEntry[] = [];
     for (const key of keys) {
       const learned = this.learnedRoute(key);
-      const override = this.overrides.get(key);
+      const runtime = this.runtime.get(key);
+      const configured = this.configured.get(key);
+      const override = runtime ?? configured;
+      const annotation = placementAnnotation(runtime, configured);
       if (learned !== undefined && learned.source === "corrected") {
         collections.push({
           collectionId: key,
           backend: learned.backend,
           source: "corrected",
+          ...annotation,
         });
       } else if (override !== undefined) {
         collections.push({
           collectionId: key,
           backend: override,
           source: "override",
+          ...annotation,
         });
       } else if (learned !== undefined) {
         collections.push({
@@ -414,6 +528,26 @@ export class RouterTable {
         .list()
         .map((entry) => ({ jobId: entry.key, backend: entry.value })),
     };
+  }
+
+  private layerFor(
+    layer: ReadonlyMap<string, string>,
+    collection: DriveCollectionId,
+  ): string | undefined {
+    return layer.get(collection.key) ?? layer.get(collection.driveId);
+  }
+
+  private notify(change: RoutingChange): void {
+    for (const listener of [...this.listeners]) {
+      try {
+        listener(change);
+      } catch (error) {
+        this.onDiagnostic(
+          `routing change listener failed on ${JSON.stringify(change.key)} (${messageOf(error)})`,
+          error,
+        );
+      }
+    }
   }
 
   /** The learned entry, dropping it once a provisional route has expired. */

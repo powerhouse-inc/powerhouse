@@ -17,6 +17,7 @@ import {
   DEFAULT_DOCUMENT_CACHE_SIZE,
   DEFAULT_MISROUTE_ATTEMPTS,
   DEFAULT_PROBE_TIMEOUT_MS,
+  warnDiagnostic,
   type RouterDiagnostic,
   type RoutingOptions,
 } from "./types.js";
@@ -100,12 +101,11 @@ export class RouteDispatcher {
     backends: readonly RouterBackend[],
     options: RoutingOptions = {},
   ) {
-    this.table = new RouterTable(backends, options);
-    this.onDiagnostic =
-      options.onDiagnostic ??
-      ((message: string, detail?: unknown) => {
-        console.warn(`[reactor-router] ${message}`, detail);
-      });
+    this.onDiagnostic = options.onDiagnostic ?? warnDiagnostic;
+    this.table = new RouterTable(backends, {
+      ...options,
+      onDiagnostic: this.onDiagnostic,
+    });
     this.attempts = Math.max(
       1,
       options.misrouteAttempts ?? DEFAULT_MISROUTE_ATTEMPTS,
@@ -764,10 +764,12 @@ export class RouteDispatcher {
         if (evidence !== "refusal") {
           return;
         }
-        const override = this.table.overrideFor(collection);
-        if (override !== "" && override !== backend.name) {
+        const placement = this.table.placementFor(collection);
+        if (placement !== undefined && placement.backend !== backend.name) {
           this.onDiagnostic(
-            `collections override for ${collection.key} names ${override}, which refused the operation; ${backend.name} accepted it and the route was corrected. The override is stale.`,
+            placement.origin === "config"
+              ? `collections override for ${collection.key} names ${placement.backend}, which refused the operation; ${backend.name} accepted it and the route was corrected. The override is stale.`
+              : `runtime placement for ${collection.key} names ${placement.backend}, which refused the operation; ${backend.name} accepted it and the route was corrected. The placement is stale.`,
           );
           return;
         }

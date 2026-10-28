@@ -40,11 +40,14 @@ export {
   type BackendHealth,
   type CollectionRequirements,
   type CollectionRequirementsInput,
+  type PlacementOrigin,
   type ReactorReach,
   type RouteSource,
   type RouterDiagnostic,
   type RouterTableEntry,
   type RouterTableSnapshot,
+  type RoutingChange,
+  type RoutingChangeListener,
   type RoutingOptions,
 } from "./types.js";
 export {

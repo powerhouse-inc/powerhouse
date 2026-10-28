@@ -73,12 +73,28 @@ export function collectionRequirements(
 /** Evidence behind a route, weakest (`placed`) to strongest (`corrected`). */
 export type RouteSource = "override" | "placed" | "learned" | "corrected";
 
+/** Which layer a placement comes from; a runtime placement wins over config. */
+export type PlacementOrigin = "config" | "runtime";
+
 export type RouterTableEntry = {
   /** The canonical `DriveCollectionId.key`. */
   readonly collectionId: string;
   readonly backend: string;
   readonly source: RouteSource;
+  /** The layer of the placement for this key, when one is set. */
+  readonly origin?: PlacementOrigin;
+  /** The backend the config places this key on, when it places it. */
+  readonly configured?: string;
 };
+
+/** What changed in the collection table; see `onRoutingChange`. */
+export type RoutingChange = {
+  /** The collection key, or the placement key as it was set. */
+  readonly key: string;
+  readonly reason: "placement" | "learned" | "corrected" | "forgotten";
+};
+
+export type RoutingChangeListener = (change: RoutingChange) => void;
 
 /** A backend's own report of whether it can be reached; see `IRoutableBackend.health`. */
 export type BackendHealth = "up" | "down";
@@ -96,6 +112,10 @@ export type RouterTableSnapshot = {
 /** Where the router reports what it handled instead of throwing. */
 export type RouterDiagnostic = (message: string, detail?: unknown) => void;
 
+export const warnDiagnostic: RouterDiagnostic = (message, detail) => {
+  console.warn(`[reactor-router] ${message}`, detail);
+};
+
 export const DEFAULT_MISROUTE_ATTEMPTS = 3;
 export const DEFAULT_DOCUMENT_CACHE_SIZE = 10_000;
 export const DEFAULT_JOB_CACHE_SIZE = 2_000;
@@ -106,7 +126,10 @@ export const DEFAULT_PROVISIONAL_ROUTE_MS = 30_000;
 
 /** Map keys are a collection id or a bare drive id (every branch). */
 export type RoutingOptions = {
-  /** Placement overrides: collection or drive id -> backend name. Advisory. */
+  /**
+   * Placements from config: collection or drive id -> backend name. Advisory:
+   * a refusal corrects them. `setPlacement` layers runtime placements above.
+   */
   readonly collections?: Readonly<Record<string, string>>;
   readonly requirements?: Readonly<Record<string, CollectionRequirementsInput>>;
   readonly defaultRequirements?: CollectionRequirementsInput;
