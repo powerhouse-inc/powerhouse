@@ -290,7 +290,9 @@ import {
 import {
   clientKindFor,
   loadOAuthApps,
+  grantedScopes,
   OAUTH_APP,
+  OAUTH_GRANTED_SCOPES,
   OAUTH_SCOPES,
   scopesOverride,
   type OAuthAppRegistry,
@@ -3465,6 +3467,7 @@ export class WorkflowRuntimeService {
       [OAUTH_CLIENT_ID]: ownClientId,
       [OAUTH_APP]: appId,
       [OAUTH_SCOPES]: _scopes,
+      [OAUTH_GRANTED_SCOPES]: _granted,
       ...props
     } = (state.config ?? {}) as Record<string, unknown>;
     const scopes = scopesOverride(
@@ -3632,6 +3635,17 @@ export class WorkflowRuntimeService {
             id: existing?.id ?? generateId(),
             name: OAUTH_TOKEN,
             ref,
+          }),
+        ]);
+      }
+      // What this sign-in covers, so an app asking for more scopes later
+      // can tell the token does not reach them and ask for a new sign-in.
+      const granted = grantedScopes(tokens.scope, config);
+      if (granted) {
+        await this.host.reactorClient.execute(document.header.id, "main", [
+          connectionActions.setConfigValue({
+            name: OAUTH_GRANTED_SCOPES,
+            value: granted,
           }),
         ]);
       }

@@ -49,7 +49,9 @@ export type {
 export {
   clientKindFor,
   loadOAuthApps,
+  grantedScopes,
   OAUTH_APP,
+  OAUTH_GRANTED_SCOPES,
   OAUTH_SCOPES,
   parseClientFile,
   scopesOverride,

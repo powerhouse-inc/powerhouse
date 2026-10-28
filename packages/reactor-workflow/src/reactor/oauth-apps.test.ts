@@ -5,6 +5,7 @@ import {
   clientSecretLabel,
   loadOAuthApps,
   parseClientFile,
+  grantedScopes,
   scopesOverride,
 } from "./oauth-apps.js";
 
@@ -55,6 +56,12 @@ describe("OAuth2 apps", () => {
     expect(scopesOverride({ oauth_scopes: ["a", " b "] })).toEqual(["a", "b"]);
     expect(scopesOverride({ oauth_scopes: "a  b" })).toEqual(["a", "b"]);
     expect(scopesOverride({ oauth_scopes: "" })).toBeUndefined();
+    // What a sign-in covers: the token's scope, else what was asked for
+    expect(
+      grantedScopes("openid https://x/email", { oauth_scopes: ["a"] }),
+    ).toEqual(["openid", "https://x/email"]);
+    expect(grantedScopes(undefined, { oauth_scopes: ["a"] })).toEqual(["a"]);
+    expect(grantedScopes("", {})).toBeUndefined();
     expect(scopesOverride({})).toBeUndefined();
   });
 

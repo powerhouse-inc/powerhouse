@@ -65,6 +65,22 @@ export function clientKindFor(redirectUri: string): OAuthClientKind {
   return LOOPBACK.has(host) ? "desktop" : "web";
 }
 
+/**
+ * Config key the runtime writes after a sign-in: the scopes the provider
+ * granted (its token response's `scope`, else the ones asked for). A
+ * connection whose `oauth_scopes` reach beyond them needs a new sign-in.
+ */
+export const OAUTH_GRANTED_SCOPES = "oauth_granted_scopes";
+
+/** What a sign-in was granted: the token's own `scope`, else what the connection asked for. */
+export function grantedScopes(
+  tokenScope: string | undefined,
+  config: Record<string, unknown>,
+): string[] | undefined {
+  const granted = (tokenScope ?? "").split(/[\s,]+/).filter(Boolean);
+  return granted.length > 0 ? granted : scopesOverride(config);
+}
+
 /** The scopes a connection asks for instead of the piece's, or undefined to keep the piece's. */
 export function scopesOverride(
   config: Record<string, unknown>,

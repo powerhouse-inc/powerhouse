@@ -579,6 +579,11 @@ module.exports = { app };
       // The token remembers its client, and a refresh uses it: the
       // connection itself holds no client id.
       const document = store.documents.get(id)!;
+      // What the sign-in covers: the provider names no scope, so what was asked
+      expect(
+        (document.state.global.config as Record<string, unknown>)
+          .oauth_granted_scopes,
+      ).toEqual(["read"]);
       const tokenRef = document.state.global.secretRefs.find(
         (ref) => ref.name === OAUTH_TOKEN,
       )!.ref;
