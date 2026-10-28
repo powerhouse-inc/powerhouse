@@ -242,6 +242,20 @@ describe.each([
     ).toEqual([{ protocol: "base-reducer", version: 3, documentType: LAZY }]);
   });
 
+  it("stores and lists a creation whose model id is several KB", async () => {
+    const model = `test/${Array.from({ length: 200 }, () => generateId()).join("")}`;
+    expect(model.length).toBeGreaterThan(4000);
+    await createModelAt({ "base-reducer": 2 }, model);
+
+    const stored = await storedProtocolVersions(baseDb, schema);
+    expect(stored.map(({ model, versions }) => ({ model, versions }))).toEqual([
+      { model, versions: { "base-reducer": 2 } },
+    ]);
+    expect(
+      await countDocumentsCreatedWith(baseDb, schema, [stored[0].hash]),
+    ).toBe(1);
+  });
+
   it("passes an empty store", async () => {
     expect(await storedProtocolVersions(baseDb, schema)).toEqual([]);
     await expect(

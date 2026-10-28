@@ -15,7 +15,7 @@ const created = sql.raw(
   `scope = 'document' and "index" = 0 and (action->'input'->'protocolVersions') is not null and action->>'type' <> 'PURGE_DOCUMENT'`,
 );
 const key = sql.raw(
-  `(md5((action->'input'->'protocolVersions')::text) || coalesce(action->'input'->>'model', ''))`,
+  `md5((action->'input'->'protocolVersions')::text || coalesce(action->'input'->>'model', ''))`,
 );
 
 /** Distinct creation (model, protocolVersions) pairs, one index probe per pair. */
