@@ -546,6 +546,29 @@ export class TriggerSupervisor {
    * before (only an ENABLED row is ever parked); a park as new stands. The
    * next upsert of the same binding then arms rather than skipping as
    * unchanged, and a retry held back by the park is due now. */
+  /**
+   * Makes an armed trigger due now and runs the due check at once, so a
+   * schedule fires and a poll polls without waiting for its interval ("sync
+   * now"). The next one follows the interval from there. False when the
+   * workflow has no armed trigger (disabled, parked, erroring, unknown).
+   */
+  async pollNow(workflowId: string): Promise<boolean> {
+    if (this.stopped) return false;
+    const store = await this.store();
+    if (!store) return false;
+    const row = await store.getTriggerState(workflowId);
+    if (!row || row.status !== "ENABLED") return false;
+    await store.upsertTriggerState({
+      ...row,
+      next_poll_at: this.now().toISOString(),
+    });
+    this.tick().catch((error: unknown) => {
+      if (isShutdownRefusal(error)) return;
+      logger.error("Trigger tick after poll-now failed: @error", error);
+    });
+    return true;
+  }
+
   unpark(workflowId: string, publishedVersion: number): Promise<void> {
     this.enabledOk.delete(workflowId);
     const retry = this.enableRetries.get(workflowId);

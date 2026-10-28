@@ -2499,6 +2499,17 @@ export class WorkflowRuntimeService {
   }
 
   /**
+   * Runs a workflow's trigger now, as its schedule or poll would (a sync
+   * now): a schedule fires the workflow, a polling trigger polls its source.
+   * Never a backfill's pace. False when it has no armed trigger.
+   */
+  async pollNow(workflowId: string, ctx?: WorkflowCaller): Promise<boolean> {
+    if (this.closed) return false;
+    await this.assertCanReadWorkflow(workflowId, ctx, undefined);
+    return this.supervisor().pollNow(workflowId);
+  }
+
+  /**
    * How one workflow's trigger stands, for host-side code that keeps
    * workflows running (a processor reconciling the workflows it built): the
    * trigger row, and the park that holds it unarmed. Not caller-filtered:

@@ -453,6 +453,12 @@ export const schema: DocumentNode = gql`
     """
     fire(workflowId: String!, payload: Unknown): WorkflowRunPayload!
     """
+    Runs the workflow's trigger now, as its schedule or poll would: a
+    schedule fires the workflow, a polling trigger polls its source ("sync
+    now"). False when it has no armed trigger (disabled, parked, erroring).
+    """
+    pollNow(workflowId: String!): Boolean!
+    """
     Samples the draft trigger and saves it as the trigger's last test. A piece
     trigger runs its test hook (no cursor changes). Of the core piece's
     triggers, manual takes payload, schedule samples a fire now, and webhook

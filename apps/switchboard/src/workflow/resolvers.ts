@@ -495,6 +495,8 @@ export const getResolvers = (
     WorkflowRuntimeMutations: {
       fire: (_parent: unknown, args: FireArgs, ctx: Context) =>
         runtime.fire(args.workflowId, args.payload, "manual", undefined, ctx),
+      pollNow: (_parent: unknown, args: { workflowId: string }, ctx: Context) =>
+        runtime.pollNow(args.workflowId, ctx),
       testTrigger: (
         _parent: unknown,
         args: {
