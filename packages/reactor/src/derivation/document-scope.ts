@@ -18,6 +18,7 @@ import {
   PURGE_DOCUMENT,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
+import type { IProtocolGate } from "../protocol/gate.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   DocumentNotFoundError,
@@ -202,6 +203,7 @@ export function applyTailPendingUpgrades(
 export async function readDocumentScope(
   operationStore: IOperationStore,
   registry: IDocumentModelRegistry,
+  gate: IProtocolGate | undefined,
   documentId: string,
   branch: string,
   documentScopeBound: number | undefined,
@@ -246,6 +248,7 @@ export async function readDocumentScope(
   }
 
   document = documentFromCreation(documentCreateAction);
+  gate?.assertRunnable(documentId, document.header.protocolVersions);
   lastDocumentScopeOperation = createOp;
 
   let docModule = registry.getModule(

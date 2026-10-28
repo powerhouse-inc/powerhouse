@@ -169,6 +169,7 @@ import type {
   IReactor,
   ReactorFeatures,
 } from "./types.js";
+import { createProtocolGate } from "../protocol/gate.js";
 
 /**
  * Dependencies provided to read-model factories registered via
@@ -951,6 +952,11 @@ export class ReactorBuilder {
     this.moduleOnlyModelKeys = resolvedSources.moduleOnlyKeys;
 
     const documentModelRegistry = new DocumentModelRegistry();
+    const protocolGate = createProtocolGate(
+      this.executorConfig.protocolSupport ?? {},
+      documentModelRegistry,
+      this.logger,
+    );
     if (this.upgradeManifests.length > 0) {
       const results = documentModelRegistry.registerUpgradeManifests(
         ...this.upgradeManifests,
@@ -1040,6 +1046,7 @@ export class ReactorBuilder {
       maxDocuments: this.writeCacheConfig?.maxDocuments ?? 100,
       ringBufferSize: this.writeCacheConfig?.ringBufferSize ?? 10,
       keyframeInterval: this.writeCacheConfig?.keyframeInterval ?? 10,
+      gate: protocolGate,
     };
 
     const writeCache = new KyselyWriteCache(
@@ -1400,6 +1407,7 @@ export class ReactorBuilder {
       catchUp,
       [unsubscribeMarkerEviction],
       [() => processorManager.shutdown()],
+      protocolGate,
     );
     const createModelResolver = this.modelResolver;
     reactor.setCreateProtocol(
@@ -1495,6 +1503,7 @@ export class ReactorBuilder {
       eventBus,
       documentModelRegistry,
       featureFlags,
+      protocolSupport: this.executorConfig.protocolSupport ?? {},
       queue,
       jobTracker,
       executorManager,
@@ -1712,6 +1721,7 @@ export class ReactorBuilder {
       postReadyKinds: config.postReadyKinds,
       indexing,
       catchUp: this.catchUpConfig,
+      protocolSupport: this.executorConfig.protocolSupport,
       factory,
       logger: this.logger!,
       hostBus: eventBus,

@@ -24,8 +24,8 @@ import {
   mentionedGroupIds,
   normalizeDocumentModelVersion,
   referencedGroupIds,
-  requireStateReducer,
 } from "@powerhousedao/shared/document-model";
+import { stateReducerOrRefusal } from "../protocol/gate.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type {
   DecisionModel,
@@ -196,10 +196,12 @@ function modelStateReducers(
     (document.state as { document?: { version?: number } }).document?.version,
   );
   const module = registry.getModule(document.header.documentType, version);
-  const reducer = requireStateReducer(
+  const reducer = stateReducerOrRefusal(
     module.reducer,
+    document.header.id,
     document.header.documentType,
     version,
+    document.header.protocolVersions,
   );
   return () => reducer;
 }

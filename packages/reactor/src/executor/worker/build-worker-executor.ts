@@ -34,6 +34,7 @@ import type {
   ModelManifestEntry,
 } from "./protocol.js";
 import { defaultLoadFactory } from "./load-spec.js";
+import { createProtocolGate } from "../../protocol/gate.js";
 
 /**
  * In-worker capture of the JOB_WRITE_READY event emitted by the executor.
@@ -166,6 +167,13 @@ export async function buildWorkerExecutor(
     maxDocuments: 100,
     ringBufferSize: 10,
     keyframeInterval: 10,
+    gate:
+      options.executorConfig?.protocolSupport &&
+      createProtocolGate(
+        options.executorConfig.protocolSupport,
+        registry,
+        logger,
+      ),
   };
   const writeCache = new KyselyWriteCache(
     keyframeStore,

@@ -80,6 +80,7 @@ import {
   RetractionRefusedError,
   SubmittedUndoRefusedError,
   type RetractionRefusalReason,
+  UnsupportedProtocolVersionError,
 } from "../shared/errors.js";
 import { findReferencing } from "../storage/find-referencing.js";
 import type { KyselyDocumentPurger } from "../storage/kysely/document-purger.js";
@@ -110,6 +111,7 @@ import { staticReadSet } from "../decision/build-decision-model.js";
 import { evaluateByPosition } from "../decision/evaluation.js";
 import { retractionSkip } from "../decision/merged-order.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
+import { createProtocolGate, type IProtocolGate } from "../protocol/gate.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
 import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
@@ -491,6 +493,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private decisionModel: RegisteredDecisionModel;
   private signatureAdmission: SignatureAdmission;
   private documentActionHandler: DocumentActionHandler;
+  private protocolGate: IProtocolGate;
   private executionScope: IExecutionScope;
   private signer: ISigner;
   private readonly flusher: IStorageFlusher;
@@ -560,13 +563,18 @@ export class SimpleJobExecutor implements IJobExecutor {
         ),
       },
     );
+    this.protocolGate = createProtocolGate(
+      this.config.protocolSupport,
+      registry,
+      logger,
+    );
     this.documentActionHandler = new DocumentActionHandler(
       registry,
       logger,
       driveContainerTypes,
       this.featureFlags,
       this.decisionModel,
-      this.config.protocolSupport,
+      this.protocolGate,
     );
     this.executionScope =
       executionScope ??
@@ -1566,10 +1574,13 @@ export class SimpleJobExecutor implements IJobExecutor {
     stores: ExecutionStores,
     signal?: AbortSignal,
   ): Promise<StoredProtocol> {
-    let versions;
+    let stored: {
+      documentType: string;
+      protocolVersions?: { readonly [protocol: string]: number };
+    };
     try {
       // Read the way admission reads: with decisions on, execution bypasses the meta cache.
-      versions =
+      stored =
         this.featureFlags.documentDecisions && job.kind !== "load"
           ? (
               await stores.writeCache.getState(
@@ -1579,15 +1590,16 @@ export class SimpleJobExecutor implements IJobExecutor {
                 undefined,
                 signal,
               )
-            ).header.protocolVersions
-          : (
-              await stores.documentMetaCache.getDocumentMeta(
-                job.documentId,
-                job.branch,
-                signal,
-              )
-            ).protocolVersions;
+            ).header
+          : await stores.documentMetaCache.getDocumentMeta(
+              job.documentId,
+              job.branch,
+              signal,
+            );
     } catch (error) {
+      if (UnsupportedProtocolVersionError.isError(error)) {
+        return { refusal: error };
+      }
       // Not stored yet, or unreadable: the job's own reads decide, unless the
       // stored creation runs the rule.
       if (DocumentNotFoundError.isError(error)) {
@@ -1601,11 +1613,14 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
       return unreadable ? { unreadable } : {};
     }
-    const refusal = this.documentActionHandler.unsupportedProtocol(
+    const refusal = this.protocolGate.refusal(
       job.documentId,
-      versions,
+      stored.protocolVersions,
+      stored.documentType,
     );
-    return refusal ? { refusal } : { caps: capabilitiesFor(versions) };
+    return refusal
+      ? { refusal }
+      : { caps: capabilitiesFor(stored.protocolVersions) };
   }
 
   /**
@@ -2248,6 +2263,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           deriveScope = await scopeDerivation(
             stores.operationStore,
             this.registry,
+            this.protocolGate,
             job.documentId,
             job.branch,
             signal,

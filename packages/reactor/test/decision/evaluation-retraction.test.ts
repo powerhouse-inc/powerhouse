@@ -1,5 +1,6 @@
 import type {
   Action,
+  DocumentModelModule,
   Grant,
   Operation,
   PHDocument,
@@ -270,6 +271,21 @@ describe("evaluateByPosition without the evaluated document's state reducer", ()
     await expect(
       evaluate(BASE_REDUCER_3_VERSIONS, new DocumentModelRegistry()),
     ).rejects.toThrow(ModuleNotFoundError);
+  });
+
+  it("throws on base-reducer 3 when the reducer wraps no state reducer", async () => {
+    const registry = new DocumentModelRegistry();
+    registry.registerModules({
+      version: 1,
+      reducer: (document: PHDocument) => document,
+      actions: {},
+      utils: {},
+      documentModel: { global: { id: "t" }, local: {} },
+    } as unknown as DocumentModelModule);
+
+    await expect(evaluate(BASE_REDUCER_3_VERSIONS, registry)).rejects.toThrow(
+      "requires base-reducer 3, which this reactor cannot run for t",
+    );
   });
 
   it("applies nothing on base-reducer 2, as before", async () => {

@@ -147,15 +147,25 @@ export class UnsupportedProtocolVersionError extends Error {
   public readonly documentId: string;
   public readonly protocol: string;
   public readonly version: number;
+  /** Set when the reactor runs the version, but not for this document type. */
+  public readonly documentType?: string;
 
-  constructor(documentId: string, protocol: string, version: number) {
+  constructor(
+    documentId: string,
+    protocol: string,
+    version: number,
+    documentType?: string,
+  ) {
     super(
-      `Document ${documentId} requires ${protocol} ${version}, which this reactor does not support`,
+      documentType === undefined
+        ? `Document ${documentId} requires ${protocol} ${version}, which this reactor does not support`
+        : `Document ${documentId} requires ${protocol} ${version}, which this reactor cannot run for ${documentType}`,
     );
     this.name = "UnsupportedProtocolVersionError";
     this.documentId = documentId;
     this.protocol = protocol;
     this.version = version;
+    this.documentType = documentType;
 
     Error.captureStackTrace(this, UnsupportedProtocolVersionError);
   }

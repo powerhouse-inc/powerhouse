@@ -150,6 +150,7 @@ export async function assertOneRuleAgreement(
     (await scopeDerivation(
       module.operationStore,
       versioned.registry,
+      undefined,
       documentId,
       branch,
     ));

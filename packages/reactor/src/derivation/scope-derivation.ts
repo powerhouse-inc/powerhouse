@@ -1,5 +1,6 @@
 import type { DeriveScope } from "@powerhousedao/shared/document-model";
 import { deriveScopeVersioned } from "@powerhousedao/shared/document-model";
+import type { IProtocolGate } from "../protocol/gate.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type { IOperationStore } from "../storage/interfaces.js";
 import { extractModuleVersion, readDocumentScope } from "./document-scope.js";
@@ -15,6 +16,7 @@ import { scopeVersions } from "./scope-versions.js";
 export async function scopeDerivation(
   operationStore: IOperationStore,
   registry: IDocumentModelRegistry,
+  gate: IProtocolGate | undefined,
   documentId: string,
   branch: string,
   signal?: AbortSignal,
@@ -22,6 +24,7 @@ export async function scopeDerivation(
   const read = await readDocumentScope(
     operationStore,
     registry,
+    gate,
     documentId,
     branch,
     undefined,

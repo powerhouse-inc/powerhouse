@@ -26,6 +26,7 @@ import type {
   ReadModelIndexingStage,
   ReadModelStage,
 } from "../events/types.js";
+import type { ProtocolSupport } from "../executor/types.js";
 import type { ReadModelIndexingConfig } from "../read-models/base-read-model.js";
 import type { ConsistencyCoordinate, JobMeta } from "../shared/types.js";
 
@@ -75,6 +76,8 @@ export type ProjectionInitMessage = {
   indexing: ReadModelIndexingConfig;
   /** The worker sweeps its own read models on the host's schedule. */
   catchUp: CatchUpConfig;
+  /** What the host runs, so a read model skips a document stored outside it. */
+  protocolSupport?: ProtocolSupport;
 };
 
 /**

@@ -17,7 +17,6 @@ import {
   tailAppliesIncrementally,
   isDenied,
   PURGE_DOCUMENT,
-  requireStateReducer,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
@@ -33,6 +32,8 @@ import {
   type PendingUpgrade,
   type ValidatedUpgrade,
 } from "../derivation/index.js";
+import { stateReducerOrRefusal, type IProtocolGate } from "../protocol/gate.js";
+import { UnsupportedProtocolVersionError } from "../shared/errors.js";
 import { findReferencing } from "../storage/find-referencing.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
@@ -105,6 +106,15 @@ function derivesByRuleOrUnknown(
   return derivesByRule(capabilitiesFor(header.protocolVersions), scope);
 }
 
+/** Wraps a rebuild failure with the document id; a protocol refusal stays typed. */
+function rebuildFailure(documentId: string, err: unknown): Error {
+  if (UnsupportedProtocolVersionError.isError(err)) return err;
+  return new Error(
+    `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
+    { cause: err },
+  );
+}
+
 /**
  * In-memory write cache with keyframe persistence for PHDocuments.
  *
@@ -157,7 +167,8 @@ export class KyselyWriteCache implements IWriteCache {
   private keyframeStore: IKeyframeStore;
   private operationStore: IOperationStore;
   private registry: IDocumentModelRegistry;
-  private config: Required<WriteCacheConfig>;
+  private config: Required<Omit<WriteCacheConfig, "gate">>;
+  private gate: IProtocolGate | undefined;
   private reads = new Map<string, Set<PendingRead>>();
   private fullReplays = new Map<string, FullReplayMark[]>();
 
@@ -175,8 +186,18 @@ export class KyselyWriteCache implements IWriteCache {
       ringBufferSize: config.ringBufferSize,
       keyframeInterval: config.keyframeInterval,
     };
+    this.gate = config.gate;
     this.streams = new Map();
     this.lruTracker = new LRUTracker<string>();
+  }
+
+  /**
+   * Refuses a document stored outside the supported versions by name, so read
+   * paths can tell it from a failed rebuild. Protocol-only: the hot path does
+   * no registry work, and derivation refuses an unrunnable model typed.
+   */
+  private assertSupported(documentId: string, document: PHDocument): void {
+    this.gate?.assertRunnable(documentId, document.header.protocolVersions);
   }
 
   withScopedStores(
@@ -187,7 +208,7 @@ export class KyselyWriteCache implements IWriteCache {
       keyframeStore,
       operationStore,
       this.registry,
-      this.config,
+      { ...this.config, gate: this.gate },
     );
     scoped.streams = this.streams;
     scoped.lruTracker = this.lruTracker;
@@ -290,6 +311,7 @@ export class KyselyWriteCache implements IWriteCache {
         // Only the topmost snapshot can be the head, and only if it was stored
         // as one: anything above it proves the stream has grown since.
         if (newest?.position === SnapshotPosition.Head) {
+          this.assertSupported(documentId, newest.document);
           this.lruTracker.touch(streamKey);
           return copyDocument(newest.document);
         }
@@ -323,6 +345,7 @@ export class KyselyWriteCache implements IWriteCache {
           (s) => s.revision === targetRevision,
         );
         if (exactMatch) {
+          this.assertSupported(documentId, exactMatch.document);
           this.lruTracker.touch(streamKey);
           return copyDocument(exactMatch.document);
         }
@@ -761,6 +784,7 @@ export class KyselyWriteCache implements IWriteCache {
     let lastDocumentScopeOperation: Operation | undefined;
 
     if (keyframe) {
+      this.assertSupported(documentId, keyframe.document);
       document = keyframe.document;
       startRevision = keyframe.revision;
       documentType = keyframe.document.header.documentType;
@@ -852,6 +876,7 @@ export class KyselyWriteCache implements IWriteCache {
       const read = await readDocumentScope(
         this.operationStore,
         this.registry,
+        this.gate,
         documentId,
         branch,
         documentScopeBound,
@@ -984,10 +1009,7 @@ export class KyselyWriteCache implements IWriteCache {
           );
         }
       } catch (err) {
-        throw new Error(
-          `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
-          { cause: err },
-        );
+        throw rebuildFailure(documentId, err);
       }
     } else {
       let cursor: string | undefined = undefined;
@@ -1075,10 +1097,7 @@ export class KyselyWriteCache implements IWriteCache {
           }
         } catch (err) {
           // Wrap errors with context to include document ID for debugging
-          throw new Error(
-            `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
-            { cause: err },
-          );
+          throw rebuildFailure(documentId, err);
         }
       } while (hasMorePages);
     }
@@ -1257,6 +1276,7 @@ export class KyselyWriteCache implements IWriteCache {
     targetRevision: number | undefined,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    this.assertSupported(documentId, baseDocument);
     const documentType = baseDocument.header.documentType;
     const docScopeNextIndex = baseDocument.header.revision["document"] ?? 0;
 
@@ -1302,10 +1322,12 @@ export class KyselyWriteCache implements IWriteCache {
 
     try {
       if (derivesByRuleOrUnknown(document.header, scope)) {
-        const stateReducer = requireStateReducer(
+        const stateReducer = stateReducerOrRefusal(
           module.reducer,
+          documentId,
           documentType,
           extractModuleVersion(baseDocument),
+          document.header.protocolVersions,
         );
         const rows = await this.readRows(
           documentId,
@@ -1390,10 +1412,7 @@ export class KyselyWriteCache implements IWriteCache {
       }
     } catch (err) {
       // Wrap errors with context to include document ID for debugging
-      throw new Error(
-        `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
-        { cause: err },
-      );
+      throw rebuildFailure(documentId, err);
     }
 
     if (needsFullReplay) {

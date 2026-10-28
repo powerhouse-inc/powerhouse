@@ -16,6 +16,7 @@ import {
   UndoTargetsCache,
   type DerivedScope,
 } from "../derivation/index.js";
+import type { IProtocolGate } from "../protocol/gate.js";
 import type { CatchUpScheduler } from "../catch-up/scheduler.js";
 import type { CreateVersionSelector } from "./types.js";
 import {
@@ -122,6 +123,8 @@ export class Reactor implements IReactor {
     private readonly disposers: Unsubscribe[] = [],
     // Run last on kill(), once nothing routes to what they close.
     private readonly closers: Array<() => Promise<void>> = [],
+    // Undo resolution derives the scope; the gate refuses an unrunnable document.
+    private readonly protocolGate?: IProtocolGate,
   ) {
     this.catchUp = catchUp;
     this.logger = logger;
@@ -482,6 +485,7 @@ export class Reactor implements IReactor {
       scopeDerivation(
         this.operationStore,
         this.documentModelRegistry,
+        this.protocolGate,
         documentId,
         branch,
         signal,
