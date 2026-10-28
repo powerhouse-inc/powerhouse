@@ -21,6 +21,18 @@ import {
  * `reactor.drives[].remote.url` and `storage.dataDir` (`$env` only). Their z.input admits tokens, their z.output is the resolved type.
  */
 
+/** A host's `name` keys its run record, `.ph/run/<name>.json`, so it must be
+ * one safe path segment. */
+export const HOST_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+export const HOST_NAME_MAX_LENGTH = 128;
+export const HOST_NAME_MESSAGE =
+  "A host name is used as a file name, so use only letters, digits, '.', '_' and '-', start with a letter or digit, and keep it to 128 characters.";
+export const hostNameSchema = z
+  .string()
+  .min(1)
+  .max(HOST_NAME_MAX_LENGTH, HOST_NAME_MESSAGE)
+  .regex(HOST_NAME_PATTERN, HOST_NAME_MESSAGE);
+
 export const profileSchema = z.strictObject({
   appId: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
@@ -234,7 +246,7 @@ function buildHostSchemas(tokenField: FieldWrappers) {
   const childrenSchema = z.record(z.string(), childWrapperSchema);
 
   const reactorHostSchema = z.strictObject({
-    name: z.string().min(1),
+    name: hostNameSchema,
     runner: runnerBaseSchema,
     config: z.looseObject({}).optional(),
     profile: profileSchema.optional(),
@@ -242,7 +254,7 @@ function buildHostSchemas(tokenField: FieldWrappers) {
   });
 
   const compoundHostSchema = z.strictObject({
-    name: z.string().min(1),
+    name: hostNameSchema,
     runner: runnerBaseSchema,
     children: childrenSchema,
     config: z.looseObject({}).optional(),
