@@ -181,6 +181,46 @@ provenance before running anything:
 ph run switchboard --explain drives
 ```
 
+### Linking to a switchboard: drive addresses and placement
+
+A `remote` backend links a host to a switchboard by the address of one of its
+drives, `<switchboard>/d/<slug>`, never by its GraphQL endpoint. The address
+names the switchboard and the drive, and sync needs both. Read it from the
+switchboard's outputs:
+
+```js
+import { outputs as switchboard } from "../switchboard/outputs.js";
+
+reactor: {
+  backends: {
+    main: { kind: "worker" },
+    // or { $output: { host: "switchboard", path: ["drives", "b", "url"] } }
+    sb: { kind: "remote", remote: { url: switchboard.drives.b.url } },
+  },
+  // More drives on the same switchboard are listed here, not as a second
+  // backend: one switchboard is one remote backend.
+  drives: [{ slug: "c", remote: { url: switchboard.drives.c.url } }],
+  // Where each drive opens, by its declared slug.
+  placement: { drives: { b: "sb", c: "main" } },
+},
+```
+
+`placement.drives` maps a drive's declared slug to a backend:
+
+- the drive's own remote backend opens it on the switchboard, with no copy in
+  this reactor;
+- a local backend (`worker`, `in-process`) keeps a synced copy and opens it
+  locally;
+- a drive that is not listed keeps a synced copy, as before.
+
+The map is checked when the host loads. Connect does not apply it yet.
+
+Validation refuses a remote link that is not a drive address (an
+`endpoints.graphql` token or a `/graphql` URL fails with an error naming the
+`drives.<slug>.url` form), two remote backends on the same switchboard, a
+placement that names a backend that does not exist, and a drive placed on a
+switchboard it is not on.
+
 ## Switchboard settings (`config.switchboard`)
 
 A switchboard host sets the rest of its server config, such as auth,

@@ -1,5 +1,29 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — host config: a remote link is a switchboard drive address
+
+### ⚡ `remote.url` names a drive, and `reactor.placement.drives` says where each drive opens
+
+A `remote` backend in a host file now links to a switchboard by the address of one of its drives, `<switchboard>/d/<slug>`, for every host kind: Connect, the assistant agent and the reactor monitor. A GraphQL endpoint names the switchboard but not a drive, and sync needs the drive. An `endpoints.graphql` output token or a `/graphql` URL in `remote.url` now fails validation with an error that names the replacement:
+
+```js
+// before
+sb: { kind: "remote", remote: { url: switchboard.endpoints.graphql } },
+// after
+sb: { kind: "remote", remote: { url: switchboard.drives.powerhouse.url } },
+// or { $output: { host: "switchboard", path: ["drives", "powerhouse", "url"] } }
+```
+
+The generated `assistant` and `cli` hosts use the new form. A project scaffolded earlier keeps its old host files (generation never overwrites them), so edit `hosts/assistant/host.js` and `hosts/cli/host.js` as above. One switchboard is one remote backend: two backends whose drive addresses share a switchboard are refused; list the second drive under `reactor.drives` instead.
+
+`reactor.placement.drives` maps a declared drive slug to a backend. The drive's own remote backend means "open it on the switchboard, with no copy here"; a local backend means "keep a synced copy"; an unlisted drive keeps a synced copy. The host is refused when a value names no backend or places a drive on a switchboard it is not on. Connect does not apply the map yet.
+
+`switchboardOfDrive(url)` (`@powerhousedao/host-core/schema`, and `@powerhousedao/shared/host-tokens`) splits a drive address into `{ base, graphql, slug }`. The reactor monitor's remote descriptors take a drive address too: the provision form asks for one, `ph host export` imports read `drives.<slug>.url`, and a saved monitoring set whose remote is a GraphQL URL fails with a message naming the drive address to use.
+
+✅ **What to try:** in a project's `hosts/cli/host.js`, set the `sb` backend's `remote.url` to `{ $output: { host: "switchboard", path: ["endpoints", "graphql"] } }` and run `FEATURE_UNIFORM_RUNNERS_ENABLED=true ph host check cli`: it reports that `remote.url` must be a switchboard drive address and names `switchboard.drives.<slug>.url`.
+
+---
+
 ## 🚀 **Unreleased** — UUIDv7 action ids and same-millisecond auth bursts
 
 ### ⚡ Action ids sort in creation order; auth bursts are admitted
