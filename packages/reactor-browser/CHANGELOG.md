@@ -1,3 +1,34 @@
+## 6.2.3-dev.79 (2026-10-28)
+
+### 🚀 Features
+
+- ⚠️  **switchboard:** startSwitchboard(config, deps) reads only its config ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+- **ph-cli,codegen:** ph mcp, a stdio launcher for reactor-mcp that starts vetra on the first tool call, and generated mcp configs that run it ([c64883e693](https://github.com/powerhouse-inc/powerhouse/commit/c64883e693))
+- **codegen,vetra,ph-cli,connect:** project agent guidance as a managed AGENTS.md block and skills, and eval fixes ([#3303](https://github.com/powerhouse-inc/powerhouse/pull/3303))
+- **reactor-browser:** the light client heads new documents with newDocument and the host's per-type selection ([49a6772cb4](https://github.com/powerhouse-inc/powerhouse/commit/49a6772cb4))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a wrapped new document takes the host's signature policy ([2eda9c8106](https://github.com/powerhouse-inc/powerhouse/commit/2eda9c8106))
+- **codegen,shared,vetra,ph-cli,document-model,reactor,reactor-api:** scaffolds get their dependencies, migration-file works, new documents count 0 per scope, subgraphs filter plain ids, and vetra sets the preview drive's app ([6fe1ead94c](https://github.com/powerhouse-inc/powerhouse/commit/6fe1ead94c))
+- **vetra,document-model,reactor-browser,reactor-mcp:** schemas and api docs say what the code does, and getDocumentModelSchema has a compact form ([ea4f1c1f30](https://github.com/powerhouse-inc/powerhouse/commit/ea4f1c1f30))
+- **reactor-browser:** addDrive takes the default policy only without a full client ([c30b184bb9](https://github.com/powerhouse-inc/powerhouse/commit/c30b184bb9))
+- **reactor-browser:** addDrive takes the default signature policy on a Switchboard without createDefaults ([098c2d089b](https://github.com/powerhouse-inc/powerhouse/commit/098c2d089b))
+- **reactor-browser:** RemoteDocumentController creates on a Switchboard without createDefaults ([1ccb0e1138](https://github.com/powerhouse-inc/powerhouse/commit/1ccb0e1138))
+- **reactor-browser, reactor-drive:** new documents take base-reducer 2 ([c597453995](https://github.com/powerhouse-inc/powerhouse/commit/c597453995))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** startSwitchboard(config, deps) reads only its config  ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+  startSwitchboard(options) is now startSwitchboard(config, deps).
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.78 (2026-10-27)
 
 ### 🚀 Features

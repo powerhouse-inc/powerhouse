@@ -25,8 +25,8 @@ export class AnalyticsSubgraph extends BaseSubgraph {
   analyticsStore: IAnalyticsStore;
   analyticsModel: AnalyticsModel;
 
-  name = "analytics";
-  typeDefs = gql`
+  override name = "analytics";
+  override typeDefs = gql`
     ${typedefs}
   `;
 
@@ -36,7 +36,7 @@ export class AnalyticsSubgraph extends BaseSubgraph {
    * no document to decide on, so only a caller with policy-wide read (anyone
    * under OPEN, an admin otherwise) may read them.
    */
-  resolvers = {
+  override resolvers = {
     ...analyticsResolvers,
     Query: {
       ...analyticsResolvers.Query,

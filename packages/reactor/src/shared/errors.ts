@@ -24,7 +24,7 @@ export class DocumentDeletedError extends Error {
     Error.captureStackTrace(this, DocumentDeletedError);
   }
 
-  static isError(error: unknown): error is DocumentDeletedError {
+  static override isError(error: unknown): error is DocumentDeletedError {
     return Error.isError(error) && error.name === "DocumentDeletedError";
   }
 }
@@ -56,7 +56,7 @@ export class AuthorizationDeniedError extends Error {
     Error.captureStackTrace(this, AuthorizationDeniedError);
   }
 
-  static isError(error: unknown): error is AuthorizationDeniedError {
+  static override isError(error: unknown): error is AuthorizationDeniedError {
     return Error.isError(error) && error.name === "AuthorizationDeniedError";
   }
 }
@@ -92,7 +92,9 @@ export class AuthTimestampNotMonotonicError extends Error {
     Error.captureStackTrace(this, AuthTimestampNotMonotonicError);
   }
 
-  static isError(error: unknown): error is AuthTimestampNotMonotonicError {
+  static override isError(
+    error: unknown,
+  ): error is AuthTimestampNotMonotonicError {
     return (
       Error.isError(error) && error.name === "AuthTimestampNotMonotonicError"
     );
@@ -131,7 +133,9 @@ export class InvalidOperationTimestampError extends Error {
     Error.captureStackTrace(this, InvalidOperationTimestampError);
   }
 
-  static isError(error: unknown): error is InvalidOperationTimestampError {
+  static override isError(
+    error: unknown,
+  ): error is InvalidOperationTimestampError {
     return (
       Error.isError(error) && error.name === "InvalidOperationTimestampError"
     );
@@ -156,7 +160,9 @@ export class UnsupportedProtocolVersionError extends Error {
     Error.captureStackTrace(this, UnsupportedProtocolVersionError);
   }
 
-  static isError(error: unknown): error is UnsupportedProtocolVersionError {
+  static override isError(
+    error: unknown,
+  ): error is UnsupportedProtocolVersionError {
     return (
       Error.isError(error) && error.name === "UnsupportedProtocolVersionError"
     );
@@ -193,7 +199,7 @@ export class ExcessiveReshuffleError extends Error {
     Error.captureStackTrace(this, ExcessiveReshuffleError);
   }
 
-  static isError(error: unknown): error is ExcessiveReshuffleError {
+  static override isError(error: unknown): error is ExcessiveReshuffleError {
     return Error.isError(error) && error.name === "ExcessiveReshuffleError";
   }
 }
@@ -233,7 +239,7 @@ export class InvalidSignatureError extends Error {
     Error.captureStackTrace(this, InvalidSignatureError);
   }
 
-  static isError(error: unknown): error is InvalidSignatureError {
+  static override isError(error: unknown): error is InvalidSignatureError {
     return Error.isError(error) && error.name === "InvalidSignatureError";
   }
 }
@@ -261,7 +267,9 @@ export class UpgradePreconditionFailedError extends Error {
     Error.captureStackTrace(this, UpgradePreconditionFailedError);
   }
 
-  static isError(error: unknown): error is UpgradePreconditionFailedError {
+  static override isError(
+    error: unknown,
+  ): error is UpgradePreconditionFailedError {
     return (
       Error.isError(error) && error.name === "UpgradePreconditionFailedError"
     );
@@ -304,7 +312,7 @@ export class DocumentNotFoundError extends Error {
   }
 
   /** Also true for DocumentPurgedError: only the name crosses the queue. */
-  static isError(error: unknown): error is DocumentNotFoundError {
+  static override isError(error: unknown): error is DocumentNotFoundError {
     return (
       Error.isError(error) &&
       (error.name === "DocumentNotFoundError" ||
@@ -341,7 +349,7 @@ export class DocumentNotDeletedError extends Error {
     Error.captureStackTrace(this, DocumentNotDeletedError);
   }
 
-  static isError(error: unknown): error is DocumentNotDeletedError {
+  static override isError(error: unknown): error is DocumentNotDeletedError {
     return Error.isError(error) && error.name === "DocumentNotDeletedError";
   }
 }
@@ -362,7 +370,7 @@ export class GroupInUseError extends Error {
     Error.captureStackTrace(this, GroupInUseError);
   }
 
-  static isError(error: unknown): error is GroupInUseError {
+  static override isError(error: unknown): error is GroupInUseError {
     return Error.isError(error) && error.name === "GroupInUseError";
   }
 }
@@ -389,7 +397,7 @@ export class PurgeTooLargeError extends Error {
     Error.captureStackTrace(this, PurgeTooLargeError);
   }
 
-  static isError(error: unknown): error is PurgeTooLargeError {
+  static override isError(error: unknown): error is PurgeTooLargeError {
     return Error.isError(error) && error.name === "PurgeTooLargeError";
   }
 }
@@ -410,7 +418,7 @@ export class ReservedActionError extends Error {
     Error.captureStackTrace(this, ReservedActionError);
   }
 
-  static isError(error: unknown): error is ReservedActionError {
+  static override isError(error: unknown): error is ReservedActionError {
     return Error.isError(error) && error.name === "ReservedActionError";
   }
 }
@@ -443,7 +451,9 @@ export class AuthEnforcementDisabledError extends Error {
     Error.captureStackTrace(this, AuthEnforcementDisabledError);
   }
 
-  static isError(error: unknown): error is AuthEnforcementDisabledError {
+  static override isError(
+    error: unknown,
+  ): error is AuthEnforcementDisabledError {
     return (
       Error.isError(error) && error.name === "AuthEnforcementDisabledError"
     );
@@ -475,7 +485,7 @@ export class RelationshipNotFoundError extends Error {
     Error.captureStackTrace(this, RelationshipNotFoundError);
   }
 
-  static isError(error: unknown): error is RelationshipNotFoundError {
+  static override isError(error: unknown): error is RelationshipNotFoundError {
     return Error.isError(error) && error.name === "RelationshipNotFoundError";
   }
 }
@@ -502,7 +512,9 @@ export class UnsupportedStoredProtocolError extends Error {
     Error.captureStackTrace(this, UnsupportedStoredProtocolError);
   }
 
-  static isError(error: unknown): error is UnsupportedStoredProtocolError {
+  static override isError(
+    error: unknown,
+  ): error is UnsupportedStoredProtocolError {
     return (
       Error.isError(error) && error.name === "UnsupportedStoredProtocolError"
     );
@@ -534,7 +546,7 @@ export class BatchJobFailedError extends Error {
     Error.captureStackTrace(this, BatchJobFailedError);
   }
 
-  static isError(error: unknown): error is BatchJobFailedError {
+  static override isError(error: unknown): error is BatchJobFailedError {
     return (
       Error.isError(error) &&
       error.name === "BatchJobFailedError" &&

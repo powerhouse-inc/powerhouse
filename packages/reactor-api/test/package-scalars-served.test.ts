@@ -118,26 +118,26 @@ const LEDGER = stateModel(
 );
 
 class IbanLookup extends BaseSubgraph {
-  name = "iban-lookup";
-  typeDefs = gql`
+  override name = "iban-lookup";
+  override typeDefs = gql`
     scalar Iban
     type Query {
       checkIban(iban: Iban!): Iban!
     }
   `;
-  resolvers = {
+  override resolvers = {
     Query: { checkIban: (_root: unknown, args: { iban: string }) => args.iban },
   };
 }
 
 class UndeclaredIbanLookup extends BaseSubgraph {
-  name = "iban-format";
-  typeDefs = gql`
+  override name = "iban-format";
+  override typeDefs = gql`
     type Query {
       formatIban(iban: Iban!): String!
     }
   `;
-  resolvers = {
+  override resolvers = {
     Query: {
       formatIban: (_root: unknown, args: { iban: string }) =>
         args.iban.replace(/(.{4})/g, "$1 ").trim(),
@@ -522,13 +522,13 @@ describe("a document model named like a registered scalar", () => {
 
 describe("a subgraph's own resolver for a registered scalar", () => {
   class IbanEcho extends BaseSubgraph {
-    name = "iban-echo";
-    typeDefs = gql`
+    override name = "iban-echo";
+    override typeDefs = gql`
       type Query {
         echo(iban: Iban!): Iban!
       }
     `;
-    resolvers = {
+    override resolvers = {
       Iban: new GraphQLScalarType({
         name: "Iban",
         serialize: (value) => `authored:${String(value)}`,
@@ -793,8 +793,8 @@ describe("a registered scalar named like a host subgraph's type", () => {
   });
 
   class HostDrive extends BaseSubgraph {
-    name = "reactor-drive";
-    typeDefs = gql`
+    override name = "reactor-drive";
+    override typeDefs = gql`
       type ReactorDriveNode {
         id: String!
       }
@@ -802,12 +802,12 @@ describe("a registered scalar named like a host subgraph's type", () => {
         driveNode: ReactorDriveNode
       }
     `;
-    resolvers = { Query: { driveNode: () => ({ id: "x" }) } };
+    override resolvers = { Query: { driveNode: () => ({ id: "x" }) } };
   }
 
   class IbanHost extends BaseSubgraph {
-    name = "iban-host";
-    typeDefs = gql`
+    override name = "iban-host";
+    override typeDefs = gql`
       type Iban {
         country: String!
       }
@@ -815,7 +815,7 @@ describe("a registered scalar named like a host subgraph's type", () => {
         ibanHost: Iban
       }
     `;
-    resolvers = { Query: { ibanHost: () => ({ country: "DE" }) } };
+    override resolvers = { Query: { ibanHost: () => ({ country: "DE" }) } };
   }
 
   class FailingIbanHost extends IbanHost {
@@ -825,13 +825,13 @@ describe("a registered scalar named like a host subgraph's type", () => {
   }
 
   class Ping extends BaseSubgraph {
-    name = "ping";
-    typeDefs = gql`
+    override name = "ping";
+    override typeDefs = gql`
       type Query {
         ping: String
       }
     `;
-    resolvers = { Query: { ping: () => "pong" } };
+    override resolvers = { Query: { ping: () => "pong" } };
   }
 
   const DRIVE_NODE = "{ driveNode { id } }";

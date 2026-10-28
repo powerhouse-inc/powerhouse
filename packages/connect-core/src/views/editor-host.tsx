@@ -16,7 +16,7 @@ type BoundaryProps = {
 type BoundaryState = { error?: unknown; keys: readonly unknown[] };
 
 class EditorErrorBoundary extends Component<BoundaryProps, BoundaryState> {
-  state: BoundaryState = { keys: this.props.resetKeys };
+  override state: BoundaryState = { keys: this.props.resetKeys };
 
   static getDerivedStateFromError(error: unknown): Partial<BoundaryState> {
     return { error };
@@ -33,11 +33,11 @@ class EditorErrorBoundary extends Component<BoundaryProps, BoundaryState> {
     return changed ? { error: undefined, keys: props.resetKeys } : null;
   }
 
-  componentDidCatch(error: unknown, info: ErrorInfo) {
+  override componentDidCatch(error: unknown, info: ErrorInfo) {
     console.error(`[connect] ${this.props.label} failed:`, error, info);
   }
 
-  render() {
+  override render() {
     const { error } = this.state;
     if (error === undefined) return this.props.children;
     return (

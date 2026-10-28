@@ -1,3 +1,31 @@
+## 6.2.3-dev.79 (2026-10-28)
+
+### 🚀 Features
+
+- ⚠️  **switchboard:** startSwitchboard(config, deps) reads only its config ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+- **ph-cli,codegen:** ph mcp, a stdio launcher for reactor-mcp that starts vetra on the first tool call, and generated mcp configs that run it ([c64883e693](https://github.com/powerhouse-inc/powerhouse/commit/c64883e693))
+- **codegen,vetra,ph-cli,connect:** project agent guidance as a managed AGENTS.md block and skills, and eval fixes ([#3303](https://github.com/powerhouse-inc/powerhouse/pull/3303))
+
+### 🩹 Fixes
+
+- **shared:** a failed action with a skip keeps the rewind ([8fdf61bba6](https://github.com/powerhouse-inc/powerhouse/commit/8fdf61bba6))
+- **codegen,shared,vetra,ph-cli,document-model,reactor,reactor-api:** scaffolds get their dependencies, migration-file works, new documents count 0 per scope, subgraphs filter plain ids, and vetra sets the preview drive's app ([6fe1ead94c](https://github.com/powerhouse-inc/powerhouse/commit/6fe1ead94c))
+- **vetra,document-model,reactor-browser,reactor-mcp:** schemas and api docs say what the code does, and getDocumentModelSchema has a compact form ([ea4f1c1f30](https://github.com/powerhouse-inc/powerhouse/commit/ea4f1c1f30))
+- **shared:** a failed action with a skip keeps the rewind" ([c8675e0d34](https://github.com/powerhouse-inc/powerhouse/commit/c8675e0d34))
+- **shared:** a failed action with a skip keeps the rewind ([580cb26e45](https://github.com/powerhouse-inc/powerhouse/commit/580cb26e45))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** startSwitchboard(config, deps) reads only its config  ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+  startSwitchboard(options) is now startSwitchboard(config, deps).
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.78 (2026-10-27)
 
 ### 🚀 Features

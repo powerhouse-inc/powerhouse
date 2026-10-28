@@ -182,7 +182,7 @@ describe("the scalar registry", () => {
 });
 
 class LookupSubgraph extends BaseSubgraph {
-  name = "iban-lookup";
+  override name = "iban-lookup";
 }
 
 function packageLoader(

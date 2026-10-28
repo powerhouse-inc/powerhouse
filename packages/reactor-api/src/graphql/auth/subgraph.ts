@@ -29,12 +29,12 @@ export class AuthSubgraph extends BaseSubgraph {
     this.logger.verbose(`constructor()`);
   }
 
-  name = "auth";
+  override name = "auth";
   hasSubscriptions = false;
 
-  typeDefs = gql(schemaSource);
+  override typeDefs = gql(schemaSource);
 
-  resolvers = {
+  override resolvers = {
     Query: {
       documentAccess: async (
         _parent: unknown,
@@ -321,7 +321,7 @@ export class AuthSubgraph extends BaseSubgraph {
     );
   }
 
-  onSetup(): Promise<void> {
+  override onSetup(): Promise<void> {
     this.logger.debug("Setting up AuthSubgraph");
     return Promise.resolve();
   }

@@ -1,3 +1,35 @@
+## 6.2.3-dev.79 (2026-10-28)
+
+### 🚀 Features
+
+- ⚠️  **reactor-api:** take settings from options only, not process.env ([88940626e1](https://github.com/powerhouse-inc/powerhouse/commit/88940626e1))
+- ⚠️  **switchboard:** startSwitchboard(config, deps) reads only its config ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+- **reactor-api:** take typed settings and read env per server, not at import ([4b6672bc4e](https://github.com/powerhouse-inc/powerhouse/commit/4b6672bc4e))
+- **ph-cli,codegen:** ph mcp, a stdio launcher for reactor-mcp that starts vetra on the first tool call, and generated mcp configs that run it ([c64883e693](https://github.com/powerhouse-inc/powerhouse/commit/c64883e693))
+- **codegen,vetra,ph-cli,connect:** project agent guidance as a managed AGENTS.md block and skills, and eval fixes ([#3303](https://github.com/powerhouse-inc/powerhouse/pull/3303))
+- **reactor-api:** createDefaults selects for a document type; create resolvers use newDocument ([b378a40a19](https://github.com/powerhouse-inc/powerhouse/commit/b378a40a19))
+
+### 🩹 Fixes
+
+- **reactor-api:** resolve the renown env in the dev edge ([1aca25a8aa](https://github.com/powerhouse-inc/powerhouse/commit/1aca25a8aa))
+- **switchboard:** config auth keys take effect over the config file ([654f94c546](https://github.com/powerhouse-inc/powerhouse/commit/654f94c546))
+- **reactor-api:** an invalid permission cache TTL or WS recheck interval in env is unset ([f484fd21c5](https://github.com/powerhouse-inc/powerhouse/commit/f484fd21c5))
+- **reactor-api,switchboard:** turn wasm wrapper tier-up off on Node 24 ([#66366](https://github.com/powerhouse-inc/powerhouse/issues/66366))
+- **codegen,shared,vetra,ph-cli,document-model,reactor,reactor-api:** scaffolds get their dependencies, migration-file works, new documents count 0 per scope, subgraphs filter plain ids, and vetra sets the preview drive's app ([6fe1ead94c](https://github.com/powerhouse-inc/powerhouse/commit/6fe1ead94c))
+
+### ⚠️  Breaking Changes
+
+- **reactor-api:** take settings from options only, not process.env  ([88940626e1](https://github.com/powerhouse-inc/powerhouse/commit/88940626e1))
+- **switchboard:** startSwitchboard(config, deps) reads only its config  ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+  startSwitchboard(options) is now startSwitchboard(config, deps).
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.78 (2026-10-27)
 
 ### 🚀 Features
