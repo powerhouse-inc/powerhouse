@@ -186,6 +186,7 @@ describe("Reshuffle Functions", () => {
           testInput.startIndex,
           testInput.operationsA,
           testInput.operationsB,
+          "rank-locale",
         );
 
         expect(result.length).toBe(testInput.expected.length);
@@ -232,6 +233,7 @@ describe("Reshuffle Functions", () => {
         { index: 3, skip: 0 },
         operationsA,
         operationsB,
+        "rank-locale",
       );
 
       expect(result.length).toBe(2);
@@ -278,11 +280,13 @@ describe("Reshuffle Functions", () => {
         { index: 3, skip: 0 },
         operationsA,
         operationsB,
+        "rank-locale",
       );
       const resultBA = reshuffleByTimestamp(
         { index: 3, skip: 0 },
         operationsB,
         operationsA,
+        "rank-locale",
       );
 
       expect(resultAB[0].action.type).toBe(resultBA[0].action.type);
@@ -322,11 +326,13 @@ describe("Reshuffle Functions", () => {
         { index: 10, skip: 1 },
         [localOp],
         [rebroadcastOp],
+        "rank-locale",
       );
       const resultBA = reshuffleByTimestamp(
         { index: 10, skip: 1 },
         [rebroadcastOp],
         [localOp],
+        "rank-locale",
       );
 
       expect(resultAB.map((op) => op.action.id)).toEqual([
@@ -372,6 +378,7 @@ describe("Reshuffle Functions", () => {
         { index: 20, skip: 0 },
         [firstLogical],
         [secondLogical],
+        "rank-locale",
       );
 
       expect(result.map((op) => op.action.id)).toEqual([
@@ -413,6 +420,7 @@ describe("Reshuffle Functions", () => {
         { index: 50, skip: 0 },
         [createDocument],
         [upgradeDocument],
+        "rank-locale",
       );
 
       expect(result.map((op) => op.action.type)).toEqual([
@@ -471,6 +479,7 @@ describe("Reshuffle Functions", () => {
         { index: 3, skip: 0 },
         operationsA,
         operationsB,
+        "rank-locale",
       );
 
       expect(result.length).toBe(3);
@@ -1040,7 +1049,7 @@ describe("Reshuffle Functions", () => {
       );
 
     const order = (ops: Operation[]): string =>
-      reshuffleByTimestamp({ index: 10, skip: 0 }, ops, [])
+      reshuffleByTimestamp({ index: 10, skip: 0 }, ops, [], "rank-locale")
         .map((op) => op.action.id)
         .join(",");
 
@@ -1094,9 +1103,12 @@ describe("Reshuffle Functions", () => {
       ]);
 
       expect(
-        reshuffleByTimestamp({ index: 10, skip: 0 }, ops, []).map(
-          (op) => op.action.type,
-        ),
+        reshuffleByTimestamp(
+          { index: 10, skip: 0 },
+          ops,
+          [],
+          "rank-locale",
+        ).map((op) => op.action.type),
       ).toEqual(["CREATE_DOCUMENT", "UPGRADE_DOCUMENT"]);
     });
   });

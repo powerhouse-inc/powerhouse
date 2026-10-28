@@ -2466,6 +2466,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       { index: nextIndex, skip: retractionSkip(nextIndex, firstRetracted) },
       moving,
       incoming,
+      "rank-locale",
     );
 
     stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
@@ -3073,6 +3074,7 @@ export class SimpleJobExecutor implements IJobExecutor {
               ...operation,
               id: operation.id,
             })),
+            "rank-locale",
           );
 
     // A NOOP is the v2 undo marker, and it is only a marker while its skip is
