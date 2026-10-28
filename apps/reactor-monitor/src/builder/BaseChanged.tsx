@@ -18,9 +18,9 @@ export function isBaseChanged(error: unknown): boolean {
   );
 }
 
-type Outcome =
-  | { kind: "applied"; kept: number; dropped: DroppedSetter[] }
-  | { kind: "discarded" };
+type Preview = { draft: BuilderDraft; dropped: DroppedSetter[] };
+
+type Outcome = { kind: "applied" } | { kind: "discarded" };
 
 /** Offers to carry the draft's changes over to the host's new version. */
 export function BaseChanged({
@@ -38,6 +38,7 @@ export function BaseChanged({
 }) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
+  const [preview, setPreview] = useState<Preview | undefined>();
   const [outcome, setOutcome] = useState<Outcome | undefined>();
 
   const fetchNew = async () => {
@@ -51,13 +52,7 @@ export function BaseChanged({
     setStatus("");
     try {
       const fresh = await fetchNew();
-      const rebased = rebaseDraft(draft, fresh.export, fresh.baseDigest);
-      onDraft(rebased.draft);
-      setOutcome({
-        kind: "applied",
-        kept: rebased.draft.setters.length,
-        dropped: rebased.dropped,
-      });
+      setPreview(rebaseDraft(draft, fresh.export, fresh.baseDigest));
     } catch (error) {
       setStatus(`Couldn't load the new version: ${errorMessage(error)}`);
     }
@@ -91,22 +86,47 @@ export function BaseChanged({
   if (outcome) {
     return (
       <div className="hb-banner hb-rebase" role="alert">
+        <span>
+          {outcome.kind === "discarded"
+            ? "The new version is loaded without your changes."
+            : "Your changes are on the new version now. The checks ran again."}
+        </span>
+        <button className="hb-link" onClick={onClose} type="button">
+          Dismiss
+        </button>
+      </div>
+    );
+  }
+
+  if (preview) {
+    const kept = preview.draft.setters;
+    return (
+      <div className="hb-banner hb-rebase" role="alert">
         <div className="hb-field">
-          {outcome.kind === "discarded" ? (
-            <span>The new version is loaded without your changes.</span>
-          ) : outcome.dropped.length === 0 ? (
-            <span>
-              All your changes now apply to the new version. The checks ran
-              again.
-            </span>
-          ) : (
+          <span className="hb-flabel">Your changes on the new version</span>
+          <span>
+            Nothing is saved until you confirm. Your current draft stays as it
+            is until then.
+          </span>
+          <span>
+            {kept.length === draft.setters.length
+              ? `All ${kept.length} of your changes carry over.`
+              : `${kept.length} of your ${draft.setters.length} changes carry over.`}
+          </span>
+          {kept.length > 0 ? (
+            <ul className="hb-list hb-fpath hb-mono" aria-label="Carried over">
+              {kept.map((setter, index) => (
+                <li key={`${index}\0${setter.path}`}>{setter.path}</li>
+              ))}
+            </ul>
+          ) : null}
+          {preview.dropped.length > 0 ? (
             <>
               <span>
-                {outcome.kept} of your changes apply to the new version. These
-                no longer apply and were left out:
+                These don't apply to the new version and would be lost:
               </span>
-              <ul className="hb-issues">
-                {outcome.dropped.map((setter, index) => (
+              <ul aria-label="Left out" className="hb-issues">
+                {preview.dropped.map((setter, index) => (
                   <li className="hb-issue" key={`${index}\0${setter.path}`}>
                     <span>{setter.reason}</span>
                     <span className="hb-fpath hb-mono">{setter.path}</span>
@@ -114,11 +134,39 @@ export function BaseChanged({
                 ))}
               </ul>
             </>
-          )}
+          ) : null}
+          <div className="hb-opts">
+            <button
+              className="hb-btn hb-btn-primary"
+              onClick={() => {
+                onDraft(preview.draft);
+                setPreview(undefined);
+                setOutcome({ kind: "applied" });
+              }}
+              type="button"
+            >
+              Confirm
+            </button>
+            <button
+              className="hb-btn"
+              onClick={() => setStatus(downloadExport(engine.envelope))}
+              type="button"
+            >
+              Download my old version
+            </button>
+            <button
+              className="hb-btn"
+              onClick={() => {
+                setPreview(undefined);
+                setStatus("");
+              }}
+              type="button"
+            >
+              Cancel
+            </button>
+          </div>
+          {status ? <span role="status">{status}</span> : null}
         </div>
-        <button className="hb-link" onClick={onClose} type="button">
-          Dismiss
-        </button>
       </div>
     );
   }

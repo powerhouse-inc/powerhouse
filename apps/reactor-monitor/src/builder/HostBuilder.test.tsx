@@ -204,11 +204,12 @@ describe("HostBuilder", () => {
       return { view, storage, alert: within(alert), freshDigest };
     }
 
-    it("applies every edit to the new version", async () => {
+    it("previews every edit on the new version and saves it on Confirm", async () => {
       const fresh = applySetters(stack(), [
         { path: "members.switchboard.runner.port", value: 4555 },
       ]).envelope;
       const { view, storage, alert, freshDigest } = await changedHost(fresh);
+      const before = loadDraft(storage);
       fireEvent.click(
         alert.getByRole("button", {
           name: "Apply my changes to the new version",
@@ -216,29 +217,60 @@ describe("HostBuilder", () => {
       );
       await waitFor(() =>
         expect(
-          view.getByText(
-            "All your changes now apply to the new version. The checks ran again.",
-          ),
+          view.getByText("All 2 of your changes carry over."),
         ).toBeTruthy(),
       );
+      expect(loadDraft(storage)).toEqual(before);
+      fireEvent.click(view.getByRole("button", { name: "Confirm" }));
+      expect(
+        view.getByText(
+          "Your changes are on the new version now. The checks ran again.",
+        ),
+      ).toBeTruthy();
       const saved = loadDraft(storage);
       expect(saved?.baseDigest).toBe(freshDigest);
       expect(saved?.setters).toHaveLength(2);
     });
 
-    it("lists the edits that no longer apply and keeps the rest", async () => {
+    it("loses no edit that doesn't apply until Confirm, and none on Cancel", async () => {
+      const created = vi.fn(() => "blob:draft");
+      Object.assign(URL, {
+        createObjectURL: created,
+        revokeObjectURL: vi.fn(),
+      });
       const { view, storage, alert } = await changedHost(withoutUi());
+      const before = loadDraft(storage);
+      const apply = () =>
+        fireEvent.click(
+          alert.getByRole("button", {
+            name: "Apply my changes to the new version",
+          }),
+        );
+      apply();
+      const left = within(await view.findByRole("list", { name: "Left out" }));
+      expect(
+        left.getByText("There is no host.children.ui in this host."),
+      ).toBeTruthy();
+      expect(view.getByText("1 of your 2 changes carry over.")).toBeTruthy();
+      expect(loadDraft(storage)).toEqual(before);
+
       fireEvent.click(
-        alert.getByRole("button", {
-          name: "Apply my changes to the new version",
-        }),
+        view.getByRole("button", { name: "Download my old version" }),
       );
-      await waitFor(() =>
-        expect(
-          view.getByText("There is no host.children.ui in this host."),
-        ).toBeTruthy(),
-      );
-      expect(view.getByText(/1 of your changes apply/)).toBeTruthy();
+      expect(created).toHaveBeenCalledOnce();
+      expect(loadDraft(storage)).toEqual(before);
+
+      fireEvent.click(view.getByRole("button", { name: "Cancel" }));
+      expect(view.queryByRole("list", { name: "Left out" })).toBeNull();
+      expect(loadDraft(storage)).toEqual(before);
+      expect(loadDraft(storage)?.setters).toContainEqual({
+        path: "host.children.ui.runner.dev",
+        value: true,
+      });
+
+      apply();
+      await view.findByRole("list", { name: "Left out" });
+      fireEvent.click(view.getByRole("button", { name: "Confirm" }));
       expect(loadDraft(storage)?.setters).toEqual([
         { path: "host.name", value: "renamed" },
       ]);
