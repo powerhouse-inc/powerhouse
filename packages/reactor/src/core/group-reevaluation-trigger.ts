@@ -1,11 +1,18 @@
 import {
+  capabilitiesFor,
+  deriveOperationId,
+  derivesByRule,
   groupDocumentType,
   groupMembershipActionTypes,
+  retractionTarget,
+  type Action,
+  type Operation,
   type OperationWithContext,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { sql, type Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
+import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { SweepResult } from "../catch-up/types.js";
@@ -20,10 +27,17 @@ import {
 } from "../read-models/base-read-model.js";
 import type { DocumentViewDatabase } from "../read-models/types.js";
 import { ConsistencyTracker } from "../shared/consistency-tracker.js";
+import type { IOperationStore } from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import { buildSingleJobMeta } from "./utils.js";
 
 export const GROUP_REEVALUATION_TRIGGER = "group-reevaluation-trigger";
+
+/** Base-reducer 3 retracts membership with a RETRACT. */
+const membershipChangeTypes: readonly string[] = [
+  ...groupMembershipActionTypes,
+  "RETRACT",
+];
 
 function isMembershipChange({
   operation,
@@ -32,9 +46,7 @@ function isMembershipChange({
   return (
     context.documentType === groupDocumentType &&
     context.scope === "global" &&
-    (groupMembershipActionTypes as readonly string[]).includes(
-      operation.action.type,
-    )
+    membershipChangeTypes.includes(operation.action.type)
   );
 }
 
@@ -58,6 +70,8 @@ export class GroupReevaluationTrigger extends BaseReadModel {
     private readonly queue: IQueue,
     operationIndex: IOperationIndex,
     db: Kysely<DocumentViewDatabase>,
+    private readonly operationStore: IOperationStore,
+    private readonly documentMetaCache: IDocumentMetaCache,
   ) {
     super(db, operationIndex, {} as IWriteCache, new ConsistencyTracker(), {
       readModelId: GROUP_REEVALUATION_TRIGGER,
@@ -98,9 +112,7 @@ export class GroupReevaluationTrigger extends BaseReadModel {
       .where("ordinal", "<=", settledThrough)
       .where("documentType", "=", groupDocumentType)
       .where("scope", "=", "global")
-      .where(sql<string>`action->>'type'`, "in", [
-        ...groupMembershipActionTypes,
-      ])
+      .where(sql<string>`action->>'type'`, "in", [...membershipChangeTypes])
       .orderBy("ordinal", "asc")
       .execute();
     return super.sweep(
@@ -116,8 +128,12 @@ export class GroupReevaluationTrigger extends BaseReadModel {
   ): Promise<void> {
     // groupId -> earliest membership-change timestamp in this batch
     const changed = new Map<string, string>();
+    const ruled = new Map<string, Promise<boolean>>();
     for (const item of items) {
       if (!isMembershipChange(item)) continue;
+      if (!(await this.retractsMembership(item, items, ruled))) {
+        continue;
+      }
       const { operation, context } = item;
       const existing = changed.get(context.documentId);
       if (
@@ -196,6 +212,97 @@ export class GroupReevaluationTrigger extends BaseReadModel {
         "group re-evaluation was not enqueued for every affected document",
       );
     }
+  }
+
+  /**
+   * Whether a RETRACT can change membership: only where the retraction rule
+   * derives its scope, and only when its target, through any RETRACTs it
+   * names, is a membership action. Any other change passes. A lookup that
+   * fails or finds nothing passes too, so a re-evaluation is never lost.
+   */
+  private async retractsMembership(
+    item: OperationWithContext,
+    batch: OperationWithContext[],
+    ruled: Map<string, Promise<boolean>>,
+  ): Promise<boolean> {
+    const { operation, context } = item;
+    if (operation.action.type !== "RETRACT") {
+      return true;
+    }
+    try {
+      const key = `${context.documentId}/${context.scope}/${context.branch}`;
+      let derived = ruled.get(key);
+      if (derived === undefined) {
+        derived = this.derivesRetraction(context);
+        ruled.set(key, derived);
+      }
+      if (!(await derived)) {
+        return false;
+      }
+
+      const seen = new Set<string>();
+      let target = retractionTarget(operation);
+      while (target !== undefined && !seen.has(target)) {
+        seen.add(target);
+        const action = await this.groupAction(item, batch, target);
+        if (action === undefined) {
+          return true;
+        }
+        if (action.type !== "RETRACT") {
+          return (groupMembershipActionTypes as readonly string[]).includes(
+            action.type,
+          );
+        }
+        target = retractionTarget({ action } as Operation);
+      }
+      return true;
+    } catch {
+      return true;
+    }
+  }
+
+  /** Whether the rule derives the stream; so taken when the version is unknown. */
+  private async derivesRetraction(
+    context: OperationWithContext["context"],
+  ): Promise<boolean> {
+    let caps;
+    try {
+      const meta = await this.documentMetaCache.getDocumentMeta(
+        context.documentId,
+        context.branch,
+      );
+      caps = capabilitiesFor(meta.protocolVersions);
+    } catch {
+      return true;
+    }
+    return caps === undefined || derivesByRule(caps, context.scope);
+  }
+
+  /** The group action with this id, from the batch or the store. */
+  private async groupAction(
+    item: OperationWithContext,
+    batch: OperationWithContext[],
+    actionId: string,
+  ): Promise<Action | undefined> {
+    const { documentId, scope, branch } = item.context;
+    const inBatch = batch.find(
+      ({ operation, context }) =>
+        context.documentId === documentId &&
+        context.scope === scope &&
+        context.branch === branch &&
+        operation.action.id === actionId,
+    );
+    if (inBatch !== undefined) {
+      return inBatch.operation.action;
+    }
+    // Stored operation ids derive from action ids.
+    const [row] = await this.operationStore.getOperationsByIds(
+      documentId,
+      scope,
+      branch,
+      [deriveOperationId(documentId, scope, branch, actionId)],
+    );
+    return row?.action;
   }
 
   private async onWriteReady(event: JobWriteReadyEvent): Promise<void> {
