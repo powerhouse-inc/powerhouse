@@ -1,7 +1,7 @@
 // The host.js files an export stands for. Browser-safe; materialize writes these.
 import type { HostExport } from "@powerhousedao/host-core/schema";
-import { fileOf } from "../host-rules/members.js";
-import type { Setter } from "../host-rules/schema.js";
+import { fileOf } from "../host-rules/members.ts";
+import type { Setter } from "../host-rules/schema.ts";
 
 export type HostFile = { folder: string; path: string; content: string };
 
