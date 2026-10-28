@@ -21,6 +21,7 @@ import {
   materialize,
   renderHostFiles,
   withFreePorts,
+  withSourcePackages,
 } from "./materialize.ts";
 
 const SWITCHBOARD = "@powerhousedao/ph-cli/runners/switchboard";
@@ -211,6 +212,105 @@ describe("materialize", () => {
     );
     expect(existsSync(instanceDir)).toBe(false);
     expect(readdirSync(base).sort()).toEqual(["source", "store", "tmp"]);
+  });
+
+  it("copies the project's own files, skipping installs, builds, dot entries and links", () => {
+    const files = {
+      "index.ts": "export {};",
+      "editors/index.ts": "export const editors = [];",
+      "document-models/a/index.ts": "export const a = 1;",
+      "hosts/duo/routes/index.tsx": "export {};",
+      "hosts/duo/host.js": "export default { stale: true };",
+      "hosts/other/host.js": "export default {};",
+      "dist/index.js": "built",
+      "coverage/index.html": "report",
+      ".env": "SECRET=1",
+      ".git/HEAD": "ref",
+      "editors/node_modules/x/index.js": "nested install",
+    };
+    for (const [file, content] of Object.entries(files)) {
+      mkdirSync(path.dirname(path.join(source, file)), { recursive: true });
+      writeFileSync(path.join(source, file), content);
+    }
+    symlinkSync(path.join(base, "store"), path.join(source, "linked"), "dir");
+    const before = listTree(source);
+    const { projectDir } = materialize(instanceDir, source, duo(source));
+    expect(listTree(source)).toEqual(before);
+
+    const copied = (file: string) => path.join(projectDir, file);
+    for (const file of [
+      "index.ts",
+      "editors/index.ts",
+      "document-models/a/index.ts",
+      "hosts/duo/routes/index.tsx",
+    ]) {
+      expect(lstatSync(copied(file)).isFile()).toBe(true);
+      expect(readFileSync(copied(file), "utf8")).toBe(
+        files[file as keyof typeof files],
+      );
+    }
+    for (const file of [
+      "dist",
+      "coverage",
+      ".env",
+      ".git",
+      "editors/node_modules",
+      "linked",
+      "hosts/other/host.js",
+    ]) {
+      expect(existsSync(copied(file))).toBe(false);
+    }
+    expect(hostFile(projectDir, "duo")).not.toHaveProperty("stale");
+    writeFileSync(copied("editors/index.ts"), "changed");
+    expect(readFileSync(path.join(source, "editors/index.ts"), "utf8")).toBe(
+      files["editors/index.ts"],
+    );
+  });
+
+  it("lists the source root in each switchboard's own packages, and only there", () => {
+    const envelope = duo(source);
+    const host = envelope.host as unknown as {
+      children: Record<string, Record<string, unknown>>;
+    };
+    host.children.b.config = {
+      switchboard: { packages: { list: ["@acme/own", source] } },
+    };
+    (envelope.members["sb-a"] as Record<string, unknown>).config = {
+      switchboard: { auth: { enabled: true } },
+    };
+    const written = withSourcePackages(envelope, source, ["@acme/server"]);
+    const members = written.members as Record<string, Record<string, unknown>>;
+    expect(members["sb-a"].config).toEqual({
+      switchboard: {
+        auth: { enabled: true },
+        packages: { list: ["@acme/server", source], disableLocal: true },
+      },
+    });
+    const children = (written.host as unknown as typeof host).children;
+    expect(children.b.config).toEqual({
+      switchboard: {
+        packages: {
+          list: ["@acme/own", source, "@acme/server"],
+          disableLocal: true,
+        },
+      },
+    });
+    // b's own config replaces sb-b's, so sb-b's body is left alone.
+    expect(members["sb-b"]).toEqual(envelope.members["sb-b"]);
+    expect(members.ui).toEqual(envelope.members.ui);
+    expect(children.ui).toEqual(host.children.ui);
+    expect(() => withSourcePackages(envelope, "relative")).toThrow(
+      MaterializeError,
+    );
+  });
+
+  it("leaves a switchboard that opted out of local packages alone", () => {
+    const envelope = duo(source);
+    (envelope.members["sb-a"] as Record<string, unknown>).config = {
+      switchboard: { packages: { disableLocal: true } },
+    };
+    const written = withSourcePackages(envelope, source);
+    expect(written.members["sb-a"]).toEqual(envelope.members["sb-a"]);
   });
 
   it("refuses an instance folder that already exists", () => {

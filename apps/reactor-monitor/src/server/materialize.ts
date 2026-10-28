@@ -6,7 +6,10 @@ import { isRecord, membersOf } from "../host-rules/members.ts";
 /** A host folder: one safe path segment. */
 export const FOLDER_PATTERN = /^[a-z0-9][a-z0-9._-]*$/i;
 
-const COPIED_FILES = ["package.json", "powerhouse.config.json"];
+/** Never copied: installed or built output, local state and secrets. */
+const SKIPPED_ENTRIES = new Set(["node_modules", "dist", "coverage"]);
+const MAX_COPIED_FILES = 20_000;
+const MAX_COPIED_BYTES = 512 * 1024 * 1024;
 
 export class MaterializeError extends Error {
   constructor(message: string) {
@@ -66,6 +69,55 @@ export function withFreePorts(envelope: HostExport): HostExport {
   return copy;
 }
 
+/**
+ * Each switchboard loads the source project's own package by its absolute
+ * root (the copy has no build output), ahead of nothing it already listed.
+ * `disableLocal` stops it loading the copy as well.
+ */
+export function withSourcePackages(
+  envelope: HostExport,
+  sourceRoot: string,
+  extra: readonly string[] = [],
+): HostExport {
+  if (!path.isAbsolute(sourceRoot)) {
+    throw new MaterializeError(`${sourceRoot} is not an absolute path.`);
+  }
+  const copy = structuredClone(envelope);
+  for (const member of membersOf({ envelope: copy })) {
+    if (member.role !== "switchboard") continue;
+    const config = ensureRecordAt(copy, member.configAt.split("."));
+    const switchboard = ensureRecord(config, "switchboard");
+    const packages = ensureRecord(switchboard, "packages");
+    if (packages.disableLocal === true) continue;
+    const listed = Array.isArray(packages.list)
+      ? packages.list.filter((p): p is string => typeof p === "string")
+      : [];
+    packages.list = [...new Set([...listed, ...extra, sourceRoot])];
+    packages.disableLocal = true;
+  }
+  return copy;
+}
+
+function ensureRecord(
+  parent: Record<string, unknown>,
+  key: string,
+): Record<string, unknown> {
+  const current = parent[key];
+  if (isRecord(current)) return current;
+  const created: Record<string, unknown> = {};
+  parent[key] = created;
+  return created;
+}
+
+function ensureRecordAt(
+  root: unknown,
+  segments: readonly string[],
+): Record<string, unknown> {
+  let at = root as Record<string, unknown>;
+  for (const segment of segments) at = ensureRecord(at, segment);
+  return at;
+}
+
 /** `hosts/<folder>/host.js` for the host and every member: plain data. */
 export function renderHostFiles(envelope: HostExport): Map<string, string> {
   const files = new Map<string, string>();
@@ -116,9 +168,50 @@ function linkPackages(source: string, target: string): void {
   }
 }
 
+function skipped(at: readonly string[]): boolean {
+  const name = at[at.length - 1];
+  if (name.startsWith(".") || SKIPPED_ENTRIES.has(name)) return true;
+  // The draft's host files replace the project's.
+  return at.length === 3 && at[0] === "hosts" && name === "host.js";
+}
+
+/** The project's own files, copied: Connect serves them from the copy, and
+ * nothing it or vite writes can reach the source. Links are not followed. */
+function copyProject(source: string, target: string): void {
+  let files = 0;
+  let bytes = 0;
+  const visit = (from: string, to: string, relative: string[]) => {
+    for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+      const at = [...relative, entry.name];
+      if (skipped(at)) continue;
+      const src = path.join(from, entry.name);
+      const dest = containedPath(to, entry.name);
+      if (entry.isDirectory()) {
+        fs.mkdirSync(dest);
+        visit(src, dest, at);
+      } else if (entry.isFile()) {
+        files += 1;
+        bytes += fs.statSync(src).size;
+        if (files > MAX_COPIED_FILES || bytes > MAX_COPIED_BYTES) {
+          throw new MaterializeError(
+            `${source} is too big to copy for a draft (over ${MAX_COPIED_FILES} files or ${MAX_COPIED_BYTES / 1024 / 1024} MB outside node_modules and dist).`,
+          );
+        }
+        fs.copyFileSync(src, dest, fs.constants.COPYFILE_EXCL);
+      }
+    }
+  };
+  visit(source, target, []);
+}
+
 export interface Materialized {
   projectDir: string;
   dataDir: string;
+}
+
+export interface MaterializeOptions {
+  /** Packages every switchboard loads ahead of the source root. */
+  packages?: readonly string[];
 }
 
 /** A throwaway copy of the project under `instanceDir`, which must not exist. */
@@ -126,28 +219,23 @@ export function materialize(
   instanceDir: string,
   sourceRoot: string,
   envelope: HostExport,
+  options: MaterializeOptions = {},
 ): Materialized {
-  const files = renderHostFiles(withFreePorts(envelope));
+  const files = renderHostFiles(
+    withSourcePackages(withFreePorts(envelope), sourceRoot, options.packages),
+  );
   fs.mkdirSync(instanceDir);
   const projectDir = containedPath(instanceDir, "project");
   const dataDir = containedPath(instanceDir, "data");
   fs.mkdirSync(projectDir);
   fs.mkdirSync(dataDir);
+  copyProject(sourceRoot, projectDir);
   const hostsDir = containedPath(projectDir, "hosts");
-  fs.mkdirSync(hostsDir);
+  fs.mkdirSync(hostsDir, { recursive: true });
   for (const [folder, source] of files) {
     const dir = containedPath(hostsDir, folder);
-    fs.mkdirSync(dir);
+    fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(containedPath(dir, "host.js"), source, { flag: "wx" });
-  }
-  for (const name of COPIED_FILES) {
-    const from = path.join(sourceRoot, name);
-    if (!fs.existsSync(from)) continue;
-    fs.copyFileSync(
-      from,
-      containedPath(projectDir, name),
-      fs.constants.COPYFILE_EXCL,
-    );
   }
   linkPackages(
     path.join(sourceRoot, "node_modules"),
