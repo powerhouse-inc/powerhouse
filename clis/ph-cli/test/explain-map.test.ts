@@ -133,7 +133,10 @@ const connect = {
         kind: "remote",
         remote: {
           url: {
-            $output: { host: "switchboard", path: ["endpoints", "graphql"] },
+            $output: {
+              host: "switchboard",
+              path: ["drives", "sektar", "url"],
+            },
           },
         },
       },
@@ -172,7 +175,7 @@ describe("--explain with $map", () => {
     expect(drivesAfter).toContain("http://localhost:4801/d/workflows");
     const outputsAfter = await explain(dir, "connect", "outputs");
     expect(outputsAfter).toContain(
-      'reactor.backends.sb.remote.url ← $output switchboard › endpoints.graphql  (host "switchboard": running)\n      = "http://localhost:4801/graphql"',
+      'reactor.backends.sb.remote.url ← $output switchboard › drives.sektar.url  (host "switchboard": running)\n      = "http://localhost:4801/d/sektar"',
     );
     // key-sorted: sektar before workflows, whatever the publish order
     expect(outputsAfter).toContain(
