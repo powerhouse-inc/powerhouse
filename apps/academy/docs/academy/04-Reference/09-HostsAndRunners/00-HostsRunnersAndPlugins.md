@@ -219,7 +219,8 @@ Validation refuses a remote link that is not a drive address (an
 `endpoints.graphql` token or a `/graphql` URL fails with an error naming the
 `drives.<slug>.url` form), two remote backends on the same switchboard, a
 placement that names a backend that does not exist, a drive placed on a
-switchboard it is not on, a slug linked on two switchboards, and a placement
+switchboard it is not on, a slug that names two drives (on two switchboards,
+or kept here and on a switchboard), and a placement
 key that names no drive the host links to, declares or attaches through a
 plugin's `config.drive`. Keys for drives known only at runtime (a `$map`
 list) are not checked. A `reactor.drives[]` entry's `remote.url` must be a
