@@ -1,3 +1,43 @@
+## 6.2.3-dev.79 (2026-10-28)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** offer workers per switchboard and add switchboards with their own folders ([bfa70ab9c5](https://github.com/powerhouse-inc/powerhouse/commit/bfa70ab9c5))
+- **reactor-monitor-app:** lift one switchboard per host; each needs its own store, search data folder and port ([8d1f6ea16b](https://github.com/powerhouse-inc/powerhouse/commit/8d1f6ea16b))
+- **reactor-monitor-app:** let the builder write a switchboard's own settings and its search data folder ([32a7e9280a](https://github.com/powerhouse-inc/powerhouse/commit/32a7e9280a))
+- **reactor-monitor-app:** read each member's runner config like its reactor block ([289eb3f679](https://github.com/powerhouse-inc/powerhouse/commit/289eb3f679))
+- ⚠️  **switchboard:** startSwitchboard(config, deps) reads only its config ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+- **ph-cli,codegen:** ph mcp, a stdio launcher for reactor-mcp that starts vetra on the first tool call, and generated mcp configs that run it ([c64883e693](https://github.com/powerhouse-inc/powerhouse/commit/c64883e693))
+- **reactor-monitor-app:** hot reload and add options, with ids unique per member ([fa0a0903f8](https://github.com/powerhouse-inc/powerhouse/commit/fa0a0903f8))
+- **codegen,vetra,ph-cli,connect:** project agent guidance as a managed AGENTS.md block and skills, and eval fixes ([#3303](https://github.com/powerhouse-inc/powerhouse/pull/3303))
+- **reactor-monitor-app:** judge a host builder's options with reasons ([33a2121428](https://github.com/powerhouse-inc/powerhouse/commit/33a2121428))
+- **reactor-monitor-app:** validate a draft host per member and backend ([ba2012b616](https://github.com/powerhouse-inc/powerhouse/commit/ba2012b616))
+- **reactor-monitor-app:** matrix owner and error codes on the controller wire ([c3b4305e33](https://github.com/powerhouse-inc/powerhouse/commit/c3b4305e33))
+
+### 🩹 Fixes
+
+- **reactor-monitor-app:** resolve output links as the compound does, and pair access control by them ([58d8dfc005](https://github.com/powerhouse-inc/powerhouse/commit/58d8dfc005))
+- **reactor-monitor-app:** read a missing host env key as unset when selecting options ([f797a8d5a9](https://github.com/powerhouse-inc/powerhouse/commit/f797a8d5a9))
+- **reactor-monitor-app:** one environment per host, and one switchboard for now ([f0f59bd646](https://github.com/powerhouse-inc/powerhouse/commit/f0f59bd646))
+- **reactor-monitor-app:** a search data folder is remove-only and reported as storage ([28a3cba311](https://github.com/powerhouse-inc/powerhouse/commit/28a3cba311))
+- **reactor-monitor-app:** one switchboard per host, process-wide env, and hot reload off that overrides the folder ([ce03482a3e](https://github.com/powerhouse-inc/powerhouse/commit/ce03482a3e))
+- **reactor-monitor-app:** keep builder storage folders under .ph or user data ([0bf33d297c](https://github.com/powerhouse-inc/powerhouse/commit/0bf33d297c))
+- **reactor-monitor-app:** check placement, shared stores, nested compounds and env as the switchboard reads it ([6dec50d38f](https://github.com/powerhouse-inc/powerhouse/commit/6dec50d38f))
+- **reactor-monitor-app:** keep builder folders inside the project and allow removing a member folder ([e114dc3821](https://github.com/powerhouse-inc/powerhouse/commit/e114dc3821))
+- **codegen,shared,vetra,ph-cli,document-model,reactor,reactor-api:** scaffolds get their dependencies, migration-file works, new documents count 0 per scope, subgraphs filter plain ids, and vetra sets the preview drive's app ([6fe1ead94c](https://github.com/powerhouse-inc/powerhouse/commit/6fe1ead94c))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** startSwitchboard(config, deps) reads only its config  ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+  startSwitchboard(options) is now startSwitchboard(config, deps).
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.78 (2026-10-27)
 
 ### 🚀 Features

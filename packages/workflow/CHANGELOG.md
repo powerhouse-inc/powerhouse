@@ -1,3 +1,28 @@
+## 6.2.3-dev.79 (2026-10-28)
+
+### 🚀 Features
+
+- ⚠️  **switchboard:** startSwitchboard(config, deps) reads only its config ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+- **ph-cli,codegen:** ph mcp, a stdio launcher for reactor-mcp that starts vetra on the first tool call, and generated mcp configs that run it ([c64883e693](https://github.com/powerhouse-inc/powerhouse/commit/c64883e693))
+- **codegen,vetra,ph-cli,connect:** project agent guidance as a managed AGENTS.md block and skills, and eval fixes ([#3303](https://github.com/powerhouse-inc/powerhouse/pull/3303))
+- take action ids from generateActionId in the drive builders and the workflow piece ([bbb8d2b5f7](https://github.com/powerhouse-inc/powerhouse/commit/bbb8d2b5f7))
+
+### 🩹 Fixes
+
+- **codegen,shared,vetra,ph-cli,document-model,reactor,reactor-api:** scaffolds get their dependencies, migration-file works, new documents count 0 per scope, subgraphs filter plain ids, and vetra sets the preview drive's app ([6fe1ead94c](https://github.com/powerhouse-inc/powerhouse/commit/6fe1ead94c))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** startSwitchboard(config, deps) reads only its config  ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+  startSwitchboard(options) is now startSwitchboard(config, deps).
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.78 (2026-10-27)
 
 ### 🚀 Features

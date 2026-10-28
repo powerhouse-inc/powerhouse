@@ -1,3 +1,35 @@
+## 6.2.3-dev.79 (2026-10-28)
+
+### 🚀 Features
+
+- ⚠️  **ph-cli:** give each switchboard member its own config, not the process env ([c28e781767](https://github.com/powerhouse-inc/powerhouse/commit/c28e781767))
+- **ph-cli:** map the env to the switchboard config at the service edge ([9a58c9593e](https://github.com/powerhouse-inc/powerhouse/commit/9a58c9593e))
+- ⚠️  **switchboard:** startSwitchboard(config, deps) reads only its config ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+- **ph-cli,codegen:** ph mcp, a stdio launcher for reactor-mcp that starts vetra on the first tool call, and generated mcp configs that run it ([c64883e693](https://github.com/powerhouse-inc/powerhouse/commit/c64883e693))
+- **codegen,vetra,ph-cli,connect:** project agent guidance as a managed AGENTS.md block and skills, and eval fixes ([#3303](https://github.com/powerhouse-inc/powerhouse/pull/3303))
+
+### 🩹 Fixes
+
+- **ph-cli:** map the shell and the project .env as one env, and keep shell values the shell's ([006937578a](https://github.com/powerhouse-inc/powerhouse/commit/006937578a))
+- **ph-cli:** keep the project .env under the switchboard host file ([e1e022a900](https://github.com/powerhouse-inc/powerhouse/commit/e1e022a900))
+- **ph-cli:** load the env mapping lazily from the switchboard runner ([3162ed2067](https://github.com/powerhouse-inc/powerhouse/commit/3162ed2067))
+- **ph-cli:** keep storage and protocol out of config.switchboard ([128b06e138](https://github.com/powerhouse-inc/powerhouse/commit/128b06e138))
+- **ph-cli:** keep the reactor block's storage precedence under the env ([7f1b5a2fc9](https://github.com/powerhouse-inc/powerhouse/commit/7f1b5a2fc9))
+- **codegen,shared,vetra,ph-cli,document-model,reactor,reactor-api:** scaffolds get their dependencies, migration-file works, new documents count 0 per scope, subgraphs filter plain ids, and vetra sets the preview drive's app ([6fe1ead94c](https://github.com/powerhouse-inc/powerhouse/commit/6fe1ead94c))
+
+### ⚠️  Breaking Changes
+
+- **ph-cli:** give each switchboard member its own config, not the process env  ([c28e781767](https://github.com/powerhouse-inc/powerhouse/commit/c28e781767))
+- **switchboard:** startSwitchboard(config, deps) reads only its config  ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+  startSwitchboard(options) is now startSwitchboard(config, deps).
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.78 (2026-10-27)
 
 ### 🚀 Features

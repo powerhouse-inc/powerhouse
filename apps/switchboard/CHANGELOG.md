@@ -1,3 +1,38 @@
+## 6.2.3-dev.79 (2026-10-28)
+
+### 🚀 Features
+
+- ⚠️  **switchboard:** drop the attachment and registry-cache env fallbacks ([4b8b99bd71](https://github.com/powerhouse-inc/powerhouse/commit/4b8b99bd71))
+- **switchboard:** config layer schema and boot facts from a config ([0c29e1715a](https://github.com/powerhouse-inc/powerhouse/commit/0c29e1715a))
+- ⚠️  **switchboard:** startSwitchboard(config, deps) reads only its config ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+- **switchboard:** merge config layers with each key's precedence ([505c38302e](https://github.com/powerhouse-inc/powerhouse/commit/505c38302e))
+- **switchboard:** map the environment to a switchboard config layer ([85d0b63665](https://github.com/powerhouse-inc/powerhouse/commit/85d0b63665))
+- **switchboard:** a zod schema for the switchboard's configuration ([8bc4e01aa6](https://github.com/powerhouse-inc/powerhouse/commit/8bc4e01aa6))
+- **ph-cli,codegen:** ph mcp, a stdio launcher for reactor-mcp that starts vetra on the first tool call, and generated mcp configs that run it ([c64883e693](https://github.com/powerhouse-inc/powerhouse/commit/c64883e693))
+- **codegen,vetra,ph-cli,connect:** project agent guidance as a managed AGENTS.md block and skills, and eval fixes ([#3303](https://github.com/powerhouse-inc/powerhouse/pull/3303))
+
+### 🩹 Fixes
+
+- **switchboard:** config auth keys take effect over the config file ([654f94c546](https://github.com/powerhouse-inc/powerhouse/commit/654f94c546))
+- **switchboard:** refuse the old startSwitchboard options shape ([03ac2daa1d](https://github.com/powerhouse-inc/powerhouse/commit/03ac2daa1d))
+- **switchboard:** an invalid PORT warns instead of failing the mapping ([8c514a0d6f](https://github.com/powerhouse-inc/powerhouse/commit/8c514a0d6f))
+- **switchboard:** load .env before reading LOG_LEVEL ([564a89796c](https://github.com/powerhouse-inc/powerhouse/commit/564a89796c))
+- **reactor-api,switchboard:** turn wasm wrapper tier-up off on Node 24 ([#66366](https://github.com/powerhouse-inc/powerhouse/issues/66366))
+- **codegen,shared,vetra,ph-cli,document-model,reactor,reactor-api:** scaffolds get their dependencies, migration-file works, new documents count 0 per scope, subgraphs filter plain ids, and vetra sets the preview drive's app ([6fe1ead94c](https://github.com/powerhouse-inc/powerhouse/commit/6fe1ead94c))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** drop the attachment and registry-cache env fallbacks  ([4b8b99bd71](https://github.com/powerhouse-inc/powerhouse/commit/4b8b99bd71))
+- **switchboard:** startSwitchboard(config, deps) reads only its config  ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+  startSwitchboard(options) is now startSwitchboard(config, deps).
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.78 (2026-10-27)
 
 ### 🚀 Features

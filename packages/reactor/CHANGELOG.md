@@ -1,3 +1,46 @@
+## 6.2.3-dev.79 (2026-10-28)
+
+### 🚀 Features
+
+- ⚠️  **switchboard:** startSwitchboard(config, deps) reads only its config ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+- **ph-cli,codegen:** ph mcp, a stdio launcher for reactor-mcp that starts vetra on the first tool call, and generated mcp configs that run it ([c64883e693](https://github.com/powerhouse-inc/powerhouse/commit/c64883e693))
+- **codegen,vetra,ph-cli,connect:** project agent guidance as a managed AGENTS.md block and skills, and eval fixes ([#3303](https://github.com/powerhouse-inc/powerhouse/pull/3303))
+- **reactor:** select versions in the reactor core for a header without them ([0444e615d1](https://github.com/powerhouse-inc/powerhouse/commit/0444e615d1))
+- ⚠️  **reactor:** build new documents with newDocument and select versions per document type ([5125e8e0b4](https://github.com/powerhouse-inc/powerhouse/commit/5125e8e0b4))
+- **reactor:** take action ids from generateActionId in the reactor's action builders ([143cfc772e](https://github.com/powerhouse-inc/powerhouse/commit/143cfc772e))
+
+### 🩹 Fixes
+
+- **shared:** genesis CREATE/UPGRADE actions take UUIDv7 ids after the move to shared ([#3296](https://github.com/powerhouse-inc/powerhouse/issues/3296))
+- **reactor:** the monotonic auth rule checks the batch as submitted ([2bcd7f12b3](https://github.com/powerhouse-inc/powerhouse/commit/2bcd7f12b3))
+- **reactor:** every positioning path stores an out-of-order batch in timestamp order ([46ca8a6915](https://github.com/powerhouse-inc/powerhouse/commit/46ca8a6915))
+- **reactor:** with documentDecisions on, an execute batch stamped out of order is stored in timestamp order ([e9b99e5184](https://github.com/powerhouse-inc/powerhouse/commit/e9b99e5184))
+- **reactor:** place a late load by timestamp only with documentDecisions on ([#6](https://github.com/powerhouse-inc/powerhouse/issues/6))
+- **reactor:** a load treats later-stamped local operations as concurrent, whatever the sender's index ([#6](https://github.com/powerhouse-inc/powerhouse/issues/6))
+- **reactor:** the versionless-create refusal says how to give a header versions ([87b952e599](https://github.com/powerhouse-inc/powerhouse/commit/87b952e599))
+- **reactor:** a model that failed to load keeps its loader error in later refusals ([be17578e82](https://github.com/powerhouse-inc/powerhouse/commit/be17578e82))
+- **codegen,shared,vetra,ph-cli,document-model,reactor,reactor-api:** scaffolds get their dependencies, migration-file works, new documents count 0 per scope, subgraphs filter plain ids, and vetra sets the preview drive's app ([6fe1ead94c](https://github.com/powerhouse-inc/powerhouse/commit/6fe1ead94c))
+- **reactor:** stale refusals take no dead-letter slot, and their deletes are awaited ([a4222e9302](https://github.com/powerhouse-inc/powerhouse/commit/a4222e9302))
+- **reactor:** drop a stored refusal only once this reactor runs the document ([c52fe4109d](https://github.com/powerhouse-inc/powerhouse/commit/c52fe4109d))
+- **reactor:** report the rows an inline re-evaluation re-appends ([a9567c0e16](https://github.com/powerhouse-inc/powerhouse/commit/a9567c0e16))
+- **reactor:** drop stored refusals when loading dead letters ([a7f8704433](https://github.com/powerhouse-inc/powerhouse/commit/a7f8704433))
+- **reactor:** select base-reducer 2 for every new document ([3008ee438f](https://github.com/powerhouse-inc/powerhouse/commit/3008ee438f))
+- **reactor:** keep a release backfill out of ack trims until it is pushed ([120a260aa7](https://github.com/powerhouse-inc/powerhouse/commit/120a260aa7))
+- **reactor:** a positional read of revision 0 no longer starts from the head keyframe ([2900db1a57](https://github.com/powerhouse-inc/powerhouse/commit/2900db1a57))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** startSwitchboard(config, deps) reads only its config  ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+  startSwitchboard(options) is now startSwitchboard(config, deps).
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+- **reactor:** build new documents with newDocument and select versions per document type  ([5125e8e0b4](https://github.com/powerhouse-inc/powerhouse/commit/5125e8e0b4))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.78 (2026-10-27)
 
 ### 🚀 Features
