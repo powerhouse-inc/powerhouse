@@ -7,6 +7,7 @@ import {
   isContainedPath,
   NAME_REASON,
   parsePath,
+  REMOTE_URL_REASON,
 } from "./policy.js";
 import type { Setter } from "./schema.js";
 
@@ -28,6 +29,7 @@ const SETTABLE: [string, unknown][] = [
   ["reactor.backends.main.storage.dataDir", ".ph/reactor-storage"],
   ["reactor.namespace", "ns"],
   ["reactor.placement.primary", "main"],
+  ["reactor.placement.drives.b", "sb"],
   ["runner.port", 4001],
   ["runner.dev", true],
   ["reactor.backends.main.readModel.url", ".ph/read-storage"],
@@ -151,22 +153,93 @@ describe("checkSetter", () => {
     ).toBeUndefined();
   });
 
-  it("lets a remote point only at a member of this host", () => {
+  it("lets a remote open only a drive of a member of this host", () => {
     const at = "host.children.ui.reactor.backends.remote.remote.url";
-    const sibling = {
-      $output: { host: "switchboard", path: ["endpoints", "graphql"] },
-    };
+    const drive = (host: string, path: string[]) => ({
+      $output: { host, member: "sb", path },
+    });
+    const sibling = drive("switchboard", ["drives", "powerhouse", "url"]);
     expect(reason({ path: at, value: sibling })).toBeUndefined();
-    expect(
-      reason({ path: at, value: "https://elsewhere.example/graphql" }),
-    ).toBe("A reactor can only sync with another reactor in this host.");
-    expect(
-      reason({
-        path: at,
-        value: { $output: { host: "ghost", path: ["endpoints", "graphql"] } },
-      }),
-    ).toBe("A reactor can only sync with another reactor in this host.");
+    for (const value of [
+      "https://elsewhere.example/d/powerhouse",
+      drive("switchboard", ["endpoints", "graphql"]),
+      drive("switchboard", ["drives", "powerhouse"]),
+      drive("switchboard", ["drives", "powerhouse", "url", "x"]),
+      drive("ghost", ["drives", "powerhouse", "url"]),
+    ]) {
+      expect(reason({ path: at, value })).toBe(REMOTE_URL_REASON);
+    }
     expect(checkSetter({ path: at, value: sibling }).ok).toBe(false);
+  });
+
+  describe("drive lists", () => {
+    const at = "host.children.ui.reactor.drives";
+    const link = (slug: string, host = "switchboard") => ({
+      slug,
+      remote: {
+        url: { $output: { host, member: "sb", path: ["drives", slug, "url"] } },
+      },
+    });
+    const own = { slug: "powerhouse", name: "my-project" };
+
+    it("takes the drives the reactor has, named drives and member drive links", () => {
+      expect(reason({ path: at, value: [own, link("b")] })).toBeUndefined();
+      expect(
+        reason({ path: at, value: [own, { slug: "shared", name: "Shared" }] }),
+      ).toBeUndefined();
+      expect(reason({ path: at, value: [] })).toBeUndefined();
+    });
+
+    it.each([
+      [
+        "a link to another server",
+        { slug: "b", remote: { url: "https://x/d/b" } },
+      ],
+      ["a link under another slug", { ...link("c"), slug: "b" }],
+      ["a link to no member", link("b", "ghost")],
+      ["a drive with more than a name", { slug: "b", projectHash: true }],
+      ["a token", { $output: { host: "switchboard", path: ["drives"] } }],
+    ])("refuses %s", (_name, entry) => {
+      expect(reason({ path: at, value: [own, entry] })).toContain(
+        "only add a drive by name",
+      );
+    });
+
+    it("refuses a list that is not a list", () => {
+      expect(reason({ path: at, value: { $map: {} } })).toContain(
+        "only add a drive by name",
+      );
+    });
+  });
+
+  it("lets a wrapper copy its folder's reactor block, as it is", () => {
+    const envelope = stack();
+    const connect = envelope.members.connect as Record<string, unknown>;
+    const block = {
+      ...(connect.reactor as Record<string, unknown>),
+      workflows: true,
+      renown: { url: "https://renown.example" },
+      backends: {
+        main: { kind: "worker", packages: { specs: ["@acme/models"] } },
+      },
+    };
+    const withBlock = {
+      ...envelope,
+      members: { ...envelope.members, connect: { ...connect, reactor: block } },
+    };
+    const copy = { path: "host.children.ui.reactor", value: block };
+    expect(checkSetter(copy, withBlock)).toEqual({ ok: true });
+    const changed = { ...block, workflows: false };
+    expect(
+      checkSetter({ ...copy, value: changed }, withBlock).ok === false,
+    ).toBe(true);
+    // a child with its own block copies nothing from the folder
+    const wrapped = structuredClone(withBlock);
+    (wrapped.host as { children: Record<string, unknown> }).children.ui = {
+      host: "connect",
+      reactor: { backends: {} },
+    };
+    expect(checkSetter(copy, wrapped).ok).toBe(false);
   });
 
   it.each([
@@ -178,7 +251,7 @@ describe("checkSetter", () => {
       "document-model packages",
     ],
     ["host.reactor.workflows", "workflows"],
-    ["host.children.k.reactor.drives", "drives"],
+    ["host.children.k.reactor.drives", "drive"],
     ["host.config.apiKey", "runner config"],
     ["host.children.k.config", "runner config"],
     ["host.config.switchboard.packages.registryUrl", "document-model packages"],
