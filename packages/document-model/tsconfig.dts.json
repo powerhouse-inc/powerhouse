@@ -1,0 +1,11 @@
+// Through tsconfig.json's `references`, a clean build resolves
+// `@powerhousedao/shared` to `.tsbuild` outputs that do not exist yet
+// (TS6305, hidden by --noCheck), and tsgo drops imports its output still uses.
+// `extends` does not carry `references`; without the "source" condition,
+// shared resolves to its built dist declarations.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "customConditions": []
+  }
+}
