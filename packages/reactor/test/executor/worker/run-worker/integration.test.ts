@@ -442,6 +442,7 @@ describe("runWorker in-process execution", () => {
   });
 
   it("refuses base-reducer 3 for a model whose reducer is not from createReducer", async () => {
+    const databases = new Map<string, Kysely<Database>>();
     async function create(
       reducer: typeof driveDocumentModelModule.reducer,
       documentId: string,
@@ -449,6 +450,7 @@ describe("runWorker in-process execution", () => {
       const h = await startInProcessWorker(() =>
         Promise.resolve({ ...driveDocumentModelModule, reducer }),
       );
+      databases.set(documentId, h.database);
       const ready = waitForMessage(
         h.port1,
         (m): m is ReadyMessage => m.type === "ready",
@@ -509,6 +511,17 @@ describe("runWorker in-process execution", () => {
     const admitted = await create(tagged, "br3-tagged");
     expect(admitted.error).toBeUndefined();
     expect(admitted.result.success).toBe(true);
+
+    const stored = await new KyselyOperationStore(
+      databases
+        .get("br3-tagged")!
+        .withSchema(REACTOR_SCHEMA) as unknown as Kysely<StorageDatabase>,
+    ).getSince("br3-tagged", "document", "main", -1);
+    const creation = stored.results.at(0)?.action as
+      | { type: string; input: { protocolVersions?: Record<string, number> } }
+      | undefined;
+    expect(creation?.type).toBe("CREATE_DOCUMENT");
+    expect(creation?.input.protocolVersions?.["base-reducer"]).toBe(3);
   });
 
   it("builds its signer from the init's spec and signs the NOOP an UNDO becomes", async () => {
