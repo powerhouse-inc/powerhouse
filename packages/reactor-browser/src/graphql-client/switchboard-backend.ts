@@ -35,7 +35,7 @@ export type SwitchboardBackendDescriptor = {
   /** Read per push when a function; `undefined` pushes unsigned, never ambient. */
   readonly signer: ISigner | (() => ISigner | undefined) | undefined;
   /** Models for signing a batch, read per batch. */
-  readonly documentModels: () => readonly DocumentModelModule[];
+  readonly documentModels: () => readonly DocumentModelModule<any>[];
   readonly realtime?: boolean;
   /** Default `"rpc"`. */
   readonly inspection?: ReactorReach["inspection"];
