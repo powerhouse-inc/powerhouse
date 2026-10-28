@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { DraftCheckResponse } from "../../controller/api.js";
 import { errorMessage } from "../../controller/client.js";
+import { isBaseChanged } from "../BaseChanged.js";
 import type { BuilderClient } from "../client.js";
 import { issueCount, NO_CONTROLLER } from "../copy.js";
 import { requestOf } from "../draft.js";
@@ -11,7 +12,11 @@ import type { StepProps } from "./types.js";
 function ControllerCheck({
   client,
   draft,
-}: Pick<StepProps, "draft"> & { readonly client?: BuilderClient }) {
+  onBaseChanged,
+}: Pick<StepProps, "draft"> & {
+  readonly client?: BuilderClient;
+  readonly onBaseChanged: () => void;
+}) {
   const [result, setResult] = useState<DraftCheckResponse | undefined>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -23,7 +28,8 @@ function ControllerCheck({
       setResult(await client.checkDraft(requestOf(draft)));
     } catch (caught) {
       setResult(undefined);
-      setError(errorMessage(caught));
+      if (isBaseChanged(caught)) onBaseChanged();
+      else setError(errorMessage(caught));
     }
     setBusy(false);
   };
@@ -85,7 +91,11 @@ export function ReviewStep({
   draft,
   engine,
   onStep,
-}: StepProps & { readonly client?: BuilderClient }) {
+  onBaseChanged = () => undefined,
+}: StepProps & {
+  readonly client?: BuilderClient;
+  readonly onBaseChanged?: () => void;
+}) {
   const count = engine.issues.length;
   return (
     <section className="hb-step">
@@ -100,7 +110,11 @@ export function ReviewStep({
         </span>
       </div>
       <IssueList issues={engine.issues} onStep={onStep} />
-      <ControllerCheck client={client} draft={draft} />
+      <ControllerCheck
+        client={client}
+        draft={draft}
+        onBaseChanged={onBaseChanged}
+      />
       <JsonPreview env={draft.env} envelope={engine.envelope} />
     </section>
   );

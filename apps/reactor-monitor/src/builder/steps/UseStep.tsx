@@ -5,8 +5,10 @@ import {
   hostFiles,
   type HostFile,
 } from "../../lib/host-files.js";
+import { isBaseChanged } from "../BaseChanged.js";
 import type { BuilderClient } from "../client.js";
 import { fixIssuesFirst, START_BLOCKERS } from "../copy.js";
+import { downloadExport, exportFileName } from "../download.js";
 import { sourceOf, type BuilderDraft } from "../draft.js";
 import type { StepProps } from "./types.js";
 
@@ -66,24 +68,6 @@ function useServed(
     : undefined;
 }
 
-function download(name: string, content: string): string | undefined {
-  try {
-    const url = URL.createObjectURL(
-      new Blob([content], { type: "application/json" }),
-    );
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = name;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    return undefined;
-  } catch (error) {
-    return `Couldn't download ${name}: ${errorMessage(error)}`;
-  }
-}
-
 function Blocked({ label, reason }: { label: string; reason?: string }) {
   return reason ? (
     <p className="hb-why">
@@ -98,9 +82,11 @@ export function UseStep({
   engine,
   onStart,
   onSaveSet,
+  onBaseChanged = () => undefined,
 }: StepProps & {
   readonly client?: BuilderClient;
-  readonly onStart?: (draft: BuilderDraft) => void;
+  readonly onStart?: (draft: BuilderDraft) => Promise<void> | void;
+  readonly onBaseChanged?: () => void;
   readonly onSaveSet?: (setName: string, draft: BuilderDraft) => void;
 }) {
   const served = useServed(client, draft);
@@ -115,10 +101,21 @@ export function UseStep({
   const saveBlocker = onSaveSet
     ? undefined
     : "Saving as a monitoring set from the builder isn't available yet.";
-  const exportFile = `${engine.envelope.name}.host-export.json`;
+  const exportFile = exportFileName(engine.envelope);
   const changed = changedFiles(engine.envelope, draft.setters);
   const copyable: HostFile[] =
     changed.length > 0 ? changed : hostFiles(engine.envelope).slice(0, 1);
+
+  const start = async () => {
+    if (!onStart) return;
+    setStatus("");
+    try {
+      await onStart(draft);
+    } catch (error) {
+      if (isBaseChanged(error)) onBaseChanged();
+      else setStatus(`Couldn't start: ${errorMessage(error)}`);
+    }
+  };
 
   const copy = async (file: HostFile) => {
     try {
@@ -142,7 +139,7 @@ export function UseStep({
           <button
             className="hb-btn hb-btn-primary"
             disabled={blocker !== undefined}
-            onClick={() => onStart?.(draft)}
+            onClick={() => void start()}
             type="button"
           >
             Start
@@ -179,14 +176,7 @@ export function UseStep({
         <div className="hb-opts">
           <button
             className="hb-btn"
-            onClick={() =>
-              setStatus(
-                download(
-                  exportFile,
-                  JSON.stringify(engine.envelope, null, 2),
-                ) ?? `Downloaded ${exportFile}.`,
-              )
-            }
+            onClick={() => setStatus(downloadExport(engine.envelope))}
             type="button"
           >
             Download {exportFile}

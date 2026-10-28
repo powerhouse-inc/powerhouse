@@ -1,7 +1,9 @@
 // @vitest-environment happy-dom
 import { fireEvent, render, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import type { HostExport } from "@powerhousedao/host-core/schema";
+import { describe, expect, it, vi } from "vitest";
 import { baseDigest } from "../controller/api.js";
+import { ControllerRequestError } from "../controller/client.js";
 import { stack } from "../host-rules/__fixtures__/hosts.js";
 import {
   fakeBuilderClient,
@@ -9,6 +11,7 @@ import {
   PROJECT,
 } from "./__fixtures__/fakes.js";
 import {
+  addEdit,
   DRAFT_STORAGE_KEY,
   loadDraft,
   newDraft,
@@ -16,6 +19,7 @@ import {
   withEnv,
   type BuilderDraft,
 } from "./draft.js";
+import { applySetters } from "../host-rules/setters.js";
 import { HostBuilder } from "./HostBuilder.js";
 
 async function savedDraft(change: (draft: BuilderDraft) => BuilderDraft) {
@@ -154,5 +158,116 @@ describe("HostBuilder", () => {
     expect(aside.getAttribute("data-open")).toBe("true");
     fireEvent.click(within(aside).getByRole("button", { name: "Close" }));
     expect(aside.getAttribute("data-open")).toBe("false");
+  });
+
+  describe("when the project's host changed", () => {
+    function withoutUi(): HostExport {
+      const base = stack();
+      const host = base.host as { children: Record<string, unknown> };
+      const { connect: _connect, ...members } = base.members;
+      return {
+        ...base,
+        host: { ...host, children: { sb: host.children.sb } },
+        members,
+      } as HostExport;
+    }
+
+    async function changedHost(fresh: HostExport) {
+      const storage = await savedDraft((draft) => ({
+        ...addEdit(addEdit(draft, [{ path: "host.name", value: "renamed" }]), [
+          { path: "host.children.ui.runner.dev", value: true },
+        ]),
+        step: "review",
+      }));
+      const freshDigest = await baseDigest(fresh);
+      const { client } = fakeBuilderClient({
+        checkDraft: () =>
+          Promise.reject(
+            new ControllerRequestError(
+              "base_changed",
+              "The host changed since the draft was made.",
+              409,
+            ),
+          ),
+        exportHost: () =>
+          Promise.resolve({ export: fresh, baseDigest: freshDigest }),
+      });
+      const view = render(<HostBuilder client={client} storage={storage} />);
+      await waitFor(() =>
+        expect(view.getByRole("button", { name: "Check now" })).toHaveProperty(
+          "disabled",
+          false,
+        ),
+      );
+      fireEvent.click(view.getByRole("button", { name: "Check now" }));
+      const alert = await view.findByRole("alert");
+      return { view, storage, alert: within(alert), freshDigest };
+    }
+
+    it("applies every edit to the new version", async () => {
+      const fresh = applySetters(stack(), [
+        { path: "members.switchboard.runner.port", value: 4555 },
+      ]).envelope;
+      const { view, storage, alert, freshDigest } = await changedHost(fresh);
+      fireEvent.click(
+        alert.getByRole("button", {
+          name: "Apply my changes to the new version",
+        }),
+      );
+      await waitFor(() =>
+        expect(
+          view.getByText(
+            "All your changes now apply to the new version. The checks ran again.",
+          ),
+        ).toBeTruthy(),
+      );
+      const saved = loadDraft(storage);
+      expect(saved?.baseDigest).toBe(freshDigest);
+      expect(saved?.setters).toHaveLength(2);
+    });
+
+    it("lists the edits that no longer apply and keeps the rest", async () => {
+      const { view, storage, alert } = await changedHost(withoutUi());
+      fireEvent.click(
+        alert.getByRole("button", {
+          name: "Apply my changes to the new version",
+        }),
+      );
+      await waitFor(() =>
+        expect(
+          view.getByText("There is no host.children.ui in this host."),
+        ).toBeTruthy(),
+      );
+      expect(view.getByText(/1 of your changes apply/)).toBeTruthy();
+      expect(loadDraft(storage)?.setters).toEqual([
+        { path: "host.name", value: "renamed" },
+      ]);
+    });
+
+    it("keeps my version by downloading it, and discards only when asked", async () => {
+      const created = vi.fn(() => "blob:draft");
+      Object.assign(URL, {
+        createObjectURL: created,
+        revokeObjectURL: vi.fn(),
+      });
+      const { view, storage, alert } = await changedHost(withoutUi());
+      const before = loadDraft(storage);
+      fireEvent.click(alert.getByRole("button", { name: "Keep my version" }));
+      expect(created).toHaveBeenCalledOnce();
+      expect(alert.getByRole("status").textContent).toBe(
+        "Downloaded stack.host-export.json.",
+      );
+      expect(loadDraft(storage)).toEqual(before);
+
+      fireEvent.click(
+        alert.getByRole("button", { name: "Discard my changes" }),
+      );
+      await waitFor(() =>
+        expect(
+          view.getByText("The new version is loaded without your changes."),
+        ).toBeTruthy(),
+      );
+      expect(loadDraft(storage)?.setters).toEqual([]);
+    });
   });
 });

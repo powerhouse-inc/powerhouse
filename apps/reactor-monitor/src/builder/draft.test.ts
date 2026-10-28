@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { baseDigest, draftRequestSchema } from "../controller/api.js";
 import { hostExport, stack } from "../host-rules/__fixtures__/hosts.js";
+import { applySetters } from "../host-rules/setters.js";
 import { memoryStorage } from "./__fixtures__/fakes.js";
 import {
   addEdit,
@@ -9,6 +10,7 @@ import {
   envelopeOf,
   loadDraft,
   newDraft,
+  rebaseDraft,
   requestOf,
   SAVE_FAILED,
   saveDraft,
@@ -45,6 +47,74 @@ describe("draft", () => {
     expect(undoEdit(undoEdit(two))).toEqual(draft);
     expect(undoEdit(draft)).toBe(draft);
     expect(addEdit(draft, [])).toBe(draft);
+  });
+
+  it("carries every edit over to a new version of the host", async () => {
+    const draft = withEnv(
+      addEdit(
+        addEdit(await projectDraft(), [
+          { path: "host.name", value: "renamed" },
+        ]),
+        [{ path: `${SB_MAIN}.storage.kind`, value: "postgres" }],
+      ),
+      { LOG_LEVEL: "debug" },
+    );
+    const fresh = applySetters(stack(), [
+      { path: "members.switchboard.runner.port", value: 4555 },
+    ]).envelope;
+    const digest = await baseDigest(fresh);
+    const { draft: rebased, dropped } = rebaseDraft(draft, fresh, digest);
+    expect(dropped).toEqual([]);
+    expect(rebased).toEqual({
+      ...draft,
+      base: {
+        kind: "project",
+        project: "/project",
+        host: "stack",
+        export: fresh,
+      },
+      baseDigest: digest,
+    });
+    expect(envelopeOf(rebased).members.switchboard).toMatchObject({
+      runner: { port: 4555 },
+      reactor: { backends: { main: { storage: { kind: "postgres" } } } },
+    });
+  });
+
+  it("names each edit that no longer applies and keeps the rest", async () => {
+    const draft = addEdit(
+      addEdit(await projectDraft(), [{ path: "host.name", value: "renamed" }]),
+      [
+        { path: "host.children.ui.runner.dev", value: true },
+        { path: "members.connect.runner.dev", value: true },
+      ],
+    );
+    const base = stack();
+    const host = base.host as { children: Record<string, unknown> };
+    const { connect: _connect, ...members } = base.members;
+    const fresh = {
+      ...base,
+      host: { ...host, children: { sb: host.children.sb } },
+      members,
+    } as typeof base;
+    const { draft: rebased, dropped } = rebaseDraft(
+      draft,
+      fresh,
+      await baseDigest(fresh),
+    );
+    expect(dropped).toEqual([
+      {
+        path: "host.children.ui.runner.dev",
+        reason: "There is no host.children.ui in this host.",
+      },
+      {
+        path: "members.connect.runner.dev",
+        reason: "There is no members.connect in this host.",
+      },
+    ]);
+    expect(rebased.setters).toEqual([{ path: "host.name", value: "renamed" }]);
+    expect(rebased.edits).toEqual([1]);
+    expect((envelopeOf(rebased).host as { name: string }).name).toBe("renamed");
   });
 
   it("counts only setters that change the envelope", () => {

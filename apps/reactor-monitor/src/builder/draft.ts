@@ -6,6 +6,7 @@ import {
 import { z } from "zod";
 import { baseDigestSchema, type DraftRequest } from "../controller/api.js";
 import {
+  checkSetter,
   setterSchema,
   type HostEnv,
   type Setter,
@@ -119,6 +120,56 @@ export function withEnv(draft: BuilderDraft, env: HostEnv): BuilderDraft {
 
 export function withStep(draft: BuilderDraft, step: StepId): BuilderDraft {
   return draft.step === step ? draft : { ...draft, step };
+}
+
+export type DroppedSetter = { path: string; reason: string };
+
+/**
+ * The draft over a newer export of its project host: each setter is replayed
+ * through the policy and applied in order; one that no longer applies is
+ * dropped and named. Edits, env and step are kept.
+ */
+export function rebaseDraft(
+  draft: BuilderDraft,
+  envelope: HostExport,
+  digest: string,
+): { draft: BuilderDraft; dropped: DroppedSetter[] } {
+  const { project, host } = sourceOf(draft);
+  const dropped: DroppedSetter[] = [];
+  const setters: Setter[] = [];
+  const edits: number[] = [];
+  let current = envelope;
+  let at = 0;
+  for (const count of draft.edits) {
+    let kept = 0;
+    for (const setter of draft.setters.slice(at, at + count)) {
+      const verdict = checkSetter(setter, envelope);
+      if (!verdict.ok) {
+        dropped.push({ path: setter.path, reason: verdict.reason });
+        continue;
+      }
+      const applied = applySetters(current, [setter]);
+      if (applied.issues.length > 0) {
+        dropped.push({ path: setter.path, reason: applied.issues[0].message });
+        continue;
+      }
+      current = applied.envelope;
+      setters.push(setter);
+      kept += 1;
+    }
+    if (kept > 0) edits.push(kept);
+    at += count;
+  }
+  return {
+    draft: {
+      ...draft,
+      base: { kind: "project", project, host, export: envelope },
+      baseDigest: digest,
+      setters,
+      edits,
+    },
+    dropped,
+  };
 }
 
 /** Where the draft's host comes from: a project root and its host folder. */

@@ -5,6 +5,7 @@ import type {
   OptionStatus,
   Setter,
 } from "../host-rules/index.js";
+import { BaseChanged } from "./BaseChanged.js";
 import type { BuilderClient } from "./client.js";
 import { issueCount, STEP_LABELS } from "./copy.js";
 import {
@@ -73,7 +74,8 @@ export type HostBuilderProps = {
   readonly client?: BuilderClient;
   /** Where the draft is kept across reloads; defaults to localStorage. */
   readonly storage?: DraftStorage;
-  readonly onStart?: (draft: BuilderDraft) => void;
+  /** A rejection that `isBaseChanged` recognises offers to rebase the draft. */
+  readonly onStart?: (draft: BuilderDraft) => Promise<void> | void;
   readonly onSaveSet?: (setName: string, draft: BuilderDraft) => void;
 };
 
@@ -88,6 +90,7 @@ export function HostBuilder({
   const [saveProblem, setSaveProblem] = useState("");
   const [others, setOthers] = useState<number | undefined>();
   const [sheet, setSheet] = useState(false);
+  const [baseChanged, setBaseChanged] = useState(false);
   const { context, error: capabilityError } = useCapabilities(client);
   const engine = useBuilderEngine(
     context ? draft : undefined,
@@ -96,6 +99,7 @@ export function HostBuilder({
 
   const setDraft = (next: BuilderDraft | undefined) => {
     setDraftState(next);
+    if (!next) setBaseChanged(false);
     const saved = saveDraft(storage, next);
     setSaveProblem(saved.ok || !next ? "" : saved.reason);
   };
@@ -171,6 +175,15 @@ export function HostBuilder({
       </nav>
       <div className="hb-body">
         <div className="hb-scroll" data-scroll="" ref={scroller}>
+          {baseChanged && draft && engine ? (
+            <BaseChanged
+              client={client}
+              draft={draft}
+              engine={engine}
+              onClose={() => setBaseChanged(false)}
+              onDraft={setDraft}
+            />
+          ) : null}
           {others ? (
             <div className="hb-banner" role="status">
               <span>
@@ -213,12 +226,17 @@ export function HostBuilder({
           ) : step === "environment" ? (
             <EnvironmentStep {...props} />
           ) : step === "review" ? (
-            <ReviewStep {...props} client={client} />
+            <ReviewStep
+              {...props}
+              client={client}
+              onBaseChanged={() => setBaseChanged(true)}
+            />
           ) : (
             <UseStep
               {...props}
               client={client}
               onSaveSet={onSaveSet}
+              onBaseChanged={() => setBaseChanged(true)}
               onStart={onStart}
             />
           )}

@@ -7,6 +7,7 @@ import {
   hostExport,
   stack,
 } from "../../host-rules/__fixtures__/hosts.js";
+import { ControllerRequestError } from "../../controller/client.js";
 import { fakeBuilderClient } from "../__fixtures__/fakes.js";
 import { renderStep, type RenderedStep } from "../__fixtures__/steps.js";
 import { fixIssuesFirst, START_BLOCKERS } from "../copy.js";
@@ -87,6 +88,25 @@ describe("UseStep", () => {
     );
     fireEvent.click(startButton(view));
     expect(onStart).toHaveBeenCalledWith(draft);
+  });
+
+  it("hands a refused start over to the host-changed choices", async () => {
+    const onBaseChanged = vi.fn();
+    const onStart = vi.fn(() =>
+      Promise.reject(
+        new ControllerRequestError("base_changed", "The host changed.", 409),
+      ),
+    );
+    const { view } = renderStep(UseStep, {
+      envelope: hostExport("switchboard"),
+      context: FULL,
+      extra: { client: fakeBuilderClient().client, onStart, onBaseChanged },
+    });
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    fireEvent.click(startButton(view));
+    await waitFor(() => expect(onBaseChanged).toHaveBeenCalledOnce());
   });
 
   it("copies each changed host file", async () => {
