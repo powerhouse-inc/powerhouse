@@ -96,7 +96,7 @@ describe("draft", () => {
       ...base,
       host: { ...host, children: { sb: host.children.sb } },
       members,
-    } as typeof base;
+    } as unknown as typeof base;
     const { draft: rebased, dropped } = rebaseDraft(
       draft,
       fresh,

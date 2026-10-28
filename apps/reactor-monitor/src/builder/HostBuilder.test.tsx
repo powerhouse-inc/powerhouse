@@ -169,7 +169,7 @@ describe("HostBuilder", () => {
         ...base,
         host: { ...host, children: { sb: host.children.sb } },
         members,
-      } as HostExport;
+      } as unknown as HostExport;
     }
 
     async function changedHost(fresh: HostExport) {
