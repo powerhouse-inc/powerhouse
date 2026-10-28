@@ -20,6 +20,7 @@ import {
 import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ControllerError,
@@ -27,6 +28,7 @@ import {
   type CheckInput,
   type MonitorController,
   type MonitorControllerOptions,
+  withSourcePackage,
 } from "./controller.ts";
 import { LogRing } from "./logs.ts";
 import {
@@ -851,9 +853,61 @@ describe("createMonitorController", () => {
       });
       await controller.startDraft(await draft({ env: { LOG_LEVEL: "debug" } }));
       expect(checks[0].env).toMatchObject({
-        PH_PACKAGES: "@acme/models",
+        PH_PACKAGES: `@acme/models,${allowed}`,
         LOG_LEVEL: "debug",
       });
+    });
+
+    it("loads the source project's own package from its files, not from the copy", async () => {
+      const subpaths = [
+        "document-models",
+        "editors",
+        "subgraphs",
+        "processors",
+      ];
+      writeFileSync(path.join(allowed, "package.json"), '{"name":"p"}');
+      for (const sub of subpaths) {
+        mkdirSync(path.join(allowed, sub));
+        writeFileSync(
+          path.join(allowed, sub, "index.js"),
+          `export const from = ${JSON.stringify(sub)};\n`,
+        );
+      }
+      const { controller, launches, checks } = create();
+      const draftCheck = await controller.checkDraft(await draft());
+      expect(draftCheck).toEqual({ ruleIssues: [], issues: [] });
+      const { id } = await controller.startDraft(await draft());
+      const project = path.join(controller.tempRoot, id, "project");
+      const env = launches[0].options.env ?? {};
+      expect(checks.map((c) => c.env.PH_PACKAGES)).toEqual([allowed, allowed]);
+      expect(env.PH_PACKAGES).toBe(allowed);
+      expect(launches[0].options.projectRoot).toBe(project);
+
+      // loadDependency's rule: an absolute name joins its subpath on disk.
+      const [root] = env.PH_PACKAGES.split(",");
+      for (const sub of subpaths) {
+        const file = path.join(root, sub, "index.js");
+        expect(realpathSync(file)).toBe(path.join(allowed, sub, "index.js"));
+        const loaded = (await import(pathToFileURL(file).href)) as {
+          from: string;
+        };
+        expect(loaded.from).toBe(sub);
+        // The copy holds no project sources, so it can't write them.
+        expect(existsSync(path.join(project, sub))).toBe(false);
+      }
+      expect(readdirSync(project).sort()).toEqual([
+        "hosts",
+        "node_modules",
+        "package.json",
+      ]);
+    });
+
+    it("refuses a source root PH_PACKAGES can't carry", () => {
+      expect(() => withSourcePackage({}, "/a,b")).toThrow(ControllerError);
+      expect(() => withSourcePackage({}, "relative")).toThrow(ControllerError);
+      expect(
+        withSourcePackage({ PH_PACKAGES: " /src , @acme/x ,," }, "/src"),
+      ).toEqual({ PH_PACKAGES: "@acme/x,/src" });
     });
 
     it("removes the copy when checkHost refuses it", async () => {

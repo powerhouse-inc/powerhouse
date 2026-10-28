@@ -162,6 +162,24 @@ export function childEnv(
   };
 }
 
+/** The copy loads the source project's own package by its absolute root. */
+export function withSourcePackage(
+  env: Record<string, string>,
+  sourceRoot: string,
+): Record<string, string> {
+  if (!path.isAbsolute(sourceRoot) || sourceRoot.includes(",")) {
+    throw new ControllerError(
+      "bad_request",
+      `${sourceRoot} can't be loaded as a package: it must be absolute and free of commas (PH_PACKAGES is comma-separated).`,
+    );
+  }
+  const listed = ("PH_PACKAGES" in env ? env.PH_PACKAGES : "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0 && name !== sourceRoot);
+  return { ...env, PH_PACKAGES: [...listed, sourceRoot].join(",") };
+}
+
 export function deniedEnvKeys(env: Record<string, string>): string[] {
   return Object.keys(env).filter((key) => !isBrowserEnvKey(key));
 }
@@ -762,7 +780,8 @@ export function createMonitorController(
       return runExport(root, host, serverEnv);
     },
     checkDraft: async (request) => {
-      const { root, host, env } = resolve(request);
+      const { root, host, env: resolved } = resolve(request);
+      const env = withSourcePackage(resolved, root);
       const { envelope, ruleIssues } = await draftEnvelope(request, root, env);
       if (ruleIssues.length > 0) return { ruleIssues, issues: [] };
       const dir = path.join(tempRoot, `check-${randomUUID()}`);
@@ -775,7 +794,8 @@ export function createMonitorController(
       }
     },
     startDraft: async (request) => {
-      const { root, host, env } = resolve(request);
+      const { root, host, env: resolved } = resolve(request);
+      const env = withSourcePackage(resolved, root);
       return startResolved(host, env, async (instanceDir) => {
         const { envelope, ruleIssues } = await draftEnvelope(
           request,
