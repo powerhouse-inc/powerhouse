@@ -180,6 +180,24 @@ describe("a rewind on a header at a number this build does not know", () => {
     },
   );
 
+  it.each([1, 2] as const)(
+    "undoes under the version passed, base-reducer %i",
+    (runsAs) => {
+      const undone = (header: number) =>
+        reducer(
+          rebuild(header, [add(0, 0, "a"), add(1, 0, "b")], runsAs),
+          { type: "UNDO", input: { count: 1 }, scope: "global" } as Action,
+          undefined,
+          { protocolVersion: runsAs },
+        );
+
+      expect(undone(7).state.global.items).toEqual(
+        undone(runsAs).state.global.items,
+      );
+      expect(undone(7).state.global.items).toEqual(["a"]);
+    },
+  );
+
   it("replays an exempt scope's rewind under base-reducer 3", () => {
     const rows = [
       add(0, 0, "x"),

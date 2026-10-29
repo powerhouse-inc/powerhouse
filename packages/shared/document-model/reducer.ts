@@ -330,6 +330,7 @@ function processUndoOperation<TState extends PHBaseState = PHBaseState>(
   document: PHDocument<TState>,
   scope: string,
   customReducer: StateReducer<TState>,
+  protocolVersion: BaseReducerVersion,
   reuseOperationResultingState = false,
   resultingStateParser = parseResultingState,
 ): PHDocument<TState> {
@@ -367,6 +368,7 @@ function processUndoOperation<TState extends PHBaseState = PHBaseState>(
     {
       reuseOperationResultingState,
       operationResultingStateParser: resultingStateParser,
+      protocolVersion,
     },
   );
 
@@ -490,6 +492,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
           newDocument,
           action.scope,
           customReducer,
+          protocolVersion,
         );
         return result;
       }
@@ -526,7 +529,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
           dispatch,
           baseReducer,
           {},
-          { skipIndexValidation: true },
+          { skipIndexValidation: true, protocolVersion },
         );
 
         // Return document with rebuilt state but original operations (including all NOOPs)
