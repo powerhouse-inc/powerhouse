@@ -1,5 +1,26 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — move a drive in Connect, attachments by drive
+
+### ✨ Move a drive between its switchboard and this browser
+
+For each drive the host keeps on a switchboard, Connect's drive settings now say where it opens and offer one action: **Keep a copy in this browser** for a drive that opens on the switchboard, or **Open on <switchboard> only** for one this browser keeps a copy of. Keeping a copy adds the drive's sync remote and waits for its first pull before reads move to the copy. Opening on the switchboard only removes the sync remote and routes the drive there; the copy already in the browser is left in place, unread, so keeping a copy again later picks up from it.
+
+The choice applies to this browser only. It is stored in IndexedDB, every open tab follows it, and it survives a reload. Drive settings mark a moved drive "Moved in this browser. Host config: …", with **Reset to config**. A move is dropped once the host config changes the placement it replaced. A Connect with no reactor in the browser opens every drive on its switchboard and offers no move.
+
+Placements now reach the router after boot, once each drive is read from its switchboard, so a switchboard that does not answer no longer delays startup. A drive a plugin serves under a hashed slug (`projectHash: true`) is found among its switchboard's drives, so its placement applies under its real id and slug. The drive settings modal (`DriveSettingsModal`, `@powerhousedao/design-system/connect`) takes `children`, rendered after the location settings.
+
+### ✨ Router: config placements after construction
+
+`RoutingReactorClient.setConfiguredPlacement(key, backend | undefined)` (`@powerhousedao/reactor-router`) sets the config layer for one collection after the client is built, as an entry of `collections` would. A runtime placement still wins, and `describeRouting()` reports the row with `origin: "config"`.
+
+### ✨ Attachments go to the switchboard that holds their document
+
+`RoutingAttachmentService` (`@powerhousedao/reactor-attachments/client`) sends each call to the attachment service of the backend that serves its `documentId`, found through a resolver such as `RoutingReactorClient.locate`. A call without a document, or for a backend with no service of its own, uses the fallback service. `reserve` takes an optional `documentId` (it is not sent to the server), and so do `preprocess(file, { documentId })`, `upload({ file, documentId })` and `useAttachmentUpload().preprocess(file, { documentId })` (`@powerhousedao/reactor-browser`). A Connect linked to more than one switchboard installs this service, with the first switchboard's attachments as the fallback.
+
+✅ **What to try:** in a host whose Connect places drive `b` on switchboard `sb`, open Connect, then `?modal=drive-settings&driveId=<b's id>`, and choose **Keep a copy in this browser**: `b` now syncs into the browser, and a second tab shows the same.
+
+---
 ## 🚀 **Unreleased** — Connect opens drives on its switchboards
 
 ### ⚡ A drive placed on a switchboard keeps no copy in the browser
