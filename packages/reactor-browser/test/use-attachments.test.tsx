@@ -174,6 +174,28 @@ describe("useAttachmentUpload", () => {
     expect(preprocessed.sizeBytes).toBe(SIZE);
   });
 
+  it("names the document in the reservation it uploads with", async () => {
+    const reserve = vi.fn(() =>
+      Promise.resolve({
+        reservationId: "res-1",
+        ref: REF,
+        expiresAtUtc: "2027-01-01T00:00:00.000Z",
+        send: () => Promise.resolve(uploadResult()),
+      } as unknown as IAttachmentUpload),
+    );
+    install(makeService({ reserve }));
+    const { result } = await renderHook(() => useAttachmentUpload());
+
+    const preprocessed = await act(() =>
+      result.current.preprocess(new Blob([CONTENT]), { documentId: "doc-1" }),
+    );
+    await act(() => result.current.upload(preprocessed));
+
+    expect(reserve).toHaveBeenCalledWith(
+      expect.objectContaining({ documentId: "doc-1" }),
+    );
+  });
+
   it("publishes real byte progress and finishes at 100 percent", async () => {
     const gate = deferred<AttachmentUploadResult>();
     let report: ((loaded: number, total?: number) => void) | undefined;
