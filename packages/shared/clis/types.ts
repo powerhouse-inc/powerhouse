@@ -59,6 +59,17 @@ export type PHConnectDefaultDriveLocal = z.infer<
   typeof C.connectDefaultDriveLocalSchema
 >;
 export type PHConnectDefaultDrive = z.infer<typeof C.connectDefaultDriveSchema>;
+/** A served default drive: remote entries carry their `backend` and `sync`. */
+export type PHConnectRuntimeDefaultDrive = z.infer<
+  typeof C.connectRuntimeDefaultDriveSchema
+>;
+export type PHConnectRuntimeDefaultDriveRemote = z.infer<
+  typeof C.connectRuntimeDefaultDriveRemoteSchema
+>;
+export type PHConnectRemoteBackend = z.infer<
+  typeof C.connectRemoteBackendSchema
+>;
+export type PHConnectCollection = z.infer<typeof C.connectCollectionSchema>;
 export type PHConnectDriveSection = z.infer<typeof C.connectDriveSectionSchema>;
 export type PHConnectDriveSections = z.infer<
   typeof C.connectDriveSectionsSchema

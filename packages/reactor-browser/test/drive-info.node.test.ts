@@ -105,6 +105,18 @@ describe("fetchDriveInfo", () => {
     expect(getBearerToken).not.toHaveBeenCalled();
   });
 
+  it("sends the token of the provider it is given", async () => {
+    signedIn("ambient");
+    fetchMock.mockReturnValue(ok());
+
+    await fetchDriveInfo("http://switchboard.test/d/my-drive", () =>
+      Promise.resolve("explicit"),
+    );
+
+    expect(sentHeaders()).toEqual({ Authorization: "Bearer explicit" });
+    expect(getBearerToken).not.toHaveBeenCalled();
+  });
+
   it("returns the parsed drive info", async () => {
     signedOut();
     fetchMock.mockReturnValue(ok());

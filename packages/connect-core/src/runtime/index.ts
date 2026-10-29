@@ -28,6 +28,14 @@ export {
   relistAppDrives,
   selectAppReactorClient,
 } from "./app-reactor-client.js";
+export {
+  keepsLocalCopy,
+  placedDrives,
+  placementCollections,
+  removeLocalCopies,
+  resolvePlacedDrives,
+} from "./drive-placement.js";
+export type { PlacedDrive, ResolvedPlacedDrive } from "./drive-placement.js";
 export { useBackendAuthGate } from "./backend-auth-gate.js";
 export type { BackendAuthGateMode } from "./backend-auth-gate.js";
 export type {

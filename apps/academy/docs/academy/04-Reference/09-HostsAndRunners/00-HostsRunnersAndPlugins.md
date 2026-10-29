@@ -213,7 +213,11 @@ reactor: {
   locally;
 - a drive that is not listed keeps a synced copy, as before.
 
-The map is checked when the host loads. Connect does not apply it yet.
+The map is checked when the host loads. Connect applies it at boot: a drive
+placed on a switchboard gets no sync remote in the browser (one an earlier
+boot added is removed), and its reads and writes go to that switchboard. New
+drives are still created in the browser. A Connect may link to several
+switchboards, one remote backend each.
 
 Validation refuses a remote link that is not a drive address (an
 `endpoints.graphql` token or a `/graphql` URL fails with an error naming the

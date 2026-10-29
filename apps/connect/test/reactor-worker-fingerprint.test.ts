@@ -6,6 +6,7 @@ import {
 import type { IRenown } from "@renown/sdk";
 import { describe, expect, it } from "vitest";
 import {
+  buildWorkerConstruct,
   buildWorkerVersion,
   type WorkerReactorClientArgs,
 } from "../src/reactor-worker-client.js";
@@ -56,6 +57,16 @@ function openTab(host: ReactorHost) {
 }
 
 describe("worker version fingerprint", () => {
+  it("never carries the remote config, which stays in the tab", () => {
+    const keys = [
+      ...Object.keys(buildWorkerConstruct(args())),
+      ...Object.keys(buildWorkerVersion(args())),
+    ];
+    for (const remote of ["remoteBackends", "collections", "defaultDrives"]) {
+      expect(keys).not.toContain(remote);
+    }
+  });
+
   it("is unchanged by multiReactor off", () => {
     expect(buildWorkerVersion(args()).featureFlags).toBe("");
     expect(

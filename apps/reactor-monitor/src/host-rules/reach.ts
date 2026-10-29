@@ -21,8 +21,6 @@ export const REACH_REASONS = {
     "Connect opens a switchboard through one of its drives. Pick a drive.",
   sameSwitchboard:
     "Both links open drives on the same switchboard. Add the second drive to the first link instead.",
-  oneSwitchboard:
-    "Connect can open drives on one switchboard today. Remove the other link first.",
   remoteOnly:
     "This app keeps no reactor in the browser, so every drive opens on the switchboard.",
   mapped:
@@ -276,7 +274,6 @@ export function reachRule(members: readonly Member[], report: Report): void {
         report(at, REACH_REASONS.sameSwitchboard);
         continue;
       }
-      if (seen.size > 0) report(at, REACH_REASONS.oneSwitchboard);
       seen.set(target.id, backend.name);
     }
     driveList(member)?.forEach((entry, index) => {

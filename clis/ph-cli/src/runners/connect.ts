@@ -15,6 +15,7 @@ import {
   isStructuralMultiReactor,
   mergeDefaultDrives,
   normalizePluginEntries,
+  placeConnectDrives,
   resolveDriveDeclaration,
   type DriveDeclaration,
   projectDrivesIntoConnect,
@@ -147,14 +148,6 @@ function toStudioArgs(host: ConnectHostParsed): ConnectStudioArgs {
   return args as ConnectStudioArgs;
 }
 
-/** Merge the reactor-block projection (protocol → connect.reactor,
- * backend kind → instance.reactorWorker, workflows → app.workflowsEnabled)
- * into the host's connect config, which rides the studio caller-override.
- * The host config wins on conflict (an explicit connect.* value is intent) —
- * EXCEPT structural multi-reactor (P4.2): declaring a remote backend next to
- * a local one IS the intent, so it beats a scaffold-default
- * instance.multiReactor: false, and the remote's drive url merges FIRST into
- * drives.defaultDrives (the first url entry is what the routing client dials). */
 /** host.js reactor.drives -> the served drives.defaultDrives shapes: locals
  * carry id/name/icon and the preferredEditor under its Connect alias `app`;
  * remotes carry their URL. */
@@ -288,12 +281,17 @@ function callerOverrideRaw(
       ? base
       : undefined;
   }
-  const drives = structural
+  const projected = structural
     ? projectDrivesIntoConnect({
         createdDriveUrls: remoteBackendUrls(reactor),
         configuredDefaultDrives: base.drives?.defaultDrives,
       }).drives
     : base.drives;
+  const placed = placeConnectDrives(reactor, projected?.defaultDrives ?? []);
+  const drives =
+    projected?.defaultDrives === undefined
+      ? projected
+      : { ...projected, defaultDrives: placed.defaultDrives };
   // When the host DECLARES backends, instance facts derive from them and win
   // over config defaults (declaring `kind: "worker"` is more explicit intent
   // than a scaffold's `reactorWorker: false`); without backends the P2 rule
@@ -303,7 +301,7 @@ function callerOverrideRaw(
     ? {
         ...base.instance,
         ...connect.instance,
-        ...(structural ? { multiReactor: true } : {}),
+        ...(placed.collections ? { collections: placed.collections } : {}),
       }
     : { ...connect.instance, ...base.instance };
   return {

@@ -239,15 +239,19 @@ describe("linking a Connect to a switchboard's drives", () => {
     );
   });
 
-  it("links one switchboard today", () => {
+  it("links drives on two switchboards", () => {
     let draft: HostDraft = { envelope: stack() };
     draft = choose(draft, "host:add:switchboard");
     draft = addDrive(draft, SB, "Shared");
     draft = addDrive(draft, "host.children.switchboard", "Shared 2");
     draft = choose(draft, `${UI}:reach:open:sb:shared`);
-    expect(status(draft, `${UI}:reach:open:switchboard:shared-2`)).toEqual(
-      off(REACH_REASONS.oneSwitchboard),
-    );
+    expect(status(draft, `${UI}:reach:open:switchboard:shared-2`)).toEqual(ON);
+    draft = choose(draft, `${UI}:reach:open:switchboard:shared-2`);
+    expect(reachOf(draft, UI).links.map((link) => link.switchboard)).toEqual([
+      "sb",
+      "switchboard",
+    ]);
+    expect(issues(draft)).toEqual([]);
   });
 
   it("works with the cli host's switchboard-only Connect", () => {

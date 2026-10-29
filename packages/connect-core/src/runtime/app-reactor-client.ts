@@ -11,6 +11,7 @@ import {
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { ISigner } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
+import { switchboardOfDrive } from "@powerhousedao/shared/host-tokens";
 import type * as MultiReactor from "./multi-reactor.js";
 import type {
   LoadedDocumentModels,
@@ -21,6 +22,9 @@ import { resolveReactorClientMode } from "./reactor-client-mode.js";
 import { isReactorWorkerEnabled } from "./reactor-worker-flag.js";
 import { setDriveRelister } from "./drive-relist.js";
 
+// Kept here: multi-reactor.ts is loaded lazily.
+const REMOTE_BACKEND_NAME = "switchboard-remote";
+
 type MultiReactorModule = typeof MultiReactor;
 
 export type AppReactorClientParams = {
@@ -28,7 +32,14 @@ export type AppReactorClientParams = {
   /** Built, and ready (the worker has started up). Undefined in `remote`
    * mode, where no local reactor is built. */
   module: LocalReactorModule | undefined;
+  /** The fallback switchboard when `remoteBackends` is empty. */
   remoteDriveUrl: string | undefined;
+  /** One per switchboard, by host key; `url` is a drive address on it. */
+  remoteBackends?: readonly { name: string; url: string }[];
+  /** Placed drives by id and served slug; awaited after the local build. */
+  collections?:
+    | Readonly<Record<string, string>>
+    | Promise<Readonly<Record<string, string>>>;
   /** Signs routed writes; unsigned (anonymous) without one. */
   signer?: ISigner;
   documentModelModules: LoadedDocumentModels;
@@ -213,10 +224,37 @@ export async function relistAppDrives(): Promise<void> {
 // The backend auth gate relists through drive-relist (see there)
 setDriveRelister(relistAppDrives);
 
+/** The switchboards to route to: the host's remote backends, else the default drive's. */
+function switchboardRemotes(params: AppReactorClientParams): {
+  remotes: MultiReactor.SwitchboardRemote[];
+  unparsed: string[];
+} {
+  const listed = params.remoteBackends?.length
+    ? params.remoteBackends
+    : params.remoteDriveUrl
+      ? [{ name: REMOTE_BACKEND_NAME, url: params.remoteDriveUrl }]
+      : [];
+  const remotes: MultiReactor.SwitchboardRemote[] = [];
+  const unparsed: string[] = [];
+  for (const { name, url } of listed) {
+    const graphqlUrl = switchboardOfDrive(url)?.graphql;
+    if (graphqlUrl) remotes.push({ name, graphqlUrl });
+    else unparsed.push(url);
+  }
+  return { remotes, unparsed };
+}
+
 async function buildRouter(
   params: AppReactorClientParams,
 ): Promise<IReactorClient | undefined> {
-  if (!params.remoteDriveUrl) {
+  const { remotes, unparsed } = switchboardRemotes(params);
+  for (const url of unparsed) {
+    logger.warn(
+      "multiReactor is on but the remote drive URL @url does not parse; skipping it",
+      url,
+    );
+  }
+  if (remotes.length === 0) {
     logger.warn(
       "multiReactor is on but no remote drive URL is configured; using the local reactor only",
     );
@@ -229,20 +267,14 @@ async function buildRouter(
     logger.error("Could not load the multi-reactor router: @error", error);
     return undefined;
   }
-  const remoteGraphqlUrl = multiReactor.deriveSwitchboardGraphqlUrl(
-    params.remoteDriveUrl,
+  logger.info(
+    "Multi-reactor routing to @urls",
+    remotes.map((remote) => remote.graphqlUrl).join(", "),
   );
-  if (!remoteGraphqlUrl) {
-    logger.warn(
-      "multiReactor is on but the remote drive URL @url does not parse; using the local reactor only",
-      params.remoteDriveUrl,
-    );
-    return undefined;
-  }
-  logger.info("Multi-reactor routing to @url", remoteGraphqlUrl);
   return multiReactor.buildMultiReactorClient({
     module: requireModule(params),
-    remoteGraphqlUrl,
+    remotes,
+    collections: await params.collections,
     signer: params.signer,
     documentModelModules: params.documentModelModules,
   });
@@ -258,24 +290,26 @@ async function buildRouter(
 async function buildRemoteOnly(
   params: AppReactorClientParams,
 ): Promise<IReactorClient> {
-  if (!params.remoteDriveUrl) {
+  const { remotes, unparsed } = switchboardRemotes(params);
+  if (unparsed.length > 0) {
+    throw new Error(
+      `reactorClient "remote": the remote drive URL "${unparsed[0]}" does not resolve to a Switchboard GraphQL endpoint`,
+    );
+  }
+  if (remotes.length === 0) {
     throw new Error(
       'reactorClient "remote" needs a remote drive URL — declare a remote backend / default drive the client can proxy to',
     );
   }
   const multiReactor = await (params.loadRouter ?? loadMultiReactor)();
-  const remoteGraphqlUrl = multiReactor.deriveSwitchboardGraphqlUrl(
-    params.remoteDriveUrl,
+  logger.info(
+    "Remote reactor client → @urls",
+    remotes.map((remote) => remote.graphqlUrl).join(", "),
   );
-  if (!remoteGraphqlUrl) {
-    throw new Error(
-      `reactorClient "remote": the remote drive URL "${params.remoteDriveUrl}" does not resolve to a Switchboard GraphQL endpoint`,
-    );
-  }
-  logger.info("Remote reactor client → @url", remoteGraphqlUrl);
   return multiReactor.buildMultiReactorClient({
     module: undefined,
-    remoteGraphqlUrl,
+    remotes,
+    collections: await params.collections,
     signer: params.signer,
     documentModelModules: params.documentModelModules,
   });

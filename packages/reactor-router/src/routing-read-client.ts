@@ -500,7 +500,13 @@ export class RoutingReadClient implements IReactorReadClient {
       pagedParticipants("find", backends, paging, options),
       (backend, backendPaging) =>
         backend.api.find(search, view, backendPaging, signal),
-      { ...options, operation: "find", identify: documentIdentity, paging },
+      {
+        ...options,
+        operation: "find",
+        identify: documentIdentity,
+        paging,
+        routedTo: (id) => this.dispatcher.knownBackendOf(id),
+      },
     );
   }
 

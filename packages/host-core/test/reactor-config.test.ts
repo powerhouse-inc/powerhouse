@@ -156,6 +156,23 @@ describe("projectReactorToConnect", () => {
     expect(connect.instance?.reactorClient).toBe("router");
   });
 
+  it("serves the remote backends by host key in router and remote modes", () => {
+    const sb = { kind: "remote" as const, remote: { url: "http://x/d/b" } };
+    expect(
+      projectReactorToConnect({
+        backends: { main: { kind: "worker" }, sb },
+      }).connect.instance?.remoteBackends,
+    ).toEqual([{ name: "sb", url: "http://x/d/b" }]);
+    expect(
+      projectReactorToConnect({ backends: { sb } }).connect.instance
+        ?.remoteBackends,
+    ).toEqual([{ name: "sb", url: "http://x/d/b" }]);
+    expect(
+      projectReactorToConnect({ backends: { main: { kind: "worker" } } })
+        .connect.instance,
+    ).not.toHaveProperty("remoteBackends");
+  });
+
   it("no declared backends → no reactorClient (legacy fallback preserved)", () => {
     const { connect } = projectReactorToConnect({ protocol: fullProtocol });
     expect(connect.instance).toBeUndefined();
