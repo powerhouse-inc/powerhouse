@@ -405,6 +405,8 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
     top?: number;
     bottom?: number;
     maxHeight: number;
+    // Inside a modal dialog, which blocks pointer events outside itself.
+    container: HTMLElement;
   } | null>(null);
 
   const selected = props.multiple
@@ -456,6 +458,9 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
       top: flip ? undefined : rect.bottom + 4,
       bottom: flip ? window.innerHeight - rect.top + 4 : undefined,
       maxHeight: Math.min(320, flip ? above : below),
+      container:
+        triggerRef.current?.closest<HTMLElement>('[role="dialog"]') ??
+        document.body,
     });
   };
 
@@ -770,7 +775,7 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
                 </div>
               ) : null}
             </div>,
-            document.body,
+            position.container,
           )
         : null}
     </>

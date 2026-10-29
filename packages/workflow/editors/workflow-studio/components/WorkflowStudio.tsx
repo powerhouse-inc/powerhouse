@@ -12,7 +12,7 @@ import {
   useSelectedNode,
 } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   useWorkflowDocumentsInSelectedDrive,
   type WorkflowDocument,
@@ -26,6 +26,7 @@ import {
   useRuntimeActions,
   WorkflowRuntimeProvider,
 } from "../../workflow-editor/runtime-context.js";
+import { parseManualInputs } from "../../workflow-editor/ui/manual-inputs.js";
 import { DocumentErrorBoundary } from "../../shared/DocumentErrorBoundary.js";
 import { RunsView } from "./RunsView.js";
 import { Sidebar } from "./Sidebar.js";
@@ -166,6 +167,19 @@ function Studio(props: { children?: ReactNode }) {
   const manualTrigger = Boolean(
     targetTrigger && sameBlock(triggerBlock(targetTrigger), MANUAL_TRIGGER),
   );
+  // A fire is checked against the published trigger, so its form asks for those.
+  const published =
+    targetDocument?.header.documentType === WORKFLOW_TYPE
+      ? (targetDocument as WorkflowDocument).state.global.published
+      : null;
+  const firedTrigger = published ? published.trigger : targetTrigger;
+  const fireInputs = useMemo(
+    () =>
+      firedTrigger && sameBlock(triggerBlock(firedTrigger), MANUAL_TRIGGER)
+        ? parseManualInputs(firedTrigger.config)
+        : [],
+    [firedTrigger],
+  );
 
   return (
     // Below md the sidebar sits above the content: side by side, a phone
@@ -239,10 +253,13 @@ function Studio(props: { children?: ReactNode }) {
               onLoadMore={feed.loadMore}
               onFire={
                 liveTarget && manualTrigger
-                  ? () =>
-                      fireWorkflow(liveTarget.id).then((result) => result.error)
+                  ? (payload) =>
+                      fireWorkflow(liveTarget.id, payload).then(
+                        (result) => result.error,
+                      )
                   : undefined
               }
+              fireInputs={fireInputs}
             />
           </div>
         )}
