@@ -395,7 +395,7 @@ function AppBody({
           </>
         ) : view === "Router" ? (
           <div className="reactor-monitor__panel">
-            <RoutingPanel />
+            <RoutingPanel setName={activeSetName} />
           </div>
         ) : (
           <HostBuilder
