@@ -23,7 +23,6 @@ import { migrate } from "./migrate.js";
 const VERSION = "6.2.3-dev.73";
 
 const temporary: string[] = [];
-const initialCwd = process.cwd();
 
 beforeAll(() => {
   // Defined at build time by tsdown; migrate maps over it.
@@ -31,8 +30,6 @@ beforeAll(() => {
 });
 
 afterEach(() => {
-  // buildTsMorphProject chdirs into the project, and Windows can't remove the cwd.
-  process.chdir(initialCwd);
   for (const dir of temporary.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }

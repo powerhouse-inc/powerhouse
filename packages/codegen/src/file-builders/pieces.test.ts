@@ -18,11 +18,10 @@ import {
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
 import { createOrUpdateManifest } from "./manifest.js";
 
-const originalCwd = process.cwd();
 const temporary: string[] = [];
 
 // A project of the shape `ph init` leaves behind, minus everything a piece
-// does not touch; buildTsMorphProject needs the tsconfig and chdirs into it.
+// does not touch.
 function makeProject(packageName = "@acme/ledger", version = "2.0.0") {
   const dir = mkdtempSync(join(tmpdir(), "ph-pieces-"));
   temporary.push(dir);
@@ -46,7 +45,6 @@ const readList = (dir: string) =>
   readFileSync(join(dir, "pieces", "index.ts"), "utf8");
 
 afterEach(() => {
-  process.chdir(originalCwd);
   for (const dir of temporary.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -15,6 +15,7 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateDirectory,
   getOrCreateSourceFile,
+  projectPath,
 } from "utils";
 
 export async function tsMorphGenerateSubgraph(args: {
@@ -112,7 +113,8 @@ export async function makeSubgraphsIndexFile(args: {
   project: Project;
   subgraphsDir: string;
 }) {
-  const { project, subgraphsDir } = args;
+  const { project } = args;
+  const subgraphsDir = projectPath(project, args.subgraphsDir);
   // skipAddingFilesFromTsConfig leaves other subgraphs out of the project; add
   // their index files so the aggregate exports every subgraph, not just the new one.
   project.addSourceFilesAtPaths(path.join(subgraphsDir, "**", "index.ts"));

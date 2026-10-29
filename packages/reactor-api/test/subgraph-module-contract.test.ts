@@ -23,6 +23,7 @@
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import type { ViteDevServer } from "vite";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
@@ -292,4 +293,44 @@ describe("VitePackageLoader against a real project tree", () => {
       "StatementsSubgraph",
     ]);
   }, 60_000);
+
+  it("registers in export-name order, as a built package's native import does", async () => {
+    const built = join(root, "built");
+    await mkdir(built, { recursive: true });
+    await writeFile(join(built, "base.mjs"), "export class BaseSubgraph {}\n");
+    for (const className of [
+      "StatementsSubgraph",
+      "LedgerSubgraph",
+      "DirectSubgraph",
+    ]) {
+      await writeFile(
+        join(built, `${className}.mjs`),
+        `import { BaseSubgraph } from "./base.mjs";\nexport class ${className} extends BaseSubgraph {}\n`,
+      );
+    }
+    await writeFile(
+      join(built, "index.mjs"),
+      [
+        'export * as StatementsSubgraph from "./StatementsSubgraph.mjs";',
+        'export * as ledger from "./LedgerSubgraph.mjs";',
+        'export { DirectSubgraph } from "./DirectSubgraph.mjs";',
+        "",
+      ].join("\n"),
+    );
+    const native = extractSubgraphs(
+      (await import(
+        /* @vite-ignore */ pathToFileURL(join(built, "index.mjs")).href
+      )) as Record<string, unknown>,
+    );
+    const loaded = await VitePackageLoader.build(vite).loadSubgraphs(root);
+    const order = ["DirectSubgraph", "StatementsSubgraph", "LedgerSubgraph"];
+    expect(native.map((s) => s.name)).toEqual(order);
+    expect(loaded.map((s) => s.name)).toEqual(order);
+  }, 60_000);
+
+  it("keeps the order of a default-exported array", () => {
+    class Zeta extends BaseSubgraph {}
+    class Alpha extends BaseSubgraph {}
+    expect(extractSubgraphs({ default: [Zeta, Alpha] })).toEqual([Zeta, Alpha]);
+  });
 });
