@@ -1,7 +1,5 @@
-import {
-  resolveFeatureFlags,
-  type IReactorClient,
-} from "@powerhousedao/reactor";
+import type { IReactorClient } from "@powerhousedao/reactor";
+import { resolveFeatureFlags } from "@powerhousedao/reactor";
 import {
   createPortTransport,
   ReactorHost,
