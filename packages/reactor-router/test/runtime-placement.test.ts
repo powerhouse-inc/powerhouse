@@ -238,3 +238,69 @@ describe("onRoutingChange", () => {
     expect(reported.join("\n")).toMatch(/routing change listener failed.*boom/);
   });
 });
+
+describe("setConfiguredPlacement", () => {
+  it("places a drive in the config layer after construction", async () => {
+    const { local, remote, client } = setup();
+    local.seed(fakeDocument({ id: "drive" }));
+    remote.seed(fakeDocument({ id: "drive" }));
+
+    client.setConfiguredPlacement("drive", "remote");
+    await client.write.drives.addFolder("drive", "f");
+
+    expect(remote.count("execute")).toBe(1);
+    expect(local.count("execute")).toBe(0);
+    expect(rowFor(client, "drive")).toEqual({
+      collectionId: "drive",
+      backend: "remote",
+      source: "override",
+      origin: "config",
+      configured: "remote",
+    });
+  });
+
+  it("stays below a runtime placement", () => {
+    const { client } = setup();
+
+    client.setPlacement("drive", "local");
+    client.setConfiguredPlacement("drive", "remote");
+
+    expect(rowFor(client, "drive")).toEqual({
+      collectionId: "drive",
+      backend: "local",
+      source: "override",
+      origin: "runtime",
+      configured: "remote",
+    });
+  });
+
+  it("removes the config placement when cleared, and reports each change once", () => {
+    const { client } = setup({ drive: "remote" });
+    const changes: RoutingChange[] = [];
+    client.onRoutingChange((change) => changes.push(change));
+
+    client.setConfiguredPlacement("drive", "remote");
+    client.setConfiguredPlacement("drive", undefined);
+
+    expect(rowFor(client, "drive")).toBeUndefined();
+    expect(changes).toEqual([{ key: "drive", reason: "placement" }]);
+  });
+
+  it("is corrected by a refusal, naming the override as stale", async () => {
+    const { local, client, reported } = setup();
+    local.seed(fakeDocument({ id: "drive" }));
+
+    client.setConfiguredPlacement("drive", "remote");
+    await client.write.drives.addFolder("drive", "f");
+
+    expect(local.count("execute")).toBe(1);
+    expect(reported.join("\n")).toMatch(/The override is stale/);
+  });
+
+  it("refuses a backend the router does not hold", () => {
+    const { client } = setup();
+    expect(() => client.setConfiguredPlacement("drive", "nowhere")).toThrow(
+      UnknownBackendError,
+    );
+  });
+});

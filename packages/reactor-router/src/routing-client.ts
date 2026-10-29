@@ -152,6 +152,11 @@ export class RoutingReactorClient implements IReactorClient {
     this.dispatcher.table.setPlacement(key, backend);
   }
 
+  /** A late `collections` entry, below runtime; `undefined` removes it. */
+  setConfiguredPlacement(key: string, backend: string | undefined): void {
+    this.dispatcher.table.setConfiguredPlacement(key, backend);
+  }
+
   /**
    * Calls `listener` whenever a collection route changes: a placement, a
    * learned or corrected route, or a route forgotten after a refusal.
