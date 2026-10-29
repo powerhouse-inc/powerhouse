@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/vetra-studio",
-  "version": "6.2.3-dev.81",
+  "version": "6.2.3-dev.82",
   "description": "Vetra Studio as host plugins: the dev tooling composed onto a project's switchboard and Connect (uniform-runners rewire R4). EXPERIMENTAL.",
   "license": "AGPL-3.0-only",
   "repository": {

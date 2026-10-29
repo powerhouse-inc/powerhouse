@@ -1,3 +1,24 @@
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+- **reactor-browser:** a request deadline and a fetch seam on GraphQLReactorClient ([04964d9ba7](https://github.com/powerhouse-inc/powerhouse/commit/04964d9ba7))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+- **reactor-browser:** a GraphQLReactorClient signer can be a function read per push ([44c401935a](https://github.com/powerhouse-inc/powerhouse/commit/44c401935a))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+- **reactor-browser:** a switchboard that hangs past the router's probe deadline opens the breaker ([4ed5966c9f](https://github.com/powerhouse-inc/powerhouse/commit/4ed5966c9f))
+- **reactor-browser:** a switchboard backend on Node sees a 421 as itself ([197d490368](https://github.com/powerhouse-inc/powerhouse/commit/197d490368))
+- **reactor-browser:** a Switchboard backend takes typed document models ([9df082c147](https://github.com/powerhouse-inc/powerhouse/commit/9df082c147))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.81 (2026-10-29)
 
 ### 🚀 Features

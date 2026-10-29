@@ -1,3 +1,29 @@
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+- **apps-reactor-monitor:** name a drive added to a switchboard, saved in this host ([804c4f2115](https://github.com/powerhouse-inc/powerhouse/commit/804c4f2115))
+- **apps-reactor-monitor:** "Where this app keeps its drives" card for Connect ([48c8d4b6ac](https://github.com/powerhouse-inc/powerhouse/commit/48c8d4b6ac))
+- **apps-reactor-monitor:** link a Connect to switchboard drives in the host rules ([9b7a19066f](https://github.com/powerhouse-inc/powerhouse/commit/9b7a19066f))
+- **apps-reactor-monitor:** policy for drive links, drive lists and placement ([ffa8b1ecb0](https://github.com/powerhouse-inc/powerhouse/commit/ffa8b1ecb0))
+- **apps-reactor-monitor:** import refuses a placement key that names no drive ([01652396c1](https://github.com/powerhouse-inc/powerhouse/commit/01652396c1))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+
+### 🩹 Fixes
+
+- **apps-reactor-monitor:** refuse a drive name a switchboard plugin already uses ([ff831b7d25](https://github.com/powerhouse-inc/powerhouse/commit/ff831b7d25))
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+- **apps-reactor-monitor:** copy an env link into a wrapper as it is ([935da0a9e2](https://github.com/powerhouse-inc/powerhouse/commit/935da0a9e2))
+- **apps-reactor-monitor:** name the folder for a placement key a wrapper's plugins hide ([43cab375b7](https://github.com/powerhouse-inc/powerhouse/commit/43cab375b7))
+- **apps-reactor-monitor:** link a second drive for a Connect that declares no drives ([44edf4ab1e](https://github.com/powerhouse-inc/powerhouse/commit/44edf4ab1e))
+- **apps-reactor-monitor:** show a switchboard's drive address in Use it ([ddb1199c35](https://github.com/powerhouse-inc/powerhouse/commit/ddb1199c35))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.81 (2026-10-29)
 
 ### 🚀 Features

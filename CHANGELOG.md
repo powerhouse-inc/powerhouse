@@ -1,3 +1,40 @@
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **apps-reactor-monitor:** import refuses a placement key that names no drive ([01652396c1](https://github.com/powerhouse-inc/powerhouse/commit/01652396c1))
+- **apps-reactor-monitor:** policy for drive links, drive lists and placement ([ffa8b1ecb0](https://github.com/powerhouse-inc/powerhouse/commit/ffa8b1ecb0))
+- **apps-reactor-monitor:** link a Connect to switchboard drives in the host rules ([9b7a19066f](https://github.com/powerhouse-inc/powerhouse/commit/9b7a19066f))
+- **apps-reactor-monitor:** "Where this app keeps its drives" card for Connect ([48c8d4b6ac](https://github.com/powerhouse-inc/powerhouse/commit/48c8d4b6ac))
+- **apps-reactor-monitor:** name a drive added to a switchboard, saved in this host ([804c4f2115](https://github.com/powerhouse-inc/powerhouse/commit/804c4f2115))
+- **apps-reactor-monitor:** link a Connect to switchboard drives ([#3333](https://github.com/powerhouse-inc/powerhouse/pull/3333))
+- **host-core:** export placementKeyIssues from ./schema ([42b0411430](https://github.com/powerhouse-inc/powerhouse/commit/42b0411430))
+- **reactor,reactor-api:** inspection says whether models load on demand ([c467cb6314](https://github.com/powerhouse-inc/powerhouse/commit/c467cb6314))
+- **reactor-browser:** a GraphQLReactorClient signer can be a function read per push ([44c401935a](https://github.com/powerhouse-inc/powerhouse/commit/44c401935a))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+- **reactor-browser:** a request deadline and a fetch seam on GraphQLReactorClient ([04964d9ba7](https://github.com/powerhouse-inc/powerhouse/commit/04964d9ba7))
+- **reactor-browser:** a Switchboard as a router backend ([#3332](https://github.com/powerhouse-inc/powerhouse/pull/3332))
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+
+### 🩹 Fixes
+
+- **apps-reactor-monitor:** show a switchboard's drive address in Use it ([ddb1199c35](https://github.com/powerhouse-inc/powerhouse/commit/ddb1199c35))
+- **apps-reactor-monitor:** link a second drive for a Connect that declares no drives ([44edf4ab1e](https://github.com/powerhouse-inc/powerhouse/commit/44edf4ab1e))
+- **apps-reactor-monitor:** name the folder for a placement key a wrapper's plugins hide ([43cab375b7](https://github.com/powerhouse-inc/powerhouse/commit/43cab375b7))
+- **apps-reactor-monitor:** copy an env link into a wrapper as it is ([935da0a9e2](https://github.com/powerhouse-inc/powerhouse/commit/935da0a9e2))
+- **apps-reactor-monitor:** refuse a drive name a switchboard plugin already uses ([ff831b7d25](https://github.com/powerhouse-inc/powerhouse/commit/ff831b7d25))
+- **ph-cli:** a switchboard host is ready once its declared drives are seeded ([e712ec6fb9](https://github.com/powerhouse-inc/powerhouse/commit/e712ec6fb9))
+- **reactor-browser:** a Switchboard backend takes typed document models ([9df082c147](https://github.com/powerhouse-inc/powerhouse/commit/9df082c147))
+- **reactor-browser:** a switchboard backend on Node sees a 421 as itself ([197d490368](https://github.com/powerhouse-inc/powerhouse/commit/197d490368))
+- **reactor-browser:** a switchboard that hangs past the router's probe deadline opens the breaker ([4ed5966c9f](https://github.com/powerhouse-inc/powerhouse/commit/4ed5966c9f))
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+- **switchboard:** /ready waits for the default drive ([27cee3f720](https://github.com/powerhouse-inc/powerhouse/commit/27cee3f720))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.81 (2026-10-29)
 
 ### 🚀 Features
