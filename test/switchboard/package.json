@@ -15,6 +15,7 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/reactor-router": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
     "@renown/sdk": "workspace:*",

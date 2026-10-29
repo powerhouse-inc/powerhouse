@@ -2,9 +2,13 @@ import {
   createReactorInspector,
   type ReactorInfo,
 } from "@powerhousedao/reactor";
-import type {
-  BrowserReactorClientModule,
-  WorkerReactorClientModule,
+import {
+  ambientRenownSigner,
+  ambientRenownTokenProvider,
+  createSwitchboardBackend,
+  type BrowserReactorClientModule,
+  type SwitchboardBackend,
+  type WorkerReactorClientModule,
 } from "@powerhousedao/reactor-browser";
 import {
   FanInPartialFailureError,
@@ -21,16 +25,6 @@ import type {
   ISigner,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
-import {
-  createGraphQLRoutableBackend,
-  type GraphQLRoutableBackend,
-} from "./graphql-routable-backend.js";
-
-export { createGraphQLRoutableBackend } from "./graphql-routable-backend.js";
-export type {
-  GraphQLRoutableBackend,
-  GraphQLRoutableBackendOptions,
-} from "./graphql-routable-backend.js";
 
 export const LOCAL_BACKEND_NAME = "connect-local";
 export const REMOTE_BACKEND_NAME = "switchboard-remote";
@@ -38,11 +32,6 @@ export const REMOTE_BACKEND_NAME = "switchboard-remote";
 export type LocalReactorModule =
   | BrowserReactorClientModule
   | WorkerReactorClientModule;
-
-const REMOTE_REACH: ReactorReach = Object.freeze({
-  hosting: "remote",
-  inspection: "none",
-});
 
 /** Only the tab's reactor is inspectable here, so new collections land on it. */
 export const PLACE_ON_LOCAL: CollectionRequirementsInput = Object.freeze({
@@ -130,12 +119,12 @@ function localIdCheckAnswer(
 
 /** The router Connect installs, with Connect's handling of credentials and id checks. */
 export class ConnectRoutingClient extends RoutingReactorClient {
-  private readonly remote: GraphQLRoutableBackend;
+  private readonly remote: SwitchboardBackend;
 
   constructor(
     backends: readonly RoutableBackendConfig[],
     options: RoutingClientOptions,
-    remote: GraphQLRoutableBackend,
+    remote: SwitchboardBackend,
     hasLocal: boolean,
   ) {
     super(backends, {
@@ -174,17 +163,16 @@ export async function buildMultiReactorClient(
   const registry = module?.reactorModule?.documentModelRegistry;
   const loaded = params.documentModelModules;
   const loadedModules = typeof loaded === "function" ? loaded : () => loaded;
-  const remote = createGraphQLRoutableBackend({
-    url: params.remoteGraphqlUrl,
-    documentModels: () => registry?.getAllModules() ?? loadedModules(),
-  });
-  const remoteBackend: RoutableBackendConfig = {
+  // The logged-in Renown user's token and signer, read per request as before.
+  const remote = createSwitchboardBackend({
     name: REMOTE_BACKEND_NAME,
-    backend: remote.backend,
-    facts: () => remote.info(),
-    reach: REMOTE_REACH,
-    refusesMisroutes: false,
-  };
+    url: params.remoteGraphqlUrl,
+    tokenProvider: ambientRenownTokenProvider,
+    signer: ambientRenownSigner,
+    documentModels: () => registry?.getAllModules() ?? loadedModules(),
+    inspection: "none",
+  });
+  const remoteBackend = remote.config;
   const backends: RoutableBackendConfig[] = module
     ? [
         {

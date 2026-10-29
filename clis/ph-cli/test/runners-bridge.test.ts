@@ -245,6 +245,8 @@ describe("switchboard bridge runner", () => {
       port: 7599,
       // run = production, exactly as `ph switchboard` without --dev
       dev: undefined,
+      // Not a classic arg: `/ready` waits for the drives the runner seeds.
+      readyAfter: expect.any(Promise) as unknown,
     });
     expect(vi.mocked(startSwitchboard).mock.calls[0][0]).toHaveProperty(
       "dbPath",
@@ -256,6 +258,7 @@ describe("switchboard bridge runner", () => {
       ...classic,
       port: 7599,
       dev: true,
+      readyAfter: expect.any(Promise) as unknown,
     });
   });
 

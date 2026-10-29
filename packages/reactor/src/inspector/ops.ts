@@ -23,6 +23,11 @@ export const INSPECTOR_OPS = {
     tier: "read",
     gql: "documentModels",
   },
+  loadsModelsOnDemand: {
+    rpc: "registry.loadsModelsOnDemand",
+    tier: "read",
+    gql: "loadsModelsOnDemand",
+  },
   listDrives: { rpc: "drives.list", tier: "read", gql: "drives" },
   checkDriveIntegrity: {
     rpc: "drives.checkIntegrity",

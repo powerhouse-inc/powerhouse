@@ -8,6 +8,10 @@ import {
   SwitchboardClient,
   type RenownCrypto,
 } from "@renown/sdk/node";
+import { createSwitchboardBackend } from "@powerhousedao/reactor-browser/graphql-client";
+import { RoutingReactorClient } from "@powerhousedao/reactor-router";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { privateKeyToAccount } from "viem/accounts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -236,6 +240,33 @@ describe("switchboard as its own renown auth provider", () => {
   it("rejects a bearer token with no delegation credential", async () => {
     const { status } = await createDocument(strangerToken);
     expect(status).toBe(401);
+  });
+
+  it("routes a write to it only with a bearer", async () => {
+    const routerWith = (token: string | undefined) => {
+      const remote = createSwitchboardBackend({
+        name: "sb",
+        url: ENDPOINT,
+        tokenProvider: () => Promise.resolve(token),
+        signer: undefined,
+        documentModels: () => [driveDocumentModelModule],
+        realtime: false,
+      });
+      return new RoutingReactorClient([remote.config], {
+        documentModelModules: [
+          driveDocumentModelModule as unknown as DocumentModelModule,
+        ],
+        onDiagnostic: () => {},
+      });
+    };
+
+    await expect(
+      routerWith(undefined).createEmpty("powerhouse/document-drive"),
+    ).rejects.toThrow("authentication required");
+    const created = await routerWith(bearerToken).createEmpty(
+      "powerhouse/document-drive",
+    );
+    expect(created.header.id).toBeTruthy();
   });
 
   it("rejects the token once the credential is revoked", async () => {

@@ -50,6 +50,10 @@ export const INSPECTION_OPERATIONS = {
     inspection { documentModels ${selectionOf("InspectionDocumentModel")} }
   }`,
 
+  loadsModelsOnDemand: `query ReactorInspectionModelLoading {
+    inspection { loadsModelsOnDemand }
+  }`,
+
   drives: `query ReactorInspectionDrives($cursor: String, $limit: Int) {
     inspection {
       drives(cursor: $cursor, limit: $limit) ${selectionOf("InspectionDrivePage")}

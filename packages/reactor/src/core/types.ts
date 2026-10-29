@@ -592,6 +592,8 @@ export interface InProcessReactorModule extends ReactorModule {
    * does, and the read surface is composed outside the reactor.
    */
   featureFlags: ReactorFeatureFlags;
+  /** A document model loader is wired: unregistered types load on first use. */
+  loadsModelsOnDemand?: boolean;
   queue: IQueue;
   jobTracker: IJobTracker;
   executorManager: IJobExecutorManager;

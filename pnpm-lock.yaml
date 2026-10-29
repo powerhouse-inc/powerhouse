@@ -2609,6 +2609,9 @@ importers:
       '@powerhousedao/reactor-drive':
         specifier: workspace:*
         version: link:../reactor-drive
+      '@powerhousedao/reactor-router':
+        specifier: workspace:*
+        version: link:../reactor-router
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
@@ -3940,6 +3943,9 @@ importers:
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../../packages/reactor-browser
+      '@powerhousedao/reactor-router':
+        specifier: workspace:*
+        version: link:../../packages/reactor-router
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared

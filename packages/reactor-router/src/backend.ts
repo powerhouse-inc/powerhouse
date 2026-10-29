@@ -268,11 +268,15 @@ export type RoutableBackendConfig = {
   /** True when the backend itself refuses a misroute with WrongBackendError. */
   readonly refusesMisroutes: boolean;
   /**
-   * The document types the backend can create, read with the facts. Absent,
-   * the backend loads models on demand and creates are not checked.
+   * The document types the backend can create, read with the facts. Absent, or
+   * read as `undefined`, the backend loads models on demand and creates are
+   * not checked.
    */
-  readonly documentTypes?: () => Promise<readonly string[]>;
+  readonly documentTypes?: () => Promise<readonly string[] | undefined>;
 };
+
+/** A facts read that failed, as opposed to one that answered `undefined`. */
+const UNREAD: unique symbol = Symbol("unread");
 
 /** The backend cannot serve this call, by declaration. Nothing was sent. */
 export class UnsupportedByBackendError extends Error {
@@ -453,14 +457,14 @@ export class RouterBackend {
         ? Promise.resolve(undefined)
         : this.read("its document types", typesSource, onDiagnostic),
     ]);
-    const known =
-      reactor !== undefined &&
-      (typesSource === undefined || types !== undefined);
+    const known = reactor !== UNREAD && types !== UNREAD;
     this.current = {
-      reactor: reactor ?? UNKNOWN_REACTOR_INFO,
+      reactor: reactor === UNREAD ? UNKNOWN_REACTOR_INFO : reactor,
       reach: this.reach,
       known,
-      ...(types === undefined ? {} : { documentTypes: new Set(types) }),
+      ...(types === UNREAD || types === undefined
+        ? {}
+        : { documentTypes: new Set(types) }),
     };
   }
 
@@ -468,7 +472,7 @@ export class RouterBackend {
     what: string,
     source: () => Promise<T>,
     onDiagnostic: RouterDiagnostic,
-  ): Promise<T | undefined> {
+  ): Promise<T | typeof UNREAD> {
     try {
       return await source();
     } catch (error) {
@@ -476,7 +480,7 @@ export class RouterBackend {
         `facts: backend ${this.name} could not report ${what} (${messageOf(error)}); placing it as unknown`,
         error,
       );
-      return undefined;
+      return UNREAD;
     }
   }
 }

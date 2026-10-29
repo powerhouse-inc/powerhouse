@@ -42,6 +42,25 @@ describe("ReactorInspector", () => {
     expect(info.syncChannels).toEqual([]);
   });
 
+  it("reports whether models load on demand", async () => {
+    module = await new ReactorBuilder().buildModule();
+    expect(await createReactorInspector(module).loadsModelsOnDemand()).toBe(
+      false,
+    );
+    module.reactor.kill();
+
+    module = await new ReactorBuilder()
+      .withDocumentModelLoader({
+        load: (documentType) =>
+          Promise.reject(new Error(`no ${documentType} here`)),
+      })
+      .buildModule();
+    expect(await createReactorInspector(module).loadsModelsOnDemand()).toBe(
+      true,
+    );
+    expect(await new ReactorInspector({}).loadsModelsOnDemand()).toBe(false);
+  });
+
   it("reports a caller-supplied store as unknown unless the host declares it", async () => {
     const kysely = new Kysely<Database>({
       dialect: new HardenedPGliteDialect(new PGlite()),

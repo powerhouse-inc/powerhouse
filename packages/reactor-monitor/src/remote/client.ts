@@ -299,6 +299,13 @@ export class RemoteInspectorClient
     return data.inspection.documentModels.map(toDocumentModel);
   }
 
+  async loadsModelsOnDemand(): Promise<boolean> {
+    const data = await this.query<{
+      inspection: { loadsModelsOnDemand: boolean };
+    }>("loadsModelsOnDemand");
+    return data.inspection.loadsModelsOnDemand;
+  }
+
   async listDrives(
     cursor?: string,
     limit?: number,
