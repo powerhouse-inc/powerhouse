@@ -383,12 +383,42 @@ describe("switchboard runner — readiness", () => {
     await expect(held.readyAfter).resolves.toBeUndefined();
   });
 
-  it("fails readiness when seeding fails", async () => {
+  it("still readies when one declared drive cannot be made", async () => {
+    // The runner logs such a drive and starts without it.
     const held = await startHeld();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
 
     held.finishSeeding(new Error("seed failed"));
-    await expect(held.running).rejects.toThrow("seed failed");
-    await expect(held.readyAfter).rejects.toThrow("seed failed");
+    await held.running;
+    await expect(held.readyAfter).resolves.toBeUndefined();
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
+  });
+
+  it("fails readiness when seeding itself fails", async () => {
+    const { seedWorkflowsDrive } = await import("../src/services/vetra.js");
+    vi.mocked(seedWorkflowsDrive).mockRejectedValueOnce(
+      new Error("seed failed"),
+    );
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    vi.mocked(startSwitchboard).mockClear();
+    const runner = await import("../src/runners/switchboard.js");
+
+    const running = runner.run(
+      switchboard({
+        name: "lab-switchboard",
+        runner: {
+          module: "@powerhousedao/ph-cli/runners/switchboard",
+          port: 7599,
+        },
+        reactor: { workflows: true },
+      }),
+      ctx,
+    );
+
+    await expect(running).rejects.toThrow("seed failed");
+    const { readyAfter } = vi.mocked(startSwitchboard).mock.calls[0][0];
+    await expect(readyAfter).rejects.toThrow("seed failed");
   });
 });
 
