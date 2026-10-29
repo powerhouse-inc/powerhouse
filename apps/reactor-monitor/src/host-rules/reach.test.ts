@@ -306,6 +306,41 @@ describe("adding a named drive to a switchboard", () => {
     );
   });
 
+  it("refuses the name of a drive a switchboard plugin adds", () => {
+    const draft = { envelope: stack() };
+    expect(reason(draft, "Workflows")).toBe(
+      REACH_REASONS.nameTaken("Workflows"),
+    );
+    expect(reason(draft, "workflows")).toBe(
+      REACH_REASONS.nameTaken("workflows"),
+    );
+    expect(reason(draft, "Work flows")).toBeUndefined();
+    const plugins = (
+      stack().members.switchboard as { runner: { plugins: unknown[] } }
+    ).runner.plugins;
+    const workflows = "@powerhousedao/switchboard/plugins/workflows";
+    const withEntry = (entry: unknown) =>
+      withSetters(stack(), {
+        "members.switchboard.runner.plugins": plugins.map((plugin) =>
+          plugin === workflows ? entry : plugin,
+        ),
+      });
+    const noDrive = withEntry({ module: workflows, config: { drive: false } });
+    expect(reason(noDrive, "Workflows")).toBeUndefined();
+    expect(reason(noDrive, "workflows")).toBeUndefined();
+    const renamed = withEntry({
+      module: workflows,
+      config: { drive: { slug: "flows", name: "Flows" } },
+    });
+    expect(reason(renamed, "Workflows")).toBeUndefined();
+    expect(reason(renamed, "Flows")).toBe(REACH_REASONS.nameTaken("Flows"));
+    // A plugin the monitor doesn't know may add the same drive.
+    const unknown = withEntry("@acme/switchboard-plugin");
+    expect(reason(unknown, "Workflows")).toBe(
+      REACH_REASONS.nameTaken("Workflows"),
+    );
+  });
+
   it("keeps the default drive when the switchboard declared none", () => {
     const envelope = withSetters(stack(), {
       "members.switchboard.reactor": {

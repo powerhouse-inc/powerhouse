@@ -557,6 +557,49 @@ function placementOptions(reach: ConnectReach): ReachOption[] {
   });
 }
 
+/** The drive the switchboard's workflows plugin seeds unless told otherwise. */
+const WORKFLOWS_DRIVE = { slug: "workflows", name: "Workflows" } as const;
+
+/** Switchboard plugins known to add no drive. */
+const DRIVELESS_PLUGINS = [
+  "/plugins/mcp",
+  "/plugins/attachments",
+  "/plugins/privacy",
+];
+
+/**
+ * Drives a switchboard's plugins add; a declared drive with the same slug
+ * replaces one. Where the export can't tell, the known defaults count.
+ */
+function pluginDrives(plugins: unknown): { slug: string; name: string }[] {
+  if (plugins === undefined) return [];
+  if (!Array.isArray(plugins)) return [WORKFLOWS_DRIVE];
+  return (plugins as unknown[]).flatMap((entry) => {
+    const module: unknown = isRecord(entry) ? entry.module : entry;
+    if (typeof module !== "string") return [WORKFLOWS_DRIVE];
+    if (DRIVELESS_PLUGINS.some((suffix) => module.endsWith(suffix))) return [];
+    if (!module.endsWith("/plugins/workflows")) return [WORKFLOWS_DRIVE];
+    const config = isRecord(entry) ? entry.config : undefined;
+    if (!isRecord(config)) return [WORKFLOWS_DRIVE];
+    if (config.drive === false) return [];
+    const drive = isRecord(config.drive) ? config.drive : {};
+    const known = [
+      {
+        slug:
+          typeof drive.slug === "string" ? drive.slug : WORKFLOWS_DRIVE.slug,
+        name:
+          typeof drive.name === "string" ? drive.name : WORKFLOWS_DRIVE.name,
+      },
+    ];
+    // A token or a token field: the default may still be what it seeds.
+    const unsure =
+      (config.drive !== undefined && !isRecord(config.drive)) ||
+      (drive.slug !== undefined && typeof drive.slug !== "string") ||
+      (drive.name !== undefined && typeof drive.name !== "string");
+    return unsure ? [...known, WORKFLOWS_DRIVE] : known;
+  });
+}
+
 /** Every drive slug and name in the host, the default drive's included. */
 function drivesInHost(members: readonly Member[]): {
   slugs: Set<string>;
@@ -565,6 +608,12 @@ function drivesInHost(members: readonly Member[]): {
   const slugs = new Set<string>([DEFAULT_DRIVE]);
   const names = new Set<string>([DEFAULT_DRIVE_NAME.toLowerCase()]);
   for (const member of members) {
+    if (member.role === "switchboard") {
+      for (const drive of pluginDrives(member.runner.plugins)) {
+        slugs.add(drive.slug);
+        names.add(drive.name.toLowerCase());
+      }
+    }
     for (const entry of driveList(member) ?? []) {
       if (!isRecord(entry)) continue;
       if (typeof entry.slug === "string") slugs.add(entry.slug);
