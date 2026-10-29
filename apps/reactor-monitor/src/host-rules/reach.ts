@@ -6,8 +6,8 @@ import {
   valueAt,
   type Member,
   type MemberBackend,
-} from "./members.js";
-import type { Setter } from "./schema.js";
+} from "./members.ts";
+import type { Setter } from "./schema.ts";
 
 export const REACH_REASONS = {
   compound:
