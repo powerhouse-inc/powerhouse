@@ -199,6 +199,13 @@ export type SetLastTestInput = {
   testedAt: Scalars["DateTime"]["input"];
 };
 
+export type SetManagedByInput = {
+  /** The managing document; omit to clear */
+  documentId?: InputMaybe<Scalars["PHID"]["input"]>;
+  documentType?: InputMaybe<Scalars["String"]["input"]>;
+  label?: InputMaybe<Scalars["String"]["input"]>;
+};
+
 export type SetPolicyInput = {
   concurrency?: InputMaybe<ConcurrencyMode>;
   defaultRetry?: InputMaybe<SetPolicyRetryPolicyInput>;
@@ -363,6 +370,15 @@ export type WorkflowEdge = {
   to: Scalars["OID"]["output"];
 };
 
+/** What manages a workflow: the document that defines it, and how to name it to a person. */
+export type WorkflowManager = {
+  documentId: Scalars["PHID"]["output"];
+  /** e.g. sektar/integration */
+  documentType: Scalars["String"]["output"];
+  /** e.g. Powerhouse - Google Calendar */
+  label: Scalars["String"]["output"];
+};
+
 export type WorkflowPolicy = {
   /** ENFORCED. SINGLETON drops a firing while a run is active (journaled CANCELLED, not dropped silently); QUEUE serialises; PARALLEL runs concurrently. */
   concurrency: ConcurrencyMode;
@@ -388,6 +404,8 @@ export type WorkflowState = {
   /** Denormalised for inspectors; written by the runtime. */
   lastRunAt: Maybe<Scalars["DateTime"]["output"]>;
   lastRunStatus: Maybe<RunStatus>;
+  /** Who keeps this workflow as it is, e.g. an app's integration; null: people edit it. Editors show a managed workflow read-only. */
+  managedBy: Maybe<WorkflowManager>;
   name: Scalars["String"]["output"];
   policy: WorkflowPolicy;
   /** Last published snapshot; version !== published.version means unpublished changes. */

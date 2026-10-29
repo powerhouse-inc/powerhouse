@@ -35,6 +35,21 @@ describe("reactorSchema (strict per D2.d)", () => {
     expect(result.success).toBe(true);
   });
 
+  it("takes a remote backend's drive address on the page origin, and nothing else that is not one", () => {
+    const at = (url: string) =>
+      reactorSchema.safeParse({
+        backends: { sb: { kind: "remote", remote: { url } } },
+      }).success;
+    expect(at("${origin}/d/powerhouse")).toBe(true);
+    expect(at("http://127.0.0.1:7540/d/powerhouse")).toBe(true);
+    // A GraphQL endpoint names no drive, on the page origin as anywhere
+    expect(at("${origin}/graphql")).toBe(false);
+    expect(at("${origin}")).toBe(false);
+    expect(at("/d/powerhouse")).toBe(false);
+    expect(at("origin/d/powerhouse")).toBe(false);
+    expect(at("x${origin}/d/powerhouse")).toBe(false);
+  });
+
   it("rejects a typo'd protocol key with its path (fleet-consensus safety)", () => {
     const result = reactorSchema.safeParse({
       protocol: { featureFlags: { documentDecisionz: true } },

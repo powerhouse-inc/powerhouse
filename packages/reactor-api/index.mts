@@ -31,6 +31,7 @@ export * from "./src/services/renown-config.js";
 export * from "./src/services/renown-credential-verifier.js";
 export * from "./src/services/document-permission.service.js";
 export * from "./src/services/permission-cache.js";
+export * from "./src/services/readable-documents.js";
 export * from "./src/services/privacy-permissions.js";
 export * from "./src/services/package-management.service.js";
 export * from "./src/services/package-storage.js";

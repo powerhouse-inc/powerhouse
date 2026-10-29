@@ -18,11 +18,8 @@ export function createWorkflowRuntimeSubgraph(
   return class WorkflowRuntimeSubgraph extends BaseSubgraph {
     override name = "workflow-runtime";
     override typeDefs: DocumentNode = schema;
-    // A field initializer runs after super(), so the authorization service
-    // the secret mutations gate on is already in place.
     override resolvers = getResolvers(
       runtime,
-      this.authorizationService,
       oauth,
       access,
       (documentId, ctx) => this.assertCanRead(documentId, ctx),

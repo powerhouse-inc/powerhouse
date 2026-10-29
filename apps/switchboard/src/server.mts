@@ -21,6 +21,7 @@ import {
   type PoolInstrumentation,
   type ReactorStorageFacts,
   UnsupportedStoredProtocolError,
+  withProgressHeartbeat,
 } from "@powerhousedao/reactor";
 import {
   HttpPackageLoader,
@@ -262,6 +263,42 @@ function resolveConfigPath(configFile: string | undefined): string {
   return configFile ?? path.join(process.cwd(), "powerhouse.config.json");
 }
 
+/**
+ * The config file's `workflows.oauthApps`, client file paths made absolute
+ * from the config file's folder. An unreadable file or a malformed entry
+ * means none: a missing app is reported when a sign-in asks for it.
+ */
+function readConfigOAuthApps(
+  configPath: string,
+): { id: string; clients: { desktop?: string; web?: string } }[] {
+  let raw: unknown;
+  try {
+    raw = (getConfig(configPath) as { workflows?: { oauthApps?: unknown } })
+      .workflows?.oauthApps;
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(raw)) return [];
+  const dir = path.dirname(path.resolve(configPath));
+  const at = (p: unknown) =>
+    typeof p === "string" && p ? path.resolve(dir, p) : undefined;
+  return raw.flatMap((entry: unknown) => {
+    const app = (entry ?? {}) as {
+      id?: unknown;
+      clients?: { desktop?: unknown; web?: unknown };
+    };
+    if (typeof app.id !== "string" || !app.id) return [];
+    const desktop = at(app.clients?.desktop);
+    const web = at(app.clients?.web);
+    return [
+      {
+        id: app.id,
+        clients: { ...(desktop ? { desktop } : {}), ...(web ? { web } : {}) },
+      },
+    ];
+  });
+}
+
 // An unreadable config file means "not configured", not a boot failure:
 // workflows are opt-in.
 function readConfigWorkflowsEnabled(configPath: string): boolean {
@@ -497,7 +534,10 @@ async function initServer(
     // stays OFF. The mcp/workflows plugins set these true at
     // transformServerOptions; their absence must actually deactivate.
     options.mcp ??= false;
-    options.workflows = { enabled: options.workflows?.enabled === true };
+    options.workflows = {
+      ...options.workflows,
+      enabled: options.workflows?.enabled === true,
+    };
   }
   logger.level = config.logLevel;
   const dbPath = config.storage.readModel.url;
@@ -957,7 +997,14 @@ async function initServer(
 
     let module: InProcessReactorClientModule;
     try {
-      module = await clientBuilder.buildModule();
+      module = await withProgressHeartbeat(
+        {
+          logger,
+          label:
+            "Starting the reactor (migrations, document view, indexer, processors)",
+        },
+        () => clientBuilder.buildModule(),
+      );
     } catch (error) {
       try {
         await baseKysely.destroy();
@@ -998,10 +1045,14 @@ async function initServer(
     const permissionsDb = baseKysely.withSchema(REACTOR_SCHEMA);
     try {
       if (readModelDb) {
-        await backfillPermissionTables(
-          readModelDb,
-          permissionsDb as unknown as Kysely<unknown>,
-          logger,
+        await withProgressHeartbeat(
+          { logger, label: "Moving the permission tables" },
+          () =>
+            backfillPermissionTables(
+              readModelDb,
+              permissionsDb as unknown as Kysely<unknown>,
+              logger,
+            ),
         );
       }
     } catch (error) {
@@ -1273,7 +1324,15 @@ async function initServer(
       // under it, not under the reactor's.
       webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
       http: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME),
+      // The host's option, else the config file's: under uniform runners the
+      // plugins own the workflows switch and the classic config read is skipped.
+      oauthApps:
+        options.workflows?.oauthApps ??
+        readConfigOAuthApps(resolveConfigPath(options.configFile)),
       authorizationService: api.authorizationService,
+      // The manager that serves this reactor's subgraphs: a piece's index read
+      // runs through it in process, as the run's user.
+      indexQueries: api.graphqlManager,
       // The manager that already loads this reactor's packages: the project it
       // runs in is one of them, so its own pieces arrive with the rest.
       pieces: api.packageManager,
@@ -1370,7 +1429,11 @@ async function initServer(
   }
   if (workflows) {
     lateSubgraphs.push(registerWorkflowSubgraph(workflows));
-    await workflows.start();
+    const runtime = workflows;
+    await withProgressHeartbeat(
+      { logger, label: "Starting the workflow runtime" },
+      () => runtime.start(),
+    );
     logger.info("Workflow runtime started");
     api.inspection?.facts.setWorkflows(true);
   }

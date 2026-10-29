@@ -11,7 +11,11 @@ import type {
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
 import { CatchUpPriority } from "./catch-up-priority.js";
-import { startReplayState, type ReplaySnapshotRow } from "./replay-state.js";
+import {
+  startReplayState,
+  type ReplaySnapshotRow,
+  type StatelessPass,
+} from "./replay-state.js";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -1099,6 +1103,8 @@ export class ProcessorManager
         startReplayState(record.replayState ?? "latest", {
           snapshots: (ids, branches) => this.readSnapshots(ids, branches),
           exact: (operations) => this.rebuildStateForOperations(operations),
+          passedWithoutState: (passes) =>
+            this.logStatelessPasses(processorId, passes),
         }),
       routedThrough: () => this.highWater(),
       confirmedThrough: () => this.lastOrdinal,
@@ -1161,6 +1167,73 @@ export class ProcessorManager
       op.operation.action.type === "CREATE_DOCUMENT" &&
       this.driveContainerTypes.has(op.context.documentType)
     );
+  }
+
+  /**
+   * One line per document a replay page passed on without state. A deleted
+   * document is expected and logged at debug; a state that could not be
+   * rebuilt is a fault the processor cannot see, so it is a warning with the
+   * first error.
+   */
+  private logStatelessPasses(
+    processorId: string,
+    passes: StatelessPass[],
+  ): void {
+    const byDocument = new Map<
+      string,
+      {
+        reason: StatelessPass["reason"];
+        count: number;
+        from: number;
+        to: number;
+        error?: unknown;
+      }
+    >();
+    for (const pass of passes) {
+      const { documentId, scope, branch } = pass.operation.context;
+      const key = `${documentId} ${scope} ${branch} ${pass.reason}`;
+      const index = pass.operation.operation.index;
+      const entry = byDocument.get(key);
+      if (entry) {
+        entry.count++;
+        entry.from = Math.min(entry.from, index);
+        entry.to = Math.max(entry.to, index);
+        entry.error ??= pass.error;
+      } else {
+        byDocument.set(key, {
+          reason: pass.reason,
+          count: 1,
+          from: index,
+          to: index,
+          error: pass.error,
+        });
+      }
+    }
+    for (const [key, entry] of byDocument) {
+      const [documentId, scope, branch] = key.split(" ");
+      if (entry.reason === "deleted") {
+        this.logger.debug(
+          "Replay for '@ProcessorId' delivered @Count operation(s) of deleted document '@DocumentId' (@Scope/@Branch) without state",
+          processorId,
+          entry.count,
+          documentId,
+          scope,
+          branch,
+        );
+      } else {
+        this.logger.warn(
+          "Replay for '@ProcessorId' delivered @Count operation(s) of '@DocumentId' (@Scope/@Branch, indexes @From-@To) without state: it could not be rebuilt: @Error",
+          processorId,
+          entry.count,
+          documentId,
+          scope,
+          branch,
+          entry.from,
+          entry.to,
+          entry.error,
+        );
+      }
+    }
   }
 
   private readSnapshots(

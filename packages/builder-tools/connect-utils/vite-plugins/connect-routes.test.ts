@@ -83,6 +83,19 @@ describe("generateConnectRoutes", () => {
     expect(tree).toContain('from "@powerhousedao/connect/routes/__root"');
   });
 
+  it("mounts no route for a type declaration beside the route files", async () => {
+    // A tsc emit leaves x.d.ts next to x.tsx; it once mounted as "/x/d".
+    addRoute("hello.tsx", "/hello");
+    writeRoute("hello.d.ts", "export declare const Route: unknown;\n");
+    writeRoute("_app/reports.d.ts", "export declare const Route: unknown;\n");
+    await generate();
+    const tree = readFileSync(join(project, CONNECT_ROUTES_GEN), "utf8");
+    expect(tree).toContain('"/hello": typeof HelloRoute');
+    expect(tree).not.toMatch(/\.d"/);
+    expect(tree).not.toContain("/hello/d");
+    expect(tree).not.toContain("reports/d");
+  });
+
   it("nests a project's _app/ routes in Connect's layout, and others at the root", async () => {
     addRoute("_app/reports.tsx", "/_app/reports");
     addRoute("(pages)/hello.tsx", "/hello");

@@ -100,6 +100,24 @@
               "const": false
             }
           ]
+        },
+        "proxy": {
+          "type": "object",
+          "properties": {
+            "target": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uri"
+                },
+                {
+                  "$ref": "#/$defs/__schema0"
+                }
+              ]
+            }
+          },
+          "required": ["target"],
+          "additionalProperties": false
         }
       },
       "required": ["module"],
@@ -1250,8 +1268,15 @@
                   "url": {
                     "anyOf": [
                       {
-                        "type": "string",
-                        "format": "uri"
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ]
                       },
                       {
                         "$ref": "#/$defs/__schema0"

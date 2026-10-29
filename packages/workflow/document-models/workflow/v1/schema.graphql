@@ -215,10 +215,22 @@ type WorkflowState {
   policy: WorkflowPolicy!
   "Last published snapshot; version !== published.version means unpublished changes."
   published: PublishedWorkflow
+  "Who keeps this workflow as it is, e.g. an app's integration; null: people edit it. Editors show a managed workflow read-only."
+  managedBy: WorkflowManager
   "Denormalised for inspectors; written by the runtime."
   lastRunAt: DateTime
   lastRunStatus: RunStatus
 }
+
+"What manages a workflow: the document that defines it, and how to name it to a person."
+type WorkflowManager {
+  documentId: PHID!
+  "e.g. sektar/integration"
+  documentType: String!
+  "e.g. Powerhouse - Google Calendar"
+  label: String!
+}
+
 
 # workflow
 
@@ -232,6 +244,13 @@ input SetWorkflowDescriptionInput {
 
 input SetWorkflowStatusInput {
     status: WorkflowStatus!
+}
+
+input SetManagedByInput {
+    "The managing document; omit to clear"
+    documentId: PHID
+    documentType: String
+    label: String
 }
 
 # trigger

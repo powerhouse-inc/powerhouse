@@ -1,3 +1,34 @@
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **connect:** a proxied Connect names its switchboard as ${origin}; the runner proxies the switchboard's paths ([bdaffdb580](https://github.com/powerhouse-inc/powerhouse/commit/bdaffdb580))
+- **host-core:** flag a placement.drives key that names no drive the host knows ([e0f7c430ae](https://github.com/powerhouse-inc/powerhouse/commit/e0f7c430ae))
+- **codegen:** scaffolded assistant and cli hosts link the switchboard by a drive address ([ca3b183ad6](https://github.com/powerhouse-inc/powerhouse/commit/ca3b183ad6))
+- ⚠️  **host-core:** a remote link is a switchboard drive address; placement.drives ([3e7bf53215](https://github.com/powerhouse-inc/powerhouse/commit/3e7bf53215))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **host-core:** refuse a placement slug that is both a local drive and on a switchboard ([cdeccbd8b0](https://github.com/powerhouse-inc/powerhouse/commit/cdeccbd8b0))
+- **host-core:** placement sees every switchboard a slug is on, and plugin-attached drives ([1c11949d8c](https://github.com/powerhouse-inc/powerhouse/commit/1c11949d8c))
+- **host-core:** keep host names to one safe file-name segment ([d347e09c10](https://github.com/powerhouse-inc/powerhouse/commit/d347e09c10))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ⚠️  Breaking Changes
+
+- **host-core:** a remote link is a switchboard drive address; placement.drives  ([3e7bf53215](https://github.com/powerhouse-inc/powerhouse/commit/3e7bf53215))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

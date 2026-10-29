@@ -21,6 +21,19 @@ export type ReplayStateSources = {
   ): Promise<ReplaySnapshotRow[]>;
   /** Each operation with its state at its own revision, rebuilt from the write cache. */
   exact(operations: OperationWithContext[]): Promise<OperationWithContext[]>;
+  /**
+   * Told about every operation a page delivers without a state it should
+   * have had, and why: its document is deleted, or its state could not be
+   * rebuilt (with the error). Not called in `operations` mode.
+   */
+  passedWithoutState?(passes: StatelessPass[]): void;
+};
+
+/** An operation a replay delivered without `resultingState`, and why. */
+export type StatelessPass = {
+  operation: OperationWithContext;
+  reason: "deleted" | "unrebuildable";
+  error?: unknown;
 };
 
 /** Turns one backfill page's deliveries into the ones a processor gets. */
@@ -61,7 +74,9 @@ async function fillExact(
 ): Promise<OperationWithContext[]> {
   const missing = operations.filter((op) => !op.context.resultingState);
   if (missing.length === 0) return operations;
-  const rebuilt = await rebuildOrPass(missing, sources);
+  const passes: StatelessPass[] = [];
+  const rebuilt = await rebuildOrPass(missing, sources, passes);
+  report(passes, sources);
   return mergeByOrdinal(
     operations.filter((op) => op.context.resultingState),
     rebuilt,
@@ -94,12 +109,15 @@ async function fillFromSnapshots(
   const out: OperationWithContext[] = kept.filter(
     (op) => op.context.resultingState,
   );
+  const passes: StatelessPass[] = [];
   const behind: OperationWithContext[] = [];
   for (const [key, ops] of streams) {
     const last = ops[ops.length - 1]!;
     const document = documents.get(documentKey(last));
     if (document?.deleted) {
       out.push(...ops);
+      for (const operation of ops)
+        passes.push({ operation, reason: "deleted" });
       continue;
     }
     const index = document?.indexes.get(last.context.scope);
@@ -114,7 +132,10 @@ async function fillFromSnapshots(
       for (const op of ops) out.push(withState(op, document.state));
     }
   }
-  if (behind.length > 0) out.push(...(await rebuildOrPass(behind, sources)));
+  if (behind.length > 0) {
+    out.push(...(await rebuildOrPass(behind, sources, passes)));
+  }
+  report(passes, sources);
   return out.sort((a, b) => a.context.ordinal - b.context.ordinal);
 }
 
@@ -164,10 +185,14 @@ async function loadDocuments(
   return documents;
 }
 
-/** Exact states; an operation whose state cannot be rebuilt passes as read. */
+/**
+ * Exact states; an operation whose state cannot be rebuilt passes as read and
+ * is recorded in `passes` with the error.
+ */
 async function rebuildOrPass(
   operations: OperationWithContext[],
   sources: ReplayStateSources,
+  passes: StatelessPass[],
 ): Promise<OperationWithContext[]> {
   try {
     return await sources.exact(operations);
@@ -176,11 +201,21 @@ async function rebuildOrPass(
     for (const op of operations) {
       try {
         out.push(...(await sources.exact([op])));
-      } catch {
+      } catch (error) {
         out.push(op);
+        passes.push({ operation: op, reason: "unrebuildable", error });
       }
     }
     return out;
+  }
+}
+
+function report(passes: StatelessPass[], sources: ReplayStateSources): void {
+  if (passes.length === 0 || !sources.passedWithoutState) return;
+  try {
+    sources.passedWithoutState(passes);
+  } catch {
+    // reporting never stops a replay
   }
 }
 

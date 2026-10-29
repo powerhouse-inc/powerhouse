@@ -49,6 +49,7 @@ import {
   authMethodFor,
   isIndeterminateError,
   type PieceAuthDescriptor,
+  type BlockDefaults,
   type BlockExecutor,
   type BlockResolution,
   type LocalPiece,
@@ -64,7 +65,9 @@ import {
   type ModelManifestSource,
   type ReactorTap,
   type StepReactorRequest,
+  SecretCreatorMismatchError,
   type SecretProvider,
+  type SecretStat,
   type SecretStore,
   type StepExecutionRecord,
   type WorkflowRunResult,
@@ -81,6 +84,7 @@ import {
   parseReactorConnectionConfig,
   type ConnectionDocument,
 } from "@powerhousedao/workflow/document-models/connection";
+import { idTokenEmail } from "./id-token.js";
 import {
   exchangeCode,
   OAUTH_CLIENT_ID,
@@ -246,6 +250,7 @@ import { ParkState } from "./park-state.js";
 import { decodeRunCursor, encodeRunCursor } from "./run-cursor.js";
 import {
   CANCELLED_RUN_STATUS,
+  concurrencyLimit,
   effectiveRunPolicy,
   type EffectiveRunPolicy,
 } from "./policy.js";
@@ -286,6 +291,16 @@ import {
   type LifecycleFilter,
   type TriggerKind,
 } from "./trigger-filters.js";
+import {
+  clientKindFor,
+  loadOAuthApps,
+  grantedScopes,
+  OAUTH_APP,
+  OAUTH_GRANTED_SCOPES,
+  OAUTH_SCOPES,
+  scopesOverride,
+  type OAuthAppRegistry,
+} from "./oauth-apps.js";
 import { SpanStatusCode, type Span } from "@opentelemetry/api";
 import { tracedSteps, WorkflowTelemetry } from "../telemetry.js";
 
@@ -453,6 +468,7 @@ const logger = childLogger(["workflow", "runtime"]);
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 const WORKFLOW_DOCUMENT_TYPE = "powerhouse/workflow";
+const CONNECTION_DOCUMENT_TYPE = "powerhouse/connection";
 // Document creation, deletion and parent linking are appended to the document
 // itself in this scope, not to any drive.
 const DOCUMENT_SCOPE = "document";
@@ -767,6 +783,24 @@ function runJournalName(
   return stateName?.trim() ? stateName : (documentName ?? "");
 }
 
+/**
+ * One workflow's trigger as the runtime holds it. `trigger` is null when the
+ * runtime holds no trigger row (never armed, or a webhook/schedule kind);
+ * `park` is set while a failed run keeps the trigger unarmed, until the
+ * workflow is re-enabled or re-published.
+ */
+export type WorkflowHealth = {
+  trigger: {
+    /** ENABLED | DISABLED | ERROR | PARKED */
+    status: string;
+    lastError: string | null;
+    lastPollAt: string | null;
+    nextPollAt: string | null;
+    consecutiveFailures: number;
+  } | null;
+  park: { reason: string; parkedAt: string; publishedVersion: number } | null;
+};
+
 export class WorkflowRuntimeService {
   private readonly host: WorkflowRuntimeHostDeps;
   private readonly logger: ILogger;
@@ -789,6 +823,7 @@ export class WorkflowRuntimeService {
   private secretsPromise?: Promise<SecretStore>;
   private oauthAttemptsPromise?: Promise<OAuthAttemptStore>;
   private tokenRefresher?: OAuthTokenRefresher;
+  private oauthAppsPromise?: Promise<OAuthAppRegistry>;
   private readonly registry = new Map<string, TriggerRegistration>();
   // Awaited before an endpoint answers: a delivery reaching an unseeded
   // registry is refused exactly as an unknown token is, so it looks like one.
@@ -932,7 +967,117 @@ export class WorkflowRuntimeService {
   }
 
   private secretProvider(): SecretProvider {
-    return { get: (ref) => this.secrets().then((store) => store.get(ref)) };
+    return {
+      get: (ref, owner) => this.secrets().then((s) => s.get(ref, owner)),
+    };
+  }
+
+  // Lower-cased; null for an anonymous caller or a host that names none.
+  private callerAddress(ctx: WorkflowCaller | undefined): string | null {
+    const subject = ctx ? this.host.subjectOf?.(ctx) : undefined;
+    return subject?.address?.toLowerCase() ?? null;
+  }
+
+  // Mints a secret owned by a connection or workflow, as the caller; the
+  // caller must be able to write that document.
+  async createSecret(
+    input: { value: string; label?: string; ownerId: string },
+    ctx?: WorkflowCaller,
+  ): Promise<SecretStat> {
+    const client = this.host.reactorClient;
+    // An editor mints right after creating the document, maybe before sync.
+    if (await isNotHereYet(client, input.ownerId)) {
+      await waitForSync(
+        client,
+        input.ownerId,
+        () => Promise.resolve(),
+        this.host.syncWaitMs ?? SYNC_WAIT_MS,
+      );
+    }
+    await this.assertCanReadDocument(input.ownerId, ctx);
+    await this.assertCanWriteDocument(input.ownerId, ctx);
+    const document = await client.get(input.ownerId);
+    const type = document.header.documentType;
+    if (type !== CONNECTION_DOCUMENT_TYPE && type !== WORKFLOW_DOCUMENT_TYPE) {
+      throw new Error("A secret belongs to a connection or a workflow");
+    }
+    return (await this.secrets()).create({
+      ...input,
+      createdBy: this.callerAddress(ctx),
+    });
+  }
+
+  // Only its creator, while able to write its owner, changes a secret; one
+  // saved anonymously is open to any such writer. Being an admin adds nothing.
+  private async assertCanManageSecret(
+    stat: SecretStat,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<void> {
+    if (stat.ownerId === null) throw new Error("This secret has no owner");
+    await this.assertCanReadDocument(stat.ownerId, ctx);
+    await this.assertCanWriteDocument(stat.ownerId, ctx);
+    if (stat.createdBy !== null && stat.createdBy !== this.callerAddress(ctx)) {
+      throw new SecretCreatorMismatchError();
+    }
+  }
+
+  async canManageSecret(
+    stat: SecretStat,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<boolean> {
+    return this.assertCanManageSecret(stat, ctx).then(
+      () => true,
+      () => false,
+    );
+  }
+
+  async rotateSecret(
+    ref: string,
+    value: string,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<SecretStat> {
+    const store = await this.secrets();
+    await this.assertCanManageSecret(await store.stat(ref), ctx);
+    return store.rotate(ref, value);
+  }
+
+  async deleteSecret(
+    ref: string,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<void> {
+    const store = await this.secrets();
+    await this.assertCanManageSecret(await store.stat(ref), ctx);
+    await store.delete(ref);
+  }
+
+  // Metadata of a secret whose owner the caller can read; null otherwise.
+  async secretStat(
+    ref: string,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<SecretStat | null> {
+    let stat: SecretStat;
+    try {
+      stat = await (await this.secrets()).stat(ref);
+    } catch {
+      // Unknown or malformed ref reads as "no such secret".
+      return null;
+    }
+    return (await this.readableSecrets([stat], ctx)).at(0) ?? null;
+  }
+
+  async listSecrets(ctx: WorkflowCaller | undefined): Promise<SecretStat[]> {
+    return this.readableSecrets(await (await this.secrets()).list(), ctx);
+  }
+
+  private readableSecrets(
+    stats: SecretStat[],
+    ctx: WorkflowCaller | undefined,
+  ): Promise<SecretStat[]> {
+    return this.readableRows(
+      stats.filter((stat) => stat.ownerId !== null),
+      (stat) => stat.ownerId!,
+      ctx,
+    );
   }
 
   private oauthAttempts(): Promise<OAuthAttemptStore> {
@@ -940,6 +1085,19 @@ export class WorkflowRuntimeService {
       this.host.relationalDb,
     );
     return this.oauthAttemptsPromise;
+  }
+
+  /** The host's OAuth2 apps, their client secrets loaded into the store once. */
+  private oauthApps(): Promise<OAuthAppRegistry> {
+    this.oauthAppsPromise ??= this.secrets().then((store) =>
+      loadOAuthApps(this.host.oauthApps ?? [], store, {
+        onSkip: (appId, kind, reason) =>
+          logger.warn(
+            `OAuth2 app "${appId}" has no usable ${kind} client: ${reason}`,
+          ),
+      }),
+    );
+    return this.oauthAppsPromise;
   }
 
   private oauthRefresher(): OAuthTokenRefresher {
@@ -2332,6 +2490,7 @@ export class WorkflowRuntimeService {
       fire: (workflowId, payload, kind, runId) => {
         this.startFiring(workflowId, payload, kind, runId);
       },
+      pollHeld: (workflowId) => this.pollHeld(workflowId),
       webhookUrlFor: async (workflowId) =>
         (await this.mintWebhookEndpoint(workflowId))?.url,
       reactorAccess: (binding, requireReactor, runUser) =>
@@ -2453,6 +2612,50 @@ export class WorkflowRuntimeService {
     this.unobservePool?.();
     this.unobservePool = undefined;
     this.designWorker = undefined;
+  }
+
+  /**
+   * Runs a workflow's trigger now, as its schedule or poll would (a sync
+   * now): a schedule fires the workflow, a polling trigger polls its source.
+   * Never a backfill's pace. False when it has no armed trigger.
+   */
+  async pollNow(workflowId: string, ctx?: WorkflowCaller): Promise<boolean> {
+    if (this.closed) return false;
+    await this.assertCanReadWorkflow(workflowId, ctx, undefined);
+    return this.supervisor().pollNow(workflowId);
+  }
+
+  /**
+   * How one workflow's trigger stands, for host-side code that keeps
+   * workflows running (a processor reconciling the workflows it built): the
+   * trigger row, and the park that holds it unarmed. Not caller-filtered:
+   * GraphQL callers go through triggerStates.
+   */
+  async workflowHealth(workflowId: string): Promise<WorkflowHealth> {
+    const store = await this.store();
+    if (!store) return { trigger: null, park: null };
+    const [row, park] = await Promise.all([
+      store.getTriggerState(workflowId),
+      store.getWorkflowPark(workflowId),
+    ]);
+    return {
+      trigger: row
+        ? {
+            status: row.status,
+            lastError: row.last_error,
+            lastPollAt: row.last_poll_at,
+            nextPollAt: row.next_poll_at,
+            consecutiveFailures: row.consecutive_failures,
+          }
+        : null,
+      park: park
+        ? {
+            reason: park.reason,
+            parkedAt: park.parked_at,
+            publishedVersion: park.published_version,
+          }
+        : null,
+    };
   }
 
   // A trigger's state names its workflow and its last error, so the rows are
@@ -2828,7 +3031,9 @@ export class WorkflowRuntimeService {
   ): Promise<string | undefined> {
     if (!config.secretRef) return undefined;
     try {
-      return await (await this.secrets()).get(config.secretRef);
+      return await (
+        await this.secrets()
+      ).get(config.secretRef, { documentId: workflowId, kind: "workflow" });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
@@ -2872,6 +3077,32 @@ export class WorkflowRuntimeService {
       block.kind === "trigger" ? descriptor.triggers : descriptor.actions;
     return blocks.find((candidate) => candidate.name === block.name)
       ?.requireReactor;
+  }
+
+  // The timeout and retry an action declares, at the version the step runs.
+  private async blockDefaults(
+    block: BlockRef,
+  ): Promise<BlockDefaults | undefined> {
+    if (block.kind !== "action" || builtinPiece(block.pieceName)) {
+      return undefined;
+    }
+    const parsed = resolvedBlock(await this.resolveBlock(block));
+    if (!parsed) return undefined;
+    const descriptor = await this.pieceDescriptor(targetOf(parsed));
+    const action = descriptor.actions.find(
+      (candidate) => candidate.name === parsed.name,
+    );
+    if (!action) return undefined;
+    const { defaultTimeoutSeconds, defaultRetry } = action;
+    if (defaultTimeoutSeconds === undefined && defaultRetry === undefined) {
+      return undefined;
+    }
+    return {
+      ...(defaultTimeoutSeconds !== undefined
+        ? { timeoutSeconds: defaultTimeoutSeconds }
+        : {}),
+      ...(defaultRetry !== undefined ? { retry: defaultRetry } : {}),
+    };
   }
 
   // Who a caller acts as at design time and in a single-step test.
@@ -3366,7 +3597,10 @@ export class WorkflowRuntimeService {
       detail: outcome.declared
         ? null
         : "piece declares no auth.validate; credentials resolved",
-      accountLabel: outcome.accountLabel ?? accountLabel,
+      // The piece's own label first; else the account the sign-in's ID token
+      // names (asked for with `openid email`); else the one it had.
+      accountLabel:
+        outcome.accountLabel ?? idTokenEmail(shapedAuth) ?? accountLabel,
     });
   }
 
@@ -3384,16 +3618,44 @@ export class WorkflowRuntimeService {
     if (state.authType !== "OAUTH2") {
       throw new OAuthError("This connection does not sign in with OAuth2");
     }
-    const { [OAUTH_CLIENT_ID]: clientId, ...props } = (state.config ??
-      {}) as Record<string, unknown>;
-    if (typeof clientId !== "string" || clientId === "") {
-      throw new OAuthError("Set the client ID before connecting");
-    }
-    const clientSecretRef = state.secretRefs.find(
-      (entry) => entry.name === OAUTH_CLIENT_SECRET,
-    )?.ref;
-    if (!clientSecretRef) {
-      throw new OAuthError("Save the client secret before connecting");
+    const {
+      [OAUTH_CLIENT_ID]: ownClientId,
+      [OAUTH_APP]: appId,
+      [OAUTH_SCOPES]: _scopes,
+      [OAUTH_GRANTED_SCOPES]: _granted,
+      ...props
+    } = (state.config ?? {}) as Record<string, unknown>;
+    const scopes = scopesOverride(
+      (state.config ?? {}) as Record<string, unknown>,
+    );
+    let clientId: string;
+    let clientSecretRef: string;
+    let pkce = false;
+    if (typeof appId === "string" && appId !== "") {
+      // The publisher's app: its desktop client for a callback to this
+      // machine, its web client otherwise.
+      const kind = clientKindFor(options.redirectUri);
+      const client = (await this.oauthApps()).client(appId, kind);
+      if (!client) {
+        throw new OAuthError(
+          `The app "${appId}" has no ${kind} client on this host; configure it in workflows.oauthApps`,
+        );
+      }
+      clientId = client.clientId;
+      clientSecretRef = client.clientSecretRef;
+      pkce = kind === "desktop";
+    } else {
+      if (typeof ownClientId !== "string" || ownClientId === "") {
+        throw new OAuthError("Set the client ID before connecting");
+      }
+      const ref = state.secretRefs.find(
+        (entry) => entry.name === OAUTH_CLIENT_SECRET,
+      )?.ref;
+      if (!ref) {
+        throw new OAuthError("Save the client secret before connecting");
+      }
+      clientId = ownClientId;
+      clientSecretRef = ref;
     }
 
     const packageName = packageFromConnectorId(state.connectorId);
@@ -3429,6 +3691,9 @@ export class WorkflowRuntimeService {
       clientSecretRef,
       redirectUri: options.redirectUri,
       ...(options.returnUrl ? { returnUrl: options.returnUrl } : {}),
+      ...(scopes ? { scopes } : {}),
+      ...(pkce ? { pkce } : {}),
+      createdBy: this.callerAddress(ctx),
     });
   }
 
@@ -3483,26 +3748,52 @@ export class WorkflowRuntimeService {
       const config = (state.config ?? {}) as Record<string, unknown>;
       // Changed while the user was signing in: the token would belong to
       // another app than the one the connection now names.
+      const appId = config[OAUTH_APP];
+      const fromRegistry =
+        typeof appId === "string" &&
+        appId !== "" &&
+        (await this.oauthApps())
+          .clients(appId)
+          .some((c) => c.clientId === attempt.client_id);
       if (
         state.authType !== "OAUTH2" ||
-        config[OAUTH_CLIENT_ID] !== attempt.client_id
+        (!fromRegistry && config[OAUTH_CLIENT_ID] !== attempt.client_id)
       ) {
         return await fail("The connection changed during sign-in; try again");
       }
       const secrets = await this.secrets();
+      const connectionId = document.header.id;
       const tokens = await exchangeCode(
         attempt,
         callback.code,
-        await secrets.get(attempt.client_secret_ref),
+        // A host app's client secret has no owner document.
+        await secrets.get(
+          attempt.client_secret_ref,
+          fromRegistry
+            ? null
+            : { documentId: connectionId, kind: "connection" },
+        ),
         this.designEgress,
+        fromRegistry,
       );
       const value = JSON.stringify(tokens);
       const existing = state.secretRefs.find(
         (entry) => entry.name === OAUTH_TOKEN,
       );
       let ref = existing?.ref;
+      // Rotated in place only when this connection owns it and whoever signed
+      // in may change it; else a new one, so no one's secret is overwritten.
       try {
-        if (ref) await secrets.rotate(ref, value);
+        const stat = ref ? await secrets.stat(ref) : undefined;
+        if (
+          ref &&
+          stat?.ownerId === connectionId &&
+          (stat.createdBy === null || stat.createdBy === attempt.created_by)
+        ) {
+          await secrets.rotate(ref, value);
+        } else {
+          ref = undefined;
+        }
       } catch {
         ref = undefined;
       }
@@ -3511,6 +3802,8 @@ export class WorkflowRuntimeService {
           await secrets.create({
             value,
             label: `${state.name || "connection"} · OAuth2 token`,
+            ownerId: connectionId,
+            createdBy: attempt.created_by,
           })
         ).ref;
         await this.host.reactorClient.execute(document.header.id, "main", [
@@ -3518,6 +3811,17 @@ export class WorkflowRuntimeService {
             id: existing?.id ?? generateId(),
             name: OAUTH_TOKEN,
             ref,
+          }),
+        ]);
+      }
+      // What this sign-in covers, so an app asking for more scopes later
+      // can tell the token does not reach them and ask for a new sign-in.
+      const granted = grantedScopes(tokens.scope, config);
+      if (granted) {
+        await this.host.reactorClient.execute(document.header.id, "main", [
+          connectionActions.setConfigValue({
+            name: OAUTH_GRANTED_SCOPES,
+            value: granted,
           }),
         ]);
       }
@@ -4396,35 +4700,50 @@ export class WorkflowRuntimeService {
       "trigger.kind": triggerKind,
       ...(resume ? { "run.rerun_of": resume.rerunOf } : {}),
     };
-    return this.telemetry.span("workflow.run", attributes, async (span) => {
-      const run: RunTrace = { span, refused: false };
-      let status = "FAILED";
-      try {
-        const result = await this.runFired(
-          run,
-          workflowId,
-          triggerPayload,
-          triggerKind,
-          resume,
-          ctx,
-          enqueuedRunId,
-        );
-        status = result.status;
-        if (status === "FAILED") {
-          span.setStatus({ code: SpanStatusCode.ERROR, message: status });
+    // Counted from here, before the gate: a firing still reading its workflow
+    // holds a slot's worth of work as much as one already admitted.
+    this.unsettledFirings.set(
+      workflowId,
+      (this.unsettledFirings.get(workflowId) ?? 0) + 1,
+    );
+    const traced = this.telemetry.span(
+      "workflow.run",
+      attributes,
+      async (span) => {
+        const run: RunTrace = { span, refused: false };
+        let status = "FAILED";
+        try {
+          const result = await this.runFired(
+            run,
+            workflowId,
+            triggerPayload,
+            triggerKind,
+            resume,
+            ctx,
+            enqueuedRunId,
+          );
+          status = result.status;
+          if (status === "FAILED") {
+            span.setStatus({ code: SpanStatusCode.ERROR, message: status });
+          }
+          return result;
+        } finally {
+          // Refused by access, type or status: not a failed run.
+          if (run.refused) status = "REFUSED";
+          span.setAttribute("run.status", status);
+          this.telemetry.recordRun(
+            performance.now() - started,
+            status,
+            triggerKind,
+          );
         }
-        return result;
-      } finally {
-        // Refused by access, type or status: not a failed run.
-        if (run.refused) status = "REFUSED";
-        span.setAttribute("run.status", status);
-        this.telemetry.recordRun(
-          performance.now() - started,
-          status,
-          triggerKind,
-        );
-      }
-    });
+      },
+    );
+    try {
+      return await traced;
+    } finally {
+      this.settleFiring(workflowId);
+    }
   }
 
   private async runFired(
@@ -4552,6 +4871,7 @@ export class WorkflowRuntimeService {
     // row is adopted, so a dropped firing is journaled as the CANCELLED run it
     // is rather than disappearing; QUEUE and a bounded PARALLEL wait.
     const policy = effectiveRunPolicy(runnable);
+    this.runLimits.set(workflowId, concurrencyLimit(policy));
     const deadline = policy.runTimeoutSeconds
       ? firedAt + policy.runTimeoutSeconds * 1000
       : undefined;
@@ -4735,6 +5055,7 @@ export class WorkflowRuntimeService {
       const { variables, secretValues } = await resolveVariables(
         runnable.variables,
         this.secretProvider(),
+        workflowId,
       );
       const journal = store;
       const journaledRunId = runId;
@@ -4763,6 +5084,7 @@ export class WorkflowRuntimeService {
             definition: { ...definition, variables },
             executor,
             declaredPorts: blockPorts,
+            blockDefaults: (block) => this.blockDefaults(block),
             ...(secretValues.length > 0 ? { redactValues: secretValues } : {}),
             triggerPayload,
             completedSteps: resume?.completedSteps,
@@ -4853,6 +5175,34 @@ export class WorkflowRuntimeService {
 
   // Firings of one workflow at a time; see run-gate.ts.
   private readonly runGate = new WorkflowRunGate();
+  // Firings of each workflow not yet settled, from the moment they reach the
+  // runtime (before the gate) until their run ends, and each workflow's slot
+  // count as its last firing read it: together they hold a poll that could
+  // only hand out work to queue (pollHeld).
+  private readonly unsettledFirings = new Map<string, number>();
+  private readonly runLimits = new Map<string, number | null>();
+
+  /**
+   * Whether a due poll of this workflow's trigger should wait: its runs are
+   * serialised (QUEUE, SINGLETON, a bounded PARALLEL) and every slot is taken
+   * by a firing that has not settled. A polling trigger that hands out work
+   * advances its own position when polled (the backfill's for-every moves its
+   * cursor), so a poll now would only add a firing that waits in the queue,
+   * where it can expire past `runTimeoutSeconds` or be skipped by a park,
+   * with the position already gone. The supervisor leaves the poll due and
+   * looks again on its next tick.
+   */
+  private pollHeld(workflowId: string): boolean {
+    const limit = this.runLimits.get(workflowId);
+    if (limit === undefined || limit === null) return false;
+    return (this.unsettledFirings.get(workflowId) ?? 0) >= limit;
+  }
+
+  private settleFiring(workflowId: string): void {
+    const left = (this.unsettledFirings.get(workflowId) ?? 1) - 1;
+    if (left > 0) this.unsettledFirings.set(workflowId, left);
+    else this.unsettledFirings.delete(workflowId);
+  }
   // Sync deliveries still holding the sender's socket, by run. Taking one
   // commits the delivery to a 503, before a 504 can.
   private readonly heldReplies = new Map<string, () => boolean>();
@@ -5252,7 +5602,11 @@ export class WorkflowRuntimeService {
     if ("error" in upstream) return refused(upstream.error);
     let resolved;
     try {
-      resolved = await resolveVariables(state.variables, this.secretProvider());
+      resolved = await resolveVariables(
+        state.variables,
+        this.secretProvider(),
+        workflowId,
+      );
     } catch (error) {
       return refused(error instanceof Error ? error.message : String(error));
     }
@@ -5336,6 +5690,12 @@ export class WorkflowRuntimeService {
           runWorkflow({
             definition,
             executor,
+            // A test runs once: the action's timeout applies, its retry not.
+            blockDefaults: async (block) => {
+              const timeoutSeconds = (await this.blockDefaults(block))
+                ?.timeoutSeconds;
+              return timeoutSeconds ? { timeoutSeconds } : undefined;
+            },
             ...(secretValues.length > 0 ? { redactValues: secretValues } : {}),
             triggerPayload: upstream.triggerPayload,
             priorSteps: upstream.priorSteps,

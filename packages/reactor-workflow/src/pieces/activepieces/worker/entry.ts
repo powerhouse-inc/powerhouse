@@ -59,6 +59,7 @@ import {
   UnsupportedPieceFeatureError,
 } from "../unsupported.js";
 import { installEgressGuard, runWithEgressPolicy } from "./egress.js";
+import { installTlsGuard } from "./tls-guard.js";
 import {
   finishRequestTimings,
   markWorkerReady,
@@ -133,10 +134,16 @@ const REACTOR_ERROR_NAMES = new Set<string>([
   ReactorRequestClosedError,
 ]);
 
-function errorName(error: unknown, fallback: string | undefined): string {
+// An error's own name first: bundled pieces are minified, so a class name can
+// read "mc" while the error says "AI_APICallError".
+export function errorName(
+  error: unknown,
+  fallback: string | undefined,
+): string {
   if (typeof error !== "object" || error === null) return fallback || "Error";
   const named = (error as { name?: unknown }).name;
   if (typeof named === "string" && REACTOR_ERROR_NAMES.has(named)) return named;
+  if (typeof named === "string" && named && named !== "Error") return named;
   return error.constructor.name || fallback || "Error";
 }
 
@@ -647,6 +654,8 @@ function dispatch(message: WorkerRequestMessage): Promise<WorkerResponse> {
 export function startPieceWorker(): void {
   // A piece cannot then keep a pristine copy of the socket layer.
   installEgressGuard();
+  // Nor switch certificate checks off for everyone (NODE_TLS_REJECT_UNAUTHORIZED=0)
+  installTlsGuard();
   process.on("message", onMessage);
   markWorkerReady();
 }

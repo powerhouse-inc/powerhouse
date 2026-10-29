@@ -47,10 +47,27 @@ export type {
   OAuthStart,
 } from "./reactor/oauth.js";
 export {
+  clientKindFor,
+  loadOAuthApps,
+  grantedScopes,
+  OAUTH_APP,
+  OAUTH_GRANTED_SCOPES,
+  OAUTH_SCOPES,
+  parseClientFile,
+  scopesOverride,
+  StaticOAuthAppRegistry,
+  type OAuthAppClient,
+  type OAuthAppDefinition,
+  type OAuthAppRegistry,
+  type OAuthClientKind,
+} from "./reactor/oauth-apps.js";
+export {
   WorkflowTriggersReadModel,
   WORKFLOW_TRIGGERS_READ_MODEL,
   WORKFLOW_TRIGGERS_READ_MODEL_STAGE,
+  type WorkflowHealthReader,
 } from "./reactor/workflow-triggers-read-model.js";
+export type { WorkflowHealth } from "./reactor/service.js";
 export type {
   PieceStoreRow,
   RunRow,

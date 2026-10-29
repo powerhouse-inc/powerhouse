@@ -72,6 +72,15 @@ export interface BlockExecution {
   step: WorkflowStepDef;
   // Run-wide secret values (SECRET variables) the executor redacts as well.
   redactValues?: string[];
+  // The action's declared timeout, for a step that sets none.
+  defaultTimeoutSeconds?: number;
+}
+
+// What an action declares for a step that sets no timeout or retry.
+export interface BlockDefaults {
+  timeoutSeconds?: number;
+  // A step retry block, resolved like the step's own.
+  retry?: unknown;
 }
 
 export interface BlockResult {

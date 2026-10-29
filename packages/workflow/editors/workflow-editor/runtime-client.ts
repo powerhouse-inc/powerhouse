@@ -106,6 +106,9 @@ interface BlockEntryDescriptor {
   propertyGroups?: PropertyGroup[];
   classification?: string;
   errorHandlingOptions?: ErrorHandlingDefaults;
+  // Actions only.
+  defaultTimeoutSeconds?: number;
+  defaultRetry?: { maxAttempts?: number };
 }
 
 interface BlockDescriptorResult {
@@ -126,6 +129,20 @@ export function blockInput(block: BlockRef) {
     pieceVersion: block.pieceVersion,
     name: block.name,
     kind: block.kind,
+  };
+}
+
+function actionDefaultsOf(
+  entry: BlockEntryDescriptor,
+): Pick<BlockForm, "actionDefaults"> {
+  const timeoutSeconds = entry.defaultTimeoutSeconds;
+  const retryAttempts = entry.defaultRetry?.maxAttempts;
+  if (timeoutSeconds === undefined && retryAttempts === undefined) return {};
+  return {
+    actionDefaults: {
+      ...(timeoutSeconds !== undefined ? { timeoutSeconds } : {}),
+      ...(retryAttempts !== undefined ? { retryAttempts } : {}),
+    },
   };
 }
 
@@ -186,6 +203,7 @@ export function getBlockForm(
         ...(entry.errorHandlingOptions
           ? { errorHandling: entry.errorHandlingOptions }
           : {}),
+        ...actionDefaultsOf(entry),
       };
     });
 }
@@ -568,25 +586,32 @@ export async function fetchOAuthAttempt(
 export interface SecretStat {
   ref: string;
   label: string | null;
+  // Null for a secret minted before secrets had owners.
+  ownerId: string | null;
+  // Whether this caller may rotate or delete it; else a save mints a new one.
+  manageable: boolean;
   version: number;
   status: "ACTIVE" | "DELETED";
   createdAt: string;
   updatedAt: string;
 }
 
-const SECRET_FIELDS = "ref label version status createdAt updatedAt";
+const SECRET_FIELDS =
+  "ref label ownerId manageable version status createdAt updatedAt";
 
-// Mints a managed secret; only the returned ref ever enters a document.
+// Mints a secret for the connection or workflow documentId; only that
+// document resolves it, and only the returned ref ever enters it.
 export async function createSecret(
   t: Transport,
+  documentId: string,
   value: string,
   label?: string,
 ): Promise<SecretStat> {
   const data = await t.gql<{ workflowRuntime: { createSecret: SecretStat } }>(
-    `mutation CreateSecret($value: String!, $label: String) {
-      workflowRuntime { createSecret(value: $value, label: $label) { ${SECRET_FIELDS} } }
+    `mutation CreateSecret($value: String!, $label: String, $documentId: String!) {
+      workflowRuntime { createSecret(value: $value, label: $label, documentId: $documentId) { ${SECRET_FIELDS} } }
     }`,
-    { value, label: label ?? null },
+    { value, label: label ?? null, documentId },
   );
   return data.workflowRuntime.createSecret;
 }

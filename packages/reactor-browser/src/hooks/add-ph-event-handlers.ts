@@ -1,4 +1,5 @@
 import type { PHGlobalEventHandlerAdders } from "../types/global.js";
+import { addBackendAuthEventHandler } from "./backend-auth.js";
 import {
   addAllowListEventHandler,
   addAnalyticsDatabaseNameEventHandler,
@@ -87,6 +88,7 @@ import { addVetraPackageManagerEventHandler } from "./vetra-packages.js";
 export const commonGlobalEventHandlerFunctions = {
   loading: addLoadingEventHandler,
   drives: addDrivesEventHandler,
+  backendAuth: addBackendAuthEventHandler,
   driveNodes: addDriveNodesEventHandler,
   selectedDriveId: () => {
     addSelectedDriveIdEventHandler();

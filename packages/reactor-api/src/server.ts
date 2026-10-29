@@ -117,6 +117,10 @@ import {
 } from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
 import {
+  ReadableDocumentsProjection,
+  type ReadableDocumentsLike,
+} from "./services/readable-documents.js";
+import {
   DEFAULT_PERMISSION_CACHE_OPTIONS,
   DEFAULT_PERMISSION_CACHE_TTL_MS,
 } from "./services/permission-cache.js";
@@ -511,6 +515,7 @@ type SetupGraphQLManagerOptions = {
   reactorDriveClient?: IDriveClient;
   driveNodes?: IDriveNodeSource;
   syncServingGate?: SyncScopeGate;
+  readableDocuments?: ReadableDocumentsLike;
   httpRoutes?: HttpRouteService;
   attachments?: IAttachmentClientProvider;
   inspection?: IReactorInspectionSource;
@@ -543,6 +548,7 @@ async function setupGraphQLManager({
   reactorDriveClient,
   driveNodes,
   syncServingGate,
+  readableDocuments,
   httpRoutes,
   attachments,
   inspection,
@@ -573,6 +579,7 @@ async function setupGraphQLManager({
     reactorDriveClient,
     driveNodes,
     syncServingGate,
+    readableDocuments,
     httpRoutes,
     attachments,
     inspection,
@@ -1183,6 +1190,25 @@ async function _setupAPI(
     `Authorization service initialized (policy: ${authorizationConfig.policy})`,
   );
 
+  // The read closure of that policy as a read model (readable_documents in
+  // the relational store), for index subgraphs. Started here so it follows
+  // every permission write and document change from the first one; its
+  // first rebuild runs in the background and the filter fails closed until
+  // it is done.
+  const readableDocuments = new ReadableDocumentsProjection({
+    relationalDb,
+    read: clients.read,
+    permissions: documentPermissionService,
+    config: authorizationConfig,
+    logger: logger.child(["readable-documents"]),
+  });
+  readableDocuments.start().catch((error: unknown) => {
+    logger.error(
+      "The readable-documents read model could not start; index subgraphs serve only admins until it does: @error",
+      error,
+    );
+  });
+
   // Attachment reads are authorized by the document read, the reactor's read
   // gate, and the projected document/ref relationship; the facade owns that
   // composition so routes never consult any of them directly.
@@ -1257,6 +1283,7 @@ async function _setupAPI(
     reactorDriveClient,
     driveNodes,
     syncServingGate,
+    readableDocuments,
     httpRoutes,
     attachments: attachmentClientProvider,
     inspection,
@@ -1296,6 +1323,9 @@ async function _setupAPI(
     logger.info(`MCP server available at http://localhost:${boundPort}/mcp`);
   }
 
+  // The read model stops before its database closes: its queued recompute
+  // must not land on a closed pool.
+  dbClosers.unshift(() => readableDocuments.stop());
   const dispose = buildApiDispose({
     graphqlManager,
     httpRoutes,
@@ -1328,6 +1358,7 @@ async function _setupAPI(
     // stores in this database.
     authorizationService,
     relationalDb,
+    readableDocuments,
     inspection,
     dispose,
   };

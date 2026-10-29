@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/portle",
-  "version": "6.2.3-dev.79",
+  "version": "6.2.3-dev.80",
   "description": "Publish a Powerhouse project through Portle: a switchboard host plugin that checks the host's authorization gate and, later, runs the site tunnel. EXPERIMENTAL.",
   "license": "AGPL-3.0-only",
   "repository": {

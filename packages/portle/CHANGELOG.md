@@ -1,3 +1,30 @@
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **connect:** a proxied Connect names its switchboard as ${origin}; the runner proxies the switchboard's paths ([bdaffdb580](https://github.com/powerhouse-inc/powerhouse/commit/bdaffdb580))
+- **portle:** same-origin publication — the app label serves the switchboard and a public runtime config ([df83745261](https://github.com/powerhouse-inc/powerhouse/commit/df83745261))
+- **portle:** optional Host header rewrite for dev-server upstreams ([865b3947ae](https://github.com/powerhouse-inc/powerhouse/commit/865b3947ae))
+- **portle:** refuse to start before the zone is delegated; configurable listen ports ([bc04aff72b](https://github.com/powerhouse-inc/powerhouse/commit/bc04aff72b))
+- **portle:** the tunnel runner — enrolment, rendering, supervised frpc and Caddy, status and mutations ([953c660395](https://github.com/powerhouse-inc/powerhouse/commit/953c660395))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **portle:** a resolver failure at start is not a missing delegation ([18f0636942](https://github.com/powerhouse-inc/powerhouse/commit/18f0636942))
+- **portle:** serve the public runtime config on demand from the switchboard, not once at tunnel start ([db9ac98964](https://github.com/powerhouse-inc/powerhouse/commit/db9ac98964))
+- **portle:** a host shutdown keeps autostart, so the tunnel returns at the next boot ([d7f7b35c96](https://github.com/powerhouse-inc/powerhouse/commit/d7f7b35c96))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

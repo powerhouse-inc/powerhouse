@@ -1,12 +1,13 @@
 // An operation's input SDL as form fields: its root input, nested inputs and
 // enums, read with graphql's own parser.
-import {
-  GraphQLError,
-  Kind,
-  parse,
-  type InputObjectTypeDefinitionNode,
-  type TypeNode,
-} from "graphql";
+// Deep imports: the package root pulls in all of graphql-js (~250 KB bundled).
+import { GraphQLError } from "graphql/error/GraphQLError.js";
+import type {
+  InputObjectTypeDefinitionNode,
+  TypeNode,
+} from "graphql/language/ast.js";
+import { Kind } from "graphql/language/kinds.js";
+import { parse } from "graphql/language/parser.js";
 
 export interface TypeRef {
   name: string;

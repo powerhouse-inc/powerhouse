@@ -1,10 +1,12 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import {
   getDrives,
-  refreshReactorDataClient,
+  getFullReactorClient,
+  getPHStore,
+  recordBackendAuthError,
+  setBackendAuth,
   setDrives,
   setFullReactorClient,
-  getPHStore,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { ISigner } from "@powerhousedao/shared/document-model";
@@ -17,6 +19,7 @@ import type {
 import type { ReactorClientMode } from "./reactor-client-mode.js";
 import { resolveReactorClientMode } from "./reactor-client-mode.js";
 import { isReactorWorkerEnabled } from "./reactor-worker-flag.js";
+import { setDriveRelister } from "./drive-relist.js";
 
 type MultiReactorModule = typeof MultiReactor;
 
@@ -133,34 +136,82 @@ function requireModule(params: AppReactorClientParams): LocalReactorModule {
   return params.module;
 }
 
-/** A Switchboard that cannot answer must not fail boot: list the tab's drives. */
+/**
+ * A Switchboard that cannot answer must not fail boot: list the tab's drives.
+ *
+ * A Switchboard that REFUSES the caller (401/403) must not fail boot either:
+ * the refusal is recorded (`backendAuth`) so the root view shows the sign-in
+ * gate, and the drive list is empty until the user is someone the backend
+ * accepts. A remote-only client has no local drives to fall back on.
+ */
 export async function getAppDrives(
   client: IReactorClient,
   local: IReactorClient,
 ): Promise<DocumentDriveDocument[]> {
   if (client === local) {
-    return getDrives(local);
+    try {
+      const drives = await getDrives(local);
+      setBackendAuth(undefined);
+      return drives;
+    } catch (error) {
+      if (recordBackendAuthError(error, "switchboard")) {
+        logger.warn(
+          "The Switchboard refused this caller; showing the sign-in gate: @error",
+          error,
+        );
+        return [];
+      }
+      throw error;
+    }
   }
   try {
-    return await getDrives(client);
+    const drives = await getDrives(client);
+    setBackendAuth(undefined);
+    return drives;
   } catch (error) {
-    logger.warn(
-      "Could not list drives through the router; listing the local reactor's: @error",
-      error,
-    );
+    if (recordBackendAuthError(error, "switchboard")) {
+      logger.warn(
+        "A remote backend refused this caller; listing the local reactor's drives: @error",
+        error,
+      );
+    } else {
+      logger.warn(
+        "Could not list drives through the router; listing the local reactor's: @error",
+        error,
+      );
+    }
     return getDrives(local);
   }
 }
 
+/**
+ * The boot refresh of the drives store. It lists through `getAppDrives`
+ * whichever client is in use, so a Switchboard that refuses the caller is
+ * recorded for the sign-in gate here too: the remote-only client is its own
+ * `local`, and a bare `refreshReactorDataClient` would let the 401 escape
+ * and fail the boot before the gate can render.
+ */
 export async function refreshAppDrives(
   client: IReactorClient,
   local: IReactorClient,
 ): Promise<void> {
-  if (client === local) {
-    return refreshReactorDataClient(client);
-  }
   setDrives(await getAppDrives(client, local));
 }
+
+/**
+ * Lists the drives again as the caller the tab now is, through the clients
+ * boot left in the store: after a sign-in landing or a sign-out that followed
+ * a backend's refusal. Nothing to do before boot has set a client.
+ */
+export async function relistAppDrives(): Promise<void> {
+  const client = getFullReactorClient();
+  if (!client) return;
+  const local = getPHStore()?.reactorClientModule?.client ?? client;
+  await refreshAppDrives(client, local);
+}
+
+// The backend auth gate relists through drive-relist (see there)
+setDriveRelister(relistAppDrives);
 
 async function buildRouter(
   params: AppReactorClientParams,

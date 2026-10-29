@@ -206,6 +206,77 @@ export const probe = {
         return ctx.reactor.execute(ctx.propsValue.id, "main", [action]);
       },
     },
+    "write-half": {
+      name: "write-half",
+      displayName: "Write through the write half",
+      requireReactor: "write",
+      props: {},
+      run: async (ctx) => {
+        const model = await ctx.reactor.getDocumentModelModule(MODEL);
+        const created = await ctx.reactor.write.create(model.utils.createDocument());
+        const id = (await created.document()).header.id;
+        const renamed = await ctx.reactor.write.execute(id, "main", [
+          model.actions.setName("Half"),
+        ]);
+        const receipt = await renamed.readable;
+        const document = await renamed.document();
+        const bad = model.actions.setModelName({ name: "valid" });
+        bad.input = { name: 42 };
+        const erred = await ctx.reactor.write.execute(id, "main", [bad]);
+        const erredReceipt = await erred.readable;
+        return {
+          id,
+          handle: { documentId: renamed.documentId, jobId: typeof renamed.jobId },
+          status: receipt.job.status,
+          coordinates: Array.isArray(receipt.token.coordinates),
+          name: document.header.name,
+          written: (await erred.written).job.status,
+          outcomes: erredReceipt.job.result.actions.map((outcome) => ({
+            actionId: outcome.actionId === bad.id,
+            kind: outcome.kind,
+            message: typeof outcome.message,
+          })),
+        };
+      },
+    },
+    "write-half-drive": {
+      name: "write-half-drive",
+      displayName: "File and fold through the write half",
+      requireReactor: "write",
+      props: { id },
+      run: async (ctx) => {
+        const model = await ctx.reactor.getDocumentModelModule(MODEL);
+        const folder = await ctx.reactor.write.drives.addFolder(ctx.propsValue.id, "Box");
+        await folder.readable;
+        const filed = await ctx.reactor.write.drives.addFile(
+          ctx.propsValue.id,
+          model.utils.createDocument(),
+          folder.nodeId,
+        );
+        const file = await filed.document();
+        return { folderId: folder.nodeId, fileId: file.header.id, type: file.header.documentType };
+      },
+    },
+    "write-half-delete": {
+      name: "write-half-delete",
+      displayName: "Delete through the write half",
+      requireReactor: "write",
+      props: { id },
+      run: async (ctx) => {
+        const handle = await ctx.reactor.write.deleteDocument(ctx.propsValue.id);
+        return { status: (await handle.readable).job.status };
+      },
+    },
+    "write-half-read-only": {
+      name: "write-half-read-only",
+      displayName: "Write through the write half, declared read",
+      requireReactor: "read",
+      props: { id },
+      run: async (ctx) => ({
+        execute: await errorOf(() => ctx.reactor.write.execute(ctx.propsValue.id, "main", [])),
+        addFile: await errorOf(() => ctx.reactor.write.drives.addFile(ctx.propsValue.id, {})),
+      }),
+    },
     "file-into-drive": {
       name: "file-into-drive",
       displayName: "File into drive",
@@ -870,6 +941,87 @@ describe("ctx.reactor over the reactor RPC", () => {
 
     expect(result.status).toBe("FAILED");
     expect(result.error).toContain(ReactorActionsFailedError);
+  }, 60_000);
+
+  it("writes through the write half: a handle per write, rebuilt in the worker", async () => {
+    const result = await testStep({ actionName: "write-half" });
+
+    expect(result.status).toBe("SUCCEEDED");
+    const output = result.output as { id: string };
+    expect(output).toMatchObject({
+      handle: { documentId: output.id, jobId: "string" },
+      status: "READ_READY",
+      coordinates: true,
+      name: "Half",
+      written: expect.stringMatching(/_READY$/) as unknown,
+      // A reducer error is the receipt's to report; the write does not throw.
+      outcomes: [{ actionId: true, kind: "reducer-error", message: "string" }],
+    });
+    expect(await nameOf(output.id)).toBe("Half");
+  }, 60_000);
+
+  it("files into a folder through the write half's drives", async () => {
+    const drive = await publisher.drives.create({ global: { name: "Half" } });
+
+    const result = await testStep({
+      actionName: "write-half-drive",
+      config: { id: drive.header.id },
+    });
+
+    expect(result.status).toBe("SUCCEEDED");
+    const { folderId, fileId, type } = result.output as {
+      folderId: string;
+      fileId: string;
+      type: string;
+    };
+    expect(type).toBe(MODEL);
+    const after = await publisher.get<typeof drive>(drive.header.id);
+    expect(after.state.global.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: folderId, kind: "folder", name: "Box" }),
+        expect.objectContaining({
+          id: fileId,
+          kind: "file",
+          parentFolder: folderId,
+        }),
+      ]),
+    );
+  }, 60_000);
+
+  it("deletes through the write half", async () => {
+    const target = await createDocument(
+      documentModelDocumentModelModule as unknown as DocumentModelModule,
+    );
+
+    const result = await testStep({
+      actionName: "write-half-delete",
+      config: { id: target },
+    });
+
+    expect(result).toMatchObject({
+      status: "SUCCEEDED",
+      output: { status: "READ_READY" },
+    });
+    const deleted = await publisher.get<PHDocument>(target).then(
+      (document) => document.state.document.isDeleted === true,
+      () => true,
+    );
+    expect(deleted).toBe(true);
+  }, 60_000);
+
+  it("refuses the write half's writes under a read declaration", async () => {
+    const result = await testStep({
+      actionName: "write-half-read-only",
+      config: { id: docs[0] },
+    });
+
+    expect(result).toMatchObject({
+      status: "SUCCEEDED",
+      output: {
+        execute: ReactorAccessDeniedError,
+        addFile: ReactorAccessDeniedError,
+      },
+    });
   }, 60_000);
 
   it("pages with next() within a step", async () => {

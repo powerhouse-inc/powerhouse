@@ -7,6 +7,7 @@ import {
 } from "@powerhousedao/shared/clis";
 import { connectConfigSchemaWith } from "@powerhousedao/shared/connect/connect-config-schema";
 import { isPassthroughImageRef } from "@powerhousedao/shared/connect/image-ref";
+import { withOriginPlaceholders } from "@powerhousedao/shared/connect/origin-placeholder";
 import {
   defineHostSchemas,
   entryActiveForVerb,
@@ -64,6 +65,15 @@ const schemas = defineHostSchemas((s) =>
         /** The host's routes folder, project-relative; false for none.
          * Default: hosts/connect/routes. */
         routes: z.union([z.string(), z.literal(false)]).optional(),
+        /** The switchboard this Connect is served next to: its server
+         * (dev and serve) proxies the switchboard's paths (`/graphql`,
+         * `/d/*`, `/attachments`, `/mcp`, `/api/*`) to `target`, and the
+         * served config names that switchboard as `${origin}`, resolved by
+         * the browser against the page's origin. So one config holds from
+         * the developer's `localhost` and from a published site alike, with
+         * every call on the page's own origin. Typically a sibling's
+         * `origin` output token. */
+        proxy: z.strictObject({ target: s.tokenable(z.url()) }).optional(),
       })
       .strict(),
     config: connectConfigSchemaWith(s.tokenable).optional(),
@@ -171,7 +181,27 @@ function declaredDrivesToDefaults(
   });
 }
 
+/**
+ * The served override. With `runner.proxy`, every URL on the proxied
+ * switchboard's origin (drives, backends, plugin configs, however they were
+ * written or resolved from output tokens) is served as `${origin}…`: the
+ * browser reaches the switchboard through the page's own origin, which this
+ * Connect's server proxies, so the config holds wherever the page is loaded
+ * from. A host may also write `${origin}/…` itself; that passes through.
+ */
 function callerOverride(
+  host: ConnectHostParsed,
+  ctx?: RunnerContext,
+  verb = "dev",
+): PHConnectRuntimeConfig | undefined {
+  const override = callerOverrideRaw(host, ctx, verb);
+  const target = host.runner.proxy?.target;
+  return override && target
+    ? withOriginPlaceholders(override, target)
+    : override;
+}
+
+function callerOverrideRaw(
   host: ConnectHostParsed,
   ctx?: RunnerContext,
   verb = "dev",
@@ -368,6 +398,7 @@ export async function dev(
     runConnectStudio(args, undefined, callerOverride(host, ctx, ctx.verb), {
       routes: host.runner.routes,
       cacheDir: viteCacheOf(host, ctx),
+      proxy: host.runner.proxy?.target,
     }),
   );
   // vite's dev server binds its default host ("localhost") here.
@@ -429,10 +460,15 @@ export async function serve(
   };
   const override = withoutBuiltImages(callerOverride(host, ctx, ctx.verb));
   const server = await startUnderSupervisor(ctx, () =>
-    runConnectPreview(args as ConnectPreviewArgs, {
-      connect: override,
-      cspRegistrySync: runner.cspRegistrySync === true,
-    }),
+    runConnectPreview(
+      args as ConnectPreviewArgs,
+      {
+        connect: override,
+        cspRegistrySync: runner.cspRegistrySync === true,
+      },
+      undefined,
+      { proxy: runner.proxy?.target },
+    ),
   );
   return connectHandle(server, { host: bind, port });
 }

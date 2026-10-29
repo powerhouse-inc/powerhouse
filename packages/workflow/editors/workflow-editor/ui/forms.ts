@@ -90,6 +90,13 @@ export interface BlockForm {
   // READ | SEARCH | WRITE | DESTRUCTIVE
   classification?: string;
   errorHandling?: ErrorHandlingDefaults;
+  // What the action declares for a step that sets no timeout or retry.
+  actionDefaults?: ActionDefaults;
+}
+
+export interface ActionDefaults {
+  timeoutSeconds?: number;
+  retryAttempts?: number;
 }
 
 export interface ConnectionSummary {

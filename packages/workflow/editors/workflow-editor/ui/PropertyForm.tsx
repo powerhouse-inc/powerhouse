@@ -303,7 +303,33 @@ function OptionSelect(props: {
   );
 }
 
-// Rows of nested forms for an ARRAY prop with item properties.
+const SUMMARY_CHARS = 60;
+
+// One line per ARRAY item: its filled values, a set switch by its name.
+export function itemSummary(
+  fields: BlockFormProp[],
+  row: Record<string, unknown>,
+): string {
+  const parts: string[] = [];
+  for (const field of fields) {
+    const value = row[field.name];
+    if (value === true) {
+      parts.push(field.displayName.toLowerCase());
+      continue;
+    }
+    if (value === undefined || value === null || value === false) continue;
+    const option = field.staticOptions?.find((o) => o.value === value);
+    const text = option ? option.label : stringifyValue(value).trim();
+    if (!text) continue;
+    parts.push(
+      text.length > SUMMARY_CHARS ? `${text.slice(0, SUMMARY_CHARS)}…` : text,
+    );
+  }
+  return parts.join(" · ");
+}
+
+// Rows of nested forms for an ARRAY prop with item properties; each folds to a
+// one-line summary.
 function ArrayRows(props: {
   prop: BlockFormProp;
   value: unknown;
@@ -319,42 +345,85 @@ function ArrayRows(props: {
           : {},
       )
     : [];
+  // Rows open by index; an added row opens, the rest start folded.
+  const [open, setOpen] = useState<ReadonlySet<number>>(() => new Set());
+  const toggle = (index: number) =>
+    setOpen((current) => {
+      const next = new Set(current);
+      if (!next.delete(index)) next.add(index);
+      return next;
+    });
   const update = (next: Record<string, unknown>[]) =>
     props.onCommit(next.length > 0 ? next : undefined);
+  const remove = (index: number) => {
+    update(rows.filter((_, i) => i !== index));
+    setOpen(
+      (current) =>
+        new Set(
+          [...current]
+            .filter((i) => i !== index)
+            .map((i) => (i > index ? i - 1 : i)),
+        ),
+    );
+  };
   return (
     <div
-      className={`flex flex-col gap-2 ${props.invalid ? "rounded-md ring-1 ring-wf-warn/50" : ""}`}
+      className={`flex flex-col gap-1.5 ${props.invalid ? "rounded-md ring-1 ring-wf-warn/50" : ""}`}
     >
-      {rows.map((row, index) => (
-        <div
-          key={index}
-          className="rounded-lg border border-solid border-foreground/10 bg-muted/40 p-3"
-        >
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">
-              Item {index + 1}
-            </span>
-            <IconButton
-              icon="trash"
-              label={`Remove item ${index + 1}`}
-              onClick={() => update(rows.filter((_, i) => i !== index))}
-            />
+      {rows.map((row, index) => {
+        const expanded = open.has(index);
+        const summary = itemSummary(fields, row);
+        return (
+          <div
+            key={index}
+            className="rounded-md border border-solid border-foreground/10 bg-muted/40"
+          >
+            <div className="flex items-center gap-1 py-1 pl-1 pr-1">
+              <button
+                type="button"
+                aria-expanded={expanded}
+                onClick={() => toggle(index)}
+                className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-0.5 text-left text-[13px] hover:bg-foreground/5"
+              >
+                <Icon
+                  name={expanded ? "chevronDown" : "chevron"}
+                  className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                />
+                <span
+                  className={`truncate ${summary ? "text-foreground" : "text-muted-foreground"}`}
+                >
+                  {summary || `Item ${index + 1}`}
+                </span>
+              </button>
+              <IconButton
+                icon="trash"
+                label={`Remove item ${index + 1}`}
+                onClick={() => remove(index)}
+              />
+            </div>
+            {expanded ? (
+              <div className="border-t border-solid border-foreground/10 px-3 pb-3 pt-2">
+                <PropertyForm
+                  props={fields}
+                  value={row}
+                  onChange={(next) =>
+                    update(rows.map((entry, i) => (i === index ? next : entry)))
+                  }
+                  scopeStepId={props.scopeStepId}
+                  nested
+                />
+              </div>
+            ) : null}
           </div>
-          <PropertyForm
-            props={fields}
-            value={row}
-            onChange={(next) =>
-              update(rows.map((entry, i) => (i === index ? next : entry)))
-            }
-            scopeStepId={props.scopeStepId}
-            nested
-          />
-        </div>
-      ))}
+        );
+      })}
       <Button
         size="sm"
         className="self-start"
-        onClick={() => update([...rows, withPropDefaults(fields, {})])}
+        onClick={() => {
+          update([...rows, withPropDefaults(fields, {})]);
+          setOpen((current) => new Set(current).add(rows.length));
+        }}
       >
         <Icon name="plus" className="h-3.5 w-3.5" />
         Add item
@@ -1706,7 +1775,7 @@ export function PropertyForm(props: {
 
   return (
     <div
-      className={`flex flex-col ${props.nested ? "gap-4" : "gap-5"}`}
+      className={`flex flex-col ${props.nested ? "gap-3" : "gap-5"}`}
       onBlur={echo.onBlur}
     >
       <PropLayout

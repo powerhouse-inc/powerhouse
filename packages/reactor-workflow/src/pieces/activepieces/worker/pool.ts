@@ -541,8 +541,10 @@ export class PieceWorkerPool {
     if (this.disposed || child.doomed) return true;
     if (child.requests >= this.maxRequests) return true;
     if (!health) return false;
-    // Dead or timed out: the next request would fork a stranger anyway.
-    if (!health.alive || health.tlsPoisoned) return true;
+    // Dead or timed out: the next request would fork a stranger anyway. A
+    // request that set NODE_TLS_REJECT_UNAUTHORIZED=0 no longer retires the
+    // child: the TLS guard (worker/tls-guard.ts) verifies regardless.
+    if (!health.alive) return true;
     return (
       health.memory !== undefined &&
       health.memory.heapUsed > HEAP_RETIREMENT * this.heapMb * MIB

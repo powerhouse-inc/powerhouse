@@ -206,9 +206,8 @@ export default {
 // Vite package loader + studio UI + codegen reload; \`ph run vetra\` (run) is
 // the same stack headless. Members spread their sibling host's composition
 // (full inclusion) and add studio.
-// Requires @powerhousedao/vetra-studio in devDependencies (private until its
-// first publish — link the workspace package meanwhile; added to the
-// versioned scaffold deps at that publish event, same as host-core/clint).
+// Requires @powerhousedao/vetra-studio in devDependencies (a versioned
+// scaffold dev dependency, same as host-core/clint).
 import config from "../../powerhouse.config.json" with { type: "json" };
 import switchboard from "../switchboard/host.js";
 import connect from "../connect/host.js";

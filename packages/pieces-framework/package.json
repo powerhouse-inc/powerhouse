@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/pieces-framework",
-  "version": "6.2.3-dev.79",
+  "version": "6.2.3-dev.80",
   "description": "Powerhouse's published copy of the Activepieces piece framework, widened with the reactor context.",
   "license": "MIT",
   "type": "module",
@@ -55,13 +55,13 @@
   },
   "upstream": {
     "repository": "https://github.com/activepieces/activepieces",
-    "tag": "0.91.0",
-    "commit": "da4410d1bf6212054e55805a98d566ff1b9310b2",
+    "tag": "0.92.3",
+    "commit": "2fc7f8dcaa84400f9db53fb0de7fc4340d055c62",
     "packages": {
-      "@activepieces/pieces-framework": "0.39.0",
+      "@activepieces/pieces-framework": "0.40.0",
       "@activepieces/pieces-common": "0.14.0",
       "@activepieces/core-piece-types": "0.11.1",
-      "@activepieces/core-utils": "0.6.2",
+      "@activepieces/core-utils": "0.8.1",
       "@activepieces/engine": "0.7.0"
     }
   },

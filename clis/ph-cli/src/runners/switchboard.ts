@@ -1,3 +1,4 @@
+import type * as SwitchboardUtils from "@powerhousedao/switchboard/utils";
 import {
   defineHostSchemas,
   drivesSchema,
@@ -208,13 +209,28 @@ function pluginDrives(
 /** Poll the default drive endpoint until the server answers — the compound's
  * readiness gate: Connect auto-connects the drive on first load, so the drive
  * must answer before the connect member serves (the sidecar's
- * waitForSwitchboard, moved behind the handle contract). */
-async function waitForDrive(url: string, timeoutMs: number): Promise<void> {
+ * waitForSwitchboard, moved behind the handle contract).
+ *
+ * The probe is anonymous, and a host with authentication on hides a drive
+ * from a caller it refuses (`/d/:drive` answers 404 to anyone who may not
+ * read it, 401 under the authenticated-caller floor). Those answers prove
+ * the server is listening but not whether the drive exists, so `served`,
+ * the reactor's own view of the drive, decides then; without it an
+ * ADMIN_ONLY host never passes this gate and the compound tears down after
+ * the timeout. */
+export async function waitForDrive(
+  url: string,
+  timeoutMs: number,
+  served?: () => Promise<boolean>,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
   const deadline = Date.now() + timeoutMs;
+  const HIDDEN = new Set([401, 403, 404]);
   for (;;) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+      const res = await fetchImpl(url, { signal: AbortSignal.timeout(3000) });
       if (res.ok) return;
+      if (HIDDEN.has(res.status) && served && (await served())) return;
     } catch {
       // not listening yet
     }
@@ -262,30 +278,56 @@ function seederClient(
       }
     },
     createDrive: async (drive: ResolvedDrive) => {
-      seededIds.set(drive.slug, drive.id);
       const { addDefaultDrive } =
         await import("@powerhousedao/switchboard/utils");
-      await addDefaultDrive(
-        reactor as Parameters<typeof addDefaultDrive>[0],
-        {
-          id: drive.id,
-          slug: drive.slug,
-          global: { name: drive.name, icon: drive.icon },
-          ...(drive.preferredEditor
-            ? { preferredEditor: drive.preferredEditor }
-            : {}),
-          local: {
-            availableOffline: drive.availableOffline,
-            listeners: [],
-            sharingType: drive.sharingType,
-            triggers: [],
-          },
-        } as Parameters<typeof addDefaultDrive>[1],
-        port,
-      );
+      // One drive that cannot be made must not keep the server from starting
+      try {
+        await createDeclaredDrive(addDefaultDrive, reactor, drive, port);
+      } catch (error) {
+        console.error(
+          `The drive "${drive.slug}" was not created: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return;
+      }
+      // Its id: the declared one, or a new one where the store could not take
+      // a pinned id (addDefaultDrive then made it under the slug)
+      let id: string | undefined;
+      try {
+        id = await (reactor as SlugLookupClient).resolveIdOrSlug(drive.slug);
+      } catch {
+        id = undefined;
+      }
+      seededIds.set(drive.slug, id || drive.id);
     },
     attachRemoteDrive: () => Promise.resolve(), // remotes ride options.remoteDrives
   };
+}
+
+/** A declared local drive, through the switchboard's own default-drive path. */
+async function createDeclaredDrive(
+  addDefaultDrive: typeof SwitchboardUtils.addDefaultDrive,
+  reactor: unknown,
+  drive: ResolvedDrive,
+  port: number,
+): Promise<void> {
+  await addDefaultDrive(
+    reactor as Parameters<typeof addDefaultDrive>[0],
+    {
+      id: drive.id,
+      slug: drive.slug,
+      global: { name: drive.name, icon: drive.icon },
+      ...(drive.preferredEditor
+        ? { preferredEditor: drive.preferredEditor }
+        : {}),
+      local: {
+        availableOffline: drive.availableOffline,
+        listeners: [],
+        sharingType: drive.sharingType,
+        triggers: [],
+      },
+    } as Parameters<typeof addDefaultDrive>[1],
+    port,
+  );
 }
 
 async function start(
@@ -444,7 +486,19 @@ async function start(
   }
   seeded.resolve();
 
-  const ready = waitForDrive(driveUrl, 180_000);
+  // Under an authenticating host the anonymous probe cannot see the drive;
+  // the reactor's slug lookup (the seeder's) answers for it.
+  const served = async () => {
+    try {
+      const id = await (
+        switchboard.reactor as SlugLookupClient
+      ).resolveIdOrSlug(slug);
+      return Boolean(id);
+    } catch {
+      return false;
+    }
+  };
+  const ready = waitForDrive(driveUrl, 180_000, served);
   // A supervisor awaits `ready` and sees the rejection; an unsupervised caller
   // (or a test with the service mocked) must not die of an unhandled one.
   ready.catch(() => undefined);
