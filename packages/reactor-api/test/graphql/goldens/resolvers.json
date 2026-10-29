@@ -479,6 +479,7 @@
     "ReactorInspection.driveIntegrity",
     "ReactorInspection.drives",
     "ReactorInspection.info",
+    "ReactorInspection.loadsModelsOnDemand",
     "ReactorInspection.processors",
     "ReactorInspection.queueState",
     "ReactorInspection.remote",
