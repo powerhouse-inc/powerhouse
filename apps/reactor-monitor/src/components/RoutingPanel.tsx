@@ -580,7 +580,7 @@ export function RoutingPanel({
     seed?.backends.find((entry) => entry.reactor === reactor)?.backend;
 
   return (
-    <section className="rm-tab" aria-label="Router topology">
+    <section className="rm-tab rm-router" aria-label="Router topology">
       <h2>Router topology</h2>
       <p className="rm-note">
         Build one routing client over two or more ready reactors. Placement is
