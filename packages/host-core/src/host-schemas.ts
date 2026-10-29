@@ -47,6 +47,7 @@ export const reactorProtocolSchema = z.strictObject({
       authEnforcement: z.boolean().optional(),
       authGroups: z.boolean().optional(),
       authConditions: z.boolean().optional(),
+      undoV3: z.boolean().optional(),
     })
     .optional(),
   createSignaturePolicy: z.enum(["legacy", "v2-required"]).optional(),

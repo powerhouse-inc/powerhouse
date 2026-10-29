@@ -56,6 +56,15 @@ describe("protocolEnv", () => {
       REACTOR_DOCUMENT_DECISIONS: "true",
     });
   });
+
+  it("maps undoV3 onto REACTOR_UNDO_V3", () => {
+    expect(protocolEnv({ featureFlags: { undoV3: false } })).toEqual({
+      REACTOR_UNDO_V3: "false",
+    });
+    expect(protocolEnv({ featureFlags: { undoV3: true } })).toEqual({
+      REACTOR_UNDO_V3: "true",
+    });
+  });
 });
 
 describe("reactorBlockToSwitchboardConfig", () => {
@@ -216,6 +225,17 @@ describe("assertProtocolConsistency (the enforcement teeth)", () => {
 });
 
 describe("protocolConflicts", () => {
+  it("reads REACTOR_UNDO_V3 as the switchboard does: on unless exactly false", () => {
+    const on = { featureFlags: { undoV3: true } };
+    const off = { featureFlags: { undoV3: false } };
+    expect(protocolConflicts(on, { REACTOR_UNDO_V3: "true" })).toEqual([]);
+    expect(protocolConflicts(on, { REACTOR_UNDO_V3: "1" })).toEqual([]);
+    expect(protocolConflicts(off, { REACTOR_UNDO_V3: "false" })).toEqual([]);
+    expect(protocolConflicts(on, { REACTOR_UNDO_V3: "false" })).toHaveLength(1);
+    expect(protocolConflicts(off, { REACTOR_UNDO_V3: "true" })).toHaveLength(1);
+    expect(protocolConflicts(off, { REACTOR_UNDO_V3: "0" })).toHaveLength(1);
+  });
+
   it("is empty without a protocol, an env, or a contradiction", () => {
     expect(protocolConflicts(undefined, { REACTOR_AUTH_GROUPS: "x" })).toEqual(
       [],

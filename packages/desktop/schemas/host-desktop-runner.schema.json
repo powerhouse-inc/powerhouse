@@ -361,6 +361,9 @@
                       },
                       "authConditions": {
                         "type": "boolean"
+                      },
+                      "undoV3": {
+                        "type": "boolean"
                       }
                     },
                     "additionalProperties": false
