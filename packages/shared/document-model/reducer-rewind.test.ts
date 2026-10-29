@@ -211,3 +211,25 @@ describe("a rewind on a header at a number this build does not know", () => {
     expect(doc.state.global.items).toEqual(["y"]);
   });
 });
+
+describe("an UNDO on a header without a base-reducer version", () => {
+  it("still throws when a version is passed, as a client prediction does", () => {
+    const doc = document(2);
+    delete (doc.header as { protocolVersions?: unknown }).protocolVersions;
+    let added = doc;
+    for (const operation of [add(0, 0, "a"), add(1, 0, "b")]) {
+      added = reducer(added, operation.action, undefined, {
+        protocolVersion: 2,
+      });
+    }
+
+    expect(() =>
+      reducer(
+        added,
+        { type: "UNDO", input: { count: 1 }, scope: "global" } as Action,
+        undefined,
+        { protocolVersion: 2 },
+      ),
+    ).toThrow("carries no base-reducer protocol version");
+  });
+});

@@ -3,6 +3,7 @@ import type { Action } from "./actions.js";
 import {
   capabilitiesOf,
   derivesByRule,
+  isBaseReducerVersion,
   optionalBaseReducerCapabilities,
   usesRetractionRule,
   type BaseReducerCapabilities,
@@ -663,8 +664,14 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
     reuseOperationResultingState,
     operationResultingStateParser = parseResultingState,
     skipIndexValidation,
-    protocolVersion,
+    protocolVersion: requestedVersion,
   } = options || {};
+  // A passed version stands in only for a header number this build does not know.
+  const headerVersion = header.protocolVersions?.["base-reducer"];
+  const protocolVersion =
+    typeof headerVersion === "number" && !isBaseReducerVersion(headerVersion)
+      ? requestedVersion
+      : undefined;
   const caps =
     protocolVersion === undefined
       ? optionalBaseReducerCapabilities(header)

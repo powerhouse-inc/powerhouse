@@ -1596,7 +1596,7 @@ export type ReplayDocumentOptions = {
   // When true, skip index contiguity validation during replay.
   // Used for V2 state rebuild where gapped indices are expected.
   skipIndexValidation?: boolean;
-  /** The base-reducer version to replay under; read from the header when unset. */
+  /** The base-reducer version to replay under when the header names one this build does not know. */
   protocolVersion?: BaseReducerVersion;
 };
 
