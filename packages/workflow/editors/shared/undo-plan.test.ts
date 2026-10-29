@@ -360,12 +360,26 @@ describe("planRetraction on base-reducer 3", () => {
     expect(planRetraction(ops, policy)).toEqual(["action-0"]);
   });
 
-  it("retracts a live row whether or not it threw", () => {
+  it("passes over a row that threw, as the reactor's undo does", () => {
     const ops = [
       row(0, "ADD_STEP"),
       row(1, "SET_STEP_CONFIG", { error: "Step not found" }),
     ];
-    expect(planRetraction(ops, policy)).toEqual(["action-1"]);
+    const applied = new Set(["action-0"]);
+    expect(ids(liveOperations(ops))).toEqual(["action-0"]);
+    expect(planRetraction(ops, policy)).toEqual(["action-0"]);
+    expect(undoTarget(ops, applied)).toBe("action-0");
+    expect(canUndoOn3([ops[1]], policy)).toBe(false);
+  });
+
+  it("retracts only the rows of a group that applied", () => {
+    const group = newUndoGroup(V3);
+    const ops = [
+      row(0, "SET_WORKFLOW_NAME"),
+      grouped(row(1, "ADD_STEP"), group),
+      grouped(row(2, "ADD_EDGE", { error: "Step not found" }), group),
+    ];
+    expect(planRetraction(ops, policy)).toEqual([ops[1].action.id]);
   });
 
   it("retracts every live row of the last edit's group together", () => {

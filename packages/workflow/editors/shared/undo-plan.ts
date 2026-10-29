@@ -102,7 +102,7 @@ export function effectiveOperations(
 }
 
 // Base-reducer 3: the live rows an undo may retract. Base actions, NOOPs,
-// retractions and denied rows are not edits.
+// retractions, denied rows and rows that threw are not edits.
 export function liveOperations(operations: readonly Operation[]): Operation[] {
   const rows = positionalOperations(operations);
   const retracted = retractedActionIds(rows);
@@ -111,15 +111,15 @@ export function liveOperations(operations: readonly Operation[]): Operation[] {
       !retracted.has(operation.action.id) &&
       !NOT_EDITS.has(operation.action.type) &&
       !isDocumentAction(operation.action) &&
-      !isDenied(operation),
+      !isDenied(operation) &&
+      !operation.error,
   );
 }
 
 const NOT_EDITS = new Set(["NOOP", "RETRACT", "UNDO", "REDO"]);
 
 // Base-reducer 3: the ids undo retracts, the live rows of the last edit
-// outside `policy.skip`; null when there is none. A row that threw is
-// retracted too, which changes nothing.
+// outside `policy.skip`; null when there is none.
 export function planRetraction(
   operations: readonly Operation[],
   policy: UndoPolicy,
