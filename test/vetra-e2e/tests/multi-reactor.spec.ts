@@ -1,6 +1,6 @@
 // Connect routed to the Vetra switchboard (4002) by a rewritten served config.
 
-import type { Locator, Page } from "@playwright/test";
+import type { Locator, Page, Route } from "@playwright/test";
 import {
   expect,
   reactorWorkerModeRequested,
@@ -558,6 +558,50 @@ test.describe("Connect routed to a switchboard", () => {
         .poll(() => syncedDriveIds(tab), { timeout: LONG_VISIBLE_TIMEOUT })
         .not.toContain(placed);
     }
+
+    // Keeping a copy again from the second tab: the browser's copy is now
+    // stale, and the first tab must not list from it before it has caught up.
+    await addFolderOnSwitchboard(placed, "after-reset");
+    await expect
+      .poll(() => listedFolders(page, placed), {
+        timeout: LONG_VISIBLE_TIMEOUT,
+      })
+      .toContain("after-reset");
+    // The first tab's copy at the moment its routing first reads it.
+    const atFlip = page.evaluate(async (driveId) => {
+      const ph = (window as unknown as PhWindow).ph!;
+      const deadline = Date.now() + 60_000;
+      while (Date.now() < deadline) {
+        const row = ph
+          .fullReactorClient!.describeRouting()
+          .collections.find((entry) => entry.collectionId === driveId);
+        if (row?.backend === "connect-local") {
+          const drive = await ph.reactorClientModule!.client.read.get(driveId);
+          return drive.state.global.nodes.map((node) => node.name);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      return null;
+    }, placed);
+    const keep = await driveSettings(other, placed);
+    // Slow pulls make the window before the copy arrives visible.
+    const slowPulls = async (route: Route) => {
+      if (route.request().postData()?.includes("pollSyncEnvelopes")) {
+        await new Promise((resolve) => setTimeout(resolve, 2_000));
+      }
+      await route.fallback();
+    };
+    await context.route(`${SWITCHBOARD}/graphql/**`, slowPulls);
+    await keep
+      .getByRole("button", { name: "Keep a copy in this browser" })
+      .click();
+    expect(await atFlip).toContain("after-reset");
+    await context.unroute(`${SWITCHBOARD}/graphql/**`, slowPulls);
+    await expect
+      .poll(() => listedFolders(page, placed), {
+        timeout: LONG_VISIBLE_TIMEOUT,
+      })
+      .toContain("after-reset");
     await other.close();
   });
 });
