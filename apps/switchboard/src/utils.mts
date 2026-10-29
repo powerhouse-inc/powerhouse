@@ -8,9 +8,10 @@ import {
   driveDocumentType,
 } from "@powerhousedao/shared/document-drive";
 import type { DriveInput } from "@powerhousedao/shared/document-drive";
-import type {
-  PHBaseState,
-  PHDocument,
+import {
+  isDerivedDocumentId,
+  type PHBaseState,
+  type PHDocument,
 } from "@powerhousedao/shared/document-model";
 
 /**
@@ -30,6 +31,24 @@ function newDrive<TDocument extends PHDocument>(
 }
 
 type DefaultDriveLogger = { error: (message: string) => void };
+
+/**
+ * The id to create a missing drive under: its configured id, unless that id
+ * has the content-addressed form only a v2 create derives (a drive pinned from
+ * another store). A legacy create may not take such an id, and a v2 one cannot
+ * choose it, so the drive is created anew and found by its slug from then on.
+ */
+function creatableId(
+  drive: DriveInput,
+  logger: DefaultDriveLogger,
+): string | undefined {
+  const id = drive.id || undefined;
+  if (!id || !isDerivedDocumentId(id)) return id;
+  logger.error(
+    `The default drive "${drive.slug ?? id}" pins ${id}, which this store does not hold and only a v2 create derives: created a new drive for "${drive.slug ?? id}" instead.`,
+  );
+  return undefined;
+}
 
 /** The document that already holds `slug`; null when two do (an id and a slug). */
 async function slugHolder(
@@ -113,6 +132,7 @@ export async function addDefaultDrive(
     logger,
   );
   if (taken !== undefined) return taken ?? undefined;
+  const pinned = creatableId(drive, logger);
 
   const document = await newDrive(
     client,
@@ -130,7 +150,7 @@ export async function addDefaultDrive(
         triggers: drive.local?.triggers ?? [],
       },
     } as Partial<PHBaseState>,
-    drive.id,
+    pinned,
   );
   if (drive.slug && drive.slug.length > 0) {
     document.header.slug = drive.slug;
@@ -153,7 +173,10 @@ export async function addDefaultDrive(
     }
   }
 
-  return `http://localhost:${serverPort}/d/${driveId}`;
+  // A pin this store could not take: the drive is served where it was made
+  const servedAs =
+    pinned === drive.id ? driveId : drive.slug || document.header.id;
+  return `http://localhost:${serverPort}/d/${servedAs}`;
 }
 
 /** addDefaultDrive for a reactor drive. */
@@ -192,6 +215,7 @@ export async function addDefaultReactorDrive(
     logger,
   );
   if (taken !== undefined) return taken ?? undefined;
+  const pinned = creatableId(drive, logger);
 
   const document = await newDrive(
     client,
@@ -209,7 +233,7 @@ export async function addDefaultReactorDrive(
         sharingType: drive.local?.sharingType ?? local.sharingType,
       },
     } as Partial<PHBaseState>,
-    drive.id,
+    pinned,
   );
   if (drive.slug && drive.slug.length > 0) {
     document.header.slug = drive.slug;
@@ -232,7 +256,10 @@ export async function addDefaultReactorDrive(
     }
   }
 
-  return `http://localhost:${serverPort}/d/${driveId}`;
+  // A pin this store could not take: the drive is served where it was made
+  const servedAs =
+    pinned === drive.id ? driveId : drive.slug || document.header.id;
+  return `http://localhost:${serverPort}/d/${servedAs}`;
 }
 
 export { isPostgresUrl } from "./postgres-url.mjs";

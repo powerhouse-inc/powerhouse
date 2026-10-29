@@ -1,3 +1,4 @@
+import type * as SwitchboardUtils from "@powerhousedao/switchboard/utils";
 import {
   defineHostSchemas,
   drivesSchema,
@@ -277,30 +278,56 @@ function seederClient(
       }
     },
     createDrive: async (drive: ResolvedDrive) => {
-      seededIds.set(drive.slug, drive.id);
       const { addDefaultDrive } =
         await import("@powerhousedao/switchboard/utils");
-      await addDefaultDrive(
-        reactor as Parameters<typeof addDefaultDrive>[0],
-        {
-          id: drive.id,
-          slug: drive.slug,
-          global: { name: drive.name, icon: drive.icon },
-          ...(drive.preferredEditor
-            ? { preferredEditor: drive.preferredEditor }
-            : {}),
-          local: {
-            availableOffline: drive.availableOffline,
-            listeners: [],
-            sharingType: drive.sharingType,
-            triggers: [],
-          },
-        } as Parameters<typeof addDefaultDrive>[1],
-        port,
-      );
+      // One drive that cannot be made must not keep the server from starting
+      try {
+        await createDeclaredDrive(addDefaultDrive, reactor, drive, port);
+      } catch (error) {
+        console.error(
+          `The drive "${drive.slug}" was not created: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return;
+      }
+      // Its id: the declared one, or a new one where the store could not take
+      // a pinned id (addDefaultDrive then made it under the slug)
+      let id: string | undefined;
+      try {
+        id = await (reactor as SlugLookupClient).resolveIdOrSlug(drive.slug);
+      } catch {
+        id = undefined;
+      }
+      seededIds.set(drive.slug, id || drive.id);
     },
     attachRemoteDrive: () => Promise.resolve(), // remotes ride options.remoteDrives
   };
+}
+
+/** A declared local drive, through the switchboard's own default-drive path. */
+async function createDeclaredDrive(
+  addDefaultDrive: typeof SwitchboardUtils.addDefaultDrive,
+  reactor: unknown,
+  drive: ResolvedDrive,
+  port: number,
+): Promise<void> {
+  await addDefaultDrive(
+    reactor as Parameters<typeof addDefaultDrive>[0],
+    {
+      id: drive.id,
+      slug: drive.slug,
+      global: { name: drive.name, icon: drive.icon },
+      ...(drive.preferredEditor
+        ? { preferredEditor: drive.preferredEditor }
+        : {}),
+      local: {
+        availableOffline: drive.availableOffline,
+        listeners: [],
+        sharingType: drive.sharingType,
+        triggers: [],
+      },
+    } as Parameters<typeof addDefaultDrive>[1],
+    port,
+  );
 }
 
 async function start(
