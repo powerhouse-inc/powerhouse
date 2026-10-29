@@ -53,6 +53,10 @@ export interface IReactorBrowserClient extends Pick<
   | "newDocument"
   | "create"
   | "deleteDocument"
+  | "undo"
+  | "redo"
+  | "undoRedoTargets"
+  | "undoRedoAvailability"
 > {
   readonly read: IReactorBrowserReadClient;
   readonly write: IReactorBrowserWriteClient;
@@ -74,7 +78,8 @@ the `jobChanges` subscription when realtime is on. Its `document()` runs the
 `write.deleteDocument` run synchronous mutations and hand back a handle that has
 already settled.
 
-`newDocument` is a top-level member only.
+`newDocument`, `undo`, `redo`, `undoRedoTargets` and `undoRedoAvailability` are
+top-level members only: the browser halves carry no undo.
 
 Everything outside these members is deliberately excluded from the interface:
 `drives`, `resolveIdOrSlug`, relationships, `executeAsync`, `executeBatch`,
@@ -88,11 +93,15 @@ getters. For the full-reactor versions of those, see
 | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `get(identifier, view?, signal?)`                             | Reads by id or slug. A `view.revision` throws: the GraphQL read API has no point-in-time reads.     |
 | `getOperations(identifier, view?, filter?, paging?, signal?)` | Paged. `next()` follows the returned cursor; the default page is `{ cursor: "0", limit: 100 }`.     |
-| `newDocument(documentType, options?, signal?)`                | Heads a new, uncreated document with the versions the Switchboard selects for the type and parent, and its create signature policy. |
+| `newDocument(documentType, options?, signal?)`                | Heads a new, uncreated document with the versions the Switchboard selects for the type and parent, fitted to this client's `documentModels`, and its create signature policy. |
 | `create(document, parentIdentifier?, signal?)`                | Creates the document as its header says and emits `Created`.                                        |
 | `execute(identifier, branch, actions, signal?)`               | Reads the document, stamps and signs a single action, pushes it, emits `Updated`. Two round trips.  |
 | `deleteDocument(identifier, propagate?, signal?)`             | Deletes and emits `Deleted` carrying the identifier it was called with.                             |
 | `subscribe(search, callback, view?)`                          | Registers a change subscriber and returns its unsubscribe function. `view` is accepted and ignored. |
+| `undo(identifier, scope?, branch?, signal?)`                  | Submits `UNDO` signed by this client. On base-reducer 3 it asks the Switchboard for the target and submits a `RETRACT` of it, signed by this client. A stale target is refused, not re-resolved. |
+| `redo(identifier, scope?, branch?, signal?)`                  | Submits `REDO`, or on base-reducer 3 a `RETRACT` of the last live retraction, the same way.         |
+| `undoRedoTargets(identifier, scope?, view?, signal?)`         | The rows a base-reducer 3 undo and redo would retract, resolved by the Switchboard as the caller.   |
+| `undoRedoAvailability(identifier, scope?, branch?, signal?)`  | On base-reducer 3, read from `undoRedoTargets`; below it, from the scope's revision.               |
 
 `useDispatch` writes through `write.execute` and reads the result back with
 `handle.document()`. That is how it reports per-action errors: `dispatchActions`
