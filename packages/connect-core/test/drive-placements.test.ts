@@ -72,7 +72,19 @@ function fakeSync(heldIds: string[] = []) {
       });
       return Promise.resolve();
     }),
+    untilCopied: vi.fn((_id: string) => Promise.resolve()),
   };
+}
+
+/** A copy that arrives, or times out, when the test says. */
+function pendingCopy() {
+  let arrive: () => void = () => {};
+  let fail: (error: Error) => void = () => {};
+  const copied = new Promise<void>((resolve, reject) => {
+    arrive = resolve;
+    fail = reject;
+  });
+  return { copied, arrive: () => arrive(), fail: (e: Error) => fail(e) };
 }
 
 function fakeRouter() {
@@ -91,7 +103,10 @@ function fakeRouter() {
   };
 }
 
-async function tab(store: PlacementStore, sync = fakeSync(["id-c"])) {
+async function tab(
+  store: PlacementStore,
+  sync: ReturnType<typeof fakeSync> = fakeSync(["id-c"]),
+) {
   const placements = await DrivePlacements.load(
     [placedB, syncedC],
     store,
@@ -137,6 +152,7 @@ describe("DrivePlacements", () => {
     await placements.move("id-b", LOCAL);
 
     expect(order).toEqual(["add, stored true"]);
+    expect(sync.untilCopied).toHaveBeenCalledWith("id-b");
     expect(sync.add).toHaveBeenCalledWith("http://localhost:4001/d/b", "id-b");
     expect([...store.entries.values()]).toEqual([
       { slug: "b", backend: LOCAL, configWas: "sb" },
@@ -232,6 +248,126 @@ describe("DrivePlacements", () => {
     expect(b.placements.placementOf("id-c")).toMatchObject({ moved: true });
     expect(seen).toHaveBeenCalled();
     expect(await b.placements.reload()).toBe(false);
+  });
+
+  it("routes another tab to a kept copy only once the copy has arrived", async () => {
+    const store = memoryStore();
+    const sync = fakeSync(["id-c"]);
+    const a = await tab(store, sync);
+    const b = await tab(store, sync);
+    const copy = pendingCopy();
+    sync.untilCopied.mockReturnValue(copy.copied);
+
+    b.router.setPlacement.mockClear();
+    const moving = a.placements.move("id-b", LOCAL);
+    await vi.waitFor(() => expect(sync.add).toHaveBeenCalled());
+    // The worker's broadcast after the add reaches B while A still waits.
+    const following = b.placements.reload();
+    const again = b.placements.reload();
+    await vi.waitFor(() =>
+      expect(b.placements.placementOf("id-b")).toMatchObject({
+        busy: true,
+        movingTo: LOCAL,
+        backend: "sb",
+      }),
+    );
+    expect(b.router.runtime.size).toBe(0);
+    expect(a.router.runtime.size).toBe(0);
+    expect(await again).toBe(false);
+
+    copy.arrive();
+    await moving;
+    expect(await following).toBe(true);
+
+    for (const t of [a, b]) {
+      expect(t.router.runtime.get("id-b")).toBe(LOCAL);
+      expect(t.placements.placementOf("id-b")).toMatchObject({
+        backend: LOCAL,
+        moved: true,
+        busy: false,
+      });
+    }
+    // Once per key: the second broadcast did not install again.
+    expect(b.router.setPlacement).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves both tabs on the switchboard, with no sync remote, when the copy never arrives", async () => {
+    const store = memoryStore();
+    const sync = fakeSync(["id-c"]);
+    const a = await tab(store, sync);
+    const b = await tab(store, sync);
+    const copy = pendingCopy();
+    sync.untilCopied.mockReturnValue(copy.copied);
+
+    const moving = a.placements.move("id-b", LOCAL);
+    await vi.waitFor(() => expect(sync.add).toHaveBeenCalled());
+    const following = b.placements.reload();
+    await vi.waitFor(() =>
+      expect(b.placements.placementOf("id-b")).toMatchObject({ busy: true }),
+    );
+
+    copy.fail(new Error("Timed out after 30000ms waiting for document id-b"));
+    await expect(moving).rejects.toThrow(/Timed out/);
+    await following;
+    // The rollback's removal broadcast.
+    expect(await b.placements.reload()).toBe(false);
+
+    expect(store.entries.size).toBe(0);
+    expect(sync.remotes.map((r) => r.meta.name)).toEqual(["r-id-c"]);
+    for (const t of [a, b]) {
+      expect(t.router.runtime.size).toBe(0);
+      expect(t.placements.placementOf("id-b")).toMatchObject({
+        backend: "sb",
+        moved: false,
+        busy: false,
+      });
+    }
+  });
+
+  it("honours a move another tab made while this one was booting", async () => {
+    const store = memoryStore();
+    const sync = fakeSync(["id-c"]);
+    const booting = await DrivePlacements.load([placedB, syncedC], store, sync);
+    const a = await tab(store, sync);
+
+    await a.placements.move("id-b", LOCAL);
+    await a.placements.move("id-c", "sb");
+
+    const router = fakeRouter();
+    expect(await booting.start(router, resolved, true)).toEqual([]);
+
+    expect(sync.remotes.map((r) => r.meta.name)).toEqual(["r-id-b"]);
+    expect(sync.remove).toHaveBeenCalledTimes(1);
+    expect(Object.fromEntries(router.runtime)).toEqual({
+      "id-b": LOCAL,
+      b: LOCAL,
+      "id-c": "sb",
+      c: "sb",
+    });
+  });
+
+  it("drops the sync remotes of placed drives when it starts, and keeps those of moved ones", async () => {
+    const store = memoryStore([{ slug: "b", backend: LOCAL, configWas: "sb" }]);
+    const sync = fakeSync(["id-b", "id-c"]);
+    const placements = await DrivePlacements.load(
+      [placedB, syncedC],
+      store,
+      sync,
+    );
+
+    await placements.start(fakeRouter(), resolved, true);
+
+    expect(sync.remove).not.toHaveBeenCalled();
+    await placements.move("id-c", "sb");
+    const fresh = await DrivePlacements.load([placedB, syncedC], store, sync);
+    sync.remotes.push({
+      meta: {
+        name: "r-id-c",
+        collectionId: DriveCollectionId.forDrive("id-c"),
+      },
+    });
+    await fresh.start(fakeRouter(), resolved, true);
+    expect(sync.remotes.map((r) => r.meta.name)).toEqual(["r-id-b"]);
   });
 
   it("refuses a drive it does not place and a backend the drive can't open on", async () => {

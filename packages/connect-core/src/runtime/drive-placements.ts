@@ -42,8 +42,10 @@ export type PlacementRouter = {
 };
 
 export type PlacementSync = SyncRemotes & {
-  /** Adds a sync remote for the drive and waits for its first pull. */
+  /** Adds a sync remote for the drive. */
   add(url: string, driveId: string): Promise<void>;
+  /** Bounded wait for the drive's local copy and its first pull; rejects when the copy never arrives. */
+  untilCopied(driveId: string): Promise<void>;
 };
 
 export type DrivePlacement = {
@@ -54,6 +56,8 @@ export type DrivePlacement = {
   moved: boolean;
   /** A move is running. */
   busy: boolean;
+  /** Where a running move takes the drive. */
+  movingTo?: string;
 };
 
 /** Config placement plus this browser's moves: store, then sync remote, then router. */
@@ -61,7 +65,8 @@ export class DrivePlacements {
   private applied = new Map<string, PlacementEntry>();
   private resolved: ResolvedSwitchboardDrive[] = [];
   private router: PlacementRouter | undefined;
-  private readonly busy = new Set<string>();
+  private readonly busy = new Map<string, string>();
+  private attached = false;
   private readonly listeners = new Set<() => void>();
   private snapshot = new Map<string, DrivePlacement>();
 
@@ -129,13 +134,36 @@ export class DrivePlacements {
 
   /** Installs both layers for every drive the router can be told about. */
   attach(
-    router: PlacementRouter,
+    router: PlacementRouter | undefined,
     resolved: readonly ResolvedSwitchboardDrive[],
   ): void {
     this.router = router;
     this.resolved = [...resolved];
+    this.attached = true;
     for (const drive of this.resolved) this.install(drive);
     this.notify();
+  }
+
+  /**
+   * Attaches, follows the moves other tabs made since `load`, then brings
+   * the sync remotes in line; returns the collections to keep a copy of.
+   */
+  async start(
+    router: PlacementRouter | undefined,
+    resolved: readonly ResolvedSwitchboardDrive[],
+    syncsDrives: boolean,
+  ): Promise<ResolvedSwitchboardDrive[]> {
+    this.attach(router, resolved);
+    await this.reload();
+    if (!syncsDrives) return [];
+    const placed = new Set(this.placed().map((drive) => drive.slug));
+    await removeLocalCopies(
+      this.sync,
+      this.resolved.filter(
+        (drive) => placed.has(drive.slug) && !this.busy.has(drive.slug),
+      ),
+    );
+    return this.keptCollections();
   }
 
   /** The drive's placement in this browser; undefined for a drive the host does not place on a switchboard. */
@@ -167,19 +195,28 @@ export class DrivePlacements {
       backend === drive.configured
         ? undefined
         : { slug: drive.slug, backend, configWas: drive.configured };
-    this.busy.add(drive.slug);
+    const id = drive.id;
+    this.busy.set(drive.slug, backend);
     this.notify();
     try {
       await this.record(drive.slug, entry);
-      try {
-        if (backend === LOCAL_BACKEND_NAME) {
-          await this.sync.add(servedUrl(drive), drive.id);
-        } else {
+      if (backend === LOCAL_BACKEND_NAME) {
+        try {
+          await this.sync.add(servedUrl(drive), id);
+          await this.sync.untilCopied(id);
+        } catch (error) {
+          // Store first: the removal's broadcast makes other tabs re-read it.
+          await this.record(drive.slug, previous);
           await removeLocalCopies(this.sync, [drive]);
+          throw error;
         }
-      } catch (error) {
-        await this.record(drive.slug, previous);
-        throw error;
+      } else {
+        try {
+          await removeLocalCopies(this.sync, [drive]);
+        } catch (error) {
+          await this.record(drive.slug, previous);
+          throw error;
+        }
       }
       this.install(drive);
     } finally {
@@ -196,30 +233,63 @@ export class DrivePlacements {
 
   /** Re-reads the store after another tab moved a drive; true when something changed. */
   async reload(): Promise<boolean> {
-    let entries: PlacementEntry[];
-    try {
-      entries = await this.store.list();
-    } catch (error) {
-      logger.warn("Could not read this browser's drive moves: @error", error);
-      return false;
-    }
-    const { applied } = applyPlacementEntries(this.drives, entries);
-    const next = new Map(applied.map((entry) => [entry.slug, entry]));
+    if (!this.attached) return false;
+    const next = await this.readMoves();
+    if (!next) return false;
     const changed = this.drives.filter(
       (drive) =>
         !this.busy.has(drive.slug) &&
         next.get(drive.slug)?.backend !== this.applied.get(drive.slug)?.backend,
     );
     if (changed.length === 0) return false;
-    for (const drive of changed) {
-      const entry = next.get(drive.slug);
-      if (entry) this.applied.set(drive.slug, entry);
-      else this.applied.delete(drive.slug);
-      const resolved = this.resolved.find((d) => d.slug === drive.slug);
-      if (resolved) this.install(resolved);
-    }
+    await Promise.all(
+      changed.map((drive) => this.follow(drive, next.get(drive.slug))),
+    );
     this.notify();
     return true;
+  }
+
+  /** A copy kept by another tab is routed here only once it has arrived. */
+  private async follow(
+    drive: SwitchboardDrive,
+    entry: PlacementEntry | undefined,
+  ): Promise<void> {
+    const resolved = this.resolved.find((d) => d.slug === drive.slug);
+    if (entry?.backend === LOCAL_BACKEND_NAME && resolved?.id) {
+      this.busy.set(drive.slug, LOCAL_BACKEND_NAME);
+      this.notify();
+      try {
+        await this.sync.untilCopied(resolved.id);
+      } catch (error) {
+        logger.warn(
+          "Drive @slug was not copied into this browser; leaving it where it opens: @error",
+          drive.slug,
+          error,
+        );
+        return;
+      } finally {
+        this.busy.delete(drive.slug);
+      }
+      // The mover may have rolled back while this tab waited.
+      const latest = await this.readMoves();
+      if (!latest) return;
+      entry = latest.get(drive.slug);
+    }
+    if (entry) this.applied.set(drive.slug, entry);
+    else this.applied.delete(drive.slug);
+    if (resolved) this.install(resolved);
+  }
+
+  private async readMoves(): Promise<Map<string, PlacementEntry> | undefined> {
+    let entries: PlacementEntry[];
+    try {
+      entries = await this.store.list();
+    } catch (error) {
+      logger.warn("Could not read this browser's drive moves: @error", error);
+      return undefined;
+    }
+    const { applied } = applyPlacementEntries(this.drives, entries);
+    return new Map(applied.map((entry) => [entry.slug, entry]));
   }
 
   private async record(
@@ -257,6 +327,9 @@ export class DrivePlacements {
         backend,
         moved: backend !== drive.configured,
         busy: this.busy.has(drive.slug),
+        ...(this.busy.has(drive.slug)
+          ? { movingTo: this.busy.get(drive.slug) }
+          : {}),
       });
     }
     this.snapshot = snapshot;
