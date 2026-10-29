@@ -82,7 +82,6 @@ import {
   planReactorClient,
   refreshAppDrives,
   relistAppDrives,
-  removeLocalCopies,
   resolveSwitchboardDrives,
   servedUrl,
   switchboardDrives,
@@ -817,28 +816,17 @@ async function attachPlacements(
   router: RoutingClient | undefined,
   syncsDrives: boolean,
 ): Promise<void> {
-  if (router) placements.attach(router, resolved);
-  if (syncsDrives) {
-    const placed = new Set(placements.placed().map((drive) => drive.slug));
-    const sync =
-      getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
-    if (sync) {
-      await removeLocalCopies(
-        sync,
-        resolved.filter((drive) => placed.has(drive.slug)),
-      );
-    }
-    for (const drive of placements.keptCollections()) {
-      if (!drive.id) continue;
-      void trackDriveArrival(addRemoteDrive(servedUrl(drive), drive.id)).catch(
-        (error: unknown) =>
-          logger.error(
-            "Failed to keep a copy of @slug: @error",
-            drive.slug,
-            error,
-          ),
-      );
-    }
+  const kept = await placements.start(router, resolved, syncsDrives);
+  for (const drive of kept) {
+    if (!drive.id) continue;
+    void trackDriveArrival(addRemoteDrive(servedUrl(drive), drive.id)).catch(
+      (error: unknown) =>
+        logger.error(
+          "Failed to keep a copy of @slug: @error",
+          drive.slug,
+          error,
+        ),
+    );
   }
   if (router) await relistAppDrives();
 }

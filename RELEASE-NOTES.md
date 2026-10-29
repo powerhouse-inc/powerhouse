@@ -4,7 +4,7 @@
 
 ### ✨ Move a drive between its switchboard and this browser
 
-For each drive the host keeps on a switchboard, Connect's drive settings now say where it opens and offer one action: **Keep a copy in this browser** for a drive that opens on the switchboard, or **Open on <switchboard> only** for one this browser keeps a copy of. Keeping a copy adds the drive's sync remote and waits for its first pull before reads move to the copy. Opening on the switchboard only removes the sync remote and routes the drive there; the copy already in the browser is left in place, unread, so keeping a copy again later picks up from it.
+For each drive the host keeps on a switchboard, Connect's drive settings now say where it opens and offer one action: **Keep a copy in this browser** for a drive that opens on the switchboard, or **Open on <switchboard> only** for one this browser keeps a copy of. Keeping a copy adds the drive's sync remote and waits for its first pull before reads move to the copy, in every tab; if the copy never arrives, the drive stays on the switchboard and the sync remote is removed again. Opening on the switchboard only removes the sync remote and routes the drive there; the copy already in the browser is left in place, unread, so keeping a copy again later picks up from it.
 
 The choice applies to this browser only. It is stored in IndexedDB, every open tab follows it, and it survives a reload. Drive settings mark a moved drive "Moved in this browser. Host config: …", with **Reset to config**. A move is dropped once the host config changes the placement it replaced. A Connect with no reactor in the browser opens every drive on its switchboard and offers no move.
 

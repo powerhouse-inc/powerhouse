@@ -11,7 +11,7 @@ export function DrivePlacementSection({ driveId }: { driveId: string }) {
   const placement = useDrivePlacement(driveId);
   const [error, setError] = useState<string>();
   if (!placement) return null;
-  const { drive, backend, moved, busy } = placement;
+  const { drive, backend, moved, busy, movingTo } = placement;
   const switchboard = drive.remote;
   const keptHere = backend === LOCAL_BACKEND_NAME;
   const hostConfig =
@@ -78,9 +78,9 @@ export function DrivePlacementSection({ driveId }: { driveId: string }) {
       </div>
       {busy ? (
         <p role="status" className="pt-2 text-xs text-muted-foreground">
-          {keptHere
-            ? `Opening on ${switchboard}…`
-            : "Copying the drive into this browser…"}
+          {movingTo === LOCAL_BACKEND_NAME
+            ? "Copying the drive into this browser…"
+            : `Opening on ${switchboard}…`}
         </p>
       ) : null}
       {error ? (

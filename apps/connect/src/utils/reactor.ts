@@ -306,6 +306,8 @@ export function placementSync(): PlacementSync {
     },
     add: async (url, driveId) => {
       await addRemoteDrive(url, driveId);
+    },
+    untilCopied: async (driveId) => {
       const local = getPHStore()?.reactorClientModule?.client;
       if (local) {
         await waitForDocumentReady(local.read, driveId, {
