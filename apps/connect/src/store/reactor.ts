@@ -75,6 +75,7 @@ import {
   getRuntimeConfig,
   keepsLocalCopy,
   placedDrives,
+  placementCollections,
   planReactorClient,
   refreshAppDrives,
   resolvePlacedDrives,
@@ -401,7 +402,10 @@ export async function createReactor(
   const { multiReactor } = plan;
   // Drives the host opens on a switchboard keep no copy in this browser.
   const routesDrives = plan.mode === "router";
-  const placed = routesDrives ? placedDrives(runtimeConfig.connect) : [];
+  const placed =
+    routesDrives || plan.mode === "remote"
+      ? placedDrives(runtimeConfig.connect)
+      : [];
   const placedResolved = resolvePlacedDrives(placed, (url) =>
     fetchDriveInfo(url, async () =>
       renown.user ? renown.getBearerToken({ expiresIn: 10 }) : undefined,
@@ -557,6 +561,8 @@ export async function createReactor(
       plan,
       localReactor,
       remoteDriveUrl,
+      remoteBackends,
+      collections: placedResolved.then(placementCollections),
       signer: renown.signer,
       documentModelModules: loadedDocumentModels,
     });
