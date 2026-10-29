@@ -179,6 +179,16 @@ export class RouteDispatcher {
     }
   }
 
+  /** A drive route, else a document route, from the table only (no probe). */
+  knownBackendOf(identifier: string): string | undefined {
+    const drive = this.table.knownRoute(
+      this.collectionFor(identifier, DEFAULT_BRANCH),
+    );
+    if (drive !== undefined) return drive.backend;
+    const document = this.table.documentBackend(identifier);
+    return document === "" ? undefined : document;
+  }
+
   collectionFor(driveIdentifier: string, branch: string): DriveCollectionId {
     return DriveCollectionId.forDrive(
       driveIdentifier,
