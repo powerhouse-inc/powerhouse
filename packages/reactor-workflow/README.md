@@ -341,6 +341,22 @@ The engine's own blocks are the built-in piece `@powerhousedao/piece-core`, in
   or `false` by its result.
 - The triggers are fed by the host: `reactor/schedule.ts`, `reactor/webhook.ts`
   and the `fire` mutation. Their hooks are never called.
+- `manual` takes optional `inputs`, shaped after Activepieces' web form
+  fields: per field a payload key (`name`), `displayName`, `type` (`text`,
+  `text_area`, `number`, `toggle`, `date`, `dropdown`, `json`), `required`,
+  `defaultValue` and `description`. A dropdown's `options` is one per line,
+  either a bare value or `Label = value` (split at the first `=` with a space
+  on each side); the Run form shows the label and the payload carries the
+  value, which is what the fire checks. Its `defaultValue` is a value, or an
+  option's label. A caller's
+  `fire` checks its payload against the published trigger's inputs
+  (`coerceManualPayload` in `@powerhousedao/pieces-framework/workflow`):
+  defaults fill missing fields, values are coerced (`"42"` to 42, `"true"` to
+  true, a date to ISO 8601), keys no field declares pass through, and a
+  missing required field or a bad value refuses the fire with a
+  `ManualPayloadError` naming each field, before any run row. Reruns and
+  other trigger kinds are not checked. The inputs also type
+  `{{trigger.payload.<name>}}` in the expression picker.
 
 ## Block resolution
 

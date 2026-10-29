@@ -556,7 +556,109 @@
       "requireAuth": false,
       "ports": ["next"],
       "hasSampleData": false,
-      "props": []
+      "props": [
+        {
+          "name": "inputs",
+          "displayName": "Inputs",
+          "description": "Fields a run asks for. The editor's Run shows them as a form; a fire missing a required field, or with one of the wrong type, is refused.",
+          "type": "ARRAY",
+          "required": false,
+          "hasDynamicResolver": false,
+          "properties": [
+            {
+              "name": "displayName",
+              "displayName": "Field Name",
+              "type": "SHORT_TEXT",
+              "required": true,
+              "hasDynamicResolver": false,
+              "placeholder": "e.g. Email address"
+            },
+            {
+              "name": "name",
+              "displayName": "Payload Key",
+              "description": "Read as {{trigger.payload.<key>}}.",
+              "type": "SHORT_TEXT",
+              "required": true,
+              "hasDynamicResolver": false,
+              "placeholder": "e.g. email"
+            },
+            {
+              "name": "type",
+              "displayName": "Field Type",
+              "type": "STATIC_DROPDOWN",
+              "required": true,
+              "hasDynamicResolver": false,
+              "defaultValue": "text",
+              "staticOptions": [
+                {
+                  "value": "text",
+                  "label": "Text"
+                },
+                {
+                  "value": "text_area",
+                  "label": "Long text"
+                },
+                {
+                  "value": "number",
+                  "label": "Number"
+                },
+                {
+                  "value": "toggle",
+                  "label": "Checkbox"
+                },
+                {
+                  "value": "date",
+                  "label": "Date"
+                },
+                {
+                  "value": "dropdown",
+                  "label": "Dropdown"
+                },
+                {
+                  "value": "json",
+                  "label": "JSON"
+                }
+              ]
+            },
+            {
+              "name": "options",
+              "displayName": "Options",
+              "description": "One per line: a value, or Label = value to show a label and send the value.",
+              "type": "LONG_TEXT",
+              "required": true,
+              "hasDynamicResolver": false,
+              "showWhen": {
+                "prop": "type",
+                "oneOf": ["dropdown"]
+              }
+            },
+            {
+              "name": "description",
+              "displayName": "Field Description",
+              "type": "SHORT_TEXT",
+              "required": false,
+              "hasDynamicResolver": false,
+              "placeholder": "Shown under the field"
+            },
+            {
+              "name": "defaultValue",
+              "displayName": "Default Value",
+              "description": "As text: 42, true, 2026-01-31, or JSON.",
+              "type": "SHORT_TEXT",
+              "required": false,
+              "hasDynamicResolver": false
+            },
+            {
+              "name": "required",
+              "displayName": "Required",
+              "type": "CHECKBOX",
+              "required": false,
+              "hasDynamicResolver": false,
+              "defaultValue": false
+            }
+          ]
+        }
+      ]
     }
   ]
 }

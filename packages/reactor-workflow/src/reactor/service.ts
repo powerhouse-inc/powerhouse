@@ -6,9 +6,11 @@ import {
 } from "@powerhousedao/pieces-framework/block-type";
 import {
   checkTriggerStrategy,
+  coerceManualPayload,
   containsDocumentRef,
   documentRefsIn,
   expandDocumentRefs,
+  parseManualInputs,
   type DocumentReference,
 } from "@powerhousedao/pieces-framework/workflow";
 import type { ModelManifestEntry } from "@powerhousedao/reactor";
@@ -126,6 +128,7 @@ import {
   hasOutputSchemaFields,
   fromSample,
   lifecycleTriggerTree,
+  manualTriggerTree,
   scheduleTriggerTree,
   treeValue,
   webhookTriggerTree,
@@ -4258,8 +4261,10 @@ export class WorkflowRuntimeService {
   ): Promise<OutputTree> {
     const record = (config ?? {}) as Record<string, unknown>;
     switch (blockKey(block)) {
-      case MANUAL_BLOCK:
-        return { source: "none", nodes: [] };
+      case MANUAL_BLOCK: {
+        const nodes = manualTriggerTree(parseManualInputs(record));
+        return { source: nodes.length > 0 ? "static" : "none", nodes };
+      }
       case SCHEDULE_BLOCK:
         return { source: "static", nodes: scheduleTriggerTree() };
       case WEBHOOK_BLOCK:
@@ -4814,6 +4819,23 @@ export class WorkflowRuntimeService {
         throw new Error(
           `Workflow is ${state.status}; only ENABLED workflows can fire`,
         );
+      }
+      // A caller's fire is checked against the manual trigger's inputs; a
+      // rerun or an adopted row keeps the payload it was journaled with.
+      if (triggerKind === "manual" && !resume && !enqueuedRunId) {
+        const fired = runnableDefinition(state).trigger;
+        const inputs =
+          fired && blockKey(triggerBlock(fired)) === MANUAL_BLOCK
+            ? parseManualInputs(configRecord(fired.config))
+            : [];
+        if (inputs.length > 0) {
+          try {
+            triggerPayload = coerceManualPayload(inputs, triggerPayload);
+          } catch (error) {
+            run.refused = true;
+            throw error;
+          }
+        }
       }
       definition = toWorkflowDefinition(state);
       const reactorConnections = declaredReactorConnectionIds(definition);
