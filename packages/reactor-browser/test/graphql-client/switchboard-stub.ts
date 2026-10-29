@@ -66,14 +66,21 @@ export const REMOTE_INFO = {
 
 export const REMOTE_DOCUMENT_TYPES = [DRIVE_TYPE, "powerhouse/document-model"];
 
-/** The `SwitchboardFacts` answer; `over` replaces parts of it. */
+/**
+ * The `SwitchboardFacts` answer; `over` replaces parts of it. `onDemand`
+ * "unreported" is a Switchboard older than `loadsModelsOnDemand`.
+ */
 export function switchboardFacts(
   over: {
     info?: Record<string, unknown>;
     documentTypes?: readonly string[];
     queries?: readonly string[];
+    onDemand?: boolean | "unreported";
   } = {},
 ) {
+  const fields = (names: readonly string[]) => ({
+    fields: names.map((name) => ({ name })),
+  });
   return {
     inspection: {
       info: { ...REMOTE_INFO, access: null, ...over.info },
@@ -81,12 +88,20 @@ export function switchboardFacts(
         (documentType) => ({ documentType }),
       ),
     },
-    __type: {
-      fields: (
-        over.queries ?? ["documentServed", "createDefaults", "inspection"]
-      ).map((name) => ({ name })),
-    },
+    queries: fields(
+      over.queries ?? ["documentServed", "createDefaults", "inspection"],
+    ),
+    inspectionFields: fields(
+      over.onDemand === "unreported"
+        ? ["info", "documentModels"]
+        : ["info", "documentModels", "loadsModelsOnDemand"],
+    ),
   };
+}
+
+/** The `SwitchboardModelLoading` answer. */
+export function modelLoading(onDemand: boolean) {
+  return { inspection: { loadsModelsOnDemand: onDemand } };
 }
 
 export function data(value: unknown): Reply {
@@ -118,6 +133,8 @@ export function switchboard(
     switch (received.body.operationName) {
       case "SwitchboardFacts":
         return data(switchboardFacts());
+      case "SwitchboardModelLoading":
+        return data(modelLoading(false));
       case "GetDocumentServed":
         return data({
           documentServed: (variables.idOrSlug as string) in documents,

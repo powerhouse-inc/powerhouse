@@ -33,6 +33,7 @@ import {
   driveIdOf,
   REMOTE_INFO,
   serve,
+  modelLoading,
   serveHanging,
   settledJob,
   switchboard,
@@ -295,6 +296,48 @@ describe("createSwitchboardBackend facts", () => {
     expect(
       stub.received.some((r) => r.body.operationName === "CreateDocument"),
     ).toBe(false);
+  });
+
+  it("leaves types open on a Switchboard that loads models on demand, and sends the create", async () => {
+    const { remote, stub } = await backendOver(
+      { "drive-1": DRIVE_TYPE },
+      ({ body }) =>
+        body.operationName === "SwitchboardFacts"
+          ? data(switchboardFacts({ documentTypes: [DRIVE_TYPE] }))
+          : body.operationName === "SwitchboardModelLoading"
+            ? data(modelLoading(true))
+            : undefined,
+    );
+    const router = routerOver(remote);
+    await router.refreshFacts();
+
+    const facts = router.backends[0].facts;
+    expect(facts.known).toBe(true);
+    expect(facts.documentTypes).toBeUndefined();
+    await router.create(modelDocument("doc-new"), "drive-1");
+    expect(
+      stub.received.some((r) => r.body.operationName === "CreateDocument"),
+    ).toBe(true);
+  });
+
+  it("leaves types open on a Switchboard too old to say how it loads models", async () => {
+    const { remote, stub } = await backendOver(
+      { "drive-1": DRIVE_TYPE },
+      factsReply({ documentTypes: [DRIVE_TYPE], onDemand: "unreported" }),
+    );
+    const router = routerOver(remote);
+    await router.refreshFacts();
+
+    const facts = router.backends[0].facts;
+    expect(facts.known).toBe(true);
+    expect(facts.documentTypes).toBeUndefined();
+    expect(stub.received.map((r) => r.body.operationName)).not.toContain(
+      "SwitchboardModelLoading",
+    );
+    await router.create(modelDocument("doc-new"), "drive-1");
+    expect(
+      stub.received.some((r) => r.body.operationName === "CreateDocument"),
+    ).toBe(true);
   });
 });
 

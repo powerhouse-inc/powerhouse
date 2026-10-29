@@ -396,6 +396,15 @@ describe("a router over a local reactor and a real Switchboard", () => {
 
     expect(remote?.facts.known).toBe(true);
     expect(remote?.facts.reactor.storage.engine).toBeTruthy();
+    // This Switchboard has no model loader, so its model list is closed.
+    const loading = await new GraphQLReactorClient({
+      url: SWITCHBOARD_URL,
+      tokenProvider: () => Promise.resolve(undefined),
+      realtime: false,
+    }).request<{ inspection: { loadsModelsOnDemand: boolean } }>(
+      "query { inspection { loadsModelsOnDemand } }",
+    );
+    expect(loading.inspection.loadsModelsOnDemand).toBe(false);
     expect([...(remote?.facts.documentTypes ?? [])]).toEqual(
       expect.arrayContaining([DRIVE_TYPE, MODEL_TYPE]),
     );

@@ -86,7 +86,12 @@ const FACTS_QUERY = /* GraphQL */ `
         documentType
       }
     }
-    __type(name: "Query") {
+    queries: __type(name: "Query") {
+      fields {
+        name
+      }
+    }
+    inspectionFields: __type(name: "ReactorInspection") {
       fields {
         name
       }
@@ -94,14 +99,31 @@ const FACTS_QUERY = /* GraphQL */ `
   }
 `;
 
-type SwitchboardFacts = {
+const MODEL_LOADING_QUERY = /* GraphQL */ `
+  query SwitchboardModelLoading {
+    inspection {
+      loadsModelsOnDemand
+    }
+  }
+`;
+
+type TypeFields = { fields: readonly { name: string }[] | null } | null;
+
+type FactsAnswer = {
   inspection: {
     info: Omit<ReactorInfo, "access"> & {
       access: ReactorInfo["access"] | null;
     };
     documentModels: readonly { documentType: string }[];
   };
-  __type: { fields: readonly { name: string }[] | null } | null;
+  queries: TypeFields;
+  inspectionFields: TypeFields;
+};
+
+type SwitchboardFacts = {
+  readonly info: ReactorInfo;
+  /** Undefined: the Switchboard loads models on demand, or does not say. */
+  readonly documentTypes: readonly string[] | undefined;
 };
 
 /** Queries this backend sends that a Switchboard serves only from some version. */
@@ -358,14 +380,8 @@ export function createSwitchboardBackend(
     config: {
       name: descriptor.name,
       backend,
-      facts: async () => {
-        const { info } = (await read()).inspection;
-        return { ...info, access: info.access ?? NO_ACCESS };
-      },
-      documentTypes: async () =>
-        (await read()).inspection.documentModels.map(
-          (model) => model.documentType,
-        ),
+      facts: async () => (await read()).info,
+      documentTypes: async () => (await read()).documentTypes,
       reach: { hosting: "remote", inspection: descriptor.inspection ?? "rpc" },
       refusesMisroutes: false,
     },
@@ -374,17 +390,35 @@ export function createSwitchboardBackend(
   };
 }
 
+function fieldNames(type: TypeFields): Set<string> {
+  return new Set(type?.fields?.map((field) => field.name));
+}
+
 async function readFacts(
   gql: GraphQLReactorClient,
   url: string,
 ): Promise<SwitchboardFacts> {
-  const facts = await gql.request<SwitchboardFacts>(FACTS_QUERY);
-  const served = new Set(facts.__type?.fields?.map((field) => field.name));
+  const answer = await gql.request<FactsAnswer>(FACTS_QUERY);
+  const served = fieldNames(answer.queries);
   const missing = REQUIRED_QUERIES.filter((query) => !served.has(query));
   if (missing.length > 0) {
     throw new Error(
       `The Switchboard at ${url} does not serve ${missing.join(", ")}; it is older than this client`,
     );
   }
-  return facts;
+  const { info, documentModels } = answer.inspection;
+  // A Switchboard too old to say how it loads models gets no constraint.
+  const closed =
+    fieldNames(answer.inspectionFields).has("loadsModelsOnDemand") &&
+    !(
+      await gql.request<{ inspection: { loadsModelsOnDemand: boolean } }>(
+        MODEL_LOADING_QUERY,
+      )
+    ).inspection.loadsModelsOnDemand;
+  return {
+    info: { ...info, access: info.access ?? NO_ACCESS },
+    documentTypes: closed
+      ? documentModels.map((model) => model.documentType)
+      : undefined,
+  };
 }
