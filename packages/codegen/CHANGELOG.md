@@ -1,3 +1,14 @@
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+- **workflow-runtime:** per-action default timeout and retry ([ed63e8839f](https://github.com/powerhouse-inc/powerhouse/commit/ed63e8839f))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.80 (2026-10-29)
 
 ### 🚀 Features

@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.3-dev.80)<br>
+# Powerhouse CLI Commands (6.2.3-dev.81)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -310,6 +310,14 @@ The piece directory under pieces/ to add the action to. Optional when the projec
 #### Require Reactor <br>
 Declare reactor access for the action: read, or write (which includes read). The action then gets context.reactor<br><br>
 **usage:** `--require-reactor <value>`<br>
+
+#### Default Timeout Seconds <br>
+Write defaultTimeoutSeconds: the step timeout used when the workflow sets none<br><br>
+**usage:** `--default-timeout-seconds <number>`<br>
+
+#### Default Max Attempts <br>
+Write defaultRetry: { maxAttempts }: the attempts (1 is no retry) used when the workflow sets no retry<br><br>
+**usage:** `--default-max-attempts <number>`<br>
 
 
 ### flags

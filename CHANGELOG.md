@@ -1,3 +1,27 @@
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **pieces-framework:** sync upstream to activepieces 0.92.3 ([484096ec69](https://github.com/powerhouse-inc/powerhouse/commit/484096ec69))
+- **pieces-framework,reactor-workflow:** serve the reactor's write half to pieces ([194cc8b5ee](https://github.com/powerhouse-inc/powerhouse/commit/194cc8b5ee))
+- **reactor-api:** send webhook reply headers ([dd5bae688f](https://github.com/powerhouse-inc/powerhouse/commit/dd5bae688f))
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+- **workflow-runtime:** per-action default timeout and retry ([ed63e8839f](https://github.com/powerhouse-inc/powerhouse/commit/ed63e8839f))
+
+### 🩹 Fixes
+
+- **connection-editor:** read dropdown options from the catalog's staticOptions ([c6c88eec7f](https://github.com/powerhouse-inc/powerhouse/commit/c6c88eec7f))
+- **ph-cli:** a served Connect proxies the switchboard's paths instead of answering them with its shell ([11daf2325f](https://github.com/powerhouse-inc/powerhouse/commit/11daf2325f))
+- **reactor-workflow:** name piece errors by their own name, not a minified class ([7aee7c7c9b](https://github.com/powerhouse-inc/powerhouse/commit/7aee7c7c9b))
+- **switchboard,ph-cli:** a drive pinned to an id this store cannot take is made under its slug ([39aff95981](https://github.com/powerhouse-inc/powerhouse/commit/39aff95981))
+- **workflow-runtime:** bind secrets to the connection or workflow that owns them ([40a52be27a](https://github.com/powerhouse-inc/powerhouse/commit/40a52be27a))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.80 (2026-10-29)
 
 ### 🚀 Features
