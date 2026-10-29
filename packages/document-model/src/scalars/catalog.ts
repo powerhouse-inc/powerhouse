@@ -19,41 +19,44 @@ import { amountCryptoScalar } from "./declarations/amount-crypto.js";
 import { amountScalar } from "./declarations/amount.js";
 import { uploadScalar } from "./declarations/upload.js";
 import { jsonObjectScalar } from "./declarations/json-object.js";
-import type { ScalarDefinition } from "./types.js";
+import type { DescribedScalarDefinition } from "./types.js";
 
-export const scalarCatalog: readonly ScalarDefinition[] = Object.freeze([
-  unknownScalar,
-  dateTimeScalar,
-  addressScalar,
-  attachmentRefScalar,
-  amountTokensScalar,
-  ethereumAddressScalar,
-  emailAddressScalar,
-  amountPercentageScalar,
-  dateScalar,
-  urlScalar,
-  amountMoneyScalar,
-  olabelScalar,
-  currencyScalar,
-  phidScalar,
-  oidScalar,
-  amountFiatScalar,
-  amountCurrencyScalar,
-  amountCryptoScalar,
-  amountScalar,
-  uploadScalar,
-  jsonObjectScalar,
-]);
+export const scalarCatalog: readonly DescribedScalarDefinition[] =
+  Object.freeze([
+    unknownScalar,
+    dateTimeScalar,
+    addressScalar,
+    attachmentRefScalar,
+    amountTokensScalar,
+    ethereumAddressScalar,
+    emailAddressScalar,
+    amountPercentageScalar,
+    dateScalar,
+    urlScalar,
+    amountMoneyScalar,
+    olabelScalar,
+    currencyScalar,
+    phidScalar,
+    oidScalar,
+    amountFiatScalar,
+    amountCurrencyScalar,
+    amountCryptoScalar,
+    amountScalar,
+    uploadScalar,
+    jsonObjectScalar,
+  ]);
 
 const byName = new Map(
   scalarCatalog.map((definition) => [definition.name, definition]),
 );
 
-export function getCatalogScalar(name: string): ScalarDefinition | undefined {
+export function getCatalogScalar(
+  name: string,
+): DescribedScalarDefinition | undefined {
   return byName.get(name);
 }
 
-type DocumentModelScalar = ScalarDefinition & {
+type DocumentModelScalar = DescribedScalarDefinition & {
   readonly typescriptType: string;
   readonly zodSource: string;
 };

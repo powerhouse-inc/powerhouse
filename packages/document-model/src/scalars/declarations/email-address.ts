@@ -6,4 +6,5 @@ export const emailAddressScalar = defineCatalogScalar({
   typescriptType: "string",
   zodSource: "z.email()",
   schema: z.email(),
+  representation: "string",
 });
