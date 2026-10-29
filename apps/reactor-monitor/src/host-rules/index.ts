@@ -1,6 +1,7 @@
 // The builder's rules core: validate a draft host, judge its options. Browser-safe.
 export {
   effectiveFlags,
+  effectiveUndoV3,
   FLAG_ENV,
   FLAG_LABELS,
   FLAG_PREREQUISITES,
