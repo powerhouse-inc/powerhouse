@@ -1,8 +1,10 @@
 // Property-driven config form, modeled on the Activepieces piece-properties
 // panel: one control per prop, typed by the descriptor.
 import {
+  createContext,
   lazy,
   Suspense,
+  useContext,
   useEffect,
   useId,
   useRef,
@@ -152,7 +154,11 @@ const NO_ENDPOINT = "[no endpoint yet — see Endpoint URL above]";
 // placeholders; unsubstituted, an author is told to paste "{{webhookUrl}}".
 export function fillPiecePlaceholders(
   text: string,
-  values: { webhookUrl?: string; webhookTimeoutSeconds?: number },
+  values: {
+    webhookUrl?: string;
+    webhookTimeoutSeconds?: number;
+    pausedFlowTimeoutDays?: number;
+  },
 ): string {
   return text
     .replace(/\{\{\s*webhookUrl\s*\}\}/g, values.webhookUrl ?? NO_ENDPOINT)
@@ -161,8 +167,19 @@ export function fillPiecePlaceholders(
       values.webhookTimeoutSeconds === undefined
         ? "{{webhookTimeoutSeconds}}"
         : String(values.webhookTimeoutSeconds),
+    )
+    .replace(
+      /\{\{\s*pausedFlowTimeoutDays\s*\}\}/g,
+      values.pausedFlowTimeoutDays === undefined
+        ? "the workflow's maximum suspension"
+        : String(values.pausedFlowTimeoutDays),
     );
 }
+
+// Workflow-wide values for piece markdown, set by the editor from the document.
+export const PiecePlaceholderContext = createContext<{
+  pausedFlowTimeoutDays?: number;
+}>({});
 
 // Marks controls whose runtime support has not landed yet.
 export function AvailableSoon(props: { children?: ReactNode }) {
@@ -679,6 +696,7 @@ function PropField(props: {
   explainOptionsError?: (message: string) => string;
 }) {
   const { prop, value } = props;
+  const placeholders = useContext(PiecePlaceholderContext);
   const fieldId = useId();
   const optionsUnavailable = Boolean(
     props.nested && prop.hasDynamicResolver && !props.loadOptions,
@@ -843,7 +861,7 @@ function PropField(props: {
         stringifyValue(
           prop.description ?? prop.defaultValue ?? prop.displayName,
         ),
-        { webhookUrl: props.webhookUrl },
+        { ...placeholders, webhookUrl: props.webhookUrl },
       );
       // The fallback keeps the text readable while the chunk loads, rather
       // than collapsing the panel's height and reflowing it.
