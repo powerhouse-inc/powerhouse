@@ -884,7 +884,12 @@ export function createMonitorController(
         return {
           root: copy.projectDir,
           dataDir: copy.dataDir,
-          source: { project: root, host },
+          source: {
+            project: root,
+            host,
+            baseDigest: request.baseDigest,
+            setters: request.setters,
+          },
         };
       });
     },

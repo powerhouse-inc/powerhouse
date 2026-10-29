@@ -20,10 +20,12 @@ import {
   type ControllerClient,
 } from "./client.js";
 import {
+  instanceReactors,
   isManaged,
   managedDescriptors,
   ownerOf,
   servesDescriptor,
+  type InstanceReactors,
   type ManagedBy,
   type ManagedDescriptor,
 } from "./managed.js";
@@ -65,6 +67,8 @@ export interface ManagedDescriptors {
   attachedIds: ReadonlySet<string>;
   /** Browser reactors in the active set, by the instance that owns them. */
   owned: ReadonlyMap<string, readonly string[]>;
+  /** Each instance's reactors in the active set, by the member each one is. */
+  reactors: ReadonlyMap<string, InstanceReactors>;
   notices: readonly ManagedNotice[];
   dismissNotice: (id: number) => void;
   /** Adds a descriptor per switchboard the instance serves. */
@@ -321,6 +325,7 @@ export function useManagedDescriptors(
     const owner = ownerOf(descriptor);
     if (owner) owned.set(owner, [...(owned.get(owner) ?? []), descriptor.name]);
   }
+  const reactors = instanceReactors(descriptors);
 
   const attach = useCallback(
     (instance: Instance) => {
@@ -456,6 +461,7 @@ export function useManagedDescriptors(
     withheld,
     attachedIds,
     owned,
+    reactors,
     notices,
     dismissNotice,
     attach,

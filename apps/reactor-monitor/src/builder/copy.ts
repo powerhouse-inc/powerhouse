@@ -44,6 +44,19 @@ export const DRIVES_COPY = {
   moveLater: "You can move drives in Router after starting.",
 } as const;
 
+export const RUN_COPY = {
+  route: "Route this app's reactors",
+} as const;
+
+export const SAVE_PLACEMENT = {
+  noDraft: "The builder has no draft to save to. Open the host in Build host.",
+  otherHost:
+    "The builder's draft is a different host now. Open this one in Build host to save.",
+  noApp: (app: string) => `The builder's draft no longer has ${app}.`,
+  already: "The builder's draft already places it there.",
+  refused: "The builder can't save this move.",
+} as const;
+
 export const NO_CONTROLLER =
   "This needs the monitor's controller, which isn't running.";
 

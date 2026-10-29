@@ -750,7 +750,17 @@ describe("createMonitorController", () => {
         project,
         host: "duo",
         status: "starting",
-        source: { project: allowed, host: "duo" },
+        source: {
+          project: allowed,
+          host: "duo",
+          baseDigest: await baseDigest(duoExport(allowed)),
+          setters: [
+            {
+              path: "members.sb-b.reactor.protocol.createSignaturePolicy",
+              value: "v2-required",
+            },
+          ],
+        },
       });
       expect(readdirSync(allowed, { recursive: true }).sort()).toEqual(before);
       expect(readdirSync(controller.tempRoot)).toEqual([started.id]);

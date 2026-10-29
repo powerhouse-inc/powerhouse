@@ -97,6 +97,7 @@ function fakeManaged(
     withheld: [],
     attachedIds: new Set(),
     owned: new Map(),
+    reactors: new Map(),
     notices: [],
     dismissNotice: vi.fn(),
     attach: vi.fn(),
