@@ -5,7 +5,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import { logger } from "document-model";
 import { useEffect, useRef } from "react";
-import { relistAppDrives } from "./app-reactor-client.js";
+import { relistDrives } from "./drive-relist.js";
 
 /** What the gate shows: nothing, a sign-in, or a "not allowed" notice. */
 export type BackendAuthGateMode = "login" | "unauthorized" | null;
@@ -42,7 +42,7 @@ export function useBackendAuthGate(): BackendAuthGateMode {
     if (seen.address === address) return;
     refusedAs.current = undefined;
     setBackendAuth(undefined);
-    relistAppDrives().catch((error: unknown) => {
+    relistDrives().catch((error: unknown) => {
       logger.warn(
         "Could not list the drives again after the identity changed: @error",
         error,

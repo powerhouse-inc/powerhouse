@@ -19,6 +19,7 @@ import type {
 import type { ReactorClientMode } from "./reactor-client-mode.js";
 import { resolveReactorClientMode } from "./reactor-client-mode.js";
 import { isReactorWorkerEnabled } from "./reactor-worker-flag.js";
+import { setDriveRelister } from "./drive-relist.js";
 
 type MultiReactorModule = typeof MultiReactor;
 
@@ -208,6 +209,9 @@ export async function relistAppDrives(): Promise<void> {
   const local = getPHStore()?.reactorClientModule?.client ?? client;
   await refreshAppDrives(client, local);
 }
+
+// The backend auth gate relists through drive-relist (see there)
+setDriveRelister(relistAppDrives);
 
 async function buildRouter(
   params: AppReactorClientParams,
