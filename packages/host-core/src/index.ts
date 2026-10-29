@@ -245,6 +245,7 @@ export {
   backendsToDescriptors,
   backendToDescriptor,
   isStructuralMultiReactor,
+  remoteBackends,
   remoteBackendUrls,
   type ProjectedDescriptor,
   type ProjectedStorage,
@@ -252,9 +253,11 @@ export {
 export { applyChildWrapper, type MemberDraft } from "./child-wrapper.js";
 export {
   mergeDefaultDrives,
+  placeConnectDrives,
   projectDrivesIntoConnect,
   rebaseDriveUrl,
   type DriveProjectionInput,
+  type PlacedConnectDrives,
 } from "./connect-projection.js";
 export {
   runRecordMemberSchema,

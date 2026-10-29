@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { switchboardOfDrive } from "../src/schema.js";
 import {
   childrenSchema,
@@ -442,6 +443,30 @@ describe("placement.drives keys (declared form, host level)", () => {
       ),
     ).toEqual([
       "reactor.placement.drives.other: placement.drives.other names no drive this host links to or declares (b, a, workflows).",
+    ]);
+  });
+
+  it("knows a drive the Connect config attaches as a default drive", () => {
+    const reactor = {
+      backends: {
+        main: { kind: "worker" },
+        sb: { kind: "remote", remote: { url: token("b") } },
+      },
+      placement: { drives: { sektar: "sb" } },
+    };
+    const connect = defineHostSchemas((s) =>
+      s.reactorHostSchema.extend({ config: z.unknown().optional() }),
+    ).declaredHostSchema;
+    const withConfig = (url: unknown) =>
+      connect.safeParse({
+        ...host(reactor),
+        config: { drives: { defaultDrives: [{ url }] } },
+      });
+    expect(withConfig(token("sektar")).success).toBe(true);
+    expect(withConfig("http://h:1/d/sektar").success).toBe(true);
+    expect(withConfig({ $env: "SEKTAR_URL" }).success).toBe(true);
+    expect(messages(withConfig(token("other")))).toEqual([
+      "reactor.placement.drives.sektar: placement.drives.sektar names no drive this host links to or declares (b, other).",
     ]);
   });
 

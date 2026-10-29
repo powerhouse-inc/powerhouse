@@ -7,6 +7,7 @@
  * client and server cannot diverge, and a contradicting pre-set env fails boot.
  */
 
+import { remoteBackends } from "./backend-projection.js";
 import type {
   ReactorBackend,
   ReactorBackendKind,
@@ -144,14 +145,18 @@ export interface ConnectReactorProjection {
   /** Patch merged into the connect runtime config (connect.*). */
   connect: {
     reactor?: ReactorProtocol;
-    instance?: { reactorWorker?: boolean; reactorClient?: ReactorClientMode };
+    instance?: {
+      reactorWorker?: boolean;
+      reactorClient?: ReactorClientMode;
+      remoteBackends?: { name: string; url: string }[];
+    };
     app?: { workflowsEnabled?: boolean };
   };
 }
 
 /** Project the reactor block onto the Connect runtime config: protocol →
  * connect.reactor (same shape), backend topology → instance.reactorWorker
- * (legacy) + instance.reactorClient (the explicit 4-way selector),
+ * (legacy), instance.reactorClient and instance.remoteBackends,
  * workflows → app.workflowsEnabled. */
 export function projectReactorToConnect(
   reactor: ReactorConfig | undefined,
@@ -166,6 +171,9 @@ export function projectReactorToConnect(
         ? { reactorWorker: backend.kind === "worker" }
         : {}),
       ...(mode !== undefined ? { reactorClient: mode } : {}),
+      ...(mode === "router" || mode === "remote"
+        ? { remoteBackends: remoteBackends(reactor) }
+        : {}),
     };
   }
   if (reactor?.workflows !== undefined) {

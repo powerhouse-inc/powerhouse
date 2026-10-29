@@ -187,6 +187,7 @@ function linkedSlug(url: unknown): string | undefined {
 
 interface DeclaredReactorHost {
   runner?: { plugins?: unknown };
+  config?: unknown;
   reactor?: {
     backends?: Record<string, { kind: string; remote?: { url: unknown } }>;
     placement?: { drives?: Record<string, string> };
@@ -225,7 +226,28 @@ function knownDriveSlugs(host: DeclaredReactorHost): string[] | undefined {
     if (slug === undefined) return undefined;
     slugs.push(slug);
   }
+  for (const drive of connectDefaultDrives(host.config)) {
+    if (typeof drive !== "object" || drive === null || !("url" in drive)) {
+      continue;
+    }
+    const slug = linkedSlug(drive.url);
+    if (slug === undefined) return undefined;
+    slugs.push(slug);
+  }
   return slugs;
+}
+
+/** A Connect host's `config.drives.defaultDrives`, unchecked. */
+function connectDefaultDrives(config: unknown): unknown[] {
+  const drives =
+    typeof config === "object" && config !== null && "drives" in config
+      ? (config as { drives: unknown }).drives
+      : undefined;
+  const list =
+    typeof drives === "object" && drives !== null && "defaultDrives" in drives
+      ? (drives as { defaultDrives: unknown }).defaultDrives
+      : undefined;
+  return Array.isArray(list) ? list : [];
 }
 
 /** Declared form, at host level so plugin drives are seen: a placement key

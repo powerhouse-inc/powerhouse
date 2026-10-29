@@ -140,3 +140,14 @@ export function remoteBackendUrls(
     .map((d) => d.remote?.url)
     .filter((u): u is string => typeof u === "string");
 }
+
+/** The remote backends by host key, placement order. */
+export function remoteBackends(
+  reactor: ReactorConfig | undefined,
+): { name: string; url: string }[] {
+  return backendsToDescriptors(reactor).flatMap((d) =>
+    d.kind === "remote" && d.remote
+      ? [{ name: d.name, url: d.remote.url }]
+      : [],
+  );
+}
