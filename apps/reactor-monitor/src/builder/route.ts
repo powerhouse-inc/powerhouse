@@ -1,16 +1,34 @@
 // What "Route this app's reactors" opens the Router view with, after Start.
 import {
+  applySetters,
   connectReach,
+  membersOf,
   targetOf,
   valueAt,
   type HostRulesContext,
   type Member,
 } from "../host-rules/index.js";
 import type { RouteSeed } from "../lib/route-seed.js";
+import type { BuilderDraft } from "./draft.js";
 import type { BuilderRun } from "./run.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** The members the copy runs, when it ran this draft's base; else `fallback`. */
+export function startedMembers(
+  draft: BuilderDraft,
+  run: BuilderRun,
+  fallback: readonly Member[],
+): readonly Member[] {
+  const source = run.source;
+  if (!source?.setters || source.baseDigest !== draft.baseDigest) {
+    return fallback;
+  }
+  return membersOf({
+    envelope: applySetters(draft.base.export, source.setters).envelope,
+  });
 }
 
 /** Undefined when the copy attached fewer than two of the app's reactors. */
@@ -89,7 +107,7 @@ export function routeSeedOf({
     app: member.key,
     member: member.path,
     instanceId: run.id,
-    source: run.source,
+    source: { project: run.source.project, host: run.source.host },
     context,
     backends,
     collections,

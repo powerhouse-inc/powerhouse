@@ -19,7 +19,7 @@ import {
 import { downloadExport, exportFileName } from "../download.js";
 import { sourceOf, type BuilderDraft } from "../draft.js";
 import type { BuilderEngine } from "../engine.js";
-import { routeSeedOf } from "../route.js";
+import { routeSeedOf, startedMembers } from "../route.js";
 import { monitoringSetOf, type BuilderRun, type RunReactor } from "../run.js";
 import type { StepProps } from "./types.js";
 
@@ -108,22 +108,24 @@ function connectOf(
 /** Where a running Connect keeps its drives, and a way to route them. */
 function AppReactors({
   member,
+  members,
   engine,
   run,
   onRoute,
 }: {
   readonly member: Member;
+  readonly members: readonly Member[];
   readonly engine: BuilderEngine;
   readonly run: BuilderRun;
   readonly onRoute?: (seed: RouteSeed) => void;
 }) {
-  const reach = connectReach(member, engine.members);
+  const reach = connectReach(member, members);
   const seed =
     onRoute && run.status === "running"
       ? routeSeedOf({
           id: `${run.id ?? ""}:${member.key}`,
           member,
-          members: engine.members,
+          members,
           run,
           context: engine.context,
         })
@@ -158,16 +160,20 @@ function AppReactors({
 
 function Running({
   run,
+  draft,
   engine,
   onStop,
   onRoute,
 }: {
   readonly run: BuilderRun;
+  readonly draft: BuilderDraft;
   readonly engine: BuilderEngine;
   readonly onStop?: () => Promise<void>;
   readonly onRoute?: (seed: RouteSeed) => void;
 }) {
   const [problem, setProblem] = useState("");
+  // What the copy runs, which later edits to the draft don't change.
+  const members = startedMembers(draft, run, engine.members);
   const stop = async () => {
     setProblem("");
     try {
@@ -193,7 +199,7 @@ function Running({
       ) : null}
       <ul className="hb-list">
         {run.reactors.map((reactor) => {
-          const connect = connectOf(reactor, engine.members);
+          const connect = connectOf(reactor, members);
           return (
             <li key={reactor.name}>
               <b>{reactor.name}</b>{" "}
@@ -209,6 +215,7 @@ function Running({
                 <AppReactors
                   engine={engine}
                   member={connect}
+                  members={members}
                   onRoute={onRoute}
                   run={run}
                 />
@@ -334,6 +341,7 @@ export function UseStep({
         {run ? null : <Blocked label="Start" reason={blocker} />}
         {run ? (
           <Running
+            draft={draft}
             engine={engine}
             onRoute={onRoute}
             onStop={onStop}

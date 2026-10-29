@@ -44,7 +44,7 @@ export type BuilderRun = {
   /** The copy's reactors in the active set, by the member each one is. */
   attached: InstanceReactors;
   /** The project host the copy was started from. */
-  source?: { project: string; host: string };
+  source?: Instance["source"];
   /** The last failed status check; the copy is still followed. */
   problem?: string;
 };

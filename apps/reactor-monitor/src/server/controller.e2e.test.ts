@@ -316,7 +316,12 @@ describe.skipIf(process.platform === "win32")(
       }
       expect(instance?.error).toBeUndefined();
       expect(instance?.status).toBe("running");
-      expect(instance?.source).toEqual({ project, host: "duo" });
+      expect(instance?.source).toEqual({
+        project,
+        host: "duo",
+        baseDigest,
+        setters: option!.setters,
+      });
       const urls = Object.values(instance?.members ?? {}).flatMap((member) =>
         member.outputs ? [member.outputs.graphql] : [],
       );

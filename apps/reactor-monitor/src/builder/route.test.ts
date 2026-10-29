@@ -4,6 +4,7 @@ import {
   membersOf,
   REACH_REASONS,
   type HostDraft,
+  type Member,
 } from "../host-rules/index.js";
 import type { RouteSeed } from "../lib/route-seed.js";
 import { PROJECT } from "./__fixtures__/fakes.js";
@@ -18,7 +19,7 @@ import {
   saveDraft,
   type DraftStorage,
 } from "./draft.js";
-import { routeSeedOf } from "./route.js";
+import { routeSeedOf, startedMembers } from "./route.js";
 import { savePlacement } from "./save-placement.js";
 
 const UI = "host.children.ui";
@@ -60,6 +61,40 @@ describe("routeSeedOf", () => {
         runOf({ attached: { ...run.attached, remote: [] } }),
       ),
     ).toBeUndefined();
+  });
+});
+
+describe("startedMembers", () => {
+  it("reads the config the copy runs, not later edits to the draft", () => {
+    const { setters } = linkedStack();
+    const base = addEdit(
+      newDraft(
+        { kind: "project", project: PROJECT, host: "stack", export: stack() },
+        DIGEST,
+      ),
+      setters,
+    );
+    const edited = addEdit(base, [
+      {
+        path: `${UI}.reactor.placement.drives.shared`,
+        value: { $delete: true },
+      },
+    ]);
+    const run = runOf({
+      source: { project: PROJECT, host: "stack", baseDigest: DIGEST, setters },
+    });
+    const placed = (members: readonly Member[]) =>
+      members.find((member) => member.path === UI)?.reactor?.placement;
+    expect(placed(startedMembers(edited, run, []))).toEqual({
+      drives: { shared: "sb" },
+    });
+    expect(
+      startedMembers(
+        edited,
+        runOf({ source: { ...run.source!, baseDigest: "f".repeat(64) } }),
+        [],
+      ),
+    ).toEqual([]);
   });
 });
 
