@@ -1,3 +1,23 @@
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **reactor,switchboard:** boot reports progress instead of going silent ([e85fcfd84e](https://github.com/powerhouse-inc/powerhouse/commit/e85fcfd84e))
+- **reactor:** report replayed operations delivered without state, and why ([bf684eca34](https://github.com/powerhouse-inc/powerhouse/commit/bf684eca34))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

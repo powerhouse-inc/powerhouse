@@ -1,3 +1,27 @@
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **connect:** a proxied Connect names its switchboard as ${origin}; the runner proxies the switchboard's paths ([bdaffdb580](https://github.com/powerhouse-inc/powerhouse/commit/bdaffdb580))
+- **connect-core,reactor-browser:** a sign-in gate when the backend refuses the caller ([77eda7795b](https://github.com/powerhouse-inc/powerhouse/commit/77eda7795b))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **connect-core:** the backend auth gate relists drives without importing the client ([06ddcdf1a1](https://github.com/powerhouse-inc/powerhouse/commit/06ddcdf1a1))
+- **connect:** the sign-in gate renders in Connect's own root, survives StrictMode, and re-lists drives after a sign-in ([0ac4f667e7](https://github.com/powerhouse-inc/powerhouse/commit/0ac4f667e7))
+- **connect-core:** the boot drive refresh records a Switchboard refusal instead of failing the boot ([6d0bd85c6e](https://github.com/powerhouse-inc/powerhouse/commit/6d0bd85c6e))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

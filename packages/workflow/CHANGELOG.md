@@ -1,3 +1,25 @@
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **workflow:** managedBy, and Workflow Studio shows managed workflows read-only ([a82a126a64](https://github.com/powerhouse-inc/powerhouse/commit/a82a126a64))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **workflow:** ctx.reactor.query, an in-process read of an index subgraph for pieces ([fba34399f4](https://github.com/powerhouse-inc/powerhouse/commit/fba34399f4))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **workflow:** stack Workflow Studio's sidebar on narrow screens ([7c04e538be](https://github.com/powerhouse-inc/powerhouse/commit/7c04e538be))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

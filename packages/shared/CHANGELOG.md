@@ -1,3 +1,31 @@
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **connect:** a proxied Connect names its switchboard as ${origin}; the runner proxies the switchboard's paths ([bdaffdb580](https://github.com/powerhouse-inc/powerhouse/commit/bdaffdb580))
+- **shared:** switchboardOfDrive splits a switchboard drive address ([9b79f7d899](https://github.com/powerhouse-inc/powerhouse/commit/9b79f7d899))
+- **reactor-mcp:** shared tool definitions with MCP and ai SDK adapters ([db60951c54](https://github.com/powerhouse-inc/powerhouse/commit/db60951c54))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **codegen:** pin date-fns, vite and rolldown for every package manager ([635f41d7cc](https://github.com/powerhouse-inc/powerhouse/commit/635f41d7cc))
+- **shared:** keep test files out of the clis/args bundle ([13781fdc71](https://github.com/powerhouse-inc/powerhouse/commit/13781fdc71))
+- **shared:** decode spawnAsync output as UTF-8 and reject with SpawnError ([3d9a582153](https://github.com/powerhouse-inc/powerhouse/commit/3d9a582153))
+- **shared,ph-cli:** leave --ignore-local unset when it is not passed ([7e8b8fd487](https://github.com/powerhouse-inc/powerhouse/commit/7e8b8fd487))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

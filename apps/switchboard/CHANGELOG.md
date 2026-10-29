@@ -1,3 +1,30 @@
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **reactor-workflow:** pollNow runs an armed trigger at once ("sync now") ([2a620c707b](https://github.com/powerhouse-inc/powerhouse/commit/2a620c707b))
+- **switchboard:** workflowRuntime.host names the switchboard an app runs on ([4680f3d307](https://github.com/powerhouse-inc/powerhouse/commit/4680f3d307))
+- **workflow:** publisher OAuth2 apps and a per-connection scope override ([5868eab4f2](https://github.com/powerhouse-inc/powerhouse/commit/5868eab4f2))
+- **reactor,switchboard:** boot reports progress instead of going silent ([e85fcfd84e](https://github.com/powerhouse-inc/powerhouse/commit/e85fcfd84e))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **workflow:** ctx.reactor.query, an in-process read of an index subgraph for pieces ([fba34399f4](https://github.com/powerhouse-inc/powerhouse/commit/fba34399f4))
+- **reactor-mcp:** shared tool definitions with MCP and ai SDK adapters ([db60951c54](https://github.com/powerhouse-inc/powerhouse/commit/db60951c54))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **switchboard:** a run with no user asks an index as the host itself ([45b1279368](https://github.com/powerhouse-inc/powerhouse/commit/45b1279368))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features
