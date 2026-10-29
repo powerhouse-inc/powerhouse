@@ -66,6 +66,18 @@ export function RenownLogin() {
           <div className="h-px flex-1 bg-current opacity-30" />
         </div>
       ) : null}
+      {methods.length === 0 ? (
+        // Redirect mode: no adapters are mounted, so login() sends the user
+        // to the Renown portal, which returns them here with `?user=`.
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => login()}
+          className="h-10 w-full rounded-lg bg-foreground text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          Continue with Renown
+        </button>
+      ) : null}
       {others.map((m) => (
         <button
           key={m.id}
