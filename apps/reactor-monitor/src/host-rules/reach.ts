@@ -35,6 +35,11 @@ export const REACH_REASONS = {
     `${name} would get the same address as another drive in this host. Choose another name.`,
   clash: (slug: string) =>
     `This app already has its own drive called ${slug}. Remove it, or link a drive with another name.`,
+  noBackend: (backend: string) =>
+    `This app no longer has ${backend}. Start it again to route its reactors.`,
+  localDrive: "Only a drive on a switchboard can open there without a copy.",
+  otherSwitchboard: (slug: string, switchboard: string) =>
+    `${slug} is a drive on ${switchboard}. It can open there, or be copied into this browser.`,
 } as const;
 
 /** The drive a switchboard serves when it declares none. */
@@ -723,6 +728,65 @@ export function reachOptions(
       ...placementOptions(reach),
     ]),
   ];
+}
+
+/** The backend the config places a drive on, if it places it. */
+export function placedOn(member: Member, slug: string): string | undefined {
+  const placed = placedDrives(member);
+  const backend = Object.hasOwn(placed, slug) ? placed[slug] : undefined;
+  return typeof backend === "string" ? backend : undefined;
+}
+
+/** A Router move of a drive onto one of the app's backends, as config. */
+export function placementSaveOption(
+  reach: ConnectReach,
+  slug: string,
+  backend: string,
+): ReachOption {
+  const { member } = reach;
+  const { at, copy } = blockOf(member);
+  const target = member.backends.find(
+    (candidate) => candidate.name === backend,
+  );
+  const link = reach.links.find((candidate) => candidate.slug === slug);
+  const local = target?.kind !== undefined && LOCAL_KINDS.has(target.kind);
+  const option: ReachOption = {
+    id: `${member.path}:placement:${slug}:${local ? "copy" : "remote"}`,
+    group: "placement",
+    value: local ? "copy" : "remote",
+    label: local ? "Copy in this browser" : `On ${backend} only`,
+    member: member.path,
+    ...(target ? { backend: target.at } : {}),
+    drive: slug,
+    setters: [],
+  };
+  if (!target) return { ...option, blocked: REACH_REASONS.noBackend(backend) };
+  if (local) {
+    return {
+      ...option,
+      setters: [
+        ...copy,
+        { path: `${at}.placement.drives.${slug}`, value: DELETE },
+      ],
+      ...(reach.keepsCopy ? {} : { blocked: REACH_REASONS.remoteOnly }),
+    };
+  }
+  if (link && link.backend?.name !== backend) {
+    return {
+      ...option,
+      blocked: REACH_REASONS.otherSwitchboard(slug, link.switchboard),
+    };
+  }
+  if (!link && !reach.mappedDrives) {
+    return { ...option, blocked: REACH_REASONS.localDrive };
+  }
+  return {
+    ...option,
+    setters: [
+      ...copy,
+      { path: `${at}.placement.drives.${slug}`, value: backend },
+    ],
+  };
 }
 
 /** "On <switchboard> only" is chosen when the drive opens with no copy. */

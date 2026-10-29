@@ -32,6 +32,7 @@ export {
   applyOption,
   hostOptionList,
   hostOptions,
+  placementStatus,
   ADD_REASONS,
   HOT_RELOAD_REASONS,
   SETTING_REASONS,
