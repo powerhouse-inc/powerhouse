@@ -1,6 +1,6 @@
 // Connect routed to the Vetra switchboard (4002) by a rewritten served config.
 
-import type { Locator, Page, Route } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import {
   expect,
   reactorWorkerModeRequested,
@@ -86,27 +86,37 @@ async function folderNames(driveId: string): Promise<string[]> {
   return driveNodes.results.map((node) => node.name);
 }
 
-/** Adds a folder to `driveId` on the switchboard itself. */
-async function addFolderOnSwitchboard(
+/** Adds folders to `driveId` on the switchboard itself, in order. */
+async function addFoldersOnSwitchboard(
   driveId: string,
-  name: string,
+  names: string[],
 ): Promise<void> {
-  const id = crypto.randomUUID();
   await gql(
     `mutation($id: String!, $actions: [ActionInput!]!) { execute(documentIdOrSlug: $id, actions: $actions) { id } }`,
     {
       id: driveId,
-      actions: [
-        {
-          id: crypto.randomUUID(),
-          type: "ADD_FOLDER",
-          timestampUtcMs: new Date().toISOString(),
-          input: { id, name, parentFolder: null },
-          scope: "global",
-        },
-      ],
+      actions: names.map((name) => ({
+        id: crypto.randomUUID(),
+        type: "ADD_FOLDER",
+        timestampUtcMs: new Date().toISOString(),
+        input: { id: crypto.randomUUID(), name, parentFolder: null },
+        scope: "global",
+      })),
     },
   );
+}
+
+async function addFolderOnSwitchboard(
+  driveId: string,
+  name: string,
+): Promise<void> {
+  await addFoldersOnSwitchboard(driveId, [name]);
+}
+
+/** A backlog the copy pulls before `marker`, so its first pull takes a while. */
+async function addBacklogThen(driveId: string, marker: string): Promise<void> {
+  const backlog = Array.from({ length: 400 }, (_, i) => `${marker}-${i}`);
+  await addFoldersOnSwitchboard(driveId, [...backlog, marker]);
 }
 
 async function listedFolders(page: Page, driveId: string): Promise<string[]> {
@@ -232,6 +242,44 @@ async function driveSettings(page: Page, id: string): Promise<Locator> {
   const section = page.getByTestId("drive-placement");
   await expect(section).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
   return section;
+}
+
+/**
+ * Keeps a copy of `driveId` from `mover`, and returns `watcher`'s own copy at
+ * the moment its routing for the drive first leaves the switchboard.
+ */
+async function keepCopyWhileWatching(
+  watcher: Page,
+  mover: Page,
+  driveId: string,
+): Promise<string[] | null> {
+  const section = await driveSettings(mover, driveId);
+  await expect
+    .poll(() => routeOf(watcher, driveId), { timeout: LONG_VISIBLE_TIMEOUT })
+    .toMatchObject({ backend: "sb" });
+  const atFlip = watcher.evaluate(async (id) => {
+    const ph = (window as unknown as PhWindow).ph!;
+    (window as unknown as { watching?: boolean }).watching = true;
+    const deadline = Date.now() + 60_000;
+    while (Date.now() < deadline) {
+      const row = ph
+        .fullReactorClient!.describeRouting()
+        .collections.find((entry) => entry.collectionId === id);
+      if (row?.backend !== "sb") {
+        const drive = await ph.reactorClientModule!.client.read.get(id);
+        return drive.state.global.nodes.map((node) => node.name);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    return null;
+  }, driveId);
+  await watcher.waitForFunction(
+    () => (window as unknown as { watching?: boolean }).watching === true,
+  );
+  await section
+    .getByRole("button", { name: "Keep a copy in this browser" })
+    .click();
+  return atFlip;
 }
 
 const LOCAL_ROW = { backend: "connect-local", origin: "runtime" };
@@ -521,15 +569,15 @@ test.describe("Connect routed to a switchboard", () => {
     expect(await syncedDriveIds(page)).toContain(placed);
     expect(await syncedDriveIds(page)).not.toContain(synced);
 
-    // A copy kept again catches up with what changed on the switchboard.
-    await addFolderOnSwitchboard(synced, "while-on-sb");
-    const back = await driveSettings(other, synced);
-    await back
-      .getByRole("button", { name: "Keep a copy in this browser" })
-      .click();
-    await expect(back.getByText(/Moved in this browser/)).toHaveCount(0, {
-      timeout: LONG_VISIBLE_TIMEOUT,
-    });
+    // A copy kept again, back to the config, catches up with what changed
+    // on the switchboard before the first tab reads it.
+    await addBacklogThen(synced, "while-on-sb");
+    expect(await keepCopyWhileWatching(page, other, synced)).toContain(
+      "while-on-sb",
+    );
+    await expect(
+      other.getByTestId("drive-placement").getByText(/Moved in this browser/),
+    ).toHaveCount(0, { timeout: LONG_VISIBLE_TIMEOUT });
     for (const tab of [page, other]) {
       await expect
         .poll(() => syncedDriveIds(tab), { timeout: LONG_VISIBLE_TIMEOUT })
@@ -561,42 +609,15 @@ test.describe("Connect routed to a switchboard", () => {
 
     // Keeping a copy again from the second tab: the browser's copy is now
     // stale, and the first tab must not list from it before it has caught up.
-    await addFolderOnSwitchboard(placed, "after-reset");
+    await addBacklogThen(placed, "after-reset");
     await expect
       .poll(() => listedFolders(page, placed), {
         timeout: LONG_VISIBLE_TIMEOUT,
       })
       .toContain("after-reset");
-    // The first tab's copy at the moment its routing first reads it.
-    const atFlip = page.evaluate(async (driveId) => {
-      const ph = (window as unknown as PhWindow).ph!;
-      const deadline = Date.now() + 60_000;
-      while (Date.now() < deadline) {
-        const row = ph
-          .fullReactorClient!.describeRouting()
-          .collections.find((entry) => entry.collectionId === driveId);
-        if (row?.backend === "connect-local") {
-          const drive = await ph.reactorClientModule!.client.read.get(driveId);
-          return drive.state.global.nodes.map((node) => node.name);
-        }
-        await new Promise((resolve) => setTimeout(resolve, 5));
-      }
-      return null;
-    }, placed);
-    const keep = await driveSettings(other, placed);
-    // Slow pulls make the window before the copy arrives visible.
-    const slowPulls = async (route: Route) => {
-      if (route.request().postData()?.includes("pollSyncEnvelopes")) {
-        await new Promise((resolve) => setTimeout(resolve, 2_000));
-      }
-      await route.fallback();
-    };
-    await context.route(`${SWITCHBOARD}/graphql/**`, slowPulls);
-    await keep
-      .getByRole("button", { name: "Keep a copy in this browser" })
-      .click();
-    expect(await atFlip).toContain("after-reset");
-    await context.unroute(`${SWITCHBOARD}/graphql/**`, slowPulls);
+    expect(await keepCopyWhileWatching(page, other, placed)).toContain(
+      "after-reset",
+    );
     await expect
       .poll(() => listedFolders(page, placed), {
         timeout: LONG_VISIBLE_TIMEOUT,
