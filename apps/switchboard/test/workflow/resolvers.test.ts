@@ -34,6 +34,41 @@ function runsInfo(query: string) {
 const emptyPage = (): Promise<unknown> =>
   Promise.resolve({ records: [], hasNextPage: false, cursor: null });
 
+function waitpointRow(id: string, runId: string) {
+  return {
+    id,
+    run_id: runId,
+    workflow_id: "wf-1",
+    step_id: "step-1",
+    step_key: "step_1",
+    step_path: "step-1",
+    piece_name: "@powerhousedao/piece-approval",
+    block_name: "approval",
+    type: "WEBHOOK",
+    kind: "approval",
+    status: "PENDING",
+    created_at: "2026-10-28T00:00:00.000Z",
+    resume_at: null,
+    expires_at: null,
+    resolved_at: null,
+    decided_by: null,
+    approval: '{"title":"Pay?"}',
+  };
+}
+
+// The run journal's waitpoint read: one pending approval per run.
+function waitpointStore() {
+  return {
+    listWaitpointsForRuns: vi.fn((runIds: string[]) =>
+      Promise.resolve(
+        new Map(
+          runIds.map((runId) => [runId, [waitpointRow(`wp-${runId}`, runId)]]),
+        ),
+      ),
+    ),
+  };
+}
+
 function fakeRuntime() {
   return {
     webhookEndpoint: vi.fn(() => Promise.resolve(null)),
@@ -43,6 +78,9 @@ function fakeRuntime() {
     run: vi.fn(() => Promise.resolve(null)),
     fire: vi.fn(() => Promise.resolve({})),
     rerun: vi.fn(() => Promise.resolve({})),
+    waitingRuns: vi.fn((): Promise<unknown[]> => Promise.resolve([])),
+    waitpointsForRun: vi.fn(() => Promise.resolve([{ id: "wp-2" }])),
+    store: vi.fn(() => Promise.resolve(waitpointStore())),
     testStep: vi.fn(() => Promise.resolve({})),
     stepOutputTree: vi.fn(() => Promise.resolve({})),
     blockResolutions: vi.fn(() => Promise.resolve([])),
@@ -78,6 +116,7 @@ function build() {
     queries: resolvers.WorkflowRuntimeQueries,
     mutations: resolvers.WorkflowRuntimeMutations,
     secretRecord: resolvers.SecretRecord,
+    runRecord: resolvers.WorkflowRunRecord,
   };
 }
 
@@ -365,5 +404,72 @@ describe("piece search", () => {
       ),
     ).toThrow(/got Registry/);
     expect(runtime.searchPieces).not.toHaveBeenCalled();
+  });
+});
+
+describe("waitpoints", () => {
+  it("serves waiting runs with the waitpoints the runtime listed", async () => {
+    const { runtime, queries, runRecord } = build();
+    runtime.waitingRuns.mockResolvedValueOnce([
+      {
+        run: {
+          row: { id: "run-1", status: "WAITING", trigger_payload: null },
+          steps: [],
+        },
+        waitpoints: [{ id: "wp-1" }],
+      },
+    ]);
+
+    const runs = (await queries.waitingRuns(
+      {},
+      { driveId: "drive-1", first: 10 },
+      CTX,
+    )) as { id: string }[];
+
+    expect(runtime.waitingRuns).toHaveBeenCalledWith(
+      { driveId: "drive-1", workflowId: undefined, first: 10 },
+      CTX,
+    );
+    expect(await runRecord.waitpoints(runs[0], {}, CTX)).toEqual([
+      { id: "wp-1" },
+    ]);
+    expect(runtime.waitpointsForRun).not.toHaveBeenCalled();
+  });
+
+  it("reads the waitpoints of every run in a request with one store call", async () => {
+    const { runtime, runRecord } = build();
+    const store = waitpointStore();
+    runtime.store.mockResolvedValueOnce(store);
+    const ctx = { ...CTX } as Context;
+    const [first, second, again] = (await Promise.all([
+      runRecord.waitpoints({ id: "run-1" }, {}, ctx),
+      runRecord.waitpoints({ id: "run-2" }, {}, ctx),
+      runRecord.waitpoints({ id: "run-1" }, {}, ctx),
+    ])) as Array<Array<{ id: string }>>;
+
+    expect(first).toEqual([
+      expect.objectContaining({
+        id: "wp-run-1",
+        runId: "run-1",
+        kind: "approval",
+        approval: { title: "Pay?" },
+      }),
+    ]);
+    expect(second!.map((waitpoint) => waitpoint.id)).toEqual(["wp-run-2"]);
+    expect(again).toBe(first);
+    expect(runtime.store).toHaveBeenCalledTimes(1);
+    expect(store.listWaitpointsForRuns).toHaveBeenCalledWith([
+      "run-1",
+      "run-2",
+    ]);
+    // The parent resolver served the run; no second run read.
+    expect(runtime.waitpointsForRun).not.toHaveBeenCalled();
+    expect(runtime.run).not.toHaveBeenCalled();
+  });
+
+  it("serves no waitpoints when the run journal is unavailable", async () => {
+    const { runtime, runRecord } = build();
+    runtime.store.mockResolvedValueOnce(undefined as never);
+    expect(await runRecord.waitpoints({ id: "run-9" }, {}, CTX)).toEqual([]);
   });
 });

@@ -720,7 +720,7 @@ type Workflow_WorkflowPolicy {
   """
   runTimeoutSeconds: Int!
   """
-  NOT YET ENFORCED. Bounds how long a run may stay suspended on a waitpoint - but nothing suspends: waitpoints, run.pause and generateResumeUrl all throw, so there is no suspended state to bound.
+  Bounds how long a run may stay suspended on a waitpoint: a waitpoint expires this long after it is created, ending the run CANCELLED with WaitpointExpired. A Delay longer than this is refused.
   """
   maxSuspensionDays: Int!
   """

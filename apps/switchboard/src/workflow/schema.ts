@@ -54,6 +54,15 @@ export const schema: DocumentNode = gql`
     ): WorkflowRunResultPage!
     run(id: String!): WorkflowRunRecord
     """
+    WAITING runs, each with its waitpoints. Scope them to one
+    workflow, or to every workflow a drive holds; workflowId wins.
+    """
+    waitingRuns(
+      driveId: String
+      workflowId: String
+      first: Int
+    ): [WorkflowRunRecord!]!
+    """
     The descriptor (props, auth, ports) of one action or trigger, as the
     version that runs it describes it; triggers come back under "trigger".
     """
@@ -404,6 +413,10 @@ export const schema: DocumentNode = gql`
     workflowVersion: Int!
     triggerKind: String!
     triggerPayload: Unknown
+    """
+    PENDING | RUNNING | WAITING | SUCCEEDED | FAILED | CANCELLED. WAITING: paused
+    at a waitpoint (approval, webhook or delay); the run holds no worker.
+    """
     status: String!
     error: String
     errorName: String
@@ -416,6 +429,48 @@ export const schema: DocumentNode = gql`
     "Steps that ran a fallback piece version, edges on ports nothing emits."
     warningNotes: [String!]!
     steps: [WorkflowStepRunRecord!]!
+    "Where the run paused, resolved ones included."
+    waitpoints: [WaitpointRecord!]!
+  }
+
+  "Who may decide an approval, and how the editor renders it."
+  type ApprovalRequest {
+    title: String!
+    "Markdown."
+    body: String
+    approveLabel: String!
+    rejectLabel: String!
+    "none | reject | both"
+    reasonRequiredOn: String!
+    "DIDs allowed to decide; empty means anyone with write access."
+    approvers: [String!]!
+  }
+
+  "A point where a run paused, and how it resumes."
+  type WaitpointRecord {
+    id: String!
+    runId: String!
+    workflowId: String!
+    stepId: String!
+    stepKey: String!
+    stepPath: String!
+    pieceName: String!
+    blockName: String!
+    "DELAY | WEBHOOK"
+    type: String!
+    "approval | webhook | delay"
+    kind: String!
+    "PENDING | COMPLETED | CONSUMED | EXPIRED | CANCELLED"
+    status: String!
+    createdAt: String!
+    "DELAY only: when the run resumes."
+    resumeAt: String
+    expiresAt: String
+    resolvedAt: String
+    "The DID that resolved it from the editor."
+    decidedBy: String
+    "Set by the Request approval block; null otherwise."
+    approval: ApprovalRequest
   }
 
   input WorkflowRunsPagingInput {
@@ -516,6 +571,21 @@ export const schema: DocumentNode = gql`
     execution restarts at the failure. Produces a new run.
     """
     rerun(runId: String!): WorkflowRunPayload!
+    """
+    Approves or rejects a PENDING WEBHOOK waitpoint, resuming its run. Needs
+    write access to the workflow; with approvers listed, the caller's DID must
+    be one. reason may be required, per approval.reasonRequiredOn.
+    """
+    resolveWaitpoint(
+      waitpointId: String!
+      approved: Boolean!
+      reason: String
+    ): WaitpointRecord!
+    """
+    Cancels a WAITING or PENDING run and its open waitpoints. A RUNNING run
+    cannot be cancelled yet.
+    """
+    cancelRun(runId: String!): WorkflowRunPayload
     """
     Mints a managed secret for a connection or workflow document and returns
     its ref; only that document resolves it. The value is stored encrypted
