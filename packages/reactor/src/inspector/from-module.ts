@@ -58,6 +58,7 @@ export function createReactorInspector(
     storageHealth:
       options.storageHealth ?? groupCommitHealth(module.groupCommitStorage),
     documentModelRegistry: module.documentModelRegistry,
+    loadsModelsOnDemand: module.loadsModelsOnDemand === true,
     drives: new DriveInspection(module.reactor, module.documentModelRegistry),
     attachmentStore: options.attachmentStore,
     facts: {

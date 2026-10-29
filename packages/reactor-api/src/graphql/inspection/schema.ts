@@ -230,13 +230,18 @@ export const inspectionTypeDefs = gql`
   }
 
   """
-  Reads only. info and documentModels serve every caller; drive and document
-  reads are made as the caller through the reactor read gate; the rest need
-  one of the host's admins.
+  Reads only. info, documentModels and loadsModelsOnDemand serve every caller;
+  drive and document reads are made as the caller through the reactor read
+  gate; the rest need one of the host's admins.
   """
   type ReactorInspection {
     info: ReactorInfo!
     documentModels: [InspectionDocumentModel!]!
+    """
+    True when a document model loads the first time a document of its type
+    arrives, so documentModels names only those loaded so far.
+    """
+    loadsModelsOnDemand: Boolean!
     drives(cursor: String, limit: Int): InspectionDrivePage!
     """
     Reads every file node's document. Throttled per caller.

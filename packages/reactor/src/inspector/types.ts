@@ -173,6 +173,11 @@ export interface IInspectableQueue {
 export interface IInspector {
   info(): Promise<ReactorInfo>;
   listDocumentModels(): Promise<InspectorDocumentModelInfo[]>;
+  /**
+   * True when a model loads the first time a document of its type arrives, so
+   * `listDocumentModels` names only those loaded so far.
+   */
+  loadsModelsOnDemand(): Promise<boolean>;
   listDrives(cursor?: string, limit?: number): Promise<InspectorDrivePage>;
   checkDriveIntegrity(
     driveId: string,

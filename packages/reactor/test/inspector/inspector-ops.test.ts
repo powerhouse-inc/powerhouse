@@ -36,6 +36,7 @@ describe("inspection op tables", () => {
       [
         "info",
         "documentModels",
+        "loadsModelsOnDemand",
         "drives",
         "driveIntegrity",
         "attachmentInfo",

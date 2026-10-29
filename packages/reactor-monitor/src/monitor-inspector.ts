@@ -16,6 +16,7 @@ export function toMonitorInspector(inspector: IInspector): MonitorInspector {
   return {
     info: () => inspector.info(),
     listDocumentModels: () => inspector.listDocumentModels(),
+    loadsModelsOnDemand: () => inspector.loadsModelsOnDemand(),
     listDrives: (cursor, limit) => inspector.listDrives(cursor, limit),
     checkDriveIntegrity: (driveId, branch) =>
       inspector.checkDriveIntegrity(driveId, branch),

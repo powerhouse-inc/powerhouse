@@ -135,6 +135,18 @@ describe("inspection subgraph: facts", () => {
     ).toEqual({ admin: false, sql: false });
   });
 
+  it("tells anyone whether models load on demand", async () => {
+    module = await buildReadGateReactor();
+    const { schema } = buildSchema(module, openHost());
+    const result = await run(
+      schema,
+      `{ inspection { loadsModelsOnDemand } }`,
+      contextFor(),
+    );
+    expect(result.errors).toBeUndefined();
+    expect(result.data?.inspection).toEqual({ loadsModelsOnDemand: false });
+  });
+
   it("late-binds workflows through the facts sink", async () => {
     module = await buildReadGateReactor();
     const { schema, source } = buildSchema(module, openHost());
