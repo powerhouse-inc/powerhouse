@@ -29,13 +29,29 @@ export {
   selectAppReactorClient,
 } from "./app-reactor-client.js";
 export {
+  applyPlacementEntries,
   keepsLocalCopy,
-  placedDrives,
-  placementCollections,
+  LOCAL_BACKEND_NAME,
+  placementKeys,
   removeLocalCopies,
-  resolvePlacedDrives,
+  resolveSwitchboardDrives,
+  servedUrl,
+  servesSlug,
+  switchboardDrives,
 } from "./drive-placement.js";
-export type { PlacedDrive, ResolvedPlacedDrive } from "./drive-placement.js";
+export type {
+  PlacementEntry,
+  ResolvedSwitchboardDrive,
+  ResolveSwitchboardDrivesOptions,
+  SwitchboardDrive,
+} from "./drive-placement.js";
+export { DrivePlacements, findServedDrive } from "./drive-placements.js";
+export type {
+  DrivePlacement,
+  PlacementRouter,
+  PlacementStore,
+  PlacementSync,
+} from "./drive-placements.js";
 export { useBackendAuthGate } from "./backend-auth-gate.js";
 export type { BackendAuthGateMode } from "./backend-auth-gate.js";
 export type {

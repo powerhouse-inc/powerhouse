@@ -36,10 +36,8 @@ export type AppReactorClientParams = {
   remoteDriveUrl: string | undefined;
   /** One per switchboard, by host key; `url` is a drive address on it. */
   remoteBackends?: readonly { name: string; url: string }[];
-  /** Placed drives by id and served slug; awaited after the local build. */
-  collections?:
-    | Readonly<Record<string, string>>
-    | Promise<Readonly<Record<string, string>>>;
+  /** Config placements known at build time; later ones go through `setConfiguredPlacement`. */
+  collections?: Readonly<Record<string, string>>;
   /** Signs routed writes; unsigned (anonymous) without one. */
   signer?: ISigner;
   documentModelModules: LoadedDocumentModels;
@@ -102,12 +100,12 @@ export async function createAppReactorClient(
     }
     module = await localReactor(plan);
   }
-  const client = await selectAppReactorClient({
+  const { client, router } = await selectClient({
     ...params,
     mode: plan.mode,
     module,
   });
-  return { plan, module, client };
+  return { plan, module, client, router };
 }
 
 /**
@@ -120,22 +118,32 @@ export async function createAppReactorClient(
 export async function selectAppReactorClient(
   params: AppReactorClientParams,
 ): Promise<IReactorClient> {
+  return (await selectClient(params)).client;
+}
+
+/** The app's client, and the router when it is one. */
+async function selectClient(params: AppReactorClientParams): Promise<{
+  client: IReactorClient;
+  router?: MultiReactor.ConnectRoutingClient;
+}> {
   if (params.mode === "remote") {
     setFullReactorClient(undefined);
     const remote = await buildRemoteOnly(params);
     setFullReactorClient(remote);
-    return remote;
+    return { client: remote, router: remote };
   }
   if (params.mode !== "router") {
     if (getPHStore()?.fullReactorClient) {
       setFullReactorClient(undefined);
     }
-    return requireModule(params).client;
+    return { client: requireModule(params).client };
   }
   setFullReactorClient(undefined);
   const routed = await buildRouter(params);
   setFullReactorClient(routed);
-  return routed ?? requireModule(params).client;
+  return routed
+    ? { client: routed, router: routed }
+    : { client: requireModule(params).client };
 }
 
 function requireModule(params: AppReactorClientParams): LocalReactorModule {
@@ -246,7 +254,7 @@ function switchboardRemotes(params: AppReactorClientParams): {
 
 async function buildRouter(
   params: AppReactorClientParams,
-): Promise<IReactorClient | undefined> {
+): Promise<MultiReactor.ConnectRoutingClient | undefined> {
   const { remotes, unparsed } = switchboardRemotes(params);
   for (const url of unparsed) {
     logger.warn(
@@ -274,7 +282,7 @@ async function buildRouter(
   return multiReactor.buildMultiReactorClient({
     module: requireModule(params),
     remotes,
-    collections: await params.collections,
+    collections: params.collections,
     signer: params.signer,
     documentModelModules: params.documentModelModules,
   });
@@ -289,7 +297,7 @@ async function buildRouter(
  */
 async function buildRemoteOnly(
   params: AppReactorClientParams,
-): Promise<IReactorClient> {
+): Promise<MultiReactor.ConnectRoutingClient> {
   const { remotes, unparsed } = switchboardRemotes(params);
   if (unparsed.length > 0) {
     throw new Error(
@@ -309,7 +317,7 @@ async function buildRemoteOnly(
   return multiReactor.buildMultiReactorClient({
     module: undefined,
     remotes,
-    collections: await params.collections,
+    collections: params.collections,
     signer: params.signer,
     documentModelModules: params.documentModelModules,
   });

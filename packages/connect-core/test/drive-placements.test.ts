@@ -1,0 +1,271 @@
+import { DriveCollectionId } from "@powerhousedao/reactor";
+import { describe, expect, it, vi } from "vitest";
+import {
+  LOCAL_BACKEND_NAME,
+  type PlacementEntry,
+  type ResolvedSwitchboardDrive,
+  type SwitchboardDrive,
+} from "../src/runtime/drive-placement.js";
+import {
+  DrivePlacements,
+  findServedDrive,
+  type PlacementStore,
+} from "../src/runtime/drive-placements.js";
+
+const LOCAL = LOCAL_BACKEND_NAME;
+
+const placedB: SwitchboardDrive = {
+  slug: "b",
+  url: "http://localhost:4001/d/b",
+  remote: "sb",
+  configured: "sb",
+  collection: false,
+};
+const syncedC: SwitchboardDrive = {
+  slug: "c",
+  url: "http://localhost:4001/d/c",
+  remote: "sb",
+  configured: LOCAL,
+  collection: false,
+};
+const resolved: ResolvedSwitchboardDrive[] = [
+  { ...placedB, id: "id-b", servedSlug: "b" },
+  { ...syncedC, id: "id-c", servedSlug: "c" },
+];
+
+/** One IndexedDB shared by the tabs of a browser. */
+function memoryStore(initial: PlacementEntry[] = []): PlacementStore & {
+  entries: Map<string, PlacementEntry>;
+} {
+  const entries = new Map(initial.map((entry) => [entry.slug, entry]));
+  return {
+    entries,
+    list: () => Promise.resolve([...entries.values()]),
+    put: (entry) => {
+      entries.set(entry.slug, entry);
+      return Promise.resolve();
+    },
+    delete: (slug) => {
+      entries.delete(slug);
+      return Promise.resolve();
+    },
+  };
+}
+
+function fakeSync(heldIds: string[] = []) {
+  const remotes = heldIds.map((id) => ({
+    meta: { name: `r-${id}`, collectionId: DriveCollectionId.forDrive(id) },
+  }));
+  return {
+    remotes,
+    list: () => remotes,
+    remove: vi.fn((name: string) => {
+      remotes.splice(
+        remotes.findIndex((remote) => remote.meta.name === name),
+        1,
+      );
+      return Promise.resolve();
+    }),
+    add: vi.fn((_url: string, id: string) => {
+      remotes.push({
+        meta: { name: `r-${id}`, collectionId: DriveCollectionId.forDrive(id) },
+      });
+      return Promise.resolve();
+    }),
+  };
+}
+
+function fakeRouter() {
+  const runtime = new Map<string, string>();
+  const configured = new Map<string, string>();
+  const set =
+    (layer: Map<string, string>) => (key: string, backend?: string) => {
+      if (backend === undefined) layer.delete(key);
+      else layer.set(key, backend);
+    };
+  return {
+    runtime,
+    configured,
+    setPlacement: vi.fn(set(runtime)),
+    setConfiguredPlacement: vi.fn(set(configured)),
+  };
+}
+
+async function tab(store: PlacementStore, sync = fakeSync(["id-c"])) {
+  const placements = await DrivePlacements.load(
+    [placedB, syncedC],
+    store,
+    sync,
+  );
+  const router = fakeRouter();
+  placements.attach(router, resolved);
+  return { placements, router, sync };
+}
+
+describe("DrivePlacements", () => {
+  it("installs the config's placement in the config layer under the id and served slug", async () => {
+    const { placements, router } = await tab(memoryStore());
+
+    expect(Object.fromEntries(router.configured)).toEqual({
+      "id-b": "sb",
+      b: "sb",
+    });
+    expect(router.runtime.size).toBe(0);
+    expect(placements.placementOf("id-b")).toMatchObject({
+      backend: "sb",
+      moved: false,
+    });
+    expect(placements.placementOf("id-c")).toMatchObject({
+      backend: LOCAL,
+      moved: false,
+    });
+    expect(placements.placementOf("elsewhere")).toBeUndefined();
+  });
+
+  it("keeps a copy of a placed drive: stores the move, adds the sync remote, then places it here", async () => {
+    const store = memoryStore();
+    const { placements, router, sync } = await tab(store);
+    const order: string[] = [];
+    sync.add.mockImplementationOnce((_url, id) => {
+      order.push(`add, stored ${store.entries.has("b")}`);
+      sync.remotes.push({
+        meta: { name: `r-${id}`, collectionId: DriveCollectionId.forDrive(id) },
+      });
+      return Promise.resolve();
+    });
+
+    await placements.move("id-b", LOCAL);
+
+    expect(order).toEqual(["add, stored true"]);
+    expect(sync.add).toHaveBeenCalledWith("http://localhost:4001/d/b", "id-b");
+    expect([...store.entries.values()]).toEqual([
+      { slug: "b", backend: LOCAL, configWas: "sb" },
+    ]);
+    expect(Object.fromEntries(router.runtime)).toEqual({
+      "id-b": LOCAL,
+      b: LOCAL,
+    });
+    expect(placements.placementOf("id-b")).toMatchObject({
+      backend: LOCAL,
+      moved: true,
+      busy: false,
+    });
+  });
+
+  it("opens a synced drive on its switchboard only: removes its sync remote and keeps the local document", async () => {
+    const store = memoryStore();
+    const { placements, router, sync } = await tab(store);
+
+    await placements.move("id-c", "sb");
+
+    expect(sync.remove).toHaveBeenCalledWith("r-id-c");
+    expect(sync.remotes).toEqual([]);
+    expect(router.runtime.get("id-c")).toBe("sb");
+    expect(store.entries.get("c")).toEqual({
+      slug: "c",
+      backend: "sb",
+      configWas: LOCAL,
+    });
+    expect(placements.placementOf("id-c")).toMatchObject({ moved: true });
+  });
+
+  it("resets to the config: drops the move, restores the sync state and the config's routing", async () => {
+    const store = memoryStore();
+    const { placements, router, sync } = await tab(store);
+    await placements.move("id-b", LOCAL);
+
+    await placements.reset("id-b");
+
+    expect(store.entries.size).toBe(0);
+    expect(sync.remove).toHaveBeenCalledWith("r-id-b");
+    expect(router.runtime.size).toBe(0);
+    expect(router.configured.get("id-b")).toBe("sb");
+    expect(placements.placementOf("id-b")).toMatchObject({
+      backend: "sb",
+      moved: false,
+    });
+  });
+
+  it("restores the stored move when the sync change fails", async () => {
+    const store = memoryStore();
+    const { placements, router, sync } = await tab(store);
+    sync.add.mockRejectedValueOnce(new Error("switchboard down"));
+
+    await expect(placements.move("id-b", LOCAL)).rejects.toThrow(
+      "switchboard down",
+    );
+
+    expect(store.entries.size).toBe(0);
+    expect(router.runtime.size).toBe(0);
+    expect(placements.placementOf("id-b")).toMatchObject({
+      backend: "sb",
+      busy: false,
+    });
+  });
+
+  it("applies a move at boot and drops one whose config value changed", async () => {
+    const store = memoryStore([
+      { slug: "b", backend: LOCAL, configWas: "sb" },
+      { slug: "c", backend: "sb", configWas: "sb" },
+    ]);
+
+    const { placements, router } = await tab(store);
+
+    expect(placements.backendOf(placedB)).toBe(LOCAL);
+    expect(placements.keepsCopy(placedB.url)).toBe(true);
+    expect(placements.placed()).toEqual([]);
+    expect(router.runtime.get("id-b")).toBe(LOCAL);
+    await vi.waitFor(() => expect([...store.entries.keys()]).toEqual(["b"]));
+  });
+
+  it("brings another tab in line when it re-reads the store", async () => {
+    const store = memoryStore();
+    const a = await tab(store);
+    const b = await tab(store);
+    const seen = vi.fn();
+    b.placements.subscribe(seen);
+
+    await a.placements.move("id-c", "sb");
+
+    expect(await b.placements.reload()).toBe(true);
+    expect(b.router.runtime.get("id-c")).toBe("sb");
+    expect(b.placements.placementOf("id-c")).toMatchObject({ moved: true });
+    expect(seen).toHaveBeenCalled();
+    expect(await b.placements.reload()).toBe(false);
+  });
+
+  it("refuses a drive it does not place and a backend the drive can't open on", async () => {
+    const { placements } = await tab(memoryStore());
+
+    await expect(placements.move("elsewhere", LOCAL)).rejects.toThrow(
+      /not on a switchboard/,
+    );
+    await expect(placements.move("id-b", "other")).rejects.toThrow(
+      /can't open on other/,
+    );
+  });
+});
+
+describe("findServedDrive", () => {
+  it("finds a drive served under its hashed slug on the drive's switchboard", async () => {
+    const find = vi.fn(() =>
+      Promise.resolve({
+        results: [
+          { header: { id: "id-p", slug: "vetra-preview" } },
+          { header: { id: "id-v", slug: "vetra-0123abcd" } },
+        ],
+      }),
+    );
+    const router = {
+      backends: [{ name: "sb", api: { find } }],
+    } as unknown as Parameters<typeof findServedDrive>[0];
+
+    expect(
+      await findServedDrive(router, { ...placedB, slug: "vetra" }),
+    ).toEqual({ id: "id-v", slug: "vetra-0123abcd" });
+    expect(
+      await findServedDrive(router, { ...placedB, remote: "missing" }),
+    ).toBeUndefined();
+    expect(find).toHaveBeenCalledWith({ type: "powerhouse/document-drive" });
+  });
+});
