@@ -21,10 +21,14 @@ import {
   PGLITE_IDB_STORAGE_FACTS,
   type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
+import {
+  removeLocalCopies,
+  type ResolvedPlacedDrive,
+} from "@powerhousedao/connect-core/runtime";
 import type {
-  PHConnectDefaultDrive,
   PHConnectDefaultDriveLocal,
   PHConnectDefaultDriveRemote,
+  PHConnectRuntimeDefaultDrive,
 } from "@powerhousedao/shared/clis";
 import type { RuntimePowerhouseConfig } from "@powerhousedao/shared/connect";
 import type {
@@ -132,7 +136,7 @@ export async function createBrowserReactor(
 
 export function getDefaultDrives(
   runtimeConfig: RuntimePowerhouseConfig,
-): PHConnectDefaultDrive[] {
+): PHConnectRuntimeDefaultDrive[] {
   return runtimeConfig.connect.drives?.defaultDrives ?? [];
 }
 
@@ -151,7 +155,7 @@ export function getDefaultDrives(
  * @param drives - Array of default-drive entries
  */
 export async function addDefaultDrivesForNewReactor(
-  drives: PHConnectDefaultDrive[],
+  drives: PHConnectRuntimeDefaultDrive[],
 ): Promise<void> {
   await Promise.all(
     drives.map((drive) =>
@@ -270,4 +274,14 @@ async function addLocalDefaultDrive(
   } catch (error) {
     console.error(`Failed to create local default drive ${drive.id}:`, error);
   }
+}
+
+/** Removes the sync remotes of drives the host opens on a switchboard. */
+export async function removePlacedDriveCopies(
+  resolved: readonly ResolvedPlacedDrive[],
+): Promise<void> {
+  const sync =
+    getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
+  if (!sync) return;
+  await removeLocalCopies(sync, resolved);
 }
