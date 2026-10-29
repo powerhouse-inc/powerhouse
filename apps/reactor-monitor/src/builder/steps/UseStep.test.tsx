@@ -11,6 +11,7 @@ import { ControllerRequestError } from "../../controller/client.js";
 import { fakeBuilderClient } from "../__fixtures__/fakes.js";
 import { renderStep, type RenderedStep } from "../__fixtures__/steps.js";
 import { fixIssuesFirst, START_BLOCKERS } from "../copy.js";
+import { linkedStack, runOf } from "../__fixtures__/route.js";
 import { startBlocker, UseStep } from "./UseStep.js";
 
 function startButton(view: RenderedStep["view"]) {
@@ -142,5 +143,49 @@ describe("UseStep", () => {
         name: `Download ${engine.envelope.name}.host-export.json`,
       }),
     ).toBeTruthy();
+  });
+
+  it("lists where a started Connect keeps its drives and routes its reactors", () => {
+    const onRoute = vi.fn();
+    const { view } = renderStep(UseStep, {
+      envelope: stack(),
+      setters: linkedStack().setters,
+      context: FULL,
+      extra: { run: runOf(), onRoute },
+    });
+    const drives = view.getByRole("list", {
+      name: "Where ui keeps its drives",
+    });
+    expect(
+      [...drives.querySelectorAll("li")].map((item) => item.textContent),
+    ).toEqual(["In this browser", "shared on sb"]);
+    fireEvent.click(
+      view.getByRole("button", { name: "Route this app's reactors" }),
+    );
+    expect(onRoute).toHaveBeenCalledOnce();
+    expect(onRoute.mock.calls[0][0]).toMatchObject({
+      app: "ui",
+      backends: [
+        { reactor: "ui.main", backend: "main" },
+        { reactor: "sb-inst-1", backend: "sb" },
+      ],
+      collections: { "id-shared": "sb-inst-1" },
+    });
+  });
+
+  it("offers no routing before the switchboard is attached", () => {
+    const run = runOf();
+    const { view } = renderStep(UseStep, {
+      envelope: stack(),
+      setters: linkedStack().setters,
+      context: FULL,
+      extra: {
+        run: runOf({ attached: { ...run.attached, remote: [] } }),
+        onRoute: vi.fn(),
+      },
+    });
+    expect(
+      view.queryByRole("button", { name: "Route this app's reactors" }),
+    ).toBeNull();
   });
 });

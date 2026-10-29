@@ -11,6 +11,7 @@ import {
   applyOption,
   hostOptionList,
   hostOptions,
+  placementStatus,
   type OptionStatus,
 } from "./options.js";
 import { checkSetter } from "./policy.js";
@@ -274,6 +275,73 @@ describe("linking a Connect to a switchboard's drives", () => {
     expect(
       status(added, `${connect}:reach:open:cli-switchboard:shared`),
     ).toEqual(off(REACH_REASONS.mapped));
+  });
+});
+
+describe("saving a Router move to the host config", () => {
+  const linked = () =>
+    choose(
+      addDrive({ envelope: stack() }, SB, "Shared"),
+      `${UI}:reach:open:sb:shared`,
+    );
+  const save = (draft: HostDraft, slug: string, backend: string) => {
+    const found = placementStatus(draft, FULL, UI, slug, backend);
+    if (!found) throw new Error("no Connect");
+    return found;
+  };
+  const placement = (draft: HostDraft) =>
+    reachOf(draft).member.reactor?.placement;
+
+  it("copies a linked drive into the browser, and opens it on its switchboard again", () => {
+    const draft = linked();
+    expect(save(draft, "shared", "sb").selected).toBe(true);
+    const copy = save(draft, "shared", "main");
+    expect(copy).toMatchObject({ enabled: true, selected: false });
+    const copied = applyOption(draft, copy).draft;
+    expect(placement(copied)).toEqual({ drives: {} });
+    expect(issues(copied)).toEqual([]);
+    expect(save(copied, "shared", "main").selected).toBe(true);
+
+    const back = save(copied, "shared", "sb");
+    expect(back).toMatchObject({ enabled: true, selected: false });
+    for (const setter of back.setters) {
+      expect(checkSetter(setter, copied.envelope), setter.path).toEqual({
+        ok: true,
+      });
+    }
+    expect(placement(applyOption(copied, back).draft)).toEqual({
+      drives: { shared: "sb" },
+    });
+  });
+
+  it("says why a drive the app keeps itself can't open on the switchboard", () => {
+    expect(save(linked(), "powerhouse", "sb")).toMatchObject({
+      enabled: false,
+      reason: REACH_REASONS.localDrive,
+    });
+  });
+
+  it("names a backend the app no longer has", () => {
+    expect(save(linked(), "shared", "gone")).toMatchObject({
+      enabled: false,
+      reason: REACH_REASONS.noBackend("gone"),
+    });
+  });
+
+  it("places a drive of a mapped drive list on its switchboard", () => {
+    const draft = withSetters(linked().envelope, {
+      [`${UI}.reactor.drives`]: {
+        $map: {
+          $output: { host: "switchboard", member: "sb", path: ["drives"] },
+        },
+        as: { slug: { $key: true }, remote: { url: { $item: "url" } } },
+      },
+    });
+    const placed = save(draft, "workflows", "sb");
+    expect(placed.reason).toBeUndefined();
+    expect(placement(applyOption(draft, placed).draft)).toEqual({
+      drives: { shared: "sb", workflows: "sb" },
+    });
   });
 });
 

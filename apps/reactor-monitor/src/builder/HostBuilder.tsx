@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { HostImportRequest } from "../components/HostImportPanel.js";
 import { errorMessage } from "../controller/client.js";
+import type { RouteSeed } from "../lib/route-seed.js";
 import type {
   HostRulesContext,
   OptionStatus,
@@ -86,6 +87,8 @@ export type HostBuilderProps = {
   readonly onStop?: () => Promise<void>;
   /** Returns the name the set was saved under. */
   readonly onSaveSet?: (request: HostImportRequest) => string;
+  /** Opens the Router view over a started app's reactors. */
+  readonly onRoute?: (seed: RouteSeed) => void;
 };
 
 export function HostBuilder({
@@ -95,6 +98,7 @@ export function HostBuilder({
   run,
   onStop,
   onSaveSet,
+  onRoute,
 }: HostBuilderProps) {
   const [storage] = useState(() => injected ?? browserStorage());
   const [draft, setDraftState] = useState(() => loadDraft(storage));
@@ -266,6 +270,7 @@ export function HostBuilder({
                 {...props}
                 client={client}
                 onSaveSet={onSaveSet}
+                onRoute={onRoute}
                 onBaseChanged={() => setBaseChanged(true)}
                 onStart={onStart}
                 onStop={onStop}

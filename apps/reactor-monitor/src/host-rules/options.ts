@@ -10,7 +10,10 @@ import {
 import { checkSetter } from "./policy.js";
 import {
   addDriveOption,
+  connectReach,
   connectReaches,
+  placedOn,
+  placementSaveOption,
   placementSelected,
   REACH_REASONS,
   reachOptions,
@@ -553,6 +556,52 @@ export function addDriveStatus(
   );
   if (!member) return undefined;
   const option = addDriveOption(member, base.members, name);
+  return judge(
+    option,
+    draft,
+    context,
+    base,
+    new Set(base.issues.map(issueKey)),
+    hostVerb(draft.envelope, context) === "dev",
+  );
+}
+
+/** Saving a Router move: the drive `slug` opens on the Connect's `backend`. */
+export function placementStatus(
+  draft: HostDraft,
+  contextInput: HostRulesContext,
+  connect: string,
+  slug: string,
+  backend: string,
+): OptionStatus | undefined {
+  const context = hostRulesContextSchema.parse(contextInput);
+  const base = validateDraft(draft, context);
+  const member = base.members.find(
+    (candidate) => candidate.path === connect && candidate.role === "connect",
+  );
+  if (!member) return undefined;
+  const option = placementSaveOption(
+    connectReach(member, base.members),
+    slug,
+    backend,
+  );
+  const placed = placedOn(member, slug);
+  const target = member.backends.find(
+    (candidate) => candidate.name === backend,
+  );
+  const already =
+    option.value === "copy"
+      ? placed === undefined || (target !== undefined && placed === target.name)
+      : placed === backend;
+  if (option.blocked) {
+    return {
+      ...option,
+      selected: false,
+      enabled: false,
+      reason: option.blocked,
+    };
+  }
+  if (already) return { ...option, selected: true, enabled: true };
   return judge(
     option,
     draft,

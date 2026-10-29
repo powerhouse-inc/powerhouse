@@ -42,21 +42,73 @@ export function managedByOf(
 /** A browser reactor a builder copy brought along; it goes when the copy does. */
 export interface OwnedBy {
   instanceId: string;
+  /** The host member and backend it stands for. */
+  member?: string;
+  backend?: string;
 }
 
-export function ownerOf(descriptor: ReactorDescriptor): string | undefined {
+export function ownedByOf(descriptor: ReactorDescriptor): OwnedBy | undefined {
   if (descriptor.kind === "remote") return undefined;
   const marker = (descriptor as { ownedBy?: unknown }).ownedBy;
   if (typeof marker !== "object" || marker === null) return undefined;
-  const { instanceId } = marker as Record<string, unknown>;
-  return typeof instanceId === "string" ? instanceId : undefined;
+  const { instanceId, member, backend } = marker as Record<string, unknown>;
+  if (typeof instanceId !== "string") return undefined;
+  return {
+    instanceId,
+    ...(typeof member === "string" ? { member } : {}),
+    ...(typeof backend === "string" ? { backend } : {}),
+  };
+}
+
+export function ownerOf(descriptor: ReactorDescriptor): string | undefined {
+  return ownedByOf(descriptor)?.instanceId;
 }
 
 export function withOwner(
   descriptor: ReactorDescriptor,
   instanceId: string,
+  stands?: { member: string; backend: string },
 ): ReactorDescriptor {
-  return { ...descriptor, ownedBy: { instanceId } } as ReactorDescriptor;
+  return {
+    ...descriptor,
+    ownedBy: { instanceId, ...stands },
+  } as ReactorDescriptor;
+}
+
+/** A started copy's reactors in the active set, by the host member each one is. */
+export type InstanceReactors = {
+  browser: { name: string; member?: string; backend?: string }[];
+  remote: { name: string; member?: string }[];
+};
+
+export function instanceReactors(
+  descriptors: readonly ReactorDescriptor[],
+): Map<string, InstanceReactors> {
+  const byInstance = new Map<string, InstanceReactors>();
+  const entry = (id: string) => {
+    let found = byInstance.get(id);
+    if (!found) {
+      found = { browser: [], remote: [] };
+      byInstance.set(id, found);
+    }
+    return found;
+  };
+  for (const descriptor of descriptors) {
+    const owned = ownedByOf(descriptor);
+    if (owned) {
+      const { instanceId, ...stands } = owned;
+      entry(instanceId).browser.push({ name: descriptor.name, ...stands });
+      continue;
+    }
+    const managed = managedByOf(descriptor);
+    if (managed) {
+      entry(managed.instanceId).remote.push({
+        name: descriptor.name,
+        ...(managed.member === undefined ? {} : { member: managed.member }),
+      });
+    }
+  }
+  return byInstance;
 }
 
 export function isManaged(

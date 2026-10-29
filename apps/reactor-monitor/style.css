@@ -764,6 +764,16 @@ body {
 
 /* Router topology view */
 
+/* Taller than the panel: its scrolling tables must not shrink to nothing. */
+.rm-router > * {
+  flex-shrink: 0;
+}
+
+.rm-router .rm-table td:last-child {
+  max-width: none;
+  white-space: normal;
+}
+
 .rm-router-build {
   display: flex;
   flex-direction: column;

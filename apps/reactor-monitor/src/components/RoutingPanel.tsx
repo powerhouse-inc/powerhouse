@@ -1,53 +1,51 @@
-/**
- * The Router topology surface.
- *
- * A reactor-spanning view rather than a per-reactor tab: the operator picks two
- * or more READY local reactors as backends (a remote one is never offered),
- * builds one {@link RoutingReactorClient} over them (see `lib/router.ts`), and
- * then sees and drives the whole topology through the single client:
- *
- * - {@link RoutingReactorClient.describeRouting} is rendered as a table, each
- *   collection tagged with the {@link RouteSource} evidence behind it
- *   (override / placed / learned / corrected), beside the backend list and each
- *   backend's capability summary (reused from the Overview tab);
- * - operator controls set and clear per-collection overrides and capability
- *   requirements, create a drive through the router, and search across every
- *   backend with a merged result that names which one holds each hit;
- * - the advisory-routing story is made visible: invert an override, drive a
- *   write, and the badge flips `override -> corrected` while the diagnostic log
- *   (wired to the router's `onDiagnostic`) reports the stale override;
- * - the v1 constraints refuse by NAME: a cross-backend batch and a cross-backend
- *   relationship write surface {@link CrossBackendBatchError} /
- *   {@link CrossBackendRelationshipError} rather than a generic failure.
- *
- * Overrides and requirements are the router's CONSTRUCTION-time configuration
- * (`RoutingOptions`), so changing one rebuilds the client over the same
- * backends — the honest model of "reconfigure the topology", and cheap because
- * a router is just a table over clients it already holds. The learned/corrected
- * state a rebuilt client starts without is re-learned on the next operation by
- * the same advisory machinery, which is the whole point of it being advisory.
- */
+// The Router view: one routing client over chosen reactors, local or remote.
 import type { BatchExecutionRequest } from "@powerhousedao/reactor";
-import type { ManagedReactorEntry } from "@powerhousedao/reactor-monitor";
+import type {
+  ManagedReactor,
+  ManagedReactorEntry,
+} from "@powerhousedao/reactor-monitor";
 import { useManagedReactors } from "@powerhousedao/reactor-monitor/react";
 import {
   collectionRequirements,
   eligibleBackends,
   ineligibleReason,
-  RouterBackend,
   type CollectionRequirementsInput,
+  type RouterBackend,
+  type RouterTableEntry,
   type RouterTableSnapshot,
   type RouteSource,
   type RoutingReactorClient,
 } from "@powerhousedao/reactor-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  buildRoutingClient,
-  isRoutable,
-  routableBackend,
-  type RoutableReactor,
-} from "../lib/router.js";
+  browserPlacementStorage,
+  judgeLayer,
+  loadPlacements,
+  savePlacements,
+  type PlacementLayer,
+  type PlacementStorage,
+} from "../lib/placements.js";
+import type { RouteSeed, SaveVerdict } from "../lib/route-seed.js";
+import { buildRoutingClient, type BuiltRouter } from "../lib/router.js";
 import { capabilityCells } from "../tabs/OverviewTab.js";
+
+export const ROUTER_COPY = {
+  needsTwo: "Select at least two ready reactors to route over.",
+  waiting: (names: string) => `Waiting for ${names} to be ready.`,
+  routing: (app: string) => `Routing ${app}'s reactors.`,
+  movedFrom: (configured: string) => `Moved here. Host config: ${configured}`,
+  movedUnplaced: "Moved here. The host config doesn't place it.",
+  reset: "Reset to config",
+  undoMove: "Undo move",
+  saveToHost: "Save to host config",
+  saved: "Saved to the builder's draft. Review it in Build host.",
+  notKept: "This browser won't keep the move after a reload.",
+  dropped: (count: number) =>
+    count === 1
+      ? "The host config changed for 1 moved drive, so its move was dropped."
+      : `The host config changed for ${count} moved drives, so their moves were dropped.`,
+  inHostConfig: (backend: string) => `${backend} in the host config`,
+} as const;
 
 /** One line the router reported through `onDiagnostic`, newest last. */
 type LogLine = { readonly id: number; readonly text: string };
@@ -65,7 +63,10 @@ type NamedError = { readonly name: string; readonly message: string };
 
 /** The topology a built client was constructed from, kept so a reconfigure can rebuild it. */
 type Topology = {
-  readonly reactors: readonly RoutableReactor[];
+  readonly reactors: readonly ManagedReactor[];
+  /** The started app this router was opened for. */
+  readonly seed?: RouteSeed;
+  /** Placements from the host config; moves are the runtime layer. */
   readonly overrides: Readonly<Record<string, string>>;
   readonly requirements: Readonly<Record<string, CollectionRequirementsInput>>;
 };
@@ -81,11 +82,9 @@ const DRIVE_TYPE = "powerhouse/document-drive";
 
 function readyReactors(
   entries: readonly ManagedReactorEntry[],
-): readonly RoutableReactor[] {
+): readonly ManagedReactor[] {
   return entries.flatMap((entry) =>
-    entry.status === "ready" && isRoutable(entry.reactor)
-      ? [entry.reactor]
-      : [],
+    entry.status === "ready" ? [entry.reactor] : [],
   );
 }
 
@@ -137,7 +136,7 @@ function SourceBadge({ source }: { readonly source: RouteSource }) {
 }
 
 /** A compact reuse of the Overview tab's capability rendering: one badge per field. */
-function CapabilitySummary({ reactor }: { readonly reactor: RoutableReactor }) {
+function CapabilitySummary({ reactor }: { readonly reactor: ManagedReactor }) {
   return (
     <ul className="rm-router-caps" aria-label={`${reactor.name} capabilities`}>
       {capabilityCells(reactor.reach, reactor.info).map((cell) => (
@@ -152,20 +151,110 @@ function CapabilitySummary({ reactor }: { readonly reactor: RoutableReactor }) {
   );
 }
 
-export function RoutingPanel() {
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** A moved row's line, or nothing when it is where the config puts it. */
+function driftOf(
+  entry: RouterTableEntry,
+  label: (reactor: string) => string,
+): string | undefined {
+  if (entry.origin !== "runtime") return undefined;
+  if (entry.configured === undefined) return ROUTER_COPY.movedUnplaced;
+  return entry.configured === entry.backend
+    ? undefined
+    : ROUTER_COPY.movedFrom(label(entry.configured));
+}
+
+/** How moves are kept: a started app's by host backend and drive slug. */
+type LayerNames = {
+  readonly app?: string;
+  readonly backend: (reactor: string) => string;
+  readonly reactor: (stored: string) => string | undefined;
+  readonly key: (routerKey: string) => string;
+  readonly routerKey: (stored: string) => string;
+};
+
+function layerNames(seed: RouteSeed | undefined): LayerNames {
+  if (!seed) {
+    return {
+      backend: (reactor) => reactor,
+      reactor: (stored) => stored,
+      key: (routerKey) => routerKey,
+      routerKey: (stored) => stored,
+    };
+  }
+  // A started copy's reactor names change with each start; these don't.
+  const app = `${seed.source.host}/${seed.app}`;
+  const prefix = `${app}/`;
+  return {
+    app,
+    backend: (reactor) =>
+      seed.backends.find((entry) => entry.reactor === reactor)?.backend ??
+      reactor,
+    reactor: (stored) =>
+      seed.backends.find((entry) => entry.backend === stored)?.reactor,
+    key: (routerKey) =>
+      prefix +
+      (Object.hasOwn(seed.drives, routerKey)
+        ? seed.drives[routerKey]
+        : routerKey),
+    routerKey: (stored) => {
+      const slug = stored.slice(prefix.length);
+      return (
+        Object.keys(seed.drives).find((key) => seed.drives[key] === slug) ??
+        slug
+      );
+    },
+  };
+}
+
+export type RoutingPanelProps = {
+  /** The monitoring set whose moves this browser keeps. */
+  readonly setName?: string;
+  readonly storage?: PlacementStorage;
+  /** Preselects a started Connect's reactors and its host config placements. */
+  readonly seed?: RouteSeed;
+  /** Adds a move to the builder's draft, or says why it can't. */
+  readonly onSaveToHost?: (
+    seed: RouteSeed,
+    drive: string,
+    backend: string,
+  ) => SaveVerdict;
+};
+
+export function RoutingPanel({
+  setName = "",
+  storage: injectedStorage,
+  seed,
+  onSaveToHost,
+}: RoutingPanelProps = {}) {
   const entries = useManagedReactors();
   const ready = useMemo(() => readyReactors(entries), [entries]);
+  const [storage] = useState(
+    () => injectedStorage ?? browserPlacementStorage(),
+  );
 
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const [client, setClient] = useState<RoutingReactorClient | null>(null);
+  const [built, setBuilt] = useState<BuiltRouter | null>(null);
+  const client = built?.client ?? null;
   const [topology, setTopology] = useState<Topology | null>(null);
   const [snapshot, setSnapshot] = useState<RouterTableSnapshot | null>(null);
   const [log, setLog] = useState<readonly LogLine[]>([]);
   const [buildError, setBuildError] = useState("");
+  const [placementNote, setPlacementNote] = useState("");
+  const [saveNotes, setSaveNotes] = useState<Readonly<Record<string, string>>>(
+    {},
+  );
+  const layer = useRef<{ set: string; layer: PlacementLayer } | undefined>(
+    undefined,
+  );
+  const seeded = useRef<string | undefined>(undefined);
 
   // Control inputs.
-  const [overrideKey, setOverrideKey] = useState("");
-  const [overrideBackend, setOverrideBackend] = useState("");
+  const [moveKey, setMoveKey] = useState("");
+  const [moveBackend, setMoveBackend] = useState("");
   const [reqKey, setReqKey] = useState("");
   const [req, setReq] = useState<RequirementInput>({
     workflows: true,
@@ -194,34 +283,125 @@ export function RoutingPanel() {
     return () => exposeRouter(null);
   }, []);
 
-  const refresh = useCallback((built: RoutingReactorClient) => {
-    setSnapshot(built.describeRouting());
+  // A replaced or unmounted router stops listening and lets its backends go.
+  useEffect(() => {
+    if (!built) return;
+    const off = built.client.onRoutingChange(() =>
+      setSnapshot(built.client.describeRouting()),
+    );
+    return () => {
+      off();
+      built.dispose();
+    };
+  }, [built]);
+
+  const refresh = useCallback((routing: RoutingReactorClient) => {
+    setSnapshot(routing.describeRouting());
   }, []);
 
-  /**
-   * Builds (or rebuilds) the client over `next`. The single path every control
-   * funnels through, because overrides and requirements are construction-time
-   * configuration: a reconfigure is a rebuild over the same handles.
-   */
+  const storedLayer = useCallback((): PlacementLayer => {
+    if (layer.current?.set !== setName) {
+      layer.current = {
+        set: setName,
+        layer: loadPlacements(storage, setName),
+      };
+    }
+    return layer.current.layer;
+  }, [setName, storage]);
+
+  const keepLayer = useCallback(
+    (next: PlacementLayer): boolean => {
+      layer.current = { set: setName, layer: next };
+      return savePlacements(storage, setName, next);
+    },
+    [setName, storage],
+  );
+
+  /** Builds the client; the moves kept for this set are applied over the config. */
   const applyTopology = useCallback(
     (next: Topology) => {
       if (next.reactors.length < 2) {
-        setBuildError("Select at least two ready reactors to route over.");
+        setBuildError(ROUTER_COPY.needsTwo);
+        return;
+      }
+      let router: BuiltRouter;
+      try {
+        router = buildRoutingClient(next.reactors, {
+          collections: next.overrides,
+          requirements: next.requirements,
+          onDiagnostic: (message) => appendLog(message),
+        });
+      } catch (error) {
+        setBuildError(errorText(error));
         return;
       }
       setBuildError("");
-      const built = buildRoutingClient(next.reactors, {
-        collections: next.overrides,
-        requirements: next.requirements,
-        onDiagnostic: (message) => appendLog(message),
+      const names = new Set(next.reactors.map((reactor) => reactor.name));
+      const kept = layerNames(next.seed);
+      const stored = storedLayer();
+      const { apply, dropped } = judgeLayer(stored, {
+        ...(kept.app === undefined ? {} : { app: kept.app }),
+        config: Object.fromEntries(
+          Object.entries(next.overrides).map(([key, reactor]) => [
+            kept.key(key),
+            kept.backend(reactor),
+          ]),
+        ),
+        backends: new Set([...names].map(kept.backend)),
       });
-      setClient(built);
+      let note = "";
+      if (dropped.length > 0) {
+        const left = { ...stored };
+        for (const key of dropped) delete left[key];
+        note = keepLayer(left)
+          ? ROUTER_COPY.dropped(dropped.length)
+          : ROUTER_COPY.notKept;
+      }
+      for (const [stored, entry] of apply) {
+        const reactor = kept.reactor(entry.backend);
+        if (reactor === undefined) continue;
+        const key = kept.routerKey(stored);
+        try {
+          router.client.setPlacement(key, reactor);
+        } catch (error) {
+          appendLog(
+            `A kept move for ${key} was not applied: ${errorText(error)}`,
+          );
+        }
+      }
+      setPlacementNote(note);
+      setSaveNotes({});
+      setSelected(new Set(names));
+      setBuilt(router);
       setTopology(next);
-      refresh(built);
-      exposeRouter(built);
+      refresh(router.client);
+      exposeRouter(router.client);
     },
-    [appendLog, refresh],
+    [appendLog, refresh, storedLayer, keepLayer],
   );
+
+  // "Route this app's reactors": build once the seed's reactors are ready.
+  const seedMissing = seed
+    ? seed.backends
+        .filter(({ reactor }) => !ready.some((r) => r.name === reactor))
+        .map(({ reactor }) => reactor)
+    : [];
+  useEffect(() => {
+    if (!seed || seeded.current === seed.id) return;
+    const chosen = seed.backends.flatMap(({ reactor }) =>
+      ready.filter((candidate) => candidate.name === reactor),
+    );
+    if (chosen.length !== seed.backends.length) return;
+    seeded.current = seed.id;
+    // The registry, not React, says when the seed's reactors are ready.
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect
+    applyTopology({
+      reactors: chosen,
+      seed,
+      overrides: seed.collections,
+      requirements: {},
+    });
+  }, [seed, ready, applyTopology]);
 
   const handleBuild = useCallback(() => {
     const chosen = ready.filter((reactor) => selected.has(reactor.name));
@@ -245,30 +425,66 @@ export function RoutingPanel() {
     });
   }, []);
 
-  const handleSetOverride = useCallback(() => {
-    if (!topology || overrideKey.trim() === "" || overrideBackend === "") {
-      return;
-    }
-    applyTopology({
-      ...topology,
-      overrides: {
-        ...topology.overrides,
-        [overrideKey.trim()]: overrideBackend,
-      },
-    });
-    setOverrideKey("");
-  }, [applyTopology, topology, overrideKey, overrideBackend]);
-
-  const handleClearOverride = useCallback(
-    (key: string) => {
-      if (!topology) {
+  /** A runtime placement; moving to the config's backend removes it. */
+  const placeAt = useCallback(
+    (key: string, backend: string | undefined) => {
+      if (!client || !topology) return;
+      const configured = Object.hasOwn(topology.overrides, key)
+        ? topology.overrides[key]
+        : undefined;
+      const runtime = backend === configured ? undefined : backend;
+      setOpError("");
+      try {
+        client.setPlacement(key, runtime);
+      } catch (error) {
+        setOpError(errorText(error));
         return;
       }
-      const overrides = { ...topology.overrides };
-      delete overrides[key];
-      applyTopology({ ...topology, overrides });
+      const names = layerNames(topology.seed);
+      const stored = names.key(key);
+      const next = { ...storedLayer() };
+      if (runtime === undefined) {
+        delete next[stored];
+      } else {
+        next[stored] = {
+          backend: names.backend(runtime),
+          ...(configured === undefined
+            ? {}
+            : { configWas: names.backend(configured) }),
+          ...(names.app === undefined ? {} : { app: names.app }),
+        };
+      }
+      setPlacementNote(keepLayer(next) ? "" : ROUTER_COPY.notKept);
+      setSaveNotes(({ [key]: _gone, ...rest }) => rest);
+      refresh(client);
     },
-    [applyTopology, topology],
+    [client, topology, storedLayer, keepLayer, refresh],
+  );
+
+  const handleMove = useCallback(() => {
+    if (moveKey.trim() === "" || moveBackend === "") return;
+    placeAt(moveKey.trim(), moveBackend);
+    setMoveKey("");
+  }, [placeAt, moveKey, moveBackend]);
+
+  const handleSave = useCallback(
+    (entry: RouterTableEntry) => {
+      const routed = topology?.seed;
+      if (!routed || !onSaveToHost) return;
+      const drive = Object.hasOwn(routed.drives, entry.collectionId)
+        ? routed.drives[entry.collectionId]
+        : undefined;
+      const backend = routed.backends.find(
+        ({ reactor }) => reactor === entry.backend,
+      )?.backend;
+      if (drive === undefined || backend === undefined) return;
+      const verdict = onSaveToHost(routed, drive, backend);
+      setSaveNotes((notes) => ({
+        ...notes,
+        [entry.collectionId]: verdict.ok ? ROUTER_COPY.saved : verdict.reason,
+      }));
+    },
+    [topology, onSaveToHost],
   );
 
   const handleSetRequirement = useCallback(() => {
@@ -313,7 +529,9 @@ export function RoutingPanel() {
           `router placed drive ${created.documentId} on ${owner?.backend ?? "(unresolved)"}`,
         );
       } else {
-        const target = topology.reactors.find((r) => r.name === driveTarget);
+        const target = topology.reactors.find(
+          (r) => r.name === driveTarget && r.kind !== "remote",
+        );
         if (!target) {
           return;
         }
@@ -329,45 +547,34 @@ export function RoutingPanel() {
       refresh(client);
     } catch (error) {
       setCreateResult("");
-      setOpError(error instanceof Error ? error.message : String(error));
+      setOpError(errorText(error));
     }
   }, [client, topology, driveName, driveTarget, refresh]);
 
   const handleFind = useCallback(async () => {
-    if (!client || !topology) {
+    if (!client) {
       return;
     }
     setOpError("");
     try {
       const page = await client.read.find({ type: findType.trim() });
-      // Provenance: ask each backend which one actually holds each hit. This
-      // is what the router's own servingBackends does; done here only to label
-      // a merged list that carries no backend of its own.
       const hits = await Promise.all(
-        page.results.map(async (document): Promise<FindHit> => {
-          const owners = await Promise.all(
-            topology.reactors.map(async (reactor) => ({
-              name: reactor.name,
-              serves: await reactor.client.read
-                .isServed(document.header.id)
-                .catch(() => false),
-            })),
-          );
-          return {
-            id: document.header.id,
-            name: document.header.name,
-            type: document.header.documentType,
-            backend: owners.find((owner) => owner.serves)?.name ?? "(none)",
-          };
-        }),
+        page.results.map(async (document): Promise<FindHit> => ({
+          id: document.header.id,
+          name: document.header.name,
+          type: document.header.documentType,
+          backend: await client
+            .locate(document.header.id)
+            .catch(() => "(none)"),
+        })),
       );
       setFindHits(hits);
       refresh(client);
     } catch (error) {
       setFindHits(null);
-      setOpError(error instanceof Error ? error.message : String(error));
+      setOpError(errorText(error));
     }
-  }, [client, topology, findType, refresh]);
+  }, [client, findType, refresh]);
 
   const handleBatch = useCallback(async () => {
     if (!client || batchA.trim() === "" || batchB.trim() === "") {
@@ -396,7 +603,7 @@ export function RoutingPanel() {
     } catch (error) {
       setBatchError({
         name: error instanceof Error ? error.name : "Error",
-        message: error instanceof Error ? error.message : String(error),
+        message: errorText(error),
       });
     }
     refresh(client);
@@ -422,24 +629,39 @@ export function RoutingPanel() {
     } catch (error) {
       setRelError({
         name: error instanceof Error ? error.name : "Error",
-        message: error instanceof Error ? error.message : String(error),
+        message: errorText(error),
       });
     }
   }, [client, batchA, batchB]);
 
   const backendNames = topology?.reactors.map((reactor) => reactor.name) ?? [];
+  const localNames =
+    topology?.reactors
+      .filter((reactor) => reactor.kind !== "remote")
+      .map((reactor) => reactor.name) ?? [];
   const requirementRows = Object.entries(topology?.requirements ?? {});
+  const hostBackendOf = (reactor: string) =>
+    topology?.seed?.backends.find((entry) => entry.reactor === reactor)
+      ?.backend;
 
   return (
-    <section className="rm-tab" aria-label="Router topology">
+    <section className="rm-tab rm-router" aria-label="Router topology">
       <h2>Router topology</h2>
       <p className="rm-note">
         Build one routing client over two or more ready reactors. Placement is
         keyed on the drive/collection id; routing is advisory, so a write aimed
         at the wrong backend is refused, re-aimed, and the table corrected.
-        Overrides and requirements reconfigure the topology, which rebuilds the
-        client over the same backends.
+        Moving a drive changes where this monitor routes it, and this browser
+        keeps the move for the monitoring set.
       </p>
+
+      {seed ? (
+        <p className="rm-note" data-testid="router-seed">
+          {seedMissing.length > 0
+            ? ROUTER_COPY.waiting(seedMissing.join(", "))
+            : ROUTER_COPY.routing(seed.app)}
+        </p>
+      ) : null}
 
       <div className="rm-router-build">
         <h3>Backends</h3>
@@ -483,25 +705,38 @@ export function RoutingPanel() {
             {backendNames[0]})
           </h3>
           <ul className="rm-router-backends" data-testid="router-backends">
-            {(topology?.reactors ?? []).map((reactor, index) => (
-              <li
-                className="rm-router-backend"
-                data-testid={`router-backend-${reactor.name}`}
-                key={reactor.name}
-              >
-                <div className="rm-router-backend-head">
-                  <strong>{reactor.name}</strong>
-                  <span className="rm-note">{reactor.kind}</span>
-                  {index === 0 ? (
-                    <span className="rm-badge rm-badge-neutral">primary</span>
-                  ) : null}
-                </div>
-                <CapabilitySummary reactor={reactor} />
-              </li>
-            ))}
+            {(topology?.reactors ?? []).map((reactor, index) => {
+              const hostBackend = hostBackendOf(reactor.name);
+              return (
+                <li
+                  className="rm-router-backend"
+                  data-testid={`router-backend-${reactor.name}`}
+                  key={reactor.name}
+                >
+                  <div className="rm-router-backend-head">
+                    <strong>{reactor.name}</strong>
+                    <span className="rm-note">{reactor.kind}</span>
+                    {hostBackend ? (
+                      <span className="rm-note">
+                        {ROUTER_COPY.inHostConfig(hostBackend)}
+                      </span>
+                    ) : null}
+                    {index === 0 ? (
+                      <span className="rm-badge rm-badge-neutral">primary</span>
+                    ) : null}
+                  </div>
+                  <CapabilitySummary reactor={reactor} />
+                </li>
+              );
+            })}
           </ul>
 
           <h3>Routing table (describeRouting)</h3>
+          {placementNote ? (
+            <p className="rm-note" data-testid="router-placement-note">
+              {placementNote}
+            </p>
+          ) : null}
           <div className="rm-table-wrap">
             <table className="rm-table" data-testid="router-table">
               <thead>
@@ -517,36 +752,92 @@ export function RoutingPanel() {
                   <tr>
                     <td className="rm-table-empty" colSpan={4}>
                       No collection routed yet. Create a drive, run an
-                      operation, or set an override to populate the table.
+                      operation, or move a drive to populate the table.
                     </td>
                   </tr>
                 ) : (
-                  snapshot.collections.map((entry) => (
-                    <tr
-                      data-testid={`router-route-${entry.collectionId}`}
-                      key={entry.collectionId}
-                    >
-                      <td title={entry.collectionId}>{entry.collectionId}</td>
-                      <td>{entry.backend}</td>
-                      <td>
-                        <SourceBadge source={entry.source} />
-                      </td>
-                      <td>
-                        {topology &&
-                        entry.collectionId in topology.overrides ? (
-                          <button
-                            className="rm-btn rm-btn-small"
-                            onClick={() =>
-                              handleClearOverride(entry.collectionId)
+                  snapshot.collections.map((entry) => {
+                    const drive = topology?.seed?.drives[entry.collectionId];
+                    const drift = driftOf(
+                      entry,
+                      (reactor) => hostBackendOf(reactor) ?? reactor,
+                    );
+                    const savable =
+                      drift !== undefined &&
+                      onSaveToHost !== undefined &&
+                      drive !== undefined &&
+                      hostBackendOf(entry.backend) !== undefined;
+                    return (
+                      <tr
+                        data-testid={`router-route-${entry.collectionId}`}
+                        key={entry.collectionId}
+                      >
+                        <td title={entry.collectionId}>
+                          {drive ?? entry.collectionId}
+                        </td>
+                        <td>
+                          <select
+                            aria-label={`Move ${drive ?? entry.collectionId}`}
+                            data-testid="router-route-backend"
+                            onChange={(e) =>
+                              placeAt(entry.collectionId, e.target.value)
                             }
-                            type="button"
+                            value={entry.backend}
                           >
-                            Clear override
-                          </button>
-                        ) : null}
-                      </td>
-                    </tr>
-                  ))
+                            {backendNames.map((name) => (
+                              <option key={name} value={name}>
+                                {name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          <SourceBadge source={entry.source} />
+                        </td>
+                        <td>
+                          {drift ? (
+                            <span
+                              className="rm-note"
+                              data-testid="router-route-drift"
+                            >
+                              {drift}
+                            </span>
+                          ) : null}
+                          {entry.origin === "runtime" ? (
+                            <button
+                              className="rm-btn rm-btn-small"
+                              onClick={() =>
+                                placeAt(entry.collectionId, undefined)
+                              }
+                              type="button"
+                            >
+                              {entry.configured === undefined
+                                ? ROUTER_COPY.undoMove
+                                : ROUTER_COPY.reset}
+                            </button>
+                          ) : null}
+                          {savable ? (
+                            <button
+                              className="rm-btn rm-btn-small"
+                              onClick={() => handleSave(entry)}
+                              type="button"
+                            >
+                              {ROUTER_COPY.saveToHost}
+                            </button>
+                          ) : null}
+                          {saveNotes[entry.collectionId] ? (
+                            <span
+                              className="rm-note"
+                              data-testid="router-route-saved"
+                              role="status"
+                            >
+                              {saveNotes[entry.collectionId]}
+                            </span>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -572,24 +863,24 @@ export function RoutingPanel() {
             </details>
           ) : null}
 
-          <h3>Overrides</h3>
+          <h3>Move a drive</h3>
           <div className="rm-form rm-form-inline">
             <label>
               Drive id or collection key
               <input
-                data-testid="router-override-key"
-                onChange={(e) => setOverrideKey(e.target.value)}
+                data-testid="router-move-key"
+                onChange={(e) => setMoveKey(e.target.value)}
                 placeholder="drive id"
                 type="text"
-                value={overrideKey}
+                value={moveKey}
               />
             </label>
             <label>
               Backend
               <select
-                data-testid="router-override-backend"
-                onChange={(e) => setOverrideBackend(e.target.value)}
-                value={overrideBackend}
+                data-testid="router-move-backend"
+                onChange={(e) => setMoveBackend(e.target.value)}
+                value={moveBackend}
               >
                 <option value="">select a backend</option>
                 {backendNames.map((name) => (
@@ -601,12 +892,12 @@ export function RoutingPanel() {
             </label>
             <button
               className="rm-btn"
-              data-testid="router-override-set"
-              disabled={overrideKey.trim() === "" || overrideBackend === ""}
-              onClick={handleSetOverride}
+              data-testid="router-move"
+              disabled={moveKey.trim() === "" || moveBackend === ""}
+              onClick={handleMove}
               type="button"
             >
-              Set override
+              Move
             </button>
           </div>
 
@@ -685,10 +976,7 @@ export function RoutingPanel() {
                       Clear
                     </button>
                   </div>
-                  <EligibilityNote
-                    input={input}
-                    reactors={topology?.reactors ?? []}
-                  />
+                  <EligibilityNote backends={client.backends} input={input} />
                 </li>
               ))}
             </ul>
@@ -714,7 +1002,7 @@ export function RoutingPanel() {
                 value={driveTarget}
               >
                 <option value="">auto (router places)</option>
-                {backendNames.map((name) => (
+                {localNames.map((name) => (
                   <option key={name} value={name}>
                     on {name}
                   </option>
@@ -894,15 +1182,12 @@ export function RoutingPanel() {
  */
 function EligibilityNote({
   input,
-  reactors,
+  backends,
 }: {
   readonly input: CollectionRequirementsInput;
-  readonly reactors: readonly RoutableReactor[];
+  readonly backends: readonly RouterBackend[];
 }) {
   const requirements = collectionRequirements(input);
-  const backends = reactors.map(
-    (reactor) => new RouterBackend(routableBackend(reactor)),
-  );
   const eligible = eligibleBackends(backends, requirements);
   const eligibleNames = eligible.map((backend) => backend.name);
   const ineligible = backends.filter(

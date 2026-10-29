@@ -202,7 +202,15 @@ export const instanceSchema = z.object({
   /** A compound's members; `outputs` above is a standalone host's only. */
   members: z.record(z.string(), instanceMemberSchema).optional(),
   /** A draft's project host; `project` above is then the throwaway copy. */
-  source: z.object({ project: z.string(), host: z.string() }).optional(),
+  source: z
+    .object({
+      project: z.string(),
+      host: z.string(),
+      /** The draft the copy runs: its base and the setters over it. */
+      baseDigest: baseDigestSchema.optional(),
+      setters: z.array(setterSchema).optional(),
+    })
+    .optional(),
   exit: z
     .object({
       code: z.number().int().nullable(),
