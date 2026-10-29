@@ -40,7 +40,6 @@ import {
   headNewDocument,
   normalizeDocumentModelVersion,
   capabilitiesOf,
-  optionalBaseReducerCapabilities,
   serializeByKey,
   undoCapabilitiesOf,
   undoNeedsTargets,
@@ -1014,7 +1013,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     signal: AbortSignal | undefined,
   ): Promise<{ caps: BaseReducerCapabilities; header: PHDocument["header"] }> {
     const { header } = await this.get(documentIdentifier, { branch }, signal);
-    const fromHeader = optionalBaseReducerCapabilities(header);
+    const fromHeader = undoCapabilitiesOf(header);
     if (fromHeader) {
       return { caps: fromHeader, header };
     }

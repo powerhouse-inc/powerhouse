@@ -17,6 +17,7 @@ import {
   modelRunsBaseReducer,
   needsTaggedModel,
   refusalFor,
+  resolveBaseReducerVersion,
   requireStateReducer,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -48,11 +49,10 @@ export function baseReducerResolver(
   const listed = (support?.["base-reducer"] ?? []).filter(isBaseReducerVersion);
   const runs =
     listed.length > 0 ? listed : baseReducerVersionsFor(resolveFeatureFlags());
-  const highest = capabilitiesOf(Math.max(...runs) as BaseReducerVersion);
+  const highest = Math.max(...runs) as BaseReducerVersion;
   const capabilities: BaseReducerResolver["capabilities"] = (versions) => {
-    const version = versions?.["base-reducer"];
-    if (isBaseReducerVersion(version)) return capabilitiesOf(version);
-    return typeof version === "number" ? highest : undefined;
+    const version = resolveBaseReducerVersion(versions, highest);
+    return version === undefined ? undefined : capabilitiesOf(version);
   };
   return {
     capabilities,

@@ -164,6 +164,23 @@ export function capabilitiesOf(
   return CAPABILITIES[version];
 }
 
+/** The highest base-reducer version this build runs. */
+const LATEST_BASE_REDUCER_VERSION: BaseReducerVersion =
+  BASE_REDUCER_VERSIONS[BASE_REDUCER_VERSIONS.length - 1];
+
+/**
+ * The version `versions` runs as: a known number as itself, a number this
+ * build does not know as `highest`, undefined without a number.
+ */
+export function resolveBaseReducerVersion(
+  versions: ProtocolVersions | undefined,
+  highest: BaseReducerVersion = LATEST_BASE_REDUCER_VERSION,
+): BaseReducerVersion | undefined {
+  const version = versions?.["base-reducer"];
+  if (isBaseReducerVersion(version)) return version;
+  return typeof version === "number" ? highest : undefined;
+}
+
 /** Throws on a missing version: defaulting one would replay through the wrong reducer. */
 export function baseReducerVersion(
   header: PHDocumentHeader,

@@ -80,6 +80,24 @@ describe("the undo plan", () => {
     expect(undoCapabilitiesOf(header)).toBeUndefined();
   });
 
+  it("reads a number this build does not know as base-reducer 3", () => {
+    const header = { id: "d" } as PHDocumentHeader;
+    expect(
+      undoCapabilitiesOf({ ...header, protocolVersions: { "base-reducer": 7 } })
+        ?.version,
+    ).toBe(3);
+    expect(
+      undoCapabilitiesOf(header, { protocolVersions: { "base-reducer": 7 } })
+        ?.version,
+    ).toBe(3);
+    expect(
+      undoCapabilitiesOf(
+        { ...header, protocolVersions: { "base-reducer": 1 } },
+        { protocolVersions: { "base-reducer": 7 } },
+      )?.version,
+    ).toBe(1);
+  });
+
   it("runs calls with one key in order, past a failure", async () => {
     const chains = new Map<string, Promise<unknown>>();
     const order: string[] = [];

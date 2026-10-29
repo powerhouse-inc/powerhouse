@@ -215,6 +215,41 @@ describe("GraphQLReactorClient undo and redo", () => {
     expect(sentActions(sdk)[0].type).toBe("RETRACT");
   });
 
+  it.each([
+    ["the header", { headerVersions: true }],
+    ["CREATE_DOCUMENT", {}],
+  ] as const)(
+    "undoes a number %s names that this build does not know as base-reducer 3",
+    async (_source, options) => {
+      const { client, sdk } = clientWith(
+        7,
+        { undoTarget: "global-1" },
+        options,
+      );
+
+      await client.undo("doc-1");
+
+      expect(sdk.GetUndoRedoTargets).toHaveBeenCalled();
+      expect(sentActions(sdk)).toEqual([
+        {
+          branch: "main",
+          type: "RETRACT",
+          scope: "global",
+          input: { target: "global-1" },
+        },
+      ]);
+    },
+  );
+
+  it("submits UNDO when the header names base-reducer 2", async () => {
+    const { client, sdk } = clientWith(2, {}, { headerVersions: true });
+
+    await client.undo("doc-1");
+
+    expect(sdk.GetUndoRedoTargets).not.toHaveBeenCalled();
+    expect(sentActions(sdk)[0].type).toBe("UNDO");
+  });
+
   it("refuses an undo with nothing to undo, submitting nothing", async () => {
     const { client, sdk } = clientWith(3);
 

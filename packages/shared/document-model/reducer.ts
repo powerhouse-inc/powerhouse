@@ -14,6 +14,7 @@ import {
   appliesRewind,
   assertNever,
   baseReducerVersion,
+  resolveBaseReducerVersion,
   capabilitiesOf,
   derivesByRule,
   type BaseReducerVersion,
@@ -413,7 +414,9 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   assertAuthScopeActionAllowed(_action);
 
   const protocolVersion: BaseReducerVersion =
-    options.protocolVersion ?? baseReducerVersion(document.header);
+    options.protocolVersion ??
+    resolveBaseReducerVersion(document.header.protocolVersions) ??
+    baseReducerVersion(document.header);
   const caps = capabilitiesOf(protocolVersion);
   const byRule = derivesByRule(caps, _action.scope);
 
