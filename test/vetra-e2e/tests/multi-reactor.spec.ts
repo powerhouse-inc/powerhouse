@@ -13,17 +13,26 @@ type RoutingRow = { collectionId: string; backend: string; origin?: string };
 
 type PhWindow = {
   ph?: {
-    drives?: Array<{ header: { id: string } }>;
+    drives?: Array<{
+      header: { id: string };
+      state: { global: { nodes: Array<{ name: string }> } };
+    }>;
     fullReactorClient?: {
       describeRouting(): { backends: string[]; collections: RoutingRow[] };
       drives: { addFolder(driveId: string, name: string): Promise<unknown> };
     };
     reactorClientModule?: {
-      client: { read: { get(id: string): Promise<unknown> } };
+      client: {
+        read: { get(id: string): Promise<unknown> };
+        drives: { addFolder(driveId: string, name: string): Promise<unknown> };
+      };
       reactorModule?: {
         syncModule?: {
           syncManager?: {
-            list(): Array<{ meta: { collectionId: { driveId: string } } }>;
+            list(): Array<{
+              meta: { name: string; collectionId: { driveId: string } };
+            }>;
+            remove(name: string): Promise<void>;
           };
         };
       };
@@ -62,6 +71,45 @@ async function folderNames(driveId: string): Promise<string[]> {
     { id: driveId },
   );
   return driveNodes.results.map((node) => node.name);
+}
+
+/** Adds a folder to `driveId` on the switchboard itself. */
+async function addFolderOnSwitchboard(
+  driveId: string,
+  name: string,
+): Promise<void> {
+  const id = crypto.randomUUID();
+  await gql(
+    `mutation($id: String!, $actions: [ActionInput!]!) { execute(documentIdOrSlug: $id, actions: $actions) { id } }`,
+    {
+      id: driveId,
+      actions: [
+        {
+          id: crypto.randomUUID(),
+          type: "ADD_FOLDER",
+          timestampUtcMs: new Date().toISOString(),
+          input: { id, name, parentFolder: null },
+          scope: "global",
+        },
+      ],
+    },
+  );
+}
+
+async function listedFolders(page: Page, driveId: string): Promise<string[]> {
+  try {
+    return await page.evaluate(
+      (id) =>
+        (
+          (window as unknown as PhWindow).ph?.drives?.find(
+            (drive) => drive.header.id === id,
+          )?.state.global.nodes ?? []
+        ).map((node) => node.name),
+      driveId,
+    );
+  } catch {
+    return [];
+  }
 }
 
 type Served = {
@@ -201,6 +249,9 @@ test.describe("Connect routed to a switchboard", () => {
     await expect
       .poll(() => syncedDriveIds(page), { timeout: LONG_VISIBLE_TIMEOUT })
       .toContain(drive);
+    await expect
+      .poll(() => heldLocally(page, drive), { timeout: LONG_VISIBLE_TIMEOUT })
+      .toBe(true);
 
     placed = true;
     await page.reload();
@@ -212,6 +263,27 @@ test.describe("Connect routed to a switchboard", () => {
     await expect
       .poll(() => syncedDriveIds(page), { timeout: LONG_VISIBLE_TIMEOUT })
       .not.toContain(drive);
+
+    // The copy left in the browser no longer syncs: it misses the switchboard's
+    // folder and keeps one of its own, so a listing shows which copy it read.
+    await addFolderOnSwitchboard(drive, "added-on-sb");
+    await page.evaluate(
+      (driveId) =>
+        (
+          window as unknown as PhWindow
+        ).ph!.reactorClientModule!.client.drives.addFolder(
+          driveId,
+          "stale-copy",
+        ),
+      drive,
+    );
+    await page.reload();
+    await waitForAppReady(page);
+    await routing(page);
+    await expect
+      .poll(() => listedFolders(page, drive), { timeout: LONG_VISIBLE_TIMEOUT })
+      .toContain("added-on-sb");
+    expect(await listedFolders(page, drive)).not.toContain("stale-copy");
   });
 
   test("runs with only the switchboard", async ({ page }) => {
