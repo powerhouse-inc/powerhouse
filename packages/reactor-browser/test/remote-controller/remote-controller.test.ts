@@ -1439,6 +1439,65 @@ describe("RemoteDocumentController", () => {
       expect(actions[0].input).toEqual({ target: "action-0" });
     });
 
+    it("replays a pending RETRACT of a pending action on rebase", async () => {
+      const v3 = (revision: number) => ({
+        ...makeDocData({
+          state: documentModelDocumentModelModule.utils.createState(),
+          revisionsList: [{ scope: "global", revision }],
+        }),
+        protocolVersions: { "base-reducer": 3 },
+      });
+      let nameAtPush: string | undefined;
+      const client = createMockClient({
+        GetDocumentWithOperations: vi
+          .fn()
+          .mockResolvedValueOnce(
+            makeDocWithOpsResponse(v3(1) as never, {
+              items: [contentOp(0, "remote") as never],
+            }),
+          )
+          .mockResolvedValue(
+            makeDocWithOpsResponse(v3(2) as never, {
+              items: [contentOp(1, "other") as never],
+            }),
+          ),
+        GetDocument: vi.fn().mockResolvedValue({
+          document: { document: v3(2), childIds: [] },
+        }),
+        GetDocumentOperations: vi.fn().mockResolvedValue({
+          documentOperations: {
+            items: [contentOp(0, "remote"), contentOp(1, "other")],
+            hasNextPage: false,
+            hasPreviousPage: false,
+            cursor: null,
+          },
+        }),
+        MutateDocument: vi.fn().mockImplementation(() => {
+          nameAtPush = controller.state.global.name;
+          return Promise.resolve({ mutateDocument: v3(2) });
+        }),
+      });
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, documentId: "doc-1", onConflict: "rebase" },
+      );
+      expect(controller.header.protocolVersions?.["base-reducer"]).toBe(3);
+
+      controller.setModelName({ name: "local" });
+      const local = controller.operations.global.at(-1)!.action.id;
+      controller.undo();
+      await controller.push();
+
+      const actions = pushedActions(client);
+      expect(actions.map((action) => action.type)).toEqual([
+        "SET_MODEL_NAME",
+        "RETRACT",
+      ]);
+      expect(actions[0].id).not.toBe(local);
+      expect(actions[1].input).toEqual({ target: actions[0].id });
+      expect(nameAtPush).toBe("other");
+    });
+
     /** A v3 remote created with `initialGlobal`, then given `content` rows. */
     function remoteCreatedWith(
       initialGlobal: Record<string, unknown>,

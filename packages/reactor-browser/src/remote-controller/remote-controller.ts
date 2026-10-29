@@ -6,6 +6,7 @@ import type {
   PHDocument,
   PHDocumentHeader,
   ProtocolVersions,
+  RetractActionInput,
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -621,29 +622,47 @@ export class RemoteDocumentController<
   private async pullAndReplay(actions: Action[]): Promise<TrackedAction[]> {
     await this.pull();
 
+    // Replayed actions get new ids; a pending RETRACT follows its target's.
+    const replayedIds = new Map<string, string>();
     for (const action of actions) {
-      // A RETRACT names its target; a stale one is the host's to refuse.
-      if (action.type === "RETRACT") {
-        this.applyAction(action);
-        continue;
-      }
-      // Action types are SCREAMING_SNAKE_CASE but interceptors use camelCase
-      const methodName = screamingSnakeToCamel(action.type);
-      // undo and redo are this class's (count, scope) methods; replay the
-      // model's action method with the action's input, as its interceptor did.
-      if (methodName === "undo" || methodName === "redo") {
-        this.dispatchModelAction(methodName, action.input);
-        continue;
-      }
-      const method = (
-        this as unknown as Record<string, (input: unknown) => unknown>
-      )[methodName];
-      if (typeof method === "function") {
-        method.call(this, action.input);
+      const scopeOps = () => this.inner.operations[action.scope] ?? [];
+      const before = scopeOps().length;
+      this.replayAction(action, replayedIds);
+      const after = scopeOps();
+      if (after.length > before) {
+        replayedIds.set(action.id, after[after.length - 1].action.id);
       }
     }
 
     return this.tracker.flush();
+  }
+
+  private replayAction(action: Action, replayedIds: Map<string, string>) {
+    // A stale RETRACT target is the host's to refuse.
+    if (action.type === "RETRACT") {
+      const { target } = action.input as RetractActionInput;
+      const replayed = replayedIds.get(target);
+      this.applyAction(
+        replayed === undefined
+          ? action
+          : { ...action, input: { target: replayed } },
+      );
+      return;
+    }
+    // Action types are SCREAMING_SNAKE_CASE but interceptors use camelCase
+    const methodName = screamingSnakeToCamel(action.type);
+    // undo and redo are this class's (count, scope) methods; replay the
+    // model's action method with the action's input, as its interceptor did.
+    if (methodName === "undo" || methodName === "redo") {
+      this.dispatchModelAction(methodName, action.input);
+      return;
+    }
+    const method = (
+      this as unknown as Record<string, (input: unknown) => unknown>
+    )[methodName];
+    if (typeof method === "function") {
+      method.call(this, action.input);
+    }
   }
 
   /** Prepare actions for push, optionally signing them. */
