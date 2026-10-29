@@ -1,13 +1,26 @@
 import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import {
+  appliedOperations,
   capabilitiesOf,
   compareActionIds,
+  creationActions,
   generateActionId,
+  stateReducerOf,
+  undoRedoTargetsOf,
   undoTarget,
   type PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
+import {
+  addStep,
+  removeStep,
+  reducer as workflowReducer,
+  setStepConfig,
+  setWorkflowName,
+  utils as workflowUtils,
+} from "document-models/workflow";
 import { describe, expect, it } from "vitest";
 import {
+  appliedActionIds,
   canUndoOn3,
   documentCapabilities,
   editedSince,
@@ -297,6 +310,9 @@ describe("planRetraction on base-reducer 3", () => {
   };
   const ids = (operations: readonly Operation[]) =>
     operations.map((operation) => operation.action.id);
+  // The rows that apply when no action throws.
+  const every = (operations: readonly Operation[]) =>
+    new Set(ids(appliedOperations(operations)));
   const grouped = (operation: Operation, group: string): Operation => ({
     ...operation,
     action: groupedAction(operation.action, group, V3),
@@ -313,7 +329,7 @@ describe("planRetraction on base-reducer 3", () => {
   it("retracts the last edit by id", () => {
     const ops = [row(0, "ADD_STEP"), row(1, "SET_STEP_CONFIG")];
     expect(ids(liveOperations(ops))).toEqual(["action-0", "action-1"]);
-    expect(planRetraction(ops, policy)).toEqual(["action-1"]);
+    expect(planRetraction(ops, policy, every(ops))).toEqual(["action-1"]);
   });
 
   it("drops retracted rows and the RETRACTs themselves", () => {
@@ -323,7 +339,7 @@ describe("planRetraction on base-reducer 3", () => {
       retraction(2, "action-1"),
     ];
     expect(ids(liveOperations(ops))).toEqual(["action-0"]);
-    expect(planRetraction(ops, policy)).toEqual(["action-0"]);
+    expect(planRetraction(ops, policy, every(ops))).toEqual(["action-0"]);
   });
 
   it("keeps a row a redo revived", () => {
@@ -334,7 +350,7 @@ describe("planRetraction on base-reducer 3", () => {
       retraction(3, "action-2"),
     ];
     expect(ids(liveOperations(ops))).toEqual(["action-0", "action-1"]);
-    expect(planRetraction(ops, policy)).toEqual(["action-1"]);
+    expect(planRetraction(ops, policy, every(ops))).toEqual(["action-1"]);
   });
 
   it("passes over denied rows, NOOPs and the runtime's facts", () => {
@@ -347,7 +363,7 @@ describe("planRetraction on base-reducer 3", () => {
       row(4, "SET_LAST_TEST"),
       row(5, "SET_LAST_RUN"),
     ];
-    expect(planRetraction(ops, policy)).toEqual(["action-1"]);
+    expect(planRetraction(ops, policy, every(ops))).toEqual(["action-1"]);
   });
 
   it("never retracts a base action", () => {
@@ -357,29 +373,7 @@ describe("planRetraction on base-reducer 3", () => {
       row(2, "SET_PREFERRED_EDITOR"),
     ];
     expect(ids(liveOperations(ops))).toEqual(["action-0"]);
-    expect(planRetraction(ops, policy)).toEqual(["action-0"]);
-  });
-
-  it("passes over a row that threw, as the reactor's undo does", () => {
-    const ops = [
-      row(0, "ADD_STEP"),
-      row(1, "SET_STEP_CONFIG", { error: "Step not found" }),
-    ];
-    const applied = new Set(["action-0"]);
-    expect(ids(liveOperations(ops))).toEqual(["action-0"]);
-    expect(planRetraction(ops, policy)).toEqual(["action-0"]);
-    expect(undoTarget(ops, applied)).toBe("action-0");
-    expect(canUndoOn3([ops[1]], policy)).toBe(false);
-  });
-
-  it("retracts only the rows of a group that applied", () => {
-    const group = newUndoGroup(V3);
-    const ops = [
-      row(0, "SET_WORKFLOW_NAME"),
-      grouped(row(1, "ADD_STEP"), group),
-      grouped(row(2, "ADD_EDGE", { error: "Step not found" }), group),
-    ];
-    expect(planRetraction(ops, policy)).toEqual([ops[1].action.id]);
+    expect(planRetraction(ops, policy, every(ops))).toEqual(["action-0"]);
   });
 
   it("retracts every live row of the last edit's group together", () => {
@@ -391,9 +385,10 @@ describe("planRetraction on base-reducer 3", () => {
       grouped(row(3, "ADD_EDGE"), group),
       row(4, "SET_LAST_RUN"),
     ];
-    const targets = planRetraction(ops, policy)!;
+    const targets = planRetraction(ops, policy, every(ops))!;
     expect(targets).toEqual([ops[1].action.id, ops[3].action.id]);
-    expect(planRetraction(land(ops, targets), policy)).toEqual(["action-0"]);
+    const undone = land(ops, targets);
+    expect(planRetraction(undone, policy, every(undone))).toEqual(["action-0"]);
   });
 
   // A rename sends SET_WORKFLOW_NAME, then SET_NAME, ungrouped.
@@ -406,11 +401,11 @@ describe("planRetraction on base-reducer 3", () => {
       row(3, "SET_NAME"),
     ];
     const all = new Set(ids(ops));
-    expect(planRetraction(ops, policy)).toEqual(["action-2"]);
+    expect(planRetraction(ops, policy, every(ops))).toEqual(["action-2"]);
     expect(undoTarget(ops, all)).toBe("action-2");
 
     const after = land(ops, ["action-2"]);
-    expect(planRetraction(after, policy)).toEqual([
+    expect(planRetraction(after, policy, every(after))).toEqual([
       ops[0].action.id,
       ops[1].action.id,
     ]);
@@ -423,21 +418,117 @@ describe("planRetraction on base-reducer 3", () => {
       grouped(row(1, "ADD_STEP"), group),
       grouped(row(2, "ADD_EDGE"), group),
     ];
-    const targets = planRetraction(ops, policy)!;
+    const targets = planRetraction(ops, policy, every(ops))!;
     const undone = land(ops, targets);
     expect(ids(liveOperations(undone))).toEqual(["action-0"]);
 
     const undoRows = undone.slice(ops.length).map((entry) => entry.action.id);
     const redone = land(undone, undoRows);
     expect(ids(liveOperations(redone))).toEqual(ids(ops));
-    expect(planRetraction(redone, policy)).toEqual(targets);
+    expect(planRetraction(redone, policy, every(redone))).toEqual(targets);
   });
 
   it("can undo while a live edit is left", () => {
     const ops = [row(0, "ADD_STEP"), row(1, "SET_LAST_RUN")];
-    expect(canUndoOn3([...ops, row(2, "NOOP")], policy)).toBe(true);
-    expect(canUndoOn3([...ops, retraction(2, "action-0")], policy)).toBe(false);
-    expect(canUndoOn3([], policy)).toBe(false);
+    const noop = [...ops, row(2, "NOOP")];
+    const retracted = [...ops, retraction(2, "action-0")];
+    expect(canUndoOn3(noop, policy, every(noop))).toBe(true);
+    expect(canUndoOn3(retracted, policy, every(retracted))).toBe(false);
+    expect(canUndoOn3([], policy, every([]))).toBe(false);
+  });
+
+  // The workflow model's own reducer decides which rows apply.
+  describe("with the workflow reducer", () => {
+    const stateReducer = stateReducerOf(workflowReducer)!;
+    const created = workflowUtils.createDocument();
+    const documentScope = creationActions(created, {
+      "base-reducer": 3,
+    }).map((action, index) => ({
+      ...op(index, action.type, { skip: 0 }),
+      action,
+    }));
+    const stored = (
+      index: number,
+      action: Action,
+      extra: Partial<Operation> = {},
+    ): Operation => ({
+      ...op(index, action.type, { skip: 0 }),
+      action,
+      ...extra,
+    });
+    const step = (id: string) =>
+      addStep({
+        id,
+        key: id,
+        name: id,
+        pieceName: "@acme/connector-http",
+        pieceVersion: "1.0.0",
+        actionName: "http.sendRequest",
+        config: {},
+      });
+    const configure = (id: string) => setStepConfig({ id, config: { n: 1 } });
+    const threw = { error: "Step not found" };
+    const applied = (ops: readonly Operation[]) =>
+      appliedActionIds(created, documentScope, ops, workflowReducer);
+    // The target the reactor's UNDO retracts, derived from the same rows.
+    const reactorTarget = (ops: readonly Operation[]) =>
+      undoRedoTargetsOf(
+        { ...created, operations: { ...created.operations, global: [...ops] } },
+        V3,
+        "global",
+        stateReducer,
+      ).undoTarget;
+
+    it("retracts a row that threw once a RETRACT lets it apply", () => {
+      const ops = [
+        stored(0, step("x")),
+        stored(1, removeStep({ id: "x" })),
+        stored(2, configure("x"), threw),
+      ];
+      const after = [...ops, retraction(3, ops[1].action.id)];
+      const config = ops[2].action.id;
+      expect(applied(after).has(config)).toBe(true);
+      expect(planRetraction(after, policy, applied(after))).toEqual([config]);
+      expect(reactorTarget(after)).toBe(config);
+      expect(canUndoOn3(after, policy, applied(after))).toBe(true);
+    });
+
+    it("passes over a row that still throws", () => {
+      const ops = [stored(0, step("x")), stored(1, configure("y"), threw)];
+      expect(applied(ops).has(ops[1].action.id)).toBe(false);
+      expect(planRetraction(ops, policy, applied(ops))).toEqual([
+        ops[0].action.id,
+      ]);
+      expect(reactorTarget(ops)).toBe(ops[0].action.id);
+      expect(canUndoOn3([ops[1]], policy, applied([ops[1]]))).toBe(false);
+    });
+
+    it("retracts every row of the last group, one that threw too", () => {
+      const group = newUndoGroup(V3);
+      const ops = [
+        stored(0, setWorkflowName({ name: "flow" })),
+        stored(1, groupedAction(step("x"), group, V3)),
+        stored(2, groupedAction(configure("y"), group, V3), threw),
+      ];
+      expect(applied(ops).has(ops[2].action.id)).toBe(false);
+      expect(planRetraction(ops, policy, applied(ops))).toEqual([
+        ops[1].action.id,
+        ops[2].action.id,
+      ]);
+    });
+
+    it("derives from the creation's state, not the cached initial state", () => {
+      const ops = [stored(0, step("x"))];
+      // The light client caches the current state as the initial one.
+      const cached = workflowReducer(created, step("x"));
+      const ids = appliedActionIds(
+        { ...cached, initialState: cached.state },
+        documentScope,
+        ops,
+        workflowReducer,
+      );
+      expect(ids.has(ops[0].action.id)).toBe(true);
+    });
   });
 
   it("sends one RETRACT per id", () => {

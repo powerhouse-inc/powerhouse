@@ -14,6 +14,7 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { createReducer } from "@powerhousedao/shared/document-model";
 import { vi } from "vitest";
 import type * as ReactorBrowser from "@powerhousedao/reactor-browser";
 import { BackButton } from "./editor-chrome.js";
@@ -105,6 +106,9 @@ describe("UndoRedo", () => {
       },
     }) as Operation;
 
+  // Every row applies.
+  const applyAll = createReducer(() => undefined);
+
   let sent: Action[][];
 
   function mount(options: {
@@ -119,6 +123,7 @@ describe("UndoRedo", () => {
         protocolVersions: options.header,
       },
       operations: {},
+      initialState: {},
     } as unknown as PHDocument;
     undoState.dispatch = (actions, _onErrors, onSuccess) => {
       sent.push(actions as Action[]);
@@ -132,7 +137,7 @@ describe("UndoRedo", () => {
             : [editRow(0)],
         }),
     } as never;
-    render(<UndoRedo documentId="wf-1" />);
+    render(<UndoRedo documentId="wf-1" reducer={applyAll} />);
   }
 
   const sentTypes = () =>
@@ -182,6 +187,7 @@ describe("UndoRedo", () => {
     undoState.document = {
       header: { id: "wf-1", revision: { global: 1 } },
       operations: {},
+      initialState: {},
     } as unknown as PHDocument;
     undoState.dispatch = (actions, _onErrors, onSuccess) => {
       sent.push(actions as Action[]);
@@ -204,7 +210,7 @@ describe("UndoRedo", () => {
         return { results: await creation() };
       },
     } as never;
-    render(<UndoRedo documentId="wf-1" />);
+    render(<UndoRedo documentId="wf-1" reducer={applyAll} />);
     return reads;
   }
 

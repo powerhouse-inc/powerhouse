@@ -1,6 +1,8 @@
 // Undo that steps over operations that are not the author's edits, such as
 // the runtime's test and run facts, and redo of what it took back.
 import {
+  creationState,
+  deriveScope,
   garbageCollect,
   garbageCollectV2,
   generateActionId,
@@ -12,13 +14,17 @@ import {
   retract,
   retractedActionIds,
   sortOperations,
+  stateReducerOf,
   undoCapabilitiesOf,
   undoGroupOfId,
   type Action,
   type BaseReducerCapabilities,
   type CreateDocumentActionInput,
   type Operation,
+  type PHBaseState,
+  type PHDocument,
   type PHDocumentHeader,
+  type Reducer,
 } from "@powerhousedao/shared/document-model";
 
 export interface UndoPolicy {
@@ -102,7 +108,7 @@ export function effectiveOperations(
 }
 
 // Base-reducer 3: the live rows an undo may retract. Base actions, NOOPs,
-// retractions, denied rows and rows that threw are not edits.
+// retractions and denied rows are not edits.
 export function liveOperations(operations: readonly Operation[]): Operation[] {
   const rows = positionalOperations(operations);
   const retracted = retractedActionIds(rows);
@@ -111,22 +117,46 @@ export function liveOperations(operations: readonly Operation[]): Operation[] {
       !retracted.has(operation.action.id) &&
       !NOT_EDITS.has(operation.action.type) &&
       !isDocumentAction(operation.action) &&
-      !isDenied(operation) &&
-      !operation.error,
+      !isDenied(operation),
   );
 }
 
 const NOT_EDITS = new Set(["NOOP", "RETRACT", "UNDO", "REDO"]);
 
-// Base-reducer 3: the ids undo retracts, the live rows of the last edit
-// outside `policy.skip`; null when there is none.
+// Base-reducer 3: the ids of `history` whose action applies, derived from
+// the state the document scope's creation recorded, as the reactor does.
+export function appliedActionIds<TState extends PHBaseState>(
+  document: PHDocument,
+  documentScope: readonly Operation[],
+  history: readonly Operation[],
+  reducer: Reducer<TState>,
+): ReadonlySet<string> {
+  const stateReducer = stateReducerOf(reducer);
+  if (stateReducer === undefined) {
+    throw new Error(
+      `Document model ${document.header.documentType} has no state reducer to resolve undo targets with`,
+    );
+  }
+  const seeded = {
+    ...document,
+    initialState: creationState(documentScope) ?? document.initialState,
+  } as PHDocument<TState>;
+  return deriveScope(seeded, history, () => stateReducer, "global").applied;
+}
+
+// Base-reducer 3: the ids undo retracts, every live row of the last edit
+// outside `policy.skip` that `applied` holds; null when there is none.
+// `applied` is what deriveScope reports: a stored row's error may be stale.
 export function planRetraction(
   operations: readonly Operation[],
   policy: UndoPolicy,
+  applied: ReadonlySet<string>,
 ): string[] | null {
   const live = liveOperations(operations);
   const last = live.findLast(
-    (operation) => !policy.skip.has(operation.action.type),
+    (operation) =>
+      !policy.skip.has(operation.action.type) &&
+      applied.has(operation.action.id),
   );
   if (!last) return null;
   const group = undoGroupOf(last.action);
@@ -139,8 +169,9 @@ export function planRetraction(
 export function canUndoOn3(
   operations: readonly Operation[],
   policy: UndoPolicy,
+  applied: ReadonlySet<string>,
 ): boolean {
-  return planRetraction(operations, policy) !== null;
+  return planRetraction(operations, policy, applied) !== null;
 }
 
 // One RETRACT per id, sent together.

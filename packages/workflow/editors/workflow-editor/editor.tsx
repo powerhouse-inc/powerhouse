@@ -10,7 +10,7 @@ import type {
   WorkflowAction,
   WorkflowDocument,
 } from "document-models/workflow";
-import { useSelectedWorkflowDocument } from "document-models/workflow";
+import { reducer, useSelectedWorkflowDocument } from "document-models/workflow";
 import { WORKFLOW_UNDO } from "./undo-policy.js";
 import { useMemo } from "react";
 import { useWorkflowModel } from "./document/useWorkflowModel.js";
@@ -243,7 +243,11 @@ function WorkflowEditor() {
             trailing={
               <>
                 <LastRunFact workflowId={workflowId} />
-                <UndoRedo documentId={workflowId} policy={WORKFLOW_UNDO} />
+                <UndoRedo
+                  documentId={workflowId}
+                  reducer={reducer}
+                  policy={WORKFLOW_UNDO}
+                />
               </>
             }
           />
