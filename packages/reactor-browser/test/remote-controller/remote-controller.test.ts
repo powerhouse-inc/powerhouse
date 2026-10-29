@@ -1650,6 +1650,95 @@ describe("RemoteDocumentController", () => {
       return client;
     }
 
+    it("heads a new document with the host's versions for its type", async () => {
+      const client = newDocumentHostAt(3);
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, parentIdentifier: "drive-1" },
+      );
+
+      expect(controller.header.protocolVersions?.["base-reducer"]).toBe(3);
+      expect(client.GetCreateProtocolVersions).toHaveBeenCalledWith(
+        {
+          documentType: "powerhouse/document-model",
+          parentIdOrSlug: "drive-1",
+        },
+        undefined,
+        undefined,
+      );
+    });
+
+    it("undoes a new document before its first push with a signed RETRACT", async () => {
+      const client = newDocumentHostAt(3);
+      const author = signer();
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, signer: author },
+      );
+      const headed = structuredClone(controller.document.state);
+
+      controller.setModelName({ name: "local" });
+      const local = controller.operations.global.at(-1)!.action.id;
+      controller.undo();
+      expect(controller.state.global.name).toBe("");
+      await controller.push();
+
+      expect(client.CreateEmptyDocument).not.toHaveBeenCalled();
+      const created = createdDocument(client);
+      expect(created.header.protocolVersions?.["base-reducer"]).toBe(3);
+      expect(created.operations.global ?? []).toEqual([]);
+      expect(created.state).toEqual(headed);
+      const actions = pushedActions(client);
+      expect(actions.map((action) => action.type)).toEqual([
+        "SET_MODEL_NAME",
+        "RETRACT",
+      ]);
+      expect(actions[1].input).toEqual({ target: local });
+      expect(actions[1].context!.signer!.user!.address).toBe("0x123");
+    });
+
+    it("undoes a new document inside the streaming push delay", async () => {
+      const client = newDocumentHostAt(3);
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, mode: "streaming" },
+      );
+      expect(controller.header.protocolVersions?.["base-reducer"]).toBe(3);
+
+      controller.setModelName({ name: "local" });
+      controller.undo();
+
+      await vi.waitFor(() => {
+        expect(client.MutateDocument).toHaveBeenCalledTimes(1);
+      });
+      expect(pushedActions(client).map((action) => action.type)).toEqual([
+        "SET_MODEL_NAME",
+        "RETRACT",
+      ]);
+    });
+
+    it("undoes with a RETRACT after the first push", async () => {
+      const client = newDocumentHostAt(3);
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client },
+      );
+      await controller.push();
+
+      expect(controller.header.protocolVersions?.["base-reducer"]).toBe(3);
+      controller.setModelName({ name: "local" });
+      const local = controller.operations.global.at(-1)!.action.id;
+      controller.undo();
+      await controller.push();
+
+      const actions = pushedActions(client);
+      expect(actions.map((action) => action.type)).toEqual([
+        "SET_MODEL_NAME",
+        "RETRACT",
+      ]);
+      expect(actions[1].input).toEqual({ target: local });
+    });
+
     it("creates a wrapped new document under its own header", async () => {
       const client = newDocumentHostAt(3);
       const local = new DocumentModelController();
