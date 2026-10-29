@@ -265,6 +265,7 @@ function processSkipOperation<TState extends PHBaseState = PHBaseState>(
   action: Action,
   customReducer: StateReducer<TState>,
   skipValue: number,
+  protocolVersion: BaseReducerVersion,
   reuseOperationResultingState = false,
   resultingStateParser = parseResultingState,
 ): PHDocument<TState> {
@@ -306,6 +307,7 @@ function processSkipOperation<TState extends PHBaseState = PHBaseState>(
         reuseOperationResultingState,
         operationResultingStateParser: resultingStateParser,
         skipIndexValidation: true,
+        protocolVersion,
       },
     );
 
@@ -547,6 +549,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
       _action,
       customReducer,
       skipValue,
+      protocolVersion,
       reuseOperationResultingState,
       operationResultingStateParser,
     );
