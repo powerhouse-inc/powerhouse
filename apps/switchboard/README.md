@@ -234,15 +234,15 @@ pool too. Any other value fails the boot. Programmatically:
 | `REACTOR_AUTH_ENFORCEMENT`     | Enforce the auth scope's policy at admission, replay and read      | `false` |
 | `REACTOR_AUTH_GROUPS`          | Let `{ group }` principals match against group-document rosters    | `false` |
 | `REACTOR_AUTH_CONDITIONS`      | Evaluate `where` / `match` conditions on grants                    | `false` |
-| `REACTOR_UNDO_V3`              | Support base-reducer 3 (id-targeted undo)                          | `false` |
+| `REACTOR_UNDO_V3`              | Support base-reducer 3 (id-targeted undo)                          | `true`  |
 
 Set an enforcement flag to the literal `true` to enable it. Each requires the one
 above it, and switchboard refuses to start on a set that skips one — a partially
 enforcing reactor would apply less than the operator asked for.
-`REACTOR_UNDO_V3` has no prerequisites, and once set it is on unless the value is
-the literal `false` (an empty value counts as on). New documents then take
-base-reducer 3, and a peer without it is held from those documents until it
-upgrades. Programmatically: `protocol.featureFlags.undoV3`.
+`REACTOR_UNDO_V3` has no prerequisites and is on unless set to the literal
+`false` (an empty value counts as on). New documents then take base-reducer 3,
+and a peer without it is held from those documents until it upgrades.
+Programmatically: `protocol.featureFlags.undoV3`.
 
 The enforcement flags change replay outcomes, which are consensus outcomes, so
 **a flag flips for a whole document-sharing fleet, never per node**. Two nodes that share

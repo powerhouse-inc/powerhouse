@@ -179,7 +179,7 @@ describe("resolveFeatureFlags", () => {
       authEnforcement: false,
       authGroups: false,
       authConditions: false,
-      undoV3: false,
+      undoV3: true,
     });
     expect(resolveFeatureFlags({})).toEqual(resolveFeatureFlags());
   });
@@ -190,7 +190,7 @@ describe("resolveFeatureFlags", () => {
       authEnforcement: false,
       authGroups: false,
       authConditions: false,
-      undoV3: false,
+      undoV3: true,
     });
   });
 
@@ -219,7 +219,7 @@ describe("resolveFeatureFlags", () => {
       authEnforcement: true,
       authGroups: false,
       authConditions: false,
-      undoV3: false,
+      undoV3: true,
     });
 
     module.reactor.kill();

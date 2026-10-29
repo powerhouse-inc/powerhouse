@@ -2,7 +2,6 @@ import type { ReactorFeatureFlags } from "@powerhousedao/reactor";
 import { describe, expect, it } from "vitest";
 import {
   effectiveFlags,
-  effectiveUndoV3,
   flagClosure,
   flagDependents,
   ladderFlags,
@@ -86,19 +85,7 @@ describe("flags", () => {
     expect(effectiveFlags(undefined).flags).toEqual(ladderFlags(0));
   });
 
-  it("reads undoV3 off the ladder: env on unless 'false', else the protocol", () => {
-    expect(effectiveUndoV3(undefined)).toBe(false);
-    expect(effectiveUndoV3({ featureFlags: ladderFlags(4) })).toBe(false);
-    expect(effectiveUndoV3({ featureFlags: { undoV3: true } })).toBe(true);
-    expect(effectiveUndoV3({ featureFlags: { undoV3: false } })).toBe(false);
-    const declaredOff = { featureFlags: { undoV3: false } };
-    expect(effectiveUndoV3(declaredOff, { REACTOR_UNDO_V3: "1" })).toBe(true);
-    expect(
-      effectiveUndoV3(
-        { featureFlags: { undoV3: true } },
-        { REACTOR_UNDO_V3: "false" },
-      ),
-    ).toBe(false);
+  it("leaves undoV3 off the ladder", () => {
     expect(effectiveFlags({ featureFlags: { undoV3: true } }).flags).toEqual(
       ladderFlags(0),
     );

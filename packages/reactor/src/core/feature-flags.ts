@@ -25,7 +25,7 @@ export const FLAG_PREREQUISITES: Record<
 };
 
 /**
- * The flags as plain booleans, with anything unset off, validated. Callers hold
+ * The flags as plain booleans, with anything unset off except `undoV3`, validated. Callers hold
  * a partial set, because that is what crosses to a pooled worker, and every
  * consumer needs the same resolution of it.
  */
@@ -37,7 +37,7 @@ export function resolveFeatureFlags(
     authEnforcement: flags.authEnforcement ?? false,
     authGroups: flags.authGroups ?? false,
     authConditions: flags.authConditions ?? false,
-    undoV3: flags.undoV3 ?? false,
+    undoV3: flags.undoV3 ?? true,
   };
 
   // Against what the caller passed, so an unrecognized name is still reported.

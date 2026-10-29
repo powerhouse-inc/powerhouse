@@ -221,6 +221,19 @@ describe("ReactorMcpProvider", () => {
       });
     });
 
+    it("creates a document at base-reducer 3 by default", async () => {
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.createDocument.callback({
+        documentType: "powerhouse/document-model",
+      });
+
+      const { documentId } = result.structuredContent as {
+        documentId: string;
+      };
+      const stored = await client.get(documentId);
+      expect(stored.header.protocolVersions?.["base-reducer"]).toBe(3);
+    });
+
     it("should create a document in a drive when driveId is provided", async () => {
       const drive = await client.createEmpty<DocumentDriveDocument>(
         "powerhouse/document-drive",

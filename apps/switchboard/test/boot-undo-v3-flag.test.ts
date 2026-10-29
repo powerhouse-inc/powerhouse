@@ -77,10 +77,10 @@ async function storedBaseReducer({ reactor }: Switchboard) {
 }
 
 describe("booting Switchboard with undoV3", () => {
-  it("leaves undoV3 to the reactor's default without a setting", async () => {
+  it("leaves undoV3 on, the reactor's default, without a setting", async () => {
     await withSwitchboard({}, async (switchboard, logger) => {
       expect(logger.info).not.toHaveBeenCalledWith(UNDO_V3_OFF);
-      expect(await storedBaseReducer(switchboard)).toBe(2);
+      expect(await storedBaseReducer(switchboard)).toBe(3);
     });
   }, 60_000);
 

@@ -83,21 +83,6 @@ export function effectiveFlags(
   return { flags, fromEnv };
 }
 
-/** undoV3 as a switchboard boots with it: a set env var is on unless it is
- * exactly "false", else the protocol's value, else the reactor's default. */
-export function effectiveUndoV3(
-  protocol: unknown,
-  env: Readonly<Record<string, string>> = {},
-): boolean {
-  const key = FLAG_ENV.undoV3;
-  if (Object.hasOwn(env, key)) return env[key] !== "false";
-  const declared =
-    isRecord(protocol) && isRecord(protocol.featureFlags)
-      ? protocol.featureFlags.undoV3
-      : undefined;
-  return declared === true;
-}
-
 /** Each flag that is on without one it needs. */
 export function ladderGaps(
   flags: Flags,
