@@ -1,6 +1,7 @@
 import {
   DocumentModelRegistry,
   DocumentModelResolver,
+  featureFlagFingerprint,
   ReactorEventTypes,
   type IDocumentModelLoader,
   type ModelLoadedEvent,
@@ -94,18 +95,6 @@ export type WorkerReactorClient = {
   dispose: () => void;
 };
 
-/** Sorted so the same set always produces the same fingerprint. */
-function enabledFlagList(
-  flags: Partial<ReactorFeatureFlags>,
-  multiReactor: boolean,
-): string {
-  return Object.entries({ ...flags, multiReactor })
-    .filter(([, enabled]) => enabled)
-    .map(([name]) => name)
-    .sort()
-    .join(",");
-}
-
 /** The hello fingerprint; a running worker with a different one retires. */
 export function buildWorkerVersion(
   args: WorkerReactorClientArgs,
@@ -121,7 +110,10 @@ export function buildWorkerVersion(
       id: m.documentModel.global.id,
       version: m.version ?? 1,
     })),
-    featureFlags: enabledFlagList(args.featureFlags, args.multiReactor),
+    featureFlags: featureFlagFingerprint({
+      ...args.featureFlags,
+      multiReactor: args.multiReactor,
+    }),
   };
 }
 

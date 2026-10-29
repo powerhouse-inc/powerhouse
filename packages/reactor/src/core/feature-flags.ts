@@ -46,6 +46,25 @@ export function resolveFeatureFlags(
 }
 
 /**
+ * The flags that differ from the defaults, sorted: `name` when on, `!name` when
+ * off. A name this reactor does not know defaults off. Never throws.
+ */
+export function featureFlagFingerprint(
+  flags: Readonly<Record<string, boolean | undefined>>,
+): string {
+  const defaults: Record<string, boolean> = resolveFeatureFlags();
+  return Object.entries(flags)
+    .flatMap(([name, value]) => {
+      if (value === undefined) return [];
+      const fallback = Object.hasOwn(defaults, name) ? defaults[name] : false;
+      if (value === fallback) return [];
+      return [value ? name : `!${name}`];
+    })
+    .sort()
+    .join(",");
+}
+
+/**
  * Throws when the flags ask for enforcement the reactor cannot deliver. Either
  * failure would otherwise read as enforcement being on while the reactor
  * applies less than the caller asked for.
