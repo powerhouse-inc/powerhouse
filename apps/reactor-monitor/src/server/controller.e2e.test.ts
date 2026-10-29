@@ -17,6 +17,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { addEdit, newDraft, requestOf } from "../builder/draft.ts";
+import { routeSeedOf } from "../builder/route.ts";
+import { browserReactors, reactorsOf } from "../builder/run.ts";
 import {
   capabilitiesResponseSchema,
   draftCheckResponseSchema,
@@ -26,10 +28,12 @@ import {
   TOKEN_HEADER,
   type Instance,
 } from "../controller/api.ts";
+import { managedDescriptors } from "../controller/managed.ts";
 import {
   addDriveStatus,
   applyOption,
   hostOptions,
+  membersOf,
   type HostDraft,
 } from "../host-rules/index.ts";
 import {
@@ -384,6 +388,128 @@ describe.skipIf(process.platform === "win32")(
         issues: [],
       });
     });
+
+    it("starts a Connect linked to a switchboard drive: serves its placement, attaches the switchboard, routes both", async () => {
+      const exported = await call(
+        "GET",
+        `export?${new URLSearchParams({ project, host: "web" }).toString()}`,
+      );
+      const { export: envelope, baseDigest } = exportResponseSchema.parse(
+        exported.body,
+      );
+      const context = capabilitiesResponseSchema.parse(
+        (await call("GET", "capabilities")).body,
+      );
+      let hostDraft: HostDraft = { envelope, env: {} };
+      let draft = newDraft(
+        { kind: "project", project, host: "web", export: envelope },
+        baseDigest,
+      );
+      for (const id of ["Shared", "host.children.app:reach:open:sb:shared"]) {
+        const option = id.startsWith("host.")
+          ? hostOptions(hostDraft, context).find(
+              (candidate) => candidate.id === id,
+            )
+          : addDriveStatus(hostDraft, context, "host.children.sb", id);
+        expect(option?.reason, id).toBeUndefined();
+        hostDraft = applyOption(hostDraft, option!).draft;
+        draft = addEdit(draft, option!.setters);
+      }
+
+      const started = await call("POST", "drafts", requestOf(draft));
+      expect(started.status, JSON.stringify(started.body)).toBe(202);
+      const { id } = instanceSchema.parse(started.body);
+      let instance: Instance | undefined;
+      const deadline = Date.now() + 150_000;
+      while (Date.now() < deadline) {
+        instance = instanceSchema.parse(
+          (await call("GET", `instances/${id}`)).body,
+        );
+        if (instance.status !== "starting") break;
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      expect(instance?.error).toBeUndefined();
+      expect(instance?.status).toBe("running");
+      const running = instance!;
+      const shared = running.members?.sb.outputs?.drives.shared;
+      expect(shared?.url).toMatch(/^http:\/\/[^/]+:\d+\/d\/shared$/);
+
+      // The copy's Connect serves the link and the placement from the draft.
+      const app = running.members?.app.app ?? "";
+      const { connect: served } = (await (
+        await fetch(new URL("powerhouse.config.json", app))
+      ).json()) as {
+        connect: {
+          instance?: { remoteBackends?: { name: string; url: string }[] };
+          drives?: {
+            defaultDrives?: {
+              url?: string;
+              backend?: string;
+              sync?: boolean;
+            }[];
+          };
+        };
+      };
+      const sharedPort = new URL(shared!.url).port;
+      const servedUrl = expect.stringMatching(
+        new RegExp(`^http://[^/]+:${sharedPort}/d/shared$`),
+      ) as string;
+      expect(served.instance?.remoteBackends).toEqual([
+        { name: "sb", url: servedUrl },
+      ]);
+      expect(served.drives?.defaultDrives).toEqual([
+        expect.objectContaining({ url: servedUrl, backend: "sb", sync: false }),
+      ]);
+
+      // Start provisions the Connect's browser reactor and attaches sb.
+      const members = membersOf(hostDraft);
+      const browser = browserReactors(hostDraft.envelope, members);
+      expect(
+        browser.map(({ descriptor, member, backend }) => [
+          descriptor.kind,
+          member,
+          backend,
+        ]),
+      ).toEqual([["worker", "app", "main"]]);
+      const attached = managedDescriptors(running, []);
+      expect(attached.map((d) => d.managedBy.member)).toEqual(["sb"]);
+      const remote = await provisionRemote(attached[0]);
+      expect(remote.url).toBe(running.members?.sb.outputs?.graphql);
+      await remote.kill();
+
+      const seed = routeSeedOf({
+        id: "e2e",
+        member: members.find((member) => member.key === "app")!,
+        members,
+        run: {
+          id,
+          status: "running",
+          source: running.source,
+          reactors: reactorsOf(running),
+          browser: [browser[0].descriptor.name],
+          attached: {
+            browser: [
+              {
+                name: browser[0].descriptor.name,
+                member: "app",
+                backend: "main",
+              },
+            ],
+            remote: [{ name: attached[0].name, member: "sb" }],
+          },
+        },
+        context,
+      });
+      expect(seed?.backends).toEqual([
+        { reactor: browser[0].descriptor.name, backend: "main" },
+        { reactor: attached[0].name, backend: "sb" },
+      ]);
+      expect(seed?.collections).toEqual({ [shared!.id]: attached[0].name });
+
+      const stopped = await call("DELETE", `instances/${id}`);
+      expect(instanceSchema.parse(stopped.body).status).toBe("exited");
+      await expect(fetch(app)).rejects.toThrow();
+    }, 420_000);
 
     it("starts a draft with a Connect member from its throwaway copy, serves Connect, removes the copy on stop", async () => {
       const exported = await call(
