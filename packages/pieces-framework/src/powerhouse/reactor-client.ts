@@ -57,6 +57,11 @@ export type RefusedMethods =
   | "isServed"
   | "getCreateSignaturePolicy"
   | "getCreateProtocolVersions"
+  // Pieces build their own undo with the model's action creators.
+  | "undo"
+  | "redo"
+  | "undoRedoTargets"
+  | "undoRedoAvailability"
   // The client's halves; a piece reaches the reactor through the listed methods.
   | "read"
   | "write"

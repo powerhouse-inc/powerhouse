@@ -1,4 +1,8 @@
 import type {
+  UndoRedoAvailability,
+  UndoRedoTargets,
+} from "@powerhousedao/shared/document-model";
+import type {
   DocumentDriveDocument,
   DriveInput,
   FolderNode,
@@ -14,6 +18,7 @@ import type {
   PeerCapabilityFlags,
   NewDocumentHeaderOptions,
   PHDocument,
+  ProtocolSupport,
   ProtocolVersions,
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
@@ -28,6 +33,8 @@ export type ProtocolSelection = {
   collectionsOf: (documentIds: string[]) => Promise<Record<string, string[]>>;
   /** Loads a model the registry lacks, as the CREATE gate does; create writes only. */
   loadModel?: (documentType: string) => Promise<void>;
+  /** What the reactor runs; undo resolves a stored base-reducer number as the reactor does. */
+  protocolSupport?: ProtocolSupport;
 };
 
 import type {
@@ -110,6 +117,8 @@ export type UpgradeDocumentOptions = {
    */
   maxConflictRetries?: number;
 };
+
+export type { UndoRedoAvailability };
 
 /** Where and what a new document is created, to select its protocolVersions. */
 export type { CreateProtocolVersionsOptions } from "@powerhousedao/shared/document-model";
@@ -554,6 +563,47 @@ export interface IReactorWriteClient {
     request: BatchExecutionRequest,
     signal?: AbortSignal,
   ): Promise<BatchWriteHandle>;
+
+  /**
+   * Submits the undo of a scope's last applied operation; see
+   * {@link IReactorClient.undo}. The target is resolved before submit.
+   */
+  undo(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** Submits the redo of a scope's last undo; see {@link IReactorClient.redo}. */
+  redo(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /**
+   * The rows {@link undo} and {@link redo} would retract now. A write-side
+   * read: it reads the operation log; see {@link IReactorClient.undoRedoTargets}.
+   */
+  undoRedoTargets(
+    documentIdentifier: string,
+    scope?: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets>;
+
+  /**
+   * Whether {@link undo} and {@link redo} would find a target now. A
+   * write-side read; see {@link IReactorClient.undoRedoAvailability}.
+   */
+  undoRedoAvailability(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability>;
 
   rename(
     documentIdentifier: string,
@@ -1149,6 +1199,14 @@ export interface IReactorClient extends IReactorReadClient {
    * and resolve with a husk whose `state.global` is absent — reading as a
    * rejected write when the write in fact succeeded.
    *
+   * On base-reducer 3 an UNDO or REDO among `actions` is refused with
+   * `SubmittedUndoRefusedError`; use {@link undo} and {@link redo}, which
+   * submit a RETRACT of the resolved target.
+   *
+   * On base-reducer 3 the actions run in canonical order (timestamp, then
+   * action id), not array order. `generateActionId` ids keep one process's
+   * creation order; other ids tied in a millisecond run in id order.
+   *
    * @param documentIdentifier - Target document id or slug
    * @param branch - Branch to apply actions to
    * @param actions - List of actions to apply
@@ -1236,6 +1294,90 @@ export interface IReactorClient extends IReactorReadClient {
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument>;
+
+  /**
+   * Undoes the last applied operation of a scope and waits for completion.
+   *
+   * On base-reducer 3 the client resolves the target with
+   * {@link undoRedoTargets} and submits a RETRACT of it signed by its own
+   * signer; on 1 and 2 it submits UNDO. The RETRACT names the row this call
+   * saw as latest, so an edit that lands in between is not undone. When the
+   * target is retracted or gone by the time the RETRACT runs, the job fails
+   * with `RetractionRefusedError` (rejected as a `JobFailedError` carrying
+   * it, as `execute` rejects) and nothing is re-resolved or retried.
+   *
+   * @param documentIdentifier - Target document id or slug
+   * @param scope - Optional scope, defaults to "global"
+   * @param branch - Optional branch, defaults to "main"
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The updated document
+   * @throws Error when there is nothing to undo, or the write fails
+   */
+  undo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
+   * Redoes the last undo of a scope and waits for completion.
+   *
+   * On base-reducer 3 the client resolves the last live retraction with
+   * {@link undoRedoTargets} and submits a RETRACT of it signed by its own
+   * signer, under {@link undo}'s race rules; on 1 and 2 it submits REDO.
+   * Applied content after the undo leaves nothing to redo.
+   *
+   * @param documentIdentifier - Target document id or slug
+   * @param scope - Optional scope, defaults to "global"
+   * @param branch - Optional branch, defaults to "main"
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The updated document
+   * @throws Error when there is nothing to redo, or the write fails
+   */
+  redo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
+   * The rows a base-reducer 3 {@link undo} and {@link redo} of `scope` would
+   * retract now, resolved by the reactor. A scope the subject may not read
+   * has none, nor does a scope the retraction rule does not derive. Below 3
+   * there are none: UNDO and REDO name no target.
+   *
+   * @param documentIdentifier - Target document id or slug
+   * @param scope - Optional scope, defaults to "global"
+   * @param view - Optional branch and subject
+   * @param signal - Optional abort signal to cancel the request
+   */
+  undoRedoTargets(
+    documentIdentifier: string,
+    scope?: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets>;
+
+  /**
+   * Whether {@link undo} and {@link redo} would find a target in a scope now.
+   *
+   * Exact on base-reducer 3. On 1 and 2, `canUndo` is whether the scope holds
+   * any operation and `canRedo` is false, since reads serve no clipboard. A
+   * scope the subject may not read has neither.
+   *
+   * @param documentIdentifier - Target document id or slug
+   * @param scope - Optional scope, defaults to "global"
+   * @param branch - Optional branch, defaults to "main"
+   * @param signal - Optional abort signal to cancel the request
+   */
+  undoRedoAvailability(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability>;
 
   /**
    * Adds a relationship between two documents and waits for completion.

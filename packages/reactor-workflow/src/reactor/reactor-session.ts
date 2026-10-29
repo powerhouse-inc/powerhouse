@@ -95,6 +95,10 @@ const REFUSED: Record<Exclude<RefusedMethods, "read" | "write">, true> = {
   isServed: true,
   getCreateSignaturePolicy: true,
   getCreateProtocolVersions: true,
+  undo: true,
+  redo: true,
+  undoRedoTargets: true,
+  undoRedoAvailability: true,
 };
 
 type AnyMethod = (...args: unknown[]) => unknown;
