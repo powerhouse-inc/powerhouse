@@ -131,10 +131,9 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
   const policy = props.policy ?? NO_SKIP;
   const known = knownRetraction(document);
   const [read, setRead] = useState<{ documentId: string; value: boolean }>();
-  const retraction =
-    known ??
-    (read?.documentId === props.documentId ? read.value : undefined) ??
-    false;
+  const settled =
+    known ?? (read?.documentId === props.documentId ? read.value : undefined);
+  const retraction = settled ?? false;
   // On base-reducer 3 undo reads its target from the history, which the
   // cache doesn't hold.
   const [canUndoTargeted, setCanUndoTargeted] = useState(false);
@@ -181,61 +180,67 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
       });
   };
 
-  const retractionNow = async (): Promise<boolean> =>
-    known ?? isRetractionDocument(document!.header, await creation(document!));
+  const readRetraction = async (): Promise<boolean> =>
+    isRetractionDocument(document!.header, await creation(document!));
+
+  // A failed read leaves the press on the dispatch path, as below base-reducer 3.
+  const retractionNow = async (): Promise<boolean> => {
+    const documentId = props.documentId;
+    try {
+      const value = await readRetraction();
+      setRead({ documentId, value });
+      return value;
+    } catch (error: unknown) {
+      console.error("Failed to read the base-reducer version:", error);
+      return false;
+    }
+  };
 
   // Base-reducer 3: RETRACT the last edit's rows.
-  const retractUndo = () =>
-    run(async () => {
-      const history = await globalHistory(props.documentId);
-      const targets = planRetraction(history, policy);
-      if (!targets) return;
-      const sent = retractions(targets);
-      const keep = !stale(history);
-      try {
-        await send(sent);
-      } finally {
-        if (await settle(headIndex(history))) {
-          setUndone((list) => [...(keep ? list : []), sent]);
-        }
+  const retractUndo = async () => {
+    const history = await globalHistory(props.documentId);
+    const targets = planRetraction(history, policy);
+    if (!targets) return;
+    const sent = retractions(targets);
+    const keep = !stale(history);
+    try {
+      await send(sent);
+    } finally {
+      if (await settle(headIndex(history))) {
+        setUndone((list) => [...(keep ? list : []), sent]);
       }
-    });
-
-  const dispatchUndo = () =>
-    run(async () => {
-      const history = await globalHistory(props.documentId);
-      const plan = planUndo(
-        effectiveOperations(history, protocolVersion(document!)),
-        policy,
-      );
-      if (!plan) return;
-      const keep = !stale(history);
-      try {
-        await send([
-          ...Array.from({ length: plan.undos }, () => undo()),
-          ...plan.replay,
-        ]);
-      } finally {
-        if (await settle(headIndex(history))) {
-          setUndone((list) => [...(keep ? list : []), plan.undone]);
-        }
-      }
-    });
-  const doUndo = () => {
-    if (known === false) return dispatchUndo();
-    if (known === true) return retractUndo();
-    if (!document || busy.current) return;
-    void retractionNow()
-      .then((onRetraction) => (onRetraction ? retractUndo() : dispatchUndo()))
-      .catch((error: unknown) => {
-        console.error("Failed to read the base-reducer version:", error);
-      });
+    }
   };
+
+  const dispatchUndo = async () => {
+    const history = await globalHistory(props.documentId);
+    const plan = planUndo(
+      effectiveOperations(history, protocolVersion(document!)),
+      policy,
+    );
+    if (!plan) return;
+    const keep = !stale(history);
+    try {
+      await send([
+        ...Array.from({ length: plan.undos }, () => undo()),
+        ...plan.replay,
+      ]);
+    } finally {
+      if (await settle(headIndex(history))) {
+        setUndone((list) => [...(keep ? list : []), plan.undone]);
+      }
+    }
+  };
+  const doUndo = () =>
+    run(async () => {
+      const onRetraction = settled ?? (await retractionNow());
+      await (onRetraction ? retractUndo() : dispatchUndo());
+    });
   const doRedo = () =>
     run(async () => {
       const last = undone.at(-1);
       if (!last) return;
-      const onRetraction = await retractionNow();
+      const onRetraction = settled ?? (await retractionNow());
       const history = await globalHistory(props.documentId);
       if (stale(history)) {
         setUndone([]);
@@ -255,9 +260,9 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
     });
 
   // Read by the key handler and the effects, which don't rerun for them.
-  const latest = useRef({ doUndo, doRedo, stale, retractionNow, policy });
+  const latest = useRef({ doUndo, doRedo, stale, readRetraction, policy });
   useEffect(() => {
-    latest.current = { doUndo, doRedo, stale, retractionNow, policy };
+    latest.current = { doUndo, doRedo, stale, readRetraction, policy };
   });
 
   // An edit made elsewhere voids what is left to redo.
@@ -281,7 +286,7 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
     let active = true;
     const documentId = props.documentId;
     void latest.current
-      .retractionNow()
+      .readRetraction()
       .then((value) => {
         if (active) setRead({ documentId, value });
       })

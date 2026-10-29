@@ -1,7 +1,13 @@
 // @vitest-environment happy-dom
 import { ensurePHStore } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type {
   Action,
@@ -166,5 +172,78 @@ describe("UndoRedo", () => {
     mount({ createdAs: { "base-reducer": 3 } });
     fireEvent.click(screen.getByLabelText("Undo"));
     await vi.waitFor(() => expect(sentTypes()).toEqual([["RETRACT"]]));
+  });
+
+  // No version and no cached CREATE_DOCUMENT; a dispatched UNDO lands as a NOOP.
+  function mountVersionless(creation: () => Promise<Operation[]>) {
+    sent = [];
+    const reads = { document: 0 };
+    const history = [editRow(0)];
+    undoState.document = {
+      header: { id: "wf-1", revision: { global: 1 } },
+      operations: {},
+    } as unknown as PHDocument;
+    undoState.dispatch = (actions, _onErrors, onSuccess) => {
+      sent.push(actions as Action[]);
+      for (const action of actions as Action[]) {
+        const row = editRow(history.length);
+        history.push({
+          ...row,
+          action:
+            action.type === "UNDO" ? { ...row.action, type: "NOOP" } : action,
+        });
+      }
+      (onSuccess as () => void)();
+    };
+    ensurePHStore().reactorClient = {
+      getOperations: async (_id: string, view: { scopes: string[] }) => {
+        if (!view.scopes.includes("document")) {
+          return { results: [...history] };
+        }
+        reads.document++;
+        return { results: await creation() };
+      },
+    } as never;
+    render(<UndoRedo documentId="wf-1" />);
+    return reads;
+  }
+
+  it("undoes and redoes by dispatch when the creation read fails on a header without a version", async () => {
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
+    mountVersionless(() => Promise.reject(new Error("offline")));
+    fireEvent.click(screen.getByLabelText("Undo"));
+    await vi.waitFor(() => expect(sentTypes()).toEqual([["UNDO"]]));
+    await vi.waitFor(() =>
+      expect(screen.getByLabelText("Redo")).not.toHaveProperty(
+        "disabled",
+        true,
+      ),
+    );
+    fireEvent.click(screen.getByLabelText("Redo"));
+    await vi.waitFor(() =>
+      expect(sentTypes()).toEqual([["UNDO"], ["ADD_STEP"]]),
+    );
+    quiet.mockRestore();
+  });
+
+  it("reads the creation once, not on every press", async () => {
+    const reads = mountVersionless(() =>
+      Promise.resolve([createRow({ "base-reducer": 2 })]),
+    );
+    await vi.waitFor(() => expect(reads.document).toBe(1));
+    await act(() => new Promise((resolve) => setTimeout(resolve)));
+    fireEvent.click(screen.getByLabelText("Undo"));
+    await vi.waitFor(() => expect(sentTypes()).toEqual([["UNDO"]]));
+    await vi.waitFor(() =>
+      expect(screen.getByLabelText("Redo")).not.toHaveProperty(
+        "disabled",
+        true,
+      ),
+    );
+    fireEvent.click(screen.getByLabelText("Redo"));
+    await vi.waitFor(() =>
+      expect(sentTypes()).toEqual([["UNDO"], ["ADD_STEP"]]),
+    );
+    expect(reads.document).toBe(1);
   });
 });
