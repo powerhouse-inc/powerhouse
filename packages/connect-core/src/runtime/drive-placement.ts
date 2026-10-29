@@ -53,11 +53,22 @@ export function placedDrives(config: PlacementConfig): PlacedDrive[] {
 export async function resolvePlacedDrives(
   placed: readonly PlacedDrive[],
   fetchInfo: (url: string) => Promise<{ id: string; slug: string }>,
+  timeoutMs = 5_000,
 ): Promise<ResolvedPlacedDrive[]> {
   return Promise.all(
     placed.map(async (drive) => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const deadline = new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`no answer in ${timeoutMs} ms`)),
+          timeoutMs,
+        );
+      });
       try {
-        const { id, slug } = await fetchInfo(drive.url);
+        const { id, slug } = await Promise.race([
+          fetchInfo(drive.url),
+          deadline,
+        ]);
         return { ...drive, id, slug };
       } catch (error) {
         logger.warn(
@@ -67,6 +78,8 @@ export async function resolvePlacedDrives(
         );
         const slug = switchboardOfDrive(drive.url)?.slug;
         return slug === undefined ? drive : { ...drive, slug };
+      } finally {
+        clearTimeout(timer);
       }
     }),
   );

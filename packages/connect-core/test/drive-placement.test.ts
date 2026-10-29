@@ -91,6 +91,17 @@ describe("resolvePlacedDrives", () => {
       workflows: "other",
     });
   });
+
+  it("stops waiting for a drive that does not answer", async () => {
+    const resolved = await resolvePlacedDrives(
+      [{ backend: "sb", url: "http://localhost:4001/d/b" }],
+      () => new Promise(() => undefined),
+      20,
+    );
+    expect(resolved).toEqual([
+      { backend: "sb", url: "http://localhost:4001/d/b", slug: "b" },
+    ]);
+  });
 });
 
 describe("removeLocalCopies", () => {
