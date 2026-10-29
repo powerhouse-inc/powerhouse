@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
@@ -31,10 +32,19 @@ const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 
 export default defineConfig({
   resolve: {
-    alias: Object.entries(SOURCE_ALIASES).map(([name, path]) => ({
-      find: new RegExp(`^${escape(name)}$`),
-      replacement: resolve(packages, path),
-    })),
+    alias: [
+      ...Object.entries(SOURCE_ALIASES).map(([name, path]) => ({
+        find: new RegExp(`^${escape(name)}$`),
+        replacement: resolve(packages, path),
+      })),
+      // Node resolves `graphql` to its CommonJS entry, the copy
+      // @apollo/subgraph requires. Vite would pick the ESM entry, a second
+      // copy, so tests would see errors production never sends.
+      {
+        find: /^graphql$/,
+        replacement: createRequire(import.meta.url).resolve("graphql"),
+      },
+    ],
   },
   plugins: [
     {
