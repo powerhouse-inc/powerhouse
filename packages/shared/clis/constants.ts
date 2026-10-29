@@ -215,6 +215,8 @@ export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/host-core",
   "@powerhousedao/clint",
   "@powerhousedao/desktop",
+  // the Vetra Studio plugins the scaffolded vetra host composes (verb dev)
+  "@powerhousedao/vetra-studio",
   // the switchboard plugins the scaffolded switchboard host composes
   // (workflows, mcp, …) and their PHPluginConfigs types for tsc -p hosts.
   "@powerhousedao/switchboard",
