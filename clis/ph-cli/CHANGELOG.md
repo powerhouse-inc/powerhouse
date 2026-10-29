@@ -1,3 +1,31 @@
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **connect:** a proxied Connect names its switchboard as ${origin}; the runner proxies the switchboard's paths ([bdaffdb580](https://github.com/powerhouse-inc/powerhouse/commit/bdaffdb580))
+- **reactor-mcp:** shared tool definitions with MCP and ai SDK adapters ([db60951c54](https://github.com/powerhouse-inc/powerhouse/commit/db60951c54))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **ph-cli:** the switchboard runner's drive readiness gate passes on an authenticating host ([f11a97e633](https://github.com/powerhouse-inc/powerhouse/commit/f11a97e633))
+- **codegen:** resolve project paths from the tsconfig instead of process.chdir ([dafd785fe3](https://github.com/powerhouse-inc/powerhouse/commit/dafd785fe3))
+- **ph-cli:** put a project's reactor.https under a switchboard member's config ([24ff9b9f78](https://github.com/powerhouse-inc/powerhouse/commit/24ff9b9f78))
+- **shared,ph-cli:** leave --ignore-local unset when it is not passed ([7e8b8fd487](https://github.com/powerhouse-inc/powerhouse/commit/7e8b8fd487))
+- **host-core:** keep host names to one safe file-name segment ([d347e09c10](https://github.com/powerhouse-inc/powerhouse/commit/d347e09c10))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

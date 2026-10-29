@@ -348,7 +348,7 @@ export function Sidebar(props: {
   onCreateConnection: () => void;
 }) {
   return (
-    <aside className="w-60 shrink-0 overflow-y-auto border-r border-solid border-border bg-muted/50 py-3">
+    <aside className="max-h-56 w-full shrink-0 overflow-y-auto border-b border-solid border-border bg-muted/50 py-3 md:max-h-none md:w-60 md:border-r md:border-b-0">
       <Row active={props.allRunsActive} onClick={props.onShowAllRuns}>
         <Icon name="list" className="text-muted-foreground" />
         <span>Overview</span>

@@ -7,7 +7,23 @@ import {
   VERSIONED_PEER_DEPENDENCIES,
 } from "@powerhousedao/shared/clis";
 import { mapValues } from "remeda";
-import { packageJsonTemplate, toYarnResolutions } from "templates";
+import { packageJsonTemplate } from "templates";
+
+/**
+ * The scaffold's dependency pins, in the field each package manager reads.
+ * yarn, bun and pnpm 10 read `resolutions`. npm and bun read `overrides`,
+ * where `$name` follows the project's own exact devDependency: a literal
+ * version fails with EOVERRIDE once the package is also a direct dependency.
+ * pnpm 11 and later read only `overrides` in pnpm-workspace.yaml.
+ */
+export function pinFields(
+  pins: Record<string, string> = BOILERPLATE_DEPENDENCY_OVERRIDES,
+) {
+  return {
+    resolutions: { ...pins },
+    overrides: mapValues(pins, (_, name) => `$${name}`),
+  };
+}
 
 export async function buildBoilerplatePackageJson(args: {
   name: string;
@@ -38,11 +54,13 @@ export async function buildBoilerplatePackageJson(args: {
     ...workspacePeers,
     ...mapValues(PEER_EXTERNAL_DEPENDENCIES, (v) => v.dev),
     ...externalDevDependencies,
+    ...BOILERPLATE_DEPENDENCY_OVERRIDES,
   };
   return packageJsonTemplate(
     name,
     peerDependencies,
     devDependencies,
-    toYarnResolutions(BOILERPLATE_DEPENDENCY_OVERRIDES),
+    pinFields().resolutions,
+    pinFields().overrides,
   );
 }

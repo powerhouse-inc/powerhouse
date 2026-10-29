@@ -306,13 +306,27 @@ A `SECRET_TEXT` piece has one secret property and usually no config at all; a
 ### Minting the secret
 
 Get the `ref` from the runtime rather than writing a credential into the
-document. `createSecret`, `rotateSecret` and `deleteSecret` need a supreme admin
-caller; anyone else gets "Admin access required".
+document. A secret is minted for one document: `documentId` is the connection
+whose `secretRefs` will hold it, or the workflow for a `SECRET` variable or a
+webhook `secretRef`. Create that document first. Only it can resolve the
+secret; a ref copied into another document fails with "This secret belongs to
+another connection; enter it again".
+
+`createSecret` needs write access to that document, and records who called it.
+`rotateSecret` and `deleteSecret` are for that user alone, while they can still
+write the document; being an admin grants nothing more. A secret saved without
+signing in can be changed by anyone who can write its document. The `secret`
+and `secrets` queries list only secrets whose document the caller can read, and
+no API returns a secret's value.
 
 ```graphql
 mutation {
   workflowRuntime {
-    createSecret(value: "sk-...", label: "CRM production") {
+    createSecret(
+      value: "sk-..."
+      label: "CRM production"
+      documentId: "<connection id>"
+    ) {
       ref
     }
   }

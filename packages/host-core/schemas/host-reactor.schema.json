@@ -205,8 +205,15 @@
                   "url": {
                     "anyOf": [
                       {
-                        "type": "string",
-                        "format": "uri"
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ]
                       },
                       {
                         "$ref": "#/$defs/__schema0"

@@ -25,8 +25,11 @@ export {
   getAppDrives,
   planReactorClient,
   refreshAppDrives,
+  relistAppDrives,
   selectAppReactorClient,
 } from "./app-reactor-client.js";
+export { useBackendAuthGate } from "./backend-auth-gate.js";
+export type { BackendAuthGateMode } from "./backend-auth-gate.js";
 export type {
   AppReactorClientParams,
   CreateAppReactorClientOptions,

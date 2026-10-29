@@ -70,10 +70,12 @@ function coerce(variable: TypedVariable): unknown {
 }
 
 /** Coerces typed variables and resolves SECRET ones through the secret store.
- * The error for a SECRET names its ref, never a value. */
+ * A SECRET resolves only as the workflow it was minted for. The error for a
+ * SECRET names its ref, never a value. */
 export async function resolveVariables(
   variables: readonly TypedVariable[],
   secrets: SecretProvider,
+  workflowId: string,
 ): Promise<ResolvedVariables> {
   const secretValues: string[] = [];
   const resolved: WorkflowVariableDef[] = [];
@@ -93,7 +95,10 @@ export async function resolveVariables(
     }
     let value: string;
     try {
-      value = await secrets.get(variable.value);
+      value = await secrets.get(variable.value, {
+        documentId: workflowId,
+        kind: "workflow",
+      });
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       throw new VariableTypeError(

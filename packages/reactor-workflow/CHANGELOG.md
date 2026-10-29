@@ -1,3 +1,30 @@
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **reactor-workflow:** pollNow runs an armed trigger at once ("sync now") ([2a620c707b](https://github.com/powerhouse-inc/powerhouse/commit/2a620c707b))
+- **workflow:** a sign-in records the scopes it was granted ([3c7a93da3f](https://github.com/powerhouse-inc/powerhouse/commit/3c7a93da3f))
+- **workflow:** name an OAuth2 connection after its ID token's email ([354b6f9faf](https://github.com/powerhouse-inc/powerhouse/commit/354b6f9faf))
+- **workflow:** workflowHealth, a host-side read of a workflow's trigger and park ([25b34f62a6](https://github.com/powerhouse-inc/powerhouse/commit/25b34f62a6))
+- **workflow:** publisher OAuth2 apps and a per-connection scope override ([5868eab4f2](https://github.com/powerhouse-inc/powerhouse/commit/5868eab4f2))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **workflow:** ctx.reactor.query, an in-process read of an index subgraph for pieces ([fba34399f4](https://github.com/powerhouse-inc/powerhouse/commit/fba34399f4))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **reactor-workflow:** hold a serialised workflow's poll while its slots are taken ([f7f5751513](https://github.com/powerhouse-inc/powerhouse/commit/f7f5751513))
+- **workflow:** pieces cannot switch certificate checks off in the worker ([ee14d1fbd1](https://github.com/powerhouse-inc/powerhouse/commit/ee14d1fbd1))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

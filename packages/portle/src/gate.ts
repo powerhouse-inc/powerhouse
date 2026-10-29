@@ -161,6 +161,16 @@ export function evaluateGate(
   };
 }
 
+/**
+ * The gate without the caller: what the host itself must satisfy before the
+ * tunnel may come up unattended at boot. The caller check is per request.
+ */
+export function bootGatePasses(facts: GateFacts): boolean {
+  return evaluateGate(facts, undefined).checks.every(
+    (check) => check.ok || check.id === "caller",
+  );
+}
+
 function describePolicy(facts: GateFacts): string {
   switch (facts.policy) {
     case "OPEN":

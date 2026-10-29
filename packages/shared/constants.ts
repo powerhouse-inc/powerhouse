@@ -28,6 +28,7 @@ export const PACKAGES_DEPENDENCIES = [
   "@powerhousedao/registry",
   "@powerhousedao/switchboard-gui",
   "@powerhousedao/vetra",
+  "@powerhousedao/vetra-studio",
   "@powerhousedao/workflow",
   "@powerhousedao/analytics-engine-core",
   "@powerhousedao/analytics-engine-knex",

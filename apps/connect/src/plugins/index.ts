@@ -75,6 +75,8 @@ export const connectPlugins: Record<string, ConnectPluginDefinition> = {
   },
   "@powerhousedao/vetra-studio/connect": {
     create: createVetraStudioPlugin,
+    // Studio sign-in (#studio-sign-in=<bearer>), for agents.
+    ui: () => import("./vetra-studio/ui.js").then((m) => m.default),
     whenAbsent: (config) => ({
       ...config,
       app: { ...config.app, studioMode: false } as never,

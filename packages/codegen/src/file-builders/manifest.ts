@@ -8,6 +8,7 @@ import {
   concat,
   filter,
   isIncludedIn,
+  isPlainObject,
   map,
   merge,
   pipe,
@@ -16,14 +17,31 @@ import {
 } from "remeda";
 import { formatJson } from "utils";
 
+function withUnknownKeys(parsed: unknown, raw: unknown): unknown {
+  if (Array.isArray(parsed) && Array.isArray(raw)) {
+    return parsed.map((value, index) => withUnknownKeys(value, raw[index]));
+  }
+  if (isPlainObject(parsed) && isPlainObject(raw)) {
+    return Object.fromEntries([
+      ...Object.entries(parsed).map(([key, value]) => [
+        key,
+        withUnknownKeys(value, raw[key]),
+      ]),
+      ...Object.entries(raw).filter(([key]) => !Object.hasOwn(parsed, key)),
+    ]);
+  }
+  return parsed;
+}
+
+function parseManifest(raw: unknown): Manifest {
+  return withUnknownKeys(ManifestSchema.parse(raw), raw) as Manifest;
+}
+
 // Parsing puts keys in the schema's order, so a rewrite changes no key order.
 async function writeManifest(manifestPath: string, manifest: Manifest) {
   await writeFile(
     manifestPath,
-    await formatJson(
-      "powerhouse.manifest.json",
-      ManifestSchema.parse(manifest),
-    ),
+    await formatJson("powerhouse.manifest.json", parseManifest(manifest)),
   );
 }
 
@@ -34,8 +52,7 @@ export async function getOrCreateManifestFile(
   if (!hasManifestFile) {
     await writeManifest(manifestPath, defaultManifest);
   }
-  const manifestFile = await loadJsonFile(manifestPath);
-  return ManifestSchema.parse(manifestFile);
+  return parseManifest(await loadJsonFile(manifestPath));
 }
 
 // Generic over the entry: a `pieces` entry carries fields `PowerhouseModule`

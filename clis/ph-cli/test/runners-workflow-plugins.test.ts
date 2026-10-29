@@ -233,6 +233,69 @@ describe("switchboard runner — plugin-contributed drives", () => {
     });
   });
 
+  it("a drive made anew (a pinned id the store could not take) is reported under the id it got", async () => {
+    const hostCore = await import("@powerhousedao/host-core");
+    vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(
+      workflowsComposition(false),
+    );
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    // Not served before the create; served under a new id after it
+    const resolveIdOrSlug = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("not found"))
+      .mockResolvedValueOnce("mail-new-id");
+    vi.mocked(startSwitchboard).mockResolvedValueOnce({
+      workflowsEnabled: true,
+      port: 7599,
+      reactor: { resolveIdOrSlug },
+    } as never);
+
+    const runner = await import("../src/runners/switchboard.js");
+    const handle = await runner.run(
+      switchboardHost({
+        drives: [{ slug: "mail", name: "Mail", id: "pinned-elsewhere" }],
+      }),
+      ctx,
+    );
+    expect(handle.outputs.drives.mail).toEqual({
+      id: "mail-new-id",
+      url: "http://localhost:7599/d/mail",
+    });
+  });
+
+  it("a drive that cannot be created leaves the others and the start", async () => {
+    const hostCore = await import("@powerhousedao/host-core");
+    vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(
+      workflowsComposition(false),
+    );
+    const { addDefaultDrive } =
+      await import("@powerhousedao/switchboard/utils");
+    vi.mocked(addDefaultDrive).mockClear();
+    vi.mocked(addDefaultDrive).mockRejectedValueOnce(
+      new Error("Invalid signature in document mail"),
+    );
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const runner = await import("../src/runners/switchboard.js");
+    const handle = await runner.run(
+      switchboardHost({
+        drives: [
+          { slug: "mail", name: "Mail" },
+          { slug: "files", name: "Files" },
+        ],
+      }),
+      ctx,
+    );
+    expect(vi.mocked(addDefaultDrive)).toHaveBeenCalledTimes(2);
+    expect(error).toHaveBeenCalledWith(
+      'The drive "mail" was not created: Invalid signature in document mail',
+    );
+    expect(handle.outputs.drives.files?.url).toBe(
+      "http://localhost:7599/d/files",
+    );
+    error.mockRestore();
+  });
+
   it("drive: false (no contribution) seeds nothing extra", async () => {
     const hostCore = await import("@powerhousedao/host-core");
     vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(

@@ -247,8 +247,8 @@ export function useRuntimeActions() {
       fireWorkflow: (workflowId: string, payload?: unknown) =>
         client.fireWorkflow(workflowId, payload).finally(runsChanged),
       rerunRun: (runId: string) => client.rerunRun(runId).finally(runsChanged),
-      createSecret: (value: string, label?: string) =>
-        client.createSecret(value, label).then(secretSaved),
+      createSecret: (documentId: string, value: string, label?: string) =>
+        client.createSecret(documentId, value, label).then(secretSaved),
       rotateSecret: (ref: string, value: string) =>
         client.rotateSecret(ref, value).then(secretSaved),
       checkConnection: (connectionId: string) =>

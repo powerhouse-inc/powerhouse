@@ -63,7 +63,7 @@ export async function cpForce(source: string | URL, destination: string | URL) {
 }
 
 export async function rmForce(path: PathLike) {
-  // buildTsMorphProject chdirs into the project, and Windows can't remove the cwd
+  // Tests chdir into the projects they generate, and Windows can't remove the cwd
   const target = path instanceof URL ? fileURLToPath(path) : path.toString();
   const fromTarget = relative(target, process.cwd());
   if (!fromTarget.startsWith("..") && !isAbsolute(fromTarget)) {

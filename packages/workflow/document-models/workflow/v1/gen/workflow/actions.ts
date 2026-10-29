@@ -4,6 +4,7 @@
  */
 import type { Action } from "document-model";
 import type {
+  SetManagedByInput,
   SetWorkflowDescriptionInput,
   SetWorkflowNameInput,
   SetWorkflowStatusInput,
@@ -21,8 +22,13 @@ export type SetWorkflowStatusAction = Action & {
   type: "SET_WORKFLOW_STATUS";
   input: SetWorkflowStatusInput;
 };
+export type SetManagedByAction = Action & {
+  type: "SET_MANAGED_BY";
+  input: SetManagedByInput;
+};
 
 export type WorkflowWorkflowAction =
   | SetWorkflowNameAction
   | SetWorkflowDescriptionAction
-  | SetWorkflowStatusAction;
+  | SetWorkflowStatusAction
+  | SetManagedByAction;

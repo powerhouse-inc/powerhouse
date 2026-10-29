@@ -1,3 +1,22 @@
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **document-model:** build declarations without the source condition ([56e7990968](https://github.com/powerhouse-inc/powerhouse/commit/56e7990968))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

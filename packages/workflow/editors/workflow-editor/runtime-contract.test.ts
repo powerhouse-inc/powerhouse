@@ -37,7 +37,7 @@ const CALLS: { [K in Operation]: Parameters<RuntimeClient[K]> } = {
     { redirectUri: "http://a/cb", returnUrl: "http://a/back" },
   ],
   fetchOAuthAttempt: ["state-1"],
-  createSecret: ["value", "label"],
+  createSecret: ["conn-1", "value", "label"],
   rotateSecret: ["secret://v1:abc", "value"],
   fetchSecretStat: ["secret://v1:abc"],
   fetchWebhookEndpoint: ["wf-1", "drive-1"],

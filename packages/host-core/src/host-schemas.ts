@@ -1,4 +1,5 @@
 import { switchboardOfDrive } from "@powerhousedao/shared/host-tokens";
+import { isOriginPlaceholderUrl } from "@powerhousedao/shared/connect/origin-placeholder";
 import { z } from "zod";
 import { buildDriveDeclarationSchema } from "./drive-schema.js";
 import { pluginEntrySchema } from "./plugins.js";
@@ -33,6 +34,18 @@ export const hostNameSchema = z
   .min(1)
   .max(HOST_NAME_MAX_LENGTH, HOST_NAME_MESSAGE)
   .regex(HOST_NAME_PATTERN, HOST_NAME_MESSAGE);
+
+/**
+ * A URL, or one written against the page origin (`${origin}/graphql`): the
+ * browser resolves the placeholder when it loads Connect's config, for a
+ * member whose own server proxies the switchboard's paths.
+ */
+export const originOrUrlSchema = z.union([
+  z.url(),
+  z.string().refine(isOriginPlaceholderUrl, {
+    message: "a URL, or ${origin}/<path> for a proxied sibling",
+  }),
+]);
 
 export const profileSchema = z.strictObject({
   appId: z.string().min(1).optional(),
@@ -376,8 +389,12 @@ function buildHostSchemas(tokenField: FieldWrappers) {
         .optional(),
       // A switchboard drive address, `<base>/d/<slug>`: typically a
       // producer's `drives.<slug>.url` output token. The backend is the
-      // switchboard at `<base>`.
-      remote: z.strictObject({ url: tokenField.any(z.url()) }).optional(),
+      // switchboard at `<base>`. `${origin}/d/<slug>` when the member's own
+      // server proxies the switchboard (the browser then calls its page
+      // origin; see `runner.proxy` on the connect runner).
+      remote: z
+        .strictObject({ url: tokenField.any(originOrUrlSchema) })
+        .optional(),
     })
     // Two PGlite instances on one data dir corrupt it: the reactor store
     // (storage.dataDir) and the read-model store (readModel.url) must differ.

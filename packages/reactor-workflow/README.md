@@ -277,12 +277,20 @@ returns it when it settles: a step, a trigger hook, an editor's options or
 describe. A run holds no child between steps. Trigger hooks have children of
 their own, so a burst of runs can't delay a poll, and so does the editor (one
 child, which exits when idle). A child is retired when it
-dies or times out, when a request switches TLS verification off, past 80% of
+dies or times out, past 80% of
 its heap budget, after `PH_WORKFLOWS_WORKER_MAX_REQUESTS` requests, or after a
 minute idle above `PH_WORKFLOWS_WORKER_MIN`.
 
 Piece code is trusted: what a piece keeps in module state carries over to the
 next request its child serves, whichever workflow sent it.
+
+Certificate checks stay on in every child (`worker/tls-guard.ts`). Pieces
+bundled with an old pieces-common set `NODE_TLS_REJECT_UNAUTHORIZED=0` before
+every request, which would switch verification off process-wide; the guard
+gives every `tls.connect` an explicit `rejectUnauthorized: true` unless the
+caller explicitly asks for `false`, so fetch, https and the HTTP clients
+pieces bundle all verify. The worker still reports a request that set the
+variable (`tlsPoisoned`), but no longer retires the child for it.
 
 That entry is `src/worker/entry.ts`: the piece worker from `src/pieces`, plus
 `ctx.reactor` (`src/worker/reactor.ts`), which needs `@powerhousedao/reactor`
@@ -294,6 +302,15 @@ the request settles. The boot document models reach the child on fork as
 `{ type: "model-manifest", entries }`. A type the host loaded later is looked
 up with a `model-entries` host call the first time a piece asks for it. Either
 way the model is imported on first use.
+
+`ctx.reactor.query` is served the same way, by the host's optional
+`queryIndex` dep (`WorkflowRuntimeHostDeps`): a read of a read-model index the
+host registers as a GraphQL subgraph, run in the host process as the run user,
+so the index's own access rules decide as they do over HTTP. A host that hands
+over no `queryIndex` refuses the method by name, and a run with no user is
+refused under enforcement like every other read. Switchboard answers it from
+the GraphQL manager (`executeSubgraph`), so a piece never needs the
+switchboard's URL or a bearer of its own to read an index.
 
 ## Blocks
 
@@ -510,6 +527,9 @@ they are true.
   is not rerunnable; fire the workflow again instead.
 - A step that DECLARES a `retry` block overrides `defaultRetry`, whatever the
   block resolves to — `{maxAttempts: 1}` is an author saying "not this one".
+- A step with no `retry` takes the workflow's `defaultRetry`, else its action's
+  default retry. A `defaultRetry` that retries nothing (the document's initial
+  `{maxAttempts: 1}`) counts as unset, so the action's applies.
 - An **INDETERMINATE** step is never retried and never replayed: a retry would
   be a second write. A rerun does execute it again, so it can write twice. See
   **Indeterminate steps** below.
@@ -832,7 +852,9 @@ releases what an earlier enable registered. The reason reads
 
 **Actions**
 
-- `errorHandlingOptions` (retry, continue on failure) is ignored.
+- `errorHandlingOptions.retryOnFailure` with `defaultValue: true` becomes the
+  action's default retry (3 attempts, exponential from 5s) unless the action
+  declares a `defaultRetry`. `continueOnFailure` is ignored.
 - `test` is never called.
 - `requireAuth` defaults to `false` in the descriptor; upstream defaults to
   `true`.

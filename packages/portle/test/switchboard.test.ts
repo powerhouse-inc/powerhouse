@@ -1,29 +1,34 @@
 import type { ISubgraph } from "@powerhousedao/reactor-api";
 import { describe, expect, it, vi } from "vitest";
 import plugin, {
+  createPortlePlugin,
   PORTLE_PLUGIN_NAME,
   portleSwitchboardPlugin,
   type PortleHostContext,
 } from "../src/switchboard.js";
+import { apiOf, fakeRunner, statusOf } from "./fixtures.js";
 
-function hostContext(): PortleHostContext & {
-  registered: ISubgraph[];
-} {
+function hostContext(
+  policy: "OPEN" | "ADMIN_ONLY" = "ADMIN_ONLY",
+  requireAuthenticatedCaller = true,
+) {
   const registered: ISubgraph[] = [];
-  return {
+  const warnings: string[] = [];
+  const infos: string[] = [];
+  const ctx: PortleHostContext & {
+    registered: ISubgraph[];
+    warnings: string[];
+    infos: string[];
+  } = {
     registered,
-    api: {
-      authorizationService: {
-        config: {
-          policy: "ADMIN_ONLY",
-          admins: ["0xa"],
-          defaultProtection: false,
-        },
-      },
-      authService: {},
-      requireAuthenticatedCaller: true,
-      relationalDb: {},
+    warnings,
+    infos,
+    options: { configFile: "/p/powerhouse.config.json" },
+    logger: {
+      info: (m: string) => infos.push(m),
+      warn: (m: string) => warnings.push(m),
     },
+    api: apiOf({ policy, requireAuthenticatedCaller }),
     graphqlManager: {
       registerSubgraphInstance: vi.fn((subgraph: ISubgraph) => {
         registered.push(subgraph);
@@ -32,6 +37,7 @@ function hostContext(): PortleHostContext & {
     },
     lateSubgraphs: [],
   };
+  return ctx;
 }
 
 describe("portle switchboard plugin", () => {
@@ -42,27 +48,20 @@ describe("portle switchboard plugin", () => {
     expect(plugin.configSchema).toBeUndefined();
   });
 
-  it("registers the portle subgraph as a late registration", async () => {
+  it("builds the runner on the project's .ph/portle and registers the subgraph late", async () => {
     const ctx = hostContext();
-    await plugin.hooks!.onSubgraphsRegistering!(ctx);
+    const stateDirs: string[] = [];
+    const runner = fakeRunner();
+    const p = createPortlePlugin((stateDir) => {
+      stateDirs.push(stateDir);
+      return runner;
+    });
+    await p.hooks!.onSubgraphsRegistering!(ctx);
+    expect(stateDirs).toEqual([
+      expect.stringMatching(/[\\/]p[\\/]\.ph[\\/]portle$/),
+    ]);
+    expect(ctx.portle?.runner).toBe(runner);
     expect(ctx.registered.map((s) => s.name)).toEqual(["portle"]);
-    expect(ctx.lateSubgraphs).toHaveLength(1);
-    const register = (
-      ctx.graphqlManager as {
-        registerSubgraphInstance: ReturnType<typeof vi.fn>;
-      }
-    ).registerSubgraphInstance;
-    expect(register).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "portle" }),
-      "graphql",
-      false,
-    );
-  });
-
-  it("creates the late-registration list when the host passed none", async () => {
-    const ctx = hostContext();
-    delete ctx.lateSubgraphs;
-    await plugin.hooks!.onSubgraphsRegistering!(ctx);
     expect(ctx.lateSubgraphs).toHaveLength(1);
   });
 
@@ -72,5 +71,106 @@ describe("portle switchboard plugin", () => {
     await expect(plugin.hooks!.onSubgraphsRegistering!(ctx)).rejects.toThrow(
       /API and GraphQL manager/,
     );
+  });
+
+  describe("autostart at onDrivesReady", () => {
+    const enrolledWantingStart = () =>
+      statusOf({
+        enrolled: true,
+        siteZone: "dev.sektar.be",
+        settings: {
+          controlPlaneUrl: "https://cp",
+          appUpstream: "x:1",
+          upstreams: {},
+          dns01Mode: "rfc2136",
+          listen: { https: 443, http: 80 },
+          autostart: true,
+        },
+      });
+
+    it("starts the tunnel when the operator asked and the host passes the gate", async () => {
+      const ctx = hostContext();
+      const runner = fakeRunner(enrolledWantingStart());
+      const p = createPortlePlugin(() => runner);
+      await p.hooks!.onSubgraphsRegistering!(ctx);
+      await p.hooks!.onDrivesReady!(ctx);
+      expect(runner.calls).toEqual(["start"]);
+      expect(ctx.infos.at(-1)).toMatch(/tunnel up for dev\.sektar\.be/);
+    });
+
+    it("stays down, with a warning, when the host no longer passes the gate", async () => {
+      const ctx = hostContext("OPEN");
+      const runner = fakeRunner(enrolledWantingStart());
+      const p = createPortlePlugin(() => runner);
+      await p.hooks!.onSubgraphsRegistering!(ctx);
+      await p.hooks!.onDrivesReady!(ctx);
+      expect(runner.calls).toEqual([]);
+      expect(ctx.warnings.at(-1)).toMatch(
+        /no longer passes the publication gate/,
+      );
+    });
+
+    it("does nothing when not enrolled or when autostart is off", async () => {
+      const ctx = hostContext();
+      const runner = fakeRunner(
+        statusOf({
+          enrolled: true,
+          settings: {
+            controlPlaneUrl: "c",
+            appUpstream: "x",
+            upstreams: {},
+            dns01Mode: "rfc2136",
+            listen: { https: 443, http: 80 },
+            autostart: false,
+          },
+        }),
+      );
+      const p = createPortlePlugin(() => runner);
+      await p.hooks!.onSubgraphsRegistering!(ctx);
+      await p.hooks!.onDrivesReady!(ctx);
+      expect(runner.calls).toEqual([]);
+    });
+
+    it("warns instead of failing the boot when the start throws", async () => {
+      const ctx = hostContext();
+      const runner = fakeRunner(enrolledWantingStart());
+      runner.start = () =>
+        Promise.reject(new Error("frpc and caddy not found"));
+      const p = createPortlePlugin(() => runner);
+      await p.hooks!.onSubgraphsRegistering!(ctx);
+      await expect(p.hooks!.onDrivesReady!(ctx)).resolves.toBeUndefined();
+      expect(ctx.warnings.at(-1)).toMatch(
+        /could not start: frpc and caddy not found/,
+      );
+    });
+  });
+
+  it("stops a running tunnel at shutdown and keeps autostart as the operator left it", async () => {
+    const ctx = hostContext();
+    const runner = fakeRunner(
+      statusOf({
+        enrolled: true,
+        settings: {
+          controlPlaneUrl: "c",
+          appUpstream: "x",
+          upstreams: {},
+          dns01Mode: "rfc2136",
+          listen: { https: 443, http: 80 },
+          autostart: true,
+        },
+        tunnel: { state: "up", frpc: null, caddy: null },
+      }),
+    );
+    const p = createPortlePlugin(() => runner);
+    await p.hooks!.onSubgraphsRegistering!(ctx);
+    await p.hooks!.onShutdown!(ctx);
+    expect(runner.calls).toEqual(["stop keepAutostart"]);
+
+    const down = fakeRunner(statusOf({ enrolled: true }));
+    const q = createPortlePlugin(() => down);
+    const ctx2 = hostContext();
+    await q.hooks!.onSubgraphsRegistering!(ctx2);
+    await q.hooks!.onShutdown!(ctx2);
+    expect(down.calls).toEqual([]);
   });
 });

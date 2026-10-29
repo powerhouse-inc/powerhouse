@@ -1,14 +1,17 @@
 {
   "name": "@powerhousedao/vetra-studio",
-  "version": "6.2.3-dev.79",
-  "description": "Vetra Studio as host plugins: the dev tooling composed onto a project's switchboard and Connect (uniform-runners rewire R4). EXPERIMENTAL - private until first manual publish.",
+  "version": "6.2.3-dev.80",
+  "description": "Vetra Studio as host plugins: the dev tooling composed onto a project's switchboard and Connect (uniform-runners rewire R4). EXPERIMENTAL.",
+  "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse",
     "directory": "packages/vetra-studio"
   },
   "type": "module",
-  "private": true,
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "dist"
   ],
@@ -34,11 +37,17 @@
     "test": "vitest --run --passWithNoTests"
   },
   "dependencies": {
-    "@powerhousedao/host-core": "workspace:*"
+    "@powerhousedao/host-core": "workspace:*",
+    "@renown/sdk": "workspace:*",
+    "graphql": "catalog:"
   },
   "devDependencies": {
+    "@powerhousedao/reactor-api": "workspace:*",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@powerhousedao/reactor-api": "workspace:*"
   }
 }

@@ -39,6 +39,10 @@ await build({
     // Zod-only Connect config schema: host-core's neutral entries and the
     // connect runner import it without the connect barrel.
     "connect/connect-config-schema.ts",
+    // Dependency-free: the `${origin}` placeholder a proxied Connect's config
+    // carries. Connect resolves it in the browser; host-core, the connect
+    // runner and the portle plugin write and route by it.
+    "connect/origin-placeholder.ts",
     // Output tokens (zod only): host-core re-exports them, and the Connect
     // config schema's declared form makes its URL fields token-able.
     "host-tokens/index.ts",
@@ -67,7 +71,7 @@ await build({
 // Sub-paths so cli.ts and command files can import only what they need
 // without pulling the full clis bundle on the cold path.
 await build({
-  entry: ["clis/args/*.ts"],
+  entry: ["clis/args/*.ts", "!clis/args/*.test.ts"],
   outDir: "dist/clis/args",
   platform: "node",
   clean: false,

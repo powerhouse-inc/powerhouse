@@ -7,6 +7,11 @@ export { EditorHost } from "./editor-host.js";
 export type { DocumentEditorProps, EditorHostProps } from "./editor-host.js";
 export { DriveIndex } from "./home.js";
 export { formatModified } from "./index-table.js";
+export {
+  BackendAuthGate,
+  useBackendAuthGate,
+  type BackendAuthGateMode,
+} from "./backend-auth-gate.js";
 export { CoreHeader, CoreLayout, CoreRoot } from "./layout.js";
 export { DriveNotFoundPage, NotFoundPage } from "./not-found-page.js";
 export {

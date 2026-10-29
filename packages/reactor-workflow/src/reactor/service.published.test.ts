@@ -365,7 +365,11 @@ describe("the runtime and the workflow model's publishing fields", () => {
 
   it("resolves a SECRET variable for the run and keeps it out of the journal", async () => {
     const plaintext = "sk-live-7f3a9c1e5b2d";
-    const { ref } = await secrets.create({ value: plaintext, label: "api" });
+    const { ref } = await secrets.create({
+      value: plaintext,
+      label: "api",
+      ownerId: "wf-secret",
+    });
     documents.apply(
       "wf-secret",
       actions.setTrigger({
