@@ -148,7 +148,7 @@ export function nextCollectionRoute(
 export class RouterTable {
   private readonly order: readonly RouterBackend[];
   private readonly byName: ReadonlyMap<string, RouterBackend>;
-  private readonly configured: ReadonlyMap<string, string>;
+  private readonly configured: Map<string, string>;
   private readonly runtime = new Map<string, string>();
   private readonly listeners = new Set<RoutingChangeListener>();
   private readonly onDiagnostic: RouterDiagnostic;
@@ -333,6 +333,20 @@ export class RouterTable {
    * the drive follows the new placement.
    */
   setPlacement(key: string, backend: string | undefined): void {
+    this.place(this.runtime, "setPlacement", key, backend);
+  }
+
+  /** A late `collections` entry; drops the same routes `setPlacement` does. */
+  setConfiguredPlacement(key: string, backend: string | undefined): void {
+    this.place(this.configured, "setConfiguredPlacement", key, backend);
+  }
+
+  private place(
+    layer: Map<string, string>,
+    caller: string,
+    key: string,
+    backend: string | undefined,
+  ): void {
     if (key === "") {
       throw new Error("A placement needs a collection key or a drive id");
     }
@@ -340,16 +354,16 @@ export class RouterTable {
       throw new UnknownBackendError(
         backend,
         [...this.byName.keys()],
-        `setPlacement for ${JSON.stringify(key)}`,
+        `${caller} for ${JSON.stringify(key)}`,
       );
     }
-    if (this.runtime.get(key) === backend) {
+    if (layer.get(key) === backend) {
       return;
     }
     if (backend === undefined) {
-      this.runtime.delete(key);
+      layer.delete(key);
     } else {
-      this.runtime.set(key, backend);
+      layer.set(key, backend);
     }
     const driveId = driveIdOf(key);
     for (const learnedKey of [...this.learned.keys()]) {

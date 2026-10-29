@@ -452,6 +452,7 @@ describe("createSwitchboardBackend breaker", () => {
       requestTimeoutMs: 5_000,
       breaker: { failures: 3, openMs: 60_000 },
     });
+    const diagnostics: string[] = [];
     const router = new RoutingReactorClient(
       [
         {
@@ -467,7 +468,7 @@ describe("createSwitchboardBackend breaker", () => {
         primaryBackend: "local",
         defaultRequirements: { inspectable: true },
         probeTimeoutMs: PROBE_TIMEOUT_MS,
-        onDiagnostic: () => {},
+        onDiagnostic: (message) => diagnostics.push(message),
       },
     );
     try {
@@ -479,11 +480,14 @@ describe("createSwitchboardBackend breaker", () => {
         { backend: "sb", health: "down" },
       ]);
 
-      const started = Date.now();
+      // With the breaker open the create sends no probe, so none can time out.
+      diagnostics.length = 0;
       const created = await router.create(modelDocument("after-open"));
 
-      expect(Date.now() - started).toBeLessThan(PROBE_TIMEOUT_MS / 2);
       expect(hanging.received).toHaveLength(3);
+      expect(diagnostics.filter((message) => message.includes("sb"))).toEqual(
+        [],
+      );
       expect(
         router
           .describeRouting()

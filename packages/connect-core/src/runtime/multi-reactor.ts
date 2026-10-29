@@ -26,8 +26,9 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { switchboardOfDrive } from "@powerhousedao/shared/host-tokens";
 import { logger } from "document-model";
+import { LOCAL_BACKEND_NAME } from "./drive-placement.js";
 
-export const LOCAL_BACKEND_NAME = "connect-local";
+export { LOCAL_BACKEND_NAME } from "./drive-placement.js";
 export const REMOTE_BACKEND_NAME = "switchboard-remote";
 
 export type LocalReactorModule =

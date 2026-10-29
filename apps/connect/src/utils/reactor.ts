@@ -22,9 +22,10 @@ import {
   type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import {
-  removeLocalCopies,
-  type ResolvedPlacedDrive,
+  caughtUp,
+  type PlacementSync,
 } from "@powerhousedao/connect-core/runtime";
+import type { RoutingReactorClient } from "@powerhousedao/reactor-router";
 import type {
   PHConnectDefaultDriveLocal,
   PHConnectDefaultDriveRemote,
@@ -276,12 +277,57 @@ async function addLocalDefaultDrive(
   }
 }
 
-/** Removes the sync remotes of drives the host opens on a switchboard. */
-export async function removePlacedDriveCopies(
-  resolved: readonly ResolvedPlacedDrive[],
-): Promise<void> {
-  const sync =
+const COPY_TIMEOUT_MS = 30_000;
+const COPY_RECHECK_MS = 250;
+
+/** The local copy's revision, or undefined while the drive is not held here. */
+async function localRevision(
+  driveId: string,
+): Promise<Record<string, number> | undefined> {
+  const local = getPHStore()?.reactorClientModule?.client;
+  if (!local) return undefined;
+  try {
+    return (await local.read.get(driveId)).header.revision;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Resolves once the local copy holds what the switchboard held when called; rejects after the timeout. */
+async function untilCaughtUp(driveId: string, remote: string): Promise<void> {
+  const router = getFullReactorClient() as
+    | Pick<RoutingReactorClient, "backends">
+    | undefined;
+  const backend = router?.backends.find((b) => b.name === remote);
+  if (!backend) {
+    throw new Error(`No switchboard named ${remote} to copy from`);
+  }
+  const source = (await backend.api.get(driveId)).header.revision;
+  const deadline = Date.now() + COPY_TIMEOUT_MS;
+  for (;;) {
+    const local = await localRevision(driveId);
+    if (local && caughtUp(local, source)) return;
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `The copy in this browser did not catch up with ${remote} within ${COPY_TIMEOUT_MS / 1000} s`,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, COPY_RECHECK_MS));
+  }
+}
+
+/** The tab's sync remotes, for moving a drive; a copy is ready once it holds what the switchboard holds. */
+export function placementSync(): PlacementSync {
+  const syncManager = () =>
     getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
-  if (!sync) return;
-  await removeLocalCopies(sync, resolved);
+  return {
+    list: () => syncManager()?.list() ?? [],
+    remove: async (name) => {
+      await syncManager()?.remove(name);
+    },
+    add: async (url, driveId) => {
+      await addRemoteDrive(url, driveId);
+    },
+    untilCopied: (driveId, remote) => untilCaughtUp(driveId, remote),
+  };
 }

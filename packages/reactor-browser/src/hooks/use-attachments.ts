@@ -272,7 +272,11 @@ export function useAttachmentPreview({
 }
 
 export type UseAttachmentUploadReturn = {
-  preprocess: (file: Blob) => Promise<PreprocessResult>;
+  /** `documentId` names the document the file is for, so it is stored where that document lives. */
+  preprocess: (
+    file: Blob,
+    options?: { documentId?: string },
+  ) => Promise<PreprocessResult>;
   upload: (results: PreprocessResult) => Promise<void>;
   /** Aborts the transfer in flight; the upload promise rejects. */
   cancel: () => void;
@@ -320,12 +324,15 @@ export function useAttachmentUpload(): UseAttachmentUploadReturn {
   }, []);
 
   const preprocess = useCallback(
-    async (file: Blob): Promise<PreprocessResult> => {
+    async (
+      file: Blob,
+      options?: { documentId?: string },
+    ): Promise<PreprocessResult> => {
       if (!client) throw new Error("AttachmentClient not available");
       const runId = ++runIdRef.current;
       setState({ ...IDLE_UPLOAD, stage: "hashing" });
       try {
-        return await client.preprocess(file);
+        return await client.preprocess(file, options);
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         if (mountedRef.current && runId === runIdRef.current) {
