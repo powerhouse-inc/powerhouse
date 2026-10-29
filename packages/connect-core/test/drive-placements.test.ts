@@ -7,8 +7,11 @@ import {
   type SwitchboardDrive,
 } from "../src/runtime/drive-placement.js";
 import {
+  caughtUp,
   DrivePlacements,
+  effectiveBackend,
   findServedDrive,
+  needsCopy,
   type PlacementStore,
 } from "../src/runtime/drive-placements.js";
 
@@ -72,7 +75,7 @@ function fakeSync(heldIds: string[] = []) {
       });
       return Promise.resolve();
     }),
-    untilCopied: vi.fn((_id: string) => Promise.resolve()),
+    untilCopied: vi.fn((_id: string, _remote: string) => Promise.resolve()),
   };
 }
 
@@ -152,7 +155,7 @@ describe("DrivePlacements", () => {
     await placements.move("id-b", LOCAL);
 
     expect(order).toEqual(["add, stored true"]);
-    expect(sync.untilCopied).toHaveBeenCalledWith("id-b");
+    expect(sync.untilCopied).toHaveBeenCalledWith("id-b", "sb");
     expect(sync.add).toHaveBeenCalledWith("http://localhost:4001/d/b", "id-b");
     expect([...store.entries.values()]).toEqual([
       { slug: "b", backend: LOCAL, configWas: "sb" },
@@ -291,6 +294,50 @@ describe("DrivePlacements", () => {
     expect(b.router.setPlacement).toHaveBeenCalledTimes(2);
   });
 
+  it.each([
+    ["Reset to config", (p: DrivePlacements) => p.reset("id-c")],
+    ["Keep a copy", (p: DrivePlacements) => p.move("id-c", LOCAL)],
+  ])(
+    "routes another tab back to a config-kept copy only once it has arrived (%s)",
+    async (_name, keepCopy) => {
+      const store = memoryStore([
+        { slug: "c", backend: "sb", configWas: LOCAL },
+      ]);
+      const sync = fakeSync();
+      const a = await tab(store, sync);
+      const b = await tab(store, sync);
+      expect(b.router.runtime.get("id-c")).toBe("sb");
+      const copy = pendingCopy();
+      sync.untilCopied.mockReturnValue(copy.copied);
+
+      const moving = keepCopy(a.placements);
+      await vi.waitFor(() => expect(sync.add).toHaveBeenCalled());
+      expect(store.entries.size).toBe(0);
+      const following = b.placements.reload();
+      await vi.waitFor(() =>
+        expect(b.placements.placementOf("id-c")).toMatchObject({
+          busy: true,
+          movingTo: LOCAL,
+          backend: "sb",
+        }),
+      );
+      expect(b.router.runtime.get("id-c")).toBe("sb");
+      expect(sync.untilCopied).toHaveBeenCalledWith("id-c", "sb");
+
+      copy.arrive();
+      await moving;
+      expect(await following).toBe(true);
+      for (const t of [a, b]) {
+        expect(t.router.runtime.has("id-c")).toBe(false);
+        expect(t.placements.placementOf("id-c")).toMatchObject({
+          backend: LOCAL,
+          moved: false,
+          busy: false,
+        });
+      }
+    },
+  );
+
   it("leaves both tabs on the switchboard, with no sync remote, when the copy never arrives", async () => {
     const store = memoryStore();
     const sync = fakeSync(["id-c"]);
@@ -379,6 +426,30 @@ describe("DrivePlacements", () => {
     await expect(placements.move("id-b", "other")).rejects.toThrow(
       /can't open on other/,
     );
+  });
+});
+
+describe("effectiveBackend and needsCopy", () => {
+  it("opens a drive where its move says, else where the config does, and needs a copy only here", () => {
+    const move = { slug: "c", backend: "sb", configWas: LOCAL };
+    expect(effectiveBackend(syncedC, move)).toBe("sb");
+    expect(effectiveBackend(syncedC, undefined)).toBe(LOCAL);
+    expect(effectiveBackend(placedB, undefined)).toBe("sb");
+    expect(needsCopy(LOCAL)).toBe(true);
+    expect(needsCopy("sb")).toBe(false);
+  });
+});
+
+describe("caughtUp", () => {
+  it("holds once every scope of the source is reached", () => {
+    expect(
+      caughtUp({ global: 5, document: 1 }, { global: 5, document: 1 }),
+    ).toBe(true);
+    expect(caughtUp({ global: 6, document: 1 }, { global: 5 })).toBe(true);
+    expect(
+      caughtUp({ global: 4, document: 1 }, { global: 5, document: 1 }),
+    ).toBe(false);
+    expect(caughtUp({ document: 1 }, { global: 0 })).toBe(false);
   });
 });
 

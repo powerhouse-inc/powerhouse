@@ -28,6 +28,29 @@ export async function findServedDrive(
   return served && { id: served.header.id, slug: served.header.slug };
 }
 
+/** Where a drive opens given its stored move, if any: the move, else the host config. */
+export function effectiveBackend(
+  drive: SwitchboardDrive,
+  entry: PlacementEntry | undefined,
+): string {
+  return entry?.backend ?? drive.configured;
+}
+
+/** A drive opening on `backend` reads its copy here, which must arrive first. */
+export function needsCopy(backend: string): boolean {
+  return backend === LOCAL_BACKEND_NAME;
+}
+
+/** A copy has caught up once every scope is at least at the source's revision. */
+export function caughtUp(
+  local: Readonly<Record<string, number>>,
+  source: Readonly<Record<string, number>>,
+): boolean {
+  return Object.entries(source).every(
+    ([scope, revision]) => (local[scope] ?? -1) >= revision,
+  );
+}
+
 /** Where this browser keeps its moves; per origin, so every tab shares it. */
 export interface PlacementStore {
   list(): Promise<PlacementEntry[]>;
@@ -44,8 +67,8 @@ export type PlacementRouter = {
 export type PlacementSync = SyncRemotes & {
   /** Adds a sync remote for the drive. */
   add(url: string, driveId: string): Promise<void>;
-  /** Bounded wait for the drive's local copy and its first pull; rejects when the copy never arrives. */
-  untilCopied(driveId: string): Promise<void>;
+  /** Bounded wait until the local copy holds what `remote` holds; rejects when it does not. */
+  untilCopied(driveId: string, remote: string): Promise<void>;
 };
 
 export type DrivePlacement = {
@@ -106,7 +129,7 @@ export class DrivePlacements {
 
   /** Where `drive` opens in this browser: a move, else the config. */
   backendOf(drive: SwitchboardDrive): string {
-    return this.applied.get(drive.slug)?.backend ?? drive.configured;
+    return effectiveBackend(drive, this.applied.get(drive.slug));
   }
 
   /** Whether a remote default drive at `url` keeps a copy here. */
@@ -200,10 +223,10 @@ export class DrivePlacements {
     this.notify();
     try {
       await this.record(drive.slug, entry);
-      if (backend === LOCAL_BACKEND_NAME) {
+      if (needsCopy(backend)) {
         try {
           await this.sync.add(servedUrl(drive), id);
-          await this.sync.untilCopied(id);
+          await this.sync.untilCopied(id, drive.remote);
         } catch (error) {
           // Store first: the removal's broadcast makes other tabs re-read it.
           await this.record(drive.slug, previous);
@@ -239,7 +262,7 @@ export class DrivePlacements {
     const changed = this.drives.filter(
       (drive) =>
         !this.busy.has(drive.slug) &&
-        next.get(drive.slug)?.backend !== this.applied.get(drive.slug)?.backend,
+        effectiveBackend(drive, next.get(drive.slug)) !== this.backendOf(drive),
     );
     if (changed.length === 0) return false;
     await Promise.all(
@@ -255,11 +278,11 @@ export class DrivePlacements {
     entry: PlacementEntry | undefined,
   ): Promise<void> {
     const resolved = this.resolved.find((d) => d.slug === drive.slug);
-    if (entry?.backend === LOCAL_BACKEND_NAME && resolved?.id) {
+    if (needsCopy(effectiveBackend(drive, entry)) && resolved?.id) {
       this.busy.set(drive.slug, LOCAL_BACKEND_NAME);
       this.notify();
       try {
-        await this.sync.untilCopied(resolved.id);
+        await this.sync.untilCopied(resolved.id, resolved.remote);
       } catch (error) {
         logger.warn(
           "Drive @slug was not copied into this browser; leaving it where it opens: @error",

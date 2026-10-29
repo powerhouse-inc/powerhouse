@@ -45,7 +45,13 @@ export type {
   ResolveSwitchboardDrivesOptions,
   SwitchboardDrive,
 } from "./drive-placement.js";
-export { DrivePlacements, findServedDrive } from "./drive-placements.js";
+export {
+  caughtUp,
+  DrivePlacements,
+  effectiveBackend,
+  findServedDrive,
+  needsCopy,
+} from "./drive-placements.js";
 export type {
   DrivePlacement,
   PlacementRouter,
