@@ -1042,7 +1042,9 @@ export class ReactorBuilder {
     if (resolver instanceof DocumentModelResolver) {
       const logger = this.logger;
       resolver.setModelLoadedHook(async (documentType) => {
-        // Reported first, so a failing MODEL_LOADED subscriber cannot hide it.
+        // Reported first, so a failing MODEL_LOADED subscriber cannot hide it;
+        // a failing refusal subscriber cannot hide MODEL_LOADED either.
+        let refusedError: Error | undefined;
         const refusals = storedModelRefusals(
           documentType,
           deferredStoredModels,
@@ -1056,12 +1058,20 @@ export class ReactorBuilder {
             documentType,
             refusals.map(storedRefusalName).join(", "),
           );
-          await eventBus.emit(ReactorEventTypes.STORED_MODEL_REFUSED, {
-            documentType,
-            refusals,
-          } satisfies StoredModelRefusedEvent);
+          try {
+            await eventBus.emit(ReactorEventTypes.STORED_MODEL_REFUSED, {
+              documentType,
+              refusals,
+            } satisfies StoredModelRefusedEvent);
+          } catch (error) {
+            refusedError =
+              error instanceof Error ? error : new Error(String(error));
+          }
         }
         await eventBus.emit(ReactorEventTypes.MODEL_LOADED, { documentType });
+        if (refusedError !== undefined) {
+          throw refusedError;
+        }
       });
       resolver.rememberManifest(this.resolvedModelManifest ?? []);
       this.modelResolver = resolver;
