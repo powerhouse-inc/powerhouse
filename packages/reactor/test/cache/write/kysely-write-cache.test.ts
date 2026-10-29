@@ -2,6 +2,7 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { createReducer } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
@@ -19,6 +20,9 @@ import {
   createUpgradeDocumentOperation,
 } from "../../factories.js";
 import { SnapshotPosition } from "../../../src/cache/write-cache-types.js";
+
+/** The cold and warm rebuild suites replay through an untagged mock reducer. */
+const BASE_REDUCER_2 = { protocolVersions: { "base-reducer": 2 } };
 
 function createMockOperationStore(): IOperationStore {
   return {
@@ -657,7 +661,9 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(docId, docType, {}, BASE_REDUCER_2),
+      );
     });
 
     const operations: Operation[] = [];
@@ -690,7 +696,9 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(docId, docType, {}, BASE_REDUCER_2),
+      );
     });
 
     const operations: Operation[] = [];
@@ -736,7 +744,9 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(docId, docType, {}, BASE_REDUCER_2),
+      );
     });
 
     const operations: Operation[] = [];
@@ -774,7 +784,9 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(docId, docType, {}, BASE_REDUCER_2),
+      );
     });
 
     const operations: Operation[] = [];
@@ -834,7 +846,9 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     await versionCache.startup();
 
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(docId, docType, {}, BASE_REDUCER_2),
+      );
       txn.addOperations(
         createUpgradeDocumentOperation(docId, 0, 2, {}, { index: 1 }),
       );
@@ -935,7 +949,9 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(docId, docType, {}, BASE_REDUCER_2),
+      );
     });
 
     const operations: Operation[] = [];
@@ -973,7 +989,9 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(docId, docType, {}, BASE_REDUCER_2),
+      );
     });
 
     const operations: Operation[] = [];
@@ -1009,7 +1027,9 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(docId, docType, {}, BASE_REDUCER_2),
+      );
     });
 
     const operations: Operation[] = [];
@@ -1039,7 +1059,9 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(docId, docType, {}, BASE_REDUCER_2),
+      );
     });
 
     const operations: Operation[] = [];
@@ -1093,7 +1115,9 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(docId, docType, {}, BASE_REDUCER_2),
+      );
     });
 
     const operations: Operation[] = [];
@@ -1132,7 +1156,9 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(docId, docType, {}, BASE_REDUCER_2),
+      );
     });
 
     const operations: Operation[] = [];
@@ -1170,7 +1196,9 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(docId, docType, {}, BASE_REDUCER_2),
+      );
     });
 
     const operations: Operation[] = [];
@@ -1210,7 +1238,9 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(docId, docType, {}, BASE_REDUCER_2),
+      );
     });
 
     const operations: Operation[] = [];
@@ -1237,5 +1267,181 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     await expect(
       cache.getState(docId, "global", "main", 15, controller.signal),
     ).rejects.toThrow("Operation aborted");
+  });
+});
+
+describe("KyselyWriteCache rebuild on base-reducer 3", () => {
+  /** Tagged, so base-reducer 3 derives through it; leaves state as it was. */
+  const keepsState = createReducer(() => undefined);
+  const docType = "powerhouse/document-model";
+  let keyframeStore: IKeyframeStore;
+  let operationStore: IOperationStore;
+  let registry: IDocumentModelRegistry;
+  let cache: KyselyWriteCache;
+  let db: any;
+
+  beforeEach(async () => {
+    const opStoreSetup = await createTestOperationStore();
+    operationStore = opStoreSetup.store;
+    keyframeStore = opStoreSetup.keyframeStore;
+    db = opStoreSetup.db;
+    registry = {
+      ...createMockRegistry(),
+      getModule: vi.fn().mockReturnValue({
+        reducer: keepsState,
+        utils: documentModelDocumentModelModule.utils,
+      }),
+    };
+    cache = new KyselyWriteCache(keyframeStore, operationStore, registry, {
+      maxDocuments: 10,
+      ringBufferSize: 5,
+      keyframeInterval: 10,
+    });
+    await cache.startup();
+  });
+
+  afterEach(async () => {
+    await cache.shutdown();
+    if (db) {
+      await db.destroy();
+    }
+  });
+
+  /** A base-reducer 3 document with `count` global operations after its CREATE. */
+  async function seed(docId: string, count: number): Promise<void> {
+    await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
+      txn.addOperations(
+        createCreateDocumentOperation(
+          docId,
+          docType,
+          {},
+          { protocolVersions: { "base-reducer": 3 } },
+        ),
+      );
+    });
+    const { results } = await operationStore.getSince(
+      docId,
+      "document",
+      "main",
+      -1,
+    );
+    expect(
+      (results[0].action.input as { protocolVersions?: Record<string, number> })
+        .protocolVersions?.["base-reducer"],
+    ).toBe(3);
+
+    await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
+      for (let i = 1; i <= count; i++) {
+        txn.addOperations(createTestOperation(docId, { index: i, skip: 0 }));
+      }
+    });
+  }
+
+  it("rebuilds a document from scratch on a cold miss", async () => {
+    await seed("v3-cold-1", 5);
+    cache.clear();
+
+    const rebuilt = await cache.getState("v3-cold-1", "global", "main");
+
+    expect(rebuilt.state).toBeDefined();
+    expect(rebuilt.header.documentType).toBe(docType);
+    expect(rebuilt.header.protocolVersions?.["base-reducer"]).toBe(3);
+  });
+
+  it("uses a keyframe on a cold miss", async () => {
+    await seed("v3-cold-2", 22);
+    const doc20 = await cache.getState("v3-cold-2", "global", "main", 20);
+    await keyframeStore.putKeyframe("v3-cold-2", "global", "main", 20, {
+      ...doc20,
+      operations: {},
+      clipboard: [],
+    });
+    // Without operations 1-20 only the keyframe can supply revision 20.
+    await db
+      .deleteFrom("Operation")
+      .where("documentId", "=", "v3-cold-2")
+      .where("index", "<", 21)
+      .execute();
+    cache.clear();
+
+    const document = await cache.getState("v3-cold-2", "global", "main", 22);
+
+    expect(document.state).toBeDefined();
+  });
+
+  it("caches the result of a rebuild", async () => {
+    await seed("v3-cold-3", 3);
+    expect(cache.getStream("v3-cold-3", "global", "main")).toBeUndefined();
+
+    await cache.getState("v3-cold-3", "global", "main");
+
+    const stream = cache.getStream("v3-cold-3", "global", "main");
+    expect(stream?.ringBuffer.getAll()).toHaveLength(1);
+  });
+
+  it("rebuilds a warm miss from the cached base revision", async () => {
+    await seed("v3-warm-1", 15);
+    expect(
+      await cache.getState("v3-warm-1", "global", "main", 10),
+    ).toBeDefined();
+    // Without operations 1-10 only the cached revision 10 can be the base.
+    await db
+      .deleteFrom("Operation")
+      .where("documentId", "=", "v3-warm-1")
+      .where("index", "<=", 10)
+      .execute();
+
+    expect(
+      await cache.getState("v3-warm-1", "global", "main", 15),
+    ).toBeDefined();
+  });
+
+  it("builds a warm miss to the exact target revision", async () => {
+    await seed("v3-warm-2", 25);
+    await cache.getState("v3-warm-2", "global", "main", 10);
+
+    expect(
+      await cache.getState("v3-warm-2", "global", "main", 17),
+    ).toBeDefined();
+  });
+
+  it("rejects an aborted warm miss", async () => {
+    await seed("v3-warm-3", 20);
+    await cache.getState("v3-warm-3", "global", "main", 10);
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      cache.getState("v3-warm-3", "global", "main", 15, controller.signal),
+    ).rejects.toThrow("Operation aborted");
+  });
+
+  it("asks for the upgraded model version after UPGRADE_DOCUMENT", async () => {
+    const docId = "v3-version";
+    await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
+      txn.addOperations(
+        createCreateDocumentOperation(
+          docId,
+          docType,
+          {},
+          { protocolVersions: { "base-reducer": 3 } },
+        ),
+      );
+      txn.addOperations(
+        createUpgradeDocumentOperation(docId, 0, 2, {}, { index: 1 }),
+      );
+    });
+    await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
+      for (let i = 1; i <= 3; i++) {
+        txn.addOperations(createTestOperation(docId, { index: i, skip: 0 }));
+      }
+    });
+
+    const rebuilt = await cache.getState(docId, "global", "main");
+
+    expect(rebuilt.header.protocolVersions?.["base-reducer"]).toBe(3);
+    const calls = vi.mocked(registry.getModule).mock.calls;
+    expect(calls.some((c) => c[0] === docType && c[1] === 1)).toBe(true);
+    expect(calls.some((c) => c[0] === docType && c[1] === 2)).toBe(true);
   });
 });
