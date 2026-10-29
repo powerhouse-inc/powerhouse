@@ -280,6 +280,31 @@ describe("GraphQLReactorClient undo and redo", () => {
     ).toEqual({ canUndo: false, canRedo: true });
   });
 
+  it("reads base-reducer 2 availability as false on a scope the Switchboard withholds", async () => {
+    const { client, sdk } = clientWith(2);
+    sdk.GetDocument.mockResolvedValue({
+      document: {
+        document: {
+          ...document,
+          state: { local: {} },
+          revisionsList: [
+            ...document.revisionsList,
+            { scope: "local", revision: 1 },
+          ],
+        },
+      },
+    });
+
+    expect(await client.undoRedoAvailability("doc-1")).toEqual({
+      canUndo: false,
+      canRedo: false,
+    });
+    expect(await client.undoRedoAvailability("doc-1", "local")).toEqual({
+      canUndo: true,
+      canRedo: false,
+    });
+  });
+
   it("reads base-reducer 2 availability from the revision", async () => {
     expect(await clientWith(2).client.undoRedoAvailability("doc-1")).toEqual({
       canUndo: true,
