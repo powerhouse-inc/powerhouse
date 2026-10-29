@@ -1493,6 +1493,7 @@ export class ReactorBuilder {
       eventBus,
       documentModelRegistry,
       featureFlags,
+      loadsModelsOnDemand: this.documentModelLoader !== undefined,
       queue,
       jobTracker,
       executorManager,

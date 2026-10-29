@@ -1,5 +1,25 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — a Switchboard as a router backend (`@powerhousedao/reactor-browser`)
+
+### ✨ `createSwitchboardBackend`
+
+`createSwitchboardBackend({ name, url, tokenProvider, signer, documentModels, ... })` from `@powerhousedao/reactor-browser/graphql-client` returns `{ config, notifyCredentialsChanged, dispose }`. `config` is a `RoutableBackendConfig` for `RoutingReactorClient`, so a host other than Connect, such as the monitor, can route to a Switchboard. `url` is the Switchboard's GraphQL endpoint. Connect's own copy of this backend is gone, and Connect now builds its remote through this function.
+
+- **Explicit credentials.** The descriptor names its token provider and signer. `signer: undefined` pushes unsigned and never falls back to the logged-in Renown user. A function is read on every push. Connect passes `ambientRenownTokenProvider` and the new `ambientRenownSigner`, so it still signs only while someone is logged in. A `GraphQLReactorClient` `signer` option may also be such a function.
+- **Request deadline.** Each request is bounded, headers through body, at `requestTimeoutMs`, which defaults to 30 s. A request past the deadline rejects with a `TimeoutError`. `GraphQLReactorClient` takes the same option, plus `fetch` for the transport.
+- **Breaker and health.** Three transport failures in a row open the breaker for 30 s (configurable through `breaker`). A transport failure is a network error, a 5xx, or a deadline: the request's own, or the router's probe deadline (`probeTimeoutMs`), so a Switchboard that hangs is marked down after three probes and local creates stop waiting on it. While the breaker is open, nothing is sent: every call throws `SwitchboardUnreachableError`, `health()` reports `"down"`, and the router stops probing the backend. A GraphQL error is an answer, so it does not count, and neither does an abort by the caller.
+- **Facts.** One `SwitchboardFacts` query reads the reactor info, including `access` from the server, and the document types the Switchboard serves. The router's create pre-check uses the types only when the Switchboard's model list is closed. The new inspection field `loadsModelsOnDemand` says whether it is. When a Switchboard loads models on demand, or is too old to say, its types stay open and creates are not checked. A Switchboard that lacks `documentServed`, `createDefaults` or `inspection` fails the read, so the router holds its facts as unknown.
+- **421.** A refusal forgets the drive the request named, so the next request sends no stale `Drive-Id`. Under Node, the default transport (`switchboardFetch`) sends request bodies as streams. Node's fetch resends a request that got a 421, and the resend of a buffered body can fail with a `TypeError` instead of returning the 421. Browsers keep buffered bodies.
+
+### 🐛 Switchboard `/ready` waits for its drives
+
+`/ready` used to answer 200 about 80 ms before the default drive existed, so a client that waited for `/ready` and then opened `/d/<slug>` could get a 404. It now turns 200 only once the default drive is served. Under `ph run`, it also waits for the drives the host declares and the drives its plugins contribute. `startSwitchboard` takes `readyAfter`, a promise that `/ready` also waits for; if it rejects, the server stays not ready. Remote drives don't hold readiness back, because they sync from another server that may be down.
+
+✅ **What to try:** start a Switchboard with `ph run`, poll `/ready`, and open `/d/<slug>` on the first 200: the drive is there.
+
+---
+
 ## 🚀 **Unreleased** — host config: a remote link is a switchboard drive address
 
 ### ⚡ `remote.url` names a drive, and `reactor.placement.drives` says where each drive opens
@@ -39,7 +59,7 @@ The generated `assistant` and `cli` hosts use the new form. A project scaffolded
 
 ### ✨ Document-type facts and `locate`
 
-`RoutableBackendConfig.documentTypes?: () => Promise<readonly string[]>` is read with the facts and lands in `BackendFacts.documentTypes`. A failed read of the facts or of the types makes `known` false. A create of a type the target backend lacks (`create`, `createAsync`, a batch that creates, `drives.create`, `drives.addFile`) throws `UnsupportedByBackendError` before anything is sent. `locate(identifier, signal?)` names the backend a document routes to, for an attachment service that routes by document.
+`RoutableBackendConfig.documentTypes?: () => Promise<readonly string[] | undefined>` is read with the facts and lands in `BackendFacts.documentTypes`. A read that answers `undefined` means the backend loads models on demand: creates are not checked, and the facts stay known. A failed read of the facts or of the types makes `known` false. A create of a type the target backend lacks (`create`, `createAsync`, a batch that creates, `drives.create`, `drives.addFile`) throws `UnsupportedByBackendError` before anything is sent. `locate(identifier, signal?)` names the backend a document routes to, for an attachment service that routes by document.
 
 ✅ **What to try:** build a router over two backends with `collections: { [driveId]: "local" }`, call `setPlacement(driveId, "remote")`, and `describeRouting()` shows the drive on `remote` with `origin: "runtime"` and `configured: "local"`.
 

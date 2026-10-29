@@ -387,6 +387,42 @@ jobs:
           path: packages/analytics-engine/browser/test-results/
           retention-days: 30
 
+  switchboard-e2e-tests:
+    name: Run Switchboard E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The suites start their own switchboards on PGlite: the shared one on
+    # SWITCHBOARD_PORT, renown-self-auth's on 4022 and 4023, and router's on 4024.
+    # No Postgres.
+    env:
+      SWITCHBOARD_PORT: 4001
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.10.1
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Setup bun global install
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      # Only the suite and what it depends on, switchboard's bin included.
+      - name: Install and build
+        run: bash .github/actions/setup/install-and-build.sh "@powerhousedao/test-switchboard..."
+
+      - name: Run switchboard E2E tests
+        run: pnpm test:e2e:switchboard
+
   recipes-e2e-tests:
     name: Run Recipes E2E Tests
     runs-on: ubuntu-latest
@@ -503,7 +539,7 @@ jobs:
           ONNXRUNTIME_NODE_INSTALL: skip
 
   notify-discord:
-    if: always() && github.event_name != 'pull_request' && (needs.vetra-e2e-tests.result == 'failure' || needs.package-e2e-tests.result == 'failure' || needs.workflow-piece-e2e-tests.result == 'failure' || needs.recipes-e2e-tests.result == 'failure')
+    if: always() && github.event_name != 'pull_request' && (needs.vetra-e2e-tests.result == 'failure' || needs.package-e2e-tests.result == 'failure' || needs.workflow-piece-e2e-tests.result == 'failure' || needs.recipes-e2e-tests.result == 'failure' || needs.switchboard-e2e-tests.result == 'failure')
     runs-on: ubuntu-24.04
     needs:
       [
@@ -511,6 +547,7 @@ jobs:
         package-e2e-tests,
         workflow-piece-e2e-tests,
         recipes-e2e-tests,
+        switchboard-e2e-tests,
       ]
     steps:
       - name: Send Discord notification
@@ -578,6 +615,7 @@ jobs:
         workflow-piece-e2e-tests,
         recipes-e2e-tests,
         analytics-engine-integration-tests,
+        switchboard-e2e-tests,
       ]
     if: always()
     runs-on: ubuntu-latest

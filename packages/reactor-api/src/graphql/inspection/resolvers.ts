@@ -212,6 +212,9 @@ export function createInspectionResolvers(
     documentModels: (): Promise<WireInspectorDocumentModel[]> =>
       inspector.listDocumentModels(),
 
+    loadsModelsOnDemand: (): Promise<boolean> =>
+      inspector.loadsModelsOnDemand(),
+
     drives: async (
       _parent: unknown,
       args: { cursor?: string | null; limit?: number | null },

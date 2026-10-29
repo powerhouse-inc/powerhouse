@@ -90,6 +90,8 @@ export type StartSwitchboardOptions = Omit<SwitchboardArgs, "mcp"> & {
   signalHandlers?: boolean;
   /** A declared composition (R2), resolved by the runner. */
   pluginComposition?: ResolvedPlugin[];
+  /** Drives the caller seeds after start; `/ready` waits for them. */
+  readyAfter?: Promise<unknown>;
 };
 
 export async function startSwitchboard(
@@ -98,12 +100,18 @@ export async function startSwitchboard(
   /** The layer under the command's options; default: this process's env. */
   base?: SwitchboardConfigInput,
 ) {
-  const { config, finalOptions } = switchboardConfigOf(options, logger, base);
+  const { readyAfter, ...serverOptions } = options;
+  const { config, finalOptions } = switchboardConfigOf(
+    serverOptions,
+    logger,
+    base,
+  );
   initSwitchboardProcess(config);
   const reactor = await startSwitchboardServer(config, {
     logger,
     pluginComposition: finalOptions.pluginComposition,
     signalHandlers: finalOptions.signalHandlers,
+    readyAfter,
     fatalErrorShutdown: true,
   });
 

@@ -61,6 +61,8 @@ export type ReactorInspectorComponents = {
   integrity?: IDocumentIntegrityService;
   storageHealth?: IInspectorStorageHealthProvider;
   documentModelRegistry?: IDocumentModelRegistry;
+  /** A document model loader is wired; absent reads as false. */
+  loadsModelsOnDemand?: boolean;
   drives?: DriveInspection;
   attachmentStore?: IInspectableAttachmentStore;
   facts?: ReactorInspectorFacts;
@@ -147,6 +149,10 @@ export class ReactorInspector
       syncChannels: [...this.syncChannels],
       access: { ...this.access },
     });
+  }
+
+  loadsModelsOnDemand(): Promise<boolean> {
+    return Promise.resolve(this.components.loadsModelsOnDemand ?? false);
   }
 
   listDocumentModels(): Promise<InspectorDocumentModelInfo[]> {
