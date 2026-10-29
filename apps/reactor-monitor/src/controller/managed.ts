@@ -101,7 +101,7 @@ export function servesDescriptor(
 }
 
 /** The switchboard's link: its first drive by slug. */
-function driveAddressOf(outputs: InstanceOutputs): string | undefined {
+export function driveAddressOf(outputs: InstanceOutputs): string | undefined {
   const slug = Object.keys(outputs.drives).sort().at(0);
   return slug === undefined ? undefined : outputs.drives[slug].url;
 }

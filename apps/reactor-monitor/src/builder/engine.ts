@@ -81,6 +81,8 @@ const OPTION_STEP: Record<OptionGroup, StepId> = {
   workers: "reactor",
   projectionWorker: "reactor",
   add: "members",
+  reach: "reactor",
+  placement: "reactor",
 };
 
 export function optionStep(option: OptionStatus): StepId {

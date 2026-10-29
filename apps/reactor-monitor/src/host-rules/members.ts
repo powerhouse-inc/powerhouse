@@ -53,6 +53,14 @@ function roleOf(runner: Record<string, unknown>): MemberRole {
   return "other";
 }
 
+/** `base`, or the first `base-<n>` not taken. */
+export function freshKey(taken: readonly string[], base: string): string {
+  if (!taken.includes(base)) return base;
+  let index = 2;
+  while (taken.includes(`${base}-${index}`)) index += 1;
+  return `${base}-${index}`;
+}
+
 /** The value at a dotted path inside a record, if every step is a record. */
 export function valueAt(
   record: Record<string, unknown> | undefined,

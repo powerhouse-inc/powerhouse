@@ -77,6 +77,8 @@ const NAME: Pattern = ["name"];
 export const NAME_REASON =
   "The name becomes a file name, so use only letters, digits, '.', '_' and '-', start with a letter or digit, and keep it to 128 characters.";
 const REMOTE_URL: Pattern = ["reactor", "backends", "*", "remote", "url"];
+const DRIVES: Pattern = ["reactor", "drives"];
+const PLACED_DRIVE: Pattern = ["reactor", "placement", "drives", "*"];
 const DATA_DIR: Pattern = ["reactor", "backends", "*", "storage", "dataDir"];
 const READ_MODEL: Pattern = ["reactor", "backends", "*", "readModel", "url"];
 
@@ -137,6 +139,7 @@ const SETTABLE: Pattern[] = [
   REMOTE_URL,
   ["reactor", "namespace"],
   ["reactor", "placement", "primary"],
+  PLACED_DRIVE,
   ["runner", "port"],
   ["runner", "dev"],
   ...SWITCHBOARD_SETTABLE,
@@ -158,6 +161,8 @@ const CODE_REASONS = {
     "The monitor can't change document-model packages, because they load code.",
   drives:
     "The monitor can't change drives, because remote drives reach other servers.",
+  driveList:
+    "The monitor can only add a drive by name, or link a drive of a switchboard in this host.",
 } as const;
 
 /**
@@ -261,19 +266,113 @@ function memberFolders(envelope: unknown): string[] {
   return Object.keys(envelope.members);
 }
 
-/** A remote may only point at another reactor of this host, by its output. */
-function remoteUrlVerdict(value: unknown, envelope: unknown): PolicyVerdict {
+export const REMOTE_URL_REASON =
+  "A reactor can only sync with a drive of another reactor in this host.";
+
+/** The slug of a `drives.<slug>.url` output of a member of this host. */
+export function memberDriveSlug(
+  value: unknown,
+  envelope: unknown,
+): string | undefined {
   const token = outputTokenSchema.safeParse(value);
-  if (
-    token.success &&
-    memberFolders(envelope).includes(token.data.$output.host)
-  ) {
-    return OK;
+  if (!token.success) return undefined;
+  const { host, path } = token.data.$output;
+  if (!memberFolders(envelope).includes(host)) return undefined;
+  const [drives, slug, url, ...rest] = path;
+  return drives === "drives" &&
+    typeof slug === "string" &&
+    slug !== "" &&
+    url === "url" &&
+    rest.length === 0
+    ? slug
+    : undefined;
+}
+
+/** A remote may only open a drive of another reactor of this host, by its output. */
+function remoteUrlVerdict(value: unknown, envelope: unknown): PolicyVerdict {
+  return memberDriveSlug(value, envelope) === undefined
+    ? { ok: false, reason: REMOTE_URL_REASON }
+    : OK;
+}
+
+function isEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((item, index) => isEqual(item, b[index]))
+    );
   }
-  return {
-    ok: false,
-    reason: "A reactor can only sync with another reactor in this host.",
-  };
+  if (!isPlainObject(a) || !isPlainObject(b)) return false;
+  const keys = Object.keys(a);
+  return (
+    keys.length === Object.keys(b).length &&
+    keys.every((key) => Object.hasOwn(b, key) && isEqual(a[key], b[key]))
+  );
+}
+
+/** What the subject runs at `rest` now; a child without its own reactor
+ * block runs its folder's. */
+function currentValue(
+  envelope: unknown,
+  subject: readonly string[],
+  rest: readonly string[],
+): unknown {
+  let body: unknown = envelope;
+  for (const segment of subject) {
+    if (!isPlainObject(body) || !Object.hasOwn(body, segment)) return undefined;
+    body = body[segment];
+  }
+  if (
+    isChild(subject) &&
+    rest[0] === "reactor" &&
+    isPlainObject(body) &&
+    body.reactor === undefined &&
+    typeof body.host === "string" &&
+    isPlainObject(envelope) &&
+    isPlainObject(envelope.members)
+  ) {
+    body = Object.hasOwn(envelope.members, body.host)
+      ? envelope.members[body.host]
+      : undefined;
+  }
+  for (const segment of rest) {
+    if (!isPlainObject(body) || !Object.hasOwn(body, segment)) return undefined;
+    body = body[segment];
+  }
+  return body;
+}
+
+/**
+ * A drive list the monitor may write: entries the reactor already has, a
+ * drive added by name, or a link to a drive of another reactor of this host.
+ */
+function drivesVerdict(
+  value: unknown,
+  current: unknown,
+  envelope: unknown,
+): PolicyVerdict {
+  const refused = { ok: false, reason: CODE_REASONS.driveList } as const;
+  if (!Array.isArray(value)) return refused;
+  const kept = Array.isArray(current) ? current : [];
+  for (const entry of value) {
+    if (kept.some((other) => isEqual(other, entry))) continue;
+    if (!isPlainObject(entry) || typeof entry.slug !== "string") return refused;
+    const keys = Object.keys(entry);
+    const named =
+      keys.every((key) => key === "slug" || key === "name") &&
+      (entry.name === undefined || typeof entry.name === "string");
+    const remote = isPlainObject(entry.remote) ? entry.remote : undefined;
+    const linked =
+      keys.length === 2 &&
+      remote !== undefined &&
+      Object.keys(remote).length === 1 &&
+      memberDriveSlug(remote.url, envelope) === entry.slug;
+    if (!named && !linked) return refused;
+  }
+  return OK;
 }
 
 function childHostVerdict(value: unknown, envelope: unknown): PolicyVerdict {
@@ -295,6 +394,14 @@ function leafVerdict(
   if (isChild(subject) && rest.length === 1 && rest[0] === "host") {
     return childHostVerdict(value, envelope);
   }
+  // Copying what the reactor already runs, as into a wrapper, changes nothing.
+  const current =
+    rest[0] === "reactor" ? currentValue(envelope, subject, rest) : undefined;
+  if (current !== undefined && isEqual(current, value)) return OK;
+  // New drive entries can't carry `$env`; kept ones are what it runs.
+  if (matches(DRIVES, rest)) return drivesVerdict(value, current, envelope);
+  const env = envVerdict(value);
+  if (!env.ok) return env;
   for (const [pattern, reason] of DENIED_FAMILIES) {
     if (matches(pattern, rest)) return { ok: false, reason };
   }
@@ -369,8 +476,8 @@ export function checkSetter(setter: Setter, envelope?: unknown): PolicyVerdict {
       reason: "The monitor can't replace a whole host file.",
     };
   }
-  const value = checkSetterValue(setter.value);
-  if (!value.ok) return value;
+  const size = sizeVerdict(setter.value);
+  if (!size.ok) return size;
   for (const [leafRest, leafValue] of leaves(rest, setter.value)) {
     const verdict = leafVerdict(subject, leafRest, leafValue, envelope);
     if (!verdict.ok) return verdict;
@@ -378,20 +485,28 @@ export function checkSetter(setter: Setter, envelope?: unknown): PolicyVerdict {
   return OK;
 }
 
-/** Size, and every `$env` leaf must name a key the monitor accepts. */
-export function checkSetterValue(value: unknown): PolicyVerdict {
+function sizeVerdict(value: unknown): PolicyVerdict {
   const size = new TextEncoder().encode(JSON.stringify(value ?? null)).length;
-  if (size > HOST_RULES_LIMITS.setterValueBytes) {
-    return {
-      ok: false,
-      reason: `The value is ${size} bytes; the limit is ${HOST_RULES_LIMITS.setterValueBytes}.`,
-    };
-  }
+  return size > HOST_RULES_LIMITS.setterValueBytes
+    ? {
+        ok: false,
+        reason: `The value is ${size} bytes; the limit is ${HOST_RULES_LIMITS.setterValueBytes}.`,
+      }
+    : OK;
+}
+
+function envVerdict(value: unknown): PolicyVerdict {
   for (const name of envLeaves(value)) {
     const verdict = checkEnvKey(name);
     if (!verdict.ok) return verdict;
   }
   return OK;
+}
+
+/** Size, and every `$env` leaf must name a key the monitor accepts. */
+export function checkSetterValue(value: unknown): PolicyVerdict {
+  const size = sizeVerdict(value);
+  return size.ok ? envVerdict(value) : size;
 }
 
 function envLeaves(value: unknown): string[] {

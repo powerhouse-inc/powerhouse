@@ -8,6 +8,7 @@ export function OptionGroup({
   options,
   onChoose,
   action = false,
+  actions = [],
 }: {
   readonly title: string;
   readonly hint?: string;
@@ -15,10 +16,12 @@ export function OptionGroup({
   readonly onChoose: (option: OptionStatus) => void;
   /** Buttons that do something once, not a choice between values. */
   readonly action?: boolean;
+  /** One-off buttons after a choice, such as Remove. */
+  readonly actions?: readonly OptionStatus[];
 }) {
   const id = useId();
-  if (options.length === 0) return null;
-  const disabled = options.filter((option) => !option.enabled);
+  if (options.length === 0 && actions.length === 0) return null;
+  const disabled = [...options, ...actions].filter((option) => !option.enabled);
   return (
     <div aria-labelledby={id} className="hb-field" role="group">
       <div className="hb-flabel" id={id}>
@@ -29,6 +32,17 @@ export function OptionGroup({
         {options.map((option) => (
           <button
             aria-pressed={action ? undefined : option.selected}
+            className="hb-opt"
+            disabled={!option.enabled}
+            key={option.id}
+            onClick={() => onChoose(option)}
+            type="button"
+          >
+            {option.label}
+          </button>
+        ))}
+        {actions.map((option) => (
+          <button
             className="hb-opt"
             disabled={!option.enabled}
             key={option.id}

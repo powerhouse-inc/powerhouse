@@ -10,7 +10,7 @@ import {
   isNotFound,
   type ControllerClient,
 } from "../controller/client.js";
-import { withOwner } from "../controller/managed.js";
+import { driveAddressOf, withOwner } from "../controller/managed.js";
 import type { ManagedDescriptors } from "../controller/use-managed-descriptors.js";
 import type { Member } from "../host-rules/index.js";
 import { planImport } from "../lib/host-import.js";
@@ -21,7 +21,7 @@ import type { BuilderEngine } from "./engine.js";
 const POLL_MS = 1000;
 const WATCH_MS = 3000;
 
-/** `url` is a switchboard's GraphQL URL; `app` a Connect's page. */
+/** `url`: a switchboard's first drive address; `app`: a Connect's page. */
 export type RunReactor = { name: string; url?: string; app?: string };
 
 /** The copy Start launched; `id` is absent until the controller answers. */
@@ -98,14 +98,14 @@ function reactorsOf(instance: Instance): RunReactor[] {
       ? [
           {
             name: instance.host,
-            url: instance.outputs?.graphql,
+            url: instance.outputs && driveAddressOf(instance.outputs),
             app: instance.app,
           },
         ]
       : []),
     ...Object.entries(instance.members ?? {}).map(([name, member]) => ({
       name,
-      url: member.outputs?.graphql,
+      url: member.outputs && driveAddressOf(member.outputs),
       app: member.app,
     })),
   ];

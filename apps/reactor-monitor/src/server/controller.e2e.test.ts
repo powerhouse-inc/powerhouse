@@ -19,13 +19,19 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { addEdit, newDraft, requestOf } from "../builder/draft.ts";
 import {
   capabilitiesResponseSchema,
+  draftCheckResponseSchema,
   errorResponseSchema,
   exportResponseSchema,
   instanceSchema,
   TOKEN_HEADER,
   type Instance,
 } from "../controller/api.ts";
-import { applyOption, hostOptions } from "../host-rules/index.ts";
+import {
+  addDriveStatus,
+  applyOption,
+  hostOptions,
+  type HostDraft,
+} from "../host-rules/index.ts";
 import {
   createMonitorController,
   type MonitorController,
@@ -340,6 +346,44 @@ describe.skipIf(process.platform === "win32")(
         await expect(fetch(url, { method: "POST" })).rejects.toThrow();
       }
     }, 300_000);
+
+    it("checks a draft whose Connect opens two of the switchboard's drives", async () => {
+      const exported = await call(
+        "GET",
+        `export?${new URLSearchParams({ project, host: "web" }).toString()}`,
+      );
+      const { export: envelope, baseDigest } = exportResponseSchema.parse(
+        exported.body,
+      );
+      const context = capabilitiesResponseSchema.parse(
+        (await call("GET", "capabilities")).body,
+      );
+      let hostDraft: HostDraft = { envelope, env: {} };
+      let draft = newDraft(
+        { kind: "project", project, host: "web", export: envelope },
+        baseDigest,
+      );
+      for (const id of [
+        "Shared",
+        "host.children.app:reach:open:sb:powerhouse",
+        "host.children.app:reach:open:sb:shared",
+      ]) {
+        const option = id.startsWith("host.")
+          ? hostOptions(hostDraft, context).find(
+              (candidate) => candidate.id === id,
+            )
+          : addDriveStatus(hostDraft, context, "host.children.sb", id);
+        expect(option?.reason, id).toBeUndefined();
+        hostDraft = applyOption(hostDraft, option!).draft;
+        draft = addEdit(draft, option!.setters);
+      }
+      const checked = await call("POST", "drafts/check", requestOf(draft));
+      expect(checked.status, JSON.stringify(checked.body)).toBe(200);
+      expect(draftCheckResponseSchema.parse(checked.body)).toEqual({
+        ruleIssues: [],
+        issues: [],
+      });
+    });
 
     it("starts a draft with a Connect member from its throwaway copy, serves Connect, removes the copy on stop", async () => {
       const exported = await call(
