@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  currentLayer,
+  judgeLayer,
   loadPlacements,
   PLACEMENTS_STORAGE_KEY,
   savePlacements,
@@ -52,22 +52,30 @@ describe("placements", () => {
     });
   });
 
-  it("drops a move whose replaced config value changed", () => {
+  it("judges only the router's own moves, dropping those whose config changed", () => {
     expect(
-      currentLayer(
+      judgeLayer(
         {
           same: { backend: "x", configWas: "y" },
           changed: { backend: "x", configWas: "y" },
           unplaced: { backend: "x" },
+          absent: { backend: "gone" },
+          app: { backend: "x", app: "web/app" },
         },
-        { same: "y", changed: "z" },
+        { config: { same: "y", changed: "z" }, backends: new Set(["x", "y"]) },
       ),
     ).toEqual({
-      layer: {
-        same: { backend: "x", configWas: "y" },
-        unplaced: { backend: "x" },
-      },
+      apply: [
+        ["same", { backend: "x", configWas: "y" }],
+        ["unplaced", { backend: "x" }],
+      ],
       dropped: ["changed"],
     });
+    expect(
+      judgeLayer(
+        { app: { backend: "x", app: "web/app" }, other: { backend: "x" } },
+        { app: "web/app", config: {}, backends: new Set(["x"]) },
+      ).apply,
+    ).toEqual([["app", { backend: "x", app: "web/app" }]]);
   });
 });

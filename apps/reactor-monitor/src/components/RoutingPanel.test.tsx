@@ -237,19 +237,28 @@ describe("RoutingPanel moves", () => {
   let registry: ReactorMonitorRegistry;
   let driveA = "";
 
+  // A second switchboard handle: the same host backend after a new Start.
+  const GAMMA = "router-gamma";
+  const three = [...descriptors, memoryDescriptor(GAMMA)];
+
   beforeAll(async () => {
     registry = new ReactorMonitorRegistry();
-    const alpha = await registry.provision(descriptors[0]);
-    await registry.provision(descriptors[1]);
+    const alpha = await registry.provision(three[0]);
+    await registry.provision(three[1]);
+    await registry.provision(three[2]);
     driveA = (await alpha.client.drives.create({ global: { name: "Alpha" } }))
       .header.id;
-  }, 60_000);
+  }, 90_000);
 
   afterAll(async () => {
     await registry.killAll();
   });
 
-  function seedOf(id: string, collections: Record<string, string>): RouteSeed {
+  function seedOf(
+    id: string,
+    collections: Record<string, string>,
+    switchboard = BETA,
+  ): RouteSeed {
     return {
       id,
       app: "app",
@@ -259,7 +268,7 @@ describe("RoutingPanel moves", () => {
       context: { controller: true, postgres: false },
       backends: [
         { reactor: ALPHA, backend: "main" },
-        { reactor: BETA, backend: "sb" },
+        { reactor: switchboard, backend: "sb" },
       ],
       collections,
       drives: { [driveA]: "alpha" },
@@ -268,7 +277,7 @@ describe("RoutingPanel moves", () => {
 
   function show(props: RoutingPanelProps) {
     return render(
-      <ReactorMonitorProvider descriptors={descriptors} registry={registry}>
+      <ReactorMonitorProvider descriptors={three} registry={registry}>
         <RoutingPanel {...props} />
       </ReactorMonitorProvider>,
     );
@@ -303,7 +312,7 @@ describe("RoutingPanel moves", () => {
     await waitFor(() =>
       expect(
         within(row(view)).getByTestId("router-route-drift").textContent,
-      ).toBe(`Moved here. Host config: ${ALPHA}`),
+      ).toBe("Moved here. Host config: main"),
     );
     fireEvent.click(within(row(view)).getByText("Save to host config"));
     expect(saved).toEqual([["alpha", "sb"]]);
@@ -318,7 +327,7 @@ describe("RoutingPanel moves", () => {
       () =>
         expect(
           within(row(again)).getByTestId("router-route-drift").textContent,
-        ).toBe(`Moved here. Host config: ${ALPHA}`),
+        ).toBe("Moved here. Host config: main"),
       WAIT,
     );
     const handle = (
@@ -338,6 +347,50 @@ describe("RoutingPanel moves", () => {
     );
     expect(storage.getItem(PLACEMENTS_STORAGE_KEY)).toBe("{}");
     again.unmount();
+  }, 60_000);
+
+  it("keeps a move across a new start, whose switchboard has a new name", async () => {
+    const storage = memoryStorage();
+    const first = show({
+      setName: "lab",
+      storage,
+      seed: seedOf("s1", { [driveA]: ALPHA }),
+    });
+    await waitFor(() => expect(row(first)).toBeTruthy(), WAIT);
+    fireEvent.change(within(row(first)).getByTestId("router-route-backend"), {
+      target: { value: BETA },
+    });
+    await waitFor(() =>
+      expect(within(row(first)).getByTestId("router-route-drift")).toBeTruthy(),
+    );
+    first.unmount();
+    expect(JSON.parse(storage.getItem(PLACEMENTS_STORAGE_KEY) ?? "")).toEqual({
+      lab: {
+        "web/app/alpha": { backend: "sb", configWas: "main", app: "web/app" },
+      },
+    });
+
+    const restarted = show({
+      setName: "lab",
+      storage,
+      seed: seedOf("s2", { [driveA]: ALPHA }, GAMMA),
+    });
+    await waitFor(
+      () =>
+        expect(
+          within(row(restarted)).getByTestId("router-route-drift").textContent,
+        ).toBe("Moved here. Host config: main"),
+      WAIT,
+    );
+    expect(
+      (
+        within(row(restarted)).getByTestId(
+          "router-route-backend",
+        ) as HTMLSelectElement
+      ).value,
+    ).toBe(GAMMA);
+    expect(restarted.queryByTestId("router-placement-note")).toBeNull();
+    restarted.unmount();
   }, 60_000);
 
   it("drops a kept move once the config value it replaced changes", async () => {

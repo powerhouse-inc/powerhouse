@@ -19,7 +19,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   browserPlacementStorage,
-  currentLayer,
+  judgeLayer,
   loadPlacements,
   savePlacements,
   type PlacementLayer,
@@ -64,6 +64,8 @@ type NamedError = { readonly name: string; readonly message: string };
 /** The topology a built client was constructed from, kept so a reconfigure can rebuild it. */
 type Topology = {
   readonly reactors: readonly ManagedReactor[];
+  /** The started app this router was opened for. */
+  readonly seed?: RouteSeed;
   /** Placements from the host config; moves are the runtime layer. */
   readonly overrides: Readonly<Record<string, string>>;
   readonly requirements: Readonly<Record<string, CollectionRequirementsInput>>;
@@ -154,12 +156,58 @@ function errorText(error: unknown): string {
 }
 
 /** A moved row's line, or nothing when it is where the config puts it. */
-function driftOf(entry: RouterTableEntry): string | undefined {
+function driftOf(
+  entry: RouterTableEntry,
+  label: (reactor: string) => string,
+): string | undefined {
   if (entry.origin !== "runtime") return undefined;
   if (entry.configured === undefined) return ROUTER_COPY.movedUnplaced;
   return entry.configured === entry.backend
     ? undefined
-    : ROUTER_COPY.movedFrom(entry.configured);
+    : ROUTER_COPY.movedFrom(label(entry.configured));
+}
+
+/** How moves are kept: a started app's by host backend and drive slug. */
+type LayerNames = {
+  readonly app?: string;
+  readonly backend: (reactor: string) => string;
+  readonly reactor: (stored: string) => string | undefined;
+  readonly key: (routerKey: string) => string;
+  readonly routerKey: (stored: string) => string;
+};
+
+function layerNames(seed: RouteSeed | undefined): LayerNames {
+  if (!seed) {
+    return {
+      backend: (reactor) => reactor,
+      reactor: (stored) => stored,
+      key: (routerKey) => routerKey,
+      routerKey: (stored) => stored,
+    };
+  }
+  // A started copy's reactor names change with each start; these don't.
+  const app = `${seed.source.host}/${seed.app}`;
+  const prefix = `${app}/`;
+  return {
+    app,
+    backend: (reactor) =>
+      seed.backends.find((entry) => entry.reactor === reactor)?.backend ??
+      reactor,
+    reactor: (stored) =>
+      seed.backends.find((entry) => entry.backend === stored)?.reactor,
+    key: (routerKey) =>
+      prefix +
+      (Object.hasOwn(seed.drives, routerKey)
+        ? seed.drives[routerKey]
+        : routerKey),
+    routerKey: (stored) => {
+      const slug = stored.slice(prefix.length);
+      return (
+        Object.keys(seed.drives).find((key) => seed.drives[key] === slug) ??
+        slug
+      );
+    },
+  };
 }
 
 export type RoutingPanelProps = {
@@ -289,23 +337,32 @@ export function RoutingPanel({
       }
       setBuildError("");
       const names = new Set(next.reactors.map((reactor) => reactor.name));
+      const kept = layerNames(next.seed);
       const stored = storedLayer();
-      const mine = Object.fromEntries(
-        Object.entries(stored).filter(([, entry]) => names.has(entry.backend)),
-      );
-      const { dropped } = currentLayer(mine, next.overrides);
+      const { apply, dropped } = judgeLayer(stored, {
+        ...(kept.app === undefined ? {} : { app: kept.app }),
+        config: Object.fromEntries(
+          Object.entries(next.overrides).map(([key, reactor]) => [
+            kept.key(key),
+            kept.backend(reactor),
+          ]),
+        ),
+        backends: new Set([...names].map(kept.backend)),
+      });
       let note = "";
       if (dropped.length > 0) {
-        const kept = { ...stored };
-        for (const key of dropped) delete kept[key];
-        note = keepLayer(kept)
+        const left = { ...stored };
+        for (const key of dropped) delete left[key];
+        note = keepLayer(left)
           ? ROUTER_COPY.dropped(dropped.length)
           : ROUTER_COPY.notKept;
       }
-      for (const [key, entry] of Object.entries(storedLayer())) {
-        if (!names.has(entry.backend)) continue;
+      for (const [stored, entry] of apply) {
+        const reactor = kept.reactor(entry.backend);
+        if (reactor === undefined) continue;
+        const key = kept.routerKey(stored);
         try {
-          router.client.setPlacement(key, entry.backend);
+          router.client.setPlacement(key, reactor);
         } catch (error) {
           appendLog(
             `A kept move for ${key} was not applied: ${errorText(error)}`,
@@ -340,6 +397,7 @@ export function RoutingPanel({
     // eslint-disable-next-line react-hooks-extra/set-state-in-effect
     applyTopology({
       reactors: chosen,
+      seed,
       overrides: seed.collections,
       requirements: {},
     });
@@ -382,13 +440,18 @@ export function RoutingPanel({
         setOpError(errorText(error));
         return;
       }
+      const names = layerNames(topology.seed);
+      const stored = names.key(key);
       const next = { ...storedLayer() };
       if (runtime === undefined) {
-        delete next[key];
+        delete next[stored];
       } else {
-        next[key] = {
-          backend: runtime,
-          ...(configured === undefined ? {} : { configWas: configured }),
+        next[stored] = {
+          backend: names.backend(runtime),
+          ...(configured === undefined
+            ? {}
+            : { configWas: names.backend(configured) }),
+          ...(names.app === undefined ? {} : { app: names.app }),
         };
       }
       setPlacementNote(keepLayer(next) ? "" : ROUTER_COPY.notKept);
@@ -406,21 +469,22 @@ export function RoutingPanel({
 
   const handleSave = useCallback(
     (entry: RouterTableEntry) => {
-      if (!seed || !onSaveToHost) return;
-      const drive = Object.hasOwn(seed.drives, entry.collectionId)
-        ? seed.drives[entry.collectionId]
+      const routed = topology?.seed;
+      if (!routed || !onSaveToHost) return;
+      const drive = Object.hasOwn(routed.drives, entry.collectionId)
+        ? routed.drives[entry.collectionId]
         : undefined;
-      const backend = seed.backends.find(
+      const backend = routed.backends.find(
         ({ reactor }) => reactor === entry.backend,
       )?.backend;
       if (drive === undefined || backend === undefined) return;
-      const verdict = onSaveToHost(seed, drive, backend);
+      const verdict = onSaveToHost(routed, drive, backend);
       setSaveNotes((notes) => ({
         ...notes,
         [entry.collectionId]: verdict.ok ? ROUTER_COPY.saved : verdict.reason,
       }));
     },
-    [seed, onSaveToHost],
+    [topology, onSaveToHost],
   );
 
   const handleSetRequirement = useCallback(() => {
@@ -577,7 +641,8 @@ export function RoutingPanel({
       .map((reactor) => reactor.name) ?? [];
   const requirementRows = Object.entries(topology?.requirements ?? {});
   const hostBackendOf = (reactor: string) =>
-    seed?.backends.find((entry) => entry.reactor === reactor)?.backend;
+    topology?.seed?.backends.find((entry) => entry.reactor === reactor)
+      ?.backend;
 
   return (
     <section className="rm-tab rm-router" aria-label="Router topology">
@@ -692,8 +757,11 @@ export function RoutingPanel({
                   </tr>
                 ) : (
                   snapshot.collections.map((entry) => {
-                    const drive = seed?.drives[entry.collectionId];
-                    const drift = driftOf(entry);
+                    const drive = topology?.seed?.drives[entry.collectionId];
+                    const drift = driftOf(
+                      entry,
+                      (reactor) => hostBackendOf(reactor) ?? reactor,
+                    );
                     const savable =
                       drift !== undefined &&
                       onSaveToHost !== undefined &&

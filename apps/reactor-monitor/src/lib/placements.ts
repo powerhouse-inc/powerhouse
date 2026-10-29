@@ -5,6 +5,8 @@ export type RuntimePlacement = {
   readonly backend: string;
   /** The config's backend for the key when it was moved; absent: none. */
   readonly configWas?: string;
+  /** Set for a started app's move, kept by host backend and drive slug. */
+  readonly app?: string;
 };
 
 export type PlacementLayer = Readonly<Record<string, RuntimePlacement>>;
@@ -54,9 +56,11 @@ export function loadPlacements(
     if (entry.configWas !== undefined && typeof entry.configWas !== "string") {
       continue;
     }
+    if (entry.app !== undefined && typeof entry.app !== "string") continue;
     layer[key] = {
       backend: entry.backend,
       ...(entry.configWas === undefined ? {} : { configWas: entry.configWas }),
+      ...(entry.app === undefined ? {} : { app: entry.app }),
     };
   }
   return layer;
@@ -80,16 +84,24 @@ export function savePlacements(
   }
 }
 
-/** The layer without entries whose config value changed since the move. */
-export function currentLayer(
+/** A router's moves to apply again, and those whose config value changed. */
+export function judgeLayer(
   layer: PlacementLayer,
-  config: Readonly<Record<string, string>>,
-): { layer: PlacementLayer; dropped: string[] } {
-  const kept: Record<string, RuntimePlacement> = {};
+  scope: {
+    readonly app?: string;
+    readonly config: Readonly<Record<string, string>>;
+    readonly backends: ReadonlySet<string>;
+  },
+): { apply: [string, RuntimePlacement][]; dropped: string[] } {
+  const apply: [string, RuntimePlacement][] = [];
   const dropped: string[] = [];
   for (const [key, entry] of Object.entries(layer)) {
-    if (entry.configWas === config[key]) kept[key] = entry;
+    if (entry.app !== scope.app || !scope.backends.has(entry.backend)) continue;
+    const configured = Object.hasOwn(scope.config, key)
+      ? scope.config[key]
+      : undefined;
+    if (entry.configWas === configured) apply.push([key, entry]);
     else dropped.push(key);
   }
-  return { layer: kept, dropped };
+  return { apply, dropped };
 }
