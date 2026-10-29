@@ -13,6 +13,7 @@ import type {
 import { useSelectedWorkflowDocument } from "document-models/workflow";
 import { WORKFLOW_UNDO } from "./undo-policy.js";
 import { useMemo } from "react";
+import { PiecePlaceholderContext } from "./ui/PropertyForm.js";
 import { useWorkflowModel } from "./document/useWorkflowModel.js";
 import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
 import type { OutputTreeNode, RuntimeClient } from "./runtime-client.js";
@@ -102,9 +103,13 @@ function LastRunFact(props: { workflowId: string }) {
       Last run
       <span className={`h-1.5 w-1.5 rounded-full ${TONE_DOT[tone]}`} />
       <span className={TONE_TEXT[tone]}>{formatWhen(run.startedAt)}</span>
-      <span className="tabular-nums">
-        {formatDuration(run.startedAt, run.endedAt)}
-      </span>
+      {run.status === "WAITING" ? (
+        <span className={TONE_TEXT[tone]}>waiting</span>
+      ) : (
+        <span className="tabular-nums">
+          {formatDuration(run.startedAt, run.endedAt)}
+        </span>
+      )}
     </span>
   );
 }
@@ -232,6 +237,16 @@ function WorkflowEditor() {
     [client, queryClient, model, workflowId, modules],
   );
 
+  const maxSuspensionDays = document.state.global.policy.maxSuspensionDays;
+  const placeholders = useMemo(
+    // Zero or less sets no bound, so there is no number to show.
+    () => ({
+      pausedFlowTimeoutDays:
+        maxSuspensionDays > 0 ? maxSuspensionDays : undefined,
+    }),
+    [maxSuspensionDays],
+  );
+
   return (
     <DesignTimeProvider
       service={designTime}
@@ -239,19 +254,21 @@ function WorkflowEditor() {
       scope={client.url}
     >
       <ExpressionScopeSourceProvider value={scopeSource}>
-        <div className="flex h-full min-h-0 flex-col bg-background">
-          <WorkflowEditorApp
-            model={model}
-            callbacks={callbacks}
-            leading={<BackButton documentId={workflowId} />}
-            trailing={
-              <>
-                <LastRunFact workflowId={workflowId} />
-                <UndoRedo documentId={workflowId} policy={WORKFLOW_UNDO} />
-              </>
-            }
-          />
-        </div>
+        <PiecePlaceholderContext.Provider value={placeholders}>
+          <div className="flex h-full min-h-0 flex-col bg-background">
+            <WorkflowEditorApp
+              model={model}
+              callbacks={callbacks}
+              leading={<BackButton documentId={workflowId} />}
+              trailing={
+                <>
+                  <LastRunFact workflowId={workflowId} />
+                  <UndoRedo documentId={workflowId} policy={WORKFLOW_UNDO} />
+                </>
+              }
+            />
+          </div>
+        </PiecePlaceholderContext.Provider>
       </ExpressionScopeSourceProvider>
     </DesignTimeProvider>
   );

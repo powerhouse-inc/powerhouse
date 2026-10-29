@@ -31,7 +31,8 @@ const BUTTON_VARIANT = {
     "border border-solid border-foreground/15 bg-card text-foreground hover:bg-accent",
   ghost: "text-muted-foreground hover:bg-accent hover:text-foreground",
   danger: "text-wf-fail hover:bg-wf-fail/10",
-  destructive: "bg-wf-fail text-white hover:opacity-90",
+  // Dark text on the lighter dark-theme red, as primary does.
+  destructive: "bg-wf-fail text-background hover:opacity-90",
 };
 
 export function Button(

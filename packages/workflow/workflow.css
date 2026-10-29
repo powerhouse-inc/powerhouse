@@ -55,6 +55,8 @@
   --w-rjv-type-date-color: var(--foreground);
   font-size: 12px;
   line-height: 1.7;
+  /* Long values (URLs, ids) wrap instead of pushing their key out of view. */
+  overflow-wrap: anywhere;
 }
 
 /* The block picker opening from its button. */

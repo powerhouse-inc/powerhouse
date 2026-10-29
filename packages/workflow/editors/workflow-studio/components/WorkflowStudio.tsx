@@ -28,6 +28,7 @@ import {
 } from "../../workflow-editor/runtime-context.js";
 import { DocumentErrorBoundary } from "../../shared/DocumentErrorBoundary.js";
 import { RunsView } from "./RunsView.js";
+import { usePendingApprovals, WaitingApprovals } from "./Waitpoints.js";
 import { Sidebar } from "./Sidebar.js";
 import { useItemSelection } from "./use-item-selection.js";
 import { useRuns } from "./useRuns.js";
@@ -146,6 +147,13 @@ function Studio(props: { children?: ReactNode }) {
   // The drive feed colours the sidebar and is the overview's own feed; a
   // focused workflow gets its own, so older runs of it aren't cut off.
   const driveFeed = useRuns({ driveId });
+  const approvals = usePendingApprovals(driveId);
+  // Bumped to scroll the waiting list into view after navigating.
+  const [waitingFocus, setWaitingFocus] = useState(0);
+  const showApprovals = (workflowId?: string) => {
+    go(workflowId);
+    setWaitingFocus((request) => request + 1);
+  };
   const workflowFeed = useRuns(
     { workflowId: focusedWorkflow?.id },
     Boolean(focusedWorkflow),
@@ -156,6 +164,19 @@ function Studio(props: { children?: ReactNode }) {
   for (const run of driveFeed.runs ?? []) {
     if (!lastRuns.has(run.workflowId)) lastRuns.set(run.workflowId, run.status);
   }
+
+  // Step names by key, per workflow, for the approval cards.
+  const stepNames = new Map(
+    workflowDocuments.map((document) => [
+      document.header.id,
+      new Map(
+        document.state.global.steps.map((step) => [
+          step.key,
+          step.name || step.key,
+        ]),
+      ),
+    ]),
+  );
 
   // Manual fire only makes sense for the core manual trigger.
   const { data: targetDocument } = useDocumentSafe(liveTarget?.id ?? null);
@@ -175,6 +196,8 @@ function Studio(props: { children?: ReactNode }) {
         workflows={workflows}
         connections={connections}
         lastRuns={lastRuns}
+        approvals={approvals}
+        onShowApprovals={showApprovals}
         activeId={selectedId}
         allRunsActive={!selectedId}
         creating={creating}
@@ -222,11 +245,21 @@ function Studio(props: { children?: ReactNode }) {
                 order={workflows.map((node) => node.id)}
                 creating={creating}
                 onOpen={(workflowId) => go(workflowId)}
+                approvals={approvals}
+                onShowApprovals={showApprovals}
                 onCreate={() =>
                   create(WORKFLOW_TYPE, "Workflow", workflows.length)
                 }
               />
             )}
+            <WaitingApprovals
+              driveId={liveTarget ? undefined : driveId}
+              workflowId={liveTarget?.id}
+              showWorkflow={liveTarget === null}
+              stepNames={stepNames}
+              onChanged={reloadRuns}
+              focusRequest={waitingFocus}
+            />
             <RunsView
               // The header already names the workflow; don't say it twice.
               title={liveTarget ? "Runs" : "Recent runs"}

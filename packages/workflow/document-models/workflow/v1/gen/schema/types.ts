@@ -388,7 +388,7 @@ export type WorkflowPolicy = {
   journalAsDocument: Scalars["Boolean"]["output"];
   /** ENFORCED under PARALLEL: how many runs of this workflow may execute at once; null is unbounded. SINGLETON and QUEUE are 1 by definition. */
   maxParallelRuns: Maybe<Scalars["Int"]["output"]>;
-  /** NOT YET ENFORCED. Bounds how long a run may stay suspended on a waitpoint - but nothing suspends: waitpoints, run.pause and generateResumeUrl all throw, so there is no suspended state to bound. */
+  /** Bounds how long a run may stay suspended on a waitpoint: a waitpoint expires this long after it is created, ending the run CANCELLED with WaitpointExpired. A Delay longer than this is refused. */
   maxSuspensionDays: Scalars["Int"]["output"];
   /** ENFORCED. What happens to a run whose steps have all failed terminally: PARK takes the trigger out of the supervisor's ENABLED set until the workflow is re-published or re-enabled, NOTIFY logs at error level (the only notification channel this engine has), IGNORE does nothing. */
   onFailure: FailureMode;
