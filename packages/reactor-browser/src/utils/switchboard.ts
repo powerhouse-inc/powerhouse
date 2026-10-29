@@ -86,7 +86,7 @@ export function getSwitchboardBaseFromChannelUrl(channelUrl: string): string {
 
 /**
  * The GraphQL name the switchboard exposes a document model under. Mirrors
- * `getDocumentModelSchemaName` on the server (`create-schema.ts`): the root
+ * `getDocumentModelSchemaName` on the server (`model-schema-templates.ts`): the root
  * query field and the state type names are all derived from the model's
  * `global.name`.
  */
@@ -233,7 +233,7 @@ function getLocalStateSelection(
  * Builds a query scoped to a document type's own subgraph root field,
  * selecting the document and its full typed state. The shape mirrors what
  * the switchboard generates per model (`generateNewApiSchema` in
- * `create-schema.ts`): `<Name> { document(identifier:) { document { ...
+ * `model-schema-templates.ts`): `<Name> { document(identifier:) { document { ...
  * state { auth document global local } } } childIds }`.
  */
 function buildModelScopedQuery(model: DocumentModelModule): string {
