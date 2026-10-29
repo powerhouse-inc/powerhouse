@@ -1,7 +1,10 @@
 import type { ReactorInfo } from "@powerhousedao/reactor";
+import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
 import {
+  fromReactorClient,
   misrouteOf,
   RoutingReactorClient,
+  UNKNOWN_REACTOR_INFO,
   UnsupportedByBackendError,
   type RouterDiagnostic,
 } from "@powerhousedao/reactor-router";
@@ -381,6 +384,71 @@ describe("createSwitchboardBackend breaker", () => {
 
       expect(remote.config.backend.health?.()).toBe("up");
     } finally {
+      await hanging.close();
+    }
+  });
+
+  it("opens on the router's probe deadlines, so a hung Switchboard stops holding local creates", async () => {
+    const PROBE_TIMEOUT_MS = 300;
+    const hanging = await serveHanging();
+    const local = await new ReactorClientBuilder()
+      .withReactorBuilder(
+        new ReactorBuilder().withDocumentModelSources([
+          documentModelDocumentModelModule as unknown as DocumentModelModule,
+        ]),
+      )
+      .buildModule();
+    const remote = createSwitchboardBackend({
+      name: "sb",
+      url: hanging.url,
+      tokenProvider: () => Promise.resolve(undefined),
+      signer: undefined,
+      documentModels: () => [],
+      realtime: false,
+      inspection: "none",
+      requestTimeoutMs: 5_000,
+      breaker: { failures: 3, openMs: 60_000 },
+    });
+    const router = new RoutingReactorClient(
+      [
+        {
+          name: "local",
+          backend: fromReactorClient(local.client),
+          facts: UNKNOWN_REACTOR_INFO,
+          reach: { hosting: "in-process", inspection: "direct" },
+          refusesMisroutes: false,
+        },
+        remote.config,
+      ],
+      {
+        primaryBackend: "local",
+        defaultRequirements: { inspectable: true },
+        probeTimeoutMs: PROBE_TIMEOUT_MS,
+        onDiagnostic: () => {},
+      },
+    );
+    try {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await router.create(modelDocument(`held-${attempt}`));
+      }
+      expect(hanging.received).toHaveLength(3);
+      expect(router.describeRouting().health).toEqual([
+        { backend: "sb", health: "down" },
+      ]);
+
+      const started = Date.now();
+      const created = await router.create(modelDocument("after-open"));
+
+      expect(Date.now() - started).toBeLessThan(PROBE_TIMEOUT_MS / 2);
+      expect(hanging.received).toHaveLength(3);
+      expect(
+        router
+          .describeRouting()
+          .documents.find((entry) => entry.identifier === created.header.id)
+          ?.backend,
+      ).toBe("local");
+    } finally {
+      local.reactorModule?.reactor.kill();
       await hanging.close();
     }
   });

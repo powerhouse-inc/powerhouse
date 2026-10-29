@@ -62,8 +62,12 @@ export function withRequestDeadline(
   };
 }
 
-/** Whether a request failed at its deadline rather than by its caller's abort. */
+/**
+ * Whether a request failed at a deadline rather than by its caller's abort:
+ * this transport's own (`TimeoutError`, a DOMException) or the router's probe
+ * deadline (`ProbeTimeoutError`, reactor-router's dispatcher.ts).
+ */
 export function isDeadlineError(error: unknown): boolean {
-  // A DOMException, which not every engine's Error.isError admits.
-  return (error as { name?: unknown } | null)?.name === "TimeoutError";
+  const name = (error as { name?: unknown } | null)?.name;
+  return name === "TimeoutError" || name === "ProbeTimeoutError";
 }

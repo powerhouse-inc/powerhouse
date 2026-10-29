@@ -249,8 +249,10 @@ export function driveIdOf(
 /** A server that accepts each request and never answers it. */
 export async function serveHanging(): Promise<StubSwitchboard> {
   const sockets = new Set<Socket>();
-  const instance = http.createServer(() => {
-    // Never answered.
+  const received: Received[] = [];
+  const instance = http.createServer((request) => {
+    // Never answered; only its arrival is recorded.
+    received.push({ headers: request.headers, body: { query: "" } });
   });
   instance.on("connection", (socket) => {
     sockets.add(socket);
@@ -262,7 +264,7 @@ export async function serveHanging(): Promise<StubSwitchboard> {
   const { port } = instance.address() as AddressInfo;
   return {
     url: `http://127.0.0.1:${port}/graphql`,
-    received: [],
+    received,
     close: () =>
       new Promise<void>((resolve) => {
         for (const socket of sockets) socket.destroy();
