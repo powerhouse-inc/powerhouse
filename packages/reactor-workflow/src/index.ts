@@ -16,7 +16,12 @@ export type {
 } from "./reactor/host.js";
 export {
   createWorkflowRuntime,
+  WAITPOINT_EXPIRED_ERROR_NAME,
+  WAITPOINT_NOT_LIVE_ERROR_NAME,
+  WORKFLOW_DISABLED_ERROR_NAME,
+  WORKFLOW_PARKED_ERROR_NAME,
   WorkflowRuntimeService,
+  waitpointRecord,
   type BlockResolutionRecord,
   type ConnectionCheckResult,
   type ConnectionSummary,
@@ -27,6 +32,18 @@ export {
   type RunsPageArgs,
 } from "./reactor/service.js";
 export { InvalidRunCursorError } from "./reactor/run-cursor.js";
+export type {
+  ApprovalRequest,
+  ReasonRequiredOn,
+  ResolveWaitpointInput,
+  WaitingRunsArgs,
+  WaitpointKind,
+  WaitpointDescription,
+  WaitpointRecord,
+  WaitpointResumePayload,
+  WaitpointStatus,
+  WaitpointType,
+} from "./reactor/waitpoint-types.js";
 export {
   acquireWorkflowSingletonLease,
   singletonOwnerName,
@@ -74,7 +91,9 @@ export {
 export type { WorkflowHealth } from "./reactor/service.js";
 export type {
   PieceStoreRow,
+  RunPinRow,
   RunRow,
+  WaitpointRow,
   StepExecutionRow,
   TriggerDedupeRow,
   TriggerStateRow,

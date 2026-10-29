@@ -5,6 +5,7 @@ import {
 import type { StagedFile } from "../context/files.js";
 import type { RecordedListener, RecordedSchedule } from "../context/trigger.js";
 import { jsonSafe } from "./json-safe.js";
+import { AsyncResource } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import { createIpcTransport, type ReactorTap } from "./reactor-rpc.js";
 import type { WorkflowTelemetry } from "../../../telemetry.js";
@@ -36,6 +37,8 @@ import {
   type WorkerMemory,
   type WorkerResponse,
   type WorkerTimings,
+  type PausedStep,
+  type RunResponse,
 } from "./protocol.js";
 import { epochNow } from "./timings.js";
 
@@ -88,6 +91,11 @@ export interface PieceWorkerResult {
   output: unknown;
   touched: string[];
   tlsPoisoned: boolean;
+  // run only: the action asked to suspend the run.
+  paused?: PausedStep;
+  // run only: what `run.respond` / `run.stop` answer with, and whether it stopped.
+  response?: RunResponse;
+  stopped?: boolean;
   // run only: files the piece wrote through ctx.files, staged on disk for the
   // host to ingest before the output is journalled.
   files?: StagedFile[];
@@ -473,6 +481,9 @@ export class PieceWorker implements IPieceWorker {
         if (response.type === "result") {
           resolve({
             output: response.output,
+            ...(response.paused ? { paused: response.paused } : {}),
+            ...(response.response ? { response: response.response } : {}),
+            ...(response.stopped ? { stopped: true } : {}),
             touched: response.touched,
             tlsPoisoned: response.tlsPoisoned,
             files: response.files,
@@ -500,7 +511,8 @@ export class PieceWorker implements IPieceWorker {
 
       // Served outside the request queue: the queue is held by this very
       // request, so routing a call through it would deadlock the step.
-      const onHostCall = (value: unknown) => {
+      // Bound to the request's async context, not that of the run that forked the child.
+      const onHostCall = AsyncResource.bind((value: unknown) => {
         const message = value as ChildMessage;
         if (message.type === "host-call") {
           void this.serveHostCall(worker, message, taps.hostCalls);
@@ -509,7 +521,7 @@ export class PieceWorker implements IPieceWorker {
         if (message.type === "host-notify") {
           serveNotify(message, taps.notifications);
         }
-      };
+      });
 
       const cleanup = () => {
         reactor?.stop();
