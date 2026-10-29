@@ -591,6 +591,17 @@ type ReactorIdentity {
   key: String!
 }
 
+type RuntimeHost {
+  """
+  switchboard@<machine>: what apps record as the runner
+  """
+  id: String!
+  """
+  The machine's name, for people: where a sign-in has to happen
+  """
+  label: String!
+}
+
 type SecretRecord {
   ref: String!
   label: String
@@ -750,6 +761,12 @@ type WorkflowRuntimeMutations {
   Fires a workflow's manual trigger (the core piece's) and runs it to completion.
   """
   fire(workflowId: String!, payload: Unknown): WorkflowRunPayload!
+  """
+  Runs the workflow's trigger now, as its schedule or poll would: a
+  schedule fires the workflow, a polling trigger polls its source ("sync
+  now"). False when it has no armed trigger (disabled, parked, erroring).
+  """
+  pollNow(workflowId: String!): Boolean!
   """
   Samples the draft trigger and saves it as the trigger's last test. A piece
   trigger runs its test hook (no cursor changes). Of the core piece's
@@ -992,6 +1009,11 @@ type WorkflowRuntimeQueries {
   """
   oauthRedirectUri: String
   """
+  The switchboard this runtime lives in: what an app records as the runner
+  of the workflows and connections it sets up here.
+  """
+  host: RuntimeHost!
+  """
   How an OAuth2 sign-in opened by startOAuth stands; null when unknown.
   """
   oauthAttempt(state: String!): OAuthAttempt
@@ -1219,6 +1241,21 @@ type Workflow_WorkflowEdge {
   condition: String
 }
 
+"""
+What manages a workflow: the document that defines it, and how to name it to a person.
+"""
+type Workflow_WorkflowManager {
+  documentId: PHID!
+  """
+  e.g. sektar/integration
+  """
+  documentType: String!
+  """
+  e.g. Powerhouse - Google Calendar
+  """
+  label: String!
+}
+
 type Workflow_WorkflowPolicy {
   """
   ENFORCED. SINGLETON drops a firing while a run is active (journaled CANCELLED, not dropped silently); QUEUE serialises; PARALLEL runs concurrently.
@@ -1274,6 +1311,10 @@ type Workflow_WorkflowState {
   Last published snapshot; version !== published.version means unpublished changes.
   """
   published: Workflow_PublishedWorkflow
+  """
+  Who keeps this workflow as it is, e.g. an app's integration; null: people edit it. Editors show a managed workflow read-only.
+  """
+  managedBy: Workflow_WorkflowManager
   """
   Denormalised for inspectors; written by the runtime.
   """

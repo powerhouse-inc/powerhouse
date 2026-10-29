@@ -4017,6 +4017,17 @@ type Revision {
   revision: Int!
 }
 
+type RuntimeHost {
+  """
+  switchboard@<machine>: what apps record as the runner
+  """
+  id: String!
+  """
+  The machine's name, for people: where a sign-in has to happen
+  """
+  label: String!
+}
+
 input SearchFilterInput {
   type: String
   parentId: String
@@ -4258,6 +4269,16 @@ type WorkflowMutations {
     documentIdOrSlug: String
     docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
     input: Workflow_SetWorkflowStatusInput!
+  ): String!
+  setManagedBy(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: Workflow_SetManagedByInput!
+  ): WorkflowMutationResult!
+  setManagedByAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: Workflow_SetManagedByInput!
   ): String!
   setTrigger(
     documentIdOrSlug: String
@@ -4555,6 +4576,12 @@ type WorkflowRuntimeMutations {
   """
   fire(workflowId: String!, payload: Unknown): WorkflowRunPayload!
   """
+  Runs the workflow's trigger now, as its schedule or poll would: a
+  schedule fires the workflow, a polling trigger polls its source ("sync
+  now"). False when it has no armed trigger (disabled, parked, erroring).
+  """
+  pollNow(workflowId: String!): Boolean!
+  """
   Samples the draft trigger and saves it as the trigger's last test. A piece
   trigger runs its test hook (no cursor changes). Of the core piece's
   triggers, manual takes payload, schedule samples a fire now, and webhook
@@ -4795,6 +4822,11 @@ type WorkflowRuntimeQueries {
   this API is reached at. Null when the host serves no HTTP routes.
   """
   oauthRedirectUri: String
+  """
+  The switchboard this runtime lives in: what an app records as the runner
+  of the workflows and connections it sets up here.
+  """
+  host: RuntimeHost!
   """
   How an OAuth2 sign-in opened by startOAuth stands; null when unknown.
   """
@@ -5144,6 +5176,15 @@ input Workflow_SetLastTestInput {
   testedAt: DateTime!
 }
 
+input Workflow_SetManagedByInput {
+  """
+  The managing document; omit to clear
+  """
+  documentId: PHID
+  documentType: String
+  label: String
+}
+
 input Workflow_SetPolicyInput {
   concurrency: Workflow_ConcurrencyMode
   maxParallelRuns: Int
@@ -5378,6 +5419,27 @@ input Workflow_WorkflowEdgeInput {
   condition: String
 }
 
+"""
+What manages a workflow: the document that defines it, and how to name it to a person.
+"""
+type Workflow_WorkflowManager {
+  documentId: PHID!
+  """
+  e.g. sektar/integration
+  """
+  documentType: String!
+  """
+  e.g. Powerhouse - Google Calendar
+  """
+  label: String!
+}
+
+input Workflow_WorkflowManagerInput {
+  documentId: PHID
+  documentType: String
+  label: String
+}
+
 type Workflow_WorkflowPolicy {
   """
   ENFORCED. SINGLETON drops a firing while a run is active (journaled CANCELLED, not dropped silently); QUEUE serialises; PARALLEL runs concurrently.
@@ -5445,6 +5507,10 @@ type Workflow_WorkflowState {
   """
   published: Workflow_PublishedWorkflow
   """
+  Who keeps this workflow as it is, e.g. an app's integration; null: people edit it. Editors show a managed workflow read-only.
+  """
+  managedBy: Workflow_WorkflowManager
+  """
   Denormalised for inspectors; written by the runtime.
   """
   lastRunAt: DateTime
@@ -5462,6 +5528,7 @@ input Workflow_WorkflowStateInput {
   variables: [Workflow_WorkflowVariableInput]
   policy: Workflow_WorkflowPolicyInput
   published: Workflow_PublishedWorkflowInput
+  managedBy: Workflow_WorkflowManagerInput
   lastRunAt: DateTime
   lastRunStatus: Workflow_RunStatus
 }

@@ -635,6 +635,21 @@ type Workflow_WorkflowEdge {
   condition: String
 }
 
+"""
+What manages a workflow: the document that defines it, and how to name it to a person.
+"""
+type Workflow_WorkflowManager {
+  documentId: PHID!
+  """
+  e.g. sektar/integration
+  """
+  documentType: String!
+  """
+  e.g. Powerhouse - Google Calendar
+  """
+  label: String!
+}
+
 type Workflow_WorkflowPolicy {
   """
   ENFORCED. SINGLETON drops a firing while a run is active (journaled CANCELLED, not dropped silently); QUEUE serialises; PARALLEL runs concurrently.
@@ -690,6 +705,10 @@ type Workflow_WorkflowState {
   Last published snapshot; version !== published.version means unpublished changes.
   """
   published: Workflow_PublishedWorkflow
+  """
+  Who keeps this workflow as it is, e.g. an app's integration; null: people edit it. Editors show a managed workflow read-only.
+  """
+  managedBy: Workflow_WorkflowManager
   """
   Denormalised for inspectors; written by the runtime.
   """
