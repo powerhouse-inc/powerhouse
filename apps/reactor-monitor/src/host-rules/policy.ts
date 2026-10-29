@@ -398,7 +398,10 @@ function leafVerdict(
   const current =
     rest[0] === "reactor" ? currentValue(envelope, subject, rest) : undefined;
   if (current !== undefined && isEqual(current, value)) return OK;
+  // New drive entries can't carry `$env`; kept ones are what it runs.
   if (matches(DRIVES, rest)) return drivesVerdict(value, current, envelope);
+  const env = envVerdict(value);
+  if (!env.ok) return env;
   for (const [pattern, reason] of DENIED_FAMILIES) {
     if (matches(pattern, rest)) return { ok: false, reason };
   }
@@ -473,8 +476,8 @@ export function checkSetter(setter: Setter, envelope?: unknown): PolicyVerdict {
       reason: "The monitor can't replace a whole host file.",
     };
   }
-  const value = checkSetterValue(setter.value);
-  if (!value.ok) return value;
+  const size = sizeVerdict(setter.value);
+  if (!size.ok) return size;
   for (const [leafRest, leafValue] of leaves(rest, setter.value)) {
     const verdict = leafVerdict(subject, leafRest, leafValue, envelope);
     if (!verdict.ok) return verdict;
@@ -482,20 +485,28 @@ export function checkSetter(setter: Setter, envelope?: unknown): PolicyVerdict {
   return OK;
 }
 
-/** Size, and every `$env` leaf must name a key the monitor accepts. */
-export function checkSetterValue(value: unknown): PolicyVerdict {
+function sizeVerdict(value: unknown): PolicyVerdict {
   const size = new TextEncoder().encode(JSON.stringify(value ?? null)).length;
-  if (size > HOST_RULES_LIMITS.setterValueBytes) {
-    return {
-      ok: false,
-      reason: `The value is ${size} bytes; the limit is ${HOST_RULES_LIMITS.setterValueBytes}.`,
-    };
-  }
+  return size > HOST_RULES_LIMITS.setterValueBytes
+    ? {
+        ok: false,
+        reason: `The value is ${size} bytes; the limit is ${HOST_RULES_LIMITS.setterValueBytes}.`,
+      }
+    : OK;
+}
+
+function envVerdict(value: unknown): PolicyVerdict {
   for (const name of envLeaves(value)) {
     const verdict = checkEnvKey(name);
     if (!verdict.ok) return verdict;
   }
   return OK;
+}
+
+/** Size, and every `$env` leaf must name a key the monitor accepts. */
+export function checkSetterValue(value: unknown): PolicyVerdict {
+  const size = sizeVerdict(value);
+  return size.ok ? envVerdict(value) : size;
 }
 
 function envLeaves(value: unknown): string[] {

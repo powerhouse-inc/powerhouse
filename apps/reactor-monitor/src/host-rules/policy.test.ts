@@ -233,6 +233,40 @@ describe("checkSetter", () => {
     expect(
       checkSetter({ ...copy, value: changed }, withBlock).ok === false,
     ).toBe(true);
+    // an env key the monitor doesn't pass is fine as a copy, not as new
+    const linked = {
+      ...block,
+      backends: {
+        ...block.backends,
+        sb: { kind: "remote", remote: { url: { $env: "SB_DRIVE_URL" } } },
+      },
+    };
+    const withEnv = {
+      ...envelope,
+      members: {
+        ...envelope.members,
+        connect: { ...connect, reactor: linked },
+      },
+    };
+    expect(checkSetter({ ...copy, value: linked }, withEnv)).toEqual({
+      ok: true,
+    });
+    expect(
+      checkSetter(
+        {
+          path: "host.children.ui.reactor.backends.main.storage.dataDir",
+          value: { $env: "SB_DRIVE_URL" },
+        },
+        withEnv,
+      ),
+    ).toEqual({
+      ok: false,
+      reason: "The monitor doesn't pass SB_DRIVE_URL to reactors.",
+    });
+    expect(
+      checkSetter({ ...copy, value: { ...linked, namespace: "x" } }, withEnv),
+    ).toEqual({ ok: true });
+    expect(checkSetter({ ...copy, value: linked }, withBlock).ok).toBe(false);
     // a child with its own block copies nothing from the folder
     const wrapped = structuredClone(withBlock);
     (wrapped.host as { children: Record<string, unknown> }).children.ui = {
