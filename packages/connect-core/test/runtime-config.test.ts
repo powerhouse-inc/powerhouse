@@ -294,6 +294,23 @@ describe("runtime-config loader", () => {
     });
   });
 
+  it("carries undoV3 from the file and leaves it unset otherwise", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      connect: { reactor: { featureFlags: { undoV3: false } } },
+    });
+    const { loadRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    const config = await loadRuntimeConfig();
+
+    expect(config.connect.reactor?.featureFlags?.undoV3).toBe(false);
+    expect(DEFAULT_CONNECT_CONFIG.reactor?.featureFlags).not.toHaveProperty(
+      "undoV3",
+    );
+  });
+
   it("returns source values for connect.app and connect.drives when set in the file", async () => {
     stubFetch({
       schemaVersion: 2,
