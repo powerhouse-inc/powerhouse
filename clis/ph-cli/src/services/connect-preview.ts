@@ -2,6 +2,10 @@ import { getConfig } from "@powerhousedao/config/node";
 import type { AppShells } from "@powerhousedao/builder-tools";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { deepMerge, normalizeBasePath } from "@powerhousedao/shared/connect";
+import {
+  isHtmlNavigation,
+  isSwitchboardProxyPath,
+} from "@powerhousedao/shared/connect/origin-placeholder";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import sirv from "sirv";
@@ -217,11 +221,22 @@ export async function shellSwapFor(
       : withShellAppName(html, appName);
 }
 
+/**
+ * Whether a request on a proxying server belongs to the switchboard: its
+ * paths go to the proxy, untouched, except a browser navigation under `/d/`
+ * (Connect's own drive routes), as switchboardProxy splits them.
+ */
+function isProxiedRequest(urlPath: string, accept: string | undefined) {
+  if (!isSwitchboardProxyPath(urlPath)) return false;
+  return !(urlPath.startsWith("/d/") && isHtmlNavigation(accept));
+}
+
 function serveOverridePlugin(
   outDir: string,
   override: ConnectServeOverride,
   base = "/",
   swapShell?: HtmlTransform,
+  proxied = false,
 ): Plugin {
   return {
     name: "ph:serve-override",
@@ -234,6 +249,12 @@ function serveOverridePlugin(
             "cache-control": "no-store",
           });
           res.end(mergedConfigBody(outDir, override));
+          return;
+        }
+        // The switchboard's paths are the proxy's, which runs after this:
+        // served the SPA shell instead, /graphql would never reach it.
+        if (proxied && isProxiedRequest(urlPath, req.headers.accept)) {
+          next();
           return;
         }
         // index.html and extensionless SPA routes get the CSP patch.
@@ -375,6 +396,7 @@ export async function runConnectPreview(
               serveOverride,
               base,
               await shellSwapFor(outDirAbs, serveOverride, base),
+              proxy !== undefined,
             ),
           ]
         : []),
