@@ -91,7 +91,8 @@ function snapshotTarget(
  *
  * `UNDO` and `REDO` rewrite history the light read path never fetched (and
  * the reducer appends no operation for them); `NOOP` is only ever produced
- * by an undo chain; the document-scope actions run through the reactor's
+ * by an undo chain; a `RETRACT` names a target in that unfetched history; the
+ * document-scope actions run through the reactor's
  * document-action handler rather than a document-model reducer
  * (`DOCUMENT_SCOPE_ACTIONS` in packages/reactor/src/executor/util.ts) and
  * `UPGRADE_DOCUMENT` changes which reducer applies mid-batch.
@@ -100,6 +101,7 @@ const unsupportedBatchActions: ReadonlySet<string> = new Set([
   "UNDO",
   "REDO",
   "NOOP",
+  "RETRACT",
   "CREATE_DOCUMENT",
   "DELETE_DOCUMENT",
   "UPGRADE_DOCUMENT",
@@ -115,8 +117,8 @@ const unsupportedBatchActions: ReadonlySet<string> = new Set([
  * `baseReducer` reads `baseReducerVersion(document.header)` for every action and
  * throws when the header has no `protocolVersions`, which a header built by
  * {@link phDocumentFromGetDocument} lacks when the server sends none. The
- * version only selects between the v1
- * and v2 UNDO/NOOP branches, and every action reaching the prediction loop is an
+ * version only selects how UNDO, REDO and RETRACT apply, and every action
+ * reaching the prediction loop is an
  * ordinary append-only one, so it cannot change the predicted state here; it is
  * passed purely so the lookup does not throw.
  */

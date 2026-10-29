@@ -20,11 +20,15 @@ import type {
   PagingOptions,
   PropagationMode,
   SearchFilter,
+  UndoRedoAvailability,
+  UndoRedoTargets,
   ViewFilter,
   WriteHandle,
   WriteReceipt,
 } from "@powerhousedao/reactor";
 import type {
+  BaseReducerCapabilities,
+  CreateDocumentActionInput,
   ISigner,
   PHDocumentState,
   ProtocolVersions,
@@ -35,6 +39,13 @@ import {
   actionSigningTarget,
   headNewDocument,
   normalizeDocumentModelVersion,
+  capabilitiesOf,
+  optionalBaseReducerCapabilities,
+  serializeByKey,
+  undoCapabilitiesOf,
+  undoNeedsTargets,
+  undoRedoActions,
+  undoRedoAvailabilityOf,
   selectDocumentModelModule,
   toTransportAction,
 } from "@powerhousedao/shared/document-model";
@@ -282,6 +293,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private readonly documentModels: () => readonly DocumentModelModule<any>[];
   private readonly signer: ISigner | undefined;
   private readonly driveIdFor: GraphQLReactorClientOptions["driveIdFor"];
+  private readonly undoRedoChains = new Map<string, Promise<unknown>>();
   private stopRealtime: (() => void) | undefined;
   private realtimeStarted = false;
   private realtimeGeneration = 0;
@@ -856,6 +868,172 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       documents: [updated],
     });
     return updated;
+  }
+
+  /**
+   * Undoes the last applied operation of `scope` under this client's own
+   * signature: UNDO below base-reducer 3; on it, a RETRACT of the target the
+   * Switchboard resolves with {@link undoRedoTargets}. One at a time per
+   * document, scope and branch. A stale target is refused, not re-resolved.
+   */
+  undo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.undoOrRedo<TDocument>(
+      "UNDO",
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+  }
+
+  /** Redoes the last undo of `scope`; see {@link undo}. */
+  redo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.undoOrRedo<TDocument>(
+      "REDO",
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+  }
+
+  /** Exact on base-reducer 3, from the targets the Switchboard resolves. */
+  async undoRedoAvailability(
+    documentIdentifier: string,
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability> {
+    const { caps, header } = await this.undoCapabilities(
+      documentIdentifier,
+      branch,
+      signal,
+    );
+    const targets = undoNeedsTargets(caps)
+      ? await this.undoRedoTargets(
+          documentIdentifier,
+          scope,
+          { branch },
+          signal,
+        )
+      : undefined;
+    // The Switchboard serves only what the caller may read.
+    return undoRedoAvailabilityOf(
+      caps,
+      targets,
+      header.revision[scope] ?? 0,
+      true,
+    );
+  }
+
+  /**
+   * The rows a base-reducer 3 undo and redo would retract, resolved by the
+   * Switchboard as the caller. A Switchboard without the query is refused
+   * with {@link GraphQLOperationNotSupportedError}. `view.subject` is not
+   * sent: the Switchboard reads the caller from the bearer.
+   */
+  async undoRedoTargets(
+    documentIdentifier: string,
+    scope: string = "global",
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets> {
+    try {
+      const { undoRedoTargets } = await this.sdk.GetUndoRedoTargets(
+        { documentIdOrSlug: documentIdentifier, scope, branch: view?.branch },
+        undefined,
+        signal,
+      );
+      return {
+        ...(undoRedoTargets.undoTarget
+          ? { undoTarget: undoRedoTargets.undoTarget }
+          : {}),
+        ...(undoRedoTargets.redoTarget
+          ? { redoTarget: undoRedoTargets.redoTarget }
+          : {}),
+      };
+    } catch (error) {
+      if (queriesUnknownField(error, "undoRedoTargets")) {
+        throw new GraphQLOperationNotSupportedError(
+          "undoRedoTargets",
+          "the Switchboard predates the undoRedoTargets query",
+        );
+      }
+      throw error;
+    }
+  }
+
+  private undoOrRedo<TDocument extends PHDocument>(
+    type: "UNDO" | "REDO",
+    documentIdentifier: string,
+    scope: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+  ): Promise<TDocument> {
+    return serializeByKey(
+      this.undoRedoChains,
+      JSON.stringify([documentIdentifier, scope, branch]),
+      async () => {
+        const { caps } = await this.undoCapabilities(
+          documentIdentifier,
+          branch,
+          signal,
+        );
+        const targets = undoNeedsTargets(caps)
+          ? await this.undoRedoTargets(
+              documentIdentifier,
+              scope,
+              { branch },
+              signal,
+            )
+          : undefined;
+        return this.execute<TDocument>(
+          documentIdentifier,
+          branch,
+          undoRedoActions(caps, type, scope, targets),
+          signal,
+        );
+      },
+    );
+  }
+
+  /** An older Switchboard serves no header versions; then CREATE_DOCUMENT names them, else it is 1. */
+  private async undoCapabilities(
+    documentIdentifier: string,
+    branch: string,
+    signal: AbortSignal | undefined,
+  ): Promise<{ caps: BaseReducerCapabilities; header: PHDocument["header"] }> {
+    const { header } = await this.get(documentIdentifier, { branch }, signal);
+    const fromHeader = optionalBaseReducerCapabilities(header);
+    if (fromHeader) {
+      return { caps: fromHeader, header };
+    }
+    const page = await this.getOperations(
+      documentIdentifier,
+      { branch, scopes: ["document"] },
+      undefined,
+      { cursor: "0", limit: 1 },
+      signal,
+    );
+    const create = page.results.at(0)?.action;
+    const input =
+      create?.type === "CREATE_DOCUMENT"
+        ? (create.input as Partial<CreateDocumentActionInput>)
+        : undefined;
+    return {
+      caps: undoCapabilitiesOf(header, input) ?? capabilitiesOf(1),
+      header,
+    };
   }
 
   /**
