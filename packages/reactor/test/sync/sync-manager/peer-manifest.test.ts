@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
+import { resolveFeatureFlags } from "../../../src/core/feature-flags.js";
 import type { IReactor } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import type { ISyncCursorStorage } from "../../../src/storage/interfaces.js";
@@ -20,6 +21,7 @@ import type {
   IChannelFactory,
 } from "../../../src/sync/interfaces.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
+import type { LocalPeer } from "../../../src/sync/types.js";
 import {
   testSyncStorageBackends,
   type TestSyncStorage,
@@ -99,6 +101,7 @@ describe.each(testSyncStorageBackends)(
 
     async function start(
       operationIndex = new KyselyOperationIndex(storage.db),
+      localPeer?: LocalPeer,
     ): Promise<SyncManager> {
       const manager = new SyncManager(
         new ConsoleLogger(["SyncManager"]),
@@ -115,6 +118,8 @@ describe.each(testSyncStorageBackends)(
         new EventBus(),
         DEFAULT_DRIVE_CONTAINER_TYPES,
         settledAtHead(),
+        undefined,
+        localPeer,
       );
       managers.push(manager);
       await manager.startup();
@@ -229,12 +234,28 @@ describe.each(testSyncStorageBackends)(
     });
 
     it("announces the local manifest to the channel", async () => {
-      const manager = await start();
+      const manager = await start(undefined, {
+        capabilities: PEER_CAPABILITIES,
+        flags: {},
+      });
       const manifest = manager.localManifest();
       expect(manifest).toEqual(
         localPeerManifest(PEER_CAPABILITIES, {}, undefined, manifest.sequence),
       );
       expect(manifest.sequence).toBeGreaterThan(0);
+    });
+
+    it("announces the resolved default manifest", async () => {
+      const manager = await start();
+      const manifest = manager.localManifest();
+      expect(manifest).toEqual(
+        localPeerManifest(
+          PEER_CAPABILITIES,
+          resolveFeatureFlags(),
+          undefined,
+          manifest.sequence,
+        ),
+      );
     });
   },
 );
