@@ -59,7 +59,7 @@ The generated `assistant` and `cli` hosts use the new form. A project scaffolded
 
 ### ✨ Document-type facts and `locate`
 
-`RoutableBackendConfig.documentTypes?: () => Promise<readonly string[]>` is read with the facts and lands in `BackendFacts.documentTypes`. A failed read of the facts or of the types makes `known` false. A create of a type the target backend lacks (`create`, `createAsync`, a batch that creates, `drives.create`, `drives.addFile`) throws `UnsupportedByBackendError` before anything is sent. `locate(identifier, signal?)` names the backend a document routes to, for an attachment service that routes by document.
+`RoutableBackendConfig.documentTypes?: () => Promise<readonly string[] | undefined>` is read with the facts and lands in `BackendFacts.documentTypes`. A read that answers `undefined` means the backend loads models on demand: creates are not checked, and the facts stay known. A failed read of the facts or of the types makes `known` false. A create of a type the target backend lacks (`create`, `createAsync`, a batch that creates, `drives.create`, `drives.addFile`) throws `UnsupportedByBackendError` before anything is sent. `locate(identifier, signal?)` names the backend a document routes to, for an attachment service that routes by document.
 
 ✅ **What to try:** build a router over two backends with `collections: { [driveId]: "local" }`, call `setPlacement(driveId, "remote")`, and `describeRouting()` shows the drive on `remote` with `origin: "runtime"` and `configured: "local"`.
 

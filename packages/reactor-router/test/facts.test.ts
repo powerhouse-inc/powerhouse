@@ -20,7 +20,7 @@ const SENDS = [
   "getCreateProtocolVersions",
 ];
 
-function remoteWith(types: () => Promise<readonly string[]>): {
+function remoteWith(types: () => Promise<readonly string[] | undefined>): {
   remote: FakeBackend;
   client: RoutingReactorClient;
 } {
@@ -204,6 +204,19 @@ describe("create pre-check", () => {
       fakeDocument({ id: "doc", documentType: "test/document" }),
     );
 
+    expect(remote.documents.has("doc")).toBe(true);
+  });
+
+  it("does not constrain a backend whose types read as open, and keeps it known", async () => {
+    const { remote, client } = remoteWith(() => Promise.resolve(undefined));
+    await client.refreshFacts();
+
+    const facts = client.backends[0].facts;
+    expect(facts.known).toBe(true);
+    expect(facts.documentTypes).toBeUndefined();
+    await client.write.create(
+      fakeDocument({ id: "doc", documentType: "any/type" }),
+    );
     expect(remote.documents.has("doc")).toBe(true);
   });
 
