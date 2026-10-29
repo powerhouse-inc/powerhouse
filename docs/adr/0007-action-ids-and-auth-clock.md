@@ -39,12 +39,17 @@ rule are independent of undo v3, so they land first, for every document version.
 bits orders ids within one millisecond, and a clock that steps back does not reorder them.
 `createAction`, the genesis `CREATE_DOCUMENT` and `UPGRADE_DOCUMENT` actions,
 `purgeDocumentAction`, the base-reducer 1 and 2 undo marker, the reactor and drive action
-builders, the workflow piece and the test harnesses use it. The workflow editors' undo-group and
-redo ids keep UUIDv4 until undo v3 changes their grouping format; base-reducers 1 and 2 never
-order by action id, so this has no effect on them.
+builders, the workflow piece and the test harnesses use it.
 
 This applies to base-reducer 1 and 2 documents too. Their code treats an action id as an opaque
 string. Document, node and folder ids stay UUIDv4.
+
+The workflow editors' undo-group and redo ids depend on the document's base-reducer:
+
+- Base-reducers 1 and 2 keep UUIDv4 ids and the `undo-group:<group>:<id>` form. They never order
+  by action id.
+- Base-reducer 3 orders by action id. There the editors use `generateActionId`, and a grouped id
+  takes the `<id>~ug:<group>` form, so it sorts by creation.
 
 ### 2. Auth actions get strictly increasing stamps
 
