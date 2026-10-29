@@ -3,14 +3,18 @@ import type { ReactorDescriptor } from "@powerhousedao/reactor-monitor";
 import type { HostExport } from "@powerhousedao/host-core/schema";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { HostImportRequest } from "../components/HostImportPanel.js";
-import type { Instance } from "../controller/api.js";
+import type { Instance, InstanceOutputs } from "../controller/api.js";
 import {
   backoffMs,
   errorMessage,
   isNotFound,
   type ControllerClient,
 } from "../controller/client.js";
-import { driveAddressOf, withOwner } from "../controller/managed.js";
+import {
+  driveAddressOf,
+  withOwner,
+  type InstanceReactors,
+} from "../controller/managed.js";
 import type { ManagedDescriptors } from "../controller/use-managed-descriptors.js";
 import type { Member } from "../host-rules/index.js";
 import { planImport } from "../lib/host-import.js";
@@ -22,7 +26,13 @@ const POLL_MS = 1000;
 const WATCH_MS = 3000;
 
 /** `url`: a switchboard's first drive address; `app`: a Connect's page. */
-export type RunReactor = { name: string; url?: string; app?: string };
+export type RunReactor = {
+  name: string;
+  url?: string;
+  app?: string;
+  /** A switchboard's drives by declared slug. */
+  drives?: InstanceOutputs["drives"];
+};
 
 /** The copy Start launched; `id` is absent until the controller answers. */
 export type BuilderRun = {
@@ -31,15 +41,19 @@ export type BuilderRun = {
   reactors: RunReactor[];
   /** Descriptors provisioned in this browser, by name. */
   browser: string[];
+  /** The copy's reactors in the active set, by the member each one is. */
+  attached: InstanceReactors;
+  /** The project host the copy was started from. */
+  source?: { project: string; host: string };
   /** The last failed status check; the copy is still followed. */
   problem?: string;
 };
 
-/** The host's browser reactors; a switchboard's own store is not one. */
-export function browserDescriptors(
+/** The host's browser reactors, with the member and backend each one is. */
+export function browserReactors(
   envelope: HostExport,
   members: readonly Member[],
-): ReactorDescriptor[] {
+): { descriptor: ReactorDescriptor; member: string; backend: string }[] {
   const browser = new Set(
     members.flatMap((member) =>
       member.backends
@@ -54,7 +68,19 @@ export function browserDescriptors(
         row.descriptor.kind !== "remote" &&
         browser.has(`${row.member}\0${row.backend}`),
     )
-    .map((row) => ({ ...row.descriptor }) as ReactorDescriptor);
+    .map((row) => ({
+      descriptor: { ...row.descriptor } as ReactorDescriptor,
+      member: row.member,
+      backend: row.backend,
+    }));
+}
+
+/** The host's browser reactors; a switchboard's own store is not one. */
+export function browserDescriptors(
+  envelope: HostExport,
+  members: readonly Member[],
+): ReactorDescriptor[] {
+  return browserReactors(envelope, members).map((entry) => entry.descriptor);
 }
 
 export type LeftOut = { name: string; reason: string };
@@ -92,7 +118,7 @@ export function monitoringSetOf(
   };
 }
 
-function reactorsOf(instance: Instance): RunReactor[] {
+export function reactorsOf(instance: Instance): RunReactor[] {
   return [
     ...(instance.outputs || instance.app
       ? [
@@ -107,6 +133,7 @@ function reactorsOf(instance: Instance): RunReactor[] {
       name,
       url: member.outputs && driveAddressOf(member.outputs),
       app: member.app,
+      ...(member.outputs ? { drives: member.outputs.drives } : {}),
     })),
   ];
 }
@@ -116,7 +143,8 @@ export type BuilderRunOptions = {
   managed: Pick<
     ManagedDescriptors,
     "attach" | "stopInstance" | "dropInstance" | "owned"
-  >;
+  > &
+    Partial<Pick<ManagedDescriptors, "reactors">>;
   /** Adds browser descriptors to the active set. */
   onAddDescriptors: (descriptors: ReactorDescriptor[]) => void;
   /** While starting; a running copy is checked every `watchMs`. */
@@ -131,7 +159,7 @@ export type BuilderRunControls = {
   stop: () => Promise<void>;
 };
 
-type RunState = Omit<BuilderRun, "browser">;
+type RunState = Omit<BuilderRun, "browser" | "attached">;
 
 const GONE = new Set(["exited", "failed"]);
 const BUSY = new Set(["starting", "stopping"]);
@@ -164,7 +192,7 @@ export function useBuilderRun({
     };
   }, []);
 
-  const { attach, stopInstance, dropInstance, owned } = managed;
+  const { attach, stopInstance, dropInstance, owned, reactors } = managed;
 
   /** The instance once it leaves `starting`, or undefined if this run was let go. */
   const settle = useCallback(
@@ -234,6 +262,7 @@ export function useBuilderRun({
         id: instance.id,
         status: "running",
         reactors: reactorsOf(instance),
+        ...(instance.source ? { source: { ...instance.source } } : {}),
       });
       void watch(
         instance.id,
@@ -313,8 +342,9 @@ export function useBuilderRun({
       const { id } = instance;
       setState({ id, status: "starting", reactors: [] });
       onAddDescriptors(
-        browserDescriptors(engine.envelope, engine.members).map((d) =>
-          withOwner(d, id),
+        browserReactors(engine.envelope, engine.members).map(
+          ({ descriptor, member, backend }) =>
+            withOwner(descriptor, id, { member, backend }),
         ),
       );
       let settled: Instance | undefined;
@@ -373,6 +403,10 @@ export function useBuilderRun({
   const run: BuilderRun | undefined = state && {
     ...state,
     browser: state.id ? [...(owned.get(state.id) ?? [])] : [],
+    attached: (state.id ? reactors?.get(state.id) : undefined) ?? {
+      browser: [],
+      remote: [],
+    },
   };
   return { run, start, stop };
 }

@@ -8,11 +8,19 @@ import {
 } from "../../lib/host-files.js";
 import { isBaseChanged } from "../BaseChanged.js";
 import type { BuilderClient } from "../client.js";
-import { fixIssuesFirst, START_BLOCKERS } from "../copy.js";
+import { connectReach, type Member } from "../../host-rules/index.js";
+import type { RouteSeed } from "../../lib/route-seed.js";
+import {
+  DRIVES_COPY,
+  fixIssuesFirst,
+  RUN_COPY,
+  START_BLOCKERS,
+} from "../copy.js";
 import { downloadExport, exportFileName } from "../download.js";
 import { sourceOf, type BuilderDraft } from "../draft.js";
 import type { BuilderEngine } from "../engine.js";
-import { monitoringSetOf, type BuilderRun } from "../run.js";
+import { routeSeedOf } from "../route.js";
+import { monitoringSetOf, type BuilderRun, type RunReactor } from "../run.js";
 import type { StepProps } from "./types.js";
 
 /** Why Start is off, if it is; `served` is undefined while it's being checked. */
@@ -82,12 +90,82 @@ function Blocked({ label, reason }: { label: string; reason?: string }) {
   ) : null;
 }
 
+/** The Connect member a running entry is, if it is one. */
+function connectOf(
+  reactor: RunReactor,
+  members: readonly Member[],
+): Member | undefined {
+  if (!reactor.app) return undefined;
+  const connects = members.filter((member) => member.role === "connect");
+  return (
+    connects.find((member) => member.key === reactor.name) ??
+    (connects.length === 1 && connects[0].path === "host"
+      ? connects[0]
+      : undefined)
+  );
+}
+
+/** Where a running Connect keeps its drives, and a way to route them. */
+function AppReactors({
+  member,
+  engine,
+  run,
+  onRoute,
+}: {
+  readonly member: Member;
+  readonly engine: BuilderEngine;
+  readonly run: BuilderRun;
+  readonly onRoute?: (seed: RouteSeed) => void;
+}) {
+  const reach = connectReach(member, engine.members);
+  const seed =
+    onRoute && run.status === "running"
+      ? routeSeedOf({
+          id: `${run.id ?? ""}:${member.key}`,
+          member,
+          members: engine.members,
+          run,
+          context: engine.context,
+        })
+      : undefined;
+  return (
+    <>
+      <ul
+        aria-label={`Where ${member.key} keeps its drives`}
+        className="hb-list"
+      >
+        {reach.local.length > 0 || reach.implicitLocal ? (
+          <li className="hb-note">{DRIVES_COPY.inBrowser}</li>
+        ) : null}
+        {reach.links.map((link) => (
+          <li className="hb-note" key={`${link.switchboard}\0${link.slug}`}>
+            {DRIVES_COPY.onSwitchboard(link.slug, link.switchboard)}
+          </li>
+        ))}
+      </ul>
+      {seed && onRoute ? (
+        <button
+          className="hb-btn"
+          onClick={() => onRoute({ ...seed, id: `${seed.id}:${Date.now()}` })}
+          type="button"
+        >
+          {RUN_COPY.route}
+        </button>
+      ) : null}
+    </>
+  );
+}
+
 function Running({
   run,
+  engine,
   onStop,
+  onRoute,
 }: {
   readonly run: BuilderRun;
+  readonly engine: BuilderEngine;
   readonly onStop?: () => Promise<void>;
+  readonly onRoute?: (seed: RouteSeed) => void;
 }) {
   const [problem, setProblem] = useState("");
   const stop = async () => {
@@ -114,19 +192,30 @@ function Running({
         </p>
       ) : null}
       <ul className="hb-list">
-        {run.reactors.map((reactor) => (
-          <li key={reactor.name}>
-            <b>{reactor.name}</b>{" "}
-            {reactor.url ? (
-              <span className="hb-mono hb-note">{reactor.url}</span>
-            ) : null}
-            {reactor.app ? (
-              <a href={reactor.app} rel="noreferrer" target="_blank">
-                Open Connect
-              </a>
-            ) : null}
-          </li>
-        ))}
+        {run.reactors.map((reactor) => {
+          const connect = connectOf(reactor, engine.members);
+          return (
+            <li key={reactor.name}>
+              <b>{reactor.name}</b>{" "}
+              {reactor.url ? (
+                <span className="hb-mono hb-note">{reactor.url}</span>
+              ) : null}
+              {reactor.app ? (
+                <a href={reactor.app} rel="noreferrer" target="_blank">
+                  Open Connect
+                </a>
+              ) : null}
+              {connect ? (
+                <AppReactors
+                  engine={engine}
+                  member={connect}
+                  onRoute={onRoute}
+                  run={run}
+                />
+              ) : null}
+            </li>
+          );
+        })}
         {run.browser.map((name) => (
           <li key={name}>
             <b>{name}</b> <span className="hb-note">runs in this browser</span>
@@ -156,6 +245,7 @@ export function UseStep({
   onStart,
   onStop,
   onSaveSet,
+  onRoute,
   onBaseChanged = () => undefined,
 }: StepProps & {
   readonly client?: BuilderClient;
@@ -168,6 +258,8 @@ export function UseStep({
   readonly onBaseChanged?: () => void;
   /** Returns the name the set was saved under. */
   readonly onSaveSet?: (request: HostImportRequest) => string;
+  /** Opens the Router view over a started app's reactors. */
+  readonly onRoute?: (seed: RouteSeed) => void;
 }) {
   const served = useServed(client, draft);
   const [setName, setSetName] = useState(engine.envelope.name);
@@ -240,7 +332,14 @@ export function UseStep({
           </button>
         </div>
         {run ? null : <Blocked label="Start" reason={blocker} />}
-        {run ? <Running onStop={onStop} run={run} /> : null}
+        {run ? (
+          <Running
+            engine={engine}
+            onRoute={onRoute}
+            onStop={onStop}
+            run={run}
+          />
+        ) : null}
       </div>
       <div className="hb-card hb-sec">
         <label className="hb-field">

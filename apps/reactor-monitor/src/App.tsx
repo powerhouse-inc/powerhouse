@@ -41,12 +41,15 @@ import {
 } from "./components/ProvisionPanel.js";
 import { RoutingPanel } from "./components/RoutingPanel.js";
 import { SwitchboardsPanel } from "./components/SwitchboardsPanel.js";
+import { browserStorage } from "./builder/draft.js";
 import { HostBuilder } from "./builder/HostBuilder.js";
 import { useBuilderRun } from "./builder/run.js";
+import { savePlacement } from "./builder/save-placement.js";
 import {
   useManagedDescriptors,
   type ManagedDescriptors,
 } from "./controller/use-managed-descriptors.js";
+import type { RouteSeed } from "./lib/route-seed.js";
 import { MonitoringSetsStore } from "./monitoring-sets.js";
 import {
   buildDescriptor as buildDescriptorFromForm,
@@ -308,6 +311,7 @@ function AppBody({
   const entry = useManagedReactorEntry(selected ?? "");
   const [activeTab, setActiveTab] = useState<InspectorTab>("Overview");
   const [view, setView] = useState<AppView>("Inspect");
+  const [routeSeed, setRouteSeed] = useState<RouteSeed>();
   const registry = useReactorMonitorRegistry();
   const builderRun = useBuilderRun({
     client: managed.client,
@@ -395,11 +399,25 @@ function AppBody({
           </>
         ) : view === "Router" ? (
           <div className="reactor-monitor__panel">
-            <RoutingPanel setName={activeSetName} />
+            <RoutingPanel
+              onSaveToHost={(seed, drive, backend) =>
+                savePlacement(browserStorage(), seed, drive, backend)
+              }
+              seed={
+                routeSeed?.instanceId === builderRun.run?.id
+                  ? routeSeed
+                  : undefined
+              }
+              setName={activeSetName}
+            />
           </div>
         ) : (
           <HostBuilder
             client={managed.client}
+            onRoute={(seed) => {
+              setRouteSeed(seed);
+              setView("Router");
+            }}
             onSaveSet={onImport}
             onStart={builderRun.start}
             onStop={builderRun.stop}
