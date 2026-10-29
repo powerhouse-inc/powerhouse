@@ -695,6 +695,54 @@ describe("base-reducer 3", () => {
       );
     }, 30_000);
   });
+
+  describe("losing a live row on current main (#6b)", () => {
+    let h: Harness | undefined;
+
+    afterEach(() => {
+      h?.a.reactor.kill();
+      h?.b.reactor.kill();
+      h = undefined;
+    });
+
+    async function connected(harness: Harness, drive: PHDocument) {
+      const id = drive.header.id;
+      await connect(harness, id);
+      await harness.a.client.create(drive);
+      await eventually(() =>
+        harness.b.reactor.get(id, { branch: "main" }).then(
+          () => true,
+          () => false,
+        ),
+      );
+      await quiesce(harness, id);
+      return id;
+    }
+
+    // B's UNDO is a RETRACT naming b1, whatever row it lands after on A.
+    it("keeps A's own op live when B undoes an op concurrently", async () => {
+      h = await buildHarness({}, { v3: true });
+      const drive = baseReducer3Drive();
+      const id = await connected(h, drive);
+      expect(await storedBaseReducer(h, id)).toEqual([3, 3]);
+      const b1 = await executeOn(h.b, id, "b1", new Date().toISOString());
+      await eventually(async () => (await applied(h!.a, id)).length === 1);
+
+      hold(h, toB(id));
+      const a1 = await executeOn(h.a, id, "a1", new Date().toISOString());
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await h.b.client.undo(id);
+      await quiesce(h, id);
+      release(h, toB(id));
+      await quiesce(h, id);
+
+      expect(await applied(h.a, id)).toContain(a1);
+      expect(await applied(h.a, id)).not.toContain(b1);
+      expect(await applied(h.a, id)).toEqual(await applied(h.b, id));
+      await agree(h.a, drive);
+      await agree(h.b, drive);
+    }, 30_000);
+  });
 });
 
 describe("a sender's same-millisecond batches", () => {
