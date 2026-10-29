@@ -75,6 +75,9 @@ export interface WorkflowRuntimeHostDeps {
   // Absent on a host with no HTTP surface: webhook triggers are then
   // unavailable, which is not the same as having no workflows.
   webhooks?: IWebhookScope;
+  // Where resume URLs live: `${waitpointBaseUrl}/<token>`. Absent or without
+  // an origin, a step cannot create a WEBHOOK waitpoint.
+  waitpointBaseUrl?: string;
   // Absent leaves ctx.files inline rather than turning it into an attachment.
   attachments?: AttachmentClientLike;
   // Whether a run may read the ref. A step runs with no caller, so the host

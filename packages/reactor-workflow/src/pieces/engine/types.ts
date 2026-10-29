@@ -2,6 +2,11 @@
 // The engine stays decoupled from the generated document-model types.
 import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
 import type { BlockResolution, StepPieceRecord } from "./resolution.js";
+import type {
+  CreatedWaitpoint,
+  RunResponse,
+  WaitpointCall,
+} from "../activepieces/worker/protocol.js";
 
 // `schema` is a DYNAMIC prop's resolved child props, keyed by child name.
 export interface PropertySettingDef {
@@ -74,6 +79,8 @@ export interface BlockExecution {
   redactValues?: string[];
   // The action's declared timeout, for a step that sets none.
   defaultTimeoutSeconds?: number;
+  // Set when the step re-enters a run it suspended: executionType RESUME.
+  resume?: { payload: unknown };
 }
 
 // What an action declares for a step that sets no timeout or retry.
@@ -81,6 +88,37 @@ export interface BlockDefaults {
   timeoutSeconds?: number;
   // A step retry block, resolved like the step's own.
   retry?: unknown;
+}
+
+// The core "Request approval" block's request, as the editor renders it.
+export interface WaitpointApproval {
+  title: string;
+  body: string | null;
+  approveLabel: string;
+  rejectLabel: string;
+  reasonRequiredOn: "none" | "reject" | "both";
+  approvers: string[];
+}
+
+// A waitpoint a step asks for, with the step it belongs to.
+export interface WaitpointRequest extends WaitpointCall {
+  stepId: string;
+  stepKey: string;
+  pieceName: string;
+  blockName: string;
+  // Core blocks only: piece code never sets these.
+  approval?: WaitpointApproval;
+  // The block's own expiry; the policy's maxSuspensionDays still caps it.
+  expiresAt?: string;
+  // The resume token a deprecated `generateResumeUrl` already handed out.
+  token?: string;
+}
+
+// The host's waitpoints for one run; absent where the run cannot suspend.
+export interface WaitpointPort {
+  create(request: WaitpointRequest): Promise<CreatedWaitpoint>;
+  // Where resume URLs live; absent where the host serves none.
+  resumeBaseUrl?: string;
 }
 
 export interface BlockResult {
@@ -92,6 +130,12 @@ export interface BlockResult {
   redactValues?: string[];
   // The piece version this step ran, when a piece ran it.
   resolution?: BlockResolution;
+  // The step suspended the run on this waitpoint.
+  paused?: { waitpointId: string };
+  // `run.respond` / `run.stop`: the answer to the request the run holds.
+  response?: RunResponse;
+  // `run.stop`: the run ends SUCCEEDED after this step.
+  stopped?: boolean;
 }
 
 export interface BlockExecutor {
@@ -104,7 +148,9 @@ export interface BlockExecutor {
 // timed out, so a write it asked for may well have been committed. Reporting
 // that as FAILED would be a claim nobody can stand behind, so it is its own
 // state: it takes no port, ends the run, and never replays on rerun.
+// WAITING: the step suspended the run; it runs again, as RESUME, on resume.
 export type StepExecutionStatus =
+  | "WAITING"
   | "SUCCEEDED"
   | "FAILED"
   | "SKIPPED"
@@ -146,12 +192,19 @@ export interface StepExecutionRecord {
   // How many times the block ran, when its retry policy let it run more than
   // once. Absent for a single attempt, so an unretried step journals as it did.
   attempts?: number;
+  // Journaled by an earlier leg of this run before it suspended; not rewritten.
+  carried?: boolean;
 }
 
 // CANCELLED: the run passed its `runTimeoutSeconds`, or a firing was skipped
 // because the workflow's concurrency mode is SINGLETON and a run was active.
 // Neither is a failure of the workflow, which is why it is not FAILED.
-export type WorkflowRunStatus = "SUCCEEDED" | "FAILED" | "CANCELLED";
+// WAITING: a step suspended the run on a waitpoint.
+export type WorkflowRunStatus =
+  | "SUCCEEDED"
+  | "FAILED"
+  | "CANCELLED"
+  | "WAITING";
 
 export interface WorkflowRunResult {
   status: WorkflowRunStatus;
@@ -160,6 +213,8 @@ export interface WorkflowRunResult {
   errorName?: string;
   // What ran but deserves a look, e.g. an edge on a port nothing emits.
   warnings?: string[];
+  // WAITING only: the step that suspended and its waitpoint.
+  waiting?: { stepId: string; waitpointId: string };
 }
 
 export function stepBlock(

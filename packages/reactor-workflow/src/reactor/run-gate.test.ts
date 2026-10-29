@@ -44,6 +44,22 @@ describe("the workflow run gate", () => {
     if (!refused.admitted) expect(refused.reason).toContain("SINGLETON");
   });
 
+  it("queues a resume under SINGLETON and past the queue depth", async () => {
+    const gate = new WorkflowRunGate({ maxQueued: 1 });
+    const policy = policyOf({ concurrency: "SINGLETON" });
+
+    const held = await gate.admit("w", policy);
+    const resumes = [1, 2].map(() =>
+      gate.admit("w", policy, undefined, { resume: true }),
+    );
+    await settled();
+    expect(gate.waiting("w")).toBe(2);
+    if (held.admitted) held.release();
+    const first = await resumes[0]!;
+    expect(first).toMatchObject({ admitted: true, waited: true });
+    expect(gate.active("w")).toBe(1);
+  });
+
   it("admits again once the held run releases", async () => {
     const gate = new WorkflowRunGate();
     const policy = policyOf({ concurrency: "SINGLETON" });
