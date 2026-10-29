@@ -250,6 +250,20 @@ describe("GraphQLReactorClient undo and redo", () => {
     expect(sentActions(sdk)[0].type).toBe("UNDO");
   });
 
+  it("stops a queued undo whose signal aborts while an earlier one is pending", async () => {
+    const { client, sdk } = clientWith(2);
+    sdk.RunDocument.mockImplementationOnce(() => new Promise(() => undefined));
+    void client.undo("doc-1");
+    await vi.waitUntil(() => sdk.RunDocument.mock.calls.length === 1);
+    const controller = new AbortController();
+
+    const queued = client.undo("doc-1", "global", "main", controller.signal);
+    controller.abort();
+
+    await expect(queued).rejects.toMatchObject({ name: "AbortError" });
+    expect(sdk.RunDocument).toHaveBeenCalledTimes(1);
+  });
+
   it("refuses an undo with nothing to undo, submitting nothing", async () => {
     const { client, sdk } = clientWith(3);
 

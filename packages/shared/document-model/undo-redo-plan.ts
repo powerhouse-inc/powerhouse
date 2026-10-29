@@ -94,20 +94,50 @@ export function undoRedoAvailabilityOf(
   }
 }
 
-/** Runs `run` after every earlier call with the same key has settled. */
+/**
+ * Runs `run` after every earlier call with the same key has settled. A caller
+ * whose `signal` aborts stops waiting and rejects with its reason; the key
+ * stays held until the earlier calls settle.
+ */
 export function serializeByKey<T>(
   chains: Map<string, Promise<unknown>>,
   key: string,
   run: () => Promise<T>,
+  signal?: AbortSignal,
 ): Promise<T> {
-  const next = (chains.get(key) ?? Promise.resolve())
-    .catch(() => undefined)
-    .then(run);
-  chains.set(key, next);
-  void next
+  const prior = (chains.get(key) ?? Promise.resolve()).catch(() => undefined);
+  const next = (signal ? settledUnlessAborted(prior, signal) : prior).then(
+    () => {
+      signal?.throwIfAborted();
+      return run();
+    },
+  );
+  const tail = signal
+    ? Promise.all([prior, next.catch(() => undefined)])
+    : next;
+  chains.set(key, tail);
+  void tail
     .catch(() => undefined)
     .finally(() => {
-      if (chains.get(key) === next) chains.delete(key);
+      if (chains.get(key) === tail) chains.delete(key);
     });
   return next;
+}
+
+function settledUnlessAborted(
+  prior: Promise<unknown>,
+  signal: AbortSignal,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(signal.reason as Error);
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
+    void prior.then(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    });
+  });
 }

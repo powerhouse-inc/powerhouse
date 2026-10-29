@@ -1003,6 +1003,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
           signal,
         );
       },
+      signal,
     );
   }
 
