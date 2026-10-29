@@ -2,6 +2,7 @@ import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import {
   compareCanonical,
   deriveOperationId,
+  undo,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { addRelationshipAction } from "../../src/actions/index.js";
@@ -190,6 +191,65 @@ describe("the first load of a document", () => {
     ]);
     expect(await storedBaseReducer(receiver, id)).toBeUndefined();
   });
+
+  // Only a document-scope UNDO can share a load with a CREATE.
+  it.each([
+    ["versionless", undefined],
+    ["base-reducer 2", { "base-reducer": 2 }],
+  ] as const)(
+    "treats a loaded UNDO on a stored %s document the same when the batch's CREATE names 3",
+    async (_label, storedVersions) => {
+      const { id, operations } = await sentHistory(2);
+      const [create, upgrade, ...relationships] = operations;
+      const withVersions = (protocolVersions: unknown) =>
+        ({
+          ...create,
+          action: {
+            ...create.action,
+            input: { ...(create.action.input as object), protocolVersions },
+          },
+        }) as Operation;
+      const undone = {
+        ...undo(1, "document"),
+        timestampUtcMs: new Date(
+          Date.parse(create.timestampUtcMs) + 3_000,
+        ).toISOString(),
+      };
+      const loadUndo = async (createVersions: unknown) => {
+        const receiver = await createUndoV3ReactorBuilder().build();
+        reactors.push(receiver);
+        const first = await settled(
+          receiver,
+          (
+            await receiver.load(id, "main", [
+              withVersions(storedVersions),
+              upgrade,
+            ])
+          ).id,
+        );
+        expect(first.error?.message ?? first.status).toBe(JobStatus.READ_READY);
+        const job = await settled(
+          receiver,
+          (
+            await receiver.load(id, "main", [
+              withVersions(createVersions),
+              ...relationships,
+              asOperation(id, undone, 4),
+            ])
+          ).id,
+        );
+        expect(await storedBaseReducer(receiver, id)).toBe(
+          storedVersions?.["base-reducer"],
+        );
+        return { status: job.status, error: job.error?.name };
+      };
+
+      const namingThree = await loadUndo(BASE_REDUCER_3_VERSIONS);
+
+      expect(namingThree.error).not.toBe("SubmittedUndoRefusedError");
+      expect(namingThree).toEqual(await loadUndo(storedVersions));
+    },
+  );
 
   it("refuses a base-reducer 3 creation on a receiver without undoV3", async () => {
     const { id, operations } = await sentHistory(3);
