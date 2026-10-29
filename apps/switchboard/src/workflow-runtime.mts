@@ -49,6 +49,10 @@ import {
   callbackUrlOf,
   registerOAuthCallback,
 } from "./workflow/oauth-callback.js";
+import {
+  registerWaitpointRoutes,
+  waitpointBaseUrlOf,
+} from "./workflow/waitpoint-routes.js";
 import type {
   ReactorAccessInfo,
   ReactorIdentity,
@@ -730,6 +734,7 @@ async function composeClaimed(
         }
       : {}),
     webhooks: deps.webhooks,
+    waitpointBaseUrl: deps.http ? waitpointBaseUrlOf(deps.http) : undefined,
     attachments: deps.attachments,
     canReadAttachmentRef: attachmentReadPolicy(deps.attachmentAccess),
     logger: deps.logger,
@@ -738,12 +743,16 @@ async function composeClaimed(
   });
 
   // Set before anything below can throw, so a failed compose stops it.
-  const routes: { oauthCallback?: ScopedRouteHandle } = {};
+  const routes: {
+    oauthCallback?: ScopedRouteHandle;
+    waitpoints?: ScopedRouteHandle[];
+  } = {};
   const registration: TriggersRegistration = { tornDown: false };
   const tearDown = () => {
     if (registration.tornDown) return;
     registration.tornDown = true;
     routes.oauthCallback?.dispose();
+    for (const handle of routes.waitpoints ?? []) handle.dispose();
     runtime.shutdown();
     // After the shutdown, so a batch already queued for it is refused and
     // replays on the next owner instead of being acknowledged here.
@@ -778,6 +787,7 @@ async function composeClaimed(
   let stopped = false;
   if (deps.http) {
     routes.oauthCallback = registerOAuthCallback(deps.http, runtime);
+    routes.waitpoints = registerWaitpointRoutes(deps.http, runtime);
   }
 
   return {
