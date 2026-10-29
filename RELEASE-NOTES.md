@@ -1,5 +1,30 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — Connect opens drives on its switchboards
+
+### ⚡ A drive placed on a switchboard keeps no copy in the browser
+
+Connect now applies a host's `reactor.placement.drives`. A drive placed on its switchboard's remote backend opens there: Connect adds no sync remote for it, removes one an earlier boot added, and routes every read and write to that switchboard. Its local data, if any, is left unread. A drive placed on a local backend, or not listed, keeps a synced copy as before. New drives are still created in the browser.
+
+A Connect can link to several switchboards: the router gets one backend per switchboard, named by its key in `reactor.backends`, and a sign-in or sign-out reaches every one of them. A Connect with only a remote backend (no reactor in the browser) opens every drive on its switchboard, and its attachments go there.
+
+### ⚡ What the Connect runner serves
+
+The connect runner derives three fields of the served config from the host, which `powerhouse.config.json` refuses:
+
+- `instance.remoteBackends: [{ name, url }]`, one per remote backend, `url` being its drive address;
+- `drives.defaultDrives[].backend` (the remote backend serving a remote default drive) and `.sync` (`false` when placed on it);
+- `instance.collections: { <slug>: { backend, sync } }` for drives placed on a switchboard that are not default drives, such as a plugin's `workflows` drive.
+
+`projectReactorToConnect` (`@powerhousedao/host-core`) adds `instance.remoteBackends`, and `placeConnectDrives(reactor, defaultDrives)` computes the other two. The runner no longer forces `instance.multiReactor: true`: `reactorClient` selects the router. A `placement.drives` key may now name a drive the Connect host attaches through `config.drives.defaultDrives`.
+
+### ✨ Tabs agree on sync remotes
+
+A sync remote one tab adds or removes in the shared worker now reaches every tab's `syncManager.list()`: the worker announces the change after `add` and `remove`, as it does for local peers. `fetchDriveInfo(url, tokenProvider?)` takes an optional token provider (default: the signed-in Renown user's).
+
+✅ **What to try:** in a host with a switchboard `sb` and a Connect linked to `sb.drives.b.url` with `placement: { drives: { b: "sb" } }`, run `ph run`, open Connect, and edit drive `b`: the edit lands on the switchboard, and `syncManager.list()` in the tab has no remote for `b`.
+
+---
 ## 🚀 **Unreleased** — a Switchboard as a router backend (`@powerhousedao/reactor-browser`)
 
 ### ✨ `createSwitchboardBackend`
@@ -36,7 +61,7 @@ sb: { kind: "remote", remote: { url: switchboard.drives.powerhouse.url } },
 
 The generated `assistant` and `cli` hosts use the new form. A project scaffolded earlier keeps its old host files (generation never overwrites them), so edit `hosts/assistant/host.js` and `hosts/cli/host.js` as above. One switchboard is one remote backend: two backends whose drive addresses share a switchboard are refused; list the second drive under `reactor.drives` instead.
 
-`reactor.placement.drives` maps a declared drive slug to a backend. The drive's own remote backend means "open it on the switchboard, with no copy here"; a local backend means "keep a synced copy"; an unlisted drive keeps a synced copy. The host is refused when a value names no backend, places a drive on a switchboard it is not on, names a slug linked on two switchboards (or kept here and linked on one), or (where the config names every drive, plugin `config.drive` links included) uses a key that names no drive. A `reactor.drives[]` entry's `remote.url` must be a drive address too. `placementKeyIssues(host)` (`@powerhousedao/host-core/schema`) runs the key check on a declared host whose runner and reactor are already merged, for a tool that parses `declaredHostSchemas.reactorHostSchema` itself, as the reactor monitor's import now does. Connect does not apply the map yet.
+`reactor.placement.drives` maps a declared drive slug to a backend. The drive's own remote backend means "open it on the switchboard, with no copy here"; a local backend means "keep a synced copy"; an unlisted drive keeps a synced copy. The host is refused when a value names no backend, places a drive on a switchboard it is not on, names a slug linked on two switchboards (or kept here and linked on one), or (where the config names every drive, plugin `config.drive` links included) uses a key that names no drive. A `reactor.drives[]` entry's `remote.url` must be a drive address too. `placementKeyIssues(host)` (`@powerhousedao/host-core/schema`) runs the key check on a declared host whose runner and reactor are already merged, for a tool that parses `declaredHostSchemas.reactorHostSchema` itself, as the reactor monitor's import now does.
 
 `switchboardOfDrive(url)` (`@powerhousedao/host-core/schema`, and `@powerhousedao/shared/host-tokens`) splits a drive address into `{ base, graphql, slug }`. The reactor monitor's remote descriptors take a drive address too: the provision form asks for one, `ph host export` imports read `drives.<slug>.url`, and a saved monitoring set whose remote is a GraphQL URL fails with a message naming the drive address to use.
 
