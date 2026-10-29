@@ -12,12 +12,12 @@ import type {
 import {
   actionSignerIdentity,
   actionSigningTarget,
-  capabilitiesFor,
   headNewDocument,
   redo,
   stateReducerOf,
   toTransportAction,
   undo,
+  undoCapabilitiesOf,
   undoNeedsTargets,
   undoRedoActions,
   undoRedoTargetsOf,
@@ -269,9 +269,9 @@ export class RemoteDocumentController<
 
   /**
    * Undoes the last `count` operations of `scope`. Below base-reducer 3 (or
-   * with no known version) it applies the model's UNDO, as the action method
-   * did; on 3 it applies a RETRACT per step, each resolved from this
-   * controller's own log, pending actions included.
+   * with no version) it applies the model's UNDO, as the action method did; on
+   * 3, or an unknown number run as 3, it applies a RETRACT per step, each
+   * resolved from this controller's own log, pending actions included.
    */
   undo(count: number = 1, scope: string = "global"): this {
     return this.undoOrRedo("UNDO", count, scope);
@@ -287,7 +287,7 @@ export class RemoteDocumentController<
     count: number,
     scope: string,
   ): this {
-    const caps = capabilitiesFor(this.inner.header.protocolVersions);
+    const caps = undoCapabilitiesOf(this.inner.header);
     if (caps === undefined || !undoNeedsTargets(caps)) {
       return this.applyAction(
         type === "UNDO" ? undo(count, scope) : redo(count, scope),

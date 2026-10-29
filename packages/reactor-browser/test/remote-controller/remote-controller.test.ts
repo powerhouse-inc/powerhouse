@@ -1313,6 +1313,53 @@ describe("RemoteDocumentController", () => {
       expect(author.signAction).toHaveBeenCalledTimes(2);
     });
 
+    it("signs a RETRACT on an unknown base-reducer number, run as 3", async () => {
+      const client = remoteAt(7);
+      const author = signer();
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, documentId: "doc-1", signer: author },
+      );
+      expect(controller.header.protocolVersions?.["base-reducer"]).toBe(7);
+
+      controller.setModelName({ name: "local" });
+      const local = controller.operations.global.at(-1)!.action.id;
+      controller.undo();
+
+      expect(controller.state.global.name).toBe("remote");
+      await controller.push();
+      const actions = pushedActions(client);
+      expect(actions.map((action) => action.type)).toEqual([
+        "SET_MODEL_NAME",
+        "RETRACT",
+      ]);
+      expect(actions[1].input).toEqual({ target: local });
+    });
+
+    it("still applies the model's undo with no base-reducer version", () => {
+      const created = documentModelDocumentModelModule.utils.createDocument();
+      const { "base-reducer": _, ...versions } =
+        created.header.protocolVersions ?? {};
+      const local = new DocumentModelController({
+        ...created,
+        header: { ...created.header, protocolVersions: versions },
+      });
+      const controller = RemoteDocumentController.from(local, {
+        client: createMockClient(),
+      });
+      expect(controller.header.protocolVersions).not.toHaveProperty(
+        "base-reducer",
+      );
+
+      expect(() => controller.undo()).toThrow(
+        "carries no base-reducer protocol version",
+      );
+      expect(() => controller.redo()).toThrow(
+        "carries no base-reducer protocol version",
+      );
+      expect(controller.status.pendingActionCount).toBe(0);
+    });
+
     it("redoes by retracting the retraction on base-reducer 3", async () => {
       const client = remoteAt(3);
       const controller = await RemoteDocumentController.pull(
