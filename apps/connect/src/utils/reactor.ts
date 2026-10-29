@@ -1,6 +1,7 @@
 import {
   addDrive,
   addRemoteDrive,
+  createDriveArrivals,
   getFullReactorClient,
   getPHStore,
   isDriveAuthError,
@@ -21,10 +22,7 @@ import {
   PGLITE_IDB_STORAGE_FACTS,
   type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
-import {
-  removeLocalCopies,
-  type ResolvedPlacedDrive,
-} from "@powerhousedao/connect-core/runtime";
+import type { PlacementSync } from "@powerhousedao/connect-core/runtime";
 import type {
   PHConnectDefaultDriveLocal,
   PHConnectDefaultDriveRemote,
@@ -276,12 +274,45 @@ async function addLocalDefaultDrive(
   }
 }
 
-/** Removes the sync remotes of drives the host opens on a switchboard. */
-export async function removePlacedDriveCopies(
-  resolved: readonly ResolvedPlacedDrive[],
-): Promise<void> {
-  const sync =
+const FIRST_PULL_TIMEOUT_MS = 30_000;
+
+/** Resolves once the drive's sync remote has finished its first pull, or after `maxWaitMs`. */
+function untilFirstPull(driveId: string, maxWaitMs: number): Promise<void> {
+  const store = getPHStore();
+  if (!store) return Promise.resolve();
+  const arrivals = createDriveArrivals(store);
+  if (!arrivals.isDrivePending(driveId)) return Promise.resolve();
+  return new Promise((resolve) => {
+    const finish = () => {
+      clearTimeout(timer);
+      unsubscribe();
+      resolve();
+    };
+    const timer = setTimeout(finish, maxWaitMs);
+    const unsubscribe = arrivals.subscribe(() => {
+      if (!arrivals.isDrivePending(driveId)) finish();
+    });
+  });
+}
+
+/** The tab's sync remotes, for moving a drive; a copy is ready once its first pull lands. */
+export function placementSync(): PlacementSync {
+  const syncManager = () =>
     getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
-  if (!sync) return;
-  await removeLocalCopies(sync, resolved);
+  return {
+    list: () => syncManager()?.list() ?? [],
+    remove: async (name) => {
+      await syncManager()?.remove(name);
+    },
+    add: async (url, driveId) => {
+      await addRemoteDrive(url, driveId);
+      const local = getPHStore()?.reactorClientModule?.client;
+      if (local) {
+        await waitForDocumentReady(local.read, driveId, {
+          timeoutMs: FIRST_PULL_TIMEOUT_MS,
+        });
+      }
+      await untilFirstPull(driveId, FIRST_PULL_TIMEOUT_MS);
+    },
+  };
 }
