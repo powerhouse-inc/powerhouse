@@ -70,6 +70,17 @@ describe("switchboardConfigSchema", () => {
     });
   });
 
+  it("leaves undoV3 to the reactor unless a layer sets it", () => {
+    expect(
+      switchboardConfigSchema.parse({}).protocol.featureFlags,
+    ).not.toHaveProperty("undoV3");
+    expect(
+      switchboardConfigSchema.parse({
+        protocol: { featureFlags: { undoV3: false } },
+      }).protocol.featureFlags.undoV3,
+    ).toBe(false);
+  });
+
   it.each<[string, SwitchboardConfigInput]>([
     ["a port out of range", { server: { port: 70000 } }],
     ["a fractional worker count", { workers: { executor: { count: 1.5 } } }],

@@ -756,3 +756,24 @@ describe("switchboardConfigFromEnv for the bin", () => {
     expect(switchboardConfigFromEnv(env, { logger: silent })).toEqual({});
   });
 });
+
+describe("switchboardConfigFromEnv REACTOR_UNDO_V3", () => {
+  it.each(["true", "false", "1", ""])(
+    "maps %j as the env read does",
+    (value) => {
+      const row = { REACTOR_UNDO_V3: value };
+      expect(mapped(row).protocol.featureFlags).toEqual(
+        resolveReactorFeatureFlags(row).flags,
+      );
+    },
+  );
+
+  it("names undoV3 only when the env sets it", () => {
+    expect(
+      switchboardConfigFromEnv(
+        { REACTOR_UNDO_V3: "false" },
+        { logger: silent },
+      ),
+    ).toStrictEqual({ protocol: { featureFlags: { undoV3: false } } });
+  });
+});

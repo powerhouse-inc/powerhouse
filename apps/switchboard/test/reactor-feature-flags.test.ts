@@ -47,6 +47,26 @@ describe("resolveReactorFeatureFlags", () => {
     ]);
   });
 
+  it("reads REACTOR_UNDO_V3 only when set, on unless the literal false", () => {
+    expect(resolveReactorFeatureFlags({}).flags).not.toHaveProperty("undoV3");
+    expect(resolveReactorFeatureFlags({ REACTOR_UNDO_V3: "false" })).toEqual({
+      flags: {
+        documentDecisions: false,
+        authEnforcement: false,
+        authGroups: false,
+        authConditions: false,
+        undoV3: false,
+      },
+      enabled: [],
+    });
+    expect(
+      resolveReactorFeatureFlags({ REACTOR_UNDO_V3: "FALSE" }).flags.undoV3,
+    ).toBe(true);
+    expect(
+      resolveReactorFeatureFlags({ REACTOR_UNDO_V3: "true" }).enabled,
+    ).toEqual(["undoV3"]);
+  });
+
   it("passes an inconsistent set through for the reactor to reject", () => {
     // Correcting it here would enforce something other than what was asked for;
     // the builder throws on the missing prerequisite at boot instead.

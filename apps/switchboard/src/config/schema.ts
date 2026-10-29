@@ -75,6 +75,8 @@ const protocolSchema = z.object({
       authEnforcement: z.boolean().default(false),
       authGroups: z.boolean().default(false),
       authConditions: z.boolean().default(false),
+      /** Unset leaves the reactor's own default. */
+      undoV3: z.boolean().optional(),
     })
     .prefault({}),
   /** Requested policy; without a signer the boot still falls back to legacy. */
