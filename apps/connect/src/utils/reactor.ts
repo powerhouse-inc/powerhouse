@@ -1,7 +1,6 @@
 import {
   addDrive,
   addRemoteDrive,
-  createDriveArrivals,
   getFullReactorClient,
   getPHStore,
   isDriveAuthError,
@@ -22,7 +21,11 @@ import {
   PGLITE_IDB_STORAGE_FACTS,
   type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
-import type { PlacementSync } from "@powerhousedao/connect-core/runtime";
+import {
+  caughtUp,
+  type PlacementSync,
+} from "@powerhousedao/connect-core/runtime";
+import type { RoutingReactorClient } from "@powerhousedao/reactor-router";
 import type {
   PHConnectDefaultDriveLocal,
   PHConnectDefaultDriveRemote,
@@ -274,28 +277,46 @@ async function addLocalDefaultDrive(
   }
 }
 
-const FIRST_PULL_TIMEOUT_MS = 30_000;
+const COPY_TIMEOUT_MS = 30_000;
+const COPY_RECHECK_MS = 250;
 
-/** Resolves once the drive's sync remote has finished its first pull, or after `maxWaitMs`. */
-function untilFirstPull(driveId: string, maxWaitMs: number): Promise<void> {
-  const store = getPHStore();
-  if (!store) return Promise.resolve();
-  const arrivals = createDriveArrivals(store);
-  if (!arrivals.isDrivePending(driveId)) return Promise.resolve();
-  return new Promise((resolve) => {
-    const finish = () => {
-      clearTimeout(timer);
-      unsubscribe();
-      resolve();
-    };
-    const timer = setTimeout(finish, maxWaitMs);
-    const unsubscribe = arrivals.subscribe(() => {
-      if (!arrivals.isDrivePending(driveId)) finish();
-    });
-  });
+/** The local copy's revision, or undefined while the drive is not held here. */
+async function localRevision(
+  driveId: string,
+): Promise<Record<string, number> | undefined> {
+  const local = getPHStore()?.reactorClientModule?.client;
+  if (!local) return undefined;
+  try {
+    return (await local.read.get(driveId)).header.revision;
+  } catch {
+    return undefined;
+  }
 }
 
-/** The tab's sync remotes, for moving a drive; a copy is ready once its first pull lands. */
+/** Resolves once the local copy holds what the switchboard held when called; rejects after the timeout. */
+async function untilCaughtUp(driveId: string, remote: string): Promise<void> {
+  const router = getFullReactorClient() as
+    | Pick<RoutingReactorClient, "backends">
+    | undefined;
+  const backend = router?.backends.find((b) => b.name === remote);
+  if (!backend) {
+    throw new Error(`No switchboard named ${remote} to copy from`);
+  }
+  const source = (await backend.api.get(driveId)).header.revision;
+  const deadline = Date.now() + COPY_TIMEOUT_MS;
+  for (;;) {
+    const local = await localRevision(driveId);
+    if (local && caughtUp(local, source)) return;
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `The copy in this browser did not catch up with ${remote} within ${COPY_TIMEOUT_MS / 1000} s`,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, COPY_RECHECK_MS));
+  }
+}
+
+/** The tab's sync remotes, for moving a drive; a copy is ready once it holds what the switchboard holds. */
 export function placementSync(): PlacementSync {
   const syncManager = () =>
     getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
@@ -307,14 +328,6 @@ export function placementSync(): PlacementSync {
     add: async (url, driveId) => {
       await addRemoteDrive(url, driveId);
     },
-    untilCopied: async (driveId) => {
-      const local = getPHStore()?.reactorClientModule?.client;
-      if (local) {
-        await waitForDocumentReady(local.read, driveId, {
-          timeoutMs: FIRST_PULL_TIMEOUT_MS,
-        });
-      }
-      await untilFirstPull(driveId, FIRST_PULL_TIMEOUT_MS);
-    },
+    untilCopied: (driveId, remote) => untilCaughtUp(driveId, remote),
   };
 }
