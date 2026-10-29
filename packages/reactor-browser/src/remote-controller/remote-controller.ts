@@ -297,11 +297,11 @@ export class RemoteDocumentController<
         `${type} count must be a positive integer on base-reducer 3, got ${count}`,
       );
     }
-    // Every target resolves on a copy before anything applies, so a missing
-    // one changes nothing; a RETRACT reduce writes into its input's state.
+    // Every target resolves on a scratch document before anything applies,
+    // so a missing one changes nothing.
     const stateReducer = this.stateReducer();
     const actions: Action[] = [];
-    let scratch = structuredClone(this.inner.document);
+    let scratch = this.inner.document;
     for (let step = 0; step < count; step++) {
       const targets = undoRedoTargetsOf(scratch, caps, scope, stateReducer);
       for (const action of undoRedoActions(caps, type, scope, targets)) {
