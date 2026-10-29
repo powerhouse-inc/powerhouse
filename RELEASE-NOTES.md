@@ -33,7 +33,7 @@ A peer below this release does not list base-reducer 3 in its sync manifest, so 
 
 #### `undoV3=false` refuses to boot over stored base-reducer 3 documents
 
-`undoV3=false` makes new documents base-reducer 2. Set it with `REACTOR_UNDO_V3=false` or `protocol.featureFlags.undoV3: false` (Switchboard), `reactor.protocol.featureFlags.undoV3: false` (ph-cli host file), `connect.reactor.featureFlags.undoV3: false` (Connect) or `withExecutorConfig({ featureFlags: { undoV3: false } })`. A host with it off that stores a base-reducer 3 document refuses to boot with `UnsupportedStoredProtocolError`, naming the types. `REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only` (or `withUnsupportedStoredDocuments("read-only")`) boots it and serves those documents read-only.
+`undoV3=false` makes new documents base-reducer 2. `REACTOR_UNDO_V3` is on for any value except the literal `false`. Set it with `REACTOR_UNDO_V3=false` or `protocol.featureFlags.undoV3: false` (Switchboard), `reactor.protocol.featureFlags.undoV3: false` (ph-cli host file), `connect.reactor.featureFlags.undoV3: false` (Connect) or `withExecutorConfig({ featureFlags: { undoV3: false } })`. A host with it off that stores a base-reducer 3 document refuses to boot with `UnsupportedStoredProtocolError`, naming the version and how many stored documents need it: `N stored document(s) require base-reducer 3, which this reactor does not run`. `REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only` (or `withUnsupportedStoredDocuments("read-only")`) boots it and serves those documents read-only.
 
 #### Defaults that now follow the feature flags
 

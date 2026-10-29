@@ -18,7 +18,7 @@ Base-reducer 3 needs the `undoV3` reactor flag, which defaults to on. A reactor 
 
 A reactor with it on still refuses a version 3 document whose model it cannot run as version 3: the model's reducer is not built by `createReducer`, or the model cannot be loaded. The refusal is an `UnsupportedProtocolVersionError`, on writes, on reads, and on receipt from a peer before any load.
 
-A reactor that stores version 3 documents of a model it cannot run refuses to start and names the types, as one without `undoV3` does; `withUnsupportedStoredDocuments("read-only")` starts it with those documents read-only. A model loaded after start is checked when it loads, and a refusal is logged and emitted as `STORED_MODEL_REFUSED`.
+A reactor that stores version 3 documents of a model it cannot run refuses to start and names the type (`base-reducer 3 for <type>`). One without `undoV3` refuses to start too, naming the version and how many stored documents need it (`N stored document(s) require base-reducer 3, which this reactor does not run`). `withUnsupportedStoredDocuments("read-only")` starts either with those documents read-only. A model loaded after start is checked when it loads, and a refusal is logged and emitted as `STORED_MODEL_REFUSED`.
 :::
 
 ## Turning it off
