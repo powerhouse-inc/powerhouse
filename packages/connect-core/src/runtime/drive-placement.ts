@@ -81,11 +81,7 @@ export function switchboardDrives(config: PlacementConfig): SwitchboardDrive[] {
   return drives;
 }
 
-/**
- * Splits stored entries into those that still apply and stale ones: no such
- * drive, a backend it can't open on, a move back to the config, or a config
- * value that changed since the move.
- */
+/** Stale: no such drive, a backend it can't open on, back to config, or a changed config value. */
 export function applyPlacementEntries(
   drives: readonly SwitchboardDrive[],
   entries: readonly PlacementEntry[],

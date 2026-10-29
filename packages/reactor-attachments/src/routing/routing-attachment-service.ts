@@ -16,11 +16,7 @@ export type AttachmentRouteResolver = (
   signal?: AbortSignal,
 ) => Promise<string>;
 
-/**
- * Sends each call to the attachment service of the backend that serves its
- * `documentId`. A call without one, a backend with no service here, or a
- * document that cannot be located goes to `fallback`.
- */
+/** Routes by `documentId` to its backend's service; anything unroutable goes to `fallback`. */
 export class RoutingAttachmentService implements IAttachmentService {
   constructor(
     private readonly resolve: AttachmentRouteResolver,

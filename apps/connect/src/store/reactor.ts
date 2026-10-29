@@ -411,8 +411,7 @@ export async function createReactor(
   // core never calls localReactor for it.
   const plan = planReactorClient();
   const { multiReactor } = plan;
-  // Drives the host opens on a switchboard keep no copy in this browser,
-  // unless this browser moved them (router mode only: remote mode keeps none).
+  // Placed drives keep no copy here unless this browser moved them (router mode only).
   const routesDrives = plan.mode === "router";
   const placements =
     routesDrives || plan.mode === "remote"
@@ -811,12 +810,7 @@ const NO_MOVES: PlacementStore = {
   delete: () => Promise.resolve(),
 };
 
-/**
- * After boot, so a switchboard that hangs never holds it: places the drives in
- * the router, drops the sync remotes of those that keep no copy here, adds
- * those of collections this browser keeps a copy of, then lists the drives
- * again so a placed drive is listed from its switchboard.
- */
+/** Runs after boot so a hung switchboard can't hold it; the relist shows placed drives from their switchboard. */
 async function attachPlacements(
   placements: DrivePlacements,
   resolved: ResolvedSwitchboardDrive[],

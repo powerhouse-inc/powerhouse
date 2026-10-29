@@ -56,11 +56,7 @@ export type DrivePlacement = {
   busy: boolean;
 };
 
-/**
- * The host config's drive placement plus this browser's moves. A move writes
- * the store, adds or removes the drive's sync remote, then places it in the
- * router; other tabs re-read the store when the sync remotes change.
- */
+/** Config placement plus this browser's moves: store, then sync remote, then router. */
 export class DrivePlacements {
   private applied = new Map<string, PlacementEntry>();
   private resolved: ResolvedSwitchboardDrive[] = [];
