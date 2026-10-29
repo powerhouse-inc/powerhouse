@@ -29,12 +29,19 @@ export const REACH_REASONS = {
     "This drive list comes from the switchboard when it starts. Place its drives in Router after starting.",
   switchboardMapped:
     "This switchboard's drives are only known once it starts, so a drive can't be added here.",
+  noName: "Give the drive a name.",
+  nameLetters: "Use at least one letter or digit in the drive's name.",
+  nameTaken: (name: string) =>
+    `This host already has a drive called ${name}. Choose another name.`,
+  addressTaken: (name: string) =>
+    `${name} would get the same address as another drive in this host. Choose another name.`,
   clash: (slug: string) =>
     `This app already has its own drive called ${slug}. Remove it, or link a drive with another name.`,
 } as const;
 
 /** The drive a switchboard serves when it declares none. */
 const DEFAULT_DRIVE = "powerhouse";
+const DEFAULT_DRIVE_NAME = "Powerhouse";
 
 const LOCAL_KINDS = new Set(["in-process", "worker"]);
 
@@ -53,6 +60,8 @@ type Target = {
   label: string;
   /** The drive, when the link names one. */
   slug?: string;
+  /** Known before the host runs: a literal url or an `$output`. */
+  knowable: boolean;
 };
 
 /** The member a `$output` names: by key, else the one child running the folder. */
@@ -72,11 +81,16 @@ export function targetOf(url: unknown, members: readonly Member[]): Target {
   if (typeof url === "string") {
     const drive = switchboardOfDrive(url);
     return drive
-      ? { id: `base:${drive.base}`, label: drive.base, slug: drive.slug }
-      : { label: url };
+      ? {
+          id: `base:${drive.base}`,
+          label: drive.base,
+          slug: drive.slug,
+          knowable: true,
+        }
+      : { label: url, knowable: true };
   }
   const ref = isRecord(url) && isRecord(url.$output) ? url.$output : undefined;
-  if (!ref) return { label: "another server" };
+  if (!ref) return { label: "another server", knowable: false };
   const member = producer(ref, members);
   const path = Array.isArray(ref.path) ? (ref.path as unknown[]) : [];
   const slug =
@@ -90,6 +104,7 @@ export function targetOf(url: unknown, members: readonly Member[]): Target {
     ...(member ? { id: `member:${member.key}`, member: member.key } : {}),
     label: member?.key ?? String(ref.host),
     ...(slug === undefined ? {} : { slug }),
+    knowable: true,
   };
 }
 
@@ -120,6 +135,10 @@ export type ConnectReach = {
   mappedDrives: boolean;
   /** Drives this Connect keeps itself, by slug. */
   ownDrives: string[];
+  /** Drives can be copied into this browser. */
+  keepsCopy: boolean;
+  /** Switchboards of this host a drive can be added to. */
+  switchboards: { path: string; key: string }[];
   /** Plain-language notes about the whole card. */
   notes: string[];
 };
@@ -199,6 +218,10 @@ export function connectReach(
     links,
     mappedDrives,
     ownDrives,
+    keepsCopy,
+    switchboards: members
+      .filter((other) => other.role === "switchboard")
+      .map(({ path, key }) => ({ path, key })),
     notes,
   };
 }
@@ -245,7 +268,9 @@ export function reachRule(members: readonly Member[], report: Report): void {
         valueAt(backend.body, ["remote", "url"]),
         members,
       );
-      if (target.slug === undefined) report(at, REACH_REASONS.notDrive);
+      if (target.knowable && target.slug === undefined) {
+        report(at, REACH_REASONS.notDrive);
+      }
       if (target.id === undefined) continue;
       if (seen.has(target.id)) {
         report(at, REACH_REASONS.sameSwitchboard);
@@ -256,7 +281,8 @@ export function reachRule(members: readonly Member[], report: Report): void {
     }
     driveList(member)?.forEach((entry, index) => {
       if (!isRecord(entry) || !isRecord(entry.remote)) return;
-      if (targetOf(entry.remote.url, members).slug === undefined) {
+      const target = targetOf(entry.remote.url, members);
+      if (target.knowable && target.slug === undefined) {
         report(
           `${member.reactorAt}.drives.${index}.remote.url`,
           REACH_REASONS.notDrive,
@@ -531,63 +557,89 @@ function placementOptions(reach: ConnectReach): ReachOption[] {
   });
 }
 
-/** Every slug any reactor of the host declares or links, and the default. */
-function slugsInHost(members: readonly Member[]): string[] {
+/** Every drive slug and name in the host, the default drive's included. */
+function drivesInHost(members: readonly Member[]): {
+  slugs: Set<string>;
+  names: Set<string>;
+} {
   const slugs = new Set<string>([DEFAULT_DRIVE]);
+  const names = new Set<string>([DEFAULT_DRIVE_NAME.toLowerCase()]);
   for (const member of members) {
-    const drives = member.reactor?.drives;
-    if (Array.isArray(drives)) {
-      for (const entry of drives) {
-        if (isRecord(entry) && typeof entry.slug === "string") {
-          slugs.add(entry.slug);
-        }
-      }
+    for (const entry of driveList(member) ?? []) {
+      if (!isRecord(entry)) continue;
+      if (typeof entry.slug === "string") slugs.add(entry.slug);
+      if (typeof entry.name === "string") names.add(entry.name.toLowerCase());
     }
     for (const backend of member.backends) {
-      const slug = targetOf(
+      const { slug } = targetOf(
         valueAt(backend.body, ["remote", "url"]),
         members,
-      ).slug;
+      );
       if (slug !== undefined) slugs.add(slug);
     }
   }
-  return [...slugs];
+  return { slugs, names };
 }
 
-function addDriveOption(
+/** The address part a drive name gives: lowercase letters, digits and dashes. */
+export function driveSlugOf(name: string): string {
+  return name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64)
+    .replace(/-+$/, "");
+}
+
+/** A named drive on a switchboard, saved in this host's entry for it. */
+export function addDriveOption(
   switchboard: Member,
   members: readonly Member[],
+  name: string,
 ): ReachOption {
+  const trimmed = name.trim();
+  const slug = driveSlugOf(trimmed);
   const option: ReachOption = {
-    id: `${switchboard.path}:reach:addDrive`,
+    id: `${switchboard.path}:reach:addDrive:${slug}`,
     group: "reach",
     value: "addDrive",
-    label: `Add a drive to ${switchboard.key}`,
+    label: `Add ${trimmed || "a drive"} to ${switchboard.key}`,
     member: switchboard.path,
     setters: [],
   };
   const drives = switchboard.reactor?.drives;
+  const { slugs, names } = drivesInHost(members);
   if (drives !== undefined && !Array.isArray(drives)) {
     option.blocked = REACH_REASONS.switchboardMapped;
-    return option;
+  } else if (trimmed === "") {
+    option.blocked = REACH_REASONS.noName;
+  } else if (slug === "") {
+    option.blocked = REACH_REASONS.nameLetters;
+  } else if (names.has(trimmed.toLowerCase())) {
+    option.blocked = REACH_REASONS.nameTaken(trimmed);
+  } else if (slugs.has(slug)) {
+    option.blocked = REACH_REASONS.addressTaken(trimmed);
   }
-  const slug = freshKey(slugsInHost(members), "shared");
-  const name = `Shared${slug === "shared" ? "" : ` ${slug.slice("shared-".length)}`}`;
+  if (option.blocked !== undefined) return option;
+  const { at, copy } = blockOf(switchboard);
   // A switchboard that declares drives no longer serves its default one.
   const kept: unknown[] = Array.isArray(drives)
     ? drives
-    : [{ slug: DEFAULT_DRIVE }];
+    : [{ slug: DEFAULT_DRIVE, name: DEFAULT_DRIVE_NAME }];
   option.drive = slug;
   option.setters = [
+    ...copy,
     {
-      path: `${switchboard.reactorAt}.drives`,
-      value: [...kept, { slug, name }] as never,
+      path: `${at}.drives`,
+      value: [...kept, { slug, name: trimmed }] as never,
     },
   ];
   return option;
 }
 
-/** Link, unlink and place options for every Connect, and drive adds. */
+/** Link, unlink and place options for every Connect. */
 export function reachOptions(
   members: readonly Member[],
   compound: boolean,
@@ -624,7 +676,6 @@ export function reachOptions(
       ...removeOptions(reach),
       ...placementOptions(reach),
     ]),
-    ...switchboards.map((switchboard) => addDriveOption(switchboard, members)),
   ];
 }
 

@@ -37,6 +37,9 @@ export const DRIVES_COPY = {
   onSwitchboard: (drive: string, switchboard: string) =>
     `${drive} on ${switchboard}`,
   add: "Add",
+  addDrive: (switchboard: string) => `Add a drive to ${switchboard}`,
+  driveName: "Drive name",
+  addButton: "Add drive",
   newDrives: "New drives are created in this browser.",
   moveLater: "You can move drives in Router after starting.",
 } as const;

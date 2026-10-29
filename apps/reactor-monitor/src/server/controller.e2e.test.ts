@@ -27,6 +27,7 @@ import {
   type Instance,
 } from "../controller/api.ts";
 import {
+  addDriveStatus,
   applyOption,
   hostOptions,
   type HostDraft,
@@ -363,13 +364,15 @@ describe.skipIf(process.platform === "win32")(
         baseDigest,
       );
       for (const id of [
-        "host.children.sb:reach:addDrive",
+        "Shared",
         "host.children.app:reach:open:sb:powerhouse",
         "host.children.app:reach:open:sb:shared",
       ]) {
-        const option = hostOptions(hostDraft, context).find(
-          (candidate) => candidate.id === id,
-        );
+        const option = id.startsWith("host.")
+          ? hostOptions(hostDraft, context).find(
+              (candidate) => candidate.id === id,
+            )
+          : addDriveStatus(hostDraft, context, "host.children.sb", id);
         expect(option?.reason, id).toBeUndefined();
         hostDraft = applyOption(hostDraft, option!).draft;
         draft = addEdit(draft, option!.setters);

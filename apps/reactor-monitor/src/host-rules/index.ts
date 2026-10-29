@@ -28,6 +28,7 @@ export {
   type MemberRole,
 } from "./members.js";
 export {
+  addDriveStatus,
   applyOption,
   hostOptionList,
   hostOptions,
@@ -43,6 +44,7 @@ export {
   BROWSER_BACKEND,
   connectReach,
   connectReaches,
+  driveSlugOf,
   REACH_REASONS,
   switchboardDrives,
   targetOf,

@@ -9,6 +9,7 @@ import {
 } from "./members.js";
 import { checkSetter } from "./policy.js";
 import {
+  addDriveOption,
   connectReaches,
   placementSelected,
   REACH_REASONS,
@@ -23,7 +24,13 @@ import {
   type Setter,
 } from "./schema.js";
 import { applySetters } from "./setters.js";
-import { REASONS, validateDraft, workerSettings } from "./validate.js";
+import {
+  REASONS,
+  validateDraft,
+  workerSettings,
+  type Validation,
+} from "./validate.js";
+import type { z } from "zod";
 
 export type OptionGroup =
   | "access"
@@ -526,33 +533,69 @@ export function hostOptions(
   const base = validateDraft(draft, context);
   const before = new Set(base.issues.map(issueKey));
   const devHost = hostVerb(draft.envelope, context) === "dev";
-  return hostOptionList(draft, context).map((option): OptionStatus => {
-    const selected = isSelected(option, base.members, draft.env ?? {});
-    if (selected) return { ...option, selected, enabled: true };
-    const ruled =
-      option.blocked ??
-      (option.group === "add"
-        ? addReason(option, draft, context.controller)
-        : option.group === "hotReload" && option.value === "off" && devHost
-          ? HOT_RELOAD_REASONS.hostWide
-          : setByEnv(option, base.members, draft.env ?? {})
-            ? SETTING_REASONS.fromEnv
-            : undefined);
-    if (ruled) return { ...option, selected, enabled: false, reason: ruled };
-    const candidate = applyOption(draft, option);
-    if (candidate.refused) {
-      return { ...option, selected, enabled: false, reason: candidate.refused };
-    }
-    const added = validateDraft(candidate.draft, context).issues.filter(
-      (issue) => !before.has(issueKey(issue)),
-    );
-    return added.length > 0
-      ? {
-          ...option,
-          selected,
-          enabled: false,
-          reason: reasonFor(option, added[0]),
-        }
-      : { ...option, selected, enabled: true };
-  });
+  return hostOptionList(draft, context).map((option) =>
+    judge(option, draft, context, base, before, devHost),
+  );
+}
+
+/** "Add a drive to <switchboard>" for a name the user typed. */
+export function addDriveStatus(
+  draft: HostDraft,
+  contextInput: HostRulesContext,
+  switchboard: string,
+  name: string,
+): OptionStatus | undefined {
+  const context = hostRulesContextSchema.parse(contextInput);
+  const base = validateDraft(draft, context);
+  const member = base.members.find(
+    (candidate) =>
+      candidate.path === switchboard && candidate.role === "switchboard",
+  );
+  if (!member) return undefined;
+  const option = addDriveOption(member, base.members, name);
+  return judge(
+    option,
+    draft,
+    context,
+    base,
+    new Set(base.issues.map(issueKey)),
+    hostVerb(draft.envelope, context) === "dev",
+  );
+}
+
+function judge(
+  option: HostOption,
+  draft: HostDraft,
+  context: z.output<typeof hostRulesContextSchema>,
+  base: Validation,
+  before: Set<string>,
+  devHost: boolean,
+): OptionStatus {
+  const selected = isSelected(option, base.members, draft.env ?? {});
+  if (selected) return { ...option, selected, enabled: true };
+  const ruled =
+    option.blocked ??
+    (option.group === "add"
+      ? addReason(option, draft, context.controller)
+      : option.group === "hotReload" && option.value === "off" && devHost
+        ? HOT_RELOAD_REASONS.hostWide
+        : setByEnv(option, base.members, draft.env ?? {})
+          ? SETTING_REASONS.fromEnv
+          : undefined);
+  if (ruled) return { ...option, selected, enabled: false, reason: ruled };
+  const candidate = applyOption(draft, option);
+  if (candidate.refused) {
+    return { ...option, selected, enabled: false, reason: candidate.refused };
+  }
+  const added = validateDraft(candidate.draft, context).issues.filter(
+    (issue) => !before.has(issueKey(issue)),
+  );
+  return added.length > 0
+    ? {
+        ...option,
+        selected,
+        enabled: false,
+        reason: reasonFor(option, added[0]),
+      }
+    : { ...option, selected, enabled: true };
 }

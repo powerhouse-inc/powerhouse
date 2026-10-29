@@ -9,6 +9,7 @@ import {
   stack,
 } from "../../host-rules/__fixtures__/hosts.js";
 import {
+  addDriveStatus,
   applyOption,
   hostOptions,
   HOT_RELOAD_REASONS,
@@ -32,14 +33,15 @@ function group(view: RenderedStep["view"], name: string) {
   return within(view.getByRole("group", { name }));
 }
 
-/** The setters the builder records for these options, chosen in order. */
+/** The setters the builder records for these options, chosen in order;
+ * `drive:<name>` adds a named drive to sb. */
 function chosen(envelope: HostExport, ids: string[]): Setter[] {
   let draft = { envelope };
   const setters: Setter[] = [];
   for (const id of ids) {
-    const option = hostOptions(draft, FULL).find(
-      (candidate) => candidate.id === id,
-    );
+    const option = id.startsWith("drive:")
+      ? addDriveStatus(draft, FULL, "host.children.sb", id.slice(6))
+      : hostOptions(draft, FULL).find((candidate) => candidate.id === id);
     if (!option?.enabled) throw new Error(`${id} is not on`);
     setters.push(...option.setters);
     draft = applyOption(draft, option).draft;
@@ -134,10 +136,28 @@ describe("ReactorStep", () => {
         add.getByRole("button", { name: "Open powerhouse on sb" }),
       ).toHaveProperty("disabled", true);
       expect(add.getByText(REACH_REASONS.clash("powerhouse"))).toBeTruthy();
-      fireEvent.click(add.getByRole("button", { name: "Add a drive to sb" }));
+      const name = card.getByRole("textbox", {
+        name: `${DRIVES_COPY.driveName} for sb`,
+      });
+      const addDrive = card.getByRole("button", {
+        name: DRIVES_COPY.addButton,
+      });
+      expect(addDrive).toHaveProperty("disabled", true);
+      fireEvent.change(name, { target: { value: "my-project" } });
+      expect(addDrive).toHaveProperty("disabled", true);
+      expect(
+        card.getByText(REACH_REASONS.nameTaken("my-project")),
+      ).toBeTruthy();
+      fireEvent.change(name, { target: { value: "Team notes" } });
+      expect(addDrive).toHaveProperty("disabled", false);
+      fireEvent.click(addDrive);
       expect(onChoose).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "host.children.sb:reach:addDrive" }),
+        expect.objectContaining({
+          id: "host.children.sb:reach:addDrive:team-notes",
+          enabled: true,
+        }),
       );
+      expect(name).toHaveProperty("value", "");
       expect(card.getByText(DRIVES_COPY.newDrives)).toBeTruthy();
     });
 
@@ -146,7 +166,7 @@ describe("ReactorStep", () => {
       const { view, onChoose } = renderStep(ReactorStep, {
         envelope,
         setters: chosen(envelope, [
-          "host.children.sb:reach:addDrive",
+          "drive:Shared",
           "host.children.ui:reach:open:sb:shared",
         ]),
         context: FULL,

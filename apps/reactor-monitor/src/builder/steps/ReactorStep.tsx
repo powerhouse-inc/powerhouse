@@ -51,7 +51,7 @@ function BackendOptions({
   });
 }
 
-export function ReactorStep({ engine, onChoose }: StepProps) {
+export function ReactorStep({ draft, engine, onChoose }: StepProps) {
   const { members } = engine;
   const [chosen, setChosen] = useState(members.at(0)?.path);
   const member =
@@ -114,6 +114,8 @@ export function ReactorStep({ engine, onChoose }: StepProps) {
           </div>
           {member.role === "connect" ? (
             <DrivesCard
+              context={engine.context}
+              draft={{ envelope: engine.envelope, env: draft.env }}
               member={member}
               members={members}
               onChoose={onChoose}

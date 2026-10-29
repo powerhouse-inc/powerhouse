@@ -7,6 +7,7 @@ import { FULL, hostExport, stack } from "./__fixtures__/hosts.js";
 import { membersOf } from "./members.js";
 import {
   ADD_REASONS,
+  addDriveStatus,
   applyOption,
   hostOptionList,
   hostOptions,
@@ -43,6 +44,19 @@ function choose(draft: HostDraft, id: string): HostDraft {
   const applied = applyOption(draft, found);
   expect(applied.refused).toBeUndefined();
   return applied.draft;
+}
+
+/** Adds a named drive as the card does: the engine must accept the name. */
+function addDrive(draft: HostDraft, switchboard: string, name: string) {
+  const found = addDriveStatus(draft, FULL, switchboard, name);
+  if (!found) throw new Error(`no switchboard ${switchboard}`);
+  expect(found.reason, name).toBeUndefined();
+  for (const setter of found.setters) {
+    expect(checkSetter(setter, draft.envelope), setter.path).toEqual({
+      ok: true,
+    });
+  }
+  return applyOption(draft, found).draft;
 }
 
 function reachOf(draft: HostDraft, path = UI) {
@@ -86,15 +100,17 @@ describe("linking a Connect to a switchboard's drives", () => {
     expect(status(draft, `${UI}:reach:open:sb:powerhouse`)).toEqual(
       off(REACH_REASONS.clash("powerhouse")),
     );
-    expect(status(draft, `${SB}:reach:addDrive`)).toEqual(ON);
-    const added = choose(draft, `${SB}:reach:addDrive`);
-    expect(
-      (added.envelope.members.switchboard as { reactor: { drives: unknown } })
-        .reactor.drives,
-    ).toEqual([
+    const added = addDrive(draft, SB, "Shared");
+    const sb = (added.envelope.host as { children: Record<string, unknown> })
+      .children.sb as { reactor: { drives: unknown } };
+    expect(sb.reactor.drives).toEqual([
       { slug: "powerhouse", name: "my-project" },
       { slug: "shared", name: "Shared" },
     ]);
+    // Only this host: the switchboard folder's own host.js is unchanged.
+    expect(added.envelope.members.switchboard).toEqual(
+      stack().members.switchboard,
+    );
     expect(issues(added)).toEqual([]);
 
     const linked = choose(added, `${UI}:reach:open:sb:shared`);
@@ -129,8 +145,8 @@ describe("linking a Connect to a switchboard's drives", () => {
 
   it("lists a second drive on the same switchboard under reactor.drives", () => {
     let draft: HostDraft = { envelope: stack() };
-    draft = choose(draft, `${SB}:reach:addDrive`);
-    draft = choose(draft, `${SB}:reach:addDrive`);
+    draft = addDrive(draft, SB, "Shared");
+    draft = addDrive(draft, SB, "Shared 2");
     draft = choose(draft, `${UI}:reach:open:sb:shared`);
     draft = choose(draft, `${UI}:reach:open:sb:shared-2`);
     expect(issues(draft)).toEqual([]);
@@ -163,7 +179,7 @@ describe("linking a Connect to a switchboard's drives", () => {
     let draft = withSetters(stack(), {
       "members.connect.reactor": { backends: { main: { kind: "worker" } } },
     });
-    draft = choose(draft, `${SB}:reach:addDrive`);
+    draft = addDrive(draft, SB, "Shared");
     draft = choose(draft, `${UI}:reach:open:sb:powerhouse`);
     draft = choose(draft, `${UI}:reach:open:sb:shared`);
     expect(issues(draft)).toEqual([]);
@@ -174,8 +190,8 @@ describe("linking a Connect to a switchboard's drives", () => {
 
   it("writes a reactor block host-core accepts once addresses are known", () => {
     let draft: HostDraft = { envelope: stack() };
-    draft = choose(draft, `${SB}:reach:addDrive`);
-    draft = choose(draft, `${SB}:reach:addDrive`);
+    draft = addDrive(draft, SB, "Shared");
+    draft = addDrive(draft, SB, "Shared 2");
     draft = choose(draft, `${UI}:reach:open:sb:shared`);
     draft = choose(draft, `${UI}:reach:open:sb:shared-2`);
     const resolved = JSON.parse(
@@ -190,7 +206,7 @@ describe("linking a Connect to a switchboard's drives", () => {
 
   it("keeps drives only on the switchboard once the browser reactor goes", () => {
     let draft: HostDraft = { envelope: stack() };
-    draft = choose(draft, `${SB}:reach:addDrive`);
+    draft = addDrive(draft, SB, "Shared");
     draft = choose(draft, `${UI}:reach:open:sb:shared`);
     draft = choose(draft, `${UI}:reach:remove:main`);
     expect(issues(draft)).toEqual([]);
@@ -226,8 +242,8 @@ describe("linking a Connect to a switchboard's drives", () => {
   it("links one switchboard today", () => {
     let draft: HostDraft = { envelope: stack() };
     draft = choose(draft, "host:add:switchboard");
-    draft = choose(draft, `${SB}:reach:addDrive`);
-    draft = choose(draft, "host.children.switchboard:reach:addDrive");
+    draft = addDrive(draft, SB, "Shared");
+    draft = addDrive(draft, "host.children.switchboard", "Shared 2");
     draft = choose(draft, `${UI}:reach:open:sb:shared`);
     expect(status(draft, `${UI}:reach:open:switchboard:shared-2`)).toEqual(
       off(REACH_REASONS.oneSwitchboard),
@@ -250,10 +266,99 @@ describe("linking a Connect to a switchboard's drives", () => {
     expect(ids).not.toContain(
       `${connect}:reach:open:cli-switchboard:powerhouse`,
     );
-    const added = choose(draft, "host.children.cli-switchboard:reach:addDrive");
+    const added = addDrive(draft, "host.children.cli-switchboard", "Shared");
     expect(
       status(added, `${connect}:reach:open:cli-switchboard:shared`),
     ).toEqual(off(REACH_REASONS.mapped));
+  });
+});
+
+describe("adding a named drive to a switchboard", () => {
+  const reason = (draft: HostDraft, name: string) =>
+    addDriveStatus(draft, FULL, SB, name)?.reason;
+
+  it("derives the address from the name", () => {
+    const draft = addDrive({ envelope: stack() }, SB, "  Team Notes! ");
+    const sb = membersOf(draft).find((member) => member.path === SB)!;
+    expect(sb.reactor?.drives).toContainEqual({
+      slug: "team-notes",
+      name: "Team Notes!",
+    });
+    expect(status(draft, `${UI}:reach:open:sb:team-notes`)).toEqual(ON);
+  });
+
+  it("refuses names in use, and names with no letters or digits", () => {
+    const draft = { envelope: stack() };
+    expect(reason(draft, "")).toBe(REACH_REASONS.noName);
+    expect(reason(draft, "  ")).toBe(REACH_REASONS.noName);
+    expect(reason(draft, "!!")).toBe(REACH_REASONS.nameLetters);
+    expect(reason(draft, "My-Project")).toBe(
+      REACH_REASONS.nameTaken("My-Project"),
+    );
+    expect(reason(draft, "Power house")).toBeUndefined();
+    expect(reason(draft, "POWERHOUSE")).toBe(
+      REACH_REASONS.nameTaken("POWERHOUSE"),
+    );
+    const added = addDrive(draft, SB, "Shared");
+    expect(reason(added, "shared")).toBe(REACH_REASONS.nameTaken("shared"));
+    expect(reason(added, "Shared.")).toBe(
+      REACH_REASONS.addressTaken("Shared."),
+    );
+  });
+
+  it("keeps the default drive when the switchboard declared none", () => {
+    const envelope = withSetters(stack(), {
+      "members.switchboard.reactor": {
+        protocol: (
+          stack().members.switchboard as { reactor: { protocol: unknown } }
+        ).reactor.protocol,
+      },
+    }).envelope;
+    const draft = addDrive({ envelope }, SB, "Shared");
+    const sb = membersOf(draft).find((member) => member.path === SB)!;
+    expect(sb.reactorAt).toBe(`${SB}.reactor`);
+    expect(sb.reactor?.drives).toEqual([
+      { slug: "powerhouse", name: "Powerhouse" },
+      { slug: "shared", name: "Shared" },
+    ]);
+    expect(issues(draft)).toEqual([]);
+  });
+});
+
+describe("a Connect linked through $env", () => {
+  const ENV_LINK = { $env: "SB_DRIVE_URL" };
+  const folder = () =>
+    withSetters(stack(), {
+      "members.connect.reactor.backends.sb": {
+        kind: "remote",
+        remote: { url: ENV_LINK },
+      },
+    });
+
+  it("is not refused: its address is only known when it runs", () => {
+    expect(issues(folder())).toEqual([]);
+    const listed = withSetters(stack(), {
+      [`${UI}.reactor`]: {
+        backends: { main: { kind: "worker" } },
+        drives: [{ slug: "b", remote: { url: ENV_LINK } }],
+      },
+    });
+    expect(issues(listed)).toEqual([]);
+  });
+
+  it("keeps its card editable, copying the env link as it is", () => {
+    let draft = folder();
+    draft = addDrive(draft, SB, "Shared");
+    draft = choose(draft, `${UI}:reach:open:sb:shared`);
+    draft = choose(draft, `${UI}:placement:shared:copy`);
+    draft = choose(draft, `${UI}:reach:remove:main`);
+    expect(issues(draft)).toEqual([]);
+    const reactor = reachOf(draft).member.reactor!;
+    expect(reachOf(draft).member.reactorAt).toBe(`${UI}.reactor`);
+    expect(reactor.backends).toMatchObject({
+      sb: { remote: { url: ENV_LINK } },
+      "sb-2": { remote: { url: drive("shared") } },
+    });
   });
 });
 
