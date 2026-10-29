@@ -11,4 +11,5 @@ export const addressScalar = defineCatalogScalar({
   schema: z.custom<`${string}:0x${string}`>((val) =>
     matchesScalarPattern(/^[a-zA-Z0-9]+:0x[a-fA-F0-9]{40}$/, val),
   ),
+  representation: "string",
 });

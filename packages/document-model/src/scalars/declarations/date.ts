@@ -7,4 +7,5 @@ export const dateScalar = defineCatalogScalar({
   typescriptType: "string",
   zodSource: "z.iso.datetime()",
   schema: z.iso.datetime(),
+  representation: "string",
 });

@@ -9,4 +9,11 @@ export {
   scalarDefinitionVersion,
   SCALAR_DEFINITION_VERSION,
 } from "./src/scalars/types.js";
-export type { ScalarDefinition, ScalarValue } from "./src/scalars/types.js";
+export type {
+  DescribedScalarDefinition,
+  ScalarCoercion,
+  ScalarDefinition,
+  ScalarRepresentation,
+  ScalarValue,
+} from "./src/scalars/types.js";
+export type { ScalarLiteralNode } from "./src/scalars/scalar-literal.js";

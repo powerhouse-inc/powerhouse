@@ -11,9 +11,9 @@ import { GraphQLError, Kind, parse } from "graphql";
 import { optionalOneOf, requireOneOf } from "./argument-aliases.js";
 import {
   documentModelSubgraphTypes,
-  getDocumentModelSchemaName,
   getDocumentModelSubgraphName,
 } from "../utils/create-schema.js";
+import { getDocumentModelSchemaName } from "./model-schema-templates.js";
 import type { CanonicalDocumentId } from "../services/authorization.service.js";
 import { BaseSubgraph } from "./base-subgraph.js";
 import { toGqlPhDocument } from "./reactor/adapters.js";
