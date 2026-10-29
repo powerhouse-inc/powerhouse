@@ -1,3 +1,20 @@
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **pieces-framework,reactor-workflow:** serve the reactor's write half to pieces ([194cc8b5ee](https://github.com/powerhouse-inc/powerhouse/commit/194cc8b5ee))
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+- **workflow-runtime:** per-action default timeout and retry ([ed63e8839f](https://github.com/powerhouse-inc/powerhouse/commit/ed63e8839f))
+
+### 🩹 Fixes
+
+- **connection-editor:** read dropdown options from the catalog's staticOptions ([c6c88eec7f](https://github.com/powerhouse-inc/powerhouse/commit/c6c88eec7f))
+- **workflow-runtime:** bind secrets to the connection or workflow that owns them ([40a52be27a](https://github.com/powerhouse-inc/powerhouse/commit/40a52be27a))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.80 (2026-10-29)
 
 ### 🚀 Features

@@ -15,6 +15,7 @@ export {
 } from "./flags.js";
 export {
   fileOf,
+  freshKey,
   hostVerb,
   membersOf,
   nestedChildren,
@@ -27,6 +28,7 @@ export {
   type MemberRole,
 } from "./members.js";
 export {
+  addDriveStatus,
   applyOption,
   hostOptionList,
   hostOptions,
@@ -39,12 +41,25 @@ export {
   type OptionStatus,
 } from "./options.js";
 export {
+  BROWSER_BACKEND,
+  connectReach,
+  connectReaches,
+  driveSlugOf,
+  REACH_REASONS,
+  switchboardDrives,
+  targetOf,
+  type ConnectReach,
+  type DriveLink,
+} from "./reach.js";
+export {
   checkEnvKey,
   checkSetter,
   checkSetterValue,
   FOLDER_REASONS,
   NAME_REASON,
   isContainedPath,
+  memberDriveSlug,
+  REMOTE_URL_REASON,
   parsePath,
   SETTINGS_ELSEWHERE,
   type PolicyVerdict,

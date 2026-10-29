@@ -1,3 +1,13 @@
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.80 (2026-10-29)
 
 ### 🚀 Features

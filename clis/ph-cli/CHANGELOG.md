@@ -1,3 +1,21 @@
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+- **workflow-runtime:** per-action default timeout and retry ([ed63e8839f](https://github.com/powerhouse-inc/powerhouse/commit/ed63e8839f))
+
+### 🩹 Fixes
+
+- **ph-cli:** a served Connect proxies the switchboard's paths instead of answering them with its shell ([11daf2325f](https://github.com/powerhouse-inc/powerhouse/commit/11daf2325f))
+- **switchboard,ph-cli:** a drive pinned to an id this store cannot take is made under its slug ([39aff95981](https://github.com/powerhouse-inc/powerhouse/commit/39aff95981))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.80 (2026-10-29)
 
 ### 🚀 Features

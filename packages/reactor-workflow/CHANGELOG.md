@@ -1,3 +1,21 @@
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **pieces-framework:** sync upstream to activepieces 0.92.3 ([484096ec69](https://github.com/powerhouse-inc/powerhouse/commit/484096ec69))
+- **pieces-framework,reactor-workflow:** serve the reactor's write half to pieces ([194cc8b5ee](https://github.com/powerhouse-inc/powerhouse/commit/194cc8b5ee))
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+- **workflow-runtime:** per-action default timeout and retry ([ed63e8839f](https://github.com/powerhouse-inc/powerhouse/commit/ed63e8839f))
+
+### 🩹 Fixes
+
+- **reactor-workflow:** name piece errors by their own name, not a minified class ([7aee7c7c9b](https://github.com/powerhouse-inc/powerhouse/commit/7aee7c7c9b))
+- **workflow-runtime:** bind secrets to the connection or workflow that owns them ([40a52be27a](https://github.com/powerhouse-inc/powerhouse/commit/40a52be27a))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.80 (2026-10-29)
 
 ### 🚀 Features

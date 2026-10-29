@@ -30,6 +30,7 @@ import {
   isContainedPath,
   SETTINGS_ELSEWHERE,
 } from "./policy.ts";
+import { reachRule } from "./reach.ts";
 import {
   hostRulesContextSchema,
   type HostDraft,
@@ -902,6 +903,7 @@ export function validateDraft(
   storesRule(members, env, report);
   configRule(members, env, report);
   workersRule(members, env, context, report);
+  reachRule(members, (path, message) => report("reach", path, message));
   const byPath: Record<string, HostRuleIssue[]> = {};
   for (const issue of issues) (byPath[issue.path] ??= []).push(issue);
   return { members, issues, byPath };

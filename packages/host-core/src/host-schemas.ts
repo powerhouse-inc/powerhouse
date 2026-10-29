@@ -562,6 +562,31 @@ export function makeHostSchemas(options: { tokens: TokenMode }): HostSchemas {
   );
 }
 
+export type PlacementKeyIssue = {
+  path: (string | number)[];
+  message: string;
+};
+
+/** withPlacementKeys' check, for a merged declared host parsed some other way. */
+export function placementKeyIssues(host: unknown): PlacementKeyIssue[] {
+  if (typeof host !== "object" || host === null || !("reactor" in host)) {
+    return [];
+  }
+  const issues: PlacementKeyIssue[] = [];
+  const ctx = {
+    addIssue: (issue: { path?: PropertyKey[]; message?: string }) => {
+      issues.push({
+        path: (issue.path ?? []).filter(
+          (part): part is string | number => typeof part !== "symbol",
+        ),
+        message: issue.message ?? "",
+      });
+    },
+  } as unknown as z.RefinementCtx;
+  refineDeclaredPlacementKeys(host as DeclaredReactorHost, ctx);
+  return issues;
+}
+
 /** Adds the host-level placement key check to a runner's declared schema. */
 function withPlacementKeys<T>(schema: T): T {
   if (!(schema instanceof z.ZodType)) return schema;

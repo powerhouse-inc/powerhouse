@@ -487,6 +487,10 @@ Generate an action inside an existing piece
 
 **Require Reactor** - Declare reactor access for the action: read, or write (which includes read). The action then gets context.reactor - Usage: `--require-reactor <value>`
 
+**Default Timeout Seconds** - Write defaultTimeoutSeconds: the step timeout used when the workflow sets none - Usage: `--default-timeout-seconds <number>`
+
+**Default Max Attempts** - Write defaultRetry: \{ maxAttempts \}: the attempts (1 is no retry) used when the workflow sets no retry - Usage: `--default-max-attempts <number>`
+
 
 
 

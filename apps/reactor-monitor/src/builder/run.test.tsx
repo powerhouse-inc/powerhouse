@@ -43,7 +43,12 @@ function instance(status: Instance["status"]): Instance {
               outputs: {
                 origin: "http://127.0.0.1:5101",
                 graphql: "http://127.0.0.1:5101/graphql",
-                drives: {},
+                drives: {
+                  powerhouse: {
+                    id: "powerhouse",
+                    url: "http://127.0.0.1:5101/d/powerhouse",
+                  },
+                },
               },
             },
             ui: { host: "connect", app: "http://localhost:6491/" },
@@ -205,7 +210,10 @@ describe("Use it, wired", () => {
     ]);
     expect(wiring.managed.attach).toHaveBeenCalledWith(instance("running"));
     const running = within(view.getByLabelText("Running copy"));
-    expect(running.getByText("http://127.0.0.1:5101/graphql")).toBeTruthy();
+    expect(
+      running.getByText("http://127.0.0.1:5101/d/powerhouse"),
+    ).toBeTruthy();
+    expect(running.queryByText("http://127.0.0.1:5101/graphql")).toBeNull();
     expect(running.getByText("ui.main")).toBeTruthy();
     expect(
       running.getByRole("link", { name: "Open Connect" }).getAttribute("href"),
