@@ -94,6 +94,13 @@ export function routeSeedOf({
     collections[key] = reactor;
     drives[key] = slug;
   }
+  // Every linked drive is named by slug, so a move survives the id changing.
+  for (const link of reach.links) {
+    if (!run.attached.remote.some((entry) => entry.member === link.member)) {
+      continue;
+    }
+    drives[keyOf(link.slug, link.member)] = link.slug;
+  }
   // The monitor's browser reactor holds none of these until they are created.
   if (browser !== undefined) {
     for (const slug of reach.ownDrives) {

@@ -393,6 +393,56 @@ describe("RoutingPanel moves", () => {
     restarted.unmount();
   }, 60_000);
 
+  it("keeps an unplaced link's move when its switchboard reports a new id", async () => {
+    const storage = memoryStorage();
+    const unplaced = (id: string, driveId: string, switchboard: string) => ({
+      ...seedOf(id, {}, switchboard),
+      drives: { [driveId]: "shared" },
+    });
+    const first = show({
+      setName: "lab",
+      storage,
+      seed: unplaced("s1", "old-id", BETA),
+    });
+    await waitFor(
+      () => expect(first.getByTestId("router-table")).toBeTruthy(),
+      WAIT,
+    );
+    fireEvent.change(first.getByTestId("router-move-key"), {
+      target: { value: "old-id" },
+    });
+    fireEvent.change(first.getByTestId("router-move-backend"), {
+      target: { value: ALPHA },
+    });
+    fireEvent.click(first.getByTestId("router-move"));
+    await waitFor(() =>
+      expect(first.getByTestId("router-route-old-id")).toBeTruthy(),
+    );
+    first.unmount();
+    expect(JSON.parse(storage.getItem(PLACEMENTS_STORAGE_KEY) ?? "")).toEqual({
+      lab: { "web/app/shared": { backend: "main", app: "web/app" } },
+    });
+
+    const restarted = show({
+      setName: "lab",
+      storage,
+      seed: unplaced("s2", "new-id", GAMMA),
+    });
+    const moved = await waitFor(
+      () => restarted.getByTestId("router-route-new-id"),
+      WAIT,
+    );
+    expect(within(moved).getByTestId("router-route-drift").textContent).toBe(
+      "Moved here. The host config doesn't place it.",
+    );
+    expect(
+      (within(moved).getByTestId("router-route-backend") as HTMLSelectElement)
+        .value,
+    ).toBe(ALPHA);
+    expect(restarted.queryByTestId("router-route-old-id")).toBeNull();
+    restarted.unmount();
+  }, 60_000);
+
   it("drops a kept move once the config value it replaced changes", async () => {
     const storage = memoryStorage();
     const first = show({

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FULL, stack } from "../host-rules/__fixtures__/hosts.js";
 import {
+  applySetters,
   membersOf,
   REACH_REASONS,
   type HostDraft,
@@ -51,6 +52,22 @@ describe("routeSeedOf", () => {
       collections: { "id-shared": "sb-inst-1", powerhouse: "ui.main" },
       drives: { "id-shared": "shared", powerhouse: "powerhouse" },
     });
+  });
+
+  it("names an unplaced linked drive by slug without placing it", () => {
+    const { draft } = linkedStack();
+    const copied = applySetters(draft.envelope, [
+      {
+        path: `${UI}.reactor.placement.drives.shared`,
+        value: { $delete: true },
+      },
+    ]).envelope;
+    const seed = seedOf({ envelope: copied });
+    expect(seed?.drives).toEqual({
+      "id-shared": "shared",
+      powerhouse: "powerhouse",
+    });
+    expect(seed?.collections).toEqual({ powerhouse: "ui.main" });
   });
 
   it("offers nothing until the switchboard is attached", () => {
