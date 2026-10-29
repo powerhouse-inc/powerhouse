@@ -1,4 +1,7 @@
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import {
+  baseReducerVersionsFor,
+  type DocumentModelModule,
+} from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -9,10 +12,15 @@ import {
   stateReducerOrRefusal,
   UNGATED,
 } from "../../src/protocol/gate.js";
+import { resolveFeatureFlags } from "../../src/core/feature-flags.js";
 import { createMockLogger, createTestRegistry } from "../factories.js";
 
 const MODEL = "powerhouse/document-model";
 const SUPPORT = { "base-reducer": [1, 2, 3], signature: [1] };
+/** What a resolver with no base-reducer entry runs an unknown number as. */
+const DEFAULT_HIGHEST = Math.max(
+  ...baseReducerVersionsFor(resolveFeatureFlags()),
+);
 
 function untagged<T extends DocumentModelModule<any>>(module: T): T {
   const reducer = module.reducer as (...args: unknown[]) => unknown;
@@ -82,7 +90,9 @@ describe("the protocol gate", () => {
     expect(createNeedsModel(gate, { "base-reducer": 3 })).toBe(true);
     expect(createNeedsModel(gate, { "base-reducer": 2 })).toBe(false);
     expect(createNeedsModel(gate, { "base-reducer": 7 })).toBe(true);
-    expect(createNeedsModel(UNGATED, { "base-reducer": 7 })).toBe(false);
+    expect(createNeedsModel(UNGATED, { "base-reducer": 7 })).toBe(
+      DEFAULT_HIGHEST >= 3,
+    );
     expect(
       modelUnavailableRefusal(gate, {
         documentId: "doc",
@@ -136,10 +146,14 @@ describe("the protocol gate", () => {
   it("falls back to the default flags' highest version without a base-reducer entry", () => {
     expect(
       baseReducerResolver({}).capabilities({ "base-reducer": 7 })?.version,
-    ).toBe(2);
-    expect(UNGATED.capabilities({ "base-reducer": 7 })?.version).toBe(2);
+    ).toBe(DEFAULT_HIGHEST);
+    expect(UNGATED.capabilities({ "base-reducer": 7 })?.version).toBe(
+      DEFAULT_HIGHEST,
+    );
     const gate = createProtocolGate({ signature: [1] }, createTestRegistry());
-    expect(gate.capabilities({ "base-reducer": 7 })?.version).toBe(2);
+    expect(gate.capabilities({ "base-reducer": 7 })?.version).toBe(
+      DEFAULT_HIGHEST,
+    );
     expect(gate.refusal("doc", { "base-reducer": 7 }, MODEL)).toBeUndefined();
   });
 

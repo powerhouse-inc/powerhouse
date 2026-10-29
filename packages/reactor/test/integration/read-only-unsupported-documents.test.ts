@@ -7,6 +7,8 @@ import type * as DocumentModel from "@powerhousedao/shared/document-model";
 import type { ProcessorFactory } from "@powerhousedao/shared/processors";
 import {
   generateId,
+  localSupports,
+  PEER_CAPABILITIES,
   withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
@@ -183,7 +185,10 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     expect(ordinals.unsupported.length).toBe(12);
 
     const narrow = await build((b) =>
-      b.withKysely(db).withUnsupportedStoredDocuments("read-only"),
+      b
+        .withKysely(db)
+        .withUnsupportedStoredDocuments("read-only")
+        .withExecutorConfig({ featureFlags: { undoV3: false } }),
     );
     const { reactor } = narrow;
     const sweeps = await narrow.catchUp.sweepNow();
@@ -211,7 +216,10 @@ describe("read-only over documents at an unsupported base-reducer version", () =
       "later",
     ]);
 
-    for (const protocolSupport of [undefined, { "base-reducer": [1, 2] }]) {
+    for (const protocolSupport of [
+      localSupports(PEER_CAPABILITIES, { undoV3: false }).protocols,
+      { "base-reducer": [1, 2] },
+    ]) {
       const integrity = new DocumentIntegrityService(
         narrow.keyframeStore,
         narrow.operationStore,
@@ -279,7 +287,10 @@ describe("read-only over documents at an unsupported base-reducer version", () =
   it("refuses the document from a warm cache", async () => {
     const { db, head } = await storeWithUnsupported();
     const narrow = await build((b) =>
-      b.withKysely(db).withUnsupportedStoredDocuments("read-only"),
+      b
+        .withKysely(db)
+        .withUnsupportedStoredDocuments("read-only")
+        .withExecutorConfig({ featureFlags: { undoV3: false } }),
     );
     const revision = head.header.revision.global - 1;
     narrow.writeCache.putState(
@@ -301,7 +312,10 @@ describe("read-only over documents at an unsupported base-reducer version", () =
   it("reports the document unsupported when its head is the latest keyframe", async () => {
     const { db } = await storeWithUnsupported({ folders: 11 });
     const narrow = await build((b) =>
-      b.withKysely(db).withUnsupportedStoredDocuments("read-only"),
+      b
+        .withKysely(db)
+        .withUnsupportedStoredDocuments("read-only")
+        .withExecutorConfig({ featureFlags: { undoV3: false } }),
     );
     const keyframes = await narrow.keyframeStore.listKeyframes(UNSUPPORTED);
     const { revision } = await narrow.operationStore.getRevisions(
@@ -368,7 +382,10 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     }
 
     const narrow = await build((b) =>
-      b.withKysely(db).withUnsupportedStoredDocuments("read-only"),
+      b
+        .withKysely(db)
+        .withUnsupportedStoredDocuments("read-only")
+        .withExecutorConfig({ featureFlags: { undoV3: false } }),
     );
     await narrow.catchUp.sweepNow();
     await expect(narrow.reactor.get(UNSUPPORTED)).rejects.toThrow(/not found/i);
@@ -515,7 +532,10 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     await schema.deleteFrom("DocumentSnapshot").execute();
 
     const narrow = await build((b) =>
-      b.withKysely(db).withUnsupportedStoredDocuments("read-only"),
+      b
+        .withKysely(db)
+        .withUnsupportedStoredDocuments("read-only")
+        .withExecutorConfig({ featureFlags: { undoV3: false } }),
     );
     const { reactor } = narrow;
     await narrow.catchUp.sweepNow();

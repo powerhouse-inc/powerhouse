@@ -255,6 +255,7 @@ describe("the first load of a document", () => {
     const { id, operations } = await sentHistory(3);
     const receiver = await new ReactorBuilder()
       .withDocumentModelSources([documentModelDocumentModelModule as never])
+      .withExecutorConfig({ featureFlags: { undoV3: false } })
       .build();
     reactors.push(receiver);
 
