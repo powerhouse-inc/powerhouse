@@ -4,9 +4,13 @@
 
 ### ⚡ A drive placed on a switchboard keeps no copy in the browser
 
-Connect now applies a host's `reactor.placement.drives`. A drive placed on its switchboard's remote backend opens there: Connect adds no sync remote for it, removes one an earlier boot added, and routes every read and write to that switchboard. Its local data, if any, is left unread. A drive placed on a local backend, or not listed, keeps a synced copy as before. New drives are still created in the browser.
+Connect now applies a host's `reactor.placement.drives`. A drive placed on its switchboard's remote backend opens there: Connect adds no sync remote for it, removes one an earlier boot added, and routes every read, listing and write to that switchboard. Its local data, if any, stays in the browser unread. A drive placed on a local backend, or not listed, keeps a synced copy as before. New drives are still created in the browser.
 
 A Connect can link to several switchboards: the router gets one backend per switchboard, named by its key in `reactor.backends`, and a sign-in or sign-out reaches every one of them. A Connect with only a remote backend (no reactor in the browser) opens every drive on its switchboard, and its attachments go there.
+
+### ⚡ The router lists a duplicated document from where it is routed
+
+`RoutingReactorClient.read.find` (`@powerhousedao/reactor-router`) used to keep the first backend's copy of a document several backends return. It now keeps the copy from the backend the router already routes that id to: a drive's correction, runtime or config placement or learned route, else the document's cached route. With no route, backend order decides as before, and nothing extra is probed. A drive placed on a remote is therefore listed from the remote even while a stale local copy remains.
 
 ### ⚡ What the Connect runner serves
 
