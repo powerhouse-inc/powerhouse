@@ -15,14 +15,10 @@ import {
   acceptsSubmittedUndoRedo,
   actionSignerIdentity,
   assertNever,
-  baseReducerCapabilities,
-  capabilitiesFor,
   compareCanonical,
   conflictWindowMovesEveryRow,
-  createdCapabilities,
   decide,
   derivesByRule,
-  documentDerivesByRule,
   garbageCollect,
   groupDocumentType,
   isPurgeMarker,
@@ -114,8 +110,7 @@ import { retractionSkip } from "../decision/merged-order.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
 import {
   createProtocolGate,
-  runnableBaseReducerCapabilities,
-  unknownBaseReducerRefusal,
+  type BaseReducerResolver,
   type IProtocolGate,
 } from "../protocol/gate.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
@@ -326,8 +321,7 @@ type StoredProtocol = {
   absent?: true;
   /**
    * The header read failed for a reason other than absence and the stored
-   * CREATE_DOCUMENT runs the retraction rule (that error), or names a
-   * base-reducer number this build does not know (a typed refusal).
+   * CREATE_DOCUMENT runs the retraction rule (that error).
    */
   unreadable?: Error;
 };
@@ -360,6 +354,7 @@ function genesisRank(operation: Operation): number {
 function undoRedoRefusal(
   job: Job,
   stored: BaseReducerCapabilities | undefined,
+  resolver: BaseReducerResolver,
 ): SubmittedUndoRefusedError | undefined {
   let actions: readonly Action[];
   let caps = stored;
@@ -367,7 +362,7 @@ function undoRedoRefusal(
     actions = job.actions;
   } else if (job.kind === "load") {
     actions = job.operations.map((operation) => operation.action);
-    caps ??= createdCapabilities(loadedCreation(job));
+    caps ??= resolver.capabilities(loadedCreation(job)?.protocolVersions);
   } else {
     return undefined;
   }
@@ -892,7 +887,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (stored.unreadable) {
       return { result: buildErrorResult(job, stored.unreadable, startTime) };
     }
-    const undoRefusal = undoRedoRefusal(job, stored.caps);
+    const undoRefusal = undoRedoRefusal(job, stored.caps, this.protocolGate);
     if (undoRefusal) {
       return { result: buildErrorResult(job, undoRefusal, startTime) };
     }
@@ -1593,6 +1588,14 @@ export class SimpleJobExecutor implements IJobExecutor {
     });
   }
 
+  /** Whether the version `header` runs under here derives `scope` by the rule. */
+  private derivesByRule(header: PHDocument["header"], scope: string): boolean {
+    return derivesByRule(
+      this.protocolGate.capabilities(header.protocolVersions),
+      scope,
+    );
+  }
+
   /**
    * The stored header's base-reducer capabilities, read once per job. A
    * stored document at a version this reactor does not run is read-only here.
@@ -1641,23 +1644,20 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
       return unreadable ? { unreadable } : {};
     }
-    const refusal =
-      unknownBaseReducerRefusal(job.documentId, stored.protocolVersions) ??
-      this.protocolGate.refusal(
-        job.documentId,
-        stored.protocolVersions,
-        stored.documentType,
-      );
+    const refusal = this.protocolGate.refusal(
+      job.documentId,
+      stored.protocolVersions,
+      stored.documentType,
+    );
     return refusal
       ? { refusal }
-      : { caps: capabilitiesFor(stored.protocolVersions) };
+      : { caps: this.protocolGate.capabilities(stored.protocolVersions) };
   }
 
   /**
    * `error` when a header read failed and the stored CREATE_DOCUMENT runs the
    * retraction rule: going on would read the document as base-reducer 2.
-   * Undefined otherwise, including when that read fails too. A creation at a
-   * base-reducer number this build does not know is refused typed.
+   * Undefined otherwise, including when that read fails too.
    */
   private async unreadableRuleDocument(
     job: Job,
@@ -1680,17 +1680,12 @@ export class SimpleJobExecutor implements IJobExecutor {
     } catch {
       return undefined;
     }
-    if (creation?.type === "CREATE_DOCUMENT") {
-      const unknown = unknownBaseReducerRefusal(
-        job.documentId,
-        (creation as CreateDocumentAction).input.protocolVersions,
-      );
-      if (unknown) return unknown;
-    }
     if (
       creation?.type !== "CREATE_DOCUMENT" ||
       !usesRetractionRule(
-        createdCapabilities((creation as CreateDocumentAction).input),
+        this.protocolGate.capabilities(
+          (creation as CreateDocumentAction).input.protocolVersions,
+        ),
       )
     ) {
       return undefined;
@@ -1982,7 +1977,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let caps: BaseReducerCapabilities;
     try {
-      caps = baseReducerCapabilities(document.header);
+      caps = this.protocolGate.headerCapabilities(document.header);
     } catch {
       // The reduce reports a header without a known version.
       return undefined;
@@ -2167,7 +2162,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (
       carried === undefined &&
       deniedReason === undefined &&
-      documentDerivesByRule(document.header, job.scope)
+      this.derivesByRule(document.header, job.scope)
     ) {
       try {
         lookups = await readRuleLookups(
@@ -2294,7 +2289,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       // rebuild would: each row with its own module version's reducer.
       let deriveScope: DeriveScope | undefined;
       if (
-        documentDerivesByRule(document.header, job.scope) &&
+        this.derivesByRule(document.header, job.scope) &&
         needsFullHistory(write, lookups ?? NO_RULE_LOOKUPS)
       ) {
         try {
@@ -2315,7 +2310,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         }
       }
       try {
-        const caps = runnableBaseReducerCapabilities(document.header);
+        const caps = this.protocolGate.headerCapabilities(document.header);
         const protocolVersion = caps.version;
         const ruleOptions = {
           ...(lookups === undefined ? {} : { targeted: lookups.targeted }),
@@ -2381,7 +2376,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           action,
           { documentId: job.documentId, scope, branch: job.branch },
           this.signer,
-          runnableBaseReducerCapabilities(document.header).synthesizedId,
+          this.protocolGate.headerCapabilities(document.header).synthesizedId,
           signal,
         );
       } catch (error) {
@@ -2646,7 +2641,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       // carried slice does not hold.
       if (
         prepared.length === 0 &&
-        documentDerivesByRule(outcome.document.header, job.scope)
+        this.derivesByRule(outcome.document.header, job.scope)
       ) {
         const later = writes.slice(1);
         try {
@@ -3047,6 +3042,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       { scope: job.scope, operations },
       stores,
       signal,
+      (header) => this.protocolGate.capabilities(header.protocolVersions),
     );
 
     const submitted = new Set(job.actions.map((action) => action.id));
@@ -3264,6 +3260,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         { scope, operations: effective },
         stores,
         signal,
+        (header) => this.protocolGate.capabilities(header.protocolVersions),
       );
 
       const firstChange = effective.findIndex(
@@ -3694,6 +3691,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           { scope, operations: reshuffledOperations },
           stores,
           signal,
+          (header) => this.protocolGate.capabilities(header.protocolVersions),
         );
       } catch (error) {
         return {
@@ -3770,7 +3768,7 @@ export class SimpleJobExecutor implements IJobExecutor {
    */
   private creationCaps(job: Job): BaseReducerCapabilities | undefined {
     const creation = loadedCreation(job);
-    const caps = createdCapabilities(creation);
+    const caps = this.protocolGate.capabilities(creation?.protocolVersions);
     if (!creation || !usesRetractionRule(caps)) {
       return undefined;
     }

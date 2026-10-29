@@ -8,7 +8,6 @@ import {
   localSupports,
   mergePeerCapabilities,
   PEER_CAPABILITIES,
-  refusalFor,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
@@ -1067,7 +1066,8 @@ export class ReactorBuilder {
       resolver.rememberManifest(this.resolvedModelManifest ?? []);
       this.modelResolver = resolver;
     }
-    const queue = this.queueInstance ?? new InMemoryQueue(eventBus, resolver);
+    const queue =
+      this.queueInstance ?? new InMemoryQueue(eventBus, resolver, protocolGate);
     const jobTracker = new InMemoryJobTracker(eventBus);
 
     const cacheConfig: WriteCacheConfig = {
@@ -1182,6 +1182,7 @@ export class ReactorBuilder {
           operationIndex,
           this.executorConfig.jobTimeoutMs,
           this.executorConfig.deferredJobTtlMs,
+          protocolGate,
         );
         executorManager = poolManager;
         executorStartCount = pool.numWorkers;
@@ -1214,6 +1215,7 @@ export class ReactorBuilder {
           resolver,
           this.executorConfig.jobTimeoutMs,
           this.executorConfig.deferredJobTtlMs,
+          protocolGate,
         );
       }
     }
@@ -1476,12 +1478,7 @@ export class ReactorBuilder {
         documentMetaCache.invalidate(documentId);
       },
       modelRefusal: (documentType, versions) =>
-        refusalFor(
-          documentType,
-          versions,
-          protocolGate.support,
-          protocolGate.registeredModules(documentType),
-        ),
+        protocolGate.refusalOf(versions, documentType),
     };
     let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {
@@ -1525,6 +1522,7 @@ export class ReactorBuilder {
         database as unknown as Kysely<DocumentViewDatabase>,
         operationStore,
         documentMetaCache,
+        protocolGate,
       );
       groupReevaluationTrigger.attachCatchUp(
         settledWatermark,

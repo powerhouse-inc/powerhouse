@@ -1,5 +1,6 @@
 import type {
   AuthSubject,
+  BaseReducerCapabilities,
   CreateDocumentAction,
   Operation,
   PHDocument,
@@ -18,6 +19,7 @@ import {
 import { derivedReadSet, staticReadSet } from "./build-decision-model.js";
 import { streamKey } from "./merged-order.js";
 import type {
+  CapabilitiesOf,
   DecisionModel,
   DecisionStores,
   DecisionTarget,
@@ -29,6 +31,10 @@ import type {
 import type { WalkStream } from "./walk.js";
 import { walkByPosition, walkIdOrder } from "./walk.js";
 
+/** A header's own known version, for callers that resolve none. */
+const headerCapabilities: CapabilitiesOf = (header) =>
+  optionalBaseReducerCapabilities(header);
+
 /**
  * A rule version's stream reducers. A stream the rule derives cannot be
  * walked without them, so a model that supplies none fails closed.
@@ -37,8 +43,8 @@ export function ruleReducers(
   before: PHDocument,
   scope: string,
   reducers: ((document: PHDocument) => ReducerFor) | undefined,
+  caps: BaseReducerCapabilities | undefined = headerCapabilities(before.header),
 ): ReducerFor | undefined {
-  const caps = optionalBaseReducerCapabilities(before.header);
   if (caps === undefined || !usesRetractionRule(caps)) return undefined;
   const reducerFor = reducers?.(before);
   if (reducerFor === undefined && derivesByRule(caps, scope)) {
@@ -137,6 +143,7 @@ export async function evaluateByPosition<M>(
   subject: EvaluationSubject,
   stores: DecisionStores,
   signal?: AbortSignal,
+  capabilitiesOf: CapabilitiesOf = headerCapabilities,
 ): Promise<Array<string | undefined>> {
   const { scope, operations } = subject;
   const { writeCache, operationStore } = stores;
@@ -242,6 +249,7 @@ export async function evaluateByPosition<M>(
       streamKey: streamKey(read.stream.query),
       scope: read.stream.query.scope,
       document: before,
+      caps: capabilitiesOf(before.header),
       operations: streamOperations,
       apply: read.stream.apply,
     });
@@ -279,21 +287,29 @@ export async function evaluateByPosition<M>(
     ).results.filter((operation) => !evaluating.has(operation.id));
 
     const before = await stateBefore(query);
+    const caps = capabilitiesOf(before.header);
 
     evaluatedStateKey = streamKey(query);
     walked.push({
       streamKey: evaluatedStateKey,
       scope,
       document: before,
+      caps,
       operations: [...storedOperations, ...operations],
       apply: definition.foldEvaluatedScope,
-      reducerFor: ruleReducers(before, scope, definition.evaluatedScopeReducer),
+      reducerFor: ruleReducers(
+        before,
+        scope,
+        definition.evaluatedScopeReducer,
+        caps,
+      ),
     });
   } else {
     walked.push({
       streamKey: EVALUATED_ONLY,
       scope,
       document: walked[0].document,
+      caps: walked[0].caps,
       operations,
       apply: (document) => document,
     });
@@ -332,10 +348,12 @@ export async function evaluateByPosition<M>(
       // reshuffle's skip can sit on a row no filter keeps, and without it the
       // rewound original survives as a duplicate. Elsewhere the read stays
       // narrowed, as before.
+      const caps = capabilitiesOf(before.header);
       const reducerFor = ruleReducers(
         before,
         query.scope,
         projection.scopeReducer,
+        caps,
       );
       const filter =
         reducerFor === undefined
@@ -359,6 +377,7 @@ export async function evaluateByPosition<M>(
         streamKey: key,
         scope: query.scope,
         document: before,
+        caps,
         operations: streamOperations,
         apply: projection.apply,
         reducerFor,

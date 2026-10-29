@@ -11,7 +11,6 @@ import {
   appendWithoutApplying,
   applyDeleteDocumentAction,
   deriveScopeVersioned,
-  capabilitiesFor,
   derivesByRule,
   tailAppliesIncrementally,
   isDenied,
@@ -32,8 +31,9 @@ import {
   type ValidatedUpgrade,
 } from "../derivation/index.js";
 import {
-  runnableBaseReducerVersion,
   stateReducerOrRefusal,
+  UNGATED,
+  type BaseReducerResolver,
   type IProtocolGate,
 } from "../protocol/gate.js";
 import { UnsupportedProtocolVersionError } from "../shared/errors.js";
@@ -96,17 +96,6 @@ function copyDocument(document: PHDocument): PHDocument {
     state: { ...document.state },
     operations: { ...document.operations },
   };
-}
-
-/**
- * Whether the rule derives `scope`. An unknown version is not refused here:
- * it rebuilds as before, and the stored protocol check names it.
- */
-function derivesByRuleOrUnknown(
-  header: PHDocument["header"],
-  scope: string,
-): boolean {
-  return derivesByRule(capabilitiesFor(header.protocolVersions), scope);
 }
 
 /** Wraps a rebuild failure with the document id; a protocol refusal stays typed. */
@@ -172,6 +161,7 @@ export class KyselyWriteCache implements IWriteCache {
   private registry: IDocumentModelRegistry;
   private config: Required<Omit<WriteCacheConfig, "gate">>;
   private gate: IProtocolGate | undefined;
+  private resolver: BaseReducerResolver;
   private reads = new Map<string, Set<PendingRead>>();
   private fullReplays = new Map<string, FullReplayMark[]>();
 
@@ -190,8 +180,17 @@ export class KyselyWriteCache implements IWriteCache {
       keyframeInterval: config.keyframeInterval,
     };
     this.gate = config.gate;
+    this.resolver = config.gate ?? UNGATED;
     this.streams = new Map();
     this.lruTracker = new LRUTracker<string>();
+  }
+
+  /** Whether the version `header` runs under here derives `scope` by the rule. */
+  private derivesByRule(header: PHDocument["header"], scope: string): boolean {
+    return derivesByRule(
+      this.resolver.capabilities(header.protocolVersions),
+      scope,
+    );
   }
 
   /**
@@ -964,7 +963,7 @@ export class KyselyWriteCache implements IWriteCache {
 
     let needsFullReplay = false;
 
-    if (derivesByRuleOrUnknown(document.header, scope)) {
+    if (this.derivesByRule(document.header, scope)) {
       const versions = scopeVersions(
         this.registry,
         document.header,
@@ -1071,9 +1070,9 @@ export class KyselyWriteCache implements IWriteCache {
               document = appendWithoutApplying(document, operation, scope);
             } else {
               // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-              const protocolVersion = runnableBaseReducerVersion(
+              const protocolVersion = this.resolver.headerCapabilities(
                 document.header,
-              );
+              ).version;
               document = withProtocolVersions(
                 getModuleCached(moduleVersion).reducer(
                   document,
@@ -1326,7 +1325,7 @@ export class KyselyWriteCache implements IWriteCache {
         : undefined;
 
     try {
-      if (derivesByRuleOrUnknown(document.header, scope)) {
+      if (this.derivesByRule(document.header, scope)) {
         const stateReducer = stateReducerOrRefusal(
           module.reducer,
           documentId,
@@ -1395,7 +1394,9 @@ export class KyselyWriteCache implements IWriteCache {
             document = appendWithoutApplying(document, operation, scope);
           } else {
             // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-            const protocolVersion = runnableBaseReducerVersion(document.header);
+            const protocolVersion = this.resolver.headerCapabilities(
+              document.header,
+            ).version;
             document = withProtocolVersions(
               module.reducer(document, operation.action, undefined, {
                 skip: operation.skip,

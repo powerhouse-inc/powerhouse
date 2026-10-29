@@ -11,11 +11,7 @@ import {
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import { firstOutOfOrderPair } from "../decision/stream-order.js";
-import {
-  createProtocolGate,
-  unknownBaseReducerRefusal,
-  type IProtocolGate,
-} from "../protocol/gate.js";
+import { createProtocolGate, type IProtocolGate } from "../protocol/gate.js";
 import type { ProtocolSupport } from "../protocol/support.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { UnsupportedProtocolVersionError } from "../shared/errors.js";
@@ -249,10 +245,7 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
       return undefined;
     }
     const { protocolVersions, model } = creation.input;
-    return (
-      unknownBaseReducerRefusal(documentId, protocolVersions) ??
-      gate.readRefusal(documentId, protocolVersions, model)
-    );
+    return gate.readRefusal(documentId, protocolVersions, model);
   }
 
   async rebuildKeyframes(

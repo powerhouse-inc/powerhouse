@@ -1,5 +1,4 @@
 import {
-  capabilitiesFor,
   deriveOperationId,
   derivesByRule,
   groupDocumentType,
@@ -17,6 +16,7 @@ import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { SweepResult } from "../catch-up/types.js";
 import type { IEventBus } from "../events/interfaces.js";
+import { UNGATED, type BaseReducerResolver } from "../protocol/gate.js";
 import type { JobWriteReadyEvent, Unsubscribe } from "../events/types.js";
 import { ReactorEventTypes } from "../events/types.js";
 import type { IQueue } from "../queue/interfaces.js";
@@ -72,6 +72,7 @@ export class GroupReevaluationTrigger extends BaseReadModel {
     db: Kysely<DocumentViewDatabase>,
     private readonly operationStore: IOperationStore,
     private readonly documentMetaCache: IDocumentMetaCache,
+    private readonly protocol: BaseReducerResolver = UNGATED,
   ) {
     super(db, operationIndex, {} as IWriteCache, new ConsistencyTracker(), {
       readModelId: GROUP_REEVALUATION_TRIGGER,
@@ -261,7 +262,7 @@ export class GroupReevaluationTrigger extends BaseReadModel {
     }
   }
 
-  /** Whether the rule derives the stream; so taken when the version is unknown. */
+  /** Whether the rule derives the stream; so taken when the header has no version or is unreadable. */
   private async derivesRetraction(
     context: OperationWithContext["context"],
   ): Promise<boolean> {
@@ -271,7 +272,7 @@ export class GroupReevaluationTrigger extends BaseReadModel {
         context.documentId,
         context.branch,
       );
-      caps = capabilitiesFor(meta.protocolVersions);
+      caps = this.protocol.capabilities(meta.protocolVersions);
     } catch {
       return true;
     }

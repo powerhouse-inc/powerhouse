@@ -7,7 +7,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   creationActions,
-  documentDerivesByRule,
+  derivesByRule,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
@@ -16,7 +16,7 @@ import {
   UndoTargetsCache,
   type DerivedScope,
 } from "../derivation/index.js";
-import type { IProtocolGate } from "../protocol/gate.js";
+import { UNGATED, type IProtocolGate } from "../protocol/gate.js";
 import type { CatchUpScheduler } from "../catch-up/scheduler.js";
 import type { CreateVersionSelector } from "./types.js";
 import {
@@ -468,7 +468,10 @@ export class Reactor implements IReactor {
       undefined,
       signal,
     );
-    if (!documentDerivesByRule(header, scope)) {
+    const caps = (this.protocolGate ?? UNGATED).capabilities(
+      header.protocolVersions,
+    );
+    if (!derivesByRule(caps, scope)) {
       return {};
     }
     return this.undoTargets.resolve(documentId, scope, branch, signal);

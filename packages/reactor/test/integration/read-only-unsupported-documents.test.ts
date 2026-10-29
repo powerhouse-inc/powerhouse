@@ -2,10 +2,7 @@ import {
   addFolder,
   driveDocumentModelModule,
 } from "@powerhousedao/shared/document-drive";
-import type {
-  PeerCapability,
-  PHDocumentHeader,
-} from "@powerhousedao/shared/document-model";
+import type { PeerCapability } from "@powerhousedao/shared/document-model";
 import type * as DocumentModel from "@powerhousedao/shared/document-model";
 import type { ProcessorFactory } from "@powerhousedao/shared/processors";
 import {
@@ -25,39 +22,6 @@ import { SKIPPED_DOCUMENT_MARKER } from "../../src/read-models/types.js";
 import { REACTOR_SCHEMA } from "../../src/storage/migrations/migrator.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 
-const lenient = vi.hoisted(() => ({ on: false, knowsSeven: false }));
-
-// While on, stands in for a reactor that runs base-reducer 3 and 7.
-vi.mock("@powerhousedao/shared/document-model", async (importOriginal) => {
-  const actual = await importOriginal<typeof DocumentModel>();
-  const pretends = (header: PHDocumentHeader) =>
-    lenient.on &&
-    [3, 7].includes(header.protocolVersions?.["base-reducer"] ?? 0);
-  return {
-    ...actual,
-    // The reactor refuses a base-reducer number shared does not know;
-    // `knowsSeven` admits 7 without a reducer that can build it.
-    isBaseReducerVersion: (version: unknown) =>
-      ((lenient.on || lenient.knowsSeven) && version === 7) ||
-      actual.isBaseReducerVersion(version),
-    baseReducerVersion: (header: PHDocumentHeader) =>
-      pretends(header) ? 2 : actual.baseReducerVersion(header),
-    baseReducerCapabilities: (header: PHDocumentHeader) =>
-      pretends(header)
-        ? actual.capabilitiesOf(2)
-        : actual.baseReducerCapabilities(header),
-    optionalBaseReducerCapabilities: (header: PHDocumentHeader) =>
-      pretends(header)
-        ? actual.capabilitiesOf(2)
-        : actual.optionalBaseReducerCapabilities(header),
-    // Reads the version inside shared, past the stubs above.
-    documentDerivesByRule: (header: PHDocumentHeader, scope: string) =>
-      pretends(header)
-        ? actual.derivesByRule(actual.capabilitiesOf(2), scope)
-        : actual.documentDerivesByRule(header, scope),
-  };
-});
-
 const BASE_REDUCER_7: PeerCapability = {
   kind: "protocol",
   name: "base-reducer",
@@ -67,7 +31,7 @@ const BASE_REDUCER_7: PeerCapability = {
   optional: false,
 };
 
-const UNSUPPORTED = "br7-stored";
+const UNSUPPORTED = "br3-stored";
 const AFTER = "v2-after";
 
 function driveAt(id: string, version: number) {
@@ -112,8 +76,6 @@ describe("read-only over documents at an unsupported base-reducer version", () =
   const reactors: IReactor[] = [];
 
   afterEach(() => {
-    lenient.on = false;
-    lenient.knowsSeven = false;
     for (const reactor of reactors.splice(0)) {
       reactor.kill();
     }
@@ -130,9 +92,13 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     return module;
   }
 
-  /** Read model cursors reset, so the next boot rebuilds the whole store. */
+  /**
+   * Read model cursors reset, so the next boot rebuilds the whole store. At 3,
+   * written with undoV3 on, which a default reactor does not run; at 7, by a
+   * reactor that registers it.
+   */
   async function storeWithUnsupported({
-    version = 7,
+    version = 3,
     folders = 12,
     clearSnapshots = false,
   }: {
@@ -145,7 +111,6 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     head: DocumentModel.PHDocument;
   }> {
     const db = await createDefaultDatabase();
-    lenient.on = true;
     const wide = await build((b) =>
       version === 7
         ? b.withKysely(db).withPeerCapabilities([BASE_REDUCER_7])
@@ -184,7 +149,6 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     ).toBe(version);
     await reactor.kill().completed;
     reactors.splice(reactors.indexOf(reactor), 1);
-    lenient.on = false;
 
     const schema = db.withSchema(REACTOR_SCHEMA);
     const rows = await schema
@@ -229,7 +193,7 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     expect(sweeps.filter((sweep) => sweep.blockedAt)).toEqual([]);
 
     const stored = await reactor.get(UNSUPPORTED);
-    expect(stored.header.protocolVersions?.["base-reducer"]).toBe(7);
+    expect(stored.header.protocolVersions?.["base-reducer"]).toBe(3);
     expect(await reactor.get(AFTER)).toBeDefined();
 
     const later = generateId();
@@ -259,15 +223,15 @@ describe("read-only over documents at an unsupported base-reducer version", () =
       const result = await integrity.validateDocument(UNSUPPORTED);
       expect(result.unsupported).toEqual({
         protocol: "base-reducer",
-        version: 7,
+        version: 3,
       });
       expect(result.keyframeIssues).toEqual([]);
     }
   });
 
-  async function expectRefusedWithoutSnapshot(version: 3 | 7): Promise<void> {
+  it("serves no state for the document when no snapshot was stored", async () => {
+    const version = 3;
     const { db, ordinals } = await storeWithUnsupported({
-      version,
       clearSnapshots: true,
     });
 
@@ -310,14 +274,6 @@ describe("read-only over documents at an unsupported base-reducer version", () =
       protocol: "base-reducer",
       version,
     });
-  }
-
-  it("serves no state for the document when no snapshot was stored", async () => {
-    await expectRefusedWithoutSnapshot(7);
-  });
-
-  it("skips a base-reducer 3 document with undoV3 off like any unsupported version", async () => {
-    await expectRefusedWithoutSnapshot(3);
   });
 
   it("refuses the document from a warm cache", async () => {
@@ -356,8 +312,7 @@ describe("read-only over documents at an unsupported base-reducer version", () =
       revision.global - 1,
     );
 
-    // A reducer that accepts the version must not hide that support refuses it.
-    lenient.on = true;
+    // A reducer that runs the version must not hide that support refuses it.
     const integrity = new DocumentIntegrityService(
       narrow.keyframeStore,
       narrow.operationStore,
@@ -369,7 +324,7 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     const result = await integrity.validateDocument(UNSUPPORTED);
     expect(result.unsupported).toEqual({
       protocol: "base-reducer",
-      version: 7,
+      version: 3,
     });
   });
 
@@ -427,9 +382,8 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     await narrow.reactor.kill().completed;
     reactors.splice(reactors.indexOf(narrow.reactor), 1);
 
-    lenient.on = true;
     const wide = await build((b) =>
-      b.withKysely(db).withPeerCapabilities([BASE_REDUCER_7]),
+      b.withKysely(db).withExecutorConfig({ featureFlags: { undoV3: true } }),
     );
     const document =
       await wide.reactor.get<
@@ -524,29 +478,6 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     expect(await skipped(db)).toEqual([]);
   });
 
-  it("still blocks on a document it registers but cannot build", async () => {
-    const { db, ordinals } = await storeWithUnsupported();
-    lenient.knowsSeven = true;
-
-    const registered = await build((b) =>
-      b.withKysely(db).withPeerCapabilities([BASE_REDUCER_7]),
-    );
-
-    const sweeps = [
-      ...(await registered.catchUp.sweepNow()),
-      ...(await registered.catchUp.sweepNow()),
-    ];
-
-    expect(appliedThrough(registered.documentView)).toBe(
-      ordinals.unsupported[0] - 1,
-    );
-    expect(
-      sweeps
-        .filter((sweep) => sweep.consumerId === "document-view")
-        .map((sweep) => sweep.blockedAt?.documentId),
-    ).toEqual([UNSUPPORTED, UNSUPPORTED]);
-  });
-
   it("serves a base-reducer 2 document at an unsupported other protocol and refuses its writes", async () => {
     const id = "purge9-stored";
     const db = await createDefaultDatabase();
@@ -621,8 +552,11 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     expect(write.error?.message).toMatch(/document-purge.*9/);
   });
 
-  it("skips a registered base-reducer number this build does not know", async () => {
-    const { db, ordinals } = await storeWithUnsupported();
+  it("serves a base-reducer number this build does not know where a capability registers it", async () => {
+    const { db, ordinals } = await storeWithUnsupported({
+      version: 7,
+      clearSnapshots: true,
+    });
 
     const registered = await build((b) =>
       b.withKysely(db).withPeerCapabilities([BASE_REDUCER_7]),
@@ -635,5 +569,12 @@ describe("read-only over documents at an unsupported base-reducer version", () =
         .filter((sweep) => sweep.consumerId === "document-view")
         .map((sweep) => sweep.blockedAt),
     ).toEqual([undefined]);
+    expect(await skipped(db)).toEqual([]);
+    const document =
+      await registered.reactor.get<
+        ReturnType<typeof driveDocumentModelModule.utils.createDocument>
+      >(UNSUPPORTED);
+    expect(document.header.protocolVersions?.["base-reducer"]).toBe(7);
+    expect(document.state.global.nodes).toHaveLength(12);
   });
 });

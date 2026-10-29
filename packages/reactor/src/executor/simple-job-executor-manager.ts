@@ -1,4 +1,5 @@
 import type { ILogger } from "document-model";
+import { UNGATED, type BaseReducerResolver } from "../protocol/gate.js";
 import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes, type JobRunningEvent } from "../events/types.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
@@ -50,6 +51,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     private resolver: IDocumentModelResolver,
     jobTimeoutMs: number = DEFAULT_JOB_TIMEOUT_MS,
     deferredJobTtlMs: number = DEFAULT_DEFERRED_JOB_TTL_MS,
+    protocol: BaseReducerResolver = UNGATED,
   ) {
     this.jobTimeoutMs = jobTimeoutMs;
     this.deferredJobs = new DeferredJobs(
@@ -65,6 +67,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       jobTracker,
       resolver,
       logger,
+      protocol,
     );
   }
 

@@ -2,7 +2,11 @@ import type { CreateDocumentActionInput } from "@powerhousedao/shared/document-m
 import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes } from "../events/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
-import { modelUnavailableRefusal } from "../protocol/gate.js";
+import {
+  modelUnavailableRefusal,
+  UNGATED,
+  type BaseReducerResolver,
+} from "../protocol/gate.js";
 import type { ErrorInfo } from "../shared/types.js";
 import type { IQueue } from "./interfaces.js";
 import { JobExecutionHandle } from "./job-execution-handle.js";
@@ -36,6 +40,7 @@ export class InMemoryQueue implements IQueue {
   constructor(
     private eventBus: IEventBus,
     private resolver: IDocumentModelResolver,
+    private protocol: BaseReducerResolver = UNGATED,
   ) {}
 
   private toErrorInfo(error: Error | string): ErrorInfo {
@@ -157,7 +162,7 @@ export class InMemoryQueue implements IQueue {
     input: CreateDocumentActionInput,
     loadError: unknown,
   ): ErrorInfo {
-    const error = modelUnavailableRefusal(input);
+    const error = modelUnavailableRefusal(this.protocol, input);
     if (error) {
       return {
         name: error.name,

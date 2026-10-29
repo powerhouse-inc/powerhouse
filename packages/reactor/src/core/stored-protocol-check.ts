@@ -3,13 +3,10 @@ import type {
   ProtocolRefusal,
   ProtocolVersions,
 } from "@powerhousedao/shared/document-model";
-import {
-  capabilitiesFor,
-  needsTaggedModel,
-  refusalFor,
-} from "@powerhousedao/shared/document-model";
+import { needsTaggedModel } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
+import { baseReducerResolver, protocolRefusal } from "../protocol/gate.js";
 import type { ProtocolSupport } from "../protocol/support.js";
 import { UnsupportedStoredProtocolError } from "../shared/errors.js";
 import {
@@ -44,6 +41,7 @@ export async function checkStoredProtocols(
   const unsupported = new Map<string, ProtocolRefusal>();
   const deferred = new Map<string, ProtocolVersions[]>();
   const hashes: string[] = [];
+  const resolver = baseReducerResolver(support);
   for (const { hash, model, versions } of await storedProtocolVersions(
     db,
     schema,
@@ -51,10 +49,11 @@ export async function checkStoredProtocols(
     const modules = modulesOf(model);
     let refused = false;
     for (const [protocol, version] of Object.entries(versions)) {
-      const refusal = refusalFor(
-        model,
-        { [protocol]: version },
+      const refusal = protocolRefusal(
         support,
+        resolver,
+        { [protocol]: version },
+        model,
         modules,
       );
       if (!refusal) continue;
@@ -68,7 +67,7 @@ export async function checkStoredProtocols(
       hashes.push(hash);
     } else if (
       modules.length === 0 &&
-      needsTaggedModel(capabilitiesFor(versions))
+      needsTaggedModel(resolver.capabilities(versions))
     ) {
       deferred.set(model, [...(deferred.get(model) ?? []), versions]);
     }
@@ -92,8 +91,15 @@ export function storedModelRefusals(
   modules: readonly DocumentModelModule[],
 ): ProtocolRefusal[] {
   const refusals = new Map<string, ProtocolRefusal>();
+  const resolver = baseReducerResolver(support);
   for (const versions of deferred.get(documentType) ?? []) {
-    const refusal = refusalFor(documentType, versions, support, modules);
+    const refusal = protocolRefusal(
+      support,
+      resolver,
+      versions,
+      documentType,
+      modules,
+    );
     if (refusal) {
       refusals.set(`${refusal.protocol}:${refusal.version}`, refusal);
     }

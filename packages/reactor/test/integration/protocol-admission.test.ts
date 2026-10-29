@@ -27,6 +27,17 @@ import {
   createTestOperation,
 } from "../factories.js";
 import { TestChannel } from "../sync/channels/test-channel.js";
+import {
+  baseReducerVersionsFor,
+  undo,
+  type Operation,
+} from "@powerhousedao/shared/document-model";
+import type { Kysely } from "kysely";
+import { DocumentIntegrityService } from "../../src/admin/document-integrity-service.js";
+import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
+import { SKIPPED_DOCUMENT_MARKER } from "../../src/read-models/types.js";
+import { REACTOR_SCHEMA } from "../../src/storage/migrations/migrator.js";
+import { authorRetraction, undoV3Flags } from "../factories.js";
 
 const DRIVE = "powerhouse/document-drive";
 
@@ -330,7 +341,7 @@ describe("protocol admission", () => {
   });
 });
 
-describe("a stored document at a base-reducer number this build does not know", () => {
+describe("a document at a base-reducer number this build does not know", () => {
   const reactors: IReactor[] = [];
 
   afterEach(() => {
@@ -339,22 +350,40 @@ describe("a stored document at a base-reducer number this build does not know", 
     }
   });
 
-  async function stored(
-    id: string,
-    documentDecisions = false,
+  // Lists what the reactor runs, so 7 joins 3 when undoV3 is on.
+  const WIDE_7: PeerCapability = {
+    kind: "protocol",
+    name: "base-reducer",
+    baseline: [1, 2],
+    supported: (flags) => [...baseReducerVersionsFor(flags), 7],
+    preferred: () => 2,
+    optional: false,
+  };
+
+  async function wide(
+    undoV3: boolean,
+    db?: Kysely<any>,
   ): Promise<InProcessReactorModule> {
-    const module = await new ReactorBuilder()
+    let builder = new ReactorBuilder()
       .withDocumentModelSources([driveDocumentModelModule as never])
-      .withPeerCapabilities([BASE_REDUCER_7])
-      .withExecutorConfig({ featureFlags: { documentDecisions } })
-      .buildModule();
+      .withPeerCapabilities([WIDE_7])
+      .withExecutorConfig({ featureFlags: undoV3 ? undoV3Flags() : {} });
+    if (db) builder = builder.withKysely(db);
+    const module = await builder.buildModule();
     reactors.push(module.reactor);
-    const created = await module.reactor.create(
-      driveAt({ "base-reducer": 7 }, id),
-    );
-    expect((await settled(module.reactor, created.id)).status).toBe(
-      JobStatus.READ_READY,
-    );
+    return module;
+  }
+
+  async function ok(reactor: IReactor, info: JobInfo): Promise<void> {
+    const job = await settled(reactor, info.id);
+    expect(job.error?.message ?? job.status).toBe(JobStatus.READ_READY);
+  }
+
+  /** The base-reducer number the stored CREATE_DOCUMENT and the header carry. */
+  async function storedVersion(
+    module: InProcessReactorModule,
+    id: string,
+  ): Promise<number | undefined> {
     const creation = await module.operationStore.getSince(
       id,
       "document",
@@ -366,48 +395,254 @@ describe("a stored document at a base-reducer number this build does not know", 
     const input = creation.results[0].action.input as {
       protocolVersions?: Record<string, number>;
     };
-    expect(input.protocolVersions?.["base-reducer"]).toBe(7);
-    return module;
+    const header = (await module.reactor.get(id)).header;
+    expect(header.protocolVersions?.["base-reducer"]).toBe(
+      input.protocolVersions?.["base-reducer"],
+    );
+    return header.protocolVersions?.["base-reducer"];
   }
 
-  it.each([false, true])(
-    "refuses a write typed and without retrying it (documentDecisions %s)",
-    async (documentDecisions) => {
-      const { reactor } = await stored("br7-unknown", documentDecisions);
+  async function globalOps(
+    reactor: IReactor,
+    id: string,
+  ): Promise<Operation[]> {
+    const result = (await reactor.getOperations(id, {
+      branch: "main",
+      scopes: ["global"],
+    })) as Record<string, { results: Operation[] } | undefined>;
+    return result.global?.results ?? [];
+  }
 
-      const write = await reactor.execute("br7-unknown", "main", [
-        addFolder({ id: generateId(), name: "unknown", parentFolder: null }),
-      ]);
-      const job = await settled(reactor, write.id);
+  async function nodes(reactor: IReactor, id: string): Promise<string[]> {
+    const document =
+      await reactor.get<
+        ReturnType<typeof driveDocumentModelModule.utils.createDocument>
+      >(id);
+    return document.state.global.nodes.map((node) => node.name);
+  }
 
-      expect(job.status).toBe(JobStatus.FAILED);
-      expect(job.error?.name).toBe("UnsupportedProtocolVersionError");
-      expect(job.errorHistory?.length ?? 0).toBeLessThanOrEqual(1);
+  /**
+   * Two folders and an UNDO, then on a retraction version the RETRACT a
+   * client submits instead. What a version decides, with ids by their form.
+   */
+  async function undoObservable(reactor: IReactor, id: string) {
+    for (const name of ["a", "b"]) {
+      await ok(
+        reactor,
+        await reactor.execute(id, "main", [
+          addFolder({ id: `${id}-${name}`, name, parentFolder: null }),
+        ]),
+      );
+    }
+    const submitted = undo();
+    const undoJob = await settled(
+      reactor,
+      (await reactor.execute(id, "main", [submitted])).id,
+    );
+    let retracted: string | undefined;
+    if (undoJob.status === JobStatus.FAILED) {
+      const retraction = await authorRetraction(reactor, id);
+      retracted = retraction.id;
+      await ok(reactor, await reactor.execute(id, "main", [retraction]));
+    }
+    const rows = (await globalOps(reactor, id)).map((operation) => ({
+      type: operation.action.type,
+      index: operation.index,
+      skip: operation.skip,
+      id:
+        operation.action.id === submitted.id
+          ? "submitted undo"
+          : operation.action.id === synthesizedActionId(submitted.id)
+            ? "synthesized from undo"
+            : operation.action.id === retracted
+              ? "retraction"
+              : "own",
+    }));
+    return {
+      undo: undoJob.error?.name ?? undoJob.status,
+      rows,
+      nodes: await nodes(reactor, id),
+    };
+  }
+
+  it.each([
+    { undoV3: false, runsAs: 2 },
+    { undoV3: true, runsAs: 3 },
+  ])(
+    "runs as the highest version the reactor runs (undoV3 $undoV3: base-reducer $runsAs)",
+    async ({ undoV3, runsAs }) => {
+      const module = await wide(undoV3);
+      const { reactor } = module;
+      await ok(
+        reactor,
+        await reactor.create(driveAt({ "base-reducer": 7 }, "br7")),
+      );
+      await ok(
+        reactor,
+        await reactor.create(driveAt({ "base-reducer": runsAs }, "known")),
+      );
+
+      const seven = await undoObservable(reactor, "br7");
+      const known = await undoObservable(reactor, "known");
+
+      expect(await storedVersion(module, "br7")).toBe(7);
+      expect(await storedVersion(module, "known")).toBe(runsAs);
+      expect(seven).toEqual(known);
+      expect(seven.nodes).toEqual(["a"]);
+
+      // A cold rebuild derives the same state.
+      module.writeCache.clear();
+      const rebuilt = await module.writeCache.getState("br7", "global", "main");
+      expect(
+        (
+          rebuilt as ReturnType<
+            typeof driveDocumentModelModule.utils.createDocument
+          >
+        ).state.global.nodes.map((node) => node.name),
+      ).toEqual(["a"]);
+
+      // A fresh receiver loads it as the same version.
+      const receiver = await wide(undoV3);
+      const documentOps = (await reactor.getOperations("br7", {
+        branch: "main",
+        scopes: ["document"],
+      })) as Record<string, { results: Operation[] } | undefined>;
+      await ok(
+        receiver.reactor,
+        await receiver.reactor.load(
+          "br7",
+          "main",
+          documentOps.document?.results ?? [],
+        ),
+      );
+      await ok(
+        receiver.reactor,
+        await receiver.reactor.load(
+          "br7",
+          "main",
+          await globalOps(reactor, "br7"),
+        ),
+      );
+      expect(await storedVersion(receiver, "br7")).toBe(7);
+      expect(await nodes(receiver.reactor, "br7")).toEqual(["a"]);
     },
   );
 
-  it("refuses a cold rebuild typed", async () => {
-    const module = await stored("br7-cold");
-    const folder = addFolder({ id: generateId(), name: "stored" });
-    await module.operationStore.apply(
-      "br7-cold",
-      DRIVE,
-      "global",
-      "main",
-      0,
-      (txn) => {
-        txn.addOperations(
-          createTestOperation("br7-cold", {
-            index: 0,
-            action: { ...folder, scope: "global" },
-          }),
-        );
-      },
+  it("decides differently at base-reducer 2 and 3, so the comparison above is not vacuous", async () => {
+    const off = await wide(false);
+    const on = await wide(true);
+    await ok(
+      off.reactor,
+      await off.reactor.create(driveAt({ "base-reducer": 7 }, "d")),
     );
-    module.writeCache.clear();
+    await ok(
+      on.reactor,
+      await on.reactor.create(driveAt({ "base-reducer": 7 }, "d")),
+    );
 
-    await expect(
-      module.writeCache.getState("br7-cold", "global", "main"),
-    ).rejects.toMatchObject({ name: "UnsupportedProtocolVersionError" });
+    const asTwo = await undoObservable(off.reactor, "d");
+    const asThree = await undoObservable(on.reactor, "d");
+
+    expect(asTwo.undo).toBe(JobStatus.READ_READY);
+    expect(asTwo.rows.at(-1)).toEqual({
+      type: "NOOP",
+      index: 2,
+      skip: 1,
+      id: "synthesized from undo",
+    });
+    expect(asThree.undo).toBe("SubmittedUndoRefusedError");
+    expect(asThree.rows.at(-1)).toMatchObject({
+      type: "RETRACT",
+      skip: 0,
+      id: "retraction",
+    });
+    expect(asTwo.nodes).toEqual(asThree.nodes);
+  });
+
+  it("refuses typed, naming 7, where its model cannot run the version it resolves to", async () => {
+    const untagged = {
+      ...driveDocumentModelModule,
+      reducer: ((
+        ...args: Parameters<typeof driveDocumentModelModule.reducer>
+      ) =>
+        driveDocumentModelModule.reducer(
+          ...args,
+        )) as typeof driveDocumentModelModule.reducer,
+    };
+    const module = await new ReactorBuilder()
+      .withDocumentModelSources([untagged as never])
+      .withPeerCapabilities([WIDE_7])
+      .withExecutorConfig({ featureFlags: undoV3Flags() })
+      .buildModule();
+    reactors.push(module.reactor);
+
+    const job = await settled(
+      module.reactor,
+      (await module.reactor.create(driveAt({ "base-reducer": 7 }, "br7-plain")))
+        .id,
+    );
+
+    expect(job.status).toBe(JobStatus.FAILED);
+    expect(job.error?.name).toBe("UnsupportedProtocolVersionError");
+    expect(job.error?.message).toContain(
+      `requires base-reducer 7, which this reactor cannot run for ${DRIVE}`,
+    );
+  });
+
+  it("is served by a reactor that does not list it, as base-reducer 2, and its writes are refused", async () => {
+    const db = await createDefaultDatabase();
+    const writer = await wide(false, db);
+    await ok(
+      writer.reactor,
+      await writer.reactor.create(driveAt({ "base-reducer": 7 }, "br7-read")),
+    );
+    await undoObservable(writer.reactor, "br7-read");
+    await writer.reactor.kill().completed;
+    const schema = db.withSchema(REACTOR_SCHEMA);
+    await schema.updateTable("ViewState").set({ lastOrdinal: 0 }).execute();
+    await schema.deleteFrom("DocumentSnapshot").execute();
+
+    const narrow = await new ReactorBuilder()
+      .withDocumentModelSources([driveDocumentModelModule as never])
+      .withKysely(db)
+      .withUnsupportedStoredDocuments("read-only")
+      .buildModule();
+    reactors.push(narrow.reactor);
+    const sweeps = await narrow.catchUp.sweepNow();
+
+    expect(sweeps.filter((sweep) => sweep.blockedAt)).toEqual([]);
+    expect(await storedVersion(narrow, "br7-read")).toBe(7);
+    expect(await nodes(narrow.reactor, "br7-read")).toEqual(["a"]);
+    expect(
+      await schema
+        .selectFrom("ViewState")
+        .select("readModelId")
+        .where("readModelId", "like", `%${SKIPPED_DOCUMENT_MARKER}%`)
+        .execute(),
+    ).toEqual([]);
+    for (const protocolSupport of [undefined, { "base-reducer": [1, 2] }]) {
+      const integrity = new DocumentIntegrityService(
+        narrow.keyframeStore,
+        narrow.operationStore,
+        narrow.writeCache,
+        narrow.documentView,
+        narrow.documentModelRegistry,
+        protocolSupport,
+      );
+      expect(
+        (await integrity.validateDocument("br7-read")).unsupported,
+      ).toBeUndefined();
+    }
+
+    const write = await settled(
+      narrow.reactor,
+      (
+        await narrow.reactor.execute("br7-read", "main", [
+          addFolder({ id: generateId(), name: "late", parentFolder: null }),
+        ])
+      ).id,
+    );
+    expect(write.status).toBe(JobStatus.FAILED);
+    expect(write.error?.name).toBe("UnsupportedProtocolVersionError");
   });
 });

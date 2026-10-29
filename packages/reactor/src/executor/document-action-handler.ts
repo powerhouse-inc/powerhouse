@@ -376,7 +376,7 @@ export class DocumentActionHandler {
     }
     // The queue's gate loaded the model on the host; a worker may still lack it.
     if (
-      createNeedsModel(input.protocolVersions) &&
+      createNeedsModel(this.protocolGate, input.protocolVersions) &&
       this.protocolGate.registeredModules(input.model).length === 0
     ) {
       return buildErrorResult(

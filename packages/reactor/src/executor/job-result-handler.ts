@@ -1,7 +1,11 @@
 import type { ILogger } from "document-model";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
-import { modelUnavailableRefusal } from "../protocol/gate.js";
+import {
+  modelUnavailableRefusal,
+  UNGATED,
+  type BaseReducerResolver,
+} from "../protocol/gate.js";
 import { RetryAccounting } from "../queue/types.js";
 import type { IJobExecutionHandle, Job } from "../queue/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
@@ -84,6 +88,7 @@ export class JobResultHandler implements IJobResultHandler {
     private jobTracker: IJobTracker,
     private resolver: IDocumentModelResolver,
     private logger: ILogger,
+    private protocol: BaseReducerResolver = UNGATED,
   ) {}
 
   async handleResult(
@@ -295,7 +300,7 @@ export class JobResultHandler implements IJobResultHandler {
         documentId?: string;
         protocolVersions?: { readonly [protocol: string]: number };
       };
-      const refusal = modelUnavailableRefusal({
+      const refusal = modelUnavailableRefusal(this.protocol, {
         documentId: input.documentId ?? job.documentId,
         model,
         protocolVersions: input.protocolVersions,
