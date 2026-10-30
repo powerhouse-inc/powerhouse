@@ -1,7 +1,13 @@
 import type { HostExport } from "@powerhousedao/host-core/schema";
 import fs from "node:fs";
 import path from "node:path";
-import { fixedPortOf, isRecord, membersOf } from "../host-rules/members.ts";
+import { isRecord, membersOf } from "../host-rules/members.ts";
+import {
+  COPY_CONNECT_PORT_OFFSET,
+  copyPortClashes,
+  copyPortOf,
+  copyPortOverflow,
+} from "../host-rules/ports.ts";
 import { hostFiles } from "../lib/host-files.ts";
 
 /** A host folder: one safe path segment. */
@@ -39,52 +45,25 @@ function assertFolder(name: string): void {
   }
 }
 
-/** Clear of a scaffold's own ports: its switchboard sits at studio + 1000. */
-export const COPY_CONNECT_PORT_OFFSET = 10_000;
-// The ph-cli Connect runner's default port.
-const CONNECT_DEFAULT_PORT = 3000;
+export { COPY_CONNECT_PORT_OFFSET };
 
 export type CopyConnectPort = { member: string; port: number };
 
-/**
- * Each Connect member's fixed port in a copy: its own plus the offset. Two
- * members that would bind one port in the copy are refused here, before
- * anything starts.
- */
+/** Each Connect member's fixed port in a copy; refuses ports two members would share. */
 export function copyConnectPorts(envelope: HostExport): CopyConnectPort[] {
   const members = membersOf({ envelope });
-  const ports = members
-    .filter((member) => member.role === "connect")
-    .map((member) => {
-      const own =
-        typeof member.runner.port === "number"
-          ? member.runner.port
-          : CONNECT_DEFAULT_PORT;
-      const port = own + COPY_CONNECT_PORT_OFFSET;
-      if (port > 65_535) {
-        throw new MaterializeError(
-          `${member.key} uses port ${own}, so a copy has no port for its Connect (${port} is too high). Give it a port below ${65_536 - COPY_CONNECT_PORT_OFFSET}.`,
-        );
-      }
-      return { member: member.key, port };
-    });
-  // Switchboards bind port 0 in a copy; other runners keep their own.
-  const kept = members.flatMap((member) => {
-    if (member.role !== "other") return [];
-    const port = fixedPortOf(member.runner, member.role);
-    return port === undefined ? [] : [{ member: member.key, port }];
-  });
-  const owners = new Map<number, string>();
-  for (const { member, port } of [...ports, ...kept]) {
-    const other = owners.get(port);
-    if (other !== undefined) {
-      throw new MaterializeError(
-        `${other} and ${member} would both use port ${port} in the copy, so one of them could not start. Give one of them another port.`,
-      );
-    }
-    owners.set(port, member);
+  for (const member of members) {
+    const overflow = copyPortOverflow(member);
+    if (overflow) throw new MaterializeError(overflow);
   }
-  return ports;
+  const [clash] = copyPortClashes(members);
+  if (clash) throw new MaterializeError(clash.message);
+  return members.flatMap((member) => {
+    const port = copyPortOf(member);
+    return member.role === "connect" && port !== undefined
+      ? [{ member: member.key, port }]
+      : [];
+  });
 }
 
 /** Free switchboard ports; Connect's copy port keeps its own browser storage. */

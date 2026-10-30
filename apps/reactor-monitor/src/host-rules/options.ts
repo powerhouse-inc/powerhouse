@@ -1,15 +1,20 @@
 import type { HostExport } from "@powerhousedao/host-core/schema";
 import { effectiveFlags, FLAG_LABELS, LADDER, ladderFlags } from "./flags.js";
 import {
-  fixedPortOf,
   freshKey,
   hostVerb,
   isRecord,
   membersOf,
-  nextFreePort,
-  portClashes,
   type Member,
 } from "./members.js";
+import {
+  copyOnlyClashes,
+  copyPortOf,
+  fixedPortOf,
+  nextFreePort,
+  portBaseOf,
+  portClashes,
+} from "./ports.js";
 import { checkSetter } from "./policy.js";
 import {
   addDriveOption,
@@ -357,28 +362,45 @@ function addMemberOption(
     ...(isRecord(body) && isRecord(body.runner) ? body.runner : {}),
     ...(isRecord(wrapper.runner) ? wrapper.runner : {}),
   };
+  const added = { key, role, runner };
   const port = fixedPortOf(runner, role);
-  if (
-    port !== undefined &&
-    members.some((member) => fixedPortOf(member.runner, member.role) === port)
-  ) {
-    const free = nextFreePort(port, members);
-    if (free !== undefined) {
-      wrapper.runner = {
-        ...(isRecord(wrapper.runner) ? wrapper.runner : {}),
-        port: free,
-      };
-    }
+  const copy = copyPortOf(added);
+  const taken =
+    (port !== undefined &&
+      members.some(
+        (member) => fixedPortOf(member.runner, member.role) === port,
+      )) ||
+    (copy !== undefined &&
+      members.some((member) => copyPortOf(member) === copy));
+  const free = taken
+    ? nextFreePort(role, portBaseOf(added), members)
+    : undefined;
+  if (free !== undefined) {
+    wrapper.runner = {
+      ...(isRecord(wrapper.runner) ? wrapper.runner : {}),
+      port: free,
+    };
   }
   option.setters = [{ path: `host.children.${key}`, value: wrapper as never }];
   return option;
 }
 
-/** A member that binds another's port moves to the next free one. */
-function portOptions(members: Member[]): HostOption[] {
-  return portClashes(members).flatMap(({ member, port }) => {
-    const free = nextFreePort(port, members);
-    if (free === undefined || member.path === "host") return [];
+/** A member that binds another's port, as declared or in the copy, moves. */
+function portOptions(members: Member[], controller: boolean): HostOption[] {
+  const clashes = [
+    ...portClashes(members),
+    ...(controller ? copyOnlyClashes(members) : []),
+  ];
+  const moved = new Set<string>();
+  return clashes.flatMap(({ member }) => {
+    if (member.path === "host" || moved.has(member.path)) return [];
+    moved.add(member.path);
+    const free = nextFreePort(
+      member.role,
+      portBaseOf(member),
+      members.filter((other) => other !== member),
+    );
+    if (free === undefined) return [];
     return [
       {
         id: `${member.path}:port:${free}`,
@@ -429,7 +451,7 @@ function addBrowserOption(members: Member[]): HostOption {
 /** Every option the builder can offer for this draft, not yet judged. */
 export function hostOptionList(
   draft: HostDraft,
-  context: Pick<HostRulesContext, "verb"> = {},
+  context: Pick<HostRulesContext, "verb"> & { controller?: boolean } = {},
 ): HostOption[] {
   const members = membersOf(draft, context);
   const host = draft.envelope.host as unknown;
@@ -438,7 +460,7 @@ export function hostOptionList(
     ...accessOptions(members),
     ...members.flatMap((member) => memberOptions(member, members)),
     ...reachOptions(members, compound),
-    ...portOptions(members),
+    ...portOptions(members, context.controller === true),
     addMemberOption(draft, members, "switchboard"),
     addMemberOption(draft, members, "connect"),
     addBrowserOption(members),

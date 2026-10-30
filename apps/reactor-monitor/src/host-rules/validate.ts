@@ -19,7 +19,6 @@ import {
   isRecord,
   membersOf,
   nestedChildren,
-  portClashes,
   primaryBackendName,
   switchboardSettings,
   valueAt,
@@ -31,6 +30,7 @@ import {
   isContainedPath,
   SETTINGS_ELSEWHERE,
 } from "./policy.ts";
+import { copyOnlyClashes, copyPortOverflow, portClashes } from "./ports.ts";
 import { reachRule } from "./reach.ts";
 import {
   hostRulesContextSchema,
@@ -93,14 +93,6 @@ export const REASONS = {
   nested:
     "This reactor starts a group of reactors, which the monitor doesn't check yet.",
 } as const;
-
-export function portClashMessage(
-  first: Pick<Member, "key">,
-  second: Pick<Member, "key">,
-  port: number,
-): string {
-  return `${first.key} and ${second.key} both use port ${port}. Give one of them another port.`;
-}
 
 export type Validation = {
   members: Member[];
@@ -856,13 +848,22 @@ function storesRule(members: Member[], env: HostEnv, report: Report): void {
 }
 
 /** Two members can't bind one port: the second would fail to start. */
-function portRule(members: Member[], report: Report): void {
-  for (const { member, other, port } of portClashes(members)) {
-    report(
-      "port",
-      `${member.path}.runner.port`,
-      portClashMessage(other, member, port),
-    );
+function portRule(
+  members: Member[],
+  controller: boolean,
+  report: Report,
+): void {
+  const clashes = [
+    ...portClashes(members),
+    ...(controller ? copyOnlyClashes(members) : []),
+  ];
+  for (const { member, message } of clashes) {
+    report("port", `${member.path}.runner.port`, message);
+  }
+  if (!controller) return;
+  for (const member of members) {
+    const overflow = copyPortOverflow(member);
+    if (overflow) report("port", `${member.path}.runner.port`, overflow);
   }
 }
 
@@ -896,7 +897,7 @@ export function validateDraft(
   ladderRule(members, env, report);
   storageRule(members, env, context, report);
   storesRule(members, env, report);
-  portRule(members, report);
+  portRule(members, context.controller, report);
   configRule(members, env, report);
   workersRule(members, env, context, report);
   reachRule(members, (path, message) => report("reach", path, message));

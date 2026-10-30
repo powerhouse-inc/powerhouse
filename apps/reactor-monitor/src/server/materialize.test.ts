@@ -196,7 +196,7 @@ describe("materialize", () => {
     const children = host.children as Record<string, Record<string, unknown>>;
     children.ui.runner = { port: 60_000 };
     expect(() => copyConnectPorts(envelope)).toThrow(
-      "ui uses port 60000, so a copy has no port for its Connect (70000 is too high). Give it a port below 55536.",
+      "ui uses port 60000, so the monitor's copy has no port for its Connect (70000 is too high). Give it a port below 55536.",
     );
   });
 
@@ -224,7 +224,7 @@ describe("materialize", () => {
     const children = host.children as Record<string, Record<string, unknown>>;
     children.ui2 = { host: "ui", runner: { port: 3000 } };
     expect(() => copyConnectPorts(envelope)).toThrow(
-      "ui and ui2 would both use port 13000 in the copy, so one of them could not start. Give one of them another port.",
+      "ui (port 3000) and ui2 (port 3000) would both use 13000 when the monitor starts its copy, which adds 10000 to Connect's port. Give ui2 another port.",
     );
     expect(() => materialize(instanceDir, source, envelope)).toThrow(
       MaterializeError,
@@ -243,7 +243,20 @@ describe("materialize", () => {
       >
     ).agent = { host: "agent" };
     expect(() => copyConnectPorts(other)).toThrow(
-      "ui and agent would both use port 13000 in the copy",
+      "ui (port 3000) and agent (port 13000) would both use 13000 when the monitor starts its copy, which adds 10000 to Connect's port. Give ui another port.",
+    );
+  });
+
+  it("refuses two Connects whose ports both come from a token", () => {
+    const envelope = duo(source);
+    const host = envelope.host as unknown as Record<string, unknown>;
+    const children = host.children as Record<string, Record<string, unknown>>;
+    delete children.ui.runner;
+    children.ui2 = { host: "ui" };
+    const ui = envelope.members.ui as unknown as Record<string, unknown>;
+    ui.runner = { ...(ui.runner as object), port: { $env: "UI_PORT" } };
+    expect(() => copyConnectPorts(envelope)).toThrow(
+      "ui (port from UI_PORT) and ui2 (port from UI_PORT) would both use 13000 when the monitor starts its copy, which adds 10000 to Connect's port. Give ui2 another port.",
     );
   });
 

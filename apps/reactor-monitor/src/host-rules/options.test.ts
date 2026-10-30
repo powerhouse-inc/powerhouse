@@ -58,6 +58,9 @@ function option(draft: HostDraft, id: string) {
   return found;
 }
 
+const portIssues = (draft: HostDraft) =>
+  validateDraft(draft, FULL).issues.filter((issue) => issue.rule === "port");
+
 const ON = { enabled: true, selected: false };
 const SELECTED = { enabled: true, selected: true };
 const off = (reason: string) => ({ enabled: false, selected: false, reason });
@@ -449,6 +452,80 @@ describe("adding and removing reactors", () => {
     expect(
       hostOptionList(moved.draft).filter((o) => o.group === "port"),
     ).toEqual([]);
+  });
+
+  it("gives an added Connect a port that is free in the monitor's copy too", () => {
+    const token = withSetters(
+      { "members.connect.runner.port": { $env: "UI_PORT" } },
+      hostExport("cli"),
+    );
+    const tokenDraft = { envelope: token };
+    const added = applyOption(
+      tokenDraft,
+      option(tokenDraft, "host:add:connect"),
+    );
+    expect(
+      (added.draft.envelope.host as { children: Record<string, unknown> })
+        .children.connect,
+    ).toMatchObject({ runner: { port: 3001 } });
+    // A token port is a shape issue of its own; no port issue is added.
+    expect(portIssues(added.draft)).toEqual([]);
+
+    // An agent on 16492 holds the copy port of 6492, so the Connect skips it.
+    const cli = hostExport("cli");
+    const withAgent = {
+      ...cli,
+      members: {
+        ...cli.members,
+        agent: {
+          name: "agent",
+          runner: {
+            module: "@powerhousedao/clint/mastra-runner",
+            port: 16_492,
+          },
+        },
+      },
+    } as HostExport;
+    const agentDraft = {
+      envelope: withSetters(
+        { "host.children.agent": { host: "agent" } },
+        withAgent,
+      ),
+    };
+    const next = applyOption(
+      agentDraft,
+      option(agentDraft, "host:add:connect"),
+    );
+    expect(
+      (next.draft.envelope.host as { children: Record<string, unknown> })
+        .children.connect,
+    ).toMatchObject({ runner: { port: 6493 } });
+    expect(validateDraft(next.draft, FULL).issues).toEqual([]);
+  });
+
+  it("offers to move a Connect off a port its copy would share", () => {
+    const clash = {
+      envelope: withSetters(
+        {
+          "members.connect.runner.port": { $env: "UI_PORT" },
+          "host.children.connect": { host: "connect" },
+        },
+        hostExport("cli"),
+      ),
+    };
+    expect(
+      hostOptionList(clash, { controller: false }).filter(
+        (o) => o.group === "port",
+      ),
+    ).toEqual([]);
+    const move = "host.children.connect:port:3001";
+    expect(statuses(clash)(move)).toEqual(ON);
+    const moved = applyOption(
+      clash,
+      hostOptionList(clash, { controller: true }).find((o) => o.id === move)!,
+    );
+    expect(portIssues(clash)).toHaveLength(1);
+    expect(portIssues(moved.draft)).toEqual([]);
   });
 
   it("adds Connect and a browser reactor", () => {

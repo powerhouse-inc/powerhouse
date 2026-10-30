@@ -15,13 +15,10 @@ export {
 } from "./flags.js";
 export {
   fileOf,
-  fixedPortOf,
   freshKey,
   hostVerb,
   membersOf,
   nestedChildren,
-  nextFreePort,
-  portClashes,
   primaryBackendName,
   switchboardSettings,
   valueAt,
@@ -29,8 +26,19 @@ export {
   type Member,
   type MemberBackend,
   type MemberRole,
-  type PortClash,
 } from "./members.js";
+export {
+  COPY_CONNECT_PORT_OFFSET,
+  copyOnlyClashes,
+  copyPortClashes,
+  copyPortOf,
+  copyPortOverflow,
+  fixedPortOf,
+  nextFreePort,
+  portClashes,
+  portClashMessage,
+  type PortClash,
+} from "./ports.js";
 export {
   addDriveStatus,
   applyOption,
@@ -86,7 +94,6 @@ export {
 export { applySetters } from "./setters.js";
 export {
   onOff,
-  portClashMessage,
   REASONS,
   shapeWording,
   validateDraft,

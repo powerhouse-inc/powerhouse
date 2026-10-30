@@ -1072,13 +1072,13 @@ describe("createMonitorController", () => {
       expect(readdirSync(controller.tempRoot)).toEqual([]);
     });
 
-    it("refuses a draft whose members would share a port in the copy, before anything starts", async () => {
+    it("refuses a draft whose members would share a port in the copy, naming the declared ports, before anything starts", async () => {
       mkdirSync(path.join(allowed, "hosts", "stack"), { recursive: true });
       writeFileSync(
         path.join(allowed, "hosts", "stack", "host.js"),
         "export default {};",
       );
-      // Valid as declared (3001 and 13001), but Connect moves to 13001 in a copy.
+      // Distinct as declared (3001 and 13001); Connect moves to 13001 in a copy.
       const envelope = stackExport(allowed);
       (envelope.members as Record<string, unknown>).agent = {
         name: "agent",
@@ -1107,10 +1107,15 @@ describe("createMonitorController", () => {
         error = caught;
       }
       expect(error).toBeInstanceOf(ControllerError);
-      expect((error as ControllerError).code).toBe("bad_request");
-      expect((error as ControllerError).message).toBe(
-        "ui and agent would both use port 13001 in the copy, so one of them could not start. Give one of them another port.",
-      );
+      expect((error as ControllerError).code).toBe("check_failed");
+      expect((error as ControllerError).ruleIssues).toEqual([
+        expect.objectContaining({
+          rule: "port",
+          path: "host.children.ui.runner.port",
+          message:
+            "ui (port 3001) and agent (port 13001) would both use 13001 when the monitor starts its copy, which adds 10000 to Connect's port. Give ui another port.",
+        }),
+      ]);
       expect(asked).toEqual([]);
       expect(launches).toEqual([]);
       expect(readdirSync(controller.tempRoot)).toEqual([]);

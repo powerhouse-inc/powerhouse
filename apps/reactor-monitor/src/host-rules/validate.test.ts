@@ -42,6 +42,21 @@ function issues(
   );
 }
 
+/** stack() plus an agent folder: a runner the monitor doesn't move. */
+function withAgent(port: number): HostExport {
+  const base = stack();
+  return {
+    ...base,
+    members: {
+      ...base.members,
+      agent: {
+        name: "agent",
+        runner: { module: "@powerhousedao/clint/mastra-runner", port },
+      },
+    },
+  } as HostExport;
+}
+
 const postgres = {
   [`${SB_REACTOR}.backends.main`]: {
     kind: "in-process",
@@ -606,19 +621,59 @@ describe("validateDraft", () => {
           "ui and ui2 both use port 3000. Give one of them another port.",
         ],
       ]);
-      for (const port of [0, { $env: "UI_PORT" }]) {
-        const free = structuredClone(stack()) as unknown as {
+    });
+
+    it("counts the copy's ports when the monitor starts it", () => {
+      const NO_CONTROLLER = { postgres: false, controller: false };
+      const ports = (envelope: HostExport, context?: HostRulesContext) =>
+        issues(envelope, {}, context).filter(([rule]) => rule === "port");
+      const cases: [Record<string, unknown>, string][] = [
+        [{ host: "connect" }, "port from UI_PORT"],
+        [{ host: "connect", runner: { port: 3000 } }, "port 3000"],
+      ];
+      for (const [wrapper, said] of cases) {
+        const shared = structuredClone(stack()) as unknown as {
           members: Record<string, { runner: Record<string, unknown> }>;
           host: { children: Record<string, unknown> };
         };
-        free.members.connect.runner.port = port;
-        free.host.children.ui2 = { host: "connect" };
-        expect(
-          issues(free as unknown as HostExport).filter(
-            ([rule]) => rule === "port",
-          ),
-        ).toEqual([]);
+        shared.members.connect.runner.port = { $env: "UI_PORT" };
+        shared.host.children.ui2 = wrapper;
+        const envelope = shared as unknown as HostExport;
+        expect(ports(envelope, NO_CONTROLLER)).toEqual([]);
+        expect(ports(envelope)).toEqual([
+          [
+            "port",
+            "host.children.ui2.runner.port",
+            `ui (port from UI_PORT) and ui2 (${said}) would both use 13000 when the monitor starts its copy, which adds 10000 to Connect's port. Give ui2 another port.`,
+          ],
+        ]);
       }
+      const agent = draft(
+        {
+          "host.children.agent": { host: "agent" },
+        },
+        withAgent(16_491),
+      );
+      expect(issues(agent)).toEqual([
+        [
+          "port",
+          "host.children.ui.runner.port",
+          "ui (port 6491) and agent (port 16491) would both use 16491 when the monitor starts its copy, which adds 10000 to Connect's port. Give ui another port.",
+        ],
+      ]);
+      expect(ports(agent, NO_CONTROLLER)).toEqual([]);
+    });
+
+    it("refuses a Connect port the copy can't move up", () => {
+      expect(issues(draft({ "host.children.ui.runner.port": 60_000 }))).toEqual(
+        [
+          [
+            "port",
+            "host.children.ui.runner.port",
+            "ui uses port 60000, so the monitor's copy has no port for its Connect (70000 is too high). Give it a port below 55536.",
+          ],
+        ],
+      );
     });
   });
 

@@ -53,54 +53,6 @@ function roleOf(runner: Record<string, unknown>): MemberRole {
   return "other";
 }
 
-// The ph-cli runners' defaults when a host names no port.
-const DEFAULT_PORTS: Partial<Record<MemberRole, number>> = {
-  switchboard: 4001,
-  connect: 3000,
-};
-
-/** The port a runner binds when it is known up front: not 0, not a token. */
-export function fixedPortOf(
-  runner: Record<string, unknown>,
-  role: MemberRole,
-): number | undefined {
-  const port = runner.port;
-  if (port === undefined) return DEFAULT_PORTS[role];
-  return typeof port === "number" && Number.isInteger(port) && port > 0
-    ? port
-    : undefined;
-}
-
-export type PortClash = { member: Member; other: Member; port: number };
-
-/** Each member that binds a port an earlier member already binds. */
-export function portClashes(members: readonly Member[]): PortClash[] {
-  const owners = new Map<number, Member>();
-  const clashes: PortClash[] = [];
-  for (const member of members) {
-    const port = fixedPortOf(member.runner, member.role);
-    if (port === undefined) continue;
-    const other = owners.get(port);
-    if (other) clashes.push({ member, other, port });
-    else owners.set(port, member);
-  }
-  return clashes;
-}
-
-/** The first port above `from` that no member binds. */
-export function nextFreePort(
-  from: number,
-  members: readonly Member[],
-): number | undefined {
-  const taken = new Set(
-    members.map((member) => fixedPortOf(member.runner, member.role)),
-  );
-  for (let port = from + 1; port <= 65_535; port++) {
-    if (!taken.has(port)) return port;
-  }
-  return undefined;
-}
-
 /** `base`, or the first `base-<n>` not taken. */
 export function freshKey(taken: readonly string[], base: string): string {
   if (!taken.includes(base)) return base;
