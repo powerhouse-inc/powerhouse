@@ -1,4 +1,5 @@
 import {
+  CONNECT_PRIMARY_MESSAGE,
   hostExportSchema,
   type HostExport,
 } from "@powerhousedao/host-core/schema";
@@ -127,6 +128,59 @@ describe("parseHostExport", () => {
           "placement.drives.powerhose names no drive this host links to or declares (powerhouse).",
       }),
     ]);
+  });
+
+  it("refuses placement.primary on a Connect, as ph run does", () => {
+    const solo = parseHostExport(
+      JSON.stringify(
+        reactorHost({
+          backends: { main: { kind: "worker" } },
+          placement: { primary: "main" },
+        }),
+      ),
+    );
+    expect(solo.export).toBeUndefined();
+    expect(solo.issues).toEqual([
+      expect.objectContaining({
+        severity: "error",
+        file: "hosts/solo/host.js",
+        path: "reactor.placement.primary",
+        message: CONNECT_PRIMARY_MESSAGE,
+      }),
+    ]);
+
+    // A compound child's wrapper block, checked as merged.
+    const cli = fixture("cli");
+    const host = cli.host as { children: Record<string, unknown> };
+    const wrapper = {
+      host: "connect",
+      reactor: {
+        backends: { main: { kind: "worker" } },
+        placement: { primary: "main" },
+      },
+    };
+    const child = parseHostExport(
+      JSON.stringify({
+        ...cli,
+        host: { ...host, children: { ...host.children, ui: wrapper } },
+      }),
+    );
+    expect(child.issues).toEqual([
+      expect.objectContaining({
+        file: "hosts/cli/host.js",
+        path: "children.ui.reactor.placement.primary",
+        message: CONNECT_PRIMARY_MESSAGE,
+      }),
+    ]);
+
+    // A switchboard keeps placement.primary.
+    const switchboard = reactorHost({
+      backends: { main: { kind: "in-process" } },
+      placement: { primary: "main" },
+    });
+    switchboard.host.runner.module =
+      "@powerhousedao/ph-cli/runners/switchboard";
+    expect(parseHostExport(JSON.stringify(switchboard)).issues).toEqual([]);
   });
 
   it("names the folder when a wrapper's plugins leave its key unknown", () => {

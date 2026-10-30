@@ -1,5 +1,4 @@
 // A Connect's router and switchboard connection settings. Browser-safe.
-import { connectReactorIssues } from "@powerhousedao/host-core/schema";
 import {
   isRecord,
   valueAt,
@@ -178,28 +177,6 @@ export function routerSettingLines(settings: RouterSettings): string[] {
           .join(", ")}`,
     ),
   ];
-}
-
-/** host-core's Connect placement check, in the builder's words. */
-export function connectRouterRule(
-  members: readonly Member[],
-  report: (path: string, message: string, hint: string) => void,
-): void {
-  for (const member of members) {
-    if (member.role !== "connect") continue;
-    for (const issue of connectReactorIssues({ reactor: member.reactor })) {
-      const [, ...rest] = issue.path;
-      const message =
-        rest.at(-1) === "primary"
-          ? ROUTER_REASONS.primary
-          : ROUTER_REASONS.newDrives;
-      report(
-        [member.reactorAt, ...rest.map(String)].join("."),
-        message,
-        issue.message,
-      );
-    }
-  }
 }
 
 const DELETE = { $delete: true } as const;

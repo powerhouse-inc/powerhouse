@@ -1,5 +1,6 @@
 import { protocolEnv } from "@powerhousedao/host-core/projection";
 import {
+  CONNECT_PRIMARY_MESSAGE,
   refineStartOrder,
   type HostExport,
   type ReactorProtocol,
@@ -31,7 +32,7 @@ import {
   SETTINGS_ELSEWHERE,
 } from "./policy.ts";
 import { reachRule } from "./reach.ts";
-import { connectRouterRule } from "./router-settings.ts";
+import { ROUTER_REASONS } from "./router-settings.ts";
 import {
   hostRulesContextSchema,
   type HostDraft,
@@ -137,6 +138,13 @@ export function shapeWording(message: string): {
   message: string;
   hint?: string;
 } {
+  // host-core's Connect placement check names config keys.
+  if (message === CONNECT_PRIMARY_MESSAGE) {
+    return { message: ROUTER_REASONS.primary, hint: message };
+  }
+  if (/^This Connect keeps no reactor in the browser and links/.test(message)) {
+    return { message: ROUTER_REASONS.newDrives, hint: message };
+  }
   if (/^Unrecognized key/.test(message)) {
     return {
       message: "A host file can't contain this setting.",
@@ -473,8 +481,7 @@ function storageRule(
     if (member.role === "switchboard" && !context.controller) {
       report("capability", member.path, REASONS.noController);
     }
-    // A Connect refuses placement.primary outright (connectRouterRule).
-    if (member.placementMissing && member.role !== "connect") {
+    if (member.placementMissing) {
       const name = primaryBackendName(member.reactor) ?? "";
       report(
         "storage",
@@ -906,9 +913,6 @@ export function validateDraft(
   configRule(members, env, report);
   workersRule(members, env, context, report);
   reachRule(members, (path, message) => report("reach", path, message));
-  connectRouterRule(members, (path, message, hint) =>
-    report("reach", path, message, hint),
-  );
   const byPath: Record<string, HostRuleIssue[]> = {};
   for (const issue of issues) (byPath[issue.path] ??= []).push(issue);
   return { members, issues, byPath };

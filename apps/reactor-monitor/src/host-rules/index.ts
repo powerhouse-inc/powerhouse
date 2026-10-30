@@ -14,6 +14,7 @@ export {
   type Flags,
 } from "./flags.js";
 export {
+  connectPrimaryName,
   fileOf,
   freshKey,
   hostVerb,

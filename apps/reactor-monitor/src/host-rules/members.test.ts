@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { hostExport, stack } from "./__fixtures__/hosts.js";
 import {
+  connectPrimaryName,
   fileOf,
   membersOf,
   primaryBackendName,
@@ -101,6 +102,48 @@ describe("membersOf", () => {
         placement: { primary: "a" },
       }),
     ).toBe("a");
+  });
+
+  it("picks a Connect's primary as host-core's Connect does, ignoring placement.primary", () => {
+    const remote = { kind: "remote", remote: { url: "http://sb.test/d/x" } };
+    expect(connectPrimaryName(undefined)).toBeUndefined();
+    expect(
+      connectPrimaryName({
+        backends: { sb: remote, tab: { kind: "worker" } },
+        placement: { primary: "sb", newDrives: "sb" },
+      }),
+    ).toBe("tab");
+    expect(
+      connectPrimaryName({
+        backends: { a: remote, b: remote },
+        placement: { newDrives: "b" },
+      }),
+    ).toBe("b");
+    expect(connectPrimaryName({ backends: { sb: remote } })).toBe("sb");
+    expect(
+      connectPrimaryName({ backends: { a: remote, b: remote } }),
+    ).toBeUndefined();
+
+    // A placement.primary naming no backend is refused, not "ignored".
+    const members = membersOf({
+      envelope: {
+        ...hostExport("connect"),
+        host: {
+          ...(hostExport("connect").host as object),
+          reactor: {
+            backends: { sb: remote, tab: { kind: "worker" } },
+            placement: { primary: "gone" },
+          },
+        },
+      } as never,
+    });
+    expect(members[0].placementMissing).toBe(false);
+    expect(
+      members[0].backends.map((backend) => [backend.name, backend.primary]),
+    ).toEqual([
+      ["sb", false],
+      ["tab", true],
+    ]);
   });
 
   it("knows dev mode from the verb or runner.dev", () => {
