@@ -15,6 +15,7 @@ import {
   setAttachmentService,
 } from "../src/hooks/attachment-service.js";
 import {
+  getAttachmentClient,
   useAttachmentPreview,
   useAttachmentUpload,
   useAttachments,
@@ -140,6 +141,23 @@ describe("useAttachments", () => {
     const { result: second } = await renderHook(() => useAttachments());
 
     expect(second.current).not.toBe(firstClient);
+  });
+});
+
+describe("getAttachmentClient", () => {
+  beforeEach(() => {
+    delete (window as { ph?: unknown }).ph;
+  });
+
+  it("returns undefined until a service is installed", () => {
+    expect(getAttachmentClient()).toBeUndefined();
+  });
+
+  it("is the same client the hook hands out", async () => {
+    install(makeService());
+    const { result } = await renderHook(() => useAttachments());
+    expect(result.current).toBeDefined();
+    expect(getAttachmentClient()).toBe(result.current);
   });
 });
 

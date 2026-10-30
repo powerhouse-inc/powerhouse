@@ -1,4 +1,5 @@
 import type {
+  PhAiChatImage,
   PhAiToolAnnotations,
   PhAiToolDescriptor,
 } from "@powerhousedao/shared/document-model";
@@ -50,6 +51,9 @@ export interface ChatImage {
   mediaType: string;
   name?: string;
 }
+
+/** A sent image, under the handle tools reach it by. */
+export type AiChatImage = PhAiChatImage;
 
 /** MCP-compatible annotation hints; structural, no MCP SDK dependency. */
 export type AiToolAnnotations = PhAiToolAnnotations;

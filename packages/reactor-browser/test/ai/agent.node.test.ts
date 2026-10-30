@@ -9,6 +9,10 @@ import {
   buildSystemPrompt,
   unwrapToolResult,
 } from "../../src/ai/agent.js";
+import {
+  MAX_REQUEST_IMAGE_CHARS,
+  MAX_REQUEST_IMAGES,
+} from "../../src/ai/tool-images.js";
 import type {
   AgentEvent,
   AiSettings,
@@ -494,6 +498,275 @@ describe("ReactorChatAgent", () => {
     ]);
     expect(request[2].content.some((p) => p.type === "tool-call")).toBe(true);
     expect(request[3].content.some((p) => p.type === "tool-result")).toBe(true);
+  });
+});
+
+describe("images a tool returns", () => {
+  const PIXEL = "aGVsbG8=";
+
+  /** An MCP result with `count` images of `size` base64 characters each. */
+  function imageResult(count = 1, size = PIXEL.length) {
+    return {
+      content: [
+        { type: "text", text: '{"pages":1}' },
+        ...Array.from({ length: count }, (_, index) => ({
+          type: "image",
+          data: `${index}`.padEnd(size, "a"),
+          mimeType: "image/jpeg",
+        })),
+      ],
+      structuredContent: { pages: 1 },
+    };
+  }
+
+  type Prompt = { role: string; content: Record<string, unknown>[] }[];
+
+  const promptOf = (model: ReturnType<typeof streamModel>, call: number) =>
+    model.doStreamCalls[call].prompt as unknown as Prompt;
+
+  const imagesIn = (prompt: Prompt) =>
+    prompt.flatMap((m) =>
+      Array.isArray(m.content)
+        ? m.content.filter(
+            (p) =>
+              p.type === "file" &&
+              String(p.mediaType).startsWith("image/") &&
+              m.role === "user",
+          )
+        : [],
+    );
+
+  function readerAgent(result: unknown, calls = 1, turns = 1) {
+    const events: AgentEvent[] = [];
+    const model = streamModel([
+      ...Array.from({ length: calls }, (_, index) => [
+        ...toolCallParts(`call-${index}`, "getPicture", {}),
+        ...finishParts("tool-calls"),
+      ]),
+      [...textParts("text-1", "I see it."), ...finishParts("stop")],
+      ...Array.from({ length: turns }, (_, index) => [
+        ...textParts(`text-${index + 2}`, "Next."),
+        ...finishParts("stop"),
+      ]),
+    ]);
+    const agent = new ReactorChatAgent({
+      settings: SETTINGS,
+      tools: [makeTool("getPicture", () => Promise.resolve(result))],
+      context: {},
+      onEvent: (event) => events.push(event),
+      model,
+    });
+    return { model, agent, events };
+  }
+
+  it("shows them to the model as a user message after the tool's text", async () => {
+    const { model, agent } = readerAgent(imageResult());
+    await agent.send("read it");
+
+    const prompt = promptOf(model, 1);
+    expect(prompt.map((m) => m.role)).toEqual([
+      "system",
+      "user",
+      "assistant",
+      "tool",
+      "user",
+    ]);
+    const result = prompt[3].content.find((p) => p.type === "tool-result");
+    expect(result?.output).toEqual({ type: "text", value: '{"pages":1}' });
+    expect(prompt[4].content).toMatchObject([
+      { type: "text" },
+      { type: "file", mediaType: "image/jpeg" },
+    ]);
+    expect(String(prompt[4].content[0].text)).toContain("tool output");
+    expect(JSON.stringify(result)).not.toContain("aaaa");
+  });
+
+  it("never hands the image data to the UI", async () => {
+    const { agent, events } = readerAgent(imageResult(1, 1000));
+    await agent.send("read it");
+    const results = events.filter((e) => e.type === "tool-result");
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ result: { pages: 1 } });
+    expect(JSON.stringify(results[0])).not.toContain("aaaa");
+  });
+
+  it("counts the turn's user message once, so the history window holds", async () => {
+    const { model, agent } = readerAgent(imageResult(), 1, 3);
+    await agent.send("turn one");
+    await agent.send("turn two");
+
+    // Still inside the window: the images go along.
+    expect(imagesIn(promptOf(model, 2))).toHaveLength(1);
+
+    await agent.send("turn three");
+    await agent.send("turn four");
+
+    const last = promptOf(model, 4);
+    expect(imagesIn(last)).toHaveLength(0);
+    const stub = last
+      .flatMap((m) => m.content)
+      .find((p) => p.type === "tool-result");
+    expect(JSON.stringify(stub)).toContain("[result omitted: getPicture");
+    expect(JSON.stringify(stub)).toContain("1 images");
+  });
+
+  it("stubs a result with images even when its text is short", async () => {
+    const { agent } = readerAgent(imageResult(), 1, 3);
+    await agent.send("turn one");
+    await agent.send("turn two");
+    await agent.send("turn three");
+    const tool = agent.getHistory().find((m) => m.role === "tool");
+    expect(JSON.stringify(tool)).toContain("result omitted");
+    expect(JSON.stringify(tool)).not.toContain('"file"');
+  });
+
+  it("keeps the newest images when a request would grow too large", async () => {
+    const size = Math.floor(MAX_REQUEST_IMAGE_CHARS / 3);
+    const { model, agent } = readerAgent(imageResult(2, size), 3);
+    await agent.send("read them all");
+
+    // Three fit: both of the newest result, then the first of the one before.
+    const prompt = promptOf(model, 3);
+    expect(imagesIn(prompt)).toHaveLength(3);
+    const notes = prompt
+      .flatMap((m) => m.content)
+      .filter((p) => p.type === "tool-result")
+      .map((p) => JSON.stringify(p.output));
+    expect(notes[0]).toContain("2 of 2 images left out");
+    expect(notes[1]).toContain("1 of 2 images left out");
+    expect(notes[2]).not.toContain("left out");
+  });
+
+  it("never sends more images than a request may hold", async () => {
+    const { model, agent } = readerAgent(imageResult(MAX_REQUEST_IMAGES), 2);
+    await agent.send("read them all");
+    expect(imagesIn(promptOf(model, 2))).toHaveLength(MAX_REQUEST_IMAGES);
+  });
+
+  it("leaves the request alone when no tool returned an image", async () => {
+    const getDrives = makeTool("getDrives");
+    const model = streamModel([
+      [
+        ...toolCallParts("call-1", "getDrives", {}),
+        ...finishParts("tool-calls"),
+      ],
+      [...textParts("text-1", "Done."), ...finishParts("stop")],
+    ]);
+    const agent = new ReactorChatAgent({
+      settings: SETTINGS,
+      tools: [getDrives],
+      context: {},
+      onEvent: () => {},
+      model,
+    });
+    await agent.send("list");
+    const tool = promptOf(model, 1).find((m) => m.role === "tool");
+    expect(tool?.content[0].output).toEqual({
+      type: "json",
+      value: { ok: true },
+    });
+  });
+});
+
+describe("images attached to the chat", () => {
+  const image = (name?: string) => ({
+    dataUrl: "data:image/png;base64,aGVsbG8=",
+    mediaType: "image/png",
+    name,
+  });
+
+  it("gives each a handle the model reads and tools can reach", async () => {
+    const seen: unknown[] = [];
+    const save = makeTool("saveImage", (_args, context) => {
+      seen.push(context?.chatImages);
+      return Promise.resolve({ content: [{ type: "text", text: "saved" }] });
+    });
+    const model = streamModel([
+      [...textParts("text-1", "Noted."), ...finishParts("stop")],
+      [
+        ...toolCallParts("call-1", "saveImage", {}),
+        ...finishParts("tool-calls"),
+      ],
+      [...textParts("text-2", "Saved."), ...finishParts("stop")],
+    ]);
+    const options = {
+      settings: { ...SETTINGS, autoApproveWrites: true },
+      tools: [save],
+      context: {},
+      onEvent: () => {},
+      model,
+    };
+    const first = new ReactorChatAgent(options);
+    await first.send("two receipts", [image("a.png"), image()]);
+
+    // The chat makes a new agent per turn; the handles carry on.
+    const second = new ReactorChatAgent({
+      ...options,
+      history: first.getHistory(),
+      chatImages: first.getChatImages(),
+    });
+    await second.send("and this one", [image("c.png")]);
+
+    const prompt = model.doStreamCalls[0].prompt as unknown as {
+      role: string;
+      content: { type: string; text?: string }[];
+    }[];
+    expect(prompt[1].content.filter((p) => p.type === "text")).toMatchObject([
+      { text: "two receipts" },
+      { text: "[Attached image image-1: a.png]" },
+      { text: "[Attached image image-2]" },
+    ]);
+    expect(seen).toMatchObject([
+      [
+        { handle: "image-1", name: "a.png" },
+        { handle: "image-2" },
+        { handle: "image-3", name: "c.png" },
+      ],
+    ]);
+  });
+
+  it("forgets them with the conversation", async () => {
+    const model = streamModel([
+      [...textParts("text-1", "Noted."), ...finishParts("stop")],
+    ]);
+    const agent = new ReactorChatAgent({
+      settings: SETTINGS,
+      tools: [],
+      context: {},
+      onEvent: () => {},
+      model,
+    });
+    await agent.send("a receipt", [image("a.png")]);
+    expect(agent.getChatImages()).toHaveLength(1);
+    agent.reset();
+    expect(agent.getChatImages()).toEqual([]);
+  });
+
+  it("passes the turn's abort signal to the tool", async () => {
+    let received: AbortSignal | undefined;
+    const controller = new AbortController();
+    const model = streamModel([
+      [
+        ...toolCallParts("call-1", "getThing", {}),
+        ...finishParts("tool-calls"),
+      ],
+      [...textParts("text-1", "Done."), ...finishParts("stop")],
+    ]);
+    const agent = new ReactorChatAgent({
+      settings: SETTINGS,
+      tools: [
+        makeTool("getThing", (_args, context) => {
+          received = context?.signal;
+          return Promise.resolve({ content: [{ type: "text", text: "ok" }] });
+        }),
+      ],
+      context: {},
+      onEvent: () => {},
+      signal: controller.signal,
+      model,
+    });
+    await agent.send("go");
+    expect(received).toBe(controller.signal);
   });
 });
 

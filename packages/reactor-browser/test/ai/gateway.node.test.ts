@@ -98,7 +98,7 @@ describe("the gateway connection", () => {
     );
   });
 
-  it("sends attached images as image parts", async () => {
+  it("sends attached images as image parts, each under its handle", async () => {
     const { calls, fetchImpl } = stubFetch();
     const { agent } = agentFor(
       gatewayConnection("qwen/test", {
@@ -113,6 +113,7 @@ describe("the gateway connection", () => {
     const user = bodyOf(calls[0]).messages.find((m) => m.role === "user");
     expect(user?.content).toEqual([
       { type: "text", text: "What is this?" },
+      { type: "text", text: "[Attached image image-1]" },
       {
         type: "image_url",
         image_url: { url: "data:image/png;base64,AAAA" },

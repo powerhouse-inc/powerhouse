@@ -9,6 +9,7 @@ import {
 } from "./settings-store.js";
 import type {
   AgentEvent,
+  AiChatImage,
   AiConnection,
   AiSettings,
   AiToolDescriptor,
@@ -85,6 +86,7 @@ export function useReactorChat(
   const pendingRef = useRef<Set<string>>(new Set());
   const assistantIdRef = useRef<string | null>(null);
   const historyRef = useRef<ModelMessage[]>([]);
+  const chatImagesRef = useRef<AiChatImage[]>([]);
 
   const settings = useSyncExternalStore(subscribeAiSettings, getAiSettings);
   const context = useChatContext();
@@ -232,6 +234,7 @@ export function useReactorChat(
           onEvent: handleEvent,
           signal: controller.signal,
           history: historyRef.current,
+          chatImages: chatImagesRef.current,
         });
         agentRef.current = agent;
 
@@ -265,6 +268,7 @@ export function useReactorChat(
           setIsStreaming(false);
           abortRef.current = null;
           historyRef.current = agent.getHistory();
+          chatImagesRef.current = agent.getChatImages();
         }
       })();
     },
@@ -288,6 +292,7 @@ export function useReactorChat(
     agentRef.current?.reset();
     agentRef.current = null;
     historyRef.current = [];
+    chatImagesRef.current = [];
     pendingRef.current.clear();
     setPendingApprovals([]);
     setMessages([]);

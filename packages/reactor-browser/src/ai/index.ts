@@ -18,5 +18,6 @@ export * from "./host-tools.js";
 export * from "./images.js";
 export * from "./settings-store.js";
 export * from "./switchboard.js";
+export * from "./tool-images.js";
 export * from "./types.js";
 export * from "./use-reactor-chat.js";
