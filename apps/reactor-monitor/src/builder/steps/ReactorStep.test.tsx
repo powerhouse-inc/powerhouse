@@ -221,7 +221,7 @@ describe("ReactorStep", () => {
       ).toBe("true");
       fireEvent.click(newDrives.getByRole("button", { name: "On sb" }));
       expect(onChoose).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "host.children.ui:newDrives:sb" }),
+        expect.objectContaining({ id: "host.children.ui:newDrives:on:sb" }),
       );
       expect(drivesCard(view).queryByText(DRIVES_COPY.newDrives)).toBeNull();
 
@@ -254,6 +254,7 @@ describe("ReactorStep", () => {
           .getByRole("button", { name: "Live updates on (default)" })
           .getAttribute("aria-pressed"),
       ).toBe("true");
+      expect(connection.getByText(CONNECTION_COPY.realtimeHint)).toBeTruthy();
       const finding = within(
         view.getByRole("region", { name: CONNECTION_COPY.finding }),
       );

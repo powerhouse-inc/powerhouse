@@ -333,6 +333,17 @@ function forgetBackend(member: Member, at: string, name: string): Setter[] {
       setters.push({ path: `${at}.placement.${key}`, value: DELETE });
     }
   }
+  // Router settings outlive no switchboard: nothing would show or reset them.
+  const remotes = member.backends.filter(
+    (backend) => backend.kind === "remote",
+  );
+  if (
+    remotes.length === 1 &&
+    remotes[0].name === name &&
+    valueAt(member.reactor, ["router"]) !== undefined
+  ) {
+    setters.push({ path: `${at}.router`, value: DELETE });
+  }
   for (const [slug, backend] of Object.entries(placedDrives(member))) {
     if (backend === name) {
       setters.push({ path: `${at}.placement.drives.${slug}`, value: DELETE });

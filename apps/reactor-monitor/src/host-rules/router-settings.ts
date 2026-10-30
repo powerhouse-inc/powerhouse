@@ -35,6 +35,8 @@ export const ROUTER_REASONS = {
     "Connect has no main backend. Remove this setting, and choose where new drives go instead.",
   newDrives:
     "This app keeps no reactor in the browser and opens drives on several switchboards. Choose where new drives go.",
+  newDrivesFirst:
+    "Choose where new drives go first: without a browser reactor, they need a switchboard.",
 } as const;
 
 export function duration(ms: number): string {
@@ -55,7 +57,8 @@ export const ROUTER_LABELS = {
       ? "Never stop trying"
       : `Stop trying after ${breaker.failures} ${breaker.failures === 1 ? "failure" : "failures"}, try again in ${duration(breaker.openMs)}`,
   realtime: (on: boolean) => (on ? "Live updates on" : "Live updates off"),
-  lookAgain: (ms: number) => `Look again after ${duration(ms)}`,
+  lookAgain: (ms: number) =>
+    ms === 0 ? "Look again every time" : `Look again after ${duration(ms)}`,
   setByHand: (what: string) => `Set in host.js: ${what}`,
   setToByHand: (ms: string) => `Set to ${ms} in host.js`,
 } as const;
@@ -112,12 +115,11 @@ export function routerSettings(
   members: readonly Member[],
 ): RouterSettings {
   const remotes = remoteBackends(member);
-  const keepsCopy = connectReach(member, members).keepsCopy;
   const raw = valueAt(member.reactor, ["placement", "newDrives"]);
-  const named = remotes.find((backend) => backend.name === raw);
+  // Absent: the Connect's primary (members.ts), when that is a switchboard.
   const newDrives =
-    named?.name ??
-    (!keepsCopy && remotes.length === 1 ? remotes[0].name : undefined);
+    remotes.find((backend) => backend.name === raw)?.name ??
+    remotes.find((backend) => backend.primary)?.name;
   const router = (key: string, fallback: number) =>
     msOf(valueAt(member.reactor, ["router", key]), fallback) ?? fallback;
   return {
@@ -163,7 +165,7 @@ export function routerSettingLines(settings: RouterSettings): string[] {
         ? ROUTER_LABELS.waitNoLimit.toLowerCase()
         : ROUTER_LABELS.waitUpTo(settings.probeTimeoutMs).toLowerCase()
     } for each reactor`,
-    `A document found on a switchboard: ${ROUTER_LABELS.lookAgain(
+    `Checking again where a document is: ${ROUTER_LABELS.lookAgain(
       settings.provisionalRouteMs,
     ).toLowerCase()}`,
     ...settings.connections.map(
@@ -225,6 +227,7 @@ function msOptions(
   path: string,
   copy: Setter[],
   label: (ms: number) => string,
+  zero: string,
 ): RouterOption[] {
   const options: RouterOption[] = presets.map((ms) => ({
     ...base,
@@ -238,7 +241,7 @@ function msOptions(
       ...base,
       id: `${prefix}:custom`,
       value: "custom",
-      label: ROUTER_LABELS.setToByHand(raw === 0 ? "no limit" : duration(raw)),
+      label: raw === 0 ? zero : ROUTER_LABELS.setToByHand(duration(raw)),
       setters: [],
     });
   }
@@ -273,9 +276,9 @@ function newDrivesOptions(
       ...(reach.keepsCopy ? {} : { blocked: ROUTER_REASONS.noBrowser }),
     },
     ...settings.connections.map((connection): RouterOption => ({
-      id: `${prefix}:${connection.backend}`,
+      id: `${prefix}:on:${connection.backend}`,
       group: "newDrives",
-      value: connection.backend,
+      value: `on:${connection.backend}`,
       label: ROUTER_LABELS.onSwitchboard(connection.switchboard),
       member: member.path,
       setters: [
@@ -307,6 +310,7 @@ function connectionOptions(
     path("requestTimeoutMs"),
     copy,
     ROUTER_LABELS.waitUpTo,
+    ROUTER_LABELS.setToByHand("no limit"),
   );
   for (const breaker of BREAKERS) {
     const isDefault = sameBreaker(breaker, ROUTER_DEFAULTS.breaker);
@@ -375,6 +379,7 @@ export function routerOptions(
       `${at}.router.probeTimeoutMs`,
       copy,
       ROUTER_LABELS.waitUpTo,
+      ROUTER_LABELS.setToByHand("no limit"),
     ),
     ...msOptions(
       { ...base, group: "provisionalRoute" },
@@ -385,6 +390,7 @@ export function routerOptions(
       `${at}.router.provisionalRouteMs`,
       copy,
       ROUTER_LABELS.lookAgain,
+      ROUTER_LABELS.setByHand("look again every time"),
     ),
     ...remotes.flatMap((backend) =>
       connectionOptions(member, backend, at, copy),
@@ -408,7 +414,7 @@ export function routerOptionSelected(
   switch (option.group) {
     case "newDrives":
       if (settings.newDrives !== undefined) {
-        return option.value === settings.newDrives;
+        return option.value === `on:${settings.newDrives}`;
       }
       return (
         option.value === "browser" && connectReach(member, members).keepsCopy

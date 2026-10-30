@@ -33,7 +33,7 @@ export const GROUP_LABELS: Record<OptionGroup, string> = {
   breaker: "When it stops answering",
   realtime: "Live updates",
   probeTimeout: "Asking each reactor for a document",
-  provisionalRoute: "A document found on a switchboard",
+  provisionalRoute: "Checking again where a document is",
 };
 
 export const DRIVES_COPY = {
@@ -58,7 +58,14 @@ export const CONNECTION_COPY = {
   probeHint:
     "How long to wait for each reactor to say whether it has a document.",
   provisionalHint:
-    "How soon to check again where a document found on a switchboard is.",
+    "After a document is found on a switchboard, Connect checks again after this long in case it has moved.",
+  realtimeHint:
+    "Changes made elsewhere show without a reload. Off: they show on the next read. Drive sync is not affected.",
+} as const;
+
+export const ROUTE_COPY = {
+  newDrivesUnreachable: (switchboard: string) =>
+    `New drives go to ${switchboard}, which the monitor can't reach, so drives can't be created through this router.`,
 } as const;
 
 export const RUN_COPY = {

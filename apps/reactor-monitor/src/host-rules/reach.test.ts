@@ -459,7 +459,7 @@ describe("a Connect linked through $env", () => {
     draft = choose(draft, `${UI}:reach:open:sb:shared`);
     draft = choose(draft, `${UI}:placement:shared:copy`);
     // Two switchboards and no browser reactor: new drives need a home first.
-    draft = choose(draft, `${UI}:newDrives:sb-2`);
+    draft = choose(draft, `${UI}:newDrives:on:sb-2`);
     draft = choose(draft, `${UI}:reach:remove:main`);
     expect(issues(draft)).toEqual([]);
     const reactor = reachOf(draft).member.reactor!;

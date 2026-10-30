@@ -104,7 +104,7 @@ describe("where new drives go", () => {
     expect(ids({ envelope: stack() }, "probeTimeout")).toEqual([]);
     expect(ids(linked(), "newDrives")).toEqual([
       `${UI}:newDrives:browser`,
-      `${UI}:newDrives:sb`,
+      `${UI}:newDrives:on:sb`,
     ]);
   });
 
@@ -115,18 +115,18 @@ describe("where new drives go", () => {
       selected: true,
       label: "In this browser",
     });
-    expect(status(draft, `${UI}:newDrives:sb`)).toEqual({
+    expect(status(draft, `${UI}:newDrives:on:sb`)).toEqual({
       enabled: true,
       selected: false,
       label: "On sb",
     });
-    const onSb = choose(draft, `${UI}:newDrives:sb`);
+    const onSb = choose(draft, `${UI}:newDrives:on:sb`);
     expect(reactorOf(onSb).placement).toEqual({
       drives: { shared: "sb" },
       newDrives: "sb",
     });
     expect(issues(onSb)).toEqual([]);
-    expect(find(onSb, `${UI}:newDrives:sb`).selected).toBe(true);
+    expect(find(onSb, `${UI}:newDrives:on:sb`).selected).toBe(true);
     expect(find(onSb, `${UI}:newDrives:browser`).selected).toBe(false);
     expect(routerSettings(ui(onSb).member, ui(onSb).members).newDrives).toBe(
       "sb",
@@ -146,7 +146,7 @@ describe("where new drives go", () => {
       reason: ROUTER_REASONS.noBrowser,
     });
     // The only switchboard is where new drives go when nothing says otherwise.
-    expect(find(draft, `${UI}:newDrives:sb`).selected).toBe(true);
+    expect(find(draft, `${UI}:newDrives:on:sb`).selected).toBe(true);
   });
 
   it("asks where new drives go when a Connect with no browser reactor links two switchboards", () => {
@@ -157,7 +157,7 @@ describe("where new drives go", () => {
     const at = `${UI}.reactor`;
     // Removing the browser reactor would leave nowhere for new drives.
     expect(find(draft, `${UI}:reach:remove:main`).reason).toBe(
-      ROUTER_REASONS.newDrives,
+      ROUTER_REASONS.newDrivesFirst,
     );
     const remoteOnly = set(draft, {
       [`${at}.backends.main`]: { $delete: true },
@@ -173,15 +173,55 @@ describe("where new drives go", () => {
         .map(({ id, selected, enabled }) => [id, selected, enabled]),
     ).toEqual([
       [`${UI}:newDrives:browser`, false, false],
-      [`${UI}:newDrives:sb`, false, true],
-      [`${UI}:newDrives:switchboard`, false, true],
+      [`${UI}:newDrives:on:sb`, false, true],
+      [`${UI}:newDrives:on:switchboard`, false, true],
     ]);
-    const chosen = choose(remoteOnly, `${UI}:newDrives:switchboard`);
+    const chosen = choose(remoteOnly, `${UI}:newDrives:on:switchboard`);
     expect(issues(chosen)).toEqual([]);
   });
 
+  it("keeps a switchboard backend named browser apart from In this browser", () => {
+    let draft = linked();
+    const remote = (reactorOf(draft).backends as Record<string, unknown>).sb;
+    draft = set(draft, {
+      [`${UI}.reactor.backends.sb`]: { $delete: true },
+      [`${UI}.reactor.backends.browser`]: remote,
+      [`${UI}.reactor.placement.drives.shared`]: "browser",
+    });
+    expect(ids(draft, "newDrives")).toEqual([
+      `${UI}:newDrives:browser`,
+      `${UI}:newDrives:on:browser`,
+    ]);
+    const onRemote = choose(draft, `${UI}:newDrives:on:browser`);
+    expect(reactorOf(onRemote).placement).toMatchObject({
+      newDrives: "browser",
+    });
+    expect(
+      hostOptions(onRemote, FULL)
+        .filter((option) => option.group === "newDrives")
+        .map(({ id, selected }) => [id, selected]),
+    ).toEqual([
+      [`${UI}:newDrives:browser`, false],
+      [`${UI}:newDrives:on:browser`, true],
+    ]);
+  });
+
+  it("drops the router settings with the Connect's last switchboard", () => {
+    const draft = choose(
+      choose(linked(), `${UI}:probeTimeout:10000`),
+      `${UI}:provisionalRoute:300000`,
+    );
+    expect(reactorOf(draft).router).toEqual({
+      probeTimeoutMs: 10_000,
+      provisionalRouteMs: 300_000,
+    });
+    const unlinked = choose(draft, `${UI}:reach:unlink:shared`);
+    expect(reactorOf(unlinked).router).toBeUndefined();
+    expect(issues(unlinked)).toEqual([]);
+  });
+
   it("forgets newDrives with the switchboard it names", () => {
-    const draft = choose(linked(), `${UI}:newDrives:sb`);
+    const draft = choose(linked(), `${UI}:newDrives:on:sb`);
     const unlinked = choose(draft, `${UI}:reach:unlink:shared`);
     expect(reactorOf(unlinked).placement).toEqual({ drives: {} });
     expect(issues(unlinked)).toEqual([]);
@@ -203,7 +243,7 @@ describe("where new drives go", () => {
       }
     }
     // Choosing where new drives go clears it.
-    const fixed = choose(draft, `${UI}:newDrives:sb`);
+    const fixed = choose(draft, `${UI}:newDrives:on:sb`);
     expect(issues(fixed)).toEqual([]);
     expect(reactorOf(fixed).placement).toEqual({
       drives: { shared: "sb" },
@@ -292,6 +332,18 @@ describe("connection and router presets", () => {
       [`${UI}.reactor.router.probeTimeoutMs`]: 0,
       [`${UI}.reactor.router.provisionalRouteMs`]: 30_000,
     });
+    const everyTime = set(draft, {
+      [`${UI}.reactor.router.provisionalRouteMs`]: 0,
+    });
+    expect(status(everyTime, `${UI}:provisionalRoute:custom`)).toEqual({
+      enabled: true,
+      selected: true,
+      label: "Set in host.js: look again every time",
+    });
+    const { member, members } = ui(everyTime);
+    expect(routerSettingLines(routerSettings(member, members))).toContain(
+      "Checking again where a document is: look again every time",
+    );
     expect(status(draft, `${UI}:requestTimeout:sb:custom`)).toEqual({
       enabled: true,
       selected: true,
@@ -324,7 +376,7 @@ describe("connection and router presets", () => {
   });
 
   it("describes the settings in effect", () => {
-    const draft = set(choose(linked(), `${UI}:newDrives:sb`), {
+    const draft = set(choose(linked(), `${UI}:newDrives:on:sb`), {
       [`${UI}.reactor.backends.sb.remote.breaker`]: false,
       [`${UI}.reactor.router.probeTimeoutMs`]: 1_000,
     });
@@ -332,7 +384,7 @@ describe("connection and router presets", () => {
     expect(routerSettingLines(routerSettings(member, members))).toEqual([
       "New drives: on sb",
       "Finding a document: wait up to 1 s for each reactor",
-      "A document found on a switchboard: look again after 30 s",
+      "Checking again where a document is: look again after 30 s",
       "Connection to sb: wait up to 30 s, never stop trying, live updates on",
     ]);
   });

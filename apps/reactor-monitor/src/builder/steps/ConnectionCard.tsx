@@ -46,6 +46,11 @@ export function ConnectionCard({
             {(["requestTimeout", "breaker", "realtime"] as const).map(
               (group) => (
                 <OptionGroup
+                  hint={
+                    group === "realtime"
+                      ? CONNECTION_COPY.realtimeHint
+                      : undefined
+                  }
                   key={group}
                   onChoose={onChoose}
                   options={of(group, at)}

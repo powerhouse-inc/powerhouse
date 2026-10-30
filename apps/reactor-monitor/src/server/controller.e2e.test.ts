@@ -413,7 +413,7 @@ describe.skipIf(process.platform === "win32")(
       for (const id of [
         "Shared",
         "host.children.app:reach:open:sb:shared",
-        "host.children.app:newDrives:sb",
+        "host.children.app:newDrives:on:sb",
         "host.children.app:requestTimeout:sb:120000",
         "host.children.app:breaker:sb:never",
         "host.children.app:probeTimeout:10000",
