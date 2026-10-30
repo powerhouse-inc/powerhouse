@@ -445,6 +445,20 @@ function openOptions(
         },
         { path: `${at}.placement.drives.${slug}`, value: name },
       );
+      // New drives stay where they go now: a second switchboard needs it said.
+      const implicit = member.backends.find(
+        (backend) => backend.primary && backend.kind === "remote",
+      );
+      if (
+        !reach.keepsCopy &&
+        implicit &&
+        valueAt(member.reactor, ["placement", "newDrives"]) === undefined
+      ) {
+        option.setters.push({
+          path: `${at}.placement.newDrives`,
+          value: implicit.name,
+        });
+      }
     }
   }
   return options;

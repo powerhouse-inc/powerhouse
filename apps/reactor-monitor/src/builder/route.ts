@@ -90,9 +90,7 @@ export function routeSeedOf({
     newDrives === undefined
       ? ROUTE_COPY.newDrivesUnreachable(
           settings.connections.find((entry) => entry.backend === home)
-            ?.switchboard ??
-            home ??
-            member.key,
+            ?.switchboard ?? ROUTE_COPY.browserReactor,
         )
       : undefined;
   const connections: Record<string, RemoteSettings> = {};

@@ -220,6 +220,31 @@ describe("where new drives go", () => {
     expect(issues(unlinked)).toEqual([]);
   });
 
+  it("keeps new drives on the only switchboard when a Connect with no browser reactor opens a second", () => {
+    let draft = choose(linked(), `${UI}:reach:remove:main`);
+    expect(issues(draft)).toEqual([]);
+    expect(reactorOf(draft).placement).toEqual({ drives: { shared: "sb" } });
+    draft = choose(draft, "host:add:switchboard");
+    draft = addDrive(draft, "host.children.switchboard", "Shared 2");
+    expect(status(draft, `${UI}:reach:open:switchboard:shared-2`)).toEqual({
+      enabled: true,
+      selected: false,
+      label: "Open shared-2 on switchboard",
+    });
+    const opened = choose(draft, `${UI}:reach:open:switchboard:shared-2`);
+    expect(reactorOf(opened).placement).toEqual({
+      drives: { shared: "sb", "shared-2": "switchboard" },
+      newDrives: "sb",
+    });
+    expect(issues(opened)).toEqual([]);
+    expect(find(opened, `${UI}:newDrives:on:sb`).selected).toBe(true);
+    // Now a real choice: the other switchboard can be picked.
+    const moved = choose(opened, `${UI}:newDrives:on:switchboard`);
+    expect(reactorOf(moved).placement).toMatchObject({
+      newDrives: "switchboard",
+    });
+  });
+
   it("forgets newDrives with the switchboard it names", () => {
     const draft = choose(linked(), `${UI}:newDrives:on:sb`);
     const unlinked = choose(draft, `${UI}:reach:unlink:shared`);

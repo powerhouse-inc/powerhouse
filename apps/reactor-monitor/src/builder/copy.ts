@@ -64,6 +64,7 @@ export const CONNECTION_COPY = {
 } as const;
 
 export const ROUTE_COPY = {
+  browserReactor: "this app's browser reactor",
   newDrivesUnreachable: (switchboard: string) =>
     `New drives go to ${switchboard}, which the monitor can't reach, so drives can't be created through this router.`,
 } as const;
