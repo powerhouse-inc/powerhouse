@@ -8,13 +8,13 @@ import {
   createSwitchboardBackend,
   type BrowserReactorClientModule,
   type SwitchboardBackend,
+  type SwitchboardBreaker,
   type WorkerReactorClientModule,
 } from "@powerhousedao/reactor-browser";
 import {
   FanInPartialFailureError,
   fromReactorClient,
   RoutingReactorClient,
-  type CollectionRequirementsInput,
   type ReactorReach,
   type RoutableBackendConfig,
   type RouterDiagnostic,
@@ -34,11 +34,6 @@ export const REMOTE_BACKEND_NAME = "switchboard-remote";
 export type LocalReactorModule =
   | BrowserReactorClientModule
   | WorkerReactorClientModule;
-
-/** Only the tab's reactor is inspectable here, so new collections land on it. */
-export const PLACE_ON_LOCAL: CollectionRequirementsInput = Object.freeze({
-  inspectable: true,
-});
 
 export function localReach(kind: LocalReactorModule["kind"]): ReactorReach {
   return kind === "worker"
@@ -69,8 +64,14 @@ export function deriveSwitchboardGraphqlUrl(
   return switchboardOfDrive(remoteDriveUrl)?.graphql;
 }
 
-/** A switchboard the router reaches, by its router backend name. */
-export type SwitchboardRemote = { name: string; graphqlUrl: string };
+/** A switchboard the router reaches, by its router backend name, with its connection settings. */
+export type SwitchboardRemote = {
+  name: string;
+  graphqlUrl: string;
+  requestTimeoutMs?: number;
+  breaker?: SwitchboardBreaker;
+  realtime?: boolean;
+};
 
 /** The loaded document models, or a getter that reads the current ones. */
 export type LoadedDocumentModels =
@@ -86,17 +87,17 @@ export type MultiReactorParams = {
   remoteGraphqlUrl?: string;
   /** Collection key or drive id -> backend; names no backend here are dropped. */
   collections?: Readonly<Record<string, string>>;
+  /** The remote new drives are created on, with no copy here. Absent: the
+   * local reactor, else the only switchboard. */
+  newDrives?: string;
+  probeTimeoutMs?: number;
+  provisionalRouteMs?: number;
   /** Signs routed writes; unsigned (anonymous) without one. */
   signer?: ISigner;
   /** Signing models when the local module exposes no registry; the router asks the local reactor (or, remote-only, the loaded set). */
   documentModelModules: LoadedDocumentModels;
   onDiagnostic?: RouterDiagnostic;
 };
-
-/** Remote-only placement: the Switchboard serves every collection. (It offers
- * no inspection surface over GraphQL, so PLACE_ON_LOCAL's `inspectable`
- * requirement must NOT apply, or no backend would be eligible.) */
-export const PLACE_ON_REMOTE: CollectionRequirementsInput = Object.freeze({});
 
 /**
  * The local answer stands when only the Switchboard could not answer -- but
@@ -123,6 +124,8 @@ function localIdCheckAnswer(
 /** The router Connect installs, with Connect's handling of credentials and id checks. */
 export class ConnectRoutingClient extends RoutingReactorClient {
   private readonly remotes: readonly SwitchboardBackend[];
+  /** The switchboard new drives are created on; undefined when it is this browser. */
+  readonly newDrives: string | undefined;
 
   constructor(
     backends: readonly RoutableBackendConfig[],
@@ -138,6 +141,8 @@ export class ConnectRoutingClient extends RoutingReactorClient {
         : options.answerFailedIdCheck,
     });
     this.remotes = remotes;
+    const home = options.defaultBackend ?? options.primaryBackend;
+    this.newDrives = home && remoteNames.has(home) ? home : undefined;
   }
 
   /** Renown's sign-in and sign-out call this on whatever client is installed. */
@@ -204,6 +209,9 @@ export async function buildMultiReactorClient(
       signer: ambientRenownSigner,
       documentModels: () => registry?.getAllModules() ?? loadedModules(),
       inspection: "none",
+      requestTimeoutMs: remote.requestTimeoutMs,
+      breaker: remote.breaker,
+      realtime: remote.realtime,
     }),
   );
   const remoteBackends = remotes.map((remote) => remote.config);
@@ -225,13 +233,18 @@ export async function buildMultiReactorClient(
       names.has(backend),
     ),
   );
+  // The local reactor answers the registry and create defaults; remote-only,
+  // the switchboard new drives go to does.
+  const primary = module
+    ? LOCAL_BACKEND_NAME
+    : (params.newDrives ?? remoteBackends[0].name);
   const router = new ConnectRoutingClient(
     backends,
     {
-      // Remote-only: the first Switchboard is primary; with a local reactor,
-      // new collections land on it (inspectable).
-      primaryBackend: module ? LOCAL_BACKEND_NAME : remoteBackends[0].name,
-      defaultRequirements: module ? PLACE_ON_LOCAL : PLACE_ON_REMOTE,
+      primaryBackend: primary,
+      defaultBackend: params.newDrives ?? primary,
+      probeTimeoutMs: params.probeTimeoutMs,
+      provisionalRouteMs: params.provisionalRouteMs,
       collections,
       signer: params.signer,
       onDiagnostic: params.onDiagnostic,

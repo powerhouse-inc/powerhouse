@@ -8,6 +8,10 @@ import {
   setDrives,
   setFullReactorClient,
 } from "@powerhousedao/reactor-browser";
+import type {
+  PHConnectRemoteBackend,
+  PHConnectRouterSettings,
+} from "@powerhousedao/shared/clis";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { ISigner } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
@@ -35,7 +39,9 @@ export type AppReactorClientParams = {
   /** The fallback switchboard when `remoteBackends` is empty. */
   remoteDriveUrl: string | undefined;
   /** One per switchboard, by host key; `url` is a drive address on it. */
-  remoteBackends?: readonly { name: string; url: string }[];
+  remoteBackends?: readonly PHConnectRemoteBackend[];
+  /** Where new drives go and the router's timeouts, from the host config. */
+  router?: PHConnectRouterSettings;
   /** Config placements known at build time; later ones go through `setConfiguredPlacement`. */
   collections?: Readonly<Record<string, string>>;
   /** Signs routed writes; unsigned (anonymous) without one. */
@@ -237,16 +243,17 @@ function switchboardRemotes(params: AppReactorClientParams): {
   remotes: MultiReactor.SwitchboardRemote[];
   unparsed: string[];
 } {
-  const listed = params.remoteBackends?.length
+  const listed: readonly PHConnectRemoteBackend[] = params.remoteBackends
+    ?.length
     ? params.remoteBackends
     : params.remoteDriveUrl
       ? [{ name: REMOTE_BACKEND_NAME, url: params.remoteDriveUrl }]
       : [];
   const remotes: MultiReactor.SwitchboardRemote[] = [];
   const unparsed: string[] = [];
-  for (const { name, url } of listed) {
+  for (const { url, ...remote } of listed) {
     const graphqlUrl = switchboardOfDrive(url)?.graphql;
-    if (graphqlUrl) remotes.push({ name, graphqlUrl });
+    if (graphqlUrl) remotes.push({ ...remote, graphqlUrl });
     else unparsed.push(url);
   }
   return { remotes, unparsed };
@@ -283,6 +290,7 @@ async function buildRouter(
     module: requireModule(params),
     remotes,
     collections: params.collections,
+    ...params.router,
     signer: params.signer,
     documentModelModules: params.documentModelModules,
   });
@@ -318,6 +326,7 @@ async function buildRemoteOnly(
     module: undefined,
     remotes,
     collections: params.collections,
+    ...params.router,
     signer: params.signer,
     documentModelModules: params.documentModelModules,
   });

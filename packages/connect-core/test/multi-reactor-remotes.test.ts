@@ -171,6 +171,43 @@ describe("Connect routing to several switchboards", () => {
     await expect(client.isDocumentIdTaken("doc-1")).resolves.toBe(false);
   });
 
+  it("builds the router from the served settings", async () => {
+    const [a, b] = await switchboards(2, switchboard({}, failing));
+    const router = (await routed({
+      remoteBackends: [
+        { name: "sb", url: `${a}/d/home`, breaker: { failures: 1 } },
+        { name: "other", url: `${b}/d/notes`, breaker: false },
+      ],
+      router: { newDrives: "other", probeTimeoutMs: 1_000 },
+    })) as unknown as RoutingReactorClient & { newDrives?: string };
+    expect(router.newDrives).toBe("other");
+    await expect(router.isDocumentIdTaken("doc-1")).resolves.toBe(false);
+    expect(router.describeRouting().health).toEqual([
+      { backend: "sb", health: "down" },
+      { backend: "other", health: "up" },
+    ]);
+  });
+
+  it("builds a switchboard-only client on the newDrives switchboard", async () => {
+    const [a, b] = await switchboards(2);
+    await selectAppReactorClient({
+      mode: "remote",
+      module: undefined,
+      remoteDriveUrl: undefined,
+      remoteBackends: [
+        { name: "sb", url: `${a}/d/home` },
+        { name: "other", url: `${b}/d/notes` },
+      ],
+      router: { newDrives: "other" },
+      signer,
+      documentModelModules: [],
+    });
+    const router = getFullReactorClient() as unknown as RoutingReactorClient & {
+      newDrives?: string;
+    };
+    expect(router.newDrives).toBe("other");
+  });
+
   it("builds a switchboard-only client from the first remote backend", async () => {
     const [a] = await switchboards(1);
     await selectAppReactorClient({
