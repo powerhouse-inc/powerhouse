@@ -180,6 +180,8 @@ Link one is judged at issuance, link two at each use. `checkCredential` answers 
 | `expired` | Past its date | None. Link one is not re-judged, or every delegate would die in 7 days |
 | `unknown` | Renown did not answer | None. Log a warning. It never blocks or stops anything |
 
+The reconciler asks at most hourly, per statement, and remembers a revocation for that statement.
+
 - `exp` passing stops repairs and disables the workflows, and the card asks again. Any visit from a
   signed-in browser renews silently. Statements last 30 days and renew with under 10 days left.
 - An op already stored stays valid after `exp`. A run on it resolves to X until the reconciler
@@ -226,10 +228,11 @@ logged in the app works offline.
   lookups, `verifyAuthBearerToken` resolves `did:key` locally, and a browser `revalidate` that fails
   on the network keeps the session.
 - **Sign-in goes through the system browser where the shell offers it.** The webview cannot hold a
-  popup, and Google refuses embedded sign-in. `ph-desktop-shell` needs to expose an opener
-  (`window.phDesktop.openExternal`). With it, `openRenown` uses the same console session as
-  `ph login`: open `/console?session=…&connect=<A>`, poll, log in. Without it, `openRenown` keeps the
-  redirect, which returns to the app's own URL. Google's integration sign-in needs the same opener.
+  popup. `ph-desktop-shell` needs to expose an opener, `window.phDesktop.openExternal(url)`, and
+  that change is not made yet. With it, `openRenown` uses the same console session as `ph login`:
+  open `/console?session=…&connect=<A>`, poll, log in. The Google integration sign-in opens through
+  it too and polls as it already does. Without it, `openRenown` keeps the redirect, which returns to
+  the app's own URL, and the Google sign-in keeps its dead end.
 
 ### 12. Runner key
 
