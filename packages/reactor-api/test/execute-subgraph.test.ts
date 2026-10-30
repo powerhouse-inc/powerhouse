@@ -183,6 +183,16 @@ describe("GraphQLManager.executeSubgraph", () => {
     expect(signedIn.data).toEqual({ whoami: "hi 0xabc" });
   });
 
+  it("lets the host itself past the floor, recording no user", async () => {
+    const manager = await ready(true);
+    const asHost = await manager.executeSubgraph("whoami", {
+      query: '{ whoami(greeting: "hi") }',
+      asHost: true,
+    });
+    expect(asHost.errors).toBeUndefined();
+    expect(asHost.data).toEqual({ whoami: "hi anonymous" });
+  });
+
   it("refuses a mutation and an unknown subgraph by name", async () => {
     const manager = await ready();
     await expect(
