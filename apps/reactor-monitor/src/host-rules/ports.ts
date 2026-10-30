@@ -1,5 +1,5 @@
 // The ports a host's members bind, as declared and in the monitor's copy.
-import { isRecord, type Member, type MemberRole } from "./members.js";
+import { isRecord, type Member, type MemberRole } from "./members.ts";
 
 /** A copy's Connect moves up by this, clear of a scaffold's own ports. */
 export const COPY_CONNECT_PORT_OFFSET = 10_000;
