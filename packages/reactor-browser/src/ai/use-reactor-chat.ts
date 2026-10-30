@@ -9,9 +9,11 @@ import {
 } from "./settings-store.js";
 import type {
   AgentEvent,
+  AiConnection,
   AiSettings,
   AiToolDescriptor,
   AiToolsProvider,
+  ChatImage,
   ChatMessage,
   ChatPart,
   PendingApproval,
@@ -43,11 +45,18 @@ export interface UseReactorChatResult {
   error: string | null;
   settings: AiSettings;
   configured: boolean;
-  send: (text: string) => void;
+  send: (text: string, images?: ChatImage[]) => void;
   stop: () => void;
   approve: (toolCallId: string) => void;
   reject: (toolCallId: string) => void;
   clear: () => void;
+}
+
+export interface UseReactorChatOptions {
+  /** Talk to this endpoint instead of the one in the user's settings. */
+  connection?: AiConnection;
+  /** Added to the agent's system prompt. */
+  instructions?: string;
 }
 
 /**
@@ -60,7 +69,10 @@ export interface UseReactorChatResult {
  */
 export function useReactorChat(
   toolsProvider?: AiToolsProvider,
+  options?: UseReactorChatOptions,
 ): UseReactorChatResult {
+  const connection = options?.connection;
+  const instructions = options?.instructions;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>(
@@ -176,15 +188,15 @@ export function useReactorChat(
   }, []);
 
   const send = useCallback(
-    (text: string) => {
+    (text: string, images: ChatImage[] = []) => {
       const trimmed = text.trim();
-      if (!trimmed || streamingRef.current) {
+      if ((!trimmed && images.length === 0) || streamingRef.current) {
         return;
       }
       setError(null);
 
       const currentSettings = getAiSettings();
-      if (!isAiConfigured(currentSettings)) {
+      if (!connection && !isAiConfigured(currentSettings)) {
         setError(
           "Configure the AI endpoint, API key and model in settings first.",
         );
@@ -213,6 +225,8 @@ export function useReactorChat(
         abortRef.current = controller;
         const agent = new ReactorChatAgent({
           settings: currentSettings,
+          connection,
+          instructions,
           tools,
           context,
           onEvent: handleEvent,
@@ -228,7 +242,14 @@ export function useReactorChat(
           {
             id: crypto.randomUUID(),
             role: "user",
-            parts: [{ type: "text", text: trimmed }],
+            parts: [
+              ...(trimmed ? [{ type: "text" as const, text: trimmed }] : []),
+              ...images.map((image) => ({
+                type: "image" as const,
+                dataUrl: image.dataUrl,
+                name: image.name,
+              })),
+            ],
           },
           { id: assistantId, role: "assistant", parts: [] },
         ]);
@@ -236,7 +257,7 @@ export function useReactorChat(
         streamingRef.current = true;
         setIsStreaming(true);
         try {
-          await agent.send(trimmed);
+          await agent.send(trimmed, images);
         } catch (sendError) {
           setError(toErrorMessage(sendError));
         } finally {
@@ -247,7 +268,7 @@ export function useReactorChat(
         }
       })();
     },
-    [toolsProvider, context, handleEvent],
+    [toolsProvider, context, handleEvent, connection, instructions],
   );
 
   const stop = useCallback(() => {
@@ -269,6 +290,7 @@ export function useReactorChat(
     historyRef.current = [];
     pendingRef.current.clear();
     setPendingApprovals([]);
+    setMessages([]);
     setError(null);
     assistantIdRef.current = null;
   }, []);
@@ -279,7 +301,7 @@ export function useReactorChat(
     pendingApprovals,
     error,
     settings,
-    configured: isAiConfigured(settings),
+    configured: connection !== undefined || isAiConfigured(settings),
     send,
     stop,
     approve,

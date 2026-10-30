@@ -175,6 +175,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   toast: addToastEventHandler,
   // Set once by the host on its store; no event to listen for.
   navigation: () => {},
+  aiTools: () => {},
 };
 export function addPHEventHandlers() {
   callEventHandlerRegisterFunctions(phGlobalEventHandlerRegisterFunctions);

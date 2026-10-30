@@ -467,7 +467,9 @@ class HttpScope implements IHttpScope {
     const url = `${ctx.transport.baseUrl}${req.url ?? "/"}`;
 
     const controller = new AbortController();
-    req.once("close", () => controller.abort());
+    // The response's close, not the request's: a request closes once its body
+    // has been read, which a buffered route has done before its handler runs.
+    res.once("close", () => controller.abort());
 
     let raw: Buffer | undefined;
     let init: RequestInit & { duplex?: "half" } = {

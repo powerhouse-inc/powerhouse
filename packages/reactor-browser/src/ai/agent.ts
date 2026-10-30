@@ -12,9 +12,11 @@ import { z } from "zod";
 import { isWriteTool } from "./types.js";
 import type {
   AgentEvent,
+  AiConnection,
   AiSettings,
   AiToolDescriptor,
   ChatContext,
+  ChatImage,
 } from "./types.js";
 
 /** Hard cap on model round-trips per user message (each tool step counts). */
@@ -166,6 +168,22 @@ export function createReactorChatModel(settings: AiSettings): LanguageModel {
 }
 
 /**
+ * Creates the chat language model for a connection the host app picked. No
+ * API key is involved: the endpoint holds it, and {@link AiConnection.fetch}
+ * carries the caller's own credentials.
+ */
+export function createConnectionChatModel(
+  connection: AiConnection,
+): LanguageModel {
+  const provider = createOpenAICompatible({
+    name: "reactor-chat",
+    baseURL: resolveBaseUrl(connection.baseUrl),
+    fetch: connection.fetch,
+  });
+  return provider.chatModel(connection.model);
+}
+
+/**
  * Unwraps the MCP `CallToolResult` envelope produced by the reactor tool
  * core into a plain value for the AI SDK. Throws for error results so the
  * SDK surfaces them as tool errors in the next model step.
@@ -256,6 +274,10 @@ export function buildSystemPrompt(context: ChatContext): string {
 
 export interface ReactorChatAgentOptions {
   settings: AiSettings;
+  /** Used instead of {@link settings}; writes then always need approval. */
+  connection?: AiConnection;
+  /** Added to the system prompt, for what the host app knows about itself. */
+  instructions?: string;
   tools: AiToolDescriptor[];
   context: ChatContext;
   onEvent: (event: AgentEvent) => void;
@@ -318,9 +340,24 @@ export class ReactorChatAgent {
   }
 
   /** Runs one user turn: appends the message, streams the model, commits history. */
-  async send(text: string): Promise<void> {
-    const { onEvent, signal, settings } = this.options;
-    const userMessage: ModelMessage = { role: "user", content: text };
+  async send(text: string, images: ChatImage[] = []): Promise<void> {
+    const { onEvent, signal, settings, connection, instructions } =
+      this.options;
+    const autoApproveWrites = !connection && settings.autoApproveWrites;
+    const userMessage: ModelMessage = {
+      role: "user",
+      content:
+        images.length === 0
+          ? text
+          : [
+              ...(text ? [{ type: "text" as const, text }] : []),
+              ...images.map((image) => ({
+                type: "file" as const,
+                data: image.dataUrl,
+                mediaType: image.mediaType,
+              })),
+            ],
+    };
     const messages: ModelMessage[] = [...this.history, userMessage];
 
     const tools: Record<string, Tool> = {};
@@ -335,7 +372,12 @@ export class ReactorChatAgent {
       });
     }
 
-    const model = this.options.model ?? createReactorChatModel(settings);
+    const model =
+      this.options.model ??
+      (connection
+        ? createConnectionChatModel(connection)
+        : createReactorChatModel(settings));
+    const system = buildSystemPrompt(this.options.context);
 
     // Messages produced by this turn: every completed step, converted
     // with the SDK's own toResponseMessages, so the committed history
@@ -345,7 +387,7 @@ export class ReactorChatAgent {
 
     const result = streamText({
       model,
-      system: buildSystemPrompt(this.options.context),
+      system: instructions ? `${system}\n\n${instructions}` : system,
       messages,
       tools,
       stopWhen: isStepCount(MAX_AGENT_STEPS),
@@ -362,10 +404,7 @@ export class ReactorChatAgent {
         const descriptor = this.options.tools.find(
           (t) => t.name === toolCall.toolName,
         );
-        if (
-          settings.autoApproveWrites ||
-          !isWriteTool(descriptor?.annotations)
-        ) {
+        if (autoApproveWrites || !isWriteTool(descriptor?.annotations)) {
           return "not-applicable";
         }
         const toolCallId = toolCall.toolCallId;

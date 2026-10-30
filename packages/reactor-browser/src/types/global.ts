@@ -8,6 +8,7 @@ import type {
 } from "@powerhousedao/reactor";
 import type { IAttachmentService } from "@powerhousedao/reactor-attachments/client";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type { PhAiToolDescriptor } from "@powerhousedao/shared/document-model";
 import type { IRenown } from "@renown/sdk";
 import type {
   GraphQLClientWindowEvents,
@@ -141,6 +142,8 @@ export type PHGlobal = PHGlobalConfig & {
   reactorGraphQLClient?: ReactorGraphQLClient | undefined;
   renown?: IRenown | LOADING;
   vetraPackageManager?: IPackageManager;
+  /** The tools the host app gives the AI agent; see `getHostAiTools`. */
+  aiTools?: () => Promise<PhAiToolDescriptor[]>;
   drives?: DocumentDriveDocument[];
   /**
    * Set when the app's backend refused the caller (401/403): the UI shows a

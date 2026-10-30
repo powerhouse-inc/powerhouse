@@ -269,6 +269,10 @@ export async function createReactor(
   addPHEventHandlers();
 
   setPHToast(toast as PHToastFn);
+  // Offered to every page, packages' included. Lazy: the AI and MCP packages
+  // load only when something asks for the tools.
+  store.aiTools = () =>
+    import("../ai-tools.js").then((tools) => tools.getConnectReactorTools());
 
   const features = await initFeatureFlags();
 

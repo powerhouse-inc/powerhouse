@@ -29,6 +29,28 @@ export interface AiSettings {
   autoApproveWrites: boolean;
 }
 
+/**
+ * An endpoint the host app picked for the chat, which takes the place of the
+ * user's settings. It holds no API key: the endpoint holds its own (see
+ * `gatewayConnection`), and write tools always ask for approval.
+ */
+export interface AiConnection {
+  /** OpenAI-compatible base URL; a relative path resolves against the page. */
+  baseUrl: string;
+  /** Model id, sent as is. A gateway may answer with its own. */
+  model: string;
+  /** Sets each request's credentials, e.g. the user's bearer. */
+  fetch?: typeof fetch;
+}
+
+/** An image attached to a user message. */
+export interface ChatImage {
+  /** `data:<mediaType>;base64,...` */
+  dataUrl: string;
+  mediaType: string;
+  name?: string;
+}
+
 /** MCP-compatible annotation hints; structural, no MCP SDK dependency. */
 export type AiToolAnnotations = PhAiToolAnnotations;
 
@@ -61,6 +83,7 @@ export type ToolCallState =
 /** One rendered unit inside a chat message. */
 export type ChatPart =
   | { type: "text"; text: string }
+  | { type: "image"; dataUrl: string; name?: string }
   | {
       type: "tool";
       toolCallId: string;

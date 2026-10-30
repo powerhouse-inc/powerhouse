@@ -57,6 +57,12 @@
       "types": "./dist/plugins/workflows.d.mts",
       "import": "./dist/plugins/workflows.mjs",
       "default": "./dist/plugins/workflows.mjs"
+    },
+    "./plugins/ai": {
+      "source": "./src/plugins/ai.mts",
+      "types": "./dist/plugins/ai.d.mts",
+      "import": "./dist/plugins/ai.mjs",
+      "default": "./dist/plugins/ai.mjs"
     }
   },
   "engines": {
