@@ -7,6 +7,7 @@ import {
   ReactorBuilder,
   ReactorClientBuilder,
   setDriveMetadata,
+  trackDriveArrival,
   untilDriveListed,
   waitForDocumentReady,
   type BrowserReactorClientModule,
@@ -154,22 +155,59 @@ export function getDefaultDrives(
  * this browser's local reactor; its fixed id makes later boots skip it).
  *
  * @param drives - Array of default-drive entries
+ * @returns The remote entries that were not added
  */
 export async function addDefaultDrivesForNewReactor(
   drives: PHConnectRuntimeDefaultDrive[],
-): Promise<void> {
-  await Promise.all(
-    drives.map((drive) =>
-      "url" in drive
-        ? addRemoteDefaultDrive(drive)
-        : addLocalDefaultDrive(drive),
-    ),
+): Promise<PHConnectDefaultDriveRemote[]> {
+  const missed = await Promise.all(
+    drives.map(async (drive) => {
+      if (!("url" in drive)) {
+        await addLocalDefaultDrive(drive);
+        return undefined;
+      }
+      return (await addRemoteDefaultDrive(drive)) ? undefined : drive;
+    }),
   );
+  return missed.filter((drive) => drive !== undefined);
 }
 
+/**
+ * Adds the default drives, and again at sign-in those a signed-out person could
+ * not reach. A host behind sign-in answers 404 for a drive it will not show, so
+ * on a first run nothing can be added until the person has signed in, and
+ * nothing else would ask again before a reload.
+ *
+ * Someone signed in from the start was already refused with their credentials:
+ * signing in again cannot change that, so there is nothing to wait for.
+ */
+export async function addDefaultDrivesThroughSignIn(
+  renown: Pick<IRenown, "on" | "user">,
+  drives: PHConnectRuntimeDefaultDrive[],
+): Promise<void> {
+  const signedInAtStart = renown.user !== undefined;
+  const missed = await addDefaultDrivesForNewReactor(drives);
+  if (missed.length === 0 || signedInAtStart) return;
+
+  const addMissed = () =>
+    trackDriveArrival(addDefaultDrivesForNewReactor(missed));
+  if (renown.user) {
+    await addMissed();
+    return;
+  }
+  const unsubscribe = renown.on("user", (user) => {
+    if (!user) return;
+    unsubscribe();
+    addMissed().catch((error: unknown) =>
+      console.error("Failed to add default drives after sign-in:", error),
+    );
+  });
+}
+
+/** @returns Whether the drive was added. */
 async function addRemoteDefaultDrive(
   drive: PHConnectDefaultDriveRemote,
-): Promise<void> {
+): Promise<boolean> {
   const MAX_ATTEMPTS = 3;
   const BACKOFF_MS = 2000;
 
@@ -225,6 +263,7 @@ async function addRemoteDefaultDrive(
       );
     }
   }
+  return driveId !== undefined;
 }
 
 /**
