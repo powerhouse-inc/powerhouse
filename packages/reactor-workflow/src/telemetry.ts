@@ -11,6 +11,7 @@ import {
   type Counter,
   type Histogram,
   type Meter,
+  type ObservableCallback,
   type ObservableGauge,
   type Span,
   type Tracer,
@@ -50,6 +51,7 @@ export class WorkflowTelemetry {
     "inFlight" | "waiting" | "loop",
     ObservableGauge
   >;
+  private suspendedGauge?: ObservableGauge;
   private poolGauges?: Record<
     "size" | "active" | "idle" | "waiting",
     ObservableGauge
@@ -244,6 +246,21 @@ export class WorkflowTelemetry {
     this.meter.addBatchObservableCallback(callback, observables);
     return () =>
       this.meter.removeBatchObservableCallback(callback, observables);
+  }
+
+  // WAITING runs, as the owning runtime last counted them.
+  observeSuspended(count: () => number): () => void {
+    // Created once: a replaced runtime re-observes the same instrument.
+    this.suspendedGauge ??= this.meter.createObservableGauge(
+      "workflow.runs.suspended",
+      { description: "Runs suspended on a waitpoint", unit: "{run}" },
+    );
+    const gauge = this.suspendedGauge;
+    const callback: ObservableCallback = (result) => {
+      result.observe(count());
+    };
+    gauge.addCallback(callback);
+    return () => gauge.removeCallback(callback);
   }
 
   private createPoolGauges() {

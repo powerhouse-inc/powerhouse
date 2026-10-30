@@ -9,7 +9,7 @@ import {
 import { RemoteKeyValueStore } from "../context/remote-store.js";
 import { RemoteOutput } from "../context/remote-output.js";
 import { captureConsole } from "./logs.js";
-import { setHostCallTimeout } from "./host-call.js";
+import { callHost, setHostCallTimeout } from "./host-call.js";
 import {
   openWorkerReactor,
   type WorkerReactorSession,
@@ -67,6 +67,12 @@ import {
   timed,
   withRequestTimings,
 } from "./timings.js";
+import {
+  FILES_UPLOAD,
+  WAITPOINT_CREATE,
+  type CreatedWaitpoint,
+  type WaitpointCall,
+} from "./protocol.js";
 import type {
   StagedInput,
   PieceModuleRef,
@@ -354,7 +360,12 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   }
   assertRunnable(piece, piece.displayName, request.auth);
   const files = request.stagingDir
-    ? new StagedFilesService(request.stagingDir)
+    ? new StagedFilesService(
+        request.stagingDir,
+        request.uploadFiles
+          ? (file) => callHost<string>(FILES_UPLOAD, file)
+          : undefined,
+      )
     : new DataUriFilesService();
   // A durable store answers every get/put over the call channel, so a write
   // survives this worker; without one the value lives only in this heap.
@@ -392,7 +403,7 @@ async function runAction(
   // Before the props are normalised, not after: a processor that cannot coerce
   // says so on console.error, and the worker's stdio goes nowhere.
   const restoreConsole = request.captureLogs ? captureConsole() : undefined;
-  const { context, touched } = buildActionContext({
+  const { context, touched, paused, response, stopped } = buildActionContext({
     propsValue: await preparePropsValue(
       `action "${request.actionName}"`,
       action.props,
@@ -411,6 +422,16 @@ async function runAction(
     ...reactor,
     resumePayload: request.resumePayload,
     executionType: request.executionType,
+    canPause: request.canPause,
+    ...(request.canPause
+      ? {
+          waitpoints: {
+            create: (call: WaitpointCall) =>
+              callHost<CreatedWaitpoint>(WAITPOINT_CREATE, call),
+          },
+        }
+      : {}),
+    ...(request.resumeBaseUrl ? { resumeBaseUrl: request.resumeBaseUrl } : {}),
     identity: request.identity,
   });
   let output: unknown;
@@ -429,6 +450,9 @@ async function runAction(
     id: message.id,
     type: "result",
     output: jsonSafe(output),
+    ...(paused() ? { paused: paused() } : {}),
+    ...(response() ? { response: response() } : {}),
+    ...(stopped() ? { stopped: true } : {}),
     ...(files instanceof StagedFilesService && files.staged().length > 0
       ? { files: files.staged() }
       : {}),

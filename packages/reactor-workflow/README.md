@@ -55,7 +55,7 @@ rather than restated here.
   Its `base64` is computed on first read, as upstream's getter is, so a piece
   that only reads `data` holds one copy of the file. A `streaming: true` FILE
   prop gets upstream's `ApStreamingFile` instead: `{ filename, extension,
-  size, body }`, with `body` read from the staged file or the network.
+size, body }`, with `body` read from the staged file or the network.
 - **Prop validation**, from the same place. Before an action's `run()` or any
   trigger hook but `onDisable`, a prop left unset takes its `defaultValue` and
   the coerced values go through the engine's `validateProperty`. A failure is
@@ -156,7 +156,7 @@ the sweeps and the supervisor are per process.
   with nobody running them. This is only for a host that never composed: one
   that lost the lease after composing stays without workflows until restart.
 - **The default owner is stable**: `<hostname>/<fingerprint of the journal's
-  storage location>`. So one deployment slot restarting re-claims its OWN lease
+storage location>`. So one deployment slot restarting re-claims its OWN lease
   once the killed process's heartbeat is stale (40s) rather than waiting out
   the whole TTL. A genuine second replica still differs
   by hostname or by the journal it points at. The storage location is hashed,
@@ -324,7 +324,9 @@ action at another version is the same block.
 ### The core piece
 
 The engine's own blocks are the built-in piece `@powerhousedao/piece-core`, in
-`src/pieces/core/`. Its actions are `branch` and `assert`; its triggers are
+`src/pieces/core/`. Its actions are `branch`, `assert`, `delay`,
+`approval` ("Request approval"), `stop` ("Stop run") and `waitForWebhook`
+("Respond and wait for webhook"); its triggers are
 `manual`, `schedule` and `webhook`. It is written with `createPiece`,
 `createAction` and `createTrigger`, and its version is this package's version.
 
@@ -339,8 +341,51 @@ The engine's own blocks are the built-in piece `@powerhousedao/piece-core`, in
 - `branch` and `assert` run through `ActivepiecesBlockExecutor` like any piece
   action, with the same resolution and journaling. `branch` leaves on `true`
   or `false` by its result.
+- `delay` ("Delay for" an amount and unit, or "Delay until" a date) suspends
+  the run on a `DELAY` waitpoint and outputs `{ resumedAt }`; a time already
+  past does not wait. `approval` suspends it on a WEBHOOK waitpoint of kind
+  `approval` (title, Markdown details rendered when the run pauses, labels,
+  when a reason is required, approver DIDs, an optional expiry) and outputs
+  `{ approved, reason, decidedBy, decidedAt }` from the editor's decision
+  (`decidedAt` is when it was decided, not when the run resumed). It
+  gets no resume URL: a waiting step stops the leg, so no later step could send
+  one. To email a link, use Activepieces' approval pieces (Gmail's "Request
+  approval in email", or Create Approval Links then Wait for Approval). Both
+  throw in a single-step test, and both leave on `next`.
+- `stop` ends the run `SUCCEEDED` without running the steps after it, through
+  the same path as `ctx.run.stop`. Its optional response (`responseType`
+  `json`, `raw` or `redirect`; `status`, `headers`, `body`, `text`,
+  `redirectUrl`) answers a held request; with none set it answers 200 with
+  `{}`, as `run.stop()` does. Its only port is `error`, so the editor offers
+  no step after it.
+- `waitForWebhook` is Activepieces' "Respond and Wait for Next Webhook": it
+  suspends the run on a WEBHOOK waitpoint of kind `webhook` whose
+  `responseToSend` is the configured response (the same props as `stop`)
+  with the resume URL in the `x-resume-webhook-url` header and, for a JSON
+  object body unless `includeResumeUrl` is off, in a `resumeUrl` field. The
+  URL is the plain resume URL; a caller appends `/sync` to hold for the run's
+  answer. It outputs `{ resumeUrl }` while waiting and the resuming request's
+  `{ body, headers, queryParams }` after. `expiresAfter` and `expiresUnit`
+  end the run if nobody calls in time. It needs the host's
+  `waitpointBaseUrl`, throws in a single-step test, and leaves on `next`.
 - The triggers are fed by the host: `reactor/schedule.ts`, `reactor/webhook.ts`
   and the `fire` mutation. Their hooks are never called.
+- `manual` takes optional `inputs`, shaped after Activepieces' web form
+  fields: per field a payload key (`name`), `displayName`, `type` (`text`,
+  `text_area`, `number`, `toggle`, `date`, `dropdown`, `json`), `required`,
+  `defaultValue` and `description`. A dropdown's `options` is one per line,
+  either a bare value or `Label = value` (split at the first `=` with a space
+  on each side); the Run form shows the label and the payload carries the
+  value, which is what the fire checks. Its `defaultValue` is a value, or an
+  option's label. A caller's
+  `fire` checks its payload against the published trigger's inputs
+  (`coerceManualPayload` in `@powerhousedao/pieces-framework/workflow`):
+  defaults fill missing fields, values are coerced (`"42"` to 42, `"true"` to
+  true, a date to ISO 8601), keys no field declares pass through, and a
+  missing required field or a bad value refuses the fire with a
+  `ManualPayloadError` naming each field, before any run row. Reruns and
+  other trigger kinds are not checked. The inputs also type
+  `{{trigger.payload.<name>}}` in the expression picker.
 
 ## Block resolution
 
@@ -414,17 +459,17 @@ at all enforces nothing, but only hand-built definitions lack one: `policy` is
 non-null in the workflow model since v1, so every workflow document, old or
 new, carries one.
 
-| Field                      | Where                     | Behaviour                                                                                             |
-| -------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `concurrency`              | `reactor/run-gate.ts`     | SINGLETON drops a firing while a run is active; QUEUE serialises; PARALLEL runs concurrently          |
-| `maxParallelRuns`          | `reactor/run-gate.ts`     | Bounds PARALLEL; null is unbounded. SINGLETON and QUEUE are 1 by definition                           |
-| `runTimeoutSeconds`        | `pieces/engine/coordinator.ts` | A run deadline from FIRING time, checked between steps and bounding every retry wait; expiry ends the run CANCELLED |
-| `defaultRetry`, step `retry` | `pieces/engine/retry.ts` | Attempts, backoff, delays and `retryOn`; attempts land on the step's journal row                      |
-| `onFailure`                | `reactor/service.ts`      | On a trigger's failed run: PARK parks the trigger; NOTIFY logs at error level; IGNORE does nothing. A failed manual run or rerun changes nothing |
-| `maxSuspensionDays`        | —                         | **Not enforced**: nothing suspends. Waitpoints, `run.pause` and `generateResumeUrl` all throw         |
-| `retainRunsDays`           | —                         | **Not enforced** per workflow; `PH_WORKFLOWS_RUN_RETENTION_DAYS` is the journal-wide control           |
-| `journalAsDocument`        | —                         | **Not enforced**: the journal is relational, and there is no run document model                       |
-| step `idempotencyKeyExpression` | —                    | **Not enforced**: a fire dedupes on its trigger operation or a trigger item's `_dedupe_key`           |
+| Field                           | Where                          | Behaviour                                                                                                                                                                                                                       |
+| ------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `concurrency`                   | `reactor/run-gate.ts`          | SINGLETON drops a firing while a run is active; QUEUE serialises; PARALLEL runs concurrently                                                                                                                                    |
+| `maxParallelRuns`               | `reactor/run-gate.ts`          | Bounds PARALLEL; null is unbounded. SINGLETON and QUEUE are 1 by definition                                                                                                                                                     |
+| `runTimeoutSeconds`             | `pieces/engine/coordinator.ts` | A run deadline from FIRING time, checked between steps and bounding every retry wait; expiry ends the run CANCELLED                                                                                                             |
+| `defaultRetry`, step `retry`    | `pieces/engine/retry.ts`       | Attempts, backoff, delays and `retryOn`; attempts land on the step's journal row                                                                                                                                                |
+| `onFailure`                     | `reactor/service.ts`           | On a trigger's failed run: PARK parks the trigger; NOTIFY logs at error level; IGNORE does nothing. A failed manual run or rerun changes nothing                                                                                |
+| `maxSuspensionDays`             | `reactor/waitpoint-poller.ts`  | A WEBHOOK waitpoint expires this long after it was created (sooner if its block says so); expiry of the one the run waits on ends the run CANCELLED with `WaitpointExpired`. A `DELAY` longer than this is refused when created |
+| `retainRunsDays`                | —                              | **Not enforced** per workflow; `PH_WORKFLOWS_RUN_RETENTION_DAYS` is the journal-wide control                                                                                                                                    |
+| `journalAsDocument`             | —                              | **Not enforced**: the journal is relational, and there is no run document model                                                                                                                                                 |
+| step `idempotencyKeyExpression` | —                              | **Not enforced**: a fire dedupes on its trigger operation or a trigger item's `_dedupe_key`                                                                                                                                     |
 
 **Enforcing the policy changes every deployed workflow.** The model's initial
 values are `concurrency: QUEUE`, `onFailure: PARK` and
@@ -608,26 +653,26 @@ Everything the engine itself reads from the environment is prefixed
 — that manifest is the published surface a host reads, this table is the
 explanation behind it.
 
-| Variable                              | Default            | What it sets                                                                              |
-| ------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------- |
-| `PH_WORKFLOWS_SECRETS_MASTER_KEY`     | generated key file | 64 hex chars (32 bytes) encrypting connection secrets at rest (`reactor/secret-store.ts`) |
-| `PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES` | unset              | Addresses or CIDRs a piece may reach, widening the default policy (`reactor/lib.ts`)      |
-| `PH_WORKFLOWS_RUN_CONCURRENCY`        | from the host      | Most piece children at once (`worker/pool.ts`); unset, sized from the cores and memory, at most 32 |
-| `PH_WORKFLOWS_RUN_QUEUE_DEPTH`        | `0`                | Requests that may wait for a child before new ones are refused; `0` waits without limit   |
-| `PH_WORKFLOWS_WORKER_MEMORY_MB`       | `256`              | Each child's V8 heap (`--max-old-space-size`); a child past 80% of it is retired          |
-| `PH_WORKFLOWS_WORKER_MAX_REQUESTS`    | `1000`             | Requests a child serves before it is retired                                              |
-| `PH_WORKFLOWS_WORKER_MIN`             | `1`                | Idle children kept warm; `0` lets every idle child exit                                   |
-| `PH_WORKFLOWS_TRIGGER_SLOTS`          | `1`                | Children reserved for trigger hooks                                                       |
-| `PH_WORKFLOWS_RUNS_IN_FLIGHT`         | 8 × the pool       | Runs admitted at once across workflows (`reactor/run-dispatcher.ts`)                      |
-| `PH_WORKFLOWS_ADMIT_MAX_ELU`          | `0.8`              | Main-thread event-loop utilization above which no new run is admitted; one always runs    |
-| `PH_WORKFLOWS_MAX_QUEUED_FIRINGS`     | `100`              | Firings of ONE workflow that may wait for its concurrency slot; past it a firing is journaled CANCELLED (`reactor/run-gate.ts`) |
-| `PH_WORKFLOWS_POLL_INTERVAL_MS`       | `60000`            | Cadence for a polling trigger that names none of its own                                  |
-| `PH_WORKFLOWS_WEBHOOK_RECONCILE_MS`   | `900000`           | How often a webhook trigger re-registers with its provider                                |
-| `PH_WORKFLOWS_WEBHOOK_TIMEOUT_MS`     | `30000`            | How long a sync-mode delivery holds the provider's socket                                 |
-| `PH_WORKFLOWS_PIECE_MAX_FILE_BYTES`   | `8388608`          | File-size ceiling for FILE-property hydration and `ctx.files.write`                       |
-| `PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS`   | `10000`            | Cap on one call a piece makes of its host; raised to the step's own timeout when that is longer, clipped to the step deadline (`activepieces/context/limits.ts`) |
-| `PH_WORKFLOWS_ATTACHMENT_CACHE_BYTES` | `1073741824`       | Downloaded attachments kept on disk by content (`engine/attachment-cache.ts`); `0` is off |
-| `PH_WORKFLOWS_RUN_RETENTION_DAYS`     | `30`               | Deletes finished runs older than this many days; `0`/`off` keeps everything (`reactor/run-retention.ts`) |
+| Variable                              | Default                 | What it sets                                                                                                                                                                |
+| ------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PH_WORKFLOWS_SECRETS_MASTER_KEY`     | generated key file      | 64 hex chars (32 bytes) encrypting connection secrets at rest (`reactor/secret-store.ts`)                                                                                   |
+| `PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES` | unset                   | Addresses or CIDRs a piece may reach, widening the default policy (`reactor/lib.ts`)                                                                                        |
+| `PH_WORKFLOWS_RUN_CONCURRENCY`        | from the host           | Most piece children at once (`worker/pool.ts`); unset, sized from the cores and memory, at most 32                                                                          |
+| `PH_WORKFLOWS_RUN_QUEUE_DEPTH`        | `0`                     | Requests that may wait for a child before new ones are refused; `0` waits without limit                                                                                     |
+| `PH_WORKFLOWS_WORKER_MEMORY_MB`       | `256`                   | Each child's V8 heap (`--max-old-space-size`); a child past 80% of it is retired                                                                                            |
+| `PH_WORKFLOWS_WORKER_MAX_REQUESTS`    | `1000`                  | Requests a child serves before it is retired                                                                                                                                |
+| `PH_WORKFLOWS_WORKER_MIN`             | `1`                     | Idle children kept warm; `0` lets every idle child exit                                                                                                                     |
+| `PH_WORKFLOWS_TRIGGER_SLOTS`          | `1`                     | Children reserved for trigger hooks                                                                                                                                         |
+| `PH_WORKFLOWS_RUNS_IN_FLIGHT`         | 8 × the pool            | Runs admitted at once across workflows (`reactor/run-dispatcher.ts`)                                                                                                        |
+| `PH_WORKFLOWS_ADMIT_MAX_ELU`          | `0.8`                   | Main-thread event-loop utilization above which no new run is admitted; one always runs                                                                                      |
+| `PH_WORKFLOWS_MAX_QUEUED_FIRINGS`     | `100`                   | Firings of ONE workflow that may wait for its concurrency slot; past it a firing is journaled CANCELLED (`reactor/run-gate.ts`)                                             |
+| `PH_WORKFLOWS_POLL_INTERVAL_MS`       | `60000`                 | Cadence for a polling trigger that names none of its own                                                                                                                    |
+| `PH_WORKFLOWS_WEBHOOK_RECONCILE_MS`   | `900000`                | How often a webhook trigger re-registers with its provider                                                                                                                  |
+| `PH_WORKFLOWS_WEBHOOK_TIMEOUT_MS`     | `30000`                 | How long a sync-mode delivery holds the provider's socket                                                                                                                   |
+| `PH_WORKFLOWS_PIECE_MAX_FILE_BYTES`   | `8388608`               | File-size ceiling for FILE-property hydration and `ctx.files.write`                                                                                                         |
+| `PH_WORKFLOWS_HOST_CALL_TIMEOUT_MS`   | `10000`                 | Cap on one call a piece makes of its host; raised to the step's own timeout when that is longer, clipped to the step deadline (`activepieces/context/limits.ts`)            |
+| `PH_WORKFLOWS_ATTACHMENT_CACHE_BYTES` | `1073741824`            | Downloaded attachments kept on disk by content (`engine/attachment-cache.ts`); `0` is off                                                                                   |
+| `PH_WORKFLOWS_RUN_RETENTION_DAYS`     | `30`                    | Deletes finished runs older than this many days; `0`/`off` keeps everything (`reactor/run-retention.ts`)                                                                    |
 | `PH_WORKFLOWS_SINGLETON_OWNER`        | `<host>/<journal hash>` | Names this process as the workflow singleton's owner; the default is stable per slot, so a restart re-claims once the old heartbeat is stale (`reactor/singleton-lease.ts`) |
 
 Each numeric one parses as `Number(raw) || default`: a value that is not a
@@ -728,7 +773,7 @@ more trusted than one that arrived inside a package.
 
 ## OAuth2 connections
 
-An OAUTH2 connection brings its own app. `startOAuth` (`reactor/oauth.ts`)
+An OAUTH2 connection brings its own app, or names a publisher's (below). `startOAuth` (`reactor/oauth.ts`)
 builds the provider's authorize URL from the piece's `PieceAuth.OAuth2`
 (`{prop}` placeholders filled from the connection's config, PKCE when the
 piece asks for it) and records a pending attempt in the `oauth` namespace,
@@ -742,6 +787,62 @@ expires and rotates that secret in place.
 Token requests leave from the reactor process, so they are held to the egress
 policy pieces run under: `https` to a public address, or an address named in
 `PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES`, over `http` too.
+
+### Publisher apps and the relay
+
+A connection may instead name a publisher's app (`oauth_app` in its config),
+configured once per host in `workflows.oauthApps`:
+
+```json
+{
+  "id": "sektar-google",
+  "clients": { "desktop": "desktop.json", "web": "web.json" },
+  "relay": {
+    "clientId": "<the web client's id>",
+    "redirectUri": "https://sektar.io/api/oauth/callback",
+    "tokenUrl": "https://sektar.io/api/oauth/token"
+  }
+}
+```
+
+`clients` are the provider's client files (relative to the config file). A
+host may pass the same list programmatically (Switchboard's
+`workflows.oauthApps` option), which wins over the config file. `startOAuth`
+picks, for the redirect it is given (`oauthSignInFor` in
+`reactor/oauth-apps.ts`, also answered by the `oauthSignIn` query as
+`DESKTOP | WEB | RELAY | NONE`):
+
+- a loopback callback: the **desktop** client, always with PKCE;
+- any other callback: the **web** client when the host has its file, sending
+  the provider the host's own callback, exactly as without a relay;
+- any other callback, no web client file, a `relay`: the **relay**;
+- otherwise none, and `startOAuth` refuses.
+
+The relay is a token broker the publisher runs and that alone holds the web
+client's secret. Its one `redirectUri` is registered with the provider, so
+hosts whose own callback is not (a cloud environment per hostname) need no
+provider change. A relayed sign-in:
+
+- sends the provider `redirect_uri` = `relay.redirectUri`, `client_id` =
+  `relay.clientId`, PKCE whatever the piece says;
+- sets `state` to `<nonce>.<base64url(own callback)>`: the nonce is the usual
+  base64url of 32 random bytes (no dots), the callback the redirect the host
+  passed, base64url without padding. The relay forwards the provider's
+  parameters unchanged to that callback, which runs `completeOAuth` as ever;
+  the whole string is the attempt's key;
+- records the attempt with `relay.redirectUri` and `relay.tokenUrl` and no
+  client secret ref (`client_secret_ref` null);
+- exchanges the code at `relay.tokenUrl` with `client_id`, `code_verifier`
+  and `redirect_uri`, no secret; the broker adds it and answers with the
+  provider's token response;
+- stores the token set with `relayed: true`, its `token_url` the relay's: every
+  refresh posts `grant_type=refresh_token`, the refresh token and `client_id`
+  there, again without a secret, whatever the config says by then.
+
+A relay needs a `clientId` and two absolute `https` URLs without credentials;
+otherwise it is dropped with a warning and the app kept without it. The
+relay's token URL is held to the egress policy above, which a public `https`
+host passes.
 
 ## Files and attachments
 
@@ -760,6 +861,8 @@ step returns. Directories a crashed host left behind are swept at startup.
   the step's directory under the ceiling. After the step the host ingests each
   file, hashing and uploading it from disk, and refuses any path the step did
   not write: outside its directory, a symlink or a hard link.
+  `ctx.files.upload` stages the same way, but the host ingests the file during
+  the call, over the host-call channel, and returns the ref.
 - **Who may read.** A run reads the refs its own steps wrote, and the refs its
   journaled steps already held on a rerun or a step test. Anything else is the
   host's call (`canReadAttachmentRef`), made against the documents the run was
@@ -856,10 +959,72 @@ releases what an earlier enable registered. The reason reads
   action's default retry (3 attempts, exponential from 5s) unless the action
   declares a `defaultRetry`. `continueOnFailure` is ignored.
 - `test` is never called.
+- `run.canPause` is `true` in a run and `false` in a single-step test, where
+  `createWaitpoint`, `waitForWaitpoint` and `run.pause` throw.
+- `createWaitpoint`, `waitForWaitpoint` and the deprecated `run.pause` (both
+  pause shapes) suspend the run (#3218): the step and run go `WAITING` and
+  the run gives up its worker, its admission slot and its `concurrency`
+  slot. A resume goes through admission again, re-runs the waiting step as
+  `RESUME` with `resumePayload`, and gets a fresh `runTimeoutSeconds`.
+- A step has at most one live waitpoint, as upstream: a second
+  `createWaitpoint` in the step, a retry of it, or a retry of a create whose
+  answer was lost gets the same waitpoint and resume URL, already resolved if
+  its resume came before the step paused. Once the step resumes, it can wait
+  again on a new one. Only the hash of a resume URL's token is stored, so the
+  URL is re-issued only within the leg that minted it; a step that would get a
+  live waitpoint from an earlier leg fails instead (unreachable today).
+- A waiting run resumes on the waitpoint its step waits on, or on a WEBHOOK
+  link a step that succeeded created (Create Approval Links, then Wait for
+  Approval), as upstream. When the run starts waiting, the waitpoints of
+  steps that failed close `CANCELLED`; when it resumes on such a link, the
+  waitpoint its step waited on closes. Only the expiry of the waitpoint it
+  waits on ends the run; a link that expires just closes. A resume already
+  delivered wins over that expiry.
+- Every end of a run (succeeded, failed, cancelled, expired, or failed by the
+  orphan sweep) closes its waitpoints and fails its waiting step. A resume
+  URL of a closed waitpoint, or of a run that has ended, answers `gone`, and
+  the editor refuses to resolve it.
+- One poller on the singleton owner wakes due `DELAY` waitpoints and expires
+  overdue ones, in batches, on a single timer armed for the next due time
+  (re-checked at least every five minutes). An expiry and the run it ends are
+  one transaction. Each pass also ends, `CANCELLED` with `WaitpointNotLive`,
+  a WAITING run whose waitpoint closed without ending it.
+- Not yet: a run left `RUNNING` by a crash after it resumed is failed, not
+  resumed (#3224).
+- A run resumed on a definition that was re-published meanwhile rebuilds it
+  by replaying the workflow's global operations below the revision it pinned,
+  from the latest `UPGRADE_DOCUMENT` snapshot, without denied or undone
+  operations. This is not the reactor's own rebuild (keyframes, upgrade
+  transitions); when the result does not hash to the pin, the leg fails.
+- A WEBHOOK waitpoint needs the host's `waitpointBaseUrl`; without it
+  `createWaitpoint({ type: "WEBHOOK" })` throws.
+- A resumed run reads steps journaled before it waited from the journal: a
+  truncated or redacted output is unavailable to later steps, and a document
+  output is its reference, not the document.
 - `requireAuth` defaults to `false` in the descriptor; upstream defaults to
   `true`.
-- `run.stop`, `run.respond`, `run.pause`, waitpoints and `generateResumeUrl`
-  throw.
+- `run.respond` and `run.stop` answer the request the run holds: a
+  `responseMode: "sync"` webhook delivery, or a `POST <resumeUrl>/sync` for
+  the leg it resumed. The first answer wins and later ones are ignored; within
+  a step the last of `respond`, `stop` and `waitForWaitpoint` wins, as
+  upstream. The answer goes out when the step returns, with status 200 and
+  body `{}` by default; a string body goes as text, anything else as JSON, and
+  `set-cookie` and framing headers are dropped. The answer is served on the
+  host's origin, so it always carries `x-content-type-options: nosniff` and
+  `content-security-policy: sandbox`, over any the step sets: a step's HTML
+  renders without scripts or the origin's cookies. Unlike upstream, any step may
+  answer, not only one of the trigger's piece. `run.stop` ends the run
+  `SUCCEEDED` and skips the steps after it.
+- A run that pauses answers the held request with its waitpoint's
+  `responseToSend`; without one, a sync webhook answers 202 with the run's
+  status. A `/sync` resume is held up to `PH_WORKFLOWS_WEBHOOK_TIMEOUT_MS`
+  (504 after), and answered with the run's status when the leg ends or waits
+  without responding. One whose waitpoint closes, or whose run ends, before a
+  leg resumes on it (including a resume that fails to start) answers 409 with
+  the run's status and error.
+- The deprecated `generateResumeUrl` links to the waitpoint the step's
+  deprecated `run.pause` creates (one link per step). A step that pauses some
+  other way, or that already made a waitpoint, leaves that link dead.
 - `connections.get`, `tags`, `server`, `agent` and `flows.list` throw.
 - `ctx.store` checks the key length on `put` only; `get` and `delete` of an
   over-long key answer as if it were absent.
@@ -871,6 +1036,9 @@ releases what an earlier enable registered. The reason reads
 
 - Trigger hooks cannot read `attachment://` refs, and a trigger's
   `ctx.files.write` returns an inline data URI rather than a ref.
+- `ctx.files.upload` returns the attachment ref as both `id` and `url`; the
+  `url` is not an HTTP URL. In a trigger hook both are the inline data URI.
+  Without an attachment store an action's call throws.
 - A webhook body that is not JSON or form data is decoded as UTF-8 text, so
   binary and multipart deliveries are corrupted.
 - A step cannot read back a file it wrote: its `apfile://` token only becomes
@@ -917,7 +1085,7 @@ A case this engine is known to fail runs as `it.fails` and names the issue that
 fixes it; never edit those files by hand. To regenerate them:
 
 ```sh
-pnpm --filter @powerhousedao/pieces-framework sync-upstream -- --tag 0.91.0 --from <activepieces checkout>
+pnpm --filter @powerhousedao/pieces-framework sync-upstream -- --tag 0.92.3 --from <activepieces checkout>
 ```
 
 ## Design documents

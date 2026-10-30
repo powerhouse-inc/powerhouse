@@ -1,3 +1,35 @@
+## 6.2.3-dev.85 (2026-10-30)
+
+This was a version bump only for @powerhousedao/reactor-monitor-app to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.84 (2026-10-30)
+
+This was a version bump only for @powerhousedao/reactor-monitor-app to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** route a copy by the config it runs ([d11d85e424](https://github.com/powerhouse-inc/powerhouse/commit/d11d85e424))
+- **reactor-monitor-app:** route a started Connect's reactors from Use it ([6cf25c1cf4](https://github.com/powerhouse-inc/powerhouse/commit/6cf25c1cf4))
+- **reactor-monitor-app:** host rules judge saving a Router move as placement ([476a74111d](https://github.com/powerhouse-inc/powerhouse/commit/476a74111d))
+- **reactor-monitor-app:** route over switchboards and move drives at runtime ([25d74b05c2](https://github.com/powerhouse-inc/powerhouse/commit/25d74b05c2))
+- **apps-reactor-monitor:** a Connect may link drives on several switchboards ([95c4947409](https://github.com/powerhouse-inc/powerhouse/commit/95c4947409))
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+- **reactor-monitor-app:** name every linked drive by slug in the route seed ([8370f3e8dd](https://github.com/powerhouse-inc/powerhouse/commit/8370f3e8dd))
+- **reactor-monitor-app:** keep a started app's moves across a new start ([e8035c45c1](https://github.com/powerhouse-inc/powerhouse/commit/e8035c45c1))
+- **reactor-monitor-app:** the Router view's tables keep their height ([a52e14b270](https://github.com/powerhouse-inc/powerhouse/commit/a52e14b270))
+- **reactor-monitor-app:** serve.ts loads again under plain node ([5dc4c7f347](https://github.com/powerhouse-inc/powerhouse/commit/5dc4c7f347))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.82 (2026-10-29)
 
 ### 🚀 Features

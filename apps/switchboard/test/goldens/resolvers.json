@@ -281,6 +281,8 @@
     "Upload.parseLiteral",
     "Upload.parseValue",
     "Upload.serialize",
+    "WorkflowRunRecord.waitpoints",
+    "WorkflowRuntimeMutations.cancelRun",
     "WorkflowRuntimeMutations.cancelTriggerTest",
     "WorkflowRuntimeMutations.checkConnection",
     "WorkflowRuntimeMutations.createSecret",
@@ -288,6 +290,7 @@
     "WorkflowRuntimeMutations.fire",
     "WorkflowRuntimeMutations.pollNow",
     "WorkflowRuntimeMutations.rerun",
+    "WorkflowRuntimeMutations.resolveWaitpoint",
     "WorkflowRuntimeMutations.rotateSecret",
     "WorkflowRuntimeMutations.startOAuth",
     "WorkflowRuntimeMutations.testStep",
@@ -303,6 +306,7 @@
     "WorkflowRuntimeQueries.host",
     "WorkflowRuntimeQueries.oauthAttempt",
     "WorkflowRuntimeQueries.oauthRedirectUri",
+    "WorkflowRuntimeQueries.oauthSignIn",
     "WorkflowRuntimeQueries.pieceActions",
     "WorkflowRuntimeQueries.pieceCatalog",
     "WorkflowRuntimeQueries.pieceDetail",
@@ -317,6 +321,7 @@
     "WorkflowRuntimeQueries.secrets",
     "WorkflowRuntimeQueries.stepOutputTree",
     "WorkflowRuntimeQueries.triggerStates",
+    "WorkflowRuntimeQueries.waitingRuns",
     "WorkflowRuntimeQueries.webhookEndpoint"
   ]
 }

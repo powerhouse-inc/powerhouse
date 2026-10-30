@@ -1,3 +1,31 @@
+## 6.2.3-dev.85 (2026-10-30)
+
+This was a version bump only for @powerhousedao/connect-core to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.84 (2026-10-30)
+
+This was a version bump only for @powerhousedao/connect-core to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🚀 Features
+
+- **connect-core:** per-browser drive moves over the host's placement ([7f3329bba9](https://github.com/powerhouse-inc/powerhouse/commit/7f3329bba9))
+- **connect-core:** route to one backend per switchboard, named by host key ([eb309ff74c](https://github.com/powerhouse-inc/powerhouse/commit/eb309ff74c))
+- **connect-core:** read drive placement from the served config ([50181cd9ae](https://github.com/powerhouse-inc/powerhouse/commit/50181cd9ae))
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect-core:** wait for the copy whenever a drive's effective placement becomes this browser ([420d544c12](https://github.com/powerhouse-inc/powerhouse/commit/420d544c12))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+- **connect-core:** other tabs follow a kept copy only once it has arrived ([3fe267ef02](https://github.com/powerhouse-inc/powerhouse/commit/3fe267ef02))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.82 (2026-10-29)
 
 ### 🚀 Features

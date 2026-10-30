@@ -1,9 +1,12 @@
 import { hostname } from "node:os";
 import type { Context } from "@powerhousedao/reactor-api";
-import type {
-  RunRow,
-  StepExecutionRow,
-  WorkflowRuntimeService,
+import {
+  waitpointRecord,
+  type RunRow,
+  type StepExecutionRow,
+  type WaitpointRecord,
+  type WaitpointRow,
+  type WorkflowRuntimeService,
 } from "@powerhousedao/reactor-workflow";
 import {
   GraphQLError,
@@ -175,7 +178,11 @@ function toStepRecord(row: StepExecutionRow) {
   };
 }
 
-function toRunRecord(row: RunRow, steps: StepExecutionRow[]) {
+function toRunRecord(
+  row: RunRow,
+  steps: StepExecutionRow[],
+  waitpoints?: WaitpointRecord[],
+) {
   return {
     id: row.id,
     workflowId: row.workflow_id,
@@ -192,6 +199,69 @@ function toRunRecord(row: RunRow, steps: StepExecutionRow[]) {
     warnings: row.warnings,
     warningNotes: parseJson(row.warning_notes) ?? [],
     steps: steps.map(toStepRecord),
+    // Absent: the waitpoints field resolver reads them for this run.
+    waitpoints,
+  };
+}
+
+type RunRecordShape = ReturnType<typeof toRunRecord>;
+
+type WaitpointLoader = (runId: string) => Promise<WaitpointRecord[]>;
+
+// One store read per request for every run whose waitpoints it selects.
+// The parent resolver already served the run to this caller.
+function waitpointLoader(runtime: WorkflowRuntimeService): WaitpointLoader {
+  const cache = new Map<string, Promise<WaitpointRecord[]>>();
+  let batch: {
+    ids: string[];
+    rows: Promise<Map<string, WaitpointRow[]>>;
+  } | null = null;
+  return (runId) => {
+    const cached = cache.get(runId);
+    if (cached) return cached;
+    if (!batch) {
+      const ids: string[] = [];
+      // Dispatches after the current promise jobs, as DataLoader does.
+      const rows = new Promise<void>((tick) => {
+        void Promise.resolve().then(() => process.nextTick(tick));
+      }).then(async () => {
+        batch = null;
+        const store = await runtime.store();
+        return store
+          ? store.listWaitpointsForRuns(ids)
+          : new Map<string, WaitpointRow[]>();
+      });
+      batch = { ids, rows };
+    }
+    batch.ids.push(runId);
+    const loaded = batch.rows;
+    const promise = loaded.then((rows) =>
+      (rows.get(runId) ?? []).map(waitpointRecord),
+    );
+    cache.set(runId, promise);
+    return promise;
+  };
+}
+
+// cancelRun answers as fire and rerun do.
+function toRunPayload(row: RunRow, steps: StepExecutionRow[]) {
+  return {
+    runId: row.id,
+    status: row.status,
+    error: row.error,
+    errorName: row.error_name,
+    steps: steps.map((step) => ({
+      stepId: step.step_id,
+      key: step.step_key,
+      pieceName: step.piece_name,
+      blockName: step.block_name,
+      status: step.status,
+      input: parseJson(step.input),
+      output: parseJson(step.output),
+      port: step.port,
+      error: step.error,
+      errorName: step.error_name,
+    })),
   };
 }
 
@@ -291,6 +361,15 @@ export const getResolvers = (
   // The subgraph's own read gate; fields that need it refuse without one.
   assertCanRead?: ReadAssertion,
 ): Record<string, unknown> => {
+  const loaders = new WeakMap<Context, WaitpointLoader>();
+  const loadWaitpoints = (runId: string, ctx: Context) => {
+    let load = loaders.get(ctx);
+    if (!load) {
+      load = waitpointLoader(runtime);
+      loaders.set(ctx, load);
+    }
+    return load(runId);
+  };
   return {
     Query: {
       workflowRuntime: () => ({}),
@@ -404,6 +483,22 @@ export const getResolvers = (
       secrets: (_parent: unknown, _args: unknown, ctx: Context) =>
         runtime.listSecrets(ctx),
       oauthRedirectUri: () => oauth?.callbackUrl ?? null,
+      // The decision startOAuth makes, for the redirect it would use; a host
+      // that cannot name that redirect signs in with no app.
+      oauthSignIn: async (
+        _parent: unknown,
+        args: { appId: string; redirectUri?: string | null },
+      ) => {
+        let redirectUri: string;
+        try {
+          redirectUri = redirectUriFor(oauth, args.redirectUri);
+        } catch {
+          return "NONE";
+        }
+        return (
+          await runtime.oauthSignInMode(args.appId, redirectUri)
+        ).toUpperCase();
+      },
       // The runner id apps record (folder-sync and integrations): the
       // machine, which processors can name too; they see no signing key.
       host: () => ({ id: `switchboard@${hostname()}`, label: hostname() }),
@@ -471,6 +566,31 @@ export const getResolvers = (
         const record = await runtime.run(args.id, ctx);
         return record ? toRunRecord(record.row, record.steps) : null;
       },
+      waitingRuns: async (
+        _parent: unknown,
+        args: {
+          driveId?: string | null;
+          workflowId?: string | null;
+          first?: number | null;
+        },
+        ctx: Context,
+      ) =>
+        (
+          await runtime.waitingRuns(
+            {
+              driveId: args.driveId ?? undefined,
+              workflowId: args.workflowId ?? undefined,
+              first: args.first ?? undefined,
+            },
+            ctx,
+          )
+        ).map(({ run, waitpoints }) =>
+          toRunRecord(run.row, run.steps, waitpoints),
+        ),
+    },
+    WorkflowRunRecord: {
+      waitpoints: (parent: RunRecordShape, _args: unknown, ctx: Context) =>
+        parent.waitpoints ?? loadWaitpoints(parent.id, ctx),
     },
     Mutation: {
       workflowRuntime: () => ({}),
@@ -516,6 +636,32 @@ export const getResolvers = (
         ),
       rerun: (_parent: unknown, args: { runId: string }, ctx: Context) =>
         runtime.rerun(args.runId, ctx),
+      resolveWaitpoint: (
+        _parent: unknown,
+        args: {
+          waitpointId: string;
+          approved: boolean;
+          reason?: string | null;
+        },
+        ctx: Context,
+      ) =>
+        // The runtime checks write access and the approver list against ctx.
+        runtime.resolveWaitpoint(
+          args.waitpointId,
+          {
+            approved: args.approved,
+            ...(args.reason ? { reason: args.reason } : {}),
+          },
+          ctx,
+        ),
+      cancelRun: async (
+        _parent: unknown,
+        args: { runId: string },
+        ctx: Context,
+      ) => {
+        const record = await runtime.cancelRun(args.runId, ctx);
+        return toRunPayload(record.row, record.steps);
+      },
       // The runtime requires write access to the owner, and to change a
       // secret, being its creator; admins get nothing more.
       createSecret: (

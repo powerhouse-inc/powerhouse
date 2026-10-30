@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { SecretStat, SecretStore } from "../pieces/index.js";
 import {
+  StaticOAuthAppRegistry,
   clientKindFor,
   clientSecretLabel,
   loadOAuthApps,
+  oauthSignInFor,
   parseClientFile,
+  parseRelay,
   grantedScopes,
   scopesOverride,
 } from "./oauth-apps.js";
@@ -155,5 +158,119 @@ describe("OAuth2 apps", () => {
     expect(registry.client("sektar", "web")?.clientId).toBe("web");
     expect(registry.client("sektar", "desktop")).toBeUndefined();
     expect(skipped).toEqual(["sektar/desktop: missing.json: ENOENT"]);
+  });
+
+  it("keeps an app's relay and drops one it cannot use, keeping the app", async () => {
+    const dropped: string[] = [];
+    const read = () => Promise.resolve(google("web", "web", "w"));
+    const relay = {
+      clientId: "relay-cid",
+      redirectUri: "https://relay.example/api/oauth/callback",
+      tokenUrl: "https://relay.example/api/oauth/token",
+    };
+    const registry = await loadOAuthApps(
+      [
+        { id: "relayed", clients: {}, relay },
+        {
+          id: "plain-http",
+          clients: { web: "w.json" },
+          relay: { ...relay, tokenUrl: "http://relay.example/token" },
+        },
+        {
+          id: "a-string",
+          clients: { web: "w.json" },
+          relay: "https://relay.example/cb" as never,
+        },
+        { id: "none", clients: { web: "w.json" } },
+      ],
+      memoryStore(),
+      {
+        read,
+        onRelayDropped: (app, reason) => dropped.push(`${app}: ${reason}`),
+      },
+    );
+    expect(registry.relay("relayed")).toEqual(relay);
+    expect(registry.clients("relayed")).toEqual([]);
+    expect(registry.relay("plain-http")).toBeUndefined();
+    expect(registry.relay("a-string")).toBeUndefined();
+    expect(registry.relay("none")).toBeUndefined();
+    expect(registry.client("plain-http", "web")?.clientId).toBe("web");
+    expect(dropped).toEqual([
+      "plain-http: tokenUrl is not an absolute https URL",
+      "a-string: not an object with clientId, redirectUri and tokenUrl",
+    ]);
+  });
+
+  it("takes a relay with a client id and two absolute https URLs without credentials", () => {
+    const relay = {
+      clientId: "cid",
+      redirectUri: "https://relay.example/cb",
+      tokenUrl: "https://relay.example/token",
+    };
+    expect(parseRelay(relay)).toEqual(relay);
+    expect(parseRelay({ ...relay, clientId: "" })).toBe("no clientId");
+    expect(parseRelay({ ...relay, redirectUri: "/cb" })).toBe(
+      "redirectUri is not an absolute https URL",
+    );
+    expect(
+      parseRelay({ ...relay, redirectUri: "https://u:p@relay.example/cb" }),
+    ).toBe("redirectUri is not an absolute https URL");
+    expect(parseRelay({ ...relay, tokenUrl: undefined })).toBe(
+      "tokenUrl is not an absolute https URL",
+    );
+    expect(parseRelay(null)).toBe(
+      "not an object with clientId, redirectUri and tokenUrl",
+    );
+  });
+
+  it("signs in with the callback's client, else the relay for a web callback, else not at all", () => {
+    const relay = {
+      clientId: "relay-cid",
+      redirectUri: "https://relay.example/cb",
+      tokenUrl: "https://relay.example/token",
+    };
+    const desktop = {
+      appId: "relayed",
+      kind: "desktop" as const,
+      clientId: "desk",
+      clientSecretRef: "ref-d",
+    };
+    const web = {
+      appId: "both",
+      kind: "web" as const,
+      clientId: "web",
+      clientSecretRef: "ref-w",
+    };
+    const apps = new StaticOAuthAppRegistry(
+      [desktop, web],
+      new Map([
+        ["relayed", relay],
+        ["both", relay],
+      ]),
+    );
+    const loopback = "http://localhost:7540/oauth/callback";
+    const cloud = "https://env.vetra.io/oauth/callback";
+    expect(oauthSignInFor(apps, "relayed", loopback)).toEqual({
+      mode: "desktop",
+      client: desktop,
+    });
+    expect(oauthSignInFor(apps, "relayed", cloud)).toEqual({
+      mode: "relay",
+      relay,
+    });
+    // A web client file wins over the relay
+    expect(oauthSignInFor(apps, "both", cloud)).toEqual({
+      mode: "web",
+      client: web,
+    });
+    // No desktop client: the relay never serves a loopback callback
+    expect(oauthSignInFor(apps, "both", loopback)).toEqual({
+      mode: "none",
+      kind: "desktop",
+    });
+    expect(oauthSignInFor(apps, "unknown", cloud)).toEqual({
+      mode: "none",
+      kind: "web",
+    });
   });
 });

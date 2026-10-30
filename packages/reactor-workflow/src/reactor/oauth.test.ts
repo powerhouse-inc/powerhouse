@@ -1,6 +1,8 @@
 // OAuth2 sign-in end to end: a fixture piece served by a local npm, a real
 // provider token endpoint on loopback, and a PGlite-backed secret store.
+import { readFileSync } from "node:fs";
 import http from "node:http";
+import https from "node:https";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,6 +15,7 @@ import {
   type ConnectionDocument,
 } from "@powerhousedao/workflow/document-models/connection";
 import type { Action } from "document-model";
+import type { Kysely } from "kysely";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   createFreshRelationalDb,
@@ -37,10 +40,16 @@ import {
 import type { WorkflowRuntimeService } from "./service.js";
 
 const PIECE = { name: "@activepieces/piece-oauth-app", version: "1.0.0" };
+// The same app without PKCE of its own, so a test sees who turned it on.
+const NO_PKCE_PIECE = {
+  name: "@activepieces/piece-oauth-no-pkce",
+  version: "1.0.0",
+};
 const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
 const OTHER_CTX = { headers: {}, db: {}, user: { address: "0xdef" } } as never;
 const REDIRECT =
   "https://switchboard.example/api/@powerhousedao/workflow/oauth/callback";
+const RELAY = "https://relay.example/api/oauth/callback";
 const EGRESS_ENV = "PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES";
 
 interface TokenRequest {
@@ -155,6 +164,88 @@ function startProvider() {
   });
 }
 
+const TLS_FIXTURE = (name: string) =>
+  readFileSync(new URL(`../../test/fixtures/tls/${name}`, import.meta.url));
+
+// The relay's token broker on loopback https: it adds the web client's
+// secret itself, so it refuses any request that carries one.
+function startBroker() {
+  const requests: Record<string, string>[] = [];
+  const challenges = new Map<string, string>();
+  const server = https.createServer(
+    {
+      key: TLS_FIXTURE("localhost-key.pem"),
+      cert: TLS_FIXTURE("localhost-cert.pem"),
+    },
+    (req, res) => {
+      let body = "";
+      req.on("data", (chunk: Buffer) => (body += chunk.toString()));
+      req.on("end", () => {
+        const form = Object.fromEntries(new URLSearchParams(body));
+        requests.push(form);
+        const reply = (status: number, json: unknown) => {
+          res.writeHead(status, { "content-type": "application/json" });
+          res.end(JSON.stringify(json));
+        };
+        if (
+          form.client_id !== "relay-cid" ||
+          "client_secret" in form ||
+          req.headers.authorization !== undefined
+        ) {
+          return reply(401, { error: "invalid_client" });
+        }
+        if (form.grant_type === "authorization_code") {
+          const verified =
+            challenges.get(form.code) ===
+            createHash("sha256")
+              .update(String(form.code_verifier))
+              .digest("base64url");
+          if (!verified || form.redirect_uri !== RELAY) {
+            return reply(400, { error: "invalid_grant" });
+          }
+          challenges.delete(form.code);
+          return reply(200, {
+            access_token: "at-relay",
+            refresh_token: "rt-relay",
+            token_type: "Bearer",
+            expires_in: 3600,
+          });
+        }
+        if (
+          form.grant_type === "refresh_token" &&
+          form.refresh_token === "rt-relay"
+        ) {
+          return reply(200, {
+            access_token: "at-relay-refreshed",
+            expires_in: 3600,
+          });
+        }
+        reply(400, { error: "unsupported_grant_type" });
+      });
+    },
+  );
+  return new Promise<{
+    tokenUrl: string;
+    requests: Record<string, string>[];
+    issue(code: string, authorizationUrl: string): void;
+    stop(): Promise<void>;
+  }>((resolve) => {
+    server.listen(0, "127.0.0.1", () => {
+      resolve({
+        tokenUrl: `https://127.0.0.1:${(server.address() as AddressInfo).port}/api/oauth/token`,
+        requests,
+        issue: (code, authorizationUrl) => {
+          challenges.set(
+            code,
+            new URL(authorizationUrl).searchParams.get("code_challenge") ?? "",
+          );
+        },
+        stop: () => new Promise((done) => server.close(() => done())),
+      });
+    });
+  });
+}
+
 // Documents a runtime reads and writes, reduced for real.
 function documentStore() {
   const documents = new Map<string, ConnectionDocument>();
@@ -222,6 +313,28 @@ const app = {
 module.exports = { app };
 `,
         },
+        {
+          ...NO_PKCE_PIECE,
+          code: `
+const app = {
+  displayName: "OAuth App Fixture",
+  actions: {},
+  auth: {
+    type: "OAUTH2",
+    displayName: "Connection",
+    required: true,
+    authUrl: "https://provider.example/{subdomain}/authorize",
+    tokenUrl: "http://127.0.0.1:${provider.port}/{subdomain}/token",
+    scope: ["read", "write"],
+    extra: { include_granted_scopes: "true" },
+    props: {
+      subdomain: { type: "SHORT_TEXT", displayName: "Subdomain", required: true },
+    },
+  },
+};
+module.exports = { app };
+`,
+        },
       ],
     });
     store = documentStore();
@@ -242,7 +355,10 @@ module.exports = { app };
   });
 
   // The client secret is minted for the connection, as the editor does.
-  async function connection(config: Record<string, unknown>): Promise<string> {
+  async function connection(
+    config: Record<string, unknown>,
+    piece = PIECE.name,
+  ): Promise<string> {
     let document = utils.createDocument();
     const clientSecretRef = (
       await (
@@ -252,7 +368,7 @@ module.exports = { app };
     document = reducer(
       document,
       actions.setConnector({
-        connectorId: `${PIECE.name}#oauth-app`,
+        connectorId: `${piece}#oauth-app`,
         authType: "OAUTH2",
       }),
     );
@@ -304,6 +420,8 @@ module.exports = { app };
       include_granted_scopes: "true",
     });
     expect(url.searchParams.get("code_challenge")).toMatch(/^[\w-]{43}$/);
+    // Its own client: the host's callback and a bare nonce as the state
+    expect(started.state).toMatch(/^[\w-]{43}$/);
     await expect(service.oauthAttempt(started.state, CTX)).resolves.toEqual({
       connectionId: id,
       status: "PENDING",
@@ -625,8 +743,13 @@ module.exports = { app };
     const LOOPBACK =
       "http://localhost:7540/api/@powerhousedao/workflow/oauth/callback";
     let appService: WorkflowRuntimeService;
+    let broker: Awaited<ReturnType<typeof startBroker>>;
+    // The token requests trust the broker's self-signed certificate.
+    const previousCa = https.globalAgent.options.ca;
 
     beforeAll(async () => {
+      broker = await startBroker();
+      https.globalAgent.options.ca = TLS_FIXTURE("localhost-cert.pem");
       const dir = await mkdtemp(join(tmpdir(), "oauth-apps-"));
       const web = join(dir, "web.json");
       const desktop = join(dir, "desktop.json");
@@ -648,9 +771,26 @@ module.exports = { app };
         oauthApps: [
           { id: "sektar", clients: { web, desktop } },
           { id: "web-only", clients: { web } },
+          // No web client file: a web sign-in goes through the relay.
+          { id: "relayed", clients: { desktop }, relay: relay() },
+          // A web client file wins over the relay.
+          { id: "relay-and-web", clients: { web, desktop }, relay: relay() },
         ],
       } as unknown as WorkflowRuntimeHostDeps);
     });
+
+    afterAll(async () => {
+      https.globalAgent.options.ca = previousCa;
+      await broker.stop();
+    });
+
+    function relay() {
+      return {
+        clientId: "relay-cid",
+        redirectUri: RELAY,
+        tokenUrl: broker.tokenUrl,
+      };
+    }
 
     it("signs in with the web client for a public callback, asking only the connection's scopes", async () => {
       const id = await connection({
@@ -664,6 +804,10 @@ module.exports = { app };
       const url = new URL(started.authorizationUrl);
       expect(url.searchParams.get("client_id")).toBe("cid");
       expect(url.searchParams.get("scope")).toBe("read");
+      // No relay on the app: the host's own callback, the state as ever
+      expect(url.searchParams.get("redirect_uri")).toBe(REDIRECT);
+      expect(started.redirectUri).toBe(REDIRECT);
+      expect(started.state).toMatch(/^[\w-]{43}$/);
       provider.issue("code-1", started.authorizationUrl);
       await expect(
         appService.completeOAuth({ state: started.state, code: "code-1" }),
@@ -721,6 +865,152 @@ module.exports = { app };
       expect(url.searchParams.get("scope")).toBe("read write");
     });
 
+    it("signs in through the app's relay for a public callback, with PKCE and the callback in the state", async () => {
+      const id = await connection(
+        { oauth_app: "relayed", subdomain: "acme" },
+        NO_PKCE_PIECE.name,
+      );
+      const started = await appService.startOAuth(id, CTX, {
+        redirectUri: REDIRECT,
+      });
+      const url = new URL(started.authorizationUrl);
+      expect(url.searchParams.get("client_id")).toBe("relay-cid");
+      expect(url.searchParams.get("redirect_uri")).toBe(RELAY);
+      expect(started.redirectUri).toBe(RELAY);
+      // The piece asks for no PKCE; the relay turns it on
+      expect(url.searchParams.get("code_challenge")).toBeTruthy();
+      expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+      expect(url.searchParams.get("state")).toBe(started.state);
+      const [nonce, target, ...rest] = started.state.split(".");
+      expect(rest).toEqual([]);
+      expect(nonce).toMatch(/^[\w-]{43}$/);
+      expect(target).not.toMatch(/=/);
+      expect(Buffer.from(target!, "base64url").toString("utf8")).toBe(REDIRECT);
+
+      // The relay forwards code and the whole state to the host's callback.
+      // The code goes to the broker's token URL with the relay's redirect
+      // URI, as the provider saw it, the verifier and no secret.
+      broker.issue("code-r", started.authorizationUrl);
+      const before = broker.requests.length;
+      const providerBefore = provider.requests.length;
+      await expect(
+        appService.completeOAuth({ state: started.state, code: "code-r" }),
+      ).resolves.toEqual({ ok: true, detail: null, returnUrl: null });
+      expect(provider.requests.length).toBe(providerBefore);
+      const [exchange] = broker.requests.slice(before);
+      expect(exchange).toEqual({
+        grant_type: "authorization_code",
+        code: "code-r",
+        redirect_uri: RELAY,
+        code_verifier: expect.stringMatching(/^[\w-]+$/) as string,
+        client_id: "relay-cid",
+      });
+
+      // The token remembers the relay; a refresh goes there too, without a secret.
+      const document = store.documents.get(id)!;
+      const tokenRef = document.state.global.secretRefs.find(
+        (ref) => ref.name === OAUTH_TOKEN,
+      )!.ref;
+      const secrets = await appService.secrets();
+      const owner = { documentId: id, kind: "connection" as const };
+      const stored = JSON.parse(
+        await secrets.get(tokenRef, owner),
+      ) as OAuthTokenSet;
+      expect(stored).toMatchObject({
+        access_token: "at-relay",
+        token_url: broker.tokenUrl,
+        redirect_url: RELAY,
+        client_id: "relay-cid",
+        relayed: true,
+      });
+      expect(stored.client_secret_ref).toBeUndefined();
+      await secrets.rotate(
+        tokenRef,
+        JSON.stringify({ ...stored, claimed_at: stored.claimed_at - 3500 }),
+      );
+      const refresher = new StoreTokenRefresher(() => appService.secrets(), {
+        allowAddresses: ["127.0.0.1/32"],
+      });
+      const resolved = await resolveConnectionWithSecrets(
+        document,
+        secrets,
+        { piecePackage: NO_PKCE_PIECE.name },
+        refresher,
+      );
+      expect((resolved.auth as { access_token?: unknown }).access_token).toBe(
+        "at-relay-refreshed",
+      );
+      expect(broker.requests.at(-1)).toEqual({
+        grant_type: "refresh_token",
+        refresh_token: "rt-relay",
+        client_id: "relay-cid",
+      });
+      const refreshed = JSON.parse(
+        await secrets.get(tokenRef, owner),
+      ) as OAuthTokenSet;
+      expect(refreshed).toMatchObject({
+        access_token: "at-relay-refreshed",
+        refresh_token: "rt-relay",
+        relayed: true,
+      });
+    });
+
+    it("keeps the desktop client and the loopback callback for a relayed app on this machine", async () => {
+      const id = await connection(
+        { oauth_app: "relayed", subdomain: "acme" },
+        NO_PKCE_PIECE.name,
+      );
+      const started = await appService.startOAuth(id, CTX, {
+        redirectUri: LOOPBACK,
+      });
+      const url = new URL(started.authorizationUrl);
+      expect(url.searchParams.get("client_id")).toBe("desk-cid");
+      expect(url.searchParams.get("redirect_uri")).toBe(LOOPBACK);
+      expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+      expect(started.state).toMatch(/^[\w-]{43}$/);
+    });
+
+    it("signs in with a web client file directly, even when the app has a relay", async () => {
+      const id = await connection(
+        { oauth_app: "relay-and-web", subdomain: "acme" },
+        NO_PKCE_PIECE.name,
+      );
+      const started = await appService.startOAuth(id, CTX, {
+        redirectUri: REDIRECT,
+      });
+      const url = new URL(started.authorizationUrl);
+      expect(url.searchParams.get("client_id")).toBe("cid");
+      expect(url.searchParams.get("redirect_uri")).toBe(REDIRECT);
+      expect(started.redirectUri).toBe(REDIRECT);
+      // As without a relay: the piece's PKCE (none) and a bare nonce
+      expect(url.searchParams.has("code_challenge")).toBe(false);
+      expect(started.state).toMatch(/^[\w-]{43}$/);
+    });
+
+    it("sends no PKCE through an app without a relay when the piece asks for none", async () => {
+      const id = await connection(
+        { oauth_app: "sektar", subdomain: "acme" },
+        NO_PKCE_PIECE.name,
+      );
+      const started = await appService.startOAuth(id, CTX, {
+        redirectUri: REDIRECT,
+      });
+      const url = new URL(started.authorizationUrl);
+      expect(url.searchParams.get("redirect_uri")).toBe(REDIRECT);
+      expect(url.searchParams.has("code_challenge")).toBe(false);
+      expect(started.state).toMatch(/^[\w-]{43}$/);
+    });
+
+    it("tells how it would sign in, as startOAuth does", async () => {
+      const mode = (appId: string, redirectUri: string) =>
+        appService.oauthSignInMode(appId, redirectUri);
+      await expect(mode("relayed", LOOPBACK)).resolves.toBe("desktop");
+      await expect(mode("relayed", REDIRECT)).resolves.toBe("relay");
+      await expect(mode("relay-and-web", REDIRECT)).resolves.toBe("web");
+      await expect(mode("web-only", LOOPBACK)).resolves.toBe("none");
+      await expect(mode("unknown", REDIRECT)).resolves.toBe("none");
+    });
+
     it("refuses an app without a client of the kind the callback needs", async () => {
       const id = await connection({ oauth_app: "web-only", subdomain: "acme" });
       await expect(
@@ -728,6 +1018,55 @@ module.exports = { app };
       ).rejects.toThrow(
         'The app "web-only" has no desktop client on this host',
       );
+    });
+  });
+});
+
+describe("an attempt store from before relays", () => {
+  it("takes an attempt without a client secret once it has started", async () => {
+    const db = createFreshRelationalDb();
+    // The table as it was: the client secret ref required.
+    const legacy = (await db.createNamespace("oauth")) as Kysely<unknown>;
+    await legacy.schema
+      .createTable("oauth_attempt")
+      .addColumn("state", "text", (col) => col.primaryKey())
+      .addColumn("connection_id", "text", (col) => col.notNull())
+      .addColumn("client_id", "text", (col) => col.notNull())
+      .addColumn("client_secret_ref", "text", (col) => col.notNull())
+      .addColumn("code_verifier", "text")
+      .addColumn("redirect_uri", "text", (col) => col.notNull())
+      .addColumn("token_url", "text", (col) => col.notNull())
+      .addColumn("authorization_method", "text")
+      .addColumn("return_url", "text")
+      .addColumn("created_by", "text")
+      .addColumn("status", "text", (col) => col.notNull())
+      .addColumn("error", "text")
+      .addColumn("created_at", "text", (col) => col.notNull())
+      .addColumn("expires_at", "text", (col) => col.notNull())
+      .execute();
+
+    const attempts = await OAuthAttemptStore.create(db);
+    const { state } = await attempts.start({
+      connectionId: "c1",
+      method: {
+        authUrl: "https://p.example/auth",
+        tokenUrl: "https://p.example/token",
+        scope: [],
+      },
+      props: {},
+      clientId: "relay-cid",
+      clientSecretRef: null,
+      redirectUri: "https://relay.example/cb",
+      tokenUrl: "https://relay.example/token",
+      pkce: true,
+      stateSuffix: "c3VmZml4",
+    });
+    expect(state).toMatch(/^[\w-]{43}\.c3VmZml4$/);
+    const claimed = await attempts.claim(state);
+    expect(claimed).toMatchObject({
+      client_secret_ref: null,
+      token_url: "https://relay.example/token",
+      redirect_uri: "https://relay.example/cb",
     });
   });
 });

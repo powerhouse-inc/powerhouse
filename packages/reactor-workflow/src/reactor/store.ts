@@ -15,11 +15,22 @@ import {
   type WorkflowRunResult,
 } from "../pieces/index.js";
 import { childLogger } from "document-model";
-import { sql, type ColumnType, type Kysely } from "kysely";
+import {
+  sql,
+  type ColumnType,
+  type Expression,
+  type ExpressionBuilder,
+  type Kysely,
+  type SqlBool,
+} from "kysely";
 import { createHash, randomUUID } from "node:crypto";
 import { CORE_PIECE_NAME } from "../pieces/index.js";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
 import { PARKED_TRIGGER_STATUS } from "./policy.js";
+import {
+  WAITPOINT_EXPIRED_ERROR_NAME,
+  WAITPOINT_NOT_LIVE_ERROR_NAME,
+} from "./waitpoint-types.js";
 
 export interface RunRow {
   id: string;
@@ -231,11 +242,56 @@ export function workflowParkRow(
   };
 }
 
+// What a suspended run executes on resume: written when it first waits.
+export interface RunPinRow {
+  // Our hash of the runnable definition the run started from.
+  definition_hash: string | null;
+  // The workflow document's global revision, and its state hash, at that read.
+  definition_op_index: number | null;
+  definition_scope_hash: string | null;
+}
+
+type NullableColumn<T> = ColumnType<T | null, T | null | undefined, T | null>;
+
+export interface WaitpointRow {
+  id: string;
+  run_id: string;
+  workflow_id: string;
+  step_id: string;
+  step_key: string;
+  // Full step path; the step id outside loops.
+  step_path: string;
+  piece_name: string;
+  block_name: string;
+  type: string; // DELAY | WEBHOOK
+  kind: string; // approval | webhook | delay
+  status: string; // see WaitpointStatus
+  // sha256 hex of the resume URL's token; null for a DELAY.
+  token_hash: string | null;
+  created_at: string;
+  resume_at: string | null;
+  expires_at: string | null;
+  resolved_at: string | null;
+  decided_by: string | null;
+  // JSON: ApprovalRequest, WaitpointResumePayload, the sync response.
+  approval: string | null;
+  resume_payload: string | null;
+  response_to_send: string | null;
+}
+
+export const WAITING_RUN_STATUS = "WAITING";
+
 export interface WorkflowRuntimeDB {
   // admit_attempts: boots that admitted this PENDING run without it starting.
   run: RunRow & {
     admit_attempts: ColumnType<number, number | undefined, number>;
+    definition_hash: NullableColumn<string>;
+    definition_op_index: NullableColumn<number>;
+    definition_scope_hash: NullableColumn<string>;
+    // The waitpoint a WAITING run waits on.
+    waiting_on: NullableColumn<string>;
   };
+  waitpoint: WaitpointRow;
   step_execution: StepExecutionRow;
   run_document: RunDocumentRow;
   trigger_state: TriggerStateRow;
@@ -255,6 +311,160 @@ export const ORPHANED_RUN_ERROR =
 // A matched fire, durable before the operation batch that matched it returns.
 // Nothing executes it yet: fire() adopts the row and turns it RUNNING.
 export const PENDING_RUN_STATUS = "PENDING";
+
+// A run that has not ended; only these may end, wait or resume.
+const LIVE_RUN_STATUSES = [PENDING_RUN_STATUS, "RUNNING", WAITING_RUN_STATUS];
+// A waitpoint that may still resume its run.
+const LIVE_WAITPOINT_STATUSES = ["PENDING", "COMPLETED"];
+
+// A run's live waitpoints, now closed; the ids it closed.
+async function closeLiveWaitpoints(
+  db: Kysely<WorkflowRuntimeDB>,
+  runIds: string[],
+  status: "EXPIRED" | "CANCELLED",
+  resolvedAt: string,
+  keep?: (
+    eb: ExpressionBuilder<WorkflowRuntimeDB, "waitpoint">,
+  ) => Expression<SqlBool>,
+): Promise<string[]> {
+  if (runIds.length === 0) return [];
+  const closed = await db
+    .updateTable("waitpoint")
+    .set({ status, resolved_at: resolvedAt })
+    .where("run_id", "in", runIds)
+    .where("status", "in", LIVE_WAITPOINT_STATUSES)
+    .$if(keep !== undefined, (qb) => qb.where((eb) => eb.not(keep!(eb))))
+    .returning("id")
+    .execute();
+  return closed.map((row) => row.id);
+}
+
+// The step a run waited on, once the run ended without resuming it.
+async function failWaitingSteps(
+  db: Kysely<WorkflowRuntimeDB>,
+  runIds: string[],
+  reason: string,
+  errorName: string | null,
+  endedAt: string,
+): Promise<void> {
+  if (runIds.length === 0) return;
+  await db
+    .updateTable("step_execution")
+    .set({
+      status: "FAILED",
+      error: redactMessage(reason),
+      error_name: errorName,
+      ended_at: endedAt,
+    })
+    .where("run_id", "in", runIds)
+    .where("status", "=", WAITING_RUN_STATUS)
+    .execute();
+}
+
+// Why the poller ended a WAITING run on its waitpoint's expiry.
+export function waitpointExpiryReason(waitpoint: WaitpointRow): string {
+  const what = waitpoint.kind === "approval" ? "approval" : "wait for a resume";
+  return (
+    `The ${what} at step "${waitpoint.step_key}" expired at ` +
+    `${waitpoint.expires_at} without being resolved`
+  );
+}
+
+// A WAITING run whose waitpoint is no longer live and holds no delivered resume.
+function strandedWait(
+  eb: ExpressionBuilder<WorkflowRuntimeDB, "run">,
+): Expression<SqlBool> {
+  const live = eb
+    .selectFrom("waitpoint")
+    .select("waitpoint.id")
+    .where("waitpoint.status", "in", LIVE_WAITPOINT_STATUSES);
+  return eb.and([
+    eb.not(eb.exists(completedOf(eb))),
+    eb.or([
+      eb.and([
+        eb("run.waiting_on", "is not", null),
+        eb.not(eb.exists(live.whereRef("waitpoint.id", "=", "run.waiting_on"))),
+      ]),
+      eb.and([
+        eb("run.waiting_on", "is", null),
+        eb.not(eb.exists(live.whereRef("waitpoint.run_id", "=", "run.id"))),
+      ]),
+    ]),
+  ]);
+}
+
+// A run's COMPLETED waitpoints: a resume was delivered and wins over an end.
+function completedOf(eb: ExpressionBuilder<WorkflowRuntimeDB, "run">) {
+  return eb
+    .selectFrom("waitpoint")
+    .select("waitpoint.id")
+    .whereRef("waitpoint.run_id", "=", "run.id")
+    .where("waitpoint.status", "=", "COMPLETED");
+}
+
+// Ends a WAITING run CANCELLED: on the expiry of the waitpoint it waits on,
+// or, without one, when its wait is stranded. Undefined when it did not end.
+async function endWaitingRun(
+  db: Kysely<WorkflowRuntimeDB>,
+  runId: string,
+  end: {
+    reason: string;
+    errorName: string;
+    endedAt: string;
+    waitpointId?: string;
+  },
+): Promise<EndedWait | undefined> {
+  const { waitpointId } = end;
+  const rows = await db
+    .updateTable("run")
+    .set({
+      status: "CANCELLED",
+      error: redactMessage(end.reason),
+      error_name: end.errorName,
+      ended_at: end.endedAt,
+    })
+    .where("id", "=", runId)
+    .where("status", "=", WAITING_RUN_STATUS)
+    .where((eb) =>
+      waitpointId === undefined
+        ? strandedWait(eb)
+        : eb.and([
+            eb.or([
+              eb("run.waiting_on", "=", waitpointId),
+              eb("run.waiting_on", "is", null),
+            ]),
+            eb.not(eb.exists(completedOf(eb))),
+          ]),
+    )
+    .returning("id")
+    .execute();
+  if (rows.length === 0) return undefined;
+  await failWaitingSteps(db, [runId], end.reason, end.errorName, end.endedAt);
+  const closed = await closeLiveWaitpoints(db, [runId], "EXPIRED", end.endedAt);
+  return { runId, reason: end.reason, closed };
+}
+
+function priorNotes(text: string | null): string[] {
+  if (!text) return [];
+  try {
+    const notes = JSON.parse(text) as unknown;
+    return Array.isArray(notes)
+      ? notes.filter((note): note is string => typeof note === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export const STRANDED_WAIT_REASON =
+  "The run waited on a waitpoint that is no longer live";
+
+// A WAITING run the poller ended, and the waitpoints that closed with it.
+export interface EndedWait {
+  runId: string;
+  reason: string;
+  closed: string[];
+}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -621,6 +831,126 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
   } catch {
     // Never blocks the journal: a leftover table costs nothing.
   }
+
+  // Additive migration for suspended runs: the definition a run pins, and
+  // the waitpoints it waits on.
+  for (const [column, type] of [
+    ["definition_hash", "text"],
+    ["definition_op_index", "integer"],
+    ["definition_scope_hash", "text"],
+    ["waiting_on", "text"],
+  ] as const) {
+    try {
+      await db.schema.alterTable("run").addColumn(column, type).execute();
+    } catch {
+      // column already exists
+    }
+  }
+  await db.schema
+    .createTable("waitpoint")
+    .addColumn("id", "text", (col) => col.primaryKey())
+    .addColumn("run_id", "text", (col) => col.notNull())
+    .addColumn("workflow_id", "text", (col) => col.notNull())
+    .addColumn("step_id", "text", (col) => col.notNull())
+    .addColumn("step_key", "text", (col) => col.notNull())
+    .addColumn("step_path", "text", (col) => col.notNull())
+    .addColumn("piece_name", "text", (col) => col.notNull())
+    .addColumn("block_name", "text", (col) => col.notNull())
+    .addColumn("type", "text", (col) => col.notNull())
+    .addColumn("kind", "text", (col) => col.notNull())
+    .addColumn("status", "text", (col) => col.notNull())
+    .addColumn("token_hash", "text")
+    .addColumn("created_at", "text", (col) => col.notNull())
+    .addColumn("resume_at", "text")
+    .addColumn("expires_at", "text")
+    .addColumn("resolved_at", "text")
+    .addColumn("decided_by", "text")
+    .addColumn("approval", "text")
+    .addColumn("resume_payload", "text")
+    .addColumn("response_to_send", "text")
+    .ifNotExists()
+    .execute();
+  await db.schema
+    .createIndex("waitpoint_token")
+    .ifNotExists()
+    .unique()
+    .on("waitpoint")
+    .column("token_hash")
+    .execute();
+  // The DELAY poller's due scan, and expiry.
+  await db.schema
+    .createIndex("waitpoint_status_resume")
+    .ifNotExists()
+    .on("waitpoint")
+    .columns(["status", "resume_at"])
+    .execute();
+  // The poller's expiry scan.
+  await db.schema
+    .createIndex("waitpoint_status_expires")
+    .ifNotExists()
+    .on("waitpoint")
+    .columns(["status", "expires_at"])
+    .execute();
+  await db.schema
+    .createIndex("waitpoint_run")
+    .ifNotExists()
+    .on("waitpoint")
+    .column("run_id")
+    .execute();
+  // One live waitpoint per step, as upstream's (flowRunId, stepName).
+  const liveStep = db.schema
+    .createIndex("waitpoint_live_step")
+    .ifNotExists()
+    .unique()
+    .on("waitpoint")
+    .columns(["run_id", "step_path"])
+    .where(sql.ref("status"), "in", LIVE_WAITPOINT_STATUSES);
+  try {
+    await liveStep.execute();
+  } catch {
+    // Rows from before the index: a step keeps only the one its run waits on.
+    await db
+      .updateTable("waitpoint")
+      .set({ status: "CANCELLED", resolved_at: new Date().toISOString() })
+      .where("status", "in", LIVE_WAITPOINT_STATUSES)
+      .where((eb) =>
+        eb.and([
+          eb.not(
+            eb.exists(
+              eb
+                .selectFrom("run")
+                .select("run.id")
+                .whereRef("run.waiting_on", "=", "waitpoint.id"),
+            ),
+          ),
+          eb.exists(
+            eb
+              .selectFrom("waitpoint as sibling")
+              .select("sibling.id")
+              .whereRef("sibling.run_id", "=", "waitpoint.run_id")
+              .whereRef("sibling.step_path", "=", "waitpoint.step_path")
+              .whereRef("sibling.id", "!=", "waitpoint.id")
+              .where("sibling.status", "in", LIVE_WAITPOINT_STATUSES),
+          ),
+        ]),
+      )
+      .execute();
+    await liveStep.execute();
+  }
+  await db.schema
+    .createIndex("waitpoint_workflow_status")
+    .ifNotExists()
+    .on("waitpoint")
+    .columns(["workflow_id", "status"])
+    .execute();
+  // Waiting-runs listings.
+  await db.schema
+    .createIndex("run_waiting")
+    .ifNotExists()
+    .on("run")
+    .columns(["workflow_id", "enqueued_at"])
+    .where(sql.ref("status"), "=", WAITING_RUN_STATUS)
+    .execute();
 
   await migrateBlockType(db, "trigger_state", "trigger_name");
   await migrateBlockType(db, "step_execution", "block_name");
@@ -1398,6 +1728,10 @@ export class WorkflowRunStore {
     string,
     Map<string, { ordinal: number; hash: string }>
   >();
+  // Runs whose current leg made a waitpoint, and legs this process resumed:
+  // only their close-out reads prior notes and closes waitpoints.
+  private readonly pausingRuns = new Set<string>();
+  private readonly resumedLegs = new Set<string>();
 
   private constructor(
     private readonly db: IRelationalDb<WorkflowRuntimeDB>,
@@ -1432,21 +1766,29 @@ export class WorkflowRunStore {
   // Without this the steps journaled before the crash are unreachable, since
   // rerun() only accepts a FAILED run.
   async recoverOrphanedRuns(): Promise<number> {
-    let query = this.db
-      .updateTable("run")
-      .set({
-        status: "FAILED",
-        error: ORPHANED_RUN_ERROR,
-        ended_at: new Date().toISOString(),
-      })
-      .where("status", "=", "RUNNING");
-    // Failing a run this process is still executing would hand rerun() a live
-    // run, and its side effects would happen twice.
-    if (this.runsInFlight.size > 0) {
-      query = query.where("id", "not in", [...this.runsInFlight]);
-    }
-    // Counted off RETURNING: the knex-backed dialect reports no row count.
-    const recovered = (await query.returning("id").execute()).length;
+    const endedAt = new Date().toISOString();
+    const inFlight = [...this.runsInFlight];
+    const recovered = await this.db.transaction().execute(async (trx) => {
+      let query = trx
+        .updateTable("run")
+        .set({
+          status: "FAILED",
+          error: ORPHANED_RUN_ERROR,
+          ended_at: endedAt,
+        })
+        .where("status", "=", "RUNNING");
+      // Failing a run this process is still executing would hand rerun() a
+      // live run, and its side effects would happen twice.
+      if (inFlight.length > 0) {
+        query = query.where("id", "not in", inFlight);
+      }
+      // Counted off RETURNING: the knex-backed dialect reports no row count.
+      const ids = (await query.returning("id").execute()).map((row) => row.id);
+      // A run that crashed after it resumed still has its waiting step.
+      await failWaitingSteps(trx, ids, ORPHANED_RUN_ERROR, null, endedAt);
+      await closeLiveWaitpoints(trx, ids, "CANCELLED", endedAt);
+      return ids.length;
+    });
     if (recovered > 0) {
       logger.warn(
         `Recovered ${recovered} workflow run(s) left RUNNING by a stopped reactor; they are now FAILED and rerunnable`,
@@ -1564,19 +1906,42 @@ export class WorkflowRunStore {
    * passed its `runTimeoutSeconds`. Separate from `failRun` because a
    * CANCELLED run is not rerunnable and must not read as a workflow defect.
    */
-  async cancelRun(runId: string, reason: string): Promise<void> {
+  // A run that already ended keeps its status. Returns the waitpoints closed.
+  async cancelRun(runId: string, reason: string): Promise<string[]> {
+    return this.endLiveRun(runId, "CANCELLED", reason, null);
+  }
+
+  // Ends a run that has not ended, its waiting step FAILED and its
+  // waitpoints CANCELLED; the ids of the waitpoints it closed.
+  private async endLiveRun(
+    runId: string,
+    status: "CANCELLED" | "FAILED",
+    reason: string,
+    errorName: string | null,
+  ): Promise<string[]> {
     this.runsInFlight.delete(runId);
     this.journaledSteps.delete(runId);
-    if (erasedRuns.delete(runId)) return;
-    await this.db
-      .updateTable("run")
-      .set({
-        status: "CANCELLED",
-        error: redactMessage(reason),
-        ended_at: new Date().toISOString(),
-      })
-      .where("id", "=", runId)
-      .execute();
+    this.pausingRuns.delete(runId);
+    this.resumedLegs.delete(runId);
+    if (erasedRuns.delete(runId)) return [];
+    const endedAt = new Date().toISOString();
+    return this.db.transaction().execute(async (trx) => {
+      const ended = await trx
+        .updateTable("run")
+        .set({
+          status,
+          error: redactMessage(reason),
+          error_name: errorName,
+          ended_at: endedAt,
+        })
+        .where("id", "=", runId)
+        .where("status", "in", LIVE_RUN_STATUSES)
+        .returning("id")
+        .execute();
+      if (ended.length === 0) return [];
+      await failWaitingSteps(trx, [runId], reason, errorName, endedAt);
+      return closeLiveWaitpoints(trx, [runId], "CANCELLED", endedAt);
+    });
   }
 
   // The durable record of a matched trigger, written before the operation
@@ -1916,13 +2281,14 @@ export class WorkflowRunStore {
   }
 
   // Adopts an enqueued row: the run starts now, with the definition fire() read.
+  // False when the row is no longer PENDING: cancelled while it queued.
   async beginRun(
     runId: string,
     details: { workflowName: string; workflowVersion: number },
-  ): Promise<void> {
+  ): Promise<boolean> {
     this.runsInFlight.add(runId);
     this.journaledSteps.set(runId, new Map());
-    await this.db
+    const adopted = await this.db
       .updateTable("run")
       .set({
         status: "RUNNING",
@@ -1933,7 +2299,13 @@ export class WorkflowRunStore {
         started_at: new Date().toISOString(),
       })
       .where("id", "=", runId)
+      .where("status", "=", PENDING_RUN_STATUS)
+      .returning("id")
       .execute();
+    if (adopted.length > 0) return true;
+    this.runsInFlight.delete(runId);
+    this.journaledSteps.delete(runId);
+    return false;
   }
 
   async startRun(options: StartRunOptions): Promise<string> {
@@ -1975,13 +2347,16 @@ export class WorkflowRunStore {
     if (erasedRuns.has(runId)) return;
     const values = stepValues(runId, ordinal, step);
     const { run_id: _run, step_id: _step, ...mutable } = values;
-    await this.db
-      .insertInto("step_execution")
-      .values({ id: randomUUID(), ...values })
-      .onConflict((oc) =>
-        oc.columns(["run_id", "step_id"]).doUpdateSet(mutable),
-      )
-      .execute();
+    const written = await this.withRunRow(runId, (trx) =>
+      trx
+        .insertInto("step_execution")
+        .values({ id: randomUUID(), ...values })
+        .onConflict((oc) =>
+          oc.columns(["run_id", "step_id"]).doUpdateSet(mutable),
+        )
+        .execute(),
+    );
+    if (!written) return;
     this.journaledSteps
       .get(runId)
       ?.set(step.stepId, { ordinal, hash: rowHash(values) });
@@ -2000,20 +2375,29 @@ export class WorkflowRunStore {
 
   // Closes the run out. `executionOrder` maps step id to the ordinal the step
   // ran with, which a lost row cannot otherwise be given back.
+  // A WAITING result stays open with its pin; `held` false, leaving the run
+  // RUNNING, when no live waitpoint of its step holds it.
   async finishRun(
     runId: string,
     result: WorkflowRunResult,
     executionOrder?: ReadonlyMap<string, number>,
-  ): Promise<void> {
+    pin?: RunPinRow,
+  ): Promise<{ held: boolean; closed: string[] }> {
     // Terminal from here whatever the writes below do: if we leave the run
     // RUNNING, a later sweep should be free to reach it.
     this.runsInFlight.delete(runId);
-    const sweep = !this.sweepIsNoop(runId, result);
+    const resumed = this.resumedLegs.delete(runId);
+    const paused = this.pausingRuns.delete(runId) || resumed;
+    // A carried step's row is the earlier leg's, already written.
+    const own = result.steps.some((step) => step.carried)
+      ? { ...result, steps: result.steps.filter((step) => !step.carried) }
+      : result;
+    const sweep = !this.sweepIsNoop(runId, own);
     this.journaledSteps.delete(runId);
-    if (erasedRuns.delete(runId)) return;
-    if (sweep && result.steps.length > 0) {
+    if (erasedRuns.delete(runId)) return { held: true, closed: [] };
+    if (sweep && own.steps.length > 0) {
       try {
-        await this.sweepSteps(runId, result, executionOrder);
+        await this.sweepSteps(runId, own, executionOrder);
       } catch (error) {
         // The work is done and the caller is owed its result: a journal that
         // cannot record the steps must not also cost the run its status.
@@ -2023,19 +2407,100 @@ export class WorkflowRunStore {
         );
       }
     }
-    const notes = runWarningNotes(result);
-    await this.db
-      .updateTable("run")
-      .set({
-        status: result.status,
-        error: result.error ? redactMessage(result.error) : null,
-        error_name: result.errorName ?? null,
-        ended_at: new Date().toISOString(),
-        warnings: notes.length,
-        warning_notes: notes.length > 0 ? JSON.stringify(notes) : null,
-      })
-      .where("id", "=", runId)
-      .execute();
+    const waiting = result.status === WAITING_RUN_STATUS;
+    const on = result.waiting;
+    const now = new Date().toISOString();
+    // A leg that made no waitpoint and resumed none closes in one statement.
+    const close = async (trx: Kysely<WorkflowRuntimeDB>) => {
+      // Earlier legs' notes stay; this leg adds its own steps' notes.
+      const prior = resumed
+        ? await trx
+            .selectFrom("run")
+            .select("warning_notes")
+            .where("id", "=", runId)
+            .executeTakeFirst()
+        : undefined;
+      const notes = [
+        ...new Set([
+          ...priorNotes(prior?.warning_notes ?? null),
+          ...runWarningNotes(own),
+        ]),
+      ];
+      const written = await trx
+        .updateTable("run")
+        .set({
+          status: result.status,
+          error: result.error ? redactMessage(result.error) : null,
+          error_name: result.errorName ?? null,
+          ended_at: waiting ? null : now,
+          warnings: notes.length,
+          warning_notes: notes.length > 0 ? JSON.stringify(notes) : null,
+          waiting_on: waiting ? (on?.waitpointId ?? null) : null,
+          ...(pin ?? {}),
+        })
+        .where("id", "=", runId)
+        // In one statement, so an expiry cannot land between check and write.
+        .$if(waiting, (qb) =>
+          qb.where((eb) =>
+            eb.exists(
+              eb
+                .selectFrom("waitpoint")
+                .select("waitpoint.id")
+                .where("waitpoint.id", "=", on?.waitpointId ?? "")
+                .where("waitpoint.run_id", "=", runId)
+                .where("waitpoint.step_id", "=", on?.stepId ?? "")
+                .where("waitpoint.status", "in", LIVE_WAITPOINT_STATUSES),
+            ),
+          ),
+        )
+        .returning("id")
+        .execute();
+      if (!waiting) {
+        return {
+          held: true,
+          closed: paused
+            ? await closeLiveWaitpoints(trx, [runId], "EXPIRED", now)
+            : [],
+        };
+      }
+      if (written.length === 0) return { held: false, closed: [] };
+      // Only the waitpoint it waits on, and links a succeeded step made, resume it.
+      // A link already resolved cannot resume an approval or a delay.
+      const awaited = await trx
+        .selectFrom("waitpoint")
+        .select("kind")
+        .where("id", "=", on!.waitpointId)
+        .executeTakeFirst();
+      const linkStatuses =
+        awaited?.kind === "webhook" ? LIVE_WAITPOINT_STATUSES : ["PENDING"];
+      const closed = await closeLiveWaitpoints(
+        trx,
+        [runId],
+        "CANCELLED",
+        now,
+        (eb) =>
+          eb.or([
+            eb("waitpoint.id", "=", on!.waitpointId),
+            eb.and([
+              eb("waitpoint.type", "=", "WEBHOOK"),
+              eb("waitpoint.kind", "=", "webhook"),
+              eb("waitpoint.status", "in", linkStatuses),
+              eb.exists(
+                eb
+                  .selectFrom("step_execution")
+                  .select("step_execution.id")
+                  .whereRef("step_execution.run_id", "=", "waitpoint.run_id")
+                  .whereRef("step_execution.step_id", "=", "waitpoint.step_id")
+                  .where("step_execution.status", "=", "SUCCEEDED"),
+              ),
+            ]),
+          ]),
+      );
+      return { held: true, closed };
+    };
+    return waiting || paused
+      ? this.db.transaction().execute(close)
+      : close(this.db);
   }
 
   // Upserts the whole step set: fills in the SKIPPED sweep per-step journaling
@@ -2071,56 +2536,64 @@ export class WorkflowRunStore {
     // that did, in definition order.
     const ordinalFor = (step: StepExecutionRecord) =>
       ordinals.get(step.stepId) ?? nextOrdinal++;
-    await this.db
-      .insertInto("step_execution")
-      .values(
-        result.steps.map((step) => ({
-          id: randomUUID(),
-          ...stepValues(runId, ordinalFor(step), step),
-        })),
-      )
-      .onConflict((oc) =>
-        oc.columns(["run_id", "step_id"]).doUpdateSet((eb) => ({
-          ordinal: eb.ref("excluded.ordinal"),
-          step_key: eb.ref("excluded.step_key"),
-          piece_name: eb.ref("excluded.piece_name"),
-          block_name: eb.ref("excluded.block_name"),
-          status: eb.ref("excluded.status"),
-          input: eb.ref("excluded.input"),
-          output: eb.ref("excluded.output"),
-          port: eb.ref("excluded.port"),
-          error: eb.ref("excluded.error"),
-          error_name: eb.ref("excluded.error_name"),
-          started_at: eb.ref("excluded.started_at"),
-          ended_at: eb.ref("excluded.ended_at"),
-          piece_version: eb.ref("excluded.piece_version"),
-          piece_source: eb.ref("excluded.piece_source"),
-          version_match: eb.ref("excluded.version_match"),
-          version_note: eb.ref("excluded.version_note"),
-          config_hash: eb.ref("excluded.config_hash"),
-        })),
-      )
-      .execute();
+    await this.withRunRow(runId, (trx) =>
+      trx
+        .insertInto("step_execution")
+        .values(
+          result.steps.map((step) => ({
+            id: randomUUID(),
+            ...stepValues(runId, ordinalFor(step), step),
+          })),
+        )
+        .onConflict((oc) =>
+          oc.columns(["run_id", "step_id"]).doUpdateSet((eb) => ({
+            ordinal: eb.ref("excluded.ordinal"),
+            step_key: eb.ref("excluded.step_key"),
+            piece_name: eb.ref("excluded.piece_name"),
+            block_name: eb.ref("excluded.block_name"),
+            status: eb.ref("excluded.status"),
+            input: eb.ref("excluded.input"),
+            output: eb.ref("excluded.output"),
+            port: eb.ref("excluded.port"),
+            error: eb.ref("excluded.error"),
+            error_name: eb.ref("excluded.error_name"),
+            started_at: eb.ref("excluded.started_at"),
+            ended_at: eb.ref("excluded.ended_at"),
+            piece_version: eb.ref("excluded.piece_version"),
+            piece_source: eb.ref("excluded.piece_source"),
+            version_match: eb.ref("excluded.version_match"),
+            version_note: eb.ref("excluded.version_note"),
+            config_hash: eb.ref("excluded.config_hash"),
+          })),
+        )
+        .execute(),
+    );
   }
 
+  // `fn` under a key-share lock on the run row, so an erase cannot interleave;
+  // undefined, writing nothing, once the row is gone.
+  private async withRunRow<T>(
+    runId: string,
+    fn: (trx: Kysely<WorkflowRuntimeDB>) => Promise<T>,
+  ): Promise<T | undefined> {
+    return this.db.transaction().execute(async (trx) => {
+      const run = await trx
+        .selectFrom("run")
+        .select("id")
+        .where("id", "=", runId)
+        .forKeyShare()
+        .executeTakeFirst();
+      return run ? fn(trx) : undefined;
+    });
+  }
+
+  // A run that already ended keeps its status. Returns the waitpoints closed.
   async failRun(
     runId: string,
     error: string,
     errorName?: string,
-  ): Promise<void> {
-    this.runsInFlight.delete(runId);
-    this.journaledSteps.delete(runId);
-    if (erasedRuns.delete(runId)) return;
-    await this.db
-      .updateTable("run")
-      .set({
-        status: "FAILED",
-        error: redactMessage(error),
-        error_name: errorName ?? null,
-        ended_at: new Date().toISOString(),
-      })
-      .where("id", "=", runId)
-      .execute();
+  ): Promise<string[]> {
+    return this.endLiveRun(runId, "FAILED", error, errorName ?? null);
   }
 
   // Scope is one workflow id, or a set of them (a drive's workflows). An
@@ -2207,16 +2680,18 @@ export class WorkflowRunStore {
     documentIds: string[],
   ): Promise<void> {
     if (documentIds.length === 0 || erasedRuns.has(runId)) return;
-    await this.db
-      .insertInto("run_document")
-      .values(
-        [...new Set(documentIds)].map((documentId) => ({
-          run_id: runId,
-          document_id: documentId,
-        })),
-      )
-      .onConflict((oc) => oc.columns(["run_id", "document_id"]).doNothing())
-      .execute();
+    await this.withRunRow(runId, (trx) =>
+      trx
+        .insertInto("run_document")
+        .values(
+          [...new Set(documentIds)].map((documentId) => ({
+            run_id: runId,
+            document_id: documentId,
+          })),
+        )
+        .onConflict((oc) => oc.columns(["run_id", "document_id"]).doNothing())
+        .execute(),
+    );
   }
 
   async getRunDocuments(runId: string): Promise<string[]> {
@@ -2546,6 +3021,458 @@ export class WorkflowRunStore {
       .execute();
   }
 
+  // ── suspended runs ──────────────────────────────────────────────────────
+
+  // Inserts the step's waitpoint, or returns the live one it already has, as
+  // upstream's createForPause: a repeat create or a retry gets the same row.
+  async createWaitpoint(
+    row: WaitpointRow,
+  ): Promise<{ waitpoint: WaitpointRow; created: boolean }> {
+    if (this.runsInFlight.has(row.run_id)) this.pausingRuns.add(row.run_id);
+    for (let attempt = 1; ; attempt++) {
+      const inserted = await this.withRunRow(row.run_id, (trx) =>
+        trx
+          .insertInto("waitpoint")
+          .values(row)
+          .onConflict((oc) => oc.doNothing())
+          .returningAll()
+          .executeTakeFirst()
+          .then((waitpoint) => ({ waitpoint })),
+      );
+      if (!inserted) throw new Error(`Run "${row.run_id}" no longer exists`);
+      if (inserted.waitpoint) {
+        return { waitpoint: inserted.waitpoint, created: true };
+      }
+      const live = await this.db
+        .selectFrom("waitpoint")
+        .selectAll()
+        .where("run_id", "=", row.run_id)
+        .where("step_path", "=", row.step_path)
+        .where("status", "in", LIVE_WAITPOINT_STATUSES)
+        .executeTakeFirst();
+      if (live) return { waitpoint: live, created: false };
+      // It closed between the two statements; the step gets a new one.
+      if (attempt >= 3) {
+        throw new Error(
+          `Could not create a waitpoint for step "${row.step_key}"`,
+        );
+      }
+    }
+  }
+
+  async getWaitpoint(id: string): Promise<WaitpointRow | undefined> {
+    return this.db
+      .selectFrom("waitpoint")
+      .selectAll()
+      .where("id", "=", id)
+      .executeTakeFirst();
+  }
+
+  async getWaitpointByTokenHash(
+    tokenHash: string,
+  ): Promise<WaitpointRow | undefined> {
+    return this.db
+      .selectFrom("waitpoint")
+      .selectAll()
+      .where("token_hash", "=", tokenHash)
+      .executeTakeFirst();
+  }
+
+  // PENDING → COMPLETED, once, while unexpired and its run RUNNING or WAITING.
+  // Never a link while its run waits on an approval or a delay.
+  async completeWaitpoint(
+    id: string,
+    resolution: {
+      payload: unknown;
+      decidedBy?: string | null;
+      resolvedAt?: string;
+    },
+  ): Promise<WaitpointRow | undefined> {
+    const now = new Date().toISOString();
+    const rows = await this.db
+      .updateTable("waitpoint")
+      .set({
+        status: "COMPLETED",
+        resume_payload: JSON.stringify(resolution.payload ?? {}),
+        resolved_at: resolution.resolvedAt ?? now,
+        decided_by: resolution.decidedBy ?? null,
+      })
+      .where("id", "=", id)
+      .where("status", "=", "PENDING")
+      .where((eb) =>
+        eb.or([eb("expires_at", "is", null), eb("expires_at", ">", now)]),
+      )
+      .where((eb) =>
+        eb.not(
+          eb.exists(
+            eb
+              .selectFrom("run")
+              .innerJoin("waitpoint as awaited", "awaited.id", "run.waiting_on")
+              .select("run.id")
+              .whereRef("run.id", "=", "waitpoint.run_id")
+              .whereRef("awaited.id", "!=", "waitpoint.id")
+              .where("awaited.kind", "!=", "webhook")
+              .where("awaited.status", "in", LIVE_WAITPOINT_STATUSES),
+          ),
+        ),
+      )
+      .where((eb) =>
+        eb.exists(
+          eb
+            .selectFrom("run")
+            .select("run.id")
+            .whereRef("run.id", "=", "waitpoint.run_id")
+            .where("run.status", "in", ["RUNNING", WAITING_RUN_STATUS]),
+        ),
+      )
+      .returningAll()
+      .execute();
+    return rows[0];
+  }
+
+  // Due DELAY waitpoints, claimed PENDING → COMPLETED in one batch.
+  async claimDueDelayWaitpoints(
+    nowIso: string,
+    limit: number,
+  ): Promise<WaitpointRow[]> {
+    return this.db
+      .updateTable("waitpoint")
+      .set({ status: "COMPLETED", resolved_at: nowIso, resume_payload: "{}" })
+      .where("id", "in", (eb) =>
+        eb
+          .selectFrom("waitpoint")
+          .select("id")
+          .where("status", "=", "PENDING")
+          .where("type", "=", "DELAY")
+          .where("resume_at", "<=", nowIso)
+          .orderBy("resume_at")
+          .limit(limit),
+      )
+      .where("status", "=", "PENDING")
+      .returningAll()
+      .execute();
+  }
+
+  // PENDING waitpoints past their expiry, claimed PENDING → EXPIRED in one
+  // batch; the WAITING runs that waited on them end CANCELLED in the same transaction.
+  async expireDueWaitpoints(
+    nowIso: string,
+    limit: number,
+  ): Promise<{ expired: WaitpointRow[]; ended: EndedWait[] }> {
+    return this.db.transaction().execute(async (trx) => {
+      const expired = await trx
+        .updateTable("waitpoint")
+        .set({ status: "EXPIRED", resolved_at: nowIso })
+        .where("id", "in", (eb) =>
+          eb
+            .selectFrom("waitpoint")
+            .select("id")
+            .where("status", "=", "PENDING")
+            .where("expires_at", "<=", nowIso)
+            .orderBy("expires_at")
+            .limit(limit),
+        )
+        .where("status", "=", "PENDING")
+        .returningAll()
+        .execute();
+      const ended: EndedWait[] = [];
+      for (const waitpoint of expired) {
+        const end = await endWaitingRun(trx, waitpoint.run_id, {
+          reason: waitpointExpiryReason(waitpoint),
+          errorName: WAITPOINT_EXPIRED_ERROR_NAME,
+          endedAt: nowIso,
+          waitpointId: waitpoint.id,
+        });
+        if (end) ended.push(end);
+      }
+      return { expired, ended };
+    });
+  }
+
+  // WAITING runs whose waitpoint is no longer live, with no resume delivered:
+  // nothing would ever end them, so they end CANCELLED.
+  async endStrandedWaits(limit: number): Promise<EndedWait[]> {
+    const runs = await this.db
+      .selectFrom("run")
+      .select("id")
+      .where("status", "=", WAITING_RUN_STATUS)
+      .where((eb) => strandedWait(eb))
+      .limit(limit)
+      .execute();
+    const ended: EndedWait[] = [];
+    for (const run of runs) {
+      const end = await this.db.transaction().execute((trx) =>
+        endWaitingRun(trx, run.id, {
+          reason: STRANDED_WAIT_REASON,
+          errorName: WAITPOINT_NOT_LIVE_ERROR_NAME,
+          endedAt: new Date().toISOString(),
+        }),
+      );
+      if (end) ended.push(end);
+    }
+    return ended;
+  }
+
+  // The next PENDING expiry, for the same timer as DELAY.
+  async nextExpiry(): Promise<string | undefined> {
+    const row = await this.db
+      .selectFrom("waitpoint")
+      .select("expires_at")
+      .where("status", "=", "PENDING")
+      .where("expires_at", "is not", null)
+      .orderBy("expires_at")
+      .limit(1)
+      .executeTakeFirst();
+    return row?.expires_at ?? undefined;
+  }
+
+  async countWaitingRuns(): Promise<number> {
+    const row = await this.db
+      .selectFrom("run")
+      .select((eb) => eb.fn.countAll<number>().as("count"))
+      .where("status", "=", WAITING_RUN_STATUS)
+      .executeTakeFirst();
+    return Number(row?.count ?? 0);
+  }
+
+  // The next DELAY due time, for a single timer.
+  async nextDelayDue(): Promise<string | undefined> {
+    const row = await this.db
+      .selectFrom("waitpoint")
+      .select("resume_at")
+      .where("status", "=", "PENDING")
+      .where("type", "=", "DELAY")
+      .where("resume_at", "is not", null)
+      .orderBy("resume_at")
+      .limit(1)
+      .executeTakeFirst();
+    return row?.resume_at ?? undefined;
+  }
+
+  async hasCompletedWaitpoint(runId: string): Promise<boolean> {
+    const row = await this.db
+      .selectFrom("waitpoint")
+      .select("id")
+      .where("run_id", "=", runId)
+      .where("status", "=", "COMPLETED")
+      .limit(1)
+      .executeTakeFirst();
+    return row !== undefined;
+  }
+
+  // WAITING runs a resume was delivered to but which never re-entered.
+  async heldRunIds(): Promise<string[]> {
+    const rows = await this.db
+      .selectFrom("waitpoint")
+      .innerJoin("run", "run.id", "waitpoint.run_id")
+      .select("waitpoint.run_id")
+      .distinct()
+      .where("waitpoint.status", "=", "COMPLETED")
+      .where("run.status", "=", WAITING_RUN_STATUS)
+      .execute();
+    return rows.map((row) => row.run_id);
+  }
+
+  // Whether this process is executing the run.
+  isRunInFlight(runId: string): boolean {
+    return this.runsInFlight.has(runId);
+  }
+
+  // WAITING → RUNNING, once; false when it was not WAITING.
+  async claimWaitingRun(runId: string): Promise<boolean> {
+    const claimed = await this.db
+      .updateTable("run")
+      .set({ status: "RUNNING" })
+      .where("id", "=", runId)
+      .where("status", "=", WAITING_RUN_STATUS)
+      .returning("id")
+      .execute();
+    if (claimed.length === 0) return false;
+    this.runsInFlight.add(runId);
+    this.resumedLegs.add(runId);
+    this.journaledSteps.set(runId, new Map());
+    return true;
+  }
+
+  // A claimed run with nothing to resume on goes back to waiting.
+  async returnToWaiting(runId: string): Promise<void> {
+    this.runsInFlight.delete(runId);
+    this.resumedLegs.delete(runId);
+    this.journaledSteps.delete(runId);
+    await this.db
+      .updateTable("run")
+      .set({ status: WAITING_RUN_STATUS })
+      .where("id", "=", runId)
+      .where("status", "=", "RUNNING")
+      .execute();
+  }
+
+  // The run's COMPLETED waitpoint, now CONSUMED: the one it waits on, else,
+  // for a webhook wait, the oldest link resolved, which closes the one it waits on.
+  async consumeCompletedWaitpoint(
+    runId: string,
+  ): Promise<{ waitpoint: WaitpointRow; closed: string[] } | undefined> {
+    return this.db.transaction().execute(async (trx) => {
+      const run = await trx
+        .selectFrom("run")
+        .select("waiting_on")
+        .where("id", "=", runId)
+        .executeTakeFirst();
+      const waitingOn = run?.waiting_on ?? null;
+      const candidates = await trx
+        .selectFrom("waitpoint")
+        .selectAll()
+        .where("run_id", "=", runId)
+        .where("status", "=", "COMPLETED")
+        .orderBy("resolved_at")
+        .execute();
+      const awaited = waitingOn
+        ? await trx
+            .selectFrom("waitpoint")
+            .select("kind")
+            .where("id", "=", waitingOn)
+            .executeTakeFirst()
+        : undefined;
+      // An approval or a delay is resumed only by its own waitpoint.
+      const linksResume = !awaited || awaited.kind === "webhook";
+      const chosen =
+        candidates.find((row) => row.id === waitingOn) ??
+        (linksResume ? candidates[0] : undefined);
+      if (!chosen) return undefined;
+      const rows = await trx
+        .updateTable("waitpoint")
+        .set({ status: "CONSUMED" })
+        .where("id", "=", chosen.id)
+        .where("status", "=", "COMPLETED")
+        .returningAll()
+        .execute();
+      const waitpoint = rows[0];
+      if (!waitpoint) return undefined;
+      // So the waiting step, run again, can wait anew.
+      const closed =
+        waitingOn && waitingOn !== waitpoint.id
+          ? await closeLiveWaitpoints(
+              trx,
+              [runId],
+              "CANCELLED",
+              new Date().toISOString(),
+              (eb) => eb("waitpoint.id", "!=", waitingOn),
+            )
+          : [];
+      return { waitpoint, closed };
+    });
+  }
+
+  async getRunPin(runId: string): Promise<RunPinRow | undefined> {
+    return this.db
+      .selectFrom("run")
+      .select([
+        "definition_hash",
+        "definition_op_index",
+        "definition_scope_hash",
+      ])
+      .where("id", "=", runId)
+      .executeTakeFirst();
+  }
+
+  // Closes out a run that is not executing: WAITING, or PENDING in a queue.
+  async cancelIdleRun(
+    runId: string,
+    reason: string,
+  ): Promise<string | undefined> {
+    const endedAt = new Date().toISOString();
+    const ended = await this.db.transaction().execute(async (trx) => {
+      const rows = await trx
+        .updateTable("run")
+        .set({
+          status: "CANCELLED",
+          error: redactMessage(reason),
+          ended_at: endedAt,
+        })
+        .where("id", "=", runId)
+        .where("status", "in", [WAITING_RUN_STATUS, PENDING_RUN_STATUS])
+        .returning("id")
+        .execute();
+      if (rows.length === 0) return false;
+      await failWaitingSteps(trx, [runId], reason, null, endedAt);
+      await closeLiveWaitpoints(trx, [runId], "CANCELLED", endedAt);
+      return true;
+    });
+    if (!ended) return undefined;
+    this.runsInFlight.delete(runId);
+    return runId;
+  }
+
+  // Ends a RUNNING run whose wait cannot go on, its waiting step FAILED.
+  async endWait(
+    runId: string,
+    end: {
+      status: "CANCELLED" | "FAILED";
+      reason: string;
+      errorName: string;
+      waitpoints: "EXPIRED" | "CANCELLED";
+    },
+  ): Promise<string[]> {
+    this.runsInFlight.delete(runId);
+    this.journaledSteps.delete(runId);
+    this.pausingRuns.delete(runId);
+    this.resumedLegs.delete(runId);
+    const endedAt = new Date().toISOString();
+    return this.db.transaction().execute(async (trx) => {
+      const rows = await trx
+        .updateTable("run")
+        .set({
+          status: end.status,
+          error: redactMessage(end.reason),
+          error_name: end.errorName,
+          ended_at: endedAt,
+        })
+        .where("id", "=", runId)
+        .where("status", "=", "RUNNING")
+        .returning("id")
+        .execute();
+      if (rows.length === 0) return [];
+      await failWaitingSteps(trx, [runId], end.reason, end.errorName, endedAt);
+      return closeLiveWaitpoints(trx, [runId], end.waitpoints, endedAt);
+    });
+  }
+
+  async listWaitpointsForRuns(
+    runIds: string[],
+  ): Promise<Map<string, WaitpointRow[]>> {
+    const byRun = new Map<string, WaitpointRow[]>(runIds.map((id) => [id, []]));
+    if (runIds.length === 0) return byRun;
+    const rows = await this.db
+      .selectFrom("waitpoint")
+      .selectAll()
+      .where("run_id", "in", [...new Set(runIds)])
+      .orderBy("created_at")
+      .execute();
+    for (const row of rows) byRun.get(row.run_id)?.push(row);
+    return byRun;
+  }
+
+  // WAITING runs, oldest first; an empty scope matches nothing.
+  async listWaitingRuns(
+    workflowId: string | string[] | undefined,
+    limit: number,
+  ): Promise<RunRow[]> {
+    if (Array.isArray(workflowId) && workflowId.length === 0) return [];
+    let query = this.db
+      .selectFrom("run")
+      .selectAll()
+      .where("status", "=", WAITING_RUN_STATUS)
+      .orderBy("enqueued_at", "asc")
+      .orderBy("id", "asc")
+      .limit(Math.min(Math.max(limit, 1), MAX_LIST_RUNS));
+    if (Array.isArray(workflowId)) {
+      query = query.where("workflow_id", "in", workflowId);
+    } else if (workflowId) {
+      query = query.where("workflow_id", "=", workflowId);
+    }
+    return query.execute();
+  }
+
   // Deletes runs that finished before `cutoffIso`, with their steps and
   // documents, a batch per transaction. Returns how many runs went.
   async pruneFinishedRuns(
@@ -2569,6 +3496,7 @@ export class WorkflowRunStore {
           .deleteFrom("step_execution")
           .where("run_id", "in", ids)
           .execute();
+        await trx.deleteFrom("waitpoint").where("run_id", "in", ids).execute();
         await trx
           .deleteFrom("run_document")
           .where("run_id", "in", ids)
@@ -2651,15 +3579,22 @@ export class WorkflowRunStore {
       }
       if (runIds.size === 0) return erased;
 
-      const all = [...runIds];
-      const live = await trx
+      const all = [...runIds].sort();
+      // Locked first: a claim or admission waits for the erase and then finds
+      // no row, and one that committed already is read here as live.
+      const locked = await trx
         .selectFrom("run")
-        .select("id")
+        .select(["id", "status"])
         .where("id", "in", all)
-        .where("status", "in", ["RUNNING", PENDING_RUN_STATUS])
+        .orderBy("id")
+        .forUpdate()
         .execute();
       // Before the deletes, so a step journaled meanwhile is dropped too.
-      for (const row of live) erasedRuns.add(row.id);
+      for (const row of locked) {
+        if (row.status === "RUNNING" || row.status === PENDING_RUN_STATUS) {
+          erasedRuns.add(row.id);
+        }
+      }
       erased.steps = (
         await trx
           .deleteFrom("step_execution")
@@ -2667,6 +3602,7 @@ export class WorkflowRunStore {
           .returning("id")
           .execute()
       ).length;
+      await trx.deleteFrom("waitpoint").where("run_id", "in", all).execute();
       erased.documents = (
         await trx
           .deleteFrom("run_document")

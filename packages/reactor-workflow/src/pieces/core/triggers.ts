@@ -8,6 +8,7 @@ import {
 import {
   SCHEDULE_MODES,
   SCHEDULE_UNIT_MS,
+  type ManualInputType,
 } from "@powerhousedao/pieces-framework/workflow";
 import { shownWhen, withDisplay, withHints } from "./hints.js";
 
@@ -272,7 +273,66 @@ export const manualTrigger = createTrigger({
     "to use for a workflow driven by a test or a script.",
   type: TriggerStrategy.MANUAL,
   requireAuth: false,
-  props: {},
+  props: {
+    // Activepieces' web form `inputs`, with a payload key and more types.
+    inputs: Property.Array({
+      displayName: "Inputs",
+      description:
+        "Fields a run asks for. The editor's Run shows them as a form; a fire missing a required field, or with one of the wrong type, is refused.",
+      required: false,
+      properties: {
+        displayName: Property.ShortText({
+          displayName: "Field Name",
+          placeholder: "e.g. Email address",
+          required: true,
+        }),
+        name: Property.ShortText({
+          displayName: "Payload Key",
+          description: "Read as {{trigger.payload.<key>}}.",
+          placeholder: "e.g. email",
+          required: true,
+        }),
+        type: Property.StaticDropdown({
+          displayName: "Field Type",
+          required: true,
+          defaultValue: "text",
+          options: options([
+            ["text", "Text"],
+            ["text_area", "Long text"],
+            ["number", "Number"],
+            ["toggle", "Checkbox"],
+            ["date", "Date"],
+            ["dropdown", "Dropdown"],
+            ["json", "JSON"],
+          ] satisfies [ManualInputType, string][]),
+        }),
+        options: withHints(
+          Property.LongText({
+            displayName: "Options",
+            description:
+              "One per line: a value, or Label = value to show a label and send the value.",
+            required: true,
+          }),
+          shownWhen("type", ["dropdown"]),
+        ),
+        description: Property.ShortText({
+          displayName: "Field Description",
+          placeholder: "Shown under the field",
+          required: false,
+        }),
+        defaultValue: Property.ShortText({
+          displayName: "Default Value",
+          description: "As text: 42, true, 2026-01-31, or JSON.",
+          required: false,
+        }),
+        required: Property.Checkbox({
+          displayName: "Required",
+          defaultValue: false,
+          required: false,
+        }),
+      },
+    }),
+  },
   sampleData: null,
   ...hooks("manual"),
 });

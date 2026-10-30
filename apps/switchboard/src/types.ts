@@ -161,8 +161,15 @@ export type StartServerOptions = {
     enabled?: boolean;
     /** OAuth2 apps the publisher owns (`oauth_app` on a connection): per app,
      * the provider's client files by kind. Wins over the config file's
-     * `workflows.oauthApps`; relative paths there are from the config file. */
-    oauthApps?: { id: string; clients: { desktop?: string; web?: string } }[];
+     * `workflows.oauthApps`; relative paths there are from the config file.
+     * `relay` is a token broker for the app's web client, used for a web
+     * sign-in when this host has no web client file: the provider needs only
+     * the broker's one redirect URI, and the secret stays with the broker. */
+    oauthApps?: {
+      id: string;
+      clients: { desktop?: string; web?: string };
+      relay?: { clientId: string; redirectUri: string; tokenUrl: string };
+    }[];
   };
   /** The GDPR add-on; off unless this or PH_PRIVACY_ENABLED turns it on. */
   privacy?: PrivacyOptions;

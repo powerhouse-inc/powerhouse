@@ -6,9 +6,11 @@ import {
 } from "@powerhousedao/pieces-framework/block-type";
 import {
   checkTriggerStrategy,
+  coerceManualPayload,
   containsDocumentRef,
   documentRefsIn,
   expandDocumentRefs,
+  parseManualInputs,
   type DocumentReference,
 } from "@powerhousedao/pieces-framework/workflow";
 import {
@@ -65,6 +67,12 @@ import {
   type ExpressionScope,
   type PieceWorkerSession,
   type ReplayedStep,
+  type CarriedStep,
+  type WaitpointPort,
+  type RunResponse,
+  canonicalJson,
+  hashOf,
+  unavailableValue,
   type ModelManifestSource,
   type ReactorTap,
   type StepReactorRequest,
@@ -77,7 +85,12 @@ import {
 } from "../pieces/index.js";
 import {
   childLogger,
+  garbageCollect,
   generateId,
+  hashDocumentStateForScope,
+  isDenied,
+  sortOperations,
+  type Operation,
   type Action,
   type ILogger,
   type OperationWithContext,
@@ -102,6 +115,8 @@ import {
 } from "./oauth.js";
 import {
   actions as workflowActions,
+  reducer as workflowReducer,
+  utils as workflowUtils,
   type WorkflowDocument,
   type WorkflowState,
 } from "@powerhousedao/workflow/document-models/workflow";
@@ -129,6 +144,7 @@ import {
   hasOutputSchemaFields,
   fromSample,
   lifecycleTriggerTree,
+  manualTriggerTree,
   scheduleTriggerTree,
   treeValue,
   webhookTriggerTree,
@@ -216,11 +232,15 @@ import {
 } from "./reactor-session.js";
 import { PUBLISH_WORKFLOW, runUserOfOperation } from "./run-user.js";
 import {
+  APPROVAL_BLOCK,
   ASSERT_BLOCK,
   BRANCH_BLOCK,
+  DELAY_BLOCK,
   isCoreBlock,
   MANUAL_BLOCK,
   SCHEDULE_BLOCK,
+  STOP_BLOCK,
+  WAIT_FOR_WEBHOOK_BLOCK,
   WEBHOOK_BLOCK,
 } from "./core-blocks.js";
 import { LocalEncryptedSecretStore } from "./secret-store.js";
@@ -243,8 +263,11 @@ import {
   isTruncatedStepPayload,
   journaledTriggerDocumentIds,
   triggerDocumentIds,
+  WAITING_RUN_STATUS,
   type ErasedRuns,
   type FireClaim,
+  type RunPinRow,
+  type WaitpointRow,
   type RunRow,
   type StepExecutionRow,
   type TriggerStateRow,
@@ -255,8 +278,11 @@ import {
   CANCELLED_RUN_STATUS,
   concurrencyLimit,
   effectiveRunPolicy,
+  maxSuspensionMs,
+  UNENFORCED_POLICY,
   type EffectiveRunPolicy,
 } from "./policy.js";
+import { WaitpointPoller } from "./waitpoint-poller.js";
 import { WorkflowRunGate } from "./run-gate.js";
 import { DEFAULT_ADMIT_MAX_ELU, RunDispatcher } from "./run-dispatcher.js";
 import { EventLoopMonitor } from "./event-loop.js";
@@ -295,16 +321,32 @@ import {
   type TriggerKind,
 } from "./trigger-filters.js";
 import {
-  clientKindFor,
   loadOAuthApps,
   grantedScopes,
   OAUTH_APP,
   OAUTH_GRANTED_SCOPES,
   OAUTH_SCOPES,
+  oauthSignInFor,
   scopesOverride,
   type OAuthAppRegistry,
+  type OAuthSignIn,
 } from "./oauth-apps.js";
 import { SpanStatusCode, type Span } from "@opentelemetry/api";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { validateHeaderName, validateHeaderValue } from "node:http";
+import type {
+  ApprovalRequest,
+  ResolveWaitpointInput,
+  WaitingRunsArgs,
+  WaitpointDescription,
+  WaitpointRecord,
+  WaitpointResumePayload,
+  WaitpointStatus,
+} from "./waitpoint-types.js";
+import {
+  WAITPOINT_EXPIRED_ERROR_NAME,
+  WAITPOINT_NOT_LIVE_ERROR_NAME,
+} from "./waitpoint-types.js";
 import { tracedSteps, WorkflowTelemetry } from "../telemetry.js";
 
 /** Why a firing was journaled CANCELLED without running, when it was. */
@@ -313,7 +355,9 @@ export type FiringRefusal =
   | "singleton"
   | "stale"
   | "queue-full"
-  | "expired";
+  | "expired"
+  // An operator cancelled it while it queued or waited.
+  | "cancelled";
 
 export { WorkflowRuntimeClosedError };
 
@@ -728,6 +772,7 @@ function refusalStatus(refusal: FiringRefusal | undefined): number {
     case "parked":
     case "singleton":
     case "stale":
+    case "cancelled":
       return 409;
     case "queue-full":
     case "expired":
@@ -735,6 +780,107 @@ function refusalStatus(refusal: FiringRefusal | undefined): number {
     default:
       return 500;
   }
+}
+
+// A sync request's answer once its run (or resumed leg) ended or waits.
+function runResultReply(
+  result: PersistedRunResult,
+  succeededStatus: number,
+): WebhookReply {
+  return {
+    status:
+      result.status === "SUCCEEDED"
+        ? succeededStatus
+        : result.status === WAITING_RUN_STATUS
+          ? 202
+          : refusalStatus(result.refusal),
+    contentType: JSON_CONTENT_TYPE,
+    body: JSON.stringify({
+      runId: result.runId,
+      status: result.status,
+      error: result.error ?? null,
+    }),
+  };
+}
+
+const RESPONDED = Symbol("a step responded");
+
+// Headers a step's response may not set: the host frames the reply, and the
+// endpoint shares the host's origin.
+const DROPPED_RESPONSE_HEADERS = new Set([
+  "connection",
+  "content-length",
+  "keep-alive",
+  "set-cookie",
+  "transfer-encoding",
+  "upgrade",
+]);
+
+// Always sent, over a step's own: its body is served on the host's origin.
+const ORIGIN_SAFE_HEADERS: Readonly<Record<string, string>> = {
+  "x-content-type-options": "nosniff",
+  "content-security-policy": "sandbox",
+};
+
+// False for what node:http refuses to send, such as a non-Latin-1 value.
+function sendableHeader(name: string, value: string): boolean {
+  try {
+    validateHeaderName(name);
+    validateHeaderValue(name, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** A step's `run.respond` / `run.stop` answer as an HTTP reply. As upstream,
+ * none answers 200 with `{}`, and a string body goes as text. */
+export function runResponseReply(response: RunResponse): WebhookReply {
+  const status =
+    typeof response.status === "number" &&
+    Number.isInteger(response.status) &&
+    response.status >= 200 &&
+    response.status <= 599
+      ? response.status
+      : 200;
+  const body = response.body ?? {};
+  let contentType =
+    typeof body === "string" ? "text/plain; charset=utf-8" : JSON_CONTENT_TYPE;
+  const headers: Record<string, string> = {};
+  const given =
+    response.headers && typeof response.headers === "object"
+      ? response.headers
+      : {};
+  for (const [rawName, rawValue] of Object.entries(given)) {
+    const name = rawName.toLowerCase();
+    if (typeof rawValue !== "string" && typeof rawValue !== "number") continue;
+    const value = String(rawValue);
+    if (!sendableHeader(name, value)) continue;
+    if (name === "content-type") contentType = value;
+    else if (!DROPPED_RESPONSE_HEADERS.has(name)) headers[name] = value;
+  }
+  return {
+    status,
+    contentType,
+    body: typeof body === "string" ? body : JSON.stringify(body),
+    headers: { ...headers, ...ORIGIN_SAFE_HEADERS },
+  };
+}
+
+// A `/sync` resume request, held for the leg its waitpoint resumes.
+interface SyncResume {
+  respond: (response: RunResponse) => void;
+  ended: (result: PersistedRunResult | undefined) => void;
+  // The run ended, or the waitpoint closed, before a leg resumed on it: 409,
+  // or 503 when this runtime shut down first.
+  closed: (runId: string, status: string, error: string, code?: number) => void;
+}
+
+interface SyncResumeCandidate {
+  entry: SyncResume;
+  runId: string;
+  // Whether this request's completeWaitpoint won the waitpoint.
+  won: Promise<boolean>;
 }
 
 // Runs an operator started rather than a trigger fired.
@@ -1098,6 +1244,8 @@ export class WorkflowRuntimeService {
           logger.warn(
             `OAuth2 app "${appId}" has no usable ${kind} client: ${reason}`,
           ),
+        onRelayDropped: (appId, reason) =>
+          logger.warn(`OAuth2 app "${appId}" relay ignored: ${reason}`),
       }),
     );
     return this.oauthAppsPromise;
@@ -2530,6 +2678,8 @@ export class WorkflowRuntimeService {
   startTriggerSupervisor(): void {
     this.supervisor().start();
     void this.admitAbandonedRuns();
+    void this.deliverAllHeld();
+    this.startWaitpointPoller();
     // Then rows left after that pass, by a draining owner or a failed pass;
     // only settled ones, so an owner still draining keeps its own.
     this.pendingSweepTimer ??= setInterval(() => {
@@ -2574,6 +2724,7 @@ export class WorkflowRuntimeService {
   stopTriggerSupervisor(): void {
     clearInterval(this.pendingSweepTimer);
     this.pendingSweepTimer = undefined;
+    this.stopWaitpointPoller();
     this.triggerSupervisor?.stop();
   }
 
@@ -2890,14 +3041,60 @@ export class WorkflowRuntimeService {
     );
     let replied = false;
     const takeReply = () => !replied && (replied = true);
-    if (runId) this.heldReplies.set(runId, takeReply);
+    // A step's respond answers first, and the run goes on.
+    let sent: RunResponse | undefined;
+    let responded: () => void = () => undefined;
+    const respondedFirst = new Promise<typeof RESPONDED>((resolve) => {
+      responded = () => resolve(RESPONDED);
+    });
+    const responder = (response: RunResponse) => {
+      if (sent || !takeReply()) return;
+      sent = response;
+      responded();
+    };
+    // A queued run an operator cancelled answers at once, not when it dequeues.
+    let ended: PersistedRunResult | undefined;
+    let endedEarly: () => void = () => undefined;
+    const endedFirst = new Promise<{ ok: true; result: PersistedRunResult }>(
+      (resolve) => {
+        endedEarly = () => resolve({ ok: true, result: ended! });
+      },
+    );
+    const ender = (result: PersistedRunResult) => {
+      if (ended || !takeReply()) return;
+      ended = result;
+      endedEarly();
+    };
+    if (runId) {
+      this.heldReplies.set(runId, takeReply);
+      this.runResponders.set(runId, responder);
+      this.queuedReplies.set(runId, ender);
+    }
     let run: Awaited<typeof firing> | typeof TIMED_OUT;
     try {
-      run = await Promise.race([firing, timeout(DELIVERY_TIMEOUT_MS)]);
+      const raced = await Promise.race([
+        firing,
+        respondedFirst,
+        endedFirst,
+        timeout(DELIVERY_TIMEOUT_MS),
+      ]);
+      // respondedFirst resolves only after `sent` is set.
+      if (sent) return runResponseReply(sent);
+      run = raced as Exclude<typeof raced, typeof RESPONDED>;
       // A shutdown that took the reply first is answered 503, not 504.
-      if (run === TIMED_OUT && !takeReply()) run = await firing;
+      if (run === TIMED_OUT && !takeReply()) {
+        run = ended ? { ok: true, result: ended } : await firing;
+      }
     } finally {
-      if (runId) this.heldReplies.delete(runId);
+      if (runId) {
+        this.heldReplies.delete(runId);
+        if (this.runResponders.get(runId) === responder) {
+          this.runResponders.delete(runId);
+        }
+        if (this.queuedReplies.get(runId) === ender) {
+          this.queuedReplies.delete(runId);
+        }
+      }
     }
 
     if (run === TIMED_OUT) {
@@ -2933,18 +3130,7 @@ export class WorkflowRuntimeService {
       };
     }
 
-    return {
-      status:
-        run.result.status === "SUCCEEDED"
-          ? config.responseStatus
-          : refusalStatus(run.result.refusal),
-      contentType: JSON_CONTENT_TYPE,
-      body: JSON.stringify({
-        runId: run.result.runId,
-        status: run.result.status,
-        error: run.result.error ?? null,
-      }),
-    };
+    return runResultReply(run.result, config.responseStatus);
   }
 
   // The probe a sender sends before it will register the endpoint. Answered by
@@ -3607,6 +3793,15 @@ export class WorkflowRuntimeService {
     });
   }
 
+  // How startOAuth would sign in with the publisher's app `appId` for this
+  // callback; "none" for an app this host does not know.
+  async oauthSignInMode(
+    appId: string,
+    redirectUri: string,
+  ): Promise<OAuthSignIn["mode"]> {
+    return oauthSignInFor(await this.oauthApps(), appId, redirectUri).mode;
+  }
+
   // Opens an OAuth2 sign-in for a connection that brings its own app. The
   // host serves redirectUri and passes what it receives to completeOAuth.
   async startOAuth(
@@ -3632,21 +3827,47 @@ export class WorkflowRuntimeService {
       (state.config ?? {}) as Record<string, unknown>,
     );
     let clientId: string;
-    let clientSecretRef: string;
+    let clientSecretRef: string | null;
     let pkce = false;
+    // What a sign-in through the app's relay changes: the provider's
+    // redirect URI, the token URL, and what the state carries after a dot.
+    let redirectUri = options.redirectUri;
+    let tokenUrl: string | undefined;
+    let stateSuffix: string | undefined;
     if (typeof appId === "string" && appId !== "") {
       // The publisher's app: its desktop client for a callback to this
-      // machine, its web client otherwise.
-      const kind = clientKindFor(options.redirectUri);
-      const client = (await this.oauthApps()).client(appId, kind);
-      if (!client) {
+      // machine, its web client otherwise, else its relay.
+      const signIn = oauthSignInFor(
+        await this.oauthApps(),
+        appId,
+        options.redirectUri,
+      );
+      if (signIn.mode === "none") {
         throw new OAuthError(
-          `The app "${appId}" has no ${kind} client on this host; configure it in workflows.oauthApps`,
+          `The app "${appId}" has no ${signIn.kind} client on this host; configure it in workflows.oauthApps`,
         );
       }
-      clientId = client.clientId;
-      clientSecretRef = client.clientSecretRef;
-      pkce = kind === "desktop";
+      if (signIn.mode === "relay") {
+        const { relay } = signIn;
+        // The provider knows the relay, not this host: it sends the browser
+        // there, and the relay forwards code and state to the callback the
+        // state names. The attempt keeps the relay's redirect URI, so the
+        // exchange names the one the provider saw, and its token URL, which
+        // adds the secret this host never holds; PKCE binds the code to
+        // this host, which alone holds the verifier.
+        clientId = relay.clientId;
+        clientSecretRef = null;
+        redirectUri = relay.redirectUri;
+        tokenUrl = relay.tokenUrl;
+        stateSuffix = Buffer.from(options.redirectUri, "utf8").toString(
+          "base64url",
+        );
+        pkce = true;
+      } else {
+        clientId = signIn.client.clientId;
+        clientSecretRef = signIn.client.clientSecretRef;
+        pkce = signIn.mode === "desktop";
+      }
     } else {
       if (typeof ownClientId !== "string" || ownClientId === "") {
         throw new OAuthError("Set the client ID before connecting");
@@ -3692,10 +3913,12 @@ export class WorkflowRuntimeService {
       props,
       clientId,
       clientSecretRef,
-      redirectUri: options.redirectUri,
+      redirectUri,
+      ...(tokenUrl ? { tokenUrl } : {}),
       ...(options.returnUrl ? { returnUrl: options.returnUrl } : {}),
       ...(scopes ? { scopes } : {}),
       ...(pkce ? { pkce } : {}),
+      ...(stateSuffix ? { stateSuffix } : {}),
       createdBy: this.callerAddress(ctx),
     });
   }
@@ -3752,15 +3975,19 @@ export class WorkflowRuntimeService {
       // Changed while the user was signing in: the token would belong to
       // another app than the one the connection now names.
       const appId = config[OAUTH_APP];
-      const fromRegistry =
-        typeof appId === "string" &&
-        appId !== "" &&
-        (await this.oauthApps())
-          .clients(appId)
-          .some((c) => c.clientId === attempt.client_id);
+      // A relayed attempt holds no secret ref; only the app's relay matches it.
+      const relayed = attempt.client_secret_ref === null;
+      let fromRegistry = false;
+      if (typeof appId === "string" && appId !== "") {
+        const apps = await this.oauthApps();
+        fromRegistry = relayed
+          ? apps.relay(appId)?.clientId === attempt.client_id
+          : apps.clients(appId).some((c) => c.clientId === attempt.client_id);
+      }
       if (
         state.authType !== "OAUTH2" ||
-        (!fromRegistry && config[OAUTH_CLIENT_ID] !== attempt.client_id)
+        (!fromRegistry &&
+          (relayed || config[OAUTH_CLIENT_ID] !== attempt.client_id))
       ) {
         return await fail("The connection changed during sign-in; try again");
       }
@@ -3769,13 +3996,16 @@ export class WorkflowRuntimeService {
       const tokens = await exchangeCode(
         attempt,
         callback.code,
-        // A host app's client secret has no owner document.
-        await secrets.get(
-          attempt.client_secret_ref,
-          fromRegistry
-            ? null
-            : { documentId: connectionId, kind: "connection" },
-        ),
+        // A relay adds the secret itself; a host app's client secret has
+        // no owner document.
+        attempt.client_secret_ref === null
+          ? null
+          : await secrets.get(
+              attempt.client_secret_ref,
+              fromRegistry
+                ? null
+                : { documentId: connectionId, kind: "connection" },
+            ),
         this.designEgress,
         fromRegistry,
       );
@@ -4261,8 +4491,10 @@ export class WorkflowRuntimeService {
   ): Promise<OutputTree> {
     const record = (config ?? {}) as Record<string, unknown>;
     switch (blockKey(block)) {
-      case MANUAL_BLOCK:
-        return { source: "none", nodes: [] };
+      case MANUAL_BLOCK: {
+        const nodes = manualTriggerTree(parseManualInputs(record));
+        return { source: nodes.length > 0 ? "static" : "none", nodes };
+      }
       case SCHEDULE_BLOCK:
         return { source: "static", nodes: scheduleTriggerTree() };
       case WEBHOOK_BLOCK:
@@ -4279,6 +4511,49 @@ export class WorkflowRuntimeService {
         };
       case ASSERT_BLOCK:
         return { source: "static", nodes: [{ name: "value", type: "value" }] };
+      case DELAY_BLOCK:
+        return {
+          source: "static",
+          nodes: [{ name: "resumedAt", type: "DateTime!" }],
+        };
+      case APPROVAL_BLOCK:
+        return {
+          source: "static",
+          nodes: [
+            { name: "approved", type: "Boolean!" },
+            { name: "reason", type: "String" },
+            {
+              name: "decidedBy",
+              type: "String",
+              description: "The approver's DID",
+            },
+            { name: "decidedAt", type: "DateTime!" },
+          ],
+        };
+      case STOP_BLOCK:
+        return {
+          source: "static",
+          nodes: [
+            {
+              name: "response",
+              type: "JSONObject",
+              description: "The answer sent, when one was set",
+            },
+          ],
+        };
+      case WAIT_FOR_WEBHOOK_BLOCK:
+        return {
+          source: "static",
+          nodes: [
+            {
+              name: "body",
+              type: "Unknown",
+              description: "The resuming request's body",
+            },
+            { name: "headers", type: "JSONObject!" },
+            { name: "queryParams", type: "JSONObject!" },
+          ],
+        };
       case DOCUMENT_CREATED_BLOCK:
       case DOCUMENT_DELETED_BLOCK:
         return { source: "static", nodes: lifecycleTriggerTree() };
@@ -4785,6 +5060,8 @@ export class WorkflowRuntimeService {
     let runUser: RunUser | null | undefined;
     // The workflow's generation as read: a wait it outlasts re-reads nothing.
     let readGeneration: number;
+    // The global revision the state reflects; a run that waits pins it.
+    let revision: number;
     try {
       // "manual" is the only kind a caller can ask for; every other one is
       // system-initiated. An adopted manual row passed this check when journaled.
@@ -4802,6 +5079,7 @@ export class WorkflowRuntimeService {
       if (cached) {
         state = cached.state;
         documentName = cached.name;
+        revision = cached.revision;
         readGeneration = this.workflowGeneration(workflowId);
       } else {
         const generation = this.workflowGeneration(workflowId);
@@ -4817,6 +5095,7 @@ export class WorkflowRuntimeService {
         }
         state = document.state.global;
         documentName = document.header.name;
+        revision = globalRevision(document);
         this.cacheLoaded(workflowId, generation, document);
       }
       if (state.status !== "ENABLED") {
@@ -4824,6 +5103,23 @@ export class WorkflowRuntimeService {
         throw new Error(
           `Workflow is ${state.status}; only ENABLED workflows can fire`,
         );
+      }
+      // A caller's fire is checked against the manual trigger's inputs; a
+      // rerun or an adopted row keeps the payload it was journaled with.
+      if (triggerKind === "manual" && !resume && !enqueuedRunId) {
+        const fired = runnableDefinition(state).trigger;
+        const inputs =
+          fired && blockKey(triggerBlock(fired)) === MANUAL_BLOCK
+            ? parseManualInputs(configRecord(fired.config))
+            : [];
+        if (inputs.length > 0) {
+          try {
+            triggerPayload = coerceManualPayload(inputs, triggerPayload);
+          } catch (error) {
+            run.refused = true;
+            throw error;
+          }
+        }
       }
       definition = toWorkflowDefinition(state);
       const reactorConnections = declaredReactorConnectionIds(definition);
@@ -5020,10 +5316,6 @@ export class WorkflowRuntimeService {
     }
 
     let runId: string | null = enqueuedRunId ?? null;
-    let journalFailed = false;
-    // Recorded whether or not the write lands: it is what lets finishRun put a
-    // lost row back where the step ran.
-    const executionOrder = new Map<string, number>();
     // This run's child, forked at its first piece step and killed below. Free
     // until then, so a run of document blocks never takes a slot.
     let session: PieceWorkerSession | undefined;
@@ -5033,117 +5325,73 @@ export class WorkflowRuntimeService {
     // life of the process — SINGLETON refuses every later firing, QUEUE waits
     // for a run that is already over.
     try {
-      runId = await this.telemetry.phase(
+      const journaled = await this.telemetry.phase(
         "journal.start",
         {},
-        async (): Promise<string | null> => {
+        async (): Promise<{ runId: string | null; cancelled?: boolean }> => {
           if (enqueuedRunId) {
-            await store?.beginRun(enqueuedRunId, {
+            const adopted = await store?.beginRun(enqueuedRunId, {
               workflowName: runJournalName(state.name, documentName),
               workflowVersion: runnable.version,
             });
-            return enqueuedRunId;
+            // Cancelled while it queued: the row is closed out already.
+            if (adopted === false) return { runId: null, cancelled: true };
+            return { runId: enqueuedRunId };
           }
-          return (
-            (await store?.startRun({
-              workflowId,
-              workflowName: runJournalName(state.name, documentName),
-              workflowVersion: runnable.version,
-              triggerKind,
-              triggerPayload,
-              rerunOf: resume?.rerunOf,
-            })) ?? null
-          );
+          return {
+            runId:
+              (await store?.startRun({
+                workflowId,
+                workflowName: runJournalName(state.name, documentName),
+                workflowVersion: runnable.version,
+                triggerKind,
+                triggerPayload,
+                rerunOf: resume?.rerunOf,
+              })) ?? null,
+          };
         },
       );
+      if (journaled.cancelled) {
+        const row = enqueuedRunId
+          ? await store?.getRun(enqueuedRunId)
+          : undefined;
+        return {
+          status: CANCELLED_RUN_STATUS,
+          steps: [],
+          runId: enqueuedRunId ?? null,
+          ...(row?.error ? { error: row.error } : {}),
+          refusal: "cancelled",
+        };
+      }
+      runId = journaled.runId;
       if (runId) run.span.setAttribute("run.id", runId);
       // Shut down during the journal write: refused here, and the journal
       // records the run as failed rather than leaving it to be swept up.
       if (this.closed) throw new WorkflowRuntimeClosedError(workflowId);
       session = this.workers().session();
-      // Resolved per run, so a rotated secret takes effect on the next one.
-      const { variables, secretValues } = await resolveVariables(
-        runnable.variables,
-        this.secretProvider(),
+      const { result, handed } = await this.executeLeg({
         workflowId,
-      );
-      const journal = store;
-      const journaledRunId = runId;
-      const handed = new Set<string>();
-      const result = await withRunScope(
-        {
-          workflowId,
-          runId,
-          connections,
-          pieceWorker: session,
-          ...(runUser !== undefined ? { runUser } : {}),
-          attachments: attachmentOrigins(
-            triggerPayload,
-            handed,
-            resume?.completedSteps,
-          ),
-          recordDocuments: async (documentIds: string[]) => {
-            for (const documentId of documentIds) handed.add(documentId);
-            if (journal && journaledRunId) {
-              await journal.recordRunDocuments(journaledRunId, documentIds);
-            }
-          },
-        },
-        () =>
-          runWorkflow({
-            definition: { ...definition, variables },
-            executor,
-            declaredPorts: blockPorts,
-            blockDefaults: (block) => this.blockDefaults(block),
-            ...(secretValues.length > 0 ? { redactValues: secretValues } : {}),
-            triggerPayload,
-            completedSteps: resume?.completedSteps,
-            // `policy.defaultRetry` and `policy.runTimeoutSeconds`, enforced.
-            ...(policy.defaultRetry
-              ? { defaultRetry: policy.defaultRetry }
-              : {}),
-            // From firedAt, so the queue wait and the document read count
-            // against the timeout rather than being free.
-            ...(deadline !== undefined ? { deadline } : {}),
-            // Journal each step as it lands, so a reactor that dies mid-run
-            // still leaves a rerunnable record of the work it finished.
-            onStep:
-              store && journaledRunId
-                ? async (record, ordinal) => {
-                    executionOrder.set(record.stepId, ordinal);
-                    try {
-                      await this.telemetry.phase("journal.step", {}, () =>
-                        store.recordStep(journaledRunId, ordinal, record),
-                      );
-                    } catch (error) {
-                      // Swallowed on purpose, but logged once per run: a dead
-                      // journal must not look exactly like a healthy one.
-                      if (journalFailed) return;
-                      journalFailed = true;
-                      this.logger.warn(
-                        `Run ${journaledRunId}: journaling step "@step" failed; the run continues without per-step durability: @error`,
-                        record.key,
-                        error,
-                      );
-                    }
-                  }
-                : undefined,
-          }),
-      );
-      if (store && journaledRunId) {
-        try {
-          await this.telemetry.phase("journal.finish", {}, () =>
-            store.finishRun(journaledRunId, result, executionOrder),
-          );
-        } catch (error) {
-          // The run is over and its result is the caller's; a journal that
-          // cannot say so must not turn a finished run into a failed one.
-          this.logger.warn(
-            `Run ${runId}: closing the run journal out failed; the run's outcome stands`,
-            error,
-          );
-        }
-      }
+        runId,
+        store,
+        session,
+        definition,
+        runnable,
+        policy,
+        // From firedAt, so the queue wait and the document read count
+        // against the timeout rather than being free.
+        deadline,
+        connections,
+        runUser,
+        triggerPayload,
+        executor,
+        completedSteps: resume?.completedSteps,
+        replayed: resume?.completedSteps,
+        pin: () => ({
+          definition_hash: this.definitionHash(workflowId, state),
+          definition_op_index: revision,
+          definition_scope_hash: scopeHash(state),
+        }),
+      });
       // `policy.onFailure`, enforced: PARK stops the trigger refiring, NOTIFY
       // says so where an operator will see it, IGNORE is the old behaviour.
       // Only for a trigger's firing: an operator's run says nothing about it.
@@ -5166,11 +5414,9 @@ export class WorkflowRuntimeService {
         : { status: finished.status, steps: [], runId };
     } catch (error) {
       if (store && runId) {
-        await store.failRun(
-          runId,
-          error instanceof Error ? error.message : String(error),
-          errorNameOf(error),
-        );
+        const message = error instanceof Error ? error.message : String(error);
+        const closed = await store.failRun(runId, message, errorNameOf(error));
+        this.answerClosed(closed, runId, { status: "FAILED", error: message });
       }
       throw error;
     } finally {
@@ -5181,6 +5427,221 @@ export class WorkflowRuntimeService {
       admission.release();
       dispatched();
     }
+  }
+
+  // One leg of a run, from start or resume until it ends (closing its
+  // waitpoints) or waits (leaving the run WAITING with its pin).
+  private async executeLeg(leg: {
+    workflowId: string;
+    runId: string | null;
+    store: WorkflowRunStore | undefined;
+    session: PieceWorkerSession;
+    definition: ReturnType<typeof toWorkflowDefinition>;
+    runnable: ReturnType<typeof runnableDefinition>;
+    policy: EffectiveRunPolicy;
+    deadline: number | undefined;
+    connections: ReadonlySet<string>;
+    runUser: RunUser | null | undefined;
+    triggerPayload: unknown;
+    executor: BlockExecutor;
+    completedSteps?: Map<string, ReplayedStep>;
+    carriedSteps?: Map<string, CarriedStep>;
+    resume?: { stepId: string; payload: unknown };
+    firstOrdinal?: number;
+    // Journaled outputs this leg treats as written by the run.
+    replayed?: unknown;
+    written?: ReadonlySet<string>;
+    // Documents earlier legs were handed.
+    handed?: Iterable<string>;
+    // The definition a WAITING leg pins; absent when it is pinned already.
+    pin?: () => RunPinRow;
+    // Answers the sync request that resumed this leg; a first leg answers
+    // the webhook delivery held for its run.
+    respond?: (response: RunResponse) => void;
+  }): Promise<{ result: WorkflowRunResult; handed: Set<string> }> {
+    const { workflowId, runId, store, policy } = leg;
+    let journalFailed = false;
+    // Recorded whether or not the write lands: it is what lets finishRun put a
+    // lost row back where the step ran.
+    const executionOrder = new Map<string, number>();
+    // Resolved per leg, so a rotated secret takes effect on the next one.
+    const { variables, secretValues } = await resolveVariables(
+      leg.runnable.variables,
+      this.secretProvider(),
+      workflowId,
+    );
+    const handed = new Set<string>(leg.handed);
+    const attachments = attachmentOrigins(
+      leg.triggerPayload,
+      handed,
+      leg.replayed,
+    );
+    for (const ref of leg.written ?? []) attachments.written.add(ref);
+    // Created only when a step asks; a run that never pauses writes nothing.
+    const waitpoints =
+      store && runId
+        ? this.waitpointPort(
+            store,
+            workflowId,
+            runId,
+            maxSuspensionMs(leg.runnable),
+          )
+        : undefined;
+    const respond =
+      leg.respond ??
+      (runId && !leg.resume
+        ? (response: RunResponse) => this.runResponders.get(runId)?.(response)
+        : undefined);
+    let result = await withRunScope(
+      {
+        workflowId,
+        runId,
+        connections: leg.connections,
+        pieceWorker: leg.session,
+        ...(leg.runUser !== undefined ? { runUser: leg.runUser } : {}),
+        attachments,
+        recordDocuments: async (documentIds: string[]) => {
+          for (const documentId of documentIds) handed.add(documentId);
+          if (store && runId) {
+            await store.recordRunDocuments(runId, documentIds);
+          }
+        },
+        ...(waitpoints ? { waitpoints: waitpoints.port } : {}),
+      },
+      () =>
+        runWorkflow({
+          definition: { ...leg.definition, variables },
+          executor: leg.executor,
+          declaredPorts: blockPorts,
+          blockDefaults: (block) => this.blockDefaults(block),
+          ...(secretValues.length > 0 ? { redactValues: secretValues } : {}),
+          triggerPayload: leg.triggerPayload,
+          completedSteps: leg.completedSteps,
+          ...(leg.carriedSteps ? { carriedSteps: leg.carriedSteps } : {}),
+          ...(leg.resume ? { resume: leg.resume } : {}),
+          ...(leg.firstOrdinal !== undefined
+            ? { firstOrdinal: leg.firstOrdinal }
+            : {}),
+          ...(respond ? { onRespond: respond } : {}),
+          // `policy.defaultRetry` and `policy.runTimeoutSeconds`, enforced.
+          ...(policy.defaultRetry ? { defaultRetry: policy.defaultRetry } : {}),
+          ...(leg.deadline !== undefined ? { deadline: leg.deadline } : {}),
+          // Journal each step as it lands, so a reactor that dies mid-run
+          // still leaves a rerunnable record of the work it finished.
+          onStep:
+            store && runId
+              ? async (record, ordinal) => {
+                  executionOrder.set(record.stepId, ordinal);
+                  try {
+                    await this.telemetry.phase("journal.step", {}, () =>
+                      store.recordStep(runId, ordinal, record),
+                    );
+                  } catch (error) {
+                    // Swallowed on purpose, but logged once per run: a dead
+                    // journal must not look exactly like a healthy one.
+                    if (journalFailed) return;
+                    journalFailed = true;
+                    this.logger.warn(
+                      `Run ${runId}: journaling step "@step" failed; the run continues without per-step durability: @error`,
+                      record.key,
+                      error,
+                    );
+                  }
+                }
+              : undefined,
+        }),
+    );
+    if (store && runId) {
+      let waiting = result.status === WAITING_RUN_STATUS;
+      try {
+        const { held, closed } = await this.telemetry.phase(
+          "journal.finish",
+          {},
+          () =>
+            store.finishRun(
+              runId,
+              result,
+              executionOrder,
+              waiting ? leg.pin?.() : undefined,
+            ),
+        );
+        this.answerClosed(closed, runId, {
+          status: waiting ? CANCELLED_RUN_STATUS : result.status,
+          error: waiting
+            ? "The step that created this waitpoint no longer waits on it"
+            : (result.error ?? "The run ended without resuming on it"),
+        });
+        if (!held) {
+          result = await this.endUnheldWait(store, runId, result);
+          waiting = false;
+        }
+      } catch (error) {
+        // The run is over and its result is the caller's; a journal that
+        // cannot say so must not turn a finished run into a failed one.
+        this.logger.warn(
+          `Run ${runId}: closing the run journal out failed; the run's outcome stands`,
+          error,
+        );
+      }
+      if (waiting) {
+        // Pausing answers the held request with the waitpoint's responseToSend.
+        const toSend =
+          result.waiting && waitpoints?.responseFor(result.waiting.waitpointId);
+        if (toSend) respond?.(toSend);
+        // A resume that arrived before WAITING was written is delivered now.
+        await this.deliverHeld(runId);
+      }
+    }
+    return { result, handed };
+  }
+
+  // A leg that waited without a live waitpoint of its step: ended as expiry
+  // ends a run when the waitpoint expired meanwhile, else FAILED.
+  private async endUnheldWait(
+    store: WorkflowRunStore,
+    runId: string,
+    result: WorkflowRunResult,
+  ): Promise<WorkflowRunResult> {
+    const on = result.waiting;
+    const step = result.steps.find((record) => record.stepId === on?.stepId);
+    const row = on ? await store.getWaitpoint(on.waitpointId) : undefined;
+    const ours = row?.run_id === runId && row.step_id === on?.stepId;
+    const end =
+      ours && row.status === "EXPIRED"
+        ? {
+            status: "CANCELLED" as const,
+            reason:
+              `The wait at step "${row.step_key}" expired at ` +
+              `${row.expires_at} before the run could wait on it`,
+            errorName: WAITPOINT_EXPIRED_ERROR_NAME,
+          }
+        : {
+            status: "FAILED" as const,
+            reason:
+              `Step "${step?.key ?? on?.stepId}" waited on waitpoint ` +
+              `"${on?.waitpointId}", which is not a live waitpoint it created`,
+            errorName: WAITPOINT_NOT_LIVE_ERROR_NAME,
+          };
+    const closed = await store.endWait(runId, {
+      ...end,
+      waitpoints: "EXPIRED",
+    });
+    this.answerClosed(closed, runId, { status: end.status, error: end.reason });
+    return {
+      status: end.status,
+      error: end.reason,
+      errorName: end.errorName,
+      steps: result.steps.map((record) =>
+        record === step
+          ? {
+              ...record,
+              status: "FAILED",
+              error: end.reason,
+              errorName: end.errorName,
+            }
+          : record,
+      ),
+    };
   }
 
   // Firings of one workflow at a time; see run-gate.ts.
@@ -5216,6 +5677,19 @@ export class WorkflowRuntimeService {
   // Sync deliveries still holding the sender's socket, by run. Taking one
   // commits the delivery to a 503, before a 504 can.
   private readonly heldReplies = new Map<string, () => boolean>();
+  // Sync deliveries a step's `run.respond` / `run.stop` may answer, by run.
+  private readonly runResponders = new Map<
+    string,
+    (response: RunResponse) => void
+  >();
+  // Sync deliveries a cancel of their queued run answers, by run.
+  private readonly queuedReplies = new Map<
+    string,
+    (result: PersistedRunResult) => void
+  >();
+  // `/sync` resume requests held for the leg their waitpoint resumes. Each
+  // learns whether it won the waitpoint; only the winner is answered.
+  private readonly syncResumes = new Map<string, Set<SyncResumeCandidate>>();
 
   /** Why a trigger's firing of a PARKED workflow is refused; undefined when
    * it is not parked, or when an operator started the run. */
@@ -5359,14 +5833,30 @@ export class WorkflowRuntimeService {
     let runId = enqueuedRunId ?? null;
     if (store) {
       try {
+        let adopted = true;
         if (runId) {
           // The row is already durable, with its trigger payload; adopt and
           // close it rather than leaving a PENDING run for a sweep to find.
-          await store.beginRun(runId, details);
+          adopted = await store.beginRun(runId, details);
         } else {
           runId = await store.startRun({ workflowId, ...details });
         }
-        await store.cancelRun(runId, details.reason);
+        if (adopted) {
+          await store.cancelRun(runId, details.reason);
+        } else {
+          // An operator closed it out while it queued: its own end is the answer.
+          const row = await store.getRun(runId);
+          if (row) {
+            return {
+              status: row.status as PersistedRunResult["status"],
+              steps: [],
+              runId,
+              ...(row.error ? { error: row.error } : {}),
+              refusal:
+                row.status === CANCELLED_RUN_STATUS ? "cancelled" : refusal,
+            };
+          }
+        }
       } catch (error) {
         this.logger.warn(
           `Could not journal the skipped firing of workflow ${workflowId}: @error`,
@@ -5576,6 +6066,1028 @@ export class WorkflowRuntimeService {
   ): Promise<boolean> {
     const parsed = resolvedBlock(await this.resolveBlock(stepBlock(step)));
     return parsed ? (await this.declaredReactor(parsed)) === "read" : false;
+  }
+
+  // ── suspend and resume ────────────────────────────────────────────────────
+
+  // Runs WAITING for a resume claim's admission, before the claim lands.
+  private readonly resuming = new Set<string>();
+  // Our hash of a published definition, by workflow and version.
+  private readonly definitionHashes = new Map<string, string>();
+
+  /** Our hash of the runnable definition: computed once per published version. */
+  private definitionHash(workflowId: string, state: WorkflowState): string {
+    const runnable = runnableDefinition(state);
+    // A draft has no version that pins it, so it is hashed each time.
+    if (!runnable.published) return hashOf(canonicalJson(runnable));
+    const key = `${workflowId}@${runnable.version}`;
+    let hash = this.definitionHashes.get(key);
+    if (hash === undefined) {
+      hash = hashOf(canonicalJson(runnable));
+      if (this.definitionHashes.size >= WORKFLOW_CACHE_MAX) {
+        this.definitionHashes.clear();
+      }
+      this.definitionHashes.set(key, hash);
+    }
+    return hash;
+  }
+
+  // One run's waitpoints, as its steps create them.
+  private waitpointPort(
+    store: WorkflowRunStore,
+    workflowId: string,
+    runId: string,
+    suspendMs: number | null,
+  ): {
+    port: WaitpointPort;
+    responseFor: (waitpointId: string) => RunResponse | undefined;
+  } {
+    // responseToSend by waitpoint, answered when the run waits on it.
+    const responses = new Map<string, RunResponse>();
+    // The raw token by waitpoint: the store keeps only its hash.
+    const tokens = new Map<string, string>();
+    // A bare path is no URL a caller can reach, so it counts as none.
+    const configured = this.host.waitpointBaseUrl?.replace(/\/+$/, "");
+    const baseUrl =
+      configured && URL.canParse(configured) ? configured : undefined;
+    const port: WaitpointPort = {
+      ...(baseUrl ? { resumeBaseUrl: baseUrl } : {}),
+      create: async (request) => {
+        if (!baseUrl && request.type === "WEBHOOK" && !request.approval) {
+          throw new Error(
+            "This host serves no resume URLs: resume URLs need an HTTP host",
+          );
+        }
+        const createdAt = new Date();
+        const resumeAt = request.resumeDateTime
+          ? new Date(Date.parse(request.resumeDateTime)).toISOString()
+          : null;
+        if (resumeAt && Date.parse(resumeAt) > MAX_WAITPOINT_MS) {
+          throw new Error(
+            `A delay until ${resumeAt} is past ${MAX_WAITPOINT_ISO}, the latest a run can wait until`,
+          );
+        }
+        const expiresAt = waitpointExpiry(createdAt, request, suspendMs);
+        if (request.type === "DELAY" && resumeAt && suspendMs !== null) {
+          if (Date.parse(resumeAt) - createdAt.getTime() > suspendMs) {
+            throw new Error(
+              `A delay until ${resumeAt} is longer than the workflow's maxSuspensionDays allows`,
+            );
+          }
+        }
+        // Approvals are decided in the editor and delays come due, so neither
+        // gets a token. A deprecated generateResumeUrl minted its own already.
+        const token =
+          baseUrl && !request.approval && request.type !== "DELAY"
+            ? (request.token ?? randomBytes(32).toString("base64url"))
+            : null;
+        const id = randomUUID();
+        const { waitpoint, created: inserted } = await store.createWaitpoint({
+          id,
+          run_id: runId,
+          workflow_id: workflowId,
+          step_id: request.stepId,
+          step_key: request.stepKey,
+          step_path: request.stepId,
+          piece_name: request.pieceName,
+          block_name: request.blockName,
+          type: request.type,
+          kind: request.approval
+            ? "approval"
+            : request.type === "DELAY"
+              ? "delay"
+              : "webhook",
+          status: "PENDING",
+          token_hash: token ? tokenHash(token) : null,
+          created_at: createdAt.toISOString(),
+          resume_at: resumeAt,
+          expires_at: request.type === "DELAY" ? null : expiresAt,
+          resolved_at: null,
+          decided_by: null,
+          approval: request.approval ? JSON.stringify(request.approval) : null,
+          resume_payload: null,
+          response_to_send: request.responseToSend
+            ? JSON.stringify(request.responseToSend)
+            : null,
+        });
+        if (!inserted) {
+          // The step's live waitpoint, with the URL this leg minted for it.
+          const known = tokens.get(waitpoint.id);
+          if (waitpoint.token_hash !== null && known === undefined) {
+            throw new Error(
+              `Step "${request.stepKey}" has a waitpoint from an earlier leg, whose resume URL cannot be issued again`,
+            );
+          }
+          return {
+            id: waitpoint.id,
+            resumeUrl: known ? `${baseUrl}/${known}` : "",
+          };
+        }
+        if (token) tokens.set(id, token);
+        if (request.responseToSend) responses.set(id, request.responseToSend);
+        const due = request.type === "DELAY" ? resumeAt : expiresAt;
+        if (due) this.waitpointPoller.nudge(due);
+        return { id, resumeUrl: token ? `${baseUrl}/${token}` : "" };
+      },
+    };
+    return {
+      port,
+      responseFor: (waitpointId) => responses.get(waitpointId),
+    };
+  }
+
+  /** Re-enters a WAITING run that holds a COMPLETED waitpoint, through the
+   * dispatcher. Whoever writes second, the resume or the WAITING, delivers. */
+  private async deliverHeld(runId: string): Promise<void> {
+    if (this.closed) return this.answerShutDown(runId);
+    if (this.resuming.has(runId)) return;
+    try {
+      const store = await this.store();
+      if (!store || !(await store.hasCompletedWaitpoint(runId))) return;
+      const run = await store.getRun(runId);
+      if (run?.status !== WAITING_RUN_STATUS) {
+        return this.answerNotWaiting(store, runId, run?.status);
+      }
+      if (this.resuming.has(runId)) return;
+      this.resuming.add(runId);
+      void this.resumeRun(runId, run.workflow_id);
+    } catch (error) {
+      this.logger.warn(`Could not resume run ${runId}: @error`, error);
+    }
+  }
+
+  // A leg running here answers its held resumes itself; otherwise the run
+  // ended or another runtime holds it, and none here ever will.
+  private answerNotWaiting(
+    store: WorkflowRunStore,
+    runId: string,
+    status: string | undefined,
+  ): void {
+    if (store.isRunInFlight(runId)) return;
+    this.answerUnresumed(runId, {
+      status: status ?? "gone",
+      error: "The run is not waiting to resume in this runtime",
+      code: 409,
+    });
+  }
+
+  // Wakes due DELAY waitpoints and expires overdue ones; runs on the owner only.
+  private readonly waitpointPoller = new WaitpointPoller({
+    store: () => this.store(),
+    resume: (runId) => this.deliverHeld(runId),
+    ended: (end) =>
+      Promise.resolve(
+        this.answerClosed(end.closed, end.runId, {
+          status: CANCELLED_RUN_STATUS,
+          error: end.reason,
+        }),
+      ),
+    logger: {
+      warn: (message: string, ...args: unknown[]) =>
+        this.logger.warn(message, ...args),
+    },
+  });
+  private unobserveSuspended?: () => void;
+
+  /** Test hook: one waitpoint poll pass now; a no-op until the supervisor starts. */
+  pollWaitpointsNow(): Promise<void> {
+    return this.waitpointPoller.poll();
+  }
+
+  private startWaitpointPoller(): void {
+    if (this.closed) return;
+    this.unobserveSuspended ??= this.telemetry.observeSuspended(() =>
+      this.waitpointPoller.suspendedRuns(),
+    );
+    this.waitpointPoller.start();
+  }
+
+  private stopWaitpointPoller(): void {
+    this.waitpointPoller.stop();
+    this.unobserveSuspended?.();
+    this.unobserveSuspended = undefined;
+  }
+
+  // Answers `/sync` resumes held for a run that ended before its leg resumed.
+  private async answerHeldResumes(
+    store: WorkflowRunStore,
+    runId: string,
+    error: string,
+  ): Promise<void> {
+    if (this.syncResumes.size === 0) return;
+    const rows = (await store.listWaitpointsForRuns([runId])).get(runId) ?? [];
+    this.answerClosed(
+      rows.map((row) => row.id),
+      runId,
+      { status: CANCELLED_RUN_STATUS, error },
+    );
+  }
+
+  // Answers `/sync` resumes held on waitpoints that closed without resuming.
+  private answerClosed(
+    waitpointIds: readonly string[],
+    runId: string,
+    end: { status: string; error: string },
+  ): void {
+    if (this.syncResumes.size === 0) return;
+    for (const id of waitpointIds) {
+      this.heldResume(id)?.closed(runId, end.status, end.error);
+    }
+  }
+
+  // The held `/sync` request that won this waitpoint, answered once it knows.
+  private heldResume(waitpointId: string): SyncResume | undefined {
+    const candidates = [...(this.syncResumes.get(waitpointId) ?? [])];
+    if (candidates.length === 0) return undefined;
+    const winner = (async () => {
+      for (const candidate of candidates) {
+        if (await candidate.won) return candidate.entry;
+      }
+      return undefined;
+    })();
+    return {
+      respond: (response) => void winner.then((e) => e?.respond(response)),
+      ended: (result) => void winner.then((e) => e?.ended(result)),
+      closed: (runId, status, error, code) =>
+        void winner.then((e) => e?.closed(runId, status, error, code)),
+    };
+  }
+
+  // Answers the `/sync` resumes held on this run's waitpoints, before any leg
+  // could resume it here.
+  private answerUnresumed(
+    runId: string,
+    end: { status: string; error: string; code: number },
+  ): void {
+    for (const [id, candidates] of this.syncResumes) {
+      if (![...candidates].some((candidate) => candidate.runId === runId)) {
+        continue;
+      }
+      this.heldResume(id)?.closed(runId, end.status, end.error, end.code);
+    }
+  }
+
+  // Held resumes a stopped process never delivered.
+  private async deliverAllHeld(): Promise<void> {
+    try {
+      const store = await this.store();
+      for (const runId of (await store?.heldRunIds()) ?? []) {
+        await this.deliverHeld(runId);
+      }
+    } catch (error) {
+      this.logger.warn("Could not deliver held resumes: @error", error);
+    }
+  }
+
+  private resumeRun(
+    runId: string,
+    workflowId: string,
+  ): Promise<PersistedRunResult | undefined> {
+    const started = performance.now();
+    const attributes = {
+      "workflow.id": workflowId,
+      "trigger.kind": "resume",
+      "run.id": runId,
+    };
+    return this.telemetry.span("workflow.run", attributes, async (span) => {
+      let status = "REFUSED";
+      try {
+        const result = await this.runResumed(runId, workflowId);
+        if (result) status = result.status;
+        if (status === "FAILED") {
+          span.setStatus({ code: SpanStatusCode.ERROR, message: status });
+        }
+        return result;
+      } finally {
+        span.setAttribute("run.status", status);
+        this.telemetry.recordRun(performance.now() - started, status, "resume");
+      }
+    });
+  }
+
+  // Undefined when the run was not resumed: cancelled, claimed elsewhere, or
+  // the runtime shut down while it waited for admission.
+  private async runResumed(
+    runId: string,
+    workflowId: string,
+  ): Promise<PersistedRunResult | undefined> {
+    // The workflow's concurrency slot, as a firing takes it, then the
+    // dispatcher's. A resume queues for the slot rather than being dropped.
+    const admission = await this.runGate.admit(
+      workflowId,
+      await this.resumePolicy(workflowId),
+      undefined,
+      { resume: true },
+    );
+    if (!admission.admitted) {
+      this.resuming.delete(runId);
+      this.answerShutDown(runId);
+      return undefined;
+    }
+    let dispatched: () => void;
+    try {
+      dispatched = await this.dispatcher().admit(workflowId);
+    } catch {
+      admission.release();
+      this.resuming.delete(runId);
+      this.answerShutDown(runId);
+      return undefined;
+    }
+    const store = await this.store();
+    let claimed = false;
+    let redeliver = false;
+    let session: PieceWorkerSession | undefined;
+    let held: SyncResume | undefined;
+    let outcome: PersistedRunResult | undefined;
+    try {
+      if (!store || this.closed) {
+        this.answerShutDown(runId);
+        return undefined;
+      }
+      claimed = await store.claimWaitingRun(runId);
+      this.resuming.delete(runId);
+      if (!claimed) {
+        this.answerNotWaiting(
+          store,
+          runId,
+          (await store.getRun(runId))?.status,
+        );
+        return undefined;
+      }
+      const row = await store.getRun(runId);
+      if (!row) throw new Error(`Run "${runId}" not found`);
+      // Read fresh: the cache can trail a disable the resume must honour.
+      const generation = this.workflowGeneration(workflowId);
+      const document =
+        await this.host.reactorClient.get<WorkflowDocument>(workflowId);
+      if (document.header.documentType === WORKFLOW_DOCUMENT_TYPE) {
+        this.cacheLoaded(workflowId, generation, document);
+      }
+      const current = document.state.global;
+      const stopped = await this.resumeStopped(
+        workflowId,
+        row.trigger_kind,
+        current,
+      );
+      if (stopped) {
+        const closed = await store.endWait(runId, {
+          status: CANCELLED_RUN_STATUS,
+          reason: stopped.reason,
+          errorName: stopped.errorName,
+          waitpoints: "CANCELLED",
+        });
+        claimed = false;
+        this.answerClosed(closed, runId, {
+          status: CANCELLED_RUN_STATUS,
+          error: stopped.reason,
+        });
+        return {
+          status: CANCELLED_RUN_STATUS,
+          steps: [],
+          runId,
+          error: stopped.reason,
+          errorName: stopped.errorName,
+          refusal: "cancelled",
+        };
+      }
+      const consumed = await store.consumeCompletedWaitpoint(runId);
+      if (!consumed) {
+        await store.returnToWaiting(runId);
+        claimed = false;
+        // A waitpoint completed while this leg held the claim found it RUNNING.
+        redeliver = true;
+        return undefined;
+      }
+      const { waitpoint } = consumed;
+      held = this.heldResume(waitpoint.id);
+      this.answerClosed(consumed.closed, runId, {
+        status: "RUNNING",
+        error: "The run resumed on another of its waitpoints",
+      });
+      const state = await this.pinnedState(workflowId, runId, store, current);
+      const runnable = runnableDefinition(state);
+      const definition = toWorkflowDefinition(state);
+      const policy = effectiveRunPolicy(runnable);
+      const connections = declaredConnectionIds(definition);
+      const reactorConnections = declaredReactorConnectionIds(definition);
+      const runUser =
+        reactorConnections.size === 0
+          ? undefined
+          : await assertReactorConnectionsReadable(
+              this.host,
+              workflowId,
+              reactorConnections,
+            );
+      const journal = carriedFromJournal(await store.getSteps(runId));
+      if (!journal.waitingStepId) {
+        throw new Error(`Run "${runId}" has no waiting step to resume`);
+      }
+      session = this.workers().session();
+      const { result } = await this.executeLeg({
+        workflowId,
+        runId,
+        store,
+        session,
+        definition,
+        runnable,
+        policy,
+        // Each leg gets the whole budget: the wait is not run time.
+        deadline: policy.runTimeoutSeconds
+          ? Date.now() + policy.runTimeoutSeconds * 1000
+          : undefined,
+        connections,
+        runUser,
+        triggerPayload: journaledTriggerPayload(row.trigger_payload),
+        executor: this.blockExecutor(store),
+        carriedSteps: journal.carried,
+        resume: {
+          stepId: journal.waitingStepId,
+          payload: parseJson(waitpoint.resume_payload) ?? {},
+        },
+        firstOrdinal: journal.nextOrdinal,
+        written: journal.attachmentRefs,
+        handed: await store.getRunDocuments(runId),
+        ...(held ? { respond: held.respond } : {}),
+      });
+      if (
+        result.status === "FAILED" &&
+        !OPERATOR_RUN_KINDS.has(row.trigger_kind)
+      ) {
+        await this.applyFailureMode(
+          policy,
+          workflowId,
+          runnable.version,
+          runId,
+          result.error,
+        );
+      }
+      outcome = { ...result, runId };
+      return outcome;
+    } catch (error) {
+      if (store && claimed) {
+        const message = error instanceof Error ? error.message : String(error);
+        const errorName = errorNameOf(error) ?? "Error";
+        // The waiting step fails with the run; a held resume hears why.
+        const closed = await store
+          .endWait(runId, {
+            status: "FAILED",
+            reason: message,
+            errorName,
+            waitpoints: "CANCELLED",
+          })
+          .catch(() => []);
+        this.answerClosed(closed, runId, { status: "FAILED", error: message });
+        outcome = {
+          status: "FAILED",
+          steps: [],
+          runId,
+          error: message,
+          errorName,
+        };
+      }
+      this.logger.warn(`Resuming run ${runId} failed: @error`, error);
+      return undefined;
+    } finally {
+      this.resuming.delete(runId);
+      session?.close();
+      dispatched();
+      admission.release();
+      held?.ended(outcome);
+      if (redeliver) void this.deliverHeld(runId);
+    }
+  }
+
+  // Answers held `/sync` resumes 503 when shutdown refused their leg; the
+  // waitpoint stays COMPLETED and the next owner delivers it.
+  private answerShutDown(runId: string): void {
+    if (!this.closed) return;
+    this.answerUnresumed(runId, {
+      status: WAITING_RUN_STATUS,
+      error: "The runtime shut down before the run could resume",
+      code: 503,
+    });
+  }
+
+  // The policy for the gate a resume shares with firings, cached as a trigger's
+  // run reads it. Unreadable, no gate: the claimed run's own read then fails it.
+  private async resumePolicy(workflowId: string): Promise<EffectiveRunPolicy> {
+    try {
+      let state = this.workflowCache.get(workflowId)?.state;
+      if (!state) {
+        const generation = this.workflowGeneration(workflowId);
+        const document =
+          await this.host.reactorClient.get<WorkflowDocument>(workflowId);
+        if (document.header.documentType === WORKFLOW_DOCUMENT_TYPE) {
+          this.cacheLoaded(workflowId, generation, document);
+        }
+        state = document.state.global;
+      }
+      return effectiveRunPolicy(runnableDefinition(state));
+    } catch {
+      return UNENFORCED_POLICY;
+    }
+  }
+
+  // Why a waiting run must not resume on the workflow as it is now.
+  private async resumeStopped(
+    workflowId: string,
+    triggerKind: string,
+    current: WorkflowState,
+  ): Promise<{ reason: string; errorName: string } | undefined> {
+    if (current.status !== "ENABLED") {
+      return {
+        reason: `The workflow is ${current.status}; a run waiting on it does not resume`,
+        errorName: WORKFLOW_DISABLED_ERROR_NAME,
+      };
+    }
+    const parked = await this.parkedFiring(
+      workflowId,
+      triggerKind,
+      runnableDefinition(current).version,
+    );
+    return parked
+      ? { reason: parked, errorName: WORKFLOW_PARKED_ERROR_NAME }
+      : undefined;
+  }
+
+  // The state a suspended run resumes on: the current one when its definition
+  // still hashes the same, else rebuilt at the revision it pinned.
+  private async pinnedState(
+    workflowId: string,
+    runId: string,
+    store: WorkflowRunStore,
+    current: WorkflowState,
+  ): Promise<WorkflowState> {
+    const pin = await store.getRunPin(runId);
+    if (!pin?.definition_hash) return current;
+    if (this.definitionHash(workflowId, current) === pin.definition_hash) {
+      return current;
+    }
+    return this.rebuildWorkflowState(workflowId, pin);
+  }
+
+  // Replays the global operations below the pinned revision; the reactor does
+  // not honour ViewFilter.revision yet. The hash check below catches a miss.
+  private async rebuildWorkflowState(
+    workflowId: string,
+    pin: RunPinRow,
+  ): Promise<WorkflowState> {
+    const revision = pin.definition_op_index ?? 0;
+    const operations: Operation[] = [];
+    let page = await this.host.reactorClient.getOperations(workflowId, {
+      scopes: ["document", "global"],
+    });
+    operations.push(...page.results);
+    while (page.next) {
+      page = await page.next();
+      operations.push(...page.results);
+    }
+    const applied = (operation: Operation) =>
+      !operation.error && !isDenied(operation);
+    // The first global operation past the pin, for upgrades without a revision.
+    const past = sortOperations(
+      operations.filter(
+        (operation) =>
+          operation.action.scope === "global" && operation.index >= revision,
+      ),
+    ).at(0);
+    // Placed by its revision snapshot, else its timestamp, as replay places it.
+    const atOrBeforePin = (operation: Operation) => {
+      const at = (operation.action.input as { revision?: { global?: number } })
+        .revision?.global;
+      if (at !== undefined) return at <= revision;
+      return !past || operation.timestampUtcMs <= past.timestampUtcMs;
+    };
+    // An upgrade that seeds a snapshot starts the state there, as the reactor does.
+    const seed = sortOperations(
+      operations.filter(
+        (operation) =>
+          operation.action.scope === "document" &&
+          operation.action.type === "UPGRADE_DOCUMENT" &&
+          applied(operation) &&
+          atOrBeforePin(operation),
+      ),
+    )
+      .map(
+        (operation) =>
+          (operation.action.input as { initialState?: { global?: unknown } })
+            .initialState,
+      )
+      .filter((state) => state?.global !== undefined)
+      .at(-1);
+    let document = workflowUtils.createDocument(seed as never);
+    const global = sortOperations(
+      operations.filter(
+        (operation) =>
+          operation.action.scope === "global" && operation.index < revision,
+      ),
+    );
+    // Undone operations drop out first, as a replay of the document does.
+    for (const operation of garbageCollect(global).filter(applied)) {
+      document = workflowReducer(document, operation.action as never);
+    }
+    const state = document.state.global;
+    if (
+      scopeHash(state) !== pin.definition_scope_hash ||
+      this.definitionHash(workflowId, state) !== pin.definition_hash
+    ) {
+      throw new Error(
+        `The workflow was re-published while this run waited, and the ` +
+          `definition it started from could not be rebuilt at revision ${revision}`,
+      );
+    }
+    return state;
+  }
+
+  /** Resolves a WEBHOOK waitpoint from the editor, as the calling DID. */
+  async resolveWaitpoint(
+    waitpointId: string,
+    input: ResolveWaitpointInput,
+    ctx?: WorkflowCaller,
+  ): Promise<WaitpointRecord> {
+    const store = await this.store();
+    if (!store) throw new Error("Run journal is unavailable");
+    const waitpoint = await store.getWaitpoint(waitpointId);
+    if (!waitpoint) throw new Error(`Waitpoint "${waitpointId}" not found`);
+    await this.assertCanReadDocument(waitpoint.workflow_id, ctx);
+    await this.assertCanWriteDocument(waitpoint.workflow_id, ctx);
+    // Its approval holds the run's data, so only a caller served the run.
+    const owner = await store.getRun(waitpoint.run_id);
+    if (!owner || (await this.servedRuns([owner], ctx)).length === 0) {
+      throw new Error(`Waitpoint "${waitpointId}" not found`);
+    }
+    if (waitpoint.type !== "WEBHOOK") {
+      throw new Error(`Waitpoint "${waitpointId}" is a ${waitpoint.type}`);
+    }
+    const decidedBy = this.callerDid(ctx);
+    const approval = parseJson(waitpoint.approval) as ApprovalRequest | null;
+    if (approval && approval.approvers.length > 0) {
+      const listed =
+        decidedBy !== undefined &&
+        approval.approvers.some((approver) =>
+          sameApprover(approver, decidedBy),
+        );
+      if (!listed) {
+        throw new Error("You are not one of this approval's approvers");
+      }
+    }
+    const reason = input.reason?.trim() || undefined;
+    const reasonRequired =
+      approval?.reasonRequiredOn === "both" ||
+      (approval?.reasonRequiredOn === "reject" && !input.approved);
+    if (reasonRequired && !reason) {
+      throw new Error("A reason is required for this decision");
+    }
+    const decidedAt = new Date().toISOString();
+    const payload: WaitpointResumePayload = {
+      queryParams: {
+        action: input.approved ? "approve" : "disapprove",
+        ...(reason ? { reason } : {}),
+      },
+      body: {
+        approved: input.approved,
+        reason: reason ?? null,
+        decidedBy: decidedBy ?? null,
+        decidedAt,
+      },
+      headers: {},
+    };
+    const completed = await store.completeWaitpoint(waitpointId, {
+      payload,
+      decidedBy: decidedBy ?? null,
+      resolvedAt: decidedAt,
+    });
+    if (!completed) {
+      const now = await store.getWaitpoint(waitpointId);
+      const run = await store.getRun(waitpoint.run_id);
+      const live =
+        run?.status === "RUNNING" || run?.status === WAITING_RUN_STATUS;
+      const status =
+        now?.status !== "PENDING"
+          ? (now?.status ?? "gone")
+          : waitpointExpired(now)
+            ? "EXPIRED"
+            : live
+              ? "not the one its run waits on"
+              : `on a ${run?.status ?? "deleted"} run`;
+      throw new Error(
+        `Waitpoint "${waitpointId}" is ${status}; it can no longer be resolved`,
+      );
+    }
+    await this.deliverHeld(completed.run_id);
+    return waitpointRecord(completed);
+  }
+
+  /** A POST to a resume URL. Single-use: only a PENDING waitpoint resumes. */
+  resumeWaitpointByToken(
+    token: string,
+    payload: WaitpointResumePayload,
+  ): Promise<{ status: "resumed" | "already" | "gone" }> {
+    return this.resumeByToken(token, payload);
+  }
+
+  /** A POST to a resume URL's `/sync`, held like a sync webhook until the
+   *  resumed leg responds, waits, ends, or times out. The first answer wins. */
+  async resumeWaitpointByTokenSync(
+    token: string,
+    payload: WaitpointResumePayload,
+    options: { timeoutMs?: number } = {},
+  ): Promise<{ status: "resumed" | "already" | "gone"; reply?: WebhookReply }> {
+    let hold: ReturnType<typeof this.holdSyncResume> | undefined;
+    try {
+      const { status } = await this.resumeByToken(
+        token,
+        payload,
+        (id, runId) => {
+          hold = this.holdSyncResume(id, runId);
+          return hold.decided;
+        },
+      );
+      if (status !== "resumed" || !hold) return { status };
+      return {
+        status,
+        reply: await hold.reply(options.timeoutMs ?? DELIVERY_TIMEOUT_MS),
+      };
+    } finally {
+      hold?.release();
+    }
+  }
+
+  // Registered before the waitpoint completes: its leg may start at once.
+  private holdSyncResume(waitpointId: string, runId: string) {
+    let settle: (reply: WebhookReply) => void = () => undefined;
+    const answer = new Promise<WebhookReply>((resolve) => {
+      settle = resolve;
+    });
+    let done = false;
+    const finish = (reply: WebhookReply) => {
+      if (done) return;
+      done = true;
+      settle(reply);
+    };
+    const entry: SyncResume = {
+      respond: (response) => finish(runResponseReply(response)),
+      ended: (result) =>
+        finish(
+          result
+            ? runResultReply(result, 200)
+            : {
+                status: 500,
+                contentType: JSON_CONTENT_TYPE,
+                body: JSON.stringify({ error: "The run could not resume" }),
+              },
+        ),
+      closed: (runId, status, error, code = 409) =>
+        finish({
+          status: code,
+          contentType: JSON_CONTENT_TYPE,
+          body: JSON.stringify({ runId, status, error }),
+        }),
+    };
+    let decided: (won: boolean) => void = () => undefined;
+    const candidate: SyncResumeCandidate = {
+      entry,
+      runId,
+      won: new Promise<boolean>((resolve) => {
+        decided = resolve;
+      }),
+    };
+    const held = this.syncResumes.get(waitpointId) ?? new Set();
+    this.syncResumes.set(waitpointId, held);
+    held.add(candidate);
+    return {
+      decided,
+      reply: async (timeoutMs: number): Promise<WebhookReply> => {
+        const raced = await Promise.race([answer, timeout(timeoutMs)]);
+        if (raced !== TIMED_OUT) return raced;
+        done = true;
+        return {
+          status: 504,
+          contentType: JSON_CONTENT_TYPE,
+          body: JSON.stringify({
+            status: "RUNNING",
+            error: "The run did not finish in time",
+          }),
+        };
+      },
+      release: () => {
+        decided(false);
+        held.delete(candidate);
+        if (held.size === 0 && this.syncResumes.get(waitpointId) === held) {
+          this.syncResumes.delete(waitpointId);
+        }
+      },
+    };
+  }
+
+  private async resumeByToken(
+    token: string,
+    payload: WaitpointResumePayload,
+    // Called before the claim; told whether this request won the waitpoint.
+    beforeComplete?: (
+      waitpointId: string,
+      runId: string,
+    ) => (won: boolean) => void,
+  ): Promise<{ status: "resumed" | "already" | "gone" }> {
+    const store = await this.store();
+    if (!store || !token) return { status: "gone" };
+    const waitpoint = await store.getWaitpointByTokenHash(tokenHash(token));
+    // Only a webhook resumes by token: never an approval or a delay.
+    if (!waitpoint || waitpoint.kind !== "webhook") return { status: "gone" };
+    let completed: WaitpointRow | undefined;
+    if (waitpoint.status === "PENDING") {
+      const decided = beforeComplete?.(waitpoint.id, waitpoint.run_id);
+      try {
+        completed = await store.completeWaitpoint(waitpoint.id, { payload });
+      } finally {
+        decided?.(completed !== undefined);
+      }
+    }
+    if (!completed) {
+      const now = (await store.getWaitpoint(waitpoint.id))?.status;
+      if (now === "CONSUMED") return { status: "already" };
+      // Completed but not yet consumed: already, unless its run has ended.
+      const run =
+        now === "COMPLETED" ? await store.getRun(waitpoint.run_id) : undefined;
+      const live =
+        run?.status === "RUNNING" || run?.status === WAITING_RUN_STATUS;
+      return { status: live ? "already" : "gone" };
+    }
+    await this.deliverHeld(completed.run_id);
+    return { status: "resumed" };
+  }
+
+  /** What a resume URL's confirm page shows. */
+  async describeWaitpointByToken(
+    token: string,
+  ): Promise<WaitpointDescription | undefined> {
+    const store = await this.store();
+    if (!store || !token) return undefined;
+    const waitpoint = await store.getWaitpointByTokenHash(tokenHash(token));
+    if (!waitpoint || waitpoint.kind !== "webhook") return undefined;
+    const run = await store.getRun(waitpoint.run_id);
+    const live =
+      run?.status === "RUNNING" || run?.status === WAITING_RUN_STATUS;
+    // An ended run's waitpoint never resumes, whatever its row still says.
+    const status =
+      !live &&
+      (waitpoint.status === "PENDING" || waitpoint.status === "COMPLETED")
+        ? "CANCELLED"
+        : (waitpoint.status as WaitpointStatus);
+    const state = await this.workflowStateForPage(waitpoint.workflow_id);
+    const step = state?.steps.find((entry) => entry.id === waitpoint.step_id);
+    const action = step
+      ? await this.blockDisplayName({
+          pieceName: step.pieceName,
+          pieceVersion: step.pieceVersion,
+          kind: "action",
+          name: step.actionName,
+        })
+      : undefined;
+    const trigger = state?.trigger
+      ? ((await this.blockDisplayName({
+          pieceName: state.trigger.pieceName,
+          pieceVersion: state.trigger.pieceVersion,
+          kind: "trigger",
+          name: state.trigger.triggerName,
+        })) ?? state.trigger.triggerName)
+      : undefined;
+    return {
+      workflowName: run?.workflow_name || state?.name || "",
+      stepName: step?.name || waitpoint.step_key,
+      status,
+      ...(state?.description ? { workflowDescription: state.description } : {}),
+      ...(action ? { actionName: action } : {}),
+      waitingSince: waitpoint.created_at,
+      ...(waitpoint.expires_at ? { expiresAt: waitpoint.expires_at } : {}),
+      ...(run ? { startedAt: run.enqueued_at } : {}),
+      ...(trigger ? { triggerName: trigger } : {}),
+    };
+  }
+
+  // Best effort, for a page anyone with the link opens: no error escapes.
+  private async workflowStateForPage(
+    workflowId: string,
+  ): Promise<WorkflowState | undefined> {
+    const cached = this.workflowCache.get(workflowId)?.state;
+    if (cached) return cached;
+    try {
+      const generation = this.workflowGeneration(workflowId);
+      const document =
+        await this.host.reactorClient.get<WorkflowDocument>(workflowId);
+      if (document.header.documentType !== WORKFLOW_DOCUMENT_TYPE) {
+        return undefined;
+      }
+      this.cacheLoaded(workflowId, generation, document);
+      return document.state.global;
+    } catch {
+      return undefined;
+    }
+  }
+
+  // The action's or trigger's display name, or undefined when not described.
+  private async blockDisplayName(block: BlockRef): Promise<string | undefined> {
+    try {
+      const parsed = resolvedBlock(await this.resolveBlock(block));
+      if (!parsed) return undefined;
+      const descriptor = await this.pieceDescriptor(targetOf(parsed));
+      const entries =
+        block.kind === "trigger" ? descriptor.triggers : descriptor.actions;
+      return entries.find((entry) => entry.name === parsed.name)?.displayName;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** The waitpoints of one run, for a caller who may read the run. */
+  async waitpointsForRun(
+    runId: string,
+    ctx?: WorkflowCaller,
+  ): Promise<WaitpointRecord[]> {
+    const store = await this.store();
+    if (!store || !(await this.run(runId, ctx))) return [];
+    const rows = (await store.listWaitpointsForRuns([runId])).get(runId) ?? [];
+    return rows.map(waitpointRecord);
+  }
+
+  /** WAITING runs this caller may read, oldest first, with their waitpoints. */
+  async waitingRuns(
+    args: WaitingRunsArgs,
+    ctx?: WorkflowCaller,
+  ): Promise<Array<{ run: RunRecord; waitpoints: WaitpointRecord[] }>> {
+    const store = await this.store();
+    if (!store || !ctx) return [];
+    let scope: string | string[] | undefined;
+    if (args.workflowId) {
+      await this.assertCanReadDocument(args.workflowId, ctx);
+      scope = args.workflowId;
+    } else if (args.driveId) {
+      scope = await this.driveWorkflowIds(args.driveId, ctx);
+      if (scope.length === 0) return [];
+    }
+    const rows = await this.servedRuns(
+      await this.readableRows(
+        await store.listWaitingRuns(scope, args.first ?? 50),
+        (row) => row.workflow_id,
+        ctx,
+      ),
+      ctx,
+    );
+    const ids = rows.map((row) => row.id);
+    const steps = await store.getStepsForRuns(ids, { withData: false });
+    const waitpoints = await store.listWaitpointsForRuns(ids);
+    return rows.map((row) => ({
+      run: { row, steps: steps.get(row.id) ?? [] },
+      waitpoints: (waitpoints.get(row.id) ?? []).map(waitpointRecord),
+    }));
+  }
+
+  /** Cancels a WAITING or PENDING run; its waitpoints stop resuming. */
+  async cancelRun(runId: string, ctx?: WorkflowCaller): Promise<RunRecord> {
+    const store = await this.store();
+    if (!store) throw new Error("Run journal is unavailable");
+    const run = await store.getRun(runId);
+    if (!run) throw new Error(`Run "${runId}" not found`);
+    await this.assertCanReadDocument(run.workflow_id, ctx);
+    await this.assertCanWriteDocument(run.workflow_id, ctx);
+    // It answers with the run's steps, so only to a caller served the run.
+    if (!ctx || (await this.servedRuns([run], ctx)).length === 0) {
+      throw new Error(`Run "${runId}" not found`);
+    }
+    const refuse = (status: string) =>
+      status === "RUNNING"
+        ? new Error("Cancelling a RUNNING run is not supported yet (#3226)")
+        : new Error(
+            `Run is ${status}; only WAITING and PENDING runs can be cancelled`,
+          );
+    if (run.status !== WAITING_RUN_STATUS && run.status !== "PENDING") {
+      throw refuse(run.status);
+    }
+    const by = this.callerDid(ctx);
+    const reason = by ? `Cancelled by ${by}` : "Cancelled";
+    const cancelled = await store.cancelIdleRun(runId, reason);
+    if (!cancelled) {
+      throw refuse((await store.getRun(runId))?.status ?? "gone");
+    }
+    await this.answerHeldResumes(store, runId, reason);
+    const row = (await store.getRun(runId))!;
+    this.queuedReplies.get(runId)?.({
+      status: row.status as PersistedRunResult["status"],
+      steps: [],
+      runId,
+      ...(row.error ? { error: row.error } : {}),
+      refusal: "cancelled",
+    });
+    return { row, steps: await store.getSteps(runId) };
+  }
+
+  // The caller's DID, as the host reads it.
+  private callerDid(ctx: WorkflowCaller | undefined): string | undefined {
+    if (!ctx) return undefined;
+    const subject = this.host.subjectOf?.(ctx);
+    if (subject?.address) return subject.address;
+    const user = (ctx as { user?: { address?: unknown } }).user;
+    return typeof user?.address === "string" ? user.address : undefined;
   }
 
   // Runs one draft step against the latest test outputs of the blocks it
@@ -6050,6 +7562,181 @@ export class WorkflowRuntimeService {
       await this.host.reactorClient.get<WorkflowDocument>(workflowId);
     return document.state.global;
   }
+}
+
+// The hash the reactor gives a document's global scope after an operation.
+function scopeHash(state: WorkflowState): string {
+  return hashDocumentStateForScope({ state: { global: state } }, "global");
+}
+
+function tokenHash(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+// Past its expiry, whether or not the poller has swept it yet.
+function waitpointExpired(waitpoint: WaitpointRow): boolean {
+  return (
+    waitpoint.expires_at !== null &&
+    Date.parse(waitpoint.expires_at) <= Date.now()
+  );
+}
+
+function parseJson(value: string | null): unknown {
+  return value === null ? null : (JSON.parse(value) as unknown);
+}
+
+export { WAITPOINT_EXPIRED_ERROR_NAME, WAITPOINT_NOT_LIVE_ERROR_NAME };
+// A waiting run cancelled because its workflow stopped running.
+export const WORKFLOW_DISABLED_ERROR_NAME = "WorkflowDisabled";
+export const WORKFLOW_PARKED_ERROR_NAME = "WorkflowParked";
+
+// The store compares waitpoint times as ISO strings, which sort by time only
+// up to year 9999: '+010000-…' sorts before '2026-…'.
+const MAX_WAITPOINT_ISO = "9999-12-31T23:59:59.999Z";
+const MAX_WAITPOINT_MS = Date.parse(MAX_WAITPOINT_ISO);
+
+// The sooner of the block's own expiry and the policy's suspension bound,
+// capped at MAX_WAITPOINT_ISO.
+function waitpointExpiry(
+  createdAt: Date,
+  request: { expiresAt?: string },
+  suspendMs: number | null,
+): string | null {
+  const own = request.expiresAt ? Date.parse(request.expiresAt) : NaN;
+  const bound = suspendMs === null ? NaN : createdAt.getTime() + suspendMs;
+  const candidates = [own, bound].filter((at) => !Number.isNaN(at));
+  return candidates.length > 0
+    ? new Date(Math.min(...candidates, MAX_WAITPOINT_MS)).toISOString()
+    : null;
+}
+
+// An approver listed as a DID (did:pkh:…:0xabc) or a bare address.
+function sameApprover(approver: string, caller: string): boolean {
+  const tail = (value: string) => value.split(":").pop()!.toLowerCase();
+  return (
+    approver.toLowerCase() === caller.toLowerCase() ||
+    tail(approver) === tail(caller)
+  );
+}
+
+export function waitpointRecord(row: WaitpointRow): WaitpointRecord {
+  return {
+    id: row.id,
+    runId: row.run_id,
+    workflowId: row.workflow_id,
+    stepId: row.step_id,
+    stepKey: row.step_key,
+    stepPath: row.step_path,
+    pieceName: row.piece_name,
+    blockName: row.block_name,
+    type: row.type as WaitpointRecord["type"],
+    kind: row.kind as WaitpointRecord["kind"],
+    status: row.status as WaitpointStatus,
+    createdAt: row.created_at,
+    resumeAt: row.resume_at,
+    expiresAt: row.expires_at,
+    resolvedAt: row.resolved_at,
+    decidedBy: row.decided_by,
+    approval: parseJson(row.approval) as ApprovalRequest | null,
+  };
+}
+
+// A journaled value a resumed run reads: a capped one is unavailable whole, a
+// redacted leaf only at its own path, so a step that reads either fails by name.
+function journaledValue(raw: string | null, what: string): unknown {
+  const value = raw === null ? undefined : (JSON.parse(raw) as unknown);
+  if (isTruncatedStepPayload(value)) {
+    return unavailableValue(
+      `${what} is unavailable: the run journal truncated it past the payload cap`,
+    );
+  }
+  return redactedLeavesUnavailable(value, what, []);
+}
+
+function redactedLeavesUnavailable(
+  value: unknown,
+  what: string,
+  path: (string | number)[],
+): unknown {
+  if (!containsRedactedMarker(value)) return value;
+  if (typeof value === "string") {
+    // The path ends the message: a colon after a sensitive key reads as a secret.
+    const at = path.length > 0 ? ` at "${path.join(".")}"` : "";
+    return unavailableValue(
+      `${what} is unavailable: the run journal holds it redacted${at}`,
+    );
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry, index) =>
+      redactedLeavesUnavailable(entry, what, [...path, index]),
+    );
+  }
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+      key,
+      redactedLeavesUnavailable(entry, what, [...path, key]),
+    ]),
+  );
+}
+
+function journaledTriggerPayload(raw: string | null): unknown {
+  return journaledValue(raw, "The trigger payload");
+}
+
+const ATTACHMENT_REF_TEXT = /"(attachment:\/\/[^"\\]*)"/g;
+
+// What a suspended run's journal hands its resume: the steps it carries,
+// the step that waits, and the attachment refs its outputs hold.
+function carriedFromJournal(rows: StepExecutionRow[]): {
+  carried: Map<string, CarriedStep>;
+  waitingStepId: string | undefined;
+  nextOrdinal: number;
+  attachmentRefs: Set<string>;
+} {
+  const carried = new Map<string, CarriedStep>();
+  const attachmentRefs = new Set<string>();
+  let waitingStepId: string | undefined;
+  let nextOrdinal = 0;
+  for (const row of rows) {
+    nextOrdinal = Math.max(nextOrdinal, row.ordinal + 1);
+    // Scanned as text: the outputs are parsed only when a step reads them.
+    for (const match of row.output?.matchAll(ATTACHMENT_REF_TEXT) ?? []) {
+      attachmentRefs.add(match[1]!);
+    }
+    const what = `Output of step "${row.step_key}"`;
+    switch (row.status) {
+      case "WAITING":
+        waitingStepId = row.step_id;
+        break;
+      case "SUCCEEDED":
+      case "REPLAYED":
+        carried.set(row.step_id, {
+          status: row.status,
+          port: row.port,
+          output: () => journaledValue(row.output, what),
+        });
+        break;
+      case "FAILED":
+        carried.set(row.step_id, {
+          status: "FAILED",
+          port: "error",
+          output: () => undefined,
+          error: row.error ?? "",
+        });
+        break;
+      case "SKIPPED":
+        // Only an author's pass carries a port; an unreached skip is redecided.
+        if (row.port) {
+          carried.set(row.step_id, {
+            status: "SKIPPED",
+            port: row.port,
+            output: () => null,
+          });
+        }
+        break;
+    }
+  }
+  return { carried, waitingStepId, nextOrdinal, attachmentRefs };
 }
 
 /** The runtime a host composes: one instance, its lifetime the host's. */

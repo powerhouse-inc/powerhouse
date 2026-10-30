@@ -7,6 +7,15 @@
 // else takes the web client, whose redirect URI the provider has registered.
 // Client secrets live in the host's secret store; the documents only ever
 // hold the app's id.
+//
+// An app may name a relay instead of a web client: a broker the publisher
+// runs that holds the web client's secret. Its one redirect URI is registered
+// with the provider and forwards the provider's answer to the host the
+// sign-in started on (named in the state); its token URL exchanges and
+// refreshes codes for that host, adding the secret. Hosts whose own callback
+// is not registered with the provider, such as cloud environments with a
+// hostname each, sign in through it with PKCE and never hold the secret. A
+// web client file on the host always wins over the relay.
 import { readFile } from "node:fs/promises";
 import type { SecretStore } from "../pieces/index.js";
 
@@ -31,6 +40,8 @@ export interface OAuthAppClient {
 export interface OAuthAppRegistry {
   client(appId: string, kind: OAuthClientKind): OAuthAppClient | undefined;
   clients(appId: string): OAuthAppClient[];
+  /** The app's relay, or undefined when it has none. */
+  relay(appId: string): OAuthAppRelay | undefined;
 }
 
 /** One app as a host configures it: per client kind, the provider's client file. */
@@ -38,10 +49,62 @@ export interface OAuthAppDefinition {
   id: string;
   /** Paths to the provider's downloaded client files (Google's client_secret_*.json). */
   clients: Partial<Record<OAuthClientKind, string>>;
+  /**
+   * The broker a web sign-in goes through when the host has no web client
+   * file. Absent, a web sign-in needs the web client.
+   */
+  relay?: OAuthAppRelay;
+}
+
+/**
+ * A token broker for an app's web client: the provider sends the browser to
+ * `redirectUri`, which forwards to the callback the state names; `tokenUrl`
+ * takes the code exchange and every refresh, with `clientId` and no secret.
+ */
+export interface OAuthAppRelay {
+  clientId: string;
+  redirectUri: string;
+  tokenUrl: string;
+}
+
+function httpsUrl(raw: unknown): string | undefined {
+  if (typeof raw !== "string" || raw === "") return undefined;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return undefined;
+  }
+  if (url.protocol !== "https:" || url.username || url.password) {
+    return undefined;
+  }
+  return url.href;
+}
+
+/**
+ * A relay as configured, or the reason it cannot be used: it needs a client
+ * id and two absolute https URLs without credentials.
+ */
+export function parseRelay(raw: unknown): OAuthAppRelay | string {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return "not an object with clientId, redirectUri and tokenUrl";
+  }
+  const { clientId, redirectUri, tokenUrl } = raw as Record<string, unknown>;
+  if (typeof clientId !== "string" || clientId === "") {
+    return "no clientId";
+  }
+  const redirect = httpsUrl(redirectUri);
+  if (!redirect) return "redirectUri is not an absolute https URL";
+  const token = httpsUrl(tokenUrl);
+  if (!token) return "tokenUrl is not an absolute https URL";
+  return { clientId, redirectUri: redirect, tokenUrl: token };
 }
 
 export class StaticOAuthAppRegistry implements OAuthAppRegistry {
-  constructor(private readonly entries: readonly OAuthAppClient[]) {}
+  constructor(
+    private readonly entries: readonly OAuthAppClient[],
+    private readonly relays: ReadonlyMap<string, OAuthAppRelay> = new Map(),
+  ) {}
 
   client(appId: string, kind: OAuthClientKind): OAuthAppClient | undefined {
     return this.entries.find((e) => e.appId === appId && e.kind === kind);
@@ -49,6 +112,10 @@ export class StaticOAuthAppRegistry implements OAuthAppRegistry {
 
   clients(appId: string): OAuthAppClient[] {
     return this.entries.filter((e) => e.appId === appId);
+  }
+
+  relay(appId: string): OAuthAppRelay | undefined {
+    return this.relays.get(appId);
   }
 }
 
@@ -63,6 +130,28 @@ export function clientKindFor(redirectUri: string): OAuthClientKind {
     return "web";
   }
   return LOOPBACK.has(host) ? "desktop" : "web";
+}
+
+/**
+ * How this host signs in with a publisher's app for a callback: the
+ * desktop client for one to this machine; else the web client when the host
+ * has its file; else the app's relay; else not at all.
+ */
+export type OAuthSignIn =
+  | { mode: "desktop" | "web"; client: OAuthAppClient }
+  | { mode: "relay"; relay: OAuthAppRelay }
+  | { mode: "none"; kind: OAuthClientKind };
+
+export function oauthSignInFor(
+  apps: OAuthAppRegistry,
+  appId: string,
+  redirectUri: string,
+): OAuthSignIn {
+  const kind = clientKindFor(redirectUri);
+  const client = apps.client(appId, kind);
+  if (client) return { mode: kind, client };
+  const relay = kind === "web" ? apps.relay(appId) : undefined;
+  return relay ? { mode: "relay", relay } : { mode: "none", kind };
 }
 
 /**
@@ -132,7 +221,9 @@ export function clientSecretLabel(appId: string, kind: OAuthClientKind) {
  * Reads each configured client file and keeps its secret in the store under a
  * fixed label: created the first time, rotated when the file changed, left
  * alone otherwise. A client whose file cannot be read is skipped with the
- * reason, so one bad file does not take the others down.
+ * reason, so one bad file does not take the others down. A relay without a
+ * client id or with a URL that is not absolute https is dropped with the
+ * reason.
  */
 export async function loadOAuthApps(
   definitions: readonly OAuthAppDefinition[],
@@ -140,6 +231,7 @@ export async function loadOAuthApps(
   options: {
     read?: (path: string) => Promise<string>;
     onSkip?: (appId: string, kind: OAuthClientKind, reason: string) => void;
+    onRelayDropped?: (appId: string, reason: string) => void;
   } = {},
 ): Promise<StaticOAuthAppRegistry> {
   const read = options.read ?? ((path: string) => readFile(path, "utf8"));
@@ -150,7 +242,13 @@ export async function loadOAuthApps(
       .map((s) => [s.label!, s.ref]),
   );
   const entries: OAuthAppClient[] = [];
+  const relays = new Map<string, OAuthAppRelay>();
   for (const app of definitions) {
+    if (app.relay !== undefined) {
+      const relay = parseRelay(app.relay);
+      if (typeof relay === "string") options.onRelayDropped?.(app.id, relay);
+      else relays.set(app.id, relay);
+    }
     for (const kind of ["desktop", "web"] as const) {
       const path = app.clients[kind];
       if (!path) continue;
@@ -188,5 +286,5 @@ export async function loadOAuthApps(
       });
     }
   }
-  return new StaticOAuthAppRegistry(entries);
+  return new StaticOAuthAppRegistry(entries, relays);
 }

@@ -96,6 +96,10 @@ import { Pool } from "pg";
 import type { ViteDevServer } from "vite";
 import { registerAttachmentRoutes } from "./attachments/index.js";
 import {
+  parseOAuthApps,
+  type OAuthAppConfig,
+} from "./workflow/oauth-apps-config.js";
+import {
   registerAttachmentReferenceReadModel,
   registerAttachmentReferenceReadModelOnModule,
 } from "./attachment-reference-read-model.mjs";
@@ -283,7 +287,8 @@ function resolveConfigPath(configFile: string | undefined): string {
  */
 function readConfigOAuthApps(
   configPath: string,
-): { id: string; clients: { desktop?: string; web?: string } }[] {
+  logger: ILogger,
+): OAuthAppConfig[] {
   let raw: unknown;
   try {
     raw = (getConfig(configPath) as { workflows?: { oauthApps?: unknown } })
@@ -291,25 +296,14 @@ function readConfigOAuthApps(
   } catch {
     return [];
   }
-  if (!Array.isArray(raw)) return [];
-  const dir = path.dirname(path.resolve(configPath));
-  const at = (p: unknown) =>
-    typeof p === "string" && p ? path.resolve(dir, p) : undefined;
-  return raw.flatMap((entry: unknown) => {
-    const app = (entry ?? {}) as {
-      id?: unknown;
-      clients?: { desktop?: unknown; web?: unknown };
-    };
-    if (typeof app.id !== "string" || !app.id) return [];
-    const desktop = at(app.clients?.desktop);
-    const web = at(app.clients?.web);
-    return [
-      {
-        id: app.id,
-        clients: { ...(desktop ? { desktop } : {}), ...(web ? { web } : {}) },
-      },
-    ];
-  });
+  return parseOAuthApps(
+    raw,
+    path.dirname(path.resolve(configPath)),
+    (id, relay) =>
+      logger.warn(
+        `workflows.oauthApps "${id}": relay ${JSON.stringify(relay)} is not an object with clientId, redirectUri and tokenUrl; ignored`,
+      ),
+  );
 }
 
 // An unreadable config file means "not configured", not a boot failure:
@@ -1384,7 +1378,7 @@ async function initServer(
       // plugins own the workflows switch and the classic config read is skipped.
       oauthApps:
         options.workflows?.oauthApps ??
-        readConfigOAuthApps(resolveConfigPath(options.configFile)),
+        readConfigOAuthApps(resolveConfigPath(options.configFile), logger),
       authorizationService: api.authorizationService,
       // The manager that serves this reactor's subgraphs: a piece's index read
       // runs through it in process, as the run's user.
