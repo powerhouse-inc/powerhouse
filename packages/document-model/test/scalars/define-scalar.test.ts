@@ -1,9 +1,11 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 import {
+  type DescribedScalarDefinition,
   defineScalar,
   type ScalarDefinition,
   type ScalarValue,
+  scalarCatalog,
 } from "../../scalars.js";
 
 const ibanSchema = z.string().regex(/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/);
@@ -24,6 +26,7 @@ describe("defineScalar", () => {
       example: "DE89370400440532013000",
       typescriptType: null,
       zodSource: null,
+      representation: "string",
     });
     expect(Object.isFrozen(Iban)).toBe(true);
   });
@@ -35,6 +38,7 @@ describe("defineScalar", () => {
       "schema",
       "typescriptType",
       "zodSource",
+      "representation",
     ]);
   });
 
@@ -65,7 +69,7 @@ describe("defineScalar", () => {
     );
   });
 
-  it("refuses input keys outside name, schema, description and example", () => {
+  it("refuses input keys outside name, schema, description, example and representation", () => {
     const input = {
       name: "Iban",
       schema: z.string(),
@@ -74,9 +78,19 @@ describe("defineScalar", () => {
     };
     expect(() => defineScalar(input)).toThrow(
       new Error(
-        'Cannot define scalar "Iban": unknown input key defaultValue, typescriptType; defineScalar accepts only name, schema, description and example.',
+        'Cannot define scalar "Iban": unknown input key defaultValue, typescriptType; defineScalar accepts only name, schema, description, example and representation.',
       ),
     );
+  });
+});
+
+describe("ScalarDefinition", () => {
+  it("assigns to Record<string, unknown>", () => {
+    expectTypeOf<ScalarDefinition>().toExtend<Record<string, unknown>>();
+    expectTypeOf(defineScalar({ name: "Iban", schema: ibanSchema })).toExtend<
+      Record<string, unknown>
+    >();
+    expectTypeOf(scalarCatalog[0]).toExtend<Record<string, unknown>>();
   });
 });
 
@@ -108,7 +122,7 @@ describe("ScalarValue", () => {
         // @ts-expect-error the example must match the schema's input type
         example: "three",
       }),
-    ).returns.toEqualTypeOf<ScalarDefinition<"Count", number>>();
+    ).returns.toEqualTypeOf<DescribedScalarDefinition<"Count", number>>();
   });
 });
 
@@ -148,35 +162,38 @@ describe("defineScalar schema", () => {
     >();
     expectTypeOf(
       defineScalar({ name: "Count", schema: z.coerce.number() }),
-    ).toEqualTypeOf<ScalarDefinition<"Count", number>>();
+    ).toEqualTypeOf<DescribedScalarDefinition<"Count", number>>();
     expectTypeOf(
       defineScalar({
         name: "Code",
         schema: z.preprocess((value) => String(value), z.string()),
       }),
-    ).toEqualTypeOf<ScalarDefinition<"Code", string>>();
+    ).toEqualTypeOf<DescribedScalarDefinition<"Code", string>>();
     expectTypeOf(
       defineScalar({ name: "Fallback", schema: z.string().catch("") }),
-    ).toEqualTypeOf<ScalarDefinition<"Fallback", string>>();
+    ).toEqualTypeOf<DescribedScalarDefinition<"Fallback", string>>();
     expectTypeOf(
       defineScalar({
         name: "Shout",
         schema: z.string().transform((value) => value.toUpperCase()),
       }),
-    ).toEqualTypeOf<ScalarDefinition<"Shout", string>>();
+    ).toEqualTypeOf<DescribedScalarDefinition<"Shout", string>>();
     expectTypeOf(
       defineScalar({
         name: "Even",
         schema: z.number().refine((value) => value % 2 === 0),
       }),
-    ).toEqualTypeOf<ScalarDefinition<"Even", number>>();
+    ).toEqualTypeOf<DescribedScalarDefinition<"Even", number>>();
     expectTypeOf(
       defineScalar({
         name: "Measure",
         schema: z.object({ unit: z.string(), note: z.string().optional() }),
       }),
     ).toEqualTypeOf<
-      ScalarDefinition<"Measure", { unit: string; note?: string | undefined }>
+      DescribedScalarDefinition<
+        "Measure",
+        { unit: string; note?: string | undefined }
+      >
     >();
   });
 

@@ -38,7 +38,13 @@ import {
   type ICatchUpConsumer,
 } from "../catch-up/types.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
+import { KeyframeCleanupService } from "../admin/keyframe-cleanup-service.js";
+import type { IStoreMaintenance } from "../admin/keyframe-cleanup-types.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
+import {
+  DEFAULT_KEYFRAME_RULE,
+  type KeyframeSettings,
+} from "../storage/keyframes/keyframe-settings.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import { EventBus } from "../events/event-bus.js";
 import { resolveFeatureFlags } from "./feature-flags.js";
@@ -162,6 +168,9 @@ import {
 } from "../inspector/storage-facts.js";
 import type { ReactorStorageFacts } from "../inspector/types.js";
 import { CatchUpPriority } from "../processors/catch-up-priority.js";
+import { ProcessorTimingSettings } from "../processors/processor-stats.js";
+import { SyncManager } from "../sync/sync-manager.js";
+import type { MemoryTelemetry } from "../telemetry/memory-telemetry.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
 import { resolveModelSources } from "./model-sources.js";
 import type { DocumentModelSource } from "./model-sources.js";
@@ -405,6 +414,8 @@ export class ReactorBuilder {
   private executorManager: IJobExecutorManager | undefined;
   private executorConfig: JobExecutorConfig = {};
   private writeCacheConfig?: Partial<WriteCacheConfig>;
+  private keyframeSettings?: KeyframeSettings;
+  private storeMaintenance?: IStoreMaintenance;
   private migrationStrategy: MigrationStrategy = "auto";
   private unsupportedStoredDocuments: UnsupportedStoredDocuments = "refuse";
   private syncBuilder?: SyncBuilder;
@@ -439,6 +450,9 @@ export class ReactorBuilder {
   private instrumentedPools: PoolInstrumentation[] = [];
   private catchUpConfig: CatchUpConfig = defaultCatchUpConfig;
   private catchUpPriority: CatchUpPriority = new CatchUpPriority();
+  private processorTiming: ProcessorTimingSettings =
+    new ProcessorTimingSettings();
+  private memoryTelemetry: MemoryTelemetry | undefined;
   private extraPeerCapabilities: PeerCapability[] = [];
 
   withLogger(logger: ILogger): this {
@@ -534,6 +548,21 @@ export class ReactorBuilder {
     return this;
   }
 
+  /**
+   * Interval and keep per document type, plus a default. Workers get the same
+   * settings. Without this call: a keyframe every 10 revisions, all kept.
+   */
+  withKeyframes(settings: KeyframeSettings): this {
+    this.keyframeSettings = settings;
+    return this;
+  }
+
+  /** How a host that owns the store's connection rewrites a table of it. */
+  withStoreMaintenance(maintenance: IStoreMaintenance): this {
+    this.storeMaintenance = maintenance;
+    return this;
+  }
+
   withDriveContainerTypes(types: string[]): this {
     this.driveContainerTypes = new Set(types);
     return this;
@@ -573,6 +602,21 @@ export class ReactorBuilder {
    */
   withCatchUpPriority(priority: CatchUpPriority): this {
     this.catchUpPriority = priority;
+    return this;
+  }
+
+  /** Records where processors spend their time. Defaults to off. */
+  withProcessorTiming(settings: ProcessorTimingSettings): this {
+    this.processorTiming = settings;
+    return this;
+  }
+
+  /**
+   * Gives `telemetry` this reactor's gauges and event counts and puts it on the
+   * module. It is never started here; the host decides.
+   */
+  withMemoryTelemetry(telemetry: MemoryTelemetry): this {
+    this.memoryTelemetry = telemetry;
     return this;
   }
 
@@ -1073,7 +1117,10 @@ export class ReactorBuilder {
     const cacheConfig: WriteCacheConfig = {
       maxDocuments: this.writeCacheConfig?.maxDocuments ?? 100,
       ringBufferSize: this.writeCacheConfig?.ringBufferSize ?? 10,
-      keyframeInterval: this.writeCacheConfig?.keyframeInterval ?? 10,
+      keyframeInterval:
+        this.writeCacheConfig?.keyframeInterval ??
+        DEFAULT_KEYFRAME_RULE.interval,
+      keyframes: this.resolveKeyframeSettings(),
       gate: protocolGate,
     };
 
@@ -1318,6 +1365,7 @@ export class ReactorBuilder {
       {
         legacyProcessorIds: this.features.legacyProcessorIds !== false,
         catchUpPriority: this.catchUpPriority,
+        processorTiming: this.processorTiming,
       },
     );
     processorManager.attachCatchUp(
@@ -1532,11 +1580,19 @@ export class ReactorBuilder {
       catchUp.addConsumer(groupReevaluationTrigger, "host");
     }
 
+    const keyframeCleanup = new KeyframeCleanupService(database, {
+      schema: REACTOR_SCHEMA,
+      settings: this.resolveKeyframeSettings(),
+      priority: this.catchUpPriority,
+      maintenance: this.storeMaintenance,
+    });
+
     const module: InProcessReactorModule = {
       eventBus,
       documentModelRegistry,
       featureFlags,
       protocolSupport: this.executorConfig.protocolSupport ?? {},
+      loadsModelsOnDemand: this.documentModelLoader !== undefined,
       queue,
       jobTracker,
       executorManager,
@@ -1561,12 +1617,15 @@ export class ReactorBuilder {
       degradedComponents,
       catchUp,
       catchUpPriority: this.catchUpPriority,
+      processorTiming: this.processorTiming,
+      memoryTelemetry: this.memoryTelemetry,
       settledWatermark,
       documentPurgeService: new DocumentPurgeService(
         queue,
         jobTracker,
         eventBus,
       ),
+      keyframeCleanup,
       storageFacts: { ...storageFacts },
       groupCommitStorage: groupCommit && {
         health: groupCommit.health,
@@ -1574,6 +1633,7 @@ export class ReactorBuilder {
       },
       shutdown: this.createShutdown(reactor, database),
     };
+    this.shutdownHooks.push(() => keyframeCleanup.shutdown());
 
     catchUp.start();
 
@@ -1590,7 +1650,76 @@ export class ReactorBuilder {
       this.attachSignalHandlers(module);
     }
 
+    this.attachMemoryTelemetry(module, eventBus, collectionMembershipCache);
+
     return module;
+  }
+
+  /** Module gauges, only for a host that gave a telemetry instance. */
+  private attachMemoryTelemetry(
+    module: InProcessReactorModule,
+    eventBus: IEventBus,
+    collectionMembership: CollectionMembershipCache,
+  ): void {
+    const telemetry = this.memoryTelemetry;
+    if (!telemetry) return;
+    telemetry.attachEventBus(eventBus);
+    const {
+      documentIndexerConsistencyTracker,
+      documentViewConsistencyTracker,
+      executorManager,
+      jobTracker,
+      processorManager,
+      processorManagerConsistencyTracker,
+      queue,
+      syncModule,
+      writeCache,
+    } = module;
+    if (jobTracker instanceof InMemoryJobTracker) {
+      telemetry.addGauge("jobTracker", () => jobTracker.stats());
+    }
+    if (queue instanceof InMemoryQueue) {
+      telemetry.addGauge("queue", () => queue.stats());
+    }
+    if (
+      executorManager instanceof SimpleJobExecutorManager ||
+      executorManager instanceof WorkerPoolJobExecutorManager
+    ) {
+      telemetry.addGauge("deferredJobs", () => executorManager.deferredStats());
+    }
+    if (processorManager instanceof ProcessorManager) {
+      telemetry.addGauge(
+        "processors",
+        () => processorManager.queueStats().totals,
+      );
+    }
+    const trackers = [
+      documentViewConsistencyTracker,
+      documentIndexerConsistencyTracker,
+      processorManagerConsistencyTracker,
+    ].filter(
+      (tracker): tracker is ConsistencyTracker =>
+        tracker instanceof ConsistencyTracker,
+    );
+    telemetry.addGauge("consistency", () => {
+      const totals = { keys: 0, waiters: 0 };
+      for (const tracker of trackers) {
+        const { keys = 0, waiters = 0 } = tracker.stats();
+        totals.keys += keys;
+        totals.waiters += waiters;
+      }
+      return totals;
+    });
+    telemetry.addGauge("collectionMembership", () =>
+      collectionMembership.stats(),
+    );
+    if (writeCache instanceof KyselyWriteCache) {
+      telemetry.addGauge("writeCache", () => writeCache.stats());
+    }
+    const syncManager = syncModule?.syncManager;
+    if (syncManager instanceof SyncManager) {
+      telemetry.addGauge("sync", () => syncManager.stats());
+    }
   }
 
   private assertAdditionalChannelFactories(): void {
@@ -1755,6 +1884,7 @@ export class ReactorBuilder {
       indexing,
       catchUp: this.catchUpConfig,
       protocolSupport: this.executorConfig.protocolSupport,
+      keyframes: this.resolveKeyframeSettings(),
       factory,
       logger: this.logger!,
       hostBus: eventBus,
@@ -1835,11 +1965,21 @@ export class ReactorBuilder {
           executorConfig: this.executorConfig,
           signer: this.workerSigner,
           trustPolicy: this.workerTrustPolicy,
+          keyframes: this.resolveKeyframeSettings(),
         },
         logger,
         poolInstrumentation,
       });
     };
+  }
+
+  /** One answer for every writer: the main thread and all its workers. */
+  private resolveKeyframeSettings(): KeyframeSettings {
+    const settings = this.keyframeSettings ?? {};
+    const interval = this.writeCacheConfig?.keyframeInterval;
+    return interval === undefined
+      ? settings
+      : { ...settings, default: { interval, ...settings.default } };
   }
 
   /**

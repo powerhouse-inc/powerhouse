@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { scalarCatalog } from "./catalog.js";
 import { defineCatalogScalar } from "./define-catalog-scalar.js";
-import type { ScalarDefinition } from "./types.js";
+import {
+  type JsonRepresentation,
+  statedRepresentation,
+} from "./representation.js";
+import type { DescribedScalarDefinition } from "./types.js";
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 
@@ -52,9 +56,24 @@ type ScalarInput<TName extends string, S extends z.ZodType> = {
   schema: S & CanonicalSchema<S>;
   description?: string;
   example?: NoInfer<z.input<S>>;
+  /** Only for a schema whose JSON shape zod cannot state, such as `z.custom`. */
+  representation?: JsonRepresentation;
 };
 
-const inputKeys = new Set(["name", "schema", "description", "example"]);
+const inputKeys = new Set([
+  "name",
+  "schema",
+  "description",
+  "example",
+  "representation",
+]);
+const jsonRepresentations: ReadonlySet<unknown> = new Set<JsonRepresentation>([
+  "string",
+  "number",
+  "boolean",
+  "json-object",
+  "json",
+]);
 const graphqlBuiltIns: ReadonlySet<unknown> = new Set([
   "Int",
   "Float",
@@ -75,7 +94,7 @@ const refusals: readonly Refusal[] = [
   (input) => {
     const unknownKeys = Object.keys(input).filter((key) => !inputKeys.has(key));
     return unknownKeys.length > 0
-      ? `unknown input key ${unknownKeys.join(", ")}; defineScalar accepts only name, schema, description and example`
+      ? `unknown input key ${unknownKeys.join(", ")}; defineScalar accepts only name, schema, description, example and representation`
       : undefined;
   },
   ({ name }) =>
@@ -96,7 +115,7 @@ const refusals: readonly Refusal[] = [
 
 export function defineScalar<TName extends string, S extends z.ZodType>(
   input: ScalarInput<TName, S>,
-): ScalarDefinition<TName, z.output<S>> {
+): DescribedScalarDefinition<TName, z.output<S>> {
   for (const refusal of refusals) {
     const reason = refusal(input);
     if (reason !== undefined) {
@@ -105,7 +124,7 @@ export function defineScalar<TName extends string, S extends z.ZodType>(
       );
     }
   }
-  const { example, ...definition } = input;
+  const { example, representation, ...definition } = input;
   // TypeScript cannot relate a generic S to its own z.output<S>.
   const schema = input.schema as z.ZodType<z.output<S>>;
   const parsedExample =
@@ -121,5 +140,27 @@ export function defineScalar<TName extends string, S extends z.ZodType>(
     ...(parsedExample && { example: parsedExample.data }),
     typescriptType: null,
     zodSource: null,
+    representation: scalarRepresentation(input.name, schema, representation),
   });
+}
+
+function scalarRepresentation(
+  name: string,
+  schema: z.ZodType,
+  declared: unknown,
+): JsonRepresentation {
+  const derived = statedRepresentation(schema);
+  if (declared === undefined) return derived ?? "json";
+  if (!jsonRepresentations.has(declared)) {
+    throw new Error(
+      `Cannot define scalar "${name}": representation must be one of ${[...jsonRepresentations].join(", ")}.`,
+    );
+  }
+  const representation = declared as JsonRepresentation;
+  if (derived !== undefined && derived !== representation) {
+    throw new Error(
+      `Cannot define scalar "${name}": the schema's values are ${derived}, so representation cannot be ${representation}.`,
+    );
+  }
+  return representation;
 }

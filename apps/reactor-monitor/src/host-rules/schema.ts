@@ -73,6 +73,7 @@ export const RULES = [
   "capability",
   "workers",
   "scope",
+  "reach",
 ] as const;
 export type RuleName = (typeof RULES)[number];
 

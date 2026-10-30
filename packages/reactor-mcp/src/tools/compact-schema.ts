@@ -1,19 +1,31 @@
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import { z } from "zod";
 
-export type CompactDocumentModelSchema = {
-  id: string;
-  name: string;
-  version: number;
-  /** One entry per operation: what `addActions` takes as `type`, `scope` and `input`. */
-  actions: {
-    type: string;
-    scope: string;
-    /** The input's GraphQL definition, or `null` for an action without input. */
-    input: string | null;
-  }[];
-  /** Definitions of the enums and types the inputs reference from the state schemas. */
-  types?: Record<string, string>;
-};
+export const compactDocumentModelSchemaSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  version: z.number(),
+  actions: z
+    .array(
+      z.object({
+        type: z.string(),
+        scope: z.string(),
+        input: z
+          .string()
+          .nullable()
+          .describe("The input's GraphQL definition; null without input"),
+      }),
+    )
+    .describe("What addActions takes as type, scope and input"),
+  types: z
+    .record(z.string(), z.string())
+    .optional()
+    .describe("Enums and types the inputs reference from the state schemas"),
+});
+
+export type CompactDocumentModelSchema = z.infer<
+  typeof compactDocumentModelSchemaSchema
+>;
 
 const BUILTIN_SCALARS = new Set(["String", "Int", "Float", "Boolean", "ID"]);
 

@@ -1,4 +1,8 @@
-import { openDrive, selectInSidebar } from "../../scripts/ui-stack.js";
+import {
+  createConnectionInBrowser,
+  openDrive,
+  selectInSidebar,
+} from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
 
 test.describe("Connection editor", () => {
@@ -9,9 +13,13 @@ test.describe("Connection editor", () => {
 
   test("shows the service and its readable status", async ({ app }) => {
     await expect(app.getByText("Connected", { exact: true })).toBeVisible();
+    // Fixed once chosen: the service shows, with no picker.
+    await expect(app.getByRole("group", { name: "Service" })).toHaveText(
+      "Slack",
+    );
     await expect(
       app.getByRole("combobox").filter({ hasText: "Slack" }),
-    ).toBeVisible();
+    ).toHaveCount(0);
     // The bot-token method's own field, by its hint.
     await expect(
       app.getByText("The bot token for your Slack app (starts with xoxb-)"),
@@ -21,8 +29,22 @@ test.describe("Connection editor", () => {
     ).toContainText("Optional");
   });
 
-  test("the service list is searchable", async ({ app }) => {
-    await app.getByRole("combobox").filter({ hasText: "Slack" }).click();
+  test("a new connection's service list is searchable", async ({
+    stack,
+    app,
+  }) => {
+    await createConnectionInBrowser(app, stack.drive, {
+      name: "Unbound",
+      connectorId: "",
+      authType: "CUSTOM_AUTH",
+      config: {},
+      secrets: {},
+    });
+    await selectInSidebar(app, "Unbound");
+    const picker = app
+      .getByRole("combobox")
+      .filter({ hasText: "Choose the service to connect" });
+    await picker.click();
     const search = app.getByPlaceholder("Search");
     await expect(search).toBeFocused();
     await search.fill("github");
@@ -32,9 +54,7 @@ test.describe("Connection editor", () => {
     await expect(app.getByText("Nothing matches.")).toBeVisible();
     await search.press("Escape");
     await expect(app.getByRole("listbox")).toBeHidden();
-    await expect(
-      app.getByRole("combobox").filter({ hasText: "Slack" }),
-    ).toBeVisible();
+    await expect(picker).toBeVisible();
   });
 
   test("a saved token shows as saved, and Replace rotates it", async ({

@@ -38,7 +38,7 @@ const throwingStorage: WebStorageLike = {
 const remoteDescriptor: ReactorDescriptor = {
   kind: "remote",
   name: "switchboard",
-  remote: { url: "http://localhost:4001/graphql" },
+  remote: { url: "http://localhost:4001/d/powerhouse" },
 };
 
 describe("MonitoringSetsStore", () => {
@@ -50,14 +50,14 @@ describe("MonitoringSetsStore", () => {
       kind: "remote",
       name: "authed",
       syncMode: "local",
-      remoteUrl: "http://localhost:4001/graphql",
+      remoteUrl: "http://localhost:4001/d/powerhouse",
       bearer: token,
     });
     const staticHeaders = {
       kind: "remote",
       name: "static",
       remote: {
-        url: "http://localhost:4002/graphql",
+        url: "http://localhost:4002/d/powerhouse",
         headers: { Authorization: `Bearer ${token}` },
       },
     } as unknown as ReactorDescriptor;
@@ -69,8 +69,8 @@ describe("MonitoringSetsStore", () => {
     }
     const reloaded = new MonitoringSetsStore(storage).getActiveDescriptors();
     expect(reloaded.map((d) => d.remote)).toEqual([
-      { url: "http://localhost:4001/graphql" },
-      { url: "http://localhost:4002/graphql" },
+      { url: "http://localhost:4001/d/powerhouse" },
+      { url: "http://localhost:4002/d/powerhouse" },
     ]);
   });
 

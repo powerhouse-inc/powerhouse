@@ -2,6 +2,10 @@ import type {
   ManagedReactorEntry,
   ReactorKind,
 } from "@powerhousedao/reactor-monitor";
+import {
+  driveAddressMessage,
+  switchboardOfDrive,
+} from "@powerhousedao/host-core/schema";
 import { useState, type FormEvent } from "react";
 
 /**
@@ -93,7 +97,13 @@ export function ProvisionPanel({
     // A remote reactor IS its URL: there is nothing to build, so an empty one
     // could only fail at the first request.
     if (isRemote && !trimmedUrl) {
-      setValidationError("A GraphQL URL is required for a remote reactor");
+      setValidationError(
+        "A switchboard drive address is required for a remote reactor",
+      );
+      return;
+    }
+    if (isRemote && !switchboardOfDrive(trimmedUrl)) {
+      setValidationError(driveAddressMessage(trimmedUrl));
       return;
     }
     setValidationError(null);
@@ -137,10 +147,10 @@ export function ProvisionPanel({
         {isRemote ? (
           <>
             <label>
-              GraphQL URL
+              Switchboard drive address
               <input
                 onChange={(e) => setRemoteUrl(e.target.value)}
-                placeholder="http://localhost:4001/graphql"
+                placeholder="http://localhost:4001/d/powerhouse"
                 type="text"
                 value={remoteUrl}
               />

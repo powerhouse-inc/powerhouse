@@ -106,11 +106,11 @@ export const localPackage = option({
   env: "PH_LOCAL_PACKAGE" as const,
 });
 
+// No default: unset leaves a host's own config.switchboard.packages.disableLocal in force.
 export const disableLocalPackages = flag({
-  type: boolean,
+  type: optional(boolean),
   long: "ignore-local",
   description: "Do not load local packages from this project",
-  defaultValue: () => false,
 });
 
 export const httpsKeyFile = option({

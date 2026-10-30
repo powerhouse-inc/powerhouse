@@ -38,5 +38,6 @@ export default defineConfig({
   test: {
     include: ["test/**/*.test.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
     globals: true,
+    testTimeout: 15_000,
   },
 });

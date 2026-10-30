@@ -131,7 +131,7 @@ export function isStructuralMultiReactor(
   );
 }
 
-/** The remote backends' urls, placement order — what the routing client dials. */
+/** The remote backends' drive addresses, placement order. */
 export function remoteBackendUrls(
   reactor: ReactorConfig | undefined,
 ): string[] {
@@ -139,4 +139,36 @@ export function remoteBackendUrls(
     .filter((d) => d.kind === "remote")
     .map((d) => d.remote?.url)
     .filter((u): u is string => typeof u === "string");
+}
+
+/** A switchboard as Connect's served config names it, with its connection settings. */
+export type ServedRemoteBackend = { name: string; url: string } & Omit<
+  NonNullable<ReactorBackend["remote"]>,
+  "url"
+>;
+
+/**
+ * The remote backends by host key, placement order, each with the
+ * connection settings it sets. A url that is not a string yet (an output
+ * token, unresolved when a host builds) is skipped, as in remoteBackendUrls.
+ */
+export function remoteBackends(
+  reactor: ReactorConfig | undefined,
+): ServedRemoteBackend[] {
+  return backendsToDescriptors(reactor).flatMap((d) => {
+    const remote = reactor?.backends?.[d.name]?.remote;
+    if (d.kind !== "remote" || typeof d.remote?.url !== "string" || !remote) {
+      return [];
+    }
+    const { requestTimeoutMs, breaker, realtime } = remote;
+    return [
+      {
+        name: d.name,
+        url: d.remote.url,
+        ...(requestTimeoutMs !== undefined ? { requestTimeoutMs } : {}),
+        ...(breaker !== undefined ? { breaker } : {}),
+        ...(realtime !== undefined ? { realtime } : {}),
+      },
+    ];
+  });
 }

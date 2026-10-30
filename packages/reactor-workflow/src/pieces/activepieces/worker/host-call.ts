@@ -4,7 +4,12 @@
 // Modelled on their engine RPC (createRpcClient): a method name, a payload, an
 // id, and failures returned as data rather than thrown across the boundary.
 import { markIndeterminate } from "../indeterminate.js";
-import { STORE_DELETE, STORE_PUT, type HostCallResponse } from "./protocol.js";
+import {
+  FILES_UPLOAD,
+  STORE_DELETE,
+  STORE_PUT,
+  type HostCallResponse,
+} from "./protocol.js";
 
 // A host call is a local IPC round trip, so ten seconds is pathological in the
 // ordinary case. It was not in the field: a reactor dispatch under load, or a
@@ -22,9 +27,14 @@ export const DEFAULT_HOST_CALL_TIMEOUT_MS = 10_000;
  * the host may have written and simply not got the answer back in time, so
  * reporting it as a failure is a claim nobody can stand behind. Reactor writes
  * go over the reactor RPC, not a host call; their unconfirmed outcome is
- * recognised by error name instead (`../indeterminate.ts`).
+ * recognised by error name instead (`../indeterminate.ts`). WAITPOINT_CREATE
+ * is not here: a retry returns the waitpoint the lost call made.
  */
-export const MUTATING_HOST_CALLS: readonly string[] = [STORE_PUT, STORE_DELETE];
+export const MUTATING_HOST_CALLS: readonly string[] = [
+  STORE_PUT,
+  STORE_DELETE,
+  FILES_UPLOAD,
+];
 
 // Set per request from the wire; requests are serialized per worker.
 let fromWire: number | undefined;

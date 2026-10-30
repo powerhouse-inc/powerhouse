@@ -2,6 +2,7 @@ import type { PHReactorClientMode } from "@powerhousedao/shared/clis";
 import { getRuntimeConfig } from "./runtime-config.js";
 import { isMultiReactorEnabled } from "./multi-reactor-flag.js";
 import { isReactorWorkerEnabled } from "./reactor-worker-flag.js";
+import { logger } from "document-model";
 
 /**
  * Which of the four reactor clients Connect boots. Standardized by the
@@ -34,7 +35,16 @@ export const REACTOR_CLIENT_STORAGE_KEY = "ph:reactorClient";
 const asMode = (value: string | null | undefined) =>
   value && MODES.has(value) ? (value as ReactorClientMode) : undefined;
 
-function fromTab(): ReactorClientMode | undefined {
+const LOCAL_ONLY: ReadonlySet<ReactorClientMode> = new Set([
+  "in-process",
+  "worker",
+]);
+
+/** Set while this page load keeps its reactor to itself against the host's `newDrives`. */
+let blockedNewDrives: Error | undefined;
+
+/** While new drives go to a switchboard, a local-only override applies only from the URL, never from storage. */
+function fromTab(newDrives: string | undefined): ReactorClientMode | undefined {
   if (typeof window === "undefined") return undefined;
   let query: ReactorClientMode | undefined;
   try {
@@ -44,12 +54,28 @@ function fromTab(): ReactorClientMode | undefined {
   } catch {
     return undefined;
   }
+  const localOnly = (mode: ReactorClientMode | undefined) =>
+    newDrives !== undefined && mode !== undefined && LOCAL_ONLY.has(mode);
   try {
     if (query) {
-      window.localStorage.setItem(REACTOR_CLIENT_STORAGE_KEY, query);
+      if (localOnly(query)) {
+        window.localStorage.removeItem(REACTOR_CLIENT_STORAGE_KEY);
+      } else {
+        window.localStorage.setItem(REACTOR_CLIENT_STORAGE_KEY, query);
+      }
       return query;
     }
-    return asMode(window.localStorage.getItem(REACTOR_CLIENT_STORAGE_KEY));
+    const stored = asMode(
+      window.localStorage.getItem(REACTOR_CLIENT_STORAGE_KEY),
+    );
+    if (!localOnly(stored)) return stored;
+    window.localStorage.removeItem(REACTOR_CLIENT_STORAGE_KEY);
+    logger.warn(
+      "Ignoring the stored ?reactorClient=@mode: new drives go to @switchboard",
+      stored,
+      newDrives,
+    );
+    return undefined;
   } catch {
     // Blocked storage: the query still applies for this page load.
     return query;
@@ -57,12 +83,25 @@ function fromTab(): ReactorClientMode | undefined {
 }
 
 export function resolveReactorClientMode(): ReactorClientMode {
-  const override = fromTab();
+  const instance = getRuntimeConfig().connect.instance;
+  const newDrives = instance?.router?.newDrives;
+  const override = fromTab(newDrives);
+  blockedNewDrives =
+    override && newDrives !== undefined && LOCAL_ONLY.has(override)
+      ? new Error(
+          `New drives go to ${newDrives}, but this browser is set to keep its reactor to itself (?reactorClient=${override}).`,
+        )
+      : undefined;
   if (override) return override;
-  const configured = getRuntimeConfig().connect.instance?.reactorClient;
+  const configured = instance?.reactorClient;
   if (configured && MODES.has(configured)) return configured;
   // Legacy fallback — unchanged behaviour for configs without reactorClient.
   if (isMultiReactorEnabled()) return "router";
   if (isReactorWorkerEnabled()) return "worker";
   return "in-process";
+}
+
+/** Why this page load can't create a drive where the host says, or undefined when it can. */
+export function newDrivesBlocked(): Error | undefined {
+  return blockedNewDrives;
 }

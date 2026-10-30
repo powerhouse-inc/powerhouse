@@ -100,6 +100,8 @@ export interface RunActionRequest
   // Where ctx.files.write() puts bytes for the host to ingest. Without it the
   // action gets the data-URI service instead.
   stagingDir?: string;
+  // Serve `ctx.files.upload` over the call channel. Without it the member throws.
+  uploadFiles?: boolean;
   // Attachment refs in propsValue, already materialized by the host.
   stagedInputs?: StagedInput[];
   // Resolved connection values served to ctx.connections.get(key).
@@ -116,9 +118,12 @@ export interface RunActionRequest
   // it the member keeps throwing, so a piece that needs it fails loudly.
   liveOutput?: boolean;
   executionType?: `${ExecutionType}`;
-  // The delivery that woke a RESUME run, served as ctx.resumePayload. This
-  // engine never suspends a run, so nothing sets it yet; absent, the context
-  // member keeps throwing by name.
+  // ctx.run.canPause; false when absent. True also serves WAITPOINT_CREATE.
+  canPause?: boolean;
+  // Where resume URLs live; serves the deprecated `generateResumeUrl`.
+  resumeBaseUrl?: string;
+  // The delivery that woke a RESUME run, served as ctx.resumePayload. Absent,
+  // the context member keeps throwing by name.
   resumePayload?: unknown;
   // Call the action's test method instead of run, as a single-step test does.
   stepTest?: boolean;
@@ -255,6 +260,12 @@ export interface ResultResponse {
   id: number;
   type: "result";
   output: unknown;
+  // run only: the action asked to suspend the run after it returned.
+  paused?: PausedStep;
+  // run only: what `run.respond` / `run.stop` answer a held sync request with.
+  response?: RunResponse;
+  // run only: `run.stop` ends the run after this step.
+  stopped?: boolean;
   touched: string[];
   // True when the piece set NODE_TLS_REJECT_UNAUTHORIZED=0 (contained to the worker).
   tlsPoisoned: boolean;
@@ -365,3 +376,37 @@ export const OUTPUT_UPDATE = "output.update";
 export const STORE_GET = "store.get";
 export const STORE_PUT = "store.put";
 export const STORE_DELETE = "store.delete";
+
+// `ctx.files.upload`: carries a StagedFile, answers with its attachment ref.
+export const FILES_UPLOAD = "files.upload";
+
+// `ctx.run.createWaitpoint`: carries a WaitpointCall, answers with
+// `{ id, resumeUrl }`.
+export const WAITPOINT_CREATE = "waitpoint.create";
+
+// What an action asks a waitpoint to be, as Activepieces' CreateWaitpointParams.
+export interface WaitpointCall {
+  type: "DELAY" | "WEBHOOK";
+  // ISO or any Date-parsable text; DELAY only.
+  resumeDateTime?: string;
+  // What the request the run holds is answered with when it pauses here.
+  responseToSend?: RunResponse;
+}
+
+// Activepieces' RespondResponse: an answer to a held sync request.
+export interface RunResponse {
+  status?: number;
+  body?: unknown;
+  headers?: Record<string, string>;
+}
+
+export interface CreatedWaitpoint {
+  id: string;
+  resumeUrl: string;
+}
+
+// How a step suspends: on its own waitpoint, or via deprecated `run.pause`
+// (the host creates one after, with any `generateResumeUrl` token).
+export type PausedStep =
+  | { waitpointId: string }
+  | { pause: WaitpointCall; token?: string };

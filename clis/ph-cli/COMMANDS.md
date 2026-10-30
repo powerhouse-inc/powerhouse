@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.3-dev.79)<br>
+# Powerhouse CLI Commands (6.2.3-dev.86)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -22,6 +22,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Connect Preview](#connect-preview)
 - [Access Token](#access-token)
 - [Inspect](#inspect)
+- [Keyframes](#keyframes)
 - [List](#list)
 - [Mcp](#mcp)
 - [Migrate](#migrate)
@@ -310,6 +311,14 @@ The piece directory under pieces/ to add the action to. Optional when the projec
 #### Require Reactor <br>
 Declare reactor access for the action: read, or write (which includes read). The action then gets context.reactor<br><br>
 **usage:** `--require-reactor <value>`<br>
+
+#### Default Timeout Seconds <br>
+Write defaultTimeoutSeconds: the step timeout used when the workflow sets none<br><br>
+**usage:** `--default-timeout-seconds <number>`<br>
+
+#### Default Max Attempts <br>
+Write defaultRetry: { maxAttempts }: the attempts (1 is no retry) used when the workflow sets no retry<br><br>
+**usage:** `--default-max-attempts <number>`<br>
 
 
 ### flags
@@ -1047,6 +1056,59 @@ The name of the package to inspect<br><br>
 
 
 ### flags
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Keyframes
+
+The keyframes command reports on and cleans up the keyframes of a running switchboard,
+through its inspection-admin endpoint.
+
+Prerequisites:
+  - The host serves inspection-admin (INSPECTION_ADMIN_ENABLED=true).
+  - The caller is one of the host's auth admins.
+  - The keep rules are in powerhouse.config.json under reactor.keyframes, or in PH_KEYFRAMES.
+
+Run preview first: it only reads. clean then removes the keyframes past each type's keep
+count and all keyframes of deleted documents, in small paced statements beside live
+traffic. Running it again is safe. A later read that misses a keyframe replays from the
+operation log, so a clean-up costs time on cold reads and never changes a document.
+
+The disk only shrinks after reclaim, which rewrites the Keyframe table once the store is
+quiet. On PGlite the store answers nothing while it rewrites. On Postgres it says what to
+run by hand.
+
+### arguments
+#### Action *[required]*<br>
+preview: report what a clean-up would remove, without writing. clean: apply the configured keep and remove the keyframes of deleted documents (needs --yes). status: show the latest run and reclaim. cancel: stop a running clean-up. reclaim: rewrite the Keyframe table to give the space back to the disk.<br><br>
+**usage:** `<action>`<br>
+
+
+### options
+#### Url <br>
+The switchboard's GraphQL endpoint, e.g. http://localhost:4001/graphql. Defaults to reactor.port in powerhouse.config.json.<br><br>
+**usage:** `--url <str>`<br>
+
+#### Token <br>
+Admin bearer token. Defaults to PH_ACCESS_TOKEN, then a token from your `ph login` identity. Its address must be in the host's auth admins.<br><br>
+**usage:** `--token <str>`<br>
+
+
+### flags
+#### Yes <br>
+Confirms a clean or a reclaim; both refuse to run without it.<br><br>
+**usage:** `--yes`<br>
+
+#### Json <br>
+Print the result as JSON.<br><br>
+**usage:** `--json`<br>
+
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>

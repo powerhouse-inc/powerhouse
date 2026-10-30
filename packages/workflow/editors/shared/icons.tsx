@@ -6,6 +6,7 @@ const ICON_PATHS = {
   minus: "M5 12h14",
   list: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
   play: "M7 5v14l12-7z",
+  stop: "M7 7h10v10H7z",
   chevron: "M9 6l6 6-6 6",
   chevronDown: "M6 9l6 6 6-6",
   retry: "M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4",

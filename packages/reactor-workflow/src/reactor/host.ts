@@ -1,3 +1,4 @@
+import type { OAuthAppDefinition } from "./oauth-apps.js";
 // What the engine asks of whatever composes it. Structural on purpose: the
 // host that serves the runtime depends on this package, never the other way.
 import type {
@@ -12,6 +13,10 @@ import type {
   IRelationalDb,
   IWebhookScope,
 } from "@powerhousedao/shared/processors";
+import type {
+  IndexQueryRequest,
+  IndexQueryResult,
+} from "@powerhousedao/pieces-framework";
 import type { ILogger } from "document-model";
 import type { AttachmentClientLike } from "./attachment-port.js";
 import type { RunUser } from "./run-scope.js";
@@ -54,6 +59,14 @@ export interface WorkflowRuntimeHostDeps {
   hostPrincipal?: Principal;
   // Who the host signs as. A publish under its key has no run user.
   hostIdentity?: HostIdentity;
+  // Answers a piece's read of a read-model index (`ctx.reactor.query`) in
+  // the host process, as the run's user: the index's own access rules
+  // decide, as over HTTP. Absent, the method is refused by name.
+  queryIndex?(
+    request: IndexQueryRequest,
+    runUser: RunUser | null,
+    signal?: AbortSignal,
+  ): Promise<IndexQueryResult>;
   // Importable document models sent to piece workers on fork. Absent, pieces
   // get DocumentModelUnavailableError for every type modelEntries lacks too.
   modelManifest?(): ModelManifestEntry[];
@@ -62,6 +75,9 @@ export interface WorkflowRuntimeHostDeps {
   // Absent on a host with no HTTP surface: webhook triggers are then
   // unavailable, which is not the same as having no workflows.
   webhooks?: IWebhookScope;
+  // Where resume URLs live: `${waitpointBaseUrl}/<token>`. Absent or without
+  // an origin, a step cannot create a WEBHOOK waitpoint.
+  waitpointBaseUrl?: string;
   // Absent leaves ctx.files inline rather than turning it into an attachment.
   attachments?: AttachmentClientLike;
   // Whether a run may read the ref. A step runs with no caller, so the host
@@ -70,6 +86,10 @@ export interface WorkflowRuntimeHostDeps {
   canReadAttachmentRef?(request: AttachmentReadRequest): Promise<boolean>;
   // Defaults to the relational store encrypted with the host's master key.
   secrets?: SecretStore;
+  // OAuth2 apps the publisher owns: a connection names one (`oauth_app`)
+  // instead of carrying a client id and secret. Their client secrets are
+  // loaded into the secret store on first use.
+  oauthApps?: readonly OAuthAppDefinition[];
   // Where that store generates a key when none is set; false requires one,
   // for a database that outlives the working directory.
   secretsKeyFile?: string | false;

@@ -97,6 +97,7 @@ export const memberSwitchboardConfigSchema = switchboardConfigLayerSchema([
   "storage.reactor",
   "storage.readModel",
   "protocol",
+  "telemetry",
   "packages.dynamic",
   "drive",
   "remoteDrives",
@@ -185,7 +186,12 @@ export function readModelAsReactorStore(
 export async function memberSwitchboardConfig(
   member: SwitchboardMember,
   env: MemberEnv,
-  options: { pluginHost: boolean; logger?: ILogger },
+  options: {
+    pluginHost: boolean;
+    logger?: ILogger;
+    /** Under everything else: values no flag or host file set. */
+    defaults?: SwitchboardConfigInput;
+  },
 ): Promise<SwitchboardConfigInput> {
   // Lazy: the env mapping loads reactor-api, which the runner module must not.
   const { switchboardConfigFromEnv } =
@@ -212,6 +218,7 @@ export async function memberSwitchboardConfig(
   }
   if (block.storage?.readModel) delete storage.readModel;
   return mergeSwitchboardConfig(
+    options.defaults ?? {},
     block,
     member.config?.switchboard ?? {},
     { ...fromEnv, storage },

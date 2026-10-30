@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { Project } from "ts-morph";
+import { projectPath } from "utils";
 
 type MakeModuleIndexFileArgs = {
   /** The project to make the legacy index file for */
@@ -21,7 +22,10 @@ export function makeModulesIndexFile({
   modulesDirPath,
   modules,
 }: MakeModuleIndexFileArgs) {
-  const indexSourceFilePath = path.join(modulesDirPath, "index.ts");
+  const indexSourceFilePath = path.join(
+    projectPath(project, modulesDirPath),
+    "index.ts",
+  );
 
   // get the source file for the index.ts file if it exists
   let indexSourceFile = project.getSourceFile(indexSourceFilePath);

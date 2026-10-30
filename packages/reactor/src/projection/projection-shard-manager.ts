@@ -19,6 +19,7 @@ import type {
 } from "../read-models/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import type { ConsistencyCoordinate } from "../shared/types.js";
+import type { KeyframeSettings } from "../storage/keyframes/keyframe-settings.js";
 import type { ForwardingPoolInstrumentation } from "../storage/pool-instrumentation.js";
 import type {
   BuiltInReadModelKind,
@@ -100,6 +101,8 @@ export type ProjectionShardManagerConfig = ProjectionShardHooks & {
   indexing: ReadModelIndexingConfig;
   catchUp: CatchUpConfig;
   protocolSupport?: ProtocolSupport;
+  /** Sent to each shard, so its write cache mints like the host's. */
+  keyframes?: KeyframeSettings;
   factory: ProjectionWorkerFactory;
   logger: ILogger;
   hostBus: IEventBus;
@@ -284,6 +287,7 @@ export class ProjectionShardManager implements IReadModelCoordinator {
         indexing: this.config.indexing,
         catchUp: this.config.catchUp,
         protocolSupport: this.config.protocolSupport,
+        keyframes: this.config.keyframes,
       };
       transport.postMessage(init);
       initPromises.push(initPromise);

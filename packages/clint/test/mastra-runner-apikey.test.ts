@@ -62,7 +62,7 @@ describe("mastra-runner apiKey", () => {
             backends: {
               switchboard: {
                 kind: "remote",
-                remote: { url: `http://127.0.0.1:${sbPort}/graphql` },
+                remote: { url: `http://127.0.0.1:${sbPort}/d/powerhouse` },
               },
             },
           },

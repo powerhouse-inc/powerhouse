@@ -6,11 +6,17 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-// Loaded lazily by the property panel: react-markdown and its remark chain are
-// a large graph, and most blocks have no markdown at all.
-export default function PieceMarkdown({ text }: { text: string }) {
+// Loaded lazily: react-markdown and its remark chain are a large graph, and
+// most blocks have no markdown at all. Colour and size come from className.
+export default function PieceMarkdown({
+  text,
+  className = "text-xs text-muted-foreground",
+}: {
+  text: string;
+  className?: string;
+}) {
   return (
-    <div className="text-xs text-muted-foreground">
+    <div className={className}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -20,9 +26,7 @@ export default function PieceMarkdown({ text }: { text: string }) {
             </p>
           ),
           strong: ({ children }) => (
-            <strong className="font-semibold text-muted-foreground">
-              {children}
-            </strong>
+            <strong className="font-semibold">{children}</strong>
           ),
           ol: ({ children }) => (
             <ol className="my-1 list-decimal space-y-0.5 pl-4">{children}</ol>
@@ -48,25 +52,49 @@ export default function PieceMarkdown({ text }: { text: string }) {
               href={href}
               target="_blank"
               rel="noreferrer noopener"
-              className="text-muted-foreground underline"
+              className="underline underline-offset-2"
             >
               {children}
             </a>
           ),
-          h1: ({ children }) => (
-            <p className="mb-1 font-semibold text-muted-foreground">
+          table: ({ children }) => (
+            <div className="my-2 w-fit max-w-full overflow-x-auto rounded-md border border-solid border-border first:mt-0 last:mb-0">
+              <table className="border-collapse text-left">{children}</table>
+            </div>
+          ),
+          thead: ({ children }) => (
+            <thead className="bg-muted/50">{children}</thead>
+          ),
+          th: ({ children, style }) => (
+            <th
+              style={style}
+              className="border-b border-solid border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
+            >
               {children}
-            </p>
+            </th>
+          ),
+          td: ({ children, style }) => (
+            <td
+              style={style}
+              className="border-t border-solid border-border px-3 py-1.5 align-top tabular-nums"
+            >
+              {children}
+            </td>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="my-1 border-l-2 border-solid border-border pl-3">
+              {children}
+            </blockquote>
+          ),
+          hr: () => <hr className="my-2 border-border" />,
+          h1: ({ children }) => (
+            <p className="mb-1 font-semibold">{children}</p>
           ),
           h2: ({ children }) => (
-            <p className="mb-1 font-semibold text-muted-foreground">
-              {children}
-            </p>
+            <p className="mb-1 font-semibold">{children}</p>
           ),
           h3: ({ children }) => (
-            <p className="mb-1 font-semibold text-muted-foreground">
-              {children}
-            </p>
+            <p className="mb-1 font-semibold">{children}</p>
           ),
         }}
       >

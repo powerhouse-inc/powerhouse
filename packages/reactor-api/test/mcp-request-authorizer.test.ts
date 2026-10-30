@@ -1,135 +1,210 @@
+import { MemoryKeyStorage, RenownCryptoBuilder } from "@renown/sdk/node";
+import type { Kysely } from "kysely";
 import type { IncomingMessage } from "node:http";
-import { describe, expect, it, vi } from "vitest";
-import type { AuthContext, AuthService } from "../src/services/auth.service.js";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { AuthService } from "../src/services/auth.service.js";
 import {
   AuthorizationPolicy,
-  type IAuthorizationService,
+  createAuthorizationService,
+  type CanonicalDocumentId,
 } from "../src/services/authorization.service.js";
-import { createMcpRequestAuthorizer } from "../src/services/mcp-request-authorizer.js";
+import { DocumentPermissionService } from "../src/services/document-permission.service.js";
+import {
+  createMcpRequestAuthorizer,
+  type McpRequestAuthorizerOptions,
+} from "../src/services/mcp-request-authorizer.js";
+import type { DocumentPermissionDatabase } from "../src/utils/db.js";
+import { openReactorPermissionStore } from "./utils/reactor-permission-store.js";
 
-// Unit tests for the /mcp authorization gate (AUTH_REVIEW S-C1).
+// The /mcp gate over a real AuthService (real did:key bearers) and a real
+// DOCUMENT_PERMISSIONS authorization service, as GraphQL decides with them.
 
-const makeRequest = (authorization?: string): IncomingMessage =>
+const ADMIN = "0x1111111111111111111111111111111111111111";
+const USER = "0x2222222222222222222222222222222222222222";
+const PROTECTED = "doc-protected";
+const OPEN_DOC = "doc-open";
+const SLUGS: Record<string, string> = { "protected-slug": PROTECTED };
+
+const request = (authorization?: string) =>
   ({ headers: { authorization } }) as IncomingMessage;
 
-const makeAuthorizationService = (
-  policy: AuthorizationPolicy,
-  isSupremeAdmin: boolean,
-): IAuthorizationService =>
-  ({
-    config: { admins: [], defaultProtection: false, policy },
-    isSupremeAdmin: vi.fn().mockReturnValue(isSupremeAdmin),
-  }) as unknown as IAuthorizationService;
+async function bearer(address: string): Promise<string> {
+  const crypto = await new RenownCryptoBuilder()
+    .withKeyPairStorage(new MemoryKeyStorage())
+    .build();
+  return `Bearer ${await crypto.getBearerToken(address)}`;
+}
 
-const makeAuthService = (result: AuthContext | Response): AuthService =>
-  ({
-    verifyBearer: vi.fn().mockResolvedValue(result),
-  }) as unknown as AuthService;
+// Resolves the way the reactor's resolveIdOrSlug does, over a fixed set.
+async function resolveDocumentId(identifier: string) {
+  const id = SLUGS[identifier] ?? identifier;
+  if (![PROTECTED, OPEN_DOC].includes(id)) throw new Error("not found");
+  return Promise.resolve(id as CanonicalDocumentId);
+}
 
-const user = {
-  address: "0xadmin",
-  chainId: 1,
-  networkId: "eip155",
-  appKey: "did:key:zAppTest",
-};
+let db: Kysely<DocumentPermissionDatabase>;
+let permissions: DocumentPermissionService;
+
+beforeEach(async () => {
+  db = await openReactorPermissionStore();
+  permissions = new DocumentPermissionService(db);
+  await permissions.setDocumentProtection(PROTECTED, true);
+});
+
+afterEach(async () => {
+  await db.destroy();
+});
+
+const authService = () =>
+  new AuthService({
+    enabled: true,
+    admins: [ADMIN],
+    skipCredentialVerification: true,
+  });
+
+function documentPermissions(
+  options: Partial<McpRequestAuthorizerOptions> = {},
+) {
+  return createMcpRequestAuthorizer(
+    authService(),
+    createAuthorizationService(
+      {
+        admins: [ADMIN],
+        defaultProtection: true,
+        policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+      },
+      permissions,
+      () => Promise.resolve([]),
+    ),
+    {
+      requireAuthenticatedCaller: false,
+      resolveDocumentId,
+      documentPermissionService: permissions,
+      ...options,
+    },
+  );
+}
+
+async function admitted(
+  authorize: ReturnType<typeof documentPermissions>,
+  authorization?: string,
+) {
+  const result = await authorize(request(authorization));
+  if (!result.authorized) throw new Error(`refused: ${result.status}`);
+  return result;
+}
 
 describe("createMcpRequestAuthorizer", () => {
-  it("allows every request as anonymous when auth is disabled and the policy is OPEN", async () => {
+  it("admits everyone as anonymous, unrestricted, without an auth service under OPEN", async () => {
     const authorize = createMcpRequestAuthorizer(
       undefined,
-      makeAuthorizationService(AuthorizationPolicy.OPEN, true),
+      createAuthorizationService({
+        admins: [],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.OPEN,
+      }),
+      { requireAuthenticatedCaller: false, resolveDocumentId },
     );
 
-    await expect(authorize(makeRequest())).resolves.toEqual({
-      authorized: true,
-      subject: {},
-    });
+    const result = await admitted(authorize);
+
+    expect(result.subject).toEqual({});
+    expect(result.access?.unrestricted).toBe(true);
+    expect(await result.access?.canCreate()).toBe(true);
   });
 
-  it("fails closed when no auth service exists under a non-OPEN policy", async () => {
+  it("admits anonymous callers without an auth service, refused by the policy as GraphQL refuses them", async () => {
     const authorize = createMcpRequestAuthorizer(
       undefined,
-      makeAuthorizationService(AuthorizationPolicy.ADMIN_ONLY, true),
+      createAuthorizationService({
+        admins: [ADMIN],
+        defaultProtection: false,
+        policy: AuthorizationPolicy.ADMIN_ONLY,
+      }),
+      { requireAuthenticatedCaller: false, resolveDocumentId },
     );
 
-    const result = await authorize(makeRequest("Bearer token"));
+    const { access } = await admitted(authorize);
 
-    expect(result).toEqual({
-      authorized: false,
-      status: 401,
-      message: "Authentication required",
-    });
+    expect(access?.unrestricted).toBe(false);
+    expect(access?.authenticated).toBe(false);
+    expect(await access?.canRead(OPEN_DOC)).toBe(false);
+    expect(await access?.canCreate()).toBe(false);
   });
 
-  it("propagates the status of a failed token verification", async () => {
-    const authorize = createMcpRequestAuthorizer(
-      makeAuthService(new Response("nope", { status: 401 })),
-      makeAuthorizationService(AuthorizationPolicy.DOCUMENT_PERMISSIONS, true),
-    );
-
-    const result = await authorize(makeRequest("Bearer bad-token"));
-
-    expect(result).toEqual({
+  it("answers a bad bearer with a 401", async () => {
+    await expect(
+      documentPermissions()(request("Bearer not-a-jwt")),
+    ).resolves.toEqual({
       authorized: false,
       status: 401,
       message: "Authentication failed",
     });
   });
 
-  it("rejects anonymous requests (no token) with a 401", async () => {
-    const authorize = createMcpRequestAuthorizer(
-      makeAuthService({ user: undefined, admins: [], auth_enabled: true }),
-      makeAuthorizationService(AuthorizationPolicy.DOCUMENT_PERMISSIONS, true),
-    );
+  it("admits anonymous callers unless the require-authenticated-caller floor is on", async () => {
+    const { subject, access } = await admitted(documentPermissions());
+    expect(subject).toEqual({});
+    expect(await access?.canRead(OPEN_DOC)).toBe(true);
+    expect(await access?.canRead(PROTECTED)).toBe(false);
+    expect(await access?.canCreate()).toBe(false);
 
-    const result = await authorize(makeRequest());
-
-    expect(result).toEqual({
+    await expect(
+      documentPermissions({ requireAuthenticatedCaller: true })(request()),
+    ).resolves.toEqual({
       authorized: false,
       status: 401,
       message: "Authentication required",
     });
   });
 
-  it("rejects authenticated non-admins with a 403", async () => {
-    const authorizationService = makeAuthorizationService(
-      AuthorizationPolicy.DOCUMENT_PERMISSIONS,
-      false,
-    );
-    const authorize = createMcpRequestAuthorizer(
-      makeAuthService({ user, admins: [], auth_enabled: true }),
-      authorizationService,
+  it("admits a non-admin, deciding each document by its grants", async () => {
+    const { subject, access } = await admitted(
+      documentPermissions(),
+      await bearer(USER),
     );
 
-    const result = await authorize(makeRequest("Bearer token"));
+    expect(subject).toMatchObject({ address: USER });
+    expect(subject.key).toMatch(/^did:key:/);
+    expect(access?.unrestricted).toBe(false);
+    expect(await access?.canRead(PROTECTED)).toBe(false);
+    expect(await access?.canMutate(PROTECTED, "SET_NAME")).toBe(false);
+    expect(await access?.canCreate()).toBe(true);
 
-    expect(result).toEqual({
-      authorized: false,
-      status: 403,
-      message: "Forbidden: MCP access requires an administrator",
-    });
-    expect(authorizationService.isSupremeAdmin).toHaveBeenCalledWith(
-      user.address,
-    );
+    await permissions.grantPermission(PROTECTED, USER, "READ", ADMIN);
+    expect(await access?.canRead("protected-slug")).toBe(true);
+    expect(await access?.canWrite(PROTECTED)).toBe(false);
+
+    await permissions.grantPermission(PROTECTED, USER, "WRITE", ADMIN);
+    expect(await access?.canWrite(PROTECTED)).toBe(true);
+    expect(await access?.canMutate(PROTECTED, "SET_NAME")).toBe(true);
   });
 
-  it("allows authenticated supreme admins, reading as their address and app key", async () => {
-    const authService = makeAuthService({
-      user,
-      admins: [user.address],
-      auth_enabled: true,
-    });
-    const authorize = createMcpRequestAuthorizer(
-      authService,
-      makeAuthorizationService(AuthorizationPolicy.DOCUMENT_PERMISSIONS, true),
+  it("refuses an identifier that resolves to no document", async () => {
+    const { access } = await admitted(
+      documentPermissions(),
+      await bearer(USER),
+    );
+    expect(await access?.canRead("missing")).toBe(false);
+  });
+
+  it("makes the creator the owner, as GraphQL's create mutations do", async () => {
+    const { access } = await admitted(
+      documentPermissions(),
+      await bearer(USER),
     );
 
-    const result = await authorize(makeRequest("Bearer token"));
+    await access?.created?.(OPEN_DOC);
 
-    expect(result).toEqual({
-      authorized: true,
-      subject: { address: user.address, key: user.appKey },
-    });
-    expect(authService.verifyBearer).toHaveBeenCalledWith("Bearer token");
+    expect(await permissions.getDocumentOwner(OPEN_DOC)).toBe(USER);
+    expect(await access?.canWrite(OPEN_DOC)).toBe(true);
+  });
+
+  it("gives supreme admins policy-wide access", async () => {
+    const { access } = await admitted(
+      documentPermissions(),
+      await bearer(ADMIN),
+    );
+    expect(access?.unrestricted).toBe(true);
   });
 });

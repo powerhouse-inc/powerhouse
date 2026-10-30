@@ -79,23 +79,54 @@ function getDefaultVetraSwitchboardOptions(
   };
 }
 
+export type StartSwitchboardOptions = Omit<SwitchboardArgs, "mcp"> & {
+  /** A declared composition (R2) leaves this unset: the mcp plugin's presence sets it. */
+  mcp?: boolean;
+  /** `undefined` suppresses the default drive (declared drives replace it). */
+  drive?: StartServerOptions["drive"];
+  strictPort?: boolean;
+  processorConfig?: Map<string, unknown>;
+  /** False under a supervising compound, which owns SIGINT/SIGTERM. */
+  signalHandlers?: boolean;
+  /** A declared composition (R2), resolved by the runner. */
+  pluginComposition?: ResolvedPlugin[];
+  /** Drives the caller seeds after start; `/ready` waits for them. */
+  readyAfter?: Promise<unknown>;
+};
+
 export async function startSwitchboard(
-  options: Omit<SwitchboardArgs, "mcp"> & {
-    /** A declared composition (R2) leaves this unset: the mcp plugin's presence sets it. */
-    mcp?: boolean;
-    /** `undefined` suppresses the default drive (declared drives replace it). */
-    drive?: StartServerOptions["drive"];
-    strictPort?: boolean;
-    processorConfig?: Map<string, unknown>;
-    /** False under a supervising compound, which owns SIGINT/SIGTERM. */
-    signalHandlers?: boolean;
-    /** A declared composition (R2), resolved by the runner. */
-    pluginComposition?: ResolvedPlugin[];
-  },
+  options: StartSwitchboardOptions,
   logger?: ILogger,
   /** The layer under the command's options; default: this process's env. */
   base?: SwitchboardConfigInput,
 ) {
+  const { readyAfter, ...serverOptions } = options;
+  const { config, finalOptions } = switchboardConfigOf(
+    serverOptions,
+    logger,
+    base,
+  );
+  initSwitchboardProcess(config);
+  const reactor = await startSwitchboardServer(config, {
+    logger,
+    pluginComposition: finalOptions.pluginComposition,
+    signalHandlers: finalOptions.signalHandlers,
+    readyAfter,
+    fatalErrorShutdown: true,
+  });
+
+  return reactor;
+}
+
+/** The server config a start runs with: the command's options over `base`. */
+export function switchboardConfigOf(
+  options: StartSwitchboardOptions,
+  logger?: ILogger,
+  base?: SwitchboardConfigInput,
+): {
+  config: SwitchboardConfigInput;
+  finalOptions: StartServerOptions;
+} {
   const {
     packages: packagesString,
     remoteDrives,
@@ -153,15 +184,7 @@ export async function startSwitchboard(
     base ?? switchboardConfigFromEnv(process.env, { logger }),
     configLayerOf(finalOptions, basePath),
   );
-  initSwitchboardProcess(config);
-  const reactor = await startSwitchboardServer(config, {
-    logger,
-    pluginComposition: finalOptions.pluginComposition,
-    signalHandlers: finalOptions.signalHandlers,
-    fatalErrorShutdown: true,
-  });
-
-  return reactor;
+  return { config, finalOptions };
 }
 
 /** The keys of the server's options view this command sets, as a config layer. */

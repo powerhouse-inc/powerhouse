@@ -7,6 +7,7 @@ import {
 } from "@powerhousedao/shared/clis";
 import { connectConfigSchemaWith } from "@powerhousedao/shared/connect/connect-config-schema";
 import { isPassthroughImageRef } from "@powerhousedao/shared/connect/image-ref";
+import { withOriginPlaceholders } from "@powerhousedao/shared/connect/origin-placeholder";
 import {
   defineHostSchemas,
   entryActiveForVerb,
@@ -14,10 +15,12 @@ import {
   isStructuralMultiReactor,
   mergeDefaultDrives,
   normalizePluginEntries,
+  placeConnectDrives,
   resolveDriveDeclaration,
   type DriveDeclaration,
   projectDrivesIntoConnect,
   projectReactorToConnect,
+  refineConnectReactor,
   remoteBackendUrls,
   type ReactorConfig,
   type RunnerContext,
@@ -49,25 +52,36 @@ export const kind = "reactor";
  * output tokens; types host files) and `hostSchema` (resolved; checked
  * right before the verb). */
 const schemas = defineHostSchemas((s) =>
-  s.reactorHostSchema.extend({
-    runner: s.runnerBaseSchema
-      .extend({
-        /** Open a browser tab once listening (dev/serve). */
-        openBrowser: z.boolean().optional(),
-        /** Fail instead of moving to the next free port when `port` is taken. */
-        strictPort: z.boolean().optional(),
-        /** The Connect build output dir (`build` writes it, `serve` serves it). */
-        outDir: z.string().min(1).optional(),
-        /** Patch the baked CSP for the runtime registry (`serve`); a
-         * compound's wiring sets it on its connect member. */
-        cspRegistrySync: z.boolean().optional(),
-        /** The host's routes folder, project-relative; false for none.
-         * Default: hosts/connect/routes. */
-        routes: z.union([z.string(), z.literal(false)]).optional(),
-      })
-      .strict(),
-    config: connectConfigSchemaWith(s.tokenable).optional(),
-  }),
+  s.reactorHostSchema
+    .extend({
+      runner: s.runnerBaseSchema
+        .extend({
+          /** Open a browser tab once listening (dev/serve). */
+          openBrowser: z.boolean().optional(),
+          /** Fail instead of moving to the next free port when `port` is taken. */
+          strictPort: z.boolean().optional(),
+          /** The Connect build output dir (`build` writes it, `serve` serves it). */
+          outDir: z.string().min(1).optional(),
+          /** Patch the baked CSP for the runtime registry (`serve`); a
+           * compound's wiring sets it on its connect member. */
+          cspRegistrySync: z.boolean().optional(),
+          /** The host's routes folder, project-relative; false for none.
+           * Default: hosts/connect/routes. */
+          routes: z.union([z.string(), z.literal(false)]).optional(),
+          /** The switchboard this Connect is served next to: its server
+           * (dev and serve) proxies the switchboard's paths (`/graphql`,
+           * `/d/*`, `/attachments`, `/mcp`, `/api/*`) to `target`, and the
+           * served config names that switchboard as `${origin}`, resolved by
+           * the browser against the page's origin. So one config holds from
+           * the developer's `localhost` and from a published site alike, with
+           * every call on the page's own origin. Typically a sibling's
+           * `origin` output token. */
+          proxy: z.strictObject({ target: s.tokenable(z.url()) }).optional(),
+        })
+        .strict(),
+      config: connectConfigSchemaWith(s.tokenable).optional(),
+    })
+    .superRefine(refineConnectReactor),
 );
 export const declaredHostSchema = schemas.declaredHostSchema;
 export const hostSchema = schemas.hostSchema;
@@ -137,14 +151,6 @@ function toStudioArgs(host: ConnectHostParsed): ConnectStudioArgs {
   return args as ConnectStudioArgs;
 }
 
-/** Merge the reactor-block projection (protocol → connect.reactor,
- * backend kind → instance.reactorWorker, workflows → app.workflowsEnabled)
- * into the host's connect config, which rides the studio caller-override.
- * The host config wins on conflict (an explicit connect.* value is intent) —
- * EXCEPT structural multi-reactor (P4.2): declaring a remote backend next to
- * a local one IS the intent, so it beats a scaffold-default
- * instance.multiReactor: false, and the remote's drive url merges FIRST into
- * drives.defaultDrives (the first url entry is what the routing client dials). */
 /** host.js reactor.drives -> the served drives.defaultDrives shapes: locals
  * carry id/name/icon and the preferredEditor under its Connect alias `app`;
  * remotes carry their URL. */
@@ -171,7 +177,27 @@ function declaredDrivesToDefaults(
   });
 }
 
+/**
+ * The served override. With `runner.proxy`, every URL on the proxied
+ * switchboard's origin (drives, backends, plugin configs, however they were
+ * written or resolved from output tokens) is served as `${origin}…`: the
+ * browser reaches the switchboard through the page's own origin, which this
+ * Connect's server proxies, so the config holds wherever the page is loaded
+ * from. A host may also write `${origin}/…` itself; that passes through.
+ */
 function callerOverride(
+  host: ConnectHostParsed,
+  ctx?: RunnerContext,
+  verb = "dev",
+): PHConnectRuntimeConfig | undefined {
+  const override = callerOverrideRaw(host, ctx, verb);
+  const target = host.runner.proxy?.target;
+  return override && target
+    ? withOriginPlaceholders(override, target)
+    : override;
+}
+
+function callerOverrideRaw(
   host: ConnectHostParsed,
   ctx?: RunnerContext,
   verb = "dev",
@@ -258,12 +284,17 @@ function callerOverride(
       ? base
       : undefined;
   }
-  const drives = structural
+  const projected = structural
     ? projectDrivesIntoConnect({
         createdDriveUrls: remoteBackendUrls(reactor),
         configuredDefaultDrives: base.drives?.defaultDrives,
       }).drives
     : base.drives;
+  const placed = placeConnectDrives(reactor, projected?.defaultDrives ?? []);
+  const drives =
+    projected?.defaultDrives === undefined
+      ? projected
+      : { ...projected, defaultDrives: placed.defaultDrives };
   // When the host DECLARES backends, instance facts derive from them and win
   // over config defaults (declaring `kind: "worker"` is more explicit intent
   // than a scaffold's `reactorWorker: false`); without backends the P2 rule
@@ -273,7 +304,7 @@ function callerOverride(
     ? {
         ...base.instance,
         ...connect.instance,
-        ...(structural ? { multiReactor: true } : {}),
+        ...(placed.collections ? { collections: placed.collections } : {}),
       }
     : { ...connect.instance, ...base.instance };
   return {
@@ -368,6 +399,7 @@ export async function dev(
     runConnectStudio(args, undefined, callerOverride(host, ctx, ctx.verb), {
       routes: host.runner.routes,
       cacheDir: viteCacheOf(host, ctx),
+      proxy: host.runner.proxy?.target,
     }),
   );
   // vite's dev server binds its default host ("localhost") here.
@@ -429,10 +461,15 @@ export async function serve(
   };
   const override = withoutBuiltImages(callerOverride(host, ctx, ctx.verb));
   const server = await startUnderSupervisor(ctx, () =>
-    runConnectPreview(args as ConnectPreviewArgs, {
-      connect: override,
-      cspRegistrySync: runner.cspRegistrySync === true,
-    }),
+    runConnectPreview(
+      args as ConnectPreviewArgs,
+      {
+        connect: override,
+        cspRegistrySync: runner.cspRegistrySync === true,
+      },
+      undefined,
+      { proxy: runner.proxy?.target },
+    ),
   );
   return connectHandle(server, { host: bind, port });
 }

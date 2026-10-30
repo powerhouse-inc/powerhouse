@@ -163,14 +163,12 @@ describe("write cache on base-reducer 3", () => {
   }
 
   async function persistKeyframeAt(revision: number): Promise<void> {
-    await cache.getState(docId, "global", BRANCH, revision);
-    await expect
-      .poll(async () =>
-        (await keyframeStore.listKeyframes(docId, "global", BRANCH)).map(
-          (k) => k.revision,
-        ),
-      )
-      .toContain(revision);
+    const document = await cache.getState(docId, "global", BRANCH, revision);
+    await keyframeStore.putKeyframe(docId, "global", BRANCH, revision, {
+      ...document,
+      operations: {},
+      clipboard: [],
+    });
     cache.clear();
   }
 
@@ -345,7 +343,15 @@ describe("write cache on base-reducer 3", () => {
       await add("c");
       await add("d");
 
-      await persistKeyframeAt(4);
+      // Only a head read mints a keyframe; revision 4 is the head here.
+      await cache.getState(docId, "global", BRANCH);
+      await expect
+        .poll(async () =>
+          (await keyframeStore.listKeyframes(docId, "global", BRANCH)).map(
+            (k) => k.revision,
+          ),
+        )
+        .toContain(4);
       const [keyframe] = await keyframeStore.listKeyframes(
         docId,
         "global",

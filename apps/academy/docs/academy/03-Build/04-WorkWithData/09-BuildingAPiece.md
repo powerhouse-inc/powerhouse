@@ -405,11 +405,12 @@ export const crmSyncRecordAction = createAction({
       url: `${baseUrl}/records/${encodeURIComponent(context.propsValue.recordId)}`,
       headers: { Authorization: `Bearer ${apiKey}` },
     });
-    const document = await context.reactor.execute(
+    const handle = await context.reactor.write.execute(
       context.propsValue.documentId,
       "main",
       [setName(response.body.name)],
     );
+    const document = await handle.document();
     return { header: document.header };
   },
 });
@@ -417,8 +418,10 @@ export const crmSyncRecordAction = createAction({
 
 `setName` comes from `@powerhousedao/shared/document-model`; your own model's
 action creators work the same way. `"read"` gives the action the read methods
-of `IReactorClient`, and `"write"` adds `create`, `createEmpty`, `execute` and
-`deleteDocument`. `false`, which the generators write by default, gives no
+of `IReactorClient`, and `"write"` adds `write`, the client's write half:
+`create`, `createEmpty`, `execute`, `deleteDocument` and `drives.addFile` and
+`drives.addFolder`. Each answers with a handle once its job is accepted;
+`handle.document()` reads the document back once the write is readable. `false`, which the generators write by default, gives no
 `ctx.reactor`. `ph generate piece-action <name> --require-reactor read|write`
 writes the declaration for you, as does `ph generate piece-trigger`. A step
 using the action needs a reactor connection, and its run acts as the user who

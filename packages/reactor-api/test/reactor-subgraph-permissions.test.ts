@@ -883,6 +883,118 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
   });
 
+  describe("Mutation: mutateDocumentAsync (deprecated, still served)", () => {
+    const action = {
+      id: "act-1",
+      type: "SET_NAME",
+      timestampUtcMs: "2026-01-01T00:00:00.000Z",
+      scope: "global",
+      input: { name: "Renamed" },
+    };
+    const callMutateDocumentAsync = (ctx: any) =>
+      (reactorSubgraph.resolvers.Mutation as any).mutateDocumentAsync(
+        null,
+        { documentIdentifier: "doc-123", actions: [action] },
+        ctx,
+      );
+
+    it("refuses a caller who cannot execute the operation", async () => {
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(false);
+
+      await expect(
+        callMutateDocumentAsync(createContext({ userAddress: "0xreader" })),
+      ).rejects.toThrow(
+        /^Forbidden: insufficient permissions to execute operation "SET_NAME" on this document$/,
+      );
+      expect(
+        mockAuthorizationService.canMutate,
+      ).toHaveBeenCalledExactlyOnceWith("doc-123", "SET_NAME", "0xreader");
+      expect(mockReactorClient.execute).not.toHaveBeenCalled();
+    });
+
+    it("returns the job the write half settles for a caller who can execute the operation", async () => {
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(true);
+
+      expect(
+        await callMutateDocumentAsync(
+          createContext({ userAddress: "0xpermitted" }),
+        ),
+      ).toBe("job-doc-123");
+      expect(mockReactorClient.execute).toHaveBeenCalledExactlyOnceWith(
+        "doc-123",
+        "main",
+        [
+          expect.objectContaining({
+            type: "SET_NAME",
+            input: { name: "Renamed" },
+          }),
+        ],
+      );
+    });
+  });
+
+  describe("PHDocument.operations", () => {
+    const callOperations = (ctx: any) =>
+      (reactorSubgraph.resolvers.PHDocument as any).operations(
+        { id: "doc-123" },
+        {},
+        ctx,
+      );
+
+    it("refuses a caller who cannot read the document, before fetching its operations", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
+      mockReactorClient.getOperations = vi.fn();
+
+      await expect(
+        callOperations(createContext({ userAddress: "0xoutsider" })),
+      ).rejects.toThrow(
+        /^Forbidden: insufficient permissions to read this document$/,
+      );
+      expect(mockAuthorizationService.canRead).toHaveBeenCalledExactlyOnceWith(
+        "doc-123",
+        "0xoutsider",
+      );
+      expect(mockReactorClient.getOperations).not.toHaveBeenCalled();
+    });
+
+    it("serves the document's operations to a caller who can read it, read as that caller", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      const operation = {
+        id: "op-1",
+        index: 0,
+        skip: 0,
+        hash: "hash-0",
+        timestampUtcMs: "2026-01-01T00:00:00.000Z",
+        action: {
+          id: "act-1",
+          type: "SET_NAME",
+          timestampUtcMs: "2026-01-01T00:00:00.000Z",
+          scope: "global",
+          input: { name: "Renamed" },
+        },
+      };
+      mockReactorClient.getOperations = vi.fn().mockResolvedValue({
+        results: [operation],
+        options: { limit: 10, cursor: "" },
+      });
+
+      expect(
+        await callOperations(createContext({ userAddress: "0xreader" })),
+      ).toEqual({
+        cursor: null,
+        hasNextPage: false,
+        hasPreviousPage: false,
+        items: [operation],
+      });
+      expect(mockReactorClient.getOperations).toHaveBeenCalledExactlyOnceWith(
+        "doc-123",
+        { subject: { address: "0xreader", key: "did:key:zCallerApp" } },
+        undefined,
+        undefined,
+      );
+    });
+  });
+
   // ============================================================
   // Mutation: deleteDocument — drives via canWrite
   // ============================================================

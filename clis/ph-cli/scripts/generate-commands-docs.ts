@@ -16,6 +16,7 @@ import { generateSubgraphCmd } from "../src/commands/generate-subgraph.js";
 import { generate } from "../src/commands/generate.js";
 import { inspect } from "../src/commands/inspect.js";
 import { install } from "../src/commands/install.js";
+import { keyframes } from "../src/commands/keyframes.js";
 import { list } from "../src/commands/list.js";
 import { login } from "../src/commands/login.js";
 import { mcp } from "../src/commands/mcp.js";
@@ -46,6 +47,7 @@ const commands = [
   { name: "connect preview", command: preview },
   { name: "access token", command: accessToken },
   { name: "inspect", command: inspect },
+  { name: "keyframes", command: keyframes },
   { name: "list", command: list },
   { name: "mcp", command: mcp },
   { name: "migrate", command: migrate },

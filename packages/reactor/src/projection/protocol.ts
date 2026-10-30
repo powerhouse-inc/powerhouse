@@ -29,6 +29,7 @@ import type {
 import type { ProtocolSupport } from "../executor/types.js";
 import type { ReadModelIndexingConfig } from "../read-models/base-read-model.js";
 import type { ConsistencyCoordinate, JobMeta } from "../shared/types.js";
+import type { KeyframeSettings } from "../storage/keyframes/keyframe-settings.js";
 
 export type { DbConfig, ModelManifestEntry, ReadModelIndexingConfig };
 
@@ -76,6 +77,8 @@ export type ProjectionInitMessage = {
   indexing: ReadModelIndexingConfig;
   /** The worker sweeps its own read models on the host's schedule. */
   catchUp: CatchUpConfig;
+  /** Omitted = the built-in keyframe rule. */
+  keyframes?: KeyframeSettings;
   /** What the host runs, so a read model skips a document stored outside it. */
   protocolSupport?: ProtocolSupport;
 };

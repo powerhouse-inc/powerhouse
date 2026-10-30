@@ -3,8 +3,14 @@ import {
   ReactorClientBuilder,
   type InProcessReactorClientModule,
 } from "@powerhousedao/reactor";
-import { createReactorMcpProvider } from "@powerhousedao/reactor-mcp";
 import {
+  reactorAdminTools,
+  reactorTools,
+  SubjectScopedClient,
+  toMcpTool,
+} from "../src/index.js";
+import {
+  addFile,
   driveDocumentModelModule,
   type DocumentDriveDocument,
 } from "@powerhousedao/shared/document-drive";
@@ -13,10 +19,12 @@ import {
   withSignaturePolicy,
   type AuthSubject,
   type DocumentModelModule,
+  type ISigner,
   type PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
+import { createP256Signer } from "./utils/p256-signer.js";
 
 const READER = "0xreader";
 const OUTSIDER = "0xoutsider";
@@ -31,8 +39,10 @@ describe("MCP tools read as the caller under auth-scope policies", () => {
     module = undefined;
   });
 
-  async function build() {
-    module = await new ReactorClientBuilder()
+  async function build(signer?: ISigner) {
+    const builder = new ReactorClientBuilder();
+    if (signer) builder.withSigner(signer);
+    module = await builder
       .withReactorBuilder(
         new ReactorBuilder()
           .withDocumentModelSources([
@@ -113,8 +123,13 @@ describe("MCP tools read as the caller under auth-scope policies", () => {
     return { client, drive, secret, open, policedDrive };
   }
 
-  const tools = async (client: Client, subject: AuthSubject) =>
-    (await createReactorMcpProvider({ client, subject })).tools;
+  const tools = (client: Client, subject: AuthSubject) => {
+    const ctx = { client: new SubjectScopedClient(client, subject) };
+    const byName = Object.fromEntries(
+      reactorTools().map((tool) => [tool.name, toMcpTool(tool, ctx)]),
+    );
+    return Promise.resolve(byName);
+  };
 
   const anonymous: AuthSubject = {};
   const outsider: AuthSubject = { address: OUTSIDER };
@@ -125,7 +140,7 @@ describe("MCP tools read as the caller under auth-scope policies", () => {
     const read = async (subject: AuthSubject) => {
       const result = await (
         await tools(client, subject)
-      ).getDocument.callback({ id: secret });
+      ).getDocument.callback({ id: secret } as never);
       return (result.structuredContent as { document: PHDocument }).document;
     };
 
@@ -139,10 +154,12 @@ describe("MCP tools read as the caller under auth-scope policies", () => {
     const list = async (subject: AuthSubject) => {
       const result = await (
         await tools(client, subject)
-      ).getDocuments.callback({ parentId: drive });
+      ).getDocuments.callback({ parentId: drive } as never);
       return (
-        result.structuredContent as { documentIds: string[] }
-      ).documentIds.sort();
+        result.structuredContent as { documents: { id: string }[] }
+      ).documents
+        .map((d) => d.id)
+        .sort();
     };
 
     expect(await list(anonymous)).toEqual([open]);
@@ -155,8 +172,10 @@ describe("MCP tools read as the caller under auth-scope policies", () => {
     const list = async (subject: AuthSubject) => {
       const result = await (
         await tools(client, subject)
-      ).getDrives.callback({});
-      return (result.structuredContent as { driveIds: string[] }).driveIds;
+      ).getDrives.callback({} as never);
+      return (
+        result.structuredContent as { drives: { id: string }[] }
+      ).drives.map((d) => d.id);
     };
 
     expect(await list(anonymous)).toEqual([drive]);
@@ -169,9 +188,7 @@ describe("MCP tools read as the caller under auth-scope policies", () => {
     const read = async (subject: AuthSubject) => {
       const result = await (
         await tools(client, subject)
-      ).getDrive.callback({
-        driveId: policedDrive,
-      });
+      ).getDrive.callback({ driveId: policedDrive } as never);
       return (result.structuredContent as { drive: PHDocument }).drive;
     };
 
@@ -179,23 +196,19 @@ describe("MCP tools read as the caller under auth-scope policies", () => {
     expect((await read(outsider)).state).not.toHaveProperty("global");
     expect((await read(reader)).state).toHaveProperty("global");
   });
-
   it("addActions returns a write the policy denied as an error", async () => {
     const { client, drive, policedDrive } = await fixture();
     const { addActions } = await tools(client, reader);
-    const addFolder = {
-      type: "ADD_FOLDER",
-      input: { id: "f", name: "f" },
-      scope: "global",
-    };
+    const addFolder = { type: "ADD_FOLDER", input: { id: "f", name: "f" } };
 
     const denied = await addActions.callback({
       documentId: policedDrive,
       actions: [addFolder],
-    });
-    expect(denied.isError).toBeUndefined();
+    } as never);
+    expect(denied.isError).toBeFalsy();
     expect(denied.structuredContent).toMatchObject({
       success: false,
+      revision: (await client.get(policedDrive)).header.revision,
       results: [
         {
           index: 0,
@@ -208,7 +221,7 @@ describe("MCP tools read as the caller under auth-scope policies", () => {
     const allowed = await addActions.callback({
       documentId: drive,
       actions: [addFolder],
-    });
+    } as never);
     expect(allowed.structuredContent).toMatchObject({
       success: true,
       results: [{ index: 0, type: "ADD_FOLDER" }],
@@ -255,13 +268,13 @@ describe("MCP tools read as the caller under auth-scope policies", () => {
     const result = await addActions.callback({
       documentId: drive,
       actions: [
-        { type: "ADD_FOLDER", input: { id: "a", name: "a" }, scope: "global" },
-        { type: "DELETE_NODE", input: { id: "a" }, scope: "global" },
-        { type: "ADD_FOLDER", input: { id: "b", name: "b" }, scope: "global" },
+        { type: "ADD_FOLDER", input: { id: "a", name: "a" } },
+        { type: "DELETE_NODE", input: { id: "a" } },
+        { type: "ADD_FOLDER", input: { id: "b", name: "b" } },
       ],
-    });
+    } as never);
 
-    expect(result.isError).toBeUndefined();
+    expect(result.isError).toBeFalsy();
     const { success, results } = result.structuredContent as {
       success: boolean;
       results: { index: number; error?: { kind: string } }[];
@@ -274,5 +287,97 @@ describe("MCP tools read as the caller under auth-scope policies", () => {
     ]);
     const read = await client.get<DocumentDriveDocument>(drive);
     expect(read.state.global.nodes).toEqual([]);
+  });
+
+  it("deleteDocument refuses a document filed in a drive the caller cannot read", async () => {
+    const client = await build();
+    const drive = await create(client, driveDocumentModelModule, "mcp-hidden");
+    const filed = await create(
+      client,
+      documentModelDocumentModelModule,
+      "mcp-filed",
+      drive,
+    );
+    await client.execute(drive, "main", [
+      addFile({
+        id: filed,
+        name: filed,
+        documentType: "powerhouse/document-model",
+      }),
+    ]);
+    await police(client, drive);
+
+    const result = await (
+      await tools(client, outsider)
+    ).deleteDocument.callback({ documentId: filed } as never);
+
+    expect(result._meta?.error).toMatchObject({ code: "FORBIDDEN" });
+    await expect(client.get(filed)).resolves.toBeDefined();
+    const read = await client.get<DocumentDriveDocument>(drive, {
+      subject: reader,
+    });
+    expect(read.state.global.nodes.map((n) => n.id)).toEqual([filed]);
+  });
+
+  it("deleteDrive reads the drive as the caller", async () => {
+    const { client, policedDrive } = await fixture();
+    const deleteDrive = (subject: AuthSubject) => {
+      const tool = reactorAdminTools({ subject }).find(
+        (t) => t.name === "deleteDrive",
+      )!;
+      return toMcpTool(tool, { client }).callback({
+        documentId: policedDrive,
+      } as never);
+    };
+
+    const refused = await deleteDrive(outsider);
+    expect(refused._meta?.error).toMatchObject({ code: "FORBIDDEN" });
+    await expect(client.get(policedDrive)).resolves.toBeDefined();
+  });
+
+  it("deleteDocument refuses a document filed in a drive only the signer reads", async () => {
+    const signer = await createP256Signer();
+    const client = await build(signer);
+    const drive = await create(client, driveDocumentModelModule, "mcp-hidden");
+    const filed = await create(
+      client,
+      documentModelDocumentModelModule,
+      "mcp-filed",
+      drive,
+    );
+    await client.execute(drive, "main", [
+      addFile({
+        id: filed,
+        name: filed,
+        documentType: "powerhouse/document-model",
+      }),
+    ]);
+    const principal = { address: signer.user!.address };
+    await client.execute(drive, "main", [
+      initializeAuth({
+        version: 1,
+        grants: ["read", "execute"].flatMap((can) =>
+          ["global", "document", "auth"].map((scope) => ({
+            id: `g-${can}-${scope}`,
+            description: "the signer administers the drive",
+            effect: "allow" as const,
+            principal,
+            capability: { can: can as "read" | "execute", scope },
+          })),
+        ),
+      }),
+    ]);
+
+    const result = await (
+      await tools(client, outsider)
+    ).deleteDocument.callback({ documentId: filed } as never);
+
+    expect(result._meta?.error).toMatchObject({
+      code: "FORBIDDEN",
+      message: expect.stringContaining("which you cannot change"),
+    });
+    await expect(client.get(filed)).resolves.toBeDefined();
+    const read = await client.get<DocumentDriveDocument>(drive);
+    expect(read.state.global.nodes.map((n) => n.id)).toEqual([filed]);
   });
 });

@@ -1,5 +1,13 @@
 import { debugArgs } from "@powerhousedao/shared/clis/args";
-import { command, oneOf, option, optional, positional, string } from "cmd-ts";
+import {
+  command,
+  number,
+  oneOf,
+  option,
+  optional,
+  positional,
+  string,
+} from "cmd-ts";
 import { skipInstallArgs } from "../utils/install-added-dependencies.js";
 
 export const generatePieceActionCmd = command({
@@ -29,6 +37,18 @@ export const generatePieceActionCmd = command({
       long: "require-reactor",
       description:
         "Declare reactor access for the action: read, or write (which includes read). The action then gets context.reactor",
+    }),
+    defaultTimeoutSeconds: option({
+      type: optional(number),
+      long: "default-timeout-seconds",
+      description:
+        "Write defaultTimeoutSeconds: the step timeout used when the workflow sets none",
+    }),
+    defaultMaxAttempts: option({
+      type: optional(number),
+      long: "default-max-attempts",
+      description:
+        "Write defaultRetry: { maxAttempts }: the attempts (1 is no retry) used when the workflow sets no retry",
     }),
     ...skipInstallArgs,
     ...debugArgs,

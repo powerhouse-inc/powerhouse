@@ -16,6 +16,7 @@ export function toMonitorInspector(inspector: IInspector): MonitorInspector {
   return {
     info: () => inspector.info(),
     listDocumentModels: () => inspector.listDocumentModels(),
+    loadsModelsOnDemand: () => inspector.loadsModelsOnDemand(),
     listDrives: (cursor, limit) => inspector.listDrives(cursor, limit),
     checkDriveIntegrity: (driveId, branch) =>
       inspector.checkDriveIntegrity(driveId, branch),
@@ -23,6 +24,9 @@ export function toMonitorInspector(inspector: IInspector): MonitorInspector {
     getQueueState: async () =>
       toWireQueueState(await inspector.getQueueState()),
     getProcessors: () => inspector.getProcessors(),
+    getProcessorTiming: () => inspector.getProcessorTiming(),
+    getMemoryTelemetry: (limit, sinceIso) =>
+      inspector.getMemoryTelemetry(limit, sinceIso),
     getCatchUpStatus: () => inspector.getCatchUpStatus(),
     getCatchUpPriority: () => inspector.getCatchUpPriority(),
     getStorageHealth: () => inspector.getStorageHealth(),

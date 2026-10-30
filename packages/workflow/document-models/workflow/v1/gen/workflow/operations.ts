@@ -5,6 +5,7 @@
 import { type SignalDispatch } from "document-model";
 import type { WorkflowGlobalState } from "../types.js";
 import type {
+  SetManagedByAction,
   SetWorkflowDescriptionAction,
   SetWorkflowNameAction,
   SetWorkflowStatusAction,
@@ -24,6 +25,11 @@ export interface WorkflowWorkflowOperations {
   setWorkflowStatusOperation: (
     state: WorkflowGlobalState,
     action: SetWorkflowStatusAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  setManagedByOperation: (
+    state: WorkflowGlobalState,
+    action: SetManagedByAction,
     dispatch?: SignalDispatch,
   ) => void;
 }

@@ -1,3 +1,8 @@
+import type {
+  TableRewriteRequest,
+  TableRewriteResult,
+} from "@powerhousedao/reactor";
+
 /**
  * Wire protocol between a {@link ThreadedPGlite} stand-in on the main thread
  * and the worker thread that owns one PGlite store.
@@ -33,6 +38,8 @@ export type PGliteWorkerDurableFsOptions = {
   vacuumFullQuietMs?: number;
   /** Undefined keeps the DurableNodeFs default (0: the quiet window only); a deadline in ms forces the run past it. */
   vacuumFullMaxDeferMs?: number;
+  /** Undefined keeps the DurableNodeFs default (1 s). */
+  rewriteQuietMs?: number;
 };
 
 /** What the worker opens. */
@@ -107,19 +114,44 @@ export type ReserveRequest = {
   id: number;
 };
 
+/**
+ * Rewrites one table through the store's maintenance. Runs beside the request
+ * queue, since it waits for a quiet store; the rewrite itself takes its turn.
+ */
+export type RewriteTableRequest = {
+  type: "rewrite-table";
+  id: number;
+  request: TableRewriteRequest;
+};
+
 /** Ends a reservation; the request queue resumes. Not answered. */
 export type ReleaseRequest = {
   type: "release";
   id: number;
 };
 
+/** Asks for the store's memory; answered outside the admission queue. */
+export type StatsRequest = {
+  type: "stats";
+  id: number;
+};
+
 export type HostMessage =
+  | StatsRequest
   | InitRequest
   | QueryRequest
   | ExecRequest
   | CloseRequest
   | ReserveRequest
-  | ReleaseRequest;
+  | ReleaseRequest
+  | RewriteTableRequest;
+
+export type StatsMessage = {
+  type: "stats-result";
+  id: number;
+  /** Bytes of WASM linear memory; 0 before the store has opened. */
+  wasmBytes: number;
+};
 
 export type AdmittedMessage = {
   type: "admitted";
@@ -144,6 +176,13 @@ export type ExecResultMessage = {
   type: "exec-result";
   id: number;
   results: WorkerResults[];
+  inTransaction: boolean;
+};
+
+export type RewriteTableResultMessage = {
+  type: "rewrite-table-result";
+  id: number;
+  result: TableRewriteResult;
   inTransaction: boolean;
 };
 
@@ -175,10 +214,12 @@ export type LogMessage = {
 };
 
 export type WorkerMessage =
+  | StatsMessage
   | AdmittedMessage
   | ReadyMessage
   | QueryResultMessage
   | ExecResultMessage
+  | RewriteTableResultMessage
   | ClosedMessage
   | ErrorMessage
   | AbortMessage

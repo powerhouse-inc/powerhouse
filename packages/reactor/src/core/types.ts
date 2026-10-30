@@ -12,6 +12,7 @@ import type { IProcessorManager } from "@powerhousedao/shared/processors";
 import type { ReactorStorageFacts } from "../inspector/types.js";
 import type { ISyncInspector } from "../sync/sync-inspection.js";
 import type { DocumentPurgeService } from "../admin/document-purge-service.js";
+import type { IKeyframeCleanup } from "../admin/keyframe-cleanup-types.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { ICatchUp, ISettledWatermark } from "../catch-up/types.js";
@@ -64,6 +65,8 @@ import type {
   Database as StorageDatabase,
 } from "../storage/kysely/types.js";
 import type { CatchUpPriority } from "../processors/catch-up-priority.js";
+import type { ProcessorTimingSettings } from "../processors/processor-stats.js";
+import type { MemoryTelemetry } from "../telemetry/memory-telemetry.js";
 import type { PoolInstrumentation } from "../storage/pool-instrumentation.js";
 import type { IGroupCommitStorage } from "../storage/kysely/group-commit-storage.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
@@ -629,6 +632,8 @@ export interface InProcessReactorModule extends ReactorModule {
   featureFlags: ReactorFeatureFlags;
   /** The protocol versions this reactor runs, which its reads check stored documents against. */
   protocolSupport: ProtocolSupport;
+  /** A document model loader is wired: unregistered types load on first use. */
+  loadsModelsOnDemand?: boolean;
   queue: IQueue;
   jobTracker: IJobTracker;
   executorManager: IJobExecutorManager;
@@ -671,10 +676,16 @@ export interface InProcessReactorModule extends ReactorModule {
   catchUp: ICatchUp;
   /** Paces processor backfills against requests; see `withCatchUpPriority`. */
   catchUpPriority: CatchUpPriority;
+  /** What processor queues record; see `withProcessorTiming`. */
+  processorTiming: ProcessorTimingSettings;
+  /** Present when the host gave one; see `withMemoryTelemetry`. */
+  memoryTelemetry?: MemoryTelemetry;
   /** The settled watermark this thread's catch-up sweeps up to. */
   settledWatermark: ISettledWatermark;
   /** Enqueues purge jobs; the erasure scheduler is its only caller. */
   documentPurgeService: DocumentPurgeService;
+  /** The backlog clean-up of keyframes and the reclaim of their disk space. */
+  keyframeCleanup: IKeyframeCleanup;
   /** What the builder knows about the store; see `withStorageFacts`. */
   storageFacts: ReactorStorageFacts;
   /** Set by `withGroupCommitPGlite`; the host closes the store through it. */

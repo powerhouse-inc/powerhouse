@@ -55,6 +55,13 @@ describe("App", () => {
     }
   });
 
+  it("opens the host builder from the views", () => {
+    const view = render(<App store={freshStore()} />);
+    fireEvent.click(view.getByRole("button", { name: "Build host" }));
+    expect(view.getByRole("navigation", { name: "Steps" })).toBeTruthy();
+    expect(view.getByRole("heading", { name: "Start" })).toBeTruthy();
+  });
+
   it("provisions an in-process reactor from the form and shows its queue snapshot", async () => {
     const view = render(<App buildDescriptor={testDescriptor} />);
 

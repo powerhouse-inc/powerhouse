@@ -6,6 +6,10 @@ import type { PackagePiece } from "@powerhousedao/pieces-framework";
 
 export const pieces: PackagePiece[] = [
   {
+    name: "@powerhousedao/piece-ai",
+    entry: "dist/node/pieces/ai/index.mjs",
+  },
+  {
     name: "@powerhousedao/piece-reactor",
     entry: "dist/node/pieces/reactor/index.mjs",
   },

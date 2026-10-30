@@ -623,6 +623,33 @@ describe("GraphQLReactorClient.execute", () => {
     expect(explicitSign).toHaveBeenCalledTimes(1);
   });
 
+  it("signs with what a signer function returns at each push", async () => {
+    const explicitSign = vi.fn().mockResolvedValue(signature);
+    const explicitSigner = {
+      user: { address: "0x9", networkId: "eip155", chainId: 1 },
+      app: { name: "explicit-app", key: "explicit-key" },
+      signAction: explicitSign,
+    } as unknown as ISigner;
+    const { signAction: ambientSign } = installSigner();
+    let current: ISigner | undefined = undefined;
+    const sdk = createMockSdk();
+    const client = createClientWith(sdk, { signer: () => current });
+
+    await client.execute("doc-1", "main", [action]);
+    current = explicitSigner;
+    await client.execute("doc-1", "main", [action]);
+
+    expect(ambientSign).not.toHaveBeenCalled();
+    expect(explicitSign).toHaveBeenCalledTimes(1);
+    const pushed = (sdk.RunDocument.mock.calls as [RunDocumentOptions][]).map(
+      ([options]) =>
+        (options.variables as MutateDocumentWithOperationsVariables)
+          .actions[0] as Action,
+    );
+    expect(pushed[0]).toEqual(action);
+    expect(pushed[1].context?.signer?.app).toEqual(explicitSigner.app);
+  });
+
   it("does not sign when renown has no logged-in user", async () => {
     const { signAction, signer } = installSigner();
     window.ph = { renown: { signer } as unknown as IRenown };

@@ -1,4 +1,7 @@
-import type { RequireReactor } from "@powerhousedao/pieces-framework";
+import type {
+  ActionRetryDefault,
+  RequireReactor,
+} from "@powerhousedao/pieces-framework";
 import {
   PIECE_ACTION_PORTS,
   TRIGGER_PORTS,
@@ -6,6 +9,7 @@ import {
 import {
   getActions,
   getTriggers,
+  type ApAction,
   type ApPiece,
   type ApProperty,
   type ApPropertyType,
@@ -87,6 +91,9 @@ export interface PieceActionDescriptor {
   requireAuth: boolean;
   // The reactor access the step asks for; absent when it asks for none.
   requireReactor?: RequireReactor;
+  // Used when the step sets no timeout or retry of its own.
+  defaultTimeoutSeconds?: number;
+  defaultRetry?: ActionRetryDefault;
   props: PiecePropDescriptor[];
   // Output ports the step can leave on; the editor draws only these.
   ports: readonly string[];
@@ -421,6 +428,51 @@ function declaredReactor(value: unknown): RequireReactor | undefined {
   return value === "read" || value === "write" ? value : undefined;
 }
 
+function declaredTimeout(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : undefined;
+}
+
+function declaredRetry(value: unknown): ActionRetryDefault | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const record = value as Record<string, unknown>;
+  const attempts = record.maxAttempts;
+  if (typeof attempts !== "number" || !Number.isInteger(attempts)) {
+    return undefined;
+  }
+  if (attempts < 1) return undefined;
+  const seconds = (key: string) =>
+    typeof record[key] === "number" && Number.isFinite(record[key])
+      ? { [key]: record[key] }
+      : {};
+  return {
+    maxAttempts: attempts,
+    ...(record.backoff === "FIXED" || record.backoff === "EXPONENTIAL"
+      ? { backoff: record.backoff }
+      : {}),
+    ...seconds("initialDelaySeconds"),
+    ...seconds("maxDelaySeconds"),
+    ...(Array.isArray(record.retryOn)
+      ? {
+          retryOn: record.retryOn.filter(
+            (entry): entry is string => typeof entry === "string",
+          ),
+        }
+      : {}),
+  };
+}
+
+// Activepieces' "retry on failure" default, as the attempts the editor's own
+// retry default makes; delays are filled as for any action default.
+function suggestedRetry(
+  options: ApAction["errorHandlingOptions"],
+): ActionRetryDefault | undefined {
+  return options?.retryOnFailure?.defaultValue === true
+    ? { maxAttempts: 3 }
+    : undefined;
+}
+
 export interface BuildDescriptorOptions {
   // Read each action's own `ports`: only a piece whose results the host routes.
   routed?: boolean;
@@ -440,6 +492,15 @@ export function buildDescriptor(
       description: action.description,
       requireAuth: action.requireAuth ?? false,
       ...optional("requireReactor", declaredReactor(action.requireReactor)),
+      ...optional(
+        "defaultTimeoutSeconds",
+        declaredTimeout(action.defaultTimeoutSeconds),
+      ),
+      ...optional(
+        "defaultRetry",
+        declaredRetry(action.defaultRetry) ??
+          suggestedRetry(action.errorHandlingOptions),
+      ),
       ports:
         (options.routed ? declaredPorts(action.ports) : undefined) ??
         PIECE_ACTION_PORTS,

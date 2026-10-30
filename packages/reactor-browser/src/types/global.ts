@@ -8,6 +8,7 @@ import type {
 } from "@powerhousedao/reactor";
 import type { IAttachmentService } from "@powerhousedao/reactor-attachments/client";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type { PhAiToolDescriptor } from "@powerhousedao/shared/document-model";
 import type { IRenown } from "@renown/sdk";
 import type {
   GraphQLClientWindowEvents,
@@ -117,6 +118,17 @@ export type PHNavigation = {
   closeOpened?(): boolean;
 };
 
+/** The backend (a Switchboard) refused this tab's caller. */
+export type BackendAuthState = {
+  requiresAuth: true;
+  /** The HTTP status that refused: 401 (anonymous) or 403 (known, not allowed). */
+  status: 401 | 403 | null;
+  /** The backend's name or URL, for the message. */
+  backend?: string;
+  /** When it was refused, ISO. */
+  at: string;
+};
+
 export type PHGlobal = PHGlobalConfig & {
   navigation?: PHNavigation;
   loading?: boolean;
@@ -130,7 +142,14 @@ export type PHGlobal = PHGlobalConfig & {
   reactorGraphQLClient?: ReactorGraphQLClient | undefined;
   renown?: IRenown | LOADING;
   vetraPackageManager?: IPackageManager;
+  /** The tools the host app gives the AI agent; see `getHostAiTools`. */
+  aiTools?: () => Promise<PhAiToolDescriptor[]>;
   drives?: DocumentDriveDocument[];
+  /**
+   * Set when the app's backend refused the caller (401/403): the UI shows a
+   * sign-in gate instead of the drives. See `hooks/backend-auth.ts`.
+   */
+  backendAuth?: BackendAuthState;
   /** Per-drive node caches; see `hooks/drive-nodes.ts`. */
   driveNodes?: DriveNodesCache;
   documentCache?: IDocumentCache;

@@ -4,8 +4,10 @@ import {
   Kind,
   parse,
   type DefinitionNode,
+  type InterfaceTypeDefinitionNode,
   type ObjectTypeDefinitionNode,
   type TypeNode,
+  type UnionTypeDefinitionNode,
 } from "graphql";
 import lzString from "lz-string";
 import { GQL_CHANNEL_SUFFIX } from "../ai/switchboard.js";
@@ -84,7 +86,7 @@ export function getSwitchboardBaseFromChannelUrl(channelUrl: string): string {
 
 /**
  * The GraphQL name the switchboard exposes a document model under. Mirrors
- * `getDocumentModelSchemaName` on the server (`create-schema.ts`): the root
+ * `getDocumentModelSchemaName` on the server (`model-schema-templates.ts`): the root
  * query field and the state type names are all derived from the model's
  * `global.name`.
  */
@@ -92,10 +94,19 @@ function getDocumentModelSchemaName(model: DocumentModelModule): string {
   return pascalCase(model.documentModel.global.name.replaceAll("/", " "));
 }
 
+type StateType =
+  | ObjectTypeDefinitionNode
+  | InterfaceTypeDefinitionNode
+  | UnionTypeDefinitionNode;
+
 function buildStateTypeMap(definitions: ReadonlyArray<DefinitionNode>) {
-  const typeMap = new Map<string, ObjectTypeDefinitionNode>();
+  const typeMap = new Map<string, StateType>();
   for (const def of definitions) {
-    if (def.kind === Kind.OBJECT_TYPE_DEFINITION) {
+    if (
+      def.kind === Kind.OBJECT_TYPE_DEFINITION ||
+      def.kind === Kind.INTERFACE_TYPE_DEFINITION ||
+      def.kind === Kind.UNION_TYPE_DEFINITION
+    ) {
       typeMap.set(def.name.value, def);
     }
   }
@@ -108,9 +119,14 @@ function buildStateTypeMap(definitions: ReadonlyArray<DefinitionNode>) {
  * type); enums, scalars, and built-ins are leaves.
  */
 function expandStateFields(
-  typeDef: ObjectTypeDefinitionNode,
-  typeMap: Map<string, ObjectTypeDefinitionNode>,
+  typeDef: StateType,
+  typeMap: Map<string, StateType>,
 ): string {
+  if (typeDef.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+    throw new Error(
+      `Abstract state type requires the generic document query: ${typeDef.name.value}`,
+    );
+  }
   return (typeDef.fields ?? [])
     .map((field) => {
       const fieldName = field.name.value;
@@ -217,7 +233,7 @@ function getLocalStateSelection(
  * Builds a query scoped to a document type's own subgraph root field,
  * selecting the document and its full typed state. The shape mirrors what
  * the switchboard generates per model (`generateNewApiSchema` in
- * `create-schema.ts`): `<Name> { document(identifier:) { document { ...
+ * `model-schema-templates.ts`): `<Name> { document(identifier:) { document { ...
  * state { auth document global local } } } childIds }`.
  */
 function buildModelScopedQuery(model: DocumentModelModule): string {

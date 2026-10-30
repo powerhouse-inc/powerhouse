@@ -2,15 +2,19 @@ import {
   createReactorInspector,
   type ReactorInfo,
 } from "@powerhousedao/reactor";
-import type {
-  BrowserReactorClientModule,
-  WorkerReactorClientModule,
+import {
+  ambientRenownSigner,
+  ambientRenownTokenProvider,
+  createSwitchboardBackend,
+  type BrowserReactorClientModule,
+  type SwitchboardBackend,
+  type SwitchboardBreaker,
+  type WorkerReactorClientModule,
 } from "@powerhousedao/reactor-browser";
 import {
   FanInPartialFailureError,
   fromReactorClient,
   RoutingReactorClient,
-  type CollectionRequirementsInput,
   type ReactorReach,
   type RoutableBackendConfig,
   type RouterDiagnostic,
@@ -20,34 +24,16 @@ import type {
   DocumentModelModule,
   ISigner,
 } from "@powerhousedao/shared/document-model";
+import { switchboardOfDrive } from "@powerhousedao/shared/host-tokens";
 import { logger } from "document-model";
-import {
-  createGraphQLRoutableBackend,
-  type GraphQLRoutableBackend,
-} from "./graphql-routable-backend.js";
+import { LOCAL_BACKEND_NAME } from "./drive-placement.js";
 
-export { createGraphQLRoutableBackend } from "./graphql-routable-backend.js";
-export type {
-  GraphQLRoutableBackend,
-  GraphQLRoutableBackendOptions,
-} from "./graphql-routable-backend.js";
-
-export const LOCAL_BACKEND_NAME = "connect-local";
+export { LOCAL_BACKEND_NAME } from "./drive-placement.js";
 export const REMOTE_BACKEND_NAME = "switchboard-remote";
 
 export type LocalReactorModule =
   | BrowserReactorClientModule
   | WorkerReactorClientModule;
-
-const REMOTE_REACH: ReactorReach = Object.freeze({
-  hosting: "remote",
-  inspection: "none",
-});
-
-/** Only the tab's reactor is inspectable here, so new collections land on it. */
-export const PLACE_ON_LOCAL: CollectionRequirementsInput = Object.freeze({
-  inspectable: true,
-});
 
 export function localReach(kind: LocalReactorModule["kind"]): ReactorReach {
   return kind === "worker"
@@ -75,15 +61,17 @@ export function localFacts(
 export function deriveSwitchboardGraphqlUrl(
   remoteDriveUrl: string,
 ): string | undefined {
-  let parsed: URL;
-  try {
-    parsed = new URL(remoteDriveUrl);
-  } catch {
-    return undefined;
-  }
-  const prefix = /^(.*)\/d\/[^/]+\/?$/.exec(parsed.pathname)?.[1];
-  return prefix === undefined ? undefined : `${parsed.origin}${prefix}/graphql`;
+  return switchboardOfDrive(remoteDriveUrl)?.graphql;
 }
+
+/** A switchboard the router reaches, by its router backend name, with its connection settings. */
+export type SwitchboardRemote = {
+  name: string;
+  graphqlUrl: string;
+  requestTimeoutMs?: number;
+  breaker?: SwitchboardBreaker;
+  realtime?: boolean;
+};
 
 /** The loaded document models, or a getter that reads the current ones. */
 export type LoadedDocumentModels =
@@ -94,18 +82,22 @@ export type MultiReactorParams = {
   /** The local module, built and ready. Undefined builds a REMOTE-ONLY router
    * (no local backend → no local reactor, no PGlite): the `remote` client. */
   module: LocalReactorModule | undefined;
-  remoteGraphqlUrl: string;
+  /** One per switchboard; `remoteGraphqlUrl` alone is one named `switchboard-remote`. */
+  remotes?: readonly SwitchboardRemote[];
+  remoteGraphqlUrl?: string;
+  /** Collection key or drive id -> backend; names no backend here are dropped. */
+  collections?: Readonly<Record<string, string>>;
+  /** The remote new drives are created on, with no copy here. Absent: the
+   * local reactor, else the only switchboard. */
+  newDrives?: string;
+  probeTimeoutMs?: number;
+  provisionalRouteMs?: number;
   /** Signs routed writes; unsigned (anonymous) without one. */
   signer?: ISigner;
   /** Signing models when the local module exposes no registry; the router asks the local reactor (or, remote-only, the loaded set). */
   documentModelModules: LoadedDocumentModels;
   onDiagnostic?: RouterDiagnostic;
 };
-
-/** Remote-only placement: the Switchboard serves every collection. (It offers
- * no inspection surface over GraphQL, so PLACE_ON_LOCAL's `inspectable`
- * requirement must NOT apply, or no backend would be eligible.) */
-export const PLACE_ON_REMOTE: CollectionRequirementsInput = Object.freeze({});
 
 /**
  * The local answer stands when only the Switchboard could not answer -- but
@@ -116,8 +108,9 @@ export const PLACE_ON_REMOTE: CollectionRequirementsInput = Object.freeze({});
 function localIdCheckAnswer(
   documentId: string,
   error: unknown,
+  remoteNames: ReadonlySet<string>,
 ): boolean | undefined {
-  if (!failedOnlyOnRemote(error)) {
+  if (!failedOnlyOnRemote(error, remoteNames)) {
     return undefined;
   }
   logger.warn(
@@ -130,34 +123,63 @@ function localIdCheckAnswer(
 
 /** The router Connect installs, with Connect's handling of credentials and id checks. */
 export class ConnectRoutingClient extends RoutingReactorClient {
-  private readonly remote: GraphQLRoutableBackend;
+  private readonly remotes: readonly SwitchboardBackend[];
+  /** The switchboard new drives are created on; undefined when it is this browser. */
+  readonly newDrives: string | undefined;
 
   constructor(
     backends: readonly RoutableBackendConfig[],
     options: RoutingClientOptions,
-    remote: GraphQLRoutableBackend,
+    remotes: readonly SwitchboardBackend[],
     hasLocal: boolean,
   ) {
+    const remoteNames = new Set(remotes.map((remote) => remote.config.name));
     super(backends, {
       ...options,
       answerFailedIdCheck: hasLocal
-        ? localIdCheckAnswer
+        ? (id, error) => localIdCheckAnswer(id, error, remoteNames)
         : options.answerFailedIdCheck,
     });
-    this.remote = remote;
+    this.remotes = remotes;
+    const home = options.defaultBackend ?? options.primaryBackend;
+    this.newDrives = home && remoteNames.has(home) ? home : undefined;
   }
 
   /** Renown's sign-in and sign-out call this on whatever client is installed. */
   notifyCredentialsChanged(): void {
-    this.remote.notifyCredentialsChanged();
+    for (const remote of this.remotes) remote.notifyCredentialsChanged();
   }
 }
 
-function failedOnlyOnRemote(error: unknown): boolean {
+function failedOnlyOnRemote(
+  error: unknown,
+  remoteNames: ReadonlySet<string>,
+): boolean {
   return (
     error instanceof FanInPartialFailureError &&
-    error.failures.every((failure) => failure.backend === REMOTE_BACKEND_NAME)
+    error.failures.every((failure) => remoteNames.has(failure.backend))
   );
+}
+
+/** The remotes to build, one per switchboard: the first link to a base wins. */
+function remotesOf(params: MultiReactorParams): SwitchboardRemote[] {
+  const listed: readonly SwitchboardRemote[] = params.remotes?.length
+    ? params.remotes
+    : params.remoteGraphqlUrl
+      ? [{ name: REMOTE_BACKEND_NAME, graphqlUrl: params.remoteGraphqlUrl }]
+      : [];
+  const seen = new Set<string>();
+  return listed.filter((remote) => {
+    if (seen.has(remote.graphqlUrl)) {
+      logger.warn(
+        "@name opens the same switchboard as an earlier backend; skipping it",
+        remote.name,
+      );
+      return false;
+    }
+    seen.add(remote.graphqlUrl);
+    return true;
+  });
 }
 
 /**
@@ -174,17 +196,33 @@ export async function buildMultiReactorClient(
   const registry = module?.reactorModule?.documentModelRegistry;
   const loaded = params.documentModelModules;
   const loadedModules = typeof loaded === "function" ? loaded : () => loaded;
-  const remote = createGraphQLRoutableBackend({
-    url: params.remoteGraphqlUrl,
-    documentModels: () => registry?.getAllModules() ?? loadedModules(),
-  });
-  const remoteBackend: RoutableBackendConfig = {
-    name: REMOTE_BACKEND_NAME,
-    backend: remote.backend,
-    facts: () => remote.info(),
-    reach: REMOTE_REACH,
-    refusesMisroutes: false,
-  };
+  const listed = remotesOf(params);
+  if (listed.length === 0) {
+    throw new Error("A routing client needs at least one switchboard");
+  }
+  if (
+    params.newDrives !== undefined &&
+    !listed.some((remote) => remote.name === params.newDrives)
+  ) {
+    throw new Error(
+      `New drives go to ${params.newDrives}, but this Connect doesn't link to it (it links to ${listed.map((remote) => remote.name).join(", ")}).`,
+    );
+  }
+  // The logged-in Renown user's token and signer, read per request as before.
+  const remotes = listed.map((remote) =>
+    createSwitchboardBackend({
+      name: remote.name,
+      url: remote.graphqlUrl,
+      tokenProvider: ambientRenownTokenProvider,
+      signer: ambientRenownSigner,
+      documentModels: () => registry?.getAllModules() ?? loadedModules(),
+      inspection: "none",
+      requestTimeoutMs: remote.requestTimeoutMs,
+      breaker: remote.breaker,
+      realtime: remote.realtime,
+    }),
+  );
+  const remoteBackends = remotes.map((remote) => remote.config);
   const backends: RoutableBackendConfig[] = module
     ? [
         {
@@ -194,22 +232,34 @@ export async function buildMultiReactorClient(
           reach: localReach(module.kind),
           refusesMisroutes: false,
         },
-        remoteBackend,
+        ...remoteBackends,
       ]
-    : [remoteBackend];
+    : remoteBackends;
+  const names = new Set(backends.map((backend) => backend.name));
+  const collections = Object.fromEntries(
+    Object.entries(params.collections ?? {}).filter(([, backend]) =>
+      names.has(backend),
+    ),
+  );
+  // The local reactor answers the registry and create defaults; remote-only,
+  // the switchboard new drives go to does.
+  const primary = module
+    ? LOCAL_BACKEND_NAME
+    : (params.newDrives ?? remoteBackends[0].name);
   const router = new ConnectRoutingClient(
     backends,
     {
-      // Remote-only: the Switchboard is primary and serves every collection;
-      // with a local reactor, new collections land on it (inspectable).
-      primaryBackend: module ? LOCAL_BACKEND_NAME : REMOTE_BACKEND_NAME,
-      defaultRequirements: module ? PLACE_ON_LOCAL : PLACE_ON_REMOTE,
+      primaryBackend: primary,
+      defaultBackend: params.newDrives ?? primary,
+      probeTimeoutMs: params.probeTimeoutMs,
+      provisionalRouteMs: params.provisionalRouteMs,
+      collections,
       signer: params.signer,
       onDiagnostic: params.onDiagnostic,
       // The Switchboard serves no models over GraphQL; remote-only uses the loaded set.
       documentModelModules: module ? undefined : loadedModules,
     },
-    remote,
+    remotes,
     Boolean(module),
   );
   await router.refreshFacts();
