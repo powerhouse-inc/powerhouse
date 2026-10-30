@@ -206,6 +206,37 @@ describe("loop on the canvas", () => {
   });
 });
 
+describe("loop body frame", () => {
+  it("frames the body's steps and buttons, not what follows the loop", () => {
+    const wf = model(
+      [loop, step("body"), step("more"), step("after")],
+      [
+        ["t", "loop", "next"],
+        ["loop", "body", "each"],
+        ["body", "more", "next"],
+        ["loop", "after", "next"],
+      ],
+    );
+    const { nodes } = layoutWorkflow(wf, ports);
+    const frame = nodes.find((node) => node.id === "__loop:loop")!;
+    const { width, height } = frame.data as { width: number; height: number };
+    const inside = (id: string) => {
+      const { x, y } = nodes.find((node) => node.id === id)!.position;
+      return (
+        x >= frame.position.x &&
+        x <= frame.position.x + width &&
+        y >= frame.position.y &&
+        y <= frame.position.y + height
+      );
+    };
+    expect(inside("body")).toBe(true);
+    expect(inside("more")).toBe(true);
+    expect(inside("__append:more:next")).toBe(true);
+    expect(inside("loop")).toBe(false);
+    expect(inside("after")).toBe(false);
+  });
+});
+
 describe("loop iterations in a run", () => {
   const row = (stepId: string, path: string | null) => ({
     stepId,

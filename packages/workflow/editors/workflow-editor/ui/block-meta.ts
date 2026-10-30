@@ -328,6 +328,19 @@ export function blockMeta(block: BlockIdentity): BlockMeta {
   };
 }
 
+// About what a step card's subtitle line holds at text-xs.
+export const CARD_SUBTITLE_CHARS = 26;
+
+// A step card's subtitle: the action, led by its piece when that fits.
+export function stepSubtitle(
+  meta: BlockMeta,
+  maxChars = CARD_SUBTITLE_CHARS,
+): string {
+  if (meta.subtitle === "Core") return meta.displayName;
+  const both = `${meta.subtitle} · ${meta.displayName}`;
+  return both.length <= maxChars ? both : meta.displayName;
+}
+
 function titleCase(value: string): string {
   return value
     .replaceAll(/[-_]/g, " ")
