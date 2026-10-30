@@ -9,7 +9,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createReactorKysely } from "../src/server.mjs";
+import { createReactorKysely, resolveKeyframes } from "../src/server.mjs";
 
 const LONG = 180_000;
 
@@ -30,6 +30,36 @@ function stubLogger(): ILogger {
 function emptyDocument() {
   return documentModelDocumentModelModule.utils.createDocument();
 }
+
+describe("resolveKeyframes", () => {
+  const CONFIG = "/project/powerhouse.config.json";
+
+  it("is unset with neither source, which keeps today's behaviour", () => {
+    expect(resolveKeyframes(undefined, undefined, CONFIG)).toBeUndefined();
+  });
+
+  it("reads the project config", () => {
+    expect(
+      resolveKeyframes(undefined, { default: { keep: 4 } }, CONFIG),
+    ).toEqual({ default: { keep: 4 } });
+  });
+
+  it("lets the configured rules win whole over the project config", () => {
+    expect(
+      resolveKeyframes(
+        { default: { keep: 1 } },
+        { default: { interval: 50 }, types: { "a/b": { keep: 9 } } },
+        CONFIG,
+      ),
+    ).toEqual({ default: { keep: 1 } });
+  });
+
+  it("stops the boot on a project config it cannot use, naming the file", () => {
+    expect(() =>
+      resolveKeyframes(undefined, { default: { keep: 0 } }, CONFIG),
+    ).toThrow(`${CONFIG} reactor.keyframes.default.keep`);
+  });
+});
 
 describe("keyframe clean-up and reclaim on a reactor's own store", () => {
   let dataDir: string | undefined;

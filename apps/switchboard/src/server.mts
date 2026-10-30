@@ -306,7 +306,7 @@ function readConfigOAuthApps(
 // An unreadable config file means "not configured", not a boot failure:
 // workflows are opt-in.
 /** `PH_KEYFRAMES` (or a caller's layer) wins whole over the project config. */
-function resolveKeyframes(
+export function resolveKeyframes(
   configured: SwitchboardConfig["storage"]["keyframes"],
   fromFile: unknown,
   configPath: string,
