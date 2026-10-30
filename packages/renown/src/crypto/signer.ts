@@ -199,7 +199,7 @@ export function createSignatureVerifier(
     const message = buildSignatureMessage(params);
     const signatureBytes = hexToUint8Array(signatureHex);
 
-    const cryptoKey = await importPublicKey(publicKey);
+    const cryptoKey = await importDidPublicKey(publicKey);
 
     const isValid = await crypto.subtle.verify(
       { name: "ECDSA", hash: "SHA-256" },
@@ -230,7 +230,8 @@ function hexToUint8Array(hex: string): Uint8Array {
   return bytes;
 }
 
-async function importPublicKey(did: string): Promise<CryptoKey> {
+/** The P-256 public key a `did:key` names, for verifying. */
+export async function importDidPublicKey(did: string): Promise<CryptoKey> {
   const keyData = extractKeyFromDid(did);
   return crypto.subtle.importKey(
     "raw",

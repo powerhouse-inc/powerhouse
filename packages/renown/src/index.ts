@@ -2,6 +2,7 @@ export * from "./common.js";
 export * from "./constants.js";
 export * from "./credential.js";
 export * from "./crypto/index.js";
+export * from "./delegation.js";
 export * from "./discovery.js";
 export * from "./init.browser.js";
 export * from "./local-credential-verifier.js";
