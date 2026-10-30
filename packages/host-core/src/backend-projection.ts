@@ -141,17 +141,34 @@ export function remoteBackendUrls(
     .filter((u): u is string => typeof u === "string");
 }
 
+/** A switchboard as Connect's served config names it, with its connection settings. */
+export type ServedRemoteBackend = { name: string; url: string } & Omit<
+  NonNullable<ReactorBackend["remote"]>,
+  "url"
+>;
+
 /**
- * The remote backends by host key, placement order. A url that is not a
- * string yet (an output token, unresolved when a host builds) is skipped, as
- * in remoteBackendUrls.
+ * The remote backends by host key, placement order, each with the
+ * connection settings it sets. A url that is not a string yet (an output
+ * token, unresolved when a host builds) is skipped, as in remoteBackendUrls.
  */
 export function remoteBackends(
   reactor: ReactorConfig | undefined,
-): { name: string; url: string }[] {
-  return backendsToDescriptors(reactor).flatMap((d) =>
-    d.kind === "remote" && typeof d.remote?.url === "string"
-      ? [{ name: d.name, url: d.remote.url }]
-      : [],
-  );
+): ServedRemoteBackend[] {
+  return backendsToDescriptors(reactor).flatMap((d) => {
+    const remote = reactor?.backends?.[d.name]?.remote;
+    if (d.kind !== "remote" || typeof d.remote?.url !== "string" || !remote) {
+      return [];
+    }
+    const { requestTimeoutMs, breaker, realtime } = remote;
+    return [
+      {
+        name: d.name,
+        url: d.remote.url,
+        ...(requestTimeoutMs !== undefined ? { requestTimeoutMs } : {}),
+        ...(breaker !== undefined ? { breaker } : {}),
+        ...(realtime !== undefined ? { realtime } : {}),
+      },
+    ];
+  });
 }
