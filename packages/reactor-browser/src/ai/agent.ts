@@ -20,7 +20,7 @@ import type {
 } from "./types.js";
 
 /** Hard cap on model round-trips per user message (each tool step counts). */
-export const MAX_AGENT_STEPS = 100;
+export const MAX_AGENT_STEPS = 250;
 
 /**
  * Hard cap on the characters of one tool result fed back to the model.
