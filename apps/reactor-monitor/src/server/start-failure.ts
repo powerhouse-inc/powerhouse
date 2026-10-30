@@ -33,25 +33,30 @@ function logLine(line: string): boolean {
   return /^\[|^\d{1,2}:\d{2}:\d{2}(?: [AP]M)? \[/.test(line);
 }
 
-/** The last `Error:` line, else the last plain line (ph run's failure). */
+/** A sentence ph run printed, not progress (`…`), a URL banner or a brace. */
+function plain(line: string): boolean {
+  return (
+    !logLine(line) &&
+    /[a-z]/i.test(line) &&
+    !/(?:\.\.\.|…)$/.test(line) &&
+    !/^[➜{}[\]]/.test(line)
+  );
+}
+
+/** The last line only: an uncaught error past its stack, else ph run's failure. */
 export function failureReason(tail: string): string | undefined {
   const lines = tail
     .split("\n")
     .map((line) => line.trimEnd())
     .filter((line) => line.trim() !== "" && !noise(line));
-  for (const line of lines.toReversed()) {
-    const match = ERROR_LINE.exec(line.trim());
-    if (match) return match[1];
+  let at = lines.length - 1;
+  while (at >= 0 && (/^\s/.test(lines[at]) || /^[}\]]$/.test(lines[at]))) {
+    at -= 1;
   }
-  return lines
-    .toReversed()
-    .find(
-      (line) =>
-        !/^\s/.test(line) &&
-        !logLine(line) &&
-        !/^\s*(?:➜|at )/.test(line) &&
-        !/^[\s^~]*$/.test(line),
-    );
+  if (at < 0) return undefined;
+  const error = ERROR_LINE.exec(lines[at]);
+  if (error) return error[1];
+  return at === lines.length - 1 && plain(lines[at]) ? lines[at] : undefined;
 }
 
 function sentence(text: string): string {
@@ -64,7 +69,9 @@ export function startFailure(error: SpawnHostError): StartFailure {
     .split("\n--- output tail ---\n")[0]
     .replace(/^spawnHost: /, "");
   const lead = LEADS[error.phase] ?? "Couldn't start";
-  const reason = failureReason(error.outputTail);
+  // A run that timed out or was stopped printed no failure of its own.
+  const reason =
+    error.phase === "exited" ? failureReason(error.outputTail) : undefined;
   return reason
     ? {
         message: `${lead}: ${sentence(reason)}`,
