@@ -32,6 +32,7 @@ import * as migration026 from "./026_create_sync_purge_refusals.js";
 import * as migration027 from "./027_add_sync_remote_persistence.js";
 import * as migration028 from "./028_create_write_identity.js";
 import * as migration029 from "./029_create_permission_tables.js";
+import * as migration030 from "./030_index_operation_retracts.js";
 
 const migrations = {
   "001_create_operation_table": migration001,
@@ -63,6 +64,7 @@ const migrations = {
   "027_add_sync_remote_persistence": migration027,
   "028_create_write_identity": migration028,
   "029_create_permission_tables": migration029,
+  "030_index_operation_retracts": migration030,
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {

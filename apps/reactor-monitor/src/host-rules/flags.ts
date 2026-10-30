@@ -4,11 +4,14 @@ export const FLAG_PREREQUISITES = {
   authEnforcement: ["documentDecisions"],
   authGroups: ["authEnforcement"],
   authConditions: ["authGroups"],
+  undoV3: [],
 } as const satisfies Record<string, readonly string[]>;
 export type FeatureFlag = keyof typeof FLAG_PREREQUISITES;
+/** The flags the access ladder sets; a host file cannot set undoV3 yet. */
+export type LadderFlag = Exclude<FeatureFlag, "undoV3">;
 
 /** The access-control ladder, bottom up: level n turns on the first n flags. */
-export const LADDER: readonly FeatureFlag[] = [
+export const LADDER: readonly LadderFlag[] = [
   "documentDecisions",
   "authEnforcement",
   "authGroups",
@@ -20,6 +23,7 @@ export const FLAG_LABELS: Record<FeatureFlag, string> = {
   authEnforcement: "Permissions",
   authGroups: "Groups",
   authConditions: "Conditions",
+  undoV3: "Undo v3",
 };
 
 /** The env var each flag is read from (host-core protocolEnv). */
@@ -28,9 +32,10 @@ export const FLAG_ENV: Record<FeatureFlag, string> = {
   authEnforcement: "REACTOR_AUTH_ENFORCEMENT",
   authGroups: "REACTOR_AUTH_GROUPS",
   authConditions: "REACTOR_AUTH_CONDITIONS",
+  undoV3: "REACTOR_UNDO_V3",
 };
 
-export type Flags = Record<FeatureFlag, boolean>;
+export type Flags = Record<LadderFlag, boolean>;
 
 export function ladderFlags(level: number): Flags {
   return Object.fromEntries(
@@ -84,7 +89,7 @@ export function ladderGaps(
 ): { flag: FeatureFlag; missing: FeatureFlag[] }[] {
   return LADDER.flatMap((flag) => {
     if (!flags[flag]) return [];
-    const needs: readonly FeatureFlag[] = FLAG_PREREQUISITES[flag];
+    const needs: readonly LadderFlag[] = FLAG_PREREQUISITES[flag];
     const missing = needs.filter((need) => !flags[need]);
     return missing.length > 0 ? [{ flag, missing }] : [];
   });

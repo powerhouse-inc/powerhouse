@@ -63,6 +63,13 @@ export type ExecutingJob = {
   evaluatedByPosition: boolean;
 
   /**
+   * The stored rows a reshuffle re-appends behind the job's own actions, each
+   * with the verdict it lands with. Until each is written back, its target
+   * still counts as present to a submitted RETRACT the job holds.
+   */
+  reappended: readonly Operation[];
+
+  /**
    * Cache entries to invalidate only after the execution transaction commits.
    * An UPGRADE_DOCUMENT reshapes sibling scopes it writes no operation to;
    * invalidating them mid-transaction lets a concurrent read repopulate the
@@ -89,6 +96,8 @@ export type ExecutingJob = {
 export type PositionedWrites = {
   writes: PendingWrite[];
   evaluatedByPosition: boolean;
+  /** The stored rows among `writes` the reshuffle re-appends. */
+  reappended: readonly Operation[];
   /** Set when a submitted action was refused at its position. */
   error?: Error;
 };
@@ -158,6 +167,12 @@ export type ReactorFeatureFlags = {
    * scope's state, the subject, and the action input. Requires authGroups.
    */
   authConditions: boolean;
+
+  /**
+   * Support base-reducer 3, in which UNDO and REDO are stored as a RETRACT
+   * naming its target by action id.
+   */
+  undoV3: boolean;
 };
 
 /** 200k operations purge in 1.6 s on local Postgres; jobs time out at 30 s. */

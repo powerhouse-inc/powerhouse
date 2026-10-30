@@ -1,9 +1,11 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import { canonicalJson } from "./action-signature.js";
+import { baseReducerVersionsFor } from "./base-reducer-protocol.js";
 import { bytesToBase64Url } from "./crypto.js";
 
 /** The reactor feature flags a capability's support is a function of. */
 export type PeerCapabilityFlags = {
+  readonly undoV3?: boolean;
   readonly [flag: string]: boolean | undefined;
 };
 
@@ -42,8 +44,9 @@ export const PEER_CAPABILITIES: readonly PeerCapability[] = [
     kind: "protocol",
     name: "base-reducer",
     baseline: [1, 2],
-    supported: () => [1, 2],
-    preferred: () => 2,
+    supported: baseReducerVersionsFor,
+    preferred: (flags: PeerCapabilityFlags) =>
+      Math.max(...baseReducerVersionsFor(flags)),
     optional: false,
   },
   {
@@ -67,6 +70,14 @@ export const PEER_CAPABILITIES: readonly PeerCapability[] = [
     supported: () => [1],
   },
 ];
+
+/** `base-reducer`'s preference with no reactor flags, which shared never holds. */
+export const FLAGLESS_BASE_REDUCER_VERSION: number = (
+  PEER_CAPABILITIES.find(
+    (capability) =>
+      capability.kind === "protocol" && capability.name === "base-reducer",
+  ) as ProtocolCapability
+).preferred!({});
 
 /** `base` plus `extra`; an extra replaces a base entry of the same name. */
 export function mergePeerCapabilities(

@@ -9,6 +9,7 @@ import type {
 import {
   actionSignerIdentity,
   actionSigningTarget,
+  optionalBaseReducerCapabilities,
   hashDocumentStateForScope,
 } from "@powerhousedao/shared/document-model";
 
@@ -203,7 +204,7 @@ export async function prepareSignedActions(
     try {
       next = module.reducer(working, signedAction, undefined, {
         protocolVersion:
-          working.header.protocolVersions?.["base-reducer"] ??
+          optionalBaseReducerCapabilities(working.header)?.version ??
           predictionProtocolVersion,
       });
     } catch (error) {

@@ -101,6 +101,7 @@ function createHarness(
     authEnforcement: false,
     authGroups: false,
     authConditions: false,
+    undoV3: false,
   };
   const registry = createTestRegistry();
   const handler = new DocumentActionHandler(
@@ -177,6 +178,7 @@ function execute(
       stores: harness.stores,
       replayingAcceptedHistory: false,
       evaluatedByPosition: false,
+      reappended: [],
       postCommitInvalidations: [],
       postCommitMembershipInvalidations: [],
       touchedStreams: new TouchedStreams(),
@@ -567,6 +569,7 @@ describe("DocumentActionHandler", () => {
         authEnforcement: true,
         authGroups: false,
         authConditions: false,
+        undoV3: false,
       };
       const harness = createHarness(sourceDoc);
       const registry = createTestRegistry();

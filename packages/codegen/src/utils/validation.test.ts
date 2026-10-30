@@ -115,6 +115,15 @@ describe("validateDocumentModelState", () => {
       ]);
     },
   );
+  it("refuses an operation named RETRACT", () => {
+    const result = validateDocumentModelState(
+      documentModelState(specification(1, ["ADD_ITEM", "RETRACT"])),
+    );
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toEqual([
+      'Operation "RETRACT" in module "items" has a reserved name',
+    ]);
+  });
   it("accepts state types named after the model", () => {
     const result = validateDocumentModelState(
       readingList("ReadingListState", "ReadingListLocalState"),
@@ -164,6 +173,19 @@ describe("assertNoReservedOperationNames", () => {
       ),
     ).toThrow(
       'Cannot generate document model "Test": Operation "SET_NAME" in module "items" has a reserved name (specification v1)',
+    );
+  });
+
+  it("refuses RETRACT in a later specification", () => {
+    expect(() =>
+      assertNoReservedOperationNames(
+        documentModelState(
+          specification(1, ["ADD_ITEM"]),
+          specification(2, ["RETRACT"]),
+        ),
+      ),
+    ).toThrow(
+      'Cannot generate document model "Test": Operation "RETRACT" in module "items" has a reserved name (specification v2)',
     );
   });
 });

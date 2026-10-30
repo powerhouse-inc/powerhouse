@@ -13,12 +13,14 @@ import {
   type IOperationStore,
 } from "../../../src/storage/interfaces.js";
 import {
+  createCreateDocumentOperation,
   createMockCollectionMembershipCache,
   createMockDocumentMetaCache,
   createMockLogger,
   createMockOperationStore,
   createTestEventBus,
   createTestRegistry,
+  undoV3Flags,
 } from "../../factories.js";
 
 describe("SimpleJobExecutor", () => {
@@ -2084,6 +2086,100 @@ describe("SimpleJobExecutor", () => {
 
       expect(result.success).toBe(true);
       expect(result.operations).toEqual([]);
+    });
+
+    /** A load into doc-1, stored at `version`, whose document meta read fails. */
+    async function loadWithFailingMeta(version: 2 | 3) {
+      const creation = createCreateDocumentOperation(
+        "doc-1",
+        "powerhouse/document-model",
+        {},
+        { protocolVersions: { "base-reducer": version } },
+      );
+      expect(
+        (
+          creation.action.input as {
+            protocolVersions: Record<string, number>;
+          }
+        ).protocolVersions["base-reducer"],
+      ).toBe(version);
+      const failing = new SimpleJobExecutor(
+        createMockLogger(),
+        registry,
+        mockOperationStore,
+        createTestEventBus(),
+        mockWriteCache,
+        {
+          start: vi.fn(),
+          commit: vi.fn(),
+          find: vi.fn(),
+          getCollectionsForDocuments: vi.fn(),
+          getGroupReferencers: vi.fn(),
+        } as any,
+        createMockDocumentMetaCache({
+          getDocumentMeta: vi
+            .fn()
+            .mockRejectedValue(new Error("meta read failed")),
+        }),
+        createMockCollectionMembershipCache(),
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+        { featureFlags: undoV3Flags() },
+      );
+      const empty = {
+        results: [],
+        options: { cursor: "0", limit: 100 },
+        nextCursor: undefined,
+      };
+      mockOperationStore.getSince = vi.fn((_id: string, scope: string) =>
+        Promise.resolve(
+          scope === "document" ? { ...empty, results: [creation] } : empty,
+        ),
+      );
+      mockOperationStore.getConflicting = vi.fn().mockResolvedValue(empty);
+
+      return failing.executeJob({
+        kind: "load",
+        id: "meta-error-load-job",
+        documentId: "doc-1",
+        scope: "global",
+        branch: "main",
+        actions: [],
+        operations: [
+          {
+            index: 0,
+            skip: 0,
+            hash: "",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            id: "op-incoming",
+            action: {
+              id: "incoming-action",
+              type: "SET_NAME",
+              scope: "global",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
+              input: { name: "Test" },
+            },
+          },
+        ],
+        createdAt: "1234567890",
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["meta-error-load-job"] },
+      });
+    }
+
+    // A base-reducer 3 document read as base-reducer 2 would take the v2 load path.
+    it("fails a load into a base-reducer 3 document whose meta read fails for any reason but absence", async () => {
+      const result = await loadWithFailingMeta(3);
+
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toBe("meta read failed");
+      expect(mockOperationStore.getConflicting).not.toHaveBeenCalled();
+    });
+
+    it("continues a load into a base-reducer 2 document whose meta read fails", async () => {
+      await loadWithFailingMeta(2);
+
+      expect(mockOperationStore.getConflicting).toHaveBeenCalled();
     });
   });
 

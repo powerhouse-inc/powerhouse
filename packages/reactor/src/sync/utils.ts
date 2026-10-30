@@ -576,6 +576,7 @@ export function classifyJobFailure(errorName: string): SyncOperationErrorType {
     case "PurgeTooLargeError":
       return "PURGE_PRECONDITION";
     case "ReservedActionError":
+    case "SubmittedUndoRefusedError":
       return "RESERVED_ACTION";
     default:
       return "UNCLASSIFIED";

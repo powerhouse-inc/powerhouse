@@ -41,6 +41,16 @@ export function duplicateKey(
   return `dup/${opId}/${pad(index)}/${pad(skip)}`;
 }
 
+/** Marks that a stored action in the stream references `actionId`. */
+export function referenceKey(
+  documentId: string,
+  scope: string,
+  branch: string,
+  actionId: string,
+): string {
+  return `ref/${documentId}/${scope}/${branch}/${actionId}`;
+}
+
 export function headKey(
   documentId: string,
   scope: string,

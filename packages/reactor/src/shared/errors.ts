@@ -402,6 +402,33 @@ export class PurgeTooLargeError extends Error {
   }
 }
 
+export type RetractionRefusalReason = "target-missing" | "target-retracted";
+
+/** A submitted RETRACT whose target is absent or already retracted; terminal. */
+export class RetractionRefusedError extends Error {
+  public readonly documentId: string;
+  public readonly target: string;
+  public readonly reason: RetractionRefusalReason;
+
+  constructor(
+    documentId: string,
+    target: string,
+    reason: RetractionRefusalReason,
+  ) {
+    super(`RETRACT of ${target} refused in document ${documentId}: ${reason}`);
+    this.name = "RetractionRefusedError";
+    this.documentId = documentId;
+    this.target = target;
+    this.reason = reason;
+
+    Error.captureStackTrace(this, RetractionRefusedError);
+  }
+
+  static override isError(error: unknown): error is RetractionRefusedError {
+    return Error.isError(error) && error.name === "RetractionRefusedError";
+  }
+}
+
 /** A regular write carried an action type only the reactor issues. Terminal. */
 export class ReservedActionError extends Error {
   public readonly documentId: string;
@@ -422,6 +449,9 @@ export class ReservedActionError extends Error {
     return Error.isError(error) && error.name === "ReservedActionError";
   }
 }
+
+// Shared, so the reducer refuses the same input with the same error.
+export { SubmittedUndoRefusedError } from "@powerhousedao/shared/document-model";
 
 /**
  * An authorization preflight was asked for while the reactor's decision model

@@ -5,6 +5,7 @@ import type { z } from "zod";
 import type { ZodRawShape } from "zod";
 import type { ActionSigningTarget } from "./action-signature.js";
 import type { Action } from "./actions.js";
+import type { BaseReducerVersion } from "./base-reducer-protocol.js";
 // By package path, so the declaration stays in its own file in dist.
 import type { DocumentDispatch } from "@powerhousedao/shared/document-model/dispatch";
 export type {
@@ -1191,6 +1192,14 @@ export type NOOPAction = Action & {
   input: SchemaNOOPAction["input"];
 };
 
+export type RetractActionInput = { target: string };
+
+/** Retracts the action named by `target` in the same document, scope and branch. */
+export type RetractAction = Action & {
+  type: "RETRACT";
+  input: RetractActionInput;
+};
+
 export type CreateDocumentActionInput = {
   model: string; // e.g., 'ph/todo'
   version: 0;
@@ -1412,14 +1421,38 @@ export type ReducerOptions = {
    * - Version 1 (default): Legacy behavior with index reuse
    * - Version 2: Reactor behavior with monotonic indices
    */
-  protocolVersion?: number;
+  protocolVersion?: BaseReducerVersion;
 
   /**
    * When true, skip index contiguity validation during replay.
    * Used for V2 state rebuild where gapped indices are expected.
    */
   skipIndexValidation?: boolean;
+
+  /**
+   * Base-reducer 3: the action ids in the scope that a stored RETRACT names.
+   * Computed from the document's operations when absent.
+   */
+  targeted?: ReadonlySet<string>;
+
+  /**
+   * Base-reducer 3: derives a scope from every row, each with its own model
+   * version's reducer and the upgrades applied at their boundaries. Without
+   * it, every row takes the reducer this one wraps.
+   */
+  deriveScope?: DeriveScope;
 };
+
+/**
+ * Derives `scope` from every row of `operations`, returning `document` with
+ * that scope's state replaced and the ids whose action applied.
+ */
+export type DeriveScope = <TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  operations: readonly Operation[],
+  scope: string,
+  onThrow?: (operation: Operation, error: unknown) => void,
+) => { document: PHDocument<TState>; applied: ReadonlySet<string> };
 
 /**
  * A pure function that takes an action and the previous state

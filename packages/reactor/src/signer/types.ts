@@ -59,7 +59,10 @@ export type SignatureTrustPolicy = {
   ): Promise<boolean>;
 };
 
-/** `log` counts refusals and admits anyway; `enforce` refuses. */
+/**
+ * `log` counts refusals and admits anyway, except a repeated action id on a
+ * base-reducer 3 rule scope; `enforce` refuses.
+ */
 export type SignatureVerificationMode = "log" | "enforce";
 
 export const SIGNATURE_REFUSAL_CODES = [
