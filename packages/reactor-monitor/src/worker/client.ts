@@ -251,6 +251,7 @@ export async function connectManagedWorkerReactor(
           admin: inspector,
           processorLevers: inspector,
           memoryLevers: inspector,
+          keyframeLevers: inspector,
         }
       : {}),
     ...(info.access.sql

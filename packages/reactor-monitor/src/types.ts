@@ -265,6 +265,8 @@ export interface ManagedReactorBase {
   readonly processorLevers?: ProcessorLevers;
   /** Telemetry switch and heap snapshot; served alongside `processorLevers`. */
   readonly memoryLevers?: MemoryLevers;
+  /** Keyframe clean-up and reclaim, reached like `processorLevers`. */
+  readonly keyframeLevers?: KeyframeLevers;
   /** Raw SQL against the reactor's own store; present when `info.access.sql`. */
   readonly dbQuery?: IReactorDbQuery;
   readonly syncManager: MonitorSyncManager | undefined;
@@ -335,6 +337,16 @@ export type ProcessorLevers = Pick<
 export type MemoryLevers = Pick<
   IInspectorAdmin,
   "setMemoryTelemetry" | "writeHeapSnapshot"
+>;
+
+/** The keyframe levers a remote can serve beside its read-only inspection. */
+export type KeyframeLevers = Pick<
+  IInspectorAdmin,
+  | "startKeyframeCleanup"
+  | "getKeyframeCleanup"
+  | "cancelKeyframeCleanup"
+  | "reclaimKeyframeSpace"
+  | "getKeyframeReclaim"
 >;
 
 /** A running reactor reached over its host's inspection subgraph; read-only. */

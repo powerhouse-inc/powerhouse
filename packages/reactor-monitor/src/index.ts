@@ -28,6 +28,7 @@ export type {
   MonitorSyncManager,
   MonitorWorkerClientModule,
   MemoryLevers,
+  KeyframeLevers,
   ProcessorLevers,
   ReactorDescriptor,
   ReactorKind,

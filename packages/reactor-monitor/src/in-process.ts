@@ -114,6 +114,7 @@ export async function provisionInProcess(
     admin: built.inspector,
     processorLevers: built.inspector,
     memoryLevers: built.inspector,
+    keyframeLevers: built.inspector,
     dbQuery: built.dbQuery,
     syncManager:
       syncManager && syncInspector

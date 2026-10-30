@@ -81,6 +81,11 @@ export const INSPECTOR_OPS = {
   writeHeapSnapshot: { rpc: "telemetry.heapSnapshot", tier: "admin" },
   rebuildKeyframes: { rpc: "integrity.rebuildKeyframes", tier: "admin" },
   rebuildSnapshots: { rpc: "integrity.rebuildSnapshots", tier: "admin" },
+  startKeyframeCleanup: { rpc: "keyframes.startCleanup", tier: "admin" },
+  getKeyframeCleanup: { rpc: "keyframes.cleanupStatus", tier: "admin" },
+  cancelKeyframeCleanup: { rpc: "keyframes.cancelCleanup", tier: "admin" },
+  reclaimKeyframeSpace: { rpc: "keyframes.reclaim", tier: "admin" },
+  getKeyframeReclaim: { rpc: "keyframes.reclaimStatus", tier: "admin" },
   queryDb: { rpc: "db.query", tier: "sql" },
 } as const satisfies {
   readonly [

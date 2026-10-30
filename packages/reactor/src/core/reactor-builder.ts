@@ -38,6 +38,8 @@ import {
   type ICatchUpConsumer,
 } from "../catch-up/types.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
+import { KeyframeCleanupService } from "../admin/keyframe-cleanup-service.js";
+import type { IStoreMaintenance } from "../admin/keyframe-cleanup-types.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
 import {
   DEFAULT_KEYFRAME_RULE,
@@ -406,6 +408,7 @@ export class ReactorBuilder {
   private executorConfig: JobExecutorConfig = {};
   private writeCacheConfig?: Partial<WriteCacheConfig>;
   private keyframeSettings?: KeyframeSettings;
+  private storeMaintenance?: IStoreMaintenance;
   private migrationStrategy: MigrationStrategy = "auto";
   private unsupportedStoredDocuments: UnsupportedStoredDocuments = "refuse";
   private syncBuilder?: SyncBuilder;
@@ -544,6 +547,12 @@ export class ReactorBuilder {
    */
   withKeyframes(settings: KeyframeSettings): this {
     this.keyframeSettings = settings;
+    return this;
+  }
+
+  /** How a host that owns the store's connection rewrites a table of it. */
+  withStoreMaintenance(maintenance: IStoreMaintenance): this {
+    this.storeMaintenance = maintenance;
     return this;
   }
 
@@ -1528,6 +1537,13 @@ export class ReactorBuilder {
       catchUp.addConsumer(groupReevaluationTrigger, "host");
     }
 
+    const keyframeCleanup = new KeyframeCleanupService(database, {
+      schema: REACTOR_SCHEMA,
+      settings: this.resolveKeyframeSettings(),
+      priority: this.catchUpPriority,
+      maintenance: this.storeMaintenance,
+    });
+
     const module: InProcessReactorModule = {
       eventBus,
       documentModelRegistry,
@@ -1565,6 +1581,7 @@ export class ReactorBuilder {
         jobTracker,
         eventBus,
       ),
+      keyframeCleanup,
       storageFacts: { ...storageFacts },
       groupCommitStorage: groupCommit && {
         health: groupCommit.health,
@@ -1572,6 +1589,7 @@ export class ReactorBuilder {
       },
       shutdown: this.createShutdown(reactor, database),
     };
+    this.shutdownHooks.push(() => keyframeCleanup.shutdown());
 
     catchUp.start();
 

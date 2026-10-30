@@ -24,3 +24,4 @@ export {
   type RemoteInspectionTransportOptions,
 } from "./transport.js";
 export { unwiredRemoteClient, unwiredRemoteEventBus } from "./unwired.js";
+export { RemoteKeyframeLevers } from "./keyframe-levers.js";

@@ -57,6 +57,7 @@ export function createReactorInspector(
       module.documentView,
       module.documentModelRegistry,
     ),
+    keyframeCleanup: module.keyframeCleanup,
     storageHealth:
       options.storageHealth ?? groupCommitHealth(module.groupCommitStorage),
     documentModelRegistry: module.documentModelRegistry,

@@ -10,6 +10,10 @@ import type {
   ProcessorTimingLevel,
   ProcessorTimingRun,
 } from "@powerhousedao/shared/processors";
+import type {
+  KeyframeCleanupRun,
+  KeyframeReclaim,
+} from "../admin/keyframe-cleanup-types.js";
 import type { RebuildResult, ValidationResult } from "../admin/types.js";
 import type { CatchUpStatus, SweepResult } from "../catch-up/types.js";
 import type {
@@ -278,6 +282,20 @@ export interface IInspectorAdmin {
   writeHeapSnapshot(force?: boolean): Promise<string>;
   rebuildKeyframes(documentId: string, branch?: string): Promise<RebuildResult>;
   rebuildSnapshots(documentId: string, branch?: string): Promise<RebuildResult>;
+  /**
+   * Starts a keyframe clean-up and answers at once. A dry run only reports;
+   * otherwise it applies `keep` and removes the keyframes of deleted documents.
+   */
+  startKeyframeCleanup(options: {
+    dryRun: boolean;
+  }): Promise<KeyframeCleanupRun>;
+  /** The running or latest clean-up. */
+  getKeyframeCleanup(): Promise<KeyframeCleanupRun | null>;
+  cancelKeyframeCleanup(): Promise<void>;
+  /** Starts a rewrite of the `Keyframe` table, or says how to do it by hand. */
+  reclaimKeyframeSpace(): Promise<KeyframeReclaim>;
+  /** The running or latest reclaim. */
+  getKeyframeReclaim(): Promise<KeyframeReclaim | null>;
 }
 
 /** Raw SQL against the reactor's own store. */

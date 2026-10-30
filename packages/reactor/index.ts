@@ -707,6 +707,28 @@ export {
   type ReactorHostModuleBaseOptions,
 } from "./src/processors/host-module.js";
 export { DocumentIntegrityService } from "./src/admin/document-integrity-service.js";
+export { KEYFRAME_ADMIN_OPERATIONS } from "./src/admin/keyframe-admin-operations.js";
+export {
+  DEFAULT_KEYFRAME_CLEANUP_LIMITS,
+  KeyframeCleanupService,
+  type KeyframeCleanupLimits,
+  type KeyframeCleanupOptions,
+} from "./src/admin/keyframe-cleanup-service.js";
+export type {
+  IKeyframeCleanup,
+  IStoreMaintenance,
+  KeyframeCleanupReason,
+  KeyframeCleanupReasonReport,
+  KeyframeCleanupRun,
+  KeyframeCleanupState,
+  KeyframeCleanupStreamReport,
+  KeyframeCleanupTotals,
+  KeyframeCleanupTypeReport,
+  KeyframeReclaim,
+  KeyframeReclaimState,
+  TableRewriteRequest,
+  TableRewriteResult,
+} from "./src/admin/keyframe-cleanup-types.js";
 export type {
   IDocumentIntegrityService,
   KeyframeValidationIssue,

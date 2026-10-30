@@ -3,6 +3,11 @@ import type {
   ProcessorRerunOptions,
 } from "@powerhousedao/shared/processors";
 import type {
+  IKeyframeCleanup,
+  KeyframeCleanupRun,
+  KeyframeReclaim,
+} from "../admin/keyframe-cleanup-types.js";
+import type {
   IDocumentIntegrityService,
   RebuildResult,
   ValidationResult,
@@ -72,6 +77,7 @@ export type ReactorInspectorComponents = {
   processorTiming?: ProcessorTimingSettings;
   memoryTelemetry?: MemoryTelemetry;
   integrity?: IDocumentIntegrityService;
+  keyframeCleanup?: IKeyframeCleanup;
   storageHealth?: IInspectorStorageHealthProvider;
   documentModelRegistry?: IDocumentModelRegistry;
   /** A document model loader is wired; absent reads as false. */
@@ -124,6 +130,7 @@ const NO_CATCH_UP = "it was built without catch-up";
 const NO_INTEGRITY = "it has no document integrity service";
 const NO_PROCESSORS = "it was built without a processor manager";
 const NO_TELEMETRY = "it was built without memory telemetry";
+const NO_KEYFRAME_CLEANUP = "it has no keyframe clean-up";
 
 const noCatchUpPriority: CatchUpPriorityState = {
   mode: "dynamic",
@@ -448,5 +455,48 @@ export class ReactorInspector
       return Promise.reject(unsupported("Rebuilding snapshots", NO_INTEGRITY));
     }
     return integrity.rebuildSnapshots(documentId, branch);
+  }
+
+  startKeyframeCleanup(options: {
+    dryRun: boolean;
+  }): Promise<KeyframeCleanupRun> {
+    const cleanup = this.components.keyframeCleanup;
+    if (!cleanup) {
+      return Promise.reject(
+        unsupported("Cleaning up keyframes", NO_KEYFRAME_CLEANUP),
+      );
+    }
+    try {
+      return Promise.resolve(cleanup.start({ dryRun: options.dryRun }));
+    } catch (error) {
+      return Promise.reject(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    }
+  }
+
+  getKeyframeCleanup(): Promise<KeyframeCleanupRun | null> {
+    return Promise.resolve(this.components.keyframeCleanup?.status() ?? null);
+  }
+
+  cancelKeyframeCleanup(): Promise<void> {
+    this.components.keyframeCleanup?.cancel();
+    return Promise.resolve();
+  }
+
+  reclaimKeyframeSpace(): Promise<KeyframeReclaim> {
+    const cleanup = this.components.keyframeCleanup;
+    if (!cleanup) {
+      return Promise.reject(
+        unsupported("Reclaiming keyframe space", NO_KEYFRAME_CLEANUP),
+      );
+    }
+    return cleanup.reclaim();
+  }
+
+  getKeyframeReclaim(): Promise<KeyframeReclaim | null> {
+    return Promise.resolve(
+      this.components.keyframeCleanup?.reclaimStatus() ?? null,
+    );
   }
 }
