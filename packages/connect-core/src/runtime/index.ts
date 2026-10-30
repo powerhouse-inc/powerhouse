@@ -33,6 +33,7 @@ export {
   applyPlacementEntries,
   keepsLocalCopy,
   LOCAL_BACKEND_NAME,
+  localDrivePlacements,
   placementKeys,
   removeLocalCopies,
   resolveSwitchboardDrives,

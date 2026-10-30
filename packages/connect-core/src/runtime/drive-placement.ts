@@ -44,6 +44,18 @@ type PlacementConfig = {
   };
 };
 
+/** The config's local default drives, placed on this browser so a
+ * switchboard `newDrives` doesn't take them. */
+export function localDrivePlacements(
+  defaultDrives: readonly PHConnectRuntimeDefaultDrive[],
+): Record<string, string> {
+  return Object.fromEntries(
+    defaultDrives.flatMap((drive) =>
+      !("url" in drive) && drive.id ? [[drive.id, LOCAL_BACKEND_NAME]] : [],
+    ),
+  );
+}
+
 export function keepsLocalCopy(drive: PHConnectRuntimeDefaultDrive): boolean {
   return !("url" in drive) || drive.sync !== false;
 }
