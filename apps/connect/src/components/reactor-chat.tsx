@@ -1,63 +1,7 @@
-import { getPHStore } from "@powerhousedao/reactor-browser";
-import { reactorAdminTools } from "@powerhousedao/reactor-mcp/admin-tools";
-import { reactorTools, toMcpTool } from "@powerhousedao/reactor-mcp/tools";
-import type { IReactorClient } from "@powerhousedao/reactor";
-import {
-  ReactorChatFab,
-  createSwitchboardSchemaTool,
-  type AiToolDescriptor,
-} from "@powerhousedao/reactor-browser/ai";
-
-/**
- * Resolves the reactor tool descriptors for the chat agent from the
- * browser's live reactor client. Built lazily at send time so the reactor
- * (and its SharedWorker) do not need to be ready at render time.
- */
-function getReactorTools(): Promise<AiToolDescriptor[]> {
-  const ph = getPHStore();
-  // The typed global is the minimal browser-client contract; the runtime
-  // client (in-process or worker-backed) is always the full IReactorClient.
-  const client = ph?.reactorClient as IReactorClient | undefined;
-  if (!client) {
-    return Promise.reject(
-      new Error("The reactor client is not available yet. Try again shortly."),
-    );
-  }
-  const syncManager =
-    ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
-  // The agent acts as the user on their own reactor, so it gets the drive
-  // tools; none is read-only, so each call needs the user's approval.
-  const builtInTools: AiToolDescriptor[] = [
-    ...reactorTools().map((tool) => toMcpTool(tool, { client })),
-    ...reactorAdminTools({ syncManager, remoteDriveUrls: "*" }).map((tool) =>
-      toMcpTool(tool, { client }),
-    ),
-  ];
-  // Packages may contribute their own tools via the `aiTools` export
-  // (see DocumentModelLib.aiTools). Built-in tools win on name
-  // collisions; duplicates across packages keep the first.
-  const taken: Set<string> = new Set(builtInTools.map((tool) => tool.name));
-  const packageTools = (ph?.vetraPackageManager?.packages ?? []).flatMap(
-    (pkg) =>
-      (pkg.aiTools ?? []).filter((tool) => {
-        if (taken.has(tool.name)) {
-          console.warn(
-            `[Connect][AI] Package tool "${tool.name}" shadows an existing tool and was ignored.`,
-          );
-          return false;
-        }
-        taken.add(tool.name);
-        return true;
-      }),
-  );
-  return Promise.resolve([
-    ...builtInTools,
-    createSwitchboardSchemaTool(),
-    ...packageTools,
-  ]);
-}
+import { ReactorChatFab } from "@powerhousedao/reactor-browser/ai";
+import { getConnectReactorTools } from "../ai-tools.js";
 
 /** Connect's bottom-right AI chat FAB, bound to the browser reactor. */
 export function ConnectReactorChatFab() {
-  return <ReactorChatFab getTools={getReactorTools} />;
+  return <ReactorChatFab getTools={getConnectReactorTools} />;
 }
