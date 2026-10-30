@@ -146,19 +146,17 @@ export function registerAiRoutes(http: IHttpScope, deps: AiRoutesDeps): void {
   /** Keeps the provider's status; the body is rebuilt from its error message. */
   const upstreamFailure = async (upstream: Response, key: string) => {
     let message = `The AI provider answered HTTP ${upstream.status}.`;
-    let code = "upstream_error";
     try {
       const body = (await upstream.json()) as {
-        error?: { message?: unknown; code?: unknown };
+        error?: { message?: unknown };
       };
       if (typeof body.error?.message === "string") {
         message = redactSecrets(body.error.message, key);
       }
-      if (typeof body.error?.code === "string") code = body.error.code;
     } catch {
       // Not JSON: the status line above says as much as we can repeat.
     }
-    return errorResponse(upstream.status, message, code);
+    return errorResponse(upstream.status, message, "upstream_error");
   };
 
   const unreachable = (error: unknown, key: string | undefined) => {
