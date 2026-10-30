@@ -404,6 +404,22 @@ export const getResolvers = (
       secrets: (_parent: unknown, _args: unknown, ctx: Context) =>
         runtime.listSecrets(ctx),
       oauthRedirectUri: () => oauth?.callbackUrl ?? null,
+      // The decision startOAuth makes, for the redirect it would use; a host
+      // that cannot name that redirect signs in with no app.
+      oauthSignIn: async (
+        _parent: unknown,
+        args: { appId: string; redirectUri?: string | null },
+      ) => {
+        let redirectUri: string;
+        try {
+          redirectUri = redirectUriFor(oauth, args.redirectUri);
+        } catch {
+          return "NONE";
+        }
+        return (
+          await runtime.oauthSignInMode(args.appId, redirectUri)
+        ).toUpperCase();
+      },
       // The runner id apps record (folder-sync and integrations): the
       // machine, which processors can name too; they see no signing key.
       host: () => ({ id: `switchboard@${hostname()}`, label: hostname() }),
