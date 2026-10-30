@@ -1,3 +1,14 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor:** memory telemetry correlated with operations processed ([c8d0779075](https://github.com/powerhouse-inc/powerhouse/commit/c8d0779075))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.85 (2026-10-30)
 
 This was a version bump only for @powerhousedao/opentelemetry-instrumentation-reactor to align it with other projects, there were no code changes.

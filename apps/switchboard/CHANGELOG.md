@@ -1,3 +1,23 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-api:** rewrite one table through the PGlite maintenance lane ([ee99ab7edd](https://github.com/powerhouse-inc/powerhouse/commit/ee99ab7edd))
+- **switchboard:** read keyframe rules from the project config and PH_KEYFRAMES ([b5a9401c6c](https://github.com/powerhouse-inc/powerhouse/commit/b5a9401c6c))
+- **switchboard:** configure processor timing and memory telemetry ([f196cf8eb2](https://github.com/powerhouse-inc/powerhouse/commit/f196cf8eb2))
+- **reactor:** memory telemetry correlated with operations processed ([c8d0779075](https://github.com/powerhouse-inc/powerhouse/commit/c8d0779075))
+- **reactor:** per-processor timing, top 5 in the catch-up output ([ca20e898e4](https://github.com/powerhouse-inc/powerhouse/commit/ca20e898e4))
+- **switchboard:** add the AI gateway plugin ([e9a4cd0dc1](https://github.com/powerhouse-inc/powerhouse/commit/e9a4cd0dc1))
+
+### 🩹 Fixes
+
+- **switchboard:** take only the message from a provider's error ([ba02a57f3f](https://github.com/powerhouse-inc/powerhouse/commit/ba02a57f3f))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.85 (2026-10-30)
 
 ### 🚀 Features

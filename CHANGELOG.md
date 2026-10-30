@@ -1,3 +1,40 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor:** per-processor timing, top 5 in the catch-up output ([ca20e898e4](https://github.com/powerhouse-inc/powerhouse/commit/ca20e898e4))
+- **reactor:** keyframe interval and keep per document type ([2654f5df0b](https://github.com/powerhouse-inc/powerhouse/commit/2654f5df0b))
+- **reactor:** memory telemetry correlated with operations processed ([c8d0779075](https://github.com/powerhouse-inc/powerhouse/commit/c8d0779075))
+- **reactor:** prune a stream's keyframes on write ([cdb29fbedf](https://github.com/powerhouse-inc/powerhouse/commit/cdb29fbedf))
+- **reactor:** historical reads no longer write keyframes ([ccc2d2a873](https://github.com/powerhouse-inc/powerhouse/commit/ccc2d2a873))
+- **reactor:** keyframe clean-up with a dry run ([9be5cad060](https://github.com/powerhouse-inc/powerhouse/commit/9be5cad060))
+- **reactor-api:** rewrite one table through the PGlite maintenance lane ([ee99ab7edd](https://github.com/powerhouse-inc/powerhouse/commit/ee99ab7edd))
+- **reactor-browser:** an embeddable chat panel over a keyless gateway ([1c2a1d0a87](https://github.com/powerhouse-inc/powerhouse/commit/1c2a1d0a87))
+- **reactor-browser:** let the chat agent take up to 100 steps per message ([e701baf425](https://github.com/powerhouse-inc/powerhouse/commit/e701baf425))
+- **reactor-browser:** raise the chat agent's limit to 250 steps per message ([32b2edf2e4](https://github.com/powerhouse-inc/powerhouse/commit/32b2edf2e4))
+- **reactor-browser:** reach the attachment client outside React ([9200c244da](https://github.com/powerhouse-inc/powerhouse/commit/9200c244da))
+- **reactor-browser:** let chat tools show images and reach the chat's images ([dbb82ccf55](https://github.com/powerhouse-inc/powerhouse/commit/dbb82ccf55))
+- **switchboard:** add the AI gateway plugin ([e9a4cd0dc1](https://github.com/powerhouse-inc/powerhouse/commit/e9a4cd0dc1))
+- **switchboard:** configure processor timing and memory telemetry ([f196cf8eb2](https://github.com/powerhouse-inc/powerhouse/commit/f196cf8eb2))
+- **switchboard:** read keyframe rules from the project config and PH_KEYFRAMES ([b5a9401c6c](https://github.com/powerhouse-inc/powerhouse/commit/b5a9401c6c))
+
+### 🩹 Fixes
+
+- **connect:** offer the agent's tools on the store, not as a Connect import ([37d4a76d78](https://github.com/powerhouse-inc/powerhouse/commit/37d4a76d78))
+- **ph-cli:** keep telemetry out of a host file's switchboard config ([3fb678064b](https://github.com/powerhouse-inc/powerhouse/commit/3fb678064b))
+- **reactor:** shutdown does not wait for a reclaim to find a quiet store ([9f0df97e86](https://github.com/powerhouse-inc/powerhouse/commit/9f0df97e86))
+- **reactor-api:** abort a route's signal on disconnect, not when its body is read ([3936f6cd6a](https://github.com/powerhouse-inc/powerhouse/commit/3936f6cd6a))
+- **switchboard:** take only the message from a provider's error ([ba02a57f3f](https://github.com/powerhouse-inc/powerhouse/commit/ba02a57f3f))
+- **workflow:** a relay's token URL may resolve to private space (https) ([60d268e701](https://github.com/powerhouse-inc/powerhouse/commit/60d268e701))
+- **workflow:** relayed token requests may reach a private relay address ([#3351](https://github.com/powerhouse-inc/powerhouse/pull/3351))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Frank @froid1911
+- Frank Pfeift
+- Wouter Kampmann
+
 ## 6.2.3-dev.85 (2026-10-30)
 
 ### 🚀 Features

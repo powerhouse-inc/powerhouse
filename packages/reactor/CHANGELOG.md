@@ -1,3 +1,23 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor:** keyframe clean-up with a dry run ([9be5cad060](https://github.com/powerhouse-inc/powerhouse/commit/9be5cad060))
+- **reactor:** historical reads no longer write keyframes ([ccc2d2a873](https://github.com/powerhouse-inc/powerhouse/commit/ccc2d2a873))
+- **reactor:** prune a stream's keyframes on write ([cdb29fbedf](https://github.com/powerhouse-inc/powerhouse/commit/cdb29fbedf))
+- **reactor:** memory telemetry correlated with operations processed ([c8d0779075](https://github.com/powerhouse-inc/powerhouse/commit/c8d0779075))
+- **reactor:** keyframe interval and keep per document type ([2654f5df0b](https://github.com/powerhouse-inc/powerhouse/commit/2654f5df0b))
+- **reactor:** per-processor timing, top 5 in the catch-up output ([ca20e898e4](https://github.com/powerhouse-inc/powerhouse/commit/ca20e898e4))
+
+### 🩹 Fixes
+
+- **reactor:** shutdown does not wait for a reclaim to find a quiet store ([9f0df97e86](https://github.com/powerhouse-inc/powerhouse/commit/9f0df97e86))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.85 (2026-10-30)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

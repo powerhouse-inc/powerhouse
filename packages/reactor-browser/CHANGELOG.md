@@ -1,3 +1,22 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-browser:** let chat tools show images and reach the chat's images ([dbb82ccf55](https://github.com/powerhouse-inc/powerhouse/commit/dbb82ccf55))
+- **reactor-browser:** reach the attachment client outside React ([9200c244da](https://github.com/powerhouse-inc/powerhouse/commit/9200c244da))
+- **reactor-browser:** raise the chat agent's limit to 250 steps per message ([32b2edf2e4](https://github.com/powerhouse-inc/powerhouse/commit/32b2edf2e4))
+- **reactor-browser:** let the chat agent take up to 100 steps per message ([e701baf425](https://github.com/powerhouse-inc/powerhouse/commit/e701baf425))
+- **reactor-browser:** an embeddable chat panel over a keyless gateway ([1c2a1d0a87](https://github.com/powerhouse-inc/powerhouse/commit/1c2a1d0a87))
+
+### 🩹 Fixes
+
+- **connect:** offer the agent's tools on the store, not as a Connect import ([37d4a76d78](https://github.com/powerhouse-inc/powerhouse/commit/37d4a76d78))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.85 (2026-10-30)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

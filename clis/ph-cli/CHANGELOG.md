@@ -1,3 +1,22 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor:** keyframe clean-up with a dry run ([9be5cad060](https://github.com/powerhouse-inc/powerhouse/commit/9be5cad060))
+- **switchboard:** read keyframe rules from the project config and PH_KEYFRAMES ([b5a9401c6c](https://github.com/powerhouse-inc/powerhouse/commit/b5a9401c6c))
+- **switchboard:** configure processor timing and memory telemetry ([f196cf8eb2](https://github.com/powerhouse-inc/powerhouse/commit/f196cf8eb2))
+- **reactor:** memory telemetry correlated with operations processed ([c8d0779075](https://github.com/powerhouse-inc/powerhouse/commit/c8d0779075))
+- **reactor:** per-processor timing, top 5 in the catch-up output ([ca20e898e4](https://github.com/powerhouse-inc/powerhouse/commit/ca20e898e4))
+
+### 🩹 Fixes
+
+- **ph-cli:** keep telemetry out of a host file's switchboard config ([3fb678064b](https://github.com/powerhouse-inc/powerhouse/commit/3fb678064b))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.85 (2026-10-30)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

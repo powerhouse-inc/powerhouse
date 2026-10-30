@@ -1,3 +1,17 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-browser:** let chat tools show images and reach the chat's images ([dbb82ccf55](https://github.com/powerhouse-inc/powerhouse/commit/dbb82ccf55))
+- **reactor:** keyframe clean-up with a dry run ([9be5cad060](https://github.com/powerhouse-inc/powerhouse/commit/9be5cad060))
+- **switchboard:** read keyframe rules from the project config and PH_KEYFRAMES ([b5a9401c6c](https://github.com/powerhouse-inc/powerhouse/commit/b5a9401c6c))
+- **reactor:** per-processor timing, top 5 in the catch-up output ([ca20e898e4](https://github.com/powerhouse-inc/powerhouse/commit/ca20e898e4))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.85 (2026-10-30)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.

@@ -1,3 +1,14 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **switchboard:** configure processor timing and memory telemetry ([f196cf8eb2](https://github.com/powerhouse-inc/powerhouse/commit/f196cf8eb2))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.85 (2026-10-30)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.

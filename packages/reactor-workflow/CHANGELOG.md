@@ -1,3 +1,19 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor:** memory telemetry correlated with operations processed ([c8d0779075](https://github.com/powerhouse-inc/powerhouse/commit/c8d0779075))
+
+### 🩹 Fixes
+
+- **workflow:** a relay's token URL may resolve to private space (https) ([60d268e701](https://github.com/powerhouse-inc/powerhouse/commit/60d268e701))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Frank Pfeift
+- Wouter Kampmann
+
 ## 6.2.3-dev.85 (2026-10-30)
 
 ### 🚀 Features

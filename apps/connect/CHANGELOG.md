@@ -1,3 +1,18 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-browser:** an embeddable chat panel over a keyless gateway ([1c2a1d0a87](https://github.com/powerhouse-inc/powerhouse/commit/1c2a1d0a87))
+
+### 🩹 Fixes
+
+- **connect:** offer the agent's tools on the store, not as a Connect import ([37d4a76d78](https://github.com/powerhouse-inc/powerhouse/commit/37d4a76d78))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.85 (2026-10-30)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

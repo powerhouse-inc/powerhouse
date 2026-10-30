@@ -1,3 +1,21 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-api:** rewrite one table through the PGlite maintenance lane ([ee99ab7edd](https://github.com/powerhouse-inc/powerhouse/commit/ee99ab7edd))
+- **reactor:** keyframe clean-up with a dry run ([9be5cad060](https://github.com/powerhouse-inc/powerhouse/commit/9be5cad060))
+- **reactor:** memory telemetry correlated with operations processed ([c8d0779075](https://github.com/powerhouse-inc/powerhouse/commit/c8d0779075))
+- **reactor:** per-processor timing, top 5 in the catch-up output ([ca20e898e4](https://github.com/powerhouse-inc/powerhouse/commit/ca20e898e4))
+
+### 🩹 Fixes
+
+- **reactor-api:** abort a route's signal on disconnect, not when its body is read ([3936f6cd6a](https://github.com/powerhouse-inc/powerhouse/commit/3936f6cd6a))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.85 (2026-10-30)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
