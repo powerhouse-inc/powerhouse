@@ -567,6 +567,7 @@ const DRIVELESS_PLUGINS = [
   "/plugins/mcp",
   "/plugins/attachments",
   "/plugins/privacy",
+  "/plugins/ai",
 ];
 
 /**

@@ -319,6 +319,8 @@ export interface ComposeWorkflowRuntimeDeps {
   onSingletonLost?: (loss: WorkflowEngine.WorkflowSingletonLoss) => void;
 }
 
+type WorkflowRuntimeSecrets = WorkflowEngine.WorkflowRuntimeService["secrets"];
+
 export interface ComposedWorkflowRuntime {
   subgraph: SubgraphClass;
   /** Whether document operations reach the runtime at all; unavailable once
@@ -327,6 +329,8 @@ export interface ComposedWorkflowRuntime {
   /** The owner name this host holds the workflow singleton under; undefined
    * when the lease was not taken (a suite that opted out). */
   singletonOwner?: string;
+  /** The runtime's secret store, for host secrets its own surface never lists. */
+  secrets: WorkflowRuntimeSecrets;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -790,6 +794,7 @@ async function composeClaimed(
       return loss.lost ? SINGLETON_LOST : triggers;
     },
     ...(lease ? { singletonOwner: lease.owner } : {}),
+    secrets: () => runtime.secrets(),
 
     async start() {
       if (registration.tornDown) return;
