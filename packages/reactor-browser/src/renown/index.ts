@@ -17,6 +17,12 @@ export {
   type RenownSessionCookieState,
 } from "./use-renown-session.js";
 export { useRenown } from "../hooks/renown.js";
+export {
+  createDelegation,
+  decodeDelegation,
+  type DelegationClaims,
+  type DelegationScope,
+} from "@renown/sdk";
 export { Renown, type RenownProps } from "./renown-init.js";
 export { RenownProvider, type RenownProviderProps } from "./provider.js";
 export {

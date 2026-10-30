@@ -1,6 +1,6 @@
 import { getPHNavigation, setSearchParams } from "../hooks/navigation.js";
 import { getPHStore } from "../hooks/ph-store.js";
-import type { IRenown, User } from "@renown/sdk";
+import { consoleLogin, type IRenown, type User } from "@renown/sdk";
 import type { WalletSession } from "@renown/sdk/wallet";
 import { logger } from "document-model";
 import {
@@ -14,6 +14,41 @@ import {
   getWalletActivator,
 } from "./wallet-registry.js";
 
+/**
+ * What a desktop shell offers a page. Its one window cannot hold a popup, and a
+ * redirect away from it leaves the app; `openExternal` hands a URL to the
+ * system browser.
+ */
+export type DesktopShell = {
+  openExternal(url: string): void | Promise<void>;
+};
+
+function desktopShell(): DesktopShell | undefined {
+  if (typeof window === "undefined") return undefined;
+  return (window as Window & { phDesktop?: DesktopShell }).phDesktop;
+}
+
+// Signs in through the system browser. The app window stays where it is, and
+// Renown's console session tells it when the person has finished.
+async function signInThroughShell(
+  renown: IRenown,
+  renownUrl: string,
+  shell: DesktopShell,
+): Promise<void> {
+  try {
+    await consoleLogin(renown, {
+      renownUrl,
+      open: (url) => shell.openExternal(url),
+      onOpenFailed: (url) => {
+        logger.error("Could not open the sign-in page: @url", url);
+      },
+    });
+    notifyReactorClientCredentialsChanged();
+  } catch (error) {
+    logger.error(error instanceof Error ? error.message : String(error));
+  }
+}
+
 export function openRenown(documentId?: string) {
   const renown = getPHStore()?.renown;
   let renownUrl = renown?.baseUrl;
@@ -21,9 +56,20 @@ export function openRenown(documentId?: string) {
     logger.warn("Renown instance not found, falling back to: @url", RENOWN_URL);
     renownUrl = RENOWN_URL;
   }
+  const shell = desktopShell();
 
   if (documentId) {
-    window.open(`${renownUrl}/profile/${documentId}`, "_blank")?.focus();
+    const profile = `${renownUrl}/profile/${documentId}`;
+    if (shell) {
+      void shell.openExternal(profile);
+    } else {
+      window.open(profile, "_blank")?.focus();
+    }
+    return;
+  }
+
+  if (shell && renown) {
+    void signInThroughShell(renown, renownUrl, shell);
     return;
   }
 

@@ -1,4 +1,5 @@
 export * from "./common.js";
+export * from "./console-login.js";
 export * from "./credential.js";
 export * from "./crypto/node.js";
 export * from "./delegation.js";
