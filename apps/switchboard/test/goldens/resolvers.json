@@ -303,6 +303,7 @@
     "WorkflowRuntimeQueries.host",
     "WorkflowRuntimeQueries.oauthAttempt",
     "WorkflowRuntimeQueries.oauthRedirectUri",
+    "WorkflowRuntimeQueries.oauthSignIn",
     "WorkflowRuntimeQueries.pieceActions",
     "WorkflowRuntimeQueries.pieceCatalog",
     "WorkflowRuntimeQueries.pieceDetail",

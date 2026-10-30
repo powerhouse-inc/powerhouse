@@ -744,7 +744,7 @@ more trusted than one that arrived inside a package.
 
 ## OAuth2 connections
 
-An OAUTH2 connection brings its own app. `startOAuth` (`reactor/oauth.ts`)
+An OAUTH2 connection brings its own app, or names a publisher's (below). `startOAuth` (`reactor/oauth.ts`)
 builds the provider's authorize URL from the piece's `PieceAuth.OAuth2`
 (`{prop}` placeholders filled from the connection's config, PKCE when the
 piece asks for it) and records a pending attempt in the `oauth` namespace,
@@ -758,6 +758,62 @@ expires and rotates that secret in place.
 Token requests leave from the reactor process, so they are held to the egress
 policy pieces run under: `https` to a public address, or an address named in
 `PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES`, over `http` too.
+
+### Publisher apps and the relay
+
+A connection may instead name a publisher's app (`oauth_app` in its config),
+configured once per host in `workflows.oauthApps`:
+
+```json
+{
+  "id": "sektar-google",
+  "clients": { "desktop": "desktop.json", "web": "web.json" },
+  "relay": {
+    "clientId": "<the web client's id>",
+    "redirectUri": "https://sektar.io/api/oauth/callback",
+    "tokenUrl": "https://sektar.io/api/oauth/token"
+  }
+}
+```
+
+`clients` are the provider's client files (relative to the config file). A
+host may pass the same list programmatically (Switchboard's
+`workflows.oauthApps` option), which wins over the config file. `startOAuth`
+picks, for the redirect it is given (`oauthSignInFor` in
+`reactor/oauth-apps.ts`, also answered by the `oauthSignIn` query as
+`DESKTOP | WEB | RELAY | NONE`):
+
+- a loopback callback: the **desktop** client, always with PKCE;
+- any other callback: the **web** client when the host has its file, sending
+  the provider the host's own callback, exactly as without a relay;
+- any other callback, no web client file, a `relay`: the **relay**;
+- otherwise none, and `startOAuth` refuses.
+
+The relay is a token broker the publisher runs and that alone holds the web
+client's secret. Its one `redirectUri` is registered with the provider, so
+hosts whose own callback is not (a cloud environment per hostname) need no
+provider change. A relayed sign-in:
+
+- sends the provider `redirect_uri` = `relay.redirectUri`, `client_id` =
+  `relay.clientId`, PKCE whatever the piece says;
+- sets `state` to `<nonce>.<base64url(own callback)>`: the nonce is the usual
+  base64url of 32 random bytes (no dots), the callback the redirect the host
+  passed, base64url without padding. The relay forwards the provider's
+  parameters unchanged to that callback, which runs `completeOAuth` as ever;
+  the whole string is the attempt's key;
+- records the attempt with `relay.redirectUri` and `relay.tokenUrl` and no
+  client secret ref (`client_secret_ref` null);
+- exchanges the code at `relay.tokenUrl` with `client_id`, `code_verifier`
+  and `redirect_uri`, no secret; the broker adds it and answers with the
+  provider's token response;
+- stores the token set with `relayed: true`, its `token_url` the relay's: every
+  refresh posts `grant_type=refresh_token`, the refresh token and `client_id`
+  there, again without a secret, whatever the config says by then.
+
+A relay needs a `clientId` and two absolute `https` URLs without credentials;
+otherwise it is dropped with a warning and the app kept without it. The
+relay's token URL is held to the egress policy above, which a public `https`
+host passes.
 
 ## Files and attachments
 

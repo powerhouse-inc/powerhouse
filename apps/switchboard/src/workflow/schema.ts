@@ -160,6 +160,13 @@ export const schema: DocumentNode = gql`
     """
     oauthRedirectUri: String
     """
+    How startOAuth would sign in with the publisher's OAuth2 app appId (a
+    connection's oauth_app) on this host, so an editor can tell before it
+    opens one. redirectUri as for startOAuth. NONE for an app this host does
+    not know, or when it cannot name its callback.
+    """
+    oauthSignIn(appId: String!, redirectUri: String): OAuthSignInMode!
+    """
     The switchboard this runtime lives in: what an app records as the runner
     of the workflows and connections it sets up here.
     """
@@ -182,6 +189,20 @@ export const schema: DocumentNode = gql`
     "PENDING | EXCHANGING | OK | ERROR"
     status: String!
     error: String
+  }
+
+  """
+  How a host signs in with a publisher's OAuth2 app: DESKTOP, the app's
+  desktop client for a callback to this machine; WEB, its web client, whose
+  file this host has; RELAY, through the app's relay, which forwards the
+  provider's answer here and exchanges codes without this host holding the
+  secret; NONE, not at all.
+  """
+  enum OAuthSignInMode {
+    DESKTOP
+    WEB
+    RELAY
+    NONE
   }
 
   type OAuthStart {
