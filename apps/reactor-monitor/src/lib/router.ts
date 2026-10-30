@@ -9,6 +9,7 @@ import {
   type RoutableBackendConfig,
   type RoutingClientOptions,
 } from "@powerhousedao/reactor-router";
+import type { RemoteSettings } from "./route-seed.js";
 
 /** The bearer a remote handle's inspection headers carry, if any. */
 export async function bearerOf(
@@ -28,8 +29,12 @@ export type RouterBackendHandle = {
   readonly dispose: () => void;
 };
 
-// A remote routes over its switchboard's GraphQL, unsigned.
-export function routableBackend(reactor: ManagedReactor): RouterBackendHandle {
+// A remote routes over its switchboard's GraphQL, unsigned. Without
+// `settings` (a router built by hand), live updates stay off.
+export function routableBackend(
+  reactor: ManagedReactor,
+  settings?: RemoteSettings,
+): RouterBackendHandle {
   if (reactor.kind === "remote") {
     const backend = createSwitchboardBackend({
       name: reactor.name,
@@ -37,7 +42,11 @@ export function routableBackend(reactor: ManagedReactor): RouterBackendHandle {
       tokenProvider: () => bearerOf(reactor),
       signer: undefined,
       documentModels: () => [],
-      realtime: false,
+      realtime: settings?.realtime ?? false,
+      ...(settings?.requestTimeoutMs === undefined
+        ? {}
+        : { requestTimeoutMs: settings.requestTimeoutMs }),
+      ...(settings?.breaker === undefined ? {} : { breaker: settings.breaker }),
       ...(reactor.fetch ? { fetch: reactor.fetch } : {}),
     });
     return { config: backend.config, dispose: () => backend.dispose() };
@@ -64,8 +73,16 @@ export type BuiltRouter = {
 export function buildRoutingClient(
   reactors: readonly ManagedReactor[],
   options: RoutingClientOptions = {},
+  connections: Readonly<Record<string, RemoteSettings>> = {},
 ): BuiltRouter {
-  const handles = reactors.map(routableBackend);
+  const handles = reactors.map((reactor) =>
+    routableBackend(
+      reactor,
+      Object.hasOwn(connections, reactor.name)
+        ? connections[reactor.name]
+        : undefined,
+    ),
+  );
   const dispose = () => {
     for (const handle of handles) handle.dispose();
   };

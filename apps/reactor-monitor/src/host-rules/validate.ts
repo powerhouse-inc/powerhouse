@@ -1,5 +1,6 @@
 import { protocolEnv } from "@powerhousedao/host-core/projection";
 import {
+  CONNECT_PRIMARY_MESSAGE,
   refineStartOrder,
   type HostExport,
   type ReactorProtocol,
@@ -32,6 +33,7 @@ import {
 } from "./policy.ts";
 import { copyOnlyClashes, copyPortOverflow, portClashes } from "./ports.ts";
 import { reachRule } from "./reach.ts";
+import { ROUTER_REASONS } from "./router-settings.ts";
 import {
   hostRulesContextSchema,
   type HostDraft,
@@ -137,6 +139,13 @@ export function shapeWording(message: string): {
   message: string;
   hint?: string;
 } {
+  // host-core's Connect placement check names config keys.
+  if (message === CONNECT_PRIMARY_MESSAGE) {
+    return { message: ROUTER_REASONS.primary, hint: message };
+  }
+  if (/^This Connect keeps no reactor in the browser and links/.test(message)) {
+    return { message: ROUTER_REASONS.newDrives, hint: message };
+  }
   if (/^Unrecognized key/.test(message)) {
     return {
       message: "A host file can't contain this setting.",

@@ -29,6 +29,12 @@ export const GROUP_LABELS: Record<OptionGroup, string> = {
   reach: "Where this app keeps its drives",
   placement: "Where this drive opens",
   port: "Ports",
+  newDrives: "Where new drives go",
+  requestTimeout: "Waiting for an answer",
+  breaker: "When it stops answering",
+  realtime: "Live updates",
+  probeTimeout: "Asking each reactor for a document",
+  provisionalRoute: "Checking again where a document is",
 };
 
 export const DRIVES_COPY = {
@@ -42,7 +48,26 @@ export const DRIVES_COPY = {
   driveName: "Drive name",
   addButton: "Add drive",
   newDrives: "New drives are created in this browser.",
+  newDrivesHint:
+    "A drive created on a switchboard has no copy in this browser.",
   moveLater: "You can move drives in Router after starting.",
+} as const;
+
+export const CONNECTION_COPY = {
+  title: (switchboard: string) => `Connection to ${switchboard}`,
+  finding: "Finding documents",
+  probeHint:
+    "How long to wait for each reactor to say whether it has a document.",
+  provisionalHint:
+    "After a document is found on a switchboard, Connect checks again after this long in case it has moved.",
+  realtimeHint:
+    "Changes made elsewhere show without a reload. Off: they show on the next read. Drive sync is not affected.",
+} as const;
+
+export const ROUTE_COPY = {
+  browserReactor: "this app's browser reactor",
+  newDrivesUnreachable: (switchboard: string) =>
+    `New drives go to ${switchboard}, which the monitor can't reach, so drives can't be created through this router.`,
 } as const;
 
 export const RUN_COPY = {

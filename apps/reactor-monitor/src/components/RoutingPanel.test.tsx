@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { fireEvent, render, waitFor, within } from "@testing-library/react";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   ReactorMonitorRegistry,
   type ReactorDescriptor,
@@ -12,7 +12,22 @@ import type {
 } from "@powerhousedao/reactor-router";
 import { PLACEMENTS_STORAGE_KEY } from "../lib/placements.js";
 import type { RouteSeed } from "../lib/route-seed.js";
+import type * as RouterModule from "../lib/router.js";
 import { RoutingPanel, type RoutingPanelProps } from "./RoutingPanel.js";
+
+const builds = vi.hoisted(() => [] as unknown[][]);
+vi.mock("../lib/router.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof RouterModule>();
+  return {
+    ...actual,
+    buildRoutingClient: (
+      ...args: Parameters<typeof actual.buildRoutingClient>
+    ) => {
+      builds.push(args);
+      return actual.buildRoutingClient(...args);
+    },
+  };
+});
 
 function memoryStorage(): Pick<Storage, "getItem" | "setItem"> {
   const items = new Map<string, string>();
@@ -272,6 +287,9 @@ describe("RoutingPanel moves", () => {
       ],
       collections,
       drives: { [driveA]: "alpha" },
+      router: { defaultBackend: ALPHA, probeTimeoutMs: 3_000 },
+      connections: {},
+      settings: [],
     };
   }
 
@@ -511,5 +529,126 @@ describe("RoutingPanel moves", () => {
     await waitFor(() => expect(other.getByTestId("router-table")).toBeTruthy());
     expect(other.queryByTestId(`router-route-${driveA}`)).toBeNull();
     other.unmount();
+  }, 60_000);
+
+  it("builds a seeded router from the Connect's settings, and a manual one with the defaults", async () => {
+    builds.length = 0;
+    const seed: RouteSeed = {
+      ...seedOf("s-settings", {}),
+      router: {
+        defaultBackend: BETA,
+        probeTimeoutMs: 1_000,
+        provisionalRouteMs: 300_000,
+      },
+      connections: { [BETA]: { requestTimeoutMs: 120_000, breaker: false } },
+      settings: ["New drives: on sb", "Connection to sb: wait up to 2 min"],
+    };
+    const seeded = show({
+      setName: "settings",
+      storage: memoryStorage(),
+      seed,
+    });
+    await waitFor(
+      () => expect(seeded.getByTestId("router-table")).toBeTruthy(),
+      WAIT,
+    );
+    const [reactors, options, connections] = builds.at(-1) as [
+      { name: string }[],
+      Record<string, unknown>,
+      unknown,
+    ];
+    expect(reactors.map((reactor) => reactor.name)).toEqual([ALPHA, BETA]);
+    expect(options).toMatchObject({
+      defaultBackend: BETA,
+      probeTimeoutMs: 1_000,
+      provisionalRouteMs: 300_000,
+    });
+    expect(connections).toEqual(seed.connections);
+    // New drives go where the host config says, not by hash.
+    const results = new Set<string>();
+    for (const name of ["One", "Two", "Three"]) {
+      fireEvent.change(seeded.getByTestId("router-create-drive-name"), {
+        target: { value: name },
+      });
+      fireEvent.click(seeded.getByTestId("router-create-drive"));
+      await waitFor(() => {
+        const text =
+          seeded.queryByTestId("router-create-result")?.textContent ?? "";
+        expect(results.has(text)).toBe(false);
+        expect(text).toMatch(new RegExp(` on ${BETA}$`));
+        results.add(text);
+      }, WAIT);
+    }
+    const block = within(seeded.getByTestId("router-host-config"));
+    expect(block.getByText("From the host config")).toBeTruthy();
+    expect(
+      block.getAllByRole("listitem").map((item) => item.textContent),
+    ).toEqual(seed.settings);
+
+    // Rebuilt by hand, the router has none of those settings any more.
+    fireEvent.click(seeded.getByTestId("router-build"));
+    await waitFor(() =>
+      expect(seeded.queryByTestId("router-host-config")).toBeNull(),
+    );
+    expect(seeded.queryByTestId("router-seed")).toBeNull();
+    seeded.unmount();
+
+    const manual = show({
+      setName: "settings-manual",
+      storage: memoryStorage(),
+    });
+    fireEvent.click(manual.getByTestId(`router-backend-option-${ALPHA}`));
+    fireEvent.click(manual.getByTestId(`router-backend-option-${BETA}`));
+    fireEvent.click(manual.getByTestId("router-build"));
+    await waitFor(() =>
+      expect(manual.getByTestId("router-table")).toBeTruthy(),
+    );
+    const [, manualOptions, manualConnections] = builds.at(-1) as [
+      unknown,
+      Record<string, unknown>,
+      unknown,
+    ];
+    expect(Object.keys(manualOptions).sort()).toEqual([
+      "collections",
+      "onDiagnostic",
+      "requirements",
+    ]);
+    expect(manualConnections).toBeUndefined();
+    expect(manual.queryByTestId("router-host-config")).toBeNull();
+    manual.unmount();
+  }, 60_000);
+
+  it("refuses a create when new drives' switchboard isn't attached", async () => {
+    const blocked = "New drives go to far, which the monitor can't reach.";
+    const seed: RouteSeed = {
+      ...seedOf("s-blocked", {}),
+      router: {},
+      settings: ["New drives: on far", blocked],
+      newDrivesBlocked: blocked,
+    };
+    const view = show({ setName: "blocked", storage: memoryStorage(), seed });
+    await waitFor(
+      () => expect(view.getByTestId("router-table")).toBeTruthy(),
+      WAIT,
+    );
+    expect(view.getByTestId("router-create-blocked").textContent).toBe(blocked);
+    fireEvent.change(view.getByTestId("router-create-drive-name"), {
+      target: { value: "Nowhere" },
+    });
+    fireEvent.click(view.getByTestId("router-create-drive"));
+    await waitFor(() =>
+      expect(view.getByTestId("router-op-error").textContent).toBe(blocked),
+    );
+    expect(view.queryByTestId("router-create-result")).toBeNull();
+    for (const entry of registry.list()) {
+      if (entry.status !== "ready") continue;
+      const page = await entry.reactor.client.read.find({
+        type: "powerhouse/document-drive",
+      });
+      expect(page.results.map((drive) => drive.header.name)).not.toContain(
+        "Nowhere",
+      );
+    }
+    view.unmount();
   }, 60_000);
 });

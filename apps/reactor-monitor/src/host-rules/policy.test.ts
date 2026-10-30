@@ -30,6 +30,13 @@ const SETTABLE: [string, unknown][] = [
   ["reactor.namespace", "ns"],
   ["reactor.placement.primary", "main"],
   ["reactor.placement.drives.b", "sb"],
+  ["reactor.placement.newDrives", "sb"],
+  ["reactor.router.probeTimeoutMs", 1_000],
+  ["reactor.router.provisionalRouteMs", 300_000],
+  ["reactor.backends.sb.remote.requestTimeoutMs", 10_000],
+  ["reactor.backends.sb.remote.realtime", false],
+  ["reactor.backends.sb.remote.breaker", false],
+  ["reactor.backends.sb.remote.breaker", { failures: 3, openMs: 120_000 }],
   ["runner.port", 4001],
   ["runner.dev", true],
   ["reactor.backends.main.readModel.url", ".ph/read-storage"],
@@ -48,6 +55,7 @@ const DELETE_ONLY = [
   "reactor.backends.main.readModel",
   "reactor.backends.main.remote",
   "reactor.placement",
+  "reactor.router",
 ];
 
 function reason(setter: Setter): string | undefined {
