@@ -331,6 +331,39 @@ describe("checkHost: one issue per stage", () => {
     expect(result.issues).toEqual([]);
   });
 
+  it("declared: Connect refuses placement.primary, standalone and as a member", async () => {
+    const reactor = {
+      backends: {
+        main: { kind: "worker", storage: { kind: "idb" } },
+        sb: { kind: "remote", remote: { url: "http://127.0.0.1:1/d/inv" } },
+      },
+      placement: { primary: "sb" },
+    };
+    writeHost("invariants", "connect-primary", {
+      name: "inv-connect-primary",
+      runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+      reactor,
+    });
+    writeHost("invariants", "compound-connect-primary", {
+      name: "inv-compound-connect-primary",
+      runner: { module: "@powerhousedao/host-core/runners/compound" },
+      children: { app: { host: "connect", reactor } },
+    });
+    const at = async (host: string) =>
+      (await check("invariants", host)).issues.map((i) => [
+        i.stage,
+        i.path,
+        i.message,
+      ]);
+    const refused = [
+      "declared",
+      "reactor.placement.primary",
+      "Connect doesn't use placement.primary. To choose where new drives go, use placement.newDrives.",
+    ];
+    expect(await at("connect-primary")).toEqual([refused]);
+    expect(await at("compound-connect-primary")).toEqual([refused]);
+  });
+
   it("declared: a verb the runner does not export", async () => {
     const result = await check("invariants", "switchboard", { verb: "start" });
     expect(result.issues).toHaveLength(1);
