@@ -11,6 +11,7 @@ import {
   type IReadModelCoordinator,
 } from "@powerhousedao/reactor";
 import {
+  AuthorizationPolicy,
   BaseSubgraph,
   type CanonicalDocumentId,
   type GraphQLManager,
@@ -972,6 +973,69 @@ describe("a piece's index query through the host", () => {
       signer: { app: { key: "did:key:zHost" }, user: {} },
     } as unknown as InProcessReactorClientModule)(request, null);
     expect(sentUser(anonymous)).toBeUndefined();
+  });
+
+  describe("a caller the policy gives no rows", () => {
+    const adminOnly = (admins: string[]) => ({
+      config: {
+        admins,
+        defaultProtection: false,
+        policy: AuthorizationPolicy.ADMIN_ONLY,
+      },
+      isSupremeAdmin: (address?: string) =>
+        address !== undefined && admins.includes(address),
+    });
+    const runUser = {
+      address: "0xrun",
+      subject: { address: "0xrun", key: "did:key:zRun" },
+    };
+    const module = { signer } as unknown as InProcessReactorClientModule;
+
+    it("refuses a granter who is no longer an admin, rather than answer nothing", async () => {
+      const m = manager();
+      const result = await indexQueryFor(
+        m,
+        module,
+        adminOnly(["0xother"]),
+      )(request, runUser);
+      expect(m.executeSubgraph).not.toHaveBeenCalled();
+      expect(result.data).toBeNull();
+      expect(result.errors?.[0].message).toMatch(
+        /0xrun is not an admin of this host/,
+      );
+    });
+
+    it("refuses a run with nobody behind it", async () => {
+      const m = manager();
+      const anonymous = {
+        signer: { app: { key: "did:key:zHost" }, user: {} },
+      } as unknown as InProcessReactorClientModule;
+      const result = await indexQueryFor(
+        m,
+        anonymous,
+        adminOnly(["0xother"]),
+      )(request, null);
+      expect(m.executeSubgraph).not.toHaveBeenCalled();
+      expect(result.errors?.[0].message).toMatch(/no person behind it/);
+    });
+
+    it("lets an admin read", async () => {
+      const m = manager();
+      await indexQueryFor(m, module, adminOnly(["0xrun"]))(request, runUser);
+      expect(m.executeSubgraph).toHaveBeenCalledOnce();
+    });
+
+    it.each([
+      AuthorizationPolicy.OPEN,
+      AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+    ])("leaves %s to the index's own filter", async (policy) => {
+      const m = manager();
+      await indexQueryFor(m, module, {
+        ...adminOnly([]),
+        config: { admins: [], defaultProtection: false, policy },
+      })(request, runUser);
+      expect(m.executeSubgraph).toHaveBeenCalledOnce();
+    });
   });
 
   it("hands the subgraph's errors back as messages", async () => {

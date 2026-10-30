@@ -168,6 +168,7 @@ import { createSignaturePolicyFor } from "./create-signature-policy.mjs";
 import { workerPoolIssues } from "./boot-preconditions.mjs";
 import { renownLayers } from "./renown-layers.mjs";
 import {
+  getDelegationTrustPolicyConfig,
   getRenownSignerConfig,
   getRenownTrustPolicyConfig,
   initRenown,
@@ -943,7 +944,7 @@ async function initServer(
                 },
             renown,
           )
-        : undefined,
+        : getDelegationTrustPolicyConfig(renown),
     });
 
     // File sources give workers and workflow pieces importable paths for the
@@ -1253,6 +1254,7 @@ async function initServer(
       packageLoaders: packageLoaders.length > 0 ? packageLoaders : undefined,
       packages: packages,
       processorConfig: options.processorConfig,
+      ...(renown ? { hostSigner: renown.signer } : {}),
       processors: vetraProcessorFactory
         ? { "@powerhousedao/vetra": [vetraProcessorFactory] }
         : {},
@@ -1261,8 +1263,17 @@ async function initServer(
         basePath: config.server.basePath,
         gatewayAdapter: config.server.gatewayAdapter,
         publicUrl: config.server.publicUrl,
+        host: config.server.host,
       },
-      auth: authSectionOf(config.auth),
+      auth: {
+        ...authSectionOf(config.auth),
+        stateDir: resolvePhDir(
+          undefined,
+          config.storage.userDataDir
+            ? { PH_USER_DATA_DIR: config.storage.userDataDir }
+            : process.env,
+        ),
+      },
       attachments: { storage: config.attachments.storage },
       mcp: options.mcp ?? true,
       inspection:

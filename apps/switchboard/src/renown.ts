@@ -136,6 +136,28 @@ export function getRenownWorkerSignerSpec(
   };
 }
 
+/**
+ * What a host with `authEnforcement` off installs: a delegated signer is
+ * verified from what it carries, and every other signer is accepted as the
+ * default would. No lookup, so it needs no network, at boot or after.
+ */
+export function getDelegationTrustPolicyConfig(
+  renown: IRenown | null,
+): Pick<SignerConfig, "trustPolicy" | "workerTrustPolicy"> {
+  const ownSigner = renown?.signer;
+  const self = ownIdentity(renown);
+  return {
+    trustPolicy: createRenownTrustPolicy({ delegationOnly: true, ownSigner }),
+    workerTrustPolicy: {
+      module: {
+        filePath: createRequire(import.meta.url).resolve("@renown/sdk/node"),
+        exportName: "createRenownTrustPolicy",
+      },
+      initArgs: { delegationOnly: true, ...(self ? { self } : {}) },
+    },
+  };
+}
+
 /** Where switchboard reads the credentials binding keys to wallets. */
 export type RenownTrustSource =
   | { source: "remote"; renownUrl?: string; switchboardUrl?: string }

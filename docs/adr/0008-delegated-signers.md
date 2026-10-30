@@ -125,7 +125,8 @@ What this does not protect:
 element [3] names one. It makes no lookup in that case. Otherwise it behaves as today.
 
 `SignatureTrustPolicy.authorizeSigner` gains a fourth argument, `{ path, actionType }`. An older
-policy ignores it. The doc comment's cache rule becomes "(user, key, statement hash)".
+policy ignores it. A delegated verdict is not cached on (user, key), because it depends on the
+statement. The policy keeps no cache for it: verification is local and a publish is rare.
 
 ### 5. Verification without enforcement
 
@@ -213,7 +214,7 @@ logged in the app works offline.
   policy is `ADMIN_ONLY`.
 - **The first signed-in person becomes the owner.** `auth.ownerClaim` makes the first verified
   bearer on a host with no admins the admin, recorded in `<phDir>/.owner.json`. Nobody edits an env
-  file. It is off by default, and refused alongside a configured `ADMINS`.
+  file. It is off by default, and inert when `ADMINS` is set: a list someone wrote wins.
 - **The host binds loopback.** The switchboard gains a bind address, and the `desktop` host uses
   `127.0.0.1`. Otherwise anyone on the local network holding a Renown credential could claim the host
   first.
