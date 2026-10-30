@@ -1,3 +1,16 @@
+## 6.2.3-dev.84 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-workflow:** manual trigger inputs, validated and typed at fire time ([257944515f](https://github.com/powerhouse-inc/powerhouse/commit/257944515f))
+- **workflow:** sign in, exchange and refresh through an app's relay without its secret ([9759ae7e3e](https://github.com/powerhouse-inc/powerhouse/commit/9759ae7e3e))
+- **workflow:** a publisher OAuth2 app may name a token-broker relay ([d283343f9d](https://github.com/powerhouse-inc/powerhouse/commit/d283343f9d))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank Pfeift
+
 ## 6.2.3-dev.83 (2026-10-30)
 
 ### 🩹 Fixes

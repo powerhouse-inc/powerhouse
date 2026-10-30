@@ -1,3 +1,13 @@
+## 6.2.3-dev.84 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-workflow:** manual trigger inputs, validated and typed at fire time ([257944515f](https://github.com/powerhouse-inc/powerhouse/commit/257944515f))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.83 (2026-10-30)
 
 ### 🩹 Fixes

@@ -1,3 +1,14 @@
+## 6.2.3-dev.84 (2026-10-30)
+
+### 🚀 Features
+
+- **switchboard:** oauthSignIn tells how a sign-in with a publisher app would go ([d3e2c84321](https://github.com/powerhouse-inc/powerhouse/commit/d3e2c84321))
+- **switchboard:** read an OAuth2 app's relay from workflows.oauthApps ([f29bc5b5fa](https://github.com/powerhouse-inc/powerhouse/commit/f29bc5b5fa))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
 ## 6.2.3-dev.83 (2026-10-30)
 
 ### 🩹 Fixes
