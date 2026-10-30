@@ -490,27 +490,32 @@ describe("createMonitorController", () => {
   it("reports a SpawnHostError as failed, with its tail, until dismissed", async () => {
     const { controller, launches } = create();
     const started = await controller.start({ project: allowed, host: "sb" });
-    launches[0].options.onOutput?.("stderr", "boom\n");
+    launches[0].options.onOutput?.("stderr", "Port 4801 is already in use\n");
     launches[0].fail(
-      new SpawnHostError("spawnHost: ph run sb exited", "exited", "boom\n", {
-        code: 1,
-        signal: null,
-        forced: false,
-      }),
+      new SpawnHostError(
+        "spawnHost: ph run sb exited",
+        "exited",
+        "Port 4801 is already in use\n",
+        {
+          code: 1,
+          signal: null,
+          forced: false,
+        },
+      ),
     );
     await until(() => controller.get(started.id).status === "failed");
     expect(controller.get(started.id)).toMatchObject({
       error: {
-        message: "Stopped while starting: boom.",
+        message: "Stopped while starting: Port 4801 is already in use.",
         phase: "exited",
-        tail: "boom\n",
+        tail: "Port 4801 is already in use\n",
         context: "ph run sb exited",
       },
       exit: { code: 1 },
     });
     expect(existsSync(path.join(controller.tempRoot, started.id))).toBe(false);
     expect(controller.logs(started.id, 0).lines).toEqual([
-      { seq: 0, stream: "stderr", text: "boom" },
+      { seq: 0, stream: "stderr", text: "Port 4801 is already in use" },
     ]);
     expect((await controller.stop(started.id)).status).toBe("failed");
     expect(controller.list()).toEqual([]);

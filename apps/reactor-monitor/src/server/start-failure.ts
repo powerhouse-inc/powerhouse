@@ -33,17 +33,22 @@ function logLine(line: string): boolean {
   return /^\[|^\d{1,2}:\d{2}:\d{2}(?: [AP]M)? \[/.test(line);
 }
 
-/** A sentence ph run printed, not progress (`…`), a URL banner or a brace. */
-function plain(line: string): boolean {
+// Words a failure says; progress and status lines ("catch-up: … 0%") don't.
+const FAILURE_WORDS =
+  /\b(?:error|errors|fail(?:s|ed|ure)?|refused|denied|EADDRINUSE|EACCES|ENOENT|already in use|cannot|can't|could not|couldn't|unable to|not found|no such|invalid|missing|timed out)\b/i;
+
+/** A line saying what failed: not a log, progress or status line. */
+function failureLine(line: string): boolean {
   return (
     !logLine(line) &&
-    /[a-z]/i.test(line) &&
+    FAILURE_WORDS.test(line) &&
+    !/\d\s?%/.test(line) &&
     !/(?:\.\.\.|…)$/.test(line) &&
     !/^[➜{}[\]]/.test(line)
   );
 }
 
-/** The last line only: an uncaught error past its stack, else ph run's failure. */
+/** The last line only: an uncaught error past its stack, else a failure line. */
 export function failureReason(tail: string): string | undefined {
   const lines = tail
     .split("\n")
@@ -56,7 +61,9 @@ export function failureReason(tail: string): string | undefined {
   if (at < 0) return undefined;
   const error = ERROR_LINE.exec(lines[at]);
   if (error) return error[1];
-  return at === lines.length - 1 && plain(lines[at]) ? lines[at] : undefined;
+  return at === lines.length - 1 && failureLine(lines[at])
+    ? lines[at]
+    : undefined;
 }
 
 function sentence(text: string): string {

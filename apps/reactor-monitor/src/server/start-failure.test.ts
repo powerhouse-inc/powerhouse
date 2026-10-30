@@ -103,4 +103,27 @@ describe("startFailure", () => {
       "listen EADDRINUSE: address already in use :::16347",
     );
   });
+
+  it("never headlines a progress or status line, even as the last one", () => {
+    const catchUp = [
+      "[connect] composition plan (verb=run): 2 active of 2 declared",
+      "catch-up: reactor-drive-node-processor 0% · attachment-reference-read-model 0% · priority 2 dynamic",
+      "memory allocation of 160 bytes failed",
+      "skipping backtrace printing to avoid potential recursion",
+      "memory allocation of 64 bytes failed",
+    ].join("\n");
+    for (const tail of [
+      catchUp,
+      "Switchboard listening on 4001",
+      "drives: powerhouse, workflows",
+    ]) {
+      expect(failureReason(tail)).toBe(undefined);
+      expect(startFailure(exited(tail)).message).toBe(
+        "Stopped while starting: ph run cli exited (code 1) before writing its run record.",
+      );
+    }
+    expect(failureReason("hosts/cli could not be loaded: no host.js")).toBe(
+      "hosts/cli could not be loaded: no host.js",
+    );
+  });
 });
