@@ -668,6 +668,7 @@
     "Query.peerAgreement",
     "Query.pollSyncEnvelopes",
     "Query.syncHolds",
+    "Query.undoRedoTargets",
     "Subscription.documentChanges",
     "Subscription.documentChanges.subscribe",
     "Subscription.jobChanges",
