@@ -29,6 +29,18 @@ export {
   type MemberRole,
 } from "./members.js";
 export {
+  COPY_CONNECT_PORT_OFFSET,
+  copyOnlyClashes,
+  copyPortClashes,
+  copyPortOf,
+  copyPortOverflow,
+  fixedPortOf,
+  nextFreePort,
+  portClashes,
+  portClashMessage,
+  type PortClash,
+} from "./ports.js";
+export {
   addDriveStatus,
   applyOption,
   hostOptionList,

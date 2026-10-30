@@ -58,6 +58,9 @@ function option(draft: HostDraft, id: string) {
   return found;
 }
 
+const portIssues = (draft: HostDraft) =>
+  validateDraft(draft, FULL).issues.filter((issue) => issue.rule === "port");
+
 const ON = { enabled: true, selected: false };
 const SELECTED = { enabled: true, selected: true };
 const off = (reason: string) => ({ enabled: false, selected: false, reason });
@@ -400,6 +403,129 @@ describe("adding and removing reactors", () => {
       host: "connect",
       reactor: { backends: { main: { kind: "worker" } } },
     });
+  });
+
+  it("gives a second Connect of one folder the next free port", () => {
+    const draft = { envelope: hostExport("cli") };
+    const added = applyOption(draft, option(draft, "host:add:connect"));
+    expect(added.refused).toBeUndefined();
+    expect(validateDraft(added.draft, FULL).issues).toEqual([]);
+    const children = (
+      added.draft.envelope.host as { children: Record<string, unknown> }
+    ).children;
+    expect(children.connect).toMatchObject({
+      host: "connect",
+      runner: { port: 6492 },
+    });
+    const third = applyOption(
+      added.draft,
+      option(added.draft, "host:add:connect"),
+    );
+    expect(validateDraft(third.draft, FULL).issues).toEqual([]);
+    expect(
+      (third.draft.envelope.host as { children: Record<string, unknown> })
+        .children["connect-2"],
+    ).toMatchObject({ runner: { port: 6493 } });
+  });
+
+  it("offers to move a member off a port another one uses", () => {
+    const clash = {
+      envelope: withSetters(
+        { "host.children.connect": { host: "connect" } },
+        hostExport("cli"),
+      ),
+    };
+    expect(validateDraft(clash, FULL).issues).toEqual([
+      expect.objectContaining({
+        rule: "port",
+        path: "host.children.connect.runner.port",
+        message:
+          "cli-connect and connect both use port 6491. Give one of them another port.",
+      }),
+    ]);
+    const move = "host.children.connect:port:6492";
+    expect(statuses(clash)(move)).toEqual(ON);
+    expect(option(clash, move).label).toBe("Move connect to port 6492");
+    const moved = applyOption(clash, option(clash, move));
+    expect(moved.refused).toBeUndefined();
+    expect(validateDraft(moved.draft, FULL).issues).toEqual([]);
+    expect(
+      hostOptionList(moved.draft).filter((o) => o.group === "port"),
+    ).toEqual([]);
+  });
+
+  it("gives an added Connect a port that is free in the monitor's copy too", () => {
+    const token = withSetters(
+      { "members.connect.runner.port": { $env: "UI_PORT" } },
+      hostExport("cli"),
+    );
+    const tokenDraft = { envelope: token };
+    const added = applyOption(
+      tokenDraft,
+      option(tokenDraft, "host:add:connect"),
+    );
+    expect(
+      (added.draft.envelope.host as { children: Record<string, unknown> })
+        .children.connect,
+    ).toMatchObject({ runner: { port: 3001 } });
+    // A token port is a shape issue of its own; no port issue is added.
+    expect(portIssues(added.draft)).toEqual([]);
+
+    // An agent on 16492 holds the copy port of 6492, so the Connect skips it.
+    const cli = hostExport("cli");
+    const withAgent = {
+      ...cli,
+      members: {
+        ...cli.members,
+        agent: {
+          name: "agent",
+          runner: {
+            module: "@powerhousedao/clint/mastra-runner",
+            port: 16_492,
+          },
+        },
+      },
+    } as HostExport;
+    const agentDraft = {
+      envelope: withSetters(
+        { "host.children.agent": { host: "agent" } },
+        withAgent,
+      ),
+    };
+    const next = applyOption(
+      agentDraft,
+      option(agentDraft, "host:add:connect"),
+    );
+    expect(
+      (next.draft.envelope.host as { children: Record<string, unknown> })
+        .children.connect,
+    ).toMatchObject({ runner: { port: 6493 } });
+    expect(validateDraft(next.draft, FULL).issues).toEqual([]);
+  });
+
+  it("offers to move a Connect off a port its copy would share", () => {
+    const clash = {
+      envelope: withSetters(
+        {
+          "members.connect.runner.port": { $env: "UI_PORT" },
+          "host.children.connect": { host: "connect" },
+        },
+        hostExport("cli"),
+      ),
+    };
+    expect(
+      hostOptionList(clash, { controller: false }).filter(
+        (o) => o.group === "port",
+      ),
+    ).toEqual([]);
+    const move = "host.children.connect:port:3001";
+    expect(statuses(clash)(move)).toEqual(ON);
+    const moved = applyOption(
+      clash,
+      hostOptionList(clash, { controller: true }).find((o) => o.id === move)!,
+    );
+    expect(portIssues(clash)).toHaveLength(1);
+    expect(portIssues(moved.draft)).toEqual([]);
   });
 
   it("adds Connect and a browser reactor", () => {

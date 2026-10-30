@@ -31,6 +31,7 @@ import {
   isContainedPath,
   SETTINGS_ELSEWHERE,
 } from "./policy.ts";
+import { copyOnlyClashes, copyPortOverflow, portClashes } from "./ports.ts";
 import { reachRule } from "./reach.ts";
 import { ROUTER_REASONS } from "./router-settings.ts";
 import {
@@ -721,9 +722,6 @@ const DEFAULT_STORES = {
   readModel: ".ph/read-storage",
 } as const;
 
-/** The switchboard runner's port when the host names none. */
-const DEFAULT_SWITCHBOARD_PORT = 4001;
-
 type Store = {
   kind: "reactor" | "readModel";
   /** One spelling per place; see storeKey. */
@@ -819,13 +817,7 @@ function storeMessage(member: Member, other: Member, store: Store): string {
     : `${member.key} and ${other.key} would keep their search data in the same folder, which corrupts both. Give ${member.key} its own search data folder.`;
 }
 
-function portOf(member: Member): number | undefined {
-  const port = member.runner.port;
-  if (typeof port === "number") return port;
-  return member.role === "switchboard" ? DEFAULT_SWITCHBOARD_PORT : undefined;
-}
-
-/** Each switchboard needs its own store, search data folder and port. */
+/** Each switchboard needs its own store and search data folder. */
 function storesRule(members: Member[], env: HostEnv, report: Report): void {
   const switchboards = members.filter(
     (member) => member.role === "switchboard",
@@ -862,21 +854,25 @@ function storesRule(members: Member[], env: HostEnv, report: Report): void {
       );
     }
   }
-  const ports = new Map<number, Member>();
+}
+
+/** Two members can't bind one port: the second would fail to start. */
+function portRule(
+  members: Member[],
+  controller: boolean,
+  report: Report,
+): void {
+  const clashes = [
+    ...portClashes(members),
+    ...(controller ? copyOnlyClashes(members) : []),
+  ];
+  for (const { member, message } of clashes) {
+    report("port", `${member.path}.runner.port`, message);
+  }
+  if (!controller) return;
   for (const member of members) {
-    const port = portOf(member);
-    if (port === undefined || port === 0) continue;
-    const other = ports.get(port);
-    if (!other) {
-      ports.set(port, member);
-      continue;
-    }
-    if (member.role !== "switchboard" && other.role !== "switchboard") continue;
-    report(
-      "port",
-      `${member.path}.runner.port`,
-      `${member.key} and ${other.key} would both use port ${port}. Give ${member.key} its own port.`,
-    );
+    const overflow = copyPortOverflow(member);
+    if (overflow) report("port", `${member.path}.runner.port`, overflow);
   }
 }
 
@@ -910,6 +906,7 @@ export function validateDraft(
   ladderRule(members, env, report);
   storageRule(members, env, context, report);
   storesRule(members, env, report);
+  portRule(members, context.controller, report);
   configRule(members, env, report);
   workersRule(members, env, context, report);
   reachRule(members, (path, message) => report("reach", path, message));

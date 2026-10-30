@@ -196,7 +196,67 @@ describe("materialize", () => {
     const children = host.children as Record<string, Record<string, unknown>>;
     children.ui.runner = { port: 60_000 };
     expect(() => copyConnectPorts(envelope)).toThrow(
-      "ui uses port 60000, so a copy has no port for its Connect (70000 is too high). Give it a port below 55536.",
+      "ui uses port 60000, so the monitor's copy has no port for its Connect (70000 is too high). Give it a port below 55536.",
+    );
+  });
+
+  it("keeps distinct Connect ports distinct in the copy", () => {
+    const envelope = duo(source);
+    const host = envelope.host as unknown as Record<string, unknown>;
+    const children = host.children as Record<string, Record<string, unknown>>;
+    children.ui2 = { host: "ui" };
+    expect(copyConnectPorts(envelope)).toEqual([
+      { member: "ui", port: 13000 },
+      { member: "ui2", port: 13001 },
+    ]);
+    const { projectDir } = materialize(instanceDir, source, envelope);
+    expect(hostFile(projectDir, "duo")).toMatchObject({
+      children: {
+        ui: { runner: { port: 13000, strictPort: true } },
+        ui2: { runner: { port: 13001, strictPort: true } },
+      },
+    });
+  });
+
+  it("refuses two members that would bind one port in the copy", () => {
+    const envelope = duo(source);
+    const host = envelope.host as unknown as Record<string, unknown>;
+    const children = host.children as Record<string, Record<string, unknown>>;
+    children.ui2 = { host: "ui", runner: { port: 3000 } };
+    expect(() => copyConnectPorts(envelope)).toThrow(
+      "ui and ui2 would both use port 13000 when the monitor starts its copy: ui is on 3000, which the copy moves up by 10000; ui2 is on 3000, which the copy moves up by 10000. Give ui2 another port.",
+    );
+    expect(() => materialize(instanceDir, source, envelope)).toThrow(
+      MaterializeError,
+    );
+    expect(existsSync(instanceDir)).toBe(false);
+
+    const other = duo(source);
+    (other.members as Record<string, unknown>).agent = {
+      name: "agent",
+      runner: { module: "@powerhousedao/clint/mastra-runner", port: 13000 },
+    };
+    (
+      (other.host as unknown as Record<string, unknown>).children as Record<
+        string,
+        unknown
+      >
+    ).agent = { host: "agent" };
+    expect(() => copyConnectPorts(other)).toThrow(
+      "ui and agent would both use port 13000 when the monitor starts its copy: ui is on 3000, which the copy moves up by 10000; agent keeps port 13000. Give ui another port.",
+    );
+  });
+
+  it("refuses two Connects whose ports both come from a token", () => {
+    const envelope = duo(source);
+    const host = envelope.host as unknown as Record<string, unknown>;
+    const children = host.children as Record<string, Record<string, unknown>>;
+    delete children.ui.runner;
+    children.ui2 = { host: "ui" };
+    const ui = envelope.members.ui as unknown as Record<string, unknown>;
+    ui.runner = { ...(ui.runner as object), port: { $env: "UI_PORT" } };
+    expect(() => copyConnectPorts(envelope)).toThrow(
+      "ui and ui2 would both use port 13000 when the monitor starts its copy: ui takes its port from UI_PORT, which the copy doesn't read, so the copy starts it on 13000; ui2 takes its port from UI_PORT, which the copy doesn't read, so the copy starts it on 13000. Give ui2 another port.",
     );
   });
 
