@@ -208,6 +208,7 @@ export {
   type SignatureScheme,
   type SignatureVerificationHandler,
   type SignatureTrustPolicy,
+  type SignatureTrustContext,
   type SignatureVerificationMode,
   type SignerConfig,
 } from "./src/signer/types.js";

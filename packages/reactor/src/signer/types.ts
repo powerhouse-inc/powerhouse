@@ -45,18 +45,30 @@ export type SignerConfig = {
  * at different times and must reach the same verdict. Cache an acceptance and
  * never expire it.
  *
- * Key a cache on (`signer.user`, `key`) only. The reactor's own key signing as
- * its current user is accepted before the policy is asked, read live on every
- * ask, and never cached. Invalidate nothing when the local identity changes:
- * other users' verdicts do not depend on it. Without a policy, a signed write
- * is refused under `authEnforcement` and accepted otherwise.
+ * Key a cache on (`signer.user`, `key`) only, unless the verdict reads what
+ * `signer` carries beyond them: a delegated signer's verdict depends on its
+ * statement (ADR 0008). The reactor's own key signing as its current user is
+ * accepted before the policy is asked, read live on every ask, and never
+ * cached. Invalidate nothing when the local identity changes: other users'
+ * verdicts do not depend on it. Without a policy, a signed write is refused
+ * under `authEnforcement` and accepted otherwise.
+ *
+ * `context` tells a first write from a load. A check on `path` must only add
+ * to what load checks, so replicas still agree on what they store.
  */
 export type SignatureTrustPolicy = {
   authorizeSigner(
     signer: ActionSigner,
     key: string,
     documentId: string,
+    context: SignatureTrustContext,
   ): Promise<boolean>;
+};
+
+/** What admission knows of the write besides who signed it. */
+export type SignatureTrustContext = {
+  path: AdmissionPath;
+  actionType: string;
 };
 
 /** `log` counts refusals and admits anyway; `enforce` refuses. */
