@@ -174,6 +174,22 @@ describe("placeConnectDrives", () => {
     expect(placed.collections).toBeUndefined();
   });
 
+  it("skips a remote backend whose url is still an output token (a host build)", () => {
+    const token = { $output: "switchboard.drives.sektar.url" };
+    const unresolved = {
+      backends: {
+        sb: {
+          kind: "remote" as const,
+          remote: { url: token as unknown as string },
+        },
+      },
+    };
+    const drives = [remote("http://localhost:4001/d/b"), local("drive-a")];
+    expect(placeConnectDrives(unresolved, drives)).toEqual({
+      defaultDrives: drives,
+    });
+  });
+
   it("keeps no copy of a drive placed on its switchboard", () => {
     const placed = placeConnectDrives(
       { ...reactor, placement: { drives: { b: "sb", c: "main" } } },

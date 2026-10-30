@@ -141,12 +141,16 @@ export function remoteBackendUrls(
     .filter((u): u is string => typeof u === "string");
 }
 
-/** The remote backends by host key, placement order. */
+/**
+ * The remote backends by host key, placement order. A url that is not a
+ * string yet (an output token, unresolved when a host builds) is skipped, as
+ * in remoteBackendUrls.
+ */
 export function remoteBackends(
   reactor: ReactorConfig | undefined,
 ): { name: string; url: string }[] {
   return backendsToDescriptors(reactor).flatMap((d) =>
-    d.kind === "remote" && d.remote
+    d.kind === "remote" && typeof d.remote?.url === "string"
       ? [{ name: d.name, url: d.remote.url }]
       : [],
   );
