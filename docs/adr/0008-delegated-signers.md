@@ -219,7 +219,7 @@ logged in the app works offline.
   file. It is off by default, and inert when `ADMINS` is set: a list someone wrote wins.
 - **The host binds loopback.** The switchboard gains a bind address, and the `desktop` host uses
   `127.0.0.1`. Otherwise anyone on the local network holding a Renown credential could claim the host
-  first.
+  first. A host that sets `auth.ownerClaim` on any other bind refuses to boot.
 - **Credentials work offline.** `auth.offlineCredentials` keeps each verified credential in
   `<phDir>/.credentials.json`. When Renown does not answer, a kept credential whose proof verifies is
   accepted, whatever its date. A definite "revoked" removes it. Off by default, so a cloud host still
@@ -228,11 +228,11 @@ logged in the app works offline.
   lookups, `verifyAuthBearerToken` resolves `did:key` locally, and a browser `revalidate` that fails
   on the network keeps the session.
 - **Sign-in goes through the system browser where the shell offers it.** The webview cannot hold a
-  popup. `ph-desktop-shell` needs to expose an opener, `window.phDesktop.openExternal(url)`, and
-  that change is not made yet. With it, `openRenown` uses the same console session as `ph login`:
-  open `/console?session=…&connect=<A>`, poll, log in. The Google integration sign-in opens through
-  it too and polls as it already does. Without it, `openRenown` keeps the redirect, which returns to
-  the app's own URL, and the Google sign-in keeps its dead end.
+  popup. `ph-desktop-shell` exposes an opener, `window.phDesktop.openExternal(url)`, for `https`
+  pages only. With it, `openRenown` uses the same console session as `ph login`: open
+  `/console?session=…&connect=<A>`, poll, log in. The Google integration sign-in opens through it
+  too and polls as it already does. On a shell older than the opener, `openRenown` keeps the
+  redirect, which returns to the app's own URL, and the Google sign-in keeps its dead end.
 
 ### 12. Runner key
 
@@ -321,8 +321,8 @@ delegates, scoped agents.
 **Renown owner**
 1. May a session key delegate one level, given the wallet never sees it? Does a later credential need
    an explicit flag?
-2. Does `/console` accept a `connect` key from a webview's session and return to polling with CORS
-   open to `http://127.0.0.1`? `ph login` proves the page, not the browser origin.
+2. Does `/console` accept a `connect` key from a webview's session? `ph login` proves the page, not
+   that key. The polling route answers `Access-Control-Allow-Origin: *`, so a webview can read it.
 3. Will the REST credential endpoint distinguish revoked from expired? This ADR infers it from the
    carried `expirationDate`.
 
