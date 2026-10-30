@@ -48,6 +48,18 @@ const vacuumFullSchema = z.object({
   maxDeferMs: nonNegative.optional(),
 });
 
+const keyframeRuleSchema = z.strictObject({
+  interval: positiveInt.optional(),
+  /** Null keeps every keyframe. */
+  keep: positiveInt.nullable().optional(),
+});
+
+/** See `KeyframeSettings` in the reactor. */
+const keyframesSchema = z.strictObject({
+  default: keyframeRuleSchema.optional(),
+  types: z.record(z.string(), keyframeRuleSchema).optional(),
+});
+
 const storageSchema = z.object({
   /** Postgres URL or PGlite data dir; unset uses the default dir. */
   reactor: z.object({ url: z.string().min(1).optional() }).prefault({}),
@@ -66,6 +78,8 @@ const storageSchema = z.object({
     .prefault({}),
   migratePglite: z.boolean().default(false),
   forcePgVersion: z.union([z.literal(16), z.literal(17)]).optional(),
+  /** Unset: `reactor.keyframes` of the project config, then the built-in rule. */
+  keyframes: keyframesSchema.optional(),
 });
 
 const protocolSchema = z.object({

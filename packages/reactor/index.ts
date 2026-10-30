@@ -511,6 +511,14 @@ export type {
   WriteCacheConfig,
 } from "./src/cache/write-cache-types.js";
 export { type IWriteCache } from "./src/cache/write/interfaces.js";
+export {
+  DEFAULT_KEYFRAME_RULE,
+  parseKeyframeSettings,
+  resolveKeyframeRule,
+  type KeyframeRule,
+  type KeyframeRuleOverride,
+  type KeyframeSettings,
+} from "./src/storage/keyframes/keyframe-settings.js";
 
 // Migrations
 export {

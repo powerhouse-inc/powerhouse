@@ -72,6 +72,7 @@ describe("batched applies: keyframes", () => {
   ): Promise<number[]> {
     const keyframeStore: IKeyframeStore = {
       putKeyframe: vi.fn().mockResolvedValue(undefined),
+      putKeyframeAndPrune: vi.fn().mockResolvedValue(undefined),
       findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
       listKeyframes: vi.fn().mockResolvedValue([]),
       deleteKeyframes: vi.fn().mockResolvedValue(0),

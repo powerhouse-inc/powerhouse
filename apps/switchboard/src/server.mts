@@ -18,10 +18,12 @@ import {
   MemoryTelemetry,
   parseDriveUrl,
   ProcessorTimingSettings,
+  parseKeyframeSettings,
   type Database,
   type InProcessReactorClientModule,
   type InProcessReactorModule,
   type JwtHandler,
+  type KeyframeSettings,
   type PoolInstrumentation,
   type ReactorStorageFacts,
   UnsupportedStoredProtocolError,
@@ -310,6 +312,18 @@ function readConfigOAuthApps(
 
 // An unreadable config file means "not configured", not a boot failure:
 // workflows are opt-in.
+/** `PH_KEYFRAMES` (or a caller's layer) wins whole over the project config. */
+function resolveKeyframes(
+  configured: SwitchboardConfig["storage"]["keyframes"],
+  fromFile: unknown,
+  configPath: string,
+): KeyframeSettings | undefined {
+  if (configured) return configured;
+  return fromFile === undefined
+    ? undefined
+    : parseKeyframeSettings(fromFile, `${configPath} reactor.keyframes`);
+}
+
 function readConfigWorkflowsEnabled(configPath: string): boolean {
   try {
     return getConfig(configPath).workflows?.enabled ?? false;
@@ -836,6 +850,18 @@ async function initServer(
       .withCatchUpPriority(catchUpPriority)
       .withProcessorTiming(processorTiming)
       .withMemoryTelemetry(memoryTelemetry);
+
+    const keyframes = resolveKeyframes(
+      config.storage.keyframes,
+      fileConfig.reactor?.keyframes,
+      configPath,
+    );
+    if (keyframes) {
+      logger.info(
+        `Keyframes: default ${JSON.stringify(keyframes.default ?? {})}, ${Object.keys(keyframes.types ?? {}).length} document type(s) with their own rule`,
+      );
+      reactorBuilder.withKeyframes(keyframes);
+    }
 
     // Feeds `module.pools`, which ReactorInstrumentation reads to emit
     // reactor.db.pool.{acquire.wait_duration,size,idle,waiting}. Without this

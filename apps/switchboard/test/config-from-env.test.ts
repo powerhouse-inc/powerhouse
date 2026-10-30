@@ -17,6 +17,7 @@ import { resolveAttachmentUrlSigning } from "../src/attachments/url-signer.js";
 import { reactorDbUrlOf } from "../src/boot-preconditions.mjs";
 import { switchboardConfigFromEnv } from "../src/config/from-env.js";
 import {
+  mergeSwitchboardConfig,
   switchboardConfigSchema,
   type SwitchboardConfig,
 } from "../src/config/schema.js";
@@ -103,6 +104,7 @@ const KEYS = [
   "PH_MEMORY_TELEMETRY_WORKERS",
   "PH_MEMORY_TELEMETRY_WINDOW_MIN",
   "PH_HEAP_SNAPSHOT_DIR",
+  "PH_KEYFRAMES",
   "AUTH_ENABLED",
   "RESOLVE_CALLER_IDENTITY",
   "REQUIRE_AUTHENTICATED_CALLER",
@@ -881,5 +883,60 @@ describe("switchboardConfigFromEnv for the bin", () => {
       ),
     ).toThrowError("Invalid PH_DEFAULT_DRIVE_TYPE: x.");
     expect(switchboardConfigFromEnv(env, { logger: silent })).toEqual({});
+  });
+});
+
+describe("PH_KEYFRAMES", () => {
+  it("leaves keyframes unset without it", () => {
+    expect(switchboardConfigFromEnv({}).storage?.keyframes).toBeUndefined();
+    expect(
+      switchboardConfigFromEnv({ PH_KEYFRAMES: "  " }).storage?.keyframes,
+    ).toBeUndefined();
+  });
+
+  it("reads the rules", () => {
+    const rules = {
+      default: { interval: 10, keep: 4 },
+      types: { "a/b": { interval: 50, keep: 1 }, "a/c": { keep: null } },
+    };
+
+    const config = switchboardConfigFromEnv({
+      PH_KEYFRAMES: JSON.stringify(rules),
+    });
+
+    expect(config.storage?.keyframes).toEqual(rules);
+    expect(switchboardConfigSchema.parse(config).storage.keyframes).toEqual(
+      rules,
+    );
+  });
+
+  it("stops the boot on JSON it cannot read", () => {
+    expect(() =>
+      switchboardConfigFromEnv({ PH_KEYFRAMES: "{keep:1}" }),
+    ).toThrow("PH_KEYFRAMES is not valid JSON");
+  });
+
+  it("stops the boot on a rule it cannot use", () => {
+    expect(() =>
+      switchboardConfigFromEnv({
+        PH_KEYFRAMES: JSON.stringify({ default: { keep: 0 } }),
+      }),
+    ).toThrow("PH_KEYFRAMES.default.keep");
+  });
+
+  it("is replaced whole by a later layer", () => {
+    const merged = mergeSwitchboardConfig(
+      {
+        storage: {
+          keyframes: {
+            default: { keep: 4 },
+            types: { "a/b": { keep: 1 } },
+          },
+        },
+      },
+      { storage: { keyframes: { default: { keep: 2 } } } },
+    );
+
+    expect(merged.storage?.keyframes).toEqual({ default: { keep: 2 } });
   });
 });
