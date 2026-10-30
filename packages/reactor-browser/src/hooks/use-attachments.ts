@@ -18,6 +18,7 @@ import {
   toProgressState,
   type AttachmentProgressState,
 } from "./attachment-progress.js";
+import { getPHStore } from "./ph-store.js";
 
 /**
  * One client per service, shared across every component.
@@ -39,6 +40,12 @@ function clientFor(service: IAttachmentService): IAttachmentClient {
 /** Returns an IAttachmentClient wrapping the current IAttachmentService, or undefined if none is set. */
 export function useAttachments(): IAttachmentClient | undefined {
   const service = useAttachmentService();
+  return service ? clientFor(service) : undefined;
+}
+
+/** The client {@link useAttachments} returns, for code outside React. */
+export function getAttachmentClient(): IAttachmentClient | undefined {
+  const service = getPHStore()?.attachmentService;
   return service ? clientFor(service) : undefined;
 }
 
