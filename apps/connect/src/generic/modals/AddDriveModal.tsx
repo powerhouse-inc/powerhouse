@@ -2,6 +2,7 @@ import { toast } from "@powerhousedao/connect/services";
 import {
   newDriveError,
   NewDriveRefusedError,
+  newDrivesBlocked,
   NewDriveUnansweredError,
 } from "@powerhousedao/connect-core/runtime";
 import type {
@@ -40,6 +41,12 @@ export function AddDriveModal() {
   const packages = useVetraPackages();
   /** True when the switchboard refused the caller, so signing in may help. */
   const onAddLocalDrive = async (data: AppOptions): Promise<boolean> => {
+    const blocked = newDrivesBlocked();
+    if (blocked) {
+      console.error(blocked);
+      toast(blocked.message, { type: "connect-warning" });
+      return false;
+    }
     try {
       const app = appModules?.find((a) => a.config.id === data.id);
       const newDrive = await addDrive(
