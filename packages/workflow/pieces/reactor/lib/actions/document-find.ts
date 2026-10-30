@@ -67,6 +67,30 @@ export const documentFindAction = createAction({
   description: "Lists documents by type and name.",
   requireAuth: false,
   requireReactor: "read",
+  propertyGroups: [
+    {
+      key: "where",
+      display: "section",
+      label: "Which documents",
+      icon: "search",
+      props: ["documentType", "parentId", "name"],
+    },
+    {
+      key: "match",
+      display: "section",
+      label: "Match a state field",
+      description: "Only documents whose state holds this value.",
+      icon: "braces",
+      props: ["matchPath", "matchValue"],
+    },
+    {
+      key: "results",
+      display: "section",
+      label: "Results",
+      icon: "list",
+      props: ["includeState", "limit"],
+    },
+  ],
   props: {
     documentType: documentTypeProp("Document type", false, "Omit for any type"),
     parentId: driveProp("In drive", "Omit for the whole reactor"),
