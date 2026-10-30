@@ -1,4 +1,8 @@
 import { toast } from "@powerhousedao/connect/services";
+import {
+  newDriveError,
+  NewDriveUnansweredError,
+} from "@powerhousedao/connect-core/runtime";
 import type {
   AddRemoteDriveInput,
   AppOptions,
@@ -63,7 +67,11 @@ export function AddDriveModal() {
 
       setSelectedDrive(newDrive);
     } catch (e) {
-      console.error(e);
+      const failure = newDriveError(getFullReactorClient(), e);
+      console.error(failure);
+      if (failure instanceof NewDriveUnansweredError) {
+        toast(failure.message, { type: "connect-warning" });
+      }
     }
   };
 

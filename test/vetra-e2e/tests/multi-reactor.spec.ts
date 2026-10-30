@@ -28,6 +28,8 @@ type PhWindow = {
     }>;
     fullReactorClient?: {
       describeRouting(): { backends: string[]; collections: RoutingRow[] };
+      newDocument(type: string): Promise<{ header: { id: string } }>;
+      write: { create(document: unknown): Promise<unknown> };
       drives: { addFolder(driveId: string, name: string): Promise<unknown> };
     };
     reactorClientModule?: {
@@ -139,6 +141,7 @@ type Served = {
   mode: "router" | "remote";
   home: string;
   drives: Array<{ id: string; sync?: false }>;
+  newDrives?: "sb";
 };
 
 /** `served` is read per request, so a test can change it before a reload. */
@@ -152,11 +155,12 @@ async function serveRouted(page: Page, served: () => Served): Promise<void> {
     const config = (await response.json()) as {
       connect: Record<string, Record<string, unknown> | undefined>;
     };
-    const { mode, home, drives } = served();
+    const { mode, home, drives, newDrives } = served();
     config.connect.instance = {
       ...config.connect.instance,
       reactorClient: mode,
       remoteBackends: [{ name: "sb", url: `${SWITCHBOARD}/d/${home}` }],
+      ...(newDrives ? { router: { newDrives } } : {}),
     };
     config.connect.drives = {
       ...config.connect.drives,
@@ -170,6 +174,14 @@ async function serveRouted(page: Page, served: () => Served): Promise<void> {
     };
     await route.fulfill({ response, json: config });
   });
+}
+
+async function servedOnSwitchboard(id: string): Promise<boolean> {
+  const { documentServed } = await gql<{ documentServed: boolean }>(
+    `query($id: String!) { documentServed(idOrSlug: $id) }`,
+    { id },
+  );
+  return documentServed;
 }
 
 async function syncedDriveIds(page: Page): Promise<string[] | null> {
@@ -394,6 +406,32 @@ test.describe("Connect routed to a switchboard", () => {
       .poll(() => listedFolders(page, drive), { timeout: LONG_VISIBLE_TIMEOUT })
       .toContain("added-on-sb");
     expect(await listedFolders(page, drive)).not.toContain("stale-copy");
+  });
+
+  test("creates a new drive on the newDrives switchboard, with no copy in this browser", async ({
+    page,
+  }) => {
+    const home = await createSwitchboardDrive();
+    await serveRouted(page, () => ({
+      mode: "router",
+      home,
+      drives: [{ id: home }],
+      newDrives: "sb",
+    }));
+    await page.goto("/");
+    await waitForAppReady(page);
+    await routing(page);
+
+    const created = await page.evaluate(async () => {
+      const client = (window as unknown as PhWindow).ph!.fullReactorClient!;
+      const drive = await client.newDocument("powerhouse/document-drive");
+      await client.write.create(drive);
+      return drive.header.id;
+    });
+
+    expect(await servedOnSwitchboard(created)).toBe(true);
+    expect(await heldLocally(page, created)).toBe(false);
+    expect(await syncedDriveIds(page)).not.toContain(created);
   });
 
   test("runs with only the switchboard", async ({ page }) => {

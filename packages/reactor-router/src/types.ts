@@ -137,6 +137,13 @@ export type RoutingOptions = {
   readonly documents?: Readonly<Record<string, string>>;
   /** Answers what no collection owns. Defaults to the first backend. */
   readonly primaryBackend?: string;
+  /**
+   * Where a new collection goes when nothing places it: a create with no
+   * placement or route lands here while it is eligible and not excluded,
+   * and parentless create defaults are asked of it. Absent, new collections
+   * hash over the eligible backends and the primary answers create defaults.
+   */
+  readonly defaultBackend?: string;
   readonly misrouteAttempts?: number;
   /**
    * Bound on one ownership probe; a probe that does not answer in time

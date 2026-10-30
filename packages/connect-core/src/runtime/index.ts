@@ -28,10 +28,12 @@ export {
   relistAppDrives,
   selectAppReactorClient,
 } from "./app-reactor-client.js";
+export { NewDriveUnansweredError, newDriveError } from "./new-drive.js";
 export {
   applyPlacementEntries,
   keepsLocalCopy,
   LOCAL_BACKEND_NAME,
+  localDrivePlacements,
   placementKeys,
   removeLocalCopies,
   resolveSwitchboardDrives,

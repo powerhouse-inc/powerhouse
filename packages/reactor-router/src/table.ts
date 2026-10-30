@@ -159,6 +159,7 @@ export class RouterTable {
   private readonly jobs: BoundedMap;
   private readonly provisionalRouteMs: number;
   private readonly seeds = new Map<string, string>();
+  readonly defaultBackend: string | undefined;
 
   constructor(
     backends: readonly RouterBackend[],
@@ -195,6 +196,17 @@ export class RouterTable {
       overrides.set(key, backend);
     }
     this.configured = overrides;
+    if (
+      options.defaultBackend !== undefined &&
+      !byName.has(options.defaultBackend)
+    ) {
+      throw new UnknownBackendError(
+        options.defaultBackend,
+        [...byName.keys()],
+        "defaultBackend",
+      );
+    }
+    this.defaultBackend = options.defaultBackend;
 
     const requirements = new Map<string, CollectionRequirements>();
     for (const [key, input] of Object.entries(options.requirements ?? {})) {
@@ -251,7 +263,8 @@ export class RouterTable {
     );
   }
 
-  /** Correction, override, learned, hash; `excluded` backends are skipped. */
+  /** Correction, override, learned, the default backend, hash; `excluded`
+   * backends are skipped. */
   collectionRoute(
     collection: DriveCollectionId,
     excluded: ReadonlySet<string> = new Set(),
@@ -261,6 +274,21 @@ export class RouterTable {
       return known;
     }
     const requirements = this.requirementsFor(collection);
+    const fallback =
+      this.defaultBackend === undefined
+        ? undefined
+        : this.byName.get(this.defaultBackend);
+    if (
+      fallback !== undefined &&
+      !excluded.has(fallback.name) &&
+      this.isEligible(fallback, requirements)
+    ) {
+      return {
+        collectionId: collection.key,
+        backend: fallback.name,
+        source: "placed",
+      };
+    }
     const placed = placeCollection(collection, this.order, requirements);
     if (!excluded.has(placed.name)) {
       return {

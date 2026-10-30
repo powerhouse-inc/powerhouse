@@ -4,6 +4,7 @@ import {
   applyPlacementEntries,
   keepsLocalCopy,
   LOCAL_BACKEND_NAME,
+  localDrivePlacements,
   placementKeys,
   removeLocalCopies,
   resolveSwitchboardDrives,
@@ -84,6 +85,18 @@ describe("keepsLocalCopy", () => {
     expect(keepsLocalCopy({ url: "http://h/d/b", sync: true })).toBe(true);
     expect(keepsLocalCopy({ url: "http://h/d/b" })).toBe(true);
     expect(keepsLocalCopy({ local: true, id: "a" })).toBe(true);
+  });
+});
+
+describe("localDrivePlacements", () => {
+  it("places each local default drive with an id on this browser", () => {
+    expect(
+      localDrivePlacements([
+        { local: true, id: "a" },
+        { url: "http://h/d/b" },
+        { local: true, id: "" },
+      ]),
+    ).toEqual({ a: LOCAL_BACKEND_NAME });
   });
 });
 
