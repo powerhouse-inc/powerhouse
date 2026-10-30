@@ -163,14 +163,17 @@ export interface ConnectRouterSettings {
   provisionalRouteMs?: number;
 }
 
+/** Served only when `newDrives` names a served remote backend: a local one
+ * is the default, and Connect refuses one it has no address for. */
 function connectRouterSettings(
   reactor: ReactorConfig | undefined,
+  served: readonly ServedRemoteBackend[],
 ): ConnectRouterSettings | undefined {
   const newDrives = reactor?.placement?.newDrives;
   const { probeTimeoutMs, provisionalRouteMs } = reactor?.router ?? {};
   const router: ConnectRouterSettings = {
     ...(newDrives !== undefined &&
-    reactor?.backends?.[newDrives]?.kind === "remote"
+    served.some((remote) => remote.name === newDrives)
       ? { newDrives }
       : {}),
     ...(probeTimeoutMs !== undefined ? { probeTimeoutMs } : {}),
@@ -206,11 +209,12 @@ export function projectReactorToConnect(
   const mode = reactorClientMode(reactor);
   if (mode !== undefined) {
     const routed = mode === "router" || mode === "remote";
-    const router = routed ? connectRouterSettings(reactor) : undefined;
+    const served = routed ? remoteBackends(reactor) : [];
+    const router = routed ? connectRouterSettings(reactor, served) : undefined;
     connect.instance = {
       reactorWorker: browserBackend(reactor)?.kind === "worker",
       reactorClient: mode,
-      ...(routed ? { remoteBackends: remoteBackends(reactor) } : {}),
+      ...(routed ? { remoteBackends: served } : {}),
       ...(router ? { router } : {}),
     };
   }
