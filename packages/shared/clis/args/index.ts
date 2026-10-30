@@ -7,6 +7,7 @@ export * from "./host.js";
 export * from "./init.js";
 export * from "./inspect.js";
 export * from "./install.js";
+export * from "./keyframes.js";
 export * from "./list.js";
 export * from "./login.js";
 export * from "./mcp.js";

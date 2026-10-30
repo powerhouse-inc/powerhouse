@@ -15,6 +15,24 @@ import {
 } from "../connect/schema-fragments.js";
 import { LOG_LEVELS } from "./constants.js";
 
+const keyframeRuleSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    interval: {
+      type: "integer",
+      minimum: 1,
+      description: "Write a keyframe every N revisions.",
+    },
+    keep: {
+      type: ["integer", "null"],
+      minimum: 1,
+      description:
+        "Keyframes kept per document stream, newest first; null keeps them all.",
+    },
+  },
+} as const;
+
 export const SOURCE_CONFIG_SCHEMA_ID =
   "https://powerhouse.inc/schemas/powerhouse.source.json";
 
@@ -122,6 +140,23 @@ export const sourceConfigSchema = {
             postgresUrl: {
               type: "string",
               description: "Required when `type: postgres`.",
+            },
+          },
+        },
+        keyframes: {
+          type: "object",
+          additionalProperties: false,
+          description:
+            "How many keyframes a document stream keeps and how often one is written. Without this block: a keyframe every 10 revisions, all kept. `PH_KEYFRAMES` overrides it.",
+          properties: {
+            default: {
+              ...keyframeRuleSchema,
+              description: "The rule for every type `types` does not name.",
+            },
+            types: {
+              type: "object",
+              description: "Rules by exact document type, over `default`.",
+              additionalProperties: keyframeRuleSchema,
             },
           },
         },

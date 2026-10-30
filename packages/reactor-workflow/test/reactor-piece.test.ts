@@ -37,7 +37,10 @@ import {
   type LocalPiece,
   type PackagePiece,
 } from "../src/pieces/index.js";
-import { ReactorAccessDeniedError } from "../src/reactor/reactor-errors.js";
+import {
+  ReactorAccessDeniedError,
+  ReactorActionsFailedError,
+} from "../src/reactor/reactor-errors.js";
 import type { StepTestResult } from "../src/reactor/step-test.js";
 import { packagePieces } from "../src/reactor/piece-registry.js";
 import { REACTOR_PIECE } from "../src/reactor/reactor-piece.js";
@@ -373,6 +376,26 @@ describe.skipIf(!workflowRoot)("the reactor piece", () => {
     expect(result.error).toMatch(/not allowed here: SET_CONNECTION_NAME/);
     const stored = await publisher.get<ConnectionDocument>(target);
     expect(stored.state.global.name).toBe("Guarded");
+  }, 60_000);
+
+  it("fails a dispatch whose action the reducer rejects", async () => {
+    const target = await connection("Kept");
+
+    const result = await testStep("document-dispatch", {
+      documentId: target,
+      actions: [
+        {
+          type: "SET_CONNECTOR",
+          input: { connectorId: "acme", authType: "REACTOR" },
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      status: "FAILED",
+      errorName: ReactorActionsFailedError,
+    });
+    expect(result.error).toContain("Action SET_CONNECTOR failed");
   }, 60_000);
 
   it("journals a write over a read-only connection as a denial", async () => {

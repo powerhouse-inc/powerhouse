@@ -1,4 +1,7 @@
-import { DOCUMENT_REF_KEY } from "@powerhousedao/pieces-framework/workflow";
+import {
+  DOCUMENT_REF_KEY,
+  parseManualInputs,
+} from "@powerhousedao/pieces-framework/workflow";
 import { describe, expect, it } from "vitest";
 import {
   documentEventTree,
@@ -7,6 +10,7 @@ import {
   fieldsFromSdl,
   fromOutputSchema,
   fromSample,
+  manualTriggerTree,
 } from "./output-tree.js";
 
 const SDL = `
@@ -287,5 +291,29 @@ describe("fromSample with document references", () => {
     expect(nodes[1]?.children?.[0]?.children).toEqual([
       { name: "title", type: "String! (acme/ticket)" },
     ]);
+  });
+});
+
+describe("manualTriggerTree", () => {
+  it("types each declared input by its field type", () => {
+    const inputs = parseManualInputs({
+      inputs: [
+        { name: "count", displayName: "Count", type: "number", required: true },
+        { name: "on", displayName: "On", type: "toggle" },
+        { name: "pick", displayName: "Pick", type: "dropdown", options: "a" },
+        { name: "due", displayName: "Due", type: "date", description: "By" },
+        { name: "meta", displayName: "Meta", type: "json" },
+        { name: "", displayName: "Nameless", type: "text" },
+        { name: "odd", displayName: "Odd", type: "colour" },
+      ],
+    });
+    expect(manualTriggerTree(inputs)).toEqual([
+      { name: "count", type: "Float!" },
+      { name: "on", type: "Boolean" },
+      { name: "pick", type: "String" },
+      { name: "due", type: "DateTime", description: "By" },
+      { name: "meta", type: "JSON" },
+    ]);
+    expect(manualTriggerTree(parseManualInputs({}))).toEqual([]);
   });
 });

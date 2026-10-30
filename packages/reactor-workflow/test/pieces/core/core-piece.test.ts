@@ -350,7 +350,7 @@ describe("the core piece through the runtime", () => {
     const core = catalog.find((entry) => entry.name === CORE_PIECE_NAME);
     expect(core).toMatchObject({
       version: CORE_PIECE_VERSION,
-      actionCount: 2,
+      actionCount: 6,
       triggerCount: 3,
     });
     const actions = await runtime.pieceActions(CORE_PIECE_NAME);
@@ -359,6 +359,10 @@ describe("the core piece through the runtime", () => {
     expect(actions.actions.map((action) => action.name)).toEqual([
       "branch",
       "assert",
+      "delay",
+      "approval",
+      "stop",
+      "waitForWebhook",
     ]);
     expect(triggers.triggers.map((trigger) => trigger.name)).toEqual([
       "schedule",
@@ -402,5 +406,28 @@ describe("the core piece through the runtime", () => {
     await expect(
       runtime.blockOptions(block("action", "branch"), "operator"),
     ).rejects.toThrow("has no options to resolve");
+  });
+
+  it.each([
+    ["stop", ["error"], ["response"]],
+    ["waitForWebhook", ["next", "error"], ["body", "headers", "queryParams"]],
+    ["delay", ["next", "error"], ["resumedAt"]],
+    [
+      "approval",
+      ["next", "error"],
+      ["approved", "reason", "decidedBy", "decidedAt"],
+    ],
+  ])("declares %s's ports and output", async (name, ports, outputs) => {
+    const action = describeBuiltinPiece(
+      builtinPiece(CORE_PIECE_NAME)!,
+    ).actions.find((entry) => entry.name === name);
+    expect(action?.ports).toEqual(ports);
+    const tree = await runtime.blockOutputTree({
+      pieceName: CORE_PIECE_NAME,
+      pieceVersion: CORE_PIECE_VERSION,
+      kind: "action",
+      name,
+    });
+    expect(tree.nodes.map((node) => node.name)).toEqual(outputs);
   });
 });

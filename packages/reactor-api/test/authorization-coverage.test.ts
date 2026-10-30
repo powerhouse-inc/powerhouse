@@ -82,6 +82,8 @@ const EXEMPT: Record<string, Record<string, string>> = {
       "Serves every caller (gate-4 D4.2); storage facts, not document content. access is redacted for non-admins.",
     "ReactorInspection.documentModels":
       "Document model metadata, as reactor's Query.documentModels.",
+    "ReactorInspection.loadsModelsOnDemand":
+      "Whether a model loader is wired; a host fact, not document content.",
   },
   "document-model": {
     "Query.DocumentModel": "Namespace stub resolver; returns an empty object.",

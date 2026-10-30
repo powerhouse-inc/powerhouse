@@ -106,6 +106,9 @@ interface BlockEntryDescriptor {
   propertyGroups?: PropertyGroup[];
   classification?: string;
   errorHandlingOptions?: ErrorHandlingDefaults;
+  // Actions only.
+  defaultTimeoutSeconds?: number;
+  defaultRetry?: { maxAttempts?: number };
 }
 
 interface BlockDescriptorResult {
@@ -126,6 +129,20 @@ export function blockInput(block: BlockRef) {
     pieceVersion: block.pieceVersion,
     name: block.name,
     kind: block.kind,
+  };
+}
+
+function actionDefaultsOf(
+  entry: BlockEntryDescriptor,
+): Pick<BlockForm, "actionDefaults"> {
+  const timeoutSeconds = entry.defaultTimeoutSeconds;
+  const retryAttempts = entry.defaultRetry?.maxAttempts;
+  if (timeoutSeconds === undefined && retryAttempts === undefined) return {};
+  return {
+    actionDefaults: {
+      ...(timeoutSeconds !== undefined ? { timeoutSeconds } : {}),
+      ...(retryAttempts !== undefined ? { retryAttempts } : {}),
+    },
   };
 }
 
@@ -186,6 +203,7 @@ export function getBlockForm(
         ...(entry.errorHandlingOptions
           ? { errorHandling: entry.errorHandlingOptions }
           : {}),
+        ...actionDefaultsOf(entry),
       };
     });
 }
@@ -568,25 +586,32 @@ export async function fetchOAuthAttempt(
 export interface SecretStat {
   ref: string;
   label: string | null;
+  // Null for a secret minted before secrets had owners.
+  ownerId: string | null;
+  // Whether this caller may rotate or delete it; else a save mints a new one.
+  manageable: boolean;
   version: number;
   status: "ACTIVE" | "DELETED";
   createdAt: string;
   updatedAt: string;
 }
 
-const SECRET_FIELDS = "ref label version status createdAt updatedAt";
+const SECRET_FIELDS =
+  "ref label ownerId manageable version status createdAt updatedAt";
 
-// Mints a managed secret; only the returned ref ever enters a document.
+// Mints a secret for the connection or workflow documentId; only that
+// document resolves it, and only the returned ref ever enters it.
 export async function createSecret(
   t: Transport,
+  documentId: string,
   value: string,
   label?: string,
 ): Promise<SecretStat> {
   const data = await t.gql<{ workflowRuntime: { createSecret: SecretStat } }>(
-    `mutation CreateSecret($value: String!, $label: String) {
-      workflowRuntime { createSecret(value: $value, label: $label) { ${SECRET_FIELDS} } }
+    `mutation CreateSecret($value: String!, $label: String, $documentId: String!) {
+      workflowRuntime { createSecret(value: $value, label: $label, documentId: $documentId) { ${SECRET_FIELDS} } }
     }`,
-    { value, label: label ?? null },
+    { value, label: label ?? null, documentId },
   );
   return data.workflowRuntime.createSecret;
 }
@@ -822,7 +847,44 @@ export interface RunRecord {
   // Why a finished run is not a plain success, e.g. an edge nothing takes.
   warningNotes: string[];
   steps: RunStepRecord[];
+  // Read by fetchRun and fetchWaitingRuns; listings leave them out.
+  waitpoints?: WaitpointRecord[];
 }
+
+export interface ApprovalRequest {
+  title: string;
+  // Markdown.
+  body: string | null;
+  approveLabel: string;
+  rejectLabel: string;
+  reasonRequiredOn: "none" | "reject" | "both";
+  // DIDs allowed to decide; empty means anyone with write access.
+  approvers: string[];
+}
+
+export interface WaitpointRecord {
+  id: string;
+  runId: string;
+  workflowId: string;
+  stepId: string;
+  stepKey: string;
+  stepPath: string;
+  pieceName: string;
+  blockName: string;
+  type: "DELAY" | "WEBHOOK";
+  kind: "approval" | "webhook" | "delay";
+  status: "PENDING" | "COMPLETED" | "CONSUMED" | "EXPIRED" | "CANCELLED";
+  createdAt: string;
+  resumeAt: string | null;
+  expiresAt: string | null;
+  resolvedAt: string | null;
+  decidedBy: string | null;
+  approval: ApprovalRequest | null;
+}
+
+const WAITPOINT_FIELDS = `id runId workflowId stepId stepKey stepPath pieceName
+  blockName type kind status createdAt resumeAt expiresAt resolvedAt decidedBy
+  approval { title body approveLabel rejectLabel reasonRequiredOn approvers }`;
 
 const RUN_ROW_FIELDS = `id workflowId workflowName workflowVersion triggerKind
   triggerPayload status error errorName startedAt endedAt rerunOf warningNotes`;
@@ -831,6 +893,7 @@ const STEP_ROW_FIELDS =
 const RUN_FIELDS = `${RUN_ROW_FIELDS} steps { ${STEP_ROW_FIELDS} input output }`;
 // A listing row: the steps without their input and output.
 const RUN_LIST_FIELDS = `${RUN_ROW_FIELDS} steps { ${STEP_ROW_FIELDS} }`;
+const RUN_DETAIL_FIELDS = `${RUN_FIELDS} waitpoints { ${WAITPOINT_FIELDS} }`;
 
 export interface RunsScope {
   workflowId?: string;
@@ -894,10 +957,61 @@ export async function fetchRun(
   runId: string,
 ): Promise<RunRecord | null> {
   const data = await t.gql<{ workflowRuntime: { run: RunRecord | null } }>(
-    `query Run($id: String!) { workflowRuntime { run(id: $id) { ${RUN_FIELDS} } } }`,
+    `query Run($id: String!) { workflowRuntime { run(id: $id) { ${RUN_DETAIL_FIELDS} } } }`,
     { id: runId },
   );
   return data.workflowRuntime.run;
+}
+
+export interface WaitingRunsScope {
+  // Every workflow the drive holds; ignored alongside workflowId.
+  driveId?: string;
+  workflowId?: string;
+  first?: number;
+}
+
+// WAITING runs with their waitpoints, steps without input and output.
+export async function fetchWaitingRuns(
+  t: Transport,
+  scope: WaitingRunsScope = {},
+): Promise<RunRecord[]> {
+  const data = await t.gql<{ workflowRuntime: { waitingRuns: RunRecord[] } }>(
+    `query WaitingRuns($driveId: String, $workflowId: String, $first: Int) {
+      workflowRuntime {
+        waitingRuns(driveId: $driveId, workflowId: $workflowId, first: $first) {
+          ${RUN_LIST_FIELDS} waitpoints { ${WAITPOINT_FIELDS} }
+        }
+      }
+    }`,
+    {
+      driveId: scope.driveId ?? null,
+      workflowId: scope.workflowId ?? null,
+      first: scope.first ?? null,
+    },
+  );
+  return data.workflowRuntime.waitingRuns;
+}
+
+// Approves or rejects a PENDING approval, resuming its run.
+export async function resolveWaitpoint(
+  t: Transport,
+  waitpointId: string,
+  approved: boolean,
+  reason?: string,
+): Promise<WaitpointRecord> {
+  const data = await t.gql<{
+    workflowRuntime: { resolveWaitpoint: WaitpointRecord };
+  }>(
+    `mutation ResolveWaitpoint($waitpointId: String!, $approved: Boolean!, $reason: String) {
+      workflowRuntime {
+        resolveWaitpoint(waitpointId: $waitpointId, approved: $approved, reason: $reason) {
+          ${WAITPOINT_FIELDS}
+        }
+      }
+    }`,
+    { waitpointId, approved, reason: reason ?? null },
+  );
+  return data.workflowRuntime.resolveWaitpoint;
 }
 
 export interface FireResult {
@@ -933,6 +1047,22 @@ export async function rerunRun(
     { runId },
   );
   return data.workflowRuntime.rerun;
+}
+
+// Cancels a WAITING or PENDING run and its open waitpoints.
+export async function cancelRun(
+  t: Transport,
+  runId: string,
+): Promise<FireResult | null> {
+  const data = await t.gql<{
+    workflowRuntime: { cancelRun: FireResult | null };
+  }>(
+    `mutation CancelRun($runId: String!) {
+      workflowRuntime { cancelRun(runId: $runId) { runId status error } }
+    }`,
+    { runId },
+  );
+  return data.workflowRuntime.cancelRun;
 }
 
 interface BlockOptionsResult {
@@ -992,8 +1122,11 @@ const operations = {
   fetchRuns,
   fetchRunsPage,
   fetchRun,
+  fetchWaitingRuns,
   fireWorkflow,
   rerunRun,
+  resolveWaitpoint,
+  cancelRun,
   loadBlockOptions,
 };
 

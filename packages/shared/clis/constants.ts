@@ -192,9 +192,10 @@ export const BOILERPLATE_ALLOWED_BUILDS = [
 
 // Single-version pins the boilerplate enforces on generated projects,
 // avoiding duplicates from coexisting version ranges. Rendered as pnpm
-// `overrides` (pnpm-workspace.yaml) and as yarn v1 `resolutions`
-// (package.json). Generated-project only — never change the monorepo
-// catalog for this (a re-resolution there pulls a tsc-crashing TS6 beta).
+// `overrides` (pnpm-workspace.yaml) and as package.json `resolutions` and
+// `overrides`, with each pin also an exact devDependency. Generated-project
+// only — never change the monorepo catalog for this (a re-resolution there
+// pulls a tsc-crashing TS6 beta).
 export const BOILERPLATE_DEPENDENCY_OVERRIDES = {
   "date-fns": "4.3.0",
   vite: "8.0.14",
@@ -214,6 +215,8 @@ export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/host-core",
   "@powerhousedao/clint",
   "@powerhousedao/desktop",
+  // the Vetra Studio plugins the scaffolded vetra host composes (verb dev)
+  "@powerhousedao/vetra-studio",
   // the switchboard plugins the scaffolded switchboard host composes
   // (workflows, mcp, …) and their PHPluginConfigs types for tsc -p hosts.
   "@powerhousedao/switchboard",

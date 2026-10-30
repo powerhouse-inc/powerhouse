@@ -22,12 +22,15 @@ export const Iban = defineScalar({
 
 `defineScalar` accepts these keys and no others:
 
-| Key           | Required | Purpose                                                                                                                              |
-| ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `name`        | Yes      | The GraphQL name of the scalar.                                                                                                      |
-| `schema`      | Yes      | A zod schema. Its output is the TypeScript type of the scalar and the value that reducers receive. The host validates input with it. |
-| `description` | No       | The scalar's GraphQL description. Introspection shows it.                                                                            |
-| `example`     | No       | A value the schema accepts. Generated reducer tests use its parsed form as the mock value for fields of this scalar.                 |
+| Key              | Required | Purpose                                                                                                                                                                                                                                     |
+| ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`           | Yes      | The GraphQL name of the scalar.                                                                                                                                                                                                             |
+| `schema`         | Yes      | A zod schema. Its output is the TypeScript type of the scalar and the value that reducers receive. The host validates input with it.                                                                                                        |
+| `description`    | No       | The scalar's GraphQL description. Introspection shows it.                                                                                                                                                                                   |
+| `example`        | No       | A value the schema accepts. Generated reducer tests use its parsed form as the mock value for fields of this scalar.                                                                                                                        |
+| `representation` | No       | The shape of the scalar's values: `string`, `number`, `boolean`, `json-object` or `json`. `defineScalar` reads it from the schema. Set it only for a schema zod cannot describe, such as `z.custom`. A value the schema contradicts throws. |
+
+`representation` is recorded on the definition for tooling. The host and codegen don't read it yet.
 
 API clients see the schema's error message when they send an invalid value. To replace zod's default message, pass `error`:
 

@@ -1,3 +1,4 @@
+import { switchboardOfDrive } from "@powerhousedao/host-core/schema";
 import type { ReactorDescriptor } from "@powerhousedao/reactor-monitor";
 import type { ProvisionRequest } from "./components/ProvisionPanel.js";
 
@@ -36,6 +37,11 @@ function sessionStore(): Storage | undefined {
   }
 }
 
+/** A drive address keys the bearer of its switchboard's GraphQL url. */
+function hostKey(url: string): string {
+  return switchboardOfDrive(url)?.graphql ?? url;
+}
+
 /** True for a JWT whose `exp` has passed; any other token is taken as it is. */
 function isExpired(token: string): boolean {
   const payload = token.split(".")[1];
@@ -54,7 +60,8 @@ function isExpired(token: string): boolean {
  * kept for the tab's session, so a reload keeps it and closing the tab drops
  * it, and read per request, so one pasted after provisioning is sent at once.
  */
-export function setRemoteBearer(url: string, bearer: string): void {
+export function setRemoteBearer(at: string, bearer: string): void {
+  const url = hostKey(at);
   const trimmed = bearer.trim().replace(/^Bearer\s+/i, "");
   const key = REMOTE_BEARER_KEY_PREFIX + url;
   const store = sessionStore();
@@ -69,7 +76,8 @@ export function setRemoteBearer(url: string, bearer: string): void {
   else unstoredBearers.delete(url);
 }
 
-function bearerFor(url: string): string | undefined {
+function bearerFor(at: string): string | undefined {
+  const url = hostKey(at);
   let bearer = unstoredBearers.get(url);
   try {
     bearer ??=

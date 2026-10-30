@@ -9,12 +9,18 @@ import type {
   IProcessorManager,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type {
+  IKeyframeCleanup,
+  KeyframeCleanupRun,
+} from "../../src/admin/keyframe-cleanup-types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { Database, InProcessReactorModule } from "../../src/core/types.js";
 import { createReactorInspector } from "../../src/inspector/from-module.js";
 import { ReactorInspector } from "../../src/inspector/reactor-inspector.js";
 import { CatchUpPriority } from "../../src/processors/catch-up-priority.js";
+import { MemoryTelemetry } from "../../src/telemetry/memory-telemetry.js";
+import type { ProcessMemorySample } from "../../src/telemetry/types.js";
 import { HardenedPGliteDialect } from "../../src/storage/kysely/pglite-dialect.js";
 import { GqlRequestChannelFactory } from "../../src/sync/channels/gql-request-channel-factory.js";
 import { channelFactoryTypes } from "../../src/sync/channels/channel-factory-types.js";
@@ -40,6 +46,25 @@ describe("ReactorInspector", () => {
     expect(info.access).toEqual({ admin: false, sql: false });
     expect(info.workflows).toBe(false);
     expect(info.syncChannels).toEqual([]);
+  });
+
+  it("reports whether models load on demand", async () => {
+    module = await new ReactorBuilder().buildModule();
+    expect(await createReactorInspector(module).loadsModelsOnDemand()).toBe(
+      false,
+    );
+    module.reactor.kill();
+
+    module = await new ReactorBuilder()
+      .withDocumentModelLoader({
+        load: (documentType) =>
+          Promise.reject(new Error(`no ${documentType} here`)),
+      })
+      .buildModule();
+    expect(await createReactorInspector(module).loadsModelsOnDemand()).toBe(
+      true,
+    );
+    expect(await new ReactorInspector({}).loadsModelsOnDemand()).toBe(false);
   });
 
   it("reports a caller-supplied store as unknown unless the host declares it", async () => {
@@ -158,6 +183,70 @@ describe("ReactorInspector", () => {
     ]);
   });
 
+  it("reports timing rows for every processor, off without settings", async () => {
+    const tracked = {
+      processorId: "f:drive:0",
+      factoryId: "f",
+      driveId: "drive",
+      processorIndex: 0,
+      lastOrdinal: 40,
+      phase: "live",
+      name: "Index",
+      driveLabel: "files",
+    } as unknown as TrackedProcessor;
+    const processorManager = {
+      getAll: () => [tracked],
+    } as unknown as IProcessorManager;
+
+    const report = await new ReactorInspector({
+      processorManager,
+    }).getProcessorTiming();
+
+    expect(report).toMatchObject({ level: "off", head: 40, headKnown: false });
+    expect(report.processors[0]).toMatchObject({
+      name: "Index",
+      driveLabel: "files",
+      total: null,
+    });
+  });
+
+  it("refuses memory telemetry on a host without it", async () => {
+    const inspector = new ReactorInspector({});
+    await expect(inspector.getMemoryTelemetry()).rejects.toThrow(/unsupported/);
+    await expect(
+      inspector.setMemoryTelemetry({ enabled: true }),
+    ).rejects.toThrow(/unsupported/);
+    await expect(inspector.writeHeapSnapshot()).rejects.toThrow(/unsupported/);
+  });
+
+  it("serves and switches the memory telemetry it was given", async () => {
+    const memoryTelemetry = new MemoryTelemetry({
+      sampler: {
+        start: () => undefined,
+        stop: () => undefined,
+        sample: () => {
+          throw new Error("no sample in this test");
+        },
+      },
+      config: { workers: false, outputs: ["memory"] },
+    });
+    const inspector = new ReactorInspector({ memoryTelemetry });
+
+    await expect(inspector.getMemoryTelemetry(5)).resolves.toMatchObject({
+      enabled: false,
+      samples: [],
+      summary: null,
+    });
+
+    await inspector.setMemoryTelemetry({ enabled: true, intervalMs: 60_000 });
+    await expect(inspector.getMemoryTelemetry()).resolves.toMatchObject({
+      enabled: true,
+      intervalMs: 60_000,
+    });
+    await inspector.setMemoryTelemetry({ enabled: false });
+    expect(memoryTelemetry.running).toBe(false);
+  });
+
   it("refuses levers on missing components rather than acknowledging them", async () => {
     const inspector = new ReactorInspector({});
     await expect(inspector.pauseQueue()).rejects.toThrow(/unsupported/);
@@ -169,6 +258,52 @@ describe("ReactorInspector", () => {
     );
     await expect(inspector.getQueueState()).resolves.toMatchObject({
       totalPending: 0,
+    });
+  });
+
+  it("refuses a keyframe clean-up without the service, and reads nothing", async () => {
+    const inspector = new ReactorInspector({});
+
+    await expect(
+      inspector.startKeyframeCleanup({ dryRun: true }),
+    ).rejects.toThrow(/unsupported/);
+    await expect(inspector.reclaimKeyframeSpace()).rejects.toThrow(
+      /unsupported/,
+    );
+    await expect(inspector.getKeyframeCleanup()).resolves.toBeNull();
+    await expect(inspector.getKeyframeReclaim()).resolves.toBeNull();
+    await expect(inspector.cancelKeyframeCleanup()).resolves.toBeUndefined();
+  });
+
+  it("hands keyframe clean-ups to the service and passes its refusal on", async () => {
+    const run = { id: "run-1" } as KeyframeCleanupRun;
+    const keyframeCleanup: IKeyframeCleanup = {
+      start: vi
+        .fn()
+        .mockReturnValueOnce(run)
+        .mockImplementation(() => {
+          throw new Error("already running");
+        }),
+      status: vi.fn().mockReturnValue(run),
+      cancel: vi.fn(),
+      reclaim: vi.fn().mockResolvedValue({ state: "unsupported" }),
+      reclaimStatus: vi.fn().mockReturnValue(null),
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    };
+    const inspector = new ReactorInspector({ keyframeCleanup });
+
+    await expect(
+      inspector.startKeyframeCleanup({ dryRun: true }),
+    ).resolves.toBe(run);
+    expect(keyframeCleanup.start).toHaveBeenCalledWith({ dryRun: true });
+    await expect(
+      inspector.startKeyframeCleanup({ dryRun: false }),
+    ).rejects.toThrow("already running");
+    await expect(inspector.getKeyframeCleanup()).resolves.toBe(run);
+    await inspector.cancelKeyframeCleanup();
+    expect(keyframeCleanup.cancel).toHaveBeenCalled();
+    await expect(inspector.reclaimKeyframeSpace()).resolves.toEqual({
+      state: "unsupported",
     });
   });
 
@@ -211,6 +346,39 @@ describe("ReactorInspector", () => {
     expect(module.catchUpPriority).toBe(priority);
     await inspector.setCatchUpPriority({ mode: "fixed", level: 5 });
     expect(priority.get().level).toBe(5);
+  });
+
+  it("gives the host's telemetry the module's gauges without starting it", async () => {
+    const memoryTelemetry = new MemoryTelemetry({
+      sampler: {
+        start: () => undefined,
+        stop: () => undefined,
+        sample: () => ({}) as ProcessMemorySample,
+      },
+      config: { workers: false, outputs: ["memory"] },
+    });
+    module = await new ReactorBuilder()
+      .withMemoryTelemetry(memoryTelemetry)
+      .buildModule();
+
+    expect(module.memoryTelemetry).toBe(memoryTelemetry);
+    expect(memoryTelemetry.running).toBe(false);
+
+    memoryTelemetry.start();
+    const sample = await memoryTelemetry.sampleNow();
+    memoryTelemetry.stop();
+    expect(Object.keys(sample.gauges)).toEqual(
+      expect.arrayContaining([
+        "jobTracker",
+        "queue",
+        "deferredJobs",
+        "processors",
+        "consistency",
+        "collectionMembership",
+        "writeCache",
+      ]),
+    );
+    expect(sample.gauges.processors).toMatchObject({ processors: 0 });
   });
 
   it("lists drives and checks their integrity on the drive's branch", async () => {

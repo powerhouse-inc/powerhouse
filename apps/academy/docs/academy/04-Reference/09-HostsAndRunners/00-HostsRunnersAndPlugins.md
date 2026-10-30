@@ -181,6 +181,114 @@ provenance before running anything:
 ph run switchboard --explain drives
 ```
 
+### Linking to a switchboard: drive addresses and placement
+
+A `remote` backend links a host to a switchboard by the address of one of its
+drives, `<switchboard>/d/<slug>`, never by its GraphQL endpoint. The address
+names the switchboard and the drive, and sync needs both. Read it from the
+switchboard's outputs:
+
+```js
+import { outputs as switchboard } from "../switchboard/outputs.js";
+
+reactor: {
+  backends: {
+    main: { kind: "worker" },
+    // or { $output: { host: "switchboard", path: ["drives", "b", "url"] } }
+    sb: { kind: "remote", remote: { url: switchboard.drives.b.url } },
+  },
+  // More drives on the same switchboard are listed here, not as a second
+  // backend: one switchboard is one remote backend.
+  drives: [{ slug: "c", remote: { url: switchboard.drives.c.url } }],
+  // Where each drive opens, by its declared slug.
+  placement: { drives: { b: "sb", c: "main" } },
+},
+```
+
+`placement.drives` maps a drive's declared slug to a backend:
+
+- the drive's own remote backend opens it on the switchboard, with no copy in
+  this reactor;
+- a local backend (`worker`, `in-process`) keeps a synced copy and opens it
+  locally;
+- a drive that is not listed keeps a synced copy, as before.
+
+The map is checked when the host loads. Connect applies it at boot: a drive
+placed on a switchboard gets no sync remote in the browser (one an earlier
+boot added is removed), and its reads and writes go to that switchboard. A
+Connect may link to several switchboards, one remote backend each.
+
+### Where new drives go, and how Connect reaches a switchboard
+
+A Connect host sets where new drives are created, how long it waits for each
+switchboard, and when it stops calling one that doesn't answer:
+
+```js
+reactor: {
+  backends: {
+    main: { kind: "worker" },
+    sb: {
+      kind: "remote",
+      remote: {
+        url: switchboard.drives.b.url,
+        // Give up on one request after this long. Default 30 s.
+        requestTimeoutMs: 10_000,
+        // After 3 failed requests in a row, send nothing for 2 minutes.
+        // Default { failures: 3, openMs: 30_000 }. false: keep trying.
+        breaker: { failures: 3, openMs: 120_000 },
+        // Live updates from this switchboard. Default true.
+        realtime: true,
+      },
+    },
+  },
+  placement: {
+    // New drives are created on sb, with no copy in this browser.
+    newDrives: "sb",
+  },
+  router: {
+    // Wait this long for a reactor to say whether it holds a document.
+    // Default 3 s; 0 waits for the answer.
+    probeTimeoutMs: 3_000,
+    // Look again after this long for a document found on a switchboard.
+    // Default 30 s.
+    provisionalRouteMs: 30_000,
+  },
+},
+```
+
+`placement.newDrives` names the backend new drives are created on. Without
+it they are created in the browser, or, when the host has no browser
+reactor, on its only switchboard. A Connect with no browser reactor and
+several switchboards must set it.
+
+A drive created on the `newDrives` switchboard stays there: when the
+switchboard isn't answering, Connect shows "<sb> isn't answering, so the
+drive wasn't created.", and when it refuses the create, Connect names it and
+gives its reason (or asks you to sign in). The drive is not created in the
+browser instead: a Connect that has no address for that switchboard, or
+whose router fails to load, doesn't start. Drives the host declares locally (`reactor.drives`
+without a `remote`) are created in the browser, with the browser reactor's
+create defaults.
+
+Connect doesn't use `placement.primary`, and refuses a host that sets it: the
+browser reactor, when there is one, answers what no drive owns. Use
+`placement.newDrives` to choose where new drives go. A switchboard host keeps
+`placement.primary` to pick its own store.
+
+`requestTimeoutMs`, `breaker` and `realtime` apply only to a `remote`
+backend. Switchboard hosts ignore `newDrives` and `router`.
+
+Validation refuses a remote link that is not a drive address (an
+`endpoints.graphql` token or a `/graphql` URL fails with an error naming the
+`drives.<slug>.url` form), two remote backends on the same switchboard, a
+placement that names a backend that does not exist, a drive placed on a
+switchboard it is not on, a slug that names two drives (on two switchboards,
+or kept here and on a switchboard), and a placement
+key that names no drive the host links to, declares or attaches through a
+plugin's `config.drive`. Keys for drives known only at runtime (a `$map`
+list) are not checked. A `reactor.drives[]` entry's `remote.url` must be a
+drive address too.
+
 ## Switchboard settings (`config.switchboard`)
 
 A switchboard host sets the rest of its server config, such as auth,

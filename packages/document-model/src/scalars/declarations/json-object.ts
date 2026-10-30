@@ -6,4 +6,5 @@ export const jsonObjectScalar = defineCatalogScalar({
   typescriptType: null,
   zodSource: null,
   schema: z.record(z.string(), z.unknown()),
+  representation: "json-object",
 });

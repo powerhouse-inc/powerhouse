@@ -866,10 +866,84 @@ export const connectCompositionEntrySchema = z.strictObject({
   config: z.record(z.string(), z.unknown()).optional(),
 });
 
-/** `instance` plus `reactorClient`, derived from the host's reactor backends. */
+/** A switchboard Connect routes to, from one of the host's remote backends. */
+export const connectRemoteBackendSchema = z.strictObject({
+  name: z.string().min(1).describe("The backend's key in the host config."),
+  url: z
+    .string()
+    .describe("A drive address on the switchboard: <switchboard>/d/<slug>."),
+  requestTimeoutMs: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe("Give up on one request after this long. Default 30000."),
+  breaker: z
+    .union([
+      z.literal(false),
+      z.strictObject({
+        failures: z.number().int().min(1).optional(),
+        openMs: z.number().int().nonnegative().optional(),
+      }),
+    ])
+    .optional()
+    .describe(
+      "After `failures` failed requests in a row, send nothing for `openMs`. false: never stop trying.",
+    ),
+  realtime: z
+    .boolean()
+    .optional()
+    .describe("Live updates over a socket. Default true."),
+});
+
+/** The router settings a host sets for Connect. */
+export const connectRouterSettingsSchema = z.strictObject({
+  newDrives: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "The remoteBackends[].name new drives are created on, with no copy in this browser. Absent: the browser reactor, else the only switchboard.",
+    ),
+  probeTimeoutMs: z.number().int().nonnegative().optional(),
+  provisionalRouteMs: z.number().int().nonnegative().optional(),
+});
+
+/** `sync: false` keeps no copy in this browser; unset means true. */
+export const connectCollectionSchema = z.strictObject({
+  backend: z.string().min(1),
+  sync: z.boolean().optional(),
+});
+
+/** `collections` holds placed drives that are not default drives, keyed by declared slug. */
 export const connectRuntimeInstanceSchema = connectInstanceSchema.extend({
   reactorClient: connectReactorClientModeSchema.optional(),
+  remoteBackends: z.array(connectRemoteBackendSchema).optional(),
+  collections: z.record(z.string(), connectCollectionSchema).optional(),
+  router: connectRouterSettingsSchema.optional(),
 });
+
+/** A remote default drive plus the backend serving it. */
+export const connectRuntimeDefaultDriveRemoteSchema =
+  connectDefaultDriveRemoteSchema.extend({
+    backend: z.string().min(1).optional(),
+    sync: z.boolean().optional(),
+  });
+
+export const connectRuntimeDefaultDriveSchema = z.union([
+  connectRuntimeDefaultDriveRemoteSchema,
+  connectDefaultDriveLocalSchema,
+]);
+
+export const connectRuntimeDrivesSchema = withMetaOf(
+  connectDrivesSchema.extend({
+    defaultDrives: withMetaOf(
+      z.array(connectRuntimeDefaultDriveSchema).optional(),
+      connectDrivesSchema.shape.defaultDrives,
+    ),
+  }),
+  connectDrivesSchema,
+);
 
 /** The manifest plus `categories`, derived from contributors' `category`. */
 export const connectRuntimePwaManifestSchema = connectPwaManifestSchema.extend({
@@ -883,6 +957,7 @@ export const connectRuntimePwaSchema = connectPwaSchema.extend({
 /** The served `connect` block (runtime powerhouse.config.json). */
 export const connectRuntimeConfigSchema = connectConfigSchema.extend({
   composition: z.array(connectCompositionEntrySchema).optional(),
+  drives: connectRuntimeDrivesSchema.optional(),
   instance: connectRuntimeInstanceSchema.optional(),
   pwa: connectRuntimePwaSchema.optional(),
 });

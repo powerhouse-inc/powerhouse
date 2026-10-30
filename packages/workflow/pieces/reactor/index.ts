@@ -8,6 +8,7 @@ import { documentFindAction } from "./lib/actions/document-find.js";
 import { documentGetAction } from "./lib/actions/document-get.js";
 import { documentSchemaAction } from "./lib/actions/document-schema.js";
 import { documentTypesAction } from "./lib/actions/document-types.js";
+import { indexQueryAction } from "./lib/actions/index-query.js";
 import {
   documentCreatedTrigger,
   documentDeletedTrigger,
@@ -17,7 +18,7 @@ import {
 export const reactor = createPiece({
   displayName: "Powerhouse Reactor",
   description:
-    "Read and write Powerhouse documents on the reactor this workflow runs in: create documents, dispatch actions, read state and schemas, and fire on document events.",
+    "Read and write Powerhouse documents on the reactor this workflow runs in: create documents, dispatch actions, read state, schemas and indexes, and fire on document events.",
   logoUrl: POWERHOUSE_LOGO,
   authors: ["powerhouse"],
   // The reactor is reached through the host, not over a connection.
@@ -29,6 +30,7 @@ export const reactor = createPiece({
     documentFindAction,
     documentSchemaAction,
     documentTypesAction,
+    indexQueryAction,
   ],
   triggers: [
     documentEventTrigger,

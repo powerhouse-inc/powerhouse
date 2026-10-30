@@ -1,4 +1,8 @@
-import type { IInspectorAdmin } from "@powerhousedao/reactor";
+import type {
+  IInspectorAdmin,
+  KeyframeCleanupRun,
+  KeyframeReclaim,
+} from "@powerhousedao/reactor";
 import type * as GraphQL from "graphql";
 import type { GraphQLSchema } from "graphql";
 import { createRequire } from "node:module";
@@ -22,10 +26,51 @@ const { graphql } = createRequire(import.meta.url)("graphql") as typeof GraphQL;
 
 const OPERATOR = "0xOperator";
 
+const KEYFRAME_RUN: KeyframeCleanupRun = {
+  id: "run-1",
+  dryRun: true,
+  state: "running",
+  startedAtUtcMs: 1,
+  finishedAtUtcMs: null,
+  documentsTotal: 2,
+  documentsSeen: 0,
+  parked: false,
+  totals: {
+    streams: 0,
+    rows: 0,
+    bytes: 0,
+    removableRows: 0,
+    removableBytes: 0,
+    removedRows: 0,
+    removedBytes: 0,
+  },
+  types: [],
+  reasons: [],
+  topStreams: [],
+  error: null,
+};
+
+const KEYFRAME_RECLAIM: KeyframeReclaim = {
+  state: "unsupported",
+  startedAtUtcMs: 1,
+  finishedAtUtcMs: 1,
+  tableBytesBefore: null,
+  tableBytesAfter: null,
+  durationMs: null,
+  message: "by hand",
+};
+
 function levers(): IInspectorAdmin & {
   retryProcessor: ReturnType<typeof vi.fn>;
   rerunProcessor: ReturnType<typeof vi.fn>;
   setCatchUpPriority: ReturnType<typeof vi.fn>;
+  setMemoryTelemetry: ReturnType<typeof vi.fn>;
+  writeHeapSnapshot: ReturnType<typeof vi.fn>;
+  startKeyframeCleanup: ReturnType<typeof vi.fn>;
+  getKeyframeCleanup: ReturnType<typeof vi.fn>;
+  cancelKeyframeCleanup: ReturnType<typeof vi.fn>;
+  reclaimKeyframeSpace: ReturnType<typeof vi.fn>;
+  getKeyframeReclaim: ReturnType<typeof vi.fn>;
 } {
   const refuse = () => Promise.reject(new Error("not under test"));
   return {
@@ -34,9 +79,16 @@ function levers(): IInspectorAdmin & {
     sweepCatchUp: refuse,
     rebuildKeyframes: refuse,
     rebuildSnapshots: refuse,
+    startKeyframeCleanup: vi.fn().mockResolvedValue(KEYFRAME_RUN),
+    getKeyframeCleanup: vi.fn().mockResolvedValue(null),
+    cancelKeyframeCleanup: vi.fn().mockResolvedValue(undefined),
+    reclaimKeyframeSpace: vi.fn().mockResolvedValue(KEYFRAME_RECLAIM),
+    getKeyframeReclaim: vi.fn().mockResolvedValue(null),
     retryProcessor: vi.fn().mockResolvedValue(undefined),
     rerunProcessor: vi.fn().mockResolvedValue(undefined),
     setCatchUpPriority: vi.fn().mockResolvedValue(undefined),
+    setMemoryTelemetry: vi.fn().mockResolvedValue(undefined),
+    writeHeapSnapshot: vi.fn().mockResolvedValue("D:/x/heap.heapsnapshot"),
   };
 }
 
@@ -60,17 +112,97 @@ const RERUN = `mutation Rerun($id: String!, $clear: Boolean!, $from: Float!) {
   inspectionRerunProcessor(processorId: $id, clear: $clear, fromOrdinal: $from)
 }`;
 const RETRY = `mutation Retry($id: String!) { inspectionRetryProcessor(processorId: $id) }`;
-const ACCESS = `{ inspectionAdmin { processors catchUpPriority } }`;
+const ACCESS = `{ inspectionAdmin { processors catchUpPriority memoryTelemetry keyframes } }`;
+const START_CLEANUP = `mutation Start($dryRun: Boolean!) {
+  inspectionStartKeyframeCleanup(dryRun: $dryRun) { id dryRun state totals { rows } }
+}`;
+const CLEANUP = `{ inspectionKeyframeCleanup { id } }`;
+const CANCEL_CLEANUP = `mutation { inspectionCancelKeyframeCleanup }`;
+const RECLAIM = `mutation { inspectionReclaimKeyframeSpace { state message } }`;
+const RECLAIM_STATUS = `{ inspectionKeyframeReclaim { state } }`;
 const PRIORITY = `mutation Priority($mode: String!, $level: Int) {
   inspectionSetCatchUpPriority(mode: $mode, level: $level)
 }`;
+
+describe("inspection-admin memory telemetry", () => {
+  const operator = contextFor(OPERATOR.toLowerCase());
+  const outsider = contextFor("0xother");
+
+  const SET = `mutation Set($enabled: Boolean!, $intervalMs: Int, $outputs: [String!]) {
+    inspectionSetMemoryTelemetry(enabled: $enabled, intervalMs: $intervalMs, outputs: $outputs)
+  }`;
+
+  it("switches telemetry for a listed admin", async () => {
+    const admin = levers();
+    const result = await graphql({
+      schema: buildSchema(admin),
+      source: SET,
+      contextValue: operator,
+      variableValues: { enabled: true, intervalMs: 5000, outputs: ["file"] },
+    });
+    expect(result.errors).toBeUndefined();
+    expect(admin.setMemoryTelemetry).toHaveBeenCalledWith({
+      enabled: true,
+      intervalMs: 5000,
+      outputs: ["file"],
+    });
+  });
+
+  it("refuses an unknown output as bad input", async () => {
+    const admin = levers();
+    const result = await graphql({
+      schema: buildSchema(admin),
+      source: SET,
+      contextValue: operator,
+      variableValues: { enabled: true, outputs: ["otel"] },
+    });
+    expect(result.errors?.[0]?.extensions.code).toBe("BAD_USER_INPUT");
+    expect(admin.setMemoryTelemetry).not.toHaveBeenCalled();
+  });
+
+  it("returns a snapshot's path and passes a refusal on", async () => {
+    const admin = levers();
+    const schema = buildSchema(admin);
+    const source = `mutation { inspectionWriteHeapSnapshot(force: true) }`;
+    const written = await graphql({ schema, source, contextValue: operator });
+    expect(written.data).toEqual({
+      inspectionWriteHeapSnapshot: "D:/x/heap.heapsnapshot",
+    });
+    expect(admin.writeHeapSnapshot).toHaveBeenCalledWith(true);
+
+    admin.writeHeapSnapshot.mockRejectedValueOnce(new Error("Too little"));
+    const refused = await graphql({ schema, source, contextValue: operator });
+    expect(refused.errors?.[0]?.extensions.code).toBe("LEVER_REFUSED");
+  });
+
+  it("refuses a caller who is not a listed admin", async () => {
+    const admin = levers();
+    const result = await graphql({
+      schema: buildSchema(admin),
+      source: `mutation { inspectionWriteHeapSnapshot }`,
+      contextValue: outsider,
+    });
+    expect(result.errors?.[0]?.extensions.code).toBe("FORBIDDEN");
+    expect(admin.writeHeapSnapshot).not.toHaveBeenCalled();
+  });
+});
 
 describe("inspection-admin subgraph", () => {
   it("refuses every field to a caller the host does not list as an admin", async () => {
     const admin = levers();
     const schema = buildSchema(admin);
     for (const caller of [contextFor(), contextFor("0xsomeone")]) {
-      for (const source of [ACCESS, RERUN, RETRY, PRIORITY]) {
+      for (const source of [
+        ACCESS,
+        RERUN,
+        RETRY,
+        PRIORITY,
+        START_CLEANUP,
+        CLEANUP,
+        CANCEL_CLEANUP,
+        RECLAIM,
+        RECLAIM_STATUS,
+      ]) {
         const result = await graphql({
           schema,
           source,
@@ -81,6 +213,7 @@ describe("inspection-admin subgraph", () => {
             from: 0,
             mode: "fixed",
             level: 7,
+            dryRun: false,
           },
         });
         expect(result.errors?.[0]?.extensions.code).toBe("FORBIDDEN");
@@ -89,6 +222,69 @@ describe("inspection-admin subgraph", () => {
     expect(admin.rerunProcessor).not.toHaveBeenCalled();
     expect(admin.retryProcessor).not.toHaveBeenCalled();
     expect(admin.setCatchUpPriority).not.toHaveBeenCalled();
+    expect(admin.startKeyframeCleanup).not.toHaveBeenCalled();
+    expect(admin.cancelKeyframeCleanup).not.toHaveBeenCalled();
+    expect(admin.reclaimKeyframeSpace).not.toHaveBeenCalled();
+  });
+
+  it("serves the keyframe levers to a listed admin", async () => {
+    const admin = levers();
+    const schema = buildSchema(admin);
+    const contextValue = contextFor(OPERATOR);
+
+    const started = await graphql({
+      schema,
+      source: START_CLEANUP,
+      contextValue,
+      variableValues: { dryRun: true },
+    });
+    expect(started.errors).toBeUndefined();
+    expect(started.data).toEqual({
+      inspectionStartKeyframeCleanup: {
+        id: "run-1",
+        dryRun: true,
+        state: "running",
+        totals: { rows: 0 },
+      },
+    });
+    expect(admin.startKeyframeCleanup).toHaveBeenCalledWith({ dryRun: true });
+
+    const status = await graphql({ schema, source: CLEANUP, contextValue });
+    expect(status.data).toEqual({ inspectionKeyframeCleanup: null });
+
+    const cancelled = await graphql({
+      schema,
+      source: CANCEL_CLEANUP,
+      contextValue,
+    });
+    expect(cancelled.data).toEqual({ inspectionCancelKeyframeCleanup: true });
+
+    const reclaim = await graphql({ schema, source: RECLAIM, contextValue });
+    expect(reclaim.data).toEqual({
+      inspectionReclaimKeyframeSpace: {
+        state: "unsupported",
+        message: "by hand",
+      },
+    });
+  });
+
+  it("answers a refused clean-up as LEVER_REFUSED", async () => {
+    const admin = levers();
+    admin.startKeyframeCleanup.mockRejectedValue(
+      new Error("A keyframe clean-up is already running"),
+    );
+
+    const result = await graphql({
+      schema: buildSchema(admin),
+      source: START_CLEANUP,
+      contextValue: contextFor(OPERATOR),
+      variableValues: { dryRun: false },
+    });
+
+    expect(result.errors?.[0]?.message).toBe(
+      "A keyframe clean-up is already running",
+    );
+    expect(result.errors?.[0]?.extensions.code).toBe("LEVER_REFUSED");
   });
 
   it("pulls the levers for a listed admin, whatever the address's case", async () => {
@@ -98,7 +294,12 @@ describe("inspection-admin subgraph", () => {
 
     const access = await graphql({ schema, source: ACCESS, contextValue: ctx });
     expect(access.data).toEqual({
-      inspectionAdmin: { processors: true, catchUpPriority: true },
+      inspectionAdmin: {
+        processors: true,
+        catchUpPriority: true,
+        memoryTelemetry: true,
+        keyframes: true,
+      },
     });
 
     const rerun = await graphql({

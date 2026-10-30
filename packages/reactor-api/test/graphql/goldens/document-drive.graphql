@@ -1,0 +1,760 @@
+directive @extends on OBJECT | INTERFACE
+
+directive @external on FIELD_DEFINITION
+
+directive @key(fields: _FieldSet!) repeatable on OBJECT | INTERFACE
+
+directive @provides(fields: _FieldSet!) on FIELD_DEFINITION
+
+directive @requires(fields: _FieldSet!) on FIELD_DEFINITION
+
+directive @tag(
+  name: String!
+) repeatable on FIELD_DEFINITION | INTERFACE | OBJECT | UNION | ARGUMENT_DEFINITION | SCALAR | ENUM | ENUM_VALUE | INPUT_OBJECT | INPUT_FIELD_DEFINITION
+
+scalar Address
+
+scalar Amount
+
+scalar Amount_Crypto
+
+scalar Amount_Currency
+
+scalar Amount_Fiat
+
+scalar Amount_Money
+
+scalar Amount_Percentage
+
+scalar Amount_Tokens
+
+scalar AttachmentRef
+
+scalar Currency
+
+scalar Date
+
+scalar DateTime
+
+type DocumentDrive implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  initialState: DocumentDrive_DocumentDriveState!
+  state: DocumentDrive_DocumentDriveState!
+  stateJSON: JSONObject
+}
+
+"""
+Mutation result type for DocumentDrive operations with typed state.
+Matches ReactorSubgraph PHDocument pattern with revisionsList.
+"""
+type DocumentDriveMutationResult {
+  id: String!
+  slug: String
+  preferredEditor: String
+  name: String!
+  documentType: String!
+  state: DocumentDrive_FullState!
+  revisionsList: [Revision!]!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+}
+
+"""
+Mutations: DocumentDrive
+"""
+type DocumentDriveMutations {
+  createDocument(
+    name: String!
+    parentIdOrSlug: String
+    parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")
+    slug: String
+    preferredEditor: String
+    initialState: DocumentDrive_InitialStateInput
+  ): DocumentDriveMutationResult!
+  createEmptyDocument(
+    parentIdOrSlug: String
+    parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")
+  ): DocumentDriveMutationResult!
+  addFile(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddFileInput!
+  ): DocumentDriveMutationResult!
+  addFileAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddFileInput!
+  ): String!
+  addFolder(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddFolderInput!
+  ): DocumentDriveMutationResult!
+  addFolderAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddFolderInput!
+  ): String!
+  deleteNode(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_DeleteNodeInput!
+  ): DocumentDriveMutationResult!
+  deleteNodeAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_DeleteNodeInput!
+  ): String!
+  updateFile(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_UpdateFileInput!
+  ): DocumentDriveMutationResult!
+  updateFileAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_UpdateFileInput!
+  ): String!
+  updateNode(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_UpdateNodeInput!
+  ): DocumentDriveMutationResult!
+  updateNodeAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_UpdateNodeInput!
+  ): String!
+  copyNode(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_CopyNodeInput!
+  ): DocumentDriveMutationResult!
+  copyNodeAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_CopyNodeInput!
+  ): String!
+  moveNode(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_MoveNodeInput!
+  ): DocumentDriveMutationResult!
+  moveNodeAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_MoveNodeInput!
+  ): String!
+  setDriveName(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetDriveNameInput!
+  ): DocumentDriveMutationResult!
+  setDriveNameAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetDriveNameInput!
+  ): String!
+  setDriveIcon(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetDriveIconInput!
+  ): DocumentDriveMutationResult!
+  setDriveIconAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetDriveIconInput!
+  ): String!
+  setSharingType(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetSharingTypeInput!
+  ): DocumentDriveMutationResult!
+  setSharingTypeAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetSharingTypeInput!
+  ): String!
+  setAvailableOffline(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetAvailableOfflineInput!
+  ): DocumentDriveMutationResult!
+  setAvailableOfflineAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetAvailableOfflineInput!
+  ): String!
+  addListener(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddListenerInput!
+  ): DocumentDriveMutationResult!
+  addListenerAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddListenerInput!
+  ): String!
+  removeListener(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_RemoveListenerInput!
+  ): DocumentDriveMutationResult!
+  removeListenerAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_RemoveListenerInput!
+  ): String!
+  addTrigger(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddTriggerInput!
+  ): DocumentDriveMutationResult!
+  addTriggerAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddTriggerInput!
+  ): String!
+  removeTrigger(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_RemoveTriggerInput!
+  ): DocumentDriveMutationResult!
+  removeTriggerAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_RemoveTriggerInput!
+  ): String!
+}
+
+"""
+Queries: DocumentDrive Document
+"""
+type DocumentDriveQueries {
+  """
+  Get a specific DocumentDrive document by identifier
+  """
+  document(
+    idOrSlug: String
+    identifier: String @deprecated(reason: "Use idOrSlug.")
+    view: DocumentDrive_ViewFilterInput
+  ): DocumentDrive_DocumentWithChildren
+  """
+  Get all DocumentDrive documents (paged)
+  """
+  documents(
+    paging: DocumentDrive_PagingInput
+  ): DocumentDrive_DocumentResultPage!
+  """
+  Find DocumentDrive documents by search criteria
+  """
+  findDocuments(
+    search: DocumentDrive_SearchFilterInput
+    view: DocumentDrive_ViewFilterInput
+    paging: DocumentDrive_PagingInput
+  ): DocumentDrive_DocumentResultPage!
+  """
+  Get outgoing relationships of a DocumentDrive document
+  """
+  documentOutgoingRelationships(
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    relationshipType: String!
+    view: DocumentDrive_ViewFilterInput
+    paging: DocumentDrive_PagingInput
+  ): DocumentDrive_DocumentResultPage!
+  """
+  Get incoming relationships to a DocumentDrive document
+  """
+  documentIncomingRelationships(
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
+    relationshipType: String!
+    view: DocumentDrive_ViewFilterInput
+    paging: DocumentDrive_PagingInput
+  ): DocumentDrive_DocumentResultPage!
+}
+
+"""
+Module: Node
+"""
+input DocumentDrive_AddFileInput {
+  id: ID!
+  name: String!
+  documentType: String!
+  parentFolder: ID
+}
+
+input DocumentDrive_AddFolderInput {
+  id: ID!
+  name: String!
+  parentFolder: ID
+}
+
+input DocumentDrive_AddListenerInput {
+  listener: DocumentDrive_ListenerInput!
+}
+
+input DocumentDrive_AddTriggerInput {
+  trigger: DocumentDrive_TriggerInput!
+}
+
+input DocumentDrive_CopyNodeInput {
+  srcId: ID!
+  targetId: ID!
+  targetName: String
+  targetParentFolder: ID
+}
+
+input DocumentDrive_DeleteNodeInput {
+  id: ID!
+}
+
+type DocumentDrive_DocumentDriveLocalState {
+  sharingType: String
+  listeners: [DocumentDrive_Listener!]!
+  triggers: [DocumentDrive_Trigger!]!
+  availableOffline: Boolean!
+}
+
+input DocumentDrive_DocumentDriveLocalStateInput {
+  sharingType: String
+  listeners: [DocumentDrive_ListenerInput]
+  triggers: [DocumentDrive_TriggerInput]
+  availableOffline: Boolean
+}
+
+type DocumentDrive_DocumentDriveState {
+  name: String!
+  nodes: [DocumentDrive_Node!]!
+  icon: String
+}
+
+input DocumentDrive_DocumentDriveStateInput {
+  name: String
+  nodes: [JSONObject]
+  icon: String
+}
+
+"""
+Paginated result type for DocumentDrive documents
+"""
+type DocumentDrive_DocumentResultPage {
+  items: [DocumentDriveMutationResult!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+"""
+Document with children for DocumentDrive
+"""
+type DocumentDrive_DocumentWithChildren {
+  document: DocumentDriveMutationResult!
+  childIds: [String!]!
+}
+
+type DocumentDrive_FileNode {
+  id: String!
+  name: String!
+  kind: String!
+  documentType: String!
+  parentFolder: String
+}
+
+input DocumentDrive_FileNodeInput {
+  id: String
+  name: String
+  kind: String
+  documentType: String
+  parentFolder: String
+}
+
+type DocumentDrive_FolderNode {
+  id: String!
+  name: String!
+  kind: String!
+  parentFolder: String
+}
+
+"""
+Input Types for Initial State
+"""
+input DocumentDrive_FolderNodeInput {
+  id: String
+  name: String
+  kind: String
+  parentFolder: String
+}
+
+"""
+Full state with all scopes for DocumentDrive
+"""
+type DocumentDrive_FullState {
+  auth: JSONObject!
+  document: DocumentDrive_PHDocumentScopeState!
+  global: DocumentDrive_DocumentDriveState!
+  local: DocumentDrive_DocumentDriveLocalState!
+}
+
+input DocumentDrive_InitialStateInput {
+  global: DocumentDrive_DocumentDriveStateInput
+  local: DocumentDrive_DocumentDriveLocalStateInput
+}
+
+type DocumentDrive_Listener {
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: DocumentDrive_ListenerFilter!
+  callInfo: DocumentDrive_ListenerCallInfo
+}
+
+type DocumentDrive_ListenerCallInfo {
+  transmitterType: DocumentDrive_TransmitterType
+  name: String
+  data: String
+}
+
+input DocumentDrive_ListenerCallInfoInput {
+  transmitterType: DocumentDrive_TransmitterType
+  name: String
+  data: String
+}
+
+type DocumentDrive_ListenerFilter {
+  documentType: [String!]!
+  documentId: [ID!]
+  scope: [String!]
+  branch: [String!]
+}
+
+input DocumentDrive_ListenerFilterInput {
+  documentType: [String!]
+  documentId: [ID!]
+  scope: [String!]
+  branch: [String!]
+}
+
+input DocumentDrive_ListenerInput {
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: DocumentDrive_ListenerFilterInput!
+  callInfo: DocumentDrive_ListenerCallInfoInput
+}
+
+input DocumentDrive_MoveNodeInput {
+  srcFolder: ID!
+  targetParentFolder: ID
+}
+
+union DocumentDrive_Node = DocumentDrive_FolderNode | DocumentDrive_FileNode
+
+"""
+Document scope state (same for all document types)
+"""
+type DocumentDrive_PHDocumentScopeState {
+  version: Int!
+  hash: DocumentDrive_PHHashConfig!
+  isDeleted: Boolean
+  deletedAtUtcIso: String
+  deletedBy: String
+  deletionReason: String
+}
+
+"""
+Hash configuration for document state
+"""
+type DocumentDrive_PHHashConfig {
+  algorithm: String!
+  encoding: String!
+}
+
+input DocumentDrive_PagingInput {
+  limit: Int
+  offset: Int
+  cursor: String
+}
+
+type DocumentDrive_PullResponderTriggerData {
+  listenerId: ID!
+  url: String!
+  interval: String!
+}
+
+input DocumentDrive_PullResponderTriggerDataInput {
+  listenerId: ID!
+  url: String!
+  interval: String!
+}
+
+input DocumentDrive_RemoveListenerInput {
+  listenerId: String!
+}
+
+input DocumentDrive_RemoveTriggerInput {
+  triggerId: String!
+}
+
+input DocumentDrive_SearchFilterInput {
+  parentId: String
+  identifiers: [String!] @deprecated(reason: "Ignored. Filter by parentId.")
+}
+
+input DocumentDrive_SetAvailableOfflineInput {
+  availableOffline: Boolean!
+}
+
+input DocumentDrive_SetDriveIconInput {
+  icon: String
+}
+
+"""
+Module: Drive
+"""
+input DocumentDrive_SetDriveNameInput {
+  name: String!
+}
+
+input DocumentDrive_SetSharingTypeInput {
+  type: String!
+}
+
+enum DocumentDrive_TransmitterType {
+  Internal
+  SwitchboardPush
+  PullResponder
+  SecureConnect
+  MatrixConnect
+  RESTWebhook
+}
+
+type DocumentDrive_Trigger {
+  id: ID!
+  type: DocumentDrive_TriggerType!
+  data: DocumentDrive_TriggerData
+}
+
+union DocumentDrive_TriggerData = DocumentDrive_PullResponderTriggerData
+
+input DocumentDrive_TriggerInput {
+  id: ID!
+  type: DocumentDrive_TriggerType!
+  data: DocumentDrive_PullResponderTriggerDataInput
+}
+
+enum DocumentDrive_TriggerType {
+  PullResponder
+}
+
+input DocumentDrive_UpdateFileInput {
+  id: ID!
+  parentFolder: ID
+  name: String
+  documentType: String
+}
+
+input DocumentDrive_UpdateNodeInput {
+  id: ID!
+  parentFolder: ID
+  name: String
+}
+
+input DocumentDrive_ViewFilterInput {
+  branch: String
+  scopes: [String!]
+}
+
+type DocumentModel implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  stateJSON: JSONObject
+}
+
+type DocumentModel_Author {
+  name: String!
+  website: String
+}
+
+type DocumentModel_CodeExample {
+  id: ID!
+  value: String!
+}
+
+type DocumentModel_DocumentModelGlobalState {
+  name: String!
+  id: String!
+  extension: String!
+  description: String!
+  author: DocumentModel_Author!
+  specifications: [DocumentModel_DocumentSpecification!]!
+}
+
+type DocumentModel_DocumentSpecification {
+  version: Int!
+  state: DocumentModel_ScopeState!
+  modules: [DocumentModel_Module!]!
+  changeLog: [String!]!
+}
+
+type DocumentModel_Module {
+  id: ID!
+  name: String!
+  description: String
+  operations: [DocumentModel_Operation!]!
+}
+
+type DocumentModel_Operation {
+  id: ID!
+  name: String
+  schema: String
+  description: String
+  template: String
+  errors: [DocumentModel_OperationError!]!
+  examples: [DocumentModel_CodeExample!]!
+  reducer: String
+  scope: String
+}
+
+type DocumentModel_OperationError {
+  id: ID!
+  code: String
+  name: String
+  description: String
+  template: String
+}
+
+type DocumentModel_ScopeState {
+  global: DocumentModel_State!
+  local: DocumentModel_State!
+}
+
+type DocumentModel_State {
+  schema: String!
+  initialValue: String!
+  examples: [DocumentModel_CodeExample!]!
+}
+
+type DriveDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+scalar EmailAddress
+
+scalar EthereumAddress
+
+type GqlDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+interface IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+"""
+The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSONObject
+
+type Mutation {
+  DocumentDrive: DocumentDriveMutations!
+}
+
+scalar OID
+
+scalar OLabel
+
+type Operation {
+  id: String!
+  type: String!
+  index: Int!
+  timestampUtcMs: DateTime!
+  hash: String!
+  skip: Int
+  inputText: String
+  error: String
+  context: PHOperationContext
+}
+
+scalar PHID
+
+type PHOperationContext {
+  signer: Signer
+}
+
+type Query {
+  DocumentDrive: DocumentDriveQueries!
+  _service: _Service!
+}
+
+type Revision {
+  scope: String!
+  revision: Int!
+}
+
+type Signer {
+  user: SignerUser
+  app: SignerApp
+  signatures: [String!]!
+}
+
+type SignerApp {
+  name: String!
+  key: String!
+}
+
+type SignerUser {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+scalar URL
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar Unknown
+
+scalar Upload
+
+scalar _FieldSet
+
+type _Service {
+  sdl: String
+}

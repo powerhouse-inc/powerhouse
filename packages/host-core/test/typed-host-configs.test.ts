@@ -105,17 +105,26 @@ describe("host schemas: invariants owned by the schema", () => {
         runner: { module: "m" },
         reactor: { backends: { switchboard: { kind: "remote", remote } } },
       }).success;
+    const drive = {
+      url: {
+        $output: { host: "switchboard", path: ["drives", "powerhouse", "url"] },
+      },
+    };
     const graphql = {
       url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } },
     };
     expect(withRemote({ host: "switchboard" })).toBe(false);
     expect(withRemote({})).toBe(false);
     expect(withRemote({ url: "not a url" })).toBe(false);
-    expect(withRemote({ url: "http://127.0.0.1:4001/graphql" })).toBe(true);
-    // the exported base is the resolved form; the declared one takes tokens
-    expect(withRemote(graphql)).toBe(false);
-    expect(withRemote(graphql, declaredHostSchemas.reactorHostSchema)).toBe(
+    expect(withRemote({ url: "http://127.0.0.1:4001/graphql" })).toBe(false);
+    expect(withRemote({ url: "http://127.0.0.1:4001/d/powerhouse" })).toBe(
       true,
+    );
+    // the exported base is the resolved form; the declared one takes tokens
+    expect(withRemote(drive)).toBe(false);
+    expect(withRemote(drive, declaredHostSchemas.reactorHostSchema)).toBe(true);
+    expect(withRemote(graphql, declaredHostSchemas.reactorHostSchema)).toBe(
+      false,
     );
     expect(
       withRemote(

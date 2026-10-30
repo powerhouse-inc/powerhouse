@@ -29,6 +29,7 @@ import type {
   ConsistencyToken,
 } from "../shared/types.js";
 import { yieldToMain } from "../shared/utils.js";
+import { startProgressHeartbeat } from "../utils/progress-heartbeat.js";
 import {
   acquirePurgeLocks,
   findPurged,
@@ -673,24 +674,42 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     }
   }
 
+  /**
+   * Applies everything after the cursor. A catch-up that takes more than a
+   * few seconds reports where it stands (ordinals applied of those settled at
+   * boot) until it ends, so a long boot is never silent.
+   */
   private async replayFromCursor(): Promise<void> {
     const settledAtBoot = await this.settledAtBoot();
-    let page = await this.operationIndex.getSinceOrdinal(
-      this.cursor.appliedThrough,
-    );
+    const from = this.cursor.appliedThrough;
+    let seen = from;
+    const heartbeat = startProgressHeartbeat({
+      logger: this.catchUpLogger,
+      label: `${this.consumerId} catch-up`,
+      progress: () => catchUpProgress(from, seen, settledAtBoot),
+    });
+    try {
+      let page = await this.operationIndex.getSinceOrdinal(from);
 
-    while (page.results.length > 0) {
-      const ordinals = page.results.map(ordinalOf);
-      const failed = await this.replayPage(page.results);
+      while (page.results.length > 0) {
+        const ordinals = page.results.map(ordinalOf);
+        const failed = await this.replayPage(page.results);
 
-      const pageMax = Math.max(...ordinals);
-      const to = this.cursor.target(Math.min(settledAtBoot, pageMax), ordinals);
-      if (to > this.cursor.appliedThrough) {
-        await this.moveCursor(to);
+        const pageMax = Math.max(...ordinals);
+        seen = Math.max(seen, pageMax);
+        const to = this.cursor.target(
+          Math.min(settledAtBoot, pageMax),
+          ordinals,
+        );
+        if (to > this.cursor.appliedThrough) {
+          await this.moveCursor(to);
+        }
+
+        if (failed || !page.next) break;
+        page = await page.next();
       }
-
-      if (failed || !page.next) break;
-      page = await page.next();
+    } finally {
+      heartbeat.stop(`through ordinal ${seen}`);
     }
   }
 
@@ -1136,4 +1155,13 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     );
     this.resetCursor(to);
   }
+}
+
+/** "12,000 of 450,000 operations (2%)" between the boot cursor and the settled head. */
+function catchUpProgress(from: number, seen: number, head: number): string {
+  const total = Math.max(0, head - from);
+  if (total === 0) return `at ordinal ${seen.toLocaleString("en-US")}`;
+  const done = Math.min(total, Math.max(0, seen - from));
+  const pct = Math.floor((done / total) * 100);
+  return `${done.toLocaleString("en-US")} of ${total.toLocaleString("en-US")} operations (${pct}%)`;
 }

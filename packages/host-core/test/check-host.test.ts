@@ -112,6 +112,11 @@ describe("checkHost: one issue per stage", () => {
       /drive: \{ from, slug \} was removed/,
     ],
     ["unknown-runner-key", "runner", /Unrecognized key: "strictPortt"/],
+    [
+      "remote-graphql-url",
+      "reactor.backends.sb.remote.url",
+      /reads switchboard's endpoints\.graphql; it must be a switchboard drive address/,
+    ],
   ])("declared: %s", async (host, at, message) => {
     const result = await check("invariants", host);
     expectOne(result.issues, { stage: "declared", path: at }, message);
@@ -324,6 +329,39 @@ describe("checkHost: one issue per stage", () => {
       verb: "build",
     });
     expect(result.issues).toEqual([]);
+  });
+
+  it("declared: Connect refuses placement.primary, standalone and as a member", async () => {
+    const reactor = {
+      backends: {
+        main: { kind: "worker", storage: { kind: "idb" } },
+        sb: { kind: "remote", remote: { url: "http://127.0.0.1:1/d/inv" } },
+      },
+      placement: { primary: "sb" },
+    };
+    writeHost("invariants", "connect-primary", {
+      name: "inv-connect-primary",
+      runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+      reactor,
+    });
+    writeHost("invariants", "compound-connect-primary", {
+      name: "inv-compound-connect-primary",
+      runner: { module: "@powerhousedao/host-core/runners/compound" },
+      children: { app: { host: "connect", reactor } },
+    });
+    const at = async (host: string) =>
+      (await check("invariants", host)).issues.map((i) => [
+        i.stage,
+        i.path,
+        i.message,
+      ]);
+    const refused = [
+      "declared",
+      "reactor.placement.primary",
+      "Connect doesn't use placement.primary. To choose where new drives go, use placement.newDrives.",
+    ];
+    expect(await at("connect-primary")).toEqual([refused]);
+    expect(await at("compound-connect-primary")).toEqual([refused]);
   });
 
   it("declared: a verb the runner does not export", async () => {

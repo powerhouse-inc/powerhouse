@@ -57,7 +57,7 @@ import type {
 } from "document-model";
 import { logger } from "document-model";
 import { print } from "graphql";
-import type { Variables } from "graphql-request";
+import { GraphQLClient, type Variables } from "graphql-request";
 import { createClient } from "../graphql/client.js";
 import {
   DocumentChangeType as GqlDocumentChangeType,
@@ -75,6 +75,7 @@ import {
 import type { ReactorGraphQLClient } from "../graphql/types.js";
 import { DRIVE_DOCUMENT_TYPES } from "../constants.js";
 import { DOCUMENT_CHANGE_TYPE } from "../reactor-interop.js";
+import { withRequestDeadline, type GraphQLFetch } from "./transport.js";
 import { remoteOperationToLocal } from "../remote-controller/utils.js";
 import type {
   IReactorBrowserClient,
@@ -219,9 +220,11 @@ export type GraphQLReactorClientOptions = {
    * Left out - the normal case - the signer is resolved per push from
    * `window.ph.renown`, so a page signs as whoever is logged in and pushes
    * unsigned when nobody is. Set it where there is no Renown to read: tests,
-   * scripts, and integration suites that must sign deterministically.
+   * scripts, and integration suites that must sign deterministically. A
+   * function is called per push, and pushes unsigned when it returns
+   * `undefined`.
    */
-  signer?: ISigner;
+  signer?: ISigner | (() => ISigner | undefined);
 
   /**
    * Names the drive a call belongs to when the client cannot prove it itself,
@@ -230,6 +233,15 @@ export type GraphQLReactorClientOptions = {
    * the client has proof of its own and the two disagree, the proof is sent.
    */
   driveIdFor?: (call: DriveIdCall) => string | undefined;
+
+  /**
+   * Bounds each HTTP request, headers through body, in milliseconds; a request
+   * past it rejects with a `TimeoutError`. Unset, requests are unbounded.
+   */
+  requestTimeoutMs?: number;
+
+  /** The `fetch` every HTTP request goes through; the global one by default. */
+  fetch?: GraphQLFetch;
 };
 
 // Always known here, so a light client can head a drive without registering it.
@@ -291,7 +303,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private readonly tokenProvider: BearerTokenProvider;
   private readonly subscriptionsUrl: string | undefined;
   private readonly documentModels: () => readonly DocumentModelModule<any>[];
-  private readonly signer: ISigner | undefined;
+  private readonly resolveSigner: () => ISigner | undefined;
   private readonly driveIdFor: GraphQLReactorClientOptions["driveIdFor"];
   private readonly undoRedoChains = new Map<string, Promise<unknown>>();
   private stopRealtime: (() => void) | undefined;
@@ -335,7 +347,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       const copied = [...(models ?? [])];
       this.documentModels = () => copied;
     }
-    this.signer = options.signer;
+    const signer = options.signer;
+    this.resolveSigner =
+      typeof signer === "function"
+        ? signer
+        : signer
+          ? () => signer
+          : ambientRenownSigner;
     this.driveIdFor = options.driveIdFor;
     this.subscriptionsUrl =
       options.realtime === false
@@ -348,11 +366,17 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     const middleware = withWrongBackendErrors(
       makeAuthMiddleware(this.tokenProvider),
     );
-    this.sdk = options.graphqlClient ?? createClient(options.url, middleware);
+    const fetch =
+      options.requestTimeoutMs === undefined
+        ? options.fetch
+        : withRequestDeadline(options.requestTimeoutMs, options.fetch);
+    this.sdk =
+      options.graphqlClient ??
+      createClient(new GraphQLClient(options.url, { fetch }), middleware);
     // Subgraph transports are always derived from `url` and always carry auth,
     // including when the reactor SDK above was injected: an injected SDK is a
     // test seam that owns its own transport, not a second endpoint.
-    this.subgraphs = new SubgraphSdkRegistry(options.url, middleware);
+    this.subgraphs = new SubgraphSdkRegistry(options.url, middleware, fetch);
     this.driveNodes = new GraphQLDriveNodeSource(this.sdk, driveIdHeaders);
     this.read = new GraphQLReadHalf(this, this.driveNodes);
     this.write = {
@@ -831,7 +855,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       actions,
       document,
       this.documentModels(),
-      this.signer,
+      this.resolveSigner(),
       signal,
     );
 
@@ -1062,7 +1086,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     request: BatchExecutionRequest,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    const signer = this.signer ?? resolveAmbientSigner();
+    const signer = this.resolveSigner();
     const jobInputs = await Promise.all(
       request.jobs.map(async (job, index) => {
         const documentId = await this.batchWriteTarget(
@@ -1588,7 +1612,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       actions,
       document,
       this.documentModels(),
-      this.signer,
+      this.resolveSigner(),
       signal,
     );
     const result = await this.sdk.MutateDocumentAsync(
@@ -2333,10 +2357,9 @@ async function prepareActionsForPush(
   actions: Action[],
   document: PHDocument,
   documentModels: readonly DocumentModelModule<any>[],
-  explicitSigner: ISigner | undefined,
+  signer: ISigner | undefined,
   signal?: AbortSignal,
 ): Promise<Action[]> {
-  const signer = explicitSigner ?? resolveAmbientSigner();
   if (!signer || actions.length === 0) {
     return actions;
   }
@@ -2507,7 +2530,8 @@ function isActionSigned(action: Action): boolean {
 }
 
 /** Resolves the signer of the logged-in user, if there is one. */
-function resolveAmbientSigner(): ISigner | undefined {
+/** The logged-in Renown user's signer, read per call; none when nobody is. */
+export function ambientRenownSigner(): ISigner | undefined {
   if (typeof window === "undefined") {
     return undefined;
   }

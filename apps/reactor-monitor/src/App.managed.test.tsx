@@ -9,12 +9,16 @@ import {
 import type { ReactorDescriptor } from "@powerhousedao/reactor-monitor";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
+import { DRAFT_STORAGE_KEY } from "./builder/draft.js";
 import {
+  baseDigest,
   CONTROLLER_PREFIX,
   TOKEN_HEADER,
   TOKEN_META_NAME,
   type Instance,
 } from "./controller/api.js";
+import { managedByOf } from "./controller/managed.js";
+import { stack } from "./host-rules/__fixtures__/hosts.js";
 import { MonitoringSetsStore } from "./monitoring-sets.js";
 import { REMOTE_BEARER_KEY_PREFIX } from "./provisioning.js";
 
@@ -46,6 +50,10 @@ function graphqlOf(port: number) {
   return `http://127.0.0.1:${port}/graphql`;
 }
 
+function driveOf(port: number) {
+  return `http://127.0.0.1:${port}/d/powerhouse`;
+}
+
 function instance(
   id: string,
   status: Instance["status"],
@@ -63,10 +71,34 @@ function instance(
           outputs: {
             origin: `http://127.0.0.1:${port}`,
             graphql: graphqlOf(port),
-            drives: {},
+            drives: { powerhouse: { id: "powerhouse", url: driveOf(port) } },
           },
         }
       : {}),
+  };
+}
+
+function compound(
+  id: string,
+  status: Instance["status"],
+  ports: Record<string, number>,
+): Instance {
+  return {
+    ...instance(id, status),
+    host: "duo",
+    members: Object.fromEntries(
+      Object.entries(ports).map(([member, port]) => [
+        member,
+        {
+          host: `sb-${member}`,
+          outputs: {
+            origin: `http://127.0.0.1:${port}`,
+            graphql: graphqlOf(port),
+            drives: { powerhouse: { id: "powerhouse", url: driveOf(port) } },
+          },
+        },
+      ]),
+    ),
   };
 }
 
@@ -90,6 +122,25 @@ function fakeController() {
       return json(200, { projects: [{ root: ROOT, name: "proj" }] });
     }
     if (path.startsWith("hosts?")) return json(200, { hosts: ["sb"] });
+    if (path === "capabilities") {
+      return json(200, { controller: true, postgres: false });
+    }
+    if (path.startsWith("export?")) {
+      const exported = { ...stack(), project: { name: "proj", root: ROOT } };
+      return json(200, {
+        export: exported,
+        baseDigest: await baseDigest(exported),
+      });
+    }
+    if (path === "drafts" && method === "POST") {
+      const id = `${String(nextId++).padStart(8, "0")}-0000-4000-8000-000000000000`;
+      const started = {
+        ...instance(id, "starting"),
+        source: { project: ROOT, host: "sb" },
+      };
+      instances.set(id, started);
+      return json(202, started);
+    }
     if (path === "instances" && method === "GET") {
       return json(200, { instances: [...instances.values()] });
     }
@@ -164,7 +215,7 @@ function managedDescriptor(
   return {
     kind: "remote",
     name,
-    remote: { url: graphqlOf(port) },
+    remote: { url: driveOf(port) },
     managedBy: { instanceId, project: ROOT, host: "sb" },
   } as ReactorDescriptor;
 }
@@ -199,6 +250,7 @@ describe("App with controller-managed switchboards", () => {
       .forEach((meta) => meta.remove());
     vi.unstubAllGlobals();
     window.sessionStorage.clear();
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     vi.restoreAllMocks();
   });
 
@@ -227,7 +279,7 @@ describe("App with controller-managed switchboards", () => {
       {
         kind: "remote",
         name,
-        remote: { url: graphqlOf(5101) },
+        remote: { url: driveOf(5101) },
         managedBy: { instanceId: id, project: ROOT, host: "sb" },
       },
     ]);
@@ -250,6 +302,84 @@ describe("App with controller-managed switchboards", () => {
     expect(store.getActiveDescriptors()).toEqual([]);
     expect(view.queryByTestId("switchboards-notices")).toBeNull();
     expect(bearerOf(5101)).toBeNull();
+  });
+
+  it("attaches every member of a compound, and kill stops it and drops them all", async () => {
+    mountController();
+    const store = freshStore();
+    const view = render(<App store={store} />);
+    const panel = view.getByLabelText("Switchboards");
+    await waitFor(() =>
+      expect(
+        (within(panel).getByLabelText("Host") as HTMLSelectElement).value,
+      ).toBe("sb"),
+    );
+
+    fireEvent.click(within(panel).getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(controller.instances.size).toBe(1));
+    const [id] = controller.instances.keys();
+    controller.instances.set(id, compound(id, "running", { a: 5301, b: 5302 }));
+
+    const names = [`a-${id.slice(0, 8)}`, `b-${id.slice(0, 8)}`];
+    await waitFor(() => {
+      for (const name of names) {
+        expect(within(reactorList(view)).getByText(name)).toBeTruthy();
+      }
+    }, WAIT);
+    expect(
+      store
+        .getActiveDescriptors()
+        .map((d) => [d.name, d.remote?.url, managedByOf(d)?.member]),
+    ).toEqual([
+      [names[0], driveOf(5301), "a"],
+      [names[1], driveOf(5302), "b"],
+    ]);
+
+    const item = within(reactorList(view)).getByText(names[0]).closest("li")!;
+    fireEvent.click(within(item).getByRole("button", { name: "Kill" }));
+    await waitFor(() =>
+      expect(controller.calls).toContain(
+        `DELETE instances/${encodeURIComponent(id)}`,
+      ),
+    );
+    await waitFor(() => expect(store.getActiveDescriptors()).toEqual([]));
+    expect(view.queryByTestId("switchboards-notices")).toBeNull();
+  });
+
+  it("probes a rehydrated member descriptor against its own member's URL", async () => {
+    mountController();
+    controller.instances.set(
+      "duo",
+      compound("duo", "running", { a: 5311, b: 5399 }),
+    );
+    const member = (name: string, key: string, port: number) =>
+      ({
+        ...managedDescriptor(name, "duo", port),
+        managedBy: {
+          instanceId: "duo",
+          project: ROOT,
+          host: "duo",
+          member: key,
+        },
+      }) as ReactorDescriptor;
+    const store = storeWith(
+      member("a-duo", "a", 5311),
+      member("b-duo", "b", 5312),
+    );
+    const view = render(<App store={store} />);
+
+    await waitFor(
+      () => expect(within(reactorList(view)).getByText("a-duo")).toBeTruthy(),
+      WAIT,
+    );
+    await waitFor(() =>
+      expect(store.getActiveDescriptors().map((d) => d.name)).toEqual([
+        "a-duo",
+      ]),
+    );
+    expect(view.getByTestId("switchboards-notices").textContent).toMatch(
+      /b-duo: its switchboard now serves another URL/,
+    );
   });
 
   it("withholds a rehydrated managed descriptor until the controller confirms it", async () => {
@@ -315,7 +445,7 @@ describe("App with controller-managed switchboards", () => {
       managedDescriptor("sb-gone", "gone", 5103),
       managedDescriptor("sb-done", "done", 5104),
       managedDescriptor("sb-moved", "moved", 5105),
-      { kind: "remote", name: "plain", remote: { url: graphqlOf(5106) } },
+      { kind: "remote", name: "plain", remote: { url: driveOf(5106) } },
     );
     const view = render(<App store={store} />);
 
@@ -405,4 +535,181 @@ describe("App with controller-managed switchboards", () => {
       attachesBefore,
     );
   });
+
+  /** Build host → Load host → Use it → Start; the copy then runs `sb`. */
+  async function startFromBuilder(view: ReturnType<typeof render>) {
+    fireEvent.click(view.getByRole("button", { name: "Build host" }));
+    const builder = within(
+      view.container.querySelector<HTMLElement>("[data-builder]")!,
+    );
+    const load = await waitFor(() => {
+      const button = builder.getByRole("button", { name: "Load host" });
+      expect(button).toHaveProperty("disabled", false);
+      return button;
+    });
+    fireEvent.click(load);
+    await waitFor(() =>
+      expect(
+        builder.getByRole("heading", { name: "Host basics" }),
+      ).toBeTruthy(),
+    );
+    const steps = within(builder.getByRole("navigation", { name: "Steps" }));
+    fireEvent.click(steps.getByRole("button", { name: /Use it/ }));
+    const start = await waitFor(() => {
+      const button = builder.getByRole("button", { name: "Start" });
+      expect(button).toHaveProperty("disabled", false);
+      return button;
+    }, WAIT);
+    fireEvent.click(start);
+    await waitFor(() => expect(controller.calls).toContain("POST drafts"));
+    const [id] = controller.instances.keys();
+    controller.instances.set(id, {
+      ...compound(id, "running", { sb: 5401 }),
+      host: "stack",
+      source: { project: ROOT, host: "sb" },
+    });
+    const name = `sb-${id.slice(0, 8)}`;
+    await waitFor(
+      () => expect(within(reactorList(view)).getByText(name)).toBeTruthy(),
+      WAIT,
+    );
+    await waitFor(
+      () => expect(builder.getByLabelText("Running copy")).toBeTruthy(),
+      WAIT,
+    );
+    return { id, name, builder };
+  }
+
+  const activeNames = (store: MonitoringSetsStore) =>
+    store.getActiveDescriptors().map((d) => d.name);
+
+  it("starts a builder draft with its browser reactor, and Stop takes both away", async () => {
+    mountController();
+    const store = freshStore();
+    const view = render(<App store={store} />);
+    const { id, name, builder } = await startFromBuilder(view);
+    expect(activeNames(store)).toEqual(["ui.main", name]);
+    expect(
+      store.getActiveDescriptors().find((d) => d.name === "ui.main"),
+    ).toMatchObject({ kind: "worker", ownedBy: { instanceId: id } });
+
+    fireEvent.click(builder.getByRole("button", { name: "Stop" }));
+    await waitFor(() =>
+      expect(controller.calls).toContain(
+        `DELETE instances/${encodeURIComponent(id)}`,
+      ),
+    );
+    await waitFor(() => expect(activeNames(store)).toEqual([]));
+    expect(builder.queryByLabelText("Running copy")).toBeNull();
+  }, 30_000);
+
+  it("removes the copy's browser reactor when its switchboard is killed in the sidebar", async () => {
+    mountController();
+    const store = freshStore();
+    const view = render(<App store={store} />);
+    const { name, builder } = await startFromBuilder(view);
+
+    const item = within(reactorList(view)).getByText(name).closest("li")!;
+    fireEvent.click(within(item).getByRole("button", { name: "Kill" }));
+    await waitFor(() => expect(activeNames(store)).toEqual([]));
+    await waitFor(
+      () => expect(builder.queryByLabelText("Running copy")).toBeNull(),
+      WAIT,
+    );
+  }, 30_000);
+
+  it("removes the copy's browser reactor when the Switchboards panel stops it", async () => {
+    mountController();
+    const store = freshStore();
+    const view = render(<App store={store} />);
+    const { builder } = await startFromBuilder(view);
+
+    const panel = view.getByLabelText("Switchboards");
+    fireEvent.click(
+      await waitFor(
+        () => within(panel).getByRole("button", { name: "Stop" }),
+        WAIT,
+      ),
+    );
+    await waitFor(() => expect(activeNames(store)).toEqual([]), WAIT);
+    await waitFor(
+      () => expect(builder.queryByLabelText("Running copy")).toBeNull(),
+      WAIT,
+    );
+  }, 30_000);
+
+  it("removes the copy's browser reactor when the controller no longer runs it", async () => {
+    mountController();
+    const store = freshStore();
+    const view = render(<App store={store} />);
+    const { id, builder } = await startFromBuilder(view);
+
+    controller.instances.delete(id);
+    await waitFor(() => expect(activeNames(store)).toEqual([]), WAIT);
+    await waitFor(
+      () => expect(builder.queryByLabelText("Running copy")).toBeNull(),
+      WAIT,
+    );
+  }, 30_000);
+
+  it("keeps the run across a set switch, and the old set lets go of it after Stop", async () => {
+    mountController();
+    const store = freshStore();
+    const view = render(<App store={store} />);
+    const { id, builder } = await startFromBuilder(view);
+
+    const sets = view.getByLabelText("Monitoring sets");
+    fireEvent.change(within(sets).getByPlaceholderText("new set"), {
+      target: { value: "other" },
+    });
+    fireEvent.click(within(sets).getByRole("button", { name: "Create set" }));
+    await waitFor(() => expect(store.getActiveSetName()).toBe("other"));
+    expect(builder.getByLabelText("Running copy")).toBeTruthy();
+
+    fireEvent.click(builder.getByRole("button", { name: "Stop" }));
+    await waitFor(() =>
+      expect(controller.calls).toContain(
+        `DELETE instances/${encodeURIComponent(id)}`,
+      ),
+    );
+    await waitFor(() =>
+      expect(builder.queryByLabelText("Running copy")).toBeNull(),
+    );
+
+    fireEvent.change(within(sets).getByLabelText("Active set"), {
+      target: { value: "default" },
+    });
+    await waitFor(() => expect(activeNames(store)).toEqual([]), WAIT);
+  }, 30_000);
+
+  it("picks the run up again after a reload, without a second browser reactor", async () => {
+    mountController();
+    const store = freshStore();
+    const first = render(<App store={store} />);
+    const { id, name } = await startFromBuilder(first);
+    first.unmount();
+
+    const view = render(<App store={store} />);
+    fireEvent.click(view.getByRole("button", { name: "Build host" }));
+    const builder = within(
+      view.container.querySelector<HTMLElement>("[data-builder]")!,
+    );
+    await waitFor(
+      () => expect(builder.getByLabelText("Running copy")).toBeTruthy(),
+      WAIT,
+    );
+    expect(builder.getByRole("button", { name: "Start" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    expect(activeNames(store)).toEqual(["ui.main", name]);
+
+    fireEvent.click(builder.getByRole("button", { name: "Stop" }));
+    await waitFor(() =>
+      expect(controller.calls).toContain(
+        `DELETE instances/${encodeURIComponent(id)}`,
+      ),
+    );
+    await waitFor(() => expect(activeNames(store)).toEqual([]));
+  }, 30_000);
 });

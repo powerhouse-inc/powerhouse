@@ -48,7 +48,7 @@ describe("HostImportPanel", () => {
           "host-import-url-cli-switchboard.main",
         ) as HTMLInputElement
       ).value,
-    ).toBe("http://localhost:7491/graphql");
+    ).toBe("http://localhost:7491/d/powerhouse");
     expect(
       view.getByTestId("host-import-status-cli-switchboard.main").textContent,
     ).toBe("derived, unverified");
@@ -63,13 +63,15 @@ describe("HostImportPanel", () => {
 
     expect(button("Save set").disabled).toBe(true);
     expect(
-      view.getByText("assistant.switchboard needs a GraphQL URL."),
+      view.getByText(
+        "assistant.switchboard needs a switchboard drive address (<switchboard>/d/<slug>).",
+      ),
     ).toBeTruthy();
 
     fireEvent.change(
       view.getByTestId("host-import-url-assistant.switchboard"),
       {
-        target: { value: "http://localhost:4001/graphql" },
+        target: { value: "http://localhost:4001/d/powerhouse" },
       },
     );
     fireEvent.click(button("Save set"));
@@ -80,7 +82,7 @@ describe("HostImportPanel", () => {
         {
           kind: "remote",
           name: "assistant.switchboard",
-          remote: { url: "http://localhost:4001/graphql" },
+          remote: { url: "http://localhost:4001/d/powerhouse" },
         },
       ],
       source: {
@@ -91,7 +93,7 @@ describe("HostImportPanel", () => {
     });
   });
 
-  it("accepts only an http(s) URL", () => {
+  it("accepts only a switchboard drive address", () => {
     const { view, paste, button } = renderPanel();
 
     paste(fixtureText("assistant"));
@@ -101,6 +103,10 @@ describe("HostImportPanel", () => {
     expect(button("Save set").disabled).toBe(true);
 
     fireEvent.change(url, { target: { value: "https://sb.example/graphql" } });
+
+    expect(button("Save set").disabled).toBe(true);
+
+    fireEvent.change(url, { target: { value: "https://sb.example/d/b" } });
 
     expect(button("Save set").disabled).toBe(false);
   });

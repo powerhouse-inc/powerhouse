@@ -613,3 +613,171 @@ describe("ProcessorsTab catch-up priority", () => {
     expect(prioritySelect(view).disabled).toBe(true);
   });
 });
+
+function timingRow(
+  processorId: string,
+  name: string,
+  windowBusy: number,
+  totalBusy: number,
+  factoryId = "f",
+) {
+  const counters = (busy: number) => ({
+    batches: 2,
+    opsDelivered: 90,
+    opsScanned: 100,
+    opsMatched: 100,
+    pages: 1,
+    handlerMs: busy,
+    maxBatchMs: busy,
+    readMs: 0,
+    lookupMs: 0,
+    fillMs: 0,
+    slotWaitMs: 0,
+    pauseMs: 0,
+    errors: 0,
+  });
+  const horizon = (busy: number) => ({
+    live: { ...counters(0), batches: 0, opsDelivered: 0, opsScanned: 0 },
+    replay: counters(busy),
+    ordinalsAdvanced: 10,
+    busyMs: busy,
+  });
+  return {
+    processorId,
+    name,
+    driveLabel: "files",
+    factoryId,
+    driveId: "d",
+    phase: "live" as const,
+    lastOrdinal: 10,
+    queueDepth: { tasks: 0, ops: 0 },
+    ordinalsBehind: 0,
+    opsPerSecond: 1,
+    ordinalsPerSecond: 1,
+    etaMs: null,
+    sinceUtcMs: 0,
+    total: horizon(totalBusy),
+    window: horizon(windowBusy),
+    windowMs: 60_000,
+    currentRun: null,
+    lastRun: null,
+    lastBatch: null,
+    byDocumentType: [],
+  };
+}
+
+function timingReport(level: "off" | "basic" = "basic") {
+  return {
+    level,
+    windowMs: 60_000,
+    head: 10,
+    headKnown: true,
+    processors: [
+      timingRow("f:d:0", "Slow", 9_000, 20_000),
+      timingRow("f:d:1", "Quick", 1_000, 90_000, "g"),
+    ],
+  };
+}
+
+function timedInspector(report: unknown): MonitorInspector {
+  return {
+    ...inspectorOf([
+      processor({ processorId: "f:d:0" }),
+      processor({ processorId: "f:d:1" }),
+    ]),
+    getProcessorTiming: () =>
+      report instanceof Error
+        ? Promise.reject(report)
+        : Promise.resolve(report),
+  } as MonitorInspector;
+}
+
+async function timeView(report: unknown = timingReport()) {
+  const view = render(<ProcessorsTab inspector={timedInspector(report)} />);
+  fireEvent.change(await view.findByLabelText("View"), {
+    target: { value: "time" },
+  });
+  await view.findByTestId("processor-timing");
+  return view;
+}
+
+function nameColumn(view: ReturnType<typeof render>): string[] {
+  return [
+    ...view.getByTestId("processor-timing").querySelectorAll("tbody tr"),
+  ].map((row) => row.querySelector("td")!.textContent ?? "");
+}
+
+describe("ProcessorsTab timing", () => {
+  it("names rows in the progress view when timing is served", async () => {
+    const view = render(
+      <ProcessorsTab inspector={timedInspector(timingReport())} />,
+    );
+    expect(await view.findByText("Slow · files")).toBeTruthy();
+  });
+
+  it("names rows even while timing is off, with a note", async () => {
+    const view = render(
+      <ProcessorsTab inspector={timedInspector(timingReport("off"))} />,
+    );
+    expect(await view.findByText("Slow · files")).toBeTruthy();
+    expect(view.getByTestId("timing-off").textContent).toContain(
+      "PH_PROCESSOR_TIMING=basic",
+    );
+    expect(view.queryByLabelText("View")).toBeNull();
+  });
+
+  it("stays on the progress view when the host serves no timing", async () => {
+    const view = render(
+      <ProcessorsTab inspector={timedInspector(new Error("no such field"))} />,
+    );
+    expect(await view.findByTestId("timing-off")).toBeTruthy();
+    expect(view.getByTestId("processor-progress")).toBeTruthy();
+    expect(view.queryByLabelText("View")).toBeNull();
+  });
+
+  it("sorts by the window's busy time, and by a clicked header", async () => {
+    const view = await timeView();
+    expect(nameColumn(view)).toEqual(["Slow · files", "Quick · files"]);
+
+    fireEvent.click(view.getByRole("button", { name: "Busy (total)" }));
+    expect(nameColumn(view)).toEqual(["Quick · files", "Slow · files"]);
+
+    fireEvent.click(view.getByRole("button", { name: "Busy (total)" }));
+    expect(nameColumn(view)).toEqual(["Slow · files", "Quick · files"]);
+  });
+
+  it("groups by factory, with a summed row per group", async () => {
+    const view = await timeView();
+    fireEvent.change(view.getByLabelText("Group by"), {
+      target: { value: "factory" },
+    });
+    expect(nameColumn(view)).toEqual([
+      "f",
+      "Slow · files",
+      "g",
+      "Quick · files",
+    ]);
+  });
+
+  it("filters to one path and to the current run", async () => {
+    const view = await timeView();
+    fireEvent.change(view.getByLabelText("Path"), {
+      target: { value: "live" },
+    });
+    expect(view.getByTestId("timing-totals").textContent).toContain("0 / 0");
+    fireEvent.change(view.getByLabelText("Path"), {
+      target: { value: "both" },
+    });
+    fireEvent.change(view.getByLabelText("Horizon"), {
+      target: { value: "current" },
+    });
+    expect(view.getByTestId("processor-timing").textContent).toContain("0 / 0");
+  });
+
+  it("shows totals with the wall share", async () => {
+    const view = await timeView();
+    const totals = view.getByTestId("timing-totals").textContent ?? "";
+    expect(totals).toContain("wall share 0.2×");
+    expect(totals).toContain("180 / 200 (90%)");
+  });
+});

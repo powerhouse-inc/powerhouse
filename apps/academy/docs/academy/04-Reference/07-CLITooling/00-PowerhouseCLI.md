@@ -259,6 +259,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Connect Preview](#connect-preview)
 - [Access Token](#access-token)
 - [Inspect](#inspect)
+- [Keyframes](#keyframes)
 - [List](#list)
 - [Mcp](#mcp)
 - [Migrate](#migrate)
@@ -486,6 +487,10 @@ Generate an action inside an existing piece
 **Piece** - The piece directory under pieces/ to add the action to. Optional when the project ships exactly one piece. - Usage: `--piece, -p <str>`
 
 **Require Reactor** - Declare reactor access for the action: read, or write (which includes read). The action then gets context.reactor - Usage: `--require-reactor <value>`
+
+**Default Timeout Seconds** - Write defaultTimeoutSeconds: the step timeout used when the workflow sets none - Usage: `--default-timeout-seconds <number>`
+
+**Default Max Attempts** - Write defaultRetry: \{ maxAttempts \}: the attempts (1 is no retry) used when the workflow sets no retry - Usage: `--default-max-attempts <number>`
 
 
 
@@ -1067,6 +1072,56 @@ your project.
 
 
 ### Flags
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Keyframes
+
+The keyframes command reports on and cleans up the keyframes of a running switchboard,
+through its inspection-admin endpoint.
+
+Prerequisites:
+  - The host serves inspection-admin (INSPECTION_ADMIN_ENABLED=true).
+  - The caller is one of the host's auth admins.
+  - The keep rules are in powerhouse.config.json under reactor.keyframes, or in PH_KEYFRAMES.
+
+Run preview first: it only reads. clean then removes the keyframes past each type's keep
+count and all keyframes of deleted documents, in small paced statements beside live
+traffic. Running it again is safe. A later read that misses a keyframe replays from the
+operation log, so a clean-up costs time on cold reads and never changes a document.
+
+The disk only shrinks after reclaim, which rewrites the Keyframe table once the store is
+quiet. On PGlite the store answers nothing while it rewrites. On Postgres it says what to
+run by hand.
+
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Action *[required]*** - preview: report what a clean-up would remove, without writing. clean: apply the configured keep and remove the keyframes of deleted documents (needs --yes). status: show the latest run and reclaim. cancel: stop a running clean-up. reclaim: rewrite the Keyframe table to give the space back to the disk. - Usage: `<action>`
+
+
+
+
+### Options
+**Url** - The switchboard's GraphQL endpoint, e.g. `http://localhost:4001/graphql`. Defaults to reactor.port in powerhouse.config.json. - Usage: `--url <str>`
+
+**Token** - Admin bearer token. Defaults to PH_ACCESS_TOKEN, then a token from your `ph login` identity. Its address must be in the host's auth admins. - Usage: `--token <str>`
+
+
+
+
+### Flags
+**Yes** - Confirms a clean or a reclaim; both refuse to run without it. - Usage: `--yes`
+
+**Json** - Print the result as JSON. - Usage: `--json`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`

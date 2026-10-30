@@ -31,7 +31,8 @@ const BUTTON_VARIANT = {
     "border border-solid border-foreground/15 bg-card text-foreground hover:bg-accent",
   ghost: "text-muted-foreground hover:bg-accent hover:text-foreground",
   danger: "text-wf-fail hover:bg-wf-fail/10",
-  destructive: "bg-wf-fail text-white hover:opacity-90",
+  // Dark text on the lighter dark-theme red, as primary does.
+  destructive: "bg-wf-fail text-background hover:opacity-90",
 };
 
 export function Button(
@@ -405,6 +406,8 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
     top?: number;
     bottom?: number;
     maxHeight: number;
+    // Inside a modal dialog, which blocks pointer events outside itself.
+    container: HTMLElement;
   } | null>(null);
 
   const selected = props.multiple
@@ -456,6 +459,9 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
       top: flip ? undefined : rect.bottom + 4,
       bottom: flip ? window.innerHeight - rect.top + 4 : undefined,
       maxHeight: Math.min(320, flip ? above : below),
+      container:
+        triggerRef.current?.closest<HTMLElement>('[role="dialog"]') ??
+        document.body,
     });
   };
 
@@ -770,7 +776,7 @@ export function Select(props: SingleSelectProps | MultiSelectProps) {
                 </div>
               ) : null}
             </div>,
-            document.body,
+            position.container,
           )
         : null}
     </>

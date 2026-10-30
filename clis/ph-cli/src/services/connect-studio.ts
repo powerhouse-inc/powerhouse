@@ -7,6 +7,7 @@ import type { InlineConfig, Logger, ViteDevServer } from "vite";
 import { createServer, mergeConfig } from "vite";
 import type { ConnectStudioArgs } from "../types.js";
 import { buildStudioConnectOverride } from "../utils/cli-connect-override.js";
+import { switchboardProxy } from "../utils/switchboard-proxy.js";
 
 const CONFIG_FILE = "powerhouse.config.json";
 const RELOAD_DEBOUNCE_MS = 200;
@@ -16,6 +17,8 @@ export type ConnectStudioOptions = {
   cacheDir?: string;
   /** Starts a new dev server when powerhouse.config.json changes; the open tab reloads. */
   reloadOnConfigChange?: boolean;
+  /** The switchboard origin whose paths this server proxies (runner.proxy). */
+  proxy?: string;
 };
 
 function readConfig(file: string): unknown {
@@ -34,7 +37,7 @@ export async function runConnectStudio(
   callerOverride?:
     | PHConnectRuntimeConfig
     | (() => PHConnectRuntimeConfig | undefined),
-  { routes, cacheDir, reloadOnConfigChange }: ConnectStudioOptions = {},
+  { routes, cacheDir, reloadOnConfigChange, proxy }: ConnectStudioOptions = {},
 ): Promise<ViteDevServer> {
   const { port, host, open, cors, strictPort, printUrls, bindCLIShortcuts } =
     args;
@@ -55,7 +58,14 @@ export async function runConnectStudio(
     });
     const devServerConfig: InlineConfig = {
       // A restart reloads the open tab rather than opening another.
-      server: { port, host, open: first && open, cors, strictPort },
+      server: {
+        port,
+        host,
+        open: first && open,
+        cors,
+        strictPort,
+        ...(proxy ? { proxy: switchboardProxy(proxy) } : {}),
+      },
       customLogger,
     };
     const server = await createServer(mergeConfig(baseConfig, devServerConfig));

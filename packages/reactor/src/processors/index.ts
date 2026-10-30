@@ -1,5 +1,15 @@
 export { ProcessorManager } from "./processor-manager.js";
 export {
+  DEFAULT_PROCESSOR_SLOW_BATCH_MS,
+  DEFAULT_PROCESSOR_TIMING_WINDOW_MS,
+  isProcessorTimingLevel,
+  PROCESSOR_TIMING_LEVELS,
+  ProcessorStats,
+  ProcessorTimingSettings,
+  type ProcessorStatsIdentity,
+  type ProcessorTimingOptions,
+} from "./processor-stats.js";
+export {
   BackfillSlots,
   DEFAULT_MAX_CONCURRENT_BACKFILLS,
   type IBackfillSlots,

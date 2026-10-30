@@ -1,6 +1,7 @@
 import {
   buildActionContext,
   InMemoryKeyValueStore,
+  RunCannotPauseError,
   UnsupportedContextMemberError,
 } from "../../../src/pieces/activepieces/context/action.js";
 
@@ -43,9 +44,8 @@ describe("buildActionContext", () => {
       );
     }
     expect(() => ctx.server.apiUrl).toThrowError(UnsupportedContextMemberError);
-    expect(() => ctx.run.stop()).toThrowError(UnsupportedContextMemberError);
     expect(() => ctx.generateResumeUrl({ queryParams: {} })).toThrowError(
-      UnsupportedContextMemberError,
+      RunCannotPauseError,
     );
   });
 

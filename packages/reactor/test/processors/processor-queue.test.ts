@@ -19,6 +19,10 @@ import {
   type IBackfillSlots,
 } from "../../src/processors/backfill-slots.js";
 import { CatchUpPriority } from "../../src/processors/catch-up-priority.js";
+import {
+  ProcessorStats,
+  ProcessorTimingSettings,
+} from "../../src/processors/processor-stats.js";
 import type { PagedResults } from "../../src/shared/types.js";
 import { createMockLogger, deferred } from "../factories.js";
 
@@ -122,6 +126,7 @@ function harness(
     backfillSlots?: IBackfillSlots;
     betweenPages?: (closing: AbortSignal) => Promise<void>;
     pageSize?: () => number;
+    stats?: ProcessorStats;
   } = {},
 ): Harness {
   const delivered: number[][] = [];
@@ -150,6 +155,7 @@ function harness(
     cursor,
     progress,
     floor: options.floor ?? 0,
+    stats: options.stats ?? ProcessorStats.disabled("p"),
     readSince: options.readSince ?? pagedIndex(options.index ?? []),
     routedThrough: options.routedThrough ?? (() => Number.MAX_SAFE_INTEGER),
     confirmedThrough:
@@ -372,6 +378,7 @@ describe("ProcessorQueue", () => {
         cursor,
         progress: { runFrom: 0, phase: "live" },
         floor: 0,
+        stats: ProcessorStats.disabled("p"),
         readSince: pagedIndex([]),
         routedThrough: () => Number.MAX_SAFE_INTEGER,
         confirmedThrough: () => Number.MAX_SAFE_INTEGER,
@@ -1334,5 +1341,202 @@ describe("ProcessorQueue", () => {
       await retried;
       expect(progress).toEqual({ runFrom: 2, phase: "live" });
     });
+  });
+});
+
+describe("ProcessorQueue timing", () => {
+  function timed() {
+    let time = 1_000;
+    const settings = new ProcessorTimingSettings({
+      level: "basic",
+      now: () => time,
+      utcNow: () => time,
+    });
+    const stats = new ProcessorStats(settings, {
+      processorId: "p",
+      name: "Index",
+      driveLabel: "files",
+      factoryId: "f",
+      driveId: "d",
+    });
+    const slow = async <T>(ms: number, value: T): Promise<T> => {
+      await Promise.resolve();
+      time += ms;
+      return value;
+    };
+    return { stats, slow, settings };
+  }
+
+  it("puts a replay page's awaits in their counters and advances the run", async () => {
+    const { stats, slow } = timed();
+    const index = [op(1), op(2)];
+    const { queue } = harness({
+      stats,
+      index,
+      readSince: async (ordinal) => slow(40, await pagedIndex(index)(ordinal)),
+      purged: () => slow(5, new Set<string>()),
+      onOperations: () => slow(7, undefined),
+    });
+
+    await queue.backfill();
+
+    const timing = stats.snapshot()!;
+    expect(timing.total.replay).toMatchObject({
+      batches: 1,
+      opsDelivered: 2,
+      opsScanned: 2,
+      opsMatched: 2,
+      pages: 1,
+      handlerMs: 7,
+      lookupMs: 5,
+      readMs: 40,
+    });
+    expect(timing.total.live.batches).toBe(0);
+    expect(timing.total.ordinalsAdvanced).toBe(2);
+    expect(timing.currentRun).toBeNull();
+    expect(timing.lastRun).toMatchObject({ ordinals: 2, opsDelivered: 2 });
+  });
+
+  it("counts a live batch on the live path", async () => {
+    const { stats, slow } = timed();
+    const { queue } = harness({
+      stats,
+      onOperations: () => slow(3, undefined),
+    });
+
+    await queue.live([op(1), op(2)], {
+      purged: slow(2, new Set<string>()),
+    });
+
+    const { live, replay } = stats.snapshot()!.total;
+    expect(live).toMatchObject({
+      batches: 1,
+      opsDelivered: 2,
+      opsScanned: 2,
+      handlerMs: 3,
+    });
+    expect(replay.batches).toBe(0);
+  });
+
+  it("counts an erase as live", async () => {
+    const { stats } = timed();
+    const { queue } = harness({ stats });
+
+    await queue.erase([op(1)], op(2), {
+      purged: Promise.resolve(new Set<string>()),
+    });
+
+    expect(stats.snapshot()!.total.live).toMatchObject({
+      batches: 1,
+      opsDelivered: 2,
+    });
+  });
+
+  it("counts handler and read failures as errors", async () => {
+    const failing = timed();
+    const handler = harness({
+      stats: failing.stats,
+      onOperations: () => Promise.reject(new Error("boom")),
+    });
+    await handler.queue.live([op(1)]);
+    expect(failing.stats.snapshot()!.total.live.errors).toBe(1);
+
+    const unreadable = timed();
+    const read = harness({
+      stats: unreadable.stats,
+      readSince: () => Promise.reject(new Error("no store")),
+    });
+    await read.queue.backfill();
+    expect(unreadable.stats.snapshot()!.total.replay.errors).toBe(1);
+  });
+
+  it("keeps slot waits and pauses out of busy time", async () => {
+    const { stats, slow } = timed();
+    const index = [op(1), op(2), op(3)];
+    const { queue } = harness({
+      stats,
+      readSince: pagedIndex(index, 1),
+      betweenPages: () => slow(9, undefined),
+      backfillSlots: {
+        acquire: () => slow(11, () => undefined),
+        oversubscribed: () => false,
+      } as unknown as IBackfillSlots,
+    });
+
+    await queue.backfill();
+
+    const { total } = stats.snapshot()!;
+    expect(total.replay.slotWaitMs).toBe(11);
+    expect(total.replay.pauseMs).toBe(18);
+    expect(total.busyMs).toBe(0);
+  });
+
+  it("reports what waits on the queue", async () => {
+    const { stats } = timed();
+    const gate = deferred<void>();
+    const { queue } = harness({ stats, onOperations: () => gate.promise });
+
+    const first = queue.live([op(1)]);
+    await Promise.resolve();
+    await Promise.resolve();
+    void queue.live([op(2), op(3)]);
+    void queue.advance(9);
+
+    expect(queue.depth).toEqual({ tasks: 2, ops: 2 });
+
+    gate.resolve();
+    await first;
+    await queue.close();
+    expect(queue.depth).toEqual({ tasks: 0, ops: 0 });
+  });
+
+  it("counts delivered operations by path whatever the level", async () => {
+    const delivered = { live: 0, replay: 0 };
+    const queue = new ProcessorQueue({
+      processorId: "p",
+      processor: {
+        onOperations: () => Promise.resolve(),
+        onDisconnect: () => Promise.resolve(),
+      },
+      filter: {},
+      cursor: {
+        lastOrdinal: 0,
+        status: "active",
+        lastError: undefined,
+        lastErrorTimestamp: undefined,
+      },
+      progress: { runFrom: 0, phase: "live" },
+      floor: 0,
+      stats: ProcessorStats.disabled("p"),
+      delivered,
+      readSince: pagedIndex([op(1), op(2)]),
+      routedThrough: () => Number.MAX_SAFE_INTEGER,
+      confirmedThrough: () => Number.MAX_SAFE_INTEGER,
+      persist: () => Promise.resolve(),
+      purged: () => Promise.resolve(new Set()),
+      logger: createMockLogger(),
+    });
+
+    await queue.backfill();
+    await queue.live([op(3)]);
+
+    expect(delivered).toEqual({ live: 1, replay: 2 });
+    expect(queue.stats()).toMatchObject({
+      processorId: "p",
+      tasks: 0,
+      bufferedLiveOps: 0,
+      replaying: 0,
+    });
+  });
+
+  it("records nothing while timing is off", async () => {
+    const { stats, settings } = timed();
+    settings.level = "off";
+    const { queue } = harness({ stats, index: [op(1)] });
+
+    await queue.backfill();
+
+    settings.level = "basic";
+    expect(stats.snapshot()!.total.replay.pages).toBe(0);
   });
 });

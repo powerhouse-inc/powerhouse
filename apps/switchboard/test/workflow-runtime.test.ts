@@ -38,6 +38,7 @@ import {
   composeWorkflowRuntime,
   assertWorkflowPackageLoadable,
   hostPrincipalOf,
+  indexQueryFor,
   isWorkflowSingletonConflict,
   retryWorkflowSingleton,
   workflowSingletonLossHandler,
@@ -913,6 +914,75 @@ describe("the host's reactor access", () => {
       identity: null,
     });
     expect(hostPrincipalOf(access)).toBeUndefined();
+  });
+});
+
+describe("a piece's index query through the host", () => {
+  const signer = {
+    app: { key: "did:key:zHost" },
+    user: { address: "0xhost", chainId: 5, networkId: "eip155" },
+  };
+  const request = {
+    subgraph: "key-index",
+    query: "{ keyIndex { find { key } } }",
+    variables: { k: ["a"] },
+  };
+  const manager = () => ({
+    executeSubgraph: vi.fn().mockResolvedValue({ data: { keyIndex: {} } }),
+  });
+  const sentUser = (m: ReturnType<typeof manager>) =>
+    (m.executeSubgraph.mock.calls[0] as [string, { user?: unknown }])[1].user;
+
+  it("asks as the run user on the host's chain, with the user's key", async () => {
+    const m = manager();
+    const query = indexQueryFor(m, {
+      signer,
+    } as unknown as InProcessReactorClientModule);
+    const result = await query(request, {
+      address: "0xrun",
+      subject: { address: "0xrun", key: "did:key:zRun" },
+    });
+    expect(result).toEqual({ data: { keyIndex: {} } });
+    expect(m.executeSubgraph).toHaveBeenCalledWith("key-index", {
+      query: request.query,
+      variables: request.variables,
+      user: {
+        address: "0xrun",
+        chainId: 5,
+        networkId: "eip155",
+        appKey: "did:key:zRun",
+      },
+    });
+  });
+
+  it("asks as the host itself for a run with no user, and anonymously without an identity", async () => {
+    const m = manager();
+    await indexQueryFor(m, {
+      signer,
+    } as unknown as InProcessReactorClientModule)(request, null);
+    expect(sentUser(m)).toEqual({
+      address: "0xhost",
+      chainId: 5,
+      networkId: "eip155",
+      appKey: "did:key:zHost",
+    });
+
+    const anonymous = manager();
+    await indexQueryFor(anonymous, {
+      signer: { app: { key: "did:key:zHost" }, user: {} },
+    } as unknown as InProcessReactorClientModule)(request, null);
+    expect(sentUser(anonymous)).toBeUndefined();
+  });
+
+  it("hands the subgraph's errors back as messages", async () => {
+    const m = {
+      executeSubgraph: vi.fn().mockResolvedValue({
+        data: null,
+        errors: [{ message: "nope", extensions: { code: "X" } }],
+      }),
+    };
+    const result = await indexQueryFor(m, undefined)(request, null);
+    expect(result).toEqual({ data: null, errors: [{ message: "nope" }] });
   });
 });
 

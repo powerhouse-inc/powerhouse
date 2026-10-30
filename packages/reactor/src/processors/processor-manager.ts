@@ -11,7 +11,11 @@ import type {
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
 import { CatchUpPriority } from "./catch-up-priority.js";
-import { startReplayState, type ReplaySnapshotRow } from "./replay-state.js";
+import {
+  startReplayState,
+  type ReplaySnapshotRow,
+  type StatelessPass,
+} from "./replay-state.js";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -28,10 +32,17 @@ import {
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import { findPurged } from "../storage/kysely/document-purges.js";
 import {
+  ProcessorStats,
+  ProcessorTimingSettings,
+  type ProcessorStatsIdentity,
+} from "./processor-stats.js";
+import {
   ProcessorQueue,
   purgeCandidates,
   type LiveCheck,
   type ProcessorCursorState,
+  type ProcessorDeliveredOps,
+  type ProcessorQueueStats,
 } from "./processor-queue.js";
 import {
   createMinimalDriveHeader,
@@ -40,6 +51,7 @@ import {
   extractDriveHeader,
   isDriveDeletion,
   matchesFilter,
+  resolveProcessorNames,
   resolveProcessorSlots,
 } from "./utils.js";
 
@@ -85,6 +97,8 @@ export type ProcessorManagerOptions = {
    * to a dynamic priority with no load source, which holds level 4.
    */
   catchUpPriority?: CatchUpPriority;
+  /** What every queue records about its time; defaults to off. */
+  processorTiming?: ProcessorTimingSettings;
 };
 
 // Routing tables are only read or written synchronously; everything that
@@ -122,6 +136,10 @@ export class ProcessorManager
   private driveContainerTypes: ReadonlySet<string>;
   private legacyProcessorIds: boolean;
   private catchUpPriority: CatchUpPriority;
+  private processorTiming: ProcessorTimingSettings;
+  // Outlives a re-registration, so a reload's cost adds up; dropped with the row.
+  private stats: Map<string, ProcessorStats> = new Map();
+  private readonly delivered: ProcessorDeliveredOps = { live: 0, replay: 0 };
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
@@ -143,6 +161,8 @@ export class ProcessorManager
     this.driveContainerTypes = driveContainerTypes;
     this.legacyProcessorIds = options.legacyProcessorIds ?? true;
     this.catchUpPriority = options.catchUpPriority ?? new CatchUpPriority();
+    this.processorTiming =
+      options.processorTiming ?? new ProcessorTimingSettings();
   }
 
   override async init(): Promise<void> {
@@ -537,6 +557,9 @@ export class ProcessorManager
       runFrom: state.lastOrdinal,
       phase: "errored",
       retry: () => this.retryOwed(factoryId, driveId),
+      name: resolveProcessorNames([record])[0],
+      driveLabel: this.driveLabelOf(driveId),
+      timing: () => undefined,
     });
   }
 
@@ -770,12 +793,14 @@ export class ProcessorManager
 
     const { factoryId, driveId, lowestRoutedOrdinal } = slot;
     const ids = resolveProcessorSlots(records, this.legacyProcessorIds);
+    const names = resolveProcessorNames(records);
     const bound: Bound[] = records.map((record, i) =>
       this.track(
         slot,
         record,
         i,
         `${factoryId}:${driveId}:${ids[i]}`,
+        names[i]!,
         creationOrdinal,
         lowestRoutedOrdinal,
       ),
@@ -1037,6 +1062,7 @@ export class ProcessorManager
     record: ProcessorRecord,
     processorIndex: number,
     processorId: string,
+    name: string,
     creationOrdinal: number,
     lowestRoutedOrdinal: number | undefined,
   ): Bound {
@@ -1071,6 +1097,14 @@ export class ProcessorManager
       );
     }
 
+    const driveLabel = this.driveLabelOf(slot.driveId);
+    const stats = this.statsFor({
+      processorId,
+      name,
+      driveLabel,
+      factoryId: slot.factoryId,
+      driveId: slot.driveId,
+    });
     const tracked: TrackedProcessor = {
       processorId,
       factoryId: slot.factoryId,
@@ -1082,6 +1116,10 @@ export class ProcessorManager
       runFrom: cursor.lastOrdinal,
       phase: cursor.status === "errored" ? "errored" : "live",
       retry: () => queue.retry(),
+      name,
+      driveLabel,
+      timing: () => stats.snapshot(),
+      queueDepth: () => queue.depth,
     };
     const queue = new ProcessorQueue({
       processorId,
@@ -1099,14 +1137,68 @@ export class ProcessorManager
         startReplayState(record.replayState ?? "latest", {
           snapshots: (ids, branches) => this.readSnapshots(ids, branches),
           exact: (operations) => this.rebuildStateForOperations(operations),
+          passedWithoutState: (passes) =>
+            this.logStatelessPasses(processorId, passes),
         }),
       routedThrough: () => this.highWater(),
       confirmedThrough: () => this.lastOrdinal,
       persist: (state) => this.writeCursor(tracked, state),
       purged: (ids) => findPurged(this.db, ids),
+      stats,
+      delivered: this.delivered,
       logger: this.logger,
     });
     return { tracked, queue };
+  }
+
+  /** A rebind keeps the stats; a new name means the id changed hands. */
+  private statsFor(identity: ProcessorStatsIdentity): ProcessorStats {
+    const existing = this.stats.get(identity.processorId);
+    if (existing?.name === identity.name) {
+      existing.rebind(identity);
+      return existing;
+    }
+    const stats = new ProcessorStats(
+      this.processorTiming,
+      identity,
+      this.logger,
+    );
+    this.stats.set(identity.processorId, stats);
+    return stats;
+  }
+
+  private driveLabelOf(driveId: string): string {
+    const header = this.driveHeaders.get(driveId);
+    return header?.slug || header?.name || driveId;
+  }
+
+  /** Every queue's sizes summed, and the fullest queues, for telemetry. */
+  queueStats(top = 20): {
+    totals: Record<string, number>;
+    largest: ProcessorQueueStats[];
+  } {
+    const all = [...this.allBound()].map(({ queue }) => queue.stats());
+    const totals: Record<string, number> = {
+      processors: all.length,
+      tasks: 0,
+      liveTasks: 0,
+      bufferedLiveOps: 0,
+      replaying: 0,
+      unrouted: 0,
+      opsDeliveredLive: this.delivered.live,
+      opsDeliveredReplay: this.delivered.replay,
+    };
+    for (const queue of all) {
+      totals.tasks! += queue.tasks;
+      totals.liveTasks! += queue.liveTasks;
+      totals.bufferedLiveOps! += queue.bufferedLiveOps;
+      totals.replaying! += queue.replaying > 0 ? 1 : 0;
+      totals.unrouted! += queue.unrouted;
+    }
+    const largest = all
+      .sort((a, b) => b.bufferedLiveOps - a.bufferedLiveOps)
+      .slice(0, top);
+    return { totals, largest };
   }
 
   /** Resolves once every queue has taken the latest cursor advance. */
@@ -1161,6 +1253,73 @@ export class ProcessorManager
       op.operation.action.type === "CREATE_DOCUMENT" &&
       this.driveContainerTypes.has(op.context.documentType)
     );
+  }
+
+  /**
+   * One line per document a replay page passed on without state. A deleted
+   * document is expected and logged at debug; a state that could not be
+   * rebuilt is a fault the processor cannot see, so it is a warning with the
+   * first error.
+   */
+  private logStatelessPasses(
+    processorId: string,
+    passes: StatelessPass[],
+  ): void {
+    const byDocument = new Map<
+      string,
+      {
+        reason: StatelessPass["reason"];
+        count: number;
+        from: number;
+        to: number;
+        error?: unknown;
+      }
+    >();
+    for (const pass of passes) {
+      const { documentId, scope, branch } = pass.operation.context;
+      const key = `${documentId} ${scope} ${branch} ${pass.reason}`;
+      const index = pass.operation.operation.index;
+      const entry = byDocument.get(key);
+      if (entry) {
+        entry.count++;
+        entry.from = Math.min(entry.from, index);
+        entry.to = Math.max(entry.to, index);
+        entry.error ??= pass.error;
+      } else {
+        byDocument.set(key, {
+          reason: pass.reason,
+          count: 1,
+          from: index,
+          to: index,
+          error: pass.error,
+        });
+      }
+    }
+    for (const [key, entry] of byDocument) {
+      const [documentId, scope, branch] = key.split(" ");
+      if (entry.reason === "deleted") {
+        this.logger.debug(
+          "Replay for '@ProcessorId' delivered @Count operation(s) of deleted document '@DocumentId' (@Scope/@Branch) without state",
+          processorId,
+          entry.count,
+          documentId,
+          scope,
+          branch,
+        );
+      } else {
+        this.logger.warn(
+          "Replay for '@ProcessorId' delivered @Count operation(s) of '@DocumentId' (@Scope/@Branch, indexes @From-@To) without state: it could not be rebuilt: @Error",
+          processorId,
+          entry.count,
+          documentId,
+          scope,
+          branch,
+          entry.from,
+          entry.to,
+          entry.error,
+        );
+      }
+    }
   }
 
   private readSnapshots(
@@ -1396,6 +1555,7 @@ export class ProcessorManager
       if (!matches(row)) continue;
       this.cursorCache.delete(processorId);
       this.persistedOrdinals.delete(processorId);
+      this.stats.delete(processorId);
       deletes.push(
         this.lane(processorId, () =>
           this.db

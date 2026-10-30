@@ -18,6 +18,10 @@ export const SCHEDULE_BLOCK = trigger("schedule");
 export const WEBHOOK_BLOCK = trigger("webhook");
 export const BRANCH_BLOCK = action("branch");
 export const ASSERT_BLOCK = action("assert");
+export const DELAY_BLOCK = action("delay");
+export const APPROVAL_BLOCK = action("approval");
+export const STOP_BLOCK = action("stop");
+export const WAIT_FOR_WEBHOOK_BLOCK = action("waitForWebhook");
 
 export function isCoreBlock(block: BlockIdentity): boolean {
   return block.pieceName === CORE_PIECE_NAME;

@@ -34,7 +34,6 @@ const SUBGRAPH_MODULE_SPEC = join(
   import.meta.dirname,
   "../../../packages/vetra/document-models/subgraph-module/subgraph-module.json",
 );
-const originalCwd = process.cwd();
 let base: string;
 let root: string;
 let logged: string[];
@@ -143,7 +142,6 @@ beforeAll(async () => {
   await startGenerateSubgraph(subgraphArgs({ name: "Stock" }), base);
   await startGeneratePiece(pieceArgs({ namePositional: "Stock Feed" }), base);
   vi.restoreAllMocks();
-  process.chdir(originalCwd);
 }, 120_000);
 
 afterAll(() => {
@@ -165,7 +163,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  process.chdir(originalCwd);
   rmSync(root, { recursive: true, force: true });
 });
 

@@ -149,9 +149,11 @@ export function connectRoutesDirOf(connectDir: string) {
 
 const ROUTE_FILE = /\.[cm]?[jt]sx?$/;
 
-// Not routes: dotfiles and the generator's routeFileIgnorePrefix.
+// Not routes: dotfiles, the generator's routeFileIgnorePrefix, and type
+// declarations (`x.d.ts` matches ROUTE_FILE; a tsc emit next to the route
+// files would otherwise mount a route `/x/d` that imports nothing).
 const isRouteEntry = (name: string) =>
-  !name.startsWith(".") && !name.startsWith("-");
+  !name.startsWith(".") && !name.startsWith("-") && !/\.d\.[cm]?ts$/.test(name);
 
 /** The route files under `dir`, by path relative to it. */
 function routeFilesIn(dir: string, at = ""): string[] {
@@ -407,8 +409,10 @@ export function connectRoutesGeneratorConfig(
       generatedRouteTree,
       virtualRouteConfig: virtualRouteConfig(),
       plugins: offers ? [overrides, offered] : [overrides],
-      // The project's _app layout and folder are mounted above, not again at the root.
-      routeFileIgnorePattern: `^${APP_LAYOUT}(\\.[cm]?[jt]sx?)?$`,
+      // The project's _app layout and folder are mounted above, not again at
+      // the root. Type declarations a tsc emit leaves beside route files are
+      // never routes.
+      routeFileIgnorePattern: `^(${APP_LAYOUT}(\\.[cm]?[jt]sx?)?|.+\\.d\\.[cm]?ts)$`,
       quoteStyle: "double",
       semicolons: true,
       addExtensions: "js",

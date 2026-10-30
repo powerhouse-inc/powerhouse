@@ -1,13 +1,5 @@
-// Two FilesService implementations plus the staged-file contract that carries
-// bytes back to the host.
-//
-// `ctx.files.write()` is called *during* action.run(), inside the forked
-// worker, and the worker protocol has no worker-to-host request channel. So
-// this follows the pattern storeState already establishes — push in, return
-// whole — using the one thing a fork shares with its parent: the filesystem.
-// The worker writes bytes to a staging directory and returns a provisional
-// `apfile://<token>`; the host ingests each staged file after the step returns
-// and rewrites the tokens in the output before journalling it.
+// FilesService over a staging dir shared with the host: write() returns an
+// `apfile://` token ingested after the step; upload() ingests via a host call.
 import { randomUUID } from "node:crypto";
 import { createWriteStream } from "node:fs";
 import { mkdir, rm, stat, writeFile } from "node:fs/promises";
@@ -25,7 +17,8 @@ export { FileTooLargeError, maxFileBytes };
 
 export const APFILE_SCHEME = "apfile://";
 
-// One file the piece wrote, as it crosses back on ResultResponse.files.
+// One file the piece wrote, as it crosses back on ResultResponse.files or
+// in a files.upload host call.
 export interface StagedFile {
   // The provisional ref handed to the piece; the host rewrites it in place.
   token: string;
@@ -42,7 +35,14 @@ export type ApFileData = Buffer | Uint8Array | Readable;
 // optional.
 export interface ApFilesService {
   write(file: { fileName?: string; data: ApFileData }): Promise<string>;
+  upload(file: {
+    fileName?: string;
+    data: ApFileData;
+  }): Promise<{ id: string; url: string }>;
 }
+
+// Ingests one staged file now and answers with its ref.
+export type StagedFileUploader = (file: StagedFile) => Promise<string>;
 
 // A Readable drained into memory under the cap, for the inline fallback.
 async function drain(data: Readable): Promise<Buffer> {
@@ -66,6 +66,14 @@ export class DataUriFilesService implements ApFilesService {
       throw new FileTooLargeError(data.byteLength);
     }
     return `data:application/octet-stream;base64,${data.toString("base64")}`;
+  }
+
+  async upload(file: {
+    fileName?: string;
+    data: ApFileData;
+  }): Promise<{ id: string; url: string }> {
+    const url = await this.write(file);
+    return { id: url, url };
   }
 }
 
@@ -92,13 +100,45 @@ function contentTypeFor(fileName: string): string | undefined {
 export class StagedFilesService implements ApFilesService {
   private readonly files: StagedFile[] = [];
 
-  constructor(private readonly stagingDir: string) {}
+  // Without an uploader `upload` throws: the host has no store to ingest into.
+  constructor(
+    private readonly stagingDir: string,
+    private readonly uploader?: StagedFileUploader,
+  ) {}
 
   staged(): StagedFile[] {
     return [...this.files];
   }
 
   async write(file: { fileName?: string; data: ApFileData }): Promise<string> {
+    const staged = await this.stage(file);
+    this.files.push(staged);
+    return staged.token;
+  }
+
+  // Ingested before it returns, so the ref is real while the step still runs.
+  async upload(file: {
+    fileName?: string;
+    data: ApFileData;
+  }): Promise<{ id: string; url: string }> {
+    if (!this.uploader) {
+      throw new Error(
+        "ctx.files.upload needs an attachment store, and none is configured for this reactor",
+      );
+    }
+    const staged = await this.stage(file);
+    try {
+      const ref = await this.uploader(staged);
+      return { id: ref, url: ref };
+    } finally {
+      await rm(staged.path, { force: true });
+    }
+  }
+
+  private async stage(file: {
+    fileName?: string;
+    data: ApFileData;
+  }): Promise<StagedFile> {
     const token = randomUUID();
     const fileName =
       file.fileName && file.fileName !== "" ? file.fileName : token;
@@ -125,14 +165,13 @@ export class StagedFilesService implements ApFilesService {
       await writeFile(target, data);
       size = data.byteLength;
     }
-    this.files.push({
+    return {
       token: `${APFILE_SCHEME}${token}`,
       path: target,
       fileName,
       size,
       contentType: contentTypeFor(fileName),
-    });
-    return `${APFILE_SCHEME}${token}`;
+    };
   }
 }
 

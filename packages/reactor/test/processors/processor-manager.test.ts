@@ -38,6 +38,7 @@ import type {
 import { ReactorEventTypes } from "../../src/events/types.js";
 import { CatchUpPriority } from "../../src/processors/catch-up-priority.js";
 import { ProcessorManager } from "../../src/processors/processor-manager.js";
+import { ProcessorTimingSettings } from "../../src/processors/processor-stats.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import type { IReadModel } from "../../src/read-models/interfaces.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
@@ -648,6 +649,138 @@ describe("ProcessorManager Integration Tests", () => {
 
         expect(states).toEqual([undefined, undefined, undefined]);
       });
+    });
+  });
+
+  describe("processor timing", () => {
+    let timed: InProcessReactorModule;
+
+    class NamedIndex {
+      calls = 0;
+      onOperations = () => {
+        this.calls++;
+        return Promise.resolve();
+      };
+      onDisconnect = () => Promise.resolve();
+    }
+
+    beforeEach(async () => {
+      timed = await new ReactorBuilder()
+        .withProcessorTiming(new ProcessorTimingSettings({ level: "basic" }))
+        .withDocumentModelSources([
+          documentModelDocumentModelModule as unknown as DocumentModelModule,
+          driveDocumentModelModule as unknown as DocumentModelModule,
+        ])
+        .buildModule();
+    });
+
+    afterEach(async () => {
+      timed.reactor.kill();
+      await timed.database.destroy();
+    });
+
+    async function driveCreated(): Promise<string> {
+      const drive = createLegacyDrive();
+      const job = await timed.reactor.create(drive);
+      await vi.waitFor(async () => {
+        const status = await timed.reactor.getJobStatus(job.id);
+        expect(status.status).toBe(JobStatus.READ_READY);
+      });
+      return drive.header.id;
+    }
+
+    function trackedOf(driveId: string) {
+      return timed.processorManager
+        .getAll()
+        .find((tracked) => tracked.driveId === driveId);
+    }
+
+    it("names a bound processor and its drive", async () => {
+      const driveId = await driveCreated();
+      await timed.processorManager.registerFactory("pkg", () => [
+        { processor: new NamedIndex(), filter: {} },
+      ]);
+      await vi.waitFor(() => expect(trackedOf(driveId)).toBeDefined());
+
+      const tracked = trackedOf(driveId)!;
+      expect(tracked.name).toBe("NamedIndex");
+      expect(tracked.driveLabel).toBeTruthy();
+      expect(tracked.queueDepth?.()).toEqual(
+        expect.objectContaining({ ops: 0 }),
+      );
+    });
+
+    it("keeps the stats across a re-registration of the same id", async () => {
+      const driveId = await driveCreated();
+      const factory = () => [{ processor: new NamedIndex(), filter: {} }];
+      await timed.processorManager.registerFactory("pkg", factory);
+      await vi.waitFor(() =>
+        expect(
+          trackedOf(driveId)?.timing?.()?.total.replay.pages,
+        ).toBeGreaterThan(0),
+      );
+      const pages = trackedOf(driveId)!.timing!()!.total.replay.pages;
+      const since = trackedOf(driveId)!.timing!()!.sinceUtcMs;
+
+      await timed.processorManager.registerFactory("pkg", factory);
+
+      await vi.waitFor(() =>
+        expect(
+          trackedOf(driveId)?.timing?.()?.total.replay.pages,
+        ).toBeGreaterThan(pages),
+      );
+      expect(trackedOf(driveId)!.timing!()!.sinceUtcMs).toBe(since);
+    });
+
+    it("starts fresh when the id comes back under another name", async () => {
+      const driveId = await driveCreated();
+      await timed.processorManager.registerFactory("pkg", () => [
+        { processor: new NamedIndex(), filter: {} },
+      ]);
+      await vi.waitFor(() =>
+        expect(
+          trackedOf(driveId)?.timing?.()?.total.replay.pages,
+        ).toBeGreaterThan(0),
+      );
+
+      class OtherIndex extends NamedIndex {}
+      const processor = new OtherIndex();
+      await timed.processorManager.registerFactory("pkg", () => [
+        { processor, filter: { documentType: ["nothing/matches"] } },
+      ]);
+
+      await vi.waitFor(() =>
+        expect(trackedOf(driveId)?.name).toBe("OtherIndex"),
+      );
+      const { total } = trackedOf(driveId)!.timing!()!;
+      expect(total.replay.opsDelivered).toBe(0);
+    });
+
+    it("drops the stats with the cursor row", async () => {
+      const driveId = await driveCreated();
+      await timed.processorManager.registerFactory("pkg", () => [
+        { processor: new NamedIndex(), filter: {} },
+      ]);
+      await vi.waitFor(() =>
+        expect(
+          trackedOf(driveId)?.timing?.()?.total.replay.pages,
+        ).toBeGreaterThan(0),
+      );
+      const stats = (
+        timed.processorManager as unknown as { stats: Map<string, unknown> }
+      ).stats;
+      expect(stats.size).toBeGreaterThan(0);
+
+      await timed.processorManager.registerFactory("pkg", () => []);
+      await timed.processorManager.registerFactory("pkg", () => [
+        {
+          id: "renamed",
+          processor: new NamedIndex(),
+          filter: {},
+        },
+      ]);
+
+      expect(stats.size).toBe(1);
     });
   });
 

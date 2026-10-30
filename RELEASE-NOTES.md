@@ -1,5 +1,135 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — router settings in the host config
+
+### ✨ Host config sets where new drives go, and the router's timeouts and breaker
+
+A Connect host's `reactor.placement.newDrives` names the backend new drives are created on. A switchboard there means the drive is created on it with no copy in this browser; drives the host declares locally are still created in the browser. When that switchboard isn't answering, Connect shows "<sb> isn't answering, so the drive wasn't created."; when it refuses, Connect names it and its reason, or opens the sign-in prompt. The drive is not created in the browser instead, and a Connect that can't build the router for that switchboard fails to start. Without `newDrives`, new drives are created in the browser as before, or on the only switchboard when there is no browser reactor. A Connect with no browser reactor and several switchboards must set it.
+
+`reactor.router` takes `probeTimeoutMs` (default 3 s) and `provisionalRouteMs` (default 30 s). A remote backend's `remote` block takes `requestTimeoutMs` (default 30 s), `breaker` (`{ failures, openMs }`, default 3 failures then 30 s; `false` never stops trying) and `realtime` (default true); a local backend refuses them. Connect serves these as `instance.router` and on each `instance.remoteBackends[]` entry, and builds its router and switchboard backends from them.
+
+⚠️ **Breaking (unreleased host config):** a Connect host refuses `placement.primary` with "Connect doesn't use placement.primary. To choose where new drives go, use placement.newDrives." Switchboard hosts keep it. Connect's `instance.reactorWorker` now follows the browser reactor's own kind, so a remote listed first no longer turns a `worker` backend in-process.
+
+`RoutingOptions.defaultBackend` (`@powerhousedao/reactor-router`) names the backend a new collection goes to when nothing places it; a create it refuses fails rather than landing elsewhere. A parentless create asks for its defaults from the backend its id is placed on, else the default backend. `createSwitchboardBackend`'s `breaker` (`@powerhousedao/reactor-browser`) takes partial settings or `false`.
+
+✅ **What to try:** give a Connect host with a switchboard backend `sb` `placement: { newDrives: "sb" }`, run it and add a drive: it appears on the switchboard and `syncManager.list()` in the tab has no remote for it. Stop the switchboard and add another: Connect shows that sb isn't answering.
+
+---
+## 🚀 **Unreleased** — move a drive in Connect, attachments by drive
+
+### ✨ Move a drive between its switchboard and this browser
+
+For each drive the host keeps on a switchboard, Connect's drive settings now say where it opens and offer one action: **Keep a copy in this browser** for a drive that opens on the switchboard, or **Open on <switchboard> only** for one this browser keeps a copy of. Keeping a copy, or resetting to a config that keeps one, adds the drive's sync remote and waits until the copy holds what the switchboard holds before reads move to it, in every tab; if the copy never arrives, the drive stays on the switchboard and the sync remote is removed again. Opening on the switchboard only removes the sync remote and routes the drive there; the copy already in the browser is left in place, unread, so keeping a copy again later picks up from it.
+
+The choice applies to this browser only. It is stored in IndexedDB, every open tab follows it, and it survives a reload. Drive settings mark a moved drive "Moved in this browser. Host config: …", with **Reset to config**. A move is dropped once the host config changes the placement it replaced. A Connect with no reactor in the browser opens every drive on its switchboard and offers no move.
+
+Placements now reach the router after boot, once each drive is read from its switchboard, so a switchboard that does not answer no longer delays startup. A drive a plugin serves under a hashed slug (`projectHash: true`) is found among its switchboard's drives, so its placement applies under its real id and slug. The drive settings modal (`DriveSettingsModal`, `@powerhousedao/design-system/connect`) takes `children`, rendered after the location settings.
+
+### ✨ Router: config placements after construction
+
+`RoutingReactorClient.setConfiguredPlacement(key, backend | undefined)` (`@powerhousedao/reactor-router`) sets the config layer for one collection after the client is built, as an entry of `collections` would. A runtime placement still wins, and `describeRouting()` reports the row with `origin: "config"`.
+
+### ✨ Attachments go to the switchboard that holds their document
+
+`RoutingAttachmentService` (`@powerhousedao/reactor-attachments/client`) sends each call to the attachment service of the backend that serves its `documentId`, found through a resolver such as `RoutingReactorClient.locate`. A call without a document, or for a backend with no service of its own, uses the fallback service. `reserve` takes an optional `documentId` (it is not sent to the server), and so do `preprocess(file, { documentId })`, `upload({ file, documentId })` and `useAttachmentUpload().preprocess(file, { documentId })` (`@powerhousedao/reactor-browser`). A Connect linked to more than one switchboard installs this service, with the first switchboard's attachments as the fallback.
+
+✅ **What to try:** in a host whose Connect places drive `b` on switchboard `sb`, open Connect, then `?modal=drive-settings&driveId=<b's id>`, and choose **Keep a copy in this browser**: `b` now syncs into the browser, and a second tab shows the same.
+
+---
+## 🚀 **Unreleased** — Connect opens drives on its switchboards
+
+### ⚡ A drive placed on a switchboard keeps no copy in the browser
+
+Connect now applies a host's `reactor.placement.drives`. A drive placed on its switchboard's remote backend opens there: Connect adds no sync remote for it, removes one an earlier boot added, and routes every read, listing and write to that switchboard. Its local data, if any, stays in the browser unread. A drive placed on a local backend, or not listed, keeps a synced copy as before. New drives are still created in the browser.
+
+A Connect can link to several switchboards: the router gets one backend per switchboard, named by its key in `reactor.backends`, and a sign-in or sign-out reaches every one of them. A Connect with only a remote backend (no reactor in the browser) opens every drive on its switchboard, and its attachments go there.
+
+### ⚡ The router lists a duplicated document from where it is routed
+
+`RoutingReactorClient.read.find` (`@powerhousedao/reactor-router`) used to keep the first backend's copy of a document several backends return. It now keeps the copy from the backend the router already routes that id to: a drive's correction, runtime or config placement or learned route, else the document's cached route. With no route, backend order decides as before, and nothing extra is probed. A drive placed on a remote is therefore listed from the remote even while a stale local copy remains.
+
+### ⚡ What the Connect runner serves
+
+The connect runner derives three fields of the served config from the host, which `powerhouse.config.json` refuses:
+
+- `instance.remoteBackends: [{ name, url }]`, one per remote backend, `url` being its drive address;
+- `drives.defaultDrives[].backend` (the remote backend serving a remote default drive) and `.sync` (`false` when placed on it);
+- `instance.collections: { <slug>: { backend, sync } }` for drives placed on a switchboard that are not default drives, such as a plugin's `workflows` drive.
+
+`projectReactorToConnect` (`@powerhousedao/host-core`) adds `instance.remoteBackends`, and `placeConnectDrives(reactor, defaultDrives)` computes the other two. The runner no longer forces `instance.multiReactor: true`: `reactorClient` selects the router. A `placement.drives` key may now name a drive the Connect host attaches through `config.drives.defaultDrives`.
+
+### ✨ Tabs agree on sync remotes
+
+A sync remote one tab adds or removes in the shared worker now reaches every tab's `syncManager.list()`: the worker announces the change after `add` and `remove`, as it does for local peers. `fetchDriveInfo(url, tokenProvider?)` takes an optional token provider (default: the signed-in Renown user's).
+
+✅ **What to try:** in a host with a switchboard `sb` and a Connect linked to `sb.drives.b.url` with `placement: { drives: { b: "sb" } }`, run `ph run`, open Connect, and edit drive `b`: the edit lands on the switchboard, and `syncManager.list()` in the tab has no remote for `b`.
+
+---
+## 🚀 **Unreleased** — a Switchboard as a router backend (`@powerhousedao/reactor-browser`)
+
+### ✨ `createSwitchboardBackend`
+
+`createSwitchboardBackend({ name, url, tokenProvider, signer, documentModels, ... })` from `@powerhousedao/reactor-browser/graphql-client` returns `{ config, notifyCredentialsChanged, dispose }`. `config` is a `RoutableBackendConfig` for `RoutingReactorClient`, so a host other than Connect, such as the monitor, can route to a Switchboard. `url` is the Switchboard's GraphQL endpoint. Connect's own copy of this backend is gone, and Connect now builds its remote through this function.
+
+- **Explicit credentials.** The descriptor names its token provider and signer. `signer: undefined` pushes unsigned and never falls back to the logged-in Renown user. A function is read on every push. Connect passes `ambientRenownTokenProvider` and the new `ambientRenownSigner`, so it still signs only while someone is logged in. A `GraphQLReactorClient` `signer` option may also be such a function.
+- **Request deadline.** Each request is bounded, headers through body, at `requestTimeoutMs`, which defaults to 30 s. A request past the deadline rejects with a `TimeoutError`. `GraphQLReactorClient` takes the same option, plus `fetch` for the transport.
+- **Breaker and health.** Three transport failures in a row open the breaker for 30 s (configurable through `breaker`). A transport failure is a network error, a 5xx, or a deadline: the request's own, or the router's probe deadline (`probeTimeoutMs`), so a Switchboard that hangs is marked down after three probes and local creates stop waiting on it. While the breaker is open, nothing is sent: every call throws `SwitchboardUnreachableError`, `health()` reports `"down"`, and the router stops probing the backend. A GraphQL error is an answer, so it does not count, and neither does an abort by the caller.
+- **Facts.** One `SwitchboardFacts` query reads the reactor info, including `access` from the server, and the document types the Switchboard serves. The router's create pre-check uses the types only when the Switchboard's model list is closed. The new inspection field `loadsModelsOnDemand` says whether it is. When a Switchboard loads models on demand, or is too old to say, its types stay open and creates are not checked. A Switchboard that lacks `documentServed`, `createDefaults` or `inspection` fails the read, so the router holds its facts as unknown.
+- **421.** A refusal forgets the drive the request named, so the next request sends no stale `Drive-Id`. Under Node, the default transport (`switchboardFetch`) sends request bodies as streams. Node's fetch resends a request that got a 421, and the resend of a buffered body can fail with a `TypeError` instead of returning the 421. Browsers keep buffered bodies.
+
+### 🐛 Switchboard `/ready` waits for its drives
+
+`/ready` used to answer 200 about 80 ms before the default drive existed, so a client that waited for `/ready` and then opened `/d/<slug>` could get a 404. It now turns 200 only once the default drive is served. Under `ph run`, it also waits for the drives the host declares and the drives its plugins contribute. `startSwitchboard` takes `readyAfter`, a promise that `/ready` also waits for; if it rejects, the server stays not ready. Remote drives don't hold readiness back, because they sync from another server that may be down.
+
+✅ **What to try:** start a Switchboard with `ph run`, poll `/ready`, and open `/d/<slug>` on the first 200: the drive is there.
+
+---
+
+## 🚀 **Unreleased** — host config: a remote link is a switchboard drive address
+
+### ⚡ `remote.url` names a drive, and `reactor.placement.drives` says where each drive opens
+
+A `remote` backend in a host file now links to a switchboard by the address of one of its drives, `<switchboard>/d/<slug>`, for every host kind: Connect, the assistant agent and the reactor monitor. A GraphQL endpoint names the switchboard but not a drive, and sync needs the drive. An `endpoints.graphql` output token or a `/graphql` URL in `remote.url` now fails validation with an error that names the replacement:
+
+```js
+// before
+sb: { kind: "remote", remote: { url: switchboard.endpoints.graphql } },
+// after
+sb: { kind: "remote", remote: { url: switchboard.drives.powerhouse.url } },
+// or { $output: { host: "switchboard", path: ["drives", "powerhouse", "url"] } }
+```
+
+The generated `assistant` and `cli` hosts use the new form. A project scaffolded earlier keeps its old host files (generation never overwrites them), so edit `hosts/assistant/host.js` and `hosts/cli/host.js` as above. One switchboard is one remote backend: two backends whose drive addresses share a switchboard are refused; list the second drive under `reactor.drives` instead.
+
+`reactor.placement.drives` maps a declared drive slug to a backend. The drive's own remote backend means "open it on the switchboard, with no copy here"; a local backend means "keep a synced copy"; an unlisted drive keeps a synced copy. The host is refused when a value names no backend, places a drive on a switchboard it is not on, names a slug linked on two switchboards (or kept here and linked on one), or (where the config names every drive, plugin `config.drive` links included) uses a key that names no drive. A `reactor.drives[]` entry's `remote.url` must be a drive address too. `placementKeyIssues(host)` (`@powerhousedao/host-core/schema`) runs the key check on a declared host whose runner and reactor are already merged, for a tool that parses `declaredHostSchemas.reactorHostSchema` itself, as the reactor monitor's import now does.
+
+`switchboardOfDrive(url)` (`@powerhousedao/host-core/schema`, and `@powerhousedao/shared/host-tokens`) splits a drive address into `{ base, graphql, slug }`. The reactor monitor's remote descriptors take a drive address too: the provision form asks for one, `ph host export` imports read `drives.<slug>.url`, and a saved monitoring set whose remote is a GraphQL URL fails with a message naming the drive address to use.
+
+✅ **What to try:** in a project's `hosts/cli/host.js`, set the `sb` backend's `remote.url` to `{ $output: { host: "switchboard", path: ["endpoints", "graphql"] } }` and run `FEATURE_UNIFORM_RUNNERS_ENABLED=true ph host check cli`: it reports that `remote.url` must be a switchboard drive address and names `switchboard.drives.<slug>.url`.
+
+---
+
+## 🚀 **Unreleased** — router placement, deadlines and document-type facts (`@powerhousedao/reactor-router`)
+
+### ✨ Move a drive while the router runs
+
+`RoutingReactorClient.setPlacement(key, backend | undefined)` places a collection or drive on a backend for this client only, above the `collections` the router was built with; `undefined` removes it and the config applies again. `onRoutingChange(listener)` reports each placement, learned, corrected or forgotten collection route and returns the unsubscribe. Precedence is now corrected > runtime > config > learned > placed: a refusal still corrects either kind of placement, and a later `setPlacement` for that key replaces the correction. `describeRouting()` rows gain `origin` (`"config"` or `"runtime"`) and `configured` (the config's backend), so a client can show where it differs from its config. Nothing is persisted; the caller stores its own runtime placements.
+
+### ⚡ A hung or missing backend no longer stalls the others
+
+- **Probe deadline.** An ownership probe that does not answer within `probeTimeoutMs` (default 3 s) answers "unknown", so a local create finishes even while a remote hangs.
+- **Health.** A backend may declare `health(): "up" | "down"`. While it reports down, probes answer "unknown" without a request, and `describeRouting().health` lists each declared state.
+- **Provisional routes.** A route found on a backend while an earlier one in the order did not hold the document is probed again after `provisionalRouteMs` (default 30 s), so a document read from a remote during initial sync moves to the local copy once it arrives. Corrected routes and placements never expire.
+- **Routing by collection.** When several backends serve a document, it goes to its drive's corrected, placed or learned backend, so a stale local copy of a drive placed on a remote never wins.
+
+### ✨ Document-type facts and `locate`
+
+`RoutableBackendConfig.documentTypes?: () => Promise<readonly string[] | undefined>` is read with the facts and lands in `BackendFacts.documentTypes`. A read that answers `undefined` means the backend loads models on demand: creates are not checked, and the facts stay known. A failed read of the facts or of the types makes `known` false. A create of a type the target backend lacks (`create`, `createAsync`, a batch that creates, `drives.create`, `drives.addFile`) throws `UnsupportedByBackendError` before anything is sent. `locate(identifier, signal?)` names the backend a document routes to, for an attachment service that routes by document.
+
+✅ **What to try:** build a router over two backends with `collections: { [driveId]: "local" }`, call `setPlacement(driveId, "remote")`, and `describeRouting()` shows the drive on `remote` with `origin: "runtime"` and `configured: "local"`.
+
+---
+
 ## 🚀 **Unreleased** — UUIDv7 action ids and same-millisecond auth bursts
 
 ### ⚡ Action ids sort in creation order; auth bursts are admitted

@@ -4,17 +4,17 @@
     "connect": {
       "paths": ["apps/connect/**"]
     },
-    "apps-reactor-monitor": {
-      "paths": ["apps/reactor-monitor/**"]
+    "reactor-monitor-app": {
+      "paths": ["apps/reactor-monitor/**"],
+      "aliases": ["apps-reactor-monitor"]
     },
-    "packages-reactor-monitor": {
-      "paths": ["packages/reactor-monitor/**"]
+    "reactor-monitor": {
+      "paths": ["packages/reactor-monitor/**"],
+      "aliases": ["packages-reactor-monitor"]
     },
-    "apps-switchboard": {
-      "paths": ["apps/switchboard/**"]
-    },
-    "test-switchboard": {
-      "paths": ["test/switchboard/**"]
+    "switchboard": {
+      "paths": ["apps/switchboard/**", "test/switchboard/**"],
+      "aliases": ["apps-switchboard", "test-switchboard"]
     },
     "ph-cli": {
       "paths": ["clis/ph-cli/**"]
@@ -23,28 +23,16 @@
       "paths": ["clis/ph-cmd/**"]
     },
     "analytics-engine": {
-      "paths": ["packages/analytics-engine/**"]
-    },
-    "benchmarks": {
-      "paths": ["packages/analytics-engine/benchmarks/**"]
-    },
-    "browser": {
-      "paths": ["packages/analytics-engine/browser/**"]
-    },
-    "compat": {
-      "paths": ["packages/analytics-engine/compat/**"]
-    },
-    "core": {
-      "paths": ["packages/analytics-engine/core/**"]
-    },
-    "graphql": {
-      "paths": ["packages/analytics-engine/graphql/**"]
-    },
-    "knex": {
-      "paths": ["packages/analytics-engine/knex/**"]
-    },
-    "pg": {
-      "paths": ["packages/analytics-engine/pg/**"]
+      "paths": ["packages/analytics-engine/**"],
+      "aliases": [
+        "benchmarks",
+        "browser",
+        "compat",
+        "core",
+        "graphql",
+        "knex",
+        "pg"
+      ]
     },
     "builder-tools": {
       "paths": ["packages/builder-tools/**"]
@@ -52,11 +40,9 @@
     "clint": {
       "paths": ["packages/clint/**"]
     },
-    "packages-codegen": {
-      "paths": ["packages/codegen/**"]
-    },
-    "test-codegen": {
-      "paths": ["test/codegen/**"]
+    "codegen": {
+      "paths": ["packages/codegen/**", "test/codegen/**"],
+      "aliases": ["packages-codegen", "test-codegen"]
     },
     "common": {
       "paths": ["packages/common/**"]
@@ -92,7 +78,8 @@
       "paths": ["packages/powerhouse-vetra-packages/**"]
     },
     "reactor": {
-      "paths": ["packages/reactor/**"]
+      "paths": ["packages/reactor/**"],
+      "aliases": ["host"]
     },
     "reactor-api": {
       "paths": ["packages/reactor-api/**"]
@@ -123,9 +110,6 @@
     },
     "reactor-workflow": {
       "paths": ["packages/reactor-workflow/**"]
-    },
-    "host": {
-      "paths": ["packages/reactor/bench/host/**"]
     },
     "registry": {
       "paths": ["packages/registry/**"]

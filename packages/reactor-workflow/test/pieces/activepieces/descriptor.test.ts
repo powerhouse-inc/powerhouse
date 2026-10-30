@@ -322,6 +322,96 @@ describe("requireReactor", () => {
   });
 });
 
+describe("action timeout and retry defaults", () => {
+  it("copies what createAction declares, and nothing when undeclared", () => {
+    const piece = createPiece({
+      displayName: "Slow",
+      auth: PieceAuth.None(),
+      logoUrl: "",
+      authors: [],
+      actions: [
+        createAction({
+          name: "agent",
+          displayName: "Agent",
+          description: "",
+          auth: PieceAuth.None(),
+          props: {},
+          defaultTimeoutSeconds: 300,
+          defaultRetry: { maxAttempts: 1 },
+          run: noop,
+        }),
+        createAction({
+          name: "plain",
+          displayName: "Plain",
+          description: "",
+          auth: PieceAuth.None(),
+          props: {},
+          run: noop,
+        }),
+      ],
+      triggers: [],
+    }) as unknown as ApPiece;
+    const [agent, plain] = buildDescriptor(piece, {
+      packageName: "@acme/piece-slow",
+      version: "1.0.0",
+    }).actions;
+    expect(agent.defaultTimeoutSeconds).toBe(300);
+    expect(agent.defaultRetry).toEqual({ maxAttempts: 1 });
+    expect("defaultTimeoutSeconds" in plain).toBe(false);
+    expect("defaultRetry" in plain).toBe(false);
+  });
+
+  it("retries an Activepieces action that asks to by default, 3 attempts", () => {
+    const descriptor = buildDescriptor(
+      {
+        displayName: "Upstream",
+        actions: {
+          retried: {
+            name: "retried",
+            errorHandlingOptions: { retryOnFailure: { defaultValue: true } },
+            run: noop,
+          },
+          declared: {
+            name: "declared",
+            defaultRetry: { maxAttempts: 1 },
+            errorHandlingOptions: { retryOnFailure: { defaultValue: true } },
+            run: noop,
+          },
+          offered: {
+            name: "offered",
+            errorHandlingOptions: { retryOnFailure: { defaultValue: false } },
+            run: noop,
+          },
+        },
+      },
+      { packageName: "@acme/piece-upstream", version: "1.0.0" },
+    );
+    const [retried, declared, offered] = descriptor.actions;
+    expect(retried.defaultRetry).toEqual({ maxAttempts: 3 });
+    expect(declared.defaultRetry).toEqual({ maxAttempts: 1 });
+    expect("defaultRetry" in offered).toBe(false);
+  });
+
+  it("drops defaults a foreign bundle mangled", () => {
+    const descriptor = buildDescriptor(
+      {
+        displayName: "Foreign",
+        actions: {
+          odd: {
+            name: "odd",
+            defaultTimeoutSeconds: -5,
+            defaultRetry: { maxAttempts: "3" },
+            run: noop,
+          },
+        },
+      },
+      { packageName: "@acme/piece-foreign", version: "1.0.0" },
+    );
+    expect("defaultTimeoutSeconds" in descriptor.actions[0]).toBe(false);
+    expect("defaultRetry" in descriptor.actions[0]).toBe(false);
+  });
+});
+
 describe("describeProperties", () => {
   it("translates a DYNAMIC props() result into descriptors", () => {
     const resolved = describeProperties({

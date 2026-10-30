@@ -235,6 +235,122 @@ export type TrackedProcessor = {
    * A no-op once the processor has been removed.
    */
   retry: () => Promise<void>;
+  /** Readable name: record id, class name or namespace; not the cursor key. */
+  name?: string;
+  /** The drive's slug, else its name, else its id. */
+  driveLabel?: string;
+  /** Its numbers so far; undefined while timing is off. */
+  timing?: () => ProcessorTiming | undefined;
+  /** What waits on its queue right now. */
+  queueDepth?: () => ProcessorQueueDepth;
+};
+
+/** How much a reactor records about its processors' time. */
+export type ProcessorTimingLevel = "off" | "basic" | "detailed";
+
+/** The two ways an operation reaches a processor. */
+export type ProcessorTimingPath = "live" | "replay";
+
+/**
+ * One path's numbers over one horizon. Times are wall-clock milliseconds the
+ * queue awaited, not CPU: a queue runs one task at a time, so one processor's
+ * busy time never exceeds the horizon, but processors run concurrently, so the
+ * sum over processors can. Read time includes waiting for the store connection.
+ */
+export type ProcessorTimingCounters = {
+  /** `onOperations` calls. */
+  batches: number;
+  opsDelivered: number;
+  /** Replay: read from the log. Live: routed to this queue. */
+  opsScanned: number;
+  /** Replay: after the filter and floor, before tombstones. Live: routed. */
+  opsMatched: number;
+  /** Replay pages read. */
+  pages: number;
+  /** Inside `onOperations`. */
+  handlerMs: number;
+  maxBatchMs: number;
+  /** Reading a page of the operation index. */
+  readMs: number;
+  /** Checking tombstones. */
+  lookupMs: number;
+  /** Filling replay state. */
+  fillMs: number;
+  /** Waiting for a backfill slot: throttling, not work. */
+  slotWaitMs: number;
+  /** Between pages: throttling, not work. */
+  pauseMs: number;
+  errors: number;
+};
+
+export type ProcessorTimingHorizon = {
+  live: ProcessorTimingCounters;
+  replay: ProcessorTimingCounters;
+  ordinalsAdvanced: number;
+  /** Handler, read, lookup and fill over both paths: the ranking key. */
+  busyMs: number;
+};
+
+/** The replay running now. */
+export type ProcessorTimingRun = {
+  startedAtUtcMs: number;
+  runFrom: number;
+  counters: ProcessorTimingCounters;
+  ordinalsAdvanced: number;
+};
+
+/** The last replay that scanned anything, kept once it ends. */
+export type ProcessorTimingLastRun = {
+  startedAtUtcMs: number;
+  durationMs: number;
+  ordinals: number;
+  opsDelivered: number;
+  busyMs: number;
+};
+
+/** The last `onOperations` call. */
+export type ProcessorTimingBatch = {
+  atUtcMs: number;
+  path: ProcessorTimingPath;
+  ops: number;
+  ms: number;
+  fromOrdinal: number;
+  toOrdinal: number;
+};
+
+/** Handler time attributed to a document type by its share of each batch. */
+export type ProcessorTimingDocumentType = {
+  documentType: string;
+  ops: number;
+  handlerMs: number;
+};
+
+/** One processor's numbers; see {@link ProcessorTimingCounters} on reading them. */
+export type ProcessorTiming = {
+  processorId: string;
+  name: string;
+  driveLabel: string;
+  factoryId: string;
+  driveId: string;
+  /** Start of `total`: the first bind, or the last reset. */
+  sinceUtcMs: number;
+  total: ProcessorTimingHorizon;
+  /** The last `windowMs`. */
+  window: ProcessorTimingHorizon;
+  /** The span `window` covers; shorter right after the start. */
+  windowMs: number;
+  currentRun: ProcessorTimingRun | null;
+  lastRun: ProcessorTimingLastRun | null;
+  lastBatch: ProcessorTimingBatch | null;
+  /** Over `window`; filled at level `detailed` only. */
+  byDocumentType: ProcessorTimingDocumentType[];
+};
+
+/** What waits on a processor's queue. */
+export type ProcessorQueueDepth = {
+  tasks: number;
+  /** Operations in queued live batches. */
+  ops: number;
 };
 
 /**
