@@ -83,6 +83,12 @@ const OPTION_STEP: Record<OptionGroup, StepId> = {
   add: "members",
   reach: "reactor",
   placement: "reactor",
+  newDrives: "reactor",
+  requestTimeout: "reactor",
+  breaker: "reactor",
+  realtime: "reactor",
+  probeTimeout: "reactor",
+  provisionalRoute: "reactor",
 };
 
 export function optionStep(option: OptionStatus): StepId {

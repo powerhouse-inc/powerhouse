@@ -19,6 +19,12 @@ import {
   reachOptions,
 } from "./reach.js";
 import {
+  ROUTER_REASONS,
+  routerOptions,
+  routerOptionSelected,
+  type RouterGroup,
+} from "./router-settings.js";
+import {
   hostRulesContextSchema,
   type HostDraft,
   type HostEnv,
@@ -44,7 +50,8 @@ export type OptionGroup =
   | "projectionWorker"
   | "add"
   | "reach"
-  | "placement";
+  | "placement"
+  | RouterGroup;
 
 export type HostOption = {
   /** Unique per draft: `<member path or host>:<group>:[<backend>:]<value>`. */
@@ -396,6 +403,7 @@ export function hostOptionList(
     ...accessOptions(members),
     ...members.flatMap((member) => memberOptions(member, members)),
     ...reachOptions(members, compound),
+    ...members.flatMap((member) => routerOptions(member, members)),
     addMemberOption(draft, members, "switchboard"),
     addMemberOption(draft, members, "connect"),
     addBrowserOption(members),
@@ -466,6 +474,13 @@ function isSelected(
       );
     case "placement":
       return placementSelected(option, members);
+    case "newDrives":
+    case "requestTimeout":
+    case "breaker":
+    case "realtime":
+    case "probeTimeout":
+    case "provisionalRoute":
+      return routerOptionSelected(option, members);
     case "add":
     case "reach":
       return false;
@@ -523,6 +538,10 @@ const HOT_RELOAD_WORDING: Record<string, string> = {
 function reasonFor(option: HostOption, issue: HostRuleIssue): string {
   if (option.group === "hotReload") {
     return HOT_RELOAD_WORDING[issue.message] ?? issue.message;
+  }
+  // Said of the host this option would make, not of the one shown.
+  if (issue.message === ROUTER_REASONS.newDrives) {
+    return ROUTER_REASONS.newDrivesFirst;
   }
   return issue.message;
 }
