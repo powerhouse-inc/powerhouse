@@ -1,14 +1,17 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import {
   getDrives,
-  refreshReactorDataClient,
+  getFullReactorClient,
+  getPHStore,
+  recordBackendAuthError,
+  setBackendAuth,
   setDrives,
   setFullReactorClient,
-  getPHStore,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { ISigner } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
+import { switchboardOfDrive } from "@powerhousedao/shared/host-tokens";
 import type * as MultiReactor from "./multi-reactor.js";
 import type {
   LoadedDocumentModels,
@@ -17,6 +20,10 @@ import type {
 import type { ReactorClientMode } from "./reactor-client-mode.js";
 import { resolveReactorClientMode } from "./reactor-client-mode.js";
 import { isReactorWorkerEnabled } from "./reactor-worker-flag.js";
+import { setDriveRelister } from "./drive-relist.js";
+
+// Kept here: multi-reactor.ts is loaded lazily.
+const REMOTE_BACKEND_NAME = "switchboard-remote";
 
 type MultiReactorModule = typeof MultiReactor;
 
@@ -25,7 +32,12 @@ export type AppReactorClientParams = {
   /** Built, and ready (the worker has started up). Undefined in `remote`
    * mode, where no local reactor is built. */
   module: LocalReactorModule | undefined;
+  /** The fallback switchboard when `remoteBackends` is empty. */
   remoteDriveUrl: string | undefined;
+  /** One per switchboard, by host key; `url` is a drive address on it. */
+  remoteBackends?: readonly { name: string; url: string }[];
+  /** Config placements known at build time; later ones go through `setConfiguredPlacement`. */
+  collections?: Readonly<Record<string, string>>;
   /** Signs routed writes; unsigned (anonymous) without one. */
   signer?: ISigner;
   documentModelModules: LoadedDocumentModels;
@@ -88,12 +100,12 @@ export async function createAppReactorClient(
     }
     module = await localReactor(plan);
   }
-  const client = await selectAppReactorClient({
+  const { client, router } = await selectClient({
     ...params,
     mode: plan.mode,
     module,
   });
-  return { plan, module, client };
+  return { plan, module, client, router };
 }
 
 /**
@@ -106,22 +118,32 @@ export async function createAppReactorClient(
 export async function selectAppReactorClient(
   params: AppReactorClientParams,
 ): Promise<IReactorClient> {
+  return (await selectClient(params)).client;
+}
+
+/** The app's client, and the router when it is one. */
+async function selectClient(params: AppReactorClientParams): Promise<{
+  client: IReactorClient;
+  router?: MultiReactor.ConnectRoutingClient;
+}> {
   if (params.mode === "remote") {
     setFullReactorClient(undefined);
     const remote = await buildRemoteOnly(params);
     setFullReactorClient(remote);
-    return remote;
+    return { client: remote, router: remote };
   }
   if (params.mode !== "router") {
     if (getPHStore()?.fullReactorClient) {
       setFullReactorClient(undefined);
     }
-    return requireModule(params).client;
+    return { client: requireModule(params).client };
   }
   setFullReactorClient(undefined);
   const routed = await buildRouter(params);
   setFullReactorClient(routed);
-  return routed ?? requireModule(params).client;
+  return routed
+    ? { client: routed, router: routed }
+    : { client: requireModule(params).client };
 }
 
 function requireModule(params: AppReactorClientParams): LocalReactorModule {
@@ -133,39 +155,114 @@ function requireModule(params: AppReactorClientParams): LocalReactorModule {
   return params.module;
 }
 
-/** A Switchboard that cannot answer must not fail boot: list the tab's drives. */
+/**
+ * A Switchboard that cannot answer must not fail boot: list the tab's drives.
+ *
+ * A Switchboard that REFUSES the caller (401/403) must not fail boot either:
+ * the refusal is recorded (`backendAuth`) so the root view shows the sign-in
+ * gate, and the drive list is empty until the user is someone the backend
+ * accepts. A remote-only client has no local drives to fall back on.
+ */
 export async function getAppDrives(
   client: IReactorClient,
   local: IReactorClient,
 ): Promise<DocumentDriveDocument[]> {
   if (client === local) {
-    return getDrives(local);
+    try {
+      const drives = await getDrives(local);
+      setBackendAuth(undefined);
+      return drives;
+    } catch (error) {
+      if (recordBackendAuthError(error, "switchboard")) {
+        logger.warn(
+          "The Switchboard refused this caller; showing the sign-in gate: @error",
+          error,
+        );
+        return [];
+      }
+      throw error;
+    }
   }
   try {
-    return await getDrives(client);
+    const drives = await getDrives(client);
+    setBackendAuth(undefined);
+    return drives;
   } catch (error) {
-    logger.warn(
-      "Could not list drives through the router; listing the local reactor's: @error",
-      error,
-    );
+    if (recordBackendAuthError(error, "switchboard")) {
+      logger.warn(
+        "A remote backend refused this caller; listing the local reactor's drives: @error",
+        error,
+      );
+    } else {
+      logger.warn(
+        "Could not list drives through the router; listing the local reactor's: @error",
+        error,
+      );
+    }
     return getDrives(local);
   }
 }
 
+/**
+ * The boot refresh of the drives store. It lists through `getAppDrives`
+ * whichever client is in use, so a Switchboard that refuses the caller is
+ * recorded for the sign-in gate here too: the remote-only client is its own
+ * `local`, and a bare `refreshReactorDataClient` would let the 401 escape
+ * and fail the boot before the gate can render.
+ */
 export async function refreshAppDrives(
   client: IReactorClient,
   local: IReactorClient,
 ): Promise<void> {
-  if (client === local) {
-    return refreshReactorDataClient(client);
-  }
   setDrives(await getAppDrives(client, local));
+}
+
+/**
+ * Lists the drives again as the caller the tab now is, through the clients
+ * boot left in the store: after a sign-in landing or a sign-out that followed
+ * a backend's refusal. Nothing to do before boot has set a client.
+ */
+export async function relistAppDrives(): Promise<void> {
+  const client = getFullReactorClient();
+  if (!client) return;
+  const local = getPHStore()?.reactorClientModule?.client ?? client;
+  await refreshAppDrives(client, local);
+}
+
+// The backend auth gate relists through drive-relist (see there)
+setDriveRelister(relistAppDrives);
+
+/** The switchboards to route to: the host's remote backends, else the default drive's. */
+function switchboardRemotes(params: AppReactorClientParams): {
+  remotes: MultiReactor.SwitchboardRemote[];
+  unparsed: string[];
+} {
+  const listed = params.remoteBackends?.length
+    ? params.remoteBackends
+    : params.remoteDriveUrl
+      ? [{ name: REMOTE_BACKEND_NAME, url: params.remoteDriveUrl }]
+      : [];
+  const remotes: MultiReactor.SwitchboardRemote[] = [];
+  const unparsed: string[] = [];
+  for (const { name, url } of listed) {
+    const graphqlUrl = switchboardOfDrive(url)?.graphql;
+    if (graphqlUrl) remotes.push({ name, graphqlUrl });
+    else unparsed.push(url);
+  }
+  return { remotes, unparsed };
 }
 
 async function buildRouter(
   params: AppReactorClientParams,
-): Promise<IReactorClient | undefined> {
-  if (!params.remoteDriveUrl) {
+): Promise<MultiReactor.ConnectRoutingClient | undefined> {
+  const { remotes, unparsed } = switchboardRemotes(params);
+  for (const url of unparsed) {
+    logger.warn(
+      "multiReactor is on but the remote drive URL @url does not parse; skipping it",
+      url,
+    );
+  }
+  if (remotes.length === 0) {
     logger.warn(
       "multiReactor is on but no remote drive URL is configured; using the local reactor only",
     );
@@ -178,20 +275,14 @@ async function buildRouter(
     logger.error("Could not load the multi-reactor router: @error", error);
     return undefined;
   }
-  const remoteGraphqlUrl = multiReactor.deriveSwitchboardGraphqlUrl(
-    params.remoteDriveUrl,
+  logger.info(
+    "Multi-reactor routing to @urls",
+    remotes.map((remote) => remote.graphqlUrl).join(", "),
   );
-  if (!remoteGraphqlUrl) {
-    logger.warn(
-      "multiReactor is on but the remote drive URL @url does not parse; using the local reactor only",
-      params.remoteDriveUrl,
-    );
-    return undefined;
-  }
-  logger.info("Multi-reactor routing to @url", remoteGraphqlUrl);
   return multiReactor.buildMultiReactorClient({
     module: requireModule(params),
-    remoteGraphqlUrl,
+    remotes,
+    collections: params.collections,
     signer: params.signer,
     documentModelModules: params.documentModelModules,
   });
@@ -206,25 +297,27 @@ async function buildRouter(
  */
 async function buildRemoteOnly(
   params: AppReactorClientParams,
-): Promise<IReactorClient> {
-  if (!params.remoteDriveUrl) {
+): Promise<MultiReactor.ConnectRoutingClient> {
+  const { remotes, unparsed } = switchboardRemotes(params);
+  if (unparsed.length > 0) {
+    throw new Error(
+      `reactorClient "remote": the remote drive URL "${unparsed[0]}" does not resolve to a Switchboard GraphQL endpoint`,
+    );
+  }
+  if (remotes.length === 0) {
     throw new Error(
       'reactorClient "remote" needs a remote drive URL — declare a remote backend / default drive the client can proxy to',
     );
   }
   const multiReactor = await (params.loadRouter ?? loadMultiReactor)();
-  const remoteGraphqlUrl = multiReactor.deriveSwitchboardGraphqlUrl(
-    params.remoteDriveUrl,
+  logger.info(
+    "Remote reactor client → @urls",
+    remotes.map((remote) => remote.graphqlUrl).join(", "),
   );
-  if (!remoteGraphqlUrl) {
-    throw new Error(
-      `reactorClient "remote": the remote drive URL "${params.remoteDriveUrl}" does not resolve to a Switchboard GraphQL endpoint`,
-    );
-  }
-  logger.info("Remote reactor client → @url", remoteGraphqlUrl);
   return multiReactor.buildMultiReactorClient({
     module: undefined,
-    remoteGraphqlUrl,
+    remotes,
+    collections: params.collections,
     signer: params.signer,
     documentModelModules: params.documentModelModules,
   });

@@ -75,4 +75,28 @@ describe.each([
     expect(created[0].header.id).toBe("fixed");
     expect(created[0].header.protocolVersions).toEqual({ "base-reducer": 3 });
   });
+
+  it("makes a drive anew under its slug when its pinned id is one only a v2 create derives", async () => {
+    const { client: reactor, created } = client();
+    const errors: string[] = [];
+    // The id of a drive created as v2-required in another store
+    const pinned = "HRsIHuMMTdmjgCdy9QGWyx96zOFByPo787oBQcEt9f4";
+
+    const url = await add(
+      reactor,
+      { id: pinned, slug: "mail", global: { name: "Mail" } } as never,
+      1,
+      { error: (message: string) => errors.push(message) },
+    );
+
+    // Created v2-required under a derived id, not as a legacy one claiming it
+    expect(created[0].header.id).not.toBe(pinned);
+    expect(created[0].header.protocolVersions).toEqual({
+      "base-reducer": 3,
+      signature: 2,
+    });
+    expect(created[0].header.slug).toBe("mail");
+    expect(url).toBe("http://localhost:1/d/mail");
+    expect(errors[0]).toContain(`pins ${pinned}`);
+  });
 });

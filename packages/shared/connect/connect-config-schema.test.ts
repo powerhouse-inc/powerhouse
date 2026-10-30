@@ -200,6 +200,34 @@ const runtimeOnly: [string, unknown][] = [
     "pwa.manifest.categories",
     { pwa: { manifest: { categories: ["finance"] } } },
   ],
+  [
+    "instance.remoteBackends",
+    {
+      instance: {
+        ...instance,
+        remoteBackends: [{ name: "sb", url: "http://localhost:4001/d/b" }],
+      },
+    },
+  ],
+  [
+    "instance.collections",
+    {
+      instance: {
+        ...instance,
+        collections: { workflows: { backend: "sb", sync: false } },
+      },
+    },
+  ],
+  [
+    "drives.defaultDrives[].backend and .sync",
+    {
+      drives: {
+        defaultDrives: [
+          { url: "http://localhost:4001/d/b", backend: "sb", sync: false },
+        ],
+      },
+    },
+  ],
 ];
 
 describe("connectConfigSchema", () => {

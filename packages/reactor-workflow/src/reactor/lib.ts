@@ -35,6 +35,7 @@ import {
   currentPieceWorker,
   currentRunId,
   currentStepTest,
+  currentWaitpoints,
   currentWorkflowId,
 } from "./run-scope.js";
 import { PROJECT_SCOPE_KEY } from "./piece-store-port.js";
@@ -163,8 +164,10 @@ export async function resolveConnectionWithSecrets(
     config: (state.config ?? {}) as Record<string, unknown>,
     secretRefs: state.secretRefs,
   };
-  if (source.authType === "OAUTH2") await oauth?.refreshIfDue(source);
-  return shapeConnection(source, secrets);
+  if (source.authType === "OAUTH2") {
+    await oauth?.refreshIfDue(source, document.header.id);
+  }
+  return shapeConnection(source, secrets, document.header.id);
 }
 
 // Piece code runs under an egress policy that denies private address space —
@@ -330,6 +333,7 @@ export function createBlockExecutor(
       // many runs, and each run has a child of its own.
       worker: currentPieceWorker,
       stepTest: currentStepTest,
+      waitpoints: currentWaitpoints,
       // A workflow is a flow; the reactor is the project, as it is for
       // ctx.store's PROJECT scope.
       identity: () => ({

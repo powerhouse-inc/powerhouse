@@ -4,7 +4,6 @@ import {
   createHttpAdapter,
   HttpRouteService,
   type Context,
-  type IAuthorizationService,
 } from "@powerhousedao/reactor-api";
 import type { WorkflowRuntimeService } from "@powerhousedao/reactor-workflow";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -115,13 +114,12 @@ describe("startOAuth", () => {
       user: { address: "0xadmin" },
     }) as unknown as Context;
 
-  function build(callbackUrl: string | undefined, isAdmin = true) {
+  function build(callbackUrl: string | undefined) {
     const runtime = {
       startOAuth: vi.fn(() => Promise.resolve({})),
     };
     const resolvers = getResolvers(
       runtime as unknown as WorkflowRuntimeService,
-      { isSupremeAdmin: () => isAdmin } as unknown as IAuthorizationService,
       callbackUrl ? { callbackUrl } : undefined,
     ) as Record<string, Record<string, Resolver>>;
     return {
@@ -132,13 +130,6 @@ describe("startOAuth", () => {
   }
 
   const PATH = "/api/@powerhousedao/workflow/oauth/callback";
-
-  it("is an administrator's, like minting a secret", () => {
-    const { start } = build(`https://sb.example${PATH}`, false);
-    expect(() => start({}, { connectionId: "c1" }, ctx())).toThrow(
-      "Admin access required",
-    );
-  });
 
   it("uses the host's own redirect when it knows its origin", async () => {
     const { runtime, start } = build(`https://sb.example${PATH}`);
@@ -210,5 +201,86 @@ describe("startOAuth", () => {
     expect(() => start({}, { connectionId: "c1" }, ctx())).toThrow(
       "This host serves no OAuth2 callback",
     );
+  });
+});
+
+describe("oauthSignIn", () => {
+  const PATH = "/api/@powerhousedao/workflow/oauth/callback";
+  const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
+
+  function build(
+    callbackUrl: string | undefined,
+    mode: "desktop" | "web" | "relay" | "none",
+  ) {
+    const runtime = {
+      oauthSignInMode: vi.fn(() => Promise.resolve(mode)),
+    };
+    const resolvers = getResolvers(
+      runtime as unknown as WorkflowRuntimeService,
+      callbackUrl ? { callbackUrl } : undefined,
+    ) as Record<string, Record<string, Resolver>>;
+    return { runtime, signIn: resolvers.WorkflowRuntimeQueries.oauthSignIn };
+  }
+
+  it.each([
+    ["desktop", "DESKTOP"],
+    ["web", "WEB"],
+    ["relay", "RELAY"],
+    ["none", "NONE"],
+  ] as const)(
+    "answers the runtime's %s decision for the host's own callback as %s",
+    async (mode, answer) => {
+      const own = `https://env.vetra.io${PATH}`;
+      const { runtime, signIn } = build(own, mode);
+      await expect(
+        signIn(
+          {},
+          {
+            appId: "sektar-google",
+            redirectUri: `https://evil.example${PATH}`,
+          },
+          CTX,
+        ),
+      ).resolves.toBe(answer);
+      expect(runtime.oauthSignInMode).toHaveBeenCalledWith(
+        "sektar-google",
+        own,
+      );
+    },
+  );
+
+  it("takes the caller's redirect when the host knows only its path", async () => {
+    const { runtime, signIn } = build(PATH, "desktop");
+    await expect(
+      signIn(
+        {},
+        { appId: "sektar-google", redirectUri: `http://localhost:4001${PATH}` },
+        CTX,
+      ),
+    ).resolves.toBe("DESKTOP");
+    expect(runtime.oauthSignInMode).toHaveBeenCalledWith(
+      "sektar-google",
+      `http://localhost:4001${PATH}`,
+    );
+  });
+
+  it("answers NONE when the host cannot name the callback a sign-in would use", async () => {
+    const noRoutes = build(undefined, "web");
+    await expect(
+      noRoutes.signIn({}, { appId: "sektar-google" }, CTX),
+    ).resolves.toBe("NONE");
+    const pathOnly = build(PATH, "web");
+    await expect(
+      pathOnly.signIn({}, { appId: "sektar-google" }, CTX),
+    ).resolves.toBe("NONE");
+    await expect(
+      pathOnly.signIn(
+        {},
+        { appId: "sektar-google", redirectUri: "https://x.example/elsewhere" },
+        CTX,
+      ),
+    ).resolves.toBe("NONE");
+    expect(noRoutes.runtime.oauthSignInMode).not.toHaveBeenCalled();
+    expect(pathOnly.runtime.oauthSignInMode).not.toHaveBeenCalled();
   });
 });

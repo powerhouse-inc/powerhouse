@@ -7,6 +7,7 @@ import type {
 import { describe, expect, it } from "vitest";
 import {
   matchesFilter,
+  resolveProcessorNames,
   resolveProcessorSlots,
 } from "../../src/processors/utils.js";
 
@@ -304,6 +305,42 @@ describe("matchesFilter", () => {
 
       expect(matchesFilter(op, filter)).toBe(true);
     });
+  });
+});
+
+describe("resolveProcessorNames", () => {
+  const onDisconnect = () => Promise.resolve();
+  const onOperations = () => Promise.resolve();
+
+  class FilesIndex {
+    namespace = "FilesIndex_drive1";
+    onDisconnect = onDisconnect;
+    onOperations = onOperations;
+  }
+
+  it("prefers the id, then the class, then the namespace, then the index", () => {
+    expect(
+      resolveProcessorNames([
+        { id: "mine", processor: new FilesIndex(), filter: {} },
+        { processor: new FilesIndex(), filter: {} },
+        {
+          processor: { namespace: "ns", onDisconnect, onOperations },
+          filter: {},
+        },
+        { processor: { onDisconnect, onOperations }, filter: {} },
+      ]),
+    ).toEqual(["mine", "FilesIndex", "ns", "#3"]);
+  });
+
+  it("numbers records that share a processor", () => {
+    const processor = new FilesIndex();
+    expect(
+      resolveProcessorNames([
+        { processor, filter: {} },
+        { processor, filter: {} },
+        { processor, filter: {} },
+      ]),
+    ).toEqual(["FilesIndex", "FilesIndex#1", "FilesIndex#2"]);
   });
 });
 

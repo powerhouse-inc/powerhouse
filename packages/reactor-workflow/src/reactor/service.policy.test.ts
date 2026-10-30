@@ -232,6 +232,41 @@ describe("policy.concurrency", () => {
     expect(spans[1][0]).toBeLessThan(spans[0][1]);
   });
 
+  // A backfill's for-every trigger moves its cursor on every poll. Polled while
+  // its earlier slice still ran, it queued the next one, where it expired
+  // past runTimeoutSeconds or was skipped by a park, the slice lost.
+  it("holds a serialised workflow's poll while a firing holds its slot", async () => {
+    workflow("wf-held", {
+      action: "slow",
+      policy: { concurrency: "QUEUE", onFailure: "IGNORE" },
+    });
+    workflow("wf-unheld", {
+      action: "slow",
+      policy: { concurrency: "PARALLEL", onFailure: "IGNORE" },
+    });
+    const held = (id: string) =>
+      (service as unknown as { pollHeld(id: string): boolean }).pollHeld(id);
+    // Nothing is held before a firing has read the workflow's policy
+    expect(held("wf-held")).toBe(false);
+    await service.fire("wf-held", undefined, "manual", undefined, CTX);
+    await service.fire("wf-unheld", undefined, "manual", undefined, CTX);
+    expect(held("wf-held")).toBe(false);
+
+    const queued = service.fire("wf-held", undefined, "manual", undefined, CTX);
+    const parallel = service.fire(
+      "wf-unheld",
+      undefined,
+      "manual",
+      undefined,
+      CTX,
+    );
+    // Held from the moment the firing reaches the runtime, before the gate
+    expect(held("wf-held")).toBe(true);
+    expect(held("wf-unheld")).toBe(false);
+    await Promise.all([queued, parallel]);
+    expect(held("wf-held")).toBe(false);
+  });
+
   // The deadline used to be computed AFTER admission, so queue time was free:
   // a firing could wait out a whole shift under a one-second timeout and then
   // run its side effect anyway, with its full budget intact.

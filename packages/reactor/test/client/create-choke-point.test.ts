@@ -65,7 +65,7 @@ const ALLOWED = new Map<string, string>([
     "heads a new document as newDocument does",
   ],
   [
-    "packages/connect-core/src/runtime/graphql-routable-backend.ts",
+    "packages/reactor-browser/src/graphql-client/switchboard-backend.ts",
     "delegates to the light client",
   ],
   ["packages/reactor-workflow/src/reactor/run-scoped-client.ts", "newDocument"],

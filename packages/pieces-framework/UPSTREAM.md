@@ -6,9 +6,9 @@ Never edit them by hand; re-run the sync instead.
 
 |           |                                            |
 | --------- | ------------------------------------------ |
-| Tag       | `0.91.0`                                   |
-| Commit    | `da4410d1bf6212054e55805a98d566ff1b9310b2` |
-| Committed | 2026-09-14                                 |
+| Tag       | `0.92.3`                                   |
+| Commit    | `2fc7f8dcaa84400f9db53fb0de7fc4340d055c62` |
+| Committed | 2026-10-12                                 |
 
 The same facts, plus the per-file upstream path and the SHA-256 of every
 original file, live in `upstream/MANIFEST.json`; the package versions are in
@@ -18,10 +18,10 @@ original file, live in `upstream/MANIFEST.json`; the package versions are in
 
 | Upstream package                        | Upstream path                   | Here                         |
 | --------------------------------------- | ------------------------------- | ---------------------------- |
-| `@activepieces/pieces-framework` 0.39.0 | `packages/pieces/framework/src` | `upstream/framework/`        |
+| `@activepieces/pieces-framework` 0.40.0 | `packages/pieces/framework/src` | `upstream/framework/`        |
 | `@activepieces/pieces-common` 0.14.0    | `packages/pieces/common/src`    | `upstream/common/`           |
 | `@activepieces/core-piece-types` 0.11.1 | `packages/core/piece-types/src` | `upstream/core-piece-types/` |
-| `@activepieces/core-utils` 0.6.2        | `packages/core/utils/src`       | `upstream/core-utils/`       |
+| `@activepieces/core-utils` 0.8.1        | `packages/core/utils/src`       | `upstream/core-utils/`       |
 | `@activepieces/engine` 0.7.0            | `packages/server/engine/src`    | `upstream/engine/`           |
 
 The first four are vendored whole. The engine is not: `PACKAGES` gives it an

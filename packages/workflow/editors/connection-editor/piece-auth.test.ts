@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { REACTOR_CONNECTOR_ID } from "document-models/connection";
 import {
   connectorIdForPiece,
   isAuthComplete,
@@ -7,6 +8,8 @@ import {
   planForConnection,
   planFromAuth,
   plansFromAuth,
+  REACTOR_SERVICE_LABEL,
+  serviceName,
   UNKNOWN_AUTH,
   type AuthPlan,
 } from "./piece-auth.js";
@@ -91,6 +94,23 @@ describe("planFromAuth", () => {
     expect(plan.configFields.map((field) => field.name)).toEqual([
       "client_id",
       "region",
+    ]);
+  });
+
+  it("reads dropdown options in the runtime catalog's shape", () => {
+    const plan = planFromAuth({
+      type: "CUSTOM_AUTH",
+      props: [
+        {
+          name: "provider",
+          type: "STATIC_DROPDOWN",
+          displayName: "Provider",
+          staticOptions: [{ label: "OpenAI", value: "openai" }],
+        },
+      ],
+    });
+    expect(plan.configFields[0].options).toEqual([
+      { label: "OpenAI", value: "openai" },
     ]);
   });
 
@@ -218,6 +238,34 @@ describe("connector ids", () => {
     );
     expect(packageFromConnectorId("@activepieces/piece-slack")).toBe(
       "@activepieces/piece-slack",
+    );
+  });
+});
+
+describe("serviceName", () => {
+  const catalog = [
+    { name: "@activepieces/piece-gotify", displayName: "Gotify" },
+  ];
+
+  it("is null while the connection has no service", () => {
+    expect(serviceName("", catalog)).toBeNull();
+  });
+
+  it("names a catalog piece by its display name", () => {
+    expect(serviceName("@activepieces/piece-gotify#gotify", catalog)).toBe(
+      "Gotify",
+    );
+  });
+
+  it("falls back to the package name before the catalog loads", () => {
+    expect(serviceName("@activepieces/piece-gotify#gotify", null)).toBe(
+      "@activepieces/piece-gotify",
+    );
+  });
+
+  it("names a reactor connection", () => {
+    expect(serviceName(REACTOR_CONNECTOR_ID, catalog)).toBe(
+      REACTOR_SERVICE_LABEL,
     );
   });
 });

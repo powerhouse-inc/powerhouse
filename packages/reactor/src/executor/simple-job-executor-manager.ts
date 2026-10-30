@@ -39,6 +39,11 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
   private deferredJobs: DeferredJobs;
   private resultHandler: IJobResultHandler;
 
+  /** The jobs held for a missing document, for telemetry. */
+  deferredStats(): Record<string, number> {
+    return this.deferredJobs.stats();
+  }
+
   private jobTimeoutMs: number;
 
   constructor(

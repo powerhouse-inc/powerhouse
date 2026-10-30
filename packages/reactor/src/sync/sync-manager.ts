@@ -1663,6 +1663,17 @@ export class SyncManager
     return this.syncAwaiter.waitForSync(jobId, signal);
   }
 
+  /** Sizes for telemetry. */
+  stats(): Record<string, number> {
+    return {
+      planKeyToJobUuid: this.planKeyToJobUuid.size,
+      lastEnqueuedJobIdByKey: this.lastEnqueuedJobIdByKey.size,
+      owed: this.owed.size,
+      derivedThrough: this.derivedThrough.size,
+      ...this.syncAwaiter.stats(),
+    };
+  }
+
   getSyncStatus(documentId: string): SyncStatus | undefined {
     return this.syncStatusTracker.getStatus(documentId);
   }

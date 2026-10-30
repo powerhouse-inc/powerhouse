@@ -4,7 +4,7 @@
  * identically whichever framework the host chose.
  */
 import type { IncomingMessage } from "node:http";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IHttpAdapter } from "../../src/graphql/gateway/types.js";
 import { HttpRouteService, type PublicOrigin } from "../../src/http/index.js";
 import type { AuthService } from "../../src/services/auth.service.js";
@@ -543,6 +543,33 @@ export function runRouteScopeTests(
       });
 
       expect(seen).toBe(exact);
+    });
+
+    it("aborts the handler's signal on a disconnect, not when the body is read", async () => {
+      let abortedOnEntry: boolean | undefined;
+      let disconnected = () => {};
+      const gone = new Promise<void>((resolve) => {
+        disconnected = resolve;
+      });
+
+      const scope = service().scopeFor("pkg");
+      scope.post("wait", { auth: "public" }, async (_req, ctx) => {
+        abortedOnEntry = ctx.signal.aborted;
+        ctx.signal.addEventListener("abort", disconnected);
+        await gone;
+        return new Response(null, { status: 204 });
+      });
+
+      const controller = new AbortController();
+      const call = fetch(`${h.url}/api/pkg/wait`, {
+        method: "POST",
+        body: "{}",
+        signal: controller.signal,
+      }).catch(() => undefined);
+      await vi.waitFor(() => expect(abortedOnEntry).toBe(false));
+      controller.abort();
+      await gone;
+      await call;
     });
 
     it("refuses a body past maxBodyBytes with 413", async () => {

@@ -80,6 +80,78 @@ describe("controller client", () => {
     });
   });
 
+  it("calls the draft routes and carries refused setters and rule issues", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const digest = "a".repeat(64);
+    const envelope = {
+      format: "ph-host-export",
+      version: 1,
+      project: { name: "p", root: "/p" },
+      name: "sb",
+      host: { name: "sb", runner: { module: "m" } },
+      members: {},
+    };
+    const refused = { path: "host.runner.module", reason: "no" };
+    const ruleIssue = { rule: "storage", path: "host", message: "m" };
+    const replies = [
+      json(200, { postgres: false, controller: true }),
+      json(200, { export: envelope, baseDigest: digest }),
+      json(200, { ruleIssues: [ruleIssue], issues: [] }),
+      json(202, { ...instance, source: { project: "/src", host: "sb" } }),
+      json(400, {
+        error: { code: "setter_denied", message: "m", setters: [refused] },
+      }),
+      json(422, {
+        error: { code: "check_failed", message: "m", ruleIssues: [ruleIssue] },
+      }),
+    ];
+    const client = createControllerClient({
+      token: "t",
+      fetch: (url, init) => {
+        calls.push({ url: url as string, init: init ?? {} });
+        return Promise.resolve(replies.shift()!);
+      },
+    });
+    const draft = {
+      project: "/p",
+      host: "sb",
+      baseDigest: digest,
+      setters: [],
+    };
+    await expect(client.capabilities()).resolves.toEqual({
+      postgres: false,
+      controller: true,
+      renownSource: "remote",
+    });
+    await expect(client.exportHost("/p a", "sb")).resolves.toMatchObject({
+      baseDigest: digest,
+    });
+    await expect(client.checkDraft(draft)).resolves.toEqual({
+      ruleIssues: [ruleIssue],
+      issues: [],
+    });
+    await expect(client.startDraft(draft)).resolves.toMatchObject({
+      source: { project: "/src" },
+    });
+    await expect(client.startDraft(draft)).rejects.toMatchObject({
+      code: "setter_denied",
+      setters: [refused],
+    });
+    await expect(client.startDraft(draft)).rejects.toMatchObject({
+      code: "check_failed",
+      ruleIssues: [ruleIssue],
+    });
+    expect(calls.map((c) => `${c.init.method} ${c.url}`)).toEqual([
+      "GET /__ph-monitor/capabilities",
+      "GET /__ph-monitor/export?project=%2Fp+a&host=sb",
+      "POST /__ph-monitor/drafts/check",
+      "POST /__ph-monitor/drafts",
+      "POST /__ph-monitor/drafts",
+      "POST /__ph-monitor/drafts",
+    ]);
+    expect(JSON.parse(calls[2].init.body as string)).toEqual(draft);
+  });
+
   it("maps a refused token and an unreachable controller", async () => {
     const refused = createControllerClient({
       token: "t",

@@ -68,7 +68,7 @@ describe("mastra-runner serve (demo provider, real HTTP)", () => {
           backends: {
             switchboard: {
               kind: "remote",
-              remote: { url: `http://127.0.0.1:${sbPort}/graphql` },
+              remote: { url: `http://127.0.0.1:${sbPort}/d/powerhouse` },
             },
           },
         },
@@ -170,7 +170,7 @@ describe("mastra-runner serve (demo provider, real HTTP)", () => {
             backends: {
               switchboard: {
                 kind: "remote",
-                remote: { url: `http://127.0.0.1:${sbPort}/graphql` },
+                remote: { url: `http://127.0.0.1:${sbPort}/d/powerhouse` },
               },
             },
           },
@@ -206,7 +206,7 @@ describe("mastra-runner attach failures", () => {
         { projectRoot: dir, verb: "run", env: {} },
       ),
     ).rejects.toThrow(
-      /needs the switchboard's GraphQL url: remote: \{ url: switchboard\.endpoints\.graphql \}.*\$output/,
+      /needs a drive address on the switchboard \(<switchboard>\/d\/<slug>\): remote: \{ url: switchboard\.drives\.<slug>\.url \}.*\$output/,
     );
   });
 });

@@ -49,6 +49,16 @@ export function processorGateFor(reactor: ManagedReactor): AdminGate {
     : adminGateFor(reactor);
 }
 
+/** Keyframe clean-up and reclaim (`reactor.keyframeLevers`). */
+export function keyframeGateFor(reactor: ManagedReactor): AdminGate {
+  if (reactor.keyframeLevers) {
+    return ADMIN_ALLOWED;
+  }
+  return reactor.kind === "remote"
+    ? closed(NO_PROCESSOR_LEVERS_REASON)
+    : adminGateFor(reactor);
+}
+
 /** Raw SQL against the reactor's own store (`reactor.dbQuery`). */
 export function sqlGateFor(reactor: ManagedReactor): AdminGate {
   if (reactor.kind === "remote") {

@@ -49,6 +49,17 @@ describe("ThreadedPGlite admission", () => {
   }
 
   it(
+    "reports memory while a reservation holds the queue",
+    async () => {
+      const pg = await start();
+      const answered = await pg.admit(() => pg.memoryStats());
+      expect(answered.heapUsed).toBeGreaterThan(0);
+      expect(answered.wasm).toBeGreaterThan(1024 * 1024);
+    },
+    BOOT_TIMEOUT_MS,
+  );
+
+  it(
     "does not count time queued behind a long statement against the deadline",
     async () => {
       const pg = await start();

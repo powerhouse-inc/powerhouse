@@ -48,6 +48,8 @@ export function createReactorInspector(
     processorManager: module.processorManager,
     catchUp: module.catchUp,
     catchUpPriority: module.catchUpPriority,
+    processorTiming: module.processorTiming,
+    memoryTelemetry: module.memoryTelemetry,
     integrity: new DocumentIntegrityService(
       module.keyframeStore,
       module.operationStore,
@@ -55,9 +57,11 @@ export function createReactorInspector(
       module.documentView,
       module.documentModelRegistry,
     ),
+    keyframeCleanup: module.keyframeCleanup,
     storageHealth:
       options.storageHealth ?? groupCommitHealth(module.groupCommitStorage),
     documentModelRegistry: module.documentModelRegistry,
+    loadsModelsOnDemand: module.loadsModelsOnDemand === true,
     drives: new DriveInspection(module.reactor, module.documentModelRegistry),
     attachmentStore: options.attachmentStore,
     facts: {

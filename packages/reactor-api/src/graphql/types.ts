@@ -16,6 +16,7 @@ import type { IncomingHttpHeaders } from "http";
 import type { IAuthorizationService } from "../services/authorization.service.js";
 import type { ICredentialInvalidator } from "../services/auth.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
+import type { ReadableDocumentsLike } from "../services/readable-documents.js";
 import type { BaseSubgraph } from "./base-subgraph.js";
 import type { IReactorInspectionSource } from "./inspection/source.js";
 import type { RequestClients } from "./request-clients.js";
@@ -103,6 +104,11 @@ export type SubgraphArgs = {
    * to the host's permission tables alone.
    */
   syncServingGate?: SyncScopeGate;
+  /**
+   * The readable-documents read model, for an index subgraph's row filter
+   * (`BaseSubgraph.readableFilter`). Absent on a host that does not serve it.
+   */
+  readableDocuments?: ReadableDocumentsLike;
   /**
    * Attachments as the request's caller may use them. Bind per request with
    * `BaseSubgraph.attachmentsFor(ctx)`.

@@ -9,7 +9,7 @@ export default {
         kind: "remote",
         remote: {
           url: {
-            $output: { host: "switchboard", path: ["endpoints", "graphql"] },
+            $output: { host: "switchboard", path: ["drives", "lab", "url"] },
           },
         },
       },

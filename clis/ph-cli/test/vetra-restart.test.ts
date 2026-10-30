@@ -76,7 +76,9 @@ async function driveIds(client: Client): Promise<string[]> {
     timeout,
   );
   expect(result.isError).toBeFalsy();
-  return (result.structuredContent as { driveIds: string[] }).driveIds;
+  return (result.structuredContent as { drives: { id: string }[] }).drives.map(
+    (drive) => drive.id,
+  );
 }
 
 describe("restarting Vetra", () => {

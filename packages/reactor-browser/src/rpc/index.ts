@@ -90,6 +90,7 @@ export {
 export {
   createSyncManagerProxy,
   SyncManagerProxy,
+  SYNC_REMOTES_CHANGED_EVENT,
   SYNC_STATUS_CHANGED_EVENT,
   type SyncStatusChangedBusEvent,
 } from "./sync-manager-proxy.js";

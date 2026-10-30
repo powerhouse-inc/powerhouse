@@ -3,7 +3,6 @@ import type {
   InProcessReactorClientModule,
 } from "@powerhousedao/reactor";
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
-import { createReactorMcpProvider } from "@powerhousedao/reactor-mcp";
 import type {
   DocumentModelDocumentModelModule,
   DocumentModelPHState,
@@ -18,6 +17,7 @@ import {
   documentModelDocumentModelModule,
 } from "document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { addActionsTool, toMcpTool } from "../src/index.js";
 import { createP256Signer } from "./utils/p256-signer.js";
 
 // Code generated before the model set a code used the class name.
@@ -113,8 +113,7 @@ describe("addActions results for a rejected action", () => {
     await (
       await module.client.write.create(document)
     ).readable;
-    const { tools } = await createReactorMcpProvider({ client });
-    const result = await tools.addActions.callback({
+    const result = await toMcpTool(addActionsTool, { client }).callback({
       documentId: document.header.id,
       actions: [
         {

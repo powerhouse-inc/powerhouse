@@ -18,7 +18,7 @@ export default {
                 $output: {
                   host: "switchboard",
                   member: "sb-b",
-                  path: ["endpoints", "graphql"],
+                  path: ["drives", "lab", "url"],
                 },
               },
             },

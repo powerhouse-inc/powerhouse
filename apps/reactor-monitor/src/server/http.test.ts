@@ -1,4 +1,5 @@
 import type { HostIssue, SpawnedHost } from "@powerhousedao/host-core";
+import type { HostExport } from "@powerhousedao/host-core/schema";
 import {
   mkdirSync,
   mkdtempSync,
@@ -12,8 +13,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  baseDigest,
+  capabilitiesResponseSchema,
   checkResponseSchema,
+  draftCheckResponseSchema,
   errorResponseSchema,
+  exportResponseSchema,
   hostsResponseSchema,
   instanceSchema,
   instancesResponseSchema,
@@ -32,6 +37,24 @@ import {
 } from "./http.ts";
 
 const TOKEN = "a".repeat(64);
+
+function sbExport(root: string): HostExport {
+  return {
+    format: "ph-host-export",
+    version: 1,
+    project: { name: "project", root },
+    name: "sb",
+    host: {
+      name: "sb",
+      runner: {
+        module: "@powerhousedao/ph-cli/runners/switchboard",
+        port: 4801,
+      },
+      reactor: { backends: { main: { kind: "in-process" } } },
+    },
+    members: {},
+  } as HostExport;
+}
 
 interface Reply {
   status: number;
@@ -57,6 +80,7 @@ describe("controller HTTP handler", () => {
       projectRoots: [project],
       tmpDir: path.join(base, "tmp"),
       check: () => Promise.resolve(issues),
+      exportHost: (input) => Promise.resolve(sbExport(input.projectRoot)),
       spawn: (options) => {
         options.onOutput?.("stdout", "booted\n");
         const exited = Promise.resolve({
@@ -297,6 +321,82 @@ describe("controller HTTP handler", () => {
     );
     expect(all.instances.map((i) => i.status)).toEqual(["exited"]);
     expect(controller.list()).toEqual([]);
+  });
+
+  it("serves the draft routes behind the same guards", async () => {
+    const capabilities = await call("GET", "/__ph-monitor/capabilities");
+    expect(capabilitiesResponseSchema.parse(capabilities.body)).toEqual({
+      postgres: false,
+      controller: true,
+      renownSource: "remote",
+    });
+
+    const query = new URLSearchParams({ project, host: "sb" }).toString();
+    const exported = exportResponseSchema.parse(
+      (await call("GET", `/__ph-monitor/export?${query}`)).body,
+    );
+    expect(exported.baseDigest).toBe(await baseDigest(sbExport(project)));
+    expect((await call("GET", "/__ph-monitor/export")).status).toBe(400);
+
+    const draft = {
+      project,
+      host: "sb",
+      baseDigest: exported.baseDigest,
+      setters: [],
+    };
+    const checked = await call("POST", "/__ph-monitor/drafts/check", {
+      body: JSON.stringify(draft),
+    });
+    expect(draftCheckResponseSchema.parse(checked.body)).toEqual({
+      ruleIssues: [],
+      issues: [],
+    });
+
+    const started = await call("POST", "/__ph-monitor/drafts", {
+      body: JSON.stringify(draft),
+    });
+    expect(started.status).toBe(202);
+    expect(instanceSchema.parse(started.body)).toMatchObject({
+      host: "sb",
+      source: { project, host: "sb" },
+    });
+
+    const denied = await call("POST", "/__ph-monitor/drafts", {
+      body: JSON.stringify({
+        ...draft,
+        setters: [{ path: "host.runner.module", value: "x" }],
+      }),
+    });
+    expect(denied.status).toBe(400);
+    expect(errorResponseSchema.parse(denied.body).error).toMatchObject({
+      code: "setter_denied",
+      setters: [{ path: "host.runner.module" }],
+    });
+
+    const stale = await call("POST", "/__ph-monitor/drafts/check", {
+      body: JSON.stringify({ ...draft, baseDigest: "0".repeat(64) }),
+    });
+    expect(stale.status).toBe(409);
+    expect(codeOf(stale)).toBe("base_changed");
+
+    const extra = await call("POST", "/__ph-monitor/drafts", {
+      body: JSON.stringify({ ...draft, verb: "build" }),
+    });
+    expect(codeOf(extra)).toBe("bad_request");
+
+    for (const route of ["drafts", "drafts/check"]) {
+      const anonymous = await call("POST", `/__ph-monitor/${route}`, {
+        headers: { [TOKEN_HEADER]: "" },
+        body: JSON.stringify(draft),
+      });
+      expect(codeOf(anonymous)).toBe("bad_token");
+      const foreign = await call("POST", `/__ph-monitor/${route}`, {
+        headers: { origin: "http://evil.example" },
+        body: JSON.stringify(draft),
+      });
+      expect(codeOf(foreign)).toBe("bad_origin");
+    }
+    expect(controller.list()).toHaveLength(1);
   });
 
   it("Host-checks every path of the built app, not only the API", async () => {

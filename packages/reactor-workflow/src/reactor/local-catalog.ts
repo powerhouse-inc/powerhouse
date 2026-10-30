@@ -158,6 +158,10 @@ export function detailResult(
           ...(action.requireReactor
             ? { requireReactor: action.requireReactor }
             : {}),
+          ...(action.defaultTimeoutSeconds !== undefined
+            ? { defaultTimeoutSeconds: action.defaultTimeoutSeconds }
+            : {}),
+          ...(action.defaultRetry ? { defaultRetry: action.defaultRetry } : {}),
           // What blockOutputTree reads. A published piece's listing carries
           // it; a package piece has only this.
           outputSchema: action.outputSchema,

@@ -110,6 +110,25 @@ function classNameOf(processor: object): string | undefined {
   return name && name !== "Object" ? name : undefined;
 }
 
+/**
+ * A readable name per record, independent of the cursor key: id, then class
+ * name, then namespace, then index. Class comes before namespace because a
+ * relational processor's namespace embeds the drive id.
+ */
+export function resolveProcessorNames(records: ProcessorRecord[]): string[] {
+  const seen = new Map<string, number>();
+  return records.map((record, i) => {
+    const base =
+      nonEmpty(record.id) ??
+      classNameOf(record.processor) ??
+      namespaceOf(record.processor) ??
+      `#${i}`;
+    const count = seen.get(base) ?? 0;
+    seen.set(base, count + 1);
+    return count === 0 ? base : `${base}#${count}`;
+  });
+}
+
 // Cursor key of each record within its factory and drive. Legacy mode keeps
 // the array index; otherwise id, then namespace, then class name, then index.
 export function resolveProcessorSlots(

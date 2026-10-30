@@ -154,6 +154,11 @@ export interface TriggerSupervisorOptions {
     kind: string,
     runId: string,
   ) => void;
+  // True while a workflow cannot start another run (its serialised slots are
+  // taken by firings that have not settled). Its due poll then stays due and
+  // is looked at again next tick, rather than handing out work that could
+  // only wait in the queue. Unset: every due poll runs.
+  pollHeld?: (workflowId: string) => boolean;
   cacheDir: string;
   // Where a trigger's piece comes from. Defaults to fetching into cacheDir,
   // so a host that ships pieces in a package passes its own.
@@ -539,6 +544,29 @@ export class TriggerSupervisor {
       if (flipRow) await store.clearParkOnDisable(workflowId);
       else await store.clearWorkflowPark(workflowId);
     });
+  }
+
+  /**
+   * Makes an armed trigger due now and runs the due check at once, so a
+   * schedule fires and a poll polls without waiting for its interval ("sync
+   * now"). The next one follows the interval from there. False when the
+   * workflow has no armed trigger (disabled, parked, erroring, unknown).
+   */
+  async pollNow(workflowId: string): Promise<boolean> {
+    if (this.stopped) return false;
+    const store = await this.store();
+    if (!store) return false;
+    const row = await store.getTriggerState(workflowId);
+    if (!row || row.status !== "ENABLED") return false;
+    await store.upsertTriggerState({
+      ...row,
+      next_poll_at: this.now().toISOString(),
+    });
+    this.tick().catch((error: unknown) => {
+      if (isShutdownRefusal(error)) return;
+      logger.error("Trigger tick after poll-now failed: @error", error);
+    });
+    return true;
   }
 
   /** A re-publish past the parked version: on this lane, a park older than
@@ -1503,6 +1531,13 @@ export class TriggerSupervisor {
             false,
           ),
         );
+        continue;
+      }
+      // Its earlier firings still hold every slot: polled now, a trigger that
+      // advances its own position (a backfill's cursor) would hand out work
+      // that can only queue, and expire or be skipped there. Left due, it is
+      // polled on the first tick after a slot frees.
+      if (!isSchedule(binding) && this.options.pollHeld?.(row.workflow_id)) {
         continue;
       }
       started.push(

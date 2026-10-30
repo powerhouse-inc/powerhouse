@@ -11,6 +11,7 @@ import {
   type CanonicalDocumentId,
 } from "../../services/authorization.service.js";
 import { BaseSubgraph } from "../base-subgraph.js";
+import { isNotFoundError } from "./resolvers.js";
 import type { Context, SubgraphArgs } from "../types.js";
 import {
   collectChangedDocumentIds,
@@ -41,6 +42,17 @@ import * as resolvers from "./resolvers.js";
 export class ReactorSubgraph extends BaseSubgraph {
   // temp
   private logger = new ConsoleLogger(["ReactorSubgraph"]);
+
+  /**
+   * A resolver's failure: a document that does not exist is an answer (a
+   * client asking for one it just removed), logged at info; anything else
+   * is an error.
+   */
+  private logFailure(message: string, ...replacements: unknown[]): void {
+    const error = replacements[replacements.length - 1];
+    if (isNotFoundError(error)) this.logger.info(message, ...replacements);
+    else this.logger.error(message, ...replacements);
+  }
 
   constructor(args: SubgraphArgs) {
     super(args);
@@ -296,7 +308,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.viewSubject(ctx),
           );
         } catch (error) {
-          this.logger.error("Error in PHDocument.operations: @Error", error);
+          this.logFailure("Error in PHDocument.operations: @Error", error);
           throw error;
         }
       },
@@ -308,7 +320,7 @@ export class ReactorSubgraph extends BaseSubgraph {
         try {
           return await resolvers.documentModels(this.clientsOf(ctx).read, args);
         } catch (error) {
-          this.logger.error("Error in documentModels: @Error", error);
+          this.logFailure("Error in documentModels: @Error", error);
           throw error;
         }
       },
@@ -328,7 +340,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.viewSubject(ctx),
           );
         } catch (error) {
-          this.logger.error("Error in document: @Error", error);
+          this.logFailure("Error in document: @Error", error);
           throw error;
         }
       },
@@ -354,7 +366,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.viewSubject(ctx),
           );
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in documentOutgoingRelationships: @Error",
             error,
           );
@@ -387,7 +399,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             items: await this.readableByHost(result.items, ctx),
           };
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in documentIncomingRelationships: @Error",
             error,
           );
@@ -421,7 +433,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           );
           return await this.filterRelationshipEdges(result, "targetId", ctx);
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in documentOutgoingRelationshipEdges: @Error",
             error,
           );
@@ -455,7 +467,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           );
           return await this.filterRelationshipEdges(result, "sourceId", ctx);
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in documentIncomingRelationshipEdges: @Error",
             error,
           );
@@ -478,7 +490,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             items: await this.readableByHost(result.items, ctx),
           };
         } catch (error) {
-          this.logger.error("Error in findDocuments: @Error", error);
+          this.logFailure("Error in findDocuments: @Error", error);
           throw error;
         }
       },
@@ -512,7 +524,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             readable,
           );
         } catch (error) {
-          this.logger.error("Error in jobStatus: @Error", error);
+          this.logFailure("Error in jobStatus: @Error", error);
           throw error;
         }
       },
@@ -525,7 +537,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             scopes: args.view?.scopes ? [...args.view.scopes] : undefined,
           });
         } catch (error) {
-          this.logger.error("Error in documentServed: @Error", error);
+          this.logFailure("Error in documentServed: @Error", error);
           throw error;
         }
       },
@@ -584,7 +596,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             args.documentType ?? undefined,
           );
         } catch (error) {
-          this.logger.error("Error in createDefaults: @Error", error);
+          this.logFailure("Error in createDefaults: @Error", error);
           throw error;
         }
       },
@@ -610,7 +622,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.viewSubject(ctx),
           );
         } catch (error) {
-          this.logger.error("Error in documentOperations: @Error", error);
+          this.logFailure("Error in documentOperations: @Error", error);
           throw error;
         }
       },
@@ -641,7 +653,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.viewSubject(ctx),
           );
         } catch (error) {
-          this.logger.error("Error in evaluateActions: @Error", error);
+          this.logFailure("Error in evaluateActions: @Error", error);
           throw error;
         }
       },
@@ -811,7 +823,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             gated && new Set(gated.map((syncOp) => syncOp.id)),
           );
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in pollSyncEnvelopes(@args): @Error",
             args,
             error,
@@ -865,7 +877,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           return result;
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in createDocument(@args): @Error",
             args,
             error,
@@ -917,7 +929,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           return result;
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in createEmptyDocument(@args): @Error",
             args,
             error,
@@ -951,7 +963,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.viewSubject(ctx),
           );
         } catch (error) {
-          this.logger.error("Error in execute(@args): @Error", args, error);
+          this.logFailure("Error in execute(@args): @Error", args, error);
           throw error;
         }
       },
@@ -976,11 +988,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             branch: args.branch,
           });
         } catch (error) {
-          this.logger.error(
-            "Error in executeAsync(@args): @Error",
-            args,
-            error,
-          );
+          this.logFailure("Error in executeAsync(@args): @Error", args, error);
           throw error;
         }
       },
@@ -1038,11 +1046,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             jobs,
           });
         } catch (error) {
-          this.logger.error(
-            "Error in executeBatch(@args): @Error",
-            args,
-            error,
-          );
+          this.logFailure("Error in executeBatch(@args): @Error", args, error);
           throw error;
         }
       },
@@ -1063,7 +1067,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.viewSubject(ctx),
           );
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in mutateDocument(@args): @Error",
             args,
             error,
@@ -1089,7 +1093,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             },
           );
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in mutateDocumentAsync(@args): @Error",
             args,
             error,
@@ -1119,7 +1123,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.viewSubject(ctx),
           );
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in renameDocument(@args): @Error",
             args,
             error,
@@ -1149,7 +1153,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.viewSubject(ctx),
           );
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in setPreferredEditor(@args): @Error",
             args,
             error,
@@ -1185,7 +1189,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.viewSubject(ctx),
           );
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in addRelationship(@args): @Error",
             args,
             error,
@@ -1221,7 +1225,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.viewSubject(ctx),
           );
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in updateRelationship(@args): @Error",
             args,
             error,
@@ -1256,7 +1260,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.viewSubject(ctx),
           );
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in removeRelationship(@args): @Error",
             args,
             error,
@@ -1304,7 +1308,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.viewSubject(ctx),
           );
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in moveRelationship(@args): @Error",
             args,
             error,
@@ -1339,7 +1343,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           return result;
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in deleteDocument(@args): @Error",
             args,
             error,
@@ -1367,7 +1371,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             propagate: args.propagate,
           });
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in deleteDocuments(@args): @Error",
             args,
             error,
@@ -1415,11 +1419,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             this.#creatorBinding(ctx),
           );
         } catch (error) {
-          this.logger.error(
-            "Error in touchChannel(@args): @Error",
-            args,
-            error,
-          );
+          this.logFailure("Error in touchChannel(@args): @Error", args, error);
           throw error;
         }
       },
@@ -1507,7 +1507,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             mutableArgs,
           );
         } catch (error) {
-          this.logger.error(
+          this.logFailure(
             "Error in pushSyncEnvelopes(@args): @Error",
             args,
             error,

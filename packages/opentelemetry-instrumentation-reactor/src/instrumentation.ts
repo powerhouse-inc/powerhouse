@@ -43,6 +43,15 @@ export class ReactorInstrumentation {
     this.module = module;
   }
 
+  /** Sizes for telemetry: entries wait here until their job settles. */
+  stats(): Record<string, number> {
+    return {
+      pendingTimestamps: this.pendingTimestamps.size,
+      runningTimestamps: this.runningTimestamps.size,
+      writeReadyTimestamps: this.writeReadyTimestamps.size,
+    };
+  }
+
   start(): void {
     this.metrics = createMetrics();
     const { eventBus, queue, executorManager, syncModule, pools } = this.module;

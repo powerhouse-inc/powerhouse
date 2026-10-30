@@ -1,5 +1,8 @@
 import { DriveRequestError } from "@powerhousedao/reactor";
-import { ambientRenownTokenProvider } from "../graphql-client/auth.js";
+import {
+  ambientRenownTokenProvider,
+  type BearerTokenProvider,
+} from "../graphql-client/auth.js";
 
 /**
  * The drive info endpoint's response: `GET <switchboard>/d/:drive`.
@@ -36,8 +39,11 @@ export type DriveInfo = {
  * `isDriveAuthError` can tell a refusal from an unreachable host and the
  * caller can prompt for a login instead of reporting a network fault.
  */
-export async function fetchDriveInfo(url: string): Promise<DriveInfo> {
-  const token = await ambientRenownTokenProvider();
+export async function fetchDriveInfo(
+  url: string,
+  tokenProvider: BearerTokenProvider = ambientRenownTokenProvider,
+): Promise<DriveInfo> {
+  const token = await tokenProvider();
 
   const response = await fetch(url, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},

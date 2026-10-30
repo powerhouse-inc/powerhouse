@@ -1,10 +1,17 @@
-import type { IDriveClient, IReactorClient } from "@powerhousedao/reactor";
+import type {
+  IDriveClient,
+  IDriveWriteClient,
+  IReactorClient,
+  IReactorWriteClient,
+} from "@powerhousedao/reactor";
 import { setName } from "@powerhousedao/shared/document-model";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
+  assertActionsApplied,
   createAction,
   createPiece,
   createTrigger,
+  deniedActionIndexes,
   DocumentModelUnavailableError,
   PieceAuth,
   Property,
@@ -20,12 +27,14 @@ import {
   type ReactorClient,
   type ReactorReadClient,
   type ReadMethods,
+  type WriteHalfMethods,
   type WriteMethods,
 } from "../src/index.js";
 import type {
   Listed,
   UnlistedDriveMethods,
   UnlistedMethods,
+  UnlistedWriteHalfMethods,
 } from "../src/powerhouse/reactor-client.js";
 
 describe("requireReactor", () => {
@@ -131,6 +140,60 @@ describe("requireReactor", () => {
     expect(metadata.actions.archive.requireReactor).toBe("write");
     expect(metadata.actions.plain.requireReactor).toBeUndefined();
     expect(metadata.triggers.changed.requireReactor).toBe("read");
+  });
+
+  it("carries timeout and retry defaults into metadata", () => {
+    const slow = createAction({
+      name: "slow",
+      displayName: "Slow",
+      description: "",
+      auth: PieceAuth.None(),
+      requireReactor: "write",
+      defaultTimeoutSeconds: 300,
+      defaultRetry: { maxAttempts: 1 },
+      props: {},
+      run: () => Promise.resolve(null),
+    });
+    const plain = createAction({
+      name: "plain",
+      displayName: "Plain",
+      description: "",
+      auth: PieceAuth.None(),
+      props: {},
+      run: () => Promise.resolve(null),
+    });
+    expect(slow.defaultTimeoutSeconds).toBe(300);
+    expect(slow.defaultRetry).toEqual({ maxAttempts: 1 });
+    expect("defaultTimeoutSeconds" in plain).toBe(false);
+    expect("defaultRetry" in plain).toBe(false);
+    const piece = createPiece({
+      displayName: "Slow",
+      auth: PieceAuth.None(),
+      logoUrl: "",
+      authors: [],
+      actions: [slow, plain],
+      triggers: [],
+    });
+    const metadata = JSON.parse(JSON.stringify(piece.metadata())) as {
+      actions: Record<
+        string,
+        { defaultTimeoutSeconds?: number; defaultRetry?: unknown }
+      >;
+    };
+    expect(metadata.actions.slow.defaultTimeoutSeconds).toBe(300);
+    expect(metadata.actions.slow.defaultRetry).toEqual({ maxAttempts: 1 });
+    expect(metadata.actions.plain.defaultTimeoutSeconds).toBeUndefined();
+    expect(() =>
+      createAction({
+        name: "bad",
+        displayName: "Bad",
+        description: "",
+        auth: PieceAuth.None(),
+        defaultTimeoutSeconds: 0,
+        props: {},
+        run: () => Promise.resolve(null),
+      }),
+    ).toThrow(/defaultTimeoutSeconds/);
   });
 
   it("treats false as no declaration", () => {
@@ -241,9 +304,38 @@ describe("reactor clients", () => {
     >();
   });
 
+  it("offer the write half's own writes as `write`", () => {
+    expectTypeOf<ReactorClient["write"]["execute"]>().toEqualTypeOf<
+      IReactorWriteClient["execute"]
+    >();
+    expectTypeOf<ReactorClient["write"]["create"]>().toEqualTypeOf<
+      IReactorWriteClient["create"]
+    >();
+    expectTypeOf<ReactorClient["write"]["drives"]["addFile"]>().toEqualTypeOf<
+      IDriveWriteClient["addFile"]
+    >();
+    expectTypeOf<keyof ReactorClient["write"]>().toEqualTypeOf<
+      WriteHalfMethods | "drives"
+    >();
+    expectTypeOf<ReactorClient["write"]>().not.toHaveProperty("rename");
+    expectTypeOf<ReactorReadClient>().not.toHaveProperty("write");
+  });
+
   it("name every method of the reactor's clients", () => {
     expectTypeOf<UnlistedMethods<IReactorClient>>().toEqualTypeOf<never>();
     expectTypeOf<UnlistedDriveMethods<IDriveClient>>().toEqualTypeOf<never>();
+    expectTypeOf<
+      UnlistedWriteHalfMethods<IReactorWriteClient>
+    >().toEqualTypeOf<never>();
+  });
+
+  it("fail to compile when the write half gains an unlisted method", () => {
+    type Grown = IReactorWriteClient & { frobnicate(): void };
+    expectTypeOf<
+      UnlistedWriteHalfMethods<Grown>
+    >().toEqualTypeOf<"frobnicate">();
+    // @ts-expect-error the new method is in no list
+    type _Write = Listed<UnlistedWriteHalfMethods<Grown>>;
   });
 
   it("fail to compile when the drive client gains an unlisted method", () => {
@@ -272,7 +364,7 @@ describe("ctx.reactor follows the declaration", () => {
       props: {},
       run(ctx) {
         expectTypeOf<keyof typeof ctx.reactor>().toEqualTypeOf<
-          ReadMethods | "drives"
+          ReadMethods | "drives" | "query"
         >();
         expectTypeOf<
           Extract<keyof typeof ctx.reactor, WriteMethods>
@@ -367,5 +459,65 @@ describe("error names", () => {
       ReactorRequestClosedError: "ReactorRequestClosedError",
       DocumentModelUnavailableError: "DocumentModelUnavailableError",
     });
+  });
+});
+
+describe("deniedActionIndexes", () => {
+  const denial = (message: string) =>
+    Object.assign(new Error(message), { name: ReactorAccessDeniedError });
+
+  it("reads the indexes a gate denial ends with", () => {
+    expect(
+      deniedActionIndexes(
+        denial(
+          "The run user may not apply A (x), C (y; z) to document d; denied action indexes: [0,2]",
+        ),
+      ),
+    ).toEqual([0, 2]);
+  });
+
+  it("answers undefined for any other error", () => {
+    expect(deniedActionIndexes(denial("declares read access only"))).toBe(
+      undefined,
+    );
+    expect(
+      deniedActionIndexes(new Error("denied action indexes: [1]")),
+    ).toBeUndefined();
+    expect(deniedActionIndexes("nope")).toBeUndefined();
+  });
+});
+
+describe("assertActionsApplied", () => {
+  const job = (...actions: object[]) => ({ result: { actions } }) as never;
+
+  it("passes when every action applied", () => {
+    expect(() =>
+      assertActionsApplied(job({ actionId: "a", kind: "applied" }), [
+        { id: "a", type: "SET_NAME" },
+      ]),
+    ).not.toThrow();
+  });
+
+  it("names each action that failed, was denied or produced nothing", () => {
+    const failed = job(
+      { actionId: "a", kind: "reducer-error", message: "bad" },
+      { actionId: "b", kind: "denied", reason: "no grant" },
+    );
+    expect(() =>
+      assertActionsApplied(failed, [
+        { id: "a", type: "A" },
+        { id: "b", type: "B" },
+        { id: "c", type: "C" },
+      ]),
+    ).toThrow(
+      expect.objectContaining({
+        name: ReactorActionsFailedError,
+        message:
+          "Action A failed: bad; Action B was denied: no grant; Action C produced no operation",
+      }),
+    );
+    expect(() => assertActionsApplied(failed)).toThrow(
+      "Action a failed: bad; Action b was denied: no grant",
+    );
   });
 });

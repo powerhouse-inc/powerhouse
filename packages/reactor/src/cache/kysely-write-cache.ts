@@ -25,6 +25,11 @@ import {
   type ValidatedUpgrade,
 } from "../derivation/index.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
+import {
+  resolveKeyframeRule,
+  type KeyframeRule,
+  type KeyframeSettings,
+} from "../storage/keyframes/keyframe-settings.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
 import { LRUTracker } from "./lru/lru-tracker.js";
 import type { CachedSnapshot, WriteCacheConfig } from "./write-cache-types.js";
@@ -137,6 +142,7 @@ export class KyselyWriteCache implements IWriteCache {
   private operationStore: IOperationStore;
   private registry: IDocumentModelRegistry;
   private config: Required<WriteCacheConfig>;
+  private keyframeSettings: KeyframeSettings;
   private reads = new Map<string, Set<PendingRead>>();
   private fullReplays = new Map<string, FullReplayMark[]>();
 
@@ -153,9 +159,26 @@ export class KyselyWriteCache implements IWriteCache {
       maxDocuments: config.maxDocuments,
       ringBufferSize: config.ringBufferSize,
       keyframeInterval: config.keyframeInterval,
+      keyframes: config.keyframes ?? {},
+    };
+    this.keyframeSettings = {
+      ...this.config.keyframes,
+      default: {
+        interval: config.keyframeInterval,
+        ...this.config.keyframes.default,
+      },
     };
     this.streams = new Map();
     this.lruTracker = new LRUTracker<string>();
+  }
+
+  /** Sizes for telemetry; O(cached documents), which is capped. */
+  stats(): Record<string, number> {
+    let snapshots = 0;
+    for (const stream of this.streams.values()) {
+      snapshots += stream.ringBuffer.length;
+    }
+    return { documents: this.streams.size, snapshots };
   }
 
   withScopedStores(
@@ -385,7 +408,8 @@ export class KyselyWriteCache implements IWriteCache {
    * operation index for each scope.
    *
    * Updates LRU tracker and may evict least recently used stream if at capacity.
-   * Asynchronously persists keyframes at configured intervals (fire-and-forget).
+   * A head snapshot is also persisted as a keyframe when its revision falls on
+   * the document type's interval (fire-and-forget); a historical one never is.
    *
    * @param documentId - The document identifier
    * @param scope - The operation scope
@@ -491,10 +515,13 @@ export class KyselyWriteCache implements IWriteCache {
 
     stream.ringBuffer.push(snapshot);
 
-    this.persistKeyframe(documentId, scope, branch, revision, document);
+    // A historical read would bring back what pruning removed.
+    if (position === SnapshotPosition.Head) {
+      this.persistKeyframe(documentId, scope, branch, revision, document);
+    }
   }
 
-  /** Persists the snapshot if this revision is one the interval falls on. */
+  /** Persists the snapshot if this revision is one its type's interval falls on. */
   private persistKeyframe(
     documentId: string,
     scope: string,
@@ -502,22 +529,40 @@ export class KyselyWriteCache implements IWriteCache {
     revision: number,
     document: PHDocument,
   ): void {
-    if (!this.isKeyframeRevision(revision)) {
+    const rule = this.keyframeRule(document);
+    if (!this.isKeyframeRevision(revision, rule)) {
       return;
     }
 
-    this.keyframeStore
-      .putKeyframe(documentId, scope, branch, revision, {
-        ...document,
-        operations: {},
-        clipboard: [],
-      })
-      .catch((err) => {
-        console.error(
-          `Failed to persist keyframe ${documentId}@${revision}:`,
-          err,
-        );
-      });
+    const keyframe: PHDocument = {
+      ...document,
+      operations: {},
+      clipboard: [],
+    };
+    const write =
+      rule.keep === null
+        ? this.keyframeStore.putKeyframe(
+            documentId,
+            scope,
+            branch,
+            revision,
+            keyframe,
+          )
+        : this.keyframeStore.putKeyframeAndPrune(
+            documentId,
+            scope,
+            branch,
+            revision,
+            keyframe,
+            rule.keep,
+          );
+
+    write.catch((err) => {
+      console.error(
+        `Failed to persist keyframe ${documentId}@${revision}:`,
+        err,
+      );
+    });
   }
 
   /**
@@ -1295,7 +1340,14 @@ export class KyselyWriteCache implements IWriteCache {
     return stream;
   }
 
-  private isKeyframeRevision(revision: number): boolean {
-    return revision > 0 && revision % this.config.keyframeInterval === 0;
+  private keyframeRule(document: PHDocument): KeyframeRule {
+    return resolveKeyframeRule(
+      this.keyframeSettings,
+      document.header.documentType,
+    );
+  }
+
+  private isKeyframeRevision(revision: number, rule: KeyframeRule): boolean {
+    return revision > 0 && revision % rule.interval === 0;
   }
 }

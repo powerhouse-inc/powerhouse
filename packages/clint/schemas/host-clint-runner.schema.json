@@ -338,8 +338,15 @@
                         "url": {
                           "anyOf": [
                             {
-                              "type": "string",
-                              "format": "uri"
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uri"
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ]
                             },
                             {
                               "$ref": "#/$defs/__schema0"
@@ -360,6 +367,17 @@
                 "properties": {
                   "primary": {
                     "type": "string"
+                  },
+                  "drives": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "minLength": 1
+                    }
                   }
                 },
                 "additionalProperties": false

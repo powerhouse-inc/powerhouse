@@ -87,11 +87,15 @@ export class WorkflowRunGate {
    * - **SINGLETON**: refused outright while a run is active. The caller
    *   journals the refusal rather than dropping it silently, because a firing
    *   that vanished is indistinguishable from a trigger that never fired.
+   *
+   * A `resume` is a waiting run's next leg, not a new firing: it queues for
+   * the slot under every policy, past the queue depth too.
    */
   async admit(
     workflowId: string,
     policy: EffectiveRunPolicy,
     onQueue?: () => void,
+    options: { resume?: boolean } = {},
   ): Promise<GateAdmission> {
     if (this.closed)
       return { admitted: false, reason: CLOSED_REASON, refusal: "closed" };
@@ -105,7 +109,7 @@ export class WorkflowRunGate {
     let waited = false;
 
     if (lane.active >= limit) {
-      if (policy.concurrency === "SINGLETON") {
+      if (policy.concurrency === "SINGLETON" && !options.resume) {
         this.forgetIfIdle(workflowId, lane);
         return {
           admitted: false,
@@ -115,7 +119,7 @@ export class WorkflowRunGate {
             "already executing",
         };
       }
-      if (lane.waiting.length >= this.maxQueued) {
+      if (!options.resume && lane.waiting.length >= this.maxQueued) {
         return {
           admitted: false,
           refusal: "queue-full",
