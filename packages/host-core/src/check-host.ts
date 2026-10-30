@@ -36,6 +36,7 @@ import {
 } from "./resolve/resolve.js";
 import { isPlainObject } from "./resolve/walk.js";
 import {
+  CONNECT_RUNNER,
   getVerb,
   hostSchemaIssues,
   kindShapeIssues,
@@ -62,6 +63,8 @@ export interface CheckDeferred extends DeferredToken {
 
 export interface CheckHostResult {
   issues: HostIssue[];
+  /** What `ph run` survives but the user should know; never fails a check. */
+  warnings: HostIssue[];
   /** `$output` tokens left unresolved because no `outputs` were given. */
   deferred: CheckDeferred[];
 }
@@ -71,7 +74,7 @@ export async function checkHost(
   name: string,
   options: CheckHostOptions,
 ): Promise<CheckHostResult> {
-  const result: CheckHostResult = { issues: [], deferred: [] };
+  const result: CheckHostResult = { issues: [], warnings: [], deferred: [] };
   const file = `hosts/${name}/host.js`;
   const issue = issuer(result, file);
   const verb = options.verb ?? "run";
@@ -319,6 +322,8 @@ async function checkCompound(
     }
   }
 
+  result.warnings.push(...sharedPortWarnings(subject.file, prepared));
+
   const byKey = new Map(prepared.map((m) => [m.key, m]));
   const outputsSchemaOf = (ref: OutputRef): OutputsSchemaLookup => {
     const target = memberForRef(ref, members);
@@ -352,6 +357,37 @@ async function checkCompound(
         : {}),
     });
   }
+}
+
+/** Members declaring one port: under `ph run` the later one moves or fails. */
+function sharedPortWarnings(
+  file: string,
+  prepared: readonly PreparedMember[],
+): HostIssue[] {
+  const owners = new Map<number, PreparedMember>();
+  const warnings: HostIssue[] = [];
+  for (const m of prepared) {
+    const port = (m.draft.runner as { port?: unknown }).port;
+    if (typeof port !== "number" || !Number.isInteger(port) || port <= 0) {
+      continue;
+    }
+    const other = owners.get(port);
+    if (!other) {
+      owners.set(port, m);
+      continue;
+    }
+    const connects =
+      m.specifier === CONNECT_RUNNER && other.specifier === CONNECT_RUNNER;
+    warnings.push({
+      stage: "declared",
+      file,
+      path: `children.${m.key}.runner.port`,
+      message: connects
+        ? `${other.key} and ${m.key} both use port ${port}. One will move to the next free port and lose its browser data.`
+        : `${other.key} and ${m.key} both use port ${port}. One will move to the next free port or fail to start.`,
+    });
+  }
+  return warnings;
 }
 
 function issuer(result: CheckHostResult, file: string) {

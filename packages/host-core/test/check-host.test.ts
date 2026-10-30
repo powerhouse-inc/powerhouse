@@ -340,3 +340,34 @@ describe("checkHost: one issue per stage", () => {
     );
   });
 });
+
+describe("checkHost: warnings", () => {
+  it("warns when two members declare one port, and only then", async () => {
+    writeHost("matrix", "two-ui", {
+      name: "lab-two-ui",
+      runner: { module: "@powerhousedao/host-core/runners/compound" },
+      children: {
+        "cli-switchboard": { host: "switchboard" },
+        "ui-a": { host: "ui" },
+        "ui-b": { host: "ui" },
+        "ui-c": { host: "ui", runner: { port: 3006 } },
+      },
+    });
+    const result = await check("matrix", "two-ui", {
+      outputs: cannedSource("matrix"),
+    });
+    expect(result.warnings).toEqual([
+      {
+        stage: "declared",
+        file: "hosts/two-ui/host.js",
+        path: "children.ui-b.runner.port",
+        message:
+          "ui-a and ui-b both use port 3005. One will move to the next free port and lose its browser data.",
+      },
+    ]);
+    expect(result.issues.map((i) => i.message)).not.toContainEqual(
+      expect.stringMatching(/port 3005/),
+    );
+    expect((await check("matrix", "cli-map")).warnings).toEqual([]);
+  });
+});

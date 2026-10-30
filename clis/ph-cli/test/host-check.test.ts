@@ -12,7 +12,7 @@ import { spawnSync } from "node:child_process";
 import { runSafely } from "cmd-ts";
 import { afterEach, describe, expect, it } from "vitest";
 import { check } from "../src/commands/host.js";
-import { runHostCheck } from "../src/services/host/check.js";
+import { formatHostIssues, runHostCheck } from "../src/services/host/check.js";
 import {
   cleanupProjects,
   makeProject,
@@ -169,6 +169,32 @@ describe("ph host check", () => {
     expect(result.exitCode).toBe(1);
     expect(result.output).toMatch(/^hosts\/broken\/host\.js\n {2}declared {2}/);
     expect(result.output).toMatch(/Unrecognized key: "strictPortt"/);
+  });
+
+  it("prints warnings under the host file without failing", () => {
+    const warning = {
+      stage: "declared" as const,
+      file: "hosts/cli/host.js",
+      path: "children.connect.runner.port",
+      message:
+        "cli-connect and connect both use port 6347. One will move to the next free port and lose its browser data.",
+    };
+    expect(formatHostIssues("hosts/cli/host.js", [], 0, [warning])).toBe(
+      [
+        "hosts/cli/host.js: ok",
+        "",
+        "hosts/cli/host.js",
+        "  warning  children.connect.runner.port: cli-connect and connect both use port 6347. One will move to the next free port and lose its browser data.",
+      ].join("\n"),
+    );
+    const issue = { ...warning, stage: "resolve" as const, message: "unset" };
+    expect(
+      formatHostIssues("hosts/cli/host.js", [issue], 0, [warning]).split("\n"),
+    ).toEqual([
+      "hosts/cli/host.js",
+      "  resolve  children.connect.runner.port: unset",
+      "  warning  children.connect.runner.port: cli-connect and connect both use port 6347. One will move to the next free port and lose its browser data.",
+    ]);
   });
 
   it("fails on an unreadable env file", async () => {
