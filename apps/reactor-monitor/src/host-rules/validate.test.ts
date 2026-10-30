@@ -628,8 +628,14 @@ describe("validateDraft", () => {
       const ports = (envelope: HostExport, context?: HostRulesContext) =>
         issues(envelope, {}, context).filter(([rule]) => rule === "port");
       const cases: [Record<string, unknown>, string][] = [
-        [{ host: "connect" }, "port from UI_PORT"],
-        [{ host: "connect", runner: { port: 3000 } }, "port 3000"],
+        [
+          { host: "connect" },
+          "ui2 takes its port from UI_PORT, which the copy doesn't read, so the copy starts it on 13000",
+        ],
+        [
+          { host: "connect", runner: { port: 3000 } },
+          "ui2 is on 3000, which the copy moves up by 10000",
+        ],
       ];
       for (const [wrapper, said] of cases) {
         const shared = structuredClone(stack()) as unknown as {
@@ -644,7 +650,7 @@ describe("validateDraft", () => {
           [
             "port",
             "host.children.ui2.runner.port",
-            `ui (port from UI_PORT) and ui2 (${said}) would both use 13000 when the monitor starts its copy, which adds 10000 to Connect's port. Give ui2 another port.`,
+            `ui and ui2 would both use port 13000 when the monitor starts its copy: ui takes its port from UI_PORT, which the copy doesn't read, so the copy starts it on 13000; ${said}. Give ui2 another port.`,
           ],
         ]);
       }
@@ -658,7 +664,7 @@ describe("validateDraft", () => {
         [
           "port",
           "host.children.ui.runner.port",
-          "ui (port 6491) and agent (port 16491) would both use 16491 when the monitor starts its copy, which adds 10000 to Connect's port. Give ui another port.",
+          "ui and agent would both use port 16491 when the monitor starts its copy: ui is on 6491, which the copy moves up by 10000; agent keeps port 16491. Give ui another port.",
         ],
       ]);
       expect(ports(agent, NO_CONTROLLER)).toEqual([]);

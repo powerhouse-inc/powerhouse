@@ -56,6 +56,24 @@ function declaredPort(member: PortHolder): string {
   return "a port set when it starts";
 }
 
+/** Why a member lands on its copy port, for each way a host names a port. */
+function copyReason(member: PortHolder): string {
+  const port = member.runner.port;
+  const copy = copyPortOf(member);
+  if (member.role !== "connect") return `${member.key} keeps port ${copy}`;
+  if (typeof port === "number") {
+    return `${member.key} is on ${port}, which the copy moves up by ${COPY_CONNECT_PORT_OFFSET}`;
+  }
+  if (port === undefined) {
+    return `${member.key} names no port, so the copy starts it on ${copy}`;
+  }
+  const source =
+    isRecord(port) && typeof port.$env === "string"
+      ? `from ${port.$env}`
+      : "when it starts";
+  return `${member.key} takes its port ${source}, which the copy doesn't read, so the copy starts it on ${copy}`;
+}
+
 export type PortClash<M extends PortHolder = Member> = {
   /** The member to give another port. */
   member: M;
@@ -123,7 +141,7 @@ export function copyPortClashes<M extends PortHolder>(
       member: moved,
       other: moved === member ? other : member,
       port,
-      message: `${other.key} (${declaredPort(other)}) and ${member.key} (${declaredPort(member)}) would both use ${port} when the monitor starts its copy, which adds ${COPY_CONNECT_PORT_OFFSET} to Connect's port. Give ${moved.key} another port.`,
+      message: `${other.key} and ${member.key} would both use port ${port} when the monitor starts its copy: ${copyReason(other)}; ${copyReason(member)}. Give ${moved.key} another port.`,
     });
   }
   return clashes;

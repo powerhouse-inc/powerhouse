@@ -1114,7 +1114,7 @@ describe("createMonitorController", () => {
           rule: "port",
           path: "host.children.ui.runner.port",
           message:
-            "ui (port 3001) and agent (port 13001) would both use 13001 when the monitor starts its copy, which adds 10000 to Connect's port. Give ui another port.",
+            "ui and agent would both use port 13001 when the monitor starts its copy: ui is on 3001, which the copy moves up by 10000; agent keeps port 13001. Give ui another port.",
         }),
       ]);
       expect(asked).toEqual([]);

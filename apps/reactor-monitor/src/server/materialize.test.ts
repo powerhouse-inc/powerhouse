@@ -224,7 +224,7 @@ describe("materialize", () => {
     const children = host.children as Record<string, Record<string, unknown>>;
     children.ui2 = { host: "ui", runner: { port: 3000 } };
     expect(() => copyConnectPorts(envelope)).toThrow(
-      "ui (port 3000) and ui2 (port 3000) would both use 13000 when the monitor starts its copy, which adds 10000 to Connect's port. Give ui2 another port.",
+      "ui and ui2 would both use port 13000 when the monitor starts its copy: ui is on 3000, which the copy moves up by 10000; ui2 is on 3000, which the copy moves up by 10000. Give ui2 another port.",
     );
     expect(() => materialize(instanceDir, source, envelope)).toThrow(
       MaterializeError,
@@ -243,7 +243,7 @@ describe("materialize", () => {
       >
     ).agent = { host: "agent" };
     expect(() => copyConnectPorts(other)).toThrow(
-      "ui (port 3000) and agent (port 13000) would both use 13000 when the monitor starts its copy, which adds 10000 to Connect's port. Give ui another port.",
+      "ui and agent would both use port 13000 when the monitor starts its copy: ui is on 3000, which the copy moves up by 10000; agent keeps port 13000. Give ui another port.",
     );
   });
 
@@ -256,7 +256,7 @@ describe("materialize", () => {
     const ui = envelope.members.ui as unknown as Record<string, unknown>;
     ui.runner = { ...(ui.runner as object), port: { $env: "UI_PORT" } };
     expect(() => copyConnectPorts(envelope)).toThrow(
-      "ui (port from UI_PORT) and ui2 (port from UI_PORT) would both use 13000 when the monitor starts its copy, which adds 10000 to Connect's port. Give ui2 another port.",
+      "ui and ui2 would both use port 13000 when the monitor starts its copy: ui takes its port from UI_PORT, which the copy doesn't read, so the copy starts it on 13000; ui2 takes its port from UI_PORT, which the copy doesn't read, so the copy starts it on 13000. Give ui2 another port.",
     );
   });
 
