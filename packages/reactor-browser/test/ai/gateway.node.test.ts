@@ -8,6 +8,7 @@ import {
   fetchAiGatewayAccess,
   gatewayConnection,
   setAiGatewayKey,
+  watchAiGatewayAccess,
 } from "../../src/ai/gateway.js";
 import type { AgentEvent, AiSettings } from "../../src/ai/types.js";
 
@@ -193,5 +194,87 @@ describe("the gateway's access answer", () => {
     await expect(setAiGatewayKey("k", answering(body, 400))).rejects.toThrow(
       "Key refused.",
     );
+  });
+});
+
+describe("watchAiGatewayAccess", () => {
+  const STATUS = {
+    configured: false,
+    keyHint: null,
+    keySetBy: null,
+    keySetAt: null,
+    model: "m",
+  };
+  const starting = () =>
+    new Response(JSON.stringify({ error: "not running yet" }), { status: 503 });
+  const options = (fetchImpl: typeof fetch) => ({
+    fetchImpl,
+    tokenProvider: () => Promise.resolve(undefined),
+  });
+
+  it("asks again until a host still starting its runtime answers", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockImplementationOnce(() => Promise.resolve(starting()))
+        .mockImplementationOnce(() => Promise.resolve(starting()))
+        .mockImplementation(() =>
+          Promise.resolve(new Response(JSON.stringify(STATUS))),
+        );
+      const answers: string[] = [];
+
+      const stop = watchAiGatewayAccess(
+        (answer) => answers.push(answer.access),
+        options(fetchImpl),
+        1000,
+      );
+      await vi.advanceTimersByTimeAsync(5000);
+      stop();
+
+      expect(answers).toEqual(["error", "error", "admin"]);
+      expect(fetchImpl).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not ask again once told no", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchImpl = vi.fn<typeof fetch>(() =>
+        Promise.resolve(new Response("", { status: 403 })),
+      );
+      const answers: string[] = [];
+
+      const stop = watchAiGatewayAccess(
+        (answer) => answers.push(answer.access),
+        options(fetchImpl),
+        1000,
+      );
+      await vi.advanceTimersByTimeAsync(5000);
+      stop();
+
+      expect(answers).toEqual(["none"]);
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stops asking when stopped", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchImpl = vi.fn<typeof fetch>(() => Promise.resolve(starting()));
+
+      const stop = watchAiGatewayAccess(() => {}, options(fetchImpl), 1000);
+      await vi.advanceTimersByTimeAsync(0);
+      stop();
+      await vi.advanceTimersByTimeAsync(5000);
+
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
