@@ -5554,16 +5554,12 @@ export class WorkflowRuntimeService {
     if (store && runId) {
       let waiting = result.status === WAITING_RUN_STATUS;
       try {
-        const { held, closed } = await this.telemetry.phase(
-          "journal.finish",
-          {},
-          () =>
-            store.finishRun(
-              runId,
-              result,
-              executionOrder,
-              waiting ? leg.pin?.() : undefined,
-            ),
+        const { held, closed } = await this.journalFinish(
+          store,
+          runId,
+          result,
+          executionOrder,
+          waiting ? leg.pin?.() : undefined,
         );
         this.answerClosed(closed, runId, {
           status: waiting ? CANCELLED_RUN_STATUS : result.status,
@@ -5593,6 +5589,21 @@ export class WorkflowRuntimeService {
       }
     }
     return { result, handed };
+  }
+
+  // Its own method so that no closure of executeLeg, the run scope's among
+  // them, shares a context with the run's result: anything that keeps the
+  // scope's async context alive would keep every step's output with it.
+  private journalFinish(
+    store: WorkflowRunStore,
+    runId: string,
+    result: WorkflowRunResult,
+    executionOrder: ReadonlyMap<string, number>,
+    pin: RunPinRow | undefined,
+  ) {
+    return this.telemetry.phase("journal.finish", {}, () =>
+      store.finishRun(runId, result, executionOrder, pin),
+    );
   }
 
   // A leg that waited without a live waitpoint of its step: ended as expiry

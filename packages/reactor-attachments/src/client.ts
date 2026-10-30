@@ -1,4 +1,5 @@
 import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
+import { blobStream } from "./blob.js";
 import {
   runWithConcurrency,
   type BatchItemResult,
@@ -123,9 +124,9 @@ export type PreprocessResult = {
   hash: AttachmentHash;
   sizeBytes: number;
   options: HashFirstReserveAttachmentOptions;
-  /** @deprecated Read `blob`; this is `blob.stream()`. */
+  /** @deprecated Read `blob`; this is a stream of its bytes. */
   data: ReadableStream<Uint8Array>;
-  /** @deprecated Read `blob`; this is `() => blob.stream()`. */
+  /** @deprecated Read `blob`; each call is a new stream of its bytes. */
   stream: () => ReadableStream<Uint8Array>;
   /** The file itself; uploads send it as-is, so a browser streams it from disk. */
   blob: Blob;
@@ -423,8 +424,8 @@ class AttachmentClientImpl implements IAttachmentClient {
         ? { documentId: opts.documentId }
         : {}),
     };
-    const data = file.stream();
-    const stream = (): ReadableStream<Uint8Array> => file.stream();
+    const data = blobStream(file);
+    const stream = (): ReadableStream<Uint8Array> => blobStream(file);
     return { ref, hash, sizeBytes, options, data, stream, blob: file };
   }
 
