@@ -4,6 +4,7 @@ import { getConfig } from "@powerhousedao/config/node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import {
   CatchUpPriority,
+  computeProcessorTiming,
   DriveCollectionId,
   EventBus,
   IN_MEMORY_PGLITE_STORAGE_FACTS,
@@ -14,9 +15,12 @@ import {
   ReactorClientBuilder,
   createHybridProjectionCoordinatorFactory,
   instrumentPgPool,
+  MemoryTelemetry,
   parseDriveUrl,
+  ProcessorTimingSettings,
   type Database,
   type InProcessReactorClientModule,
+  type InProcessReactorModule,
   type JwtHandler,
   type PoolInstrumentation,
   type ReactorStorageFacts,
@@ -24,8 +28,11 @@ import {
   withProgressHeartbeat,
 } from "@powerhousedao/reactor";
 import {
+  createHeapSnapshotWriter,
   HttpPackageLoader,
   ImportPackageLoader,
+  memoryFileSink,
+  NodeMemorySampler,
   PackageManagementService,
   PackagesSubgraph,
   initializeAndStartAPI,
@@ -34,6 +41,7 @@ import {
   reportFailure,
   resolveRenownConfig,
   runDetached,
+  telemetryDir,
   type CanonicalDocumentId,
   type ClientInitializerDependencies,
   type CredentialVerifier,
@@ -111,6 +119,7 @@ import {
 } from "./worker-pool.mjs";
 import { initProfilerFromEnv } from "./profiler.js";
 import { switchboardConfigFromEnv } from "./config/from-env.js";
+import { startProcessorTimingLog } from "./processor-timing-log.mjs";
 import {
   mergeSwitchboardConfig,
   switchboardConfigSchema,
@@ -742,6 +751,12 @@ async function initServer(
       ? { mode: "dynamic" }
       : { mode: "fixed", level: config.protocol.catchUpPriority },
   );
+  const processorTiming = new ProcessorTimingSettings({
+    level: config.protocol.processorTiming,
+    windowMs: config.protocol.processorTimingWindowMs,
+    slowBatchMs: config.protocol.processorSlowBatchMs,
+  });
+  const memoryTelemetry = createMemoryTelemetry(config, reactorLogger);
   // The models workers and workflow pieces import; only on a reactor built here.
   let workerModels: ModelManifestSource | undefined;
   // Bound once the api serves the renown read model; see `localCredentialCheck`.
@@ -818,7 +833,9 @@ async function initServer(
         legacyProcessorIds: config.protocol.legacyProcessorIds,
       })
       .withUnsupportedStoredDocuments(unsupportedStoredDocuments)
-      .withCatchUpPriority(catchUpPriority);
+      .withCatchUpPriority(catchUpPriority)
+      .withProcessorTiming(processorTiming)
+      .withMemoryTelemetry(memoryTelemetry);
 
     // Feeds `module.pools`, which ReactorInstrumentation reads to emit
     // reactor.db.pool.{acquire.wait_duration,size,idle,waiting}. Without this
@@ -1024,6 +1041,7 @@ async function initServer(
       const instrumentation = new ReactorInstrumentation(module.reactorModule);
       instrumentation.start();
       reactorLogger.info("Reactor metrics instrumentation started");
+      memoryTelemetry.addGauge("otel", () => instrumentation.stats());
     }
 
     const reactorDriveClient = new ReactorDriveClient({
@@ -1500,10 +1518,21 @@ async function initServer(
   const stopCatchUpLoad = ownedReactorModule
     ? feedCatchUpPriority(catchUpPriority, api.httpServer)
     : () => {};
+  const stopTimingLog = startOwnedTimingLog(
+    ownedReactorModule?.reactorModule,
+    processorTiming,
+    config.protocol.processorTimingLogMs,
+    reactorLogger,
+  );
+  if (ownedReactorModule?.reactorModule && config.telemetry.memory.enabled) {
+    memoryTelemetry.start();
+  }
   let apiDrained: Promise<void> | undefined;
   const drainApi = () =>
     (apiDrained ??= (async () => {
       stopCatchUpLoad();
+      stopTimingLog();
+      memoryTelemetry.stop();
       if (pluginHost) await pluginHost.observe("onShutdown");
       await privacy?.stop();
       await workflowsRetry?.stop();
@@ -1973,6 +2002,57 @@ if (import.meta.main) {
   const config = switchboardConfigFromEnv(process.env);
   initSwitchboardProcess(config);
   await startSwitchboard(config, { fatalErrorShutdown: true });
+}
+
+/** Off in config, no timers or observers exist; a lever can still start it. */
+function createMemoryTelemetry(
+  config: SwitchboardConfig,
+  logger: ILogger,
+): MemoryTelemetry {
+  const { memory, dir, heapSnapshotDir } = config.telemetry;
+  const directory = dir ?? telemetryDir();
+  return new MemoryTelemetry({
+    sampler: new NodeMemorySampler(),
+    config: {
+      enabled: memory.enabled,
+      intervalMs: memory.intervalMs,
+      outputs: memory.outputs,
+      filePath: memory.file.path,
+      fileMaxMb: memory.file.maxMb,
+      fileKeep: memory.file.keep,
+      ringSize: memory.ringSize,
+      consoleIntervalMs: memory.consoleIntervalMs,
+      workers: memory.workers,
+      windowMin: memory.windowMin,
+    },
+    fileSink: (settings) =>
+      memoryFileSink(settings, { dir: directory, logger }),
+    heapSnapshot: createHeapSnapshotWriter({
+      dir: heapSnapshotDir ?? directory,
+    }),
+    logger,
+  });
+}
+
+/** For a host with no ph-cli display: the slowest processors, through the log. */
+function startOwnedTimingLog(
+  module: InProcessReactorModule | undefined,
+  settings: ProcessorTimingSettings,
+  intervalMs: number,
+  logger: ILogger,
+): () => void {
+  if (!module || intervalMs <= 0) return () => {};
+  return startProcessorTimingLog({
+    intervalMs,
+    read: () =>
+      computeProcessorTiming(
+        module.processorManager.getAll(),
+        module.catchUp.status(),
+        settings.level,
+        settings.windowMs,
+      ),
+    log: (line) => logger.info("@Line", line),
+  });
 }
 
 /**

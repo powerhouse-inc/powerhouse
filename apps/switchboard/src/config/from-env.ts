@@ -1,4 +1,11 @@
-import { parseCatchUpPriority } from "@powerhousedao/reactor";
+import {
+  isProcessorTimingLevel,
+  parseCatchUpPriority,
+  parseMemoryTelemetryOutputs,
+  parseMemoryTelemetrySwitch,
+  type MemoryTelemetryOutput,
+  type ProcessorTimingLevel,
+} from "@powerhousedao/reactor";
 import {
   reactorApiConfigFromEnv,
   resolveRenownConfig,
@@ -50,6 +57,7 @@ export function switchboardConfigFromEnv(
   const projectionOn = parseOnOff(env.REACTOR_PROJECTION_WORKER);
   const privacyOn = flag(env.PH_PRIVACY_ENABLED);
   const pgliteWorkers = openFeatureFlag(env.PH_PGLITE_WORKERS);
+  const telemetryOff = telemetrySwitchFromEnv(env, logger) === false;
 
   return withoutUnset({
     logLevel: logLevelFromEnv(env.LOG_LEVEL, logger),
@@ -107,6 +115,29 @@ export function switchboardConfigFromEnv(
           : env.REACTOR_LEGACY_PROCESSOR_IDS !== "false",
       maxSkipThreshold: maxSkipThresholdFromEnv(env.MAX_SKIP_THRESHOLD),
       catchUpPriority: catchUpPriorityFromEnv(env.PH_CATCH_UP_PRIORITY, logger),
+      processorTiming: telemetryOff
+        ? "off"
+        : processorTimingFromEnv(env.PH_PROCESSOR_TIMING, logger),
+      processorTimingWindowMs: positiveIntFromEnv(
+        env,
+        "PH_PROCESSOR_TIMING_WINDOW_MS",
+        logger,
+      ),
+      processorSlowBatchMs: positiveIntFromEnv(
+        env,
+        "PH_PROCESSOR_SLOW_BATCH_MS",
+        logger,
+      ),
+      processorTimingLogMs: positiveIntFromEnv(
+        env,
+        "PH_PROCESSOR_TIMING_LOG_MS",
+        logger,
+      ),
+    },
+    telemetry: {
+      memory: memoryTelemetryFromEnv(env, telemetryOff, logger),
+      dir: blankAsUnset(env.PH_TELEMETRY_DIR),
+      heapSnapshotDir: blankAsUnset(env.PH_HEAP_SNAPSHOT_DIR),
     },
     auth: {
       ...api.auth,
@@ -315,6 +346,105 @@ function catchUpPriorityFromEnv(
     `PH_CATCH_UP_PRIORITY=${JSON.stringify(raw)} is neither dynamic nor a level 0-7; using dynamic`,
   );
   return undefined;
+}
+
+// PH_TELEMETRY=off is the umbrella: it wins over both specific switches.
+function telemetrySwitchFromEnv(env: Env, logger: Logger): boolean | undefined {
+  const raw = env.PH_TELEMETRY;
+  if (raw === undefined) return undefined;
+  const value = parseMemoryTelemetrySwitch(raw);
+  if (value === undefined) {
+    logger.warn(`PH_TELEMETRY=${JSON.stringify(raw)} is neither on nor off`);
+  }
+  return value;
+}
+
+function processorTimingFromEnv(
+  raw: string | undefined,
+  logger: Logger,
+): ProcessorTimingLevel | undefined {
+  if (raw === undefined) return undefined;
+  if (isProcessorTimingLevel(raw)) return raw;
+  logger.warn(
+    `PH_PROCESSOR_TIMING=${JSON.stringify(raw)} is none of off, basic, detailed; using the default`,
+  );
+  return undefined;
+}
+
+function positiveIntFromEnv(
+  env: Env,
+  name: string,
+  logger: Logger,
+): number | undefined {
+  const raw = env[name];
+  if (raw === undefined) return undefined;
+  const value = Number(raw.trim() || Number.NaN);
+  if (Number.isInteger(value) && value > 0) return value;
+  logger.warn(`${name}=${JSON.stringify(raw)} is not a positive integer`);
+  return undefined;
+}
+
+function memoryOutputsFromEnv(
+  env: Env,
+  logger: Logger,
+): MemoryTelemetryOutput[] | undefined {
+  const raw = env.PH_MEMORY_TELEMETRY_OUTPUT;
+  let outputs: MemoryTelemetryOutput[] | undefined;
+  if (raw !== undefined) {
+    outputs = parseMemoryTelemetryOutputs(raw);
+    if (!outputs) {
+      logger.warn(
+        `PH_MEMORY_TELEMETRY_OUTPUT=${JSON.stringify(raw)} lists an output other than memory, file, console; using the default`,
+      );
+    }
+  }
+  // A file path implies the file output.
+  if (env.PH_MEMORY_TELEMETRY_FILE?.trim() && outputs) {
+    return outputs.includes("file") ? outputs : [...outputs, "file"];
+  }
+  return outputs;
+}
+
+function memoryTelemetryFromEnv(env: Env, off: boolean, logger: Logger) {
+  const raw = env.PH_MEMORY_TELEMETRY;
+  let enabled = raw === undefined ? undefined : parseMemoryTelemetrySwitch(raw);
+  if (raw !== undefined && enabled === undefined) {
+    logger.warn(
+      `PH_MEMORY_TELEMETRY=${JSON.stringify(raw)} is neither on nor off; leaving it off`,
+    );
+  }
+  if (off) enabled = false;
+  const consoleOn = env.PH_MEMORY_TELEMETRY_CONSOLE?.trim() !== "false";
+  const outputs = memoryOutputsFromEnv(env, logger);
+  return {
+    enabled,
+    intervalMs: positiveIntFromEnv(
+      env,
+      "PH_MEMORY_TELEMETRY_INTERVAL_MS",
+      logger,
+    ),
+    outputs: consoleOn ? outputs : outputs?.filter((o) => o !== "console"),
+    file: {
+      path: blankAsUnset(env.PH_MEMORY_TELEMETRY_FILE),
+      maxMb: positiveIntFromEnv(env, "PH_MEMORY_TELEMETRY_FILE_MAX_MB", logger),
+      keep: positiveIntFromEnv(env, "PH_MEMORY_TELEMETRY_FILE_KEEP", logger),
+    },
+    ringSize: positiveIntFromEnv(env, "PH_MEMORY_TELEMETRY_RING", logger),
+    consoleIntervalMs: positiveIntFromEnv(
+      env,
+      "PH_MEMORY_TELEMETRY_CONSOLE_INTERVAL_MS",
+      logger,
+    ),
+    workers:
+      env.PH_MEMORY_TELEMETRY_WORKERS === undefined
+        ? undefined
+        : env.PH_MEMORY_TELEMETRY_WORKERS.trim() !== "false",
+    windowMin: positiveIntFromEnv(
+      env,
+      "PH_MEMORY_TELEMETRY_WINDOW_MIN",
+      logger,
+    ),
+  };
 }
 
 function projectionPoolSizeFromEnv(raw: string | undefined) {
