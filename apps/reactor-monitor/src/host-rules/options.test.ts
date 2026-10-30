@@ -402,6 +402,55 @@ describe("adding and removing reactors", () => {
     });
   });
 
+  it("gives a second Connect of one folder the next free port", () => {
+    const draft = { envelope: hostExport("cli") };
+    const added = applyOption(draft, option(draft, "host:add:connect"));
+    expect(added.refused).toBeUndefined();
+    expect(validateDraft(added.draft, FULL).issues).toEqual([]);
+    const children = (
+      added.draft.envelope.host as { children: Record<string, unknown> }
+    ).children;
+    expect(children.connect).toMatchObject({
+      host: "connect",
+      runner: { port: 6492 },
+    });
+    const third = applyOption(
+      added.draft,
+      option(added.draft, "host:add:connect"),
+    );
+    expect(validateDraft(third.draft, FULL).issues).toEqual([]);
+    expect(
+      (third.draft.envelope.host as { children: Record<string, unknown> })
+        .children["connect-2"],
+    ).toMatchObject({ runner: { port: 6493 } });
+  });
+
+  it("offers to move a member off a port another one uses", () => {
+    const clash = {
+      envelope: withSetters(
+        { "host.children.connect": { host: "connect" } },
+        hostExport("cli"),
+      ),
+    };
+    expect(validateDraft(clash, FULL).issues).toEqual([
+      expect.objectContaining({
+        rule: "port",
+        path: "host.children.connect.runner.port",
+        message:
+          "cli-connect and connect both use port 6491. Give one of them another port.",
+      }),
+    ]);
+    const move = "host.children.connect:port:6492";
+    expect(statuses(clash)(move)).toEqual(ON);
+    expect(option(clash, move).label).toBe("Move connect to port 6492");
+    const moved = applyOption(clash, option(clash, move));
+    expect(moved.refused).toBeUndefined();
+    expect(validateDraft(moved.draft, FULL).issues).toEqual([]);
+    expect(
+      hostOptionList(moved.draft).filter((o) => o.group === "port"),
+    ).toEqual([]);
+  });
+
   it("adds Connect and a browser reactor", () => {
     const draft = { envelope: stack() };
     for (const id of ["host:add:connect", "host:add:browser"]) {

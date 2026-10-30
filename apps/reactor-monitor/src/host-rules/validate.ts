@@ -19,6 +19,7 @@ import {
   isRecord,
   membersOf,
   nestedChildren,
+  portClashes,
   primaryBackendName,
   switchboardSettings,
   valueAt,
@@ -92,6 +93,14 @@ export const REASONS = {
   nested:
     "This reactor starts a group of reactors, which the monitor doesn't check yet.",
 } as const;
+
+export function portClashMessage(
+  first: Pick<Member, "key">,
+  second: Pick<Member, "key">,
+  port: number,
+): string {
+  return `${first.key} and ${second.key} both use port ${port}. Give one of them another port.`;
+}
 
 export type Validation = {
   members: Member[];
@@ -712,9 +721,6 @@ const DEFAULT_STORES = {
   readModel: ".ph/read-storage",
 } as const;
 
-/** The switchboard runner's port when the host names none. */
-const DEFAULT_SWITCHBOARD_PORT = 4001;
-
 type Store = {
   kind: "reactor" | "readModel";
   /** One spelling per place; see storeKey. */
@@ -810,13 +816,7 @@ function storeMessage(member: Member, other: Member, store: Store): string {
     : `${member.key} and ${other.key} would keep their search data in the same folder, which corrupts both. Give ${member.key} its own search data folder.`;
 }
 
-function portOf(member: Member): number | undefined {
-  const port = member.runner.port;
-  if (typeof port === "number") return port;
-  return member.role === "switchboard" ? DEFAULT_SWITCHBOARD_PORT : undefined;
-}
-
-/** Each switchboard needs its own store, search data folder and port. */
+/** Each switchboard needs its own store and search data folder. */
 function storesRule(members: Member[], env: HostEnv, report: Report): void {
   const switchboards = members.filter(
     (member) => member.role === "switchboard",
@@ -853,20 +853,15 @@ function storesRule(members: Member[], env: HostEnv, report: Report): void {
       );
     }
   }
-  const ports = new Map<number, Member>();
-  for (const member of members) {
-    const port = portOf(member);
-    if (port === undefined || port === 0) continue;
-    const other = ports.get(port);
-    if (!other) {
-      ports.set(port, member);
-      continue;
-    }
-    if (member.role !== "switchboard" && other.role !== "switchboard") continue;
+}
+
+/** Two members can't bind one port: the second would fail to start. */
+function portRule(members: Member[], report: Report): void {
+  for (const { member, other, port } of portClashes(members)) {
     report(
       "port",
       `${member.path}.runner.port`,
-      `${member.key} and ${other.key} would both use port ${port}. Give ${member.key} its own port.`,
+      portClashMessage(other, member, port),
     );
   }
 }
@@ -901,6 +896,7 @@ export function validateDraft(
   ladderRule(members, env, report);
   storageRule(members, env, context, report);
   storesRule(members, env, report);
+  portRule(members, report);
   configRule(members, env, report);
   workersRule(members, env, context, report);
   reachRule(members, (path, message) => report("reach", path, message));

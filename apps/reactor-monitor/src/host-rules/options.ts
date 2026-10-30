@@ -1,10 +1,13 @@
 import type { HostExport } from "@powerhousedao/host-core/schema";
 import { effectiveFlags, FLAG_LABELS, LADDER, ladderFlags } from "./flags.js";
 import {
+  fixedPortOf,
   freshKey,
   hostVerb,
   isRecord,
   membersOf,
+  nextFreePort,
+  portClashes,
   type Member,
 } from "./members.js";
 import { checkSetter } from "./policy.js";
@@ -44,7 +47,8 @@ export type OptionGroup =
   | "projectionWorker"
   | "add"
   | "reach"
-  | "placement";
+  | "placement"
+  | "port";
 
 export type HostOption = {
   /** Unique per draft: `<member path or host>:<group>:[<backend>:]<value>`. */
@@ -300,7 +304,8 @@ function hostProtocol(members: Member[]): Record<string, unknown> {
 
 /**
  * A new child. A second Connect of one folder gets its own reactor block; a
- * second switchboard gets its own block, folders and port.
+ * second switchboard gets its own block, folders and port. A member whose
+ * port another already binds gets the next free one.
  */
 function addMemberOption(
   draft: HostDraft,
@@ -346,8 +351,45 @@ function addMemberOption(
       },
     };
   }
+  const bodies = isRecord(draft.envelope.members) ? draft.envelope.members : {};
+  const body = bodies[folder];
+  const runner = {
+    ...(isRecord(body) && isRecord(body.runner) ? body.runner : {}),
+    ...(isRecord(wrapper.runner) ? wrapper.runner : {}),
+  };
+  const port = fixedPortOf(runner, role);
+  if (
+    port !== undefined &&
+    members.some((member) => fixedPortOf(member.runner, member.role) === port)
+  ) {
+    const free = nextFreePort(port, members);
+    if (free !== undefined) {
+      wrapper.runner = {
+        ...(isRecord(wrapper.runner) ? wrapper.runner : {}),
+        port: free,
+      };
+    }
+  }
   option.setters = [{ path: `host.children.${key}`, value: wrapper as never }];
   return option;
+}
+
+/** A member that binds another's port moves to the next free one. */
+function portOptions(members: Member[]): HostOption[] {
+  return portClashes(members).flatMap(({ member, port }) => {
+    const free = nextFreePort(port, members);
+    if (free === undefined || member.path === "host") return [];
+    return [
+      {
+        id: `${member.path}:port:${free}`,
+        group: "port" as const,
+        value: String(free),
+        label: `Move ${member.key} to port ${free}`,
+        member: member.path,
+        setters: [{ path: `${member.path}.runner.port`, value: free }],
+      },
+    ];
+  });
 }
 
 /**
@@ -396,6 +438,7 @@ export function hostOptionList(
     ...accessOptions(members),
     ...members.flatMap((member) => memberOptions(member, members)),
     ...reachOptions(members, compound),
+    ...portOptions(members),
     addMemberOption(draft, members, "switchboard"),
     addMemberOption(draft, members, "connect"),
     addBrowserOption(members),
@@ -468,6 +511,7 @@ function isSelected(
       return placementSelected(option, members);
     case "add":
     case "reach":
+    case "port":
       return false;
   }
 }

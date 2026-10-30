@@ -544,14 +544,14 @@ describe("validateDraft", () => {
         [
           "port",
           `${SB2}.runner.port`,
-          "sb2 and sb would both use port 7491. Give sb2 its own port.",
+          "sb and sb2 both use port 7491. Give one of them another port.",
         ],
       ]);
       expect(issues(second(own, { port: 6491 }))).toEqual([
         [
           "port",
           `${SB2}.runner.port`,
-          "sb2 and ui would both use port 6491. Give sb2 its own port.",
+          "ui and sb2 both use port 6491. Give one of them another port.",
         ],
       ]);
     });
@@ -565,9 +565,60 @@ describe("validateDraft", () => {
         [
           "port",
           `${SB2}.runner.port`,
-          "sb2 and sb would both use port 4001. Give sb2 its own port.",
+          "sb and sb2 both use port 4001. Give one of them another port.",
         ],
       ]);
+    });
+  });
+
+  describe("ports", () => {
+    it("refuses two Connects on one port, whatever their runner", () => {
+      const twin = draft(
+        {
+          "host.children.ui2": {
+            host: "connect",
+            reactor: { backends: { main: { kind: "worker" } } },
+          },
+        },
+        stack(),
+      );
+      expect(issues(twin)).toEqual([
+        [
+          "port",
+          "host.children.ui2.runner.port",
+          "ui and ui2 both use port 6491. Give one of them another port.",
+        ],
+      ]);
+      expect(
+        issues(draft({ "host.children.ui2.runner.port": 6492 }, twin)),
+      ).toEqual([]);
+    });
+
+    it("counts Connect's default port and skips port 0 and tokens", () => {
+      const defaults = draft({
+        "members.connect.runner.port": { $delete: true },
+        "host.children.ui2": { host: "connect", runner: { port: 3000 } },
+      });
+      expect(issues(defaults)).toEqual([
+        [
+          "port",
+          "host.children.ui2.runner.port",
+          "ui and ui2 both use port 3000. Give one of them another port.",
+        ],
+      ]);
+      for (const port of [0, { $env: "UI_PORT" }]) {
+        const free = structuredClone(stack()) as unknown as {
+          members: Record<string, { runner: Record<string, unknown> }>;
+          host: { children: Record<string, unknown> };
+        };
+        free.members.connect.runner.port = port;
+        free.host.children.ui2 = { host: "connect" };
+        expect(
+          issues(free as unknown as HostExport).filter(
+            ([rule]) => rule === "port",
+          ),
+        ).toEqual([]);
+      }
     });
   });
 
