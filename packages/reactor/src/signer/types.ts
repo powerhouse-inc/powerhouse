@@ -53,15 +53,16 @@ export type SignerConfig = {
  * verdicts do not depend on it. Without a policy, a signed write is refused
  * under `authEnforcement` and accepted otherwise.
  *
- * `context` tells a first write from a load. A check on `path` must only add
- * to what load checks, so replicas still agree on what they store.
+ * `context` tells a first write from a load, and admission always passes it. A
+ * check on `path` must only add to what load checks, so replicas still agree
+ * on what they store.
  */
 export type SignatureTrustPolicy = {
   authorizeSigner(
     signer: ActionSigner,
     key: string,
     documentId: string,
-    context: SignatureTrustContext,
+    context?: SignatureTrustContext,
   ): Promise<boolean>;
 };
 

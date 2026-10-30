@@ -320,7 +320,7 @@ async function signedBy(issuer: string, parts: string[]): Promise<boolean> {
     return await globalThis.crypto.subtle.verify(
       { name: "ECDSA", hash: "SHA-256" },
       key,
-      fromString(parts[2], "base64url"),
+      new Uint8Array(fromString(parts[2], "base64url")),
       new TextEncoder().encode(`${parts[0]}.${parts[1]}`),
     );
   } catch {

@@ -31,6 +31,7 @@ import type { ILogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { ReadableDocumentsProjection } from "../../../packages/reactor-api/src/services/readable-documents.js";
 import type { startSwitchboard } from "../src/server.mjs";
 import { bootSwitchboard } from "./boot-helpers.js";
 import {
@@ -1017,6 +1018,57 @@ describe("a piece's index query through the host", () => {
       )(request, null);
       expect(m.executeSubgraph).not.toHaveBeenCalled();
       expect(result.errors?.[0].message).toMatch(/no person behind it/);
+    });
+
+    // The real filter an index answers with, over the rows of a store.
+    it("finds an existing document for a delegated run, and refuses once the granter left", async () => {
+      const admins = ["0xrun"];
+      const config = {
+        admins,
+        defaultProtection: false,
+        policy: AuthorizationPolicy.ADMIN_ONLY,
+      };
+      const readable = new ReadableDocumentsProjection({
+        config,
+      } as unknown as ConstructorParameters<
+        typeof ReadableDocumentsProjection
+      >[0]);
+      const executeSubgraph = vi.fn(
+        (
+          _name: string,
+          { user }: { user?: { address: string } },
+        ): Promise<{ data: Record<string, unknown> }> => {
+          const seen = readable.filterFor(user?.address).kind === "all";
+          return Promise.resolve({
+            data: {
+              keyIndex: {
+                find: seen ? [{ key: "gmail:1", documentId: "d1" }] : [],
+              },
+            },
+          });
+        },
+      );
+      const delegated = {
+        address: "0xrun",
+        subject: { address: "0xrun", key: "did:key:zDelegate" },
+      };
+      const query = indexQueryFor({ executeSubgraph }, module, {
+        config,
+        isSupremeAdmin: (address?: string) =>
+          address !== undefined && admins.includes(address),
+      });
+
+      expect(await query(request, delegated)).toEqual({
+        data: { keyIndex: { find: [{ key: "gmail:1", documentId: "d1" }] } },
+      });
+
+      // Removed from ADMINS: an empty answer here would duplicate everything.
+      admins.length = 0;
+      admins.push("0xother");
+      const refused = await query(request, delegated);
+      expect(refused.data).toBeNull();
+      expect(refused.errors).toHaveLength(1);
+      expect(executeSubgraph).toHaveBeenCalledOnce();
     });
 
     it("lets an admin read", async () => {

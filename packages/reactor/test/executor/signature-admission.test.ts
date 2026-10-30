@@ -889,10 +889,10 @@ describe("signature admission", () => {
       answer: (signer: ActionSigner, key: string) => Promise<boolean>,
     ): SignatureTrustPolicy & {
       calls: Call[];
-      contexts: SignatureTrustContext[];
+      contexts: (SignatureTrustContext | undefined)[];
     } {
       const calls: Call[] = [];
-      const contexts: SignatureTrustContext[] = [];
+      const contexts: (SignatureTrustContext | undefined)[] = [];
       return {
         calls,
         contexts,

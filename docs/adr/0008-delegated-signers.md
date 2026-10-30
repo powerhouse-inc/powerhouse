@@ -263,6 +263,12 @@ verified against its own K and `env`.
   gets both "old operations verify forever" and "a thief cannot backdate".
 - **Revocation reaches other reactors only through `exp`.** The host stops at once.
 - **On desktop the runner key is a plain file** that piece code could read.
+- **A person's run now leaves that person's grant on what it creates.** `grantRunUser` runs only
+  with a run user, so a delegated run writes `initializeAuth` on each new document, and the host is
+  granted only with an address or `authConditions`. `BareReadGate` applies that policy with
+  enforcement off. A second admin on one host reads such a document's metadata, not its global
+  scope, through the reactor's read surface. Sektar's processors read operations, not documents,
+  so their indexes are unaffected. Not a problem on a desktop, which has one person.
 - **With `auth.offlineCredentials`, a revoked credential keeps working on that host until it is next
   online.**
 - **Desktop login is a behaviour change.** An existing desktop store, used with no sign-in so far, now
@@ -335,3 +341,5 @@ delegates, scoped agents.
 **Owner**
 10. Is 30 days the right statement life? How long may `unknown` go on before someone is told?
 11. Should `auth.ownerClaim` be reversible from the app? Today it means deleting `.owner.json`.
+12. Should a second admin on one host read what another person's run created? It needs a grant for
+    the host or for admins on each new document (see Negative / risks).
