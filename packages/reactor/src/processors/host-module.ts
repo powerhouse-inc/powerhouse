@@ -47,7 +47,7 @@ export interface IReactorProcessorHostModuleBase extends IProcessorHostModuleBas
 
 export type ReactorHostModuleBaseOptions = Pick<
   IProcessorHostModuleBase,
-  "analyticsStore" | "relationalDb" | "processorApp" | "config"
+  "analyticsStore" | "relationalDb" | "processorApp" | "config" | "host"
 > & {
   client: IReactorClient;
   /** The read half processors read through; defaults to `client.read`. */
