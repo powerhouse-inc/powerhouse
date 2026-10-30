@@ -21,30 +21,34 @@ import { uploadScalar } from "./declarations/upload.js";
 import { jsonObjectScalar } from "./declarations/json-object.js";
 import type { DescribedScalarDefinition } from "./types.js";
 
+const declarations = [
+  unknownScalar,
+  dateTimeScalar,
+  addressScalar,
+  attachmentRefScalar,
+  amountTokensScalar,
+  ethereumAddressScalar,
+  emailAddressScalar,
+  amountPercentageScalar,
+  dateScalar,
+  urlScalar,
+  amountMoneyScalar,
+  olabelScalar,
+  currencyScalar,
+  phidScalar,
+  oidScalar,
+  amountFiatScalar,
+  amountCurrencyScalar,
+  amountCryptoScalar,
+  amountScalar,
+  uploadScalar,
+  jsonObjectScalar,
+] as const;
+
+export type CatalogScalarDefinition = (typeof declarations)[number];
+
 export const scalarCatalog: readonly DescribedScalarDefinition[] =
-  Object.freeze([
-    unknownScalar,
-    dateTimeScalar,
-    addressScalar,
-    attachmentRefScalar,
-    amountTokensScalar,
-    ethereumAddressScalar,
-    emailAddressScalar,
-    amountPercentageScalar,
-    dateScalar,
-    urlScalar,
-    amountMoneyScalar,
-    olabelScalar,
-    currencyScalar,
-    phidScalar,
-    oidScalar,
-    amountFiatScalar,
-    amountCurrencyScalar,
-    amountCryptoScalar,
-    amountScalar,
-    uploadScalar,
-    jsonObjectScalar,
-  ]);
+  Object.freeze([...declarations]);
 
 const byName = new Map(
   scalarCatalog.map((definition) => [definition.name, definition]),
