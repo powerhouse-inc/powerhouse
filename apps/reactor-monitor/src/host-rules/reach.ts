@@ -302,7 +302,7 @@ export function reachRule(members: readonly Member[], report: Report): void {
 const DELETE = { $delete: true } as const;
 
 /** Reach is written in the wrapper, copied from the folder first. */
-function blockOf(member: Member): { at: string; copy: Setter[] } {
+export function blockOf(member: Member): { at: string; copy: Setter[] } {
   const own = `${member.path}.reactor`;
   if (!member.path.startsWith("host.children.") || member.reactorAt === own) {
     return { at: member.reactorAt, copy: [] };
@@ -328,8 +328,10 @@ function driveToken(switchboard: Member, slug: string) {
 /** Drops placement entries that name a backend that is going away. */
 function forgetBackend(member: Member, at: string, name: string): Setter[] {
   const setters: Setter[] = [];
-  if (valueAt(member.reactor, ["placement", "primary"]) === name) {
-    setters.push({ path: `${at}.placement.primary`, value: DELETE });
+  for (const key of ["primary", "newDrives"]) {
+    if (valueAt(member.reactor, ["placement", key]) === name) {
+      setters.push({ path: `${at}.placement.${key}`, value: DELETE });
+    }
   }
   for (const [slug, backend] of Object.entries(placedDrives(member))) {
     if (backend === name) {

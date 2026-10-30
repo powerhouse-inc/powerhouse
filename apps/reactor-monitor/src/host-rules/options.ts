@@ -19,6 +19,11 @@ import {
   reachOptions,
 } from "./reach.js";
 import {
+  routerOptions,
+  routerOptionSelected,
+  type RouterGroup,
+} from "./router-settings.js";
+import {
   hostRulesContextSchema,
   type HostDraft,
   type HostEnv,
@@ -44,7 +49,8 @@ export type OptionGroup =
   | "projectionWorker"
   | "add"
   | "reach"
-  | "placement";
+  | "placement"
+  | RouterGroup;
 
 export type HostOption = {
   /** Unique per draft: `<member path or host>:<group>:[<backend>:]<value>`. */
@@ -396,6 +402,7 @@ export function hostOptionList(
     ...accessOptions(members),
     ...members.flatMap((member) => memberOptions(member, members)),
     ...reachOptions(members, compound),
+    ...members.flatMap((member) => routerOptions(member, members)),
     addMemberOption(draft, members, "switchboard"),
     addMemberOption(draft, members, "connect"),
     addBrowserOption(members),
@@ -466,6 +473,13 @@ function isSelected(
       );
     case "placement":
       return placementSelected(option, members);
+    case "newDrives":
+    case "requestTimeout":
+    case "breaker":
+    case "realtime":
+    case "probeTimeout":
+    case "provisionalRoute":
+      return routerOptionSelected(option, members);
     case "add":
     case "reach":
       return false;

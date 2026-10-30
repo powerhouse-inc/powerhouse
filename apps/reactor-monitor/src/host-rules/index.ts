@@ -53,6 +53,22 @@ export {
   type DriveLink,
 } from "./reach.js";
 export {
+  BREAKERS,
+  duration,
+  PROBE_TIMEOUTS,
+  PROVISIONAL_ROUTES,
+  REQUEST_TIMEOUTS,
+  ROUTER_DEFAULTS,
+  ROUTER_LABELS,
+  ROUTER_REASONS,
+  routerSettingLines,
+  routerSettings,
+  type BreakerSetting,
+  type ConnectionSettings,
+  type RouterGroup,
+  type RouterSettings,
+} from "./router-settings.js";
+export {
   checkEnvKey,
   checkSetter,
   checkSetterValue,

@@ -31,6 +31,7 @@ import {
   SETTINGS_ELSEWHERE,
 } from "./policy.ts";
 import { reachRule } from "./reach.ts";
+import { connectRouterRule } from "./router-settings.ts";
 import {
   hostRulesContextSchema,
   type HostDraft,
@@ -472,7 +473,8 @@ function storageRule(
     if (member.role === "switchboard" && !context.controller) {
       report("capability", member.path, REASONS.noController);
     }
-    if (member.placementMissing) {
+    // A Connect refuses placement.primary outright (connectRouterRule).
+    if (member.placementMissing && member.role !== "connect") {
       const name = primaryBackendName(member.reactor) ?? "";
       report(
         "storage",
@@ -904,6 +906,9 @@ export function validateDraft(
   configRule(members, env, report);
   workersRule(members, env, context, report);
   reachRule(members, (path, message) => report("reach", path, message));
+  connectRouterRule(members, (path, message, hint) =>
+    report("reach", path, message, hint),
+  );
   const byPath: Record<string, HostRuleIssue[]> = {};
   for (const issue of issues) (byPath[issue.path] ??= []).push(issue);
   return { members, issues, byPath };
