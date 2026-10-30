@@ -22,6 +22,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Connect Preview](#connect-preview)
 - [Access Token](#access-token)
 - [Inspect](#inspect)
+- [Keyframes](#keyframes)
 - [List](#list)
 - [Mcp](#mcp)
 - [Migrate](#migrate)
@@ -1055,6 +1056,59 @@ The name of the package to inspect<br><br>
 
 
 ### flags
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Keyframes
+
+The keyframes command reports on and cleans up the keyframes of a running switchboard,
+through its inspection-admin endpoint.
+
+Prerequisites:
+  - The host serves inspection-admin (INSPECTION_ADMIN_ENABLED=true).
+  - The caller is one of the host's auth admins.
+  - The keep rules are in powerhouse.config.json under reactor.keyframes, or in PH_KEYFRAMES.
+
+Run preview first: it only reads. clean then removes the keyframes past each type's keep
+count and all keyframes of deleted documents, in small paced statements beside live
+traffic. Running it again is safe. A later read that misses a keyframe replays from the
+operation log, so a clean-up costs time on cold reads and never changes a document.
+
+The disk only shrinks after reclaim, which rewrites the Keyframe table once the store is
+quiet. On PGlite the store answers nothing while it rewrites. On Postgres it says what to
+run by hand.
+
+### arguments
+#### Action *[required]*<br>
+preview: report what a clean-up would remove, without writing. clean: apply the configured keep and remove the keyframes of deleted documents (needs --yes). status: show the latest run and reclaim. cancel: stop a running clean-up. reclaim: rewrite the Keyframe table to give the space back to the disk.<br><br>
+**usage:** `<action>`<br>
+
+
+### options
+#### Url <br>
+The switchboard's GraphQL endpoint, e.g. http://localhost:4001/graphql. Defaults to reactor.port in powerhouse.config.json.<br><br>
+**usage:** `--url <str>`<br>
+
+#### Token <br>
+Admin bearer token. Defaults to PH_ACCESS_TOKEN, then a token from your `ph login` identity. Its address must be in the host's auth admins.<br><br>
+**usage:** `--token <str>`<br>
+
+
+### flags
+#### Yes <br>
+Confirms a clean or a reclaim; both refuse to run without it.<br><br>
+**usage:** `--yes`<br>
+
+#### Json <br>
+Print the result as JSON.<br><br>
+**usage:** `--json`<br>
+
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>

@@ -39,7 +39,8 @@ export const keyframesArgs = {
   yes: flag({
     type: optional(boolean),
     long: "yes",
-    description: "Run a clean or a reclaim without asking.",
+    description:
+      "Confirms a clean or a reclaim; both refuse to run without it.",
   }),
   json: flag({
     type: optional(boolean),
