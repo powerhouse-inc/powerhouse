@@ -259,10 +259,16 @@ reactor: {
 `placement.newDrives` names the backend new drives are created on. Without
 it they are created in the browser, or, when the host has no browser
 reactor, on its only switchboard. A Connect with no browser reactor and
-several switchboards must set it. When the `newDrives` switchboard isn't
-answering, creating a drive fails with "<sb> isn't answering, so the drive
-wasn't created."; it is never created in the browser instead. Drives the host
-declares locally (`reactor.drives` without a `remote`) stay in the browser.
+several switchboards must set it.
+
+A drive created on the `newDrives` switchboard stays there: when the
+switchboard isn't answering, Connect shows "<sb> isn't answering, so the
+drive wasn't created.", and when it refuses the create, Connect names it and
+gives its reason (or asks you to sign in). The drive is not created in the
+browser instead: a Connect that has no address for that switchboard, or
+whose router fails to load, doesn't start. Drives the host declares locally (`reactor.drives`
+without a `remote`) are created in the browser, with the browser reactor's
+create defaults.
 
 Connect doesn't use `placement.primary`, and refuses a host that sets it: the
 browser reactor, when there is one, answers what no drive owns. Use
