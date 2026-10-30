@@ -28,6 +28,7 @@ export const GROUP_LABELS: Record<OptionGroup, string> = {
   add: "Add a reactor",
   reach: "Where this app keeps its drives",
   placement: "Where this drive opens",
+  port: "Ports",
 };
 
 export const DRIVES_COPY = {
