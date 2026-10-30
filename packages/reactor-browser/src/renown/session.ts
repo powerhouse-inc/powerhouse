@@ -23,7 +23,8 @@ export type DesktopShell = {
   openExternal(url: string): void | Promise<void>;
 };
 
-function desktopShell(): DesktopShell | undefined {
+/** The shell around this window, when it offers one. */
+export function desktopShell(): DesktopShell | undefined {
   if (typeof window === "undefined") return undefined;
   return (window as Window & { phDesktop?: DesktopShell }).phDesktop;
 }

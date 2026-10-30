@@ -199,6 +199,13 @@ describe("a switchboard on a person's own computer", () => {
     await rm(root, { recursive: true, force: true });
   }, 60_000);
 
+  it("has its own key on first run, apart from the person's", () => {
+    expect(existsSync(join(root, ".ph", ".keypair.json"))).toBe(true);
+    const hostKey = switchboard!.renown?.did;
+    expect(hostKey).toMatch(/^did:key:/);
+    expect(hostKey).not.toBe(person.did);
+  });
+
   it("refuses anyone not signed in", async () => {
     expect(await ask()).toBe(401);
   });
