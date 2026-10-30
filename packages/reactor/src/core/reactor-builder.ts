@@ -157,6 +157,8 @@ import {
 import type { ReactorStorageFacts } from "../inspector/types.js";
 import { CatchUpPriority } from "../processors/catch-up-priority.js";
 import { ProcessorTimingSettings } from "../processors/processor-stats.js";
+import { SyncManager } from "../sync/sync-manager.js";
+import type { MemoryTelemetry } from "../telemetry/memory-telemetry.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
 import { resolveModelSources } from "./model-sources.js";
 import type { DocumentModelSource } from "./model-sources.js";
@@ -435,6 +437,7 @@ export class ReactorBuilder {
   private catchUpPriority: CatchUpPriority = new CatchUpPriority();
   private processorTiming: ProcessorTimingSettings =
     new ProcessorTimingSettings();
+  private memoryTelemetry: MemoryTelemetry | undefined;
   private extraPeerCapabilities: PeerCapability[] = [];
 
   withLogger(logger: ILogger): this {
@@ -575,6 +578,15 @@ export class ReactorBuilder {
   /** Records where processors spend their time. Defaults to off. */
   withProcessorTiming(settings: ProcessorTimingSettings): this {
     this.processorTiming = settings;
+    return this;
+  }
+
+  /**
+   * Gives `telemetry` this reactor's gauges and event counts and puts it on the
+   * module. It is never started here; the host decides.
+   */
+  withMemoryTelemetry(telemetry: MemoryTelemetry): this {
+    this.memoryTelemetry = telemetry;
     return this;
   }
 
@@ -1529,6 +1541,7 @@ export class ReactorBuilder {
       catchUp,
       catchUpPriority: this.catchUpPriority,
       processorTiming: this.processorTiming,
+      memoryTelemetry: this.memoryTelemetry,
       settledWatermark,
       documentPurgeService: new DocumentPurgeService(
         queue,
@@ -1558,7 +1571,76 @@ export class ReactorBuilder {
       this.attachSignalHandlers(module);
     }
 
+    this.attachMemoryTelemetry(module, eventBus, collectionMembershipCache);
+
     return module;
+  }
+
+  /** Module gauges, only for a host that gave a telemetry instance. */
+  private attachMemoryTelemetry(
+    module: InProcessReactorModule,
+    eventBus: IEventBus,
+    collectionMembership: CollectionMembershipCache,
+  ): void {
+    const telemetry = this.memoryTelemetry;
+    if (!telemetry) return;
+    telemetry.attachEventBus(eventBus);
+    const {
+      documentIndexerConsistencyTracker,
+      documentViewConsistencyTracker,
+      executorManager,
+      jobTracker,
+      processorManager,
+      processorManagerConsistencyTracker,
+      queue,
+      syncModule,
+      writeCache,
+    } = module;
+    if (jobTracker instanceof InMemoryJobTracker) {
+      telemetry.addGauge("jobTracker", () => jobTracker.stats());
+    }
+    if (queue instanceof InMemoryQueue) {
+      telemetry.addGauge("queue", () => queue.stats());
+    }
+    if (
+      executorManager instanceof SimpleJobExecutorManager ||
+      executorManager instanceof WorkerPoolJobExecutorManager
+    ) {
+      telemetry.addGauge("deferredJobs", () => executorManager.deferredStats());
+    }
+    if (processorManager instanceof ProcessorManager) {
+      telemetry.addGauge(
+        "processors",
+        () => processorManager.queueStats().totals,
+      );
+    }
+    const trackers = [
+      documentViewConsistencyTracker,
+      documentIndexerConsistencyTracker,
+      processorManagerConsistencyTracker,
+    ].filter(
+      (tracker): tracker is ConsistencyTracker =>
+        tracker instanceof ConsistencyTracker,
+    );
+    telemetry.addGauge("consistency", () => {
+      const totals = { keys: 0, waiters: 0 };
+      for (const tracker of trackers) {
+        const { keys = 0, waiters = 0 } = tracker.stats();
+        totals.keys += keys;
+        totals.waiters += waiters;
+      }
+      return totals;
+    });
+    telemetry.addGauge("collectionMembership", () =>
+      collectionMembership.stats(),
+    );
+    if (writeCache instanceof KyselyWriteCache) {
+      telemetry.addGauge("writeCache", () => writeCache.stats());
+    }
+    const syncManager = syncModule?.syncManager;
+    if (syncManager instanceof SyncManager) {
+      telemetry.addGauge("sync", () => syncManager.stats());
+    }
   }
 
   private assertAdditionalChannelFactories(): void {

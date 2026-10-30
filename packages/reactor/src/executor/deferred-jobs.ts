@@ -48,6 +48,17 @@ export class DeferredJobs {
     private readonly onReleased: () => Promise<void> = () => Promise.resolve(),
   ) {}
 
+  /** Sizes for telemetry; O(number of documents waited on). */
+  stats(): Record<string, number> {
+    let jobs = 0;
+    for (const waiting of this.#byDocumentId.values()) jobs += waiting.length;
+    return {
+      documents: this.#byDocumentId.size,
+      jobs,
+      timers: this.#timers.size,
+    };
+  }
+
   /**
    * Holds a job until its document arrives, or until the TTL elapses.
    *

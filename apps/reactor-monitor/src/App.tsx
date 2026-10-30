@@ -65,6 +65,7 @@ import { EventsTab } from "./tabs/EventsTab.js";
 import { IntegrityTab } from "./tabs/IntegrityTab.js";
 import { ModulesTab } from "./tabs/ModulesTab.js";
 import { OverviewTab } from "./tabs/OverviewTab.js";
+import { MemoryTab } from "./tabs/MemoryTab.js";
 import { ProcessorsTab } from "./tabs/ProcessorsTab.js";
 import { QueueTab } from "./tabs/QueueTab.js";
 import { SyncTab } from "./tabs/SyncTab.js";
@@ -76,6 +77,7 @@ export const INSPECTOR_TABS = [
   "Drives",
   "Queue",
   "Processors",
+  "Memory",
   "Catch-up",
   "Integrity",
   "DB",
@@ -185,6 +187,14 @@ function ReadyPanel({
           admin={processorGateFor(reactor)}
           inspector={reactor.inspector}
           levers={reactor.processorLevers}
+        />,
+      );
+    case "Memory":
+      return operational(
+        <MemoryTab
+          admin={processorGateFor(reactor)}
+          inspector={reactor.inspector}
+          levers={reactor.memoryLevers}
         />,
       );
     case "Catch-up":

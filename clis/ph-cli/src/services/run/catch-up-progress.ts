@@ -8,9 +8,12 @@ import {
   type CatchUpPriorityState,
   type IInspector,
   type InspectorProcessorTimingReport,
+  type MemoryTelemetryReport,
   type ReactorProgress,
   type SlowProcessor,
 } from "@powerhousedao/reactor";
+
+import { renderMemoryLine, wantsMemoryLine } from "./memory-line.js";
 
 /** One bar: a processor factory or a read model, and how far its catch-up has got. */
 export type ProgressRow = {
@@ -33,6 +36,8 @@ export type ProgressSnapshot = {
   readonly priority: ProgressPriority | undefined;
   /** Undefined when the reactor has no timing, an older one. */
   readonly timing?: InspectorProcessorTimingReport;
+  /** The latest sample; undefined when the reactor has no memory telemetry. */
+  readonly memory?: MemoryTelemetryReport;
 };
 
 /** Reads the current rows; rejects while the reactor cannot answer. */
@@ -64,6 +69,8 @@ export function progressRows(progress: ReactorProgress): ProgressRow[] {
 
 /** Rows from a reactor's inspector: its processors, catch-up status and priority. */
 export function inspectorProgressSource(inspector: IInspector): ProgressSource {
+  // Its summary reads every sample of the window, too much for each poll.
+  let memoryReadAt = 0;
   return async () => {
     const processors = await inspector.getProcessors();
     let catchUp:
@@ -87,10 +94,20 @@ export function inspectorProgressSource(inspector: IInspector): ProgressSource {
     } catch {
       timing = undefined;
     }
+    let memory: MemoryTelemetryReport | undefined;
+    if (Date.now() - memoryReadAt >= MEMORY_READ_MS) {
+      memoryReadAt = Date.now();
+      try {
+        memory = await inspector.getMemoryTelemetry(1);
+      } catch {
+        memory = undefined;
+      }
+    }
     return {
       rows: progressRows(computeProgress(processors, catchUp)),
       priority,
       timing,
+      memory,
     };
   };
 }
@@ -137,6 +154,7 @@ export type ProgressDisplay = {
 const DEFAULT_POLL_MS = 1_000;
 const DEFAULT_LINE_MS = 10_000;
 const DEFAULT_TOP = 5;
+const MEMORY_READ_MS = 5_000;
 const MIN_BAR = 10;
 const MAX_LABEL = 32;
 
@@ -307,6 +325,8 @@ export function startProgressDisplay(
   let rows: readonly ProgressRow[] = [];
   let priority: ProgressPriority | undefined;
   let timing: InspectorProcessorTimingReport | undefined;
+  let memory: MemoryTelemetryReport | undefined;
+  let lastMemoryLine = Date.now();
   let busySince: number | undefined;
   let drawn = 0;
   let atLineStart = true;
@@ -372,7 +392,7 @@ export function startProgressDisplay(
     if (reading || stopped) return;
     reading = true;
     try {
-      ({ rows, priority, timing } = await source());
+      ({ rows, priority, timing, memory } = await source());
     } catch {
       // The reactor did not answer; keep the last rows until it does.
     } finally {
@@ -380,6 +400,18 @@ export function startProgressDisplay(
     }
     if (stopped) return;
     const now = Date.now();
+    // Through stderr, so a terminal's bars lift above it like any other output.
+    if (
+      memory &&
+      wantsMemoryLine(memory) &&
+      now - lastMemoryLine >= memory.consoleIntervalMs
+    ) {
+      const line = renderMemoryLine(memory);
+      if (line) {
+        stderr.write(`${line}\n`);
+        lastMemoryLine = now;
+      }
+    }
     if (busy(rows)) {
       busySince ??= now;
     } else if (busySince !== undefined) {

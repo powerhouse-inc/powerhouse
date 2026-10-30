@@ -43,6 +43,7 @@ describe("inspection op tables", () => {
         "queueState",
         "processors",
         "processorTiming",
+        "memoryTelemetry",
         "catchUpStatus",
         "catchUpPriority",
         "storageHealth",

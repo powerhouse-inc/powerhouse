@@ -197,6 +197,15 @@ export class KyselyWriteCache implements IWriteCache {
     this.lruTracker = new LRUTracker<string>();
   }
 
+  /** Sizes for telemetry; O(cached documents), which is capped. */
+  stats(): Record<string, number> {
+    let snapshots = 0;
+    for (const stream of this.streams.values()) {
+      snapshots += stream.ringBuffer.length;
+    }
+    return { documents: this.streams.size, snapshots };
+  }
+
   withScopedStores(
     operationStore: IOperationStore,
     keyframeStore: IKeyframeStore,

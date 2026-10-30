@@ -226,6 +226,22 @@ export const inspectionTypeDefs = gql`
   }
 
   """
+  Memory samples correlated with operations processed. samples are newest
+  last; summary holds the rates over the correlation window and is null until
+  two samples exist.
+  """
+  type InspectionMemoryTelemetry {
+    enabled: Boolean!
+    intervalMs: Float!
+    consoleIntervalMs: Float!
+    outputs: [String!]!
+    file: String
+    startedAt: String
+    summary: JSONObject
+    samples: [JSONObject!]!
+  }
+
+  """
   What one catch-up priority level sets. giveWay is stop (level 0: no page is
   read until the level rises), pause (pauseMs between pages), yield (one
   event-loop turn) or none.
@@ -352,6 +368,8 @@ export const inspectionTypeDefs = gql`
     queueState: InspectionQueueState!
     processors: [InspectionProcessor!]!
     processorTiming: InspectionProcessorTimingReport!
+    "Refused on a host without memory telemetry."
+    memoryTelemetry(limit: Int, sinceIso: String): InspectionMemoryTelemetry!
     catchUpStatus: JSONObject!
     catchUpPriority: InspectionCatchUpPriority!
     storageHealth: InspectionStorageHealth!

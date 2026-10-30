@@ -102,6 +102,12 @@ export const INSPECTION_OPERATIONS = {
     inspection { processorTiming ${selectionOf("InspectionProcessorTimingReport")} }
   }`,
 
+  memoryTelemetry: `query ReactorInspectionMemoryTelemetry($limit: Int, $sinceIso: String) {
+    inspection {
+      memoryTelemetry(limit: $limit, sinceIso: $sinceIso) ${selectionOf("InspectionMemoryTelemetry")}
+    }
+  }`,
+
   catchUpStatus: `query ReactorInspectionCatchUp { inspection { catchUpStatus } }`,
 
   catchUpPriority: `query ReactorInspectionCatchUpPriority {

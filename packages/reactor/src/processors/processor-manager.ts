@@ -41,6 +41,8 @@ import {
   purgeCandidates,
   type LiveCheck,
   type ProcessorCursorState,
+  type ProcessorDeliveredOps,
+  type ProcessorQueueStats,
 } from "./processor-queue.js";
 import {
   createMinimalDriveHeader,
@@ -137,6 +139,7 @@ export class ProcessorManager
   private processorTiming: ProcessorTimingSettings;
   // Outlives a re-registration, so a reload's cost adds up; dropped with the row.
   private stats: Map<string, ProcessorStats> = new Map();
+  private readonly delivered: ProcessorDeliveredOps = { live: 0, replay: 0 };
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
@@ -1142,6 +1145,7 @@ export class ProcessorManager
       persist: (state) => this.writeCursor(tracked, state),
       purged: (ids) => findPurged(this.db, ids),
       stats,
+      delivered: this.delivered,
       logger: this.logger,
     });
     return { tracked, queue };
@@ -1166,6 +1170,35 @@ export class ProcessorManager
   private driveLabelOf(driveId: string): string {
     const header = this.driveHeaders.get(driveId);
     return header?.slug || header?.name || driveId;
+  }
+
+  /** Every queue's sizes summed, and the fullest queues, for telemetry. */
+  queueStats(top = 20): {
+    totals: Record<string, number>;
+    largest: ProcessorQueueStats[];
+  } {
+    const all = [...this.allBound()].map(({ queue }) => queue.stats());
+    const totals: Record<string, number> = {
+      processors: all.length,
+      tasks: 0,
+      liveTasks: 0,
+      bufferedLiveOps: 0,
+      replaying: 0,
+      unrouted: 0,
+      opsDeliveredLive: this.delivered.live,
+      opsDeliveredReplay: this.delivered.replay,
+    };
+    for (const queue of all) {
+      totals.tasks! += queue.tasks;
+      totals.liveTasks! += queue.liveTasks;
+      totals.bufferedLiveOps! += queue.bufferedLiveOps;
+      totals.replaying! += queue.replaying > 0 ? 1 : 0;
+      totals.unrouted! += queue.unrouted;
+    }
+    const largest = all
+      .sort((a, b) => b.bufferedLiveOps - a.bufferedLiveOps)
+      .slice(0, top);
+    return { totals, largest };
   }
 
   /** Resolves once every queue has taken the latest cursor advance. */

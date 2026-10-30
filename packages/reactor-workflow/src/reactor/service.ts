@@ -11,7 +11,10 @@ import {
   expandDocumentRefs,
   type DocumentReference,
 } from "@powerhousedao/pieces-framework/workflow";
-import type { ModelManifestEntry } from "@powerhousedao/reactor";
+import {
+  registerTelemetryGauge,
+  type ModelManifestEntry,
+} from "@powerhousedao/reactor";
 import type {
   IWebhookEndpoints,
   IWebhookScope,
@@ -4647,7 +4650,14 @@ export class WorkflowRuntimeService {
       pool.dispose();
       return (this.pieceWorkers = pool);
     }
-    this.unobservePool = this.telemetry.observeWorkerPool(() => pool.stats());
+    const unobservePool = this.telemetry.observeWorkerPool(() => pool.stats());
+    const unregisterGauge = registerTelemetryGauge("workflow.pool", () =>
+      pool.memoryStats(),
+    );
+    this.unobservePool = () => {
+      unobservePool();
+      unregisterGauge();
+    };
     return (this.pieceWorkers = pool);
   }
 

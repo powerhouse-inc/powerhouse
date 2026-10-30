@@ -26,6 +26,8 @@ function levers(): IInspectorAdmin & {
   retryProcessor: ReturnType<typeof vi.fn>;
   rerunProcessor: ReturnType<typeof vi.fn>;
   setCatchUpPriority: ReturnType<typeof vi.fn>;
+  setMemoryTelemetry: ReturnType<typeof vi.fn>;
+  writeHeapSnapshot: ReturnType<typeof vi.fn>;
 } {
   const refuse = () => Promise.reject(new Error("not under test"));
   return {
@@ -37,6 +39,8 @@ function levers(): IInspectorAdmin & {
     retryProcessor: vi.fn().mockResolvedValue(undefined),
     rerunProcessor: vi.fn().mockResolvedValue(undefined),
     setCatchUpPriority: vi.fn().mockResolvedValue(undefined),
+    setMemoryTelemetry: vi.fn().mockResolvedValue(undefined),
+    writeHeapSnapshot: vi.fn().mockResolvedValue("D:/x/heap.heapsnapshot"),
   };
 }
 
@@ -60,10 +64,73 @@ const RERUN = `mutation Rerun($id: String!, $clear: Boolean!, $from: Float!) {
   inspectionRerunProcessor(processorId: $id, clear: $clear, fromOrdinal: $from)
 }`;
 const RETRY = `mutation Retry($id: String!) { inspectionRetryProcessor(processorId: $id) }`;
-const ACCESS = `{ inspectionAdmin { processors catchUpPriority } }`;
+const ACCESS = `{ inspectionAdmin { processors catchUpPriority memoryTelemetry } }`;
 const PRIORITY = `mutation Priority($mode: String!, $level: Int) {
   inspectionSetCatchUpPriority(mode: $mode, level: $level)
 }`;
+
+describe("inspection-admin memory telemetry", () => {
+  const operator = contextFor(OPERATOR.toLowerCase());
+  const outsider = contextFor("0xother");
+
+  const SET = `mutation Set($enabled: Boolean!, $intervalMs: Int, $outputs: [String!]) {
+    inspectionSetMemoryTelemetry(enabled: $enabled, intervalMs: $intervalMs, outputs: $outputs)
+  }`;
+
+  it("switches telemetry for a listed admin", async () => {
+    const admin = levers();
+    const result = await graphql({
+      schema: buildSchema(admin),
+      source: SET,
+      contextValue: operator,
+      variableValues: { enabled: true, intervalMs: 5000, outputs: ["file"] },
+    });
+    expect(result.errors).toBeUndefined();
+    expect(admin.setMemoryTelemetry).toHaveBeenCalledWith({
+      enabled: true,
+      intervalMs: 5000,
+      outputs: ["file"],
+    });
+  });
+
+  it("refuses an unknown output as bad input", async () => {
+    const admin = levers();
+    const result = await graphql({
+      schema: buildSchema(admin),
+      source: SET,
+      contextValue: operator,
+      variableValues: { enabled: true, outputs: ["otel"] },
+    });
+    expect(result.errors?.[0]?.extensions.code).toBe("BAD_USER_INPUT");
+    expect(admin.setMemoryTelemetry).not.toHaveBeenCalled();
+  });
+
+  it("returns a snapshot's path and passes a refusal on", async () => {
+    const admin = levers();
+    const schema = buildSchema(admin);
+    const source = `mutation { inspectionWriteHeapSnapshot(force: true) }`;
+    const written = await graphql({ schema, source, contextValue: operator });
+    expect(written.data).toEqual({
+      inspectionWriteHeapSnapshot: "D:/x/heap.heapsnapshot",
+    });
+    expect(admin.writeHeapSnapshot).toHaveBeenCalledWith(true);
+
+    admin.writeHeapSnapshot.mockRejectedValueOnce(new Error("Too little"));
+    const refused = await graphql({ schema, source, contextValue: operator });
+    expect(refused.errors?.[0]?.extensions.code).toBe("LEVER_REFUSED");
+  });
+
+  it("refuses a caller who is not a listed admin", async () => {
+    const admin = levers();
+    const result = await graphql({
+      schema: buildSchema(admin),
+      source: `mutation { inspectionWriteHeapSnapshot }`,
+      contextValue: outsider,
+    });
+    expect(result.errors?.[0]?.extensions.code).toBe("FORBIDDEN");
+    expect(admin.writeHeapSnapshot).not.toHaveBeenCalled();
+  });
+});
 
 describe("inspection-admin subgraph", () => {
   it("refuses every field to a caller the host does not list as an admin", async () => {
@@ -98,7 +165,11 @@ describe("inspection-admin subgraph", () => {
 
     const access = await graphql({ schema, source: ACCESS, contextValue: ctx });
     expect(access.data).toEqual({
-      inspectionAdmin: { processors: true, catchUpPriority: true },
+      inspectionAdmin: {
+        processors: true,
+        catchUpPriority: true,
+        memoryTelemetry: true,
+      },
     });
 
     const rerun = await graphql({

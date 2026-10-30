@@ -113,13 +113,27 @@ export type ReleaseRequest = {
   id: number;
 };
 
+/** Asks for the store's memory; answered outside the admission queue. */
+export type StatsRequest = {
+  type: "stats";
+  id: number;
+};
+
 export type HostMessage =
+  | StatsRequest
   | InitRequest
   | QueryRequest
   | ExecRequest
   | CloseRequest
   | ReserveRequest
   | ReleaseRequest;
+
+export type StatsMessage = {
+  type: "stats-result";
+  id: number;
+  /** Bytes of WASM linear memory; 0 before the store has opened. */
+  wasmBytes: number;
+};
 
 export type AdmittedMessage = {
   type: "admitted";
@@ -175,6 +189,7 @@ export type LogMessage = {
 };
 
 export type WorkerMessage =
+  | StatsMessage
   | AdmittedMessage
   | ReadyMessage
   | QueryResultMessage

@@ -35,5 +35,6 @@ export * from "./src/services/readable-documents.js";
 export * from "./src/services/privacy-permissions.js";
 export * from "./src/services/package-management.service.js";
 export * from "./src/services/package-storage.js";
+export * from "./src/telemetry/index.js";
 export * from "./src/types.js";
 export * from "./src/utils/index.js";

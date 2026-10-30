@@ -8,6 +8,7 @@ import type {
   ProcessorTimingRun,
 } from "@powerhousedao/shared/processors";
 import type { CatchUpPriorityState } from "../processors/catch-up-priority.js";
+import type { MemoryTelemetryReport } from "../telemetry/types.js";
 import type { Job } from "../queue/types.js";
 import type { DeadLetterRecord } from "../storage/interfaces.js";
 import type {
@@ -171,6 +172,9 @@ export type WireProcessorTimingDocumentType = ProcessorTimingDocumentType;
 export type WireProcessorQueueDepth = ProcessorQueueDepth;
 export type WireProcessorTiming = InspectorProcessorTiming;
 export type WireProcessorTimingReport = InspectorProcessorTimingReport;
+
+/** `summary` and `samples` ride a JSON scalar, so gauges can change freely. */
+export type WireMemoryTelemetry = MemoryTelemetryReport;
 
 export type WireCatchUpLevelSettings = {
   readonly slots: number;
@@ -508,6 +512,16 @@ export const INSPECTION_WIRE_FIELDS = {
     "head",
     "headKnown",
     "processors",
+  ]),
+  InspectionMemoryTelemetry: fieldsOf<WireMemoryTelemetry>()([
+    "enabled",
+    "intervalMs",
+    "consoleIntervalMs",
+    "outputs",
+    "file",
+    "startedAt",
+    "summary",
+    "samples",
   ]),
   InspectionCatchUpLevelSettings: fieldsOf<WireCatchUpLevelSettings>()([
     "slots",

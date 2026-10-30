@@ -32,6 +32,21 @@ export type ProcessorProgressState = {
   phase: ProcessorPhase;
 };
 
+/** Operations delivered, summed over a manager's queues. */
+export type ProcessorDeliveredOps = { live: number; replay: number };
+
+/** One queue's sizes, for telemetry. */
+export type ProcessorQueueStats = {
+  processorId: string;
+  tasks: number;
+  liveTasks: number;
+  /** Operations in queued live batches. */
+  bufferedLiveOps: number;
+  /** Replays queued or running. */
+  replaying: number;
+  unrouted: number;
+};
+
 export type ProcessorQueueOptions = {
   processorId: string;
   processor: IProcessor;
@@ -71,6 +86,8 @@ export type ProcessorQueueOptions = {
   pageSize?: () => number;
   /** Where its time goes; collects nothing while the level is off. */
   stats: ProcessorStats;
+  /** Kept whatever the timing level: telemetry correlates memory with it. */
+  delivered?: ProcessorDeliveredOps;
   logger: ILogger;
 };
 
@@ -188,6 +205,22 @@ export class ProcessorQueue {
   /** True while a backfill or retry is queued or running. */
   get replaying(): boolean {
     return this.replaysAhead > 0;
+  }
+
+  /** Sizes for telemetry, read when asked. */
+  stats(): ProcessorQueueStats {
+    let liveTasks = 0;
+    for (const task of this.tasks) {
+      if (task.kind === "live") liveTasks++;
+    }
+    return {
+      processorId: this.options.processorId,
+      tasks: this.tasks.length,
+      liveTasks,
+      bufferedLiveOps: this.depth.ops,
+      replaying: this.replaysAhead,
+      unrouted: this.unrouted.size,
+    };
   }
 
   /** Read when asked, not kept: tasks waiting and operations in live ones. */
@@ -726,6 +759,7 @@ export class ProcessorQueue {
     try {
       await this.options.processor.onOperations(ops);
       stats.recordBatch(path, mark, ops, false);
+      if (this.options.delivered) this.options.delivered[path] += ops.length;
       return true;
     } catch (error) {
       stats.recordBatch(path, mark, ops, true);

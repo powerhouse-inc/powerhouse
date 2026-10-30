@@ -25,6 +25,8 @@ export function toMonitorInspector(inspector: IInspector): MonitorInspector {
       toWireQueueState(await inspector.getQueueState()),
     getProcessors: () => inspector.getProcessors(),
     getProcessorTiming: () => inspector.getProcessorTiming(),
+    getMemoryTelemetry: (limit, sinceIso) =>
+      inspector.getMemoryTelemetry(limit, sinceIso),
     getCatchUpStatus: () => inspector.getCatchUpStatus(),
     getCatchUpPriority: () => inspector.getCatchUpPriority(),
     getStorageHealth: () => inspector.getStorageHealth(),

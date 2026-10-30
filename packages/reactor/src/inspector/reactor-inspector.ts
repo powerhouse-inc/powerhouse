@@ -25,6 +25,11 @@ import {
   type ProcessorTimingSettings,
 } from "../processors/processor-stats.js";
 import type { Job } from "../queue/types.js";
+import type { MemoryTelemetry } from "../telemetry/memory-telemetry.js";
+import type {
+  MemoryTelemetryChange,
+  MemoryTelemetryReport,
+} from "../telemetry/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type { DriveInspection } from "./drive-inspection.js";
 import { READ_ONLY_ACCESS } from "./ops.js";
@@ -65,6 +70,7 @@ export type ReactorInspectorComponents = {
   catchUp?: ICatchUp;
   catchUpPriority?: CatchUpPriority;
   processorTiming?: ProcessorTimingSettings;
+  memoryTelemetry?: MemoryTelemetry;
   integrity?: IDocumentIntegrityService;
   storageHealth?: IInspectorStorageHealthProvider;
   documentModelRegistry?: IDocumentModelRegistry;
@@ -117,6 +123,7 @@ const NO_INSPECTABLE_QUEUE =
 const NO_CATCH_UP = "it was built without catch-up";
 const NO_INTEGRITY = "it has no document integrity service";
 const NO_PROCESSORS = "it was built without a processor manager";
+const NO_TELEMETRY = "it was built without memory telemetry";
 
 const noCatchUpPriority: CatchUpPriorityState = {
   mode: "dynamic",
@@ -273,6 +280,19 @@ export class ReactorInspector
     );
   }
 
+  getMemoryTelemetry(
+    limit?: number,
+    sinceIso?: string,
+  ): Promise<MemoryTelemetryReport> {
+    const telemetry = this.components.memoryTelemetry;
+    if (!telemetry) {
+      return Promise.reject(
+        unsupported("Reading memory telemetry", NO_TELEMETRY),
+      );
+    }
+    return Promise.resolve(telemetry.report(limit, sinceIso));
+  }
+
   getCatchUpStatus(): Promise<CatchUpStatus> {
     const catchUp = this.components.catchUp;
     if (!catchUp) {
@@ -385,6 +405,27 @@ export class ReactorInspector
     }
     priority.set(setting);
     return Promise.resolve();
+  }
+
+  setMemoryTelemetry(change: MemoryTelemetryChange): Promise<void> {
+    const telemetry = this.components.memoryTelemetry;
+    if (!telemetry) {
+      return Promise.reject(
+        unsupported("Setting memory telemetry", NO_TELEMETRY),
+      );
+    }
+    telemetry.reconfigure(change);
+    return Promise.resolve();
+  }
+
+  writeHeapSnapshot(force = false): Promise<string> {
+    const telemetry = this.components.memoryTelemetry;
+    if (!telemetry) {
+      return Promise.reject(
+        unsupported("Writing a heap snapshot", NO_TELEMETRY),
+      );
+    }
+    return telemetry.writeHeapSnapshot(force);
   }
 
   rebuildKeyframes(

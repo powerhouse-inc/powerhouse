@@ -101,6 +101,7 @@ export {
   type WireInspectorDriveIntegrityRef,
   type WireInspectorDrivePage,
   type WireInspectorProcessor,
+  type WireMemoryTelemetry,
   type WireProcessorQueueDepth,
   type WireProcessorTiming,
   type WireProcessorTimingBatch,

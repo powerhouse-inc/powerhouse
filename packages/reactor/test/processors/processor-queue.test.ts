@@ -1490,6 +1490,45 @@ describe("ProcessorQueue timing", () => {
     expect(queue.depth).toEqual({ tasks: 0, ops: 0 });
   });
 
+  it("counts delivered operations by path whatever the level", async () => {
+    const delivered = { live: 0, replay: 0 };
+    const queue = new ProcessorQueue({
+      processorId: "p",
+      processor: {
+        onOperations: () => Promise.resolve(),
+        onDisconnect: () => Promise.resolve(),
+      },
+      filter: {},
+      cursor: {
+        lastOrdinal: 0,
+        status: "active",
+        lastError: undefined,
+        lastErrorTimestamp: undefined,
+      },
+      progress: { runFrom: 0, phase: "live" },
+      floor: 0,
+      stats: ProcessorStats.disabled("p"),
+      delivered,
+      readSince: pagedIndex([op(1), op(2)]),
+      routedThrough: () => Number.MAX_SAFE_INTEGER,
+      confirmedThrough: () => Number.MAX_SAFE_INTEGER,
+      persist: () => Promise.resolve(),
+      purged: () => Promise.resolve(new Set()),
+      logger: createMockLogger(),
+    });
+
+    await queue.backfill();
+    await queue.live([op(3)]);
+
+    expect(delivered).toEqual({ live: 1, replay: 2 });
+    expect(queue.stats()).toMatchObject({
+      processorId: "p",
+      tasks: 0,
+      bufferedLiveOps: 0,
+      replaying: 0,
+    });
+  });
+
   it("records nothing while timing is off", async () => {
     const { stats, settings } = timed();
     settings.level = "off";

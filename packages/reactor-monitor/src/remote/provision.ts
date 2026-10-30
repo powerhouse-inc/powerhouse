@@ -86,6 +86,9 @@ export async function provisionRemote(
     get processorLevers() {
       return leversServed ? levers : undefined;
     },
+    get memoryLevers() {
+      return leversServed ? levers : undefined;
+    },
     refreshInfo: async () => {
       const refreshed = await client.info();
       leversServed = await leversFor(refreshed);

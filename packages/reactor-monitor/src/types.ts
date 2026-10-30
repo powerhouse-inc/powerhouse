@@ -263,6 +263,8 @@ export interface ManagedReactorBase {
    * remote's while its host serves `inspection-admin` to this caller.
    */
   readonly processorLevers?: ProcessorLevers;
+  /** Telemetry switch and heap snapshot; served alongside `processorLevers`. */
+  readonly memoryLevers?: MemoryLevers;
   /** Raw SQL against the reactor's own store; present when `info.access.sql`. */
   readonly dbQuery?: IReactorDbQuery;
   readonly syncManager: MonitorSyncManager | undefined;
@@ -327,6 +329,12 @@ export interface ManagedWorkerReactor extends ManagedReactorBase {
 export type ProcessorLevers = Pick<
   IInspectorAdmin,
   "retryProcessor" | "rerunProcessor" | "setCatchUpPriority"
+>;
+
+/** The memory telemetry levers, served beside the processor ones. */
+export type MemoryLevers = Pick<
+  IInspectorAdmin,
+  "setMemoryTelemetry" | "writeHeapSnapshot"
 >;
 
 /** A running reactor reached over its host's inspection subgraph; read-only. */

@@ -46,6 +46,11 @@ export const INSPECTOR_OPS = {
     tier: "read",
     gql: "processorTiming",
   },
+  getMemoryTelemetry: {
+    rpc: "telemetry.memory",
+    tier: "read",
+    gql: "memoryTelemetry",
+  },
   getCatchUpStatus: {
     rpc: "catchUp.status",
     tier: "read",
@@ -72,6 +77,8 @@ export const INSPECTOR_OPS = {
   rerunProcessor: { rpc: "processors.rerun", tier: "admin" },
   sweepCatchUp: { rpc: "catchUp.sweepNow", tier: "admin" },
   setCatchUpPriority: { rpc: "catchUp.setPriority", tier: "admin" },
+  setMemoryTelemetry: { rpc: "telemetry.setMemory", tier: "admin" },
+  writeHeapSnapshot: { rpc: "telemetry.heapSnapshot", tier: "admin" },
   rebuildKeyframes: { rpc: "integrity.rebuildKeyframes", tier: "admin" },
   rebuildSnapshots: { rpc: "integrity.rebuildSnapshots", tier: "admin" },
   queryDb: { rpc: "db.query", tier: "sql" },

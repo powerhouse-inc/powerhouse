@@ -1,7 +1,9 @@
 import {
   isCatchUpLevel,
+  isMemoryTelemetryOutput,
   type CatchUpPrioritySetting,
   type IInspectorAdmin,
+  type MemoryTelemetryChange,
 } from "@powerhousedao/reactor";
 import { ConsoleLogger } from "document-model";
 import { GraphQLError, type DocumentNode } from "graphql";
@@ -13,6 +15,11 @@ import { isListedAdmin } from "./subgraph.js";
 
 type RerunArgs = { processorId: string; clear: boolean; fromOrdinal: number };
 type PriorityArgs = { mode: string; level?: number | null };
+type MemoryTelemetryArgs = {
+  enabled: boolean;
+  intervalMs?: number | null;
+  outputs?: string[] | null;
+};
 
 function badInput(message: string): GraphQLError {
   return new GraphQLError(message, { extensions: { code: "BAD_USER_INPUT" } });
@@ -40,6 +47,28 @@ export function catchUpPrioritySettingOf(
     );
   }
   return { mode: "fixed", level };
+}
+
+/** The change `args` name; throws BAD_USER_INPUT for an unknown output. */
+export function memoryTelemetryChangeOf(
+  args: MemoryTelemetryArgs,
+): MemoryTelemetryChange {
+  const unknown = args.outputs?.find((o) => !isMemoryTelemetryOutput(o));
+  if (unknown !== undefined) {
+    throw badInput(`Memory telemetry has no output ${JSON.stringify(unknown)}`);
+  }
+  return {
+    enabled: args.enabled,
+    intervalMs: args.intervalMs ?? undefined,
+    outputs: args.outputs?.filter(isMemoryTelemetryOutput),
+  };
+}
+
+function refused(error: unknown): GraphQLError {
+  return new GraphQLError(
+    error instanceof Error ? error.message : String(error),
+    { extensions: { code: "LEVER_REFUSED" } },
+  );
 }
 
 /** How long a mutation waits on its lever before answering that it started. */
@@ -112,6 +141,7 @@ export class InspectionAdminSubgraph extends BaseSubgraph {
         inspectionAdmin: listed(() => ({
           processors: true,
           catchUpPriority: true,
+          memoryTelemetry: true,
         })),
       },
       Mutation: {
@@ -135,13 +165,30 @@ export class InspectionAdminSubgraph extends BaseSubgraph {
           try {
             await admin.setCatchUpPriority(setting);
           } catch (error) {
-            throw new GraphQLError(
-              error instanceof Error ? error.message : String(error),
-              { extensions: { code: "LEVER_REFUSED" } },
-            );
+            throw refused(error);
           }
           return true;
         }),
+        inspectionSetMemoryTelemetry: listed(
+          async (args: MemoryTelemetryArgs) => {
+            const change = memoryTelemetryChangeOf(args);
+            try {
+              await admin.setMemoryTelemetry(change);
+            } catch (error) {
+              throw refused(error);
+            }
+            return true;
+          },
+        ),
+        inspectionWriteHeapSnapshot: listed(
+          async ({ force }: { force?: boolean | null }) => {
+            try {
+              return await admin.writeHeapSnapshot(force ?? false);
+            } catch (error) {
+              throw refused(error);
+            }
+          },
+        ),
       },
     };
   }

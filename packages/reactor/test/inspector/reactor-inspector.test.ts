@@ -15,6 +15,8 @@ import type { Database, InProcessReactorModule } from "../../src/core/types.js";
 import { createReactorInspector } from "../../src/inspector/from-module.js";
 import { ReactorInspector } from "../../src/inspector/reactor-inspector.js";
 import { CatchUpPriority } from "../../src/processors/catch-up-priority.js";
+import { MemoryTelemetry } from "../../src/telemetry/memory-telemetry.js";
+import type { ProcessMemorySample } from "../../src/telemetry/types.js";
 import { HardenedPGliteDialect } from "../../src/storage/kysely/pglite-dialect.js";
 import { GqlRequestChannelFactory } from "../../src/sync/channels/gql-request-channel-factory.js";
 import { channelFactoryTypes } from "../../src/sync/channels/channel-factory-types.js";
@@ -204,6 +206,43 @@ describe("ReactorInspector", () => {
     });
   });
 
+  it("refuses memory telemetry on a host without it", async () => {
+    const inspector = new ReactorInspector({});
+    await expect(inspector.getMemoryTelemetry()).rejects.toThrow(/unsupported/);
+    await expect(
+      inspector.setMemoryTelemetry({ enabled: true }),
+    ).rejects.toThrow(/unsupported/);
+    await expect(inspector.writeHeapSnapshot()).rejects.toThrow(/unsupported/);
+  });
+
+  it("serves and switches the memory telemetry it was given", async () => {
+    const memoryTelemetry = new MemoryTelemetry({
+      sampler: {
+        start: () => undefined,
+        stop: () => undefined,
+        sample: () => {
+          throw new Error("no sample in this test");
+        },
+      },
+      config: { workers: false, outputs: ["memory"] },
+    });
+    const inspector = new ReactorInspector({ memoryTelemetry });
+
+    await expect(inspector.getMemoryTelemetry(5)).resolves.toMatchObject({
+      enabled: false,
+      samples: [],
+      summary: null,
+    });
+
+    await inspector.setMemoryTelemetry({ enabled: true, intervalMs: 60_000 });
+    await expect(inspector.getMemoryTelemetry()).resolves.toMatchObject({
+      enabled: true,
+      intervalMs: 60_000,
+    });
+    await inspector.setMemoryTelemetry({ enabled: false });
+    expect(memoryTelemetry.running).toBe(false);
+  });
+
   it("refuses levers on missing components rather than acknowledging them", async () => {
     const inspector = new ReactorInspector({});
     await expect(inspector.pauseQueue()).rejects.toThrow(/unsupported/);
@@ -257,6 +296,39 @@ describe("ReactorInspector", () => {
     expect(module.catchUpPriority).toBe(priority);
     await inspector.setCatchUpPriority({ mode: "fixed", level: 5 });
     expect(priority.get().level).toBe(5);
+  });
+
+  it("gives the host's telemetry the module's gauges without starting it", async () => {
+    const memoryTelemetry = new MemoryTelemetry({
+      sampler: {
+        start: () => undefined,
+        stop: () => undefined,
+        sample: () => ({}) as ProcessMemorySample,
+      },
+      config: { workers: false, outputs: ["memory"] },
+    });
+    module = await new ReactorBuilder()
+      .withMemoryTelemetry(memoryTelemetry)
+      .buildModule();
+
+    expect(module.memoryTelemetry).toBe(memoryTelemetry);
+    expect(memoryTelemetry.running).toBe(false);
+
+    memoryTelemetry.start();
+    const sample = await memoryTelemetry.sampleNow();
+    memoryTelemetry.stop();
+    expect(Object.keys(sample.gauges)).toEqual(
+      expect.arrayContaining([
+        "jobTracker",
+        "queue",
+        "deferredJobs",
+        "processors",
+        "consistency",
+        "collectionMembership",
+        "writeCache",
+      ]),
+    );
+    expect(sample.gauges.processors).toMatchObject({ processors: 0 });
   });
 
   it("lists drives and checks their integrity on the drive's branch", async () => {

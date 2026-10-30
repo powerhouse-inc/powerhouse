@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type {
   IInspector,
   InspectorProcessorTimingReport,
+  MemoryTelemetryReport,
   SlowProcessor,
 } from "@powerhousedao/reactor";
 import {
@@ -17,6 +18,7 @@ import {
   type ProgressSnapshot,
   type ProgressStream,
 } from "../src/services/run/catch-up-progress.js";
+import { renderMemoryLine } from "../src/services/run/memory-line.js";
 
 function stream(isTTY: boolean): ProgressStream & { out: string[] } {
   const out: string[] = [];
@@ -585,5 +587,116 @@ describe("the slowest processors", () => {
 
     getProcessorTiming.mockRejectedValueOnce(new Error("older reactor"));
     await expect(source()).resolves.toMatchObject({ timing: undefined });
+  });
+});
+
+describe("the memory line", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const GB = 1024 ** 3;
+  const MB = 1024 ** 2;
+
+  function memoryReport(
+    outputs: MemoryTelemetryReport["outputs"] = ["memory", "console"],
+  ): MemoryTelemetryReport {
+    return {
+      enabled: true,
+      intervalMs: 30_000,
+      consoleIntervalMs: 5_000,
+      outputs,
+      file: null,
+      startedAt: null,
+      summary: {
+        windowMin: 30,
+        mbPer1kOps: 17.2,
+        postGcMbPer1kOps: 14,
+        rssMbPerMin: 61.4,
+        heapMbPerMin: 50,
+        postGcMbPerMin: 48.9,
+        externalMbPerMin: 0,
+        pgliteMbPerMin: 0,
+        verdict: "growing",
+        topGauges: [
+          {
+            gauge: "processors.bufferedLiveOps",
+            value: 88_112,
+            perMin: 2_900,
+            r: 0.9,
+          },
+        ],
+        gauges: [],
+      },
+      samples: [
+        {
+          rss: 4.12 * GB,
+          heapUsed: 2.35 * GB,
+          postGcHeap: 2.1 * GB,
+          workers: {
+            "pglite:reactor": { heapUsed: 20 * MB, wasm: 2 * GB },
+            "pglite:read": { heapUsed: 20 * MB, wasm: 1.6 * GB },
+            "executor#1": { heapUsed: 64 * MB },
+          },
+          delta: { s: 30, opsWritten: 1830, rss: 0, heapUsed: 0 },
+        } as unknown as MemoryTelemetryReport["samples"][number],
+      ],
+    };
+  }
+
+  it("states rates, stores, operations and the fastest gauge", () => {
+    expect(renderMemoryLine(memoryReport())).toBe(
+      "memory: rss 4.12 GB (+61 MB/min) · heap 2.35 GB, post-GC 2.10 GB (+49 MB/min) · pglite 3.60 GB · 1830 ops/30s, 17 MB/1k ops · top: processors.bufferedLiveOps +2.9k/min",
+    );
+  });
+
+  it("goes without what it does not have yet", () => {
+    const report = memoryReport();
+    const line = renderMemoryLine({
+      ...report,
+      summary: null,
+      samples: [{ ...report.samples[0]!, postGcHeap: null, workers: {} }],
+    });
+    expect(line).toBe("memory: rss 4.12 GB · heap 2.35 GB · 1830 ops/30s");
+    expect(renderMemoryLine({ ...report, samples: [] })).toBeUndefined();
+  });
+
+  it("prints through stderr at its own cadence, catching up or not", async () => {
+    const stdout = stream(false);
+    const stderr = stream(false);
+    vi.useFakeTimers();
+    const display = startProgressDisplay(
+      () =>
+        Promise.resolve({
+          rows: [],
+          priority: undefined,
+          memory: memoryReport(),
+        }),
+      { stdout, stderr, pollMs: 1_000 },
+    );
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(stderr.out).toHaveLength(0);
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(stderr.out).toHaveLength(1);
+    expect(stderr.out[0]).toMatch(/^memory: rss/);
+    display.stop();
+  });
+
+  it("stays quiet without the console output", async () => {
+    const stderr = stream(false);
+    vi.useFakeTimers();
+    const display = startProgressDisplay(
+      () =>
+        Promise.resolve({
+          rows: [],
+          priority: undefined,
+          memory: memoryReport(["memory", "file"]),
+        }),
+      { stdout: stream(false), stderr, pollMs: 1_000 },
+    );
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(stderr.out).toHaveLength(0);
+    display.stop();
   });
 });

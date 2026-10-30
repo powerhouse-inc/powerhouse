@@ -25,7 +25,7 @@ import { ConsoleLogger } from "document-model";
 import type * as GraphQL from "graphql";
 import type { GraphQLSchema } from "graphql";
 import { createRequire } from "node:module";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createInspectionResolvers,
   createReactorInspectionSource,
@@ -239,6 +239,7 @@ describe("inspection subgraph: OPEN does not make every caller an operator", () 
     "queueState { isPaused }",
     "processors { processorId }",
     "processorTiming { level }",
+    "memoryTelemetry { enabled }",
     "catchUpStatus",
     "catchUpPriority { level }",
     "storageHealth { tracked }",
@@ -667,6 +668,38 @@ describe("inspection subgraph: wire contract", () => {
         head: large,
         headKnown: true,
         processors: [],
+      },
+    });
+  });
+
+  it("serves memory telemetry to an operator with its filters", async () => {
+    module = await buildReadGateReactor();
+    const source = createReactorInspectionSource(module.reactorModule!);
+    const getMemoryTelemetry = vi.fn(() =>
+      Promise.resolve({
+        enabled: true,
+        intervalMs: 30_000,
+        consoleIntervalMs: 300_000,
+        outputs: ["memory"],
+        file: null,
+        startedAt: "2026-10-30T12:00:00.000Z",
+        summary: null,
+        samples: [{ t: "2026-10-30T12:00:30.000Z", rss: 1 }],
+      }),
+    );
+    Object.assign(source.inspector, { getMemoryTelemetry });
+    const { schema } = buildSchema(module, openHost(), source);
+    const result = await run(
+      schema,
+      `{ inspection { memoryTelemetry(limit: 5, sinceIso: "2026-10-30") { enabled samples } } }`,
+      contextFor(OPERATOR),
+    );
+    expect(result.errors).toBeUndefined();
+    expect(getMemoryTelemetry).toHaveBeenCalledWith(5, "2026-10-30");
+    expect(result.data?.inspection).toEqual({
+      memoryTelemetry: {
+        enabled: true,
+        samples: [{ t: "2026-10-30T12:00:30.000Z", rss: 1 }],
       },
     });
   });

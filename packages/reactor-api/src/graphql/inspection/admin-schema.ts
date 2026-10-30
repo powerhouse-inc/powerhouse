@@ -10,6 +10,8 @@ export const inspectionAdminTypeDefs = gql`
     processors: Boolean!
     "The catch-up priority can be set."
     catchUpPriority: Boolean!
+    "Memory telemetry can be switched and heap snapshots written."
+    memoryTelemetry: Boolean!
   }
 
   type Query {
@@ -36,5 +38,17 @@ export const inspectionAdminTypeDefs = gql`
     load controller (level must be absent); mode fixed holds level, 0-7.
     """
     inspectionSetCatchUpPriority(mode: String!, level: Int): Boolean!
+    "Starts or stops memory telemetry, or changes its interval or outputs, without a restart."
+    inspectionSetMemoryTelemetry(
+      enabled: Boolean!
+      intervalMs: Int
+      outputs: [String!]
+    ): Boolean!
+    """
+    Writes a V8 heap snapshot of the main thread and returns its path on the
+    host. Blocks the server for seconds to minutes. force skips the check for
+    free memory.
+    """
+    inspectionWriteHeapSnapshot(force: Boolean): String!
   }
 `;

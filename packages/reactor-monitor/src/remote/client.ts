@@ -10,6 +10,7 @@ import type {
   InspectorProcessorInfo,
   InspectorProcessorTimingReport,
   InspectorStorageHealth,
+  MemoryTelemetryReport,
   ProcessorPhase,
   RemoteCursorInfo,
   RemoteSyncInspection,
@@ -21,6 +22,7 @@ import type {
   WireInspectorDriveIntegrity,
   WireInspectorDrivePage,
   WireInspectorProcessor,
+  WireMemoryTelemetry,
   WireProcessorTimingReport,
   WireQueueState,
   WireReactorInfo,
@@ -354,6 +356,16 @@ export class RemoteInspectorClient
       inspection: { processorTiming: WireProcessorTimingReport };
     }>("processorTiming");
     return data.inspection.processorTiming;
+  }
+
+  async getMemoryTelemetry(
+    limit?: number,
+    sinceIso?: string,
+  ): Promise<MemoryTelemetryReport> {
+    const data = await this.query<{
+      inspection: { memoryTelemetry: WireMemoryTelemetry };
+    }>("memoryTelemetry", { limit, sinceIso });
+    return data.inspection.memoryTelemetry;
   }
 
   async getCatchUpStatus(): Promise<CatchUpStatus> {

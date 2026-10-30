@@ -708,6 +708,7 @@ export type {
   ValidationResult,
 } from "./src/admin/types.js";
 export * from "./src/processors/index.js";
+export * from "./src/telemetry/index.js";
 export * from "./src/catch-up/index.js";
 export * from "./src/inspector/index.js";
 

@@ -49,6 +49,7 @@ export function createReactorInspector(
     catchUp: module.catchUp,
     catchUpPriority: module.catchUpPriority,
     processorTiming: module.processorTiming,
+    memoryTelemetry: module.memoryTelemetry,
     integrity: new DocumentIntegrityService(
       module.keyframeStore,
       module.operationStore,

@@ -191,6 +191,7 @@ export function runPGliteWorker(port: MessagePort): void {
       case "reserve":
         return handleReserve(msg.id);
       case "release":
+      case "stats":
         return Promise.resolve();
       case "init":
         return handleInit(msg);
@@ -230,6 +231,14 @@ export function runPGliteWorker(port: MessagePort): void {
       if (admission?.id === msg.id) admission.release();
       return;
     }
+    if (msg.type === "stats") {
+      post({
+        type: "stats-result",
+        id: msg.id,
+        wasmBytes: wasmBytesOf(pg),
+      });
+      return;
+    }
     const current = admission;
     if (
       (msg.type === "query" || msg.type === "exec") &&
@@ -241,6 +250,12 @@ export function runPGliteWorker(port: MessagePort): void {
     }
     void enqueue(() => handle(msg));
   });
+}
+
+/** PGlite's types leave the Emscripten heap out of `Module`. */
+function wasmBytesOf(pg: PGlite | null): number {
+  const module = pg?.Module as { HEAPU8: Uint8Array } | undefined;
+  return module?.HEAPU8.byteLength ?? 0;
 }
 
 type Admission = {

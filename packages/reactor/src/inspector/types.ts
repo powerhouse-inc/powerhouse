@@ -17,6 +17,10 @@ import type {
   CatchUpPriorityState,
 } from "../processors/catch-up-priority.js";
 import type { Job } from "../queue/types.js";
+import type {
+  MemoryTelemetryChange,
+  MemoryTelemetryReport,
+} from "../telemetry/types.js";
 
 /** Where the reactor's store keeps its bytes. */
 export type StoragePersistence =
@@ -237,6 +241,14 @@ export interface IInspector {
   getProcessors(): Promise<InspectorProcessorInfo[]>;
   /** Where each processor's time goes; level `off` when nothing is recorded. */
   getProcessorTiming(): Promise<InspectorProcessorTimingReport>;
+  /**
+   * Memory samples correlated with operations processed, the latest `limit` at
+   * or after `sinceIso`. Refused on a host with no telemetry, such as a browser.
+   */
+  getMemoryTelemetry(
+    limit?: number,
+    sinceIso?: string,
+  ): Promise<MemoryTelemetryReport>;
   getCatchUpStatus(): Promise<CatchUpStatus>;
   /** The processor backfills' pace: mode, level, its settings, why, last load. */
   getCatchUpPriority(): Promise<CatchUpPriorityState>;
@@ -260,6 +272,10 @@ export interface IInspectorAdmin {
   sweepCatchUp(): Promise<SweepResult[]>;
   /** Fixes the level (0-7) or hands it to the load controller. */
   setCatchUpPriority(setting: CatchUpPrioritySetting): Promise<void>;
+  /** Starts or stops memory telemetry, or changes it, without a restart. */
+  setMemoryTelemetry(change: MemoryTelemetryChange): Promise<void>;
+  /** Writes a V8 heap snapshot of the main thread; returns its path on the host. */
+  writeHeapSnapshot(force?: boolean): Promise<string>;
   rebuildKeyframes(documentId: string, branch?: string): Promise<RebuildResult>;
   rebuildSnapshots(documentId: string, branch?: string): Promise<RebuildResult>;
 }

@@ -121,6 +121,11 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     );
   }
 
+  /** The jobs held for a missing document, for telemetry. */
+  deferredStats(): Record<string, number> {
+    return this.deferredJobs.stats();
+  }
+
   async start(numWorkers: number): Promise<void> {
     if (this.isRunning) {
       throw new Error("WorkerPoolJobExecutorManager is already running");

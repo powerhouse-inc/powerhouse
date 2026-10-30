@@ -358,6 +358,26 @@ export class PieceWorkerPool {
     return { size: this.size, active, idle, waiting: this.waiters.run.length };
   }
 
+  // Memory of the live children, from each one's last report.
+  memoryStats(): Record<string, number> {
+    let childRssTotal = 0;
+    let childRssMax = 0;
+    let childHeapUsedTotal = 0;
+    for (const child of this.children) {
+      const memory = child.worker.health?.().memory;
+      if (!memory) continue;
+      childRssTotal += memory.rss;
+      childRssMax = Math.max(childRssMax, memory.rss);
+      childHeapUsedTotal += memory.heapUsed;
+    }
+    return {
+      children: this.children.size,
+      childRssTotal,
+      childRssMax,
+      childHeapUsedTotal,
+    };
+  }
+
   // Kills every child, mid-request ones too, and refuses queued requests.
   // For shutdown; a live run does not survive it.
   dispose(): void {

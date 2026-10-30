@@ -1,4 +1,8 @@
 import type { QueryOptions, Results } from "@electric-sql/pglite";
+import {
+  registerTelemetryWorker,
+  type WorkerMemorySample,
+} from "@powerhousedao/reactor";
 import { childLogger, type ILogger } from "document-model";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { existsSync } from "node:fs";
@@ -41,7 +45,7 @@ export type PGliteAbortListener = (reason: string) => void;
 /** Called once, when the worker thread is gone; `error` is null after a clean close. */
 export type PGliteExitListener = (error: Error | null) => void;
 
-type PendingKind = "init" | "query" | "exec" | "close" | "reserve";
+type PendingKind = "init" | "query" | "exec" | "close" | "reserve" | "stats";
 
 type Pending = {
   kind: PendingKind;
@@ -100,6 +104,7 @@ export class ThreadedPGlite implements PGliteLike {
   private workerError: Error | null = null;
   private abortReason: string | null = null;
   private closePromise: Promise<void> | null = null;
+  private readonly forgetTelemetry: () => void;
 
   constructor(options: ThreadedPGliteOptions) {
     this.label = options.store.label;
@@ -125,6 +130,9 @@ export class ThreadedPGlite implements PGliteLike {
     this.worker.on("message", (msg: WorkerMessage) => this.handleMessage(msg));
     this.worker.on("error", (err: Error) => this.handleWorkerError(err));
     this.worker.on("exit", (code: number) => this.handleExit(code));
+    this.forgetTelemetry = registerTelemetryWorker(`pglite:${this.label}`, () =>
+      this.memoryStats(),
+    );
 
     this.waitReady = this.request<void>("init", (id) => ({
       type: "init",
@@ -146,6 +154,15 @@ export class ThreadedPGlite implements PGliteLike {
       },
     );
     this.waitReady.catch(() => undefined);
+  }
+
+  /** JS heap of the worker and the WASM linear memory, which only grows. */
+  async memoryStats(): Promise<WorkerMemorySample> {
+    const [heap, wasm] = await Promise.all([
+      this.worker.getHeapStatistics(),
+      this.request<number>("stats", (id) => ({ type: "stats", id })),
+    ]);
+    return { heapUsed: heap.used_heap_size, wasm };
   }
 
   /** True once the store is open and until close starts. */
@@ -348,6 +365,9 @@ export class ThreadedPGlite implements PGliteLike {
       case "exec-result":
         this.settle(msg.id, msg.inTransaction, msg.results);
         return;
+      case "stats-result":
+        this.settle(msg.id, this.inTransaction, msg.wasmBytes);
+        return;
       case "closed":
         this.settle(msg.id, false, undefined);
         return;
@@ -440,6 +460,7 @@ export class ThreadedPGlite implements PGliteLike {
   }
 
   private handleExit(code: number): void {
+    this.forgetTelemetry();
     const graceful = this.phase === "closing" && this.terminalError === null;
     this.phase = "closed";
     this.inTransaction = false;

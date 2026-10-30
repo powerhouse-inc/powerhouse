@@ -1820,3 +1820,72 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+/* Memory charts: thin lines on a recessive grid; text stays in text colours. */
+
+.rm-chart {
+  margin: 0 0 1.25rem;
+  max-width: 60rem;
+}
+
+.rm-chart figcaption {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.rm-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0 0 0.25rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+}
+
+.rm-chart-swatch {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.2rem;
+  margin-right: 0.3rem;
+  vertical-align: middle;
+  border-radius: 2px;
+}
+
+.rm-chart-plot {
+  position: relative;
+}
+
+.rm-chart-plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.rm-chart-grid {
+  stroke: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.rm-chart-tick {
+  fill: currentColor;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.rm-chart-crosshair {
+  stroke: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+.rm-chart-tooltip {
+  position: absolute;
+  top: 0.5rem;
+  z-index: 1;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  color: #1a1a1a;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
