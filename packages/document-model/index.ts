@@ -10,3 +10,4 @@ export * from "./src/logger-types.js";
 export * from "./src/logger.js";
 export * from "./src/module.js";
 export * from "./src/state.js";
+export * from "./src/definition/index.js";
