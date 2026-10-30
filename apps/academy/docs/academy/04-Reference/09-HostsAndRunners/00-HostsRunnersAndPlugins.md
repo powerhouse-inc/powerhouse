@@ -215,9 +215,62 @@ reactor: {
 
 The map is checked when the host loads. Connect applies it at boot: a drive
 placed on a switchboard gets no sync remote in the browser (one an earlier
-boot added is removed), and its reads and writes go to that switchboard. New
-drives are still created in the browser. A Connect may link to several
-switchboards, one remote backend each.
+boot added is removed), and its reads and writes go to that switchboard. A
+Connect may link to several switchboards, one remote backend each.
+
+### Where new drives go, and how Connect reaches a switchboard
+
+A Connect host sets where new drives are created, how long it waits for each
+switchboard, and when it stops calling one that doesn't answer:
+
+```js
+reactor: {
+  backends: {
+    main: { kind: "worker" },
+    sb: {
+      kind: "remote",
+      remote: {
+        url: switchboard.drives.b.url,
+        // Give up on one request after this long. Default 30 s.
+        requestTimeoutMs: 10_000,
+        // After 3 failed requests in a row, send nothing for 2 minutes.
+        // Default { failures: 3, openMs: 30_000 }. false: keep trying.
+        breaker: { failures: 3, openMs: 120_000 },
+        // Live updates from this switchboard. Default true.
+        realtime: true,
+      },
+    },
+  },
+  placement: {
+    // New drives are created on sb, with no copy in this browser.
+    newDrives: "sb",
+  },
+  router: {
+    // Wait this long for a reactor to say whether it holds a document.
+    // Default 3 s; 0 waits for the answer.
+    probeTimeoutMs: 3_000,
+    // Look again after this long for a document found on a switchboard.
+    // Default 30 s.
+    provisionalRouteMs: 30_000,
+  },
+},
+```
+
+`placement.newDrives` names the backend new drives are created on. Without
+it they are created in the browser, or, when the host has no browser
+reactor, on its only switchboard. A Connect with no browser reactor and
+several switchboards must set it. When the `newDrives` switchboard isn't
+answering, creating a drive fails with "<sb> isn't answering, so the drive
+wasn't created."; it is never created in the browser instead. Drives the host
+declares locally (`reactor.drives` without a `remote`) stay in the browser.
+
+Connect doesn't use `placement.primary`, and refuses a host that sets it: the
+browser reactor, when there is one, answers what no drive owns. Use
+`placement.newDrives` to choose where new drives go. A switchboard host keeps
+`placement.primary` to pick its own store.
+
+`requestTimeoutMs`, `breaker` and `realtime` apply only to a `remote`
+backend. Switchboard hosts ignore `newDrives` and `router`.
 
 Validation refuses a remote link that is not a drive address (an
 `endpoints.graphql` token or a `/graphql` URL fails with an error naming the
