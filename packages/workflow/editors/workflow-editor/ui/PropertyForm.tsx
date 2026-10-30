@@ -71,7 +71,7 @@ import {
   optionIcon,
   richTextMode,
 } from "./prop-controls.js";
-import { PropLayout } from "./prop-layout.js";
+import { essentialNames, PropLayout } from "./prop-layout.js";
 import { isEmptyValue } from "./validation.js";
 
 // Splices text at the field's cursor and returns the updated value.
@@ -1744,8 +1744,13 @@ export function PropertyForm(props: {
   // A hidden field's value is not cleared: switching scheme to None and back
   // must not silently discard the secret ref the author already minted.
   const visible = props.props.filter((prop) => isPropVisible(prop, current));
-  const essential = visible.filter((prop) => !prop.advanced);
-  const advanced = visible.filter((prop) => prop.advanced);
+  const kept = essentialNames(props.props, props.groups);
+  const essential = visible.filter(
+    (prop) => !prop.advanced || kept.has(prop.name),
+  );
+  const advanced = visible.filter(
+    (prop) => prop.advanced && !kept.has(prop.name),
+  );
   const [showAdvanced, setShowAdvanced] = useState(false);
   // Closed even when advanced fields hold values, so the count goes in the
   // label — else config already in effect reads as config that is not there.

@@ -245,6 +245,22 @@ export const proposeActionsAction = createAction({
     "Ask a model which actions to apply to a document. Outputs them for Dispatch actions; this step writes nothing.",
   requireReactor: "read",
   defaultTimeoutSeconds: 120,
+  propertyGroups: [
+    {
+      key: "documents",
+      display: "section",
+      label: "Documents",
+      icon: "list",
+      props: ["documentId", "documents"],
+    },
+    {
+      key: "request",
+      display: "section",
+      label: "Request",
+      icon: "pencil",
+      props: ["instruction", "allowedActionTypes"],
+    },
+  ],
   props: {
     documentId: documentIdProp(
       "Document",

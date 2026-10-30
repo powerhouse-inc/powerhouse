@@ -283,6 +283,31 @@ function Summary(props: { members: BlockFormProp[]; layout: LayoutProps }) {
   );
 }
 
+// Kept out of "More options" despite `advanced`, as Activepieces does:
+// all of a builder form, tab and section members, and their reveals.
+export function essentialNames(
+  props: BlockFormProp[],
+  groups: PropertyGroup[] | undefined,
+): Set<string> {
+  const all = groups ?? [];
+  if (all.some((group) => ["builder", "footer"].includes(group.display))) {
+    return new Set(props.map((prop) => prop.name));
+  }
+  const names = new Set(
+    all
+      .filter(
+        (group) => group.display === "tabs" || group.display === "section",
+      )
+      .flatMap((group) => group.props),
+  );
+  if (all.some((group) => group.display === "section")) {
+    for (const prop of props) {
+      for (const name of prop.reveals ?? []) names.add(name);
+    }
+  }
+  return names;
+}
+
 export function PropLayout(props: LayoutProps) {
   const groups = (props.groups ?? []).filter(
     (group) => PLACED.has(group.display) || group.display === "summary",
@@ -295,10 +320,27 @@ export function PropLayout(props: LayoutProps) {
       if (byName.has(name) && !groupOf.has(name)) groupOf.set(name, group);
     }
   }
-  const membersOf = (group: PropertyGroup) =>
-    group.props
+  // A section checkbox's reveals join its section, folded under it there.
+  for (const group of groups) {
+    if (group.display !== "section") continue;
+    for (const name of group.props) {
+      if (groupOf.get(name) !== group) continue;
+      for (const revealed of byName.get(name)?.reveals ?? []) {
+        if (byName.has(revealed) && !groupOf.has(revealed)) {
+          groupOf.set(revealed, group);
+        }
+      }
+    }
+  }
+  const membersOf = (group: PropertyGroup) => {
+    const named = group.props.filter((name) => groupOf.get(name) === group);
+    const joined = [...groupOf.keys()].filter(
+      (name) => groupOf.get(name) === group && !named.includes(name),
+    );
+    return [...named, ...joined]
       .map((name) => byName.get(name))
       .filter((prop): prop is BlockFormProp => prop !== undefined);
+  };
   const builderGroups = groups.filter((group) => group.display === "builder");
   const summaries = groups.filter((group) => group.display === "summary");
   const sectionMembers = groups
