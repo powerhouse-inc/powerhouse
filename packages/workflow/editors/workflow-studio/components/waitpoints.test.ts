@@ -115,6 +115,15 @@ describe("approvalCountLabel", () => {
 });
 
 describe("waitDescription", () => {
+  it("says a Call workflow step waits for the called workflow", () => {
+    expect(
+      waitDescription(callback(), "Review", {
+        pieceName: "@activepieces/piece-subflows",
+        blockName: "callFlow",
+      }),
+    ).toBe("Review is waiting for the called workflow to respond");
+  });
+
   it("says what a callback or a delay waits for", () => {
     expect(waitDescription(callback(), "Hook")).toBe(
       "Hook is waiting for a webhook callback",

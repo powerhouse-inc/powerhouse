@@ -34,8 +34,11 @@ export interface GraphLayout {
   lanes: number;
 }
 
-// Ports that leave the main line and drop to a lower lane.
-const SIDE_PORTS = new Set(["false", "error"]);
+// Ports that leave the main line and drop to a lower lane: a loop's body,
+// and every router branch after the first.
+const SIDE_PORTS = new Set(["false", "error", "each", "otherwise"]);
+const isSidePort = (port: string) =>
+  SIDE_PORTS.has(port) || /^branch_(?!1$)\d+$/.test(port);
 
 export function graphLayout(args: {
   triggerId?: string | null;
@@ -59,7 +62,7 @@ export function graphLayout(args: {
   // A side port drops a lane only to clear the way for its source's other
   // path; a step's only way out stays on its lane.
   const drops = (edge: OutlineEdge) =>
-    SIDE_PORTS.has(edge.port) && (outbound.get(edge.from) ?? 0) > 1;
+    isSidePort(edge.port) && (outbound.get(edge.from) ?? 0) > 1;
 
   const nodes: GraphNode[] = [];
   for (const { step } of rows) {

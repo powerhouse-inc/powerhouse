@@ -324,7 +324,8 @@ action at another version is the same block.
 ### The core piece
 
 The engine's own blocks are the built-in piece `@powerhousedao/piece-core`, in
-`src/pieces/core/`. Its actions are `branch`, `assert`, `delay`,
+`src/pieces/core/`. Its actions are `branch`, `router`, `loop` ("Loop on
+items"), `assert`, `delay`,
 `approval` ("Request approval"), `stop` ("Stop run") and `waitForWebhook`
 ("Respond and wait for webhook"); its triggers are
 `manual`, `schedule` and `webhook`. It is written with `createPiece`,
@@ -341,6 +342,36 @@ The engine's own blocks are the built-in piece `@powerhousedao/piece-core`, in
 - `branch` and `assert` run through `ActivepiecesBlockExecutor` like any piece
   action, with the same resolution and journaling. `branch` leaves on `true`
   or `false` by its result.
+- `router` is Activepieces' Router, first match wins. Its `branches` prop is a
+  list; each item has an optional `name` and one condition of the same shape
+  and semantics as `branch` (`left`, `operator`, `right`, `caseSensitive`).
+  Its ports follow its config: `branch_1` … `branch_N`, then `otherwise` when
+  no branch holds, and `error` (`stepPorts` and `routerPorts` in
+  `@powerhousedao/pieces-framework/workflow`; the editor labels them with the
+  branch names, else "Branch N", and "Otherwise"). It outputs
+  `{ branch, index }`: the matched branch's name and 1-based index, both
+  `null` for `otherwise`. Every branch resolves before any is tested, so a
+  missing reference fails the step unless that branch's operator is an
+  existence test. An operand of the wrong type fails it naming the branch.
+- `loop` is Activepieces' Loop on Items. Its `items` must resolve to a list;
+  anything else fails the step. Its ports are `next`, `each` and `error`. Its
+  body is every step reachable from its `each` edges, and must be closed: a
+  body step reached from outside the body, or a body step with an edge back
+  to the loop, fails the run before any step runs, naming the step. The
+  coordinator runs the body once per item, in order,
+  each iteration from fresh records and edge decisions; body steps read
+  `{{steps.<loop>.output.item}}` and `.index` (from 1). Then the loop takes
+  `next` with the output `{ item, index, count, iterations }`, where
+  `iterations` is `[{ index, item, steps: { <key>: output } }]`, kept while
+  the row stays under 240 KiB of UTF-8 (`iterationsTruncated` past it), and
+  `item` and `index` are the last item's. The row is redacted with every body
+  step's connection secrets too. Zero items skip the body. After the loop each
+  body step's scope entry and record are its last iteration's. A body step
+  failing with no `error` edge fails the loop and the run. Loops nest. A
+  step that waits inside a body fails the run: `Step "<key>" cannot wait
+  inside a loop yet`. A core wait, or Call Flow with Wait for Response, is
+  refused before it runs; any other piece that pauses is refused after it
+  ran, so its side effects stand.
 - `delay` ("Delay for" an amount and unit, or "Delay until" a date) suspends
   the run on a `DELAY` waitpoint and outputs `{ resumedAt }`; a time already
   past does not wait. `approval` suspends it on a WEBHOOK waitpoint of kind
@@ -442,6 +473,23 @@ passes over the `steps` array in order until a pass changes nothing:
 - **Never reached.** A step in a cycle, or fed by an edge from a step that does
   not exist, is skipped when the run ends. So is every step not yet reached
   when a step fails with no `error` edge taken.
+- **Loop bodies.** The steps a loop's `each` edges reach are left out of the
+  outer passes. The loop step walks them by the same rules once per item,
+  then decides its own edges on `next`. Each iteration journals its body
+  steps under the path `<loop>[<i>]/<step>` (nested loops concatenate,
+  `i` from 1); once a top-level loop ends, the loop's row, then each body
+  step's last-iteration row under its own id, follow (`step_execution` is
+  unique per `(run_id, step_path)`). Run detail reads the first 1000
+  iteration rows and the total; run listings read none. Resume carry reads
+  only the rows under a step's own id; a resume carries a finished loop
+  with its body.
+- **Loop reruns.** A rerun runs every loop again, and replays its
+  iterations step by step from the rows under their paths. An iteration
+  replays only while its item, as the loop row journaled it, is unchanged;
+  a body step replays by the same rules as a top-level one (same key and
+  hash, SUCCEEDED or REPLAYED, a read re-runs). The loop row's config hash
+  covers its body's steps and edges, so a rewired body, or a loop row
+  truncated past the payload cap, runs every iteration again.
 
 Which port a step takes changes which steps run, never the order steps are
 reached in. The studio's step outline (`stepOutline` in the workflow editor)
@@ -872,6 +920,58 @@ step returns. Directories a crashed host left behind are swept at startup.
   after the same check.
 - **Time.** Staging and ingest count against the step's timeout.
 
+## Sub-flows
+
+Activepieces' `@activepieces/piece-subflows` runs unmodified (the editor pins
+`0.7.0` and lists its blocks under Core): the **Callable Flow** trigger
+("Callable workflow"), **Call Flow** ("Call workflow") and **Return Response**
+("Return response"). Stream CSV to Subflows is not offered.
+
+- `ctx.flows.list` answers with the Callable Flow workflows of every drive
+  the calling workflow is in, itself included, that the reader may read: the
+  design-time caller, else the calling workflow's run user (with no run user,
+  none while auth enforcement is on). They come as Activepieces
+  `PopulatedFlow` records: `id` and `externalId` are the workflow id,
+  `status` is `ENABLED` only for an enabled, published workflow,
+  `version.displayName` is its name and `version.trigger.settings` is its
+  runnable trigger (`pieceName`, `pieceVersion`, `triggerName`, and its
+  config as `input`). A workflow in no drive can list only itself. Steps, trigger hooks (but `test` and `onDisable`)
+  and design-time options get it; `blockOptions` takes the edited
+  `workflowId` for the last.
+- `ctx.server.apiUrl` is `http://reactor.invalid`, an origin that is never on
+  the network. The worker's global `fetch` hands a request to it to the host
+  over the call channel, so a sub-flow call needs no public URL, no egress
+  rule and no replica routing, and only a run of this reactor can make one.
+  Another HTTP client fails to resolve it. `publicUrl` is the origin of
+  `waitpointBaseUrl` when there is one; `server.token` throws.
+- The host origin serves `POST /v1/webhooks/<workflowId>` (Call Flow) and
+  `POST /v1/waitpoints/<token>` (Return Response); anything else is 404. A
+  call is refused unless the target is listed for the caller (404) and is
+  enabled with the Callable Flow trigger (409), or when its
+  `ap-parent-run-id` names another run (403). It goes through the trigger's
+  `run` hook and journals the callee's run, answering `{ runId }`.
+- Call Flow's callback is a resume URL on the host origin, minted without
+  `waitpointBaseUrl`, so Return Response resumes the caller in process. A
+  callback on `waitpointBaseUrl` this host minted is mapped to the host
+  origin too. A response no pending waitpoint takes
+  answers `{ status: "gone", discarded: true }` and Return Response fails.
+  Switchboard's public resume route adds `discarded` to its JSON answers too.
+- The callee's run records its caller (`parent_run_id`) and, when the caller
+  asked to fail on failure (Wait for Response), the waitpoint it waits on
+  (`parent_waitpoint_id`). A callee that ends `FAILED`, `CANCELLED` or
+  `INDETERMINATE` resolves that waitpoint with
+  `{ status: "error", data: { message, runId } }`, so Call Flow throws and the
+  caller fails. A callee that succeeds without Return Response leaves the
+  caller waiting until its waitpoint expires, as upstream.
+- A Callable Flow trigger arms without a public webhook endpoint and is never
+  polled. Its workflow's public webhook URL answers 401: it is called only by
+  runs of this reactor.
+- A trigger's `onStart` runs once per run, before its first step, with the
+  run's id as `ctx.run.id` and the trigger item as `payload`; it fails the run
+  when it throws. A rerun or a resumed leg does not run it, so a rerun called
+  run answers no caller. A trigger without one, or with `createTrigger`'s no-op
+  default, is not called.
+
 ## Known missing features
 
 This is what a piece can declare or call that this engine does not run. It is tracked in
@@ -913,7 +1013,8 @@ releases what an earlier enable registered. The reason reads
   either fails or fires a spurious run (#3090).
 - `setSchedule({ cronExpression })` is run as a fixed interval; wall-clock
   time and timezone are lost.
-- `onStart` is never called. The trigger context's `server` is a throwing stub.
+- A trigger hook's `server` is the host origin (see Sub-flows), except in
+  `test` and `onDisable`, where it throws.
 - Outside a delivery a hook's `payload` is `undefined`; upstream passes `{}`
   (#3090).
 - A webhook payload carries no raw body, and its signature headers
@@ -997,7 +1098,7 @@ releases what an earlier enable registered. The reason reads
   operations. This is not the reactor's own rebuild (keyframes, upgrade
   transitions); when the result does not hash to the pin, the leg fails.
 - A WEBHOOK waitpoint needs the host's `waitpointBaseUrl`; without it
-  `createWaitpoint({ type: "WEBHOOK" })` throws.
+  `createWaitpoint({ type: "WEBHOOK" })` throws, except in Call Flow.
 - A resumed run reads steps journaled before it waited from the journal: a
   truncated or redacted output is unavailable to later steps, and a document
   output is its reference, not the document.
@@ -1025,7 +1126,9 @@ releases what an earlier enable registered. The reason reads
 - The deprecated `generateResumeUrl` links to the waitpoint the step's
   deprecated `run.pause` creates (one link per step). A step that pauses some
   other way, or that already made a waitpoint, leaves that link dead.
-- `connections.get`, `tags`, `server`, `agent` and `flows.list` throw.
+- `connections.get`, `tags`, `agent` and `server.token` throw. `server` and
+  `flows.list` are served as described in Sub-flows; a single-step test gets
+  neither.
 - `ctx.store` checks the key length on `put` only; `get` and `delete` of an
   over-long key answer as if it were absent.
 - `flows.current.version.id` is a constant. `project.id` is `reactor` on

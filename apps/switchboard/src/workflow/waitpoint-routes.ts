@@ -300,17 +300,18 @@ function json(
   headers?: Record<string, string>,
   outcome?: string,
 ): Response {
-  return new Response(
-    JSON.stringify(outcome ? { status: outcome, message } : { message }),
-    {
-      status,
-      headers: {
-        "content-type": "application/json",
-        "cache-control": "no-store",
-        ...headers,
-      },
+  // `discarded` as Activepieces' Return Response reads it.
+  const body = outcome
+    ? { status: outcome, message, discarded: outcome === "gone" }
+    : { message };
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      ...headers,
     },
-  );
+  });
 }
 
 interface PageContent {

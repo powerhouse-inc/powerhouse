@@ -27,6 +27,12 @@ import type {
 import type { WorkflowCaller, WorkflowRuntimeHostDeps } from "./host.js";
 
 import {
+  isLoopStep,
+  loopConfigHash,
+  loopStructure,
+} from "../pieces/engine/loops.js";
+import { loopItems } from "../pieces/core/flow.js";
+import {
   blockLabel,
   blockPorts,
   builtinPiece,
@@ -69,6 +75,10 @@ import {
   type ReplayedStep,
   type CarriedStep,
   type WaitpointPort,
+  type FlowsPort,
+  type HostHttpRequest,
+  type HostHttpResponse,
+  FLOWS_LIST,
   type RunResponse,
   canonicalJson,
   hashOf,
@@ -230,11 +240,17 @@ import {
   runJournal,
   unboundReactorConnection,
 } from "./reactor-session.js";
-import { PUBLISH_WORKFLOW, runUserOfOperation } from "./run-user.js";
+import {
+  PUBLISH_WORKFLOW,
+  publishRunUser,
+  runUserOfOperation,
+} from "./run-user.js";
 import {
   APPROVAL_BLOCK,
   ASSERT_BLOCK,
   BRANCH_BLOCK,
+  LOOP_BLOCK,
+  ROUTER_BLOCK,
   DELAY_BLOCK,
   isCoreBlock,
   MANUAL_BLOCK,
@@ -273,6 +289,20 @@ import {
   type TriggerStateRow,
 } from "./store.js";
 import { ParkState } from "./park-state.js";
+import {
+  CALL_FLOW_ACTION,
+  FAIL_PARENT_HEADER,
+  HOST_WAITPOINTS_URL,
+  hostBody,
+  hostRoute,
+  isCallableFlow,
+  jsonReply,
+  localCallback,
+  PARENT_RUN_HEADER,
+  populatedFlow,
+  SUBFLOWS_PIECE,
+  type PopulatedFlow,
+} from "./subflows.js";
 import { decodeRunCursor, encodeRunCursor } from "./run-cursor.js";
 import {
   CANCELLED_RUN_STATUS,
@@ -375,6 +405,7 @@ interface RunTrace {
 // A rerun's journaled outputs, replayed instead of executed.
 type RunResume = {
   completedSteps: Map<string, ReplayedStep>;
+  loopItems: Map<string, unknown[]>;
   rerunOf: string;
 };
 
@@ -415,9 +446,14 @@ export interface ConnectionCheckResult {
 }
 
 /** A journal row with the steps that belong to it, as the subgraph serves it. */
+// Loop iteration rows a run's detail serves.
+export const RUN_ITERATIONS_LIMIT = 1000;
+
 export interface RunRecord {
   row: RunRow;
   steps: StepExecutionRow[];
+  // Iteration rows journaled, when `steps` holds only the first of them.
+  iterationsTotal?: number;
 }
 
 export interface RunsArgs {
@@ -1077,7 +1113,7 @@ export class WorkflowRuntimeService {
     this.storeOpening = true;
     const opening = WorkflowRunStore.create(this.host.relationalDb);
     opening.then(
-      () => {
+      (store) => {
         this.storeOpening = false;
         if (this.storeError !== undefined) {
           this.logger.info("Workflow run store opened after failing to");
@@ -1085,6 +1121,7 @@ export class WorkflowRuntimeService {
         this.storeError = undefined;
         this.storeReopenMs = STORE_REOPEN_MS;
         this.retentionSweep?.();
+        for (const runId of store.orphanedRunIds) void this.endSubflow(runId);
       },
       (error: unknown) => {
         this.storeOpening = false;
@@ -2644,6 +2681,8 @@ export class WorkflowRuntimeService {
       pollHeld: (workflowId) => this.pollHeld(workflowId),
       webhookUrlFor: async (workflowId) =>
         (await this.mintWebhookEndpoint(workflowId))?.url,
+      flowsFor: (workflowId, runId) =>
+        this.flowsPort(workflowId, runId ?? null),
       reactorAccess: (binding, requireReactor, runUser) =>
         this.triggerReactorAccess(binding, requireReactor, runUser),
       models: this.models,
@@ -3186,6 +3225,8 @@ export class WorkflowRuntimeService {
     binding: PieceTriggerBinding,
     request: WebhookRequest,
   ): Promise<WebhookReply> {
+    // A callable workflow is called by a run of this reactor, never over HTTP.
+    if (isCallableFlow(binding)) return UNAUTHORIZED;
     const probe = await this.pieceHandshake(binding, request);
     if (probe) return probe;
 
@@ -3459,6 +3500,11 @@ export class WorkflowRuntimeService {
     ctx?: WorkflowCaller,
   ): Promise<string[]> {
     await this.assertCanReadDocument(driveId, ctx);
+    const ids = await this.workflowNodeIds(driveId);
+    return this.readableRows(ids, (id) => id, ctx);
+  }
+
+  private async workflowNodeIds(driveId: string): Promise<string[]> {
     let page = await this.host.reactorClient.drives.listNodes(driveId);
     const nodes = [...page.results];
     // A drive past one page would otherwise scope runs to a prefix of its
@@ -3468,14 +3514,13 @@ export class WorkflowRuntimeService {
       nodes.push(...page.results);
     }
     // Only file nodes carry a documentType, so `in` also rules out folders.
-    const ids = nodes
+    return nodes
       .filter(
         (node) =>
           "documentType" in node &&
           node.documentType === WORKFLOW_DOCUMENT_TYPE,
       )
       .map((node) => node.id);
-    return this.readableRows(ids, (id) => id, ctx);
   }
 
   // The run journal, scoped to what this caller may read: a run carries its
@@ -3559,6 +3604,7 @@ export class WorkflowRuntimeService {
       full || exhausted
         ? lastRow && { enqueuedAt: lastRow.enqueued_at, id: lastRow.id }
         : position;
+    // Loop iterations are left to the run's detail.
     const steps = await store.getStepsForRuns(
       rows.map((row) => row.id),
       { withData: args.withStepData ?? true },
@@ -3579,7 +3625,20 @@ export class WorkflowRuntimeService {
     if (!row) return null;
     if (!(await this.canReadDocument(row.workflow_id, ctx))) return null;
     if ((await this.servedRuns([row], ctx)).length === 0) return null;
-    return { row, steps: await store.getSteps(row.id) };
+    const steps = await store.getSteps(row.id, {
+      withIterations: true,
+      iterationLimit: RUN_ITERATIONS_LIMIT,
+    });
+    const shown = steps.filter((step) => step.step_path !== step.step_id);
+    const total =
+      shown.length < RUN_ITERATIONS_LIMIT
+        ? shown.length
+        : await store.countIterations(row.id);
+    return {
+      row,
+      steps,
+      ...(total > shown.length ? { iterationsTotal: total } : {}),
+    };
   }
 
   // Design-time: the powerhouse/connection documents this caller may read,
@@ -4433,6 +4492,8 @@ export class WorkflowRuntimeService {
     searchValue?: string,
     // The step's reactor connection, which narrows what a resolver reads.
     reactorConnectionId?: string,
+    // The workflow being edited; ctx.flows.list lists what it may call.
+    editedWorkflowId?: string,
   ): Promise<unknown> {
     // Auth-dependent options() resolvers need the step's connection. Nothing
     // about the request authorizes it, so the caller's own read access does.
@@ -4440,6 +4501,16 @@ export class WorkflowRuntimeService {
     if (reactorConnectionId) {
       await this.assertCanReadDocument(reactorConnectionId, ctx);
     }
+    // Only ctx.flows needs the workflow; one not readable yet (e.g. not synced
+    // from the editor) lists no flows rather than failing every dropdown.
+    const workflowId =
+      editedWorkflowId &&
+      (await this.assertCanReadDocument(editedWorkflowId, ctx).then(
+        () => true,
+        () => false,
+      ))
+        ? editedWorkflowId
+        : undefined;
     const resolution = await this.resolveBlock(block);
     const parsed = resolvedBlock(resolution);
     if (!parsed) {
@@ -4478,8 +4549,24 @@ export class WorkflowRuntimeService {
         // Options come from the same service the step will call: the editor
         // must not offer a choice a run cannot reach.
         ...(this.designEgress ? { egress: this.designEgress } : {}),
+        ...(workflowId ? { flows: true } : {}),
       },
-      reactor ? { reactor } : {},
+      {
+        ...(reactor ? { reactor } : {}),
+        ...(workflowId
+          ? {
+              hostCalls: {
+                [FLOWS_LIST]: (payload: unknown) =>
+                  this.listFlows(
+                    workflowId,
+                    (payload as { externalIds?: string[] } | undefined)
+                      ?.externalIds,
+                    ctx,
+                  ),
+              },
+            }
+          : {}),
+      },
     );
     return result.output;
   }
@@ -4507,6 +4594,45 @@ export class WorkflowRuntimeService {
             { name: "left", type: "value" },
             { name: "right", type: "value" },
             { name: "result", type: "Boolean!" },
+          ],
+        };
+      case ROUTER_BLOCK:
+        return {
+          source: "static",
+          nodes: [
+            {
+              name: "branch",
+              type: "String",
+              description: "The matched branch's name; null for otherwise",
+            },
+            {
+              name: "index",
+              type: "Int",
+              description: "The matched branch, from 1; null for otherwise",
+            },
+          ],
+        };
+      case LOOP_BLOCK:
+        return {
+          source: "static",
+          nodes: [
+            {
+              name: "item",
+              type: "value",
+              description: "The current item; the last one after the loop",
+            },
+            { name: "index", type: "Int!", description: "From 1" },
+            { name: "count", type: "Int", description: "Set after the loop" },
+            {
+              name: "iterations",
+              type: "array",
+              description: "Set after the loop: each item's step outputs",
+              children: [
+                { name: "index", type: "Int!" },
+                { name: "item", type: "value" },
+                { name: "steps", type: "JSONObject!" },
+              ],
+            },
           ],
         };
       case ASSERT_BLOCK:
@@ -5028,6 +5154,7 @@ export class WorkflowRuntimeService {
       return await traced;
     } finally {
       this.settleFiring(workflowId);
+      if (enqueuedRunId) void this.endSubflow(enqueuedRunId);
     }
   }
 
@@ -5368,6 +5495,9 @@ export class WorkflowRuntimeService {
       // Shut down during the journal write: refused here, and the journal
       // records the run as failed rather than leaving it to be swept up.
       if (this.closed) throw new WorkflowRuntimeClosedError(workflowId);
+      if (runId && !resume) {
+        await this.startPieceTrigger(workflowId, runId, triggerPayload);
+      }
       session = this.workers().session();
       const { result, handed } = await this.executeLeg({
         workflowId,
@@ -5385,6 +5515,7 @@ export class WorkflowRuntimeService {
         triggerPayload,
         executor,
         completedSteps: resume?.completedSteps,
+        loopItems: resume?.loopItems,
         replayed: resume?.completedSteps,
         pin: () => ({
           definition_hash: this.definitionHash(workflowId, state),
@@ -5445,6 +5576,7 @@ export class WorkflowRuntimeService {
     triggerPayload: unknown;
     executor: BlockExecutor;
     completedSteps?: Map<string, ReplayedStep>;
+    loopItems?: Map<string, unknown[]>;
     carriedSteps?: Map<string, CarriedStep>;
     resume?: { stepId: string; payload: unknown };
     firstOrdinal?: number;
@@ -5507,6 +5639,7 @@ export class WorkflowRuntimeService {
           }
         },
         ...(waitpoints ? { waitpoints: waitpoints.port } : {}),
+        flows: this.flowsPort(workflowId, runId),
       },
       () =>
         runWorkflow({
@@ -5517,6 +5650,7 @@ export class WorkflowRuntimeService {
           ...(secretValues.length > 0 ? { redactValues: secretValues } : {}),
           triggerPayload: leg.triggerPayload,
           completedSteps: leg.completedSteps,
+          ...(leg.loopItems ? { loopItems: leg.loopItems } : {}),
           ...(leg.carriedSteps ? { carriedSteps: leg.carriedSteps } : {}),
           ...(leg.resume ? { resume: leg.resume } : {}),
           ...(leg.firstOrdinal !== undefined
@@ -5531,7 +5665,7 @@ export class WorkflowRuntimeService {
           onStep:
             store && runId
               ? async (record, ordinal) => {
-                  executionOrder.set(record.stepId, ordinal);
+                  if (!record.path) executionOrder.set(record.stepId, ordinal);
                   try {
                     await this.telemetry.phase("journal.step", {}, () =>
                       store.recordStep(runId, ordinal, record),
@@ -6003,26 +6137,61 @@ export class WorkflowRuntimeService {
     const document = await this.host.reactorClient.get<WorkflowDocument>(
       run.workflow_id,
     );
+    const runnable = runnableDefinition(document.state.global);
     const currentSteps = new Map(
-      runnableDefinition(document.state.global).steps.map((step) => [
-        step.id,
-        stepDefinition(step),
-      ]),
+      runnable.steps.map((step) => [step.id, stepDefinition(step)]),
     );
+    const current = {
+      steps: [...currentSteps.values()],
+      edges: runnable.edges,
+    };
+    const structure = loopStructure(current);
+    const hashes = new Map<string, string>();
+    const hashNow = (step: ReturnType<typeof stepDefinition>) => {
+      let hash = hashes.get(step.id);
+      if (hash === undefined) {
+        hash = isLoopStep(step)
+          ? loopConfigHash(step, current, structure)
+          : stepConfigHash(step);
+        hashes.set(step.id, hash);
+      }
+      return hash;
+    };
+    const readers = new Map<string, Promise<boolean>>();
+    const rereads = (step: ReturnType<typeof stepDefinition>) => {
+      let reads = readers.get(step.id);
+      if (!reads) readers.set(step.id, (reads = this.rereads(step)));
+      return reads;
+    };
     // Reuse an output only while the step is the step that produced it: same
-    // key, and the same definition hash (block type, config, connection, schemas).
+    // key, and the same definition hash (block type, config, connection, schemas;
+    // a loop's body shape too). Keyed by path: loop iterations replay one by one.
     const completedSteps = new Map<string, ReplayedStep>();
-    for (const row of await store.getSteps(runId)) {
-      if (row.status !== "SUCCEEDED" && row.status !== "REPLAYED") continue;
-      const current = currentSteps.get(row.step_id);
+    const loopItemsByPath = new Map<string, unknown[]>();
+    const rows = await store.getSteps(runId, { withIterations: true });
+    for (const row of rows) {
+      const step = currentSteps.get(row.step_id);
       if (
-        !current ||
-        current.key !== row.step_key ||
+        !step ||
+        step.key !== row.step_key ||
         row.config_hash === null ||
-        stepConfigHash(current) !== row.config_hash
+        hashNow(step) !== row.config_hash
       ) {
         continue;
       }
+      // A loop runs again; its items tell which iterations can replay.
+      if (isLoopStep(step)) {
+        const input =
+          row.input === null ? undefined : (JSON.parse(row.input) as unknown);
+        if (input === undefined || isTruncatedStepPayload(input)) continue;
+        try {
+          loopItemsByPath.set(row.step_path, loopItems(input));
+        } catch {
+          // Items that were never a list ran no iteration.
+        }
+        continue;
+      }
+      if (row.status !== "SUCCEEDED" && row.status !== "REPLAYED") continue;
       const output =
         row.output === null ? undefined : (JSON.parse(row.output) as unknown);
       // The journal capped this output to a marker (store.ts,
@@ -6033,8 +6202,8 @@ export class WorkflowRuntimeService {
       // downstream step that reads it fails the rerun by name. A declared
       // read has no side effect to repeat, so it re-runs instead.
       if (isTruncatedStepPayload(output)) {
-        if (await this.rereads(current)) continue;
-        completedSteps.set(row.step_id, {
+        if (await rereads(step)) continue;
+        completedSteps.set(row.step_path, {
           port: row.port,
           outputTruncated: true,
           // Carried so this rerun's REPLAYED row journals the marker again. A
@@ -6046,16 +6215,16 @@ export class WorkflowRuntimeService {
       }
       // Reads re-read the documents they referenced; a succeeded write is never
       // repeated. An INDETERMINATE step is not in this map, so it runs again.
-      if (containsDocumentRef(output) && (await this.rereads(current))) {
+      if (containsDocumentRef(output) && (await rereads(step))) {
         continue;
       }
-      completedSteps.set(row.step_id, { output, port: row.port });
+      completedSteps.set(row.step_path, { output, port: row.port });
     }
     return this.fire(
       run.workflow_id,
       triggerPayload,
       "rerun",
-      { completedSteps, rerunOf: runId },
+      { completedSteps, loopItems: loopItemsByPath, rerunOf: runId },
       ctx,
     );
   }
@@ -6066,6 +6235,299 @@ export class WorkflowRuntimeService {
   ): Promise<boolean> {
     const parsed = resolvedBlock(await this.resolveBlock(stepBlock(step)));
     return parsed ? (await this.declaredReactor(parsed)) === "read" : false;
+  }
+
+  // ── sub-flows ─────────────────────────────────────────────────────────────
+
+  // ctx.flows and ctx.server for a run, a trigger hook or a step test.
+  private flowsPort(workflowId: string, runId: string | null): FlowsPort {
+    const base = this.resumeBaseUrl();
+    return {
+      list: (params) => this.listFlows(workflowId, params.externalIds),
+      request: (request) => this.hostRequest(workflowId, runId, request),
+      ...(base ? { publicUrl: new URL(base).origin } : {}),
+    };
+  }
+
+  private resumeBaseUrl(): string | undefined {
+    const configured = this.host.waitpointBaseUrl?.replace(/\/+$/, "");
+    return configured && URL.canParse(configured) ? configured : undefined;
+  }
+
+  // The drives a workflow is in: the project a callable flow is offered within.
+  private async drivesOf(workflowId: string): Promise<string[]> {
+    try {
+      const parents = await this.host.reactorClient.getIncomingRelationships(
+        workflowId,
+        CHILD_RELATIONSHIP,
+      );
+      return parents.results
+        .filter((parent) => parent.header.documentType === DRIVE_DOCUMENT_TYPE)
+        .map((parent) => parent.header.id);
+    } catch (error) {
+      this.logger.debug(
+        "Could not read the drives of workflow @workflow: @error",
+        workflowId,
+        error,
+      );
+      return [];
+    }
+  }
+
+  // The workflows of the drives this one is in, itself included.
+  private async callableWorkflowIds(workflowId: string): Promise<string[]> {
+    const ids = new Set([workflowId]);
+    for (const driveId of await this.drivesOf(workflowId)) {
+      for (const id of await this.workflowNodeIds(driveId)) ids.add(id);
+    }
+    return [...ids];
+  }
+
+  // A Callable Flow workflow the reader reads, as Activepieces lists it.
+  private async callableFlow(
+    id: string,
+    reads: (documentId: string) => Promise<boolean>,
+  ): Promise<PopulatedFlow | undefined> {
+    try {
+      const document = await this.host.reactorClient.get<WorkflowDocument>(id);
+      if (document.header.documentType !== WORKFLOW_DOCUMENT_TYPE) {
+        return undefined;
+      }
+      const trigger = runnableDefinition(document.state.global).trigger;
+      if (!trigger || !isCallableFlow(trigger) || !(await reads(id))) {
+        return undefined;
+      }
+      return populatedFlow(id, document.state.global, document.header.name);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** `ctx.flows.list`, as Activepieces' PopulatedFlow records: the Callable
+   * Flow workflows the caller (else the calling workflow's run user) reads. */
+  async listFlows(
+    workflowId: string,
+    externalIds?: string[],
+    ctx?: WorkflowCaller,
+  ): Promise<{ data: PopulatedFlow[] }> {
+    const ids = (await this.callableWorkflowIds(workflowId)).filter(
+      (id) => !externalIds || externalIds.includes(id),
+    );
+    const reads = await this.flowReader(workflowId, ctx);
+    const flows = await Promise.all(
+      ids.map((id) => this.callableFlow(id, reads)),
+    );
+    return { data: flows.filter((flow) => flow !== undefined) };
+  }
+
+  // Who lists flows: a design-time caller, else the calling workflow's run user.
+  private async flowReader(
+    workflowId: string,
+    ctx: WorkflowCaller | undefined,
+  ): Promise<(documentId: string) => Promise<boolean>> {
+    if (ctx) return (id) => this.canReadDocument(id, ctx);
+    const runUser =
+      currentRunUser() ??
+      (await publishRunUser(
+        this.host.reactorClient,
+        workflowId,
+        this.host.hostIdentity,
+      ).catch(() => null));
+    if (!runUser) {
+      const open = !authEnforced(this.host);
+      return () => Promise.resolve(open);
+    }
+    return (id) =>
+      this.host.reactorClient
+        .isServed(id, { subject: runUser.subject })
+        .catch(() => false);
+  }
+
+  // A piece's fetch to ctx.server.apiUrl, answered in process.
+  private async hostRequest(
+    workflowId: string,
+    runId: string | null,
+    request: HostHttpRequest,
+  ): Promise<HostHttpResponse> {
+    const route = hostRoute(request);
+    if (!route) {
+      return jsonReply(404, {
+        message: `Nothing is served at ${request.method} ${request.path}`,
+      });
+    }
+    const body = hostBody(request);
+    if (route.kind === "callback") {
+      const { status } = await this.resumeByToken(route.token, {
+        body,
+        headers: request.headers,
+        queryParams: {},
+      });
+      // As upstream: a response nothing was waiting for is discarded, and the
+      // callee's Return Response fails on it.
+      return jsonReply(200, { status, discarded: status === "gone" });
+    }
+    return this.dispatchSubflow(
+      workflowId,
+      runId,
+      route.workflowId,
+      request.headers,
+      body,
+    );
+  }
+
+  // listFlows' rules for one target: itself, or a workflow sharing a drive.
+  private async flowCallableFrom(
+    callerId: string,
+    targetId: string,
+  ): Promise<PopulatedFlow | undefined> {
+    if (targetId !== callerId) {
+      const [callerDrives, targetDrives] = await Promise.all([
+        this.drivesOf(callerId),
+        this.drivesOf(targetId),
+      ]);
+      if (!targetDrives.some((drive) => callerDrives.includes(drive))) {
+        return undefined;
+      }
+    }
+    return this.callableFlow(
+      targetId,
+      await this.flowReader(callerId, undefined),
+    );
+  }
+
+  // Call Flow: a run of a callable workflow in the caller's drive, linked to
+  // the caller's run so a failure can fail the caller.
+  private async dispatchSubflow(
+    callerId: string,
+    runId: string | null,
+    targetId: string,
+    headers: Record<string, string>,
+    body: unknown,
+  ): Promise<HostHttpResponse> {
+    const flow = await this.flowCallableFrom(callerId, targetId);
+    if (!flow) {
+      return jsonReply(404, {
+        message: `No workflow "${targetId}" is callable from workflow "${callerId}"`,
+      });
+    }
+    const registration = this.registry.get(targetId);
+    const binding =
+      registration?.kind === PIECE_WEBHOOK_KIND
+        ? registration.binding
+        : undefined;
+    if (!binding || !isCallableFlow(binding)) {
+      return jsonReply(409, {
+        message: `Workflow "${flow.version.displayName}" is not enabled with a Callable Flow trigger`,
+      });
+    }
+    const claimed = headers[PARENT_RUN_HEADER];
+    if (runId && claimed && claimed !== runId) {
+      return jsonReply(403, {
+        message: `Run "${runId}" cannot call on behalf of run "${claimed}"`,
+      });
+    }
+    const request = (
+      body && typeof body === "object" ? body : { data: body }
+    ) as { data?: unknown; callbackUrl?: unknown };
+    const callback =
+      typeof request.callbackUrl === "string"
+        ? localCallback(request.callbackUrl, this.resumeBaseUrl())
+        : undefined;
+    let waitpointId: string | null = null;
+    if (runId && callback && headers[FAIL_PARENT_HEADER] === "true") {
+      const store = await this.store();
+      const waitpoint = await store?.getWaitpointByTokenHash(
+        tokenHash(callback.token),
+      );
+      if (waitpoint?.run_id === runId) waitpointId = waitpoint.id;
+    }
+    const payload = {
+      method: "POST",
+      path: `/v1/webhooks/${targetId}`,
+      headers,
+      queryParams: {},
+      body: {
+        data: request.data ?? null,
+        ...(request.callbackUrl !== undefined
+          ? { callbackUrl: callback?.url ?? request.callbackUrl }
+          : {}),
+      },
+    };
+    try {
+      const runIds = await this.supervisor().deliverWebhook(
+        targetId,
+        payload,
+        runId ? { runId, waitpointId } : undefined,
+      );
+      return jsonReply(200, { runId: runIds.at(0) ?? null });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return jsonReply(500, { message });
+    }
+  }
+
+  // The piece trigger's onStart, once per run before its first step.
+  private async startPieceTrigger(
+    workflowId: string,
+    runId: string,
+    payload: unknown,
+  ): Promise<void> {
+    const registration = this.registry.get(workflowId);
+    const binding =
+      registration?.kind === PIECE_WEBHOOK_KIND
+        ? registration.binding
+        : registration?.kind === "piece"
+          ? this.supervisor().pieceBinding(workflowId)
+          : undefined;
+    if (!binding) return;
+    const descriptor = await this.pieceDescriptor(bindingTarget(binding));
+    const trigger = descriptor.triggers.find(
+      (entry) => entry.name === binding.triggerName,
+    );
+    if (!trigger?.onStart) return;
+    await this.supervisor().onStart(binding, runId, payload);
+  }
+
+  // An ended called run drops its callback key. One that did not succeed
+  // resolves its caller's waitpoint as an error, failing the caller's Call Flow.
+  private async endSubflow(runId: string): Promise<void> {
+    try {
+      const store = await this.store();
+      if (!store) return;
+      const parent = await store.getRunParent(runId);
+      if (!parent) return;
+      const run = await store.getRun(runId);
+      if (!run) return;
+      const failed = FAILED_SUBFLOW_STATUSES.has(run.status);
+      if (!failed && run.status !== "SUCCEEDED") return;
+      await store.deletePieceStoreValue(
+        "FLOW",
+        run.workflow_id,
+        `${CALLABLE_FLOW_KEY_PREFIX}${runId}`,
+      );
+      if (!parent.waitpointId || !failed) return;
+      const completed = await store.completeWaitpoint(parent.waitpointId, {
+        payload: {
+          body: {
+            status: "error",
+            data: {
+              message:
+                run.error ?? `The called workflow's run ended ${run.status}`,
+              runId,
+            },
+          },
+          headers: {},
+          queryParams: {},
+        },
+      });
+      if (completed) await this.deliverHeld(completed.run_id);
+    } catch (error) {
+      this.logger.warn(
+        "Could not fail the caller of run @run: @error",
+        runId,
+        error,
+      );
+    }
   }
 
   // ── suspend and resume ────────────────────────────────────────────────────
@@ -6104,15 +6566,18 @@ export class WorkflowRuntimeService {
   } {
     // responseToSend by waitpoint, answered when the run waits on it.
     const responses = new Map<string, RunResponse>();
-    // The raw token by waitpoint: the store keeps only its hash.
-    const tokens = new Map<string, string>();
-    // A bare path is no URL a caller can reach, so it counts as none.
-    const configured = this.host.waitpointBaseUrl?.replace(/\/+$/, "");
-    const baseUrl =
-      configured && URL.canParse(configured) ? configured : undefined;
+    // The resume URL by waitpoint: the store keeps only its token's hash.
+    const urls = new Map<string, string>();
+    const resumeBaseUrl = this.resumeBaseUrl();
     const port: WaitpointPort = {
-      ...(baseUrl ? { resumeBaseUrl: baseUrl } : {}),
+      ...(resumeBaseUrl ? { resumeBaseUrl } : {}),
       create: async (request) => {
+        // Call Flow's callback is only ever posted in process.
+        const baseUrl =
+          request.pieceName === SUBFLOWS_PIECE &&
+          request.blockName === CALL_FLOW_ACTION
+            ? HOST_WAITPOINTS_URL
+            : resumeBaseUrl;
         if (!baseUrl && request.type === "WEBHOOK" && !request.approval) {
           throw new Error(
             "This host serves no resume URLs: resume URLs need an HTTP host",
@@ -6172,22 +6637,20 @@ export class WorkflowRuntimeService {
         });
         if (!inserted) {
           // The step's live waitpoint, with the URL this leg minted for it.
-          const known = tokens.get(waitpoint.id);
+          const known = urls.get(waitpoint.id);
           if (waitpoint.token_hash !== null && known === undefined) {
             throw new Error(
               `Step "${request.stepKey}" has a waitpoint from an earlier leg, whose resume URL cannot be issued again`,
             );
           }
-          return {
-            id: waitpoint.id,
-            resumeUrl: known ? `${baseUrl}/${known}` : "",
-          };
+          return { id: waitpoint.id, resumeUrl: known ?? "" };
         }
-        if (token) tokens.set(id, token);
+        const resumeUrl = token ? `${baseUrl}/${token}` : "";
+        if (token) urls.set(id, resumeUrl);
         if (request.responseToSend) responses.set(id, request.responseToSend);
         const due = request.type === "DELAY" ? resumeAt : expiresAt;
         if (due) this.waitpointPoller.nudge(due);
-        return { id, resumeUrl: token ? `${baseUrl}/${token}` : "" };
+        return { id, resumeUrl };
       },
     };
     return {
@@ -6235,13 +6698,13 @@ export class WorkflowRuntimeService {
   private readonly waitpointPoller = new WaitpointPoller({
     store: () => this.store(),
     resume: (runId) => this.deliverHeld(runId),
-    ended: (end) =>
-      Promise.resolve(
-        this.answerClosed(end.closed, end.runId, {
-          status: CANCELLED_RUN_STATUS,
-          error: end.reason,
-        }),
-      ),
+    ended: (end) => {
+      this.answerClosed(end.closed, end.runId, {
+        status: CANCELLED_RUN_STATUS,
+        error: end.reason,
+      });
+      return this.endSubflow(end.runId);
+    },
     logger: {
       warn: (message: string, ...args: unknown[]) =>
         this.logger.warn(message, ...args),
@@ -6353,6 +6816,7 @@ export class WorkflowRuntimeService {
       let status = "REFUSED";
       try {
         const result = await this.runResumed(runId, workflowId);
+        void this.endSubflow(runId);
         if (result) status = result.status;
         if (status === "FAILED") {
           span.setStatus({ code: SpanStatusCode.ERROR, message: status });
@@ -7070,6 +7534,7 @@ export class WorkflowRuntimeService {
       throw refuse((await store.getRun(runId))?.status ?? "gone");
     }
     await this.answerHeldResumes(store, runId, reason);
+    await this.endSubflow(runId);
     const row = (await store.getRun(runId))!;
     this.queuedReplies.get(runId)?.({
       status: row.status as PersistedRunResult["status"],
@@ -7568,6 +8033,16 @@ export class WorkflowRuntimeService {
 function scopeHash(state: WorkflowState): string {
   return hashDocumentStateForScope({ state: { global: state } }, "global");
 }
+
+// Upstream's Callable Flow keeps the caller's callback under this key + run id.
+const CALLABLE_FLOW_KEY_PREFIX = "callableFlow_";
+
+// A called run ending in one of these fails a caller that waits on it.
+const FAILED_SUBFLOW_STATUSES = new Set([
+  "FAILED",
+  "CANCELLED",
+  "INDETERMINATE",
+]);
 
 function tokenHash(token: string): string {
   return createHash("sha256").update(token).digest("hex");
