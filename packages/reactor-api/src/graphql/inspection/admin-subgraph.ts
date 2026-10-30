@@ -74,6 +74,18 @@ async function pulled(
   return true;
 }
 
+/** Passes a lever's refusal to the caller as LEVER_REFUSED. */
+async function refusable<T>(lever: () => Promise<T>): Promise<T> {
+  try {
+    return await lever();
+  } catch (error) {
+    throw new GraphQLError(
+      error instanceof Error ? error.message : String(error),
+      { extensions: { code: "LEVER_REFUSED" } },
+    );
+  }
+}
+
 /** Inspection levers for listed admins, kept apart from the read-only inspection subgraph. */
 export class InspectionAdminSubgraph extends BaseSubgraph {
   override name = "inspection-admin";
@@ -112,7 +124,10 @@ export class InspectionAdminSubgraph extends BaseSubgraph {
         inspectionAdmin: listed(() => ({
           processors: true,
           catchUpPriority: true,
+          keyframes: true,
         })),
+        inspectionKeyframeCleanup: listed(() => admin.getKeyframeCleanup()),
+        inspectionKeyframeReclaim: listed(() => admin.getKeyframeReclaim()),
       },
       Mutation: {
         inspectionRetryProcessor: listed(({ processorId }: RerunArgs) =>
@@ -142,6 +157,17 @@ export class InspectionAdminSubgraph extends BaseSubgraph {
           }
           return true;
         }),
+        inspectionStartKeyframeCleanup: listed(
+          ({ dryRun }: { dryRun: boolean }) =>
+            refusable(() => admin.startKeyframeCleanup({ dryRun })),
+        ),
+        inspectionCancelKeyframeCleanup: listed(async () => {
+          await admin.cancelKeyframeCleanup();
+          return true;
+        }),
+        inspectionReclaimKeyframeSpace: listed(() =>
+          refusable(() => admin.reclaimKeyframeSpace()),
+        ),
       },
     };
   }

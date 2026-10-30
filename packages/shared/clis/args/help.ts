@@ -8,6 +8,7 @@ import { generateArgs } from "./generate.js";
 import { hostCheckArgs } from "./host.js";
 import { inspectArgs } from "./inspect.js";
 import { installArgs } from "./install.js";
+import { keyframesArgs } from "./keyframes.js";
 import { listArgs } from "./list.js";
 import { loginArgs } from "./login.js";
 import { mcpArgs } from "./mcp.js";
@@ -116,6 +117,13 @@ const allPhCliHelpCommands = {
     args: mcpArgs,
     description:
       "Serve the project's reactor-mcp tools over stdio, starting Vetra on the first tool call",
+    handler: () => {},
+  }),
+  keyframes: helpCommand({
+    name: "keyframes",
+    args: keyframesArgs,
+    description:
+      "Report on and clean up the keyframes of a running switchboard",
     handler: () => {},
   }),
   migrate: helpCommand({

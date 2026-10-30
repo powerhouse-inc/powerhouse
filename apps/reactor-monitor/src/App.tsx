@@ -26,6 +26,7 @@ import {
   adminGateFor,
   OperatorGateNote,
   operatorGateFor,
+  keyframeGateFor,
   processorGateFor,
   sqlGateFor,
 } from "./components/AdminGate.js";
@@ -63,6 +64,7 @@ import { DbTab } from "./tabs/DbTab.js";
 import { DrivesTab } from "./tabs/DrivesTab.js";
 import { EventsTab } from "./tabs/EventsTab.js";
 import { IntegrityTab } from "./tabs/IntegrityTab.js";
+import { KeyframesTab } from "./tabs/KeyframesTab.js";
 import { ModulesTab } from "./tabs/ModulesTab.js";
 import { OverviewTab } from "./tabs/OverviewTab.js";
 import { ProcessorsTab } from "./tabs/ProcessorsTab.js";
@@ -78,6 +80,7 @@ export const INSPECTOR_TABS = [
   "Processors",
   "Catch-up",
   "Integrity",
+  "Keyframes",
   "DB",
   "Sync",
   "Attachments",
@@ -193,6 +196,13 @@ function ReadyPanel({
           admin={admin}
           inspector={reactor.inspector}
           levers={reactor.admin}
+        />,
+      );
+    case "Keyframes":
+      return operational(
+        <KeyframesTab
+          admin={keyframeGateFor(reactor)}
+          levers={reactor.keyframeLevers}
         />,
       );
     case "Integrity":

@@ -11,6 +11,7 @@ import type { IProcessorManager } from "@powerhousedao/shared/processors";
 import type { ReactorStorageFacts } from "../inspector/types.js";
 import type { ISyncInspector } from "../sync/sync-inspection.js";
 import type { DocumentPurgeService } from "../admin/document-purge-service.js";
+import type { IKeyframeCleanup } from "../admin/keyframe-cleanup-types.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { ICatchUp, ISettledWatermark } from "../catch-up/types.js";
@@ -640,6 +641,8 @@ export interface InProcessReactorModule extends ReactorModule {
   settledWatermark: ISettledWatermark;
   /** Enqueues purge jobs; the erasure scheduler is its only caller. */
   documentPurgeService: DocumentPurgeService;
+  /** The backlog clean-up of keyframes and the reclaim of their disk space. */
+  keyframeCleanup: IKeyframeCleanup;
   /** What the builder knows about the store; see `withStorageFacts`. */
   storageFacts: ReactorStorageFacts;
   /** Set by `withGroupCommitPGlite`; the host closes the store through it. */

@@ -9,7 +9,11 @@ import type {
   IProcessorManager,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type {
+  IKeyframeCleanup,
+  KeyframeCleanupRun,
+} from "../../src/admin/keyframe-cleanup-types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { Database, InProcessReactorModule } from "../../src/core/types.js";
 import { createReactorInspector } from "../../src/inspector/from-module.js";
@@ -188,6 +192,52 @@ describe("ReactorInspector", () => {
     );
     await expect(inspector.getQueueState()).resolves.toMatchObject({
       totalPending: 0,
+    });
+  });
+
+  it("refuses a keyframe clean-up without the service, and reads nothing", async () => {
+    const inspector = new ReactorInspector({});
+
+    await expect(
+      inspector.startKeyframeCleanup({ dryRun: true }),
+    ).rejects.toThrow(/unsupported/);
+    await expect(inspector.reclaimKeyframeSpace()).rejects.toThrow(
+      /unsupported/,
+    );
+    await expect(inspector.getKeyframeCleanup()).resolves.toBeNull();
+    await expect(inspector.getKeyframeReclaim()).resolves.toBeNull();
+    await expect(inspector.cancelKeyframeCleanup()).resolves.toBeUndefined();
+  });
+
+  it("hands keyframe clean-ups to the service and passes its refusal on", async () => {
+    const run = { id: "run-1" } as KeyframeCleanupRun;
+    const keyframeCleanup: IKeyframeCleanup = {
+      start: vi
+        .fn()
+        .mockReturnValueOnce(run)
+        .mockImplementation(() => {
+          throw new Error("already running");
+        }),
+      status: vi.fn().mockReturnValue(run),
+      cancel: vi.fn(),
+      reclaim: vi.fn().mockResolvedValue({ state: "unsupported" }),
+      reclaimStatus: vi.fn().mockReturnValue(null),
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    };
+    const inspector = new ReactorInspector({ keyframeCleanup });
+
+    await expect(
+      inspector.startKeyframeCleanup({ dryRun: true }),
+    ).resolves.toBe(run);
+    expect(keyframeCleanup.start).toHaveBeenCalledWith({ dryRun: true });
+    await expect(
+      inspector.startKeyframeCleanup({ dryRun: false }),
+    ).rejects.toThrow("already running");
+    await expect(inspector.getKeyframeCleanup()).resolves.toBe(run);
+    await inspector.cancelKeyframeCleanup();
+    expect(keyframeCleanup.cancel).toHaveBeenCalled();
+    await expect(inspector.reclaimKeyframeSpace()).resolves.toEqual({
+      state: "unsupported",
     });
   });
 
