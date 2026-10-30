@@ -55,11 +55,31 @@ export interface RunAttachmentOrigins {
 
 const storage = new AsyncLocalStorage<ActiveRun>();
 
+let scopesOpened = 0;
+let scopesCollected = 0;
+const collectedScopes = new FinalizationRegistry<undefined>(() => {
+  scopesCollected += 1;
+});
+
 export function withRunScope<T>(
   scope: ActiveRun,
   fn: () => Promise<T>,
 ): Promise<T> {
+  scopesOpened += 1;
+  collectedScopes.register(scope, undefined);
   return storage.run(scope, fn);
+}
+
+// `held` is the scopes still on the heap: the runs in flight, the finished ones
+// the next major GC will take, and any something keeps. Only the last kind
+// climbs across GCs, and no structure we can count would show it: what keeps a
+// scope is an async context, not a list.
+export function runScopeStats(): Record<string, number> {
+  return {
+    opened: scopesOpened,
+    collected: scopesCollected,
+    held: scopesOpened - scopesCollected,
+  };
 }
 
 export function currentWorkflowId(): string | undefined {

@@ -208,6 +208,7 @@ import {
   currentAttachmentOrigins,
   currentRunUser,
   currentWorkflowId,
+  runScopeStats,
   withRunScope,
   type RunAttachmentOrigins,
   type RunUser,
@@ -4929,9 +4930,14 @@ export class WorkflowRuntimeService {
     const unregisterGauge = registerTelemetryGauge("workflow.pool", () =>
       pool.memoryStats(),
     );
+    const unregisterRuns = registerTelemetryGauge(
+      "workflow.runs",
+      runScopeStats,
+    );
     this.unobservePool = () => {
       unobservePool();
       unregisterGauge();
+      unregisterRuns();
     };
     return (this.pieceWorkers = pool);
   }

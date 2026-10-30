@@ -14,6 +14,7 @@ import { createFreshRelationalDb } from "../../test/helpers/pglite.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 import { CORE_PIECE_VERSION } from "../pieces/index.js";
 import { packagePieces } from "./piece-registry.js";
+import { runScopeStats } from "./run-scope.js";
 import type { WorkflowRuntimeService } from "./service.js";
 
 setFlagsFromString("--expose-gc");
@@ -43,6 +44,13 @@ export const scoped = {
   triggers: {},
 };
 `;
+
+async function collectGarbage() {
+  for (let turn = 0; turn < 10; turn++) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    gc();
+  }
+}
 
 let dir = "";
 let documents: Documents;
@@ -132,13 +140,20 @@ describe("a run whose async context outlives it", () => {
       );
       expect(fired.status).toBe("SUCCEEDED");
     }
-    for (let turn = 0; turn < 10; turn++) {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      gc();
-    }
+    await collectGarbage();
 
     expect(pinned).toHaveLength(RUNS);
     expect(finished).toBe(RUNS);
     expect(collected).toBeGreaterThan(RUNS / 2);
+  });
+
+  it("shows on the gauge until it is let go", async () => {
+    await collectGarbage();
+    expect(pinned.length).toBeGreaterThan(0);
+    expect(runScopeStats().held).toBeGreaterThanOrEqual(pinned.length);
+
+    pinned.length = 0;
+    await collectGarbage();
+    expect(runScopeStats().held).toBeLessThan(RUNS / 2);
   });
 });
