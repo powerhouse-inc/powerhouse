@@ -5,13 +5,16 @@
       "paths": ["apps/connect/**"]
     },
     "reactor-monitor-app": {
-      "paths": ["apps/reactor-monitor/**"]
+      "paths": ["apps/reactor-monitor/**"],
+      "aliases": ["apps-reactor-monitor"]
     },
     "reactor-monitor": {
-      "paths": ["packages/reactor-monitor/**"]
+      "paths": ["packages/reactor-monitor/**"],
+      "aliases": ["packages-reactor-monitor"]
     },
     "switchboard": {
-      "paths": ["apps/switchboard/**", "test/switchboard/**"]
+      "paths": ["apps/switchboard/**", "test/switchboard/**"],
+      "aliases": ["apps-switchboard", "test-switchboard"]
     },
     "ph-cli": {
       "paths": ["clis/ph-cli/**"]
@@ -20,7 +23,16 @@
       "paths": ["clis/ph-cmd/**"]
     },
     "analytics-engine": {
-      "paths": ["packages/analytics-engine/**"]
+      "paths": ["packages/analytics-engine/**"],
+      "aliases": [
+        "benchmarks",
+        "browser",
+        "compat",
+        "core",
+        "graphql",
+        "knex",
+        "pg"
+      ]
     },
     "builder-tools": {
       "paths": ["packages/builder-tools/**"]
@@ -29,7 +41,8 @@
       "paths": ["packages/clint/**"]
     },
     "codegen": {
-      "paths": ["packages/codegen/**", "test/codegen/**"]
+      "paths": ["packages/codegen/**", "test/codegen/**"],
+      "aliases": ["packages-codegen", "test-codegen"]
     },
     "common": {
       "paths": ["packages/common/**"]
@@ -65,7 +78,8 @@
       "paths": ["packages/powerhouse-vetra-packages/**"]
     },
     "reactor": {
-      "paths": ["packages/reactor/**"]
+      "paths": ["packages/reactor/**"],
+      "aliases": ["host"]
     },
     "reactor-api": {
       "paths": ["packages/reactor-api/**"]
