@@ -252,6 +252,12 @@ type CreateDefaults {
   protocolVersions: JSONObject!
 }
 
+# Action ids; absent when there is nothing to undo or redo
+type UndoRedoTargets {
+  undoTarget: String
+  redoTarget: String
+}
+
 type MoveRelationshipResult {
   source: PHDocument!
   target: PHDocument!
@@ -709,6 +715,15 @@ type Query {
   # parent when one is named. A parent the caller may not read is refused.
   # With documentType, protocolVersions fit that type's reducer.
   createDefaults(parentIdOrSlug: String, documentType: String): CreateDefaults!
+
+  # The rows a base-reducer 3 undo and redo of the scope would retract now, for
+  # the caller to sign a RETRACT of. A scope the caller may not read has none;
+  # below base-reducer 3 there are none.
+  undoRedoTargets(
+    documentIdOrSlug: String!
+    scope: String
+    branch: String
+  ): UndoRedoTargets!
 
   # Get operations for a document with filtering and pagination
   documentOperations(

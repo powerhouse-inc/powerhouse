@@ -382,6 +382,32 @@ export function createSwitchboardBackend(
       return job && isUnknownJob(job) ? undefined : job;
     },
     waitForJob: (job, signal) => gql.waitForJob(job, signal),
+    undo: async <TDocument extends PHDocument = PHDocument>(
+      identifier: string,
+      scope?: string,
+      branch?: string,
+      signal?: AbortSignal,
+    ) =>
+      drives.learn(
+        await drives.refusable(
+          gql.undo<TDocument>(identifier, scope, branch, signal),
+        ),
+      ),
+    redo: async <TDocument extends PHDocument = PHDocument>(
+      identifier: string,
+      scope?: string,
+      branch?: string,
+      signal?: AbortSignal,
+    ) =>
+      drives.learn(
+        await drives.refusable(
+          gql.redo<TDocument>(identifier, scope, branch, signal),
+        ),
+      ),
+    undoRedoTargets: (identifier, scope, view, signal) =>
+      gql.undoRedoTargets(identifier, scope, view, signal),
+    undoRedoAvailability: (identifier, scope, branch, signal) =>
+      gql.undoRedoAvailability(identifier, scope, branch, signal),
   };
   // The router reads the facts and the types together; they share one query.
   let reading: Promise<SwitchboardFacts> | undefined;

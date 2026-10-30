@@ -19,6 +19,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { GraphQLReactorClient } from "../../src/graphql-client/graphql-reactor-client.js";
 import {
   createSwitchboardBackend,
   SwitchboardUnreachableError,
@@ -724,6 +725,74 @@ describe("createSwitchboardBackend Drive-Id", () => {
         .map((r) => r.headers["drive-id"]);
     expect(driveIdsFor("doc-a")).toEqual(["drive-1"]);
     expect(driveIdsFor("doc-b")).toEqual([undefined]);
+  });
+});
+
+describe("createSwitchboardBackend undo and redo", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.each(["undo", "redo"] as const)(
+    "forwards %s to the GraphQL client and learns the drive it answers",
+    async (method) => {
+      const forwarded = vi
+        .spyOn(GraphQLReactorClient.prototype, method)
+        .mockResolvedValue(driveDocument("drive-1") as never);
+      const { backend, stub } = await backendOver({ "drive-1": DRIVE_TYPE });
+      const signal = new AbortController().signal;
+
+      const result = await backend[method]!(
+        "drive-1",
+        "global",
+        "main",
+        signal,
+      );
+
+      expect(forwarded).toHaveBeenCalledExactlyOnceWith(
+        "drive-1",
+        "global",
+        "main",
+        signal,
+      );
+      expect(result.header.id).toBe("drive-1");
+      await backend.create(modelDocument("doc-new"), "drive-1");
+      expect(driveIdOf(stub.received, "CreateDocument")).toBe("drive-1");
+    },
+  );
+
+  it.each(["undo", "redo"] as const)(
+    "learns nothing from a %s that answers a document that is not a drive",
+    async (method) => {
+      vi.spyOn(GraphQLReactorClient.prototype, method).mockResolvedValue(
+        modelDocument("drive-1") as never,
+      );
+      const { backend, stub } = await backendOver({ "drive-1": DRIVE_TYPE });
+
+      await backend[method]!("drive-1");
+      await backend.create(modelDocument("doc-new"), "drive-1");
+      expect(driveIdOf(stub.received, "CreateDocument")).toBeUndefined();
+    },
+  );
+
+  it("forwards undoRedoAvailability to the GraphQL client", async () => {
+    const availability = { canUndo: true, canRedo: false };
+    const forwarded = vi
+      .spyOn(GraphQLReactorClient.prototype, "undoRedoAvailability")
+      .mockResolvedValue(availability);
+    const { backend, stub } = await backendOver({ "drive-1": DRIVE_TYPE });
+    const signal = new AbortController().signal;
+
+    expect(
+      await backend.undoRedoAvailability!("doc-1", "global", "main", signal),
+    ).toEqual(availability);
+    expect(forwarded).toHaveBeenCalledExactlyOnceWith(
+      "doc-1",
+      "global",
+      "main",
+      signal,
+    );
+    expect(stub.received).toEqual([]);
   });
 });
 

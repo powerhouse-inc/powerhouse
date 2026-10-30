@@ -107,6 +107,7 @@ export {
   type WriteReceipt,
   type WriteTargetDescription,
   type ProtocolSelection,
+  type UndoRedoAvailability,
   type UpgradeDocumentOptions,
 } from "./src/client/types.js";
 export {

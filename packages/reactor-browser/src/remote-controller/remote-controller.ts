@@ -6,13 +6,21 @@ import type {
   PHDocument,
   PHDocumentHeader,
   ProtocolVersions,
+  RetractActionInput,
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
   actionSignerIdentity,
   actionSigningTarget,
+  capabilitiesFor,
   headNewDocument,
+  redo,
+  stateReducerOf,
   toTransportAction,
+  undo,
+  undoNeedsTargets,
+  undoRedoActions,
+  undoRedoTargetsOf,
 } from "@powerhousedao/shared/document-model";
 import type { PHDocumentController } from "document-model";
 import {
@@ -55,9 +63,9 @@ type InferState<C> = C extends PHDocumentController<infer S> ? S : never;
  * These are the dynamically-added methods (not on the base PHDocumentController prototype).
  */
 type ActionMethodsOf<C, TRemote> = {
-  [K in Exclude<keyof C, keyof PHDocumentController<any>>]: C[K] extends (
-    input: infer I,
-  ) => unknown
+  [
+    K in Exclude<keyof C, keyof PHDocumentController<any> | "undo" | "redo">
+  ]: C[K] extends (input: infer I) => unknown
     ? (input: I) => TRemote & ActionMethodsOf<C, TRemote>
     : C[K];
 };
@@ -257,6 +265,67 @@ export class RemoteDocumentController<
     return remoteDoc;
   }
 
+  // --- Undo ---
+
+  /**
+   * Undoes the last `count` operations of `scope`. Below base-reducer 3 (or
+   * with no known version) it applies the model's UNDO, as the action method
+   * did; on 3 it applies a RETRACT per step, each resolved from this
+   * controller's own log, pending actions included.
+   */
+  undo(count: number = 1, scope: string = "global"): this {
+    return this.undoOrRedo("UNDO", count, scope);
+  }
+
+  /** Redoes the last `count` undos of `scope`; see {@link undo}. */
+  redo(count: number = 1, scope: string = "global"): this {
+    return this.undoOrRedo("REDO", count, scope);
+  }
+
+  private undoOrRedo(
+    type: "UNDO" | "REDO",
+    count: number,
+    scope: string,
+  ): this {
+    const caps = capabilitiesFor(this.inner.header.protocolVersions);
+    if (caps === undefined || !undoNeedsTargets(caps)) {
+      return this.applyAction(
+        type === "UNDO" ? undo(count, scope) : redo(count, scope),
+      );
+    }
+    if (!Number.isInteger(count) || count < 1) {
+      throw new RangeError(
+        `${type} count must be a positive integer on base-reducer 3, got ${count}`,
+      );
+    }
+    // Every target resolves on a scratch document before anything applies,
+    // so a missing one changes nothing.
+    const stateReducer = this.stateReducer();
+    const actions: Action[] = [];
+    let scratch = this.inner.document;
+    for (let step = 0; step < count; step++) {
+      const targets = undoRedoTargetsOf(scratch, caps, scope, stateReducer);
+      for (const action of undoRedoActions(caps, type, scope, targets)) {
+        scratch = this.inner.module.reducer(scratch, action);
+        actions.push(action);
+      }
+    }
+    for (const action of actions) {
+      this.applyAction(action);
+    }
+    return this;
+  }
+
+  private stateReducer() {
+    const reducer = stateReducerOf(this.inner.module.reducer);
+    if (reducer === undefined) {
+      throw new Error(
+        `Document model ${this.inner.header.documentType} has no state reducer to resolve undo targets with`,
+      );
+    }
+    return reducer;
+  }
+
   // --- Static factories ---
 
   /**
@@ -375,20 +444,28 @@ export class RemoteDocumentController<
       }
 
       Object.defineProperty(this, actionType, {
-        value: (input: unknown) =>
-          this.applyAndTrack(() => {
-            // Apply locally via inner controller
-            (
-              this.inner as unknown as Record<
-                string,
-                (input: unknown) => unknown
-              >
-            )[actionType](input);
-          }),
+        value: (input: unknown) => this.dispatchModelAction(actionType, input),
         enumerable: true,
         configurable: true,
       });
     }
+  }
+
+  /** Applies the model's `actionType` action method locally and tracks it. */
+  private dispatchModelAction(actionType: string, input: unknown): this {
+    return this.applyAndTrack(() => {
+      // Apply locally via inner controller
+      (this.inner as unknown as Record<string, (input: unknown) => unknown>)[
+        actionType
+      ](input);
+    });
+  }
+
+  /** Applies `action` locally through the model's reducer and tracks it. */
+  private applyAction(action: Action): this {
+    return this.applyAndTrack(() => {
+      this.replaceInner(this.inner.module.reducer(this.inner.document, action));
+    });
   }
 
   /** Runs `apply`, then tracks the operation it added for push. */
@@ -545,18 +622,47 @@ export class RemoteDocumentController<
   private async pullAndReplay(actions: Action[]): Promise<TrackedAction[]> {
     await this.pull();
 
+    // Replayed actions get new ids; a pending RETRACT follows its target's.
+    const replayedIds = new Map<string, string>();
     for (const action of actions) {
-      // Action types are SCREAMING_SNAKE_CASE but interceptors use camelCase
-      const methodName = screamingSnakeToCamel(action.type);
-      const method = (
-        this as unknown as Record<string, (input: unknown) => unknown>
-      )[methodName];
-      if (typeof method === "function") {
-        method.call(this, action.input);
+      const scopeOps = () => this.inner.operations[action.scope] ?? [];
+      const before = scopeOps().length;
+      this.replayAction(action, replayedIds);
+      const after = scopeOps();
+      if (after.length > before) {
+        replayedIds.set(action.id, after[after.length - 1].action.id);
       }
     }
 
     return this.tracker.flush();
+  }
+
+  private replayAction(action: Action, replayedIds: Map<string, string>) {
+    // A stale RETRACT target is the host's to refuse.
+    if (action.type === "RETRACT") {
+      const { target } = action.input as RetractActionInput;
+      const replayed = replayedIds.get(target);
+      this.applyAction(
+        replayed === undefined
+          ? action
+          : { ...action, input: { target: replayed } },
+      );
+      return;
+    }
+    // Action types are SCREAMING_SNAKE_CASE but interceptors use camelCase
+    const methodName = screamingSnakeToCamel(action.type);
+    // undo and redo are this class's (count, scope) methods; replay the
+    // model's action method with the action's input, as its interceptor did.
+    if (methodName === "undo" || methodName === "redo") {
+      this.dispatchModelAction(methodName, action.input);
+      return;
+    }
+    const method = (
+      this as unknown as Record<string, (input: unknown) => unknown>
+    )[methodName];
+    if (typeof method === "function") {
+      method.call(this, action.input);
+    }
   }
 
   /** Prepare actions for push, optionally signing them. */

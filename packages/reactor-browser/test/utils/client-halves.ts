@@ -38,6 +38,8 @@ const WRITE_METHODS = [
   "upgradeDocument",
   "addRelationship",
   "removeRelationship",
+  "undo",
+  "redo",
 ];
 
 function emptyToken(): ConsistencyToken {

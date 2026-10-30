@@ -64,6 +64,8 @@ const DEFAULT_BRANCH = "main";
  * - `pollSyncEnvelopes`, `syncHolds` and `peerAgreement` serve peers from the
  *   operation index and the sync tables through the sync manager; they touch
  *   neither client.
+ * - `undoRedoTargets` resolves against the write side's operation log, as an
+ *   undo does before it submits.
  * - `jobStatus` answers from the job tracker, which the read half exposes.
  *
  * `documentServed` is not one of them: it is the read gate over the read
@@ -71,6 +73,7 @@ const DEFAULT_BRANCH = "main";
  */
 export const WRITE_SIDE_QUERIES = {
   evaluateActions: "write",
+  undoRedoTargets: "write",
   pollSyncEnvelopes: "syncManager",
   syncHolds: "syncManager",
   peerAgreement: "syncManager",
@@ -233,6 +236,27 @@ export async function createDefaults(
     }),
   ]);
   return { signaturePolicy, protocolVersions };
+}
+
+/** Read-gated by the client: a scope the subject may not read has none. */
+export async function undoRedoTargets(
+  write: Pick<IReactorWriteClient, "undoRedoTargets">,
+  args: {
+    documentIdOrSlug: string;
+    scope?: string | null;
+    branch?: string | null;
+  },
+  subject?: AuthSubject,
+): Promise<{ undoTarget: string | null; redoTarget: string | null }> {
+  const targets = await write.undoRedoTargets(
+    args.documentIdOrSlug,
+    fromInputMaybe(args.scope) ?? undefined,
+    { branch: fromInputMaybe(args.branch) ?? undefined, subject },
+  );
+  return {
+    undoTarget: targets.undoTarget ?? null,
+    redoTarget: targets.redoTarget ?? null,
+  };
 }
 
 export async function documentModels(

@@ -367,6 +367,10 @@ const REFUSED_WRITE: Record<RefusedWriteHalfMethods, true> = {
   moveRelationship: true,
   deleteDocuments: true,
   loadBatch: true,
+  undo: true,
+  redo: true,
+  undoRedoTargets: true,
+  undoRedoAvailability: true,
 };
 
 // As the host's served facade: the served methods go over RPC under `prefix`,

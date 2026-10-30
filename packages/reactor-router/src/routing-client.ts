@@ -18,6 +18,8 @@ import {
   type PagingOptions,
   type PropagationMode,
   type SearchFilter,
+  type UndoRedoAvailability,
+  type UndoRedoTargets,
   type UpgradeDocumentOptions,
   type ViewFilter,
 } from "@powerhousedao/reactor";
@@ -533,6 +535,61 @@ export class RoutingReactorClient implements IReactorClient {
     const batch = await this.write.executeBatch(request, signal);
     await batch.readable;
     return { jobs: batch.jobs };
+  }
+
+  /** The owning backend resolves the target and signs the write. */
+  async undo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const handle = await this.write.undo(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+    return handle.document<TDocument>(undefined, signal);
+  }
+
+  /** See {@link undo}. */
+  async redo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const handle = await this.write.redo(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+    return handle.document<TDocument>(undefined, signal);
+  }
+
+  undoRedoTargets(
+    documentIdentifier: string,
+    scope?: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets> {
+    return this.write.undoRedoTargets(documentIdentifier, scope, view, signal);
+  }
+
+  undoRedoAvailability(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability> {
+    return this.write.undoRedoAvailability(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
   }
 
   /**

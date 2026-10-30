@@ -28,6 +28,10 @@ describe("IReactorBrowserClient", () => {
       | "newDocument"
       | "create"
       | "deleteDocument"
+      | "undo"
+      | "redo"
+      | "undoRedoTargets"
+      | "undoRedoAvailability"
       | "read"
       | "write"
     >();
