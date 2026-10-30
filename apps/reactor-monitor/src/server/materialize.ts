@@ -1,7 +1,7 @@
 import type { HostExport } from "@powerhousedao/host-core/schema";
 import fs from "node:fs";
 import path from "node:path";
-import { isRecord, membersOf } from "../host-rules/members.ts";
+import { fixedPortOf, isRecord, membersOf } from "../host-rules/members.ts";
 import { hostFiles } from "../lib/host-files.ts";
 
 /** A host folder: one safe path segment. */
@@ -46,9 +46,14 @@ const CONNECT_DEFAULT_PORT = 3000;
 
 export type CopyConnectPort = { member: string; port: number };
 
-/** Each Connect member's fixed port in a copy: its own plus the offset. */
+/**
+ * Each Connect member's fixed port in a copy: its own plus the offset. Two
+ * members that would bind one port in the copy are refused here, before
+ * anything starts.
+ */
 export function copyConnectPorts(envelope: HostExport): CopyConnectPort[] {
-  return membersOf({ envelope })
+  const members = membersOf({ envelope });
+  const ports = members
     .filter((member) => member.role === "connect")
     .map((member) => {
       const own =
@@ -63,6 +68,23 @@ export function copyConnectPorts(envelope: HostExport): CopyConnectPort[] {
       }
       return { member: member.key, port };
     });
+  // Switchboards bind port 0 in a copy; other runners keep their own.
+  const kept = members.flatMap((member) => {
+    if (member.role !== "other") return [];
+    const port = fixedPortOf(member.runner, member.role);
+    return port === undefined ? [] : [{ member: member.key, port }];
+  });
+  const owners = new Map<number, string>();
+  for (const { member, port } of [...ports, ...kept]) {
+    const other = owners.get(port);
+    if (other !== undefined) {
+      throw new MaterializeError(
+        `${other} and ${member} would both use port ${port} in the copy, so one of them could not start. Give one of them another port.`,
+      );
+    }
+    owners.set(port, member);
+  }
+  return ports;
 }
 
 /** Free switchboard ports; Connect's copy port keeps its own browser storage. */

@@ -200,6 +200,53 @@ describe("materialize", () => {
     );
   });
 
+  it("keeps distinct Connect ports distinct in the copy", () => {
+    const envelope = duo(source);
+    const host = envelope.host as unknown as Record<string, unknown>;
+    const children = host.children as Record<string, Record<string, unknown>>;
+    children.ui2 = { host: "ui" };
+    expect(copyConnectPorts(envelope)).toEqual([
+      { member: "ui", port: 13000 },
+      { member: "ui2", port: 13001 },
+    ]);
+    const { projectDir } = materialize(instanceDir, source, envelope);
+    expect(hostFile(projectDir, "duo")).toMatchObject({
+      children: {
+        ui: { runner: { port: 13000, strictPort: true } },
+        ui2: { runner: { port: 13001, strictPort: true } },
+      },
+    });
+  });
+
+  it("refuses two members that would bind one port in the copy", () => {
+    const envelope = duo(source);
+    const host = envelope.host as unknown as Record<string, unknown>;
+    const children = host.children as Record<string, Record<string, unknown>>;
+    children.ui2 = { host: "ui", runner: { port: 3000 } };
+    expect(() => copyConnectPorts(envelope)).toThrow(
+      "ui and ui2 would both use port 13000 in the copy, so one of them could not start. Give one of them another port.",
+    );
+    expect(() => materialize(instanceDir, source, envelope)).toThrow(
+      MaterializeError,
+    );
+    expect(existsSync(instanceDir)).toBe(false);
+
+    const other = duo(source);
+    (other.members as Record<string, unknown>).agent = {
+      name: "agent",
+      runner: { module: "@powerhousedao/clint/mastra-runner", port: 13000 },
+    };
+    (
+      (other.host as unknown as Record<string, unknown>).children as Record<
+        string,
+        unknown
+      >
+    ).agent = { host: "agent" };
+    expect(() => copyConnectPorts(other)).toThrow(
+      "ui and agent would both use port 13000 in the copy",
+    );
+  });
+
   it("rewrites a standalone switchboard's port", () => {
     const envelope = {
       ...duo(source),

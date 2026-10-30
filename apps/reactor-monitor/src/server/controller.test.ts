@@ -1072,6 +1072,50 @@ describe("createMonitorController", () => {
       expect(readdirSync(controller.tempRoot)).toEqual([]);
     });
 
+    it("refuses a draft whose members would share a port in the copy, before anything starts", async () => {
+      mkdirSync(path.join(allowed, "hosts", "stack"), { recursive: true });
+      writeFileSync(
+        path.join(allowed, "hosts", "stack", "host.js"),
+        "export default {};",
+      );
+      // Valid as declared (3001 and 13001), but Connect moves to 13001 in a copy.
+      const envelope = stackExport(allowed);
+      (envelope.members as Record<string, unknown>).agent = {
+        name: "agent",
+        runner: { module: "@powerhousedao/clint/mastra-runner", port: 13001 },
+      };
+      (
+        (envelope.host as unknown as Record<string, unknown>)
+          .children as Record<string, unknown>
+      ).agent = { host: "agent" };
+      const asked: number[] = [];
+      const { controller, launches } = create({
+        exportHost: () => Promise.resolve(envelope),
+        portFree: (port) => {
+          asked.push(port);
+          return Promise.resolve(true);
+        },
+      });
+      const request = await draft({
+        host: "stack",
+        baseDigest: await baseDigest(envelope),
+      });
+      let error: unknown;
+      try {
+        await controller.startDraft(request);
+      } catch (caught) {
+        error = caught;
+      }
+      expect(error).toBeInstanceOf(ControllerError);
+      expect((error as ControllerError).code).toBe("bad_request");
+      expect((error as ControllerError).message).toBe(
+        "ui and agent would both use port 13001 in the copy, so one of them could not start. Give one of them another port.",
+      );
+      expect(asked).toEqual([]);
+      expect(launches).toEqual([]);
+      expect(readdirSync(controller.tempRoot)).toEqual([]);
+    });
+
     it("sees a port another process listens on as taken", async () => {
       const server = net.createServer();
       await new Promise<void>((resolve) => server.listen(0, resolve));
