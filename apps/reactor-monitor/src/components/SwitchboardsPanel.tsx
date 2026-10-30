@@ -160,7 +160,10 @@ function InstanceRow({
             {instance.error.phase}: {instance.error.message}
           </p>
           {instance.error.tail ? (
-            <pre className="rm-switchboards__log">{instance.error.tail}</pre>
+            <details>
+              <summary className="rm-note">Last log lines</summary>
+              <pre className="rm-switchboards__log">{instance.error.tail}</pre>
+            </details>
           ) : null}
         </>
       ) : null}

@@ -141,6 +141,36 @@ describe("SwitchboardsPanel", () => {
     expect(managed.forget).toHaveBeenCalledWith("sb-1234");
   });
 
+  it("leads a failed start with its reason and keeps the log tail folded", async () => {
+    const { client, instances } = fakeClient();
+    instances.set("dead", {
+      id: "dead",
+      project: ROOT,
+      host: "sb",
+      status: "failed",
+      startedAt: new Date().toISOString(),
+      error: {
+        phase: "exited",
+        message: "ph run sb exited (code 1) before writing its run record.",
+        tail: "Port 16347 is already in use\nmemory allocation of 64 bytes failed",
+      },
+    });
+    const view = render(
+      <SwitchboardsPanel managed={fakeManaged(client)} pollMs={POLL} />,
+    );
+    const reason = await view.findByText(
+      "exited: ph run sb exited (code 1) before writing its run record.",
+    );
+    const tail = view.getByText(/memory allocation of 64 bytes failed/);
+    const folded = tail.closest("details");
+    expect(folded).toBeTruthy();
+    expect(folded?.open).toBe(false);
+    expect(
+      reason.compareDocumentPosition(folded!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("keeps the admin preset on the browser env allowlist", () => {
     for (const { key } of ADMIN_PRESET) expect(isBrowserEnvKey(key)).toBe(true);
   });
