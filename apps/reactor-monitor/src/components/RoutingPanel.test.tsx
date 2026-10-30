@@ -564,6 +564,21 @@ describe("RoutingPanel moves", () => {
       provisionalRouteMs: 300_000,
     });
     expect(connections).toEqual(seed.connections);
+    // New drives go where the host config says, not by hash.
+    const results = new Set<string>();
+    for (const name of ["One", "Two", "Three"]) {
+      fireEvent.change(seeded.getByTestId("router-create-drive-name"), {
+        target: { value: name },
+      });
+      fireEvent.click(seeded.getByTestId("router-create-drive"));
+      await waitFor(() => {
+        const text =
+          seeded.queryByTestId("router-create-result")?.textContent ?? "";
+        expect(results.has(text)).toBe(false);
+        expect(text).toMatch(new RegExp(` on ${BETA}$`));
+        results.add(text);
+      }, WAIT);
+    }
     const block = within(seeded.getByTestId("router-host-config"));
     expect(block.getByText("From the host config")).toBeTruthy();
     expect(

@@ -26,11 +26,7 @@ import {
   type PlacementLayer,
   type PlacementStorage,
 } from "../lib/placements.js";
-import type {
-  RouteSeed,
-  SaveVerdict,
-  SeedRouterOptions,
-} from "../lib/route-seed.js";
+import type { RouteSeed, SaveVerdict } from "../lib/route-seed.js";
 import { buildRoutingClient, type BuiltRouter } from "../lib/router.js";
 import { capabilityCells } from "../tabs/OverviewTab.js";
 
@@ -330,8 +326,7 @@ export function RoutingPanel({
         setBuildError(ROUTER_COPY.needsTwo);
         return;
       }
-      // defaultBackend is the plan's RoutingOptions name (RC1's router PR).
-      const options: RoutingClientOptions & SeedRouterOptions = {
+      const options: RoutingClientOptions = {
         collections: next.overrides,
         requirements: next.requirements,
         onDiagnostic: (message) => appendLog(message),

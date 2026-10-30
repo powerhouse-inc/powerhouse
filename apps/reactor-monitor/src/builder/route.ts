@@ -76,18 +76,19 @@ export function routeSeedOf({
   }
   if (backends.length < 2) return undefined;
 
-  // The router Connect builds: new drives' backend, then the browser reactor.
+  // As Connect: the browser reactor is primary, else new drives' switchboard;
+  // new drives go to newDrives, else the primary.
   const settings = routerSettings(member, members);
-  const newDrives =
+  const named =
     settings.newDrives === undefined
-      ? browser
+      ? undefined
       : reactorOf.get(settings.newDrives);
-  if (browser === undefined && newDrives !== undefined) {
+  if (browser === undefined && named !== undefined) {
     backends.sort(
-      (a, b) =>
-        Number(b.reactor === newDrives) - Number(a.reactor === newDrives),
+      (a, b) => Number(b.reactor === named) - Number(a.reactor === named),
     );
   }
+  const newDrives = named ?? backends[0].reactor;
   const connections: Record<string, RemoteSettings> = {};
   for (const connection of settings.connections) {
     const reactor = reactorOf.get(connection.backend);
@@ -145,7 +146,7 @@ export function routeSeedOf({
     collections,
     drives,
     router: {
-      ...(newDrives === undefined ? {} : { defaultBackend: newDrives }),
+      defaultBackend: newDrives,
       probeTimeoutMs: settings.probeTimeoutMs,
       provisionalRouteMs: settings.provisionalRouteMs,
     },

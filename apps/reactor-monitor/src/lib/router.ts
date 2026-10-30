@@ -29,9 +29,6 @@ export type RouterBackendHandle = {
   readonly dispose: () => void;
 };
 
-/** A breaker that never opens, for `breaker: false`. */
-const NEVER_OPENS = { failures: Number.POSITIVE_INFINITY, openMs: 0 } as const;
-
 // A remote routes over its switchboard's GraphQL, unsigned. Without
 // `settings` (a router built by hand), live updates stay off.
 export function routableBackend(
@@ -39,8 +36,6 @@ export function routableBackend(
   settings?: RemoteSettings,
 ): RouterBackendHandle {
   if (reactor.kind === "remote") {
-    const breaker =
-      settings?.breaker === false ? NEVER_OPENS : settings?.breaker;
     const backend = createSwitchboardBackend({
       name: reactor.name,
       url: reactor.url,
@@ -51,7 +46,7 @@ export function routableBackend(
       ...(settings?.requestTimeoutMs === undefined
         ? {}
         : { requestTimeoutMs: settings.requestTimeoutMs }),
-      ...(breaker ? { breaker } : {}),
+      ...(settings?.breaker === undefined ? {} : { breaker: settings.breaker }),
       ...(reactor.fetch ? { fetch: reactor.fetch } : {}),
     });
     return { config: backend.config, dispose: () => backend.dispose() };
