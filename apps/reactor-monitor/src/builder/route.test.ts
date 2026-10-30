@@ -14,7 +14,7 @@ import type { RouteSeed } from "../lib/route-seed.js";
 import { PROJECT } from "./__fixtures__/fakes.js";
 import { linkedStack, runOf } from "./__fixtures__/route.js";
 import { DIGEST } from "./__fixtures__/steps.js";
-import { SAVE_PLACEMENT } from "./copy.js";
+import { ROUTE_COPY, SAVE_PLACEMENT } from "./copy.js";
 import {
   addEdit,
   envelopeOf,
@@ -69,7 +69,7 @@ describe("routeSeedOf", () => {
       settings: [
         "New drives: in this browser",
         "Finding a document: wait up to 3 s for each reactor",
-        "A document found on a switchboard: look again after 30 s",
+        "Checking again where a document is: look again after 30 s",
         "Connection to sb: wait up to 30 s, stop trying after 3 failures, try again in 30 s, live updates on",
       ],
     });
@@ -117,9 +117,31 @@ describe("routeSeedOf", () => {
     expect(seed?.settings).toEqual([
       "New drives: on sb",
       "Finding a document: wait up to 10 s for each reactor",
-      "A document found on a switchboard: look again after 5 min",
+      "Checking again where a document is: look again after 5 min",
       "Connection to sb: wait up to 2 min, never stop trying, live updates off",
     ]);
+  });
+
+  it("won't create new drives elsewhere when their switchboard isn't attached", () => {
+    const { draft } = linkedStack();
+    const linkedByAddress = applySetters(draft.envelope, [
+      {
+        path: `${UI}.reactor.backends.far`,
+        value: { kind: "remote", remote: { url: "https://far.test/d/team" } },
+      },
+      { path: `${UI}.reactor.placement.newDrives`, value: "far" },
+    ]);
+    expect(linkedByAddress.issues).toEqual([]);
+    const seed = seedOf({ envelope: linkedByAddress.envelope });
+    expect(seed?.backends.map((entry) => entry.reactor)).toEqual([
+      "ui.main",
+      "sb-inst-1",
+    ]);
+    expect(seed?.router).not.toHaveProperty("defaultBackend");
+    const blocked = ROUTE_COPY.newDrivesUnreachable("https://far.test");
+    expect(seed?.newDrivesBlocked).toBe(blocked);
+    expect(seed?.settings[0]).toBe("New drives: on https://far.test");
+    expect(seed?.settings.at(-1)).toBe(blocked);
   });
 
   it("puts the new drives' switchboard first when the Connect keeps no browser reactor", () => {
@@ -140,7 +162,7 @@ describe("routeSeedOf", () => {
     add("host.children.switchboard", "Shared 2");
     pick(`${UI}:reach:open:sb:shared`);
     pick(`${UI}:reach:open:switchboard:shared-2`);
-    pick(`${UI}:newDrives:switchboard`);
+    pick(`${UI}:newDrives:on:switchboard`);
     pick(`${UI}:reach:remove:main`);
     const seed = seedOf(
       draft,

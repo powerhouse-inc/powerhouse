@@ -11,6 +11,7 @@ import {
   type Member,
 } from "../host-rules/index.js";
 import type { RemoteSettings, RouteSeed } from "../lib/route-seed.js";
+import { ROUTE_COPY } from "./copy.js";
 import type { BuilderDraft } from "./draft.js";
 import type { BuilderRun } from "./run.js";
 
@@ -76,19 +77,24 @@ export function routeSeedOf({
   }
   if (backends.length < 2) return undefined;
 
-  // As Connect: the browser reactor is primary, else new drives' switchboard;
-  // new drives go to newDrives, else the primary.
+  // As Connect: its primary first; new drives on newDrives, else the primary.
   const settings = routerSettings(member, members);
-  const named =
-    settings.newDrives === undefined
-      ? undefined
-      : reactorOf.get(settings.newDrives);
-  if (browser === undefined && named !== undefined) {
-    backends.sort(
-      (a, b) => Number(b.reactor === named) - Number(a.reactor === named),
-    );
-  }
-  const newDrives = named ?? backends[0].reactor;
+  const primary = member.backends.find((backend) => backend.primary)?.name;
+  const first = primary === undefined ? undefined : reactorOf.get(primary);
+  backends.sort(
+    (a, b) => Number(b.reactor === first) - Number(a.reactor === first),
+  );
+  const home = settings.newDrives ?? primary;
+  const newDrives = home === undefined ? undefined : reactorOf.get(home);
+  const blocked =
+    newDrives === undefined
+      ? ROUTE_COPY.newDrivesUnreachable(
+          settings.connections.find((entry) => entry.backend === home)
+            ?.switchboard ??
+            home ??
+            member.key,
+        )
+      : undefined;
   const connections: Record<string, RemoteSettings> = {};
   for (const connection of settings.connections) {
     const reactor = reactorOf.get(connection.backend);
@@ -146,11 +152,15 @@ export function routeSeedOf({
     collections,
     drives,
     router: {
-      defaultBackend: newDrives,
+      ...(newDrives === undefined ? {} : { defaultBackend: newDrives }),
       probeTimeoutMs: settings.probeTimeoutMs,
       provisionalRouteMs: settings.provisionalRouteMs,
     },
     connections,
-    settings: routerSettingLines(settings),
+    settings: [
+      ...routerSettingLines(settings),
+      ...(blocked === undefined ? [] : [blocked]),
+    ],
+    ...(blocked === undefined ? {} : { newDrivesBlocked: blocked }),
   };
 }

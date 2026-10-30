@@ -1,5 +1,8 @@
 import type * as GraphQLClient from "@powerhousedao/reactor-browser/graphql-client";
-import type { ManagedReactor } from "@powerhousedao/reactor-monitor";
+import {
+  ReactorMonitorRegistry,
+  type ManagedReactor,
+} from "@powerhousedao/reactor-monitor";
 import { describe, expect, it, vi } from "vitest";
 import { bearerOf, buildRoutingClient, routableBackend } from "./router.js";
 
@@ -148,4 +151,40 @@ describe("a remote's connection settings", () => {
     ]);
     built.dispose();
   });
+});
+
+describe("new drives on a switchboard that is down", () => {
+  it("fails the create and never falls back to the browser reactor (Q1a)", async () => {
+    const registry = new ReactorMonitorRegistry();
+    try {
+      const local = await registry.provision({
+        kind: "in-process",
+        name: "tab",
+        storage: { kind: "memory" },
+      });
+      const offline = (() =>
+        Promise.reject(new Error("offline"))) as typeof globalThis.fetch;
+      const remote = remoteHandle(offline);
+      const built = buildRoutingClient(
+        [local, remote],
+        { defaultBackend: remote.name },
+        { [remote.name]: { breaker: { failures: 1, openMs: 60_000 } } },
+      );
+      try {
+        await expect(
+          built.client.write.drives.create({ global: { name: "Shared" } }),
+        ).rejects.toThrow();
+        const page = await local.client.read.find({
+          type: "powerhouse/document-drive",
+        });
+        expect(page.results.map((drive) => drive.header.name)).not.toContain(
+          "Shared",
+        );
+      } finally {
+        built.dispose();
+      }
+    } finally {
+      await registry.killAll();
+    }
+  }, 60_000);
 });

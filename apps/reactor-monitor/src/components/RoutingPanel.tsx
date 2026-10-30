@@ -526,6 +526,12 @@ export function RoutingPanel({
     const name = driveName.trim();
     try {
       if (driveTarget === "") {
+        const blocked = topology.seed?.newDrivesBlocked;
+        if (blocked !== undefined) {
+          setCreateResult("");
+          setOpError(blocked);
+          return;
+        }
         const created = await client.write.drives.create({
           global: { name },
         });
@@ -648,6 +654,8 @@ export function RoutingPanel({
       .filter((reactor) => reactor.kind !== "remote")
       .map((reactor) => reactor.name) ?? [];
   const requirementRows = Object.entries(topology?.requirements ?? {});
+  // The seed of the router that is live; a router built by hand has none.
+  const routed = topology?.seed;
   const hostBackendOf = (reactor: string) =>
     topology?.seed?.backends.find((entry) => entry.reactor === reactor)
       ?.backend;
@@ -663,18 +671,20 @@ export function RoutingPanel({
         keeps the move for the monitoring set.
       </p>
 
-      {seed ? (
+      {seed && seedMissing.length > 0 ? (
         <p className="rm-note" data-testid="router-seed">
-          {seedMissing.length > 0
-            ? ROUTER_COPY.waiting(seedMissing.join(", "))
-            : ROUTER_COPY.routing(seed.app)}
+          {ROUTER_COPY.waiting(seedMissing.join(", "))}
+        </p>
+      ) : routed ? (
+        <p className="rm-note" data-testid="router-seed">
+          {ROUTER_COPY.routing(routed.app)}
         </p>
       ) : null}
-      {seed && seed.settings.length > 0 ? (
+      {routed && routed.settings.length > 0 ? (
         <div className="rm-router-host" data-testid="router-host-config">
           <h3>{ROUTER_COPY.fromHostConfig}</h3>
           <ul>
-            {seed.settings.map((line) => (
+            {routed.settings.map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ul>
@@ -1037,6 +1047,11 @@ export function RoutingPanel({
               Create drive
             </button>
           </div>
+          {routed?.newDrivesBlocked ? (
+            <p className="rm-note" data-testid="router-create-blocked">
+              {routed.newDrivesBlocked}
+            </p>
+          ) : null}
           {createResult ? (
             <p className="rm-note" data-testid="router-create-result">
               {createResult}

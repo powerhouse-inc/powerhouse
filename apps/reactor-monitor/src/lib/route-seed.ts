@@ -41,6 +41,8 @@ export type RouteSeed = {
   readonly connections: Readonly<Record<string, RemoteSettings>>;
   /** The settings in effect, in words, for "From the host config". */
   readonly settings: readonly string[];
+  /** Why a drive can't be created through this router, as in Connect (Q1a). */
+  readonly newDrivesBlocked?: string;
 };
 
 export type SaveVerdict = { ok: true } | { ok: false; reason: string };

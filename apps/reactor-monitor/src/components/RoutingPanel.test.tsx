@@ -584,6 +584,13 @@ describe("RoutingPanel moves", () => {
     expect(
       block.getAllByRole("listitem").map((item) => item.textContent),
     ).toEqual(seed.settings);
+
+    // Rebuilt by hand, the router has none of those settings any more.
+    fireEvent.click(seeded.getByTestId("router-build"));
+    await waitFor(() =>
+      expect(seeded.queryByTestId("router-host-config")).toBeNull(),
+    );
+    expect(seeded.queryByTestId("router-seed")).toBeNull();
     seeded.unmount();
 
     const manual = show({
@@ -609,5 +616,39 @@ describe("RoutingPanel moves", () => {
     expect(manualConnections).toBeUndefined();
     expect(manual.queryByTestId("router-host-config")).toBeNull();
     manual.unmount();
+  }, 60_000);
+
+  it("refuses a create when new drives' switchboard isn't attached", async () => {
+    const blocked = "New drives go to far, which the monitor can't reach.";
+    const seed: RouteSeed = {
+      ...seedOf("s-blocked", {}),
+      router: {},
+      settings: ["New drives: on far", blocked],
+      newDrivesBlocked: blocked,
+    };
+    const view = show({ setName: "blocked", storage: memoryStorage(), seed });
+    await waitFor(
+      () => expect(view.getByTestId("router-table")).toBeTruthy(),
+      WAIT,
+    );
+    expect(view.getByTestId("router-create-blocked").textContent).toBe(blocked);
+    fireEvent.change(view.getByTestId("router-create-drive-name"), {
+      target: { value: "Nowhere" },
+    });
+    fireEvent.click(view.getByTestId("router-create-drive"));
+    await waitFor(() =>
+      expect(view.getByTestId("router-op-error").textContent).toBe(blocked),
+    );
+    expect(view.queryByTestId("router-create-result")).toBeNull();
+    for (const entry of registry.list()) {
+      if (entry.status !== "ready") continue;
+      const page = await entry.reactor.client.read.find({
+        type: "powerhouse/document-drive",
+      });
+      expect(page.results.map((drive) => drive.header.name)).not.toContain(
+        "Nowhere",
+      );
+    }
+    view.unmount();
   }, 60_000);
 });
