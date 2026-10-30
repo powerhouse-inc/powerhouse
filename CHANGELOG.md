@@ -1,3 +1,29 @@
+## 6.2.3-dev.85 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-workflow:** manual trigger inputs, validated and typed at fire time ([257944515f](https://github.com/powerhouse-inc/powerhouse/commit/257944515f))
+- **reactor-workflow:** suspend and resume runs on waitpoints ([e12b8eb819](https://github.com/powerhouse-inc/powerhouse/commit/e12b8eb819))
+- **switchboard:** read an OAuth2 app's relay from workflows.oauthApps ([f29bc5b5fa](https://github.com/powerhouse-inc/powerhouse/commit/f29bc5b5fa))
+- **switchboard:** oauthSignIn tells how a sign-in with a publisher app would go ([d3e2c84321](https://github.com/powerhouse-inc/powerhouse/commit/d3e2c84321))
+- **switchboard:** waitpoint resume routes, confirm page and subgraph fields ([d471c7b7b3](https://github.com/powerhouse-inc/powerhouse/commit/d471c7b7b3))
+- **workflow:** a publisher OAuth2 app may name a token-broker relay ([d283343f9d](https://github.com/powerhouse-inc/powerhouse/commit/d283343f9d))
+- **workflow:** sign in, exchange and refresh through an app's relay without its secret ([9759ae7e3e](https://github.com/powerhouse-inc/powerhouse/commit/9759ae7e3e))
+- **workflow:** a Run form for the manual trigger's inputs ([3effc302de](https://github.com/powerhouse-inc/powerhouse/commit/3effc302de))
+- **workflow:** OAuth2 relay and token broker for publisher apps ([#3349](https://github.com/powerhouse-inc/powerhouse/pull/3349))
+- **workflow:** approvals, waiting runs and wait blocks in the editor ([dead08df1b](https://github.com/powerhouse-inc/powerhouse/commit/dead08df1b))
+
+### 🩹 Fixes
+
+- **host-core:** a remote backend's unresolved url token is no drive address (ph run build) ([9a33ea3268](https://github.com/powerhouse-inc/powerhouse/commit/9a33ea3268))
+- **host-core:** skip unresolved remote backend url tokens in placeConnectDrives ([#3350](https://github.com/powerhouse-inc/powerhouse/pull/3350))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank @froid1911
+- Frank Pfeift
+
 ## 6.2.3-dev.84 (2026-10-30)
 
 ### 🚀 Features

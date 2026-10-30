@@ -1,3 +1,14 @@
+## 6.2.3-dev.85 (2026-10-30)
+
+### 🚀 Features
+
+- **workflow:** approvals, waiting runs and wait blocks in the editor ([dead08df1b](https://github.com/powerhouse-inc/powerhouse/commit/dead08df1b))
+- **workflow:** a Run form for the manual trigger's inputs ([3effc302de](https://github.com/powerhouse-inc/powerhouse/commit/3effc302de))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.84 (2026-10-30)
 
 ### 🚀 Features

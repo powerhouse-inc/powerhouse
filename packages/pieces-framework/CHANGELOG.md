@@ -1,3 +1,14 @@
+## 6.2.3-dev.85 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-workflow:** suspend and resume runs on waitpoints ([e12b8eb819](https://github.com/powerhouse-inc/powerhouse/commit/e12b8eb819))
+- **reactor-workflow:** manual trigger inputs, validated and typed at fire time ([257944515f](https://github.com/powerhouse-inc/powerhouse/commit/257944515f))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.84 (2026-10-30)
 
 ### 🚀 Features
