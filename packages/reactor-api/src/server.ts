@@ -1180,7 +1180,7 @@ async function _setupAPI(
     const factories = await Promise.allSettled(
       fns.map(async (fn) => {
         try {
-          return fn(moduleFor(packageName));
+          return await fn(moduleFor(packageName));
         } catch (e) {
           logger.error(
             "Error initializing processor factory for package @package: @error",
