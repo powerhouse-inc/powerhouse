@@ -3,12 +3,14 @@ import {
   applySetters,
   connectReach,
   membersOf,
+  routerSettingLines,
+  routerSettings,
   targetOf,
   valueAt,
   type HostRulesContext,
   type Member,
 } from "../host-rules/index.js";
-import type { RouteSeed } from "../lib/route-seed.js";
+import type { RemoteSettings, RouteSeed } from "../lib/route-seed.js";
 import type { BuilderDraft } from "./draft.js";
 import type { BuilderRun } from "./run.js";
 
@@ -74,6 +76,29 @@ export function routeSeedOf({
   }
   if (backends.length < 2) return undefined;
 
+  // The router Connect builds: new drives' backend, then the browser reactor.
+  const settings = routerSettings(member, members);
+  const newDrives =
+    settings.newDrives === undefined
+      ? browser
+      : reactorOf.get(settings.newDrives);
+  if (browser === undefined && newDrives !== undefined) {
+    backends.sort(
+      (a, b) =>
+        Number(b.reactor === newDrives) - Number(a.reactor === newDrives),
+    );
+  }
+  const connections: Record<string, RemoteSettings> = {};
+  for (const connection of settings.connections) {
+    const reactor = reactorOf.get(connection.backend);
+    if (reactor === undefined) continue;
+    connections[reactor] = {
+      requestTimeoutMs: connection.requestTimeoutMs,
+      breaker: connection.breaker,
+      realtime: connection.realtime,
+    };
+  }
+
   // A switchboard drive is keyed by the id the copy's switchboard reports.
   const keyOf = (slug: string, switchboard: string | undefined) =>
     (switchboard === undefined
@@ -119,5 +144,12 @@ export function routeSeedOf({
     backends,
     collections,
     drives,
+    router: {
+      ...(newDrives === undefined ? {} : { defaultBackend: newDrives }),
+      probeTimeoutMs: settings.probeTimeoutMs,
+      provisionalRouteMs: settings.provisionalRouteMs,
+    },
+    connections,
+    settings: routerSettingLines(settings),
   };
 }

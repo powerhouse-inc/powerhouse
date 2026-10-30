@@ -14,6 +14,7 @@ import {
   type RouterTableEntry,
   type RouterTableSnapshot,
   type RouteSource,
+  type RoutingClientOptions,
   type RoutingReactorClient,
 } from "@powerhousedao/reactor-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -25,7 +26,11 @@ import {
   type PlacementLayer,
   type PlacementStorage,
 } from "../lib/placements.js";
-import type { RouteSeed, SaveVerdict } from "../lib/route-seed.js";
+import type {
+  RouteSeed,
+  SaveVerdict,
+  SeedRouterOptions,
+} from "../lib/route-seed.js";
 import { buildRoutingClient, type BuiltRouter } from "../lib/router.js";
 import { capabilityCells } from "../tabs/OverviewTab.js";
 
@@ -45,6 +50,7 @@ export const ROUTER_COPY = {
       ? "The host config changed for 1 moved drive, so its move was dropped."
       : `The host config changed for ${count} moved drives, so their moves were dropped.`,
   inHostConfig: (backend: string) => `${backend} in the host config`,
+  fromHostConfig: "From the host config",
 } as const;
 
 /** One line the router reported through `onDiagnostic`, newest last. */
@@ -324,13 +330,20 @@ export function RoutingPanel({
         setBuildError(ROUTER_COPY.needsTwo);
         return;
       }
+      // defaultBackend is the plan's RoutingOptions name (RC1's router PR).
+      const options: RoutingClientOptions & SeedRouterOptions = {
+        collections: next.overrides,
+        requirements: next.requirements,
+        onDiagnostic: (message) => appendLog(message),
+        ...next.seed?.router,
+      };
       let router: BuiltRouter;
       try {
-        router = buildRoutingClient(next.reactors, {
-          collections: next.overrides,
-          requirements: next.requirements,
-          onDiagnostic: (message) => appendLog(message),
-        });
+        router = buildRoutingClient(
+          next.reactors,
+          options,
+          next.seed?.connections,
+        );
       } catch (error) {
         setBuildError(errorText(error));
         return;
@@ -661,6 +674,16 @@ export function RoutingPanel({
             ? ROUTER_COPY.waiting(seedMissing.join(", "))
             : ROUTER_COPY.routing(seed.app)}
         </p>
+      ) : null}
+      {seed && seed.settings.length > 0 ? (
+        <div className="rm-router-host" data-testid="router-host-config">
+          <h3>{ROUTER_COPY.fromHostConfig}</h3>
+          <ul>
+            {seed.settings.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       <div className="rm-router-build">

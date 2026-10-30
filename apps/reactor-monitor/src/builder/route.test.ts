@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { FULL, stack } from "../host-rules/__fixtures__/hosts.js";
 import {
+  addDriveStatus,
+  applyOption,
   applySetters,
+  hostOptions,
   membersOf,
   REACH_REASONS,
   type HostDraft,
@@ -51,7 +54,112 @@ describe("routeSeedOf", () => {
       ],
       collections: { "id-shared": "sb-inst-1", powerhouse: "ui.main" },
       drives: { "id-shared": "shared", powerhouse: "powerhouse" },
+      router: {
+        defaultBackend: "ui.main",
+        probeTimeoutMs: 3_000,
+        provisionalRouteMs: 30_000,
+      },
+      connections: {
+        "sb-inst-1": {
+          requestTimeoutMs: 30_000,
+          breaker: { failures: 3, openMs: 30_000 },
+          realtime: true,
+        },
+      },
+      settings: [
+        "New drives: in this browser",
+        "Finding a document: wait up to 3 s for each reactor",
+        "A document found on a switchboard: look again after 30 s",
+        "Connection to sb: wait up to 30 s, stop trying after 3 failures, try again in 30 s, live updates on",
+      ],
     });
+  });
+
+  it("builds the router the Connect builds from its host config", () => {
+    const { draft } = linkedStack();
+    const configured = applySetters(draft.envelope, [
+      { path: `${UI}.reactor.placement.newDrives`, value: "sb" },
+      { path: `${UI}.reactor.router.probeTimeoutMs`, value: 10_000 },
+      { path: `${UI}.reactor.router.provisionalRouteMs`, value: 300_000 },
+      {
+        path: `${UI}.reactor.backends.sb.remote`,
+        value: {
+          ...(
+            (draft.envelope.host as { children: Record<string, unknown> })
+              .children.ui as {
+              reactor: { backends: { sb: { remote: object } } };
+            }
+          ).reactor.backends.sb.remote,
+          requestTimeoutMs: 120_000,
+          breaker: false,
+          realtime: false,
+        },
+      },
+    ]);
+    expect(configured.issues).toEqual([]);
+    const seed = seedOf({ envelope: configured.envelope });
+    expect(seed?.backends.map((entry) => entry.reactor)).toEqual([
+      "ui.main",
+      "sb-inst-1",
+    ]);
+    expect(seed?.router).toEqual({
+      defaultBackend: "sb-inst-1",
+      probeTimeoutMs: 10_000,
+      provisionalRouteMs: 300_000,
+    });
+    expect(seed?.connections).toEqual({
+      "sb-inst-1": {
+        requestTimeoutMs: 120_000,
+        breaker: false,
+        realtime: false,
+      },
+    });
+    expect(seed?.settings).toEqual([
+      "New drives: on sb",
+      "Finding a document: wait up to 10 s for each reactor",
+      "A document found on a switchboard: look again after 5 min",
+      "Connection to sb: wait up to 2 min, never stop trying, live updates off",
+    ]);
+  });
+
+  it("puts the new drives' switchboard first when the Connect keeps no browser reactor", () => {
+    let draft: HostDraft = { envelope: stack() };
+    const pick = (id: string) => {
+      const option = hostOptions(draft, FULL).find((entry) => entry.id === id);
+      expect(option?.reason, id).toBeUndefined();
+      draft = applyOption(draft, option!).draft;
+    };
+    const add = (switchboard: string, name: string) => {
+      draft = applyOption(
+        draft,
+        addDriveStatus(draft, FULL, switchboard, name)!,
+      ).draft;
+    };
+    pick("host:add:switchboard");
+    add("host.children.sb", "Shared");
+    add("host.children.switchboard", "Shared 2");
+    pick(`${UI}:reach:open:sb:shared`);
+    pick(`${UI}:reach:open:switchboard:shared-2`);
+    pick(`${UI}:newDrives:switchboard`);
+    pick(`${UI}:reach:remove:main`);
+    const seed = seedOf(
+      draft,
+      runOf({
+        attached: {
+          browser: [],
+          remote: [
+            { name: "sb-inst-1", member: "sb" },
+            { name: "sw-inst-1", member: "switchboard" },
+          ],
+        },
+      }),
+    );
+    expect(seed?.backends).toEqual([
+      { reactor: "sw-inst-1", backend: "switchboard" },
+      { reactor: "sb-inst-1", backend: "sb" },
+    ]);
+    expect(seed?.router.defaultBackend).toBe("sw-inst-1");
+    expect(seed?.settings[0]).toBe("New drives: on switchboard");
   });
 
   it("names an unplaced linked drive by slug without placing it", () => {
