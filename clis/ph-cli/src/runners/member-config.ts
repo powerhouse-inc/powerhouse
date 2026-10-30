@@ -97,6 +97,7 @@ export const memberSwitchboardConfigSchema = switchboardConfigLayerSchema([
   "storage.reactor",
   "storage.readModel",
   "protocol",
+  "telemetry",
   "packages.dynamic",
   "drive",
   "remoteDrives",
