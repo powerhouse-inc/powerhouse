@@ -1,3 +1,20 @@
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-router:** setConfiguredPlacement for config known after construction ([0f0362f63b](https://github.com/powerhouse-inc/powerhouse/commit/0f0362f63b))
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+- **reactor-router:** find lists a duplicated id from the backend it is routed to ([1c2eba9778](https://github.com/powerhouse-inc/powerhouse/commit/1c2eba9778))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.82 (2026-10-29)
 
 ### 🚀 Features

@@ -1,3 +1,54 @@
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🚀 Features
+
+- **apps-reactor-monitor:** a Connect may link drives on several switchboards ([95c4947409](https://github.com/powerhouse-inc/powerhouse/commit/95c4947409))
+- **apps-reactor-monitor:** watch and route a started host ([#3347](https://github.com/powerhouse-inc/powerhouse/pull/3347))
+- **connect:** a drive placed on its switchboard keeps no copy in this browser ([58e5b60bcf](https://github.com/powerhouse-inc/powerhouse/commit/58e5b60bcf))
+- **connect:** route placed drives to their switchboard from boot ([2d577e96a8](https://github.com/powerhouse-inc/powerhouse/commit/2d577e96a8))
+- **connect:** route to the host's switchboards by drive placement ([#3343](https://github.com/powerhouse-inc/powerhouse/pull/3343))
+- **connect:** move a drive between its switchboard and this browser ([250fac73ae](https://github.com/powerhouse-inc/powerhouse/commit/250fac73ae))
+- **connect:** move a drive at runtime, attachments by drive ([#3346](https://github.com/powerhouse-inc/powerhouse/pull/3346))
+- **connect-core:** read drive placement from the served config ([50181cd9ae](https://github.com/powerhouse-inc/powerhouse/commit/50181cd9ae))
+- **connect-core:** route to one backend per switchboard, named by host key ([eb309ff74c](https://github.com/powerhouse-inc/powerhouse/commit/eb309ff74c))
+- **connect-core:** per-browser drive moves over the host's placement ([7f3329bba9](https://github.com/powerhouse-inc/powerhouse/commit/7f3329bba9))
+- **design-system:** a slot for app sections in the drive settings modal ([7b6b7231a6](https://github.com/powerhouse-inc/powerhouse/commit/7b6b7231a6))
+- **document-model:** record a representation and optional coercion on scalars ([a719542782](https://github.com/powerhouse-inc/powerhouse/commit/a719542782))
+- **host-core:** project remote backends and drive placement onto Connect ([595abd71a6](https://github.com/powerhouse-inc/powerhouse/commit/595abd71a6))
+- **ph-cli:** the connect runner serves remote backends and drive placement ([e255517ca2](https://github.com/powerhouse-inc/powerhouse/commit/e255517ca2))
+- **ph-cli:** add the TypeScript compile plan as a library ([9be8b6a27f](https://github.com/powerhouse-inc/powerhouse/commit/9be8b6a27f))
+- **reactor-attachments:** route attachments by document with RoutingAttachmentService ([9a7720a85e](https://github.com/powerhouse-inc/powerhouse/commit/9a7720a85e))
+- **reactor-browser:** every tab learns of sync remotes added or removed in one ([586c752322](https://github.com/powerhouse-inc/powerhouse/commit/586c752322))
+- **reactor-browser:** fetchDriveInfo takes a token provider ([ddecd39600](https://github.com/powerhouse-inc/powerhouse/commit/ddecd39600))
+- **reactor-browser:** export SYNC_REMOTES_CHANGED_EVENT from ./rpc ([371ad9d132](https://github.com/powerhouse-inc/powerhouse/commit/371ad9d132))
+- **reactor-browser:** useAttachmentUpload preprocess takes the document id ([763f18b39a](https://github.com/powerhouse-inc/powerhouse/commit/763f18b39a))
+- **reactor-monitor-app:** route over switchboards and move drives at runtime ([25d74b05c2](https://github.com/powerhouse-inc/powerhouse/commit/25d74b05c2))
+- **reactor-monitor-app:** host rules judge saving a Router move as placement ([476a74111d](https://github.com/powerhouse-inc/powerhouse/commit/476a74111d))
+- **reactor-monitor-app:** route a started Connect's reactors from Use it ([6cf25c1cf4](https://github.com/powerhouse-inc/powerhouse/commit/6cf25c1cf4))
+- **reactor-monitor-app:** route a copy by the config it runs ([d11d85e424](https://github.com/powerhouse-inc/powerhouse/commit/d11d85e424))
+- **reactor-router:** setConfiguredPlacement for config known after construction ([0f0362f63b](https://github.com/powerhouse-inc/powerhouse/commit/0f0362f63b))
+- **shared:** served Connect config carries remoteBackends, collections and default-drive placement ([67426c7182](https://github.com/powerhouse-inc/powerhouse/commit/67426c7182))
+- **shared:** add stored definition types and latestVersionOf ([95aa962203](https://github.com/powerhouse-inc/powerhouse/commit/95aa962203))
+- **shared,document-model,reactor-api,ph-cli:** add groundwork for code-first document models ([#3345](https://github.com/powerhouse-inc/powerhouse/pull/3345))
+
+### 🩹 Fixes
+
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect-core:** other tabs follow a kept copy only once it has arrived ([3fe267ef02](https://github.com/powerhouse-inc/powerhouse/commit/3fe267ef02))
+- **connect-core:** wait for the copy whenever a drive's effective placement becomes this browser ([420d544c12](https://github.com/powerhouse-inc/powerhouse/commit/420d544c12))
+- **reactor-monitor-app:** serve.ts loads again under plain node ([5dc4c7f347](https://github.com/powerhouse-inc/powerhouse/commit/5dc4c7f347))
+- **reactor-monitor-app:** the Router view's tables keep their height ([a52e14b270](https://github.com/powerhouse-inc/powerhouse/commit/a52e14b270))
+- **reactor-monitor-app:** keep a started app's moves across a new start ([e8035c45c1](https://github.com/powerhouse-inc/powerhouse/commit/e8035c45c1))
+- **reactor-monitor-app:** name every linked drive by slug in the route seed ([8370f3e8dd](https://github.com/powerhouse-inc/powerhouse/commit/8370f3e8dd))
+- **reactor-router:** find lists a duplicated id from the backend it is routed to ([1c2eba9778](https://github.com/powerhouse-inc/powerhouse/commit/1c2eba9778))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.82 (2026-10-29)
 
 ### 🚀 Features

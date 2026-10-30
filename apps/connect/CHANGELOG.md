@@ -1,3 +1,21 @@
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🚀 Features
+
+- **connect:** move a drive between its switchboard and this browser ([250fac73ae](https://github.com/powerhouse-inc/powerhouse/commit/250fac73ae))
+- **connect:** route placed drives to their switchboard from boot ([2d577e96a8](https://github.com/powerhouse-inc/powerhouse/commit/2d577e96a8))
+- **connect:** a drive placed on its switchboard keeps no copy in this browser ([58e5b60bcf](https://github.com/powerhouse-inc/powerhouse/commit/58e5b60bcf))
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.82 (2026-10-29)
 
 ### 🚀 Features

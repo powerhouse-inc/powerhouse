@@ -1,3 +1,22 @@
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-browser:** useAttachmentUpload preprocess takes the document id ([763f18b39a](https://github.com/powerhouse-inc/powerhouse/commit/763f18b39a))
+- **reactor-browser:** export SYNC_REMOTES_CHANGED_EVENT from ./rpc ([371ad9d132](https://github.com/powerhouse-inc/powerhouse/commit/371ad9d132))
+- **reactor-browser:** fetchDriveInfo takes a token provider ([ddecd39600](https://github.com/powerhouse-inc/powerhouse/commit/ddecd39600))
+- **reactor-browser:** every tab learns of sync remotes added or removed in one ([586c752322](https://github.com/powerhouse-inc/powerhouse/commit/586c752322))
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.82 (2026-10-29)
 
 ### 🚀 Features

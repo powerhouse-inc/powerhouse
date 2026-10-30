@@ -1,3 +1,19 @@
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-attachments:** route attachments by document with RoutingAttachmentService ([9a7720a85e](https://github.com/powerhouse-inc/powerhouse/commit/9a7720a85e))
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.82 (2026-10-29)
 
 ### 🚀 Features

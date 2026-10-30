@@ -1,3 +1,20 @@
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🚀 Features
+
+- **document-model:** record a representation and optional coercion on scalars ([a719542782](https://github.com/powerhouse-inc/powerhouse/commit/a719542782))
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.82 (2026-10-29)
 
 ### 🚀 Features
