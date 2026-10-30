@@ -33,6 +33,7 @@ import {
   OAUTH_TOKEN,
   OAuthAttemptStore,
   postTokenForm,
+  relayEgress,
   StoreTokenRefresher,
   tokenDue,
   type OAuthTokenSet,
@@ -1156,6 +1157,39 @@ describe("postTokenForm", () => {
       postTokenForm(`http://localhost:${provider.port}/acme/token`, {}, {}),
     ).rejects.toThrow("is not reachable from here");
     expect(provider.requests).toHaveLength(0);
+  });
+
+  it("lets a relay's token URL reach private space over https, nothing else", async () => {
+    // A cluster may route its own domains internally: sektar.vetra.io
+    // resolved to a ClusterIP inside Vetra (2026-10-30).
+    const broker = await startBroker();
+    const previousCa = https.globalAgent.options.ca;
+    https.globalAgent.options.ca = TLS_FIXTURE("localhost-cert.pem");
+    try {
+      const form = {
+        grant_type: "refresh_token",
+        refresh_token: "rt-relay",
+        client_id: "relay-cid",
+      };
+      await expect(postTokenForm(broker.tokenUrl, form, {})).rejects.toThrow(
+        "is not reachable from here",
+      );
+      await expect(
+        postTokenForm(broker.tokenUrl, form, {}, relayEgress()),
+      ).resolves.toMatchObject({ access_token: "at-relay-refreshed" });
+      // Plain http still needs an address the operator named.
+      await expect(
+        postTokenForm(
+          `http://127.0.0.1:${provider.port}/acme/token`,
+          {},
+          {},
+          relayEgress(),
+        ),
+      ).rejects.toThrow("is not reachable from here");
+    } finally {
+      https.globalAgent.options.ca = previousCa;
+      await broker.stop();
+    }
   });
 
   it("reports the provider's own error", async () => {

@@ -531,6 +531,13 @@ function tokenSetFrom(
   };
 }
 
+// A relay's token URL is the host's configuration (workflows.oauthApps), not a
+// piece's: it may resolve to private space, e.g. a cluster that routes its own
+// domains internally. Still https only; plain http needs a named address.
+export function relayEgress(egress?: EgressPolicy): EgressPolicy {
+  return { ...egress, allowPrivateAddresses: true };
+}
+
 // A null clientSecret exchanges through a relay: client_id and the PKCE
 // verifier, no secret.
 export async function exchangeCode(
@@ -554,7 +561,7 @@ export async function exchangeCode(
       ...auth.form,
     },
     auth.headers,
-    egress,
+    clientSecret === null ? relayEgress(egress) : egress,
   );
   return tokenSetFrom(response, {
     token_url: attempt.token_url,
@@ -684,7 +691,7 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
           ...auth.form,
         },
         auth.headers,
-        this.egress,
+        tokens.relayed ? relayEgress(this.egress) : this.egress,
       );
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
