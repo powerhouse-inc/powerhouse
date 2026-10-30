@@ -82,8 +82,8 @@ A compact JWS, `ES256`, signed by A, with header `{"alg":"ES256","typ":"ph-deleg
 - `scp.res` names what the statement is for. Sektar uses `sektar/integration:<id>`. The host that uses
   the statement checks it. Other reactors treat it as a label.
 - `prf` is new against the earlier plan. It makes both links verifiable with no network, which the
-  offline rule in §11 requires. It costs about 2 KB on each delegated action. Only publishes carry it
-  in this slice.
+  offline rule in §11 requires. A statement measures 3.1 KB, of which the credential is most. Only
+  publishes carry one in this slice.
 
 ### 3. Where the proof lives
 
