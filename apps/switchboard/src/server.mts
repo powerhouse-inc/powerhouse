@@ -22,6 +22,7 @@ import {
   type Database,
   type InProcessReactorClientModule,
   type InProcessReactorModule,
+  type IStoreMaintenance,
   type JwtHandler,
   type KeyframeSettings,
   type PoolInstrumentation,
@@ -55,6 +56,7 @@ import {
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
 import {
   disableWasmWrapperTiering,
+  maintenanceOf,
   ThreadedPGlite,
 } from "@powerhousedao/reactor-api/pglite-node";
 import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
@@ -313,7 +315,7 @@ function readConfigOAuthApps(
 // An unreadable config file means "not configured", not a boot failure:
 // workflows are opt-in.
 /** `PH_KEYFRAMES` (or a caller's layer) wins whole over the project config. */
-function resolveKeyframes(
+export function resolveKeyframes(
   configured: SwitchboardConfig["storage"]["keyframes"],
   fromFile: unknown,
   configPath: string,
@@ -364,6 +366,8 @@ type ReactorStorage = {
   kysely: Kysely<Database>;
   poolInstrumentation: PoolInstrumentation | undefined;
   storageFacts: ReactorStorageFacts;
+  /** Absent on Postgres, where the host does not own the connection. */
+  storeMaintenance?: IStoreMaintenance;
 };
 
 export async function createReactorKysely(opts: {
@@ -433,6 +437,10 @@ export async function createReactorKysely(opts: {
     storageFacts: inMemory
       ? IN_MEMORY_PGLITE_STORAGE_FACTS
       : PGLITE_PATH_STORAGE_FACTS,
+    storeMaintenance:
+      pglite instanceof ThreadedPGlite
+        ? pglite
+        : maintenanceOf(pglite as { fs?: unknown }),
   };
 }
 
@@ -812,6 +820,7 @@ async function initServer(
       kysely: baseKysely,
       poolInstrumentation,
       storageFacts,
+      storeMaintenance,
     } = await createReactorKysely({
       reactorDbUrl,
       reactorPgliteDir,
@@ -861,6 +870,9 @@ async function initServer(
         `Keyframes: default ${JSON.stringify(keyframes.default ?? {})}, ${Object.keys(keyframes.types ?? {}).length} document type(s) with their own rule`,
       );
       reactorBuilder.withKeyframes(keyframes);
+    }
+    if (storeMaintenance) {
+      reactorBuilder.withStoreMaintenance(storeMaintenance);
     }
 
     // Feeds `module.pools`, which ReactorInstrumentation reads to emit

@@ -1,11 +1,11 @@
 import {
   isProcessorTimingLevel,
   parseCatchUpPriority,
+  parseKeyframeSettings,
   parseMemoryTelemetryOutputs,
   parseMemoryTelemetrySwitch,
   type MemoryTelemetryOutput,
   type ProcessorTimingLevel,
-  parseKeyframeSettings,
 } from "@powerhousedao/reactor";
 import {
   reactorApiConfigFromEnv,

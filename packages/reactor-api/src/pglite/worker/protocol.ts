@@ -1,3 +1,8 @@
+import type {
+  TableRewriteRequest,
+  TableRewriteResult,
+} from "@powerhousedao/reactor";
+
 /**
  * Wire protocol between a {@link ThreadedPGlite} stand-in on the main thread
  * and the worker thread that owns one PGlite store.
@@ -33,6 +38,8 @@ export type PGliteWorkerDurableFsOptions = {
   vacuumFullQuietMs?: number;
   /** Undefined keeps the DurableNodeFs default (0: the quiet window only); a deadline in ms forces the run past it. */
   vacuumFullMaxDeferMs?: number;
+  /** Undefined keeps the DurableNodeFs default (1 s). */
+  rewriteQuietMs?: number;
 };
 
 /** What the worker opens. */
@@ -107,6 +114,16 @@ export type ReserveRequest = {
   id: number;
 };
 
+/**
+ * Rewrites one table through the store's maintenance. Runs beside the request
+ * queue, since it waits for a quiet store; the rewrite itself takes its turn.
+ */
+export type RewriteTableRequest = {
+  type: "rewrite-table";
+  id: number;
+  request: TableRewriteRequest;
+};
+
 /** Ends a reservation; the request queue resumes. Not answered. */
 export type ReleaseRequest = {
   type: "release";
@@ -126,7 +143,8 @@ export type HostMessage =
   | ExecRequest
   | CloseRequest
   | ReserveRequest
-  | ReleaseRequest;
+  | ReleaseRequest
+  | RewriteTableRequest;
 
 export type StatsMessage = {
   type: "stats-result";
@@ -158,6 +176,13 @@ export type ExecResultMessage = {
   type: "exec-result";
   id: number;
   results: WorkerResults[];
+  inTransaction: boolean;
+};
+
+export type RewriteTableResultMessage = {
+  type: "rewrite-table-result";
+  id: number;
+  result: TableRewriteResult;
   inTransaction: boolean;
 };
 
@@ -194,6 +219,7 @@ export type WorkerMessage =
   | ReadyMessage
   | QueryResultMessage
   | ExecResultMessage
+  | RewriteTableResultMessage
   | ClosedMessage
   | ErrorMessage
   | AbortMessage

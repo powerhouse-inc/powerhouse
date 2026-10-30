@@ -720,6 +720,18 @@ describe("KeyframeCleanupService", () => {
       expect(service.reclaimStatus()?.message).toBe("why");
     });
 
+    it("does not hold up shutdown for a rewrite waiting on a quiet store", async () => {
+      const maintenance: IStoreMaintenance = {
+        rewriteTable: () => new Promise(() => undefined),
+      };
+      const service = serviceWith({}, { maintenance });
+
+      await service.reclaim();
+      await service.shutdown();
+
+      expect(service.reclaimStatus()?.state).toBe("running");
+    });
+
     it("refuses while a clean-up runs, and a clean-up while it rewrites", async () => {
       const release: { resolve?: () => void } = {};
       const maintenance: IStoreMaintenance = {

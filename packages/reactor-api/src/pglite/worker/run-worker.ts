@@ -1,7 +1,8 @@
 import type { PGlite, PGliteOptions, Results } from "@electric-sql/pglite";
+import type { TableRewriteResult } from "@powerhousedao/reactor";
 import type { MessagePort } from "node:worker_threads";
 import { createDurableNodeFs, type NodeFsClass } from "../durable-node-fs.js";
-import type { MaintenanceGate } from "../maintenance.js";
+import { maintenanceOf, type MaintenanceGate } from "../maintenance.js";
 import { PGLITE_UTC_PARSERS } from "../parsers.js";
 import { toPGliteErrorInfo } from "./error-info.js";
 import type {
@@ -12,6 +13,7 @@ import type {
   PGliteParserPreset,
   PGliteWorkerStoreOptions,
   QueryRequest,
+  RewriteTableRequest,
   WorkerMessage,
   WorkerResults,
 } from "./protocol.js";
@@ -146,6 +148,35 @@ export function runPGliteWorker(port: MessagePort): void {
     });
   }
 
+  async function handleRewriteTable(msg: RewriteTableRequest): Promise<void> {
+    const maintenance = pg === null ? undefined : maintenanceOf(pg);
+    if (maintenance === undefined) {
+      post({
+        type: "rewrite-table-result",
+        id: msg.id,
+        result: {
+          outcome: "refused",
+          reason: "this store has no maintenance: it is in memory",
+        },
+        inTransaction: inTransaction(),
+      });
+      return;
+    }
+    let result: TableRewriteResult;
+    try {
+      result = await maintenance.rewriteTable(msg.request);
+    } catch (error) {
+      postError(msg.id, error);
+      return;
+    }
+    post({
+      type: "rewrite-table-result",
+      id: msg.id,
+      result,
+      inTransaction: inTransaction(),
+    });
+  }
+
   async function handleClose(id: number): Promise<void> {
     const instance = pg;
     closed = true;
@@ -201,6 +232,8 @@ export function runPGliteWorker(port: MessagePort): void {
         return handleExec(msg);
       case "close":
         return handleClose(msg.id);
+      case "rewrite-table":
+        return handleRewriteTable(msg);
       default: {
         const exhaustive: never = msg;
         void exhaustive;
@@ -248,6 +281,10 @@ export function runPGliteWorker(port: MessagePort): void {
       current.statements = current.statements.then(() => handle(msg));
       return;
     }
+    if (msg.type === "rewrite-table") {
+      void handle(msg);
+      return;
+    }
     void enqueue(() => handle(msg));
   });
 }
@@ -293,6 +330,7 @@ async function createPGlite(
           vacuumFullAboveBytes: durable.vacuumFullAboveBytes,
           vacuumFullQuietMs: durable.vacuumFullQuietMs,
           vacuumFullMaxDeferMs: durable.vacuumFullMaxDeferMs,
+          rewriteQuietMs: durable.rewriteQuietMs,
           maintenanceGate: hooks.maintenanceGate,
           logger: { warn: hooks.warn },
           onAbort: hooks.onAbort,
