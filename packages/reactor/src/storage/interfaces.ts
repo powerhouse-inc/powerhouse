@@ -337,6 +337,29 @@ export interface IKeyframeStore {
   ): Promise<void>;
 
   /**
+   * Stores a snapshot and, in the same statement, deletes the stream's oldest
+   * keyframes beyond the newest `keep`, counting the one stored. Only rows
+   * below `revision` go, so a late write never removes a newer keyframe.
+   *
+   * @param documentId - The document id
+   * @param scope - The operation scope
+   * @param branch - The branch name
+   * @param revision - The operation index this snapshot corresponds to
+   * @param document - The full document state to persist
+   * @param keep - Keyframes to keep in this stream, at least 1
+   * @param signal - Optional abort signal to cancel the request
+   */
+  putKeyframeAndPrune(
+    documentId: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    document: PHDocument,
+    keep: number,
+    signal?: AbortSignal,
+  ): Promise<void>;
+
+  /**
    * Finds the keyframe closest to (but not exceeding) the target revision.
    * Returns undefined if no keyframe exists for this document/scope/branch.
    *

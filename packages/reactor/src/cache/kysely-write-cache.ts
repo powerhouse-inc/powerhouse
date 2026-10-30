@@ -560,18 +560,35 @@ export class KyselyWriteCache implements IWriteCache {
       return;
     }
 
-    this.keyframeStore
-      .putKeyframe(documentId, scope, branch, revision, {
-        ...document,
-        operations: {},
-        clipboard: [],
-      })
-      .catch((err) => {
-        console.error(
-          `Failed to persist keyframe ${documentId}@${revision}:`,
-          err,
-        );
-      });
+    const keyframe: PHDocument = {
+      ...document,
+      operations: {},
+      clipboard: [],
+    };
+    const write =
+      rule.keep === null
+        ? this.keyframeStore.putKeyframe(
+            documentId,
+            scope,
+            branch,
+            revision,
+            keyframe,
+          )
+        : this.keyframeStore.putKeyframeAndPrune(
+            documentId,
+            scope,
+            branch,
+            revision,
+            keyframe,
+            rule.keep,
+          );
+
+    write.catch((err) => {
+      console.error(
+        `Failed to persist keyframe ${documentId}@${revision}:`,
+        err,
+      );
+    });
   }
 
   /**

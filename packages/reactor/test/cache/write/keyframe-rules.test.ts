@@ -30,6 +30,7 @@ describe("keyframe intervals per document type", () => {
   beforeEach(() => {
     keyframeStore = {
       putKeyframe: vi.fn().mockResolvedValue(undefined),
+      putKeyframeAndPrune: vi.fn().mockResolvedValue(undefined),
       findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
       listKeyframes: vi.fn().mockResolvedValue([]),
       deleteKeyframes: vi.fn().mockResolvedValue(0),
@@ -96,6 +97,23 @@ describe("keyframe intervals per document type", () => {
       [1, 2, 3, 4, 5, 6, 7].map((revision) => ({ revision, document })),
     );
     expect(writtenRevisions(keyframeStore)).toEqual([3, 6]);
+  });
+
+  it("prunes on write only for a type with a keep", () => {
+    const cache = cacheWith(10, { types: { "a/kept": { keep: 3 } } });
+
+    putHeads(cache, "a/kept", [10]);
+    putHeads(cache, "a/other", [10]);
+
+    expect(keyframeStore.putKeyframeAndPrune).toHaveBeenCalledExactlyOnceWith(
+      "doc-a/kept",
+      "global",
+      "main",
+      10,
+      expect.objectContaining({ operations: {}, clipboard: [] }),
+      3,
+    );
+    expect(writtenRevisions(keyframeStore)).toEqual([10]);
   });
 
   it("never mints at revision 0", () => {
