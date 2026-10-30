@@ -177,6 +177,33 @@ describe("ReactorInspector", () => {
     ]);
   });
 
+  it("reports timing rows for every processor, off without settings", async () => {
+    const tracked = {
+      processorId: "f:drive:0",
+      factoryId: "f",
+      driveId: "drive",
+      processorIndex: 0,
+      lastOrdinal: 40,
+      phase: "live",
+      name: "Index",
+      driveLabel: "files",
+    } as unknown as TrackedProcessor;
+    const processorManager = {
+      getAll: () => [tracked],
+    } as unknown as IProcessorManager;
+
+    const report = await new ReactorInspector({
+      processorManager,
+    }).getProcessorTiming();
+
+    expect(report).toMatchObject({ level: "off", head: 40, headKnown: false });
+    expect(report.processors[0]).toMatchObject({
+      name: "Index",
+      driveLabel: "files",
+      total: null,
+    });
+  });
+
   it("refuses levers on missing components rather than acknowledging them", async () => {
     const inspector = new ReactorInspector({});
     await expect(inspector.pauseQueue()).rejects.toThrow(/unsupported/);

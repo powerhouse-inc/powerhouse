@@ -1,11 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { IInspector } from "@powerhousedao/reactor";
+import type {
+  IInspector,
+  InspectorProcessorTimingReport,
+  SlowProcessor,
+} from "@powerhousedao/reactor";
 import {
   inspectorProgressSource,
   progressRows,
   renderBars,
   renderLine,
   renderPriority,
+  renderSlowest,
   startProgressDisplay,
   type ProgressPriority,
   type ProgressRow,
@@ -372,5 +377,213 @@ describe("catch-up priority", () => {
 
     getCatchUpPriority.mockRejectedValue(new Error("old host"));
     await expect(source()).resolves.toEqual({ rows: [], priority: undefined });
+  });
+});
+
+const slowRow: SlowProcessor = {
+  label: "FilesIndex · files",
+  busyMs: 41_200,
+  handlerMs: 12_000,
+  readMs: 25_100,
+  fillMs: 4_100,
+  opsPerSecond: 3_100,
+  ordinalsBehind: 182_400,
+  etaMs: 59_000,
+};
+
+function horizon(busyMs: number) {
+  const counters = {
+    batches: 0,
+    opsDelivered: 0,
+    opsScanned: 0,
+    opsMatched: 0,
+    pages: 0,
+    handlerMs: busyMs,
+    maxBatchMs: 0,
+    readMs: 0,
+    lookupMs: 0,
+    fillMs: 0,
+    slotWaitMs: 0,
+    pauseMs: 0,
+    errors: 0,
+  };
+  return {
+    live: { ...counters, handlerMs: 0 },
+    replay: counters,
+    ordinalsAdvanced: 0,
+    busyMs,
+  };
+}
+
+function report(
+  level: InspectorProcessorTimingReport["level"],
+  windowBusy = 4_000,
+  totalBusy = 90_000,
+): InspectorProcessorTimingReport {
+  return {
+    level,
+    windowMs: 60_000,
+    head: 100,
+    headKnown: true,
+    processors: [
+      {
+        processorId: "p",
+        name: "FilesIndex",
+        driveLabel: "files",
+        factoryId: "f",
+        driveId: "d",
+        phase: "catching-up",
+        lastOrdinal: 50,
+        queueDepth: { tasks: 0, ops: 0 },
+        ordinalsBehind: 50,
+        opsPerSecond: 10,
+        ordinalsPerSecond: 10,
+        etaMs: 5_000,
+        sinceUtcMs: 0,
+        total: horizon(totalBusy),
+        window: horizon(windowBusy),
+        windowMs: 60_000,
+        currentRun: null,
+        lastRun: null,
+        lastBatch: null,
+        byDocumentType: [],
+      },
+    ],
+  };
+}
+
+describe("the slowest processors", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("drops columns from the right as the console narrows, and keeps busy", () => {
+    const header = (columns: number) =>
+      renderSlowest([slowRow], columns, 20, 60_000)[0]!;
+    expect(header(120)).toContain("handler");
+    expect(header(120)).toContain("eta");
+    expect(header(70)).not.toContain("eta");
+    expect(header(70)).toContain("read");
+    expect(header(45)).not.toContain("read");
+    expect(header(45)).toContain("handler");
+    expect(header(32)).toContain("busy");
+    expect(header(32)).not.toContain("handler");
+  });
+
+  it.each([120, 80, 50, 30])(
+    "never reaches the last column at %d columns",
+    (columns) => {
+      for (const line of renderSlowest([slowRow], columns, 32, 60_000)) {
+        expect(line.length).toBeLessThan(columns);
+      }
+    },
+  );
+
+  it("renders nothing without rows", () => {
+    expect(renderSlowest([], 120, 20, 60_000)).toEqual([]);
+  });
+
+  it("prints a slowest line after the catch-up line without a terminal", async () => {
+    const stdout = stream(false);
+    vi.useFakeTimers();
+    const display = startProgressDisplay(
+      () =>
+        Promise.resolve({
+          rows: catchingUp,
+          priority: undefined,
+          timing: report("basic"),
+        }),
+      { stdout, stderr: stream(false), pollMs: 1_000, lineMs: 1_000 },
+    );
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(stdout.out.at(-2)).toBe("catch-up: sektar 62%\n");
+    expect(stdout.out.at(-1)).toContain(
+      "catch-up slowest (60 s): FilesIndex·files 4.0s",
+    );
+    display.stop();
+  });
+
+  it("draws the slowest block under the bars in a terminal", async () => {
+    const stdout = stream(true);
+    const display = startProgressDisplay(
+      () =>
+        Promise.resolve({
+          rows: catchingUp,
+          priority: undefined,
+          timing: report("basic"),
+        }),
+      { stdout, stderr: stream(true), pollMs: 60_000 },
+    );
+    await settle();
+
+    const written = stdout.out.join("");
+    expect(written.indexOf("62%")).toBeLessThan(
+      written.indexOf("slowest, last 60 s"),
+    );
+    expect(written).toContain("FilesIndex · files");
+    display.stop();
+  });
+
+  it.each([
+    ["timing is off", report("off"), 5],
+    ["top is 0", report("basic"), 0],
+    ["nothing is busy", report("basic", 0), 5],
+    ["the reactor has no timing", undefined, 5],
+  ])("hides them when %s", async (_, timing, top) => {
+    const stdout = stream(true);
+    const display = startProgressDisplay(
+      () => Promise.resolve({ rows: catchingUp, priority: undefined, timing }),
+      { stdout, stderr: stream(true), pollMs: 60_000, top },
+    );
+    await settle();
+
+    expect(stdout.out.join("")).not.toContain("slowest");
+    display.stop();
+  });
+
+  it("prints the done summary once, from the total horizon", async () => {
+    const stdout = stream(false);
+    vi.useFakeTimers();
+    let rows: readonly ProgressRow[] = catchingUp;
+    const display = startProgressDisplay(
+      () =>
+        Promise.resolve({
+          rows,
+          priority: undefined,
+          timing: report("basic"),
+        }),
+      { stdout, stderr: stream(false), pollMs: 1_000, lineMs: 60_000 },
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    rows = [{ label: "sektar", fraction: 1, state: "done" }];
+    await vi.advanceTimersByTimeAsync(3_000);
+
+    const summaries = stdout.out.filter((line) =>
+      line.startsWith("catch-up done in"),
+    );
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0]).toContain(
+      "slowest since start: FilesIndex·files 1m30s",
+    );
+    display.stop();
+  });
+
+  it("reads timing from the inspector, and goes without when refused", async () => {
+    const getProcessorTiming = vi.fn(() => Promise.resolve(report("basic")));
+    const inspector = {
+      getProcessors: () => Promise.resolve([]),
+      getCatchUpStatus: () => Promise.reject(new Error("no catch-up")),
+      getCatchUpPriority: () => Promise.reject(new Error("no priority")),
+      getProcessorTiming,
+    } as unknown as IInspector;
+    const source = inspectorProgressSource(inspector);
+
+    await expect(source()).resolves.toMatchObject({
+      timing: { level: "basic" },
+    });
+
+    getProcessorTiming.mockRejectedValueOnce(new Error("older reactor"));
+    await expect(source()).resolves.toMatchObject({ timing: undefined });
   });
 });

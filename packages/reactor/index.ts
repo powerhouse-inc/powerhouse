@@ -680,7 +680,17 @@ export type {
   ProcessorFilter,
   ProcessorRecord,
   ProcessorPhase,
+  ProcessorQueueDepth,
   ProcessorStatus,
+  ProcessorTiming,
+  ProcessorTimingBatch,
+  ProcessorTimingCounters,
+  ProcessorTimingDocumentType,
+  ProcessorTimingHorizon,
+  ProcessorTimingLastRun,
+  ProcessorTimingLevel,
+  ProcessorTimingPath,
+  ProcessorTimingRun,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
 export {

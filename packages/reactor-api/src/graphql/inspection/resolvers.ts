@@ -26,6 +26,7 @@ import {
   type WireInspectorDriveIntegrity,
   type WireInspectorDrivePage,
   type WireInspectorProcessor,
+  type WireProcessorTimingReport,
   type WireQueueState,
   type WireReactorInfo,
   type WireRemoteCursor,
@@ -264,6 +265,10 @@ export function createInspectionResolvers(
 
     processors: operator(async (): Promise<WireInspectorProcessor[]> =>
       (await inspector.getProcessors()).map(toWireProcessor),
+    ),
+
+    processorTiming: operator((): Promise<WireProcessorTimingReport> =>
+      inspector.getProcessorTiming(),
     ),
 
     catchUpStatus: operator(() => inspector.getCatchUpStatus()),

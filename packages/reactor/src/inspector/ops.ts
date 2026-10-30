@@ -41,6 +41,11 @@ export const INSPECTOR_OPS = {
   },
   getQueueState: { rpc: "queue.getState", tier: "read", gql: "queueState" },
   getProcessors: { rpc: "processors.getAll", tier: "read", gql: "processors" },
+  getProcessorTiming: {
+    rpc: "processors.timing",
+    tier: "read",
+    gql: "processorTiming",
+  },
   getCatchUpStatus: {
     rpc: "catchUp.status",
     tier: "read",

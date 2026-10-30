@@ -29,6 +29,23 @@ const NESTED: Partial<
     settings: "InspectionCatchUpLevelSettings",
     sample: "InspectionCatchUpLoadSample",
   },
+  InspectionProcessorTimingHorizon: {
+    live: "InspectionProcessorTimingCounters",
+    replay: "InspectionProcessorTimingCounters",
+  },
+  InspectionProcessorTimingRun: {
+    counters: "InspectionProcessorTimingCounters",
+  },
+  InspectionProcessorTiming: {
+    queueDepth: "InspectionProcessorQueueDepth",
+    total: "InspectionProcessorTimingHorizon",
+    window: "InspectionProcessorTimingHorizon",
+    currentRun: "InspectionProcessorTimingRun",
+    lastRun: "InspectionProcessorTimingLastRun",
+    lastBatch: "InspectionProcessorTimingBatch",
+    byDocumentType: "InspectionProcessorTimingDocumentType",
+  },
+  InspectionProcessorTimingReport: { processors: "InspectionProcessorTiming" },
 };
 
 /** `{ ... }` selecting every field of `type`, nested records included. */
@@ -79,6 +96,10 @@ export const INSPECTION_OPERATIONS = {
 
   processors: `query ReactorInspectionProcessors {
     inspection { processors ${selectionOf("InspectionProcessor")} }
+  }`,
+
+  processorTiming: `query ReactorInspectionProcessorTiming {
+    inspection { processorTiming ${selectionOf("InspectionProcessorTimingReport")} }
   }`,
 
   catchUpStatus: `query ReactorInspectionCatchUp { inspection { catchUpStatus } }`,

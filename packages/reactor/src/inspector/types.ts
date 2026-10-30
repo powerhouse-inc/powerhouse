@@ -1,7 +1,14 @@
 import type {
   ProcessorPhase,
+  ProcessorQueueDepth,
   ProcessorRerunOptions,
   ProcessorStatus,
+  ProcessorTimingBatch,
+  ProcessorTimingDocumentType,
+  ProcessorTimingHorizon,
+  ProcessorTimingLastRun,
+  ProcessorTimingLevel,
+  ProcessorTimingRun,
 } from "@powerhousedao/shared/processors";
 import type { RebuildResult, ValidationResult } from "../admin/types.js";
 import type { CatchUpStatus, SweepResult } from "../catch-up/types.js";
@@ -159,6 +166,48 @@ export type InspectorProcessorInfo = {
   phase: ProcessorPhase;
 };
 
+/**
+ * One processor's timing and where it stands. The numbers are null while timing
+ * is off, so a row still names the processor and shows its queue and lag.
+ */
+export type InspectorProcessorTiming = {
+  processorId: string;
+  name: string;
+  driveLabel: string;
+  factoryId: string;
+  driveId: string;
+  phase: ProcessorPhase;
+  lastOrdinal: number;
+  queueDepth: ProcessorQueueDepth;
+  /** Ordinals from its cursor to the head. */
+  ordinalsBehind: number;
+  /** Delivered per second over the window. */
+  opsPerSecond: number;
+  /** Cursor movement per second over the window. */
+  ordinalsPerSecond: number;
+  /** While catching up with a rate above zero; null otherwise. */
+  etaMs: number | null;
+  sinceUtcMs: number | null;
+  total: ProcessorTimingHorizon | null;
+  window: ProcessorTimingHorizon | null;
+  /** The span `window` covers. */
+  windowMs: number;
+  currentRun: ProcessorTimingRun | null;
+  lastRun: ProcessorTimingLastRun | null;
+  lastBatch: ProcessorTimingBatch | null;
+  byDocumentType: ProcessorTimingDocumentType[];
+};
+
+/** Every processor's timing; `headKnown` as in `ReactorProgress`. */
+export type InspectorProcessorTimingReport = {
+  level: ProcessorTimingLevel;
+  /** The configured rolling window. */
+  windowMs: number;
+  head: number;
+  headKnown: boolean;
+  processors: InspectorProcessorTiming[];
+};
+
 /** The in-memory queue's debugging surface; not part of `IQueue`. */
 export interface IInspectableQueue {
   readonly paused: boolean;
@@ -186,6 +235,8 @@ export interface IInspector {
   getAttachmentInfo(): Promise<InspectorAttachmentInfo>;
   getQueueState(): Promise<QueueStateSnapshot>;
   getProcessors(): Promise<InspectorProcessorInfo[]>;
+  /** Where each processor's time goes; level `off` when nothing is recorded. */
+  getProcessorTiming(): Promise<InspectorProcessorTimingReport>;
   getCatchUpStatus(): Promise<CatchUpStatus>;
   /** The processor backfills' pace: mode, level, its settings, why, last load. */
   getCatchUpPriority(): Promise<CatchUpPriorityState>;

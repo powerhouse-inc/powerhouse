@@ -20,11 +20,16 @@ import {
   type CatchUpPrioritySetting,
   type CatchUpPriorityState,
 } from "../processors/catch-up-priority.js";
+import {
+  DEFAULT_PROCESSOR_TIMING_WINDOW_MS,
+  type ProcessorTimingSettings,
+} from "../processors/processor-stats.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type { DriveInspection } from "./drive-inspection.js";
 import { READ_ONLY_ACCESS } from "./ops.js";
 import { UNKNOWN_STORAGE_FACTS } from "./storage-facts.js";
+import { computeProcessorTiming } from "./timing.js";
 import type {
   IInspectableAttachmentStore,
   IInspectableQueue,
@@ -36,6 +41,7 @@ import type {
   InspectorDriveIntegrity,
   InspectorDrivePage,
   InspectorProcessorInfo,
+  InspectorProcessorTimingReport,
   IReactorFactsSink,
   IInspectorStorageHealthProvider,
   QueueStateSnapshot,
@@ -58,6 +64,7 @@ export type ReactorInspectorComponents = {
   processorManager?: IProcessorManager;
   catchUp?: ICatchUp;
   catchUpPriority?: CatchUpPriority;
+  processorTiming?: ProcessorTimingSettings;
   integrity?: IDocumentIntegrityService;
   storageHealth?: IInspectorStorageHealthProvider;
   documentModelRegistry?: IDocumentModelRegistry;
@@ -251,6 +258,18 @@ export class ReactorInspector
         runFrom: processor.runFrom,
         phase: processor.phase,
       })),
+    );
+  }
+
+  getProcessorTiming(): Promise<InspectorProcessorTimingReport> {
+    const { processorManager, catchUp, processorTiming } = this.components;
+    return Promise.resolve(
+      computeProcessorTiming(
+        processorManager?.getAll() ?? [],
+        catchUp?.status(),
+        processorTiming?.level ?? "off",
+        processorTiming?.windowMs ?? DEFAULT_PROCESSOR_TIMING_WINDOW_MS,
+      ),
     );
   }
 

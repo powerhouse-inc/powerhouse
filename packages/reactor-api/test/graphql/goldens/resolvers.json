@@ -480,6 +480,7 @@
     "ReactorInspection.drives",
     "ReactorInspection.info",
     "ReactorInspection.loadsModelsOnDemand",
+    "ReactorInspection.processorTiming",
     "ReactorInspection.processors",
     "ReactorInspection.queueState",
     "ReactorInspection.remote",

@@ -32,6 +32,11 @@ import {
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import { findPurged } from "../storage/kysely/document-purges.js";
 import {
+  ProcessorStats,
+  ProcessorTimingSettings,
+  type ProcessorStatsIdentity,
+} from "./processor-stats.js";
+import {
   ProcessorQueue,
   purgeCandidates,
   type LiveCheck,
@@ -44,6 +49,7 @@ import {
   extractDriveHeader,
   isDriveDeletion,
   matchesFilter,
+  resolveProcessorNames,
   resolveProcessorSlots,
 } from "./utils.js";
 
@@ -89,6 +95,8 @@ export type ProcessorManagerOptions = {
    * to a dynamic priority with no load source, which holds level 4.
    */
   catchUpPriority?: CatchUpPriority;
+  /** What every queue records about its time; defaults to off. */
+  processorTiming?: ProcessorTimingSettings;
 };
 
 // Routing tables are only read or written synchronously; everything that
@@ -126,6 +134,9 @@ export class ProcessorManager
   private driveContainerTypes: ReadonlySet<string>;
   private legacyProcessorIds: boolean;
   private catchUpPriority: CatchUpPriority;
+  private processorTiming: ProcessorTimingSettings;
+  // Outlives a re-registration, so a reload's cost adds up; dropped with the row.
+  private stats: Map<string, ProcessorStats> = new Map();
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
@@ -147,6 +158,8 @@ export class ProcessorManager
     this.driveContainerTypes = driveContainerTypes;
     this.legacyProcessorIds = options.legacyProcessorIds ?? true;
     this.catchUpPriority = options.catchUpPriority ?? new CatchUpPriority();
+    this.processorTiming =
+      options.processorTiming ?? new ProcessorTimingSettings();
   }
 
   override async init(): Promise<void> {
@@ -541,6 +554,9 @@ export class ProcessorManager
       runFrom: state.lastOrdinal,
       phase: "errored",
       retry: () => this.retryOwed(factoryId, driveId),
+      name: resolveProcessorNames([record])[0],
+      driveLabel: this.driveLabelOf(driveId),
+      timing: () => undefined,
     });
   }
 
@@ -774,12 +790,14 @@ export class ProcessorManager
 
     const { factoryId, driveId, lowestRoutedOrdinal } = slot;
     const ids = resolveProcessorSlots(records, this.legacyProcessorIds);
+    const names = resolveProcessorNames(records);
     const bound: Bound[] = records.map((record, i) =>
       this.track(
         slot,
         record,
         i,
         `${factoryId}:${driveId}:${ids[i]}`,
+        names[i]!,
         creationOrdinal,
         lowestRoutedOrdinal,
       ),
@@ -1041,6 +1059,7 @@ export class ProcessorManager
     record: ProcessorRecord,
     processorIndex: number,
     processorId: string,
+    name: string,
     creationOrdinal: number,
     lowestRoutedOrdinal: number | undefined,
   ): Bound {
@@ -1075,6 +1094,14 @@ export class ProcessorManager
       );
     }
 
+    const driveLabel = this.driveLabelOf(slot.driveId);
+    const stats = this.statsFor({
+      processorId,
+      name,
+      driveLabel,
+      factoryId: slot.factoryId,
+      driveId: slot.driveId,
+    });
     const tracked: TrackedProcessor = {
       processorId,
       factoryId: slot.factoryId,
@@ -1086,6 +1113,10 @@ export class ProcessorManager
       runFrom: cursor.lastOrdinal,
       phase: cursor.status === "errored" ? "errored" : "live",
       retry: () => queue.retry(),
+      name,
+      driveLabel,
+      timing: () => stats.snapshot(),
+      queueDepth: () => queue.depth,
     };
     const queue = new ProcessorQueue({
       processorId,
@@ -1110,9 +1141,31 @@ export class ProcessorManager
       confirmedThrough: () => this.lastOrdinal,
       persist: (state) => this.writeCursor(tracked, state),
       purged: (ids) => findPurged(this.db, ids),
+      stats,
       logger: this.logger,
     });
     return { tracked, queue };
+  }
+
+  /** A rebind keeps the stats; a new name means the id changed hands. */
+  private statsFor(identity: ProcessorStatsIdentity): ProcessorStats {
+    const existing = this.stats.get(identity.processorId);
+    if (existing?.name === identity.name) {
+      existing.rebind(identity);
+      return existing;
+    }
+    const stats = new ProcessorStats(
+      this.processorTiming,
+      identity,
+      this.logger,
+    );
+    this.stats.set(identity.processorId, stats);
+    return stats;
+  }
+
+  private driveLabelOf(driveId: string): string {
+    const header = this.driveHeaders.get(driveId);
+    return header?.slug || header?.name || driveId;
   }
 
   /** Resolves once every queue has taken the latest cursor advance. */
@@ -1469,6 +1522,7 @@ export class ProcessorManager
       if (!matches(row)) continue;
       this.cursorCache.delete(processorId);
       this.persistedOrdinals.delete(processorId);
+      this.stats.delete(processorId);
       deletes.push(
         this.lane(processorId, () =>
           this.db

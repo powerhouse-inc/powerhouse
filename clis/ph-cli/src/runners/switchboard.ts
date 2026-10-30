@@ -330,6 +330,11 @@ async function createDeclaredDrive(
   );
 }
 
+function catchUpTopFromEnv(raw: string | undefined): number | undefined {
+  const top = Number(raw?.trim() || Number.NaN);
+  return Number.isInteger(top) && top >= 0 ? top : undefined;
+}
+
 async function start(
   host: SwitchboardHostParsed,
   ctx: RunnerContext,
@@ -430,12 +435,14 @@ async function start(
     memberConfig,
   );
   // Bars for processor and read-model catch-up, below the server's output;
-  // PH_CATCH_UP_PROGRESS=false leaves the output as it was.
+  // PH_CATCH_UP_PROGRESS=false leaves the output as it was. PH_CATCH_UP_TOP
+  // sets how many of the slowest processors they list; 0 hides them.
   const progress =
     switchboard.inspector && process.env.PH_CATCH_UP_PROGRESS !== "false"
       ? startProgressDisplay(inspectorProgressSource(switchboard.inspector), {
           stdout: process.stdout,
           stderr: process.stderr,
+          top: catchUpTopFromEnv(process.env.PH_CATCH_UP_TOP),
         })
       : undefined;
   // The port the server actually bound (it may move off a taken one).

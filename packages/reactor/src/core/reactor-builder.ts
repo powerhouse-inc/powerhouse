@@ -156,6 +156,7 @@ import {
 } from "../inspector/storage-facts.js";
 import type { ReactorStorageFacts } from "../inspector/types.js";
 import { CatchUpPriority } from "../processors/catch-up-priority.js";
+import { ProcessorTimingSettings } from "../processors/processor-stats.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
 import { resolveModelSources } from "./model-sources.js";
 import type { DocumentModelSource } from "./model-sources.js";
@@ -432,6 +433,8 @@ export class ReactorBuilder {
   private instrumentedPools: PoolInstrumentation[] = [];
   private catchUpConfig: CatchUpConfig = defaultCatchUpConfig;
   private catchUpPriority: CatchUpPriority = new CatchUpPriority();
+  private processorTiming: ProcessorTimingSettings =
+    new ProcessorTimingSettings();
   private extraPeerCapabilities: PeerCapability[] = [];
 
   withLogger(logger: ILogger): this {
@@ -566,6 +569,12 @@ export class ReactorBuilder {
    */
   withCatchUpPriority(priority: CatchUpPriority): this {
     this.catchUpPriority = priority;
+    return this;
+  }
+
+  /** Records where processors spend their time. Defaults to off. */
+  withProcessorTiming(settings: ProcessorTimingSettings): this {
+    this.processorTiming = settings;
     return this;
   }
 
@@ -1281,6 +1290,7 @@ export class ReactorBuilder {
       {
         legacyProcessorIds: this.features.legacyProcessorIds !== false,
         catchUpPriority: this.catchUpPriority,
+        processorTiming: this.processorTiming,
       },
     );
     processorManager.attachCatchUp(
@@ -1518,6 +1528,7 @@ export class ReactorBuilder {
       degradedComponents,
       catchUp,
       catchUpPriority: this.catchUpPriority,
+      processorTiming: this.processorTiming,
       settledWatermark,
       documentPurgeService: new DocumentPurgeService(
         queue,

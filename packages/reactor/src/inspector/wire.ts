@@ -1,3 +1,12 @@
+import type {
+  ProcessorQueueDepth,
+  ProcessorTimingBatch,
+  ProcessorTimingCounters,
+  ProcessorTimingDocumentType,
+  ProcessorTimingHorizon,
+  ProcessorTimingLastRun,
+  ProcessorTimingRun,
+} from "@powerhousedao/shared/processors";
 import type { CatchUpPriorityState } from "../processors/catch-up-priority.js";
 import type { Job } from "../queue/types.js";
 import type { DeadLetterRecord } from "../storage/interfaces.js";
@@ -7,7 +16,11 @@ import type {
   RemoteOptions,
   RemotePeer,
 } from "../sync/types.js";
-import type { QueueStateSnapshot } from "./types.js";
+import type {
+  InspectorProcessorTiming,
+  InspectorProcessorTimingReport,
+  QueueStateSnapshot,
+} from "./types.js";
 import {
   INSPECTOR_OPS,
   readOpFields,
@@ -148,6 +161,16 @@ export type WireInspectorProcessor = {
   readonly runFrom: number;
   readonly phase: string;
 };
+
+export type WireProcessorTimingCounters = ProcessorTimingCounters;
+export type WireProcessorTimingHorizon = ProcessorTimingHorizon;
+export type WireProcessorTimingRun = ProcessorTimingRun;
+export type WireProcessorTimingLastRun = ProcessorTimingLastRun;
+export type WireProcessorTimingBatch = ProcessorTimingBatch;
+export type WireProcessorTimingDocumentType = ProcessorTimingDocumentType;
+export type WireProcessorQueueDepth = ProcessorQueueDepth;
+export type WireProcessorTiming = InspectorProcessorTiming;
+export type WireProcessorTimingReport = InspectorProcessorTimingReport;
 
 export type WireCatchUpLevelSettings = {
   readonly slots: number;
@@ -405,6 +428,87 @@ export const INSPECTION_WIRE_FIELDS = {
     "runFrom",
     "phase",
   ]),
+  InspectionProcessorTimingCounters: fieldsOf<WireProcessorTimingCounters>()([
+    "batches",
+    "opsDelivered",
+    "opsScanned",
+    "opsMatched",
+    "pages",
+    "handlerMs",
+    "maxBatchMs",
+    "readMs",
+    "lookupMs",
+    "fillMs",
+    "slotWaitMs",
+    "pauseMs",
+    "errors",
+  ]),
+  InspectionProcessorTimingHorizon: fieldsOf<WireProcessorTimingHorizon>()([
+    "live",
+    "replay",
+    "ordinalsAdvanced",
+    "busyMs",
+  ]),
+  InspectionProcessorTimingRun: fieldsOf<WireProcessorTimingRun>()([
+    "startedAtUtcMs",
+    "runFrom",
+    "counters",
+    "ordinalsAdvanced",
+  ]),
+  InspectionProcessorTimingLastRun: fieldsOf<WireProcessorTimingLastRun>()([
+    "startedAtUtcMs",
+    "durationMs",
+    "ordinals",
+    "opsDelivered",
+    "busyMs",
+  ]),
+  InspectionProcessorTimingBatch: fieldsOf<WireProcessorTimingBatch>()([
+    "atUtcMs",
+    "path",
+    "ops",
+    "ms",
+    "fromOrdinal",
+    "toOrdinal",
+  ]),
+  InspectionProcessorTimingDocumentType:
+    fieldsOf<WireProcessorTimingDocumentType>()([
+      "documentType",
+      "ops",
+      "handlerMs",
+    ]),
+  InspectionProcessorQueueDepth: fieldsOf<WireProcessorQueueDepth>()([
+    "tasks",
+    "ops",
+  ]),
+  InspectionProcessorTiming: fieldsOf<WireProcessorTiming>()([
+    "processorId",
+    "name",
+    "driveLabel",
+    "factoryId",
+    "driveId",
+    "phase",
+    "lastOrdinal",
+    "queueDepth",
+    "ordinalsBehind",
+    "opsPerSecond",
+    "ordinalsPerSecond",
+    "etaMs",
+    "sinceUtcMs",
+    "total",
+    "window",
+    "windowMs",
+    "currentRun",
+    "lastRun",
+    "lastBatch",
+    "byDocumentType",
+  ]),
+  InspectionProcessorTimingReport: fieldsOf<WireProcessorTimingReport>()([
+    "level",
+    "windowMs",
+    "head",
+    "headKnown",
+    "processors",
+  ]),
   InspectionCatchUpLevelSettings: fieldsOf<WireCatchUpLevelSettings>()([
     "slots",
     "pageSize",
@@ -500,5 +604,9 @@ export const INSPECTION_ROOT_FIELDS: {
 /** Ordinals pass 2^31, so these are `Float` rather than `Int`. */
 export const INSPECTION_ORDINAL_FIELDS = {
   InspectionProcessor: ["lastOrdinal", "floor", "runFrom"],
+  InspectionProcessorTiming: ["lastOrdinal", "ordinalsBehind"],
+  InspectionProcessorTimingReport: ["head"],
+  InspectionProcessorTimingRun: ["runFrom"],
+  InspectionProcessorTimingBatch: ["fromOrdinal", "toOrdinal"],
   InspectionCursor: ["cursorOrdinal", "liveAckOrdinal", "liveLatestOrdinal"],
 } as const satisfies Record<string, readonly string[]>;

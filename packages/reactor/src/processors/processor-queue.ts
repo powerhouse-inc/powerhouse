@@ -6,6 +6,8 @@ import type {
   IProcessor,
   ProcessorFilter,
   ProcessorPhase,
+  ProcessorQueueDepth,
+  ProcessorTimingPath,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
 import type { ILogger } from "document-model";
@@ -15,6 +17,7 @@ import {
   yieldToEventLoop,
   type IBackfillSlots,
 } from "./backfill-slots.js";
+import type { ProcessorStats } from "./processor-stats.js";
 import type { ReplayPage } from "./replay-state.js";
 import { matchesFilter } from "./utils.js";
 
@@ -66,6 +69,8 @@ export type ProcessorQueueOptions = {
   betweenPages?: (closing: AbortSignal) => Promise<void>;
   /** Read before every backfill page; defaults to the index's page size. */
   pageSize?: () => number;
+  /** Where its time goes; collects nothing while the level is off. */
+  stats: ProcessorStats;
   logger: ILogger;
 };
 
@@ -183,6 +188,15 @@ export class ProcessorQueue {
   /** True while a backfill or retry is queued or running. */
   get replaying(): boolean {
     return this.replaysAhead > 0;
+  }
+
+  /** Read when asked, not kept: tasks waiting and operations in live ones. */
+  get depth(): ProcessorQueueDepth {
+    let ops = 0;
+    for (const task of this.tasks) {
+      if (task.kind === "live") ops += task.ops.length;
+    }
+    return { tasks: this.tasks.length, ops };
   }
 
   /**
@@ -315,11 +329,13 @@ export class ProcessorQueue {
     this.replaysAhead++;
     this.syncProgress();
     return this.enqueue(kind, async () => {
+      this.options.stats.startRun(this.options.cursor.lastOrdinal);
       try {
         await run();
       } finally {
         this.replaysAhead--;
         this.syncProgress();
+        if (this.replaysAhead === 0) this.options.stats.endRun();
       }
     });
   }
@@ -393,6 +409,8 @@ export class ProcessorQueue {
       await this.raiseCursor(through);
       return;
     }
+    this.options.stats.recordScanned("live", fresh.length);
+    this.options.stats.recordMatched("live", fresh.length);
 
     if (cursor.status !== "active" || this.parked) {
       await this.parkBelow(fresh);
@@ -405,7 +423,7 @@ export class ProcessorQueue {
       return;
     }
 
-    if (live.length > 0 && !(await this.deliver(live))) {
+    if (live.length > 0 && !(await this.deliver(live, "live"))) {
       await this.parkBelow(fresh);
       return;
     }
@@ -426,12 +444,14 @@ export class ProcessorQueue {
       for (const ordinal of task.check.keep ?? []) keep.add(ordinal);
     }
     let purged: ReadonlySet<string> | undefined;
+    const mark = this.options.stats.mark();
     try {
       const sets = await Promise.all(checks);
       purged = new Set(sets.flatMap((set) => [...set]));
     } catch (error) {
       purged = await this.retryLookup(fresh, error);
     }
+    this.options.stats.recordLookup("live", mark);
     return purged && withoutPurged(fresh, purged, keep);
   }
 
@@ -559,15 +579,18 @@ export class ProcessorQueue {
       }
     }
     if (deletion) ops.push(deletion);
-    return ops.length === 0 || (await this.deliver(ops));
+    return ops.length === 0 || (await this.deliver(ops, "live"));
   }
 
   private async runBackfill(): Promise<void> {
     const { cursor } = this.options;
     if (cursor.status !== "active" || this.parked) return;
     const slots = this.options.backfillSlots ?? UNLIMITED_BACKFILL_SLOTS;
+    const { stats } = this.options;
+    const waiting = stats.mark();
     // Replaced when the scan gives its slot back between pages.
     const slot = { release: await slots.acquire(this.closing.signal) };
+    stats.recordSlotWait(waiting);
     if (this.closed) {
       slot.release();
       return;
@@ -583,7 +606,7 @@ export class ProcessorQueue {
     slots: IBackfillSlots,
     slot: { release: () => void },
   ): Promise<void> {
-    const { cursor, filter, floor } = this.options;
+    const { cursor, filter, floor, stats } = this.options;
     if (cursor.status !== "active" || this.parked) return;
     this.options.progress.runFrom = cursor.lastOrdinal;
     const betweenPages = this.options.betweenPages ?? yieldToEventLoop;
@@ -592,12 +615,14 @@ export class ProcessorQueue {
     const fill = this.options.replayState?.();
 
     let page: PagedResults<OperationWithContext>;
+    let reading = stats.mark();
     try {
       page = await this.options.readSince(cursor.lastOrdinal, pageSize());
     } catch (error) {
       await this.fail(error, "reading backfill");
       return;
     }
+    stats.recordRead(reading, page.results.length);
 
     while (page.results.length > 0) {
       if (this.closed) return;
@@ -605,15 +630,18 @@ export class ProcessorQueue {
       const matching = page.results.filter(
         (op) => op.context.ordinal > floor && matchesFilter(op, filter),
       );
+      stats.recordMatched("replay", matching.length);
       let live: OperationWithContext[] = matching;
       if (matching.length > 0) {
         const ids = purgeCandidates(matching);
         let purged: ReadonlySet<string> | undefined;
+        const lookup = stats.mark();
         try {
           purged = await this.options.purged(ids);
         } catch (error) {
           purged = await this.retryLookup(matching, error);
         }
+        stats.recordLookup("replay", lookup);
         if (purged === undefined) {
           await this.persist();
           return;
@@ -621,15 +649,17 @@ export class ProcessorQueue {
         live = withoutPurged(matching, purged);
       }
       if (fill && live.length > 0) {
+        const filling = stats.mark();
         try {
           live = await fill(live);
         } catch (error) {
           await this.fail(error, "reading replay state");
           return;
         }
+        stats.recordFill(filling);
       }
       if (live.length > 0) {
-        if (!(await this.deliver(live))) {
+        if (!(await this.deliver(live, "replay"))) {
           await this.persist();
           return;
         }
@@ -641,20 +671,26 @@ export class ProcessorQueue {
       if (!page.next) break;
       // Re-read from where this page ended, so a new page size applies now.
       const scanned = highestOf(page.results);
+      const pausing = stats.mark();
       await betweenPages(this.closing.signal);
+      stats.recordPause(pausing);
       if (this.closed) return;
       // After a lower, scans over the new count queue again for a slot.
       if (slots.oversubscribed()) {
         slot.release();
+        const waiting = stats.mark();
         slot.release = await slots.acquire(this.closing.signal);
+        stats.recordSlotWait(waiting);
         if (this.closed) return;
       }
+      reading = stats.mark();
       try {
         page = await this.options.readSince(scanned, pageSize());
       } catch (error) {
         await this.fail(error, "reading backfill");
         return;
       }
+      stats.recordRead(reading, page.results.length);
     }
   }
 
@@ -681,11 +717,18 @@ export class ProcessorQueue {
     }
   }
 
-  private async deliver(ops: OperationWithContext[]): Promise<boolean> {
+  private async deliver(
+    ops: OperationWithContext[],
+    path: ProcessorTimingPath,
+  ): Promise<boolean> {
+    const { stats } = this.options;
+    const mark = stats.mark();
     try {
       await this.options.processor.onOperations(ops);
+      stats.recordBatch(path, mark, ops, false);
       return true;
     } catch (error) {
+      stats.recordBatch(path, mark, ops, true);
       this.markErrored(error);
       this.options.logger.error(
         "Processor '@ProcessorId' failed at ordinal @Ordinal: @Error",
@@ -698,6 +741,7 @@ export class ProcessorQueue {
   }
 
   private async fail(error: unknown, during: string): Promise<void> {
+    this.options.stats.recordError("replay");
     this.markErrored(error);
     await this.persist();
     this.options.logger.error(
@@ -729,6 +773,7 @@ export class ProcessorQueue {
     const capped = Math.min(through, this.options.confirmedThrough());
     if (cursor.status !== "active" || this.parked) return;
     if (capped <= cursor.lastOrdinal) return;
+    this.options.stats.recordAdvance(capped - cursor.lastOrdinal);
     cursor.lastOrdinal = capped;
     await this.persist();
   }

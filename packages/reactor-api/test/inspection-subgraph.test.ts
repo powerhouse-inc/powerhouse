@@ -238,6 +238,7 @@ describe("inspection subgraph: OPEN does not make every caller an operator", () 
   it.each([
     "queueState { isPaused }",
     "processors { processorId }",
+    "processorTiming { level }",
     "catchUpStatus",
     "catchUpPriority { level }",
     "storageHealth { tracked }",
@@ -637,6 +638,37 @@ describe("inspection subgraph: wire contract", () => {
         [...fields].sort(),
       );
     }
+  });
+
+  it("serves processor timing to an operator, with ordinals as Float", async () => {
+    module = await buildReadGateReactor();
+    const source = createReactorInspectionSource(module.reactorModule!);
+    const large = 2 ** 33;
+    Object.assign(source.inspector, {
+      getProcessorTiming: () =>
+        Promise.resolve({
+          level: "basic",
+          windowMs: 60_000,
+          head: large,
+          headKnown: true,
+          processors: [],
+        }),
+    });
+    const { schema } = buildSchema(module, openHost(), source);
+    const result = await run(
+      schema,
+      `{ inspection { processorTiming { level head headKnown processors { name } } } }`,
+      contextFor(OPERATOR),
+    );
+    expect(result.errors).toBeUndefined();
+    expect(result.data?.inspection).toEqual({
+      processorTiming: {
+        level: "basic",
+        head: large,
+        headKnown: true,
+        processors: [],
+      },
+    });
   });
 
   it("serves a processor's run start and phase", async () => {

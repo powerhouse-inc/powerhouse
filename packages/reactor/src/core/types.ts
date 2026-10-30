@@ -60,6 +60,7 @@ import type {
   Database as StorageDatabase,
 } from "../storage/kysely/types.js";
 import type { CatchUpPriority } from "../processors/catch-up-priority.js";
+import type { ProcessorTimingSettings } from "../processors/processor-stats.js";
 import type { PoolInstrumentation } from "../storage/pool-instrumentation.js";
 import type { IGroupCommitStorage } from "../storage/kysely/group-commit-storage.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
@@ -636,6 +637,8 @@ export interface InProcessReactorModule extends ReactorModule {
   catchUp: ICatchUp;
   /** Paces processor backfills against requests; see `withCatchUpPriority`. */
   catchUpPriority: CatchUpPriority;
+  /** What processor queues record; see `withProcessorTiming`. */
+  processorTiming: ProcessorTimingSettings;
   /** The settled watermark this thread's catch-up sweeps up to. */
   settledWatermark: ISettledWatermark;
   /** Enqueues purge jobs; the erasure scheduler is its only caller. */

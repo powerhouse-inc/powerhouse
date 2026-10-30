@@ -8,6 +8,7 @@ import type {
   InspectorDriveIntegrity,
   InspectorDrivePage,
   InspectorProcessorInfo,
+  InspectorProcessorTimingReport,
   InspectorStorageHealth,
   ProcessorPhase,
   RemoteCursorInfo,
@@ -20,6 +21,7 @@ import type {
   WireInspectorDriveIntegrity,
   WireInspectorDrivePage,
   WireInspectorProcessor,
+  WireProcessorTimingReport,
   WireQueueState,
   WireReactorInfo,
   WireRemoteCursor,
@@ -345,6 +347,13 @@ export class RemoteInspectorClient
       inspection: { processors: WireInspectorProcessor[] };
     }>("processors");
     return data.inspection.processors.map(toProcessor);
+  }
+
+  async getProcessorTiming(): Promise<InspectorProcessorTimingReport> {
+    const data = await this.query<{
+      inspection: { processorTiming: WireProcessorTimingReport };
+    }>("processorTiming");
+    return data.inspection.processorTiming;
   }
 
   async getCatchUpStatus(): Promise<CatchUpStatus> {

@@ -125,6 +125,107 @@ export const inspectionTypeDefs = gql`
   }
 
   """
+  One path's numbers over one horizon. Times are wall-clock milliseconds the
+  processor's queue awaited, not CPU; read time includes waiting for the store.
+  slotWaitMs and pauseMs are throttling and count toward no busy time.
+  """
+  type InspectionProcessorTimingCounters {
+    batches: Float!
+    opsDelivered: Float!
+    opsScanned: Float!
+    opsMatched: Float!
+    pages: Float!
+    handlerMs: Float!
+    maxBatchMs: Float!
+    readMs: Float!
+    lookupMs: Float!
+    fillMs: Float!
+    slotWaitMs: Float!
+    pauseMs: Float!
+    errors: Float!
+  }
+
+  type InspectionProcessorTimingHorizon {
+    live: InspectionProcessorTimingCounters!
+    replay: InspectionProcessorTimingCounters!
+    ordinalsAdvanced: Float!
+    busyMs: Float!
+  }
+
+  type InspectionProcessorTimingRun {
+    startedAtUtcMs: Float!
+    runFrom: Float!
+    counters: InspectionProcessorTimingCounters!
+    ordinalsAdvanced: Float!
+  }
+
+  type InspectionProcessorTimingLastRun {
+    startedAtUtcMs: Float!
+    durationMs: Float!
+    ordinals: Float!
+    opsDelivered: Float!
+    busyMs: Float!
+  }
+
+  type InspectionProcessorTimingBatch {
+    atUtcMs: Float!
+    path: String!
+    ops: Float!
+    ms: Float!
+    fromOrdinal: Float!
+    toOrdinal: Float!
+  }
+
+  type InspectionProcessorTimingDocumentType {
+    documentType: String!
+    ops: Float!
+    handlerMs: Float!
+  }
+
+  type InspectionProcessorQueueDepth {
+    tasks: Float!
+    ops: Float!
+  }
+
+  """
+  One processor's timing. The horizons are null while timing is off.
+  """
+  type InspectionProcessorTiming {
+    processorId: String!
+    name: String!
+    driveLabel: String!
+    factoryId: String!
+    driveId: String!
+    phase: String!
+    lastOrdinal: Float!
+    queueDepth: InspectionProcessorQueueDepth!
+    ordinalsBehind: Float!
+    opsPerSecond: Float!
+    ordinalsPerSecond: Float!
+    etaMs: Float
+    sinceUtcMs: Float
+    total: InspectionProcessorTimingHorizon
+    window: InspectionProcessorTimingHorizon
+    windowMs: Float!
+    currentRun: InspectionProcessorTimingRun
+    lastRun: InspectionProcessorTimingLastRun
+    lastBatch: InspectionProcessorTimingBatch
+    byDocumentType: [InspectionProcessorTimingDocumentType!]!
+  }
+
+  """
+  level is off, basic or detailed. Without a catch-up status, head is the
+  highest cursor and headKnown is false.
+  """
+  type InspectionProcessorTimingReport {
+    level: String!
+    windowMs: Float!
+    head: Float!
+    headKnown: Boolean!
+    processors: [InspectionProcessorTiming!]!
+  }
+
+  """
   What one catch-up priority level sets. giveWay is stop (level 0: no page is
   read until the level rises), pause (pauseMs between pages), yield (one
   event-loop turn) or none.
@@ -250,6 +351,7 @@ export const inspectionTypeDefs = gql`
     attachmentInfo: InspectionAttachmentInfo!
     queueState: InspectionQueueState!
     processors: [InspectionProcessor!]!
+    processorTiming: InspectionProcessorTimingReport!
     catchUpStatus: JSONObject!
     catchUpPriority: InspectionCatchUpPriority!
     storageHealth: InspectionStorageHealth!
