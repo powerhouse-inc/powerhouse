@@ -16,6 +16,7 @@ import type { OperationWithContext } from "@powerhousedao/shared/document-model"
 import type { SignatureRefusedEvent } from "../../events/types.js";
 import type { Job } from "../../queue/types.js";
 import type { JobMeta } from "../../shared/types.js";
+import type { KeyframeSettings } from "../../storage/keyframes/keyframe-settings.js";
 import type { JobExecutorConfig, JobResult } from "../types.js";
 
 // ---------------------------------------------------------------------------
@@ -229,6 +230,8 @@ export type InitMessage = {
   signer?: FactorySpec;
   /** Builds the `SignatureTrustPolicy`; omitted = the default. */
   trustPolicy?: FactorySpec;
+  /** Omitted = the built-in keyframe rule. */
+  keyframes?: KeyframeSettings;
 };
 
 /**

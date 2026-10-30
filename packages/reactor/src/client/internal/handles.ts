@@ -127,6 +127,18 @@ export function jobIdsOf(handle: WriteHandle): readonly string[] {
   return named ?? (handle.jobId === "" ? [] : [handle.jobId]);
 }
 
+/** A job as accepted, before its state is read; a handle waits for that. */
+export function placeholderJob(id: string, documentId: string): JobInfo {
+  return {
+    id,
+    documentId,
+    status: JobStatus.PENDING,
+    createdAtUtcIso: "",
+    consistencyToken: { version: 1, createdAtUtcIso: "", coordinates: [] },
+    meta: { batchId: "", batchJobIds: [] },
+  };
+}
+
 /** The first FAILED job, in the order given, or undefined. */
 function firstFailed(jobs: readonly JobInfo[]): JobInfo | undefined {
   return jobs.find((job) => job.status === JobStatus.FAILED);

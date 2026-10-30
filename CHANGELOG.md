@@ -1,3 +1,328 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor:** per-processor timing, top 5 in the catch-up output ([ca20e898e4](https://github.com/powerhouse-inc/powerhouse/commit/ca20e898e4))
+- **reactor:** keyframe interval and keep per document type ([2654f5df0b](https://github.com/powerhouse-inc/powerhouse/commit/2654f5df0b))
+- **reactor:** memory telemetry correlated with operations processed ([c8d0779075](https://github.com/powerhouse-inc/powerhouse/commit/c8d0779075))
+- **reactor:** prune a stream's keyframes on write ([cdb29fbedf](https://github.com/powerhouse-inc/powerhouse/commit/cdb29fbedf))
+- **reactor:** historical reads no longer write keyframes ([ccc2d2a873](https://github.com/powerhouse-inc/powerhouse/commit/ccc2d2a873))
+- **reactor:** keyframe clean-up with a dry run ([9be5cad060](https://github.com/powerhouse-inc/powerhouse/commit/9be5cad060))
+- **reactor-api:** rewrite one table through the PGlite maintenance lane ([ee99ab7edd](https://github.com/powerhouse-inc/powerhouse/commit/ee99ab7edd))
+- **reactor-browser:** an embeddable chat panel over a keyless gateway ([1c2a1d0a87](https://github.com/powerhouse-inc/powerhouse/commit/1c2a1d0a87))
+- **reactor-browser:** let the chat agent take up to 100 steps per message ([e701baf425](https://github.com/powerhouse-inc/powerhouse/commit/e701baf425))
+- **reactor-browser:** raise the chat agent's limit to 250 steps per message ([32b2edf2e4](https://github.com/powerhouse-inc/powerhouse/commit/32b2edf2e4))
+- **reactor-browser:** reach the attachment client outside React ([9200c244da](https://github.com/powerhouse-inc/powerhouse/commit/9200c244da))
+- **reactor-browser:** let chat tools show images and reach the chat's images ([dbb82ccf55](https://github.com/powerhouse-inc/powerhouse/commit/dbb82ccf55))
+- **switchboard:** add the AI gateway plugin ([e9a4cd0dc1](https://github.com/powerhouse-inc/powerhouse/commit/e9a4cd0dc1))
+- **switchboard:** configure processor timing and memory telemetry ([f196cf8eb2](https://github.com/powerhouse-inc/powerhouse/commit/f196cf8eb2))
+- **switchboard:** read keyframe rules from the project config and PH_KEYFRAMES ([b5a9401c6c](https://github.com/powerhouse-inc/powerhouse/commit/b5a9401c6c))
+
+### 🩹 Fixes
+
+- **connect:** offer the agent's tools on the store, not as a Connect import ([37d4a76d78](https://github.com/powerhouse-inc/powerhouse/commit/37d4a76d78))
+- **ph-cli:** keep telemetry out of a host file's switchboard config ([3fb678064b](https://github.com/powerhouse-inc/powerhouse/commit/3fb678064b))
+- **reactor:** shutdown does not wait for a reclaim to find a quiet store ([9f0df97e86](https://github.com/powerhouse-inc/powerhouse/commit/9f0df97e86))
+- **reactor-api:** abort a route's signal on disconnect, not when its body is read ([3936f6cd6a](https://github.com/powerhouse-inc/powerhouse/commit/3936f6cd6a))
+- **switchboard:** take only the message from a provider's error ([ba02a57f3f](https://github.com/powerhouse-inc/powerhouse/commit/ba02a57f3f))
+- **workflow:** a relay's token URL may resolve to private space (https) ([60d268e701](https://github.com/powerhouse-inc/powerhouse/commit/60d268e701))
+- **workflow:** relayed token requests may reach a private relay address ([#3351](https://github.com/powerhouse-inc/powerhouse/pull/3351))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Frank @froid1911
+- Frank Pfeift
+- Wouter Kampmann
+
+## 6.2.3-dev.85 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-workflow:** manual trigger inputs, validated and typed at fire time ([257944515f](https://github.com/powerhouse-inc/powerhouse/commit/257944515f))
+- **reactor-workflow:** suspend and resume runs on waitpoints ([e12b8eb819](https://github.com/powerhouse-inc/powerhouse/commit/e12b8eb819))
+- **switchboard:** read an OAuth2 app's relay from workflows.oauthApps ([f29bc5b5fa](https://github.com/powerhouse-inc/powerhouse/commit/f29bc5b5fa))
+- **switchboard:** oauthSignIn tells how a sign-in with a publisher app would go ([d3e2c84321](https://github.com/powerhouse-inc/powerhouse/commit/d3e2c84321))
+- **switchboard:** waitpoint resume routes, confirm page and subgraph fields ([d471c7b7b3](https://github.com/powerhouse-inc/powerhouse/commit/d471c7b7b3))
+- **workflow:** a publisher OAuth2 app may name a token-broker relay ([d283343f9d](https://github.com/powerhouse-inc/powerhouse/commit/d283343f9d))
+- **workflow:** sign in, exchange and refresh through an app's relay without its secret ([9759ae7e3e](https://github.com/powerhouse-inc/powerhouse/commit/9759ae7e3e))
+- **workflow:** a Run form for the manual trigger's inputs ([3effc302de](https://github.com/powerhouse-inc/powerhouse/commit/3effc302de))
+- **workflow:** OAuth2 relay and token broker for publisher apps ([#3349](https://github.com/powerhouse-inc/powerhouse/pull/3349))
+- **workflow:** approvals, waiting runs and wait blocks in the editor ([dead08df1b](https://github.com/powerhouse-inc/powerhouse/commit/dead08df1b))
+
+### 🩹 Fixes
+
+- **host-core:** a remote backend's unresolved url token is no drive address (ph run build) ([9a33ea3268](https://github.com/powerhouse-inc/powerhouse/commit/9a33ea3268))
+- **host-core:** skip unresolved remote backend url tokens in placeConnectDrives ([#3350](https://github.com/powerhouse-inc/powerhouse/pull/3350))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank @froid1911
+- Frank Pfeift
+
+## 6.2.3-dev.84 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-workflow:** manual trigger inputs, validated and typed at fire time ([257944515f](https://github.com/powerhouse-inc/powerhouse/commit/257944515f))
+- **switchboard:** read an OAuth2 app's relay from workflows.oauthApps ([f29bc5b5fa](https://github.com/powerhouse-inc/powerhouse/commit/f29bc5b5fa))
+- **switchboard:** oauthSignIn tells how a sign-in with a publisher app would go ([d3e2c84321](https://github.com/powerhouse-inc/powerhouse/commit/d3e2c84321))
+- **workflow:** a publisher OAuth2 app may name a token-broker relay ([d283343f9d](https://github.com/powerhouse-inc/powerhouse/commit/d283343f9d))
+- **workflow:** sign in, exchange and refresh through an app's relay without its secret ([9759ae7e3e](https://github.com/powerhouse-inc/powerhouse/commit/9759ae7e3e))
+- **workflow:** a Run form for the manual trigger's inputs ([3effc302de](https://github.com/powerhouse-inc/powerhouse/commit/3effc302de))
+- **workflow:** OAuth2 relay and token broker for publisher apps ([#3349](https://github.com/powerhouse-inc/powerhouse/pull/3349))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank @froid1911
+- Frank Pfeift
+
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🚀 Features
+
+- **apps-reactor-monitor:** a Connect may link drives on several switchboards ([95c4947409](https://github.com/powerhouse-inc/powerhouse/commit/95c4947409))
+- **apps-reactor-monitor:** watch and route a started host ([#3347](https://github.com/powerhouse-inc/powerhouse/pull/3347))
+- **connect:** a drive placed on its switchboard keeps no copy in this browser ([58e5b60bcf](https://github.com/powerhouse-inc/powerhouse/commit/58e5b60bcf))
+- **connect:** route placed drives to their switchboard from boot ([2d577e96a8](https://github.com/powerhouse-inc/powerhouse/commit/2d577e96a8))
+- **connect:** route to the host's switchboards by drive placement ([#3343](https://github.com/powerhouse-inc/powerhouse/pull/3343))
+- **connect:** move a drive between its switchboard and this browser ([250fac73ae](https://github.com/powerhouse-inc/powerhouse/commit/250fac73ae))
+- **connect:** move a drive at runtime, attachments by drive ([#3346](https://github.com/powerhouse-inc/powerhouse/pull/3346))
+- **connect-core:** read drive placement from the served config ([50181cd9ae](https://github.com/powerhouse-inc/powerhouse/commit/50181cd9ae))
+- **connect-core:** route to one backend per switchboard, named by host key ([eb309ff74c](https://github.com/powerhouse-inc/powerhouse/commit/eb309ff74c))
+- **connect-core:** per-browser drive moves over the host's placement ([7f3329bba9](https://github.com/powerhouse-inc/powerhouse/commit/7f3329bba9))
+- **design-system:** a slot for app sections in the drive settings modal ([7b6b7231a6](https://github.com/powerhouse-inc/powerhouse/commit/7b6b7231a6))
+- **document-model:** record a representation and optional coercion on scalars ([a719542782](https://github.com/powerhouse-inc/powerhouse/commit/a719542782))
+- **host-core:** project remote backends and drive placement onto Connect ([595abd71a6](https://github.com/powerhouse-inc/powerhouse/commit/595abd71a6))
+- **ph-cli:** the connect runner serves remote backends and drive placement ([e255517ca2](https://github.com/powerhouse-inc/powerhouse/commit/e255517ca2))
+- **ph-cli:** add the TypeScript compile plan as a library ([9be8b6a27f](https://github.com/powerhouse-inc/powerhouse/commit/9be8b6a27f))
+- **reactor-attachments:** route attachments by document with RoutingAttachmentService ([9a7720a85e](https://github.com/powerhouse-inc/powerhouse/commit/9a7720a85e))
+- **reactor-browser:** every tab learns of sync remotes added or removed in one ([586c752322](https://github.com/powerhouse-inc/powerhouse/commit/586c752322))
+- **reactor-browser:** fetchDriveInfo takes a token provider ([ddecd39600](https://github.com/powerhouse-inc/powerhouse/commit/ddecd39600))
+- **reactor-browser:** export SYNC_REMOTES_CHANGED_EVENT from ./rpc ([371ad9d132](https://github.com/powerhouse-inc/powerhouse/commit/371ad9d132))
+- **reactor-browser:** useAttachmentUpload preprocess takes the document id ([763f18b39a](https://github.com/powerhouse-inc/powerhouse/commit/763f18b39a))
+- **reactor-monitor-app:** route over switchboards and move drives at runtime ([25d74b05c2](https://github.com/powerhouse-inc/powerhouse/commit/25d74b05c2))
+- **reactor-monitor-app:** host rules judge saving a Router move as placement ([476a74111d](https://github.com/powerhouse-inc/powerhouse/commit/476a74111d))
+- **reactor-monitor-app:** route a started Connect's reactors from Use it ([6cf25c1cf4](https://github.com/powerhouse-inc/powerhouse/commit/6cf25c1cf4))
+- **reactor-monitor-app:** route a copy by the config it runs ([d11d85e424](https://github.com/powerhouse-inc/powerhouse/commit/d11d85e424))
+- **reactor-router:** setConfiguredPlacement for config known after construction ([0f0362f63b](https://github.com/powerhouse-inc/powerhouse/commit/0f0362f63b))
+- **shared:** served Connect config carries remoteBackends, collections and default-drive placement ([67426c7182](https://github.com/powerhouse-inc/powerhouse/commit/67426c7182))
+- **shared:** add stored definition types and latestVersionOf ([95aa962203](https://github.com/powerhouse-inc/powerhouse/commit/95aa962203))
+- **shared,document-model,reactor-api,ph-cli:** add groundwork for code-first document models ([#3345](https://github.com/powerhouse-inc/powerhouse/pull/3345))
+
+### 🩹 Fixes
+
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect-core:** other tabs follow a kept copy only once it has arrived ([3fe267ef02](https://github.com/powerhouse-inc/powerhouse/commit/3fe267ef02))
+- **connect-core:** wait for the copy whenever a drive's effective placement becomes this browser ([420d544c12](https://github.com/powerhouse-inc/powerhouse/commit/420d544c12))
+- **reactor-monitor-app:** serve.ts loads again under plain node ([5dc4c7f347](https://github.com/powerhouse-inc/powerhouse/commit/5dc4c7f347))
+- **reactor-monitor-app:** the Router view's tables keep their height ([a52e14b270](https://github.com/powerhouse-inc/powerhouse/commit/a52e14b270))
+- **reactor-monitor-app:** keep a started app's moves across a new start ([e8035c45c1](https://github.com/powerhouse-inc/powerhouse/commit/e8035c45c1))
+- **reactor-monitor-app:** name every linked drive by slug in the route seed ([8370f3e8dd](https://github.com/powerhouse-inc/powerhouse/commit/8370f3e8dd))
+- **reactor-router:** find lists a duplicated id from the backend it is routed to ([1c2eba9778](https://github.com/powerhouse-inc/powerhouse/commit/1c2eba9778))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **apps-reactor-monitor:** import refuses a placement key that names no drive ([01652396c1](https://github.com/powerhouse-inc/powerhouse/commit/01652396c1))
+- **apps-reactor-monitor:** policy for drive links, drive lists and placement ([ffa8b1ecb0](https://github.com/powerhouse-inc/powerhouse/commit/ffa8b1ecb0))
+- **apps-reactor-monitor:** link a Connect to switchboard drives in the host rules ([9b7a19066f](https://github.com/powerhouse-inc/powerhouse/commit/9b7a19066f))
+- **apps-reactor-monitor:** "Where this app keeps its drives" card for Connect ([48c8d4b6ac](https://github.com/powerhouse-inc/powerhouse/commit/48c8d4b6ac))
+- **apps-reactor-monitor:** name a drive added to a switchboard, saved in this host ([804c4f2115](https://github.com/powerhouse-inc/powerhouse/commit/804c4f2115))
+- **apps-reactor-monitor:** link a Connect to switchboard drives ([#3333](https://github.com/powerhouse-inc/powerhouse/pull/3333))
+- **host-core:** export placementKeyIssues from ./schema ([42b0411430](https://github.com/powerhouse-inc/powerhouse/commit/42b0411430))
+- **reactor,reactor-api:** inspection says whether models load on demand ([c467cb6314](https://github.com/powerhouse-inc/powerhouse/commit/c467cb6314))
+- **reactor-browser:** a GraphQLReactorClient signer can be a function read per push ([44c401935a](https://github.com/powerhouse-inc/powerhouse/commit/44c401935a))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+- **reactor-browser:** a request deadline and a fetch seam on GraphQLReactorClient ([04964d9ba7](https://github.com/powerhouse-inc/powerhouse/commit/04964d9ba7))
+- **reactor-browser:** a Switchboard as a router backend ([#3332](https://github.com/powerhouse-inc/powerhouse/pull/3332))
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+
+### 🩹 Fixes
+
+- **apps-reactor-monitor:** show a switchboard's drive address in Use it ([ddb1199c35](https://github.com/powerhouse-inc/powerhouse/commit/ddb1199c35))
+- **apps-reactor-monitor:** link a second drive for a Connect that declares no drives ([44edf4ab1e](https://github.com/powerhouse-inc/powerhouse/commit/44edf4ab1e))
+- **apps-reactor-monitor:** name the folder for a placement key a wrapper's plugins hide ([43cab375b7](https://github.com/powerhouse-inc/powerhouse/commit/43cab375b7))
+- **apps-reactor-monitor:** copy an env link into a wrapper as it is ([935da0a9e2](https://github.com/powerhouse-inc/powerhouse/commit/935da0a9e2))
+- **apps-reactor-monitor:** refuse a drive name a switchboard plugin already uses ([ff831b7d25](https://github.com/powerhouse-inc/powerhouse/commit/ff831b7d25))
+- **ph-cli:** a switchboard host is ready once its declared drives are seeded ([e712ec6fb9](https://github.com/powerhouse-inc/powerhouse/commit/e712ec6fb9))
+- **reactor-browser:** a Switchboard backend takes typed document models ([9df082c147](https://github.com/powerhouse-inc/powerhouse/commit/9df082c147))
+- **reactor-browser:** a switchboard backend on Node sees a 421 as itself ([197d490368](https://github.com/powerhouse-inc/powerhouse/commit/197d490368))
+- **reactor-browser:** a switchboard that hangs past the router's probe deadline opens the breaker ([4ed5966c9f](https://github.com/powerhouse-inc/powerhouse/commit/4ed5966c9f))
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+- **switchboard:** /ready waits for the default drive ([27cee3f720](https://github.com/powerhouse-inc/powerhouse/commit/27cee3f720))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **pieces-framework:** sync upstream to activepieces 0.92.3 ([484096ec69](https://github.com/powerhouse-inc/powerhouse/commit/484096ec69))
+- **pieces-framework,reactor-workflow:** serve the reactor's write half to pieces ([194cc8b5ee](https://github.com/powerhouse-inc/powerhouse/commit/194cc8b5ee))
+- **reactor-api:** send webhook reply headers ([dd5bae688f](https://github.com/powerhouse-inc/powerhouse/commit/dd5bae688f))
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+- **workflow-runtime:** per-action default timeout and retry ([ed63e8839f](https://github.com/powerhouse-inc/powerhouse/commit/ed63e8839f))
+
+### 🩹 Fixes
+
+- **connection-editor:** read dropdown options from the catalog's staticOptions ([c6c88eec7f](https://github.com/powerhouse-inc/powerhouse/commit/c6c88eec7f))
+- **ph-cli:** a served Connect proxies the switchboard's paths instead of answering them with its shell ([11daf2325f](https://github.com/powerhouse-inc/powerhouse/commit/11daf2325f))
+- **reactor-workflow:** name piece errors by their own name, not a minified class ([7aee7c7c9b](https://github.com/powerhouse-inc/powerhouse/commit/7aee7c7c9b))
+- **switchboard,ph-cli:** a drive pinned to an id this store cannot take is made under its slug ([39aff95981](https://github.com/powerhouse-inc/powerhouse/commit/39aff95981))
+- **workflow-runtime:** bind secrets to the connection or workflow that owns them ([40a52be27a](https://github.com/powerhouse-inc/powerhouse/commit/40a52be27a))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **apps-reactor-monitor:** host builder controller contract ([#3318](https://github.com/powerhouse-inc/powerhouse/pull/3318))
+- **apps-reactor-monitor:** host builder stepper UI ([#3320](https://github.com/powerhouse-inc/powerhouse/pull/3320))
+- **apps-reactor-monitor:** start host builder drafts from a temp copy ([#3321](https://github.com/powerhouse-inc/powerhouse/pull/3321))
+- **apps-reactor-monitor:** link switchboards by a drive address ([2059829ebc](https://github.com/powerhouse-inc/powerhouse/commit/2059829ebc))
+- **apps-reactor-monitor:** start, stop and save host builder drafts ([#3325](https://github.com/powerhouse-inc/powerhouse/pull/3325))
+- **apps-reactor-monitor:** start a Connect from a builder copy ([#3330](https://github.com/powerhouse-inc/powerhouse/pull/3330))
+- **clint:** the mastra runner attaches through a switchboard drive address ([0d34a3c2eb](https://github.com/powerhouse-inc/powerhouse/commit/0d34a3c2eb))
+- **codegen:** scaffolded assistant and cli hosts link the switchboard by a drive address ([ca3b183ad6](https://github.com/powerhouse-inc/powerhouse/commit/ca3b183ad6))
+- **connect:** a proxied Connect names its switchboard as ${origin}; the runner proxies the switchboard's paths ([bdaffdb580](https://github.com/powerhouse-inc/powerhouse/commit/bdaffdb580))
+- **connect-core,reactor-browser:** a sign-in gate when the backend refuses the caller ([77eda7795b](https://github.com/powerhouse-inc/powerhouse/commit/77eda7795b))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([#3284](https://github.com/powerhouse-inc/powerhouse/pull/3284))
+- ⚠️  **host-core:** a remote link is a switchboard drive address; placement.drives ([3e7bf53215](https://github.com/powerhouse-inc/powerhouse/commit/3e7bf53215))
+- **host-core:** flag a placement.drives key that names no drive the host knows ([e0f7c430ae](https://github.com/powerhouse-inc/powerhouse/commit/e0f7c430ae))
+- ⚠️  **host-core:** link remotes by a switchboard drive address ([#3328](https://github.com/powerhouse-inc/powerhouse/pull/3328))
+- **portle:** the tunnel runner — enrolment, rendering, supervised frpc and Caddy, status and mutations ([953c660395](https://github.com/powerhouse-inc/powerhouse/commit/953c660395))
+- **portle:** refuse to start before the zone is delegated; configurable listen ports ([bc04aff72b](https://github.com/powerhouse-inc/powerhouse/commit/bc04aff72b))
+- **portle:** optional Host header rewrite for dev-server upstreams ([865b3947ae](https://github.com/powerhouse-inc/powerhouse/commit/865b3947ae))
+- **portle:** same-origin publication — the app label serves the switchboard and a public runtime config ([df83745261](https://github.com/powerhouse-inc/powerhouse/commit/df83745261))
+- **reactor:** report replayed operations delivered without state, and why ([bf684eca34](https://github.com/powerhouse-inc/powerhouse/commit/bf684eca34))
+- **reactor,switchboard:** boot reports progress instead of going silent ([e85fcfd84e](https://github.com/powerhouse-inc/powerhouse/commit/e85fcfd84e))
+- **reactor-api:** the readable-documents read model, for index subgraphs to join on ([0e55ab91e9](https://github.com/powerhouse-inc/powerhouse/commit/0e55ab91e9))
+- **reactor-api:** defineIndexSubgraph, the declared permission check for index subgraphs ([5e17260c28](https://github.com/powerhouse-inc/powerhouse/commit/5e17260c28))
+- **reactor-mcp:** shared tool definitions with MCP and ai SDK adapters ([db60951c54](https://github.com/powerhouse-inc/powerhouse/commit/db60951c54))
+- **reactor-monitor:** add setter_denied and base_changed controller errors ([3a8797a980](https://github.com/powerhouse-inc/powerhouse/commit/3a8797a980))
+- **reactor-monitor:** add the host builder's controller contract ([8a5d8a752d](https://github.com/powerhouse-inc/powerhouse/commit/8a5d8a752d))
+- **reactor-monitor:** let setters change a host's display name ([4743cf5b12](https://github.com/powerhouse-inc/powerhouse/commit/4743cf5b12))
+- **reactor-monitor:** carry host-rules issues on the controller wire ([df9b116a52](https://github.com/powerhouse-inc/powerhouse/commit/df9b116a52))
+- **reactor-monitor:** host-files writes the host.js files an export stands for ([8ea300e746](https://github.com/powerhouse-inc/powerhouse/commit/8ea300e746))
+- **reactor-monitor:** builder draft, persistence and engine hook ([1b2f65fdc9](https://github.com/powerhouse-inc/powerhouse/commit/1b2f65fdc9))
+- **reactor-monitor:** materialize a draft host into a throwaway project ([adf31afe72](https://github.com/powerhouse-inc/powerhouse/commit/adf31afe72))
+- **reactor-monitor:** start a draft host from a throwaway copy of its project ([4abb04b4b2](https://github.com/powerhouse-inc/powerhouse/commit/4abb04b4b2))
+- **reactor-monitor:** serve capabilities, export and draft routes ([3633418a4a](https://github.com/powerhouse-inc/powerhouse/commit/3633418a4a))
+- **reactor-monitor:** client methods for capabilities, export and drafts ([fdb84fa3f2](https://github.com/powerhouse-inc/powerhouse/commit/fdb84fa3f2))
+- **reactor-monitor:** one managed descriptor per compound member ([63bd4580cb](https://github.com/powerhouse-inc/powerhouse/commit/63bd4580cb))
+- **reactor-monitor:** host builder stepper and its steps ([02665ec029](https://github.com/powerhouse-inc/powerhouse/commit/02665ec029))
+- **reactor-monitor:** open the host builder from the views ([65d66d91d4](https://github.com/powerhouse-inc/powerhouse/commit/65d66d91d4))
+- **reactor-monitor:** copy the project into a draft and list it per switchboard ([5ac8af6cff](https://github.com/powerhouse-inc/powerhouse/commit/5ac8af6cff))
+- **reactor-monitor:** start, stop and save builder drafts from Use it ([0a228efa74](https://github.com/powerhouse-inc/powerhouse/commit/0a228efa74))
+- **reactor-monitor:** a remote descriptor takes a switchboard drive address ([64202449c9](https://github.com/powerhouse-inc/powerhouse/commit/64202449c9))
+- **reactor-monitor:** report a started Connect's app URL ([ceb1bb14c7](https://github.com/powerhouse-inc/powerhouse/commit/ceb1bb14c7))
+- **reactor-monitor:** link to the running Connect from a builder copy ([2b418ff13d](https://github.com/powerhouse-inc/powerhouse/commit/2b418ff13d))
+- **reactor-monitor:** give a copy's Connect a fixed port of its own ([2302f04f24](https://github.com/powerhouse-inc/powerhouse/commit/2302f04f24))
+- **reactor-router:** bound ownership probes and read backend health ([5a71e44b11](https://github.com/powerhouse-inc/powerhouse/commit/5a71e44b11))
+- **reactor-router:** document-type facts and a create pre-check ([4f1b78aaab](https://github.com/powerhouse-inc/powerhouse/commit/4f1b78aaab))
+- **reactor-router:** provisional routes expire and are probed again ([c93226d894](https://github.com/powerhouse-inc/powerhouse/commit/c93226d894))
+- **reactor-router:** route an id several backends hold by its collection ([28f48a1059](https://github.com/powerhouse-inc/powerhouse/commit/28f48a1059))
+- **reactor-router:** runtime placements above the config ([7efca47e5c](https://github.com/powerhouse-inc/powerhouse/commit/7efca47e5c))
+- **reactor-router:** locate the backend a document routes to ([4281828831](https://github.com/powerhouse-inc/powerhouse/commit/4281828831))
+- **reactor-router:** resilience and runtime placement ([#3326](https://github.com/powerhouse-inc/powerhouse/pull/3326))
+- **reactor-workflow:** pollNow runs an armed trigger at once ("sync now") ([2a620c707b](https://github.com/powerhouse-inc/powerhouse/commit/2a620c707b))
+- **shared:** switchboardOfDrive splits a switchboard drive address ([9b79f7d899](https://github.com/powerhouse-inc/powerhouse/commit/9b79f7d899))
+- **switchboard:** workflowRuntime.host names the switchboard an app runs on ([4680f3d307](https://github.com/powerhouse-inc/powerhouse/commit/4680f3d307))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **workflow:** ctx.reactor.query, an in-process read of an index subgraph for pieces ([fba34399f4](https://github.com/powerhouse-inc/powerhouse/commit/fba34399f4))
+- **workflow:** publisher OAuth2 apps and a per-connection scope override ([5868eab4f2](https://github.com/powerhouse-inc/powerhouse/commit/5868eab4f2))
+- **workflow:** workflowHealth, a host-side read of a workflow's trigger and park ([25b34f62a6](https://github.com/powerhouse-inc/powerhouse/commit/25b34f62a6))
+- **workflow:** name an OAuth2 connection after its ID token's email ([354b6f9faf](https://github.com/powerhouse-inc/powerhouse/commit/354b6f9faf))
+- **workflow:** a sign-in records the scopes it was granted ([3c7a93da3f](https://github.com/powerhouse-inc/powerhouse/commit/3c7a93da3f))
+- **workflow:** managedBy, and Workflow Studio shows managed workflows read-only ([a82a126a64](https://github.com/powerhouse-inc/powerhouse/commit/a82a126a64))
+
+### 🩹 Fixes
+
+- generic codegen, CLI and reactor-api fixes from the code-first branch ([#3329](https://github.com/powerhouse-inc/powerhouse/pull/3329))
+- **builder-tools:** serve linked packages' node_modules in Connect dev ([00b12c3735](https://github.com/powerhouse-inc/powerhouse/commit/00b12c3735))
+- **builder-tools:** type declarations beside route files are not routes ([6fc44bb2a2](https://github.com/powerhouse-inc/powerhouse/commit/6fc44bb2a2))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+- **codegen:** resolve project paths from the tsconfig instead of process.chdir ([dafd785fe3](https://github.com/powerhouse-inc/powerhouse/commit/dafd785fe3))
+- **codegen:** keep powerhouse.manifest.json keys the schema does not know ([25913b746f](https://github.com/powerhouse-inc/powerhouse/commit/25913b746f))
+- **codegen:** pin date-fns, vite and rolldown for every package manager ([635f41d7cc](https://github.com/powerhouse-inc/powerhouse/commit/635f41d7cc))
+- **codegen:** pin date-fns, vite and rolldown for every package manager ([#3331](https://github.com/powerhouse-inc/powerhouse/pull/3331))
+- **connect:** the sign-in gate renders in Connect's own root, survives StrictMode, and re-lists drives after a sign-in ([0ac4f667e7](https://github.com/powerhouse-inc/powerhouse/commit/0ac4f667e7))
+- **connect-core:** the boot drive refresh records a Switchboard refusal instead of failing the boot ([6d0bd85c6e](https://github.com/powerhouse-inc/powerhouse/commit/6d0bd85c6e))
+- **connect-core:** the backend auth gate relists drives without importing the client ([06ddcdf1a1](https://github.com/powerhouse-inc/powerhouse/commit/06ddcdf1a1))
+- **desktop:** refuse a host name that resolves outside hosts/ ([f7850ac9ac](https://github.com/powerhouse-inc/powerhouse/commit/f7850ac9ac))
+- **document-model:** build declarations without the source condition ([56e7990968](https://github.com/powerhouse-inc/powerhouse/commit/56e7990968))
+- **host-core:** keep host names to one safe file-name segment ([d347e09c10](https://github.com/powerhouse-inc/powerhouse/commit/d347e09c10))
+- **host-core:** placement sees every switchboard a slug is on, and plugin-attached drives ([1c11949d8c](https://github.com/powerhouse-inc/powerhouse/commit/1c11949d8c))
+- **host-core:** refuse a placement slug that is both a local drive and on a switchboard ([cdeccbd8b0](https://github.com/powerhouse-inc/powerhouse/commit/cdeccbd8b0))
+- **ph-cli:** put a project's reactor.https under a switchboard member's config ([24ff9b9f78](https://github.com/powerhouse-inc/powerhouse/commit/24ff9b9f78))
+- **ph-cli:** the switchboard runner's drive readiness gate passes on an authenticating host ([f11a97e633](https://github.com/powerhouse-inc/powerhouse/commit/f11a97e633))
+- **portle:** a host shutdown keeps autostart, so the tunnel returns at the next boot ([d7f7b35c96](https://github.com/powerhouse-inc/powerhouse/commit/d7f7b35c96))
+- **portle:** serve the public runtime config on demand from the switchboard, not once at tunnel start ([db9ac98964](https://github.com/powerhouse-inc/powerhouse/commit/db9ac98964))
+- **portle:** a resolver failure at start is not a missing delegation ([18f0636942](https://github.com/powerhouse-inc/powerhouse/commit/18f0636942))
+- **reactor-api:** pass inspectionAdmin in the served-scalars tests and give the loader's Vite server no WebSocket ([2d4db07b1f](https://github.com/powerhouse-inc/powerhouse/commit/2d4db07b1f))
+- **reactor-api:** load local packages on Windows and the registry cache under Bun ([afaca5eda9](https://github.com/powerhouse-inc/powerhouse/commit/afaca5eda9))
+- **reactor-api:** register a package's subgraphs in export-name order with every loader ([690f20a1a1](https://github.com/powerhouse-inc/powerhouse/commit/690f20a1a1))
+- **reactor-api:** a missing document is logged at info, not as an error ([6d740cde3a](https://github.com/powerhouse-inc/powerhouse/commit/6d740cde3a))
+- **reactor-api,reactor-browser:** serve document state with interface types ([72a44ee3fb](https://github.com/powerhouse-inc/powerhouse/commit/72a44ee3fb))
+- **reactor-browser:** the backend-auth classifier stays free of node-only imports ([6c7be7b93a](https://github.com/powerhouse-inc/powerhouse/commit/6c7be7b93a))
+- **reactor-monitor:** allow only a safe file name in a name setter ([66cd1a4970](https://github.com/powerhouse-inc/powerhouse/commit/66cd1a4970))
+- **reactor-monitor:** keep the builder in the viewport on every step ([b294b89a08](https://github.com/powerhouse-inc/powerhouse/commit/b294b89a08))
+- **reactor-monitor:** no sideways scroll in the sidebar; attach the download link ([98287fc0d8](https://github.com/powerhouse-inc/powerhouse/commit/98287fc0d8))
+- **reactor-monitor:** recover a draft whose project host changed ([e9364bae75](https://github.com/powerhouse-inc/powerhouse/commit/e9364bae75))
+- **reactor-monitor:** preview a rebase before saving it ([7de6790d4d](https://github.com/powerhouse-inc/powerhouse/commit/7de6790d4d))
+- **reactor-monitor:** confirm a rebase only against the current draft ([edc70d920a](https://github.com/powerhouse-inc/powerhouse/commit/edc70d920a))
+- **reactor-monitor:** load a draft's own project package from its source root ([aac6201584](https://github.com/powerhouse-inc/powerhouse/commit/aac6201584))
+- **reactor-monitor:** keep PH_PACKAGES out of a draft's env ([2daedfa771](https://github.com/powerhouse-inc/powerhouse/commit/2daedfa771))
+- **reactor-monitor:** keep why an import row has no remote URL ([c5fab52dd2](https://github.com/powerhouse-inc/powerhouse/commit/c5fab52dd2))
+- **reactor-monitor:** browser reactors a copy brought go when the copy does ([1f4e8ed72a](https://github.com/powerhouse-inc/powerhouse/commit/1f4e8ed72a))
+- **reactor-monitor:** follow a builder copy by its status, across reloads and set switches ([60ae8debc0](https://github.com/powerhouse-inc/powerhouse/commit/60ae8debc0))
+- **reactor-monitor:** stopping a starting copy is not a failed start ([ab5dd17e33](https://github.com/powerhouse-inc/powerhouse/commit/ab5dd17e33))
+- **reactor-router:** an acceptance after the TTL keeps a provisional route expired ([3da4af060c](https://github.com/powerhouse-inc/powerhouse/commit/3da4af060c))
+- **reactor-router:** a home from a provisional drive route expires with it ([90ec0665d3](https://github.com/powerhouse-inc/powerhouse/commit/90ec0665d3))
+- **reactor-router:** setPlacement moves the documents already routed in the drive ([a54a0c1903](https://github.com/powerhouse-inc/powerhouse/commit/a54a0c1903))
+- **reactor-workflow:** hold a serialised workflow's poll while its slots are taken ([f7f5751513](https://github.com/powerhouse-inc/powerhouse/commit/f7f5751513))
+- **shared:** decode spawnAsync output as UTF-8 and reject with SpawnError ([3d9a582153](https://github.com/powerhouse-inc/powerhouse/commit/3d9a582153))
+- **shared:** keep test files out of the clis/args bundle ([13781fdc71](https://github.com/powerhouse-inc/powerhouse/commit/13781fdc71))
+- **shared,ph-cli:** leave --ignore-local unset when it is not passed ([7e8b8fd487](https://github.com/powerhouse-inc/powerhouse/commit/7e8b8fd487))
+- **switchboard:** a run with no user asks an index as the host itself ([45b1279368](https://github.com/powerhouse-inc/powerhouse/commit/45b1279368))
+- **workflow:** stack Workflow Studio's sidebar on narrow screens ([7c04e538be](https://github.com/powerhouse-inc/powerhouse/commit/7c04e538be))
+- **workflow:** pieces cannot switch certificate checks off in the worker ([ee14d1fbd1](https://github.com/powerhouse-inc/powerhouse/commit/ee14d1fbd1))
+
+### ⚠️  Breaking Changes
+
+- **host-core:** link remotes by a switchboard drive address  ([#3328](https://github.com/powerhouse-inc/powerhouse/pull/3328))
+- **host-core:** a remote link is a switchboard drive address; placement.drives  ([3e7bf53215](https://github.com/powerhouse-inc/powerhouse/commit/3e7bf53215))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

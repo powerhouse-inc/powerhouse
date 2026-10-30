@@ -7,6 +7,7 @@
 
 export {
   assertProtocolConsistency,
+  browserBackend,
   primaryBackend,
   projectReactorToConnect,
   protocolConflicts,
@@ -15,6 +16,7 @@ export {
   reactorBlockToSwitchboardConfig,
   reactorClientMode,
   type ConnectReactorProjection,
+  type ConnectRouterSettings,
   type ReactorClientMode,
   type SwitchboardReactorLayer,
 } from "./reactor-config.js";

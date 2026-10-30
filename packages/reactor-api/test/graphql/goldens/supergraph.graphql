@@ -1,0 +1,3246 @@
+type Action {
+  id: String!
+  type: String!
+  timestampUtcMs: String!
+  input: JSONObject!
+  scope: String!
+  context: ActionContext
+}
+
+"""
+One operation an authorization preflight predicts a verdict for.
+
+`input` is what a conditional grant reads, so a candidate standing for a
+filled-in form carries that form's input. Omitting it predicts the verdict an
+empty input earns, not the verdict the filled-in form will get.
+"""
+input ActionCandidateInput {
+  scope: String!
+  type: String!
+  input: JSONObject
+}
+
+type ActionContext {
+  signer: ReactorSigner
+}
+
+"""
+An action's context, as a caller submits it.
+
+Declares every field `ActionContext` carries, because an input object rejects a
+field it does not declare: an action stamped with the head it applies to - which
+is what a signing client sends - is refused outright if these are missing, and
+that refusal is a whole-request one, not a per-field one.
+
+`prevOpHash` and `prevOpIndex` are the scope head the action was composed
+against. They are recorded rather than enforced; a signature is verified from
+the params carried in its own tuple, which do not include them.
+"""
+input ActionContextInput {
+  """
+  The index of the last operation in the scope the action applies to.
+  """
+  prevOpIndex: Int
+  """
+  The hash of the state the action applies to.
+  """
+  prevOpHash: String
+  """
+  Covers replay of an operation that would otherwise be a no-op.
+  """
+  nonce: String
+  signer: ReactorSignerInput
+}
+
+"""
+One candidate's predicted verdict. `reason` carries the refusal a DENY is
+recorded with, and is null on an ALLOW.
+"""
+type ActionEvaluation {
+  decision: AuthDecision!
+  reason: String
+}
+
+"""
+The predicted verdicts for a set of candidates, in the order they were given,
+with the aggregates a caller branches on.
+
+The aggregates are redundant -- a verdict is binary -- and all four are returned
+so a caller reads the one its question is phrased in rather than negating
+another. Over no candidates every aggregate is false: nothing is allowed and
+nothing is denied.
+"""
+type ActionEvaluations {
+  evaluations: [ActionEvaluation!]!
+  allAllowed: Boolean!
+  anyAllowed: Boolean!
+  allDenied: Boolean!
+  anyDenied: Boolean!
+}
+
+input ActionInput {
+  id: String!
+  type: String!
+  timestampUtcMs: String!
+  input: JSONObject!
+  scope: String!
+  context: ActionContextInput
+}
+
+scalar Address
+
+scalar Amount
+
+scalar Amount_Crypto
+
+scalar Amount_Currency
+
+scalar Amount_Fiat
+
+scalar Amount_Money
+
+scalar Amount_Percentage
+
+scalar Amount_Tokens
+
+input AnalyticsFilter {
+  start: String
+  end: String
+  """
+  Period to group by
+  """
+  granularity: AnalyticsGranularity
+  """
+  List of metrics to filter by, such as 'budget' or 'actuals'
+  """
+  metrics: [String]
+  """
+  List of dimensions to filter by, such as 'budget' or 'project'
+  """
+  dimensions: [AnalyticsFilterDimension]
+  currency: String
+}
+
+input AnalyticsFilterDimension {
+  name: String!
+  select: String!
+  lod: Int!
+}
+
+enum AnalyticsGranularity {
+  hourly
+  daily
+  weekly
+  monthly
+  quarterly
+  semiAnnual
+  annual
+  total
+}
+
+type AnalyticsPeriod {
+  period: String
+  start: DateTime
+  end: DateTime
+  rows: [AnalyticsSeries]
+}
+
+type AnalyticsQuery {
+  series(filter: AnalyticsFilter): [AnalyticsPeriod]
+  multiCurrencySeries(filter: MultiCurrencyConversions): [AnalyticsPeriod]
+  metrics: [String]
+  dimensions: [Dimension]
+  currencies: [String]
+}
+
+type AnalyticsSeries {
+  dimensions: [AnalyticsSeriesDimension]
+  metric: String
+  unit: String
+  value: Float
+  sum: Float
+}
+
+type AnalyticsSeriesDimension {
+  name: String
+  path: String
+  label: String
+  description: String
+  icon: String
+}
+
+scalar AttachmentRef
+
+enum AuthDecision {
+  ALLOW
+  DENY
+}
+
+"""
+The outcome of a batch mutation, one entry per job the request named. The wire
+shape of `BatchExecutionResult` (`{ jobs }`), keyed on each entry by the plan
+key rather than by position so the client can rebuild the record. The batch is
+not atomic: each job commits on its own and a failed job releases its
+dependents, so each entry's status says what happened to that job, and
+re-submitting re-applies the jobs that succeeded.
+"""
+type BatchExecutionResult {
+  jobs: [BatchJobResult!]!
+}
+
+"""
+One job's outcome within a batch, pairing the plan key the caller gave with the
+job that applied it. Mirrors one entry of the `Record<string, JobInfo>` that
+`IReactor.executeBatch` returns (packages/reactor/src/core/types.ts).
+"""
+type BatchJobResult {
+  key: String!
+  job: JobInfo!
+}
+
+type ChannelMeta {
+  id: String!
+}
+
+input ChannelMetaInput {
+  id: String!
+}
+
+type ConsistencyCoordinate {
+  documentId: String!
+  scope: String!
+  branch: String!
+  operationIndex: Int!
+}
+
+"""
+A consistency token's coordinate, as ConsistencyCoordinate reports it.
+"""
+input ConsistencyCoordinateInput {
+  documentId: String!
+  scope: String!
+  branch: String!
+  operationIndex: Int!
+}
+
+"""
+The write positions a job reached, for read-after-write. Only meaningful once
+the job has completed.
+"""
+type ConsistencyToken {
+  version: Int!
+  createdAtUtcIso: String!
+  coordinates: [ConsistencyCoordinate!]!
+}
+
+"""
+A consistency token, as JobInfo.consistencyToken reports it. A read given one
+waits until the read models it reads from hold every coordinate it names.
+"""
+input ConsistencyTokenInput {
+  version: Int!
+  createdAtUtcIso: String!
+  coordinates: [ConsistencyCoordinateInput!]!
+}
+
+type CreateDefaults {
+  signaturePolicy: String!
+  protocolVersions: JSONObject!
+}
+
+scalar Currency
+
+input CurrencyConversion {
+  metric: String!
+  sourceCurrency: String!
+}
+
+scalar Date
+
+scalar DateTime
+
+type DeadLetterInfo {
+  documentId: String!
+  error: String!
+  """
+  How the origin classified the failure. A peer needs this to mirror the origin's
+  quarantine decision; without it a held auth operation would freeze the document
+  on the peer side while the origin kept syncing.
+  """
+  errorType: String
+  jobId: String!
+  branch: String!
+  scopes: [String!]!
+  operationCount: Int!
+}
+
+type Dimension {
+  name: String
+  values: [Value]
+}
+
+type DocumentAccessInfo {
+  documentId: String!
+  permissions: [DocumentPermissionEntry!]!
+}
+
+type DocumentChangeContext {
+  parentId: String
+  childId: String
+}
+
+type DocumentChangeEvent {
+  type: DocumentChangeType!
+  documents: [PHDocument!]!
+  context: DocumentChangeContext
+}
+
+enum DocumentChangeType {
+  CREATED
+  DELETED
+  UPDATED
+  PARENT_ADDED
+  PARENT_REMOVED
+  CHILD_ADDED
+  CHILD_REMOVED
+}
+
+type DocumentDrive implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  initialState: DocumentDrive_DocumentDriveState!
+  state: DocumentDrive_DocumentDriveState!
+  stateJSON: JSONObject
+}
+
+"""
+Mutation result type for DocumentDrive operations with typed state.
+Matches ReactorSubgraph PHDocument pattern with revisionsList.
+"""
+type DocumentDriveMutationResult {
+  id: String!
+  slug: String
+  preferredEditor: String
+  name: String!
+  documentType: String!
+  state: DocumentDrive_FullState!
+  revisionsList: [Revision!]!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+}
+
+"""
+Mutations: DocumentDrive
+"""
+type DocumentDriveMutations {
+  createDocument(
+    name: String!
+    parentIdOrSlug: String
+    parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")
+    slug: String
+    preferredEditor: String
+    initialState: DocumentDrive_InitialStateInput
+  ): DocumentDriveMutationResult!
+  createEmptyDocument(
+    parentIdOrSlug: String
+    parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")
+  ): DocumentDriveMutationResult!
+  addFile(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddFileInput!
+  ): DocumentDriveMutationResult!
+  addFileAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddFileInput!
+  ): String!
+  addFolder(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddFolderInput!
+  ): DocumentDriveMutationResult!
+  addFolderAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddFolderInput!
+  ): String!
+  deleteNode(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_DeleteNodeInput!
+  ): DocumentDriveMutationResult!
+  deleteNodeAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_DeleteNodeInput!
+  ): String!
+  updateFile(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_UpdateFileInput!
+  ): DocumentDriveMutationResult!
+  updateFileAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_UpdateFileInput!
+  ): String!
+  updateNode(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_UpdateNodeInput!
+  ): DocumentDriveMutationResult!
+  updateNodeAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_UpdateNodeInput!
+  ): String!
+  copyNode(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_CopyNodeInput!
+  ): DocumentDriveMutationResult!
+  copyNodeAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_CopyNodeInput!
+  ): String!
+  moveNode(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_MoveNodeInput!
+  ): DocumentDriveMutationResult!
+  moveNodeAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_MoveNodeInput!
+  ): String!
+  setDriveName(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetDriveNameInput!
+  ): DocumentDriveMutationResult!
+  setDriveNameAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetDriveNameInput!
+  ): String!
+  setDriveIcon(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetDriveIconInput!
+  ): DocumentDriveMutationResult!
+  setDriveIconAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetDriveIconInput!
+  ): String!
+  setSharingType(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetSharingTypeInput!
+  ): DocumentDriveMutationResult!
+  setSharingTypeAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetSharingTypeInput!
+  ): String!
+  setAvailableOffline(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetAvailableOfflineInput!
+  ): DocumentDriveMutationResult!
+  setAvailableOfflineAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_SetAvailableOfflineInput!
+  ): String!
+  addListener(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddListenerInput!
+  ): DocumentDriveMutationResult!
+  addListenerAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddListenerInput!
+  ): String!
+  removeListener(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_RemoveListenerInput!
+  ): DocumentDriveMutationResult!
+  removeListenerAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_RemoveListenerInput!
+  ): String!
+  addTrigger(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddTriggerInput!
+  ): DocumentDriveMutationResult!
+  addTriggerAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_AddTriggerInput!
+  ): String!
+  removeTrigger(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_RemoveTriggerInput!
+  ): DocumentDriveMutationResult!
+  removeTriggerAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentDrive_RemoveTriggerInput!
+  ): String!
+}
+
+"""
+Queries: DocumentDrive Document
+"""
+type DocumentDriveQueries {
+  """
+  Get a specific DocumentDrive document by identifier
+  """
+  document(
+    idOrSlug: String
+    identifier: String @deprecated(reason: "Use idOrSlug.")
+    view: DocumentDrive_ViewFilterInput
+  ): DocumentDrive_DocumentWithChildren
+  """
+  Get all DocumentDrive documents (paged)
+  """
+  documents(
+    paging: DocumentDrive_PagingInput
+  ): DocumentDrive_DocumentResultPage!
+  """
+  Find DocumentDrive documents by search criteria
+  """
+  findDocuments(
+    search: DocumentDrive_SearchFilterInput
+    view: DocumentDrive_ViewFilterInput
+    paging: DocumentDrive_PagingInput
+  ): DocumentDrive_DocumentResultPage!
+  """
+  Get outgoing relationships of a DocumentDrive document
+  """
+  documentOutgoingRelationships(
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    relationshipType: String!
+    view: DocumentDrive_ViewFilterInput
+    paging: DocumentDrive_PagingInput
+  ): DocumentDrive_DocumentResultPage!
+  """
+  Get incoming relationships to a DocumentDrive document
+  """
+  documentIncomingRelationships(
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
+    relationshipType: String!
+    view: DocumentDrive_ViewFilterInput
+    paging: DocumentDrive_PagingInput
+  ): DocumentDrive_DocumentResultPage!
+}
+
+"""
+Module: Node
+"""
+input DocumentDrive_AddFileInput {
+  id: ID!
+  name: String!
+  documentType: String!
+  parentFolder: ID
+}
+
+input DocumentDrive_AddFolderInput {
+  id: ID!
+  name: String!
+  parentFolder: ID
+}
+
+input DocumentDrive_AddListenerInput {
+  listener: DocumentDrive_ListenerInput!
+}
+
+input DocumentDrive_AddTriggerInput {
+  trigger: DocumentDrive_TriggerInput!
+}
+
+input DocumentDrive_CopyNodeInput {
+  srcId: ID!
+  targetId: ID!
+  targetName: String
+  targetParentFolder: ID
+}
+
+input DocumentDrive_DeleteNodeInput {
+  id: ID!
+}
+
+type DocumentDrive_DocumentDriveLocalState {
+  sharingType: String
+  listeners: [DocumentDrive_Listener!]!
+  triggers: [DocumentDrive_Trigger!]!
+  availableOffline: Boolean!
+}
+
+input DocumentDrive_DocumentDriveLocalStateInput {
+  sharingType: String
+  listeners: [DocumentDrive_ListenerInput]
+  triggers: [DocumentDrive_TriggerInput]
+  availableOffline: Boolean
+}
+
+type DocumentDrive_DocumentDriveState {
+  name: String!
+  nodes: [DocumentDrive_Node!]!
+  icon: String
+}
+
+input DocumentDrive_DocumentDriveStateInput {
+  name: String
+  nodes: [JSONObject]
+  icon: String
+}
+
+"""
+Paginated result type for DocumentDrive documents
+"""
+type DocumentDrive_DocumentResultPage {
+  items: [DocumentDriveMutationResult!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+"""
+Document with children for DocumentDrive
+"""
+type DocumentDrive_DocumentWithChildren {
+  document: DocumentDriveMutationResult!
+  childIds: [String!]!
+}
+
+type DocumentDrive_FileNode {
+  id: String!
+  name: String!
+  kind: String!
+  documentType: String!
+  parentFolder: String
+}
+
+input DocumentDrive_FileNodeInput {
+  id: String
+  name: String
+  kind: String
+  documentType: String
+  parentFolder: String
+}
+
+type DocumentDrive_FolderNode {
+  id: String!
+  name: String!
+  kind: String!
+  parentFolder: String
+}
+
+"""
+Input Types for Initial State
+"""
+input DocumentDrive_FolderNodeInput {
+  id: String
+  name: String
+  kind: String
+  parentFolder: String
+}
+
+"""
+Full state with all scopes for DocumentDrive
+"""
+type DocumentDrive_FullState {
+  auth: JSONObject!
+  document: DocumentDrive_PHDocumentScopeState!
+  global: DocumentDrive_DocumentDriveState!
+  local: DocumentDrive_DocumentDriveLocalState!
+}
+
+input DocumentDrive_InitialStateInput {
+  global: DocumentDrive_DocumentDriveStateInput
+  local: DocumentDrive_DocumentDriveLocalStateInput
+}
+
+type DocumentDrive_Listener {
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: DocumentDrive_ListenerFilter!
+  callInfo: DocumentDrive_ListenerCallInfo
+}
+
+type DocumentDrive_ListenerCallInfo {
+  transmitterType: DocumentDrive_TransmitterType
+  name: String
+  data: String
+}
+
+input DocumentDrive_ListenerCallInfoInput {
+  transmitterType: DocumentDrive_TransmitterType
+  name: String
+  data: String
+}
+
+type DocumentDrive_ListenerFilter {
+  documentType: [String!]!
+  documentId: [ID!]
+  scope: [String!]
+  branch: [String!]
+}
+
+input DocumentDrive_ListenerFilterInput {
+  documentType: [String!]
+  documentId: [ID!]
+  scope: [String!]
+  branch: [String!]
+}
+
+input DocumentDrive_ListenerInput {
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: DocumentDrive_ListenerFilterInput!
+  callInfo: DocumentDrive_ListenerCallInfoInput
+}
+
+input DocumentDrive_MoveNodeInput {
+  srcFolder: ID!
+  targetParentFolder: ID
+}
+
+union DocumentDrive_Node = DocumentDrive_FolderNode | DocumentDrive_FileNode
+
+"""
+Document scope state (same for all document types)
+"""
+type DocumentDrive_PHDocumentScopeState {
+  version: Int!
+  hash: DocumentDrive_PHHashConfig!
+  isDeleted: Boolean
+  deletedAtUtcIso: String
+  deletedBy: String
+  deletionReason: String
+}
+
+"""
+Hash configuration for document state
+"""
+type DocumentDrive_PHHashConfig {
+  algorithm: String!
+  encoding: String!
+}
+
+input DocumentDrive_PagingInput {
+  limit: Int
+  offset: Int
+  cursor: String
+}
+
+type DocumentDrive_PullResponderTriggerData {
+  listenerId: ID!
+  url: String!
+  interval: String!
+}
+
+input DocumentDrive_PullResponderTriggerDataInput {
+  listenerId: ID!
+  url: String!
+  interval: String!
+}
+
+input DocumentDrive_RemoveListenerInput {
+  listenerId: String!
+}
+
+input DocumentDrive_RemoveTriggerInput {
+  triggerId: String!
+}
+
+input DocumentDrive_SearchFilterInput {
+  parentId: String
+  identifiers: [String!] @deprecated(reason: "Ignored. Filter by parentId.")
+}
+
+input DocumentDrive_SetAvailableOfflineInput {
+  availableOffline: Boolean!
+}
+
+input DocumentDrive_SetDriveIconInput {
+  icon: String
+}
+
+"""
+Module: Drive
+"""
+input DocumentDrive_SetDriveNameInput {
+  name: String!
+}
+
+input DocumentDrive_SetSharingTypeInput {
+  type: String!
+}
+
+enum DocumentDrive_TransmitterType {
+  Internal
+  SwitchboardPush
+  PullResponder
+  SecureConnect
+  MatrixConnect
+  RESTWebhook
+}
+
+type DocumentDrive_Trigger {
+  id: ID!
+  type: DocumentDrive_TriggerType!
+  data: DocumentDrive_TriggerData
+}
+
+union DocumentDrive_TriggerData = DocumentDrive_PullResponderTriggerData
+
+input DocumentDrive_TriggerInput {
+  id: ID!
+  type: DocumentDrive_TriggerType!
+  data: DocumentDrive_PullResponderTriggerDataInput
+}
+
+enum DocumentDrive_TriggerType {
+  PullResponder
+}
+
+input DocumentDrive_UpdateFileInput {
+  id: ID!
+  parentFolder: ID
+  name: String
+  documentType: String
+}
+
+input DocumentDrive_UpdateNodeInput {
+  id: ID!
+  parentFolder: ID
+  name: String
+}
+
+input DocumentDrive_ViewFilterInput {
+  branch: String
+  scopes: [String!]
+}
+
+type DocumentModel implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  stateJSON: JSONObject
+}
+
+type DocumentModelGlobalState {
+  id: String!
+  name: String!
+  namespace: String
+  version: String
+  specification: JSONObject!
+}
+
+"""
+Mutation result type for DocumentModel operations with typed state.
+Matches ReactorSubgraph PHDocument pattern with revisionsList.
+"""
+type DocumentModelMutationResult {
+  id: String!
+  slug: String
+  preferredEditor: String
+  name: String!
+  documentType: String!
+  state: DocumentModel_FullState!
+  revisionsList: [Revision!]!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+}
+
+"""
+Mutations: DocumentModel
+"""
+type DocumentModelMutations {
+  createDocument(
+    name: String!
+    parentIdOrSlug: String
+    parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")
+    slug: String
+    preferredEditor: String
+    initialState: DocumentModel_InitialStateInput
+  ): DocumentModelMutationResult!
+  createEmptyDocument(
+    parentIdOrSlug: String
+    parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")
+  ): DocumentModelMutationResult!
+  setModelName(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetModelNameInput!
+  ): DocumentModelMutationResult!
+  setModelNameAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetModelNameInput!
+  ): String!
+  setModelId(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetModelIdInput!
+  ): DocumentModelMutationResult!
+  setModelIdAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetModelIdInput!
+  ): String!
+  setModelExtension(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetModelExtensionInput!
+  ): DocumentModelMutationResult!
+  setModelExtensionAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetModelExtensionInput!
+  ): String!
+  setModelDescription(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetModelDescriptionInput!
+  ): DocumentModelMutationResult!
+  setModelDescriptionAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetModelDescriptionInput!
+  ): String!
+  setAuthorName(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetAuthorNameInput!
+  ): DocumentModelMutationResult!
+  setAuthorNameAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetAuthorNameInput!
+  ): String!
+  setAuthorWebsite(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetAuthorWebsiteInput!
+  ): DocumentModelMutationResult!
+  setAuthorWebsiteAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetAuthorWebsiteInput!
+  ): String!
+  addChangeLogItem(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_AddChangeLogItemInput!
+  ): DocumentModelMutationResult!
+  addChangeLogItemAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_AddChangeLogItemInput!
+  ): String!
+  updateChangeLogItem(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_UpdateChangeLogItemInput!
+  ): DocumentModelMutationResult!
+  updateChangeLogItemAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_UpdateChangeLogItemInput!
+  ): String!
+  deleteChangeLogItem(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_DeleteChangeLogItemInput!
+  ): DocumentModelMutationResult!
+  deleteChangeLogItemAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_DeleteChangeLogItemInput!
+  ): String!
+  reorderChangeLogItems(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_ReorderChangeLogItemsInput!
+  ): DocumentModelMutationResult!
+  reorderChangeLogItemsAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_ReorderChangeLogItemsInput!
+  ): String!
+  addModule(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_AddModuleInput!
+  ): DocumentModelMutationResult!
+  addModuleAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_AddModuleInput!
+  ): String!
+  setModuleName(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetModuleNameInput!
+  ): DocumentModelMutationResult!
+  setModuleNameAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetModuleNameInput!
+  ): String!
+  setModuleDescription(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetModuleDescriptionInput!
+  ): DocumentModelMutationResult!
+  setModuleDescriptionAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetModuleDescriptionInput!
+  ): String!
+  deleteModule(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_DeleteModuleInput!
+  ): DocumentModelMutationResult!
+  deleteModuleAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_DeleteModuleInput!
+  ): String!
+  reorderModules(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_ReorderModulesInput!
+  ): DocumentModelMutationResult!
+  reorderModulesAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_ReorderModulesInput!
+  ): String!
+  addOperationError(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_AddOperationErrorInput!
+  ): DocumentModelMutationResult!
+  addOperationErrorAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_AddOperationErrorInput!
+  ): String!
+  setOperationErrorCode(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationErrorCodeInput!
+  ): DocumentModelMutationResult!
+  setOperationErrorCodeAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationErrorCodeInput!
+  ): String!
+  setOperationErrorName(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationErrorNameInput!
+  ): DocumentModelMutationResult!
+  setOperationErrorNameAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationErrorNameInput!
+  ): String!
+  setOperationErrorDescription(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationErrorDescriptionInput!
+  ): DocumentModelMutationResult!
+  setOperationErrorDescriptionAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationErrorDescriptionInput!
+  ): String!
+  setOperationErrorTemplate(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationErrorTemplateInput!
+  ): DocumentModelMutationResult!
+  setOperationErrorTemplateAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationErrorTemplateInput!
+  ): String!
+  deleteOperationError(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_DeleteOperationErrorInput!
+  ): DocumentModelMutationResult!
+  deleteOperationErrorAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_DeleteOperationErrorInput!
+  ): String!
+  reorderOperationErrors(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_ReorderOperationErrorsInput!
+  ): DocumentModelMutationResult!
+  reorderOperationErrorsAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_ReorderOperationErrorsInput!
+  ): String!
+  addOperationExample(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_AddOperationExampleInput!
+  ): DocumentModelMutationResult!
+  addOperationExampleAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_AddOperationExampleInput!
+  ): String!
+  updateOperationExample(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_UpdateOperationExampleInput!
+  ): DocumentModelMutationResult!
+  updateOperationExampleAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_UpdateOperationExampleInput!
+  ): String!
+  deleteOperationExample(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_DeleteOperationExampleInput!
+  ): DocumentModelMutationResult!
+  deleteOperationExampleAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_DeleteOperationExampleInput!
+  ): String!
+  reorderOperationExamples(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_ReorderOperationExamplesInput!
+  ): DocumentModelMutationResult!
+  reorderOperationExamplesAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_ReorderOperationExamplesInput!
+  ): String!
+  addOperation(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_AddOperationInput!
+  ): DocumentModelMutationResult!
+  addOperationAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_AddOperationInput!
+  ): String!
+  setOperationName(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationNameInput!
+  ): DocumentModelMutationResult!
+  setOperationNameAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationNameInput!
+  ): String!
+  setOperationSchema(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationSchemaInput!
+  ): DocumentModelMutationResult!
+  setOperationSchemaAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationSchemaInput!
+  ): String!
+  setOperationDescription(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationDescriptionInput!
+  ): DocumentModelMutationResult!
+  setOperationDescriptionAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationDescriptionInput!
+  ): String!
+  setOperationTemplate(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationTemplateInput!
+  ): DocumentModelMutationResult!
+  setOperationTemplateAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationTemplateInput!
+  ): String!
+  setOperationReducer(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationReducerInput!
+  ): DocumentModelMutationResult!
+  setOperationReducerAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationReducerInput!
+  ): String!
+  setOperationScope(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationScopeInput!
+  ): DocumentModelMutationResult!
+  setOperationScopeAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetOperationScopeInput!
+  ): String!
+  moveOperation(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_MoveOperationInput!
+  ): DocumentModelMutationResult!
+  moveOperationAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_MoveOperationInput!
+  ): String!
+  deleteOperation(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_DeleteOperationInput!
+  ): DocumentModelMutationResult!
+  deleteOperationAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_DeleteOperationInput!
+  ): String!
+  reorderModuleOperations(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_ReorderModuleOperationsInput!
+  ): DocumentModelMutationResult!
+  reorderModuleOperationsAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_ReorderModuleOperationsInput!
+  ): String!
+  setStateSchema(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetStateSchemaInput!
+  ): DocumentModelMutationResult!
+  setStateSchemaAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetStateSchemaInput!
+  ): String!
+  setInitialState(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetInitialStateInput!
+  ): DocumentModelMutationResult!
+  setInitialStateAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_SetInitialStateInput!
+  ): String!
+  addStateExample(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_AddStateExampleInput!
+  ): DocumentModelMutationResult!
+  addStateExampleAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_AddStateExampleInput!
+  ): String!
+  updateStateExample(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_UpdateStateExampleInput!
+  ): DocumentModelMutationResult!
+  updateStateExampleAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_UpdateStateExampleInput!
+  ): String!
+  deleteStateExample(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_DeleteStateExampleInput!
+  ): DocumentModelMutationResult!
+  deleteStateExampleAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_DeleteStateExampleInput!
+  ): String!
+  reorderStateExamples(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_ReorderStateExamplesInput!
+  ): DocumentModelMutationResult!
+  reorderStateExamplesAsync(
+    documentIdOrSlug: String
+    docId: PHID @deprecated(reason: "Use documentIdOrSlug.")
+    input: DocumentModel_ReorderStateExamplesInput!
+  ): String!
+}
+
+"""
+Queries: DocumentModel Document
+"""
+type DocumentModelQueries {
+  """
+  Get a specific DocumentModel document by identifier
+  """
+  document(
+    idOrSlug: String
+    identifier: String @deprecated(reason: "Use idOrSlug.")
+    view: DocumentModel_ViewFilterInput
+  ): DocumentModel_DocumentWithChildren
+  """
+  Get all DocumentModel documents (paged)
+  """
+  documents(
+    paging: DocumentModel_PagingInput
+  ): DocumentModel_DocumentResultPage!
+  """
+  Find DocumentModel documents by search criteria
+  """
+  findDocuments(
+    search: DocumentModel_SearchFilterInput
+    view: DocumentModel_ViewFilterInput
+    paging: DocumentModel_PagingInput
+  ): DocumentModel_DocumentResultPage!
+  """
+  Get outgoing relationships of a DocumentModel document
+  """
+  documentOutgoingRelationships(
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    relationshipType: String!
+    view: DocumentModel_ViewFilterInput
+    paging: DocumentModel_PagingInput
+  ): DocumentModel_DocumentResultPage!
+  """
+  Get incoming relationships to a DocumentModel document
+  """
+  documentIncomingRelationships(
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
+    relationshipType: String!
+    view: DocumentModel_ViewFilterInput
+    paging: DocumentModel_PagingInput
+  ): DocumentModel_DocumentResultPage!
+}
+
+type DocumentModelResultPage {
+  items: [DocumentModelGlobalState!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+"""
+Module: Versioning
+"""
+input DocumentModel_AddChangeLogItemInput {
+  id: ID!
+  insertBefore: ID
+  content: String!
+}
+
+"""
+Module: Module
+"""
+input DocumentModel_AddModuleInput {
+  id: ID!
+  name: String!
+  description: String
+}
+
+"""
+Module: OperationError
+"""
+input DocumentModel_AddOperationErrorInput {
+  operationId: ID!
+  id: ID!
+  errorCode: String
+  errorName: String
+  errorDescription: String
+  errorTemplate: String
+}
+
+"""
+Module: OperationExample
+"""
+input DocumentModel_AddOperationExampleInput {
+  operationId: ID!
+  id: ID!
+  example: String!
+}
+
+"""
+Module: Operation
+"""
+input DocumentModel_AddOperationInput {
+  moduleId: ID!
+  id: ID!
+  name: String!
+  schema: String
+  description: String
+  template: String
+  reducer: String
+  scope: String
+}
+
+input DocumentModel_AddStateExampleInput {
+  scope: String!
+  id: ID!
+  insertBefore: ID
+  example: String!
+}
+
+type DocumentModel_Author {
+  name: String!
+  website: String
+}
+
+input DocumentModel_AuthorInput {
+  name: String
+  website: String
+}
+
+type DocumentModel_CodeExample {
+  id: ID!
+  value: String!
+}
+
+"""
+Input Types for Initial State
+"""
+input DocumentModel_CodeExampleInput {
+  id: ID
+  value: String
+}
+
+input DocumentModel_DeleteChangeLogItemInput {
+  id: ID!
+}
+
+input DocumentModel_DeleteModuleInput {
+  id: ID!
+}
+
+input DocumentModel_DeleteOperationErrorInput {
+  id: ID!
+}
+
+input DocumentModel_DeleteOperationExampleInput {
+  id: ID!
+}
+
+input DocumentModel_DeleteOperationInput {
+  id: ID!
+}
+
+input DocumentModel_DeleteStateExampleInput {
+  scope: String!
+  id: ID!
+}
+
+type DocumentModel_DocumentModelGlobalState {
+  name: String!
+  id: String!
+  extension: String!
+  description: String!
+  author: DocumentModel_Author!
+  specifications: [DocumentModel_DocumentSpecification!]!
+}
+
+input DocumentModel_DocumentModelGlobalStateInput {
+  name: String
+  id: String
+  extension: String
+  description: String
+  author: DocumentModel_AuthorInput
+  specifications: [DocumentModel_DocumentSpecificationInput]
+}
+
+"""
+Paginated result type for DocumentModel documents
+"""
+type DocumentModel_DocumentResultPage {
+  items: [DocumentModelMutationResult!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+type DocumentModel_DocumentSpecification {
+  version: Int!
+  state: DocumentModel_ScopeState!
+  modules: [DocumentModel_Module!]!
+  changeLog: [String!]!
+}
+
+input DocumentModel_DocumentSpecificationInput {
+  version: Int
+  state: DocumentModel_ScopeStateInput
+  modules: [DocumentModel_ModuleInput]
+  changeLog: [String]
+}
+
+"""
+Document with children for DocumentModel
+"""
+type DocumentModel_DocumentWithChildren {
+  document: DocumentModelMutationResult!
+  childIds: [String!]!
+}
+
+"""
+Full state with all scopes for DocumentModel
+"""
+type DocumentModel_FullState {
+  auth: JSONObject!
+  document: DocumentModel_PHDocumentScopeState!
+  global: DocumentModel_DocumentModelGlobalState!
+  local: JSONObject!
+}
+
+input DocumentModel_InitialStateInput {
+  global: DocumentModel_DocumentModelGlobalStateInput
+  local: JSONObject
+}
+
+type DocumentModel_Module {
+  id: ID!
+  name: String!
+  description: String
+  operations: [DocumentModel_Operation!]!
+}
+
+input DocumentModel_ModuleInput {
+  id: ID
+  name: String
+  description: String
+  operations: [DocumentModel_OperationInput]
+}
+
+input DocumentModel_MoveOperationInput {
+  operationId: ID!
+  newModuleId: ID!
+}
+
+type DocumentModel_Operation {
+  id: ID!
+  name: String
+  schema: String
+  description: String
+  template: String
+  errors: [DocumentModel_OperationError!]!
+  examples: [DocumentModel_CodeExample!]!
+  reducer: String
+  scope: String
+}
+
+type DocumentModel_OperationError {
+  id: ID!
+  code: String
+  name: String
+  description: String
+  template: String
+}
+
+input DocumentModel_OperationErrorInput {
+  id: ID
+  code: String
+  name: String
+  description: String
+  template: String
+}
+
+input DocumentModel_OperationInput {
+  id: ID
+  name: String
+  schema: String
+  description: String
+  template: String
+  errors: [DocumentModel_OperationErrorInput]
+  examples: [DocumentModel_CodeExampleInput]
+  reducer: String
+  scope: String
+}
+
+"""
+Document scope state (same for all document types)
+"""
+type DocumentModel_PHDocumentScopeState {
+  version: Int!
+  hash: DocumentModel_PHHashConfig!
+  isDeleted: Boolean
+  deletedAtUtcIso: String
+  deletedBy: String
+  deletionReason: String
+}
+
+"""
+Hash configuration for document state
+"""
+type DocumentModel_PHHashConfig {
+  algorithm: String!
+  encoding: String!
+}
+
+input DocumentModel_PagingInput {
+  limit: Int
+  offset: Int
+  cursor: String
+}
+
+input DocumentModel_ReorderChangeLogItemsInput {
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderModuleOperationsInput {
+  moduleId: ID!
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderModulesInput {
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderOperationErrorsInput {
+  operationId: ID!
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderOperationExamplesInput {
+  operationId: ID!
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderStateExamplesInput {
+  scope: String!
+  order: [ID!]!
+}
+
+type DocumentModel_ScopeState {
+  global: DocumentModel_State!
+  local: DocumentModel_State!
+}
+
+input DocumentModel_ScopeStateInput {
+  global: DocumentModel_StateInput
+  local: DocumentModel_StateInput
+}
+
+input DocumentModel_SearchFilterInput {
+  parentId: String
+  identifiers: [String!] @deprecated(reason: "Ignored. Filter by parentId.")
+}
+
+input DocumentModel_SetAuthorNameInput {
+  authorName: String!
+}
+
+input DocumentModel_SetAuthorWebsiteInput {
+  authorWebsite: String!
+}
+
+input DocumentModel_SetInitialStateInput {
+  scope: String!
+  initialValue: String!
+}
+
+input DocumentModel_SetModelDescriptionInput {
+  description: String!
+}
+
+input DocumentModel_SetModelExtensionInput {
+  extension: String!
+}
+
+input DocumentModel_SetModelIdInput {
+  id: String!
+}
+
+"""
+Module: Header
+"""
+input DocumentModel_SetModelNameInput {
+  name: String!
+}
+
+input DocumentModel_SetModuleDescriptionInput {
+  id: ID!
+  description: String
+}
+
+input DocumentModel_SetModuleNameInput {
+  id: ID!
+  name: String
+}
+
+input DocumentModel_SetOperationDescriptionInput {
+  id: ID!
+  description: String
+}
+
+input DocumentModel_SetOperationErrorCodeInput {
+  id: ID!
+  errorCode: String
+}
+
+input DocumentModel_SetOperationErrorDescriptionInput {
+  id: ID!
+  errorDescription: String
+}
+
+input DocumentModel_SetOperationErrorNameInput {
+  id: ID!
+  errorName: String
+}
+
+input DocumentModel_SetOperationErrorTemplateInput {
+  id: ID!
+  errorTemplate: String
+}
+
+input DocumentModel_SetOperationNameInput {
+  id: ID!
+  name: String
+}
+
+input DocumentModel_SetOperationReducerInput {
+  id: ID!
+  reducer: String
+}
+
+input DocumentModel_SetOperationSchemaInput {
+  id: ID!
+  schema: String
+}
+
+input DocumentModel_SetOperationScopeInput {
+  id: ID!
+  scope: String
+}
+
+input DocumentModel_SetOperationTemplateInput {
+  id: ID!
+  template: String
+}
+
+"""
+Module: State
+"""
+input DocumentModel_SetStateSchemaInput {
+  scope: String!
+  schema: String!
+}
+
+type DocumentModel_State {
+  schema: String!
+  initialValue: String!
+  examples: [DocumentModel_CodeExample!]!
+}
+
+input DocumentModel_StateInput {
+  schema: String
+  initialValue: String
+  examples: [DocumentModel_CodeExampleInput]
+}
+
+input DocumentModel_UpdateChangeLogItemInput {
+  id: ID!
+  newContent: String!
+}
+
+input DocumentModel_UpdateOperationExampleInput {
+  id: ID!
+  example: String!
+}
+
+input DocumentModel_UpdateStateExampleInput {
+  scope: String!
+  id: ID!
+  newExample: String!
+}
+
+input DocumentModel_ViewFilterInput {
+  branch: String
+  scopes: [String!]
+}
+
+input DocumentOperationsFilterInput {
+  branch: String
+  scopes: [String!]
+  actionTypes: [String!]
+  sinceRevision: Int
+  timestampFrom: String
+  timestampTo: String
+}
+
+type DocumentPermissionEntry {
+  documentId: String!
+  userAddress: String!
+  permission: DocumentPermissionLevel!
+  grantedBy: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum DocumentPermissionLevel {
+  READ
+  WRITE
+  ADMIN
+}
+
+type DocumentProtectionInfo {
+  documentId: String!
+  protected: Boolean!
+  ownerAddress: String
+}
+
+type DocumentRelationship {
+  sourceId: String!
+  targetId: String!
+  relationshipType: String!
+  metadata: JSONObject
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type DocumentRelationshipResultPage {
+  items: [DocumentRelationship!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+type DocumentWithChildren {
+  document: PHDocument!
+  childIds: [String!]!
+}
+
+type DriveDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type DriveFileNode {
+  id: ID!
+  driveId: ID!
+  name: String!
+  parentFolder: ID
+  documentType: String!
+}
+
+type DriveFolderNode {
+  id: ID!
+  driveId: ID!
+  name: String!
+  parentFolder: ID
+}
+
+union DriveNode = DriveFileNode | DriveFolderNode
+
+enum DriveNodeKind {
+  FILE
+  FOLDER
+}
+
+type DriveNodePage {
+  results: [DriveNode!]!
+  nextCursor: String
+  hasMore: Boolean!
+}
+
+scalar EmailAddress
+
+scalar EthereumAddress
+
+"""
+One mutation job of a batch, mirroring the reactor's `ExecutionJobPlan`
+(packages/reactor/src/core/types.ts). The batch runs its jobs in dependency
+order only, not atomically: each job commits on its own with no batch rollback,
+and a failed job still releases its dependents.
+
+`documentIdOrSlug` is the document the job's actions apply to -- an id that does
+not yet exist when the job's actions create it. `actions` are coerced against
+`ActionInput` and passed through exactly as `execute` does, so a client-signed
+action keeps its signature. `scope` is the single scope every action in the job
+shares, and `dependsOn` names the plan keys this job is ordered after. `branch`
+defaults to `main`.
+"""
+input ExecutionJobInput {
+  key: String!
+  documentIdOrSlug: String!
+  scope: String!
+  branch: String
+  actions: [ActionInput!]!
+  dependsOn: [String!]!
+}
+
+type GqlDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+interface IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+"""
+The levers a listed admin may pull. Only served when the host enables
+inspection-admin; every field refuses any other caller.
+"""
+type InspectionAdmin {
+  """
+  Processor retry and rerun are served.
+  """
+  processors: Boolean!
+  """
+  The catch-up priority can be set.
+  """
+  catchUpPriority: Boolean!
+  """
+  Memory telemetry can be switched and heap snapshots written.
+  """
+  memoryTelemetry: Boolean!
+  """
+  Keyframe clean-up and reclaim are served.
+  """
+  keyframes: Boolean!
+}
+
+type InspectionAttachmentInfo {
+  present: Boolean!
+  storeKind: String!
+  hasReplicator: Boolean!
+  replicatorRunning: Boolean!
+  backlogScanned: Boolean!
+  refsSeen: Int!
+  held: Int!
+  bytesHeld: Float!
+  queued: Int!
+  fetching: Int!
+  pendingFetches: Int!
+  waiting: Int!
+  notFound: Int!
+  failed: Int!
+  lastError: String
+}
+
+"""
+What one catch-up priority level sets. giveWay is stop (level 0: no page is
+read until the level rises), pause (pauseMs between pages), yield (one
+event-loop turn) or none.
+"""
+type InspectionCatchUpLevelSettings {
+  slots: Int!
+  pageSize: Int!
+  pauseMs: Int!
+  giveWay: String!
+}
+
+"""
+The host's load over its last window, as the dynamic controller read it.
+"""
+type InspectionCatchUpLoadSample {
+  requests: Int!
+  p95LatencyMs: Float!
+  eventLoopDelayMs: Float!
+  idleForMs: Float!
+}
+
+"""
+The pace of processor backfills. mode is fixed or dynamic; level is 0-7.
+sample is null until a dynamic tick has sampled the host's load.
+"""
+type InspectionCatchUpPriority {
+  mode: String!
+  level: Int!
+  settings: InspectionCatchUpLevelSettings!
+  reason: String!
+  sample: InspectionCatchUpLoadSample
+}
+
+type InspectionConnectionHealth {
+  snapshot: JSONObject!
+  neverSucceeded: Boolean!
+  stalenessMs: Float
+}
+
+type InspectionCursor {
+  cursorType: String!
+  cursorOrdinal: Float!
+  lastSyncedAtUtcMs: Float
+  liveAckOrdinal: Float!
+  liveLatestOrdinal: Float!
+}
+
+"""
+A dead letter without its operations.
+"""
+type InspectionDeadLetter {
+  id: String!
+  jobId: String!
+  documentId: String!
+  branch: String!
+  scopes: [String!]!
+  errorType: String!
+  errorMessage: String!
+  operationCount: Int!
+}
+
+type InspectionDeadLetterPage {
+  remoteName: String!
+  results: [InspectionDeadLetter!]!
+  nextCursor: String
+}
+
+type InspectionDocumentModel {
+  documentType: String!
+  name: String!
+  version: Int!
+  supportedVersions: [Int!]!
+}
+
+type InspectionDrive {
+  driveId: String!
+  name: String!
+  branch: String!
+  collectionId: String!
+  documentType: String!
+  nodeCount: Int!
+  fileCount: Int!
+  folderCount: Int!
+  otherNodeCount: Int!
+  unreadableNodeCount: Int!
+  icon: String
+}
+
+type InspectionDriveIntegrity {
+  driveId: String!
+  checkedNodeCount: Int!
+  totalFileNodeCount: Int!
+  """
+  File nodes whose document is missing or not served to you; the two are
+  reported alike so a withheld document's existence does not leak.
+  """
+  missingDocuments: [InspectionDriveIntegrityRef!]!
+  unsupportedTypes: [InspectionDriveIntegrityRef!]!
+}
+
+type InspectionDriveIntegrityRef {
+  id: String!
+  documentType: String!
+}
+
+type InspectionDrivePage {
+  results: [InspectionDrive!]!
+  nextCursor: String
+}
+
+type InspectionKeyframeCleanupReason {
+  """
+  beyond-keep or deleted-document.
+  """
+  reason: String!
+  rows: Float!
+  bytes: Float!
+}
+
+type InspectionKeyframeCleanupRun {
+  id: String!
+  dryRun: Boolean!
+  """
+  running, done, cancelled or failed.
+  """
+  state: String!
+  startedAtUtcMs: Float!
+  finishedAtUtcMs: Float
+  documentsTotal: Float!
+  documentsSeen: Float!
+  """
+  The catch-up priority is at level 0, which stops the run.
+  """
+  parked: Boolean!
+  totals: InspectionKeyframeCleanupTotals!
+  types: [InspectionKeyframeCleanupType!]!
+  reasons: [InspectionKeyframeCleanupReason!]!
+  topStreams: [InspectionKeyframeCleanupStream!]!
+  error: String
+}
+
+type InspectionKeyframeCleanupStream {
+  documentId: String!
+  documentType: String!
+  scope: String!
+  branch: String!
+  reason: String!
+  rows: Float!
+  bytes: Float!
+  removableRows: Float!
+  removableBytes: Float!
+}
+
+"""
+Rows and stored bytes a keyframe clean-up saw, can remove and removed.
+"""
+type InspectionKeyframeCleanupTotals {
+  streams: Float!
+  rows: Float!
+  bytes: Float!
+  removableRows: Float!
+  removableBytes: Float!
+  removedRows: Float!
+  removedBytes: Float!
+}
+
+type InspectionKeyframeCleanupType {
+  documentType: String!
+  """
+  The rule in force; absent keeps every keyframe.
+  """
+  keep: Float
+  interval: Float!
+  streams: Float!
+  rows: Float!
+  bytes: Float!
+  removableRows: Float!
+  removableBytes: Float!
+  removedRows: Float!
+  removedBytes: Float!
+}
+
+type InspectionKeyframeReclaim {
+  """
+  running, done, busy, failed or unsupported.
+  """
+  state: String!
+  startedAtUtcMs: Float!
+  finishedAtUtcMs: Float
+  tableBytesBefore: Float
+  tableBytesAfter: Float
+  durationMs: Float
+  """
+  What happened, or what to do by hand.
+  """
+  message: String!
+}
+
+type InspectionMailboxDepths {
+  inbox: Int!
+  outbox: Int!
+  deadLetter: Int!
+}
+
+"""
+Memory samples correlated with operations processed. samples are newest
+last; summary holds the rates over the correlation window and is null until
+two samples exist.
+"""
+type InspectionMemoryTelemetry {
+  enabled: Boolean!
+  intervalMs: Float!
+  consoleIntervalMs: Float!
+  outputs: [String!]!
+  file: String
+  startedAt: String
+  summary: JSONObject
+  samples: [JSONObject!]!
+}
+
+type InspectionProcessor {
+  processorId: String!
+  factoryId: String!
+  driveId: String!
+  processorIndex: Int!
+  lastOrdinal: Float!
+  status: String!
+  lastError: String
+  lastErrorTimestampUtcMs: Float
+  floor: Float!
+  clearable: Boolean!
+  runFrom: Float!
+  phase: String!
+}
+
+type InspectionProcessorQueueDepth {
+  tasks: Float!
+  ops: Float!
+}
+
+"""
+One processor's timing. The horizons are null while timing is off.
+"""
+type InspectionProcessorTiming {
+  processorId: String!
+  name: String!
+  driveLabel: String!
+  factoryId: String!
+  driveId: String!
+  phase: String!
+  lastOrdinal: Float!
+  queueDepth: InspectionProcessorQueueDepth!
+  ordinalsBehind: Float!
+  opsPerSecond: Float!
+  ordinalsPerSecond: Float!
+  etaMs: Float
+  sinceUtcMs: Float
+  total: InspectionProcessorTimingHorizon
+  window: InspectionProcessorTimingHorizon
+  windowMs: Float!
+  currentRun: InspectionProcessorTimingRun
+  lastRun: InspectionProcessorTimingLastRun
+  lastBatch: InspectionProcessorTimingBatch
+  byDocumentType: [InspectionProcessorTimingDocumentType!]!
+}
+
+type InspectionProcessorTimingBatch {
+  atUtcMs: Float!
+  path: String!
+  ops: Float!
+  ms: Float!
+  fromOrdinal: Float!
+  toOrdinal: Float!
+}
+
+"""
+One path's numbers over one horizon. Times are wall-clock milliseconds the
+processor's queue awaited, not CPU; read time includes waiting for the store.
+slotWaitMs and pauseMs are throttling and count toward no busy time.
+"""
+type InspectionProcessorTimingCounters {
+  batches: Float!
+  opsDelivered: Float!
+  opsScanned: Float!
+  opsMatched: Float!
+  pages: Float!
+  handlerMs: Float!
+  maxBatchMs: Float!
+  readMs: Float!
+  lookupMs: Float!
+  fillMs: Float!
+  slotWaitMs: Float!
+  pauseMs: Float!
+  errors: Float!
+}
+
+type InspectionProcessorTimingDocumentType {
+  documentType: String!
+  ops: Float!
+  handlerMs: Float!
+}
+
+type InspectionProcessorTimingHorizon {
+  live: InspectionProcessorTimingCounters!
+  replay: InspectionProcessorTimingCounters!
+  ordinalsAdvanced: Float!
+  busyMs: Float!
+}
+
+type InspectionProcessorTimingLastRun {
+  startedAtUtcMs: Float!
+  durationMs: Float!
+  ordinals: Float!
+  opsDelivered: Float!
+  busyMs: Float!
+}
+
+"""
+level is off, basic or detailed. Without a catch-up status, head is the
+highest cursor and headKnown is false.
+"""
+type InspectionProcessorTimingReport {
+  level: String!
+  windowMs: Float!
+  head: Float!
+  headKnown: Boolean!
+  processors: [InspectionProcessorTiming!]!
+}
+
+type InspectionProcessorTimingRun {
+  startedAtUtcMs: Float!
+  runFrom: Float!
+  counters: InspectionProcessorTimingCounters!
+  ordinalsAdvanced: Float!
+}
+
+"""
+A queued job without its actions or operations.
+"""
+type InspectionQueueJob {
+  id: String!
+  kind: String!
+  documentId: String!
+  scope: String!
+  branch: String!
+  status: String!
+  actionCount: Int!
+  operationCount: Int!
+  retryCount: Int!
+}
+
+type InspectionQueueState {
+  isPaused: Boolean!
+  totalPending: Int!
+  totalExecuting: Int!
+  pendingJobs: [InspectionQueueJob!]!
+  executingJobs: [InspectionQueueJob!]!
+}
+
+type InspectionRemote {
+  remoteName: String!
+  remoteId: String!
+  inboxCursor: InspectionCursor!
+  outboxCursor: InspectionCursor!
+  mailboxDepths: InspectionMailboxDepths!
+  connection: InspectionConnectionHealth!
+  meta: JSONObject!
+}
+
+"""
+healthy means something only when tracked; an untracked store reports false.
+"""
+type InspectionStorageHealth {
+  tracked: Boolean!
+  healthy: Boolean!
+  everRecreated: Boolean!
+  recreateCount: Int!
+}
+
+"""
+Issues in scopes the caller may not read are left out.
+"""
+type InspectionValidation {
+  documentId: String!
+  isConsistent: Boolean!
+  keyframeIssues: [JSONObject!]!
+  snapshotIssues: [JSONObject!]!
+  streamOrderIssues: [JSONObject!]!
+}
+
+type InspectorAccess {
+  admin: Boolean!
+  sql: Boolean!
+}
+
+scalar JSONObject
+
+"""
+The batch a job was submitted in.
+"""
+type JobBatchMeta {
+  batchId: String!
+  batchJobIds: [String!]!
+}
+
+type JobChangeEvent {
+  jobId: String!
+  status: String!
+  """
+  What the job produced, once it has produced anything. Nullable for the same
+  reason as `JobInfo.result`: a job that has not written yet has produced
+  nothing, and an empty object would claim otherwise.
+  """
+  result: JSONObject
+  error: String
+}
+
+type JobInfo {
+  id: String!
+  """
+  The document the job operates on. Empty for a job this server does not know,
+  which then comes back FAILED with "Job not found".
+  """
+  documentId: String!
+  status: String!
+  """
+  What the job produced, once it has produced anything. Null until then, which
+  is the state every job is in when it is handed back from a submission.
+  """
+  result: JSONObject
+  error: String
+  """
+  The error's class name, such as `DocumentAlreadyExistsError`, when it failed.
+  """
+  errorName: String
+  createdAt: DateTime!
+  completedAt: DateTime
+  consistencyToken: ConsistencyToken!
+  meta: JobBatchMeta!
+}
+
+type MoveRelationshipResult {
+  source: PHDocument!
+  target: PHDocument!
+}
+
+input MultiCurrencyConversions {
+  start: String
+  end: String
+  """
+  Period to group by
+  """
+  granularity: AnalyticsGranularity
+  """
+  List of metrics to filter by, such as 'budget' or 'actuals'
+  """
+  metrics: [String]
+  """
+  List of dimensions to filter by, such as 'budget' or 'project'
+  """
+  dimensions: [AnalyticsFilterDimension]
+  currency: String
+  conversions: [CurrencyConversion]!
+}
+
+type Mutation {
+  setDocumentProtection(
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+    protected: Boolean!
+  ): DocumentProtectionInfo!
+  transferDocumentOwnership(
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+    newOwnerAddress: String!
+  ): DocumentProtectionInfo!
+  grantDocumentPermission(
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+    userAddress: String!
+    permission: DocumentPermissionLevel!
+  ): DocumentPermissionEntry!
+  revokeDocumentPermission(
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+    userAddress: String!
+  ): Boolean!
+  grantOperationPermission(
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+    operationType: String!
+    userAddress: String!
+  ): OperationUserPermission!
+  revokeOperationPermission(
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+    operationType: String!
+    userAddress: String!
+  ): Boolean!
+  DocumentDrive: DocumentDriveMutations!
+  DocumentModel: DocumentModelMutations!
+  """
+  Clears a processor's error and replays from its cursor.
+  """
+  inspectionRetryProcessor(processorId: String!): Boolean!
+  """
+  Replays a processor. With clear, it and the processors sharing its clear
+  scope are cleared and replayed from their floor; otherwise its cursor moves
+  back to fromOrdinal, between its floor and its cursor. Answers once the
+  replay ends or has run for two seconds; its progress shows in the
+  processor's lastOrdinal, and a later failure in its status and the log.
+  """
+  inspectionRerunProcessor(
+    processorId: String!
+    clear: Boolean!
+    fromOrdinal: Float!
+  ): Boolean!
+  """
+  Sets the pace of processor backfills: mode dynamic hands the level to the
+  load controller (level must be absent); mode fixed holds level, 0-7.
+  """
+  inspectionSetCatchUpPriority(mode: String!, level: Int): Boolean!
+  """
+  Starts or stops memory telemetry, or changes its interval or outputs, without a restart.
+  """
+  inspectionSetMemoryTelemetry(
+    enabled: Boolean!
+    intervalMs: Int
+    outputs: [String!]
+  ): Boolean!
+  """
+  Writes a V8 heap snapshot of the main thread and returns its path on the
+  host. Blocks the server for seconds to minutes. force skips the check for
+  free memory.
+  """
+  inspectionWriteHeapSnapshot(force: Boolean): String!
+  """
+  Starts a keyframe clean-up and answers at once; poll
+  inspectionKeyframeCleanup. A dry run only reports. Otherwise it applies the
+  configured keep and removes the keyframes of deleted documents. Refused
+  while another run or a reclaim is going.
+  """
+  inspectionStartKeyframeCleanup(
+    dryRun: Boolean!
+  ): InspectionKeyframeCleanupRun!
+  """
+  Stops a running keyframe clean-up after its current statement.
+  """
+  inspectionCancelKeyframeCleanup: Boolean!
+  """
+  Rewrites the Keyframe table to give its dead space back to the disk, once
+  the store is quiet; poll inspectionKeyframeReclaim. Where the host has no
+  way to do that, it answers with what to do by hand.
+  """
+  inspectionReclaimKeyframeSpace: InspectionKeyframeReclaim!
+  createDocument(
+    document: JSONObject!
+    parentIdOrSlug: String
+    parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")
+  ): PHDocument!
+  createEmptyDocument(
+    documentType: String!
+    parentIdOrSlug: String
+    parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")
+  ): PHDocument!
+  """
+  Applies actions to a document and waits for the result.
+
+  Each action is coerced against `ActionInput`, so one missing a field the wire
+  declares is refused before any work starts. The id in particular: it is hashed
+  into the operation id and replay dedupes by it, so an action without one is
+  stored under an operation id shared by every id-less operation on the same
+  document, scope and branch.
+
+  Named for `IReactorClient.execute`, which this is the wire form of. `branch`
+  defaults to `main`.
+  """
+  execute(
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
+    actions: [ActionInput!]!
+    branch: String
+  ): PHDocument!
+  """
+  Submits actions to a document and returns the job that will apply them.
+
+  Coerced exactly as `execute` is, so a malformed action is refused here rather
+  than surfacing later as a failed job. Returns the job rather than only its id,
+  so a caller has the status and the creation time it would otherwise have to
+  ask for; `result` is null until the job produces one.
+  """
+  executeAsync(
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
+    actions: [ActionInput!]!
+    branch: String
+  ): JobInfo!
+  """
+  Applies multiple mutation jobs in dependency order and waits for all of them,
+  the wire form of `IReactorClient.executeBatch`. Each job's actions are coerced
+  against `ActionInput` exactly as `execute` is, so client-signed actions pass
+  through unchanged, and `dependsOn` orders the jobs. It is synchronous: the jobs
+  are applied and awaited before the result returns, so every returned `JobInfo`
+  is a completed one rather than the pending receipt the in-process reactor hands
+  back. A batch is ordering, not a transaction: each job commits on its own, and
+  a failed job still releases the jobs that depend on it, so any job, before or
+  after a failure, may have committed. A failed job is therefore returned as a
+  FAILED entry with its `error` and `errorName`, beside the final state of every
+  other job, rather than failing the mutation. The mutation itself fails only
+  when no job state can be reported.
+
+  A job carrying `CREATE_DOCUMENT` must be the batch's only job, with the create
+  as its first action naming the job's document. Its other actions may only be
+  an `UPGRADE_DOCUMENT` of the new document and `ADD_RELATIONSHIP`s targeting
+  it. It is authorized like `createDocument`: write on every source of those
+  relationships, or the right to create when there is none.
+  """
+  executeBatch(jobs: [ExecutionJobInput!]!): BatchExecutionResult!
+  mutateDocument(
+    documentIdentifier: String!
+    actions: [JSONObject!]!
+    view: ViewFilterInput
+  ): PHDocument!
+    @deprecated(
+      reason: "Use execute. Actions here are untyped, so a malformed one is refused by a hand-written check rather than by the schema, and `view.scopes` is accepted but ignored."
+    )
+  mutateDocumentAsync(
+    documentIdentifier: String!
+    actions: [JSONObject!]!
+    view: ViewFilterInput
+  ): String!
+    @deprecated(
+      reason: "Use executeAsync, which is typed and returns the job rather than only its id."
+    )
+  renameDocument(
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
+    name: String!
+    branch: String
+  ): PHDocument!
+  setPreferredEditor(
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
+    preferredEditor: String
+    branch: String
+  ): PHDocument!
+  addRelationship(
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
+    relationshipType: String!
+    metadata: JSONObject
+    branch: String
+  ): PHDocument!
+  updateRelationship(
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
+    relationshipType: String!
+    metadata: JSONObject
+    branch: String
+  ): PHDocument!
+  removeRelationship(
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
+    relationshipType: String!
+    branch: String
+  ): PHDocument!
+  moveRelationship(
+    sourceParentIdOrSlug: String
+    sourceParentIdentifier: String
+      @deprecated(reason: "Use sourceParentIdOrSlug.")
+    targetParentIdOrSlug: String
+    targetParentIdentifier: String
+      @deprecated(reason: "Use targetParentIdOrSlug.")
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
+    relationshipType: String!
+    branch: String
+  ): MoveRelationshipResult!
+  deleteDocument(
+    idOrSlug: String
+    identifier: String @deprecated(reason: "Use idOrSlug.")
+    propagate: PropagationMode
+  ): Boolean!
+  deleteDocuments(
+    idsOrSlugs: [String!]
+    identifiers: [String!] @deprecated(reason: "Use idsOrSlugs.")
+    propagate: PropagationMode
+  ): Boolean!
+  touchChannel(input: TouchChannelInput!): TouchChannelResult!
+  pushSyncEnvelopes(
+    envelopes: [SyncEnvelopeInput!]!
+    peerManifestRevision: String
+  ): Boolean!
+}
+
+scalar OID
+
+scalar OLabel
+
+type Operation {
+  id: String!
+  type: String!
+  index: Int!
+  timestampUtcMs: DateTime!
+  hash: String!
+  skip: Int
+  inputText: String
+  error: String
+  context: PHOperationContext
+}
+
+type OperationContext {
+  documentId: String!
+  documentType: String!
+  scope: String!
+  branch: String!
+  ordinal: Int!
+}
+
+input OperationContextInput {
+  documentId: String!
+  documentType: String!
+  scope: String!
+  branch: String!
+  ordinal: Int!
+}
+
+input OperationInput {
+  index: Int!
+  timestampUtcMs: String!
+  hash: String!
+  skip: Int!
+  error: String
+  deniedReason: String
+  id: String
+  action: ActionInput!
+}
+
+type OperationPermissionsInfo {
+  documentId: String!
+  operationType: String!
+  userPermissions: [OperationUserPermission!]!
+}
+
+type OperationUserPermission {
+  documentId: String!
+  operationType: String!
+  userAddress: String!
+  grantedBy: String!
+  createdAt: DateTime!
+}
+
+type OperationWithContext {
+  operation: ReactorOperation!
+  context: OperationContext!
+}
+
+input OperationWithContextInput {
+  operation: OperationInput!
+  context: OperationContextInput!
+}
+
+input OperationsFilterInput {
+  documentIdOrSlug: String
+  documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+  branch: String
+  scopes: [String!]
+  actionTypes: [String!]
+  sinceRevision: Int
+  timestampFrom: String
+  timestampTo: String
+}
+
+type PHDocument {
+  id: String!
+  slug: String
+  preferredEditor: String
+  meta: JSONObject
+  protocolVersions: JSONObject
+  name: String!
+  documentType: String!
+  state: JSONObject!
+  revisionsList: [Revision!]!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(
+    filter: DocumentOperationsFilterInput
+    paging: PagingInput
+  ): ReactorOperationResultPage
+}
+
+type PHDocumentResultPage {
+  items: [PHDocument!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+scalar PHID
+
+type PHOperationContext {
+  signer: Signer
+}
+
+input PagingInput {
+  limit: Int
+  offset: Int
+  cursor: String
+}
+
+type PeerAgreement {
+  collectionId: String!
+  local: JSONObject!
+  members: [PeerAgreementMember!]!
+  limitedBy: [PeerAgreementLimit!]!
+}
+
+type PeerAgreementLimit {
+  protocol: String!
+  remoteNames: [String!]!
+}
+
+type PeerAgreementMember {
+  remoteName: String!
+  announced: Boolean!
+  protocols: JSONObject!
+  features: JSONObject!
+}
+
+type PollSyncEnvelopesResult {
+  envelopes: [SyncEnvelope!]!
+  ackOrdinal: Int!
+  deadLetters: [DeadLetterInfo!]!
+  hasMore: Boolean!
+  manifestRevision: String
+  peerManifestRevision: String
+}
+
+enum PropagationMode {
+  CASCADE
+  ORPHAN
+}
+
+type Query {
+  analytics: AnalyticsQuery
+  documentAccess(
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+  ): DocumentAccessInfo!
+  documentProtection(
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+  ): DocumentProtectionInfo!
+  userDocumentPermissions: [DocumentPermissionEntry!]!
+  operationPermissions(
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+    operationType: String!
+  ): OperationPermissionsInfo!
+  canExecuteOperation(
+    documentIdOrSlug: String
+    documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+    operationType: String!
+  ): Boolean!
+  DocumentDrive: DocumentDriveQueries!
+  DocumentModel: DocumentModelQueries!
+  inspection: ReactorInspection!
+  inspectionAdmin: InspectionAdmin!
+  """
+  The running or latest keyframe clean-up.
+  """
+  inspectionKeyframeCleanup: InspectionKeyframeCleanupRun
+  """
+  The running or latest reclaim of the Keyframe table's disk space.
+  """
+  inspectionKeyframeReclaim: InspectionKeyframeReclaim
+  documentModels(
+    namespace: String
+    paging: PagingInput
+  ): DocumentModelResultPage!
+  document(
+    idOrSlug: String
+    identifier: String @deprecated(reason: "Use idOrSlug.")
+    view: ViewFilterInput
+    consistency: ConsistencyTokenInput
+  ): DocumentWithChildren
+  documentOutgoingRelationships(
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    relationshipType: String!
+    view: ViewFilterInput
+    paging: PagingInput
+    consistency: ConsistencyTokenInput
+  ): PHDocumentResultPage!
+  documentIncomingRelationships(
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
+    relationshipType: String!
+    view: ViewFilterInput
+    paging: PagingInput
+    consistency: ConsistencyTokenInput
+  ): PHDocumentResultPage!
+  documentOutgoingRelationshipEdges(
+    sourceIdOrSlug: String
+    sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug.")
+    relationshipType: String
+    view: ViewFilterInput
+    paging: PagingInput
+    consistency: ConsistencyTokenInput
+  ): DocumentRelationshipResultPage!
+  documentIncomingRelationshipEdges(
+    targetIdOrSlug: String
+    targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug.")
+    relationshipType: String
+    view: ViewFilterInput
+    paging: PagingInput
+    consistency: ConsistencyTokenInput
+  ): DocumentRelationshipResultPage!
+  findDocuments(
+    search: SearchFilterInput
+    view: ViewFilterInput
+    paging: PagingInput
+    consistency: ConsistencyTokenInput
+  ): PHDocumentResultPage!
+  jobStatus(jobId: String!): JobInfo
+  documentServed(idOrSlug: String!, view: ViewFilterInput): Boolean!
+  createDefaults(parentIdOrSlug: String, documentType: String): CreateDefaults!
+  undoRedoTargets(
+    documentIdOrSlug: String!
+    scope: String
+    branch: String
+  ): UndoRedoTargets!
+  documentOperations(
+    filter: OperationsFilterInput!
+    paging: PagingInput
+  ): ReactorOperationResultPage!
+  """
+  Predicts whether the calling subject would be admitted to execute each of a
+  set of candidate operations, without submitting any of them. A UI asks this to
+  disable a control rather than offer an action that fails on submit.
+
+  The answer is a prediction, not a promise:
+
+  - Real admission compiles an append condition over everything it read and the
+    store enforces it at write time. A preflight reads no future, so a policy
+    change landing between this answer and the submit changes the verdict. The
+    submit path stays the only authority.
+  - The verdict is evaluated at the stream heads, so it is correct for a
+    candidate about to be submitted. A backdated submission is out of contract;
+    the reactor decides that one by position.
+  - A candidate whose verdict depends on its input has to carry that input, since
+    a conditional grant reads it.
+
+  The subject is the authenticated caller and cannot be named in the request:
+  answering for an arbitrary subject would disclose what a policy grants
+  somebody else. It carries both the caller's address and the did:key of the app
+  instance whose token authenticated the request, so a policy naming either
+  matches the same principal the write path presents.
+
+  Requires the reactor's authEnforcement feature flag. Without it the reactor
+  holds no decision model, so this fails with extensions.code
+  AUTH_EVALUATION_UNSUPPORTED rather than guessing.
+  """
+  evaluateActions(
+    documentIdOrSlug: String
+    documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug.")
+    branch: String
+    candidates: [ActionCandidateInput!]!
+  ): ActionEvaluations!
+  """
+  Polls for sync envelopes from a channel.
+
+  An operation stored before the API required an action id cannot be
+  represented by this schema, and rather than serving a partial response beside
+  a bare non-null violation, this fails with extensions.code
+  MALFORMED_STORED_OPERATION naming the operation. That code means the failure
+  is worth polling through: the document holding the operation needs repairing,
+  but the channel serves every other document, and a peer that stopped polling
+  would stop receiving those too.
+  """
+  pollSyncEnvelopes(
+    channelId: String!
+    outboxAck: Int!
+    outboxLatest: Int!
+    manifestRevision: String
+    refusals: [SyncRefusalInput!]
+  ): PollSyncEnvelopesResult!
+  syncHolds(remoteName: String, documentId: String): [SyncHold!]!
+  peerAgreement(collectionId: String!): PeerAgreement!
+  driveNodes(
+    driveId: ID!
+    parentFolder: ID
+    paging: PagingInput
+    kind: DriveNodeKind
+  ): DriveNodePage!
+  driveNode(driveId: ID!, id: ID!): DriveNode
+  driveDescendants(driveId: ID!, root: ID!): [DriveNode!]!
+  system: SystemInfo!
+}
+
+"""
+What this reactor reports about itself. access is null unless the caller is
+one of the host's admins.
+"""
+type ReactorInfo {
+  storage: ReactorStorageFacts!
+  workflows: Boolean!
+  syncChannels: [String!]!
+  access: InspectorAccess
+}
+
+"""
+Reads only. info, documentModels and loadsModelsOnDemand serve every caller;
+drive and document reads are made as the caller through the reactor read
+gate; the rest need one of the host's admins.
+"""
+type ReactorInspection {
+  info: ReactorInfo!
+  documentModels: [InspectionDocumentModel!]!
+  """
+  True when a document model loads the first time a document of its type
+  arrives, so documentModels names only those loaded so far.
+  """
+  loadsModelsOnDemand: Boolean!
+  drives(cursor: String, limit: Int): InspectionDrivePage!
+  """
+  Reads every file node's document. Throttled per caller.
+  """
+  driveIntegrity(driveId: String!, branch: String!): InspectionDriveIntegrity!
+  attachmentInfo: InspectionAttachmentInfo!
+  queueState: InspectionQueueState!
+  processors: [InspectionProcessor!]!
+  processorTiming: InspectionProcessorTimingReport!
+  """
+  Refused on a host without memory telemetry.
+  """
+  memoryTelemetry(limit: Int, sinceIso: String): InspectionMemoryTelemetry!
+  catchUpStatus: JSONObject!
+  catchUpPriority: InspectionCatchUpPriority!
+  storageHealth: InspectionStorageHealth!
+  """
+  Replays the whole document; expensive. Throttled per caller.
+  """
+  validateDocument(documentId: String!, branch: String): InspectionValidation!
+  remotes: [InspectionRemote!]!
+  remote(remoteName: String!): InspectionRemote!
+  deadLetters(
+    remoteName: String!
+    cursor: String
+    limit: Int
+  ): InspectionDeadLetterPage!
+}
+
+type ReactorOperation {
+  index: Int!
+  timestampUtcMs: String!
+  hash: String!
+  skip: Int!
+  error: String
+  deniedReason: String
+  id: String
+  action: Action!
+}
+
+type ReactorOperationResultPage {
+  items: [ReactorOperation!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+type ReactorSigner {
+  user: ReactorSignerUser
+  app: ReactorSignerApp
+  signatures: [String!]!
+}
+
+type ReactorSignerApp {
+  name: String!
+  key: String!
+}
+
+input ReactorSignerAppInput {
+  name: String!
+  key: String!
+}
+
+input ReactorSignerInput {
+  user: ReactorSignerUserInput
+  app: ReactorSignerAppInput
+  signatures: [String!]!
+}
+
+type ReactorSignerUser {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+input ReactorSignerUserInput {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+type ReactorStorageFacts {
+  engine: String!
+  persistence: String!
+  durable: Boolean!
+  selfHeal: Boolean!
+}
+
+type RemoteCursor {
+  remoteName: String!
+  cursorOrdinal: Int!
+  lastSyncedAtUtcMs: String
+}
+
+input RemoteCursorInput {
+  remoteName: String!
+  cursorOrdinal: Int!
+  lastSyncedAtUtcMs: String
+}
+
+input RemoteFilterInput {
+  documentId: [String!]!
+  scope: [String!]!
+  branch: String!
+}
+
+type Revision {
+  scope: String!
+  revision: Int!
+}
+
+input SearchFilterInput {
+  type: String
+  parentId: String
+  identifiers: [String!]
+    @deprecated(reason: "Ignored. Filter by type or parentId.")
+}
+
+type Signer {
+  user: SignerUser
+  app: SignerApp
+  signatures: [String!]!
+}
+
+type SignerApp {
+  name: String!
+  key: String!
+}
+
+type SignerUser {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+type Subscription {
+  documentChanges(
+    search: SearchFilterInput
+    view: ViewFilterInput
+  ): DocumentChangeEvent!
+  jobChanges(jobId: String!): JobChangeEvent!
+}
+
+type SyncEnvelope {
+  type: SyncEnvelopeType!
+  channelMeta: ChannelMeta!
+  operations: [OperationWithContext!]
+  cursor: RemoteCursor
+  key: String
+  dependsOn: [String!]
+}
+
+input SyncEnvelopeInput {
+  type: SyncEnvelopeType!
+  channelMeta: ChannelMetaInput!
+  operations: [OperationWithContextInput!]
+  cursor: RemoteCursorInput
+  key: String
+  dependsOn: [String!]
+}
+
+enum SyncEnvelopeType {
+  OPERATIONS
+  ACK
+}
+
+type SyncHold {
+  remoteName: String!
+  documentId: String!
+  branch: String!
+  reason: SyncHoldReason!
+  heldAtUtcMs: String!
+}
+
+type SyncHoldReason {
+  protocol: String!
+  version: Int!
+  peerSupports: [Int!]!
+}
+
+input SyncRefusalInput {
+  documentId: String!
+  branch: String!
+  kind: String
+}
+
+type SystemInfo {
+  version: String!
+  gitHash: String!
+  gitUrl: String
+}
+
+input TouchChannelInput {
+  id: String!
+  name: String!
+  collectionId: String!
+  filter: RemoteFilterInput!
+  sinceTimestampUtcMs: String!
+  manifest: JSONObject
+}
+
+type TouchChannelResult {
+  success: Boolean!
+  ackOrdinal: Int!
+  manifest: JSONObject
+}
+
+scalar URL
+
+type UndoRedoTargets {
+  undoTarget: String
+  redoTarget: String
+}
+
+scalar Unknown
+
+scalar Upload
+
+type Value {
+  path: String
+  label: String
+  description: String
+  icon: String
+}
+
+input ViewFilterInput {
+  branch: String
+  scopes: [String!]
+}

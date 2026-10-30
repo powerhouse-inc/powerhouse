@@ -19,14 +19,18 @@ import {
   useBlockMeta,
 } from "./block-meta.js";
 import {
+  APPROVAL_BLOCK,
   ASSERT_BLOCK,
   BRANCH_BLOCK,
+  DELAY_BLOCK,
   isCoreBlock,
   MANUAL_TRIGGER,
   pinBlock,
   REACTOR_PIECE,
   SCHEDULE_TRIGGER,
   stepBlock,
+  STOP_BLOCK,
+  WAIT_FOR_WEBHOOK_BLOCK,
   WEBHOOK_TRIGGER,
   type BlockIdentity,
   type BlockPreset,
@@ -63,6 +67,10 @@ const CORE_TILE: Record<string, { icon: IconName; color: string }> = {
   [blockKey(WEBHOOK_TRIGGER)]: { icon: "bolt", color: "#0891b2" },
   [blockKey(BRANCH_BLOCK)]: { icon: "branch", color: "#d97706" },
   [blockKey(ASSERT_BLOCK)]: { icon: "alert", color: "#dc2626" },
+  [blockKey(DELAY_BLOCK)]: { icon: "clock", color: "#0d9488" },
+  [blockKey(APPROVAL_BLOCK)]: { icon: "check", color: "#16a34a" },
+  [blockKey(STOP_BLOCK)]: { icon: "stop", color: "#475569" },
+  [blockKey(WAIT_FOR_WEBHOOK_BLOCK)]: { icon: "link", color: "#0891b2" },
 };
 
 function CoreTile(props: {

@@ -6,6 +6,7 @@ import {
   parseAddress,
   type EgressPolicy,
   type OAuth2MethodDescriptor,
+  type SecretOwner,
   type SecretStore,
 } from "../pieces/index.js";
 import { childLogger } from "document-model";
@@ -37,12 +38,15 @@ export interface OAuthAttemptRow {
   state: string;
   connection_id: string;
   client_id: string;
-  client_secret_ref: string;
+  // Null for a sign-in through a relay: the relay holds the secret.
+  client_secret_ref: string | null;
   code_verifier: string | null;
   redirect_uri: string;
   token_url: string;
   authorization_method: string | null;
   return_url: string | null;
+  // Lower-cased address of who started it; null when anonymous.
+  created_by: string | null;
   status: OAuthAttemptStatus;
   error: string | null;
   created_at: string;
@@ -65,6 +69,13 @@ export interface OAuthTokenSet {
   token_url: string;
   authorization_method?: "HEADER" | "BODY";
   redirect_url: string;
+  // The client that obtained the token, when it came from the host's app
+  // registry rather than the connection: a refresh must use the same client.
+  client_id?: string;
+  client_secret_ref?: string;
+  // Obtained through an app's relay: token_url is the relay's, and a refresh
+  // sends it client_id and no secret, which only the relay holds.
+  relayed?: true;
   // The provider's whole token response; pieces read fields off it.
   data: Record<string, unknown>;
 }
@@ -82,17 +93,33 @@ async function up(db: IRelationalDb<OAuthDB>): Promise<void> {
     .addColumn("state", "text", (col) => col.primaryKey())
     .addColumn("connection_id", "text", (col) => col.notNull())
     .addColumn("client_id", "text", (col) => col.notNull())
-    .addColumn("client_secret_ref", "text", (col) => col.notNull())
+    .addColumn("client_secret_ref", "text")
     .addColumn("code_verifier", "text")
     .addColumn("redirect_uri", "text", (col) => col.notNull())
     .addColumn("token_url", "text", (col) => col.notNull())
     .addColumn("authorization_method", "text")
     .addColumn("return_url", "text")
+    .addColumn("created_by", "text")
     .addColumn("status", "text", (col) => col.notNull())
     .addColumn("error", "text")
     .addColumn("created_at", "text", (col) => col.notNull())
     .addColumn("expires_at", "text", (col) => col.notNull())
     .ifNotExists()
+    .execute();
+  // Additive migration for namespaces created before attempts had a caller.
+  try {
+    await db.schema
+      .alterTable("oauth_attempt")
+      .addColumn("created_by", "text")
+      .execute();
+  } catch {
+    // column already exists
+  }
+  // Nullable since relayed sign-ins hold no client secret; a no-op on a
+  // table created that way.
+  await db.schema
+    .alterTable("oauth_attempt")
+    .alterColumn("client_secret_ref", (col) => col.dropNotNull())
     .execute();
 }
 
@@ -126,9 +153,22 @@ export interface StartOAuthInput {
   method: OAuth2MethodDescriptor;
   props: Record<string, unknown>;
   clientId: string;
-  clientSecretRef: string;
+  /** Null when a relay exchanges the code and holds the secret. */
+  clientSecretRef: string | null;
   redirectUri: string;
+  /** Replaces the piece's token URL: a relay's. */
+  tokenUrl?: string;
   returnUrl?: string;
+  /** Replaces the piece's scopes: the connection asks for exactly these. */
+  scopes?: string[];
+  /** Always PKCE, whatever the piece says: a desktop client cannot keep its secret. */
+  pkce?: boolean;
+  /**
+   * Appended to the state after a dot: a relay reads where to forward the
+   * provider's answer from it. The whole string stays the attempt's key.
+   */
+  stateSuffix?: string;
+  createdBy?: string | null;
 }
 
 export interface OAuthStart {
@@ -169,8 +209,9 @@ export class OAuthAttemptStore {
       .execute();
 
     const { method } = input;
-    const state = base64url(randomBytes(32));
-    const pkce = method.pkce === true;
+    const nonce = base64url(randomBytes(32));
+    const state = input.stateSuffix ? `${nonce}.${input.stateSuffix}` : nonce;
+    const pkce = method.pkce === true || input.pkce === true;
     const verifier = pkce ? base64url(randomBytes(48)) : null;
     const authUrl = new URL(fillOAuthUrl(method.authUrl, input.props));
     const params = authUrl.searchParams;
@@ -178,7 +219,8 @@ export class OAuthAttemptStore {
     params.set("client_id", input.clientId);
     params.set("redirect_uri", input.redirectUri);
     params.set("state", state);
-    if (method.scope.length > 0) params.set("scope", method.scope.join(" "));
+    const scope = input.scopes ?? method.scope;
+    if (scope.length > 0) params.set("scope", scope.join(" "));
     // Activepieces' defaults: without them Google issues no refresh token.
     params.set("access_type", "offline");
     const prompt = method.prompt ?? "consent";
@@ -207,9 +249,10 @@ export class OAuthAttemptStore {
         client_secret_ref: input.clientSecretRef,
         code_verifier: verifier,
         redirect_uri: input.redirectUri,
-        token_url: fillOAuthUrl(method.tokenUrl, input.props),
+        token_url: input.tokenUrl ?? fillOAuthUrl(method.tokenUrl, input.props),
         authorization_method: method.authorizationMethod ?? null,
         return_url: input.returnUrl ?? null,
+        created_by: input.createdBy?.toLowerCase() ?? null,
         status: "PENDING",
         error: null,
         created_at: now.toISOString(),
@@ -417,8 +460,12 @@ export async function postTokenForm(
 function clientAuth(
   method: "HEADER" | "BODY" | undefined,
   clientId: string,
-  clientSecret: string,
+  // Null for a relay, which adds the secret itself.
+  clientSecret: string | null,
 ): { form: Record<string, string>; headers: Record<string, string> } {
+  if (clientSecret === null) {
+    return { form: { client_id: clientId }, headers: {} };
+  }
   if (method === "HEADER") {
     const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
     return { form: {}, headers: { authorization: `Basic ${basic}` } };
@@ -439,7 +486,12 @@ function tokenSetFrom(
   response: Record<string, unknown>,
   context: Pick<
     OAuthTokenSet,
-    "token_url" | "authorization_method" | "redirect_url"
+    | "token_url"
+    | "authorization_method"
+    | "redirect_url"
+    | "client_id"
+    | "client_secret_ref"
+    | "relayed"
   >,
   previous?: OAuthTokenSet,
 ): OAuthTokenSet {
@@ -463,15 +515,37 @@ function tokenSetFrom(
       ? { authorization_method: context.authorization_method }
       : {}),
     redirect_url: context.redirect_url,
+    ...((context.client_id ?? previous?.client_id)
+      ? { client_id: context.client_id ?? previous?.client_id }
+      : {}),
+    ...((context.client_secret_ref ?? previous?.client_secret_ref)
+      ? {
+          client_secret_ref:
+            context.client_secret_ref ?? previous?.client_secret_ref,
+        }
+      : {}),
+    ...((context.relayed ?? previous?.relayed)
+      ? { relayed: true as const }
+      : {}),
     data: { ...previous?.data, ...response },
   };
 }
 
+// A relay's token URL is the host's configuration (workflows.oauthApps), not a
+// piece's: it may resolve to private space, e.g. a cluster that routes its own
+// domains internally. Still https only; plain http needs a named address.
+export function relayEgress(egress?: EgressPolicy): EgressPolicy {
+  return { ...egress, allowPrivateAddresses: true };
+}
+
+// A null clientSecret exchanges through a relay: client_id and the PKCE
+// verifier, no secret.
 export async function exchangeCode(
   attempt: OAuthAttemptRow,
   code: string,
-  clientSecret: string,
+  clientSecret: string | null,
   egress?: EgressPolicy,
+  fromRegistry = false,
 ): Promise<OAuthTokenSet> {
   const method = authorizationMethod(attempt.authorization_method);
   const auth = clientAuth(method, attempt.client_id, clientSecret);
@@ -487,12 +561,21 @@ export async function exchangeCode(
       ...auth.form,
     },
     auth.headers,
-    egress,
+    clientSecret === null ? relayEgress(egress) : egress,
   );
   return tokenSetFrom(response, {
     token_url: attempt.token_url,
     authorization_method: method,
     redirect_url: attempt.redirect_uri,
+    ...(fromRegistry
+      ? {
+          client_id: attempt.client_id,
+          ...(attempt.client_secret_ref
+            ? { client_secret_ref: attempt.client_secret_ref }
+            : {}),
+        }
+      : {}),
+    ...(clientSecret === null ? { relayed: true as const } : {}),
   });
 }
 
@@ -525,8 +608,12 @@ export interface OAuthConnectionSource {
 }
 
 export interface OAuthTokenRefresher {
-  // Rotates the token secret in place when it is close to expiring.
-  refreshIfDue(source: OAuthConnectionSource): Promise<void>;
+  // Rotates the token secret in place when it is close to expiring. Secrets
+  // are read as connectionId, so refs copied from another connection fail.
+  refreshIfDue(
+    source: OAuthConnectionSource,
+    connectionId: string,
+  ): Promise<void>;
 }
 
 export class StoreTokenRefresher implements OAuthTokenRefresher {
@@ -538,18 +625,28 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
     private readonly egress?: EgressPolicy,
   ) {}
 
-  refreshIfDue(source: OAuthConnectionSource): Promise<void> {
+  refreshIfDue(
+    source: OAuthConnectionSource,
+    connectionId: string,
+  ): Promise<void> {
     const refOf = (name: string) =>
       source.secretRefs?.find((entry) => entry.name === name)?.ref;
     const tokenRef = refOf(OAUTH_TOKEN);
+    if (!tokenRef) return Promise.resolve();
+    // A connection's own app, or (absent) the registry client the token set names.
     const secretRef = refOf(OAUTH_CLIENT_SECRET);
-    const clientId = source.config?.[OAUTH_CLIENT_ID];
-    if (!tokenRef || !secretRef || typeof clientId !== "string") {
-      return Promise.resolve();
-    }
+    const configId = source.config?.[OAUTH_CLIENT_ID];
+    const own =
+      secretRef && typeof configId === "string"
+        ? { secretRef, clientId: configId }
+        : undefined;
     let pending = this.inFlight.get(tokenRef);
     if (!pending) {
-      pending = this.refresh(tokenRef, secretRef, clientId).finally(() =>
+      const owner: SecretOwner = {
+        documentId: connectionId,
+        kind: "connection",
+      };
+      pending = this.refresh(tokenRef, own, owner).finally(() =>
         this.inFlight.delete(tokenRef),
       );
       this.inFlight.set(tokenRef, pending);
@@ -559,17 +656,31 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
 
   private async refresh(
     tokenRef: string,
-    secretRef: string,
-    clientId: string,
+    own: { secretRef: string; clientId: string } | undefined,
+    owner: SecretOwner,
   ): Promise<void> {
     const store = await this.secrets();
-    const tokens = parseTokenSet(await store.get(tokenRef));
+    const read = (ref: string) => store.get(ref, owner);
+    const tokens = parseTokenSet(await read(tokenRef));
     if (!tokenDue(tokens, Math.round(Date.now() / 1000))) return;
-    const auth = clientAuth(
-      tokens.authorization_method,
-      clientId,
-      await store.get(secretRef),
-    );
+    let auth: { form: Record<string, string>; headers: Record<string, string> };
+    if (tokens.relayed) {
+      // Through the relay it was obtained from, which adds the secret: the
+      // refresh token belongs to the relay's client, whatever the config says now.
+      if (!tokens.client_id) return;
+      auth = clientAuth(undefined, tokens.client_id, null);
+    } else {
+      const clientId = own?.clientId ?? tokens.client_id;
+      const secretRef = own?.secretRef ?? tokens.client_secret_ref;
+      // No client to refresh with: the token is used until it expires.
+      if (!clientId || !secretRef) return;
+      auth = clientAuth(
+        tokens.authorization_method,
+        clientId,
+        // A host app's client secret has no owner document.
+        own ? await read(secretRef) : await store.get(secretRef, null),
+      );
+    }
     let response: Record<string, unknown>;
     try {
       response = await postTokenForm(
@@ -580,7 +691,7 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
           ...auth.form,
         },
         auth.headers,
-        this.egress,
+        tokens.relayed ? relayEgress(this.egress) : this.egress,
       );
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
@@ -596,7 +707,7 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
       );
     }
     // A sign-in that landed meanwhile is newer than this refresh.
-    const current = parseTokenSet(await store.get(tokenRef));
+    const current = parseTokenSet(await read(tokenRef));
     if (
       current.access_token !== tokens.access_token ||
       current.claimed_at !== tokens.claimed_at

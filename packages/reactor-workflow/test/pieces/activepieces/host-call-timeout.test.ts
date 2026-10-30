@@ -22,9 +22,11 @@ import {
 } from "../../../src/pieces/activepieces/indeterminate.js";
 import { ReactorJobPendingError } from "@powerhousedao/pieces-framework";
 import {
+  FILES_UPLOAD,
   STORE_DELETE,
   STORE_GET,
   STORE_PUT,
+  WAITPOINT_CREATE,
 } from "../../../src/pieces/activepieces/worker/protocol.js";
 
 describe("the host-call cap", () => {
@@ -63,10 +65,12 @@ describe("the host-call cap", () => {
 describe("which host calls are indeterminate on timeout", () => {
   it("names every call that may have committed something", () => {
     expect([...MUTATING_HOST_CALLS].sort()).toEqual(
-      [STORE_DELETE, STORE_PUT].sort(),
+      [FILES_UPLOAD, STORE_DELETE, STORE_PUT].sort(),
     );
     // Reads are not in it: a read that did not answer is just a read.
     expect(MUTATING_HOST_CALLS).not.toContain(STORE_GET);
+    // Nor an idempotent write: a retry gets the waitpoint the lost call made.
+    expect(MUTATING_HOST_CALLS).not.toContain(WAITPOINT_CREATE);
   });
 
   it("carries the distinction as an enumerable property, which survives IPC", () => {

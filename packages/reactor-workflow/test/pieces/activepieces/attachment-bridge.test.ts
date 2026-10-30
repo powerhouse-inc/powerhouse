@@ -62,6 +62,28 @@ const app = {
 module.exports = { app };
 `;
 
+// Uploads mid-step and reports what it got back while still running.
+const UPLOADER_FIXTURE = `
+const app = {
+  displayName: "Uploader Fixture",
+  actions: {
+    upload: {
+      name: "upload",
+      displayName: "Upload",
+      props: {},
+      run: async (ctx) => {
+        const uploaded = await ctx.files.upload({
+          fileName: "answer.txt",
+          data: Buffer.from("uploaded-bytes"),
+        });
+        return { uploaded, canPause: ctx.run.canPause };
+      },
+    },
+  },
+};
+module.exports = { app };
+`;
+
 // Echoes back what a FILE-typed prop actually looked like inside the piece.
 const READER_FIXTURE = `
 const app = {
@@ -219,6 +241,44 @@ describe("AttachmentBridge", () => {
     ]);
     // The staging directory is gone once the step returns.
     expect(await readdir(stagingRoot)).toEqual([]);
+  });
+
+  it("ingests an uploaded file before the step returns", async () => {
+    await writeFixture("@test/uploader", UPLOADER_FIXTURE);
+    const port = attachmentPort();
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      stagingRoot,
+      attachments: port,
+    });
+    const result = await executor.execute(
+      execution("@test/uploader", "upload", {}),
+    );
+
+    const output = result.output as {
+      uploaded: { id: string; url: string };
+      canPause: boolean;
+    };
+    expect(output.uploaded.id).toMatch(/^attachment:\/\/v1:/);
+    expect(output.uploaded.url).toBe(output.uploaded.id);
+    expect(output.canPause).toBe(false);
+    expect(port.written).toEqual([
+      { fileName: "answer.txt", size: 14, contentType: "text/plain" },
+    ]);
+    expect(await readdir(stagingRoot)).toEqual([]);
+  });
+
+  it("refuses ctx.files.upload without an attachment store", async () => {
+    await writeFixture("@test/uploader", UPLOADER_FIXTURE);
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      stagingRoot,
+    });
+    await expect(
+      executor.execute(execution("@test/uploader", "upload", {})),
+    ).rejects.toThrow(/ctx\.files\.upload needs an attachment store/);
   });
 
   it("hydrates an attachment reference into an ApFile for a FILE prop", async () => {

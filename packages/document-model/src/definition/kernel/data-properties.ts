@@ -1,0 +1,400 @@
+import type { DefinitionPath } from "@powerhousedao/shared/document-model";
+import { describeReceived } from "./diagnostics.js";
+
+type DataLeaf = string | number | boolean | bigint | null | undefined;
+
+export type DataValue =
+  | DataLeaf
+  | readonly DataValue[]
+  | { readonly [key: string]: DataValue };
+
+export type DataSnapshotRejection =
+  | {
+      readonly ok: false;
+      readonly reason: "not-record";
+      readonly path: DefinitionPath;
+      readonly received: string;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "not-array";
+      readonly path: DefinitionPath;
+      readonly received: string;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "custom-prototype";
+      readonly path: DefinitionPath;
+      readonly expected: "record" | "array";
+      readonly received: string;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "symbol-key";
+      readonly path: DefinitionPath;
+      readonly key: symbol;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "unknown-key";
+      readonly path: DefinitionPath;
+      readonly key: string;
+      readonly allowedKeys: readonly string[];
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "accessor";
+      readonly path: DefinitionPath;
+      readonly key: string | number;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "non-enumerable";
+      readonly path: DefinitionPath;
+      readonly key: string | number;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "sparse";
+      readonly path: DefinitionPath;
+      readonly key: number;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "array-property";
+      readonly path: DefinitionPath;
+      readonly key: string;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "cycle";
+      readonly path: DefinitionPath;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "not-data";
+      readonly path: DefinitionPath;
+      readonly received: string;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "inspection-failed";
+      readonly path: DefinitionPath;
+    };
+
+export type DataSnapshot<T> =
+  | { readonly ok: true; readonly value: T }
+  | DataSnapshotRejection;
+
+export function rejectionReceived(rejection: DataSnapshotRejection): string {
+  return "received" in rejection ? rejection.received : rejection.reason;
+}
+
+const CANONICAL_INDEX = /^(?:0|[1-9][0-9]*)$/;
+
+export function snapshotDataRecord(
+  value: unknown,
+  allowedKeys: readonly string[] | undefined,
+  path: DefinitionPath,
+): DataSnapshot<{ readonly [key: string]: DataValue }> {
+  return snapshotPlainObject(
+    value,
+    allowedKeys,
+    path,
+    snapshotDataValue,
+    new Set(),
+  );
+}
+
+export function snapshotDataArray(
+  value: unknown,
+  path: DefinitionPath,
+): DataSnapshot<readonly DataValue[]> {
+  return snapshotArrayValue(value, path, snapshotDataValue, new Set());
+}
+
+export function snapshotArray(
+  value: unknown,
+  path: DefinitionPath,
+): DataSnapshot<readonly unknown[]> {
+  return snapshotArrayValue<unknown>(
+    value,
+    path,
+    (member) => ({ ok: true, value: member }),
+    new Set(),
+  );
+}
+
+type MemberSnapshot<T> = (
+  value: unknown,
+  path: DefinitionPath,
+  ancestors: Set<object>,
+) => DataSnapshot<T>;
+
+function snapshotArrayValue<T>(
+  value: unknown,
+  path: DefinitionPath,
+  member: MemberSnapshot<T>,
+  ancestors: Set<object>,
+): DataSnapshot<readonly T[]> {
+  try {
+    if (!Array.isArray(value)) {
+      return {
+        ok: false,
+        reason: "not-array",
+        path,
+        received: describeReceived(value),
+      };
+    }
+  } catch {
+    return { ok: false, reason: "inspection-failed", path };
+  }
+  if (ancestors.has(value)) {
+    return { ok: false, reason: "cycle", path };
+  }
+  ancestors.add(value);
+  try {
+    return snapshotArrayMembers(value, path, member, ancestors);
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
+function snapshotArrayMembers<T>(
+  value: readonly unknown[],
+  path: DefinitionPath,
+  member: MemberSnapshot<T>,
+  ancestors: Set<object>,
+): DataSnapshot<readonly T[]> {
+  let prototype: unknown;
+  let keys: readonly (string | symbol)[];
+  let lengthDescriptor: PropertyDescriptor | undefined;
+  try {
+    prototype = Object.getPrototypeOf(value);
+    keys = Reflect.ownKeys(value);
+    lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+  } catch {
+    return { ok: false, reason: "inspection-failed", path };
+  }
+  if (prototype !== Array.prototype) {
+    return {
+      ok: false,
+      reason: "custom-prototype",
+      path,
+      expected: "array",
+      received: "array of another prototype or realm",
+    };
+  }
+  const length: unknown = lengthDescriptor?.value;
+  if (
+    typeof length !== "number" ||
+    !Number.isSafeInteger(length) ||
+    length < 0
+  ) {
+    return { ok: false, reason: "inspection-failed", path };
+  }
+  for (const key of keys) {
+    if (key === "length") continue;
+    if (typeof key === "symbol") {
+      return { ok: false, reason: "symbol-key", path, key };
+    }
+    if (!CANONICAL_INDEX.test(key) || Number(key) >= length) {
+      return { ok: false, reason: "array-property", path: [...path, key], key };
+    }
+  }
+  const elements: T[] = [];
+  for (let index = 0; index < length; index += 1) {
+    const elementPath = [...path, index];
+    let descriptor: PropertyDescriptor | undefined;
+    try {
+      descriptor = Object.getOwnPropertyDescriptor(value, index);
+    } catch {
+      return { ok: false, reason: "inspection-failed", path: elementPath };
+    }
+    if (descriptor === undefined) {
+      return { ok: false, reason: "sparse", path: elementPath, key: index };
+    }
+    const propertyValue = dataPropertyValue(descriptor, index, elementPath);
+    if (!propertyValue.ok) return propertyValue;
+    const element = member(propertyValue.value, elementPath, ancestors);
+    if (!element.ok) return element;
+    elements.push(element.value);
+  }
+  return { ok: true, value: Object.freeze(elements) };
+}
+
+export function snapshotRecord(
+  value: unknown,
+  allowedKeys: readonly string[] | undefined,
+  path: DefinitionPath,
+  ignoredKeys: readonly string[] = [],
+): DataSnapshot<{ readonly [key: string]: unknown }> {
+  return snapshotPlainObject<unknown>(
+    value,
+    allowedKeys,
+    path,
+    (member) => ({ ok: true, value: member }),
+    new Set(),
+    ignoredKeys,
+  );
+}
+
+function snapshotPlainObject<T>(
+  value: unknown,
+  allowedKeys: readonly string[] | undefined,
+  path: DefinitionPath,
+  member: (
+    value: unknown,
+    path: DefinitionPath,
+    ancestors: Set<object>,
+  ) => DataSnapshot<T>,
+  ancestors: Set<object>,
+  ignoredKeys: readonly string[] = [],
+): DataSnapshot<{ readonly [key: string]: T }> {
+  if (value === null || typeof value !== "object") {
+    return {
+      ok: false,
+      reason: "not-record",
+      path,
+      received: describeReceived(value),
+    };
+  }
+  if (ancestors.has(value)) {
+    return { ok: false, reason: "cycle", path };
+  }
+  ancestors.add(value);
+  try {
+    return snapshotPlainObjectMembers(
+      value,
+      allowedKeys,
+      path,
+      member,
+      ancestors,
+      ignoredKeys,
+    );
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
+function snapshotPlainObjectMembers<T>(
+  value: object,
+  allowedKeys: readonly string[] | undefined,
+  path: DefinitionPath,
+  member: (
+    value: unknown,
+    path: DefinitionPath,
+    ancestors: Set<object>,
+  ) => DataSnapshot<T>,
+  ancestors: Set<object>,
+  ignoredKeys: readonly string[],
+): DataSnapshot<{ readonly [key: string]: T }> {
+  let isArray: boolean;
+  let prototype: unknown;
+  let keys: readonly (string | symbol)[];
+  try {
+    isArray = Array.isArray(value);
+    prototype = Object.getPrototypeOf(value);
+    keys = Reflect.ownKeys(value);
+  } catch {
+    return { ok: false, reason: "inspection-failed", path };
+  }
+  if (isArray) {
+    return { ok: false, reason: "not-record", path, received: "array" };
+  }
+  if (prototype !== Object.prototype && prototype !== null) {
+    return {
+      ok: false,
+      reason: "custom-prototype",
+      path,
+      expected: "record",
+      received: "object",
+    };
+  }
+  const entries: [string, T][] = [];
+  for (const key of keys) {
+    if (typeof key === "symbol") {
+      return { ok: false, reason: "symbol-key", path, key };
+    }
+    if (ignoredKeys.includes(key)) continue;
+    const memberPath = [...path, key];
+    if (allowedKeys !== undefined && !allowedKeys.includes(key)) {
+      return {
+        ok: false,
+        reason: "unknown-key",
+        path: memberPath,
+        key,
+        allowedKeys,
+      };
+    }
+    let descriptor: PropertyDescriptor | undefined;
+    try {
+      descriptor = Object.getOwnPropertyDescriptor(value, key);
+    } catch {
+      return { ok: false, reason: "inspection-failed", path: memberPath };
+    }
+    if (descriptor === undefined) {
+      return { ok: false, reason: "inspection-failed", path: memberPath };
+    }
+    const propertyValue = dataPropertyValue(descriptor, key, memberPath);
+    if (!propertyValue.ok) return propertyValue;
+    const snapshot = member(propertyValue.value, memberPath, ancestors);
+    if (!snapshot.ok) return snapshot;
+    entries.push([key, snapshot.value]);
+  }
+  // `Object.fromEntries` defines own properties, so an own "__proto__" key stays
+  // an own key instead of silently becoming the prototype as plain assignment would.
+  return { ok: true, value: Object.freeze(Object.fromEntries(entries)) };
+}
+
+function dataPropertyValue(
+  descriptor: PropertyDescriptor,
+  key: string | number,
+  path: DefinitionPath,
+): DataSnapshot<unknown> {
+  if (!("value" in descriptor)) {
+    return { ok: false, reason: "accessor", path, key };
+  }
+  if (!descriptor.enumerable) {
+    return { ok: false, reason: "non-enumerable", path, key };
+  }
+  const value: unknown = descriptor.value;
+  return { ok: true, value };
+}
+
+function snapshotDataValue(
+  value: unknown,
+  path: DefinitionPath,
+  ancestors: Set<object>,
+): DataSnapshot<DataValue> {
+  switch (typeof value) {
+    case "string":
+    case "number":
+    case "boolean":
+    case "bigint":
+    case "undefined":
+      return { ok: true, value };
+    case "function":
+      return { ok: false, reason: "not-data", path, received: "function" };
+    case "symbol":
+      return { ok: false, reason: "not-data", path, received: "symbol" };
+    case "object": {
+      if (value === null) return { ok: true, value };
+      let isArray: boolean;
+      try {
+        isArray = Array.isArray(value);
+      } catch {
+        return { ok: false, reason: "inspection-failed", path };
+      }
+      return isArray
+        ? snapshotArrayValue(value, path, snapshotDataValue, ancestors)
+        : snapshotPlainObject(
+            value,
+            undefined,
+            path,
+            snapshotDataValue,
+            ancestors,
+          );
+    }
+  }
+}

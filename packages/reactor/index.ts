@@ -67,7 +67,9 @@ export {
   JobFailedError,
   JobBatchHandle,
   JobSetHandle,
+  jobIdsOf,
   mergeConsistencyTokens,
+  placeholderJob,
   WriteHandleFactory,
   type HandleReader,
   type IJobStagePort,
@@ -520,6 +522,14 @@ export type {
   WriteCacheConfig,
 } from "./src/cache/write-cache-types.js";
 export { type IWriteCache } from "./src/cache/write/interfaces.js";
+export {
+  DEFAULT_KEYFRAME_RULE,
+  parseKeyframeSettings,
+  resolveKeyframeRule,
+  type KeyframeRule,
+  type KeyframeRuleOverride,
+  type KeyframeSettings,
+} from "./src/storage/keyframes/keyframe-settings.js";
 
 // Migrations
 export {
@@ -689,7 +699,17 @@ export type {
   ProcessorFilter,
   ProcessorRecord,
   ProcessorPhase,
+  ProcessorQueueDepth,
   ProcessorStatus,
+  ProcessorTiming,
+  ProcessorTimingBatch,
+  ProcessorTimingCounters,
+  ProcessorTimingDocumentType,
+  ProcessorTimingHorizon,
+  ProcessorTimingLastRun,
+  ProcessorTimingLevel,
+  ProcessorTimingPath,
+  ProcessorTimingRun,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
 export {
@@ -698,6 +718,28 @@ export {
   type ReactorHostModuleBaseOptions,
 } from "./src/processors/host-module.js";
 export { DocumentIntegrityService } from "./src/admin/document-integrity-service.js";
+export { KEYFRAME_ADMIN_OPERATIONS } from "./src/admin/keyframe-admin-operations.js";
+export {
+  DEFAULT_KEYFRAME_CLEANUP_LIMITS,
+  KeyframeCleanupService,
+  type KeyframeCleanupLimits,
+  type KeyframeCleanupOptions,
+} from "./src/admin/keyframe-cleanup-service.js";
+export type {
+  IKeyframeCleanup,
+  IStoreMaintenance,
+  KeyframeCleanupReason,
+  KeyframeCleanupReasonReport,
+  KeyframeCleanupRun,
+  KeyframeCleanupState,
+  KeyframeCleanupStreamReport,
+  KeyframeCleanupTotals,
+  KeyframeCleanupTypeReport,
+  KeyframeReclaim,
+  KeyframeReclaimState,
+  TableRewriteRequest,
+  TableRewriteResult,
+} from "./src/admin/keyframe-cleanup-types.js";
 export type {
   IDocumentIntegrityService,
   KeyframeValidationIssue,
@@ -707,6 +749,7 @@ export type {
   ValidationResult,
 } from "./src/admin/types.js";
 export * from "./src/processors/index.js";
+export * from "./src/telemetry/index.js";
 export * from "./src/catch-up/index.js";
 export * from "./src/inspector/index.js";
 
@@ -751,3 +794,10 @@ export {
   DocumentPurgeService,
   type EnqueuePurgeOptions,
 } from "./src/admin/document-purge-service.js";
+export {
+  startProgressHeartbeat,
+  withProgressHeartbeat,
+  type ProgressHeartbeat,
+  type ProgressHeartbeatLogger,
+  type ProgressHeartbeatOptions,
+} from "./src/utils/progress-heartbeat.js";

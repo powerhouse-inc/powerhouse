@@ -10,7 +10,9 @@ export {
   childrenSchema,
   childWrapperSchema,
   compoundHostSchema,
+  CONNECT_PRIMARY_MESSAGE,
   compoundWiringSchema,
+  connectReactorIssues,
   declaredGenericCompoundHostSchema,
   declaredHostSchemas,
   defineHostSchemas,
@@ -22,12 +24,14 @@ export {
   HOST_NAME_PATTERN,
   hostNameSchema,
   makeHostSchemas,
+  placementKeyIssues,
   profileSchema,
   reactorBackendKindSchema,
   reactorBackendSchema,
   reactorHostSchema,
   reactorProtocolSchema,
   reactorSchema,
+  refineConnectReactor,
   refineStartOrder,
   runnerBaseSchema,
   runnerKindSchema,
@@ -37,6 +41,7 @@ export {
   type CompoundWiring,
   type HostDefinition,
   type HostSchemas,
+  type PlacementKeyIssue,
   type Profile,
   type ReactorBackend,
   type ReactorBackendKind,
@@ -51,6 +56,11 @@ export {
   type RunnerKind,
 } from "./host-schemas.js";
 export { hostExportSchema, type HostExport } from "./host-export-schema.js";
+export {
+  driveAddressMessage,
+  switchboardOfDrive,
+  type SwitchboardDrive,
+} from "@powerhousedao/shared/host-tokens";
 export {
   buildDriveDeclarationSchema,
   driveDeclarationSchema,

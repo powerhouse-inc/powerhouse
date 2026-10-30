@@ -6,4 +6,5 @@ export const phidScalar = defineCatalogScalar({
   typescriptType: "string",
   zodSource: "z.string()",
   schema: z.string(),
+  representation: "string",
 });

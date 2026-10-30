@@ -10,7 +10,9 @@ import {
   retryDelayMs,
 } from "../../../src/pieces/engine/retry.js";
 import { HostCallIndeterminateError } from "../../../src/pieces/activepieces/worker/host-call.js";
+import { ActivepiecesBlockExecutor } from "../../../src/pieces/engine/blocks.js";
 import type {
+  BlockDefaults,
   BlockExecution,
   BlockExecutor,
   WorkflowDefinition,
@@ -226,6 +228,229 @@ describe("the coordinator's retry", () => {
     });
 
     expect(executor.calls).toHaveLength(1);
+  });
+});
+
+describe("action defaults", () => {
+  const defaults =
+    (value: BlockDefaults | undefined, asked: string[] = []) =>
+    (block: { name: string }) => {
+      asked.push(block.name);
+      return Promise.resolve(value);
+    };
+
+  it("applies the workflow's retry over the action's when the step sets none", async () => {
+    const executor = new FlakyExecutor(99);
+
+    const result = await runWorkflow({
+      definition: definition([step("a", "first")]),
+      executor,
+      defaultRetry: effectiveRetryPolicy(NO_WAIT),
+      blockDefaults: defaults({ retry: { maxAttempts: 1 } }),
+    });
+
+    expect(executor.calls).toHaveLength(3);
+    expect(result.steps[0].attempts).toBe(3);
+  });
+
+  it("applies the action's retry when the workflow's retries nothing", async () => {
+    const executor = new FlakyExecutor(99);
+
+    await runWorkflow({
+      definition: definition([step("a", "first")]),
+      executor,
+      // The document's initial default.
+      defaultRetry: effectiveRetryPolicy({ maxAttempts: 1 }),
+      blockDefaults: defaults({ retry: { maxAttempts: 2 } }),
+      sleep: () => Promise.resolve(),
+    });
+
+    expect(executor.calls).toHaveLength(2);
+  });
+
+  it("retries by the action's policy when neither step nor workflow has one", async () => {
+    const executor = new FlakyExecutor(1);
+
+    await runWorkflow({
+      definition: definition([step("a", "first")]),
+      executor,
+      blockDefaults: defaults({ retry: { maxAttempts: 2 } }),
+      sleep: () => Promise.resolve(),
+    });
+
+    expect(executor.calls).toHaveLength(2);
+  });
+
+  it("backs off from 5s exponentially when the action names no delay", async () => {
+    const waits: number[] = [];
+
+    await runWorkflow({
+      definition: definition([step("a", "first")]),
+      executor: new FlakyExecutor(99),
+      blockDefaults: defaults({ retry: { maxAttempts: 4 } }),
+      sleep: (ms) => {
+        waits.push(ms);
+        return Promise.resolve();
+      },
+    });
+
+    expect(waits).toEqual([5_000, 10_000, 20_000]);
+  });
+
+  it("keeps the delays the action declares", async () => {
+    const waits: number[] = [];
+
+    await runWorkflow({
+      definition: definition([step("a", "first")]),
+      executor: new FlakyExecutor(99),
+      blockDefaults: defaults({
+        retry: { maxAttempts: 3, backoff: "FIXED", initialDelaySeconds: 1 },
+      }),
+      sleep: (ms) => {
+        waits.push(ms);
+        return Promise.resolve();
+      },
+    });
+
+    expect(waits).toEqual([1_000, 1_000]);
+  });
+
+  it("lets the step's own retry win over the action's", async () => {
+    const executor = new FlakyExecutor(99);
+
+    await runWorkflow({
+      definition: definition([step("a", "first", NO_WAIT)]),
+      executor,
+      blockDefaults: defaults({ retry: { maxAttempts: 1 } }),
+    });
+
+    expect(executor.calls).toHaveLength(3);
+  });
+
+  it("still clamps the action's maxAttempts", async () => {
+    const executor = new FlakyExecutor(99);
+
+    await runWorkflow({
+      definition: definition([step("a", "first")]),
+      executor,
+      blockDefaults: defaults({ retry: { maxAttempts: 1000 } }),
+      sleep: () => Promise.resolve(),
+    });
+
+    expect(executor.calls).toHaveLength(MAX_STEP_ATTEMPTS);
+  });
+
+  it("passes the action's timeout only to a step without its own", async () => {
+    const executor = new FlakyExecutor(0);
+    const asked: string[] = [];
+
+    await runWorkflow({
+      definition: definition(
+        [
+          step("a", "unset"),
+          { ...step("b", "own", NO_WAIT), timeoutSeconds: 5 },
+        ],
+        [{ id: "e1", from: "a", to: "b", port: "next" }],
+      ),
+      executor,
+      blockDefaults: defaults({ timeoutSeconds: 300 }, asked),
+    });
+
+    expect(executor.calls[0].defaultTimeoutSeconds).toBe(300);
+    expect(executor.calls[1].defaultTimeoutSeconds).toBeUndefined();
+    // A step that sets both never asks.
+    expect(asked).toHaveLength(1);
+  });
+
+  it("keeps the workflow's retry when the lookup fails", async () => {
+    const executor = new FlakyExecutor(99);
+
+    const result = await runWorkflow({
+      definition: definition([step("a", "first")]),
+      executor,
+      defaultRetry: effectiveRetryPolicy(NO_WAIT),
+      blockDefaults: () => Promise.reject(new Error("describe failed")),
+    });
+
+    expect(executor.calls).toHaveLength(3);
+    expect(executor.calls[0].defaultTimeoutSeconds).toBeUndefined();
+    expect(result.status).toBe("FAILED");
+  });
+
+  it("runs once when the lookup fails and the workflow has no retry", async () => {
+    const executor = new FlakyExecutor(99);
+
+    await runWorkflow({
+      definition: definition([step("a", "first")]),
+      executor,
+      blockDefaults: () => Promise.reject(new Error("describe failed")),
+    });
+
+    expect(executor.calls).toHaveLength(1);
+  });
+
+  it("still asks for the action's timeout under the workflow's retry", async () => {
+    const executor = new FlakyExecutor(0);
+    const asked: string[] = [];
+
+    await runWorkflow({
+      definition: definition(
+        [step("a", "unset"), { ...step("b", "timed"), timeoutSeconds: 5 }],
+        [{ id: "e1", from: "a", to: "b", port: "next" }],
+      ),
+      executor,
+      defaultRetry: effectiveRetryPolicy(NO_WAIT),
+      blockDefaults: defaults({ timeoutSeconds: 300 }, asked),
+    });
+
+    expect(executor.calls[0].defaultTimeoutSeconds).toBe(300);
+    // Its own timeout and the workflow's retry leave nothing to ask.
+    expect(asked).toHaveLength(1);
+  });
+
+  it("times the piece out by step, then action, then executor default", async () => {
+    const seen: (number | undefined)[] = [];
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir: "/tmp/na",
+      defaultTimeoutMs: 30_000,
+      resolver: {
+        resolve: (target) =>
+          Promise.resolve({ ...target, bundleDir: "/bundle", local: false }),
+      },
+      worker: {
+        runAction: (_request: unknown, options: { timeoutMs?: number }) => {
+          seen.push(options.timeoutMs);
+          return Promise.resolve({ output: null });
+        },
+      } as never,
+    });
+    const run = (timeoutSeconds: number | undefined, fallback?: number) =>
+      runWorkflow({
+        definition: definition([
+          {
+            ...step("a", "first"),
+            ...(timeoutSeconds ? { timeoutSeconds } : {}),
+          },
+        ]),
+        executor,
+        blockDefaults: defaults(
+          fallback ? { timeoutSeconds: fallback } : undefined,
+        ),
+      });
+
+    await run(5, 300);
+    await run(undefined, 300);
+    await run(undefined);
+    executor.dispose();
+
+    // Remaining time after staging, so at most the resolved timeout.
+    const [own, action, runtime] = seen;
+    expect(own).toBeLessThanOrEqual(5_000);
+    expect(own).toBeGreaterThan(4_000);
+    expect(action).toBeLessThanOrEqual(300_000);
+    expect(action).toBeGreaterThan(299_000);
+    expect(runtime).toBeLessThanOrEqual(30_000);
+    expect(runtime).toBeGreaterThan(29_000);
   });
 });
 

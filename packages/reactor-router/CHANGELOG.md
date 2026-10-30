@@ -1,3 +1,86 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+This was a version bump only for @powerhousedao/reactor-router to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.85 (2026-10-30)
+
+This was a version bump only for @powerhousedao/reactor-router to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.84 (2026-10-30)
+
+This was a version bump only for @powerhousedao/reactor-router to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-router:** setConfiguredPlacement for config known after construction ([0f0362f63b](https://github.com/powerhouse-inc/powerhouse/commit/0f0362f63b))
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+- **reactor-router:** find lists a duplicated id from the backend it is routed to ([1c2eba9778](https://github.com/powerhouse-inc/powerhouse/commit/1c2eba9778))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **reactor-router:** locate the backend a document routes to ([4281828831](https://github.com/powerhouse-inc/powerhouse/commit/4281828831))
+- **reactor-router:** runtime placements above the config ([7efca47e5c](https://github.com/powerhouse-inc/powerhouse/commit/7efca47e5c))
+- **reactor-router:** route an id several backends hold by its collection ([28f48a1059](https://github.com/powerhouse-inc/powerhouse/commit/28f48a1059))
+- **reactor-router:** provisional routes expire and are probed again ([c93226d894](https://github.com/powerhouse-inc/powerhouse/commit/c93226d894))
+- **reactor-router:** document-type facts and a create pre-check ([4f1b78aaab](https://github.com/powerhouse-inc/powerhouse/commit/4f1b78aaab))
+- **reactor-router:** bound ownership probes and read backend health ([5a71e44b11](https://github.com/powerhouse-inc/powerhouse/commit/5a71e44b11))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **reactor-router:** setPlacement moves the documents already routed in the drive ([a54a0c1903](https://github.com/powerhouse-inc/powerhouse/commit/a54a0c1903))
+- **reactor-router:** a home from a provisional drive route expires with it ([90ec0665d3](https://github.com/powerhouse-inc/powerhouse/commit/90ec0665d3))
+- **reactor-router:** an acceptance after the TTL keeps a provisional route expired ([3da4af060c](https://github.com/powerhouse-inc/powerhouse/commit/3da4af060c))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

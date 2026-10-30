@@ -7,4 +7,5 @@ export const urlScalar = defineCatalogScalar({
   typescriptType: "string",
   zodSource: "z.url()",
   schema: z.url(),
+  representation: "string",
 });

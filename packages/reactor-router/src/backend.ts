@@ -39,6 +39,7 @@ import { messageOf } from "./errors.js";
 import {
   UNKNOWN_REACTOR_INFO,
   type BackendFacts,
+  type BackendHealth,
   type ReactorReach,
   type RouterDiagnostic,
 } from "./types.js";
@@ -91,6 +92,12 @@ export interface IRoutableBackend {
    * prefer it over `read.drives` and over the drive's state.
    */
   readonly drives?: IDriveReadClient;
+  /**
+   * Whether the backend can be reached now, without sending a request. While
+   * it answers "down", the router's ownership probes answer "unknown" without
+   * asking. Absent, the backend is probed every time.
+   */
+  readonly health?: () => BackendHealth;
 
   get<TDocument extends PHDocument>(
     identifier: string,
@@ -287,7 +294,16 @@ export type RoutableBackendConfig = {
   readonly reach: ReactorReach;
   /** True when the backend itself refuses a misroute with WrongBackendError. */
   readonly refusesMisroutes: boolean;
+  /**
+   * The document types the backend can create, read with the facts. Absent, or
+   * read as `undefined`, the backend loads models on demand and creates are
+   * not checked.
+   */
+  readonly documentTypes?: () => Promise<readonly string[] | undefined>;
 };
+
+/** A facts read that failed, as opposed to one that answered `undefined`. */
+const UNREAD: unique symbol = Symbol("unread");
 
 /** The backend cannot serve this call, by declaration. Nothing was sent. */
 export class UnsupportedByBackendError extends Error {
@@ -436,6 +452,7 @@ export class RouterBackend {
   readonly reach: ReactorReach;
   readonly refusesMisroutes: boolean;
   private readonly source: RoutableBackendConfig["facts"];
+  private readonly typesSource: RoutableBackendConfig["documentTypes"];
   private current: BackendFacts;
 
   constructor(config: RoutableBackendConfig) {
@@ -444,6 +461,7 @@ export class RouterBackend {
     this.reach = config.reach;
     this.refusesMisroutes = config.refusesMisroutes;
     this.source = config.facts;
+    this.typesSource = config.documentTypes;
     this.current =
       typeof config.facts === "function"
         ? { reactor: UNKNOWN_REACTOR_INFO, reach: config.reach, known: false }
@@ -454,24 +472,50 @@ export class RouterBackend {
     return this.current;
   }
 
+  /** The backend's own report, or `undefined` when it declares none. */
+  health(): BackendHealth | undefined {
+    return this.api.health?.();
+  }
+
   /** Re-reads the facts; a failed read leaves them unknown and says so. */
   async refreshFacts(onDiagnostic: RouterDiagnostic): Promise<void> {
-    if (typeof this.source !== "function") {
+    const source = this.source;
+    const typesSource = this.typesSource;
+    if (typeof source !== "function" && typesSource === undefined) {
       return;
     }
+    const [reactor, types] = await Promise.all([
+      typeof source === "function"
+        ? this.read("its facts", source, onDiagnostic)
+        : Promise.resolve(source),
+      typesSource === undefined
+        ? Promise.resolve(undefined)
+        : this.read("its document types", typesSource, onDiagnostic),
+    ]);
+    const known = reactor !== UNREAD && types !== UNREAD;
+    this.current = {
+      reactor: reactor === UNREAD ? UNKNOWN_REACTOR_INFO : reactor,
+      reach: this.reach,
+      known,
+      ...(types === UNREAD || types === undefined
+        ? {}
+        : { documentTypes: new Set(types) }),
+    };
+  }
+
+  private async read<T>(
+    what: string,
+    source: () => Promise<T>,
+    onDiagnostic: RouterDiagnostic,
+  ): Promise<T | typeof UNREAD> {
     try {
-      const reactor = await this.source();
-      this.current = { reactor, reach: this.reach, known: true };
+      return await source();
     } catch (error) {
-      this.current = {
-        reactor: UNKNOWN_REACTOR_INFO,
-        reach: this.reach,
-        known: false,
-      };
       onDiagnostic(
-        `facts: backend ${this.name} could not report its facts (${messageOf(error)}); placing it as unknown`,
+        `facts: backend ${this.name} could not report ${what} (${messageOf(error)}); placing it as unknown`,
         error,
       );
+      return UNREAD;
     }
   }
 }

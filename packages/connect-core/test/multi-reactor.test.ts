@@ -16,11 +16,6 @@ import type {
   BrowserReactorClientModule,
   WorkerReactorClientModule,
 } from "@powerhousedao/reactor-browser";
-import {
-  collectionRequirements,
-  ineligibleReason,
-  UNKNOWN_REACTOR_INFO,
-} from "@powerhousedao/reactor-router";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
   withSignaturePolicy,
@@ -36,13 +31,19 @@ import {
   deriveSwitchboardGraphqlUrl,
   LOCAL_BACKEND_NAME,
   localReach,
-  PLACE_ON_LOCAL,
   REMOTE_BACKEND_NAME,
   type LocalReactorModule,
+  type SwitchboardRemote,
 } from "../src/runtime/multi-reactor.js";
+import {
+  newDriveError,
+  NewDriveRefusedError,
+  NewDriveUnansweredError,
+} from "../src/runtime/new-drive.js";
 import { useReactorDatabases } from "./reactor-database.js";
 import {
   DRIVE_TYPE,
+  HANG,
   serve,
   switchboard,
   wrongShard,
@@ -313,30 +314,6 @@ describe("placement", () => {
     (id) => bucketFor(DriveCollectionId.forDrive(id).key, 2) === 1,
   ) as string;
 
-  it("keeps the local reactor eligible when its facts cannot be read", () => {
-    const requirements = collectionRequirements(PLACE_ON_LOCAL);
-    expect(
-      ineligibleReason(
-        {
-          reactor: UNKNOWN_REACTOR_INFO,
-          reach: localReach("worker"),
-          known: false,
-        },
-        requirements,
-      ),
-    ).toBe("");
-    expect(
-      ineligibleReason(
-        {
-          reactor: UNKNOWN_REACTOR_INFO,
-          reach: { hosting: "remote", inspection: "none" },
-          known: true,
-        },
-        requirements,
-      ),
-    ).not.toBe("");
-  });
-
   it("creates a parentless drive on the local reactor", async () => {
     const local = emptyLocal();
     const client = localClient(local);
@@ -348,9 +325,284 @@ describe("placement", () => {
     await router.create(drive(REMOTE_BUCKET_ID));
 
     expect(client.create).toHaveBeenCalledTimes(1);
+    expect(router.newDrives).toBeUndefined();
     expect(
       stub.received.some((r) => r.body.operationName === "CreateDocument"),
     ).toBe(false);
+  });
+});
+
+describe("new drives on a switchboard (placement.newDrives)", () => {
+  /** An id the bare bucket placement would put on the local reactor. */
+  const LOCAL_BUCKET_ID = Array.from(
+    { length: 64 },
+    (_unused, i) => `drive-${i}`,
+  ).find(
+    (id) => bucketFor(DriveCollectionId.forDrive(id).key, 2) === 0,
+  ) as string;
+
+  async function routerOn(
+    module: LocalReactorModule | undefined,
+    remote: Partial<SwitchboardRemote> = {},
+  ) {
+    stub = await serve(switchboard({}));
+    const router = await buildMultiReactorClient({
+      module,
+      remotes: [{ name: "sb", graphqlUrl: stub.url, ...remote }],
+      newDrives: "sb",
+      signer,
+      documentModelModules: [
+        driveDocumentModelModule as unknown as DocumentModelModule,
+      ],
+      onDiagnostic: () => undefined,
+    });
+    return { router, stub };
+  }
+
+  const creates = (received: StubSwitchboard["received"]) =>
+    received.filter((r) => r.body.operationName === "CreateDocument").length;
+
+  it("creates a new drive on the switchboard, with no copy in this browser", async () => {
+    const client = localClient(emptyLocal());
+    const { module } = workerModule(client);
+    const { router, stub } = await routerOn(module);
+
+    await router.create(drive(LOCAL_BUCKET_ID));
+
+    expect(router.newDrives).toBe("sb");
+    expect(creates(stub.received)).toBe(1);
+    expect(client.create).not.toHaveBeenCalled();
+    expect(client.createAsync).not.toHaveBeenCalled();
+  });
+
+  it("fails the create, naming the switchboard, when it isn't answering", async () => {
+    const client = localClient(emptyLocal());
+    const { module } = workerModule(client);
+    const { router, stub: down } = await routerOn(module, {
+      breaker: { failures: 1 },
+    });
+    await down.close();
+    stub = undefined;
+
+    const failure = await router.create(drive(LOCAL_BUCKET_ID)).then(
+      () => undefined,
+      (error: unknown) => newDriveError(router, error),
+    );
+
+    expect(failure).toBeInstanceOf(NewDriveUnansweredError);
+    expect((failure as Error).message).toBe(
+      "sb isn't answering, so the drive wasn't created.",
+    );
+    expect(client.create).not.toHaveBeenCalled();
+    expect(client.createAsync).not.toHaveBeenCalled();
+    expect(router.describeRouting().health).toEqual([
+      { backend: "sb", health: "down" },
+    ]);
+  });
+
+  it("names the switchboard while its breaker is open", async () => {
+    const client = localClient(emptyLocal());
+    const { module } = workerModule(client);
+    const { router, stub: down } = await routerOn(module, {
+      breaker: { failures: 1, openMs: 60_000 },
+    });
+    await down.close();
+    stub = undefined;
+    await router.create(drive(LOCAL_BUCKET_ID)).catch(() => undefined);
+    expect(router.describeRouting().health).toEqual([
+      { backend: "sb", health: "down" },
+    ]);
+
+    const failure = await router.create(drive(`${LOCAL_BUCKET_ID}-again`)).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+
+    expect((failure as Error).name).toBe("SwitchboardUnreachableError");
+    expect((newDriveError(router, failure) as Error).message).toBe(
+      "sb isn't answering, so the drive wasn't created.",
+    );
+    expect(client.create).not.toHaveBeenCalled();
+  });
+
+  it("names the switchboard when a request times out", async () => {
+    const client = localClient(emptyLocal());
+    const { module } = workerModule(client);
+    stub = await serve(
+      switchboard({}, ({ body }) =>
+        body.operationName === "CreateDocument" ? HANG : undefined,
+      ),
+    );
+    const router = await buildMultiReactorClient({
+      module,
+      remotes: [{ name: "sb", graphqlUrl: stub.url, requestTimeoutMs: 200 }],
+      newDrives: "sb",
+      signer,
+      documentModelModules: [
+        driveDocumentModelModule as unknown as DocumentModelModule,
+      ],
+      onDiagnostic: () => undefined,
+    });
+
+    const failure = await router.create(drive(LOCAL_BUCKET_ID)).then(
+      () => undefined,
+      (error: unknown) => newDriveError(router, error),
+    );
+
+    expect(failure).toBeInstanceOf(NewDriveUnansweredError);
+    expect(client.create).not.toHaveBeenCalled();
+  });
+
+  it("names the switchboard when it answers a server error", async () => {
+    const client = localClient(emptyLocal());
+    const { module } = workerModule(client);
+    stub = await serve(
+      switchboard({}, ({ body }) =>
+        body.operationName === "CreateDocument"
+          ? { status: 503, body: "unavailable" }
+          : undefined,
+      ),
+    );
+    const router = await buildMultiReactorClient({
+      module,
+      remotes: [{ name: "sb", graphqlUrl: stub.url }],
+      newDrives: "sb",
+      signer,
+      documentModelModules: [
+        driveDocumentModelModule as unknown as DocumentModelModule,
+      ],
+      onDiagnostic: () => undefined,
+    });
+
+    const failure = await router.create(drive(LOCAL_BUCKET_ID)).then(
+      () => undefined,
+      (error: unknown) => newDriveError(router, error),
+    );
+
+    expect(failure).toBeInstanceOf(NewDriveUnansweredError);
+    expect(client.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses a newDrives switchboard it doesn't link to", async () => {
+    stub = await serve(switchboard({}));
+    await expect(
+      buildMultiReactorClient({
+        module: workerModule(localClient(emptyLocal())).module,
+        remotes: [{ name: "sb", graphqlUrl: stub.url }],
+        newDrives: "other",
+        signer,
+        documentModelModules: [],
+      }),
+    ).rejects.toThrow(
+      "New drives go to other, but this Connect doesn't link to it (it links to sb).",
+    );
+  });
+
+  it("creates a drive the config places here in this browser, with its defaults, while the switchboard is down", async () => {
+    const client = {
+      ...localClient(emptyLocal()),
+      getCreateProtocolVersions: vi.fn(() =>
+        Promise.resolve({ "base-reducer": 2 }),
+      ),
+      getCreateSignaturePolicy: vi.fn(() => Promise.resolve("legacy")),
+      getDocumentModelModules: vi.fn(() =>
+        Promise.resolve({
+          results: [driveDocumentModelModule as unknown as DocumentModelModule],
+          options: { cursor: "", limit: 1 },
+        }),
+      ),
+    };
+    const { module } = workerModule(
+      client as unknown as ReturnType<typeof localClient>,
+    );
+    stub = await serve(switchboard({}));
+    const router = await buildMultiReactorClient({
+      module,
+      remotes: [{ name: "sb", graphqlUrl: stub.url }],
+      newDrives: "sb",
+      collections: { "home-drive": LOCAL_BACKEND_NAME },
+      signer,
+      documentModelModules: [],
+      onDiagnostic: () => undefined,
+    });
+    await stub.close();
+    stub = undefined;
+
+    const created = await router.newDocument(DRIVE_TYPE, { id: "home-drive" });
+    await router.create(created);
+
+    expect(client.getCreateProtocolVersions).toHaveBeenCalledTimes(1);
+    expect(client.getCreateSignaturePolicy).toHaveBeenCalledTimes(1);
+    expect(client.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("is the primary of a remote-only router", async () => {
+    const { router } = await routerOn(undefined);
+
+    expect(router.newDrives).toBe("sb");
+    expect(router.describeRouting().backends).toEqual(["sb"]);
+  });
+
+  it("names the switchboard and its reason when it refuses the create", async () => {
+    const client = localClient(emptyLocal());
+    const { module } = workerModule(client);
+    let reply: { status: number; body: string } = {
+      status: 200,
+      body: JSON.stringify({ errors: [{ message: "Drives are read-only" }] }),
+    };
+    stub = await serve(
+      switchboard({}, ({ body }) =>
+        body.operationName === "CreateDocument" ? reply : undefined,
+      ),
+    );
+    const router = await buildMultiReactorClient({
+      module,
+      remotes: [{ name: "sb", graphqlUrl: stub.url }],
+      newDrives: "sb",
+      signer,
+      documentModelModules: [
+        driveDocumentModelModule as unknown as DocumentModelModule,
+      ],
+      onDiagnostic: () => undefined,
+    });
+    const failureOf = (id: string) =>
+      router.create(drive(id)).then(
+        () => undefined,
+        (error: unknown) => newDriveError(router, error),
+      );
+
+    const refused = await failureOf(LOCAL_BUCKET_ID);
+    expect(refused).toBeInstanceOf(NewDriveRefusedError);
+    expect((refused as NewDriveRefusedError).message).toBe(
+      "sb refused the new drive: Drives are read-only",
+    );
+    expect((refused as NewDriveRefusedError).auth).toBe(false);
+
+    reply = { status: 401, body: "unauthorized" };
+    const signIn = await failureOf(`${LOCAL_BUCKET_ID}-2`);
+    expect(signIn).toBeInstanceOf(NewDriveRefusedError);
+    expect((signIn as NewDriveRefusedError).auth).toBe(true);
+    expect(client.create).not.toHaveBeenCalled();
+  });
+
+  it("leaves a failure alone when new drives stay in this browser", () => {
+    const unreachable = Object.assign(new Error("x"), {
+      name: "SwitchboardUnreachableError",
+    });
+    expect(newDriveError({ newDrives: undefined }, unreachable)).toBe(
+      unreachable,
+    );
+    // Not from the switchboard: a failure in this browser stays as it is.
+    const local = new Error("User is not allowed to create drives");
+    expect(newDriveError({ newDrives: "sb" }, local)).toBe(local);
+    expect(
+      (
+        newDriveError(
+          { newDrives: "sb" },
+          Object.assign(new Error("x"), { name: "MisrouteUnresolvedError" }),
+        ) as Error
+      ).message,
+    ).toBe("sb refused the new drive.");
   });
 });
 

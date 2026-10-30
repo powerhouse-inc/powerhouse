@@ -4,6 +4,7 @@ import { EXISTENCE_OPERATORS } from "../core/branch-operators.js";
 import {
   assertNoUnavailableValue,
   resolveExpressions,
+  UnavailableValueError,
   UnresolvedReferenceError,
   type ExpressionScope,
 } from "./expressions.js";
@@ -30,6 +31,33 @@ export function resolveStepInput(
 ): unknown {
   const input = resolveStepInputRaw(step, scope);
   assertNoUnavailableValue(input);
+  return input;
+}
+
+// A resumed core wait's input, leaving out props the journal truncated or redacted.
+export function resolveResumedCoreInput(
+  step: StepInputSource,
+  scope: ExpressionScope,
+): unknown {
+  try {
+    return resolveStepInput(step, scope);
+  } catch (error) {
+    if (!(error instanceof UnavailableValueError)) throw error;
+  }
+  const { config } = step;
+  if (config === null || typeof config !== "object" || Array.isArray(config)) {
+    return {};
+  }
+  const input: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(config)) {
+    try {
+      const resolved = resolveExpressions(value, scope);
+      assertNoUnavailableValue(resolved);
+      input[key] = resolved;
+    } catch (error) {
+      if (!(error instanceof UnavailableValueError)) throw error;
+    }
+  }
   return input;
 }
 

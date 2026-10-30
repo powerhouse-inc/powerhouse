@@ -4,6 +4,7 @@ import { getConfig } from "@powerhousedao/config/node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import {
   CatchUpPriority,
+  computeProcessorTiming,
   DriveCollectionId,
   EventBus,
   IN_MEMORY_PGLITE_STORAGE_FACTS,
@@ -14,17 +15,27 @@ import {
   ReactorClientBuilder,
   createHybridProjectionCoordinatorFactory,
   instrumentPgPool,
+  MemoryTelemetry,
   parseDriveUrl,
+  ProcessorTimingSettings,
+  parseKeyframeSettings,
   type Database,
   type InProcessReactorClientModule,
+  type InProcessReactorModule,
+  type IStoreMaintenance,
   type JwtHandler,
+  type KeyframeSettings,
   type PoolInstrumentation,
   type ReactorStorageFacts,
   UnsupportedStoredProtocolError,
+  withProgressHeartbeat,
 } from "@powerhousedao/reactor";
 import {
+  createHeapSnapshotWriter,
   HttpPackageLoader,
   ImportPackageLoader,
+  memoryFileSink,
+  NodeMemorySampler,
   PackageManagementService,
   PackagesSubgraph,
   initializeAndStartAPI,
@@ -33,6 +44,7 @@ import {
   reportFailure,
   resolveRenownConfig,
   runDetached,
+  telemetryDir,
   type CanonicalDocumentId,
   type ClientInitializerDependencies,
   type CredentialVerifier,
@@ -44,6 +56,7 @@ import {
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
 import {
   disableWasmWrapperTiering,
+  maintenanceOf,
   ThreadedPGlite,
 } from "@powerhousedao/reactor-api/pglite-node";
 import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
@@ -83,6 +96,10 @@ import { Pool } from "pg";
 import type { ViteDevServer } from "vite";
 import { registerAttachmentRoutes } from "./attachments/index.js";
 import {
+  parseOAuthApps,
+  type OAuthAppConfig,
+} from "./workflow/oauth-apps-config.js";
+import {
   registerAttachmentReferenceReadModel,
   registerAttachmentReferenceReadModelOnModule,
 } from "./attachment-reference-read-model.mjs";
@@ -110,6 +127,7 @@ import {
 } from "./worker-pool.mjs";
 import { initProfilerFromEnv } from "./profiler.js";
 import { switchboardConfigFromEnv } from "./config/from-env.js";
+import { startProcessorTimingLog } from "./processor-timing-log.mjs";
 import {
   mergeSwitchboardConfig,
   switchboardConfigSchema,
@@ -262,8 +280,46 @@ function resolveConfigPath(configFile: string | undefined): string {
   return configFile ?? path.join(process.cwd(), "powerhouse.config.json");
 }
 
+/**
+ * The config file's `workflows.oauthApps`, client file paths made absolute
+ * from the config file's folder. An unreadable file or a malformed entry
+ * means none: a missing app is reported when a sign-in asks for it.
+ */
+function readConfigOAuthApps(
+  configPath: string,
+  logger: ILogger,
+): OAuthAppConfig[] {
+  let raw: unknown;
+  try {
+    raw = (getConfig(configPath) as { workflows?: { oauthApps?: unknown } })
+      .workflows?.oauthApps;
+  } catch {
+    return [];
+  }
+  return parseOAuthApps(
+    raw,
+    path.dirname(path.resolve(configPath)),
+    (id, relay) =>
+      logger.warn(
+        `workflows.oauthApps "${id}": relay ${JSON.stringify(relay)} is not an object with clientId, redirectUri and tokenUrl; ignored`,
+      ),
+  );
+}
+
 // An unreadable config file means "not configured", not a boot failure:
 // workflows are opt-in.
+/** `PH_KEYFRAMES` (or a caller's layer) wins whole over the project config. */
+export function resolveKeyframes(
+  configured: SwitchboardConfig["storage"]["keyframes"],
+  fromFile: unknown,
+  configPath: string,
+): KeyframeSettings | undefined {
+  if (configured) return configured;
+  return fromFile === undefined
+    ? undefined
+    : parseKeyframeSettings(fromFile, `${configPath} reactor.keyframes`);
+}
+
 function readConfigWorkflowsEnabled(configPath: string): boolean {
   try {
     return getConfig(configPath).workflows?.enabled ?? false;
@@ -304,6 +360,8 @@ type ReactorStorage = {
   kysely: Kysely<Database>;
   poolInstrumentation: PoolInstrumentation | undefined;
   storageFacts: ReactorStorageFacts;
+  /** Absent on Postgres, where the host does not own the connection. */
+  storeMaintenance?: IStoreMaintenance;
 };
 
 export async function createReactorKysely(opts: {
@@ -373,6 +431,10 @@ export async function createReactorKysely(opts: {
     storageFacts: inMemory
       ? IN_MEMORY_PGLITE_STORAGE_FACTS
       : PGLITE_PATH_STORAGE_FACTS,
+    storeMaintenance:
+      pglite instanceof ThreadedPGlite
+        ? pglite
+        : maintenanceOf(pglite as { fs?: unknown }),
   };
 }
 
@@ -497,7 +559,10 @@ async function initServer(
     // stays OFF. The mcp/workflows plugins set these true at
     // transformServerOptions; their absence must actually deactivate.
     options.mcp ??= false;
-    options.workflows = { enabled: options.workflows?.enabled === true };
+    options.workflows = {
+      ...options.workflows,
+      enabled: options.workflows?.enabled === true,
+    };
   }
   logger.level = config.logLevel;
   const dbPath = config.storage.readModel.url;
@@ -702,6 +767,12 @@ async function initServer(
       ? { mode: "dynamic" }
       : { mode: "fixed", level: config.protocol.catchUpPriority },
   );
+  const processorTiming = new ProcessorTimingSettings({
+    level: config.protocol.processorTiming,
+    windowMs: config.protocol.processorTimingWindowMs,
+    slowBatchMs: config.protocol.processorSlowBatchMs,
+  });
+  const memoryTelemetry = createMemoryTelemetry(config, reactorLogger);
   // The models workers and workflow pieces import; only on a reactor built here.
   let workerModels: ModelManifestSource | undefined;
   // Bound once the api serves the renown read model; see `localCredentialCheck`.
@@ -743,6 +814,7 @@ async function initServer(
       kysely: baseKysely,
       poolInstrumentation,
       storageFacts,
+      storeMaintenance,
     } = await createReactorKysely({
       reactorDbUrl,
       reactorPgliteDir,
@@ -781,7 +853,24 @@ async function initServer(
         legacyProcessorIds: config.protocol.legacyProcessorIds,
       })
       .withUnsupportedStoredDocuments(unsupportedStoredDocuments)
-      .withCatchUpPriority(catchUpPriority);
+      .withCatchUpPriority(catchUpPriority)
+      .withProcessorTiming(processorTiming)
+      .withMemoryTelemetry(memoryTelemetry);
+
+    const keyframes = resolveKeyframes(
+      config.storage.keyframes,
+      fileConfig.reactor?.keyframes,
+      configPath,
+    );
+    if (keyframes) {
+      logger.info(
+        `Keyframes: default ${JSON.stringify(keyframes.default ?? {})}, ${Object.keys(keyframes.types ?? {}).length} document type(s) with their own rule`,
+      );
+      reactorBuilder.withKeyframes(keyframes);
+    }
+    if (storeMaintenance) {
+      reactorBuilder.withStoreMaintenance(storeMaintenance);
+    }
 
     // Feeds `module.pools`, which ReactorInstrumentation reads to emit
     // reactor.db.pool.{acquire.wait_duration,size,idle,waiting}. Without this
@@ -957,7 +1046,14 @@ async function initServer(
 
     let module: InProcessReactorClientModule;
     try {
-      module = await clientBuilder.buildModule();
+      module = await withProgressHeartbeat(
+        {
+          logger,
+          label:
+            "Starting the reactor (migrations, document view, indexer, processors)",
+        },
+        () => clientBuilder.buildModule(),
+      );
     } catch (error) {
       try {
         await baseKysely.destroy();
@@ -977,6 +1073,7 @@ async function initServer(
       const instrumentation = new ReactorInstrumentation(module.reactorModule);
       instrumentation.start();
       reactorLogger.info("Reactor metrics instrumentation started");
+      memoryTelemetry.addGauge("otel", () => instrumentation.stats());
     }
 
     const reactorDriveClient = new ReactorDriveClient({
@@ -998,10 +1095,14 @@ async function initServer(
     const permissionsDb = baseKysely.withSchema(REACTOR_SCHEMA);
     try {
       if (readModelDb) {
-        await backfillPermissionTables(
-          readModelDb,
-          permissionsDb as unknown as Kysely<unknown>,
-          logger,
+        await withProgressHeartbeat(
+          { logger, label: "Moving the permission tables" },
+          () =>
+            backfillPermissionTables(
+              readModelDb,
+              permissionsDb as unknown as Kysely<unknown>,
+              logger,
+            ),
         );
       }
     } catch (error) {
@@ -1273,7 +1374,15 @@ async function initServer(
       // under it, not under the reactor's.
       webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
       http: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME),
+      // The host's option, else the config file's: under uniform runners the
+      // plugins own the workflows switch and the classic config read is skipped.
+      oauthApps:
+        options.workflows?.oauthApps ??
+        readConfigOAuthApps(resolveConfigPath(options.configFile), logger),
       authorizationService: api.authorizationService,
+      // The manager that serves this reactor's subgraphs: a piece's index read
+      // runs through it in process, as the run's user.
+      indexQueries: api.graphqlManager,
       // The manager that already loads this reactor's packages: the project it
       // runs in is one of them, so its own pieces arrive with the rest.
       pieces: api.packageManager,
@@ -1370,7 +1479,11 @@ async function initServer(
   }
   if (workflows) {
     lateSubgraphs.push(registerWorkflowSubgraph(workflows));
-    await workflows.start();
+    const runtime = workflows;
+    await withProgressHeartbeat(
+      { logger, label: "Starting the workflow runtime" },
+      () => runtime.start(),
+    );
     logger.info("Workflow runtime started");
     api.inspection?.facts.setWorkflows(true);
   }
@@ -1437,10 +1550,21 @@ async function initServer(
   const stopCatchUpLoad = ownedReactorModule
     ? feedCatchUpPriority(catchUpPriority, api.httpServer)
     : () => {};
+  const stopTimingLog = startOwnedTimingLog(
+    ownedReactorModule?.reactorModule,
+    processorTiming,
+    config.protocol.processorTimingLogMs,
+    reactorLogger,
+  );
+  if (ownedReactorModule?.reactorModule && config.telemetry.memory.enabled) {
+    memoryTelemetry.start();
+  }
   let apiDrained: Promise<void> | undefined;
   const drainApi = () =>
     (apiDrained ??= (async () => {
       stopCatchUpLoad();
+      stopTimingLog();
+      memoryTelemetry.stop();
       if (pluginHost) await pluginHost.observe("onShutdown");
       await privacy?.stop();
       await workflowsRetry?.stop();
@@ -1539,24 +1663,6 @@ async function initServer(
     );
   }
 
-  void runDetached(
-    "Marking the API ready",
-    async () => {
-      await Promise.allSettled(lateSubgraphs);
-      try {
-        await graphqlManager.updateRouter(true);
-      } catch (error) {
-        reportFailure(
-          reporting,
-          error,
-          "Final router update before readiness failed: @error",
-        );
-      }
-      api.readiness.markReady();
-    },
-    reporting,
-  );
-
   // Create default drive if provided
   if (options.drive) {
     if (!renown) {
@@ -1580,6 +1686,36 @@ async function initServer(
       );
     }
   }
+
+  // Ready once this server serves its own drives. Remote drives stay out: they
+  // replicate from another server, which may be down.
+  void runDetached(
+    "Marking the API ready",
+    async () => {
+      await Promise.allSettled(lateSubgraphs);
+      try {
+        await graphqlManager.updateRouter(true);
+      } catch (error) {
+        reportFailure(
+          reporting,
+          error,
+          "Final router update before readiness failed: @error",
+        );
+      }
+      try {
+        await options.readyAfter;
+      } catch (error) {
+        reportFailure(
+          reporting,
+          error,
+          "Not ready: the drives seeded after start failed: @error",
+        );
+        return;
+      }
+      api.readiness.markReady();
+    },
+    reporting,
+  );
 
   // add vite middleware after express app is initialized if applicable
   if (vite) {
@@ -1828,6 +1964,7 @@ function serverOptionsOf(
     reactor: deps.reactor,
     fatalErrorShutdown: deps.fatalErrorShutdown,
     signalHandlers: deps.signalHandlers,
+    readyAfter: deps.readyAfter,
     pluginComposition: deps.pluginComposition,
     logger: deps.logger,
     registryUrl: config.packages.registryUrl,
@@ -1897,6 +2034,57 @@ if (import.meta.main) {
   const config = switchboardConfigFromEnv(process.env);
   initSwitchboardProcess(config);
   await startSwitchboard(config, { fatalErrorShutdown: true });
+}
+
+/** Off in config, no timers or observers exist; a lever can still start it. */
+function createMemoryTelemetry(
+  config: SwitchboardConfig,
+  logger: ILogger,
+): MemoryTelemetry {
+  const { memory, dir, heapSnapshotDir } = config.telemetry;
+  const directory = dir ?? telemetryDir();
+  return new MemoryTelemetry({
+    sampler: new NodeMemorySampler(),
+    config: {
+      enabled: memory.enabled,
+      intervalMs: memory.intervalMs,
+      outputs: memory.outputs,
+      filePath: memory.file.path,
+      fileMaxMb: memory.file.maxMb,
+      fileKeep: memory.file.keep,
+      ringSize: memory.ringSize,
+      consoleIntervalMs: memory.consoleIntervalMs,
+      workers: memory.workers,
+      windowMin: memory.windowMin,
+    },
+    fileSink: (settings) =>
+      memoryFileSink(settings, { dir: directory, logger }),
+    heapSnapshot: createHeapSnapshotWriter({
+      dir: heapSnapshotDir ?? directory,
+    }),
+    logger,
+  });
+}
+
+/** For a host with no ph-cli display: the slowest processors, through the log. */
+function startOwnedTimingLog(
+  module: InProcessReactorModule | undefined,
+  settings: ProcessorTimingSettings,
+  intervalMs: number,
+  logger: ILogger,
+): () => void {
+  if (!module || intervalMs <= 0) return () => {};
+  return startProcessorTimingLog({
+    intervalMs,
+    read: () =>
+      computeProcessorTiming(
+        module.processorManager.getAll(),
+        module.catchUp.status(),
+        settings.level,
+        settings.windowMs,
+      ),
+    log: (line) => logger.info("@Line", line),
+  });
 }
 
 /**

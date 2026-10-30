@@ -12,4 +12,5 @@ export const attachmentRefScalar = defineCatalogScalar({
   schema: z.custom<`attachment://v${number}:${string}`>((val) =>
     matchesScalarPattern(/^attachment:\/\/v\d+:.+$/, val),
   ),
+  representation: "string",
 });

@@ -59,6 +59,20 @@ export type PHConnectDefaultDriveLocal = z.infer<
   typeof C.connectDefaultDriveLocalSchema
 >;
 export type PHConnectDefaultDrive = z.infer<typeof C.connectDefaultDriveSchema>;
+/** A served default drive: remote entries carry their `backend` and `sync`. */
+export type PHConnectRuntimeDefaultDrive = z.infer<
+  typeof C.connectRuntimeDefaultDriveSchema
+>;
+export type PHConnectRuntimeDefaultDriveRemote = z.infer<
+  typeof C.connectRuntimeDefaultDriveRemoteSchema
+>;
+export type PHConnectRemoteBackend = z.infer<
+  typeof C.connectRemoteBackendSchema
+>;
+export type PHConnectRouterSettings = z.infer<
+  typeof C.connectRouterSettingsSchema
+>;
+export type PHConnectCollection = z.infer<typeof C.connectCollectionSchema>;
 export type PHConnectDriveSection = z.infer<typeof C.connectDriveSectionSchema>;
 export type PHConnectDriveSections = z.infer<
   typeof C.connectDriveSectionsSchema
@@ -155,6 +169,12 @@ export type PHReactorRenown = {
   switchboardUrl?: string;
 };
 
+/** `reactor.keyframes`: parts left out come from `default`, then the built-in rule. */
+export type PHKeyframeRule = {
+  interval?: number;
+  keep?: number | null;
+};
+
 export type PowerhouseConfig = {
   // required
   logLevel: LogLevel;
@@ -181,6 +201,10 @@ export type PowerhouseConfig = {
       type: "filesystem" | "memory" | "postgres" | "browser";
       filesystemPath?: string;
       postgresUrl?: string;
+    };
+    keyframes?: {
+      default?: PHKeyframeRule;
+      types?: Record<string, PHKeyframeRule>;
     };
   };
   auth?: {

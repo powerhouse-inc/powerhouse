@@ -6,6 +6,15 @@ import { fillPiecePlaceholders } from "./PropertyForm.js";
 const URL = "http://localhost:4001/webhooks/3a44d1ef719306717928064f034bff61";
 
 describe("fillPiecePlaceholders", () => {
+  it("fills the maximum suspension from the workflow's policy", () => {
+    const note =
+      "The maximum duration per step is {{pausedFlowTimeoutDays}} days.";
+    expect(fillPiecePlaceholders(note, { pausedFlowTimeoutDays: 30 })).toBe(
+      "The maximum duration per step is 30 days.",
+    );
+    expect(fillPiecePlaceholders(note, {})).not.toContain("{{");
+  });
+
   it("substitutes the endpoint URL, wherever it appears", () => {
     expect(
       fillPiecePlaceholders("Paste {{webhookUrl}} then save.", {

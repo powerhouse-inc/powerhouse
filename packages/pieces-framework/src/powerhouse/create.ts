@@ -33,6 +33,23 @@ type UpstreamActionParams<
   ActionProps extends InputPropertyMap,
 > = Parameters<typeof upstreamCreateAction<PieceAuth, ActionProps>>[0];
 
+// The step's retry block. Omitted delays back off exponentially from 5s,
+// capped at 300s; `retryOn` omitted retries every error.
+export interface ActionRetryDefault {
+  // Attempts, not retries: 1 is no retry. Clamped by the runtime.
+  maxAttempts: number;
+  backoff?: "FIXED" | "EXPONENTIAL";
+  initialDelaySeconds?: number;
+  maxDelaySeconds?: number;
+  retryOn?: string[];
+}
+
+// Used for a step that sets no timeout or retry of its own.
+export interface ActionDefaults {
+  defaultTimeoutSeconds?: number;
+  defaultRetry?: ActionRetryDefault;
+}
+
 export type CreateActionParams<
   PieceAuth extends AnyPieceAuth,
   ActionProps extends InputPropertyMap,
@@ -41,7 +58,8 @@ export type CreateActionParams<
   UpstreamActionParams<PieceAuth, ActionProps>,
   "run" | "test",
   R
->;
+> &
+  ActionDefaults;
 
 // A block with the declaration the host reads off it.
 export type Declared<T, R extends ReactorDeclaration | undefined> = T & {
@@ -58,13 +76,43 @@ export function createAction<
 ): Declared<
   ReturnType<typeof upstreamCreateAction<PieceAuth, ActionProps>>,
   R
-> {
-  const { requireReactor, ...rest } = params;
+> &
+  Readonly<ActionDefaults> {
+  const { requireReactor, defaultTimeoutSeconds, defaultRetry, ...rest } =
+    params;
   // The host serves `ctx.reactor`; upstream's context type does not know it.
   const action = upstreamCreateAction<PieceAuth, ActionProps>(
     rest as unknown as UpstreamActionParams<PieceAuth, ActionProps>,
   );
-  return withDeclaration(action, requireReactor);
+  return withDefaults(withDeclaration(action, requireReactor), {
+    defaultTimeoutSeconds,
+    defaultRetry,
+  });
+}
+
+// Set only when declared, so an undeclared action describes as before.
+function withDefaults<T extends object>(
+  action: T,
+  { defaultTimeoutSeconds, defaultRetry }: ActionDefaults,
+): T & Readonly<ActionDefaults> {
+  if (defaultTimeoutSeconds !== undefined) {
+    if (!Number.isFinite(defaultTimeoutSeconds) || defaultTimeoutSeconds <= 0) {
+      throw new Error(
+        `defaultTimeoutSeconds must be a positive number, got ${JSON.stringify(defaultTimeoutSeconds)}`,
+      );
+    }
+    Object.assign(action, { defaultTimeoutSeconds });
+  }
+  if (defaultRetry !== undefined) {
+    const attempts = defaultRetry.maxAttempts;
+    if (!Number.isInteger(attempts) || attempts < 1) {
+      throw new Error(
+        `defaultRetry.maxAttempts must be a positive integer, got ${JSON.stringify(attempts)}`,
+      );
+    }
+    Object.assign(action, { defaultRetry });
+  }
+  return action;
 }
 
 type UpstreamTriggerParams<

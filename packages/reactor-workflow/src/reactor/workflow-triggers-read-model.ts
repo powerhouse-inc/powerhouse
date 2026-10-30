@@ -12,7 +12,7 @@ import {
 } from "@powerhousedao/reactor";
 import type { OperationWithContext } from "document-model";
 import type { Kysely } from "kysely";
-import type { WorkflowRuntimeService } from "./service.js";
+import type { WorkflowHealth, WorkflowRuntimeService } from "./service.js";
 
 export const WORKFLOW_TRIGGERS_READ_MODEL = "workflow-triggers";
 
@@ -21,9 +21,21 @@ export const WORKFLOW_TRIGGERS_READ_MODEL = "workflow-triggers";
 export const WORKFLOW_TRIGGERS_READ_MODEL_STAGE: ReadModelRegistrationStage =
   "post_ready";
 
+/**
+ * What a processor on the runtime's host reads through
+ * `getReadModel(WORKFLOW_TRIGGERS_READ_MODEL)`: whether a workflow's trigger
+ * is armed, failing or parked. The model exists only where the runtime runs.
+ */
+export interface WorkflowHealthReader {
+  health(workflowId: string): Promise<WorkflowHealth>;
+}
+
 // Hands every batch to onOperations and keeps the reactor's ViewState cursor.
 // Triggers fire forward only, so a first registration starts at head, not zero.
-export class WorkflowTriggersReadModel extends BaseReadModel {
+export class WorkflowTriggersReadModel
+  extends BaseReadModel
+  implements WorkflowHealthReader
+{
   constructor(
     db: Kysely<DocumentViewDatabase>,
     operationIndex: IOperationIndex,
@@ -39,6 +51,10 @@ export class WorkflowTriggersReadModel extends BaseReadModel {
       // Runs live on the relational handle, and a fire must not hold a lock.
       purgeFence: "skip",
     });
+  }
+
+  health(workflowId: string): Promise<WorkflowHealth> {
+    return this.runtime.workflowHealth(workflowId);
   }
 
   // The only await that matters here: onOperations journals every matched fire

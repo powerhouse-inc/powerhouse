@@ -238,7 +238,12 @@ export async function connectManagedWorkerReactor(
     client,
     inspector: toMonitorInspector(inspector),
     ...(info.access.admin
-      ? { admin: inspector, processorLevers: inspector }
+      ? {
+          admin: inspector,
+          processorLevers: inspector,
+          memoryLevers: inspector,
+          keyframeLevers: inspector,
+        }
       : {}),
     ...(info.access.sql
       ? {

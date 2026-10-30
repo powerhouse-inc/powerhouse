@@ -13,7 +13,10 @@ import {
   type PGliteParserPreset,
   type PgliteMaintenanceSettings,
 } from "@powerhousedao/reactor-api/pglite-node";
-import type { HardenedPGliteDialectOptions } from "@powerhousedao/reactor";
+import {
+  startProgressHeartbeat,
+  type HardenedPGliteDialectOptions,
+} from "@powerhousedao/reactor";
 import type { ILogger } from "document-model";
 import { triggerFatalShutdown } from "./fatal-shutdown.mjs";
 import {
@@ -218,6 +221,16 @@ function threadedStoreFactory(options: PgliteStoreOptions): PgliteStoreFactory {
     routePgliteWorkerFailures(store, logger, proc);
     logger.info(
       `${label}: PGlite (PG${major}) in a worker thread (memory limit ${memoryLimitMb} MB)${where(inMemory, dir)}`,
+    );
+    // Opening a large store (loading the data dir, a crash-recovery sweep)
+    // can take a while before the first query answers: say so while it lasts.
+    const opening = startProgressHeartbeat({
+      logger,
+      label: `${label}: opening the store`,
+    });
+    store.waitReady.then(
+      () => opening.stop(),
+      () => opening.stop("failed"),
     );
     return store;
   };

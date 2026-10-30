@@ -61,6 +61,7 @@ function toModel(state: WorkflowState): WorkflowModel {
     description: state.description ?? null,
     status: state.status,
     version: state.version,
+    defaultRetryAttempts: state.policy.defaultRetry.maxAttempts,
     published: state.published
       ? {
           version: state.published.version,
@@ -92,7 +93,9 @@ function toModel(state: WorkflowState): WorkflowModel {
           ],
         }
       : null,
-    readOnly: false,
+    // A managed workflow is the managing app's to change: editors only look.
+    readOnly: Boolean(state.managedBy),
+    managedBy: state.managedBy ?? null,
     trigger: state.trigger
       ? {
           id: state.trigger.id,
@@ -153,13 +156,20 @@ export function useWorkflowModel(): {
   model: WorkflowModel;
   callbacks: WorkflowEditorCallbacks;
 } {
-  const [document, dispatch] = useSelectedWorkflowDocument();
+  const [document, write] = useSelectedWorkflowDocument();
   const state = document.state.global;
   // Base-reducer 3 groups an edit in ids that lead with a UUIDv7.
   const caps = documentCapabilities(
     document.header,
     (document.operations as Record<string, Operation[] | undefined>)
       .document?.[0],
+  );
+  // Managed (managedBy): nothing the editor does is written; the app that
+  // manages it would put it back anyway.
+  const managed = Boolean(state.managedBy);
+  const dispatch = useMemo<typeof write>(
+    () => (managed ? ((() => undefined) as typeof write) : write),
+    [managed, write],
   );
   // Follow-ups land after the add; they read the state as it is by then.
   const latest = useRef(state);

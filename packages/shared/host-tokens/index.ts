@@ -395,6 +395,17 @@ function unwrapField(schema: unknown): unknown {
 function fieldShapeOf(schema: unknown): FieldShape {
   const def = defOf(unwrapField(schema));
   if (!def) return { kind: "unknown" };
+  // A union of one scalar type (a URL, or a string of another form) holds it
+  if (def.type === "union" && Array.isArray(def.options)) {
+    const shapes = def.options.map(fieldShapeOf);
+    const first = shapes[0];
+    if (
+      first?.kind === "scalar" &&
+      shapes.every((s) => s.kind === "scalar" && s.type === first.type)
+    ) {
+      return first;
+    }
+  }
   if (def.type === "array") return { kind: "array", element: def.element };
   if (def.type === "tuple") return { kind: "array", element: undefined };
   if (def.type === "record") return { kind: "record", value: def.valueType };
@@ -587,3 +598,9 @@ export function envTokenable<S extends z.ZodType>(
 ): TokenableSchema<S, EnvToken> {
   return z.union([schema, passthrough<EnvToken>(envTokenSchema)]);
 }
+
+export {
+  driveAddressMessage,
+  switchboardOfDrive,
+  type SwitchboardDrive,
+} from "./drive-address.js";

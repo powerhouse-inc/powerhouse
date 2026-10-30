@@ -17,6 +17,7 @@ import { resolveAttachmentUrlSigning } from "../src/attachments/url-signer.js";
 import { reactorDbUrlOf } from "../src/boot-preconditions.mjs";
 import { switchboardConfigFromEnv } from "../src/config/from-env.js";
 import {
+  mergeSwitchboardConfig,
   switchboardConfigSchema,
   type SwitchboardConfig,
 } from "../src/config/schema.js";
@@ -85,6 +86,25 @@ const KEYS = [
   "REACTOR_LEGACY_PROCESSOR_IDS",
   "MAX_SKIP_THRESHOLD",
   "PH_CATCH_UP_PRIORITY",
+  "PH_TELEMETRY",
+  "PH_TELEMETRY_DIR",
+  "PH_PROCESSOR_TIMING",
+  "PH_PROCESSOR_TIMING_WINDOW_MS",
+  "PH_PROCESSOR_SLOW_BATCH_MS",
+  "PH_PROCESSOR_TIMING_LOG_MS",
+  "PH_MEMORY_TELEMETRY",
+  "PH_MEMORY_TELEMETRY_INTERVAL_MS",
+  "PH_MEMORY_TELEMETRY_OUTPUT",
+  "PH_MEMORY_TELEMETRY_FILE",
+  "PH_MEMORY_TELEMETRY_FILE_MAX_MB",
+  "PH_MEMORY_TELEMETRY_FILE_KEEP",
+  "PH_MEMORY_TELEMETRY_RING",
+  "PH_MEMORY_TELEMETRY_CONSOLE",
+  "PH_MEMORY_TELEMETRY_CONSOLE_INTERVAL_MS",
+  "PH_MEMORY_TELEMETRY_WORKERS",
+  "PH_MEMORY_TELEMETRY_WINDOW_MIN",
+  "PH_HEAP_SNAPSHOT_DIR",
+  "PH_KEYFRAMES",
   "AUTH_ENABLED",
   "RESOLVE_CALLER_IDENTITY",
   "REQUIRE_AUTHENTICATED_CALLER",
@@ -617,6 +637,94 @@ describe("switchboardConfigFromEnv errors", () => {
   });
 });
 
+describe("switchboardConfigFromEnv telemetry", () => {
+  const layer = (env: Env) => switchboardConfigFromEnv(env, { logger: silent });
+
+  it("maps the processor timing settings", () => {
+    expect(
+      layer({
+        PH_PROCESSOR_TIMING: "detailed",
+        PH_PROCESSOR_TIMING_WINDOW_MS: "120000",
+        PH_PROCESSOR_SLOW_BATCH_MS: "250",
+        PH_PROCESSOR_TIMING_LOG_MS: "60000",
+      }).protocol,
+    ).toEqual({
+      processorTiming: "detailed",
+      processorTimingWindowMs: 120_000,
+      processorSlowBatchMs: 250,
+      processorTimingLogMs: 60_000,
+    });
+  });
+
+  it("maps the memory telemetry settings", () => {
+    expect(
+      layer({
+        PH_MEMORY_TELEMETRY: "on",
+        PH_MEMORY_TELEMETRY_INTERVAL_MS: "5000",
+        PH_MEMORY_TELEMETRY_OUTPUT: "file,console",
+        PH_MEMORY_TELEMETRY_FILE_MAX_MB: "20",
+        PH_MEMORY_TELEMETRY_FILE_KEEP: "3",
+        PH_MEMORY_TELEMETRY_RING: "100",
+        PH_MEMORY_TELEMETRY_CONSOLE_INTERVAL_MS: "60000",
+        PH_MEMORY_TELEMETRY_WORKERS: "false",
+        PH_MEMORY_TELEMETRY_WINDOW_MIN: "10",
+        PH_HEAP_SNAPSHOT_DIR: "/snapshots",
+      }).telemetry,
+    ).toEqual({
+      memory: {
+        enabled: true,
+        intervalMs: 5000,
+        outputs: ["memory", "file", "console"],
+        file: { maxMb: 20, keep: 3 },
+        ringSize: 100,
+        consoleIntervalMs: 60_000,
+        workers: false,
+        windowMin: 10,
+      },
+      heapSnapshotDir: "/snapshots",
+    });
+  });
+
+  it("leaves the telemetry block out with nothing set", () => {
+    expect(layer({}).telemetry).toBeUndefined();
+  });
+
+  it("drops the console output when told to", () => {
+    expect(
+      layer({
+        PH_MEMORY_TELEMETRY_OUTPUT: "console,file",
+        PH_MEMORY_TELEMETRY_CONSOLE: "false",
+      }).telemetry?.memory?.outputs,
+    ).toEqual(["memory", "file"]);
+  });
+
+  it("adds the file output for an explicit path", () => {
+    expect(
+      layer({
+        PH_MEMORY_TELEMETRY_OUTPUT: "memory",
+        PH_MEMORY_TELEMETRY_FILE: "/x/memory.jsonl",
+      }).telemetry?.memory,
+    ).toEqual({
+      outputs: ["memory", "file"],
+      file: { path: "/x/memory.jsonl" },
+    });
+  });
+
+  it("lets PH_TELEMETRY=off win over both switches", () => {
+    const off = layer({
+      PH_TELEMETRY: "off",
+      PH_PROCESSOR_TIMING: "detailed",
+      PH_MEMORY_TELEMETRY: "on",
+    });
+    expect(off.protocol?.processorTiming).toBe("off");
+    expect(off.telemetry?.memory?.enabled).toBe(false);
+  });
+
+  it("carries the shared telemetry directory", () => {
+    expect(layer({ PH_TELEMETRY_DIR: "/t" }).telemetry?.dir).toBe("/t");
+  });
+});
+
 describe("switchboardConfigFromEnv warnings", () => {
   it.each<
     [
@@ -629,6 +737,27 @@ describe("switchboardConfigFromEnv warnings", () => {
       "PH_CATCH_UP_PRIORITY",
       { PH_CATCH_UP_PRIORITY: "fast" },
       (l) => l.protocol,
+    ],
+    ["PH_PROCESSOR_TIMING", { PH_PROCESSOR_TIMING: "full" }, (l) => l.protocol],
+    [
+      "PH_PROCESSOR_TIMING_WINDOW_MS",
+      { PH_PROCESSOR_TIMING_WINDOW_MS: "0" },
+      (l) => l.protocol,
+    ],
+    [
+      "PH_MEMORY_TELEMETRY",
+      { PH_MEMORY_TELEMETRY: "maybe" },
+      (l) => l.telemetry,
+    ],
+    [
+      "PH_MEMORY_TELEMETRY_OUTPUT",
+      { PH_MEMORY_TELEMETRY_OUTPUT: "memory,otel" },
+      (l) => l.telemetry,
+    ],
+    [
+      "PH_MEMORY_TELEMETRY_INTERVAL_MS",
+      { PH_MEMORY_TELEMETRY_INTERVAL_MS: "soon" },
+      (l) => l.telemetry,
     ],
     ["GATEWAY_ADAPTER", { GATEWAY_ADAPTER: "nginx" }, (l) => l.server],
     ["LOG_LEVEL", { LOG_LEVEL: "INFO" }, (l) => l.logLevel],
@@ -754,6 +883,61 @@ describe("switchboardConfigFromEnv for the bin", () => {
       ),
     ).toThrowError("Invalid PH_DEFAULT_DRIVE_TYPE: x.");
     expect(switchboardConfigFromEnv(env, { logger: silent })).toEqual({});
+  });
+});
+
+describe("PH_KEYFRAMES", () => {
+  it("leaves keyframes unset without it", () => {
+    expect(switchboardConfigFromEnv({}).storage?.keyframes).toBeUndefined();
+    expect(
+      switchboardConfigFromEnv({ PH_KEYFRAMES: "  " }).storage?.keyframes,
+    ).toBeUndefined();
+  });
+
+  it("reads the rules", () => {
+    const rules = {
+      default: { interval: 10, keep: 4 },
+      types: { "a/b": { interval: 50, keep: 1 }, "a/c": { keep: null } },
+    };
+
+    const config = switchboardConfigFromEnv({
+      PH_KEYFRAMES: JSON.stringify(rules),
+    });
+
+    expect(config.storage?.keyframes).toEqual(rules);
+    expect(switchboardConfigSchema.parse(config).storage.keyframes).toEqual(
+      rules,
+    );
+  });
+
+  it("stops the boot on JSON it cannot read", () => {
+    expect(() =>
+      switchboardConfigFromEnv({ PH_KEYFRAMES: "{keep:1}" }),
+    ).toThrow("PH_KEYFRAMES is not valid JSON");
+  });
+
+  it("stops the boot on a rule it cannot use", () => {
+    expect(() =>
+      switchboardConfigFromEnv({
+        PH_KEYFRAMES: JSON.stringify({ default: { keep: 0 } }),
+      }),
+    ).toThrow("PH_KEYFRAMES.default.keep");
+  });
+
+  it("is replaced whole by a later layer", () => {
+    const merged = mergeSwitchboardConfig(
+      {
+        storage: {
+          keyframes: {
+            default: { keep: 4 },
+            types: { "a/b": { keep: 1 } },
+          },
+        },
+      },
+      { storage: { keyframes: { default: { keep: 2 } } } },
+    );
+
+    expect(merged.storage?.keyframes).toEqual({ default: { keep: 2 } });
   });
 });
 

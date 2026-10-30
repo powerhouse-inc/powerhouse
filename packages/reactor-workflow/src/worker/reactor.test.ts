@@ -1,7 +1,10 @@
 // The worker's ctx.reactor drives over a real reactor RPC pair: what a piece
 // calls in the child reaches the host's served facade, and refusals match.
 import { context as otelContext } from "@opentelemetry/api";
-import type { ReactorClient } from "@powerhousedao/pieces-framework";
+import type {
+  ReactorClient,
+  RequireReactor,
+} from "@powerhousedao/pieces-framework";
 import {
   createPortTransport,
   createReactorClientProxy,
@@ -36,8 +39,39 @@ function hostClient() {
     ),
     addFolder: vi.fn(),
   };
-  return { drives } as unknown as ReactorClient & {
+  // A handle with no job: its stages are settled, and only `document()` reads.
+  const handle = (documentId: string) => ({
+    jobId: "",
+    jobIds: [],
+    documentId,
+    branch: "main",
+    document: () => Promise.resolve(draft),
+  });
+  const write = {
+    execute: vi.fn((documentId: string) => Promise.resolve(handle(documentId))),
+    // A handle on a job, so its stages and document read go over `read`.
+    deleteDocument: vi.fn((documentId: string) =>
+      Promise.resolve({
+        ...handle(documentId),
+        jobId: "job-1",
+        jobIds: ["job-1"],
+      }),
+    ),
+    drives: {
+      addFile: vi.fn((drive: string) => Promise.resolve(handle(drive))),
+      addFolder: vi.fn(),
+    },
+  };
+  // The job never settles, so a stage waits until the step closes.
+  const read = {
+    waitForJob: vi.fn(() => new Promise(() => undefined)),
+    getJobStatus: vi.fn(() => new Promise(() => undefined)),
+    get: vi.fn(() => Promise.resolve(draft)),
+  };
+  return { drives, write, read } as unknown as ReactorClient & {
     drives: typeof drives;
+    write: typeof write;
+    read: typeof read;
   };
 }
 
@@ -48,13 +82,18 @@ afterEach(() => {
 });
 
 // A worker session over a MessageChannel to a host serving `host`, optionally traced.
-function connect(host: ReactorClient, telemetry?: WorkflowTelemetry) {
+function connect(
+  host: ReactorClient,
+  telemetry?: WorkflowTelemetry,
+  requireReactor: RequireReactor = "write",
+) {
   const channel = new MessageChannel();
   const served = servedClient(host);
   const server = new ReactorHostServer(
     telemetry
       ? tracedMethods(served, telemetry, "reactor", otelContext.active(), [
           "drives",
+          "write",
         ])
       : served,
     createPortTransport(channel.port1),
@@ -66,16 +105,21 @@ function connect(host: ReactorClient, telemetry?: WorkflowTelemetry) {
     registry: new DocumentModelRegistry(),
   });
   const guard = new RequestGuard();
-  closers.push(() => {
+  let open = true;
+  const close = () => {
+    if (!open) return;
+    open = false;
     guard.close();
     router.detach();
     server.stop();
     channel.port1.close();
     channel.port2.close();
-  });
+  };
+  closers.push(close);
   return {
     proxy,
-    client: sessionClient({} as Runtime, proxy, guard),
+    client: sessionClient({} as Runtime, proxy, guard, requireReactor),
+    close,
   };
 }
 
@@ -142,6 +186,89 @@ describe("ctx.reactor.drives in the worker", () => {
 
     expect(phases.mock.calls.map(([phase]) => phase)).toContain(
       "reactor.drives.addFile",
+    );
+  });
+});
+
+describe("ctx.reactor.write in the worker", () => {
+  it("sends a write over RPC and answers with a handle rebuilt from its ids", async () => {
+    const host = hostClient();
+    const { client } = connect(host);
+
+    const handle = await client.write.execute("doc-1", "main", []);
+
+    expect(host.write.execute.mock.calls[0].slice(0, 2)).toEqual([
+      "doc-1",
+      "main",
+    ]);
+    expect(handle).toMatchObject({ jobId: "", documentId: "doc-1" });
+    await expect(handle.readable).resolves.toMatchObject({
+      documentId: "doc-1",
+      job: { status: "READ_READY" },
+    });
+  });
+
+  it("refuses a write the half does not offer, in the worker and on the host", async () => {
+    const { client, proxy } = connect(hostClient());
+    const write = client.write as unknown as Record<string, () => unknown>;
+
+    expect(() => write.rename()).toThrow(
+      "write.rename is not available to workflow pieces",
+    );
+    await expect(proxy.write.rename("doc-1", "Nope")).rejects.toMatchObject({
+      name: "ReactorAccessDeniedError",
+      message: "write.rename is not available to workflow pieces",
+    });
+    await expect(
+      proxy.write.drives.removeNode("drive-1", "node-1"),
+    ).rejects.toMatchObject({
+      message: "write.drives.removeNode is not available to workflow pieces",
+    });
+  });
+
+  it("closes a handle's stages and document read with the step", async () => {
+    const host = hostClient();
+    const { client, close } = connect(host);
+    const handle = await client.write.deleteDocument("doc-1");
+    const pending = handle.readable;
+    await vi.waitFor(() => expect(host.read.waitForJob).toHaveBeenCalled());
+
+    close();
+
+    const closed = { name: "ReactorRequestClosedError" };
+    await expect(pending).rejects.toMatchObject(closed);
+    await expect(handle.written).rejects.toMatchObject(closed);
+    await expect(handle.document()).rejects.toMatchObject(closed);
+    expect(host.read.get).not.toHaveBeenCalled();
+  });
+
+  it("refuses every write of a read declaration's write half", () => {
+    const host = hostClient();
+    const { client } = connect(host, undefined, "read");
+
+    for (const call of [
+      () => client.write.execute("doc-1", "main", []),
+      () => client.write.drives.addFile("drive-1", draft),
+      () => (client.write as unknown as Record<string, () => unknown>).rename(),
+    ]) {
+      expect(call).toThrow(/declares read access only$/);
+      expect(call).toThrow(
+        expect.objectContaining({ name: "ReactorAccessDeniedError" }),
+      );
+    }
+    expect(host.write.execute).not.toHaveBeenCalled();
+    expect(host.write.drives.addFile).not.toHaveBeenCalled();
+  });
+
+  it("traces write calls on the host as reactor.write.*", async () => {
+    const telemetry = new WorkflowTelemetry();
+    const phases = vi.spyOn(telemetry, "recordPhase");
+    const { client } = connect(hostClient(), telemetry);
+
+    await client.write.drives.addFile("drive-1", draft);
+
+    expect(phases.mock.calls.map(([phase]) => phase)).toContain(
+      "reactor.write.drives.addFile",
     );
   });
 });

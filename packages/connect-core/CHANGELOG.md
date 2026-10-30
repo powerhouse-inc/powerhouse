@@ -1,3 +1,85 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+This was a version bump only for @powerhousedao/connect-core to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.85 (2026-10-30)
+
+This was a version bump only for @powerhousedao/connect-core to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.84 (2026-10-30)
+
+This was a version bump only for @powerhousedao/connect-core to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🚀 Features
+
+- **connect-core:** per-browser drive moves over the host's placement ([7f3329bba9](https://github.com/powerhouse-inc/powerhouse/commit/7f3329bba9))
+- **connect-core:** route to one backend per switchboard, named by host key ([eb309ff74c](https://github.com/powerhouse-inc/powerhouse/commit/eb309ff74c))
+- **connect-core:** read drive placement from the served config ([50181cd9ae](https://github.com/powerhouse-inc/powerhouse/commit/50181cd9ae))
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect-core:** wait for the copy whenever a drive's effective placement becomes this browser ([420d544c12](https://github.com/powerhouse-inc/powerhouse/commit/420d544c12))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+- **connect-core:** other tabs follow a kept copy only once it has arrived ([3fe267ef02](https://github.com/powerhouse-inc/powerhouse/commit/3fe267ef02))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **connect:** a proxied Connect names its switchboard as ${origin}; the runner proxies the switchboard's paths ([bdaffdb580](https://github.com/powerhouse-inc/powerhouse/commit/bdaffdb580))
+- **connect-core,reactor-browser:** a sign-in gate when the backend refuses the caller ([77eda7795b](https://github.com/powerhouse-inc/powerhouse/commit/77eda7795b))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **connect-core:** the backend auth gate relists drives without importing the client ([06ddcdf1a1](https://github.com/powerhouse-inc/powerhouse/commit/06ddcdf1a1))
+- **connect:** the sign-in gate renders in Connect's own root, survives StrictMode, and re-lists drives after a sign-in ([0ac4f667e7](https://github.com/powerhouse-inc/powerhouse/commit/0ac4f667e7))
+- **connect-core:** the boot drive refresh records a Switchboard refusal instead of failing the boot ([6d0bd85c6e](https://github.com/powerhouse-inc/powerhouse/commit/6d0bd85c6e))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

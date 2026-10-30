@@ -1,3 +1,120 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-api:** rewrite one table through the PGlite maintenance lane ([ee99ab7edd](https://github.com/powerhouse-inc/powerhouse/commit/ee99ab7edd))
+- **switchboard:** read keyframe rules from the project config and PH_KEYFRAMES ([b5a9401c6c](https://github.com/powerhouse-inc/powerhouse/commit/b5a9401c6c))
+- **switchboard:** configure processor timing and memory telemetry ([f196cf8eb2](https://github.com/powerhouse-inc/powerhouse/commit/f196cf8eb2))
+- **reactor:** memory telemetry correlated with operations processed ([c8d0779075](https://github.com/powerhouse-inc/powerhouse/commit/c8d0779075))
+- **reactor:** per-processor timing, top 5 in the catch-up output ([ca20e898e4](https://github.com/powerhouse-inc/powerhouse/commit/ca20e898e4))
+- **switchboard:** add the AI gateway plugin ([e9a4cd0dc1](https://github.com/powerhouse-inc/powerhouse/commit/e9a4cd0dc1))
+
+### 🩹 Fixes
+
+- **switchboard:** take only the message from a provider's error ([ba02a57f3f](https://github.com/powerhouse-inc/powerhouse/commit/ba02a57f3f))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.85 (2026-10-30)
+
+### 🚀 Features
+
+- **switchboard:** waitpoint resume routes, confirm page and subgraph fields ([d471c7b7b3](https://github.com/powerhouse-inc/powerhouse/commit/d471c7b7b3))
+- **switchboard:** oauthSignIn tells how a sign-in with a publisher app would go ([d3e2c84321](https://github.com/powerhouse-inc/powerhouse/commit/d3e2c84321))
+- **switchboard:** read an OAuth2 app's relay from workflows.oauthApps ([f29bc5b5fa](https://github.com/powerhouse-inc/powerhouse/commit/f29bc5b5fa))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank Pfeift
+
+## 6.2.3-dev.84 (2026-10-30)
+
+### 🚀 Features
+
+- **switchboard:** oauthSignIn tells how a sign-in with a publisher app would go ([d3e2c84321](https://github.com/powerhouse-inc/powerhouse/commit/d3e2c84321))
+- **switchboard:** read an OAuth2 app's relay from workflows.oauthApps ([f29bc5b5fa](https://github.com/powerhouse-inc/powerhouse/commit/f29bc5b5fa))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+- **switchboard:** /ready waits for the default drive ([27cee3f720](https://github.com/powerhouse-inc/powerhouse/commit/27cee3f720))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+
+### 🩹 Fixes
+
+- **switchboard,ph-cli:** a drive pinned to an id this store cannot take is made under its slug ([39aff95981](https://github.com/powerhouse-inc/powerhouse/commit/39aff95981))
+- **workflow-runtime:** bind secrets to the connection or workflow that owns them ([40a52be27a](https://github.com/powerhouse-inc/powerhouse/commit/40a52be27a))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **reactor-workflow:** pollNow runs an armed trigger at once ("sync now") ([2a620c707b](https://github.com/powerhouse-inc/powerhouse/commit/2a620c707b))
+- **switchboard:** workflowRuntime.host names the switchboard an app runs on ([4680f3d307](https://github.com/powerhouse-inc/powerhouse/commit/4680f3d307))
+- **workflow:** publisher OAuth2 apps and a per-connection scope override ([5868eab4f2](https://github.com/powerhouse-inc/powerhouse/commit/5868eab4f2))
+- **reactor,switchboard:** boot reports progress instead of going silent ([e85fcfd84e](https://github.com/powerhouse-inc/powerhouse/commit/e85fcfd84e))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **workflow:** ctx.reactor.query, an in-process read of an index subgraph for pieces ([fba34399f4](https://github.com/powerhouse-inc/powerhouse/commit/fba34399f4))
+- **reactor-mcp:** shared tool definitions with MCP and ai SDK adapters ([db60951c54](https://github.com/powerhouse-inc/powerhouse/commit/db60951c54))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **switchboard:** a run with no user asks an index as the host itself ([45b1279368](https://github.com/powerhouse-inc/powerhouse/commit/45b1279368))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

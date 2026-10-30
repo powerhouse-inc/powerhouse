@@ -49,6 +49,31 @@ describe("boilerplate dependency overrides", () => {
     const out = packageJsonTemplate("test-project", {}, { vitest: "4.1.1" });
     expect(JSON.parse(out)).not.toHaveProperty("resolutions");
   });
+
+  it("pins date-fns, rolldown and vite in the fields every package manager reads", async () => {
+    const parsed = JSON.parse(
+      await buildBoilerplatePackageJson({ name: "p", version: "6.3.0-dev.1" }),
+    ) as {
+      devDependencies: Record<string, string>;
+      resolutions: Record<string, string>;
+      overrides: Record<string, string>;
+    };
+    expect(parsed.devDependencies).toMatchObject({
+      "date-fns": "4.3.0",
+      rolldown: "1.0.2",
+      vite: "8.0.14",
+    });
+    expect(parsed.resolutions).toEqual({
+      "date-fns": "4.3.0",
+      rolldown: "1.0.2",
+      vite: "8.0.14",
+    });
+    expect(parsed.overrides).toEqual({
+      "date-fns": "$date-fns",
+      rolldown: "$rolldown",
+      vite: "$vite",
+    });
+  });
 });
 
 describe("boilerplate release-age policy", () => {

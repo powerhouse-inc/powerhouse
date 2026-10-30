@@ -309,6 +309,9 @@ export class WebhookService {
       }
 
       res.statusCode = reply.status;
+      for (const [name, value] of Object.entries(reply.headers ?? {})) {
+        res.setHeader(name, value);
+      }
       if (reply.body !== undefined && method !== "HEAD") {
         res.setHeader("content-type", reply.contentType ?? "text/plain");
         res.end(reply.body);

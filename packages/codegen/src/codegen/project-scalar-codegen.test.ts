@@ -185,11 +185,9 @@ async function generatedTestInput(
   return generated;
 }
 
-const originalCwd = process.cwd();
 const temporary: string[] = [];
 
 afterAll(() => {
-  process.chdir(originalCwd);
   for (const dir of temporary) rmSync(dir, { recursive: true, force: true });
 });
 

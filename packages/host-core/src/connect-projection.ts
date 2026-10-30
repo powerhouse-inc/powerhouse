@@ -1,7 +1,12 @@
 import type {
+  PHConnectCollection,
   PHConnectDefaultDrive,
   PHConnectRuntimeConfig,
+  PHConnectRuntimeDefaultDrive,
 } from "@powerhousedao/shared/clis";
+import { switchboardOfDrive } from "@powerhousedao/shared/host-tokens";
+import { remoteBackends } from "./backend-projection.js";
+import type { ReactorConfig } from "./host-schemas.js";
 
 /**
  * Instance-fact projection for compound hosts: the drives a compound's
@@ -100,4 +105,52 @@ export function projectDrivesIntoConnect(
       preserveStrategy: "preserve-all",
     },
   };
+}
+
+/** A served slug names a declared one as is, or hashed (`<slug>-<8 hex>`). */
+function servesSlug(declared: string, served: string): boolean {
+  return (
+    served === declared ||
+    (served.startsWith(`${declared}-`) &&
+      /^[0-9a-f]{8}$/.test(served.slice(declared.length + 1)))
+  );
+}
+
+export interface PlacedConnectDrives {
+  defaultDrives: PHConnectRuntimeDefaultDrive[];
+  collections?: Record<string, PHConnectCollection>;
+}
+
+/** Annotates remote default drives with their backend (`sync: false` when placed on it); other remote placements become collections. */
+export function placeConnectDrives(
+  reactor: ReactorConfig | undefined,
+  defaultDrives: readonly PHConnectDefaultDrive[],
+): PlacedConnectDrives {
+  const remotes = remoteBackends(reactor).flatMap(({ name, url }) => {
+    const at = switchboardOfDrive(url);
+    return at ? [{ name, base: at.base }] : [];
+  });
+  if (remotes.length === 0) return { defaultDrives: [...defaultDrives] };
+  const placement = Object.entries(reactor?.placement?.drives ?? {});
+  const matched = new Set<string>();
+  const placed = defaultDrives.map((drive): PHConnectRuntimeDefaultDrive => {
+    if (!("url" in drive)) return drive;
+    const at = switchboardOfDrive(drive.url);
+    const backend = remotes.find((remote) => remote.base === at?.base)?.name;
+    if (!at || !backend) return drive;
+    const entry = placement.find(([slug]) => servesSlug(slug, at.slug));
+    if (entry) matched.add(entry[0]);
+    return entry?.[1] === backend
+      ? { ...drive, backend, sync: false }
+      : { ...drive, backend };
+  });
+  const names = new Set(remotes.map((remote) => remote.name));
+  const collections = Object.fromEntries(
+    placement
+      .filter(([slug, backend]) => !matched.has(slug) && names.has(backend))
+      .map(([slug, backend]) => [slug, { backend, sync: false }]),
+  );
+  return Object.keys(collections).length > 0
+    ? { defaultDrives: placed, collections }
+    : { defaultDrives: placed };
 }

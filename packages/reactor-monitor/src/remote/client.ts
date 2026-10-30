@@ -8,7 +8,9 @@ import type {
   InspectorDriveIntegrity,
   InspectorDrivePage,
   InspectorProcessorInfo,
+  InspectorProcessorTimingReport,
   InspectorStorageHealth,
+  MemoryTelemetryReport,
   ProcessorPhase,
   RemoteCursorInfo,
   RemoteSyncInspection,
@@ -20,6 +22,8 @@ import type {
   WireInspectorDriveIntegrity,
   WireInspectorDrivePage,
   WireInspectorProcessor,
+  WireMemoryTelemetry,
+  WireProcessorTimingReport,
   WireQueueState,
   WireReactorInfo,
   WireRemoteCursor,
@@ -299,6 +303,13 @@ export class RemoteInspectorClient
     return data.inspection.documentModels.map(toDocumentModel);
   }
 
+  async loadsModelsOnDemand(): Promise<boolean> {
+    const data = await this.query<{
+      inspection: { loadsModelsOnDemand: boolean };
+    }>("loadsModelsOnDemand");
+    return data.inspection.loadsModelsOnDemand;
+  }
+
   async listDrives(
     cursor?: string,
     limit?: number,
@@ -338,6 +349,23 @@ export class RemoteInspectorClient
       inspection: { processors: WireInspectorProcessor[] };
     }>("processors");
     return data.inspection.processors.map(toProcessor);
+  }
+
+  async getProcessorTiming(): Promise<InspectorProcessorTimingReport> {
+    const data = await this.query<{
+      inspection: { processorTiming: WireProcessorTimingReport };
+    }>("processorTiming");
+    return data.inspection.processorTiming;
+  }
+
+  async getMemoryTelemetry(
+    limit?: number,
+    sinceIso?: string,
+  ): Promise<MemoryTelemetryReport> {
+    const data = await this.query<{
+      inspection: { memoryTelemetry: WireMemoryTelemetry };
+    }>("memoryTelemetry", { limit, sinceIso });
+    return data.inspection.memoryTelemetry;
   }
 
   async getCatchUpStatus(): Promise<CatchUpStatus> {

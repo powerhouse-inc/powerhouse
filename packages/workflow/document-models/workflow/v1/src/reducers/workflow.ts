@@ -17,4 +17,14 @@ export const workflowWorkflowOperations: WorkflowWorkflowOperations = {
     }
     state.status = action.input.status;
   },
+  setManagedByOperation(state, action) {
+    const i = action.input;
+    state.managedBy = i.documentId
+      ? {
+          documentId: i.documentId,
+          documentType: i.documentType ?? "",
+          label: i.label ?? "",
+        }
+      : null;
+  },
 };

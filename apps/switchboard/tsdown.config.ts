@@ -17,6 +17,7 @@ export default defineConfig({
     "src/plugins/attachments.mts",
     "src/plugins/privacy.mts",
     "src/plugins/workflows.mts",
+    "src/plugins/ai.mts",
   ],
   platform: "node",
   outDir: "dist",

@@ -48,6 +48,18 @@ const vacuumFullSchema = z.object({
   maxDeferMs: nonNegative.optional(),
 });
 
+const keyframeRuleSchema = z.strictObject({
+  interval: positiveInt.optional(),
+  /** Null keeps every keyframe. */
+  keep: positiveInt.nullable().optional(),
+});
+
+/** See `KeyframeSettings` in the reactor. */
+const keyframesSchema = z.strictObject({
+  default: keyframeRuleSchema.optional(),
+  types: z.record(z.string(), keyframeRuleSchema).optional(),
+});
+
 const storageSchema = z.object({
   /** Postgres URL or PGlite data dir; unset uses the default dir. */
   reactor: z.object({ url: z.string().min(1).optional() }).prefault({}),
@@ -66,6 +78,8 @@ const storageSchema = z.object({
     .prefault({}),
   migratePglite: z.boolean().default(false),
   forcePgVersion: z.union([z.literal(16), z.literal(17)]).optional(),
+  /** Unset: `reactor.keyframes` of the project config, then the built-in rule. */
+  keyframes: keyframesSchema.optional(),
 });
 
 const protocolSchema = z.object({
@@ -89,6 +103,40 @@ const protocolSchema = z.object({
   catchUpPriority: z
     .union([z.literal("dynamic"), z.number().int().min(0).max(7)])
     .default("dynamic"),
+  /** What processors record about their time. */
+  processorTiming: z.enum(["off", "basic", "detailed"]).default("basic"),
+  processorTimingWindowMs: positiveInt.default(60_000),
+  /** At `detailed`: an `onOperations` call over this logs a warning. */
+  processorSlowBatchMs: positiveInt.default(1_000),
+  /** Above 0: logs the slowest processors this often while catching up. */
+  processorTimingLogMs: nonNegativeInt.default(0),
+});
+
+const memoryTelemetrySchema = z.object({
+  enabled: z.boolean().default(false),
+  intervalMs: z.number().int().min(1000).default(30_000),
+  /** `memory`, the ring, is always on while telemetry runs. */
+  outputs: z
+    .array(z.enum(["memory", "file", "console"]))
+    .default(["memory", "file"]),
+  file: z
+    .object({
+      path: z.string().min(1).optional(),
+      maxMb: positiveInt.default(10),
+      keep: positiveInt.default(5),
+    })
+    .prefault({}),
+  ringSize: positiveInt.default(720),
+  consoleIntervalMs: positiveInt.default(300_000),
+  workers: z.boolean().default(true),
+  windowMin: positiveInt.default(30),
+});
+
+const telemetrySchema = z.object({
+  memory: memoryTelemetrySchema.prefault({}),
+  /** Under it go the JSONL files and heap snapshots; unset: `<phDir>/telemetry`. */
+  dir: z.string().min(1).optional(),
+  heapSnapshotDir: z.string().min(1).optional(),
 });
 
 const authSchema = z.object({
@@ -213,6 +261,7 @@ export const switchboardConfigSchema = z.object({
   server: serverSchema.prefault({}),
   storage: storageSchema.prefault({}),
   protocol: protocolSchema.prefault({}),
+  telemetry: telemetrySchema.prefault({}),
   auth: authSchema.prefault({}),
   inspection: inspectionSchema.prefault({}),
   workers: workersSchema.prefault({}),

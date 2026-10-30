@@ -10,15 +10,20 @@ import {
   addDefaultDrivesForNewReactor,
   createBrowserReactor,
   getDefaultDrives,
+  placementSync,
 } from "@powerhousedao/connect/utils";
 import {
   createRemoteAttachmentService,
   createXhrUploadTransport,
+  RoutingAttachmentService,
+  type IAttachmentService,
 } from "@powerhousedao/reactor-attachments/client";
+import { SYNC_REMOTES_CHANGED_EVENT } from "@powerhousedao/reactor-browser/rpc";
 import {
   addPHEventHandlers,
   addRemoteDrive,
   DocumentCache,
+  fetchDriveInfo,
   DRIVE_DOCUMENT_TYPES,
   login,
   trackDriveArrival,
@@ -69,12 +74,25 @@ import { reloadForWorker } from "../utils/poisoned-store-budget.js";
 import { startupOwningStores } from "../utils/worker-startup.js";
 import {
   createAppReactorClient,
+  DrivePlacements,
+  findServedDrive,
   getAppDrives,
   getRuntimeConfig,
+  keepsLocalCopy,
+  localDrivePlacements,
   planReactorClient,
   refreshAppDrives,
+  relistAppDrives,
+  resolveSwitchboardDrives,
+  servedUrl,
+  switchboardDrives,
+  type PlacementStore,
   type ReactorClientPlan,
+  type ResolvedSwitchboardDrive,
 } from "@powerhousedao/connect-core/runtime";
+import { placementIdb } from "../utils/placement-idb.js";
+import { setDrivePlacements } from "./drive-placements.js";
+import { switchboardOfDrive } from "@powerhousedao/shared/host-tokens";
 import { getSharedDeps, pageSharedImports } from "../shared-deps.js";
 import { isPackagedConnectDist } from "../utils/build-info.js";
 import {
@@ -252,6 +270,10 @@ export async function createReactor(
   addPHEventHandlers();
 
   setPHToast(toast as PHToastFn);
+  // Offered to every page, packages' included. Lazy: the AI and MCP packages
+  // load only when something asks for the tools.
+  store.aiTools = () =>
+    import("../ai-tools.js").then((tools) => tools.getConnectReactorTools());
 
   const features = await initFeatureFlags();
 
@@ -393,6 +415,37 @@ export async function createReactor(
   // core never calls localReactor for it.
   const plan = planReactorClient();
   const { multiReactor } = plan;
+  // Placed drives keep no copy here unless this browser moved them (router mode only).
+  const routesDrives = plan.mode === "router";
+  const placements =
+    routesDrives || plan.mode === "remote"
+      ? await DrivePlacements.load(
+          switchboardDrives(runtimeConfig.connect),
+          routesDrives ? placementIdb : NO_MOVES,
+          placementSync(),
+        )
+      : undefined;
+  let routerReady: (router: RoutingClient | undefined) => void = () => {};
+  const routerBuilt = new Promise<RoutingClient | undefined>((resolve) => {
+    routerReady = resolve;
+  });
+  const placementsResolved = resolveSwitchboardDrives(
+    placements?.drives ?? [],
+    (url) =>
+      fetchDriveInfo(url, async () =>
+        renown.user ? renown.getBearerToken({ expiresIn: 10 }) : undefined,
+      ),
+    {
+      findServed: async (drive) => {
+        const router = await routerBuilt;
+        return router ? findServedDrive(router, drive) : undefined;
+      },
+    },
+  );
+  const remoteBackends = runtimeConfig.connect.instance?.remoteBackends ?? [];
+  const routerSettings = runtimeConfig.connect.instance?.router;
+  const remoteDriveUrl =
+    remoteBackends.at(0)?.url ?? phGlobalConfig.defaultDrivesUrl;
 
   // The tab's reactor v2, with all versions and upgrade manifests.
   const localReactor = async ({
@@ -535,14 +588,24 @@ export async function createReactor(
     return workerClient.reactorClientModule;
   };
 
-  const { module: reactorClientModule, client: appReactorClient } =
-    await createAppReactorClient({
-      plan,
-      localReactor,
-      remoteDriveUrl: phGlobalConfig.defaultDrivesUrl,
-      signer: renown.signer,
-      documentModelModules: loadedDocumentModels,
-    });
+  const {
+    module: reactorClientModule,
+    client: appReactorClient,
+    router,
+  } = await createAppReactorClient({
+    plan,
+    localReactor,
+    remoteDriveUrl,
+    remoteBackends,
+    // Config local drives stay here when new drives go to a switchboard.
+    collections: routerSettings?.newDrives
+      ? localDrivePlacements(getDefaultDrives(runtimeConfig))
+      : undefined,
+    router: routerSettings,
+    signer: renown.signer,
+    documentModelModules: loadedDocumentModels,
+  });
+  routerReady(router);
 
   const drives = await getAppDrives(
     appReactorClient,
@@ -566,29 +629,32 @@ export async function createReactor(
   setReactorClientModule(reactorClientModule);
   setReactorClient(appReactorClient);
 
-  const _defaultDrivesUrl = phGlobalConfig.defaultDrivesUrl;
-  if (_defaultDrivesUrl) {
-    let switchboardOrigin: string | undefined;
-    try {
-      switchboardOrigin = new URL(_defaultDrivesUrl).origin;
-    } catch {
-      // malformed URL — skip attachment service construction
-    }
-    if (switchboardOrigin) {
-      const attachmentJwtHandler = async (_url: string) => {
-        if (!renown.user) return undefined;
-        // aud omitted: server rejects aud-bearing tokens. Re-enable once both sides support it.
-        return renown.getBearerToken({ expiresIn: 10 });
-      };
-      const attachmentService = createRemoteAttachmentService({
-        remoteUrl: switchboardOrigin,
+  const switchboardOrigin = attachmentsOrigin(
+    remoteBackends.at(0)?.url,
+    phGlobalConfig.defaultDrivesUrl,
+  );
+  if (switchboardOrigin) {
+    const attachmentJwtHandler = async (_url: string) => {
+      if (!renown.user) return undefined;
+      // aud omitted: server rejects aud-bearing tokens. Re-enable once both sides support it.
+      return renown.getBearerToken({ expiresIn: 10 });
+    };
+    const attachmentServiceAt = (remoteUrl: string) =>
+      createRemoteAttachmentService({
+        remoteUrl,
         jwtHandler: attachmentJwtHandler,
         // XMLHttpRequest is the only browser API that reports upload byte
         // progress; everything else about the request is unchanged.
         uploadTransport: createXhrUploadTransport(),
       });
-      setAttachmentService(attachmentService);
-    }
+    const fallback = attachmentServiceAt(switchboardOrigin);
+    setAttachmentService(
+      router && remoteBackends.length > 1
+        ? routeAttachments(router, remoteBackends, fallback, (base) =>
+            base === switchboardOrigin ? fallback : attachmentServiceAt(base),
+          )
+        : fallback,
+    );
   }
 
   setDocumentCache(documentCache);
@@ -599,11 +665,43 @@ export async function createReactor(
   // They are tracked before the drives are set, so a waiting route sees them pending.
   // The remote client lists the Switchboard's own drives; it has no sync to add drives to.
   const addsDrives = plan.mode !== "remote";
-  const defaultDrivesConfig = getDefaultDrives(runtimeConfig);
+  const defaultDrivesConfig = getDefaultDrives(runtimeConfig).filter(
+    (drive) =>
+      !routesDrives ||
+      (placements && "url" in drive
+        ? placements.keepsCopy(drive.url)
+        : keepsLocalCopy(drive)),
+  );
   if (addsDrives && defaultDrivesConfig.length > 0) {
     void trackDriveArrival(
       addDefaultDrivesForNewReactor(defaultDrivesConfig),
     ).catch((error) => console.error("Failed to add default drives:", error));
+  }
+  if (placements && placements.drives.length > 0) {
+    void placementsResolved
+      .then((resolved) =>
+        attachPlacements(placements, resolved, router, routesDrives),
+      )
+      .catch((error: unknown) =>
+        logger.error("Failed to place switchboard drives: @error", error),
+      );
+  }
+  if (routesDrives && placements) {
+    setDrivePlacements(placements);
+    reactorClientModule?.reactorModule?.eventBus.subscribe(
+      SYNC_REMOTES_CHANGED_EVENT,
+      () => {
+        void placements
+          .reload()
+          .then((changed) => (changed ? relistAppDrives() : undefined))
+          .catch((error: unknown) =>
+            logger.error(
+              "Failed to apply another tab's drive move: @error",
+              error,
+            ),
+          );
+      },
+    );
   }
 
   const remoteUrl = getDriveUrl();
@@ -711,9 +809,76 @@ export async function createReactor(
   store.loading = false;
 }
 
+type RoutingClient = NonNullable<
+  Awaited<ReturnType<typeof createAppReactorClient>>["router"]
+>;
+
+/** Remote mode: drives open on the switchboard, and nothing is moved. */
+const NO_MOVES: PlacementStore = {
+  list: () => Promise.resolve([]),
+  put: () => Promise.resolve(),
+  delete: () => Promise.resolve(),
+};
+
+/** Runs after boot so a hung switchboard can't hold it; the relist shows placed drives from their switchboard. */
+async function attachPlacements(
+  placements: DrivePlacements,
+  resolved: ResolvedSwitchboardDrive[],
+  router: RoutingClient | undefined,
+  syncsDrives: boolean,
+): Promise<void> {
+  const kept = await placements.start(router, resolved, syncsDrives);
+  for (const drive of kept) {
+    if (!drive.id) continue;
+    void trackDriveArrival(addRemoteDrive(servedUrl(drive), drive.id)).catch(
+      (error: unknown) =>
+        logger.error(
+          "Failed to keep a copy of @slug: @error",
+          drive.slug,
+          error,
+        ),
+    );
+  }
+  if (router) await relistAppDrives();
+}
+
+/** Each switchboard's attachments by its backend; anything else uses `fallback`. */
+function routeAttachments(
+  router: RoutingClient,
+  remoteBackends: readonly { name: string; url: string }[],
+  fallback: IAttachmentService,
+  serviceAt: (base: string) => IAttachmentService,
+): IAttachmentService {
+  const byBackend = new Map<string, IAttachmentService>();
+  for (const { name, url } of remoteBackends) {
+    const base = switchboardOfDrive(url)?.base;
+    if (base) byBackend.set(name, serviceAt(base));
+  }
+  return new RoutingAttachmentService(
+    (documentId, signal) => router.locate(documentId, signal),
+    byBackend,
+    fallback,
+  );
+}
+
 function getDriveUrl() {
   const searchParams = new URLSearchParams(window.location.search);
   const driveUrl = searchParams.get("driveUrl");
   const url = driveUrl ? decodeURIComponent(driveUrl) : undefined;
   return url;
+}
+
+/** The first remote backend's switchboard, else the first default drive's origin. */
+function attachmentsOrigin(
+  remoteBackendUrl: string | undefined,
+  defaultDrivesUrl: string | undefined,
+): string | undefined {
+  const base = remoteBackendUrl && switchboardOfDrive(remoteBackendUrl)?.base;
+  if (base) return base;
+  if (!defaultDrivesUrl) return undefined;
+  try {
+    return new URL(defaultDrivesUrl).origin;
+  } catch {
+    return undefined;
+  }
 }

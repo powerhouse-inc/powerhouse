@@ -43,6 +43,22 @@ export class InMemoryQueue implements IQueue {
     private protocol: BaseReducerResolver = UNGATED,
   ) {}
 
+  /** Sizes for telemetry; O(number of queues). */
+  stats(): Record<string, number> {
+    let pending = 0;
+    for (const queue of this.queues.values()) pending += queue.length;
+    let executing = 0;
+    for (const jobs of this.docIdToJobId.values()) executing += jobs.size;
+    return {
+      pending,
+      queues: this.queues.size,
+      jobIndex: this.jobIndex.size,
+      jobIdToSeq: this.jobIdToSeq.size,
+      completedJobs: this.completedJobs.size,
+      executing,
+    };
+  }
+
   private toErrorInfo(error: Error | string): ErrorInfo {
     if (error instanceof Error) {
       return {

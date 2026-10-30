@@ -5,11 +5,15 @@ import {
   ReactorAccessDeniedError,
   ReactorRequestClosedError,
   type DriveReadMethods,
+  type DriveWriteHalfMethods,
   type DriveWriteMethods,
   type ReactorClient,
   type ReactorReadClient,
+  type ReactorWriteClient,
   type RefusedDriveMethods,
+  type RefusedWriteHalfMethods,
   type RequireReactor,
+  type WriteHalfMethods,
 } from "@powerhousedao/pieces-framework";
 import type {
   IDocumentModelRegistry,
@@ -273,7 +277,7 @@ export class RequestGuard {
       return Promise.reject(error as Error);
     }
     return Promise.race([
-      result.then((value) => this.paged(value)),
+      result.then((value) => this.wrap(value)),
       this.whenClosed,
     ]);
   }
@@ -283,8 +287,9 @@ export class RequestGuard {
     this.rejectClosed(requestClosed());
   }
 
-  private paged<T>(value: T): T {
+  private wrap<T>(value: T): T {
     if (typeof value !== "object" || value === null) return value;
+    if (isWriteHandle(value)) return this.handle(value);
     const next = (value as { next?: unknown }).next;
     if (typeof next !== "function") return value;
     return {
@@ -292,6 +297,32 @@ export class RequestGuard {
       next: () => this.call(() => (next as AnyMethod).call(value)),
     };
   }
+
+  // A write handle's stages and document read go over RPC, so through the guard.
+  private handle<T extends WriteHandle>(handle: T): T {
+    return new Proxy(handle, {
+      get: (target, prop) => {
+        if (prop === "readable" || prop === "written") {
+          return this.call(() => target[prop]);
+        }
+        if (prop === "document") {
+          return (...args: Parameters<WriteHandle["document"]>) =>
+            this.call(() => target.document(...args));
+        }
+        return Reflect.get(target, prop, target);
+      },
+    });
+  }
+}
+
+type WriteHandle = Awaited<ReturnType<ReactorWriteClient["execute"]>>;
+
+function isWriteHandle(value: object): value is WriteHandle {
+  return (
+    typeof (value as { document?: unknown }).document === "function" &&
+    "readable" in value &&
+    "written" in value
+  );
 }
 
 const SERVED_DRIVES: Record<DriveReadMethods | DriveWriteMethods, true> = {
@@ -310,32 +341,125 @@ const REFUSED_DRIVES: Record<RefusedDriveMethods, true> = {
   setPreferredEditorOnNode: true,
 };
 
-// As the host's served facade: the served methods go over RPC as `drives.*`,
+const SERVED_WRITE: Record<WriteHalfMethods, true> = {
+  create: true,
+  createEmpty: true,
+  execute: true,
+  deleteDocument: true,
+};
+
+const SERVED_DRIVE_WRITES: Record<DriveWriteHalfMethods, true> = {
+  addFile: true,
+  addFolder: true,
+};
+
+const REFUSED_WRITE: Record<RefusedWriteHalfMethods, true> = {
+  isDocumentIdTaken: true,
+  describe: true,
+  evaluateActions: true,
+  upgradeDocument: true,
+  executeBatch: true,
+  rename: true,
+  setPreferredEditor: true,
+  addRelationship: true,
+  updateRelationship: true,
+  removeRelationship: true,
+  moveRelationship: true,
+  deleteDocuments: true,
+  loadBatch: true,
+  undo: true,
+  redo: true,
+  undoRedoTargets: true,
+  undoRedoAvailability: true,
+};
+
+// As the host's served facade: the served methods go over RPC under `prefix`,
 // the refused ones throw here with the error the host would answer.
+function guarded(
+  remote: Record<string, AnyMethod>,
+  guard: RequestGuard,
+  serve: Record<string, true>,
+  refuse: Record<string, true>,
+  prefix: string,
+): Record<string, unknown> {
+  const methods = Object.create(null) as Record<string, unknown>;
+  for (const name of Object.keys(serve)) {
+    methods[name] = (...args: unknown[]) =>
+      guard.call(() => remote[name](...args));
+  }
+  refuseAll(
+    methods,
+    refuse,
+    (name) => `${prefix}${name} is not available to workflow pieces`,
+  );
+  return methods;
+}
+
+function refuseAll(
+  methods: Record<string, unknown>,
+  names: Record<string, true>,
+  message: (name: string) => string,
+): void {
+  for (const name of Object.keys(names)) {
+    methods[name] = () => {
+      throw named(ReactorAccessDeniedError, message(name));
+    };
+  }
+}
+
 function sessionDrives(
   proxy: IReactorClient,
   guard: RequestGuard,
 ): ReactorClient["drives"] {
-  const remote = proxy.drives as unknown as Record<string, AnyMethod>;
-  const drives = Object.create(null) as Record<string, AnyMethod>;
-  for (const name of Object.keys(SERVED_DRIVES)) {
-    drives[name] = (...args) => guard.call(() => remote[name](...args));
-  }
-  for (const name of Object.keys(REFUSED_DRIVES)) {
-    drives[name] = () => {
-      throw named(
-        ReactorAccessDeniedError,
-        `drives.${name} is not available to workflow pieces`,
-      );
-    };
-  }
-  return drives as unknown as ReactorClient["drives"];
+  return guarded(
+    proxy.drives as unknown as Record<string, AnyMethod>,
+    guard,
+    SERVED_DRIVES,
+    REFUSED_DRIVES,
+    "drives.",
+  ) as unknown as ReactorClient["drives"];
+}
+
+// The write half: handles come back rebuilt over the proxy's own reads.
+function sessionWrite(
+  proxy: IReactorClient,
+  guard: RequestGuard,
+): ReactorWriteClient {
+  const remote = proxy.write as unknown as Record<string, AnyMethod> & {
+    drives: Record<string, AnyMethod>;
+  };
+  const write = guarded(remote, guard, SERVED_WRITE, REFUSED_WRITE, "write.");
+  write.drives = guarded(
+    remote.drives,
+    guard,
+    SERVED_DRIVE_WRITES,
+    REFUSED_DRIVES,
+    "write.drives.",
+  );
+  return write as unknown as ReactorWriteClient;
+}
+
+// A read declaration's write half: every method refuses, as the host would.
+function readOnlyWrite(): ReactorWriteClient {
+  const readOnly = (prefix: string) => (name: string) =>
+    `${prefix}${name} writes, and this step declares read access only`;
+  const write = Object.create(null) as Record<string, unknown>;
+  refuseAll(write, { ...SERVED_WRITE, ...REFUSED_WRITE }, readOnly("write."));
+  const drives = Object.create(null) as Record<string, unknown>;
+  refuseAll(
+    drives,
+    { ...SERVED_DRIVE_WRITES, ...REFUSED_DRIVES },
+    readOnly("write.drives."),
+  );
+  write.drives = drives;
+  return write as unknown as ReactorWriteClient;
 }
 
 export function sessionClient(
   rt: Runtime,
   proxy: IReactorClient,
   guard: RequestGuard,
+  requireReactor: RequireReactor = "read",
 ): ReactorClient {
   const local: Record<string, AnyMethod> = {
     getDocumentModelModule: (documentType) =>
@@ -374,11 +498,15 @@ export function sessionClient(
     },
   };
   const drives = sessionDrives(proxy, guard);
+  const write =
+    requireReactor === "write" ? sessionWrite(proxy, guard) : readOnlyWrite();
   // Every listed method resolves through `get`.
   return new Proxy({} as ReactorClient, {
     get: (_target, prop) => {
       if (typeof prop !== "string" || prop === "then") return undefined;
       if (prop === "drives") return drives;
+      if (prop === "write") return write;
+      if (prop === "read") return undefined;
       if (prop in local) return local[prop];
       return (...args: unknown[]) =>
         guard.call(() =>
@@ -400,7 +528,7 @@ async function openSession(
     registry: rt.registry,
   });
   const guard = new RequestGuard();
-  const client = sessionClient(rt, proxy, guard);
+  const client = sessionClient(rt, proxy, guard, requireReactor);
   const close = () => {
     guard.close();
     router.detach();

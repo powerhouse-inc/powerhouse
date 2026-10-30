@@ -290,6 +290,39 @@ Switchboard supports multiple storage backends:
 - **PostgreSQL**: Persistent database storage
 - **Redis**: Caching layer (optional)
 
+### Keyframes
+
+A keyframe is a stored copy of a whole document that saves a cold read from replaying its full history. Set how often one is written and how many a document stream keeps, per document type, in `powerhouse.config.json`:
+
+```json
+{
+  "reactor": {
+    "keyframes": {
+      "default": { "interval": 10, "keep": 4 },
+      "types": {
+        "acme/email": { "interval": 50, "keep": 1 },
+        "acme/invoice": { "keep": 12 }
+      }
+    }
+  }
+}
+```
+
+A rule takes what it leaves out from `default`. `"keep": null` keeps every keyframe. Without this block a keyframe is written every 10 revisions and all of them stay. `PH_KEYFRAMES` holds the same JSON and replaces the block whole.
+
+New keyframes then stay within `keep` on their own. To apply a `keep` to keyframes already stored, and to remove all keyframes of deleted documents, use the reactor monitor's Keyframes tab or the CLI. Both need `INSPECTION_ADMIN_ENABLED=true` and a caller in the host's `ADMINS`:
+
+```bash
+ph keyframes preview --url http://localhost:4001/graphql   # reads only
+ph keyframes clean --yes --url http://localhost:4001/graphql
+ph keyframes reclaim --yes --url http://localhost:4001/graphql
+```
+
+A clean-up deletes in small paced statements beside live traffic and can be run again at any time. It frees space inside the table, which new rows reuse; the disk only shrinks after `reclaim`, which rewrites the `Keyframe` table:
+
+- **PGlite:** runs in the store's maintenance lane at the first second without a statement, and reports the store as busy after 15 minutes. The store answers nothing during the rewrite. It needs free disk of about twice the table's live size.
+- **Postgres:** `reclaim` only says what to do. Run `VACUUM FULL reactor."Keyframe"` in a quiet moment; it takes an `ACCESS EXCLUSIVE` lock, so writes that add a keyframe wait for it. `pg_repack` does the same without holding the lock.
+
 ### Observability
 
 Switchboard bootstraps Sentry and OpenTelemetry from a single module (`src/observability.mts`) that is imported as the very first thing in `src/index.mts`. The OpenTelemetry instrumentations (`http`, `express`, `pg`, `graphql`) register require-time hooks at load, so the import order must not be changed.
