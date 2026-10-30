@@ -3,7 +3,11 @@
 // the block executor is shared across concurrent runs, so the scope travels
 // with the async context rather than on the executor.
 import type { AuthSubject } from "@powerhousedao/shared/document-model";
-import type { IPieceWorker, WaitpointPort } from "../pieces/index.js";
+import type {
+  FlowsPort,
+  IPieceWorker,
+  WaitpointPort,
+} from "../pieces/index.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 
 export interface ReactorConnectionScope {
@@ -44,6 +48,8 @@ export interface ActiveRun {
   attachments?: RunAttachmentOrigins;
   // Absent where the run cannot suspend: no journal, or a single-step test.
   waitpoints?: WaitpointPort;
+  // ctx.flows and ctx.server; absent, both throw.
+  flows?: FlowsPort;
 }
 
 export interface RunAttachmentOrigins {
@@ -103,4 +109,8 @@ export function currentRunUser(): RunUser | null | undefined {
 
 export function currentWaitpoints(): WaitpointPort | undefined {
   return storage.getStore()?.waitpoints;
+}
+
+export function currentFlows(): FlowsPort | undefined {
+  return storage.getStore()?.flows;
 }

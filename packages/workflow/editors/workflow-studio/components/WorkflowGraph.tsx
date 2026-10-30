@@ -1,5 +1,6 @@
 // The whole workflow, left to right: the trigger as a labelled pill, then
 // every step it reaches, branches included, coloured by the latest run.
+import { stepPortLabel } from "@powerhousedao/pieces-framework/workflow";
 import type { WorkflowState } from "document-models/workflow";
 import {
   useLayoutEffect,
@@ -160,7 +161,15 @@ const PORT_PILL: Record<string, string> = {
   true: "bg-wf-ok/10 text-wf-ok ring-wf-ok/30",
   false: "bg-foreground/5 text-muted-foreground ring-foreground/15",
   error: "bg-wf-fail/10 text-wf-fail ring-wf-fail/30",
+  each: "bg-violet-500/10 text-violet-500 ring-violet-500/30",
+  otherwise: "bg-foreground/5 text-muted-foreground ring-foreground/15",
 };
+
+const pillOf = (port: string): string | undefined =>
+  PORT_PILL[port] ??
+  (/^branch_\d+$/.test(port)
+    ? "bg-wf-run/10 text-wf-run ring-wf-run/30"
+    : undefined);
 
 export type Point = [number, number];
 
@@ -357,6 +366,14 @@ export function WorkflowGraph(props: {
     steps: state.steps,
     edges: state.edges,
   });
+  // A router branch reads as its name, a loop's body as "For each item".
+  const portText = (edge: GraphEdge) => {
+    const step = state.steps.find((entry) => entry.id === edge.from);
+    return (
+      (step && stepPortLabel(stepBlock(step), step.config, edge.port)) ??
+      edge.port
+    );
+  };
   const { g, stacked, perRow } = fitGraph(
     GEOMETRY[props.size ?? "sm"],
     layout.cols,
@@ -417,7 +434,7 @@ export function WorkflowGraph(props: {
   });
   const dips = routes
     .filter((route) => route.under)
-    .map(({ route, edge }) => route.label.y + (PORT_PILL[edge.port] ? 10 : 4));
+    .map(({ route, edge }) => route.label.y + (pillOf(edge.port) ? 10 : 4));
   const height = Math.max(
     ...layout.nodes.map(
       (node) =>
@@ -499,7 +516,7 @@ export function WorkflowGraph(props: {
               ))}
             </svg>
             {routes.map(({ key, edge, route }) =>
-              PORT_PILL[edge.port] ? (
+              pillOf(edge.port) ? (
                 <span
                   key={key}
                   aria-hidden
@@ -507,9 +524,9 @@ export function WorkflowGraph(props: {
                   style={{ left: route.label.x, top: route.label.y }}
                 >
                   <span
-                    className={`block rounded-full px-1.5 font-medium leading-4 ring-1 ring-inset ${g.portText} ${PORT_PILL[edge.port]}`}
+                    className={`block rounded-full px-1.5 font-medium leading-4 ring-1 ring-inset ${g.portText} ${pillOf(edge.port)}`}
                   >
-                    {edge.port}
+                    {portText(edge)}
                   </span>
                 </span>
               ) : null,

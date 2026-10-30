@@ -7,11 +7,7 @@ import {
   Position,
   type EdgeProps,
 } from "@xyflow/react";
-import {
-  AddButton,
-  PORT_LABEL_CLASSES,
-  useCanvasHandlers,
-} from "./ap-nodes.js";
+import { AddButton, portClasses, useCanvasHandlers } from "./ap-nodes.js";
 import { STEP_PRESETS } from "./blocks.js";
 
 export function ApEdge(props: EdgeProps) {
@@ -19,6 +15,7 @@ export function ApEdge(props: EdgeProps) {
   const data = props.data as {
     edgeId: string;
     port: string;
+    portLabel?: string;
     condition: string | null;
     fromSkipped?: boolean;
     dead?: boolean;
@@ -33,9 +30,9 @@ export function ApEdge(props: EdgeProps) {
     borderRadius: 15,
   });
   const portLabel = data.dead
-    ? `${data.port} · never taken`
-    : data.port !== "next"
-      ? data.port
+    ? `${data.portLabel ?? data.port} · never taken`
+    : data.port !== "next" || data.portLabel
+      ? (data.portLabel ?? data.port)
       : null;
 
   return (
@@ -64,8 +61,7 @@ export function ApEdge(props: EdgeProps) {
               className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
                 data.dead
                   ? "border border-solid border-wf-fail/40 bg-card text-wf-fail"
-                  : (PORT_LABEL_CLASSES[portLabel] ??
-                    "bg-muted text-muted-foreground")
+                  : (portClasses(data.port) ?? "bg-muted text-muted-foreground")
               }`}
               title={
                 data.dead

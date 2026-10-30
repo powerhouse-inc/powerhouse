@@ -170,6 +170,211 @@
       ]
     },
     {
+      "name": "router",
+      "displayName": "Router",
+      "description": "Continues on the first branch whose condition holds, else on Otherwise. Each branch tests one value, as Branch does.",
+      "requireAuth": false,
+      "ports": ["otherwise", "error"],
+      "props": [
+        {
+          "name": "branches",
+          "displayName": "Branches",
+          "type": "ARRAY",
+          "required": true,
+          "hasDynamicResolver": false,
+          "description": "Tested in order; the first that holds is taken.",
+          "properties": [
+            {
+              "name": "name",
+              "displayName": "Name",
+              "type": "SHORT_TEXT",
+              "required": false,
+              "hasDynamicResolver": false,
+              "description": "Labels the branch's port."
+            },
+            {
+              "name": "left",
+              "displayName": "Value",
+              "type": "SHORT_TEXT",
+              "required": true,
+              "hasDynamicResolver": false,
+              "description": "What to test, usually an expression.",
+              "placeholder": "{{steps.fetch.output.status}}"
+            },
+            {
+              "name": "operator",
+              "displayName": "Condition",
+              "type": "STATIC_DROPDOWN",
+              "required": true,
+              "hasDynamicResolver": false,
+              "description": "How the value is tested.",
+              "defaultValue": "TEXT_EXACTLY_MATCHES",
+              "staticOptions": [
+                {
+                  "label": "Text is exactly",
+                  "value": "TEXT_EXACTLY_MATCHES"
+                },
+                {
+                  "label": "Text is not exactly",
+                  "value": "TEXT_DOES_NOT_EXACTLY_MATCH"
+                },
+                {
+                  "label": "Text contains",
+                  "value": "TEXT_CONTAINS"
+                },
+                {
+                  "label": "Text does not contain",
+                  "value": "TEXT_DOES_NOT_CONTAIN"
+                },
+                {
+                  "label": "Text starts with",
+                  "value": "TEXT_STARTS_WITH"
+                },
+                {
+                  "label": "Text does not start with",
+                  "value": "TEXT_DOES_NOT_START_WITH"
+                },
+                {
+                  "label": "Text ends with",
+                  "value": "TEXT_ENDS_WITH"
+                },
+                {
+                  "label": "Text does not end with",
+                  "value": "TEXT_DOES_NOT_END_WITH"
+                },
+                {
+                  "label": "Number equals",
+                  "value": "NUMBER_IS_EQUAL_TO"
+                },
+                {
+                  "label": "Number is greater than",
+                  "value": "NUMBER_IS_GREATER_THAN"
+                },
+                {
+                  "label": "Number is less than",
+                  "value": "NUMBER_IS_LESS_THAN"
+                },
+                {
+                  "label": "Date is",
+                  "value": "DATE_IS_EQUAL"
+                },
+                {
+                  "label": "Date is before",
+                  "value": "DATE_IS_BEFORE"
+                },
+                {
+                  "label": "Date is after",
+                  "value": "DATE_IS_AFTER"
+                },
+                {
+                  "label": "Is true",
+                  "value": "BOOLEAN_IS_TRUE"
+                },
+                {
+                  "label": "Is false",
+                  "value": "BOOLEAN_IS_FALSE"
+                },
+                {
+                  "label": "List contains",
+                  "value": "LIST_CONTAINS"
+                },
+                {
+                  "label": "List does not contain",
+                  "value": "LIST_DOES_NOT_CONTAIN"
+                },
+                {
+                  "label": "List is empty",
+                  "value": "LIST_IS_EMPTY"
+                },
+                {
+                  "label": "List is not empty",
+                  "value": "LIST_IS_NOT_EMPTY"
+                },
+                {
+                  "label": "Exists",
+                  "value": "EXISTS"
+                },
+                {
+                  "label": "Does not exist",
+                  "value": "DOES_NOT_EXIST"
+                }
+              ]
+            },
+            {
+              "name": "right",
+              "displayName": "Compared with",
+              "type": "SHORT_TEXT",
+              "required": true,
+              "hasDynamicResolver": false,
+              "description": "The value the condition compares to.",
+              "showWhen": {
+                "prop": "operator",
+                "oneOf": [
+                  "TEXT_EXACTLY_MATCHES",
+                  "TEXT_DOES_NOT_EXACTLY_MATCH",
+                  "TEXT_CONTAINS",
+                  "TEXT_DOES_NOT_CONTAIN",
+                  "TEXT_STARTS_WITH",
+                  "TEXT_DOES_NOT_START_WITH",
+                  "TEXT_ENDS_WITH",
+                  "TEXT_DOES_NOT_END_WITH",
+                  "NUMBER_IS_EQUAL_TO",
+                  "NUMBER_IS_GREATER_THAN",
+                  "NUMBER_IS_LESS_THAN",
+                  "DATE_IS_EQUAL",
+                  "DATE_IS_BEFORE",
+                  "DATE_IS_AFTER",
+                  "LIST_CONTAINS",
+                  "LIST_DOES_NOT_CONTAIN"
+                ]
+              }
+            },
+            {
+              "name": "caseSensitive",
+              "displayName": "Case sensitive",
+              "type": "CHECKBOX",
+              "required": false,
+              "hasDynamicResolver": false,
+              "description": "Match letter case exactly.",
+              "showWhen": {
+                "prop": "operator",
+                "oneOf": [
+                  "TEXT_EXACTLY_MATCHES",
+                  "TEXT_DOES_NOT_EXACTLY_MATCH",
+                  "TEXT_CONTAINS",
+                  "TEXT_DOES_NOT_CONTAIN",
+                  "TEXT_STARTS_WITH",
+                  "TEXT_DOES_NOT_START_WITH",
+                  "TEXT_ENDS_WITH",
+                  "TEXT_DOES_NOT_END_WITH",
+                  "LIST_CONTAINS",
+                  "LIST_DOES_NOT_CONTAIN"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "loop",
+      "displayName": "Loop on items",
+      "description": "Runs the steps under For each item once per item, in order, then continues After loop. Those steps read the current item and its index (from 1) from this step's output.",
+      "requireAuth": false,
+      "ports": ["next", "each", "error"],
+      "props": [
+        {
+          "name": "items",
+          "displayName": "Items",
+          "type": "SHORT_TEXT",
+          "required": true,
+          "hasDynamicResolver": false,
+          "description": "An expression that resolves to a list.",
+          "placeholder": "{{steps.fetch.output.rows}}"
+        }
+      ]
+    },
+    {
       "name": "assert",
       "displayName": "Assert",
       "description": "Fails the step when its value is blank or rejected, so a bad value stops the run instead of reaching a step with a side effect.",

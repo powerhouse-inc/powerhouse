@@ -1,7 +1,7 @@
 // Plain-language descriptions of when a workflow starts: "Every day at
 // 08:00 UTC" rather than "0 8 * * *". Unknown shapes fall back to the raw text.
 import { blockKey } from "@powerhousedao/pieces-framework/block-type";
-import { blockMeta } from "./block-meta.js";
+import { blockMeta, namedByCoreTab } from "./block-meta.js";
 import {
   MANUAL_TRIGGER,
   REACTOR_PIECE,
@@ -188,6 +188,7 @@ export function describeTrigger(
         if (described) return described;
       }
       const meta = blockMeta(block);
+      if (namedByCoreTab(block)) return meta.displayName;
       const piece = meta.subtitle.replace(/ · Trigger$/, "");
       return `${meta.displayName} in ${piece}`;
     }

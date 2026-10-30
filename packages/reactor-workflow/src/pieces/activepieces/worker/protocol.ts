@@ -122,6 +122,8 @@ export interface RunActionRequest
   canPause?: boolean;
   // Where resume URLs live; serves the deprecated `generateResumeUrl`.
   resumeBaseUrl?: string;
+  // Serves `ctx.flows.list` and `ctx.server` over FLOWS_LIST and HOST_HTTP.
+  flows?: HostServerContext;
   // The delivery that woke a RESUME run, served as ctx.resumePayload. Absent,
   // the context member keeps throwing by name.
   resumePayload?: unknown;
@@ -151,6 +153,8 @@ export interface ResolveOptionsRequest
   searchValue?: string;
   // ctx.project.id, the same one a run of the piece is handed.
   projectId?: string;
+  // Serves `ctx.flows.list` over FLOWS_LIST; absent lists nothing.
+  flows?: boolean;
 }
 
 export interface ResolveOptionsMessage {
@@ -167,7 +171,14 @@ export interface ResolveOptionsMessage {
 export interface TriggerHookRequest
   extends HostScopedRequest, PieceModuleRef, ReactorScopedRequest {
   triggerName: string;
-  hook: "onEnable" | "onDisable" | "run" | "test" | "onHandshake" | "onRenew";
+  hook:
+    | "onEnable"
+    | "onDisable"
+    | "run"
+    | "test"
+    | "onHandshake"
+    | "onRenew"
+    | "onStart";
   propsValue: Record<string, unknown>;
   auth?: unknown;
   storeState?: Record<string, unknown>;
@@ -181,6 +192,8 @@ export interface TriggerHookRequest
   payload?: unknown;
   webhookUrl?: string;
   server?: ServerContext;
+  // Serves `ctx.flows.list` and `ctx.server` over FLOWS_LIST and HOST_HTTP.
+  flows?: HostServerContext;
   // As on a run request: secrets stripped from errors before they cross back.
   redactValues?: string[];
 }
@@ -383,6 +396,36 @@ export const FILES_UPLOAD = "files.upload";
 // `ctx.run.createWaitpoint`: carries a WaitpointCall, answers with
 // `{ id, resumeUrl }`.
 export const WAITPOINT_CREATE = "waitpoint.create";
+
+// `ctx.flows.list`: carries `{ externalIds? }`, answers `{ data }` with
+// Activepieces PopulatedFlow records.
+export const FLOWS_LIST = "flows.list";
+
+// A piece's fetch to `ctx.server.apiUrl`: carries a HostHttpRequest, answers
+// a HostHttpResponse. The host serves it in process, never over the network.
+export const HOST_HTTP = "host.http";
+
+// `ctx.server.apiUrl`: `.invalid` never resolves, so only fetch reaches it.
+export const HOST_ORIGIN = "http://reactor.invalid";
+
+export interface HostHttpRequest {
+  method: string;
+  // Path and query, relative to the host origin.
+  path: string;
+  headers: Record<string, string>;
+  body?: string;
+}
+
+export interface HostHttpResponse {
+  status: number;
+  headers?: Record<string, string>;
+  body?: string;
+}
+
+// `ctx.server` as a request serves it; apiUrl is always the host origin.
+export interface HostServerContext {
+  publicUrl?: string;
+}
 
 // What an action asks a waitpoint to be, as Activepieces' CreateWaitpointParams.
 export interface WaitpointCall {

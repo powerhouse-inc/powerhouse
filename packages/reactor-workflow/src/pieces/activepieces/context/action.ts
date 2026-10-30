@@ -4,7 +4,7 @@ import { throwingStub, withTouchTracking } from "./stubs.js";
 import { jsonSafe } from "../worker/json-safe.js";
 import { normalizeStoreScope, type StoreScopeName } from "./store-scope.js";
 import type { ApFilesService } from "./files.js";
-import type { ConnectionsProvider } from "./props.js";
+import type { ConnectionsProvider, FlowsProvider } from "./props.js";
 import type { ReactorOption } from "./reactor-option.js";
 import { randomBytes } from "node:crypto";
 import type {
@@ -113,6 +113,9 @@ interface ActionContextBaseOptions {
   // loudly rather than silently dropping them.
   files?: ApFilesService;
   connections?: ConnectionsProvider;
+  // ctx.flows.list and ctx.server; omitted, both throw by name.
+  flows?: FlowsProvider;
+  server?: ServerContext;
   // ctx.output.update, the piece's own progress report. Omitted, the member
   // throws, so a piece that depends on it fails by name rather than silently.
   output?: { update(output: unknown): Promise<void> };
@@ -328,7 +331,7 @@ export function buildActionContext(
     },
     connections: options.connections ?? throwingStub("connections"),
     tags: throwingStub("tags"),
-    server: throwingStub("server"),
+    server: options.server ?? throwingStub("server"),
     files: options.files ?? throwingStub("files"),
     output: options.output ?? throwingStub("output"),
     reactor: options.reactor ?? throwingStub("reactor"),
@@ -348,7 +351,9 @@ export function buildActionContext(
       externalId: () => Promise.resolve(identity.projectId ?? "project"),
     },
     flows: {
-      list: throwingStub("flows.list"),
+      list: options.flows
+        ? options.flows.list.bind(options.flows)
+        : throwingStub("flows.list"),
       current: {
         id: identity.flowId ?? "flow",
         version: { id: identity.flowVersionId ?? "flow-version" },

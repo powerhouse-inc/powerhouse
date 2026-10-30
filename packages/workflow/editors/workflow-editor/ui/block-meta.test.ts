@@ -105,9 +105,9 @@ describe("blockMeta", () => {
       blockMeta({
         pieceName: "@powerhousedao/piece-core",
         kind: "action",
-        name: "loop",
+        name: "split",
       }),
-    ).toEqual({ displayName: "Loop", subtitle: "Core", glyph: "?" });
+    ).toEqual({ displayName: "Split", subtitle: "Core", glyph: "?" });
   });
 });
 

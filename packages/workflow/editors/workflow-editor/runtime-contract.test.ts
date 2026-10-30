@@ -57,7 +57,15 @@ const CALLS: { [K in Operation]: Parameters<RuntimeClient[K]> } = {
   fetchWaitingRuns: [{ driveId: "drive-1", first: 10 }],
   resolveWaitpoint: ["wp-1", false, "too expensive"],
   cancelRun: ["run-1"],
-  loadBlockOptions: [BLOCK, "channel", { a: 1 }, "conn-1", "gen"],
+  loadBlockOptions: [
+    BLOCK,
+    "channel",
+    { a: 1 },
+    "conn-1",
+    "gen",
+    undefined,
+    "wf-1",
+  ],
   fetchReactorAccess: [],
   fetchReactorAccessDenial: ["wf-1"],
 };

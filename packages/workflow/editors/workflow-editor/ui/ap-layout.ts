@@ -1,6 +1,10 @@
 // Vertical tree layout, a port of the Activepieces builder flow-canvas
 // layout behavior (MIT, activepieces packages/web) onto our flat graph.
-import { flowPorts } from "@powerhousedao/pieces-framework/workflow";
+import {
+  flowPorts,
+  stepPortLabel,
+  stepPorts,
+} from "@powerhousedao/pieces-framework/workflow";
 import type { Edge, Node } from "@xyflow/react";
 import { stepBlock, triggerBlock, type BlockRef } from "./blocks.js";
 import type { EdgeModel, StepModel, WorkflowModel } from "./model.js";
@@ -59,11 +63,17 @@ export const HSPACE = 80;
 export const ADD_BUTTON_SIZE = 20;
 export const BIG_ADD_BUTTON_SIZE = 50;
 
-const PORT_ORDER = ["next", "true", "false", "error"];
+// A loop's body before what follows it; a router's branches in their order.
+const PORT_ORDER = ["each", "next", "true", "false"];
 
 export function portRank(port: string): number {
   const index = PORT_ORDER.indexOf(port);
-  return index === -1 ? PORT_ORDER.length : index;
+  if (index !== -1) return index;
+  const branch = /^branch_(\d+)$/.exec(port);
+  if (branch) return PORT_ORDER.length + 1 - 1 / Number(branch[1]);
+  if (port === "otherwise") return PORT_ORDER.length + 1;
+  if (port === "error") return PORT_ORDER.length + 2;
+  return PORT_ORDER.length + 3;
 }
 
 export interface ApLayout {
@@ -110,13 +120,16 @@ export function layoutWorkflow(
   // Declared ports of a block, undefined until its form is known.
   const declared = (id: string): readonly string[] | undefined => {
     const step = stepById.get(id);
-    const block =
-      id === model.trigger?.id
-        ? triggerBlock(model.trigger)
-        : step
-          ? stepBlock(step)
-          : undefined;
-    return block ? portsOf(block) : undefined;
+    if (id === model.trigger?.id) return portsOf(triggerBlock(model.trigger));
+    const wired = (outgoing.get(id) ?? []).map((edge) => edge.port);
+    return step
+      ? stepPorts(stepBlock(step), step.config, portsOf, wired)
+      : undefined;
+  };
+  // What a port reads as: a router branch's name, a loop's "For each item".
+  const labelOf = (id: string, port: string): string | undefined => {
+    const step = stepById.get(id);
+    return step ? stepPortLabel(stepBlock(step), step.config, port) : undefined;
   };
   const outPorts = (id: string): string[] => {
     const ports = declared(id);
@@ -225,6 +238,7 @@ export function layoutWorkflow(
       data: {
         edgeId: edge.id,
         port: edge.port,
+        portLabel: labelOf(edge.from, edge.port),
         condition: edge.condition,
         // A skipped step passes the run straight through this edge.
         fromSkipped: stepById.get(edge.from)?.skip === true,
@@ -264,6 +278,7 @@ export function layoutWorkflow(
         data: {
           parentId: node.id,
           port,
+          portLabel: labelOf(node.id, port),
           card: Boolean(slot),
           // An empty workflow says where its first step goes.
           ...(model.steps.length === 0 ? { hint: true } : {}),

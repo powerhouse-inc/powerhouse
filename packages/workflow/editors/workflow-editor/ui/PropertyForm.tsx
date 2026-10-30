@@ -347,6 +347,18 @@ export function itemSummary(
 
 // Rows of nested forms for an ARRAY prop with item properties; each folds to a
 // one-line summary.
+// "Branches" adds a branch; a name that is not a plural adds an item.
+export function addItemLabel(displayName: string): string {
+  const name = displayName.trim().toLowerCase();
+  if (!/^[a-z]+s$/.test(name) || name.endsWith("ss")) return "Add item";
+  const singular = name.endsWith("ies")
+    ? `${name.slice(0, -3)}y`
+    : /(ss|x|z|ch|sh)es$/.test(name)
+      ? name.slice(0, -2)
+      : name.slice(0, -1);
+  return `Add ${singular}`;
+}
+
 function ArrayRows(props: {
   prop: BlockFormProp;
   value: unknown;
@@ -443,7 +455,7 @@ function ArrayRows(props: {
         }}
       >
         <Icon name="plus" className="h-3.5 w-3.5" />
-        Add item
+        {addItemLabel(props.prop.displayName)}
       </Button>
     </div>
   );

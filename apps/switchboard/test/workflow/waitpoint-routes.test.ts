@@ -279,6 +279,28 @@ describe("the waitpoint resume routes", () => {
     runtime.resumeWaitpointByToken.mockResolvedValueOnce({ status: "gone" });
     const gone = await fetch(base, { method: "POST" });
     expect(gone.status).toBe(410);
-    expect(await gone.json()).toMatchObject({ status: "gone" });
+    expect(await gone.json()).toMatchObject({
+      status: "gone",
+      discarded: true,
+    });
+  });
+
+  it("tells a sub-flow's response whether it was discarded", async () => {
+    const respond = () =>
+      fetch(base, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "success", data: { ok: true } }),
+      });
+    runtime.resumeWaitpointByToken.mockResolvedValueOnce({ status: "resumed" });
+    expect(await (await respond()).json()).toMatchObject({
+      status: "resumed",
+      discarded: false,
+    });
+    runtime.resumeWaitpointByToken.mockResolvedValueOnce({ status: "already" });
+    expect(await (await respond()).json()).toMatchObject({
+      status: "already",
+      discarded: false,
+    });
   });
 });

@@ -14,9 +14,14 @@ import {
   APPROVAL_BLOCK,
   ASSERT_BLOCK,
   BRANCH_BLOCK,
+  CALL_FLOW_BLOCK,
+  CALLABLE_FLOW_TRIGGER,
+  LOOP_BLOCK,
+  ROUTER_BLOCK,
   DELAY_BLOCK,
   isCoreBlock,
   MANUAL_TRIGGER,
+  RETURN_RESPONSE_BLOCK,
   SCHEDULE_TRIGGER,
   STOP_BLOCK,
   WAIT_FOR_WEBHOOK_BLOCK,
@@ -54,6 +59,16 @@ const CORE_META: Record<string, BlockMeta> = {
     subtitle: "Core",
     glyph: "⑂",
   },
+  [blockKey(ROUTER_BLOCK)]: {
+    displayName: "Router",
+    subtitle: "Core",
+    glyph: "⑃",
+  },
+  [blockKey(LOOP_BLOCK)]: {
+    displayName: "Loop on items",
+    subtitle: "Core",
+    glyph: "↻",
+  },
   [blockKey(ASSERT_BLOCK)]: {
     displayName: "Assert",
     subtitle: "Core",
@@ -78,6 +93,21 @@ const CORE_META: Record<string, BlockMeta> = {
     displayName: "Respond and wait for webhook",
     subtitle: "Core",
     glyph: "⇄",
+  },
+  [blockKey(CALLABLE_FLOW_TRIGGER)]: {
+    displayName: "Callable workflow",
+    subtitle: "Trigger",
+    glyph: "↳",
+  },
+  [blockKey(CALL_FLOW_BLOCK)]: {
+    displayName: "Call workflow",
+    subtitle: "Core",
+    glyph: "↳",
+  },
+  [blockKey(RETURN_RESPONSE_BLOCK)]: {
+    displayName: "Return response",
+    subtitle: "Core",
+    glyph: "↩",
   },
 };
 
@@ -267,6 +297,11 @@ export function ensurePieceLogos(source?: PieceCatalogSource): Promise<void> {
     () => scheduleRetry(current),
   );
   return current.load;
+}
+
+// Another piece's blocks the Core tab names itself, whatever the piece calls them.
+export function namedByCoreTab(block: BlockIdentity): boolean {
+  return !isCoreBlock(block) && blockKey(block) in CORE_META;
 }
 
 export function blockMeta(block: BlockIdentity): BlockMeta {

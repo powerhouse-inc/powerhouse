@@ -282,7 +282,19 @@ export const PORT_LABEL_CLASSES: Record<string, string> = {
   // False is an ordinary outcome; red is kept for a step that failed.
   false: "bg-foreground/5 text-muted-foreground hover:bg-foreground/10",
   error: "bg-wf-fail/10 text-wf-fail hover:bg-red-200",
+  each: "bg-violet-500/10 text-violet-500 hover:bg-violet-500/20",
+  otherwise: "bg-foreground/5 text-muted-foreground hover:bg-foreground/10",
 };
+
+const BRANCH_CLASSES = "bg-wf-run/10 text-wf-run hover:bg-blue-200";
+
+// A port's label colours; a router's numbered branches share one.
+export function portClasses(port: string): string | undefined {
+  return (
+    PORT_LABEL_CLASSES[port] ??
+    (/^branch_\d+$/.test(port) ? BRANCH_CLASSES : undefined)
+  );
+}
 
 function AddButton(props: {
   size?: number;
@@ -295,6 +307,8 @@ function AddButton(props: {
   onAttach?: (stepId: string) => void;
   // Named ports read as their name; an unnamed one is just a plus.
   label?: string;
+  // The port the label names, for its colours.
+  port?: string;
 }) {
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLButtonElement>(null);
@@ -319,7 +333,7 @@ function AddButton(props: {
           open
             ? "border-wf-run bg-wf-run text-card"
             : label
-              ? `border-transparent ${PORT_LABEL_CLASSES[label] ?? "bg-muted text-muted-foreground hover:bg-foreground/10"}`
+              ? `border-transparent ${portClasses(props.port ?? label) ?? "bg-muted text-muted-foreground hover:bg-foreground/10"}`
               : "border-foreground/15 bg-card text-foreground hover:border-foreground/25"
         }`}
         onClick={(event) => {
@@ -402,9 +416,11 @@ export function ApAppendNode(props: NodeProps) {
   const data = props.data as {
     parentId: string;
     port: string;
+    portLabel?: string;
     card?: boolean;
     hint?: boolean;
   };
+  const portName = data.portLabel ?? data.port;
   const handlers = useCanvasHandlers();
   const attachSteps = handlers?.attachableSteps(data.parentId);
   const dragging = useDraggingStep();
@@ -466,13 +482,13 @@ export function ApAppendNode(props: NodeProps) {
         <Handle type="target" position={Position.Top} style={hiddenHandle} />
         <span
           className={`absolute left-3 top-3 rounded px-1.5 text-[10px] font-semibold ${
-            PORT_LABEL_CLASSES[data.port] ?? "bg-muted text-muted-foreground"
+            portClasses(data.port) ?? "bg-muted text-muted-foreground"
           }`}
         >
-          {data.port}
+          {portName}
         </span>
         <AddButton
-          title={`Add step (${data.port})`}
+          title={`Add step (${portName})`}
           presets={STEP_PRESETS}
           showPieces
           attachSteps={attachSteps}
@@ -496,8 +512,13 @@ export function ApAppendNode(props: NodeProps) {
         </span>
       ) : null}
       <AddButton
-        title={data.port === "next" ? "Add step" : `Add step (${data.port})`}
-        label={data.port === "next" ? undefined : data.port}
+        title={
+          data.port === "next" && !data.portLabel
+            ? "Add step"
+            : `Add step (${portName})`
+        }
+        label={data.port === "next" && !data.portLabel ? undefined : portName}
+        port={data.port}
         presets={STEP_PRESETS}
         showPieces
         attachSteps={attachSteps}

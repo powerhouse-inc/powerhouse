@@ -149,7 +149,7 @@ test.describe("Manual trigger inputs", () => {
       .locator("aside")
       .filter({ has: app.getByRole("button", { name: "Remove trigger" }) });
 
-    await panel.getByRole("button", { name: "Add item" }).click();
+    await panel.getByRole("button", { name: "Add input" }).click();
     const type = panel.getByRole("combobox", { name: /Field Type/ });
     await expect(type).toContainText("Text");
     // Options are only asked for by a dropdown.
