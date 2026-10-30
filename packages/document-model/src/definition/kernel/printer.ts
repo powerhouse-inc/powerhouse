@@ -288,9 +288,10 @@ export function printNamedDefinition(
 
 export function printSchemaSegment(
   definitions: readonly NamedGraphQLTypeDefinition[],
+  known: readonly NamedGraphQLTypeDefinition[] = definitions,
 ): string {
   if (definitions.length === 0) return "";
-  const inventory = namedTypeInventory(definitions);
+  const inventory = namedTypeInventory(known);
   return `${definitions
     .map((definition) => printNamedDefinition(definition, inventory))
     .join(`${LINE}${LINE}`)}${LINE}`;

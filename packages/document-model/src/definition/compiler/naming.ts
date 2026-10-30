@@ -2,7 +2,42 @@ import { compilerDiagnostics } from "./diagnostic-codes.js";
 import type { DefinitionDiagnostic } from "@powerhousedao/shared/document-model";
 import { camelCase, constantCase, pascalCase } from "change-case";
 
-type DocumentModelNames = {
+type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
+
+type ActionTypeWords<
+  TKey extends string,
+  TPrevious extends string = "",
+  TResult extends string = "",
+  TSeparator extends string = "",
+> = TKey extends `${infer TFirst}${infer TRest}`
+  ? TFirst extends "_"
+    ? ActionTypeWords<TRest, "", TResult, TResult extends "" ? "" : "_">
+    : ActionTypeWords<
+        TRest,
+        TFirst,
+        `${TResult}${TSeparator extends "_"
+          ? "_"
+          : TFirst extends Lowercase<TFirst>
+            ? ""
+            : TPrevious extends ""
+              ? ""
+              : TPrevious extends Digit
+                ? "_"
+                : TPrevious extends Uppercase<TPrevious>
+                  ? TRest extends `${infer TNext}${string}`
+                    ? TNext extends Uppercase<TNext>
+                      ? ""
+                      : "_"
+                    : ""
+                  : "_"}${Uppercase<TFirst>}`
+      >
+  : TResult;
+
+export type DocumentModelActionType<TKey extends string> = string extends TKey
+  ? string
+  : ActionTypeWords<TKey>;
+
+export type DocumentModelNames = {
   readonly documentType: string;
   readonly graphQLName: string;
   readonly globalStateRootName: string;
@@ -76,6 +111,28 @@ export function deriveDocumentModelOperationNames(
   };
 }
 
+// Action types the base reducer or the reactor reduces before a model's own
+// reducer sees them, and RETRACT, which replay reads as a retraction. NOOP is
+// left out because the model's reducer still runs.
+export const PLATFORM_ACTION_TYPES: ReadonlySet<string> = new Set([
+  "SET_NAME",
+  "SET_PREFERRED_EDITOR",
+  "UNDO",
+  "REDO",
+  "RETRACT",
+  "CREATE_DOCUMENT",
+  "DELETE_DOCUMENT",
+  "UPGRADE_DOCUMENT",
+  "ADD_RELATIONSHIP",
+  "REMOVE_RELATIONSHIP",
+  "UPDATE_RELATIONSHIP",
+  "PURGE_DOCUMENT",
+]);
+
+export function deriveOperationErrorClassName(errorKey: string): string {
+  return pascalCase(errorKey);
+}
+
 export function deriveDocumentModelErrorNames(
   errorKey: string,
   authored: {
@@ -90,7 +147,7 @@ export function deriveDocumentModelErrorNames(
   };
 }
 
-type DerivedOperationNames = {
+export type DerivedOperationNames = {
   readonly key: string;
   readonly names: DocumentModelOperationNames;
 };

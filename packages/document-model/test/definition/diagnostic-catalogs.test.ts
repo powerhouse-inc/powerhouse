@@ -24,18 +24,31 @@ describe("layer diagnostic catalogs", () => {
       "PH-SCALAR-INTERNAL",
       "PH-SCALAR-DEFINITION-INVALID",
     ]);
-    expect(own(compilerDiagnostics.codes)).toStrictEqual([
+    expect(own(compilerDiagnostics.codes, dslDiagnostics.codes)).toStrictEqual([
       "PH-DM-DUPLICATE-ACTION",
       "PH-DM-DUPLICATE-NAME",
       "PH-DM-IDENTITY-INVALID",
+      "PH-DM-DECLARATION-INVALID",
+      "PH-DM-DEFAULT-UNSUPPORTED",
+      "PH-DM-INTERFACE-INVALID",
+      "PH-DM-INPUT-CYCLE",
+      "PH-DM-TYPE-POSITION-INVALID",
+      "PH-DM-INITIAL-VALUE-INVALID",
+      "PH-SCALAR-DUPLICATE-NAME",
     ]);
   });
 
   it("reuse a lower layer's entry instead of redefining its code", () => {
-    for (const [code, entry] of Object.entries(kernelDiagnostics.codes)) {
-      expect(
-        dslDiagnostics.codes[code as keyof typeof dslDiagnostics.codes],
-      ).toBe(entry);
+    const layers = [
+      kernelDiagnostics.codes,
+      dslDiagnostics.codes,
+      compilerDiagnostics.codes,
+    ];
+    for (const [index, lower] of layers.slice(0, -1).entries()) {
+      const upper: Readonly<Record<string, object>> = layers[index + 1];
+      for (const [code, entry] of Object.entries(lower)) {
+        expect(upper[code]).toBe(entry);
+      }
     }
   });
 });

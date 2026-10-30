@@ -224,6 +224,79 @@ function implementedInterfaces(config: {
   return Object.freeze([...implemented]) as readonly InterfaceDescriptor[];
 }
 
+/**
+ * The first signature types an object without `implements` as implementing
+ * nothing. A single generic signature would infer `TImplements` from the
+ * contextual type instead, as for a union member or an inline state root,
+ * and widen it to every interface.
+ */
+function objectType<const TFields extends ObjectFields>(
+  name: string,
+  options: ImplementingOptions<TFields, readonly []>,
+): ObjectDescriptor<TFields, readonly []>;
+function objectType<
+  const TFields extends ObjectFields,
+  const TImplements extends readonly InterfaceDescriptor[],
+>(
+  name: string,
+  options: ImplementingOptions<TFields, TImplements>,
+): ObjectDescriptor<TFields, TImplements>;
+function objectType(
+  name: string,
+  options: ImplementingOptions<ObjectFields, readonly InterfaceDescriptor[]>,
+): ObjectDescriptor {
+  return namedType<ObjectDescriptor>({
+    kind: "object",
+    ...implementingMembers(name, options),
+  });
+}
+
+/** Overloaded like `objectType`, for the same reason. */
+function interfaceType<const TFields extends ObjectFields>(
+  name: string,
+  options: ImplementingOptions<TFields, readonly []>,
+): InterfaceDescriptor<TFields, readonly []>;
+function interfaceType<
+  const TFields extends ObjectFields,
+  const TImplements extends readonly InterfaceDescriptor[],
+>(
+  name: string,
+  options: ImplementingOptions<TFields, TImplements>,
+): InterfaceDescriptor<TFields, TImplements>;
+function interfaceType(
+  name: string,
+  options: ImplementingOptions<ObjectFields, readonly InterfaceDescriptor[]>,
+): InterfaceDescriptor {
+  return namedType<InterfaceDescriptor>({
+    kind: "interface",
+    ...implementingMembers(name, options),
+  });
+}
+
+function implementingMembers(
+  name: string,
+  options: ImplementingOptions<ObjectFields, readonly InterfaceDescriptor[]>,
+) {
+  const validName = assertAuthoredName(name, ["name"]);
+  const config = snapshotDescriptorOptions(
+    options,
+    ["fields", "description", "implements"],
+    ["options"],
+  );
+  return {
+    name: validName,
+    description: stringOption(config, "description", ["options"]),
+    fields: fieldMap(config.fields, ["options", "fields"]),
+    implements: implementedInterfaces(config),
+  };
+}
+
+/**
+ * @experimental The field and type builders of a code-first document model:
+ * scalar factories such as `ph.String()` and `ph.PHID()`, `ph.scalar` for a
+ * project scalar, and `list`, `ref`, `enum`, `object`, `interface`, `input`,
+ * and `union`.
+ */
 export const ph = Object.freeze({
   ...builtInScalarFactories,
   ...catalogScalarFactories,
@@ -341,49 +414,9 @@ export const ph = Object.freeze({
     });
   },
 
-  object<
-    const TFields extends ObjectFields,
-    const TImplements extends readonly InterfaceDescriptor[] = readonly [],
-  >(
-    name: string,
-    options: ImplementingOptions<TFields, TImplements>,
-  ): ObjectDescriptor<TFields, TImplements> {
-    const validName = assertAuthoredName(name, ["name"]);
-    const config = snapshotDescriptorOptions(
-      options,
-      ["fields", "description", "implements"],
-      ["options"],
-    );
-    return namedType<ObjectDescriptor<TFields, TImplements>>({
-      kind: "object",
-      name: validName,
-      description: stringOption(config, "description", ["options"]),
-      fields: fieldMap(config.fields, ["options", "fields"]) as TFields,
-      implements: implementedInterfaces(config) as TImplements,
-    });
-  },
+  object: objectType,
 
-  interface<
-    const TFields extends ObjectFields,
-    const TImplements extends readonly InterfaceDescriptor[] = readonly [],
-  >(
-    name: string,
-    options: ImplementingOptions<TFields, TImplements>,
-  ): InterfaceDescriptor<TFields, TImplements> {
-    const validName = assertAuthoredName(name, ["name"]);
-    const config = snapshotDescriptorOptions(
-      options,
-      ["fields", "description", "implements"],
-      ["options"],
-    );
-    return namedType<InterfaceDescriptor<TFields, TImplements>>({
-      kind: "interface",
-      name: validName,
-      description: stringOption(config, "description", ["options"]),
-      fields: fieldMap(config.fields, ["options", "fields"]) as TFields,
-      implements: implementedInterfaces(config) as TImplements,
-    });
-  },
+  interface: interfaceType,
 
   input<const TFields extends ObjectFields>(
     ...args:
@@ -471,3 +504,6 @@ export const ph = Object.freeze({
     });
   },
 });
+
+/** @experimental The type of `ph`. */
+export type Ph = typeof ph;
