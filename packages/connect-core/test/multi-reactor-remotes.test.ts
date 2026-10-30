@@ -171,6 +171,84 @@ describe("Connect routing to several switchboards", () => {
     await expect(client.isDocumentIdTaken("doc-1")).resolves.toBe(false);
   });
 
+  it("builds the router from the served settings", async () => {
+    const [a, b] = await switchboards(2, switchboard({}, failing));
+    const router = (await routed({
+      remoteBackends: [
+        { name: "sb", url: `${a}/d/home`, breaker: { failures: 1 } },
+        { name: "other", url: `${b}/d/notes`, breaker: false },
+      ],
+      router: { newDrives: "other", probeTimeoutMs: 1_000 },
+    })) as unknown as RoutingReactorClient & { newDrives?: string };
+    expect(router.newDrives).toBe("other");
+    await expect(router.isDocumentIdTaken("doc-1")).resolves.toBe(false);
+    expect(router.describeRouting().health).toEqual([
+      { backend: "sb", health: "down" },
+      { backend: "other", health: "up" },
+    ]);
+  });
+
+  it("never falls back to the browser when new drives go to a switchboard", async () => {
+    await expect(
+      routed({ remoteBackends: [], router: { newDrives: "sb" } }),
+    ).rejects.toThrow(
+      "New drives go to sb, but this Connect has no address for it, so it can't start.",
+    );
+    const [a] = await switchboards(1);
+    await expect(
+      routed({
+        remoteBackends: [{ name: "sb", url: `${a}/d/home` }],
+        router: { newDrives: "sb" },
+        loadRouter: () => Promise.reject(new Error("chunk failed")),
+      }),
+    ).rejects.toThrow(
+      "New drives go to sb, but the router that reaches it didn't load, so Connect can't start.",
+    );
+    await expect(
+      routed({
+        remoteBackends: [{ name: "sb", url: `${a}/d/home` }],
+        router: { newDrives: "other" },
+      }),
+    ).rejects.toThrow(
+      "New drives go to other, but this Connect doesn't link to it (it links to sb).",
+    );
+  });
+
+  it("falls back to the browser without newDrives", async () => {
+    const [a] = await switchboards(1);
+    const client = await selectAppReactorClient({
+      mode: "router",
+      module: localModule(),
+      remoteDriveUrl: undefined,
+      remoteBackends: [{ name: "sb", url: `${a}/d/home` }],
+      loadRouter: () => Promise.reject(new Error("chunk failed")),
+      signer,
+      documentModelModules: [],
+    });
+    expect(getFullReactorClient()).toBeUndefined();
+    expect(client).toBeDefined();
+  });
+
+  it("builds a switchboard-only client on the newDrives switchboard", async () => {
+    const [a, b] = await switchboards(2);
+    await selectAppReactorClient({
+      mode: "remote",
+      module: undefined,
+      remoteDriveUrl: undefined,
+      remoteBackends: [
+        { name: "sb", url: `${a}/d/home` },
+        { name: "other", url: `${b}/d/notes` },
+      ],
+      router: { newDrives: "other" },
+      signer,
+      documentModelModules: [],
+    });
+    const router = getFullReactorClient() as unknown as RoutingReactorClient & {
+      newDrives?: string;
+    };
+    expect(router.newDrives).toBe("other");
+  });
+
   it("builds a switchboard-only client from the first remote backend", async () => {
     const [a] = await switchboards(1);
     await selectAppReactorClient({

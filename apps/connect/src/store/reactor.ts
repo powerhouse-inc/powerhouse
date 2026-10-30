@@ -79,6 +79,7 @@ import {
   getAppDrives,
   getRuntimeConfig,
   keepsLocalCopy,
+  localDrivePlacements,
   planReactorClient,
   refreshAppDrives,
   relistAppDrives,
@@ -442,6 +443,7 @@ export async function createReactor(
     },
   );
   const remoteBackends = runtimeConfig.connect.instance?.remoteBackends ?? [];
+  const routerSettings = runtimeConfig.connect.instance?.router;
   const remoteDriveUrl =
     remoteBackends.at(0)?.url ?? phGlobalConfig.defaultDrivesUrl;
 
@@ -595,6 +597,11 @@ export async function createReactor(
     localReactor,
     remoteDriveUrl,
     remoteBackends,
+    // Config local drives stay here when new drives go to a switchboard.
+    collections: routerSettings?.newDrives
+      ? localDrivePlacements(getDefaultDrives(runtimeConfig))
+      : undefined,
+    router: routerSettings,
     signer: renown.signer,
     documentModelModules: loadedDocumentModels,
   });

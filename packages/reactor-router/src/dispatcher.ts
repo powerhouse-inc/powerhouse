@@ -139,6 +139,14 @@ export class RouteDispatcher {
     return this.table.backend(this.primaryName, "primaryBackend");
   }
 
+  /** Where a create with nothing to place it by goes, and asks its defaults. */
+  get createHome(): RouterBackend {
+    const name = this.table.defaultBackend;
+    return name === undefined
+      ? this.primary
+      : this.table.backend(name, "defaultBackend");
+  }
+
   /** Re-reads the facts of the named backend, or of every backend. */
   async refreshFacts(name?: string): Promise<void> {
     const targets =
@@ -407,7 +415,7 @@ export class RouteDispatcher {
   ): Promise<RouterBackend> {
     const distinct = distinctIds(identifiers);
     if (distinct.length === 0) {
-      return this.primary;
+      return this.createHome;
     }
     const existing = distinct.filter((id) => !created.has(id));
     if (existing.length === 0) {

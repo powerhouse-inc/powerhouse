@@ -5,8 +5,9 @@ export default {
   name: "lab-connect-router",
   runner: { module: "@powerhousedao/ph-cli/runners/connect", port: 3002 },
   reactor: {
-    placement: { primary: "tab", drives: { lab: "sb" } },
+    placement: { drives: { lab: "sb" } },
     backends: {
+      tab: { kind: "in-process", storage: { kind: "idb" } },
       sb: {
         kind: "remote",
         remote: {
@@ -15,7 +16,6 @@ export default {
           },
         },
       },
-      tab: { kind: "in-process", storage: { kind: "idb" } },
     },
     drives: [
       {

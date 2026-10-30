@@ -44,6 +44,7 @@ import {
   type BackendDrives,
 } from "./routing-drive-client.js";
 import { subscribeAll } from "./subscribe-mux.js";
+import { DEFAULT_BRANCH } from "./types.js";
 
 const documentIdentity = (document: PHDocument): string => document.header.id;
 
@@ -154,11 +155,31 @@ export class RoutingReadClient implements IReactorReadClient {
   }
 
   getCreateSignaturePolicy(): Promise<SignaturePolicy> {
+    return this.createSignaturePolicyOn(this.dispatcher.createHome);
+  }
+
+  private createSignaturePolicyOn(
+    home: RouterBackend,
+  ): Promise<SignaturePolicy> {
     return this.dispatcher.onBackend(
       "getCreateSignaturePolicy",
-      this.dispatcher.primary,
+      home,
       (backend) => backend.api.getCreateSignaturePolicy(),
       ATTEMPT.read,
+    );
+  }
+
+  /** Where a parentless create with this id would land: its placement or route, else the create home. */
+  private async createHomeFor(id: string | undefined): Promise<RouterBackend> {
+    if (id === undefined || id === "") return this.dispatcher.createHome;
+    const route = await this.dispatcher.placed(() =>
+      this.dispatcher.table.collectionRoute(
+        this.dispatcher.collectionFor(id, DEFAULT_BRANCH),
+      ),
+    );
+    return this.dispatcher.table.backend(
+      route.backend,
+      `create defaults for ${JSON.stringify(id)}`,
     );
   }
 
@@ -169,11 +190,10 @@ export class RoutingReadClient implements IReactorReadClient {
   ): Promise<ProtocolVersions> {
     const parentIdentifier = options.parentIdentifier;
     if (parentIdentifier === undefined) {
-      return this.dispatcher.onBackend(
-        "getCreateProtocolVersions",
-        this.dispatcher.primary,
-        (backend) => backend.api.getCreateProtocolVersions(options, signal),
-        ATTEMPT.read,
+      return this.createProtocolVersionsOn(
+        this.dispatcher.createHome,
+        options,
+        signal,
       );
     }
     return this.dispatcher.onDocument(
@@ -184,7 +204,21 @@ export class RoutingReadClient implements IReactorReadClient {
     );
   }
 
-  /** Versions from the parent's backend, the module from this client's models. */
+  private createProtocolVersionsOn(
+    home: RouterBackend,
+    options: CreateProtocolVersionsOptions,
+    signal?: AbortSignal,
+  ): Promise<ProtocolVersions> {
+    return this.dispatcher.onBackend(
+      "getCreateProtocolVersions",
+      home,
+      (backend) => backend.api.getCreateProtocolVersions(options, signal),
+      ATTEMPT.read,
+    );
+  }
+
+  /** Versions from the parent's backend, or for a parentless create the
+   * backend it would land on; the module from this client's models. */
   async newDocument<TDocument extends PHDocument = PHDocument>(
     documentModelType: string,
     options?: NewDocumentOptions,
@@ -195,15 +229,20 @@ export class RoutingReadClient implements IReactorReadClient {
       documentModelType,
       options?.documentModelVersion,
     );
+    const parentIdentifier = options?.parentIdentifier;
+    const home =
+      parentIdentifier === undefined
+        ? await this.createHomeFor(options?.id)
+        : undefined;
+    const request = { documentType: documentModelType, parentIdentifier };
     const [policy, versions] = await Promise.all([
-      options?.signaturePolicy ?? this.getCreateSignaturePolicy(),
-      this.getCreateProtocolVersions(
-        {
-          documentType: documentModelType,
-          parentIdentifier: options?.parentIdentifier,
-        },
-        signal,
-      ),
+      options?.signaturePolicy ??
+        (home
+          ? this.createSignaturePolicyOn(home)
+          : this.getCreateSignaturePolicy()),
+      home
+        ? this.createProtocolVersionsOn(home, request, signal)
+        : this.getCreateProtocolVersions(request, signal),
     ]);
     return createEmptyDocument(module, options, policy, versions) as TDocument;
   }

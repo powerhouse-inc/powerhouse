@@ -210,6 +210,37 @@ const runtimeOnly: [string, unknown][] = [
     },
   ],
   [
+    "instance.remoteBackends[] connection settings",
+    {
+      instance: {
+        ...instance,
+        remoteBackends: [
+          {
+            name: "sb",
+            url: "http://localhost:4001/d/b",
+            requestTimeoutMs: 10_000,
+            breaker: { failures: 5, openMs: 120_000 },
+            realtime: false,
+          },
+          { name: "sb2", url: "http://localhost:4002/d/c", breaker: false },
+        ],
+      },
+    },
+  ],
+  [
+    "instance.router",
+    {
+      instance: {
+        ...instance,
+        router: {
+          newDrives: "sb",
+          probeTimeoutMs: 1_000,
+          provisionalRouteMs: 300_000,
+        },
+      },
+    },
+  ],
+  [
     "instance.collections",
     {
       instance: {

@@ -10,6 +10,21 @@ Under `ph run`, a Connect or switchboard whose port is taken moves to the next f
 
 ---
 
+## 🚀 **Unreleased** — router settings in the host config
+
+### ✨ Host config sets where new drives go, and the router's timeouts and breaker
+
+A Connect host's `reactor.placement.newDrives` names the backend new drives are created on. A switchboard there means the drive is created on it with no copy in this browser; drives the host declares locally are still created in the browser. When that switchboard isn't answering, Connect shows "<sb> isn't answering, so the drive wasn't created."; when it refuses, Connect names it and its reason, or opens the sign-in prompt. The drive is not created in the browser instead, and a Connect that can't build the router for that switchboard fails to start. Without `newDrives`, new drives are created in the browser as before, or on the only switchboard when there is no browser reactor. A Connect with no browser reactor and several switchboards must set it.
+
+`reactor.router` takes `probeTimeoutMs` (default 3 s) and `provisionalRouteMs` (default 30 s). A remote backend's `remote` block takes `requestTimeoutMs` (default 30 s), `breaker` (`{ failures, openMs }`, default 3 failures then 30 s; `false` never stops trying) and `realtime` (default true); a local backend refuses them. Connect serves these as `instance.router` and on each `instance.remoteBackends[]` entry, and builds its router and switchboard backends from them.
+
+⚠️ **Breaking (unreleased host config):** a Connect host refuses `placement.primary` with "Connect doesn't use placement.primary. To choose where new drives go, use placement.newDrives." Switchboard hosts keep it. Connect's `instance.reactorWorker` now follows the browser reactor's own kind, so a remote listed first no longer turns a `worker` backend in-process.
+
+`RoutingOptions.defaultBackend` (`@powerhousedao/reactor-router`) names the backend a new collection goes to when nothing places it; a create it refuses fails rather than landing elsewhere. A parentless create asks for its defaults from the backend its id is placed on, else the default backend. `createSwitchboardBackend`'s `breaker` (`@powerhousedao/reactor-browser`) takes partial settings or `false`.
+
+✅ **What to try:** give a Connect host with a switchboard backend `sb` `placement: { newDrives: "sb" }`, run it and add a drive: it appears on the switchboard and `syncManager.list()` in the tab has no remote for it. Stop the switchboard and add another: Connect shows that sb isn't answering.
+
+---
 ## 🚀 **Unreleased** — move a drive in Connect, attachments by drive
 
 ### ✨ Move a drive between its switchboard and this browser

@@ -47,14 +47,27 @@ export type SwitchboardBackendDescriptor = {
   readonly inspection?: ReactorReach["inspection"];
   /** Bound on one request, headers through body. Default 30_000. */
   readonly requestTimeoutMs?: number;
-  /** Default `{failures: 3, openMs: 30_000}`. */
-  readonly breaker?: { readonly failures: number; readonly openMs: number };
+  /** Unset fields take {@link DEFAULT_BREAKER}; `false` never opens. */
+  readonly breaker?: SwitchboardBreaker;
   /** The transport under the deadline and the breaker; {@link switchboardFetch} by default. */
   readonly fetch?: GraphQLFetch;
 };
 
 export const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 export const DEFAULT_BREAKER = Object.freeze({ failures: 3, openMs: 30_000 });
+
+/** After `failures` failed requests in a row, send nothing for `openMs`. */
+export type SwitchboardBreaker =
+  | false
+  | { readonly failures?: number; readonly openMs?: number };
+
+function breakerSettings(breaker: SwitchboardBreaker | undefined): {
+  failures: number;
+  openMs: number;
+} {
+  if (breaker === false) return { failures: Infinity, openMs: 0 };
+  return { ...DEFAULT_BREAKER, ...breaker };
+}
 
 export type SwitchboardBackend = {
   /** reach `{hosting: "remote", inspection}`; `refusesMisroutes: false`. */
@@ -288,7 +301,7 @@ export function createSwitchboardBackend(
   const drives = new KnownDrives();
   const breaker = new Breaker(
     descriptor.name,
-    descriptor.breaker ?? DEFAULT_BREAKER,
+    breakerSettings(descriptor.breaker),
   );
   const signer = descriptor.signer;
   const gql = new GraphQLReactorClient({

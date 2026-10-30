@@ -872,6 +872,41 @@ export const connectRemoteBackendSchema = z.strictObject({
   url: z
     .string()
     .describe("A drive address on the switchboard: <switchboard>/d/<slug>."),
+  requestTimeoutMs: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe("Give up on one request after this long. Default 30000."),
+  breaker: z
+    .union([
+      z.literal(false),
+      z.strictObject({
+        failures: z.number().int().min(1).optional(),
+        openMs: z.number().int().nonnegative().optional(),
+      }),
+    ])
+    .optional()
+    .describe(
+      "After `failures` failed requests in a row, send nothing for `openMs`. false: never stop trying.",
+    ),
+  realtime: z
+    .boolean()
+    .optional()
+    .describe("Live updates over a socket. Default true."),
+});
+
+/** The router settings a host sets for Connect. */
+export const connectRouterSettingsSchema = z.strictObject({
+  newDrives: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "The remoteBackends[].name new drives are created on, with no copy in this browser. Absent: the browser reactor, else the only switchboard.",
+    ),
+  probeTimeoutMs: z.number().int().nonnegative().optional(),
+  provisionalRouteMs: z.number().int().nonnegative().optional(),
 });
 
 /** `sync: false` keeps no copy in this browser; unset means true. */
@@ -885,6 +920,7 @@ export const connectRuntimeInstanceSchema = connectInstanceSchema.extend({
   reactorClient: connectReactorClientModeSchema.optional(),
   remoteBackends: z.array(connectRemoteBackendSchema).optional(),
   collections: z.record(z.string(), connectCollectionSchema).optional(),
+  router: connectRouterSettingsSchema.optional(),
 });
 
 /** A remote default drive plus the backend serving it. */
