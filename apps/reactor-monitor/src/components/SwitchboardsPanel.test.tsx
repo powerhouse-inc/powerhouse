@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { SpawnHostError } from "@powerhousedao/host-core";
 import { fireEvent, render, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -12,6 +13,8 @@ import {
   type HostIssue,
 } from "../controller/client.js";
 import type { ManagedDescriptors } from "../controller/use-managed-descriptors.js";
+import { PORT_TAKEN_TAIL } from "../server/__fixtures__/spawn-tails.js";
+import { startFailure } from "../server/start-failure.js";
 import { ADMIN_PRESET, SwitchboardsPanel } from "./SwitchboardsPanel.js";
 
 const POLL = { busy: 10, idle: 20 } as const;
@@ -139,6 +142,45 @@ describe("SwitchboardsPanel", () => {
     expect(withheld.textContent).toMatch(/no controller on this page/);
     fireEvent.click(within(withheld).getByRole("button", { name: "Forget" }));
     expect(managed.forget).toHaveBeenCalledWith("sb-1234");
+  });
+
+  it("leads a failed start with its reason and keeps the log tail folded", async () => {
+    const { client, instances } = fakeClient();
+    instances.set("dead", {
+      id: "dead",
+      project: ROOT,
+      host: "sb",
+      status: "failed",
+      startedAt: new Date().toISOString(),
+      error: startFailure(
+        new SpawnHostError(
+          "spawnHost: ph run sb exited (code 1) before writing its run record.",
+          "exited",
+          PORT_TAKEN_TAIL,
+          { code: 1, signal: null, forced: false },
+        ),
+      ),
+    });
+    const view = render(
+      <SwitchboardsPanel managed={fakeManaged(client)} pollMs={POLL} />,
+    );
+    const reason = await view.findByText(
+      "Stopped while starting: Port 16347 is already in use.",
+    );
+    expect(
+      view.getByText(
+        "ph run sb exited (code 1) before writing its run record.",
+      ),
+    ).toBeTruthy();
+    expect(view.queryByText(/^exited:/)).toBeNull();
+    const tail = view.getByText(/memory allocation of 160 bytes failed/);
+    const folded = tail.closest("details");
+    expect(folded).toBeTruthy();
+    expect(folded?.open).toBe(false);
+    expect(
+      reason.compareDocumentPosition(folded!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("keeps the admin preset on the browser env allowlist", () => {

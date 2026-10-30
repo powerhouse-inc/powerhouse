@@ -2,6 +2,12 @@ import type { HostExport } from "@powerhousedao/host-core/schema";
 import fs from "node:fs";
 import path from "node:path";
 import { isRecord, membersOf } from "../host-rules/members.ts";
+import {
+  COPY_CONNECT_PORT_OFFSET,
+  copyPortClashes,
+  copyPortOf,
+  copyPortOverflow,
+} from "../host-rules/ports.ts";
 import { hostFiles } from "../lib/host-files.ts";
 
 /** A host folder: one safe path segment. */
@@ -39,30 +45,25 @@ function assertFolder(name: string): void {
   }
 }
 
-/** Clear of a scaffold's own ports: its switchboard sits at studio + 1000. */
-export const COPY_CONNECT_PORT_OFFSET = 10_000;
-// The ph-cli Connect runner's default port.
-const CONNECT_DEFAULT_PORT = 3000;
+export { COPY_CONNECT_PORT_OFFSET };
 
 export type CopyConnectPort = { member: string; port: number };
 
-/** Each Connect member's fixed port in a copy: its own plus the offset. */
+/** Each Connect member's fixed port in a copy; refuses ports two members would share. */
 export function copyConnectPorts(envelope: HostExport): CopyConnectPort[] {
-  return membersOf({ envelope })
-    .filter((member) => member.role === "connect")
-    .map((member) => {
-      const own =
-        typeof member.runner.port === "number"
-          ? member.runner.port
-          : CONNECT_DEFAULT_PORT;
-      const port = own + COPY_CONNECT_PORT_OFFSET;
-      if (port > 65_535) {
-        throw new MaterializeError(
-          `${member.key} uses port ${own}, so a copy has no port for its Connect (${port} is too high). Give it a port below ${65_536 - COPY_CONNECT_PORT_OFFSET}.`,
-        );
-      }
-      return { member: member.key, port };
-    });
+  const members = membersOf({ envelope });
+  for (const member of members) {
+    const overflow = copyPortOverflow(member);
+    if (overflow) throw new MaterializeError(overflow);
+  }
+  const clash = copyPortClashes(members).at(0);
+  if (clash) throw new MaterializeError(clash.message);
+  return members.flatMap((member) => {
+    const port = copyPortOf(member);
+    return member.role === "connect" && port !== undefined
+      ? [{ member: member.key, port }]
+      : [];
+  });
 }
 
 /** Free switchboard ports; Connect's copy port keeps its own browser storage. */

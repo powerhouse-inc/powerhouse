@@ -8,6 +8,7 @@ import { GROUP_LABELS, ROLE_LABELS } from "../copy.js";
 import { IssueList } from "../IssueList.js";
 import { OptionGroup } from "../OptionGroup.js";
 import { memberOf, stepOf } from "../engine.js";
+import { ConnectionCard } from "./ConnectionCard.js";
 import { DrivesCard } from "./DrivesCard.js";
 import type { StepProps } from "./types.js";
 
@@ -113,14 +114,22 @@ export function ReactorStep({ draft, engine, onChoose }: StepProps) {
             {member.key} · {ROLE_LABELS[member.role]}
           </div>
           {member.role === "connect" ? (
-            <DrivesCard
-              context={engine.context}
-              draft={{ envelope: engine.envelope, env: draft.env }}
-              member={member}
-              members={members}
-              onChoose={onChoose}
-              options={engine.options}
-            />
+            <>
+              <DrivesCard
+                context={engine.context}
+                draft={{ envelope: engine.envelope, env: draft.env }}
+                member={member}
+                members={members}
+                onChoose={onChoose}
+                options={engine.options}
+              />
+              <ConnectionCard
+                member={member}
+                members={members}
+                onChoose={onChoose}
+                options={engine.options}
+              />
+            </>
           ) : (
             <BackendOptions
               member={member}

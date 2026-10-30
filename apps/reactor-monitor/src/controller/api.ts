@@ -219,7 +219,13 @@ export const instanceSchema = z.object({
     })
     .optional(),
   error: z
-    .object({ message: z.string(), phase: z.string(), tail: z.string() })
+    .object({
+      message: z.string(),
+      phase: z.string(),
+      tail: z.string(),
+      /** How the start ended, when `message` leads with a reason from the log. */
+      context: z.string().optional(),
+    })
     .optional(),
 });
 export type Instance = z.infer<typeof instanceSchema>;

@@ -410,7 +410,14 @@ describe.skipIf(process.platform === "win32")(
         { kind: "project", project, host: "web", export: envelope },
         baseDigest,
       );
-      for (const id of ["Shared", "host.children.app:reach:open:sb:shared"]) {
+      for (const id of [
+        "Shared",
+        "host.children.app:reach:open:sb:shared",
+        "host.children.app:newDrives:on:sb",
+        "host.children.app:requestTimeout:sb:120000",
+        "host.children.app:breaker:sb:never",
+        "host.children.app:probeTimeout:10000",
+      ]) {
         const option = id.startsWith("host.")
           ? hostOptions(hostDraft, context).find(
               (candidate) => candidate.id === id,
@@ -445,7 +452,10 @@ describe.skipIf(process.platform === "win32")(
         await fetch(new URL("powerhouse.config.json", app))
       ).json()) as {
         connect: {
-          instance?: { remoteBackends?: { name: string; url: string }[] };
+          instance?: {
+            remoteBackends?: { name: string; url: string }[];
+            router?: Record<string, unknown>;
+          };
           drives?: {
             defaultDrives?: {
               url?: string;
@@ -460,8 +470,17 @@ describe.skipIf(process.platform === "win32")(
         new RegExp(`^http://[^/]+:${sharedPort}/d/shared$`),
       ) as string;
       expect(served.instance?.remoteBackends).toEqual([
-        { name: "sb", url: servedUrl },
+        {
+          name: "sb",
+          url: servedUrl,
+          requestTimeoutMs: 120_000,
+          breaker: false,
+        },
       ]);
+      expect(served.instance?.router).toEqual({
+        newDrives: "sb",
+        probeTimeoutMs: 10_000,
+      });
       expect(served.drives?.defaultDrives).toEqual([
         expect.objectContaining({ url: servedUrl, backend: "sb", sync: false }),
       ]);
@@ -510,6 +529,18 @@ describe.skipIf(process.platform === "win32")(
         { reactor: attached[0].name, backend: "sb" },
       ]);
       expect(seed?.collections).toEqual({ [shared!.id]: attached[0].name });
+      expect(seed?.router).toEqual({
+        defaultBackend: attached[0].name,
+        probeTimeoutMs: 10_000,
+        provisionalRouteMs: 30_000,
+      });
+      expect(seed?.connections).toEqual({
+        [attached[0].name]: {
+          requestTimeoutMs: 120_000,
+          breaker: false,
+          realtime: true,
+        },
+      });
 
       const stopped = await call("DELETE", `instances/${id}`);
       expect(instanceSchema.parse(stopped.body).status).toBe("exited");

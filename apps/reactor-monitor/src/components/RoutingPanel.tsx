@@ -14,6 +14,7 @@ import {
   type RouterTableEntry,
   type RouterTableSnapshot,
   type RouteSource,
+  type RoutingClientOptions,
   type RoutingReactorClient,
 } from "@powerhousedao/reactor-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -45,6 +46,7 @@ export const ROUTER_COPY = {
       ? "The host config changed for 1 moved drive, so its move was dropped."
       : `The host config changed for ${count} moved drives, so their moves were dropped.`,
   inHostConfig: (backend: string) => `${backend} in the host config`,
+  fromHostConfig: "From the host config",
 } as const;
 
 /** One line the router reported through `onDiagnostic`, newest last. */
@@ -324,13 +326,19 @@ export function RoutingPanel({
         setBuildError(ROUTER_COPY.needsTwo);
         return;
       }
+      const options: RoutingClientOptions = {
+        collections: next.overrides,
+        requirements: next.requirements,
+        onDiagnostic: (message) => appendLog(message),
+        ...next.seed?.router,
+      };
       let router: BuiltRouter;
       try {
-        router = buildRoutingClient(next.reactors, {
-          collections: next.overrides,
-          requirements: next.requirements,
-          onDiagnostic: (message) => appendLog(message),
-        });
+        router = buildRoutingClient(
+          next.reactors,
+          options,
+          next.seed?.connections,
+        );
       } catch (error) {
         setBuildError(errorText(error));
         return;
@@ -518,6 +526,12 @@ export function RoutingPanel({
     const name = driveName.trim();
     try {
       if (driveTarget === "") {
+        const blocked = topology.seed?.newDrivesBlocked;
+        if (blocked !== undefined) {
+          setCreateResult("");
+          setOpError(blocked);
+          return;
+        }
         const created = await client.write.drives.create({
           global: { name },
         });
@@ -640,6 +654,8 @@ export function RoutingPanel({
       .filter((reactor) => reactor.kind !== "remote")
       .map((reactor) => reactor.name) ?? [];
   const requirementRows = Object.entries(topology?.requirements ?? {});
+  // The seed of the router that is live; a router built by hand has none.
+  const routed = topology?.seed;
   const hostBackendOf = (reactor: string) =>
     topology?.seed?.backends.find((entry) => entry.reactor === reactor)
       ?.backend;
@@ -655,12 +671,24 @@ export function RoutingPanel({
         keeps the move for the monitoring set.
       </p>
 
-      {seed ? (
+      {seed && seedMissing.length > 0 ? (
         <p className="rm-note" data-testid="router-seed">
-          {seedMissing.length > 0
-            ? ROUTER_COPY.waiting(seedMissing.join(", "))
-            : ROUTER_COPY.routing(seed.app)}
+          {ROUTER_COPY.waiting(seedMissing.join(", "))}
         </p>
+      ) : routed ? (
+        <p className="rm-note" data-testid="router-seed">
+          {ROUTER_COPY.routing(routed.app)}
+        </p>
+      ) : null}
+      {routed && routed.settings.length > 0 ? (
+        <div className="rm-router-host" data-testid="router-host-config">
+          <h3>{ROUTER_COPY.fromHostConfig}</h3>
+          <ul>
+            {routed.settings.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       <div className="rm-router-build">
@@ -1019,6 +1047,11 @@ export function RoutingPanel({
               Create drive
             </button>
           </div>
+          {routed?.newDrivesBlocked ? (
+            <p className="rm-note" data-testid="router-create-blocked">
+              {routed.newDrivesBlocked}
+            </p>
+          ) : null}
           {createResult ? (
             <p className="rm-note" data-testid="router-create-result">
               {createResult}

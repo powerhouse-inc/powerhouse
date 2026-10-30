@@ -7,6 +7,14 @@ import {
   membersOf,
   type Member,
 } from "./members.js";
+import {
+  copyOnlyClashes,
+  copyPortOf,
+  fixedPortOf,
+  nextFreePort,
+  portBaseOf,
+  portClashes,
+} from "./ports.js";
 import { checkSetter } from "./policy.js";
 import {
   addDriveOption,
@@ -18,6 +26,12 @@ import {
   REACH_REASONS,
   reachOptions,
 } from "./reach.js";
+import {
+  ROUTER_REASONS,
+  routerOptions,
+  routerOptionSelected,
+  type RouterGroup,
+} from "./router-settings.js";
 import {
   hostRulesContextSchema,
   type HostDraft,
@@ -44,7 +58,9 @@ export type OptionGroup =
   | "projectionWorker"
   | "add"
   | "reach"
-  | "placement";
+  | "placement"
+  | "port"
+  | RouterGroup;
 
 export type HostOption = {
   /** Unique per draft: `<member path or host>:<group>:[<backend>:]<value>`. */
@@ -311,7 +327,8 @@ function hostProtocol(members: Member[]): Record<string, unknown> {
 
 /**
  * A new child. A second Connect of one folder gets its own reactor block; a
- * second switchboard gets its own block, folders and port.
+ * second switchboard gets its own block, folders and port. A member whose
+ * port another already binds gets the next free one.
  */
 function addMemberOption(
   draft: HostDraft,
@@ -357,8 +374,62 @@ function addMemberOption(
       },
     };
   }
+  const bodies = isRecord(draft.envelope.members) ? draft.envelope.members : {};
+  const body = bodies[folder];
+  const runner = {
+    ...(isRecord(body) && isRecord(body.runner) ? body.runner : {}),
+    ...(isRecord(wrapper.runner) ? wrapper.runner : {}),
+  };
+  const added = { key, role, runner };
+  const port = fixedPortOf(runner, role);
+  const copy = copyPortOf(added);
+  const taken =
+    (port !== undefined &&
+      members.some(
+        (member) => fixedPortOf(member.runner, member.role) === port,
+      )) ||
+    (copy !== undefined &&
+      members.some((member) => copyPortOf(member) === copy));
+  const free = taken
+    ? nextFreePort(role, portBaseOf(added), members)
+    : undefined;
+  if (free !== undefined) {
+    wrapper.runner = {
+      ...(isRecord(wrapper.runner) ? wrapper.runner : {}),
+      port: free,
+    };
+  }
   option.setters = [{ path: `host.children.${key}`, value: wrapper as never }];
   return option;
+}
+
+/** A member that binds another's port, as declared or in the copy, moves. */
+function portOptions(members: Member[], controller: boolean): HostOption[] {
+  const clashes = [
+    ...portClashes(members),
+    ...(controller ? copyOnlyClashes(members) : []),
+  ];
+  const moved = new Set<string>();
+  return clashes.flatMap(({ member }) => {
+    if (member.path === "host" || moved.has(member.path)) return [];
+    moved.add(member.path);
+    const free = nextFreePort(
+      member.role,
+      portBaseOf(member),
+      members.filter((other) => other !== member),
+    );
+    if (free === undefined) return [];
+    return [
+      {
+        id: `${member.path}:port:${free}`,
+        group: "port" as const,
+        value: String(free),
+        label: `Move ${member.key} to port ${free}`,
+        member: member.path,
+        setters: [{ path: `${member.path}.runner.port`, value: free }],
+      },
+    ];
+  });
 }
 
 /**
@@ -398,7 +469,7 @@ function addBrowserOption(members: Member[]): HostOption {
 /** Every option the builder can offer for this draft, not yet judged. */
 export function hostOptionList(
   draft: HostDraft,
-  context: Pick<HostRulesContext, "verb"> = {},
+  context: Pick<HostRulesContext, "verb"> & { controller?: boolean } = {},
 ): HostOption[] {
   const members = membersOf(draft, context);
   const host = draft.envelope.host as unknown;
@@ -407,6 +478,8 @@ export function hostOptionList(
     ...accessOptions(members),
     ...members.flatMap((member) => memberOptions(member, members)),
     ...reachOptions(members, compound),
+    ...members.flatMap((member) => routerOptions(member, members)),
+    ...portOptions(members, context.controller === true),
     addMemberOption(draft, members, "switchboard"),
     addMemberOption(draft, members, "connect"),
     addBrowserOption(members),
@@ -477,8 +550,16 @@ function isSelected(
       );
     case "placement":
       return placementSelected(option, members);
+    case "newDrives":
+    case "requestTimeout":
+    case "breaker":
+    case "realtime":
+    case "probeTimeout":
+    case "provisionalRoute":
+      return routerOptionSelected(option, members);
     case "add":
     case "reach":
+    case "port":
       return false;
   }
 }
@@ -534,6 +615,10 @@ const HOT_RELOAD_WORDING: Record<string, string> = {
 function reasonFor(option: HostOption, issue: HostRuleIssue): string {
   if (option.group === "hotReload") {
     return HOT_RELOAD_WORDING[issue.message] ?? issue.message;
+  }
+  // Said of the host this option would make, not of the one shown.
+  if (issue.message === ROUTER_REASONS.newDrives) {
+    return ROUTER_REASONS.newDrivesFirst;
   }
   return issue.message;
 }
