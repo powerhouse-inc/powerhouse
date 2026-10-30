@@ -16,6 +16,7 @@ import {
   CrossBackendBatchError,
   CrossBackendRelationshipError,
   FanInPartialFailureError,
+  MisrouteUnresolvedError,
   NoEligibleBackendError,
   RoutingReactorClient,
   UnsupportedByBackendError,
@@ -302,6 +303,65 @@ describe("placement through the client", () => {
 
     expect(local.count("create")).toBe(1);
     expect(sb.called("create")).toBe(false);
+  });
+
+  it("fails a create the default backend refuses, rather than placing it elsewhere", async () => {
+    const local = new FakeBackend("local");
+    const sb = new FakeBackend("sb", undefined, REMOTE);
+    const api = sb.api();
+    const client = router(
+      [
+        local.config(),
+        sb.config({
+          backend: {
+            ...api,
+            create: (document: PHDocument) =>
+              Promise.reject(
+                new WrongBackendError({
+                  documentId: document.header.id,
+                  rejectedBy: "sb",
+                  operation: "create",
+                }),
+              ),
+          },
+        }),
+      ],
+      { primaryBackend: "local", defaultBackend: "sb" },
+    );
+
+    await expect(
+      client.create(fakeDocument({ id: parentless[0] })),
+    ).rejects.toBeInstanceOf(MisrouteUnresolvedError);
+    expect(local.called("create")).toBe(false);
+  });
+
+  it("hashes a create past a default backend the collection can't use", async () => {
+    const plain = new FakeBackend("plain");
+    const node = new FakeBackend("node", workflowInfo(), REMOTE);
+    const client = router([plain.config(), node.config()], {
+      defaultBackend: "plain",
+      requirements: { [parentless[0]]: { workflows: true } },
+    });
+
+    await client.create(fakeDocument({ id: parentless[0] }));
+
+    expect(node.count("create")).toBe(1);
+    expect(plain.called("create")).toBe(false);
+  });
+
+  it("writes to an existing drive where it is, whatever the default backend", async () => {
+    const local = new FakeBackend("local");
+    const sb = new FakeBackend("sb", undefined, REMOTE);
+    local.seed(fakeDocument({ id: "drive-here" }));
+    const client = router([local.config(), sb.config()], {
+      primaryBackend: "local",
+      defaultBackend: "sb",
+    });
+
+    await client.rename("drive-here", "renamed");
+
+    expect(local.count("execute")).toBe(1);
+    expect(sb.called("execute")).toBe(false);
   });
 
   it("refuses a default backend it does not hold", () => {

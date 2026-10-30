@@ -139,9 +139,10 @@ export type RoutingOptions = {
   readonly primaryBackend?: string;
   /**
    * Where a new collection goes when nothing places it: a create with no
-   * placement or route lands here while it is eligible and not excluded,
-   * and parentless create defaults are asked of it. Absent, new collections
-   * hash over the eligible backends and the primary answers create defaults.
+   * placement or route lands here while it is eligible, and parentless
+   * create defaults are asked of it. A create it refuses fails; it is not
+   * placed on another backend. Absent, new collections hash over the
+   * eligible backends and the primary answers create defaults.
    */
   readonly defaultBackend?: string;
   readonly misrouteAttempts?: number;
