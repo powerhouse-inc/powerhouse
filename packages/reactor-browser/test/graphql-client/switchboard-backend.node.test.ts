@@ -393,6 +393,31 @@ describe("createSwitchboardBackend breaker", () => {
     expect(stub.received).toHaveLength(sent);
   });
 
+  it("never opens when the breaker is off", async () => {
+    const { backend, stub } = await backendOver({}, failing(serverError), {
+      breaker: false,
+    });
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await expect(backend.isServed("doc-1")).rejects.toThrow();
+    }
+
+    expect(backend.health?.()).toBe("up");
+    expect(stub.received).toHaveLength(5);
+  });
+
+  it("takes the default for a breaker field left unset", async () => {
+    const { backend } = await backendOver({}, failing(serverError), {
+      breaker: { openMs: 60_000 },
+    });
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await expect(backend.isServed("doc-1")).rejects.toThrow();
+    }
+    expect(backend.health?.()).toBe("up");
+
+    await expect(backend.isServed("doc-1")).rejects.toThrow();
+    expect(backend.health?.()).toBe("down");
+  });
+
   it("does not open on GraphQL errors, which are answers", async () => {
     const { backend } = await backendOver({}, failing(graphqlError), {
       breaker: BREAKER,

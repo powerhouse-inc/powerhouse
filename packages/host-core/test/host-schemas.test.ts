@@ -4,6 +4,8 @@ import { switchboardOfDrive } from "../src/schema.js";
 import {
   childrenSchema,
   compoundHostSchema,
+  CONNECT_PRIMARY_MESSAGE,
+  connectReactorIssues,
   declaredHostSchemas,
   defineHostSchemas,
   hostNameSchema,
@@ -12,6 +14,7 @@ import {
   reactorHostSchema,
   reactorBackendSchema,
   reactorSchema,
+  refineConnectReactor,
 } from "../src/host-schemas.js";
 
 describe("reactorSchema (strict per D2.d)", () => {
@@ -596,5 +599,174 @@ describe("reactor.drives[].remote.url is a drive address (resolved form)", () =>
     ).toEqual([
       'drives.0.remote.url: remote.url must be a switchboard drive address (<switchboard>/d/<slug>), not http://a:1/graphql: sync needs the drive. Use url: switchboard.drives.<slug>.url, or url: { $output: { host: "switchboard", path: ["drives", "<slug>", "url"] } }.',
     ]);
+  });
+});
+
+describe("router settings", () => {
+  const sb = { kind: "remote", remote: { url: "https://sb.example/d/b" } };
+  const forms = [
+    ["declared", declaredHostSchemas.reactorSchema],
+    ["resolved", reactorSchema],
+  ] as const;
+  const issues = (result: {
+    error?: { issues: { path: PropertyKey[]; message: string }[] };
+  }) =>
+    (result.error?.issues ?? []).map(
+      (issue) => `${issue.path.join(".")}: ${issue.message}`,
+    );
+
+  it.each(forms)("%s: accepts every setting where it applies", (_, schema) => {
+    const result = schema.safeParse({
+      backends: {
+        main: { kind: "worker" },
+        sb: {
+          kind: "remote",
+          remote: {
+            url: "https://sb.example/d/b",
+            requestTimeoutMs: 10_000,
+            breaker: { failures: 5, openMs: 120_000 },
+            realtime: false,
+          },
+        },
+        sb2: {
+          kind: "remote",
+          remote: { url: "https://sb2.example/d/c", breaker: false },
+        },
+      },
+      placement: { newDrives: "sb" },
+      router: { probeTimeoutMs: 0, provisionalRouteMs: 300_000 },
+    });
+    expect(result.error).toBeUndefined();
+  });
+
+  it.each(forms)("%s: newDrives must name a backend", (_, schema) => {
+    expect(
+      issues(
+        schema.safeParse({
+          backends: { main: { kind: "worker" }, sb },
+          placement: { newDrives: "sbb" },
+        }),
+      ),
+    ).toEqual([
+      'placement.newDrives: placement.newDrives names backend "sbb", which is not in backends (main, sb).',
+    ]);
+  });
+
+  it.each(forms)(
+    "%s: connection settings belong to a remote backend",
+    (_, schema) => {
+      expect(
+        issues(
+          schema.safeParse({
+            backends: {
+              main: {
+                kind: "worker",
+                remote: {
+                  url: "https://sb.example/d/b",
+                  requestTimeoutMs: 1_000,
+                  realtime: true,
+                },
+              },
+            },
+          }),
+        ),
+      ).toEqual([
+        'backends.main.remote.requestTimeoutMs: remote.requestTimeoutMs applies only to a "remote" backend; this one is "worker".',
+        'backends.main.remote.realtime: remote.realtime applies only to a "remote" backend; this one is "worker".',
+      ]);
+    },
+  );
+
+  it("refuses out-of-range values and unknown keys", () => {
+    const at = (value: unknown) => reactorSchema.safeParse(value).success;
+    expect(
+      at({
+        backends: {
+          sb: { ...sb, remote: { ...sb.remote, requestTimeoutMs: 0 } },
+        },
+      }),
+    ).toBe(false);
+    expect(
+      at({
+        backends: {
+          sb: { ...sb, remote: { ...sb.remote, breaker: { failures: 0 } } },
+        },
+      }),
+    ).toBe(false);
+    expect(
+      at({
+        backends: { sb: { ...sb, remote: { ...sb.remote, breaker: true } } },
+      }),
+    ).toBe(false);
+    expect(at({ router: { probeTimeoutMs: -1 } })).toBe(false);
+    expect(at({ router: { retries: 3 } })).toBe(false);
+    expect(at({ placement: { moves: false } })).toBe(false);
+  });
+});
+
+describe("Connect placement (refineConnectReactor)", () => {
+  const sb = (slug: string) => ({
+    kind: "remote",
+    remote: { url: `https://${slug}.example/d/${slug}` },
+  });
+  const connect = defineHostSchemas((s) =>
+    s.reactorHostSchema.superRefine(refineConnectReactor),
+  );
+  const host = (reactor: unknown) => ({
+    name: "c",
+    runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+    reactor,
+  });
+  const messages = (reactor: unknown) =>
+    connectReactorIssues(host(reactor)).map(
+      (issue) => `${issue.path.join(".")}: ${issue.message}`,
+    );
+
+  it("refuses placement.primary, in both forms", () => {
+    const reactor = {
+      backends: { main: { kind: "worker" }, a: sb("a") },
+      placement: { primary: "main" },
+    };
+    for (const schema of [connect.declaredHostSchema, connect.hostSchema]) {
+      const result = schema.safeParse(host(reactor));
+      expect(result.error?.issues).toEqual([
+        expect.objectContaining({
+          path: ["reactor", "placement", "primary"],
+          message: CONNECT_PRIMARY_MESSAGE,
+        }),
+      ]);
+    }
+    expect(CONNECT_PRIMARY_MESSAGE).toBe(
+      "Connect doesn't use placement.primary. To choose where new drives go, use placement.newDrives.",
+    );
+  });
+
+  it("asks where new drives go when several switchboards and no browser reactor", () => {
+    expect(messages({ backends: { a: sb("a"), b: sb("b") } })).toEqual([
+      "reactor.placement.newDrives: This Connect keeps no reactor in the browser and links 2 switchboards (a, b). Set placement.newDrives to the one new drives are created on.",
+    ]);
+    expect(
+      messages({
+        backends: { a: sb("a"), b: sb("b") },
+        placement: { newDrives: "b" },
+      }),
+    ).toEqual([]);
+    expect(messages({ backends: { a: sb("a") } })).toEqual([]);
+    expect(
+      messages({
+        backends: { main: { kind: "worker" }, a: sb("a"), b: sb("b") },
+      }),
+    ).toEqual([]);
+  });
+
+  it("leaves a switchboard host's placement.primary alone", () => {
+    expect(
+      reactorHostSchema.safeParse(
+        host({
+          backends: { main: { kind: "in-process" }, b: { kind: "in-process" } },
+          placement: { primary: "b" },
+        }),
+      ).success,
+    ).toBe(true);
   });
 });

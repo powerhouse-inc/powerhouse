@@ -22,12 +22,18 @@ type RoutingRow = {
 
 type PhWindow = {
   ph?: {
+    selectedDriveId?: string;
     drives?: Array<{
       header: { id: string };
-      state: { global: { nodes: Array<{ name: string }> } };
+      state: { global: { name: string; nodes: Array<{ name: string }> } };
     }>;
     fullReactorClient?: {
-      describeRouting(): { backends: string[]; collections: RoutingRow[] };
+      describeRouting(): {
+        backends: string[];
+        collections: RoutingRow[];
+        documents: { identifier: string; backend: string }[];
+      };
+      get(id: string): Promise<unknown>;
       drives: { addFolder(driveId: string, name: string): Promise<unknown> };
     };
     reactorClientModule?: {
@@ -139,6 +145,7 @@ type Served = {
   mode: "router" | "remote";
   home: string;
   drives: Array<{ id: string; sync?: false }>;
+  newDrives?: "sb";
 };
 
 /** `served` is read per request, so a test can change it before a reload. */
@@ -152,11 +159,12 @@ async function serveRouted(page: Page, served: () => Served): Promise<void> {
     const config = (await response.json()) as {
       connect: Record<string, Record<string, unknown> | undefined>;
     };
-    const { mode, home, drives } = served();
+    const { mode, home, drives, newDrives } = served();
     config.connect.instance = {
       ...config.connect.instance,
       reactorClient: mode,
       remoteBackends: [{ name: "sb", url: `${SWITCHBOARD}/d/${home}` }],
+      ...(newDrives ? { router: { newDrives } } : {}),
     };
     config.connect.drives = {
       ...config.connect.drives,
@@ -170,6 +178,81 @@ async function serveRouted(page: Page, served: () => Served): Promise<void> {
     };
     await route.fulfill({ response, json: config });
   });
+}
+
+async function servedOnSwitchboard(id: string): Promise<boolean> {
+  const { documentServed } = await gql<{ documentServed: boolean }>(
+    `query($id: String!) { documentServed(idOrSlug: $id) }`,
+    { id },
+  );
+  return documentServed;
+}
+
+/** Creates a drive through Connect's Add drive dialog, as a person would. */
+async function addDriveThroughDialog(page: Page, name: string): Promise<void> {
+  await page.getByText("Create New Drive").click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
+  await page.locator('input[placeholder="Drive name"]').fill(name);
+  const submit = page.getByRole("button", { name: "Create new drive" });
+  await expect(submit).toBeEnabled({ timeout: LONG_VISIBLE_TIMEOUT });
+  await submit.click();
+}
+
+/** The id of the drive the dialog just created and opened. */
+async function createdDriveId(page: Page, name: string): Promise<string> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate((driveName) => {
+          const ph = (window as unknown as PhWindow).ph;
+          const drive = ph?.drives?.find(
+            (entry) => entry.state.global.name === driveName,
+          );
+          return drive?.header.id ?? ph?.selectedDriveId;
+        }, name),
+      { timeout: LONG_VISIBLE_TIMEOUT },
+    )
+    .toBeTruthy();
+  return page.evaluate((driveName) => {
+    const ph = (window as unknown as PhWindow).ph!;
+    return (
+      ph.drives?.find((entry) => entry.state.global.name === driveName)?.header
+        .id ?? ph.selectedDriveId!
+    );
+  }, name);
+}
+
+async function listedDriveIds(page: Page): Promise<string[]> {
+  try {
+    return await page.evaluate(
+      () =>
+        (window as unknown as PhWindow).ph?.drives?.map(
+          (drive) => drive.header.id,
+        ) ?? [],
+    );
+  } catch {
+    return [];
+  }
+}
+
+/** Whether this browser's own reactor holds a drive with this name. */
+async function localDriveNamed(page: Page, name: string): Promise<boolean> {
+  return page.evaluate(async (driveName) => {
+    const ph = (window as unknown as PhWindow).ph;
+    const client = ph?.reactorClientModule?.client;
+    if (!client) return false;
+    for (const drive of ph?.drives ?? []) {
+      if (drive.state.global.name !== driveName) continue;
+      try {
+        await client.read.get(drive.header.id);
+        return true;
+      } catch {
+        // listed, but not held here
+      }
+    }
+    return false;
+  }, name);
 }
 
 async function syncedDriveIds(page: Page): Promise<string[] | null> {
@@ -394,6 +477,75 @@ test.describe("Connect routed to a switchboard", () => {
       .poll(() => listedFolders(page, drive), { timeout: LONG_VISIBLE_TIMEOUT })
       .toContain("added-on-sb");
     expect(await listedFolders(page, drive)).not.toContain("stale-copy");
+  });
+
+  test("creates a new drive on the newDrives switchboard, with no copy in this browser", async ({
+    page,
+  }) => {
+    const home = await createSwitchboardDrive();
+    await serveRouted(page, () => ({
+      mode: "router",
+      home,
+      drives: [{ id: home }],
+      newDrives: "sb",
+    }));
+    await page.goto("/");
+    await waitForAppReady(page);
+    await routing(page);
+
+    const name = `On sb ${crypto.randomUUID().slice(0, 8)}`;
+    await addDriveThroughDialog(page, name);
+    const created = await createdDriveId(page, name);
+
+    expect(await servedOnSwitchboard(created)).toBe(true);
+    expect(await heldLocally(page, created)).toBe(false);
+    expect(await syncedDriveIds(page)).not.toContain(created);
+
+    await page.reload();
+    await waitForAppReady(page);
+    await routing(page);
+    await expect
+      .poll(() => listedDriveIds(page), { timeout: LONG_VISIBLE_TIMEOUT })
+      .toContain(created);
+    await page.evaluate(
+      (id) => (window as unknown as PhWindow).ph!.fullReactorClient!.get(id),
+      created,
+    );
+    expect(
+      await page.evaluate(
+        (id) =>
+          (window as unknown as PhWindow)
+            .ph!.fullReactorClient!.describeRouting()
+            .documents.find((row) => row.identifier === id)?.backend,
+        created,
+      ),
+    ).toBe("sb");
+    expect(await heldLocally(page, created)).toBe(false);
+    expect(await syncedDriveIds(page)).not.toContain(created);
+  });
+
+  test("names the newDrives switchboard when it isn't answering, and creates nothing here", async ({
+    page,
+  }) => {
+    const home = await createSwitchboardDrive();
+    await serveRouted(page, () => ({
+      mode: "router",
+      home,
+      drives: [{ id: home }],
+      newDrives: "sb",
+    }));
+    await page.goto("/");
+    await waitForAppReady(page);
+    await routing(page);
+
+    await page.route(`${SWITCHBOARD}/graphql**`, (route) => route.abort());
+    const name = `Down ${crypto.randomUUID().slice(0, 8)}`;
+    await addDriveThroughDialog(page, name);
+
+    await expect(
+      page.getByText("sb isn't answering, so the drive wasn't created."),
+    ).toBeVisible({ timeout: LONG_VISIBLE_TIMEOUT });
+    expect(await localDriveNamed(page, name)).toBe(false);
   });
 
   test("runs with only the switchboard", async ({ page }) => {

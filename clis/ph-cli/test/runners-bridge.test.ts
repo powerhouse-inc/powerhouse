@@ -790,7 +790,6 @@ describe("connect bridge runner — structural multi-reactor (P4.2/P4.3)", () =>
               remote: { url: "http://localhost:7064/d/drive" },
             },
           },
-          placement: { primary: "local" },
         },
       }),
       ctx,
@@ -799,7 +798,7 @@ describe("connect bridge runner — structural multi-reactor (P4.2/P4.3)", () =>
       .calls[0][2] as PHConnectRuntimeConfigLike;
     expect(override.instance).toMatchObject({
       reactorClient: "router", // structure beats the scaffold-default false
-      reactorWorker: true, // primary backend kind
+      reactorWorker: true, // the browser reactor's kind
       remoteBackends: [{ name: "main", url: "http://localhost:7064/d/drive" }],
     });
     // the home drive first, annotated with the backend serving it

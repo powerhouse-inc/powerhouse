@@ -20,6 +20,7 @@ import {
   type DriveDeclaration,
   projectDrivesIntoConnect,
   projectReactorToConnect,
+  refineConnectReactor,
   remoteBackendUrls,
   type ReactorConfig,
   type RunnerContext,
@@ -51,34 +52,36 @@ export const kind = "reactor";
  * output tokens; types host files) and `hostSchema` (resolved; checked
  * right before the verb). */
 const schemas = defineHostSchemas((s) =>
-  s.reactorHostSchema.extend({
-    runner: s.runnerBaseSchema
-      .extend({
-        /** Open a browser tab once listening (dev/serve). */
-        openBrowser: z.boolean().optional(),
-        /** Fail instead of moving to the next free port when `port` is taken. */
-        strictPort: z.boolean().optional(),
-        /** The Connect build output dir (`build` writes it, `serve` serves it). */
-        outDir: z.string().min(1).optional(),
-        /** Patch the baked CSP for the runtime registry (`serve`); a
-         * compound's wiring sets it on its connect member. */
-        cspRegistrySync: z.boolean().optional(),
-        /** The host's routes folder, project-relative; false for none.
-         * Default: hosts/connect/routes. */
-        routes: z.union([z.string(), z.literal(false)]).optional(),
-        /** The switchboard this Connect is served next to: its server
-         * (dev and serve) proxies the switchboard's paths (`/graphql`,
-         * `/d/*`, `/attachments`, `/mcp`, `/api/*`) to `target`, and the
-         * served config names that switchboard as `${origin}`, resolved by
-         * the browser against the page's origin. So one config holds from
-         * the developer's `localhost` and from a published site alike, with
-         * every call on the page's own origin. Typically a sibling's
-         * `origin` output token. */
-        proxy: z.strictObject({ target: s.tokenable(z.url()) }).optional(),
-      })
-      .strict(),
-    config: connectConfigSchemaWith(s.tokenable).optional(),
-  }),
+  s.reactorHostSchema
+    .extend({
+      runner: s.runnerBaseSchema
+        .extend({
+          /** Open a browser tab once listening (dev/serve). */
+          openBrowser: z.boolean().optional(),
+          /** Fail instead of moving to the next free port when `port` is taken. */
+          strictPort: z.boolean().optional(),
+          /** The Connect build output dir (`build` writes it, `serve` serves it). */
+          outDir: z.string().min(1).optional(),
+          /** Patch the baked CSP for the runtime registry (`serve`); a
+           * compound's wiring sets it on its connect member. */
+          cspRegistrySync: z.boolean().optional(),
+          /** The host's routes folder, project-relative; false for none.
+           * Default: hosts/connect/routes. */
+          routes: z.union([z.string(), z.literal(false)]).optional(),
+          /** The switchboard this Connect is served next to: its server
+           * (dev and serve) proxies the switchboard's paths (`/graphql`,
+           * `/d/*`, `/attachments`, `/mcp`, `/api/*`) to `target`, and the
+           * served config names that switchboard as `${origin}`, resolved by
+           * the browser against the page's origin. So one config holds from
+           * the developer's `localhost` and from a published site alike, with
+           * every call on the page's own origin. Typically a sibling's
+           * `origin` output token. */
+          proxy: z.strictObject({ target: s.tokenable(z.url()) }).optional(),
+        })
+        .strict(),
+      config: connectConfigSchemaWith(s.tokenable).optional(),
+    })
+    .superRefine(refineConnectReactor),
 );
 export const declaredHostSchema = schemas.declaredHostSchema;
 export const hostSchema = schemas.hostSchema;

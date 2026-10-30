@@ -151,9 +151,101 @@ describe("projectReactorToConnect", () => {
         local: { kind: "worker" },
         sb: { kind: "remote", remote: { url: "http://x/graphql" } },
       },
-      placement: { primary: "local" },
     });
     expect(connect.instance?.reactorClient).toBe("router");
+  });
+
+  it("reactorWorker follows the browser reactor, wherever it is listed", () => {
+    const sb = { kind: "remote" as const, remote: { url: "http://x/d/b" } };
+    expect(
+      projectReactorToConnect({ backends: { sb, tab: { kind: "worker" } } })
+        .connect.instance?.reactorWorker,
+    ).toBe(true);
+    expect(
+      projectReactorToConnect({ backends: { sb, tab: { kind: "in-process" } } })
+        .connect.instance?.reactorWorker,
+    ).toBe(false);
+  });
+
+  it("serves the router settings the host sets, in router and remote modes", () => {
+    const sb = { kind: "remote" as const, remote: { url: "http://x/d/b" } };
+    const router = { probeTimeoutMs: 1_000, provisionalRouteMs: 300_000 };
+    expect(
+      projectReactorToConnect({
+        backends: { main: { kind: "worker" }, sb },
+        placement: { newDrives: "sb" },
+        router,
+      }).connect.instance?.router,
+    ).toEqual({ newDrives: "sb", ...router });
+    expect(
+      projectReactorToConnect({
+        backends: { sb },
+        placement: { newDrives: "sb" },
+      }).connect.instance?.router,
+    ).toEqual({ newDrives: "sb" });
+    // The browser reactor is the default: naming it serves nothing.
+    expect(
+      projectReactorToConnect({
+        backends: { main: { kind: "worker" }, sb },
+        placement: { newDrives: "main" },
+      }).connect.instance,
+    ).not.toHaveProperty("router");
+    // A switchboard with no address yet (an unresolved token) isn't served,
+    // so neither is newDrives naming it.
+    const unresolved = projectReactorToConnect({
+      backends: {
+        main: { kind: "worker" },
+        sb: {
+          kind: "remote",
+          remote: {
+            url: {
+              $output: { host: "switchboard", path: ["drives", "b", "url"] },
+            } as unknown as string,
+          },
+        },
+      },
+      placement: { newDrives: "sb" },
+    }).connect.instance;
+    expect(unresolved?.remoteBackends).toEqual([]);
+    expect(unresolved).not.toHaveProperty("router");
+    // No switchboard, no router.
+    expect(
+      projectReactorToConnect({
+        backends: { main: { kind: "worker" } },
+        router,
+      }).connect.instance,
+    ).not.toHaveProperty("router");
+  });
+
+  it("serves each switchboard's connection settings with its backend", () => {
+    const { connect } = projectReactorToConnect({
+      backends: {
+        main: { kind: "worker" },
+        a: {
+          kind: "remote",
+          remote: {
+            url: "http://a:1/d/x",
+            requestTimeoutMs: 10_000,
+            breaker: { failures: 5, openMs: 120_000 },
+            realtime: false,
+          },
+        },
+        b: {
+          kind: "remote",
+          remote: { url: "http://b:2/d/y", breaker: false },
+        },
+      },
+    });
+    expect(connect.instance?.remoteBackends).toEqual([
+      {
+        name: "a",
+        url: "http://a:1/d/x",
+        requestTimeoutMs: 10_000,
+        breaker: { failures: 5, openMs: 120_000 },
+        realtime: false,
+      },
+      { name: "b", url: "http://b:2/d/y", breaker: false },
+    ]);
   });
 
   it("serves the remote backends by host key in router and remote modes", () => {

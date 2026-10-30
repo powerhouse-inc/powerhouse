@@ -312,7 +312,7 @@ export class RoutingDriveWriteClient implements IDriveWriteClient {
   private async placeNewDrive(input: DriveInput): Promise<RouterBackend> {
     const key = input.id ?? input.slug ?? "";
     if (key === "") {
-      return this.dispatcher.primary;
+      return this.dispatcher.createHome;
     }
     const collection = this.dispatcher.collectionFor(key, DEFAULT_BRANCH);
     const route = await this.dispatcher.placed(() =>
