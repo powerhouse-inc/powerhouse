@@ -156,9 +156,10 @@ function InstanceRow({
       ) : null}
       {instance.error ? (
         <>
-          <p className="rm-error">
-            {instance.error.phase}: {instance.error.message}
-          </p>
+          <p className="rm-error">{instance.error.message}</p>
+          {instance.error.context ? (
+            <p className="rm-note">{instance.error.context}</p>
+          ) : null}
           {instance.error.tail ? (
             <details>
               <summary className="rm-note">Last log lines</summary>
