@@ -235,7 +235,8 @@ export class KeyframeCleanupService implements IKeyframeCleanup {
       reclaim.tableBytesBefore = await this.tableBytes();
       // The new table, and the write-ahead log that carries it.
       const requiredFreeBytes = 2 * (await this.liveBytes());
-      this.finished = this.rewrite(reclaim, maintenance, requiredFreeBytes);
+      // Not awaited on shutdown: closing the store is what ends a waiting one.
+      void this.rewrite(reclaim, maintenance, requiredFreeBytes);
     } catch (error) {
       this.finishReclaim(reclaim, "failed", errorMessage(error));
     }
