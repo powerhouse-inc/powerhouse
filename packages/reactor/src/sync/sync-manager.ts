@@ -1,3 +1,4 @@
+import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type {
   HoldReason,
   Operation,
@@ -254,6 +255,15 @@ function createdVersions(
   return undefined;
 }
 
+/** The document type the operations for `documentId` carry. */
+function documentTypeOf(
+  operations: readonly OperationWithContext[],
+  documentId: string,
+): string | undefined {
+  return operations.find(({ context }) => context.documentId === documentId)
+    ?.context.documentType;
+}
+
 /** The load was refused because this very id is purged here: a drop. */
 function isPurgedFailure(
   error: ErrorInfo | undefined,
@@ -376,6 +386,7 @@ export class SyncManager
     documentId: string,
     branch: string,
   ) => Promise<ProtocolVersions | undefined>;
+  private readonly modelRefusal: LocalPeer["modelRefusal"];
   private readonly peerUpdates = new Map<string, Promise<void>>();
   private readonly peerUnsubscribes = new Map<string, () => void>();
   // remote name -> marker op id -> the inbox item loading it
@@ -413,7 +424,10 @@ export class SyncManager
     driveContainerTypes: ReadonlySet<string>,
     watermark: ISettledWatermark,
     config: Partial<SyncManagerConfig> = {},
-    localPeer: LocalPeer = { capabilities: PEER_CAPABILITIES, flags: {} },
+    localPeer: LocalPeer = {
+      capabilities: PEER_CAPABILITIES,
+      flags: resolveFeatureFlags(),
+    },
     holds: ISyncHoldStorage = new InMemorySyncHoldStorage(),
     purges?: PurgeLookup,
     receivedMarkers: ISyncReceivedMarkerStorage = new InMemorySyncReceivedMarkerStorage(),
@@ -447,6 +461,7 @@ export class SyncManager
       if (wanted !== undefined) this.wanted[capability.name] = wanted;
     }
     this.holds = holds;
+    this.modelRefusal = localPeer.modelRefusal;
     this.protocolVersionsOf =
       localPeer.protocolVersionsOf ??
       ((documentId, branch) => this.indexedVersions(documentId, branch));
@@ -1179,20 +1194,27 @@ export class SyncManager
     versions: ProtocolVersions,
     peer: Supports,
   ): boolean {
+    let message: string;
     let errorType: SyncOperationErrorType;
-    let reason = holdReason(this.localSupport, versions, this.capabilities);
-    if (reason) {
+    const local = holdReason(this.localSupport, versions, this.capabilities);
+    const documentType = documentTypeOf(syncOp.operations, syncOp.documentId);
+    const model =
+      local || documentType === undefined
+        ? undefined
+        : this.modelRefusal?.(documentType, versions);
+    if (local) {
       errorType = "UNSUPPORTED_PROTOCOL";
+      message = `Document ${syncOp.documentId} requires ${local.protocol} ${local.version}, which this reactor does not support`;
+    } else if (model) {
+      errorType = "UNSUPPORTED_PROTOCOL";
+      message = `Document ${syncOp.documentId} requires ${model.protocol} ${model.version}, which this reactor cannot run for ${documentType}`;
     } else {
-      reason = holdReason(peer, versions, this.capabilities);
+      const reason = holdReason(peer, versions, this.capabilities);
       if (!reason) return false;
       errorType = "PEER_PROTOCOL_UNSUPPORTED";
+      message = `Remote ${remote.meta.name} wrote into document ${syncOp.documentId} at ${reason.protocol} ${reason.version}, which its peer does not announce`;
     }
 
-    const message =
-      errorType === "UNSUPPORTED_PROTOCOL"
-        ? `Document ${syncOp.documentId} requires ${reason.protocol} ${reason.version}, which this reactor does not support`
-        : `Remote ${remote.meta.name} wrote into document ${syncOp.documentId} at ${reason.protocol} ${reason.version}, which its peer does not announce`;
     syncOp.failed(
       new ChannelError(ChannelErrorSource.Inbox, new Error(message), errorType),
     );

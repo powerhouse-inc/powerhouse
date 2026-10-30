@@ -5,6 +5,12 @@ import {
   sortOperations,
   undo,
 } from "@powerhousedao/shared/document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
+import {
+  appliedOperations,
+  stateReducerOf,
+  withSignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { DriveCollectionId } from "../../src/cache/operation-index-types.js";
 import type { ReactorClient } from "../../src/client/reactor-client.js";
@@ -20,6 +26,8 @@ import type {
   RemoteOptions,
   SyncEnvelope,
 } from "../../src/sync/types.js";
+import { assertOneRuleAgreement } from "../executor/one-rule-agreement.js";
+import { BASE_REDUCER_3_VERSIONS, undoV3Flags } from "../factories.js";
 import { TestP256Signer } from "../utils/p256-signer.js";
 import { TestChannel } from "./channels/test-channel.js";
 
@@ -45,8 +53,10 @@ type Harness = {
   channels: Map<string, TestChannel>;
 };
 
+/** `v3`: undoV3 on, manifests exchanged so base-reducer 3 is not held. */
 async function buildHarness(
   featureFlags: Partial<ReactorFeatureFlags> = {},
+  options: { v3?: boolean } = {},
 ): Promise<Harness> {
   const channels = new Map<string, TestChannel>();
   const peerMapping = new Map<string, string>();
@@ -77,6 +87,14 @@ async function buildHarness(
         remoteName,
         cursorStorage,
         send,
+        options.v3
+          ? {
+              peer: () => {
+                const peerName = peerMapping.get(remoteName);
+                return peerName ? channels.get(peerName) : undefined;
+              },
+            }
+          : {},
       );
       channels.set(remoteName, channel);
       return channel;
@@ -92,6 +110,10 @@ async function buildHarness(
           .withExecutorConfig({ featureFlags })
           // On demand only: a tick serves a pending echo ahead of A's next write.
           .withCatchUp({ intervalMs: 3_600_000 })
+          .withExecutorConfig({
+            featureFlags: options.v3 ? undoV3Flags(featureFlags) : featureFlags,
+          })
+          .withWriteCacheConfig(options.v3 ? { keyframeInterval: 2 } : {})
           .withSync(new SyncBuilder().withChannelFactory(channelFactory())),
       )
       .withSigner(signer)
@@ -111,6 +133,14 @@ async function buildHarness(
     held,
     channels,
   };
+}
+
+function baseReducer3Drive() {
+  return withSignaturePolicy(
+    driveDocumentModelModule.utils.createDocument(),
+    "v2-required",
+    { protocolVersions: BASE_REDUCER_3_VERSIONS },
+  );
 }
 
 function toA(id: string): string {
@@ -243,8 +273,11 @@ type Damaged = {
 };
 
 /** A as the pre-fix load of y left it; `pendingEcho` leaves its echo unsent. */
-async function damaged(h: Harness, pendingEcho = false): Promise<Damaged> {
-  const drive = driveDocumentModelModule.utils.createDocument();
+async function damaged(
+  h: Harness,
+  pendingEcho = false,
+  drive: PHDocument = driveDocumentModelModule.utils.createDocument(),
+): Promise<Damaged> {
   const id = drive.header.id;
   const collectionId = DriveCollectionId.forDrive(id);
   await connect(h, id);
@@ -566,6 +599,102 @@ describe("losing a live row on current main (#6b)", () => {
     expect(await live(h.a, id)).toContain(a1);
     expect(await live(h.a, id)).toEqual(await live(h.b, id));
   }, 30_000);
+});
+
+/** The action ids the stored global stream applies, in order. */
+async function applied(peer: Peer, id: string): Promise<string[]> {
+  return appliedOperations(await stored(peer, id)).map(
+    (operation) => operation.action.id,
+  );
+}
+
+async function agree(peer: Peer, document: PHDocument): Promise<void> {
+  await assertOneRuleAgreement({
+    module: peer.module,
+    document,
+    reducer: driveDocumentModelModule.reducer as never,
+    reducerFor: () => stateReducerOf(driveDocumentModelModule.reducer) as never,
+  });
+}
+
+/** The base-reducer version each replica stored for `id`. */
+async function storedBaseReducer(h: Harness, id: string): Promise<unknown[]> {
+  return Promise.all(
+    [h.a, h.b].map(
+      async (peer) =>
+        (await peer.reactor.get(id)).header.protocolVersions?.["base-reducer"],
+    ),
+  );
+}
+
+describe("base-reducer 3", () => {
+  describe("a replica that lost a live operation of its own (#6)", () => {
+    let h: Harness | undefined;
+
+    afterEach(() => {
+      h?.a.reactor.kill();
+      h?.b.reactor.kill();
+      h = undefined;
+    });
+
+    // A trivial append writes skip 0, so B's rewind skip on z retracts nothing on A.
+    it("converges after B's own backdated write re-sends x (documentDecisions)", async () => {
+      h = await buildHarness({ documentDecisions: true }, { v3: true });
+      const drive = baseReducer3Drive();
+      const { id, base, y } = await damaged(h, false, drive);
+      expect(await storedBaseReducer(h, id)).toEqual([3, 3]);
+
+      await executeOn(h.b, id, "z", new Date(base - 5_000).toISOString());
+      await quiesce(h, id);
+
+      expect(await applied(h.a, id)).toContain(y);
+      expect(await applied(h.a, id)).toEqual(await applied(h.b, id));
+      await agree(h.a, drive);
+      await agree(h.b, drive);
+    }, 30_000);
+
+    // The pin below starts from this state; a broken setup fails here, visibly.
+    it("B holds x stamped with A as its source, with A's echo pending", async () => {
+      h = await buildHarness({}, { v3: true });
+      const { id, x } = await damaged(h, true, baseReducer3Drive());
+      expect(await storedBaseReducer(h, id)).toEqual([3, 3]);
+
+      expect(await sourceRemoteOnB(h, id, x)).toEqual([toA(id)]);
+    }, 30_000);
+
+    // BUG: v3 has no lost-operation resend either; B keeps x stamped with A.
+    // A setup failure returns, so it turns the pin red instead of satisfying it.
+    it.fails("is repaired when A's reshuffle echo reaches B alone", async () => {
+      let id: string;
+      let x: string;
+      try {
+        h = await buildHarness({}, { v3: true });
+        ({ id, x } = await damaged(h, true, baseReducer3Drive()));
+        expect(await storedBaseReducer(h, id)).toEqual([3, 3]);
+        const stamped = await sourceRemoteOnB(h, id, x);
+        if (stamped.length !== 1 || stamped[0] !== toA(id)) {
+          console.error("precondition broken: x on B is stamped", stamped);
+          return;
+        }
+
+        hold(h, toB(id));
+        await h.a.module.catchUp.sweepNow();
+        await eventually(() =>
+          Promise.resolve((h!.held.get(toB(id))?.length ?? 0) > 0),
+        );
+        release(h, toB(id));
+        await executeOn(h.a, id, "w", new Date().toISOString());
+      } catch (error) {
+        console.error("setup failed before the pinned wait", error);
+        return;
+      }
+
+      await eventually(
+        async () => (await sourceRemoteOnB(h!, id, x)).includes(""),
+        5_000,
+      );
+    }, 30_000);
+  });
 });
 
 describe("a sender's same-millisecond batches", () => {

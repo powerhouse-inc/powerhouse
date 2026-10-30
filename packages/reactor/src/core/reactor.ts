@@ -7,7 +7,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   creationActions,
-  documentDerivesByRule,
+  derivesByRule,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
@@ -16,6 +16,7 @@ import {
   UndoTargetsCache,
   type DerivedScope,
 } from "../derivation/index.js";
+import { UNGATED, type IProtocolGate } from "../protocol/gate.js";
 import type { CatchUpScheduler } from "../catch-up/scheduler.js";
 import type { CreateVersionSelector } from "./types.js";
 import {
@@ -122,6 +123,8 @@ export class Reactor implements IReactor {
     private readonly disposers: Unsubscribe[] = [],
     // Run last on kill(), once nothing routes to what they close.
     private readonly closers: Array<() => Promise<void>> = [],
+    // Undo resolution derives the scope; the gate refuses an unrunnable document.
+    private readonly protocolGate?: IProtocolGate,
   ) {
     this.catchUp = catchUp;
     this.logger = logger;
@@ -465,7 +468,10 @@ export class Reactor implements IReactor {
       undefined,
       signal,
     );
-    if (!documentDerivesByRule(header, scope)) {
+    const caps = (this.protocolGate ?? UNGATED).capabilities(
+      header.protocolVersions,
+    );
+    if (!derivesByRule(caps, scope)) {
       return {};
     }
     return this.undoTargets.resolve(documentId, scope, branch, signal);
@@ -482,6 +488,7 @@ export class Reactor implements IReactor {
       scopeDerivation(
         this.operationStore,
         this.documentModelRegistry,
+        this.protocolGate,
         documentId,
         branch,
         signal,

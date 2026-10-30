@@ -1,6 +1,8 @@
-import type {
-  UnsupportedStoredDocuments,
-  UnsupportedStoredProtocolError,
+import {
+  storedRefusalName,
+  type StoredProtocolRefusal,
+  type UnsupportedStoredDocuments,
+  type UnsupportedStoredProtocolError,
 } from "@powerhousedao/reactor";
 
 const MODES: readonly UnsupportedStoredDocuments[] = ["refuse", "read-only"];
@@ -23,13 +25,11 @@ export function resolveUnsupportedStoredDocuments(
 
 /** The reactor refused to start over documents this build does not run. */
 export class StoredDocumentsRefusedError extends Error {
-  readonly versions: readonly { protocol: string; version: number }[];
+  readonly versions: readonly StoredProtocolRefusal[];
   readonly documents: number;
 
   constructor(cause: UnsupportedStoredProtocolError) {
-    const named = cause.versions
-      .map(({ protocol, version }) => `${protocol} ${version}`)
-      .join(", ");
+    const named = cause.versions.map(storedRefusalName).join(", ");
     super(
       `Refusing to start: ${cause.documents} stored document(s) require ${named}, which this switchboard does not run. ` +
         `Either start a switchboard build that runs ${named}, or set REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only to start with those documents read-only.`,

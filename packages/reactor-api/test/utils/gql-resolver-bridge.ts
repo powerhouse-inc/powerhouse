@@ -35,6 +35,8 @@ type GraphQLRequest = {
 
 type ResolverBridgeOptions = {
   log?: boolean;
+  /** Relays the poll's dead letters, as the subgraph does. */
+  deadLetters?: boolean;
 };
 
 function createMockResponse<T>(data: T): Response {
@@ -188,6 +190,7 @@ export function createResolverBridge(
           hasMore: result.hasMore,
           manifestRevision: result.manifestRevision,
           peerManifestRevision: result.peerManifestRevision,
+          ...(options.deadLetters ? { deadLetters: result.deadLetters } : {}),
         },
       });
     }

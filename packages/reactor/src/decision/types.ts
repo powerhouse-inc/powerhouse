@@ -1,6 +1,8 @@
 import type {
+  BaseReducerCapabilities,
   Operation,
   PHDocument,
+  PHDocumentHeader,
   ReducerFor,
 } from "@powerhousedao/shared/document-model";
 import type {
@@ -57,6 +59,14 @@ export type EvaluationSubject = {
   scope: string;
   operations: Operation[];
 };
+
+/**
+ * The base-reducer capabilities a stream's document runs under, resolved by
+ * the caller that knows which versions the reactor runs.
+ */
+export type CapabilitiesOf = (
+  header: PHDocumentHeader,
+) => BaseReducerCapabilities | undefined;
 
 /** What an evaluation reads the streams it needs through. */
 export type DecisionStores = {

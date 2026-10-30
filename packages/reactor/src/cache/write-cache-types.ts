@@ -1,4 +1,5 @@
 import type { PHDocument } from "@powerhousedao/shared/document-model";
+import type { IProtocolGate } from "../protocol/gate.js";
 import type { KeyframeSettings } from "../storage/keyframes/keyframe-settings.js";
 
 /**
@@ -19,6 +20,9 @@ export type WriteCacheConfig = {
 
   /** Interval and keep per document type, over `keyframeInterval`. */
   keyframes?: KeyframeSettings;
+
+  /** Refuses a document stored outside the versions this reactor runs, typed. */
+  gate?: IProtocolGate;
 };
 
 /**

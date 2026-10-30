@@ -26,6 +26,7 @@ import type {
   ReadModelIndexingStage,
   ReadModelStage,
 } from "../events/types.js";
+import type { ProtocolSupport } from "../executor/types.js";
 import type { ReadModelIndexingConfig } from "../read-models/base-read-model.js";
 import type { ConsistencyCoordinate, JobMeta } from "../shared/types.js";
 import type { KeyframeSettings } from "../storage/keyframes/keyframe-settings.js";
@@ -78,6 +79,8 @@ export type ProjectionInitMessage = {
   catchUp: CatchUpConfig;
   /** Omitted = the built-in keyframe rule. */
   keyframes?: KeyframeSettings;
+  /** What the host runs, so a read model skips a document stored outside it. */
+  protocolSupport?: ProtocolSupport;
 };
 
 /**

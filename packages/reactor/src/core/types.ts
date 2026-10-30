@@ -26,7 +26,10 @@ import type {
 import type { ReactorWriteClient } from "../client/write-client.js";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IJobExecutorManager } from "../executor/interfaces.js";
-import type { ReactorFeatureFlags } from "../executor/types.js";
+import type {
+  ProtocolSupport,
+  ReactorFeatureFlags,
+} from "../executor/types.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { GroupReevaluationTrigger } from "./group-reevaluation-trigger.js";
@@ -627,6 +630,8 @@ export interface InProcessReactorModule extends ReactorModule {
    * does, and the read surface is composed outside the reactor.
    */
   featureFlags: ReactorFeatureFlags;
+  /** The protocol versions this reactor runs, which its reads check stored documents against. */
+  protocolSupport: ProtocolSupport;
   /** A document model loader is wired: unregistered types load on first use. */
   loadsModelsOnDemand?: boolean;
   queue: IQueue;

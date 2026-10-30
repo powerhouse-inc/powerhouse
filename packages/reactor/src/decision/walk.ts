@@ -1,4 +1,5 @@
 import type {
+  BaseReducerCapabilities,
   IdOrder,
   Operation,
   PHDocument,
@@ -53,6 +54,11 @@ export type WalkStream = {
   /** Decides a cross-stream timestamp tie, which an auth operation wins. */
   scope: string;
   document: PHDocument;
+  /**
+   * The base-reducer capabilities `document` runs under. Unset, they are
+   * read from its header, which knows no version this build does not.
+   */
+  caps?: BaseReducerCapabilities;
   apply: ApplyOperation;
   /** The stream's stored operations. Order and skips are resolved internally. */
   operations: Operation[];
@@ -66,14 +72,17 @@ export type WalkStream = {
 /** Marks a row this pass refused, so a derivation leaves it out. */
 const DENIED_IN_WALK = "denied in walk";
 
+function capabilitiesOf(
+  stream: WalkStream,
+): BaseReducerCapabilities | undefined {
+  return stream.caps ?? optionalBaseReducerCapabilities(stream.document.header);
+}
+
 /** A stream carrying rule reducers whose scope the rule derives. */
 function walksByRule(stream: WalkStream): boolean {
   return (
     stream.reducerFor !== undefined &&
-    derivesByRule(
-      optionalBaseReducerCapabilities(stream.document.header),
-      stream.scope,
-    )
+    derivesByRule(capabilitiesOf(stream), stream.scope)
   );
 }
 
@@ -105,13 +114,10 @@ export function walkIdOrder(
   streams: readonly WalkStream[],
   documentId: string,
 ): IdOrder {
-  const header = (
+  const stream =
     streams.find((stream) => stream.document.header.id === documentId) ??
-    streams.at(0)
-  )?.document.header;
-  return idOrderFor(
-    header && optionalBaseReducerCapabilities(header)?.tieOrder,
-  );
+    streams.at(0);
+  return idOrderFor(stream && capabilitiesOf(stream)?.tieOrder);
 }
 
 /**

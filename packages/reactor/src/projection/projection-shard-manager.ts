@@ -2,6 +2,7 @@ import type { OperationWithContext } from "@powerhousedao/shared/document-model"
 import { childLogger, type ILogger } from "document-model";
 import { randomUUID } from "node:crypto";
 import type { CatchUpConfig, CatchUpStatus } from "../catch-up/types.js";
+import type { ProtocolSupport } from "../executor/types.js";
 import { fromErrorInfo } from "../executor/worker/error-info.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
@@ -99,6 +100,7 @@ export type ProjectionShardManagerConfig = ProjectionShardHooks & {
    */
   indexing: ReadModelIndexingConfig;
   catchUp: CatchUpConfig;
+  protocolSupport?: ProtocolSupport;
   /** Sent to each shard, so its write cache mints like the host's. */
   keyframes?: KeyframeSettings;
   factory: ProjectionWorkerFactory;
@@ -284,6 +286,7 @@ export class ProjectionShardManager implements IReadModelCoordinator {
         chainDepthReportIntervalMs: reportIntervalMs,
         indexing: this.config.indexing,
         catchUp: this.config.catchUp,
+        protocolSupport: this.config.protocolSupport,
         keyframes: this.config.keyframes,
       };
       transport.postMessage(init);

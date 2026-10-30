@@ -441,6 +441,89 @@ describe("runWorker in-process execution", () => {
     expect(admitted.result.success).toBe(true);
   });
 
+  it("refuses base-reducer 3 for a model whose reducer is not from createReducer", async () => {
+    const databases = new Map<string, Kysely<Database>>();
+    async function create(
+      reducer: typeof driveDocumentModelModule.reducer,
+      documentId: string,
+    ): Promise<ResultMessage> {
+      const h = await startInProcessWorker(() =>
+        Promise.resolve({ ...driveDocumentModelModule, reducer }),
+      );
+      databases.set(documentId, h.database);
+      const ready = waitForMessage(
+        h.port1,
+        (m): m is ReadyMessage => m.type === "ready",
+      );
+      // A reactor that runs base-reducer 3.
+      h.port1.postMessage(
+        makeInit(undefined, { protocolSupport: { "base-reducer": [1, 2, 3] } }),
+      );
+      await ready;
+
+      const job: Job = {
+        id: `job-${documentId}`,
+        kind: "mutation",
+        documentId,
+        scope: "document",
+        branch: "main",
+        actions: [
+          {
+            id: generateId(),
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: new Date().toISOString(),
+            input: {
+              documentId,
+              model: "powerhouse/document-drive",
+              protocolVersions: { "base-reducer": 3 },
+            },
+          },
+        ],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        retryCount: 0,
+        maxRetries: 0,
+        errorHistory: [],
+        meta: { batchId: `batch-${documentId}`, batchJobIds: [] },
+      };
+      const result = waitForMessage(
+        h.port1,
+        (m): m is ResultMessage => m.type === "result",
+      );
+      h.port1.postMessage({ type: "execute", correlationId: documentId, job });
+      return result;
+    }
+
+    const tagged = driveDocumentModelModule.reducer;
+    const refused = await create(
+      ((...args: Parameters<typeof tagged>) =>
+        tagged(...args)) as typeof tagged,
+      "br3-untagged",
+    );
+    expect(refused.result.success).toBe(false);
+    expect(refused.error?.name).toBe("UnsupportedProtocolVersionError");
+    expect(refused.error?.message).toContain(
+      "cannot run for powerhouse/document-drive",
+    );
+
+    const admitted = await create(tagged, "br3-tagged");
+    expect(admitted.error).toBeUndefined();
+    expect(admitted.result.success).toBe(true);
+
+    const stored = await new KyselyOperationStore(
+      databases
+        .get("br3-tagged")!
+        .withSchema(REACTOR_SCHEMA) as unknown as Kysely<StorageDatabase>,
+    ).getSince("br3-tagged", "document", "main", -1);
+    const creation = stored.results.at(0)?.action as
+      | { type: string; input: { protocolVersions?: Record<string, number> } }
+      | undefined;
+    expect(creation?.type).toBe("CREATE_DOCUMENT");
+    expect(creation?.input.protocolVersions?.["base-reducer"]).toBe(3);
+  });
+
   it("builds its signer from the init's spec and signs the NOOP an UNDO becomes", async () => {
     const reactorKey = await TestP256Signer.create();
     const specs: string[] = [];

@@ -96,16 +96,20 @@ const touch = (index: number, skip: number, t: number, id: string) =>
     input: {},
   });
 
-/** Applies stored rows one at a time with their skips, as a cold rebuild does. */
+/**
+ * Applies stored rows one at a time with their skips, as a cold rebuild does,
+ * under `runsAs` (by default the header's version).
+ */
 function rebuild(
   baseReducer: number,
   rows: Operation[],
+  runsAs = baseReducer as 1 | 2 | 3,
 ): PHDocument<TestState> {
   let doc = document(baseReducer);
   for (const operation of rows) {
     doc = reducer(doc, operation.action, undefined, {
       skip: operation.skip,
-      protocolVersion: baseReducer as 1 | 2 | 3,
+      protocolVersion: runsAs,
       replayOptions: { operation },
       skipIndexValidation: true,
     });
@@ -154,5 +158,78 @@ describe("a reshuffle's rewind in a scope no rule derives", () => {
 
     expect(kept(2)).toEqual(["act-b", "act-a"]);
     expect(kept(3)).toEqual(kept(2));
+  });
+});
+
+describe("a rewind on a header at a number this build does not know", () => {
+  const rewound = [add(0, 0, "a"), add(1, 1, "b"), add(2, 0, "a")];
+
+  it.each([1, 2] as const)(
+    "replays under the version passed, base-reducer %i",
+    (runsAs) => {
+      const doc = rebuild(7, rewound, runsAs);
+
+      expect(doc.header.protocolVersions?.["base-reducer"]).toBe(7);
+      expect(doc.state.global.items).toEqual(
+        rebuild(runsAs, rewound).state.global.items,
+      );
+      expect(grantIds(rebuild(7, reshuffledGrants, runsAs))).toEqual([
+        "b",
+        "a",
+      ]);
+    },
+  );
+
+  it.each([1, 2] as const)(
+    "undoes under the version passed, base-reducer %i",
+    (runsAs) => {
+      const undone = (header: number) =>
+        reducer(
+          rebuild(header, [add(0, 0, "a"), add(1, 0, "b")], runsAs),
+          { type: "UNDO", input: { count: 1 }, scope: "global" } as Action,
+          undefined,
+          { protocolVersion: runsAs },
+        );
+
+      expect(undone(7).state.global.items).toEqual(
+        undone(runsAs).state.global.items,
+      );
+      expect(undone(7).state.global.items).toEqual(["a"]);
+    },
+  );
+
+  it("replays an exempt scope's rewind under base-reducer 3", () => {
+    const rows = [
+      add(0, 0, "x"),
+      add(1, 0, "y"),
+      retract(2, "r", "x"),
+      ...reshuffledGrants,
+    ];
+    const doc = rebuild(7, rows, 3);
+
+    expect(grantIds(doc)).toEqual(["b", "a"]);
+    expect(doc.state.global.items).toEqual(["y"]);
+  });
+});
+
+describe("an UNDO on a header without a base-reducer version", () => {
+  it("still throws when a version is passed, as a client prediction does", () => {
+    const doc = document(2);
+    delete (doc.header as { protocolVersions?: unknown }).protocolVersions;
+    let added = doc;
+    for (const operation of [add(0, 0, "a"), add(1, 0, "b")]) {
+      added = reducer(added, operation.action, undefined, {
+        protocolVersion: 2,
+      });
+    }
+
+    expect(() =>
+      reducer(
+        added,
+        { type: "UNDO", input: { count: 1 }, scope: "global" } as Action,
+        undefined,
+        { protocolVersion: 2 },
+      ),
+    ).toThrow("carries no base-reducer protocol version");
   });
 });

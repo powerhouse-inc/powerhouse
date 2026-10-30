@@ -2,6 +2,7 @@ import type {
   Action,
   BaseReducerCapabilities,
   CreateDocumentAction,
+  CreateDocumentActionInput,
   DeriveScope,
   DocumentModelModule,
   ISigner,
@@ -14,14 +15,10 @@ import {
   acceptsSubmittedUndoRedo,
   actionSignerIdentity,
   assertNever,
-  baseReducerCapabilities,
-  capabilitiesFor,
   compareCanonical,
   conflictWindowMovesEveryRow,
-  createdCapabilities,
   decide,
   derivesByRule,
-  documentDerivesByRule,
   garbageCollect,
   groupDocumentType,
   isPurgeMarker,
@@ -80,6 +77,7 @@ import {
   RetractionRefusedError,
   SubmittedUndoRefusedError,
   type RetractionRefusalReason,
+  UnsupportedProtocolVersionError,
 } from "../shared/errors.js";
 import { findReferencing } from "../storage/find-referencing.js";
 import type { KyselyDocumentPurger } from "../storage/kysely/document-purger.js";
@@ -110,6 +108,11 @@ import { staticReadSet } from "../decision/build-decision-model.js";
 import { evaluateByPosition } from "../decision/evaluation.js";
 import { retractionSkip } from "../decision/merged-order.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
+import {
+  createProtocolGate,
+  type BaseReducerResolver,
+  type IProtocolGate,
+} from "../protocol/gate.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
 import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
@@ -314,9 +317,35 @@ type StoredProtocol = {
   refusal?: Error;
   /** Undefined when nothing is stored yet. */
   caps?: BaseReducerCapabilities;
-  /** The header read failed for a reason other than absence. */
+  /** Nothing is stored yet. */
+  absent?: true;
+  /**
+   * The header read failed for a reason other than absence and the stored
+   * CREATE_DOCUMENT runs the retraction rule (that error).
+   */
   unreadable?: Error;
 };
+
+/** The CREATE_DOCUMENT a load job carries, if any. */
+function loadedCreation(job: Job): CreateDocumentActionInput | undefined {
+  if (job.kind !== "load") {
+    return undefined;
+  }
+  return job.operations
+    .map((operation) => operation.action)
+    .find(
+      (action): action is CreateDocumentAction =>
+        action.type === "CREATE_DOCUMENT",
+    )?.input;
+}
+
+/** Creation first, then its UPGRADE: a shared timestamp must not reorder them. */
+function genesisRank(operation: Operation): number {
+  if (operation.action.type === "CREATE_DOCUMENT") {
+    return 0;
+  }
+  return isGenesisOperation(operation) ? 1 : 2;
+}
 
 /**
  * An UNDO or REDO, submitted or loaded from a peer, where the version undoes by
@@ -325,6 +354,7 @@ type StoredProtocol = {
 function undoRedoRefusal(
   job: Job,
   stored: BaseReducerCapabilities | undefined,
+  resolver: BaseReducerResolver,
 ): SubmittedUndoRefusedError | undefined {
   let actions: readonly Action[];
   let caps = stored;
@@ -332,12 +362,7 @@ function undoRedoRefusal(
     actions = job.actions;
   } else if (job.kind === "load") {
     actions = job.operations.map((operation) => operation.action);
-    caps ??= createdCapabilities(
-      actions.find(
-        (action): action is CreateDocumentAction =>
-          action.type === "CREATE_DOCUMENT",
-      )?.input,
-    );
+    caps ??= resolver.capabilities(loadedCreation(job)?.protocolVersions);
   } else {
     return undefined;
   }
@@ -491,6 +516,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private decisionModel: RegisteredDecisionModel;
   private signatureAdmission: SignatureAdmission;
   private documentActionHandler: DocumentActionHandler;
+  private protocolGate: IProtocolGate;
   private executionScope: IExecutionScope;
   private signer: ISigner;
   private readonly flusher: IStorageFlusher;
@@ -560,13 +586,18 @@ export class SimpleJobExecutor implements IJobExecutor {
         ),
       },
     );
+    this.protocolGate = createProtocolGate(
+      this.config.protocolSupport,
+      registry,
+      logger,
+    );
     this.documentActionHandler = new DocumentActionHandler(
       registry,
       logger,
       driveContainerTypes,
       this.featureFlags,
       this.decisionModel,
-      this.config.protocolSupport,
+      this.protocolGate,
     );
     this.executionScope =
       executionScope ??
@@ -856,7 +887,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (stored.unreadable) {
       return { result: buildErrorResult(job, stored.unreadable, startTime) };
     }
-    const undoRefusal = undoRedoRefusal(job, stored.caps);
+    const undoRefusal = undoRedoRefusal(job, stored.caps, this.protocolGate);
     if (undoRefusal) {
       return { result: buildErrorResult(job, undoRefusal, startTime) };
     }
@@ -1557,6 +1588,14 @@ export class SimpleJobExecutor implements IJobExecutor {
     });
   }
 
+  /** Whether the version `header` runs under here derives `scope` by the rule. */
+  private derivesByRule(header: PHDocument["header"], scope: string): boolean {
+    return derivesByRule(
+      this.protocolGate.capabilities(header.protocolVersions),
+      scope,
+    );
+  }
+
   /**
    * The stored header's base-reducer capabilities, read once per job. A
    * stored document at a version this reactor does not run is read-only here.
@@ -1566,10 +1605,13 @@ export class SimpleJobExecutor implements IJobExecutor {
     stores: ExecutionStores,
     signal?: AbortSignal,
   ): Promise<StoredProtocol> {
-    let versions;
+    let stored: {
+      documentType: string;
+      protocolVersions?: { readonly [protocol: string]: number };
+    };
     try {
       // Read the way admission reads: with decisions on, execution bypasses the meta cache.
-      versions =
+      stored =
         this.featureFlags.documentDecisions && job.kind !== "load"
           ? (
               await stores.writeCache.getState(
@@ -1579,19 +1621,20 @@ export class SimpleJobExecutor implements IJobExecutor {
                 undefined,
                 signal,
               )
-            ).header.protocolVersions
-          : (
-              await stores.documentMetaCache.getDocumentMeta(
-                job.documentId,
-                job.branch,
-                signal,
-              )
-            ).protocolVersions;
+            ).header
+          : await stores.documentMetaCache.getDocumentMeta(
+              job.documentId,
+              job.branch,
+              signal,
+            );
     } catch (error) {
+      if (UnsupportedProtocolVersionError.isError(error)) {
+        return { refusal: error };
+      }
       // Not stored yet, or unreadable: the job's own reads decide, unless the
       // stored creation runs the rule.
       if (DocumentNotFoundError.isError(error)) {
-        return {};
+        return { absent: true };
       }
       const unreadable = await this.unreadableRuleDocument(
         job,
@@ -1601,11 +1644,14 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
       return unreadable ? { unreadable } : {};
     }
-    const refusal = this.documentActionHandler.unsupportedProtocol(
+    const refusal = this.protocolGate.refusal(
       job.documentId,
-      versions,
+      stored.protocolVersions,
+      stored.documentType,
     );
-    return refusal ? { refusal } : { caps: capabilitiesFor(versions) };
+    return refusal
+      ? { refusal }
+      : { caps: this.protocolGate.capabilities(stored.protocolVersions) };
   }
 
   /**
@@ -1637,7 +1683,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (
       creation?.type !== "CREATE_DOCUMENT" ||
       !usesRetractionRule(
-        createdCapabilities((creation as CreateDocumentAction).input),
+        this.protocolGate.capabilities(
+          (creation as CreateDocumentAction).input.protocolVersions,
+        ),
       )
     ) {
       return undefined;
@@ -1929,7 +1977,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let caps: BaseReducerCapabilities;
     try {
-      caps = baseReducerCapabilities(document.header);
+      caps = this.protocolGate.headerCapabilities(document.header);
     } catch {
       // The reduce reports a header without a known version.
       return undefined;
@@ -2114,7 +2162,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (
       carried === undefined &&
       deniedReason === undefined &&
-      documentDerivesByRule(document.header, job.scope)
+      this.derivesByRule(document.header, job.scope)
     ) {
       try {
         lookups = await readRuleLookups(
@@ -2241,13 +2289,14 @@ export class SimpleJobExecutor implements IJobExecutor {
       // rebuild would: each row with its own module version's reducer.
       let deriveScope: DeriveScope | undefined;
       if (
-        documentDerivesByRule(document.header, job.scope) &&
+        this.derivesByRule(document.header, job.scope) &&
         needsFullHistory(write, lookups ?? NO_RULE_LOOKUPS)
       ) {
         try {
           deriveScope = await scopeDerivation(
             stores.operationStore,
             this.registry,
+            this.protocolGate,
             job.documentId,
             job.branch,
             signal,
@@ -2261,7 +2310,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         }
       }
       try {
-        const caps = baseReducerCapabilities(document.header);
+        const caps = this.protocolGate.headerCapabilities(document.header);
         const protocolVersion = caps.version;
         const ruleOptions = {
           ...(lookups === undefined ? {} : { targeted: lookups.targeted }),
@@ -2327,7 +2376,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           action,
           { documentId: job.documentId, scope, branch: job.branch },
           this.signer,
-          baseReducerCapabilities(document.header).synthesizedId,
+          this.protocolGate.headerCapabilities(document.header).synthesizedId,
           signal,
         );
       } catch (error) {
@@ -2592,7 +2641,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       // carried slice does not hold.
       if (
         prepared.length === 0 &&
-        documentDerivesByRule(outcome.document.header, job.scope)
+        this.derivesByRule(outcome.document.header, job.scope)
       ) {
         const later = writes.slice(1);
         try {
@@ -2993,6 +3042,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       { scope: job.scope, operations },
       stores,
       signal,
+      (header) => this.protocolGate.capabilities(header.protocolVersions),
     );
 
     const submitted = new Set(job.actions.map((action) => action.id));
@@ -3210,6 +3260,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         { scope, operations: effective },
         stores,
         signal,
+        (header) => this.protocolGate.capabilities(header.protocolVersions),
       );
 
       const firstChange = effective.findIndex(
@@ -3363,7 +3414,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     // Base-reducer 3 skips are this replica's own rewinds, never an undo, and
     // its conflict window is the receiver's.
-    const caps = stored.caps;
+    const caps = stored.absent ? this.creationCaps(job) : stored.caps;
     const canonical = sortsJobsCanonically(caps);
     const skipsMayUndo = skipMayUndo(caps);
 
@@ -3578,7 +3629,9 @@ export class SimpleJobExecutor implements IJobExecutor {
             .sort((a, b) =>
               // A sender's reshuffle puts its rows out of timestamp order,
               // and canonical order does not read the skip that orders them.
-              canonical ? compareCanonical(a, b) : a.index - b.index,
+              canonical
+                ? genesisRank(a) - genesisRank(b) || compareCanonical(a, b)
+                : a.index - b.index,
             )
             .map((operation, i) => ({
               ...operation,
@@ -3638,6 +3691,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           { scope, operations: reshuffledOperations },
           stores,
           signal,
+          (header) => this.protocolGate.capabilities(header.protocolVersions),
         );
       } catch (error) {
         return {
@@ -3706,6 +3760,24 @@ export class SimpleJobExecutor implements IJobExecutor {
       ],
       duration: Date.now() - startTime,
     };
+  }
+
+  /**
+   * A fresh receiver's first load runs base-reducer 3 rules when the batch's
+   * CREATE_DOCUMENT names 3 and this reactor admits it; otherwise none, as before.
+   */
+  private creationCaps(job: Job): BaseReducerCapabilities | undefined {
+    const creation = loadedCreation(job);
+    const caps = this.protocolGate.capabilities(creation?.protocolVersions);
+    if (!creation || !usesRetractionRule(caps)) {
+      return undefined;
+    }
+    const refusal = this.protocolGate.refusal(
+      job.documentId,
+      creation.protocolVersions,
+      creation.model,
+    );
+    return refusal ? undefined : caps;
   }
 
   /** The conflicting window a load opens, and which of its operations are new. */

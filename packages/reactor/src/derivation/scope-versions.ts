@@ -5,10 +5,8 @@ import type {
   ScopeVersions,
   StateReducer,
 } from "@powerhousedao/shared/document-model";
-import {
-  reduceOne,
-  requireStateReducer,
-} from "@powerhousedao/shared/document-model";
+import { reduceOne } from "@powerhousedao/shared/document-model";
+import { stateReducerOrRefusal } from "../protocol/gate.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   applyPendingUpgrades,
@@ -78,11 +76,13 @@ export function scopeVersions(
     reducerOf: (version) => {
       let reducer = reducers.get(version);
       if (!reducer) {
-        reducer = requireStateReducer(
+        reducer = stateReducerOrRefusal(
           registry.getModule(header.documentType, version).reducer,
+          header.id,
           header.documentType,
           version,
-        ) as StateReducer;
+          header.protocolVersions,
+        );
         reducers.set(version, reducer);
       }
       return reducer;

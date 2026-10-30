@@ -56,6 +56,7 @@ export function createReactorInspector(
       module.writeCache,
       module.documentView,
       module.documentModelRegistry,
+      module.protocolSupport,
     ),
     keyframeCleanup: module.keyframeCleanup,
     storageHealth:

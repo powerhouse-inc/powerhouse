@@ -239,6 +239,7 @@ describe("Reactor.resolveUndoRedo", () => {
       const derive = await scopeDerivation(
         module.operationStore,
         module.documentModelRegistry,
+        undefined,
         id,
         "main",
       );

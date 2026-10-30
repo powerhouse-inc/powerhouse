@@ -10,14 +10,11 @@ import {
   appendRows,
   appendWithoutApplying,
   applyDeleteDocumentAction,
-  baseReducerVersion,
   deriveScopeVersioned,
-  capabilitiesFor,
   derivesByRule,
   tailAppliesIncrementally,
   isDenied,
   PURGE_DOCUMENT,
-  requireStateReducer,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
@@ -33,6 +30,13 @@ import {
   type PendingUpgrade,
   type ValidatedUpgrade,
 } from "../derivation/index.js";
+import {
+  stateReducerOrRefusal,
+  UNGATED,
+  type BaseReducerResolver,
+  type IProtocolGate,
+} from "../protocol/gate.js";
+import { UnsupportedProtocolVersionError } from "../shared/errors.js";
 import { findReferencing } from "../storage/find-referencing.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import {
@@ -99,15 +103,13 @@ function copyDocument(document: PHDocument): PHDocument {
   };
 }
 
-/**
- * Whether the rule derives `scope`. An unknown version is not refused here:
- * it rebuilds as before, and the stored protocol check names it.
- */
-function derivesByRuleOrUnknown(
-  header: PHDocument["header"],
-  scope: string,
-): boolean {
-  return derivesByRule(capabilitiesFor(header.protocolVersions), scope);
+/** Wraps a rebuild failure with the document id; a protocol refusal stays typed. */
+function rebuildFailure(documentId: string, err: unknown): Error {
+  if (UnsupportedProtocolVersionError.isError(err)) return err;
+  return new Error(
+    `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
+    { cause: err },
+  );
 }
 
 /**
@@ -162,8 +164,10 @@ export class KyselyWriteCache implements IWriteCache {
   private keyframeStore: IKeyframeStore;
   private operationStore: IOperationStore;
   private registry: IDocumentModelRegistry;
-  private config: Required<WriteCacheConfig>;
+  private config: Required<Omit<WriteCacheConfig, "gate">>;
   private keyframeSettings: KeyframeSettings;
+  private gate: IProtocolGate | undefined;
+  private resolver: BaseReducerResolver;
   private reads = new Map<string, Set<PendingRead>>();
   private fullReplays = new Map<string, FullReplayMark[]>();
 
@@ -189,8 +193,27 @@ export class KyselyWriteCache implements IWriteCache {
         ...this.config.keyframes.default,
       },
     };
+    this.gate = config.gate;
+    this.resolver = config.gate ?? UNGATED;
     this.streams = new Map();
     this.lruTracker = new LRUTracker<string>();
+  }
+
+  /** Whether the version `header` runs under here derives `scope` by the rule. */
+  private derivesByRule(header: PHDocument["header"], scope: string): boolean {
+    return derivesByRule(
+      this.resolver.capabilities(header.protocolVersions),
+      scope,
+    );
+  }
+
+  /**
+   * Refuses a document stored at an unsupported base-reducer version by name,
+   * so read paths can tell it from a failed rebuild. Protocol-only: the hot
+   * path does no registry work, and derivation refuses an unrunnable model typed.
+   */
+  private assertSupported(documentId: string, document: PHDocument): void {
+    this.gate?.assertReadable(documentId, document.header.protocolVersions);
   }
 
   /** Sizes for telemetry; O(cached documents), which is capped. */
@@ -210,7 +233,7 @@ export class KyselyWriteCache implements IWriteCache {
       keyframeStore,
       operationStore,
       this.registry,
-      this.config,
+      { ...this.config, gate: this.gate },
     );
     scoped.streams = this.streams;
     scoped.lruTracker = this.lruTracker;
@@ -313,6 +336,7 @@ export class KyselyWriteCache implements IWriteCache {
         // Only the topmost snapshot can be the head, and only if it was stored
         // as one: anything above it proves the stream has grown since.
         if (newest?.position === SnapshotPosition.Head) {
+          this.assertSupported(documentId, newest.document);
           this.lruTracker.touch(streamKey);
           return copyDocument(newest.document);
         }
@@ -346,6 +370,7 @@ export class KyselyWriteCache implements IWriteCache {
           (s) => s.revision === targetRevision,
         );
         if (exactMatch) {
+          this.assertSupported(documentId, exactMatch.document);
           this.lruTracker.touch(streamKey);
           return copyDocument(exactMatch.document);
         }
@@ -806,6 +831,7 @@ export class KyselyWriteCache implements IWriteCache {
     let lastDocumentScopeOperation: Operation | undefined;
 
     if (keyframe) {
+      this.assertSupported(documentId, keyframe.document);
       document = keyframe.document;
       startRevision = keyframe.revision;
       documentType = keyframe.document.header.documentType;
@@ -897,6 +923,7 @@ export class KyselyWriteCache implements IWriteCache {
       const read = await readDocumentScope(
         this.operationStore,
         this.registry,
+        this.gate,
         documentId,
         branch,
         documentScopeBound,
@@ -981,7 +1008,7 @@ export class KyselyWriteCache implements IWriteCache {
 
     let needsFullReplay = false;
 
-    if (derivesByRuleOrUnknown(document.header, scope)) {
+    if (this.derivesByRule(document.header, scope)) {
       const versions = scopeVersions(
         this.registry,
         document.header,
@@ -1029,10 +1056,7 @@ export class KyselyWriteCache implements IWriteCache {
           );
         }
       } catch (err) {
-        throw new Error(
-          `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
-          { cause: err },
-        );
+        throw rebuildFailure(documentId, err);
       }
     } else {
       let cursor: string | undefined = undefined;
@@ -1091,7 +1115,9 @@ export class KyselyWriteCache implements IWriteCache {
               document = appendWithoutApplying(document, operation, scope);
             } else {
               // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-              const protocolVersion = baseReducerVersion(document.header);
+              const protocolVersion = this.resolver.headerCapabilities(
+                document.header,
+              ).version;
               document = withProtocolVersions(
                 getModuleCached(moduleVersion).reducer(
                   document,
@@ -1120,10 +1146,7 @@ export class KyselyWriteCache implements IWriteCache {
           }
         } catch (err) {
           // Wrap errors with context to include document ID for debugging
-          throw new Error(
-            `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
-            { cause: err },
-          );
+          throw rebuildFailure(documentId, err);
         }
       } while (hasMorePages);
     }
@@ -1302,6 +1325,7 @@ export class KyselyWriteCache implements IWriteCache {
     targetRevision: number | undefined,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    this.assertSupported(documentId, baseDocument);
     const documentType = baseDocument.header.documentType;
     const docScopeNextIndex = baseDocument.header.revision["document"] ?? 0;
 
@@ -1346,11 +1370,13 @@ export class KyselyWriteCache implements IWriteCache {
         : undefined;
 
     try {
-      if (derivesByRuleOrUnknown(document.header, scope)) {
-        const stateReducer = requireStateReducer(
+      if (this.derivesByRule(document.header, scope)) {
+        const stateReducer = stateReducerOrRefusal(
           module.reducer,
+          documentId,
           documentType,
           extractModuleVersion(baseDocument),
+          document.header.protocolVersions,
         );
         const rows = await this.readRows(
           documentId,
@@ -1413,7 +1439,9 @@ export class KyselyWriteCache implements IWriteCache {
             document = appendWithoutApplying(document, operation, scope);
           } else {
             // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-            const protocolVersion = baseReducerVersion(document.header);
+            const protocolVersion = this.resolver.headerCapabilities(
+              document.header,
+            ).version;
             document = withProtocolVersions(
               module.reducer(document, operation.action, undefined, {
                 skip: operation.skip,
@@ -1435,10 +1463,7 @@ export class KyselyWriteCache implements IWriteCache {
       }
     } catch (err) {
       // Wrap errors with context to include document ID for debugging
-      throw new Error(
-        `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
-        { cause: err },
-      );
+      throw rebuildFailure(documentId, err);
     }
 
     if (needsFullReplay) {

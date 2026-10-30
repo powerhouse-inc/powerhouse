@@ -1,10 +1,13 @@
 import { stringify } from "safe-stable-stringify";
 import type { Action } from "./actions.js";
 import {
+  capabilitiesOf,
   derivesByRule,
+  isBaseReducerVersion,
   optionalBaseReducerCapabilities,
   usesRetractionRule,
   type BaseReducerCapabilities,
+  type BaseReducerVersion,
 } from "./base-reducer-protocol.js";
 import { hashBrowser } from "./crypto.js";
 import { isDenied } from "./denied.js";
@@ -544,6 +547,7 @@ function replayOperation<TState extends PHBaseState>(
   dispatch: SignalDispatch | undefined,
   checkHashes: boolean,
   skipIndexValidation: boolean | undefined,
+  protocolVersion: BaseReducerVersion | undefined,
 ): PHDocument<TState> {
   // Denied: holds its index and applies nothing, as on the reactor's rebuilds.
   if (isDenied(operation)) {
@@ -558,6 +562,7 @@ function replayOperation<TState extends PHBaseState>(
     ignoreSkipOperations: true,
     checkHashes,
     skipIndexValidation,
+    protocolVersion,
     replayOptions: {
       operation,
     },
@@ -586,6 +591,7 @@ function replayRetractionScopes<TState extends PHBaseState>(
   dispatch: SignalDispatch | undefined,
   checkHashes: boolean,
   skipIndexValidation: boolean | undefined,
+  protocolVersion: BaseReducerVersion | undefined,
 ): PHDocument<TState> {
   let reducerFor: ReducerFor<TState> | undefined;
   let result = document;
@@ -602,6 +608,7 @@ function replayRetractionScopes<TState extends PHBaseState>(
           dispatch,
           checkHashes,
           skipIndexValidation,
+          protocolVersion,
         );
       }
       continue;
@@ -657,8 +664,18 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
     reuseOperationResultingState,
     operationResultingStateParser = parseResultingState,
     skipIndexValidation,
+    protocolVersion: requestedVersion,
   } = options || {};
-  const caps = optionalBaseReducerCapabilities(header);
+  // A passed version stands in only for a header number this build does not know.
+  const headerVersion = header.protocolVersions?.["base-reducer"];
+  const protocolVersion =
+    typeof headerVersion === "number" && !isBaseReducerVersion(headerVersion)
+      ? requestedVersion
+      : undefined;
+  const caps =
+    protocolVersion === undefined
+      ? optionalBaseReducerCapabilities(header)
+      : capabilitiesOf(protocolVersion);
   const retraction = usesRetractionRule(caps);
 
   const backfilledInitialState = backfillAuthState(initialState);
@@ -734,6 +751,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
       dispatch,
       checkHashes,
       skipIndexValidation,
+      protocolVersion,
     );
   } else if (operationsToReplay.length) {
     result = operationsToReplay.reduce(
@@ -745,6 +763,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
           dispatch,
           checkHashes,
           skipIndexValidation,
+          protocolVersion,
         ),
       document,
     );
