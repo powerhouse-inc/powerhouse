@@ -127,7 +127,9 @@ export {
   childrenSchema,
   childWrapperSchema,
   compoundHostSchema,
+  CONNECT_PRIMARY_MESSAGE,
   compoundWiringSchema,
+  connectReactorIssues,
   declaredGenericCompoundHostSchema,
   declaredHostSchemas,
   defineHostSchemas,
@@ -147,6 +149,7 @@ export {
   reactorHostSchema,
   reactorProtocolSchema,
   reactorSchema,
+  refineConnectReactor,
   refineStartOrder,
   runnerBaseSchema,
   runnerKindSchema,
@@ -231,6 +234,7 @@ export type { PHHost, PHHostOutputs, PluginEntry } from "./host-types.js";
 
 export {
   assertProtocolConsistency,
+  browserBackend,
   primaryBackend,
   projectReactorToConnect,
   protocolConflicts,
@@ -238,6 +242,7 @@ export {
   reactorBlockToSwitchboardConfig,
   reactorClientMode,
   type ConnectReactorProjection,
+  type ConnectRouterSettings,
   type ReactorClientMode,
   type SwitchboardReactorLayer,
 } from "./reactor-config.js";
@@ -249,6 +254,7 @@ export {
   remoteBackendUrls,
   type ProjectedDescriptor,
   type ProjectedStorage,
+  type ServedRemoteBackend,
 } from "./backend-projection.js";
 export { applyChildWrapper, type MemberDraft } from "./child-wrapper.js";
 export {

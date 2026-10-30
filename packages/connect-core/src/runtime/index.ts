@@ -17,6 +17,7 @@ export type { ReactorWorkerFlagInput } from "./reactor-worker-flag.js";
 export {
   REACTOR_CLIENT_QUERY_KEY,
   REACTOR_CLIENT_STORAGE_KEY,
+  newDrivesBlocked,
   resolveReactorClientMode,
 } from "./reactor-client-mode.js";
 export type { ReactorClientMode } from "./reactor-client-mode.js";
@@ -29,9 +30,15 @@ export {
   selectAppReactorClient,
 } from "./app-reactor-client.js";
 export {
+  NewDriveRefusedError,
+  NewDriveUnansweredError,
+  newDriveError,
+} from "./new-drive.js";
+export {
   applyPlacementEntries,
   keepsLocalCopy,
   LOCAL_BACKEND_NAME,
+  localDrivePlacements,
   placementKeys,
   removeLocalCopies,
   resolveSwitchboardDrives,

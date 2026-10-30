@@ -69,6 +69,9 @@ export type PHConnectRuntimeDefaultDriveRemote = z.infer<
 export type PHConnectRemoteBackend = z.infer<
   typeof C.connectRemoteBackendSchema
 >;
+export type PHConnectRouterSettings = z.infer<
+  typeof C.connectRouterSettingsSchema
+>;
 export type PHConnectCollection = z.infer<typeof C.connectCollectionSchema>;
 export type PHConnectDriveSection = z.infer<typeof C.connectDriveSectionSchema>;
 export type PHConnectDriveSections = z.infer<

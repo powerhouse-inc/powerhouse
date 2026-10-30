@@ -7,7 +7,10 @@
  * client and server cannot diverge, and a contradicting pre-set env fails boot.
  */
 
-import { remoteBackends } from "./backend-projection.js";
+import {
+  remoteBackends,
+  type ServedRemoteBackend,
+} from "./backend-projection.js";
 import type {
   ReactorBackend,
   ReactorBackendKind,
@@ -25,8 +28,9 @@ export type {
   ReactorStorageConfig,
 } from "./host-schemas.js";
 
-/** The single primary backend for phase-2 projection (multi-backend routing is
- * track R). Prefers placement.primary, else "main"/"local", else the first. */
+/** A switchboard host's own store. Prefers placement.primary, else
+ * "main"/"local", else the first. Connect refuses placement.primary: its
+ * reactor is {@link browserBackend}. */
 export function primaryBackend(
   reactor: ReactorConfig | undefined,
 ): ReactorBackend | undefined {
@@ -118,6 +122,16 @@ const LOCAL_BACKEND_KINDS = new Set<ReactorBackendKind>([
   "worker",
 ]);
 
+/** Connect's browser reactor: its first in-process or worker backend. */
+export function browserBackend(
+  reactor: ReactorConfig | undefined,
+): (ReactorBackend & { name: string }) | undefined {
+  const entry = Object.entries(reactor?.backends ?? {}).find(([, backend]) =>
+    LOCAL_BACKEND_KINDS.has(backend.kind),
+  );
+  return entry ? { ...entry[1], name: entry[0] } : undefined;
+}
+
 /**
  * Which reactor client the backend topology asks for:
  *  - local (in-process/worker) AND remote backends -> `router`
@@ -138,7 +152,34 @@ export function reactorClientMode(
   const hasRemote = kinds.some((k) => k === "remote");
   if (hasLocal && hasRemote) return "router";
   if (hasRemote) return "remote";
-  return primaryBackend(reactor)?.kind === "worker" ? "worker" : "in-process";
+  return browserBackend(reactor)?.kind === "worker" ? "worker" : "in-process";
+}
+
+/** The router settings Connect serves: only the keys the host sets. */
+export interface ConnectRouterSettings {
+  /** A remote backend's host key; absent, the browser reactor (or the only switchboard). */
+  newDrives?: string;
+  probeTimeoutMs?: number;
+  provisionalRouteMs?: number;
+}
+
+/** Served only when `newDrives` names a served remote backend: a local one
+ * is the default, and Connect refuses one it has no address for. */
+function connectRouterSettings(
+  reactor: ReactorConfig | undefined,
+  served: readonly ServedRemoteBackend[],
+): ConnectRouterSettings | undefined {
+  const newDrives = reactor?.placement?.newDrives;
+  const { probeTimeoutMs, provisionalRouteMs } = reactor?.router ?? {};
+  const router: ConnectRouterSettings = {
+    ...(newDrives !== undefined &&
+    served.some((remote) => remote.name === newDrives)
+      ? { newDrives }
+      : {}),
+    ...(probeTimeoutMs !== undefined ? { probeTimeoutMs } : {}),
+    ...(provisionalRouteMs !== undefined ? { provisionalRouteMs } : {}),
+  };
+  return Object.keys(router).length > 0 ? router : undefined;
 }
 
 export interface ConnectReactorProjection {
@@ -148,7 +189,8 @@ export interface ConnectReactorProjection {
     instance?: {
       reactorWorker?: boolean;
       reactorClient?: ReactorClientMode;
-      remoteBackends?: { name: string; url: string }[];
+      remoteBackends?: ServedRemoteBackend[];
+      router?: ConnectRouterSettings;
     };
     app?: { workflowsEnabled?: boolean };
   };
@@ -156,24 +198,24 @@ export interface ConnectReactorProjection {
 
 /** Project the reactor block onto the Connect runtime config: protocol →
  * connect.reactor (same shape), backend topology → instance.reactorWorker
- * (legacy), instance.reactorClient and instance.remoteBackends,
- * workflows → app.workflowsEnabled. */
+ * (the browser reactor's kind), instance.reactorClient, and with a
+ * switchboard instance.remoteBackends and instance.router, workflows →
+ * app.workflowsEnabled. */
 export function projectReactorToConnect(
   reactor: ReactorConfig | undefined,
 ): ConnectReactorProjection {
   const connect: ConnectReactorProjection["connect"] = {};
   if (reactor?.protocol) connect.reactor = reactor.protocol;
-  const backend = primaryBackend(reactor);
   const mode = reactorClientMode(reactor);
-  if (backend?.kind !== undefined || mode !== undefined) {
+  if (mode !== undefined) {
+    const routed = mode === "router" || mode === "remote";
+    const served = routed ? remoteBackends(reactor) : [];
+    const router = routed ? connectRouterSettings(reactor, served) : undefined;
     connect.instance = {
-      ...(backend?.kind !== undefined
-        ? { reactorWorker: backend.kind === "worker" }
-        : {}),
-      ...(mode !== undefined ? { reactorClient: mode } : {}),
-      ...(mode === "router" || mode === "remote"
-        ? { remoteBackends: remoteBackends(reactor) }
-        : {}),
+      reactorWorker: browserBackend(reactor)?.kind === "worker",
+      reactorClient: mode,
+      ...(routed ? { remoteBackends: served } : {}),
+      ...(router ? { router } : {}),
     };
   }
   if (reactor?.workflows !== undefined) {

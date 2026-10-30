@@ -190,7 +190,11 @@ interface DeclaredReactorHost {
   config?: unknown;
   reactor?: {
     backends?: Record<string, { kind: string; remote?: { url: unknown } }>;
-    placement?: { drives?: Record<string, string> };
+    placement?: {
+      primary?: string;
+      drives?: Record<string, string>;
+      newDrives?: string;
+    };
     drives?: unknown;
   };
 }
@@ -383,6 +387,9 @@ function refineResolvedReactor(
   }
 }
 
+/** `remote` keys that tune a connection, so only a remote backend has them. */
+const REMOTE_ONLY_KEYS = ["requestTimeoutMs", "breaker", "realtime"] as const;
+
 /**
  * Builds the host schema set. "allow" (declared form) accepts `T | Token` in
  * every token-able field; "forbid" (resolved form) accepts `T` only.
@@ -415,7 +422,26 @@ function buildHostSchemas(tokenField: FieldWrappers) {
       // server proxies the switchboard (the browser then calls its page
       // origin; see `runner.proxy` on the connect runner).
       remote: z
-        .strictObject({ url: tokenField.any(originOrUrlSchema) })
+        .strictObject({
+          url: tokenField.any(originOrUrlSchema),
+          /** Give up on one request to this switchboard after this long. Default 30_000. */
+          requestTimeoutMs: z.number().int().positive().optional(),
+          /** After `failures` failed requests in a row, send nothing for
+           * `openMs`. Default { failures: 3, openMs: 30_000 }. `false`:
+           * never stop trying. */
+          breaker: z
+            .union([
+              z.literal(false),
+              z.strictObject({
+                failures: z.number().int().min(1).optional(),
+                openMs: z.number().int().nonnegative().optional(),
+              }),
+            ])
+            .optional(),
+          /** Live updates over a socket (the router's GraphQL
+           * subscriptions, not drive sync). Default true. */
+          realtime: z.boolean().optional(),
+        })
         .optional(),
     })
     // Two PGlite instances on one data dir corrupt it: the reactor store
@@ -430,6 +456,16 @@ function buildHostSchemas(tokenField: FieldWrappers) {
           path: ["remote", "url"],
           message: `a "remote" backend needs remote.url, a switchboard drive address: ${useDriveUrl()}.`,
         });
+      }
+      if (backend.kind !== "remote" && backend.remote) {
+        for (const key of REMOTE_ONLY_KEYS) {
+          if (backend.remote[key] === undefined) continue;
+          ctx.addIssue({
+            code: "custom",
+            path: ["remote", key],
+            message: `remote.${key} applies only to a "remote" backend; this one is "${backend.kind}".`,
+          });
+        }
       }
       const url: unknown = backend.remote?.url;
       const graphqlRef = resolved ? undefined : endpointsGraphqlRef(url);
@@ -478,6 +514,20 @@ function buildHostSchemas(tokenField: FieldWrappers) {
            * synced copy; the drive's own remote backend opens it there with
            * no copy. An unlisted drive keeps a synced copy. */
           drives: z.record(z.string().min(1), z.string().min(1)).optional(),
+          /** The backend new drives (and documents outside a drive) are
+           * created on. A switchboard keeps no copy in this browser.
+           * Default: the browser reactor, else the only switchboard. */
+          newDrives: z.string().min(1).optional(),
+        })
+        .optional(),
+      router: z
+        .strictObject({
+          /** Wait this long for a reactor to say whether it holds a
+           * document. 0: no bound. Default 3_000. */
+          probeTimeoutMs: z.number().int().nonnegative().optional(),
+          /** Look again after this long for a document found on a later
+           * backend. Default 30_000. */
+          provisionalRouteMs: z.number().int().nonnegative().optional(),
         })
         .optional(),
       protocol: reactorProtocolSchema.optional(),
@@ -509,6 +559,14 @@ function buildHostSchemas(tokenField: FieldWrappers) {
           code: "custom",
           path: ["placement", "drives", slug],
           message: `placement.drives.${slug} names backend "${name}", which is not in backends (${Object.keys(backends).join(", ") || "none"}).`,
+        });
+      }
+      const newDrives = reactor.placement?.newDrives;
+      if (newDrives !== undefined && !Object.hasOwn(backends, newDrives)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["placement", "newDrives"],
+          message: `placement.newDrives names backend "${newDrives}", which is not in backends (${Object.keys(backends).join(", ") || "none"}).`,
         });
       }
       if (resolved) refineResolvedReactor(reactor, ctx);
@@ -589,8 +647,11 @@ export type PlacementKeyIssue = {
   message: string;
 };
 
-/** withPlacementKeys' check, for a merged declared host parsed some other way. */
-export function placementKeyIssues(host: unknown): PlacementKeyIssue[] {
+/** The issues a host-level refinement raises, outside a zod parse. */
+function collectIssues(
+  host: unknown,
+  refine: (host: DeclaredReactorHost, ctx: z.RefinementCtx) => void,
+): PlacementKeyIssue[] {
   if (typeof host !== "object" || host === null || !("reactor" in host)) {
     return [];
   }
@@ -605,8 +666,58 @@ export function placementKeyIssues(host: unknown): PlacementKeyIssue[] {
       });
     },
   } as unknown as z.RefinementCtx;
-  refineDeclaredPlacementKeys(host as DeclaredReactorHost, ctx);
+  refine(host as DeclaredReactorHost, ctx);
   return issues;
+}
+
+/** withPlacementKeys' check, for a merged declared host parsed some other way. */
+export function placementKeyIssues(host: unknown): PlacementKeyIssue[] {
+  return collectIssues(host, refineDeclaredPlacementKeys);
+}
+
+export const CONNECT_PRIMARY_MESSAGE =
+  "Connect doesn't use placement.primary. To choose where new drives go, use placement.newDrives.";
+
+/**
+ * A Connect host's placement rules, in either form. The router's primary is
+ * the browser reactor, else the `newDrives` switchboard, else the only one,
+ * so `placement.primary` means nothing here, and a Connect with several
+ * switchboards and no browser reactor must say where new drives go. Apply it
+ * last to the Connect runner's schema: `.superRefine(refineConnectReactor)`.
+ */
+export function refineConnectReactor(
+  host: { reactor?: unknown },
+  ctx: z.RefinementCtx,
+): void {
+  const reactor = (host as DeclaredReactorHost).reactor;
+  if (!reactor) return;
+  if (reactor.placement?.primary !== undefined) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["reactor", "placement", "primary"],
+      message: CONNECT_PRIMARY_MESSAGE,
+    });
+  }
+  const backends = Object.entries(reactor.backends ?? {});
+  const remotes = backends
+    .filter(([, backend]) => backend.kind === "remote")
+    .map(([name]) => name);
+  if (
+    remotes.length > 1 &&
+    remotes.length === backends.length &&
+    reactor.placement?.newDrives === undefined
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["reactor", "placement", "newDrives"],
+      message: `This Connect keeps no reactor in the browser and links ${remotes.length} switchboards (${remotes.join(", ")}). Set placement.newDrives to the one new drives are created on.`,
+    });
+  }
+}
+
+/** refineConnectReactor's check, for a Connect host parsed some other way. */
+export function connectReactorIssues(host: unknown): PlacementKeyIssue[] {
+  return collectIssues(host, refineConnectReactor);
 }
 
 /** Adds the host-level placement key check to a runner's declared schema. */
