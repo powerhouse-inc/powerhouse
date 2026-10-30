@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthService } from "../src/services/auth.service.js";
 import {
+  assertOwnerClaimBind,
   FileCredentialKeep,
   OwnerClaim,
 } from "../src/services/host-auth-state.js";
@@ -41,6 +42,20 @@ describe("host auth state", () => {
 
   afterEach(async () => {
     await rm(dir, { recursive: true, force: true });
+  });
+
+  describe("assertOwnerClaimBind", () => {
+    it("allows a host only its own machine can reach", () => {
+      for (const host of ["127.0.0.1", "::1", "localhost"]) {
+        expect(() => assertOwnerClaimBind(host)).not.toThrow();
+      }
+    });
+
+    it("refuses a host others can reach, which one naming no bind is", () => {
+      for (const host of ["0.0.0.0", "::", "192.168.1.20", undefined]) {
+        expect(() => assertOwnerClaimBind(host)).toThrow(/loopback/);
+      }
+    });
   });
 
   describe("OwnerClaim", () => {

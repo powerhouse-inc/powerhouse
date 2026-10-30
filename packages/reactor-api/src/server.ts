@@ -64,7 +64,11 @@ import {
   type IAttachmentClientProvider,
 } from "./services/authorized-attachment.service.js";
 import { createCanonicalDocumentIdResolver } from "./services/canonical-document-id.js";
-import { FileCredentialKeep, OwnerClaim } from "./services/host-auth-state.js";
+import {
+  assertOwnerClaimBind,
+  FileCredentialKeep,
+  OwnerClaim,
+} from "./services/host-auth-state.js";
 import {
   createAuthFetchMiddleware,
   type AuthFetchMiddleware,
@@ -864,6 +868,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   let authFetchMiddleware: AuthFetchMiddleware | undefined;
   let requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
   let authService: AuthService | undefined;
+  if (optionAuth.ownerClaim) assertOwnerClaimBind(options.server?.host);
   if (resolveCallerIdentity || authEnabled) {
     logger.info(
       "Setting up Auth middleware (policy enforcement: @enabled, caller identity: @resolve)",

@@ -241,6 +241,23 @@ describe(
       ).rejects.toThrow();
     });
 
+    it("refuses an owner claim on an address others can reach", async () => {
+      const exposed = config(renown.url);
+      await expect(
+        bootSwitchboard(
+          {
+            ...exposed,
+            server: { port: 0, host: "0.0.0.0" },
+            storage: {
+              userDataDir: join(root, "exposed"),
+              readModel: { url: join(root, "exposed", "read-model") },
+            },
+          },
+          { logger },
+        ),
+      ).rejects.toThrow(/loopback/);
+    });
+
     it("boots and verifies its owner with Renown unreachable", async () => {
       expect(existsSync(join(root, ".ph", ".credentials.json"))).toBe(true);
       await stop();

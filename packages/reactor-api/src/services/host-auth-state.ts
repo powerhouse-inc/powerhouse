@@ -23,14 +23,27 @@ function writeJson(filePath: string, value: unknown): void {
   renameSync(partial, filePath);
 }
 
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "::1", "localhost"]);
+
+/**
+ * Refuses an owner claim on a host others can reach: the first stranger to sign
+ * in would own it. A host binds every interface when it names none.
+ */
+export function assertOwnerClaimBind(host: string | undefined): void {
+  if (host !== undefined && LOOPBACK_HOSTS.has(host)) return;
+  throw new Error(
+    `auth.ownerClaim needs a host bound to loopback, not ${host ?? "every interface"}: set the admins instead`,
+  );
+}
+
 /**
  * Makes the first verified caller on a host with no admins its admin, so a
  * person's own computer needs no env file. `admins` is the list the auth and
  * authorization services read, so the claim takes effect at once. Inert when
  * admins are configured: a list someone wrote always wins.
  *
- * Only for a host that nobody else can reach before its owner does: the desktop
- * host binds loopback for this reason.
+ * Only for a host that nobody else can reach before its owner does, which
+ * `assertOwnerClaimBind` holds a host to.
  */
 export class OwnerClaim {
   readonly #filePath: string;
