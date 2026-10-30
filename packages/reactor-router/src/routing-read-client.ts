@@ -156,7 +156,7 @@ export class RoutingReadClient implements IReactorReadClient {
   getCreateSignaturePolicy(): Promise<SignaturePolicy> {
     return this.dispatcher.onBackend(
       "getCreateSignaturePolicy",
-      this.dispatcher.primary,
+      this.dispatcher.createHome,
       (backend) => backend.api.getCreateSignaturePolicy(),
       ATTEMPT.read,
     );
@@ -171,7 +171,7 @@ export class RoutingReadClient implements IReactorReadClient {
     if (parentIdentifier === undefined) {
       return this.dispatcher.onBackend(
         "getCreateProtocolVersions",
-        this.dispatcher.primary,
+        this.dispatcher.createHome,
         (backend) => backend.api.getCreateProtocolVersions(options, signal),
         ATTEMPT.read,
       );
