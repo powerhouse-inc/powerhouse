@@ -505,7 +505,7 @@ describe("the authorization preflight end to end", () => {
    * without the executor's __migrated voucher: the snapshot indexes nothing
    * but header/document/auth from such an operation. Empirically the two
    * sources agree in that shape, because the write cache materializes nothing
-   * either (createDocumentFromAction seeds defaultBaseState, not the model's
+   * either (documentFromCreation seeds defaultBaseState, not the model's
    * default, and an unvouched upgrade adds no scope state), so a conditional
    * grant reading `doc.<scope>.*` resolves undefined on both sides and both
    * deny. These tests pin that agreement: if either side ever starts

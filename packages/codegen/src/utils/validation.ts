@@ -1,4 +1,7 @@
-import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import {
+  isReservedOperationName,
+  type DocumentModelGlobalState,
+} from "@powerhousedao/shared/document-model";
 import { pascalCase } from "change-case";
 
 /**
@@ -181,6 +184,13 @@ export function validateDocumentModelState(
             );
           }
 
+          if (
+            typeof operation.name === "string" &&
+            isReservedOperationName(operation.name)
+          ) {
+            errors.push(reservedOperationNameError(operation.name, moduleId));
+          }
+
           // operation.schema can be null or string (required property)
           if (
             operation.schema !== null &&
@@ -216,6 +226,42 @@ export function validateDocumentModelState(
     isValid: errors.length === 0,
     errors,
   };
+}
+
+function reservedOperationNameError(
+  operationName: string,
+  moduleName: string,
+): string {
+  return `Operation "${operationName}" in module "${moduleName}" has a reserved name`;
+}
+
+/**
+ * Throws when an operation in any specification has a name a base action
+ * reserves; codegen generates every specification.
+ */
+export function assertNoReservedOperationNames(
+  documentModelState: DocumentModelGlobalState,
+): void {
+  const errors: string[] = [];
+  for (const specification of documentModelState.specifications) {
+    for (const module of specification.modules) {
+      for (const operation of module.operations) {
+        if (
+          typeof operation.name === "string" &&
+          isReservedOperationName(operation.name)
+        ) {
+          errors.push(
+            `${reservedOperationNameError(operation.name, module.name)} (specification v${specification.version})`,
+          );
+        }
+      }
+    }
+  }
+  if (errors.length > 0) {
+    throw new Error(
+      `Cannot generate document model "${documentModelState.name}": ${errors.join("; ")}`,
+    );
+  }
 }
 
 type SpecificationState = DocumentModelGlobalState["specifications"][number];

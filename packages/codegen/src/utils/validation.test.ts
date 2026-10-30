@@ -1,4 +1,7 @@
-import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelGlobalState,
+  DocumentSpecification,
+} from "@powerhousedao/shared/document-model";
 import {
   addModule,
   addOperation,
@@ -11,7 +14,55 @@ import {
   setStateSchema,
 } from "document-model";
 import { describe, expect, it } from "vitest";
-import { validateDocumentModelState } from "./validation.js";
+import {
+  assertNoReservedOperationNames,
+  validateDocumentModelState,
+} from "./validation.js";
+
+function specification(
+  version: number,
+  operationNames: string[],
+): DocumentSpecification {
+  return {
+    version,
+    changeLog: [],
+    state: {
+      global: { schema: "", initialValue: "", examples: [] },
+      local: { schema: "", initialValue: "", examples: [] },
+    },
+    modules: [
+      {
+        id: "module-1",
+        name: "items",
+        description: null,
+        operations: operationNames.map((name, index) => ({
+          id: `operation-${index}`,
+          name,
+          description: null,
+          errors: [],
+          examples: [],
+          reducer: null,
+          schema: null,
+          template: null,
+          scope: "global",
+        })),
+      },
+    ],
+  };
+}
+
+function documentModelState(
+  ...specifications: DocumentSpecification[]
+): DocumentModelGlobalState {
+  return {
+    id: "powerhouse/test",
+    name: "Test",
+    extension: "",
+    description: "",
+    author: { name: "", website: null },
+    specifications,
+  };
+}
 
 /** A "Reading List" model, built with the actions an agent sends. */
 function readingList(globalType: string, localType?: string) {
@@ -44,6 +95,26 @@ function readingList(globalType: string, localType?: string) {
 }
 
 describe("validateDocumentModelState", () => {
+  it("accepts a spec without reserved operation names", () => {
+    expect(
+      validateDocumentModelState(
+        documentModelState(specification(1, ["ADD_ITEM"])),
+      ),
+    ).toEqual({ isValid: true, errors: [] });
+  });
+
+  it.each(["UNDO", "SET_NAME", "set_name"])(
+    "refuses an operation named %s",
+    (name) => {
+      const result = validateDocumentModelState(
+        documentModelState(specification(1, ["ADD_ITEM", name])),
+      );
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toEqual([
+        `Operation "${name}" in module "items" has a reserved name`,
+      ]);
+    },
+  );
   it("accepts state types named after the model", () => {
     const result = validateDocumentModelState(
       readingList("ReadingListState", "ReadingListLocalState"),
@@ -71,5 +142,28 @@ describe("validateDocumentModelState", () => {
         "Local state schema must define `type ReadingListLocalState`",
       ),
     ]);
+  });
+});
+
+describe("assertNoReservedOperationNames", () => {
+  it("passes a model without reserved operation names", () => {
+    expect(() =>
+      assertNoReservedOperationNames(
+        documentModelState(specification(1, ["ADD_ITEM"])),
+      ),
+    ).not.toThrow();
+  });
+
+  it("refuses a reserved name in any specification", () => {
+    expect(() =>
+      assertNoReservedOperationNames(
+        documentModelState(
+          specification(1, ["SET_NAME"]),
+          specification(2, ["ADD_ITEM"]),
+        ),
+      ),
+    ).toThrow(
+      'Cannot generate document model "Test": Operation "SET_NAME" in module "items" has a reserved name (specification v1)',
+    );
   });
 });

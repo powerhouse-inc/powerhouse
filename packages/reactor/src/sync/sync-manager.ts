@@ -974,6 +974,14 @@ export class SyncManager
     const held = this.heldFor(remote.meta.name);
     const key = holdKey(documentId, branch);
     if (held.has(key)) return;
+    this.logger.info(
+      "Holding @documentId from @remote: it runs @protocol @version, the peer supports @peerSupports",
+      documentId,
+      remote.meta.name,
+      reason.protocol,
+      reason.version,
+      reason.peerSupports.length > 0 ? reason.peerSupports.join(", ") : "none",
+    );
     const record: SyncHoldRecord = {
       remoteName: remote.meta.name,
       documentId,
