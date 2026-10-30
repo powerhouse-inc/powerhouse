@@ -501,9 +501,10 @@ describe("createMonitorController", () => {
     await until(() => controller.get(started.id).status === "failed");
     expect(controller.get(started.id)).toMatchObject({
       error: {
-        message: "spawnHost: ph run sb exited",
+        message: "Stopped while starting: boom.",
         phase: "exited",
         tail: "boom\n",
+        context: "ph run sb exited",
       },
       exit: { code: 1 },
     });
