@@ -1,4 +1,6 @@
-const WEBHOOK_SEGMENT = "/webhooks/";
+// Segments followed by a token that is the request's whole credential:
+// a webhook's delivery token, a waitpoint's resume token.
+const TOKEN_SEGMENTS = ["/webhooks/", "/waitpoints/"];
 
 /**
  * Strips a webhook's delivery token out of a request path.
@@ -12,9 +14,12 @@ export function redactWebhookPath(url: string | undefined): string {
   // Dropped with the token: `http.route` is meant to be a template, and a
   // query string is another place a sender can put a credential.
   const path = url.split("?")[0] ?? url;
-  const at = path.indexOf(WEBHOOK_SEGMENT);
-  if (at === -1) return url;
-  // Nothing after the segment is nothing to redact.
-  if (path.length === at + WEBHOOK_SEGMENT.length) return url;
-  return `${path.slice(0, at)}${WEBHOOK_SEGMENT}[redacted]`;
+  for (const segment of TOKEN_SEGMENTS) {
+    const at = path.indexOf(segment);
+    if (at === -1) continue;
+    // Nothing after the segment is nothing to redact.
+    if (path.length === at + segment.length) return url;
+    return `${path.slice(0, at)}${segment}[redacted]`;
+  }
+  return url;
 }

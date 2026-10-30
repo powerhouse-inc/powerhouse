@@ -48,13 +48,12 @@ export const WORKSPACE_PUBLISH_PACKAGES = [
   // here is proxied from npmjs at the SAME version with yesterday's content —
   // version-equal content skew (host-core's ./plugins subpath was the first
   // casualty: local connect imports it, npmjs host-core lacked it).
-  // @powerhousedao/vetra-studio stays out deliberately: private until its
-  // first publish, and reachable only by name (string specifiers), not deps.
   "@powerhousedao/host-core",
   "@powerhousedao/connect-core",
   "@powerhousedao/clint",
   "@powerhousedao/desktop",
   "@powerhousedao/portle",
+  "@powerhousedao/vetra-studio",
 ] as const;
 
 export interface PublishWorkspaceOptions {

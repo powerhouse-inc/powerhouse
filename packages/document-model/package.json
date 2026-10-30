@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "6.2.3-dev.79",
+  "version": "6.2.3-dev.86",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -57,6 +57,7 @@
     "@types/mime": "^4.0.0",
     "@types/node": "catalog:",
     "change-case": "catalog:",
+    "graphql": "catalog:",
     "mutative": "^1.0.5",
     "tsdown": "catalog:",
     "tsx": "catalog:",

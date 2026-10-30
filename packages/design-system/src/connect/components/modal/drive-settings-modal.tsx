@@ -3,7 +3,7 @@ import { Icon, Modal } from "#design-system";
 import type { DriveSystemInfoState } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { SharingType } from "@powerhousedao/shared/document-drive";
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 import { Divider } from "../divider/divider.js";
 import {
@@ -32,6 +32,8 @@ export type DriveSettingsModalProps = {
   ) => void;
   modalProps?: ModalProps;
   containerProps?: DivProps;
+  /** Rendered in the form after the location settings. */
+  children?: ReactNode;
 };
 export function DriveSettingsModal(props: DriveSettingsModalProps) {
   const {
@@ -47,6 +49,7 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
     onChangeAvailableOffline,
     modalProps,
     containerProps,
+    children,
   } = props;
 
   const onSubmit: DriveSettingsFormSubmitHandler = (data) => {
@@ -107,7 +110,9 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
           sharingType={sharingType}
           availableOffline={availableOffline}
           systemInfo={systemInfo}
-        />
+        >
+          {children}
+        </DriveSettingsForm>
       </div>
     </Modal>
   );

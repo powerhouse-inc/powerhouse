@@ -1,3 +1,5 @@
+import { switchboardOfDrive } from "@powerhousedao/shared/host-tokens";
+import { isOriginPlaceholderUrl } from "@powerhousedao/shared/connect/origin-placeholder";
 import { z } from "zod";
 import { buildDriveDeclarationSchema } from "./drive-schema.js";
 import { pluginEntrySchema } from "./plugins.js";
@@ -17,7 +19,7 @@ import {
  * `config` is runner-defined.
  *
  * Token-able fields (typed-host-configs 3.5): `reactor.backends.*.remote.url`
- * (required), `reactor.drives` (whole list, e.g. `$map`),
+ * (required, a switchboard drive address), `reactor.drives` (whole list, e.g. `$map`),
  * `reactor.drives[].remote.url` and `storage.dataDir` (`$env` only). Their z.input admits tokens, their z.output is the resolved type.
  */
 
@@ -32,6 +34,18 @@ export const hostNameSchema = z
   .min(1)
   .max(HOST_NAME_MAX_LENGTH, HOST_NAME_MESSAGE)
   .regex(HOST_NAME_PATTERN, HOST_NAME_MESSAGE);
+
+/**
+ * A URL, or one written against the page origin (`${origin}/graphql`): the
+ * browser resolves the placeholder when it loads Connect's config, for a
+ * member whose own server proxies the switchboard's paths.
+ */
+export const originOrUrlSchema = z.union([
+  z.url(),
+  z.string().refine(isOriginPlaceholderUrl, {
+    message: "a URL, or ${origin}/<path> for a proxied sibling",
+  }),
+]);
 
 export const profileSchema = z.strictObject({
   appId: z.string().min(1).optional(),
@@ -130,11 +144,251 @@ const FORBID_TOKENS: FieldWrappers = {
   env: (schema) => z.union([schema]),
 };
 
+/** The replacement a non-drive `remote.url` message names. */
+function useDriveUrl(host = "switchboard", member?: string): string {
+  const memberPart = member ? `, member: "${member}"` : "";
+  return (
+    `remote: { url: ${host}.drives.<slug>.url } with ${host} from ../${host}/outputs.js, ` +
+    `or remote: { url: { $output: { host: "${host}"${memberPart}, path: ["drives", "<slug>", "url"] } } }`
+  );
+}
+
+/** The `$output` of a declared `remote.url` that reads `endpoints.graphql`. */
+function endpointsGraphqlRef(
+  url: unknown,
+): { host: string; member?: string } | undefined {
+  if (typeof url !== "object" || url === null || !("$output" in url)) {
+    return undefined;
+  }
+  const ref = (url as { $output: unknown }).$output;
+  if (typeof ref !== "object" || ref === null) return undefined;
+  const { host, member, path } = ref as Record<string, unknown>;
+  if (typeof host !== "string" || !Array.isArray(path)) return undefined;
+  if (path.join(".") !== "endpoints.graphql") return undefined;
+  return { host, ...(typeof member === "string" ? { member } : {}) };
+}
+
+/** The slug a drive link names: a `drives.<slug>.url` token's slug or a
+ * literal address's served slug; undefined when only runtime knows it. */
+function linkedSlug(url: unknown): string | undefined {
+  if (typeof url === "string") return switchboardOfDrive(url)?.slug;
+  const ref =
+    typeof url === "object" && url !== null && "$output" in url
+      ? (url as { $output: { path?: unknown } }).$output
+      : undefined;
+  const path = Array.isArray(ref?.path) ? (ref.path as unknown[]) : [];
+  return path.length === 3 &&
+    path[0] === "drives" &&
+    typeof path[1] === "string" &&
+    path[2] === "url"
+    ? path[1]
+    : undefined;
+}
+
+interface DeclaredReactorHost {
+  runner?: { plugins?: unknown };
+  config?: unknown;
+  reactor?: {
+    backends?: Record<string, { kind: string; remote?: { url: unknown } }>;
+    placement?: { drives?: Record<string, string> };
+    drives?: unknown;
+  };
+}
+
+/** The drives a declared host names (home drives, `reactor.drives`, plugin
+ * `config.drive` links), or undefined when one is known only at runtime. */
+function knownDriveSlugs(host: DeclaredReactorHost): string[] | undefined {
+  const reactor = host.reactor ?? {};
+  const slugs: string[] = [];
+  for (const backend of Object.values(reactor.backends ?? {})) {
+    if (backend.kind !== "remote") continue;
+    const slug = linkedSlug(backend.remote?.url);
+    if (slug === undefined) return undefined;
+    slugs.push(slug);
+  }
+  if (reactor.drives !== undefined) {
+    if (!Array.isArray(reactor.drives)) return undefined;
+    for (const drive of reactor.drives as { slug?: unknown }[]) {
+      if (typeof drive.slug === "string") slugs.push(drive.slug);
+    }
+  }
+  const plugins = Array.isArray(host.runner?.plugins)
+    ? (host.runner.plugins as unknown[])
+    : [];
+  for (const entry of plugins) {
+    const config =
+      typeof entry === "object" && entry !== null && "config" in entry
+        ? (entry as { config: unknown }).config
+        : undefined;
+    if (typeof config !== "object" || config === null) continue;
+    if (!("drive" in config) || config.drive === undefined) continue;
+    const slug = linkedSlug(config.drive);
+    if (slug === undefined) return undefined;
+    slugs.push(slug);
+  }
+  for (const drive of connectDefaultDrives(host.config)) {
+    if (typeof drive !== "object" || drive === null || !("url" in drive)) {
+      continue;
+    }
+    const slug = linkedSlug(drive.url);
+    if (slug === undefined) return undefined;
+    slugs.push(slug);
+  }
+  return slugs;
+}
+
+/** A Connect host's `config.drives.defaultDrives`, unchecked. */
+function connectDefaultDrives(config: unknown): unknown[] {
+  const drives =
+    typeof config === "object" && config !== null && "drives" in config
+      ? (config as { drives: unknown }).drives
+      : undefined;
+  const list =
+    typeof drives === "object" && drives !== null && "defaultDrives" in drives
+      ? (drives as { defaultDrives: unknown }).defaultDrives
+      : undefined;
+  return Array.isArray(list) ? list : [];
+}
+
+/** Declared form, at host level so plugin drives are seen: a placement key
+ * must name a drive the host names, when every drive is knowable. A host
+ * with no remote backend is not checked: its plugins may contribute drives
+ * (a switchboard's workflows drive) that no field names. */
+function refineDeclaredPlacementKeys(
+  host: DeclaredReactorHost,
+  ctx: z.RefinementCtx,
+): void {
+  const placed = Object.keys(host.reactor?.placement?.drives ?? {});
+  if (placed.length === 0) return;
+  const remote = Object.values(host.reactor?.backends ?? {}).some(
+    (b) => b.kind === "remote",
+  );
+  if (!remote) return;
+  const known = knownDriveSlugs(host);
+  if (!known) return;
+  // A literal address may carry the hashed slug of a `projectHash` drive.
+  const names = (slug: string, served: string) =>
+    served === slug ||
+    (served.startsWith(`${slug}-`) &&
+      /^[0-9a-f]{8}$/.test(served.slice(slug.length + 1)));
+  for (const slug of placed) {
+    if (known.some((served) => names(slug, served))) continue;
+    ctx.addIssue({
+      code: "custom",
+      path: ["reactor", "placement", "drives", slug],
+      message: `placement.drives.${slug} names no drive this host links to or declares (${[...new Set(known)].join(", ") || "none"}).`,
+    });
+  }
+}
+
+interface ResolvedReactorBlock {
+  backends?: Record<string, { kind: string; remote?: { url: unknown } }>;
+  placement?: { drives?: Record<string, string> };
+  drives?: unknown;
+}
+
+/** Resolved-form checks across backends, drives and placement: one base is
+ * one remote backend, and a drive placed on a remote is on its switchboard. */
+function refineResolvedReactor(
+  reactor: ResolvedReactorBlock,
+  ctx: z.RefinementCtx,
+): void {
+  const backends = reactor.backends ?? {};
+  const baseOf = new Map<string, string>();
+  const byBase = new Map<string, string>();
+  // Every switchboard a slug is linked on: one slug on two is ambiguous.
+  const linked = new Map<string, Set<string>>();
+  const link = (slug: string, base: string) =>
+    linked.set(slug, (linked.get(slug) ?? new Set()).add(base));
+  for (const [name, backend] of Object.entries(backends)) {
+    const url = backend.remote?.url;
+    if (backend.kind !== "remote" || typeof url !== "string") continue;
+    const home = switchboardOfDrive(url);
+    if (!home) continue;
+    baseOf.set(name, home.base);
+    link(home.slug, home.base);
+    const first = byBase.get(home.base);
+    if (first === undefined) {
+      byBase.set(home.base, name);
+      continue;
+    }
+    ctx.addIssue({
+      code: "custom",
+      path: ["backends", name, "remote", "url"],
+      message: `backends "${first}" and "${name}" both open drives on the same switchboard (${home.base}). Keep "${first}", and list the second drive under reactor.drives with its remote.url instead.`,
+    });
+  }
+
+  const kept = new Set<string>();
+  const declared = Array.isArray(reactor.drives)
+    ? (reactor.drives as { slug: string; remote?: { url: string } }[])
+    : [];
+  declared.forEach((drive, index) => {
+    if (!drive.remote) {
+      kept.add(drive.slug);
+      return;
+    }
+    const at = switchboardOfDrive(drive.remote.url);
+    // An empty url already fails the field's own check.
+    if (at || drive.remote.url === "") {
+      if (at) link(drive.slug, at.base);
+      return;
+    }
+    ctx.addIssue({
+      code: "custom",
+      path: ["drives", index, "remote", "url"],
+      message: `remote.url must be a switchboard drive address (<switchboard>/d/<slug>), not ${drive.remote.url}: sync needs the drive. Use url: switchboard.drives.<slug>.url, or url: { $output: { host: "switchboard", path: ["drives", "<slug>", "url"] } }.`,
+    });
+  });
+
+  const nameOf = (base: string) => byBase.get(base) ?? base;
+  for (const [slug, name] of Object.entries(reactor.placement?.drives ?? {})) {
+    const at = ["placement", "drives", slug];
+    const on = [...(linked.get(slug) ?? [])];
+    // Two drives answer to the key, whichever backend it names.
+    if (on.length > 0 && kept.has(slug)) {
+      ctx.addIssue({
+        code: "custom",
+        path: at,
+        message: `Drive "${slug}" is both this reactor's own drive and on ${on.map(nameOf).join(" and ")}. Rename one, or link only one.`,
+      });
+      continue;
+    }
+    if (on.length > 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: at,
+        message: `Drive "${slug}" is on both ${on.map(nameOf).join(" and ")}. Rename one, or link only one.`,
+      });
+      continue;
+    }
+    const base = baseOf.get(name);
+    if (base === undefined) continue;
+    if (on.length === 0) {
+      // A key that names no drive here (a hashed home drive) is not checked.
+      if (!kept.has(slug)) continue;
+      ctx.addIssue({
+        code: "custom",
+        path: at,
+        message: `placement.drives.${slug} opens drive "${slug}" on "${name}", but this reactor keeps that drive itself. Only a drive on a switchboard can open there without a copy.`,
+      });
+      continue;
+    }
+    if (on[0] === base) continue;
+    ctx.addIssue({
+      code: "custom",
+      path: at,
+      message: `placement.drives.${slug} opens drive "${slug}" on "${name}" (${base}), but the drive is on ${on[0]}. Place it on the backend for that switchboard.`,
+    });
+  }
+}
+
 /**
  * Builds the host schema set. "allow" (declared form) accepts `T | Token` in
  * every token-able field; "forbid" (resolved form) accepts `T` only.
  */
 function buildHostSchemas(tokenField: FieldWrappers) {
+  const resolved = tokenField === FORBID_TOKENS;
   const reactorBackendSchema = z
     .strictObject({
       kind: reactorBackendKindSchema,
@@ -155,9 +409,14 @@ function buildHostSchemas(tokenField: FieldWrappers) {
           dynamic: z.boolean().optional(),
         })
         .optional(),
-      // The reactor to attach to, by URL: typically a producer's
-      // `endpoints.graphql` output token. (`remote.host` was removed in T3.)
-      remote: z.strictObject({ url: tokenField.any(z.url()) }).optional(),
+      // A switchboard drive address, `<base>/d/<slug>`: typically a
+      // producer's `drives.<slug>.url` output token. The backend is the
+      // switchboard at `<base>`. `${origin}/d/<slug>` when the member's own
+      // server proxies the switchboard (the browser then calls its page
+      // origin; see `runner.proxy` on the connect runner).
+      remote: z
+        .strictObject({ url: tokenField.any(originOrUrlSchema) })
+        .optional(),
     })
     // Two PGlite instances on one data dir corrupt it: the reactor store
     // (storage.dataDir) and the read-model store (readModel.url) must differ.
@@ -169,9 +428,23 @@ function buildHostSchemas(tokenField: FieldWrappers) {
         ctx.addIssue({
           code: "custom",
           path: ["remote", "url"],
-          message:
-            'a "remote" backend needs remote.url: remote: { url: switchboard.endpoints.graphql } ' +
-            'with switchboard from ../switchboard/outputs.js, or remote: { url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } } }.',
+          message: `a "remote" backend needs remote.url, a switchboard drive address: ${useDriveUrl()}.`,
+        });
+      }
+      const url: unknown = backend.remote?.url;
+      const graphqlRef = resolved ? undefined : endpointsGraphqlRef(url);
+      if (graphqlRef) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["remote", "url"],
+          message: `remote.url reads ${graphqlRef.host}'s endpoints.graphql; it must be a switchboard drive address (<switchboard>/d/<slug>): sync needs the drive. Use ${useDriveUrl(graphqlRef.host, graphqlRef.member)}.`,
+        });
+      }
+      if (resolved && typeof url === "string" && !switchboardOfDrive(url)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["remote", "url"],
+          message: `remote.url must be a switchboard drive address (<switchboard>/d/<slug>), not ${url}: sync needs the drive. Use ${useDriveUrl()}.`,
         });
       }
       const store = backend.storage;
@@ -195,28 +468,51 @@ function buildHostSchemas(tokenField: FieldWrappers) {
       }
     });
 
-  const reactorSchema = z.strictObject({
-    backends: z.record(z.string(), reactorBackendSchema).optional(),
-    placement: z.strictObject({ primary: z.string().optional() }).optional(),
-    protocol: reactorProtocolSchema.optional(),
-    /** DEPRECATED (dies in R2): workflows become a listed plugin. */
-    workflows: z.boolean().optional(),
-    // R1 core keys: identity/signing and storage namespace.
-    renown: z
-      .strictObject({
-        url: z.string().optional(),
-        networkId: z.string().optional(),
-        chainId: z.number().int().optional(),
-      })
-      .optional(),
-    namespace: z.string().min(1).optional(),
-    // Core-declared, seeded by the host runtime. Token-able as a whole
-    // (3.3): a `$map` over a producer's `drives` output (or an `$output` of
-    // an array of declarations) renders the list at resolve time.
-    drives: tokenField
-      .any(z.array(buildDriveDeclarationSchema(tokenField.any)))
-      .optional(),
-  });
+  const reactorSchema = z
+    .strictObject({
+      backends: z.record(z.string(), reactorBackendSchema).optional(),
+      placement: z
+        .strictObject({
+          primary: z.string().optional(),
+          /** Declared drive slug → backend name. A local backend keeps a
+           * synced copy; the drive's own remote backend opens it there with
+           * no copy. An unlisted drive keeps a synced copy. */
+          drives: z.record(z.string().min(1), z.string().min(1)).optional(),
+        })
+        .optional(),
+      protocol: reactorProtocolSchema.optional(),
+      /** DEPRECATED (dies in R2): workflows become a listed plugin. */
+      workflows: z.boolean().optional(),
+      // R1 core keys: identity/signing and storage namespace.
+      renown: z
+        .strictObject({
+          url: z.string().optional(),
+          networkId: z.string().optional(),
+          chainId: z.number().int().optional(),
+        })
+        .optional(),
+      namespace: z.string().min(1).optional(),
+      // Core-declared, seeded by the host runtime. Token-able as a whole
+      // (3.3): a `$map` over a producer's `drives` output (or an `$output` of
+      // an array of declarations) renders the list at resolve time.
+      drives: tokenField
+        .any(z.array(buildDriveDeclarationSchema(tokenField.any)))
+        .optional(),
+    })
+    .superRefine((reactor, ctx) => {
+      const backends = reactor.backends ?? {};
+      for (const [slug, name] of Object.entries(
+        reactor.placement?.drives ?? {},
+      )) {
+        if (Object.hasOwn(backends, name)) continue;
+        ctx.addIssue({
+          code: "custom",
+          path: ["placement", "drives", slug],
+          message: `placement.drives.${slug} names backend "${name}", which is not in backends (${Object.keys(backends).join(", ") || "none"}).`,
+        });
+      }
+      if (resolved) refineResolvedReactor(reactor, ctx);
+    });
 
   /** Common runner options; runner modules extend it with their own. */
   const runnerBaseSchema = z.looseObject({
@@ -288,6 +584,41 @@ export function makeHostSchemas(options: { tokens: TokenMode }): HostSchemas {
   );
 }
 
+export type PlacementKeyIssue = {
+  path: (string | number)[];
+  message: string;
+};
+
+/** withPlacementKeys' check, for a merged declared host parsed some other way. */
+export function placementKeyIssues(host: unknown): PlacementKeyIssue[] {
+  if (typeof host !== "object" || host === null || !("reactor" in host)) {
+    return [];
+  }
+  const issues: PlacementKeyIssue[] = [];
+  const ctx = {
+    addIssue: (issue: { path?: PropertyKey[]; message?: string }) => {
+      issues.push({
+        path: (issue.path ?? []).filter(
+          (part): part is string | number => typeof part !== "symbol",
+        ),
+        message: issue.message ?? "",
+      });
+    },
+  } as unknown as z.RefinementCtx;
+  refineDeclaredPlacementKeys(host as DeclaredReactorHost, ctx);
+  return issues;
+}
+
+/** Adds the host-level placement key check to a runner's declared schema. */
+function withPlacementKeys<T>(schema: T): T {
+  if (!(schema instanceof z.ZodType)) return schema;
+  return schema.superRefine((host, ctx) => {
+    if (typeof host === "object" && host !== null && "reactor" in host) {
+      refineDeclaredPlacementKeys(host as DeclaredReactorHost, ctx);
+    }
+  }) as T;
+}
+
 /**
  * One runner definition, two schemas (3.5): `build` runs over the DECLARED
  * set (tokens allowed; its z.input types host files) and the RESOLVED set
@@ -301,7 +632,7 @@ export function defineHostSchemas<T>(build: (schemas: HostSchemas) => T): {
   hostSchema: T;
 } {
   return {
-    declaredHostSchema: build(declaredSchemas),
+    declaredHostSchema: withPlacementKeys(build(declaredSchemas)),
     hostSchema: build(resolvedSchemas),
   };
 }

@@ -1,3 +1,95 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+This was a version bump only for @powerhousedao/workflow to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.85 (2026-10-30)
+
+### 🚀 Features
+
+- **workflow:** approvals, waiting runs and wait blocks in the editor ([dead08df1b](https://github.com/powerhouse-inc/powerhouse/commit/dead08df1b))
+- **workflow:** a Run form for the manual trigger's inputs ([3effc302de](https://github.com/powerhouse-inc/powerhouse/commit/3effc302de))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.84 (2026-10-30)
+
+### 🚀 Features
+
+- **workflow:** a Run form for the manual trigger's inputs ([3effc302de](https://github.com/powerhouse-inc/powerhouse/commit/3effc302de))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **pieces-framework,reactor-workflow:** serve the reactor's write half to pieces ([194cc8b5ee](https://github.com/powerhouse-inc/powerhouse/commit/194cc8b5ee))
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+- **workflow-runtime:** per-action default timeout and retry ([ed63e8839f](https://github.com/powerhouse-inc/powerhouse/commit/ed63e8839f))
+
+### 🩹 Fixes
+
+- **connection-editor:** read dropdown options from the catalog's staticOptions ([c6c88eec7f](https://github.com/powerhouse-inc/powerhouse/commit/c6c88eec7f))
+- **workflow-runtime:** bind secrets to the connection or workflow that owns them ([40a52be27a](https://github.com/powerhouse-inc/powerhouse/commit/40a52be27a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **workflow:** managedBy, and Workflow Studio shows managed workflows read-only ([a82a126a64](https://github.com/powerhouse-inc/powerhouse/commit/a82a126a64))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **workflow:** ctx.reactor.query, an in-process read of an index subgraph for pieces ([fba34399f4](https://github.com/powerhouse-inc/powerhouse/commit/fba34399f4))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **workflow:** stack Workflow Studio's sidebar on narrow screens ([7c04e538be](https://github.com/powerhouse-inc/powerhouse/commit/7c04e538be))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

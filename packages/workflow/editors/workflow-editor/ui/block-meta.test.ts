@@ -105,9 +105,9 @@ describe("blockMeta", () => {
       blockMeta({
         pieceName: "@powerhousedao/piece-core",
         kind: "action",
-        name: "delay",
+        name: "loop",
       }),
-    ).toEqual({ displayName: "Delay", subtitle: "Core", glyph: "?" });
+    ).toEqual({ displayName: "Loop", subtitle: "Core", glyph: "?" });
   });
 });
 

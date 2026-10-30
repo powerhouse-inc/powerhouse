@@ -1,17 +1,24 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { IInspector } from "@powerhousedao/reactor";
+import type {
+  IInspector,
+  InspectorProcessorTimingReport,
+  MemoryTelemetryReport,
+  SlowProcessor,
+} from "@powerhousedao/reactor";
 import {
   inspectorProgressSource,
   progressRows,
   renderBars,
   renderLine,
   renderPriority,
+  renderSlowest,
   startProgressDisplay,
   type ProgressPriority,
   type ProgressRow,
   type ProgressSnapshot,
   type ProgressStream,
 } from "../src/services/run/catch-up-progress.js";
+import { renderMemoryLine } from "../src/services/run/memory-line.js";
 
 function stream(isTTY: boolean): ProgressStream & { out: string[] } {
   const out: string[] = [];
@@ -372,5 +379,324 @@ describe("catch-up priority", () => {
 
     getCatchUpPriority.mockRejectedValue(new Error("old host"));
     await expect(source()).resolves.toEqual({ rows: [], priority: undefined });
+  });
+});
+
+const slowRow: SlowProcessor = {
+  label: "FilesIndex · files",
+  busyMs: 41_200,
+  handlerMs: 12_000,
+  readMs: 25_100,
+  fillMs: 4_100,
+  opsPerSecond: 3_100,
+  ordinalsBehind: 182_400,
+  etaMs: 59_000,
+};
+
+function horizon(busyMs: number) {
+  const counters = {
+    batches: 0,
+    opsDelivered: 0,
+    opsScanned: 0,
+    opsMatched: 0,
+    pages: 0,
+    handlerMs: busyMs,
+    maxBatchMs: 0,
+    readMs: 0,
+    lookupMs: 0,
+    fillMs: 0,
+    slotWaitMs: 0,
+    pauseMs: 0,
+    errors: 0,
+  };
+  return {
+    live: { ...counters, handlerMs: 0 },
+    replay: counters,
+    ordinalsAdvanced: 0,
+    busyMs,
+  };
+}
+
+function report(
+  level: InspectorProcessorTimingReport["level"],
+  windowBusy = 4_000,
+  totalBusy = 90_000,
+): InspectorProcessorTimingReport {
+  return {
+    level,
+    windowMs: 60_000,
+    head: 100,
+    headKnown: true,
+    processors: [
+      {
+        processorId: "p",
+        name: "FilesIndex",
+        driveLabel: "files",
+        factoryId: "f",
+        driveId: "d",
+        phase: "catching-up",
+        lastOrdinal: 50,
+        queueDepth: { tasks: 0, ops: 0 },
+        ordinalsBehind: 50,
+        opsPerSecond: 10,
+        ordinalsPerSecond: 10,
+        etaMs: 5_000,
+        sinceUtcMs: 0,
+        total: horizon(totalBusy),
+        window: horizon(windowBusy),
+        windowMs: 60_000,
+        currentRun: null,
+        lastRun: null,
+        lastBatch: null,
+        byDocumentType: [],
+      },
+    ],
+  };
+}
+
+describe("the slowest processors", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("drops columns from the right as the console narrows, and keeps busy", () => {
+    const header = (columns: number) =>
+      renderSlowest([slowRow], columns, 20, 60_000)[0]!;
+    expect(header(120)).toContain("handler");
+    expect(header(120)).toContain("eta");
+    expect(header(70)).not.toContain("eta");
+    expect(header(70)).toContain("read");
+    expect(header(45)).not.toContain("read");
+    expect(header(45)).toContain("handler");
+    expect(header(32)).toContain("busy");
+    expect(header(32)).not.toContain("handler");
+  });
+
+  it.each([120, 80, 50, 30])(
+    "never reaches the last column at %d columns",
+    (columns) => {
+      for (const line of renderSlowest([slowRow], columns, 32, 60_000)) {
+        expect(line.length).toBeLessThan(columns);
+      }
+    },
+  );
+
+  it("renders nothing without rows", () => {
+    expect(renderSlowest([], 120, 20, 60_000)).toEqual([]);
+  });
+
+  it("prints a slowest line after the catch-up line without a terminal", async () => {
+    const stdout = stream(false);
+    vi.useFakeTimers();
+    const display = startProgressDisplay(
+      () =>
+        Promise.resolve({
+          rows: catchingUp,
+          priority: undefined,
+          timing: report("basic"),
+        }),
+      { stdout, stderr: stream(false), pollMs: 1_000, lineMs: 1_000 },
+    );
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(stdout.out.at(-2)).toBe("catch-up: sektar 62%\n");
+    expect(stdout.out.at(-1)).toContain(
+      "catch-up slowest (60 s): FilesIndex·files 4.0s",
+    );
+    display.stop();
+  });
+
+  it("draws the slowest block under the bars in a terminal", async () => {
+    const stdout = stream(true);
+    const display = startProgressDisplay(
+      () =>
+        Promise.resolve({
+          rows: catchingUp,
+          priority: undefined,
+          timing: report("basic"),
+        }),
+      { stdout, stderr: stream(true), pollMs: 60_000 },
+    );
+    await settle();
+
+    const written = stdout.out.join("");
+    expect(written.indexOf("62%")).toBeLessThan(
+      written.indexOf("slowest, last 60 s"),
+    );
+    expect(written).toContain("FilesIndex · files");
+    display.stop();
+  });
+
+  it.each([
+    ["timing is off", report("off"), 5],
+    ["top is 0", report("basic"), 0],
+    ["nothing is busy", report("basic", 0), 5],
+    ["the reactor has no timing", undefined, 5],
+  ])("hides them when %s", async (_, timing, top) => {
+    const stdout = stream(true);
+    const display = startProgressDisplay(
+      () => Promise.resolve({ rows: catchingUp, priority: undefined, timing }),
+      { stdout, stderr: stream(true), pollMs: 60_000, top },
+    );
+    await settle();
+
+    expect(stdout.out.join("")).not.toContain("slowest");
+    display.stop();
+  });
+
+  it("prints the done summary once, from the total horizon", async () => {
+    const stdout = stream(false);
+    vi.useFakeTimers();
+    let rows: readonly ProgressRow[] = catchingUp;
+    const display = startProgressDisplay(
+      () =>
+        Promise.resolve({
+          rows,
+          priority: undefined,
+          timing: report("basic"),
+        }),
+      { stdout, stderr: stream(false), pollMs: 1_000, lineMs: 60_000 },
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    rows = [{ label: "sektar", fraction: 1, state: "done" }];
+    await vi.advanceTimersByTimeAsync(3_000);
+
+    const summaries = stdout.out.filter((line) =>
+      line.startsWith("catch-up done in"),
+    );
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0]).toContain(
+      "slowest since start: FilesIndex·files 1m30s",
+    );
+    display.stop();
+  });
+
+  it("reads timing from the inspector, and goes without when refused", async () => {
+    const getProcessorTiming = vi.fn(() => Promise.resolve(report("basic")));
+    const inspector = {
+      getProcessors: () => Promise.resolve([]),
+      getCatchUpStatus: () => Promise.reject(new Error("no catch-up")),
+      getCatchUpPriority: () => Promise.reject(new Error("no priority")),
+      getProcessorTiming,
+    } as unknown as IInspector;
+    const source = inspectorProgressSource(inspector);
+
+    await expect(source()).resolves.toMatchObject({
+      timing: { level: "basic" },
+    });
+
+    getProcessorTiming.mockRejectedValueOnce(new Error("older reactor"));
+    await expect(source()).resolves.toMatchObject({ timing: undefined });
+  });
+});
+
+describe("the memory line", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const GB = 1024 ** 3;
+  const MB = 1024 ** 2;
+
+  function memoryReport(
+    outputs: MemoryTelemetryReport["outputs"] = ["memory", "console"],
+  ): MemoryTelemetryReport {
+    return {
+      enabled: true,
+      intervalMs: 30_000,
+      consoleIntervalMs: 5_000,
+      outputs,
+      file: null,
+      startedAt: null,
+      summary: {
+        windowMin: 30,
+        mbPer1kOps: 17.2,
+        postGcMbPer1kOps: 14,
+        rssMbPerMin: 61.4,
+        heapMbPerMin: 50,
+        postGcMbPerMin: 48.9,
+        externalMbPerMin: 0,
+        pgliteMbPerMin: 0,
+        verdict: "growing",
+        topGauges: [
+          {
+            gauge: "processors.bufferedLiveOps",
+            value: 88_112,
+            perMin: 2_900,
+            r: 0.9,
+          },
+        ],
+        gauges: [],
+      },
+      samples: [
+        {
+          rss: 4.12 * GB,
+          heapUsed: 2.35 * GB,
+          postGcHeap: 2.1 * GB,
+          workers: {
+            "pglite:reactor": { heapUsed: 20 * MB, wasm: 2 * GB },
+            "pglite:read": { heapUsed: 20 * MB, wasm: 1.6 * GB },
+            "executor#1": { heapUsed: 64 * MB },
+          },
+          delta: { s: 30, opsWritten: 1830, rss: 0, heapUsed: 0 },
+        } as unknown as MemoryTelemetryReport["samples"][number],
+      ],
+    };
+  }
+
+  it("states rates, stores, operations and the fastest gauge", () => {
+    expect(renderMemoryLine(memoryReport())).toBe(
+      "memory: rss 4.12 GB (+61 MB/min) · heap 2.35 GB, post-GC 2.10 GB (+49 MB/min) · pglite 3.60 GB · 1830 ops/30s, 17 MB/1k ops · top: processors.bufferedLiveOps +2.9k/min",
+    );
+  });
+
+  it("goes without what it does not have yet", () => {
+    const report = memoryReport();
+    const line = renderMemoryLine({
+      ...report,
+      summary: null,
+      samples: [{ ...report.samples[0]!, postGcHeap: null, workers: {} }],
+    });
+    expect(line).toBe("memory: rss 4.12 GB · heap 2.35 GB · 1830 ops/30s");
+    expect(renderMemoryLine({ ...report, samples: [] })).toBeUndefined();
+  });
+
+  it("prints through stderr at its own cadence, catching up or not", async () => {
+    const stdout = stream(false);
+    const stderr = stream(false);
+    vi.useFakeTimers();
+    const display = startProgressDisplay(
+      () =>
+        Promise.resolve({
+          rows: [],
+          priority: undefined,
+          memory: memoryReport(),
+        }),
+      { stdout, stderr, pollMs: 1_000 },
+    );
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(stderr.out).toHaveLength(0);
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(stderr.out).toHaveLength(1);
+    expect(stderr.out[0]).toMatch(/^memory: rss/);
+    display.stop();
+  });
+
+  it("stays quiet without the console output", async () => {
+    const stderr = stream(false);
+    vi.useFakeTimers();
+    const display = startProgressDisplay(
+      () =>
+        Promise.resolve({
+          rows: [],
+          priority: undefined,
+          memory: memoryReport(["memory", "file"]),
+        }),
+      { stdout: stream(false), stderr, pollMs: 1_000 },
+    );
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(stderr.out).toHaveLength(0);
+    display.stop();
   });
 });

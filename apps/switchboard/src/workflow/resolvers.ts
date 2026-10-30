@@ -1,11 +1,12 @@
-import type {
-  Context,
-  IAuthorizationService,
-} from "@powerhousedao/reactor-api";
-import type {
-  RunRow,
-  StepExecutionRow,
-  WorkflowRuntimeService,
+import { hostname } from "node:os";
+import type { Context } from "@powerhousedao/reactor-api";
+import {
+  waitpointRecord,
+  type RunRow,
+  type StepExecutionRow,
+  type WaitpointRecord,
+  type WaitpointRow,
+  type WorkflowRuntimeService,
 } from "@powerhousedao/reactor-workflow";
 import {
   GraphQLError,
@@ -23,6 +24,8 @@ interface PieceArgs {
   packageName: string;
   version?: string | null;
 }
+
+type SecretStat = Parameters<WorkflowRuntimeService["canManageSecret"]>[0];
 
 type BlockRef = Parameters<WorkflowRuntimeService["blockDescriptor"]>[0];
 
@@ -131,17 +134,6 @@ function readsStepData(
   return selectsStepData(selections, path);
 }
 
-// A secret belongs to the reactor, not to any one document, so writing one is
-// an administrator's call — the gate the package mutations already use.
-function requireAdmin(
-  authorizationService: IAuthorizationService,
-  ctx: Context,
-): void {
-  if (!authorizationService.isSupremeAdmin(ctx.user?.address)) {
-    throw new GraphQLError("Admin access required");
-  }
-}
-
 // The runtime's retryable "not synced here yet", tagged for clients.
 async function syncAware<T>(call: () => Promise<T>): Promise<T> {
   try {
@@ -186,7 +178,11 @@ function toStepRecord(row: StepExecutionRow) {
   };
 }
 
-function toRunRecord(row: RunRow, steps: StepExecutionRow[]) {
+function toRunRecord(
+  row: RunRow,
+  steps: StepExecutionRow[],
+  waitpoints?: WaitpointRecord[],
+) {
   return {
     id: row.id,
     workflowId: row.workflow_id,
@@ -203,6 +199,69 @@ function toRunRecord(row: RunRow, steps: StepExecutionRow[]) {
     warnings: row.warnings,
     warningNotes: parseJson(row.warning_notes) ?? [],
     steps: steps.map(toStepRecord),
+    // Absent: the waitpoints field resolver reads them for this run.
+    waitpoints,
+  };
+}
+
+type RunRecordShape = ReturnType<typeof toRunRecord>;
+
+type WaitpointLoader = (runId: string) => Promise<WaitpointRecord[]>;
+
+// One store read per request for every run whose waitpoints it selects.
+// The parent resolver already served the run to this caller.
+function waitpointLoader(runtime: WorkflowRuntimeService): WaitpointLoader {
+  const cache = new Map<string, Promise<WaitpointRecord[]>>();
+  let batch: {
+    ids: string[];
+    rows: Promise<Map<string, WaitpointRow[]>>;
+  } | null = null;
+  return (runId) => {
+    const cached = cache.get(runId);
+    if (cached) return cached;
+    if (!batch) {
+      const ids: string[] = [];
+      // Dispatches after the current promise jobs, as DataLoader does.
+      const rows = new Promise<void>((tick) => {
+        void Promise.resolve().then(() => process.nextTick(tick));
+      }).then(async () => {
+        batch = null;
+        const store = await runtime.store();
+        return store
+          ? store.listWaitpointsForRuns(ids)
+          : new Map<string, WaitpointRow[]>();
+      });
+      batch = { ids, rows };
+    }
+    batch.ids.push(runId);
+    const loaded = batch.rows;
+    const promise = loaded.then((rows) =>
+      (rows.get(runId) ?? []).map(waitpointRecord),
+    );
+    cache.set(runId, promise);
+    return promise;
+  };
+}
+
+// cancelRun answers as fire and rerun do.
+function toRunPayload(row: RunRow, steps: StepExecutionRow[]) {
+  return {
+    runId: row.id,
+    status: row.status,
+    error: row.error,
+    errorName: row.error_name,
+    steps: steps.map((step) => ({
+      stepId: step.step_id,
+      key: step.step_key,
+      pieceName: step.piece_name,
+      blockName: step.block_name,
+      status: step.status,
+      input: parseJson(step.input),
+      output: parseJson(step.output),
+      port: step.port,
+      error: step.error,
+      errorName: step.error_name,
+    })),
   };
 }
 
@@ -297,12 +356,20 @@ function returnUrlFor(
 
 export const getResolvers = (
   runtime: WorkflowRuntimeService,
-  authorizationService: IAuthorizationService,
   oauth?: OAuthRouting,
   access: ReactorAccessInfo = UNKNOWN_ACCESS,
   // The subgraph's own read gate; fields that need it refuse without one.
   assertCanRead?: ReadAssertion,
 ): Record<string, unknown> => {
+  const loaders = new WeakMap<Context, WaitpointLoader>();
+  const loadWaitpoints = (runId: string, ctx: Context) => {
+    let load = loaders.get(ctx);
+    if (!load) {
+      load = waitpointLoader(runtime);
+      loaders.set(ctx, load);
+    }
+    return load(runId);
+  };
   return {
     Query: {
       workflowRuntime: () => ({}),
@@ -410,16 +477,31 @@ export const getResolvers = (
             driveId: args.driveId ?? undefined,
           }),
         ),
-      secret: async (_parent: unknown, args: { ref: string }) => {
-        try {
-          return await (await runtime.secrets()).stat(args.ref);
-        } catch {
-          // Unknown or malformed ref reads as "no such secret".
-          return null;
-        }
-      },
-      secrets: async () => (await runtime.secrets()).list(),
+      // Only secrets whose owning document the caller can read.
+      secret: (_parent: unknown, args: { ref: string }, ctx: Context) =>
+        runtime.secretStat(args.ref, ctx),
+      secrets: (_parent: unknown, _args: unknown, ctx: Context) =>
+        runtime.listSecrets(ctx),
       oauthRedirectUri: () => oauth?.callbackUrl ?? null,
+      // The decision startOAuth makes, for the redirect it would use; a host
+      // that cannot name that redirect signs in with no app.
+      oauthSignIn: async (
+        _parent: unknown,
+        args: { appId: string; redirectUri?: string | null },
+      ) => {
+        let redirectUri: string;
+        try {
+          redirectUri = redirectUriFor(oauth, args.redirectUri);
+        } catch {
+          return "NONE";
+        }
+        return (
+          await runtime.oauthSignInMode(args.appId, redirectUri)
+        ).toUpperCase();
+      },
+      // The runner id apps record (folder-sync and integrations): the
+      // machine, which processors can name too; they see no signing key.
+      host: () => ({ id: `switchboard@${hostname()}`, label: hostname() }),
       oauthAttempt: (_parent: unknown, args: { state: string }, ctx: Context) =>
         runtime.oauthAttempt(args.state, ctx),
       triggerStates: async (_parent: unknown, _args: unknown, ctx: Context) =>
@@ -484,6 +566,31 @@ export const getResolvers = (
         const record = await runtime.run(args.id, ctx);
         return record ? toRunRecord(record.row, record.steps) : null;
       },
+      waitingRuns: async (
+        _parent: unknown,
+        args: {
+          driveId?: string | null;
+          workflowId?: string | null;
+          first?: number | null;
+        },
+        ctx: Context,
+      ) =>
+        (
+          await runtime.waitingRuns(
+            {
+              driveId: args.driveId ?? undefined,
+              workflowId: args.workflowId ?? undefined,
+              first: args.first ?? undefined,
+            },
+            ctx,
+          )
+        ).map(({ run, waitpoints }) =>
+          toRunRecord(run.row, run.steps, waitpoints),
+        ),
+    },
+    WorkflowRunRecord: {
+      waitpoints: (parent: RunRecordShape, _args: unknown, ctx: Context) =>
+        parent.waitpoints ?? loadWaitpoints(parent.id, ctx),
     },
     Mutation: {
       workflowRuntime: () => ({}),
@@ -491,6 +598,8 @@ export const getResolvers = (
     WorkflowRuntimeMutations: {
       fire: (_parent: unknown, args: FireArgs, ctx: Context) =>
         runtime.fire(args.workflowId, args.payload, "manual", undefined, ctx),
+      pollNow: (_parent: unknown, args: { workflowId: string }, ctx: Context) =>
+        runtime.pollNow(args.workflowId, ctx),
       testTrigger: (
         _parent: unknown,
         args: {
@@ -527,32 +636,60 @@ export const getResolvers = (
         ),
       rerun: (_parent: unknown, args: { runId: string }, ctx: Context) =>
         runtime.rerun(args.runId, ctx),
-      createSecret: async (
+      resolveWaitpoint: (
         _parent: unknown,
-        args: { value: string; label?: string | null },
+        args: {
+          waitpointId: string;
+          approved: boolean;
+          reason?: string | null;
+        },
+        ctx: Context,
+      ) =>
+        // The runtime checks write access and the approver list against ctx.
+        runtime.resolveWaitpoint(
+          args.waitpointId,
+          {
+            approved: args.approved,
+            ...(args.reason ? { reason: args.reason } : {}),
+          },
+          ctx,
+        ),
+      cancelRun: async (
+        _parent: unknown,
+        args: { runId: string },
         ctx: Context,
       ) => {
-        requireAdmin(authorizationService, ctx);
-        return (await runtime.secrets()).create({
-          value: args.value,
-          label: args.label ?? undefined,
-        });
+        const record = await runtime.cancelRun(args.runId, ctx);
+        return toRunPayload(record.row, record.steps);
       },
-      rotateSecret: async (
+      // The runtime requires write access to the owner, and to change a
+      // secret, being its creator; admins get nothing more.
+      createSecret: (
+        _parent: unknown,
+        args: { value: string; label?: string | null; documentId: string },
+        ctx: Context,
+      ) =>
+        syncAware(() =>
+          runtime.createSecret(
+            {
+              value: args.value,
+              label: args.label ?? undefined,
+              ownerId: args.documentId,
+            },
+            ctx,
+          ),
+        ),
+      rotateSecret: (
         _parent: unknown,
         args: { ref: string; value: string },
         ctx: Context,
-      ) => {
-        requireAdmin(authorizationService, ctx);
-        return (await runtime.secrets()).rotate(args.ref, args.value);
-      },
+      ) => runtime.rotateSecret(args.ref, args.value, ctx),
       deleteSecret: async (
         _parent: unknown,
         args: { ref: string },
         ctx: Context,
       ) => {
-        requireAdmin(authorizationService, ctx);
-        await (await runtime.secrets()).delete(args.ref);
+        await runtime.deleteSecret(args.ref, ctx);
         return true;
       },
       checkConnection: (
@@ -560,7 +697,7 @@ export const getResolvers = (
         args: { connectionId: string },
         ctx: Context,
       ) => runtime.checkConnection(args.connectionId, ctx),
-      // Signing in mints a secret, so it takes what createSecret takes.
+      // Signing in mints a secret: the runtime requires write access.
       startOAuth: (
         _parent: unknown,
         args: {
@@ -570,13 +707,16 @@ export const getResolvers = (
         },
         ctx: Context,
       ) => {
-        requireAdmin(authorizationService, ctx);
         const returnUrl = returnUrlFor(args.returnUrl, ctx);
         return runtime.startOAuth(args.connectionId, ctx, {
           redirectUri: redirectUriFor(oauth, args.redirectUri),
           ...(returnUrl ? { returnUrl } : {}),
         });
       },
+    },
+    SecretRecord: {
+      manageable: (parent: SecretStat, _args: unknown, ctx: Context) =>
+        runtime.canManageSecret(parent, ctx),
     },
   };
 };

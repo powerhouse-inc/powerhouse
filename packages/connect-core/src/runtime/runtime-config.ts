@@ -2,6 +2,7 @@
 import type { RuntimePowerhouseConfig } from "@powerhousedao/shared/connect";
 import { ConfigLoader } from "@powerhousedao/shared/connect/config-loader";
 import { JsonConfigAdapter } from "@powerhousedao/shared/connect/json-adapter";
+import { resolveOriginPlaceholders } from "@powerhousedao/shared/connect/origin-placeholder";
 import type { ConnectPluginDefinition } from "../plugins/types.js";
 import { getConnectRegistry } from "../registry.js";
 
@@ -38,7 +39,17 @@ export async function loadRuntimeConfig(
   // Handled here so a failed config read doesn't leave them unhandled.
   void pluginHost?.catch(() => undefined);
   void pluginUi?.catch(() => undefined);
-  const config = (await loader().read()) as RuntimePowerhouseConfig;
+  let config = (await loader().read()) as RuntimePowerhouseConfig;
+  // A served config names a switchboard this page's server proxies as
+  // `${origin}` (the connect runner's `runner.proxy`): resolved here, once,
+  // against the page's origin, so every consumer sees absolute URLs and the
+  // same config holds from localhost and from a published site alike. Not
+  // in Node (the shell prerender): there is no page origin to resolve to.
+  const origin = globalThis.location?.origin;
+  if (origin) {
+    config = resolveOriginPlaceholders(config, origin);
+    loader().prime(config);
+  }
   // R3: a served composition (projected from host.js runner.plugins by the
   // uniform-runners connect runner) runs the plugin pipeline over the config
   // BEFORE the cache warms — every downstream consumer sees the transformed

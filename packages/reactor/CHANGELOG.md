@@ -1,3 +1,91 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor:** keyframe clean-up with a dry run ([9be5cad060](https://github.com/powerhouse-inc/powerhouse/commit/9be5cad060))
+- **reactor:** historical reads no longer write keyframes ([ccc2d2a873](https://github.com/powerhouse-inc/powerhouse/commit/ccc2d2a873))
+- **reactor:** prune a stream's keyframes on write ([cdb29fbedf](https://github.com/powerhouse-inc/powerhouse/commit/cdb29fbedf))
+- **reactor:** memory telemetry correlated with operations processed ([c8d0779075](https://github.com/powerhouse-inc/powerhouse/commit/c8d0779075))
+- **reactor:** keyframe interval and keep per document type ([2654f5df0b](https://github.com/powerhouse-inc/powerhouse/commit/2654f5df0b))
+- **reactor:** per-processor timing, top 5 in the catch-up output ([ca20e898e4](https://github.com/powerhouse-inc/powerhouse/commit/ca20e898e4))
+
+### 🩹 Fixes
+
+- **reactor:** shutdown does not wait for a reclaim to find a quiet store ([9f0df97e86](https://github.com/powerhouse-inc/powerhouse/commit/9f0df97e86))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.85 (2026-10-30)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.84 (2026-10-30)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor,reactor-api:** inspection says whether models load on demand ([c467cb6314](https://github.com/powerhouse-inc/powerhouse/commit/c467cb6314))
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **pieces-framework,reactor-workflow:** serve the reactor's write half to pieces ([194cc8b5ee](https://github.com/powerhouse-inc/powerhouse/commit/194cc8b5ee))
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **reactor,switchboard:** boot reports progress instead of going silent ([e85fcfd84e](https://github.com/powerhouse-inc/powerhouse/commit/e85fcfd84e))
+- **reactor:** report replayed operations delivered without state, and why ([bf684eca34](https://github.com/powerhouse-inc/powerhouse/commit/bf684eca34))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

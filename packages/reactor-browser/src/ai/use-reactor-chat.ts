@@ -9,9 +9,12 @@ import {
 } from "./settings-store.js";
 import type {
   AgentEvent,
+  AiChatImage,
+  AiConnection,
   AiSettings,
   AiToolDescriptor,
   AiToolsProvider,
+  ChatImage,
   ChatMessage,
   ChatPart,
   PendingApproval,
@@ -43,24 +46,34 @@ export interface UseReactorChatResult {
   error: string | null;
   settings: AiSettings;
   configured: boolean;
-  send: (text: string) => void;
+  send: (text: string, images?: ChatImage[]) => void;
   stop: () => void;
   approve: (toolCallId: string) => void;
   reject: (toolCallId: string) => void;
   clear: () => void;
 }
 
+export interface UseReactorChatOptions {
+  /** Talk to this endpoint instead of the one in the user's settings. */
+  connection?: AiConnection;
+  /** Added to the agent's system prompt. */
+  instructions?: string;
+}
+
 /**
  * Drives one in-browser chat conversation against the reactor tools.
  *
  * `toolsProvider` lazily resolves the tool descriptors (e.g. from
- * `createReactorMcpProvider` bound to `window.ph.reactorClient`) when the
+ * `toMcpTool` bound to `window.ph.reactorClient`) when the
  * user sends a message, so the reactor does not need to be ready at render
  * time.
  */
 export function useReactorChat(
   toolsProvider?: AiToolsProvider,
+  options?: UseReactorChatOptions,
 ): UseReactorChatResult {
+  const connection = options?.connection;
+  const instructions = options?.instructions;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>(
@@ -73,6 +86,7 @@ export function useReactorChat(
   const pendingRef = useRef<Set<string>>(new Set());
   const assistantIdRef = useRef<string | null>(null);
   const historyRef = useRef<ModelMessage[]>([]);
+  const chatImagesRef = useRef<AiChatImage[]>([]);
 
   const settings = useSyncExternalStore(subscribeAiSettings, getAiSettings);
   const context = useChatContext();
@@ -176,15 +190,15 @@ export function useReactorChat(
   }, []);
 
   const send = useCallback(
-    (text: string) => {
+    (text: string, images: ChatImage[] = []) => {
       const trimmed = text.trim();
-      if (!trimmed || streamingRef.current) {
+      if ((!trimmed && images.length === 0) || streamingRef.current) {
         return;
       }
       setError(null);
 
       const currentSettings = getAiSettings();
-      if (!isAiConfigured(currentSettings)) {
+      if (!connection && !isAiConfigured(currentSettings)) {
         setError(
           "Configure the AI endpoint, API key and model in settings first.",
         );
@@ -213,11 +227,14 @@ export function useReactorChat(
         abortRef.current = controller;
         const agent = new ReactorChatAgent({
           settings: currentSettings,
+          connection,
+          instructions,
           tools,
           context,
           onEvent: handleEvent,
           signal: controller.signal,
           history: historyRef.current,
+          chatImages: chatImagesRef.current,
         });
         agentRef.current = agent;
 
@@ -228,7 +245,14 @@ export function useReactorChat(
           {
             id: crypto.randomUUID(),
             role: "user",
-            parts: [{ type: "text", text: trimmed }],
+            parts: [
+              ...(trimmed ? [{ type: "text" as const, text: trimmed }] : []),
+              ...images.map((image) => ({
+                type: "image" as const,
+                dataUrl: image.dataUrl,
+                name: image.name,
+              })),
+            ],
           },
           { id: assistantId, role: "assistant", parts: [] },
         ]);
@@ -236,7 +260,7 @@ export function useReactorChat(
         streamingRef.current = true;
         setIsStreaming(true);
         try {
-          await agent.send(trimmed);
+          await agent.send(trimmed, images);
         } catch (sendError) {
           setError(toErrorMessage(sendError));
         } finally {
@@ -244,10 +268,11 @@ export function useReactorChat(
           setIsStreaming(false);
           abortRef.current = null;
           historyRef.current = agent.getHistory();
+          chatImagesRef.current = agent.getChatImages();
         }
       })();
     },
-    [toolsProvider, context, handleEvent],
+    [toolsProvider, context, handleEvent, connection, instructions],
   );
 
   const stop = useCallback(() => {
@@ -267,8 +292,10 @@ export function useReactorChat(
     agentRef.current?.reset();
     agentRef.current = null;
     historyRef.current = [];
+    chatImagesRef.current = [];
     pendingRef.current.clear();
     setPendingApprovals([]);
+    setMessages([]);
     setError(null);
     assistantIdRef.current = null;
   }, []);
@@ -279,7 +306,7 @@ export function useReactorChat(
     pendingApprovals,
     error,
     settings,
-    configured: isAiConfigured(settings),
+    configured: connection !== undefined || isAiConfigured(settings),
     send,
     stop,
     approve,

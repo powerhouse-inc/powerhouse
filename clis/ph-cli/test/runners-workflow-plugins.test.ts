@@ -233,6 +233,69 @@ describe("switchboard runner — plugin-contributed drives", () => {
     });
   });
 
+  it("a drive made anew (a pinned id the store could not take) is reported under the id it got", async () => {
+    const hostCore = await import("@powerhousedao/host-core");
+    vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(
+      workflowsComposition(false),
+    );
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    // Not served before the create; served under a new id after it
+    const resolveIdOrSlug = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("not found"))
+      .mockResolvedValueOnce("mail-new-id");
+    vi.mocked(startSwitchboard).mockResolvedValueOnce({
+      workflowsEnabled: true,
+      port: 7599,
+      reactor: { resolveIdOrSlug },
+    } as never);
+
+    const runner = await import("../src/runners/switchboard.js");
+    const handle = await runner.run(
+      switchboardHost({
+        drives: [{ slug: "mail", name: "Mail", id: "pinned-elsewhere" }],
+      }),
+      ctx,
+    );
+    expect(handle.outputs.drives.mail).toEqual({
+      id: "mail-new-id",
+      url: "http://localhost:7599/d/mail",
+    });
+  });
+
+  it("a drive that cannot be created leaves the others and the start", async () => {
+    const hostCore = await import("@powerhousedao/host-core");
+    vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(
+      workflowsComposition(false),
+    );
+    const { addDefaultDrive } =
+      await import("@powerhousedao/switchboard/utils");
+    vi.mocked(addDefaultDrive).mockClear();
+    vi.mocked(addDefaultDrive).mockRejectedValueOnce(
+      new Error("Invalid signature in document mail"),
+    );
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const runner = await import("../src/runners/switchboard.js");
+    const handle = await runner.run(
+      switchboardHost({
+        drives: [
+          { slug: "mail", name: "Mail" },
+          { slug: "files", name: "Files" },
+        ],
+      }),
+      ctx,
+    );
+    expect(vi.mocked(addDefaultDrive)).toHaveBeenCalledTimes(2);
+    expect(error).toHaveBeenCalledWith(
+      'The drive "mail" was not created: Invalid signature in document mail',
+    );
+    expect(handle.outputs.drives.files?.url).toBe(
+      "http://localhost:7599/d/files",
+    );
+    error.mockRestore();
+  });
+
   it("drive: false (no contribution) seeds nothing extra", async () => {
     const hostCore = await import("@powerhousedao/host-core");
     vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(
@@ -276,6 +339,86 @@ describe("switchboard runner — plugin-contributed drives", () => {
     expect(handle.outputs.drives.workflows.url).toBe(
       "http://localhost:7599/d/implicit",
     );
+  });
+});
+
+describe("switchboard runner — readiness", () => {
+  async function startHeld() {
+    const hostCore = await import("@powerhousedao/host-core");
+    vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(
+      workflowsComposition(),
+    );
+    const { addDefaultDrive } =
+      await import("@powerhousedao/switchboard/utils");
+    let finishSeeding!: (outcome: Error | undefined) => void;
+    vi.mocked(addDefaultDrive).mockImplementationOnce(
+      () =>
+        new Promise((resolve, reject) => {
+          finishSeeding = (error) =>
+            error ? reject(error) : resolve("http://localhost:7599/d/x");
+        }),
+    );
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    vi.mocked(startSwitchboard).mockClear();
+    const runner = await import("../src/runners/switchboard.js");
+    const running = runner.run(switchboardHost(), ctx);
+    await vi.waitFor(() => expect(finishSeeding).toBeDefined());
+    const { readyAfter } = vi.mocked(startSwitchboard).mock.calls[0][0];
+    if (!readyAfter) throw new Error("the runner passed no readyAfter");
+    let settled = false;
+    void readyAfter.then(
+      () => (settled = true),
+      () => (settled = true),
+    );
+    return { running, readyAfter, finishSeeding, settled: () => settled };
+  }
+
+  it("holds the server's /ready until the seeded drives exist", async () => {
+    const held = await startHeld();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(held.settled()).toBe(false);
+
+    held.finishSeeding(undefined);
+    await held.running;
+    await expect(held.readyAfter).resolves.toBeUndefined();
+  });
+
+  it("still readies when one declared drive cannot be made", async () => {
+    // The runner logs such a drive and starts without it.
+    const held = await startHeld();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    held.finishSeeding(new Error("seed failed"));
+    await held.running;
+    await expect(held.readyAfter).resolves.toBeUndefined();
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
+  });
+
+  it("fails readiness when seeding itself fails", async () => {
+    const { seedWorkflowsDrive } = await import("../src/services/vetra.js");
+    vi.mocked(seedWorkflowsDrive).mockRejectedValueOnce(
+      new Error("seed failed"),
+    );
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    vi.mocked(startSwitchboard).mockClear();
+    const runner = await import("../src/runners/switchboard.js");
+
+    const running = runner.run(
+      switchboard({
+        name: "lab-switchboard",
+        runner: {
+          module: "@powerhousedao/ph-cli/runners/switchboard",
+          port: 7599,
+        },
+        reactor: { workflows: true },
+      }),
+      ctx,
+    );
+
+    await expect(running).rejects.toThrow("seed failed");
+    const { readyAfter } = vi.mocked(startSwitchboard).mock.calls[0][0];
+    await expect(readyAfter).rejects.toThrow("seed failed");
   });
 });
 

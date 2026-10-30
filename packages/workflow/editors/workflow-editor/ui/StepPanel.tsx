@@ -40,7 +40,11 @@ import {
   useWebhookEndpoint,
   type EndpointState,
 } from "./design-time.js";
-import type { BlockForm, ErrorHandlingDefaults } from "./forms.js";
+import type {
+  ActionDefaults,
+  BlockForm,
+  ErrorHandlingDefaults,
+} from "./forms.js";
 import { flowPorts } from "@powerhousedao/pieces-framework/workflow";
 import {
   type PropertySettingModel,
@@ -52,6 +56,14 @@ import {
   type WorkflowModel,
 } from "./model.js";
 import { AvailableSoon, PropertyForm } from "./PropertyForm.js";
+import {
+  DEFAULT_RETRY,
+  inheritedRetryHint,
+  MAX_RETRY_DELAY_SECONDS,
+  MAX_STEP_ATTEMPTS,
+  normalizeRetry,
+  parseRetryOn,
+} from "./retry-policy.js";
 import { DataViewer } from "../../shared/data-viewer.js";
 import { ScheduleBuilder } from "./ScheduleBuilder.js";
 import { StepTestSection } from "./StepTest.js";
@@ -379,14 +391,6 @@ function PanelHeader(props: {
   );
 }
 
-const DEFAULT_RETRY: RetryPolicyModel = {
-  maxAttempts: 3,
-  backoff: "EXPONENTIAL",
-  initialDelaySeconds: 5,
-  maxDelaySeconds: 300,
-  retryOn: [],
-};
-
 function intOrUndefined(raw: string): number | undefined {
   const parsed = Number.parseInt(raw.trim(), 10);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
@@ -398,6 +402,7 @@ function NumberField(props: {
   value: number | null;
   unit?: string;
   min?: number;
+  max?: number;
   placeholder?: string;
   hint?: string;
   onCommit: (value: number | null) => void;
@@ -410,13 +415,22 @@ function NumberField(props: {
           key={`${props.label}-${props.value ?? ""}`}
           type="number"
           min={props.min}
+          max={props.max}
           className={`${textInputClass} ${props.unit ? "pr-16" : ""}`}
           defaultValue={props.value ?? ""}
           placeholder={props.placeholder}
           onBlur={(event) => {
             const raw = event.target.value.trim();
             if (raw === "") return props.onCommit(null);
-            const next = intOrUndefined(raw);
+            let next = intOrUndefined(raw);
+            if (
+              next !== undefined &&
+              props.max !== undefined &&
+              next > props.max
+            ) {
+              next = props.max;
+              event.target.value = String(next);
+            }
             if (next !== undefined && next >= (props.min ?? 0))
               props.onCommit(next);
           }}
@@ -438,7 +452,7 @@ function RetryEditor(props: {
 }) {
   const retry = props.value;
   const patch = (partial: Partial<RetryPolicyModel>) =>
-    props.onChange({ ...(retry ?? DEFAULT_RETRY), ...partial });
+    props.onChange(normalizeRetry({ ...(retry ?? DEFAULT_RETRY), ...partial }));
   return (
     <div className="flex flex-col gap-4">
       <Switch
@@ -453,6 +467,8 @@ function RetryEditor(props: {
             label="Attempts"
             value={retry.maxAttempts}
             min={1}
+            max={MAX_STEP_ATTEMPTS}
+            hint={`Including the first run; up to ${MAX_STEP_ATTEMPTS}.`}
             onCommit={(next) => {
               if (next !== null) patch({ maxAttempts: next });
             }}
@@ -474,6 +490,7 @@ function RetryEditor(props: {
             label="First delay"
             unit="seconds"
             value={retry.initialDelaySeconds}
+            max={MAX_RETRY_DELAY_SECONDS}
             onCommit={(next) => {
               if (next !== null) patch({ initialDelaySeconds: next });
             }}
@@ -482,6 +499,8 @@ function RetryEditor(props: {
             label="Longest delay"
             unit="seconds"
             value={retry.maxDelaySeconds}
+            max={MAX_RETRY_DELAY_SECONDS}
+            hint={`Up to ${MAX_RETRY_DELAY_SECONDS}.`}
             onCommit={(next) => {
               if (next !== null) patch({ maxDelaySeconds: next });
             }}
@@ -494,12 +513,7 @@ function RetryEditor(props: {
               defaultValue={retry.retryOn.join(", ")}
               placeholder="TRANSIENT, RATE_LIMIT"
               onBlur={(event) =>
-                patch({
-                  retryOn: event.target.value
-                    .split(",")
-                    .map((entry) => entry.trim())
-                    .filter((entry) => entry !== ""),
-                })
+                patch({ retryOn: parseRetryOn(event.target.value) })
               }
             />
             <Hint>
@@ -854,9 +868,16 @@ function StepSettings(props: {
   callbacks: WorkflowEditorCallbacks;
   // The piece's defaults for how the step handles failure.
   errorHandling?: ErrorHandlingDefaults;
+  actionDefaults?: ActionDefaults;
   onRemoved: () => void;
 }) {
   const { step, callbacks } = props;
+  const retryHint = step.retry
+    ? null
+    : inheritedRetryHint(
+        props.model.defaultRetryAttempts,
+        props.actionDefaults?.retryAttempts,
+      );
   return (
     <div className="flex flex-col gap-6">
       <PieceVersionSection
@@ -895,30 +916,38 @@ function StepSettings(props: {
           unit="seconds"
           min={1}
           value={step.timeoutSeconds}
-          placeholder="Runtime default"
+          placeholder={
+            props.actionDefaults?.timeoutSeconds
+              ? `Action default: ${props.actionDefaults.timeoutSeconds}`
+              : "Runtime default"
+          }
           onCommit={(next) => {
             if (next === 0) return;
             if (next !== step.timeoutSeconds)
               callbacks.updateStep({ id: step.id, timeoutSeconds: next });
           }}
         />
-        {props.errorHandling?.retryOnFailure?.defaultValue ? (
+        {retryHint ? <Hint>{retryHint}</Hint> : null}
+        {props.errorHandling?.retryOnFailure?.defaultValue &&
+        props.actionDefaults?.retryAttempts === undefined ? (
           <Hint>This piece suggests retrying the step when it fails.</Hint>
         ) : null}
-        {/* Stored on the step, but the runtime does not enforce them yet. */}
+        {props.errorHandling?.retryOnFailure?.hide === true ? null : (
+          <RetryEditor
+            value={step.retry}
+            onChange={(retry) => callbacks.updateStep({ id: step.id, retry })}
+          />
+        )}
+        {/* Stored on the step; the runtime does not read it yet. */}
         <fieldset
           hidden={props.errorHandling?.retryOnFailure?.hide === true}
           disabled
           className="m-0 flex min-w-0 flex-col gap-4 rounded-lg border border-dashed border-foreground/15 p-3"
         >
           <legend className="px-1">
-            <AvailableSoon>retries and idempotency</AvailableSoon>
+            <AvailableSoon>idempotency</AvailableSoon>
           </legend>
-          <div className="flex flex-col gap-4 opacity-70">
-            <RetryEditor
-              value={step.retry}
-              onChange={(retry) => callbacks.updateStep({ id: step.id, retry })}
-            />
+          <div className="opacity-70">
             <IdempotencyField step={step} callbacks={callbacks} />
           </div>
         </fieldset>
@@ -1210,6 +1239,9 @@ export function StepPanel(props: {
             callbacks={callbacks}
             errorHandling={
               form && form !== "loading" ? form.errorHandling : undefined
+            }
+            actionDefaults={
+              form && form !== "loading" ? form.actionDefaults : undefined
             }
             onRemoved={props.onClose}
           />

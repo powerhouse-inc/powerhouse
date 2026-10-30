@@ -1,0 +1,691 @@
+directive @extends on OBJECT | INTERFACE
+
+directive @external on FIELD_DEFINITION
+
+directive @key(fields: _FieldSet!) repeatable on OBJECT | INTERFACE
+
+directive @provides(fields: _FieldSet!) on FIELD_DEFINITION
+
+directive @requires(fields: _FieldSet!) on FIELD_DEFINITION
+
+directive @tag(
+  name: String!
+) repeatable on FIELD_DEFINITION | INTERFACE | OBJECT | UNION | ARGUMENT_DEFINITION | SCALAR | ENUM | ENUM_VALUE | INPUT_OBJECT | INPUT_FIELD_DEFINITION
+
+scalar Address
+
+scalar Amount
+
+scalar Amount_Crypto
+
+scalar Amount_Currency
+
+scalar Amount_Fiat
+
+scalar Amount_Money
+
+scalar Amount_Percentage
+
+scalar Amount_Tokens
+
+scalar AttachmentRef
+
+scalar Currency
+
+scalar Date
+
+scalar DateTime
+
+type DocumentDrive implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  initialState: DocumentDrive_DocumentDriveState!
+  state: DocumentDrive_DocumentDriveState!
+  stateJSON: JSONObject
+}
+
+type DocumentDrive_DocumentDriveLocalState {
+  sharingType: String
+  listeners: [DocumentDrive_Listener!]!
+  triggers: [DocumentDrive_Trigger!]!
+  availableOffline: Boolean!
+}
+
+type DocumentDrive_DocumentDriveState {
+  name: String!
+  nodes: [DocumentDrive_Node!]!
+  icon: String
+}
+
+type DocumentDrive_FileNode {
+  id: String!
+  name: String!
+  kind: String!
+  documentType: String!
+  parentFolder: String
+}
+
+type DocumentDrive_FolderNode {
+  id: String!
+  name: String!
+  kind: String!
+  parentFolder: String
+}
+
+type DocumentDrive_Listener {
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: DocumentDrive_ListenerFilter!
+  callInfo: DocumentDrive_ListenerCallInfo
+}
+
+type DocumentDrive_ListenerCallInfo {
+  transmitterType: DocumentDrive_TransmitterType
+  name: String
+  data: String
+}
+
+type DocumentDrive_ListenerFilter {
+  documentType: [String!]!
+  documentId: [ID!]
+  scope: [String!]
+  branch: [String!]
+}
+
+union DocumentDrive_Node = DocumentDrive_FolderNode | DocumentDrive_FileNode
+
+type DocumentDrive_PullResponderTriggerData {
+  listenerId: ID!
+  url: String!
+  interval: String!
+}
+
+enum DocumentDrive_TransmitterType {
+  Internal
+  SwitchboardPush
+  PullResponder
+  SecureConnect
+  MatrixConnect
+  RESTWebhook
+}
+
+type DocumentDrive_Trigger {
+  id: ID!
+  type: DocumentDrive_TriggerType!
+  data: DocumentDrive_TriggerData
+}
+
+union DocumentDrive_TriggerData = DocumentDrive_PullResponderTriggerData
+
+enum DocumentDrive_TriggerType {
+  PullResponder
+}
+
+type DocumentModel implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  stateJSON: JSONObject
+}
+
+type DocumentModel_Author {
+  name: String!
+  website: String
+}
+
+type DocumentModel_CodeExample {
+  id: ID!
+  value: String!
+}
+
+type DocumentModel_DocumentModelGlobalState {
+  name: String!
+  id: String!
+  extension: String!
+  description: String!
+  author: DocumentModel_Author!
+  specifications: [DocumentModel_DocumentSpecification!]!
+}
+
+type DocumentModel_DocumentSpecification {
+  version: Int!
+  state: DocumentModel_ScopeState!
+  modules: [DocumentModel_Module!]!
+  changeLog: [String!]!
+}
+
+type DocumentModel_Module {
+  id: ID!
+  name: String!
+  description: String
+  operations: [DocumentModel_Operation!]!
+}
+
+type DocumentModel_Operation {
+  id: ID!
+  name: String
+  schema: String
+  description: String
+  template: String
+  errors: [DocumentModel_OperationError!]!
+  examples: [DocumentModel_CodeExample!]!
+  reducer: String
+  scope: String
+}
+
+type DocumentModel_OperationError {
+  id: ID!
+  code: String
+  name: String
+  description: String
+  template: String
+}
+
+type DocumentModel_ScopeState {
+  global: DocumentModel_State!
+  local: DocumentModel_State!
+}
+
+type DocumentModel_State {
+  schema: String!
+  initialValue: String!
+  examples: [DocumentModel_CodeExample!]!
+}
+
+type DriveDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+scalar EmailAddress
+
+scalar EthereumAddress
+
+type GqlDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+interface IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type InspectionAttachmentInfo {
+  present: Boolean!
+  storeKind: String!
+  hasReplicator: Boolean!
+  replicatorRunning: Boolean!
+  backlogScanned: Boolean!
+  refsSeen: Int!
+  held: Int!
+  bytesHeld: Float!
+  queued: Int!
+  fetching: Int!
+  pendingFetches: Int!
+  waiting: Int!
+  notFound: Int!
+  failed: Int!
+  lastError: String
+}
+
+"""
+What one catch-up priority level sets. giveWay is stop (level 0: no page is
+read until the level rises), pause (pauseMs between pages), yield (one
+event-loop turn) or none.
+"""
+type InspectionCatchUpLevelSettings {
+  slots: Int!
+  pageSize: Int!
+  pauseMs: Int!
+  giveWay: String!
+}
+
+"""
+The host's load over its last window, as the dynamic controller read it.
+"""
+type InspectionCatchUpLoadSample {
+  requests: Int!
+  p95LatencyMs: Float!
+  eventLoopDelayMs: Float!
+  idleForMs: Float!
+}
+
+"""
+The pace of processor backfills. mode is fixed or dynamic; level is 0-7.
+sample is null until a dynamic tick has sampled the host's load.
+"""
+type InspectionCatchUpPriority {
+  mode: String!
+  level: Int!
+  settings: InspectionCatchUpLevelSettings!
+  reason: String!
+  sample: InspectionCatchUpLoadSample
+}
+
+type InspectionConnectionHealth {
+  snapshot: JSONObject!
+  neverSucceeded: Boolean!
+  stalenessMs: Float
+}
+
+type InspectionCursor {
+  cursorType: String!
+  cursorOrdinal: Float!
+  lastSyncedAtUtcMs: Float
+  liveAckOrdinal: Float!
+  liveLatestOrdinal: Float!
+}
+
+"""
+A dead letter without its operations.
+"""
+type InspectionDeadLetter {
+  id: String!
+  jobId: String!
+  documentId: String!
+  branch: String!
+  scopes: [String!]!
+  errorType: String!
+  errorMessage: String!
+  operationCount: Int!
+}
+
+type InspectionDeadLetterPage {
+  remoteName: String!
+  results: [InspectionDeadLetter!]!
+  nextCursor: String
+}
+
+type InspectionDocumentModel {
+  documentType: String!
+  name: String!
+  version: Int!
+  supportedVersions: [Int!]!
+}
+
+type InspectionDrive {
+  driveId: String!
+  name: String!
+  branch: String!
+  collectionId: String!
+  documentType: String!
+  nodeCount: Int!
+  fileCount: Int!
+  folderCount: Int!
+  otherNodeCount: Int!
+  unreadableNodeCount: Int!
+  icon: String
+}
+
+type InspectionDriveIntegrity {
+  driveId: String!
+  checkedNodeCount: Int!
+  totalFileNodeCount: Int!
+  """
+  File nodes whose document is missing or not served to you; the two are
+  reported alike so a withheld document's existence does not leak.
+  """
+  missingDocuments: [InspectionDriveIntegrityRef!]!
+  unsupportedTypes: [InspectionDriveIntegrityRef!]!
+}
+
+type InspectionDriveIntegrityRef {
+  id: String!
+  documentType: String!
+}
+
+type InspectionDrivePage {
+  results: [InspectionDrive!]!
+  nextCursor: String
+}
+
+type InspectionMailboxDepths {
+  inbox: Int!
+  outbox: Int!
+  deadLetter: Int!
+}
+
+"""
+Memory samples correlated with operations processed. samples are newest
+last; summary holds the rates over the correlation window and is null until
+two samples exist.
+"""
+type InspectionMemoryTelemetry {
+  enabled: Boolean!
+  intervalMs: Float!
+  consoleIntervalMs: Float!
+  outputs: [String!]!
+  file: String
+  startedAt: String
+  summary: JSONObject
+  samples: [JSONObject!]!
+}
+
+type InspectionProcessor {
+  processorId: String!
+  factoryId: String!
+  driveId: String!
+  processorIndex: Int!
+  lastOrdinal: Float!
+  status: String!
+  lastError: String
+  lastErrorTimestampUtcMs: Float
+  floor: Float!
+  clearable: Boolean!
+  runFrom: Float!
+  phase: String!
+}
+
+type InspectionProcessorQueueDepth {
+  tasks: Float!
+  ops: Float!
+}
+
+"""
+One processor's timing. The horizons are null while timing is off.
+"""
+type InspectionProcessorTiming {
+  processorId: String!
+  name: String!
+  driveLabel: String!
+  factoryId: String!
+  driveId: String!
+  phase: String!
+  lastOrdinal: Float!
+  queueDepth: InspectionProcessorQueueDepth!
+  ordinalsBehind: Float!
+  opsPerSecond: Float!
+  ordinalsPerSecond: Float!
+  etaMs: Float
+  sinceUtcMs: Float
+  total: InspectionProcessorTimingHorizon
+  window: InspectionProcessorTimingHorizon
+  windowMs: Float!
+  currentRun: InspectionProcessorTimingRun
+  lastRun: InspectionProcessorTimingLastRun
+  lastBatch: InspectionProcessorTimingBatch
+  byDocumentType: [InspectionProcessorTimingDocumentType!]!
+}
+
+type InspectionProcessorTimingBatch {
+  atUtcMs: Float!
+  path: String!
+  ops: Float!
+  ms: Float!
+  fromOrdinal: Float!
+  toOrdinal: Float!
+}
+
+"""
+One path's numbers over one horizon. Times are wall-clock milliseconds the
+processor's queue awaited, not CPU; read time includes waiting for the store.
+slotWaitMs and pauseMs are throttling and count toward no busy time.
+"""
+type InspectionProcessorTimingCounters {
+  batches: Float!
+  opsDelivered: Float!
+  opsScanned: Float!
+  opsMatched: Float!
+  pages: Float!
+  handlerMs: Float!
+  maxBatchMs: Float!
+  readMs: Float!
+  lookupMs: Float!
+  fillMs: Float!
+  slotWaitMs: Float!
+  pauseMs: Float!
+  errors: Float!
+}
+
+type InspectionProcessorTimingDocumentType {
+  documentType: String!
+  ops: Float!
+  handlerMs: Float!
+}
+
+type InspectionProcessorTimingHorizon {
+  live: InspectionProcessorTimingCounters!
+  replay: InspectionProcessorTimingCounters!
+  ordinalsAdvanced: Float!
+  busyMs: Float!
+}
+
+type InspectionProcessorTimingLastRun {
+  startedAtUtcMs: Float!
+  durationMs: Float!
+  ordinals: Float!
+  opsDelivered: Float!
+  busyMs: Float!
+}
+
+"""
+level is off, basic or detailed. Without a catch-up status, head is the
+highest cursor and headKnown is false.
+"""
+type InspectionProcessorTimingReport {
+  level: String!
+  windowMs: Float!
+  head: Float!
+  headKnown: Boolean!
+  processors: [InspectionProcessorTiming!]!
+}
+
+type InspectionProcessorTimingRun {
+  startedAtUtcMs: Float!
+  runFrom: Float!
+  counters: InspectionProcessorTimingCounters!
+  ordinalsAdvanced: Float!
+}
+
+"""
+A queued job without its actions or operations.
+"""
+type InspectionQueueJob {
+  id: String!
+  kind: String!
+  documentId: String!
+  scope: String!
+  branch: String!
+  status: String!
+  actionCount: Int!
+  operationCount: Int!
+  retryCount: Int!
+}
+
+type InspectionQueueState {
+  isPaused: Boolean!
+  totalPending: Int!
+  totalExecuting: Int!
+  pendingJobs: [InspectionQueueJob!]!
+  executingJobs: [InspectionQueueJob!]!
+}
+
+type InspectionRemote {
+  remoteName: String!
+  remoteId: String!
+  inboxCursor: InspectionCursor!
+  outboxCursor: InspectionCursor!
+  mailboxDepths: InspectionMailboxDepths!
+  connection: InspectionConnectionHealth!
+  meta: JSONObject!
+}
+
+"""
+healthy means something only when tracked; an untracked store reports false.
+"""
+type InspectionStorageHealth {
+  tracked: Boolean!
+  healthy: Boolean!
+  everRecreated: Boolean!
+  recreateCount: Int!
+}
+
+"""
+Issues in scopes the caller may not read are left out.
+"""
+type InspectionValidation {
+  documentId: String!
+  isConsistent: Boolean!
+  keyframeIssues: [JSONObject!]!
+  snapshotIssues: [JSONObject!]!
+  streamOrderIssues: [JSONObject!]!
+}
+
+type InspectorAccess {
+  admin: Boolean!
+  sql: Boolean!
+}
+
+"""
+The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSONObject
+
+scalar OID
+
+scalar OLabel
+
+type Operation {
+  id: String!
+  type: String!
+  index: Int!
+  timestampUtcMs: DateTime!
+  hash: String!
+  skip: Int
+  inputText: String
+  error: String
+  context: PHOperationContext
+}
+
+scalar PHID
+
+type PHOperationContext {
+  signer: Signer
+}
+
+type Query {
+  inspection: ReactorInspection!
+  _service: _Service!
+}
+
+"""
+What this reactor reports about itself. access is null unless the caller is
+one of the host's admins.
+"""
+type ReactorInfo {
+  storage: ReactorStorageFacts!
+  workflows: Boolean!
+  syncChannels: [String!]!
+  access: InspectorAccess
+}
+
+"""
+Reads only. info, documentModels and loadsModelsOnDemand serve every caller;
+drive and document reads are made as the caller through the reactor read
+gate; the rest need one of the host's admins.
+"""
+type ReactorInspection {
+  info: ReactorInfo!
+  documentModels: [InspectionDocumentModel!]!
+  """
+  True when a document model loads the first time a document of its type
+  arrives, so documentModels names only those loaded so far.
+  """
+  loadsModelsOnDemand: Boolean!
+  drives(cursor: String, limit: Int): InspectionDrivePage!
+  """
+  Reads every file node's document. Throttled per caller.
+  """
+  driveIntegrity(driveId: String!, branch: String!): InspectionDriveIntegrity!
+  attachmentInfo: InspectionAttachmentInfo!
+  queueState: InspectionQueueState!
+  processors: [InspectionProcessor!]!
+  processorTiming: InspectionProcessorTimingReport!
+  """
+  Refused on a host without memory telemetry.
+  """
+  memoryTelemetry(limit: Int, sinceIso: String): InspectionMemoryTelemetry!
+  catchUpStatus: JSONObject!
+  catchUpPriority: InspectionCatchUpPriority!
+  storageHealth: InspectionStorageHealth!
+  """
+  Replays the whole document; expensive. Throttled per caller.
+  """
+  validateDocument(documentId: String!, branch: String): InspectionValidation!
+  remotes: [InspectionRemote!]!
+  remote(remoteName: String!): InspectionRemote!
+  deadLetters(
+    remoteName: String!
+    cursor: String
+    limit: Int
+  ): InspectionDeadLetterPage!
+}
+
+type ReactorStorageFacts {
+  engine: String!
+  persistence: String!
+  durable: Boolean!
+  selfHeal: Boolean!
+}
+
+type Signer {
+  user: SignerUser
+  app: SignerApp
+  signatures: [String!]!
+}
+
+type SignerApp {
+  name: String!
+  key: String!
+}
+
+type SignerUser {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+scalar URL
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar Unknown
+
+scalar Upload
+
+scalar _FieldSet
+
+type _Service {
+  sdl: String
+}

@@ -26,6 +26,10 @@ export const SCHEDULE_TRIGGER = core("trigger", "schedule");
 export const WEBHOOK_TRIGGER = core("trigger", "webhook");
 export const BRANCH_BLOCK = core("action", "branch");
 export const ASSERT_BLOCK = core("action", "assert");
+export const DELAY_BLOCK = core("action", "delay");
+export const APPROVAL_BLOCK = core("action", "approval");
+export const STOP_BLOCK = core("action", "stop");
+export const WAIT_FOR_WEBHOOK_BLOCK = core("action", "waitForWebhook");
 
 // A block to add: pinned already, or pinned to the installed version on pick.
 export type BlockPick = BlockIdentity & { pieceVersion?: string };
@@ -185,6 +189,40 @@ export const STEP_PRESETS: BlockPreset[] = [
     description:
       "Fails the run when a value is blank, rejected or not allowed.",
     defaultConfig: { value: "", allowValues: [] },
+  },
+  {
+    label: "Delay",
+    block: DELAY_BLOCK,
+    group: "core",
+    description: "Waits for a while, or until a date, then carries on.",
+    defaultConfig: { mode: "for", amount: 5, unit: "minutes" },
+  },
+  {
+    label: "Request approval",
+    block: APPROVAL_BLOCK,
+    group: "core",
+    description: "Waits until someone approves or rejects the run.",
+    defaultConfig: {
+      title: "",
+      approveLabel: "Approve",
+      rejectLabel: "Reject",
+      reasonRequiredOn: "none",
+    },
+  },
+  {
+    label: "Respond and wait for webhook",
+    block: WAIT_FOR_WEBHOOK_BLOCK,
+    group: "core",
+    description:
+      "Answers the caller with a resume URL, then waits until it is called.",
+    defaultConfig: { responseType: "json", includeResumeUrl: true },
+  },
+  {
+    label: "Stop run",
+    block: STOP_BLOCK,
+    group: "core",
+    description: "Ends the run successfully, optionally answering the caller.",
+    defaultConfig: { responseType: "json" },
   },
   {
     label: "Create document",

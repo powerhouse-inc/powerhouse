@@ -1,9 +1,7 @@
 // What the workflow subgraph does with the caller behind a request: every
-// workflow-scoped field hands it to the runtime, and secret writes are admins'.
-import type {
-  Context,
-  IAuthorizationService,
-} from "@powerhousedao/reactor-api";
+// workflow-scoped field, secrets included, hands it to the runtime, which
+// gates secrets on their owner document and creator rather than on admin.
+import type { Context } from "@powerhousedao/reactor-api";
 import {
   WORKFLOW_SYNCING_MESSAGE,
   WorkflowSyncingError,
@@ -36,6 +34,41 @@ function runsInfo(query: string) {
 const emptyPage = (): Promise<unknown> =>
   Promise.resolve({ records: [], hasNextPage: false, cursor: null });
 
+function waitpointRow(id: string, runId: string) {
+  return {
+    id,
+    run_id: runId,
+    workflow_id: "wf-1",
+    step_id: "step-1",
+    step_key: "step_1",
+    step_path: "step-1",
+    piece_name: "@powerhousedao/piece-approval",
+    block_name: "approval",
+    type: "WEBHOOK",
+    kind: "approval",
+    status: "PENDING",
+    created_at: "2026-10-28T00:00:00.000Z",
+    resume_at: null,
+    expires_at: null,
+    resolved_at: null,
+    decided_by: null,
+    approval: '{"title":"Pay?"}',
+  };
+}
+
+// The run journal's waitpoint read: one pending approval per run.
+function waitpointStore() {
+  return {
+    listWaitpointsForRuns: vi.fn((runIds: string[]) =>
+      Promise.resolve(
+        new Map(
+          runIds.map((runId) => [runId, [waitpointRow(`wp-${runId}`, runId)]]),
+        ),
+      ),
+    ),
+  };
+}
+
 function fakeRuntime() {
   return {
     webhookEndpoint: vi.fn(() => Promise.resolve(null)),
@@ -45,6 +78,9 @@ function fakeRuntime() {
     run: vi.fn(() => Promise.resolve(null)),
     fire: vi.fn(() => Promise.resolve({})),
     rerun: vi.fn(() => Promise.resolve({})),
+    waitingRuns: vi.fn((): Promise<unknown[]> => Promise.resolve([])),
+    waitpointsForRun: vi.fn(() => Promise.resolve([{ id: "wp-2" }])),
+    store: vi.fn(() => Promise.resolve(waitpointStore())),
     testStep: vi.fn(() => Promise.resolve({})),
     stepOutputTree: vi.fn(() => Promise.resolve({})),
     blockResolutions: vi.fn(() => Promise.resolve([])),
@@ -54,24 +90,20 @@ function fakeRuntime() {
     reactorAccessDenial: vi.fn((): string | undefined => undefined),
     testTrigger: vi.fn(() => Promise.resolve(null)),
     cancelTriggerTestFor: vi.fn(() => Promise.resolve(true)),
-    secrets: vi.fn(() =>
-      Promise.resolve({
-        create: vi.fn(() => Promise.resolve({ ref: "secret://v1:00" })),
-        rotate: vi.fn(() => Promise.resolve({ ref: "secret://v1:00" })),
-        delete: vi.fn(() => Promise.resolve()),
-      }),
-    ),
+    createSecret: vi.fn(() => Promise.resolve({ ref: "secret://v1:00" })),
+    rotateSecret: vi.fn(() => Promise.resolve({ ref: "secret://v1:00" })),
+    deleteSecret: vi.fn(() => Promise.resolve()),
+    secretStat: vi.fn(() => Promise.resolve(null)),
+    listSecrets: vi.fn(() => Promise.resolve([])),
+    canManageSecret: vi.fn(() => Promise.resolve(false)),
+    secrets: vi.fn(),
   };
 }
 
-function build(isAdmin: boolean) {
+function build() {
   const runtime = fakeRuntime();
-  const authorizationService = {
-    isSupremeAdmin: vi.fn(() => isAdmin),
-  } as unknown as IAuthorizationService;
   const resolvers = getResolvers(
     runtime as unknown as WorkflowRuntimeService,
-    authorizationService,
     undefined,
     undefined,
     (documentId) =>
@@ -83,12 +115,14 @@ function build(isAdmin: boolean) {
     runtime,
     queries: resolvers.WorkflowRuntimeQueries,
     mutations: resolvers.WorkflowRuntimeMutations,
+    secretRecord: resolvers.SecretRecord,
+    runRecord: resolvers.WorkflowRunRecord,
   };
 }
 
 describe("the workflow resolvers and the caller", () => {
   it("hands the caller to every workflow-scoped field", async () => {
-    const { runtime, queries, mutations } = build(true);
+    const { runtime, queries, mutations } = build();
 
     await queries.webhookEndpoint({}, { workflowId: "wf-1" }, CTX);
     await queries.triggerStates({}, {}, CTX);
@@ -132,7 +166,7 @@ describe("the workflow resolvers and the caller", () => {
   });
 
   it("passes the caller's drive, and tags a still-syncing workflow", async () => {
-    const { runtime, queries, mutations } = build(true);
+    const { runtime, queries, mutations } = build();
     const drive = { driveId: "drive-1" };
 
     await queries.webhookEndpoint({}, { workflowId: "wf-1", ...drive }, CTX);
@@ -153,32 +187,49 @@ describe("the workflow resolvers and the caller", () => {
     expect(runtime.testStep).toHaveBeenCalledWith("wf-1", "s1", CTX, drive);
   });
 
-  it("refuses secret writes to a caller who does not administer the reactor", async () => {
-    const { runtime, mutations } = build(false);
+  it("hands every secret field to the runtime with the caller, never the store", async () => {
+    const { runtime, queries, mutations, secretRecord } = build();
+    const stat = { ref: "secret://v1:00", ownerId: "conn-1" };
 
+    await mutations.createSecret(
+      {},
+      { value: "s3cret", documentId: "conn-1" },
+      CTX,
+    );
+    await mutations.rotateSecret({}, { ref: stat.ref, value: "s" }, CTX);
     await expect(
-      mutations.createSecret({}, { value: "s3cret" }, CTX),
-    ).rejects.toThrow("Admin access required");
-    await expect(
-      mutations.rotateSecret({}, { ref: "secret://v1:00", value: "s" }, CTX),
-    ).rejects.toThrow("Admin access required");
-    await expect(
-      mutations.deleteSecret({}, { ref: "secret://v1:00" }, CTX),
-    ).rejects.toThrow("Admin access required");
-    // Refused before the store is ever opened.
+      mutations.deleteSecret({}, { ref: stat.ref }, CTX),
+    ).resolves.toBe(true);
+    await queries.secret({}, { ref: stat.ref }, CTX);
+    await queries.secrets({}, {}, CTX);
+    await secretRecord.manageable(stat, {}, CTX);
+
+    expect(runtime.createSecret).toHaveBeenCalledWith(
+      { value: "s3cret", label: undefined, ownerId: "conn-1" },
+      CTX,
+    );
+    expect(runtime.rotateSecret).toHaveBeenCalledWith(stat.ref, "s", CTX);
+    expect(runtime.deleteSecret).toHaveBeenCalledWith(stat.ref, CTX);
+    expect(runtime.secretStat).toHaveBeenCalledWith(stat.ref, CTX);
+    expect(runtime.listSecrets).toHaveBeenCalledWith(CTX);
+    expect(runtime.canManageSecret).toHaveBeenCalledWith(stat, CTX);
+    // Nothing reaches the raw store, whose get returns values.
     expect(runtime.secrets).not.toHaveBeenCalled();
   });
 
-  it("lets an administrator write secrets", async () => {
-    const { runtime, mutations } = build(true);
+  it("tags a secret minted for a document still syncing", async () => {
+    const { runtime, mutations } = build();
+    runtime.createSecret.mockRejectedValueOnce(new WorkflowSyncingError());
 
-    await mutations.createSecret({}, { value: "s3cret", label: "slack" }, CTX);
-
-    expect(runtime.secrets).toHaveBeenCalledTimes(1);
+    await expect(
+      mutations.createSecret({}, { value: "s", documentId: "c1" }, CTX),
+    ).rejects.toMatchObject({
+      extensions: { code: "WORKFLOW_SYNCING", retryable: true },
+    });
   });
 
   it("serves why a workflow got no reactor access, naming the publisher", async () => {
-    const { runtime, queries } = build(false);
+    const { runtime, queries } = build();
     runtime.reactorAccessDenial.mockReturnValueOnce(
       'The publisher 0xabc cannot read reactor connection "conn-1"',
     );
@@ -197,7 +248,7 @@ describe("the workflow resolvers and the caller", () => {
   });
 
   it("serves the piece version a run's steps ran", async () => {
-    const { runtime, queries } = build(true);
+    const { runtime, queries } = build();
     runtime.run.mockResolvedValueOnce({
       row: { id: "run-1", warnings: 1, trigger_payload: null },
       steps: [
@@ -231,7 +282,7 @@ describe("the workflow resolvers and the caller", () => {
 
 describe("the runs listing and step data", () => {
   it("reads step blobs only when the query selects them", async () => {
-    const { runtime, queries } = build(false);
+    const { runtime, queries } = build();
     const withData = (query: string) =>
       queries.runs({}, {}, CTX, runsInfo(query)).then(
         () =>
@@ -271,7 +322,7 @@ describe("the runs listing and step data", () => {
 
 describe("the runs page", () => {
   it("passes paging through and serves the page", async () => {
-    const { runtime, queries } = build(false);
+    const { runtime, queries } = build();
     runtime.runsPage.mockResolvedValueOnce({
       records: [],
       hasNextPage: true,
@@ -310,7 +361,7 @@ describe("the runs page", () => {
   });
 
   it("reports a cursor it did not issue as bad input", async () => {
-    const { runtime, queries } = build(false);
+    const { runtime, queries } = build();
     const invalid = new Error("Invalid runs cursor");
     invalid.name = "InvalidRunCursorError";
     runtime.runsPage.mockRejectedValueOnce(invalid);
@@ -326,7 +377,7 @@ describe("the runs page", () => {
 
 describe("piece search", () => {
   it("passes a valid filter through", async () => {
-    const { runtime, queries } = build(false);
+    const { runtime, queries } = build();
     await queries.searchPieces(
       {},
       { query: "send", kind: "trigger", sources: ["registry", "local"] },
@@ -341,7 +392,7 @@ describe("piece search", () => {
   });
 
   it("refuses a kind or source it does not know, rather than widen", () => {
-    const { runtime, queries } = build(false);
+    const { runtime, queries } = build();
     expect(() =>
       queries.searchPieces({}, { query: "send", kind: "triggers" }, CTX),
     ).toThrow(/kind is "action" or "trigger"/);
@@ -353,5 +404,72 @@ describe("piece search", () => {
       ),
     ).toThrow(/got Registry/);
     expect(runtime.searchPieces).not.toHaveBeenCalled();
+  });
+});
+
+describe("waitpoints", () => {
+  it("serves waiting runs with the waitpoints the runtime listed", async () => {
+    const { runtime, queries, runRecord } = build();
+    runtime.waitingRuns.mockResolvedValueOnce([
+      {
+        run: {
+          row: { id: "run-1", status: "WAITING", trigger_payload: null },
+          steps: [],
+        },
+        waitpoints: [{ id: "wp-1" }],
+      },
+    ]);
+
+    const runs = (await queries.waitingRuns(
+      {},
+      { driveId: "drive-1", first: 10 },
+      CTX,
+    )) as { id: string }[];
+
+    expect(runtime.waitingRuns).toHaveBeenCalledWith(
+      { driveId: "drive-1", workflowId: undefined, first: 10 },
+      CTX,
+    );
+    expect(await runRecord.waitpoints(runs[0], {}, CTX)).toEqual([
+      { id: "wp-1" },
+    ]);
+    expect(runtime.waitpointsForRun).not.toHaveBeenCalled();
+  });
+
+  it("reads the waitpoints of every run in a request with one store call", async () => {
+    const { runtime, runRecord } = build();
+    const store = waitpointStore();
+    runtime.store.mockResolvedValueOnce(store);
+    const ctx = { ...CTX } as Context;
+    const [first, second, again] = (await Promise.all([
+      runRecord.waitpoints({ id: "run-1" }, {}, ctx),
+      runRecord.waitpoints({ id: "run-2" }, {}, ctx),
+      runRecord.waitpoints({ id: "run-1" }, {}, ctx),
+    ])) as Array<Array<{ id: string }>>;
+
+    expect(first).toEqual([
+      expect.objectContaining({
+        id: "wp-run-1",
+        runId: "run-1",
+        kind: "approval",
+        approval: { title: "Pay?" },
+      }),
+    ]);
+    expect(second!.map((waitpoint) => waitpoint.id)).toEqual(["wp-run-2"]);
+    expect(again).toBe(first);
+    expect(runtime.store).toHaveBeenCalledTimes(1);
+    expect(store.listWaitpointsForRuns).toHaveBeenCalledWith([
+      "run-1",
+      "run-2",
+    ]);
+    // The parent resolver served the run; no second run read.
+    expect(runtime.waitpointsForRun).not.toHaveBeenCalled();
+    expect(runtime.run).not.toHaveBeenCalled();
+  });
+
+  it("serves no waitpoints when the run journal is unavailable", async () => {
+    const { runtime, runRecord } = build();
+    runtime.store.mockResolvedValueOnce(undefined as never);
+    expect(await runRecord.waitpoints({ id: "run-9" }, {}, CTX)).toEqual([]);
   });
 });

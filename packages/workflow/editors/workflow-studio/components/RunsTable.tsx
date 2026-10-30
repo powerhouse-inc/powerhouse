@@ -42,6 +42,7 @@ import { useSearchParam, useSearchParamDraft } from "../../shared/url-param.js";
 import { DataViewer } from "../../shared/data-viewer.js";
 import { Button, Icon, StatusText } from "./ui.js";
 import { StepError } from "../../workflow-editor/ui/StepError.js";
+import { CancelRunButton, RunWaitpoints } from "./Waitpoints.js";
 
 type StatusFilter = "ALL" | (typeof RUN_STATUSES)[number];
 const STATUS_FILTERS: readonly StatusFilter[] = ["ALL", ...RUN_STATUSES];
@@ -306,6 +307,13 @@ function RunDetail(props: {
           {describeRunError(run.error, names)}
         </p>
       ) : null}
+      {run.waitpoints ? (
+        <RunWaitpoints
+          waitpoints={run.waitpoints}
+          names={names}
+          onChanged={props.onChanged}
+        />
+      ) : null}
       {run.warningNotes.length > 0 ? (
         <ul
           aria-label="Run warnings"
@@ -351,6 +359,11 @@ function RunDetail(props: {
           </Button>
         ) : null}
         {rerunError ? <span className="text-wf-fail">{rerunError}</span> : null}
+        {run.status === "WAITING" ? (
+          <span className="ml-auto flex items-center gap-2">
+            <CancelRunButton run={run} onChanged={props.onChanged} />
+          </span>
+        ) : null}
       </div>
       <div
         role="list"
@@ -489,6 +502,7 @@ export function RunsTable(props: {
     () => ({
       ALL: scoped.length,
       RUNNING: scoped.filter((run) => run.status === "RUNNING").length,
+      WAITING: scoped.filter((run) => run.status === "WAITING").length,
       SUCCEEDED: scoped.filter((run) => run.status === "SUCCEEDED").length,
       FAILED: scoped.filter((run) => run.status === "FAILED").length,
     }),

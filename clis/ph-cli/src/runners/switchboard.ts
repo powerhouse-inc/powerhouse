@@ -1,3 +1,4 @@
+import type * as SwitchboardUtils from "@powerhousedao/switchboard/utils";
 import {
   defineHostSchemas,
   drivesSchema,
@@ -208,13 +209,28 @@ function pluginDrives(
 /** Poll the default drive endpoint until the server answers — the compound's
  * readiness gate: Connect auto-connects the drive on first load, so the drive
  * must answer before the connect member serves (the sidecar's
- * waitForSwitchboard, moved behind the handle contract). */
-async function waitForDrive(url: string, timeoutMs: number): Promise<void> {
+ * waitForSwitchboard, moved behind the handle contract).
+ *
+ * The probe is anonymous, and a host with authentication on hides a drive
+ * from a caller it refuses (`/d/:drive` answers 404 to anyone who may not
+ * read it, 401 under the authenticated-caller floor). Those answers prove
+ * the server is listening but not whether the drive exists, so `served`,
+ * the reactor's own view of the drive, decides then; without it an
+ * ADMIN_ONLY host never passes this gate and the compound tears down after
+ * the timeout. */
+export async function waitForDrive(
+  url: string,
+  timeoutMs: number,
+  served?: () => Promise<boolean>,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
   const deadline = Date.now() + timeoutMs;
+  const HIDDEN = new Set([401, 403, 404]);
   for (;;) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+      const res = await fetchImpl(url, { signal: AbortSignal.timeout(3000) });
       if (res.ok) return;
+      if (HIDDEN.has(res.status) && served && (await served())) return;
     } catch {
       // not listening yet
     }
@@ -262,30 +278,61 @@ function seederClient(
       }
     },
     createDrive: async (drive: ResolvedDrive) => {
-      seededIds.set(drive.slug, drive.id);
       const { addDefaultDrive } =
         await import("@powerhousedao/switchboard/utils");
-      await addDefaultDrive(
-        reactor as Parameters<typeof addDefaultDrive>[0],
-        {
-          id: drive.id,
-          slug: drive.slug,
-          global: { name: drive.name, icon: drive.icon },
-          ...(drive.preferredEditor
-            ? { preferredEditor: drive.preferredEditor }
-            : {}),
-          local: {
-            availableOffline: drive.availableOffline,
-            listeners: [],
-            sharingType: drive.sharingType,
-            triggers: [],
-          },
-        } as Parameters<typeof addDefaultDrive>[1],
-        port,
-      );
+      // One drive that cannot be made must not keep the server from starting
+      try {
+        await createDeclaredDrive(addDefaultDrive, reactor, drive, port);
+      } catch (error) {
+        console.error(
+          `The drive "${drive.slug}" was not created: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return;
+      }
+      // Its id: the declared one, or a new one where the store could not take
+      // a pinned id (addDefaultDrive then made it under the slug)
+      let id: string | undefined;
+      try {
+        id = await (reactor as SlugLookupClient).resolveIdOrSlug(drive.slug);
+      } catch {
+        id = undefined;
+      }
+      seededIds.set(drive.slug, id || drive.id);
     },
     attachRemoteDrive: () => Promise.resolve(), // remotes ride options.remoteDrives
   };
+}
+
+/** A declared local drive, through the switchboard's own default-drive path. */
+async function createDeclaredDrive(
+  addDefaultDrive: typeof SwitchboardUtils.addDefaultDrive,
+  reactor: unknown,
+  drive: ResolvedDrive,
+  port: number,
+): Promise<void> {
+  await addDefaultDrive(
+    reactor as Parameters<typeof addDefaultDrive>[0],
+    {
+      id: drive.id,
+      slug: drive.slug,
+      global: { name: drive.name, icon: drive.icon },
+      ...(drive.preferredEditor
+        ? { preferredEditor: drive.preferredEditor }
+        : {}),
+      local: {
+        availableOffline: drive.availableOffline,
+        listeners: [],
+        sharingType: drive.sharingType,
+        triggers: [],
+      },
+    } as Parameters<typeof addDefaultDrive>[1],
+    port,
+  );
+}
+
+function catchUpTopFromEnv(raw: string | undefined): number | undefined {
+  const top = Number(raw?.trim() || Number.NaN);
+  return Number.isInteger(top) && top >= 0 ? top : undefined;
 }
 
 async function start(
@@ -306,11 +353,16 @@ async function start(
   const { startSwitchboard } = await import("../services/switchboard.js");
   const entries = host.runner.plugins;
   const entriesDeclared = entries !== undefined;
-  const args = await toSwitchboardArgs(host, devMode, entriesDeclared);
+  const classic = await toSwitchboardArgs(host, devMode, entriesDeclared);
+  // powerhouse.config.json `reactor.https` is a default, not a flag: it goes
+  // under the member's own config instead of over it.
+  const { https } = classic;
+  const args = { ...classic, https: undefined };
   // This member's own config, under the args: nothing is written to the
   // process env, so compound members do not see each other's settings.
   const memberConfig = await memberSwitchboardConfig(host, env, {
     pluginHost: entriesDeclared,
+    defaults: https === undefined ? {} : { server: { https } },
   });
 
   // R2 step 2: a declared composition activates the plugin pipeline — the
@@ -364,18 +416,33 @@ async function start(
     ...(ctx.parent ? { signalHandlers: false } : {}),
   };
 
+  // `/ready` waits until the drives seeded below exist.
+  let seeded!: { resolve: () => void; reject: (error: unknown) => void };
+  const readyAfter = new Promise<void>((resolve, reject) => {
+    seeded = { resolve, reject };
+  });
+  const seeding = async <T>(work: Promise<T>): Promise<T> => {
+    try {
+      return await work;
+    } catch (error) {
+      seeded.reject(error);
+      throw error;
+    }
+  };
   const switchboard = await startSwitchboard(
-    serverArgs,
+    { ...serverArgs, readyAfter },
     undefined,
     memberConfig,
   );
   // Bars for processor and read-model catch-up, below the server's output;
-  // PH_CATCH_UP_PROGRESS=false leaves the output as it was.
+  // PH_CATCH_UP_PROGRESS=false leaves the output as it was. PH_CATCH_UP_TOP
+  // sets how many of the slowest processors they list; 0 hides them.
   const progress =
     switchboard.inspector && process.env.PH_CATCH_UP_PROGRESS !== "false"
       ? startProgressDisplay(inspectorProgressSource(switchboard.inspector), {
           stdout: process.stdout,
           stderr: process.stderr,
+          top: catchUpTopFromEnv(process.env.PH_CATCH_UP_TOP),
         })
       : undefined;
   // The port the server actually bound (it may move off a taken one).
@@ -386,9 +453,11 @@ async function start(
   const seededIds = new Map<string, string>();
   const localPlanned = planned.filter((p) => p.drive.kind === "local");
   if (localPlanned.length > 0) {
-    await seedDrives(
-      seederClient(switchboard.reactor, port, seededIds),
-      localPlanned.map((p) => p.drive),
+    await seeding(
+      seedDrives(
+        seederClient(switchboard.reactor, port, seededIds),
+        localPlanned.map((p) => p.drive),
+      ),
     );
   }
 
@@ -418,12 +487,25 @@ async function start(
   if (entries === undefined && switchboard.workflowsEnabled) {
     const { seedWorkflowsDrive } = await import("../services/vetra.js");
     const { generateProjectDriveId } = await import("../utils.js");
-    const url = await seedWorkflowsDrive(switchboard.reactor, port);
+    const url = await seeding(seedWorkflowsDrive(switchboard.reactor, port));
     if (url)
       drives.workflows = { id: generateProjectDriveId("workflows"), url };
   }
+  seeded.resolve();
 
-  const ready = waitForDrive(driveUrl, 180_000);
+  // Under an authenticating host the anonymous probe cannot see the drive;
+  // the reactor's slug lookup (the seeder's) answers for it.
+  const served = async () => {
+    try {
+      const id = await (
+        switchboard.reactor as SlugLookupClient
+      ).resolveIdOrSlug(slug);
+      return Boolean(id);
+    } catch {
+      return false;
+    }
+  };
+  const ready = waitForDrive(driveUrl, 180_000, served);
   // A supervisor awaits `ready` and sees the rejection; an unsupervised caller
   // (or a test with the service mocked) must not die of an unhandled one.
   ready.catch(() => undefined);

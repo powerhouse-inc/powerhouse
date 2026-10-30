@@ -1,3 +1,98 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-api:** rewrite one table through the PGlite maintenance lane ([ee99ab7edd](https://github.com/powerhouse-inc/powerhouse/commit/ee99ab7edd))
+- **reactor:** keyframe clean-up with a dry run ([9be5cad060](https://github.com/powerhouse-inc/powerhouse/commit/9be5cad060))
+- **reactor:** memory telemetry correlated with operations processed ([c8d0779075](https://github.com/powerhouse-inc/powerhouse/commit/c8d0779075))
+- **reactor:** per-processor timing, top 5 in the catch-up output ([ca20e898e4](https://github.com/powerhouse-inc/powerhouse/commit/ca20e898e4))
+
+### 🩹 Fixes
+
+- **reactor-api:** abort a route's signal on disconnect, not when its body is read ([3936f6cd6a](https://github.com/powerhouse-inc/powerhouse/commit/3936f6cd6a))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.85 (2026-10-30)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.84 (2026-10-30)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor,reactor-api:** inspection says whether models load on demand ([c467cb6314](https://github.com/powerhouse-inc/powerhouse/commit/c467cb6314))
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor-api:** send webhook reply headers ([dd5bae688f](https://github.com/powerhouse-inc/powerhouse/commit/dd5bae688f))
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **workflow:** ctx.reactor.query, an in-process read of an index subgraph for pieces ([fba34399f4](https://github.com/powerhouse-inc/powerhouse/commit/fba34399f4))
+- **reactor-api:** defineIndexSubgraph, the declared permission check for index subgraphs ([5e17260c28](https://github.com/powerhouse-inc/powerhouse/commit/5e17260c28))
+- **reactor-api:** the readable-documents read model, for index subgraphs to join on ([0e55ab91e9](https://github.com/powerhouse-inc/powerhouse/commit/0e55ab91e9))
+- **reactor-mcp:** shared tool definitions with MCP and ai SDK adapters ([db60951c54](https://github.com/powerhouse-inc/powerhouse/commit/db60951c54))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **reactor-api:** a missing document is logged at info, not as an error ([6d740cde3a](https://github.com/powerhouse-inc/powerhouse/commit/6d740cde3a))
+- **reactor-api,reactor-browser:** serve document state with interface types ([72a44ee3fb](https://github.com/powerhouse-inc/powerhouse/commit/72a44ee3fb))
+- **reactor-api:** register a package's subgraphs in export-name order with every loader ([690f20a1a1](https://github.com/powerhouse-inc/powerhouse/commit/690f20a1a1))
+- **reactor-api:** load local packages on Windows and the registry cache under Bun ([afaca5eda9](https://github.com/powerhouse-inc/powerhouse/commit/afaca5eda9))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+- **reactor-api:** pass inspectionAdmin in the served-scalars tests and give the loader's Vite server no WebSocket ([2d4db07b1f](https://github.com/powerhouse-inc/powerhouse/commit/2d4db07b1f))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

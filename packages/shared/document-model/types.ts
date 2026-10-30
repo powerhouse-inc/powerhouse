@@ -1736,22 +1736,40 @@ export type PhAiToolAnnotations = {
   openWorldHint?: boolean;
 };
 
+/** An image the user attached to the chat, under the handle the model knows it by. */
+export type PhAiChatImage = {
+  handle: string;
+  /** `data:<mediaType>;base64,...` */
+  dataUrl: string;
+  mediaType: string;
+  name?: string;
+};
+
+/** What the assistant passes a tool next to its arguments. */
+export type PhAiToolContext = {
+  /** Aborted when the user stops the turn. */
+  signal?: AbortSignal;
+  /** The images attached to this chat so far. */
+  chatImages?: readonly PhAiChatImage[];
+};
+
 /**
  * Provider-agnostic tool descriptor a package can offer to the in-browser
  * AI assistant (see `DocumentModelLib.aiTools`).
  *
  * Structurally compatible with the MCP tool records produced by
- * `createReactorMcpProvider`: the callback parameter is `never` so any
+ * `toMcpTool`: the callback parameter is `never` so any
  * per-tool-args function type is assignable, and the result is `unknown`
  * because the envelope shape (MCP `CallToolResult`) is unwrapped at the
- * adapter boundary.
+ * adapter boundary. An MCP `image` content block in that envelope reaches the
+ * model as an image.
  */
 export type PhAiToolDescriptor = {
   name: string;
   description?: string;
   inputSchema: ZodRawShape;
   annotations?: PhAiToolAnnotations;
-  callback: (args: never) => Promise<unknown>;
+  callback: (args: never, context?: PhAiToolContext) => Promise<unknown>;
 };
 
 export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {

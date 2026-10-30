@@ -181,6 +181,68 @@ describe("startReplayState", () => {
     expect(src.exact).not.toHaveBeenCalled();
   });
 
+  it("reports a deleted document's operations as passed without state", async () => {
+    const passed = vi.fn();
+    const src = {
+      ...sources(snapshot("d", 4, { isDeleted: true })),
+      passedWithoutState: passed,
+    };
+    const page = startReplayState("latest", src)!;
+
+    await page([op("d", 3, 1), op("d", 4, 2)]);
+
+    expect(passed).toHaveBeenCalledTimes(1);
+    const passes = passed.mock.calls[0]![0] as {
+      reason: string;
+      operation: OperationWithContext;
+    }[];
+    expect(passes.map((p) => [p.reason, p.operation.operation.index])).toEqual([
+      ["deleted", 3],
+      ["deleted", 4],
+    ]);
+  });
+
+  it("reports a state that could not be rebuilt, with its error", async () => {
+    const passed = vi.fn();
+    const error = new Error("no such revision");
+    const src = { ...sources([]), passedWithoutState: passed };
+    src.exact.mockImplementation(() => Promise.reject(error));
+    const page = startReplayState("latest", src)!;
+
+    const out = await page([op("d", 0, 1)]);
+
+    expect(out[0]!.context.resultingState).toBeUndefined();
+    const passes = passed.mock.calls[0]![0] as {
+      reason: string;
+      error: unknown;
+    }[];
+    expect(passes).toEqual([
+      expect.objectContaining({ reason: "unrebuildable", error }),
+    ]);
+  });
+
+  it("reports nothing when every operation gets a state", async () => {
+    const passed = vi.fn();
+    const src = { ...sources(snapshot("d", 4)), passedWithoutState: passed };
+    const page = startReplayState("latest", src)!;
+
+    await page([op("d", 3, 1)]);
+
+    expect(passed).not.toHaveBeenCalled();
+  });
+
+  it("keeps replaying when the report throws", async () => {
+    const src = {
+      ...sources(snapshot("d", 4, { isDeleted: true })),
+      passedWithoutState: () => {
+        throw new Error("logger down");
+      },
+    };
+    const page = startReplayState("latest", src)!;
+
+    await expect(page([op("d", 3, 1)])).resolves.toHaveLength(1);
+  });
+
   it("passes an operation as read when its exact state cannot be rebuilt", async () => {
     const src = sources([]);
     src.exact.mockImplementation((ops: OperationWithContext[]) =>

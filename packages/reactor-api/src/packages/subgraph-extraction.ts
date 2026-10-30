@@ -35,13 +35,23 @@ export function extractSubgraphs(
       found.push(candidate);
     }
   };
-  for (const value of Object.values(namespace)) {
+  for (const value of valuesByName(namespace)) {
     add(value);
     if (value !== null && typeof value === "object") {
-      for (const inner of Object.values(value)) {
+      for (const inner of valuesByName(value as Record<string, unknown>)) {
         add(inner);
       }
     }
   }
   return found;
+}
+
+// Native ESM lists a namespace's exports by name; Vite's module runner
+// namespace, also tagged "Module", lists them in statement order.
+function valuesByName(record: Record<string, unknown>): unknown[] {
+  const keys = Object.keys(record);
+  if (Object.prototype.toString.call(record) === "[object Module]") {
+    keys.sort();
+  }
+  return keys.map((key) => record[key]);
 }

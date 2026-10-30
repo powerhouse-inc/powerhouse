@@ -19,6 +19,7 @@ import {
   moduleInputSchema,
   parseProp,
 } from "../reactor.js";
+import { appliedDocument } from "../writes.js";
 
 const BLOCK = "document-dispatch";
 
@@ -113,7 +114,10 @@ export const documentDispatchAction = createAction({
     const branch =
       (typeof config.branch === "string" && config.branch.trim()) ||
       DEFAULT_BRANCH;
-    const document = await reactor.execute(documentId, branch, actions);
+    const document = await appliedDocument(
+      await reactor.write.execute(documentId, branch, actions),
+      actions,
+    );
     return { ...documentReference(document.header), ...reader.output() };
   },
 });

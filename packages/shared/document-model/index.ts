@@ -7,6 +7,7 @@ export * from "./base-reducer-protocol.js";
 export * from "./constants.js";
 export * from "./create-base-reducer.js";
 export * from "./crypto.js";
+export type * from "./definition-types.js";
 export {
   createDocumentAction,
   creationActions,

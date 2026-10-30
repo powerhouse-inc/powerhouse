@@ -312,6 +312,11 @@ export class ReactorClientBuilder {
       new JobAwaiter(eventBus, (jobId, signal) =>
         reactor.getJobStatus(jobId, signal),
       );
+    if (jobAwaiter instanceof JobAwaiter) {
+      reactorModule?.memoryTelemetry?.addGauge("jobAwaiter", () =>
+        jobAwaiter.stats(),
+      );
+    }
 
     const decisionModel = reactorModule
       ? readDecisionModel(

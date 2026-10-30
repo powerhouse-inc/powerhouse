@@ -1,3 +1,84 @@
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **switchboard:** add the AI gateway plugin ([e9a4cd0dc1](https://github.com/powerhouse-inc/powerhouse/commit/e9a4cd0dc1))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.85 (2026-10-30)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.84 (2026-10-30)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+- **workflow-runtime:** per-action default timeout and retry ([ed63e8839f](https://github.com/powerhouse-inc/powerhouse/commit/ed63e8839f))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **codegen:** scaffolded assistant and cli hosts link the switchboard by a drive address ([ca3b183ad6](https://github.com/powerhouse-inc/powerhouse/commit/ca3b183ad6))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **codegen:** pin date-fns, vite and rolldown for every package manager ([635f41d7cc](https://github.com/powerhouse-inc/powerhouse/commit/635f41d7cc))
+- **codegen:** keep powerhouse.manifest.json keys the schema does not know ([25913b746f](https://github.com/powerhouse-inc/powerhouse/commit/25913b746f))
+- **codegen:** resolve project paths from the tsconfig instead of process.chdir ([dafd785fe3](https://github.com/powerhouse-inc/powerhouse/commit/dafd785fe3))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.79 (2026-10-28)
 
 ### 🚀 Features

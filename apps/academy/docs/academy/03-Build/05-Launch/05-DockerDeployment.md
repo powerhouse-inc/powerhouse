@@ -261,6 +261,35 @@ For a single-database deployment (the normal case, and what the repo's compose f
 | `PH_CATCH_UP_PRIORITY`               | Pace of processor catch-up against requests: `dynamic` follows load (levels 1-6); `0` (requests only) to `7` (catch-up only) is fixed                                                 | `dynamic`                      |
 | `SKIP_DB_MIGRATIONS`                 | `true` = skip the entrypoint's Postgres migration run                                                                                                                                 | _unset_                        |
 
+#### Telemetry
+
+Processor timing and memory telemetry share one surface: the `processorTiming` and `memoryTelemetry` inspection fields, the Processors and Memory tabs of the reactor monitor, and the `catch-up slowest` and `memory:` lines of `ph vetra` and `ph switchboard`.
+
+| Variable                                  | Description                                                                                                                                  | Default                             |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `PH_TELEMETRY`                            | `off` turns both telemetries off, whatever the settings below say                                                                            | _unset_                             |
+| `PH_TELEMETRY_DIR`                        | Directory for memory telemetry files and heap snapshots                                                                                      | `<phDir>/telemetry`                 |
+| `PH_PROCESSOR_TIMING`                     | What processors record: `off`, `basic` (time per processor), or `detailed` (also per document type, and a warning for each slow batch)       | `basic`                             |
+| `PH_PROCESSOR_TIMING_WINDOW_MS`           | The rolling window the slowest processors are ranked over, in ms                                                                             | `60000`                             |
+| `PH_PROCESSOR_SLOW_BATCH_MS`              | At `detailed`: an `onOperations` call over this logs a warning, in ms                                                                        | `1000`                              |
+| `PH_PROCESSOR_TIMING_LOG_MS`              | Above 0: logs the slowest processors this often while catching up, for a host without the `ph` console display, in ms                        | `0`                                 |
+| `PH_MEMORY_TELEMETRY`                     | `on` or `off` (`true`/`false`/`1`/`0` also work)                                                                                             | `off`                               |
+| `PH_MEMORY_TELEMETRY_INTERVAL_MS`         | Sampling interval, in ms; at least 1000                                                                                                      | `30000`                             |
+| `PH_MEMORY_TELEMETRY_OUTPUT`              | Comma list from `memory` (always on), `file`, `console`                                                                                      | `memory,file`                       |
+| `PH_MEMORY_TELEMETRY_FILE`                | An explicit JSONL path; implies `file`                                                                                                       | `<dir>/memory-<start>-<pid>.jsonl`  |
+| `PH_MEMORY_TELEMETRY_FILE_MAX_MB`         | Rotates the JSONL file at this size                                                                                                          | `10`                                |
+| `PH_MEMORY_TELEMETRY_FILE_KEEP`           | How many JSONL files to keep                                                                                                                 | `5`                                 |
+| `PH_MEMORY_TELEMETRY_RING`                | Samples kept in memory                                                                                                                       | `720`                               |
+| `PH_MEMORY_TELEMETRY_CONSOLE`             | `false` drops the `console` output                                                                                                           | _unset_                             |
+| `PH_MEMORY_TELEMETRY_CONSOLE_INTERVAL_MS` | How often the `memory:` line is printed, in ms                                                                                               | `300000`                            |
+| `PH_MEMORY_TELEMETRY_WORKERS`             | `false` leaves out worker threads and PGlite WASM                                                                                            | `true`                              |
+| `PH_MEMORY_TELEMETRY_WINDOW_MIN`          | The correlation window, in minutes                                                                                                           | `30`                                |
+| `PH_HEAP_SNAPSHOT_DIR`                    | Where heap snapshots go                                                                                                                      | `PH_TELEMETRY_DIR`                  |
+
+Processor times are wall-clock time the queue awaited, not CPU. One processor's busy time never exceeds the window, but processors run at once, so the sum over processors can. Read time includes waiting for the store connection: under concurrent backfills, a high read time means "waited on the store", not "this query is slow". Waiting for a backfill slot and pausing between pages are throttling and count toward no busy time.
+
+The memory leak signal is the used heap right after a major GC, not `heapUsed`, which saw-tooths. PGlite's WASM memory only grows, so it is reported separately. A heap snapshot (reactor monitor, Memory tab) blocks the server for seconds to minutes and needs about the heap's size in free memory: take it at 2-4 GB, not at 10 GB. It can hold document state, so it stays on the host.
+
 #### Core Configuration
 
 | Variable                    | Description                                                          | Default                     |

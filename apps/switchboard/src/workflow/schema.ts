@@ -54,6 +54,15 @@ export const schema: DocumentNode = gql`
     ): WorkflowRunResultPage!
     run(id: String!): WorkflowRunRecord
     """
+    WAITING runs, each with its waitpoints. Scope them to one
+    workflow, or to every workflow a drive holds; workflowId wins.
+    """
+    waitingRuns(
+      driveId: String
+      workflowId: String
+      first: Int
+    ): [WorkflowRunRecord!]!
+    """
     The descriptor (props, auth, ports) of one action or trigger, as the
     version that runs it describes it; triggers come back under "trigger".
     """
@@ -148,7 +157,8 @@ export const schema: DocumentNode = gql`
     """
     webhookEndpoint(workflowId: String!, driveId: String): WebhookEndpointRecord
     """
-    Secret metadata (label, version, status). Never the value.
+    Secret metadata (label, version, status). Never the value. Only secrets
+    whose owning document the caller can read.
     """
     secret(ref: String!): SecretRecord
     secrets: [SecretRecord!]!
@@ -159,9 +169,28 @@ export const schema: DocumentNode = gql`
     """
     oauthRedirectUri: String
     """
+    How startOAuth would sign in with the publisher's OAuth2 app appId (a
+    connection's oauth_app) on this host, so an editor can tell before it
+    opens one. redirectUri as for startOAuth. NONE for an app this host does
+    not know, or when it cannot name its callback.
+    """
+    oauthSignIn(appId: String!, redirectUri: String): OAuthSignInMode!
+    """
+    The switchboard this runtime lives in: what an app records as the runner
+    of the workflows and connections it sets up here.
+    """
+    host: RuntimeHost!
+    """
     How an OAuth2 sign-in opened by startOAuth stands; null when unknown.
     """
     oauthAttempt(state: String!): OAuthAttempt
+  }
+
+  type RuntimeHost {
+    "switchboard@<machine>: what apps record as the runner"
+    id: String!
+    "The machine's name, for people: where a sign-in has to happen"
+    label: String!
   }
 
   type OAuthAttempt {
@@ -169,6 +198,20 @@ export const schema: DocumentNode = gql`
     "PENDING | EXCHANGING | OK | ERROR"
     status: String!
     error: String
+  }
+
+  """
+  How a host signs in with a publisher's OAuth2 app: DESKTOP, the app's
+  desktop client for a callback to this machine; WEB, its web client, whose
+  file this host has; RELAY, through the app's relay, which forwards the
+  provider's answer here and exchanges codes without this host holding the
+  secret; NONE, not at all.
+  """
+  enum OAuthSignInMode {
+    DESKTOP
+    WEB
+    RELAY
+    NONE
   }
 
   type OAuthStart {
@@ -262,6 +305,10 @@ export const schema: DocumentNode = gql`
   type SecretRecord {
     ref: String!
     label: String
+    "The document the secret resolves for; null for a host secret (an OAuth app's)."
+    ownerId: String
+    "Whether the caller may rotate or delete it: its creator, able to write its owner."
+    manageable: Boolean!
     version: Int!
     status: String!
     createdAt: String!
@@ -366,6 +413,10 @@ export const schema: DocumentNode = gql`
     workflowVersion: Int!
     triggerKind: String!
     triggerPayload: Unknown
+    """
+    PENDING | RUNNING | WAITING | SUCCEEDED | FAILED | CANCELLED. WAITING: paused
+    at a waitpoint (approval, webhook or delay); the run holds no worker.
+    """
     status: String!
     error: String
     errorName: String
@@ -378,6 +429,48 @@ export const schema: DocumentNode = gql`
     "Steps that ran a fallback piece version, edges on ports nothing emits."
     warningNotes: [String!]!
     steps: [WorkflowStepRunRecord!]!
+    "Where the run paused, resolved ones included."
+    waitpoints: [WaitpointRecord!]!
+  }
+
+  "Who may decide an approval, and how the editor renders it."
+  type ApprovalRequest {
+    title: String!
+    "Markdown."
+    body: String
+    approveLabel: String!
+    rejectLabel: String!
+    "none | reject | both"
+    reasonRequiredOn: String!
+    "DIDs allowed to decide; empty means anyone with write access."
+    approvers: [String!]!
+  }
+
+  "A point where a run paused, and how it resumes."
+  type WaitpointRecord {
+    id: String!
+    runId: String!
+    workflowId: String!
+    stepId: String!
+    stepKey: String!
+    stepPath: String!
+    pieceName: String!
+    blockName: String!
+    "DELAY | WEBHOOK"
+    type: String!
+    "approval | webhook | delay"
+    kind: String!
+    "PENDING | COMPLETED | CONSUMED | EXPIRED | CANCELLED"
+    status: String!
+    createdAt: String!
+    "DELAY only: when the run resumes."
+    resumeAt: String
+    expiresAt: String
+    resolvedAt: String
+    "The DID that resolved it from the editor."
+    decidedBy: String
+    "Set by the Request approval block; null otherwise."
+    approval: ApprovalRequest
   }
 
   input WorkflowRunsPagingInput {
@@ -441,6 +534,12 @@ export const schema: DocumentNode = gql`
     """
     fire(workflowId: String!, payload: Unknown): WorkflowRunPayload!
     """
+    Runs the workflow's trigger now, as its schedule or poll would: a
+    schedule fires the workflow, a polling trigger polls its source ("sync
+    now"). False when it has no armed trigger (disabled, parked, erroring).
+    """
+    pollNow(workflowId: String!): Boolean!
+    """
     Samples the draft trigger and saves it as the trigger's last test. A piece
     trigger runs its test hook (no cursor changes). Of the core piece's
     triggers, manual takes payload, schedule samples a fire now, and webhook
@@ -473,16 +572,38 @@ export const schema: DocumentNode = gql`
     """
     rerun(runId: String!): WorkflowRunPayload!
     """
-    Mints a managed secret and returns its ref; the value is stored
-    encrypted and is never readable back over any API.
+    Approves or rejects a PENDING WEBHOOK waitpoint, resuming its run. Needs
+    write access to the workflow; with approvers listed, the caller's DID must
+    be one. reason may be required, per approval.reasonRequiredOn.
     """
-    createSecret(value: String!, label: String): SecretRecord!
+    resolveWaitpoint(
+      waitpointId: String!
+      approved: Boolean!
+      reason: String
+    ): WaitpointRecord!
+    """
+    Cancels a WAITING or PENDING run and its open waitpoints. A RUNNING run
+    cannot be cancelled yet.
+    """
+    cancelRun(runId: String!): WorkflowRunPayload
+    """
+    Mints a managed secret for a connection or workflow document and returns
+    its ref; only that document resolves it. The value is stored encrypted
+    and is never readable back over any API.
+    """
+    createSecret(
+      value: String!
+      label: String
+      documentId: String!
+    ): SecretRecord!
     """
     Replaces the value behind an existing ref; documents stay untouched.
+    Only its creator, while able to write its owning document.
     """
     rotateSecret(ref: String!, value: String!): SecretRecord!
     """
-    Tombstones a secret; its value becomes unrecoverable.
+    Tombstones a secret; its value becomes unrecoverable. Only its creator,
+    while able to write its owning document.
     """
     deleteSecret(ref: String!): Boolean!
     """

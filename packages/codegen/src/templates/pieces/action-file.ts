@@ -13,6 +13,9 @@ export type PieceActionTemplateArgs = PieceNames & {
   actionDisplayName: string;
   withAuth: boolean;
   requireReactor?: PieceRequireReactor;
+  defaultTimeoutSeconds?: number;
+  /** Written as defaultRetry: { maxAttempts }. */
+  defaultMaxAttempts?: number;
 };
 
 // The requireReactor line of an action or trigger, always written out.
@@ -27,6 +30,15 @@ export const reactorDeclaration = (
 `
     : `  // "read" or "write" gives this ${block} context.reactor
   requireReactor: false,
+`;
+
+// The step defaults, commented out unless given; createAction validates them.
+const stepDefaults = (
+  timeoutSeconds: number | undefined,
+  maxAttempts: number | undefined,
+) => `  // Used when the workflow step sets no timeout or retry of its own
+  ${timeoutSeconds === undefined ? "// defaultTimeoutSeconds: 30," : `defaultTimeoutSeconds: ${timeoutSeconds},`}
+  ${maxAttempts === undefined ? '// defaultRetry: { maxAttempts: 3, backoff: "EXPONENTIAL", initialDelaySeconds: 5 },' : `defaultRetry: { maxAttempts: ${maxAttempts} },`}
 `;
 
 const runComment = (access: PieceRequireReactor | undefined) =>
@@ -57,7 +69,7 @@ ${v.withAuth ? `  auth: ${v.camelCaseName}Auth,` : "  // Types context.auth as u
   displayName: "${v.actionDisplayName}",
   // Shown under the action in the editor: say what it does
   description: "",
-${reactorDeclaration(v.requireReactor, "action")}  // Inputs the user fills in on the step, e.g. Property.ShortText({ ... })
+${reactorDeclaration(v.requireReactor, "action")}${stepDefaults(v.defaultTimeoutSeconds, v.defaultMaxAttempts)}  // Inputs the user fills in on the step, e.g. Property.ShortText({ ... })
   props: {},
   async run() {
 ${runComment(v.requireReactor)}

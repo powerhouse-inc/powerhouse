@@ -24,6 +24,7 @@ import type {
   RunStatus,
   SetLastRunInput,
   SetLastTestInput,
+  SetManagedByInput,
   SetPolicyInput,
   SetPolicyRetryPolicyInput,
   SetStepConfigInput,
@@ -45,6 +46,7 @@ import type {
   UpdateStepRetryPolicyInput,
   VariableType,
   WorkflowEdge,
+  WorkflowManager,
   WorkflowPolicy,
   WorkflowState,
   WorkflowStatus,
@@ -270,6 +272,16 @@ export function SetLastTestInputSchema(): z.ZodObject<
     id: z.string(),
     runId: z.string(),
     testedAt: z.iso.datetime(),
+  });
+}
+
+export function SetManagedByInputSchema(): z.ZodObject<
+  Properties<SetManagedByInput>
+> {
+  return z.object({
+    documentId: z.string().nullish(),
+    documentType: z.string().nullish(),
+    label: z.string().nullish(),
   });
 }
 
@@ -504,6 +516,17 @@ export function WorkflowEdgeSchema(): z.ZodObject<Properties<WorkflowEdge>> {
   });
 }
 
+export function WorkflowManagerSchema(): z.ZodObject<
+  Properties<WorkflowManager>
+> {
+  return z.object({
+    __typename: z.literal("WorkflowManager").optional(),
+    documentId: z.string(),
+    documentType: z.string(),
+    label: z.string(),
+  });
+}
+
 export function WorkflowPolicySchema(): z.ZodObject<
   Properties<WorkflowPolicy>
 > {
@@ -527,6 +550,7 @@ export function WorkflowStateSchema(): z.ZodObject<Properties<WorkflowState>> {
     edges: z.array(z.lazy(() => WorkflowEdgeSchema())),
     lastRunAt: z.iso.datetime().nullish(),
     lastRunStatus: RunStatusSchema.nullish(),
+    managedBy: z.lazy(() => WorkflowManagerSchema().nullish()),
     name: z.string(),
     policy: z.lazy(() => WorkflowPolicySchema()),
     published: z.lazy(() => PublishedWorkflowSchema().nullish()),

@@ -1,58 +1,97 @@
-import type { McpRequestAuthorizer } from "@powerhousedao/reactor-mcp";
-import type { AuthService } from "./auth.service.js";
-import {
-  AuthorizationPolicy,
-  type IAuthorizationService,
+import type {
+  McpAccess,
+  McpRequestAuthorizer,
+} from "@powerhousedao/reactor-mcp";
+import type { AuthService, User } from "./auth.service.js";
+import type {
+  CanonicalDocumentId,
+  IAuthorizationService,
 } from "./authorization.service.js";
+import type { CanonicalDocumentIdResolver } from "./canonical-document-id.js";
+import type { DocumentPermissionService } from "./document-permission.service.js";
 
-/**
- * Authorization gate for the /mcp endpoint (AUTH_REVIEW S-C1). MCP tools have
- * unrestricted reactor access, so access is limited to supreme admins when
- * auth is enabled. OPEN policy is public; any other policy without an
- * AuthService fails closed. The tools read as the caller: anonymous under OPEN,
- * else the admin's address and the app key its token carries.
- */
+export type McpRequestAuthorizerOptions = {
+  /** GraphQL's require-authenticated-caller floor: anonymous callers get a 401. */
+  requireAuthenticatedCaller: boolean;
+  /** Resolves ids the way GraphQL's read checks do. */
+  resolveDocumentId: CanonicalDocumentIdResolver;
+  /** Records a creator as owner, as GraphQL's create mutations do. */
+  documentPermissionService?: DocumentPermissionService;
+};
+
+/** The /mcp gate, as GraphQL's: a bad bearer is a 401, anonymous passes unless the
+ * floor is on, and the tools answer to the caller's IAuthorizationService decisions. */
 export function createMcpRequestAuthorizer(
   authService: AuthService | undefined,
   authorizationService: IAuthorizationService,
+  options: McpRequestAuthorizerOptions,
 ): McpRequestAuthorizer {
   return async (req) => {
-    if (!authService) {
-      if (authorizationService.config.policy === AuthorizationPolicy.OPEN) {
-        return { authorized: true, subject: {} };
+    let user: User | undefined;
+    if (authService) {
+      const context = await authService.verifyBearer(req.headers.authorization);
+      if (context instanceof Response) {
+        return {
+          authorized: false,
+          status: context.status,
+          message: "Authentication failed",
+        };
       }
+      user = context.user;
+    }
+    if (!user && options.requireAuthenticatedCaller) {
       return {
         authorized: false,
         status: 401,
         message: "Authentication required",
-      };
-    }
-
-    const context = await authService.verifyBearer(req.headers.authorization);
-    if (context instanceof Response) {
-      return {
-        authorized: false,
-        status: context.status,
-        message: "Authentication failed",
-      };
-    }
-    if (!context.user) {
-      return {
-        authorized: false,
-        status: 401,
-        message: "Authentication required",
-      };
-    }
-    if (!authorizationService.isSupremeAdmin(context.user.address)) {
-      return {
-        authorized: false,
-        status: 403,
-        message: "Forbidden: MCP access requires an administrator",
       };
     }
     return {
       authorized: true,
-      subject: { address: context.user.address, key: context.user.appKey },
+      subject: user ? { address: user.address, key: user.appKey } : {},
+      access: hostAccess(authorizationService, options, user?.address),
     };
+  };
+}
+
+function hostAccess(
+  authorization: IAuthorizationService,
+  options: McpRequestAuthorizerOptions,
+  address: string | undefined,
+): McpAccess {
+  const { resolveDocumentId, documentPermissionService } = options;
+  // An id that no longer resolves is refused, as GraphQL's checks refuse it.
+  const decide = async (
+    identifier: string,
+    check: (id: CanonicalDocumentId) => Promise<boolean>,
+  ) => {
+    let id: CanonicalDocumentId;
+    try {
+      id = await resolveDocumentId(identifier);
+    } catch {
+      return false;
+    }
+    return check(id);
+  };
+  return {
+    unrestricted: authorization.isSupremeAdmin(address),
+    authenticated: address !== undefined,
+    canRead: (identifier) =>
+      decide(identifier, (id) => authorization.canRead(id, address)),
+    canWrite: (identifier) =>
+      decide(identifier, (id) => authorization.canWrite(id, address)),
+    canMutate: (identifier, operationType) =>
+      decide(identifier, (id) =>
+        authorization.canMutate(id, operationType, address),
+      ),
+    canCreate: () => authorization.canCreate(address),
+    created: async (documentId) => {
+      if (!address) return;
+      await documentPermissionService?.initializeDocumentProtection(
+        documentId,
+        address,
+        authorization.config.defaultProtection,
+      );
+    },
   };
 }

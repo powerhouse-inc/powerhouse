@@ -6,6 +6,8 @@ import {
   secretRefFromId,
   SecretDeletedError,
   SecretNotFoundError,
+  SecretOwnerMismatchError,
+  type SecretOwner,
   type SecretStat,
   type SecretStore,
 } from "../pieces/index.js";
@@ -29,6 +31,10 @@ const KEY_CHECK_LABEL = "reactor-workflow/secrets/key-check/v1";
 export interface SecretRow {
   id: string;
   label: string | null;
+  // The document the secret was minted for; null on pre-ownership rows.
+  owner_id: string | null;
+  // Lower-cased address of the user who saved it; null when anonymous.
+  created_by: string | null;
   version: number;
   // base64(iv || tag || ciphertext); null once deleted.
   enc: string | null;
@@ -54,6 +60,8 @@ async function up(db: IRelationalDb<SecretsDB>): Promise<void> {
     .createTable("secret")
     .addColumn("id", "text", (col) => col.primaryKey())
     .addColumn("label", "text")
+    .addColumn("owner_id", "text")
+    .addColumn("created_by", "text")
     .addColumn("version", "integer", (col) => col.notNull())
     .addColumn("enc", "text")
     .addColumn("status", "text", (col) => col.notNull())
@@ -61,6 +69,14 @@ async function up(db: IRelationalDb<SecretsDB>): Promise<void> {
     .addColumn("updated_at", "text", (col) => col.notNull())
     .ifNotExists()
     .execute();
+  // Additive migration for namespaces created before secrets had owners.
+  for (const column of ["owner_id", "created_by"]) {
+    try {
+      await db.schema.alterTable("secret").addColumn(column, "text").execute();
+    } catch {
+      // column already exists
+    }
+  }
   await db.schema
     .createTable("secret_key_check")
     .addColumn("id", "text", (col) => col.primaryKey())
@@ -248,6 +264,8 @@ export class LocalEncryptedSecretStore implements SecretStore {
     return {
       ref: secretRefFromId(row.id),
       label: row.label,
+      ownerId: row.owner_id,
+      createdBy: row.created_by,
       version: row.version,
       status: row.status as SecretStat["status"],
       createdAt: row.created_at,
@@ -255,11 +273,20 @@ export class LocalEncryptedSecretStore implements SecretStore {
     };
   }
 
-  async create(input: { value: string; label?: string }): Promise<SecretStat> {
+  async create(input: {
+    value: string;
+    label?: string;
+    ownerId: string | null;
+    createdBy?: string | null;
+  }): Promise<SecretStat> {
+    if (input.ownerId === "")
+      throw new Error("A secret needs an owning document");
     const now = new Date().toISOString();
     const row: SecretRow = {
       id: randomBytes(16).toString("hex"),
       label: input.label ?? null,
+      owner_id: input.ownerId,
+      created_by: input.createdBy?.toLowerCase() ?? null,
       version: 1,
       enc: this.encrypt(input.value),
       status: "ACTIVE",
@@ -291,8 +318,15 @@ export class LocalEncryptedSecretStore implements SecretStore {
     return this.toStat(updated);
   }
 
-  async get(ref: string): Promise<string> {
+  // Ownership is checked before the value is decrypted; unowned never resolves.
+  // `null` reads a host secret (an OAuth app's), which no document owns.
+  async get(ref: string, owner: SecretOwner | null): Promise<string> {
     const row = await this.row(ref);
+    if (owner === null) {
+      if (row.owner_id !== null) throw new SecretOwnerMismatchError("host");
+    } else if (row.owner_id === null || row.owner_id !== owner.documentId) {
+      throw new SecretOwnerMismatchError(owner.kind);
+    }
     if (row.status !== "ACTIVE" || row.enc === null) {
       throw new SecretDeletedError(ref);
     }

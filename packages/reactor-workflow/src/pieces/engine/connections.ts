@@ -1,7 +1,7 @@
 // Resolves connection references into the auth value a piece reads from
 // ctx.auth, shaped per Activepieces auth kind (powerhouse/connection state).
 
-import type { SecretProvider } from "./secrets.js";
+import type { SecretOwner, SecretProvider } from "./secrets.js";
 import type { WorkflowDefinition } from "./types.js";
 import {
   AppConnectionType,
@@ -77,13 +77,17 @@ export class UnsupportedAuthTypeError extends Error {
   }
 }
 
+// Each ref resolves only as the connection it was minted for, so a ref
+// copied from another connection is refused rather than read.
 async function resolveSecrets(
   source: ConnectionSource,
   secrets: SecretProvider,
+  connectionId: string,
 ): Promise<Record<string, string>> {
+  const owner: SecretOwner = { documentId: connectionId, kind: "connection" };
   const entries = await Promise.all(
     (source.secretRefs ?? []).map(
-      async ({ name, ref }) => [name, await secrets.get(ref)] as const,
+      async ({ name, ref }) => [name, await secrets.get(ref, owner)] as const,
     ),
   );
   return Object.fromEntries(entries);
@@ -94,8 +98,9 @@ async function resolveSecrets(
 export async function shapeAuthValue(
   source: ConnectionSource,
   secrets: SecretProvider,
+  connectionId: string,
 ): Promise<unknown> {
-  return (await shapeConnection(source, secrets)).auth;
+  return (await shapeConnection(source, secrets, connectionId)).auth;
 }
 
 // Only the values behind `secretRefs` are reported as secret: config fields
@@ -103,8 +108,9 @@ export async function shapeAuthValue(
 export async function shapeConnection(
   source: ConnectionSource,
   secrets: SecretProvider,
+  connectionId: string,
 ): Promise<ResolvedConnection> {
-  const resolved = await resolveSecrets(source, secrets);
+  const resolved = await resolveSecrets(source, secrets, connectionId);
   if (source.authType === "OAUTH2") return shapeOAuth2(source, resolved);
   return {
     auth: shapeAuth(source, resolved),
@@ -236,7 +242,7 @@ export class StaticConnectionResolver implements EngineConnectionResolver {
     if (!source) {
       return Promise.reject(new ConnectionNotFoundError(connectionId));
     }
-    return shapeConnection(source, this.secrets);
+    return shapeConnection(source, this.secrets, connectionId);
   }
 }
 

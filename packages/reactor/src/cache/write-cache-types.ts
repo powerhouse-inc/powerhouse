@@ -1,4 +1,5 @@
 import type { PHDocument } from "@powerhousedao/shared/document-model";
+import type { KeyframeSettings } from "../storage/keyframes/keyframe-settings.js";
 
 /**
  * Configuration options for the write cache
@@ -10,8 +11,14 @@ export type WriteCacheConfig = {
   /** Number of snapshots to keep in each document's ring buffer. Default: 10 */
   ringBufferSize: number;
 
-  /** Persist a keyframe snapshot every N revisions. Default: 10 */
+  /**
+   * Persist a keyframe snapshot every N revisions, for a type `keyframes` sets
+   * no interval for. Default: 10
+   */
   keyframeInterval: number;
+
+  /** Interval and keep per document type, over `keyframeInterval`. */
+  keyframes?: KeyframeSettings;
 };
 
 /**

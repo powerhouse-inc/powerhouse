@@ -31,22 +31,27 @@ export const archiveInvoice = createAction({
   async run(ctx) {
     const doc = await ctx.reactor.get(ctx.propsValue.invoiceId);
     const invoice = await ctx.reactor.getDocumentModelModuleForDocument(doc);
-    const updated = await ctx.reactor.execute(doc.header.id, "main", [
+    const handle = await ctx.reactor.write.execute(doc.header.id, "main", [
       invoice.actions.setStatus({ status: "ARCHIVED" }),
     ]);
+    const { job } = await handle.readable;
+    if (job.result?.allApplied === false) {
+      throw new Error(`Invoice ${doc.header.id} was not archived`);
+    }
+    const updated = await handle.document();
     return documentReference(updated.header);
   },
 });
 ```
 
-The invoice model and its `setStatus` operation stand in for your own. The action reads the document, gets its document model module, builds the action with the model's own action creator, and executes it. It outputs a reference to the document: `{ documentId, documentType, branch, revision }`.
+The invoice model and its `setStatus` operation stand in for your own. The action reads the document, gets its document model module, builds the action with the model's own action creator, and executes it through the write half, `ctx.reactor.write`. It waits for the write to be readable, checks that the action applied, and reads the document back. It outputs a reference to the document: `{ documentId, documentType, branch, revision }`.
 
 The declaration sets the type of `ctx.reactor`:
 
 | `requireReactor`  | `ctx.reactor`                                                    |
 | ----------------- | ---------------------------------------------------------------- |
 | `"read"`          | `ReactorReadClient`, with the read methods only                  |
-| `"write"`         | `ReactorClient`, with the read and write methods                 |
+| `"write"`         | `ReactorClient`, with the read methods and the write half        |
 | `false` or absent | none. Using `ctx.reactor` throws `UnsupportedContextMemberError` |
 
 A write method on a `"read"` action does not compile. The host also refuses it at run time, in case the declaration and the code disagree.
@@ -86,56 +91,76 @@ ph generate piece-action archive-invoice --require-reactor write
 
 `ctx.reactor` is a subset of [`IReactorClient`](/academy/Reference/Reactor/ReactorClient), with the client's own signatures and types. The reference page covers each method.
 
-| Access | Methods                                                                                                                                                                                                                                                             |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Read   | `get`, `resolveIdOrSlug`, `find`, `getOperations`, `getOutgoingRelationships`, `getIncomingRelationships`, `getOutgoingRelationshipEdges`, `getIncomingRelationshipEdges`, `getDocumentModelModules`, `getDocumentModelModule`, `getDocumentModelModuleForDocument` |
-| Write  | `create`, `createEmpty`, `execute`, `executeAsync`, `deleteDocument`                                                                                                                                                                                                |
+| Access              | Methods                                                                                                                                                                                                                                                                                  |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Read                | `get`, `resolveIdOrSlug`, `find`, `getOperations`, `getOutgoingRelationships`, `getIncomingRelationships`, `getOutgoingRelationshipEdges`, `getIncomingRelationshipEdges`, `getDocumentModelModules`, `getDocumentModelModule`, `getDocumentModelModuleForDocument`, `drives.getNode`, `drives.listNodes` |
+| Write               | `newDocument`, and the write half: `write.create`, `write.createEmpty`, `write.execute`, `write.deleteDocument`, `write.drives.addFile`, `write.drives.addFolder`                                                                                                                         |
+| Write, deprecated   | `create`, `createEmpty`, `execute`, `executeAsync`, `deleteDocument`, `drives.addFile`, `drives.addFolder`                                                                                                                                                                               |
 
-For a piece, `executeAsync` writes as `execute` does and answers at the same point, once every action is applied or the write throws. It returns the settled `JobInfo` instead of reading the document back. Use it when the step has no use for the document, such as adding a file to a large drive, where the read-back would be the drive's whole state.
+The deprecated writes are the client's facade, kept so pieces built against them keep working. New pieces write through `write`.
 
-A piece changes a document by building actions with the document model's action creators and passing them to `execute`. The creators come from the model's package, from `@powerhousedao/shared/document-model` (`setName`) and `@powerhousedao/shared/document-drive` (`addFile`, `deleteNode`), or from the module `getDocumentModelModuleForDocument` returns.
+### Write handles
 
-A drive file is a document created under the drive plus the drive's node for it:
+A write-half method answers once its jobs are accepted, with a write handle:
+
+- **`readable`** resolves when every pre-ready read model holds the write. Its receipt carries the job (`job.status`, `job.result`), a consistency token, `documentId` and `branch`.
+- **`written`** resolves when the operations are in the log, before the read models.
+- **`document(view?)`** waits for `readable` and reads the document back as the run user, at the receipt's token.
+
+A reducer error does not throw. The job still finishes, and `receipt.job.result.actions` holds one outcome per action: `{ kind: "applied" }`, `{ kind: "reducer-error", message, name?, code? }` or `{ kind: "denied", reason }`. `job.result.allApplied` is false when any action erred or was denied. Check it when the step must fail on a rejected action. The facade's `execute` throws `ReactorActionsFailedError` instead.
+
+A handle reads only its own step's jobs, within the step's deadline. A job that fails rejects `readable` and `written` with an error named `JobFailedError`, carrying the job. A job still running at the deadline rejects with `ReactorJobPendingError`.
+
+A piece changes a document by building actions with the document model's action creators and passing them to `write.execute`. The creators come from the model's package, from `@powerhousedao/shared/document-model` (`setName`) and `@powerhousedao/shared/document-drive` (`addFile`, `deleteNode`), or from the module `getDocumentModelModuleForDocument` returns.
+
+`write.drives.addFile` files a document into a drive of either drive type: it creates the document under the drive, then adds the drive's node for it. Its handle's document is the new file:
 
 ```typescript
-import { addFile } from "@powerhousedao/shared/document-drive";
-
-const file = await ctx.reactor.create(invoiceDocument, driveId);
-await ctx.reactor.execute(driveId, "main", [
-  addFile({
-    id: file.header.id,
-    name: "Invoice",
-    documentType: file.header.documentType,
-    parentFolder: folderId,
-  }),
-]);
+const filed = await ctx.reactor.write.drives.addFile(
+  driveId,
+  invoiceDocument,
+  folderId,
+);
+const file = await filed.document();
 ```
 
-Creating under the drive adds the drive's `child` relationship; `ADD_FILE` adds the node. `ADD_FILE` alone, for a document created elsewhere, leaves the node without the relationship. To read a drive's folders and files, `get` the drive and read `state.global.nodes`.
+`write.drives.addFolder` answers a handle with the new folder's `nodeId`. To read a drive's folders and files, use `drives.listNodes` or `drives.getNode`.
 
 Not offered to any piece:
 
 | Methods                                                                                                                                                                                         | Why                                                                                                                         |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `createDocumentInDrive`, `executeBatch`, `rename`, `setPreferredEditor`, `addRelationship`, `updateRelationship`, `removeRelationship`, `moveRelationship`, `upgradeDocument`, `deleteDocuments` | Each would have to be rebuilt on the host to check it as the run user. Build the actions and call `execute`.                |
-| `drives`                                                                                                                                                                                        | Its reads take no subject, and its writes are conveniences. `get` the drive, and `execute` drive actions.                   |
-| `createAsync`, `createEmptyAsync`, `getJobStatus`, `waitForJob`                                                                                                                                 | A job must finish within its step, with its outcome checked.                                                                |
+| `createDocumentInDrive`, `executeBatch`, `rename`, `setPreferredEditor`, `addRelationship`, `updateRelationship`, `removeRelationship`, `moveRelationship`, `upgradeDocument`, `deleteDocuments`, on the client and on `write` | Each would have to be rebuilt on the host to check it as the run user. Build the actions and call `write.execute`.          |
+| `drives.create`, `drives.removeNode`, `drives.renameNode`, `drives.moveNode`, `drives.copyNode`, `drives.setPreferredEditorOnNode`, on the client and on `write`                                  | Each writes more than one document. Build the drive's actions and call `write.execute`.                                     |
+| `createAsync`, `createEmptyAsync`, `getJobStatus`, `waitForJob`, `read`                                                                                                                         | The write half covers them: a handle waits for its own step's jobs.                                                         |
 | `subscribe`                                                                                                                                                                                     | Triggers cover document events.                                                                                             |
 | `loadBatch`                                                                                                                                                                                     | It loads operations other principals signed, which the host can neither sign nor check as the run user.                     |
-| `evaluateActions`, `isDocumentIdTaken`, `isServed`, `getCreateSignaturePolicy`, `getCreateProtocolVersions`                                                                                     | Host internals. `isDocumentIdTaken` would answer for documents the user cannot read.                                        |
+| `evaluateActions`, `isDocumentIdTaken`, `describe`, `isServed`, `getCreateSignaturePolicy`, `getCreateProtocolVersions`                                                                          | Host internals. `isDocumentIdTaken` would answer for documents the user cannot read.                                        |
 
 Calling one throws `ReactorAccessDeniedError`, naming the method. The host also refuses:
 
-- **A chosen subject.** A call that passes `view.subject`, or `execute`'s `subject`, is refused. The host sets the run user as the subject.
+- **A chosen subject.** A call that passes `view.subject`, or `execute`'s `subject`, is refused, as is a handle's `document({ subject })`. The host sets the run user as the subject.
 - **A signed action.** An action carrying `context.signer` is refused. The host signs every action, and a new document gets the host's create signature policy.
-- **Document lifecycle actions through `execute`**: `CREATE_DOCUMENT`, `DELETE_DOCUMENT`, `UPGRADE_DOCUMENT`, `PURGE_DOCUMENT` and the relationship actions. Create with `create` or `createEmpty`, and delete with `deleteDocument`.
+- **Document lifecycle actions through `execute`**: `CREATE_DOCUMENT`, `DELETE_DOCUMENT`, `UPGRADE_DOCUMENT`, `PURGE_DOCUMENT` and the relationship actions. Create with `write.create` or `write.createEmpty`, and delete with `write.deleteDocument`.
 - **A cascade delete.** `deleteDocument` with `PropagationMode.Cascade` is refused.
+
+### Denied actions
+
+Before submitting a write, the host asks the reactor whether the run user may apply each action. When it may not, the write throws `ReactorAccessDeniedError` and submits nothing. The message names each denied action and ends with their indexes in the write's action list:
+
+```text
+The run user may not apply SET_STATUS (no grant) to document 3f2a…; denied action indexes: [1]
+```
+
+`deniedActionIndexes(error)` from `@powerhousedao/pieces-framework` reads them back, and answers `undefined` for any other error. A drive write's index is that of its drive-side action, `0`.
 
 ## At run time
 
-### Writes block until applied
+### Waiting for writes
 
-A write returns once its jobs are applied and readable, as on the client. It waits until the step's deadline, which is the step's `timeoutSeconds` or the runtime's default timeout, and stops a little before it to report why. The host checks each action's outcome, so a reducer error or a denial fails the call instead of passing silently.
+A write-half method returns once its jobs are accepted; a handle's `readable` waits for them. A deprecated facade write returns once its jobs are applied and readable, and checks each action's outcome, so a reducer error or a denial fails the call.
+
+A wait lasts until the step's deadline, which is the step's `timeoutSeconds` or the runtime's default timeout, and stops a little before it to report why. A document the run creates gets the run user's grant before the create's handle is returned, so `write.create` waits for the create to land when the run has a user.
 
 ### Errors
 
@@ -144,8 +169,9 @@ Errors cross from the host to the worker by `name` and `message`, so test `error
 | `error.name`                    | Meaning                                                                               |
 | ------------------------------- | ------------------------------------------------------------------------------------- |
 | `ReactorAccessDeniedError`      | The declaration, the reactor connection or the document's auth refused the call.      |
-| `ReactorJobFailedError`         | A write's job failed.                                                                 |
-| `ReactorActionsFailedError`     | The job finished, but some of its actions failed, for example on a reducer error.     |
+| `ReactorJobFailedError`         | A deprecated write's job failed.                                                      |
+| `ReactorActionsFailedError`     | A deprecated write's job finished, but some of its actions failed.                    |
+| `JobFailedError`                | A write handle's job failed. Not exported: compare the string.                        |
 | `ReactorJobPendingError`        | A write's job was still running at the step deadline. Its actions may yet be written. |
 | `ReactorRequestClosedError`     | A `ctx.reactor`, or a page's `next`, was used after its step settled.                 |
 | `DocumentModelUnavailableError` | The worker has no document model for that type. See below.                            |
@@ -154,10 +180,11 @@ Errors cross from the host to the worker by `name` and `message`, so test `error
 import { ReactorJobPendingError } from "@powerhousedao/pieces-framework";
 import { setName } from "@powerhousedao/shared/document-model";
 
+const handle = await ctx.reactor.write.execute(ctx.propsValue.id, "main", [
+  setName("Settled"),
+]);
 try {
-  return await ctx.reactor.execute(ctx.propsValue.id, "main", [
-    setName("Settled"),
-  ]);
+  return await handle.readable;
 } catch (error) {
   if (error instanceof Error && error.name === ReactorJobPendingError) {
     return { pending: true };
@@ -237,7 +264,7 @@ Every call then passes these checks, in order:
 
 1. **The declaration.** A `"read"` block cannot call a write method.
 2. **The connection's `access`.**
-3. **The reactor's document auth**, as the run user. Reads pass the run user as the subject. `execute` and `deleteDocument` are evaluated as the run user (`evaluateActions`) before the host signs them. A create needs only checks 1 and 2; the reactor admits it by the Switchboard's signature.
+3. **The reactor's document auth**, as the run user. Reads pass the run user as the subject. `execute`, `deleteDocument` and the drive writes are evaluated as the run user (`evaluateActions`) before the host signs them. A create needs only checks 1 and 2; the reactor admits it by the Switchboard's signature.
 
 The run records each document it reads or writes, and a write's documents when it is submitted, so run visibility and erasure cover a write even when reading it back fails. A document the run creates gets an auth grant for the run user.
 
@@ -317,7 +344,7 @@ The run journal does not store document state:
 The editor shows a journaled reference with the document's type, id and revision, and an **Open document** action. It opens the document as it is now: reading a document at a past revision is not supported yet ([#3179](https://github.com/powerhouse-inc/powerhouse/issues/3179)). The expression picker offers a referenced document's `state.global` fields from its model's state schema. Testing a step that reads an earlier step's document reads that document as it is now.
 
 <Quiz
-  question='An action declares requireReactor: "write". Its step is bound to a reactor connection with access: "read". The workflow was published by Alice, and Bob fires it. What happens when the action calls ctx.reactor.execute?'
+  question='An action declares requireReactor: "write". Its step is bound to a reactor connection with access: "read". The workflow was published by Alice, and Bob fires it. What happens when the action calls ctx.reactor.write.execute?'
   choices={[
     {
       label: "It runs as Bob, because Bob fired the run.",
@@ -339,7 +366,7 @@ The editor shows a journaled reference with the document's type, id and revision
     {
       label: "It fails to compile.",
       explanation:
-        "The piece declares write, so ctx.reactor has execute. The connection is a run-time setting the piece cannot see.",
+        "The piece declares write, so ctx.reactor has write. The connection is a run-time setting the piece cannot see.",
     },
   ]}
 />

@@ -195,6 +195,27 @@ export function ReactorDenialNote(props: { denial: string | null }) {
   );
 }
 
+/** Instead of the draft banner on a managed workflow: who keeps it, and that edits here are not saved. */
+export function ManagedBanner(props: { model: WorkflowModel }) {
+  const manager = props.model.managedBy;
+  if (!manager) return null;
+  return (
+    <div
+      role="status"
+      className="pointer-events-auto flex max-w-xl items-center gap-3 rounded-lg border border-solid border-foreground/10 bg-card px-3 py-1.5 text-[13px] shadow-sm"
+    >
+      <span
+        className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground"
+        aria-hidden
+      />
+      <span className="text-foreground">
+        Managed by <strong>{manager.label || manager.documentType}</strong>.
+        Change it there: edits here are not saved.
+      </span>
+    </div>
+  );
+}
+
 export function DraftBanner(props: {
   model: WorkflowModel;
   readiness: WorkflowReadiness;

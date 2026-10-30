@@ -4,7 +4,7 @@ type Layer = SwitchboardConfigInput;
 type Section = Record<string, unknown>;
 
 // A union, not a section: its variants do not share keys.
-const REPLACED_WHOLE = new Set(["attachments.storage"]);
+const REPLACED_WHOLE = new Set(["attachments.storage", "storage.keyframes"]);
 
 // The reactor-api auth keys whose env vars override a caller's option.
 const ENV_WINS_AUTH = [

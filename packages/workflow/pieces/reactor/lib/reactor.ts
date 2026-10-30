@@ -81,7 +81,7 @@ export async function documentTypes(
     .sort((a, b) => a.documentType.localeCompare(b.documentType));
 }
 
-async function documentOptions(
+export async function documentOptions(
   reactor: ReactorReadClient,
   documentType: string | undefined,
 ): Promise<OptionState> {

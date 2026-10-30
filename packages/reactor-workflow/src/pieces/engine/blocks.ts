@@ -28,11 +28,14 @@ import { PieceWorker, type IPieceWorker } from "../activepieces/worker/host.js";
 import type { ReactorTap } from "../activepieces/worker/reactor-rpc.js";
 import { DEFAULT_EGRESS_POLICY } from "../activepieces/worker/egress.js";
 import {
+  FILES_UPLOAD,
   LOG_WRITE,
   OUTPUT_UPDATE,
   STORE_DELETE,
   STORE_GET,
   STORE_PUT,
+  WAITPOINT_CREATE,
+  type WaitpointCall,
   type EgressPolicy,
   type HostCallHandlers,
   type HostNotifyHandlers,
@@ -51,9 +54,20 @@ import type {
   EngineConnectionResolver,
   ResolvedConnection,
 } from "./connections.js";
-import type { BlockExecution, BlockExecutor, BlockResult } from "./types.js";
+import type {
+  BlockExecution,
+  BlockExecutor,
+  BlockResult,
+  WaitpointPort,
+  WaitpointRequest,
+} from "./types.js";
 import type { WorkflowTelemetry } from "../../telemetry.js";
-import { builtinPiece, isBuiltinPiece, runBuiltinAction } from "../builtin.js";
+import {
+  builtinPiece,
+  isBuiltinPiece,
+  runBuiltinAction,
+  type BuiltinRunOptions,
+} from "../builtin.js";
 import {
   blockLabel,
   missingError,
@@ -215,7 +229,47 @@ export interface ActivepiecesBlockExecutorOptions {
   identity?: () => Omit<ActionContextIdentity, "stepName"> | undefined;
   // Whether this step runs as a single-step test, asked per step likewise.
   stepTest?: () => boolean;
+  // The run's waitpoints, asked per step; absent, a step cannot suspend.
+  waitpoints?: () => WaitpointPort | undefined;
   telemetry?: WorkflowTelemetry;
+}
+
+function waitpointHandlers(
+  port: WaitpointPort,
+  execution: BlockExecution,
+  parsed: ParsedBlockType,
+  created: Set<string>,
+): HostCallHandlers {
+  return {
+    [WAITPOINT_CREATE]: async (payload) => {
+      // Only what Activepieces' createWaitpoint takes: approvals are core's.
+      const call = payload as WaitpointCall;
+      const waitpoint = await port.create({
+        ...waitpointRequest(execution, parsed),
+        type: call.type,
+        ...(call.resumeDateTime !== undefined
+          ? { resumeDateTime: call.resumeDateTime }
+          : {}),
+        ...(call.responseToSend !== undefined
+          ? { responseToSend: call.responseToSend }
+          : {}),
+      });
+      created.add(waitpoint.id);
+      return waitpoint;
+    },
+  };
+}
+
+function waitpointRequest(
+  execution: BlockExecution,
+  parsed: ParsedBlockType,
+): Omit<WaitpointRequest, "type"> {
+  return {
+    stepId: execution.step.id,
+    stepKey: execution.step.key,
+    pieceName: parsed.packageName,
+    blockName: parsed.name,
+  };
 }
 
 export interface StepReactorRequest {
@@ -355,12 +409,38 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
             builtin,
             parsed.name,
             execution.config as Record<string, unknown>,
+            this.builtinOptions(execution, parsed),
           )
         : await this.run(execution, parsed);
       return { ...result, resolution };
     } catch (error) {
       throw withResolution(error, resolution);
     }
+  }
+
+  private builtinOptions(
+    execution: BlockExecution,
+    parsed: ParsedBlockType,
+  ): BuiltinRunOptions {
+    const stepTest = this.options.stepTest?.() ?? false;
+    const port = stepTest ? undefined : this.options.waitpoints?.();
+    return {
+      ...(port
+        ? {
+            waitpoints: {
+              create: (call) =>
+                port.create({
+                  ...waitpointRequest(execution, parsed),
+                  ...call,
+                }),
+              ...(port.resumeBaseUrl
+                ? { resumeBaseUrl: port.resumeBaseUrl }
+                : {}),
+            },
+          }
+        : {}),
+      ...(execution.resume ? { resume: execution.resume } : {}),
+    };
   }
 
   private async run(
@@ -396,8 +476,10 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
       const auth = connection?.auth;
       redactValues = [...runSecrets, ...(connection?.secretValues ?? [])];
 
-      const timeoutMs = execution.step.timeoutSeconds
-        ? execution.step.timeoutSeconds * 1000
+      const timeoutSeconds =
+        execution.step.timeoutSeconds || execution.defaultTimeoutSeconds;
+      const timeoutMs = timeoutSeconds
+        ? timeoutSeconds * 1000
         : this.options.defaultTimeoutMs;
       // Staging and ingest count against the step's timeout, not only the
       // piece's own run.
@@ -417,6 +499,21 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
         this.options.egress === undefined
           ? DEFAULT_EGRESS_POLICY
           : this.options.egress;
+      const uploads = this.uploadHandlers(stagingDir, signal);
+      const stepTest = this.options.stepTest?.() ?? false;
+      const waitpoints = stepTest ? undefined : this.options.waitpoints?.();
+      // The waitpoints this execution created: the only ones it may wait on.
+      const created = new Set<string>();
+      const hostCalls =
+        pieceStore || uploads || waitpoints
+          ? {
+              ...(pieceStore ? storeHandlers(pieceStore) : {}),
+              ...uploads,
+              ...(waitpoints
+                ? waitpointHandlers(waitpoints, execution, parsed, created)
+                : {}),
+            }
+          : undefined;
       const reactorTap = await this.options.reactorAccess?.({
         block: parsed,
         reactorConnectionId: execution.reactorConnectionId,
@@ -432,8 +529,19 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
             stepName: execution.step.key,
           },
           ...(redactValues.length > 0 ? { redactValues } : {}),
-          ...(this.options.stepTest?.() ? { stepTest: true } : {}),
+          ...(stepTest ? { stepTest: true } : {}),
+          ...(waitpoints ? { canPause: true } : {}),
+          ...(waitpoints?.resumeBaseUrl
+            ? { resumeBaseUrl: waitpoints.resumeBaseUrl }
+            : {}),
+          ...(execution.resume
+            ? {
+                executionType: "RESUME" as const,
+                resumePayload: execution.resume.payload,
+              }
+            : {}),
           ...(stagingDir ? { stagingDir } : {}),
+          ...(uploads ? { uploadFiles: true } : {}),
           ...(stagedInputs ? { stagedInputs } : {}),
           ...(pieceStore ? { durableStore: true } : {}),
           ...(this.options.onPieceLog ? { captureLogs: true } : {}),
@@ -445,20 +553,45 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
           // Never shorter than the step's own timeout: a step given two
           // minutes must not have its host calls cut off after ten seconds.
           hostCallTimeoutMs: hostCallTimeoutForStep(timeoutMs),
-          ...(pieceStore ? { hostCalls: storeHandlers(pieceStore) } : {}),
+          ...(hostCalls ? { hostCalls } : {}),
           ...(notifications ? { notifications } : {}),
           ...(reactorTap ? { reactor: reactorTap } : {}),
         },
       );
-      return {
-        output: await this.ingestFiles(
-          result.output,
-          result.files,
-          stagingDir,
-          signal,
-        ),
-        redactValues,
+      const output = await this.ingestFiles(
+        result.output,
+        result.files,
+        stagingDir,
+        signal,
+      );
+      const answer = {
+        ...(result.response ? { response: result.response } : {}),
+        ...(result.stopped ? { stopped: true } : {}),
       };
+      if (!result.paused) return { output, redactValues, ...answer };
+      if (!waitpoints)
+        throw new Error("The step paused a run that cannot pause");
+      if (
+        "waitpointId" in result.paused &&
+        !created.has(result.paused.waitpointId)
+      ) {
+        throw new Error(
+          `waitForWaitpoint: the step waited on waitpoint "${result.paused.waitpointId}", ` +
+            "which it did not create; a step can only wait on a waitpoint its own createWaitpoint returned",
+        );
+      }
+      // run.pause names no waitpoint, so the host creates it now.
+      const waitpointId =
+        "waitpointId" in result.paused
+          ? result.paused.waitpointId
+          : (
+              await waitpoints.create({
+                ...waitpointRequest(execution, parsed),
+                ...result.paused.pause,
+                ...(result.paused.token ? { token: result.paused.token } : {}),
+              })
+            ).id;
+      return { output, redactValues, paused: { waitpointId } };
     } catch (error) {
       // The child already stripped what it threw; this covers what the host
       // itself raises (bundle fetch, connection resolution, file ingest).
@@ -554,6 +687,31 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
       );
     });
     return meta;
+  }
+
+  // `ctx.files.upload`: ingests one staged file mid-step, under the same checks
+  // as the files a step returns.
+  private uploadHandlers(
+    stagingDir: string | undefined,
+    signal: AbortSignal | undefined,
+  ): HostCallHandlers | undefined {
+    const port = this.options.attachments;
+    if (!stagingDir || !port) return undefined;
+    return {
+      [FILES_UPLOAD]: async (payload) => {
+        const file = payload as StagedFile;
+        const size = await this.checkStagedFile(file, stagingDir);
+        return port.write(
+          {
+            path: path.resolve(file.path),
+            fileName: file.fileName,
+            size,
+            contentType: file.contentType,
+          },
+          signal,
+        );
+      },
+    };
   }
 
   // A file the worker reports must be one it wrote into this step's staging
