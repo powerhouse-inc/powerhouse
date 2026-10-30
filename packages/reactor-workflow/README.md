@@ -1085,7 +1085,7 @@ A case this engine is known to fail runs as `it.fails` and names the issue that
 fixes it; never edit those files by hand. To regenerate them:
 
 ```sh
-pnpm --filter @powerhousedao/pieces-framework sync-upstream -- --tag 0.92.3 --from <activepieces checkout>
+pnpm --filter @powerhousedao/pieces-framework sync-upstream -- --tag d078d47750b53c13b837b2bec86b0402b4bff94f --from <activepieces checkout>
 ```
 
 ## Design documents

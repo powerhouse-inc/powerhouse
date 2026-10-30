@@ -55,13 +55,13 @@
   },
   "upstream": {
     "repository": "https://github.com/activepieces/activepieces",
-    "tag": "0.92.3",
-    "commit": "2fc7f8dcaa84400f9db53fb0de7fc4340d055c62",
+    "tag": "d078d47750b53c13b837b2bec86b0402b4bff94f",
+    "commit": "d078d47750b53c13b837b2bec86b0402b4bff94f",
     "packages": {
-      "@activepieces/pieces-framework": "0.40.0",
-      "@activepieces/pieces-common": "0.14.0",
-      "@activepieces/core-piece-types": "0.11.1",
-      "@activepieces/core-utils": "0.8.1",
+      "@activepieces/pieces-framework": "0.42.0",
+      "@activepieces/pieces-common": "0.15.1",
+      "@activepieces/core-piece-types": "0.12.3",
+      "@activepieces/core-utils": "0.11.0",
       "@activepieces/engine": "0.7.0"
     }
   },
