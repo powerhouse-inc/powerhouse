@@ -1,4 +1,8 @@
 import {
+  DEFAULT_CONNECT_STUDIO_PORT,
+  DEFAULT_SWITCHBOARD_PORT,
+} from "@powerhousedao/shared/clis/constants";
+import {
   compoundStartVerb,
   memberVerbOf,
   prepareMember,
@@ -359,7 +363,22 @@ async function checkCompound(
   }
 }
 
-/** Members declaring one port: under `ph run` the later one moves or fails. */
+const SWITCHBOARD_RUNNER = "@powerhousedao/ph-cli/runners/switchboard";
+
+/** The port a member binds: its own literal, else its ph-cli runner's default. */
+function boundPortOf(m: PreparedMember): number | undefined {
+  const port = (m.draft.runner as { port?: unknown }).port;
+  if (port === undefined) {
+    if (m.specifier === CONNECT_RUNNER) return DEFAULT_CONNECT_STUDIO_PORT;
+    if (m.specifier === SWITCHBOARD_RUNNER) return DEFAULT_SWITCHBOARD_PORT;
+    return undefined;
+  }
+  return typeof port === "number" && Number.isInteger(port) && port > 0
+    ? port
+    : undefined;
+}
+
+/** Members binding one port: under `ph run` the later one moves or fails. */
 function sharedPortWarnings(
   file: string,
   prepared: readonly PreparedMember[],
@@ -367,10 +386,8 @@ function sharedPortWarnings(
   const owners = new Map<number, PreparedMember>();
   const warnings: HostIssue[] = [];
   for (const m of prepared) {
-    const port = (m.draft.runner as { port?: unknown }).port;
-    if (typeof port !== "number" || !Number.isInteger(port) || port <= 0) {
-      continue;
-    }
+    const port = boundPortOf(m);
+    if (port === undefined) continue;
     const other = owners.get(port);
     if (!other) {
       owners.set(port, m);

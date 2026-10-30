@@ -403,4 +403,31 @@ describe("checkHost: warnings", () => {
     );
     expect((await check("matrix", "cli-map")).warnings).toEqual([]);
   });
+
+  it("counts a runner's default port when a member names none", async () => {
+    writeHost("matrix", "ui-default", {
+      name: "lab-ui-default",
+      runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+      reactor: { backends: { main: { kind: "worker" } } },
+    });
+    writeHost("matrix", "two-default", {
+      name: "lab-two-default",
+      runner: { module: "@powerhousedao/host-core/runners/compound" },
+      children: {
+        "ui-a": { host: "ui-default" },
+        "ui-b": { host: "ui-default" },
+        "ui-c": { host: "ui-default", runner: { port: 3001 } },
+      },
+    });
+    const result = await check("matrix", "two-default");
+    expect(result.warnings).toEqual([
+      {
+        stage: "declared",
+        file: "hosts/two-default/host.js",
+        path: "children.ui-b.runner.port",
+        message:
+          "ui-a and ui-b both use port 3000. One will move to the next free port and lose its browser data.",
+      },
+    ]);
+  });
 });
