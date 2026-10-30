@@ -110,147 +110,152 @@ const stopped = (server: Server) =>
     server.closeAllConnections();
   });
 
-describe("a switchboard on a person's own computer", () => {
-  let root = "";
-  let previous: [string, string | undefined][] = [];
-  let switchboard: Switchboard | undefined;
-  let person: IRenownCrypto;
-  let visitor: IRenownCrypto;
-  let renown: { server: Server; url: string };
+// A booted server under a full suite's load: the default 5s is for a unit test.
+describe(
+  "a switchboard on a person's own computer",
+  { timeout: 60_000 },
+  () => {
+    let root = "";
+    let previous: [string, string | undefined][] = [];
+    let switchboard: Switchboard | undefined;
+    let person: IRenownCrypto;
+    let visitor: IRenownCrypto;
+    let renown: { server: Server; url: string };
 
-  const config = (renownUrl: string): SwitchboardConfigInput => ({
-    server: { port: 0, host: "127.0.0.1" },
-    storage: {
-      userDataDir: root,
-      readModel: { url: join(root, "read-model") },
-    },
-    features: { workflows: false, mcp: false },
-    packages: { disableLocal: true },
-    auth: {
-      enabled: true,
-      requireAuthenticatedCaller: true,
-      resolveIdentity: true,
-      ownerClaim: true,
-      offlineCredentials: true,
-      renown: { source: "remote", url: renownUrl },
-    },
-  });
-
-  const boot = async (renownUrl: string) => {
-    switchboard = await bootSwitchboard(config(renownUrl), { logger });
-  };
-
-  const stop = async () => {
-    await switchboard?.shutdown();
-    switchboard = undefined;
-  };
-
-  const ask = async (
-    key?: IRenownCrypto,
-    address?: string,
-  ): Promise<number> => {
-    const bearer = key ? await key.getBearerToken(address) : undefined;
-    const response = await fetch(
-      `http://127.0.0.1:${String(switchboard!.port)}/graphql`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
-        },
-        body: JSON.stringify({ query: "{ __typename }" }),
+    const config = (renownUrl: string): SwitchboardConfigInput => ({
+      server: { port: 0, host: "127.0.0.1" },
+      storage: {
+        userDataDir: root,
+        readModel: { url: join(root, "read-model") },
       },
-    );
-    return response.status;
-  };
+      features: { workflows: false, mcp: false },
+      packages: { disableLocal: true },
+      auth: {
+        enabled: true,
+        requireAuthenticatedCaller: true,
+        resolveIdentity: true,
+        ownerClaim: true,
+        offlineCredentials: true,
+        renown: { source: "remote", url: renownUrl },
+      },
+    });
 
-  const isAdmin = (address: string): boolean =>
-    (
-      switchboard as unknown as { api: { graphqlManager: GraphQLManager } }
-    ).api.graphqlManager
-      .getAuthorizationService()
-      .isSupremeAdmin(address);
+    const boot = async (renownUrl: string) => {
+      switchboard = await bootSwitchboard(config(renownUrl), { logger });
+    };
 
-  beforeAll(async () => {
-    root = await mkdtemp(join(tmpdir(), "switchboard-desktop-auth-"));
-    previous = ENV_KEYS.map((key) => [key, process.env[key]]);
-    for (const key of ENV_KEYS) delete process.env[key];
-    process.env.PH_REACTOR_DATABASE_URL = join(root, "reactor-storage");
+    const stop = async () => {
+      await switchboard?.shutdown();
+      switchboard = undefined;
+    };
 
-    person = await newKey();
-    visitor = await newKey();
-    renown = await fakeRenown(
-      new Map([
-        // Past its date: it is the proof that counts while Renown is away.
-        [person.did, await credentialFor(PERSON, person.did, -1)],
-        [visitor.did, await credentialFor(VISITOR, visitor.did)],
-      ]),
-    );
-    await boot(renown.url);
-  }, 120_000);
+    const ask = async (
+      key?: IRenownCrypto,
+      address?: string,
+    ): Promise<number> => {
+      const bearer = key ? await key.getBearerToken(address) : undefined;
+      const response = await fetch(
+        `http://127.0.0.1:${String(switchboard!.port)}/graphql`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
+          },
+          body: JSON.stringify({ query: "{ __typename }" }),
+        },
+      );
+      return response.status;
+    };
 
-  afterAll(async () => {
-    await stop();
-    await stopped(renown.server);
-    for (const [key, value] of previous) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
-    await rm(root, { recursive: true, force: true });
-  }, 60_000);
+    const isAdmin = (address: string): boolean =>
+      (
+        switchboard as unknown as { api: { graphqlManager: GraphQLManager } }
+      ).api.graphqlManager
+        .getAuthorizationService()
+        .isSupremeAdmin(address);
 
-  it("has its own key on first run, apart from the person's", () => {
-    expect(existsSync(join(root, ".ph", ".keypair.json"))).toBe(true);
-    const hostKey = switchboard!.renown?.did;
-    expect(hostKey).toMatch(/^did:key:/);
-    expect(hostKey).not.toBe(person.did);
-  });
+    beforeAll(async () => {
+      root = await mkdtemp(join(tmpdir(), "switchboard-desktop-auth-"));
+      previous = ENV_KEYS.map((key) => [key, process.env[key]]);
+      for (const key of ENV_KEYS) delete process.env[key];
+      process.env.PH_REACTOR_DATABASE_URL = join(root, "reactor-storage");
 
-  it("refuses anyone not signed in", async () => {
-    expect(await ask()).toBe(401);
-  });
+      person = await newKey();
+      visitor = await newKey();
+      renown = await fakeRenown(
+        new Map([
+          // Past its date: it is the proof that counts while Renown is away.
+          [person.did, await credentialFor(PERSON, person.did, -1)],
+          [visitor.did, await credentialFor(VISITOR, visitor.did)],
+        ]),
+      );
+      await boot(renown.url);
+    }, 120_000);
 
-  it("makes the first person to sign in its owner, with no env file", async () => {
-    expect(isAdmin(PERSON.address)).toBe(false);
-    expect(await ask(person, PERSON.address)).toBe(200);
-    expect(isAdmin(PERSON.address)).toBe(true);
-    const owner = JSON.parse(
-      await readFile(join(root, ".ph", ".owner.json"), "utf8"),
-    ) as { owner: string };
-    expect(owner.owner).toBe(PERSON.address.toLowerCase());
-  });
+    afterAll(async () => {
+      await stop();
+      await stopped(renown.server);
+      for (const [key, value] of previous) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+      await rm(root, { recursive: true, force: true });
+    }, 60_000);
 
-  it("gives a second person no ownership", async () => {
-    expect(await ask(visitor, VISITOR.address)).toBe(200);
-    expect(isAdmin(VISITOR.address)).toBe(false);
-  });
+    it("has its own key on first run, apart from the person's", () => {
+      expect(existsSync(join(root, ".ph", ".keypair.json"))).toBe(true);
+      const hostKey = switchboard!.renown?.did;
+      expect(hostKey).toMatch(/^did:key:/);
+      expect(hostKey).not.toBe(person.did);
+    });
 
-  it("answers on loopback only", async () => {
-    const lan = Object.values(networkInterfaces())
-      .flat()
-      .find((entry) => entry?.family === "IPv4" && !entry.internal);
-    if (!lan) return;
-    await expect(
-      fetch(`http://${lan.address}:${String(switchboard!.port)}/graphql`, {
-        signal: AbortSignal.timeout(3_000),
-      }),
-    ).rejects.toThrow();
-  });
+    it("refuses anyone not signed in", async () => {
+      expect(await ask()).toBe(401);
+    });
 
-  it("boots and verifies its owner with Renown unreachable", async () => {
-    expect(existsSync(join(root, ".ph", ".credentials.json"))).toBe(true);
-    await stop();
-    await stopped(renown.server);
+    it("makes the first person to sign in its owner, with no env file", async () => {
+      expect(isAdmin(PERSON.address)).toBe(false);
+      expect(await ask(person, PERSON.address)).toBe(200);
+      expect(isAdmin(PERSON.address)).toBe(true);
+      const owner = JSON.parse(
+        await readFile(join(root, ".ph", ".owner.json"), "utf8"),
+      ) as { owner: string };
+      expect(owner.owner).toBe(PERSON.address.toLowerCase());
+    });
 
-    await boot(renown.url);
+    it("gives a second person no ownership", async () => {
+      expect(await ask(visitor, VISITOR.address)).toBe(200);
+      expect(isAdmin(VISITOR.address)).toBe(false);
+    });
 
-    expect(await ask(person, PERSON.address)).toBe(200);
-    expect(isAdmin(PERSON.address)).toBe(true);
-  }, 120_000);
+    it("answers on loopback only", async () => {
+      const lan = Object.values(networkInterfaces())
+        .flat()
+        .find((entry) => entry?.family === "IPv4" && !entry.internal);
+      if (!lan) return;
+      await expect(
+        fetch(`http://${lan.address}:${String(switchboard!.port)}/graphql`, {
+          signal: AbortSignal.timeout(3_000),
+        }),
+      ).rejects.toThrow();
+    });
 
-  it("verifies nobody it has not seen while Renown is unreachable", async () => {
-    const stranger = await newKey();
-    expect(await ask(stranger, VISITOR.address)).toBe(401);
-    expect(await ask()).toBe(401);
-  });
-});
+    it("boots and verifies its owner with Renown unreachable", async () => {
+      expect(existsSync(join(root, ".ph", ".credentials.json"))).toBe(true);
+      await stop();
+      await stopped(renown.server);
+
+      await boot(renown.url);
+
+      expect(await ask(person, PERSON.address)).toBe(200);
+      expect(isAdmin(PERSON.address)).toBe(true);
+    }, 120_000);
+
+    it("verifies nobody it has not seen while Renown is unreachable", async () => {
+      const stranger = await newKey();
+      expect(await ask(stranger, VISITOR.address)).toBe(401);
+      expect(await ask()).toBe(401);
+    });
+  },
+);
