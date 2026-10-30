@@ -8,6 +8,7 @@ import {
   STEP_WIDTH,
   VSPACE,
 } from "./ap-layout.js";
+import { graphLayout } from "../../workflow-studio/components/graph-layout.js";
 import { BRANCH_BLOCK, sameBlock, type BlockRef } from "./blocks.js";
 import type { StepModel, WorkflowModel } from "./model.js";
 
@@ -207,6 +208,58 @@ describe("layoutWorkflow branch placeholders", () => {
     expect(button.position.y).toBeLessThan(
       step.position.y + STEP_HEIGHT + VSPACE,
     );
+  });
+});
+
+describe("layoutWorkflow merging branches", () => {
+  // br: true → a → c, false → c; c joins both branches.
+  const merged = (): WorkflowModel => {
+    const wf = branchWith([]);
+    return {
+      ...wf,
+      steps: [...wf.steps, step("c")],
+      edges: [
+        ...wf.edges,
+        { id: "t1", from: "br", to: "a", port: "true", condition: null },
+        { id: "f1", from: "br", to: "c", port: "false", condition: null },
+        { id: "n1", from: "a", to: "c", port: "next", condition: null },
+      ],
+    };
+  };
+  const centre = (node: { position: { x: number } }) =>
+    node.position.x + STEP_WIDTH / 2;
+
+  it("places a join a row below its deepest source, under the path it continues", () => {
+    const { nodes } = layoutWorkflow(merged(), portsOf);
+    const at = (id: string) => nodes.find((n) => n.id === id)!;
+    expect(at("c").position.y).toBe(at("a").position.y + STEP_HEIGHT + VSPACE);
+    expect(centre(at("a"))).toBeLessThan(centre(at("br")));
+    expect(centre(at("c"))).toBe(centre(at("a")));
+  });
+
+  it("agrees with the overview track on which edge a join continues", () => {
+    const wf = merged();
+    const track = graphLayout({
+      triggerId: wf.trigger!.id,
+      steps: wf.steps,
+      edges: wf.edges,
+    });
+    expect(track.nodes.find((n) => n.step.id === "c")?.via).toMatchObject({
+      from: "a",
+    });
+  });
+
+  it("runs each edge down its own column, clear of the other branch", () => {
+    const { nodes, edges } = layoutWorkflow(merged(), portsOf);
+    const at = (id: string) => nodes.find((n) => n.id === id)!;
+    const lane = (id: string) =>
+      (edges.find((e) => e.id === id)!.data as { lane: number }).lane;
+    expect(lane("n1")).toBe(centre(at("a")));
+    expect(lane("n1")).toBe(centre(at("c")));
+    expect(lane("f1")).toBeGreaterThan(centre(at("br")));
+    // The false lane passes beside a's and c's cards, not through them.
+    expect(Math.abs(lane("f1") - centre(at("a")))).toBeGreaterThan(STEP_WIDTH);
+    expect(Math.abs(lane("f1") - centre(at("c")))).toBeGreaterThan(STEP_WIDTH);
   });
 });
 

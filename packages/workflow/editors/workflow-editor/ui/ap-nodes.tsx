@@ -14,7 +14,7 @@ import {
   STEP_HEIGHT,
   STEP_WIDTH,
 } from "./ap-layout.js";
-import { useBlockMeta } from "./block-meta.js";
+import { stepSubtitle, useBlockMeta } from "./block-meta.js";
 import { BlockLogo, BlockSelector } from "./BlockSelector.js";
 import { PickerPopover } from "./PickerPopover.js";
 import {
@@ -263,11 +263,7 @@ export function ApStepNode(props: NodeProps) {
             <Badge badge={badge} version={version} />
           </div>
           <div className="truncate text-xs text-muted-foreground/80">
-            {data.kind === "trigger"
-              ? meta.subtitle === "Trigger"
-                ? "Trigger"
-                : meta.subtitle
-              : meta.subtitle}
+            {data.kind === "trigger" ? meta.subtitle : stepSubtitle(meta)}
           </div>
         </div>
       </div>
@@ -550,10 +546,22 @@ export function ApBigButtonNode(_props: NodeProps) {
   );
 }
 
+// Behind a loop's body, so the steps it repeats read as one block.
+export function ApLoopFrameNode(props: NodeProps) {
+  const data = props.data as { width: number; height: number };
+  return (
+    <div
+      style={{ width: data.width, height: data.height }}
+      className="pointer-events-none rounded-lg border border-dashed border-violet-500/30 bg-violet-500/[0.03]"
+    />
+  );
+}
+
 export { AddButton };
 
 export const apNodeTypes = {
   apStep: ApStepNode,
   apAppend: ApAppendNode,
   apBigButton: ApBigButtonNode,
+  apLoopFrame: ApLoopFrameNode,
 };
