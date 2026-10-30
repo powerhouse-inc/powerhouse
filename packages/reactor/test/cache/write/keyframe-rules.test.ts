@@ -99,6 +99,24 @@ describe("keyframe intervals per document type", () => {
     expect(writtenRevisions(keyframeStore)).toEqual([3, 6]);
   });
 
+  it("mints no keyframe from a historical snapshot", () => {
+    const cache = cacheWith(10);
+    const document = documentOfType("a/b");
+
+    cache.putState(
+      "doc-1",
+      "global",
+      "main",
+      10,
+      document,
+      SnapshotPosition.Historical,
+    );
+
+    expect(keyframeStore.putKeyframe).not.toHaveBeenCalled();
+    expect(keyframeStore.putKeyframeAndPrune).not.toHaveBeenCalled();
+    expect(cache.getStream("doc-1", "global", "main")).toBeDefined();
+  });
+
   it("prunes on write only for a type with a keep", () => {
     const cache = cacheWith(10, { types: { "a/kept": { keep: 3 } } });
 

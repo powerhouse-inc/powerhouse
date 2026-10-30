@@ -438,7 +438,8 @@ export class KyselyWriteCache implements IWriteCache {
    * operation index for each scope.
    *
    * Updates LRU tracker and may evict least recently used stream if at capacity.
-   * Asynchronously persists keyframes at configured intervals (fire-and-forget).
+   * A head snapshot is also persisted as a keyframe when its revision falls on
+   * the document type's interval (fire-and-forget); a historical one never is.
    *
    * @param documentId - The document identifier
    * @param scope - The operation scope
@@ -544,7 +545,10 @@ export class KyselyWriteCache implements IWriteCache {
 
     stream.ringBuffer.push(snapshot);
 
-    this.persistKeyframe(documentId, scope, branch, revision, document);
+    // A historical read would bring back what pruning removed.
+    if (position === SnapshotPosition.Head) {
+      this.persistKeyframe(documentId, scope, branch, revision, document);
+    }
   }
 
   /** Persists the snapshot if this revision is one its type's interval falls on. */
