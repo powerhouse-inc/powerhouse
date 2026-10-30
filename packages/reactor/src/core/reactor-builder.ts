@@ -39,6 +39,10 @@ import {
 } from "../catch-up/types.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
+import {
+  DEFAULT_KEYFRAME_RULE,
+  type KeyframeSettings,
+} from "../storage/keyframes/keyframe-settings.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import { EventBus } from "../events/event-bus.js";
 import { resolveFeatureFlags } from "./feature-flags.js";
@@ -398,6 +402,7 @@ export class ReactorBuilder {
   private executorManager: IJobExecutorManager | undefined;
   private executorConfig: JobExecutorConfig = {};
   private writeCacheConfig?: Partial<WriteCacheConfig>;
+  private keyframeSettings?: KeyframeSettings;
   private migrationStrategy: MigrationStrategy = "auto";
   private unsupportedStoredDocuments: UnsupportedStoredDocuments = "refuse";
   private syncBuilder?: SyncBuilder;
@@ -524,6 +529,15 @@ export class ReactorBuilder {
 
   withWriteCacheConfig(config: Partial<WriteCacheConfig>): this {
     this.writeCacheConfig = config;
+    return this;
+  }
+
+  /**
+   * Interval and keep per document type, plus a default. Workers get the same
+   * settings. Without this call: a keyframe every 10 revisions, all kept.
+   */
+  withKeyframes(settings: KeyframeSettings): this {
+    this.keyframeSettings = settings;
     return this;
   }
 
@@ -1039,7 +1053,10 @@ export class ReactorBuilder {
     const cacheConfig: WriteCacheConfig = {
       maxDocuments: this.writeCacheConfig?.maxDocuments ?? 100,
       ringBufferSize: this.writeCacheConfig?.ringBufferSize ?? 10,
-      keyframeInterval: this.writeCacheConfig?.keyframeInterval ?? 10,
+      keyframeInterval:
+        this.writeCacheConfig?.keyframeInterval ??
+        DEFAULT_KEYFRAME_RULE.interval,
+      keyframes: this.resolveKeyframeSettings(),
     };
 
     const writeCache = new KyselyWriteCache(
@@ -1711,6 +1728,7 @@ export class ReactorBuilder {
       postReadyKinds: config.postReadyKinds,
       indexing,
       catchUp: this.catchUpConfig,
+      keyframes: this.resolveKeyframeSettings(),
       factory,
       logger: this.logger!,
       hostBus: eventBus,
@@ -1791,11 +1809,21 @@ export class ReactorBuilder {
           executorConfig: this.executorConfig,
           signer: this.workerSigner,
           trustPolicy: this.workerTrustPolicy,
+          keyframes: this.resolveKeyframeSettings(),
         },
         logger,
         poolInstrumentation,
       });
     };
+  }
+
+  /** One answer for every writer: the main thread and all its workers. */
+  private resolveKeyframeSettings(): KeyframeSettings {
+    const settings = this.keyframeSettings ?? {};
+    const interval = this.writeCacheConfig?.keyframeInterval;
+    return interval === undefined
+      ? settings
+      : { ...settings, default: { interval, ...settings.default } };
   }
 
   /**

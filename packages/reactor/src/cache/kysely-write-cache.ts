@@ -25,6 +25,11 @@ import {
   DocumentPurgedError,
 } from "../shared/errors.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
+import {
+  resolveKeyframeRule,
+  type KeyframeRule,
+  type KeyframeSettings,
+} from "../storage/keyframes/keyframe-settings.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
 import { LRUTracker } from "./lru/lru-tracker.js";
 import type { CachedSnapshot, WriteCacheConfig } from "./write-cache-types.js";
@@ -176,6 +181,7 @@ export class KyselyWriteCache implements IWriteCache {
   private operationStore: IOperationStore;
   private registry: IDocumentModelRegistry;
   private config: Required<WriteCacheConfig>;
+  private keyframeSettings: KeyframeSettings;
   private reads = new Map<string, Set<PendingRead>>();
   private fullReplays = new Map<string, FullReplayMark[]>();
 
@@ -192,6 +198,14 @@ export class KyselyWriteCache implements IWriteCache {
       maxDocuments: config.maxDocuments,
       ringBufferSize: config.ringBufferSize,
       keyframeInterval: config.keyframeInterval,
+      keyframes: config.keyframes ?? {},
+    };
+    this.keyframeSettings = {
+      ...this.config.keyframes,
+      default: {
+        interval: config.keyframeInterval,
+        ...this.config.keyframes.default,
+      },
     };
     this.streams = new Map();
     this.lruTracker = new LRUTracker<string>();
@@ -533,7 +547,7 @@ export class KyselyWriteCache implements IWriteCache {
     this.persistKeyframe(documentId, scope, branch, revision, document);
   }
 
-  /** Persists the snapshot if this revision is one the interval falls on. */
+  /** Persists the snapshot if this revision is one its type's interval falls on. */
   private persistKeyframe(
     documentId: string,
     scope: string,
@@ -541,7 +555,8 @@ export class KyselyWriteCache implements IWriteCache {
     revision: number,
     document: PHDocument,
   ): void {
-    if (!this.isKeyframeRevision(revision)) {
+    const rule = this.keyframeRule(document);
+    if (!this.isKeyframeRevision(revision, rule)) {
       return;
     }
 
@@ -1583,7 +1598,14 @@ export class KyselyWriteCache implements IWriteCache {
     return stream;
   }
 
-  private isKeyframeRevision(revision: number): boolean {
-    return revision > 0 && revision % this.config.keyframeInterval === 0;
+  private keyframeRule(document: PHDocument): KeyframeRule {
+    return resolveKeyframeRule(
+      this.keyframeSettings,
+      document.header.documentType,
+    );
+  }
+
+  private isKeyframeRevision(revision: number, rule: KeyframeRule): boolean {
+    return revision > 0 && revision % rule.interval === 0;
   }
 }
