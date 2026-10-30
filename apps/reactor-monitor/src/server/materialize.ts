@@ -56,7 +56,7 @@ export function copyConnectPorts(envelope: HostExport): CopyConnectPort[] {
     const overflow = copyPortOverflow(member);
     if (overflow) throw new MaterializeError(overflow);
   }
-  const [clash] = copyPortClashes(members);
+  const clash = copyPortClashes(members).at(0);
   if (clash) throw new MaterializeError(clash.message);
   return members.flatMap((member) => {
     const port = copyPortOf(member);
