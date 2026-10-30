@@ -33,6 +33,7 @@ import { DocumentMetaCache } from "../../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../../cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../cache/write-cache-types.js";
+import { DEFAULT_KEYFRAME_RULE } from "../../storage/keyframes/keyframe-settings.js";
 import type { Database } from "../../core/types.js";
 import { EventBus } from "../../events/event-bus.js";
 import {
@@ -258,7 +259,8 @@ export async function buildProjectionStack(
   const cacheConfig: WriteCacheConfig = {
     maxDocuments: 100,
     ringBufferSize: 10,
-    keyframeInterval: 10,
+    keyframeInterval: DEFAULT_KEYFRAME_RULE.interval,
+    keyframes: init.keyframes,
   };
   const writeCache = new KyselyWriteCache(
     keyframeStore,

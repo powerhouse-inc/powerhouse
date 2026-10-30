@@ -1,5 +1,6 @@
 // The reactor RPC on a piece child's IPC channel, bound to one request. It owns
 // only `reactor-rpc` envelopes carrying that request's id.
+import { AsyncResource } from "node:async_hooks";
 import {
   REACTOR_RPC,
   type ReactorRpcEnvelope,
@@ -54,11 +55,12 @@ export function createIpcTransport(
       worker.send({ type: REACTOR_RPC, requestId, message });
     },
     onMessage(listener: (message: never) => void) {
-      const handler = (value: unknown) => {
+      // In the subscriber's async context, not the one that forked the child.
+      const handler = AsyncResource.bind((value: unknown) => {
         if (closed || !isReactorRpcEnvelope(value, requestId)) return;
         if (!isRpcMessage(value.message)) return;
         listener(value.message as never);
-      };
+      });
       worker.on("message", handler);
       const detach = () => {
         worker.off("message", handler);

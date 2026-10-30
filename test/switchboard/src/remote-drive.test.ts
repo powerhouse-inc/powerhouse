@@ -282,7 +282,8 @@ describe("Remote drive sync via CONNECT channel", () => {
 
   it("adds operations via MCP and verifies sync to local reactor", async () => {
     const MCP_URL =
-      process.env.SWITCHBOARD_MCP_URL ?? "http://localhost:4001/mcp";
+      process.env.SWITCHBOARD_MCP_URL ??
+      SWITCHBOARD_URL.replace(/\/graphql\/?$/, "/mcp");
 
     // 1. Connect MCP client
     const transport = new StreamableHTTPClientTransport(new URL(MCP_URL));

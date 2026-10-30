@@ -25,8 +25,41 @@ export {
   getAppDrives,
   planReactorClient,
   refreshAppDrives,
+  relistAppDrives,
   selectAppReactorClient,
 } from "./app-reactor-client.js";
+export {
+  applyPlacementEntries,
+  keepsLocalCopy,
+  LOCAL_BACKEND_NAME,
+  placementKeys,
+  removeLocalCopies,
+  resolveSwitchboardDrives,
+  servedUrl,
+  servesSlug,
+  switchboardDrives,
+} from "./drive-placement.js";
+export type {
+  PlacementEntry,
+  ResolvedSwitchboardDrive,
+  ResolveSwitchboardDrivesOptions,
+  SwitchboardDrive,
+} from "./drive-placement.js";
+export {
+  caughtUp,
+  DrivePlacements,
+  effectiveBackend,
+  findServedDrive,
+  needsCopy,
+} from "./drive-placements.js";
+export type {
+  DrivePlacement,
+  PlacementRouter,
+  PlacementStore,
+  PlacementSync,
+} from "./drive-placements.js";
+export { useBackendAuthGate } from "./backend-auth-gate.js";
+export type { BackendAuthGateMode } from "./backend-auth-gate.js";
 export type {
   AppReactorClientParams,
   CreateAppReactorClientOptions,

@@ -27,12 +27,10 @@ export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
       <div
         className={twMerge(
           "relative z-10 m-8 flex flex-wrap justify-center gap-4 pt-12",
-          // the default gradient sits behind an opaque tile band; over a
-          // project background the tiles sit on a translucent panel so their
-          // labels stay readable on any art
-          background
-            ? "rounded-2xl bg-background/75 px-6 pb-6 backdrop-blur-sm"
-            : "bg-background",
+          // tiles sit on the default gradient; over project art they get a
+          // translucent panel so their labels stay readable
+          background &&
+            "rounded-2xl bg-background/75 px-6 pb-6 backdrop-blur-sm",
         )}
       >
         {children}

@@ -30,11 +30,8 @@ type Manifest = {
 };
 
 const created: string[] = [];
-const initialCwd = process.cwd();
 
 afterEach(() => {
-  // buildTsMorphProject chdirs into the project, and Windows can't remove the cwd.
-  process.chdir(initialCwd);
   for (const dir of created.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }

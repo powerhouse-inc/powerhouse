@@ -138,15 +138,16 @@ describe("writeGeneratedHostsFiles", () => {
     );
 
     // P5.8: the agent rides the mastra runner, attached to the running
-    // switchboard by its graphql endpoint output.
+    // switchboard by a drive address output.
     const assistant = readFileSync(
       join(dir, "hosts/assistant/host.js"),
       "utf-8",
     );
     expect(assistant).toContain("@powerhousedao/clint/mastra-runner");
     expect(assistant).toContain(
-      '$output: { host: "switchboard", path: ["endpoints", "graphql"] }',
+      '$output: { host: "switchboard", path: ["drives", "powerhouse", "url"] }',
     );
+    expect(assistant).not.toContain('path: ["endpoints", "graphql"]');
     expect(assistant).not.toContain("remote: { host");
     expect(assistant).not.toContain("workdir");
     expect(assistant).toContain('apiKey: { $env: "OPENROUTER_API_KEY" }');
@@ -172,8 +173,9 @@ describe("writeGeneratedHostsFiles", () => {
     );
     expect(cli).toContain(`kind: "remote"`);
     expect(cli).toContain(
-      '$output: { host: "switchboard", path: ["endpoints", "graphql"] }',
+      '$output: { host: "switchboard", path: ["drives", "powerhouse", "url"] }',
     );
+    expect(cli).not.toContain('path: ["endpoints", "graphql"]');
     expect(cli).not.toContain("127.0.0.1");
     expect(cli).not.toContain("@powerhousedao/clint/clint-runner");
   });
@@ -554,7 +556,7 @@ export default {
       reactor: {
         protocol: connect.reactor.protocol,
         backends: {
-          sb: { kind: "remote", remote: { url: switchboard.endpoints.graphql } },
+          sb: { kind: "remote", remote: { url: switchboard.drives.powerhouse.url } },
         },
         drives: {
           $map: {

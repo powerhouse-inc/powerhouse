@@ -5,6 +5,7 @@ import {
   secretsFor,
 } from "../activepieces/worker/redact.js";
 import { PieceWorkerError } from "../activepieces/worker/host.js";
+import type { RunResponse } from "../activepieces/worker/protocol.js";
 import {
   evaluateCondition,
   unavailableValue,
@@ -14,13 +15,15 @@ import {
 import {
   effectiveRetryPolicy,
   isRetryableError,
+  MAX_RETRY_DELAY_MS,
   retryDelayMs,
   type EffectiveRetryPolicy,
 } from "./retry.js";
-import { resolveStepInput } from "./step-input.js";
+import { resolveResumedCoreInput, resolveStepInput } from "./step-input.js";
 import { checkDynamicProperties } from "./dynamic-props.js";
 import { isIndeterminateError } from "../activepieces/indeterminate.js";
 import {
+  CORE_PIECE_NAME,
   referenceDocuments,
   undeclaredPortEdges,
 } from "@powerhousedao/pieces-framework/workflow";
@@ -30,6 +33,7 @@ import { blockLabel, pieceRecord, resolutionOf } from "./resolution.js";
 import {
   stepBlock,
   triggerBlock,
+  type BlockDefaults,
   type BlockExecutor,
   type StepExecutionRecord,
   type WorkflowDefinition,
@@ -64,6 +68,16 @@ export interface ReplayedStep {
   truncatedOutput?: unknown;
 }
 
+/** A step an earlier leg of a suspended run journaled, as its resume carries it. */
+export interface CarriedStep {
+  status: "SUCCEEDED" | "REPLAYED" | "FAILED" | "SKIPPED";
+  port: string | null;
+  // Read on first use only: a resume parses what the remaining steps reference.
+  output: () => unknown;
+  // A FAILED step whose error port was taken.
+  error?: string;
+}
+
 export interface RunWorkflowOptions {
   definition: WorkflowDefinition;
   executor: BlockExecutor;
@@ -95,6 +109,59 @@ export interface RunWorkflowOptions {
   priorSteps?: ExpressionScope["steps"];
   // A block's declared output ports; an edge on any other is a warning.
   declaredPorts?: (block: BlockRef) => readonly string[] | undefined;
+  // The action's timeout and retry defaults, asked only for a step missing one.
+  blockDefaults?: (block: BlockRef) => Promise<BlockDefaults | undefined>;
+  // A resumed run: its journaled steps, by step id, which are neither run
+  // nor journaled again, and the waiting step with what woke it.
+  carriedSteps?: Map<string, CarriedStep>;
+  resume?: { stepId: string; payload: unknown };
+  // The first ordinal this leg journals at; a resumed run continues its own.
+  firstOrdinal?: number;
+  // A step's `run.respond` / `run.stop` answer, as soon as the step returns.
+  onRespond?: (response: RunResponse) => void;
+}
+
+// Marks a failed defaults lookup; carries no defaults of its own.
+const LOOKUP_FAILED: BlockDefaults = Object.freeze({});
+
+// Fills the delays an action's retry default omits, as the editor's default does.
+const ACTION_RETRY_DELAYS = {
+  backoff: "EXPONENTIAL",
+  initialDelaySeconds: 5,
+  maxDelaySeconds: MAX_RETRY_DELAY_MS / 1000,
+};
+
+function actionRetryPolicy(retry: unknown): EffectiveRetryPolicy | null {
+  if (typeof retry !== "object" || retry === null) return null;
+  const declared: Record<string, unknown> = Object.fromEntries(
+    Object.entries(retry).filter(([, value]) => value !== undefined),
+  );
+  const cap = declared.maxDelaySeconds;
+  const initial =
+    typeof cap === "number" && cap > 0
+      ? Math.min(ACTION_RETRY_DELAYS.initialDelaySeconds, cap)
+      : ACTION_RETRY_DELAYS.initialDelaySeconds;
+  return effectiveRetryPolicy({
+    ...ACTION_RETRY_DELAYS,
+    initialDelaySeconds: initial,
+    ...declared,
+  });
+}
+
+// A scope entry whose output is produced on first read, then kept.
+function lazyEntry(read: () => unknown): { output?: unknown } {
+  let value: unknown;
+  let done = false;
+  return Object.defineProperty({}, "output", {
+    enumerable: true,
+    get: () => {
+      if (!done) {
+        value = read();
+        done = true;
+      }
+      return value;
+    },
+  }) as { output?: unknown };
 }
 
 // Edges no run can take, because their source never emits that port.
@@ -178,7 +245,11 @@ export async function runWorkflow(
   // not fail, it was stopped, and the status says so.
   let runCancelled: string | undefined;
   let runFailedName: string | undefined;
-  let executedCount = 0;
+  // Set when a step suspended the run: nothing further runs in this leg.
+  let runWaiting: { stepId: string; waitpointId: string } | undefined;
+  // Set when a step called `run.stop`: the run ends SUCCEEDED.
+  let runStopped = false;
+  let executedCount = options.firstOrdinal ?? 0;
   const sleep =
     options.sleep ??
     ((ms: number) =>
@@ -186,6 +257,19 @@ export async function runWorkflow(
         // A pending retry wait must not be what keeps the process alive.
         setTimeout(resolve, ms).unref();
       }));
+
+  // A failed lookup leaves the runtime timeout and no action retry: the action
+  // may be unsafe to retry. Executing reports the cause.
+  const blockDefaults = async (
+    step: WorkflowStepDef,
+  ): Promise<BlockDefaults | undefined> => {
+    if (!options.blockDefaults) return undefined;
+    try {
+      return await options.blockDefaults(stepBlock(step));
+    } catch {
+      return LOOKUP_FAILED;
+    }
+  };
 
   // Null while there is time left; the reason once there is not.
   const outOfTime = (): string | undefined => {
@@ -279,7 +363,31 @@ export async function runWorkflow(
     decideOutgoing(step.id, "next");
   };
 
+  // Journaled already, by the leg before the run suspended.
+  const carryStep = (step: WorkflowStepDef, carried: CarriedStep) => {
+    const failed = carried.status === "FAILED";
+    const port = carried.port ?? (failed ? "error" : "next");
+    records.set(step.id, {
+      stepId: step.id,
+      key: step.key,
+      pieceName: step.pieceName,
+      blockName: step.actionName,
+      status: carried.status,
+      port,
+      carried: true,
+    });
+    scope.steps[step.key] = failed
+      ? { error: carried.error ?? "" }
+      : lazyEntry(carried.output);
+    decideOutgoing(step.id, port);
+  };
+
   const executeStep = async (step: WorkflowStepDef) => {
+    const carried = options.carriedSteps?.get(step.id);
+    if (carried) {
+      carryStep(step, carried);
+      return;
+    }
     if (step.skip === true) {
       await passStep(step);
       return;
@@ -327,14 +435,25 @@ export async function runWorkflow(
       return;
     }
 
-    // One resolved policy per step: its own `retry`, else the workflow's. A
-    // step that DECLARES a block overrides, whatever the block resolves to —
-    // `{maxAttempts: 1}` is an author saying "not this one", and inheriting
-    // the workflow default over it would be the opposite of an override.
-    const retry =
-      step.retry === undefined || step.retry === null
-        ? (options.defaultRetry ?? null)
-        : effectiveRetryPolicy(step.retry);
+    // Retry is the step's block, else the workflow's default, else the
+    // action's. A workflow default that retries nothing (the document's
+    // initial `{maxAttempts: 1}`) counts as unset; a step's does not.
+    const ownRetry = step.retry !== undefined && step.retry !== null;
+    const inherited = ownRetry ? null : (options.defaultRetry ?? null);
+    const defaults =
+      (ownRetry || inherited) && step.timeoutSeconds
+        ? undefined
+        : await blockDefaults(step);
+    const retry = ownRetry
+      ? effectiveRetryPolicy(step.retry)
+      : (inherited ??
+        (defaults === LOOKUP_FAILED || defaults?.retry === undefined
+          ? null
+          : actionRetryPolicy(defaults.retry)));
+    const defaultTimeout =
+      !step.timeoutSeconds && defaults?.timeoutSeconds
+        ? { defaultTimeoutSeconds: defaults.timeoutSeconds }
+        : {};
     const maxAttempts = retry?.maxAttempts ?? 1;
     const startedAt = new Date().toISOString();
     let input: unknown;
@@ -346,8 +465,13 @@ export async function runWorkflow(
     // names nothing on attempt five either. Inside the loop it burned the
     // whole retry budget, backoff waits and all, on an error that could not
     // come right, and held the run's worker slot while it did.
+    // A resumed core wait reads only resumePayload, so journal-lost props don't fail it.
+    const resumedCore =
+      options.resume?.stepId === step.id && step.pieceName === CORE_PIECE_NAME;
     try {
-      input = resolveStepInput(step, scope);
+      input = resumedCore
+        ? resolveResumedCoreInput(step, scope)
+        : resolveStepInput(step, scope);
       checkDynamicProperties(input, step.propertySettings);
     } catch (error) {
       await endStep(step, { error, input, startedAt, attempt: 1 });
@@ -364,9 +488,37 @@ export async function runWorkflow(
           reactorConnectionId: step.reactorConnectionId,
           step,
           ...(runSecrets.length > 0 ? { redactValues: runSecrets } : {}),
+          ...defaultTimeout,
+          ...(options.resume?.stepId === step.id
+            ? { resume: { payload: options.resume.payload } }
+            : {}),
         });
         const port = result.port ?? "next";
         const values = [...runSecrets, ...(result.redactValues ?? [])];
+        if (result.response) options.onRespond?.(result.response);
+        if (result.paused) {
+          // No port yet: the step decides its edges when it runs as RESUME.
+          const record: StepExecutionRecord = {
+            stepId: step.id,
+            key: step.key,
+            pieceName: step.pieceName,
+            blockName: step.actionName,
+            status: "WAITING",
+            input: journaled(input, values),
+            output: journaled(referenceDocuments(result.output), values),
+            startedAt,
+            ...withPiece(pieceRecord(result.resolution)),
+            configHash: stepConfigHash(step),
+            ...attempts,
+          };
+          records.set(step.id, record);
+          await journal(record);
+          runWaiting = {
+            stepId: step.id,
+            waitpointId: result.paused.waitpointId,
+          };
+          return;
+        }
         const record: StepExecutionRecord = {
           stepId: step.id,
           key: step.key,
@@ -386,6 +538,10 @@ export async function runWorkflow(
         records.set(step.id, record);
         await journal(record);
         scope.steps[step.key] = { output: result.output };
+        if (result.stopped) {
+          runStopped = true;
+          return;
+        }
         decideOutgoing(step.id, port);
         return;
       } catch (error) {
@@ -535,8 +691,11 @@ export async function runWorkflow(
     return runCancelled !== undefined;
   };
 
+  const stopped = () =>
+    Boolean(runFailed || runCancelled || runWaiting || runStopped);
+
   let progressed = true;
-  while (progressed && !runFailed && !runCancelled) {
+  while (progressed && !stopped()) {
     progressed = false;
     for (const step of definition.steps) {
       if (records.has(step.id)) continue;
@@ -547,7 +706,7 @@ export async function runWorkflow(
         progressed = true;
         // Independent roots are otherwise free to run their side effects
         // before the outer loop notices the run is already over.
-        if (runFailed || runCancelled) break;
+        if (stopped()) break;
         continue;
       }
       if (inbound.length === 0) continue;
@@ -561,8 +720,23 @@ export async function runWorkflow(
         skipStep(step);
       }
       progressed = true;
-      if (runFailed || runCancelled) break;
+      if (stopped()) break;
     }
+  }
+
+  // Suspended: the steps not reached yet are decided when the run resumes.
+  if (runWaiting && !runFailed && !runCancelled) {
+    const warnings = options.declaredPorts
+      ? deadPortWarnings(definition, options.declaredPorts)
+      : [];
+    return {
+      status: "WAITING",
+      steps: definition.steps
+        .filter((step) => records.has(step.id))
+        .map((step) => records.get(step.id)!),
+      waiting: runWaiting,
+      ...(warnings.length > 0 ? { warnings } : {}),
+    };
   }
 
   // Steps never reached (dangling, cyclic, or after a terminal failure).

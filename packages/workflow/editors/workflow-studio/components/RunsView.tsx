@@ -2,6 +2,8 @@
 // The run feed is owned by the studio so the header shares these rows.
 import { useState } from "react";
 import type { RunRecord } from "../../workflow-editor/runtime-client.js";
+import type { ManualInput } from "../../workflow-editor/ui/manual-inputs.js";
+import { RunDialog } from "./RunDialog.js";
 import { RunsTable } from "./RunsTable.js";
 import { Button, Icon } from "./ui.js";
 
@@ -16,11 +18,15 @@ export function RunsView(props: {
   loadingMore?: boolean;
   onLoadMore?: () => void;
   // Present only for manual-trigger workflows.
-  onFire?: () => Promise<string | null>;
+  onFire?: (payload?: unknown) => Promise<string | null>;
+  // The manual trigger's inputs; with any, Run asks for them first.
+  fireInputs?: ManualInput[];
 }) {
   const [firing, setFiring] = useState(false);
   const [fireError, setFireError] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
   const { runs } = props;
+  const inputs = props.fireInputs ?? [];
 
   return (
     <div className="w-full">
@@ -34,6 +40,11 @@ export function RunsView(props: {
             variant="primary"
             disabled={firing}
             onClick={() => {
+              if (inputs.length > 0) {
+                setFireError(null);
+                setAsking(true);
+                return;
+              }
               setFiring(true);
               setFireError(null);
               props.onFire!()
@@ -56,6 +67,15 @@ export function RunsView(props: {
           </Button>
         ) : null}
       </div>
+      {asking && props.onFire && inputs.length > 0 ? (
+        <RunDialog
+          inputs={inputs}
+          onCancel={() => setAsking(false)}
+          onFire={(payload) =>
+            props.onFire!(payload).finally(() => props.reload())
+          }
+        />
+      ) : null}
       {fireError ? (
         <p className="mb-3 rounded-md bg-wf-fail/10 px-3 py-2 text-[13px] text-wf-fail">
           {fireError}

@@ -353,6 +353,173 @@ describe("durable NodeFS maintenance", () => {
     await expect(queued).resolves.toBe("not-ready");
   });
 
+  describe("rewriteTable", () => {
+    const REQUEST = { schema: "public", table: "snap", requiredFreeBytes: 0 };
+
+    it(
+      "rewrites the one table and leaves the rest of the store",
+      async () => {
+        const { pg, durableFs, warn } = await start({
+          maintenanceIntervalMs: 0,
+          rewriteQuietMs: 0,
+        });
+        await createSnapTable(pg);
+        await pg.exec("CREATE TABLE other (v text)");
+        await pg.query("INSERT INTO other VALUES ('kept')");
+        await update(pg, 200);
+        await pg.query("DELETE FROM snap WHERE doc <> 'd0'");
+        const before = await tableBytes(pg);
+
+        const result = await durableFs.maintenance.rewriteTable(REQUEST);
+
+        expect(result).toMatchObject({ outcome: "done" });
+        expect(await tableBytes(pg)).toBeLessThan(before);
+        const { rows } = await pg.query<{ doc: string }>(
+          "SELECT doc FROM snap",
+        );
+        expect(rows).toEqual([{ doc: "d0" }]);
+        const other = await pg.query<{ v: string }>("SELECT v FROM other");
+        expect(other.rows).toEqual([{ v: "kept" }]);
+        expect(warn).toHaveBeenCalledWith(
+          expect.stringContaining('running VACUUM FULL "public"."snap"'),
+        );
+      },
+      LONG,
+    );
+
+    it(
+      "waits for a gap in the writes and reports a store that never has one",
+      async () => {
+        const { pg, durableFs } = await start({
+          maintenanceIntervalMs: 0,
+          rewriteQuietMs: 60_000,
+          rewriteMaxWaitMs: 300,
+        });
+        await pg.exec("CREATE TABLE snap (v int)");
+        const exec = vi.spyOn(pg, "execProtocol");
+
+        await expect(
+          durableFs.maintenance.rewriteTable(REQUEST),
+        ).resolves.toMatchObject({
+          outcome: "busy",
+          reason: expect.stringContaining("Try again") as string,
+        });
+
+        expect(exec).not.toHaveBeenCalled();
+      },
+      LONG,
+    );
+
+    it(
+      "goes ahead once the writes leave a gap",
+      async () => {
+        const { pg, durableFs } = await start({
+          maintenanceIntervalMs: 0,
+          rewriteQuietMs: 400,
+        });
+        await pg.exec("CREATE TABLE snap (v int)");
+
+        await expect(
+          durableFs.maintenance.rewriteTable(REQUEST),
+        ).resolves.toMatchObject({ outcome: "done" });
+      },
+      LONG,
+    );
+
+    it(
+      "waits out an open transaction, then rewrites",
+      async () => {
+        const { pg, durableFs } = await start({
+          maintenanceIntervalMs: 0,
+          rewriteQuietMs: 0,
+        });
+        await pg.exec("CREATE TABLE snap (v int)");
+        await pg.exec("BEGIN");
+        await pg.exec("INSERT INTO snap VALUES (1)");
+
+        const rewriting = durableFs.maintenance.rewriteTable(REQUEST);
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        await pg.exec("COMMIT");
+
+        await expect(rewriting).resolves.toMatchObject({ outcome: "done" });
+        const { rows } = await pg.query("SELECT v FROM snap");
+        expect(rows).toEqual([{ v: 1 }]);
+      },
+      LONG,
+    );
+
+    it(
+      "takes its turn at the gate",
+      async () => {
+        let gated = 0;
+        const { pg, durableFs } = await start({
+          maintenanceIntervalMs: 0,
+          rewriteQuietMs: 0,
+          maintenanceGate: (task) => {
+            gated++;
+            return task();
+          },
+        });
+        await pg.exec("CREATE TABLE snap (v int)");
+
+        await durableFs.maintenance.rewriteTable(REQUEST);
+
+        expect(gated).toBe(1);
+      },
+      LONG,
+    );
+
+    it(
+      "refuses when the disk cannot hold the rewrite",
+      async () => {
+        const { pg, durableFs } = await start({
+          maintenanceIntervalMs: 0,
+          rewriteQuietMs: 0,
+        });
+        await pg.exec("CREATE TABLE snap (v int)");
+
+        const result = await durableFs.maintenance.rewriteTable({
+          ...REQUEST,
+          requiredFreeBytes: Number.MAX_SAFE_INTEGER,
+        });
+
+        expect(result).toMatchObject({
+          outcome: "refused",
+          reason: expect.stringContaining("free disk") as string,
+        });
+      },
+      LONG,
+    );
+
+    it(
+      "reports a table that does not exist and leaves the store usable",
+      async () => {
+        const { pg, durableFs } = await start({
+          maintenanceIntervalMs: 0,
+          rewriteQuietMs: 0,
+        });
+
+        const result = await durableFs.maintenance.rewriteTable(REQUEST);
+
+        expect(result).toMatchObject({ outcome: "refused" });
+        await expect(pg.query("SELECT 1 AS one")).resolves.toMatchObject({
+          rows: [{ one: 1 }],
+        });
+      },
+      LONG,
+    );
+
+    it("refuses on a store that is closing", async () => {
+      const maintenance = new PgliteMaintenance({ intervalMs: 0 });
+      await maintenance.stop();
+
+      await expect(maintenance.rewriteTable(REQUEST)).resolves.toEqual({
+        outcome: "refused",
+        reason: "the store is closing",
+      });
+    });
+  });
+
   it(
     "reports idle when nothing was written since the last pass",
     async () => {

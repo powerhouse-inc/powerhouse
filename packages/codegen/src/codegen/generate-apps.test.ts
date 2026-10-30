@@ -8,11 +8,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
 import { generateAllApps, generateApp } from "./generate.js";
 
-const originalCwd = process.cwd();
 const temporary: string[] = [];
 
 afterEach(() => {
-  process.chdir(originalCwd);
   for (const dir of temporary.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }

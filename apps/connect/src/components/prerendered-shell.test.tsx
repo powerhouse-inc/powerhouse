@@ -88,6 +88,9 @@ describe("prerendered shell", () => {
       routeTree: rootRoute.addChildren([index]),
       history: createMemoryHistory(),
       defaultPendingComponent: ColdStartPending,
+      // Pending view at once, not after TanStack's 1000ms default (= findBy's timeout).
+      defaultPendingMs: 0,
+      defaultPendingMinMs: 0,
     });
     adoptPrerenderedShell(prerenderedRoot());
     render(<RouterProvider router={router} />);

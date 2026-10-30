@@ -11,11 +11,15 @@ import {
   type BlockIdentity,
 } from "@powerhousedao/pieces-framework/block-type";
 import {
+  APPROVAL_BLOCK,
   ASSERT_BLOCK,
   BRANCH_BLOCK,
+  DELAY_BLOCK,
   isCoreBlock,
   MANUAL_TRIGGER,
   SCHEDULE_TRIGGER,
+  STOP_BLOCK,
+  WAIT_FOR_WEBHOOK_BLOCK,
   WEBHOOK_TRIGGER,
 } from "./blocks.js";
 import { useEffect, useSyncExternalStore } from "react";
@@ -54,6 +58,26 @@ const CORE_META: Record<string, BlockMeta> = {
     displayName: "Assert",
     subtitle: "Core",
     glyph: "!",
+  },
+  [blockKey(DELAY_BLOCK)]: {
+    displayName: "Delay",
+    subtitle: "Core",
+    glyph: "⧗",
+  },
+  [blockKey(APPROVAL_BLOCK)]: {
+    displayName: "Request approval",
+    subtitle: "Core",
+    glyph: "✓",
+  },
+  [blockKey(STOP_BLOCK)]: {
+    displayName: "Stop run",
+    subtitle: "Core",
+    glyph: "■",
+  },
+  [blockKey(WAIT_FOR_WEBHOOK_BLOCK)]: {
+    displayName: "Respond and wait for webhook",
+    subtitle: "Core",
+    glyph: "⇄",
   },
 };
 

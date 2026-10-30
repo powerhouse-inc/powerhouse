@@ -1,6 +1,5 @@
 import type { InProcessReactorClientModule } from "@powerhousedao/reactor";
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
-import { createReactorMcpProvider } from "@powerhousedao/reactor-mcp";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { CodegenStatusRegistry } from "@powerhousedao/shared/processors";
 import {
@@ -8,6 +7,11 @@ import {
   documentModelDocumentModelModule,
 } from "document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  codegenStatusTool,
+  createAddActionsTool,
+  toMcpTool,
+} from "../src/index.js";
 import { createP256Signer } from "./utils/p256-signer.js";
 
 const DOCUMENT_MODEL = "powerhouse/document-model";
@@ -33,11 +37,16 @@ describe("getCodegenStatus tool", () => {
     module.reactor.kill();
   });
 
-  const provider = () =>
-    createReactorMcpProvider({ client: module.client, codegenStatus });
+  const mount = () => {
+    const context = { client: module.client };
+    return {
+      getCodegenStatus: toMcpTool(codegenStatusTool(codegenStatus), context),
+      addActions: toMcpTool(createAddActionsTool({ codegenStatus }), context),
+    };
+  };
 
   it("says no codegen runs on a reactor without Vetra", async () => {
-    const { tools } = await provider();
+    const tools = mount();
 
     const result = await tools.getCodegenStatus.callback({});
 
@@ -63,7 +72,7 @@ describe("getCodegenStatus tool", () => {
       "document models",
       "[VitePackageLoader] ReadingListStateSchema is not a function",
     );
-    const { tools } = await provider();
+    const tools = mount();
 
     const result = await tools.getCodegenStatus.callback({
       documentId: "model-1",
@@ -98,7 +107,7 @@ describe("getCodegenStatus tool", () => {
     codegenStatus.watch([DOCUMENT_MODEL]);
     const job = { documentId: "model-1", documentType: DOCUMENT_MODEL };
     codegenStatus.set({ ...job, state: "running" });
-    const { tools } = await provider();
+    const tools = mount();
 
     setTimeout(
       () =>
@@ -129,7 +138,7 @@ describe("getCodegenStatus tool", () => {
       documentType: DOCUMENT_MODEL,
       state: "waiting-for-install",
     });
-    const { tools } = await provider();
+    const tools = mount();
 
     const result = await tools.getCodegenStatus.callback({
       documentId: "model-1",
@@ -145,10 +154,8 @@ describe("getCodegenStatus tool", () => {
   it("queues codegen for a Vetra document and says how to follow it", async () => {
     codegenStatus.watch([DOCUMENT_MODEL]);
     const document = documentModelCreateDocument();
-    await (
-      await module.client.write.create(document)
-    ).readable;
-    const { tools } = await provider();
+    await module.client.create(document);
+    const tools = mount();
 
     const result = await tools.addActions.callback({
       documentId: document.header.id,
@@ -175,10 +182,8 @@ describe("getCodegenStatus tool", () => {
 
   it("gives no codegen hint without Vetra", async () => {
     const document = documentModelCreateDocument();
-    await (
-      await module.client.write.create(document)
-    ).readable;
-    const { tools } = await provider();
+    await module.client.create(document);
+    const tools = mount();
 
     const result = await tools.addActions.callback({
       documentId: document.header.id,

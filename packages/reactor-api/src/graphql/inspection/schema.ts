@@ -125,6 +125,123 @@ export const inspectionTypeDefs = gql`
   }
 
   """
+  One path's numbers over one horizon. Times are wall-clock milliseconds the
+  processor's queue awaited, not CPU; read time includes waiting for the store.
+  slotWaitMs and pauseMs are throttling and count toward no busy time.
+  """
+  type InspectionProcessorTimingCounters {
+    batches: Float!
+    opsDelivered: Float!
+    opsScanned: Float!
+    opsMatched: Float!
+    pages: Float!
+    handlerMs: Float!
+    maxBatchMs: Float!
+    readMs: Float!
+    lookupMs: Float!
+    fillMs: Float!
+    slotWaitMs: Float!
+    pauseMs: Float!
+    errors: Float!
+  }
+
+  type InspectionProcessorTimingHorizon {
+    live: InspectionProcessorTimingCounters!
+    replay: InspectionProcessorTimingCounters!
+    ordinalsAdvanced: Float!
+    busyMs: Float!
+  }
+
+  type InspectionProcessorTimingRun {
+    startedAtUtcMs: Float!
+    runFrom: Float!
+    counters: InspectionProcessorTimingCounters!
+    ordinalsAdvanced: Float!
+  }
+
+  type InspectionProcessorTimingLastRun {
+    startedAtUtcMs: Float!
+    durationMs: Float!
+    ordinals: Float!
+    opsDelivered: Float!
+    busyMs: Float!
+  }
+
+  type InspectionProcessorTimingBatch {
+    atUtcMs: Float!
+    path: String!
+    ops: Float!
+    ms: Float!
+    fromOrdinal: Float!
+    toOrdinal: Float!
+  }
+
+  type InspectionProcessorTimingDocumentType {
+    documentType: String!
+    ops: Float!
+    handlerMs: Float!
+  }
+
+  type InspectionProcessorQueueDepth {
+    tasks: Float!
+    ops: Float!
+  }
+
+  """
+  One processor's timing. The horizons are null while timing is off.
+  """
+  type InspectionProcessorTiming {
+    processorId: String!
+    name: String!
+    driveLabel: String!
+    factoryId: String!
+    driveId: String!
+    phase: String!
+    lastOrdinal: Float!
+    queueDepth: InspectionProcessorQueueDepth!
+    ordinalsBehind: Float!
+    opsPerSecond: Float!
+    ordinalsPerSecond: Float!
+    etaMs: Float
+    sinceUtcMs: Float
+    total: InspectionProcessorTimingHorizon
+    window: InspectionProcessorTimingHorizon
+    windowMs: Float!
+    currentRun: InspectionProcessorTimingRun
+    lastRun: InspectionProcessorTimingLastRun
+    lastBatch: InspectionProcessorTimingBatch
+    byDocumentType: [InspectionProcessorTimingDocumentType!]!
+  }
+
+  """
+  level is off, basic or detailed. Without a catch-up status, head is the
+  highest cursor and headKnown is false.
+  """
+  type InspectionProcessorTimingReport {
+    level: String!
+    windowMs: Float!
+    head: Float!
+    headKnown: Boolean!
+    processors: [InspectionProcessorTiming!]!
+  }
+
+  """
+  Memory samples correlated with operations processed. samples are newest
+  last; summary holds the rates over the correlation window and is null until
+  two samples exist.
+  """
+  type InspectionMemoryTelemetry {
+    enabled: Boolean!
+    intervalMs: Float!
+    consoleIntervalMs: Float!
+    outputs: [String!]!
+    file: String
+    startedAt: String
+    summary: JSONObject
+    samples: [JSONObject!]!
+  }
+
+  """
   What one catch-up priority level sets. giveWay is stop (level 0: no page is
   read until the level rises), pause (pauseMs between pages), yield (one
   event-loop turn) or none.
@@ -230,13 +347,18 @@ export const inspectionTypeDefs = gql`
   }
 
   """
-  Reads only. info and documentModels serve every caller; drive and document
-  reads are made as the caller through the reactor read gate; the rest need
-  one of the host's admins.
+  Reads only. info, documentModels and loadsModelsOnDemand serve every caller;
+  drive and document reads are made as the caller through the reactor read
+  gate; the rest need one of the host's admins.
   """
   type ReactorInspection {
     info: ReactorInfo!
     documentModels: [InspectionDocumentModel!]!
+    """
+    True when a document model loads the first time a document of its type
+    arrives, so documentModels names only those loaded so far.
+    """
+    loadsModelsOnDemand: Boolean!
     drives(cursor: String, limit: Int): InspectionDrivePage!
     """
     Reads every file node's document. Throttled per caller.
@@ -245,6 +367,9 @@ export const inspectionTypeDefs = gql`
     attachmentInfo: InspectionAttachmentInfo!
     queueState: InspectionQueueState!
     processors: [InspectionProcessor!]!
+    processorTiming: InspectionProcessorTimingReport!
+    "Refused on a host without memory telemetry."
+    memoryTelemetry(limit: Int, sinceIso: String): InspectionMemoryTelemetry!
     catchUpStatus: JSONObject!
     catchUpPriority: InspectionCatchUpPriority!
     storageHealth: InspectionStorageHealth!

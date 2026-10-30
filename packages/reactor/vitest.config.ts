@@ -3,6 +3,7 @@ import { defineConfig } from "vitest/config";
 // Hold a cluster xid for seconds, stalling every watermark; run alone, last.
 const HOLDS_XID = [
   "test/admin/catchup-status-postgres.test.ts",
+  "test/admin/keyframe-cleanup-postgres.test.ts",
   "test/catch-up/settled-watermark-postgres.test.ts",
   "test/purge/caches/keyframe-persistence.test.ts",
   "test/purge/e2e/resurrection.test.ts",

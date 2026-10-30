@@ -24,6 +24,7 @@ import {
   RevertToPublishedInputSchema,
   SetLastRunInputSchema,
   SetLastTestInputSchema,
+  SetManagedByInputSchema,
   SetPolicyInputSchema,
   SetStepConfigInputSchema,
   SetTriggerConfigInputSchema,
@@ -85,6 +86,18 @@ const stateReducer: StateReducer<WorkflowPHState> = (
       memoizedSchema(SetWorkflowStatusInputSchema).parse(action.input);
 
       workflowWorkflowOperations.setWorkflowStatusOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "SET_MANAGED_BY": {
+      memoizedSchema(SetManagedByInputSchema).parse(action.input);
+
+      workflowWorkflowOperations.setManagedByOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,

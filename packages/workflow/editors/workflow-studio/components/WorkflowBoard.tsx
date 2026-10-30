@@ -25,6 +25,11 @@ import {
   workflowHealth,
 } from "./run-format.js";
 import { Button, Icon, StatusDot } from "./ui.js";
+import {
+  ApprovalBadge,
+  approvalCountLabel,
+  type PendingApprovals,
+} from "./Waitpoints.js";
 import { WorkflowGraph } from "./WorkflowGraph.js";
 import { WorkflowMenu } from "./WorkflowMenu.js";
 
@@ -134,7 +139,11 @@ export function WorkflowBoard(props: {
   creating: boolean;
   onOpen: (workflowId: string) => void;
   onCreate: () => void;
+  approvals?: PendingApprovals;
+  // Opens the waiting list: the drive's, or one workflow's.
+  onShowApprovals?: (workflowId?: string) => void;
 }) {
+  const { approvals, onShowApprovals } = props;
   usePieceLogos();
   const { isCollapsed, toggle } = useCollapsed();
   const documents = useWorkflowDocumentsInSelectedDrive() ?? [];
@@ -167,8 +176,18 @@ export function WorkflowBoard(props: {
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">
             Workflows
           </h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
             {rows.length === 0 ? "Automations in this drive" : summary(rows)}
+            {approvals && approvals.total > 0 ? (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-full bg-wf-warn/12 px-2 py-0.5 text-xs font-medium text-wf-warn hover:bg-wf-warn/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => onShowApprovals?.()}
+              >
+                <Icon name="clock" className="h-3 w-3" />
+                {approvalCountLabel(approvals.total, approvals.capped)}
+              </button>
+            ) : null}
           </p>
         </div>
         <Button
@@ -299,6 +318,15 @@ export function WorkflowBoard(props: {
                       </span>
                     </button>
                     <span className="mt-4 flex h-6 shrink-0 items-center gap-1 pr-3">
+                      <ApprovalBadge
+                        count={approvals?.byWorkflow.get(row.id) ?? 0}
+                        capped={approvals?.capped ?? false}
+                        onClick={
+                          onShowApprovals
+                            ? () => onShowApprovals(row.id)
+                            : undefined
+                        }
+                      />
                       <RowToggle document={row.document} />
                       <WorkflowMenu document={row.document} />
                     </span>

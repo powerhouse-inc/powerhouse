@@ -20,7 +20,7 @@ import {
   type InlineConfig,
   type PluginOption,
 } from "vite";
-import { connectOptimizeDeps } from "./dev-deps.js";
+import { connectOptimizeDeps, dependencyStoreOf } from "./dev-deps.js";
 import type { IConnectOptions } from "./types.js";
 import {
   buildHashFromBuildOptions,
@@ -471,28 +471,21 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     "react-dom/client",
   ];
 
-  // pnpm `link:` deps (e.g. a downstream project linking @powerhousedao/*
-  // packages from a sibling monorepo checkout) live outside Vite's
-  // auto-detected workspace root. Their `node_modules/.pnpm/...` assets
-  // then 403 through `/@fs/`, returning a 760-byte HTML body where the
-  // binary should be — which breaks PGlite at startup with "Invalid FS
-  // bundle size: 760 !== 4939170". Resolve key linked packages back to
-  // their real workspace roots and allow Vite to serve from there.
+  // Linked deps live outside Vite's root; their /@fs/ assets would 403.
   const linkedRoots = [
     "@powerhousedao/reactor-browser",
     "@powerhousedao/connect",
     "@electric-sql/pglite",
-  ]
-    .map((pkg) => {
-      try {
-        return searchForWorkspaceRoot(
-          realpathSync(join(options.dirname, "node_modules", pkg)),
-        );
-      } catch {
-        return null;
-      }
-    })
-    .filter((p): p is string => p !== null);
+  ].flatMap((pkg) => {
+    let real: string;
+    try {
+      real = realpathSync(join(options.dirname, "node_modules", pkg));
+    } catch {
+      return [];
+    }
+    const store = dependencyStoreOf(real);
+    return [searchForWorkspaceRoot(real), ...(store ? [store] : [])];
+  });
 
   const routesDir =
     resolveConnectRoutesDir(options.dirname, options.routes) ?? false;

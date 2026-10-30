@@ -26,6 +26,12 @@ import { createCanonicalDocumentIdResolver } from "../services/canonical-documen
 import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
+  isDocumentListed,
+  type ReadableDocumentsLike,
+  type ReadableFilter,
+} from "../services/readable-documents.js";
+import type { Kysely } from "kysely";
+import {
   createCredentialInvalidator,
   type ICredentialInvalidator,
 } from "../services/auth.service.js";
@@ -97,6 +103,13 @@ export class BaseSubgraph implements ISubgraph {
   authorizationService: IAuthorizationService;
   syncServingGate?: SyncScopeGate;
   /**
+   * The readable-documents read model (`services/readable-documents.ts`):
+   * the host ACL's read closure as rows an index table joins on. Absent on
+   * a host that does not serve it; `readableFilter` then fails closed for
+   * every caller but a listed admin.
+   */
+  readableDocuments?: ReadableDocumentsLike;
+  /**
    * The host's credential cache, for a package that revokes credentials:
    * call `this.credentials.invalidateCredential(address, chainId?, appDid?)`
    * right after the revocation is stored, so this host refuses the credential
@@ -150,6 +163,7 @@ export class BaseSubgraph implements ISubgraph {
     this.documentPermissionService = args.documentPermissionService;
     this.authorizationService = args.authorizationService;
     this.syncServingGate = args.syncServingGate;
+    this.readableDocuments = args.readableDocuments;
     this.path = args.path ?? "";
     this.#attachments = args.attachments;
     this.credentials =
@@ -318,6 +332,51 @@ export class BaseSubgraph implements ISubgraph {
       }
     }
     return readable;
+  }
+
+  /**
+   * Whether the caller is in the ADMINS list. Not `isSupremeAdmin`: under
+   * OPEN that admits every caller, anonymous included.
+   */
+  isListedAdmin(ctx: Context): boolean {
+    const address = ctx.user?.address.toLowerCase();
+    return (
+      address !== undefined &&
+      this.authorizationService.config.admins.includes(address)
+    );
+  }
+
+  /**
+   * The readable-documents filter for this request's caller, for a query
+   * over an index table keyed by document (`applyReadableFilter`). Without
+   * the read model only a listed admin reads anything: an index must never
+   * serve more than the host would.
+   */
+  readableFilter(ctx: Context): ReadableFilter {
+    if (this.readableDocuments) {
+      return this.readableDocuments.filterFor(ctx.user?.address);
+    }
+    return this.isListedAdmin(ctx) ? { kind: "all" } : { kind: "none" };
+  }
+
+  /**
+   * The row filter for an index query scoped to one document (its drive or
+   * folder): `none` when the caller may not read the scope itself, the
+   * caller's `readableFilter` otherwise. One call per resolver, then
+   * `applyReadableFilter` on every query it runs.
+   */
+  async indexAccess(
+    ctx: Context,
+    scopeDocumentId: string,
+  ): Promise<ReadableFilter> {
+    const filter = this.readableFilter(ctx);
+    if (filter.kind !== "ids") return filter;
+    const listed = await isDocumentListed(
+      this.relationalDb as unknown as Kysely<unknown>,
+      filter,
+      scopeDocumentId,
+    );
+    return listed ? filter : { kind: "none" };
   }
 
   /**

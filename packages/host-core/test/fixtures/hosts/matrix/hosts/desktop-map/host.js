@@ -20,7 +20,7 @@ export default {
               url: {
                 $output: {
                   host: "switchboard",
-                  path: ["endpoints", "graphql"],
+                  path: ["drives", "lab", "url"],
                 },
               },
             },

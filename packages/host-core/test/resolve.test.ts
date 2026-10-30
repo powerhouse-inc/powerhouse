@@ -540,7 +540,7 @@ describe("declared validation", () => {
         backends: {
           sb: {
             kind: "remote",
-            remote: { url: out("switchboard", ["endpoints", "graphql"]) },
+            remote: { url: out("switchboard", ["drives", "sektar", "url"]) },
           },
         },
       },

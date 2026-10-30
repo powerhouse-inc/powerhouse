@@ -63,6 +63,10 @@ function fakeClient(overrides: Partial<ControllerClient> = {}) {
       instances.clear();
       return Promise.resolve(all);
     },
+    capabilities: () => Promise.reject(new Error("unused")),
+    exportHost: () => Promise.reject(new Error("unused")),
+    checkDraft: () => Promise.reject(new Error("unused")),
+    startDraft: () => Promise.reject(new Error("unused")),
     ...overrides,
   };
   const run = (id: string) => {
@@ -92,6 +96,8 @@ function fakeManaged(
     visible: [],
     withheld: [],
     attachedIds: new Set(),
+    owned: new Map(),
+    reactors: new Map(),
     notices: [],
     dismissNotice: vi.fn(),
     attach: vi.fn(),
@@ -99,6 +105,7 @@ function fakeManaged(
     stopInstance: vi.fn(async (id: string) => {
       await client?.stop(id);
     }),
+    dropInstance: vi.fn(),
     stopAll: vi.fn(async () => {
       await client?.stopAll();
     }),

@@ -35,6 +35,22 @@ describe("switchboardConfigSchema", () => {
       unsupportedStoredDocuments: "refuse",
       legacyProcessorIds: true,
       catchUpPriority: "dynamic",
+      processorTiming: "basic",
+      processorTimingWindowMs: 60_000,
+      processorSlowBatchMs: 1_000,
+      processorTimingLogMs: 0,
+    });
+    expect(config.telemetry).toEqual({
+      memory: {
+        enabled: false,
+        intervalMs: 30_000,
+        outputs: ["memory", "file"],
+        file: { maxMb: 10, keep: 5 },
+        ringSize: 720,
+        consoleIntervalMs: 300_000,
+        workers: true,
+        windowMin: 30,
+      },
     });
     expect(config.workers).toEqual({
       executor: { count: 0, poolSize: 2, acquireTimeoutMs: 5000 },
@@ -75,6 +91,18 @@ describe("switchboardConfigSchema", () => {
     ["a fractional worker count", { workers: { executor: { count: 1.5 } } }],
     ["a host pool of 0", { workers: { hostPoolSize: 0 } }],
     ["a catch-up level above 7", { protocol: { catchUpPriority: 8 } }],
+    [
+      "an unknown timing level",
+      { protocol: { processorTiming: "full" as never } },
+    ],
+    [
+      "a sampling interval under a second",
+      { telemetry: { memory: { intervalMs: 10 } } },
+    ],
+    [
+      "an unknown memory output",
+      { telemetry: { memory: { outputs: ["otel" as never] } } },
+    ],
     [
       "an unknown signature policy",
       { protocol: { createSignaturePolicy: "v3" as "legacy" } },

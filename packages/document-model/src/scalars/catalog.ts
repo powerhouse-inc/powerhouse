@@ -19,9 +19,9 @@ import { amountCryptoScalar } from "./declarations/amount-crypto.js";
 import { amountScalar } from "./declarations/amount.js";
 import { uploadScalar } from "./declarations/upload.js";
 import { jsonObjectScalar } from "./declarations/json-object.js";
-import type { ScalarDefinition } from "./types.js";
+import type { DescribedScalarDefinition } from "./types.js";
 
-export const scalarCatalog: readonly ScalarDefinition[] = Object.freeze([
+const declarations = [
   unknownScalar,
   dateTimeScalar,
   addressScalar,
@@ -43,17 +43,24 @@ export const scalarCatalog: readonly ScalarDefinition[] = Object.freeze([
   amountScalar,
   uploadScalar,
   jsonObjectScalar,
-]);
+] as const;
+
+export type CatalogScalarDefinition = (typeof declarations)[number];
+
+export const scalarCatalog: readonly DescribedScalarDefinition[] =
+  Object.freeze([...declarations]);
 
 const byName = new Map(
   scalarCatalog.map((definition) => [definition.name, definition]),
 );
 
-export function getCatalogScalar(name: string): ScalarDefinition | undefined {
+export function getCatalogScalar(
+  name: string,
+): DescribedScalarDefinition | undefined {
   return byName.get(name);
 }
 
-type DocumentModelScalar = ScalarDefinition & {
+type DocumentModelScalar = DescribedScalarDefinition & {
   readonly typescriptType: string;
   readonly zodSource: string;
 };

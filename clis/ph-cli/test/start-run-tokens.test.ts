@@ -294,7 +294,7 @@ describe("standalone ph run resolves output tokens", () => {
     await expect(
       startRun({ host: "connect", projectRoot: remoteHost.dir }),
     ).rejects.toThrow(
-      /remote: \{ host \} was removed; use remote: \{ url: switchboard\.endpoints\.graphql \}.*\{ \$output: \{ host: "switchboard", path: \["endpoints", "graphql"\] \} \}/s,
+      /remote: \{ host \} was removed; use a drive address: remote: \{ url: switchboard\.drives\.<slug>\.url \}.*\{ \$output: \{ host: "switchboard", path: \["drives", "<slug>", "url"\] \} \}/s,
     );
   });
 

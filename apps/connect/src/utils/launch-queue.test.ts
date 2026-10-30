@@ -2,6 +2,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Warm the transform once; the per-test resetModules then only re-evaluates.
+import "@powerhousedao/reactor-browser";
 import type * as reactorBrowserModule from "@powerhousedao/reactor-browser";
 import type * as launchQueueModule from "./launch-queue.js";
 

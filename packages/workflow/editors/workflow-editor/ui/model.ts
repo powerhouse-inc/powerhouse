@@ -121,9 +121,17 @@ export interface WorkflowModel {
   steps: StepModel[];
   edges: EdgeModel[];
   variables: VariableModel[];
+  // The policy's defaultRetry attempts; 1 retries nothing.
+  defaultRetryAttempts?: number;
   published?: PublishedModel | null;
   // Writes nothing, bookkeeping included.
   readOnly?: boolean;
+  // Kept by another document (an app's integration): shown read-only.
+  managedBy?: {
+    documentId: string;
+    documentType: string;
+    label: string;
+  } | null;
 }
 
 // The side panel's id for the variables editor, beside step and trigger ids.

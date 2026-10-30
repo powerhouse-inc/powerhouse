@@ -3,6 +3,11 @@ import type {
   ProcessorRerunOptions,
 } from "@powerhousedao/shared/processors";
 import type {
+  IKeyframeCleanup,
+  KeyframeCleanupRun,
+  KeyframeReclaim,
+} from "../admin/keyframe-cleanup-types.js";
+import type {
   IDocumentIntegrityService,
   RebuildResult,
   ValidationResult,
@@ -20,11 +25,21 @@ import {
   type CatchUpPrioritySetting,
   type CatchUpPriorityState,
 } from "../processors/catch-up-priority.js";
+import {
+  DEFAULT_PROCESSOR_TIMING_WINDOW_MS,
+  type ProcessorTimingSettings,
+} from "../processors/processor-stats.js";
 import type { Job } from "../queue/types.js";
+import type { MemoryTelemetry } from "../telemetry/memory-telemetry.js";
+import type {
+  MemoryTelemetryChange,
+  MemoryTelemetryReport,
+} from "../telemetry/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type { DriveInspection } from "./drive-inspection.js";
 import { READ_ONLY_ACCESS } from "./ops.js";
 import { UNKNOWN_STORAGE_FACTS } from "./storage-facts.js";
+import { computeProcessorTiming } from "./timing.js";
 import type {
   IInspectableAttachmentStore,
   IInspectableQueue,
@@ -36,6 +51,7 @@ import type {
   InspectorDriveIntegrity,
   InspectorDrivePage,
   InspectorProcessorInfo,
+  InspectorProcessorTimingReport,
   IReactorFactsSink,
   IInspectorStorageHealthProvider,
   QueueStateSnapshot,
@@ -58,9 +74,14 @@ export type ReactorInspectorComponents = {
   processorManager?: IProcessorManager;
   catchUp?: ICatchUp;
   catchUpPriority?: CatchUpPriority;
+  processorTiming?: ProcessorTimingSettings;
+  memoryTelemetry?: MemoryTelemetry;
   integrity?: IDocumentIntegrityService;
+  keyframeCleanup?: IKeyframeCleanup;
   storageHealth?: IInspectorStorageHealthProvider;
   documentModelRegistry?: IDocumentModelRegistry;
+  /** A document model loader is wired; absent reads as false. */
+  loadsModelsOnDemand?: boolean;
   drives?: DriveInspection;
   attachmentStore?: IInspectableAttachmentStore;
   facts?: ReactorInspectorFacts;
@@ -108,6 +129,8 @@ const NO_INSPECTABLE_QUEUE =
 const NO_CATCH_UP = "it was built without catch-up";
 const NO_INTEGRITY = "it has no document integrity service";
 const NO_PROCESSORS = "it was built without a processor manager";
+const NO_TELEMETRY = "it was built without memory telemetry";
+const NO_KEYFRAME_CLEANUP = "it has no keyframe clean-up";
 
 const noCatchUpPriority: CatchUpPriorityState = {
   mode: "dynamic",
@@ -147,6 +170,10 @@ export class ReactorInspector
       syncChannels: [...this.syncChannels],
       access: { ...this.access },
     });
+  }
+
+  loadsModelsOnDemand(): Promise<boolean> {
+    return Promise.resolve(this.components.loadsModelsOnDemand ?? false);
   }
 
   listDocumentModels(): Promise<InspectorDocumentModelInfo[]> {
@@ -246,6 +273,31 @@ export class ReactorInspector
         phase: processor.phase,
       })),
     );
+  }
+
+  getProcessorTiming(): Promise<InspectorProcessorTimingReport> {
+    const { processorManager, catchUp, processorTiming } = this.components;
+    return Promise.resolve(
+      computeProcessorTiming(
+        processorManager?.getAll() ?? [],
+        catchUp?.status(),
+        processorTiming?.level ?? "off",
+        processorTiming?.windowMs ?? DEFAULT_PROCESSOR_TIMING_WINDOW_MS,
+      ),
+    );
+  }
+
+  getMemoryTelemetry(
+    limit?: number,
+    sinceIso?: string,
+  ): Promise<MemoryTelemetryReport> {
+    const telemetry = this.components.memoryTelemetry;
+    if (!telemetry) {
+      return Promise.reject(
+        unsupported("Reading memory telemetry", NO_TELEMETRY),
+      );
+    }
+    return Promise.resolve(telemetry.report(limit, sinceIso));
   }
 
   getCatchUpStatus(): Promise<CatchUpStatus> {
@@ -362,6 +414,27 @@ export class ReactorInspector
     return Promise.resolve();
   }
 
+  setMemoryTelemetry(change: MemoryTelemetryChange): Promise<void> {
+    const telemetry = this.components.memoryTelemetry;
+    if (!telemetry) {
+      return Promise.reject(
+        unsupported("Setting memory telemetry", NO_TELEMETRY),
+      );
+    }
+    telemetry.reconfigure(change);
+    return Promise.resolve();
+  }
+
+  writeHeapSnapshot(force = false): Promise<string> {
+    const telemetry = this.components.memoryTelemetry;
+    if (!telemetry) {
+      return Promise.reject(
+        unsupported("Writing a heap snapshot", NO_TELEMETRY),
+      );
+    }
+    return telemetry.writeHeapSnapshot(force);
+  }
+
   rebuildKeyframes(
     documentId: string,
     branch?: string,
@@ -382,5 +455,48 @@ export class ReactorInspector
       return Promise.reject(unsupported("Rebuilding snapshots", NO_INTEGRITY));
     }
     return integrity.rebuildSnapshots(documentId, branch);
+  }
+
+  startKeyframeCleanup(options: {
+    dryRun: boolean;
+  }): Promise<KeyframeCleanupRun> {
+    const cleanup = this.components.keyframeCleanup;
+    if (!cleanup) {
+      return Promise.reject(
+        unsupported("Cleaning up keyframes", NO_KEYFRAME_CLEANUP),
+      );
+    }
+    try {
+      return Promise.resolve(cleanup.start({ dryRun: options.dryRun }));
+    } catch (error) {
+      return Promise.reject(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    }
+  }
+
+  getKeyframeCleanup(): Promise<KeyframeCleanupRun | null> {
+    return Promise.resolve(this.components.keyframeCleanup?.status() ?? null);
+  }
+
+  cancelKeyframeCleanup(): Promise<void> {
+    this.components.keyframeCleanup?.cancel();
+    return Promise.resolve();
+  }
+
+  reclaimKeyframeSpace(): Promise<KeyframeReclaim> {
+    const cleanup = this.components.keyframeCleanup;
+    if (!cleanup) {
+      return Promise.reject(
+        unsupported("Reclaiming keyframe space", NO_KEYFRAME_CLEANUP),
+      );
+    }
+    return cleanup.reclaim();
+  }
+
+  getKeyframeReclaim(): Promise<KeyframeReclaim | null> {
+    return Promise.resolve(
+      this.components.keyframeCleanup?.reclaimStatus() ?? null,
+    );
   }
 }

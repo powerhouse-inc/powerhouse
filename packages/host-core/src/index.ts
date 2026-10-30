@@ -139,8 +139,10 @@ export {
   HOST_NAME_PATTERN,
   hostNameSchema,
   makeHostSchemas,
+  placementKeyIssues,
   profileSchema,
   reactorBackendKindSchema,
+  originOrUrlSchema,
   reactorBackendSchema,
   reactorHostSchema,
   reactorProtocolSchema,
@@ -154,6 +156,7 @@ export {
   type CompoundWiring,
   type HostDefinition,
   type HostSchemas,
+  type PlacementKeyIssue,
   type Profile,
   type ReactorBackend,
   type ReactorBackendKind,
@@ -168,6 +171,11 @@ export {
   type RunnerKind,
 } from "./host-schemas.js";
 export { hostExportSchema, type HostExport } from "./host-export-schema.js";
+export {
+  driveAddressMessage,
+  switchboardOfDrive,
+  type SwitchboardDrive,
+} from "@powerhousedao/shared/host-tokens";
 export {
   buildDriveDeclarationSchema,
   driveDeclarationSchema,
@@ -237,6 +245,7 @@ export {
   backendsToDescriptors,
   backendToDescriptor,
   isStructuralMultiReactor,
+  remoteBackends,
   remoteBackendUrls,
   type ProjectedDescriptor,
   type ProjectedStorage,
@@ -244,9 +253,11 @@ export {
 export { applyChildWrapper, type MemberDraft } from "./child-wrapper.js";
 export {
   mergeDefaultDrives,
+  placeConnectDrives,
   projectDrivesIntoConnect,
   rebaseDriveUrl,
   type DriveProjectionInput,
+  type PlacedConnectDrives,
 } from "./connect-projection.js";
 export {
   runRecordMemberSchema,
@@ -307,3 +318,17 @@ export {
   type MemberExpectation,
   type MemberInput,
 } from "./expect-host.js";
+
+// The origin placeholder (`${origin}`) a proxied member's served config
+// carries, and the switchboard paths a fronting server proxies; defined in
+// shared (browser-safe), re-exported for Node consumers.
+export {
+  isHtmlNavigation,
+  isOriginPlaceholderUrl,
+  isSwitchboardProxyPath,
+  ORIGIN_PLACEHOLDER,
+  resolveOriginPlaceholders,
+  SWITCHBOARD_PROXY_PATHS,
+  toOriginPlaceholder,
+  withOriginPlaceholders,
+} from "@powerhousedao/shared/connect/origin-placeholder";

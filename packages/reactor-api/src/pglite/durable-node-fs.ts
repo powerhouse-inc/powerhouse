@@ -29,6 +29,10 @@ export interface DurableNodeFsOptions {
   vacuumFullMaxDeferMs?: number;
   /** See `MaintenanceOptions.gate`. */
   maintenanceGate?: MaintenanceGate;
+  /** The gap between statements a table rewrite waits for. Default 1 s. */
+  rewriteQuietMs?: number;
+  /** How long a table rewrite waits for that gap. Default 15 min. */
+  rewriteMaxWaitMs?: number;
   /** Clock for the maintenance quiet window; tests pass their own. */
   now?: () => number;
   logger?: { warn(message: string): void; info?(message: string): void };
@@ -201,6 +205,8 @@ export function createDurableNodeFs(
     vacuumFullMaxDeferMs: options.vacuumFullMaxDeferMs,
     gate: options.maintenanceGate,
     now: options.now,
+    rewriteQuietMs: options.rewriteQuietMs,
+    rewriteMaxWaitMs: options.rewriteMaxWaitMs,
     logger,
   });
 

@@ -308,6 +308,7 @@ export async function document(
   } catch (error) {
     throw new GraphQLError(
       `Failed to fetch document: ${error instanceof Error ? error.message : "Unknown error"}`,
+      notFoundExtensions(error),
     );
   }
 
@@ -800,6 +801,7 @@ export async function documentOperations(
   } catch (error) {
     throw new GraphQLError(
       `Failed to fetch document operations: ${error instanceof Error ? error.message : "Unknown error"}`,
+      notFoundExtensions(error),
     );
   }
 
@@ -873,6 +875,21 @@ export async function evaluateActions(
 
 const isDocumentNotFound = (error: unknown) =>
   error instanceof Error && error.name === "DocumentNotFoundError";
+
+/** A missing document is an answer, not a failure: its GraphQL error says NOT_FOUND. */
+function notFoundExtensions(
+  error: unknown,
+): { extensions: { code: string } } | undefined {
+  return isDocumentNotFound(error)
+    ? { extensions: { code: "NOT_FOUND" } }
+    : undefined;
+}
+
+/** Whether a resolver failed because the document does not exist (NOT_FOUND or the reactor's error). */
+export function isNotFoundError(error: unknown): boolean {
+  if (isDocumentNotFound(error)) return true;
+  return error instanceof GraphQLError && error.extensions.code === "NOT_FOUND";
+}
 
 /** Refuses a slug another document holds: the reactor would move it to the new one. */
 async function assertSlugAvailable(

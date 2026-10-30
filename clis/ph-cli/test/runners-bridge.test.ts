@@ -245,6 +245,8 @@ describe("switchboard bridge runner", () => {
       port: 7599,
       // run = production, exactly as `ph switchboard` without --dev
       dev: undefined,
+      // Not a classic arg: `/ready` waits for the drives the runner seeds.
+      readyAfter: expect.any(Promise) as unknown,
     });
     expect(vi.mocked(startSwitchboard).mock.calls[0][0]).toHaveProperty(
       "dbPath",
@@ -256,6 +258,7 @@ describe("switchboard bridge runner", () => {
       ...classic,
       port: 7599,
       dev: true,
+      readyAfter: expect.any(Promise) as unknown,
     });
   });
 
@@ -757,7 +760,7 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
 });
 
 describe("connect bridge runner — structural multi-reactor (P4.2/P4.3)", () => {
-  it("a remote backend next to a local one activates routing: multiReactor + drives", async () => {
+  it("a remote backend next to a local one activates routing: reactorClient + drives", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =
       await import("../src/services/connect-studio.js");
@@ -795,15 +798,131 @@ describe("connect bridge runner — structural multi-reactor (P4.2/P4.3)", () =>
     const override = vi.mocked(runConnectStudio).mock
       .calls[0][2] as PHConnectRuntimeConfigLike;
     expect(override.instance).toMatchObject({
-      multiReactor: true, // structure beats the scaffold-default false
+      reactorClient: "router", // structure beats the scaffold-default false
       reactorWorker: true, // primary backend kind
+      remoteBackends: [{ name: "main", url: "http://localhost:7064/d/drive" }],
     });
-    // remote url first — it becomes defaultDrivesUrl, what the router dials
-    expect(override.drives?.defaultDrives?.[0]).toMatchObject({
+    // the home drive first, annotated with the backend serving it
+    expect(override.drives?.defaultDrives?.[0]).toEqual({
       url: "http://localhost:7064/d/drive",
+      name: null,
+      icon: null,
+      backend: "main",
     });
-    expect(override.drives?.defaultDrives?.[1]).toMatchObject({
+    expect(override.drives?.defaultDrives?.[1]).toEqual({
       url: "http://existing/d/kept",
+      name: null,
+      icon: null,
+    });
+    expect(override.instance).not.toHaveProperty("collections");
+  });
+
+  const linked = (reactor: ConnectHost["reactor"]) =>
+    connect({ name: "lab-connect", runner: { module: "m" }, reactor });
+  const served = async (host: ReturnType<typeof connect>) => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    vi.mocked(runConnectStudio).mockClear();
+    await runner.dev(host, ctx);
+    return vi.mocked(runConnectStudio).mock
+      .calls[0][2] as PHConnectRuntimeConfigLike;
+  };
+  const sb = (url: string) => ({ kind: "remote" as const, remote: { url } });
+
+  it("serves a remote-only Connect its switchboard", async () => {
+    const override = await served(
+      linked({ backends: { sb: sb("http://localhost:4001/d/b") } }),
+    );
+    expect(override.instance).toMatchObject({
+      reactorClient: "remote",
+      remoteBackends: [{ name: "sb", url: "http://localhost:4001/d/b" }],
+    });
+  });
+
+  it("serves one backend per switchboard, each drive with its own", async () => {
+    const override = await served(
+      linked({
+        backends: {
+          main: { kind: "worker" },
+          sb: sb("http://localhost:4001/d/b"),
+          other: sb("http://localhost:4002/d/c"),
+        },
+        drives: [
+          { slug: "d", remote: { url: "http://localhost:4001/d/d" } },
+          { slug: "e", remote: { url: "http://localhost:4002/d/e" } },
+        ],
+      }),
+    );
+    expect(override.instance?.remoteBackends).toEqual([
+      { name: "sb", url: "http://localhost:4001/d/b" },
+      { name: "other", url: "http://localhost:4002/d/c" },
+    ]);
+    expect(
+      override.drives?.defaultDrives?.map((d) => [d.url, d.backend, d.sync]),
+    ).toEqual([
+      ["http://localhost:4001/d/b", "sb", undefined],
+      ["http://localhost:4002/d/c", "other", undefined],
+      ["http://localhost:4001/d/d", "sb", undefined],
+      ["http://localhost:4002/d/e", "other", undefined],
+    ]);
+  });
+
+  it("keeps no local copy of a drive placed on its switchboard", async () => {
+    const override = await served(
+      linked({
+        backends: {
+          main: { kind: "worker" },
+          sb: sb("http://localhost:4001/d/b"),
+        },
+        drives: [{ slug: "c", remote: { url: "http://localhost:4001/d/c" } }],
+        placement: { drives: { b: "sb" } },
+      }),
+    );
+    expect(
+      override.drives?.defaultDrives?.map((d) => [d.url, d.backend, d.sync]),
+    ).toEqual([
+      ["http://localhost:4001/d/b", "sb", false], // placed: no copy
+      ["http://localhost:4001/d/c", "sb", undefined], // unplaced: synced
+    ]);
+  });
+
+  it("serves a placed drive that is no default drive as a collection", async () => {
+    const override = await served(
+      linked({
+        backends: {
+          main: { kind: "worker" },
+          sb: sb("http://localhost:4001/d/b"),
+        },
+        placement: { drives: { b: "sb", workflows: "sb" } },
+      }),
+    );
+    expect(override.instance?.collections).toEqual({
+      workflows: { backend: "sb", sync: false },
+    });
+  });
+
+  it("writes the switchboard as ${origin} behind the proxy", async () => {
+    const override = await served(
+      connect({
+        name: "lab-connect",
+        runner: { module: "m", proxy: { target: "http://localhost:4001" } },
+        reactor: {
+          backends: {
+            main: { kind: "worker" },
+            sb: sb("http://localhost:4001/d/b"),
+          },
+          placement: { drives: { b: "sb" } },
+        },
+      }),
+    );
+    expect(override.instance?.remoteBackends).toEqual([
+      { name: "sb", url: "${origin}/d/b" },
+    ]);
+    expect(override.drives?.defaultDrives?.[0]).toMatchObject({
+      url: "${origin}/d/b",
+      backend: "sb",
+      sync: false,
     });
   });
 
@@ -835,8 +954,16 @@ describe("connect bridge runner — structural multi-reactor (P4.2/P4.3)", () =>
 });
 
 interface PHConnectRuntimeConfigLike {
-  instance?: { multiReactor?: boolean; reactorWorker?: boolean };
-  drives?: { defaultDrives?: { url?: string }[] };
+  instance?: {
+    multiReactor?: boolean;
+    reactorWorker?: boolean;
+    reactorClient?: string;
+    remoteBackends?: { name: string; url: string }[];
+    collections?: Record<string, { backend: string; sync?: boolean }>;
+  };
+  drives?: {
+    defaultDrives?: { url?: string; backend?: string; sync?: boolean }[];
+  };
 }
 
 describe("connect bridge runner — reactor projection (P2.5)", () => {

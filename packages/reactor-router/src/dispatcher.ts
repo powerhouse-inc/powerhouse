@@ -1,5 +1,5 @@
 import { DriveCollectionId } from "@powerhousedao/reactor";
-import type { RouterBackend } from "./backend.js";
+import { UnsupportedByBackendError, type RouterBackend } from "./backend.js";
 import {
   CrossBackendBatchError,
   messageOf,
@@ -16,6 +16,8 @@ import {
   DEFAULT_BRANCH,
   DEFAULT_DOCUMENT_CACHE_SIZE,
   DEFAULT_MISROUTE_ATTEMPTS,
+  DEFAULT_PROBE_TIMEOUT_MS,
+  warnDiagnostic,
   type RouterDiagnostic,
   type RoutingOptions,
 } from "./types.js";
@@ -33,11 +35,45 @@ interface RouteTarget {
 
 const NOT_FOUND_ERROR_NAME = "DocumentNotFoundError";
 
+/** The relationship a drive holds each of its documents by. */
+const CHILD_RELATIONSHIP = "child";
+
 const NONE: ReadonlySet<string> = new Set();
 
 const distinctIds = (identifiers: readonly string[]): string[] => [
   ...new Set(identifiers.filter((id) => id !== "")),
 ];
+
+class ProbeTimeoutError extends Error {
+  constructor(readonly timeoutMs: number) {
+    super(`did not answer within ${timeoutMs} ms`);
+    this.name = "ProbeTimeoutError";
+  }
+}
+
+/** Runs `step` with a signal that aborts at the deadline, and stops waiting then. */
+async function withDeadline<T>(
+  timeoutMs: number,
+  step: (signal: AbortSignal | undefined) => Promise<T>,
+): Promise<T> {
+  if (!(timeoutMs > 0) || !Number.isFinite(timeoutMs)) {
+    return step(undefined);
+  }
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      const error = new ProbeTimeoutError(timeoutMs);
+      controller.abort(error);
+      reject(error);
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([step(controller.signal), deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /** Marks a step that runs before anything is submitted. */
 export type BeforeSubmit = <T>(step: () => Promise<T>) => Promise<T>;
@@ -59,21 +95,22 @@ export class RouteDispatcher {
   private readonly attempts: number;
   private readonly primaryName: string;
   private readonly guard: OwnershipGuard;
+  private readonly probeTimeoutMs: number;
 
   constructor(
     backends: readonly RouterBackend[],
     options: RoutingOptions = {},
   ) {
-    this.table = new RouterTable(backends, options);
-    this.onDiagnostic =
-      options.onDiagnostic ??
-      ((message: string, detail?: unknown) => {
-        console.warn(`[reactor-router] ${message}`, detail);
-      });
+    this.onDiagnostic = options.onDiagnostic ?? warnDiagnostic;
+    this.table = new RouterTable(backends, {
+      ...options,
+      onDiagnostic: this.onDiagnostic,
+    });
     this.attempts = Math.max(
       1,
       options.misrouteAttempts ?? DEFAULT_MISROUTE_ATTEMPTS,
     );
+    this.probeTimeoutMs = options.probeTimeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS;
     this.guard = new OwnershipGuard(
       (backend, identifier) => this.owns(backend, identifier),
       (backend, identifier) =>
@@ -111,6 +148,45 @@ export class RouteDispatcher {
     await Promise.all(
       targets.map((backend) => backend.refreshFacts(this.onDiagnostic)),
     );
+  }
+
+  /**
+   * Refuses, before anything is sent, a create of a document type the backend
+   * declares it lacks. Its types are re-read once before refusing.
+   */
+  async assertCreatable(
+    operation: string,
+    backend: RouterBackend,
+    documentTypes: readonly string[],
+  ): Promise<void> {
+    const missing = (): string[] => {
+      const served = backend.facts.documentTypes;
+      return served === undefined
+        ? []
+        : [...new Set(documentTypes)].filter((type) => !served.has(type));
+    };
+    if (missing().length === 0) {
+      return;
+    }
+    await backend.refreshFacts(this.onDiagnostic);
+    const lacking = missing();
+    if (lacking.length > 0) {
+      throw new UnsupportedByBackendError(
+        backend.name,
+        operation,
+        `it has no document model for ${lacking.map((type) => JSON.stringify(type)).join(", ")}`,
+      );
+    }
+  }
+
+  /** A drive route, else a document route, from the table only (no probe). */
+  knownBackendOf(identifier: string): string | undefined {
+    const drive = this.table.knownRoute(
+      this.collectionFor(identifier, DEFAULT_BRANCH),
+    );
+    if (drive !== undefined) return drive.backend;
+    const document = this.table.documentBackend(identifier);
+    return document === "" ? undefined : document;
   }
 
   collectionFor(driveIdentifier: string, branch: string): DriveCollectionId {
@@ -389,8 +465,13 @@ export class RouteDispatcher {
     }
     const serving = await this.servingBackends(identifier, excluded);
     if (serving.length > 0) {
-      this.table.recordDocument(identifier, serving[0].name);
-      return serving[0];
+      const holder = await this.chooseHolder(identifier, serving, excluded);
+      this.table.recordDocument(
+        identifier,
+        holder.backend.name,
+        holder.expiresAt,
+      );
+      return holder.backend;
     }
     return this.placeDocument(identifier, excluded);
   }
@@ -427,8 +508,18 @@ export class RouteDispatcher {
     }
     const serving = await this.servingBackends(collection.driveId, excluded);
     if (serving.length > 0) {
-      this.table.recordCollection(collection, serving[0].name, "probed");
-      this.table.recordDocument(collection.driveId, serving[0].name);
+      const provisional = this.isProvisional(serving[0], excluded);
+      this.table.recordCollection(
+        collection,
+        serving[0].name,
+        "probed",
+        provisional,
+      );
+      this.table.recordDocument(
+        collection.driveId,
+        serving[0].name,
+        this.table.learnedExpiry(collection),
+      );
       return serving[0];
     }
     return this.table.backend(
@@ -483,10 +574,15 @@ export class RouteDispatcher {
       this.backends.map((backend) => this.owns(backend, identifier)),
     );
     const serving = this.backends.filter((_backend, i) => answers[i] === "yes");
-    const holder = serving.find((backend) => !excluded.has(backend.name));
-    if (holder !== undefined) {
-      this.table.recordDocument(identifier, holder.name);
-      return { backend: holder, cached: false };
+    const eligible = serving.filter((backend) => !excluded.has(backend.name));
+    if (eligible.length > 0) {
+      const holder = await this.chooseHolder(identifier, eligible, excluded);
+      this.table.recordDocument(
+        identifier,
+        holder.backend.name,
+        holder.expiresAt,
+      );
+      return { backend: holder.backend, cached: false };
     }
     if (serving.length > 0) {
       return { backend: serving[0], cached: false };
@@ -512,25 +608,133 @@ export class RouteDispatcher {
     }
     this.table.forgetDocument(identifier);
     this.guard.forget(cached, identifier);
-    const holder = serving.find((backend) => !excluded.has(backend.name));
-    if (holder === undefined) {
+    const eligible = serving.filter((backend) => !excluded.has(backend.name));
+    if (eligible.length === 0) {
       return serving[0];
     }
-    this.table.recordDocument(identifier, holder.name);
-    return holder;
+    const holder = await this.chooseHolder(identifier, eligible, excluded);
+    this.table.recordDocument(
+      identifier,
+      holder.backend.name,
+      holder.expiresAt,
+    );
+    return holder.backend;
   }
 
-  /** isServed, then isDocumentIdTaken when declared. A failure is unknown. */
-  async owns(backend: RouterBackend, identifier: string): Promise<Ownership> {
+  /**
+   * The holder among `serving` (every one not excluded, in configuration
+   * order). An id several backends hold goes to its collection's home; see
+   * {@link homeOf}. Otherwise the first, provisional when an earlier backend
+   * did not hold it. `expiresAt` is set for a provisional holder: a home
+   * from a provisional collection route expires with that route.
+   */
+  private async chooseHolder(
+    identifier: string,
+    serving: readonly RouterBackend[],
+    excluded: ReadonlySet<string>,
+  ): Promise<{ readonly backend: RouterBackend; readonly expiresAt?: number }> {
+    if (serving.length > 1) {
+      const home = await this.homeRouteOf(identifier, serving);
+      if (home !== undefined) {
+        return home;
+      }
+    }
+    return this.isProvisional(serving[0], excluded)
+      ? { backend: serving[0], expiresAt: this.table.provisionalDeadline() }
+      : { backend: serving[0] };
+  }
+
+  /**
+   * The backend that holds an id's collection, when several serve the id: a
+   * drive is its own collection, any other document the drive that holds it
+   * as a child. Only a correction, a placement or a learned route names a
+   * home; with none, or when the home is not among `serving`, `undefined`.
+   */
+  async homeOf(
+    identifier: string,
+    serving: readonly RouterBackend[],
+  ): Promise<RouterBackend | undefined> {
+    return (await this.homeRouteOf(identifier, serving))?.backend;
+  }
+
+  /** {@link homeOf}, with the expiry of a provisional route it came from. */
+  private async homeRouteOf(
+    identifier: string,
+    serving: readonly RouterBackend[],
+  ): Promise<
+    { readonly backend: RouterBackend; readonly expiresAt?: number } | undefined
+  > {
+    const asker = serving.at(0);
+    if (asker === undefined) {
+      return undefined;
+    }
+    let drive: string;
     try {
-      if (await backend.api.isServed(identifier)) {
-        return "yes";
-      }
-      const api = backend.api;
-      if (api.isDocumentIdTaken === undefined) {
-        return "no";
-      }
-      return (await api.isDocumentIdTaken(identifier)) ? "yes" : "no";
+      const parents = await withDeadline(this.probeTimeoutMs, (signal) =>
+        asker.api.getIncomingRelationships(
+          identifier,
+          CHILD_RELATIONSHIP,
+          undefined,
+          { cursor: "", limit: 1 },
+          signal,
+        ),
+      );
+      drive = parents.results.at(0)?.header.id ?? identifier;
+    } catch (error) {
+      this.onDiagnostic(
+        `home lookup: ${asker.name} could not name the drive that holds ${JSON.stringify(identifier)} (${messageOf(error)}); routing by backend order`,
+        error,
+      );
+      return undefined;
+    }
+    const collection = this.collectionFor(drive, DEFAULT_BRANCH);
+    const route = this.table.knownRoute(collection);
+    const backend =
+      route === undefined
+        ? undefined
+        : serving.find((candidate) => candidate.name === route.backend);
+    if (backend === undefined || route === undefined) {
+      return undefined;
+    }
+    const expiresAt =
+      route.source === "learned"
+        ? this.table.learnedExpiry(collection)
+        : undefined;
+    return expiresAt === undefined ? { backend } : { backend, expiresAt };
+  }
+
+  /**
+   * A route found on a backend while an earlier one in the order, not
+   * excluded, did not answer yes; it is probed again once it expires.
+   */
+  private isProvisional(
+    holder: RouterBackend,
+    excluded: ReadonlySet<string>,
+  ): boolean {
+    return (
+      this.backends.find((backend) => !excluded.has(backend.name)) !== holder
+    );
+  }
+
+  /**
+   * isServed, then isDocumentIdTaken when declared, within the probe timeout.
+   * A failure, a timeout or a backend that reports itself down is unknown.
+   */
+  async owns(backend: RouterBackend, identifier: string): Promise<Ownership> {
+    if (backend.health() === "down") {
+      return "unknown";
+    }
+    const api = backend.api;
+    try {
+      return await withDeadline(this.probeTimeoutMs, async (signal) => {
+        if (await api.isServed(identifier, undefined, signal)) {
+          return "yes";
+        }
+        if (api.isDocumentIdTaken === undefined) {
+          return "no";
+        }
+        return (await api.isDocumentIdTaken(identifier, signal)) ? "yes" : "no";
+      });
     } catch (error) {
       this.onDiagnostic(
         `ownership probe: ${backend.name} could not say whether it holds ${JSON.stringify(identifier)} (${messageOf(error)})`,
@@ -585,10 +789,12 @@ export class RouteDispatcher {
         if (evidence !== "refusal") {
           return;
         }
-        const override = this.table.overrideFor(collection);
-        if (override !== "" && override !== backend.name) {
+        const placement = this.table.placementFor(collection);
+        if (placement !== undefined && placement.backend !== backend.name) {
           this.onDiagnostic(
-            `collections override for ${collection.key} names ${override}, which refused the operation; ${backend.name} accepted it and the route was corrected. The override is stale.`,
+            placement.origin === "config"
+              ? `collections override for ${collection.key} names ${placement.backend}, which refused the operation; ${backend.name} accepted it and the route was corrected. The override is stale.`
+              : `runtime placement for ${collection.key} names ${placement.backend}, which refused the operation; ${backend.name} accepted it and the route was corrected. The placement is stale.`,
           );
           return;
         }

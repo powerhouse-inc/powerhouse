@@ -1,13 +1,13 @@
 {
   "repository": "https://github.com/activepieces/activepieces",
-  "tag": "0.91.0",
-  "commit": "da4410d1bf6212054e55805a98d566ff1b9310b2",
-  "date": "2026-09-14T11:51:38+01:00",
+  "tag": "0.92.3",
+  "commit": "2fc7f8dcaa84400f9db53fb0de7fc4340d055c62",
+  "date": "2026-10-12T16:59:36+03:00",
   "packages": {
     "framework": {
       "upstreamDir": "packages/pieces/framework",
       "name": "@activepieces/pieces-framework",
-      "version": "0.39.0"
+      "version": "0.40.0"
     },
     "common": {
       "upstreamDir": "packages/pieces/common",
@@ -22,7 +22,7 @@
     "core-utils": {
       "upstreamDir": "packages/core/utils",
       "name": "@activepieces/core-utils",
-      "version": "0.6.2"
+      "version": "0.8.1"
     },
     "engine": {
       "upstreamDir": "packages/server/engine",
@@ -43,7 +43,12 @@
     {
       "path": "test/upstream/core-piece-types/src/lib/ai-providers.test.ts",
       "upstream": "packages/core/piece-types/src/lib/ai-providers.test.ts",
-      "sha256": "4b7b5ba274132d1d25ece2bdcffbc728834729e8b126e53a6ac969049c768886"
+      "sha256": "8295c64bcbd8e687f4bcf987f42a4a064d5afe777386a2468df4d04e056c57c7"
+    },
+    {
+      "path": "test/upstream/core-utils/test/ai-provider-credentials.test.ts",
+      "upstream": "packages/core/utils/test/ai-provider-credentials.test.ts",
+      "sha256": "46bf50d88c2c3c1dc12277f360efcdc0e213b1b22659033a25e7e8b4ca01ba02"
     },
     {
       "path": "test/upstream/core-utils/test/ai-provider-health.test.ts",
@@ -218,7 +223,7 @@
     {
       "path": "upstream/core-piece-types/lib/ai-providers.ts",
       "upstream": "packages/core/piece-types/src/lib/ai-providers.ts",
-      "sha256": "4933f894bdf4dc8061889103fa0cc2229dcc4f8d9a6f5bad8e80f2611e3fa4ad"
+      "sha256": "50a8e2ddec442ebcf78c8668be5f2299efd0fec9914a63208f125073c41be96d"
     },
     {
       "path": "upstream/core-piece-types/lib/app-connection.ts",
@@ -238,7 +243,7 @@
     {
       "path": "upstream/core-piece-types/lib/execution-contracts.ts",
       "upstream": "packages/core/piece-types/src/lib/execution-contracts.ts",
-      "sha256": "66c17cde3c4984e8d07ddcf457bd64cd89dff316f66464cb18c96fdb6473b2f2"
+      "sha256": "51db43b1346999006d1f855f87ccaee04a20bd03c0918f6f75069d489c286fce"
     },
     {
       "path": "upstream/core-piece-types/lib/execution.ts",
@@ -288,17 +293,32 @@
     {
       "path": "upstream/core-utils/index.ts",
       "upstream": "packages/core/utils/src/index.ts",
-      "sha256": "d36f19fdd1a9e9ddc283b7dcb4bebcf3f595ad1469814a8b1581867f730a014c"
+      "sha256": "24bdcc87df271bba4956f73e6299958243b2a9389624e64d51693bd7afccddc9"
+    },
+    {
+      "path": "upstream/core-utils/lib/activepieces-ai-billing.ts",
+      "upstream": "packages/core/utils/src/lib/activepieces-ai-billing.ts",
+      "sha256": "6aeddb325911d91f9f45b06b9a2763e16fc3dd376fd798b3f808b63b61f35261"
     },
     {
       "path": "upstream/core-utils/lib/activepieces-error.ts",
       "upstream": "packages/core/utils/src/lib/activepieces-error.ts",
-      "sha256": "fcb617e6cc0ad81ce0e5f516d601cf36dbbbcc3b5824d011633b53e7b05164e1"
+      "sha256": "1bd6cc58a458c219f64eb35266a936e893275e296bfbb9f985996ac8a6d147ca"
+    },
+    {
+      "path": "upstream/core-utils/lib/ai-provider-credentials.ts",
+      "upstream": "packages/core/utils/src/lib/ai-provider-credentials.ts",
+      "sha256": "7701e753254ad827e80dff5a5315c9a98dc663dd3d35c5ec0ff087b72a568cb3"
     },
     {
       "path": "upstream/core-utils/lib/ai-provider-health.ts",
       "upstream": "packages/core/utils/src/lib/ai-provider-health.ts",
-      "sha256": "7cec6d8aabd2978e756fc27b8f67fcab0ce7406e753f7714bea15e919b1d8fe9"
+      "sha256": "52ecea00f9369cf2e1e10284cdad394fcad69faf77ec1a12d97125d4030bb366"
+    },
+    {
+      "path": "upstream/core-utils/lib/ai-step.ts",
+      "upstream": "packages/core/utils/src/lib/ai-step.ts",
+      "sha256": "af5df438325d56c5897e29afaf63b8e4c55f76b8d02cc9e3fe3fd5115105273e"
     },
     {
       "path": "upstream/core-utils/lib/assertions.ts",
@@ -308,7 +328,7 @@
     {
       "path": "upstream/core-utils/lib/base-model.ts",
       "upstream": "packages/core/utils/src/lib/base-model.ts",
-      "sha256": "3e7a8bcc37812cd3564806f55346dc6e26bcc0fcec2a147ff45ee19c3c69961a"
+      "sha256": "4158ac67898bd694446f383ed5da1911e383ba74195408f83f4d1ce9d88a9040"
     },
     {
       "path": "upstream/core-utils/lib/byte-lru-cache.ts",
@@ -326,9 +346,14 @@
       "sha256": "b650b9f0d4c087e541ece80244f476c998267255b2cd675f71e4b1044fa51aac"
     },
     {
+      "path": "upstream/core-utils/lib/deno.ts",
+      "upstream": "packages/core/utils/src/lib/deno.ts",
+      "sha256": "0c8e0e01e1e5f10b862422d1a98077d8bfb61e2e08f7e7aa43db5a507720ecd9"
+    },
+    {
       "path": "upstream/core-utils/lib/form-errors.ts",
       "upstream": "packages/core/utils/src/lib/form-errors.ts",
-      "sha256": "652593796f3b4590a7313daf2a825979136f1a66cca962ad0d46812a379fc077"
+      "sha256": "c15fe1532c2b34f6a4527bf1b5e34874861f13bc6526f689fe39550ba130f871"
     },
     {
       "path": "upstream/core-utils/lib/friendly-piece-error.ts",
@@ -374,6 +399,11 @@
       "path": "upstream/core-utils/lib/project-role.ts",
       "upstream": "packages/core/utils/src/lib/project-role.ts",
       "sha256": "47b68a98eef7198ed561946456765b1e90c0be9493dbb911efa88177121f2e5f"
+    },
+    {
+      "path": "upstream/core-utils/lib/sandbox-error.ts",
+      "upstream": "packages/core/utils/src/lib/sandbox-error.ts",
+      "sha256": "bf7c957f5c17ceb410c8033ac5c4a550d2bef81da5cfea7e0129f4e316591ddf"
     },
     {
       "path": "upstream/core-utils/lib/seek-page.ts",
@@ -463,7 +493,7 @@
     {
       "path": "upstream/framework/index.ts",
       "upstream": "packages/pieces/framework/src/index.ts",
-      "sha256": "db059e0eda300482bbd1455175cdccfb0b7408d43e9cefa482a327dd6c9edb37"
+      "sha256": "9f1fb5b21cfe02ee0899ef1b26519fd021928e07e6257b586c5631d744c42b34"
     },
     {
       "path": "upstream/framework/lib/action/action.ts",
@@ -473,7 +503,7 @@
     {
       "path": "upstream/framework/lib/context/index.ts",
       "upstream": "packages/pieces/framework/src/lib/context/index.ts",
-      "sha256": "c9d193d1a136b5a7f0e0d96cca3a89ea920b4ac3e8ac8ee4a061cae2da517c50"
+      "sha256": "ed1436fa7afbcb982ab20b3d6e53baf297a953901fbdfaf19c66560bebaeaf65"
     },
     {
       "path": "upstream/framework/lib/context/versioning.ts",
@@ -653,7 +683,7 @@
     {
       "path": "upstream/framework/lib/test/index.ts",
       "upstream": "packages/pieces/framework/src/lib/test/index.ts",
-      "sha256": "2adc05f85d17b8c6e105e5bd324f1ee3c9b9c53044735aceb5b016894a79a630"
+      "sha256": "1a65b76de960c17712d607585446cfd707715b9b0dada7c26ac162ccc461b63b"
     },
     {
       "path": "upstream/framework/lib/trigger/trigger.ts",

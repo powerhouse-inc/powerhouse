@@ -26,6 +26,7 @@
   "@powerhousedao/switchboard": 44,
   "@powerhousedao/versioned-documents": 1,
   "@powerhousedao/vetra": 4,
+  "@powerhousedao/vetra-studio": 1,
   "@powerhousedao/workflow": 6,
   "@renown/sdk": 3,
   "document-model": 1,

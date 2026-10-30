@@ -1,27 +1,36 @@
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type {
   IReactorClient,
   InProcessReactorClientModule,
 } from "@powerhousedao/reactor";
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
-import { createReactorMcpProvider } from "@powerhousedao/reactor-mcp";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { createServer } from "../src/index.js";
 import { createP256Signer } from "./utils/p256-signer.js";
 
 // IReactorClient's writes that warn "is deprecated"; client.write replaces them.
 const DEPRECATED = new Set([
   "create",
   "createEmpty",
+  "upgradeDocument",
   "createDocumentInDrive",
   "execute",
   "executeBatch",
   "rename",
   "setPreferredEditor",
   "addRelationship",
+  "updateRelationship",
   "removeRelationship",
+  "moveRelationship",
   "deleteDocument",
   "deleteDocuments",
+  "loadBatch",
+  // The facade's drive writes; client.write.drives replaces them.
+  "drives",
 ]);
 
 /** The client, refusing its deprecated writes. */
@@ -43,8 +52,8 @@ describe("reactor-mcp's writes", () => {
     module = await new ReactorClientBuilder()
       .withReactorBuilder(
         new ReactorBuilder().withDocumentModelSources([
-          documentModelDocumentModelModule,
-          driveDocumentModelModule,
+          documentModelDocumentModelModule as unknown as DocumentModelModule,
+          driveDocumentModelModule as unknown as DocumentModelModule,
         ]),
       )
       .withSigner(await createP256Signer())
@@ -56,49 +65,44 @@ describe("reactor-mcp's writes", () => {
   });
 
   it("use no deprecated IReactorClient write", async () => {
-    const { tools } = await createReactorMcpProvider({
+    const server = await createServer({
       client: withoutDeprecatedWrites(module.client),
     });
-    const content = (result: {
-      structuredContent?: unknown;
-      isError?: boolean;
-    }) => {
-      expect(result.isError).toBeUndefined();
+    const mcp = new Client({ name: "test", version: "1.0.0" });
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(serverSide), mcp.connect(clientSide)]);
+    const call = async (name: string, args: Record<string, unknown>) => {
+      const result = await mcp.callTool({ name, arguments: args });
+      expect(result.isError, JSON.stringify(result.content)).toBeFalsy();
       return result.structuredContent as Record<string, string>;
     };
-
-    const { driveId } = content(
-      await tools.addDrive.callback({
+    let driveId = "";
+    try {
+      ({ driveId } = await call("addDrive", {
         name: "Books",
         icon: "book",
         preferredEditor: "powerhouse/generic-drive-explorer",
-      }),
-    );
-    const { documentId } = content(
-      await tools.createDocument.callback({
+      }));
+      const { documentId } = await call("createDocument", {
         documentType: "powerhouse/document-model",
-      }),
-    );
-    await tools.createDocument.callback({
-      documentType: "powerhouse/document-model",
-      driveId,
-    });
-    content(
-      await tools.addActions.callback({
+        name: "Loose",
+      });
+      const filed = await call("createDocument", {
+        documentType: "powerhouse/document-model",
+        driveId,
+        name: "Filed",
+      });
+      await call("addActions", {
         documentId,
-        actions: [
-          { type: "SET_MODEL_NAME", input: { name: "Books" }, scope: "global" },
-        ],
-      }),
-    );
-
-    expect(
-      content(await tools.deleteDocument.callback({ documentId })),
-    ).toEqual({ success: true });
-    expect(
-      content(await tools.deleteDrive.callback({ documentId: driveId })),
-    ).toEqual({ success: true });
-    const drive = await module.client.get(driveId).catch(() => undefined);
-    expect(drive).toBeUndefined();
+        actions: [{ type: "SET_MODEL_NAME", input: { name: "Books" } }],
+      });
+      await call("deleteDocument", { documentId: filed.documentId });
+      await call("deleteDocument", { documentId });
+      await call("deleteDrive", { documentId: driveId });
+    } finally {
+      await mcp.close();
+      await server.close();
+    }
+    await expect(module.client.read.get(driveId)).rejects.toThrow();
   });
 });
