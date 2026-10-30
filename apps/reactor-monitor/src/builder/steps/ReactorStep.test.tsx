@@ -15,10 +15,11 @@ import {
   HOT_RELOAD_REASONS,
   REACH_REASONS,
   REASONS,
+  ROUTER_REASONS,
   SETTING_REASONS,
   type Setter,
 } from "../../host-rules/index.js";
-import { DRIVES_COPY } from "../copy.js";
+import { CONNECTION_COPY, DRIVES_COPY } from "../copy.js";
 import { renderStep, type RenderedStep } from "../__fixtures__/steps.js";
 import { ReactorStep } from "./ReactorStep.js";
 
@@ -192,6 +193,81 @@ describe("ReactorStep", () => {
       );
     });
 
+    it("chooses where new drives go and how Connect reaches the switchboard", () => {
+      const envelope = stack();
+      const setters = chosen(envelope, [
+        "drive:Shared",
+        "host.children.ui:reach:open:sb:shared",
+      ]);
+      const { view, onChoose } = renderStep(ReactorStep, {
+        envelope,
+        setters: [
+          ...setters,
+          {
+            path: "host.children.ui.reactor.backends.sb.remote.requestTimeoutMs",
+            value: 45_000,
+          },
+        ],
+        context: FULL,
+      });
+      fireEvent.click(view.getByRole("tab", { name: /ui/ }));
+      const newDrives = within(
+        drivesCard(view).getByRole("group", { name: "Where new drives go" }),
+      );
+      expect(
+        newDrives
+          .getByRole("button", { name: "In this browser" })
+          .getAttribute("aria-pressed"),
+      ).toBe("true");
+      fireEvent.click(newDrives.getByRole("button", { name: "On sb" }));
+      expect(onChoose).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "host.children.ui:newDrives:sb" }),
+      );
+      expect(drivesCard(view).queryByText(DRIVES_COPY.newDrives)).toBeNull();
+
+      const connection = within(
+        view.getByRole("region", { name: CONNECTION_COPY.title("sb") }),
+      );
+      const wait = within(
+        connection.getByRole("group", { name: "Waiting for an answer" }),
+      );
+      expect(
+        wait
+          .getByRole("button", { name: "Set to 45 s in host.js" })
+          .getAttribute("aria-pressed"),
+      ).toBe("true");
+      expect(
+        wait
+          .getByRole("button", { name: "Wait up to 30 s (default)" })
+          .getAttribute("aria-pressed"),
+      ).toBe("false");
+      fireEvent.click(
+        within(
+          connection.getByRole("group", { name: "When it stops answering" }),
+        ).getByRole("button", { name: "Never stop trying" }),
+      );
+      expect(onChoose).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "host.children.ui:breaker:sb:never" }),
+      );
+      expect(
+        within(connection.getByRole("group", { name: "Live updates" }))
+          .getByRole("button", { name: "Live updates on (default)" })
+          .getAttribute("aria-pressed"),
+      ).toBe("true");
+      const finding = within(
+        view.getByRole("region", { name: CONNECTION_COPY.finding }),
+      );
+      expect(
+        within(
+          finding.getByRole("group", {
+            name: "Asking each reactor for a document",
+          }),
+        )
+          .getByRole("button", { name: "Wait up to 3 s (default)" })
+          .getAttribute("aria-pressed"),
+      ).toBe("true");
+    });
+
     it("says every drive opens on the switchboard when Connect keeps none", () => {
       const { view } = renderStep(ReactorStep, {
         envelope: hostExport("cli"),
@@ -208,6 +284,18 @@ describe("ReactorStep", () => {
       expect(row.getByText(REACH_REASONS.remoteOnly)).toBeTruthy();
       expect(card.getByText(REACH_REASONS.mapped)).toBeTruthy();
       expect(card.queryByText(DRIVES_COPY.newDrives)).toBeNull();
+      const newDrives = within(
+        card.getByRole("group", { name: "Where new drives go" }),
+      );
+      expect(
+        newDrives.getByRole("button", { name: "In this browser" }),
+      ).toHaveProperty("disabled", true);
+      expect(newDrives.getByText(ROUTER_REASONS.noBrowser)).toBeTruthy();
+      expect(
+        newDrives
+          .getByRole("button", { name: "On cli-switchboard" })
+          .getAttribute("aria-pressed"),
+      ).toBe("true");
       expect(
         card.getByRole("button", { name: "Keep drives in this browser" }),
       ).toHaveProperty("disabled", false);

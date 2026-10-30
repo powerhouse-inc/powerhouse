@@ -82,6 +82,7 @@ export function DrivesCard({
   const own = options.filter((option) => option.member === member.path);
   const removeOf = (id: string) =>
     own.filter((option) => option.id === `${member.path}:reach:${id}`);
+  const newDrives = own.filter((option) => option.group === "newDrives");
   const adds = own.filter(
     (option) =>
       option.group === "reach" &&
@@ -136,7 +137,14 @@ export function DrivesCard({
           {note}
         </p>
       ))}
-      {reach.keepsCopy ? (
+      {newDrives.length > 0 ? (
+        <OptionGroup
+          hint={DRIVES_COPY.newDrivesHint}
+          onChoose={onChoose}
+          options={newDrives}
+          title={GROUP_LABELS.newDrives}
+        />
+      ) : reach.keepsCopy ? (
         <p className="hb-note">{DRIVES_COPY.newDrives}</p>
       ) : null}
       {reach.links.length > 0 ? (
