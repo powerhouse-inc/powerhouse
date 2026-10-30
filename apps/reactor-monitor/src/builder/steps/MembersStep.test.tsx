@@ -49,4 +49,29 @@ describe("MembersStep", () => {
       expect.objectContaining({ id: "host:add:switchboard" }),
     );
   });
+
+  it("shows a port clash and offers to move the member", () => {
+    const envelope = structuredClone(stack());
+    (
+      envelope.host as unknown as { children: Record<string, unknown> }
+    ).children.ui2 = { host: "connect" };
+    const { view, onChoose } = renderStep(MembersStep, {
+      envelope,
+      context: FULL,
+    });
+    expect(
+      view.getByText(
+        "ui and ui2 both use port 6491. Give one of them another port.",
+      ),
+    ).toBeTruthy();
+    const ports = within(view.getByRole("group", { name: "Ports" }));
+    fireEvent.click(
+      ports.getByRole("button", { name: "Move ui2 to port 6492" }),
+    );
+    expect(onChoose).toHaveBeenCalledWith(
+      expect.objectContaining({
+        setters: [{ path: "host.children.ui2.runner.port", value: 6492 }],
+      }),
+    );
+  });
 });

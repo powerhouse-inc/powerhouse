@@ -45,6 +45,7 @@ import {
   MaterializeError,
   materialize,
 } from "./materialize.ts";
+import { startFailure } from "./start-failure.ts";
 
 export class ControllerError extends Error {
   readonly code: ErrorCode;
@@ -722,11 +723,7 @@ export function createMonitorController(
       if (entry.abort.signal.aborted) return;
       entry.view.status = "failed";
       if (error instanceof SpawnHostError) {
-        entry.view.error = {
-          message: error.message.split("\n--- output tail ---\n")[0],
-          phase: error.phase,
-          tail: error.outputTail,
-        };
+        entry.view.error = startFailure(error);
         if (error.exit) entry.view.exit = exitOf(error.exit);
       } else {
         entry.view.error = {

@@ -139,7 +139,15 @@ const SETTABLE: Pattern[] = [
   REMOTE_URL,
   ["reactor", "namespace"],
   ["reactor", "placement", "primary"],
+  ["reactor", "placement", "newDrives"],
   PLACED_DRIVE,
+  ["reactor", "router", "probeTimeoutMs"],
+  ["reactor", "router", "provisionalRouteMs"],
+  ["reactor", "backends", "*", "remote", "requestTimeoutMs"],
+  ["reactor", "backends", "*", "remote", "realtime"],
+  ["reactor", "backends", "*", "remote", "breaker"],
+  ["reactor", "backends", "*", "remote", "breaker", "failures"],
+  ["reactor", "backends", "*", "remote", "breaker", "openMs"],
   ["runner", "port"],
   ["runner", "dev"],
   ...SWITCHBOARD_SETTABLE,
@@ -153,6 +161,7 @@ const DELETABLE: Pattern[] = [
   ["reactor", "backends", "*", "readModel"],
   ["reactor", "backends", "*", "remote"],
   ["reactor", "placement"],
+  ["reactor", "router"],
 ];
 
 const CODE_REASONS = {

@@ -80,7 +80,7 @@ export function switchboardSettings(member: Member): Record<string, unknown> {
   return isRecord(own) ? own : {};
 }
 
-/** host-core primaryBackend's pick, by name. */
+/** host-core primaryBackend's pick, by name: a switchboard's own store. */
 export function primaryBackendName(
   reactor: Record<string, unknown> | undefined,
 ): string | undefined {
@@ -94,6 +94,34 @@ export function primaryBackendName(
   if (names.includes("main")) return "main";
   if (names.includes("local")) return "local";
   return names[0];
+}
+
+const BROWSER_KINDS = new Set(["in-process", "worker"]);
+
+/** Connect's router primary: its browser reactor, else newDrives, else the only switchboard. */
+export function connectPrimaryName(
+  reactor: Record<string, unknown> | undefined,
+): string | undefined {
+  if (!reactor || !isRecord(reactor.backends)) return undefined;
+  const entries = Object.entries(reactor.backends);
+  const browser = entries.find(
+    ([, body]) =>
+      isRecord(body) &&
+      typeof body.kind === "string" &&
+      BROWSER_KINDS.has(body.kind),
+  );
+  if (browser) return browser[0];
+  const newDrives = valueAt(reactor, ["placement", "newDrives"]);
+  if (
+    typeof newDrives === "string" &&
+    Object.hasOwn(reactor.backends, newDrives)
+  ) {
+    return newDrives;
+  }
+  const remotes = entries.filter(
+    ([, body]) => isRecord(body) && body.kind === "remote",
+  );
+  return remotes.length === 1 ? remotes[0][0] : undefined;
 }
 
 function placementMissing(
@@ -126,8 +154,11 @@ function backendsOf(
   reactorAt: string,
 ): MemberBackend[] {
   if (!reactor || !isRecord(reactor.backends)) return [];
-  const primary = primaryBackendName(reactor);
-  const missing = placementMissing(reactor);
+  const connect = role === "connect";
+  const primary = connect
+    ? connectPrimaryName(reactor)
+    : primaryBackendName(reactor);
+  const missing = !connect && placementMissing(reactor);
   return Object.entries(reactor.backends).flatMap(([name, body]) => {
     if (!isRecord(body)) return [];
     const storage = isRecord(body.storage) ? body.storage.kind : undefined;
@@ -166,7 +197,7 @@ function member(
     role,
     dev: verb === "dev" || fields.runner.dev === true,
     backends: backendsOf(role, fields.reactor, fields.reactorAt),
-    placementMissing: placementMissing(fields.reactor),
+    placementMissing: role !== "connect" && placementMissing(fields.reactor),
   };
 }
 

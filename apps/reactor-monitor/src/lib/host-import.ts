@@ -9,6 +9,7 @@ import {
   type ProjectedDescriptor,
 } from "@powerhousedao/host-core/projection";
 import {
+  connectReactorIssues,
   declaredHostSchemas,
   hostExportSchema,
   outputTokenSchema,
@@ -31,6 +32,7 @@ export type ImportIssue = HostIssue & { severity: ImportSeverity };
 export const EXPORT_FILE = "export";
 
 const SWITCHBOARD_RUNNER = "/runners/switchboard";
+const CONNECT_RUNNER = "/runners/connect";
 const MAIN_BACKEND = "main";
 /** A hostile export can share nested compounds to blow the walk up. */
 export const MAX_IMPORT_MEMBERS = 1000;
@@ -177,7 +179,18 @@ export function parseHostExport(text: string): {
   return issues.length > 0 ? { issues } : { export: exp, issues };
 }
 
-/** `ph run`'s placement key check: each folder, and each child as merged. */
+/** `ph run`'s host-level placement checks: the Connect runner adds its own. */
+function hostIssues(host: unknown) {
+  const runner = isRecord(host) && isRecord(host.runner) ? host.runner : {};
+  const connect =
+    typeof runner.module === "string" && runner.module.endsWith(CONNECT_RUNNER);
+  return [
+    ...placementKeyIssues(host),
+    ...(connect ? connectReactorIssues(host) : []),
+  ];
+}
+
+/** `ph run`'s placement checks: each folder, and each child as merged. */
 function placementIssues(
   bodies: readonly [string, unknown][],
   members: HostExport["members"],
@@ -194,7 +207,7 @@ function placementIssues(
     });
   for (const [folder, body] of bodies) {
     if (!isRecord(body) || "children" in body) continue;
-    const found = placementKeyIssues(body);
+    const found = hostIssues(body);
     own.set(folder, new Set(found.map((issue) => issue.message)));
     for (const issue of found)
       push(hostFile(folder), issue.path, issue.message);
@@ -211,7 +224,7 @@ function placementIssues(
         member as HostDefinition,
         wrapper as ChildWrapper,
       );
-      for (const issue of placementKeyIssues(merged)) {
+      for (const issue of hostIssues(merged)) {
         if (wrapper.reactor !== undefined) {
           push(
             hostFile(folder),

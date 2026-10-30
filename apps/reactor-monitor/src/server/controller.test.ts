@@ -490,26 +490,32 @@ describe("createMonitorController", () => {
   it("reports a SpawnHostError as failed, with its tail, until dismissed", async () => {
     const { controller, launches } = create();
     const started = await controller.start({ project: allowed, host: "sb" });
-    launches[0].options.onOutput?.("stderr", "boom\n");
+    launches[0].options.onOutput?.("stderr", "Port 4801 is already in use\n");
     launches[0].fail(
-      new SpawnHostError("spawnHost: ph run sb exited", "exited", "boom\n", {
-        code: 1,
-        signal: null,
-        forced: false,
-      }),
+      new SpawnHostError(
+        "spawnHost: ph run sb exited",
+        "exited",
+        "Port 4801 is already in use\n",
+        {
+          code: 1,
+          signal: null,
+          forced: false,
+        },
+      ),
     );
     await until(() => controller.get(started.id).status === "failed");
     expect(controller.get(started.id)).toMatchObject({
       error: {
-        message: "spawnHost: ph run sb exited",
+        message: "Stopped while starting: Port 4801 is already in use.",
         phase: "exited",
-        tail: "boom\n",
+        tail: "Port 4801 is already in use\n",
+        context: "ph run sb exited",
       },
       exit: { code: 1 },
     });
     expect(existsSync(path.join(controller.tempRoot, started.id))).toBe(false);
     expect(controller.logs(started.id, 0).lines).toEqual([
-      { seq: 0, stream: "stderr", text: "boom" },
+      { seq: 0, stream: "stderr", text: "Port 4801 is already in use" },
     ]);
     expect((await controller.stop(started.id)).status).toBe("failed");
     expect(controller.list()).toEqual([]);
@@ -1068,6 +1074,55 @@ describe("createMonitorController", () => {
         "The copy's Connect (ui) needs port 13001, and something else is using it, perhaps another running copy. Stop that, then start again.",
       );
       expect(asked).toEqual([13001]);
+      expect(launches).toEqual([]);
+      expect(readdirSync(controller.tempRoot)).toEqual([]);
+    });
+
+    it("refuses a draft whose members would share a port in the copy, naming the declared ports, before anything starts", async () => {
+      mkdirSync(path.join(allowed, "hosts", "stack"), { recursive: true });
+      writeFileSync(
+        path.join(allowed, "hosts", "stack", "host.js"),
+        "export default {};",
+      );
+      // Distinct as declared (3001 and 13001); Connect moves to 13001 in a copy.
+      const envelope = stackExport(allowed);
+      (envelope.members as Record<string, unknown>).agent = {
+        name: "agent",
+        runner: { module: "@powerhousedao/clint/mastra-runner", port: 13001 },
+      };
+      (
+        (envelope.host as unknown as Record<string, unknown>)
+          .children as Record<string, unknown>
+      ).agent = { host: "agent" };
+      const asked: number[] = [];
+      const { controller, launches } = create({
+        exportHost: () => Promise.resolve(envelope),
+        portFree: (port) => {
+          asked.push(port);
+          return Promise.resolve(true);
+        },
+      });
+      const request = await draft({
+        host: "stack",
+        baseDigest: await baseDigest(envelope),
+      });
+      let error: unknown;
+      try {
+        await controller.startDraft(request);
+      } catch (caught) {
+        error = caught;
+      }
+      expect(error).toBeInstanceOf(ControllerError);
+      expect((error as ControllerError).code).toBe("check_failed");
+      expect((error as ControllerError).ruleIssues).toEqual([
+        expect.objectContaining({
+          rule: "port",
+          path: "host.children.ui.runner.port",
+          message:
+            "ui and agent would both use port 13001 when the monitor starts its copy: ui is on 3001, which the copy moves up by 10000; agent keeps port 13001. Give ui another port.",
+        }),
+      ]);
+      expect(asked).toEqual([]);
       expect(launches).toEqual([]);
       expect(readdirSync(controller.tempRoot)).toEqual([]);
     });

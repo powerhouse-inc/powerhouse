@@ -26,6 +26,14 @@ const POLL_MS = 1000;
 const WATCH_MS = 3000;
 
 /** `url`: a switchboard's first drive address; `app`: a Connect's page. */
+/** A copy that began and then failed; its message already says so. */
+export class StartFailedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StartFailedError";
+  }
+}
+
 export type RunReactor = {
   name: string;
   url?: string;
@@ -365,10 +373,9 @@ export function useBuilderRun({
         current.current = undefined;
         dropInstance(id);
         setState(undefined);
-        throw new Error(
-          settled.error?.message ??
-            `The copy ${settled.status} while starting.`,
-        );
+        throw settled.error
+          ? new StartFailedError(settled.error.message)
+          : new Error(`The copy ${settled.status} while starting.`);
       }
       attach(settled);
       running(settled, token);

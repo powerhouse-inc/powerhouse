@@ -387,13 +387,19 @@ describe("Use it, wired", () => {
       get: () =>
         Promise.resolve({
           ...instance("failed"),
-          error: { message: "port taken", phase: "ready", tail: "" },
+          error: {
+            message: "Stopped while starting: Port 16347 is already in use.",
+            phase: "exited",
+            tail: "Port 16347 is already in use",
+          },
         }),
     });
     const view = render(<Wired storage={storage} wiring={wiring} />);
     fireEvent.click(await waitFor(() => startButton(view)));
     await waitFor(() =>
-      expect(view.getByText("Couldn't start: port taken")).toBeTruthy(),
+      expect(
+        view.getByText("Stopped while starting: Port 16347 is already in use."),
+      ).toBeTruthy(),
     );
     expect(runText(view)).toBe("");
     expect(wiring.managed.attach).not.toHaveBeenCalled();

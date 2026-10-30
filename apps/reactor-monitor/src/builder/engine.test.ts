@@ -57,7 +57,8 @@ describe("stepOf", () => {
     expect(stepOf("host.children.sb")).toBe("members");
     expect(stepOf("members.switchboard")).toBe("members");
     expect(stepOf("host.config.startOrder.0")).toBe("members");
-    expect(stepOf("host.children.sb.runner.port")).toBe("reactor");
+    expect(stepOf("host.children.sb.runner.port")).toBe("members");
+    expect(stepOf("host.runner.port")).toBe("members");
     expect(stepOf("members.switchboard.reactor.backends.main.storage")).toBe(
       "reactor",
     );

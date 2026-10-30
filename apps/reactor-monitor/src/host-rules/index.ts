@@ -14,6 +14,7 @@ export {
   type Flags,
 } from "./flags.js";
 export {
+  connectPrimaryName,
   fileOf,
   freshKey,
   hostVerb,
@@ -27,6 +28,18 @@ export {
   type MemberBackend,
   type MemberRole,
 } from "./members.js";
+export {
+  COPY_CONNECT_PORT_OFFSET,
+  copyOnlyClashes,
+  copyPortClashes,
+  copyPortOf,
+  copyPortOverflow,
+  fixedPortOf,
+  nextFreePort,
+  portClashes,
+  portClashMessage,
+  type PortClash,
+} from "./ports.js";
 export {
   addDriveStatus,
   applyOption,
@@ -52,6 +65,22 @@ export {
   type ConnectReach,
   type DriveLink,
 } from "./reach.js";
+export {
+  BREAKERS,
+  duration,
+  PROBE_TIMEOUTS,
+  PROVISIONAL_ROUTES,
+  REQUEST_TIMEOUTS,
+  ROUTER_DEFAULTS,
+  ROUTER_LABELS,
+  ROUTER_REASONS,
+  routerSettingLines,
+  routerSettings,
+  type BreakerSetting,
+  type ConnectionSettings,
+  type RouterGroup,
+  type RouterSettings,
+} from "./router-settings.js";
 export {
   checkEnvKey,
   checkSetter,

@@ -83,6 +83,13 @@ const OPTION_STEP: Record<OptionGroup, StepId> = {
   add: "members",
   reach: "reactor",
   placement: "reactor",
+  port: "members",
+  newDrives: "reactor",
+  requestTimeout: "reactor",
+  breaker: "reactor",
+  realtime: "reactor",
+  probeTimeout: "reactor",
+  provisionalRoute: "reactor",
 };
 
 export function optionStep(option: OptionStatus): StepId {
@@ -98,6 +105,7 @@ export function stepOf(path: string): StepId {
   if (parts[0] === "members" && parts.length === 2) return "members";
   if (parts[1] === "children" && parts.length === 3) return "members";
   if (parts.includes("startOrder")) return "members";
+  if (parts.at(-2) === "runner" && parts.at(-1) === "port") return "members";
   return "reactor";
 }
 
