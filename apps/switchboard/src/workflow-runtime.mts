@@ -273,8 +273,13 @@ export interface ComposeWorkflowRuntimeDeps {
   /** The workflow package's HTTP namespace; the OAuth2 callback lives on it.
    * Absent leaves OAuth2 connections unable to sign in. */
   http?: IHttpScope;
-  /** The publisher's OAuth2 apps, by id: client file paths per kind. */
-  oauthApps?: { id: string; clients: { desktop?: string; web?: string } }[];
+  /** The publisher's OAuth2 apps, by id: client file paths per kind, and
+   * the relay a web sign-in goes through without a web client file. */
+  oauthApps?: {
+    id: string;
+    clients: { desktop?: string; web?: string };
+    relay?: { clientId: string; redirectUri: string; tokenUrl: string };
+  }[];
   authorizationService: IAuthorizationService;
   /** Answers a piece's read of a read-model index (`ctx.reactor.query`) in
    * process, as the run's user: the GraphQL manager that serves the same
