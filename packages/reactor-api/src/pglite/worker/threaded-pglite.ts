@@ -1,4 +1,9 @@
 import type { QueryOptions, Results } from "@electric-sql/pglite";
+import type {
+  IStoreMaintenance,
+  TableRewriteRequest,
+  TableRewriteResult,
+} from "@powerhousedao/reactor";
 import { childLogger, type ILogger } from "document-model";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { existsSync } from "node:fs";
@@ -41,7 +46,7 @@ export type PGliteAbortListener = (reason: string) => void;
 /** Called once, when the worker thread is gone; `error` is null after a clean close. */
 export type PGliteExitListener = (error: Error | null) => void;
 
-type PendingKind = "init" | "query" | "exec" | "close" | "reserve";
+type PendingKind = "init" | "query" | "exec" | "close" | "reserve" | "rewrite";
 
 type Pending = {
   kind: PendingKind;
@@ -80,7 +85,7 @@ export function resolvePgliteWorkerMemoryMb(
  * The instance is a plain extensible object, since knex stores its own
  * bookkeeping on the connection.
  */
-export class ThreadedPGlite implements PGliteLike {
+export class ThreadedPGlite implements PGliteLike, IStoreMaintenance {
   readonly label: string;
   /** Settles once the worker has opened the store; rejects with {@link PGliteWorkerInitError}. */
   readonly waitReady: Promise<void>;
@@ -223,6 +228,15 @@ export class ThreadedPGlite implements PGliteLike {
     }
   }
 
+  /** Rewrites one table through the store's maintenance inside the worker. */
+  rewriteTable(request: TableRewriteRequest): Promise<TableRewriteResult> {
+    return this.request<TableRewriteResult>("rewrite", (id) => ({
+      type: "rewrite-table",
+      id,
+      request,
+    }));
+  }
+
   /** The status after the most recently answered request, as PGlite reported it. */
   isInTransaction(): boolean {
     return this.inTransaction;
@@ -347,6 +361,9 @@ export class ThreadedPGlite implements PGliteLike {
         return;
       case "exec-result":
         this.settle(msg.id, msg.inTransaction, msg.results);
+        return;
+      case "rewrite-table-result":
+        this.settle(msg.id, msg.inTransaction, msg.result);
         return;
       case "closed":
         this.settle(msg.id, false, undefined);
