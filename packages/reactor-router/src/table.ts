@@ -264,7 +264,9 @@ export class RouterTable {
   }
 
   /** Correction, override, learned, the default backend, hash; `excluded`
-   * backends are skipped. */
+   * backends are skipped, except an eligible default backend: the caller
+   * then sees a backend that already refused, and fails rather than placing
+   * the collection elsewhere. */
   collectionRoute(
     collection: DriveCollectionId,
     excluded: ReadonlySet<string> = new Set(),
@@ -278,11 +280,7 @@ export class RouterTable {
       this.defaultBackend === undefined
         ? undefined
         : this.byName.get(this.defaultBackend);
-    if (
-      fallback !== undefined &&
-      !excluded.has(fallback.name) &&
-      this.isEligible(fallback, requirements)
-    ) {
+    if (fallback !== undefined && this.isEligible(fallback, requirements)) {
       return {
         collectionId: collection.key,
         backend: fallback.name,

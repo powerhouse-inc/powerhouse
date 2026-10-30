@@ -190,6 +190,24 @@ describe("projectReactorToConnect", () => {
         placement: { newDrives: "main" },
       }).connect.instance,
     ).not.toHaveProperty("router");
+    // A switchboard with no address yet (an unresolved token) isn't served,
+    // so neither is newDrives naming it.
+    const unresolved = projectReactorToConnect({
+      backends: {
+        main: { kind: "worker" },
+        sb: {
+          kind: "remote",
+          remote: {
+            url: {
+              $output: { host: "switchboard", path: ["drives", "b", "url"] },
+            } as unknown as string,
+          },
+        },
+      },
+      placement: { newDrives: "sb" },
+    }).connect.instance;
+    expect(unresolved?.remoteBackends).toEqual([]);
+    expect(unresolved).not.toHaveProperty("router");
     // No switchboard, no router.
     expect(
       projectReactorToConnect({

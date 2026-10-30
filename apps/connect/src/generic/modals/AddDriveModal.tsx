@@ -1,6 +1,8 @@
 import { toast } from "@powerhousedao/connect/services";
 import {
   newDriveError,
+  NewDriveRefusedError,
+  newDrivesBlocked,
   NewDriveUnansweredError,
 } from "@powerhousedao/connect-core/runtime";
 import type {
@@ -18,6 +20,7 @@ import {
   getDrives,
   getPHNavigation,
   setSelectedDrive,
+  showPHModal,
   useAppModules,
   usePHModal,
   useVetraPackages,
@@ -36,7 +39,14 @@ export function AddDriveModal() {
   const open = phModal?.type === "addDrive";
   const appModules = useAppModules();
   const packages = useVetraPackages();
-  const onAddLocalDrive = async (data: AppOptions) => {
+  /** True when the switchboard refused the caller, so signing in may help. */
+  const onAddLocalDrive = async (data: AppOptions): Promise<boolean> => {
+    const blocked = newDrivesBlocked();
+    if (blocked) {
+      console.error(blocked);
+      toast(blocked.message, { type: "connect-warning" });
+      return false;
+    }
     try {
       const app = appModules?.find((a) => a.config.id === data.id);
       const newDrive = await addDrive(
@@ -62,17 +72,24 @@ export function AddDriveModal() {
       });
 
       if (!newDrive) {
-        return;
+        return false;
       }
 
       setSelectedDrive(newDrive);
     } catch (e) {
       const failure = newDriveError(getFullReactorClient(), e);
       console.error(failure);
-      if (failure instanceof NewDriveUnansweredError) {
+      if (failure instanceof NewDriveRefusedError && failure.auth) {
+        return true;
+      }
+      if (
+        failure instanceof NewDriveUnansweredError ||
+        failure instanceof NewDriveRefusedError
+      ) {
         toast(failure.message, { type: "connect-warning" });
       }
     }
+    return false;
   };
 
   const onAddRemoteDrive = async (data: AddRemoteDriveInput) => {
@@ -114,8 +131,9 @@ export function AddDriveModal() {
     }
   };
   async function onAddLocalDriveSubmit(data: AppOptions) {
-    await onAddLocalDrive(data);
+    const signIn = await onAddLocalDrive(data);
     closePHModal();
+    if (signIn) showPHModal({ type: "driveAuthRequired" });
   }
 
   async function onAddRemoteDriveSubmit(data: AddRemoteDriveInput) {

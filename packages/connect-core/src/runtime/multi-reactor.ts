@@ -200,6 +200,14 @@ export async function buildMultiReactorClient(
   if (listed.length === 0) {
     throw new Error("A routing client needs at least one switchboard");
   }
+  if (
+    params.newDrives !== undefined &&
+    !listed.some((remote) => remote.name === params.newDrives)
+  ) {
+    throw new Error(
+      `New drives go to ${params.newDrives}, but this Connect doesn't link to it (it links to ${listed.map((remote) => remote.name).join(", ")}).`,
+    );
+  }
   // The logged-in Renown user's token and signer, read per request as before.
   const remotes = listed.map((remote) =>
     createSwitchboardBackend({
