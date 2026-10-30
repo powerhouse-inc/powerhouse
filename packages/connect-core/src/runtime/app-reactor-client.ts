@@ -269,7 +269,15 @@ async function buildRouter(
       url,
     );
   }
+  // New drives belong on a switchboard: without the router they would be
+  // created in this browser, so it is required.
+  const newDrives = params.router?.newDrives;
   if (remotes.length === 0) {
+    if (newDrives !== undefined) {
+      throw new Error(
+        `New drives go to ${newDrives}, but this Connect has no address for it, so it can't start.`,
+      );
+    }
     logger.warn(
       "multiReactor is on but no remote drive URL is configured; using the local reactor only",
     );
@@ -279,6 +287,12 @@ async function buildRouter(
   try {
     multiReactor = await (params.loadRouter ?? loadMultiReactor)();
   } catch (error) {
+    if (newDrives !== undefined) {
+      throw new Error(
+        `New drives go to ${newDrives}, but the router that reaches it didn't load, so Connect can't start.`,
+        { cause: error },
+      );
+    }
     logger.error("Could not load the multi-reactor router: @error", error);
     return undefined;
   }

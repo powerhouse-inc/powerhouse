@@ -104,6 +104,9 @@ export function modelLoading(onDemand: boolean) {
   return { inspection: { loadsModelsOnDemand: onDemand } };
 }
 
+/** A reply `serve` never sends: the request hangs until the stub closes. */
+export const HANG: Reply = Object.freeze({ status: 0, body: "" });
+
 export function data(value: unknown): Reply {
   return { status: 200, body: JSON.stringify({ data: value }) };
 }
@@ -234,6 +237,7 @@ export async function serve(
           body: JSON.stringify({ errors: [{ message: String(error) }] }),
         };
       }
+      if (answer === HANG) return;
       response.writeHead(answer.status, {
         "content-type": "application/json; charset=utf-8",
       });
@@ -248,7 +252,10 @@ export async function serve(
     url: `http://127.0.0.1:${port}/graphql`,
     received,
     close: () =>
-      new Promise<void>((resolve) => instance.close(() => resolve())),
+      new Promise<void>((resolve) => {
+        instance.close(() => resolve());
+        instance.closeAllConnections();
+      }),
   };
 }
 

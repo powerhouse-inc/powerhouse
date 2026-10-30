@@ -28,7 +28,11 @@ export {
   relistAppDrives,
   selectAppReactorClient,
 } from "./app-reactor-client.js";
-export { NewDriveUnansweredError, newDriveError } from "./new-drive.js";
+export {
+  NewDriveRefusedError,
+  NewDriveUnansweredError,
+  newDriveError,
+} from "./new-drive.js";
 export {
   applyPlacementEntries,
   keepsLocalCopy,
