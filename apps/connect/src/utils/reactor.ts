@@ -22,6 +22,7 @@ import {
   type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import {
+  actionIdsFrom,
   caughtUp,
   type PlacementSync,
 } from "@powerhousedao/connect-core/runtime";
@@ -280,16 +281,28 @@ async function addLocalDefaultDrive(
 const COPY_TIMEOUT_MS = 30_000;
 const COPY_RECHECK_MS = 250;
 
-/** The local copy's revision, or undefined while the drive is not held here. */
-async function localRevision(
+/** Adds what the copy here stored since the last read; false while it is not held here. */
+async function readCopy(
   driveId: string,
-): Promise<Record<string, number> | undefined> {
+  held: Record<string, Set<string>>,
+  from: Record<string, number>,
+): Promise<boolean> {
   const local = getPHStore()?.reactorClientModule?.client;
-  if (!local) return undefined;
+  if (!local) return false;
   try {
-    return (await local.read.get(driveId)).header.revision;
+    for (const scope of Object.keys(held)) {
+      const read = await actionIdsFrom(
+        local.read,
+        driveId,
+        scope,
+        from[scope] ?? 0,
+      );
+      for (const id of read.ids) held[scope].add(id);
+      from[scope] = read.next;
+    }
+    return true;
   } catch {
-    return undefined;
+    return false;
   }
 }
 
@@ -302,11 +315,19 @@ async function untilCaughtUp(driveId: string, remote: string): Promise<void> {
   if (!backend) {
     throw new Error(`No switchboard named ${remote} to copy from`);
   }
-  const source = (await backend.api.get(driveId)).header.revision;
+  const scopes = Object.keys((await backend.api.get(driveId)).header.revision);
+  const source: Record<string, string[]> = {};
+  const held: Record<string, Set<string>> = {};
+  for (const scope of scopes) {
+    source[scope] = (await actionIdsFrom(backend.api, driveId, scope, 0)).ids;
+    held[scope] = new Set();
+  }
+  const from: Record<string, number> = {};
   const deadline = Date.now() + COPY_TIMEOUT_MS;
   for (;;) {
-    const local = await localRevision(driveId);
-    if (local && caughtUp(local, source)) return;
+    if ((await readCopy(driveId, held, from)) && caughtUp(held, source)) {
+      return;
+    }
     if (Date.now() >= deadline) {
       throw new Error(
         `The copy in this browser did not catch up with ${remote} within ${COPY_TIMEOUT_MS / 1000} s`,
