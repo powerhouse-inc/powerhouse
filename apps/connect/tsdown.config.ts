@@ -13,7 +13,6 @@ export default defineConfig({
     router: "src/router/index.ts",
     layout: "src/layout/index.ts",
     generic: "src/generic/index.ts",
-    "ai-tools": "src/ai-tools.ts",
     "route-tree": "src/route-tree.ts",
     "route-views": "src/route-views/index.ts",
     prerender: "src/prerender/shell.tsx",

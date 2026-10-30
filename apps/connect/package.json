@@ -54,11 +54,6 @@
       "types": "./dist/generic.d.ts",
       "import": "./dist/generic.js"
     },
-    "./ai-tools": {
-      "source": "./src/ai-tools.ts",
-      "types": "./dist/ai-tools.d.ts",
-      "import": "./dist/ai-tools.js"
-    },
     "./route-tree": {
       "source": "./src/route-tree.ts",
       "types": "./dist/route-tree.d.ts",
