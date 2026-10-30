@@ -292,14 +292,15 @@ import {
   type TriggerKind,
 } from "./trigger-filters.js";
 import {
-  clientKindFor,
   loadOAuthApps,
   grantedScopes,
   OAUTH_APP,
   OAUTH_GRANTED_SCOPES,
   OAUTH_SCOPES,
+  oauthSignInFor,
   scopesOverride,
   type OAuthAppRegistry,
+  type OAuthSignIn,
 } from "./oauth-apps.js";
 import { SpanStatusCode, type Span } from "@opentelemetry/api";
 import { tracedSteps, WorkflowTelemetry } from "../telemetry.js";
@@ -1095,6 +1096,8 @@ export class WorkflowRuntimeService {
           logger.warn(
             `OAuth2 app "${appId}" has no usable ${kind} client: ${reason}`,
           ),
+        onRelayDropped: (appId, reason) =>
+          logger.warn(`OAuth2 app "${appId}" relay ignored: ${reason}`),
       }),
     );
     return this.oauthAppsPromise;
@@ -3604,6 +3607,15 @@ export class WorkflowRuntimeService {
     });
   }
 
+  // How startOAuth would sign in with the publisher's app `appId` for this
+  // callback; "none" for an app this host does not know.
+  async oauthSignInMode(
+    appId: string,
+    redirectUri: string,
+  ): Promise<OAuthSignIn["mode"]> {
+    return oauthSignInFor(await this.oauthApps(), appId, redirectUri).mode;
+  }
+
   // Opens an OAuth2 sign-in for a connection that brings its own app. The
   // host serves redirectUri and passes what it receives to completeOAuth.
   async startOAuth(
@@ -3629,21 +3641,47 @@ export class WorkflowRuntimeService {
       (state.config ?? {}) as Record<string, unknown>,
     );
     let clientId: string;
-    let clientSecretRef: string;
+    let clientSecretRef: string | null;
     let pkce = false;
+    // What a sign-in through the app's relay changes: the provider's
+    // redirect URI, the token URL, and what the state carries after a dot.
+    let redirectUri = options.redirectUri;
+    let tokenUrl: string | undefined;
+    let stateSuffix: string | undefined;
     if (typeof appId === "string" && appId !== "") {
       // The publisher's app: its desktop client for a callback to this
-      // machine, its web client otherwise.
-      const kind = clientKindFor(options.redirectUri);
-      const client = (await this.oauthApps()).client(appId, kind);
-      if (!client) {
+      // machine, its web client otherwise, else its relay.
+      const signIn = oauthSignInFor(
+        await this.oauthApps(),
+        appId,
+        options.redirectUri,
+      );
+      if (signIn.mode === "none") {
         throw new OAuthError(
-          `The app "${appId}" has no ${kind} client on this host; configure it in workflows.oauthApps`,
+          `The app "${appId}" has no ${signIn.kind} client on this host; configure it in workflows.oauthApps`,
         );
       }
-      clientId = client.clientId;
-      clientSecretRef = client.clientSecretRef;
-      pkce = kind === "desktop";
+      if (signIn.mode === "relay") {
+        const { relay } = signIn;
+        // The provider knows the relay, not this host: it sends the browser
+        // there, and the relay forwards code and state to the callback the
+        // state names. The attempt keeps the relay's redirect URI, so the
+        // exchange names the one the provider saw, and its token URL, which
+        // adds the secret this host never holds; PKCE binds the code to
+        // this host, which alone holds the verifier.
+        clientId = relay.clientId;
+        clientSecretRef = null;
+        redirectUri = relay.redirectUri;
+        tokenUrl = relay.tokenUrl;
+        stateSuffix = Buffer.from(options.redirectUri, "utf8").toString(
+          "base64url",
+        );
+        pkce = true;
+      } else {
+        clientId = signIn.client.clientId;
+        clientSecretRef = signIn.client.clientSecretRef;
+        pkce = signIn.mode === "desktop";
+      }
     } else {
       if (typeof ownClientId !== "string" || ownClientId === "") {
         throw new OAuthError("Set the client ID before connecting");
@@ -3689,10 +3727,12 @@ export class WorkflowRuntimeService {
       props,
       clientId,
       clientSecretRef,
-      redirectUri: options.redirectUri,
+      redirectUri,
+      ...(tokenUrl ? { tokenUrl } : {}),
       ...(options.returnUrl ? { returnUrl: options.returnUrl } : {}),
       ...(scopes ? { scopes } : {}),
       ...(pkce ? { pkce } : {}),
+      ...(stateSuffix ? { stateSuffix } : {}),
       createdBy: this.callerAddress(ctx),
     });
   }
@@ -3749,15 +3789,19 @@ export class WorkflowRuntimeService {
       // Changed while the user was signing in: the token would belong to
       // another app than the one the connection now names.
       const appId = config[OAUTH_APP];
-      const fromRegistry =
-        typeof appId === "string" &&
-        appId !== "" &&
-        (await this.oauthApps())
-          .clients(appId)
-          .some((c) => c.clientId === attempt.client_id);
+      // A relayed attempt holds no secret ref; only the app's relay matches it.
+      const relayed = attempt.client_secret_ref === null;
+      let fromRegistry = false;
+      if (typeof appId === "string" && appId !== "") {
+        const apps = await this.oauthApps();
+        fromRegistry = relayed
+          ? apps.relay(appId)?.clientId === attempt.client_id
+          : apps.clients(appId).some((c) => c.clientId === attempt.client_id);
+      }
       if (
         state.authType !== "OAUTH2" ||
-        (!fromRegistry && config[OAUTH_CLIENT_ID] !== attempt.client_id)
+        (!fromRegistry &&
+          (relayed || config[OAUTH_CLIENT_ID] !== attempt.client_id))
       ) {
         return await fail("The connection changed during sign-in; try again");
       }
@@ -3766,13 +3810,16 @@ export class WorkflowRuntimeService {
       const tokens = await exchangeCode(
         attempt,
         callback.code,
-        // A host app's client secret has no owner document.
-        await secrets.get(
-          attempt.client_secret_ref,
-          fromRegistry
-            ? null
-            : { documentId: connectionId, kind: "connection" },
-        ),
+        // A relay adds the secret itself; a host app's client secret has
+        // no owner document.
+        attempt.client_secret_ref === null
+          ? null
+          : await secrets.get(
+              attempt.client_secret_ref,
+              fromRegistry
+                ? null
+                : { documentId: connectionId, kind: "connection" },
+            ),
         this.designEgress,
         fromRegistry,
       );
