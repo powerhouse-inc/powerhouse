@@ -195,6 +195,64 @@
                       "const": 17
                     }
                   ]
+                },
+                "keyframes": {
+                  "type": "object",
+                  "properties": {
+                    "default": {
+                      "type": "object",
+                      "properties": {
+                        "interval": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        "keep": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "types": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "interval": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          },
+                          "keep": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "additionalProperties": false
                 }
               },
               "additionalProperties": false

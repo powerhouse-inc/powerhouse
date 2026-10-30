@@ -1,4 +1,7 @@
-import { parseCatchUpPriority } from "@powerhousedao/reactor";
+import {
+  parseCatchUpPriority,
+  parseKeyframeSettings,
+} from "@powerhousedao/reactor";
 import {
   reactorApiConfigFromEnv,
   resolveRenownConfig,
@@ -86,6 +89,7 @@ export function switchboardConfigFromEnv(
       forcePgVersion: options.bin
         ? (parseForcePgVersion(env.PH_FORCE_PG_VERSION) ?? undefined)
         : undefined,
+      keyframes: keyframesFromEnv(env.PH_KEYFRAMES),
     },
     protocol: {
       featureFlags: {
@@ -264,6 +268,22 @@ function portFromEnv(
 // Not a number falls through to the config file, as the bin's own config does.
 function binPortFromEnv(raw: string | undefined): number | undefined {
   return raw && !isNaN(Number(raw)) ? Number(raw) : undefined;
+}
+
+// A malformed value stops the boot: running on with the defaults would keep
+// writing keyframes the operator asked to bound.
+function keyframesFromEnv(raw: string | undefined) {
+  if (isBlank(raw)) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw as string);
+  } catch (error) {
+    throw new Error(
+      `PH_KEYFRAMES is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
+  }
+  return parseKeyframeSettings(parsed, "PH_KEYFRAMES");
 }
 
 function vacuumFullFromEnv(env: Env) {

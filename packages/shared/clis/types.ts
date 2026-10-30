@@ -165,6 +165,12 @@ export type PHReactorRenown = {
   switchboardUrl?: string;
 };
 
+/** `reactor.keyframes`: parts left out come from `default`, then the built-in rule. */
+export type PHKeyframeRule = {
+  interval?: number;
+  keep?: number | null;
+};
+
 export type PowerhouseConfig = {
   // required
   logLevel: LogLevel;
@@ -191,6 +197,10 @@ export type PowerhouseConfig = {
       type: "filesystem" | "memory" | "postgres" | "browser";
       filesystemPath?: string;
       postgresUrl?: string;
+    };
+    keyframes?: {
+      default?: PHKeyframeRule;
+      types?: Record<string, PHKeyframeRule>;
     };
   };
   auth?: {
