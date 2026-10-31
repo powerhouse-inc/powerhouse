@@ -207,6 +207,18 @@ function callerOverrideRaw(
   const base: PHConnectRuntimeConfig = { ...host.config };
   const reactor: ReactorConfig | undefined = host.reactor;
 
+  // The Renown instance a person chose at start, under the names the
+  // switchboard reads, so the two can't disagree.
+  const renownUrl = ctx?.env.RENOWN_URL?.trim();
+  const renownSwitchboardUrl = ctx?.env.SWITCHBOARD_URL?.trim();
+  if (renownUrl || renownSwitchboardUrl) {
+    base.renown = {
+      ...base.renown,
+      ...(renownUrl ? { url: renownUrl } : {}),
+      ...(renownSwitchboardUrl ? { switchboardUrl: renownSwitchboardUrl } : {}),
+    };
+  }
+
   // R3: the composition (verb-filtered, projected as DATA — the browser
   // pipeline resolves and runs the entries), declared drives, and the
   // reactor-core identity/namespace keys.

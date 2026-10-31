@@ -159,6 +159,10 @@ const shellSourceSchema = z
 export const appJsonSchema = z.strictObject({
   identifier: identifierSchema,
   productName: z.string().min(1),
+  /** Ask who is using the app before anything runs: the stack then starts for
+   * that identity, with its own folder and as its admin. Off, the stack starts
+   * with the window, in one store. */
+  signIn: z.boolean().nullable().optional(),
   /** Single source image (square PNG, 1024×1024 recommended); the icon set
    * for every platform is generated from it via `tauri icon`. */
   icon: z.string().min(1),

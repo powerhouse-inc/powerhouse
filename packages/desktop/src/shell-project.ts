@@ -7,6 +7,7 @@ import {
 import { isPassthroughImageRef } from "@powerhousedao/shared/connect/image-ref";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   appSlug,
   DEFAULT_SHELL_CRATE_VERSION,
@@ -40,6 +41,8 @@ export interface ProjectShellInput {
   /** The connect member's port — baked into the remote capability so the
    * served Connect origin can reach the shell's launch-queue commands. */
   connectPort: number;
+  /** The sign-in page's script, where the built one isn't to hand. */
+  signInScript?: Buffer;
 }
 
 export interface ProjectShellResult {
@@ -123,11 +126,31 @@ fn main() {
             "read_launch_file",
             "log_from_webview",
             "open_external",
+            "desktop_state",
+            "pick_root",
+            "save_renown_url",
+            "local_create",
+            "local_unlock",
+            "saved_credential",
+            "save_profile",
+            "adopt_old_data",
+            "start_stack",
+            "switch_identity",
         ]),
     ))
     .expect("failed to run tauri-build");
 }
 `;
+
+/** The sign-in page's script (app.json `signIn`), beside the page. */
+const SIGN_IN_SCRIPT = "sign-in.js";
+
+/** That script as this package built it (tsdown.config.ts). */
+function builtSignInScript(): Buffer {
+  return fs.readFileSync(
+    fileURLToPath(new URL(`./sign-in/${SIGN_IN_SCRIPT}`, import.meta.url)),
+  );
+}
 
 /** The loading page's logo: app.json's icon SOURCE (1024² recommended), copied
  * beside ui/index.html — not one of the downsampled `tauri icon` outputs, so
@@ -165,7 +188,43 @@ type LoadingArt = {
   } | null;
 };
 
-function loadingHtml(app: AppJson, art: LoadingArt): string {
+/** The sign-in page's own look, on the loading page's colours. */
+const SIGN_IN_CSS = `
+      body { overflow: auto; height: auto; min-height: 100vh; }
+      #sign-in {
+        position: relative; z-index: 1; box-sizing: border-box;
+        width: min(420px, calc(100vw - 32px)); margin: 24px 0; padding: 32px;
+        display: flex; flex-direction: column; gap: 12px; text-align: left;
+        background: color-mix(in srgb, var(--bg) 92%, var(--fg));
+        border: 1px solid color-mix(in srgb, var(--fg) 14%, transparent);
+        border-radius: 14px;
+      }
+      #sign-in h1 { margin: 0 0 8px; font-size: 24px; line-height: 1.2; font-weight: 600; }
+      #sign-in p { margin: 0; }
+      #sign-in small { opacity: .7; }
+      #sign-in button, #sign-in input {
+        font: inherit; color: inherit; border-radius: 8px; padding: 10px 14px;
+        border: 1px solid color-mix(in srgb, var(--fg) 22%, transparent);
+        background: transparent; box-sizing: border-box; width: 100%;
+      }
+      #sign-in button { cursor: pointer; }
+      #sign-in button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+      #sign-in button.link { width: auto; padding: 0; border: 0; text-decoration: underline; }
+      #sign-in label { display: grid; gap: 4px; }
+      #sign-in details { font-size: 14px; display: grid; gap: 8px; }
+      #sign-in .folder { font-size: 13px; overflow-wrap: anywhere; }
+      #sign-in .notice { padding: 10px 12px; border-radius: 8px; font-size: 14px; background: color-mix(in srgb, var(--accent) 16%, transparent); }
+      #sign-in .identities { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+      #sign-in .identity { display: flex; gap: 12px; align-items: center; text-align: left; }
+      #sign-in .identity img, #sign-in .initial {
+        width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex: none;
+        display: grid; place-items: center; font-weight: 600;
+        background: color-mix(in srgb, var(--accent) 30%, transparent);
+      }
+      #sign-in .identity b, #sign-in .identity small { display: block; }
+      #sign-in .busy { display: flex; align-items: center; }`;
+
+function loadingHtml(app: AppJson, art: LoadingArt, signIn = false): string {
   const escape = (text: string) =>
     text.replace(/[<&]/g, (c) => (c === "<" ? "&lt;" : "&amp;"));
   const name = escape(app.productName);
@@ -283,13 +342,18 @@ function loadingHtml(app: AppJson, art: LoadingArt): string {
         animation: pulse 1.2s ease-in-out infinite;
       }
       @keyframes pulse { 0%,100% { opacity: .35 } 50% { opacity: 1 } }
-      @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+      @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }${signIn ? SIGN_IN_CSS : ""}
     </style>
   </head>
   <body>
-    <div class="box">
+    ${
+      signIn
+        ? `<main id="sign-in"></main>
+    <script type="module" src="./sign-in.js"></script>`
+        : `<div class="box">
       ${logoTag}<div><span class="dot"></span>${message}</div>
-    </div>
+    </div>`
+    }
     ${layersTag}${cornerTag}</body>
 </html>
 `;
@@ -397,6 +461,16 @@ function connectCapability(connectPort: number): string {
           "allow-read-launch-file",
           "allow-log-from-webview",
           "allow-open-external",
+          "allow-desktop-state",
+          "allow-pick-root",
+          "allow-save-renown-url",
+          "allow-local-create",
+          "allow-local-unlock",
+          "allow-saved-credential",
+          "allow-save-profile",
+          "allow-adopt-old-data",
+          "allow-start-stack",
+          "allow-switch-identity",
         ],
       },
       null,
@@ -415,6 +489,7 @@ const GITIGNORE = `# Generated tauri shell — only Cargo.lock and app-icon.png 
 /ui/art.*
 /ui/art-dark.*
 /ui/bg-*
+/ui/sign-in.*
 /dist-stack
 /binaries
 `;
@@ -519,6 +594,7 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
     [".gitignore", GITIGNORE],
     ["dist-stack/README.md", DIST_STACK_README],
   ];
+  if (app.signIn) files.push(["ui/sign-in.html", loadingHtml(app, art, true)]);
   let changed = false;
   for (const [rel, content] of files) {
     if (writeIfChanged(path.join(shellDir, rel), content)) changed = true;
@@ -527,6 +603,10 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
   // the same full-resolution source as the loading page's logo, and the
   // splash when app.json names one.
   const copies: Array<[string, Buffer | null]> = [
+    [
+      path.join(shellDir, "ui", SIGN_IN_SCRIPT),
+      app.signIn ? (input.signInScript ?? builtSignInScript()) : null,
+    ],
     [path.join(shellDir, ICON_SOURCE), iconBytes],
     [path.join(shellDir, "ui", LOADING_LOGO), iconBytes],
     [path.join(shellDir, "ui", LOADING_SPLASH), splashBytes],

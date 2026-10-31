@@ -39,9 +39,12 @@
   "dependencies": {
     "@powerhousedao/host-core": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@renown/sdk": "workspace:*",
+    "viem": "~2.50.4",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "ethers": "^6.17.0",
     "tsdown": "catalog:",
     "vitest": "catalog:"
   }

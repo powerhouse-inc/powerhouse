@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * P6.3 — stage the shippable STACK into the shell project: everything the
@@ -201,6 +202,14 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     options.excludeDirs ?? [],
   );
   log(`  hosts/ ${hostsStaged ? "staged" : "absent — skipped"}`);
+  // The local key's process: the stack holds no @powerhousedao/desktop, and
+  // this file needs nothing from it.
+  const localKey = fileURLToPath(
+    new URL("./local-key/local-key.mjs", import.meta.url),
+  );
+  if (fs.existsSync(localKey)) {
+    fs.copyFileSync(localKey, path.join(stackDir, "local-key.mjs"));
+  }
   // The built Connect at the path the stack's connect runner serves by default.
   for (const dir of ["agents", "dist", CONNECT_BUILD_DIR]) {
     const copied = copyIfExists(
