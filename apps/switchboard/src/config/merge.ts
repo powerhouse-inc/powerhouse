@@ -68,10 +68,12 @@ export function callerOverEnv(env: Layer, caller: Layer): Layer {
   ) {
     inspection.enabled = false;
   }
-  // Under the plugin host a plugin's presence decides these, not their env vars.
+  // Under the plugin host a plugin's presence decides these, not their env vars,
+  // except that workflows can be switched off, for when one stops the host starting.
   if (features.pluginHost === true) {
     features.mcp = caller.features?.mcp;
-    features.workflows = caller.features?.workflows;
+    features.workflows =
+      env.features?.workflows === false ? false : caller.features?.workflows;
   }
 
   return { ...merged, features, inspection, auth } as Layer;

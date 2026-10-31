@@ -183,6 +183,17 @@ describe("callerOverEnv keeps each key's precedence", () => {
     },
   );
 
+  it("lets PH_WORKFLOWS_ENABLED switch workflows off under the plugin host", () => {
+    const env = {
+      FEATURE_PLUGIN_HOST_ENABLED: "1",
+      PH_WORKFLOWS_ENABLED: "false",
+    };
+    expect(resolved(env, {}).features.workflows).toBe(false);
+    expect(
+      resolved(env, { features: { workflows: true } }).features.workflows,
+    ).toBe(false);
+  });
+
   it("ignores MCP_ENABLED and PH_WORKFLOWS_ENABLED under the plugin host", () => {
     const env = {
       FEATURE_PLUGIN_HOST_ENABLED: "1",
