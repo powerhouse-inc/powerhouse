@@ -222,7 +222,8 @@ const SIGN_IN_CSS = `
         background: color-mix(in srgb, var(--accent) 30%, transparent);
       }
       #sign-in .identity b, #sign-in .identity small { display: block; }
-      #sign-in .busy { display: flex; align-items: center; }`;
+      #sign-in .busy { display: flex; align-items: center; justify-content: center; }
+      #sign-in:has(> .busy) { background: none; border: 0; }`;
 
 function loadingHtml(app: AppJson, art: LoadingArt, signIn = false): string {
   const escape = (text: string) =>
