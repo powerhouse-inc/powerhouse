@@ -240,6 +240,10 @@ type Options = {
   /** Storage health and workflow facts for the inspection subgraph; `false`
    * leaves it unmounted and `api.inspection` undefined. On by default. */
   inspection?: ReactorInspectionOptions | false;
+  /** Mount `/graphql/system`, which answers the package version, git hash
+   * and repository URL to any caller the authentication floor admits.
+   * `false` leaves it unmounted. On by default. */
+  systemInfo?: boolean;
 };
 
 type ProcessorInitializer = ProcessorFactoryBuilder;
@@ -1253,6 +1257,7 @@ async function _setupAPI(
     inspection: !!inspection,
     inspectionAdmin: !!inspection?.admin,
     documentPermissions: !!documentPermissionService,
+    systemInfo: options.systemInfo !== false,
   });
   if (documentPermissionService) {
     logger.info("Auth subgraph registered (document permissions enabled)");

@@ -193,6 +193,7 @@ export function switchboardConfigFromEnv(
     },
     features: {
       mcp: openFeatureFlag(env.MCP_ENABLED),
+      systemInfo: openFeatureFlag(env.SYSTEM_INFO_ENABLED),
       workflows: workflowsFromEnv(env.PH_WORKFLOWS_ENABLED),
       documentModelSubgraphs: openFeatureFlag(
         env.DOCUMENT_MODEL_SUBGRAPHS_ENABLED,

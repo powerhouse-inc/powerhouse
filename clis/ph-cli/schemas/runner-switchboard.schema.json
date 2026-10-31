@@ -434,6 +434,9 @@
                 "mcp": {
                   "type": "boolean"
                 },
+                "systemInfo": {
+                  "type": "boolean"
+                },
                 "workflows": {
                   "type": "boolean"
                 },
