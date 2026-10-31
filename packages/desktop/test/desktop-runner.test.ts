@@ -280,6 +280,7 @@ describe("the OAuth clients a stack ships", () => {
     const parent = tempDir("ph-desktop-oauth-");
     const projectRoot = path.join(parent, "project");
     mkdirSync(projectRoot);
+    writeFileSync(path.join(projectRoot, "package.json"), "{}");
     writeFileSync(path.join(parent, "desktop.json"), "the desktop client");
     writeFileSync(path.join(parent, "web.json"), "the web client");
     writeFileSync(
