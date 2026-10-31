@@ -89,6 +89,24 @@ describe("hostOptions", () => {
     expect(level2.label).toBe("Deletion history, Permissions");
   });
 
+  it("keeps a site's undoV3 when the access level changes", () => {
+    const envelope = withSetters({
+      "members.switchboard.reactor.protocol.featureFlags": { undoV3: false },
+    });
+    const level2 = option({ envelope }, "host:access:2");
+    expect(level2.setters).toEqual([
+      {
+        path: "members.switchboard.reactor.protocol.featureFlags",
+        value: { ...ladderFlags(2), undoV3: false },
+      },
+      {
+        path: "members.connect.reactor.protocol.featureFlags",
+        value: ladderFlags(2),
+      },
+    ]);
+    expect(statuses({ envelope })("host:access:0")).toEqual(SELECTED);
+  });
+
   it("disables permissions that would stop background workers", () => {
     const draft = {
       envelope: withSetters(postgres),

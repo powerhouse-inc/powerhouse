@@ -1060,6 +1060,7 @@ export class ReactorWriteClient implements IReactorWriteClient {
         await handle.readable.catch(() => undefined);
         return handle;
       },
+      signal,
     );
   }
 

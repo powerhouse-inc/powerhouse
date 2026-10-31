@@ -55,6 +55,14 @@ describe("reactorSchema (strict per D2.d)", () => {
     expect(at("x${origin}/d/powerhouse")).toBe(false);
   });
 
+  it("accepts undoV3 in the protocol flags", () => {
+    const result = reactorSchema.safeParse({
+      protocol: { featureFlags: { undoV3: false } },
+    });
+    expect(result.success).toBe(true);
+    expect(result.data?.protocol?.featureFlags).toEqual({ undoV3: false });
+  });
+
   it("rejects a typo'd protocol key with its path (fleet-consensus safety)", () => {
     const result = reactorSchema.safeParse({
       protocol: { featureFlags: { documentDecisionz: true } },

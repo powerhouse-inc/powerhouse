@@ -215,6 +215,55 @@ describe("GraphQLReactorClient undo and redo", () => {
     expect(sentActions(sdk)[0].type).toBe("RETRACT");
   });
 
+  it.each([
+    ["the header", { headerVersions: true }],
+    ["CREATE_DOCUMENT", {}],
+  ] as const)(
+    "undoes a number %s names that this build does not know as base-reducer 3",
+    async (_source, options) => {
+      const { client, sdk } = clientWith(
+        7,
+        { undoTarget: "global-1" },
+        options,
+      );
+
+      await client.undo("doc-1");
+
+      expect(sdk.GetUndoRedoTargets).toHaveBeenCalled();
+      expect(sentActions(sdk)).toEqual([
+        {
+          branch: "main",
+          type: "RETRACT",
+          scope: "global",
+          input: { target: "global-1" },
+        },
+      ]);
+    },
+  );
+
+  it("submits UNDO when the header names base-reducer 2", async () => {
+    const { client, sdk } = clientWith(2, {}, { headerVersions: true });
+
+    await client.undo("doc-1");
+
+    expect(sdk.GetUndoRedoTargets).not.toHaveBeenCalled();
+    expect(sentActions(sdk)[0].type).toBe("UNDO");
+  });
+
+  it("stops a queued undo whose signal aborts while an earlier one is pending", async () => {
+    const { client, sdk } = clientWith(2);
+    sdk.RunDocument.mockImplementationOnce(() => new Promise(() => undefined));
+    void client.undo("doc-1");
+    await vi.waitUntil(() => sdk.RunDocument.mock.calls.length === 1);
+    const controller = new AbortController();
+
+    const queued = client.undo("doc-1", "global", "main", controller.signal);
+    controller.abort();
+
+    await expect(queued).rejects.toMatchObject({ name: "AbortError" });
+    expect(sdk.RunDocument).toHaveBeenCalledTimes(1);
+  });
+
   it("refuses an undo with nothing to undo, submitting nothing", async () => {
     const { client, sdk } = clientWith(3);
 
@@ -243,6 +292,31 @@ describe("GraphQLReactorClient undo and redo", () => {
         redoTarget: "global-1",
       }).client.undoRedoAvailability("doc-1"),
     ).toEqual({ canUndo: false, canRedo: true });
+  });
+
+  it("reads base-reducer 2 availability as false on a scope the Switchboard withholds", async () => {
+    const { client, sdk } = clientWith(2);
+    sdk.GetDocument.mockResolvedValue({
+      document: {
+        document: {
+          ...document,
+          state: { local: {} },
+          revisionsList: [
+            ...document.revisionsList,
+            { scope: "local", revision: 1 },
+          ],
+        },
+      },
+    });
+
+    expect(await client.undoRedoAvailability("doc-1")).toEqual({
+      canUndo: false,
+      canRedo: false,
+    });
+    expect(await client.undoRedoAvailability("doc-1", "local")).toEqual({
+      canUndo: true,
+      canRedo: false,
+    });
   });
 
   it("reads base-reducer 2 availability from the revision", async () => {

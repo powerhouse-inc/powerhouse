@@ -38,10 +38,12 @@ describe.each<SignaturePolicy>(["v2-required", "legacy"])(
     async function client(): Promise<ReactorClient> {
       const built = await new ReactorClientBuilder()
         .withReactorBuilder(
-          new ReactorBuilder().withDocumentModelSources([
-            driveDocumentModelModule as never,
-            documentModelDocumentModelModule,
-          ]),
+          new ReactorBuilder()
+            .withDocumentModelSources([
+              driveDocumentModelModule as never,
+              documentModelDocumentModelModule,
+            ])
+            .withExecutorConfig({ featureFlags: { undoV3: false } }),
         )
         .withSigner((await TestP256Signer.create()).asISigner())
         .withCreateSignaturePolicy(policy)
@@ -74,6 +76,79 @@ describe.each<SignaturePolicy>(["v2-required", "legacy"])(
         parentIdentifier: drive.header.id,
       });
       expect(child.header.protocolVersions).toEqual(before);
+
+      const file = await reactor.drives.addFile(
+        drive.header.id,
+        documentModelDocumentModelModule.utils.createDocument(),
+      );
+      await reactor.drives.copyNode(drive.header.id, file.header.id, undefined);
+      const copied = await reactor.get(drive.header.id);
+      const copyNode = (
+        copied.state as unknown as {
+          global: { nodes: Array<{ id: string }> };
+        }
+      ).global.nodes.find((node) => node.id !== file.header.id)!;
+      const copy = await reactor.get(copyNode.id);
+      expect(copy.header.protocolVersions).toEqual(
+        file.header.protocolVersions,
+      );
+    });
+  },
+);
+
+/** With undoV3 every create path under the default registry heads base-reducer 3. */
+describe.each<SignaturePolicy>(["v2-required", "legacy"])(
+  "create paths under the default registry with undoV3 (%s)",
+  (policy) => {
+    const reactors: IReactor[] = [];
+    const expected = protocolVersionsFor(policy, { "base-reducer": 3 });
+
+    afterEach(() => {
+      for (const reactor of reactors.splice(0)) {
+        reactor.kill();
+      }
+    });
+
+    async function client(): Promise<ReactorClient> {
+      const built = await new ReactorClientBuilder()
+        .withReactorBuilder(
+          new ReactorBuilder()
+            .withDocumentModelSources([
+              driveDocumentModelModule as never,
+              documentModelDocumentModelModule,
+            ])
+            .withExecutorConfig({ featureFlags: undoV3Flags() }),
+        )
+        .withSigner((await TestP256Signer.create()).asISigner())
+        .withCreateSignaturePolicy(policy)
+        .buildModule();
+      reactors.push(built.reactor);
+      return built.client;
+    }
+
+    it("selects base-reducer 3 everywhere", async () => {
+      const reactor = await client();
+
+      expect(
+        await reactor.getCreateProtocolVersions({
+          documentType: DOCUMENT_MODEL,
+        }),
+      ).toEqual({
+        "base-reducer": 3,
+      });
+
+      const drive = await reactor.drives.create({ global: { name: "Drive" } });
+      const empty = await reactor.createEmpty(DOCUMENT_MODEL);
+      const child = await reactor.createEmpty(DOCUMENT_MODEL, {
+        parentIdentifier: drive.header.id,
+      });
+      for (const created of [drive, empty, child]) {
+        const stored = await reactor.get(created.header.id);
+        expect(stored.header.protocolVersions).toEqual(expected);
+      }
+      expect(empty.header.protocolVersions).not.toHaveProperty(
+        "document-purge",
+      );
 
       const file = await reactor.drives.addFile(
         drive.header.id,

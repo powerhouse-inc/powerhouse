@@ -111,8 +111,9 @@ export type PHReactorClientMode = z.infer<
 >;
 /** Served `instance`: the authored fields plus the derived `reactorClient`. */
 export type PHConnectInstance = z.infer<typeof C.connectRuntimeInstanceSchema>;
-/** Each flag implies its predecessors, and must match the fleet Connect syncs
- * with or the two compute different replay outcomes. */
+/** The four enforcement flags each imply their predecessors, and must match
+ * the fleet Connect syncs with or the two compute different replay outcomes.
+ * `undoV3` has no prerequisites and is negotiated with peers. */
 export type PHConnectReactorFeatureFlags = z.infer<
   typeof C.connectReactorFeatureFlagsSchema
 >;

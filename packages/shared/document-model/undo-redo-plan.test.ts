@@ -80,6 +80,24 @@ describe("the undo plan", () => {
     expect(undoCapabilitiesOf(header)).toBeUndefined();
   });
 
+  it("reads a number this build does not know as base-reducer 3", () => {
+    const header = { id: "d" } as PHDocumentHeader;
+    expect(
+      undoCapabilitiesOf({ ...header, protocolVersions: { "base-reducer": 7 } })
+        ?.version,
+    ).toBe(3);
+    expect(
+      undoCapabilitiesOf(header, { protocolVersions: { "base-reducer": 7 } })
+        ?.version,
+    ).toBe(3);
+    expect(
+      undoCapabilitiesOf(
+        { ...header, protocolVersions: { "base-reducer": 1 } },
+        { protocolVersions: { "base-reducer": 7 } },
+      )?.version,
+    ).toBe(1);
+  });
+
   it("runs calls with one key in order, past a failure", async () => {
     const chains = new Map<string, Promise<unknown>>();
     const order: string[] = [];
@@ -96,6 +114,89 @@ describe("the undo plan", () => {
     await expect(next).resolves.toBe(2);
     expect(order).toEqual(["first", "second"]);
     await Promise.resolve();
+    expect(chains.size).toBe(0);
+  });
+  it("stops a queued caller whose signal aborts, without letting a later call overtake", async () => {
+    const chains = new Map<string, Promise<unknown>>();
+    const order: string[] = [];
+    let settleFirst!: () => void;
+    const first = serializeByKey(
+      chains,
+      "k",
+      () =>
+        new Promise<void>((resolve) => {
+          order.push("first started");
+          settleFirst = () => {
+            order.push("first settled");
+            resolve();
+          };
+        }),
+    );
+    await Promise.resolve();
+    const controller = new AbortController();
+    const aborted = serializeByKey(
+      chains,
+      "k",
+      () => {
+        order.push("aborted ran");
+        return Promise.resolve();
+      },
+      controller.signal,
+    );
+    const third = serializeByKey(chains, "k", () => {
+      order.push("third");
+      return Promise.resolve(3);
+    });
+
+    controller.abort();
+    await expect(aborted).rejects.toMatchObject({ name: "AbortError" });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(order).toEqual(["first started"]);
+    expect(chains.has("k")).toBe(true);
+
+    settleFirst();
+    await first;
+    await expect(third).resolves.toBe(3);
+    expect(order).toEqual(["first started", "first settled", "third"]);
+  });
+
+  it("never runs a caller whose signal aborted before it was queued", async () => {
+    const chains = new Map<string, Promise<unknown>>();
+    let ran = false;
+    const run = () => {
+      ran = true;
+      return Promise.resolve();
+    };
+
+    await expect(
+      serializeByKey(chains, "k", run, AbortSignal.abort()),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(ran).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(chains.size).toBe(0);
+  });
+
+  it("runs a signalled caller in order when its signal never aborts", async () => {
+    const chains = new Map<string, Promise<unknown>>();
+    const order: string[] = [];
+    const first = serializeByKey(chains, "k", async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      order.push("first");
+    });
+    const second = serializeByKey(
+      chains,
+      "k",
+      () => {
+        order.push("second");
+        return Promise.resolve(2);
+      },
+      new AbortController().signal,
+    );
+
+    await first;
+    await expect(second).resolves.toBe(2);
+    expect(order).toEqual(["first", "second"]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(chains.size).toBe(0);
   });
 });

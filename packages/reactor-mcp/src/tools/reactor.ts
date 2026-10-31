@@ -368,9 +368,10 @@ export function createAddActionsTool(options: ReactorToolsOptions = {}) {
     name: "addActions",
     title: "Change a document",
     description: `Apply actions to a document as one batch. Send several actions in one call rather than one call each.
-Besides the model's operations it accepts the base actions SET_NAME, SET_PREFERRED_EDITOR, UNDO, REDO and NOOP.
+Besides the model's operations it accepts the base actions SET_NAME, SET_PREFERRED_EDITOR, UNDO, REDO (input: { count }; on base-reducer 3 each step retracts one row, counting rows added earlier in the same call) and NOOP.
 Every action is validated first; on a validation failure nothing is applied and each failed action is listed.
-Returns one result per action, in input order; "success" is false when any result has an "error". An action its reducer rejected is stored as an operation that changes nothing, and the rest of the batch still applies. When a policy denies an action, the whole batch is refused.${
+Returns one result per action, in input order; "success" is false when any result has an "error". An action its reducer rejected is stored as an operation that changes nothing, and the rest of the batch still applies. When a policy denies an action, the whole batch is refused.
+On base-reducer 3 the call fails and writes nothing when an UNDO or REDO has nothing to retract, or when the reactor refuses one of its RETRACTs because another write changed the target first.${
       allowed ? `\nAllowed action types: ${allowed.join(", ")}.` : ""
     }`,
     inputSchema: z.object({
@@ -394,7 +395,9 @@ Returns one result per action, in input order; "success" is false when any resul
             operationIndex: z
               .number()
               .optional()
-              .describe("Index of the operation the action was stored as"),
+              .describe(
+                "Index of the operation the action was stored as; for a counted UNDO or REDO on base-reducer 3, the last of its RETRACT rows",
+              ),
             error: actionErrorSchema.optional(),
           }),
         )

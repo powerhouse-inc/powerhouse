@@ -132,9 +132,20 @@ function accessOptions(members: Member[]): HostOption[] {
             .join(", "),
     setters: sites.map((at) => ({
       path: `${at}.protocol.featureFlags`,
-      value: ladderFlags(level),
+      value: { ...ladderFlags(level), ...keptUndoV3(members, at) },
     })),
   }));
+}
+
+/** undoV3 is not on the ladder, so a level change keeps the site's own. */
+function keptUndoV3(members: Member[], at: string): { undoV3?: boolean } {
+  const protocol = members.find((member) => member.reactorAt === at)?.reactor
+    ?.protocol;
+  const undoV3 =
+    isRecord(protocol) && isRecord(protocol.featureFlags)
+      ? protocol.featureFlags.undoV3
+      : undefined;
+  return typeof undoV3 === "boolean" ? { undoV3 } : {};
 }
 
 function storageSetters(

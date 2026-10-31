@@ -6,8 +6,15 @@ import type { AddressInfo } from "node:net";
 import type {
   InProcessReactorClientModule,
   ISyncManager,
+  JobInfo,
+  WriteHandle,
 } from "@powerhousedao/reactor";
-import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
+import {
+  JobFailedError,
+  JobStatus,
+  ReactorBuilder,
+  ReactorClientBuilder,
+} from "@powerhousedao/reactor";
 import {
   addActionsTool,
   createAddActionsTool,
@@ -36,13 +43,21 @@ import {
 } from "../src/index.js";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import { setName } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  DocumentModelModule,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
+import {
+  retract,
+  setName,
+  withSignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import {
   documentModelCreateDocument,
   documentModelDocumentModelModule,
 } from "document-model";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createP256Signer } from "./utils/p256-signer.js";
 
 type ReactorClient = InProcessReactorClientModule["client"];
@@ -54,6 +69,20 @@ async function createReactorClientModule(): Promise<InProcessReactorClientModule
     documentModelDocumentModelModule as unknown as DocumentModelModule,
     driveDocumentModelModule as unknown as DocumentModelModule,
   ]);
+  return new ReactorClientBuilder()
+    .withReactorBuilder(reactorBuilder)
+    .withSigner(await createP256Signer())
+    .buildModule();
+}
+
+// The same, with undo v3 on, so a document can be created at base-reducer 3.
+async function createUndoV3ReactorClientModule(): Promise<InProcessReactorClientModule> {
+  const reactorBuilder = new ReactorBuilder()
+    .withDocumentModelSources([
+      documentModelDocumentModelModule as unknown as DocumentModelModule,
+      driveDocumentModelModule as unknown as DocumentModelModule,
+    ])
+    .withExecutorConfig({ featureFlags: { undoV3: true } });
   return new ReactorClientBuilder()
     .withReactorBuilder(reactorBuilder)
     .withSigner(await createP256Signer())
@@ -240,6 +269,14 @@ describe("reactor tools", () => {
       });
       const document = await client.get(result.documentId);
       expect(document.header.documentType).toBe("powerhouse/document-model");
+    });
+
+    it("creates a document at base-reducer 3 by default", async () => {
+      const result = await call<{ documentId: string }>(createDocumentTool, {
+        documentType: "powerhouse/document-model",
+      });
+      const stored = await client.get(result.documentId);
+      expect(stored.header.protocolVersions?.["base-reducer"]).toBe(3);
     });
 
     it("creates a named document as a drive file", async () => {
@@ -890,6 +927,551 @@ describe("reactor tools", () => {
           },
         ],
       });
+    });
+
+    describe("UNDO and REDO", () => {
+      // A reactor that runs base-reducer 3; every document names its version.
+      beforeEach(async () => {
+        reactorModule.reactor.kill();
+        reactorModule = await createUndoV3ReactorClientModule();
+        client = reactorModule.client;
+      });
+
+      const setModelName = (name: string) =>
+        documentModelDocumentModelModule.actions.setModelName({ name });
+      const nameOf = async (documentId: string) =>
+        (
+          (await client.get<PHDocument>(documentId)).state as unknown as {
+            global: { name: string };
+          }
+        ).global.name;
+      const globalRows = async (documentId: string) =>
+        (await client.getOperations(documentId, { scopes: ["global"] }))
+          .results;
+      const targetOf = (action: Action) =>
+        (action.input as { target: string }).target;
+
+      async function v3Document(...names: string[]) {
+        const document = await client.createEmpty<PHDocument>(
+          "powerhouse/document-model",
+          { protocolVersions: { "base-reducer": 3 } },
+        );
+        const stored = await client.get<PHDocument>(document.header.id);
+        expect(stored.header.protocolVersions?.["base-reducer"]).toBe(3);
+        if (names.length > 0) {
+          await (
+            await client.write.execute(
+              document.header.id,
+              "main",
+              names.map(setModelName),
+            )
+          ).readable;
+        }
+        return document.header.id;
+      }
+
+      const undo = (count?: number) => ({
+        type: "UNDO",
+        input: count === undefined ? {} : { count },
+        scope: "global",
+      });
+      const redo = (count?: number) => ({
+        type: "REDO",
+        input: count === undefined ? {} : { count },
+        scope: "global",
+      });
+
+      it("submits one job on base-reducer 3, each step a RETRACT", async () => {
+        const documentId = await v3Document();
+        const execute = vi.spyOn(client.write, "execute");
+        const executed = await call<Executed>(addActionsTool, {
+          documentId,
+          actions: [
+            setModelName("first"),
+            setModelName("second"),
+            setModelName("third"),
+            undo(2),
+            redo(),
+          ],
+        });
+
+        expect(execute).toHaveBeenCalledTimes(1);
+        expect(await nameOf(documentId)).toBe("second");
+        const rows = await globalRows(documentId);
+        expect(rows.map((row) => row.action.type)).toEqual([
+          "SET_MODEL_NAME",
+          "SET_MODEL_NAME",
+          "SET_MODEL_NAME",
+          "RETRACT",
+          "RETRACT",
+          "RETRACT",
+        ]);
+        const [, second, third, undoThird, undoSecond, redone] = rows.map(
+          (row) => row.action,
+        );
+        expect(targetOf(undoThird)).toBe(third.id);
+        expect(targetOf(undoSecond)).toBe(second.id);
+        expect(targetOf(redone)).toBe(undoSecond.id);
+        // One result per input action; the counted UNDO reports its last row.
+        expect(
+          executed.results.map(({ index, type, operationIndex }) => [
+            index,
+            type,
+            operationIndex,
+          ]),
+        ).toEqual([
+          [0, "SET_MODEL_NAME", 0],
+          [1, "SET_MODEL_NAME", 1],
+          [2, "SET_MODEL_NAME", 2],
+          [3, "UNDO", 4],
+          [4, "REDO", 5],
+        ]);
+      });
+
+      it("resolves the target from the state the document was created with", async () => {
+        const documentId = await v3Document();
+        const { setModelDescription, addModule } =
+          documentModelDocumentModelModule.actions;
+        await (
+          await client.write.execute(documentId, "main", [
+            setModelDescription({ description: "d" }),
+            addModule({ id: "m1", name: "m1" }),
+          ])
+        ).readable;
+
+        // Re-applied over the head state, ADD_MODULE throws on its own module.
+        await call(addActionsTool, { documentId, actions: [undo()] });
+
+        const [, added, undone] = (await globalRows(documentId)).map(
+          (row) => row.action,
+        );
+        expect(added.type).toBe("ADD_MODULE");
+        expect(targetOf(undone)).toBe(added.id);
+        const { global } = (await client.get<PHDocument>(documentId))
+          .state as unknown as {
+          global: {
+            description: string;
+            specifications: { modules: unknown[] }[];
+          };
+        };
+        expect(global.description).toBe("d");
+        expect(global.specifications[0].modules).toEqual([]);
+      });
+
+      it("retracts an action from earlier in the same call", async () => {
+        const documentId = await v3Document("stored");
+        await call(addActionsTool, {
+          documentId,
+          actions: [setModelName("a"), undo(), setModelName("b")],
+        });
+
+        expect(await nameOf(documentId)).toBe("b");
+        const [, a, undone, b] = (await globalRows(documentId)).map(
+          (row) => row.action,
+        );
+        expect([a.type, undone.type, b.type]).toEqual([
+          "SET_MODEL_NAME",
+          "RETRACT",
+          "SET_MODEL_NAME",
+        ]);
+        expect(targetOf(undone)).toBe(a.id);
+
+        // b follows the undo, so there is nothing left to redo.
+        const error = await fail(addActionsTool, {
+          documentId,
+          actions: [redo()],
+        });
+        expect(error.message).toContain(
+          "Cannot redo: nothing to redo in scope history",
+        );
+      });
+
+      it("undoes the call's own rows first, then stored ones, for a count", async () => {
+        const documentId = await v3Document("x");
+        await call(addActionsTool, {
+          documentId,
+          actions: [setModelName("a"), undo(2)],
+        });
+
+        expect(await nameOf(documentId)).toBe("");
+        const [x, a, undoA, undoX] = (await globalRows(documentId)).map(
+          (row) => row.action,
+        );
+        expect(targetOf(undoA)).toBe(a.id);
+        expect(targetOf(undoX)).toBe(x.id);
+      });
+
+      it("redoes stored undos and the call's own, latest first", async () => {
+        const documentId = await v3Document("x", "y");
+        await call(addActionsTool, { documentId, actions: [undo(2)] });
+        expect(await nameOf(documentId)).toBe("");
+
+        await call(addActionsTool, {
+          documentId,
+          actions: [redo(), undo(), redo(2)],
+        });
+
+        expect(await nameOf(documentId)).toBe("y");
+        const [x, , undoY, undoX, redoX, undoAgain, redoAgain, redoY] = (
+          await globalRows(documentId)
+        ).map((row) => row.action);
+        expect(targetOf(redoX)).toBe(undoX.id);
+        expect(targetOf(undoAgain)).toBe(x.id);
+        expect(targetOf(redoAgain)).toBe(undoAgain.id);
+        expect(targetOf(redoY)).toBe(undoY.id);
+      });
+
+      it("does not undo a base action", async () => {
+        const documentId = await v3Document("x");
+        await call(addActionsTool, {
+          documentId,
+          actions: [{ type: "SET_NAME", input: "renamed" }, undo()],
+        });
+
+        expect(await nameOf(documentId)).toBe("");
+        const updated = await client.get<PHDocument>(documentId);
+        expect(updated.header.name).toBe("renamed");
+        const [x, , undone] = (await globalRows(documentId)).map(
+          (row) => row.action,
+        );
+        expect(targetOf(undone)).toBe(x.id);
+      });
+
+      it("writes nothing when the job is refused for a later action", async () => {
+        const documentId = await v3Document("x", "y");
+        const before = await globalRows(documentId);
+        let submitted: Action[] = [];
+        // Denies the counted UNDO's second step and the schema change.
+        const evaluateActions: ReactorClient["write"]["evaluateActions"] = (
+          _id,
+          _branch,
+          candidates,
+        ) =>
+          Promise.resolve({
+            evaluations: candidates.map((candidate, index) =>
+              index === 2 || candidate.type === "SET_STATE_SCHEMA"
+                ? { decision: "deny" as const, reason: `denied: ${index}` }
+                : { decision: "allow" as const },
+            ),
+            allAllowed: false,
+            anyAllowed: true,
+            allDenied: false,
+            anyDenied: true,
+          });
+        // As the reactor refuses a denied batch: the job fails and writes nothing.
+        const write = Object.assign(Object.create(client.write) as object, {
+          evaluateActions,
+          execute: (id: string, _branch: string, actions: Action[]) => {
+            submitted = actions;
+            const job: JobInfo = {
+              id: "refused",
+              documentId: id,
+              status: JobStatus.FAILED,
+              createdAtUtcIso: new Date().toISOString(),
+              consistencyToken: {
+                version: 1,
+                createdAtUtcIso: new Date().toISOString(),
+                coordinates: [],
+              },
+              meta: { batchId: "refused", batchJobIds: ["refused"] },
+              error: {
+                name: "AuthorizationDeniedError",
+                message: "denied: b",
+                stack: "",
+              },
+            };
+            return Promise.resolve({
+              readable: Promise.reject(new JobFailedError(job)),
+            } as unknown as WriteHandle);
+          },
+        });
+        const host = Object.assign(Object.create(client) as ReactorClient, {
+          write,
+          evaluateActions,
+        });
+        const result = await toMcpTool(addActionsTool, {
+          client: host,
+        }).callback({
+          documentId,
+          actions: [
+            setModelName("a"),
+            undo(2),
+            documentModelDocumentModelModule.actions.setStateSchema({
+              scope: "global",
+              schema: "type B { b: String }",
+            }),
+          ],
+        });
+
+        expect(submitted.map((action) => action.type)).toEqual([
+          "SET_MODEL_NAME",
+          "RETRACT",
+          "RETRACT",
+          "SET_STATE_SCHEMA",
+        ]);
+        expect(result.isError).toBeFalsy();
+        const { success, results } = result.structuredContent as Executed;
+        expect({ success, results }).toStrictEqual({
+          success: false,
+          results: [
+            {
+              index: 0,
+              type: "SET_MODEL_NAME",
+              scope: "global",
+              error: {
+                kind: "not-applied",
+                message: expect.stringContaining(
+                  "The batch was refused, so nothing in it was written",
+                ),
+              },
+            },
+            {
+              index: 1,
+              type: "UNDO",
+              scope: "global",
+              error: { kind: "denied", message: "denied: 2" },
+            },
+            {
+              index: 2,
+              type: "SET_STATE_SCHEMA",
+              scope: "global",
+              error: { kind: "denied", message: "denied: 3" },
+            },
+          ],
+        });
+        expect(await globalRows(documentId)).toEqual(before);
+        expect(await nameOf(documentId)).toBe("y");
+      });
+
+      it("reports a reducer error by the input that caused it", async () => {
+        const documentId = await v3Document("x");
+        const { addModule } = documentModelDocumentModelModule.actions;
+        const result = await toMcpTool(addActionsTool, { client }).callback({
+          documentId,
+          actions: [
+            setModelName("a"),
+            undo(2),
+            addModule({ id: "m1", name: "m1" }),
+            addModule({ id: "m1", name: "m1" }),
+          ],
+        });
+
+        expect(result.isError).toBeFalsy();
+        const { success, results } = result.structuredContent as Executed;
+        expect(success).toBe(false);
+        expect(
+          results.map(({ index, type, operationIndex, error }) => [
+            index,
+            type,
+            operationIndex,
+            error?.kind,
+          ]),
+        ).toEqual([
+          [0, "SET_MODEL_NAME", 1, undefined],
+          [1, "UNDO", 3, undefined],
+          [2, "ADD_MODULE", 4, undefined],
+          [3, "ADD_MODULE", 5, "reducer-error"],
+        ]);
+      });
+
+      it("reads a counted UNDO's last row back when the job carries no result", async () => {
+        const actions = [setModelName("a"), undo(2), setModelName("b")];
+        const expected = await call<Executed>(addActionsTool, {
+          documentId: await v3Document("x"),
+          actions,
+        });
+
+        const write = Object.assign(Object.create(client.write) as object, {
+          execute: async (
+            ...args: Parameters<ReactorClient["write"]["execute"]>
+          ) => {
+            const handle = await client.write.execute(...args);
+            const readable = handle.readable.then((receipt) => ({
+              ...receipt,
+              job: { ...receipt.job, result: undefined },
+            }));
+            return { ...handle, readable };
+          },
+        });
+        const host = Object.assign(Object.create(client) as ReactorClient, {
+          write,
+        });
+        const result = await toMcpTool(addActionsTool, {
+          client: host,
+        }).callback({ documentId: await v3Document("x"), actions });
+
+        expect(result.isError).toBeFalsy();
+        const { success, results } = result.structuredContent as Executed;
+        expect({ success, results }).toStrictEqual({
+          success: true,
+          results: [
+            {
+              index: 0,
+              type: "SET_MODEL_NAME",
+              scope: "global",
+              operationIndex: 1,
+            },
+            { index: 1, type: "UNDO", scope: "global", operationIndex: 3 },
+            {
+              index: 2,
+              type: "SET_MODEL_NAME",
+              scope: "global",
+              operationIndex: 4,
+            },
+          ],
+        });
+        expect(results).toStrictEqual(expected.results);
+      });
+
+      it("writes nothing when the reactor refuses a stale target", async () => {
+        const documentId = await v3Document("x");
+        const [x] = (await globalRows(documentId)).map((row) => row.action);
+        // Another writer's retraction of x, created before the call and
+        // landing after its targets are resolved.
+        const external = retract(x.id, "global");
+        const execute = client.write.execute.bind(client.write);
+        let interfered = false;
+        vi.spyOn(client.write, "execute").mockImplementation(
+          async (id, branch, actions, ...rest) => {
+            const retractsX = actions.some(
+              (action) =>
+                action.type === "RETRACT" && targetOf(action) === x.id,
+            );
+            if (retractsX && !interfered) {
+              interfered = true;
+              await (
+                await execute(id, "main", [external])
+              ).readable;
+            }
+            return execute(id, branch, actions, ...rest);
+          },
+        );
+        const error = await fail(addActionsTool, {
+          documentId,
+          actions: [setModelName("a"), undo(2), setModelName("b")],
+        });
+
+        expect(interfered).toBe(true);
+        expect(error.message).toContain("target-retracted");
+        expect(
+          (await globalRows(documentId)).map((row) => row.action.type),
+        ).toEqual(["SET_MODEL_NAME", "RETRACT"]);
+        expect(await nameOf(documentId)).toBe("");
+      });
+
+      it("refuses with nothing to undo and writes nothing", async () => {
+        const documentId = await v3Document();
+        const execute = vi.spyOn(client.write, "execute");
+        const error = await fail(addActionsTool, {
+          documentId,
+          actions: [setModelName("a"), undo(2)],
+        });
+
+        expect(error.code).toBe("INVALID_ACTION");
+        expect(error.failures?.map((f) => [f.index, f.type])).toEqual([
+          [1, "UNDO"],
+        ]);
+        expect(error.message).toContain(
+          "Cannot undo: nothing to undo in scope history",
+        );
+        expect(execute).not.toHaveBeenCalled();
+        expect(await globalRows(documentId)).toEqual([]);
+      });
+
+      it.each([0, -1, 1.5])(
+        "refuses a count of %d before submitting anything",
+        async (count) => {
+          const documentId = await v3Document("x");
+          const execute = vi.spyOn(client.write, "execute");
+          for (const action of [undo(count), redo(count)]) {
+            const error = await fail(addActionsTool, {
+              documentId,
+              actions: [setModelName("a"), action],
+            });
+
+            expect(error.code).toBe("INVALID_ACTION");
+            expect(error.failures?.map((f) => [f.index, f.type])).toEqual([
+              [1, action.type],
+            ]);
+            expect(error.message).toContain("count must be a positive integer");
+          }
+          expect(execute).not.toHaveBeenCalled();
+          expect(await nameOf(documentId)).toBe("x");
+        },
+      );
+
+      // Below base-reducer 3 the count goes to the reactor unchecked.
+      it.each([0, -1, 1.5])(
+        "submits an UNDO with a count of %d unchanged on base-reducer 2",
+        async (count) => {
+          const documentId = await newModelDocument();
+          expect(
+            (await client.get<PHDocument>(documentId)).header
+              .protocolVersions?.["base-reducer"],
+          ).toBe(2);
+          const execute = vi.spyOn(client.write, "execute");
+          const executed = await call<Executed>(addActionsTool, {
+            documentId,
+            actions: [setModelName("x"), setModelName("a"), undo(count)],
+          });
+
+          expect(execute).toHaveBeenCalledTimes(1);
+          expect(
+            execute.mock.calls[0][2].map(({ type, input }) => ({
+              type,
+              input,
+            })),
+          ).toEqual([
+            { type: "SET_MODEL_NAME", input: { name: "x" } },
+            { type: "SET_MODEL_NAME", input: { name: "a" } },
+            { type: "UNDO", input: { count } },
+          ]);
+          expect(
+            executed.results.map(({ index, type }) => [index, type]),
+          ).toEqual([
+            [0, "SET_MODEL_NAME"],
+            [1, "SET_MODEL_NAME"],
+            [2, "UNDO"],
+          ]);
+        },
+      );
+
+      it.each([1, 2] as const)(
+        "submits one UNDO with its count in one job on base-reducer %i",
+        async (version) => {
+          const created = documentModelCreateDocument();
+          const document =
+            version === 1
+              ? withSignaturePolicy(created, "legacy", {
+                  protocolVersions: { "base-reducer": 1 },
+                })
+              : created;
+          await client.create(document);
+          const documentId = document.header.id;
+          expect(
+            (await client.get<PHDocument>(documentId)).header
+              .protocolVersions?.["base-reducer"],
+          ).toBe(version);
+          const execute = vi.spyOn(client.write, "execute");
+          await call(addActionsTool, {
+            documentId,
+            actions: [setModelName("a"), setModelName("b"), undo(1)],
+          });
+
+          expect(execute).toHaveBeenCalledTimes(1);
+          expect(
+            execute.mock.calls[0][2].map(({ type, input }) => ({
+              type,
+              input,
+            })),
+          ).toEqual([
+            { type: "SET_MODEL_NAME", input: { name: "a" } },
+            { type: "SET_MODEL_NAME", input: { name: "b" } },
+            { type: "UNDO", input: { count: 1 } },
+          ]);
+          expect(await nameOf(documentId)).toBe("a");
+        },
+      );
     });
 
     it("fails NOT_FOUND for an unknown document", async () => {

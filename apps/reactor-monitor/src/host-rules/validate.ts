@@ -1,4 +1,7 @@
-import { protocolEnv } from "@powerhousedao/host-core/projection";
+import {
+  protocolEnv,
+  protocolEnvAgrees,
+} from "@powerhousedao/host-core/projection";
 import {
   CONNECT_PRIMARY_MESSAGE,
   refineStartOrder,
@@ -442,7 +445,9 @@ function protocolRule(
     );
     for (const [key, hostValue] of Object.entries(host)) {
       const value = envValue(env, key);
-      if (value === undefined || value === hostValue) continue;
+      if (value === undefined || protocolEnvAgrees(key, value, hostValue)) {
+        continue;
+      }
       report(
         "protocol",
         envPath(key),

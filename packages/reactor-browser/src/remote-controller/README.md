@@ -206,8 +206,8 @@ Each action is signed with the operation's `prevOpHash` before push. Signatures 
 
 `undo(count = 1, scope = "global")` and `redo(count = 1, scope = "global")` apply locally and track what they produce, like any action method. What that is depends on the document's base-reducer version, which a pulled document takes from the remote header:
 
-- Below base-reducer 3, or with no known version, the local reducer applies UNDO or REDO with `count`, as the model's action method does.
-- On base-reducer 3, the controller resolves `count` targets in turn from its own log, pending local actions included, and applies a `RETRACT` of each. The configured signer signs each `RETRACT` on push. `count` must be a positive integer. If any target is missing the call throws and changes nothing. The host refuses a `RETRACT` whose target is gone or already retracted; the controller does not re-resolve it.
+- Below base-reducer 3, or with no version, the local reducer applies UNDO or REDO with `count`, as the model's action method does.
+- On base-reducer 3, or an unknown number, which runs as 3, the controller resolves `count` targets in turn from its own log, pending local actions included, and applies a `RETRACT` of each. The configured signer signs each `RETRACT` on push. `count` must be a positive integer. If any target is missing the call throws and changes nothing. The host refuses a `RETRACT` whose target is gone or already retracted; the controller does not re-resolve it.
 
 A new document runs the versions its header names from the start (see [Create a new document](#create-a-new-document)), so undo before the first push is a `RETRACT` on base-reducer 3 too.
 

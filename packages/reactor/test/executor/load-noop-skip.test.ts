@@ -5,13 +5,19 @@ import type {
 import {
   addModule,
   deriveOperationId,
+  retract,
+  retractionTarget,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 import { JobStatus } from "../../src/shared/types.js";
-import { createDocModelDocument } from "../factories.js";
+import {
+  createBaseReducer3Document,
+  createDocModelDocument,
+  createUndoV3ReactorBuilder,
+} from "../factories.js";
 
 /** Earlier than every local operation, so an incoming write always sorts first. */
 const INCOMING_TS = "2026-01-01T00:00:01.000Z";
@@ -24,162 +30,264 @@ const LOCAL_TS = "2026-01-01T00:00:02.000Z";
  * it is handed then spans everything the reshuffle retired, which is not the
  * marker's own 1.
  */
-describe("the skip a load job leaves on a NOOP", () => {
-  let reactor: IReactor;
+describe("base-reducer 2", () => {
+  describe("the skip a load job leaves on a NOOP", () => {
+    let reactor: IReactor;
 
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
-  });
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    });
 
-  afterEach(() => {
-    reactor?.kill();
-    vi.useRealTimers();
-  });
+    afterEach(() => {
+      reactor?.kill();
+      vi.useRealTimers();
+    });
 
-  async function settle(jobId: string): Promise<string | undefined> {
-    await vi.waitUntil(async () => {
+    async function settle(jobId: string): Promise<string | undefined> {
+      await vi.waitUntil(async () => {
+        const status = await reactor.getJobStatus(jobId);
+        return (
+          status.status === JobStatus.FAILED ||
+          status.status === JobStatus.READ_READY
+        );
+      });
       const status = await reactor.getJobStatus(jobId);
+      return status.status === JobStatus.FAILED
+        ? (status.error?.message ?? "job failed")
+        : undefined;
+    }
+
+    async function globalOps(documentId: string): Promise<Operation[]> {
+      const result = await reactor.getOperations(documentId, {
+        branch: "main",
+        scopes: ["global"],
+      });
       return (
-        status.status === JobStatus.FAILED ||
-        status.status === JobStatus.READ_READY
+        (result as Record<string, { results: Operation[] } | undefined>).global
+          ?.results ?? []
       );
-    });
-    const status = await reactor.getJobStatus(jobId);
-    return status.status === JobStatus.FAILED
-      ? (status.error?.message ?? "job failed")
-      : undefined;
-  }
+    }
 
-  async function globalOps(documentId: string): Promise<Operation[]> {
-    const result = await reactor.getOperations(documentId, {
-      branch: "main",
-      scopes: ["global"],
-    });
-    return (
-      (result as Record<string, { results: Operation[] } | undefined>).global
-        ?.results ?? []
-    );
-  }
-
-  /** An operation as a peer would send it, stamped ahead of the local stream. */
-  function incoming(
-    documentId: string,
-    index: number,
-    action: { id: string; type: string; input: unknown },
-  ): Operation {
-    return {
-      id: deriveOperationId(documentId, "global", "main", action.id),
-      index,
-      skip: action.type === "NOOP" ? 1 : 0,
-      hash: "",
-      timestampUtcMs: INCOMING_TS,
-      action: {
-        ...action,
-        scope: "global",
+    /** An operation as a peer would send it, stamped ahead of the local stream. */
+    function incoming(
+      documentId: string,
+      index: number,
+      action: { id: string; type: string; input: unknown },
+    ): Operation {
+      return {
+        id: deriveOperationId(documentId, "global", "main", action.id),
+        index,
+        skip: action.type === "NOOP" ? 1 : 0,
+        hash: "",
         timestampUtcMs: INCOMING_TS,
-      },
-    } as unknown as Operation;
-  }
+        action: {
+          ...action,
+          scope: "global",
+          timestampUtcMs: INCOMING_TS,
+        },
+      } as unknown as Operation;
+    }
 
-  /**
-   * A document holding one operation and an undo of it. The undo leaves a NOOP
-   * marker with skip 1 at the head, and the load that follows has both
-   * revisions to retire.
-   */
-  async function undoneDocument(id: string): Promise<string> {
-    const document = createDocModelDocument({ id });
-    expect(await settle((await reactor.create(document)).id)).toBeUndefined();
+    /**
+     * A document holding one operation and an undo of it. The undo leaves a NOOP
+     * marker with skip 1 at the head, and the load that follows has both
+     * revisions to retire.
+     */
+    async function undoneDocument(id: string): Promise<string> {
+      const document = createDocModelDocument({
+        id,
+        protocolVersions: { "base-reducer": 2 },
+      });
+      expect(await settle((await reactor.create(document)).id)).toBeUndefined();
 
-    vi.setSystemTime(new Date(LOCAL_TS));
-    expect(
-      await settle(
-        (
-          await reactor.execute(document.header.id, "main", [
-            addModule({ id: "m0", name: "m0" }),
-          ])
-        ).id,
-      ),
-    ).toBeUndefined();
+      vi.setSystemTime(new Date(LOCAL_TS));
+      expect(
+        await settle(
+          (
+            await reactor.execute(document.header.id, "main", [
+              addModule({ id: "m0", name: "m0" }),
+            ])
+          ).id,
+        ),
+      ).toBeUndefined();
 
-    expect(
-      await settle(
-        (
-          await reactor.execute(document.header.id, "main", [
-            { type: "UNDO", scope: "global", input: {} } as never,
-          ])
-        ).id,
-      ),
-    ).toBeUndefined();
+      expect(
+        await settle(
+          (
+            await reactor.execute(document.header.id, "main", [
+              { type: "UNDO", scope: "global", input: {} } as never,
+            ])
+          ).id,
+        ),
+      ).toBeUndefined();
 
-    return document.header.id;
-  }
+      return document.header.id;
+    }
 
-  beforeEach(async () => {
-    reactor = await new ReactorBuilder()
-      .withDocumentModelSources([documentModelDocumentModelModule as never])
-      .build();
+    beforeEach(async () => {
+      reactor = await new ReactorBuilder()
+        .withDocumentModelSources([documentModelDocumentModelModule as never])
+        .build();
+    });
+
+    it("keeps the reshuffle's skip when the NOOP sorts first", async () => {
+      const docId = await undoneDocument("noop-sorts-first");
+
+      const before = await globalOps(docId);
+      // The marker as the undo wrote it: one operation retired, at the head.
+      expect(before.find((op) => op.action.type === "NOOP")?.skip).toBe(1);
+
+      // A NOOP from a peer, earlier than everything local, so it sorts first and
+      // the reshuffle hands it the whole batch skip. Its index is below the local
+      // head, so the load reshuffles rather than appending.
+      const load = await reactor.load(docId, "main", [
+        incoming(docId, 0, {
+          id: "incoming-noop",
+          type: "NOOP",
+          input: {},
+        }),
+      ]);
+      expect(await settle(load.id)).toBeUndefined();
+
+      const after = await globalOps(docId);
+      const sortedFirst = after.find((op) => op.action.id === "incoming-noop");
+      expect(sortedFirst).toBeDefined();
+
+      // Two local revisions were retired, so the skip is 2. Overwritten with the
+      // marker's own 1 it stops covering what the reshuffle retired, and that
+      // operation reads back as live history on the next round.
+      expect(sortedFirst?.skip).toBe(2);
+    });
+
+    it("leaves a re-appended local NOOP's skip at zero", async () => {
+      const docId = await undoneDocument("noop-sorts-later");
+
+      const localNoopId = (await globalOps(docId)).find(
+        (op) => op.action.type === "NOOP",
+      )?.action.id;
+      expect(localNoopId).toBeDefined();
+
+      // An ordinary operation sorts first and takes the batch skip, which retires
+      // m0 as well. The NOOP that undid m0 is re-appended behind it.
+      const load = await reactor.load(docId, "main", [
+        incoming(docId, 0, {
+          id: "incoming-module",
+          type: "ADD_MODULE",
+          input: { id: "m1", name: "m1" },
+        }),
+      ]);
+      expect(await settle(load.id)).toBeUndefined();
+
+      const after = await globalOps(docId);
+      expect(after.find((op) => op.action.id === "incoming-module")?.skip).toBe(
+        2,
+      );
+
+      // m0 is not re-appended, so a positive skip would undo m1 in its place.
+      const reappended = after
+        .filter((op) => op.action.id === localNoopId)
+        .pop();
+      expect(reappended?.skip).toBe(0);
+      const document = await reactor.get<DocumentModelDocument>(docId);
+      expect(
+        document.state.global.specifications[0].modules.map(
+          (entry) => entry.id,
+        ),
+      ).toEqual(["m1"]);
+    });
   });
+});
 
-  it("keeps the reshuffle's skip when the NOOP sorts first", async () => {
-    const docId = await undoneDocument("noop-sorts-first");
+describe("base-reducer 3", () => {
+  describe("the skip a load job leaves on a local RETRACT", () => {
+    let reactor: IReactor;
 
-    const before = await globalOps(docId);
-    // The marker as the undo wrote it: one operation retired, at the head.
-    expect(before.find((op) => op.action.type === "NOOP")?.skip).toBe(1);
+    beforeEach(async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      reactor = await createUndoV3ReactorBuilder().build();
+    });
 
-    // A NOOP from a peer, earlier than everything local, so it sorts first and
-    // the reshuffle hands it the whole batch skip. Its index is below the local
-    // head, so the load reshuffles rather than appending.
-    const load = await reactor.load(docId, "main", [
-      incoming(docId, 0, {
-        id: "incoming-noop",
-        type: "NOOP",
-        input: {},
-      }),
-    ]);
-    expect(await settle(load.id)).toBeUndefined();
+    afterEach(() => {
+      reactor?.kill();
+      vi.useRealTimers();
+    });
 
-    const after = await globalOps(docId);
-    const sortedFirst = after.find((op) => op.action.id === "incoming-noop");
-    expect(sortedFirst).toBeDefined();
+    async function settle(jobId: string): Promise<string | undefined> {
+      await vi.waitUntil(async () => {
+        const status = await reactor.getJobStatus(jobId);
+        return (
+          status.status === JobStatus.FAILED ||
+          status.status === JobStatus.READ_READY
+        );
+      });
+      const status = await reactor.getJobStatus(jobId);
+      return status.status === JobStatus.FAILED
+        ? (status.error?.message ?? "job failed")
+        : undefined;
+    }
 
-    // Two local revisions were retired, so the skip is 2. Overwritten with the
-    // marker's own 1 it stops covering what the reshuffle retired, and that
-    // operation reads back as live history on the next round.
-    expect(sortedFirst?.skip).toBe(2);
-  });
+    async function globalOps(documentId: string): Promise<Operation[]> {
+      const result = await reactor.getOperations(documentId, {
+        branch: "main",
+        scopes: ["global"],
+      });
+      return (
+        (result as Record<string, { results: Operation[] } | undefined>).global
+          ?.results ?? []
+      );
+    }
 
-  it("leaves a re-appended local NOOP's skip at zero", async () => {
-    const docId = await undoneDocument("noop-sorts-later");
+    it("leaves a re-appended local RETRACT's skip at zero", async () => {
+      const document = createBaseReducer3Document({
+        id: "retract-sorts-later",
+      });
+      const docId = document.header.id;
+      expect(await settle((await reactor.create(document)).id)).toBeUndefined();
+      expect(
+        (await reactor.get(docId)).header.protocolVersions?.["base-reducer"],
+      ).toBe(3);
 
-    const localNoopId = (await globalOps(docId)).find(
-      (op) => op.action.type === "NOOP",
-    )?.action.id;
-    expect(localNoopId).toBeDefined();
+      vi.setSystemTime(new Date(LOCAL_TS));
+      const m0 = addModule({ id: "m0", name: "m0" });
+      expect(
+        await settle((await reactor.execute(docId, "main", [m0])).id),
+      ).toBeUndefined();
+      expect(
+        await settle(
+          (await reactor.execute(docId, "main", [retract(m0.id)])).id,
+        ),
+      ).toBeUndefined();
+      const localRetractId = (await globalOps(docId)).find(
+        (op) => retractionTarget(op) === m0.id,
+      )?.action.id;
+      expect(localRetractId).toBeDefined();
 
-    // An ordinary operation sorts first and takes the batch skip, which retires
-    // m0 as well. The NOOP that undid m0 is re-appended behind it.
-    const load = await reactor.load(docId, "main", [
-      incoming(docId, 0, {
-        id: "incoming-module",
-        type: "ADD_MODULE",
-        input: { id: "m1", name: "m1" },
-      }),
-    ]);
-    expect(await settle(load.id)).toBeUndefined();
+      // An ordinary operation sorts first and takes the batch skip. The RETRACT
+      // is re-appended behind it and still names m0.
+      const incomingModule = addModule({ id: "m1", name: "m1" });
+      const load = await reactor.load(docId, "main", [
+        {
+          id: deriveOperationId(docId, "global", "main", incomingModule.id),
+          index: 0,
+          skip: 0,
+          hash: "",
+          timestampUtcMs: INCOMING_TS,
+          action: { ...incomingModule, timestampUtcMs: INCOMING_TS },
+        } as unknown as Operation,
+      ]);
+      expect(await settle(load.id)).toBeUndefined();
 
-    const after = await globalOps(docId);
-    expect(after.find((op) => op.action.id === "incoming-module")?.skip).toBe(
-      2,
-    );
-
-    // m0 is not re-appended, so a positive skip would undo m1 in its place.
-    const reappended = after.filter((op) => op.action.id === localNoopId).pop();
-    expect(reappended?.skip).toBe(0);
-    const document = await reactor.get<DocumentModelDocument>(docId);
-    expect(
-      document.state.global.specifications[0].modules.map((entry) => entry.id),
-    ).toEqual(["m1"]);
+      const after = await globalOps(docId);
+      const reappended = after
+        .filter((op) => op.action.id === localRetractId)
+        .pop();
+      expect(reappended?.skip).toBe(0);
+      const stored = await reactor.get<DocumentModelDocument>(docId);
+      expect(
+        stored.state.global.specifications[0].modules.map((entry) => entry.id),
+      ).toEqual(["m1"]);
+    });
   });
 });

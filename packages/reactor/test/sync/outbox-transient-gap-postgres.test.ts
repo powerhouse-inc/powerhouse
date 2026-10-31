@@ -15,6 +15,7 @@ import { addRelationshipAction } from "../../src/actions/index.js";
 import { DriveCollectionId } from "../../src/cache/operation-index-types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { Database, InProcessReactorModule } from "../../src/core/types.js";
+import type { ReactorFeatureFlags } from "../../src/executor/types.js";
 import { bucketFor } from "../../src/executor/worker-pool-router.js";
 import type { DbConfig } from "../../src/executor/worker/protocol.js";
 import { createThreadTransport } from "../../src/executor/worker/transport.js";
@@ -26,7 +27,7 @@ import type { IChannelFactory } from "../../src/sync/interfaces.js";
 import { SyncBuilder } from "../../src/sync/sync-builder.js";
 import type { ChannelConfig, SyncEnvelope } from "../../src/sync/types.js";
 import { holdIndexCommit } from "../catch-up/helpers.js";
-import { createDocModelDocument } from "../factories.js";
+import { createDocModelDocument, undoV3Flags } from "../factories.js";
 import { TestChannel } from "./channels/test-channel.js";
 
 const PG_TEST_URL =
@@ -112,7 +113,10 @@ describe("sync outbox across a transient ordinal gap [Postgres]", () => {
     }
   });
 
-  async function build(mode: "workers" | "in-process"): Promise<Harness> {
+  async function build(
+    mode: "workers" | "in-process",
+    featureFlags?: Partial<ReactorFeatureFlags>,
+  ): Promise<Harness> {
     const sent: SyncEnvelope[] = [];
     let testChannel: TestChannel | undefined;
     const channelFactory: IChannelFactory = {
@@ -139,6 +143,7 @@ describe("sync outbox across a transient ordinal gap [Postgres]", () => {
       .withSync(new SyncBuilder().withChannelFactory(channelFactory));
 
     if (mode === "workers") {
+      builder.withExecutorConfig({ featureFlags });
       const db = dbConfigFor(PG_TEST_URL, TEST_DATABASE);
       const logger = new ConsoleLogger(["test", "worker"]);
       builder
@@ -168,7 +173,7 @@ describe("sync outbox across a transient ordinal gap [Postgres]", () => {
                 },
                 db,
                 models: builder.getResolvedModelManifest() ?? [],
-                executorConfig: {},
+                executorConfig: { featureFlags },
               },
               logger,
             }),
@@ -179,7 +184,7 @@ describe("sync outbox across a transient ordinal gap [Postgres]", () => {
           documentModelDocumentModelModule as never,
           driveDocumentModelModule as never,
         ])
-        .withExecutorConfig({ maxConcurrency: 2 });
+        .withExecutorConfig({ maxConcurrency: 2, featureFlags });
     }
 
     module = await builder.buildModule();
@@ -214,8 +219,15 @@ describe("sync outbox across a transient ordinal gap [Postgres]", () => {
     return ids;
   }
 
-  async function runScenario(mode: "workers" | "in-process"): Promise<void> {
-    const { module: reactorModule, sent, channel } = await build(mode);
+  async function runScenario(
+    mode: "workers" | "in-process",
+    version = 2,
+  ): Promise<void> {
+    const {
+      module: reactorModule,
+      sent,
+      channel,
+    } = await build(mode, version === 3 ? undoV3Flags() : undefined);
     const { reactor } = reactorModule;
     const [docX, docY] = idsOnDifferentWorkers();
 
@@ -226,7 +238,19 @@ describe("sync outbox across a transient ordinal gap [Postgres]", () => {
     const driveId = drive.header.id;
     await settled((await reactor.create(drive)).id);
     for (const id of [docX, docY]) {
-      await settled((await reactor.create(createDocModelDocument({ id }))).id);
+      await settled(
+        (
+          await reactor.create(
+            createDocModelDocument({
+              id,
+              protocolVersions: { "base-reducer": version },
+            }),
+          )
+        ).id,
+      );
+      expect(
+        (await reactor.get(id)).header.protocolVersions?.["base-reducer"],
+      ).toBe(version);
       await settled(
         (
           await reactor.execute(driveId, "main", [
@@ -236,11 +260,17 @@ describe("sync outbox across a transient ordinal gap [Postgres]", () => {
       );
     }
 
+    const { syncManager } = reactorModule.syncModule!;
+    // No peer answers the handshake. On base-reducer 3 the remote stands for a
+    // peer on this build, since a silent one is held from the document.
     await reactorModule.syncModule!.syncManager.add(
       REMOTE,
       DriveCollectionId.forDrive(driveId),
       { type: "internal", parameters: {} },
       { documentId: [], scope: [], branch: "main" },
+      undefined,
+      undefined,
+      version === 3 ? syncManager.localManifest() : undefined,
     );
     await vi.waitUntil(() => channel().outbox.latestOrdinal > 0, {
       timeout: 10_000,
@@ -293,4 +323,14 @@ describe("sync outbox across a transient ordinal gap [Postgres]", () => {
   it("sends a lower ordinal that commits after a higher one, in process", async () => {
     await runScenario("in-process");
   }, 60_000);
+
+  describe("base-reducer 3", () => {
+    it("sends a lower ordinal that commits after a higher one", async () => {
+      await runScenario("workers", 3);
+    }, 60_000);
+
+    it("sends a lower ordinal that commits after a higher one, in process", async () => {
+      await runScenario("in-process", 3);
+    }, 60_000);
+  });
 });

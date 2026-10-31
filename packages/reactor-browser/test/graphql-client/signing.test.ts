@@ -424,6 +424,39 @@ describe("prepareSignedActions", () => {
     ).rejects.toThrow(`cannot sign a batch containing ${type}`);
   });
 
+  it.each([
+    [undefined, 2],
+    [1, 1],
+    [2, 2],
+    [3, 3],
+    [7, 3],
+  ] as const)(
+    "predicts a header at base-reducer %s as base-reducer %i",
+    async (headerVersion, runsAs) => {
+      const snapshot = createSnapshot({ global: 5 });
+      if (headerVersion !== undefined) {
+        snapshot.header.protocolVersions = { "base-reducer": headerVersion };
+      }
+      const reducer = vi.fn(documentModelDocumentModelModule.reducer);
+      const spied = {
+        ...documentModelDocumentModelModule,
+        reducer,
+      } as unknown as typeof documentModelDocumentModelModule;
+
+      const signed = await prepareSignedActions(
+        batch,
+        snapshot,
+        createSigner(),
+        spied,
+      );
+
+      expect(signed).toHaveLength(batch.length);
+      expect(
+        reducer.mock.calls.map(([, , , options]) => options?.protocolVersion),
+      ).toEqual(batch.map(() => runsAs));
+    },
+  );
+
   it("rejects the batch when the reducer throws", async () => {
     // The real reducer records a bad action as a failed operation rather than
     // throwing (see the test below), so the throwing case needs a stub. It is

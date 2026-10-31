@@ -406,7 +406,7 @@ export function createCreateDocumentOperation(
         documentId,
         model: documentType,
         version: 0,
-        protocolVersions: { "base-reducer": 2 },
+        protocolVersions: { "base-reducer": 3 },
         ...inputOverrides,
       },
     } as Action,
@@ -540,21 +540,20 @@ export function createDocModelDocument(
     protocolVersions?: ProtocolVersions;
   } = {},
 ): PHDocument {
-  const { protocolVersions, ...rest } = overrides;
-  if (protocolVersions) {
-    return withSignaturePolicy(
-      createDocModelDocument(rest),
-      rest.signaturePolicy ??
-        (rest.id ? "legacy" : signaturePolicyOf(protocolVersions)),
-      { id: rest.id, protocolVersions },
-    );
-  }
-  // A fixed id cannot be content-addressed, so it defaults to legacy.
-  const policy = overrides.signaturePolicy ?? (overrides.id ? "legacy" : null);
+  const { protocolVersions } = overrides;
   const created = documentModelDocumentModelModule.utils.createDocument();
-  const baseDocument = policy
-    ? withSignaturePolicy(created, policy, { id: overrides.id })
-    : created;
+  // A fixed id cannot be content-addressed, so it defaults to legacy.
+  const policy =
+    overrides.signaturePolicy ??
+    (overrides.id
+      ? "legacy"
+      : protocolVersions
+        ? signaturePolicyOf(protocolVersions)
+        : signaturePolicyOf(created.header));
+  const baseDocument = withSignaturePolicy(created, policy, {
+    id: overrides.id,
+    protocolVersions: { "base-reducer": 3, ...protocolVersions },
+  });
 
   if (overrides.slug) {
     baseDocument.header.slug = overrides.slug;

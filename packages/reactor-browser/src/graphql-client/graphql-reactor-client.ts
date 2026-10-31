@@ -40,7 +40,6 @@ import {
   headNewDocument,
   normalizeDocumentModelVersion,
   capabilitiesOf,
-  optionalBaseReducerCapabilities,
   serializeByKey,
   undoCapabilitiesOf,
   undoNeedsTargets,
@@ -938,7 +937,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     branch: string = "main",
     signal?: AbortSignal,
   ): Promise<UndoRedoAvailability> {
-    const { caps, header } = await this.undoCapabilities(
+    const { caps, document } = await this.undoCapabilities(
       documentIdentifier,
       branch,
       signal,
@@ -951,12 +950,12 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
           signal,
         )
       : undefined;
-    // The Switchboard serves only what the caller may read.
+    // The Switchboard serves only the scopes the caller may read.
     return undoRedoAvailabilityOf(
       caps,
       targets,
-      header.revision[scope] ?? 0,
-      true,
+      document.header.revision[scope] ?? 0,
+      scope in document.state,
     );
   }
 
@@ -1028,6 +1027,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
           signal,
         );
       },
+      signal,
     );
   }
 
@@ -1036,11 +1036,12 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     documentIdentifier: string,
     branch: string,
     signal: AbortSignal | undefined,
-  ): Promise<{ caps: BaseReducerCapabilities; header: PHDocument["header"] }> {
-    const { header } = await this.get(documentIdentifier, { branch }, signal);
-    const fromHeader = optionalBaseReducerCapabilities(header);
+  ): Promise<{ caps: BaseReducerCapabilities; document: PHDocument }> {
+    const document = await this.get(documentIdentifier, { branch }, signal);
+    const { header } = document;
+    const fromHeader = undoCapabilitiesOf(header);
     if (fromHeader) {
-      return { caps: fromHeader, header };
+      return { caps: fromHeader, document };
     }
     const page = await this.getOperations(
       documentIdentifier,
@@ -1056,7 +1057,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         : undefined;
     return {
       caps: undoCapabilitiesOf(header, input) ?? capabilitiesOf(1),
-      header,
+      document,
     };
   }
 

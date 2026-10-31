@@ -146,6 +146,20 @@ describe("validateDraft", () => {
       );
     });
 
+    it("reads REACTOR_UNDO_V3 as on unless it is exactly false", () => {
+      const envelope = draft({
+        [`${SB_REACTOR}.protocol.featureFlags`]: { undoV3: true },
+      });
+      expect(issues(envelope, { REACTOR_UNDO_V3: "1" })).toEqual([]);
+      expect(issues(envelope, { REACTOR_UNDO_V3: "false" })).toEqual([
+        [
+          "protocol",
+          "env.REACTOR_UNDO_V3",
+          "REACTOR_UNDO_V3=false disagrees with the host's setting (true), so sb won't start.",
+        ],
+      ]);
+    });
+
     it("applies the ladder to the protocol block", () => {
       const groups = { ...ladderFlags(0), authGroups: true };
       const envelope = draft({

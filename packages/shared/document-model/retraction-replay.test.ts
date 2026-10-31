@@ -318,6 +318,26 @@ describe("replayDocumentVersioned on base-reducer 3", () => {
     expect(result.header.revision.global).toBe(6);
   });
 
+  it("runs a header at a number this build does not know as base-reducer 3", () => {
+    const expected = ["a!", "c!", "D", "E"];
+    const hash = hashDocumentStateForScope(
+      { state: { global: { items: expected } } },
+      "global",
+    );
+    const replayed = (version: number) =>
+      replayDocumentVersioned(
+        initialState(),
+        { document: spine([upgrade]), global: withLastHash(global, hash) },
+        { reducers: { 1: v1, 2: v2 }, upgradeManifest: manifest },
+        header(version),
+        undefined,
+        { checkHashes: false },
+      );
+
+    expect(replayed(7).state.global.items).toEqual(expected);
+    expect(replayed(7).header.protocolVersions?.["base-reducer"]).toBe(7);
+  });
+
   it("refuses a version whose reducer wraps no state reducer", () => {
     const opaque: Reducer = (document) => document;
 
@@ -361,5 +381,63 @@ describe("replayDocumentVersioned on base-reducer 3", () => {
     expect(v3.state.document.deletedAtUtcIso).toBe(purgedAt);
     expect(v3.state).toEqual(v2Result.state);
     expect(v3.header.revision).toEqual(v2Result.header.revision);
+  });
+});
+
+describe("replay of a header at a number this build does not know", () => {
+  it("runs replayDocument as base-reducer 3 when no version is passed", () => {
+    const rows = stream();
+    const replayed = (version: number) =>
+      replayDocument(
+        initialState(),
+        { global: rows },
+        reducer,
+        header(version),
+      );
+
+    expect(replayed(7).state.global).toEqual(replayed(3).state.global);
+    expect(replayed(7).state.global.items).toEqual(["a", "x", "c", "d"]);
+  });
+
+  it("runs replayDocument as a passed version", () => {
+    const rows = [add(0, "a"), add(1, "b"), retract(2, "r", "a")];
+    const replayed = (version: number, protocolVersion?: 1 | 2 | 3) =>
+      replayDocument(
+        initialState(),
+        { global: rows },
+        reducer,
+        header(version),
+        undefined,
+        {},
+        { protocolVersion },
+      );
+
+    expect(replayed(7, 2).state.global).toEqual(replayed(2).state.global);
+    expect(replayed(7, 2).state.global.items).toEqual(["a", "b"]);
+    expect(replayed(7).state.global.items).toEqual(["b"]);
+  });
+
+  it("loads a .phd as base-reducer 3", async () => {
+    const rows = stream();
+    const derived = oracle(rows);
+    const stored = withLastHash(
+      rows,
+      hashDocumentStateForScope(derived, "global"),
+    );
+    const zip = await createZip({
+      header: header(7),
+      state: derived.state,
+      initialState: initialState(),
+      operations: { global: stored },
+      clipboard: [],
+    });
+
+    const loaded = await baseLoadFromInput(zip, reducer, {
+      checkHashes: false,
+    });
+
+    expect(loaded.header.protocolVersions?.["base-reducer"]).toBe(7);
+    expect(loaded.state.global).toEqual(derived.state.global);
+    expect(loaded.operations.global).toEqual(positionalOperations(stored));
   });
 });

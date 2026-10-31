@@ -189,6 +189,10 @@ export {
   type StoredProtocolRefusal,
 } from "./src/shared/errors.js";
 export type { UnsupportedStoredDocuments } from "./src/core/stored-protocol-check.js";
+export {
+  featureFlagFingerprint,
+  resolveFeatureFlags,
+} from "./src/core/feature-flags.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
 export { parsePagingOptions, type ParsedPaging } from "./src/shared/utils.js";
 export {

@@ -1,5 +1,98 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — undo v3: new documents undo by retraction
+
+### ✨ Highlights
+
+1. **New documents are base-reducer 3** — `undoV3` is on by default. On a version 3 document an undo is a `RETRACT { target }` that names the undone action by id and is signed by its author, so replicas that hold the same operations derive the same state whatever order they arrived in
+2. **Base-reducer 1 and 2 documents behave exactly as before** — an existing document keeps its version and is never upgraded; its undo, redo, admission and sync do not change
+3. **Upgrade the Switchboard first** — a peer below this release cannot hold base-reducer 3 documents
+
+---
+
+### NEW FEATURES
+
+#### ↩️ Undo and redo through the client
+
+- `write.undo` and `write.redo` (in-process client, `GraphQLReactorClient` and the router) submit `UNDO`/`REDO` on base-reducer 1 and 2. On 3 they resolve the target and submit a `RETRACT` signed by the client.
+- `undoRedoTargets` and `undoRedoAvailability` report what an undo or redo would retract now; the Switchboard serves the targets as the `undoRedoTargets` query, and `IReactor.resolveUndoRedo` resolves them in the reactor.
+- `RemoteDocumentController.undo(count, scope)` and `redo(count, scope)` keep their signature; on 3 each step applies a `RETRACT` resolved from the controller's own log.
+- The design-system undo controls (`useUndo`, `useRedo`) and Connect's document toolbar undo a version 3 document through the reactor client, and keep dispatching `UNDO`/`REDO` for every other document.
+- The workflow editors undo a version 3 document by retracting the last edit; their undo-group and redo ids on 3 are UUIDv7 (`<id>~ug:<group>`).
+- reactor-mcp `addActions` turns each `UNDO`/`REDO` step on a version 3 document into one `RETRACT`.
+
+✅ **What to try:** create a document with `client.read.newDocument` and `client.write.create`, edit it, call `client.write.undo(id)`: the stored operation is a `RETRACT` whose `input.target` is the edit's action id.
+
+---
+
+### BREAKING CHANGES
+
+#### Older peers are held from base-reducer 3 documents
+
+A peer below this release does not list base-reducer 3 in its sync manifest, so this release holds every version 3 document, and every operation on it, from that peer until it upgrades. A peer below this release that receives one anyway refuses it as `UNSUPPORTED_PROTOCOL`. Until the Switchboard is upgraded, documents created on an upgraded Connect or light client stay there.
+
+#### `undoV3=false` refuses to boot over stored base-reducer 3 documents
+
+`undoV3=false` makes new documents base-reducer 2. `REACTOR_UNDO_V3` is on for any value except the literal `false`. Set it with `REACTOR_UNDO_V3=false` or `protocol.featureFlags.undoV3: false` (Switchboard), `reactor.protocol.featureFlags.undoV3: false` (ph-cli host file), `connect.reactor.featureFlags.undoV3: false` (Connect) or `withExecutorConfig({ featureFlags: { undoV3: false } })`. A host with it off that stores a base-reducer 3 document refuses to boot with `UnsupportedStoredProtocolError`, naming the version and how many stored documents need it: `N stored document(s) require base-reducer 3, which this reactor does not run`. `REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only` (or `withUnsupportedStoredDocuments("read-only")`) boots it and serves those documents read-only.
+
+#### Defaults that now follow the feature flags
+
+A caller that passes nothing now gets the reactor's default flags, so it announces, creates and accepts base-reducer 3: `SyncManager`'s `localPeer.flags`, `ReactorClient`'s `protocolSelection.flags` and `DocumentIntegrityService`'s `protocolSupport` default to `resolveFeatureFlags()` instead of no flags.
+
+#### `RETRACT` is a reserved operation name
+
+`ph generate`, Vetra and the document model editor refuse an operation named `RETRACT` (in any case) on every model. A model that defines one must rename it.
+
+#### Base-reducer numbers this build does not know
+
+A document whose base-reducer number this build does not know is read, derived and synced as the highest version the reader runs: a reactor, and its in-process client, run it as the highest version the reactor supports; the light client and local reducers run it as 3. Before, it ran as base-reducer 2. A reactor still refuses writes to it unless its support lists the number.
+
+#### A repeated action id is refused on base-reducer 3
+
+On a version 3 document, outside its `document` and `auth` scopes, admission refuses an action id the stream already holds as `DUPLICATE_ACTION` under `signatureVerification: "log"` too: a mutation fails and a load drops the operation. Base-reducer 1 and 2 still only log it.
+
+#### `IOperationStore.findReferencing`
+
+`IOperationStore` gains an optional `findReferencing(documentId, scope, branch, actionIds, signal?)`. A store without it still works, but the reactor then scans the whole stream on every base-reducer 3 write.
+
+#### Migrations 030 and 031
+
+030 adds `idx_operation_retracts`. 031 replaces 023's created-protocol-versions index with one keyed by document type, which changes the stored-protocol query every host runs at boot; results for base-reducer 1 and 2 documents are unchanged. A build that does not list a migration the database has run does not start, so going back to an older build needs a migration down first (see the migration guide).
+
+---
+
+### MIGRATION GUIDE
+
+1. Upgrade every Switchboard before Connect builds and light clients.
+2. To stop creating base-reducer 3 documents, set `undoV3=false`. Once one is stored, the host also needs `REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only` to boot, and those documents are read-only on it.
+3. To run an older build on a database this release migrated, stop the host and migrate down with this release's packages, which carry the `down()` of the newer migrations:
+
+   ```typescript
+   import { REACTOR_SCHEMA, runMigrations } from "@powerhousedao/reactor";
+   import { runReactorDriveMigrations } from "@powerhousedao/reactor-drive";
+   import type { Kysely } from "kysely";
+
+   // The release before undo v3: drops the 030 and 031 indexes.
+   export async function revertToPreviousRelease(db: Kysely<any>): Promise<void> {
+     const reactor = await runMigrations(db, REACTOR_SCHEMA, "029_create_permission_tables");
+     if (!reactor.success) throw reactor.error;
+   }
+
+   // 6.2.3: also reverts 024 to 029 and drops their tables (document purges, sync markers,
+   // purge refusals, remote persistence, write identity, permissions).
+   export async function revertTo623(db: Kysely<any>): Promise<void> {
+     const reactor = await runMigrations(db, REACTOR_SCHEMA, "023_index_created_protocol_versions");
+     if (!reactor.success) throw reactor.error;
+     const drive = await runReactorDriveMigrations(db, REACTOR_SCHEMA, "0002_document_name");
+     if (!drive.success) throw drive.error;
+   }
+   ```
+
+   On Postgres, pass a Kysely `PostgresDialect` over the reactor database URL (`PH_REACTOR_DATABASE_URL`). On an embedded PGlite store, pass `new PGliteDialect(new PGlite(".ph/reactor-storage"))` (`kysely-pglite-dialect`); a store whose `PG_VERSION` is 16 needs PGlite 0.2 (`pglite-legacy-02`). The drive tables live in the same database. Then start the older build, with `REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only` if any base-reducer 3 document is stored. No CLI migrates down, and Connect's in-browser store has no rollback path.
+4. Store implementers outside this repository: implement `findReferencing` over an index of `actionReferences(row.action)`.
+
+---
+
 ## 🚀 **Unreleased** — `ph host check` warns about members on one port
 
 ### ⚡ Two compound members that declare one port are a warning
@@ -144,7 +237,7 @@ The generated `assistant` and `cli` hosts use the new form. A project scaffolded
 
 ### ⚡ Action ids sort in creation order; auth bursts are admitted
 
-Action ids are now UUIDv7 from `generateActionId` (`@powerhousedao/shared/document-model`), for every document version, including base-reducer 1 and 2 documents. Ids from one process strictly increase, so actions built in the same millisecond keep their creation order wherever the id breaks a tie. `createAction`, the genesis `CREATE_DOCUMENT`/`UPGRADE_DOCUMENT` actions, `purgeDocumentAction`, the base-reducer 1/2 undo marker, the reactor and drive action builders and the workflow piece's `plainAction` use it. Document, node and folder ids stay UUIDv4, and so do the workflow editors' undo-group and redo ids for now. Code that parsed action ids as v4 should treat them as opaque strings.
+Action ids are now UUIDv7 from `generateActionId` (`@powerhousedao/shared/document-model`), for every document version, including base-reducer 1 and 2 documents. Ids from one process strictly increase, so actions built in the same millisecond keep their creation order wherever the id breaks a tie. `createAction`, the genesis `CREATE_DOCUMENT`/`UPGRADE_DOCUMENT` actions, `purgeDocumentAction`, the base-reducer 1/2 undo marker, the reactor and drive action builders and the workflow piece's `plainAction` use it. Document, node and folder ids stay UUIDv4, and so do the workflow editors' undo-group and redo ids on base-reducer 1 and 2 documents (base-reducer 3 documents use UUIDv7 there; see the undo v3 entry). Code that parsed action ids as v4 should treat them as opaque strings.
 
 Auth-scope actions are now stamped with `nextAuthTimestamp`, which strictly increases per process. A burst such as `initializeAuth` followed by `setGrant` built in one millisecond no longer fails with `AuthTimestampNotMonotonicError`. The error is still exported, and the executor still refuses an auth stamp at or below the stream's newest one, for example one set by hand or minted by another process. Every other scope keeps the wall clock. The auth clock is one per process, shared by every document, so a burst runs ahead by one millisecond per auth action built in the same millisecond, across all documents: granting 3 grants on each of 500 documents at once (`grantOnDocuments`) stamps the last grants about 1.5 s ahead. Content built before the clock catches up sorts before those grants and may be denied under `documentDecisions`; resubmit it once the clock passes the burst. If the wall clock steps back after a run-ahead, the process's auth writes are refused until the clock passes the highest stamp it sent. See ADR 0007.
 
@@ -265,7 +358,7 @@ None on the wire, and none at compile time for callers of `IReactorClient`. Beha
 ### ✨ Highlights
 
 1. **One place chooses a new document's versions** — `newDocument` heads a new, uncreated document with the protocol versions the client selects for its type and parent, and the client's create signature policy; every first-party create path goes through it
-2. **The reactor core selects like a client** — `IReactor.create` gives a header without `protocolVersions` the versions the reactor selects for its type, as `newDocument` would (base-reducer 2 in this release)
+2. **The reactor core selects like a client** — `IReactor.create` gives a header without `protocolVersions` the versions the reactor selects for its type, as `newDocument` would (base-reducer 3 for a model whose reducer `createReducer` builds while `undoV3` is on, the default; otherwise 2)
 3. **`RemoteDocumentController` falls back when a host has no `createDefaults`** — it creates through `createEmptyDocument`, as before. This client already needs a Switchboard that serves document `meta` and `protocolVersions`, which the released 6.2.3 does not, so the fallback does not make it work against 6.2.3
 
 ---
@@ -274,7 +367,7 @@ None on the wire, and none at compile time for callers of `IReactorClient`. Beha
 
 #### 🧱 `newDocument`
 
-`IReactorReadClient.newDocument(documentType, options?, signal?)` (also on `IReactorClient`, the router client and `GraphQLReactorClient`) returns a document headed with the versions `getCreateProtocolVersions` selects and the client's create signature policy. `NewDocumentOptions` extends `CreateDocumentOptions` with `protocolVersions`, `signaturePolicy`, `initialState`, `name` and `id` (kept only under the legacy policy). Pass the result to `write.create` or `write.drives.addFile`. Every new document is base-reducer 2 in this release.
+`IReactorReadClient.newDocument(documentType, options?, signal?)` (also on `IReactorClient`, the router client and `GraphQLReactorClient`) returns a document headed with the versions `getCreateProtocolVersions` selects and the client's create signature policy. `NewDocumentOptions` extends `CreateDocumentOptions` with `protocolVersions`, `signaturePolicy`, `initialState`, `name` and `id` (kept only under the legacy policy). Pass the result to `write.create` or `write.drives.addFile`. With `undoV3` on, the default, a new document of a model whose reducer `createReducer` builds is base-reducer 3; any other new document is base-reducer 2. See the undo v3 entry.
 
 `Query.createDefaults` takes an optional `documentType`; the light client asks with it and caps the answer at what it runs. A Switchboard that predates the argument answers reactor-wide, and one without `createDefaults` gives the baseline.
 

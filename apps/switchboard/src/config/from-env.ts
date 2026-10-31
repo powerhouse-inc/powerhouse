@@ -103,6 +103,10 @@ export function switchboardConfigFromEnv(
         authEnforcement: flag(env.REACTOR_AUTH_ENFORCEMENT),
         authGroups: flag(env.REACTOR_AUTH_GROUPS),
         authConditions: flag(env.REACTOR_AUTH_CONDITIONS),
+        undoV3:
+          env.REACTOR_UNDO_V3 === undefined
+            ? undefined
+            : env.REACTOR_UNDO_V3 !== "false",
       },
       createSignaturePolicy: createSignaturePolicyFromEnv(
         env.CREATE_SIGNATURE_POLICY,

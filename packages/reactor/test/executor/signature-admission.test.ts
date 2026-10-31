@@ -70,6 +70,7 @@ describe("signature admission", () => {
       trustPolicy?: SignatureTrustPolicy;
       signer?: ISigner;
       jobTimeoutMs?: number;
+      protocolVersions?: { "base-reducer": number };
     } = {},
   ): Promise<InProcessReactorModule> {
     const builder = new ReactorBuilder()
@@ -95,7 +96,10 @@ describe("signature admission", () => {
     );
 
     // Legacy, so every scheme is admissible; signature-policy covers v2-required.
-    const document = createDocModelDocument({ signaturePolicy: "legacy" });
+    const document = createDocModelDocument({
+      signaturePolicy: "legacy",
+      protocolVersions: options.protocolVersions,
+    });
     docId = document.header.id;
     expect((await settle(await module.reactor.create(document))).status).toBe(
       JobStatus.READ_READY,
@@ -682,7 +686,7 @@ describe("signature admission", () => {
     }
 
     it("is still only logged on base-reducer 2 in log mode", async () => {
-      await build("log");
+      await build("log", {}, { protocolVersions: { "base-reducer": 2 } });
       expect(
         (await module!.reactor.get(docId)).header.protocolVersions?.[
           "base-reducer"
@@ -776,7 +780,7 @@ describe("signature admission", () => {
         ["where the peer holds it", 0],
         ["from far above the local head", 999],
       ])("does not redo it when loaded %s", async (_label, index) => {
-        await build("enforce");
+        await build("enforce", {}, { protocolVersions: { "base-reducer": 2 } });
         const action = await undone();
 
         expect((await load([asOperation(action, index)])).status).toBe(
@@ -788,7 +792,7 @@ describe("signature admission", () => {
       });
 
       it("does not redo it when resubmitted", async () => {
-        await build("enforce");
+        await build("enforce", {}, { protocolVersions: { "base-reducer": 2 } });
         const action = await undone();
 
         const job = await execute([action]);
@@ -840,6 +844,33 @@ describe("signature admission", () => {
         expect(refusals).toEqual([]);
         expect(await liveActionIds3()).toContain(action.id);
         expect(await moduleIds()).toEqual(["x"]);
+      });
+
+      it.each([
+        ["where the peer holds it", 0],
+        ["from far above the local head", 999],
+      ])("does not redo it when loaded %s", async (_label, index) => {
+        await build3("enforce");
+        const action = await undone3();
+
+        expect((await load([asOperation(action, index)])).status).toBe(
+          JobStatus.READ_READY,
+        );
+
+        expect(await liveActionIds3()).not.toContain(action.id);
+        expect(await moduleIds()).toEqual([]);
+      });
+
+      it("does not redo it when resubmitted", async () => {
+        await build3("enforce");
+        const action = await undone3();
+
+        const job = await execute([action]);
+
+        expect(job.status).toBe(JobStatus.FAILED);
+        expect(job.error?.message).toContain("[DUPLICATE_ACTION]");
+        expect(await liveActionIds3()).not.toContain(action.id);
+        expect(await moduleIds()).toEqual([]);
       });
     });
   });

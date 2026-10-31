@@ -1,6 +1,9 @@
 import {
   baseReducerCapabilities,
+  capabilitiesOf,
   derivesByRule,
+  isBaseReducerVersion,
+  resolveBaseReducerVersion,
   usesRetractionRule,
 } from "./base-reducer-protocol.js";
 import { isDenied } from "./denied.js";
@@ -82,7 +85,14 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
 ): PHDocument<TState> {
   const { checkHashes = true, skipIndexValidation } = options || {};
 
-  const caps = baseReducerCapabilities(header);
+  // A header number this build does not know runs as the passed version, else
+  // as the highest this build runs; a header without one throws.
+  const known = isBaseReducerVersion(header.protocolVersions?.["base-reducer"]);
+  const unknown = resolveBaseReducerVersion(header.protocolVersions);
+  const caps =
+    known || unknown === undefined
+      ? baseReducerCapabilities(header)
+      : capabilitiesOf(options?.protocolVersion ?? unknown);
 
   const spine = (operations["document"] ?? [])
     .slice()
