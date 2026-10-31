@@ -22,8 +22,8 @@ const isDriveDocumentType = (documentType: string): boolean =>
   documentType === REACTOR_DRIVE_DOCUMENT_TYPE;
 
 /**
- * A configured id pins the drive, and only a legacy drive can take a chosen
- * id; otherwise the client's creation default applies.
+ * Only a legacy drive can take a chosen id; without one the client's creation
+ * default applies.
  */
 function newDrive<TDocument extends PHDocument>(
   client: IReactorClient,
@@ -72,7 +72,9 @@ async function slugHolder(
       error instanceof Error && error.name === "DocumentNotFoundError";
     return notFound ? undefined : null;
   }
-  return liveHolder(client, id);
+  const holder = await liveHolder(client, id);
+  // The slug matched a deleted document's id, which leaves the slug free.
+  return holder === "deleted" && id === slug ? undefined : holder;
 }
 
 async function existingDrive(
@@ -80,7 +82,8 @@ async function existingDrive(
   id: string,
 ): Promise<PHDocument | undefined> {
   try {
-    return await client.get(id);
+    const document = await client.get(id);
+    return document.state.document?.isDeleted ? undefined : document;
   } catch {
     return undefined;
   }
@@ -134,8 +137,10 @@ const driveState = (
  * generates the id, so nothing here may rely on it equalling the slug.
  *
  * A deleted drive frees its slug, so the next call makes a new empty drive and
- * the slug names that one from then on. A delete with `keepSlug` is someone
- * deciding the drive is gone: the slug stays on it and nothing is created.
+ * the slug names that one from then on. Its id stays taken, so a declared id
+ * that a deleted drive holds gives way to a generated one. A delete with
+ * `keepSlug` is someone deciding the drive is gone: the slug stays on it and
+ * nothing is created.
  */
 export async function ensureDrive(
   client: IReactorClient,
@@ -197,6 +202,14 @@ export async function ensureDrive(
     const errorMessage = e instanceof Error ? e.message : String(e);
     if (!errorMessage.includes("already exists")) {
       throw e;
+    }
+    if (drive.slug && drive.id && !(await existingDrive(client, drive.id))) {
+      return ensureDrive(
+        client,
+        { ...drive, id: undefined },
+        serverPort,
+        logger,
+      );
     }
   }
 

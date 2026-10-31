@@ -100,7 +100,10 @@ describe("addDefaultDrive with a slug another document holds", () => {
   });
 });
 
-describe("ensureDrive", () => {
+describe.each([
+  ["without document decisions", false],
+  ["with document decisions", true],
+])("ensureDrive %s", (_name, documentDecisions) => {
   let module: InProcessReactorClientModule;
   const logger = { error: vi.fn() };
   const mail = { slug: "mail", global: { name: "Mail" } };
@@ -116,10 +119,12 @@ describe("ensureDrive", () => {
     module = await new ReactorClientBuilder()
       .withCreateSignaturePolicy("legacy")
       .withReactorBuilder(
-        new ReactorBuilder().withDocumentModelSources([
-          driveDocumentModelModule as unknown as DocumentModelModule,
-          documentModelDocumentModelModule as unknown as DocumentModelModule,
-        ]),
+        new ReactorBuilder()
+          .withDocumentModelSources([
+            driveDocumentModelModule as unknown as DocumentModelModule,
+            documentModelDocumentModelModule as unknown as DocumentModelModule,
+          ])
+          .withExecutorConfig({ featureFlags: { documentDecisions } }),
       )
       .buildModule();
   });
@@ -205,6 +210,30 @@ describe("ensureDrive", () => {
     ]);
     expect(renamed.header.id).toBe(id);
   });
+
+  // A project-hashed drive declares an id, and that id outlives the drive.
+  it.each([
+    ["a different slug", "mail", "mail-1234abcd"],
+    ["the same slug", "mail-1234abcd", "mail-1234abcd"],
+  ])(
+    "makes a new drive when a deleted drive holds the declared id, under %s",
+    async (_case, slug, id) => {
+      const declared = { ...mail, slug, id };
+      await ensureDrive(module.client, declared, PORT, logger);
+      await deleteDrive(id);
+
+      await expect(
+        ensureDrive(module.client, declared, PORT, logger),
+      ).resolves.toBe(`http://localhost:${PORT}/d/${slug}`);
+
+      const created = await module.client.resolveIdOrSlug(slug);
+      expect(created).not.toBe(id);
+
+      await ensureDrive(module.client, declared, PORT, logger);
+      await expect(module.client.resolveIdOrSlug(slug)).resolves.toBe(created);
+      expect(logger.error).not.toHaveBeenCalled();
+    },
+  );
 
   it("leaves a drive deleted when the delete kept its slug", async () => {
     await ensureDrive(module.client, mail, PORT, logger);
