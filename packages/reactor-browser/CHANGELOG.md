@@ -1,3 +1,25 @@
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **reactor-browser:** a switchboard backend's breaker takes unset fields as defaults, or false to never open ([634b82893f](https://github.com/powerhouse-inc/powerhouse/commit/634b82893f))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+- **reactor-browser:** undo(count, scope) and redo(count, scope) on the remote controller ([8f49ffda8c](https://github.com/powerhouse-inc/powerhouse/commit/8f49ffda8c))
+- **reactor-browser:** undo, redo and undo targets on the light client ([a8d36c3180](https://github.com/powerhouse-inc/powerhouse/commit/a8d36c3180))
+- **reactor-api:** undoRedoTargets query ([24ebdc6f9a](https://github.com/powerhouse-inc/powerhouse/commit/24ebdc6f9a))
+- **shared:** base-reducer 3 capability table, retraction rule and RETRACT ([b006a95770](https://github.com/powerhouse-inc/powerhouse/commit/b006a95770))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a pending RETRACT follows its local target through a rebase ([5ce883f878](https://github.com/powerhouse-inc/powerhouse/commit/5ce883f878))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.86 (2026-10-30)
 
 ### 🚀 Features

@@ -1,3 +1,37 @@
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **reactor-monitor-app:** the Router view routes a started app as its Connect does ([8668131606](https://github.com/powerhouse-inc/powerhouse/commit/8668131606))
+- **reactor-monitor-app:** builder chooses where new drives go and each switchboard connection ([78224a1f4a](https://github.com/powerhouse-inc/powerhouse/commit/78224a1f4a))
+- **reactor-monitor-app:** host-rules offer Connect's router settings ([e1aafa7cb8](https://github.com/powerhouse-inc/powerhouse/commit/e1aafa7cb8))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+- **reactor-monitor-app:** show port clashes on the Reactors step with a fix ([477ec947a8](https://github.com/powerhouse-inc/powerhouse/commit/477ec947a8))
+- **reactor:** undoV3 feature flag, off by default ([5e69f6cd0f](https://github.com/powerhouse-inc/powerhouse/commit/5e69f6cd0f))
+
+### 🩹 Fixes
+
+- **reactor-monitor-app:** opening a second switchboard keeps new drives where they go ([32115af5e0](https://github.com/powerhouse-inc/powerhouse/commit/32115af5e0))
+- **apps-reactor-monitor:** headline only a line that says what failed ([166268d79f](https://github.com/powerhouse-inc/powerhouse/commit/166268d79f))
+- **apps-reactor-monitor:** say how the copy picks each clashing port ([3764263573](https://github.com/powerhouse-inc/powerhouse/commit/3764263573))
+- **apps-reactor-monitor:** only the last line of a failed run names its cause ([eddbfd2dae](https://github.com/powerhouse-inc/powerhouse/commit/eddbfd2dae))
+- **reactor-monitor-app:** the Router view never sends new drives somewhere Connect wouldn't ([5f03c9a0dc](https://github.com/powerhouse-inc/powerhouse/commit/5f03c9a0dc))
+- **reactor-monitor-app:** router settings review: labels, ids, a narrower delete and one primary ([ded5799dce](https://github.com/powerhouse-inc/powerhouse/commit/ded5799dce))
+- **apps-reactor-monitor:** load host-rules ports under plain node ([f507416387](https://github.com/powerhouse-inc/powerhouse/commit/f507416387))
+- **apps-reactor-monitor:** a failed start leads with the cause from its log ([fa69426405](https://github.com/powerhouse-inc/powerhouse/commit/fa69426405))
+- **apps-reactor-monitor:** check the copy's ports in the builder too ([b314508b19](https://github.com/powerhouse-inc/powerhouse/commit/b314508b19))
+- **reactor-monitor-app:** import refuses placement.primary on a Connect, and its primary follows Connect ([13f98f91b6](https://github.com/powerhouse-inc/powerhouse/commit/13f98f91b6))
+- **reactor-monitor-app:** lead a failed start with its reason, fold the log tail ([5c950656c5](https://github.com/powerhouse-inc/powerhouse/commit/5c950656c5))
+- **reactor-monitor-app:** refuse a copy whose members would share a port ([767d6c69a5](https://github.com/powerhouse-inc/powerhouse/commit/767d6c69a5))
+- **reactor-monitor-app:** give an added member a free port; refuse two members on one port ([11345ff71e](https://github.com/powerhouse-inc/powerhouse/commit/11345ff71e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.86 (2026-10-30)
 
 ### 🚀 Features

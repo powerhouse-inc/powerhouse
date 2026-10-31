@@ -1,3 +1,25 @@
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **shared:** serve Connect's router settings and per-switchboard connection settings ([b090b4d0f1](https://github.com/powerhouse-inc/powerhouse/commit/b090b4d0f1))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+- **reactor:** sync refuses before load a base-reducer 3 document whose model this reactor cannot run ([a75861b101](https://github.com/powerhouse-inc/powerhouse/commit/a75861b101))
+- **shared:** base-reducer 3 capability table, retraction rule and RETRACT ([b006a95770](https://github.com/powerhouse-inc/powerhouse/commit/b006a95770))
+
+### 🩹 Fixes
+
+- **shared:** a replay takes a passed base-reducer version only for a header number this build does not know ([0c05c18cde](https://github.com/powerhouse-inc/powerhouse/commit/0c05c18cde))
+- **shared:** an UNDO's replay runs under the base-reducer version its reducer runs ([74ea776ae4](https://github.com/powerhouse-inc/powerhouse/commit/74ea776ae4))
+- **shared:** a skip's replay runs under the base-reducer version its reducer runs ([1692b7ee44](https://github.com/powerhouse-inc/powerhouse/commit/1692b7ee44))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.86 (2026-10-30)
 
 ### 🚀 Features

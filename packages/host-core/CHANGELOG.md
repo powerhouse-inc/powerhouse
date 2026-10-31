@@ -1,3 +1,23 @@
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **host-core:** project router settings to Connect; reactorWorker follows the browser reactor ([7c010daf4d](https://github.com/powerhouse-inc/powerhouse/commit/7c010daf4d))
+- **host-core:** router settings in the host config; Connect refuses placement.primary ([384abd8357](https://github.com/powerhouse-inc/powerhouse/commit/384abd8357))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+
+### 🩹 Fixes
+
+- **host-core:** warn about members on their runner's default port too ([724161b6ab](https://github.com/powerhouse-inc/powerhouse/commit/724161b6ab))
+- **host-core:** serve newDrives only when it names a served switchboard ([6d525ee98c](https://github.com/powerhouse-inc/powerhouse/commit/6d525ee98c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.86 (2026-10-30)
 
 This was a version bump only for @powerhousedao/host-core to align it with other projects, there were no code changes.

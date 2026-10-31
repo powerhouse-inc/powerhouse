@@ -1,3 +1,37 @@
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+- **reactor:** undo, redo and undo availability on the in-process client ([91a848dbd7](https://github.com/powerhouse-inc/powerhouse/commit/91a848dbd7))
+- **reactor:** a base-reducer number this build does not know runs as the highest version the reactor runs ([2e6433b2d1](https://github.com/powerhouse-inc/powerhouse/commit/2e6433b2d1))
+- **reactor:** sync refuses before load a base-reducer 3 document whose model this reactor cannot run ([a75861b101](https://github.com/powerhouse-inc/powerhouse/commit/a75861b101))
+- **reactor:** read models skip documents whose protocol this reactor cannot run ([c1c74a3175](https://github.com/powerhouse-inc/powerhouse/commit/c1c74a3175))
+- **reactor:** stored documents of a model this reactor cannot run defer until the model loads ([eb6d1a0fd4](https://github.com/powerhouse-inc/powerhouse/commit/eb6d1a0fd4))
+- **reactor:** refuse a base-reducer 3 create whose model cannot load ([e54d7f426a](https://github.com/powerhouse-inc/powerhouse/commit/e54d7f426a))
+- **reactor:** one protocol gate decides which protocol versions a reactor runs ([148cb6f004](https://github.com/powerhouse-inc/powerhouse/commit/148cb6f004))
+- **reactor:** base-reducer 3 decisions walk the retraction rule ([d3f3b39894](https://github.com/powerhouse-inc/powerhouse/commit/d3f3b39894))
+- **reactor:** base-reducer 3 engine behind undoV3 ([0cd42c739c](https://github.com/powerhouse-inc/powerhouse/commit/0cd42c739c))
+- **reactor:** undoV3 feature flag, off by default ([5e69f6cd0f](https://github.com/powerhouse-inc/powerhouse/commit/5e69f6cd0f))
+- **reactor:** findReferencing over an indexed RETRACT target (migration 030) ([04de8d801c](https://github.com/powerhouse-inc/powerhouse/commit/04de8d801c))
+- **reactor:** log why sync holds a document ([8e96b27ee1](https://github.com/powerhouse-inc/powerhouse/commit/8e96b27ee1))
+
+### 🩹 Fixes
+
+- **reactor:** migration 031 hashes the model with the versions, as 023 did ([03627c2898](https://github.com/powerhouse-inc/powerhouse/commit/03627c2898))
+- **reactor:** only a fresh receiver takes a load's base-reducer from its CREATE ([42b5575fe4](https://github.com/powerhouse-inc/powerhouse/commit/42b5575fe4))
+- **reactor:** read paths refuse only the base-reducer version, as before ([5b3bcadcd1](https://github.com/powerhouse-inc/powerhouse/commit/5b3bcadcd1))
+- **reactor:** the first load of a base-reducer 3 document runs base-reducer 3 load rules ([b6cf820b4e](https://github.com/powerhouse-inc/powerhouse/commit/b6cf820b4e))
+- **reactor:** an unknown base-reducer version is refused with a typed error ([40b7926615](https://github.com/powerhouse-inc/powerhouse/commit/40b7926615))
+- **reactor:** the write cache rebuilds an unknown base-reducer version as before ([c50f838725](https://github.com/powerhouse-inc/powerhouse/commit/c50f838725))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.86 (2026-10-30)
 
 ### 🚀 Features

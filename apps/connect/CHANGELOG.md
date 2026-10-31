@@ -1,3 +1,24 @@
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **connect:** create new drives where the host config says, and say when that switchboard isn't answering ([2b3ef15468](https://github.com/powerhouse-inc/powerhouse/commit/2b3ef15468))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+- **reactor:** read models skip documents whose protocol this reactor cannot run ([c1c74a3175](https://github.com/powerhouse-inc/powerhouse/commit/c1c74a3175))
+- **reactor:** stored documents of a model this reactor cannot run defer until the model loads ([eb6d1a0fd4](https://github.com/powerhouse-inc/powerhouse/commit/eb6d1a0fd4))
+
+### 🩹 Fixes
+
+- **connect:** a ?reactorClient override can't create new drives in the browser when the host sends them to a switchboard ([9d21294161](https://github.com/powerhouse-inc/powerhouse/commit/9d21294161))
+- **connect:** the Add drive dialog names a switchboard that refused the new drive, or asks to sign in ([60b5c06fe0](https://github.com/powerhouse-inc/powerhouse/commit/60b5c06fe0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.86 (2026-10-30)
 
 ### 🚀 Features
