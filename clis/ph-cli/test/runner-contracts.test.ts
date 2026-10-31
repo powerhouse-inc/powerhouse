@@ -53,7 +53,7 @@ vi.mock("../src/services/build.js", () => ({
   runBuild: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@powerhousedao/switchboard/utils", () => ({
-  addDefaultDrive: vi.fn().mockResolvedValue(undefined),
+  ensureDrive: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@powerhousedao/host-core", async (importOriginal) => {
   const actual = await importOriginal<typeof HostCore>();

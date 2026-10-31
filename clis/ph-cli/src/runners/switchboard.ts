@@ -278,26 +278,24 @@ function seederClient(
       }
     },
     createDrive: async (drive: ResolvedDrive) => {
-      const { addDefaultDrive } =
-        await import("@powerhousedao/switchboard/utils");
+      const { ensureDrive } = await import("@powerhousedao/switchboard/utils");
       // One drive that cannot be made must not keep the server from starting
       try {
-        await createDeclaredDrive(addDefaultDrive, reactor, drive, port);
+        await createDeclaredDrive(ensureDrive, reactor, drive, port);
       } catch (error) {
         console.error(
           `The drive "${drive.slug}" was not created: ${error instanceof Error ? error.message : String(error)}`,
         );
         return;
       }
-      // Its id: the declared one, or a new one where the store could not take
-      // a pinned id (addDefaultDrive then made it under the slug)
+      // Its id: the declared one, or the one the reactor generated
       let id: string | undefined;
       try {
         id = await (reactor as SlugLookupClient).resolveIdOrSlug(drive.slug);
       } catch {
         id = undefined;
       }
-      seededIds.set(drive.slug, id || drive.id);
+      seededIds.set(drive.slug, id || drive.id || drive.slug);
     },
     attachRemoteDrive: () => Promise.resolve(), // remotes ride options.remoteDrives
   };
@@ -305,15 +303,16 @@ function seederClient(
 
 /** A declared local drive, through the switchboard's own default-drive path. */
 async function createDeclaredDrive(
-  addDefaultDrive: typeof SwitchboardUtils.addDefaultDrive,
+  ensureDrive: typeof SwitchboardUtils.ensureDrive,
   reactor: unknown,
   drive: ResolvedDrive,
   port: number,
 ): Promise<void> {
-  await addDefaultDrive(
-    reactor as Parameters<typeof addDefaultDrive>[0],
+  await ensureDrive(
+    reactor as Parameters<typeof ensureDrive>[0],
     {
-      id: drive.id,
+      ...(drive.id ? { id: drive.id } : {}),
+      ...(drive.documentType ? { documentType: drive.documentType } : {}),
       slug: drive.slug,
       global: { name: drive.name, icon: drive.icon },
       ...(drive.preferredEditor
@@ -325,7 +324,7 @@ async function createDeclaredDrive(
         sharingType: drive.sharingType,
         triggers: [],
       },
-    } as Parameters<typeof addDefaultDrive>[1],
+    } as Parameters<typeof ensureDrive>[1],
     port,
   );
 }
@@ -471,7 +470,7 @@ async function start(
   }
   for (const { declaredSlug, drive } of localPlanned) {
     drives[declaredSlug] = {
-      id: seededIds.get(drive.slug) ?? drive.id,
+      id: seededIds.get(drive.slug) ?? drive.id ?? drive.slug,
       url: driveUrlOf(drive.slug),
     };
   }

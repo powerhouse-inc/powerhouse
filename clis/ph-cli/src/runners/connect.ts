@@ -169,7 +169,8 @@ function declaredDrivesToDefaults(
     }
     return {
       local: true as const,
-      id: drive.id,
+      // A local drive is skipped on later boots by this id, so it stays fixed.
+      id: drive.id ?? drive.slug,
       name: drive.name,
       icon: drive.icon ?? null,
       ...(drive.preferredEditor ? { app: drive.preferredEditor } : {}),

@@ -181,11 +181,7 @@ import {
   StoredDocumentsRefusedError,
   resolveUnsupportedStoredDocuments,
 } from "./unsupported-stored-documents.mjs";
-import {
-  addDefaultDrive,
-  addDefaultReactorDrive,
-  isPostgresUrl,
-} from "./utils.mjs";
+import { ensureDrive, isPostgresUrl } from "./utils.mjs";
 import { acquireStoreLocks } from "./store-lock.mjs";
 import {
   defaultStoreDirs,
@@ -1669,22 +1665,12 @@ async function initServer(
       throw new Error("Cannot create default drive without Renown identity");
     }
 
-    const driveType = options.drive.documentType ?? "powerhouse/document-drive";
-    if (driveType === "powerhouse/reactor-drive") {
-      defaultDriveUrl = await addDefaultReactorDrive(
-        client,
-        options.drive,
-        serverPort,
-        logger,
-      );
-    } else {
-      defaultDriveUrl = await addDefaultDrive(
-        client,
-        options.drive,
-        serverPort,
-        logger,
-      );
-    }
+    defaultDriveUrl = await ensureDrive(
+      client,
+      options.drive,
+      serverPort,
+      logger,
+    );
   }
 
   // Ready once this server serves its own drives. Remote drives stay out: they
