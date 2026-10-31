@@ -16,6 +16,7 @@ export {
 } from "./app-json.js";
 export {
   bundleStack,
+  pruneStack,
   type BundleStackOptions,
   type BundleStackResult,
 } from "./bundle-stack.js";

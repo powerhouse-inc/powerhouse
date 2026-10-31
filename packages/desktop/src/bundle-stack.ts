@@ -271,6 +271,45 @@ function vendoredFromLocal(stackDir: string): boolean {
   );
 }
 
+/** Types and source maps, which nothing reads at runtime. */
+const UNREAD_FILE = /\.(d\.[cm]?ts|map)$/i;
+const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/;
+/** Licences stay, as the packages' terms ask. */
+const PACKAGE_NOTES = /^(readme|changelog|history)(\..*)?$/i;
+
+/**
+ * Removes what a running app never reads. Windows creates and scans each file
+ * on its own, so these, over half the stack, were over half the install.
+ *
+ * @returns How many files went
+ */
+export function pruneStack(dir: string, inPackages = false): number {
+  let removed = 0;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === "__tests__") {
+        removed += fs
+          .readdirSync(full, { recursive: true, withFileTypes: true })
+          .filter((file) => file.isFile()).length;
+        fs.rmSync(full, { recursive: true, force: true });
+        continue;
+      }
+      removed += pruneStack(full, inPackages || entry.name === "node_modules");
+      if (fs.readdirSync(full).length === 0) fs.rmdirSync(full);
+    } else if (
+      entry.isFile() &&
+      (UNREAD_FILE.test(entry.name) ||
+        TEST_FILE.test(entry.name) ||
+        (inPackages && PACKAGE_NOTES.test(entry.name)))
+    ) {
+      fs.rmSync(full);
+      removed++;
+    }
+  }
+  return removed;
+}
+
 export function bundleStack(options: BundleStackOptions): BundleStackResult {
   const log = options.logger ?? console.log;
   const stackDir = path.join(options.shellProjectDir, "dist-stack");
@@ -436,6 +475,8 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
   } else {
     log("  vendoring skipped (vendor: false) — existing tree left in place");
   }
+
+  log(`  ${pruneStack(stackDir)} files a running app never reads removed`);
 
   return { stackDir, vendored };
 }

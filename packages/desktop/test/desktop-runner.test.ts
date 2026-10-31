@@ -14,6 +14,7 @@ import {
   bundleStack,
   readLocalPackages,
   pluginPackagesOf,
+  pruneStack,
   stackManifest,
 } from "../src/bundle-stack.js";
 import { resolveShell, shellEnv, tauriConfigPatch } from "../src/shell.js";
@@ -387,6 +388,54 @@ describe("the AI demo key a stack ships", () => {
     expect(config.ai.demoKeyFile).toBeUndefined();
     expect(existsSync(path.join(stackDir, "ai"))).toBe(false);
     expect(logs.join(" ")).toContain("no AI demo key");
+  });
+});
+
+describe("what a stack leaves out", () => {
+  function stackWith(files: string[]): string {
+    const dir = tempDir("ph-desktop-prune-");
+    for (const file of files) {
+      mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+      writeFileSync(path.join(dir, file), "x");
+    }
+    return dir;
+  }
+
+  it("removes what nothing reads at runtime, and folders that leaves empty", () => {
+    const dir = stackWith([
+      "node_modules/a/index.d.ts",
+      "node_modules/a/index.d.mts",
+      "node_modules/a/index.js.map",
+      "node_modules/a/index.test.js",
+      "node_modules/a/README.md",
+      "node_modules/a/CHANGELOG.md",
+      "node_modules/a/__tests__/deep/case.js",
+      "node_modules/a/types/only.d.ts",
+      "dist/types/thing.d.ts",
+      "hosts/connect/page.test.tsx",
+    ]);
+
+    expect(pruneStack(dir)).toBe(10);
+    expect(existsSync(path.join(dir, "node_modules/a/types"))).toBe(false);
+    expect(existsSync(path.join(dir, "dist/types"))).toBe(false);
+  });
+
+  it("keeps code, licences, and the project's own notes", () => {
+    const kept = [
+      "node_modules/a/index.js",
+      "node_modules/a/LICENSE",
+      "node_modules/a/LICENSE.md",
+      "node_modules/a/package.json",
+      "node_modules/a/map.js",
+      "node_modules/a/pglite.wasm",
+      "node_modules/a/test/fixture.js",
+      "agents/README.md",
+    ];
+    const dir = stackWith(kept);
+
+    expect(pruneStack(dir)).toBe(0);
+    for (const file of kept)
+      expect(existsSync(path.join(dir, file))).toBe(true);
   });
 });
 
