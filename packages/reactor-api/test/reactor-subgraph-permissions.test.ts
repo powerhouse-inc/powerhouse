@@ -120,6 +120,8 @@ describe("ReactorSubgraph Permission Checks", () => {
 
     // Create mock ReactorClient
     mockReactorClient = {
+      // `document` and `documentOperations` first ask whether a listing would serve the document.
+      isServed: vi.fn().mockResolvedValue(true),
       get: vi.fn().mockResolvedValue(mockDocument),
       resolveIdOrSlug: vi.fn((identifier: string) =>
         Promise.resolve(identifier),

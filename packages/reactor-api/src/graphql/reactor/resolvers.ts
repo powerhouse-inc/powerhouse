@@ -1,4 +1,5 @@
 import {
+  DocumentNotFoundError,
   type ActionCandidate,
   type ActionEvaluations,
   AuthEnforcementDisabledError,
@@ -301,6 +302,31 @@ export async function documentModels(
   }
 }
 
+/**
+ * Refuses, exactly as a missing document is refused, a document the read gate
+ * would withhold from a listing: one whose domain scopes the subject may read
+ * none of. `get` alone still answers such a document's header and its `auth`
+ * and `document` scopes — the husk every holder may read, because a replica
+ * must be able to sync a policy it cannot read under — and at this boundary
+ * that husk tells a caller that the id exists, what the document is named, its
+ * hash and who is granted what. The in-process client keeps serving it: the
+ * host and its maintenance read as the host, not as a principal. Here the
+ * caller is a principal, so `document` and `documentOperations` answer the
+ * same `Document not found` the reactor answers for an id that was never there.
+ */
+async function assertServed(
+  read: IReactorReadClient,
+  identifier: string,
+  view: ViewFilter | undefined,
+): Promise<void> {
+  if (!(await read.isServed(identifier, view))) {
+    throw new DocumentNotFoundError(
+      identifier,
+      `Document not found: ${identifier}`,
+    );
+  }
+}
+
 export async function document(
   read: IReactorReadClient,
   args: {
@@ -328,6 +354,7 @@ export async function document(
   const token = toConsistencyToken(args.consistency);
   let result: PHDocument;
   try {
+    await assertServed(read, args.idOrSlug, view);
     result = await read.get(args.idOrSlug, view, undefined, token);
   } catch (error) {
     throw new GraphQLError(
@@ -816,6 +843,7 @@ export async function documentOperations(
 
   let result: PagedResults<Operation>;
   try {
+    await assertServed(read, args.filter.documentIdOrSlug, view);
     result = await read.getOperations(
       args.filter.documentIdOrSlug,
       view,
