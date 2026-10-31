@@ -106,7 +106,8 @@ jobs:
   # alone is 44s of the 137s total, so a fourth shard would sit idle.
   test:
     name: Test (shard ${{ matrix.shard }}/3)
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       CI: true
