@@ -29,6 +29,7 @@ import { PassthroughSigner } from "../signer/passthrough-signer.js";
 import { admissionTrustPolicy } from "../signer/trust-policy.js";
 import type {
   AdmissionPath,
+  SignatureTrustContext,
   SignatureTrustPolicy,
   SignatureVerdict,
   SignatureVerificationMode,
@@ -299,6 +300,7 @@ export class SignatureAdmission {
     const authorized = await this.authorize(
       signer,
       entry.stream.documentId,
+      { path, actionType: entry.action.type },
       signal,
     );
     if (!authorized) {
@@ -316,6 +318,7 @@ export class SignatureAdmission {
   private async authorize(
     signer: ActionSigner,
     documentId: string,
+    context: SignatureTrustContext,
     signal?: AbortSignal,
   ): Promise<boolean> {
     signal?.throwIfAborted();
@@ -341,7 +344,12 @@ export class SignatureAdmission {
     });
     try {
       return await Promise.race([
-        this.trustPolicy.authorizeSigner(signer, signer.app.key, documentId),
+        this.trustPolicy.authorizeSigner(
+          signer,
+          signer.app.key,
+          documentId,
+          context,
+        ),
         stop,
       ]);
     } finally {

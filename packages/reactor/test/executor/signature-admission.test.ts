@@ -33,6 +33,7 @@ import type { Job } from "../../src/queue/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import type {
   SignatureTrustPolicy,
+  SignatureTrustContext,
   SignatureVerificationMode,
 } from "../../src/signer/types.js";
 import { verifyActionSignature } from "../../src/signer/verify-action-signature.js";
@@ -886,12 +887,18 @@ describe("signature admission", () => {
     /** Records every question; `answer` decides, or throws. */
     function policy(
       answer: (signer: ActionSigner, key: string) => Promise<boolean>,
-    ): SignatureTrustPolicy & { calls: Call[] } {
+    ): SignatureTrustPolicy & {
+      calls: Call[];
+      contexts: (SignatureTrustContext | undefined)[];
+    } {
       const calls: Call[] = [];
+      const contexts: (SignatureTrustContext | undefined)[] = [];
       return {
         calls,
-        authorizeSigner(actionSigner, key, documentId) {
+        contexts,
+        authorizeSigner(actionSigner, key, documentId, context) {
           calls.push({ key, address: actionSigner.user.address, documentId });
+          contexts.push(context);
           return answer(actionSigner, key);
         },
       };
@@ -983,6 +990,20 @@ describe("signature admission", () => {
       expect(job.error?.message).toContain("[SIGNER_UNAUTHORIZED]");
       expect(trust.calls).toEqual([
         { key: signer.did, address: "0xdef", documentId: docId },
+      ]);
+    });
+
+    it("tells the policy a first write from a load, and the action's type", async () => {
+      const trust = policy(() => Promise.resolve(true));
+      await build("enforce", {}, { trustPolicy: trust });
+      const first = await v2Signed(moduleAction("a", 0));
+      await execute([first]);
+      const second = await v2Signed(moduleAction("b", 1));
+      await load([asOperation(second, 1)]);
+
+      expect(trust.contexts).toEqual([
+        { path: "mutation", actionType: first.type },
+        { path: "load", actionType: second.type },
       ]);
     });
 

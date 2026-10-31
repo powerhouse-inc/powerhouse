@@ -221,15 +221,8 @@ async function fetchDelegationCredentialRest(params: {
   };
   if (!credential) return undefined;
 
-  // Binding: delegates to this app DID, issued by this address on this chain
-  // (issuer.id = did:pkh:<networkId>:<chainId>:<address>).
-  const [, , , issuerChainId, issuerAddress] = credential.issuer.id.split(":");
-  if (
-    credential.credentialSubject.id !== appDid ||
-    issuerChainId !== String(chainId) ||
-    issuerAddress.toLowerCase() !== address.toLowerCase() ||
-    credential.issuer.ethereumAddress.toLowerCase() !== address.toLowerCase()
-  ) {
+  // Binding (issuer.id = did:pkh:<networkId>:<chainId>:<address>).
+  if (!credentialIssuedTo(credential, address, chainId, appDid)) {
     return undefined;
   }
 
@@ -315,6 +308,149 @@ export async function fetchDelegationCredential(
     return await finalizeCredential(credential, chainId, verifySignature);
   } catch {
     return undefined;
+  }
+}
+
+/**
+ * What Renown says of a credential. `unknown` means it did not answer, and is
+ * never read as revoked: an outage must not stop anything.
+ */
+export type DelegationCredentialStatus =
+  | "active"
+  | "revoked"
+  | "expired"
+  | "unknown";
+
+export interface CheckDelegationCredentialOptions {
+  address: string;
+  chainId: number;
+  appDid: string;
+  /** Renown service base URL. Defaults to DEFAULT_RENOWN_URL. */
+  baseUrl?: string;
+  /** Switchboard GraphQL endpoint; wins over the REST lookup. */
+  switchboardUrl?: string;
+  /** In-process Switchboard reader; wins over any URL. */
+  switchboardRequest?: SwitchboardRequestFn;
+  /**
+   * The credential's own expiry, when the caller holds it. The REST endpoint
+   * answers with active credentials only, so this tells a credential that
+   * expired from one revoked.
+   */
+  expirationDate?: string;
+  /** How long Renown has to answer. Defaults to 5 seconds. */
+  timeoutMs?: number;
+}
+
+export interface DelegationCredentialCheck {
+  status: DelegationCredentialStatus;
+  /** The active credential, proof verified. */
+  credential?: PowerhouseVerifiableCredential;
+}
+
+const DEFAULT_CHECK_TIMEOUT_MS = 5_000;
+
+// Delegates to this app DID, issued by this address on this chain.
+function credentialIssuedTo(
+  credential: PowerhouseVerifiableCredential,
+  address: string,
+  chainId: number,
+  appDid: string,
+): boolean {
+  const [, , , issuerChainId, issuerAddress] = credential.issuer.id.split(":");
+  return (
+    credential.credentialSubject.id === appDid &&
+    issuerChainId === String(chainId) &&
+    issuerAddress?.toLowerCase() === address.toLowerCase() &&
+    credential.issuer.ethereumAddress.toLowerCase() === address.toLowerCase()
+  );
+}
+
+// A credential Renown no longer serves: past its date, or revoked. With no date
+// to go on, a credential that is gone was not expired by anything known here.
+function goneStatus(
+  expirationDate: string | undefined,
+): DelegationCredentialStatus {
+  if (!expirationDate) return "revoked";
+  const expiresAt = Date.parse(expirationDate);
+  return !Number.isNaN(expiresAt) && expiresAt <= Date.now()
+    ? "expired"
+    : "revoked";
+}
+
+async function checkOverRest(
+  options: CheckDelegationCredentialOptions,
+  baseUrl: string,
+): Promise<DelegationCredentialCheck> {
+  const { address, chainId, appDid, expirationDate } = options;
+  const url = new URL(
+    `/api/auth/credential?address=${encodeURIComponent(address)}&chainId=${encodeURIComponent(chainId)}&connectId=${encodeURIComponent(appDid)}&appId=${encodeURIComponent(appDid)}`,
+    baseUrl,
+  );
+  const response = await fetch(url, {
+    method: "GET",
+    signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_CHECK_TIMEOUT_MS),
+  });
+  if (!response.ok && response.status !== 404) return { status: "unknown" };
+  // A JSON body is Renown's own answer; a proxy's 404 page says nothing.
+  const body = (await response.json().catch(() => undefined)) as
+    | { credential?: PowerhouseVerifiableCredential | null }
+    | undefined;
+  if (!body) return { status: "unknown" };
+  if (!body.credential) return { status: goneStatus(expirationDate) };
+  return { status: "active", credential: body.credential };
+}
+
+async function checkOverSwitchboard(
+  options: CheckDelegationCredentialOptions,
+  source: SwitchboardSource,
+): Promise<DelegationCredentialCheck> {
+  const { address, chainId, appDid, expirationDate } = options;
+  const client = new SwitchboardClient(source);
+  const credential = await client.getCredential({ address, chainId, appDid });
+  if (credential) return { status: "active", credential };
+  const issued = await client.getIssuedCredentials({
+    address,
+    chainId,
+    appDid,
+  });
+  // This read model has never held it: nothing definite to say.
+  if (issued.length === 0 && !expirationDate) return { status: "unknown" };
+  const latest = issued
+    .map((row) => row.expirationDate)
+    .filter((date): date is string => Boolean(date))
+    .sort()
+    .at(-1);
+  return { status: goneStatus(latest ?? expirationDate) };
+}
+
+/**
+ * Asks Renown about a credential, keeping "no" apart from "no answer". Never
+ * throws. Used where a definite answer stops something, unlike
+ * {@link fetchDelegationCredential}, which reads both as undefined.
+ */
+export async function checkDelegationCredential(
+  options: CheckDelegationCredentialOptions,
+): Promise<DelegationCredentialCheck> {
+  const source = options.switchboardRequest ?? options.switchboardUrl;
+  try {
+    const check = source
+      ? await checkOverSwitchboard(options, source)
+      : await checkOverRest(options, options.baseUrl ?? DEFAULT_RENOWN_URL);
+    if (check.status !== "active" || !check.credential) return check;
+    const { address, chainId, appDid } = options;
+    const verified = credentialIssuedTo(
+      check.credential,
+      address,
+      chainId,
+      appDid,
+    )
+      ? await finalizeCredential(check.credential, chainId, true)
+      : undefined;
+    return verified
+      ? { status: "active", credential: verified }
+      : { status: "unknown" };
+  } catch {
+    return { status: "unknown" };
   }
 }
 

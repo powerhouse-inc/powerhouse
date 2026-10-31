@@ -17,6 +17,8 @@ export type ReactorApiConfig = {
     gatewayAdapter?: GatewayAdapterType;
     /** Origin advertised in webhook URLs; a bare domain gets `https://`. */
     publicUrl?: string;
+    /** Address to bind; unset binds every interface. */
+    host?: string;
   };
   auth?: {
     enabled?: boolean;
@@ -30,6 +32,10 @@ export type ReactorApiConfig = {
     skipCredentialVerification?: boolean;
     credentialCacheTtlMs?: number;
     wsRecheckMs?: number;
+    /** The first verified caller becomes the admin of a host with none. */
+    ownerClaim?: boolean;
+    /** Keep verified credentials, and rely on them while Renown is away. */
+    offlineCredentials?: boolean;
   };
   inspection?: { admin?: boolean };
   attachments?: { storage?: AttachmentStorageConfig };

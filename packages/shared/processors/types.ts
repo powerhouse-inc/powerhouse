@@ -57,6 +57,19 @@ export interface IProcessorDispatch {
 
 // Host-agnostic core. reactor-browser and reactor-api extend it with
 // `client` and `attachments` as `IProcessorHostModule`.
+/** What a processor may need to know about the host it runs on. */
+export type ProcessorHostInfo = {
+  /** The host's own `did:key`, the one it signs its writes with. */
+  key: string;
+  /** Who the host is signed in as; null when it has no identity. */
+  address: string | null;
+  /**
+   * Whether reads need a person: the authorization policy is not OPEN, so a
+   * run with no user and a host with no address reads nothing.
+   */
+  requiresPerson: boolean;
+};
+
 export interface IProcessorHostModuleBase {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDb;
@@ -64,6 +77,8 @@ export interface IProcessorHostModuleBase {
   dispatch: IProcessorDispatch;
   getReadModel<T>(name: string): T;
   config?: Map<string, unknown>;
+  /** Absent in the browser, and on a host with no key of its own. */
+  host?: ProcessorHostInfo;
   /**
    * The package's slice of the HTTP surface, bound to its own namespace.
    *

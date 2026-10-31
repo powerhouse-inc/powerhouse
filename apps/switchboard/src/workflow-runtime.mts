@@ -446,10 +446,16 @@ export function reactorAccessOf(
  * the host's too: the request's caller is the host's signed-in address. A
  * host with no signed-in identity reads anonymously, which the
  * authenticated-caller floor refuses as it would an anonymous HTTP request.
+ *
+ * A caller the policy gives no rows is refused here. The index would answer it
+ * with nothing, which a piece cannot tell from "nothing exists", and an upsert
+ * would then create a duplicate of everything: a granter who left ADMINS must
+ * stop a run, not double its documents.
  */
 export function indexQueryFor(
   manager: Pick<GraphQLManager, "executeSubgraph">,
   clientModule: InProcessReactorClientModule | undefined,
+  authorization?: Pick<IAuthorizationService, "config" | "isSupremeAdmin">,
 ): NonNullable<WorkflowEngine.WorkflowRuntimeHostDeps["queryIndex"]> {
   const signer = clientModule?.signer;
   const host = signer?.user as Partial<UserActionSigner> | undefined;
@@ -467,6 +473,21 @@ export function indexQueryFor(
       : host?.address
         ? { address: host.address, chainId, networkId, appKey: hostKey }
         : undefined;
+    if (
+      authorization?.config.policy === AuthorizationPolicy.ADMIN_ONLY &&
+      !authorization.isSupremeAdmin(user?.address)
+    ) {
+      return {
+        data: null,
+        errors: [
+          {
+            message: user
+              ? `Forbidden: ${user.address} is not an admin of this host, so it reads no index`
+              : "Forbidden: this run has no person behind it, so it reads no index",
+          },
+        ],
+      };
+    }
     const result = await manager.executeSubgraph(request.subgraph, {
       query: request.query,
       variables: request.variables,
@@ -733,7 +754,13 @@ async function composeClaimed(
     hostPrincipal: hostPrincipalOf(access),
     hostIdentity: hostIdentityOf(access),
     ...(deps.indexQueries
-      ? { queryIndex: indexQueryFor(deps.indexQueries, deps.clientModule) }
+      ? {
+          queryIndex: indexQueryFor(
+            deps.indexQueries,
+            deps.clientModule,
+            deps.authorizationService,
+          ),
+        }
       : {}),
     ...(models
       ? {

@@ -7,7 +7,7 @@ import { toast } from "@powerhousedao/connect/services";
 import { getConnectPluginUi } from "@powerhousedao/connect-core/plugins";
 import { holdConnectRoutes } from "@powerhousedao/connect-core/router";
 import {
-  addDefaultDrivesForNewReactor,
+  addDefaultDrivesThroughSignIn,
   createBrowserReactor,
   getDefaultDrives,
   placementSync,
@@ -674,7 +674,7 @@ export async function createReactor(
   );
   if (addsDrives && defaultDrivesConfig.length > 0) {
     void trackDriveArrival(
-      addDefaultDrivesForNewReactor(defaultDrivesConfig),
+      addDefaultDrivesThroughSignIn(renown, defaultDrivesConfig),
     ).catch((error) => console.error("Failed to add default drives:", error));
   }
   if (placements && placements.drives.length > 0) {

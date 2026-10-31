@@ -122,6 +122,7 @@ fn main() {
             "take_launch_files",
             "read_launch_file",
             "log_from_webview",
+            "open_external",
         ]),
     ))
     .expect("failed to run tauri-build");
@@ -395,6 +396,7 @@ function connectCapability(connectPort: number): string {
           "allow-take-launch-files",
           "allow-read-launch-file",
           "allow-log-from-webview",
+          "allow-open-external",
         ],
       },
       null,

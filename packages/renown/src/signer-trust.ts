@@ -1,6 +1,12 @@
 import type { ActionSigner } from "@powerhousedao/shared/document-model";
 import { DEFAULT_RENOWN_URL } from "./constants.js";
 import { verifyDelegationProof } from "./credential.js";
+import {
+  bindingRefusal,
+  delegationOf,
+  verifyDelegation,
+  type DelegationCarried,
+} from "./delegation.js";
 import { SwitchboardClient, type SwitchboardSource } from "./switchboard.js";
 import type { PowerhouseVerifiableCredential } from "./types.js";
 
@@ -28,6 +34,18 @@ export interface RenownTrustPolicyOptions {
   maxAccepted?: number;
   /** How long a refusal is remembered before asking again. Defaults to 60s. */
   refusalTtlMs?: number;
+  /**
+   * Verify delegated signers only, and accept every other signer: what a host
+   * with `authEnforcement` off does. It makes no lookup, so it needs no network.
+   */
+  delegationOnly?: boolean;
+}
+
+/** What admission knows of the write; the reactor's `SignatureTrustContext`. */
+export interface RenownTrustContext {
+  /** Where this reactor first stores the write. */
+  path: "mutation" | "load";
+  actionType: string;
 }
 
 /** Structurally a reactor `SignatureTrustPolicy`. */
@@ -36,6 +54,7 @@ export interface RenownTrustPolicy {
     signer: ActionSigner,
     key: string,
     documentId: string,
+    context?: RenownTrustContext,
   ): Promise<boolean>;
 }
 
@@ -46,6 +65,10 @@ const DEFAULT_REFUSAL_TTL_MS = 60_000;
  * Accepts a key the user's EIP-712 Renown credential delegates to, ignoring
  * expiry and revocation. Verdicts are cached per (address, key); this node's
  * own key is checked before the cache and never cached.
+ *
+ * A signer carrying a delegation is verified from what it carries, with no
+ * lookup and no cache: the verdict depends on the statement, not on (address,
+ * key). `options.delegationOnly` accepts every other signer.
  */
 export function createRenownTrustPolicy(
   options: RenownTrustPolicyOptions = {},
@@ -99,10 +122,17 @@ export function createRenownTrustPolicy(
   }
 
   return {
-    authorizeSigner(signer, key) {
+    authorizeSigner(signer, key, _documentId, context) {
       const user = signer.user as SignerUser | undefined;
       const self = ownIdentity(options);
       if (self && isSelf(self, user, key)) {
+        return Promise.resolve(true);
+      }
+      const carried = delegationOf(signer);
+      if (carried) {
+        return authorizeDelegated(carried, user, key, self?.key, context);
+      }
+      if (options.delegationOnly) {
         return Promise.resolve(true);
       }
       if (!user || !isLookupable(user, key)) {
@@ -137,6 +167,36 @@ export function createRenownTrustPolicy(
       return verdict;
     },
   };
+}
+
+/**
+ * The statement alone decides, so every replica agrees and no network is
+ * needed. The one exception is `env`, checked only at first write: peers
+ * receive these operations legitimately on load.
+ */
+async function authorizeDelegated(
+  carried: DelegationCarried,
+  user: SignerUser | undefined,
+  key: string,
+  ownKey: string | undefined,
+  context: RenownTrustContext | undefined,
+): Promise<boolean> {
+  if (!user || !context || carried.statement === undefined) {
+    return false;
+  }
+  if ((await bindingRefusal(carried)) !== undefined) {
+    return false;
+  }
+  const verdict = await verifyDelegation(carried.statement, {
+    user,
+    key,
+    signedAt: carried.signedAt,
+    actionType: context.actionType,
+  });
+  if (!verdict.ok) {
+    return false;
+  }
+  return context.path === "load" || verdict.claims.env === ownKey;
 }
 
 function ownIdentity(

@@ -11,6 +11,7 @@ import {
   type IReadModelCoordinator,
 } from "@powerhousedao/reactor";
 import {
+  AuthorizationPolicy,
   BaseSubgraph,
   type CanonicalDocumentId,
   type GraphQLManager,
@@ -30,6 +31,7 @@ import type { ILogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { ReadableDocumentsProjection } from "../../../packages/reactor-api/src/services/readable-documents.js";
 import type { startSwitchboard } from "../src/server.mjs";
 import { bootSwitchboard } from "./boot-helpers.js";
 import {
@@ -972,6 +974,120 @@ describe("a piece's index query through the host", () => {
       signer: { app: { key: "did:key:zHost" }, user: {} },
     } as unknown as InProcessReactorClientModule)(request, null);
     expect(sentUser(anonymous)).toBeUndefined();
+  });
+
+  describe("a caller the policy gives no rows", () => {
+    const adminOnly = (admins: string[]) => ({
+      config: {
+        admins,
+        defaultProtection: false,
+        policy: AuthorizationPolicy.ADMIN_ONLY,
+      },
+      isSupremeAdmin: (address?: string) =>
+        address !== undefined && admins.includes(address),
+    });
+    const runUser = {
+      address: "0xrun",
+      subject: { address: "0xrun", key: "did:key:zRun" },
+    };
+    const module = { signer } as unknown as InProcessReactorClientModule;
+
+    it("refuses a granter who is no longer an admin, rather than answer nothing", async () => {
+      const m = manager();
+      const result = await indexQueryFor(
+        m,
+        module,
+        adminOnly(["0xother"]),
+      )(request, runUser);
+      expect(m.executeSubgraph).not.toHaveBeenCalled();
+      expect(result.data).toBeNull();
+      expect(result.errors?.[0].message).toMatch(
+        /0xrun is not an admin of this host/,
+      );
+    });
+
+    it("refuses a run with nobody behind it", async () => {
+      const m = manager();
+      const anonymous = {
+        signer: { app: { key: "did:key:zHost" }, user: {} },
+      } as unknown as InProcessReactorClientModule;
+      const result = await indexQueryFor(
+        m,
+        anonymous,
+        adminOnly(["0xother"]),
+      )(request, null);
+      expect(m.executeSubgraph).not.toHaveBeenCalled();
+      expect(result.errors?.[0].message).toMatch(/no person behind it/);
+    });
+
+    // The real filter an index answers with, over the rows of a store.
+    it("finds an existing document for a delegated run, and refuses once the granter left", async () => {
+      const admins = ["0xrun"];
+      const config = {
+        admins,
+        defaultProtection: false,
+        policy: AuthorizationPolicy.ADMIN_ONLY,
+      };
+      const readable = new ReadableDocumentsProjection({
+        config,
+      } as unknown as ConstructorParameters<
+        typeof ReadableDocumentsProjection
+      >[0]);
+      const executeSubgraph = vi.fn(
+        (
+          _name: string,
+          { user }: { user?: { address: string } },
+        ): Promise<{ data: Record<string, unknown> }> => {
+          const seen = readable.filterFor(user?.address).kind === "all";
+          return Promise.resolve({
+            data: {
+              keyIndex: {
+                find: seen ? [{ key: "gmail:1", documentId: "d1" }] : [],
+              },
+            },
+          });
+        },
+      );
+      const delegated = {
+        address: "0xrun",
+        subject: { address: "0xrun", key: "did:key:zDelegate" },
+      };
+      const query = indexQueryFor({ executeSubgraph }, module, {
+        config,
+        isSupremeAdmin: (address?: string) =>
+          address !== undefined && admins.includes(address),
+      });
+
+      expect(await query(request, delegated)).toEqual({
+        data: { keyIndex: { find: [{ key: "gmail:1", documentId: "d1" }] } },
+      });
+
+      // Removed from ADMINS: an empty answer here would duplicate everything.
+      admins.length = 0;
+      admins.push("0xother");
+      const refused = await query(request, delegated);
+      expect(refused.data).toBeNull();
+      expect(refused.errors).toHaveLength(1);
+      expect(executeSubgraph).toHaveBeenCalledOnce();
+    });
+
+    it("lets an admin read", async () => {
+      const m = manager();
+      await indexQueryFor(m, module, adminOnly(["0xrun"]))(request, runUser);
+      expect(m.executeSubgraph).toHaveBeenCalledOnce();
+    });
+
+    it.each([
+      AuthorizationPolicy.OPEN,
+      AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+    ])("leaves %s to the index's own filter", async (policy) => {
+      const m = manager();
+      await indexQueryFor(m, module, {
+        ...adminOnly([]),
+        config: { admins: [], defaultProtection: false, policy },
+      })(request, runUser);
+      expect(m.executeSubgraph).toHaveBeenCalledOnce();
+    });
   });
 
   it("hands the subgraph's errors back as messages", async () => {
