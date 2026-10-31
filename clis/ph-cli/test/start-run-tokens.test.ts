@@ -394,3 +394,34 @@ describe("--explain outputs", () => {
     );
   });
 });
+
+describe("a build's NODE_ENV", () => {
+  const initial = process.env.NODE_ENV;
+  afterEach(() => {
+    process.env.NODE_ENV = initial;
+  });
+
+  async function nodeEnvAfter(verb: string): Promise<string | undefined> {
+    const dir = mkdtempSync(path.join(tmpdir(), "ph-start-run-env-"));
+    temporary.push(dir);
+    await startRun({ host: "absent", verb, projectRoot: dir }).catch(
+      () => undefined,
+    );
+    return process.env.NODE_ENV;
+  }
+
+  it("is settled before a host loads, as loading one can load React", async () => {
+    delete process.env.NODE_ENV;
+    expect(await nodeEnvAfter("build")).toBe("production");
+  });
+
+  it("stays what the caller set", async () => {
+    process.env.NODE_ENV = "development";
+    expect(await nodeEnvAfter("build")).toBe("development");
+  });
+
+  it("is left alone by a verb that runs something", async () => {
+    delete process.env.NODE_ENV;
+    expect(await nodeEnvAfter("run")).toBeUndefined();
+  });
+});
