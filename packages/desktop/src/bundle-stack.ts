@@ -47,6 +47,51 @@ export function pluginPackagesOf(
     .map((entry) => packageOf(entry.module));
 }
 
+/** Where a stack keeps the OAuth clients its config names. */
+const OAUTH_CLIENTS_DIR = "oauth";
+
+interface StagedConfig {
+  workflows?: {
+    oauthApps?: { id?: string; clients?: { desktop?: string; web?: string } }[];
+  };
+}
+
+/**
+ * The project's config, with its OAuth clients made the app's own. They sit
+ * outside the project, so a packaged app would find nothing at those paths. A
+ * desktop client ships with the app: it can't keep its secret, so sign-ins
+ * always use PKCE. A web client belongs to a server and never leaves the machine.
+ */
+function stageConfig(
+  projectRoot: string,
+  stackDir: string,
+  log: (message: string) => void,
+): void {
+  const source = path.join(projectRoot, "powerhouse.config.json");
+  if (!fs.existsSync(source)) return;
+  const config = JSON.parse(fs.readFileSync(source, "utf8")) as StagedConfig;
+  for (const app of config.workflows?.oauthApps ?? []) {
+    if (!app.clients) continue;
+    const desktop = app.clients.desktop;
+    const from = desktop && path.resolve(projectRoot, desktop);
+    app.clients = {};
+    if (!from || !fs.existsSync(from)) {
+      log(`  oauth app ${app.id}: no desktop client, so it can't sign in`);
+      continue;
+    }
+    const file = path.basename(from);
+    fs.mkdirSync(path.join(stackDir, OAUTH_CLIENTS_DIR), { recursive: true });
+    fs.copyFileSync(from, path.join(stackDir, OAUTH_CLIENTS_DIR, file));
+    app.clients.desktop = `./${OAUTH_CLIENTS_DIR}/${file}`;
+    log(`  oauth app ${app.id}: desktop client staged`);
+  }
+  fs.writeFileSync(
+    path.join(stackDir, "powerhouse.config.json"),
+    `${JSON.stringify(config, null, 2)}
+`,
+  );
+}
+
 export interface BundleStackOptions {
   projectRoot: string;
   shellProjectDir: string;
@@ -219,6 +264,7 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     "agents",
     "dist",
     ".ph",
+    OAUTH_CLIENTS_DIR,
     "powerhouse.config.json",
     "package.json",
   ]) {
@@ -272,10 +318,7 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
       );
     }
   }
-  copyIfExists(
-    path.join(options.projectRoot, "powerhouse.config.json"),
-    path.join(stackDir, "powerhouse.config.json"),
-  );
+  stageConfig(options.projectRoot, stackDir, log);
 
   // shell.json: the stack's contract with the shell. The no-env (packaged)
   // path has nobody to set PH_WIN_CONNECT_PORT, so the shell reads the probe

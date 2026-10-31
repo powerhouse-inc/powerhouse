@@ -275,6 +275,58 @@ function packTarball(dir: string, file: string, name: string): string {
   return tarball;
 }
 
+describe("the OAuth clients a stack ships", () => {
+  function stagedFrom(clients: Record<string, string>) {
+    const parent = tempDir("ph-desktop-oauth-");
+    const projectRoot = path.join(parent, "project");
+    mkdirSync(projectRoot);
+    writeFileSync(path.join(parent, "desktop.json"), "the desktop client");
+    writeFileSync(path.join(parent, "web.json"), "the web client");
+    writeFileSync(
+      path.join(projectRoot, "powerhouse.config.json"),
+      JSON.stringify({
+        keep: "this",
+        workflows: { oauthApps: [{ id: "google", clients }] },
+      }),
+    );
+    const logs: string[] = [];
+    const { stackDir } = bundleStack({
+      projectRoot,
+      shellProjectDir: path.join(parent, "shell"),
+      vendor: false,
+      logger: (message) => logs.push(message),
+    });
+    const config = JSON.parse(
+      readFileSync(path.join(stackDir, "powerhouse.config.json"), "utf8"),
+    ) as {
+      keep: string;
+      workflows: { oauthApps: { clients: Record<string, string> }[] };
+    };
+    return { config, logs, stackDir };
+  }
+
+  it("moves the desktop client inside the stack, and leaves the web one out", () => {
+    const { config, stackDir } = stagedFrom({
+      desktop: "../desktop.json",
+      web: "../web.json",
+    });
+    expect(config.keep).toBe("this");
+    expect(config.workflows.oauthApps[0].clients).toEqual({
+      desktop: "./oauth/desktop.json",
+    });
+    expect(
+      readFileSync(path.join(stackDir, "oauth/desktop.json"), "utf8"),
+    ).toBe("the desktop client");
+    expect(existsSync(path.join(stackDir, "oauth/web.json"))).toBe(false);
+  });
+
+  it("says so when the desktop client isn't there", () => {
+    const { config, logs } = stagedFrom({ desktop: "../missing.json" });
+    expect(config.workflows.oauthApps[0].clients).toEqual({});
+    expect(logs.join(" ")).toContain("no desktop client");
+  });
+});
+
 describe("the plugins a stack ships", () => {
   it("names the package of each plugin that resolves in Node", () => {
     const connectBuiltIn = "@powerhousedao/connect/plugins/workflows";
