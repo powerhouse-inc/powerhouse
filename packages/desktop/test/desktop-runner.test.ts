@@ -275,6 +275,28 @@ function packTarball(dir: string, file: string, name: string): string {
   return tarball;
 }
 
+describe("the package a stack is", () => {
+  it("keeps the project's version and exports, which its pieces and models need", () => {
+    const parent = tempDir("ph-desktop-identity-");
+    const projectRoot = path.join(parent, "project");
+    mkdirSync(projectRoot);
+    const exports = { "./document-models": { node: "./dist/models.mjs" } };
+    writeFileSync(
+      path.join(projectRoot, "package.json"),
+      JSON.stringify({ name: "lab", version: "1.2.3", exports }),
+    );
+    const { stackDir } = bundleStack({
+      projectRoot,
+      shellProjectDir: path.join(parent, "shell"),
+      vendor: false,
+      logger: () => undefined,
+    });
+    expect(
+      JSON.parse(readFileSync(path.join(stackDir, "package.json"), "utf8")),
+    ).toMatchObject({ name: "lab", version: "1.2.3", exports });
+  });
+});
+
 describe("the OAuth clients a stack ships", () => {
   function stagedFrom(clients: Record<string, string>) {
     const parent = tempDir("ph-desktop-oauth-");

@@ -335,9 +335,17 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
   // ph-cli so the vendored tree resolves exactly like a real install.
   const sourcePkg = JSON.parse(
     fs.readFileSync(path.join(options.projectRoot, "package.json"), "utf8"),
-  ) as { name?: string };
+  ) as { name?: string; version?: string; exports?: unknown };
   const version = options.phCliVersion ?? "dev";
   const name = sourcePkg.name ?? "powerhouse-desktop-stack";
+  // The stack is the project's own package to the reactor, which loads it by
+  // path: its pieces take this version, and workers find its models through
+  // these exports. Without them the pieces are dropped, and a workflow pinned
+  // to one quietly runs whatever the registry has instead.
+  const project = {
+    ...(sourcePkg.version ? { version: sourcePkg.version } : {}),
+    ...(sourcePkg.exports ? { exports: sourcePkg.exports } : {}),
+  };
   const vendor = options.vendor !== false;
   const local = options.localPackagesDir
     ? readLocalPackages(options.localPackagesDir)
@@ -352,20 +360,23 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
   fs.writeFileSync(
     path.join(stackDir, "package.json"),
     `${JSON.stringify(
-      local
-        ? stackManifest({
-            name,
-            version,
-            phCliSpec: options.phCliSpec,
-            local,
-            plugins: options.plugins,
-          })
-        : {
-            name,
-            private: true,
-            type: "module",
-            dependencies: { "@powerhousedao/ph-cli": version },
-          },
+      {
+        ...(local
+          ? stackManifest({
+              name,
+              version,
+              phCliSpec: options.phCliSpec,
+              local,
+              plugins: options.plugins,
+            })
+          : {
+              name,
+              private: true,
+              type: "module",
+              dependencies: { "@powerhousedao/ph-cli": version },
+            }),
+        ...project,
+      },
       null,
       2,
     )}\n`,
