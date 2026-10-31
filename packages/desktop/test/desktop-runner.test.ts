@@ -267,7 +267,9 @@ function packTarball(dir: string, file: string, name: string): string {
     JSON.stringify({ name, version: "1.0.0-dev.1" }),
   );
   const tarball = path.join(dir, file);
-  const r = spawnSync("tar", ["-czf", tarball, "-C", src, "package"]);
+  const r = spawnSync("tar", ["-czf", file, "-C", src, "package"], {
+    cwd: dir,
+  });
   expect(r.status).toBe(0);
   return tarball;
 }
