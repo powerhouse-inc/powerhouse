@@ -43,6 +43,7 @@ import {
   SetModuleNameInputSchema,
   SetNameActionInputSchema,
   SetPreferredEditorActionInputSchema,
+  SetSlugActionInputSchema,
   SetOperationDescriptionInputSchema,
   SetOperationErrorCodeInputSchema,
   SetOperationErrorDescriptionInputSchema,
@@ -132,6 +133,7 @@ import type {
   SetModuleNameInput,
   SetNameAction,
   SetPreferredEditorAction,
+  SetSlugAction,
   SetOperationDescriptionAction,
   SetOperationDescriptionInput,
   SetOperationErrorCodeAction,
@@ -449,6 +451,21 @@ export const setPreferredEditor = (
     SetPreferredEditorActionInputSchema,
     "header",
   );
+/**
+ * Gives the document a slug, its name on the reactor that serves it. The last
+ * document to claim a slug holds it.
+ *
+ * @category Actions
+ */
+export const setSlug = (slug: string) =>
+  createAction<SetSlugAction>(
+    "SET_SLUG",
+    { slug },
+    undefined,
+    SetSlugActionInputSchema,
+    "header",
+  );
+
 export const setModelName = (input: SetModelNameInput) =>
   createAction<SetModelNameAction>(
     "SET_MODEL_NAME",
@@ -852,6 +869,7 @@ export const releaseNewVersion = () =>
 export const baseActions = {
   setName,
   setPreferredEditor,
+  setSlug,
   undo,
   redo,
   noop,

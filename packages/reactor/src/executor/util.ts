@@ -1,5 +1,6 @@
 import type {
   Action,
+  DeleteDocumentActionInput,
   Operation,
   OperationWithContext,
   PHDocument,
@@ -483,6 +484,7 @@ const IDENTITY_ACTIONS: ReadonlySet<string> = new Set([
   "CREATE_DOCUMENT",
   "UPGRADE_DOCUMENT",
   "DELETE_DOCUMENT",
+  "SET_SLUG",
 ]);
 
 /**
@@ -495,22 +497,31 @@ export function writeIdentityRows(
 ): WriteIdentityUpsert[] {
   const rows: WriteIdentityUpsert[] = [];
   for (const { operation, context } of operations) {
-    if (context.scope !== "document") continue;
-    if (!IDENTITY_ACTIONS.has(operation.action.type)) continue;
+    const { type } = operation.action;
+    if (context.scope !== "document" && type !== "SET_SLUG") continue;
+    if (!IDENTITY_ACTIONS.has(type)) continue;
     if (isPurgeMarker(operation) || isDenied(operation)) continue;
     if (!context.resultingState) continue;
 
     const state = JSON.parse(context.resultingState) as Record<string, unknown>;
     const identity = identityFromDocumentState(state);
     const isDeleted = isDeletedDocumentState(state);
+    const keptByDelete =
+      isDeleted &&
+      (operation.action.input as DeleteDocumentActionInput).keepSlug === true;
     rows.push({
       documentId: context.documentId,
       branch: context.branch,
-      slug: isDeleted
-        ? null
-        : resolvableSlug(identity.slug, context.documentId),
+      slug:
+        isDeleted && !keptByDelete
+          ? null
+          : resolvableSlug(identity.slug, context.documentId),
       documentType: identity.documentType ?? context.documentType,
       isDeleted,
+      // Both echo the slug the document was created with, not its current one.
+      ...(keptByDelete || type === "UPGRADE_DOCUMENT"
+        ? { keepSlug: true }
+        : {}),
     });
   }
   return rows;

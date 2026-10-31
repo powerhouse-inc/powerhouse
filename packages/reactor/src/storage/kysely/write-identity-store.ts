@@ -43,6 +43,9 @@ export class KyselyWriteIdentityStore implements IWriteIdentityStore {
     const slugMatch = rows.find((row) => row.slug === identifier);
 
     if (idMatch && slugMatch && idMatch.documentId !== slugMatch.documentId) {
+      // A deleted document's id stays taken, but no longer names anything: the
+      // identifier belongs to the live document holding it as a slug.
+      if (idMatch.isDeleted) return toRecord(slugMatch);
       throw new Error(
         `Ambiguous identifier "${identifier}": matches both document ID "${idMatch.documentId}" and slug for document ID "${slugMatch.documentId}". ` +
           `Please use get() for ID or resolveSlug() + get() for slug to be explicit.`,
@@ -88,7 +91,7 @@ export class KyselyWriteIdentityStore implements IWriteIdentityStore {
   ): Promise<void> {
     const now = new Date().toISOString();
     for (const row of rows) {
-      if (row.slug !== null) {
+      if (row.slug !== null && !row.keepSlug) {
         await trx
           .updateTable("WriteIdentity")
           .set({ slug: null, updatedAtUtcIso: now })
@@ -111,7 +114,7 @@ export class KyselyWriteIdentityStore implements IWriteIdentityStore {
         })
         .onConflict((oc) =>
           oc.columns(["documentId", "branch"]).doUpdateSet({
-            slug: row.slug,
+            ...(row.keepSlug ? {} : { slug: row.slug }),
             documentType: row.documentType,
             isDeleted: row.isDeleted,
             updatedAtUtcIso: now,

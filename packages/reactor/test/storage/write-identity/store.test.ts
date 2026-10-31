@@ -74,6 +74,29 @@ describe("KyselyWriteIdentityStore", () => {
     );
   });
 
+  it("gives the identifier to a live slug over a deleted document's id", async () => {
+    await store.upsert([
+      identity({ documentId: "mail", isDeleted: true }),
+      identity({ documentId: "doc-1", slug: "mail" }),
+    ]);
+
+    await expect(store.resolve("mail", "main")).resolves.toMatchObject({
+      documentId: "doc-1",
+    });
+  });
+
+  it("leaves a row's slug as it is with keepSlug", async () => {
+    await store.upsert([identity({ documentId: "doc-1", slug: "mail" })]);
+
+    await store.upsert([
+      identity({ documentId: "doc-1", slug: null, keepSlug: true }),
+    ]);
+
+    await expect(store.resolve("mail", "main")).resolves.toMatchObject({
+      documentId: "doc-1",
+    });
+  });
+
   it("resolves a document whose slug and id are both the identifier", async () => {
     await store.upsert([identity({ documentId: "doc-1", slug: "doc-1" })]);
 

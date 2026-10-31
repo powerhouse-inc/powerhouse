@@ -11,6 +11,7 @@ import {
   isPurgeMarker,
   withScopeRevisions,
 } from "@powerhousedao/shared/document-model";
+import type { DeleteDocumentActionInput } from "@powerhousedao/shared/document-model";
 import { childLogger, type ILogger } from "document-model";
 import type { Kysely, Transaction } from "kysely";
 import { v4 as uuidv4 } from "uuid";
@@ -233,6 +234,12 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             operationType !== "SET_NAME" &&
             scope !== "global");
 
+        // And `slug`: only SET_SLUG changes it, and every other operation
+        // echoes the slug the document was created with.
+        const preserveHeaderSlug =
+          denied ||
+          (operationType !== "CREATE_DOCUMENT" && operationType !== "SET_SLUG");
+
         if (operationType === "DELETE_DOCUMENT" && !denied) {
           const now = new Date();
           await trx
@@ -266,11 +273,14 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               .execute();
           }
 
-          await trx
-            .deleteFrom("SlugMapping")
-            .where("documentId", "=", documentId)
-            .where("branch", "=", branch)
-            .execute();
+          const input = operation.action.input as DeleteDocumentActionInput;
+          if (!input.keepSlug) {
+            await trx
+              .deleteFrom("SlugMapping")
+              .where("documentId", "=", documentId)
+              .where("branch", "=", branch)
+              .execute();
+          }
 
           continue;
         }
@@ -343,7 +353,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
           // to overwrite.
           const needsExistingContent =
             scopeName === "header" &&
-            (preserveHeaderMeta || preserveHeaderName);
+            (preserveHeaderMeta || preserveHeaderName || preserveHeaderSlug);
 
           const existingSnapshot = await trx
             .selectFrom("DocumentSnapshot")
@@ -377,7 +387,10 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             ({ slug, name } = identityFromDocumentState(
               { header: newState },
               { slug, name },
-              { preserveName: preserveHeaderName },
+              {
+                preserveName: preserveHeaderName,
+                preserveSlug: preserveHeaderSlug,
+              },
             ));
 
             if (needsExistingContent && existingSnapshot) {
@@ -391,6 +404,9 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               if (preserveHeaderName && "name" in existingHeader) {
                 newState.name = existingHeader.name;
               }
+              if (preserveHeaderSlug && "slug" in existingHeader) {
+                newState.slug = existingHeader.slug;
+              }
             }
 
             // Never for a deleted document. Deleting removes its SlugMapping
@@ -399,6 +415,13 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             // resolvable by slug again, and the upsert would take the slug from
             // a live document that has since claimed it.
             const mappedSlug = resolvableSlug(slug, documentId);
+            if (operationType === "SET_SLUG" && !denied) {
+              await trx
+                .deleteFrom("SlugMapping")
+                .where("documentId", "=", documentId)
+                .where("branch", "=", branch)
+                .execute();
+            }
             if (mappedSlug && !existingSnapshot?.isDeleted) {
               await trx
                 .insertInto("SlugMapping")
@@ -875,7 +898,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     // branch never does: deleting a document removes its SlugMapping rows.
     let idCheckQuery = this._db
       .selectFrom("DocumentSnapshot")
-      .select("documentId")
+      .select(["documentId", "isDeleted"])
       .where("documentId", "=", identifier)
       .where("branch", "=", branch);
 
@@ -905,6 +928,8 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     const slugMatchDocId = slugMatch?.documentId;
 
     if (idMatchDocId && slugMatchDocId && idMatchDocId !== slugMatchDocId) {
+      // As on the write side: a deleted id gives way to a live slug.
+      if (idMatch?.isDeleted) return slugMatchDocId;
       throw new Error(
         `Ambiguous identifier "${identifier}": matches both document ID "${idMatchDocId}" and slug for document ID "${slugMatchDocId}". ` +
           `Please use get() for ID or resolveSlug() + get() for slug to be explicit.`,

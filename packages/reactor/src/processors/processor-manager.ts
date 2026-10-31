@@ -53,6 +53,7 @@ import {
   matchesFilter,
   resolveProcessorNames,
   resolveProcessorSlots,
+  withCurrentSlug,
 } from "./utils.js";
 
 // A drive header read in flight; a purge marker routed meanwhile flags it.
@@ -387,6 +388,7 @@ export class ProcessorManager
     read: HeaderRead,
   ): Promise<PHDocumentHeader> {
     let first: OperationWithContext | undefined;
+    let headerOperations: OperationWithContext[] = [];
     await this.takeHeaderSlot();
     try {
       [first] = await this.operationIndex.getStreamAfter(
@@ -394,6 +396,10 @@ export class ProcessorManager
         0,
         undefined,
         1,
+      );
+      headerOperations = await this.operationIndex.getStreamAfter(
+        { documentId: driveId, scope: "header", branch: "main" },
+        0,
       );
     } catch (error) {
       this.logger.error(
@@ -406,11 +412,12 @@ export class ProcessorManager
       if (this.headerReads.get(driveId) === read)
         this.headerReads.delete(driveId);
     }
-    const header = first && extractCreationHeader(first);
+    const creation = first && extractCreationHeader(first);
     // A purge routed during the read erased what it returned.
-    if (!header || read.purged) {
+    if (!creation || read.purged) {
       return createMinimalDriveHeader(driveId, documentType);
     }
+    const header = withCurrentSlug(creation, headerOperations);
     if (this.knownDrives.has(driveId) || this.deletedDrives.has(driveId)) {
       this.driveHeaders.set(driveId, header);
     }

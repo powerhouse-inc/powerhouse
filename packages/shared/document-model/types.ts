@@ -1127,6 +1127,20 @@ export type SetNameOperation = IOperation & {
   type: Scalars["String"]["output"];
 };
 
+export type Set_Slug = "SET_SLUG";
+
+export type SetSlugActionInput = {
+  slug: Scalars["String"]["input"];
+};
+
+export type SchemaSetSlugAction = {
+  id: Scalars["String"]["output"];
+  timestampUtcMs: Scalars["DateTime"]["output"];
+  input: SetSlugActionInput;
+  type: Set_Slug;
+  scope: "header";
+};
+
 export type Set_PreferredEditor = "SET_PREFERRED_EDITOR";
 
 export type SetPreferredEditorActionInput = {
@@ -1178,6 +1192,10 @@ export type SetNameAction = Action & {
   type: "SET_NAME";
   input: SchemaSetNameAction["input"];
 };
+export type SetSlugAction = Action & {
+  type: "SET_SLUG";
+  input: SchemaSetSlugAction["input"];
+};
 export type SetPreferredEditorAction = Action & {
   type: "SET_PREFERRED_EDITOR";
   input: SchemaSetPreferredEditorAction["input"];
@@ -1227,6 +1245,9 @@ export type UpgradeDocumentActionInput = {
 export type DeleteDocumentActionInput = {
   documentId: string;
   propagate?: "none" | "cascade"; // Deletion propagation mode
+  // Keeps the slug on the deleted document, so it resolves to a deletion
+  // someone decided on. Without it the slug is free for the next claimant.
+  keepSlug?: boolean;
 };
 
 export type PurgeDocumentActionInput = {
@@ -1298,6 +1319,7 @@ export type DocumentAction =
   | RedoAction
   | SetNameAction
   | SetPreferredEditorAction
+  | SetSlugAction
   | UndoAction
   | NOOPAction;
 

@@ -441,6 +441,8 @@ export type WriteIdentityUpsert = {
   slug: string | null;
   documentType: string;
   isDeleted: boolean;
+  /** Leaves the slug of an existing row as it is. */
+  keepSlug?: boolean;
 };
 
 /**

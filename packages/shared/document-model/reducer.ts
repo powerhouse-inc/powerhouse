@@ -28,6 +28,7 @@ import {
   redoOperation,
   setNameOperation,
   setPreferredEditorOperation,
+  setSlugOperation,
   undoOperation,
   undoOperationV2,
   type DocumentOperations,
@@ -221,6 +222,8 @@ function _baseReducer<TState extends PHBaseState = PHBaseState>(
       return setNameOperation(document, parsedAction.input);
     case "SET_PREFERRED_EDITOR":
       return setPreferredEditorOperation(document, parsedAction.input);
+    case "SET_SLUG":
+      return setSlugOperation(document, parsedAction.input);
     default:
       return document;
   }

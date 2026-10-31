@@ -175,9 +175,13 @@ export function isUndo(action: Action): action is UndoAction {
 }
 
 export function isDocumentAction(action: Action): action is DocumentAction {
-  return ["SET_NAME", "SET_PREFERRED_EDITOR", "UNDO", "REDO"].includes(
-    action.type,
-  );
+  return [
+    "SET_NAME",
+    "SET_PREFERRED_EDITOR",
+    "SET_SLUG",
+    "UNDO",
+    "REDO",
+  ].includes(action.type);
 }
 
 /**

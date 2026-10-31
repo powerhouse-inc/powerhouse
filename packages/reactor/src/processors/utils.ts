@@ -6,8 +6,12 @@ import type {
 import type {
   CreateDocumentAction,
   PHDocumentHeader,
+  SetSlugActionInput,
 } from "@powerhousedao/shared/document-model";
-import { documentFromCreation } from "@powerhousedao/shared/document-model";
+import {
+  documentFromCreation,
+  isDenied,
+} from "@powerhousedao/shared/document-model";
 
 // The marker counts: a peer can receive a drive's marker without its delete.
 export function isDriveDeletion(op: OperationWithContext): boolean {
@@ -25,6 +29,22 @@ export function extractDriveHeader(
     unknown
   >;
   return state.header as PHDocumentHeader | undefined;
+}
+
+/** A creation header with the slug the document has now, which only SET_SLUG changes. */
+export function withCurrentSlug(
+  header: PHDocumentHeader,
+  headerOperations: readonly OperationWithContext[],
+): PHDocumentHeader {
+  const named = headerOperations
+    .filter(
+      ({ operation }) =>
+        operation.action.type === "SET_SLUG" && !isDenied(operation),
+    )
+    .at(-1);
+  if (!named) return header;
+  const { slug } = named.operation.action.input as SetSlugActionInput;
+  return { ...header, slug };
 }
 
 // The index keeps no resultingState, so its rows rebuild it from the input.
