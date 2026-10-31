@@ -8,7 +8,7 @@ export interface SwitchboardBootFacts {
   projectionWorker: boolean;
   reactorDbUrl: string | undefined;
   authEnforcement: boolean;
-  renownSource: "self" | "remote";
+  renownSource: "self" | "remote" | "kept";
 }
 
 /** The reactor database the server boots with: its `dbPath` option, then the env. */
@@ -30,12 +30,12 @@ export function workerTrustPolicyIssue(
   if (
     facts.workers > 0 &&
     facts.authEnforcement &&
-    facts.renownSource === "self"
+    facts.renownSource !== "remote"
   ) {
     return (
       "The executor worker pool (REACTOR_WORKERS) cannot verify signers when " +
       "REACTOR_AUTH_ENFORCEMENT is on and Renown credentials are read from " +
-      'this switchboard ("self" via auth.renown.source or RENOWN_SOURCE): ' +
+      'this switchboard ("self" or "kept" via auth.renown.source or RENOWN_SOURCE): ' +
       "pooled workers have no trust policy and would refuse every signed " +
       "write. Set RENOWN_SOURCE=remote, or disable the worker pool " +
       "(REACTOR_WORKERS=0)."
