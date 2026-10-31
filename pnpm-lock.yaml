@@ -2006,6 +2006,9 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
+      change-case:
+        specifier: 'catalog:'
+        version: 5.4.4
       zod:
         specifier: 'catalog:'
         version: 4.6.5
@@ -2019,9 +2022,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
-      change-case:
-        specifier: 'catalog:'
-        version: 5.4.4
       graphql:
         specifier: 'catalog:'
         version: 16.12.0

@@ -63,7 +63,7 @@ function applyDirective(
   return base.check(z.regex(new RegExp(equalsPattern(value))));
 }
 
-function constrainedBase(field: AnyFieldDescriptor): z.ZodType {
+export function constrainedBase(field: AnyFieldDescriptor): z.ZodType {
   return field.presentation.directives.reduce(applyDirective, fieldBase(field));
 }
 
