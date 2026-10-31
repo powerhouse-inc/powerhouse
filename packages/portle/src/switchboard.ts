@@ -2,7 +2,7 @@ import type { HostPlugin } from "@powerhousedao/host-core";
 import type { ISubgraph } from "@powerhousedao/reactor-api";
 import { bootGatePasses } from "./gate.js";
 import { PortleRunner, type PortleRunnerLike } from "./runner.js";
-import { projectRootOf, stateDirOf } from "./state.js";
+import { hostStateDir } from "./state.js";
 import {
   createPortleSubgraph,
   gateFactsOf,
@@ -88,10 +88,7 @@ export function createPortlePlugin(
   /** One runner per host, built by whichever hook the host reaches first. */
   const ensureRunner = (ctx: PortleHostContext): PortleRunnerLike => {
     if (ctx.portle) return ctx.portle.runner;
-    const runner = makeRunner(
-      stateDirOf(projectRootOf(ctx.options)),
-      loggerOf(ctx),
-    );
+    const runner = makeRunner(hostStateDir(ctx.options), loggerOf(ctx));
     ctx.portle = { runner };
     return runner;
   };

@@ -1,10 +1,11 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   DEFAULT_SITE_SETTINGS,
   ENROLLMENT_FILE,
+  hostStateDir,
   projectRootOf,
   readEnrollment,
   readSiteSettings,
@@ -75,5 +76,27 @@ describe("enrolment and settings files", () => {
     writeFileAtomic(join(dir, "a.txt"), "hello", 0o600);
     expect(readFileSync(join(dir, "a.txt"), "utf8")).toBe("hello");
     expect(existsSync(join(dir, "a.txt.tmp"))).toBe(false);
+  });
+});
+
+describe("hostStateDir", () => {
+  const options = { configFile: join("/project", "powerhouse.config.json") };
+
+  it("sits in the project with no user data root", () => {
+    expect(hostStateDir(options, {})).toBe(
+      join(dirname(resolve(options.configFile)), ".ph", "portle"),
+    );
+  });
+
+  it("follows the user data root, so a host never takes the project's", () => {
+    expect(hostStateDir(options, { PH_USER_DATA_DIR: "/identity" })).toBe(
+      join("/identity", ".ph", "portle"),
+    );
+  });
+
+  it("treats a blank root as none", () => {
+    expect(hostStateDir(options, { PH_USER_DATA_DIR: "" })).toBe(
+      join(dirname(resolve(options.configFile)), ".ph", "portle"),
+    );
   });
 });

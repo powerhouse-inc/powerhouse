@@ -22,6 +22,7 @@ export default defineConfig([
     clean: false,
     dts: false,
     noExternal: [/.*/],
+    outputOptions: { inlineDynamicImports: true },
   },
   {
     // The shell's sign-in page: a browser script with everything inside it,
@@ -33,6 +34,9 @@ export default defineConfig([
     clean: false,
     dts: false,
     noExternal: [/.*/],
+    // One file: only that file is copied beside the page, and viem loads its
+    // signature code by dynamic import.
+    outputOptions: { inlineDynamicImports: true },
     minify: true,
   },
 ]);

@@ -40,8 +40,10 @@ async function run(command: string | undefined, line: string) {
   }
 }
 
+/** Exits once it has written: the shell holds stdin open, which would keep this
+    process alive, and the shell waiting for it. */
 function reply(value: unknown): void {
-  process.stdout.write(`${JSON.stringify(value)}\n`);
+  process.stdout.write(`${JSON.stringify(value)}\n`, () => process.exit(0));
 }
 
 try {
