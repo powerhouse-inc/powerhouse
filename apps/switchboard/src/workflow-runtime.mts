@@ -444,8 +444,10 @@ export function reactorAccessOf(
  * before this under enforcement. With enforcement off the host acts for such
  * a run already, signing its writes with its own key, so its index reads are
  * the host's too: the request's caller is the host's signed-in address. A
- * host with no signed-in identity reads anonymously, which the
- * authenticated-caller floor refuses as it would an anonymous HTTP request.
+ * host with no signed-in identity (a cloud environment's switchboard has a key,
+ * not a Renown login) reads as itself: past the authenticated-caller floor,
+ * with no user recorded. Otherwise every workflow a processor builds there
+ * fails at its first index lookup.
  */
 export function indexQueryFor(
   manager: Pick<GraphQLManager, "executeSubgraph">,
@@ -470,7 +472,7 @@ export function indexQueryFor(
     const result = await manager.executeSubgraph(request.subgraph, {
       query: request.query,
       variables: request.variables,
-      user,
+      ...(user ? { user } : { asHost: true }),
     });
     return {
       data: (result.data as Record<string, unknown> | null | undefined) ?? null,

@@ -950,6 +950,14 @@ export class GraphQLManager {
       query: string;
       variables?: Record<string, unknown>;
       user?: Context["user"];
+      /**
+       * The host itself, for a workflow run with no user (an unsigned or
+       * host-signed publish) on a host with no signed-in identity. Only
+       * reachable with reactor auth enforcement off, where the host already
+       * signs such a run's writes: it passes the authenticated-caller floor
+       * and records no user, as {@link executeSubgraphQuery}'s trusted callers.
+       */
+      asHost?: boolean;
     },
   ): Promise<{
     data?: Record<string, unknown> | null;
@@ -963,7 +971,11 @@ export class GraphQLManager {
           : `Unknown subgraph: ${name}`,
       );
     }
-    if (this.#requireAuthMiddleware !== undefined && !request.user) {
+    if (
+      this.#requireAuthMiddleware !== undefined &&
+      !request.user &&
+      request.asHost !== true
+    ) {
       throw new AuthenticationRequiredError();
     }
     const operation = getOperationAST(parse(request.query), undefined);

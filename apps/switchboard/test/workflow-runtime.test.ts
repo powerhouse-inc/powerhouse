@@ -955,7 +955,7 @@ describe("a piece's index query through the host", () => {
     });
   });
 
-  it("asks as the host itself for a run with no user, and anonymously without an identity", async () => {
+  it("asks as the host itself for a run with no user, by its address or, without one, as the host", async () => {
     const m = manager();
     await indexQueryFor(m, {
       signer,
@@ -972,6 +972,11 @@ describe("a piece's index query through the host", () => {
       signer: { app: { key: "did:key:zHost" }, user: {} },
     } as unknown as InProcessReactorClientModule)(request, null);
     expect(sentUser(anonymous)).toBeUndefined();
+    expect(anonymous.executeSubgraph).toHaveBeenCalledWith("key-index", {
+      query: request.query,
+      variables: request.variables,
+      asHost: true,
+    });
   });
 
   it("hands the subgraph's errors back as messages", async () => {
