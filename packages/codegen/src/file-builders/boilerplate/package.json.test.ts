@@ -18,6 +18,8 @@ describe("boilerplate dependency overrides", () => {
 
   it("maps each pin to a **/ yarn resolution key", () => {
     expect(toYarnResolutions(BOILERPLATE_DEPENDENCY_OVERRIDES)).toEqual({
+      "**/@apollo/gateway": "2.14.4",
+      "**/@apollo/subgraph": "2.14.4",
       "**/date-fns": "4.3.0",
       "**/rolldown": "1.0.2",
       "**/vite": "8.0.14",
@@ -39,6 +41,8 @@ describe("boilerplate dependency overrides", () => {
     };
     expect(parsed.devDependencies).toEqual({ vitest: "4.1.1" });
     expect(parsed.resolutions).toEqual({
+      "**/@apollo/gateway": "2.14.4",
+      "**/@apollo/subgraph": "2.14.4",
       "**/date-fns": "4.3.0",
       "**/rolldown": "1.0.2",
       "**/vite": "8.0.14",
