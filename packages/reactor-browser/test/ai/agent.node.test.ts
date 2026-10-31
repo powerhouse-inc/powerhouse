@@ -317,6 +317,124 @@ describe("ReactorChatAgent", () => {
     expect(events.some((e) => e.type === "approval-request")).toBe(false);
   });
 
+  describe("through a connection", () => {
+    const connection = {
+      baseUrl: "http://localhost:9/v1",
+      model: "test-model",
+    };
+    const asked = (events: AgentEvent[]) =>
+      events.filter((e) => e.type === "approval-request");
+
+    it("ignores the settings' auto-approval and asks", async () => {
+      const events: AgentEvent[] = [];
+      const agent = new ReactorChatAgent({
+        settings: { ...SETTINGS, autoApproveWrites: true },
+        connection,
+        tools: [makeTool("addDrive")],
+        context: {},
+        onEvent: (event) => events.push(event),
+        model: streamModel([
+          [
+            ...toolCallParts("call-1", "addDrive", {}),
+            ...finishParts("tool-calls"),
+          ],
+          [...textParts("text-1", "Done."), ...finishParts("stop")],
+        ]),
+      });
+
+      const sending = agent.send("add a drive");
+      await waitFor(() => asked(events).length === 1, "approval request");
+      agent.approve("call-1");
+      await sending;
+    });
+
+    it("runs writes without asking when the host says so, and stops when it stops", async () => {
+      let autoApprove = true;
+      const events: AgentEvent[] = [];
+      const agent = new ReactorChatAgent({
+        settings: SETTINGS,
+        connection,
+        autoApprove: () => autoApprove,
+        tools: [
+          makeTool("addDrive", () => {
+            autoApprove = false;
+            return Promise.resolve({
+              content: [{ type: "text", text: "{}" }],
+              structuredContent: {},
+            });
+          }),
+        ],
+        context: {},
+        onEvent: (event) => events.push(event),
+        model: streamModel([
+          [
+            ...toolCallParts("call-1", "addDrive", {}),
+            ...finishParts("tool-calls"),
+          ],
+          [
+            ...toolCallParts("call-2", "addDrive", {}),
+            ...finishParts("tool-calls"),
+          ],
+          [...textParts("text-1", "Done."), ...finishParts("stop")],
+        ]),
+      });
+
+      const sending = agent.send("add two drives");
+      await waitFor(() => asked(events).length === 1, "approval request");
+      expect(asked(events)[0]).toMatchObject({ toolCallId: "call-2" });
+      agent.approve("call-2");
+      await sending;
+    });
+  });
+
+  it("Approve all answers what's waiting and the rest of the turn, not the next", async () => {
+    const executed = vi.fn(() =>
+      Promise.resolve({
+        content: [{ type: "text", text: "{}" }],
+        structuredContent: {},
+      }),
+    );
+    const events: AgentEvent[] = [];
+    const asked = () => events.filter((e) => e.type === "approval-request");
+    const agent = new ReactorChatAgent({
+      settings: SETTINGS,
+      tools: [makeTool("addDrive", executed as AiToolDescriptor["callback"])],
+      context: {},
+      onEvent: (event) => events.push(event),
+      model: streamModel([
+        [
+          ...toolCallParts("call-1", "addDrive", {}),
+          ...toolCallParts("call-2", "addDrive", {}),
+          ...finishParts("tool-calls"),
+        ],
+        [
+          ...toolCallParts("call-3", "addDrive", {}),
+          ...finishParts("tool-calls"),
+        ],
+        [...textParts("text-1", "Three drives."), ...finishParts("stop")],
+        [
+          ...toolCallParts("call-4", "addDrive", {}),
+          ...finishParts("tool-calls"),
+        ],
+        [...textParts("text-2", "One more."), ...finishParts("stop")],
+      ]),
+    });
+
+    const first = agent.send("add three drives");
+    await waitFor(() => asked().length === 1, "the first approval request");
+    agent.approveAll();
+    await first;
+    expect(executed).toHaveBeenCalledTimes(3);
+    expect(asked()).toHaveLength(1);
+
+    const second = agent.send("add another");
+    await waitFor(() => asked().length === 2, "the next turn to ask again");
+    expect(executed).toHaveBeenCalledTimes(3);
+    agent.approve("call-4");
+    await second;
+    expect(executed).toHaveBeenCalledTimes(4);
+  });
+
   it("pauses destructive package tools for approval even when not in the built-in write set", async () => {
     const executed = vi.fn(() =>
       Promise.resolve({

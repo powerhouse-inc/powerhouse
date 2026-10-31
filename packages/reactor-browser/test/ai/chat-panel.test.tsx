@@ -39,6 +39,7 @@ function fakeChat(
     send: vi.fn(),
     stop: vi.fn(),
     approve: vi.fn(),
+    approveAll: vi.fn(),
     reject: vi.fn(),
     clear: vi.fn(),
     ...overrides,
@@ -58,6 +59,32 @@ const sentImages = (chat: UseReactorChatResult) =>
   ];
 
 describe("ChatPanel", () => {
+  it("offers Approve all beside Approve and Reject", async () => {
+    const chat = fakeChat({
+      messages: [
+        {
+          id: "m1",
+          role: "assistant",
+          parts: [
+            {
+              type: "tool",
+              toolCallId: "call-1",
+              name: "addDrive",
+              args: {},
+              state: "awaiting-approval",
+            },
+          ],
+        },
+      ],
+    });
+    const screen = await render(<ChatPanel chat={chat} />);
+
+    await screen.getByRole("button", { name: "Approve all" }).click();
+
+    expect(chat.approveAll).toHaveBeenCalledTimes(1);
+    expect(chat.approve).not.toHaveBeenCalled();
+  });
+
   it("offers no attachment unless the host allows it", async () => {
     const screen = await render(<ChatPanel chat={fakeChat()} />);
     await expect

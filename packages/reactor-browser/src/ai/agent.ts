@@ -289,8 +289,13 @@ export function buildSystemPrompt(context: ChatContext): string {
 
 export interface ReactorChatAgentOptions {
   settings: AiSettings;
-  /** Used instead of {@link settings}; writes then always need approval. */
+  /** Used instead of {@link settings}, whose auto-approval then doesn't apply. */
   connection?: AiConnection;
+  /**
+   * With a {@link connection}: whether writes run without asking. Called for
+   * each one, so switching it off stops what's still to come.
+   */
+  autoApprove?: () => boolean;
   /** Added to the system prompt, for what the host app knows about itself. */
   instructions?: string;
   tools: AiToolDescriptor[];
@@ -316,6 +321,7 @@ export class ReactorChatAgent {
   private history: ModelMessage[];
   private chatImages: AiChatImage[];
   private approvals = new Map<string, (approved: boolean) => void>();
+  private approvingAll = false;
 
   constructor(private readonly options: ReactorChatAgentOptions) {
     this.history = options.history ?? [];
@@ -349,6 +355,14 @@ export class ReactorChatAgent {
     this.resolveApproval(toolCallId, false);
   }
 
+  /** Approves every pending write, and any more for the rest of this turn. */
+  approveAll(): void {
+    this.approvingAll = true;
+    for (const toolCallId of [...this.approvals.keys()]) {
+      this.resolveApproval(toolCallId, true);
+    }
+  }
+
   private resolveApproval(toolCallId: string, approved: boolean): void {
     const resolve = this.approvals.get(toolCallId);
     if (resolve) {
@@ -368,7 +382,12 @@ export class ReactorChatAgent {
   async send(text: string, images: ChatImage[] = []): Promise<void> {
     const { onEvent, signal, settings, connection, instructions } =
       this.options;
-    const autoApproveWrites = !connection && settings.autoApproveWrites;
+    this.approvingAll = false;
+    const approvesWrites = () =>
+      this.approvingAll ||
+      (connection
+        ? this.options.autoApprove?.() === true
+        : settings.autoApproveWrites);
     const attached = images.map((image, index): AiChatImage => ({
       ...image,
       handle: `image-${this.chatImages.length + index + 1}`,
@@ -457,7 +476,7 @@ export class ReactorChatAgent {
         const descriptor = this.options.tools.find(
           (t) => t.name === toolCall.toolName,
         );
-        if (autoApproveWrites || !isWriteTool(descriptor?.annotations)) {
+        if (approvesWrites() || !isWriteTool(descriptor?.annotations)) {
           return "not-applicable";
         }
         const toolCallId = toolCall.toolCallId;
