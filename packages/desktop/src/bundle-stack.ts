@@ -106,14 +106,12 @@ export function readLocalPackages(dir: string): Record<string, string> {
   const specs: Record<string, string> = {};
   for (const file of tarballs.sort()) {
     const tarball = path.join(root, file);
-    const manifest = spawnSync(
-      "tar",
-      ["-xzOf", tarball, "package/package.json"],
-      {
-        encoding: "utf8",
-        windowsHide: true,
-      },
-    );
+    // By name from its folder: GNU tar reads the `C:` of a Windows path as a host.
+    const manifest = spawnSync("tar", ["-xzOf", file, "package/package.json"], {
+      cwd: root,
+      encoding: "utf8",
+      windowsHide: true,
+    });
     if (manifest.status !== 0) {
       throw new Error(
         `bundle-stack: ${tarball} has no package/package.json: ${manifest.stderr}`,
