@@ -156,6 +156,7 @@ function mockRenown(overrides: Partial<IRenown> = {}): IRenown {
     status: "initial",
     login: vi.fn(),
     signIn: vi.fn(),
+    adoptCredential: vi.fn(),
     logout: vi.fn(),
     revalidate: vi.fn().mockResolvedValue(true),
     refreshProfile: vi.fn().mockResolvedValue(false),

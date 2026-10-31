@@ -902,6 +902,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
         (await createRenownCredentialVerifier({
           renownUrl: renown.url,
           switchboardUrl: renown.switchboardUrl,
+          keptOnly: renown.source === "kept",
           ...(optionAuth.offlineCredentials
             ? {
                 keep: new FileCredentialKeep(

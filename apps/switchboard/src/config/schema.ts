@@ -164,7 +164,7 @@ const authSchema = z.object({
   offlineCredentials: z.boolean().default(false),
   renown: z
     .object({
-      source: z.enum(["self", "remote"]).optional(),
+      source: z.enum(["self", "remote", "kept"]).optional(),
       url: z.string().min(1).optional(),
       switchboardUrl: z.string().min(1).optional(),
     })

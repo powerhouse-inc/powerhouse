@@ -1,7 +1,10 @@
 import { privateKeyToAccount } from "viem/accounts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Renown, RenownMemoryStorage } from "../src/common.js";
-import type { SignCredentialTypedData } from "../src/credential.js";
+import {
+  buildAndSignCredential,
+  type SignCredentialTypedData,
+} from "../src/credential.js";
 import { MemoryKeyStorage, RenownCryptoBuilder } from "../src/crypto/index.js";
 import { MemoryEventEmitter } from "../src/event/memory.js";
 import { SwitchboardClient } from "../src/switchboard.js";
@@ -195,5 +198,58 @@ describe("Renown.signIn", () => {
         signTypedData: sign,
       }),
     ).rejects.toThrow(/chain 1.*chain 137/);
+  });
+});
+
+describe("Renown.adoptCredential", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const credentialFor = (appId: string) =>
+    buildAndSignCredential({
+      signTypedData: sign,
+      address: ACCOUNT.address,
+      chainId: 1,
+      app: "test-app",
+      appId,
+    });
+
+  it("signs in from a credential in hand, asking nobody", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const renown = await makeRenown(false);
+
+    const user = await renown.adoptCredential(await credentialFor(renown.did));
+
+    expect(user.did).toBe(`did:pkh:eip155:1:${ACCOUNT.address.toLowerCase()}`);
+    expect(user.local).toBeUndefined();
+    expect(renown.status).toBe("authorized");
+    expect(renown.user?.address).toBe(ACCOUNT.address);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("never checks a local session against a Renown", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const renown = await makeRenown(false);
+
+    const user = await renown.adoptCredential(await credentialFor(renown.did), {
+      local: true,
+    });
+
+    expect(user.local).toBe(true);
+    expect(renown.user?.local).toBe(true);
+    await expect(renown.revalidate()).resolves.toBe(true);
+    await expect(renown.refreshProfile()).resolves.toBe(false);
+    expect(renown.user?.address).toBe(ACCOUNT.address);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("refuses a credential for another key", async () => {
+    const renown = await makeRenown(false);
+
+    await expect(
+      renown.adoptCredential(await credentialFor("did:key:someone-else")),
+    ).rejects.toThrow("Invalid credential");
+
+    expect(renown.user).toBeUndefined();
+    expect(renown.status).toBe("not-authorized");
   });
 });

@@ -244,7 +244,7 @@ function blankAsUnset(raw: string | undefined): string | undefined {
 function renownSourceFromEnv(
   env: Env,
   logger: Logger,
-): "self" | "remote" | undefined {
+): "self" | "remote" | "kept" | undefined {
   if (blankAsUnset(env.RENOWN_SOURCE) === undefined) return undefined;
   return resolveRenownConfig(undefined, env, logger).source;
 }

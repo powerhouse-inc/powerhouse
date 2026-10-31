@@ -14,6 +14,8 @@ export interface RenownCredentialVerifierConfig {
   switchboardUrl?: string;
   // Keeps verified credentials so a person stays verified with Renown away.
   keep?: ICredentialKeep;
+  // Asks nobody: only what `keep` holds counts, for an identity no Renown knows.
+  keptOnly?: boolean;
 }
 
 // A CredentialVerifier backed by Renown. Resolves the switchboard endpoint once
@@ -21,6 +23,14 @@ export interface RenownCredentialVerifierConfig {
 export async function createRenownCredentialVerifier(
   config: RenownCredentialVerifierConfig = {},
 ): Promise<CredentialVerifier> {
+  if (config.keptOnly) {
+    if (!config.keep) {
+      throw new Error(
+        'Renown credential verification is set to "kept" but this host keeps no credentials: set auth.offlineCredentials',
+      );
+    }
+    return keptVerifier(config.keep);
+  }
   const switchboardUrl = await resolveSwitchboardEndpoint({
     switchboardUrl: config.switchboardUrl,
     baseUrl: config.renownUrl,
@@ -43,6 +53,15 @@ export async function createRenownCredentialVerifier(
       discover: false,
     });
     return credential !== undefined;
+  };
+}
+
+/** A credential this host was given and whose proof verifies. Renown is never
+ * asked, so nothing here can be revoked but by removing it. */
+function keptVerifier(keep: ICredentialKeep): CredentialVerifier {
+  return async ({ address, chainId, appId }) => {
+    const kept = keep.get(address, chainId, appId);
+    return kept !== undefined && verifyDelegationProof(kept, chainId);
   };
 }
 
