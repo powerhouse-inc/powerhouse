@@ -111,6 +111,37 @@ export interface AuthContext {
   auth_enabled: boolean;
 }
 
+/**
+ * What an `Authorization` header carries. Only the `Bearer` scheme (RFC 6750)
+ * names a token this service can verify, and a token is one `token68` word.
+ *
+ * Reading the second word regardless of the first let `Basic <jwt>`,
+ * `Token <jwt>` and any made-up scheme authenticate like `Bearer <jwt>`,
+ * which defeats a proxy or log that filters on the scheme. The scheme is
+ * compared case-insensitively, as the RFC says.
+ */
+export type ParsedAuthorization =
+  | { kind: "absent" }
+  | { kind: "bearer"; token: string }
+  | { kind: "malformed" };
+
+const BEARER_HEADER = /^Bearer[ \t]+([^ \t]+)$/i;
+
+export function parseAuthorization(
+  authorization: string | undefined,
+): ParsedAuthorization {
+  const header = authorization?.trim() ?? "";
+  if (header === "") {
+    return { kind: "absent" };
+  }
+  const match = BEARER_HEADER.exec(header);
+  return match ? { kind: "bearer", token: match[1] } : { kind: "malformed" };
+}
+
+/** What a request with an unusable `Authorization` header is told. */
+export const MALFORMED_AUTHORIZATION =
+  "Unsupported authorization: expected 'Bearer <token>'";
+
 export class AuthService implements ICredentialInvalidator {
   private readonly config: AuthConfig;
   private readonly credentialCache = new Map<string, CredentialCacheEntry>();
@@ -165,14 +196,21 @@ export class AuthService implements ICredentialInvalidator {
     if (!this.resolvesIdentity) {
       return this.anonymousContext();
     }
-    const token = authorization?.split(" ")[1];
-    if (!token) {
+    const parsed = parseAuthorization(authorization);
+    if (parsed.kind === "absent") {
       return {
         user: undefined,
         admins: this.config.admins,
         auth_enabled: this.config.enabled,
       };
     }
+    if (parsed.kind === "malformed") {
+      // Present but not a bearer: refused, never read as anonymous.
+      return new Response(JSON.stringify({ error: MALFORMED_AUTHORIZATION }), {
+        status: 401,
+      });
+    }
+    const token = parsed.token;
     try {
       const verified = await this.verifyToken(token);
       if (!verified) {
@@ -231,10 +269,14 @@ export class AuthService implements ICredentialInvalidator {
       return null;
     }
 
-    const token = authHeader.split(" ")[1];
-    if (!token) {
-      throw new Error("Invalid authorization format");
+    const parsed = parseAuthorization(authHeader);
+    if (parsed.kind === "absent") {
+      return null;
     }
+    if (parsed.kind === "malformed") {
+      throw new Error(MALFORMED_AUTHORIZATION);
+    }
+    const token = parsed.token;
 
     const verified = await this.verifyToken(token);
     if (!verified) {
