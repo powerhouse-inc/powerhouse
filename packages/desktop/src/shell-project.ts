@@ -599,6 +599,16 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
   for (const [rel, content] of files) {
     if (writeIfChanged(path.join(shellDir, rel), content)) changed = true;
   }
+  // The shell gates on the page being there, so turning it off has to remove it.
+  if (!app.signIn) {
+    for (const file of ["sign-in.html", SIGN_IN_SCRIPT]) {
+      const stale = path.join(shellDir, "ui", file);
+      if (fs.existsSync(stale)) {
+        fs.rmSync(stale);
+        changed = true;
+      }
+    }
+  }
   // Stage the icon source next to the shell (tauri icon reads it at build),
   // the same full-resolution source as the loading page's logo, and the
   // splash when app.json names one.
