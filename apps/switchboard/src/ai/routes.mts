@@ -40,6 +40,8 @@ export interface AiRoutesDeps {
   isAdmin(address: string | undefined): boolean;
   /** Undefined while the workflow runtime is absent. */
   secrets(): Promise<AiSecretStore | undefined>;
+  /** The host's demo key, which stays on the server; undefined without one. */
+  demoKey?(): Promise<string | undefined>;
   /** OpenAI-compatible base, without a trailing slash. */
   upstreamUrl: string;
   defaultModel: string;
@@ -140,6 +142,7 @@ export function registerAiRoutes(http: IHttpScope, deps: AiRoutesDeps): void {
       keySetBy: stored?.setBy ?? null,
       keySetAt: stored?.setAt ?? null,
       model: await currentModel(store),
+      demoKeyAvailable: (await deps.demoKey?.()) !== undefined,
     });
   };
 
@@ -182,6 +185,34 @@ export function registerAiRoutes(http: IHttpScope, deps: AiRoutesDeps): void {
   });
 
   // Tested before it is stored, so a typo cannot replace a working key.
+  const testAndStore = async (
+    value: string,
+    store: AiSecretStore,
+    ctx: RouteContext,
+  ) => {
+    let check: Response;
+    try {
+      check = await fetchImpl(`${deps.upstreamUrl}/key`, {
+        headers: upstreamHeaders(value),
+        signal: AbortSignal.timeout(UPSTREAM_CHECK_TIMEOUT_MS),
+      });
+    } catch (error) {
+      return unreachable(error, value);
+    }
+    if (!check.ok) {
+      await check.body?.cancel();
+      return errorResponse(
+        400,
+        `OpenRouter did not accept this key (HTTP ${check.status}).`,
+        "invalid_key",
+      );
+    }
+    await check.body?.cancel();
+    await writeKey(store, value, ctx.user?.address);
+    logger.info("The AI gateway key was set by @actor", ctx.user?.address);
+    return status(store);
+  };
+
   http.route({
     method: "PUT",
     path: "ai/key",
@@ -195,27 +226,23 @@ export function registerAiRoutes(http: IHttpScope, deps: AiRoutesDeps): void {
       if (!value || value.length > MAX_KEY_CHARS || /\s/.test(value)) {
         return errorResponse(400, "Enter an OpenRouter key.", "invalid_key");
       }
-      let check: Response;
-      try {
-        check = await fetchImpl(`${deps.upstreamUrl}/key`, {
-          headers: upstreamHeaders(value),
-          signal: AbortSignal.timeout(UPSTREAM_CHECK_TIMEOUT_MS),
-        });
-      } catch (error) {
-        return unreachable(error, value);
+      return testAndStore(value, gated.store, ctx);
+    },
+  });
+
+  // The browser only asks: the key goes from the host's file to its store.
+  http.route({
+    method: "PUT",
+    path: "ai/key/demo",
+    auth: "renown",
+    handler: async (_request, ctx) => {
+      const gated = await gate(ctx);
+      if ("refused" in gated) return gated.refused;
+      const value = await deps.demoKey?.();
+      if (value === undefined) {
+        return errorResponse(404, "This host has no demo key.", "no_demo_key");
       }
-      if (!check.ok) {
-        await check.body?.cancel();
-        return errorResponse(
-          400,
-          `OpenRouter did not accept this key (HTTP ${check.status}).`,
-          "invalid_key",
-        );
-      }
-      await check.body?.cancel();
-      await writeKey(gated.store, value, ctx.user?.address);
-      logger.info("The AI gateway key was set by @actor", ctx.user?.address);
-      return status(gated.store);
+      return testAndStore(value, gated.store, ctx);
     },
   });
 

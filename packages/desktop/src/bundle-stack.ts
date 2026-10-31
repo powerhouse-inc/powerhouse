@@ -49,8 +49,11 @@ export function pluginPackagesOf(
 
 /** Where a stack keeps the OAuth clients its config names. */
 const OAUTH_CLIENTS_DIR = "oauth";
+/** Where a stack keeps the AI demo key its config names. */
+const AI_DIR = "ai";
 
 interface StagedConfig {
+  ai?: { demoKeyFile?: string };
   workflows?: {
     oauthApps?: { id?: string; clients?: { desktop?: string; web?: string } }[];
   };
@@ -70,6 +73,21 @@ function stageConfig(
   const source = path.join(projectRoot, "powerhouse.config.json");
   if (!fs.existsSync(source)) return;
   const config = JSON.parse(fs.readFileSync(source, "utf8")) as StagedConfig;
+  // Whoever has the installer can read this. Without the file it ships no key,
+  // and the app offers none.
+  if (config.ai?.demoKeyFile) {
+    const from = path.resolve(projectRoot, config.ai.demoKeyFile);
+    delete config.ai.demoKeyFile;
+    if (fs.existsSync(from)) {
+      const file = path.basename(from);
+      fs.mkdirSync(path.join(stackDir, AI_DIR), { recursive: true });
+      fs.copyFileSync(from, path.join(stackDir, AI_DIR, file));
+      config.ai.demoKeyFile = `./${AI_DIR}/${file}`;
+      log("  AI demo key staged");
+    } else {
+      log("  no AI demo key: this build won't offer one");
+    }
+  }
   for (const app of config.workflows?.oauthApps ?? []) {
     if (!app.clients) continue;
     const desktop = app.clients.desktop;
@@ -265,6 +283,7 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     "dist",
     ".ph",
     OAUTH_CLIENTS_DIR,
+    AI_DIR,
     "powerhouse.config.json",
     "package.json",
   ]) {

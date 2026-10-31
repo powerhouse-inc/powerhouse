@@ -1,7 +1,9 @@
 import type { HostPlugin } from "@powerhousedao/host-core";
 import { AuthorizationPolicy, type API } from "@powerhousedao/reactor-api";
 import type { ILogger } from "document-model";
+import path from "node:path";
 import { z } from "zod";
+import { demoKeyFileOf, readDemoKey } from "../ai/demo-key.mjs";
 import { registerAiRoutes } from "../ai/routes.mjs";
 import type { SwitchboardHostContext } from "../plugin-host.mjs";
 import type { ComposedWorkflowRuntime } from "../workflow-runtime.mjs";
@@ -72,10 +74,15 @@ export function createAiPlugin(rawConfig: unknown): AiPlugin {
           );
           return;
         }
+        const { configFile } = ctx.options as { configFile?: string };
+        const demoKeyFile = demoKeyFileOf(
+          configFile ?? path.join(process.cwd(), "powerhouse.config.json"),
+        );
         registerAiRoutes(
           api.httpRoutes.scopeFor("@powerhousedao/switchboard"),
           {
             isAdmin: (address) => authorizationService.isSupremeAdmin(address),
+            demoKey: () => readDemoKey(demoKeyFile),
             secrets: async () =>
               (ctx.workflows as ComposedWorkflowRuntime | undefined)?.secrets(),
             upstreamUrl: config.upstreamUrl.replace(/\/+$/, ""),

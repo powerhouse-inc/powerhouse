@@ -350,6 +350,46 @@ describe("the OAuth clients a stack ships", () => {
   });
 });
 
+describe("the AI demo key a stack ships", () => {
+  function stagedFrom(demoKeyFile: string) {
+    const parent = tempDir("ph-desktop-demo-");
+    const projectRoot = path.join(parent, "project");
+    mkdirSync(projectRoot);
+    writeFileSync(path.join(projectRoot, "package.json"), "{}");
+    writeFileSync(path.join(parent, "demo-key.txt"), "the demo key");
+    writeFileSync(
+      path.join(projectRoot, "powerhouse.config.json"),
+      JSON.stringify({ ai: { demoKeyFile } }),
+    );
+    const logs: string[] = [];
+    const { stackDir } = bundleStack({
+      projectRoot,
+      shellProjectDir: path.join(parent, "shell"),
+      vendor: false,
+      logger: (message) => logs.push(message),
+    });
+    const config = JSON.parse(
+      readFileSync(path.join(stackDir, "powerhouse.config.json"), "utf8"),
+    ) as { ai: { demoKeyFile?: string } };
+    return { config, logs, stackDir };
+  }
+
+  it("moves it inside the stack", () => {
+    const { config, stackDir } = stagedFrom("../demo-key.txt");
+    expect(config.ai.demoKeyFile).toBe("./ai/demo-key.txt");
+    expect(readFileSync(path.join(stackDir, "ai/demo-key.txt"), "utf8")).toBe(
+      "the demo key",
+    );
+  });
+
+  it("ships none when the file isn't there, as on a build with no secrets", () => {
+    const { config, logs, stackDir } = stagedFrom("../missing.txt");
+    expect(config.ai.demoKeyFile).toBeUndefined();
+    expect(existsSync(path.join(stackDir, "ai"))).toBe(false);
+    expect(logs.join(" ")).toContain("no AI demo key");
+  });
+});
+
 describe("the plugins a stack ships", () => {
   it("names the package of each plugin that resolves in Node", () => {
     const connectBuiltIn = "@powerhousedao/connect/plugins/workflows";

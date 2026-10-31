@@ -20,6 +20,8 @@ export interface AiGatewayStatus {
   keySetBy: string | null;
   keySetAt: string | null;
   model: string;
+  /** This host can set a demo key of its own, which it never sends here. */
+  demoKeyAvailable: boolean;
 }
 
 /**
@@ -133,6 +135,13 @@ export function setAiGatewayKey(
   );
 }
 
+/** Asks the host to use its demo key, tested as a typed one is. */
+export function setAiGatewayDemoKey(
+  options: AiGatewayOptions = {},
+): Promise<AiGatewayStatus> {
+  return adminCall("/key/demo", { method: "PUT" }, options);
+}
+
 export function resetAiGatewayKey(
   options: AiGatewayOptions = {},
 ): Promise<AiGatewayStatus> {
@@ -156,6 +165,7 @@ export interface UseAiGatewayResult {
   /** Connection for {@link useReactorChat}, once the gateway has a key. */
   connection: AiConnection | undefined;
   setKey: (value: string) => Promise<void>;
+  setDemoKey: () => Promise<void>;
   resetKey: () => Promise<void>;
 }
 
@@ -205,6 +215,11 @@ export function useAiGateway(): UseAiGatewayResult {
     setGateway({ access: "admin", status });
   }, []);
 
+  const setDemoKey = useCallback(async () => {
+    const status = await setAiGatewayDemoKey();
+    setGateway({ access: "admin", status });
+  }, []);
+
   const resetKey = useCallback(async () => {
     const status = await resetAiGatewayKey();
     setGateway({ access: "admin", status });
@@ -219,5 +234,5 @@ export function useAiGateway(): UseAiGatewayResult {
     [ready],
   );
 
-  return { gateway, connection, setKey, resetKey };
+  return { gateway, connection, setKey, setDemoKey, resetKey };
 }
