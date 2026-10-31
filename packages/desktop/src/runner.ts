@@ -1,5 +1,6 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import {
   compoundWiringSchema,
@@ -10,6 +11,7 @@ import {
   validateHost,
   type RunnerContext,
   type RunnerHandle,
+  type PluginEntryData,
 } from "@powerhousedao/host-core";
 import {
   defineHostSchemas,
@@ -18,7 +20,7 @@ import {
 } from "@powerhousedao/host-core/schema";
 import { z } from "zod";
 import { APP_JSON_FILE, loadAppJson } from "./app-json.js";
-import { bundleStack } from "./bundle-stack.js";
+import { bundleStack, pluginPackagesOf } from "./bundle-stack.js";
 import { ICON_SOURCE, projectShell } from "./shell-project.js";
 import {
   detectToolchain,
@@ -344,6 +346,35 @@ async function buildMembers(
   }
 }
 
+/** What the members' plugins need, as the stack resolves them as the project
+ * does, from its own node_modules. */
+async function memberPluginPackages(
+  host: DesktopHost,
+  ctx: RunnerContext,
+): Promise<string[]> {
+  const projectRequire = createRequire(
+    path.join(ctx.projectRoot, "package.json"),
+  );
+  const resolves = (specifier: string) => {
+    try {
+      projectRequire.resolve(specifier);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const packages = new Set<string>();
+  for (const wrapper of Object.values(host.children)) {
+    const member = await loadHost(ctx.projectRoot, wrapper.host);
+    const entries = member.host.runner.plugins as PluginEntryData[] | undefined;
+    const where = `hosts/${wrapper.host}/host.js`;
+    for (const name of pluginPackagesOf(entries ?? [], where, resolves)) {
+      packages.add(name);
+    }
+  }
+  return [...packages].sort();
+}
+
 /** PH_DESKTOP_LOCAL_PACKAGES: tarballs to vendor in place of the registry's
  * (a machine path, so an env var rather than a host-file option). */
 function localPackagesDir(ctx: RunnerContext): string | undefined {
@@ -381,6 +412,7 @@ export async function build(
       phCliVersion: runnerOptions.phCliVersion,
       phCliSpec: runnerOptions.phCliSpec ?? ctx.env.PH_DESKTOP_PHCLI_SPEC,
       localPackagesDir: localPackagesDir(ctx),
+      plugins: await memberPluginPackages(host, ctx),
       connectPort: port,
       // the generated shell lives under hosts/ — never stage it into itself
       excludeDirs: [shellDir],
@@ -429,6 +461,7 @@ export async function build(
     phCliVersion: runnerOptions.phCliVersion,
     phCliSpec: runnerOptions.phCliSpec ?? ctx.env.PH_DESKTOP_PHCLI_SPEC,
     localPackagesDir: localPackagesDir(ctx),
+    plugins: await memberPluginPackages(host, ctx),
     connectPort: port,
   });
   console.log(

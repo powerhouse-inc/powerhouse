@@ -13,6 +13,7 @@ import { spawnSync } from "node:child_process";
 import {
   bundleStack,
   readLocalPackages,
+  pluginPackagesOf,
   stackManifest,
 } from "../src/bundle-stack.js";
 import { resolveShell, shellEnv, tauriConfigPatch } from "../src/shell.js";
@@ -273,6 +274,42 @@ function packTarball(dir: string, file: string, name: string): string {
   expect(r.status).toBe(0);
   return tarball;
 }
+
+describe("the plugins a stack ships", () => {
+  it("names the package of each plugin that resolves in Node", () => {
+    const connectBuiltIn = "@powerhousedao/connect/plugins/workflows";
+    const packages = pluginPackagesOf(
+      [
+        "@powerhousedao/portle/switchboard",
+        { module: "@powerhousedao/switchboard/plugins/ai", config: {} },
+        { module: "off-plugin", enabled: false },
+        "plain-plugin/entry",
+        "./local-plugin.js",
+        connectBuiltIn,
+      ],
+      "hosts/x/host.js",
+      (specifier) => specifier !== connectBuiltIn,
+    );
+    expect(packages).toEqual([
+      "@powerhousedao/portle",
+      "@powerhousedao/switchboard",
+      "plain-plugin",
+    ]);
+  });
+
+  it("depends on them, from a tarball when there is one", () => {
+    const manifest = stackManifest({
+      name: "lab",
+      version: "6.0.0",
+      local: { "@powerhousedao/portle": "file:/p/portle.tgz" },
+      plugins: ["@powerhousedao/portle", "plain-plugin"],
+    });
+    expect(manifest.dependencies).toMatchObject({
+      "@powerhousedao/portle": "file:/p/portle.tgz",
+      "plain-plugin": "6.0.0",
+    });
+  });
+});
 
 describe("bundle-stack local packages", () => {
   it("names each tarball by the package inside it", () => {

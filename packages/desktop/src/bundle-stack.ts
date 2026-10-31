@@ -2,6 +2,10 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  normalizePluginEntries,
+  type PluginEntryData,
+} from "@powerhousedao/host-core";
 
 /**
  * P6.3 — stage the shippable STACK into the shell project: everything the
@@ -23,6 +27,26 @@ import { fileURLToPath } from "node:url";
  */
 const CONNECT_BUILD_DIR = path.join(".ph", "connect-build", "dist");
 
+/** The package a module specifier belongs to. */
+function packageOf(specifier: string): string {
+  const parts = specifier.split("/");
+  return parts.slice(0, specifier.startsWith("@") ? 2 : 1).join("/");
+}
+
+/** The packages to ship for a host's plugins. One that doesn't resolve is a
+ * browser built-in of Connect's, already in the built app, and resolves no
+ * better in the stack (host-core's plugins-resolve). */
+export function pluginPackagesOf(
+  entries: readonly PluginEntryData[],
+  where: string,
+  resolves: (specifier: string) => boolean,
+): string[] {
+  return normalizePluginEntries(entries, where)
+    .filter((entry) => entry.enabled && !entry.module.startsWith("."))
+    .filter((entry) => resolves(entry.module))
+    .map((entry) => packageOf(entry.module));
+}
+
 export interface BundleStackOptions {
   projectRoot: string;
   shellProjectDir: string;
@@ -43,6 +67,9 @@ export interface BundleStackOptions {
    * number, from the registry. `pnpm pack:desktop-stack` in the monorepo
    * packs the set ph-cli and host-core need. */
   localPackagesDir?: string;
+  /** Packages the hosts' plugins come from. The stack resolves them from its
+   * own node_modules, and ph-cli brings only what it depends on. */
+  plugins?: readonly string[];
   /** The connect member's port — written into the stack's shell.json so the
    * shell knows where to probe/navigate with no environment at all. */
   connectPort?: number;
@@ -136,6 +163,8 @@ export interface StackManifestOptions {
   phCliSpec?: string;
   /** Package name → spec, from readLocalPackages. */
   local?: Record<string, string>;
+  /** Packages to depend on besides ph-cli and host-core. */
+  plugins?: readonly string[];
 }
 
 /**
@@ -146,6 +175,10 @@ export interface StackManifestOptions {
 export function stackManifest(options: StackManifestOptions) {
   const local = options.local ?? {};
   const spec = (pkg: string, fallback: string) => local[pkg] ?? fallback;
+  const plugins = (options.plugins ?? []).map((pkg): [string, string] => [
+    pkg,
+    spec(pkg, options.version),
+  ]);
   return {
     name: options.name,
     private: true,
@@ -159,6 +192,7 @@ export function stackManifest(options: StackManifestOptions) {
         "@powerhousedao/host-core",
         options.version,
       ),
+      ...Object.fromEntries(plugins),
     },
     ...(Object.keys(local).length > 0 ? { overrides: local } : {}),
   };
@@ -276,7 +310,13 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     path.join(stackDir, "package.json"),
     `${JSON.stringify(
       local
-        ? stackManifest({ name, version, phCliSpec: options.phCliSpec, local })
+        ? stackManifest({
+            name,
+            version,
+            phCliSpec: options.phCliSpec,
+            local,
+            plugins: options.plugins,
+          })
         : {
             name,
             private: true,
@@ -295,7 +335,13 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     // compound) from the STACK's own node_modules.
     const specs = local
       ? ""
-      : `"${options.phCliSpec ?? `@powerhousedao/ph-cli@${version}`}" "@powerhousedao/host-core@${version}"`;
+      : [
+          options.phCliSpec ?? `@powerhousedao/ph-cli@${version}`,
+          `@powerhousedao/host-core@${version}`,
+          ...(options.plugins ?? []).map((pkg) => `${pkg}@${version}`),
+        ]
+          .map((spec) => `"${spec}"`)
+          .join(" ");
     log(
       local
         ? `  vendoring ${Object.keys(local).length} local packages from ${options.localPackagesDir} (hoisted, real files)…`
