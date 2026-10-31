@@ -15,7 +15,7 @@ import {
 
 // The pre-journaling shape: step_execution without the unique constraint.
 interface LegacyDB {
-  step_execution: StepExecutionRow;
+  step_execution: Omit<StepExecutionRow, "step_path">;
 }
 
 // The host here allows every read; a rerun still has to name who asked.
@@ -278,6 +278,7 @@ describe("WorkflowRunStore per-step journaling", () => {
         run_id: runId,
         ordinal: 0,
         step_id: "a",
+        step_path: "a",
         step_key: "first",
         piece_name: "fake",
         block_name: "ok",

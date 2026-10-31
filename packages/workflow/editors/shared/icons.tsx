@@ -31,9 +31,13 @@ const ICON_PATHS = {
   bolt: "M13 3L5 13h6l-1 8 8-10h-6l1-8z",
   branch:
     "M6 4v10M6 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM18 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM18 10c0 4-6 3-11 6",
+  route: "M12 21v-7M12 14L5 5M12 14l7-9M12 14V3",
+  loop: "M17 2l3 3-3 3M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3M20 13v2a4 4 0 0 1-4 4H4",
   lock: "M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3M12 15v2",
   more: "M5 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM19 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z",
   archive: "M4 5h16v4H4zM6 9v10h12V9M10 13h4",
+  subflow: "M4 4h8v6H4zM12 14h8v6h-8zM8 10v7h4",
+  reply: "M10 7l-5 5 5 5M5 12h9a5 5 0 0 1 5 5v2",
 };
 
 export type IconName = keyof typeof ICON_PATHS;

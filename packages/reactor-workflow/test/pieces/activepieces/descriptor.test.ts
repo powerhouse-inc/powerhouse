@@ -478,3 +478,61 @@ describe("trigger renewal", () => {
     expect(described.unsupported?.feature).toBe("renewConfiguration");
   });
 });
+
+describe("trigger onStart", () => {
+  const describeHook = (onStart?: unknown) =>
+    buildDescriptor(
+      {
+        displayName: "Hooks",
+        triggers: {
+          event: {
+            name: "event",
+            displayName: "Event",
+            type: "WEBHOOK",
+            props: {},
+            ...(onStart !== undefined ? { onStart } : {}),
+            run: () => Promise.resolve([]),
+          } as never,
+        },
+      },
+      { packageName: "@acme/piece-hooks", version: "1.0.0" },
+    ).triggers[0];
+
+  it("marks a trigger that declares onStart", () => {
+    expect(
+      describeHook(async (ctx: { store: { put(k: string): Promise<void> } }) =>
+        ctx.store.put("k"),
+      ).onStart,
+    ).toBe(true);
+  });
+
+  it("leaves out none, and createTrigger's no-op default", () => {
+    expect(describeHook()).not.toHaveProperty("onStart");
+    expect(describeHook(async () => Promise.resolve())).not.toHaveProperty(
+      "onStart",
+    );
+    expect(describeHook(async () => {})).not.toHaveProperty("onStart");
+  });
+
+  it("leaves out the no-op default however it was compiled", () => {
+    // The exact source text of each compiled form, as a function.
+    const compiled = (source: string): unknown =>
+      // oxlint-disable-next-line no-implied-eval, no-unsafe-call -- test sources only
+      new Function(`return ${source}`)();
+    for (const source of [
+      "function () { return Promise.resolve(); }",
+      "async function () {}",
+      "async () => { await Promise.resolve(); }",
+      "() => __awaiter(this, void 0, void 0, function* () { return Promise.resolve(); })",
+      "function () { return __async(this, null, function* () { return Promise.resolve(); }); }",
+    ]) {
+      expect(describeHook(compiled(source)), source).not.toHaveProperty(
+        "onStart",
+      );
+    }
+    expect(
+      describeHook(compiled("async () => { await globalThis.fetch('x'); }"))
+        .onStart,
+    ).toBe(true);
+  });
+});

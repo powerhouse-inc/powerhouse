@@ -1,7 +1,12 @@
 // Vertical tree layout, a port of the Activepieces builder flow-canvas
 // layout behavior (MIT, activepieces packages/web) onto our flat graph.
-import { flowPorts } from "@powerhousedao/pieces-framework/workflow";
+import {
+  flowPorts,
+  stepPortLabel,
+  stepPorts,
+} from "@powerhousedao/pieces-framework/workflow";
 import type { Edge, Node } from "@xyflow/react";
+import { graphLayout } from "../../workflow-studio/components/graph-layout.js";
 import { stepBlock, triggerBlock, type BlockRef } from "./blocks.js";
 import type { EdgeModel, StepModel, WorkflowModel } from "./model.js";
 
@@ -59,11 +64,17 @@ export const HSPACE = 80;
 export const ADD_BUTTON_SIZE = 20;
 export const BIG_ADD_BUTTON_SIZE = 50;
 
-const PORT_ORDER = ["next", "true", "false", "error"];
+// A loop's body before what follows it; a router's branches in their order.
+const PORT_ORDER = ["each", "next", "true", "false"];
 
 export function portRank(port: string): number {
   const index = PORT_ORDER.indexOf(port);
-  return index === -1 ? PORT_ORDER.length : index;
+  if (index !== -1) return index;
+  const branch = /^branch_(\d+)$/.exec(port);
+  if (branch) return PORT_ORDER.length + 1 - 1 / Number(branch[1]);
+  if (port === "otherwise") return PORT_ORDER.length + 1;
+  if (port === "error") return PORT_ORDER.length + 2;
+  return PORT_ORDER.length + 3;
 }
 
 export interface ApLayout {
@@ -104,19 +115,21 @@ export function layoutWorkflow(
     list.sort((a, b) => portRank(a.port) - portRank(b.port));
   }
 
-  const placed = new Set<string>();
   const stepById = new Map(model.steps.map((step) => [step.id, step]));
 
   // Declared ports of a block, undefined until its form is known.
   const declared = (id: string): readonly string[] | undefined => {
     const step = stepById.get(id);
-    const block =
-      id === model.trigger?.id
-        ? triggerBlock(model.trigger)
-        : step
-          ? stepBlock(step)
-          : undefined;
-    return block ? portsOf(block) : undefined;
+    if (id === model.trigger?.id) return portsOf(triggerBlock(model.trigger));
+    const wired = (outgoing.get(id) ?? []).map((edge) => edge.port);
+    return step
+      ? stepPorts(stepBlock(step), step.config, portsOf, wired)
+      : undefined;
+  };
+  // What a port reads as: a router branch's name, a loop's "For each item".
+  const labelOf = (id: string, port: string): string | undefined => {
+    const step = stepById.get(id);
+    return step ? stepPortLabel(stepBlock(step), step.config, port) : undefined;
   };
   const outPorts = (id: string): string[] => {
     const ports = declared(id);
@@ -128,13 +141,62 @@ export function layoutWorkflow(
     return ports.length > 1 ? ports : [];
   };
 
+  // A step several reachable edges enter hangs under the path it continues,
+  // as the overview track picks it, a row below its deepest source; the
+  // others are cross edges.
+  const reachable = reachableFrom(model.trigger.id, model.edges);
+  const via = new Map<string, EdgeModel>();
+  for (const node of graphLayout({
+    triggerId: model.trigger.id,
+    steps: model.steps,
+    edges: model.edges,
+  }).nodes) {
+    if (node.via) via.set(node.step.id, node.via as EdgeModel);
+  }
+  const pending = new Map<string, number>();
+  for (const list of outgoing.values()) {
+    for (const edge of list) {
+      if (!reachable.has(edge.from)) continue;
+      pending.set(edge.to, (pending.get(edge.to) ?? 0) + 1);
+    }
+  }
+  const owner = new Map<string, EdgeModel>();
+  const row = new Map<string, number>();
+  const visited = new Set<string>();
+  const visit = (id: string, gated: boolean) => {
+    visited.add(id);
+    for (const edge of outgoing.get(id) ?? []) {
+      if (visited.has(edge.to)) continue;
+      const below = row.get(id)! + 1;
+      row.set(edge.to, gated ? Math.max(row.get(edge.to) ?? 0, below) : below);
+      if (gated) {
+        const left = pending.get(edge.to)! - 1;
+        pending.set(edge.to, left);
+        if (left > 0) continue;
+      }
+      const parent = gated ? via.get(edge.to) : undefined;
+      const wired = parent && outgoing.get(parent.from)?.includes(parent);
+      owner.set(edge.to, wired ? parent : edge);
+      visit(edge.to, gated);
+    }
+  };
+  row.set(model.trigger.id, 0);
+  visit(model.trigger.id, true);
+  // Unreachable steps (and any cycle) form plain trees, each root at row 0.
+  const roots: string[] = [];
+  for (const step of model.steps) {
+    if (visited.has(step.id)) continue;
+    roots.push(step.id);
+    row.set(step.id, 0);
+    visit(step.id, false);
+  }
+  const owns = (edge: EdgeModel) => owner.get(edge.to) === edge;
+
   // An unwired branch port still occupies a column: it gets a placeholder card
-  // where its step would go, so both branches read as branches.
-  const outletsOf = (
-    id: string,
-    used: (target: string) => boolean,
-  ): { port: string; edge?: EdgeModel }[] => {
-    const edges = (outgoing.get(id) ?? []).filter((edge) => !used(edge.to));
+  // where its step would go, so both branches read as branches. A cross edge
+  // gets an empty column too, the lane it runs down.
+  const outletsOf = (id: string): { port: string; edge?: EdgeModel }[] => {
+    const edges = outgoing.get(id) ?? [];
     const ports = branchPorts(id);
     if (ports.length === 0) {
       return edges.map((edge) => ({ port: edge.port, edge }));
@@ -146,14 +208,14 @@ export function layoutWorkflow(
     ].sort((a, b) => portRank(a.port) - portRank(b.port));
   };
 
-  const subtreeWidth = (id: string, visited: Set<string>): number => {
-    if (visited.has(id)) return STEP_WIDTH;
-    visited.add(id);
-    const outlets = outletsOf(id, (target) => visited.has(target));
+  const subtreeWidth = (id: string): number => {
+    const outlets = outletsOf(id);
     if (outlets.length === 0) return STEP_WIDTH;
     const total = outlets
       .map((outlet) =>
-        outlet.edge ? subtreeWidth(outlet.edge.to, visited) : STEP_WIDTH,
+        outlet.edge && owns(outlet.edge)
+          ? subtreeWidth(outlet.edge.to)
+          : STEP_WIDTH,
       )
       .reduce((sum, width) => sum + width, 0);
     return Math.max(STEP_WIDTH, total + (outlets.length - 1) * HSPACE);
@@ -161,12 +223,14 @@ export function layoutWorkflow(
 
   // Centre of the column reserved for an unwired port, keyed "stepId:port".
   const placeholders = new Map<string, { x: number; y: number }>();
+  // Centre of the column each edge runs down, keyed by edge id.
+  const lanes = new Map<string, number>();
+  const ROW = STEP_HEIGHT + VSPACE;
 
-  const place = (id: string, centerX: number, y: number) => {
-    if (placed.has(id)) return;
-    placed.add(id);
+  const place = (id: string, centerX: number, top: number) => {
     const step = stepById.get(id);
     const isTrigger = id === model.trigger?.id;
+    const y = top + row.get(id)! * ROW;
     nodes.push({
       id,
       type: "apStep",
@@ -182,21 +246,23 @@ export function layoutWorkflow(
       draggable: false,
     });
 
-    const outlets = outletsOf(id, (target) => placed.has(target));
+    const outlets = outletsOf(id);
     const widths = outlets.map((outlet) =>
-      outlet.edge ? subtreeWidth(outlet.edge.to, new Set(placed)) : STEP_WIDTH,
+      outlet.edge && owns(outlet.edge)
+        ? subtreeWidth(outlet.edge.to)
+        : STEP_WIDTH,
     );
     const total =
       widths.reduce((sum, width) => sum + width, 0) +
       Math.max(outlets.length - 1, 0) * HSPACE;
-    const childY = y + STEP_HEIGHT + VSPACE;
     let cursor = centerX - total / 2;
     outlets.forEach((outlet, index) => {
       const slotCenter = cursor + widths[index] / 2;
       if (outlet.edge) {
-        place(outlet.edge.to, slotCenter, childY);
+        lanes.set(outlet.edge.id, slotCenter);
+        if (owns(outlet.edge)) place(outlet.edge.to, slotCenter, top);
       } else {
-        placeholders.set(`${id}:${outlet.port}`, { x: slotCenter, y: childY });
+        placeholders.set(`${id}:${outlet.port}`, { x: slotCenter, y: y + ROW });
       }
       cursor += widths[index] + HSPACE;
     });
@@ -205,12 +271,15 @@ export function layoutWorkflow(
   place(model.trigger.id, 0, 0);
 
   // Steps unreachable from the trigger stack in a column to the right.
+  const mainWidth = subtreeWidth(model.trigger.id);
   let orphanY = 0;
-  const mainWidth = subtreeWidth(model.trigger.id, new Set());
-  for (const step of model.steps) {
-    if (placed.has(step.id)) continue;
-    place(step.id, mainWidth / 2 + HSPACE + STEP_WIDTH / 2, orphanY);
-    orphanY += STEP_HEIGHT + VSPACE;
+  for (const root of roots) {
+    const before = nodes.length;
+    place(root, mainWidth / 2 + HSPACE + STEP_WIDTH / 2, orphanY);
+    const bottom = Math.max(
+      ...nodes.slice(before).map((node) => node.position.y),
+    );
+    orphanY = bottom + ROW;
   }
 
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
@@ -225,6 +294,8 @@ export function layoutWorkflow(
       data: {
         edgeId: edge.id,
         port: edge.port,
+        portLabel: labelOf(edge.from, edge.port),
+        lane: lanes.get(edge.id),
         condition: edge.condition,
         // A skipped step passes the run straight through this edge.
         fromSkipped: stepById.get(edge.from)?.skip === true,
@@ -264,6 +335,7 @@ export function layoutWorkflow(
         data: {
           parentId: node.id,
           port,
+          portLabel: labelOf(node.id, port),
           card: Boolean(slot),
           // An empty workflow says where its first step goes.
           ...(model.steps.length === 0 ? { hint: true } : {}),
@@ -282,7 +354,54 @@ export function layoutWorkflow(
     });
   }
 
-  return { nodes, edges };
+  // A light frame behind each loop body: its steps and their add buttons.
+  const LOOP_PAD = 16;
+  const sizeOf = (node: Node) =>
+    node.type === "apAppend" && !(node.data as { card?: boolean }).card
+      ? { width: ADD_BUTTON_SIZE, height: ADD_BUTTON_SIZE }
+      : { width: STEP_WIDTH, height: STEP_HEIGHT };
+  const frames: Node[] = [];
+  for (const edge of model.edges) {
+    if (edge.port !== "each" || !owns(edge)) continue;
+    const body = new Set<string>();
+    const collect = (id: string) => {
+      body.add(id);
+      for (const next of outgoing.get(id) ?? []) {
+        if (owns(next)) collect(next.to);
+      }
+    };
+    collect(edge.to);
+    const members = nodes.filter((node) =>
+      node.type === "apStep"
+        ? body.has(node.id)
+        : body.has((node.data as { parentId?: string }).parentId ?? ""),
+    );
+    const left = Math.min(...members.map((node) => node.position.x));
+    const top = Math.min(...members.map((node) => node.position.y));
+    const right = Math.max(
+      ...members.map((node) => node.position.x + sizeOf(node).width),
+    );
+    const bottom = Math.max(
+      ...members.map((node) => node.position.y + sizeOf(node).height),
+    );
+    frames.push({
+      id: `__loop:${edge.from}`,
+      type: "apLoopFrame",
+      position: { x: left - LOOP_PAD, y: top - LOOP_PAD },
+      data: {
+        width: right - left + 2 * LOOP_PAD,
+        height: bottom - top + 2 * LOOP_PAD,
+      },
+      draggable: false,
+      selectable: false,
+      focusable: false,
+      zIndex: -1,
+      // Clicks inside the frame reach the pane.
+      style: { pointerEvents: "none" },
+    });
+  }
+
+  return { nodes: [...frames, ...nodes], edges };
 }
 
 // Steps in the order a run meets them (depth first, branches in port order),

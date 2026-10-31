@@ -1,8 +1,8 @@
 {
   "repository": "https://github.com/activepieces/activepieces",
-  "tag": "0.92.3",
-  "commit": "2fc7f8dcaa84400f9db53fb0de7fc4340d055c62",
-  "date": "2026-10-12T16:59:36+03:00",
+  "tag": "d078d47750b53c13b837b2bec86b0402b4bff94f",
+  "commit": "d078d47750b53c13b837b2bec86b0402b4bff94f",
+  "date": "2026-10-30T13:23:35+03:00",
   "files": [
     {
       "path": "test/upstream/engine/network/ssrf-guard.test.ts",

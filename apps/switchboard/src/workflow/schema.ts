@@ -81,6 +81,8 @@ export const schema: DocumentNode = gql`
       searchValue: String
       "The step's reactor connection; its filter narrows what the resolver reads."
       reactorConnectionId: String
+      "The workflow being edited; a sub-flow dropdown lists what it may call."
+      workflowId: String
     ): Unknown
     """
     Every piece this reactor offers: the core piece, its package pieces, and
@@ -384,6 +386,11 @@ export const schema: DocumentNode = gql`
   type WorkflowStepRunRecord {
     stepId: String!
     stepKey: String!
+    """
+    One iteration of a loop body: "<loop>[<i>]/<step>", nested loops
+    concatenated, i from 1. Null for the step's own row.
+    """
+    path: String
     pieceName: String!
     "The action the step ran, or the trigger a trigger test sampled."
     blockName: String!
@@ -429,6 +436,11 @@ export const schema: DocumentNode = gql`
     "Steps that ran a fallback piece version, edges on ports nothing emits."
     warningNotes: [String!]!
     steps: [WorkflowStepRunRecord!]!
+    """
+    Loop iteration rows the run journaled, when steps holds only the first of
+    them; null when it holds every one. Listings hold none.
+    """
+    iterationsTotal: Int
     "Where the run paused, resolved ones included."
     waitpoints: [WaitpointRecord!]!
   }

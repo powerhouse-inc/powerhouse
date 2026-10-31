@@ -131,6 +131,8 @@ export interface PieceTriggerDescriptor {
   handshake?: { strategy: string; paramName?: string };
   // When the provider's subscription must be renewed; absent for NONE.
   renew?: TriggerRenew;
+  // Declares onStart, which the host calls once per run before its first step.
+  onStart?: true;
   // A trigger feature the engine cannot run; the piece's own is on the piece.
   unsupported?: UnsupportedFeature;
 }
@@ -200,6 +202,25 @@ function describeOAuth2(
     ...(typeof raw.grantType === "string" ? { grantType: raw.grantType } : {}),
     ...(extra && Object.keys(extra).length > 0 ? { extra } : {}),
   };
+}
+
+// createTrigger fills a missing onStart with a no-op, on the built trigger
+// only, so its compiled forms are matched: native, __awaiter or __async.
+const NOOP_HEAD = /^(?:async)?(?:function[\w$]*)?\(\)(?:=>)?/;
+const DOWNLEVELED =
+  /^\{?(?:return)?(?:__awaiter|__async)\(this,[^{]*function\*\(\)(\{.*\})\);?\}?$/;
+const NOOP_BODY =
+  /^\{?(?:return)?(?:await|yield)?(?:Promise\.resolve\(\))?;?\}?$/;
+
+function declaresOnStart(onStart: unknown): boolean {
+  if (typeof onStart !== "function") return false;
+  // The default takes no context.
+  if (onStart.length > 0) return true;
+  const source = Function.prototype.toString.call(onStart).replace(/\s+/g, "");
+  const head = NOOP_HEAD.exec(source);
+  if (!head) return true;
+  const body = source.slice(head[0].length);
+  return !NOOP_BODY.test(DOWNLEVELED.exec(body)?.[1] ?? body);
 }
 
 // NONE is how the framework spells "no handshake", so it is not carried:
@@ -552,6 +573,7 @@ export function buildDescriptor(
         : {}),
       handshake: describeHandshake(trigger),
       ...optional("renew", triggerRenew(trigger)),
+      ...(declaresOnStart(trigger.onStart) ? { onStart: true as const } : {}),
       ...optional("propertyGroups", describeGroups(trigger.propertyGroups)),
       ...(options.hostFed ? {} : withUnsupported(unsupportedTrigger(trigger))),
     }),

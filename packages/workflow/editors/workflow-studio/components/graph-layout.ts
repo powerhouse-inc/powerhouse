@@ -15,6 +15,8 @@ export interface GraphNode {
   lane: number;
   // The port it runs on; null for "next", entries and joins.
   port: string | null;
+  // The inbound edge whose path it continues; null on an entry.
+  via: OutlineEdge | null;
 }
 
 export interface GraphEdge {
@@ -34,8 +36,11 @@ export interface GraphLayout {
   lanes: number;
 }
 
-// Ports that leave the main line and drop to a lower lane.
-const SIDE_PORTS = new Set(["false", "error"]);
+// Ports that leave the main line and drop to a lower lane: a loop's body,
+// and every router branch after the first.
+const SIDE_PORTS = new Set(["false", "error", "each", "otherwise"]);
+const isSidePort = (port: string) =>
+  SIDE_PORTS.has(port) || /^branch_(?!1$)\d+$/.test(port);
 
 export function graphLayout(args: {
   triggerId?: string | null;
@@ -59,7 +64,7 @@ export function graphLayout(args: {
   // A side port drops a lane only to clear the way for its source's other
   // path; a step's only way out stays on its lane.
   const drops = (edge: OutlineEdge) =>
-    SIDE_PORTS.has(edge.port) && (outbound.get(edge.from) ?? 0) > 1;
+    isSidePort(edge.port) && (outbound.get(edge.from) ?? 0) > 1;
 
   const nodes: GraphNode[] = [];
   for (const { step } of rows) {
@@ -70,19 +75,21 @@ export function graphLayout(args: {
       1,
       ...from.map((edge) => placed.get(nodeId(edge.from))!.col + 1),
     );
-    // A join stays on the highest lane any of its sources leads to.
-    let lane = Math.min(
-      ...from.map(
-        (edge) => placed.get(nodeId(edge.from))!.lane + (drops(edge) ? 1 : 0),
-      ),
-      from.length === 0 ? 0 : Infinity,
-    );
+    // A join continues the path on the highest lane its sources lead to; on
+    // a tie, the one from the deepest source.
+    const via = joinVia(from, (edge) => {
+      const source = placed.get(nodeId(edge.from))!;
+      return { lane: source.lane + (drops(edge) ? 1 : 0), col: source.col };
+    });
+    let lane = via
+      ? placed.get(nodeId(via.from))!.lane + (drops(via) ? 1 : 0)
+      : 0;
     const port =
       from.length === 1 && from[0].port !== "next" ? from[0].port : null;
     while (taken.has(`${col}:${lane}`)) lane++;
     taken.add(`${col}:${lane}`);
     placed.set(step.id, { col, lane });
-    nodes.push({ step, col, lane, port });
+    nodes.push({ step, col, lane, port, via });
   }
 
   const edges = args.edges
@@ -111,4 +118,23 @@ export function graphLayout(args: {
     cols: Math.max(0, ...nodes.map((node) => node.col)),
     lanes: Math.max(1, ...nodes.map((node) => node.lane + 1)),
   };
+}
+
+function joinVia(
+  from: readonly OutlineEdge[],
+  spot: (edge: OutlineEdge) => { lane: number; col: number },
+): OutlineEdge | null {
+  let best: OutlineEdge | null = null;
+  let bestSpot = { lane: Infinity, col: -Infinity };
+  for (const edge of from) {
+    const at = spot(edge);
+    if (
+      at.lane < bestSpot.lane ||
+      (at.lane === bestSpot.lane && at.col >= bestSpot.col)
+    ) {
+      best = edge;
+      bestSpot = at;
+    }
+  }
+  return best;
 }

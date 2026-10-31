@@ -9,8 +9,10 @@ import {
   registerBlockNames,
   registerPieceLogos,
   resetPieceLogos,
+  stepSubtitle,
   subscribePieceLogos,
 } from "./block-meta.js";
+import { CALL_FLOW_BLOCK } from "./blocks.js";
 import type { PieceCatalogSource, PieceSummaryUi } from "./piece-source.js";
 
 const DATE_HELPER = {
@@ -105,9 +107,9 @@ describe("blockMeta", () => {
       blockMeta({
         pieceName: "@powerhousedao/piece-core",
         kind: "action",
-        name: "loop",
+        name: "split",
       }),
-    ).toEqual({ displayName: "Loop", subtitle: "Core", glyph: "?" });
+    ).toEqual({ displayName: "Split", subtitle: "Core", glyph: "?" });
   });
 });
 
@@ -339,5 +341,41 @@ describe("action names", () => {
     );
     expect(loadActions).toHaveBeenCalledTimes(1);
     expect(loadActions).toHaveBeenCalledWith("@activepieces/piece-openai");
+  });
+});
+
+describe("stepSubtitle", () => {
+  it("names a core block's action alone", () => {
+    const meta = blockMeta({
+      pieceName: "@powerhousedao/piece-core",
+      kind: "action" as const,
+      name: "approval",
+    });
+    expect(stepSubtitle(meta)).toBe("Request approval");
+  });
+
+  it("uses the Core tab's name for a block it names", () => {
+    expect(stepSubtitle(blockMeta(CALL_FLOW_BLOCK))).toBe("Call workflow");
+  });
+
+  it("leads with the piece when both fit, else the action alone", () => {
+    registerPieceLogos([
+      { name: "@activepieces/piece-http", displayName: "HTTP" },
+    ]);
+    registerBlockNames([
+      {
+        pieceName: "@activepieces/piece-http",
+        kind: "action",
+        name: "parse_url",
+        displayName: "Parse URL",
+      },
+    ]);
+    const meta = blockMeta({
+      pieceName: "@activepieces/piece-http",
+      kind: "action" as const,
+      name: "parse_url",
+    });
+    expect(stepSubtitle(meta)).toBe("HTTP · Parse URL");
+    expect(stepSubtitle(meta, 10)).toBe("Parse URL");
   });
 });

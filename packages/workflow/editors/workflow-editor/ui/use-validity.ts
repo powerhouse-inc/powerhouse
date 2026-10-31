@@ -93,7 +93,9 @@ export function useBlockCheck(block: CheckedBlock): BlockCheck {
   return {
     form,
     formError: error,
-    issues: block.skip ? [] : undeclaredPortIssues(form, block.outgoingPorts),
+    issues: block.skip
+      ? []
+      : undeclaredPortIssues(form, block.outgoingPorts, block),
     missing: blockMissing({
       form,
       block: block.block,
@@ -169,7 +171,7 @@ export function useWorkflowCheck(model: WorkflowModel): WorkflowCheck {
       }),
       block.skip
         ? []
-        : undeclaredPortIssues(formOf(block), block.outgoingPorts),
+        : undeclaredPortIssues(formOf(block), block.outgoingPorts, block),
     ),
   }));
   return {

@@ -59,6 +59,11 @@ import {
   UnsupportedPieceFeatureError,
 } from "../unsupported.js";
 import { installEgressGuard, runWithEgressPolicy } from "./egress.js";
+import {
+  hostFlows,
+  hostServerContext,
+  installHostFetch,
+} from "./host-origin.js";
 import { installTlsGuard } from "./tls-guard.js";
 import {
   finishRequestTimings,
@@ -235,8 +240,10 @@ async function resolveOptions(
   const { context, touched } = buildPropertyContext({
     searchValue: request.searchValue,
     projectId: request.projectId,
-    // Design-time default: an empty flows listing instead of a throwing stub.
-    flows: { list: () => Promise.resolve({ data: [] }) },
+    // Without a host listing, an empty one instead of a throwing stub.
+    flows: request.flows
+      ? hostFlows
+      : { list: () => Promise.resolve({ data: [] }) },
     ...(session ? { reactor: session.client } : {}),
   });
   const refresherValues = {
@@ -432,6 +439,9 @@ async function runAction(
         }
       : {}),
     ...(request.resumeBaseUrl ? { resumeBaseUrl: request.resumeBaseUrl } : {}),
+    ...(request.flows
+      ? { flows: hostFlows, server: hostServerContext(request.flows) }
+      : {}),
     identity: request.identity,
   });
   let output: unknown;
@@ -512,7 +522,9 @@ async function handleTriggerHook(
     isRepublish: request.isRepublish,
     payload: request.payload,
     webhookUrl: request.webhookUrl,
-    server: request.server,
+    ...(request.flows
+      ? { flows: hostFlows, server: hostServerContext(request.flows) }
+      : { server: request.server }),
     files: runsPiece ? new DataUriFilesService() : undefined,
     ...reactorOption(session),
   });
@@ -680,6 +692,7 @@ export function startPieceWorker(): void {
   installEgressGuard();
   // Nor switch certificate checks off for everyone (NODE_TLS_REJECT_UNAUTHORIZED=0)
   installTlsGuard();
+  installHostFetch();
   process.on("message", onMessage);
   markWorkerReady();
 }

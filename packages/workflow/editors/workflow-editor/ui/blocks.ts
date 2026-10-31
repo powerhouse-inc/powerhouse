@@ -6,7 +6,12 @@ import {
   type BlockKind,
   type BlockRef,
 } from "@powerhousedao/pieces-framework/block-type";
-import { CORE_PIECE_NAME } from "@powerhousedao/pieces-framework/workflow";
+import {
+  CALL_FLOW_ACTION,
+  CALLABLE_FLOW_TRIGGER as CALLABLE_FLOW_TRIGGER_NAME,
+  CORE_PIECE_NAME,
+  SUBFLOWS_PIECE,
+} from "@powerhousedao/pieces-framework/workflow";
 
 export type { BlockIdentity, BlockKind, BlockRef };
 
@@ -25,11 +30,29 @@ export const MANUAL_TRIGGER = core("trigger", "manual");
 export const SCHEDULE_TRIGGER = core("trigger", "schedule");
 export const WEBHOOK_TRIGGER = core("trigger", "webhook");
 export const BRANCH_BLOCK = core("action", "branch");
+export const ROUTER_BLOCK = core("action", "router");
+export const LOOP_BLOCK = core("action", "loop");
 export const ASSERT_BLOCK = core("action", "assert");
 export const DELAY_BLOCK = core("action", "delay");
 export const APPROVAL_BLOCK = core("action", "approval");
 export const STOP_BLOCK = core("action", "stop");
 export const WAIT_FOR_WEBHOOK_BLOCK = core("action", "waitForWebhook");
+
+// Sub-flows are Activepieces' own piece, pinned to a version this runtime runs.
+export { SUBFLOWS_PIECE };
+export const SUBFLOWS_VERSION = "0.7.0";
+const subflows = (kind: BlockKind, name: string): BlockPick => ({
+  pieceName: SUBFLOWS_PIECE,
+  pieceVersion: SUBFLOWS_VERSION,
+  kind,
+  name,
+});
+export const CALLABLE_FLOW_TRIGGER = subflows(
+  "trigger",
+  CALLABLE_FLOW_TRIGGER_NAME,
+);
+export const CALL_FLOW_BLOCK = subflows("action", CALL_FLOW_ACTION);
+export const RETURN_RESPONSE_BLOCK = subflows("action", "returnResponse");
 
 // A block to add: pinned already, or pinned to the installed version on pick.
 export type BlockPick = BlockIdentity & { pieceVersion?: string };
@@ -152,6 +175,13 @@ export const TRIGGER_PRESETS: BlockPreset[] = [
     defaultConfig: { methods: "POST", scheme: "none", responseMode: "async" },
   },
   {
+    label: "Callable workflow",
+    block: CALLABLE_FLOW_TRIGGER,
+    group: "core",
+    description: "Fires when another workflow in this drive calls it.",
+    defaultConfig: { mode: "simple", exampleData: { sampleData: {} } },
+  },
+  {
     label: "Document event",
     block: reactor("trigger", "document-event"),
     group: "powerhouse",
@@ -181,6 +211,20 @@ export const STEP_PRESETS: BlockPreset[] = [
     group: "core",
     description: "Routes true/false on a condition.",
     defaultConfig: {},
+  },
+  {
+    label: "Router",
+    block: ROUTER_BLOCK,
+    group: "core",
+    description: "Takes the first of several branches whose condition holds.",
+    defaultConfig: { branches: [{ operator: "TEXT_EXACTLY_MATCHES" }] },
+  },
+  {
+    label: "Loop on items",
+    block: LOOP_BLOCK,
+    group: "core",
+    description: "Runs the steps inside it once for each item of a list.",
+    defaultConfig: { items: "" },
   },
   {
     label: "Assert",
@@ -223,6 +267,21 @@ export const STEP_PRESETS: BlockPreset[] = [
     group: "core",
     description: "Ends the run successfully, optionally answering the caller.",
     defaultConfig: { responseType: "json" },
+  },
+  {
+    label: "Call workflow",
+    block: CALL_FLOW_BLOCK,
+    group: "core",
+    description:
+      "Runs a callable workflow in this drive, optionally waiting for its response.",
+    defaultConfig: { mode: "simple", waitForResponse: false },
+  },
+  {
+    label: "Return response",
+    block: RETURN_RESPONSE_BLOCK,
+    group: "core",
+    description: "Answers the workflow that called this one.",
+    defaultConfig: { mode: "simple", response: { response: {} } },
   },
   {
     label: "Create document",

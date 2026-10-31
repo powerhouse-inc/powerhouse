@@ -182,6 +182,8 @@ export function buildTriggerContext(
       },
     },
     step: { name: identity.stepName ?? "trigger" },
+    // onStart's run; the other hooks run outside one.
+    run: identity.runId ? { id: identity.runId } : throwingStub("run"),
     project: {
       id: identity.projectId ?? "project",
       externalId: () => Promise.resolve(identity.projectId ?? "project"),
@@ -234,7 +236,8 @@ export type TriggerLifecycleHook =
   | "run"
   | "test"
   | "onHandshake"
-  | "onRenew";
+  | "onRenew"
+  | "onStart";
 
 // Invokes one lifecycle hook with the built context; result is returned untouched.
 export async function runTriggerHook(
