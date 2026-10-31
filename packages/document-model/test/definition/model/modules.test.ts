@@ -14,7 +14,7 @@ const model = defineDocumentModel({
   extension: "mod",
   version: 1,
   author: { name: "Powerhouse" },
-  specifications: {
+  scopes: {
     global: {
       schema: ph.object("ModulesState", {
         fields: { title: ph.String({ required: true }) },
@@ -215,7 +215,7 @@ describe("context.module and the scope builders", () => {
       extension: "oth",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("OtherState", {
             fields: { count: ph.Int({ required: true }) },

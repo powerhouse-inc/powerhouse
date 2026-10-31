@@ -44,7 +44,7 @@ export const todo = defineDocumentModel({
   extension: "todo",
   version: 1,
   author: { name: "Consumer" },
-  specifications: {
+  scopes: {
     global: {
       schema: TodoState,
       initialValue: {
@@ -171,7 +171,7 @@ const model = defineDocumentModel({
   extension: "ledger",
   version: 1,
   author: { name: "Consumer" },
-  specifications: {
+  scopes: {
     global: {
       schema: ph.object("LedgerState", {
         fields: {
@@ -254,7 +254,7 @@ const noLocal = defineDocumentModel({
   extension: "plain",
   version: 1,
   author: { name: "Consumer" },
-  specifications: {
+  scopes: {
     global: {
       schema: ph.object("PlainState", { fields: { n: ph.Int() } }),
       initialValue: { n: null },

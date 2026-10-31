@@ -74,7 +74,7 @@ export const invoice = defineDocumentModel({
   version: 1,
   author: { name: "Powerhouse", website: "https://powerhouse.inc" },
   changeLog: [],
-  specifications: {
+  scopes: {
     auxiliaryTypes: [ArchivedInvoice],
     global: {
       schema: InvoiceState,

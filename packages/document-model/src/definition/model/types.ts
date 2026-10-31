@@ -52,7 +52,7 @@ export type DocumentModelConfig<
     readonly website?: string | null;
   };
   readonly changeLog?: readonly string[];
-  readonly specifications: {
+  readonly scopes: {
     readonly auxiliaryTypes?: readonly AnyTypeDescriptor[];
     readonly global: StateScopeDeclaration<TGlobal>;
     readonly local: TLocal extends StateRootDescriptor

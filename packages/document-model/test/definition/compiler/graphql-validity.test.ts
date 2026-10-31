@@ -22,7 +22,7 @@ function probe(options: {
     extension: "probe",
     version: 1,
     author: { name: "Powerhouse" },
-    specifications: {
+    scopes: {
       global: { schema: options.state as never, initialValue: {} as never },
       local: { schema: null, initialValue: {} },
     },
@@ -134,7 +134,7 @@ describe("interface implementations", () => {
     probe({
       state: ph.object("ProbeState", { fields: { item: ph.ref(item) } }),
     });
-  const ITEM_PATH = ["specifications", "global", "schema", "fields", "item"];
+  const ITEM_PATH = ["scopes", "global", "schema", "fields", "item"];
 
   it("refuses an object that omits an interface field", () => {
     expect(
@@ -307,7 +307,7 @@ describe("input object cycles", () => {
 });
 
 describe("scalar names", () => {
-  const stateField = ["specifications", "global", "schema", "fields"];
+  const stateField = ["scopes", "global", "schema", "fields"];
   const refusalOf = (run: () => unknown) =>
     diagnosticsOf(run).map(({ code, path, message }) => ({
       code,

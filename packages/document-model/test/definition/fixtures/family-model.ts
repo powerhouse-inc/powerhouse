@@ -29,7 +29,7 @@ export const taskV1Context = defineDocumentModel({
   extension: "task",
   version: 1,
   author,
-  specifications: {
+  scopes: {
     global: {
       schema: ph.object("TaskState", {
         fields: {
@@ -51,7 +51,7 @@ export const taskV2Context = defineDocumentModel({
   extension: "task",
   version: 2,
   author,
-  specifications: {
+  scopes: {
     global: {
       schema: ph.object("TaskState", {
         fields: {

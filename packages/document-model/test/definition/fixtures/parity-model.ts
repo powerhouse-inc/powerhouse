@@ -361,7 +361,7 @@ const parity = defineDocumentModel({
   extension: "parity",
   version: 1,
   author: { name: "Powerhouse" },
-  specifications: {
+  scopes: {
     global: {
       schema: ph.object("ParityState", {
         fields: {

@@ -14,7 +14,7 @@ const model = defineDocumentModel({
   extension: "err",
   version: 1,
   author: { name: "Powerhouse" },
-  specifications: {
+  scopes: {
     global: {
       schema: ph.object("ErrorsState", {
         fields: { count: ph.Int({ required: true }) },
@@ -233,7 +233,7 @@ describe("operation errors", () => {
       extension: "ek",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("ErrorKeysState", {
             fields: { count: ph.Int({ required: true }) },
@@ -271,7 +271,7 @@ describe("operation errors", () => {
       extension: "err",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("ErrorsState", {
             fields: { count: ph.Int({ required: true }) },
@@ -306,7 +306,7 @@ describe("operation errors", () => {
         extension: "ec",
         version: 1,
         author: { name: "Powerhouse" },
-        specifications: {
+        scopes: {
           global: {
             schema: ph.object("ErrorClassesState", {
               fields: { count: ph.Int({ required: true }) },

@@ -31,7 +31,7 @@ function config(overrides: Record<string, unknown> = {}) {
     extension: "sample",
     version: 1,
     author: { name: "Powerhouse" },
-    specifications: {
+    scopes: {
       global: { schema: state(), initialValue: { title: "" } },
       local: { schema: null, initialValue: {} },
     },
@@ -39,7 +39,7 @@ function config(overrides: Record<string, unknown> = {}) {
   } as never;
 }
 
-function specifications(global: Record<string, unknown>, extra = {}) {
+function scopes(global: Record<string, unknown>, extra = {}) {
   return {
     ...extra,
     global: { schema: state(), initialValue: { title: "" }, ...global },
@@ -91,25 +91,23 @@ function refusals(value: unknown): Record<string, string | undefined> {
     extension: receivedAt(declaration, "extension"),
     version: receivedAt(declaration, "version"),
     "author.name": receivedAt(declaration, "author.name"),
-    "specifications.global.schema": receivedAt(
+    "scopes.global.schema": receivedAt(
       diagnosticsOf(() =>
-        defineDocumentModel(
-          config({ specifications: specifications({ schema: value }) }),
-        ),
+        defineDocumentModel(config({ scopes: scopes({ schema: value }) })),
       ),
-      "specifications.global.schema",
+      "scopes.global.schema",
     ),
-    "specifications.global.examples.0.value": receivedAt(
+    "scopes.global.examples.0.value": receivedAt(
       diagnosticsOf(() =>
         defineDocumentModel(
           config({
-            specifications: specifications({
+            scopes: scopes({
               examples: [{ key: "first", value }],
             }),
           }),
         ),
       ),
-      "specifications.global.examples.0.value",
+      "scopes.global.examples.0.value",
     ),
     "module.operations": receivedAt(
       diagnosticsOf(() => model.module("m", { operations: value as never })),
@@ -156,8 +154,8 @@ const SITES = [
   "extension",
   "version",
   "author.name",
-  "specifications.global.schema",
-  "specifications.global.examples.0.value",
+  "scopes.global.schema",
+  "scopes.global.examples.0.value",
   "module.operations",
   "operations.input",
   "operations.reduce",
@@ -234,7 +232,7 @@ describe("a declaration that cannot be inspected", () => {
   it("is refused by defineDocumentModel with a diagnostic", () => {
     const local = (initialValue: unknown) =>
       config({
-        specifications: {
+        scopes: {
           global: { schema: state(), initialValue: { title: "" } },
           local: { schema: null, initialValue },
         },
@@ -243,12 +241,12 @@ describe("a declaration that cannot be inspected", () => {
       diagnosticsOf(() => defineDocumentModel(input as never)).map(
         ({ code, path, received }) => [code, path.join("."), received],
       );
-    const initialValue = "specifications.local.initialValue";
+    const initialValue = "scopes.local.initialValue";
 
     expect([
       ...refusal(revokedProxy()),
       ...refusal(config({ id: revokedProxy() })),
-      ...refusal(config({ specifications: revokedProxy() })),
+      ...refusal(config({ scopes: revokedProxy() })),
       ...refusal(local(revokedProxy())),
       ...refusal(local(null)),
       ...refusal(local([])),
@@ -259,7 +257,7 @@ describe("a declaration that cannot be inspected", () => {
     ]).toStrictEqual([
       ["PH-DM-DECLARATION-INVALID", "", "inspection-failed"],
       ["PH-DM-DECLARATION-INVALID", "id", "inspection-failed"],
-      ["PH-DM-DECLARATION-INVALID", "specifications", "inspection-failed"],
+      ["PH-DM-DECLARATION-INVALID", "scopes", "inspection-failed"],
       ["PH-DM-INITIAL-VALUE-INVALID", initialValue, "inspection-failed"],
       ["PH-DM-INITIAL-VALUE-INVALID", initialValue, "null"],
       ["PH-DM-INITIAL-VALUE-INVALID", initialValue, "array"],
@@ -322,7 +320,7 @@ describe("a declaration that cannot be inspected", () => {
       diagnosticsOf(() =>
         defineDocumentModel(
           config({
-            specifications: specifications(
+            scopes: scopes(
               {},
               { auxiliaryTypes: new (class extends Array {})() },
             ),
@@ -345,7 +343,7 @@ describe("a declaration that cannot be inspected", () => {
           diagnosticsOf(() =>
             defineDocumentModel(
               config({
-                specifications: specifications({}, { auxiliaryTypes }),
+                scopes: scopes({}, { auxiliaryTypes }),
               }),
             ),
           ).map(({ code, path, message, received, repair }) => [
@@ -359,21 +357,21 @@ describe("a declaration that cannot be inspected", () => {
     ).toStrictEqual([
       [
         "PH-DM-DECLARATION-INVALID",
-        "specifications.auxiliaryTypes",
+        "scopes.auxiliaryTypes",
         "Expected a plain array, not an Array subclass or an array from another realm.",
         "array of another prototype or realm",
         "Pass an array literal, or copy the array with Array.from(...).",
       ],
       [
         "PH-DM-DECLARATION-INVALID",
-        "specifications.auxiliaryTypes",
+        "scopes.auxiliaryTypes",
         "Expected a plain array, not an Array subclass or an array from another realm.",
         "array of another prototype or realm",
         "Pass an array literal, or copy the array with Array.from(...).",
       ],
       [
         "PH-DM-DECLARATION-INVALID",
-        "specifications.auxiliaryTypes",
+        "scopes.auxiliaryTypes",
         "The option value could not be snapshotted (inspection-failed).",
         "inspection-failed",
         "Pass an array literal of data values with no holes, extra properties, accessors, or proxies.",
@@ -382,25 +380,25 @@ describe("a declaration that cannot be inspected", () => {
   });
 });
 
-describe("a specifications value that is not the scope map", () => {
+describe("a scopes value that is not a map of global and local", () => {
   it("is refused once per mistake", () => {
-    const withHidden = specifications({});
+    const withHidden = scopes({});
     Object.defineProperty(withHidden, "custom", {
       value: {},
       enumerable: false,
     });
     const refusal = (value: unknown) =>
-      diagnosticsOf(() =>
-        defineDocumentModel(config({ specifications: value })),
-      ).map(({ code, path, message, received }) => [
-        code,
-        path.join("."),
-        message,
-        received,
-      ]);
+      diagnosticsOf(() => defineDocumentModel(config({ scopes: value }))).map(
+        ({ code, path, message, received }) => [
+          code,
+          path.join("."),
+          message,
+          received,
+        ],
+      );
     const scope = (key: string) => [
       "PH-DM-SCOPE-UNSUPPORTED",
-      `specifications.${key}`,
+      `scopes.${key}`,
       `Scope "${key}" cannot be declared; DocumentSpecification.state describes global and local only.`,
       key,
     ];
@@ -409,13 +407,13 @@ describe("a specifications value that is not the scope map", () => {
       refusal([]),
       refusal(new String("ab")),
       refusal(withHidden),
-      refusal(specifications({}, { custom: {} })),
-      refusal(specifications({}, { auth: {} })),
+      refusal(scopes({}, { custom: {} })),
+      refusal(scopes({}, { auth: {} })),
     ]).toStrictEqual([
       [
         [
           "PH-DM-DECLARATION-INVALID",
-          "specifications",
+          "scopes",
           "The option value could not be snapshotted (not-record).",
           "array",
         ],
@@ -423,7 +421,7 @@ describe("a specifications value that is not the scope map", () => {
       [
         [
           "PH-DM-DECLARATION-INVALID",
-          "specifications",
+          "scopes",
           "The option value could not be snapshotted (custom-prototype).",
           "object",
         ],
@@ -433,7 +431,7 @@ describe("a specifications value that is not the scope map", () => {
       [
         [
           "PH-AUTH-UNSUPPORTED",
-          "specifications.auth",
+          "scopes.auth",
           "A document model cannot declare authorization; core V1 rejects a model auth declaration.",
           "auth",
         ],
@@ -457,7 +455,7 @@ describe("a legitimate declaration", () => {
           config({
             changeLog: ["first"],
             author: Object.freeze({ name: "Powerhouse", website: undefined }),
-            specifications: Object.freeze({
+            scopes: Object.freeze({
               global: Object.freeze({
                 schema: ph.object("SampleState", {
                   fields: Object.freeze({

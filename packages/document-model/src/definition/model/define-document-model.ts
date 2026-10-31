@@ -104,7 +104,7 @@ function stateRoot(
   return undefined;
 }
 
-const SCOPE_KEYS = ["schema", "initialValue", "examples"];
+const SCOPE_DECLARATION_KEYS = ["schema", "initialValue", "examples"];
 
 function normalizeScope(
   collector: ModelCollector,
@@ -112,11 +112,11 @@ function normalizeScope(
   scope: "global" | "local",
   expectedName: string,
 ): ScopeDeclaration | undefined {
-  const path: DefinitionPath = ["specifications", scope];
+  const path: DefinitionPath = ["scopes", scope];
   const declaration = take(
     collector,
-    snapshotRecord(value, SCOPE_KEYS, path),
-    SCOPE_KEYS,
+    snapshotRecord(value, SCOPE_DECLARATION_KEYS, path),
+    SCOPE_DECLARATION_KEYS,
   );
   if (declaration === undefined) return undefined;
   const examples = normalizeExamples(collector, declaration.examples, [
@@ -174,9 +174,9 @@ const CONFIG_KEYS = [
   "version",
   "author",
   "changeLog",
-  "specifications",
+  "scopes",
 ];
-const SPECIFICATION_KEYS = ["auxiliaryTypes", "global", "local"];
+const SCOPE_MAP_KEYS = ["auxiliaryTypes", "global", "local"];
 
 function rejectAuthorization(
   collector: ModelCollector,
@@ -205,14 +205,14 @@ function rejectAuthorization(
   return true;
 }
 
-function normalizeSpecifications(
+function normalizeScopes(
   collector: ModelCollector,
   value: unknown,
   names: { readonly global: string; readonly local: string },
-): DocumentModelCompilationConfig["specifications"] | undefined {
-  const path: DefinitionPath = ["specifications"];
+): DocumentModelCompilationConfig["scopes"] | undefined {
+  const path: DefinitionPath = ["scopes"];
   const declaresAuth = rejectAuthorization(collector, value, path);
-  const snapshot = snapshotRecord(value, SPECIFICATION_KEYS, path, ["auth"]);
+  const snapshot = snapshotRecord(value, SCOPE_MAP_KEYS, path, ["auth"]);
   if (!snapshot.ok && snapshot.reason === "unknown-key") {
     collector.add({
       code: "PH-DM-SCOPE-UNSUPPORTED",
@@ -225,13 +225,13 @@ function normalizeSpecifications(
     });
     return undefined;
   }
-  const specifications = take(collector, snapshot, SPECIFICATION_KEYS);
-  if (specifications === undefined || declaresAuth) return undefined;
+  const scopes = take(collector, snapshot, SCOPE_MAP_KEYS);
+  if (scopes === undefined || declaresAuth) return undefined;
 
   const auxiliary =
-    specifications.auxiliaryTypes === undefined
+    scopes.auxiliaryTypes === undefined
       ? []
-      : (takeArray(collector, specifications.auxiliaryTypes, [
+      : (takeArray(collector, scopes.auxiliaryTypes, [
           ...path,
           "auxiliaryTypes",
         ]) ?? []);
@@ -252,16 +252,11 @@ function normalizeSpecifications(
 
   const global = normalizeScope(
     collector,
-    specifications.global,
+    scopes.global,
     "global",
     names.global,
   );
-  const local = normalizeScope(
-    collector,
-    specifications.local,
-    "local",
-    names.local,
-  );
+  const local = normalizeScope(collector, scopes.local, "local", names.local);
   if (global === undefined || global.root === null || local === undefined) {
     return undefined;
   }
@@ -326,13 +321,12 @@ function normalizeConfig(
 
   if (id === undefined || name === undefined) return undefined;
   const names = deriveDocumentModelNames({ id, name });
-  const specifications = normalizeSpecifications(
-    collector,
-    config.specifications,
-    { global: names.globalStateRootName, local: names.localStateRootName },
-  );
+  const scopes = normalizeScopes(collector, config.scopes, {
+    global: names.globalStateRootName,
+    local: names.localStateRootName,
+  });
   if (
-    specifications === undefined ||
+    scopes === undefined ||
     description === undefined ||
     extension === undefined ||
     authorName === undefined ||
@@ -350,7 +344,7 @@ function normalizeConfig(
     author: { name: authorName, website },
     changeLog,
     names,
-    specifications,
+    scopes,
   };
 }
 

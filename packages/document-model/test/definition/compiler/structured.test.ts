@@ -51,7 +51,7 @@ function tinyModel(
     extension: "tiny",
     version: 1,
     author: { name: "Powerhouse" },
-    specifications: {
+    scopes: {
       global: {
         schema: ph.object(`${name}State`, {
           fields: { title: ph.String({ required: true }) },
@@ -129,7 +129,7 @@ describe("the structured definition builder", () => {
       extension: "cyc",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("CyclesState", {
             fields: { root: ph.ref(Tree), also: ph.ref(Branch) },
@@ -171,7 +171,7 @@ describe("the structured definition builder", () => {
       extension: "shelf",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("ShelfState", { fields: { book: ph.ref(Book) } }),
           initialValue: { book: null },
@@ -381,7 +381,7 @@ describe("the structured definition builder", () => {
       extension: "aux",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         auxiliaryTypes: [Aux],
         global: {
           schema: ph.object("AuxiliaryScalarState", {
@@ -489,7 +489,7 @@ describe("the structured definition builder", () => {
         extension: "ord",
         version: 1,
         author: { name: "Powerhouse" },
-        specifications: {
+        scopes: {
           global: {
             schema: ph.object("OrderedState", {
               fields: reversed
@@ -576,7 +576,7 @@ describe("the structured definition builder", () => {
         extension: "pos",
         version: 1,
         author: { name: "Powerhouse" },
-        specifications: {
+        scopes: {
           global: {
             schema: ph.object("PositionsState", {
               fields: { reused: ph.ref(Reused) },
@@ -617,7 +617,7 @@ describe("the structured definition builder", () => {
       extension: "lazy",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("LazyState", {
             fields: {
@@ -636,7 +636,7 @@ describe("the structured definition builder", () => {
       (candidate) => candidate.code === "PH-DEF-REFERENCE-TARGET-INVALID",
     );
     expect(diagnostic?.path).toStrictEqual([
-      "specifications",
+      "scopes",
       "global",
       "schema",
       "fields",
@@ -696,7 +696,7 @@ describe("the structured definition builder", () => {
     );
     expect(diagnostics[0]?.code).toBe("PH-DM-IDENTITY-INVALID");
     expect(diagnostics[0]?.path).toStrictEqual([
-      "specifications",
+      "scopes",
       "global",
       "examples",
       1,
@@ -713,7 +713,7 @@ describe("the structured definition builder", () => {
         extension: "def",
         version: 1,
         author: { name: "Powerhouse" },
-        specifications: {
+        scopes: {
           global: {
             schema: ph.object("DefaultsState", {
               fields: { title: ph.String({ defaultValue: "untitled" }) },
@@ -799,7 +799,7 @@ describe("the structured definition builder", () => {
       extension: "tones",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         auxiliaryTypes: [Filter],
         global: {
           schema: ph.object("TonesState", { fields: { tone: ph.ref(Tone) } }),
@@ -859,7 +859,7 @@ describe("the structured definition builder", () => {
         extension: "col",
         version: 1,
         author: { name: "Powerhouse" },
-        specifications: {
+        scopes: {
           auxiliaryTypes: [second],
           global: {
             schema: ph.object("CollideState", {
@@ -921,7 +921,7 @@ describe("the stored SDL segments", () => {
     extension: "seg",
     version: 1,
     author: { name: "Powerhouse" },
-    specifications: {
+    scopes: {
       auxiliaryTypes: [Orphan],
       global: {
         schema: ph.object("SegmentsState", {
@@ -1034,7 +1034,7 @@ describe("the stored SDL segments", () => {
         extension: "ml",
         version: 1,
         author: { name: "Powerhouse" },
-        specifications: {
+        scopes: {
           global: {
             schema: ph.object("MemberlessState", {
               fields: { thing: ph.ref(schema as never) },
@@ -1291,7 +1291,7 @@ describe("project scalars in the stored SDL", () => {
     extension: "payroll",
     version: 1,
     author: { name: "Powerhouse" },
-    specifications: {
+    scopes: {
       global: {
         schema: ph.object("PayrollState", {
           fields: {

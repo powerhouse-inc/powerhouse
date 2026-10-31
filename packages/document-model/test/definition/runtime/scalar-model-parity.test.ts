@@ -19,7 +19,7 @@ const context = defineDocumentModel({
   extension: "scalars",
   version: 1,
   author: { name: "Powerhouse" },
-  specifications: {
+  scopes: {
     global: {
       schema: ph.object("ScalarsState", {
         fields: Object.fromEntries(

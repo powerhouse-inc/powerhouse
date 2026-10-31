@@ -254,7 +254,7 @@ function createRuntimeSchemas(
   const documents = new Map<number, z.ZodType>();
   for (const candidate of known) {
     const state = BaseDocumentStateSchema.extend({
-      global: candidate.config.specifications.global.root.validator,
+      global: candidate.config.scopes.global.root.validator,
     });
     states.set(candidate.config.version, state);
     documents.set(

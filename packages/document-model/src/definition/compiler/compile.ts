@@ -118,7 +118,7 @@ export type DocumentModelCompilationConfig = {
   };
   readonly changeLog: readonly string[];
   readonly names: DocumentModelNames;
-  readonly specifications: {
+  readonly scopes: {
     readonly auxiliaryTypes: readonly AnyTypeDescriptor[];
     readonly global: ScopeDeclaration & { readonly root: StateRootDescriptor };
     readonly local: ScopeDeclaration;
@@ -343,7 +343,7 @@ function materializeInitialValue(
   const notSerializable = materialized.reason === "not-serializable";
   collector.add({
     code: "PH-DM-INITIAL-VALUE-INVALID",
-    path: ["specifications", scope, "initialValue"],
+    path: ["scopes", scope, "initialValue"],
     message: notSerializable
       ? "This initial value cannot produce a stored JSON string."
       : `The ${root.name} schema rejects this initial value.`,
@@ -384,17 +384,13 @@ export function compileDocumentModelVersion(
     });
   };
 
-  const { global, local, auxiliaryTypes } = config.specifications;
-  walk.visitType(global.root, "output", ["specifications", "global", "schema"]);
+  const { global, local, auxiliaryTypes } = config.scopes;
+  walk.visitType(global.root, "output", ["scopes", "global", "schema"]);
   if (local.root !== null) {
-    walk.visitType(local.root, "output", ["specifications", "local", "schema"]);
+    walk.visitType(local.root, "output", ["scopes", "local", "schema"]);
   }
   auxiliaryTypes.forEach((descriptor, index) =>
-    walk.visitType(descriptor, "output", [
-      "specifications",
-      "auxiliaryTypes",
-      index,
-    ]),
+    walk.visitType(descriptor, "output", ["scopes", "auxiliaryTypes", index]),
   );
 
   const moduleKeys = new Map<string, number>();
@@ -593,8 +589,8 @@ export function compileDocumentModelVersion(
   const stateExamples = (scope: "global" | "local") => {
     const examples = exampleDefinitions(
       collector,
-      config.specifications[scope].examples,
-      ["specifications", scope, "examples"],
+      config.scopes[scope].examples,
+      ["scopes", scope, "examples"],
       (key, path) =>
         deriveId(
           collector,
@@ -604,7 +600,7 @@ export function compileDocumentModelVersion(
     );
     examples.forEach((example) =>
       claimIdentity(example.id, [
-        "specifications",
+        "scopes",
         scope,
         "examples",
         example.key,

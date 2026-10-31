@@ -38,7 +38,7 @@ function contextAt(version: number, options: { readonly id?: string } = {}) {
     extension: "fam",
     version,
     author: { name: "Powerhouse" },
-    specifications: {
+    scopes: {
       global: {
         schema: ph.object("FamilyState", {
           fields: { title: ph.String({ required: true }) },

@@ -12,7 +12,7 @@ const GoodState = ph.object("SampleState", {
   fields: { title: ph.String({ required: true }) },
 });
 
-function declare(specifications: unknown) {
+function declare(scopes: unknown) {
   return () =>
     defineDocumentModel({
       id: "test/sample",
@@ -21,7 +21,7 @@ function declare(specifications: unknown) {
       extension: "sample",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications,
+      scopes,
     } as never);
 }
 
@@ -50,7 +50,7 @@ describe("defineDocumentModel state roots", () => {
       );
       expect(diagnostics[0]).toMatchObject({
         code: "PH-DM-STATE-ROOT-INVALID",
-        path: ["specifications", "global", "schema"],
+        path: ["scopes", "global", "schema"],
       });
       expect(diagnostics[0]?.expected).toContain('ph.object("SampleState"');
     });
@@ -68,7 +68,7 @@ describe("defineDocumentModel state roots", () => {
     );
     expect(diagnostics[0]).toMatchObject({
       code: "PH-DM-STATE-ROOT-INVALID",
-      path: ["specifications", "local", "schema"],
+      path: ["scopes", "local", "schema"],
     });
     expect(diagnostics[0]?.expected).toContain("SampleLocalState");
   });
@@ -81,7 +81,7 @@ describe("defineDocumentModel state roots", () => {
       extension: "mw",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("MultiWordModelState", {
             fields: { title: ph.String({ required: true }) },
@@ -109,7 +109,7 @@ describe("defineDocumentModel empty local state", () => {
     extension: "el",
     version: 1,
     author: { name: "Powerhouse" },
-    specifications: {
+    scopes: {
       global: {
         schema: ph.object("EmptyLocalState", {
           fields: { title: ph.String({ required: true }) },
@@ -166,7 +166,7 @@ describe("defineDocumentModel empty local state", () => {
       );
       expect(diagnostics[0]).toMatchObject({
         code: "PH-DM-INITIAL-VALUE-INVALID",
-        path: ["specifications", "local", "initialValue"],
+        path: ["scopes", "local", "initialValue"],
       });
       expect(diagnostics[0]?.repair).toContain("initialValue: {}");
     });
@@ -181,7 +181,7 @@ describe("defineDocumentModel initial values", () => {
     const LocalState = ph.object("SampleLocalState", {
       fields: { title: ph.String({ required: true }), payload: ph.Unknown() },
     });
-    const specifications = (initialValue: unknown) => ({
+    const scopes = (initialValue: unknown) => ({
       global: { schema: State, initialValue: { title: "global" } },
       local: { schema: LocalState, initialValue: { title: "local" } },
       [scope]: {
@@ -199,12 +199,12 @@ describe("defineDocumentModel initial values", () => {
         },
       };
       const diagnostics = diagnosticsOf(() =>
-        declare(specifications(initialValue))().version({ modules: [] }),
+        declare(scopes(initialValue))().version({ modules: [] }),
       );
       expect(reads).toBe(0);
       expect(diagnostics[0]).toMatchObject({
         code: "PH-DM-INITIAL-VALUE-INVALID",
-        path: ["specifications", scope, "initialValue", "title"],
+        path: ["scopes", scope, "initialValue", "title"],
         received: "accessor",
       });
     });
@@ -243,13 +243,13 @@ describe("defineDocumentModel initial values", () => {
     for (const { label, payload, path, received } of invalidMembers) {
       it(`rejects ${label} in ${scope} initialValue at its own path`, () => {
         const diagnostics = diagnosticsOf(() =>
-          declare(specifications({ title: "hi", payload }))().version({
+          declare(scopes({ title: "hi", payload }))().version({
             modules: [],
           }),
         );
         expect(diagnostics[0]).toMatchObject({
           code: "PH-DM-INITIAL-VALUE-INVALID",
-          path: ["specifications", scope, "initialValue", ...path],
+          path: ["scopes", scope, "initialValue", ...path],
           received,
         });
       });
@@ -268,14 +268,14 @@ describe("defineDocumentModel initial values", () => {
           },
         });
         const diagnostics = diagnosticsOf(() =>
-          declare(specifications({ title: "hi", payload }))().version({
+          declare(scopes({ title: "hi", payload }))().version({
             modules: [],
           }),
         );
         expect(reads).toBe(0);
         expect(diagnostics[0]).toMatchObject({
           code: "PH-DM-INITIAL-VALUE-INVALID",
-          path: ["specifications", scope, "initialValue", "payload", key],
+          path: ["scopes", scope, "initialValue", "payload", key],
           received: "accessor",
         });
       });
@@ -287,7 +287,7 @@ describe("defineDocumentModel initial values", () => {
         title: "initial",
         payload: { note: "original", items: [item] },
       };
-      const model = declare(specifications(initialValue))();
+      const model = declare(scopes(initialValue))();
       initialValue.title = "changed";
       initialValue.payload.note = "changed";
       item.count = 2;
@@ -319,7 +319,7 @@ describe("defineDocumentModel initial values", () => {
         extension: "typed",
         version: 1,
         author: { name: "Powerhouse" },
-        specifications: {
+        scopes: {
           global: {
             schema: State,
             // @ts-expect-error a missing required field fails TypeScript
@@ -358,7 +358,7 @@ describe("defineDocumentModel initial values", () => {
       extension: "json",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         global: {
           schema: State,
           initialValue: value as never,
@@ -401,7 +401,7 @@ describe("defineDocumentModel initial values", () => {
     expect(calls).toBe(0);
     expect(diagnostics[0]).toMatchObject({
       code: "PH-DM-INITIAL-VALUE-INVALID",
-      path: ["specifications", "global", "initialValue", "toJSON"],
+      path: ["scopes", "global", "initialValue", "toJSON"],
       received: "function",
     });
   });
@@ -414,7 +414,7 @@ describe("defineDocumentModel initial values", () => {
       extension: "ii",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("InvalidInitialState", {
             fields: { count: ph.Int({ required: true }) },
@@ -429,7 +429,7 @@ describe("defineDocumentModel initial values", () => {
     );
     expect(diagnostics[0]).toMatchObject({
       code: "PH-DM-INITIAL-VALUE-INVALID",
-      path: ["specifications", "global", "initialValue"],
+      path: ["scopes", "global", "initialValue"],
     });
     expect(diagnostics[0]?.message).toContain("InvalidInitialState");
   });
@@ -445,7 +445,7 @@ describe("defineDocumentModel initial values", () => {
         extension: "cy",
         version: 1,
         author: { name: "Powerhouse" },
-        specifications: {
+        scopes: {
           global: {
             schema: ph.object("CyclicState", {
               fields: { self: ph.Unknown() },
@@ -458,7 +458,7 @@ describe("defineDocumentModel initial values", () => {
     );
     expect(diagnostics[0]).toMatchObject({
       code: "PH-DM-INITIAL-VALUE-INVALID",
-      path: ["specifications", "global", "initialValue", "self"],
+      path: ["scopes", "global", "initialValue", "self"],
       received: "cycle",
     });
   });
@@ -475,7 +475,7 @@ describe("defineDocumentModel scopes and authorization", () => {
     );
     expect(diagnostics[0]).toMatchObject({
       code: "PH-DM-SCOPE-UNSUPPORTED",
-      path: ["specifications", "platform"],
+      path: ["scopes", "platform"],
     });
     expect(diagnostics[0]?.repair).toContain("platform concerns");
   });
@@ -490,7 +490,7 @@ describe("defineDocumentModel scopes and authorization", () => {
         version: 1,
         author: { name: "Powerhouse" },
         auth: { required: true },
-        specifications: {
+        scopes: {
           global: { schema: GoodState, initialValue: { title: "" } },
           local: { schema: null, initialValue: {} },
         },
@@ -503,7 +503,7 @@ describe("defineDocumentModel scopes and authorization", () => {
     });
   });
 
-  it("rejects an auth declaration inside specifications", () => {
+  it("rejects an auth declaration inside scopes", () => {
     const diagnostics = diagnosticsOf(
       declare({
         auth: { required: true },
@@ -514,19 +514,19 @@ describe("defineDocumentModel scopes and authorization", () => {
     expect(diagnostics[0]?.code).toBe("PH-AUTH-UNSUPPORTED");
   });
 
-  it("reports auth and a custom scope inside specifications in either order", () => {
+  it("reports auth and a custom scope inside scopes in either order", () => {
     const scopes = {
       global: { schema: GoodState, initialValue: { title: "" } },
       local: { schema: null, initialValue: {} },
     };
-    const reported = (specifications: unknown) =>
-      diagnosticsOf(declare(specifications)).map((entry) => [
+    const reported = (value: unknown) =>
+      diagnosticsOf(declare(value)).map((entry) => [
         entry.code,
         entry.path.join("."),
       ]);
     const both = [
-      ["PH-AUTH-UNSUPPORTED", "specifications.auth"],
-      ["PH-DM-SCOPE-UNSUPPORTED", "specifications.custom"],
+      ["PH-AUTH-UNSUPPORTED", "scopes.auth"],
+      ["PH-DM-SCOPE-UNSUPPORTED", "scopes.custom"],
     ];
 
     expect(reported({ auth: {}, custom: {}, ...scopes })).toEqual(both);
@@ -561,8 +561,8 @@ describe("defineDocumentModel scopes and authorization", () => {
     const hidden = { enumerable: false, value: {} };
     const reported = (run: () => unknown) =>
       diagnosticsOf(run).map((entry) => [entry.code, entry.path.join(".")]);
-    const auth = ["PH-AUTH-UNSUPPORTED", "specifications.auth"];
-    const custom = ["PH-DM-SCOPE-UNSUPPORTED", "specifications.custom"];
+    const auth = ["PH-AUTH-UNSUPPORTED", "scopes.auth"];
+    const custom = ["PH-DM-SCOPE-UNSUPPORTED", "scopes.custom"];
 
     expect([
       reported(declare(withAuth(accessor, {}, scopes))),
@@ -578,7 +578,7 @@ describe("defineDocumentModel scopes and authorization", () => {
             extension: "auth",
             version: 1,
             author: { name: "Powerhouse" },
-            specifications: scopes,
+            scopes,
           }) as never,
         ),
       ),
@@ -602,7 +602,7 @@ describe("defineDocumentModel scopes and authorization", () => {
         version: 1,
         author: { name: "Powerhouse" },
         auth: { required: true },
-        specifications: {
+        scopes: {
           global: { schema: GoodState, initialValue: { title: "" } },
           local: { schema: null, initialValue: {} },
         },
@@ -624,7 +624,7 @@ describe("defineDocumentModel scopes and authorization", () => {
         author: { name: "Powerhouse" },
         // @ts-expect-error auth is not part of the public declaration
         auth: { required: true },
-        specifications: {
+        scopes: {
           global: {
             schema: ph.object("AuthTypedState", {
               fields: { title: ph.String({ required: true }) },
@@ -649,7 +649,7 @@ describe("defineDocumentModel configuration", () => {
           extension: "v",
           version: version as never,
           author: { name: "Powerhouse" },
-          specifications: {
+          scopes: {
             global: { schema: GoodState, initialValue: { title: "" } },
             local: { schema: null, initialValue: {} },
           },
@@ -670,7 +670,7 @@ describe("defineDocumentModel configuration", () => {
         extension: "s",
         version: 0,
         author: { name: "Powerhouse" },
-        specifications: {
+        scopes: {
           global: { schema: GoodState, initialValue: { title: "" } },
           local: { schema: null, initialValue: {} },
         },
@@ -704,7 +704,7 @@ describe("defineDocumentModel configuration", () => {
       extension: "op",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("OpaqueState", {
             fields: { title: ph.String({ required: true }) },

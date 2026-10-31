@@ -81,7 +81,7 @@ describe("a materialized module", () => {
       extension: "p",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("PlatformState", {
             fields: { title: ph.String({ required: true }) },
@@ -118,7 +118,7 @@ describe("a materialized module", () => {
       extension: "c",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("CollisionState", {
             fields: { title: ph.String({ required: true }) },
@@ -443,7 +443,7 @@ describe("a materialized module", () => {
       extension: "d",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("DuplicateState", {
             fields: { title: ph.String({ required: true }) },

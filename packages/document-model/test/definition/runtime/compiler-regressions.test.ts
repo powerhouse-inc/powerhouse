@@ -28,7 +28,7 @@ import { defineDocumentModel, materialize, ph } from "../../src/definition/index
 const context = defineDocumentModel({
   id: "test/inference", name: "Inference", description: "", extension: "test", version: 1,
   author: { name: "Test" },
-  specifications: {
+  scopes: {
     global: { schema: ph.object("InferenceState", { fields: { value: ph.String({ required: true }) } }), initialValue: { value: "" } },
     local: { schema: null, initialValue: {} },
   },
@@ -47,7 +47,7 @@ describe("compiler regressions", () => {
       extension: "test",
       version: 1,
       author: { name: "Test" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("IsolatedState", {
             fields: {
@@ -113,7 +113,7 @@ const clear: "CLEAR" = Invoice.actions.clear().type;
       extension: "test",
       version: 1,
       author: { name: "Test" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("InferenceState", {
             fields: { value: ph.String({ required: true }) },
@@ -168,7 +168,7 @@ ${operationTypes.map(([key, type]) => `const ${key}: "${type}" = model.actions.$
       extension: "test",
       version: 1,
       author: { name: "Test" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("TransformedState", {
             fields: {

@@ -55,7 +55,7 @@ describe("the package entry", () => {
       extension: "entry",
       version: 1,
       author: { name: "Powerhouse" },
-      specifications: {
+      scopes: {
         global: {
           schema: ph.object("EntryState", {
             fields: { title: ph.String({ required: true }) },
@@ -98,7 +98,7 @@ describe("the package entry", () => {
         extension: "entry",
         version: 0,
         author: { name: "Powerhouse" },
-        specifications: {
+        scopes: {
           global: {
             schema: ph.object("EntryState", {
               fields: { title: ph.String({ required: true }) },
