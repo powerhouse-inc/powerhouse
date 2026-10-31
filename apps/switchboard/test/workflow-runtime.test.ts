@@ -597,6 +597,7 @@ describe("composeWorkflowRuntime", () => {
   it("lets the lease fence itself only over a journal others can open", async () => {
     const engine = await import("@powerhousedao/reactor-workflow");
     const selfFence: (boolean | undefined)[] = [];
+    const exclusive: (boolean | undefined)[] = [];
     const load = () =>
       Promise.resolve({
         ...engine,
@@ -604,6 +605,7 @@ describe("composeWorkflowRuntime", () => {
           options: Parameters<typeof engine.acquireWorkflowSingletonLease>[0],
         ) => {
           selfFence.push(options.selfFence);
+          exclusive.push(options.exclusive);
           return engine.acquireWorkflowSingletonLease(options);
         },
       });
@@ -618,6 +620,7 @@ describe("composeWorkflowRuntime", () => {
     }
 
     expect(selfFence).toEqual([false, true]);
+    expect(exclusive).toEqual([true, false]);
     // Two reactors and two PGlite stores: past 5s on a Windows runner
   }, 30_000);
 

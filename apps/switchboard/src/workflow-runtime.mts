@@ -320,7 +320,8 @@ export interface ComposeWorkflowRuntimeDeps {
    * True when the journal's database is an embedded one no other process can
    * open (PGlite). Nothing can then take the lease, so a renewal that stalls
    * (a busy queue, a blocked event loop) is logged rather than turning
-   * workflows off.
+   * workflows off, and a restart takes back the lease a killed process left
+   * rather than booting without workflows until it goes stale.
    */
   exclusiveJournal?: boolean;
   /** Called once when the composed runtime has shut down for losing the
@@ -669,6 +670,7 @@ export async function composeWorkflowRuntime(
           logger: deps.logger,
           ...(deps.storageId ? { storageId: deps.storageId } : {}),
           selfFence: deps.exclusiveJournal !== true,
+          exclusive: deps.exclusiveJournal === true,
           onLost: (lost) => {
             loss.lost = true;
             if (lost.reason === "taken") loss.heldBy = lost.heldBy;
