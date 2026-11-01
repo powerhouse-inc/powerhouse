@@ -22,7 +22,7 @@ const entry = [
 // pieces builds here; each piece is its own build (buildPieceBuildConfig), so
 // two pieces never share a chunk and each ships as one self-contained module.
 const nodeEntry = [
-  ...entry,
+  ...entry.filter((path) => !/^editors\/\*\//.test(path)),
   // Node-only: Connect reaches processors through processors/index.ts, and
   // subgraphs only over GraphQL.
   "processors/*/index.ts",
@@ -243,6 +243,40 @@ export type NodeBuildConfigOptions = {
   plugins?: InlineConfig["plugins"];
 };
 
+/** A generated module a host has no use for, and what it builds to instead. */
+export function hostStubOf(
+  file: string,
+  projectRoot = process.cwd(),
+): string | undefined {
+  const forward = (text: string) => text.replaceAll("\\", "/").toLowerCase();
+  const path = forward(file).split("?")[0];
+  // The assistant's tools run in the page it's open on.
+  if (path === `${forward(projectRoot)}/ai/tools.ts`) {
+    return "export const aiTools = [];";
+  }
+  // A package's index.ts takes `editors` from either, as its generator wrote it.
+  if (
+    path.endsWith("/editors/editors.ts") ||
+    path.endsWith("/editors/index.ts")
+  ) {
+    return "export const editors = [];";
+  }
+  if (/\/document-models\/[^/]+\/v\d+\/hooks\.ts$/.test(path)) {
+    return "export {};";
+  }
+  return undefined;
+}
+
+/**
+ * Editors and document hooks run in a browser, and a host never renders. Left
+ * in, every document model takes `reactor-browser` and React to the server,
+ * and the editors take the design system.
+ */
+const noBrowserCodeOnHosts = {
+  name: "ph:no-browser-code-on-hosts",
+  load: (file: string) => hostStubOf(file),
+};
+
 /**
  * The node build externalizes the same shared set as the browser build, for
  * the same reason the `@powerhousedao/reactor-api` entry in `nodeNeverBundle`
@@ -267,7 +301,7 @@ export function buildNodeBuildConfig(
       ],
     },
     platform: "node",
-    ...(options.plugins ? { plugins: options.plugins } : {}),
+    plugins: [noBrowserCodeOnHosts, options.plugins],
     loader,
     config,
     clean,

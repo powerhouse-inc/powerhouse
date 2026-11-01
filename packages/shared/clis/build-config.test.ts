@@ -13,6 +13,7 @@ import {
   buildNodeBuildConfig,
   buildPieceBuildConfig,
   findBundledSharedDeps,
+  hostStubOf,
   IMAGE_EXTENSIONS,
   nodeBuildConfig,
   PIECE_ENTRY_GLOB,
@@ -161,6 +162,66 @@ describe("buildNodeBuildConfig", () => {
 
   it("the exported default externalizes the shared set", () => {
     expect(sharedMatchers(nodeBuildConfig).length).toBeGreaterThan(0);
+  });
+
+  it("has no entry for a single editor, which a host never renders", () => {
+    const entry = buildNodeBuildConfig().entry as string[];
+    expect(entry).not.toContain("editors/*/index.ts");
+    expect(entry).not.toContain("editors/*/module.ts");
+    expect(browserEntry).toContain("editors/*/index.ts");
+  });
+
+  it("keeps the plugins it's given alongside its own", () => {
+    const mine = { name: "mine" };
+    const plugins = buildNodeBuildConfig({ plugins: [mine] }).plugins as {
+      name: string;
+    }[][];
+    expect(plugins.flat().map((plugin) => plugin.name)).toEqual([
+      "ph:no-browser-code-on-hosts",
+      "mine",
+    ]);
+  });
+});
+
+describe("hostStubOf", () => {
+  it("leaves a host no editors, wherever the package's index.ts finds them", () => {
+    for (const file of [
+      "/project/editors/editors.ts",
+      "C:\\project\\editors\\index.ts",
+    ]) {
+      expect(hostStubOf(file)).toBe("export const editors = [];");
+    }
+  });
+
+  it("drops a document model's hooks, in any version", () => {
+    for (const file of [
+      "/project/document-models/invoice/v1/hooks.ts",
+      "D:\\project\\document-models\\invoice\\v12\\hooks.ts",
+    ]) {
+      expect(hostStubOf(file)).toBe("export {};");
+    }
+  });
+
+  it("leaves a host no assistant tools, only at the project's root", () => {
+    expect(hostStubOf("D:\\project\\ai\\tools.ts", "d:/project")).toContain(
+      "aiTools = []",
+    );
+    expect(
+      hostStubOf("/project/processors/ai/tools.ts", "/project"),
+    ).toBeUndefined();
+  });
+
+  it("leaves everything a host does run", () => {
+    for (const file of [
+      "/project/document-models/invoice/v1/module.ts",
+      "/project/document-models/invoice/v1/src/hooks.ts",
+      "/project/document-models/invoice/hooks.ts",
+      "/project/processors/index.ts",
+      "/project/editors/sektar/kit/format.ts",
+      "/project/subgraphs/editors/index.ts.bak",
+    ]) {
+      expect(hostStubOf(file)).toBeUndefined();
+    }
   });
 });
 
