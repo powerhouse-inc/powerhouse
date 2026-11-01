@@ -2,7 +2,6 @@ import fastifyCors from "@fastify/cors";
 import fastifyFormbody from "@fastify/formbody";
 import fastifyMiddie from "@fastify/middie";
 import type { CorsOptions } from "cors";
-import devcert from "devcert";
 import Fastify from "fastify";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import fs from "node:fs";
@@ -186,6 +185,8 @@ export class FastifyHttpAdapter implements IHttpAdapter {
     let httpServer: http.Server;
 
     if (tls === true) {
+      // Only for local HTTPS, and it does work as it loads.
+      const { default: devcert } = await import("devcert");
       const { cert, key } = (await devcert.certificateFor("localhost")) as {
         cert: Buffer;
         key: Buffer;
