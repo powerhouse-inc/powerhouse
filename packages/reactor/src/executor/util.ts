@@ -323,6 +323,24 @@ export function summarizeSubmittedActions(
   };
 }
 
+/** Whether a DELETE_DOCUMENT the job was given took effect. */
+export function deletedADocument(
+  operations: OperationWithContext[],
+  submitted: string[] | undefined,
+): boolean {
+  if (!submitted || submitted.length === 0) {
+    return false;
+  }
+
+  const ids = new Set(submitted);
+  return operations.some(
+    ({ operation }) =>
+      ids.has(operation.action.id) &&
+      operation.action.type === "DELETE_DOCUMENT" &&
+      operationOutcome(operation).kind === "applied",
+  );
+}
+
 /** Tombstones a job has read, each under the shared lock it took first. */
 export class PurgeFence {
   constructor(

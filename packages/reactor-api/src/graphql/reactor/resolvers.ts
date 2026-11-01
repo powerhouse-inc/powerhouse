@@ -706,7 +706,9 @@ export async function jobStatus(
       `Failed to fetch job status: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
-  if (!(await serves(result.documentId))) {
+  // A deleted document is served to no one, and a job that deleted its own is
+  // not an unknown one: its caller is waiting on this answer.
+  if (!result.deletedDocument && !(await serves(result.documentId))) {
     result = unknownJob(args.jobId);
   }
 

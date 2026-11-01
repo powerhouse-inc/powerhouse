@@ -35,6 +35,19 @@ function operationFor(
   };
 }
 
+function deletion(
+  overrides: Partial<{ error: string }> = {},
+): OperationWithContext {
+  const item = operationFor("a", 0, overrides);
+  return {
+    ...item,
+    operation: {
+      ...item.operation,
+      action: { ...item.operation.action, type: "DELETE_DOCUMENT" },
+    },
+  };
+}
+
 function registered(tracker: InMemoryJobTracker, jobId: string): void {
   const jobInfo: JobInfo = {
     id: jobId,
@@ -195,5 +208,27 @@ describe("InMemoryJobTracker job result", () => {
     const job = tracker.getJobStatus("job-1");
     expect(job?.status).toBe(JobStatus.READ_READY);
     expect(job?.result?.allApplied).toBe(false);
+  });
+
+  it("records that a job deleted its document", async () => {
+    registered(tracker, "job-1");
+    await writeReady({
+      jobId: "job-1",
+      operations: [deletion()],
+      submittedActionIds: ["a"],
+    });
+
+    expect(tracker.getJobStatus("job-1")?.deletedDocument).toBe(true);
+  });
+
+  it("does not record a delete the reducer rejected", async () => {
+    registered(tracker, "job-1");
+    await writeReady({
+      jobId: "job-1",
+      operations: [deletion({ error: "rejected" })],
+      submittedActionIds: ["a"],
+    });
+
+    expect(tracker.getJobStatus("job-1")?.deletedDocument).toBeUndefined();
   });
 });
