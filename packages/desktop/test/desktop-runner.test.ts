@@ -256,7 +256,8 @@ describe("bundle-stack staging", () => {
       readFileSync(path.join(result.stackDir, "package.json"), "utf8"),
     ) as { name: string; dependencies: Record<string, string> };
     expect(manifest.name).toBe("desk-lab");
-    expect(manifest.dependencies["@powerhousedao/ph-cli"]).toBe("dev");
+    expect(manifest.dependencies["@powerhousedao/ph-run"]).toBe("dev");
+    expect(manifest.dependencies).not.toHaveProperty("@powerhousedao/ph-cli");
   });
 });
 
@@ -500,7 +501,7 @@ describe("bundle-stack local packages", () => {
 
   it("overrides every local package and names the same spec directly", () => {
     const local = {
-      "@powerhousedao/ph-cli": "file:/p/ph-cli.tgz",
+      "@powerhousedao/ph-run": "file:/p/ph-run.tgz",
       "@powerhousedao/host-core": "file:/p/host-core.tgz",
       "@powerhousedao/shared": "file:/p/shared.tgz",
     };
@@ -509,7 +510,7 @@ describe("bundle-stack local packages", () => {
       private: true,
       type: "module",
       dependencies: {
-        "@powerhousedao/ph-cli": "file:/p/ph-cli.tgz",
+        "@powerhousedao/ph-run": "file:/p/ph-run.tgz",
         "@powerhousedao/host-core": "file:/p/host-core.tgz",
       },
       overrides: local,
@@ -518,11 +519,11 @@ describe("bundle-stack local packages", () => {
     const partial = stackManifest({
       name: "lab",
       version: "6.0.0",
-      phCliSpec: "/p/cli.tgz",
+      phCliSpec: "/p/run.tgz",
       local: { "@powerhousedao/shared": "file:/p/shared.tgz" },
     });
     expect(partial.dependencies).toEqual({
-      "@powerhousedao/ph-cli": "/p/cli.tgz",
+      "@powerhousedao/ph-run": "/p/run.tgz",
       "@powerhousedao/host-core": "6.0.0",
     });
     expect(stackManifest({ name: "lab", version: "dev" })).not.toHaveProperty(

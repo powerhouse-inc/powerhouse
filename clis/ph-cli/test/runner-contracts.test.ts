@@ -28,7 +28,7 @@ import * as switchboardRunner from "../src/runners/switchboard.js";
 
 const servers = new Set<http.Server>();
 
-vi.mock("../src/services/switchboard.js", () => ({
+vi.mock("@powerhousedao/ph-run/switchboard", () => ({
   startSwitchboard: vi.fn(async (args: { port: number }) => {
     const server = http.createServer((_req, res) => res.end("ok"));
     servers.add(server);
@@ -276,7 +276,7 @@ describe("standalone ph run", () => {
   reactor: { drives: [{ slug: "sektar", name: "Sektar" }] },
 };`,
     });
-    const { startRun } = await import("../src/services/run/start-run.js");
+    const { startRun } = await import("@powerhousedao/ph-run/start-run");
     const handle = (await startRun({
       host: "switchboard",
       projectRoot: project,
@@ -307,7 +307,7 @@ describe("standalone ph run", () => {
     const project = makeProject({
       switchboard: `export default { name: "lab-switchboard", runner: { module: ${JSON.stringify(SWITCHBOARD_SRC)}, outDir: "out" } };`,
     });
-    const { startRun } = await import("../src/services/run/start-run.js");
+    const { startRun } = await import("@powerhousedao/ph-run/start-run");
     const { runBuild } = await import("../src/services/build.js");
     await startRun({
       host: "switchboard",
@@ -324,8 +324,9 @@ describe("standalone ph run", () => {
     const project = makeProject({
       switchboard: `export default { name: "lab-switchboard", runner: { module: ${JSON.stringify(SWITCHBOARD_SRC)}, prot: 1 } };`,
     });
-    const { startRun } = await import("../src/services/run/start-run.js");
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startRun } = await import("@powerhousedao/ph-run/start-run");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     vi.mocked(startSwitchboard).mockClear();
     await expect(
       startRun({ host: "switchboard", projectRoot: project }),
@@ -349,7 +350,7 @@ describe("standalone ph run", () => {
       startedAt: new Date().toISOString(),
       outputs: {},
     });
-    const { startRun } = await import("../src/services/run/start-run.js");
+    const { startRun } = await import("@powerhousedao/ph-run/start-run");
     await expect(
       startRun({ host: "switchboard", projectRoot: project }),
     ).rejects.toThrow(/already running for this project/);
@@ -377,7 +378,7 @@ describe("standalone ph run", () => {
 export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
 export async function run() { return { ready: Promise.resolve(), shutdown() {} }; }`,
     );
-    const { startRun } = await import("../src/services/run/start-run.js");
+    const { startRun } = await import("@powerhousedao/ph-run/start-run");
     await startRun({ host: "agent", projectRoot: project });
     expect(readRunRecord(project, "lab-agent")).toBeUndefined();
   });

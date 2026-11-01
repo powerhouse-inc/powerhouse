@@ -17,7 +17,7 @@ import { join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ConnectServeOverride } from "../src/services/connect-preview.js";
 import { runConnectPreview } from "../src/services/connect-preview.js";
-import { runConnectServer } from "../src/services/connect-server.js";
+import { runConnectServer } from "@powerhousedao/ph-run/connect-server";
 import type { ConnectPreviewArgs } from "../src/types.js";
 
 const PROJECT = resolve(__dirname, "../../../test/test-consumer-project");

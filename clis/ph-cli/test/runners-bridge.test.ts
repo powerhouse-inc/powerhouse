@@ -27,7 +27,7 @@ vi.mock("../src/services/connect-studio.js", () => ({
       Promise.resolve(fakeVite(`http://localhost:${args.port}/`)),
     ),
 }));
-vi.mock("../src/services/switchboard.js", () => ({
+vi.mock("@powerhousedao/ph-run/switchboard", () => ({
   // the real service returns the server handle; workflows off in these tests
   startSwitchboard: vi.fn().mockImplementation((args: { port: number }) =>
     Promise.resolve({
@@ -45,7 +45,7 @@ vi.mock("../src/services/connect-preview.js", () => ({
       Promise.resolve(fakeVite(`http://${args.host}:${args.port}/`)),
     ),
 }));
-vi.mock("../src/services/connect-server.js", () => ({
+vi.mock("@powerhousedao/ph-run/connect-server", () => ({
   runConnectServer: vi
     .fn()
     .mockImplementation((args: { host: string; port: number }) =>
@@ -222,7 +222,8 @@ describe("connect bridge runner", () => {
 describe("switchboard bridge runner", () => {
   it("maps run → production and dev → dev loader", async () => {
     const runner = await import("../src/runners/switchboard.js");
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     const host = switchboard({
       name: "lab-switchboard",
       runner: {
@@ -232,7 +233,7 @@ describe("switchboard bridge runner", () => {
     });
 
     const { classicSwitchboardArgs } =
-      await import("../src/services/classic-args.js");
+      await import("@powerhousedao/ph-run/classic-args");
     const classic = await classicSwitchboardArgs();
     // sanity on the classic shape this gate compares against
     expect(classic).toMatchObject({
@@ -283,7 +284,8 @@ describe("switchboard bridge runner", () => {
 
   it("passes the reactor block as the member's config, writing no env (P2.4)", async () => {
     const runner = await import("../src/runners/switchboard.js");
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     vi.mocked(startSwitchboard).mockClear();
     const envBefore = { ...process.env };
     // a real, writable path: the runner mkdirs a path-storage dataDir
@@ -327,7 +329,8 @@ describe("switchboard bridge runner", () => {
 
   it("lets the operator's env win over the member's config (D1)", async () => {
     const runner = await import("../src/runners/switchboard.js");
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     vi.mocked(startSwitchboard).mockClear();
     await runner.run(
       switchboard({
@@ -367,7 +370,8 @@ describe("switchboard bridge runner", () => {
 
   it("turns the plugin host on in the member's config, not the env", async () => {
     const runner = await import("../src/runners/switchboard.js");
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     vi.mocked(startSwitchboard).mockClear();
     await runner.run(
       switchboard({
@@ -418,7 +422,8 @@ describe("switchboard bridge runner", () => {
 
   it("keeps a readModel-only block's reactor store on readModel.url, with a warning", async () => {
     const runner = await import("../src/runners/switchboard.js");
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const readModelOnly = switchboard({
       name: "lab-switchboard",
@@ -468,7 +473,8 @@ describe("switchboard bridge runner", () => {
 
   it("puts a project .env under reactor.protocol and the block's storage, as on main", async () => {
     const runner = await import("../src/runners/switchboard.js");
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     const dir = mkdtempSync(join(tmpdir(), "ph-bridge-dotenv-"));
     writeFileSync(
       join(dir, ".env"),
@@ -522,7 +528,8 @@ describe("switchboard bridge runner", () => {
 
   it("reads one env from the shell and the .env (S3 split across both)", async () => {
     const runner = await import("../src/runners/switchboard.js");
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     const dir = mkdtempSync(join(tmpdir(), "ph-bridge-dotenv-"));
     writeFileSync(
       join(dir, ".env"),
@@ -564,7 +571,8 @@ describe("switchboard bridge runner", () => {
 
   it("keeps a shell value the shell's even when the .env holds the same value", async () => {
     const runner = await import("../src/runners/switchboard.js");
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     const dir = mkdtempSync(join(tmpdir(), "ph-bridge-dotenv-"));
     writeFileSync(
       join(dir, ".env"),
@@ -651,7 +659,7 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
   it("serve maps to the built-in server with runner options", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectServer } =
-      await import("../src/services/connect-server.js");
+      await import("@powerhousedao/ph-run/connect-server");
     await runner.serve(
       connect({
         name: "lab-connect",
@@ -734,7 +742,7 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
   it("serve leaves the built favicon's path out of the served config", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectServer } =
-      await import("../src/services/connect-server.js");
+      await import("@powerhousedao/ph-run/connect-server");
     vi.mocked(runConnectServer).mockClear();
     await runner.serve(
       {

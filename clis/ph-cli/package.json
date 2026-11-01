@@ -55,6 +55,7 @@
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/ph-run": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-mcp": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
@@ -79,7 +80,6 @@
     "remeda": "catalog:",
     "rolldown": "catalog:",
     "semver": "catalog:",
-    "sirv": "^3.0.2",
     "tsdown": "catalog:",
     "vite": "catalog:"
   },

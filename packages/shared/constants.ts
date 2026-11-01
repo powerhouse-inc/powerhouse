@@ -40,7 +40,11 @@ export const PACKAGES_DEPENDENCIES = [
   "@renown/sdk",
 ] as const;
 
-export const CLIS_DEPENDENCIES = ["ph-cmd", "@powerhousedao/ph-cli"];
+export const CLIS_DEPENDENCIES = [
+  "ph-cmd",
+  "@powerhousedao/ph-cli",
+  "@powerhousedao/ph-run",
+];
 export const APPS_DEPENDENCIES = [
   "@powerhousedao/connect",
   "@powerhousedao/switchboard",

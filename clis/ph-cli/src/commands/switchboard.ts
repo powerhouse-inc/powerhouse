@@ -39,7 +39,8 @@ This command:
       process.exit(0);
     }
 
-    const { startSwitchboard } = await import("../services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     const { defaultDriveUrl, renown } = await startSwitchboard(args);
     console.log("   ➜  Switchboard:", defaultDriveUrl);
     if (renown) {

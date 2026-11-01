@@ -29,7 +29,7 @@ vi.mock("../src/services/connect-studio.js", () => ({
     close: vi.fn(),
   }),
 }));
-vi.mock("../src/services/switchboard.js", () => ({
+vi.mock("@powerhousedao/ph-run/switchboard", () => ({
   startSwitchboard: vi.fn().mockResolvedValue({
     workflowsEnabled: true,
     mcpEnabled: false,
@@ -37,11 +37,10 @@ vi.mock("../src/services/switchboard.js", () => ({
     reactor: { fake: true },
     shutdown: vi.fn(),
   }),
-}));
-vi.mock("../src/services/vetra.js", () => ({
   seedWorkflowsDrive: vi
     .fn()
     .mockResolvedValue("http://localhost:7599/d/implicit"),
+  projectDriveId: (name: string) => `${name}-project`,
 }));
 vi.mock("@powerhousedao/switchboard/utils", () => ({
   ensureDrive: vi.fn().mockResolvedValue("http://localhost:7599/d/x"),
@@ -110,9 +109,11 @@ describe("switchboard runner — plugin-contributed drives", () => {
     );
     const { ensureDrive } = await import("@powerhousedao/switchboard/utils");
     vi.mocked(ensureDrive).mockClear();
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     vi.mocked(startSwitchboard).mockClear();
-    const { seedWorkflowsDrive } = await import("../src/services/vetra.js");
+    const { seedWorkflowsDrive } =
+      await import("@powerhousedao/ph-run/switchboard");
     vi.mocked(seedWorkflowsDrive).mockClear();
 
     const runner = await import("../src/runners/switchboard.js");
@@ -212,7 +213,8 @@ describe("switchboard runner — plugin-contributed drives", () => {
     );
     const { ensureDrive } = await import("@powerhousedao/switchboard/utils");
     vi.mocked(ensureDrive).mockClear();
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     const resolveIdOrSlug = vi.fn().mockResolvedValue("workflows-other-hash");
     vi.mocked(startSwitchboard).mockResolvedValueOnce({
       workflowsEnabled: true,
@@ -236,7 +238,8 @@ describe("switchboard runner — plugin-contributed drives", () => {
     vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(
       workflowsComposition(false),
     );
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     // Not served before the create; under a generated id after it
     const resolveIdOrSlug = vi
       .fn()
@@ -313,7 +316,8 @@ describe("switchboard runner — plugin-contributed drives", () => {
   });
 
   it("without a composition the deprecated reactor.workflows path still seeds the classic drive", async () => {
-    const { seedWorkflowsDrive } = await import("../src/services/vetra.js");
+    const { seedWorkflowsDrive } =
+      await import("@powerhousedao/ph-run/switchboard");
     vi.mocked(seedWorkflowsDrive).mockClear();
     const runner = await import("../src/runners/switchboard.js");
     const handle = await runner.run(
@@ -353,7 +357,8 @@ describe("switchboard runner — readiness", () => {
             error ? reject(error) : resolve("http://localhost:7599/d/x");
         }),
     );
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     vi.mocked(startSwitchboard).mockClear();
     const runner = await import("../src/runners/switchboard.js");
     const running = runner.run(switchboardHost(), ctx);
@@ -391,11 +396,13 @@ describe("switchboard runner — readiness", () => {
   });
 
   it("fails readiness when seeding itself fails", async () => {
-    const { seedWorkflowsDrive } = await import("../src/services/vetra.js");
+    const { seedWorkflowsDrive } =
+      await import("@powerhousedao/ph-run/switchboard");
     vi.mocked(seedWorkflowsDrive).mockRejectedValueOnce(
       new Error("seed failed"),
     );
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     vi.mocked(startSwitchboard).mockClear();
     const runner = await import("../src/runners/switchboard.js");
 
@@ -423,7 +430,8 @@ describe("switchboard runner — signal ownership", () => {
     vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(
       workflowsComposition(),
     );
-    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
     const runner = await import("../src/runners/switchboard.js");
     const argsOf = async (context: RunnerContext) => {
       vi.mocked(startSwitchboard).mockClear();

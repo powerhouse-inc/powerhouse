@@ -6,7 +6,7 @@ import { gunzipSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer } from "node:net";
 import { runConnectPreview } from "../src/services/connect-preview.js";
-import { runConnectServer } from "../src/services/connect-server.js";
+import { runConnectServer } from "@powerhousedao/ph-run/connect-server";
 import type { ConnectPreviewArgs } from "../src/types.js";
 import { precompressAssets } from "../src/utils/precompress.js";
 

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import {
+  CONNECT_RUNNER,
   compoundWiringSchema,
   getVerb,
   loadHost,
@@ -366,6 +367,9 @@ async function memberPluginPackages(
   const packages = new Set<string>();
   for (const wrapper of Object.values(host.children)) {
     const member = await loadHost(ctx.projectRoot, wrapper.host);
+    // Connect's plugins are compiled into the build it serves, and all it reads
+    // of them at run time is optional. Only a server loads any.
+    if (member.host.runner.module === CONNECT_RUNNER) continue;
     const entries = member.host.runner.plugins as PluginEntryData[] | undefined;
     const where = `hosts/${wrapper.host}/host.js`;
     for (const name of pluginPackagesOf(entries ?? [], where, resolves)) {

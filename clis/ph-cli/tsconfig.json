@@ -45,6 +45,9 @@
     },
     {
       "path": "../../packages/vetra"
+    },
+    {
+      "path": "../ph-run"
     }
   ]
 }

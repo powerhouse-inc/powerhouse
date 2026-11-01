@@ -13,7 +13,7 @@ import path from "node:path";
 import { writeRunRecord } from "@powerhousedao/host-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { explainHost } from "../src/services/run/explain.js";
-import { startRun } from "../src/services/run/start-run.js";
+import { startRun } from "@powerhousedao/ph-run/start-run";
 
 /**
  * Standalone `ph run` over output tokens (typed-host-configs T3): a

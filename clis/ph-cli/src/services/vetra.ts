@@ -13,13 +13,16 @@ import type { ILogger } from "document-model";
 import { childLogger, setLogLevel } from "document-model";
 import { createLogger } from "vite";
 import type { VetraArgs } from "../types.js";
-import { generateProjectDriveId, POWERHOUSE_CONFIG_FILE } from "../utils.js";
+import {
+  generateProjectDriveId,
+  getProjectInfo,
+  POWERHOUSE_CONFIG_FILE,
+} from "../utils.js";
 import { wasFlagExplicitlyPassed } from "../utils/cli-connect-override.js";
 import {
   configureVetraGithubUrl,
   sleep,
 } from "../utils/configure-vetra-github-url.js";
-import { POWERHOUSE_DRIVE_ICON } from "../utils/drive-icons.js";
 import { mergeDefaultDrives, rebaseDriveUrl } from "@powerhousedao/host-core";
 import { parseDefaultDrivesUrl } from "../utils/parse-default-drives.js";
 import { resolveSwitchboardPort } from "../utils/resolve-switchboard-port.js";
@@ -33,7 +36,11 @@ import {
 } from "../utils/vetra-runtime.js";
 import { stopVetra } from "../utils/vetra-launch.js";
 import { runConnectStudio } from "./connect-studio.js";
-import { startSwitchboard } from "./switchboard.js";
+import {
+  POWERHOUSE_DRIVE_ICON,
+  seedWorkflowsDrive,
+  startSwitchboard,
+} from "@powerhousedao/ph-run/switchboard";
 
 const VETRA_DRIVE_NAME = "vetra";
 
@@ -152,35 +159,6 @@ export function buildVetraStudioOverride(
   return override;
 }
 
-// Opens in Workflow Studio; only seeded when the switchboard runs workflows.
-// Exported for the switchboard bridge runner: a hosts project with
-// reactor.workflows enabled seeds the SAME project-hashed drive this vetra
-// path does, until drive provisioning becomes a plugin contribution.
-export async function seedWorkflowsDrive(
-  reactor: IReactorClient,
-  port: number,
-  verbose?: boolean,
-): Promise<string | null> {
-  const workflowsDrive = {
-    id: generateProjectDriveId("workflows"),
-    slug: "workflows",
-    global: { name: "Workflows" },
-    preferredEditor: "workflow-studio",
-    local: {
-      availableOffline: true,
-      listeners: [],
-      sharingType: "public" as const,
-      triggers: [],
-    },
-  };
-
-  const driveUrl = await addDefaultDrive(reactor, workflowsDrive, port);
-
-  if (verbose && driveUrl) {
-    console.log(blue(`Vetra Switchboard: Workflows drive: ${driveUrl}`));
-  }
-  return driveUrl ?? null;
-}
 async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
   const {
     connectPort,
@@ -273,11 +251,17 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
     let workflowsDriveUrl: string | null = null;
     if (switchboard.workflowsEnabled) {
       try {
+        // Opens in Workflow Studio.
         workflowsDriveUrl = await seedWorkflowsDrive(
           switchboard.reactor,
           actualSwitchboardPort,
-          verbose,
+          getProjectInfo().path,
         );
+        if (verbose && workflowsDriveUrl) {
+          console.log(
+            blue(`Vetra Switchboard: Workflows drive: ${workflowsDriveUrl}`),
+          );
+        }
       } catch (error) {
         console.error(error);
       }

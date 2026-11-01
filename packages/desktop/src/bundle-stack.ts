@@ -21,7 +21,7 @@ import {
  *     package.json               minimal, names the project
  *     dist/                      the package's build (ph build)
  *     .ph/connect-build/dist/    the BUILT Connect (ph run connect build)
- *     node_modules/              vendored @powerhousedao/ph-cli (hoisted,
+ *     node_modules/              vendored @powerhousedao/ph-run (hoisted,
  *                                real files — computed-specifier imports and
  *                                PGlite wasm forbid bundling)
  */
@@ -110,28 +110,31 @@ function stageConfig(
   );
 }
 
+/** What runs a stack: `ph run` without the tools that build one, which is
+ * most of ph-cli's dependencies. */
+const RUN_PACKAGE = "@powerhousedao/ph-run";
+
 export interface BundleStackOptions {
   projectRoot: string;
   shellProjectDir: string;
   /** Vendor the runtime packages (slow). Skipped when false — an existing
    * vendored tree is left in place. */
   vendor?: boolean;
-  /** The ph-cli version/tag to vendor. Default: "dev". NOTE: the vendored
-   * ph-cli must carry the `run` command — registry tags published before
-   * uniform-runners landed cannot run a stack; until a nightly catches up,
-   * pass `phCliSpec` with a locally packed tarball instead. */
+  /** The version/tag of ph-run to vendor, which ph-cli publishes alongside.
+   * Default: "dev". Until a nightly carries it, pass `phCliSpec` with a locally
+   * packed tarball instead. */
   phCliVersion?: string;
-  /** Overrides the ph-cli install spec entirely (e.g. a `pnpm pack` tarball
-   * path for a not-yet-published build). */
+  /** Overrides ph-run's install spec entirely (e.g. a `pnpm pack` tarball path
+   * for a not-yet-published build). */
   phCliSpec?: string;
   /** A directory of `pnpm pack` tarballs (env PH_DESKTOP_LOCAL_PACKAGES).
    * Each replaces its package everywhere in the vendored tree: a packed
-   * ph-cli alone would still pull its dependencies, at the same version
+   * ph-run alone would still pull its dependencies, at the same version
    * number, from the registry. `pnpm pack:desktop-stack` in the monorepo
-   * packs the set ph-cli and host-core need. */
+   * packs the set ph-run and host-core need. */
   localPackagesDir?: string;
   /** Packages the hosts' plugins come from. The stack resolves them from its
-   * own node_modules, and ph-cli brings only what it depends on. */
+   * own node_modules, and ph-run brings only what it depends on. */
   plugins?: readonly string[];
   /** The connect member's port — written into the stack's shell.json so the
    * shell knows where to probe/navigate with no environment at all. */
@@ -226,7 +229,7 @@ export interface StackManifestOptions {
   phCliSpec?: string;
   /** Package name → spec, from readLocalPackages. */
   local?: Record<string, string>;
-  /** Packages to depend on besides ph-cli and host-core. */
+  /** Packages to depend on besides ph-run and host-core. */
   plugins?: readonly string[];
 }
 
@@ -247,10 +250,7 @@ export function stackManifest(options: StackManifestOptions) {
     private: true,
     type: "module",
     dependencies: {
-      "@powerhousedao/ph-cli": spec(
-        "@powerhousedao/ph-cli",
-        options.phCliSpec ?? options.version,
-      ),
+      [RUN_PACKAGE]: spec(RUN_PACKAGE, options.phCliSpec ?? options.version),
       "@powerhousedao/host-core": spec(
         "@powerhousedao/host-core",
         options.version,
@@ -390,7 +390,7 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
   }
 
   // A minimal manifest: names the project (lock identity) and depends on
-  // ph-cli so the vendored tree resolves exactly like a real install.
+  // ph-run so the vendored tree resolves exactly like a real install.
   const sourcePkg = JSON.parse(
     fs.readFileSync(path.join(options.projectRoot, "package.json"), "utf8"),
   ) as { name?: string; version?: string; exports?: unknown };
@@ -431,7 +431,7 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
               name,
               private: true,
               type: "module",
-              dependencies: { "@powerhousedao/ph-cli": version },
+              dependencies: { [RUN_PACKAGE]: version },
             }),
         ...project,
       },
@@ -443,12 +443,12 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
   let vendored = false;
   if (vendor) {
     // Local: the manifest names every spec. Registry: host-core rides along
-    // with ph-cli, since host files resolve runner modules (the generic
+    // with ph-run, since host files resolve runner modules (the generic
     // compound) from the STACK's own node_modules.
     const specs = local
       ? ""
       : [
-          options.phCliSpec ?? `@powerhousedao/ph-cli@${version}`,
+          options.phCliSpec ?? `${RUN_PACKAGE}@${version}`,
           `@powerhousedao/host-core@${version}`,
           ...(options.plugins ?? []).map((pkg) => `${pkg}@${version}`),
         ]

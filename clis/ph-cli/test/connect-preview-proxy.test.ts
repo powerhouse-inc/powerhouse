@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runConnectPreview } from "../src/services/connect-preview.js";
-import { runConnectServer } from "../src/services/connect-server.js";
+import { runConnectServer } from "@powerhousedao/ph-run/connect-server";
 import type { ConnectPreviewArgs } from "../src/types.js";
 
 // Connect is served two ways, and what it gets must not depend on which.

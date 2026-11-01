@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { overrideFromEnv } from "../src/services/connect-preview.js";
+import { overrideFromEnv } from "../src/services/connect-serve.js";
 
 describe("overrideFromEnv (the supervisor env contract, P5.7)", () => {
   it("returns undefined when neither variable is set", () => {

@@ -13,7 +13,7 @@ import path from "node:path";
 import type { Duplex } from "node:stream";
 import tls from "node:tls";
 import sirv from "sirv";
-import type { ConnectPreviewArgs } from "../types.js";
+import type { ConnectPreviewArgs } from "./classic-args.js";
 import {
   cacheHeaders,
   connectBaseOf,
@@ -24,7 +24,7 @@ import {
   shellSwapFor,
   type ConnectMiddleware,
   type ConnectServeOverride,
-} from "./connect-preview.js";
+} from "./connect-serve.js";
 
 /**
  * Serves a built Connect with what a running app has anyway. The other way to

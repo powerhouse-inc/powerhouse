@@ -8,6 +8,7 @@ import {
   listVerbs,
   resolveRunnerModule,
   RunnerError,
+  runnerFallback,
   validateHost,
   type RunnerModule,
 } from "../src/runner-resolver.js";
@@ -62,6 +63,20 @@ describe("resolveRunnerModule", () => {
     const runner = await resolveRunnerModule(project, "fake-runner");
     expect(runner.kind).toBe("reactor");
     expect(listVerbs(runner)).toEqual(["dev", "run"]);
+  });
+
+  // What resolves it is the packaged stack's boot: under vitest, NODE_PATH puts
+  // the whole workspace in reach of any project.
+  it("takes ph-run's runner in place of ph-cli's, and nothing else", () => {
+    expect(runnerFallback("@powerhousedao/ph-cli/runners/connect")).toBe(
+      "@powerhousedao/ph-run/runners/connect",
+    );
+    expect(runnerFallback("@powerhousedao/ph-cli/runners/switchboard")).toBe(
+      "@powerhousedao/ph-run/runners/switchboard",
+    );
+    expect(runnerFallback("@powerhousedao/ph-cli")).toBeUndefined();
+    expect(runnerFallback("@powerhousedao/desktop/runner")).toBeUndefined();
+    expect(runnerFallback("fake-runner")).toBeUndefined();
   });
 
   it("resolves subpath exports that carry a `default` condition (regression)", async () => {

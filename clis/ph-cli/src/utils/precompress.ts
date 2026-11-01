@@ -1,3 +1,4 @@
+import { PRECOMPRESS_EXTENSIONS } from "@powerhousedao/ph-run/connect-serve";
 import { createHash } from "node:crypto";
 import { readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -6,8 +7,7 @@ import { gzip } from "node:zlib";
 
 const gzipAsync = promisify(gzip);
 
-/** Extensions whose files get `.gz` siblings. */
-export const PRECOMPRESS_EXTENSIONS = [".wasm", ".data"] as const;
+export { PRECOMPRESS_EXTENSIONS };
 
 /** A sibling is written only when it is at most this fraction of the source. */
 const MAX_RATIO = 0.9;

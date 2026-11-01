@@ -1,6 +1,9 @@
-import { switchboardArgs } from "@powerhousedao/shared/clis/args";
+import type { ParsedCmdResult } from "@powerhousedao/shared/clis";
+import {
+  connectPreviewArgs,
+  switchboardArgs,
+} from "@powerhousedao/shared/clis/args";
 import { command, runSafely } from "cmd-ts";
-import type { SwitchboardArgs } from "../types.js";
 
 /**
  * The classic `ph switchboard` argument shape, produced by the SAME cmd-ts
@@ -18,6 +21,15 @@ const classicSwitchboard = command({
   args: switchboardArgs,
   handler: (args) => args,
 });
+
+const classicConnectPreview = command({
+  name: "preview",
+  args: connectPreviewArgs,
+  handler: (args) => args,
+});
+
+export type SwitchboardArgs = ParsedCmdResult<typeof classicSwitchboard>;
+export type ConnectPreviewArgs = ParsedCmdResult<typeof classicConnectPreview>;
 
 export async function classicSwitchboardArgs(
   argv: string[] = [],
