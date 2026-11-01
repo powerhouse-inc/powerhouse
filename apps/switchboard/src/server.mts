@@ -103,7 +103,7 @@ import {
   registerAttachmentReferenceReadModel,
   registerAttachmentReferenceReadModelOnModule,
 } from "./attachment-reference-read-model.mjs";
-import { installFatalErrorShutdown } from "./fatal-shutdown.mjs";
+import { installFatalErrorShutdown, raiseSigterm } from "./fatal-shutdown.mjs";
 import {
   resolvePrivacy,
   startPrivacy,
@@ -734,7 +734,7 @@ async function initServer(
       reason,
     );
     // SIGTERM takes the builder's withSignalHandlers() path: kill, hooks, db.
-    process.kill(process.pid, "SIGTERM");
+    raiseSigterm();
   };
   // Resolved in startSwitchboard, which owns the flag mechanism; initServer
   // only reads the answer.
