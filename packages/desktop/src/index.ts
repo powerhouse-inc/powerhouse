@@ -55,3 +55,4 @@ export {
   type ResolvedShell,
   type ShellOptions,
 } from "./shell.js";
+export { bundleBackend, type BundleBackendResult } from "./bundle-backend.js";

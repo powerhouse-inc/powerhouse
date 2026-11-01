@@ -259,6 +259,27 @@ describe("bundle-stack staging", () => {
     expect(manifest.dependencies["@powerhousedao/ph-run"]).toBe("dev");
     expect(manifest.dependencies).not.toHaveProperty("@powerhousedao/ph-cli");
   });
+
+  it("leaves out a build of Connect in dist, which nothing serves", () => {
+    const dir = makeProject();
+    mkdirSync(path.join(dir, "dist", "assets"), { recursive: true });
+    mkdirSync(path.join(dir, "dist", "browser"), { recursive: true });
+    mkdirSync(path.join(dir, "dist", "node"), { recursive: true });
+    writeFileSync(path.join(dir, "dist", "assets", "app.js"), "");
+    writeFileSync(path.join(dir, "dist", "browser", "index.js"), "");
+    writeFileSync(path.join(dir, "dist", "node", "index.mjs"), "");
+    const { stackDir } = bundleStack({
+      projectRoot: dir,
+      shellProjectDir: tempDir("ph-desktop-shell-"),
+      vendor: false,
+      logger: () => undefined,
+    });
+    expect(existsSync(path.join(stackDir, "dist", "node", "index.mjs"))).toBe(
+      true,
+    );
+    expect(existsSync(path.join(stackDir, "dist", "assets"))).toBe(false);
+    expect(existsSync(path.join(stackDir, "dist", "browser"))).toBe(false);
+  });
 });
 
 /** A `pnpm pack`-shaped tarball: package/package.json inside. */

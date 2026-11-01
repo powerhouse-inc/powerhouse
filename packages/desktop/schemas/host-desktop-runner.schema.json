@@ -126,6 +126,9 @@
         "phCliSpec": {
           "type": "string",
           "minLength": 1
+        },
+        "bundleBackend": {
+          "type": "boolean"
         }
       },
       "required": ["module"],

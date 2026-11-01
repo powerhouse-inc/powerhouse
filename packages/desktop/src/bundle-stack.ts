@@ -26,6 +26,13 @@ import {
  *                                PGlite wasm forbid bundling)
  */
 const CONNECT_BUILD_DIR = path.join(".ph", "connect-build", "dist");
+const BROWSER_ONLY_IN_DIST = [
+  "__react__",
+  "__reactor_worker__",
+  "__vendor__",
+  "assets",
+  "browser",
+];
 
 /** The package a module specifier belongs to. */
 function packageOf(specifier: string): string {
@@ -353,6 +360,14 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
       path.join(stackDir, dir),
     );
     log(`  ${dir}/ ${copied ? "staged" : "absent — skipped"}`);
+  }
+  // The window gets the build staged above. A server reads dist/node, and a
+  // project that once built Connect into dist still has that build there.
+  for (const dir of BROWSER_ONLY_IN_DIST) {
+    fs.rmSync(path.join(stackDir, "dist", dir), {
+      recursive: true,
+      force: true,
+    });
   }
 
   // Inside the package there is no nested shell — the shell IS the window —
