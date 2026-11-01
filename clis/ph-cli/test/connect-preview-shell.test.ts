@@ -17,6 +17,7 @@ import { join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ConnectServeOverride } from "../src/services/connect-preview.js";
 import { runConnectPreview } from "../src/services/connect-preview.js";
+import { runConnectServer } from "../src/services/connect-server.js";
 import type { ConnectPreviewArgs } from "../src/types.js";
 
 const PROJECT = resolve(__dirname, "../../../test/test-consumer-project");
@@ -65,9 +66,16 @@ beforeAll(() => {
 });
 afterAll(() => rmSync(dist, { recursive: true, force: true }));
 
+// Connect is served two ways, and what it gets must not depend on which.
+const SERVERS = [
+  ["vite preview", runConnectPreview],
+  ["the built-in server", runConnectServer],
+] as const;
+let serve: (typeof SERVERS)[number][1];
+
 async function servedPage(override: ConnectServeOverride, path = "/") {
   const port = await freePort();
-  const server = await runConnectPreview(
+  const server = await serve(
     {
       outDir: dist,
       port,
@@ -85,76 +93,83 @@ async function servedPage(override: ConnectServeOverride, path = "/") {
   }
 }
 
-describe("ph connect preview: the shell follows the served composition", () => {
-  it("serves core's shell for a composition without the generic plugin", async () => {
-    const html = await servedPage({ connect: { composition: [] } });
-    expect(appShellVariantOf(html)).toBe("core");
-    expect(html).toContain("<header>");
-    expect(html).not.toContain("sidebar");
-    // SPA routes get the same page.
-    const route = await servedPage(
-      { connect: { composition: [{ module: "./mine.js" }] } },
-      "/d/some-drive",
-    );
-    expect(appShellVariantOf(route)).toBe("core");
-  }, 60_000);
-
-  it("keeps the generic shell with its plugin, or with no composition", async () => {
-    const withGeneric = await servedPage({
-      connect: { composition: [{ module: SHELL_PLUGIN }] },
+describe.each(SERVERS)(
+  "%s: the shell follows the served composition",
+  (_name, server) => {
+    beforeAll(() => {
+      serve = server;
     });
-    expect(appShellVariantOf(withGeneric)).toBe("generic");
-    const classic = await servedPage({
-      connect: { drives: { defaultDrives: [] } } as never,
-    });
-    expect(appShellVariantOf(classic)).toBe("generic");
-  }, 60_000);
 
-  it("picks the shell of the first composition plugin that has one", async () => {
-    const html = await servedPage({
-      connect: {
-        composition: [{ module: "./mine.js" }, { module: SHELL_PLUGIN }],
-      },
-    });
-    expect(appShellVariantOf(html)).toBe("generic");
-  }, 60_000);
+    it("serves core's shell for a composition without the generic plugin", async () => {
+      const html = await servedPage({ connect: { composition: [] } });
+      expect(appShellVariantOf(html)).toBe("core");
+      expect(html).toContain("<header>");
+      expect(html).not.toContain("sidebar");
+      // SPA routes get the same page.
+      const route = await servedPage(
+        { connect: { composition: [{ module: "./mine.js" }] } },
+        "/d/some-drive",
+      );
+      expect(appShellVariantOf(route)).toBe("core");
+    }, 60_000);
 
-  it("serves core's shell for a declared composition when the dist has no manifest", async () => {
-    const file = join(dist, SHELL_PLUGINS_FILE);
-    const aside = `${file}.off`;
-    renameSync(file, aside);
-    try {
-      const declared = await servedPage({
+    it("keeps the generic shell with its plugin, or with no composition", async () => {
+      const withGeneric = await servedPage({
         connect: { composition: [{ module: SHELL_PLUGIN }] },
       });
-      expect(appShellVariantOf(declared)).toBe("core");
+      expect(appShellVariantOf(withGeneric)).toBe("generic");
       const classic = await servedPage({
         connect: { drives: { defaultDrives: [] } } as never,
       });
       expect(appShellVariantOf(classic)).toBe("generic");
-    } finally {
-      renameSync(aside, file);
-    }
-  }, 60_000);
+    }, 60_000);
 
-  it("titles core's shell with the served app name: the baked one, else the override's", async () => {
-    writeFileSync(
-      join(dist, "powerhouse.config.json"),
-      JSON.stringify({ connect: { branding: { appName: "Lab Docs" } } }),
-    );
-    try {
-      const baked = await servedPage({ connect: { composition: [] } });
-      expect(baked).toContain(name("Lab Docs"));
-      const renamed = await servedPage({
-        connect: { composition: [], branding: { appName: "Desk & Co" } },
+    it("picks the shell of the first composition plugin that has one", async () => {
+      const html = await servedPage({
+        connect: {
+          composition: [{ module: "./mine.js" }, { module: SHELL_PLUGIN }],
+        },
       });
-      expect(renamed).toContain(name("Desk &amp; Co"));
-    } finally {
-      writeFileSync(join(dist, "powerhouse.config.json"), "{}");
-    }
-    // No branding name: the app's own fallback.
-    expect(await servedPage({ connect: { composition: [] } })).toContain(
-      name("Connect"),
-    );
-  }, 60_000);
-});
+      expect(appShellVariantOf(html)).toBe("generic");
+    }, 60_000);
+
+    it("serves core's shell for a declared composition when the dist has no manifest", async () => {
+      const file = join(dist, SHELL_PLUGINS_FILE);
+      const aside = `${file}.off`;
+      renameSync(file, aside);
+      try {
+        const declared = await servedPage({
+          connect: { composition: [{ module: SHELL_PLUGIN }] },
+        });
+        expect(appShellVariantOf(declared)).toBe("core");
+        const classic = await servedPage({
+          connect: { drives: { defaultDrives: [] } } as never,
+        });
+        expect(appShellVariantOf(classic)).toBe("generic");
+      } finally {
+        renameSync(aside, file);
+      }
+    }, 60_000);
+
+    it("titles core's shell with the served app name: the baked one, else the override's", async () => {
+      writeFileSync(
+        join(dist, "powerhouse.config.json"),
+        JSON.stringify({ connect: { branding: { appName: "Lab Docs" } } }),
+      );
+      try {
+        const baked = await servedPage({ connect: { composition: [] } });
+        expect(baked).toContain(name("Lab Docs"));
+        const renamed = await servedPage({
+          connect: { composition: [], branding: { appName: "Desk & Co" } },
+        });
+        expect(renamed).toContain(name("Desk &amp; Co"));
+      } finally {
+        writeFileSync(join(dist, "powerhouse.config.json"), "{}");
+      }
+      // No branding name: the app's own fallback.
+      expect(await servedPage({ connect: { composition: [] } })).toContain(
+        name("Connect"),
+      );
+    }, 60_000);
+  },
+);

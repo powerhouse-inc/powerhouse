@@ -1,16 +1,24 @@
 import { getConfig } from "@powerhousedao/config/node";
-import type { AppShells } from "@powerhousedao/builder-tools";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { deepMerge, normalizeBasePath } from "@powerhousedao/shared/connect";
+import {
+  APP_SHELLS_FILE,
+  appShellVariant,
+  appShellVariantOf,
+  readShellPluginsIn,
+  swapAppShell,
+  withShellAppName,
+  type AppShells,
+} from "@powerhousedao/shared/connect/app-shell";
 import {
   isHtmlNavigation,
   isSwitchboardProxyPath,
 } from "@powerhousedao/shared/connect/origin-placeholder";
 import { existsSync, readFileSync } from "node:fs";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
 import sirv from "sirv";
 import type { InlineConfig, Plugin } from "vite";
-import { preview } from "vite";
 import type { ConnectPreviewArgs } from "../types.js";
 import { PRECOMPRESS_EXTENSIONS } from "../utils/precompress.js";
 import { switchboardProxy } from "../utils/switchboard-proxy.js";
@@ -141,6 +149,13 @@ export function stripBase(pathname: string, base: string): string {
     : pathname;
 }
 
+/** The steps both Connect servers run, in the order they run them. */
+export type ConnectMiddleware = (
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: () => void,
+) => void;
+
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
 const HASHED_DIRS = ["/assets/", "/fonts/", "/__reactor_worker__/assets/"];
@@ -163,44 +178,31 @@ export function previewCacheControl(
   return undefined;
 }
 
-function previewCacheHeadersPlugin(outDir: string, base: string): Plugin {
-  return {
-    name: "ph:preview-cache-headers",
-    configurePreviewServer(server) {
-      server.middlewares.use((req, res, next) => {
-        const [rawPath, search = ""] = (req.url ?? "/").split("?");
-        const rel = stripBase(rawPath, base);
-        let value = previewCacheControl(rel, search);
-        // A cached 404 would outlive the next deploy.
-        if (value === IMMUTABLE && !existsSync(path.join(outDir, rel))) {
-          value = undefined;
-        }
-        if (value) res.setHeader("Cache-Control", value);
-        next();
-      });
-    },
+export function cacheHeaders(outDir: string, base: string): ConnectMiddleware {
+  return (req, res, next) => {
+    const [rawPath, search = ""] = (req.url ?? "/").split("?");
+    const rel = stripBase(rawPath, base);
+    let value = previewCacheControl(rel, search);
+    // A cached 404 would outlive the next deploy.
+    if (value === IMMUTABLE && !existsSync(path.join(outDir, rel))) {
+      value = undefined;
+    }
+    if (value) res.setHeader("Cache-Control", value);
+    next();
   };
 }
 
 type HtmlTransform = (html: string) => string;
 
 /** The dist's shell for the served config: its composition's variant and its app name. */
-export async function shellSwapFor(
+export function shellSwapFor(
   outDir: string,
   override: ConnectServeOverride,
   base = "/",
-): Promise<HtmlTransform | undefined> {
+): HtmlTransform | undefined {
   const composition = override.connect?.composition;
   const renamed = override.connect?.branding?.appName !== undefined;
   if (!composition && !renamed) return undefined;
-  const {
-    APP_SHELLS_FILE,
-    appShellVariant,
-    appShellVariantOf,
-    readShellPluginsIn,
-    swapAppShell,
-    withShellAppName,
-  } = await import("@powerhousedao/builder-tools");
   const file = path.join(outDir, APP_SHELLS_FILE);
   // The manifest the build copied from the Connect it used.
   const variant =
@@ -226,65 +228,60 @@ export async function shellSwapFor(
  * paths go to the proxy, untouched, except a browser navigation under `/d/`
  * (Connect's own drive routes), as switchboardProxy splits them.
  */
-function isProxiedRequest(urlPath: string, accept: string | undefined) {
+export function isProxiedRequest(urlPath: string, accept: string | undefined) {
   if (!isSwitchboardProxyPath(urlPath)) return false;
   return !(urlPath.startsWith("/d/") && isHtmlNavigation(accept));
 }
 
-function serveOverridePlugin(
+export function serveOverrideStep(
   outDir: string,
   override: ConnectServeOverride,
   base = "/",
   swapShell?: HtmlTransform,
   proxied = false,
-): Plugin {
-  return {
-    name: "ph:serve-override",
-    configurePreviewServer(server) {
-      server.middlewares.use((req, res, next) => {
-        const urlPath = stripBase((req.url ?? "/").split("?")[0], base);
-        if (urlPath === "/powerhouse.config.json") {
-          res.writeHead(200, {
-            "content-type": "application/json; charset=utf-8",
-            "cache-control": "no-store",
-          });
-          res.end(mergedConfigBody(outDir, override));
-          return;
-        }
-        // The switchboard's paths are the proxy's, which runs after this:
-        // served the SPA shell instead, /graphql would never reach it.
-        if (proxied && isProxiedRequest(urlPath, req.headers.accept)) {
-          next();
-          return;
-        }
-        // index.html and extensionless SPA routes get the CSP patch.
-        const isHtml =
-          urlPath === "/" ||
-          urlPath.endsWith("/index.html") ||
-          !path.extname(urlPath);
-        if ((override.cspRegistrySync || swapShell) && isHtml) {
-          const file = path.join(outDir, "index.html");
-          if (existsSync(file)) {
-            let html = readFileSync(file, "utf8");
-            if (override.cspRegistrySync) {
-              const merged = JSON.parse(mergedConfigBody(outDir, override)) as {
-                packageRegistryUrl?: string;
-              };
-              const registry = merged.packageRegistryUrl;
-              if (registry) html = patchCspScriptSrc(html, registry);
-            }
-            if (swapShell) html = swapShell(html);
-            res.writeHead(200, {
-              "content-type": "text/html; charset=utf-8",
-              "cache-control": "no-store",
-            });
-            res.end(html);
-            return;
-          }
-        }
-        next();
+): ConnectMiddleware {
+  return (req, res, next) => {
+    const urlPath = stripBase((req.url ?? "/").split("?")[0], base);
+    if (urlPath === "/powerhouse.config.json") {
+      res.writeHead(200, {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
       });
-    },
+      res.end(mergedConfigBody(outDir, override));
+      return;
+    }
+    // The switchboard's paths are the proxy's, which runs after this:
+    // served the SPA shell instead, /graphql would never reach it.
+    if (proxied && isProxiedRequest(urlPath, req.headers.accept)) {
+      next();
+      return;
+    }
+    // index.html and extensionless SPA routes get the CSP patch.
+    const isHtml =
+      urlPath === "/" ||
+      urlPath.endsWith("/index.html") ||
+      !path.extname(urlPath);
+    if ((override.cspRegistrySync || swapShell) && isHtml) {
+      const file = path.join(outDir, "index.html");
+      if (existsSync(file)) {
+        let html = readFileSync(file, "utf8");
+        if (override.cspRegistrySync) {
+          const merged = JSON.parse(mergedConfigBody(outDir, override)) as {
+            packageRegistryUrl?: string;
+          };
+          const registry = merged.packageRegistryUrl;
+          if (registry) html = patchCspScriptSrc(html, registry);
+        }
+        if (swapShell) html = swapShell(html);
+        res.writeHead(200, {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        });
+        res.end(html);
+        return;
+      }
+    }
+    next();
   };
 }
 
@@ -293,47 +290,59 @@ const PRECOMPRESSED_TYPES: Record<string, string> = {
   ".data": "application/octet-stream",
 };
 
-// Serves the build's `.gz` siblings of wasm/data; Vite's sirv ignores them.
-export function precompressedAssetsPlugin(outDir: string, base = "/"): Plugin {
-  return {
-    name: "ph:precompressed-assets",
-    configurePreviewServer(server) {
-      const headers = server.config.preview.headers;
-      const serve = sirv(outDir, {
-        dev: true,
-        etag: true,
-        gzip: true,
-        extensions: [],
-        setHeaders(res, pathname) {
-          if (headers) for (const k in headers) res.setHeader(k, headers[k]!);
-          res.setHeader(
-            "Content-Type",
-            PRECOMPRESSED_TYPES[path.extname(pathname)],
-          );
-        },
-      });
-      server.middlewares.use((req, res, next) => {
-        const url = req.url ?? "/";
-        const [rawPath, search] = url.split("?");
-        const rel = stripBase(rawPath, base);
-        // Ranges are byte offsets into the identity body: leave them to Vite.
-        if (
-          !(PRECOMPRESS_EXTENSIONS as readonly string[]).includes(
-            path.extname(rel),
-          ) ||
-          req.headers.range ||
-          (base !== "/" && rel === rawPath)
-        ) {
-          return next();
-        }
-        req.url = search === undefined ? rel : `${rel}?${search}`;
-        serve(req, res, () => {
-          req.url = url;
-          next();
-        });
-      });
+// Serves the build's `.gz` siblings of wasm/data, which the main sirv ignores.
+export function precompressedAssets(
+  outDir: string,
+  base = "/",
+): ConnectMiddleware {
+  const serve = sirv(outDir, {
+    dev: true,
+    etag: true,
+    gzip: true,
+    extensions: [],
+    setHeaders(res, pathname) {
+      res.setHeader(
+        "Content-Type",
+        PRECOMPRESSED_TYPES[path.extname(pathname)],
+      );
     },
+  });
+  return (req, res, next) => {
+    const url = req.url ?? "/";
+    const [rawPath, search] = url.split("?");
+    const rel = stripBase(rawPath, base);
+    // Ranges are byte offsets into the identity body: leave them to the server.
+    if (
+      !(PRECOMPRESS_EXTENSIONS as readonly string[]).includes(
+        path.extname(rel),
+      ) ||
+      req.headers.range ||
+      (base !== "/" && rel === rawPath)
+    ) {
+      next();
+      return;
+    }
+    req.url = search === undefined ? rel : `${rel}?${search}`;
+    serve(req, res, () => {
+      req.url = url;
+      next();
+    });
   };
+}
+
+/** The served base: `--base`, else what the dist or the project was built with. */
+export function connectBaseOf(
+  args: Pick<ConnectPreviewArgs, "connectBasePath">,
+  outDirAbs: string,
+  dirname: string,
+): string {
+  // Serving a dist needs only its base, not the build's plugin stack.
+  const sourceBasePath = getConfig(path.join(dirname, "powerhouse.config.json"))
+    .connect?.app?.basePath;
+  return (
+    resolvePreviewBase(args.connectBasePath, outDirAbs) ??
+    (sourceBasePath ? normalizeBasePath(sourceBasePath) : "/")
+  );
 }
 
 export async function runConnectPreview(
@@ -363,13 +372,17 @@ export async function runConnectPreview(
 
   const mode = "production";
 
-  // Serving a dist needs only its base, not the build's plugin stack.
-  const sourceBasePath = getConfig(path.join(dirname, "powerhouse.config.json"))
-    .connect?.app?.basePath;
   const outDirAbs = path.resolve(dirname, outDir);
-  const base =
-    resolvePreviewBase(args.connectBasePath, outDirAbs) ??
-    (sourceBasePath ? normalizeBasePath(sourceBasePath) : "/");
+  const base = connectBaseOf(args, outDirAbs, dirname);
+
+  // Build tooling, so only here: a packaged app doesn't have it.
+  const { preview } = await import("vite");
+  const previewPlugin = (name: string, step: ConnectMiddleware): Plugin => ({
+    name,
+    configurePreviewServer(server) {
+      server.middlewares.use(step);
+    },
+  });
 
   const previewConfig: InlineConfig = {
     configFile: false,
@@ -387,16 +400,22 @@ export async function runConnectPreview(
       ...(proxy ? { proxy: switchboardProxy(proxy) } : {}),
     },
     plugins: [
-      previewCacheHeadersPlugin(outDirAbs, base),
-      precompressedAssetsPlugin(outDirAbs, base),
+      previewPlugin("ph:preview-cache-headers", cacheHeaders(outDirAbs, base)),
+      previewPlugin(
+        "ph:precompressed-assets",
+        precompressedAssets(outDirAbs, base),
+      ),
       ...(serveOverride
         ? [
-            serveOverridePlugin(
-              outDirAbs,
-              serveOverride,
-              base,
-              await shellSwapFor(outDirAbs, serveOverride, base),
-              proxy !== undefined,
+            previewPlugin(
+              "ph:serve-override",
+              serveOverrideStep(
+                outDirAbs,
+                serveOverride,
+                base,
+                shellSwapFor(outDirAbs, serveOverride, base),
+                proxy !== undefined,
+              ),
             ),
           ]
         : []),

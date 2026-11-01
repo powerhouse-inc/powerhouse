@@ -442,8 +442,10 @@ export async function build(
   );
 }
 
-/** P3.3 — `serve`: the SAME vite preview server as classic
- * `ph connect preview` (static serve of a built Connect; run `build` first).
+/** P3.3 — `serve`: serves a built Connect (run `build` first) from the built-in
+ * server, which needs no build tools; a packaged app has none. `vite preview`,
+ * as classic `ph connect preview` uses, serves it the same way, and takes over
+ * for `openBrowser` or under PH_CONNECT_SERVER=vite.
  * The host's connect config (including a supervising compound's projected
  * drives and the reactor projection) rides a serve override: the baked
  * powerhouse.config.json merges with it at request time, and
@@ -455,8 +457,11 @@ export async function serve(
   ctx: RunnerContext,
 ): Promise<RunnerHandle<ConnectOutputs>> {
   await validateComposition(host, ctx);
-  const { runConnectPreview } = await import("../services/connect-preview.js");
   const runner = host.runner;
+  const start =
+    runner.openBrowser === true || process.env.PH_CONNECT_SERVER === "vite"
+      ? (await import("../services/connect-preview.js")).runConnectPreview
+      : (await import("../services/connect-server.js")).runConnectServer;
   const port = runner.port ?? DEFAULT_CONNECT_STUDIO_PORT;
   const bind = runner.host ?? "127.0.0.1";
   const args: Partial<ConnectPreviewArgs> = {
@@ -473,8 +478,8 @@ export async function serve(
     host: bind,
   };
   const override = withoutBuiltImages(callerOverride(host, ctx, ctx.verb));
-  const server = await startUnderSupervisor(ctx, () =>
-    runConnectPreview(
+  const server = await startUnderSupervisor<ListeningServer>(ctx, () =>
+    start(
       args as ConnectPreviewArgs,
       {
         connect: override,

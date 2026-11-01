@@ -45,6 +45,13 @@ vi.mock("../src/services/connect-preview.js", () => ({
       Promise.resolve(fakeVite(`http://${args.host}:${args.port}/`)),
     ),
 }));
+vi.mock("../src/services/connect-server.js", () => ({
+  runConnectServer: vi
+    .fn()
+    .mockImplementation((args: { host: string; port: number }) =>
+      Promise.resolve(fakeVite(`http://${args.host}:${args.port}/`)),
+    ),
+}));
 vi.mock("../src/services/connect-build.js", () => ({
   runConnectBuild: vi.fn().mockResolvedValue(undefined),
 }));
@@ -619,10 +626,32 @@ describe("switchboard bridge runner", () => {
 });
 
 describe("connect bridge runner — serve/build verbs (P3.3)", () => {
-  it("serve maps to the classic preview service with runner options", async () => {
+  it("serve needs vite only to open a browser, or when asked for it", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectPreview } =
       await import("../src/services/connect-preview.js");
+    vi.mocked(runConnectPreview).mockClear();
+    const opening = connectHost({
+      runner: {
+        module: "@powerhousedao/ph-cli/runners/connect",
+        port: 6599,
+        openBrowser: true,
+      },
+    });
+    await runner.serve(connect(opening), ctx);
+    expect(runConnectPreview).toHaveBeenCalledOnce();
+
+    vi.mocked(runConnectPreview).mockClear();
+    vi.stubEnv("PH_CONNECT_SERVER", "vite");
+    await runner.serve(connect(connectHost()), ctx);
+    vi.unstubAllEnvs();
+    expect(runConnectPreview).toHaveBeenCalledOnce();
+  });
+
+  it("serve maps to the built-in server with runner options", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectServer } =
+      await import("../src/services/connect-server.js");
     await runner.serve(
       connect({
         name: "lab-connect",
@@ -630,7 +659,7 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
       }),
       ctx,
     );
-    expect(vi.mocked(runConnectPreview).mock.calls[0][0]).toMatchObject({
+    expect(vi.mocked(runConnectServer).mock.calls[0][0]).toMatchObject({
       port: 8099,
       outDir: "build-out",
       cors: true,
@@ -704,9 +733,9 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
 
   it("serve leaves the built favicon's path out of the served config", async () => {
     const runner = await import("../src/runners/connect.js");
-    const { runConnectPreview } =
-      await import("../src/services/connect-preview.js");
-    vi.mocked(runConnectPreview).mockClear();
+    const { runConnectServer } =
+      await import("../src/services/connect-server.js");
+    vi.mocked(runConnectServer).mockClear();
     await runner.serve(
       {
         name: "lab-connect",
@@ -715,7 +744,7 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
       },
       ctx,
     );
-    const { connect } = vi.mocked(runConnectPreview).mock.calls[0][1]!;
+    const { connect } = vi.mocked(runConnectServer).mock.calls[0][1]!;
     expect(connect?.branding).toEqual({ appName: "Lab" });
   });
 
