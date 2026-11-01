@@ -177,6 +177,57 @@ export interface PgliteStoreOptions {
 /** Opens a store on a data dir; synchronous because reactor-api's read store opens synchronously. */
 export type PgliteStoreFactory = (dataDir: string) => PGliteLike;
 
+export const REACTOR_STORE = {
+  label: "reactor-storage",
+  parsers: "none",
+} as const;
+
+export const READ_STORE = {
+  label: "read-storage",
+  parsers: "utc-timestamps",
+} as const;
+
+/** A host's two stores, opening side by side. */
+export interface StoresOpening {
+  reactor: PGliteLike;
+  readModel: PGliteLike;
+  /** Rejects with the first store's failure, once the other has closed. */
+  failed: Promise<never>;
+  close(): Promise<void>;
+}
+
+/**
+ * Starts both stores at once, so the wait is the slower of the two rather than
+ * their sum. A store left by a crash spends seconds recovering in its thread.
+ * If one can't open, the other is closed, not left recovering for nobody.
+ */
+export function openStoresTogether(
+  openReactor: () => PGliteLike,
+  openReadModel: () => PGliteLike,
+): StoresOpening {
+  const reactor = openReactor();
+  let readModel: PGliteLike;
+  try {
+    readModel = openReadModel();
+  } catch (error) {
+    void reactor.close().catch(() => undefined);
+    throw error;
+  }
+  const close = async () => {
+    await Promise.allSettled([reactor.close(), readModel.close()]);
+  };
+  const stays = () => new Promise<never>(() => undefined);
+  const failed = Promise.race([
+    reactor.waitReady.then(stays),
+    readModel.waitReady.then(stays),
+  ]).catch(async (error: unknown) => {
+    await close();
+    throw error;
+  });
+  failed.catch(() => undefined);
+  return { reactor, readModel, failed, close };
+}
+
 /**
  * The factory for one PGlite store: in a worker thread when `threaded` (and a
  * worker script exists here), else in the main thread as before. Either way

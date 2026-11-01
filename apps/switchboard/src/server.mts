@@ -57,7 +57,9 @@ import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
 import {
   disableWasmWrapperTiering,
   maintenanceOf,
+  pgliteWorkerEntryPath,
   ThreadedPGlite,
+  type PGliteLike,
 } from "@powerhousedao/reactor-api/pglite-node";
 import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
 import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
@@ -154,9 +156,13 @@ import {
 import { runPglitePreflight } from "./pglite-preflight.js";
 import {
   createPgliteStoreFactory,
+  openStoresTogether,
+  READ_STORE,
+  REACTOR_STORE,
   terminateOnPoisoned,
   vacuumFullTimingOf,
   type PgliteStoreSettings,
+  type StoresOpening,
 } from "./pglite-store.mjs";
 import {
   CURRENT_PG_MAJOR,
@@ -371,6 +377,8 @@ export async function createReactorKysely(opts: {
   /** Open the PGlite store in its own worker thread. */
   pgliteWorkers: boolean;
   pgliteSettings?: PgliteStoreSettings;
+  /** The store, when it's already opening. */
+  openingStore?: PGliteLike;
   logger: ILogger;
 }): Promise<ReactorStorage> {
   const {
@@ -381,6 +389,7 @@ export async function createReactorKysely(opts: {
     hostPoolSize,
     pgliteWorkers,
     pgliteSettings,
+    openingStore,
     logger,
   } = opts;
 
@@ -406,16 +415,18 @@ export async function createReactorKysely(opts: {
   if (!reactorPgliteDir || reactorPgliteMajor === null) {
     throw new Error("Reactor PGLite directory not resolved");
   }
-  const openStore = await createPgliteStoreFactory({
-    label: "reactor-storage",
-    major: reactorPgliteMajor,
-    parsers: "none",
-    inMemory,
-    threaded: pgliteWorkers,
-    settings: pgliteSettings,
-    logger,
-  });
-  const pglite = openStore(reactorPgliteDir);
+  const pglite =
+    openingStore ??
+    (
+      await createPgliteStoreFactory({
+        ...REACTOR_STORE,
+        major: reactorPgliteMajor,
+        inMemory,
+        threaded: pgliteWorkers,
+        settings: pgliteSettings,
+        logger,
+      })
+    )(reactorPgliteDir);
   const dialectOptions =
     pglite instanceof ThreadedPGlite
       ? terminateOnPoisoned(reactorPgliteDialectOptions(logger), pglite)
@@ -528,6 +539,8 @@ async function initServer(
   renown: IRenown | null,
   renownConfig: ResolvedRenownConfig,
   reportError: (error: unknown) => void,
+  /** Filled in once the stores start, for a boot that fails after that. */
+  opening: { stores?: StoresOpening },
 ) {
   const {
     dev,
@@ -820,6 +833,7 @@ async function initServer(
       hostPoolSize: () => config.workers.hostPoolSize,
       pgliteWorkers: options.pgliteWorkers === true,
       pgliteSettings,
+      openingStore: opening.stores?.reactor,
       logger,
     });
 
@@ -1226,21 +1240,58 @@ async function initServer(
   // PG_VERSION. reactor-api calls the factory synchronously, so the legacy
   // module is preloaded above.
   let pgliteFactory: PgliteFactory | undefined;
+  let storeFailed: (error: unknown) => void = () => undefined;
+  const storesFailed = new Promise<never>((_, reject) => {
+    storeFailed = reject;
+  });
+  storesFailed.catch(() => undefined);
   if (readModelPgliteDir && readModelPgliteMajor !== null) {
-    const openReadStore = await createPgliteStoreFactory({
-      label: "read-storage",
-      major: readModelPgliteMajor,
-      parsers: "utc-timestamps",
+    const storeOptions = {
       inMemory,
       threaded: options.pgliteWorkers === true,
       settings: pgliteSettings,
       logger,
+    };
+    const openReadStore = await createPgliteStoreFactory({
+      ...storeOptions,
+      ...READ_STORE,
+      major: readModelPgliteMajor,
     });
-    pgliteFactory = (connectionString) =>
-      openReadStore(connectionString ?? readModelPgliteDir);
+    // With a thread each, the stores needn't take turns. Two on one dir must,
+    // and in the main thread nothing would overlap.
+    const openReactorStore =
+      storeOptions.threaded &&
+      pgliteWorkerEntryPath !== null &&
+      sharedPgliteDir === null &&
+      reactorPgliteDir &&
+      reactorPgliteMajor !== null
+        ? await createPgliteStoreFactory({
+            ...storeOptions,
+            ...REACTOR_STORE,
+            major: reactorPgliteMajor,
+          })
+        : undefined;
+    pgliteFactory = (connectionString) => {
+      const dir = connectionString ?? readModelPgliteDir;
+      if (
+        !openReactorStore ||
+        !reactorPgliteDir ||
+        dir !== readModelPgliteDir
+      ) {
+        return openReadStore(dir);
+      }
+      // Here, not any sooner: reactor-api refuses what it won't run before it
+      // reaches for this store, and a refused boot touches neither.
+      opening.stores ??= openStoresTogether(
+        () => openReactorStore(reactorPgliteDir),
+        () => openReadStore(dir),
+      );
+      opening.stores.failed.catch(storeFailed);
+      return opening.stores.readModel;
+    };
   }
 
-  const api = await initializeAndStartAPI(
+  const startingApi = initializeAndStartAPI(
     initializeClient,
     {
       port: requestedPort,
@@ -1288,6 +1339,9 @@ async function initServer(
     },
     "switchboard",
   );
+  // A store that can't open ends the boot now, with its own error, rather
+  // than as a closed store's error once something reaches for the other one.
+  const api = await Promise.race([startingApi, storesFailed]);
   apiRef.current = api;
   const serverPort = api.port;
 
@@ -1920,6 +1974,7 @@ export const startSwitchboard = async (
     ((error: unknown) => {
       Sentry.captureException(error);
     });
+  const opening: { stores?: StoresOpening } = {};
   try {
     return await initServer(
       serverPort,
@@ -1928,8 +1983,10 @@ export const startSwitchboard = async (
       renown,
       renownConfig,
       reportError,
+      opening,
     );
   } catch (e) {
+    await opening.stores?.close();
     Sentry.captureException(e);
     if (StoredDocumentsRefusedError.isError(e)) {
       logger.error(e.message);
