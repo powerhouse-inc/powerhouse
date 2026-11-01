@@ -327,7 +327,7 @@
                   "properties": {
                     "source": {
                       "type": "string",
-                      "enum": ["self", "remote"]
+                      "enum": ["self", "remote", "kept"]
                     },
                     "url": {
                       "type": "string",
