@@ -51,6 +51,7 @@
   "author": "",
   "dependencies": {
     "@modelcontextprotocol/sdk": "catalog:",
+    "@originjs/vite-plugin-commonjs": "^1.0.3",
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/common": "workspace:*",

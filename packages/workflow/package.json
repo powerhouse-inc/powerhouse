@@ -80,10 +80,8 @@
     "test:ui": "playwright test"
   },
   "dependencies": {
-    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/pieces-framework": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
-    "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@tanstack/react-query": "^5.49.2",
     "@uiw/react-json-view": "2.0.0-alpha.42",
@@ -99,11 +97,13 @@
   "devDependencies": {
     "@ai-sdk/anthropic": "catalog:",
     "@ai-sdk/google": "catalog:",
-    "@ai-sdk/openai-compatible": "catalog:",
     "@ai-sdk/openai": "catalog:",
+    "@ai-sdk/openai-compatible": "catalog:",
     "@ai-sdk/typesafe-ai": "catalog:",
     "@playwright/test": "^1.60.0",
+    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/powerhouse-vetra-packages": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/reactor-mcp": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "@testing-library/react": "^16.0.1",
@@ -130,5 +130,17 @@
     "connect",
     "pieces",
     "activepieces"
-  ]
+  ],
+  "peerDependencies": {
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@powerhousedao/design-system": {
+      "optional": true
+    },
+    "@powerhousedao/reactor-browser": {
+      "optional": true
+    }
+  }
 }

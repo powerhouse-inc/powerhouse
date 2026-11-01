@@ -70,14 +70,22 @@
     "@powerhousedao/shared": "workspace:*",
     "change-case": "catalog:",
     "document-model": "workspace:*",
-    "vite": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@openfeature/core": "catalog:",
     "@types/node": "catalog:",
     "tsdown": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
   },
-  "homepage": "https://academy.vetra.io"
+  "homepage": "https://academy.vetra.io",
+  "peerDependencies": {
+    "vite": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  }
 }
