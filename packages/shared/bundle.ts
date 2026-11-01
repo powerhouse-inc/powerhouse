@@ -43,6 +43,8 @@ await build({
     // carries. Connect resolves it in the browser; host-core, the connect
     // runner and the portle plugin write and route by it.
     "connect/origin-placeholder.ts",
+    // Node only: serving a built Connect swaps its shell, with no bundler around.
+    "connect/app-shell.ts",
     // Output tokens (zod only): host-core re-exports them, and the Connect
     // config schema's declared form makes its URL fields token-able.
     "host-tokens/index.ts",
