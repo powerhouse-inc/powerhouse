@@ -25,7 +25,7 @@ ph connect build --json '{"app":{"offline":false}}'
 
 Disabling emits a self-destroying worker, so any worker installed by an earlier build unregisters itself and clears its caches on the browser's next update check — no stale workers are left behind.
 
-The service worker is only built for production. During local development it is always disabled, regardless of `connect.app.offline`, so hot-reload isn't intercepted by a cache.
+The service worker is only built for production. During local development it is always disabled, regardless of `connect.app.offline`, so hot-reload isn't intercepted by a cache. The manifest is still served, so you can install a development server on a phone to see how it looks, but that install needs the server to be running.
 
 ## Customize with `connect.pwa`
 

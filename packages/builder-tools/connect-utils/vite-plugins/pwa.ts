@@ -169,6 +169,7 @@ export function staticFilesIn(dir: string): string[] {
 }
 
 const SW_FILENAME = "service-worker.ts";
+const MANIFEST_FILENAME = "manifest.webmanifest";
 
 /**
  * Absolute directory holding the hand-written service-worker source. Resolved
@@ -212,6 +213,39 @@ function phSwConfigPlugin(data: Record<string, unknown>): Plugin {
           ([key, value]) => `export const ${key} = ${JSON.stringify(value)};`,
         )
         .join("\n");
+    },
+  };
+}
+
+/**
+ * The web manifest on the dev server, so `ph connect studio` and `ph run vetra`
+ * install on a phone the way a build does. Only the manifest: no worker, so hot
+ * reload stays uncached and the installed app needs the server. File handlers
+ * stay out, as they only work on a build.
+ */
+export function connectPwaDevManifestPlugin(
+  manifest: ConnectPwaManifest,
+): Plugin {
+  const { file_handlers: _fileHandlers, ...served } = manifest;
+  let href = `/${MANIFEST_FILENAME}`;
+  return {
+    name: "ph-connect-pwa-dev-manifest",
+    apply: "serve",
+    configResolved(config) {
+      href = `${config.base}${MANIFEST_FILENAME}`.replace(/\/{2,}/g, "/");
+    },
+    configureServer(server) {
+      server.middlewares.use(href, (_req, res) => {
+        res.setHeader("Content-Type", "application/manifest+json");
+        res.setHeader("Cache-Control", "no-cache");
+        res.end(JSON.stringify(served));
+      });
+    },
+    transformIndexHtml(html) {
+      return html.replace(
+        "</head>",
+        `<link rel="manifest" href="${href}" /></head>`,
+      );
     },
   };
 }
@@ -276,6 +310,7 @@ export function connectPwaPlugins(options: {
 
   return [
     connectPwaIconsPlugin(),
+    connectPwaDevManifestPlugin(manifest),
     VitePWA({
       strategies: "injectManifest",
       // Absolute srcDir → swSrc is builder-tools' own SW source; the emitted
