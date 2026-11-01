@@ -1,9 +1,11 @@
 import type {
+  ConsistencyToken,
   JobInfo,
   PagedResults,
   ReactorInfo,
   ViewFilter,
 } from "@powerhousedao/reactor";
+import { DRIVE_CHILD_RELATIONSHIP_TYPE } from "@powerhousedao/reactor-drive";
 import type {
   BackendHealth,
   IRoutableBackend,
@@ -47,6 +49,8 @@ export type SwitchboardBackendDescriptor = {
   readonly inspection?: ReactorReach["inspection"];
   /** Bound on one request, headers through body. Default 30_000. */
   readonly requestTimeoutMs?: number;
+  /** Bound on a batch, which waits for its jobs. Default 120_000. */
+  readonly batchRequestTimeoutMs?: number;
   /** Unset fields take {@link DEFAULT_BREAKER}; `false` never opens. */
   readonly breaker?: SwitchboardBreaker;
   /** The transport under the deadline and the breaker; {@link switchboardFetch} by default. */
@@ -54,6 +58,7 @@ export type SwitchboardBackendDescriptor = {
 };
 
 export const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+export const DEFAULT_BATCH_REQUEST_TIMEOUT_MS = 120_000;
 export const DEFAULT_BREAKER = Object.freeze({ failures: 3, openMs: 30_000 });
 
 /** After `failures` failed requests in a row, send nothing for `openMs`. */
@@ -312,17 +317,33 @@ export function createSwitchboardBackend(
     realtime: descriptor.realtime,
     driveIdFor: drives.driveIdFor,
     requestTimeoutMs: descriptor.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
+    batchRequestTimeoutMs:
+      descriptor.batchRequestTimeoutMs ?? DEFAULT_BATCH_REQUEST_TIMEOUT_MS,
     fetch: breaker.wrap(descriptor.fetch ?? switchboardFetch),
   });
   const backend: IRoutableBackend = {
     supports: { find: findIsServableOverGraphQL, pointInTimeViews: false },
     health: () => breaker.health(),
     drives: gql.read.drives,
+    driveNodes: gql.nodeSource(),
+    // A file added through the reactor has the one; one a drive migration or
+    // the reactor-drive client linked has the other.
+    driveFileLinkTypes: ["child", DRIVE_CHILD_RELATIONSHIP_TYPE],
+    // A write is submitted and its job polled: the waiting mutation is one
+    // request, which a slow write outlives, and it would be aborted having landed.
+    submit: {
+      execute: (identifier, branch, actions, signal) =>
+        drives.refusable(gql.executeAsync(identifier, branch, actions, signal)),
+    },
     get: async <TDocument extends PHDocument>(
       identifier: string,
       view?: ViewFilter,
       signal?: AbortSignal,
-    ) => drives.learn(await gql.get<TDocument>(identifier, view, signal)),
+      consistencyToken?: ConsistencyToken,
+    ) =>
+      drives.learn(
+        await gql.get<TDocument>(identifier, view, signal, consistencyToken),
+      ),
     getMany: async <TDocument extends PHDocument>(
       ids: string[],
       view?: ViewFilter,

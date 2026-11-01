@@ -24,6 +24,7 @@ import {
   asJobError,
   DriveWriteClient,
   type BatchSubmitter,
+  type DriveNodeLookups,
   type DriveWriteHalf,
 } from "./drive-write-client.js";
 import { WriteHandleFactory, type HandleReader } from "./internal/handles.js";
@@ -37,7 +38,7 @@ import type {
   WriteHandle,
 } from "./types.js";
 
-export type { BatchSubmitter } from "./drive-write-client.js";
+export type { BatchSubmitter, DriveNodeLookups } from "./drive-write-client.js";
 
 /** The client members a {@link DriveClient} reads and writes through. */
 export type DriveClientDeps = Pick<
@@ -251,6 +252,7 @@ export class DriveClient extends DriveClientFacade {
       options: CreateProtocolVersionsOptions,
       signal?: AbortSignal,
     ) => Promise<ProtocolVersions>,
+    lookups?: DriveNodeLookups,
   ) {
     const handles = new WriteHandleFactory({
       waitForStage: (jobId, _stage, signal) => client.waitForJob(jobId, signal),
@@ -265,9 +267,11 @@ export class DriveClient extends DriveClientFacade {
         submitter,
         signer,
         resolveReference,
-        undefined,
+        lookups?.lookupLiveDocument,
         undefined,
         createProtocolVersions,
+        lookups?.nodesFrom,
+        lookups?.fileLinkTypes,
       ),
     );
   }

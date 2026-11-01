@@ -169,6 +169,7 @@ the full reactor client implement:
 | `find(search, view?, paging?, signal?)`           | Paged documents by type, parent or ids; `useDocumentsOfType` reads by type.        |
 | `create(document, parentIdentifier?, signal?)`    | Emits `Created`.                                                                  |
 | `execute(identifier, branch, actions, signal?)`   | Fetches the document, stamps and signs a single action, pushes, emits `Updated`.  |
+| `executeAsync(identifier, branch, actions, signal?)` | What `execute` writes, through `mutateDocumentAsync`: returns the job once the Switchboard holds it, and announces `Updated` once it is readable. A Switchboard backend writes through this, so no one request has to outlast a write. |
 | `deleteDocument(identifier, propagate?, signal?)` | Emits `Deleted`.                                                                  |
 | `subscribe(search, callback, view?)`              | Local emissions plus, lazily, the server's.                                       |
 

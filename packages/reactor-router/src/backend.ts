@@ -11,6 +11,7 @@ import {
   type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type DocumentRelationship,
+  type IDriveNodeSource,
   type IDriveReadClient,
   type IReactorClient,
   type IReactorReadClient,
@@ -59,7 +60,8 @@ export type BackendSubmit = {
     actions: Action[],
     signal?: AbortSignal,
   ): Promise<JobInfo>;
-  create(
+  /** Absent where a create has no non-waiting form; it then waits as without `submit`. */
+  create?(
     document: PHDocument,
     parentIdentifier?: string,
     signal?: AbortSignal,
@@ -90,6 +92,16 @@ export interface IRoutableBackend {
    * prefer it over `read.drives` and over the drive's state.
    */
   readonly drives?: IDriveReadClient;
+  /**
+   * The node reads behind `drives`, where a drive's subtree can be asked for
+   * without paging through every node in the drive.
+   */
+  readonly driveNodes?: IDriveNodeSource;
+  /**
+   * The relationship types that can link a file to its drive, all removed with
+   * the file. Absent, the reactor's own `child`.
+   */
+  readonly driveFileLinkTypes?: readonly string[];
   /**
    * Whether the backend can be reached now, without sending a request. While
    * it answers "down", the router's ownership probes answer "unknown" without

@@ -130,9 +130,7 @@ describe("selectAppReactorClient with multiReactor on", () => {
     expect(getFullReactorClient()).toBe(client);
     expect(loads.count).toBe(1);
     expect(local.execute).not.toHaveBeenCalled();
-    expect(driveIdOf(stub.received, "MutateDocumentWithOperations")).toBe(
-      "drive-x",
-    );
+    expect(driveIdOf(stub.received, "MutateDocumentAsync")).toBe("drive-x");
   });
 
   it("sends a reactor-browser drive rename to the Switchboard that holds the drive", async () => {
@@ -148,9 +146,7 @@ describe("selectAppReactorClient with multiReactor on", () => {
     await renameDrive("drive-x", "renamed");
 
     expect(local.execute).not.toHaveBeenCalled();
-    expect(driveIdOf(stub.received, "MutateDocumentWithOperations")).toBe(
-      "drive-x",
-    );
+    expect(driveIdOf(stub.received, "MutateDocumentAsync")).toBe("drive-x");
   });
 
   it.each([
@@ -197,9 +193,7 @@ describe("selectAppReactorClient in remote mode (no local reactor)", () => {
     expect(client).toBeInstanceOf(RoutingReactorClient);
     expect(getFullReactorClient()).toBe(client);
     await client.execute("drive-x", "main", [actions.setName("renamed")]);
-    expect(driveIdOf(stub.received, "MutateDocumentWithOperations")).toBe(
-      "drive-x",
-    );
+    expect(driveIdOf(stub.received, "MutateDocumentAsync")).toBe("drive-x");
   });
 
   it("throws on a missing remote drive URL (no local reactor to fall back to)", async () => {

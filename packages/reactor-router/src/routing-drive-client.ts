@@ -1,6 +1,10 @@
 import {
+  collectAllPages,
   DriveClient,
   DriveClientFacade,
+  JobFailedError,
+  JobStatus,
+  toLegacyNode,
   type CopyNodeOptions,
   type IDriveReadClient,
   type IDriveWriteClient,
@@ -16,9 +20,13 @@ import {
   type DriveInput,
   type Node,
 } from "@powerhousedao/shared/document-drive";
-import type { ISigner, PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  ISigner,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
-import type { RouterBackend } from "./backend.js";
+import type { IRoutableBackend, RouterBackend } from "./backend.js";
 import { ATTEMPT, type RouteDispatcher } from "./dispatcher.js";
 import { jobIdsOfHandle } from "./routing-handles.js";
 import { DEFAULT_BRANCH } from "./types.js";
@@ -38,6 +46,49 @@ export async function resolveOn(
   return document.header.id;
 }
 
+/** The id of the live document `identifier` names on one backend, if any. */
+async function liveDocumentOn(
+  backend: RouterBackend,
+  identifier: string,
+  signal?: AbortSignal,
+): Promise<string | undefined> {
+  const served = await backend.api.isServed(identifier, undefined, signal);
+  return served ? resolveOn(backend, identifier, signal) : undefined;
+}
+
+/**
+ * A backend's facade members, with `execute` over its `submit` where it has
+ * one: the job is submitted, waited for and its document read back, so no one
+ * request has to outlast the write.
+ */
+function facadeMembersOf(api: IRoutableBackend): IRoutableBackend {
+  const submit = api.submit;
+  if (submit === undefined) {
+    return api;
+  }
+  return {
+    ...api,
+    execute: async <TDocument extends PHDocument>(
+      identifier: string,
+      branch: string,
+      actions: Action[],
+      signal?: AbortSignal,
+    ): Promise<TDocument> => {
+      const job = await submit.execute(identifier, branch, actions, signal);
+      const settled = await api.waitForJob(job, signal);
+      if (settled.status === JobStatus.FAILED) {
+        throw new JobFailedError(settled);
+      }
+      return api.get<TDocument>(
+        job.documentId || identifier,
+        { branch },
+        signal,
+        settled.consistencyToken,
+      );
+    },
+  };
+}
+
 /** The drive client over a backend's facade members, with its halves exposed. */
 class FacadeDriveClient extends DriveClient {
   get readHalf(): IDriveReadClient {
@@ -52,8 +103,9 @@ class FacadeDriveClient extends DriveClient {
 /**
  * Each backend's drive halves. Reads use the backend's `drives` node reads,
  * else its `read.drives`; writes its `write.drives`. Without those, the drive
- * client over its facade members, built once on first use, which reads nodes
- * from the drive document's state.
+ * client over its facade members, built once on first use, whose writes read
+ * nodes through {@link readOn}, so they reach a drive that keeps no nodes in
+ * its state.
  */
 export class BackendDrives {
   private readonly facades = new Map<string, FacadeDriveClient>();
@@ -75,15 +127,44 @@ export class BackendDrives {
     return backend.api.write?.drives ?? this.facadeOf(backend).writeHalf;
   }
 
+  /** A node and its subtree; a backend that cannot ask lists the whole drive. */
+  private async nodesFrom(
+    backend: RouterBackend,
+    driveId: string,
+    nodeId: string,
+    signal?: AbortSignal,
+  ): Promise<Node[]> {
+    const source = backend.api.driveNodes;
+    if (source !== undefined) {
+      const nodes = await source.getDescendants(driveId, nodeId, signal);
+      return nodes.map(toLegacyNode);
+    }
+    const page = await this.readOn(backend).listNodes(
+      driveId,
+      undefined,
+      undefined,
+      signal,
+    );
+    return collectAllPages(page, signal);
+  }
+
   private facadeOf(backend: RouterBackend): FacadeDriveClient {
     let client = this.facades.get(backend.name);
     if (client === undefined) {
       client = new FacadeDriveClient(
-        backend.api,
+        facadeMembersOf(backend.api),
         this.logger,
         (request, signal) => backend.api.executeBatch(request, signal),
         this.signer,
         (identifier, signal) => resolveOn(backend, identifier, signal),
+        undefined,
+        {
+          lookupLiveDocument: (identifier, signal) =>
+            liveDocumentOn(backend, identifier, signal),
+          nodesFrom: (driveId, nodeId, signal) =>
+            this.nodesFrom(backend, driveId, nodeId, signal),
+          fileLinkTypes: backend.api.driveFileLinkTypes,
+        },
       );
       this.facades.set(backend.name, client);
     }

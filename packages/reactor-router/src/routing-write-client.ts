@@ -277,7 +277,7 @@ export class RoutingWriteClient implements IReactorWriteClient {
           return write.create(document, parentIdentifier, signal);
         }
         const submit = target.api.submit;
-        if (submit !== undefined) {
+        if (submit?.create !== undefined) {
           const result = await submit.create(
             document,
             parentIdentifier,
@@ -706,7 +706,7 @@ export class RoutingWriteClient implements IReactorWriteClient {
           document.header.documentType,
         ]);
         const submit = target.api.submit;
-        if (submit !== undefined) {
+        if (submit?.create !== undefined) {
           return submit.create(document, parentIdentifier, signal);
         }
         const parentId =
