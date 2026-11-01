@@ -169,7 +169,6 @@ export function staticFilesIn(dir: string): string[] {
 }
 
 const SW_FILENAME = "service-worker.ts";
-const MANIFEST_FILENAME = "manifest.webmanifest";
 
 /**
  * Absolute directory holding the hand-written service-worker source. Resolved
@@ -218,34 +217,20 @@ function phSwConfigPlugin(data: Record<string, unknown>): Plugin {
 }
 
 /**
- * The web manifest on the dev server, so `ph connect studio` and `ph run vetra`
- * install on a phone the way a build does. Only the manifest: no worker, so hot
- * reload stays uncached and the installed app needs the server. File handlers
- * stay out, as they only work on a build.
+ * Connect's `?ph-manifest-rev` link (pwa-manifest-link.ts) is the service
+ * worker's to ignore. The dev server has none, and vite-plugin-pwa matches the
+ * whole URL there, so without this the link would get index.html.
  */
-export function connectPwaDevManifestPlugin(
-  manifest: ConnectPwaManifest,
-): Plugin {
-  const { file_handlers: _fileHandlers, ...served } = manifest;
-  let href = `/${MANIFEST_FILENAME}`;
+function devManifestRevisionPlugin(): Plugin {
   return {
-    name: "ph-connect-pwa-dev-manifest",
+    name: "ph-connect-pwa-dev-manifest-revision",
     apply: "serve",
-    configResolved(config) {
-      href = `${config.base}${MANIFEST_FILENAME}`.replace(/\/{2,}/g, "/");
-    },
     configureServer(server) {
-      server.middlewares.use(href, (_req, res) => {
-        res.setHeader("Content-Type", "application/manifest+json");
-        res.setHeader("Cache-Control", "no-cache");
-        res.end(JSON.stringify(served));
+      const manifestUrl = `${server.config.base}manifest.webmanifest`;
+      server.middlewares.use((req, _res, next) => {
+        if (req.url?.startsWith(`${manifestUrl}?`)) req.url = manifestUrl;
+        next();
       });
-    },
-    transformIndexHtml(html) {
-      return html.replace(
-        "</head>",
-        `<link rel="manifest" href="${href}" /></head>`,
-      );
     },
   };
 }
@@ -310,7 +295,7 @@ export function connectPwaPlugins(options: {
 
   return [
     connectPwaIconsPlugin(),
-    connectPwaDevManifestPlugin(manifest),
+    devManifestRevisionPlugin(),
     VitePWA({
       strategies: "injectManifest",
       // Absolute srcDir → swSrc is builder-tools' own SW source; the emitted
@@ -321,8 +306,10 @@ export function connectPwaPlugins(options: {
       // posts SKIP_WAITING when the user accepts (see serviceWorkerManager).
       registerType: "prompt",
       injectRegister: null,
-      // ph connect studio keeps running without a service worker.
-      devOptions: { enabled: false },
+      // The dev server gets the build's manifest and link, so it installs like
+      // a build. It gets no worker: nothing registers one (injectRegister above,
+      // and the SPA skips it in development), so hot reload stays uncached.
+      devOptions: { enabled: true },
       // Icons are emitted by connectPwaIconsPlugin and precached via the png
       // glob, so the plugin must not also try to resolve them from /public.
       includeManifestIcons: false,

@@ -9,11 +9,7 @@ import {
   collectProjectPwaContribution,
   validateProjectPwaConfig,
 } from "./pwa-packages.js";
-import {
-  BASE_PRECACHE,
-  connectPwaDevManifestPlugin,
-  connectPwaPlugins,
-} from "./pwa.js";
+import { BASE_PRECACHE, connectPwaPlugins } from "./pwa.js";
 
 describe("connectPwaPlugins", () => {
   it("emits a single self-destroying worker when offline is disabled", () => {
@@ -62,15 +58,8 @@ describe("connectPwaPlugins", () => {
   });
 });
 
-describe("connectPwaDevManifestPlugin", () => {
-  const manifest = {
-    name: "Sektar",
-    display: "standalone" as const,
-    icons: [{ src: "pwa-app-192x192.png", sizes: "192x192" }],
-    file_handlers: [{ action: ".", accept: { "app/x": [".x"] } }],
-  };
-
-  it("serves the manifest under the base and links it from index.html", async () => {
+describe("connectPwaPlugins on the dev server", () => {
+  it("serves a build's manifest and link, and registers no worker", async () => {
     const root = mkdtempSync(join(tmpdir(), "connect-pwa-dev-"));
     writeFileSync(
       join(root, "index.html"),
@@ -83,34 +72,39 @@ describe("connectPwaDevManifestPlugin", () => {
       logLevel: "silent",
       optimizeDeps: { noDiscovery: true },
       server: { host: "127.0.0.1", port: 0 },
-      plugins: [connectPwaDevManifestPlugin(manifest)],
+      plugins: connectPwaPlugins({
+        offlineEnabled: true,
+        pwa: { manifest: { name: "Sektar" } },
+      }),
     });
     try {
       await server.listen();
       const { port } = server.httpServer!.address() as AddressInfo;
       const origin = `http://127.0.0.1:${port}/app/`;
 
-      const response = await fetch(`${origin}manifest.webmanifest`);
-      expect(response.headers.get("content-type")).toBe(
-        "application/manifest+json",
-      );
-      const served = (await response.json()) as Record<string, unknown>;
-      expect(served.name).toBe("Sektar");
-      expect(served.icons).toEqual(manifest.icons);
-      // They only work on a build, which the docs promise.
-      expect(served).not.toHaveProperty("file_handlers");
+      // Both the plain link and the one Connect re-attaches with a revision.
+      for (const query of ["", "?ph-manifest-rev=2"]) {
+        const response = await fetch(`${origin}manifest.webmanifest${query}`);
+        expect(response.headers.get("content-type")).toBe(
+          "application/manifest+json",
+        );
+        const served = (await response.json()) as Record<string, unknown>;
+        expect(served.name).toBe("Sektar");
+        expect(served).toHaveProperty("file_handlers");
+      }
 
-      expect(await (await fetch(origin)).text()).toContain(
-        `<link rel="manifest" href="/app/manifest.webmanifest" />`,
+      const html = await server.transformIndexHtml(
+        "/",
+        `<html><head></head><body></body></html>`,
       );
+      expect(html).toContain(
+        `<link rel="manifest" href="/app/manifest.webmanifest">`,
+      );
+      expect(html).not.toContain("serviceWorker.register");
     } finally {
       await server.close();
       rmSync(root, { recursive: true, force: true });
     }
-  });
-
-  it("leaves a build to vite-plugin-pwa", () => {
-    expect(connectPwaDevManifestPlugin(manifest).apply).toBe("serve");
   });
 });
 
