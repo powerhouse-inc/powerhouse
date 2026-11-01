@@ -51,6 +51,8 @@ The manifest's [`categories`](https://developer.mozilla.org/en-US/docs/Web/Progr
 
 To replace the browser-tab favicon too, pass `ph connect build --favicon ./icon.ico`.
 
+`connect.branding.appName` and `connect.branding.icon` give the installed app your project's name and icons, without setting anything under `pwa`. Keep `_16x16`, `_32x32`, `_64x64`, `_192x192` and `_512x512` copies next to the icon, as a size with no copy keeps Connect's icon or is left out. The first icon of at least 180 px is also what an iPhone puts on its home screen.
+
 ```json
 {
   "connect": {

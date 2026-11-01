@@ -498,6 +498,23 @@ export function withProjectFavicons(
   return html.replace(ICON_LINK, "").replace("</head>", `${links}</head>`);
 }
 
+/** index.html with the icon an iPhone puts on its home screen: the first
+ * installed-app icon covering its 180 px. Unchanged without one, as with
+ * Connect's own icons or an SVG, which iOS can't use here. */
+export function withAppleTouchIcon(
+  html: string,
+  icons: PwaIcon[] = [],
+  base = "/",
+): string {
+  const icon = icons.find((candidate) => parseInt(candidate.sizes) >= 180);
+  if (!icon) return html;
+  const prefix = base.endsWith("/") ? base : `${base}/`;
+  return html.replace(
+    "</head>",
+    `<link rel="apple-touch-icon" href="${escapeAttr(prefix + icon.fileName)}" /></head>`,
+  );
+}
+
 /** Keyframes for the loader motions; shared by the shell and the app. */
 export const LOADER_KEYFRAMES =
   "@keyframes ph-loader-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.94)}}" +
@@ -534,7 +551,7 @@ export function replaceShellLoader(
 /**
  * Serves (dev) and emits (build) the branding files, and adds the tags
  * index.html carries before any JavaScript: the loader and custom-shell
- * meta tags, and the favicon links.
+ * meta tags, the favicon links and the iPhone's home-screen icon.
  */
 export function connectProjectBrandPlugin(options: {
   loader?: ProjectLoader;
@@ -574,7 +591,11 @@ export function connectProjectBrandPlugin(options: {
     },
     transformIndexHtml(html) {
       const withMeta = meta ? html.replace("</head>", `${meta}</head>`) : html;
-      return withProjectFavicons(withMeta, favicons, base);
+      return withAppleTouchIcon(
+        withProjectFavicons(withMeta, favicons, base),
+        options.pwaIcons,
+        base,
+      );
     },
     generateBundle(_options, bundle) {
       for (const file of files) {
