@@ -6,6 +6,7 @@ import {
 import {
   compoundStartVerb,
   runCompound,
+  stopStreamOf,
   type RunCompoundResult,
 } from "../compound.js";
 import { readProjectName } from "../run-record.js";
@@ -37,7 +38,10 @@ async function startAt(
   return runCompound(
     host,
     { ...ctx, verb: memberVerb },
-    { projectName: readProjectName(ctx.projectRoot) },
+    {
+      projectName: readProjectName(ctx.projectRoot),
+      stopStream: stopStreamOf(process.env, () => process.stdin),
+    },
   );
 }
 

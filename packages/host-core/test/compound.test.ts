@@ -10,8 +10,13 @@ import {
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { runCompound } from "../src/compound.js";
+import {
+  runCompound,
+  STOP_ON_STDIN_ENV,
+  stopStreamOf,
+} from "../src/compound.js";
 import { loadHost } from "../src/host-loader.js";
 import { readRunRecord } from "../src/run-record.js";
 import type { RunnerContext } from "../src/runner-resolver.js";
@@ -56,7 +61,7 @@ function makeProject(opts?: {
   );
   const sink = path.join(dir, "calls.json");
   mkdirSync(path.join(dir, "node_modules"), { recursive: true });
-  symlinkSync(ZOD_DIR, path.join(dir, "node_modules", "zod"), "dir");
+  symlinkSync(ZOD_DIR, path.join(dir, "node_modules", "zod"), "junction");
 
   // fake runner package shared by both members, keyed on the host name it
   // receives so one module can play both roles
@@ -570,6 +575,113 @@ describe("runCompound", () => {
     ).toEqual(["lab-connect", "lab-switchboard"]);
     expect(exits).toEqual([130]);
     expect(readRunRecord(dir, "app")).toBeUndefined();
+  });
+
+  describe("stop stream", () => {
+    const wired = () =>
+      makeProject({
+        connectPlugins: [{ module: WF, config: { drive: workflowsUrl } }],
+      });
+    const shutdowns = (sink: string) =>
+      calls(sink)
+        .filter((c) => c.event === "shutdown")
+        .map((c) => c.name);
+    const stoppedWith = async (dir: string, stopStream: PassThrough) => {
+      const exits: number[] = [];
+      await runCompound(await appHost(dir), ctx(dir), {
+        projectName: "lab",
+        installSignalHandlers: false,
+        exit: (code) => exits.push(code),
+        stopStream,
+      });
+      return exits;
+    };
+
+    it("a line stops the members as a signal does, and exits once", async () => {
+      const { dir, sink } = wired();
+      const stopStream = new PassThrough();
+      const exits = await stoppedWith(dir, stopStream);
+      stopStream.write("stop\n");
+      stopStream.end();
+      await vi.waitFor(() => expect(exits).toEqual([143]));
+      expect(shutdowns(sink)).toEqual(["lab-connect", "lab-switchboard"]);
+      expect(readRunRecord(dir, "app")).toBeUndefined();
+    });
+
+    it("the stream ending stops them too: the supervisor has gone", async () => {
+      const { dir, sink } = wired();
+      const stopStream = new PassThrough();
+      const exits = await stoppedWith(dir, stopStream);
+      stopStream.end();
+      await vi.waitFor(() => expect(exits).toEqual([143]));
+      expect(shutdowns(sink)).toEqual(["lab-connect", "lab-switchboard"]);
+    });
+
+    it("a stop during boot takes effect when boot finishes", async () => {
+      const { dir, sink } = wired();
+      const stopStream = new PassThrough();
+      stopStream.end();
+      const exits = await stoppedWith(dir, stopStream);
+      await vi.waitFor(() => expect(exits).toEqual([143]));
+      expect(shutdowns(sink)).toEqual(["lab-connect", "lab-switchboard"]);
+    });
+
+    it("exits at the limit if the shutdown hangs", async () => {
+      const { dir } = makeProject();
+      const stopStream = new PassThrough();
+      const exits: number[] = [];
+      const result = await runCompound(await appHost(dir), ctx(dir), {
+        projectName: "lab",
+        installSignalHandlers: false,
+        exit: (code) => exits.push(code),
+        stopStream,
+        stopStreamLimitMs: 5,
+      });
+      result.started[0].handle.shutdown = () =>
+        new Promise<void>(() => undefined);
+      stopStream.end();
+      await vi.waitFor(() => expect(exits).toEqual([143]));
+    });
+
+    it("outlives the supervisor's pipes: a log line then is no error", async () => {
+      const { dir } = wired();
+      const output = new PassThrough();
+      await runCompound(await appHost(dir), ctx(dir), {
+        projectName: "lab",
+        installSignalHandlers: false,
+        exit: () => undefined,
+        stopStream: new PassThrough(),
+        supervisedOutputs: [output],
+      });
+      expect(() =>
+        output.emit("error", Object.assign(new Error(), { code: "EPIPE" })),
+      ).not.toThrow();
+    });
+
+    it("a one-shot verb doesn't listen: it has nothing to stop", async () => {
+      const { dir } = makeProject();
+      const stopStream = new PassThrough();
+      await runCompound(
+        await appHost(dir),
+        { ...ctx(dir), verb: "build" },
+        {
+          projectName: "lab",
+          installSignalHandlers: false,
+          stopStream,
+        },
+      );
+      expect(stopStream.listenerCount("end")).toBe(0);
+    });
+
+    it("stdin stops the stack only when the supervisor asks for that", () => {
+      const stdin = vi.fn(() => new PassThrough());
+      expect(stopStreamOf({}, stdin)).toBeUndefined();
+      expect(stdin).not.toHaveBeenCalled();
+      expect(stopStreamOf({ [STOP_ON_STDIN_ENV]: "1" }, stdin)).toBe(
+        stdin.mock.results[0]?.value,
+      );
+      expect(stdin).toHaveBeenCalledOnce();
+    });
   });
 
   it("refuses to start when a live record of this project exists (lock)", async () => {
