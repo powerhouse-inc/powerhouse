@@ -85,7 +85,6 @@ import {
   type IRenown,
   type SwitchboardRequestFn,
 } from "@renown/sdk/node";
-import * as Sentry from "@sentry/node";
 import { childLogger, setLogLevel, type ILogger } from "document-model";
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
@@ -530,6 +529,13 @@ export function deriveAttachmentServiceConfig(
           : undefined
     : undefined;
   return { remoteUrl, jwtHandler };
+}
+
+/** Sentry starts only under SENTRY_DSN (observability.mts), and is a lot to load. */
+async function captureInSentry(error: unknown): Promise<void> {
+  if (!process.env.SENTRY_DSN) return;
+  const Sentry = await import("@sentry/node");
+  Sentry.captureException(error);
 }
 
 async function initServer(
@@ -1396,7 +1402,7 @@ async function initServer(
   if (process.env.SENTRY_DSN) {
     // Register Sentry error handler after all routes are established.
     // The adapter calls the framework-specific Sentry setup internally.
-    api.httpAdapter.setupSentryErrorHandler(Sentry);
+    api.httpAdapter.setupSentryErrorHandler(await import("@sentry/node"));
   }
 
   // The framework wiring takes the halves; `client` (the facade) stays for
@@ -1972,7 +1978,7 @@ export const startSwitchboard = async (
   const reportError =
     deps.reportError ??
     ((error: unknown) => {
-      Sentry.captureException(error);
+      void captureInSentry(error);
     });
   const opening: { stores?: StoresOpening } = {};
   try {
@@ -1987,7 +1993,7 @@ export const startSwitchboard = async (
     );
   } catch (e) {
     await opening.stores?.close();
-    Sentry.captureException(e);
+    await captureInSentry(e);
     if (StoredDocumentsRefusedError.isError(e)) {
       logger.error(e.message);
     } else {
