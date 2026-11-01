@@ -235,10 +235,20 @@ export function DeleteItemModal() {
   const node = useNodeById(modal?.id);
   const parent = useNodeParentFolderById(modal?.id);
   const { drive } = useDriveRouteData();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string>();
   const remove = async () => {
-    closePHModal();
     if (!drive || !modal) return;
-    await deleteNode(drive.header.id, modal.id);
+    setPending(true);
+    setError(undefined);
+    try {
+      await deleteNode(drive.header.id, modal.id);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+      setPending(false);
+      return;
+    }
+    closePHModal();
     setSelectedNode(parent);
   };
   return (
@@ -250,9 +260,10 @@ export function DeleteItemModal() {
           <button
             type="button"
             className={primaryClass}
+            disabled={pending}
             onClick={() => void remove()}
           >
-            Delete
+            {pending ? "Deleting…" : "Delete"}
           </button>
         </>
       }
@@ -262,6 +273,7 @@ export function DeleteItemModal() {
           ? "The folder and everything in it will be deleted."
           : "The document will be deleted."}
       </p>
+      {error && <p className="text-core-muted">{error}</p>}
     </Dialog>
   );
 }
