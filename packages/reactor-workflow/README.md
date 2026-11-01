@@ -727,9 +727,12 @@ therefore checks the value it is about to return at any depth, and
 the piece.
 
 **The secrets key is not optional in production.** Unset, `loadKey` generates
-`./.ph/secrets.key` — relative to the working directory, like the bundle cache
-and the attachment staging dir. A host whose working directory does not survive
-a restart would come back with a new key, so the store guards against it:
+`.ph/secrets.key` in the same `.ph` tree as the bundle cache and the attachment
+folders: the working directory's, or the one `PH_USER_DATA_DIR` moves it to. A
+tree with no key takes a copy of one left in the working directory, as a
+desktop shell's stores from before it moved are encrypted with that. A host
+whose tree does not survive a restart would come back with a new key, so the
+store guards against it:
 
 - A host passes `secretsKeyFile: false` when its database outlives the working
   directory, and the store then requires `PH_WORKFLOWS_SECRETS_MASTER_KEY`

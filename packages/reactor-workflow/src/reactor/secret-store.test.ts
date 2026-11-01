@@ -6,9 +6,25 @@ import {
 } from "../../test/helpers/pglite.js";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import {
   InvalidSecretRefError,
   SecretDeletedError,
@@ -189,6 +205,74 @@ describe("LocalEncryptedSecretStore", () => {
         keyFile: tempKeyFile(),
       }),
     ).rejects.toThrow(MasterKeyMismatchError);
+  });
+
+  describe("when a shell moves .ph with PH_USER_DATA_DIR", () => {
+    let folder: string;
+    let working: string;
+    let moved: string;
+
+    beforeEach(() => {
+      folder = mkdtempSync(join(tmpdir(), "secrets-moved-"));
+      working = join(folder, "install");
+      moved = join(folder, "identity");
+      vi.spyOn(process, "cwd").mockReturnValue(working);
+      vi.stubEnv("PH_USER_DATA_DIR", moved);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+      rmSync(folder, { recursive: true, force: true });
+    });
+
+    it("keeps the key with the rest of the tree", async () => {
+      await LocalEncryptedSecretStore.create(freshDb());
+      expect(existsSync(join(moved, ".ph", "secrets.key"))).toBe(true);
+      expect(existsSync(join(working, ".ph"))).toBe(false);
+    });
+
+    it("copies a key left in the working directory, so what it encrypted stays readable", async () => {
+      const db = freshDb();
+      const left = join(working, ".ph", "secrets.key");
+      const before = await LocalEncryptedSecretStore.create(db, {
+        keyFile: left,
+      });
+      const created = await before.create({
+        value: "stored-before-the-move",
+        ownerId: OWNER.documentId,
+      });
+
+      const after = await LocalEncryptedSecretStore.create(db);
+
+      await expect(after.get(created.ref, OWNER)).resolves.toBe(
+        "stored-before-the-move",
+      );
+      const copy = readFileSync(join(moved, ".ph", "secrets.key"), "utf8");
+      expect(copy).toBe(readFileSync(left, "utf8"));
+    });
+
+    it("prefers the tree's key to one left behind", async () => {
+      const mine = join(moved, ".ph", "secrets.key");
+      mkdirSync(join(moved, ".ph"), { recursive: true });
+      writeFileSync(mine, `${KEY_A}\n`);
+      mkdirSync(join(working, ".ph"), { recursive: true });
+      writeFileSync(join(working, ".ph", "secrets.key"), `${KEY_B}\n`);
+
+      await LocalEncryptedSecretStore.create(freshDb());
+
+      expect(readFileSync(mine, "utf8").trim()).toBe(KEY_A);
+    });
+
+    it("leaves a named key file alone", async () => {
+      mkdirSync(join(working, ".ph"), { recursive: true });
+      writeFileSync(join(working, ".ph", "secrets.key"), `${KEY_B}\n`);
+      const keyFile = join(folder, "named.key");
+
+      await LocalEncryptedSecretStore.create(freshDb(), { keyFile });
+
+      expect(readFileSync(keyFile, "utf8").trim()).not.toBe(KEY_B);
+    });
   });
 
   it("lets exactly one of two concurrent first starts claim the namespace", async () => {

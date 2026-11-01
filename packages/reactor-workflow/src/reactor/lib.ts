@@ -1,5 +1,6 @@
 // Scaffold file meant for customization; delete and re-run codegen to reset.
 import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
+import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import type { WorkflowRuntimeHostDeps } from "./host.js";
 import {
   ActivepiecesBlockExecutor,
@@ -207,7 +208,7 @@ export function configuredEgress(): EgressPolicy | undefined {
   return { allowAddresses };
 }
 
-let bundleCache = join(process.cwd(), ".ph", "ap-bundles");
+let bundleCache = join(resolvePhDir(), "ap-bundles");
 
 export function bundleCacheDir(): string {
   return bundleCache;
@@ -223,17 +224,12 @@ export function setBundleCacheDir(dir: string): void {
 // the length of one step. Under .ph so a host can sweep it on startup after a
 // crash; the executor removes each step's directory itself.
 export const ATTACHMENT_STAGING_DIR = join(
-  process.cwd(),
-  ".ph",
+  resolvePhDir(),
   "ap-attachment-staging",
 );
 
 // Downloaded attachments kept by content, so later steps and runs reuse them.
-export const ATTACHMENT_CACHE_DIR = join(
-  process.cwd(),
-  ".ph",
-  "ap-attachment-cache",
-);
+export const ATTACHMENT_CACHE_DIR = join(resolvePhDir(), "ap-attachment-cache");
 
 const DEFAULT_ATTACHMENT_CACHE_BYTES = 1024 * 1024 * 1024;
 
