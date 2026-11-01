@@ -1279,6 +1279,8 @@ async function initServer(
       logger: apiLogger,
       reportError,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
+      // The final update before readiness picks up everything added until then.
+      hostRefreshesSupergraph: true,
       // Already resolved for this reactor's own identity; reuse it so an
       // invalid RENOWN_SOURCE is reported once, not once per resolution.
       renown: renownConfig,

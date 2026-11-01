@@ -244,6 +244,8 @@ type Options = {
    */
   documentPermissionService?: DocumentPermissionService;
   enableDocumentModelSubgraphs?: boolean;
+  /** The host refreshes the supergraph itself, once its last subgraphs are in. */
+  hostRefreshesSupergraph?: boolean;
   logger?: ILogger;
   /** Receives failures in background work that is logged and skipped. */
   reportError?: ReportError;
@@ -529,6 +531,7 @@ type SetupGraphQLManagerOptions = {
   authService?: AuthService;
   documentPermissionService?: DocumentPermissionService;
   enableDocumentModelSubgraphs?: boolean;
+  hostRefreshesSupergraph?: boolean;
   port?: number;
   reactorDriveClient?: IDriveClient;
   driveNodes?: IDriveNodeSource;
@@ -562,6 +565,7 @@ async function setupGraphQLManager({
   authService,
   documentPermissionService,
   enableDocumentModelSubgraphs,
+  hostRefreshesSupergraph,
   port,
   reactorDriveClient,
   driveNodes,
@@ -612,8 +616,15 @@ async function setupGraphQLManager({
     scalars,
   );
 
-  await graphqlManager.applyPackageSubgraphs(subgraphs.extended);
-  await graphqlManager.updateRouter();
+  // Packages join a supergraph that's already up, so one that won't compose
+  // is reported rather than stopping the boot. Composing is the slowest part
+  // of a boot, so this happens once, here or in a host with more to add.
+  await graphqlManager.applyPackageSubgraphs(
+    subgraphs.extended,
+    "graphql",
+    false,
+  );
+  if (!hostRefreshesSupergraph) await graphqlManager.updateRouter(true);
 
   return graphqlManager;
 }
@@ -1343,6 +1354,7 @@ async function _setupAPI(
     authService,
     documentPermissionService,
     enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
+    hostRefreshesSupergraph: options.hostRefreshesSupergraph,
     port: boundPort,
     reactorDriveClient,
     driveNodes,

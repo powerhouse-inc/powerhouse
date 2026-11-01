@@ -680,9 +680,9 @@ export class GraphQLManager {
     // An unbuilt subgraph claims nothing, so build before the supergraph.
     await this.#setupSubgraphs(this.subgraphs);
 
+    // The caller refreshes it once packages are in: composing is the slowest
+    // part of a boot, and doing it here as well would only repeat this one.
     await this.#createSupergraphGateway();
-
-    return this.updateRouter();
   }
 
   /** Rejects when the rebuild fails; the next change retries it. */
@@ -1625,20 +1625,23 @@ export class GraphQLManager {
    * Apply a package change: `packaged` holds every loaded package's subgraph
    * classes. Removals run before additions, so a name one package gives up
    * can be taken by another in the same change. Changes apply one at a time;
-   * the router refresh is scheduled, not awaited.
+   * the router refresh is scheduled, not awaited, unless `refresh` leaves it
+   * to the caller.
    */
   applyPackageSubgraphs(
     packaged: ReadonlyMap<string, readonly SubgraphClass[]>,
     supergraph = "graphql",
+    refresh = true,
   ): Promise<void> {
     return this.#serialize(() =>
-      this.#applyPackageSubgraphs(packaged, supergraph),
+      this.#applyPackageSubgraphs(packaged, supergraph, refresh),
     );
   }
 
   async #applyPackageSubgraphs(
     packaged: ReadonlyMap<string, readonly SubgraphClass[]>,
     supergraph: string,
+    refresh: boolean,
   ): Promise<void> {
     // Includes packages registered through registerSubgraph, e.g. at boot.
     const known = new Set([
@@ -1702,7 +1705,7 @@ export class GraphQLManager {
       await this.#pruneOrigin(packageName, registered);
     }
 
-    this.#scheduleRouterUpdate();
+    if (refresh) this.#scheduleRouterUpdate();
   }
 
   /**

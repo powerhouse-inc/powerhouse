@@ -148,6 +148,8 @@ async function init(manager: GraphQLManager, core: SubgraphClass[]) {
   const pending = manager.init(core);
   await vi.runAllTimersAsync();
   await pending;
+  // As a host does, once packages are in.
+  await manager.updateRouter(true);
 }
 
 function hostSubgraph(name: string, typeDefs: DocumentNode): ISubgraph {
@@ -178,6 +180,33 @@ describe("the first supergraph", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  // Composing is the slowest step of a boot, and one more of them is seconds.
+  it("is built once at init, and again only when a host refreshes it", async () => {
+    const { manager, supergraphs } = makeHarness([drive]);
+    const pending = manager.init([ReactorSubgraph]);
+    await vi.runAllTimersAsync();
+    await pending;
+    expect(supergraphs).toHaveLength(1);
+
+    await manager.applyPackageSubgraphs(new Map(), "graphql", false);
+    await vi.runAllTimersAsync();
+    expect(supergraphs).toHaveLength(1);
+
+    await manager.updateRouter(true);
+    expect(supergraphs).toHaveLength(2);
+  });
+
+  it("is refreshed by a package change that doesn't leave that to the caller", async () => {
+    const { manager, supergraphs } = makeHarness([drive]);
+    const pending = manager.init([ReactorSubgraph]);
+    await vi.runAllTimersAsync();
+    await pending;
+
+    await manager.applyPackageSubgraphs(new Map());
+    await vi.runAllTimersAsync();
+    expect(supergraphs).toHaveLength(2);
   });
 
   it("excludes a subgraph registered before init that loses a claim to a core subgraph", async () => {
