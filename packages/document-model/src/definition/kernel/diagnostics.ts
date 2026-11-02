@@ -260,6 +260,7 @@ function oneLine(value: string): string {
   return value.replace(/\s+/g, " ");
 }
 
+/** @experimental One line: code, severity and phase, location, message, expected, received, related and repair. */
 export function formatDefinitionDiagnostic(
   diagnostic: DefinitionDiagnostic,
 ): string {

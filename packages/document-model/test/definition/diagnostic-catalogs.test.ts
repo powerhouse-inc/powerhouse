@@ -3,6 +3,7 @@ import { compilerDiagnostics } from "../../src/definition/compiler/diagnostic-co
 import { dslDiagnostics } from "../../src/definition/dsl/diagnostic-codes.js";
 import { kernelDiagnostics } from "../../src/definition/kernel/diagnostic-codes.js";
 import { modelDiagnostics } from "../../src/definition/model/diagnostic-codes.js";
+import { toolingDiagnostics } from "../../src/definition/tooling/diagnostic-codes.js";
 
 describe("layer diagnostic catalogs", () => {
   it("give each layer the codes it emits", () => {
@@ -44,6 +45,18 @@ describe("layer diagnostic catalogs", () => {
       "PH-DM-SCOPE-UNSUPPORTED",
       "PH-AUTH-UNSUPPORTED",
     ]);
+    expect(own(toolingDiagnostics.codes, modelDiagnostics.codes)).toStrictEqual(
+      [
+        "PH-CONFIG-SOURCE-INVALID",
+        "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE",
+        "PH-CONFIG-DUPLICATE-SOURCE",
+        "PH-CONFIG-VERSION-UNSUPPORTED",
+        "PH-IMPORT-FAILED",
+        "PH-PKG-DEFINITION-UNRECOGNIZED",
+        "PH-PKG-DEFINITION-UNINSPECTABLE",
+        "PH-PKG-LOGICAL-COLLISION",
+      ],
+    );
   });
 
   it("reuse a lower layer's entry instead of redefining its code", () => {
@@ -52,6 +65,7 @@ describe("layer diagnostic catalogs", () => {
       dslDiagnostics.codes,
       compilerDiagnostics.codes,
       modelDiagnostics.codes,
+      toolingDiagnostics.codes,
     ];
     for (const [index, lower] of layers.slice(0, -1).entries()) {
       const upper: Readonly<Record<string, object>> = layers[index + 1];

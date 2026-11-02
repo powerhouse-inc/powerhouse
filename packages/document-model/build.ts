@@ -14,7 +14,7 @@ await build({
 });
 
 await build({
-  entry: ["node.mts"],
+  entry: ["node.mts", "tooling.ts"],
   outDir: "dist",
   platform: "node",
   clean: false,
