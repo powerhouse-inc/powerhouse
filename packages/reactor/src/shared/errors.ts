@@ -461,7 +461,10 @@ export class ReservedActionError extends Error {
 }
 
 // Shared, so the reducer refuses the same input with the same error.
-export { SubmittedUndoRefusedError } from "@powerhousedao/shared/document-model";
+export {
+  SubmittedUndoRefusedError,
+  UndoOperationRefusedError,
+} from "@powerhousedao/shared/document-model";
 
 /**
  * An authorization preflight was asked for while the reactor's decision model

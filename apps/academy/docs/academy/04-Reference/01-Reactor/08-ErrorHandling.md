@@ -13,7 +13,7 @@ Errors reach your code from the reactor through three channels:
 This page is the consolidated error reference for the reactor. For attachment errors see [Attachment service](/academy/Reference/Reactor/AttachmentService); for sync-channel behavior see [Synchronization](/academy/Reference/Reactor/Synchronization).
 
 :::info[Import paths]
-Importable error values come from `@powerhousedao/reactor`: `EventBusAggregateError`, `ModuleNotFoundError`, `DuplicateModuleError`, `InvalidModuleError`, `DuplicateManifestError`, `ChannelError`, `ChannelErrorSource`, `SyncOperationAggregateError`, `PollingChannelError`, `RetractionRefusedError`, `SubmittedUndoRefusedError`, `UnsupportedProtocolVersionError`, `ReservedActionError`, `isDriveAuthError`, and `DRIVE_AUTH_ERROR_MESSAGES`. `@powerhousedao/reactor-browser` re-exports only `isDriveAuthError`. Attachment errors come from `@powerhousedao/reactor-attachments`. Several errors are internal and cannot be imported; this page marks each one.
+Importable error values come from `@powerhousedao/reactor`: `EventBusAggregateError`, `ModuleNotFoundError`, `DuplicateModuleError`, `InvalidModuleError`, `DuplicateManifestError`, `ChannelError`, `ChannelErrorSource`, `SyncOperationAggregateError`, `PollingChannelError`, `RetractionRefusedError`, `SubmittedUndoRefusedError`, `UndoOperationRefusedError`, `UnsupportedProtocolVersionError`, `ReservedActionError`, `isDriveAuthError`, and `DRIVE_AUTH_ERROR_MESSAGES`. `@powerhousedao/reactor-browser` re-exports only `isDriveAuthError`. Attachment errors come from `@powerhousedao/reactor-attachments`. Several errors are internal and cannot be imported; this page marks each one.
 :::
 
 ## Job failures
@@ -81,6 +81,7 @@ The refusals of undo and protocol versions are terminal, so the job fails withou
 
 - `RetractionRefusedError`: a `RETRACT`'s target was already retracted or is gone. An undo does not resolve again.
 - `SubmittedUndoRefusedError`: an `UNDO` or `REDO` was submitted to a base-reducer 3 document. Use [`write.undo`](/academy/Reference/Reactor/ReactorClient#undo) and [`write.redo`](/academy/Reference/Reactor/ReactorClient#redo), which submit a signed `RETRACT`.
+- `UndoOperationRefusedError`: a peer's load carries an `UNDO` operation into a base-reducer 1 or 2 document. Those versions store an undo as a `NOOP`, so only a submitted `UNDO` is valid there.
 - `UnsupportedProtocolVersionError`: this reactor cannot run the document's protocol versions, for example a base-reducer 3 document whose model's reducer was not built by `createReducer`.
 - `ReservedActionError`: the action type is reserved for the reactor.
 

@@ -577,6 +577,7 @@ export function classifyJobFailure(errorName: string): SyncOperationErrorType {
       return "PURGE_PRECONDITION";
     case "ReservedActionError":
     case "SubmittedUndoRefusedError":
+    case "UndoOperationRefusedError":
       return "RESERVED_ACTION";
     default:
       return "UNCLASSIFIED";

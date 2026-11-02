@@ -9,7 +9,10 @@ import { applyAuthAction, assertAuthScopeActionAllowed } from "./auth.js";
 import { baseActionReducer } from "./base-action-reducer.js";
 import { tagStateReducer } from "./state-reducer.js";
 import { isDenied } from "./denied.js";
-import { SubmittedUndoRefusedError } from "./errors.js";
+import {
+  SubmittedUndoRefusedError,
+  UndoOperationRefusedError,
+} from "./errors.js";
 import {
   appliesRewind,
   assertNever,
@@ -419,6 +422,11 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
     baseReducerVersion(document.header);
   const caps = capabilitiesOf(protocolVersion);
   const byRule = derivesByRule(caps, _action.scope);
+
+  // Recorded as given, an UNDO row would replay itself without end.
+  if (options.replayOptions && isUndo(_action) && caps.undo !== "retraction") {
+    throw new UndoOperationRefusedError(document.header.id, _action.scope);
+  }
 
   let skipValue = skip ?? options.replayOptions?.operation.skip ?? 0;
   let newDocument = {

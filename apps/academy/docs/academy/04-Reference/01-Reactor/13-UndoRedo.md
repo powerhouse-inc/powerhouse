@@ -105,7 +105,8 @@ The rules do not run in the `auth` and `document` scopes, or in version 1 and 2 
 | `RetractionRefusedError` | `documentId`, `target`, `reason` | A submitted `RETRACT` names an absent target (`"target-missing"`) or one already retracted (`"target-retracted"`) |
 | `ReservedActionError`    | `documentId`, `actionType`       | A write carries an action type the client may not submit, such as a `RETRACT` to the `auth` or `document` scope of a version 3 document |
 | `SubmittedUndoRefusedError` | `documentId`, `actionType`    | A write, or a peer's load, carries `UNDO` or `REDO` to a version 3 document |
+| `UndoOperationRefusedError` | `documentId`, `scope` | A peer's load carries an `UNDO` operation to a version 1 or 2 document, which stores an undo as a `NOOP` |
 
-All three are exported from `@powerhousedao/reactor` and are terminal: the job fails without a retry. Through the write half they reach you as a `JobFailedError` whose `job.error.name` names the class; see [Error handling](/academy/Reference/Reactor/ErrorHandling).
+All four are exported from `@powerhousedao/reactor` and are terminal: the job fails without a retry. Through the write half they reach you as a `JobFailedError` whose `job.error.name` names the class; see [Error handling](/academy/Reference/Reactor/ErrorHandling).
 
 `undo` and `redo` on version 3 throw `NoUndoRedoTargetError` (from `document-model`, message `Cannot undo: nothing to undo in scope history`, or `redo`) before submitting anything when there is no target.

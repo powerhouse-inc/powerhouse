@@ -186,6 +186,7 @@ export {
   RelationshipNotFoundError,
   storedRefusalName,
   SubmittedUndoRefusedError,
+  UndoOperationRefusedError,
   UnsupportedProtocolVersionError,
   UnsupportedStoredProtocolError,
   type StoredProtocolRefusal,
