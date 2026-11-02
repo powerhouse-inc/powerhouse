@@ -9,6 +9,7 @@ import {
   REACH_REASONS,
   type HostDraft,
   type Member,
+  type Setter,
 } from "../host-rules/index.js";
 import type { RouteSeed } from "../lib/route-seed.js";
 import { PROJECT } from "./__fixtures__/fakes.js";
@@ -311,6 +312,100 @@ describe("routeSeedOf", () => {
       context: FULL,
     });
     expect(seed?.drives).toEqual({ "id-powerhouse": "powerhouse" });
+  });
+
+  describe("a mapped list with a placement", () => {
+    const connect = "host.children.cli-connect";
+    const mappedSeed = (setters: Setter[]) => {
+      let draft: HostDraft = { envelope: hostExport("cli") };
+      const local = hostOptions(draft, FULL).find(
+        (option) => option.id === `${connect}:reach:local`,
+      );
+      draft = applyOption(draft, local!).draft;
+      const applied = applySetters(draft.envelope, setters);
+      expect(applied.issues).toEqual([]);
+      const members = membersOf({ envelope: applied.envelope });
+      return routeSeedOf({
+        id: "seed",
+        member: members.find((member) => member.path === connect)!,
+        members,
+        run: runOf({
+          reactors: [
+            {
+              name: "cli-switchboard",
+              url: "http://127.0.0.1:7001/d/powerhouse",
+              drives: {
+                powerhouse: {
+                  id: "id-powerhouse",
+                  url: "http://127.0.0.1:7001/d/powerhouse",
+                },
+                "field-notes": {
+                  id: "id-field-notes",
+                  url: "http://127.0.0.1:7001/d/field-notes",
+                },
+              },
+            },
+          ],
+          attached: {
+            browser: [
+              {
+                name: "cli-connect.main",
+                member: "cli-connect",
+                backend: "main",
+              },
+            ],
+            remote: [{ name: "sb-inst-1", member: "cli-switchboard" }],
+          },
+        }),
+        context: FULL,
+      });
+    };
+
+    it("keys a drive placed in the browser by its switchboard id", () => {
+      const seed = mappedSeed([
+        {
+          path: `${connect}.reactor.placement.drives.field-notes`,
+          value: "main",
+        },
+      ]);
+      expect(seed?.collections).toEqual({
+        "id-field-notes": "cli-connect.main",
+      });
+      expect(seed?.drives["id-field-notes"]).toBe("field-notes");
+      expect(seed?.copies).toEqual({ "id-powerhouse": "cli-connect.main" });
+    });
+
+    it("keeps no copy of a drive placed on a switchboard that isn't attached", () => {
+      const seed = mappedSeed([
+        {
+          path: `${connect}.reactor.backends.far`,
+          value: { kind: "remote", remote: { url: "https://far.test/d/x" } },
+        },
+        {
+          path: `${connect}.reactor.placement.drives.field-notes`,
+          value: "far",
+        },
+      ]);
+      expect(seed?.copies).toEqual({ "id-powerhouse": "cli-connect.main" });
+    });
+
+    it("names nothing from a list that renames its drives", () => {
+      const seed = mappedSeed([
+        {
+          path: `${connect}.reactor.drives`,
+          value: {
+            $map: {
+              over: { $output: { host: "switchboard", path: ["drives"] } },
+              to: {
+                slug: { $item: ["name"] },
+                remote: { url: { $item: ["url"] } },
+              },
+            },
+          },
+        },
+      ]);
+      expect(seed?.drives).toEqual({ "id-powerhouse": "powerhouse" });
+    });
   });
 
   it("offers nothing until the switchboard is attached", () => {

@@ -19,6 +19,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** The switchboard a `$map` drive list takes whole, under the slugs it serves. */
+function mappedSwitchboard(
+  member: Member,
+  members: readonly Member[],
+): string | undefined {
+  const map = valueAt(member.reactor, ["drives", "$map"]);
+  if (!isRecord(map) || !isRecord(map.over)) return undefined;
+  const path = valueAt(map.over, ["$output", "path"]);
+  const whole =
+    Array.isArray(path) && path.length === 1 && path[0] === "drives";
+  if (!whole || valueAt(map, ["to", "slug", "$key"]) !== true) return undefined;
+  return targetOf(map.over, members).member;
+}
+
 /** The members the copy runs, when it ran this draft's base; else `fallback`. */
 export function startedMembers(
   draft: BuilderDraft,
@@ -111,6 +125,13 @@ export function routeSeedOf({
       : run.reactors.find((reactor) => reactor.name === switchboard)?.drives?.[
           slug
         ]?.id) ?? slug;
+  const listed = reach.mappedDrives
+    ? mappedSwitchboard(member, members)
+    : undefined;
+  const mapped =
+    listed !== undefined && [...switchboardOf.values()].includes(listed)
+      ? listed
+      : undefined;
   const collections: Record<string, string> = {};
   const drives: Record<string, string> = {};
   const placed = valueAt(member.reactor, ["placement", "drives"]);
@@ -120,7 +141,10 @@ export function routeSeedOf({
     const reactor = reactorOf.get(backend);
     if (reactor === undefined) continue;
     const link = reach.links.find((candidate) => candidate.slug === slug);
-    const key = keyOf(slug, switchboardOf.get(backend) ?? link?.member);
+    const key = keyOf(
+      slug,
+      switchboardOf.get(backend) ?? link?.member ?? mapped,
+    );
     collections[key] = reactor;
     drives[key] = slug;
   }
@@ -132,11 +156,7 @@ export function routeSeedOf({
     drives[keyOf(link.slug, link.member)] = link.slug;
   }
   // A mapped list is every drive its switchboard reports at start.
-  const mapped = reach.mappedDrives
-    ? targetOf(valueAt(member.reactor, ["drives", "$map", "over"]), members)
-        .member
-    : undefined;
-  if (mapped !== undefined && [...switchboardOf.values()].includes(mapped)) {
+  if (mapped !== undefined) {
     const served = run.reactors.find(
       (reactor) => reactor.name === mapped,
     )?.drives;
@@ -147,8 +167,11 @@ export function routeSeedOf({
   const copies: Record<string, string> = {};
   // The monitor's browser reactor holds none of these until they are created.
   if (browser !== undefined) {
-    for (const key of Object.keys(drives)) {
-      if (!Object.hasOwn(collections, key)) copies[key] = browser;
+    for (const [key, slug] of Object.entries(drives)) {
+      if (Object.hasOwn(collections, key) || Object.hasOwn(placement, slug)) {
+        continue;
+      }
+      copies[key] = browser;
     }
     for (const slug of reach.ownDrives) {
       if (Object.hasOwn(placement, slug)) continue;
