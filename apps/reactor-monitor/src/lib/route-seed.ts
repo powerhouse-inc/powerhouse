@@ -36,6 +36,8 @@ export type RouteSeed = {
   readonly collections: Readonly<Record<string, string>>;
   /** Router key to the drive's declared slug. */
   readonly drives: Readonly<Record<string, string>>;
+  /** Router key to the reactor the config keeps a copy in; never routed there. */
+  readonly copies: Readonly<Record<string, string>>;
   readonly router: SeedRouterOptions;
   /** Monitor reactor of each switchboard to its connection settings. */
   readonly connections: Readonly<Record<string, RemoteSettings>>;

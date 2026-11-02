@@ -36,6 +36,8 @@ export const ROUTER_COPY = {
   routing: (app: string) => `Routing ${app}'s reactors.`,
   movedFrom: (configured: string) => `Moved here. Host config: ${configured}`,
   movedUnplaced: "Moved here. The host config doesn't place it.",
+  movedFromCopy: (reactor: string) =>
+    `Moved here. Host config: a copy in ${reactor}`,
   reset: "Reset to config",
   undoMove: "Undo move",
   saveToHost: "Save to host config",
@@ -161,9 +163,15 @@ function errorText(error: unknown): string {
 function driftOf(
   entry: RouterTableEntry,
   label: (reactor: string) => string,
+  copy: string | undefined,
 ): string | undefined {
   if (entry.origin !== "runtime") return undefined;
-  if (entry.configured === undefined) return ROUTER_COPY.movedUnplaced;
+  if (entry.configured === undefined) {
+    if (copy === undefined) return ROUTER_COPY.movedUnplaced;
+    return copy === entry.backend
+      ? undefined
+      : ROUTER_COPY.movedFromCopy(label(copy));
+  }
   return entry.configured === entry.backend
     ? undefined
     : ROUTER_COPY.movedFrom(label(entry.configured));
@@ -785,10 +793,18 @@ export function RoutingPanel({
                   </tr>
                 ) : (
                   snapshot.collections.map((entry) => {
-                    const drive = topology?.seed?.drives[entry.collectionId];
+                    const drive =
+                      topology?.seed &&
+                      Object.hasOwn(topology.seed.drives, entry.collectionId)
+                        ? topology.seed.drives[entry.collectionId]
+                        : undefined;
                     const drift = driftOf(
                       entry,
                       (reactor) => hostBackendOf(reactor) ?? reactor,
+                      topology?.seed &&
+                        Object.hasOwn(topology.seed.copies, entry.collectionId)
+                        ? topology.seed.copies[entry.collectionId]
+                        : undefined,
                     );
                     const savable =
                       drift !== undefined &&

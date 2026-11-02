@@ -287,6 +287,7 @@ describe("RoutingPanel moves", () => {
       ],
       collections,
       drives: { [driveA]: "alpha" },
+      copies: {},
       router: { defaultBackend: ALPHA, probeTimeoutMs: 3_000 },
       connections: {},
       settings: [],
@@ -459,6 +460,41 @@ describe("RoutingPanel moves", () => {
     ).toBe(ALPHA);
     expect(restarted.queryByTestId("router-route-old-id")).toBeNull();
     restarted.unmount();
+  }, 60_000);
+
+  it("says where the host config keeps a copy of a moved drive", async () => {
+    const view = show({
+      setName: "copy",
+      storage: memoryStorage(),
+      seed: { ...seedOf("s-copy", {}), copies: { [driveA]: ALPHA } },
+      onSaveToHost: () => ({ ok: true }),
+    });
+    await waitFor(
+      () => expect(view.getByTestId("router-table")).toBeTruthy(),
+      WAIT,
+    );
+    fireEvent.change(view.getByTestId("router-move-key"), {
+      target: { value: driveA },
+    });
+    fireEvent.change(view.getByTestId("router-move-backend"), {
+      target: { value: BETA },
+    });
+    fireEvent.click(view.getByTestId("router-move"));
+    await waitFor(() =>
+      expect(
+        within(row(view)).getByTestId("router-route-drift").textContent,
+      ).toBe("Moved here. Host config: a copy in main"),
+    );
+    expect(within(row(view)).getByText("Save to host config")).toBeTruthy();
+
+    fireEvent.change(within(row(view)).getByTestId("router-route-backend"), {
+      target: { value: ALPHA },
+    });
+    await waitFor(() =>
+      expect(within(row(view)).queryByTestId("router-route-drift")).toBeNull(),
+    );
+    expect(within(row(view)).queryByText("Save to host config")).toBeNull();
+    view.unmount();
   }, 60_000);
 
   it("drops a kept move once the config value it replaced changes", async () => {

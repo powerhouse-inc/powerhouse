@@ -270,9 +270,14 @@ function callerOverrideRaw(
   const structural = isStructuralMultiReactor(reactor);
   if (!connect.reactor && !connect.instance && !connect.app && !structural) {
     // `base` IS host.config when the host has one; a host without a config
-    // block still carries its composition and drives (set on `base` above).
-    // With none of the three, there is no override: a classic build.
-    return host.config !== undefined || composition || declaredDefaults
+    // block still carries its composition, drives, Renown and namespace (set
+    // on `base` above). With none of them, there is no override: a classic
+    // build.
+    return host.config !== undefined ||
+      composition ||
+      declaredDefaults ||
+      base.renown !== undefined ||
+      base.instance !== undefined
       ? base
       : undefined;
   }

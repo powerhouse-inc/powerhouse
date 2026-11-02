@@ -18,6 +18,7 @@ export {
   fileOf,
   freshKey,
   hostVerb,
+  isRecord,
   membersOf,
   nestedChildren,
   primaryBackendName,
