@@ -24,7 +24,8 @@
     "build": "vite build && node scripts/assert-worker-chunk.mjs",
     "preview": "vite preview",
     "serve": "node src/server/serve.ts",
-    "test": "vitest --run"
+    "test": "vitest --run",
+    "install:playwright": "playwright install chromium"
   },
   "dependencies": {
     "@powerhousedao/host-core": "workspace:*",
@@ -43,7 +44,10 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "@vitest/browser": "catalog:",
+    "@vitest/browser-playwright": "catalog:",
     "happy-dom": "^20.8.9",
+    "playwright": "catalog:",
     "vite": "catalog:",
     "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"

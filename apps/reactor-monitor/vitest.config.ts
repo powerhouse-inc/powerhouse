@@ -1,6 +1,7 @@
 import react from "@vitejs/plugin-react";
+import { playwright } from "@vitest/browser-playwright";
 import tsconfigPaths from "vite-tsconfig-paths";
-import { defineConfig } from "vitest/config";
+import { defaultExclude, defineConfig } from "vitest/config";
 
 // Provisioning a reactor stands up a whole PGlite (WASM cold boot plus the
 // reactor migrations), which takes seconds rather than milliseconds — same as
@@ -18,18 +19,43 @@ const REACTOR_BOOT_TIMEOUT_MS = 60_000;
 // stale `dist`.
 const SOURCE_FIRST = ["source", "import", "module", "browser", "default"];
 
+// Layout tests measure real boxes, so they run in chromium.
+const LAYOUT_TESTS = "src/**/*.layout.test.{ts,tsx}";
+
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
   resolve: { conditions: SOURCE_FIRST },
   ssr: { resolve: { conditions: SOURCE_FIRST } },
   test: {
-    include: ["src/**/*.test.{ts,tsx}"],
     globals: true,
-    // Every test that provisions a reactor boots at least one PGlite;
-    // running them in parallel on a developer machine thrashes rather than
-    // overlaps.
-    fileParallelism: false,
     testTimeout: REACTOR_BOOT_TIMEOUT_MS,
     hookTimeout: REACTOR_BOOT_TIMEOUT_MS,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "unit",
+          include: ["src/**/*.test.{ts,tsx}"],
+          exclude: [...defaultExclude, LAYOUT_TESTS],
+          // Parallel PGlite boots thrash rather than overlap.
+          fileParallelism: false,
+        },
+      },
+      {
+        extends: true,
+        optimizeDeps: { exclude: ["@electric-sql/pglite"] },
+        define: { "process.env": {} },
+        test: {
+          name: "layout",
+          include: [LAYOUT_TESTS],
+          browser: {
+            provider: playwright(),
+            enabled: true,
+            headless: true,
+            instances: [{ browser: "chromium" }],
+          },
+        },
+      },
+    ],
   },
 });

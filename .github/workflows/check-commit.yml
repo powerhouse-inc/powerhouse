@@ -143,6 +143,12 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./packages/reactor-browser
 
+      # The monitor's builder layout tests measure the page in chromium.
+      - name: Install playwright chromium for the monitor
+        if: contains(steps.shard.outputs.selectors, '@powerhousedao/reactor-monitor-app...')
+        run: pnpm exec playwright install --with-deps chromium
+        working-directory: ./apps/reactor-monitor
+
       # The engine's piece suites fetch Activepieces bundles from npm. Keyed on
       # the suites themselves: a run that changes none of them reuses the bundles.
       - name: Cache Activepieces bundles

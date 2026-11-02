@@ -5,6 +5,7 @@ import type { DraftRequest } from "../../controller/api.js";
 import { FULL, stack } from "../../host-rules/__fixtures__/hosts.js";
 import { fakeBuilderClient } from "../__fixtures__/fakes.js";
 import { renderStep } from "../__fixtures__/steps.js";
+import { blankExport, CHECK_REASONS } from "../../host-rules/index.js";
 import { NO_CONTROLLER } from "../copy.js";
 import { requestOf } from "../draft.js";
 import { ReviewStep } from "./ReviewStep.js";
@@ -67,5 +68,19 @@ describe("ReviewStep", () => {
       true,
     );
     expect(view.getByText(NO_CONTROLLER)).toBeTruthy();
+  });
+
+  it("asks a blank host for a project before checking it", () => {
+    const { view } = renderStep(ReviewStep, {
+      envelope: blankExport(),
+      base: { kind: "blank", export: blankExport() },
+      context: FULL,
+      extra: { client: fakeBuilderClient().client },
+    });
+    expect(view.getByRole("button", { name: "Check now" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    expect(view.getByText(CHECK_REASONS.noProject)).toBeTruthy();
   });
 });

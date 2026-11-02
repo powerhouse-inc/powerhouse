@@ -4,7 +4,8 @@ import { errorMessage } from "../../controller/client.js";
 import { isBaseChanged } from "../BaseChanged.js";
 import type { BuilderClient } from "../client.js";
 import { issueCount, NO_CONTROLLER } from "../copy.js";
-import { requestOf } from "../draft.js";
+import { checkReason } from "../../host-rules/index.js";
+import { blankOf, isBlankImport, requestOf } from "../draft.js";
 import { IssueList } from "../IssueList.js";
 import { JsonPreview } from "../JsonPreview.js";
 import type { StepProps } from "./types.js";
@@ -34,6 +35,11 @@ function ControllerCheck({
     setBusy(false);
   };
   const found = result ? result.ruleIssues.length + result.issues.length : 0;
+  const blank = blankOf(draft);
+  const blocked = checkReason({
+    ...(blank ? { blank } : {}),
+    blankImport: isBlankImport(draft),
+  });
   return (
     <div className="hb-card hb-sec">
       <div className="hb-flabel">Check on the controller</div>
@@ -44,16 +50,16 @@ function ControllerCheck({
       <div>
         <button
           className="hb-btn"
-          disabled={!client || busy}
+          disabled={!client || busy || blocked !== undefined}
           onClick={() => void check()}
           type="button"
         >
           {busy ? "Checking…" : "Check now"}
         </button>
       </div>
-      {client ? null : (
+      {client && !blocked ? null : (
         <p className="hb-why">
-          <b>Check now:</b> {NO_CONTROLLER}
+          <b>Check now:</b> {client ? blocked : NO_CONTROLLER}
         </p>
       )}
       {error ? <p className="hb-error">{error}</p> : null}

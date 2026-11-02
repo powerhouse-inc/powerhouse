@@ -1,4 +1,5 @@
 import type { HostExport } from "@powerhousedao/host-core/schema";
+import { folderTemplate } from "./catalog.js";
 import { effectiveFlags, FLAG_LABELS, LADDER, ladderFlags } from "./flags.js";
 import {
   freshKey,
@@ -343,7 +344,14 @@ function addMemberOption(
     setters: [],
   };
   const host = draft.envelope.host as unknown;
-  const folder = folderFor(draft.envelope, role);
+  const bodies = isRecord(draft.envelope.members) ? draft.envelope.members : {};
+  const own = folderFor(draft.envelope, role);
+  // A blank host takes the folder `ph init` writes, unless one is there.
+  const template =
+    own === undefined && !Object.hasOwn(bodies, role)
+      ? folderTemplate(draft.envelope, role)
+      : undefined;
+  const folder = own ?? (template ? role : undefined);
   if (!isRecord(host) || !isRecord(host.children) || folder === undefined) {
     return option;
   }
@@ -374,8 +382,7 @@ function addMemberOption(
       },
     };
   }
-  const bodies = isRecord(draft.envelope.members) ? draft.envelope.members : {};
-  const body = bodies[folder];
+  const body = template ?? bodies[folder];
   const runner = {
     ...(isRecord(body) && isRecord(body.runner) ? body.runner : {}),
     ...(isRecord(wrapper.runner) ? wrapper.runner : {}),
@@ -399,7 +406,12 @@ function addMemberOption(
       port: free,
     };
   }
-  option.setters = [{ path: `host.children.${key}`, value: wrapper as never }];
+  option.setters = [
+    ...(template
+      ? [{ path: `members.${folder}`, value: template as never }]
+      : []),
+    { path: `host.children.${key}`, value: wrapper as never },
+  ];
   return option;
 }
 

@@ -33,9 +33,12 @@ import {
   splitPackages,
 } from "./controller.ts";
 import { LogRing } from "./logs.ts";
+import { blankExport, folderTemplate } from "../host-rules/catalog.ts";
+import { hostOptions } from "../host-rules/options.ts";
 import {
   BROWSER_ENV_ALLOWLIST,
   baseDigest,
+  blankDigest,
   CODE_LOADING_ENV,
   isBrowserEnvKey,
   type DraftRequest,
@@ -923,6 +926,118 @@ describe("createMonitorController", () => {
         ).code,
       ).toBe("unknown_project");
       expect(exports).toEqual([]);
+    });
+
+    describe("a blank host", () => {
+      const blankDraft = async (
+        overrides: Partial<DraftRequest> = {},
+      ): Promise<DraftRequest> => {
+        const add = hostOptions(
+          { envelope: blankExport() },
+          { controller: true, postgres: false },
+        ).find((option) => option.id === "host:add:switchboard");
+        return {
+          project: allowed,
+          host: "blank",
+          blank: true,
+          baseDigest: await blankDigest(),
+          setters: add?.setters ?? [],
+          ...overrides,
+        };
+      };
+
+      it("starts in a project it serves, writing the catalog's folders into the copy", async () => {
+        const { controller, launches, exports } = create();
+        const started = await controller.startDraft(await blankDraft());
+        const project = path.join(controller.tempRoot, started.id, "project");
+        expect(exports).toEqual([]);
+        expect(started.source).toMatchObject({
+          project: allowed,
+          host: "blank",
+        });
+        expect(launches[0].options).toMatchObject({
+          projectRoot: project,
+          host: "blank",
+        });
+        const blank = readFileSync(
+          path.join(project, "hosts", "blank", "host.js"),
+          "utf8",
+        );
+        expect(blank).toContain('"host": "switchboard"');
+        const switchboard = readFileSync(
+          path.join(project, "hosts", "switchboard", "host.js"),
+          "utf8",
+        );
+        expect(switchboard).toContain(
+          "@powerhousedao/ph-cli/runners/switchboard",
+        );
+        expect(existsSync(path.join(allowed, "hosts", "blank"))).toBe(false);
+      });
+
+      it("refuses a folder that isn't the catalog's", async () => {
+        const { controller, launches } = create();
+        const template = folderTemplate(blankExport(), "switchboard") ?? {};
+        const error = await errorOf(
+          controller.startDraft(
+            await blankDraft({
+              setters: [
+                {
+                  path: "members.switchboard",
+                  value: {
+                    ...template,
+                    runner: { module: "./evil.js" },
+                  } as never,
+                },
+                {
+                  path: "host.children.switchboard",
+                  value: { host: "switchboard" },
+                },
+              ],
+            }),
+          ),
+        );
+        expect(error.code).toBe("setter_denied");
+        expect(error.setters?.map((s) => s.path)).toEqual([
+          "members.switchboard",
+        ]);
+        expect(launches).toEqual([]);
+      });
+
+      it("refuses a project it doesn't serve, and a blank host by another name", async () => {
+        const { controller } = create();
+        expect(
+          (
+            await errorOf(
+              controller.startDraft(
+                await blankDraft({ project: path.join(base, "outside") }),
+              ),
+            )
+          ).code,
+        ).toBe("unknown_project");
+        expect(
+          (
+            await errorOf(
+              controller.startDraft(await blankDraft({ host: "sb" })),
+            )
+          ).code,
+        ).toBe("bad_request");
+      });
+
+      it("refuses a configured root with no hosts/ folder", async () => {
+        const bare = path.join(base, "bare");
+        mkdirSync(bare);
+        const { controller, launches } = create({
+          projectRoots: [allowed, bare],
+        });
+        const error = await errorOf(
+          controller.startDraft(await blankDraft({ project: bare })),
+        );
+        expect(error.code).toBe("unknown_project");
+        expect(controller.listProjects().map((p) => p.root)).not.toContain(
+          bare,
+        );
+        expect(launches).toEqual([]);
+      });
     });
 
     it("gives the server's PH_PACKAGES to the switchboards, not the whole copy", async () => {
