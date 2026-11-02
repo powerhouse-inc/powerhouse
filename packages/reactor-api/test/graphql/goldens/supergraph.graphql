@@ -2918,6 +2918,11 @@ type Query {
   jobStatus(jobId: String!): JobInfo
   documentServed(idOrSlug: String!, view: ViewFilterInput): Boolean!
   createDefaults(parentIdOrSlug: String, documentType: String): CreateDefaults!
+  undoRedoTargets(
+    documentIdOrSlug: String!
+    scope: String
+    branch: String
+  ): UndoRedoTargets!
   documentOperations(
     filter: OperationsFilterInput!
     paging: PagingInput
@@ -3218,6 +3223,11 @@ type TouchChannelResult {
 }
 
 scalar URL
+
+type UndoRedoTargets {
+  undoTarget: String
+  redoTarget: String
+}
 
 scalar Unknown
 

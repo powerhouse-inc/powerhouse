@@ -11,13 +11,13 @@ import {
   documentFromCreation,
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
-  baseReducerVersion,
   isDenied,
   isPurgeMarker,
   normalizeDocumentModelVersion,
   PURGE_DOCUMENT,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
+import { UNGATED, type IProtocolGate } from "../protocol/gate.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   DocumentNotFoundError,
@@ -202,6 +202,7 @@ export function applyTailPendingUpgrades(
 export async function readDocumentScope(
   operationStore: IOperationStore,
   registry: IDocumentModelRegistry,
+  gate: IProtocolGate | undefined,
   documentId: string,
   branch: string,
   documentScopeBound: number | undefined,
@@ -246,6 +247,7 @@ export async function readDocumentScope(
   }
 
   document = documentFromCreation(documentCreateAction);
+  gate?.assertReadable(documentId, document.header.protocolVersions);
   lastDocumentScopeOperation = createOp;
 
   let docModule = registry.getModule(
@@ -342,7 +344,9 @@ export async function readDocumentScope(
         );
       }
     } else {
-      const protocolVersion = baseReducerVersion(document.header);
+      const protocolVersion = (gate ?? UNGATED).headerCapabilities(
+        document.header,
+      ).version;
       document = withProtocolVersions(
         docModule.reducer(document, operation.action, undefined, {
           skip: operation.skip,

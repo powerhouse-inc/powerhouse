@@ -4,6 +4,7 @@ import {
   mergePeerCapabilities,
   PEER_CAPABILITIES,
   withSignaturePolicy,
+  type DocumentModelModule,
   type OperationWithContext,
   type PeerCapability,
   type PeerManifest,
@@ -22,6 +23,7 @@ import type {
   IReactor,
 } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
+import type { ReactorFeatureFlags } from "../../../src/executor/types.js";
 import { JobStatus } from "../../../src/shared/types.js";
 import type { ISyncCursorStorage } from "../../../src/storage/interfaces.js";
 import { GqlResponseChannel } from "../../../src/sync/channels/gql-res-channel.js";
@@ -133,7 +135,16 @@ export class Fleet {
     return db;
   }
 
-  async node(name: string, versions: number[]): Promise<Node> {
+  /** `models` replaces the drive and document-model sources. */
+  async node(
+    name: string,
+    versions: number[],
+    models: DocumentModelModule[] = [
+      driveDocumentModelModule as never,
+      documentModelDocumentModelModule as never,
+    ],
+    featureFlags?: Partial<ReactorFeatureFlags>,
+  ): Promise<Node> {
     const factory: IChannelFactory = {
       instance: (
         remoteId: string,
@@ -180,12 +191,10 @@ export class Fleet {
     const builder = new ReactorBuilder()
       .withLogger(createMockLogger())
       .withEventBus(new EventBus())
-      .withDocumentModelSources([
-        driveDocumentModelModule as never,
-        documentModelDocumentModelModule,
-      ])
+      .withDocumentModelSources(models as never)
       .withPeerCapabilities([testProtocol(versions)])
       .withSync(new SyncBuilder().withChannelFactory(factory));
+    if (featureFlags) builder.withExecutorConfig({ featureFlags });
     if (this.config.postgres) builder.withKysely(await this.database());
 
     const built = await new ReactorClientBuilder()

@@ -40,26 +40,20 @@ async function checkEnv(
   }
 }
 
-export function formatHostIssues(
-  file: string,
-  issues: readonly HostIssue[],
-  deferred: number,
+function issueBlocks(
+  found: readonly { label: string; issue: HostIssue }[],
 ): string {
-  if (issues.length === 0) {
-    const note =
-      deferred > 0
-        ? `\n  ${deferred} output token(s) checked declared-only`
-        : "";
-    return `${file}: ok${note}`;
+  const byFile = new Map<string, typeof found>();
+  for (const entry of found) {
+    byFile.set(entry.issue.file, [
+      ...(byFile.get(entry.issue.file) ?? []),
+      entry,
+    ]);
   }
-  const byFile = new Map<string, HostIssue[]>();
-  for (const issue of issues) {
-    byFile.set(issue.file, [...(byFile.get(issue.file) ?? []), issue]);
-  }
-  const blocks = [...byFile].map(([at, found]) => {
-    const lines = found.flatMap((issue) => {
+  const blocks = [...byFile].map(([at, entries]) => {
+    const lines = entries.flatMap(({ label, issue }) => {
       const where = issue.path ? `${issue.path}: ` : "";
-      const line = `  ${issue.stage}  ${where}${issue.message.replaceAll("\n", "\n    ")}`;
+      const line = `  ${label}  ${where}${issue.message.replaceAll("\n", "\n    ")}`;
       return issue.hint ? [line, `    hint: ${issue.hint}`] : [line];
     });
     return [at, ...lines].join("\n");
@@ -67,13 +61,34 @@ export function formatHostIssues(
   return blocks.join("\n\n");
 }
 
-/** `ph host check <host>`: every issue `ph run` would hit; exits 1 on any. */
+export function formatHostIssues(
+  file: string,
+  issues: readonly HostIssue[],
+  deferred: number,
+  warnings: readonly HostIssue[] = [],
+): string {
+  const warned = warnings.map((issue) => ({ label: "warning", issue }));
+  if (issues.length === 0) {
+    const note =
+      deferred > 0
+        ? `\n  ${deferred} output token(s) checked declared-only`
+        : "";
+    const tail = warned.length > 0 ? `\n\n${issueBlocks(warned)}` : "";
+    return `${file}: ok${note}${tail}`;
+  }
+  return issueBlocks([
+    ...issues.map((issue) => ({ label: issue.stage, issue })),
+    ...warned,
+  ]);
+}
+
+/** `ph host check <host>`: exits 1 on any issue; warnings only print. */
 export async function runHostCheck(
   args: HostCheckArgs,
 ): Promise<{ output: string; exitCode: number }> {
   const projectRoot = args.projectRoot ?? process.cwd();
   const env = await checkEnv(projectRoot, args.envFile);
-  const { issues, deferred } = await checkHost(args.host, {
+  const { issues, warnings, deferred } = await checkHost(args.host, {
     projectRoot,
     env,
     ...(args.verb !== undefined ? { verb: args.verb } : {}),
@@ -83,6 +98,7 @@ export async function runHostCheck(
       `hosts/${args.host}/host.js`,
       issues,
       deferred.length,
+      warnings,
     ),
     exitCode: issues.length > 0 ? 1 : 0,
   };

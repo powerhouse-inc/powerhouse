@@ -49,4 +49,14 @@ describe("generateDocumentModel", () => {
     );
     expect(project.getSourceFiles()).toHaveLength(0);
   });
+
+  it("refuses an operation named RETRACT before writing anything", async () => {
+    const retract = structuredClone(state);
+    retract.specifications[0].modules[0].operations[0].name = "RETRACT";
+    const project = new Project({ useInMemoryFileSystem: true });
+    await expect(generateDocumentModel(retract, project)).rejects.toThrow(
+      'Operation "RETRACT" in module "items" has a reserved name',
+    );
+    expect(project.getSourceFiles()).toHaveLength(0);
+  });
 });

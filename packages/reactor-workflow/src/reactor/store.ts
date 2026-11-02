@@ -63,6 +63,8 @@ export interface StepExecutionRow {
   // the definition index. Both are per-run, and nothing compares across runs.
   ordinal: number;
   step_id: string;
+  // The step id, or "<loop>[<i>]/<step>" for one iteration of a loop body.
+  step_path: string;
   step_key: string;
   piece_name: string;
   // The action a step ran, or the trigger a trigger test sampled.
@@ -182,6 +184,8 @@ export const FIRE_CRASH_BUDGET = 3;
 export const FIRED_WITHOUT_RUN_ID = "fired-without-run";
 
 const DEDUPE_CLAIM_MIGRATION = "trigger_dedupe.run_id-null-is-unclaimed";
+// step_execution is unique per (run_id, step_path), not per step id.
+const STEP_PATH_MIGRATION = "step_execution.step_path";
 
 export function abandonedAdmissionError(attempts: number): string {
   return (
@@ -290,6 +294,10 @@ export interface WorkflowRuntimeDB {
     definition_scope_hash: NullableColumn<string>;
     // The waitpoint a WAITING run waits on.
     waiting_on: NullableColumn<string>;
+    // The run that called this one (Call Flow), and the caller's waitpoint to
+    // fail when this run fails; null when the caller asked for neither.
+    parent_run_id: NullableColumn<string>;
+    parent_waitpoint_id: NullableColumn<string>;
   };
   waitpoint: WaitpointRow;
   step_execution: StepExecutionRow;
@@ -578,22 +586,37 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     }
   }
 
+  await db.schema
+    .createTable("migration_mark")
+    .addColumn("name", "text", (col) => col.primaryKey())
+    .addColumn("applied_at", "text", (col) => col.notNull())
+    .ifNotExists()
+    .execute();
+  const stepPathMigrated = await db
+    .selectFrom("migration_mark")
+    .select("name")
+    .where("name", "=", STEP_PATH_MIGRATION)
+    .executeTakeFirst();
+
   // Additive migration for journals created before per-step journaling: the
   // upsert in recordStep/finishRun needs this constraint to conflict on.
-  try {
-    await db.schema
-      .alterTable("step_execution")
-      .addUniqueConstraint("step_execution_run_step", ["run_id", "step_id"])
-      .execute();
-  } catch (error) {
-    // Only "already there" is benign. Swallowing anything else would leave
-    // every later upsert failing on a missing ON CONFLICT target.
-    if (!isDuplicateObject(error)) {
-      throw new Error(
-        `Could not add the step_execution (run_id, step_id) unique constraint, ` +
-          `which per-step journaling upserts against: ${errorMessage(error)}`,
-        { cause: error },
-      );
+  // Superseded by (run_id, step_path) below.
+  if (!stepPathMigrated) {
+    try {
+      await db.schema
+        .alterTable("step_execution")
+        .addUniqueConstraint("step_execution_run_step", ["run_id", "step_id"])
+        .execute();
+    } catch (error) {
+      // Only "already there" is benign. Swallowing anything else would leave
+      // every later upsert failing on a missing ON CONFLICT target.
+      if (!isDuplicateObject(error)) {
+        throw new Error(
+          `Could not add the step_execution (run_id, step_id) unique constraint, ` +
+            `which per-step journaling upserts against: ${errorMessage(error)}`,
+          { cause: error },
+        );
+      }
     }
   }
 
@@ -627,12 +650,7 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
   // Before claims, a NULL run_id meant "fired"; it now means "not claimed".
   // Keyed on its own mark, committed with it, so an interrupted upgrade
   // converts on the next open rather than never.
-  await db.schema
-    .createTable("migration_mark")
-    .addColumn("name", "text", (col) => col.primaryKey())
-    .addColumn("applied_at", "text", (col) => col.notNull())
-    .ifNotExists()
-    .execute();
+  if (!stepPathMigrated) await migrateStepPath(db);
   await db.transaction().execute(async (trx) => {
     const done = await trx
       .selectFrom("migration_mark")
@@ -839,6 +857,8 @@ async function up(db: IRelationalDb<WorkflowRuntimeDB>): Promise<Set<string>> {
     ["definition_op_index", "integer"],
     ["definition_scope_hash", "text"],
     ["waiting_on", "text"],
+    ["parent_run_id", "text"],
+    ["parent_waitpoint_id", "text"],
   ] as const) {
     try {
       await db.schema.alterTable("run").addColumn(column, type).execute();
@@ -996,6 +1016,47 @@ function legacyBlockIdentity(blockType: string): {
     pieceName: pieceName === LEGACY_CORE_PIECE ? CORE_PIECE_NAME : pieceName,
     name,
   };
+}
+
+// Iteration steps get their own path; others keep their id. Idempotent, as two
+// runtimes may open one journal at once; the mark lands last.
+async function migrateStepPath(
+  db: IRelationalDb<WorkflowRuntimeDB>,
+): Promise<void> {
+  await db.schema
+    .alterTable("step_execution")
+    .addColumn("step_path", "text", (col) => col.ifNotExists())
+    .execute();
+  await db
+    .updateTable("step_execution")
+    .set({ step_path: sql.ref("step_id") })
+    .where("step_path", "is", null)
+    .execute();
+  await db.schema
+    .alterTable("step_execution")
+    .alterColumn("step_path", (col) => col.setNotNull())
+    .execute();
+  try {
+    await db.schema
+      .alterTable("step_execution")
+      .addUniqueConstraint("step_execution_run_path", ["run_id", "step_path"])
+      .execute();
+  } catch (error) {
+    if (!isDuplicateObject(error)) throw error;
+  }
+  await db.schema
+    .alterTable("step_execution")
+    .dropConstraint("step_execution_run_step")
+    .ifExists()
+    .execute();
+  await db
+    .insertInto("migration_mark")
+    .values({
+      name: STEP_PATH_MIGRATION,
+      applied_at: new Date().toISOString(),
+    })
+    .onConflict((oc) => oc.column("name").doNothing())
+    .execute();
 }
 
 // Adds the identity columns to a table created with block_type and fills them
@@ -1470,6 +1531,7 @@ function stepValues(runId: string, ordinal: number, step: StepExecutionRecord) {
     run_id: runId,
     ordinal,
     step_id: step.stepId,
+    step_path: step.path ?? step.stepId,
     step_key: step.key,
     piece_name: step.pieceName,
     block_name: step.blockName,
@@ -1665,6 +1727,7 @@ const STEP_COLUMNS_WITHOUT_DATA = [
   "run_id",
   "ordinal",
   "step_id",
+  "step_path",
   "step_key",
   "piece_name",
   "block_name",
@@ -1704,6 +1767,13 @@ export interface EnqueueRunOptions {
   workflowId: string;
   triggerKind: string;
   triggerPayload?: unknown;
+  parent?: RunParent;
+}
+
+// A sub-flow's caller: its run, and the waitpoint failed when this run fails.
+export interface RunParent {
+  runId: string;
+  waitpointId: string | null;
 }
 
 export interface StartRunOptions {
@@ -1722,6 +1792,8 @@ export class WorkflowRunStore {
   // Runtime-local on purpose. A second reactor over the same journal would
   // need a lease, and one that can block startup costs more than a sweep.
   private readonly runsInFlight = new Set<string>();
+  // Runs the last recoverOrphanedRuns failed, for the host to close out.
+  orphanedRunIds: string[] = [];
   // Rows this process wrote for each run it began, so finishRun can skip a
   // closing sweep that would rewrite them unchanged.
   private readonly journaledSteps = new Map<
@@ -1787,14 +1859,15 @@ export class WorkflowRunStore {
       // A run that crashed after it resumed still has its waiting step.
       await failWaitingSteps(trx, ids, ORPHANED_RUN_ERROR, null, endedAt);
       await closeLiveWaitpoints(trx, ids, "CANCELLED", endedAt);
-      return ids.length;
+      return ids;
     });
-    if (recovered > 0) {
+    this.orphanedRunIds = recovered;
+    if (recovered.length > 0) {
       logger.warn(
-        `Recovered ${recovered} workflow run(s) left RUNNING by a stopped reactor; they are now FAILED and rerunnable`,
+        `Recovered ${recovered.length} workflow run(s) left RUNNING by a stopped reactor; they are now FAILED and rerunnable`,
       );
     }
-    return recovered;
+    return recovered.length;
   }
 
   // PENDING runs a stopped process journaled, oldest first, each counted as
@@ -2276,8 +2349,27 @@ export class WorkflowRunStore {
         rerun_of: null,
         warnings: 0,
         warning_notes: null,
+        ...(options.parent
+          ? {
+              parent_run_id: options.parent.runId,
+              parent_waitpoint_id: options.parent.waitpointId,
+            }
+          : {}),
       })
       .execute();
+  }
+
+  async getRunParent(runId: string): Promise<RunParent | undefined> {
+    const row = await this.db
+      .selectFrom("run")
+      .select(["parent_run_id", "parent_waitpoint_id"])
+      .where("id", "=", runId)
+      .executeTakeFirst();
+    if (!row?.parent_run_id) return undefined;
+    return {
+      runId: row.parent_run_id,
+      waitpointId: row.parent_waitpoint_id ?? null,
+    };
   }
 
   // Adopts an enqueued row: the run starts now, with the definition fire() read.
@@ -2338,7 +2430,7 @@ export class WorkflowRunStore {
   // One step's terminal state, written the moment it reaches it, so a
   // reactor killed mid-run leaves the work it finished behind.
 
-  // Keyed by (run_id, step_id): a re-executed step corrects its row.
+  // Keyed by (run_id, step_path): a re-executed step corrects its row.
   async recordStep(
     runId: string,
     ordinal: number,
@@ -2346,20 +2438,25 @@ export class WorkflowRunStore {
   ): Promise<void> {
     if (erasedRuns.has(runId)) return;
     const values = stepValues(runId, ordinal, step);
-    const { run_id: _run, step_id: _step, ...mutable } = values;
+    const {
+      run_id: _run,
+      step_id: _step,
+      step_path: _path,
+      ...mutable
+    } = values;
     const written = await this.withRunRow(runId, (trx) =>
       trx
         .insertInto("step_execution")
         .values({ id: randomUUID(), ...values })
         .onConflict((oc) =>
-          oc.columns(["run_id", "step_id"]).doUpdateSet(mutable),
+          oc.columns(["run_id", "step_path"]).doUpdateSet(mutable),
         )
         .execute(),
     );
     if (!written) return;
     this.journaledSteps
       .get(runId)
-      ?.set(step.stepId, { ordinal, hash: rowHash(values) });
+      ?.set(values.step_path, { ordinal, hash: rowHash(values) });
   }
 
   // True when every step already has the row the sweep would write.
@@ -2514,6 +2611,7 @@ export class WorkflowRunStore {
       .selectFrom("step_execution")
       .select(["step_id", "ordinal"])
       .where("run_id", "=", runId)
+      .whereRef("step_path", "=", "step_id")
       .execute();
     // A journaled step keeps the ordinal it ran with; the sweep lands after
     // the highest of them.
@@ -2546,7 +2644,7 @@ export class WorkflowRunStore {
           })),
         )
         .onConflict((oc) =>
-          oc.columns(["run_id", "step_id"]).doUpdateSet((eb) => ({
+          oc.columns(["run_id", "step_path"]).doUpdateSet((eb) => ({
             ordinal: eb.ref("excluded.ordinal"),
             step_key: eb.ref("excluded.step_key"),
             piece_name: eb.ref("excluded.piece_name"),
@@ -2641,17 +2739,43 @@ export class WorkflowRunStore {
       .executeTakeFirst();
   }
 
-  async getSteps(runId: string): Promise<StepExecutionRow[]> {
-    return this.db
+  // A run's steps in execution order; a loop's iteration rows only with
+  // `withIterations`, the first `iterationLimit` of them when set.
+  async getSteps(
+    runId: string,
+    options: { withIterations?: boolean; iterationLimit?: number } = {},
+  ): Promise<StepExecutionRow[]> {
+    const base = this.db
       .selectFrom("step_execution")
       .selectAll()
       .where("run_id", "=", runId)
-      .orderBy("ordinal", "asc")
-      .execute();
+      .orderBy("ordinal", "asc");
+    const own = base.whereRef("step_path", "=", "step_id");
+    if (!options.withIterations) return own.execute();
+    if (options.iterationLimit === undefined) return base.execute();
+    const [steps, iterations] = await Promise.all([
+      own.execute(),
+      base
+        .whereRef("step_path", "!=", "step_id")
+        .limit(options.iterationLimit)
+        .execute(),
+    ]);
+    return [...steps, ...iterations].sort((a, b) => a.ordinal - b.ordinal);
   }
 
-  // Steps of many runs in one query, each run's in execution order. Without
-  // `withData` the input and output blobs are left out (read as null).
+  // How many loop iteration rows a run journaled.
+  async countIterations(runId: string): Promise<number> {
+    const row = await this.db
+      .selectFrom("step_execution")
+      .select((eb) => eb.fn.countAll<number>().as("count"))
+      .where("run_id", "=", runId)
+      .whereRef("step_path", "!=", "step_id")
+      .executeTakeFirst();
+    return Number(row?.count ?? 0);
+  }
+
+  // Each run's own step rows in one query, in execution order; loop iteration
+  // rows are left out. Without `withData` the blobs read as null.
   async getStepsForRuns(
     runIds: string[],
     options: { withData?: boolean } = {},
@@ -2663,6 +2787,7 @@ export class WorkflowRunStore {
     const base = this.db
       .selectFrom("step_execution")
       .where("run_id", "in", [...new Set(runIds)])
+      .whereRef("step_path", "=", "step_id")
       .orderBy("run_id")
       .orderBy("ordinal", "asc");
     const rows: StepExecutionRow[] =

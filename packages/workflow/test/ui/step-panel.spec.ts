@@ -48,7 +48,10 @@ test.describe("Step panel", () => {
       "true",
     );
     await expect(app.getByText("Connection needs a value")).toBeVisible();
-    await expect(app.getByText("OpenAI · Ask ChatGPT")).toBeVisible();
+    // The panel header; the canvas card shows the same subtitle.
+    await expect(
+      app.getByRole("paragraph").filter({ hasText: "OpenAI · Ask ChatGPT" }),
+    ).toBeVisible();
     await expect(app.getByRole("textbox", { name: /Question/ })).toHaveValue(
       "Summarise {{steps.fetch.output.body}} in three bullets.",
     );

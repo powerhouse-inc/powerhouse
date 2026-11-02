@@ -102,6 +102,10 @@ const REFUSED_WRITE: Record<RefusedWriteHalfMethods, true> = {
   moveRelationship: true,
   deleteDocuments: true,
   loadBatch: true,
+  undo: true,
+  redo: true,
+  undoRedoTargets: true,
+  undoRedoAvailability: true,
 };
 
 // What the piece's write handles call; the client admits only its own jobs.
@@ -135,6 +139,10 @@ const REFUSED: Record<Exclude<RefusedMethods, "read">, true> = {
   isServed: true,
   getCreateSignaturePolicy: true,
   getCreateProtocolVersions: true,
+  undo: true,
+  redo: true,
+  undoRedoTargets: true,
+  undoRedoAvailability: true,
 };
 
 type AnyMethod = (...args: unknown[]) => unknown;

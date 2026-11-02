@@ -7,9 +7,12 @@ import type {
   UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
 import {
+  appendRows,
   appendWithoutApplying,
   applyDeleteDocumentAction,
-  baseReducerVersion,
+  deriveScopeVersioned,
+  derivesByRule,
+  tailAppliesIncrementally,
   isDenied,
   PURGE_DOCUMENT,
   withProtocolVersions,
@@ -17,13 +20,24 @@ import {
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   applyPendingUpgrades,
+  applyRowsByRule,
   applyTailPendingUpgrades,
   extractModuleVersion,
   readDocumentScope,
   resolveModuleVersionForOp,
+  scopeVersions,
+  singleVersion,
   type PendingUpgrade,
   type ValidatedUpgrade,
 } from "../derivation/index.js";
+import {
+  stateReducerOrRefusal,
+  UNGATED,
+  type BaseReducerResolver,
+  type IProtocolGate,
+} from "../protocol/gate.js";
+import { UnsupportedProtocolVersionError } from "../shared/errors.js";
+import { findReferencing } from "../storage/find-referencing.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import {
   resolveKeyframeRule,
@@ -89,6 +103,15 @@ function copyDocument(document: PHDocument): PHDocument {
   };
 }
 
+/** Wraps a rebuild failure with the document id; a protocol refusal stays typed. */
+function rebuildFailure(documentId: string, err: unknown): Error {
+  if (UnsupportedProtocolVersionError.isError(err)) return err;
+  return new Error(
+    `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
+    { cause: err },
+  );
+}
+
 /**
  * In-memory write cache with keyframe persistence for PHDocuments.
  *
@@ -141,8 +164,10 @@ export class KyselyWriteCache implements IWriteCache {
   private keyframeStore: IKeyframeStore;
   private operationStore: IOperationStore;
   private registry: IDocumentModelRegistry;
-  private config: Required<WriteCacheConfig>;
+  private config: Required<Omit<WriteCacheConfig, "gate">>;
   private keyframeSettings: KeyframeSettings;
+  private gate: IProtocolGate | undefined;
+  private resolver: BaseReducerResolver;
   private reads = new Map<string, Set<PendingRead>>();
   private fullReplays = new Map<string, FullReplayMark[]>();
 
@@ -168,8 +193,27 @@ export class KyselyWriteCache implements IWriteCache {
         ...this.config.keyframes.default,
       },
     };
+    this.gate = config.gate;
+    this.resolver = config.gate ?? UNGATED;
     this.streams = new Map();
     this.lruTracker = new LRUTracker<string>();
+  }
+
+  /** Whether the version `header` runs under here derives `scope` by the rule. */
+  private derivesByRule(header: PHDocument["header"], scope: string): boolean {
+    return derivesByRule(
+      this.resolver.capabilities(header.protocolVersions),
+      scope,
+    );
+  }
+
+  /**
+   * Refuses a document stored at an unsupported base-reducer version by name,
+   * so read paths can tell it from a failed rebuild. Protocol-only: the hot
+   * path does no registry work, and derivation refuses an unrunnable model typed.
+   */
+  private assertSupported(documentId: string, document: PHDocument): void {
+    this.gate?.assertReadable(documentId, document.header.protocolVersions);
   }
 
   /** Sizes for telemetry; O(cached documents), which is capped. */
@@ -189,7 +233,7 @@ export class KyselyWriteCache implements IWriteCache {
       keyframeStore,
       operationStore,
       this.registry,
-      this.config,
+      { ...this.config, gate: this.gate },
     );
     scoped.streams = this.streams;
     scoped.lruTracker = this.lruTracker;
@@ -292,6 +336,7 @@ export class KyselyWriteCache implements IWriteCache {
         // Only the topmost snapshot can be the head, and only if it was stored
         // as one: anything above it proves the stream has grown since.
         if (newest?.position === SnapshotPosition.Head) {
+          this.assertSupported(documentId, newest.document);
           this.lruTracker.touch(streamKey);
           return copyDocument(newest.document);
         }
@@ -325,6 +370,7 @@ export class KyselyWriteCache implements IWriteCache {
           (s) => s.revision === targetRevision,
         );
         if (exactMatch) {
+          this.assertSupported(documentId, exactMatch.document);
           this.lruTracker.touch(streamKey);
           return copyDocument(exactMatch.document);
         }
@@ -799,6 +845,7 @@ export class KyselyWriteCache implements IWriteCache {
     let lastDocumentScopeOperation: Operation | undefined;
 
     if (keyframe) {
+      this.assertSupported(documentId, keyframe.document);
       document = keyframe.document;
       startRevision = ownKeyframe ? keyframe.revision : -1;
       documentType = keyframe.document.header.documentType;
@@ -890,6 +937,7 @@ export class KyselyWriteCache implements IWriteCache {
       const read = await readDocumentScope(
         this.operationStore,
         this.registry,
+        this.gate,
         documentId,
         branch,
         documentScopeBound,
@@ -972,98 +1020,150 @@ export class KyselyWriteCache implements IWriteCache {
     const finalVersion =
       validatedUpgrades.at(-1)?.toVersion ?? extractModuleVersion(document);
 
-    let cursor: string | undefined = undefined;
-    const pageSize = 100;
-    let hasMorePages: boolean;
     let needsFullReplay = false;
 
-    do {
-      if (signal?.aborted) {
-        throw new Error("Operation aborted");
-      }
-
-      const paging = { cursor: cursor || "0", limit: pageSize };
+    if (this.derivesByRule(document.header, scope)) {
+      const versions = scopeVersions(
+        this.registry,
+        document.header,
+        scope,
+        validatedUpgrades,
+        pendingUpgrades,
+        finalVersion,
+      );
 
       try {
-        const result = await this.operationStore.getSince(
+        const rows = await this.readRows(
           documentId,
           scope,
           branch,
           startRevision,
-          undefined,
-          paging,
+          targetRevision,
           signal,
         );
 
-        for (const operation of result.results) {
-          if (
-            targetRevision !== undefined &&
-            operation.index > targetRevision
-          ) {
-            break;
-          }
-
-          // A keyframe carries no operations; a skip replays them all.
-          if (keyframe && operation.skip > 0) {
-            needsFullReplay = true;
-            break;
-          }
-
-          const moduleVersion = resolveModuleVersionForOp(
-            operation.index,
-            operation.timestampUtcMs,
+        if (keyframe) {
+          needsFullReplay = await this.tailNeedsWholeLog(
+            documentId,
             scope,
-            validatedUpgrades,
-            finalVersion,
+            branch,
+            rows,
+            signal,
           );
-
-          document = applyPendingUpgrades(
-            document,
-            pendingUpgrades,
-            moduleVersion ?? Number.MAX_SAFE_INTEGER,
-          );
-
-          // A denied operation still carries a potentially valid action, so
-          // we must specifically skip without applying.
-          if (isDenied(operation)) {
-            document = appendWithoutApplying(document, operation, scope);
-          } else {
-            // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-            const protocolVersion = baseReducerVersion(document.header);
-            document = withProtocolVersions(
-              getModuleCached(moduleVersion).reducer(
+          if (!needsFullReplay) {
+            document = appendRows(
+              applyRowsByRule(
                 document,
-                operation.action,
-                undefined,
-                {
-                  skip: operation.skip,
-                  protocolVersion,
-                  replayOptions: { operation },
-                  skipIndexValidation: true,
-                },
+                rows,
+                (operation) => !isDenied(operation),
+                versions,
               ),
-              document.header.protocolVersions,
+              scope,
+              rows,
             );
           }
-        }
-
-        const reachedTarget =
-          targetRevision !== undefined &&
-          result.results.some((op) => op.index >= targetRevision);
-        hasMorePages =
-          Boolean(result.nextCursor) && !reachedTarget && !needsFullReplay;
-
-        if (hasMorePages) {
-          cursor = result.nextCursor;
+        } else {
+          document = appendRows(
+            deriveScopeVersioned(document, rows, versions, scope).document,
+            scope,
+            rows,
+          );
         }
       } catch (err) {
-        // Wrap errors with context to include document ID for debugging
-        throw new Error(
-          `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
-          { cause: err },
-        );
+        throw rebuildFailure(documentId, err);
       }
-    } while (hasMorePages);
+    } else {
+      let cursor: string | undefined = undefined;
+      const pageSize = 100;
+      let hasMorePages: boolean;
+
+      do {
+        if (signal?.aborted) {
+          throw new Error("Operation aborted");
+        }
+
+        const paging = { cursor: cursor || "0", limit: pageSize };
+
+        try {
+          const result = await this.operationStore.getSince(
+            documentId,
+            scope,
+            branch,
+            startRevision,
+            undefined,
+            paging,
+            signal,
+          );
+
+          for (const operation of result.results) {
+            if (
+              targetRevision !== undefined &&
+              operation.index > targetRevision
+            ) {
+              break;
+            }
+
+            // A keyframe carries no operations; a skip replays them all.
+            if (keyframe && operation.skip > 0) {
+              needsFullReplay = true;
+              break;
+            }
+
+            const moduleVersion = resolveModuleVersionForOp(
+              operation.index,
+              operation.timestampUtcMs,
+              scope,
+              validatedUpgrades,
+              finalVersion,
+            );
+
+            document = applyPendingUpgrades(
+              document,
+              pendingUpgrades,
+              moduleVersion ?? Number.MAX_SAFE_INTEGER,
+            );
+
+            // A denied operation still carries a potentially valid action, so
+            // we must specifically skip without applying.
+            if (isDenied(operation)) {
+              document = appendWithoutApplying(document, operation, scope);
+            } else {
+              // Fail-fast: if reducer throws, error propagates immediately without caching partial state
+              const protocolVersion = this.resolver.headerCapabilities(
+                document.header,
+              ).version;
+              document = withProtocolVersions(
+                getModuleCached(moduleVersion).reducer(
+                  document,
+                  operation.action,
+                  undefined,
+                  {
+                    skip: operation.skip,
+                    protocolVersion,
+                    replayOptions: { operation },
+                    skipIndexValidation: true,
+                  },
+                ),
+                document.header.protocolVersions,
+              );
+            }
+          }
+
+          const reachedTarget =
+            targetRevision !== undefined &&
+            result.results.some((op) => op.index >= targetRevision);
+          hasMorePages =
+            Boolean(result.nextCursor) && !reachedTarget && !needsFullReplay;
+
+          if (hasMorePages) {
+            cursor = result.nextCursor;
+          }
+        } catch (err) {
+          // Wrap errors with context to include document ID for debugging
+          throw rebuildFailure(documentId, err);
+        }
+      } while (hasMorePages);
+    }
 
     if (needsFullReplay) {
       return this.coldMissRebuild(
@@ -1140,6 +1240,70 @@ export class KyselyWriteCache implements IWriteCache {
     return document;
   }
 
+  /** The stored rows after index `after`, through `targetRevision` if given. */
+  private async readRows(
+    documentId: string,
+    scope: string,
+    branch: string,
+    after: number,
+    targetRevision: number | undefined,
+    signal?: AbortSignal,
+  ): Promise<Operation[]> {
+    const rows: Operation[] = [];
+    let cursor = "0";
+    for (;;) {
+      if (signal?.aborted) {
+        throw new Error("Operation aborted");
+      }
+      const result = await this.operationStore.getSince(
+        documentId,
+        scope,
+        branch,
+        after,
+        undefined,
+        { cursor, limit: 100 },
+        signal,
+      );
+      for (const operation of result.results) {
+        if (targetRevision !== undefined && operation.index > targetRevision) {
+          return rows;
+        }
+        rows.push(operation);
+      }
+      const reachedTarget =
+        targetRevision !== undefined &&
+        (rows.at(-1)?.index ?? -1) >= targetRevision;
+      if (!result.nextCursor || reachedTarget) {
+        return rows;
+      }
+      cursor = result.nextCursor;
+    }
+  }
+
+  /** Base-reducer 3: whether rows after a base need the whole log (tailAppliesIncrementally). */
+  private async tailNeedsWholeLog(
+    documentId: string,
+    scope: string,
+    branch: string,
+    rows: readonly Operation[],
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    if (rows.length === 0) {
+      return false;
+    }
+    const named = await findReferencing(
+      this.operationStore,
+      documentId,
+      scope,
+      branch,
+      rows.map((operation) => operation.action.id),
+      signal,
+    );
+    return !tailAppliesIncrementally(rows, {
+      named: (id) => named.has(id),
+    });
+  }
+
   /** The stored operation at `index`, or undefined if it is no longer there. */
   private async operationAt(
     documentId: string,
@@ -1175,6 +1339,7 @@ export class KyselyWriteCache implements IWriteCache {
     targetRevision: number | undefined,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    this.assertSupported(documentId, baseDocument);
     const documentType = baseDocument.header.documentType;
     const docScopeNextIndex = baseDocument.header.revision["document"] ?? 0;
 
@@ -1219,61 +1384,100 @@ export class KyselyWriteCache implements IWriteCache {
         : undefined;
 
     try {
-      const pagedResults = await this.operationStore.getSince(
-        documentId,
-        scope,
-        branch,
-        baseRevision,
-        undefined,
-        paging,
-        signal,
-      );
-
-      for (const operation of pagedResults.results) {
-        if (signal?.aborted) {
-          throw new Error("Operation aborted");
-        }
-
-        if (targetRevision !== undefined && operation.index > targetRevision) {
-          break;
-        }
-
-        if (operation.skip > 0) {
-          needsFullReplay = true;
-          break;
-        }
-
-        // A denied operation still carries a potentially valid action, so
-        // we must specifically skip without applying.
-        if (isDenied(operation)) {
-          document = appendWithoutApplying(document, operation, scope);
-        } else {
-          // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-          const protocolVersion = baseReducerVersion(document.header);
-          document = withProtocolVersions(
-            module.reducer(document, operation.action, undefined, {
-              skip: operation.skip,
-              protocolVersion,
-              replayOptions: { operation },
-              skipIndexValidation: true,
-            }),
-            document.header.protocolVersions,
+      if (this.derivesByRule(document.header, scope)) {
+        const stateReducer = stateReducerOrRefusal(
+          module.reducer,
+          documentId,
+          documentType,
+          extractModuleVersion(baseDocument),
+          document.header.protocolVersions,
+        );
+        const rows = await this.readRows(
+          documentId,
+          scope,
+          branch,
+          baseRevision,
+          targetRevision,
+          signal,
+        );
+        needsFullReplay = await this.tailNeedsWholeLog(
+          documentId,
+          scope,
+          branch,
+          rows,
+          signal,
+        );
+        if (!needsFullReplay) {
+          document = appendRows(
+            applyRowsByRule(
+              document,
+              rows,
+              (operation) => !isDenied(operation),
+              singleVersion(extractModuleVersion(baseDocument), stateReducer),
+            ),
+            scope,
+            rows,
           );
         }
+      } else {
+        const pagedResults = await this.operationStore.getSince(
+          documentId,
+          scope,
+          branch,
+          baseRevision,
+          undefined,
+          paging,
+          signal,
+        );
 
-        if (
-          targetRevision !== undefined &&
-          operation.index === targetRevision
-        ) {
-          break;
+        for (const operation of pagedResults.results) {
+          if (signal?.aborted) {
+            throw new Error("Operation aborted");
+          }
+
+          if (
+            targetRevision !== undefined &&
+            operation.index > targetRevision
+          ) {
+            break;
+          }
+
+          if (operation.skip > 0) {
+            needsFullReplay = true;
+            break;
+          }
+
+          // A denied operation still carries a potentially valid action, so
+          // we must specifically skip without applying.
+          if (isDenied(operation)) {
+            document = appendWithoutApplying(document, operation, scope);
+          } else {
+            // Fail-fast: if reducer throws, error propagates immediately without caching partial state
+            const protocolVersion = this.resolver.headerCapabilities(
+              document.header,
+            ).version;
+            document = withProtocolVersions(
+              module.reducer(document, operation.action, undefined, {
+                skip: operation.skip,
+                protocolVersion,
+                replayOptions: { operation },
+                skipIndexValidation: true,
+              }),
+              document.header.protocolVersions,
+            );
+          }
+
+          if (
+            targetRevision !== undefined &&
+            operation.index === targetRevision
+          ) {
+            break;
+          }
         }
       }
     } catch (err) {
       // Wrap errors with context to include document ID for debugging
-      throw new Error(
-        `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
-        { cause: err },
-      );
+      throw rebuildFailure(documentId, err);
     }
 
     if (needsFullReplay) {

@@ -58,6 +58,10 @@ export interface IReactorBrowserClient extends Pick<
   | "newDocument"
   | "create"
   | "deleteDocument"
+  | "undo"
+  | "redo"
+  | "undoRedoTargets"
+  | "undoRedoAvailability"
 > {
   readonly read: IReactorBrowserReadClient;
   readonly write: IReactorBrowserWriteClient;

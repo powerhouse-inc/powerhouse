@@ -20,7 +20,12 @@ import { downloadExport, exportFileName } from "../download.js";
 import { sourceOf, type BuilderDraft } from "../draft.js";
 import type { BuilderEngine } from "../engine.js";
 import { routeSeedOf, startedMembers } from "../route.js";
-import { monitoringSetOf, type BuilderRun, type RunReactor } from "../run.js";
+import {
+  monitoringSetOf,
+  StartFailedError,
+  type BuilderRun,
+  type RunReactor,
+} from "../run.js";
 import type { StepProps } from "./types.js";
 
 /** Why Start is off, if it is; `served` is undefined while it's being checked. */
@@ -297,6 +302,7 @@ export function UseStep({
       await onStart(draft, engine);
     } catch (error) {
       if (isBaseChanged(error)) onBaseChanged();
+      else if (error instanceof StartFailedError) setStatus(error.message);
       else setStatus(`Couldn't start: ${errorMessage(error)}`);
     }
   };

@@ -31,6 +31,12 @@ export type ValidationResult = {
   keyframeIssues: KeyframeValidationIssue[];
   snapshotIssues: SnapshotValidationIssue[];
   streamOrderIssues: StreamOrderIssue[];
+  /**
+   * Set when the document is stored at a protocol version this reactor does
+   * not run. Its keyframes and snapshots are not replayed, so isConsistent
+   * covers only what was checked.
+   */
+  unsupported?: { protocol: string; version: number };
 };
 
 export type RebuildResult = {

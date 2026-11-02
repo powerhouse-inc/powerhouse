@@ -1,9 +1,16 @@
+import {
+  baseReducerCapabilities,
+  derivesByRule,
+  usesRetractionRule,
+} from "./base-reducer-protocol.js";
 import { isDenied } from "./denied.js";
 import {
+  appendRows,
   appendWithoutApplying,
-  baseReducerVersion,
+  assertReplayIndices,
   hashDocumentStateForScope,
   replayDocument,
+  requireStateReducer,
   updateHeaderRevision,
   type PHDocument,
   type PHDocumentHeader,
@@ -14,6 +21,7 @@ import {
 } from "./errors.js";
 import type { DocumentOperations, Operation } from "./operations.js";
 import { PURGE_DOCUMENT } from "./purge.js";
+import { scopeDeriver } from "./retraction.js";
 import { backfillAuthState } from "./state.js";
 import type { PHBaseState } from "./state.js";
 import type {
@@ -74,7 +82,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
 ): PHDocument<TState> {
   const { checkHashes = true, skipIndexValidation } = options || {};
 
-  const protocolVersion = baseReducerVersion(header);
+  const caps = baseReducerCapabilities(header);
 
   const spine = (operations["document"] ?? [])
     .slice()
@@ -219,6 +227,19 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
 
   const segmentEndHashPerScope = new Map<string, string>();
 
+  // Base-reducer 3: each scope is derived across the segments.
+  const derivers = new Map<string, ReturnType<typeof scopeDeriver>>();
+  if (usesRetractionRule(caps)) {
+    for (const s of replayScopes) {
+      if (!derivesByRule(caps, s)) continue;
+      const ops = scopeOps[s] ?? [];
+      if (!skipIndexValidation) {
+        assertReplayIndices(ops);
+      }
+      derivers.set(s, scopeDeriver(ops));
+    }
+  }
+
   for (let k = 0; k <= validatedUpgrades.length; k++) {
     const reducer = config.reducers[currentVersion] as unknown as
       | Reducer<TState>
@@ -242,6 +263,25 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
           : ops.length;
       const segOps = ops.slice(segStart, segEnd);
 
+      const deriver = derivers.get(s);
+      if (deriver) {
+        if (segOps.length === 0) continue;
+        const stateReducer = requireStateReducer(
+          reducer,
+          header.documentType,
+          currentVersion,
+        );
+        const reducerFor = () => stateReducer;
+        document = updateHeaderRevision(
+          appendRows(document, s, segOps),
+          s,
+          segOps.at(-1)!.timestampUtcMs,
+        ) as PHDocument<TState>;
+        document = deriver.advance(document, segOps, reducerFor);
+        segmentEndHashPerScope.set(s, hashDocumentStateForScope(document, s));
+        continue;
+      }
+
       for (const op of segOps) {
         // A denied operation holds its position without contributing state, the
         // same way the reactor's own rebuild treats it. It is still recorded, or
@@ -259,7 +299,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
             checkHashes,
             skipIndexValidation,
             replayOptions: { operation: op },
-            protocolVersion,
+            protocolVersion: caps.version,
           }) as PHDocument<TState>;
         }
         segmentEndHashPerScope.set(s, hashDocumentStateForScope(document, s));
@@ -301,7 +341,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
           checkHashes,
           skipIndexValidation,
           replayOptions: { operation: spineOp },
-          protocolVersion,
+          protocolVersion: caps.version,
         }) as PHDocument<TState>;
       }
     }

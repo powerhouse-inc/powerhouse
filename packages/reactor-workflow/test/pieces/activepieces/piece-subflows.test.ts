@@ -14,7 +14,7 @@ import { fetchBundleForTest } from "./bundle-cache.js";
 
 const bundleDir = await fetchBundleForTest(
   "@activepieces/piece-subflows",
-  "0.6.4",
+  "0.7.0",
 );
 
 interface FlowFixture {
@@ -76,7 +76,7 @@ describe.skipIf(!bundleDir)("piece-subflows (spike S6b)", () => {
     const { piece } = await loadPieceFromDir(bundleDir);
     const descriptor = buildDescriptor(piece, {
       packageName: "@activepieces/piece-subflows",
-      version: "0.6.4",
+      version: "0.7.0",
     });
     const props = Object.fromEntries(
       (descriptor.actions.find((a) => a.name === "callFlow")?.props ?? []).map(

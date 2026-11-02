@@ -172,6 +172,9 @@ the full reactor client implement:
 | `executeAsync(identifier, branch, actions, signal?)` | What `execute` writes, through `mutateDocumentAsync`: returns the job once the Switchboard holds it, and announces `Updated` once it is readable. A Switchboard backend writes through this, so no one request has to outlast a write. |
 | `deleteDocument(identifier, propagate?, signal?)` | Emits `Deleted`.                                                                  |
 | `subscribe(search, callback, view?)`              | Local emissions plus, lazily, the server's.                                       |
+| `undo` / `redo(identifier, scope?, branch?, ...)` | Submits UNDO or REDO, signed by this client; on base-reducer 3 a RETRACT of the target `undoRedoTargets` resolves. |
+| `undoRedoTargets(identifier, scope?, view?, ...)` | The base-reducer 3 targets, resolved by the Switchboard as the caller.            |
+| `undoRedoAvailability(identifier, scope?, ...)`   | On base-reducer 3, read from `undoRedoTargets`.                                   |
 
 The interface is declared as a `Pick` of the reactor's own `IReactorClient`, so
 the signatures cannot drift.

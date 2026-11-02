@@ -1,4 +1,9 @@
+import type { GatingFlag } from "@powerhousedao/shared/document-model";
 import type { ReactorFeatureFlags } from "../executor/types.js";
+
+type KnownFlag<F extends keyof ReactorFeatureFlags> = F;
+/** Fails to compile when a base-reducer version is gated by a flag this reactor does not know. */
+export type BaseReducerGatingFlag = KnownFlag<GatingFlag>;
 
 /** A flag name mapped to the flags it requires. */
 export type FeatureFlagPrerequisites = Record<string, readonly string[]>;
@@ -16,6 +21,7 @@ export const FLAG_PREREQUISITES: Record<
   authEnforcement: ["documentDecisions"],
   authGroups: ["authEnforcement"],
   authConditions: ["authGroups"],
+  undoV3: [],
 };
 
 /**
@@ -31,6 +37,7 @@ export function resolveFeatureFlags(
     authEnforcement: flags.authEnforcement ?? false,
     authGroups: flags.authGroups ?? false,
     authConditions: flags.authConditions ?? false,
+    undoV3: flags.undoV3 ?? false,
   };
 
   // Against what the caller passed, so an unrecognized name is still reported.

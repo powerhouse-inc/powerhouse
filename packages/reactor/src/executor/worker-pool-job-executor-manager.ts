@@ -1,4 +1,5 @@
 import { isPurgeMarker } from "@powerhousedao/shared/document-model";
+import { UNGATED, type BaseReducerResolver } from "../protocol/gate.js";
 import type { ILogger } from "document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IEventBus } from "../events/interfaces.js";
@@ -103,6 +104,7 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
     private operationIndex: IOperationIndex,
     jobTimeoutMs: number = 30_000,
     deferredJobTtlMs: number = DEFAULT_DEFERRED_JOB_TTL_MS,
+    protocol: BaseReducerResolver = UNGATED,
   ) {
     this.jobTimeoutMs = jobTimeoutMs;
     this.deferredJobs = new DeferredJobs(
@@ -118,6 +120,7 @@ export class WorkerPoolJobExecutorManager implements IJobExecutorManager {
       jobTracker,
       resolver,
       logger,
+      protocol,
     );
   }
 

@@ -674,6 +674,11 @@ type Query {
     refusals: [SyncRefusalInput!]
   ): PollSyncEnvelopesResult!
   syncHolds(documentId: String, remoteName: String): [SyncHold!]!
+  undoRedoTargets(
+    branch: String
+    documentIdOrSlug: String!
+    scope: String
+  ): UndoRedoTargets!
 }
 
 type ReactorOperation {
@@ -827,4 +832,9 @@ type TouchChannelResult {
 input ViewFilterInput {
   branch: String
   scopes: [String!]
+}
+
+type UndoRedoTargets {
+  redoTarget: String
+  undoTarget: String
 }

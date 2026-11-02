@@ -33,6 +33,7 @@ import { readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import {
   currentBoundConnections,
+  currentFlows,
   currentPieceWorker,
   currentRunId,
   currentStepTest,
@@ -330,6 +331,7 @@ export function createBlockExecutor(
       worker: currentPieceWorker,
       stepTest: currentStepTest,
       waitpoints: currentWaitpoints,
+      flows: currentFlows,
       // A workflow is a flow; the reactor is the project, as it is for
       // ctx.store's PROJECT scope.
       identity: () => ({

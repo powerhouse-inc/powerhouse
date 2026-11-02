@@ -4,6 +4,8 @@ import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
 import type { BlockResolution, StepPieceRecord } from "./resolution.js";
 import type {
   CreatedWaitpoint,
+  HostHttpRequest,
+  HostHttpResponse,
   RunResponse,
   WaitpointCall,
 } from "../activepieces/worker/protocol.js";
@@ -121,6 +123,15 @@ export interface WaitpointPort {
   resumeBaseUrl?: string;
 }
 
+// `ctx.flows` and `ctx.server` for one run: the workflows it may call, and the
+// host origin a piece's fetch reaches in process.
+export interface FlowsPort {
+  list(params: { externalIds?: string[] }): Promise<{ data: unknown[] }>;
+  request(request: HostHttpRequest): Promise<HostHttpResponse>;
+  // The host's public origin, served as ctx.server.publicUrl.
+  publicUrl?: string;
+}
+
 export interface BlockResult {
   output: unknown;
   // Output port routing the step's outgoing edges; defaults to "next".
@@ -159,6 +170,8 @@ export type StepExecutionStatus =
 
 export interface StepExecutionRecord {
   stepId: string;
+  // "<loop>[<i>]/<step>" for one iteration of a loop body; absent outside one.
+  path?: string;
   key: string;
   pieceName: string;
   // The step's action, or the trigger's name for a trigger test.

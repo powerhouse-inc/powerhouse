@@ -59,6 +59,11 @@ export type RefusedMethods =
   | "isServed"
   | "getCreateSignaturePolicy"
   | "getCreateProtocolVersions"
+  // Pieces build their own undo with the model's action creators.
+  | "undo"
+  | "redo"
+  | "undoRedoTargets"
+  | "undoRedoAvailability"
   // The read half; a piece's write handles reach the few methods they need.
   | "read"
   | "getMany";
@@ -87,7 +92,11 @@ export type RefusedWriteHalfMethods =
   | "removeRelationship"
   | "moveRelationship"
   | "deleteDocuments"
-  | "loadBatch";
+  | "loadBatch"
+  | "undo"
+  | "redo"
+  | "undoRedoTargets"
+  | "undoRedoAvailability";
 
 // `drives` is served as an object of these; `addFile` files a document into a
 // drive of any drive type.

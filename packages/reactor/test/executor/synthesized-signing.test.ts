@@ -40,6 +40,7 @@ import {
   createTestEventBus,
   createTestRegistry,
 } from "../factories.js";
+import { undoV3Flags } from "../factories.js";
 import { TestP256Signer } from "../utils/p256-signer.js";
 
 const REACTOR_USER: ActionSigner["user"] = {
@@ -484,6 +485,52 @@ describe("synthesized operations", () => {
     clientModule.reactor.kill();
 
     expect(withSigner).toHaveBeenCalledWith(signer, workerSigner);
+  });
+
+  async function modelName(
+    reactor: IReactor,
+    documentId: string,
+  ): Promise<string> {
+    const { state } = await reactor.get(documentId);
+    return (state as unknown as { global: { name: string } }).global.name;
+  }
+
+  it("synthesizes nothing on base-reducer 3, which refuses a submitted UNDO", async () => {
+    const module = await new ReactorBuilder()
+      .withDocumentModelSources([documentModelDocumentModelModule as never])
+      .withExecutorConfig({
+        signatureVerification: "enforce",
+        featureFlags: undoV3Flags(),
+      })
+      .withSigner(reactorKey.asISigner([], REACTOR_USER))
+      .buildModule();
+    modules.push(module);
+    const document = createDocModelDocument({
+      signaturePolicy: "legacy",
+      protocolVersions: { "base-reducer": 3 },
+    });
+    const documentId = document.header.id;
+    const { reactor } = module;
+    await settle(reactor, await reactor.create(document));
+    expect(
+      (await reactor.get(documentId)).header.protocolVersions?.["base-reducer"],
+    ).toBe(3);
+    await settle(
+      reactor,
+      await reactor.execute(documentId, "main", [
+        await clientSigned(setModelName({ name: "renamed" }), documentId),
+      ]),
+    );
+
+    const refused = await settle(
+      reactor,
+      await reactor.execute(documentId, "main", [
+        await clientSigned(undo(), documentId),
+      ]),
+    );
+
+    expect(refused.error?.name).toBe("SubmittedUndoRefusedError");
+    expect(await modelName(reactor, documentId)).toBe("renamed");
   });
 });
 

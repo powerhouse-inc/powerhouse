@@ -29,6 +29,8 @@ import type { ReactorTap } from "../activepieces/worker/reactor-rpc.js";
 import { DEFAULT_EGRESS_POLICY } from "../activepieces/worker/egress.js";
 import {
   FILES_UPLOAD,
+  FLOWS_LIST,
+  HOST_HTTP,
   LOG_WRITE,
   OUTPUT_UPDATE,
   STORE_DELETE,
@@ -37,6 +39,7 @@ import {
   WAITPOINT_CREATE,
   type WaitpointCall,
   type EgressPolicy,
+  type HostHttpRequest,
   type HostCallHandlers,
   type HostNotifyHandlers,
   type PieceLogEntry,
@@ -58,6 +61,7 @@ import type {
   BlockExecution,
   BlockExecutor,
   BlockResult,
+  FlowsPort,
   WaitpointPort,
   WaitpointRequest,
 } from "./types.js";
@@ -231,6 +235,8 @@ export interface ActivepiecesBlockExecutorOptions {
   stepTest?: () => boolean;
   // The run's waitpoints, asked per step; absent, a step cannot suspend.
   waitpoints?: () => WaitpointPort | undefined;
+  // The run's ctx.flows and ctx.server, asked per step; absent, both throw.
+  flows?: () => FlowsPort | undefined;
   telemetry?: WorkflowTelemetry;
 }
 
@@ -257,6 +263,14 @@ function waitpointHandlers(
       created.add(waitpoint.id);
       return waitpoint;
     },
+  };
+}
+
+export function flowsHandlers(port: FlowsPort): HostCallHandlers {
+  return {
+    [FLOWS_LIST]: (payload) =>
+      port.list((payload ?? {}) as { externalIds?: string[] }),
+    [HOST_HTTP]: (payload) => port.request(payload as HostHttpRequest),
   };
 }
 
@@ -502,16 +516,18 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
       const uploads = this.uploadHandlers(stagingDir, signal);
       const stepTest = this.options.stepTest?.() ?? false;
       const waitpoints = stepTest ? undefined : this.options.waitpoints?.();
+      const flows = this.options.flows?.();
       // The waitpoints this execution created: the only ones it may wait on.
       const created = new Set<string>();
       const hostCalls =
-        pieceStore || uploads || waitpoints
+        pieceStore || uploads || waitpoints || flows
           ? {
               ...(pieceStore ? storeHandlers(pieceStore) : {}),
               ...uploads,
               ...(waitpoints
                 ? waitpointHandlers(waitpoints, execution, parsed, created)
                 : {}),
+              ...(flows ? flowsHandlers(flows) : {}),
             }
           : undefined;
       const reactorTap = await this.options.reactorAccess?.({
@@ -533,6 +549,11 @@ export class ActivepiecesBlockExecutor implements BlockExecutor {
           ...(waitpoints ? { canPause: true } : {}),
           ...(waitpoints?.resumeBaseUrl
             ? { resumeBaseUrl: waitpoints.resumeBaseUrl }
+            : {}),
+          ...(flows
+            ? {
+                flows: flows.publicUrl ? { publicUrl: flows.publicUrl } : {},
+              }
             : {}),
           ...(execution.resume
             ? {

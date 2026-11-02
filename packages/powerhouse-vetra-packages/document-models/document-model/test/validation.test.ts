@@ -462,6 +462,10 @@ describe("DocumentModel Validation Error", () => {
         expect(isReservedOperationName("Set_Name")).toBe(true);
       });
 
+      it("should return true for RETRACT", () => {
+        expect(isReservedOperationName("RETRACT")).toBe(true);
+      });
+
       it("should return false for non-reserved names", () => {
         expect(isReservedOperationName("CREATE_USER")).toBe(false);
         expect(isReservedOperationName("UPDATE")).toBe(false);

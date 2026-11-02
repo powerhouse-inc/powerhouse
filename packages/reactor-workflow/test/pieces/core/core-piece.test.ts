@@ -350,7 +350,7 @@ describe("the core piece through the runtime", () => {
     const core = catalog.find((entry) => entry.name === CORE_PIECE_NAME);
     expect(core).toMatchObject({
       version: CORE_PIECE_VERSION,
-      actionCount: 6,
+      actionCount: 8,
       triggerCount: 3,
     });
     const actions = await runtime.pieceActions(CORE_PIECE_NAME);
@@ -358,6 +358,8 @@ describe("the core piece through the runtime", () => {
     expect(actions.version).toBe(CORE_PIECE_VERSION);
     expect(actions.actions.map((action) => action.name)).toEqual([
       "branch",
+      "router",
+      "loop",
       "assert",
       "delay",
       "approval",

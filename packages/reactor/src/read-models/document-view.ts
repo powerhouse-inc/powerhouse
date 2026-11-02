@@ -149,6 +149,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
         indexing,
         replayStreamSuffix: false,
         purgeFence: "locked",
+        applySkippedWhenSupported: true,
       },
     );
     this._db = db;

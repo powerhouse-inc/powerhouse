@@ -13,6 +13,7 @@ A lightweight controller that wraps `PHDocumentController` with remote push/pull
   - [Batch mode](#batch-mode)
   - [Streaming mode](#streaming-mode)
 - [Signing](#signing)
+- [Undo and redo](#undo-and-redo)
 - [Conflict handling](#conflict-handling)
   - [Reject strategy](#reject-strategy)
   - [Rebase strategy](#rebase-strategy)
@@ -201,6 +202,15 @@ const signature = result.operations[0].context?.signer?.signatures[0];
 
 Each action is signed with the operation's `prevOpHash` before push. Signatures are preserved through the push/pull roundtrip.
 
+## Undo and redo
+
+`undo(count = 1, scope = "global")` and `redo(count = 1, scope = "global")` apply locally and track what they produce, like any action method. What that is depends on the document's base-reducer version, which a pulled document takes from the remote header:
+
+- Below base-reducer 3, or with no known version, the local reducer applies UNDO or REDO with `count`, as the model's action method does.
+- On base-reducer 3, the controller resolves `count` targets in turn from its own log, pending local actions included, and applies a `RETRACT` of each. The configured signer signs each `RETRACT` on push. `count` must be a positive integer. If any target is missing the call throws and changes nothing. The host refuses a `RETRACT` whose target is gone or already retracted; the controller does not re-resolve it.
+
+A new document runs the versions its header names from the start (see [Create a new document](#create-a-new-document)), so undo before the first push is a `RETRACT` on base-reducer 3 too.
+
 ## Conflict handling
 
 When multiple controllers edit the same document concurrently, a push may conflict with changes made by another peer. By default no conflict check is performed (last-write-wins). Set the `onConflict` option to enable pull-before-push conflict detection.
@@ -316,6 +326,8 @@ Both return `RemoteDocumentControllerWith<C>`, which includes the base class plu
 | `pull()`             | `Promise<RemoteDocumentData>` | Pull latest state from remote, replacing local document.     |
 | `delete(propagate?)` | `Promise<boolean>`            | Delete the document on the remote.                           |
 | `onChange(listener)` | `() => void`                  | Register a change listener. Returns an unsubscribe function. |
+| `undo(count?, scope?)` | `this`                      | Undo the last `count` changes of `scope`; see [Undo and redo](#undo-and-redo). |
+| `redo(count?, scope?)` | `this`                      | Redo the last `count` undos of `scope`.                      |
 
 Action methods from the wrapped controller are also available and return `this` for chaining.
 

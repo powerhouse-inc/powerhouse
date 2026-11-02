@@ -53,6 +53,22 @@ export const decideOnDocumentsAction = createAction({
     "Answer named questions about documents on this reactor: pick an option, score on a scale, or estimate a yes/no probability.",
   requireReactor: "read",
   defaultTimeoutSeconds: 120,
+  propertyGroups: [
+    {
+      key: "documents",
+      display: "section",
+      label: "Documents",
+      icon: "list",
+      props: ["documents", "filter"],
+    },
+    {
+      key: "decision",
+      display: "section",
+      label: "Decision",
+      icon: "branch",
+      props: ["input", "questions"],
+    },
+  ],
   props: {
     documents: documentsProp("Documents", true),
     input: Property.LongText({

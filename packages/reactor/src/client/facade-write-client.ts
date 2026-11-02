@@ -10,6 +10,7 @@ import type {
   BatchExecutionResult,
   BatchLoadRequest,
   BatchLoadResult,
+  UndoRedoTargets,
 } from "../core/types.js";
 import { BatchJobFailedError } from "../shared/errors.js";
 import type {
@@ -36,6 +37,7 @@ import type {
   IReactorWriteClient,
   MoveRelationshipHandles,
   NewDocumentOptions,
+  UndoRedoAvailability,
   UpgradeDocumentOptions,
   WriteHandle,
   WriteTargetDescription,
@@ -336,6 +338,59 @@ export class FacadeWriteClient implements IReactorWriteClient {
       );
     }
     return new JobBatchHandle(result.jobs, handles, planOrder);
+  }
+
+  async undo(
+    documentIdentifier: string,
+    scope?: string,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    const document = await this.client.undo(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+    return this.settledHandle(document.header.id, branch);
+  }
+
+  async redo(
+    documentIdentifier: string,
+    scope?: string,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    const document = await this.client.redo(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+    return this.settledHandle(document.header.id, branch);
+  }
+
+  undoRedoTargets(
+    documentIdentifier: string,
+    scope?: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets> {
+    return this.client.undoRedoTargets(documentIdentifier, scope, view, signal);
+  }
+
+  undoRedoAvailability(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability> {
+    return this.client.undoRedoAvailability(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
   }
 
   rename(

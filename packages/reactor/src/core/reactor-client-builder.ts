@@ -246,6 +246,7 @@ export class ReactorClientBuilder {
       loadModel: resolver
         ? (documentType) => resolver.ensureModelLoaded(documentType)
         : undefined,
+      protocolSupport: reactorModule.protocolSupport,
     };
   }
 

@@ -54,6 +54,15 @@ export const summarizeAction = createAction({
   description:
     "Summarize long emails, articles or documents into what matters.",
   defaultTimeoutSeconds: 120,
+  propertyGroups: [
+    {
+      key: "summary",
+      display: "section",
+      label: "Summary",
+      icon: "sliders",
+      props: ["length", "instructions"],
+    },
+  ],
   props: {
     model: modelProp(),
     text: Property.LongText({

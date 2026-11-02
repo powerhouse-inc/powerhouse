@@ -46,7 +46,11 @@ export type OptionalMember =
   | "removeRelationship"
   | "moveRelationship"
   | "getDocumentModelModules"
-  | "getDocumentModelModule";
+  | "getDocumentModelModule"
+  | "undo"
+  | "redo"
+  | "undoRedoTargets"
+  | "undoRedoAvailability";
 
 export function declared<K extends OptionalMember>(
   backend: RouterBackend,

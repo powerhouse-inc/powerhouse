@@ -1,5 +1,15 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — `ph host check` warns about members on one port
+
+### ⚡ Two compound members that declare one port are a warning
+
+Under `ph run`, a Connect or switchboard whose port is taken moves to the next free port, so a compound with two members on one port still runs. A moved Connect is a new browser origin, though, and comes up without its drives, sign-in and local data. `ph host check` now prints a warning for such a pair, for example `warning  children.connect.runner.port: cli-connect and connect both use port 6347. One will move to the next free port and lose its browser data.` Warnings never change the exit code. `checkHost()` returns them as `warnings`, beside `issues`.
+
+✅ **What to try:** add `connect: { host: "connect" }` to `hosts/cli/host.js` in a scaffolded project and run `FEATURE_UNIFORM_RUNNERS_ENABLED=true ph host check cli`.
+
+---
+
 ## 🚀 **Unreleased** — router settings in the host config
 
 ### ✨ Host config sets where new drives go, and the router's timeouts and breaker

@@ -6,6 +6,7 @@ export {
   generateActionId,
   type ActionIdGeneratorOptions,
 } from "./action-id.js";
+export * from "./action-order.js";
 
 export function generateId(method?: "UUIDv4"): string {
   if (method && method.toString() !== "UUIDv4") {

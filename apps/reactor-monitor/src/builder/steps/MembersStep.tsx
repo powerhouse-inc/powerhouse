@@ -6,6 +6,7 @@ import type { StepProps } from "./types.js";
 
 export function MembersStep({ engine, onChoose }: StepProps) {
   const add = engine.options.filter((option) => option.group === "add");
+  const ports = engine.options.filter((option) => option.group === "port");
   const issues = engine.issues.filter(
     (issue) => stepOf(issue.path) === "members",
   );
@@ -41,6 +42,12 @@ export function MembersStep({ engine, onChoose }: StepProps) {
           onChoose={onChoose}
           options={add}
           title={GROUP_LABELS.add}
+        />
+        <OptionGroup
+          action
+          onChoose={onChoose}
+          options={ports}
+          title={GROUP_LABELS.port}
         />
       </div>
       <IssueList issues={issues} />

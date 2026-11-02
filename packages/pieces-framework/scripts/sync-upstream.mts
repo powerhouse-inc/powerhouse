@@ -1,5 +1,5 @@
-// Regenerates upstream/ and test/upstream/ from an Activepieces tag. The only
-// way those trees change; see UPSTREAM.md.
+// Regenerates upstream/ and test/upstream/ from an Activepieces tag or commit.
+// The only way those trees change; see UPSTREAM.md.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -152,13 +152,12 @@ const PATCHES: Patch[] = [
     file: "upstream/common/lib/http/core/fetch-http-client.ts",
     why: "HttpError's message embeds the request body; logging it can write secrets to host logs",
     find:
-      "      });\n" +
       "      console.error(\n" +
       '        "[HttpClient#(sanitized error message)] Request failed:",\n' +
       "        httpError,\n" +
       "      );\n" +
       "      throw httpError;\n",
-    replace: "      });\n      throw httpError;\n",
+    replace: "      throw httpError;\n",
   },
   {
     file: "upstream/common/lib/stream/index.ts",
@@ -316,12 +315,10 @@ const PATCHES: Patch[] = [
     file: "upstream/framework/index.ts",
     why: "same for McpAuthConfig: move it from the type-only block to the value block",
     find:
-      "  DEFAULT_CHAT_TIER_ID,\n" +
       '} from "../core-piece-types/index.js";\n' +
       "export type {\n" +
       "  McpAuthConfig,\n",
     replace:
-      "  DEFAULT_CHAT_TIER_ID,\n" +
       "  McpAuthConfig,\n" +
       '} from "../core-piece-types/index.js";\n' +
       "export type {\n",
@@ -416,6 +413,26 @@ const PATCHES: Patch[] = [
     replace:
       "observedProviderFetch((signal) => {\n        signals.push(signal);\n      })",
     count: 3,
+  },
+  {
+    file: "test/upstream/framework/test/i18n.test.ts",
+    why: "upstream never typechecks this test; createPiece requires authors",
+    find: '        logoUrl: "https://example.com/logo.png",\n        auth:',
+    replace:
+      '        logoUrl: "https://example.com/logo.png",\n        authors: [],\n        auth:',
+  },
+  {
+    file: "test/upstream/framework/test/i18n.test.ts",
+    why: "upstream never typechecks this test; createAction requires description",
+    find: '            displayName: "Archive",\n            props: {},',
+    replace:
+      '            displayName: "Archive",\n            description: "Archives",\n            props: {},',
+  },
+  {
+    file: "test/upstream/common/test/http-error-redaction.test.ts",
+    why: "the fetch-http-client patch above drops the error log, so nothing is logged",
+    find: '    expect(logged).toContain("hunter2");\n',
+    replace: '    expect(logged).toBe("[]");\n',
   },
 ];
 
@@ -896,7 +913,7 @@ function parseArgs(argv: string[]): { tag: string; from?: string } {
   }
   if (!tag) {
     throw new Error(
-      "usage: pnpm sync-upstream -- --tag <activepieces tag> [--from <checkout>]",
+      "usage: pnpm sync-upstream -- --tag <activepieces tag or commit> [--from <checkout>]",
     );
   }
   return { tag, from };
@@ -936,33 +953,50 @@ interface Tree {
   cleanup: () => void;
 }
 
+// An untagged upstream commit, named by its SHA.
+const isCommit = (ref: string) => /^[0-9a-f]{7,40}$/.test(ref);
+
 function obtainTree(tag: string, from: string | undefined): Tree {
   if (from) {
     const root = path.resolve(from);
     const commit = git(root, "rev-parse", "HEAD");
     const tags = git(root, "tag", "--points-at", "HEAD").split("\n");
-    if (!tags.includes(tag)) {
-      throw new Error(`${root} is at ${commit}, which is not tagged ${tag}`);
+    const matches = isCommit(tag) ? commit.startsWith(tag) : tags.includes(tag);
+    if (!matches) {
+      throw new Error(`${root} is at ${commit}, which is not ${tag}`);
     }
     const date = git(root, "log", "-1", "--format=%cI", "HEAD");
     return { root, commit, date, cleanup: () => undefined };
   }
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "activepieces-"));
-  execFileSync(
-    "git",
-    [
-      "clone",
-      "--depth",
-      "1",
-      "--filter=blob:none",
-      "--sparse",
-      "--branch",
-      tag,
-      REPO_URL,
-      root,
-    ],
-    { stdio: "inherit" },
-  );
+  if (isCommit(tag)) {
+    // `clone --branch` takes no SHA; GitHub serves a full one by fetch.
+    git(root, "init", "-q");
+    git(root, "remote", "add", "origin", REPO_URL);
+    git(root, "sparse-checkout", "init", "--cone");
+    execFileSync(
+      "git",
+      ["fetch", "--depth", "1", "--filter=blob:none", "origin", tag],
+      { cwd: root, stdio: "inherit" },
+    );
+    git(root, "checkout", "-q", "FETCH_HEAD");
+  } else {
+    execFileSync(
+      "git",
+      [
+        "clone",
+        "--depth",
+        "1",
+        "--filter=blob:none",
+        "--sparse",
+        "--branch",
+        tag,
+        REPO_URL,
+        root,
+      ],
+      { stdio: "inherit" },
+    );
+  }
   git(
     root,
     "sparse-checkout",

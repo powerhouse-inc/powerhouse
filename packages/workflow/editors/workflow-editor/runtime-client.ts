@@ -816,6 +816,8 @@ export async function blockResolutions(
 export interface RunStepRecord {
   stepId: string;
   stepKey: string;
+  // One loop iteration: "<loop>[<i>]/<step>", i from 1; null for the step's own row.
+  path?: string | null;
   pieceName: string;
   // The action the step ran, or the trigger a trigger test sampled.
   blockName: string;
@@ -846,7 +848,12 @@ export interface RunRecord {
   rerunOf: string | null;
   // Why a finished run is not a plain success, e.g. an edge nothing takes.
   warningNotes: string[];
+  // One row per step; a loop body's step holds its last iteration.
   steps: RunStepRecord[];
+  // Each loop iteration's rows, in execution order.
+  iterations?: RunStepRecord[];
+  // Set by fetchRun when it holds only the first iterations: all there are.
+  iterationsTotal?: number | null;
   // Read by fetchRun and fetchWaitingRuns; listings leave them out.
   waitpoints?: WaitpointRecord[];
 }
@@ -889,11 +896,22 @@ const WAITPOINT_FIELDS = `id runId workflowId stepId stepKey stepPath pieceName
 const RUN_ROW_FIELDS = `id workflowId workflowName workflowVersion triggerKind
   triggerPayload status error errorName startedAt endedAt rerunOf warningNotes`;
 const STEP_ROW_FIELDS =
-  "stepId stepKey pieceName blockName status port error errorName startedAt endedAt";
+  "stepId stepKey path pieceName blockName status port error errorName startedAt endedAt";
+
+// Splits a loop's iteration rows off the steps, which stay one row per step.
+export function withIterations(run: RunRecord): RunRecord {
+  const iterations = run.steps.filter((step) => step.path);
+  if (iterations.length === 0) return run;
+  return {
+    ...run,
+    steps: run.steps.filter((step) => !step.path),
+    iterations,
+  };
+}
 const RUN_FIELDS = `${RUN_ROW_FIELDS} steps { ${STEP_ROW_FIELDS} input output }`;
 // A listing row: the steps without their input and output.
 const RUN_LIST_FIELDS = `${RUN_ROW_FIELDS} steps { ${STEP_ROW_FIELDS} }`;
-const RUN_DETAIL_FIELDS = `${RUN_FIELDS} waitpoints { ${WAITPOINT_FIELDS} }`;
+const RUN_DETAIL_FIELDS = `${RUN_FIELDS} iterationsTotal waitpoints { ${WAITPOINT_FIELDS} }`;
 
 export interface RunsScope {
   workflowId?: string;
@@ -923,7 +941,7 @@ export async function fetchRuns(
     }`,
     scopeVariables(scope, 30),
   );
-  return data.workflowRuntime.runs;
+  return data.workflowRuntime.runs.map(withIterations);
 }
 
 // Steps come without input and output; fetchRun has them.
@@ -949,7 +967,8 @@ export async function fetchRunsPage(
     }`,
     { ...rest, paging: { limit, cursor } },
   );
-  return data.workflowRuntime.runsPage;
+  const page = data.workflowRuntime.runsPage;
+  return { ...page, items: page.items.map(withIterations) };
 }
 
 export async function fetchRun(
@@ -960,7 +979,8 @@ export async function fetchRun(
     `query Run($id: String!) { workflowRuntime { run(id: $id) { ${RUN_DETAIL_FIELDS} } } }`,
     { id: runId },
   );
-  return data.workflowRuntime.run;
+  const run = data.workflowRuntime.run;
+  return run ? withIterations(run) : null;
 }
 
 export interface WaitingRunsScope {
@@ -989,7 +1009,7 @@ export async function fetchWaitingRuns(
       first: scope.first ?? null,
     },
   );
-  return data.workflowRuntime.waitingRuns;
+  return data.workflowRuntime.waitingRuns.map(withIterations);
 }
 
 // Approves or rejects a PENDING approval, resuming its run.
@@ -1078,10 +1098,12 @@ export async function loadBlockOptions(
   searchValue?: string,
   // Narrows a reactor-reading resolver to what the step's connection reaches.
   reactorConnectionId?: string,
+  // The workflow being edited: what a sub-flow dropdown lists.
+  workflowId?: string,
 ): Promise<unknown> {
   const data = await t.gql<BlockOptionsResult>(
-    `query Options($block: BlockInput!, $propName: String!, $input: Unknown, $connectionId: String, $searchValue: String, $reactorConnectionId: String) {
-      workflowRuntime { blockOptions(block: $block, propName: $propName, input: $input, connectionId: $connectionId, searchValue: $searchValue, reactorConnectionId: $reactorConnectionId) }
+    `query Options($block: BlockInput!, $propName: String!, $input: Unknown, $connectionId: String, $searchValue: String, $reactorConnectionId: String, $workflowId: String) {
+      workflowRuntime { blockOptions(block: $block, propName: $propName, input: $input, connectionId: $connectionId, searchValue: $searchValue, reactorConnectionId: $reactorConnectionId, workflowId: $workflowId) }
     }`,
     {
       block: blockInput(block),
@@ -1090,6 +1112,7 @@ export async function loadBlockOptions(
       connectionId: connectionId ?? null,
       searchValue: searchValue ?? null,
       reactorConnectionId: reactorConnectionId ?? null,
+      workflowId: workflowId ?? null,
     },
   );
   return data.workflowRuntime.blockOptions;

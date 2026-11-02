@@ -183,8 +183,8 @@ function createSnapshot(revision: Record<string, number>): PHDocument {
     operations: { global: [], local: [] },
     clipboard: [],
   } as unknown as PHDocument;
-  // The GraphQL `PHDocument` type carries no protocol versions, so a real light
-  // snapshot never has them either.
+  // An older Switchboard serves `PHDocument` without protocol versions, so its
+  // light snapshot has none.
   delete (snapshot.header as { protocolVersions?: unknown }).protocolVersions;
   return snapshot;
 }
@@ -404,6 +404,7 @@ describe("prepareSignedActions", () => {
     "UNDO",
     "REDO",
     "NOOP",
+    "RETRACT",
     "CREATE_DOCUMENT",
     "DELETE_DOCUMENT",
     "UPGRADE_DOCUMENT",
