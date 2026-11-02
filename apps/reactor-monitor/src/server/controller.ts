@@ -20,6 +20,7 @@ import { Worker } from "node:worker_threads";
 import { z } from "zod";
 import {
   baseDigest,
+  blankDigest,
   ENV_KEY_PATTERN,
   isBrowserEnvKey,
   type CapabilitiesResponse,
@@ -537,7 +538,7 @@ export function createMonitorController(
   const resolve = (request: HostRequest & { blank?: true }) => {
     // A blank host's folder is written into the copy, not read from the project.
     const root = request.blank
-      ? projectRoot(request.project)
+      ? blankRoot(request.project)
       : hostRoot(request.project, request.host);
     const env = request.env ?? {};
     const denied = deniedEnvKeys(env);
@@ -586,7 +587,19 @@ export function createMonitorController(
         `A blank host is named ${envelope.name}, not ${host}.`,
       );
     }
-    return { export: envelope, baseDigest: await baseDigest(envelope) };
+    return { export: envelope, baseDigest: await blankDigest() };
+  };
+
+  /** A blank host runs in a project with a hosts/ folder, like any other host. */
+  const blankRoot = (project: string): string => {
+    const root = projectRoot(project);
+    if (probeHostsFolder(root).kind !== "present") {
+      throw new ControllerError(
+        "unknown_project",
+        `${root} has no hosts/ folder, so it isn't a project a host can run in.`,
+      );
+    }
+    return root;
   };
 
   /** The request's setters over the current export, checked as the UI did. */
@@ -602,7 +615,7 @@ export function createMonitorController(
       throw new ControllerError(
         "base_changed",
         request.blank
-          ? "The monitor's blank host changed since the draft was made. Start a new one and make your changes again."
+          ? "The monitor's folder templates changed since this blank host was made. Reload the page, then review your changes again."
           : `hosts/${request.host} changed since the draft was made. Reload it and review your changes again.`,
       );
     }

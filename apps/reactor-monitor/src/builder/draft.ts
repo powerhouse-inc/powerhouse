@@ -5,11 +5,11 @@ import {
 } from "@powerhousedao/host-core/schema";
 import { z } from "zod";
 import {
-  baseDigest,
   baseDigestSchema,
+  blankDigest,
   type DraftRequest,
 } from "../controller/api.js";
-import { blankExport } from "../host-rules/catalog.js";
+import { blankExport, folderTemplate, isBlank } from "../host-rules/catalog.js";
 import {
   checkSetter,
   setterSchema,
@@ -84,10 +84,9 @@ export function newDraft(base: DraftBase, baseDigest: string): BuilderDraft {
 }
 
 export async function newBlankDraft(): Promise<BuilderDraft> {
-  const envelope = blankExport();
   return newDraft(
-    { kind: "blank", export: envelope },
-    await baseDigest(envelope),
+    { kind: "blank", export: blankExport() },
+    await blankDigest(),
   );
 }
 
@@ -100,6 +99,11 @@ export function withProject(
     return draft;
   }
   return { ...draft, base: { ...draft.base, project } };
+}
+
+/** An imported export of a blank host, which names no project. */
+export function isBlankImport(draft: BuilderDraft): boolean {
+  return draft.base.kind === "import" && isBlank(draft.base.export);
 }
 
 /** A blank draft's start settings; undefined for any other draft. */
@@ -180,7 +184,8 @@ export function rebaseDraft(
   let at = 0;
   for (const count of draft.edits) {
     let kept = 0;
-    for (const setter of draft.setters.slice(at, at + count)) {
+    for (const written of draft.setters.slice(at, at + count)) {
+      const setter = renewedTemplate(draft, written, envelope);
       const verdict = checkSetter(setter, envelope);
       if (!verdict.ok) {
         dropped.push({ path: setter.path, reason: verdict.reason });
@@ -211,6 +216,20 @@ export function rebaseDraft(
     },
     dropped,
   };
+}
+
+/** A blank host's catalog folder, as the current catalog writes it. */
+function renewedTemplate(
+  draft: BuilderDraft,
+  setter: Setter,
+  envelope: HostExport,
+): Setter {
+  const [root, folder, ...rest] = setter.path.split(".");
+  if (draft.base.kind !== "blank" || root !== "members" || rest.length > 0) {
+    return setter;
+  }
+  const template = folderTemplate(envelope, folder);
+  return template ? { ...setter, value: template as never } : setter;
 }
 
 /** Where the draft's host comes from: a project root and its host folder. */

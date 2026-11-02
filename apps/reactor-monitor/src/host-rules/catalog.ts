@@ -131,6 +131,17 @@ export function isBlank(envelope: unknown): boolean {
   return project?.root === BLANK_ROOT;
 }
 
+/** Every catalog folder as a blank host would write it. */
+export function catalogFolders(): Record<
+  TemplateFolder,
+  Record<string, unknown>
+> {
+  return {
+    switchboard: TEMPLATES.switchboard(BLANK_PROJECT),
+    connect: TEMPLATES.connect(BLANK_PROJECT),
+  };
+}
+
 /** Folders a blank host may add from the catalog; none for any other host. */
 export function templateFolders(envelope: unknown): TemplateFolder[] {
   return isBlank(envelope) ? ["switchboard", "connect"] : [];

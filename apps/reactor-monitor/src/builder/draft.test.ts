@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { baseDigest, draftRequestSchema } from "../controller/api.js";
+import {
+  baseDigest,
+  blankDigest,
+  draftRequestSchema,
+} from "../controller/api.js";
+import {
+  blankExport,
+  folderTemplate,
+  hostOptions,
+} from "../host-rules/index.js";
 import { hostExport, stack } from "../host-rules/__fixtures__/hosts.js";
 import { applySetters } from "../host-rules/setters.js";
 import { memoryStorage } from "./__fixtures__/fakes.js";
@@ -9,6 +18,7 @@ import {
   DRAFT_STORAGE_KEY,
   envelopeOf,
   loadDraft,
+  newBlankDraft,
   newDraft,
   rebaseDraft,
   requestOf,
@@ -206,5 +216,44 @@ describe("draft", () => {
       reason: SAVE_FAILED.unavailable,
     });
     expect(loadDraft(throwing(new Error("blocked")))).toBeUndefined();
+  });
+});
+
+describe("a blank draft", () => {
+  it("is digested with the catalog, so a new catalog is a changed base", async () => {
+    const draft = await newBlankDraft();
+    expect(draft.baseDigest).toBe(await blankDigest());
+    expect(draft.baseDigest).not.toBe(await baseDigest(blankExport()));
+    expect(requestOf(draft)).toMatchObject({ host: "blank", blank: true });
+  });
+
+  it("rebases a folder an older catalog wrote onto the current one", async () => {
+    const add = hostOptions(
+      { envelope: blankExport() },
+      { controller: true, postgres: false },
+    ).find((option) => option.id === "host:add:switchboard");
+    const [folder, child] = add?.setters ?? [];
+    const old = {
+      ...(folder.value as Record<string, unknown>),
+      name: "an-older-template",
+    };
+    const draft = addEdit(await newBlankDraft(), [
+      { path: folder.path, value: old as never },
+      child,
+    ]);
+    const { draft: rebased, dropped } = rebaseDraft(
+      draft,
+      blankExport(),
+      await blankDigest(),
+    );
+    expect(dropped).toEqual([]);
+    expect(rebased.base.kind).toBe("blank");
+    expect(rebased.setters).toEqual([
+      {
+        path: "members.switchboard",
+        value: folderTemplate(blankExport(), "switchboard"),
+      },
+      child,
+    ]);
   });
 });

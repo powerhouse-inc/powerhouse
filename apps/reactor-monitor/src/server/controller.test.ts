@@ -38,6 +38,7 @@ import { hostOptions } from "../host-rules/options.ts";
 import {
   BROWSER_ENV_ALLOWLIST,
   baseDigest,
+  blankDigest,
   CODE_LOADING_ENV,
   isBrowserEnvKey,
   type DraftRequest,
@@ -939,7 +940,7 @@ describe("createMonitorController", () => {
           project: allowed,
           host: "blank",
           blank: true,
-          baseDigest: await baseDigest(blankExport()),
+          baseDigest: await blankDigest(),
           setters: add?.setters ?? [],
           ...overrides,
         };
@@ -1020,6 +1021,20 @@ describe("createMonitorController", () => {
             )
           ).code,
         ).toBe("bad_request");
+      });
+
+      it("refuses a configured root with no hosts/ folder", async () => {
+        const bare = path.join(base, "bare");
+        mkdirSync(bare);
+        const { controller, launches } = create({
+          projectRoots: [allowed, bare],
+        });
+        const error = await errorOf(
+          controller.startDraft(await blankDraft({ project: bare })),
+        );
+        expect(error.code).toBe("unknown_project");
+        expect(error.message).toContain("has no hosts/ folder");
+        expect(launches).toEqual([]);
       });
     });
 

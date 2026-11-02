@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { fireEvent, render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { baseDigest } from "../../controller/api.js";
+import { baseDigest, blankDigest } from "../../controller/api.js";
 import { HOST_EXPORTS } from "../../lib/__fixtures__/host-export/index.js";
 import { hostExport, stack } from "../../host-rules/__fixtures__/hosts.js";
 import { blankExport } from "../../host-rules/index.js";
@@ -30,7 +30,7 @@ describe("StartStep", () => {
     await waitFor(() => expect(onDraft).toHaveBeenCalledOnce());
     expect(onDraft.mock.calls[0][0]).toMatchObject({
       base: { kind: "blank", export: blankExport() },
-      baseDigest: await baseDigest(blankExport()),
+      baseDigest: await blankDigest(),
       step: "basics",
     });
   });

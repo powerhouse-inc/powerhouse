@@ -5,7 +5,7 @@ import { isBaseChanged } from "../BaseChanged.js";
 import type { BuilderClient } from "../client.js";
 import { issueCount, NO_CONTROLLER } from "../copy.js";
 import { checkReason } from "../../host-rules/index.js";
-import { blankOf, requestOf } from "../draft.js";
+import { blankOf, isBlankImport, requestOf } from "../draft.js";
 import { IssueList } from "../IssueList.js";
 import { JsonPreview } from "../JsonPreview.js";
 import type { StepProps } from "./types.js";
@@ -36,7 +36,10 @@ function ControllerCheck({
   };
   const found = result ? result.ruleIssues.length + result.issues.length : 0;
   const blank = blankOf(draft);
-  const blocked = checkReason(blank ? { blank } : {});
+  const blocked = checkReason({
+    ...(blank ? { blank } : {}),
+    blankImport: isBlankImport(draft),
+  });
   return (
     <div className="hb-card hb-sec">
       <div className="hb-flabel">Check on the controller</div>

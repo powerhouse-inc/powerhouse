@@ -46,6 +46,13 @@ describe("startReason", () => {
     ).toBe(START_REASONS.projectGone);
     expect(startReason({ ...ready, blank: { project: "/p" } })).toBeUndefined();
   });
+
+  it("sends a downloaded blank host back to Blank", () => {
+    expect(startReason({ ...ready, blankImport: true })).toBe(
+      START_REASONS.blankImport,
+    );
+    expect(checkReason({ blankImport: true })).toBe(CHECK_REASONS.blankImport);
+  });
 });
 
 describe("checkReason", () => {

@@ -102,6 +102,36 @@ describe("UseStep", () => {
     expect(onDraft).toHaveBeenCalledWith(withProject(draft, PROJECT));
   });
 
+  it("shows a project that is no longer served as unchosen", async () => {
+    const { view, draft, onDraft } = renderStep(UseStep, {
+      envelope: blankExport(),
+      base: { kind: "blank", export: blankExport(), project: "/gone" },
+      setters: addSwitchboard(),
+      context: FULL,
+      extra: { client: fakeBuilderClient().client, onStart: vi.fn() },
+    });
+    await waitFor(() =>
+      expect(view.getByText(START_REASONS.projectGone)).toBeTruthy(),
+    );
+    const picker = view.getByRole("combobox", {
+      name: /Project to run it in/,
+    }) as HTMLSelectElement;
+    expect(picker.value).toBe("");
+    fireEvent.change(picker, { target: { value: PROJECT } });
+    expect(onDraft).toHaveBeenCalledWith(withProject(draft, PROJECT));
+  });
+
+  it("sends a downloaded blank host back to Blank", () => {
+    const { view } = renderStep(UseStep, {
+      envelope: blankExport(),
+      base: { kind: "import", export: blankExport() },
+      setters: addSwitchboard(),
+      context: FULL,
+      extra: { client: fakeBuilderClient().client, onStart: vi.fn() },
+    });
+    expect(view.getByText(START_REASONS.blankImport)).toBeTruthy();
+  });
+
   it("starts a blank host in the project chosen for it", async () => {
     const onStart = vi.fn();
     const { view, draft, engine } = renderStep(UseStep, {

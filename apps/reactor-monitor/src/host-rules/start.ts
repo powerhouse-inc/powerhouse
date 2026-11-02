@@ -10,10 +10,14 @@ export const START_REASONS = {
     "This host comes from a project the monitor can't start. Download it instead.",
   projectGone: "The controller no longer serves that project. Choose another.",
   notWired: "Starting from the builder isn't available yet.",
+  blankImport:
+    "A downloaded blank host has no project to start in. Start a new blank host here, or copy its host.js into a project and load it from there.",
 } as const;
 
 export const CHECK_REASONS = {
   noProject: "Checking needs a project to run in. Choose one on Use it.",
+  blankImport:
+    "A downloaded blank host has no project to check it in. Start a new blank host to check it.",
 } as const;
 
 export function fixIssuesFirst(count: number): string {
@@ -28,6 +32,8 @@ export type StartState = {
   readonly controller: boolean;
   /** A blank host runs in the project chosen for it; none until one is. */
   readonly blank?: { readonly project?: string };
+  /** An imported export of a blank host: it names no project. */
+  readonly blankImport?: boolean;
   /** Whether the controller serves the project; undefined while asking. */
   readonly served: boolean | undefined;
   readonly wired: boolean;
@@ -39,6 +45,7 @@ export function startReason(state: StartState): string | undefined {
   if (state.running) return START_REASONS.running;
   if (state.issues > 0) return fixIssuesFirst(state.issues);
   if (state.reactors === 0) return START_REASONS.noReactors;
+  if (state.blankImport) return START_REASONS.blankImport;
   if (!state.controller) return START_REASONS.noController;
   if (state.blank && !state.blank.project) return START_REASONS.noProject;
   if (state.served === undefined) return START_REASONS.checking;
@@ -51,8 +58,9 @@ export function startReason(state: StartState): string | undefined {
 
 /** Why the controller can't check the draft, if it can't. */
 export function checkReason(
-  state: Pick<StartState, "blank">,
+  state: Pick<StartState, "blank" | "blankImport">,
 ): string | undefined {
+  if (state.blankImport) return CHECK_REASONS.blankImport;
   return state.blank && !state.blank.project
     ? CHECK_REASONS.noProject
     : undefined;

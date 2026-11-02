@@ -4,6 +4,7 @@ import {
   type HostIssue,
 } from "@powerhousedao/host-core/schema";
 import { z } from "zod";
+import { blankExport, catalogFolders } from "../host-rules/catalog.ts";
 import {
   hostRulesContextSchema,
   RULES,
@@ -96,6 +97,12 @@ export async function baseDigest(envelope: HostExport): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
+}
+
+/** A blank host's digest covers the folders it may add: a new catalog is a new base. */
+export function blankDigest(): Promise<string> {
+  const members = catalogFolders() as unknown as HostExport["members"];
+  return baseDigest({ ...blankExport(), members });
 }
 
 /** `GET capabilities`: what the controller can offer a host it builds. */

@@ -17,7 +17,13 @@ import type { Project } from "../../controller/api.js";
 import type { RouteSeed } from "../../lib/route-seed.js";
 import { DRIVES_COPY, RUN_COPY } from "../copy.js";
 import { downloadExport, exportFileName } from "../download.js";
-import { blankOf, sourceOf, withProject, type BuilderDraft } from "../draft.js";
+import {
+  blankOf,
+  isBlankImport,
+  sourceOf,
+  withProject,
+  type BuilderDraft,
+} from "../draft.js";
 import type { BuilderEngine } from "../engine.js";
 import { routeSeedOf, startedMembers } from "../route.js";
 import {
@@ -41,7 +47,7 @@ function useServed(
     ? blank.project === undefined
       ? undefined
       : `${blank.project}\0`
-    : draft.base.kind === "import"
+    : draft.base.kind === "import" && !isBlankImport(draft)
       ? `${project}\0${host}`
       : undefined;
   const [answer, setAnswer] = useState<
@@ -85,6 +91,11 @@ function BlankProject({
 }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState("");
+  const chosen = blankOf(draft)?.project;
+  // A project no longer listed shows as unchosen, so picking any one applies.
+  const value = projects.some((candidate) => candidate.root === chosen)
+    ? chosen
+    : "";
   useEffect(() => {
     const abort = new AbortController();
     void (async () => {
@@ -102,7 +113,7 @@ function BlankProject({
       <span className="hb-flabel">Project to run it in</span>
       <select
         onChange={(event) => onDraft(withProject(draft, event.target.value))}
-        value={blankOf(draft)?.project ?? ""}
+        value={value}
       >
         <option disabled value="">
           Choose a project
@@ -318,6 +329,7 @@ export function UseStep({
     reactors: engine.members.length,
     controller: engine.context.controller,
     ...(blank ? { blank } : {}),
+    blankImport: isBlankImport(draft),
     served,
     wired: onStart !== undefined,
     running: run !== undefined,

@@ -1,6 +1,6 @@
 import type { HostExport } from "@powerhousedao/host-core/schema";
 import { useId, useState } from "react";
-import { baseDigest } from "../controller/api.js";
+import { blankDigest } from "../controller/api.js";
 import { ControllerRequestError, errorMessage } from "../controller/client.js";
 import { blankExport } from "../host-rules/index.js";
 import type { BuilderClient } from "./client.js";
@@ -60,12 +60,11 @@ export function BaseChanged({
   const fetchNew = async () => {
     const { project, host } = sourceOf(draft);
     if (draft.base.kind === "blank") {
-      const envelope = blankExport();
       return {
         project,
         host,
-        export: envelope,
-        baseDigest: await baseDigest(envelope),
+        export: blankExport(),
+        baseDigest: await blankDigest(),
       };
     }
     if (!client) throw new Error("The monitor's controller isn't running.");
