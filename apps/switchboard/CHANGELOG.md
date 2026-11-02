@@ -1,3 +1,38 @@
+## 6.2.3-dev.90 (2026-11-02)
+
+### 🚀 Features
+
+- **desktop:** fold a stack into a few thousand files ([9ff7083857](https://github.com/powerhouse-inc/powerhouse/commit/9ff7083857))
+- **ph-run:** run a host with none of the tools that build one ([ff0ac7910f](https://github.com/powerhouse-inc/powerhouse/commit/ff0ac7910f))
+- **switchboard:** open both PGlite stores at once ([484877830e](https://github.com/powerhouse-inc/powerhouse/commit/484877830e))
+- **ai:** a host can offer a demo key ([11147a01dc](https://github.com/powerhouse-inc/powerhouse/commit/11147a01dc))
+- **desktop:** a sign-in page and a local key for generated shells ([7cce4b7316](https://github.com/powerhouse-inc/powerhouse/commit/7cce4b7316))
+- **renown:** credentials no Renown holds ([337ddba394](https://github.com/powerhouse-inc/powerhouse/commit/337ddba394))
+- **switchboard:** ensureDrive, by slug ([8ae38afcb6](https://github.com/powerhouse-inc/powerhouse/commit/8ae38afcb6))
+- **desktop:** grant generated shells the system browser opener ([db0642a856](https://github.com/powerhouse-inc/powerhouse/commit/db0642a856))
+- **reactor-browser:** export the desktop shell for other sign-ins ([a0dcb5016e](https://github.com/powerhouse-inc/powerhouse/commit/a0dcb5016e))
+- **switchboard:** verify delegated signers with authEnforcement off ([b896f23cfe](https://github.com/powerhouse-inc/powerhouse/commit/b896f23cfe))
+
+### 🩹 Fixes
+
+- **switchboard:** a self-verifying host mounts its renown read model at once ([c51a4c2881](https://github.com/powerhouse-inc/powerhouse/commit/c51a4c2881))
+- **switchboard:** load Sentry only for a host that reports to it ([2f5196e31b](https://github.com/powerhouse-inc/powerhouse/commit/2f5196e31b))
+- **switchboard:** close the stores on a fatal error on Windows ([d07d995c57](https://github.com/powerhouse-inc/powerhouse/commit/d07d995c57))
+- **reactor-api:** compose the supergraph less often at boot ([f70f2223f9](https://github.com/powerhouse-inc/powerhouse/commit/f70f2223f9))
+- **switchboard:** workers can't verify kept credentials either ([e3563478f9](https://github.com/powerhouse-inc/powerhouse/commit/e3563478f9))
+- **workflow:** a restart takes back its own lease on an embedded journal ([e83365c6d4](https://github.com/powerhouse-inc/powerhouse/commit/e83365c6d4))
+- **desktop:** the stack ships the packages its hosts' plugins come from ([faa1168ba4](https://github.com/powerhouse-inc/powerhouse/commit/faa1168ba4))
+- **desktop:** pack and test the stack on Windows ([c6317e2c15](https://github.com/powerhouse-inc/powerhouse/commit/c6317e2c15))
+- **switchboard:** the env can turn workflows off under the plugin host ([51543d6302](https://github.com/powerhouse-inc/powerhouse/commit/51543d6302))
+- **switchboard:** recreate a drive whose id a deleted drive holds ([059fad1f3f](https://github.com/powerhouse-inc/powerhouse/commit/059fad1f3f))
+- **reactor-api:** refuse an owner claim on a host others can reach ([62f3a39c6a](https://github.com/powerhouse-inc/powerhouse/commit/62f3a39c6a))
+- **reactor:** keep the trust context optional for direct callers ([1760590c37](https://github.com/powerhouse-inc/powerhouse/commit/1760590c37))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.89 (2026-11-02)
 
 ### 🚀 Features

@@ -1,3 +1,73 @@
+## 6.2.3-dev.90 (2026-11-02)
+
+### 🚀 Features
+
+- **ai:** a host can offer a demo key ([11147a01dc](https://github.com/powerhouse-inc/powerhouse/commit/11147a01dc))
+- **builder-tools:** serve the web manifest on the dev server ([c2d2261186](https://github.com/powerhouse-inc/powerhouse/commit/c2d2261186))
+- **builder-tools:** name the icon an iPhone puts on its home screen ([109412c47f](https://github.com/powerhouse-inc/powerhouse/commit/109412c47f))
+- **desktop:** grant generated shells the system browser opener ([db0642a856](https://github.com/powerhouse-inc/powerhouse/commit/db0642a856))
+- **desktop:** a sign-in page and a local key for generated shells ([7cce4b7316](https://github.com/powerhouse-inc/powerhouse/commit/7cce4b7316))
+- **desktop:** fold a stack into a few thousand files ([9ff7083857](https://github.com/powerhouse-inc/powerhouse/commit/9ff7083857))
+- **host-core:** a supervisor can stop a compound through its stdin ([78c9b941f5](https://github.com/powerhouse-inc/powerhouse/commit/78c9b941f5))
+- **ph-cli:** serve a built Connect without vite ([a145e50dff](https://github.com/powerhouse-inc/powerhouse/commit/a145e50dff))
+- **ph-run:** run a host with none of the tools that build one ([ff0ac7910f](https://github.com/powerhouse-inc/powerhouse/commit/ff0ac7910f))
+- **reactor:** tell a trust policy the path and the action type ([9c0f45da06](https://github.com/powerhouse-inc/powerhouse/commit/9c0f45da06))
+- **reactor:** set a slug after creation, and a live slug over a deleted id ([234deeae76](https://github.com/powerhouse-inc/powerhouse/commit/234deeae76))
+- **reactor-api:** owner claim, kept credentials, a bind address and host facts ([21def9b8fe](https://github.com/powerhouse-inc/powerhouse/commit/21def9b8fe))
+- **reactor-browser:** export the desktop shell for other sign-ins ([a0dcb5016e](https://github.com/powerhouse-inc/powerhouse/commit/a0dcb5016e))
+- **reactor-browser:** approve a whole turn, or auto-approve through a gateway ([36100f1a6a](https://github.com/powerhouse-inc/powerhouse/commit/36100f1a6a))
+- **reactor-workflow:** add a workflow.runs telemetry gauge ([400bdff1b6](https://github.com/powerhouse-inc/powerhouse/commit/400bdff1b6))
+- **renown:** delegation statements and a four-way credential check ([e6f4fd0af4](https://github.com/powerhouse-inc/powerhouse/commit/e6f4fd0af4))
+- **renown:** sign in through the system browser from a desktop window ([e787eab695](https://github.com/powerhouse-inc/powerhouse/commit/e787eab695))
+- **renown:** credentials no Renown holds ([337ddba394](https://github.com/powerhouse-inc/powerhouse/commit/337ddba394))
+- **shared:** a node build leaves out what only a browser runs ([7b9d548b09](https://github.com/powerhouse-inc/powerhouse/commit/7b9d548b09))
+- **switchboard:** verify delegated signers with authEnforcement off ([b896f23cfe](https://github.com/powerhouse-inc/powerhouse/commit/b896f23cfe))
+- **switchboard:** ensureDrive, by slug ([8ae38afcb6](https://github.com/powerhouse-inc/powerhouse/commit/8ae38afcb6))
+- **switchboard:** open both PGlite stores at once ([484877830e](https://github.com/powerhouse-inc/powerhouse/commit/484877830e))
+
+### 🩹 Fixes
+
+- **builder-tools:** one PWA for dev and build, under the project's name ([25759fc2fc](https://github.com/powerhouse-inc/powerhouse/commit/25759fc2fc))
+- **connect:** add the default drives missed before sign-in ([bdc31a74f2](https://github.com/powerhouse-inc/powerhouse/commit/bdc31a74f2))
+- **connect-core:** keep the delete dialog open until the delete lands ([e5823a13f9](https://github.com/powerhouse-inc/powerhouse/commit/e5823a13f9))
+- **design-system:** a delegation statement is not a signature ([e11db35cbb](https://github.com/powerhouse-inc/powerhouse/commit/e11db35cbb))
+- **desktop:** turning the sign-in page off removes it ([db4cf93c1e](https://github.com/powerhouse-inc/powerhouse/commit/db4cf93c1e))
+- **desktop:** read local tarballs with GNU tar on Windows ([ec389ada3e](https://github.com/powerhouse-inc/powerhouse/commit/ec389ada3e))
+- **desktop:** pack and test the stack on Windows ([c6317e2c15](https://github.com/powerhouse-inc/powerhouse/commit/c6317e2c15))
+- **desktop:** the stack ships the packages its hosts' plugins come from ([faa1168ba4](https://github.com/powerhouse-inc/powerhouse/commit/faa1168ba4))
+- **desktop:** a packaged app ships its desktop OAuth client ([b05d0af319](https://github.com/powerhouse-inc/powerhouse/commit/b05d0af319))
+- **desktop:** the stack keeps the project's version and exports ([533d82bd2f](https://github.com/powerhouse-inc/powerhouse/commit/533d82bd2f))
+- **desktop:** show progress on the page's background, centred ([ed194e6bda](https://github.com/powerhouse-inc/powerhouse/commit/ed194e6bda))
+- **desktop:** leave out what a running app never reads ([50623de920](https://github.com/powerhouse-inc/powerhouse/commit/50623de920))
+- **ph-cli:** settle NODE_ENV before a build loads its host ([7e47a7ba9c](https://github.com/powerhouse-inc/powerhouse/commit/7e47a7ba9c))
+- **portle:** keep state with the host's other .ph state ([9058328718](https://github.com/powerhouse-inc/powerhouse/commit/9058328718))
+- **reactor:** keep the trust context optional for direct callers ([1760590c37](https://github.com/powerhouse-inc/powerhouse/commit/1760590c37))
+- **reactor:** rebuild the header scope from a document keyframe ([270ffc7639](https://github.com/powerhouse-inc/powerhouse/commit/270ffc7639))
+- **reactor,reactor-api:** answer the status of a job that deleted its document ([87f10dbe66](https://github.com/powerhouse-inc/powerhouse/commit/87f10dbe66))
+- **reactor-api:** refuse an owner claim on a host others can reach ([62f3a39c6a](https://github.com/powerhouse-inc/powerhouse/commit/62f3a39c6a))
+- **reactor-api:** route a local package on a Windows path ([c7c8b2270b](https://github.com/powerhouse-inc/powerhouse/commit/c7c8b2270b))
+- **reactor-api:** log a processor package that fails to initialize ([6827269a34](https://github.com/powerhouse-inc/powerhouse/commit/6827269a34))
+- **reactor-api:** compose the supergraph less often at boot ([f70f2223f9](https://github.com/powerhouse-inc/powerhouse/commit/f70f2223f9))
+- **reactor-api:** load devcert only for local HTTPS ([0be336be4e](https://github.com/powerhouse-inc/powerhouse/commit/0be336be4e))
+- **reactor-browser:** keep asking a gateway that answers with an error ([84872cbdb4](https://github.com/powerhouse-inc/powerhouse/commit/84872cbdb4))
+- **reactor-router,reactor-browser:** remote drive writes that reach a reactor-drive and outlast a request ([dd97654823](https://github.com/powerhouse-inc/powerhouse/commit/dd97654823))
+- **reactor-workflow:** stop a run's async context pinning its output ([65a4a0c4a6](https://github.com/powerhouse-inc/powerhouse/commit/65a4a0c4a6))
+- **reactor-workflow:** what a run leaves follows the .ph tree ([6079ef2f33](https://github.com/powerhouse-inc/powerhouse/commit/6079ef2f33))
+- **shared:** a node build keeps an editors/index.ts that exports more than editors ([2f7c664f51](https://github.com/powerhouse-inc/powerhouse/commit/2f7c664f51))
+- **shared,powerhouse-vetra-packages:** the prerendered Connect shell gets its editors ([1b3794d1c1](https://github.com/powerhouse-inc/powerhouse/commit/1b3794d1c1))
+- **switchboard:** recreate a drive whose id a deleted drive holds ([059fad1f3f](https://github.com/powerhouse-inc/powerhouse/commit/059fad1f3f))
+- **switchboard:** the env can turn workflows off under the plugin host ([51543d6302](https://github.com/powerhouse-inc/powerhouse/commit/51543d6302))
+- **switchboard:** workers can't verify kept credentials either ([e3563478f9](https://github.com/powerhouse-inc/powerhouse/commit/e3563478f9))
+- **switchboard:** close the stores on a fatal error on Windows ([d07d995c57](https://github.com/powerhouse-inc/powerhouse/commit/d07d995c57))
+- **switchboard:** load Sentry only for a host that reports to it ([2f5196e31b](https://github.com/powerhouse-inc/powerhouse/commit/2f5196e31b))
+- **switchboard:** a self-verifying host mounts its renown read model at once ([c51a4c2881](https://github.com/powerhouse-inc/powerhouse/commit/c51a4c2881))
+- **workflow:** a restart takes back its own lease on an embedded journal ([e83365c6d4](https://github.com/powerhouse-inc/powerhouse/commit/e83365c6d4))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.89 (2026-11-02)
 
 ### 🚀 Features

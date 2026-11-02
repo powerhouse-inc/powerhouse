@@ -1,3 +1,30 @@
+## 6.2.3-dev.90 (2026-11-02)
+
+### 🚀 Features
+
+- **desktop:** fold a stack into a few thousand files ([9ff7083857](https://github.com/powerhouse-inc/powerhouse/commit/9ff7083857))
+- **ph-run:** run a host with none of the tools that build one ([ff0ac7910f](https://github.com/powerhouse-inc/powerhouse/commit/ff0ac7910f))
+- **desktop:** a sign-in page and a local key for generated shells ([7cce4b7316](https://github.com/powerhouse-inc/powerhouse/commit/7cce4b7316))
+- **reactor:** set a slug after creation, and a live slug over a deleted id ([234deeae76](https://github.com/powerhouse-inc/powerhouse/commit/234deeae76))
+- **desktop:** grant generated shells the system browser opener ([db0642a856](https://github.com/powerhouse-inc/powerhouse/commit/db0642a856))
+- **switchboard:** verify delegated signers with authEnforcement off ([b896f23cfe](https://github.com/powerhouse-inc/powerhouse/commit/b896f23cfe))
+- **reactor-api:** owner claim, kept credentials, a bind address and host facts ([21def9b8fe](https://github.com/powerhouse-inc/powerhouse/commit/21def9b8fe))
+- **reactor:** tell a trust policy the path and the action type ([9c0f45da06](https://github.com/powerhouse-inc/powerhouse/commit/9c0f45da06))
+
+### 🩹 Fixes
+
+- **reactor-router,reactor-browser:** remote drive writes that reach a reactor-drive and outlast a request ([dd97654823](https://github.com/powerhouse-inc/powerhouse/commit/dd97654823))
+- **reactor,reactor-api:** answer the status of a job that deleted its document ([87f10dbe66](https://github.com/powerhouse-inc/powerhouse/commit/87f10dbe66))
+- **desktop:** the stack ships the packages its hosts' plugins come from ([faa1168ba4](https://github.com/powerhouse-inc/powerhouse/commit/faa1168ba4))
+- **desktop:** pack and test the stack on Windows ([c6317e2c15](https://github.com/powerhouse-inc/powerhouse/commit/c6317e2c15))
+- **reactor:** rebuild the header scope from a document keyframe ([270ffc7639](https://github.com/powerhouse-inc/powerhouse/commit/270ffc7639))
+- **reactor:** keep the trust context optional for direct callers ([1760590c37](https://github.com/powerhouse-inc/powerhouse/commit/1760590c37))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.89 (2026-11-02)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
