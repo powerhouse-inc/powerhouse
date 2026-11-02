@@ -166,7 +166,7 @@ jobs:
               "$dir" || true
           done
 
-          for dir in clis/ph-cli/dist clis/ph-cmd/dist; do
+          for dir in clis/ph-cli/dist clis/ph-cmd/dist clis/ph-run/dist; do
             [ -d "$dir" ] || continue
             sentry-cli sourcemaps upload \
               --release "$VERSION" \
