@@ -39,6 +39,7 @@ type JobInfo = {
   error?: ErrorInfo; // the failing error
   errorHistory?: ErrorInfo[]; // one entry per attempt, ordered
   result?: any;
+  deletedDocument?: boolean; // set once the job has deleted its document
   consistencyToken: ConsistencyToken;
   meta: JobMeta;
   job?: Job; // full job object, populated on failure for debugging
