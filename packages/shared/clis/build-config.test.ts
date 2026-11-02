@@ -193,6 +193,15 @@ describe("hostStubOf", () => {
     }
   });
 
+  it("builds editors/index.ts as written for a package rendered in Node, but no editors list", () => {
+    expect(
+      hostStubOf("/project/editors/index.ts", "/project", true),
+    ).toBeUndefined();
+    expect(hostStubOf("/project/editors/editors.ts", "/project", true)).toBe(
+      "export const editors = [];",
+    );
+  });
+
   it("drops a document model's hooks, in any version", () => {
     for (const file of [
       "/project/document-models/invoice/v1/hooks.ts",

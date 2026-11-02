@@ -241,12 +241,20 @@ export type NodeBuildConfigOptions = {
   sharedDeps?: boolean;
   /** Extra bundler plugins, such as the external dependency detector. */
   plugins?: InlineConfig["plugins"];
+  /**
+   * Build `editors/index.ts` as written, for a package whose editors are
+   * rendered in Node: Connect prerenders its shell from
+   * powerhouse-vetra-packages' editors. The `editors` list a host loads stays
+   * empty.
+   */
+  editorExports?: boolean;
 };
 
 /** A generated module a host has no use for, and what it builds to instead. */
 export function hostStubOf(
   file: string,
   projectRoot = process.cwd(),
+  editorExports = false,
 ): string | undefined {
   const forward = (text: string) => text.replaceAll("\\", "/").toLowerCase();
   const path = forward(file).split("?")[0];
@@ -257,7 +265,7 @@ export function hostStubOf(
   // A package's index.ts takes `editors` from either, as its generator wrote it.
   if (
     path.endsWith("/editors/editors.ts") ||
-    path.endsWith("/editors/index.ts")
+    (!editorExports && path.endsWith("/editors/index.ts"))
   ) {
     return "export const editors = [];";
   }
@@ -272,10 +280,12 @@ export function hostStubOf(
  * in, every document model takes `reactor-browser` and React to the server,
  * and the editors take the design system.
  */
-const noBrowserCodeOnHosts = {
-  name: "ph:no-browser-code-on-hosts",
-  load: (file: string) => hostStubOf(file),
-};
+function noBrowserCodeOnHosts(editorExports: boolean) {
+  return {
+    name: "ph:no-browser-code-on-hosts",
+    load: (file: string) => hostStubOf(file, process.cwd(), editorExports),
+  };
+}
 
 /**
  * The node build externalizes the same shared set as the browser build, for
@@ -301,7 +311,10 @@ export function buildNodeBuildConfig(
       ],
     },
     platform: "node",
-    plugins: [noBrowserCodeOnHosts, options.plugins],
+    plugins: [
+      noBrowserCodeOnHosts(options.editorExports ?? false),
+      options.plugins,
+    ],
     loader,
     config,
     clean,
