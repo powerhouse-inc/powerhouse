@@ -1,7 +1,7 @@
 import type { HostExport } from "@powerhousedao/host-core/schema";
 import fs from "node:fs";
 import path from "node:path";
-import { isRecord, membersOf } from "../host-rules/members.ts";
+import { isRecord, membersOf, valueAt } from "../host-rules/members.ts";
 import {
   COPY_CONNECT_PORT_OFFSET,
   copyPortClashes,
@@ -66,7 +66,7 @@ export function copyConnectPorts(envelope: HostExport): CopyConnectPort[] {
   });
 }
 
-/** Free switchboard ports; Connect's copy port keeps its own browser storage. */
+/** Free switchboard ports; Connect's copy port is fixed, offset from its own. */
 export function withFreePorts(envelope: HostExport): HostExport {
   const copy = structuredClone(envelope);
   const host = copy.host as unknown as Record<string, unknown>;
@@ -109,7 +109,11 @@ export function withFreePorts(envelope: HostExport): HostExport {
   return copy;
 }
 
-/** Connect's copy port is fixed, so each copy names its own browser storage. */
+/**
+ * Connect's copy port is fixed, so each copy names its own browser storage:
+ * in `config.instance` when the host has one (the runner reads it first),
+ * else in the reactor block.
+ */
 export function withCopyStorage(
   envelope: HostExport,
   copy: string,
@@ -117,11 +121,24 @@ export function withCopyStorage(
   const result = structuredClone(envelope);
   const named = new Set<string>();
   for (const member of membersOf({ envelope: result })) {
-    if (member.role !== "connect" || named.has(member.reactorAt)) continue;
-    named.add(member.reactorAt);
-    const reactor = ensureRecordAt(result, member.reactorAt.split("."));
-    const own = reactor.namespace;
-    reactor.namespace = `${typeof own === "string" ? own : "monitor"}-${copy}`;
+    if (member.role !== "connect") continue;
+    const instance = valueAt(result, [
+      ...member.configAt.split("."),
+      "instance",
+    ]);
+    const at = isRecord(instance)
+      ? [...member.configAt.split("."), "instance"]
+      : member.reactorAt.split(".");
+    const key = at.join(".");
+    if (named.has(key)) continue;
+    named.add(key);
+    const slot = valueAt(result, at);
+    if (slot !== undefined && !isRecord(slot)) continue;
+    const own = [
+      isRecord(instance) ? instance.namespace : undefined,
+      member.reactor?.namespace,
+    ].find((value): value is string => typeof value === "string");
+    ensureRecordAt(result, at).namespace = `${own ?? "monitor"}-${copy}`;
   }
   return result;
 }

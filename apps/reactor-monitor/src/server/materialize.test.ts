@@ -191,13 +191,45 @@ describe("materialize", () => {
     const host = named.host as unknown as Record<string, unknown>;
     const children = host.children as Record<string, Record<string, unknown>>;
     children.ui.reactor = { namespace: "team" };
-    const again = materialize(
+    const second = materialize(
       path.join(base, "tmp", "second"),
       source,
       named,
     ).projectDir;
-    expect(hostFile(again, "duo")).toMatchObject({
+    expect(hostFile(second, "duo")).toMatchObject({
       children: { ui: { reactor: { namespace: "team-second" } } },
+    });
+  });
+
+  it("names the storage in config.instance when the host sets one", () => {
+    const envelope = duo(source);
+    const host = envelope.host as unknown as Record<string, unknown>;
+    const children = host.children as Record<string, Record<string, unknown>>;
+    children.ui.reactor = { namespace: "team" };
+    children.ui.config = {
+      instance: { reactorWorker: true, namespace: "lab" },
+    };
+    const { projectDir } = materialize(instanceDir, source, envelope);
+    expect(hostFile(projectDir, "duo")).toMatchObject({
+      children: {
+        ui: {
+          reactor: { namespace: "team" },
+          config: {
+            instance: { reactorWorker: true, namespace: "lab-instance" },
+          },
+        },
+      },
+    });
+  });
+
+  it("leaves a Connect whose reactor block is not an object as it is", () => {
+    const envelope = duo(source);
+    const host = envelope.host as unknown as Record<string, unknown>;
+    const children = host.children as Record<string, Record<string, unknown>>;
+    children.ui.reactor = null;
+    const { projectDir } = materialize(instanceDir, source, envelope);
+    expect(hostFile(projectDir, "duo")).toMatchObject({
+      children: { ui: { reactor: null } },
     });
   });
 

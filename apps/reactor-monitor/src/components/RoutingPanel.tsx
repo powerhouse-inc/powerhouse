@@ -797,7 +797,10 @@ export function RoutingPanel({
                     const drift = driftOf(
                       entry,
                       (reactor) => hostBackendOf(reactor) ?? reactor,
-                      topology?.seed?.copies[entry.collectionId],
+                      topology?.seed &&
+                        Object.hasOwn(topology.seed.copies, entry.collectionId)
+                        ? topology.seed.copies[entry.collectionId]
+                        : undefined,
                     );
                     const savable =
                       drift !== undefined &&

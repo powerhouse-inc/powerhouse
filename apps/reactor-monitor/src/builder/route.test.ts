@@ -255,6 +255,64 @@ describe("routeSeedOf", () => {
     });
   });
 
+  it("names only the drives of the switchboard the list maps", () => {
+    const connect = "host.children.cli-connect";
+    let draft: HostDraft = { envelope: hostExport("cli") };
+    const local = hostOptions(draft, FULL).find(
+      (option) => option.id === `${connect}:reach:local`,
+    );
+    draft = applyOption(draft, local!).draft;
+    draft = {
+      envelope: applySetters(draft.envelope, [
+        {
+          path: `${connect}.reactor.drives`,
+          value: {
+            $map: {
+              over: { $output: { host: "elsewhere", path: ["drives"] } },
+              to: { slug: { $key: true }, remote: { url: { $item: ["url"] } } },
+            },
+          },
+        },
+      ]).envelope,
+    };
+    const members = membersOf(draft);
+    const seed = routeSeedOf({
+      id: "seed",
+      member: members.find((member) => member.path === connect)!,
+      members,
+      run: runOf({
+        reactors: [
+          {
+            name: "cli-switchboard",
+            url: "http://127.0.0.1:7001/d/powerhouse",
+            drives: {
+              powerhouse: {
+                id: "id-powerhouse",
+                url: "http://127.0.0.1:7001/d/powerhouse",
+              },
+              "field-notes": {
+                id: "id-field-notes",
+                url: "http://127.0.0.1:7001/d/field-notes",
+              },
+            },
+          },
+        ],
+        attached: {
+          browser: [
+            {
+              name: "cli-connect.main",
+              member: "cli-connect",
+              backend: "main",
+            },
+          ],
+          remote: [{ name: "sb-inst-1", member: "cli-switchboard" }],
+        },
+      }),
+      context: FULL,
+    });
+    expect(seed?.drives).toEqual({ "id-powerhouse": "powerhouse" });
+  });
+
   it("offers nothing until the switchboard is attached", () => {
     const run = runOf();
     expect(

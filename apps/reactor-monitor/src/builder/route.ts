@@ -131,15 +131,17 @@ export function routeSeedOf({
     }
     drives[keyOf(link.slug, link.member)] = link.slug;
   }
-  // A mapped list is every drive the started switchboard reports.
-  if (reach.mappedDrives) {
-    for (const switchboard of new Set(switchboardOf.values())) {
-      const served = run.reactors.find(
-        (reactor) => reactor.name === switchboard,
-      )?.drives;
-      for (const [slug, drive] of Object.entries(served ?? {})) {
-        drives[drive.id] ??= slug;
-      }
+  // A mapped list is every drive its switchboard reports at start.
+  const mapped = reach.mappedDrives
+    ? targetOf(valueAt(member.reactor, ["drives", "$map", "over"]), members)
+        .member
+    : undefined;
+  if (mapped !== undefined && [...switchboardOf.values()].includes(mapped)) {
+    const served = run.reactors.find(
+      (reactor) => reactor.name === mapped,
+    )?.drives;
+    for (const [slug, drive] of Object.entries(served ?? {})) {
+      drives[drive.id] ??= slug;
     }
   }
   const copies: Record<string, string> = {};
