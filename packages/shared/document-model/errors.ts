@@ -87,6 +87,25 @@ export class NoUndoRedoTargetError extends Error {
   }
 }
 
+/** A loaded UNDO row; base-reducer 1 and 2 store an undo as a NOOP. */
+export class UndoOperationRefusedError extends Error {
+  public readonly documentId: string;
+  public readonly scope: string;
+
+  constructor(documentId: string, scope: string) {
+    super(
+      `UNDO operation in scope ${scope} cannot be applied to document ${documentId}: its base reducer stores an undo as a NOOP marker, never as an UNDO operation`,
+    );
+    this.name = "UndoOperationRefusedError";
+    this.documentId = documentId;
+    this.scope = scope;
+  }
+
+  static override isError(error: unknown): error is UndoOperationRefusedError {
+    return error instanceof Error && error.name === "UndoOperationRefusedError";
+  }
+}
+
 /**
  * Error thrown when attempting to downgrade a document version.
  */
