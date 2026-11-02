@@ -256,4 +256,15 @@ describe("a blank draft", () => {
       child,
     ]);
   });
+
+  it("keeps a removed catalog folder removed through a rebase", async () => {
+    const remove = { path: "members.switchboard", value: { $delete: true } };
+    const draft = addEdit(await newBlankDraft(), [remove as never]);
+    const { draft: rebased } = rebaseDraft(
+      draft,
+      blankExport(),
+      await blankDigest(),
+    );
+    expect(rebased.setters).toEqual([remove]);
+  });
 });

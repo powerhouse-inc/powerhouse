@@ -1033,7 +1033,9 @@ describe("createMonitorController", () => {
           controller.startDraft(await blankDraft({ project: bare })),
         );
         expect(error.code).toBe("unknown_project");
-        expect(error.message).toContain("has no hosts/ folder");
+        expect(controller.listProjects().map((p) => p.root)).not.toContain(
+          bare,
+        );
         expect(launches).toEqual([]);
       });
     });

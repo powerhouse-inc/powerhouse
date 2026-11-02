@@ -12,6 +12,7 @@ import {
 import { blankExport, folderTemplate, isBlank } from "../host-rules/catalog.js";
 import {
   checkSetter,
+  isDelete,
   setterSchema,
   type HostEnv,
   type Setter,
@@ -225,7 +226,12 @@ function renewedTemplate(
   envelope: HostExport,
 ): Setter {
   const [root, folder, ...rest] = setter.path.split(".");
-  if (draft.base.kind !== "blank" || root !== "members" || rest.length > 0) {
+  if (
+    draft.base.kind !== "blank" ||
+    root !== "members" ||
+    rest.length > 0 ||
+    isDelete(setter.value)
+  ) {
     return setter;
   }
   const template = folderTemplate(envelope, folder);

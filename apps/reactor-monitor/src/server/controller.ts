@@ -488,7 +488,8 @@ export function createMonitorController(
     for (const configured of options.projectRoots) {
       const root = realpathOrUndefined(configured);
       if (!root) continue;
-      add(root);
+      // A root is a project only with a hosts/ folder; a parent of projects isn't.
+      if (probeHostsFolder(root).kind === "present") add(root);
       let children: fs.Dirent[] = [];
       try {
         children = fs.readdirSync(root, { withFileTypes: true });
@@ -538,7 +539,7 @@ export function createMonitorController(
   const resolve = (request: HostRequest & { blank?: true }) => {
     // A blank host's folder is written into the copy, not read from the project.
     const root = request.blank
-      ? blankRoot(request.project)
+      ? projectRoot(request.project)
       : hostRoot(request.project, request.host);
     const env = request.env ?? {};
     const denied = deniedEnvKeys(env);
@@ -588,18 +589,6 @@ export function createMonitorController(
       );
     }
     return { export: envelope, baseDigest: await blankDigest() };
-  };
-
-  /** A blank host runs in a project with a hosts/ folder, like any other host. */
-  const blankRoot = (project: string): string => {
-    const root = projectRoot(project);
-    if (probeHostsFolder(root).kind !== "present") {
-      throw new ControllerError(
-        "unknown_project",
-        `${root} has no hosts/ folder, so it isn't a project a host can run in.`,
-      );
-    }
-    return root;
   };
 
   /** The request's setters over the current export, checked as the UI did. */
