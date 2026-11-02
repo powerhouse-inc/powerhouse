@@ -42,6 +42,7 @@ export const WORKSPACE_PUBLISH_PACKAGES = [
   "@powerhousedao/connect",
   "@powerhousedao/switchboard",
   "@powerhousedao/ph-cli",
+  "@powerhousedao/ph-run",
   "ph-cmd",
   // Scaffold dev deps (shared/clis/constants.ts) + deps of locally published
   // packages. A workspace package REACHABLE from the install graph but absent
