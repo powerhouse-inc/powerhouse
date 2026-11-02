@@ -147,6 +147,8 @@ export function UndoRedo<TState extends PHBaseState>(props: {
   // The document model's reducer: base-reducer 3 derives which rows applied.
   reducer: Reducer<TState>;
   policy?: UndoPolicy;
+  // A managed document: the app that manages it would overwrite any undo.
+  readOnly?: boolean;
 }) {
   const [document, dispatch] = useDocumentById(props.documentId);
   const policy = props.policy ?? NO_SKIP;
@@ -192,7 +194,7 @@ export function UndoRedo<TState extends PHBaseState>(props: {
     return head.current > since;
   };
   const run = (task: () => Promise<void>) => {
-    if (!document || busy.current) return;
+    if (!document || busy.current || props.readOnly) return;
     busy.current = true;
     task()
       .catch(() => undefined)
@@ -382,13 +384,13 @@ export function UndoRedo<TState extends PHBaseState>(props: {
       <IconButton
         icon="undo"
         label="Undo"
-        disabled={!canUndo}
+        disabled={props.readOnly || !canUndo}
         onClick={doUndo}
       />
       <IconButton
         icon="redo"
         label="Redo"
-        disabled={undone.length === 0}
+        disabled={props.readOnly || undone.length === 0}
         onClick={doRedo}
       />
     </span>
