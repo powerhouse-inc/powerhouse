@@ -56,7 +56,6 @@
     "@types/jest": "^29.5.14",
     "@types/mime": "^4.0.0",
     "@types/node": "catalog:",
-    "change-case": "catalog:",
     "graphql": "catalog:",
     "mutative": "^1.0.5",
     "tsdown": "catalog:",
@@ -65,6 +64,7 @@
   },
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",
+    "change-case": "catalog:",
     "zod": "catalog:"
   },
   "description": "Powerhouse document model — foundational data structure for local-first, event-sourced documents with typed operations, reducers, and GraphQL schema validation.",
