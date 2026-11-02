@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 
-FROM node:lts AS base
+# corepack left Node in 25, and node:lts has moved past 24.
+FROM node:24 AS base
 ENV FORCE_COLOR=0
 
 ENV PNPM_HOME="/pnpm"
