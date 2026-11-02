@@ -8,16 +8,16 @@ import {
 } from "../../lib/host-files.js";
 import { isBaseChanged } from "../BaseChanged.js";
 import type { BuilderClient } from "../client.js";
-import { connectReach, type Member } from "../../host-rules/index.js";
-import type { RouteSeed } from "../../lib/route-seed.js";
 import {
-  DRIVES_COPY,
-  fixIssuesFirst,
-  RUN_COPY,
-  START_BLOCKERS,
-} from "../copy.js";
+  connectReach,
+  startReason,
+  type Member,
+} from "../../host-rules/index.js";
+import type { Project } from "../../controller/api.js";
+import type { RouteSeed } from "../../lib/route-seed.js";
+import { DRIVES_COPY, RUN_COPY } from "../copy.js";
 import { downloadExport, exportFileName } from "../download.js";
-import { sourceOf, type BuilderDraft } from "../draft.js";
+import { blankOf, sourceOf, withProject, type BuilderDraft } from "../draft.js";
 import type { BuilderEngine } from "../engine.js";
 import { routeSeedOf, startedMembers } from "../route.js";
 import {
@@ -28,42 +28,27 @@ import {
 } from "../run.js";
 import type { StepProps } from "./types.js";
 
-/** Why Start is off, if it is; `served` is undefined while it's being checked. */
-export function startBlocker({
-  issues,
-  controller,
-  served,
-  wired,
-  running = false,
-}: {
-  readonly issues: number;
-  readonly controller: boolean;
-  readonly served: boolean | undefined;
-  readonly wired: boolean;
-  readonly running?: boolean;
-}): string | undefined {
-  if (running) return START_BLOCKERS.running;
-  if (issues > 0) return fixIssuesFirst(issues);
-  if (!controller) return START_BLOCKERS.noController;
-  if (served === undefined) return START_BLOCKERS.checking;
-  if (!served) return START_BLOCKERS.notServed;
-  if (!wired) return START_BLOCKERS.notWired;
-  return undefined;
-}
-
 /** Whether the controller serves the project and host the draft comes from. */
 function useServed(
   client: BuilderClient | undefined,
   draft: BuilderDraft,
 ): boolean | undefined {
   const { project, host } = sourceOf(draft);
-  const imported = draft.base.kind === "import";
-  const asked = `${project}\0${host}`;
+  const blank = blankOf(draft);
+  const isBlank = blank !== undefined;
+  // A blank host is written into the copy; only its project has to exist.
+  const asked = blank
+    ? blank.project === undefined
+      ? undefined
+      : `${blank.project}\0`
+    : draft.base.kind === "import"
+      ? `${project}\0${host}`
+      : undefined;
   const [answer, setAnswer] = useState<
     { client: BuilderClient; asked: string; served: boolean } | undefined
   >();
   useEffect(() => {
-    if (!imported || !client) return;
+    if (asked === undefined || !client) return;
     const abort = new AbortController();
     const aborted = () => abort.signal.aborted;
     void (async () => {
@@ -72,19 +57,68 @@ function useServed(
         const projects = await client.projects();
         served =
           projects.some((candidate) => candidate.root === project) &&
-          (await client.hosts(project)).includes(host);
+          (isBlank || (await client.hosts(project)).includes(host));
       } catch {
         served = false;
       }
       if (!aborted()) setAnswer({ client, asked, served });
     })();
     return () => abort.abort();
-  }, [client, imported, project, host, asked]);
-  if (!imported) return true;
+  }, [client, project, host, asked, isBlank]);
+  if (draft.base.kind === "project") return true;
+  if (asked === undefined) return false;
   if (!client) return false;
   return answer?.client === client && answer.asked === asked
     ? answer.served
     : undefined;
+}
+
+/** Where a blank host runs: a project the controller serves. */
+function BlankProject({
+  client,
+  draft,
+  onDraft,
+}: {
+  readonly client: BuilderClient;
+  readonly draft: BuilderDraft;
+  readonly onDraft: (draft: BuilderDraft) => void;
+}) {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    const abort = new AbortController();
+    void (async () => {
+      try {
+        const listed = await client.projects();
+        if (!abort.signal.aborted) setProjects(listed);
+      } catch (caught) {
+        if (!abort.signal.aborted) setError(errorMessage(caught));
+      }
+    })();
+    return () => abort.abort();
+  }, [client]);
+  return (
+    <label className="hb-field">
+      <span className="hb-flabel">Project to run it in</span>
+      <select
+        onChange={(event) => onDraft(withProject(draft, event.target.value))}
+        value={blankOf(draft)?.project ?? ""}
+      >
+        <option disabled value="">
+          Choose a project
+        </option>
+        {projects.map((candidate) => (
+          <option key={candidate.root} value={candidate.root}>
+            {candidate.name} · {candidate.root}
+          </option>
+        ))}
+      </select>
+      <span className="hb-note">
+        The copy uses this project's packages. The project isn't changed.
+      </span>
+      {error ? <span className="hb-error">{error}</span> : null}
+    </label>
+  );
 }
 
 function Blocked({ label, reason }: { label: string; reason?: string }) {
@@ -253,6 +287,7 @@ export function UseStep({
   client,
   draft,
   engine,
+  onDraft,
   run,
   onStart,
   onStop,
@@ -277,9 +312,12 @@ export function UseStep({
   const [setName, setSetName] = useState(engine.envelope.name);
   const [status, setStatus] = useState("");
   const [saved, setSaved] = useState<string[]>([]);
-  const blocker = startBlocker({
+  const blank = blankOf(draft);
+  const blocker = startReason({
     issues: engine.issues.length,
+    reactors: engine.members.length,
     controller: engine.context.controller,
+    ...(blank ? { blank } : {}),
     served,
     wired: onStart !== undefined,
     running: run !== undefined,
@@ -334,6 +372,9 @@ export function UseStep({
           The controller starts a copy of this host in a throwaway folder. Your
           project isn't changed. Started copies pick free ports.
         </p>
+        {blank && client && !run ? (
+          <BlankProject client={client} draft={draft} onDraft={onDraft} />
+        ) : null}
         <div>
           <button
             className="hb-btn hb-btn-primary"

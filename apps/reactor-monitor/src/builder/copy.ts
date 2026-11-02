@@ -86,15 +86,6 @@ export const SAVE_PLACEMENT = {
 export const NO_CONTROLLER =
   "This needs the monitor's controller, which isn't running.";
 
-export const START_BLOCKERS = {
-  noController: "Starting needs the monitor's controller, which isn't running.",
-  notServed:
-    "This host comes from a project the monitor can't start. Download it instead.",
-  checking: "Checking whether the controller can start this host.",
-  notWired: "Starting from the builder isn't available yet.",
-  running: "A copy is already running. Stop it first.",
-} as const;
-
 export const START_GONE = "The controller no longer has the copy.";
 
 export const NO_ADDRESS_YET =
@@ -103,10 +94,4 @@ export const NO_ADDRESS_YET =
 export function issueCount(count: number): string {
   if (count === 0) return "No issues";
   return count === 1 ? "1 issue" : `${count} issues`;
-}
-
-export function fixIssuesFirst(count: number): string {
-  return count === 1
-    ? "Fix the issue on Review first."
-    : `Fix the ${count} issues on Review first.`;
 }

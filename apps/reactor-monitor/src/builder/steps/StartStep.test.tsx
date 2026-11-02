@@ -4,12 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import { baseDigest } from "../../controller/api.js";
 import { HOST_EXPORTS } from "../../lib/__fixtures__/host-export/index.js";
 import { hostExport, stack } from "../../host-rules/__fixtures__/hosts.js";
+import { blankExport } from "../../host-rules/index.js";
 import { fakeBuilderClient, PROJECT } from "../__fixtures__/fakes.js";
 import { NO_CONTROLLER } from "../copy.js";
 import { StartStep } from "./StartStep.js";
 
 describe("StartStep", () => {
-  it("offers only a project host or an import", () => {
+  it("offers a project host, an import or a blank host", () => {
     const view = render(<StartStep onDiscard={vi.fn()} onDraft={vi.fn()} />);
     const sources = view
       .getAllByRole("button", { pressed: undefined })
@@ -17,8 +18,21 @@ describe("StartStep", () => {
     expect(sources.map((button) => button.textContent)).toEqual([
       expect.stringContaining("From a project host"),
       expect.stringContaining("Import an export"),
+      expect.stringContaining("Blank"),
     ]);
-    expect(view.queryByText(/blank/i)).toBeNull();
+  });
+
+  it("starts a blank host without the controller", async () => {
+    const onDraft = vi.fn();
+    const view = render(<StartStep onDiscard={vi.fn()} onDraft={onDraft} />);
+    fireEvent.click(view.getByRole("button", { name: /Blank/ }));
+    fireEvent.click(view.getByRole("button", { name: "Start blank" }));
+    await waitFor(() => expect(onDraft).toHaveBeenCalledOnce());
+    expect(onDraft.mock.calls[0][0]).toMatchObject({
+      base: { kind: "blank", export: blankExport() },
+      baseDigest: await baseDigest(blankExport()),
+      step: "basics",
+    });
   });
 
   it("needs the controller for a project host", () => {

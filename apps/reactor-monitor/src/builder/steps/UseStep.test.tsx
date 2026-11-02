@@ -9,34 +9,30 @@ import {
 } from "../../host-rules/__fixtures__/hosts.js";
 import { ControllerRequestError } from "../../controller/client.js";
 import { fakeBuilderClient } from "../__fixtures__/fakes.js";
+
+/** The edit that adds the catalog's switchboard to a blank host. */
+function addSwitchboard() {
+  const option = hostOptions({ envelope: blankExport() }, FULL).find(
+    (candidate) => candidate.id === "host:add:switchboard",
+  );
+  if (!option) throw new Error("no add switchboard");
+  return option.setters;
+}
 import { renderStep, type RenderedStep } from "../__fixtures__/steps.js";
-import { fixIssuesFirst, START_BLOCKERS } from "../copy.js";
+import {
+  blankExport,
+  fixIssuesFirst,
+  hostOptions,
+  START_REASONS,
+} from "../../host-rules/index.js";
+import { withProject } from "../draft.js";
+import { PROJECT } from "../__fixtures__/fakes.js";
 import { linkedStack, runOf } from "../__fixtures__/route.js";
-import { startBlocker, UseStep } from "./UseStep.js";
+import { UseStep } from "./UseStep.js";
 
 function startButton(view: RenderedStep["view"]) {
   return view.getByRole("button", { name: "Start" });
 }
-
-describe("startBlocker", () => {
-  it("names the first thing in the way", () => {
-    const ready = { issues: 0, controller: true, served: true, wired: true };
-    expect(startBlocker(ready)).toBeUndefined();
-    expect(startBlocker({ ...ready, issues: 2 })).toBe(fixIssuesFirst(2));
-    expect(startBlocker({ ...ready, controller: false })).toBe(
-      START_BLOCKERS.noController,
-    );
-    expect(startBlocker({ ...ready, served: undefined })).toBe(
-      START_BLOCKERS.checking,
-    );
-    expect(startBlocker({ ...ready, served: false })).toBe(
-      START_BLOCKERS.notServed,
-    );
-    expect(startBlocker({ ...ready, wired: false })).toBe(
-      START_BLOCKERS.notWired,
-    );
-  });
-});
 
 describe("UseStep", () => {
   it("keeps Start off while the draft has issues", () => {
@@ -57,7 +53,7 @@ describe("UseStep", () => {
       extra: { onStart: vi.fn() },
     });
     expect(startButton(view)).toHaveProperty("disabled", true);
-    expect(view.getByText(START_BLOCKERS.noController)).toBeTruthy();
+    expect(view.getByText(START_REASONS.noController)).toBeTruthy();
   });
 
   it("sends an import from a project the controller doesn't serve to Download", async () => {
@@ -72,9 +68,79 @@ describe("UseStep", () => {
       extra: { client: fakeBuilderClient().client, onStart: vi.fn() },
     });
     await waitFor(() =>
-      expect(view.getByText(START_BLOCKERS.notServed)).toBeTruthy(),
+      expect(view.getByText(START_REASONS.notServed)).toBeTruthy(),
     );
     expect(startButton(view)).toHaveProperty("disabled", true);
+  });
+
+  it("asks a blank host for a reactor, then for a project to run in", async () => {
+    const empty = renderStep(UseStep, {
+      envelope: blankExport(),
+      base: { kind: "blank", export: blankExport() },
+      context: FULL,
+      extra: { client: fakeBuilderClient().client, onStart: vi.fn() },
+    });
+    expect(empty.view.getByText(START_REASONS.noReactors)).toBeTruthy();
+    empty.view.unmount();
+
+    const { view, draft, onDraft } = renderStep(UseStep, {
+      envelope: blankExport(),
+      base: { kind: "blank", export: blankExport() },
+      setters: addSwitchboard(),
+      context: FULL,
+      extra: { client: fakeBuilderClient().client, onStart: vi.fn() },
+    });
+    expect(startButton(view)).toHaveProperty("disabled", true);
+    expect(view.getByText(START_REASONS.noProject)).toBeTruthy();
+    await waitFor(() =>
+      expect(view.getByRole("option", { name: /my-project/ })).toBeTruthy(),
+    );
+    fireEvent.change(
+      view.getByRole("combobox", { name: /Project to run it in/ }),
+      { target: { value: PROJECT } },
+    );
+    expect(onDraft).toHaveBeenCalledWith(withProject(draft, PROJECT));
+  });
+
+  it("starts a blank host in the project chosen for it", async () => {
+    const onStart = vi.fn();
+    const { view, draft, engine } = renderStep(UseStep, {
+      envelope: blankExport(),
+      base: { kind: "blank", export: blankExport(), project: PROJECT },
+      setters: addSwitchboard(),
+      context: FULL,
+      extra: { client: fakeBuilderClient().client, onStart },
+    });
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    fireEvent.click(startButton(view));
+    expect(onStart).toHaveBeenCalledWith(draft, engine);
+  });
+
+  it("downloads and copies a blank host's host.js with no controller", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    const { view } = renderStep(UseStep, {
+      envelope: blankExport(),
+      base: { kind: "blank", export: blankExport() },
+      context: { ...BARE, controller: false },
+      extra: {},
+    });
+    expect(
+      view.getByRole("button", { name: "Download blank.host-export.json" }),
+    ).toBeTruthy();
+    fireEvent.click(view.getByRole("button", { name: "Copy host.js" }));
+    await waitFor(() =>
+      expect(view.getByRole("status").textContent).toBe(
+        "Copied hosts/blank/host.js.",
+      ),
+    );
+    const copied = (writeText.mock.calls[0] as unknown[])[0] as string;
+    expect(copied).toContain('"children": {}');
   });
 
   it("starts a clean project draft when wired", async () => {

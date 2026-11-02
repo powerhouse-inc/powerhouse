@@ -13,7 +13,8 @@ import {
   memoryStorage,
   PROJECT,
 } from "./__fixtures__/fakes.js";
-import { NO_ADDRESS_YET, START_BLOCKERS } from "./copy.js";
+import { START_REASONS } from "../host-rules/index.js";
+import { NO_ADDRESS_YET } from "./copy.js";
 import {
   newDraft,
   requestOf,
@@ -467,7 +468,7 @@ describe("Use it, wired", () => {
     const wiring = setup();
     const view = render(<Wired storage={storage} wiring={wiring} />);
     await waitFor(() =>
-      expect(view.getByText(START_BLOCKERS.notServed)).toBeTruthy(),
+      expect(view.getByText(START_REASONS.notServed)).toBeTruthy(),
     );
     expect(startButton(view)).toHaveProperty("disabled", true);
     expect(wiring.startDraft).not.toHaveBeenCalled();

@@ -5,9 +5,9 @@ import { errorMessage } from "../../controller/client.js";
 import { parseHostExport } from "../../lib/host-import.js";
 import type { BuilderClient } from "../client.js";
 import { NO_CONTROLLER } from "../copy.js";
-import { newDraft, type BuilderDraft } from "../draft.js";
+import { newBlankDraft, newDraft, type BuilderDraft } from "../draft.js";
 
-type Source = "project" | "import";
+type Source = "project" | "import" | "blank";
 
 const SOURCES: { value: Source; label: string; sub: string }[] = [
   {
@@ -20,7 +20,42 @@ const SOURCES: { value: Source; label: string; sub: string }[] = [
     label: "Import an export",
     sub: "Open or paste the file that ph host export writes.",
   },
+  {
+    value: "blank",
+    label: "Blank",
+    sub: "An empty host. Add a switchboard or Connect on Reactors.",
+  },
 ];
+
+function BlankHost({
+  onDraft,
+}: {
+  readonly onDraft: (draft: BuilderDraft) => void;
+}) {
+  const [error, setError] = useState("");
+  const create = async () => {
+    setError("");
+    try {
+      onDraft(await newBlankDraft());
+    } catch (caught) {
+      setError(errorMessage(caught));
+    }
+  };
+  return (
+    <div className="hb-card hb-sec">
+      <div>
+        <button
+          className="hb-btn hb-btn-primary"
+          onClick={() => void create()}
+          type="button"
+        >
+          Start blank
+        </button>
+      </div>
+      {error ? <p className="hb-error">{error}</p> : null}
+    </div>
+  );
+}
 
 function ProjectHost({
   client,
@@ -281,6 +316,7 @@ export function StartStep({
         <ProjectHost client={client} onDraft={onDraft} />
       ) : null}
       {source === "import" ? <ImportExport onDraft={onDraft} /> : null}
+      {source === "blank" ? <BlankHost onDraft={onDraft} /> : null}
     </section>
   );
 }

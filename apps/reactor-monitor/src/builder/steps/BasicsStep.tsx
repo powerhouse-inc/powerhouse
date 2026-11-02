@@ -82,6 +82,8 @@ export function BasicsStep({ draft, engine, onEdit }: StepProps) {
               The {base.host} host in{" "}
               <span className="hb-mono">{base.project}</span>
             </span>
+          ) : base.kind === "blank" ? (
+            <span>A blank host</span>
           ) : (
             <span>
               An imported export

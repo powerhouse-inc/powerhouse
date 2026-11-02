@@ -4,7 +4,12 @@ import {
   type HostExport,
 } from "@powerhousedao/host-core/schema";
 import { z } from "zod";
-import { baseDigestSchema, type DraftRequest } from "../controller/api.js";
+import {
+  baseDigest,
+  baseDigestSchema,
+  type DraftRequest,
+} from "../controller/api.js";
+import { blankExport } from "../host-rules/catalog.js";
 import {
   checkSetter,
   setterSchema,
@@ -38,6 +43,12 @@ const baseSchema = z.discriminatedUnion("kind", [
     export: hostExportSchema,
     fileName: z.string().optional(),
   }),
+  z.object({
+    kind: z.literal("blank"),
+    export: hostExportSchema,
+    /** The project it starts in, once one is chosen. */
+    project: z.string().min(1).optional(),
+  }),
 ]);
 export type DraftBase = z.infer<typeof baseSchema>;
 
@@ -70,6 +81,33 @@ export function newDraft(base: DraftBase, baseDigest: string): BuilderDraft {
     step: "basics",
     baseDigest,
   };
+}
+
+export async function newBlankDraft(): Promise<BuilderDraft> {
+  const envelope = blankExport();
+  return newDraft(
+    { kind: "blank", export: envelope },
+    await baseDigest(envelope),
+  );
+}
+
+/** A blank draft set to start in `project`; any other draft is unchanged. */
+export function withProject(
+  draft: BuilderDraft,
+  project: string,
+): BuilderDraft {
+  if (draft.base.kind !== "blank" || draft.base.project === project) {
+    return draft;
+  }
+  return { ...draft, base: { ...draft.base, project } };
+}
+
+/** A blank draft's start settings; undefined for any other draft. */
+export function blankOf(draft: BuilderDraft): { project?: string } | undefined {
+  if (draft.base.kind !== "blank") return undefined;
+  return draft.base.project === undefined
+    ? {}
+    : { project: draft.base.project };
 }
 
 /** The draft's envelope: its base with every setter applied in order. */
@@ -163,7 +201,10 @@ export function rebaseDraft(
   return {
     draft: {
       ...draft,
-      base: { kind: "project", project, host, export: envelope },
+      base:
+        draft.base.kind === "blank"
+          ? { ...draft.base, export: envelope }
+          : { kind: "project", project, host, export: envelope },
       baseDigest: digest,
       setters,
       edits,
@@ -177,9 +218,15 @@ export function sourceOf(draft: BuilderDraft): {
   project: string;
   host: string;
 } {
-  return draft.base.kind === "project"
-    ? { project: draft.base.project, host: draft.base.host }
-    : { project: draft.base.export.project.root, host: draft.base.export.name };
+  const { base } = draft;
+  if (base.kind === "project")
+    return { project: base.project, host: base.host };
+  return {
+    project:
+      (base.kind === "blank" ? base.project : undefined) ??
+      base.export.project.root,
+    host: base.export.name,
+  };
 }
 
 /** The body of `POST drafts/check` and `POST drafts`. */
@@ -188,6 +235,7 @@ export function requestOf(draft: BuilderDraft): DraftRequest {
     ...sourceOf(draft),
     baseDigest: draft.baseDigest,
     setters: draft.setters,
+    ...(draft.base.kind === "blank" ? { blank: true as const } : {}),
     ...(Object.keys(draft.env).length > 0 ? { env: draft.env } : {}),
   };
 }

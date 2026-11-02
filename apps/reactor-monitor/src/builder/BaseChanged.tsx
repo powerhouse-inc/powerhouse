@@ -1,6 +1,8 @@
 import type { HostExport } from "@powerhousedao/host-core/schema";
 import { useId, useState } from "react";
+import { baseDigest } from "../controller/api.js";
 import { ControllerRequestError, errorMessage } from "../controller/client.js";
+import { blankExport } from "../host-rules/index.js";
 import type { BuilderClient } from "./client.js";
 import { downloadExport } from "./download.js";
 import { newDraft, rebaseDraft, sourceOf, type BuilderDraft } from "./draft.js";
@@ -56,8 +58,17 @@ export function BaseChanged({
   const [outcome, setOutcome] = useState<Outcome | undefined>();
 
   const fetchNew = async () => {
-    if (!client) throw new Error("The monitor's controller isn't running.");
     const { project, host } = sourceOf(draft);
+    if (draft.base.kind === "blank") {
+      const envelope = blankExport();
+      return {
+        project,
+        host,
+        export: envelope,
+        baseDigest: await baseDigest(envelope),
+      };
+    }
+    if (!client) throw new Error("The monitor's controller isn't running.");
     return { project, host, ...(await client.exportHost(project, host)) };
   };
 
@@ -106,12 +117,14 @@ export function BaseChanged({
       const fresh = await fetchNew();
       onDraft({
         ...newDraft(
-          {
-            kind: "project",
-            project: fresh.project,
-            host: fresh.host,
-            export: fresh.export,
-          },
+          draft.base.kind === "blank"
+            ? { ...draft.base, export: fresh.export }
+            : {
+                kind: "project",
+                project: fresh.project,
+                host: fresh.host,
+                export: fresh.export,
+              },
           fresh.baseDigest,
         ),
         step: draft.step,
