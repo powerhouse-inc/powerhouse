@@ -22,6 +22,7 @@ import {
   DocumentDeletedError,
   DocumentNotFoundError,
   InvalidOperationTimestampError,
+  UndoOperationRefusedError,
 } from "../../../src/shared/errors.js";
 import type { ErrorInfo } from "../../../src/shared/types.js";
 import { AppendConditionFailedError } from "../../../src/storage/interfaces.js";
@@ -566,6 +567,25 @@ describe("JobResultHandler", () => {
       );
 
       expect(queue.retryJob).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("UndoOperationRefusedError", () => {
+    it("fails a load at once, consuming no retry", async () => {
+      const error = new UndoOperationRefusedError("doc-1", "document");
+      const job = createTestJob({ kind: "load", retryCount: 0, maxRetries: 5 });
+      const handle = createTestHandle(job);
+
+      await handler.handleResult(
+        handle,
+        { success: false, job, error },
+        callbacks(),
+      );
+
+      expect(queue.retryJob).not.toHaveBeenCalled();
+      expect(handle.fail).toHaveBeenCalledWith(
+        expect.objectContaining({ name: error.name, source: error }),
+      );
     });
   });
 

@@ -26,6 +26,7 @@ import {
   purgeMarkerOperation,
   type PurgeMarkerOperation,
   hashDocumentStateForScope,
+  isUndo,
   isUndoRedo,
   mentionedGroupIds,
   localSupports,
@@ -77,6 +78,7 @@ import {
   RetractionRefusedError,
   SubmittedUndoRefusedError,
   type RetractionRefusalReason,
+  UndoOperationRefusedError,
   UnsupportedProtocolVersionError,
 } from "../shared/errors.js";
 import { findReferencing } from "../storage/find-referencing.js";
@@ -350,7 +352,7 @@ function genesisRank(operation: Operation): number {
 function undoRedoRefusal(
   job: Job,
   caps: BaseReducerCapabilities | undefined,
-): SubmittedUndoRefusedError | undefined {
+): SubmittedUndoRefusedError | UndoOperationRefusedError | undefined {
   let actions: readonly Action[];
   if (job.kind === "mutation") {
     actions = job.actions;
@@ -359,8 +361,15 @@ function undoRedoRefusal(
   } else {
     return undefined;
   }
-  if (!caps || acceptsSubmittedUndoRedo(caps)) {
+  if (!caps) {
     return undefined;
+  }
+  if (acceptsSubmittedUndoRedo(caps)) {
+    // These versions store an undo as a NOOP, never as an UNDO row.
+    const loaded = job.kind === "load" ? actions.find(isUndo) : undefined;
+    return loaded
+      ? new UndoOperationRefusedError(job.documentId, loaded.scope)
+      : undefined;
   }
   const refused = actions.find(isUndoRedo);
   return refused

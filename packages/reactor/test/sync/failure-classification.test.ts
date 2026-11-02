@@ -9,6 +9,7 @@ import {
   InvalidOperationTimestampError,
   PurgeTooLargeError,
   ReservedActionError,
+  UndoOperationRefusedError,
   UnsupportedProtocolVersionError,
 } from "../../src/shared/errors.js";
 import {
@@ -74,6 +75,11 @@ describe("classifyJobFailure", () => {
 
   it("names a reserved action", () => {
     const error = new ReservedActionError("doc", "PURGE_DOCUMENT");
+    expect(classifyJobFailure(error.name)).toBe("RESERVED_ACTION");
+  });
+
+  it("names a loaded UNDO operation a reserved action", () => {
+    const error = new UndoOperationRefusedError("doc", "document");
     expect(classifyJobFailure(error.name)).toBe("RESERVED_ACTION");
   });
 
