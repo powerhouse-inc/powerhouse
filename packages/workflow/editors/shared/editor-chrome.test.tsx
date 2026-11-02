@@ -110,12 +110,15 @@ describe("UndoRedo", () => {
   const applyAll = createReducer(() => undefined);
 
   let sent: Action[][];
+  let reads: { global: number; document: number };
 
   function mount(options: {
     header?: Record<string, number>;
     createdAs?: Record<string, number>;
+    readOnly?: boolean;
   }) {
     sent = [];
+    reads = { global: 0, document: 0 };
     undoState.document = {
       header: {
         id: "wf-1",
@@ -130,18 +133,32 @@ describe("UndoRedo", () => {
       (onSuccess as () => void)();
     };
     ensurePHStore().reactorClient = {
-      getOperations: (_id: string, view: { scopes: string[] }) =>
-        Promise.resolve({
-          results: view.scopes.includes("document")
-            ? [createRow(options.createdAs)]
-            : [editRow(0)],
-        }),
+      getOperations: (_id: string, view: { scopes: string[] }) => {
+        const document = view.scopes.includes("document");
+        reads[document ? "document" : "global"]++;
+        return Promise.resolve({
+          results: document ? [createRow(options.createdAs)] : [editRow(0)],
+        });
+      },
     } as never;
-    render(<UndoRedo documentId="wf-1" reducer={applyAll} />);
+    render(
+      <UndoRedo
+        documentId="wf-1"
+        reducer={applyAll}
+        readOnly={options.readOnly}
+      />,
+    );
   }
 
   const sentTypes = () =>
     sent.map((actions) => actions.map((action) => action.type));
+
+  // Whether the shortcut reached a handler that kept it from Connect's own.
+  const pressUndo = () =>
+    !fireEvent.keyDown(window, { key: "z", metaKey: true });
+  const pressRedo = () =>
+    !fireEvent.keyDown(window, { key: "z", metaKey: true, shiftKey: true });
+  const flush = () => act(() => new Promise((resolve) => setTimeout(resolve)));
 
   afterEach(() => {
     undoState.document = undefined;
@@ -179,10 +196,50 @@ describe("UndoRedo", () => {
     await vi.waitFor(() => expect(sentTypes()).toEqual([["RETRACT"]]));
   });
 
+  it("dispatches UNDO on Cmd+Z on base-reducer 2", async () => {
+    mount({ header: { "base-reducer": 2 } });
+    expect(pressUndo()).toBe(true);
+    await vi.waitFor(() => expect(sentTypes()).toEqual([["UNDO"]]));
+  });
+
+  it("retracts on Cmd+Z on base-reducer 3", async () => {
+    mount({ header: { "base-reducer": 3 } });
+    expect(pressUndo()).toBe(true);
+    await vi.waitFor(() => expect(sentTypes()).toEqual([["RETRACT"]]));
+  });
+
+  describe("on a managed document", () => {
+    it("disables undo and swallows Cmd+Z on base-reducer 2", async () => {
+      mount({ header: { "base-reducer": 2 }, readOnly: true });
+      expect(screen.getByLabelText("Undo")).toHaveProperty("disabled", true);
+      expect(screen.getByLabelText("Redo")).toHaveProperty("disabled", true);
+      expect(pressUndo()).toBe(true);
+      expect(pressRedo()).toBe(true);
+      await flush();
+      expect(reads.global).toBe(0);
+      expect(sent).toEqual([]);
+    });
+
+    it("disables undo and swallows Cmd+Z on base-reducer 3", async () => {
+      mount({ header: { "base-reducer": 3 }, readOnly: true });
+      // Once the availability read settles, which enables it when unmanaged.
+      await vi.waitFor(() => expect(reads.global).toBeGreaterThan(0));
+      await flush();
+      expect(screen.getByLabelText("Undo")).toHaveProperty("disabled", true);
+      expect(screen.getByLabelText("Redo")).toHaveProperty("disabled", true);
+      const before = reads.global;
+      expect(pressUndo()).toBe(true);
+      expect(pressRedo()).toBe(true);
+      await flush();
+      expect(reads.global).toBe(before);
+      expect(sent).toEqual([]);
+    });
+  });
+
   // No version and no cached CREATE_DOCUMENT; a dispatched UNDO lands as a NOOP.
   function mountVersionless(creation: () => Promise<Operation[]>) {
     sent = [];
-    const reads = { document: 0 };
+    const creationReads = { document: 0 };
     const history = [editRow(0)];
     undoState.document = {
       header: { id: "wf-1", revision: { global: 1 } },
@@ -206,12 +263,12 @@ describe("UndoRedo", () => {
         if (!view.scopes.includes("document")) {
           return { results: [...history] };
         }
-        reads.document++;
+        creationReads.document++;
         return { results: await creation() };
       },
     } as never;
-    render(<UndoRedo documentId="wf-1" reducer={applyAll} />);
-    return reads;
+    const view = render(<UndoRedo documentId="wf-1" reducer={applyAll} />);
+    return Object.assign(creationReads, { view });
   }
 
   it("undoes and redoes by dispatch when the creation read fails on a header without a version", async () => {
@@ -251,5 +308,24 @@ describe("UndoRedo", () => {
       expect(sentTypes()).toEqual([["UNDO"], ["ADD_STEP"]]),
     );
     expect(reads.document).toBe(1);
+  });
+
+  it("disables redo once the document becomes managed", async () => {
+    const { view } = mountVersionless(() =>
+      Promise.resolve([createRow({ "base-reducer": 2 })]),
+    );
+    fireEvent.click(screen.getByLabelText("Undo"));
+    await vi.waitFor(() =>
+      expect(screen.getByLabelText("Redo")).not.toHaveProperty(
+        "disabled",
+        true,
+      ),
+    );
+    view.rerender(<UndoRedo documentId="wf-1" reducer={applyAll} readOnly />);
+    expect(screen.getByLabelText("Undo")).toHaveProperty("disabled", true);
+    expect(screen.getByLabelText("Redo")).toHaveProperty("disabled", true);
+    expect(pressRedo()).toBe(true);
+    await flush();
+    expect(sentTypes()).toEqual([["UNDO"]]);
   });
 });
