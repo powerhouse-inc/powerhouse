@@ -1,3 +1,15 @@
+## 6.2.3-dev.89 (2026-11-02)
+
+### 🚀 Features
+
+- **workflow:** lane-routed canvas edges, loop body frame, action subtitles ([0e8e1d9123](https://github.com/powerhouse-inc/powerhouse/commit/0e8e1d9123))
+- **workflow:** router, loop and sub-flow blocks ([16f3ee7c3c](https://github.com/powerhouse-inc/powerhouse/commit/16f3ee7c3c))
+- **workflow:** property groups in the AI pieces and Find documents ([8286e17957](https://github.com/powerhouse-inc/powerhouse/commit/8286e17957))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.88 (2026-11-01)
 
 This was a version bump only for @powerhousedao/workflow to align it with other projects, there were no code changes.
