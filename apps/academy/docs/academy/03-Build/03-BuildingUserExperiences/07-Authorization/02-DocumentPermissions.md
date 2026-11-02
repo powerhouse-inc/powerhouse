@@ -217,6 +217,10 @@ The Reactor API stores permission data in a relational database using six tables
 These tables are automatically created by database migrations when you enable `DOCUMENT_PERMISSIONS_ENABLED=true`. You don't need to create them manually.
 :::
 
+`DocumentPermission` and `OperationUserPermission`, together with the `DocumentProtection` table, live in the reactor store. On the first boot after an upgrade, the Switchboard copies existing rows of those three tables from the read-model store into the reactor store and renames the old tables to `<name>_migrated_2026_10_25`. The log reports `Permission tables backfill: copied ...` or `... nothing to copy`.
+
+Permission reads go through a per-process cache. Set `DOCUMENT_PERMISSION_CACHE_TTL_MS` to its time-to-live in milliseconds (default `30000`; `0` disables the cache). The service invalidates the cache on its own writes.
+
 <details>
 <summary><strong>Useful Queries</strong></summary>
 
