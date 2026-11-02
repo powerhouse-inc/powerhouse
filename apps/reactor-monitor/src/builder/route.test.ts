@@ -426,6 +426,30 @@ describe("routeSeedOf", () => {
       });
     });
 
+    it.each([
+      [
+        "renders a record",
+        {
+          over: { $output: { host: "switchboard", path: ["drives"] } },
+          into: "record",
+          to: { slug: { $key: true }, remote: { url: { $item: ["url"] } } },
+        },
+      ],
+      [
+        "names a binding it doesn't declare",
+        {
+          over: { $output: { host: "switchboard", path: ["drives"] } },
+          as: "d",
+          to: { slug: { $key: "x" }, remote: { url: { $item: ["url"] } } },
+        },
+      ],
+    ])("names nothing from a list that %s", (_, map) => {
+      const seed = mappedSeed([
+        { path: `${connect}.reactor.drives`, value: { $map: map } },
+      ]);
+      expect(seed?.drives).toEqual({ "id-powerhouse": "powerhouse" });
+    });
+
     it("names nothing from a list that renames its drives", () => {
       const seed = mappedSeed([
         {

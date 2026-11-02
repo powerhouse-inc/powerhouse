@@ -30,7 +30,9 @@ function mappedSwitchboard(
   members: readonly Member[],
 ): string | undefined {
   const map = valueAt(member.reactor, ["drives", "$map"]);
-  if (!isRecord(map) || !isRecord(map.over)) return undefined;
+  if (!isRecord(map) || !isRecord(map.over) || map.into !== undefined) {
+    return undefined;
+  }
   // Unnamed, or named by `as`: host-core reads both the same.
   const bound = (name: unknown) =>
     name === true || (typeof map.as === "string" && name === map.as);
@@ -183,7 +185,10 @@ export function routeSeedOf({
   // The monitor's browser reactor holds none of these until they are created.
   if (browser !== undefined) {
     for (const [key, slug] of Object.entries(drives)) {
-      if (!Object.hasOwn(placement, slug)) copies[key] = browser;
+      if (Object.hasOwn(collections, key) || Object.hasOwn(placement, slug)) {
+        continue;
+      }
+      copies[key] = browser;
     }
     for (const slug of reach.ownDrives) {
       if (Object.hasOwn(placement, slug)) continue;
