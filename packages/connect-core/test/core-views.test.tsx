@@ -982,6 +982,28 @@ describe("core's modals", () => {
     await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
+  it("keeps a failed delete open and says why", async () => {
+    const { drive, node } = await createFile(await createDrive("Docs"), "Plan");
+    store.drives = [drive];
+    store.fullReactorClient = module.client;
+    mount(`/d/${drive.header.slug}`);
+    await screen.findByRole("table", { name: "Directory listing" });
+    const removeNode = vi
+      .spyOn(module.client.write.drives, "removeNode")
+      .mockRejectedValueOnce(new Error("The drive refused"));
+    await act(() => Promise.resolve(showDeleteNodeModal(node)));
+    const dialog = await screen.findByRole("dialog", { name: "Delete Plan?" });
+
+    click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    expect(await within(dialog).findByText("The drive refused")).toBeTruthy();
+    expect(removeNode).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("dialog", { name: "Delete Plan?" })).toBeTruthy();
+    removeNode.mockRestore();
+    act(() => closePHModal());
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
   it("closes a confirmation opened over a routed modal with it", async () => {
     const { router, history } = mount("/?modal=login");
     await vi.waitFor(() => expect(store.modal?.type).toBe("login"));

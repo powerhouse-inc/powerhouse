@@ -25,7 +25,7 @@ ph connect build --json '{"app":{"offline":false}}'
 
 Disabling emits a self-destroying worker, so any worker installed by an earlier build unregisters itself and clears its caches on the browser's next update check — no stale workers are left behind.
 
-The service worker is only built for production. During local development it is always disabled, regardless of `connect.app.offline`, so hot-reload isn't intercepted by a cache.
+The service worker is only built for production. During local development it is always disabled, regardless of `connect.app.offline`, so hot-reload isn't intercepted by a cache. The manifest is still served, so you can install a development server on a phone to see how it looks, but that install needs the server to be running.
 
 ## Customize with `connect.pwa`
 
@@ -51,6 +51,8 @@ The manifest's [`categories`](https://developer.mozilla.org/en-US/docs/Web/Progr
 
 To replace the browser-tab favicon too, pass `ph connect build --favicon ./icon.ico`.
 
+`connect.branding.appName` and `connect.branding.icon` give the installed app your project's name and icons, without setting anything under `pwa`. Keep `_16x16`, `_32x32`, `_64x64`, `_192x192` and `_512x512` copies next to the icon, as a size with no copy keeps Connect's icon or is left out. The first icon of at least 180 px is also what an iPhone puts on its home screen. The name replaces Connect's in the title a shared link shows, and Connect's description and picture are left out.
+
 ```json
 {
   "connect": {
@@ -65,7 +67,7 @@ To replace the browser-tab favicon too, pass `ph connect build --favicon ./icon.
 }
 ```
 
-One member hands Connect an **OS launch** — `file_handlers` (detailed below). It declares only **what** it accepts, never **where** or **how** it opens: that route belongs to Connect (so a package can't point the OS at an arbitrary URL, and consuming the launch runs Connect's own code). A fragment that sets its own `action` fails validation. It takes effect only for an **installed** PWA on a production build — never through `ph connect studio` — and browser/OS support varies (where it's unsupported the association is simply never registered, and Connect keeps working normally).
+One member hands Connect an **OS launch** — `file_handlers` (detailed below). It declares only **what** it accepts, never **where** or **how** it opens: that route belongs to Connect (so a package can't point the OS at an arbitrary URL, and consuming the launch runs Connect's own code). A fragment that sets its own `action` fails validation. It takes effect only for an **installed** PWA, and browser/OS support varies (where it's unsupported the association is simply never registered, and Connect keeps working normally).
 
 ### File handling
 

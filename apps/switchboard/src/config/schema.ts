@@ -29,6 +29,8 @@ const serverSchema = z.object({
   basePath: z.string().default("/"),
   /** Origin advertised in webhook URLs; a bare domain gets a scheme at use. */
   publicUrl: z.string().optional(),
+  /** Address to bind; unset binds every interface. */
+  host: z.string().min(1).optional(),
   gatewayAdapter: z
     .enum(["apollo", "mercurius", "stitching"])
     .default("apollo"),
@@ -158,9 +160,13 @@ const authSchema = z.object({
   /** Unset: 0 with a "self" renown source, else the AuthService default. */
   credentialCacheTtlMs: nonNegative.optional(),
   wsRecheckMs: nonNegative.optional(),
+  /** The first verified caller becomes the admin of a host with none. */
+  ownerClaim: z.boolean().default(false),
+  /** Keep verified credentials, and rely on them while Renown is away. */
+  offlineCredentials: z.boolean().default(false),
   renown: z
     .object({
-      source: z.enum(["self", "remote"]).optional(),
+      source: z.enum(["self", "remote", "kept"]).optional(),
       url: z.string().min(1).optional(),
       switchboardUrl: z.string().min(1).optional(),
     })

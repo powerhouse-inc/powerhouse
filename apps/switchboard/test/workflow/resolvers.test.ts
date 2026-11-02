@@ -278,6 +278,19 @@ describe("the workflow resolvers and the caller", () => {
       versionNote: "Pinned 3.0.0 is not available; runs 2.1.0 from registry",
     });
   });
+
+  it("serves how many iterations a capped run detail holds back", async () => {
+    const { runtime, queries } = build();
+    runtime.run.mockResolvedValueOnce({
+      row: { id: "run-1", warnings: 0, trigger_payload: null },
+      steps: [],
+      iterationsTotal: 1200,
+    } as never);
+    const run = (await queries.run({}, { id: "run-1" }, CTX)) as {
+      iterationsTotal: number | null;
+    };
+    expect(run.iterationsTotal).toBe(1200);
+  });
 });
 
 describe("the runs listing and step data", () => {

@@ -161,6 +161,7 @@ function toStepRecord(row: StepExecutionRow) {
   return {
     stepId: row.step_id,
     stepKey: row.step_key,
+    path: row.step_path === row.step_id ? null : row.step_path,
     pieceName: row.piece_name,
     blockName: row.block_name,
     status: row.status,
@@ -182,6 +183,7 @@ function toRunRecord(
   row: RunRow,
   steps: StepExecutionRow[],
   waitpoints?: WaitpointRecord[],
+  iterationsTotal?: number,
 ) {
   return {
     id: row.id,
@@ -199,6 +201,7 @@ function toRunRecord(
     warnings: row.warnings,
     warningNotes: parseJson(row.warning_notes) ?? [],
     steps: steps.map(toStepRecord),
+    iterationsTotal: iterationsTotal ?? null,
     // Absent: the waitpoints field resolver reads them for this run.
     waitpoints,
   };
@@ -401,6 +404,7 @@ export const getResolvers = (
           connectionId?: string | null;
           searchValue?: string | null;
           reactorConnectionId?: string | null;
+          workflowId?: string | null;
         },
         ctx: Context,
       ) =>
@@ -412,6 +416,7 @@ export const getResolvers = (
           ctx,
           args.searchValue ?? undefined,
           args.reactorConnectionId ?? undefined,
+          args.workflowId ?? undefined,
         ),
       pieceCatalog: () => runtime.pieceCatalog(),
       pieceActions: (_parent: unknown, args: PieceArgs) =>
@@ -564,7 +569,14 @@ export const getResolvers = (
       },
       run: async (_parent: unknown, args: { id: string }, ctx: Context) => {
         const record = await runtime.run(args.id, ctx);
-        return record ? toRunRecord(record.row, record.steps) : null;
+        return record
+          ? toRunRecord(
+              record.row,
+              record.steps,
+              undefined,
+              record.iterationsTotal,
+            )
+          : null;
       },
       waitingRuns: async (
         _parent: unknown,

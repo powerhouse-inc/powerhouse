@@ -126,6 +126,9 @@
         "phCliSpec": {
           "type": "string",
           "minLength": 1
+        },
+        "bundleBackend": {
+          "type": "boolean"
         }
       },
       "required": ["module"],
@@ -497,6 +500,13 @@
                               "type": "string",
                               "const": "id"
                             }
+                          ]
+                        },
+                        "documentType": {
+                          "type": "string",
+                          "enum": [
+                            "powerhouse/document-drive",
+                            "powerhouse/reactor-drive"
                           ]
                         },
                         "name": {

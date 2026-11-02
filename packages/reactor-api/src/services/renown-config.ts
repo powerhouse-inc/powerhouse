@@ -2,7 +2,8 @@ import type { PHReactorRenown } from "@powerhousedao/shared/clis";
 import type { ILogger } from "document-model";
 
 /** Where the credential check reads from: a remote Renown or Switchboard
- * instance, or this switchboard's own renown read model. */
+ * instance, this switchboard's own renown read model, or the credentials this
+ * host keeps, for an identity no Renown holds. */
 export type RenownSource = NonNullable<PHReactorRenown["source"]>;
 
 /** The `auth.renown` config block: which Renown instance to authenticate
@@ -68,11 +69,11 @@ function resolveRenownSource(
   if (value === undefined || value === null) {
     return "remote";
   }
-  if (value === "self" || value === "remote") {
+  if (value === "self" || value === "remote" || value === "kept") {
     return value;
   }
   logger.warn(
-    `Ignoring invalid renown source "${value}" (expected "self" or "remote") — using "remote"`,
+    `Ignoring invalid renown source "${value}" (expected "self", "remote" or "kept") — using "remote"`,
   );
   return "remote";
 }

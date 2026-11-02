@@ -16,7 +16,7 @@ export function admissionTrustPolicy(
   policy?: SignatureTrustPolicy,
 ): SignatureTrustPolicy {
   return {
-    authorizeSigner(signer, key, documentId) {
+    authorizeSigner(signer, key, documentId, context) {
       const identity = actionSignerIdentity(own);
       if (identity.app.key !== "" && key === identity.app.key) {
         if (sameUser(actionSignerIdentity(signer).user, identity.user)) {
@@ -24,7 +24,7 @@ export function admissionTrustPolicy(
         }
       }
       if (policy) {
-        return policy.authorizeSigner(signer, key, documentId);
+        return policy.authorizeSigner(signer, key, documentId, context);
       }
       return Promise.resolve(!authEnforcement);
     },

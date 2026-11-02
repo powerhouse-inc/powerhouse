@@ -72,6 +72,19 @@ export function stateDirOf(projectRoot: string): string {
   return join(projectRoot, PORTLE_DIR);
 }
 
+/**
+ * Where this host keeps its Portle state: with the rest of its `.ph`. A desktop
+ * app points `PH_USER_DATA_DIR` at the identity that signed in, so each identity
+ * has its own site, and a run with its own data can't pick up this project's
+ * enrolment and bring up its tunnel.
+ */
+export function hostStateDir(
+  options: { configFile?: unknown } | undefined,
+  env: Record<string, string | undefined> = process.env,
+): string {
+  return stateDirOf(env.PH_USER_DATA_DIR || projectRootOf(options));
+}
+
 /** Writes atomically (temp file + rename) with the given mode (best effort on Windows). */
 export function writeFileAtomic(
   path: string,

@@ -103,6 +103,13 @@ function localClient(local: Local) {
       await client.create(document);
       return { jobs: { create: settledJob(document.header.id) } };
     }),
+    /** The router submits a drive write through this. */
+    executeAsync: vi.fn(
+      async (id: string, branch: string, actions: Action[]) => {
+        await client.execute(id, branch, actions);
+        return settledJob(id);
+      },
+    ),
     waitForJob: vi.fn((job: string | JobInfo) =>
       Promise.resolve(
         typeof job === "string" ? { ...settledJob(""), id: job } : job,
@@ -618,7 +625,7 @@ describe("a drive the Switchboard stops holding (bug 2, end to end)", () => {
       { "drive-x": DRIVE_TYPE },
       ({ body, headers }) =>
         moved &&
-        body.operationName === "MutateDocumentWithOperations" &&
+        body.operationName === "MutateDocumentAsync" &&
         headers["drive-id"] === "drive-x"
           ? wrongShard("drive-x")
           : undefined,
@@ -638,7 +645,7 @@ describe("a drive the Switchboard stops holding (bug 2, end to end)", () => {
     expect(
       stub.received.filter(
         (r) =>
-          r.body.operationName === "MutateDocumentWithOperations" &&
+          r.body.operationName === "MutateDocumentAsync" &&
           r.headers["drive-id"] === "drive-x",
       ).length,
     ).toBeGreaterThan(0);

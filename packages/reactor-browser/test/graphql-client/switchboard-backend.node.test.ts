@@ -135,7 +135,6 @@ describe("createSwitchboardBackend declares what GraphQL serves", () => {
 
     expect(Object.getPrototypeOf(backend)).toBe(Object.prototype);
     for (const member of [
-      "submit",
       "isDocumentIdTaken",
       "resolveIdOrSlug",
       "evaluateActions",
@@ -149,6 +148,7 @@ describe("createSwitchboardBackend declares what GraphQL serves", () => {
     ]) {
       expect(backend, member).not.toHaveProperty(member);
     }
+    expect(backend.driveFileLinkTypes).toEqual(["child", "drive/child"]);
     expect(backend.supports.pointInTimeViews).toBe(false);
     expect(backend.supports.find({ type: DRIVE_TYPE })).toBe(true);
     expect(backend.supports.find({ ids: ["a"] })).toBe(false);
@@ -366,6 +366,88 @@ describe("createSwitchboardBackend request deadline", () => {
     } finally {
       await hanging.close();
     }
+  });
+});
+
+describe("createSwitchboardBackend writes", () => {
+  it("lands a write slower than one request's deadline", async () => {
+    let polls = 0;
+    const { remote, stub } = await backendOver(
+      { "drive-1": DRIVE_TYPE },
+      ({ body }) => {
+        if (body.operationName !== "GetJobStatus") return undefined;
+        polls += 1;
+        return polls < 3
+          ? data({ jobStatus: { ...settledJob("drive-1"), status: "RUNNING" } })
+          : undefined;
+      },
+      { requestTimeoutMs: 200 },
+    );
+
+    const handle = await routerOver(remote).write.execute("drive-1", "main", [
+      actions.setName("renamed"),
+    ]);
+    const document = await handle.document();
+
+    expect(document.header.id).toBe("drive-1");
+    expect(polls).toBe(3);
+    const sent = stub.received.map((entry) => entry.body.operationName);
+    expect(sent).toContain("MutateDocumentAsync");
+    expect(sent).not.toContain("MutateDocumentWithOperations");
+  });
+
+  it("gives a batch, which waits for its jobs, its own longer deadline", async () => {
+    const { backend } = await backendOver(
+      { "drive-1": DRIVE_TYPE },
+      undefined,
+      {
+        requestTimeoutMs: 100,
+        batchRequestTimeoutMs: 5_000,
+        fetch: async (input, init) => {
+          const body = typeof init?.body === "string" ? init.body : "";
+          if (body.includes("ExecuteBatch")) {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+          }
+          return fetch(input, init);
+        },
+      },
+    );
+
+    const result = await backend.executeBatch({
+      jobs: [
+        {
+          key: "drive",
+          documentId: "drive-1",
+          scope: "global",
+          branch: "main",
+          actions: [actions.setName("renamed")],
+          dependsOn: [],
+        },
+      ],
+    });
+
+    expect(result.jobs.drive.status).toBe("READ_READY");
+  });
+
+  it("reads a write back bounded by its job's token", async () => {
+    const { backend, stub } = await backendOver({ "drive-1": DRIVE_TYPE });
+    const token = {
+      version: 1 as const,
+      createdAtUtcIso: "2026-01-01T00:00:01.000Z",
+      coordinates: [
+        {
+          documentId: "drive-1",
+          scope: "global",
+          branch: "main",
+          operationIndex: 3,
+        },
+      ],
+    };
+
+    await backend.get("drive-1", undefined, undefined, token);
+
+    const sent = stub.received.map((entry) => entry.body.operationName);
+    expect(sent).toContain("GetDocumentAtConsistency");
   });
 });
 

@@ -7,7 +7,7 @@ import {
   loadProjectEnv,
 } from "@powerhousedao/shared/clis/project-env";
 import dotenv from "dotenv";
-import { rememberShellNames } from "../../runners/member-config.js";
+import { rememberShellNames } from "@powerhousedao/ph-run/member-config";
 
 export interface HostCheckArgs {
   host: string;

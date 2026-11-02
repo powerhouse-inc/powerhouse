@@ -287,6 +287,31 @@ describe("ReactorSubgraph Permission Checks", () => {
       expect(result.consistencyToken.coordinates).toEqual([]);
     });
 
+    it("answers a job that deleted its document, which nothing serves any more", async () => {
+      mockReactorClient.isServed = vi.fn().mockResolvedValue(false);
+      vi.mocked(mockReactorClient.getJobStatus!).mockResolvedValue({
+        ...job,
+        deletedDocument: true,
+      } as any);
+      const ctx = createContext({ userAddress: "0xreader" });
+
+      const result = await callJobStatus(ctx);
+
+      expect(result.documentId).toBe("doc-123");
+      expect(result.status).toBe("READ_READY");
+      expect(result.consistencyToken.coordinates).toEqual([]);
+    });
+
+    it("keeps a job unknown when its document is only withheld", async () => {
+      mockReactorClient.isServed = vi.fn().mockResolvedValue(false);
+      const ctx = createContext({ userAddress: "0xreader" });
+
+      const result = await callJobStatus(ctx);
+
+      expect(result.documentId).toBe("");
+      expect(result.status).toBe("FAILED");
+    });
+
     it("drops coordinates of documents the caller cannot read", async () => {
       vi.mocked(mockAuthorizationService.canRead!).mockImplementation(
         (documentId: string) => Promise.resolve(documentId === "doc-123"),

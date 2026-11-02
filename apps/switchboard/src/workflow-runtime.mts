@@ -320,7 +320,8 @@ export interface ComposeWorkflowRuntimeDeps {
    * True when the journal's database is an embedded one no other process can
    * open (PGlite). Nothing can then take the lease, so a renewal that stalls
    * (a busy queue, a blocked event loop) is logged rather than turning
-   * workflows off.
+   * workflows off, and a restart takes back the lease a killed process left
+   * rather than booting without workflows until it goes stale.
    */
   exclusiveJournal?: boolean;
   /** Called once when the composed runtime has shut down for losing the
@@ -446,10 +447,16 @@ export function reactorAccessOf(
  * the host's too: the request's caller is the host's signed-in address. A
  * host with no signed-in identity reads anonymously, which the
  * authenticated-caller floor refuses as it would an anonymous HTTP request.
+ *
+ * A caller the policy gives no rows is refused here. The index would answer it
+ * with nothing, which a piece cannot tell from "nothing exists", and an upsert
+ * would then create a duplicate of everything: a granter who left ADMINS must
+ * stop a run, not double its documents.
  */
 export function indexQueryFor(
   manager: Pick<GraphQLManager, "executeSubgraph">,
   clientModule: InProcessReactorClientModule | undefined,
+  authorization?: Pick<IAuthorizationService, "config" | "isSupremeAdmin">,
 ): NonNullable<WorkflowEngine.WorkflowRuntimeHostDeps["queryIndex"]> {
   const signer = clientModule?.signer;
   const host = signer?.user as Partial<UserActionSigner> | undefined;
@@ -467,6 +474,21 @@ export function indexQueryFor(
       : host?.address
         ? { address: host.address, chainId, networkId, appKey: hostKey }
         : undefined;
+    if (
+      authorization?.config.policy === AuthorizationPolicy.ADMIN_ONLY &&
+      !authorization.isSupremeAdmin(user?.address)
+    ) {
+      return {
+        data: null,
+        errors: [
+          {
+            message: user
+              ? `Forbidden: ${user.address} is not an admin of this host, so it reads no index`
+              : "Forbidden: this run has no person behind it, so it reads no index",
+          },
+        ],
+      };
+    }
     const result = await manager.executeSubgraph(request.subgraph, {
       query: request.query,
       variables: request.variables,
@@ -648,6 +670,7 @@ export async function composeWorkflowRuntime(
           logger: deps.logger,
           ...(deps.storageId ? { storageId: deps.storageId } : {}),
           selfFence: deps.exclusiveJournal !== true,
+          exclusive: deps.exclusiveJournal === true,
           onLost: (lost) => {
             loss.lost = true;
             if (lost.reason === "taken") loss.heldBy = lost.heldBy;
@@ -733,7 +756,13 @@ async function composeClaimed(
     hostPrincipal: hostPrincipalOf(access),
     hostIdentity: hostIdentityOf(access),
     ...(deps.indexQueries
-      ? { queryIndex: indexQueryFor(deps.indexQueries, deps.clientModule) }
+      ? {
+          queryIndex: indexQueryFor(
+            deps.indexQueries,
+            deps.clientModule,
+            deps.authorizationService,
+          ),
+        }
       : {}),
     ...(models
       ? {

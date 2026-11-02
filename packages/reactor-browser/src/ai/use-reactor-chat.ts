@@ -1,4 +1,10 @@
-import { useCallback, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { ModelMessage } from "ai";
 import { ReactorChatAgent } from "./agent.js";
 import { useChatContext } from "./context.js";
@@ -49,6 +55,8 @@ export interface UseReactorChatResult {
   send: (text: string, images?: ChatImage[]) => void;
   stop: () => void;
   approve: (toolCallId: string) => void;
+  /** Approves what's waiting, and any more until this message is answered. */
+  approveAll: () => void;
   reject: (toolCallId: string) => void;
   clear: () => void;
 }
@@ -58,6 +66,8 @@ export interface UseReactorChatOptions {
   connection?: AiConnection;
   /** Added to the agent's system prompt. */
   instructions?: string;
+  /** With a {@link connection}: writes run without asking. */
+  autoApprove?: boolean;
 }
 
 /**
@@ -74,6 +84,7 @@ export function useReactorChat(
 ): UseReactorChatResult {
   const connection = options?.connection;
   const instructions = options?.instructions;
+  const autoApprove = options?.autoApprove === true;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>(
@@ -87,6 +98,11 @@ export function useReactorChat(
   const assistantIdRef = useRef<string | null>(null);
   const historyRef = useRef<ModelMessage[]>([]);
   const chatImagesRef = useRef<AiChatImage[]>([]);
+  // A ref, as a turn in progress has to see it change.
+  const autoApproveRef = useRef(autoApprove);
+  useEffect(() => {
+    autoApproveRef.current = autoApprove;
+  }, [autoApprove]);
 
   const settings = useSyncExternalStore(subscribeAiSettings, getAiSettings);
   const context = useChatContext();
@@ -228,6 +244,7 @@ export function useReactorChat(
         const agent = new ReactorChatAgent({
           settings: currentSettings,
           connection,
+          autoApprove: () => autoApproveRef.current,
           instructions,
           tools,
           context,
@@ -283,6 +300,10 @@ export function useReactorChat(
     agentRef.current?.approve(toolCallId);
   }, []);
 
+  const approveAll = useCallback(() => {
+    agentRef.current?.approveAll();
+  }, []);
+
   const reject = useCallback((toolCallId: string) => {
     agentRef.current?.reject(toolCallId);
   }, []);
@@ -310,6 +331,7 @@ export function useReactorChat(
     send,
     stop,
     approve,
+    approveAll,
     reject,
     clear,
   };

@@ -11,6 +11,9 @@
       "path": "../host-core"
     },
     {
+      "path": "../renown"
+    },
+    {
       "path": "../shared"
     }
   ]

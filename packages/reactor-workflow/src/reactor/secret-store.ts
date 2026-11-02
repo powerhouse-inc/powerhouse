@@ -1,5 +1,6 @@
 // Managed secrets in the relational "secrets" namespace, AES-256-GCM at rest;
 // master key from PH_WORKFLOWS_SECRETS_MASTER_KEY or a generated key file.
+import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import {
   parseSecretRef,
@@ -117,6 +118,19 @@ export class MasterKeyMismatchError extends Error {
   }
 }
 
+function readKeyFile(file: string): Buffer | undefined {
+  try {
+    const key = Buffer.from(readFileSync(file, "utf8").trim(), "hex");
+    if (key.length !== KEY_BYTES) {
+      throw new Error(`Key file "${file}" is not 32 bytes of hex`);
+    }
+    return key;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    return undefined;
+  }
+}
+
 function loadKey(options: LocalSecretStoreOptions): Buffer {
   const hex = options.masterKeyHex ?? process.env[MASTER_KEY_ENV];
   if (hex !== undefined) {
@@ -126,17 +140,17 @@ function loadKey(options: LocalSecretStoreOptions): Buffer {
     return Buffer.from(hex, "hex");
   }
   if (options.keyFile === false) throw new MasterKeyRequiredError();
-  const file = options.keyFile ?? join(process.cwd(), ".ph", "secrets.key");
-  try {
-    const key = Buffer.from(readFileSync(file, "utf8").trim(), "hex");
-    if (key.length !== KEY_BYTES) {
-      throw new Error(`Key file "${file}" is not 32 bytes of hex`);
-    }
-    return key;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-  }
-  const key = randomBytes(KEY_BYTES);
+  const file = options.keyFile ?? join(resolvePhDir(), "secrets.key");
+  const kept = readKeyFile(file);
+  if (kept) return kept;
+  // A shell's stores from before this followed PH_USER_DATA_DIR are encrypted
+  // with the key left in the working directory, so a relocated tree takes a
+  // copy of it. The original stays: every other identity needs it too.
+  const left =
+    options.keyFile === undefined
+      ? readKeyFile(join(resolvePhDir(process.cwd(), {}), "secrets.key"))
+      : undefined;
+  const key = left ?? randomBytes(KEY_BYTES);
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, key.toString("hex") + "\n", { mode: 0o600 });
   return key;

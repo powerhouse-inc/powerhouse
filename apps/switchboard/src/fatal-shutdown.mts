@@ -4,10 +4,26 @@ const FORCED_EXIT_MS = 15_000;
 
 type FatalProcess = Pick<
   NodeJS.Process,
-  "on" | "kill" | "exit" | "pid" | "listenerCount"
+  "on" | "emit" | "kill" | "exit" | "pid" | "listenerCount"
 > & {
   exitCode?: NodeJS.Process["exitCode"];
+  platform?: NodeJS.Process["platform"];
 };
+
+/**
+ * Starts the shutdown that SIGTERM's listeners run. Windows has no signals:
+ * `kill` there ends the process at once, stores open, so the listeners are
+ * called directly. False when nothing is listening.
+ */
+export function raiseSigterm(proc: FatalProcess = process): boolean {
+  if (proc.platform === "win32") return proc.emit("SIGTERM", "SIGTERM");
+  return proc.kill(proc.pid, "SIGTERM");
+}
+
+/** A write to a stdout or stderr that nobody reads any more. */
+function isClosedPipe(err: unknown): boolean {
+  return (err as NodeJS.ErrnoException | null)?.code === "EPIPE";
+}
 
 const fatalHandlers = new WeakMap<
   FatalProcess,
@@ -58,6 +74,8 @@ export function installFatalErrorShutdown(
   };
 
   const onFatal = (kind: string, err: unknown): void => {
+    // Logging this one would raise it again, and the shutdown would starve.
+    if (shuttingDown && isClosedPipe(err)) return;
     logFatal(`${kind}: @error`, err);
     if (shuttingDown) return;
     shuttingDown = true;
@@ -66,7 +84,7 @@ export function installFatalErrorShutdown(
       logFatal("Shutdown after fatal error timed out; exiting");
       realExit(1);
     }, FORCED_EXIT_MS).unref();
-    proc.kill(proc.pid, "SIGTERM");
+    if (!raiseSigterm(proc)) realExit(1);
   };
   fatalHandlers.set(proc, onFatal);
 

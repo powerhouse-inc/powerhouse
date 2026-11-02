@@ -6,7 +6,15 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runConnectPreview } from "../src/services/connect-preview.js";
+import { runConnectServer } from "@powerhousedao/ph-run/connect-server";
 import type { ConnectPreviewArgs } from "../src/types.js";
+
+// Connect is served two ways, and what it gets must not depend on which.
+const SERVERS = [
+  ["vite preview", runConnectPreview],
+  ["the built-in server", runConnectServer],
+] as const;
+let serve: (typeof SERVERS)[number][1];
 
 const PROJECT = resolve(__dirname, "../../../test/test-consumer-project");
 
@@ -50,11 +58,15 @@ afterAll(async () => {
   rmSync(dist, { recursive: true, force: true });
 });
 
-describe("ph connect preview with a proxied switchboard", () => {
+describe.each(SERVERS)("%s with a proxied switchboard", (_name, server) => {
+  beforeAll(() => {
+    serve = server;
+  });
+
   it("leaves the switchboard's paths to the proxy, even while it swaps the shell", async () => {
     const port = await freePort();
     // A composition turns the shell swap on, which answers extensionless paths
-    const server = await runConnectPreview(
+    const running = await serve(
       {
         outDir: dist,
         port,
@@ -92,7 +104,7 @@ describe("ph connect preview with a proxied switchboard", () => {
         'data-ph-shell="core"',
       );
     } finally {
-      await server.close();
+      await running.close();
     }
   }, 60_000);
 });

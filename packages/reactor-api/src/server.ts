@@ -43,6 +43,7 @@ import path from "node:path";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 import { createReactorHostModuleBase } from "@powerhousedao/reactor";
+import type { ProcessorHostInfo } from "@powerhousedao/shared/processors";
 import {
   createRelationalDb,
   type IRelationalDb,
@@ -63,6 +64,11 @@ import {
   type IAttachmentClientProvider,
 } from "./services/authorized-attachment.service.js";
 import { createCanonicalDocumentIdResolver } from "./services/canonical-document-id.js";
+import {
+  assertOwnerClaimBind,
+  FileCredentialKeep,
+  OwnerClaim,
+} from "./services/host-auth-state.js";
 import {
   createAuthFetchMiddleware,
   type AuthFetchMiddleware,
@@ -104,6 +110,7 @@ import { PackageManager } from "./packages/package-manager.js";
 import type { ScalarRegistry } from "./utils/scalar-types.js";
 import {
   AuthService,
+  type User,
   type CredentialVerifier,
 } from "./services/auth.service.js";
 import { createRenownCredentialVerifier } from "./services/renown-credential-verifier.js";
@@ -200,6 +207,15 @@ type Options = {
     skipCredentialVerification?: boolean;
     credentialCacheTtlMs?: number;
     wsRecheckMs?: number;
+    /** The first verified caller becomes the admin of a host with none. A
+     *  configured admin list wins. Only for a host bound to loopback. */
+    ownerClaim?: boolean;
+    /** Keep verified credentials in `stateDir`, and accept one whose proof
+     *  verifies while Renown does not answer. Off, a Renown outage refuses
+     *  every bearer. */
+    offlineCredentials?: boolean;
+    /** Where `ownerClaim` and `offlineCredentials` keep their files. */
+    stateDir?: string;
   };
   /** Renown coordinates the host already resolved, used verbatim instead of
    * resolving the config file's `auth.renown` again (which would warn twice). */
@@ -218,6 +234,8 @@ type Options = {
   processors?: Record<string, ProcessorInitializer[]>;
   mcp?: boolean;
   processorConfig?: Map<string, unknown>;
+  /** Read live, so a login shows; absent leaves processors without `host`. */
+  hostSigner?: { app?: { key: string }; user?: { address: string } };
   /**
    * Document permission service instance.
    * When provided, the Auth subgraph is registered and document permission
@@ -226,6 +244,8 @@ type Options = {
    */
   documentPermissionService?: DocumentPermissionService;
   enableDocumentModelSubgraphs?: boolean;
+  /** The host refreshes the supergraph itself, once its last subgraphs are in. */
+  hostRefreshesSupergraph?: boolean;
   logger?: ILogger;
   /** Receives failures in background work that is logged and skipped. */
   reportError?: ReportError;
@@ -511,6 +531,7 @@ type SetupGraphQLManagerOptions = {
   authService?: AuthService;
   documentPermissionService?: DocumentPermissionService;
   enableDocumentModelSubgraphs?: boolean;
+  hostRefreshesSupergraph?: boolean;
   port?: number;
   reactorDriveClient?: IDriveClient;
   driveNodes?: IDriveNodeSource;
@@ -544,6 +565,7 @@ async function setupGraphQLManager({
   authService,
   documentPermissionService,
   enableDocumentModelSubgraphs,
+  hostRefreshesSupergraph,
   port,
   reactorDriveClient,
   driveNodes,
@@ -594,10 +616,41 @@ async function setupGraphQLManager({
     scalars,
   );
 
-  await graphqlManager.applyPackageSubgraphs(subgraphs.extended);
-  await graphqlManager.updateRouter();
+  // Packages join a supergraph that's already up, so one that won't compose
+  // is reported rather than stopping the boot. Composing is the slowest part
+  // of a boot, so this happens once, here or in a host with more to add.
+  await graphqlManager.applyPackageSubgraphs(
+    subgraphs.extended,
+    "graphql",
+    false,
+  );
+  if (!hostRefreshesSupergraph) await graphqlManager.updateRouter(true);
 
   return graphqlManager;
+}
+
+/** Where a host keeps its auth files: an explicit dir, else the working one's `.ph`. */
+function authStateDir(auth: NonNullable<Options["auth"]>): string {
+  return auth.stateDir ?? path.join(process.cwd(), ".ph");
+}
+
+function claimOwner(claim: OwnerClaim): (user: User) => void {
+  return (user) => claim.observe(user.address);
+}
+
+function processorHostOf(
+  signer: Options["hostSigner"],
+  policy: AuthorizationPolicy,
+): ProcessorHostInfo | undefined {
+  const key = signer?.app?.key;
+  if (!signer || !key) return undefined;
+  return {
+    key,
+    get address() {
+      return signer.user?.address || null;
+    },
+    requiresPerson: policy !== AuthorizationPolicy.OPEN,
+  };
 }
 
 /**
@@ -608,6 +661,7 @@ async function startServer(
   port: number,
   httpsOptions: Options["https"],
   logger: ILogger,
+  host?: string,
 ): Promise<{ httpServer: http.Server; wsServer: WebSocketServer }> {
   const tls: TlsOptions | undefined =
     httpsOptions === true
@@ -616,7 +670,7 @@ async function startServer(
         ? { keyPath: httpsOptions.keyPath, certPath: httpsOptions.certPath }
         : undefined;
 
-  const httpServer = await httpAdapter.listen(port, tls);
+  const httpServer = await httpAdapter.listen(port, tls, host);
 
   const wsServer = new WebSocketServer({
     server: httpServer,
@@ -825,6 +879,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   let authFetchMiddleware: AuthFetchMiddleware | undefined;
   let requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
   let authService: AuthService | undefined;
+  if (optionAuth.ownerClaim) assertOwnerClaimBind(options.server?.host);
   if (resolveCallerIdentity || authEnabled) {
     logger.info(
       "Setting up Auth middleware (policy enforcement: @enabled, caller identity: @resolve)",
@@ -858,7 +913,25 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
         (await createRenownCredentialVerifier({
           renownUrl: renown.url,
           switchboardUrl: renown.switchboardUrl,
+          keptOnly: renown.source === "kept",
+          ...(optionAuth.offlineCredentials
+            ? {
+                keep: new FileCredentialKeep(
+                  path.join(authStateDir(optionAuth), ".credentials.json"),
+                ),
+              }
+            : {}),
         })),
+      ...(optionAuth.ownerClaim
+        ? {
+            onVerified: claimOwner(
+              new OwnerClaim(
+                path.join(authStateDir(optionAuth), ".owner.json"),
+                admins,
+              ),
+            ),
+          }
+        : {}),
     });
     authFetchMiddleware = createAuthFetchMiddleware(authService);
     if (requireAuthenticatedCaller) {
@@ -1090,6 +1163,7 @@ async function _setupAPI(
       analyticsStore,
       processorApp,
       config: options.processorConfig,
+      host: processorHostOf(options.hostSigner, authorizationConfig.policy),
     }),
     attachments: createAttachmentClient(attachments.service),
   };
@@ -1118,7 +1192,7 @@ async function _setupAPI(
     const factories = await Promise.allSettled(
       fns.map(async (fn) => {
         try {
-          return fn(moduleFor(packageName));
+          return await fn(moduleFor(packageName));
         } catch (e) {
           logger.error(
             "Error initializing processor factory for package @package: @error",
@@ -1174,6 +1248,7 @@ async function _setupAPI(
     listenPort.current,
     options.https,
     logger,
+    options.server?.host,
   );
   const boundPort = boundPortOf(httpServer);
   listenPort.current = boundPort;
@@ -1279,6 +1354,7 @@ async function _setupAPI(
     authService,
     documentPermissionService,
     enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
+    hostRefreshesSupergraph: options.hostRefreshesSupergraph,
     port: boundPort,
     reactorDriveClient,
     driveNodes,

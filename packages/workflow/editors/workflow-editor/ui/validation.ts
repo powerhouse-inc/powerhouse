@@ -1,6 +1,9 @@
 // Lean required-field check shared by the property form, the side panel
 // header and the canvas badge. No schema validation: {{}} values defeat it.
-import { scheduleConfigIssue } from "@powerhousedao/pieces-framework/workflow";
+import {
+  scheduleConfigIssue,
+  stepPorts,
+} from "@powerhousedao/pieces-framework/workflow";
 import type { BlockRef } from "./blocks.js";
 import type { BlockForm, BlockFormProp } from "./forms.js";
 import type { PropertyModeValue, PropertySettingModel } from "./model.js";
@@ -192,11 +195,16 @@ export function blockMissing(input: ValidityInput): string[] | null {
 }
 
 // Edges leaving on a port the block does not declare: no run takes them.
+// With the step's config, a router's ports follow its branches.
 export function undeclaredPortIssues(
   form: BlockForm | null | "loading" | undefined,
   outgoingPorts: readonly string[] | undefined,
+  step?: { block: BlockRef; config: unknown },
 ): string[] {
-  const ports = form && form !== "loading" ? form.ports : undefined;
+  const formPorts = form && form !== "loading" ? form.ports : undefined;
+  const ports = step
+    ? stepPorts(step.block, step.config, () => formPorts, outgoingPorts)
+    : formPorts;
   if (!ports || !outgoingPorts) return [];
   return [...new Set(outgoingPorts)]
     .filter((port) => !ports.includes(port))

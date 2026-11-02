@@ -114,6 +114,70 @@ describe("shell projection", () => {
     expect(cargo).toContain("ph-desktop-shell");
   });
 
+  it("has no sign-in page unless app.json asks for one", () => {
+    const { res } = projectInto();
+    expect(existsSync(path.join(res.shellDir, "ui/sign-in.html"))).toBe(false);
+    expect(existsSync(path.join(res.shellDir, "ui/sign-in.js"))).toBe(false);
+  });
+
+  it("puts the sign-in page and its script beside the loading page", () => {
+    const dir = tempDir("ph-proj-signin-");
+    writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
+    const app = appJsonSchema.parse({ ...validApp, signIn: true });
+    const res = projectShell({
+      hostDir: dir,
+      app,
+      connectPort: 6494,
+      signInScript: Buffer.from("// the page's script"),
+    });
+    const read = (rel: string) =>
+      readFileSync(path.join(res.shellDir, rel), "utf8");
+    expect(read("ui/sign-in.js")).toBe("// the page's script");
+    expect(read("ui/sign-in.html")).toContain("sign-in.js");
+    expect(read("ui/index.html")).not.toContain("sign-in.js");
+  });
+
+  it("takes the sign-in page away again, as the shell gates on it being there", () => {
+    const dir = tempDir("ph-proj-signout-");
+    writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
+    const on = appJsonSchema.parse({ ...validApp, signIn: true });
+    const signInScript = Buffer.from("// the page's script");
+    projectShell({ hostDir: dir, app: on, connectPort: 6494, signInScript });
+    const off = projectShell({
+      hostDir: dir,
+      app: appJsonSchema.parse(validApp),
+      connectPort: 6494,
+    });
+    expect(off.changed).toBe(true);
+    expect(existsSync(path.join(off.shellDir, "ui/sign-in.html"))).toBe(false);
+    expect(existsSync(path.join(off.shellDir, "ui/sign-in.js"))).toBe(false);
+  });
+
+  it("gives the window every sign-in command, each compiled in and granted", () => {
+    const { read } = projectInto();
+    const buildScript = read("build.rs");
+    const connect = JSON.parse(read("capabilities/connect.json")) as {
+      permissions: string[];
+    };
+    for (const command of [
+      "desktop_state",
+      "pick_root",
+      "save_renown_url",
+      "local_create",
+      "local_unlock",
+      "saved_credential",
+      "save_profile",
+      "adopt_old_data",
+      "start_stack",
+      "switch_identity",
+    ]) {
+      expect(buildScript).toContain(`"${command}"`);
+      expect(connect.permissions).toContain(
+        `allow-${command.replaceAll("_", "-")}`,
+      );
+    }
+  });
+
   it("is idempotent — a second projection with the same input changes nothing", () => {
     const dir = tempDir("ph-proj-idem-");
     writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));

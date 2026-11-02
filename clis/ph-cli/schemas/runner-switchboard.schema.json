@@ -106,6 +106,10 @@
                 "publicUrl": {
                   "type": "string"
                 },
+                "host": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "gatewayAdapter": {
                   "type": "string",
                   "enum": ["apollo", "mercurius", "stitching"]
@@ -312,12 +316,18 @@
                   "type": "number",
                   "minimum": 0
                 },
+                "ownerClaim": {
+                  "type": "boolean"
+                },
+                "offlineCredentials": {
+                  "type": "boolean"
+                },
                 "renown": {
                   "type": "object",
                   "properties": {
                     "source": {
                       "type": "string",
-                      "enum": ["self", "remote"]
+                      "enum": ["self", "remote", "kept"]
                     },
                     "url": {
                       "type": "string",
@@ -881,6 +891,13 @@
                         "type": "string",
                         "const": "id"
                       }
+                    ]
+                  },
+                  "documentType": {
+                    "type": "string",
+                    "enum": [
+                      "powerhouse/document-drive",
+                      "powerhouse/reactor-drive"
                     ]
                   },
                   "name": {

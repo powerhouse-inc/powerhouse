@@ -6,13 +6,16 @@ import {
 } from "@powerhousedao/reactor-api/pglite-node";
 import type { ILogger } from "document-model";
 import { EventEmitter } from "node:events";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 import { installFatalErrorShutdown } from "../src/fatal-shutdown.mjs";
 import {
   createPgliteStoreFactory,
+  openStoresTogether,
+  READ_STORE,
+  REACTOR_STORE,
   routePgliteWorkerFailures,
   terminateOnPoisoned,
   type PgliteStoreOptions,
@@ -229,6 +232,180 @@ describe("createPgliteStoreFactory", () => {
     },
     BOOT * 2,
   );
+});
+
+describe("openStoresTogether", () => {
+  function fakeStore(waitReady: Promise<void> = Promise.resolve()) {
+    return {
+      waitReady,
+      close: vi.fn(() => Promise.resolve()),
+    } as unknown as Omit<PGliteLike, "close"> & {
+      close: Mock<() => Promise<void>>;
+    };
+  }
+
+  function failing(error: Error): Promise<void> {
+    const opening = Promise.reject(error);
+    opening.catch(() => undefined);
+    return opening;
+  }
+
+  it("leaves both open when both open", async () => {
+    const reactor = fakeStore();
+    const readModel = fakeStore();
+    const settled = vi.fn();
+    const stores = openStoresTogether(
+      () => reactor,
+      () => readModel,
+    );
+    stores.failed.then(settled, settled);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(stores.reactor).toBe(reactor);
+    expect(stores.readModel).toBe(readModel);
+    expect(settled).not.toHaveBeenCalled();
+    expect(reactor.close).not.toHaveBeenCalled();
+    expect(readModel.close).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["reactor", "readModel"],
+    ["readModel", "reactor"],
+  ] as const)("%s failing closes %s, with the failure", async (bad, good) => {
+    const error = new Error("the disk is full");
+    const fakes = {
+      reactor: fakeStore(bad === "reactor" ? failing(error) : undefined),
+      readModel: fakeStore(bad === "readModel" ? failing(error) : undefined),
+    };
+    const stores = openStoresTogether(
+      () => fakes.reactor,
+      () => fakes.readModel,
+    );
+    await expect(stores.failed).rejects.toBe(error);
+    expect(fakes[good].close).toHaveBeenCalled();
+  });
+
+  it("reports the failure only once the survivor has closed", async () => {
+    let closed!: () => void;
+    const survivor = fakeStore();
+    survivor.close.mockReturnValue(
+      new Promise((resolve) => (closed = resolve)),
+    );
+    const stores = openStoresTogether(
+      () => fakeStore(failing(new Error("no"))),
+      () => survivor,
+    );
+    const settled = vi.fn();
+    stores.failed.catch(settled);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(settled).not.toHaveBeenCalled();
+    closed();
+    await vi.waitFor(() => expect(settled).toHaveBeenCalled());
+  });
+
+  it("still reports the failure when the survivor won't close", async () => {
+    const error = new Error("no");
+    const survivor = fakeStore();
+    survivor.close.mockRejectedValue(new Error("won't"));
+    const stores = openStoresTogether(
+      () => survivor,
+      () => fakeStore(failing(error)),
+    );
+    await expect(stores.failed).rejects.toBe(error);
+  });
+
+  it("closes the reactor store if the read store can't start", () => {
+    const reactor = fakeStore();
+    const error = new Error("no worker");
+    expect(() =>
+      openStoresTogether(
+        () => reactor,
+        () => {
+          throw error;
+        },
+      ),
+    ).toThrow(error);
+    expect(reactor.close).toHaveBeenCalled();
+  });
+
+  it("closes both for a boot that failed elsewhere", async () => {
+    const reactor = fakeStore();
+    const readModel = fakeStore();
+    await openStoresTogether(
+      () => reactor,
+      () => readModel,
+    ).close();
+    expect(reactor.close).toHaveBeenCalled();
+    expect(readModel.close).toHaveBeenCalled();
+  });
+
+  describe("on real stores", () => {
+    let root: string;
+    const logger = stubLogger() as unknown as ILogger;
+    const opener = async (store: typeof READ_STORE | typeof REACTOR_STORE) => {
+      const open = await createPgliteStoreFactory({
+        ...store,
+        major: 17,
+        inMemory: false,
+        threaded: true,
+        logger,
+      });
+      return open;
+    };
+
+    afterEach(async () => {
+      await rm(root, { recursive: true, force: true });
+    });
+
+    it(
+      "opens both, each in a thread of its own",
+      async () => {
+        root = await mkdtemp(join(tmpdir(), "sb-stores-"));
+        const openReactor = await opener(REACTOR_STORE);
+        const openRead = await opener(READ_STORE);
+        const stores = openStoresTogether(
+          () => openReactor(join(root, "reactor-storage")),
+          () => openRead(join(root, "read-storage")),
+        );
+        await Promise.all([
+          stores.reactor.waitReady,
+          stores.readModel.waitReady,
+        ]);
+        expect((stores.reactor as ThreadedPGlite).threadId).not.toBe(
+          (stores.readModel as ThreadedPGlite).threadId,
+        );
+        await stores.reactor.exec("create table kept (v text)");
+        await stores.readModel.query("select 1");
+        await stores.close();
+        expect(stores.reactor.closed).toBe(true);
+        expect(stores.readModel.closed).toBe(true);
+      },
+      BOOT * 2,
+    );
+
+    it(
+      "closes a store that's still opening when the other can't, and it opens again",
+      async () => {
+        root = await mkdtemp(join(tmpdir(), "sb-stores-"));
+        const notAStore = join(root, "read-storage");
+        await writeFile(notAStore, "a file where a store should be");
+        const reactorDir = join(root, "reactor-storage");
+        const openReactor = await opener(REACTOR_STORE);
+        const openRead = await opener(READ_STORE);
+        const stores = openStoresTogether(
+          () => openReactor(reactorDir),
+          () => openRead(notAStore),
+        );
+        await expect(stores.failed).rejects.toThrow();
+        expect(stores.reactor.closed).toBe(true);
+
+        const again = openReactor(reactorDir);
+        await again.waitReady;
+        await again.query("select 1");
+        await again.close();
+      },
+      BOOT * 2,
+    );
+  });
 });
 
 describe("vacuumFullTimingFromEnv", () => {

@@ -2,7 +2,7 @@
 // encrypted secret store, and a stub provider that records what it was sent
 // and echoes the credentials back wherever a careless proxy would repeat them.
 import { randomBytes } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import {
   createServer,
   type IncomingMessage,
@@ -36,6 +36,7 @@ const USER = "0x2222222222222222222222222222222222222222";
 const KEY = `sk-or-v1-${randomBytes(24).toString("hex")}`;
 const OTHER_KEY = `sk-or-v1-${randomBytes(24).toString("hex")}`;
 const BAD_KEY = `sk-or-v1-${randomBytes(24).toString("hex")}`;
+const DEMO_KEY = `sk-or-v1-${randomBytes(24).toString("hex")}`;
 const DEFAULT_MODEL = "qwen/test-vision";
 const MODELS = { data: [{ id: DEFAULT_MODEL }, { id: "qwen/other" }] };
 const GATEWAY = "/api/@powerhousedao/switchboard/ai";
@@ -178,6 +179,12 @@ beforeAll(async () => {
   process.env.PH_REACTOR_DATABASE_URL = join(tempRoot, "reactor-storage");
   process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY = randomBytes(32).toString("hex");
   process.env.FEATURE_PLUGIN_HOST_ENABLED = "1";
+  const configFile = join(tempRoot, "powerhouse.config.json");
+  await writeFile(
+    configFile,
+    JSON.stringify({ ai: { demoKeyFile: "./demo-key.txt" } }),
+  );
+  await writeFile(join(tempRoot, "demo-key.txt"), `${DEMO_KEY}\n`);
 
   for (const method of ["log", "info", "warn", "error"] as const) {
     vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
@@ -187,6 +194,7 @@ beforeAll(async () => {
 
   switchboard = await bootSwitchboard(
     {
+      configFile,
       server: { port: 0 },
       storage: { readModel: { url: join(tempRoot, "read-model") } },
       features: { workflows: true, mcp: false },
@@ -243,6 +251,7 @@ describe("the gateway on a signed-in host", () => {
     const routes: [string, string][] = [
       ["GET", "/status"],
       ["PUT", "/key"],
+      ["PUT", "/key/demo"],
       ["DELETE", "/key"],
       ["PUT", "/model"],
       ["GET", "/v1/models"],
@@ -266,6 +275,7 @@ describe("the gateway on a signed-in host", () => {
       keySetBy: null,
       keySetAt: null,
       model: DEFAULT_MODEL,
+      demoKeyAvailable: true,
     });
     const refused = await chat({ messages: [] });
     expect(refused.status).toBe(503);
@@ -464,6 +474,53 @@ describe("the gateway on a signed-in host", () => {
     for (const key of [KEY, OTHER_KEY, BAD_KEY]) {
       expect(logged).not.toContain(key);
     }
+  });
+});
+
+describe("the demo key", () => {
+  const demoFile = () => join(tempRoot, "demo-key.txt");
+  const useDemoKey = () => call(ADMIN, "/key/demo", { method: "PUT" });
+  const status = async () =>
+    (await (await call(ADMIN, "/status")).json()) as {
+      demoKeyAvailable: boolean;
+      keyHint: string;
+    };
+
+  afterEach(async () => {
+    await writeFile(demoFile(), DEMO_KEY);
+    await setKey(KEY);
+  });
+
+  it("is tested and stored like any key, and never reaches the browser", async () => {
+    const answer = await useDemoKey();
+    const text = await answer.text();
+
+    expect(answer.status).toBe(200);
+    expect(text).not.toContain(DEMO_KEY);
+    expect(seen.at(-1)).toMatchObject({
+      path: "/key",
+      authorization: `Bearer ${DEMO_KEY}`,
+    });
+    expect((await status()).keyHint).toContain(DEMO_KEY.slice(-4));
+    await chat({ messages: [] });
+    expect(lastChat().authorization).toBe(`Bearer ${DEMO_KEY}`);
+  });
+
+  it("keeps the working key when the provider refuses it", async () => {
+    await writeFile(demoFile(), BAD_KEY);
+
+    const answer = await useDemoKey();
+
+    expect(answer.status).toBe(400);
+    expect(await answer.text()).not.toContain(BAD_KEY);
+    expect((await status()).keyHint).toContain(KEY.slice(-4));
+  });
+
+  it("isn't offered when the file has gone", async () => {
+    await rm(demoFile());
+
+    expect((await status()).demoKeyAvailable).toBe(false);
+    expect((await useDemoKey()).status).toBe(404);
   });
 });
 

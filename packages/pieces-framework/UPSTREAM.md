@@ -6,9 +6,9 @@ Never edit them by hand; re-run the sync instead.
 
 |           |                                            |
 | --------- | ------------------------------------------ |
-| Tag       | `0.92.3`                                   |
-| Commit    | `2fc7f8dcaa84400f9db53fb0de7fc4340d055c62` |
-| Committed | 2026-10-12                                 |
+| Tag       | none (`main`)                              |
+| Commit    | `d078d47750b53c13b837b2bec86b0402b4bff94f` |
+| Committed | 2026-10-30                                 |
 
 The same facts, plus the per-file upstream path and the SHA-256 of every
 original file, live in `upstream/MANIFEST.json`; the package versions are in
@@ -18,10 +18,10 @@ original file, live in `upstream/MANIFEST.json`; the package versions are in
 
 | Upstream package                        | Upstream path                   | Here                         |
 | --------------------------------------- | ------------------------------- | ---------------------------- |
-| `@activepieces/pieces-framework` 0.40.0 | `packages/pieces/framework/src` | `upstream/framework/`        |
-| `@activepieces/pieces-common` 0.14.0    | `packages/pieces/common/src`    | `upstream/common/`           |
-| `@activepieces/core-piece-types` 0.11.1 | `packages/core/piece-types/src` | `upstream/core-piece-types/` |
-| `@activepieces/core-utils` 0.8.1        | `packages/core/utils/src`       | `upstream/core-utils/`       |
+| `@activepieces/pieces-framework` 0.42.0 | `packages/pieces/framework/src` | `upstream/framework/`        |
+| `@activepieces/pieces-common` 0.15.1    | `packages/pieces/common/src`    | `upstream/common/`           |
+| `@activepieces/core-piece-types` 0.12.3 | `packages/core/piece-types/src` | `upstream/core-piece-types/` |
+| `@activepieces/core-utils` 0.11.0       | `packages/core/utils/src`       | `upstream/core-utils/`       |
 | `@activepieces/engine` 0.7.0            | `packages/server/engine/src`    | `upstream/engine/`           |
 
 The first four are vendored whole. The engine is not: `PACKAGES` gives it an
@@ -68,12 +68,12 @@ does reach them, through `ssrfIpClassifier` and the DATE_TIME processor.
 ## How to sync
 
 ```sh
-pnpm --filter @powerhousedao/pieces-framework sync-upstream -- --tag <tag>
-# or, from a checkout you already have at that tag:
+pnpm --filter @powerhousedao/pieces-framework sync-upstream -- --tag <tag or commit SHA>
+# or, from a checkout you already have at that tag or commit:
 pnpm --filter @powerhousedao/pieces-framework sync-upstream -- --tag <tag> --from ../activepieces
 ```
 
-Without `--from` the script sparse-clones the tag into a temp dir. Then run the
+Without `--from` the script sparse-clones the tag (or fetches the commit) into a temp dir. Then run the
 gates (`tsc`, `lint`, `test`, `build`) and commit the result together with the
 `UPSTREAM.md` table above. The script is idempotent: running it twice yields no
 diff.

@@ -1,6 +1,6 @@
 import {
   buildBrowserBuildConfig,
-  nodeBuildConfig,
+  buildNodeBuildConfig,
 } from "@powerhousedao/shared/build-config";
 import { execSync } from "node:child_process";
 import { join } from "node:path";
@@ -12,8 +12,9 @@ await build({
   outDir: join("dist", "browser"),
 });
 
+// Connect prerenders its shell in Node from ./editors, so they build as written.
 await build({
-  ...nodeBuildConfig,
+  ...buildNodeBuildConfig({ editorExports: true }),
   outDir: join("dist", "node"),
 });
 

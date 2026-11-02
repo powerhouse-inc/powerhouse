@@ -138,7 +138,23 @@ function WorkflowEditor() {
     () => ({
       workflowId,
       getBlockForm: (block) => client.getBlockForm(block),
-      loadOptions: (...args) => client.loadBlockOptions(...args),
+      loadOptions: (
+        block,
+        propName,
+        input,
+        connectionId,
+        searchValue,
+        reactorConnectionId,
+      ) =>
+        client.loadBlockOptions(
+          block,
+          propName,
+          input,
+          connectionId,
+          searchValue,
+          reactorConnectionId,
+          workflowId,
+        ),
       testTrigger: () => client.testTrigger(workflowId, driveId),
       testStep: (stepId) => client.testStep(workflowId, stepId, driveId),
       webhookEndpoint: () => client.fetchWebhookEndpoint(workflowId, driveId),

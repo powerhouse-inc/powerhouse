@@ -1,12 +1,16 @@
 import type { Action } from "./actions.js";
 import type { PHDocument } from "./documents.js";
-import { setNameOperation, setPreferredEditorOperation } from "./operations.js";
+import {
+  setNameOperation,
+  setPreferredEditorOperation,
+  setSlugOperation,
+} from "./operations.js";
 import { DocumentActionSchema } from "./schemas.js";
 import type { PHBaseState } from "./state.js";
 
 /**
- * Applies a base document action (SET_NAME, SET_PREFERRED_EDITOR) to the
- * document. UNDO and REDO apply nothing here.
+ * Applies a base document action (SET_NAME, SET_PREFERRED_EDITOR, SET_SLUG) to
+ * the document. UNDO and REDO apply nothing here.
  */
 export function baseActionReducer<TState extends PHBaseState = PHBaseState>(
   document: PHDocument<TState>,
@@ -21,6 +25,8 @@ export function baseActionReducer<TState extends PHBaseState = PHBaseState>(
       return setNameOperation(document, parsedAction.input);
     case "SET_PREFERRED_EDITOR":
       return setPreferredEditorOperation(document, parsedAction.input);
+    case "SET_SLUG":
+      return setSlugOperation(document, parsedAction.input);
     default:
       return document;
   }

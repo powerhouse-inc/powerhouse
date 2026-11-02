@@ -9,6 +9,7 @@ import {
 import {
   createConsistencyToken,
   createEmptyConsistencyToken,
+  deletedADocument,
   summarizeSubmittedActions,
 } from "../executor/util.js";
 import type { Job } from "../queue/types.js";
@@ -90,6 +91,9 @@ export class InMemoryJobTracker implements IJobTracker {
           event.operations,
           event.submittedActionIds,
         ),
+        ...(deletedADocument(event.operations, event.submittedActionIds)
+          ? { deletedDocument: true }
+          : {}),
       });
     }
   }

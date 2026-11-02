@@ -1,3 +1,54 @@
+## 6.2.3-dev.90 (2026-11-02)
+
+### 🚀 Features
+
+- **desktop:** fold a stack into a few thousand files ([9ff7083857](https://github.com/powerhouse-inc/powerhouse/commit/9ff7083857))
+- **ph-run:** run a host with none of the tools that build one ([ff0ac7910f](https://github.com/powerhouse-inc/powerhouse/commit/ff0ac7910f))
+- **desktop:** a sign-in page and a local key for generated shells ([7cce4b7316](https://github.com/powerhouse-inc/powerhouse/commit/7cce4b7316))
+- **desktop:** grant generated shells the system browser opener ([db0642a856](https://github.com/powerhouse-inc/powerhouse/commit/db0642a856))
+- **switchboard:** verify delegated signers with authEnforcement off ([b896f23cfe](https://github.com/powerhouse-inc/powerhouse/commit/b896f23cfe))
+
+### 🩹 Fixes
+
+- **connect-core:** keep the delete dialog open until the delete lands ([e5823a13f9](https://github.com/powerhouse-inc/powerhouse/commit/e5823a13f9))
+- **reactor-router,reactor-browser:** remote drive writes that reach a reactor-drive and outlast a request ([dd97654823](https://github.com/powerhouse-inc/powerhouse/commit/dd97654823))
+- **desktop:** the stack ships the packages its hosts' plugins come from ([faa1168ba4](https://github.com/powerhouse-inc/powerhouse/commit/faa1168ba4))
+- **desktop:** pack and test the stack on Windows ([c6317e2c15](https://github.com/powerhouse-inc/powerhouse/commit/c6317e2c15))
+- **reactor:** keep the trust context optional for direct callers ([1760590c37](https://github.com/powerhouse-inc/powerhouse/commit/1760590c37))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.89 (2026-11-02)
+
+This was a version bump only for @powerhousedao/connect-core to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.88 (2026-11-01)
+
+This was a version bump only for @powerhousedao/connect-core to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **connect:** create new drives where the host config says, and say when that switchboard isn't answering ([2b3ef15468](https://github.com/powerhouse-inc/powerhouse/commit/2b3ef15468))
+- **connect-core:** build the router from the host's router settings ([6c4be34c1f](https://github.com/powerhouse-inc/powerhouse/commit/6c4be34c1f))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+
+### 🩹 Fixes
+
+- **connect:** a ?reactorClient override can't create new drives in the browser when the host sends them to a switchboard ([9d21294161](https://github.com/powerhouse-inc/powerhouse/commit/9d21294161))
+- **connect-core:** a Connect whose new drives go to a switchboard never falls back to the browser ([fd07d44b7e](https://github.com/powerhouse-inc/powerhouse/commit/fd07d44b7e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.86 (2026-10-30)
 
 This was a version bump only for @powerhousedao/connect-core to align it with other projects, there were no code changes.

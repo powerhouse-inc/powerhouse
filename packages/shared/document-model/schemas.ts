@@ -30,6 +30,7 @@ import type {
   SchemaRedoAction,
   SchemaSetNameAction,
   SchemaSetPreferredEditorAction,
+  SchemaSetSlugAction,
   SchemaUndoAction,
   ScopeState,
   SetAuthorNameInput,
@@ -73,6 +74,8 @@ export const Set_NameSchema = z.enum(["SET_NAME"]);
 
 export const Set_PreferredEditorSchema = z.enum(["SET_PREFERRED_EDITOR"]);
 
+export const Set_SlugSchema = z.enum(["SET_SLUG"]);
+
 export const UndoSchema = z.enum(["UNDO"]);
 
 export function OperationScopeSchema(): z.ZodString {
@@ -84,6 +87,7 @@ export function DocumentActionSchema() {
     RedoActionSchema(),
     SetNameActionSchema(),
     SetPreferredEditorActionSchema(),
+    SetSlugActionSchema(),
     UndoActionSchema(),
   ]);
 }
@@ -130,6 +134,22 @@ export function SetPreferredEditorActionSchema(): z.ZodObject<
     timestampUtcMs: z.string().datetime(),
     input: SetPreferredEditorActionInputSchema(),
     type: Set_PreferredEditorSchema,
+    scope: z.literal("header"),
+  });
+}
+
+export function SetSlugActionInputSchema() {
+  return z.object({ slug: z.string().min(1) });
+}
+
+export function SetSlugActionSchema(): z.ZodObject<
+  Properties<SchemaSetSlugAction>
+> {
+  return z.object({
+    id: z.string(),
+    timestampUtcMs: z.string().datetime(),
+    input: SetSlugActionInputSchema(),
+    type: Set_SlugSchema,
     scope: z.literal("header"),
   });
 }

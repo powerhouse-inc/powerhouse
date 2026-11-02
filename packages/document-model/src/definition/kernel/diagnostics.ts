@@ -9,7 +9,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { compareCodeUnits } from "./primitives.js";
 
-type DiagnosticCode = `PH-${string}`;
+export type DiagnosticCode = `PH-${string}`;
 
 type DiagnosticCodeEntry = {
   readonly severity: DefinitionDiagnosticSeverity;
@@ -100,7 +100,7 @@ export function describeReceived(value: unknown): string {
 }
 
 /** The codes one layer emits, and the builders that fill in each code's severity and phase. */
-type DiagnosticCatalog<TCode extends DiagnosticCode> = {
+export type DiagnosticCatalog<TCode extends DiagnosticCode> = {
   readonly codes: { readonly [K in TCode]: DiagnosticCodeEntry };
   create(input: DefinitionDiagnosticInput<TCode>): DefinitionDiagnostic;
   fail(input: DefinitionDiagnosticInput<TCode>): never;
@@ -281,6 +281,10 @@ export function formatDefinitionDiagnostic(
   return `${diagnostic.code} [${diagnostic.severity}/${diagnostic.phase}] ${where}: ${oneLine(diagnostic.message)}${expected}${received}${related} Repair: ${oneLine(diagnostic.repair)}`;
 }
 
+/**
+ * @experimental Thrown when a code-first declaration is refused. `diagnostics`
+ * holds every problem found, sorted, each with its code, path and repair.
+ */
 export class DefinitionError extends Error {
   readonly diagnostics: readonly DefinitionDiagnostic[];
 

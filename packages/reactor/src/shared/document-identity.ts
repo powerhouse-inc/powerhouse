@@ -18,6 +18,7 @@ export type DocumentIdentityOptions = {
    * may be stale, so only the operations that own the name may write it.
    */
   preserveName: boolean;
+  preserveSlug: boolean;
 };
 
 const NO_PREVIOUS_IDENTITY: PreviousDocumentIdentity = {
@@ -25,7 +26,10 @@ const NO_PREVIOUS_IDENTITY: PreviousDocumentIdentity = {
   name: null,
 };
 
-const DEFAULT_OPTIONS: DocumentIdentityOptions = { preserveName: false };
+const DEFAULT_OPTIONS: DocumentIdentityOptions = {
+  preserveName: false,
+  preserveSlug: false,
+};
 
 /**
  * Derives slug, name and documentType from an operation's resulting state
@@ -46,7 +50,10 @@ export function identityFromDocumentState(
       : {};
 
   const identity: DocumentIdentity = {
-    slug: typeof fields.slug === "string" ? fields.slug : previous.slug,
+    slug:
+      typeof fields.slug === "string" && !options.preserveSlug
+        ? fields.slug
+        : previous.slug,
     name:
       typeof fields.name === "string" && !options.preserveName
         ? fields.name

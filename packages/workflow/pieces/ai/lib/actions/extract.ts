@@ -215,6 +215,15 @@ export const extractAction = createAction({
   displayName: "Extract structured data",
   description: "Pull names, amounts and other fields out of text.",
   defaultTimeoutSeconds: 120,
+  propertyGroups: [
+    {
+      key: "fields",
+      display: "section",
+      label: "What to extract",
+      icon: "braces",
+      props: ["prompt", "mode", "schema"],
+    },
+  ],
   props: {
     model: modelProp(),
     text: Property.LongText({

@@ -18,7 +18,9 @@ export {
   DriveClientFacade,
   type BatchSubmitter,
   type DriveClientDeps,
+  type DriveNodeLookups,
 } from "./src/client/drive-client.js";
+export { collectAllPages } from "./src/shared/collect-all-pages.js";
 export { warnOnce } from "./src/client/deprecations.js";
 export {
   DriveReadClient,
@@ -218,6 +220,7 @@ export {
   type SignatureScheme,
   type SignatureVerificationHandler,
   type SignatureTrustPolicy,
+  type SignatureTrustContext,
   type SignatureVerificationMode,
   type SignerConfig,
 } from "./src/signer/types.js";

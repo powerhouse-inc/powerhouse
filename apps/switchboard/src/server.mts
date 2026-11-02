@@ -57,7 +57,9 @@ import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
 import {
   disableWasmWrapperTiering,
   maintenanceOf,
+  pgliteWorkerEntryPath,
   ThreadedPGlite,
+  type PGliteLike,
 } from "@powerhousedao/reactor-api/pglite-node";
 import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
 import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
@@ -83,7 +85,6 @@ import {
   type IRenown,
   type SwitchboardRequestFn,
 } from "@renown/sdk/node";
-import * as Sentry from "@sentry/node";
 import { childLogger, setLogLevel, type ILogger } from "document-model";
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
@@ -103,7 +104,7 @@ import {
   registerAttachmentReferenceReadModel,
   registerAttachmentReferenceReadModelOnModule,
 } from "./attachment-reference-read-model.mjs";
-import { installFatalErrorShutdown } from "./fatal-shutdown.mjs";
+import { installFatalErrorShutdown, raiseSigterm } from "./fatal-shutdown.mjs";
 import {
   resolvePrivacy,
   startPrivacy,
@@ -154,9 +155,13 @@ import {
 import { runPglitePreflight } from "./pglite-preflight.js";
 import {
   createPgliteStoreFactory,
+  openStoresTogether,
+  READ_STORE,
+  REACTOR_STORE,
   terminateOnPoisoned,
   vacuumFullTimingOf,
   type PgliteStoreSettings,
+  type StoresOpening,
 } from "./pglite-store.mjs";
 import {
   CURRENT_PG_MAJOR,
@@ -168,6 +173,7 @@ import { createSignaturePolicyFor } from "./create-signature-policy.mjs";
 import { workerPoolIssues } from "./boot-preconditions.mjs";
 import { renownLayers } from "./renown-layers.mjs";
 import {
+  getDelegationTrustPolicyConfig,
   getRenownSignerConfig,
   getRenownTrustPolicyConfig,
   initRenown,
@@ -181,11 +187,7 @@ import {
   StoredDocumentsRefusedError,
   resolveUnsupportedStoredDocuments,
 } from "./unsupported-stored-documents.mjs";
-import {
-  addDefaultDrive,
-  addDefaultReactorDrive,
-  isPostgresUrl,
-} from "./utils.mjs";
+import { ensureDrive, isPostgresUrl } from "./utils.mjs";
 import { acquireStoreLocks } from "./store-lock.mjs";
 import {
   defaultStoreDirs,
@@ -374,6 +376,8 @@ export async function createReactorKysely(opts: {
   /** Open the PGlite store in its own worker thread. */
   pgliteWorkers: boolean;
   pgliteSettings?: PgliteStoreSettings;
+  /** The store, when it's already opening. */
+  openingStore?: PGliteLike;
   logger: ILogger;
 }): Promise<ReactorStorage> {
   const {
@@ -384,6 +388,7 @@ export async function createReactorKysely(opts: {
     hostPoolSize,
     pgliteWorkers,
     pgliteSettings,
+    openingStore,
     logger,
   } = opts;
 
@@ -409,16 +414,18 @@ export async function createReactorKysely(opts: {
   if (!reactorPgliteDir || reactorPgliteMajor === null) {
     throw new Error("Reactor PGLite directory not resolved");
   }
-  const openStore = await createPgliteStoreFactory({
-    label: "reactor-storage",
-    major: reactorPgliteMajor,
-    parsers: "none",
-    inMemory,
-    threaded: pgliteWorkers,
-    settings: pgliteSettings,
-    logger,
-  });
-  const pglite = openStore(reactorPgliteDir);
+  const pglite =
+    openingStore ??
+    (
+      await createPgliteStoreFactory({
+        ...REACTOR_STORE,
+        major: reactorPgliteMajor,
+        inMemory,
+        threaded: pgliteWorkers,
+        settings: pgliteSettings,
+        logger,
+      })
+    )(reactorPgliteDir);
   const dialectOptions =
     pglite instanceof ThreadedPGlite
       ? terminateOnPoisoned(reactorPgliteDialectOptions(logger), pglite)
@@ -524,6 +531,13 @@ export function deriveAttachmentServiceConfig(
   return { remoteUrl, jwtHandler };
 }
 
+/** Sentry starts only under SENTRY_DSN (observability.mts), and is a lot to load. */
+async function captureInSentry(error: unknown): Promise<void> {
+  if (!process.env.SENTRY_DSN) return;
+  const Sentry = await import("@sentry/node");
+  Sentry.captureException(error);
+}
+
 async function initServer(
   requestedPort: number,
   options: StartServerOptions,
@@ -531,6 +545,8 @@ async function initServer(
   renown: IRenown | null,
   renownConfig: ResolvedRenownConfig,
   reportError: (error: unknown) => void,
+  /** Filled in once the stores start, for a boot that fails after that. */
+  opening: { stores?: StoresOpening },
 ) {
   const {
     dev,
@@ -737,7 +753,7 @@ async function initServer(
       reason,
     );
     // SIGTERM takes the builder's withSignalHandlers() path: kill, hooks, db.
-    process.kill(process.pid, "SIGTERM");
+    raiseSigterm();
   };
   // Resolved in startSwitchboard, which owns the flag mechanism; initServer
   // only reads the answer.
@@ -823,6 +839,7 @@ async function initServer(
       hostPoolSize: () => config.workers.hostPoolSize,
       pgliteWorkers: options.pgliteWorkers === true,
       pgliteSettings,
+      openingStore: opening.stores?.reactor,
       logger,
     });
 
@@ -943,7 +960,7 @@ async function initServer(
                 },
             renown,
           )
-        : undefined,
+        : getDelegationTrustPolicyConfig(renown),
     });
 
     // File sources give workers and workflow pieces importable paths for the
@@ -1229,21 +1246,58 @@ async function initServer(
   // PG_VERSION. reactor-api calls the factory synchronously, so the legacy
   // module is preloaded above.
   let pgliteFactory: PgliteFactory | undefined;
+  let storeFailed: (error: unknown) => void = () => undefined;
+  const storesFailed = new Promise<never>((_, reject) => {
+    storeFailed = reject;
+  });
+  storesFailed.catch(() => undefined);
   if (readModelPgliteDir && readModelPgliteMajor !== null) {
-    const openReadStore = await createPgliteStoreFactory({
-      label: "read-storage",
-      major: readModelPgliteMajor,
-      parsers: "utc-timestamps",
+    const storeOptions = {
       inMemory,
       threaded: options.pgliteWorkers === true,
       settings: pgliteSettings,
       logger,
+    };
+    const openReadStore = await createPgliteStoreFactory({
+      ...storeOptions,
+      ...READ_STORE,
+      major: readModelPgliteMajor,
     });
-    pgliteFactory = (connectionString) =>
-      openReadStore(connectionString ?? readModelPgliteDir);
+    // With a thread each, the stores needn't take turns. Two on one dir must,
+    // and in the main thread nothing would overlap.
+    const openReactorStore =
+      storeOptions.threaded &&
+      pgliteWorkerEntryPath !== null &&
+      sharedPgliteDir === null &&
+      reactorPgliteDir &&
+      reactorPgliteMajor !== null
+        ? await createPgliteStoreFactory({
+            ...storeOptions,
+            ...REACTOR_STORE,
+            major: reactorPgliteMajor,
+          })
+        : undefined;
+    pgliteFactory = (connectionString) => {
+      const dir = connectionString ?? readModelPgliteDir;
+      if (
+        !openReactorStore ||
+        !reactorPgliteDir ||
+        dir !== readModelPgliteDir
+      ) {
+        return openReadStore(dir);
+      }
+      // Here, not any sooner: reactor-api refuses what it won't run before it
+      // reaches for this store, and a refused boot touches neither.
+      opening.stores ??= openStoresTogether(
+        () => openReactorStore(reactorPgliteDir),
+        () => openReadStore(dir),
+      );
+      opening.stores.failed.catch(storeFailed);
+      return opening.stores.readModel;
+    };
   }
 
-  const api = await initializeAndStartAPI(
+  const startingApi = initializeAndStartAPI(
     initializeClient,
     {
       port: requestedPort,
@@ -1253,6 +1307,7 @@ async function initServer(
       packageLoaders: packageLoaders.length > 0 ? packageLoaders : undefined,
       packages: packages,
       processorConfig: options.processorConfig,
+      ...(renown ? { hostSigner: renown.signer } : {}),
       processors: vetraProcessorFactory
         ? { "@powerhousedao/vetra": [vetraProcessorFactory] }
         : {},
@@ -1261,8 +1316,17 @@ async function initServer(
         basePath: config.server.basePath,
         gatewayAdapter: config.server.gatewayAdapter,
         publicUrl: config.server.publicUrl,
+        host: config.server.host,
       },
-      auth: authSectionOf(config.auth),
+      auth: {
+        ...authSectionOf(config.auth),
+        stateDir: resolvePhDir(
+          undefined,
+          config.storage.userDataDir
+            ? { PH_USER_DATA_DIR: config.storage.userDataDir }
+            : process.env,
+        ),
+      },
       attachments: { storage: config.attachments.storage },
       mcp: options.mcp ?? true,
       inspection:
@@ -1272,6 +1336,8 @@ async function initServer(
       logger: apiLogger,
       reportError,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
+      // The final update before readiness picks up everything added until then.
+      hostRefreshesSupergraph: true,
       // Already resolved for this reactor's own identity; reuse it so an
       // invalid RENOWN_SOURCE is reported once, not once per resolution.
       renown: renownConfig,
@@ -1279,11 +1345,27 @@ async function initServer(
     },
     "switchboard",
   );
+  // A store that can't open ends the boot now, with its own error, rather
+  // than as a closed store's error once something reaches for the other one.
+  const api = await Promise.race([startingApi, storesFailed]);
   apiRef.current = api;
   const serverPort = api.port;
 
   if (renownConfig.source === "self") {
     const { graphqlManager: manager } = api;
+    // Credentials are checked from the first request, before the router update
+    // that readiness waits for: a package's read model gets its handler now.
+    if (
+      !manager.hasSubgraphHandler(RENOWN_READ_MODEL_SUBGRAPH) &&
+      manager.getSubgraphByName(RENOWN_READ_MODEL_SUBGRAPH)
+    ) {
+      try {
+        await manager.updateRouter(true);
+      } catch (error) {
+        await abortBoot(api);
+        throw error;
+      }
+    }
     // Refuse to serve rather than 401 every request: the read model comes from
     // a loaded package, so a missing one is a deployment mistake.
     if (!manager.hasSubgraphHandler(RENOWN_READ_MODEL_SUBGRAPH)) {
@@ -1333,7 +1415,7 @@ async function initServer(
   if (process.env.SENTRY_DSN) {
     // Register Sentry error handler after all routes are established.
     // The adapter calls the framework-specific Sentry setup internally.
-    api.httpAdapter.setupSentryErrorHandler(Sentry);
+    api.httpAdapter.setupSentryErrorHandler(await import("@sentry/node"));
   }
 
   // The framework wiring takes the halves; `client` (the facade) stays for
@@ -1669,22 +1751,12 @@ async function initServer(
       throw new Error("Cannot create default drive without Renown identity");
     }
 
-    const driveType = options.drive.documentType ?? "powerhouse/document-drive";
-    if (driveType === "powerhouse/reactor-drive") {
-      defaultDriveUrl = await addDefaultReactorDrive(
-        client,
-        options.drive,
-        serverPort,
-        logger,
-      );
-    } else {
-      defaultDriveUrl = await addDefaultDrive(
-        client,
-        options.drive,
-        serverPort,
-        logger,
-      );
-    }
+    defaultDriveUrl = await ensureDrive(
+      client,
+      options.drive,
+      serverPort,
+      logger,
+    );
   }
 
   // Ready once this server serves its own drives. Remote drives stay out: they
@@ -1919,8 +1991,9 @@ export const startSwitchboard = async (
   const reportError =
     deps.reportError ??
     ((error: unknown) => {
-      Sentry.captureException(error);
+      void captureInSentry(error);
     });
+  const opening: { stores?: StoresOpening } = {};
   try {
     return await initServer(
       serverPort,
@@ -1929,9 +2002,11 @@ export const startSwitchboard = async (
       renown,
       renownConfig,
       reportError,
+      opening,
     );
   } catch (e) {
-    Sentry.captureException(e);
+    await opening.stores?.close();
+    await captureInSentry(e);
     if (StoredDocumentsRefusedError.isError(e)) {
       logger.error(e.message);
     } else {

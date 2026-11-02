@@ -217,6 +217,25 @@ function phSwConfigPlugin(data: Record<string, unknown>): Plugin {
 }
 
 /**
+ * Connect's `?ph-manifest-rev` link (pwa-manifest-link.ts) is the service
+ * worker's to ignore. The dev server has none, and vite-plugin-pwa matches the
+ * whole URL there, so without this the link would get index.html.
+ */
+function devManifestRevisionPlugin(): Plugin {
+  return {
+    name: "ph-connect-pwa-dev-manifest-revision",
+    apply: "serve",
+    configureServer(server) {
+      const manifestUrl = `${server.config.base}manifest.webmanifest`;
+      server.middlewares.use((req, _res, next) => {
+        if (req.url?.startsWith(`${manifestUrl}?`)) req.url = manifestUrl;
+        next();
+      });
+    },
+  };
+}
+
+/**
  * Service-worker / PWA support for Connect, gated by `connect.app.offline`.
  *
  * When enabled (the default), Workbox `injectManifest` bundles Connect's
@@ -276,6 +295,7 @@ export function connectPwaPlugins(options: {
 
   return [
     connectPwaIconsPlugin(),
+    devManifestRevisionPlugin(),
     VitePWA({
       strategies: "injectManifest",
       // Absolute srcDir → swSrc is builder-tools' own SW source; the emitted
@@ -286,8 +306,10 @@ export function connectPwaPlugins(options: {
       // posts SKIP_WAITING when the user accepts (see serviceWorkerManager).
       registerType: "prompt",
       injectRegister: null,
-      // ph connect studio keeps running without a service worker.
-      devOptions: { enabled: false },
+      // The dev server gets the build's manifest and link, so it installs like
+      // a build. It gets no worker: nothing registers one (injectRegister above,
+      // and the SPA skips it in development), so hot reload stays uncached.
+      devOptions: { enabled: true },
       // Icons are emitted by connectPwaIconsPlugin and precached via the png
       // glob, so the plugin must not also try to resolve them from /public.
       includeManifestIcons: false,

@@ -241,6 +241,32 @@ export class Renown implements IRenown {
     }
   }
 
+  // Signs in from a credential in hand, asking nobody: one kept on this computer
+  // for someone who has signed in before, or one a `local` key signed here. No
+  // Renown holds the latter, so such a session is never checked against one.
+  async adoptCredential(
+    credential: PowerhouseVerifiableCredential,
+    options: { local?: boolean } = {},
+  ): Promise<User> {
+    this.#updateStatus("checking");
+    try {
+      const userDid = credential.issuer.id;
+      const user = await this.#completeLogin(
+        userDid,
+        parsePkhDid(userDid),
+        credential,
+      );
+      if (!options.local) return user;
+      const local: User = { ...user, local: true };
+      this.#updateUser(local);
+      return local;
+    } catch (error) {
+      this.#updateUser(undefined);
+      this.#updateStatus("not-authorized");
+      throw error;
+    }
+  }
+
   // Write the profile via an authenticated request, retrying while the reactor's
   // read model catches up to the just-issued credential (needed to authenticate).
   async #writeProfile(
@@ -352,6 +378,7 @@ export class Renown implements IRenown {
   async revalidate(): Promise<boolean> {
     const user = this.user;
     if (!user) return false;
+    if (user.local) return true;
     try {
       const credential = await this.#getCredential(
         user.address,
@@ -373,7 +400,7 @@ export class Renown implements IRenown {
   // shows up on the next load. Carries no logout risk, unlike revalidate().
   async refreshProfile(): Promise<boolean> {
     const user = this.user;
-    if (!user || !this.#profileFetcher) return false;
+    if (!user || user.local || !this.#profileFetcher) return false;
     try {
       const profile = await this.#profileFetcher(user, this.#baseUrl);
       if (!profile) return false;

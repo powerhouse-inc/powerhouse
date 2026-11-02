@@ -47,6 +47,13 @@ export interface StartRunArgs {
  * the members in it; one-shot verbs (`build`) return nothing and write none.
  */
 export async function startRun(args: StartRunArgs): Promise<unknown> {
+  // Loading a host loads its plugins, and React settles on its development or
+  // production build the first time it's loaded. `vite build` sets NODE_ENV only
+  // after that, so a build would run one half of React with the other half's
+  // renderer (TypeError: dispatcher.getOwner is not a function).
+  if (ONE_SHOT_VERBS.has(args.verb ?? "run")) {
+    process.env.NODE_ENV ??= "production";
+  }
   const projectRoot = args.projectRoot ?? process.cwd();
   const loaded = await loadHost(projectRoot, args.host);
   const { warnSupersededConfigKeys } = await import("./superseded-config.js");

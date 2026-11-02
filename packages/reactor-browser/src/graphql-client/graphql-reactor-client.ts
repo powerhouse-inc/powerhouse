@@ -239,6 +239,13 @@ export type GraphQLReactorClientOptions = {
    */
   requestTimeoutMs?: number;
 
+  /**
+   * Bounds an `executeBatch` request in place of `requestTimeoutMs`. The
+   * mutation answers once its jobs are readable, and it has no form that does
+   * not wait, so one request lasts as long as the write does.
+   */
+  batchRequestTimeoutMs?: number;
+
   /** The `fetch` every HTTP request goes through; the global one by default. */
   fetch?: GraphQLFetch;
 };
@@ -297,6 +304,8 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   readonly [graphQLReactorClientBrand] = true;
 
   private readonly sdk: ReactorGraphQLClient;
+  /** For `executeBatch`, the one write a request waits for: see {@link batchRequestTimeoutMs}. */
+  private readonly batchSdk: ReactorGraphQLClient;
   private readonly subgraphs: SubgraphSdkRegistry;
   private readonly listeners: ChangeListener[] = [];
   private readonly tokenProvider: BearerTokenProvider;
@@ -372,6 +381,19 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     this.sdk =
       options.graphqlClient ??
       createClient(new GraphQLClient(options.url, { fetch }), middleware);
+    this.batchSdk =
+      options.graphqlClient !== undefined ||
+      options.batchRequestTimeoutMs === undefined
+        ? this.sdk
+        : createClient(
+            new GraphQLClient(options.url, {
+              fetch: withRequestDeadline(
+                options.batchRequestTimeoutMs,
+                options.fetch,
+              ),
+            }),
+            middleware,
+          );
     // Subgraph transports are always derived from `url` and always carry auth,
     // including when the reactor SDK above was injected: an injected SDK is a
     // test seam that owns its own transport, not a second endpoint.
@@ -894,6 +916,26 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   }
 
   /**
+   * What `execute` writes, without waiting: returns the job once the Switchboard
+   * holds it, so a write slower than one request's deadline still lands and is
+   * reported. It is announced as the write half's `execute` announces it.
+   */
+  async executeAsync(
+    documentIdentifier: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<JobInfo> {
+    const handle = await this.submitExecute(
+      documentIdentifier,
+      branch,
+      actions,
+      signal,
+    );
+    return handle.job;
+  }
+
+  /**
    * Undoes the last applied operation of `scope` under this client's own
    * signature: UNDO below base-reducer 3; on it, a RETRACT of the target the
    * Switchboard resolves with {@link undoRedoTargets}. One at a time per
@@ -1112,7 +1154,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       }),
     );
 
-    const result = await this.sdk.ExecuteBatch(
+    const result = await this.batchSdk.ExecuteBatch(
       { jobs: jobInputs },
       this.driveIdHeaders({
         method: "executeBatch",
@@ -1607,7 +1649,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     branch: string,
     actions: Action[],
     signal?: AbortSignal,
-  ): Promise<WriteHandle> {
+  ): Promise<GraphQLJobWriteHandle> {
     const document = await this.get(documentIdentifier, { branch }, signal);
     const preparedActions = await prepareActionsForPush(
       actions,

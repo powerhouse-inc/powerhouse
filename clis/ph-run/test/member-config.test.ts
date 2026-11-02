@@ -221,6 +221,52 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
     });
   }
 
+  it("takes the desktop host's sign-in, owner and bind settings", async () => {
+    const config = parse(
+      await memberSwitchboardConfig(
+        {
+          config: {
+            switchboard: {
+              server: { host: "127.0.0.1" },
+              auth: {
+                enabled: true,
+                requireAuthenticatedCaller: true,
+                resolveIdentity: true,
+                ownerClaim: true,
+                offlineCredentials: true,
+              },
+            },
+          },
+        },
+        { shell: {}, dotenv: {} },
+        { pluginHost: false },
+      ),
+    );
+    expect(config.server.host).toBe("127.0.0.1");
+    expect(config.auth).toMatchObject({
+      enabled: true,
+      requireAuthenticatedCaller: true,
+      resolveIdentity: true,
+      ownerClaim: true,
+      offlineCredentials: true,
+    });
+  });
+
+  it("leaves a host that says nothing open and bound as before", async () => {
+    const config = parse(
+      await memberSwitchboardConfig(
+        {},
+        { shell: {}, dotenv: {} },
+        {
+          pluginHost: false,
+        },
+      ),
+    );
+    expect(config.server.host).toBeUndefined();
+    expect(config.auth.ownerClaim).toBe(false);
+    expect(config.auth.offlineCredentials).toBe(false);
+  });
+
   it("puts config.switchboard under the env", async () => {
     const config = parse(
       await memberSwitchboardConfig(

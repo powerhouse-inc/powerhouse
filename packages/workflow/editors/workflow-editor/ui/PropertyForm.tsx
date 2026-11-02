@@ -71,7 +71,7 @@ import {
   optionIcon,
   richTextMode,
 } from "./prop-controls.js";
-import { PropLayout } from "./prop-layout.js";
+import { essentialNames, PropLayout } from "./prop-layout.js";
 import { isEmptyValue } from "./validation.js";
 
 // Splices text at the field's cursor and returns the updated value.
@@ -347,6 +347,18 @@ export function itemSummary(
 
 // Rows of nested forms for an ARRAY prop with item properties; each folds to a
 // one-line summary.
+// "Branches" adds a branch; a name that is not a plural adds an item.
+export function addItemLabel(displayName: string): string {
+  const name = displayName.trim().toLowerCase();
+  if (!/^[a-z]+s$/.test(name) || name.endsWith("ss")) return "Add item";
+  const singular = name.endsWith("ies")
+    ? `${name.slice(0, -3)}y`
+    : /(ss|x|z|ch|sh)es$/.test(name)
+      ? name.slice(0, -2)
+      : name.slice(0, -1);
+  return `Add ${singular}`;
+}
+
 function ArrayRows(props: {
   prop: BlockFormProp;
   value: unknown;
@@ -443,7 +455,7 @@ function ArrayRows(props: {
         }}
       >
         <Icon name="plus" className="h-3.5 w-3.5" />
-        Add item
+        {addItemLabel(props.prop.displayName)}
       </Button>
     </div>
   );
@@ -1744,8 +1756,13 @@ export function PropertyForm(props: {
   // A hidden field's value is not cleared: switching scheme to None and back
   // must not silently discard the secret ref the author already minted.
   const visible = props.props.filter((prop) => isPropVisible(prop, current));
-  const essential = visible.filter((prop) => !prop.advanced);
-  const advanced = visible.filter((prop) => prop.advanced);
+  const kept = essentialNames(props.props, props.groups);
+  const essential = visible.filter(
+    (prop) => !prop.advanced || kept.has(prop.name),
+  );
+  const advanced = visible.filter(
+    (prop) => prop.advanced && !kept.has(prop.name),
+  );
   const [showAdvanced, setShowAdvanced] = useState(false);
   // Closed even when advanced fields hold values, so the count goes in the
   // label — else config already in effect reads as config that is not there.

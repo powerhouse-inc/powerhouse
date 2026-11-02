@@ -50,6 +50,13 @@ export function setPreferredEditorOperation<TDocument extends PHDocument>(
   };
 }
 
+export function setSlugOperation<TDocument extends PHDocument>(
+  document: TDocument,
+  input: { slug: string },
+): TDocument {
+  return { ...document, header: { ...document.header, slug: input.slug } };
+}
+
 export function undoOperation<TDocument extends PHDocument>(
   document: TDocument,
   action: Action,

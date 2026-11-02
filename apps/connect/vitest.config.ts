@@ -33,6 +33,16 @@ export default defineConfig({
           ),
         ),
       },
+      // Its node build gives a host no editors, and Connect reads them.
+      {
+        find: /^@powerhousedao\/powerhouse-vetra-packages$/,
+        replacement: fileURLToPath(
+          new URL(
+            "../../packages/powerhouse-vetra-packages/index.ts",
+            import.meta.url,
+          ),
+        ),
+      },
     ],
   },
   test: {

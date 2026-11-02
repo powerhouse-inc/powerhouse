@@ -71,10 +71,70 @@ import { vendorImportMapPlugin } from "./vite-plugins/vendor-import-map.js";
 export function getConnectHtmlTags(
   options: {
     registryUrl?: string | null;
+    /** The project's own name, from `connect.branding.appName`. */
+    appName?: string;
     injectTo?: HtmlTagDescriptor["injectTo"];
   } = {},
 ) {
-  const { registryUrl, injectTo = "head" } = options;
+  const { registryUrl, appName, injectTo = "head" } = options;
+  // What a shared link shows, the iOS share sheet included. Connect's address,
+  // description and picture aren't a project's, so a project's name drops them.
+  const connectCard: HtmlTagDescriptor[] = appName
+    ? []
+    : [
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:url",
+            content: "https://apps.powerhouse.io/powerhouse/connect/",
+          },
+          injectTo,
+        },
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:description",
+            content:
+              "Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.",
+          },
+          injectTo,
+        },
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:image",
+            content:
+              "https://cf-ipfs.com/ipfs/bafkreigrmclndf2jpbolaq22535q2sw5t44uad3az3dpvkzrnt4lpjt63e",
+          },
+          injectTo,
+        },
+        {
+          tag: "meta",
+          attrs: {
+            name: "twitter:card",
+            content: "summary_large_image",
+          },
+          injectTo,
+        },
+        {
+          tag: "meta",
+          attrs: {
+            name: "twitter:image",
+            content:
+              "https://cf-ipfs.com/ipfs/bafkreigrmclndf2jpbolaq22535q2sw5t44uad3az3dpvkzrnt4lpjt63e",
+          },
+          injectTo,
+        },
+        {
+          tag: "meta",
+          attrs: {
+            name: "twitter:description",
+            content:
+              "Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.",
+          },
+          injectTo,
+        },
+      ];
   return [
     {
       tag: "meta",
@@ -88,7 +148,7 @@ export function getConnectHtmlTags(
       tag: "meta",
       attrs: {
         property: "og:title",
-        content: "Connect",
+        content: appName ?? "Connect",
       },
       injectTo,
     },
@@ -103,64 +163,13 @@ export function getConnectHtmlTags(
     {
       tag: "meta",
       attrs: {
-        property: "og:url",
-        content: "https://apps.powerhouse.io/powerhouse/connect/",
-      },
-      injectTo,
-    },
-    {
-      tag: "meta",
-      attrs: {
-        property: "og:description",
-        content:
-          "Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.",
-      },
-      injectTo,
-    },
-    {
-      tag: "meta",
-      attrs: {
-        property: "og:image",
-        content:
-          "https://cf-ipfs.com/ipfs/bafkreigrmclndf2jpbolaq22535q2sw5t44uad3az3dpvkzrnt4lpjt63e",
-      },
-      injectTo,
-    },
-    {
-      tag: "meta",
-      attrs: {
-        name: "twitter:card",
-        content: "summary_large_image",
-      },
-      injectTo,
-    },
-    {
-      tag: "meta",
-      attrs: {
-        name: "twitter:image",
-        content:
-          "https://cf-ipfs.com/ipfs/bafkreigrmclndf2jpbolaq22535q2sw5t44uad3az3dpvkzrnt4lpjt63e",
-      },
-      injectTo,
-    },
-    {
-      tag: "meta",
-      attrs: {
         name: "twitter:title",
-        content: "Connect",
+        content: appName ?? "Connect",
       },
       injectTo,
     },
-    {
-      tag: "meta",
-      attrs: {
-        name: "twitter:description",
-        content:
-          "Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.",
-      },
-      injectTo,
-    },
-  ] as const satisfies HtmlTagDescriptor[];
+    ...connectCard,
+  ] satisfies HtmlTagDescriptor[];
 }
 
 function viteLogger({
@@ -291,10 +300,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     packageRegistryUrl: phPackageRegistryUrl,
   });
 
-  const connectHtmlTags = getConnectHtmlTags({
-    registryUrl: phPackageRegistryUrl,
-  });
-
   // Dev needs a placeholder importmap for devReactImportmapPlugin to rewrite;
   // builds get their map from reactSelfHostPlugin's boot script instead.
   const devImportmapTag =
@@ -318,7 +323,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       name: "ph-connect-html-tags",
       transformIndexHtml: {
         order: "pre",
-        handler: () => [...connectHtmlTags, ...devImportmapTag],
+        handler: () => [
+          ...getConnectHtmlTags({
+            registryUrl: phPackageRegistryUrl,
+            appName: projectBrand.name,
+          }),
+          ...devImportmapTag,
+        ],
       },
     },
   ] as const;

@@ -108,6 +108,45 @@ export interface RunCompoundOptions {
   installSignalHandlers?: boolean;
   /** How the compound exits after a signal (default `process.exit`). */
   exit?: (code: number) => void;
+  /** Stops the compound as SIGTERM would, once this delivers anything or
+   * ends: see {@link stopStreamOf}. */
+  stopStream?: NodeJS.ReadableStream;
+  /** How long a stream's stop may take before exiting regardless (default
+   * {@link STOP_STREAM_LIMIT_MS}). */
+  stopStreamLimitMs?: number;
+  /** What a stream's supervisor reads (default stdout and stderr). */
+  supervisedOutputs?: readonly NodeJS.WritableStream[];
+}
+
+/** Set by a supervisor that holds this process's stdin. */
+export const STOP_ON_STDIN_ENV = "PH_STOP_ON_STDIN";
+
+/** Past the shell's own limit: this only matters when no shell is left. */
+export const STOP_STREAM_LIMIT_MS = 15_000;
+
+/**
+ * Windows has no SIGTERM, so a supervisor asks a stack to stop through its
+ * stdin: a line, or the pipe closing, which also covers the supervisor dying.
+ * Only when it asks to: a stack started from a script may have no stdin.
+ */
+export function stopStreamOf(
+  env: NodeJS.ProcessEnv,
+  stdin: () => NodeJS.ReadableStream,
+): NodeJS.ReadableStream | undefined {
+  return env[STOP_ON_STDIN_ENV] === "1" ? stdin() : undefined;
+}
+
+function whenStreamStops(stream: NodeJS.ReadableStream, stop: () => void) {
+  let stopped = false;
+  const once = () => {
+    if (stopped) return;
+    stopped = true;
+    stop();
+  };
+  for (const event of ["data", "end", "close", "error"]) {
+    stream.once(event, once);
+  }
+  stream.resume();
 }
 
 export interface RunCompoundResult {
@@ -168,6 +207,22 @@ export async function runCompound(
   // to write or clear (clearing would delete a live instance's record).
   const oneShotCompound = ONE_SHOT_VERBS.has(verb);
   const keepsRecord = wiring.runtimeRecord !== false && !oneShotCompound;
+
+  // From the start, so a stop during boot takes effect when boot finishes.
+  let stopRequested = false;
+  let stopFromStream: () => void = () => {
+    stopRequested = true;
+  };
+  if (options.stopStream && !oneShotCompound) {
+    whenStreamStops(options.stopStream, () => stopFromStream());
+    // These go when the supervisor does, and with no listener the next log
+    // line would be a fatal error in the middle of the shutdown it started.
+    const outputs = options.supervisedOutputs ?? [
+      process.stdout,
+      process.stderr,
+    ];
+    for (const output of outputs) output.on("error", () => undefined);
+  }
 
   // Lock: one live instance per project per host (storage-root contention).
   const probe = oneShotCompound
@@ -365,6 +420,13 @@ export async function runCompound(
     process.on("SIGINT", () => void handleSignal("SIGINT"));
     process.on("SIGTERM", () => void handleSignal("SIGTERM"));
   }
+  stopFromStream = () => {
+    // No supervisor may be left to end a shutdown that hangs.
+    const limit = options.stopStreamLimitMs ?? STOP_STREAM_LIMIT_MS;
+    setTimeout(() => exit(143), limit).unref();
+    void handleSignal("SIGTERM");
+  };
+  if (stopRequested) stopFromStream();
 
   return { started, shutdown, handleSignal };
 }

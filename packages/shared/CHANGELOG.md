@@ -1,3 +1,60 @@
+## 6.2.3-dev.90 (2026-11-02)
+
+### 🚀 Features
+
+- **desktop:** fold a stack into a few thousand files ([9ff7083857](https://github.com/powerhouse-inc/powerhouse/commit/9ff7083857))
+- **ph-run:** run a host with none of the tools that build one ([ff0ac7910f](https://github.com/powerhouse-inc/powerhouse/commit/ff0ac7910f))
+- **shared:** a node build leaves out what only a browser runs ([7b9d548b09](https://github.com/powerhouse-inc/powerhouse/commit/7b9d548b09))
+- **desktop:** a sign-in page and a local key for generated shells ([7cce4b7316](https://github.com/powerhouse-inc/powerhouse/commit/7cce4b7316))
+- **renown:** credentials no Renown holds ([337ddba394](https://github.com/powerhouse-inc/powerhouse/commit/337ddba394))
+- **reactor:** set a slug after creation, and a live slug over a deleted id ([234deeae76](https://github.com/powerhouse-inc/powerhouse/commit/234deeae76))
+- **desktop:** grant generated shells the system browser opener ([db0642a856](https://github.com/powerhouse-inc/powerhouse/commit/db0642a856))
+- **switchboard:** verify delegated signers with authEnforcement off ([b896f23cfe](https://github.com/powerhouse-inc/powerhouse/commit/b896f23cfe))
+- **reactor-api:** owner claim, kept credentials, a bind address and host facts ([21def9b8fe](https://github.com/powerhouse-inc/powerhouse/commit/21def9b8fe))
+
+### 🩹 Fixes
+
+- **shared:** a node build keeps an editors/index.ts that exports more than editors ([2f7c664f51](https://github.com/powerhouse-inc/powerhouse/commit/2f7c664f51))
+- **shared,powerhouse-vetra-packages:** the prerendered Connect shell gets its editors ([1b3794d1c1](https://github.com/powerhouse-inc/powerhouse/commit/1b3794d1c1))
+- **desktop:** the stack ships the packages its hosts' plugins come from ([faa1168ba4](https://github.com/powerhouse-inc/powerhouse/commit/faa1168ba4))
+- **desktop:** pack and test the stack on Windows ([c6317e2c15](https://github.com/powerhouse-inc/powerhouse/commit/c6317e2c15))
+- **reactor:** keep the trust context optional for direct callers ([1760590c37](https://github.com/powerhouse-inc/powerhouse/commit/1760590c37))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.89 (2026-11-02)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.88 (2026-11-01)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **shared:** serve Connect's router settings and per-switchboard connection settings ([b090b4d0f1](https://github.com/powerhouse-inc/powerhouse/commit/b090b4d0f1))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+- **reactor:** sync refuses before load a base-reducer 3 document whose model this reactor cannot run ([a75861b101](https://github.com/powerhouse-inc/powerhouse/commit/a75861b101))
+- **shared:** base-reducer 3 capability table, retraction rule and RETRACT ([b006a95770](https://github.com/powerhouse-inc/powerhouse/commit/b006a95770))
+
+### 🩹 Fixes
+
+- **shared:** a replay takes a passed base-reducer version only for a header number this build does not know ([0c05c18cde](https://github.com/powerhouse-inc/powerhouse/commit/0c05c18cde))
+- **shared:** an UNDO's replay runs under the base-reducer version its reducer runs ([74ea776ae4](https://github.com/powerhouse-inc/powerhouse/commit/74ea776ae4))
+- **shared:** a skip's replay runs under the base-reducer version its reducer runs ([1692b7ee44](https://github.com/powerhouse-inc/powerhouse/commit/1692b7ee44))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.86 (2026-10-30)
 
 ### 🚀 Features

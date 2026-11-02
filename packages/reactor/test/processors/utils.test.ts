@@ -1,4 +1,7 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import type {
+  OperationWithContext,
+  PHDocumentHeader,
+} from "@powerhousedao/shared/document-model";
 import type {
   IProcessor,
   ProcessorFilter,
@@ -9,6 +12,7 @@ import {
   matchesFilter,
   resolveProcessorNames,
   resolveProcessorSlots,
+  withCurrentSlug,
 } from "../../src/processors/utils.js";
 
 function createOperation(context: {
@@ -402,5 +406,36 @@ describe("resolveProcessorSlots", () => {
         false,
       ),
     ).toEqual(["0", "1"]);
+  });
+});
+
+describe("withCurrentSlug", () => {
+  const header = { id: "drive", slug: "drive" } as PHDocumentHeader;
+  const named = (slug: string, error?: string) =>
+    ({
+      operation: {
+        action: { type: "SET_SLUG", input: { slug } },
+        ...(error ? { error } : {}),
+      },
+    }) as unknown as OperationWithContext;
+
+  it("keeps the creation header when the document never took a slug", () => {
+    expect(withCurrentSlug(header, [])).toBe(header);
+  });
+
+  it("takes the last slug the document was given", () => {
+    expect(withCurrentSlug(header, [named("first"), named("mail")]).slug).toBe(
+      "mail",
+    );
+  });
+
+  it("ignores any other header operation", () => {
+    const other = {
+      operation: {
+        action: { type: "SET_PREFERRED_EDITOR", input: {} },
+      },
+    } as unknown as OperationWithContext;
+
+    expect(withCurrentSlug(header, [named("mail"), other]).slug).toBe("mail");
   });
 });

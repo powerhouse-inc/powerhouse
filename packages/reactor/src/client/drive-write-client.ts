@@ -13,6 +13,7 @@ import {
   updateNode as updateNodeAction,
   type DocumentDriveDocument,
   type DriveInput,
+  type Node,
 } from "@powerhousedao/shared/document-drive";
 import { addFile as addFileAction } from "@powerhousedao/shared/document-drive";
 import {
@@ -95,6 +96,27 @@ export type DriveWriteStrategies = {
   ) => Promise<WriteTargetDescription>;
 };
 
+/**
+ * How a drive write finds what is in a drive when the reactor's own lookups are
+ * out of reach, as they are on a backend behind a router. A reactor-drive keeps
+ * its nodes in a projection, so its document's state has none to read.
+ */
+export type DriveNodeLookups = {
+  /** The id of the live document `identifier` names, or undefined. */
+  lookupLiveDocument: (
+    identifier: string,
+    signal?: AbortSignal,
+  ) => Promise<string | undefined>;
+  /** The node and everything under it, among any other nodes of the drive. */
+  nodesFrom: (
+    driveId: string,
+    nodeId: string,
+    signal?: AbortSignal,
+  ) => Promise<Node[]>;
+  /** The relationship types that can link a file to its drive. */
+  fileLinkTypes?: readonly string[];
+};
+
 /** A drive whose document type has a registered strategy. */
 type StrategyTarget = {
   driveId: string;
@@ -169,6 +191,19 @@ export class DriveWriteClient implements IDriveWriteClient {
       signal?: AbortSignal,
     ) => Promise<ProtocolVersions> = (options, signal) =>
       reads.getCreateProtocolVersions(options, signal),
+    private readonly nodesFrom: DriveNodeLookups["nodesFrom"] = async (
+      driveId,
+      _nodeId,
+      signal,
+    ) => {
+      const drive = await reads.get<DocumentDriveDocument>(
+        driveId,
+        undefined,
+        signal,
+      );
+      return drive.state.global.nodes;
+    },
+    private readonly fileLinkTypes: readonly string[] = ["child"],
   ) {
     this.executeBatch =
       typeof submitter === "function"
@@ -369,18 +404,13 @@ export class DriveWriteClient implements IDriveWriteClient {
       return this.removeFileNode(driveId, fileId, signal);
     }
 
-    // Anything else is a folder or unknown. The drive is read through the read
-    // half because a folder's removal needs its subtree: each file under it is
-    // a document that has to be deleted, which the reducer does not do.
-    const drive = await this.reads.get<DocumentDriveDocument>(
-      driveId,
-      undefined,
-      signal,
-    );
+    // Anything else is a folder or unknown. The drive's nodes are read because
+    // a folder's removal needs its subtree: each file under it is a document
+    // that has to be deleted, which the reducer does not do.
+    const nodes = await this.nodesFrom(driveId, nodeIdentifier, signal);
     // A folder is a node, not a document: a resolver that reads documents
     // cannot resolve its id. Only an identifier that is no node's id is
     // resolved, as a file's slug.
-    const nodes = drive.state.global.nodes;
     const nodeId = nodes.some((n) => n.id === nodeIdentifier)
       ? nodeIdentifier
       : await this.resolveReference(nodeIdentifier, signal);
@@ -398,10 +428,7 @@ export class DriveWriteClient implements IDriveWriteClient {
     }
 
     if (isFolderNode(node)) {
-      const fileDescendants = getDescendants(
-        node,
-        drive.state.global.nodes,
-      ).filter(isFileNode);
+      const fileDescendants = getDescendants(node, nodes).filter(isFileNode);
       for (const file of fileDescendants) {
         await this.complete(
           await this.removeFileNode(driveId, file.id, signal),
@@ -775,7 +802,9 @@ export class DriveWriteClient implements IDriveWriteClient {
       signal,
     );
     const relationshipActions: Action[] = await signActions(
-      [removeRelationshipAction(driveId, fileId, "child")],
+      this.fileLinkTypes.map((type) =>
+        removeRelationshipAction(driveId, fileId, type),
+      ),
       this.signer,
       { documentId: driveId, branch: "main" },
       signal,

@@ -19,6 +19,24 @@ const PWA_ICONS = [
 export function connectPwaIconsPlugin(): Plugin {
   return {
     name: "copy-connect-pwa-icons",
+    // The dev server's manifest names the same files.
+    configureServer(server) {
+      for (const icon of PWA_ICONS) {
+        server.middlewares.use(
+          `${server.config.base}${icon}`,
+          (_req, res, next) => {
+            server.pluginContainer
+              .resolveId(`@powerhousedao/connect/assets/${icon}`)
+              .then((resolved) => {
+                if (!resolved) return next();
+                res.setHeader("Content-Type", "image/png");
+                res.end(readFileSync(resolved.id));
+              })
+              .catch(() => next());
+          },
+        );
+      }
+    },
     async generateBundle(_options, bundle) {
       for (const icon of PWA_ICONS) {
         try {

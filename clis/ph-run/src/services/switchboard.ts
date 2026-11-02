@@ -5,6 +5,7 @@ import {
   type SwitchboardConfigInput,
 } from "@powerhousedao/switchboard/config";
 import { switchboardConfigFromEnv } from "@powerhousedao/switchboard/config/env";
+import { addDefaultDrive } from "@powerhousedao/switchboard/utils";
 import {
   initSwitchboardProcess,
   startSwitchboard as startSwitchboardServer,
@@ -12,8 +13,11 @@ import {
   type StartServerOptions,
 } from "@powerhousedao/switchboard/server";
 import type { ILogger } from "document-model";
-import type { SwitchboardArgs } from "../types.js";
+import { createHash } from "node:crypto";
+import type { SwitchboardArgs } from "./classic-args.js";
 import { POWERHOUSE_DRIVE_ICON } from "../utils/drive-icons.js";
+
+export { POWERHOUSE_DRIVE_ICON };
 
 const EGRESS_ALLOW_ENV = "PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES";
 const LOCALHOST_ADDRESSES = ["127.0.0.1/32", "::1/128"];
@@ -216,4 +220,35 @@ function configLayerOf(
     remoteDrives: options.remoteDrives,
     processorConfig: options.processorConfig,
   };
+}
+
+/** A drive's id for this project: the same path always gives the same one. */
+export function projectDriveId(name: string, projectRoot: string): string {
+  const hash = createHash("sha256").update(projectRoot).digest("hex");
+  return `${name}-${hash.substring(0, 8)}`;
+}
+
+/** The drive `reactor.workflows` seeds, the same one `ph vetra` does. */
+export async function seedWorkflowsDrive(
+  reactor: Parameters<typeof addDefaultDrive>[0],
+  port: number,
+  projectRoot: string,
+): Promise<string | null> {
+  const driveUrl = await addDefaultDrive(
+    reactor,
+    {
+      id: projectDriveId("workflows", projectRoot),
+      slug: "workflows",
+      global: { name: "Workflows" },
+      preferredEditor: "workflow-studio",
+      local: {
+        availableOffline: true,
+        listeners: [],
+        sharingType: "public" as const,
+        triggers: [],
+      },
+    },
+    port,
+  );
+  return driveUrl ?? null;
 }

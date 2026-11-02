@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { patchCspScriptSrc } from "../src/services/connect-preview.js";
+import { patchCspScriptSrc } from "../src/services/connect-serve.js";
 
 const html = (csp: string) =>
   `<html><head><meta http-equiv="Content-Security-Policy" content="${csp}"></head></html>`;

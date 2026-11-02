@@ -806,7 +806,7 @@ export class KyselyWriteCache implements IWriteCache {
   ): Promise<PHDocument> {
     const effectiveTargetRevision = targetRevision ?? Number.MAX_SAFE_INTEGER;
 
-    const keyframe = fromKeyframe
+    const ownKeyframe = fromKeyframe
       ? await this.findNearestKeyframe(
           documentId,
           scope,
@@ -815,6 +815,20 @@ export class KyselyWriteCache implements IWriteCache {
           signal,
         )
       : undefined;
+    // A header stream is too short to earn a keyframe, and a document keyframe
+    // holds everything its operations touch. Without this, one header write on
+    // a large drive replays the whole document stream.
+    const keyframe =
+      ownKeyframe ??
+      (fromKeyframe && scope === "header"
+        ? await this.findNearestKeyframe(
+            documentId,
+            "document",
+            branch,
+            Number.MAX_SAFE_INTEGER,
+            signal,
+          )
+        : undefined);
 
     // all scope rebuilds need the document scope for type, upgrades and deletion,
     // but we need to special case for document scope rebuilds
@@ -833,7 +847,7 @@ export class KyselyWriteCache implements IWriteCache {
     if (keyframe) {
       this.assertSupported(documentId, keyframe.document);
       document = keyframe.document;
-      startRevision = keyframe.revision;
+      startRevision = ownKeyframe ? keyframe.revision : -1;
       documentType = keyframe.document.header.documentType;
 
       // The keyframe's label indexes the scope it was written for, a different

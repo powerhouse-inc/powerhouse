@@ -32,8 +32,10 @@ export function projectDriveId(projectRoot: string, slug: string): string {
 
 export interface ResolvedDrive {
   kind: "local" | "remote";
-  id: string;
+  /** A fixed id; absent, the reactor generates it. The slug is the name. */
+  id?: string;
   slug: string;
+  documentType?: DriveDeclaration["documentType"];
   name: string;
   icon?: string;
   preferredEditor?: string;
@@ -48,10 +50,10 @@ export function resolveDriveDeclaration(
 ): ResolvedDrive {
   const id = decl.projectHash
     ? projectDriveId(projectRoot, decl.slug)
-    : (decl.id ?? decl.slug);
+    : decl.id;
   // Hash-derived drives serve under the hashed slug too (classic parity:
   // the vetra drive's slug IS its hashed id) — unless only the id is hashed.
-  const slug = decl.projectHash === true ? id : decl.slug;
+  const slug = decl.projectHash === true ? id! : decl.slug;
   if (decl.remote) {
     return {
       kind: "remote",
@@ -67,6 +69,7 @@ export function resolveDriveDeclaration(
     kind: "local",
     id,
     slug,
+    documentType: decl.documentType,
     name: decl.name ?? decl.slug,
     // A project path becomes a data URI here (the icon lives in synced drive
     // state, so it is size-capped); URLs and data URIs pass through.
@@ -158,7 +161,8 @@ export function explainDrivePlan(plan: readonly DrivePlanEntry[]): string {
     const editor = drive.preferredEditor
       ? ` editor=${drive.preferredEditor}`
       : "";
-    return `  ${drive.slug}  (${kind}, id=${drive.id}${editor})  [${source}]`;
+    const id = drive.id ?? "generated";
+    return `  ${drive.slug}  (${kind}, id=${id}${editor})  [${source}]`;
   });
   return ["drives:", ...lines].join("\n");
 }

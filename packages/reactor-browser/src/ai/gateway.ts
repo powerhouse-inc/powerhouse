@@ -20,6 +20,8 @@ export interface AiGatewayStatus {
   keySetBy: string | null;
   keySetAt: string | null;
   model: string;
+  /** This host can set a demo key of its own, which it never sends here. */
+  demoKeyAvailable: boolean;
 }
 
 /**
@@ -133,6 +135,13 @@ export function setAiGatewayKey(
   );
 }
 
+/** Asks the host to use its demo key, tested as a typed one is. */
+export function setAiGatewayDemoKey(
+  options: AiGatewayOptions = {},
+): Promise<AiGatewayStatus> {
+  return adminCall("/key/demo", { method: "PUT" }, options);
+}
+
 export function resetAiGatewayKey(
   options: AiGatewayOptions = {},
 ): Promise<AiGatewayStatus> {
@@ -156,7 +165,39 @@ export interface UseAiGatewayResult {
   /** Connection for {@link useReactorChat}, once the gateway has a key. */
   connection: AiConnection | undefined;
   setKey: (value: string) => Promise<void>;
+  setDemoKey: () => Promise<void>;
   resetKey: () => Promise<void>;
+}
+
+const GATEWAY_RETRY_MS = 5_000;
+
+/**
+ * Reports what the gateway answers, asking again while it answers with an error.
+ * Waiting can change that one: a host stopped hard holds its workflow lease for
+ * up to a minute, so the runtime the gateway needs arrives after it serves.
+ *
+ * @returns Stops asking
+ */
+export function watchAiGatewayAccess(
+  onAnswer: (access: AiGatewayAccess) => void,
+  options: AiGatewayOptions = {},
+  retryMs = GATEWAY_RETRY_MS,
+): () => void {
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const ask = async () => {
+    const answer = await fetchAiGatewayAccess(options);
+    if (stopped) return;
+    onAnswer(answer);
+    if (answer.access === "error") {
+      timer = setTimeout(() => void ask(), retryMs);
+    }
+  };
+  void ask();
+  return () => {
+    stopped = true;
+    clearTimeout(timer);
+  };
 }
 
 /** The gateway as the signed-in user sees it; asks again when they change. */
@@ -165,18 +206,17 @@ export function useAiGateway(): UseAiGatewayResult {
   const [gateway, setGateway] = useState<AiGatewayAccess>();
 
   useEffect(() => {
-    let current = true;
     setGateway(undefined);
-    void fetchAiGatewayAccess().then((answer) => {
-      if (current) setGateway(answer);
-    });
-    return () => {
-      current = false;
-    };
+    return watchAiGatewayAccess(setGateway);
   }, [address]);
 
   const setKey = useCallback(async (value: string) => {
     const status = await setAiGatewayKey(value);
+    setGateway({ access: "admin", status });
+  }, []);
+
+  const setDemoKey = useCallback(async () => {
+    const status = await setAiGatewayDemoKey();
     setGateway({ access: "admin", status });
   }, []);
 
@@ -194,5 +234,5 @@ export function useAiGateway(): UseAiGatewayResult {
     [ready],
   );
 
-  return { gateway, connection, setKey, resetKey };
+  return { gateway, connection, setKey, setDemoKey, resetKey };
 }

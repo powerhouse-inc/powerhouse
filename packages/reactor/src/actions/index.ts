@@ -19,9 +19,13 @@ export {
 /**
  * Creates a DELETE_DOCUMENT action for document deletion.
  */
-export function deleteDocumentAction(documentId: string): Action {
+export function deleteDocumentAction(
+  documentId: string,
+  options: { keepSlug?: boolean } = {},
+): Action {
   const input: DeleteDocumentActionInput = {
     documentId,
+    ...(options.keepSlug ? { keepSlug: true } : {}),
   };
 
   return {

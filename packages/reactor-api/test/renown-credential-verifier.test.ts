@@ -3,12 +3,15 @@ import { createRenownCredentialVerifier } from "../src/services/renown-credentia
 
 const mockFetchDelegationCredential = vi.fn();
 const mockResolveSwitchboardEndpoint = vi.fn();
+const mockVerifyDelegationProof = vi.fn();
 
 vi.mock("@renown/sdk", () => ({
   fetchDelegationCredential: (...args: unknown[]) =>
     mockFetchDelegationCredential(...args),
   resolveSwitchboardEndpoint: (...args: unknown[]) =>
     mockResolveSwitchboardEndpoint(...args),
+  verifyDelegationProof: (...args: unknown[]) =>
+    mockVerifyDelegationProof(...args),
 }));
 
 describe("createRenownCredentialVerifier", () => {
@@ -75,5 +78,56 @@ describe("createRenownCredentialVerifier", () => {
       baseUrl: "http://renown.test",
       discover: false,
     });
+  });
+});
+
+describe("createRenownCredentialVerifier, keptOnly", () => {
+  const credential = { id: "urn:uuid:kept" };
+  const params = { address: "0xabc", chainId: 1, appId: "did:key:app" };
+  const keep = (held?: unknown) => ({
+    get: vi.fn().mockReturnValue(held),
+    set: vi.fn(),
+    delete: vi.fn(),
+  });
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it("accepts a kept credential whose proof verifies, asking nobody", async () => {
+    mockVerifyDelegationProof.mockResolvedValue(true);
+    const verify = await createRenownCredentialVerifier({
+      keep: keep(credential) as never,
+      keptOnly: true,
+    });
+
+    await expect(verify(params)).resolves.toBe(true);
+    expect(mockVerifyDelegationProof).toHaveBeenCalledWith(credential, 1);
+    expect(mockResolveSwitchboardEndpoint).not.toHaveBeenCalled();
+    expect(mockFetchDelegationCredential).not.toHaveBeenCalled();
+  });
+
+  it("refuses a kept credential whose proof doesn't verify", async () => {
+    mockVerifyDelegationProof.mockResolvedValue(false);
+    const verify = await createRenownCredentialVerifier({
+      keep: keep(credential) as never,
+      keptOnly: true,
+    });
+
+    await expect(verify(params)).resolves.toBe(false);
+  });
+
+  it("refuses someone with no kept credential", async () => {
+    const verify = await createRenownCredentialVerifier({
+      keep: keep() as never,
+      keptOnly: true,
+    });
+
+    await expect(verify(params)).resolves.toBe(false);
+    expect(mockVerifyDelegationProof).not.toHaveBeenCalled();
+  });
+
+  it("refuses to start with nowhere to keep credentials", async () => {
+    await expect(
+      createRenownCredentialVerifier({ keptOnly: true }),
+    ).rejects.toThrow(/auth.offlineCredentials/);
   });
 });

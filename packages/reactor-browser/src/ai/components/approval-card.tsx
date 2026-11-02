@@ -1,4 +1,4 @@
-import { Check, X } from "lucide-react";
+import { Check, CheckCheck, X } from "lucide-react";
 import type { PendingApproval } from "../types.js";
 
 function formatArgs(args: unknown): string {
@@ -18,10 +18,13 @@ function formatArgs(args: unknown): string {
 export function ApprovalCard({
   approval,
   onApprove,
+  onApproveAll,
   onReject,
 }: {
   approval: PendingApproval;
   onApprove: (toolCallId: string) => void;
+  /** Offers Approve all when given */
+  onApproveAll?: () => void;
   onReject: (toolCallId: string) => void;
 }) {
   return (
@@ -41,6 +44,17 @@ export function ApprovalCard({
           <Check size={14} />
           Approve
         </button>
+        {onApproveAll && (
+          <button
+            type="button"
+            onClick={onApproveAll}
+            title="Approve this and everything else needed to answer this message"
+            className="ph-chat-approve-all flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
+          >
+            <CheckCheck size={14} />
+            Approve all
+          </button>
+        )}
         <button
           type="button"
           onClick={() => onReject(approval.toolCallId)}

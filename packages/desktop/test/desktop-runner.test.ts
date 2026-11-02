@@ -13,6 +13,8 @@ import { spawnSync } from "node:child_process";
 import {
   bundleStack,
   readLocalPackages,
+  pluginPackagesOf,
+  pruneStack,
   stackManifest,
 } from "../src/bundle-stack.js";
 import { resolveShell, shellEnv, tauriConfigPatch } from "../src/shell.js";
@@ -254,7 +256,29 @@ describe("bundle-stack staging", () => {
       readFileSync(path.join(result.stackDir, "package.json"), "utf8"),
     ) as { name: string; dependencies: Record<string, string> };
     expect(manifest.name).toBe("desk-lab");
-    expect(manifest.dependencies["@powerhousedao/ph-cli"]).toBe("dev");
+    expect(manifest.dependencies["@powerhousedao/ph-run"]).toBe("dev");
+    expect(manifest.dependencies).not.toHaveProperty("@powerhousedao/ph-cli");
+  });
+
+  it("leaves out a build of Connect in dist, which nothing serves", () => {
+    const dir = makeProject();
+    mkdirSync(path.join(dir, "dist", "assets"), { recursive: true });
+    mkdirSync(path.join(dir, "dist", "browser"), { recursive: true });
+    mkdirSync(path.join(dir, "dist", "node"), { recursive: true });
+    writeFileSync(path.join(dir, "dist", "assets", "app.js"), "");
+    writeFileSync(path.join(dir, "dist", "browser", "index.js"), "");
+    writeFileSync(path.join(dir, "dist", "node", "index.mjs"), "");
+    const { stackDir } = bundleStack({
+      projectRoot: dir,
+      shellProjectDir: tempDir("ph-desktop-shell-"),
+      vendor: false,
+      logger: () => undefined,
+    });
+    expect(existsSync(path.join(stackDir, "dist", "node", "index.mjs"))).toBe(
+      true,
+    );
+    expect(existsSync(path.join(stackDir, "dist", "assets"))).toBe(false);
+    expect(existsSync(path.join(stackDir, "dist", "browser"))).toBe(false);
   });
 });
 
@@ -267,10 +291,211 @@ function packTarball(dir: string, file: string, name: string): string {
     JSON.stringify({ name, version: "1.0.0-dev.1" }),
   );
   const tarball = path.join(dir, file);
-  const r = spawnSync("tar", ["-czf", tarball, "-C", src, "package"]);
+  const r = spawnSync("tar", ["-czf", file, "-C", src, "package"], {
+    cwd: dir,
+  });
   expect(r.status).toBe(0);
   return tarball;
 }
+
+describe("the package a stack is", () => {
+  it("keeps the project's version and exports, which its pieces and models need", () => {
+    const parent = tempDir("ph-desktop-identity-");
+    const projectRoot = path.join(parent, "project");
+    mkdirSync(projectRoot);
+    const exports = { "./document-models": { node: "./dist/models.mjs" } };
+    writeFileSync(
+      path.join(projectRoot, "package.json"),
+      JSON.stringify({ name: "lab", version: "1.2.3", exports }),
+    );
+    const { stackDir } = bundleStack({
+      projectRoot,
+      shellProjectDir: path.join(parent, "shell"),
+      vendor: false,
+      logger: () => undefined,
+    });
+    expect(
+      JSON.parse(readFileSync(path.join(stackDir, "package.json"), "utf8")),
+    ).toMatchObject({ name: "lab", version: "1.2.3", exports });
+  });
+});
+
+describe("the OAuth clients a stack ships", () => {
+  function stagedFrom(clients: Record<string, string>) {
+    const parent = tempDir("ph-desktop-oauth-");
+    const projectRoot = path.join(parent, "project");
+    mkdirSync(projectRoot);
+    writeFileSync(path.join(projectRoot, "package.json"), "{}");
+    writeFileSync(path.join(parent, "desktop.json"), "the desktop client");
+    writeFileSync(path.join(parent, "web.json"), "the web client");
+    writeFileSync(
+      path.join(projectRoot, "powerhouse.config.json"),
+      JSON.stringify({
+        keep: "this",
+        workflows: { oauthApps: [{ id: "google", clients }] },
+      }),
+    );
+    const logs: string[] = [];
+    const { stackDir } = bundleStack({
+      projectRoot,
+      shellProjectDir: path.join(parent, "shell"),
+      vendor: false,
+      logger: (message) => logs.push(message),
+    });
+    const config = JSON.parse(
+      readFileSync(path.join(stackDir, "powerhouse.config.json"), "utf8"),
+    ) as {
+      keep: string;
+      workflows: { oauthApps: { clients: Record<string, string> }[] };
+    };
+    return { config, logs, stackDir };
+  }
+
+  it("moves the desktop client inside the stack, and leaves the web one out", () => {
+    const { config, stackDir } = stagedFrom({
+      desktop: "../desktop.json",
+      web: "../web.json",
+    });
+    expect(config.keep).toBe("this");
+    expect(config.workflows.oauthApps[0].clients).toEqual({
+      desktop: "./oauth/desktop.json",
+    });
+    expect(
+      readFileSync(path.join(stackDir, "oauth/desktop.json"), "utf8"),
+    ).toBe("the desktop client");
+    expect(existsSync(path.join(stackDir, "oauth/web.json"))).toBe(false);
+  });
+
+  it("says so when the desktop client isn't there", () => {
+    const { config, logs } = stagedFrom({ desktop: "../missing.json" });
+    expect(config.workflows.oauthApps[0].clients).toEqual({});
+    expect(logs.join(" ")).toContain("no desktop client");
+  });
+});
+
+describe("the AI demo key a stack ships", () => {
+  function stagedFrom(demoKeyFile: string) {
+    const parent = tempDir("ph-desktop-demo-");
+    const projectRoot = path.join(parent, "project");
+    mkdirSync(projectRoot);
+    writeFileSync(path.join(projectRoot, "package.json"), "{}");
+    writeFileSync(path.join(parent, "demo-key.txt"), "the demo key");
+    writeFileSync(
+      path.join(projectRoot, "powerhouse.config.json"),
+      JSON.stringify({ ai: { demoKeyFile } }),
+    );
+    const logs: string[] = [];
+    const { stackDir } = bundleStack({
+      projectRoot,
+      shellProjectDir: path.join(parent, "shell"),
+      vendor: false,
+      logger: (message) => logs.push(message),
+    });
+    const config = JSON.parse(
+      readFileSync(path.join(stackDir, "powerhouse.config.json"), "utf8"),
+    ) as { ai: { demoKeyFile?: string } };
+    return { config, logs, stackDir };
+  }
+
+  it("moves it inside the stack", () => {
+    const { config, stackDir } = stagedFrom("../demo-key.txt");
+    expect(config.ai.demoKeyFile).toBe("./ai/demo-key.txt");
+    expect(readFileSync(path.join(stackDir, "ai/demo-key.txt"), "utf8")).toBe(
+      "the demo key",
+    );
+  });
+
+  it("ships none when the file isn't there, as on a build with no secrets", () => {
+    const { config, logs, stackDir } = stagedFrom("../missing.txt");
+    expect(config.ai.demoKeyFile).toBeUndefined();
+    expect(existsSync(path.join(stackDir, "ai"))).toBe(false);
+    expect(logs.join(" ")).toContain("no AI demo key");
+  });
+});
+
+describe("what a stack leaves out", () => {
+  function stackWith(files: string[]): string {
+    const dir = tempDir("ph-desktop-prune-");
+    for (const file of files) {
+      mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+      writeFileSync(path.join(dir, file), "x");
+    }
+    return dir;
+  }
+
+  it("removes what nothing reads at runtime, and folders that leaves empty", () => {
+    const dir = stackWith([
+      "node_modules/a/index.d.ts",
+      "node_modules/a/index.d.mts",
+      "node_modules/a/index.js.map",
+      "node_modules/a/index.test.js",
+      "node_modules/a/README.md",
+      "node_modules/a/CHANGELOG.md",
+      "node_modules/a/__tests__/deep/case.js",
+      "node_modules/a/types/only.d.ts",
+      "dist/types/thing.d.ts",
+      "hosts/connect/page.test.tsx",
+    ]);
+
+    expect(pruneStack(dir)).toBe(10);
+    expect(existsSync(path.join(dir, "node_modules/a/types"))).toBe(false);
+    expect(existsSync(path.join(dir, "dist/types"))).toBe(false);
+  });
+
+  it("keeps code, licences, and the project's own notes", () => {
+    const kept = [
+      "node_modules/a/index.js",
+      "node_modules/a/LICENSE",
+      "node_modules/a/LICENSE.md",
+      "node_modules/a/package.json",
+      "node_modules/a/map.js",
+      "node_modules/a/pglite.wasm",
+      "node_modules/a/test/fixture.js",
+      "agents/README.md",
+    ];
+    const dir = stackWith(kept);
+
+    expect(pruneStack(dir)).toBe(0);
+    for (const file of kept)
+      expect(existsSync(path.join(dir, file))).toBe(true);
+  });
+});
+
+describe("the plugins a stack ships", () => {
+  it("names the package of each plugin that resolves in Node", () => {
+    const connectBuiltIn = "@powerhousedao/connect/plugins/workflows";
+    const packages = pluginPackagesOf(
+      [
+        "@powerhousedao/portle/switchboard",
+        { module: "@powerhousedao/switchboard/plugins/ai", config: {} },
+        { module: "off-plugin", enabled: false },
+        "plain-plugin/entry",
+        "./local-plugin.js",
+        connectBuiltIn,
+      ],
+      "hosts/x/host.js",
+      (specifier) => specifier !== connectBuiltIn,
+    );
+    expect(packages).toEqual([
+      "@powerhousedao/portle",
+      "@powerhousedao/switchboard",
+      "plain-plugin",
+    ]);
+  });
+
+  it("depends on them, from a tarball when there is one", () => {
+    const manifest = stackManifest({
+      name: "lab",
+      version: "6.0.0",
+      local: { "@powerhousedao/portle": "file:/p/portle.tgz" },
+      plugins: ["@powerhousedao/portle", "plain-plugin"],
+    });
+    expect(manifest.dependencies).toMatchObject({
+      "@powerhousedao/portle": "file:/p/portle.tgz",
+      "plain-plugin": "6.0.0",
+    });
+  });
+});
 
 describe("bundle-stack local packages", () => {
   it("names each tarball by the package inside it", () => {
@@ -297,7 +522,7 @@ describe("bundle-stack local packages", () => {
 
   it("overrides every local package and names the same spec directly", () => {
     const local = {
-      "@powerhousedao/ph-cli": "file:/p/ph-cli.tgz",
+      "@powerhousedao/ph-run": "file:/p/ph-run.tgz",
       "@powerhousedao/host-core": "file:/p/host-core.tgz",
       "@powerhousedao/shared": "file:/p/shared.tgz",
     };
@@ -306,7 +531,7 @@ describe("bundle-stack local packages", () => {
       private: true,
       type: "module",
       dependencies: {
-        "@powerhousedao/ph-cli": "file:/p/ph-cli.tgz",
+        "@powerhousedao/ph-run": "file:/p/ph-run.tgz",
         "@powerhousedao/host-core": "file:/p/host-core.tgz",
       },
       overrides: local,
@@ -315,11 +540,11 @@ describe("bundle-stack local packages", () => {
     const partial = stackManifest({
       name: "lab",
       version: "6.0.0",
-      phCliSpec: "/p/cli.tgz",
+      phCliSpec: "/p/run.tgz",
       local: { "@powerhousedao/shared": "file:/p/shared.tgz" },
     });
     expect(partial.dependencies).toEqual({
-      "@powerhousedao/ph-cli": "/p/cli.tgz",
+      "@powerhousedao/ph-run": "/p/run.tgz",
       "@powerhousedao/host-core": "6.0.0",
     });
     expect(stackManifest({ name: "lab", version: "dev" })).not.toHaveProperty(

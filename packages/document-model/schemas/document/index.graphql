@@ -84,6 +84,27 @@ input SetPreferredEditorAction {
   input: SetPreferredEditorActionInput!
 }
 
+enum SET_SLUG {
+  SET_SLUG
+}
+
+input SetSlugActionInput {
+  slug: String!
+}
+
+type SetSlugOperation implements IOperation {
+  type: String!
+  input: SetSlugActionInput!
+  index: Int!
+  timestamp: DateTime!
+  hash: String!
+}
+
+input SetSlugAction {
+  type: SET_SLUG!
+  input: SetSlugActionInput!
+}
+
 enum UNDO {
   UNDO
 }
@@ -113,12 +134,14 @@ input RedoAction {
 union DocumentAction =
   | SetNameAction
   | SetPreferredEditorAction
+  | SetSlugAction
   | UndoAction
   | RedoAction
 
 type Mutation {
   setName(input: SetNameAction!): IDocument
   setPreferredEditor(input: SetPreferredEditorAction!): IDocument
+  setSlug(input: SetSlugAction!): IDocument
   undo(input: UndoAction!): IDocument
   redo(input: RedoAction!): IDocument
 }

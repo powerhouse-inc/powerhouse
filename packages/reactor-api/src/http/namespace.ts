@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, win32 } from "node:path";
 
 /**
  * A package's namespace is its npm name, used verbatim as one or two path
@@ -101,8 +101,9 @@ export function assertRelativeRoutePath(path: string): string {
  * always a name:
  * - `@scope/pkg` — already a name.
  * - `@scope/pkg@1.3.9` — a registry spec; only the loader strips the tag.
- * - `/Users/me/project` — the local project, which switchboard registers by
- *   `process.cwd()`. Its real name lives in its package.json.
+ * - `/Users/me/project` or `D:\\me\\project` — the local project, which
+ *   switchboard registers by `process.cwd()`. Its real name lives in its
+ *   package.json.
  *
  * Deriving a URL segment straight from the key would give a developer's home
  * directory a route namespace, so the path form is resolved rather than slugged.
@@ -114,7 +115,9 @@ export function resolvePackageName(
   const withoutVersion = stripVersionSpec(key);
   if (isPackageName(withoutVersion)) return withoutVersion;
 
-  if (key.startsWith("/") || key.startsWith(".")) {
+  // `win32` on every platform: it also takes the POSIX form, and a key is only
+  // ever read here, so a Windows path on another OS just finds no package.json.
+  if (key.startsWith(".") || win32.isAbsolute(key)) {
     const name = readPackageJsonName(key);
     if (name && isPackageName(name)) return name;
     throw new InvalidNamespaceError(

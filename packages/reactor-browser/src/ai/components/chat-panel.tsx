@@ -67,10 +67,12 @@ function ToolCard({ part }: { part: Extract<ChatPart, { type: "tool" }> }) {
 function MessageView({
   message,
   onApprove,
+  onApproveAll,
   onReject,
 }: {
   message: ChatMessage;
   onApprove: (toolCallId: string) => void;
+  onApproveAll: () => void;
   onReject: (toolCallId: string) => void;
 }) {
   if (message.role === "user") {
@@ -121,6 +123,7 @@ function MessageView({
                   args: part.args,
                 }}
                 onApprove={onApprove}
+                onApproveAll={onApproveAll}
                 onReject={onReject}
               />
             )}
@@ -257,6 +260,7 @@ export function ChatPanel({
             key={message.id}
             message={message}
             onApprove={chat.approve}
+            onApproveAll={chat.approveAll}
             onReject={chat.reject}
           />
         ))}

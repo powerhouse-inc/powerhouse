@@ -1,3 +1,175 @@
+## 6.2.3-dev.90 (2026-11-02)
+
+### 🚀 Features
+
+- **ai:** a host can offer a demo key ([11147a01dc](https://github.com/powerhouse-inc/powerhouse/commit/11147a01dc))
+- **builder-tools:** serve the web manifest on the dev server ([c2d2261186](https://github.com/powerhouse-inc/powerhouse/commit/c2d2261186))
+- **builder-tools:** name the icon an iPhone puts on its home screen ([109412c47f](https://github.com/powerhouse-inc/powerhouse/commit/109412c47f))
+- **desktop:** grant generated shells the system browser opener ([db0642a856](https://github.com/powerhouse-inc/powerhouse/commit/db0642a856))
+- **desktop:** a sign-in page and a local key for generated shells ([7cce4b7316](https://github.com/powerhouse-inc/powerhouse/commit/7cce4b7316))
+- **desktop:** fold a stack into a few thousand files ([9ff7083857](https://github.com/powerhouse-inc/powerhouse/commit/9ff7083857))
+- **host-core:** a supervisor can stop a compound through its stdin ([78c9b941f5](https://github.com/powerhouse-inc/powerhouse/commit/78c9b941f5))
+- **ph-cli:** serve a built Connect without vite ([a145e50dff](https://github.com/powerhouse-inc/powerhouse/commit/a145e50dff))
+- **ph-run:** run a host with none of the tools that build one ([ff0ac7910f](https://github.com/powerhouse-inc/powerhouse/commit/ff0ac7910f))
+- **reactor:** tell a trust policy the path and the action type ([9c0f45da06](https://github.com/powerhouse-inc/powerhouse/commit/9c0f45da06))
+- **reactor:** set a slug after creation, and a live slug over a deleted id ([234deeae76](https://github.com/powerhouse-inc/powerhouse/commit/234deeae76))
+- **reactor-api:** owner claim, kept credentials, a bind address and host facts ([21def9b8fe](https://github.com/powerhouse-inc/powerhouse/commit/21def9b8fe))
+- **reactor-browser:** export the desktop shell for other sign-ins ([a0dcb5016e](https://github.com/powerhouse-inc/powerhouse/commit/a0dcb5016e))
+- **reactor-browser:** approve a whole turn, or auto-approve through a gateway ([36100f1a6a](https://github.com/powerhouse-inc/powerhouse/commit/36100f1a6a))
+- **reactor-workflow:** add a workflow.runs telemetry gauge ([400bdff1b6](https://github.com/powerhouse-inc/powerhouse/commit/400bdff1b6))
+- **renown:** delegation statements and a four-way credential check ([e6f4fd0af4](https://github.com/powerhouse-inc/powerhouse/commit/e6f4fd0af4))
+- **renown:** sign in through the system browser from a desktop window ([e787eab695](https://github.com/powerhouse-inc/powerhouse/commit/e787eab695))
+- **renown:** credentials no Renown holds ([337ddba394](https://github.com/powerhouse-inc/powerhouse/commit/337ddba394))
+- **shared:** a node build leaves out what only a browser runs ([7b9d548b09](https://github.com/powerhouse-inc/powerhouse/commit/7b9d548b09))
+- **switchboard:** verify delegated signers with authEnforcement off ([b896f23cfe](https://github.com/powerhouse-inc/powerhouse/commit/b896f23cfe))
+- **switchboard:** ensureDrive, by slug ([8ae38afcb6](https://github.com/powerhouse-inc/powerhouse/commit/8ae38afcb6))
+- **switchboard:** open both PGlite stores at once ([484877830e](https://github.com/powerhouse-inc/powerhouse/commit/484877830e))
+
+### 🩹 Fixes
+
+- **builder-tools:** one PWA for dev and build, under the project's name ([25759fc2fc](https://github.com/powerhouse-inc/powerhouse/commit/25759fc2fc))
+- **connect:** add the default drives missed before sign-in ([bdc31a74f2](https://github.com/powerhouse-inc/powerhouse/commit/bdc31a74f2))
+- **connect-core:** keep the delete dialog open until the delete lands ([e5823a13f9](https://github.com/powerhouse-inc/powerhouse/commit/e5823a13f9))
+- **design-system:** a delegation statement is not a signature ([e11db35cbb](https://github.com/powerhouse-inc/powerhouse/commit/e11db35cbb))
+- **desktop:** turning the sign-in page off removes it ([db4cf93c1e](https://github.com/powerhouse-inc/powerhouse/commit/db4cf93c1e))
+- **desktop:** read local tarballs with GNU tar on Windows ([ec389ada3e](https://github.com/powerhouse-inc/powerhouse/commit/ec389ada3e))
+- **desktop:** pack and test the stack on Windows ([c6317e2c15](https://github.com/powerhouse-inc/powerhouse/commit/c6317e2c15))
+- **desktop:** the stack ships the packages its hosts' plugins come from ([faa1168ba4](https://github.com/powerhouse-inc/powerhouse/commit/faa1168ba4))
+- **desktop:** a packaged app ships its desktop OAuth client ([b05d0af319](https://github.com/powerhouse-inc/powerhouse/commit/b05d0af319))
+- **desktop:** the stack keeps the project's version and exports ([533d82bd2f](https://github.com/powerhouse-inc/powerhouse/commit/533d82bd2f))
+- **desktop:** show progress on the page's background, centred ([ed194e6bda](https://github.com/powerhouse-inc/powerhouse/commit/ed194e6bda))
+- **desktop:** leave out what a running app never reads ([50623de920](https://github.com/powerhouse-inc/powerhouse/commit/50623de920))
+- **ph-cli:** settle NODE_ENV before a build loads its host ([7e47a7ba9c](https://github.com/powerhouse-inc/powerhouse/commit/7e47a7ba9c))
+- **portle:** keep state with the host's other .ph state ([9058328718](https://github.com/powerhouse-inc/powerhouse/commit/9058328718))
+- **reactor:** keep the trust context optional for direct callers ([1760590c37](https://github.com/powerhouse-inc/powerhouse/commit/1760590c37))
+- **reactor:** rebuild the header scope from a document keyframe ([270ffc7639](https://github.com/powerhouse-inc/powerhouse/commit/270ffc7639))
+- **reactor,reactor-api:** answer the status of a job that deleted its document ([87f10dbe66](https://github.com/powerhouse-inc/powerhouse/commit/87f10dbe66))
+- **reactor-api:** refuse an owner claim on a host others can reach ([62f3a39c6a](https://github.com/powerhouse-inc/powerhouse/commit/62f3a39c6a))
+- **reactor-api:** route a local package on a Windows path ([c7c8b2270b](https://github.com/powerhouse-inc/powerhouse/commit/c7c8b2270b))
+- **reactor-api:** log a processor package that fails to initialize ([6827269a34](https://github.com/powerhouse-inc/powerhouse/commit/6827269a34))
+- **reactor-api:** compose the supergraph less often at boot ([f70f2223f9](https://github.com/powerhouse-inc/powerhouse/commit/f70f2223f9))
+- **reactor-api:** load devcert only for local HTTPS ([0be336be4e](https://github.com/powerhouse-inc/powerhouse/commit/0be336be4e))
+- **reactor-browser:** keep asking a gateway that answers with an error ([84872cbdb4](https://github.com/powerhouse-inc/powerhouse/commit/84872cbdb4))
+- **reactor-router,reactor-browser:** remote drive writes that reach a reactor-drive and outlast a request ([dd97654823](https://github.com/powerhouse-inc/powerhouse/commit/dd97654823))
+- **reactor-workflow:** stop a run's async context pinning its output ([65a4a0c4a6](https://github.com/powerhouse-inc/powerhouse/commit/65a4a0c4a6))
+- **reactor-workflow:** what a run leaves follows the .ph tree ([6079ef2f33](https://github.com/powerhouse-inc/powerhouse/commit/6079ef2f33))
+- **shared:** a node build keeps an editors/index.ts that exports more than editors ([2f7c664f51](https://github.com/powerhouse-inc/powerhouse/commit/2f7c664f51))
+- **shared,powerhouse-vetra-packages:** the prerendered Connect shell gets its editors ([1b3794d1c1](https://github.com/powerhouse-inc/powerhouse/commit/1b3794d1c1))
+- **switchboard:** recreate a drive whose id a deleted drive holds ([059fad1f3f](https://github.com/powerhouse-inc/powerhouse/commit/059fad1f3f))
+- **switchboard:** the env can turn workflows off under the plugin host ([51543d6302](https://github.com/powerhouse-inc/powerhouse/commit/51543d6302))
+- **switchboard:** workers can't verify kept credentials either ([e3563478f9](https://github.com/powerhouse-inc/powerhouse/commit/e3563478f9))
+- **switchboard:** close the stores on a fatal error on Windows ([d07d995c57](https://github.com/powerhouse-inc/powerhouse/commit/d07d995c57))
+- **switchboard:** load Sentry only for a host that reports to it ([2f5196e31b](https://github.com/powerhouse-inc/powerhouse/commit/2f5196e31b))
+- **switchboard:** a self-verifying host mounts its renown read model at once ([c51a4c2881](https://github.com/powerhouse-inc/powerhouse/commit/c51a4c2881))
+- **workflow:** a restart takes back its own lease on an embedded journal ([e83365c6d4](https://github.com/powerhouse-inc/powerhouse/commit/e83365c6d4))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.89 (2026-11-02)
+
+### 🚀 Features
+
+- **workflow:** property groups in the AI pieces and Find documents ([8286e17957](https://github.com/powerhouse-inc/powerhouse/commit/8286e17957))
+- **workflow:** router, loop and sub-flow blocks ([16f3ee7c3c](https://github.com/powerhouse-inc/powerhouse/commit/16f3ee7c3c))
+- **workflow:** lane-routed canvas edges, loop body frame, action subtitles ([0e8e1d9123](https://github.com/powerhouse-inc/powerhouse/commit/0e8e1d9123))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.88 (2026-11-01)
+
+This was a version bump only, there were no code changes.
+
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **codegen:** refuse reserved operation names at generation ([0b6454241d](https://github.com/powerhouse-inc/powerhouse/commit/0b6454241d))
+- **connect:** create new drives where the host config says, and say when that switchboard isn't answering ([2b3ef15468](https://github.com/powerhouse-inc/powerhouse/commit/2b3ef15468))
+- **connect-core:** route undo and redo through the GraphQL routable backend ([64eaa08881](https://github.com/powerhouse-inc/powerhouse/commit/64eaa08881))
+- **connect-core:** build the router from the host's router settings ([6c4be34c1f](https://github.com/powerhouse-inc/powerhouse/commit/6c4be34c1f))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+- **document-model:** add the ph field DSL ([b573e1939d](https://github.com/powerhouse-inc/powerhouse/commit/b573e1939d))
+- **document-model:** add compiler naming and definition identity ([dd8fcfc992](https://github.com/powerhouse-inc/powerhouse/commit/dd8fcfc992))
+- **document-model:** add the code-first model kernel, ph field DSL and compiler naming ([#3353](https://github.com/powerhouse-inc/powerhouse/pull/3353))
+- **host-core:** router settings in the host config; Connect refuses placement.primary ([384abd8357](https://github.com/powerhouse-inc/powerhouse/commit/384abd8357))
+- **host-core:** project router settings to Connect; reactorWorker follows the browser reactor ([7c010daf4d](https://github.com/powerhouse-inc/powerhouse/commit/7c010daf4d))
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **host-core:** router settings in the host config ([#3355](https://github.com/powerhouse-inc/powerhouse/pull/3355))
+- **reactor:** log why sync holds a document ([8e96b27ee1](https://github.com/powerhouse-inc/powerhouse/commit/8e96b27ee1))
+- **reactor:** findReferencing over an indexed RETRACT target (migration 030) ([04de8d801c](https://github.com/powerhouse-inc/powerhouse/commit/04de8d801c))
+- **reactor:** undoV3 feature flag, off by default ([5e69f6cd0f](https://github.com/powerhouse-inc/powerhouse/commit/5e69f6cd0f))
+- **reactor:** base-reducer 3 engine behind undoV3 ([0cd42c739c](https://github.com/powerhouse-inc/powerhouse/commit/0cd42c739c))
+- **reactor:** base-reducer 3 decisions walk the retraction rule ([d3f3b39894](https://github.com/powerhouse-inc/powerhouse/commit/d3f3b39894))
+- **reactor:** one protocol gate decides which protocol versions a reactor runs ([148cb6f004](https://github.com/powerhouse-inc/powerhouse/commit/148cb6f004))
+- **reactor:** refuse a base-reducer 3 create whose model cannot load ([e54d7f426a](https://github.com/powerhouse-inc/powerhouse/commit/e54d7f426a))
+- **reactor:** stored documents of a model this reactor cannot run defer until the model loads ([eb6d1a0fd4](https://github.com/powerhouse-inc/powerhouse/commit/eb6d1a0fd4))
+- **reactor:** read models skip documents whose protocol this reactor cannot run ([c1c74a3175](https://github.com/powerhouse-inc/powerhouse/commit/c1c74a3175))
+- **reactor:** sync refuses before load a base-reducer 3 document whose model this reactor cannot run ([a75861b101](https://github.com/powerhouse-inc/powerhouse/commit/a75861b101))
+- **reactor:** a base-reducer number this build does not know runs as the highest version the reactor runs ([2e6433b2d1](https://github.com/powerhouse-inc/powerhouse/commit/2e6433b2d1))
+- **reactor:** undo, redo and undo availability on the in-process client ([91a848dbd7](https://github.com/powerhouse-inc/powerhouse/commit/91a848dbd7))
+- **reactor:** undo v3 re-land engine, base-reducer 3 behind undoV3 ([#3327](https://github.com/powerhouse-inc/powerhouse/pull/3327))
+- **reactor:** undo v3 re-land gate and refusals ([#3340](https://github.com/powerhouse-inc/powerhouse/pull/3340))
+- **reactor:** undo v3 re-land clients, undo API and router ([#3344](https://github.com/powerhouse-inc/powerhouse/pull/3344))
+- **reactor-api:** undoRedoTargets query ([24ebdc6f9a](https://github.com/powerhouse-inc/powerhouse/commit/24ebdc6f9a))
+- **reactor-browser:** undo, redo and undo targets on the light client ([a8d36c3180](https://github.com/powerhouse-inc/powerhouse/commit/a8d36c3180))
+- **reactor-browser:** undo(count, scope) and redo(count, scope) on the remote controller ([8f49ffda8c](https://github.com/powerhouse-inc/powerhouse/commit/8f49ffda8c))
+- **reactor-browser:** a switchboard backend's breaker takes unset fields as defaults, or false to never open ([634b82893f](https://github.com/powerhouse-inc/powerhouse/commit/634b82893f))
+- **reactor-monitor-app:** show port clashes on the Reactors step with a fix ([477ec947a8](https://github.com/powerhouse-inc/powerhouse/commit/477ec947a8))
+- **reactor-monitor-app:** host-rules offer Connect's router settings ([e1aafa7cb8](https://github.com/powerhouse-inc/powerhouse/commit/e1aafa7cb8))
+- **reactor-monitor-app:** builder chooses where new drives go and each switchboard connection ([78224a1f4a](https://github.com/powerhouse-inc/powerhouse/commit/78224a1f4a))
+- **reactor-monitor-app:** the Router view routes a started app as its Connect does ([8668131606](https://github.com/powerhouse-inc/powerhouse/commit/8668131606))
+- **reactor-monitor-app:** builder and Router view for router settings ([#3357](https://github.com/powerhouse-inc/powerhouse/pull/3357))
+- **reactor-router:** defaultBackend places new collections and answers parentless create defaults ([bae556ef76](https://github.com/powerhouse-inc/powerhouse/commit/bae556ef76))
+- **shared:** base-reducer 3 capability table, retraction rule and RETRACT ([b006a95770](https://github.com/powerhouse-inc/powerhouse/commit/b006a95770))
+- **shared:** serve Connect's router settings and per-switchboard connection settings ([b090b4d0f1](https://github.com/powerhouse-inc/powerhouse/commit/b090b4d0f1))
+
+### 🩹 Fixes
+
+- **apps-reactor-monitor:** check the copy's ports in the builder too ([b314508b19](https://github.com/powerhouse-inc/powerhouse/commit/b314508b19))
+- **apps-reactor-monitor:** a failed start leads with the cause from its log ([fa69426405](https://github.com/powerhouse-inc/powerhouse/commit/fa69426405))
+- **apps-reactor-monitor:** load host-rules ports under plain node ([f507416387](https://github.com/powerhouse-inc/powerhouse/commit/f507416387))
+- **apps-reactor-monitor:** only the last line of a failed run names its cause ([eddbfd2dae](https://github.com/powerhouse-inc/powerhouse/commit/eddbfd2dae))
+- **apps-reactor-monitor:** say how the copy picks each clashing port ([3764263573](https://github.com/powerhouse-inc/powerhouse/commit/3764263573))
+- **apps-reactor-monitor:** headline only a line that says what failed ([166268d79f](https://github.com/powerhouse-inc/powerhouse/commit/166268d79f))
+- **connect:** the Add drive dialog names a switchboard that refused the new drive, or asks to sign in ([60b5c06fe0](https://github.com/powerhouse-inc/powerhouse/commit/60b5c06fe0))
+- **connect:** a ?reactorClient override can't create new drives in the browser when the host sends them to a switchboard ([9d21294161](https://github.com/powerhouse-inc/powerhouse/commit/9d21294161))
+- **connect-core:** a Connect whose new drives go to a switchboard never falls back to the browser ([fd07d44b7e](https://github.com/powerhouse-inc/powerhouse/commit/fd07d44b7e))
+- **design-system:** drop the opaque band behind the home drive tiles ([57cd510de0](https://github.com/powerhouse-inc/powerhouse/commit/57cd510de0))
+- **host-core:** serve newDrives only when it names a served switchboard ([6d525ee98c](https://github.com/powerhouse-inc/powerhouse/commit/6d525ee98c))
+- **host-core:** warn about members on their runner's default port too ([724161b6ab](https://github.com/powerhouse-inc/powerhouse/commit/724161b6ab))
+- **reactor:** the write cache rebuilds an unknown base-reducer version as before ([c50f838725](https://github.com/powerhouse-inc/powerhouse/commit/c50f838725))
+- **reactor:** an unknown base-reducer version is refused with a typed error ([40b7926615](https://github.com/powerhouse-inc/powerhouse/commit/40b7926615))
+- **reactor:** the first load of a base-reducer 3 document runs base-reducer 3 load rules ([b6cf820b4e](https://github.com/powerhouse-inc/powerhouse/commit/b6cf820b4e))
+- **reactor:** read paths refuse only the base-reducer version, as before ([5b3bcadcd1](https://github.com/powerhouse-inc/powerhouse/commit/5b3bcadcd1))
+- **reactor:** only a fresh receiver takes a load's base-reducer from its CREATE ([42b5575fe4](https://github.com/powerhouse-inc/powerhouse/commit/42b5575fe4))
+- **reactor:** migration 031 hashes the model with the versions, as 023 did ([03627c2898](https://github.com/powerhouse-inc/powerhouse/commit/03627c2898))
+- **reactor-browser:** a pending RETRACT follows its local target through a rebase ([5ce883f878](https://github.com/powerhouse-inc/powerhouse/commit/5ce883f878))
+- **reactor-monitor-app:** give an added member a free port; refuse two members on one port ([11345ff71e](https://github.com/powerhouse-inc/powerhouse/commit/11345ff71e))
+- **reactor-monitor-app:** refuse a copy whose members would share a port ([767d6c69a5](https://github.com/powerhouse-inc/powerhouse/commit/767d6c69a5))
+- **reactor-monitor-app:** lead a failed start with its reason, fold the log tail ([5c950656c5](https://github.com/powerhouse-inc/powerhouse/commit/5c950656c5))
+- **reactor-monitor-app:** import refuses placement.primary on a Connect, and its primary follows Connect ([13f98f91b6](https://github.com/powerhouse-inc/powerhouse/commit/13f98f91b6))
+- **reactor-monitor-app:** router settings review: labels, ids, a narrower delete and one primary ([ded5799dce](https://github.com/powerhouse-inc/powerhouse/commit/ded5799dce))
+- **reactor-monitor-app:** the Router view never sends new drives somewhere Connect wouldn't ([5f03c9a0dc](https://github.com/powerhouse-inc/powerhouse/commit/5f03c9a0dc))
+- **reactor-monitor-app:** opening a second switchboard keeps new drives where they go ([32115af5e0](https://github.com/powerhouse-inc/powerhouse/commit/32115af5e0))
+- **reactor-monitor-app:** no two host members on one port ([#3352](https://github.com/powerhouse-inc/powerhouse/pull/3352))
+- **reactor-router:** a create the default backend refuses fails; a placed id's create defaults come from its backend ([67bbc52bc5](https://github.com/powerhouse-inc/powerhouse/commit/67bbc52bc5))
+- **shared:** a skip's replay runs under the base-reducer version its reducer runs ([1692b7ee44](https://github.com/powerhouse-inc/powerhouse/commit/1692b7ee44))
+- **shared:** an UNDO's replay runs under the base-reducer version its reducer runs ([74ea776ae4](https://github.com/powerhouse-inc/powerhouse/commit/74ea776ae4))
+- **shared:** a replay takes a passed base-reducer version only for a header number this build does not know ([0c05c18cde](https://github.com/powerhouse-inc/powerhouse/commit/0c05c18cde))
+- **workflow:** editor undo ids come from generateActionId ([#3296](https://github.com/powerhouse-inc/powerhouse/issues/3296))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.86 (2026-10-30)
 
 ### 🚀 Features

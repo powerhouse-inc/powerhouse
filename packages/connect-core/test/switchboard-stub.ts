@@ -142,7 +142,8 @@ export function switchboard(
         return data({
           documentServed: (variables.idOrSlug as string) in documents,
         });
-      case "GetDocument": {
+      case "GetDocument":
+      case "GetDocumentAtConsistency": {
         const id = variables.identifier as string;
         if (!(id in documents)) {
           return data({ document: null });
@@ -159,6 +160,12 @@ export function switchboard(
           createDocument: wireDocument(header.id, header.documentType),
         });
       }
+      case "MutateDocumentAsync":
+        return data({
+          mutateDocumentAsync: settledJob(
+            variables.documentIdentifier as string,
+          ),
+        });
       case "MutateDocumentWithOperations": {
         const id = variables.documentIdentifier as string;
         return data({

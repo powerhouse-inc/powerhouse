@@ -28,6 +28,7 @@ export {
   ENROLLMENT_FILE,
   PORTLE_DIR,
   SITE_FILE,
+  hostStateDir,
   projectRootOf,
   readEnrollment,
   readSiteSettings,

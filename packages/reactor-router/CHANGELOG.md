@@ -1,3 +1,52 @@
+## 6.2.3-dev.90 (2026-11-02)
+
+### 🚀 Features
+
+- **desktop:** fold a stack into a few thousand files ([9ff7083857](https://github.com/powerhouse-inc/powerhouse/commit/9ff7083857))
+- **ph-run:** run a host with none of the tools that build one ([ff0ac7910f](https://github.com/powerhouse-inc/powerhouse/commit/ff0ac7910f))
+- **desktop:** a sign-in page and a local key for generated shells ([7cce4b7316](https://github.com/powerhouse-inc/powerhouse/commit/7cce4b7316))
+- **desktop:** grant generated shells the system browser opener ([db0642a856](https://github.com/powerhouse-inc/powerhouse/commit/db0642a856))
+- **switchboard:** verify delegated signers with authEnforcement off ([b896f23cfe](https://github.com/powerhouse-inc/powerhouse/commit/b896f23cfe))
+
+### 🩹 Fixes
+
+- **reactor-router,reactor-browser:** remote drive writes that reach a reactor-drive and outlast a request ([dd97654823](https://github.com/powerhouse-inc/powerhouse/commit/dd97654823))
+- **desktop:** the stack ships the packages its hosts' plugins come from ([faa1168ba4](https://github.com/powerhouse-inc/powerhouse/commit/faa1168ba4))
+- **desktop:** pack and test the stack on Windows ([c6317e2c15](https://github.com/powerhouse-inc/powerhouse/commit/c6317e2c15))
+- **reactor:** keep the trust context optional for direct callers ([1760590c37](https://github.com/powerhouse-inc/powerhouse/commit/1760590c37))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.89 (2026-11-02)
+
+This was a version bump only for @powerhousedao/reactor-router to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.88 (2026-11-01)
+
+This was a version bump only for @powerhousedao/reactor-router to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **reactor-router:** defaultBackend places new collections and answers parentless create defaults ([bae556ef76](https://github.com/powerhouse-inc/powerhouse/commit/bae556ef76))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+- **reactor:** undo, redo and undo availability on the in-process client ([91a848dbd7](https://github.com/powerhouse-inc/powerhouse/commit/91a848dbd7))
+
+### 🩹 Fixes
+
+- **reactor-router:** a create the default backend refuses fails; a placed id's create defaults come from its backend ([67bbc52bc5](https://github.com/powerhouse-inc/powerhouse/commit/67bbc52bc5))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.86 (2026-10-30)
 
 This was a version bump only for @powerhousedao/reactor-router to align it with other projects, there were no code changes.

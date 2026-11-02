@@ -41,6 +41,7 @@ export interface AuthConfig {
   skipCredentialVerification?: boolean; // DANGER: removes identity verification; boot-gated to test/dev
   credentialVerificationCacheTtlMs?: number; // How long successful Renown credential checks are cached; 0 disables caching
   verifyCredential?: CredentialVerifier; // Injected credential check; required when verification is on
+  onVerified?: (user: User) => void; // Called with each caller whose bearer and credential verified
 }
 
 const DEFAULT_CREDENTIAL_CACHE_TTL_MS = 60_000;
@@ -199,6 +200,7 @@ export class AuthService implements ICredentialInvalidator {
           );
         }
       }
+      this.config.onVerified?.(user);
       return {
         user,
         admins: this.config.admins,
@@ -256,6 +258,8 @@ export class AuthService implements ICredentialInvalidator {
         throw new Error("Credentials no longer valid");
       }
     }
+
+    this.config.onVerified?.(user);
 
     // Note: We no longer block based on global allowed lists.
     // Authorization is handled at the resolver level based on document permissions.

@@ -79,6 +79,10 @@ function makeSignatureFromSignatureArray(signatureArray: string[]): Signature {
   };
 }
 
+// An entry tagged `dlg1` carries a delegation statement (ADR 0008). It proves
+// the chain behind the signature; it is not a signature of its own.
 function makeSignatures(signaturesArray: string[][] | undefined) {
-  return signaturesArray?.map(makeSignatureFromSignatureArray);
+  return signaturesArray
+    ?.filter((entry) => entry[0] !== "dlg1")
+    .map(makeSignatureFromSignatureArray);
 }

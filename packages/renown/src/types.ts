@@ -224,6 +224,8 @@ export type InternalUser = EditorUser & {
   did: string;
   credential: PowerhouseVerifiableCredential | undefined;
   profile?: RenownProfile;
+  /** Signed in with a key on this computer: no Renown holds the credential. */
+  local?: boolean;
 };
 
 // Export as User for backward compatibility within the package
@@ -280,6 +282,11 @@ export interface IRenown extends Pick<RenownEventEmitter, "on"> {
   readonly status: LoginStatus;
   login: (userDid: string) => Promise<User>;
   signIn: (params: SignInParams) => Promise<User>;
+  /** Signs in from a credential in hand, asking nobody. */
+  adoptCredential: (
+    credential: PowerhouseVerifiableCredential,
+    options?: { local?: boolean },
+  ) => Promise<User>;
   logout: () => Promise<void>;
   /** Re-check the current credential at the source; logs out if revoked/expired. */
   revalidate: () => Promise<boolean>;

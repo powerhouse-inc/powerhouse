@@ -94,7 +94,7 @@ describe("resolveDriveDeclaration", () => {
     expect(resolved.sharingType).toBe("public");
     expect(resolved.availableOffline).toBe(true);
     expect(resolved.kind).toBe("local");
-    expect(resolved.id).toBe("studio");
+    expect(resolved.id).toBeUndefined();
   });
 
   it("remote kind carries remoteUrl and ignores local-only fields", () => {
@@ -136,7 +136,7 @@ class StubDriveSeederClient implements DriveSeederClient {
     return Promise.resolve(this.locals.get(slug));
   }
   createDrive(drive: ResolvedDrive): Promise<void> {
-    this.locals.set(drive.slug, drive.id);
+    this.locals.set(drive.slug, drive.id ?? drive.slug);
     return Promise.resolve();
   }
   attachRemoteDrive(url: string): Promise<void> {
@@ -257,7 +257,7 @@ describe("explainDrivePlan", () => {
     expect(explained).toContain("drives:");
     expect(explained).toContain("vetra");
     expect(explained).toContain("local");
-    expect(explained).toContain("id=vetra");
+    expect(explained).toContain("id=generated");
     expect(explained).toContain("editor=vetra-editor");
     expect(explained).toContain("[host]");
   });

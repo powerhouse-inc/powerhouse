@@ -1,3 +1,61 @@
+## 6.2.3-dev.90 (2026-11-02)
+
+### 🚀 Features
+
+- **desktop:** fold a stack into a few thousand files ([9ff7083857](https://github.com/powerhouse-inc/powerhouse/commit/9ff7083857))
+- **ph-run:** run a host with none of the tools that build one ([ff0ac7910f](https://github.com/powerhouse-inc/powerhouse/commit/ff0ac7910f))
+- **ai:** a host can offer a demo key ([11147a01dc](https://github.com/powerhouse-inc/powerhouse/commit/11147a01dc))
+- **reactor-browser:** approve a whole turn, or auto-approve through a gateway ([36100f1a6a](https://github.com/powerhouse-inc/powerhouse/commit/36100f1a6a))
+- **desktop:** a sign-in page and a local key for generated shells ([7cce4b7316](https://github.com/powerhouse-inc/powerhouse/commit/7cce4b7316))
+- **desktop:** grant generated shells the system browser opener ([db0642a856](https://github.com/powerhouse-inc/powerhouse/commit/db0642a856))
+- **reactor-browser:** export the desktop shell for other sign-ins ([a0dcb5016e](https://github.com/powerhouse-inc/powerhouse/commit/a0dcb5016e))
+- **renown:** sign in through the system browser from a desktop window ([e787eab695](https://github.com/powerhouse-inc/powerhouse/commit/e787eab695))
+- **switchboard:** verify delegated signers with authEnforcement off ([b896f23cfe](https://github.com/powerhouse-inc/powerhouse/commit/b896f23cfe))
+
+### 🩹 Fixes
+
+- **reactor-router,reactor-browser:** remote drive writes that reach a reactor-drive and outlast a request ([dd97654823](https://github.com/powerhouse-inc/powerhouse/commit/dd97654823))
+- **desktop:** the stack ships the packages its hosts' plugins come from ([faa1168ba4](https://github.com/powerhouse-inc/powerhouse/commit/faa1168ba4))
+- **desktop:** pack and test the stack on Windows ([c6317e2c15](https://github.com/powerhouse-inc/powerhouse/commit/c6317e2c15))
+- **reactor-browser:** keep asking a gateway that answers with an error ([84872cbdb4](https://github.com/powerhouse-inc/powerhouse/commit/84872cbdb4))
+- **reactor:** keep the trust context optional for direct callers ([1760590c37](https://github.com/powerhouse-inc/powerhouse/commit/1760590c37))
+- **reactor-workflow:** stop a run's async context pinning its output ([65a4a0c4a6](https://github.com/powerhouse-inc/powerhouse/commit/65a4a0c4a6))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.89 (2026-11-02)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.88 (2026-11-01)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **reactor-browser:** a switchboard backend's breaker takes unset fields as defaults, or false to never open ([634b82893f](https://github.com/powerhouse-inc/powerhouse/commit/634b82893f))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+- **reactor-browser:** undo(count, scope) and redo(count, scope) on the remote controller ([8f49ffda8c](https://github.com/powerhouse-inc/powerhouse/commit/8f49ffda8c))
+- **reactor-browser:** undo, redo and undo targets on the light client ([a8d36c3180](https://github.com/powerhouse-inc/powerhouse/commit/a8d36c3180))
+- **reactor-api:** undoRedoTargets query ([24ebdc6f9a](https://github.com/powerhouse-inc/powerhouse/commit/24ebdc6f9a))
+- **shared:** base-reducer 3 capability table, retraction rule and RETRACT ([b006a95770](https://github.com/powerhouse-inc/powerhouse/commit/b006a95770))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a pending RETRACT follows its local target through a rebase ([5ce883f878](https://github.com/powerhouse-inc/powerhouse/commit/5ce883f878))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.86 (2026-10-30)
 
 ### 🚀 Features

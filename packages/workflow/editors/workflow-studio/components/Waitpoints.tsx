@@ -18,6 +18,10 @@ import {
   useWaitingRunsQuery,
 } from "../../workflow-editor/runtime-context.js";
 import { textAreaClass } from "../../shared/controls.js";
+import {
+  CALL_FLOW_BLOCK,
+  SUBFLOWS_PIECE,
+} from "../../workflow-editor/ui/blocks.js";
 import { formatAbsolute, formatUntil, formatWhen } from "./run-format.js";
 import { Button, Icon } from "./ui.js";
 
@@ -39,6 +43,7 @@ export function isOpenApproval(waitpoint: WaitpointRecord): boolean {
 export function waitDescription(
   waitpoint: WaitpointRecord,
   stepName: string,
+  step?: { pieceName: string; blockName: string },
 ): string {
   if (waitpoint.kind === "delay") {
     return waitpoint.resumeAt
@@ -48,6 +53,12 @@ export function waitDescription(
   const expiry = waitpoint.expiresAt
     ? `, until ${formatAbsolute(waitpoint.expiresAt)}`
     : "";
+  if (
+    step?.pieceName === SUBFLOWS_PIECE &&
+    step.blockName === CALL_FLOW_BLOCK.name
+  ) {
+    return `${stepName} is waiting for the called workflow to respond${expiry}`;
+  }
   return `${stepName} is waiting for a webhook callback${expiry}`;
 }
 
@@ -301,6 +312,7 @@ export function ApprovalCard(props: {
 export function RunWaitpoints(props: {
   waitpoints: WaitpointRecord[];
   names: Map<string, string>;
+  steps?: { stepKey: string; pieceName: string; blockName: string }[];
   onChanged: () => void;
 }) {
   const open = props.waitpoints.filter(
@@ -326,6 +338,7 @@ export function RunWaitpoints(props: {
             {waitDescription(
               waitpoint,
               props.names.get(waitpoint.stepKey) ?? waitpoint.stepKey,
+              props.steps?.find((step) => step.stepKey === waitpoint.stepKey),
             )}
           </p>
         ),

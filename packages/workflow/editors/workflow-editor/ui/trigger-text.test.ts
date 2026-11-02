@@ -89,6 +89,16 @@ describe("describeTrigger", () => {
     expect(describeTrigger(null)).toBe("Never starts: no trigger");
   });
 
+  it("names a Core tab trigger by its own name", () => {
+    expect(
+      describeTrigger({
+        pieceName: "@activepieces/piece-subflows",
+        triggerName: "callableFlow",
+        config: {},
+      }),
+    ).toBe("Callable workflow");
+  });
+
   it("names a piece trigger with its piece", () => {
     expect(
       describeTrigger({

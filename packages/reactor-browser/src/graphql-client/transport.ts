@@ -34,9 +34,17 @@ export function withStreamedBodies(
     if (typeof body !== "string") {
       return inner(input, init);
     }
+    // Not `new Blob([body]).stream()`: under Node 24 a Blob's stream keeps the
+    // caller's async context alive for good.
+    const bytes = new TextEncoder().encode(body);
     return inner(input, {
       ...init,
-      body: new Blob([body]).stream(),
+      body: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(bytes);
+          controller.close();
+        },
+      }),
       duplex: "half",
     } as RequestInit);
   };

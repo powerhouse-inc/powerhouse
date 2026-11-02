@@ -1,5 +1,7 @@
 import {
+  CALLABLE_FLOW_TRIGGER,
   isCoreBlock,
+  sameBlock,
   stepBlock,
   triggerBlock,
   type BlockRef,
@@ -20,7 +22,7 @@ import {
 import { Icon } from "../../shared/icons.js";
 import { useSearchParam } from "../../shared/url-param.js";
 import { acyclicTargets, flowOrder, reachableFrom } from "./ap-layout.js";
-import { useBlockMeta } from "./block-meta.js";
+import { namedByCoreTab, useBlockMeta } from "./block-meta.js";
 import { BlockLogo } from "./BlockSelector.js";
 import { ConnectionField } from "./ConnectionField.js";
 import { StepError } from "./StepError.js";
@@ -45,7 +47,11 @@ import type {
   BlockForm,
   ErrorHandlingDefaults,
 } from "./forms.js";
-import { flowPorts } from "@powerhousedao/pieces-framework/workflow";
+import {
+  flowPorts,
+  stepPortLabel,
+  stepPorts,
+} from "@powerhousedao/pieces-framework/workflow";
 import {
   type PropertySettingModel,
   type RetryPolicyModel,
@@ -568,8 +574,14 @@ function FlowPortEditor(props: {
   callbacks: WorkflowEditorCallbacks;
 }) {
   const { step, model, callbacks } = props;
-  const { form } = useBlockForm(stepBlock(step));
-  const declared = form && form !== "loading" ? form.ports : undefined;
+  const block = stepBlock(step);
+  const { form } = useBlockForm(block);
+  const declared = stepPorts(
+    block,
+    step.config,
+    () => (form && form !== "loading" ? form.ports : undefined),
+    model.edges.filter((edge) => edge.from === step.id).map((e) => e.port),
+  );
   const ports = declared ? flowPorts(declared) : [];
   // Wired, but on a port the block never takes: listed so it can be removed.
   const dead = declared
@@ -608,7 +620,13 @@ function FlowPortEditor(props: {
         );
         return (
           <div key={port}>
-            <FieldLabel label={PORT_LABEL[port] ?? port} />
+            <FieldLabel
+              label={
+                stepPortLabel(block, step.config, port) ??
+                PORT_LABEL[port] ??
+                port
+              }
+            />
             <div className="flex flex-col gap-1.5">
               {edges.map((edge) => (
                 <EdgeRow
@@ -1447,8 +1465,11 @@ export function TriggerPanel(props: {
   const writes = !props.readOnly;
   // The core webhook, and any piece trigger the provider pushes to: both are
   // reached through this workflow's endpoint URL.
+  // A callable workflow is reached only through Call workflow, never its URL.
   const isWebhookTrigger =
-    form !== "loading" && form?.triggerDelivery === "webhook";
+    form !== "loading" &&
+    form?.triggerDelivery === "webhook" &&
+    !sameBlock(block, CALLABLE_FLOW_TRIGGER);
   // Only a webhook trigger asks. The query mints on first ask, so opening
   // this panel on a schedule or document trigger must not create an endpoint.
   const endpoint = useWebhookEndpoint(isWebhookTrigger);
@@ -1465,11 +1486,13 @@ export function TriggerPanel(props: {
       <PanelHeader
         block={block}
         name={
-          form && form !== "loading" && form.title
+          form && form !== "loading" && form.title && !namedByCoreTab(block)
             ? form.title
             : meta.displayName
         }
-        actionLabel={describeTrigger(trigger)}
+        actionLabel={
+          namedByCoreTab(block) ? meta.subtitle : describeTrigger(trigger)
+        }
         missing={missing}
         loading={form === "loading"}
         onClose={props.onClose}

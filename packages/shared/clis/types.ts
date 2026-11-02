@@ -162,7 +162,7 @@ export type PHConnectRuntimeConfig = z.infer<
 export type PHReactorRenown = {
   /** "self" reads this reactor's own renown read model; "remote" (default)
    * queries a Renown or Switchboard instance. */
-  source?: "remote" | "self";
+  source?: "remote" | "self" | "kept";
   /** Renown base URL; also the instance this reactor's own identity uses. */
   url?: string;
   /** Switchboard GraphQL endpoint to read credentials from directly. */

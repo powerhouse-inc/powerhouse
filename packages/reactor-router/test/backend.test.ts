@@ -63,7 +63,7 @@ describe("fromReactorClient submit", () => {
     const document = { header: { id: "doc" } } as never;
 
     await backend.submit?.execute("doc", "main", [], signal);
-    await backend.submit?.create(document, "drive", signal);
+    await backend.submit?.create?.(document, "drive", signal);
 
     expect(executeAsync).toHaveBeenCalledWith("doc", "main", [], signal);
     expect(createAsync).toHaveBeenCalledWith(document, "drive", signal);

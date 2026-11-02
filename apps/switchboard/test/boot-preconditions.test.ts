@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { workerTrustPolicyIssue } from "../src/boot-preconditions.mjs";
 import {
   reactorDbUrlOf,
   switchboardBootFactsFromEnv,
@@ -43,6 +44,18 @@ describe("switchboardBootIssues", () => {
     expect(issues[2]).toMatch(
       /REACTOR_WORKERS\) requires a Postgres reactor database/,
     );
+  });
+
+  it("keeps workers away from credentials only this switchboard holds", () => {
+    const facts = { workers: 2, authEnforcement: true };
+    for (const renownSource of ["self", "kept"] as const) {
+      expect(workerTrustPolicyIssue({ ...facts, renownSource })).toMatch(
+        /cannot verify signers/,
+      );
+    }
+    expect(
+      workerTrustPolicyIssue({ ...facts, renownSource: "remote" }),
+    ).toBeUndefined();
   });
 
   it("treats a PGlite path as no Postgres", () => {

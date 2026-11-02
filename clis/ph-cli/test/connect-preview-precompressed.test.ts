@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer } from "node:net";
-import type { PreviewServer } from "vite";
 import { runConnectPreview } from "../src/services/connect-preview.js";
+import { runConnectServer } from "@powerhousedao/ph-run/connect-server";
 import type { ConnectPreviewArgs } from "../src/types.js";
 import { precompressAssets } from "../src/utils/precompress.js";
 
@@ -46,8 +46,15 @@ function freePort(): Promise<number> {
   });
 }
 
+// Connect is served two ways, and what it gets must not depend on which.
+const SERVERS = [
+  ["vite preview", runConnectPreview],
+  ["the built-in server", runConnectServer],
+] as const;
+let serve: (typeof SERVERS)[number][1];
+
 async function startPreview(dir: string, port: number, base = "/") {
-  return runConnectPreview(
+  return serve(
     {
       outDir: dir,
       port,
@@ -71,10 +78,14 @@ function expectBytes(actual: Buffer, expected: Buffer, label?: string) {
   expect(actual.equals(expected), label).toBe(true);
 }
 
-describe("ph connect preview serving precompressed wasm/data", () => {
+describe.each(SERVERS)("%s serving precompressed wasm/data", (_name, start) => {
+  beforeAll(() => {
+    serve = start;
+  });
+
   let dir: string;
-  let server: PreviewServer;
-  let subServer: PreviewServer;
+  let server: Awaited<ReturnType<typeof startPreview>>;
+  let subServer: Awaited<ReturnType<typeof startPreview>>;
   let port: number;
   let subPort: number;
 
@@ -143,7 +154,7 @@ describe("ph connect preview serving precompressed wasm/data", () => {
     expectBytes(r.body, WASM);
   });
 
-  it("falls through to Vite for files without siblings and other types", async () => {
+  it("falls through to the server for files without siblings and other types", async () => {
     const raw = await get(port, "/plain/raw.wasm", {
       "accept-encoding": "gzip",
     });
@@ -156,7 +167,7 @@ describe("ph connect preview serving precompressed wasm/data", () => {
     expect(js.headers["content-type"]).toMatch(/javascript/);
   });
 
-  it("leaves range requests to Vite", async () => {
+  it("leaves range requests to the server", async () => {
     const r = await get(port, "/assets/pglite.wasm", {
       "accept-encoding": "gzip",
       range: "bytes=0-9",
