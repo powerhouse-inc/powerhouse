@@ -283,6 +283,7 @@ function WorkflowEditor() {
                     documentId={workflowId}
                     reducer={reducer}
                     policy={WORKFLOW_UNDO}
+                    readOnly={model.readOnly}
                   />
                 </>
               }
