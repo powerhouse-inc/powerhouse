@@ -1003,6 +1003,21 @@ interface PHConnectRuntimeConfigLike {
 }
 
 describe("connect bridge runner — reactor projection (P2.5)", () => {
+  it("serves the Renown instance from the env on a host that sets nothing else", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    vi.mocked(runConnectStudio).mockClear();
+    await runner.dev(
+      connect({ name: "lab-connect", runner: { module: "m", port: 6599 } }),
+      { ...ctx, env: { RENOWN_URL: "https://renown.test" } },
+    );
+    const override = vi.mocked(runConnectStudio).mock.calls[0][2];
+    expect(override).toMatchObject({
+      renown: { url: "https://renown.test" },
+    });
+  });
+
   it("serves a reactor namespace on a host that sets nothing else", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =
