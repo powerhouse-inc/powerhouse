@@ -178,6 +178,29 @@ describe("materialize", () => {
     });
   });
 
+  it("gives each copy's Connect browser storage of its own", () => {
+    const { projectDir } = materialize(instanceDir, source, duo(source));
+    expect(hostFile(projectDir, "ui")).toMatchObject({
+      reactor: { namespace: "monitor-instance" },
+    });
+    expect(hostFile(projectDir, "sb-a")).not.toHaveProperty(
+      "reactor.namespace",
+    );
+
+    const named = duo(source);
+    const host = named.host as unknown as Record<string, unknown>;
+    const children = host.children as Record<string, Record<string, unknown>>;
+    children.ui.reactor = { namespace: "team" };
+    const again = materialize(
+      path.join(base, "tmp", "second"),
+      source,
+      named,
+    ).projectDir;
+    expect(hostFile(again, "duo")).toMatchObject({
+      children: { ui: { reactor: { namespace: "team-second" } } },
+    });
+  });
+
   it("gives Connect the runner's default port plus the offset when it sets none", () => {
     const envelope = duo(source);
     const host = envelope.host as unknown as Record<string, unknown>;

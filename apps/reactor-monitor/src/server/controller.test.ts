@@ -1024,11 +1024,16 @@ describe("createMonitorController", () => {
       expect(existsSync(path.join(project, ".env"))).toBe(false);
       expect(existsSync(path.join(project, "dist"))).toBe(false);
 
-      // Connect keeps what its host and the project configure, on its copy port.
+      // Connect keeps what its host and the project configure, on its copy
+      // port, with browser storage of the copy's own.
       const ui = stackExport(allowed).members.ui as Record<string, unknown>;
       expect(hostFileOf(project, "ui")).toEqual({
         ...ui,
         runner: { ...(ui.runner as object), port: 13001, strictPort: true },
+        reactor: {
+          ...(ui.reactor as object),
+          namespace: `monitor-${id}`,
+        },
       });
       // Switchboards load the source's own package from the source root.
       expect(hostFileOf(project, "sb")).toMatchObject({

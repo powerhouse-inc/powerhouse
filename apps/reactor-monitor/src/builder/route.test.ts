@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FULL, stack } from "../host-rules/__fixtures__/hosts.js";
+import { FULL, hostExport, stack } from "../host-rules/__fixtures__/hosts.js";
 import {
   addDriveStatus,
   applyOption,
@@ -54,6 +54,7 @@ describe("routeSeedOf", () => {
       ],
       collections: { "id-shared": "sb-inst-1", powerhouse: "ui.main" },
       drives: { "id-shared": "shared", powerhouse: "powerhouse" },
+      copies: {},
       router: {
         defaultBackend: "ui.main",
         probeTimeoutMs: 3_000,
@@ -198,6 +199,60 @@ describe("routeSeedOf", () => {
       powerhouse: "powerhouse",
     });
     expect(seed?.collections).toEqual({ powerhouse: "ui.main" });
+    expect(seed?.copies).toEqual({ "id-shared": "ui.main" });
+  });
+
+  it("names each drive of a mapped list by the slug its switchboard reports", () => {
+    const connect = "host.children.cli-connect";
+    let draft: HostDraft = { envelope: hostExport("cli") };
+    const local = hostOptions(draft, FULL).find(
+      (option) => option.id === `${connect}:reach:local`,
+    );
+    draft = applyOption(draft, local!).draft;
+    const members = membersOf(draft);
+    const seed = routeSeedOf({
+      id: "seed",
+      member: members.find((member) => member.path === connect)!,
+      members,
+      run: runOf({
+        reactors: [
+          {
+            name: "cli-switchboard",
+            url: "http://127.0.0.1:7001/d/powerhouse",
+            drives: {
+              powerhouse: {
+                id: "id-powerhouse",
+                url: "http://127.0.0.1:7001/d/powerhouse",
+              },
+              "field-notes": {
+                id: "id-field-notes",
+                url: "http://127.0.0.1:7001/d/field-notes",
+              },
+            },
+          },
+        ],
+        attached: {
+          browser: [
+            {
+              name: "cli-connect.main",
+              member: "cli-connect",
+              backend: "main",
+            },
+          ],
+          remote: [{ name: "sb-inst-1", member: "cli-switchboard" }],
+        },
+      }),
+      context: FULL,
+    });
+    expect(seed?.drives).toEqual({
+      "id-powerhouse": "powerhouse",
+      "id-field-notes": "field-notes",
+    });
+    expect(seed?.collections).toEqual({});
+    expect(seed?.copies).toEqual({
+      "id-powerhouse": "cli-connect.main",
+      "id-field-notes": "cli-connect.main",
+    });
   });
 
   it("offers nothing until the switchboard is attached", () => {

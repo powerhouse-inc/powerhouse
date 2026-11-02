@@ -131,8 +131,23 @@ export function routeSeedOf({
     }
     drives[keyOf(link.slug, link.member)] = link.slug;
   }
+  // A mapped list is every drive the started switchboard reports.
+  if (reach.mappedDrives) {
+    for (const switchboard of new Set(switchboardOf.values())) {
+      const served = run.reactors.find(
+        (reactor) => reactor.name === switchboard,
+      )?.drives;
+      for (const [slug, drive] of Object.entries(served ?? {})) {
+        drives[drive.id] ??= slug;
+      }
+    }
+  }
+  const copies: Record<string, string> = {};
   // The monitor's browser reactor holds none of these until they are created.
   if (browser !== undefined) {
+    for (const key of Object.keys(drives)) {
+      if (!Object.hasOwn(collections, key)) copies[key] = browser;
+    }
     for (const slug of reach.ownDrives) {
       if (Object.hasOwn(placement, slug)) continue;
       collections[slug] = browser;
@@ -149,6 +164,7 @@ export function routeSeedOf({
     backends,
     collections,
     drives,
+    copies,
     router: {
       ...(newDrives === undefined ? {} : { defaultBackend: newDrives }),
       probeTimeoutMs: settings.probeTimeoutMs,

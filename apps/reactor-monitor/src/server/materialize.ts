@@ -109,6 +109,23 @@ export function withFreePorts(envelope: HostExport): HostExport {
   return copy;
 }
 
+/** Connect's copy port is fixed, so each copy names its own browser storage. */
+export function withCopyStorage(
+  envelope: HostExport,
+  copy: string,
+): HostExport {
+  const result = structuredClone(envelope);
+  const named = new Set<string>();
+  for (const member of membersOf({ envelope: result })) {
+    if (member.role !== "connect" || named.has(member.reactorAt)) continue;
+    named.add(member.reactorAt);
+    const reactor = ensureRecordAt(result, member.reactorAt.split("."));
+    const own = reactor.namespace;
+    reactor.namespace = `${typeof own === "string" ? own : "monitor"}-${copy}`;
+  }
+  return result;
+}
+
 /**
  * Each switchboard loads the source project's own package by its absolute
  * root (the copy has no build output), ahead of nothing it already listed.
@@ -255,7 +272,11 @@ export function materialize(
   options: MaterializeOptions = {},
 ): Materialized {
   const files = renderHostFiles(
-    withSourcePackages(withFreePorts(envelope), sourceRoot, options.packages),
+    withSourcePackages(
+      withCopyStorage(withFreePorts(envelope), path.basename(instanceDir)),
+      sourceRoot,
+      options.packages,
+    ),
   );
   fs.mkdirSync(instanceDir);
   const projectDir = containedPath(instanceDir, "project");
