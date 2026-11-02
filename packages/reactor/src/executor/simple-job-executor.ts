@@ -352,7 +352,7 @@ function genesisRank(operation: Operation): number {
 function undoRedoRefusal(
   job: Job,
   caps: BaseReducerCapabilities | undefined,
-): SubmittedUndoRefusedError | UndoOperationRefusedError | undefined {
+): SubmittedUndoRefusedError | undefined {
   let actions: readonly Action[];
   if (job.kind === "mutation") {
     actions = job.actions;
@@ -361,19 +361,28 @@ function undoRedoRefusal(
   } else {
     return undefined;
   }
-  if (!caps) {
+  if (!caps || acceptsSubmittedUndoRedo(caps)) {
     return undefined;
-  }
-  if (acceptsSubmittedUndoRedo(caps)) {
-    // These versions store an undo as a NOOP, never as an UNDO row.
-    const loaded = job.kind === "load" ? actions.find(isUndo) : undefined;
-    return loaded
-      ? new UndoOperationRefusedError(job.documentId, loaded.scope)
-      : undefined;
   }
   const refused = actions.find(isUndoRedo);
   return refused
     ? new SubmittedUndoRefusedError(job.documentId, refused.type)
+    : undefined;
+}
+
+/** A loaded UNDO row where the version stores an undo as a NOOP marker. */
+function undoOperationRefusal(
+  job: Job,
+  caps: BaseReducerCapabilities | undefined,
+): UndoOperationRefusedError | undefined {
+  if (job.kind !== "load" || !caps || !acceptsSubmittedUndoRedo(caps)) {
+    return undefined;
+  }
+  const loaded = job.operations.find(
+    ({ action }) => isUndo(action) && action.scope !== "auth",
+  );
+  return loaded
+    ? new UndoOperationRefusedError(job.documentId, loaded.action.scope)
     : undefined;
 }
 
@@ -890,10 +899,19 @@ export class SimpleJobExecutor implements IJobExecutor {
       return { result: buildErrorResult(job, stored.unreadable, startTime) };
     }
     // Only a fresh receiver takes a load's version from the batch's CREATE.
-    const undoRefusal = undoRedoRefusal(
-      job,
-      stored.absent ? this.creationCaps(job) : stored.caps,
-    );
+    const undoRefusal =
+      undoRedoRefusal(
+        job,
+        stored.absent ? this.creationCaps(job) : stored.caps,
+      ) ??
+      undoOperationRefusal(
+        job,
+        stored.absent
+          ? this.protocolGate.capabilities(
+              loadedCreation(job)?.protocolVersions,
+            )
+          : stored.caps,
+      );
     if (undoRefusal) {
       return { result: buildErrorResult(job, undoRefusal, startTime) };
     }

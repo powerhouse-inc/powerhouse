@@ -66,8 +66,8 @@ describe.each(Object.entries(builders))(
       ).map((operation) => `${operation.index}:${operation.action.type}`);
     }
 
-    /** A stored document on the receiver, and the creation it was loaded from. */
-    async function receiverWith(baseReducer: 1 | 2) {
+    /** A document's creation as its source stores it. */
+    async function sentCreation(baseReducer: 1 | 2) {
       const source = await builder().build();
       reactors.push(source);
       const document = createDocModelDocument({
@@ -82,9 +82,19 @@ describe.each(Object.entries(builders))(
       const [create, upgrade] = (
         await source.getOperations(id, { branch: "main", scopes: ["document"] })
       ).document!.results;
+      return { id, create, upgrade, base: Date.parse(create.timestampUtcMs) };
+    }
 
+    async function freshReceiver() {
       const receiver = await builder().build();
       reactors.push(receiver);
+      return receiver;
+    }
+
+    /** A stored document on the receiver, and the creation it was loaded from. */
+    async function receiverWith(baseReducer: 1 | 2) {
+      const { id, create, upgrade, base } = await sentCreation(baseReducer);
+      const receiver = await freshReceiver();
       const first = await settled(
         receiver,
         (await receiver.load(id, "main", [create, upgrade])).id,
@@ -93,7 +103,7 @@ describe.each(Object.entries(builders))(
       expect(
         (await receiver.get(id)).header.protocolVersions?.["base-reducer"],
       ).toBe(baseReducer);
-      return { receiver, id, create, base: Date.parse(create.timestampUtcMs) };
+      return { receiver, id, create, base };
     }
 
     const at = (base: number, offset: number) =>
@@ -167,6 +177,29 @@ describe.each(Object.entries(builders))(
           "0:CREATE_DOCUMENT",
           "1:UPGRADE_DOCUMENT",
         ]);
+      });
+
+      it("refuses a document-scope UNDO in a fresh receiver's first load", async () => {
+        const { id, create, upgrade, base } = await sentCreation(baseReducer);
+        const receiver = await freshReceiver();
+        await expectRefused(receiver, id, [
+          create,
+          upgrade,
+          asOperation(
+            id,
+            {
+              ...addRelationshipAction(id, "child", "child"),
+              timestampUtcMs: at(base, 1_000),
+            },
+            2,
+          ),
+          asOperation(
+            id,
+            { ...undo(1, "document"), timestampUtcMs: at(base, 2_000) },
+            3,
+          ),
+        ]);
+        await expect(receiver.get(id)).rejects.toThrow();
       });
 
       it("refuses a global-scope UNDO", async () => {
