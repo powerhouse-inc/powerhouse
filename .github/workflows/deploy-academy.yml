@@ -44,7 +44,8 @@ jobs:
   publish:
     name: Publish ${{ inputs.branch }} to ${{ inputs.environment }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Pushes to cr.vetra.io have stalled for up to 20 minutes.
+    timeout-minutes: 40
     steps:
       - name: Checkout ${{ inputs.branch }}
         uses: actions/checkout@v6
