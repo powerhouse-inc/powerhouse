@@ -19,17 +19,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** The switchboard a `$map` drive list takes whole, under the slugs it serves. */
+function isPath(value: unknown, path: readonly string[]): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length === path.length &&
+    path.every((segment, at) => value[at] === segment)
+  );
+}
+
+/** The switchboard a `$map` list opens whole, by its own slugs and urls. */
 function mappedSwitchboard(
   member: Member,
   members: readonly Member[],
 ): string | undefined {
   const map = valueAt(member.reactor, ["drives", "$map"]);
   if (!isRecord(map) || !isRecord(map.over)) return undefined;
-  const path = valueAt(map.over, ["$output", "path"]);
-  const whole =
-    Array.isArray(path) && path.length === 1 && path[0] === "drives";
-  if (!whole || valueAt(map, ["to", "slug", "$key"]) !== true) return undefined;
+  if (
+    !isPath(valueAt(map.over, ["$output", "path"]), ["drives"]) ||
+    !isPath(valueAt(map, ["to", "remote", "url", "$item"]), ["url"]) ||
+    valueAt(map, ["to", "slug", "$key"]) !== true
+  ) {
+    return undefined;
+  }
   return targetOf(map.over, members).member;
 }
 

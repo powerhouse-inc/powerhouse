@@ -389,6 +389,21 @@ describe("routeSeedOf", () => {
       expect(seed?.copies).toEqual({ "id-powerhouse": "cli-connect.main" });
     });
 
+    it("names nothing from a list that doesn't open the switchboard's drives", () => {
+      const seed = mappedSeed([
+        {
+          path: `${connect}.reactor.drives`,
+          value: {
+            $map: {
+              over: { $output: { host: "switchboard", path: ["drives"] } },
+              to: { slug: { $key: true } },
+            },
+          },
+        },
+      ]);
+      expect(seed?.drives).toEqual({ "id-powerhouse": "powerhouse" });
+    });
+
     it("names nothing from a list that renames its drives", () => {
       const seed = mappedSeed([
         {
