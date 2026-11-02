@@ -1,6 +1,9 @@
 {
   "version": 1,
   "components": {
+    "academy": {
+      "paths": ["apps/academy/**"]
+    },
     "connect": {
       "paths": ["apps/connect/**"]
     },
