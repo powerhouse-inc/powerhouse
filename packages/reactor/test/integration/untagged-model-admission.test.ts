@@ -417,6 +417,58 @@ describe("base-reducer 3 admission of a model the reactor cannot run as 3", () =
     ]);
   });
 
+  it("reports a lazily loaded model as loaded when a refusal subscriber throws", async () => {
+    const db = await createDefaultDatabase();
+    const tagged = await build(documentModelDocumentModelModule, (b) =>
+      b.withKysely(db),
+    );
+    await settled(
+      tagged.reactor,
+      (await tagged.reactor.create(modelAt("lazy-throw-3", V3))).id,
+    );
+    expect(await storedBaseReducer(tagged.reactor, "lazy-throw-3")).toBe(3);
+    await tagged.reactor.kill().completed;
+    reactors.splice(reactors.indexOf(tagged.reactor), 1);
+
+    const eventBus = new EventBus();
+    const reported: StoredModelRefusedEvent[] = [];
+    const loaded: string[] = [];
+    eventBus.subscribe<StoredModelRefusedEvent>(
+      ReactorEventTypes.STORED_MODEL_REFUSED,
+      (_type, event) => {
+        reported.push(event);
+        throw new Error("refusal subscriber failed");
+      },
+    );
+    eventBus.subscribe<{ documentType: string }>(
+      ReactorEventTypes.MODEL_LOADED,
+      (_type, event) => {
+        loaded.push(event.documentType);
+      },
+    );
+    const load = vi.fn(() =>
+      Promise.resolve(untagged(documentModelDocumentModelModule)),
+    );
+    const { reactor } = await build(undefined, (b) =>
+      b
+        .withKysely(db)
+        .withEventBus(eventBus)
+        .withDocumentModelLoader({ load: load as never }),
+    );
+
+    const write = await settled(
+      reactor,
+      (
+        await reactor.execute("lazy-throw-3", "main", [
+          setModelName({ name: "written" }),
+        ])
+      ).id,
+    );
+    expectRefused(write, MODEL);
+    await vi.waitUntil(() => reported.length > 0, { timeout: 5_000 });
+    await vi.waitUntil(() => loaded.includes(MODEL), { timeout: 5_000 });
+  });
+
   it("refuses a rebuild of a stored v3 document typed once its model is untagged", async () => {
     const db = await createDefaultDatabase();
     const tagged = await build(documentModelDocumentModelModule, (b) =>

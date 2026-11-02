@@ -1,6 +1,8 @@
 import type { Operation } from "@powerhousedao/shared/document-model";
 import {
   generateId,
+  localSupports,
+  PEER_CAPABILITIES,
   type Action,
   type PHDocument,
 } from "@powerhousedao/shared/document-model";
@@ -111,7 +113,15 @@ describe("DocumentIntegrityService", () => {
     opCount: number,
     actionFactory?: (index: number) => Partial<Operation>,
   ) {
-    const docOps: Operation[] = [createCreateDocumentOperation(docId, docType)];
+    // The registry mock answers no versions, which only base-reducer 2 skips.
+    const docOps: Operation[] = [
+      createCreateDocumentOperation(
+        docId,
+        docType,
+        {},
+        { protocolVersions: { "base-reducer": 2 } },
+      ),
+    ];
 
     if (actionFactory) {
       const initialState =
@@ -414,6 +424,213 @@ describe("DocumentIntegrityService", () => {
 
     const service = createService(documentView);
     const result = await service.validateDocument(docId);
+
+    expect(result.documentId).toBe(docId);
+    expect(result.snapshotIssues).toHaveLength(0);
+  });
+});
+
+describe("DocumentIntegrityService on base-reducer 3", () => {
+  let operationStore: IOperationStore;
+  let keyframeStore: IKeyframeStore;
+  let writeCache: KyselyWriteCache;
+  let registry: IDocumentModelRegistry;
+  let db: any;
+
+  const docId = "test-integrity-doc-v3";
+  const docType = "powerhouse/document-model";
+
+  beforeEach(async () => {
+    const setup = await createTestOperationStore();
+    operationStore = setup.store;
+    keyframeStore = setup.keyframeStore;
+    db = setup.db;
+    registry = {
+      registerModules: vi.fn(),
+      unregisterModules: vi.fn(),
+      getModule: vi.fn().mockReturnValue(documentModelDocumentModelModule),
+      getAllModules: vi.fn(),
+      clear: vi.fn(),
+      // The protocol gate reads the registered versions for base-reducer 3.
+      getSupportedVersions: vi.fn().mockReturnValue([1]),
+      getLatestVersion: vi.fn(),
+      registerUpgradeManifests: vi.fn(),
+      unregisterUpgradeManifests: vi.fn(),
+      getUpgradeManifest: vi.fn(),
+      computeUpgradePath: vi.fn(),
+      getUpgradeReducer: vi.fn(),
+    };
+    writeCache = new KyselyWriteCache(keyframeStore, operationStore, registry, {
+      maxDocuments: 10,
+      ringBufferSize: 5,
+      keyframeInterval: 10,
+    });
+    await writeCache.startup();
+  });
+
+  afterEach(async () => {
+    await writeCache.shutdown();
+    try {
+      await db?.destroy();
+    } catch {
+      //
+    }
+  });
+
+  /** A base-reducer 3 document renamed `opCount` times. */
+  async function seedDocument(opCount: number): Promise<void> {
+    await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
+      txn.addOperations(
+        createCreateDocumentOperation(
+          docId,
+          docType,
+          {},
+          { protocolVersions: { "base-reducer": 3 } },
+        ),
+      );
+      txn.addOperations(
+        createUpgradeDocumentOperation(
+          docId,
+          0,
+          1,
+          documentModelDocumentModelModule.utils.createDocument()
+            .state as Record<string, unknown>,
+        ),
+      );
+    });
+    await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
+      for (let i = 1; i <= opCount; i++) {
+        txn.addOperations(
+          createTestOperation(docId, {
+            index: i,
+            skip: 0,
+            action: {
+              id: generateId(),
+              type: "SET_MODEL_NAME",
+              scope: "global",
+              timestampUtcMs: new Date().toISOString(),
+              input: { name: `Model Name ${i}` },
+            } as Action,
+          }),
+        );
+      }
+    });
+    const head = await writeCache.getState(docId, "global", "main");
+    expect(head.header.protocolVersions?.["base-reducer"]).toBe(3);
+  }
+
+  function createService(
+    documentView: IDocumentView = createMockDocumentView(),
+  ): DocumentIntegrityService {
+    return new DocumentIntegrityService(
+      keyframeStore,
+      operationStore,
+      writeCache,
+      documentView,
+      registry,
+      localSupports(PEER_CAPABILITIES, { undoV3: true }).protocols,
+    );
+  }
+
+  async function putCorruptKeyframe(): Promise<void> {
+    const doc10 = await writeCache.getState(docId, "global", "main", 10);
+    const corruptDoc = structuredClone(doc10);
+    (corruptDoc.state as Record<string, unknown>).global = {
+      corruptData: true,
+    };
+    await keyframeStore.putKeyframe(docId, "global", "main", 10, {
+      ...corruptDoc,
+      operations: {},
+      clipboard: [],
+    });
+  }
+
+  it("should report consistent when no keyframes and no document view", async () => {
+    await seedDocument(5);
+
+    const result = await createService().validateDocument(docId);
+
+    expect(result.isConsistent).toBe(true);
+    expect(result.keyframeIssues).toHaveLength(0);
+    expect(result.snapshotIssues).toHaveLength(0);
+  });
+
+  it("should report consistent when keyframes match replayed state", async () => {
+    await seedDocument(15);
+    const doc10 = await writeCache.getState(docId, "global", "main", 10);
+    await keyframeStore.putKeyframe(docId, "global", "main", 10, {
+      ...doc10,
+      operations: {},
+      clipboard: [],
+    });
+
+    const result = await createService().validateDocument(docId);
+
+    expect(result.isConsistent).toBe(true);
+    expect(result.keyframeIssues).toHaveLength(0);
+  });
+
+  it("should detect snapshot inconsistency when document view diverges", async () => {
+    await seedDocument(5);
+    const staleDoc = documentModelDocumentModelModule.utils.createDocument();
+    (staleDoc.state as Record<string, unknown>).global = { staleData: true };
+
+    const result = await createService(
+      createMockDocumentView(() => Promise.resolve(staleDoc)),
+    ).validateDocument(docId);
+
+    expect(result.isConsistent).toBe(false);
+    expect(result.snapshotIssues[0].scope).toBe("global");
+  });
+
+  it("should detect corrupt keyframe as inconsistent", async () => {
+    await seedDocument(15);
+    await putCorruptKeyframe();
+
+    const result = await createService().validateDocument(docId);
+
+    expect(result.isConsistent).toBe(false);
+    expect(result.keyframeIssues[0].scope).toBe("global");
+    expect(result.keyframeIssues[0].revision).toBe(10);
+  });
+
+  it("validation does not mutate production cache", async () => {
+    await seedDocument(5);
+    const streamBefore = writeCache.getStream(docId, "global", "main");
+    expect(streamBefore).toBeDefined();
+    const currentDoc = await writeCache.getState(docId, "global", "main");
+
+    await createService(
+      createMockDocumentView(() => Promise.resolve(currentDoc)),
+    ).validateDocument(docId);
+
+    expect(writeCache.getStream(docId, "global", "main")).toBe(streamBefore);
+  });
+
+  it("corrupt keyframe does not cause false-positive snapshot issue", async () => {
+    await seedDocument(15);
+    const correctDoc = await writeCache.getState(docId, "global", "main");
+    expect((correctDoc.state as Record<string, unknown>).global).toHaveProperty(
+      "name",
+      "Model Name 15",
+    );
+    await putCorruptKeyframe();
+
+    const result = await createService(
+      createMockDocumentView(() => Promise.resolve(correctDoc)),
+    ).validateDocument(docId);
+
+    expect(result.keyframeIssues.length).toBeGreaterThan(0);
+    expect(result.snapshotIssues).toHaveLength(0);
+  });
+
+  it("should validate snapshots across all scopes from getRevisions", async () => {
+    await seedDocument(5);
+    const currentDoc = await writeCache.getState(docId, "global", "main");
+
+    const result = await createService(
+      createMockDocumentView(() => Promise.resolve(currentDoc)),
+    ).validateDocument(docId);
 
     expect(result.documentId).toBe(docId);
     expect(result.snapshotIssues).toHaveLength(0);

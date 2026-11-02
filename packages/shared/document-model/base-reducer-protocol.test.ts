@@ -26,6 +26,7 @@ import {
   needsTaggedModel,
   optionalBaseReducerCapabilities,
   refusalFor,
+  resolveBaseReducerVersion,
   skipMayUndo,
   sortsJobsCanonically,
   tieOrderOf,
@@ -111,6 +112,22 @@ describe("base-reducer capabilities", () => {
     expect(() =>
       optionalBaseReducerCapabilities(header({ "base-reducer": 4 })),
     ).toThrow("unknown base-reducer protocol version 4");
+  });
+
+  it("resolves a number this build does not know to the highest it runs", () => {
+    expect(resolveBaseReducerVersion(undefined)).toBeUndefined();
+    expect(resolveBaseReducerVersion({})).toBeUndefined();
+    for (const version of BASE_REDUCER_VERSIONS) {
+      expect(resolveBaseReducerVersion({ "base-reducer": version })).toBe(
+        version,
+      );
+      expect(resolveBaseReducerVersion({ "base-reducer": version }, 2)).toBe(
+        version,
+      );
+    }
+    expect(resolveBaseReducerVersion({ "base-reducer": 7 })).toBe(3);
+    expect(resolveBaseReducerVersion({ "base-reducer": 0 })).toBe(3);
+    expect(resolveBaseReducerVersion({ "base-reducer": 7 }, 2)).toBe(2);
   });
 
   it("reads CREATE_DOCUMENT input", () => {

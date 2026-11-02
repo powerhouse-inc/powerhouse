@@ -34,426 +34,465 @@ const GLOBAL_GRANT: Grant = {
  * rule is deliberately asymmetric: the replica ahead rejects the arrival rather
  * than granting authority its own policy never granted.
  */
-describe("the monotonic auth timestamp rule", () => {
-  let reactor: IReactor;
-  let other: IReactor;
+describe.each([2, 3])("on base-reducer %i", (baseReducer) => {
+  describe("the monotonic auth timestamp rule", () => {
+    let reactor: IReactor;
+    let other: IReactor;
 
-  async function build(authEnforcement: boolean): Promise<IReactor> {
-    return new ReactorBuilder()
-      .withDocumentModelSources([
-        documentModelDocumentModelModule as never,
-        driveDocumentModelModule as never,
-      ])
-      .withExecutorConfig({
-        featureFlags: { documentDecisions: true, authEnforcement },
-      })
-      .build();
-  }
+    async function build(authEnforcement: boolean): Promise<IReactor> {
+      return new ReactorBuilder()
+        .withDocumentModelSources([
+          documentModelDocumentModelModule as never,
+          driveDocumentModelModule as never,
+        ])
+        .withExecutorConfig({
+          featureFlags: { documentDecisions: true, authEnforcement },
+        })
+        .build();
+    }
 
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
-  });
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    });
 
-  afterEach(() => {
-    reactor?.kill();
-    other?.kill();
-    vi.useRealTimers();
-  });
+    afterEach(() => {
+      reactor?.kill();
+      other?.kill();
+      vi.useRealTimers();
+    });
 
-  async function settle(
-    target: IReactor,
-    jobId: string,
-  ): Promise<ConsistencyToken> {
-    await vi.waitUntil(async () => {
+    async function settle(
+      target: IReactor,
+      jobId: string,
+    ): Promise<ConsistencyToken> {
+      await vi.waitUntil(async () => {
+        const status = await target.getJobStatus(jobId);
+        return (
+          status.status === JobStatus.FAILED ||
+          status.status === JobStatus.READ_READY
+        );
+      });
       const status = await target.getJobStatus(jobId);
-      return (
-        status.status === JobStatus.FAILED ||
-        status.status === JobStatus.READ_READY
+      if (status.status === JobStatus.FAILED) {
+        throw new Error(status.error?.message ?? "job failed");
+      }
+      return status.consistencyToken;
+    }
+
+    async function authInitializedDocument(
+      target: IReactor,
+      id: string,
+    ): Promise<string> {
+      const document = createDocModelDocument({
+        id,
+        protocolVersions: { "base-reducer": baseReducer },
+      });
+      const created = await target.create(document);
+      await settle(target, created.id);
+
+      const init = await target.execute(document.header.id, "main", [
+        initializeAuth({
+          version: 1,
+          grants: [AUTH_ADMIN_GRANT, GLOBAL_GRANT],
+        }),
+      ]);
+      await settle(target, init.id);
+
+      return document.header.id;
+    }
+
+    it("rejects a locally submitted auth write that does not exceed the newest", async () => {
+      reactor = await build(true);
+      const docId = await authInitializedDocument(reactor, "monotonic-local");
+
+      // Stamped before the INITIALIZE_AUTH already stored.
+      vi.setSystemTime(new Date("2025-12-31T23:59:59.000Z"));
+      const backdated = await reactor.execute(docId, "main", [
+        setGrant({
+          grant: { ...GLOBAL_GRANT, description: "backdated rewrite" },
+        }),
+      ]);
+
+      await expect(settle(reactor, backdated.id)).rejects.toThrow(
+        /Auth timestamp not monotonic/,
       );
     });
-    const status = await target.getJobStatus(jobId);
-    if (status.status === JobStatus.FAILED) {
-      throw new Error(status.error?.message ?? "job failed");
-    }
-    return status.consistencyToken;
-  }
 
-  async function authInitializedDocument(
-    target: IReactor,
-    id: string,
-  ): Promise<string> {
-    const document = createDocModelDocument({ id });
-    const created = await target.create(document);
-    await settle(target, created.id);
+    it("rejects an auth write stamped at exactly the newest timestamp", async () => {
+      reactor = await build(true);
+      const docId = await authInitializedDocument(reactor, "monotonic-tie");
 
-    const init = await target.execute(document.header.id, "main", [
-      initializeAuth({
-        version: 1,
-        grants: [AUTH_ADMIN_GRANT, GLOBAL_GRANT],
-      }),
-    ]);
-    await settle(target, init.id);
+      // Stamped explicitly: createAction never repeats a millisecond. The rule
+      // is strictly greater, so an equal timestamp is refused.
+      const stored = await reactor.getOperations(docId, {
+        branch: "main",
+        scopes: ["auth"],
+      });
+      const newest = stored.auth.results[0].timestampUtcMs;
 
-    return document.header.id;
-  }
+      const tied = await reactor.execute(docId, "main", [
+        {
+          ...setGrant({ grant: { ...GLOBAL_GRANT, description: "tied" } }),
+          timestampUtcMs: newest,
+        },
+      ]);
 
-  it("rejects a locally submitted auth write that does not exceed the newest", async () => {
-    reactor = await build(true);
-    const docId = await authInitializedDocument(reactor, "monotonic-local");
-
-    // Stamped before the INITIALIZE_AUTH already stored.
-    vi.setSystemTime(new Date("2025-12-31T23:59:59.000Z"));
-    const backdated = await reactor.execute(docId, "main", [
-      setGrant({
-        grant: { ...GLOBAL_GRANT, description: "backdated rewrite" },
-      }),
-    ]);
-
-    await expect(settle(reactor, backdated.id)).rejects.toThrow(
-      /Auth timestamp not monotonic/,
-    );
-  });
-
-  it("rejects an auth write stamped at exactly the newest timestamp", async () => {
-    reactor = await build(true);
-    const docId = await authInitializedDocument(reactor, "monotonic-tie");
-
-    // Stamped explicitly: createAction never repeats a millisecond. The rule
-    // is strictly greater, so an equal timestamp is refused.
-    const stored = await reactor.getOperations(docId, {
-      branch: "main",
-      scopes: ["auth"],
+      await expect(settle(reactor, tied.id)).rejects.toThrow(
+        /Auth timestamp not monotonic/,
+      );
     });
-    const newest = stored.auth.results[0].timestampUtcMs;
 
-    const tied = await reactor.execute(docId, "main", [
-      {
-        ...setGrant({ grant: { ...GLOBAL_GRANT, description: "tied" } }),
-        timestampUtcMs: newest,
+    // Two actions sharing a millisecond, which comparing each against one stored
+    // maximum would let through.
+    it("rejects a batch whose own auth actions share a timestamp", async () => {
+      reactor = await build(true);
+
+      const document = createDocModelDocument({
+        id: "monotonic-batch",
+        protocolVersions: { "base-reducer": baseReducer },
+      });
+      const created = await reactor.create(document);
+      await settle(reactor, created.id);
+      const docId = document.header.id;
+
+      const init = initializeAuth({ version: 1, grants: [AUTH_ADMIN_GRANT] });
+      const batch = await reactor.execute(docId, "main", [
+        init,
+        {
+          ...setGrant({ grant: GLOBAL_GRANT }),
+          timestampUtcMs: init.timestampUtcMs,
+        },
+      ]);
+
+      await expect(settle(reactor, batch.id)).rejects.toThrow(
+        /Auth timestamp not monotonic/,
+      );
+    });
+
+    it.each([true, false])(
+      "with authEnforcement %s, a batch whose own auth actions run backwards is rejected only under enforcement",
+      async (authEnforcement) => {
+        reactor = await build(authEnforcement);
+        const docId = await authInitializedDocument(
+          reactor,
+          `monotonic-backwards-${authEnforcement}`,
+        );
+
+        const at = (offsetMs: number) =>
+          new Date(Date.now() + offsetMs).toISOString();
+        const batch = await reactor.execute(docId, "main", [
+          {
+            ...setGrant({ grant: { ...GLOBAL_GRANT, description: "second" } }),
+            timestampUtcMs: at(2_000),
+          },
+          {
+            ...setGrant({ grant: { ...GLOBAL_GRANT, description: "first" } }),
+            timestampUtcMs: at(1_000),
+          },
+        ]);
+
+        if (authEnforcement) {
+          await expect(settle(reactor, batch.id)).rejects.toThrow(
+            /Auth timestamp not monotonic/,
+          );
+        } else {
+          await settle(reactor, batch.id);
+        }
       },
-    ]);
-
-    await expect(settle(reactor, tied.id)).rejects.toThrow(
-      /Auth timestamp not monotonic/,
     );
-  });
 
-  // Two actions sharing a millisecond, which comparing each against one stored
-  // maximum would let through.
-  it("rejects a batch whose own auth actions share a timestamp", async () => {
-    reactor = await build(true);
+    it("admits an auth burst built in one millisecond", async () => {
+      reactor = await build(true);
 
-    const document = createDocModelDocument({ id: "monotonic-batch" });
-    const created = await reactor.create(document);
-    await settle(reactor, created.id);
-    const docId = document.header.id;
+      const document = createDocModelDocument({
+        id: "monotonic-burst",
+        protocolVersions: { "base-reducer": baseReducer },
+      });
+      const created = await reactor.create(document);
+      await settle(reactor, created.id);
+      const docId = document.header.id;
 
-    const init = initializeAuth({ version: 1, grants: [AUTH_ADMIN_GRANT] });
-    const batch = await reactor.execute(docId, "main", [
-      init,
-      {
-        ...setGrant({ grant: GLOBAL_GRANT }),
-        timestampUtcMs: init.timestampUtcMs,
-      },
-    ]);
+      // Past any auth stamp an earlier case ran ahead to.
+      vi.setSystemTime(new Date("2026-01-01T00:01:00.000Z"));
+      const actions = [
+        initializeAuth({ version: 1, grants: [AUTH_ADMIN_GRANT] }),
+        setGrant({ grant: GLOBAL_GRANT }),
+        setGrant({ grant: { ...GLOBAL_GRANT, description: "again" } }),
+      ];
+      const now = Date.now();
+      expect(
+        actions.map((action) => Date.parse(action.timestampUtcMs)),
+      ).toEqual([now, now + 1, now + 2]);
+      await settle(reactor, (await reactor.execute(docId, "main", actions)).id);
 
-    await expect(settle(reactor, batch.id)).rejects.toThrow(
-      /Auth timestamp not monotonic/,
-    );
-  });
+      const authOps = await reactor.getOperations(docId, {
+        branch: "main",
+        scopes: ["auth"],
+      });
+      expect(
+        authOps.auth.results.map((operation) => operation.action.id),
+      ).toEqual(actions.map((action) => action.id));
+    });
 
-  it.each([true, false])(
-    "with authEnforcement %s, a batch whose own auth actions run backwards is rejected only under enforcement",
-    async (authEnforcement) => {
-      reactor = await build(authEnforcement);
+    // Accepted window: content keeps the wall clock, so it sorts before the
+    // grants a same-millisecond burst stamped ahead of it.
+    it("denies content made in the millisecond of a grant burst stamped ahead of it", async () => {
+      reactor = await build(true);
+
+      const document = createDocModelDocument({
+        id: "monotonic-overrun",
+        protocolVersions: { "base-reducer": baseReducer },
+      });
+      const created = await reactor.create(document);
+      await settle(reactor, created.id);
+      const docId = document.header.id;
+
+      vi.setSystemTime(new Date("2026-01-01T00:02:00.000Z"));
+      const init = initializeAuth({ version: 1, grants: [AUTH_ADMIN_GRANT] });
+      const grant = setGrant({ grant: GLOBAL_GRANT });
+      const content = addModule({ id: "m", name: "m" });
+      expect(content.timestampUtcMs).toBe(init.timestampUtcMs);
+      expect(Date.parse(grant.timestampUtcMs)).toBe(
+        Date.parse(init.timestampUtcMs) + 1,
+      );
+
+      const burst = await reactor.execute(docId, "main", [init, grant]);
+      await settle(reactor, burst.id);
+      const early = await reactor.execute(docId, "main", [content]);
+      await expect(settle(reactor, early.id)).rejects.toThrow(
+        /Authorization denied/,
+      );
+
+      vi.setSystemTime(Date.parse(grant.timestampUtcMs) + 1);
+      const later = await reactor.execute(docId, "main", [
+        addModule({ id: "m", name: "m" }),
+      ]);
+      await settle(reactor, later.id);
+    });
+
+    it("accepts an auth write that strictly exceeds the newest", async () => {
+      reactor = await build(true);
+      const docId = await authInitializedDocument(reactor, "monotonic-forward");
+
+      vi.advanceTimersByTime(1_000);
+      const later = await reactor.execute(docId, "main", [
+        setGrant({ grant: { ...GLOBAL_GRANT, description: "later" } }),
+      ]);
+      await settle(reactor, later.id);
+
+      const authOps = await reactor.getOperations(docId, {
+        branch: "main",
+        scopes: ["auth"],
+      });
+      expect(authOps.auth.results).toHaveLength(2);
+    });
+
+    it("leaves the auth stream in timestamp order", async () => {
+      reactor = await build(true);
+      const docId = await authInitializedDocument(reactor, "monotonic-ordered");
+
+      for (let i = 1; i <= 3; i++) {
+        vi.advanceTimersByTime(1_000);
+        const write = await reactor.execute(docId, "main", [
+          setGrant({ grant: { ...GLOBAL_GRANT, description: `v${i}` } }),
+        ]);
+        await settle(reactor, write.id);
+      }
+
+      const authOps = await reactor.getOperations(docId, {
+        branch: "main",
+        scopes: ["auth"],
+      });
+      expect(firstOutOfOrderPair(authOps.auth.results)).toBeUndefined();
+    });
+
+    // The strict pre-flight and the load path apply the same rule: a stream the
+    // pre-flight passes must load onto an empty replica without tripping it.
+    it("loads a stream the strict pre-flight passes onto an empty replica", async () => {
+      reactor = await build(true);
+      other = await build(true);
+
+      const document = createDocModelDocument({
+        id: "monotonic-preflight",
+        protocolVersions: { "base-reducer": baseReducer },
+      });
+      const created = await reactor.create(document);
+      const createToken = await settle(reactor, created.id);
+      const docId = document.header.id;
+
+      const init = await reactor.execute(docId, "main", [
+        initializeAuth({
+          version: 1,
+          grants: [AUTH_ADMIN_GRANT, GLOBAL_GRANT],
+        }),
+      ]);
+      let token = await settle(reactor, init.id);
+
+      for (let i = 1; i <= 2; i++) {
+        vi.advanceTimersByTime(1_000);
+        const write = await reactor.execute(docId, "main", [
+          setGrant({ grant: { ...GLOBAL_GRANT, description: `v${i}` } }),
+        ]);
+        token = await settle(reactor, write.id);
+      }
+
+      const docOps = await reactor.getOperations(
+        docId,
+        { branch: "main", scopes: ["document"] },
+        undefined,
+        undefined,
+        createToken,
+      );
+      const authOps = await reactor.getOperations(
+        docId,
+        { branch: "main", scopes: ["auth"] },
+        undefined,
+        undefined,
+        token,
+      );
+
+      expect(
+        firstOutOfOrderPair(authOps.auth.results, { requireStrict: true }),
+      ).toBeUndefined();
+
+      const loadDoc = await other.load(docId, "main", docOps.document.results);
+      await settle(other, loadDoc.id);
+      const loadAuth = await other.load(docId, "main", authOps.auth.results);
+      await settle(other, loadAuth.id);
+
+      const otherAuth = await other.getOperations(docId, {
+        branch: "main",
+        scopes: ["auth"],
+      });
+      expect(otherAuth.auth.results).toHaveLength(3);
+    });
+
+    /**
+     * A re-append is not an arrival: it keeps its original timestamp, so the rule
+     * must not apply or a refusal could never retract the tail it invalidated.
+     */
+    it("does not reject a re-appended auth operation, which keeps its timestamp", async () => {
+      reactor = await build(true);
+      other = await build(true);
+
+      const document = createDocModelDocument({
+        id: "monotonic-reappend",
+        protocolVersions: { "base-reducer": baseReducer },
+      });
+      const created = await reactor.create(document);
+      const createToken = await settle(reactor, created.id);
+      const docId = document.header.id;
+
+      const docOps = await reactor.getOperations(
+        docId,
+        { branch: "main", scopes: ["document"] },
+        undefined,
+        undefined,
+        createToken,
+      );
+      const loadCreate = await other.load(
+        docId,
+        "main",
+        docOps.document.results,
+      );
+      await settle(other, loadCreate.id);
+
+      const init = await reactor.execute(docId, "main", [
+        initializeAuth({
+          version: 1,
+          grants: [AUTH_ADMIN_GRANT, GLOBAL_GRANT],
+        }),
+      ]);
+      const initToken = await settle(reactor, init.id);
+      const authOps = await reactor.getOperations(
+        docId,
+        { branch: "main", scopes: ["auth"] },
+        undefined,
+        undefined,
+        initToken,
+      );
+      const loadAuth = await other.load(docId, "main", authOps.auth.results);
+      await settle(other, loadAuth.id);
+
+      vi.advanceTimersByTime(5_000);
+      const domain = await other.execute(docId, "main", [
+        addModule({ id: "m", name: "m" }),
+      ]);
+      await settle(other, domain.id);
+
+      // Sorts before the domain write, so it triggers a pass that re-appends it.
+      vi.setSystemTime(new Date("2026-01-01T00:00:03.000Z"));
+      const revoke = await reactor.execute(docId, "main", [
+        setGrant({
+          grant: {
+            id: "g-freeze",
+            description: "freeze the global scope",
+            effect: "deny",
+            principal: { anyone: true },
+            capability: { can: "execute", scope: "global" },
+          },
+        }),
+      ]);
+      const revokeToken = await settle(reactor, revoke.id);
+
+      const revokeOps = await reactor.getOperations(
+        docId,
+        { branch: "main", scopes: ["auth"] },
+        undefined,
+        undefined,
+        revokeToken,
+      );
+
+      // Accepted, and the pass it triggers does not trip the rule.
+      const loadRevoke = await other.load(
+        docId,
+        "main",
+        revokeOps.auth.results,
+      );
+      await settle(other, loadRevoke.id);
+
+      const otherAuth = await other.getOperations(docId, {
+        branch: "main",
+        scopes: ["auth"],
+      });
+      expect(firstOutOfOrderPair(otherAuth.auth.results)).toBeUndefined();
+    });
+
+    it("does not apply the rule with authEnforcement off", async () => {
+      reactor = await build(false);
       const docId = await authInitializedDocument(
         reactor,
-        `monotonic-backwards-${authEnforcement}`,
+        "monotonic-flag-off",
       );
 
-      const at = (offsetMs: number) =>
-        new Date(Date.now() + offsetMs).toISOString();
-      const batch = await reactor.execute(docId, "main", [
-        {
-          ...setGrant({ grant: { ...GLOBAL_GRANT, description: "second" } }),
-          timestampUtcMs: at(2_000),
-        },
-        {
-          ...setGrant({ grant: { ...GLOBAL_GRANT, description: "first" } }),
-          timestampUtcMs: at(1_000),
-        },
+      // The same tie lands, because nothing enforces the rule.
+      const stored = await reactor.getOperations(docId, {
+        branch: "main",
+        scopes: ["auth"],
+      });
+      vi.setSystemTime(new Date(stored.auth.results[0].timestampUtcMs));
+
+      const tied = await reactor.execute(docId, "main", [
+        setGrant({ grant: { ...GLOBAL_GRANT, description: "tied" } }),
       ]);
+      await settle(reactor, tied.id);
 
-      if (authEnforcement) {
-        await expect(settle(reactor, batch.id)).rejects.toThrow(
-          /Auth timestamp not monotonic/,
-        );
-      } else {
-        await settle(reactor, batch.id);
-      }
-    },
-  );
-
-  it("admits an auth burst built in one millisecond", async () => {
-    reactor = await build(true);
-
-    const document = createDocModelDocument({ id: "monotonic-burst" });
-    const created = await reactor.create(document);
-    await settle(reactor, created.id);
-    const docId = document.header.id;
-
-    // Past any auth stamp an earlier case ran ahead to.
-    vi.setSystemTime(new Date("2026-01-01T00:01:00.000Z"));
-    const actions = [
-      initializeAuth({ version: 1, grants: [AUTH_ADMIN_GRANT] }),
-      setGrant({ grant: GLOBAL_GRANT }),
-      setGrant({ grant: { ...GLOBAL_GRANT, description: "again" } }),
-    ];
-    const now = Date.now();
-    expect(actions.map((action) => Date.parse(action.timestampUtcMs))).toEqual([
-      now,
-      now + 1,
-      now + 2,
-    ]);
-    await settle(reactor, (await reactor.execute(docId, "main", actions)).id);
-
-    const authOps = await reactor.getOperations(docId, {
-      branch: "main",
-      scopes: ["auth"],
+      const authOps = await reactor.getOperations(docId, {
+        branch: "main",
+        scopes: ["auth"],
+      });
+      expect(authOps.auth.results).toHaveLength(2);
     });
-    expect(
-      authOps.auth.results.map((operation) => operation.action.id),
-    ).toEqual(actions.map((action) => action.id));
-  });
 
-  // Accepted window: content keeps the wall clock, so it sorts before the
-  // grants a same-millisecond burst stamped ahead of it.
-  it("denies content made in the millisecond of a grant burst stamped ahead of it", async () => {
-    reactor = await build(true);
+    it("stores the document at the base-reducer it was created with", async () => {
+      reactor = await build(true);
+      const docId = await authInitializedDocument(reactor, "monotonic-version");
 
-    const document = createDocModelDocument({ id: "monotonic-overrun" });
-    const created = await reactor.create(document);
-    await settle(reactor, created.id);
-    const docId = document.header.id;
-
-    vi.setSystemTime(new Date("2026-01-01T00:02:00.000Z"));
-    const init = initializeAuth({ version: 1, grants: [AUTH_ADMIN_GRANT] });
-    const grant = setGrant({ grant: GLOBAL_GRANT });
-    const content = addModule({ id: "m", name: "m" });
-    expect(content.timestampUtcMs).toBe(init.timestampUtcMs);
-    expect(Date.parse(grant.timestampUtcMs)).toBe(
-      Date.parse(init.timestampUtcMs) + 1,
-    );
-
-    const burst = await reactor.execute(docId, "main", [init, grant]);
-    await settle(reactor, burst.id);
-    const early = await reactor.execute(docId, "main", [content]);
-    await expect(settle(reactor, early.id)).rejects.toThrow(
-      /Authorization denied/,
-    );
-
-    vi.setSystemTime(Date.parse(grant.timestampUtcMs) + 1);
-    const later = await reactor.execute(docId, "main", [
-      addModule({ id: "m", name: "m" }),
-    ]);
-    await settle(reactor, later.id);
-  });
-
-  it("accepts an auth write that strictly exceeds the newest", async () => {
-    reactor = await build(true);
-    const docId = await authInitializedDocument(reactor, "monotonic-forward");
-
-    vi.advanceTimersByTime(1_000);
-    const later = await reactor.execute(docId, "main", [
-      setGrant({ grant: { ...GLOBAL_GRANT, description: "later" } }),
-    ]);
-    await settle(reactor, later.id);
-
-    const authOps = await reactor.getOperations(docId, {
-      branch: "main",
-      scopes: ["auth"],
+      const stored = await reactor.get(docId);
+      expect(stored.header.protocolVersions?.["base-reducer"]).toBe(
+        baseReducer,
+      );
     });
-    expect(authOps.auth.results).toHaveLength(2);
-  });
-
-  it("leaves the auth stream in timestamp order", async () => {
-    reactor = await build(true);
-    const docId = await authInitializedDocument(reactor, "monotonic-ordered");
-
-    for (let i = 1; i <= 3; i++) {
-      vi.advanceTimersByTime(1_000);
-      const write = await reactor.execute(docId, "main", [
-        setGrant({ grant: { ...GLOBAL_GRANT, description: `v${i}` } }),
-      ]);
-      await settle(reactor, write.id);
-    }
-
-    const authOps = await reactor.getOperations(docId, {
-      branch: "main",
-      scopes: ["auth"],
-    });
-    expect(firstOutOfOrderPair(authOps.auth.results)).toBeUndefined();
-  });
-
-  // The strict pre-flight and the load path apply the same rule: a stream the
-  // pre-flight passes must load onto an empty replica without tripping it.
-  it("loads a stream the strict pre-flight passes onto an empty replica", async () => {
-    reactor = await build(true);
-    other = await build(true);
-
-    const document = createDocModelDocument({ id: "monotonic-preflight" });
-    const created = await reactor.create(document);
-    const createToken = await settle(reactor, created.id);
-    const docId = document.header.id;
-
-    const init = await reactor.execute(docId, "main", [
-      initializeAuth({
-        version: 1,
-        grants: [AUTH_ADMIN_GRANT, GLOBAL_GRANT],
-      }),
-    ]);
-    let token = await settle(reactor, init.id);
-
-    for (let i = 1; i <= 2; i++) {
-      vi.advanceTimersByTime(1_000);
-      const write = await reactor.execute(docId, "main", [
-        setGrant({ grant: { ...GLOBAL_GRANT, description: `v${i}` } }),
-      ]);
-      token = await settle(reactor, write.id);
-    }
-
-    const docOps = await reactor.getOperations(
-      docId,
-      { branch: "main", scopes: ["document"] },
-      undefined,
-      undefined,
-      createToken,
-    );
-    const authOps = await reactor.getOperations(
-      docId,
-      { branch: "main", scopes: ["auth"] },
-      undefined,
-      undefined,
-      token,
-    );
-
-    expect(
-      firstOutOfOrderPair(authOps.auth.results, { requireStrict: true }),
-    ).toBeUndefined();
-
-    const loadDoc = await other.load(docId, "main", docOps.document.results);
-    await settle(other, loadDoc.id);
-    const loadAuth = await other.load(docId, "main", authOps.auth.results);
-    await settle(other, loadAuth.id);
-
-    const otherAuth = await other.getOperations(docId, {
-      branch: "main",
-      scopes: ["auth"],
-    });
-    expect(otherAuth.auth.results).toHaveLength(3);
-  });
-
-  /**
-   * A re-append is not an arrival: it keeps its original timestamp, so the rule
-   * must not apply or a refusal could never retract the tail it invalidated.
-   */
-  it("does not reject a re-appended auth operation, which keeps its timestamp", async () => {
-    reactor = await build(true);
-    other = await build(true);
-
-    const document = createDocModelDocument({ id: "monotonic-reappend" });
-    const created = await reactor.create(document);
-    const createToken = await settle(reactor, created.id);
-    const docId = document.header.id;
-
-    const docOps = await reactor.getOperations(
-      docId,
-      { branch: "main", scopes: ["document"] },
-      undefined,
-      undefined,
-      createToken,
-    );
-    const loadCreate = await other.load(docId, "main", docOps.document.results);
-    await settle(other, loadCreate.id);
-
-    const init = await reactor.execute(docId, "main", [
-      initializeAuth({
-        version: 1,
-        grants: [AUTH_ADMIN_GRANT, GLOBAL_GRANT],
-      }),
-    ]);
-    const initToken = await settle(reactor, init.id);
-    const authOps = await reactor.getOperations(
-      docId,
-      { branch: "main", scopes: ["auth"] },
-      undefined,
-      undefined,
-      initToken,
-    );
-    const loadAuth = await other.load(docId, "main", authOps.auth.results);
-    await settle(other, loadAuth.id);
-
-    vi.advanceTimersByTime(5_000);
-    const domain = await other.execute(docId, "main", [
-      addModule({ id: "m", name: "m" }),
-    ]);
-    await settle(other, domain.id);
-
-    // Sorts before the domain write, so it triggers a pass that re-appends it.
-    vi.setSystemTime(new Date("2026-01-01T00:00:03.000Z"));
-    const revoke = await reactor.execute(docId, "main", [
-      setGrant({
-        grant: {
-          id: "g-freeze",
-          description: "freeze the global scope",
-          effect: "deny",
-          principal: { anyone: true },
-          capability: { can: "execute", scope: "global" },
-        },
-      }),
-    ]);
-    const revokeToken = await settle(reactor, revoke.id);
-
-    const revokeOps = await reactor.getOperations(
-      docId,
-      { branch: "main", scopes: ["auth"] },
-      undefined,
-      undefined,
-      revokeToken,
-    );
-
-    // Accepted, and the pass it triggers does not trip the rule.
-    const loadRevoke = await other.load(docId, "main", revokeOps.auth.results);
-    await settle(other, loadRevoke.id);
-
-    const otherAuth = await other.getOperations(docId, {
-      branch: "main",
-      scopes: ["auth"],
-    });
-    expect(firstOutOfOrderPair(otherAuth.auth.results)).toBeUndefined();
-  });
-
-  it("does not apply the rule with authEnforcement off", async () => {
-    reactor = await build(false);
-    const docId = await authInitializedDocument(reactor, "monotonic-flag-off");
-
-    // The same tie lands, because nothing enforces the rule.
-    const stored = await reactor.getOperations(docId, {
-      branch: "main",
-      scopes: ["auth"],
-    });
-    vi.setSystemTime(new Date(stored.auth.results[0].timestampUtcMs));
-
-    const tied = await reactor.execute(docId, "main", [
-      setGrant({ grant: { ...GLOBAL_GRANT, description: "tied" } }),
-    ]);
-    await settle(reactor, tied.id);
-
-    const authOps = await reactor.getOperations(docId, {
-      branch: "main",
-      scopes: ["auth"],
-    });
-    expect(authOps.auth.results).toHaveLength(2);
   });
 });

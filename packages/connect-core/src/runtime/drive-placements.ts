@@ -1,4 +1,7 @@
-import type { RoutingReactorClient } from "@powerhousedao/reactor-router";
+import type {
+  IRoutableBackend,
+  RoutingReactorClient,
+} from "@powerhousedao/reactor-router";
 import { driveDocumentType } from "@powerhousedao/shared/document-drive";
 import { logger } from "document-model";
 import {
@@ -41,13 +44,45 @@ export function needsCopy(backend: string): boolean {
   return backend === LOCAL_BACKEND_NAME;
 }
 
-/** A copy has caught up once every scope is at least at the source's revision. */
+/** A switchboard, or the copy here, read for the operations it stores. */
+export type OperationReader = Pick<IRoutableBackend, "getOperations">;
+
+/** Action ids in `scope` from index `from`, and the next index to read. */
+export async function actionIdsFrom(
+  reader: OperationReader,
+  documentId: string,
+  scope: string,
+  from: number,
+): Promise<{ ids: string[]; next: number }> {
+  const ids: string[] = [];
+  let next = from;
+  let paging: Parameters<OperationReader["getOperations"]>[3];
+  do {
+    const page = await reader.getOperations(
+      documentId,
+      { branch: "main", scopes: [scope] },
+      { sinceRevision: from },
+      paging,
+    );
+    for (const operation of page.results) {
+      ids.push(operation.action.id);
+      next = Math.max(next, operation.index + 1);
+    }
+    paging =
+      page.nextCursor && page.results.length > 0
+        ? { cursor: page.nextCursor, limit: page.options.limit }
+        : undefined;
+  } while (paging);
+  return { ids, next };
+}
+
+/** Holds every action the source holds; each replica numbers its own revisions. */
 export function caughtUp(
-  local: Readonly<Record<string, number>>,
-  source: Readonly<Record<string, number>>,
+  local: Readonly<Record<string, ReadonlySet<string>>>,
+  source: Readonly<Record<string, readonly string[]>>,
 ): boolean {
-  return Object.entries(source).every(
-    ([scope, revision]) => (local[scope] ?? -1) >= revision,
+  return Object.entries(source).every(([scope, ids]) =>
+    ids.every((id) => local[scope]?.has(id) ?? false),
   );
 }
 

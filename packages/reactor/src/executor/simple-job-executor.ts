@@ -108,11 +108,7 @@ import { staticReadSet } from "../decision/build-decision-model.js";
 import { evaluateByPosition } from "../decision/evaluation.js";
 import { retractionSkip } from "../decision/merged-order.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
-import {
-  createProtocolGate,
-  type BaseReducerResolver,
-  type IProtocolGate,
-} from "../protocol/gate.js";
+import { createProtocolGate, type IProtocolGate } from "../protocol/gate.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
 import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
@@ -353,16 +349,13 @@ function genesisRank(operation: Operation): number {
  */
 function undoRedoRefusal(
   job: Job,
-  stored: BaseReducerCapabilities | undefined,
-  resolver: BaseReducerResolver,
+  caps: BaseReducerCapabilities | undefined,
 ): SubmittedUndoRefusedError | undefined {
   let actions: readonly Action[];
-  let caps = stored;
   if (job.kind === "mutation") {
     actions = job.actions;
   } else if (job.kind === "load") {
     actions = job.operations.map((operation) => operation.action);
-    caps ??= resolver.capabilities(loadedCreation(job)?.protocolVersions);
   } else {
     return undefined;
   }
@@ -887,7 +880,11 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (stored.unreadable) {
       return { result: buildErrorResult(job, stored.unreadable, startTime) };
     }
-    const undoRefusal = undoRedoRefusal(job, stored.caps, this.protocolGate);
+    // Only a fresh receiver takes a load's version from the batch's CREATE.
+    const undoRefusal = undoRedoRefusal(
+      job,
+      stored.absent ? this.creationCaps(job) : stored.caps,
+    );
     if (undoRefusal) {
       return { result: buildErrorResult(job, undoRefusal, startTime) };
     }

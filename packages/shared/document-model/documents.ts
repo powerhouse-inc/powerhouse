@@ -5,6 +5,7 @@ import {
   derivesByRule,
   isBaseReducerVersion,
   optionalBaseReducerCapabilities,
+  resolveBaseReducerVersion,
   usesRetractionRule,
   type BaseReducerCapabilities,
   type BaseReducerVersion,
@@ -666,11 +667,12 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
     skipIndexValidation,
     protocolVersion: requestedVersion,
   } = options || {};
-  // A passed version stands in only for a header number this build does not know.
+  // A passed version stands in only for a header number this build does not
+  // know; without one, that number runs as the highest this build runs.
   const headerVersion = header.protocolVersions?.["base-reducer"];
   const protocolVersion =
     typeof headerVersion === "number" && !isBaseReducerVersion(headerVersion)
-      ? requestedVersion
+      ? (requestedVersion ?? resolveBaseReducerVersion(header.protocolVersions))
       : undefined;
   const caps =
     protocolVersion === undefined

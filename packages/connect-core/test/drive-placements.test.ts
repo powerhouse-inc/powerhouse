@@ -7,11 +7,13 @@ import {
   type SwitchboardDrive,
 } from "../src/runtime/drive-placement.js";
 import {
+  actionIdsFrom,
   caughtUp,
   DrivePlacements,
   effectiveBackend,
   findServedDrive,
   needsCopy,
+  type OperationReader,
   type PlacementStore,
 } from "../src/runtime/drive-placements.js";
 
@@ -441,15 +443,83 @@ describe("effectiveBackend and needsCopy", () => {
 });
 
 describe("caughtUp", () => {
-  it("holds once every scope of the source is reached", () => {
+  it("holds once the copy stores every action of every source scope", () => {
+    const source = { global: ["a", "b"], document: ["c"] };
     expect(
-      caughtUp({ global: 5, document: 1 }, { global: 5, document: 1 }),
+      caughtUp(
+        { global: new Set(["b", "a"]), document: new Set(["c"]) },
+        source,
+      ),
     ).toBe(true);
-    expect(caughtUp({ global: 6, document: 1 }, { global: 5 })).toBe(true);
     expect(
-      caughtUp({ global: 4, document: 1 }, { global: 5, document: 1 }),
+      caughtUp({ global: new Set(["a"]), document: new Set(["c"]) }, source),
     ).toBe(false);
-    expect(caughtUp({ document: 1 }, { global: 0 })).toBe(false);
+    expect(caughtUp({ global: new Set(["a", "b"]) }, source)).toBe(false);
+  });
+
+  it("does not take a copy whose revision ran ahead for one that holds everything", async () => {
+    // A base-reducer 3 copy re-appends rows it holds, so its revision runs ahead.
+    const rows = (ids: string[]) =>
+      ids.map((id, index) => ({ index, action: { id } }));
+    const reader = (stored: { index: number; action: { id: string } }[]) =>
+      ({
+        getOperations: vi.fn(
+          (
+            _id: string,
+            _view: unknown,
+            filter?: { sinceRevision?: number },
+            paging?: { cursor: string; limit: number },
+          ) => {
+            const start = Math.max(
+              filter?.sinceRevision ?? 0,
+              Number(paging?.cursor ?? 0),
+            );
+            const page = stored.filter((row) => row.index >= start).slice(0, 2);
+            const last = page.at(-1);
+            return Promise.resolve({
+              results: page,
+              options: { cursor: String(start), limit: 2 },
+              nextCursor:
+                last && last.index < stored.at(-1)!.index
+                  ? String(last.index + 1)
+                  : undefined,
+            });
+          },
+        ),
+      }) as unknown as OperationReader;
+
+    const source = await actionIdsFrom(
+      reader(rows(["a", "b", "c"])),
+      "d",
+      "global",
+      0,
+    );
+    expect(source).toEqual({ ids: ["a", "b", "c"], next: 3 });
+
+    const copy = await actionIdsFrom(
+      reader(rows(["b", "a", "b", "a"])),
+      "d",
+      "global",
+      0,
+    );
+    expect(copy.next).toBeGreaterThan(source.next);
+    expect(
+      caughtUp({ global: new Set(copy.ids) }, { global: source.ids }),
+    ).toBe(false);
+
+    const later = await actionIdsFrom(
+      reader(rows(["b", "a", "b", "a", "c"])),
+      "d",
+      "global",
+      copy.next,
+    );
+    expect(later).toEqual({ ids: ["c"], next: 5 });
+    expect(
+      caughtUp(
+        { global: new Set([...copy.ids, ...later.ids]) },
+        { global: source.ids },
+      ),
+    ).toBe(true);
   });
 });
 

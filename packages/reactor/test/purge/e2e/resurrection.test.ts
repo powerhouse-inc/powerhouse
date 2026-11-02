@@ -25,12 +25,13 @@ import { DocumentNotFoundError } from "../../../src/shared/errors.js";
 import { JobStatus, type JobInfo } from "../../../src/shared/types.js";
 import { DocumentExistence } from "../../../src/storage/interfaces.js";
 
-import { createDocModelDocument } from "../../factories.js";
+import { createDocModelDocument, undoV3Flags } from "../../factories.js";
 import {
   buildNode,
   CaptureChannels,
   enqueuePurge,
   expectPurged,
+  fullManifest,
   holdIndexCommitOn,
   legacyDrive,
   lockWaiters,
@@ -61,11 +62,22 @@ function carries(id: string, type: string) {
     );
 }
 
-async function create(node: Node, id: string): Promise<void> {
+async function create(node: Node, id: string, version?: number): Promise<void> {
   await succeeded(
     node.reactor,
-    node.reactor.create(createDocModelDocument({ id })),
+    node.reactor.create(
+      createDocModelDocument({
+        id,
+        protocolVersions:
+          version === undefined ? undefined : { "base-reducer": version },
+      }),
+    ),
   );
+  if (version !== undefined) {
+    expect(
+      (await node.reactor.get(id)).header.protocolVersions?.["base-reducer"],
+    ).toBe(version);
+  }
 }
 
 async function createDrive(node: Node, id: string): Promise<void> {
@@ -781,82 +793,99 @@ describe("resurrection probes [Postgres]", () => {
     ).toEqual([true]);
   });
 
-  it("a purge held open stalls the outbox for another document, which is served once it commits", async () => {
-    const node = a!;
-    await createDrive(node, "d");
-    await create(node, "x");
-    await create(node, "z");
-    await adopt(node, "d", "x");
-    await adopt(node, "d", "z");
-    await capture.add(node, REMOTE, "d");
-    await remove(node, "x");
-    await until(
-      "the remote has x's delete",
-      probed(node, () =>
-        capture
-          .operations(REMOTE)
-          .some(
-            (op) =>
-              op.context.documentId === "x" &&
-              op.operation.action.type === "DELETE_DOCUMENT",
-          ),
-      ),
-    );
+  // Base-reducer 3 needs undoV3 on the node and a remote that announces it.
+  describe.each([2, 3])("base-reducer %i", (version) => {
+    const featureFlags = version === 3 ? undoV3Flags() : {};
 
-    const hold = await holdIndexCommitOn(node, "x");
-    let markerId: string;
-    let zOpId: string;
-    let purging: Promise<JobInfo> | undefined;
-    try {
-      purging = enqueuePurge(node, "x");
-      await hold.waitUntilHeld();
+    beforeEach(async () => {
+      if (version !== 3) return;
+      await stopNode(a);
+      a = await buildNode({
+        name: "a",
+        db: pg,
+        channelFactory: capture.factory(),
+        maxConcurrency: 2,
+        featureFlags,
+      });
+    });
 
-      await rename(node, "z", "while-purging");
-      const zOp = (
-        await node.reactor.getOperations("z", {
-          branch: "main",
-          scopes: ["global"],
-        })
-      ).global!.results.at(-1)!;
-      zOpId = zOp.id;
-      const zOrdinal = Number(
-        (
-          await node.db
-            .selectFrom("operation_index_operations")
-            .select("ordinal")
-            .where("opId", "=", zOpId)
-            .executeTakeFirstOrThrow()
-        ).ordinal,
+    it("a purge held open stalls the outbox for another document, which is served once it commits", async () => {
+      const node = a!;
+      await createDrive(node, "d");
+      await create(node, "x", version);
+      await create(node, "z", version);
+      await adopt(node, "d", "x");
+      await adopt(node, "d", "z");
+      await capture.add(node, REMOTE, "d", fullManifest(1, featureFlags));
+      await remove(node, "x");
+      await until(
+        "the remote has x's delete",
+        probed(node, () =>
+          capture
+            .operations(REMOTE)
+            .some(
+              (op) =>
+                op.context.documentId === "x" &&
+                op.operation.action.type === "DELETE_DOCUMENT",
+            ),
+        ),
       );
 
-      expect(await node.module.settledWatermark.refresh()).toBeLessThan(
-        zOrdinal,
+      const hold = await holdIndexCommitOn(node, "x");
+      let markerId: string;
+      let zOpId: string;
+      let purging: Promise<JobInfo> | undefined;
+      try {
+        purging = enqueuePurge(node, "x");
+        await hold.waitUntilHeld();
+
+        await rename(node, "z", "while-purging");
+        const zOp = (
+          await node.reactor.getOperations("z", {
+            branch: "main",
+            scopes: ["global"],
+          })
+        ).global!.results.at(-1)!;
+        zOpId = zOp.id;
+        const zOrdinal = Number(
+          (
+            await node.db
+              .selectFrom("operation_index_operations")
+              .select("ordinal")
+              .where("opId", "=", zOpId)
+              .executeTakeFirstOrThrow()
+          ).ordinal,
+        );
+
+        expect(await node.module.settledWatermark.refresh()).toBeLessThan(
+          zOrdinal,
+        );
+        await quiesce();
+        expect(capture.sentOpIds(REMOTE).has(zOpId), "z withheld").toBe(false);
+
+        await hold.release();
+        await waitForJob(node.reactor, (await purging).id, [
+          JobStatus.WRITE_READY,
+          JobStatus.READ_READY,
+          JobStatus.FAILED,
+        ]);
+      } finally {
+        await hold.remove();
+      }
+
+      ({
+        marker: { id: markerId },
+      } = await expectPurged(node.db, "x", {
+        documentType: DOC_TYPE,
+      }));
+      await until(
+        "the outbox serves z's write",
+        probed(node, () => capture.sentOpIds(REMOTE).has(zOpId)),
       );
-      await quiesce();
-      expect(capture.sentOpIds(REMOTE).has(zOpId), "z withheld").toBe(false);
-
-      await hold.release();
-      await waitForJob(node.reactor, (await purging).id, [
-        JobStatus.WRITE_READY,
-        JobStatus.READ_READY,
-        JobStatus.FAILED,
-      ]);
-    } finally {
-      await hold.remove();
-    }
-
-    ({
-      marker: { id: markerId },
-    } = await expectPurged(node.db, "x", {
-      documentType: DOC_TYPE,
-    }));
-    await until(
-      "the outbox serves z's write",
-      probed(node, () => capture.sentOpIds(REMOTE).has(zOpId)),
-    );
-    await until(
-      "the outbox serves x's marker",
-      probed(node, () => capture.sentOpIds(REMOTE).has(markerId)),
-    );
+      await until(
+        "the outbox serves x's marker",
+        probed(node, () => capture.sentOpIds(REMOTE).has(markerId)),
+      );
+    });
   });
 });

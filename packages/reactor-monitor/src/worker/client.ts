@@ -1,9 +1,9 @@
 import {
   DocumentModelRegistry,
+  featureFlagFingerprint,
   LOCAL_CHANNEL_TYPE,
   READ_ONLY_ACCESS,
   UNKNOWN_STORAGE_FACTS,
-  type ReactorFeatureFlags,
   type ReactorInfo,
 } from "@powerhousedao/reactor";
 import { baseDocumentModels } from "@powerhousedao/reactor-browser/base-document-models";
@@ -38,15 +38,6 @@ import { toWorkerConstruct } from "./construct.js";
 import { ReactorMonitorVersion } from "../version.js";
 import { reactorMonitorWorkerUrl } from "../worker-url.js";
 import { adoptWorkerGen, readWorkerGen } from "./worker-gen.js";
-
-/** Sorted so the same set always produces the same fingerprint. */
-function enabledFlagList(flags: Partial<ReactorFeatureFlags>): string {
-  return Object.entries(flags)
-    .filter(([, enabled]) => enabled)
-    .map(([name]) => name)
-    .sort()
-    .join(",");
-}
 
 /** `descriptor.workerUrl`, or the package's own entry; see {@link reactorMonitorWorkerUrl}. */
 function resolveWorkerUrl(descriptor: ReactorDescriptor): URL {
@@ -144,7 +135,7 @@ export async function connectManagedWorkerReactor(
           id: m.documentModel.global.id,
           version: m.version ?? 1,
         })),
-        featureFlags: enabledFlagList(featureFlags),
+        featureFlags: featureFlagFingerprint(featureFlags),
       },
       construct: toWorkerConstruct(descriptor),
       packages: descriptor.packages?.specs ?? [],

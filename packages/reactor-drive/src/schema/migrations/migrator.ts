@@ -30,9 +30,11 @@ class ProgrammaticMigrationProvider implements MigrationProvider {
   }
 }
 
+/** Migrates to the latest, or up or down to `upTo` when given. */
 export async function runReactorDriveMigrations(
   db: Kysely<unknown>,
   schema: string,
+  upTo?: string,
 ): Promise<ReactorDriveMigrationResult> {
   try {
     await sql`CREATE SCHEMA IF NOT EXISTS ${sql.id(schema)}`.execute(db);
@@ -56,7 +58,9 @@ export async function runReactorDriveMigrations(
   let error: unknown;
   let results: Awaited<ReturnType<typeof migrator.migrateToLatest>>["results"];
   try {
-    const result = await migrator.migrateToLatest();
+    const result = upTo
+      ? await migrator.migrateTo(upTo)
+      : await migrator.migrateToLatest();
     error = result.error;
     results = result.results;
   } catch (e) {

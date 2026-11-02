@@ -85,6 +85,12 @@ describe("flags", () => {
     expect(effectiveFlags(undefined).flags).toEqual(ladderFlags(0));
   });
 
+  it("leaves undoV3 off the ladder", () => {
+    expect(effectiveFlags({ featureFlags: { undoV3: true } }).flags).toEqual(
+      ladderFlags(0),
+    );
+  });
+
   it("keeps the ladder in prerequisite order", () => {
     LADDER.forEach((flag, index) => {
       expect(flagClosure(flag)).toEqual(LADDER.slice(0, index + 1));

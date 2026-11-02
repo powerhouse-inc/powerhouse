@@ -29,6 +29,16 @@ describe("backendToDescriptor (P4.1)", () => {
     });
   });
 
+  it("rides undoV3:false onto the descriptor", () => {
+    expect(
+      backendToDescriptor(
+        "local",
+        { kind: "in-process" },
+        { featureFlags: { undoV3: false } },
+      ).featureFlags,
+    ).toEqual({ undoV3: false });
+  });
+
   it("carries the declared kind (kind is required by the schema)", () => {
     expect(backendToDescriptor("x", { kind: "worker" }).kind).toBe("worker");
   });

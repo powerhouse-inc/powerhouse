@@ -212,7 +212,7 @@ describe("GraphQLReactorClient create protocol versions", () => {
         documentType: DOCUMENT_MODEL,
         parentIdentifier: "parent-1",
       }),
-    ).toEqual({ "base-reducer": 2 });
+    ).toEqual({ "base-reducer": 3 });
     expect(received.map((entry) => entry.body.operationName)).toEqual([
       "GetCreateProtocolVersions",
     ]);
@@ -244,6 +244,22 @@ describe("GraphQLReactorClient create protocol versions", () => {
     ).toEqual({ "base-reducer": 2 });
   });
 
+  it.each([1, 2])(
+    "keeps a host's base-reducer %i selection for any model",
+    async (baseReducer) => {
+      for (const model of [tagged, untagged]) {
+        const { client } = await clientKnowing([model], {
+          "base-reducer": baseReducer,
+        });
+        for (const documentType of [DOCUMENT_MODEL, "powerhouse/test"]) {
+          expect(
+            await client.getCreateProtocolVersions({ documentType }),
+          ).toEqual({ "base-reducer": baseReducer });
+        }
+      }
+    },
+  );
+
   it("gives a type the client does not know base-reducer 2", async () => {
     const { client } = await clientKnowing([tagged], { "base-reducer": 3 });
 
@@ -254,7 +270,7 @@ describe("GraphQLReactorClient create protocol versions", () => {
     ).toEqual({ "base-reducer": 2 });
     expect(
       await client.getCreateProtocolVersions({ documentType: undefined }),
-    ).toEqual({ "base-reducer": 2 });
+    ).toEqual({ "base-reducer": 3 });
   });
 
   it("falls back to the reactor-wide answer on a host that predates per-type selection", async () => {
@@ -278,7 +294,7 @@ describe("GraphQLReactorClient create protocol versions", () => {
 
     expect(
       await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
-    ).toEqual({ "base-reducer": 2 });
+    ).toEqual({ "base-reducer": 3 });
   });
 
   it("refuses a malformed host answer, or a version of a known protocol it does not run", async () => {
@@ -327,7 +343,7 @@ describe("GraphQLReactorClient create protocol versions", () => {
     expect(document.header.documentType).toBe(DOCUMENT_MODEL);
     expect(document.header.name).toBe("New");
     expect(document.header.protocolVersions).toEqual({
-      "base-reducer": 2,
+      "base-reducer": 3,
       signature: 2,
     });
   });

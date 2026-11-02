@@ -77,6 +77,7 @@ describe("effective stream timestamp order", () => {
     const document = createDocModelDocument({
       id: "probe-doc",
       slug: "probe-doc",
+      protocolVersions: { "base-reducer": 2 },
     });
 
     // Both reactors hold the document.
@@ -144,6 +145,7 @@ describe("effective stream timestamp order", () => {
     const document = createDocModelDocument({
       id: "probe-doc-2",
       slug: "probe-doc-2",
+      protocolVersions: { "base-reducer": 2 },
     });
 
     let info = await reactorA.create(document);
@@ -228,8 +230,7 @@ describe("effective stream timestamp order", () => {
     ).length;
     expect(modules).toBe(5);
 
-    // The skip was applied on a document carrying base-reducer 2, which is the
-    // only version the reactor stamps.
+    // The skip was applied on a document carrying base-reducer 2.
     expect(doc.header.protocolVersions).toEqual({ "base-reducer": 2 });
   });
 

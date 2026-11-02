@@ -56,6 +56,7 @@ const FLAG_ENV: Record<
   authEnforcement: "REACTOR_AUTH_ENFORCEMENT",
   authGroups: "REACTOR_AUTH_GROUPS",
   authConditions: "REACTOR_AUTH_CONDITIONS",
+  undoV3: "REACTOR_UNDO_V3",
 };
 
 /** The env vars a protocol block maps onto, with their string values. Only
@@ -224,6 +225,19 @@ export function projectReactorToConnect(
   return { connect };
 }
 
+/** Whether an env value means what the host's value does. The switchboard
+ * reads REACTOR_UNDO_V3 as on unless it is exactly "false". */
+export function protocolEnvAgrees(
+  varName: string,
+  envValue: string,
+  hostValue: string,
+): boolean {
+  if (varName === FLAG_ENV.undoV3) {
+    return (envValue !== "false") === (hostValue === "true");
+  }
+  return envValue === hostValue;
+}
+
 /** Each pre-set env var that CONTRADICTS the host's protocol block, as a
  * message naming the var, the host value and the env value. An env var that
  * merely matches, or is unset, is fine. */
@@ -236,7 +250,12 @@ export function protocolConflicts(
   return Object.entries(protocolEnv(protocol)).flatMap(
     ([varName, hostValue]) => {
       const envValue = env[varName];
-      if (envValue === undefined || envValue === hostValue) return [];
+      if (
+        envValue === undefined ||
+        protocolEnvAgrees(varName, envValue, hostValue)
+      ) {
+        return [];
+      }
       return [
         `reactor.protocol conflict: ${varName} is "${envValue}" in the environment ` +
           `but "${hostValue}" in ${hostFile}. These are fleet-consensus settings — ` +

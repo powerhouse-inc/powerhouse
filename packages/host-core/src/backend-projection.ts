@@ -32,6 +32,7 @@ export interface ProjectedDescriptor {
     authEnforcement?: boolean;
     authGroups?: boolean;
     authConditions?: boolean;
+    undoV3?: boolean;
   };
   remote?: { url: string };
 }

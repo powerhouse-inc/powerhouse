@@ -367,7 +367,9 @@ describe("a document at a base-reducer number this build does not know", () => {
     let builder = new ReactorBuilder()
       .withDocumentModelSources([driveDocumentModelModule as never])
       .withPeerCapabilities([WIDE_7])
-      .withExecutorConfig({ featureFlags: undoV3 ? undoV3Flags() : {} });
+      .withExecutorConfig({
+        featureFlags: undoV3 ? undoV3Flags() : { undoV3: false },
+      });
     if (db) builder = builder.withKysely(db);
     const module = await builder.buildModule();
     reactors.push(module.reactor);
@@ -605,6 +607,7 @@ describe("a document at a base-reducer number this build does not know", () => {
     const narrow = await new ReactorBuilder()
       .withDocumentModelSources([driveDocumentModelModule as never])
       .withKysely(db)
+      .withExecutorConfig({ featureFlags: { undoV3: false } })
       .withUnsupportedStoredDocuments("read-only")
       .buildModule();
     reactors.push(narrow.reactor);
