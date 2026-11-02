@@ -16,6 +16,7 @@ import {
   hostStubOf,
   IMAGE_EXTENSIONS,
   nodeBuildConfig,
+  onlyReexportsEditors,
   PIECE_ENTRY_GLOB,
 } from "./build-config.mts";
 
@@ -184,18 +185,46 @@ describe("buildNodeBuildConfig", () => {
 });
 
 describe("hostStubOf", () => {
+  const generatedIndex = [
+    "// generated",
+    'export { Files } from "./files/module.js";',
+    'export { TripEditor } from "./trip-editor/module.js";',
+    'export { editors } from "./editors.js";',
+  ].join("\n");
+
   it("leaves a host no editors, wherever the package's index.ts finds them", () => {
-    for (const file of [
-      "/project/editors/editors.ts",
-      "C:\\project\\editors\\index.ts",
-    ]) {
-      expect(hostStubOf(file)).toBe("export const editors = [];");
-    }
+    expect(hostStubOf("/project/editors/editors.ts")).toBe(
+      "export const editors = [];",
+    );
+    expect(
+      hostStubOf(
+        "C:\\project\\editors\\index.ts",
+        "c:/project",
+        false,
+        () => generatedIndex,
+      ),
+    ).toBe("export const editors = [];");
+  });
+
+  it("builds an editors/index.ts that exports anything else as written", () => {
+    const withHelper = `${generatedIndex}\nexport { brandSwatchClass } from "./brand.js";`;
+    expect(
+      hostStubOf(
+        "/project/editors/index.ts",
+        "/project",
+        false,
+        () => withHelper,
+      ),
+    ).toBeUndefined();
+    expect(onlyReexportsEditors(withHelper)).toBe(false);
+    expect(onlyReexportsEditors("")).toBe(false);
   });
 
   it("builds editors/index.ts as written for a package rendered in Node, but no editors list", () => {
     expect(
-      hostStubOf("/project/editors/index.ts", "/project", true),
+      hostStubOf("/project/editors/index.ts", "/project", true, () => {
+        throw new Error("not read when the package keeps its editor exports");
+      }),
     ).toBeUndefined();
     expect(hostStubOf("/project/editors/editors.ts", "/project", true)).toBe(
       "export const editors = [];",

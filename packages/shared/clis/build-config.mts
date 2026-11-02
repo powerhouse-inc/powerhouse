@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { esmExternalRequirePlugin } from "rolldown/plugins";
 import type { InlineConfig } from "tsdown";
 import {
@@ -243,19 +244,46 @@ export type NodeBuildConfigOptions = {
   /** Extra bundler plugins, such as the external dependency detector. */
   plugins?: InlineConfig["plugins"];
   /**
-   * Build `editors/index.ts` as written, for a package whose editors are
-   * rendered in Node: Connect prerenders its shell from
+   * Build a generated `editors/index.ts` as written, for a package whose
+   * editors are rendered in Node: Connect prerenders its shell from
    * powerhouse-vetra-packages' editors. The `editors` list a host loads stays
    * empty.
    */
   editorExports?: boolean;
 };
 
+/**
+ * Whether an editors/index.ts is only what the generator writes: each editor's
+ * module re-exported, and the `editors` list. Anything else it exports, such as
+ * a helper the package's index.ts passes on, a host may use.
+ */
+export function onlyReexportsEditors(source: string): boolean {
+  const statements = source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/[^\n]*/g, "")
+    .split(";")
+    .map((statement) => statement.trim())
+    .filter((statement) => statement.length > 0);
+  return (
+    statements.length > 0 &&
+    statements.every(
+      (statement) =>
+        /^export\s*\{\s*[\w$]+\s*\}\s*from\s*["']\.\/[\w.-]+\/module(\.js)?["']$/.test(
+          statement,
+        ) ||
+        /^export\s*\{\s*editors\s*\}\s*from\s*["']\.\/editors(\.js)?["']$/.test(
+          statement,
+        ),
+    )
+  );
+}
+
 /** A generated module a host has no use for, and what it builds to instead. */
 export function hostStubOf(
   file: string,
   projectRoot = process.cwd(),
   editorExports = false,
+  readSource: (file: string) => string = (path) => readFileSync(path, "utf8"),
 ): string | undefined {
   const forward = (text: string) => text.replaceAll("\\", "/").toLowerCase();
   const path = forward(file).split("?")[0];
@@ -264,9 +292,13 @@ export function hostStubOf(
     return "export const aiTools = [];";
   }
   // A package's index.ts takes `editors` from either, as its generator wrote it.
+  if (path.endsWith("/editors/editors.ts")) {
+    return "export const editors = [];";
+  }
   if (
-    path.endsWith("/editors/editors.ts") ||
-    (!editorExports && path.endsWith("/editors/index.ts"))
+    !editorExports &&
+    path.endsWith("/editors/index.ts") &&
+    onlyReexportsEditors(readSource(file.split("?")[0]))
   ) {
     return "export const editors = [];";
   }
