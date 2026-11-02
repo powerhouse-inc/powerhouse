@@ -32,6 +32,7 @@ export default defineConfig({
       "clis/package-style.test.ts",
       "clis/services/use-local.test.ts",
       "clis/source-config-schema.test.ts",
+      "clis/definition-sources.test.ts",
       "clis/project-ports.test.ts",
       "clis/project-env.test.ts",
       "clis/ph-dir.test.ts",

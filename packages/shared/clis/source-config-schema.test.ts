@@ -36,6 +36,7 @@ const EXPECTED_PROPERTIES = [
   "workflows",
   "packageRegistryUrl",
   "connect",
+  "definitionSources",
 ] as const;
 
 describe("source-config schema", () => {
@@ -201,5 +202,27 @@ describe("source-config schema", () => {
     expect(props.assistant.additionalProperties).toBe(false);
     expect(Object.keys(props.assistant.properties ?? {})).toEqual(["port"]);
     expect(props.assistant.properties?.port.type).toBe("integer");
+  });
+
+  it("definitionSources accepts a code-first entry list or an explicit schema-first mode", () => {
+    const props = sourceConfigSchema.properties as unknown as Record<
+      string,
+      {
+        oneOf?: readonly {
+          required?: readonly string[];
+          properties?: Record<string, { const?: unknown }>;
+        }[];
+      }
+    >;
+    const variants = props.definitionSources.oneOf ?? [];
+    expect(
+      variants.map((variant) => ({
+        mode: variant.properties?.mode.const,
+        required: variant.required,
+      })),
+    ).toEqual([
+      { mode: "code-first", required: ["formatVersion", "mode", "entries"] },
+      { mode: "schema-first", required: ["formatVersion", "mode"] },
+    ]);
   });
 });
