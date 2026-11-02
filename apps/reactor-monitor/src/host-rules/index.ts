@@ -110,6 +110,22 @@ export {
 } from "./schema.js";
 export { applySetters } from "./setters.js";
 export {
+  BLANK_FOLDER,
+  blankExport,
+  folderTemplate,
+  isBlank,
+  templateFolders,
+  type TemplateFolder,
+} from "./catalog.js";
+export {
+  CHECK_REASONS,
+  checkReason,
+  fixIssuesFirst,
+  START_REASONS,
+  startReason,
+  type StartState,
+} from "./start.js";
+export {
   onOff,
   REASONS,
   shapeWording,

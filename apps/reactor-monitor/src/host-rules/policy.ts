@@ -9,6 +9,7 @@ import {
   ENV_KEY_PATTERN,
   isBrowserEnvKey,
 } from "../controller/api.ts";
+import { folderTemplate, templateFolders } from "./catalog.ts";
 import { HOST_RULES_LIMITS, isDelete, type Setter } from "./schema.ts";
 
 const FORBIDDEN_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
@@ -270,9 +271,13 @@ function isChild(subject: readonly string[]): boolean {
   return subject.at(-2) === "children";
 }
 
+/** A blank host's catalog folders count: an edit may add them. */
 function memberFolders(envelope: unknown): string[] {
-  if (!isPlainObject(envelope) || !isPlainObject(envelope.members)) return [];
-  return Object.keys(envelope.members);
+  const folders =
+    isPlainObject(envelope) && isPlainObject(envelope.members)
+      ? Object.keys(envelope.members)
+      : [];
+  return [...new Set([...folders, ...templateFolders(envelope)])];
 }
 
 export const REMOTE_URL_REASON =
@@ -438,6 +443,27 @@ function leafVerdict(
     : { ok: false, reason: "The monitor can't change this setting.", hint };
 }
 
+const WHOLE_FILE_REASON = "The monitor can't replace a whole host file.";
+
+/** A blank host adds a folder only as the catalog writes it, and only once. */
+function templateVerdict(
+  folder: string,
+  value: unknown,
+  envelope: unknown,
+): PolicyVerdict {
+  const template = folderTemplate(envelope, folder);
+  const members =
+    isPlainObject(envelope) && isPlainObject(envelope.members)
+      ? envelope.members
+      : {};
+  const current = Object.hasOwn(members, folder) ? members[folder] : undefined;
+  return template !== undefined &&
+    isEqual(value, template) &&
+    (current === undefined || isEqual(current, template))
+    ? OK
+    : { ok: false, reason: WHOLE_FILE_REASON };
+}
+
 /** Each written leaf; a token, an array or an empty object is one leaf. */
 function leaves(
   rest: readonly string[],
@@ -480,10 +506,9 @@ export function checkSetter(setter: Setter, envelope?: unknown): PolicyVerdict {
         };
   }
   if (rest.length === 0 && !isChild(subject)) {
-    return {
-      ok: false,
-      reason: "The monitor can't replace a whole host file.",
-    };
+    return subject[0] === "members"
+      ? templateVerdict(subject[1], setter.value, envelope)
+      : { ok: false, reason: WHOLE_FILE_REASON };
   }
   const size = sizeVerdict(setter.value);
   if (!size.ok) return size;

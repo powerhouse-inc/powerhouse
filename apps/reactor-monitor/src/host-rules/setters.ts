@@ -3,6 +3,7 @@ import {
   TOKEN_ESCAPE_KEY,
   type HostExport,
 } from "@powerhousedao/host-core/schema";
+import { isBlank } from "./catalog.ts";
 import { parsePath } from "./policy.ts";
 import { isDelete, type HostRuleIssue, type Setter } from "./schema.ts";
 
@@ -73,8 +74,10 @@ function applyOne(root: Container, setter: Setter): string | undefined {
     if (exists) delete current[last];
     return undefined;
   }
-  // A new member may be added by setting its whole wrapper; a host or folder may not.
-  const addsMember = subject.at(-2) === "children";
+  // A new member is added by setting its whole wrapper or, on a blank host, folder.
+  const addsMember =
+    subject.at(-2) === "children" ||
+    (subject.length === 2 && subject[0] === "members" && isBlank(root));
   if (segments.length === subject.length && !exists && !addsMember) {
     return `There is no ${setter.path} in this host.`;
   }
