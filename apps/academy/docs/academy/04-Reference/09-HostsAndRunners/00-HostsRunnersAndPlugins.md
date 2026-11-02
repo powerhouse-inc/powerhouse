@@ -262,8 +262,8 @@ reactor, on its only switchboard. A Connect with no browser reactor and
 several switchboards must set it.
 
 A drive created on the `newDrives` switchboard stays there: when the
-switchboard isn't answering, Connect shows "<sb> isn't answering, so the
-drive wasn't created.", and when it refuses the create, Connect names it and
+switchboard isn't answering, Connect shows `<sb> isn't answering, so the
+drive wasn't created.`, and when it refuses the create, Connect names it and
 gives its reason (or asks you to sign in). The drive is not created in the
 browser instead: a Connect that has no address for that switchboard, or
 whose router fails to load, doesn't start. Drives the host declares locally (`reactor.drives`
