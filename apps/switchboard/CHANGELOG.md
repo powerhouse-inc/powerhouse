@@ -1,3 +1,13 @@
+## 6.2.3-dev.89 (2026-11-02)
+
+### 🚀 Features
+
+- **workflow:** router, loop and sub-flow blocks ([16f3ee7c3c](https://github.com/powerhouse-inc/powerhouse/commit/16f3ee7c3c))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.88 (2026-11-01)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
