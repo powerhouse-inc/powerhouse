@@ -24,11 +24,20 @@ describe("redactWebhookPath", () => {
     );
   });
 
+  it("redacts a waitpoint's resume token and its sub-path", () => {
+    expect(
+      redactWebhookPath(
+        `/api/@powerhousedao/workflow/waitpoints/${TOKEN}/confirm?action=approve`,
+      ),
+    ).toBe("/api/@powerhousedao/workflow/waitpoints/[redacted]");
+  });
+
   it("never returns anything containing the token", () => {
     for (const url of [
       `/webhooks/${TOKEN}`,
       `/reactor/webhooks/${TOKEN}`,
       `/a/b/c/webhooks/${TOKEN}?x=1`,
+      `/a/waitpoints/${TOKEN}/sync`,
     ]) {
       expect(redactWebhookPath(url)).not.toContain(TOKEN);
     }

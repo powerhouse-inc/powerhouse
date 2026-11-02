@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { esmExternalRequirePlugin } from "rolldown/plugins";
 import type { InlineConfig } from "tsdown";
 import {
@@ -14,6 +15,7 @@ const entry = [
   "editors/*/index.ts",
   "editors/*/module.ts",
   "processors/index.ts",
+  "scalars/index.ts",
 ];
 
 // ./pieces is node-only for the same reason ./reactor is browser-only: a piece
@@ -21,7 +23,7 @@ const entry = [
 // pieces builds here; each piece is its own build (buildPieceBuildConfig), so
 // two pieces never share a chunk and each ships as one self-contained module.
 const nodeEntry = [
-  ...entry,
+  ...entry.filter((path) => !/^editors\/\*\//.test(path)),
   // Node-only: Connect reaches processors through processors/index.ts, and
   // subgraphs only over GraphQL.
   "processors/*/index.ts",
@@ -59,6 +61,7 @@ const nodeNeverBundle = [
   "@powerhousedao/connect-core",
   // published code would never need the cli
   "@powerhousedao/ph-cli",
+  "@powerhousedao/ph-run",
   // the reactor-api host must provide a single class identity for
   // BaseSubgraph/BaseProcessor — inlining a copy here breaks the
   // prototype-chain check the package loader uses to detect subgraphs.
@@ -240,7 +243,82 @@ export type NodeBuildConfigOptions = {
   sharedDeps?: boolean;
   /** Extra bundler plugins, such as the external dependency detector. */
   plugins?: InlineConfig["plugins"];
+  /**
+   * Build a generated `editors/index.ts` as written, for a package whose
+   * editors are rendered in Node: Connect prerenders its shell from
+   * powerhouse-vetra-packages' editors. The `editors` list a host loads stays
+   * empty.
+   */
+  editorExports?: boolean;
 };
+
+/**
+ * Whether an editors/index.ts is only what the generator writes: each editor's
+ * module re-exported, and the `editors` list. Anything else it exports, such as
+ * a helper the package's index.ts passes on, a host may use.
+ */
+export function onlyReexportsEditors(source: string): boolean {
+  const statements = source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/[^\n]*/g, "")
+    .split(";")
+    .map((statement) => statement.trim())
+    .filter((statement) => statement.length > 0);
+  return (
+    statements.length > 0 &&
+    statements.every(
+      (statement) =>
+        /^export\s*\{\s*[\w$]+\s*\}\s*from\s*["']\.\/[\w.-]+\/module(\.js)?["']$/.test(
+          statement,
+        ) ||
+        /^export\s*\{\s*editors\s*\}\s*from\s*["']\.\/editors(\.js)?["']$/.test(
+          statement,
+        ),
+    )
+  );
+}
+
+/** A generated module a host has no use for, and what it builds to instead. */
+export function hostStubOf(
+  file: string,
+  projectRoot = process.cwd(),
+  editorExports = false,
+  readSource: (file: string) => string = (path) => readFileSync(path, "utf8"),
+): string | undefined {
+  const forward = (text: string) => text.replaceAll("\\", "/").toLowerCase();
+  const path = forward(file).split("?")[0];
+  // The assistant's tools run in the page it's open on.
+  if (path === `${forward(projectRoot)}/ai/tools.ts`) {
+    return "export const aiTools = [];";
+  }
+  // A package's index.ts takes `editors` from either, as its generator wrote it.
+  if (path.endsWith("/editors/editors.ts")) {
+    return "export const editors = [];";
+  }
+  if (
+    !editorExports &&
+    path.endsWith("/editors/index.ts") &&
+    onlyReexportsEditors(readSource(file.split("?")[0]))
+  ) {
+    return "export const editors = [];";
+  }
+  if (/\/document-models\/[^/]+\/v\d+\/hooks\.ts$/.test(path)) {
+    return "export {};";
+  }
+  return undefined;
+}
+
+/**
+ * Editors and document hooks run in a browser, and a host never renders. Left
+ * in, every document model takes `reactor-browser` and React to the server,
+ * and the editors take the design system.
+ */
+function noBrowserCodeOnHosts(editorExports: boolean) {
+  return {
+    name: "ph:no-browser-code-on-hosts",
+    load: (file: string) => hostStubOf(file, process.cwd(), editorExports),
+  };
+}
 
 /**
  * The node build externalizes the same shared set as the browser build, for
@@ -266,7 +344,10 @@ export function buildNodeBuildConfig(
       ],
     },
     platform: "node",
-    ...(options.plugins ? { plugins: options.plugins } : {}),
+    plugins: [
+      noBrowserCodeOnHosts(options.editorExports ?? false),
+      options.plugins,
+    ],
     loader,
     config,
     clean,

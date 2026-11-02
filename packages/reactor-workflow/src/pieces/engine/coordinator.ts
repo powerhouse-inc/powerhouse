@@ -5,6 +5,7 @@ import {
   secretsFor,
 } from "../activepieces/worker/redact.js";
 import { PieceWorkerError } from "../activepieces/worker/host.js";
+import type { RunResponse } from "../activepieces/worker/protocol.js";
 import {
   evaluateCondition,
   unavailableValue,
@@ -14,22 +15,34 @@ import {
 import {
   effectiveRetryPolicy,
   isRetryableError,
+  MAX_RETRY_DELAY_MS,
   retryDelayMs,
   type EffectiveRetryPolicy,
 } from "./retry.js";
-import { resolveStepInput } from "./step-input.js";
+import { resolveResumedCoreInput, resolveStepInput } from "./step-input.js";
 import { checkDynamicProperties } from "./dynamic-props.js";
 import { isIndeterminateError } from "../activepieces/indeterminate.js";
 import {
+  CORE_PIECE_NAME,
+  LOOP_EACH_PORT,
   referenceDocuments,
+  stepPorts,
   undeclaredPortEdges,
 } from "@powerhousedao/pieces-framework/workflow";
-import { stepConfigHash } from "./canonical.js";
+import { loopItems } from "../core/flow.js";
+import {
+  isLoopStep,
+  loopConfigHash,
+  loopStructure,
+  waitsForCallee,
+} from "./loops.js";
+import { canonicalJson, stepConfigHash } from "./canonical.js";
 import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
 import { blockLabel, pieceRecord, resolutionOf } from "./resolution.js";
 import {
   stepBlock,
   triggerBlock,
+  type BlockDefaults,
   type BlockExecutor,
   type StepExecutionRecord,
   type WorkflowDefinition,
@@ -64,14 +77,27 @@ export interface ReplayedStep {
   truncatedOutput?: unknown;
 }
 
+/** A step an earlier leg of a suspended run journaled, as its resume carries it. */
+export interface CarriedStep {
+  status: "SUCCEEDED" | "REPLAYED" | "FAILED" | "SKIPPED";
+  port: string | null;
+  // Read on first use only: a resume parses what the remaining steps reference.
+  output: () => unknown;
+  // A FAILED step whose error port was taken.
+  error?: string;
+}
+
 export interface RunWorkflowOptions {
   definition: WorkflowDefinition;
   executor: BlockExecutor;
   // Exposed to expressions as {{trigger.payload...}}.
   triggerPayload?: unknown;
-  // Journaled outputs from a prior run, keyed by step id; matching steps
-  // replay (output injected, port re-taken) instead of executing.
+  // Journaled outputs from a prior run, keyed by step path (a loop
+  // iteration's "<loop>[i]/<step>"); matching steps replay instead of executing.
   completedSteps?: Map<string, ReplayedStep>;
+  // The prior run's journaled loop items, by loop path. An iteration whose
+  // item is unchanged replays its body steps from completedSteps.
+  loopItems?: Map<string, unknown[]>;
   // The workflow policy's `defaultRetry`, for steps with no `retry` of their
   // own. Absent enforces no retry, which is what a definition with no policy
   // (every legacy document) means.
@@ -95,6 +121,75 @@ export interface RunWorkflowOptions {
   priorSteps?: ExpressionScope["steps"];
   // A block's declared output ports; an edge on any other is a warning.
   declaredPorts?: (block: BlockRef) => readonly string[] | undefined;
+  // The action's timeout and retry defaults, asked only for a step missing one.
+  blockDefaults?: (block: BlockRef) => Promise<BlockDefaults | undefined>;
+  // A resumed run: its journaled steps, by step id, which are neither run
+  // nor journaled again, and the waiting step with what woke it.
+  carriedSteps?: Map<string, CarriedStep>;
+  resume?: { stepId: string; payload: unknown };
+  // The first ordinal this leg journals at; a resumed run continues its own.
+  firstOrdinal?: number;
+  // A step's `run.respond` / `run.stop` answer, as soon as the step returns.
+  onRespond?: (response: RunResponse) => void;
+}
+
+// Under the journal's 256 KiB payload cap, with room for redaction markers.
+const LOOP_ROW_MAX_BYTES = 240 * 1024;
+
+// The core blocks that suspend the run.
+const CORE_WAITS = new Set(["delay", "approval", "waitForWebhook"]);
+
+const utf8 = new TextEncoder();
+
+function jsonBytes(value: unknown): number {
+  try {
+    return utf8.encode(JSON.stringify(value ?? null)).length;
+  } catch {
+    return Number.POSITIVE_INFINITY;
+  }
+}
+
+// Marks a failed defaults lookup; carries no defaults of its own.
+const LOOKUP_FAILED: BlockDefaults = Object.freeze({});
+
+// Fills the delays an action's retry default omits, as the editor's default does.
+const ACTION_RETRY_DELAYS = {
+  backoff: "EXPONENTIAL",
+  initialDelaySeconds: 5,
+  maxDelaySeconds: MAX_RETRY_DELAY_MS / 1000,
+};
+
+function actionRetryPolicy(retry: unknown): EffectiveRetryPolicy | null {
+  if (typeof retry !== "object" || retry === null) return null;
+  const declared: Record<string, unknown> = Object.fromEntries(
+    Object.entries(retry).filter(([, value]) => value !== undefined),
+  );
+  const cap = declared.maxDelaySeconds;
+  const initial =
+    typeof cap === "number" && cap > 0
+      ? Math.min(ACTION_RETRY_DELAYS.initialDelaySeconds, cap)
+      : ACTION_RETRY_DELAYS.initialDelaySeconds;
+  return effectiveRetryPolicy({
+    ...ACTION_RETRY_DELAYS,
+    initialDelaySeconds: initial,
+    ...declared,
+  });
+}
+
+// A scope entry whose output is produced on first read, then kept.
+function lazyEntry(read: () => unknown): { output?: unknown } {
+  let value: unknown;
+  let done = false;
+  return Object.defineProperty({}, "output", {
+    enumerable: true,
+    get: () => {
+      if (!done) {
+        value = read();
+        done = true;
+      }
+      return value;
+    },
+  }) as { output?: unknown };
 }
 
 // Edges no run can take, because their source never emits that port.
@@ -102,10 +197,13 @@ export function deadPortWarnings(
   definition: WorkflowDefinition,
   declaredPorts: (block: BlockRef) => readonly string[] | undefined,
 ): string[] {
-  const blocks = new Map<string, { key: string; block: BlockRef }>(
+  const blocks = new Map<
+    string,
+    { key: string; block: BlockRef; config?: unknown }
+  >(
     definition.steps.map((step) => [
       step.id,
-      { key: step.key, block: stepBlock(step) },
+      { key: step.key, block: stepBlock(step), config: step.config },
     ]),
   );
   if (definition.trigger) {
@@ -116,7 +214,12 @@ export function deadPortWarnings(
   }
   return undeclaredPortEdges(definition.edges, (id) => {
     const source = blocks.get(id);
-    return source ? declaredPorts(source.block) : undefined;
+    const wired = definition.edges
+      .filter((edge) => edge.from === id)
+      .map((edge) => edge.port);
+    return source
+      ? stepPorts(source.block, source.config, declaredPorts, wired)
+      : undefined;
   }).map((edge) => {
     const source = blocks.get(edge.from)!;
     const target = blocks.get(edge.to)?.key ?? edge.to;
@@ -171,6 +274,18 @@ export async function runWorkflow(
   };
 
   const records = new Map<string, StepExecutionRecord>();
+  // A step's own redact values (its connection's), for the loop rows above it.
+  const stepSecrets = new Map<string, string[]>();
+  const loops = loopStructure(definition);
+  // A loop's hash covers its body's shape, so a rerun sees a rewired body.
+  const configHashOf = (step: WorkflowStepDef) =>
+    isLoopStep(step)
+      ? loopConfigHash(step, definition, loops)
+      : stepConfigHash(step);
+  // "<loop>[<i>]/" per enclosing iteration; empty outside loops.
+  let pathPrefix = "";
+  // Off inside an iteration whose item differs from the prior run's.
+  let replaying = true;
   // edgeId -> taken; an edge is decided once its source ran or was skipped.
   const edgeDecisions = new Map<string, boolean>();
   let runFailed: string | undefined;
@@ -178,7 +293,11 @@ export async function runWorkflow(
   // not fail, it was stopped, and the status says so.
   let runCancelled: string | undefined;
   let runFailedName: string | undefined;
-  let executedCount = 0;
+  // Set when a step suspended the run: nothing further runs in this leg.
+  let runWaiting: { stepId: string; waitpointId: string } | undefined;
+  // Set when a step called `run.stop`: the run ends SUCCEEDED.
+  let runStopped = false;
+  let executedCount = options.firstOrdinal ?? 0;
   const sleep =
     options.sleep ??
     ((ms: number) =>
@@ -186,6 +305,19 @@ export async function runWorkflow(
         // A pending retry wait must not be what keeps the process alive.
         setTimeout(resolve, ms).unref();
       }));
+
+  // A failed lookup leaves the runtime timeout and no action retry: the action
+  // may be unsafe to retry. Executing reports the cause.
+  const blockDefaults = async (
+    step: WorkflowStepDef,
+  ): Promise<BlockDefaults | undefined> => {
+    if (!options.blockDefaults) return undefined;
+    try {
+      return await options.blockDefaults(stepBlock(step));
+    } catch {
+      return LOOKUP_FAILED;
+    }
+  };
 
   // Null while there is time left; the reason once there is not.
   const outOfTime = (): string | undefined => {
@@ -200,15 +332,24 @@ export async function runWorkflow(
     if (!options.onStep) return;
     const ordinal = executedCount++;
     try {
-      await options.onStep(record, ordinal);
+      await options.onStep(
+        pathPrefix ? { ...record, path: pathPrefix + record.stepId } : record,
+        ordinal,
+      );
     } catch {
       // Durability is the bonus here; run correctness is not at stake.
     }
   };
 
-  const decideOutgoing = (sourceId: string, port: string | undefined) => {
+  // `only` limits the decision to that port's edges.
+  const decideOutgoing = (
+    sourceId: string,
+    port: string | undefined,
+    only?: string,
+  ) => {
     for (const edge of definition.edges) {
       if (edge.from !== sourceId) continue;
+      if (only !== undefined && edge.port !== only) continue;
       const portMatches = port !== undefined && edge.port === port;
       let taken = portMatches;
       if (taken && edge.condition) {
@@ -241,6 +382,8 @@ export async function runWorkflow(
       pieceName: step.pieceName,
       blockName: step.actionName,
       status: "SKIPPED",
+      // Lets a rerun tell an edited loop body step from an unchanged one.
+      configHash: configHashOf(step),
     });
     decideOutgoing(step.id, undefined);
   };
@@ -272,6 +415,7 @@ export async function runWorkflow(
       status: "SKIPPED",
       output: null,
       port: "next",
+      configHash: configHashOf(step),
     };
     records.set(step.id, record);
     await journal(record);
@@ -279,62 +423,138 @@ export async function runWorkflow(
     decideOutgoing(step.id, "next");
   };
 
+  // Journaled already, by the leg before the run suspended.
+  const carryStep = (step: WorkflowStepDef, carried: CarriedStep) => {
+    const failed = carried.status === "FAILED";
+    const port = carried.port ?? (failed ? "error" : "next");
+    records.set(step.id, {
+      stepId: step.id,
+      key: step.key,
+      pieceName: step.pieceName,
+      blockName: step.actionName,
+      status: carried.status,
+      port,
+      carried: true,
+    });
+    scope.steps[step.key] = failed
+      ? { error: carried.error ?? "" }
+      : lazyEntry(carried.output);
+    decideOutgoing(step.id, port);
+  };
+
+  // A carried loop settles its body from the journal's top-level rows; a body
+  // step with none is skipped.
+  const settleBody = async (
+    loop: WorkflowStepDef,
+    settle: (step: WorkflowStepDef) => Promise<boolean> | boolean,
+  ) => {
+    const body = loops.bodies.get(loop.id);
+    for (const step of definition.steps) {
+      if (!body?.has(step.id) || records.has(step.id)) continue;
+      if (!(await settle(step))) skipStep(step);
+    }
+  };
+
+  const replayStep = async (
+    step: WorkflowStepDef,
+    replay: ReplayedStep,
+  ): Promise<void> => {
+    if (containsRedactedMarker(replay.output)) {
+      refuseReplay(step);
+      return;
+    }
+    const port = replay.port ?? "next";
+    // Truncated: the step is completed, its output is not available. Both
+    // halves have to be true at once, or the rerun either re-runs a side
+    // effect or hands a marker on as data.
+    const output = replay.outputTruncated
+      ? unavailableValue(
+          `Output of step "${step.key}" is unavailable: it succeeded in the ` +
+            "run being rerun, but the run journal truncated its output past " +
+            "the payload cap. The step is not re-run, because it had side " +
+            "effects. Fire the workflow again instead of rerunning it.",
+        )
+      : replay.output;
+    const record: StepExecutionRecord = {
+      stepId: step.id,
+      key: step.key,
+      pieceName: step.pieceName,
+      blockName: step.actionName,
+      status: "REPLAYED",
+      // Not the wrapper: that is a run-scope device and carries its reason on
+      // a symbol. The marker goes on `journaledOutput` instead, which is what
+      // carries the truncation fact into the NEXT rerun — a NULL output
+      // column reads as an ordinary replay with nothing to replay, and the
+      // fact would be gone after one generation.
+      output: replay.outputTruncated ? undefined : replay.output,
+      ...(replay.outputTruncated && replay.truncatedOutput !== undefined
+        ? { journaledOutput: replay.truncatedOutput }
+        : {}),
+      port,
+      configHash: configHashOf(step),
+    };
+    records.set(step.id, record);
+    await journal(record);
+    scope.steps[step.key] = { output };
+    decideOutgoing(step.id, port);
+  };
+
   const executeStep = async (step: WorkflowStepDef) => {
+    // Inside an iteration the body runs fresh: nothing carries or replays.
+    const outer = pathPrefix === "";
+    const carried = outer ? options.carriedSteps?.get(step.id) : undefined;
+    if (carried) {
+      carryStep(step, carried);
+      if (isLoopStep(step)) {
+        await settleBody(step, (inner) => {
+          const entry = options.carriedSteps?.get(inner.id);
+          if (entry) carryStep(inner, entry);
+          return entry !== undefined;
+        });
+      }
+      return;
+    }
     if (step.skip === true) {
       await passStep(step);
       return;
     }
-    const replay = options.completedSteps?.get(step.id);
+    // A loop runs again, replaying its iterations step by step.
+    const replay =
+      replaying && !isLoopStep(step)
+        ? options.completedSteps?.get(pathPrefix + step.id)
+        : undefined;
     if (replay) {
-      if (containsRedactedMarker(replay.output)) {
-        refuseReplay(step);
-        return;
-      }
-      const port = replay.port ?? "next";
-      // Truncated: the step is completed, its output is not available. Both
-      // halves have to be true at once, or the rerun either re-runs a side
-      // effect or hands a marker on as data.
-      const output = replay.outputTruncated
-        ? unavailableValue(
-            `Output of step "${step.key}" is unavailable: it succeeded in the ` +
-              "run being rerun, but the run journal truncated its output past " +
-              "the payload cap. The step is not re-run, because it had side " +
-              "effects. Fire the workflow again instead of rerunning it.",
-          )
-        : replay.output;
-      const record: StepExecutionRecord = {
-        stepId: step.id,
-        key: step.key,
-        pieceName: step.pieceName,
-        blockName: step.actionName,
-        status: "REPLAYED",
-        // Not the wrapper: that is a run-scope device and carries its reason on
-        // a symbol. The marker goes on `journaledOutput` instead, which is what
-        // carries the truncation fact into the NEXT rerun — a NULL output
-        // column reads as an ordinary replay with nothing to replay, and the
-        // fact would be gone after one generation.
-        output: replay.outputTruncated ? undefined : replay.output,
-        ...(replay.outputTruncated && replay.truncatedOutput !== undefined
-          ? { journaledOutput: replay.truncatedOutput }
-          : {}),
-        port,
-        configHash: stepConfigHash(step),
-      };
-      records.set(step.id, record);
-      await journal(record);
-      scope.steps[step.key] = { output };
-      decideOutgoing(step.id, port);
+      await replayStep(step, replay);
+      return;
+    }
+    if (
+      !outer &&
+      CORE_WAITS.has(step.actionName) &&
+      step.pieceName === CORE_PIECE_NAME
+    ) {
+      await refuseWaitInLoop(step);
       return;
     }
 
-    // One resolved policy per step: its own `retry`, else the workflow's. A
-    // step that DECLARES a block overrides, whatever the block resolves to —
-    // `{maxAttempts: 1}` is an author saying "not this one", and inheriting
-    // the workflow default over it would be the opposite of an override.
-    const retry =
-      step.retry === undefined || step.retry === null
-        ? (options.defaultRetry ?? null)
-        : effectiveRetryPolicy(step.retry);
+    // Retry is the step's block, else the workflow's default, else the
+    // action's. A workflow default that retries nothing (the document's
+    // initial `{maxAttempts: 1}`) counts as unset; a step's does not.
+    const ownRetry = step.retry !== undefined && step.retry !== null;
+    const inherited = ownRetry ? null : (options.defaultRetry ?? null);
+    const defaults =
+      (ownRetry || inherited) && step.timeoutSeconds
+        ? undefined
+        : await blockDefaults(step);
+    const retry = ownRetry
+      ? effectiveRetryPolicy(step.retry)
+      : (inherited ??
+        (defaults === LOOKUP_FAILED || defaults?.retry === undefined
+          ? null
+          : actionRetryPolicy(defaults.retry)));
+    const defaultTimeout =
+      !step.timeoutSeconds && defaults?.timeoutSeconds
+        ? { defaultTimeoutSeconds: defaults.timeoutSeconds }
+        : {};
     const maxAttempts = retry?.maxAttempts ?? 1;
     const startedAt = new Date().toISOString();
     let input: unknown;
@@ -346,11 +566,31 @@ export async function runWorkflow(
     // names nothing on attempt five either. Inside the loop it burned the
     // whole retry budget, backoff waits and all, on an error that could not
     // come right, and held the run's worker slot while it did.
+    // A resumed core wait reads only resumePayload, so journal-lost props don't fail it.
+    const resumedCore =
+      options.resume?.stepId === step.id && step.pieceName === CORE_PIECE_NAME;
     try {
-      input = resolveStepInput(step, scope);
+      input = resumedCore
+        ? resolveResumedCoreInput(step, scope)
+        : resolveStepInput(step, scope);
       checkDynamicProperties(input, step.propertySettings);
     } catch (error) {
       await endStep(step, { error, input, startedAt, attempt: 1 });
+      return;
+    }
+    if (!outer && waitsForCallee(step, input)) {
+      await refuseWaitInLoop(step);
+      return;
+    }
+    if (isLoopStep(step)) {
+      let items: unknown[];
+      try {
+        items = loopItems(input);
+      } catch (error) {
+        await endStep(step, { error, input, startedAt, attempt: 1 });
+        return;
+      }
+      await runLoop(step, input, items, startedAt);
       return;
     }
 
@@ -364,9 +604,44 @@ export async function runWorkflow(
           reactorConnectionId: step.reactorConnectionId,
           step,
           ...(runSecrets.length > 0 ? { redactValues: runSecrets } : {}),
+          ...defaultTimeout,
+          ...(options.resume?.stepId === step.id
+            ? { resume: { payload: options.resume.payload } }
+            : {}),
         });
         const port = result.port ?? "next";
         const values = [...runSecrets, ...(result.redactValues ?? [])];
+        if (result.redactValues?.length) {
+          stepSecrets.set(step.id, result.redactValues);
+        }
+        if (result.response) options.onRespond?.(result.response);
+        if (result.paused && !outer) {
+          await refuseWaitInLoop(step);
+          return;
+        }
+        if (result.paused) {
+          // No port yet: the step decides its edges when it runs as RESUME.
+          const record: StepExecutionRecord = {
+            stepId: step.id,
+            key: step.key,
+            pieceName: step.pieceName,
+            blockName: step.actionName,
+            status: "WAITING",
+            input: journaled(input, values),
+            output: journaled(referenceDocuments(result.output), values),
+            startedAt,
+            ...withPiece(pieceRecord(result.resolution)),
+            configHash: configHashOf(step),
+            ...attempts,
+          };
+          records.set(step.id, record);
+          await journal(record);
+          runWaiting = {
+            stepId: step.id,
+            waitpointId: result.paused.waitpointId,
+          };
+          return;
+        }
         const record: StepExecutionRecord = {
           stepId: step.id,
           key: step.key,
@@ -380,12 +655,16 @@ export async function runWorkflow(
           startedAt,
           endedAt: new Date().toISOString(),
           ...withPiece(pieceRecord(result.resolution)),
-          configHash: stepConfigHash(step),
+          configHash: configHashOf(step),
           ...attempts,
         };
         records.set(step.id, record);
         await journal(record);
         scope.steps[step.key] = { output: result.output };
+        if (result.stopped) {
+          runStopped = true;
+          return;
+        }
         decideOutgoing(step.id, port);
         return;
       } catch (error) {
@@ -493,7 +772,7 @@ export async function runWorkflow(
       startedAt,
       endedAt: new Date().toISOString(),
       ...withPiece(pieceRecord(resolutionOf(error))),
-      configHash: stepConfigHash(step),
+      configHash: configHashOf(step),
       ...(attempt > 1 ? { attempts: attempt } : {}),
     };
     records.set(step.id, record);
@@ -535,34 +814,223 @@ export async function runWorkflow(
     return runCancelled !== undefined;
   };
 
-  let progressed = true;
-  while (progressed && !runFailed && !runCancelled) {
-    progressed = false;
-    for (const step of definition.steps) {
-      if (records.has(step.id)) continue;
-      const inbound = inboundEdges(step);
-      if (isEntryStep(step)) {
-        if (expiredBeforeStep()) break;
-        await executeStep(step);
+  const stopped = () =>
+    Boolean(runFailed || runCancelled || runWaiting || runStopped);
+
+  // Steps a walk visits: the top level's, or one loop's own body steps.
+  const ownedSteps = (loopId: string | undefined) =>
+    definition.steps.filter((step) => loops.owner.get(step.id) === loopId);
+
+  // Walks `steps` until no further step can run or the run stopped.
+  async function walk(steps: WorkflowStepDef[]): Promise<void> {
+    let progressed = true;
+    while (progressed && !stopped()) {
+      progressed = false;
+      for (const step of steps) {
+        if (records.has(step.id)) continue;
+        const inbound = inboundEdges(step);
+        if (isEntryStep(step)) {
+          if (expiredBeforeStep()) break;
+          await executeStep(step);
+          progressed = true;
+          // Independent roots are otherwise free to run their side effects
+          // before the outer loop notices the run is already over.
+          if (stopped()) break;
+          continue;
+        }
+        if (inbound.length === 0) continue;
+        const decided = inbound.every((edge) => edgeDecisions.has(edge.id));
+        if (!decided) continue;
+        const reachable = inbound.some((edge) => edgeDecisions.get(edge.id));
+        if (reachable) {
+          if (expiredBeforeStep()) break;
+          await executeStep(step);
+        } else {
+          skipStep(step);
+        }
         progressed = true;
-        // Independent roots are otherwise free to run their side effects
-        // before the outer loop notices the run is already over.
-        if (runFailed || runCancelled) break;
-        continue;
+        if (stopped()) break;
       }
-      if (inbound.length === 0) continue;
-      const decided = inbound.every((edge) => edgeDecisions.has(edge.id));
-      if (!decided) continue;
-      const reachable = inbound.some((edge) => edgeDecisions.get(edge.id));
-      if (reachable) {
-        if (expiredBeforeStep()) break;
-        await executeStep(step);
-      } else {
-        skipStep(step);
-      }
-      progressed = true;
-      if (runFailed || runCancelled) break;
     }
+  }
+
+  // A wait would suspend the run in the middle of an iteration, which a
+  // resume cannot re-enter yet.
+  async function refuseWaitInLoop(step: WorkflowStepDef): Promise<void> {
+    const error = `Step "${step.key}" cannot wait inside a loop yet`;
+    const record: StepExecutionRecord = {
+      stepId: step.id,
+      key: step.key,
+      pieceName: step.pieceName,
+      blockName: step.actionName,
+      status: "FAILED",
+      error,
+      configHash: configHashOf(step),
+    };
+    records.set(step.id, record);
+    await journal(record);
+    runFailed ??= error;
+  }
+
+  // Walks the loop's body once per item, each iteration from a clean slate.
+  // Body steps end holding their last iteration's record and scope entry.
+  async function runLoop(
+    loop: WorkflowStepDef,
+    input: unknown,
+    items: unknown[],
+    startedAt: string,
+  ): Promise<void> {
+    const body = loops.bodies.get(loop.id) ?? new Set<string>();
+    const bodySteps = definition.steps.filter((step) => body.has(step.id));
+    const owned = ownedSteps(loop.id);
+    const prefix = pathPrefix;
+    const iterations: {
+      index: number;
+      item: unknown;
+      steps: Record<string, unknown>;
+    }[] = [];
+    // The row's item, index and count come out of the iterations' budget.
+    const last = items.length > 0 ? items[items.length - 1] : null;
+    let iterationBytes = jsonBytes({
+      item: last,
+      index: items.length,
+      count: items.length,
+      iterations: [],
+      iterationsTruncated: true,
+    });
+    let iterationsTruncated = false;
+    let interrupted: string | undefined;
+    const bodySecrets = new Set<string>();
+    const outerReplaying = replaying;
+    const priorItems = replaying
+      ? options.loopItems?.get(prefix + loop.id)
+      : undefined;
+    // As journaled: redacted and through JSON, like the prior run's items.
+    const itemKey = (item: unknown): string | undefined => {
+      try {
+        return canonicalJson(
+          JSON.parse(JSON.stringify(journaled(item, runSecrets) ?? null)),
+        );
+      } catch {
+        return undefined;
+      }
+    };
+    for (const [i, item] of items.entries()) {
+      if (expiredBeforeStep()) break;
+      for (const step of bodySteps) {
+        records.delete(step.id);
+        stepSecrets.delete(step.id);
+        delete scope.steps[step.key];
+      }
+      for (const edge of definition.edges) {
+        if (
+          body.has(edge.from) ||
+          (edge.from === loop.id && edge.port === LOOP_EACH_PORT)
+        ) {
+          edgeDecisions.delete(edge.id);
+        }
+      }
+      scope.steps[loop.key] = { output: { item, index: i + 1 } };
+      pathPrefix = `${prefix}${loop.id}[${i + 1}]/`;
+      const key =
+        priorItems && i < priorItems.length ? itemKey(item) : undefined;
+      replaying = key !== undefined && key === itemKey(priorItems![i]);
+      try {
+        decideOutgoing(loop.id, LOOP_EACH_PORT, LOOP_EACH_PORT);
+        await walk(owned);
+      } finally {
+        pathPrefix = prefix;
+        replaying = outerReplaying;
+      }
+      const outputs: Record<string, unknown> = {};
+      for (const step of bodySteps) {
+        // A skipped step has no entry.
+        const entry = scope.steps[step.key] as { output?: unknown } | undefined;
+        if (entry && "output" in entry) outputs[step.key] = entry.output;
+        for (const value of stepSecrets.get(step.id) ?? []) {
+          bodySecrets.add(value);
+        }
+      }
+      const iteration = { index: i + 1, item, steps: outputs };
+      const bytes = jsonBytes(iteration) + 1;
+      if (
+        !iterationsTruncated &&
+        iterationBytes + bytes <= LOOP_ROW_MAX_BYTES
+      ) {
+        iterations.push(iteration);
+        iterationBytes += bytes;
+      } else {
+        iterationsTruncated = true;
+      }
+      if (runFailed || runCancelled || runWaiting) {
+        interrupted = `Item ${i + 1}: ${runFailed ?? runCancelled ?? "suspended"}`;
+        break;
+      }
+      if (runStopped) break;
+    }
+    if (runCancelled && interrupted === undefined) interrupted = runCancelled;
+    if (bodySecrets.size > 0) stepSecrets.set(loop.id, [...bodySecrets]);
+    const values = [...runSecrets, ...bodySecrets];
+    for (const step of bodySteps) {
+      if (!records.has(step.id)) skipStep(step);
+    }
+    const output = {
+      item: last,
+      index: items.length,
+      count: items.length,
+      iterations,
+      ...(iterationsTruncated ? { iterationsTruncated: true } : {}),
+    };
+    const record: StepExecutionRecord = {
+      stepId: loop.id,
+      key: loop.key,
+      pieceName: loop.pieceName,
+      blockName: loop.actionName,
+      status: interrupted === undefined ? "SUCCEEDED" : "FAILED",
+      input: journaled(input, runSecrets),
+      ...(interrupted === undefined
+        ? {
+            output: journaled(referenceDocuments(output), values),
+            port: "next",
+          }
+        : { error: interrupted }),
+      startedAt,
+      endedAt: new Date().toISOString(),
+      configHash: configHashOf(loop),
+    };
+    records.set(loop.id, record);
+    await journal(record);
+    // Each body step also keeps a top-level row: its last iteration's.
+    if (prefix === "") {
+      for (const step of bodySteps) {
+        const settled = records.get(step.id);
+        if (settled && settled.status !== "SKIPPED") await journal(settled);
+      }
+    }
+    if (interrupted !== undefined) return;
+    scope.steps[loop.key] = { output };
+    if (!runStopped) decideOutgoing(loop.id, "next");
+  }
+
+  if (loops.violation) {
+    runFailed = loops.violation;
+  } else {
+    await walk(ownedSteps(undefined));
+  }
+
+  // Suspended: the steps not reached yet are decided when the run resumes.
+  if (runWaiting && !runFailed && !runCancelled) {
+    const warnings = options.declaredPorts
+      ? deadPortWarnings(definition, options.declaredPorts)
+      : [];
+    return {
+      status: "WAITING",
+      steps: definition.steps
+        .filter((step) => records.has(step.id))
+        .map((step) => records.get(step.id)!),
+      waiting: runWaiting,
+      ...(warnings.length > 0 ? { warnings } : {}),
+    };
   }
 
   // Steps never reached (dangling, cyclic, or after a terminal failure).

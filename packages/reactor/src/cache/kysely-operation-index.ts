@@ -7,6 +7,7 @@ import { sql } from "kysely";
 import { readSnapshotFunctions } from "../catch-up/settled-watermark.js";
 import type { DocumentStreamKey } from "./write-cache-types.js";
 import { DocumentPurgedError } from "../shared/errors.js";
+import { MAX_BIND_PARAMETERS } from "../storage/kysely/bind-parameters.js";
 import { findPurged } from "../storage/kysely/document-purges.js";
 import type { PagedResults, PagingOptions } from "../shared/types.js";
 import type { ViewFilter } from "../storage/interfaces.js";
@@ -21,9 +22,6 @@ import type {
 } from "./operation-index-types.js";
 
 export const DEFAULT_PAGE_LIMIT = 500;
-
-/** Bind slots per statement: 16-bit on the wire, read signed in-process. */
-const MAX_BIND_PARAMETERS = 32_767;
 
 /** Splits rows into runs that each bind at most MAX_BIND_PARAMETERS. */
 function chunkRows<TRow extends object>(rows: TRow[]): TRow[][] {

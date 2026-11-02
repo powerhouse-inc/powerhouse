@@ -40,6 +40,14 @@ const EXEMPT: Record<string, Record<string, string>> = {
   reactor: {
     "Query.documentModels":
       "Document model metadata, not document content (AUTH_REVIEW §4: low-sensitivity).",
+    "Query.driveNodes":
+      "Gated by #driveNodeGate: listsDocument on the drive, then find as the caller and readableByHost for each file node's document.",
+    "Query.driveNode":
+      "Gated by #driveNodeGate: listsDocument on the drive, then find as the caller and readableByHost for each file node's document.",
+    "Query.driveDescendants":
+      "Gated by #driveNodeGate: listsDocument on the drive, then find as the caller and readableByHost for each file node's document.",
+    "DriveNode.__resolveType":
+      "Type resolution for an already-served node; reads nothing.",
   },
   auth: {
     "Query.userDocumentPermissions":
@@ -74,6 +82,8 @@ const EXEMPT: Record<string, Record<string, string>> = {
       "Serves every caller (gate-4 D4.2); storage facts, not document content. access is redacted for non-admins.",
     "ReactorInspection.documentModels":
       "Document model metadata, as reactor's Query.documentModels.",
+    "ReactorInspection.loadsModelsOnDemand":
+      "Whether a model loader is wired; a host fact, not document content.",
   },
   "document-model": {
     "Query.DocumentModel": "Namespace stub resolver; returns an empty object.",

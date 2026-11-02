@@ -11,6 +11,7 @@ import {
   type IReadModelCoordinator,
 } from "@powerhousedao/reactor";
 import {
+  AuthorizationPolicy,
   BaseSubgraph,
   type CanonicalDocumentId,
   type GraphQLManager,
@@ -30,21 +31,20 @@ import type { ILogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { initFeatureFlags } from "../src/feature-flags.js";
-import { startSwitchboard } from "../src/server.mjs";
+import { ReadableDocumentsProjection } from "../../../packages/reactor-api/src/services/readable-documents.js";
+import type { startSwitchboard } from "../src/server.mjs";
+import { bootSwitchboard } from "./boot-helpers.js";
 import {
-  PH_WORKFLOWS_ENABLED,
   bindPackagePieces,
   attachmentReadPolicy,
   composeWorkflowRuntime,
   assertWorkflowPackageLoadable,
   hostPrincipalOf,
+  indexQueryFor,
   isWorkflowSingletonConflict,
   retryWorkflowSingleton,
   workflowSingletonLossHandler,
   reactorAccessOf,
-  resolveWorkflowsEnabled,
-  type BooleanFlagSource,
   type ComposedWorkflowRuntime,
 } from "../src/workflow-runtime.mjs";
 
@@ -66,61 +66,6 @@ function stubLogger(): ILogger & {
     error: ReturnType<typeof vi.fn>;
   };
 }
-
-describe("resolveWorkflowsEnabled", () => {
-  let featureFlags: BooleanFlagSource;
-
-  beforeAll(async () => {
-    featureFlags = await initFeatureFlags();
-  });
-
-  afterEach(() => {
-    delete process.env[PH_WORKFLOWS_ENABLED];
-  });
-
-  it("defaults to off", async () => {
-    await expect(resolveWorkflowsEnabled({ featureFlags })).resolves.toBe(
-      false,
-    );
-  });
-
-  it("lets the host's option win over the env var", async () => {
-    process.env[PH_WORKFLOWS_ENABLED] = "false";
-
-    await expect(
-      resolveWorkflowsEnabled({ featureFlags, override: true }),
-    ).resolves.toBe(true);
-
-    process.env[PH_WORKFLOWS_ENABLED] = "true";
-
-    await expect(
-      resolveWorkflowsEnabled({ featureFlags, override: false }),
-    ).resolves.toBe(false);
-  });
-
-  it("reads the env var in every form reactor-api accepted", async () => {
-    for (const [raw, expected] of [
-      ["true", true],
-      ["1", true],
-      ["false", false],
-      ["0", false],
-    ] as const) {
-      process.env[PH_WORKFLOWS_ENABLED] = raw;
-      await expect(
-        resolveWorkflowsEnabled({ featureFlags, configEnabled: !expected }),
-      ).resolves.toBe(expected);
-    }
-  });
-
-  it("falls back to the config file, then off", async () => {
-    await expect(
-      resolveWorkflowsEnabled({ featureFlags, configEnabled: true }),
-    ).resolves.toBe(true);
-    await expect(
-      resolveWorkflowsEnabled({ featureFlags, configEnabled: false }),
-    ).resolves.toBe(false);
-  });
-});
 
 describe("assertWorkflowPackageLoadable", () => {
   it("passes when the package resolves", async () => {
@@ -652,6 +597,7 @@ describe("composeWorkflowRuntime", () => {
   it("lets the lease fence itself only over a journal others can open", async () => {
     const engine = await import("@powerhousedao/reactor-workflow");
     const selfFence: (boolean | undefined)[] = [];
+    const exclusive: (boolean | undefined)[] = [];
     const load = () =>
       Promise.resolve({
         ...engine,
@@ -659,6 +605,7 @@ describe("composeWorkflowRuntime", () => {
           options: Parameters<typeof engine.acquireWorkflowSingletonLease>[0],
         ) => {
           selfFence.push(options.selfFence);
+          exclusive.push(options.exclusive);
           return engine.acquireWorkflowSingletonLease(options);
         },
       });
@@ -673,6 +620,7 @@ describe("composeWorkflowRuntime", () => {
     }
 
     expect(selfFence).toEqual([false, true]);
+    expect(exclusive).toEqual([true, false]);
     // Two reactors and two PGlite stores: past 5s on a Windows runner
   }, 30_000);
 
@@ -974,6 +922,189 @@ describe("the host's reactor access", () => {
   });
 });
 
+describe("a piece's index query through the host", () => {
+  const signer = {
+    app: { key: "did:key:zHost" },
+    user: { address: "0xhost", chainId: 5, networkId: "eip155" },
+  };
+  const request = {
+    subgraph: "key-index",
+    query: "{ keyIndex { find { key } } }",
+    variables: { k: ["a"] },
+  };
+  const manager = () => ({
+    executeSubgraph: vi.fn().mockResolvedValue({ data: { keyIndex: {} } }),
+  });
+  const sentUser = (m: ReturnType<typeof manager>) =>
+    (m.executeSubgraph.mock.calls[0] as [string, { user?: unknown }])[1].user;
+
+  it("asks as the run user on the host's chain, with the user's key", async () => {
+    const m = manager();
+    const query = indexQueryFor(m, {
+      signer,
+    } as unknown as InProcessReactorClientModule);
+    const result = await query(request, {
+      address: "0xrun",
+      subject: { address: "0xrun", key: "did:key:zRun" },
+    });
+    expect(result).toEqual({ data: { keyIndex: {} } });
+    expect(m.executeSubgraph).toHaveBeenCalledWith("key-index", {
+      query: request.query,
+      variables: request.variables,
+      user: {
+        address: "0xrun",
+        chainId: 5,
+        networkId: "eip155",
+        appKey: "did:key:zRun",
+      },
+    });
+  });
+
+  it("asks as the host itself for a run with no user, and anonymously without an identity", async () => {
+    const m = manager();
+    await indexQueryFor(m, {
+      signer,
+    } as unknown as InProcessReactorClientModule)(request, null);
+    expect(sentUser(m)).toEqual({
+      address: "0xhost",
+      chainId: 5,
+      networkId: "eip155",
+      appKey: "did:key:zHost",
+    });
+
+    const anonymous = manager();
+    await indexQueryFor(anonymous, {
+      signer: { app: { key: "did:key:zHost" }, user: {} },
+    } as unknown as InProcessReactorClientModule)(request, null);
+    expect(sentUser(anonymous)).toBeUndefined();
+  });
+
+  describe("a caller the policy gives no rows", () => {
+    const adminOnly = (admins: string[]) => ({
+      config: {
+        admins,
+        defaultProtection: false,
+        policy: AuthorizationPolicy.ADMIN_ONLY,
+      },
+      isSupremeAdmin: (address?: string) =>
+        address !== undefined && admins.includes(address),
+    });
+    const runUser = {
+      address: "0xrun",
+      subject: { address: "0xrun", key: "did:key:zRun" },
+    };
+    const module = { signer } as unknown as InProcessReactorClientModule;
+
+    it("refuses a granter who is no longer an admin, rather than answer nothing", async () => {
+      const m = manager();
+      const result = await indexQueryFor(
+        m,
+        module,
+        adminOnly(["0xother"]),
+      )(request, runUser);
+      expect(m.executeSubgraph).not.toHaveBeenCalled();
+      expect(result.data).toBeNull();
+      expect(result.errors?.[0].message).toMatch(
+        /0xrun is not an admin of this host/,
+      );
+    });
+
+    it("refuses a run with nobody behind it", async () => {
+      const m = manager();
+      const anonymous = {
+        signer: { app: { key: "did:key:zHost" }, user: {} },
+      } as unknown as InProcessReactorClientModule;
+      const result = await indexQueryFor(
+        m,
+        anonymous,
+        adminOnly(["0xother"]),
+      )(request, null);
+      expect(m.executeSubgraph).not.toHaveBeenCalled();
+      expect(result.errors?.[0].message).toMatch(/no person behind it/);
+    });
+
+    // The real filter an index answers with, over the rows of a store.
+    it("finds an existing document for a delegated run, and refuses once the granter left", async () => {
+      const admins = ["0xrun"];
+      const config = {
+        admins,
+        defaultProtection: false,
+        policy: AuthorizationPolicy.ADMIN_ONLY,
+      };
+      const readable = new ReadableDocumentsProjection({
+        config,
+      } as unknown as ConstructorParameters<
+        typeof ReadableDocumentsProjection
+      >[0]);
+      const executeSubgraph = vi.fn(
+        (
+          _name: string,
+          { user }: { user?: { address: string } },
+        ): Promise<{ data: Record<string, unknown> }> => {
+          const seen = readable.filterFor(user?.address).kind === "all";
+          return Promise.resolve({
+            data: {
+              keyIndex: {
+                find: seen ? [{ key: "gmail:1", documentId: "d1" }] : [],
+              },
+            },
+          });
+        },
+      );
+      const delegated = {
+        address: "0xrun",
+        subject: { address: "0xrun", key: "did:key:zDelegate" },
+      };
+      const query = indexQueryFor({ executeSubgraph }, module, {
+        config,
+        isSupremeAdmin: (address?: string) =>
+          address !== undefined && admins.includes(address),
+      });
+
+      expect(await query(request, delegated)).toEqual({
+        data: { keyIndex: { find: [{ key: "gmail:1", documentId: "d1" }] } },
+      });
+
+      // Removed from ADMINS: an empty answer here would duplicate everything.
+      admins.length = 0;
+      admins.push("0xother");
+      const refused = await query(request, delegated);
+      expect(refused.data).toBeNull();
+      expect(refused.errors).toHaveLength(1);
+      expect(executeSubgraph).toHaveBeenCalledOnce();
+    });
+
+    it("lets an admin read", async () => {
+      const m = manager();
+      await indexQueryFor(m, module, adminOnly(["0xrun"]))(request, runUser);
+      expect(m.executeSubgraph).toHaveBeenCalledOnce();
+    });
+
+    it.each([
+      AuthorizationPolicy.OPEN,
+      AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+    ])("leaves %s to the index's own filter", async (policy) => {
+      const m = manager();
+      await indexQueryFor(m, module, {
+        ...adminOnly([]),
+        config: { admins: [], defaultProtection: false, policy },
+      })(request, runUser);
+      expect(m.executeSubgraph).toHaveBeenCalledOnce();
+    });
+  });
+
+  it("hands the subgraph's errors back as messages", async () => {
+    const m = {
+      executeSubgraph: vi.fn().mockResolvedValue({
+        data: null,
+        errors: [{ message: "nope", extensions: { code: "X" } }],
+      }),
+    };
+    const result = await indexQueryFor(m, undefined)(request, null);
+    expect(result).toEqual({ data: null, errors: [{ message: "nope" }] });
+  });
+});
+
 // The GraphQL manager rides on the boot result without being on its public
 // type, and the subgraph registers late: poll rather than race it.
 async function pollWorkflowSubgraph(
@@ -1000,15 +1131,16 @@ describe("booting Switchboard with workflows on", () => {
     let switchboard: Awaited<ReturnType<typeof startSwitchboard>> | undefined;
 
     try {
-      switchboard = await startSwitchboard({
-        workflows: { enabled: true },
-        dbPath: join(tempRoot, "read-model"),
-        port: 0,
-        mcp: false,
-        disableLocalPackages: true,
-        identity: { keypairPath: join(tempRoot, "identity.json") },
-        logger: stubLogger(),
-      });
+      switchboard = await bootSwitchboard(
+        {
+          server: { port: 0 },
+          storage: { readModel: { url: join(tempRoot, "read-model") } },
+          features: { workflows: true, mcp: false },
+          packages: { disableLocal: true },
+          identity: { keypairPath: join(tempRoot, "identity.json") },
+        },
+        { logger: stubLogger() },
+      );
 
       expect(switchboard.workflowTriggers).toEqual({ status: "available" });
       const { results } = await switchboard.reactor.getDocumentModelModules();

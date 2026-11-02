@@ -200,11 +200,10 @@ export function createFolderOperations(
     );
     const parentFolderId = await ensureFolder(folderPath);
 
-    const module = await client.getDocumentModelModule(documentType);
-    const doc = module.utils.createDocument();
-    if (name) {
-      doc.header.name = name;
-    }
+    const doc = await client.newDocument(documentType, {
+      parentIdentifier: personalDriveId,
+      name,
+    });
 
     await client.drives.addFile(personalDriveId, doc, parentFolderId);
 

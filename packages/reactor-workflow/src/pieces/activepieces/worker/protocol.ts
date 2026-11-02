@@ -100,6 +100,8 @@ export interface RunActionRequest
   // Where ctx.files.write() puts bytes for the host to ingest. Without it the
   // action gets the data-URI service instead.
   stagingDir?: string;
+  // Serve `ctx.files.upload` over the call channel. Without it the member throws.
+  uploadFiles?: boolean;
   // Attachment refs in propsValue, already materialized by the host.
   stagedInputs?: StagedInput[];
   // Resolved connection values served to ctx.connections.get(key).
@@ -116,9 +118,14 @@ export interface RunActionRequest
   // it the member keeps throwing, so a piece that needs it fails loudly.
   liveOutput?: boolean;
   executionType?: `${ExecutionType}`;
-  // The delivery that woke a RESUME run, served as ctx.resumePayload. This
-  // engine never suspends a run, so nothing sets it yet; absent, the context
-  // member keeps throwing by name.
+  // ctx.run.canPause; false when absent. True also serves WAITPOINT_CREATE.
+  canPause?: boolean;
+  // Where resume URLs live; serves the deprecated `generateResumeUrl`.
+  resumeBaseUrl?: string;
+  // Serves `ctx.flows.list` and `ctx.server` over FLOWS_LIST and HOST_HTTP.
+  flows?: HostServerContext;
+  // The delivery that woke a RESUME run, served as ctx.resumePayload. Absent,
+  // the context member keeps throwing by name.
   resumePayload?: unknown;
   // Call the action's test method instead of run, as a single-step test does.
   stepTest?: boolean;
@@ -146,6 +153,8 @@ export interface ResolveOptionsRequest
   searchValue?: string;
   // ctx.project.id, the same one a run of the piece is handed.
   projectId?: string;
+  // Serves `ctx.flows.list` over FLOWS_LIST; absent lists nothing.
+  flows?: boolean;
 }
 
 export interface ResolveOptionsMessage {
@@ -162,7 +171,14 @@ export interface ResolveOptionsMessage {
 export interface TriggerHookRequest
   extends HostScopedRequest, PieceModuleRef, ReactorScopedRequest {
   triggerName: string;
-  hook: "onEnable" | "onDisable" | "run" | "test" | "onHandshake" | "onRenew";
+  hook:
+    | "onEnable"
+    | "onDisable"
+    | "run"
+    | "test"
+    | "onHandshake"
+    | "onRenew"
+    | "onStart";
   propsValue: Record<string, unknown>;
   auth?: unknown;
   storeState?: Record<string, unknown>;
@@ -176,6 +192,8 @@ export interface TriggerHookRequest
   payload?: unknown;
   webhookUrl?: string;
   server?: ServerContext;
+  // Serves `ctx.flows.list` and `ctx.server` over FLOWS_LIST and HOST_HTTP.
+  flows?: HostServerContext;
   // As on a run request: secrets stripped from errors before they cross back.
   redactValues?: string[];
 }
@@ -255,6 +273,12 @@ export interface ResultResponse {
   id: number;
   type: "result";
   output: unknown;
+  // run only: the action asked to suspend the run after it returned.
+  paused?: PausedStep;
+  // run only: what `run.respond` / `run.stop` answer a held sync request with.
+  response?: RunResponse;
+  // run only: `run.stop` ends the run after this step.
+  stopped?: boolean;
   touched: string[];
   // True when the piece set NODE_TLS_REJECT_UNAUTHORIZED=0 (contained to the worker).
   tlsPoisoned: boolean;
@@ -365,3 +389,67 @@ export const OUTPUT_UPDATE = "output.update";
 export const STORE_GET = "store.get";
 export const STORE_PUT = "store.put";
 export const STORE_DELETE = "store.delete";
+
+// `ctx.files.upload`: carries a StagedFile, answers with its attachment ref.
+export const FILES_UPLOAD = "files.upload";
+
+// `ctx.run.createWaitpoint`: carries a WaitpointCall, answers with
+// `{ id, resumeUrl }`.
+export const WAITPOINT_CREATE = "waitpoint.create";
+
+// `ctx.flows.list`: carries `{ externalIds? }`, answers `{ data }` with
+// Activepieces PopulatedFlow records.
+export const FLOWS_LIST = "flows.list";
+
+// A piece's fetch to `ctx.server.apiUrl`: carries a HostHttpRequest, answers
+// a HostHttpResponse. The host serves it in process, never over the network.
+export const HOST_HTTP = "host.http";
+
+// `ctx.server.apiUrl`: `.invalid` never resolves, so only fetch reaches it.
+export const HOST_ORIGIN = "http://reactor.invalid";
+
+export interface HostHttpRequest {
+  method: string;
+  // Path and query, relative to the host origin.
+  path: string;
+  headers: Record<string, string>;
+  body?: string;
+}
+
+export interface HostHttpResponse {
+  status: number;
+  headers?: Record<string, string>;
+  body?: string;
+}
+
+// `ctx.server` as a request serves it; apiUrl is always the host origin.
+export interface HostServerContext {
+  publicUrl?: string;
+}
+
+// What an action asks a waitpoint to be, as Activepieces' CreateWaitpointParams.
+export interface WaitpointCall {
+  type: "DELAY" | "WEBHOOK";
+  // ISO or any Date-parsable text; DELAY only.
+  resumeDateTime?: string;
+  // What the request the run holds is answered with when it pauses here.
+  responseToSend?: RunResponse;
+}
+
+// Activepieces' RespondResponse: an answer to a held sync request.
+export interface RunResponse {
+  status?: number;
+  body?: unknown;
+  headers?: Record<string, string>;
+}
+
+export interface CreatedWaitpoint {
+  id: string;
+  resumeUrl: string;
+}
+
+// How a step suspends: on its own waitpoint, or via deprecated `run.pause`
+// (the host creates one after, with any `generateResumeUrl` token).
+export type PausedStep =
+  | { waitpointId: string }
+  | { pause: WaitpointCall; token?: string };

@@ -14,12 +14,14 @@ import {
   piecesFromListModule,
 } from "./pieces.js";
 import { extractDocumentModels } from "./document-model-detection.js";
+import { type ScalarExport, scalarExportsOf } from "./scalar-exports.js";
 import { extractSubgraphs } from "./subgraph-extraction.js";
 import type { PackagePieceEntry } from "./types.js";
 import {
   extractUpgradeManifests,
   loadDocumentModels as loadDocumentModelsUtil,
   loadProcessors as loadProcessorsUtil,
+  loadScalars as loadScalarsUtil,
   loadSubgraphs as loadSubgraphsUtil,
 } from "./util.js";
 
@@ -90,6 +92,15 @@ export class ImportPackageLoader implements IPackageLoader {
     );
 
     return subgraphs;
+  }
+
+  async loadScalars(identifier: string): Promise<ScalarExport[]> {
+    this.logger.verbose(`Loading scalars from package: ${identifier}`);
+    const scalars = scalarExportsOf(await loadScalarsUtil(identifier));
+    this.logger.verbose(
+      `  ➜  Loaded ${scalars.length} Scalars from: ${identifier}`,
+    );
+    return scalars;
   }
 
   async loadProcessors(

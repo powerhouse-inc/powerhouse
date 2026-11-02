@@ -1,4 +1,5 @@
 import type { AttachmentHash, AttachmentRef } from "@powerhousedao/reactor";
+import { blobStream } from "./blob.js";
 import {
   runWithConcurrency,
   type BatchItemResult,
@@ -95,6 +96,10 @@ export {
 } from "./switchboard/index.js";
 export { NullAttachmentTransport } from "./null-attachment-transport.js";
 export {
+  RoutingAttachmentService,
+  type AttachmentRouteResolver,
+} from "./routing/routing-attachment-service.js";
+export {
   DEFAULT_PROGRESS_THROTTLE_MS,
   progressFraction,
   ProgressEmitter,
@@ -107,14 +112,21 @@ export {
   type ProgressEmitterOptions,
 } from "./progress.js";
 
+export type PreprocessOptions = {
+  fileName?: string;
+  mimeType?: string;
+  /** The document the attachment is for; see `ReserveAttachmentOptions`. */
+  documentId?: string;
+};
+
 export type PreprocessResult = {
   ref: AttachmentRef;
   hash: AttachmentHash;
   sizeBytes: number;
   options: HashFirstReserveAttachmentOptions;
-  /** @deprecated Read `blob`; this is `blob.stream()`. */
+  /** @deprecated Read `blob`; this is a stream of its bytes. */
   data: ReadableStream<Uint8Array>;
-  /** @deprecated Read `blob`; this is `() => blob.stream()`. */
+  /** @deprecated Read `blob`; each call is a new stream of its bytes. */
   stream: () => ReadableStream<Uint8Array>;
   /** The file itself; uploads send it as-is, so a browser streams it from disk. */
   blob: Blob;
@@ -124,6 +136,8 @@ export type AttachmentUploadInput = {
   file: Blob;
   fileName?: string;
   mimeType?: string;
+  /** The document the attachment is for; see `ReserveAttachmentOptions`. */
+  documentId?: string;
   /** Per-item cancellation, checked between stages. */
   signal?: AbortSignal;
 };
@@ -227,10 +241,7 @@ export type AttachmentBatchCounts = {
 export const DEFAULT_ATTACHMENT_BATCH_CONCURRENCY = 4;
 
 export interface IAttachmentClient {
-  preprocess(
-    file: Blob,
-    opts?: { fileName?: string; mimeType?: string },
-  ): Promise<PreprocessResult>;
+  preprocess(file: Blob, opts?: PreprocessOptions): Promise<PreprocessResult>;
   reserve(
     options: HashFirstReserveAttachmentOptions,
     send: (handle: IAttachmentUpload) => Promise<AttachmentUploadResult>,
@@ -389,16 +400,13 @@ function batchRunOptions<R>(
 class AttachmentClientImpl implements IAttachmentClient {
   constructor(private readonly service: IAttachmentService) {}
 
-  preprocess(
-    file: Blob,
-    opts?: { fileName?: string; mimeType?: string },
-  ): Promise<PreprocessResult> {
+  preprocess(file: Blob, opts?: PreprocessOptions): Promise<PreprocessResult> {
     return this.hashFile(file, opts);
   }
 
   private async hashFile(
     file: Blob,
-    opts?: { fileName?: string; mimeType?: string },
+    opts?: PreprocessOptions,
     signal?: AbortSignal,
   ): Promise<PreprocessResult> {
     const hash = await sha256HexOfBlob(file, signal ? { signal } : undefined);
@@ -412,9 +420,12 @@ class AttachmentClientImpl implements IAttachmentClient {
       fileName,
       clientHash: hash,
       sizeBytes,
+      ...(opts?.documentId !== undefined
+        ? { documentId: opts.documentId }
+        : {}),
     };
-    const data = file.stream();
-    const stream = (): ReadableStream<Uint8Array> => file.stream();
+    const data = blobStream(file);
+    const stream = (): ReadableStream<Uint8Array> => blobStream(file);
     return { ref, hash, sizeBytes, options, data, stream, blob: file };
   }
 
@@ -477,6 +488,9 @@ class AttachmentClientImpl implements IAttachmentClient {
               : {}),
             ...(input.mimeType !== undefined
               ? { mimeType: input.mimeType }
+              : {}),
+            ...(input.documentId !== undefined
+              ? { documentId: input.documentId }
               : {}),
           },
           signal,

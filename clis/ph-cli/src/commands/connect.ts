@@ -23,7 +23,9 @@ This command:
       console.log(args);
     }
     const { runConnectStudio } = await import("../services/connect-studio.js");
-    await runConnectStudio(args);
+    await runConnectStudio(args, undefined, undefined, {
+      reloadOnConfigChange: true,
+    });
   },
 });
 

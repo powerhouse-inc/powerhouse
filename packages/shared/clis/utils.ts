@@ -28,7 +28,7 @@ export class NodeVersionError extends Error {
     this.name = "NodeVersionError";
   }
 
-  static isError(error: unknown): error is NodeVersionError {
+  static override isError(error: unknown): error is NodeVersionError {
     return error instanceof Error && error.name === "NodeVersionError";
   }
 }

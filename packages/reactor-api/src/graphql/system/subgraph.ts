@@ -3,12 +3,12 @@ import { systemTypeDefs } from "./schema.js";
 import { getGitHash, getGitUrl, getVersion } from "./version.js";
 
 export class SystemSubgraph extends BaseSubgraph {
-  name = "system";
+  override name = "system";
   hasSubscriptions = false;
 
-  typeDefs = systemTypeDefs;
+  override typeDefs = systemTypeDefs;
 
-  resolvers = {
+  override resolvers = {
     Query: {
       system: () => ({
         version: getVersion(),

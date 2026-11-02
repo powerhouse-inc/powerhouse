@@ -1,11 +1,13 @@
 // setSchedule's two forms and the members a piece fails loudly on.
-import { buildActionContext } from "../../../src/pieces/activepieces/context/action.js";
+import {
+  buildActionContext,
+  RunCannotPauseError,
+} from "../../../src/pieces/activepieces/context/action.js";
 import {
   buildTriggerContext,
   InvalidCronExpressionError,
   InvalidScheduleIntervalError,
 } from "../../../src/pieces/activepieces/context/trigger.js";
-import { UnsupportedContextMemberError } from "../../../src/pieces/activepieces/context/stubs.js";
 
 describe("setSchedule", () => {
   it("records a cron schedule and defaults its timezone to UTC", () => {
@@ -59,18 +61,13 @@ describe("setSchedule", () => {
 });
 
 describe("run waitpoints", () => {
-  it("names createWaitpoint and waitForWaitpoint rather than reading undefined", () => {
+  it("refuses to suspend outside a workflow run", async () => {
     const { context } = buildActionContext({ propsValue: {} });
-    for (const member of ["createWaitpoint", "waitForWaitpoint"] as const) {
-      try {
-        void context.run[member]("" as never);
-        expect.unreachable();
-      } catch (error) {
-        expect(error).toBeInstanceOf(UnsupportedContextMemberError);
-        expect((error as UnsupportedContextMemberError).member).toBe(
-          `run.${member}`,
-        );
-      }
-    }
+    await expect(
+      context.run.createWaitpoint({ type: "WEBHOOK" }),
+    ).rejects.toBeInstanceOf(RunCannotPauseError);
+    expect(() => context.run.waitForWaitpoint("wp")).toThrowError(
+      RunCannotPauseError,
+    );
   });
 });

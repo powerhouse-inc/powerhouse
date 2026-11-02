@@ -34,13 +34,13 @@ type BoundaryProps = { modal: string; children: ReactNode };
 // A broken modal closes quietly instead of taking the page down; keyed by
 // modal, so the next one gets a fresh try.
 class ModalErrorBoundary extends Component<BoundaryProps, { failed: boolean }> {
-  state = { failed: false };
+  override state = { failed: false };
 
   static getDerivedStateFromError() {
     return { failed: true };
   }
 
-  componentDidCatch(error: unknown, info: ErrorInfo) {
+  override componentDidCatch(error: unknown, info: ErrorInfo) {
     console.error(
       `[connect] the ${this.props.modal} modal failed:`,
       error,
@@ -48,7 +48,7 @@ class ModalErrorBoundary extends Component<BoundaryProps, { failed: boolean }> {
     );
   }
 
-  render() {
+  override render() {
     return this.state.failed ? null : this.props.children;
   }
 }

@@ -14,6 +14,8 @@ export const phCliCommandNames = [
   "registry-login",
   "inspect",
   "is",
+  "keyframes",
+  "mcp",
   "migrate",
   "switchboard",
   "reactor",

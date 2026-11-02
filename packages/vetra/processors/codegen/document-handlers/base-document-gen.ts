@@ -1,14 +1,14 @@
 import type { Project } from "ts-morph";
-import type { CodegenInput, Config } from "./types.js";
-/**
- * Abstract base class for document generators
- * Defines the interface that all document-type handlers must implement
- */
+import type {
+  CodegenInput,
+  CodegenJob,
+  Config,
+  GenerateResult,
+} from "./types.js";
+
+/** The base of the generators, one per document type or set of types. */
 export abstract class BaseDocumentGen {
-  /**
-   * The document type(s) this generator supports
-   * Can be a single string or an array of strings for generators that handle multiple types
-   */
+  /** The document type or types this generator handles. */
   abstract readonly supportedDocumentTypes: string | string[];
   project: Project;
 
@@ -19,15 +19,12 @@ export abstract class BaseDocumentGen {
     this.project = project;
   }
 
-  /**
-   * Generate code for the given document
-   * Must be implemented by each specific document generator
-   */
-  abstract generate(strand: CodegenInput): Promise<void>;
+  /** Generates code for the document; throws when generation fails. */
+  abstract generate(
+    strand: CodegenInput,
+    job?: CodegenJob,
+  ): Promise<GenerateResult>;
 
-  /**
-   * Check if this generator supports the given document type
-   */
   supportsDocumentType(documentType: string): boolean {
     if (typeof this.supportedDocumentTypes === "string") {
       return this.supportedDocumentTypes === documentType;
@@ -35,9 +32,6 @@ export abstract class BaseDocumentGen {
     return this.supportedDocumentTypes.includes(documentType);
   }
 
-  /**
-   * Get all supported document types as an array
-   */
   getSupportedDocumentTypes(): string[] {
     if (typeof this.supportedDocumentTypes === "string") {
       return [this.supportedDocumentTypes];
@@ -45,22 +39,25 @@ export abstract class BaseDocumentGen {
     return [...this.supportedDocumentTypes];
   }
 
-  /**
-   * Validate if this strand should be processed
-   * Override this method in specific generators to add custom validation logic
-   */
-  shouldProcess(strand: CodegenInput): boolean {
-    // Basic validation: ensure strand has required properties
+  /** The module's name in the strand's state, for its codegen status. */
+  moduleName(strand: CodegenInput): string | undefined {
+    const state = strand.state as { global?: { name?: unknown } } | undefined;
+    const name = state?.global?.name;
+    return typeof name === "string" && name !== "" ? name : undefined;
+  }
+
+  /** Why this strand is not generated from; undefined when it is. */
+  skipReason(strand: CodegenInput): string | undefined {
     if (!strand.documentId || !strand.documentType) {
-      return false;
+      return "The operation names no document";
     }
-
-    // Basic validation: check if document type is supported
     if (!this.supportsDocumentType(strand.documentType)) {
-      return false;
+      return `No generator for document type ${strand.documentType}`;
     }
+    return undefined;
+  }
 
-    // Default to processing if basic validation passes
-    return true;
+  shouldProcess(strand: CodegenInput): boolean {
+    return this.skipReason(strand) === undefined;
   }
 }

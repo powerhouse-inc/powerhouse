@@ -5,3 +5,5 @@ export * from "./workflow/schedule.js";
 export * from "./workflow/ports.js";
 export * from "./workflow/core.js";
 export * from "./workflow/document-reference.js";
+export * from "./workflow/manual-inputs.js";
+export * from "./workflow/subflows.js";

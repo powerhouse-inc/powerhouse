@@ -741,7 +741,7 @@ describe("$map typing (tsc -p hosts positions)", () => {
         backends: {
           sb: {
             kind: "remote",
-            remote: { url: switchboard.endpoints.graphql },
+            remote: { url: switchboard.drives.sektar.url },
           },
         },
         drives: {
@@ -1027,7 +1027,7 @@ export async function run(host) {
           host: "connect",
           reactor: {
             backends: {
-              sb: { kind: "remote", remote: { url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } } } },
+              sb: { kind: "remote", remote: { url: { $output: { host: "switchboard", path: ["drives", "sektar", "url"] } } } },
             },
             drives: {
               $map: {
@@ -1070,7 +1070,7 @@ describe("cli-style compound: $map over the switchboard's drives", () => {
       backends: {
         sb: {
           kind: "remote",
-          remote: { url: "http://127.0.0.1:7064/graphql" },
+          remote: { url: "http://127.0.0.1:7064/d/sektar" },
         },
       },
       drives: [
@@ -1105,7 +1105,7 @@ describe("cli-style compound: $map over the switchboard's drives", () => {
         backends: {
           sb: {
             kind: "remote",
-            remote: { url: out("switchboard", ["endpoints", "graphql"]) },
+            remote: { url: out("switchboard", ["drives", "sektar", "url"]) },
           },
         },
         drives: drivesMap,

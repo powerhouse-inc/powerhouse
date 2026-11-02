@@ -42,6 +42,7 @@ describe("PURGE_DOCUMENT in reactor constants", () => {
       { index: 0, skip: 0 },
       [edit],
       [marker],
+      "rank-locale",
     );
     expect(merged.map((op) => op.action.type)).toEqual([
       "PURGE_DOCUMENT",

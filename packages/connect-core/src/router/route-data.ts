@@ -1,4 +1,4 @@
-import { useDrives } from "@powerhousedao/reactor-browser";
+import { useDriveNode, useDrives } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
   FolderNode,
@@ -35,9 +35,7 @@ export function useDriveRouteData(): DriveRouteView {
   const ids = useDriveRouteIds();
   const drives = useDrives();
   const drive = ids && drives?.find((d) => d.header.id === ids.driveId);
-  const node = ids?.nodeId
-    ? drive?.state.global.nodes.find((n) => n.id === ids.nodeId)
-    : undefined;
+  const node = useDriveNode(drive?.header.id, ids?.nodeId);
   const folder = node?.kind === "folder" ? node : undefined;
   // A node the listed drive doesn't have yet was a document the loader fetched.
   return { drive, folder, documentId: folder ? undefined : ids?.nodeId };

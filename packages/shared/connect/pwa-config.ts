@@ -310,3 +310,23 @@ export function toRegExpOrString(
     ? pattern
     : new RegExp(pattern.source, pattern.flags);
 }
+
+// A last path segment with an extension, e.g. icon.svg; .html pages stay the shell's.
+const FILE_PATH = /\.(?!html?$)[a-z0-9]+$/i;
+
+/**
+ * Whether the service worker answers a navigation to `pathname` with the app
+ * shell. A request for a file, one with an extension or one of the project's
+ * static files (`staticFiles`, relative to `scopePath`), gets the file instead.
+ */
+export function isAppShellNavigation(
+  pathname: string,
+  scopePath: string,
+  staticFiles: readonly string[],
+): boolean {
+  if (FILE_PATH.test(pathname)) return false;
+  const path = pathname.startsWith(scopePath)
+    ? pathname.slice(scopePath.length)
+    : pathname;
+  return !staticFiles.includes(path.replace(/^\/+/, ""));
+}

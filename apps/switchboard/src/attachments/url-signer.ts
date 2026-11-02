@@ -73,7 +73,7 @@ export type AttachmentUrlSigning =
 
 // Unset: production fails closed, anything else gets a per-process secret.
 export function resolveAttachmentUrlSigning(
-  env: Readonly<Record<string, string | undefined>> = process.env,
+  env: Readonly<Record<string, string | undefined>>,
 ): AttachmentUrlSigning {
   const secret = env[ATTACHMENT_URL_SIGNING_SECRET_ENV];
   if (secret !== undefined) {

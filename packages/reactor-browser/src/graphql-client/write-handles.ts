@@ -102,7 +102,7 @@ export class GraphQLJobWriteHandle implements WriteHandle {
   private defaultDocument: Promise<PHDocument> | undefined;
 
   constructor(
-    job: JobInfo,
+    readonly job: JobInfo,
     documentId: string,
     branch: string,
     wait: GraphQLJobStageWaiter,

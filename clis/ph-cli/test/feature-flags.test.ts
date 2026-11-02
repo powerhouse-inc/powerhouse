@@ -1,3 +1,4 @@
+import { parse } from "cmd-ts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   isUniformRunnersEnabled,
@@ -45,5 +46,15 @@ describe("help listing", () => {
     expect(names.includes("run")).toBe(listed);
     expect(names.includes("host")).toBe(listed);
     expect(names).toContain("generate");
+  });
+});
+
+describe("ph host", () => {
+  it.each(["check", "export"])("registers %s", async (name) => {
+    const { host } = await import("../src/commands/host.js");
+    expect(await parse(host, [name, "switchboard"])).toMatchObject({
+      _tag: "ok",
+      value: { command: name, args: { host: "switchboard" } },
+    });
   });
 });

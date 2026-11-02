@@ -1,4 +1,5 @@
 import type { Action } from "@powerhousedao/shared/document-model";
+import { generateActionId } from "@powerhousedao/shared/document-model";
 import { GraphQLClient } from "../client/graphql-client.js";
 import { MetricsCollector } from "../metrics/collector.js";
 import { Reporter } from "../metrics/reporter.js";
@@ -15,17 +16,13 @@ import type {
 } from "../types.js";
 import { DOCUMENT_MODEL_TYPE } from "../types.js";
 
-function generateId(): string {
-  return `test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
 function createAddFileAction(
   documentId: string,
   documentName: string,
   documentType: string,
 ): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "ADD_FILE",
     timestampUtcMs: new Date().toISOString(),
     input: {
@@ -137,8 +134,8 @@ export class TestScheduler {
     setTimeout(() => this.stop(), this.config.duration);
   }
 
-  async stop(): Promise<void> {
-    if (!this.isRunning) return;
+  stop(): Promise<void> {
+    if (!this.isRunning) return Promise.resolve();
 
     this.isRunning = false;
 
@@ -150,6 +147,7 @@ export class TestScheduler {
     const durationSeconds = (Date.now() - this.startTime) / 1000;
 
     this.reporter.printSummary(stats, durationSeconds);
+    return Promise.resolve();
   }
 
   private async createDocument(): Promise<void> {

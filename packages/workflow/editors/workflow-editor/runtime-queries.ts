@@ -14,6 +14,7 @@ import type {
   RunsScope,
   RuntimeClient,
   StepTestResult,
+  WaitingRunsScope,
 } from "./runtime-client.js";
 import { realRuns, TEST_TRIGGER_KIND } from "./run-kinds.js";
 import { runtimeKeys, SHARED_STALE_MS } from "./ui/query-keys.js";
@@ -130,7 +131,17 @@ export function runsOfPages(pages: readonly RunPage[]): RunRecord[] {
   });
 }
 
-const FINISHED = new Set(["SUCCEEDED", "FAILED"]);
+export const waitingRunsQuery = (
+  client: RuntimeClient,
+  scope: WaitingRunsScope,
+) =>
+  queryOptions({
+    queryKey: runtimeKeys.waitingRuns(client.url, scope),
+    queryFn: () => client.fetchWaitingRuns(scope),
+    staleTime: 0,
+  });
+
+const FINISHED = new Set(["SUCCEEDED", "FAILED", "CANCELLED"]);
 
 export const runQuery = (client: RuntimeClient, runId: string) =>
   queryOptions({

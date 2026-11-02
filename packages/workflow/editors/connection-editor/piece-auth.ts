@@ -1,6 +1,9 @@
 // Turns a piece's PieceAuth descriptor into a concrete field plan that maps
 // onto powerhouse/connection state: config fields vs secret refs.
-import type { ConnectionAuthType } from "document-models/connection";
+import {
+  isReactorConnectorId,
+  type ConnectionAuthType,
+} from "document-models/connection";
 
 export interface AuthField {
   name: string;
@@ -56,6 +59,8 @@ interface AuthPropDescriptor {
   required?: boolean;
   type?: string;
   options?: { options?: { label?: string; value?: unknown }[] };
+  // How the runtime's catalog lists a STATIC_DROPDOWN's options.
+  staticOptions?: { label?: string; value?: unknown }[];
 }
 
 interface PieceAuthDescriptor {
@@ -93,7 +98,7 @@ function toField(name: string, prop: AuthPropDescriptor): AuthField {
     required: prop.required ?? false,
     description: prop.description,
     inputType: prop.type,
-    options: prop.options?.options
+    options: (prop.staticOptions ?? prop.options?.options)
       ?.filter((option) => option.value !== undefined)
       .map((option) => ({
         label: option.label ?? String(option.value as string),
@@ -266,4 +271,20 @@ export function packageFromConnectorId(connectorId: string): string {
   const spec = connectorId.slice(0, separator);
   const at = spec.indexOf("@", 1);
   return at > 0 ? spec.slice(0, at) : spec;
+}
+
+export const REACTOR_SERVICE_LABEL = "Powerhouse documents";
+
+// The service a connection is bound to, by name; null while none is chosen.
+export function serviceName(
+  connectorId: string,
+  catalog: readonly { name: string; displayName: string }[] | null,
+): string | null {
+  if (connectorId === "") return null;
+  if (isReactorConnectorId(connectorId)) return REACTOR_SERVICE_LABEL;
+  const packageName = packageFromConnectorId(connectorId);
+  return (
+    catalog?.find((entry) => entry.name === packageName)?.displayName ??
+    packageName
+  );
 }

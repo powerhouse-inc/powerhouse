@@ -2,10 +2,11 @@
  * Switchboard — wraps the caller-provided Reactor via
  * `@powerhousedao/switchboard/server`'s `startSwitchboard`, exposing GraphQL
  * (including the `Packages` subgraph for dynamic install/uninstall), MCP,
- * and attachment endpoints. The caller's reactor is forwarded through the
- * `reactor` option on switchboard's `StartServerOptions`.
+ * and attachment endpoints. The caller's reactor is forwarded through
+ * switchboard's `reactor` dep.
  */
 
+import type { SwitchboardConfigInput } from "@powerhousedao/switchboard/config";
 import type { ReactorClientModule, SwitchboardInstance } from "./types.js";
 
 export interface StartSwitchboardOptions {
@@ -61,15 +62,11 @@ export function buildSwitchboardInstance(
 }
 
 interface StartSwitchboardEntry {
-  startSwitchboard: (opts: {
-    reactor: ReactorClientModule;
-    port: number;
-    dbPath: string;
-    mcp?: boolean;
-    packages?: string[];
-    registryUrl?: string;
-    strictPort?: boolean;
-  }) => Promise<SwitchboardHandle & { port: number }>;
+  initSwitchboardProcess: (config: SwitchboardConfigInput) => void;
+  startSwitchboard: (
+    config: SwitchboardConfigInput,
+    deps: { reactor: ReactorClientModule },
+  ) => Promise<SwitchboardHandle & { port: number }>;
 }
 
 /**
@@ -82,18 +79,27 @@ interface StartSwitchboardEntry {
 export async function startSwitchboard(
   options: StartSwitchboardOptions,
 ): Promise<SwitchboardInstance> {
-  const { startSwitchboard: startSwitchboardImpl } =
-    (await import("@powerhousedao/switchboard/server")) as unknown as StartSwitchboardEntry;
+  const [server, { switchboardConfigFromEnv }, { callerOverEnv }] =
+    await Promise.all([
+      import("@powerhousedao/switchboard/server") as unknown as Promise<StartSwitchboardEntry>,
+      import("@powerhousedao/switchboard/config/env"),
+      import("@powerhousedao/switchboard/config"),
+    ]);
 
-  const handle = await startSwitchboardImpl({
+  // The process env still configures the switchboard, under these options.
+  const config = callerOverEnv(switchboardConfigFromEnv(process.env), {
+    server: {
+      port: options.port,
+      // Fail rather than silently shift ports when the requested port is busy.
+      strictPort: true,
+    },
+    storage: { readModel: { url: options.dbPath } },
+    features: { mcp: true },
+    packages: { list: [], registryUrl: options.registryUrl },
+  });
+  server.initSwitchboardProcess(config);
+  const handle = await server.startSwitchboard(config, {
     reactor: options.reactorModule,
-    port: options.port,
-    dbPath: options.dbPath,
-    mcp: true,
-    packages: [],
-    registryUrl: options.registryUrl,
-    // Fail rather than silently shift ports when the requested port is busy.
-    strictPort: true,
   });
 
   return buildSwitchboardInstance(options, handle);

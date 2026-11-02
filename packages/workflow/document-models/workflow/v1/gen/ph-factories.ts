@@ -42,6 +42,7 @@ export function defaultGlobalState(): WorkflowGlobalState {
     published: null,
     lastRunAt: null,
     lastRunStatus: null,
+    managedBy: null,
   };
 }
 

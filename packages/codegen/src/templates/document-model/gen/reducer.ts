@@ -57,13 +57,20 @@ function makeModulesOperationsImports(
     .join("\n");
 }
 
-function makeOperationInputSchemaInvocation(operation: OperationSpecification) {
+function makeOperationInputSchemaInvocation(
+  operation: OperationSpecification,
+  parsesInput: boolean,
+) {
   const operationInputSchema = makeOperationInputSchema(operation);
   const constantCaseOperationName = makeConstantCaseOperationName(operation);
   if (operation.schema === null) {
     return ts`
   if (Object.keys(action.input).length > 0) throw new Error("Expected empty input for action ${constantCaseOperationName}");
 `.raw;
+  }
+  if (parsesInput) {
+    return ts`const input = memoizedSchema(${operationInputSchema}).parse(action.input);`
+      .raw;
   }
   return ts`memoizedSchema(${operationInputSchema}).parse(action.input);`.raw;
 }
@@ -85,43 +92,66 @@ function makeOperationInvocation(
   module: ModuleSpecification,
   operation: OperationSpecification,
   camelCaseDocumentType: string,
+  parsesInput: boolean,
 ) {
   const operationsObjectName = makeOperationsObjectName(
     module,
     camelCaseDocumentType,
   );
   const operationName = makeOperationName(operation);
+  const scope = operation.scope || "global";
+  const actionTypeName = makeActionTypeName(operation);
+  const operationAction = parsesInput ? "{ ...action, input }" : "action";
 
   return ts`
-  ${operationsObjectName}.${operationName}((state as any)[action.scope], action as any, dispatch);
+  ${operationsObjectName}.${operationName}(state.${scope}, ${operationAction} as ${actionTypeName}, dispatch);
   `.raw;
+}
+
+function makeActionTypeName(operation: OperationSpecification) {
+  return `${makePascalCaseOperationName(operation)}Action`;
+}
+
+// The operation reducers take their own action types; `action` is any Action.
+function makeActionTypeImports(modules: ModuleSpecification[]) {
+  return modules
+    .filter((module) => module.operations.length > 0)
+    .map(
+      (module) =>
+        `import type { ${module.operations.map(makeActionTypeName).join(", ")} } from "./${kebabCase(module.name)}/actions.js";`,
+    )
+    .join("\n");
 }
 
 function makeModuleOperationCaseStatement(
   module: ModuleSpecification,
   camelCaseDocumentType: string,
+  parsedInputOperations: ReadonlySet<string>,
 ) {
-  return module.operations.map(
-    (operation) =>
-      ts`
+  return module.operations.map((operation) => {
+    const parsesInput = parsedInputOperations.has(operation.name ?? "");
+    return ts`
       case "${makeConstantCaseOperationName(operation)}": {
-        ${makeOperationInputSchemaInvocation(operation)}
-        ${makeOperationInvocation(module, operation, camelCaseDocumentType)}
+        ${makeOperationInputSchemaInvocation(operation, parsesInput)}
+        ${makeOperationInvocation(module, operation, camelCaseDocumentType, parsesInput)}
         break;
       }
-      `.raw,
-  );
+      `.raw;
+  });
 }
 
 function makeModuleOperationsCaseStatements(
   modules: ModuleSpecification[],
   camelCaseDocumentType: string,
+  parsedInputOperations: ReadonlySet<string>,
 ) {
   return modules
     .map((module) =>
-      makeModuleOperationCaseStatement(module, camelCaseDocumentType).join(
-        "\n",
-      ),
+      makeModuleOperationCaseStatement(
+        module,
+        camelCaseDocumentType,
+        parsedInputOperations,
+      ).join("\n"),
     )
     .join("\n");
 }
@@ -149,13 +179,13 @@ function memoizedSchema<T>(makeSchema: () => T): T {
 
 export const documentModelGenReducerFileTemplate = (
   v: DocumentModelFileMakerArgs,
+  parsedInputOperations: ReadonlySet<string> = new Set(),
 ) =>
   ts`
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { Reducer, StateReducer } from "document-model";
 import { isDocumentAction, createReducer } from "document-model";
 import type { ${v.phStateName} } from "${v.versionImportPath}";
+${makeActionTypeImports(v.specification.modules)}
 
 ${makeModulesOperationsImports(v.specification.modules, v.camelCaseDocumentType)}
 
@@ -169,7 +199,7 @@ const stateReducer: StateReducer<${v.phStateName}> =
             return state;
         }
         switch (action.type) {
-       ${makeModuleOperationsCaseStatements(v.specification.modules, v.camelCaseDocumentType)}
+       ${makeModuleOperationsCaseStatements(v.specification.modules, v.camelCaseDocumentType, parsedInputOperations)}
             default:
                 return state;
         }

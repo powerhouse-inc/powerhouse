@@ -393,7 +393,7 @@ function isFsPath(identifier: string): boolean {
   );
 }
 
-function parseWorkerCount(
+export function parseWorkerCount(
   raw: string | undefined,
 ): WorkerCountInput | undefined {
   if (raw === undefined || raw.trim() === "") {

@@ -15,6 +15,11 @@ export class CollectionMembershipCache implements ICollectionMembershipCache {
 
   constructor(private operationIndex: IOperationIndex) {}
 
+  /** Sizes for telemetry. */
+  stats(): Record<string, number> {
+    return { size: this.cache.size };
+  }
+
   withScopedIndex(operationIndex: IOperationIndex): CollectionMembershipCache {
     const scoped = new CollectionMembershipCache(operationIndex);
     scoped.cache = this.cache;

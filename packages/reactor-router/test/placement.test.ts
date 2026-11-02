@@ -284,7 +284,13 @@ describe("RouterTable", () => {
     expect(snapshot.backends).toEqual(["one", "two"]);
     expect(snapshot.collections).toEqual(
       expect.arrayContaining([
-        { collectionId: "drive-a", backend: "one", source: "override" },
+        {
+          collectionId: "drive-a",
+          backend: "one",
+          source: "override",
+          origin: "config",
+          configured: "one",
+        },
         {
           collectionId: collection("drive-b").key,
           backend: "two",
@@ -311,7 +317,13 @@ describe("RouterTable", () => {
         .describe()
         .collections.filter((entry) => entry.collectionId === target.key),
     ).toEqual([
-      { collectionId: target.key, backend: "one", source: "override" },
+      {
+        collectionId: target.key,
+        backend: "one",
+        source: "override",
+        origin: "config",
+        configured: "one",
+      },
     ]);
   });
 
@@ -328,7 +340,13 @@ describe("RouterTable", () => {
         .describe()
         .collections.filter((entry) => entry.collectionId === target.key),
     ).toEqual([
-      { collectionId: target.key, backend: "two", source: "corrected" },
+      {
+        collectionId: target.key,
+        backend: "two",
+        source: "corrected",
+        origin: "config",
+        configured: "one",
+      },
     ]);
   });
 });

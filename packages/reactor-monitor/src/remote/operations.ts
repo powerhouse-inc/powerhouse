@@ -29,6 +29,23 @@ const NESTED: Partial<
     settings: "InspectionCatchUpLevelSettings",
     sample: "InspectionCatchUpLoadSample",
   },
+  InspectionProcessorTimingHorizon: {
+    live: "InspectionProcessorTimingCounters",
+    replay: "InspectionProcessorTimingCounters",
+  },
+  InspectionProcessorTimingRun: {
+    counters: "InspectionProcessorTimingCounters",
+  },
+  InspectionProcessorTiming: {
+    queueDepth: "InspectionProcessorQueueDepth",
+    total: "InspectionProcessorTimingHorizon",
+    window: "InspectionProcessorTimingHorizon",
+    currentRun: "InspectionProcessorTimingRun",
+    lastRun: "InspectionProcessorTimingLastRun",
+    lastBatch: "InspectionProcessorTimingBatch",
+    byDocumentType: "InspectionProcessorTimingDocumentType",
+  },
+  InspectionProcessorTimingReport: { processors: "InspectionProcessorTiming" },
 };
 
 /** `{ ... }` selecting every field of `type`, nested records included. */
@@ -48,6 +65,10 @@ export const INSPECTION_OPERATIONS = {
 
   documentModels: `query ReactorInspectionDocumentModels {
     inspection { documentModels ${selectionOf("InspectionDocumentModel")} }
+  }`,
+
+  loadsModelsOnDemand: `query ReactorInspectionModelLoading {
+    inspection { loadsModelsOnDemand }
   }`,
 
   drives: `query ReactorInspectionDrives($cursor: String, $limit: Int) {
@@ -75,6 +96,16 @@ export const INSPECTION_OPERATIONS = {
 
   processors: `query ReactorInspectionProcessors {
     inspection { processors ${selectionOf("InspectionProcessor")} }
+  }`,
+
+  processorTiming: `query ReactorInspectionProcessorTiming {
+    inspection { processorTiming ${selectionOf("InspectionProcessorTimingReport")} }
+  }`,
+
+  memoryTelemetry: `query ReactorInspectionMemoryTelemetry($limit: Int, $sinceIso: String) {
+    inspection {
+      memoryTelemetry(limit: $limit, sinceIso: $sinceIso) ${selectionOf("InspectionMemoryTelemetry")}
+    }
   }`,
 
   catchUpStatus: `query ReactorInspectionCatchUp { inspection { catchUpStatus } }`,

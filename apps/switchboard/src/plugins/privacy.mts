@@ -58,7 +58,7 @@ export const privacyPlugin: HostPlugin<{
       // Fail-fast resolve, before the reactor is built.
       ctx.privacyConfig = resolvePrivacy(
         (options as PrivacyCapableOptions).privacy,
-        process.env,
+        {},
       );
       return options;
     },

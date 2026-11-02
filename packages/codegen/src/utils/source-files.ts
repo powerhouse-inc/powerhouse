@@ -2,6 +2,18 @@ import path from "path";
 import type { Project, SourceFile } from "ts-morph";
 import { FileSystemRefreshResult } from "ts-morph";
 
+/**
+ * A relative path names a file beside the project's tsconfig.json, not in the
+ * process's cwd. A Project built without one keeps ts-morph's own resolution.
+ */
+export function projectPath(project: Project, filePath: string) {
+  const { configFilePath } = project.getCompilerOptions();
+  if (path.isAbsolute(filePath) || typeof configFilePath !== "string") {
+    return filePath;
+  }
+  return path.resolve(path.dirname(configFilePath), filePath);
+}
+
 /** Gets a SourceFile by name in a ts-morph Project, or creates a new one
  * if none with that path exists.
  *
@@ -30,7 +42,11 @@ import { FileSystemRefreshResult } from "ts-morph";
  * `addSourceFileAtPathIfExists` has just read disk, so refreshing that again
  * would be I/O for a guaranteed `NoChange`.
  */
-export function getOrCreateSourceFile(project: Project, filePath: string) {
+export function getOrCreateSourceFile(
+  project: Project,
+  relativeOrAbsolutePath: string,
+) {
+  const filePath = projectPath(project, relativeOrAbsolutePath);
   const dirName = path.dirname(filePath);
   if (!project.getDirectory(dirName)) {
     project.createDirectory(dirName);
@@ -70,7 +86,11 @@ function refreshCachedSourceFile(sourceFile: SourceFile) {
 /** Gets a Directory by name in a ts-morph Project, or creates a new one
  * if none with that path exists.
  */
-export function getOrCreateDirectory(project: Project, dirPath: string) {
+export function getOrCreateDirectory(
+  project: Project,
+  relativeOrAbsolutePath: string,
+) {
+  const dirPath = projectPath(project, relativeOrAbsolutePath);
   const directory = project.getDirectory(dirPath);
   if (!directory) {
     const newDirectory = project.createDirectory(dirPath);
@@ -92,7 +112,8 @@ export async function ensureDirectoriesExist(
   project: Project,
   ...pathsToEnsure: string[]
 ) {
-  for (const dirPath of pathsToEnsure) {
+  for (const relativeOrAbsolutePath of pathsToEnsure) {
+    const dirPath = projectPath(project, relativeOrAbsolutePath);
     const dir = project.getDirectory(dirPath);
     if (!dir) {
       const newDir = project.createDirectory(dirPath);
@@ -101,17 +122,25 @@ export async function ensureDirectoriesExist(
   }
 }
 
+// Either separator: path.join writes backslashes on Windows
+export function previousVersionPath(filePath: string, version: number) {
+  return filePath.replace(
+    new RegExp(`([\\\\/])v${version}([\\\\/])`),
+    `$1v${version - 1}$2`,
+  );
+}
+
 export function getPreviousVersionSourceFile(args: {
   project: Project;
   version: number;
   filePath: string;
 }) {
-  const { project, version, filePath } = args;
+  const { project, version } = args;
   const previousVersion = version - 1;
   if (previousVersion < 1) return;
-  const previousVersionFilePath = filePath.replace(
-    `/v${version}/`,
-    `/v${previousVersion}/`,
+  const previousVersionFilePath = previousVersionPath(
+    projectPath(project, args.filePath),
+    version,
   );
 
   // With skipAddingFilesFromTsConfig, the file isn't in the project yet;

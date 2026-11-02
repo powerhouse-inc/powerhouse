@@ -34,6 +34,8 @@ export class SyncOperation {
   error?: ChannelError;
   deliveredCount = 0;
   emittedCount = 0;
+  /** A release backfill, below a peer ack it did not advance. */
+  awaitingPush = false;
 
   callbacks: SyncOperationStatusCallback[] = [];
 
@@ -64,6 +66,10 @@ export class SyncOperation {
 
   started(): void {
     this.transition(SyncOperationStatus.TransportPending);
+  }
+
+  pushed(): void {
+    this.awaitingPush = false;
   }
 
   transported(): void {

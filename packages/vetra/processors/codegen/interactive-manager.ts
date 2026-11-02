@@ -143,6 +143,7 @@ export class InteractiveManager {
    */
   public async processQueueWithConfirmation(
     processor: (strands: QueuedStrand[]) => Promise<void>,
+    onCancel?: (strands: QueuedStrand[]) => void,
   ): Promise<void> {
     if (this.processingConfirmation) {
       logger.debug(
@@ -166,8 +167,7 @@ export class InteractiveManager {
 
       if (!shouldProceed) {
         logger.info("❌ Code generation cancelled by user");
-        // Clear the queue since user cancelled
-        this.clearQueue();
+        onCancel?.(this.clearQueue());
         return;
       }
 

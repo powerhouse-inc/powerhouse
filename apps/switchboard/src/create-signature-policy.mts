@@ -12,7 +12,7 @@ import type { ILogger } from "document-model";
  */
 export function resolveCreateSignaturePolicy(
   env: NodeJS.ProcessEnv,
-  options: { hasSigner: boolean; logger?: Pick<ILogger, "warn"> },
+  options: SignerFallbackOptions,
 ): SignaturePolicy {
   const raw = env.CREATE_SIGNATURE_POLICY?.trim();
   let policy: SignaturePolicy = DEFAULT_SIGNATURE_POLICY;
@@ -24,7 +24,19 @@ export function resolveCreateSignaturePolicy(
     }
     policy = raw;
   }
+  return createSignaturePolicyFor(policy, options);
+}
 
+type SignerFallbackOptions = {
+  hasSigner: boolean;
+  logger?: Pick<ILogger, "warn">;
+};
+
+/** The requested policy, or legacy when it needs a signer this switchboard lacks. */
+export function createSignaturePolicyFor(
+  policy: SignaturePolicy,
+  options: SignerFallbackOptions,
+): SignaturePolicy {
   if (policy === "v2-required" && !options.hasSigner) {
     options.logger?.warn(
       "No signer is configured, so new documents are created legacy: a v2-required document refuses the unsigned operations this switchboard would write. Set up an identity (ph login) to create v2-required documents.",

@@ -27,16 +27,18 @@ function scaffold(): string {
     ),
   );
   writeFileSync(join(dir, ".mcp.json"), JSON.stringify(MCP_BODY, null, 2));
-  mkdirSync(join(dir, ".cursor"), { recursive: true });
-  writeFileSync(
-    join(dir, ".cursor", "mcp.json"),
-    JSON.stringify(MCP_BODY, null, 2),
-  );
+  for (const rel of [
+    join(".cursor", "mcp.json"),
+    join(".gemini", "settings.json"),
+  ]) {
+    mkdirSync(join(dir, rel, ".."), { recursive: true });
+    writeFileSync(join(dir, rel), JSON.stringify(MCP_BODY, null, 2));
+  }
   return dir;
 }
 
 describe("applyProjectCustomizations port assignment", () => {
-  it("writes the derived ports into the config and both MCP files", async () => {
+  it("writes the derived ports and points every MCP file at the launcher", async () => {
     const dir = scaffold();
 
     await applyProjectCustomizations({ name: "my-package", projectDir: dir });
@@ -53,13 +55,16 @@ describe("applyProjectCustomizations port assignment", () => {
     expect(config.studio.port).toBe(expected.studioPort);
     expect(config.vetra.connectPort).toBe(expected.vetraConnectPort);
 
-    for (const rel of [".mcp.json", join(".cursor", "mcp.json")]) {
+    for (const rel of [
+      ".mcp.json",
+      join(".cursor", "mcp.json"),
+      join(".gemini", "settings.json"),
+    ]) {
       const mcp = JSON.parse(readFileSync(join(dir, rel), "utf8")) as {
-        mcpServers: Record<string, { url: string }>;
+        mcpServers: Record<string, { command?: string; url?: string }>;
       };
-      expect(mcp.mcpServers["reactor-mcp"].url).toBe(
-        `http://localhost:${expected.switchboardPort}/mcp`,
-      );
+      expect(mcp.mcpServers["reactor-mcp"].command).toBe("node");
+      expect(mcp.mcpServers["reactor-mcp"].url).toBeUndefined();
     }
   });
 

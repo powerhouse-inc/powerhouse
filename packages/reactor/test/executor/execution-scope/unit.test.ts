@@ -148,6 +148,7 @@ describe("KyselyWriteCache.withScopedStores", () => {
   beforeEach(() => {
     mockKeyframeStore = {
       putKeyframe: vi.fn().mockResolvedValue(undefined),
+      putKeyframeAndPrune: vi.fn().mockResolvedValue(undefined),
       findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
       listKeyframes: vi.fn().mockResolvedValue([]),
       deleteKeyframes: vi.fn().mockResolvedValue(0),
@@ -170,6 +171,7 @@ describe("KyselyWriteCache.withScopedStores", () => {
   it("should share streams between scoped and original", () => {
     const scopedKeyframeStore: IKeyframeStore = {
       putKeyframe: vi.fn().mockResolvedValue(undefined),
+      putKeyframeAndPrune: vi.fn().mockResolvedValue(undefined),
       findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
       listKeyframes: vi.fn().mockResolvedValue([]),
       deleteKeyframes: vi.fn().mockResolvedValue(0),
@@ -212,6 +214,7 @@ describe("KyselyWriteCache.withScopedStores", () => {
   it("should share putState from scoped to original", () => {
     const scopedKeyframeStore: IKeyframeStore = {
       putKeyframe: vi.fn().mockResolvedValue(undefined),
+      putKeyframeAndPrune: vi.fn().mockResolvedValue(undefined),
       findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
       listKeyframes: vi.fn().mockResolvedValue([]),
       deleteKeyframes: vi.fn().mockResolvedValue(0),
@@ -244,6 +247,7 @@ describe("KyselyWriteCache.withScopedStores", () => {
   it("should use provided stores for DB reads", async () => {
     const scopedKeyframeStore: IKeyframeStore = {
       putKeyframe: vi.fn().mockResolvedValue(undefined),
+      putKeyframeAndPrune: vi.fn().mockResolvedValue(undefined),
       findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
       listKeyframes: vi.fn().mockResolvedValue([]),
       deleteKeyframes: vi.fn().mockResolvedValue(0),
@@ -316,6 +320,7 @@ describe("KyselyWriteCache isolation", () => {
   beforeEach(() => {
     mockKeyframeStore = {
       putKeyframe: vi.fn().mockResolvedValue(undefined),
+      putKeyframeAndPrune: vi.fn().mockResolvedValue(undefined),
       findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
       listKeyframes: vi.fn().mockResolvedValue([]),
       deleteKeyframes: vi.fn().mockResolvedValue(0),

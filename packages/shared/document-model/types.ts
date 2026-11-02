@@ -5,6 +5,14 @@ import type { z } from "zod";
 import type { ZodRawShape } from "zod";
 import type { ActionSigningTarget } from "./action-signature.js";
 import type { Action } from "./actions.js";
+import type { BaseReducerVersion } from "./base-reducer-protocol.js";
+// By package path, so the declaration stays in its own file in dist.
+import type { DocumentDispatch } from "@powerhousedao/shared/document-model/dispatch";
+export type {
+  DispatchOutcome,
+  DocumentDispatch,
+  RejectedAction,
+} from "@powerhousedao/shared/document-model/dispatch";
 import type { PHDocument } from "./documents.js";
 import type { Operation } from "./operations.js";
 import type {
@@ -1120,6 +1128,20 @@ export type SetNameOperation = IOperation & {
   type: Scalars["String"]["output"];
 };
 
+export type Set_Slug = "SET_SLUG";
+
+export type SetSlugActionInput = {
+  slug: Scalars["String"]["input"];
+};
+
+export type SchemaSetSlugAction = {
+  id: Scalars["String"]["output"];
+  timestampUtcMs: Scalars["DateTime"]["output"];
+  input: SetSlugActionInput;
+  type: Set_Slug;
+  scope: "header";
+};
+
 export type Set_PreferredEditor = "SET_PREFERRED_EDITOR";
 
 export type SetPreferredEditorActionInput = {
@@ -1171,6 +1193,10 @@ export type SetNameAction = Action & {
   type: "SET_NAME";
   input: SchemaSetNameAction["input"];
 };
+export type SetSlugAction = Action & {
+  type: "SET_SLUG";
+  input: SchemaSetSlugAction["input"];
+};
 export type SetPreferredEditorAction = Action & {
   type: "SET_PREFERRED_EDITOR";
   input: SchemaSetPreferredEditorAction["input"];
@@ -1182,6 +1208,14 @@ export type UndoAction = Action & {
 export type NOOPAction = Action & {
   type: "NOOP";
   input: SchemaNOOPAction["input"];
+};
+
+export type RetractActionInput = { target: string };
+
+/** Retracts the action named by `target` in the same document, scope and branch. */
+export type RetractAction = Action & {
+  type: "RETRACT";
+  input: RetractActionInput;
 };
 
 export type CreateDocumentActionInput = {
@@ -1220,6 +1254,9 @@ export type UpgradeDocumentActionInput = {
 export type DeleteDocumentActionInput = {
   documentId: string;
   propagate?: "none" | "cascade"; // Deletion propagation mode
+  // Keeps the slug on the deleted document, so it resolves to a deletion
+  // someone decided on. Without it the slug is free for the next claimant.
+  keepSlug?: boolean;
 };
 
 export type PurgeDocumentActionInput = {
@@ -1291,6 +1328,7 @@ export type DocumentAction =
   | RedoAction
   | SetNameAction
   | SetPreferredEditorAction
+  | SetSlugAction
   | UndoAction
   | NOOPAction;
 
@@ -1405,14 +1443,38 @@ export type ReducerOptions = {
    * - Version 1 (default): Legacy behavior with index reuse
    * - Version 2: Reactor behavior with monotonic indices
    */
-  protocolVersion?: number;
+  protocolVersion?: BaseReducerVersion;
 
   /**
    * When true, skip index contiguity validation during replay.
    * Used for V2 state rebuild where gapped indices are expected.
    */
   skipIndexValidation?: boolean;
+
+  /**
+   * Base-reducer 3: the action ids in the scope that a stored RETRACT names.
+   * Computed from the document's operations when absent.
+   */
+  targeted?: ReadonlySet<string>;
+
+  /**
+   * Base-reducer 3: derives a scope from every row, each with its own model
+   * version's reducer and the upgrades applied at their boundaries. Without
+   * it, every row takes the reducer this one wraps.
+   */
+  deriveScope?: DeriveScope;
 };
+
+/**
+ * Derives `scope` from every row of `operations`, returning `document` with
+ * that scope's state replaced and the ids whose action applied.
+ */
+export type DeriveScope = <TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  operations: readonly Operation[],
+  scope: string,
+  onThrow?: (operation: Operation, error: unknown) => void,
+) => { document: PHDocument<TState>; applied: ReadonlySet<string> };
 
 /**
  * A pure function that takes an action and the previous state
@@ -1495,19 +1557,6 @@ export type EditorDispatch = (
   onErrorCallback?: ActionErrorCallback,
 ) => void;
 
-/** Dispatches actions to a document; `onErrors`/`onSuccess` report the outcome.
- * In Connect, `onErrors` gets an `OperationRejectedError` per rejected action. */
-export type DocumentDispatch<TAction extends Action = Action> = (
-  actionOrActions:
-    | TAction
-    | TAction[]
-    | DocumentAction
-    | DocumentAction[]
-    | undefined,
-  onErrors?: (errors: Error[]) => void,
-  onSuccess?: (result: PHDocument) => void,
-) => void;
-
 type EditorBaseProps = {
   children?: ReactNode;
   className?: string;
@@ -1569,6 +1618,8 @@ export type ReplayDocumentOptions = {
   // When true, skip index contiguity validation during replay.
   // Used for V2 state rebuild where gapped indices are expected.
   skipIndexValidation?: boolean;
+  /** The base-reducer version to replay under when the header names one this build does not know. */
+  protocolVersion?: BaseReducerVersion;
 };
 
 export type OperationIndex = {
@@ -1709,22 +1760,40 @@ export type PhAiToolAnnotations = {
   openWorldHint?: boolean;
 };
 
+/** An image the user attached to the chat, under the handle the model knows it by. */
+export type PhAiChatImage = {
+  handle: string;
+  /** `data:<mediaType>;base64,...` */
+  dataUrl: string;
+  mediaType: string;
+  name?: string;
+};
+
+/** What the assistant passes a tool next to its arguments. */
+export type PhAiToolContext = {
+  /** Aborted when the user stops the turn. */
+  signal?: AbortSignal;
+  /** The images attached to this chat so far. */
+  chatImages?: readonly PhAiChatImage[];
+};
+
 /**
  * Provider-agnostic tool descriptor a package can offer to the in-browser
  * AI assistant (see `DocumentModelLib.aiTools`).
  *
  * Structurally compatible with the MCP tool records produced by
- * `createReactorMcpProvider`: the callback parameter is `never` so any
+ * `toMcpTool`: the callback parameter is `never` so any
  * per-tool-args function type is assignable, and the result is `unknown`
  * because the envelope shape (MCP `CallToolResult`) is unwrapped at the
- * adapter boundary.
+ * adapter boundary. An MCP `image` content block in that envelope reaches the
+ * model as an image.
  */
 export type PhAiToolDescriptor = {
   name: string;
   description?: string;
   inputSchema: ZodRawShape;
   annotations?: PhAiToolAnnotations;
-  callback: (args: never) => Promise<unknown>;
+  callback: (args: never, context?: PhAiToolContext) => Promise<unknown>;
 };
 
 export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {

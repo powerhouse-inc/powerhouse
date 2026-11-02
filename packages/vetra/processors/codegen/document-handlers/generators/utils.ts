@@ -1,3 +1,7 @@
+import {
+  type Feature,
+  installFeatureDependencies as installForFeatures,
+} from "@powerhousedao/codegen";
 import type {
   MinimalBackupData,
   PHBaseState,
@@ -9,6 +13,7 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { lintSubgraphTypes } from "../../../../codegen/subgraph-type-lint.js";
 import { logger } from "../../logger.js";
+import type { CodegenJob } from "../types.js";
 
 const BACKUP_FOLDER = "backup-documents";
 
@@ -99,4 +104,34 @@ export async function warnSubgraphTypeConflicts(
     return;
   }
   for (const warning of warnings) logger.warn(`⚠️ ${warning}`);
+}
+
+/** Adds and installs what `features` need before their files are written:
+ * the package loader reloads on those files, so their imports must resolve. */
+export async function installFeatureDependencies(
+  features: readonly Feature[],
+  projectDir: string,
+  waiting?: string,
+  job?: CodegenJob,
+): Promise<void> {
+  const install = { ran: false };
+  try {
+    await installForFeatures(features, projectDir, {
+      log: (message) => logger.info(message),
+      warn: (message) => logger.warn(`⚠️ ${message}`),
+      waiting,
+      onInstall: (packages, command) => {
+        install.ran = true;
+        job?.waitingForInstall(
+          `Installing ${packages.join(", ")} with \`${command}\``,
+        );
+      },
+    });
+  } catch (error) {
+    logger.warn(
+      `⚠️ Could not add the dependencies of ${features.join(", ")}: ${(error as Error).message}`,
+    );
+  } finally {
+    if (install.ran) job?.running();
+  }
 }

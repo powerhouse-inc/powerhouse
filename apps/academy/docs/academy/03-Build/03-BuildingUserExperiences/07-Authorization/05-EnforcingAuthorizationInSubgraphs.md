@@ -67,8 +67,6 @@ import type { Context } from "@powerhousedao/reactor-api";
 export const getResolvers = (
   subgraph: BaseSubgraph,
 ): Record<string, unknown> => {
-  const reactor = subgraph.reactorClient;
-
   return {
     Query: {
       document: async (
@@ -77,7 +75,7 @@ export const getResolvers = (
         ctx: Context,
       ) => {
         const handle = await subgraph.assertCanRead(args.identifier, ctx);
-        return reactor.get(handle.fetchIdentifier);
+        return ctx.clients.read.get(handle.fetchIdentifier);
       },
     },
   };
@@ -115,7 +113,7 @@ the check was skipped for a policy-wide caller (OPEN or a supreme admin):
 
 ```typescript
 const handle = await subgraph.assertCanRead(args.identifier, ctx); // throws if denied
-const doc = await subgraph.reactorClient.get(handle.fetchIdentifier); // never args.identifier
+const doc = await ctx.clients.read.get(handle.fetchIdentifier); // never args.identifier
 ```
 
 **Rule of thumb:** after any `assertCan*` that takes an identifier, perform the
@@ -133,6 +131,7 @@ All of the following are public methods on `BaseSubgraph`, called on the
 | `assertCanExecuteOperation(identifier, type, ctx)` | Executing a specific operation type on a document.                         | throws `Forbidden` |
 | `assertCanCreate(ctx)`                             | Creating a new top-level document (no parent to check write against).      | throws `Forbidden` |
 | `canReadDocument(canonicalId, ctx)`                | Filtering a list — a non-throwing read check on an id from the data layer. | returns `boolean`  |
+| `filterReadableDocumentIds(ids, ctx)`              | Filtering plain string ids or slugs, e.g. ones a processor stored.          | drops them         |
 | `authorizationService.isSupremeAdmin(address)`     | Short-circuiting per-item filtering for policy-wide callers.               | returns `boolean`  |
 | `attachmentsFor(ctx)`                              | Reading or uploading attachments as the caller; returns an `IAttachmentClient`. | its reads throw `AttachmentNotFound` |
 
@@ -159,7 +158,7 @@ to name them — `Context`, `CanonicalDocumentId`, `AuthorizationPolicy`,
 ```typescript
 document: async (_parent, args: { identifier: string }, ctx: Context) => {
   const handle = await subgraph.assertCanRead(args.identifier, ctx);
-  return subgraph.reactorClient.get(handle.fetchIdentifier);
+  return ctx.clients.read.get(handle.fetchIdentifier);
 };
 ```
 
@@ -221,7 +220,26 @@ createTodoList: async (
 
 A resolver that returns _many_ documents must not throw on the first forbidden
 one — it must drop the documents the caller cannot read and return the rest.
-Supreme admins (and OPEN) see everything, so skip the per-item work for them:
+
+When the ids are plain strings, such as the document ids a processor wrote to
+its own table, pass them to `filterReadableDocumentIds`. It resolves and
+checks each one as `assertCanRead` does, keeps the ones it admits in their
+order, and drops the rest:
+
+```typescript
+searchTodos: async (
+  _parent,
+  args: { driveId: string; searchTerm: string },
+  ctx: Context,
+) => {
+  const matches = await runSearch(args.driveId, args.searchTerm); // returns document ids
+  return subgraph.filterReadableDocumentIds(matches, ctx);
+};
+```
+
+With ids that are already canonical, `canReadDocument` checks one at a time
+without resolving it. Supreme admins (and OPEN) see everything, so skip the
+per-item work for them:
 
 ```typescript
 import type { CanonicalDocumentId } from "@powerhousedao/reactor-api";
@@ -260,8 +278,8 @@ document through a list endpoint.
 2. **Fetch with `handle.fetchIdentifier`.** Never re-use the raw identifier the
    caller passed in after an `assertCan*` check.
 3. **Trust only `ctx.user`.** Do not read identity from arguments or headers.
-4. **Filter lists, don't throw on them.** Use `canReadDocument` + `isSupremeAdmin`
-   for collection resolvers; reserve the throwing asserts for single-target
+4. **Filter lists, don't throw on them.** Use `filterReadableDocumentIds`, or
+   `canReadDocument` + `isSupremeAdmin`, for collection resolvers; reserve the throwing asserts for single-target
    resolvers.
 5. **Pick the tightest check.** Read endpoints use `assertCanRead`; mutations use
    `assertCanWrite`; operation-restricted mutations use `assertCanExecuteOperation`.

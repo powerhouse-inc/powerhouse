@@ -103,13 +103,13 @@ if (!result.success && result.error) {
 
 ### Stored protocol versions
 
-After migrations, `buildModule()` reads the protocol versions (`header.protocolVersions`, such as `base-reducer` or `signature`) that stored documents were created with. If the reactor does not run one of them, for example after a rollback to an older build, it throws `UnsupportedStoredProtocolError` before any executor starts. The error's `versions` lists the unsupported `{ protocol, version }` pairs, and `documents` is how many stored documents need them.
+After migrations, `buildModule()` reads the protocol versions (`header.protocolVersions`, such as `base-reducer` or `signature`) that stored documents were created with, per document type. If the reactor does not run one of them, for example after a rollback to an older build, or a registered model cannot run its stored version, such as a base-reducer 3 document whose model's reducer is not built by `createReducer`, it throws `UnsupportedStoredProtocolError` before any executor starts. The error's `versions` lists the unsupported `{ protocol, version, documentType? }` entries, with `documentType` set when only that model cannot run the version, and `documents` is how many stored documents need them. A type whose model is loaded after start is checked when it loads: a refusal is logged and emitted as the `STORED_MODEL_REFUSED` event, and its documents stay read-only.
 
 ```typescript
 withUnsupportedStoredDocuments(mode: "refuse" | "read-only"): this
 ```
 
-`"refuse"` is the default. `"read-only"` builds anyway and logs a warning. Every job into those documents, and every operation received for them, is then refused. The check probes an index once per distinct set of creation versions rather than reading every document.
+`"refuse"` is the default. `"read-only"` builds anyway and logs a warning. Every job into those documents, and every operation received for them, is then refused. The check probes an index once per distinct pair of document type and creation versions rather than reading every document.
 
 | Host        | Setting                                                                       |
 | ----------- | ----------------------------------------------------------------------------- |

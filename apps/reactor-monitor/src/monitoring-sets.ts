@@ -27,10 +27,17 @@ export const MONITORING_SETS_STORAGE_KEY = "ph:reactor-monitor:sets";
 /** The set seeded when storage is empty or unreadable. */
 export const DEFAULT_SET_NAME = "default";
 
+/** Where an imported set came from: the `ph host export` it was built from. */
+export interface MonitoringSetSource {
+  project: { name: string; root: string };
+  host: string;
+}
+
 /** A named group of provisioned-reactor descriptors. */
 export interface MonitoringSet {
   name: string;
   descriptors: ReactorDescriptor[];
+  source?: MonitoringSetSource;
 }
 
 /** What is persisted: every set plus which one is active. */
@@ -60,6 +67,25 @@ function defaultSnapshot(): MonitoringSetsSnapshot {
   };
 }
 
+function asSource(value: unknown): MonitoringSetSource | undefined {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+  const { project, host } = value as { project?: unknown; host?: unknown };
+  if (typeof project !== "object" || project === null) {
+    return undefined;
+  }
+  const { name, root } = project as { name?: unknown; root?: unknown };
+  if (
+    typeof host !== "string" ||
+    typeof name !== "string" ||
+    typeof root !== "string"
+  ) {
+    return undefined;
+  }
+  return { project: { name, root }, host };
+}
+
 /**
  * Narrows arbitrary parsed JSON to a snapshot, or returns `undefined` when the
  * shape does not hold. A stored value written by an older or corrupted build
@@ -78,13 +104,19 @@ function asSnapshot(value: unknown): MonitoringSetsSnapshot | undefined {
     if (typeof entry !== "object" || entry === null) {
       return undefined;
     }
-    const set = entry as { name?: unknown; descriptors?: unknown };
+    const set = entry as {
+      name?: unknown;
+      descriptors?: unknown;
+      source?: unknown;
+    };
     if (typeof set.name !== "string" || !Array.isArray(set.descriptors)) {
       return undefined;
     }
+    const source = asSource(set.source);
     sets.push({
       name: set.name,
       descriptors: set.descriptors as ReactorDescriptor[],
+      ...(source ? { source } : {}),
     });
   }
   if (sets.length === 0) {
@@ -186,6 +218,37 @@ export class MonitoringSetsStore {
     this.snapshot.activeSetName = name;
     this.save();
     return [];
+  }
+
+  /**
+   * Adds a set without activating it and returns its name: `name`, or
+   * `name-2`, `name-3`, … when taken.
+   */
+  public importSet(
+    name: string,
+    descriptors: readonly ReactorDescriptor[],
+    source?: MonitoringSetSource,
+  ): string {
+    const taken = new Set(this.snapshot.sets.map((set) => set.name));
+    let unique = name;
+    for (let n = 2; taken.has(unique); n++) {
+      unique = `${name}-${n}`;
+    }
+    this.snapshot.sets.push({
+      name: unique,
+      descriptors: serializableCopy(descriptors),
+      ...(source
+        ? { source: { project: { ...source.project }, host: source.host } }
+        : {}),
+    });
+    this.save();
+    return unique;
+  }
+
+  /** The provenance of an imported set. */
+  public getSetSource(name: string): MonitoringSetSource | undefined {
+    const source = this.snapshot.sets.find((set) => set.name === name)?.source;
+    return source && { project: { ...source.project }, host: source.host };
   }
 
   /**

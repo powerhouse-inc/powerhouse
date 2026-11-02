@@ -81,6 +81,60 @@ describe("runtime-config loader", () => {
     expect(config.connect).toEqual(DEFAULT_CONNECT_CONFIG);
   });
 
+  it("resolves ${origin} against the page's origin, once, for every consumer", async () => {
+    vi.stubGlobal("location", { origin: "https://app.dev.sektar.be" });
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      connect: {
+        drives: {
+          defaultDrives: [
+            { url: "${origin}/d/sektar", name: null, icon: null },
+          ],
+        },
+        renown: { switchboardUrl: "${origin}/graphql" },
+      },
+    });
+    const { loadRuntimeConfig, getRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    const config = await loadRuntimeConfig();
+    const drives = config.connect.drives?.defaultDrives ?? [];
+    expect("url" in drives[0] ? drives[0].url : undefined).toBe(
+      "https://app.dev.sektar.be/d/sektar",
+    );
+    expect(config.connect.renown?.switchboardUrl).toBe(
+      "https://app.dev.sektar.be/graphql",
+    );
+    // the cached copy is the resolved one
+    const cachedDrives = getRuntimeConfig().connect.drives?.defaultDrives ?? [];
+    expect("url" in cachedDrives[0] ? cachedDrives[0].url : undefined).toBe(
+      "https://app.dev.sektar.be/d/sektar",
+    );
+  });
+
+  it("keeps ${origin} as written where there is no page origin (the shell prerender)", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      connect: {
+        drives: {
+          defaultDrives: [
+            { url: "${origin}/d/sektar", name: null, icon: null },
+          ],
+        },
+      },
+    });
+    const { loadRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    const config = await loadRuntimeConfig();
+    const drives = config.connect.drives?.defaultDrives ?? [];
+    expect("url" in drives[0] ? drives[0].url : undefined).toBe(
+      "${origin}/d/sektar",
+    );
+  });
+
   it("tolerates unknown extra fields under connect (forward-compat)", async () => {
     stubFetch({
       schemaVersion: 2,
@@ -292,6 +346,23 @@ describe("runtime-config loader", () => {
       authGroups: false,
       authConditions: false,
     });
+  });
+
+  it("carries undoV3 from the file and leaves it unset otherwise", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      connect: { reactor: { featureFlags: { undoV3: false } } },
+    });
+    const { loadRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    const config = await loadRuntimeConfig();
+
+    expect(config.connect.reactor?.featureFlags?.undoV3).toBe(false);
+    expect(DEFAULT_CONNECT_CONFIG.reactor?.featureFlags).not.toHaveProperty(
+      "undoV3",
+    );
   });
 
   it("returns source values for connect.app and connect.drives when set in the file", async () => {

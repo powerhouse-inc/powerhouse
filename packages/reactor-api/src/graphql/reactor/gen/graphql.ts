@@ -27,6 +27,7 @@ export type Incremental<T> =
   | {
       [P in keyof T]?: P extends " $fragmentName" | "__typename" ? T[P] : never;
     };
+export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 export type RequireFields<T, K extends keyof T> = Omit<T, K> & {
   [P in K]-?: NonNullable<T[P]>;
 };
@@ -278,6 +279,34 @@ export type DocumentRelationshipResultPage = {
 export type DocumentWithChildren = {
   readonly childIds: ReadonlyArray<Scalars["String"]["output"]>;
   readonly document: PhDocument;
+};
+
+export type DriveFileNode = {
+  readonly documentType: Scalars["String"]["output"];
+  readonly driveId: Scalars["ID"]["output"];
+  readonly id: Scalars["ID"]["output"];
+  readonly name: Scalars["String"]["output"];
+  readonly parentFolder?: Maybe<Scalars["ID"]["output"]>;
+};
+
+export type DriveFolderNode = {
+  readonly driveId: Scalars["ID"]["output"];
+  readonly id: Scalars["ID"]["output"];
+  readonly name: Scalars["String"]["output"];
+  readonly parentFolder?: Maybe<Scalars["ID"]["output"]>;
+};
+
+export type DriveNode = DriveFileNode | DriveFolderNode;
+
+export enum DriveNodeKind {
+  File = "FILE",
+  Folder = "FOLDER",
+}
+
+export type DriveNodePage = {
+  readonly hasMore: Scalars["Boolean"]["output"];
+  readonly nextCursor?: Maybe<Scalars["String"]["output"]>;
+  readonly results: ReadonlyArray<DriveNode>;
 };
 
 /**
@@ -651,6 +680,9 @@ export type Query = {
   readonly documentOutgoingRelationshipEdges: DocumentRelationshipResultPage;
   readonly documentOutgoingRelationships: PhDocumentResultPage;
   readonly documentServed: Scalars["Boolean"]["output"];
+  readonly driveDescendants: ReadonlyArray<DriveNode>;
+  readonly driveNode?: Maybe<DriveNode>;
+  readonly driveNodes: DriveNodePage;
   /**
    * Predicts whether the calling subject would be admitted to execute each of a
    * set of candidate operations, without submitting any of them. A UI asks this to
@@ -695,9 +727,11 @@ export type Query = {
    */
   readonly pollSyncEnvelopes: PollSyncEnvelopesResult;
   readonly syncHolds: ReadonlyArray<SyncHold>;
+  readonly undoRedoTargets: UndoRedoTargets;
 };
 
 export type QueryCreateDefaultsArgs = {
+  documentType?: InputMaybe<Scalars["String"]["input"]>;
   parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
 };
 
@@ -759,6 +793,23 @@ export type QueryDocumentServedArgs = {
   view?: InputMaybe<ViewFilterInput>;
 };
 
+export type QueryDriveDescendantsArgs = {
+  driveId: Scalars["ID"]["input"];
+  root: Scalars["ID"]["input"];
+};
+
+export type QueryDriveNodeArgs = {
+  driveId: Scalars["ID"]["input"];
+  id: Scalars["ID"]["input"];
+};
+
+export type QueryDriveNodesArgs = {
+  driveId: Scalars["ID"]["input"];
+  kind?: InputMaybe<DriveNodeKind>;
+  paging?: InputMaybe<PagingInput>;
+  parentFolder?: InputMaybe<Scalars["ID"]["input"]>;
+};
+
 export type QueryEvaluateActionsArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   candidates: ReadonlyArray<ActionCandidateInput>;
@@ -792,6 +843,12 @@ export type QueryPollSyncEnvelopesArgs = {
 export type QuerySyncHoldsArgs = {
   documentId?: InputMaybe<Scalars["String"]["input"]>;
   remoteName?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type QueryUndoRedoTargetsArgs = {
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdOrSlug: Scalars["String"]["input"];
+  scope?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type ReactorOperation = {
@@ -946,6 +1003,11 @@ export type TouchChannelResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
   readonly manifest?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly success: Scalars["Boolean"]["output"];
+};
+
+export type UndoRedoTargets = {
+  readonly redoTarget?: Maybe<Scalars["String"]["output"]>;
+  readonly undoTarget?: Maybe<Scalars["String"]["output"]>;
 };
 
 export type ViewFilterInput = {
@@ -1370,6 +1432,123 @@ export type GetCreateDefaultsQuery = {
     readonly signaturePolicy: string;
     readonly protocolVersions: NonNullable<unknown>;
   };
+};
+
+export type GetCreateProtocolVersionsQueryVariables = Exact<{
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentType: Scalars["String"]["input"];
+}>;
+
+export type GetCreateProtocolVersionsQuery = {
+  readonly createDefaults: { readonly protocolVersions: NonNullable<unknown> };
+};
+
+export type GetUndoRedoTargetsQueryVariables = Exact<{
+  documentIdOrSlug: Scalars["String"]["input"];
+  scope?: InputMaybe<Scalars["String"]["input"]>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type GetUndoRedoTargetsQuery = {
+  readonly undoRedoTargets: {
+    readonly undoTarget?: string | null | undefined;
+    readonly redoTarget?: string | null | undefined;
+  };
+};
+
+type DriveNodeFields_DriveFileNode_Fragment = {
+  readonly id: string;
+  readonly driveId: string;
+  readonly name: string;
+  readonly parentFolder?: string | null | undefined;
+  readonly documentType: string;
+};
+
+type DriveNodeFields_DriveFolderNode_Fragment = {
+  readonly id: string;
+  readonly driveId: string;
+  readonly name: string;
+  readonly parentFolder?: string | null | undefined;
+};
+
+export type DriveNodeFieldsFragment =
+  | DriveNodeFields_DriveFileNode_Fragment
+  | DriveNodeFields_DriveFolderNode_Fragment;
+
+export type GetDriveNodesQueryVariables = Exact<{
+  driveId: Scalars["ID"]["input"];
+  parentFolder?: InputMaybe<Scalars["ID"]["input"]>;
+  paging?: InputMaybe<PagingInput>;
+  kind?: InputMaybe<DriveNodeKind>;
+}>;
+
+export type GetDriveNodesQuery = {
+  readonly driveNodes: {
+    readonly nextCursor?: string | null | undefined;
+    readonly hasMore: boolean;
+    readonly results: ReadonlyArray<
+      | {
+          readonly id: string;
+          readonly driveId: string;
+          readonly name: string;
+          readonly parentFolder?: string | null | undefined;
+          readonly documentType: string;
+        }
+      | {
+          readonly id: string;
+          readonly driveId: string;
+          readonly name: string;
+          readonly parentFolder?: string | null | undefined;
+        }
+    >;
+  };
+};
+
+export type GetDriveNodeQueryVariables = Exact<{
+  driveId: Scalars["ID"]["input"];
+  id: Scalars["ID"]["input"];
+}>;
+
+export type GetDriveNodeQuery = {
+  readonly driveNode?:
+    | {
+        readonly id: string;
+        readonly driveId: string;
+        readonly name: string;
+        readonly parentFolder?: string | null | undefined;
+        readonly documentType: string;
+      }
+    | {
+        readonly id: string;
+        readonly driveId: string;
+        readonly name: string;
+        readonly parentFolder?: string | null | undefined;
+      }
+    | null
+    | undefined;
+};
+
+export type GetDriveDescendantsQueryVariables = Exact<{
+  driveId: Scalars["ID"]["input"];
+  root: Scalars["ID"]["input"];
+}>;
+
+export type GetDriveDescendantsQuery = {
+  readonly driveDescendants: ReadonlyArray<
+    | {
+        readonly id: string;
+        readonly driveId: string;
+        readonly name: string;
+        readonly parentFolder?: string | null | undefined;
+        readonly documentType: string;
+      }
+    | {
+        readonly id: string;
+        readonly driveId: string;
+        readonly name: string;
+        readonly parentFolder?: string | null | undefined;
+      }
+  >;
 };
 
 export type EvaluateActionsQueryVariables = Exact<{
@@ -1983,6 +2162,12 @@ export type DirectiveResolverFn<
   info: GraphQLResolveInfo,
 ) => TResult | Promise<TResult>;
 
+/** Mapping of union types */
+export type ResolversUnionTypes<_RefType extends Record<string, unknown>> =
+  ResolversObject<{
+    DriveNode: DriveFileNode | DriveFolderNode;
+  }>;
+
 /** Mapping between all available schema types and the resolvers types */
 export type ResolversTypes = ResolversObject<{
   Action: ResolverTypeWrapper<Action>;
@@ -2014,7 +2199,19 @@ export type ResolversTypes = ResolversObject<{
   DocumentRelationship: ResolverTypeWrapper<DocumentRelationship>;
   DocumentRelationshipResultPage: ResolverTypeWrapper<DocumentRelationshipResultPage>;
   DocumentWithChildren: ResolverTypeWrapper<DocumentWithChildren>;
+  DriveFileNode: ResolverTypeWrapper<DriveFileNode>;
+  DriveFolderNode: ResolverTypeWrapper<DriveFolderNode>;
+  DriveNode: ResolverTypeWrapper<
+    ResolversUnionTypes<ResolversTypes>["DriveNode"]
+  >;
+  DriveNodeKind: DriveNodeKind;
+  DriveNodePage: ResolverTypeWrapper<
+    Omit<DriveNodePage, "results"> & {
+      results: ReadonlyArray<ResolversTypes["DriveNode"]>;
+    }
+  >;
   ExecutionJobInput: ExecutionJobInput;
+  ID: ResolverTypeWrapper<Scalars["ID"]["output"]>;
   Int: ResolverTypeWrapper<Scalars["Int"]["output"]>;
   JSONObject: ResolverTypeWrapper<Scalars["JSONObject"]["output"]>;
   JobBatchMeta: ResolverTypeWrapper<JobBatchMeta>;
@@ -2060,6 +2257,7 @@ export type ResolversTypes = ResolversObject<{
   SyncRefusalInput: SyncRefusalInput;
   TouchChannelInput: TouchChannelInput;
   TouchChannelResult: ResolverTypeWrapper<TouchChannelResult>;
+  UndoRedoTargets: ResolverTypeWrapper<UndoRedoTargets>;
   ViewFilterInput: ViewFilterInput;
 }>;
 
@@ -2092,7 +2290,14 @@ export type ResolversParentTypes = ResolversObject<{
   DocumentRelationship: DocumentRelationship;
   DocumentRelationshipResultPage: DocumentRelationshipResultPage;
   DocumentWithChildren: DocumentWithChildren;
+  DriveFileNode: DriveFileNode;
+  DriveFolderNode: DriveFolderNode;
+  DriveNode: ResolversUnionTypes<ResolversParentTypes>["DriveNode"];
+  DriveNodePage: Omit<DriveNodePage, "results"> & {
+    results: ReadonlyArray<ResolversParentTypes["DriveNode"]>;
+  };
   ExecutionJobInput: ExecutionJobInput;
+  ID: Scalars["ID"]["output"];
   Int: Scalars["Int"]["output"];
   JSONObject: Scalars["JSONObject"]["output"];
   JobBatchMeta: JobBatchMeta;
@@ -2136,6 +2341,7 @@ export type ResolversParentTypes = ResolversObject<{
   SyncRefusalInput: SyncRefusalInput;
   TouchChannelInput: TouchChannelInput;
   TouchChannelResult: TouchChannelResult;
+  UndoRedoTargets: UndoRedoTargets;
   ViewFilterInput: ViewFilterInput;
 }>;
 
@@ -2410,6 +2616,61 @@ export type DocumentWithChildrenResolvers<
     ContextType
   >;
   document?: Resolver<ResolversTypes["PHDocument"], ParentType, ContextType>;
+}>;
+
+export type DriveFileNodeResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["DriveFileNode"] =
+    ResolversParentTypes["DriveFileNode"],
+> = ResolversObject<{
+  documentType?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  driveId?: Resolver<ResolversTypes["ID"], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes["ID"], ParentType, ContextType>;
+  name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  parentFolder?: Resolver<Maybe<ResolversTypes["ID"]>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type DriveFolderNodeResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["DriveFolderNode"] =
+    ResolversParentTypes["DriveFolderNode"],
+> = ResolversObject<{
+  driveId?: Resolver<ResolversTypes["ID"], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes["ID"], ParentType, ContextType>;
+  name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  parentFolder?: Resolver<Maybe<ResolversTypes["ID"]>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type DriveNodeResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["DriveNode"] =
+    ResolversParentTypes["DriveNode"],
+> = ResolversObject<{
+  __resolveType: TypeResolveFn<
+    "DriveFileNode" | "DriveFolderNode",
+    ParentType,
+    ContextType
+  >;
+}>;
+
+export type DriveNodePageResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["DriveNodePage"] =
+    ResolversParentTypes["DriveNodePage"],
+> = ResolversObject<{
+  hasMore?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
+  nextCursor?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+  results?: Resolver<
+    ReadonlyArray<ResolversTypes["DriveNode"]>,
+    ParentType,
+    ContextType
+  >;
 }>;
 
 export interface JsonObjectScalarConfig extends GraphQLScalarTypeConfig<
@@ -2824,6 +3085,24 @@ export type QueryResolvers<
     ContextType,
     RequireFields<QueryDocumentServedArgs, "idOrSlug">
   >;
+  driveDescendants?: Resolver<
+    ReadonlyArray<ResolversTypes["DriveNode"]>,
+    ParentType,
+    ContextType,
+    RequireFields<QueryDriveDescendantsArgs, "driveId" | "root">
+  >;
+  driveNode?: Resolver<
+    Maybe<ResolversTypes["DriveNode"]>,
+    ParentType,
+    ContextType,
+    RequireFields<QueryDriveNodeArgs, "driveId" | "id">
+  >;
+  driveNodes?: Resolver<
+    ResolversTypes["DriveNodePage"],
+    ParentType,
+    ContextType,
+    RequireFields<QueryDriveNodesArgs, "driveId">
+  >;
   evaluateActions?: Resolver<
     ResolversTypes["ActionEvaluations"],
     ParentType,
@@ -2862,6 +3141,12 @@ export type QueryResolvers<
     ParentType,
     ContextType,
     Partial<QuerySyncHoldsArgs>
+  >;
+  undoRedoTargets?: Resolver<
+    ResolversTypes["UndoRedoTargets"],
+    ParentType,
+    ContextType,
+    RequireFields<QueryUndoRedoTargetsArgs, "documentIdOrSlug">
   >;
 }>;
 
@@ -3057,6 +3342,23 @@ export type TouchChannelResultResolvers<
   success?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
 }>;
 
+export type UndoRedoTargetsResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["UndoRedoTargets"] =
+    ResolversParentTypes["UndoRedoTargets"],
+> = ResolversObject<{
+  redoTarget?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+  undoTarget?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+}>;
+
 export type Resolvers<ContextType = Context> = ResolversObject<{
   Action?: ActionResolvers<ContextType>;
   ActionContext?: ActionContextResolvers<ContextType>;
@@ -3077,6 +3379,10 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   DocumentRelationship?: DocumentRelationshipResolvers<ContextType>;
   DocumentRelationshipResultPage?: DocumentRelationshipResultPageResolvers<ContextType>;
   DocumentWithChildren?: DocumentWithChildrenResolvers<ContextType>;
+  DriveFileNode?: DriveFileNodeResolvers<ContextType>;
+  DriveFolderNode?: DriveFolderNodeResolvers<ContextType>;
+  DriveNode?: DriveNodeResolvers<ContextType>;
+  DriveNodePage?: DriveNodePageResolvers<ContextType>;
   JSONObject?: GraphQLScalarType;
   JobBatchMeta?: JobBatchMetaResolvers<ContextType>;
   JobChangeEvent?: JobChangeEventResolvers<ContextType>;
@@ -3104,6 +3410,7 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   SyncHold?: SyncHoldResolvers<ContextType>;
   SyncHoldReason?: SyncHoldReasonResolvers<ContextType>;
   TouchChannelResult?: TouchChannelResultResolvers<ContextType>;
+  UndoRedoTargets?: UndoRedoTargetsResolvers<ContextType>;
 }>;
 
 type Properties<T> = Required<{
@@ -3122,6 +3429,8 @@ export const definedNonNullAnySchema = z
 export const AuthDecisionSchema = z.enum(AuthDecision);
 
 export const DocumentChangeTypeSchema = z.enum(DocumentChangeType);
+
+export const DriveNodeKindSchema = z.enum(DriveNodeKind);
 
 export const PropagationModeSchema = z.enum(PropagationMode);
 
@@ -3432,6 +3741,23 @@ export const JobInfoFieldsFragmentDoc = gql`
     }
   }
 `;
+export const DriveNodeFieldsFragmentDoc = gql`
+  fragment DriveNodeFields on DriveNode {
+    ... on DriveFileNode {
+      id
+      driveId
+      name
+      parentFolder
+      documentType
+    }
+    ... on DriveFolderNode {
+      id
+      driveId
+      name
+      parentFolder
+    }
+  }
+`;
 export const GetDocumentModelsDocument = gql`
   query GetDocumentModels($namespace: String, $paging: PagingInput) {
     documentModels(namespace: $namespace, paging: $paging) {
@@ -3681,6 +4007,73 @@ export const GetCreateDefaultsDocument = gql`
       protocolVersions
     }
   }
+`;
+export const GetCreateProtocolVersionsDocument = gql`
+  query GetCreateProtocolVersions(
+    $parentIdOrSlug: String
+    $documentType: String!
+  ) {
+    createDefaults(
+      parentIdOrSlug: $parentIdOrSlug
+      documentType: $documentType
+    ) {
+      protocolVersions
+    }
+  }
+`;
+export const GetUndoRedoTargetsDocument = gql`
+  query GetUndoRedoTargets(
+    $documentIdOrSlug: String!
+    $scope: String
+    $branch: String
+  ) {
+    undoRedoTargets(
+      documentIdOrSlug: $documentIdOrSlug
+      scope: $scope
+      branch: $branch
+    ) {
+      undoTarget
+      redoTarget
+    }
+  }
+`;
+export const GetDriveNodesDocument = gql`
+  query GetDriveNodes(
+    $driveId: ID!
+    $parentFolder: ID
+    $paging: PagingInput
+    $kind: DriveNodeKind
+  ) {
+    driveNodes(
+      driveId: $driveId
+      parentFolder: $parentFolder
+      paging: $paging
+      kind: $kind
+    ) {
+      results {
+        ...DriveNodeFields
+      }
+      nextCursor
+      hasMore
+    }
+  }
+  ${DriveNodeFieldsFragmentDoc}
+`;
+export const GetDriveNodeDocument = gql`
+  query GetDriveNode($driveId: ID!, $id: ID!) {
+    driveNode(driveId: $driveId, id: $id) {
+      ...DriveNodeFields
+    }
+  }
+  ${DriveNodeFieldsFragmentDoc}
+`;
+export const GetDriveDescendantsDocument = gql`
+  query GetDriveDescendants($driveId: ID!, $root: ID!) {
+    driveDescendants(driveId: $driveId, root: $root) {
+      ...DriveNodeFields
+    }
+  }
+  ${DriveNodeFieldsFragmentDoc}
 `;
 export const EvaluateActionsDocument = gql`
   query EvaluateActions(
@@ -4169,6 +4562,65 @@ export function getSdk<C>(requester: Requester<C>) {
         variables,
         options,
       ) as Promise<GetCreateDefaultsQuery>;
+    },
+    GetCreateProtocolVersions(
+      variables: GetCreateProtocolVersionsQueryVariables,
+      options?: C,
+    ): Promise<GetCreateProtocolVersionsQuery> {
+      return requester<
+        GetCreateProtocolVersionsQuery,
+        GetCreateProtocolVersionsQueryVariables
+      >(
+        GetCreateProtocolVersionsDocument,
+        variables,
+        options,
+      ) as Promise<GetCreateProtocolVersionsQuery>;
+    },
+    GetUndoRedoTargets(
+      variables: GetUndoRedoTargetsQueryVariables,
+      options?: C,
+    ): Promise<GetUndoRedoTargetsQuery> {
+      return requester<
+        GetUndoRedoTargetsQuery,
+        GetUndoRedoTargetsQueryVariables
+      >(
+        GetUndoRedoTargetsDocument,
+        variables,
+        options,
+      ) as Promise<GetUndoRedoTargetsQuery>;
+    },
+    GetDriveNodes(
+      variables: GetDriveNodesQueryVariables,
+      options?: C,
+    ): Promise<GetDriveNodesQuery> {
+      return requester<GetDriveNodesQuery, GetDriveNodesQueryVariables>(
+        GetDriveNodesDocument,
+        variables,
+        options,
+      ) as Promise<GetDriveNodesQuery>;
+    },
+    GetDriveNode(
+      variables: GetDriveNodeQueryVariables,
+      options?: C,
+    ): Promise<GetDriveNodeQuery> {
+      return requester<GetDriveNodeQuery, GetDriveNodeQueryVariables>(
+        GetDriveNodeDocument,
+        variables,
+        options,
+      ) as Promise<GetDriveNodeQuery>;
+    },
+    GetDriveDescendants(
+      variables: GetDriveDescendantsQueryVariables,
+      options?: C,
+    ): Promise<GetDriveDescendantsQuery> {
+      return requester<
+        GetDriveDescendantsQuery,
+        GetDriveDescendantsQueryVariables
+      >(
+        GetDriveDescendantsDocument,
+        variables,
+        options,
+      ) as Promise<GetDriveDescendantsQuery>;
     },
     EvaluateActions(
       variables: EvaluateActionsQueryVariables,

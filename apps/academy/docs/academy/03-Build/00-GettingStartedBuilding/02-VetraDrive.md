@@ -93,22 +93,25 @@ An example of a builder team building on the Powerhouse Vetra Ecosystem and its 
 
 ### Connect Claude to the Reactor MCP
 
-Claude can connect directly to your running Reactor via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), giving it live access to your drives, documents, and document model operations.
+Claude can connect directly to your project's Reactor via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), giving it live access to your drives, documents, and document model operations.
 
-Add the following configuration to your Claude MCP settings (e.g. `~/.claude/mcp.json` for Claude Code, or the MCP servers section in Claude Desktop):
+`ph init` writes the configuration into the project: `.mcp.json` for Claude Code, `.cursor/mcp.json` for Cursor and `.gemini/settings.json` for Gemini CLI. The `.mcp.json` it writes is:
 
 ```json
 {
   "mcpServers": {
     "reactor-mcp": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:4001/mcp"]
+      "type": "stdio",
+      "command": "node",
+      "args": ["--run", "mcp"]
     }
   }
 }
 ```
 
-This connects Claude to the Reactor running at `http://localhost:4001`. Make sure `ph vetra --watch` (or `ph reactor`) is running before starting a Claude session that uses the MCP.
+`ph mcp` serves the reactor-mcp tools over stdio from the project's own `ph-cli`. `node --run mcp` runs the project's `mcp` script (`ph-cli mcp`), which works on every platform. On the first tool call it connects to the project's running Vetra, or starts `ph vetra --watch` in the background and writes its output to `.ph/vetra.log`, so you don't need to start Vetra first.
+
+For a client that doesn't start in the project directory, such as Claude Desktop, copy the entry from `.cursor/mcp.json` and replace `${workspaceFolder}` with the project's path. A project created before `ph mcp` points reactor-mcp at `http://localhost:4001/mcp`; run `ph migrate` to switch it to the launcher.
 
 → See [Connecting Claude with Reactor MCP](/academy/Lookup/Cookbook#connecting-claude-with-reactor-mcp) for a step-by-step walkthrough.
 

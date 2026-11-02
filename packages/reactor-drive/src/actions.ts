@@ -1,5 +1,5 @@
 import type { Action } from "@powerhousedao/shared/document-model";
-import { generateId } from "@powerhousedao/shared/document-model";
+import { generateActionId } from "@powerhousedao/shared/document-model";
 import type {
   AddFolderActionInput,
   RemoveFolderActionInput,
@@ -13,7 +13,7 @@ export type SetAvailableOfflineInput = { availableOffline: boolean };
 
 export function setDriveNameAction(input: SetDriveNameInput): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "SET_DRIVE_NAME",
     scope: "global",
     timestampUtcMs: new Date().toISOString(),
@@ -23,7 +23,7 @@ export function setDriveNameAction(input: SetDriveNameInput): Action {
 
 export function setDriveIconAction(input: SetDriveIconInput): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "SET_DRIVE_ICON",
     scope: "global",
     timestampUtcMs: new Date().toISOString(),
@@ -33,7 +33,7 @@ export function setDriveIconAction(input: SetDriveIconInput): Action {
 
 export function setSharingTypeAction(input: SetSharingTypeInput): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "SET_SHARING_TYPE",
     scope: "local",
     timestampUtcMs: new Date().toISOString(),
@@ -45,7 +45,7 @@ export function setAvailableOfflineAction(
   input: SetAvailableOfflineInput,
 ): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "SET_AVAILABLE_OFFLINE",
     scope: "local",
     timestampUtcMs: new Date().toISOString(),
@@ -55,7 +55,7 @@ export function setAvailableOfflineAction(
 
 export function addFolderAction(input: AddFolderActionInput): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "ADD_FOLDER",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
@@ -65,7 +65,7 @@ export function addFolderAction(input: AddFolderActionInput): Action {
 
 export function updateFolderAction(input: UpdateFolderActionInput): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "UPDATE_FOLDER",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
@@ -75,7 +75,7 @@ export function updateFolderAction(input: UpdateFolderActionInput): Action {
 
 export function removeFolderAction(input: RemoveFolderActionInput): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "REMOVE_FOLDER",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),

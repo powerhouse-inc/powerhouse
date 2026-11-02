@@ -17,7 +17,7 @@ function hungRemote(name: string, timeoutMs?: number) {
     name,
     kind: "remote",
     remote: {
-      url: "http://hung.example/graphql",
+      url: "http://hung.example/d/powerhouse",
       fetch: () => {
         reached();
         return new Promise<Response>(() => {});

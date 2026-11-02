@@ -17,6 +17,12 @@ export {
   type RenownSessionCookieState,
 } from "./use-renown-session.js";
 export { useRenown } from "../hooks/renown.js";
+export {
+  createDelegation,
+  decodeDelegation,
+  type DelegationClaims,
+  type DelegationScope,
+} from "@renown/sdk";
 export { Renown, type RenownProps } from "./renown-init.js";
 export { RenownProvider, type RenownProviderProps } from "./provider.js";
 export {
@@ -39,4 +45,4 @@ export {
 export { useRenownWalletAdapter } from "./use-renown-wallet-adapter.js";
 // Only the session action is public. Wallet-controller registry (mutators and
 // the ready waiter) stays internal wiring between the provider and useRenownAuth.
-export { openRenown } from "./session.js";
+export { desktopShell, openRenown, type DesktopShell } from "./session.js";

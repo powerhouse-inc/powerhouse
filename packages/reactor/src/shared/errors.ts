@@ -24,7 +24,7 @@ export class DocumentDeletedError extends Error {
     Error.captureStackTrace(this, DocumentDeletedError);
   }
 
-  static isError(error: unknown): error is DocumentDeletedError {
+  static override isError(error: unknown): error is DocumentDeletedError {
     return Error.isError(error) && error.name === "DocumentDeletedError";
   }
 }
@@ -56,7 +56,7 @@ export class AuthorizationDeniedError extends Error {
     Error.captureStackTrace(this, AuthorizationDeniedError);
   }
 
-  static isError(error: unknown): error is AuthorizationDeniedError {
+  static override isError(error: unknown): error is AuthorizationDeniedError {
     return Error.isError(error) && error.name === "AuthorizationDeniedError";
   }
 }
@@ -92,7 +92,9 @@ export class AuthTimestampNotMonotonicError extends Error {
     Error.captureStackTrace(this, AuthTimestampNotMonotonicError);
   }
 
-  static isError(error: unknown): error is AuthTimestampNotMonotonicError {
+  static override isError(
+    error: unknown,
+  ): error is AuthTimestampNotMonotonicError {
     return (
       Error.isError(error) && error.name === "AuthTimestampNotMonotonicError"
     );
@@ -131,7 +133,9 @@ export class InvalidOperationTimestampError extends Error {
     Error.captureStackTrace(this, InvalidOperationTimestampError);
   }
 
-  static isError(error: unknown): error is InvalidOperationTimestampError {
+  static override isError(
+    error: unknown,
+  ): error is InvalidOperationTimestampError {
     return (
       Error.isError(error) && error.name === "InvalidOperationTimestampError"
     );
@@ -143,20 +147,32 @@ export class UnsupportedProtocolVersionError extends Error {
   public readonly documentId: string;
   public readonly protocol: string;
   public readonly version: number;
+  /** Set when the reactor runs the version, but not for this document type. */
+  public readonly documentType?: string;
 
-  constructor(documentId: string, protocol: string, version: number) {
+  constructor(
+    documentId: string,
+    protocol: string,
+    version: number,
+    documentType?: string,
+  ) {
     super(
-      `Document ${documentId} requires ${protocol} ${version}, which this reactor does not support`,
+      documentType === undefined
+        ? `Document ${documentId} requires ${protocol} ${version}, which this reactor does not support`
+        : `Document ${documentId} requires ${protocol} ${version}, which this reactor cannot run for ${documentType}`,
     );
     this.name = "UnsupportedProtocolVersionError";
     this.documentId = documentId;
     this.protocol = protocol;
     this.version = version;
+    this.documentType = documentType;
 
     Error.captureStackTrace(this, UnsupportedProtocolVersionError);
   }
 
-  static isError(error: unknown): error is UnsupportedProtocolVersionError {
+  static override isError(
+    error: unknown,
+  ): error is UnsupportedProtocolVersionError {
     return (
       Error.isError(error) && error.name === "UnsupportedProtocolVersionError"
     );
@@ -193,7 +209,7 @@ export class ExcessiveReshuffleError extends Error {
     Error.captureStackTrace(this, ExcessiveReshuffleError);
   }
 
-  static isError(error: unknown): error is ExcessiveReshuffleError {
+  static override isError(error: unknown): error is ExcessiveReshuffleError {
     return Error.isError(error) && error.name === "ExcessiveReshuffleError";
   }
 }
@@ -233,7 +249,7 @@ export class InvalidSignatureError extends Error {
     Error.captureStackTrace(this, InvalidSignatureError);
   }
 
-  static isError(error: unknown): error is InvalidSignatureError {
+  static override isError(error: unknown): error is InvalidSignatureError {
     return Error.isError(error) && error.name === "InvalidSignatureError";
   }
 }
@@ -261,7 +277,9 @@ export class UpgradePreconditionFailedError extends Error {
     Error.captureStackTrace(this, UpgradePreconditionFailedError);
   }
 
-  static isError(error: unknown): error is UpgradePreconditionFailedError {
+  static override isError(
+    error: unknown,
+  ): error is UpgradePreconditionFailedError {
     return (
       Error.isError(error) && error.name === "UpgradePreconditionFailedError"
     );
@@ -304,7 +322,7 @@ export class DocumentNotFoundError extends Error {
   }
 
   /** Also true for DocumentPurgedError: only the name crosses the queue. */
-  static isError(error: unknown): error is DocumentNotFoundError {
+  static override isError(error: unknown): error is DocumentNotFoundError {
     return (
       Error.isError(error) &&
       (error.name === "DocumentNotFoundError" ||
@@ -341,7 +359,7 @@ export class DocumentNotDeletedError extends Error {
     Error.captureStackTrace(this, DocumentNotDeletedError);
   }
 
-  static isError(error: unknown): error is DocumentNotDeletedError {
+  static override isError(error: unknown): error is DocumentNotDeletedError {
     return Error.isError(error) && error.name === "DocumentNotDeletedError";
   }
 }
@@ -362,7 +380,7 @@ export class GroupInUseError extends Error {
     Error.captureStackTrace(this, GroupInUseError);
   }
 
-  static isError(error: unknown): error is GroupInUseError {
+  static override isError(error: unknown): error is GroupInUseError {
     return Error.isError(error) && error.name === "GroupInUseError";
   }
 }
@@ -389,8 +407,35 @@ export class PurgeTooLargeError extends Error {
     Error.captureStackTrace(this, PurgeTooLargeError);
   }
 
-  static isError(error: unknown): error is PurgeTooLargeError {
+  static override isError(error: unknown): error is PurgeTooLargeError {
     return Error.isError(error) && error.name === "PurgeTooLargeError";
+  }
+}
+
+export type RetractionRefusalReason = "target-missing" | "target-retracted";
+
+/** A submitted RETRACT whose target is absent or already retracted; terminal. */
+export class RetractionRefusedError extends Error {
+  public readonly documentId: string;
+  public readonly target: string;
+  public readonly reason: RetractionRefusalReason;
+
+  constructor(
+    documentId: string,
+    target: string,
+    reason: RetractionRefusalReason,
+  ) {
+    super(`RETRACT of ${target} refused in document ${documentId}: ${reason}`);
+    this.name = "RetractionRefusedError";
+    this.documentId = documentId;
+    this.target = target;
+    this.reason = reason;
+
+    Error.captureStackTrace(this, RetractionRefusedError);
+  }
+
+  static override isError(error: unknown): error is RetractionRefusedError {
+    return Error.isError(error) && error.name === "RetractionRefusedError";
   }
 }
 
@@ -410,10 +455,13 @@ export class ReservedActionError extends Error {
     Error.captureStackTrace(this, ReservedActionError);
   }
 
-  static isError(error: unknown): error is ReservedActionError {
+  static override isError(error: unknown): error is ReservedActionError {
     return Error.isError(error) && error.name === "ReservedActionError";
   }
 }
+
+// Shared, so the reducer refuses the same input with the same error.
+export { SubmittedUndoRefusedError } from "@powerhousedao/shared/document-model";
 
 /**
  * An authorization preflight was asked for while the reactor's decision model
@@ -443,7 +491,9 @@ export class AuthEnforcementDisabledError extends Error {
     Error.captureStackTrace(this, AuthEnforcementDisabledError);
   }
 
-  static isError(error: unknown): error is AuthEnforcementDisabledError {
+  static override isError(
+    error: unknown,
+  ): error is AuthEnforcementDisabledError {
     return (
       Error.isError(error) && error.name === "AuthEnforcementDisabledError"
     );
@@ -475,23 +525,36 @@ export class RelationshipNotFoundError extends Error {
     Error.captureStackTrace(this, RelationshipNotFoundError);
   }
 
-  static isError(error: unknown): error is RelationshipNotFoundError {
+  static override isError(error: unknown): error is RelationshipNotFoundError {
     return Error.isError(error) && error.name === "RelationshipNotFoundError";
   }
 }
 
+export type StoredProtocolRefusal = {
+  protocol: string;
+  version: number;
+  documentType?: string;
+};
+
+/** "base-reducer 3", or "base-reducer 3 for <type>" when only that model cannot run it. */
+export function storedRefusalName({
+  protocol,
+  version,
+  documentType,
+}: StoredProtocolRefusal): string {
+  return documentType === undefined
+    ? `${protocol} ${version}`
+    : `${protocol} ${version} for ${documentType}`;
+}
+
 /** The store holds documents at protocol versions this reactor does not run. */
 export class UnsupportedStoredProtocolError extends Error {
-  public readonly versions: readonly { protocol: string; version: number }[];
+  /** `documentType` is set when the reactor runs the version, but not for that model. */
+  public readonly versions: readonly StoredProtocolRefusal[];
   public readonly documents: number;
 
-  constructor(
-    versions: readonly { protocol: string; version: number }[],
-    documents: number,
-  ) {
-    const named = versions
-      .map(({ protocol, version }) => `${protocol} ${version}`)
-      .join(", ");
+  constructor(versions: readonly StoredProtocolRefusal[], documents: number) {
+    const named = versions.map(storedRefusalName).join(", ");
     super(
       `${documents} stored document(s) require ${named}, which this reactor does not run. Start a build that runs them, or accept them read-only with withUnsupportedStoredDocuments("read-only")`,
     );
@@ -502,7 +565,9 @@ export class UnsupportedStoredProtocolError extends Error {
     Error.captureStackTrace(this, UnsupportedStoredProtocolError);
   }
 
-  static isError(error: unknown): error is UnsupportedStoredProtocolError {
+  static override isError(
+    error: unknown,
+  ): error is UnsupportedStoredProtocolError {
     return (
       Error.isError(error) && error.name === "UnsupportedStoredProtocolError"
     );
@@ -534,7 +599,7 @@ export class BatchJobFailedError extends Error {
     Error.captureStackTrace(this, BatchJobFailedError);
   }
 
-  static isError(error: unknown): error is BatchJobFailedError {
+  static override isError(error: unknown): error is BatchJobFailedError {
     return (
       Error.isError(error) &&
       error.name === "BatchJobFailedError" &&

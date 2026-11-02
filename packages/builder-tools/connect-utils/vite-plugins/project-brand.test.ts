@@ -1,11 +1,11 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
   PHBackgroundLayers,
   PHConnectBranding,
 } from "@powerhousedao/shared/clis";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   brandMetaTags,
   effectiveBranding,
@@ -17,6 +17,7 @@ import {
   resolveProjectLoader,
   resolveProjectPwaBrand,
   resolveRuntimeBranding,
+  withAppleTouchIcon,
   withProjectFavicons,
   withResolvedGenericImages,
 } from "./project-brand.js";
@@ -33,8 +34,16 @@ function png(width: number, height: number): Buffer {
   return bytes;
 }
 
+const made: string[] = [];
+afterEach(() => {
+  for (const dir of made.splice(0)) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 function project(files: Record<string, Buffer | string>): string {
   const dir = mkdtempSync(join(tmpdir(), "ph-brand-"));
+  made.push(dir);
   for (const [rel, content] of Object.entries(files)) {
     const file = join(dir, rel);
     mkdirSync(join(file, ".."), { recursive: true });
@@ -370,6 +379,29 @@ describe("favicons", () => {
     expect(resolveProjectFavicons(dir, { icon: null })).toEqual([]);
     expect(warnings).toHaveLength(1);
     expect(withProjectFavicons("<head></head>", [])).toBe("<head></head>");
+  });
+
+  it("gives an iPhone the first installed-app icon that covers its 180 px", () => {
+    const icon = (sizes: string) => ({
+      fileName: `pwa-app-${sizes}.png`,
+      file: "unused",
+      contentType: "image/png",
+      sizes,
+    });
+    expect(
+      withAppleTouchIcon(
+        "<head></head>",
+        [icon("64x64"), icon("192x192"), icon("512x512")],
+        "/app/",
+      ),
+    ).toBe(
+      '<head><link rel="apple-touch-icon" href="/app/pwa-app-192x192.png" /></head>',
+    );
+    // Connect's own icons, or an SVG master, name nothing.
+    expect(withAppleTouchIcon("<head></head>")).toBe("<head></head>");
+    expect(withAppleTouchIcon("<head></head>", [icon("any")])).toBe(
+      "<head></head>",
+    );
   });
 });
 

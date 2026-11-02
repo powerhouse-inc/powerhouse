@@ -12,6 +12,7 @@ import {
   checkTriggerStrategy,
   type TriggerDelivery,
 } from "@powerhousedao/pieces-framework/workflow";
+import { isCallableFlow } from "./subflows.js";
 import {
   blockLabel,
   bundleResolver,
@@ -21,6 +22,7 @@ import {
   hashOf,
   DynamicPropertiesError,
   extractDedupeKey,
+  flowsHandlers,
   pieceModuleRef,
   PieceWorker,
   type IPieceWorker,
@@ -33,6 +35,7 @@ import {
   type PieceOrigin,
   type PieceTarget,
   type EgressPolicy,
+  type FlowsPort,
   type PieceResolver,
   type PieceWorkerResult,
   type ModelManifestSource,
@@ -71,6 +74,7 @@ import {
   triggerBlockColumns,
   triggerRowBlock,
   type PollSuccess,
+  type RunParent,
   type TriggerStateRow,
   workflowParkRow,
   type WorkflowParkRow,
@@ -154,6 +158,11 @@ export interface TriggerSupervisorOptions {
     kind: string,
     runId: string,
   ) => void;
+  // True while a workflow cannot start another run (its serialised slots are
+  // taken by firings that have not settled). Its due poll then stays due and
+  // is looked at again next tick, rather than handing out work that could
+  // only wait in the queue. Unset: every due poll runs.
+  pollHeld?: (workflowId: string) => boolean;
   cacheDir: string;
   // Where a trigger's piece comes from. Defaults to fetching into cacheDir,
   // so a host that ships pieces in a package passes its own.
@@ -180,6 +189,8 @@ export interface TriggerSupervisorOptions {
   // per workflow by the reactor's webhook service. Without one, such a trigger
   // refuses to enable rather than registering a URL nothing can reach.
   webhookUrlFor?: (workflowId: string) => Promise<string | undefined>;
+  // ctx.flows and ctx.server for a hook; absent, both throw.
+  flowsFor?: (workflowId: string, runId?: string) => FlowsPort | undefined;
   // How often a webhook trigger reconciles by polling anyway. A provider that
   // drops a delivery — paperless never retries a transport error — would
   // otherwise lose the event for good.
@@ -541,6 +552,33 @@ export class TriggerSupervisor {
     });
   }
 
+  /**
+   * Makes an armed trigger due now and runs the due check at once, so a
+   * schedule fires and a poll polls without waiting for its interval ("sync
+   * now"). The next one follows the interval from there. False when the
+   * workflow has no armed trigger (disabled, parked, erroring, unknown).
+   */
+  async pollNow(workflowId: string): Promise<boolean> {
+    if (this.stopped) return false;
+    const store = await this.store();
+    if (!store) return false;
+    const row = await store.getTriggerState(workflowId);
+    if (!row || row.status !== "ENABLED") return false;
+    const binding = this.bindings.get(workflowId);
+    if (binding && !isSchedule(binding) && isCallableFlow(binding)) {
+      return false;
+    }
+    await store.upsertTriggerState({
+      ...row,
+      next_poll_at: this.now().toISOString(),
+    });
+    this.tick().catch((error: unknown) => {
+      if (isShutdownRefusal(error)) return;
+      logger.error("Trigger tick after poll-now failed: @error", error);
+    });
+    return true;
+  }
+
   /** A re-publish past the parked version: on this lane, a park older than
    * `publishedVersion` goes and a row it parked is ENABLED again, as it was
    * before (only an ENABLED row is ever parked); a park as new stands. The
@@ -728,12 +766,17 @@ export class TriggerSupervisor {
   // payload, then goes through the same dedupe and fire path a poll does. The
   // resolver never waits for this — providers time out fast (paperless allows
   // five seconds) and a slow run would look like a failed delivery.
-  deliverWebhook(workflowId: string, payload: unknown): Promise<void> {
+  // Resolves to the runs it journaled; `parent` is a sub-flow's caller.
+  deliverWebhook(
+    workflowId: string,
+    payload: unknown,
+    parent?: RunParent,
+  ): Promise<string[]> {
     return this.enqueue(workflowId, async () => {
       const binding = this.bindings.get(workflowId);
       if (!binding || isSchedule(binding)) {
         logger.warn(`Webhook delivery for unknown workflow ${workflowId}`);
-        return;
+        return [];
       }
       const store = await this.store();
       // Rejecting is what stops the resolver logging "Webhook delivered" for a
@@ -773,19 +816,34 @@ export class TriggerSupervisor {
                 ).toISOString(),
               }
             : undefined;
-        await this.fireItems(
+        return await this.fireItems(
           store,
           binding,
           result.output,
           now,
           rewind,
           success,
+          parent,
         );
       } catch (error) {
         if (!refused) await rewind();
         throw error;
       }
     });
+  }
+
+  pieceBinding(workflowId: string): PieceTriggerBinding | undefined {
+    const binding = this.bindings.get(workflowId);
+    return binding && !isSchedule(binding) ? binding : undefined;
+  }
+
+  // Once per run, before its first step: the trigger's own setup for it.
+  onStart(
+    binding: PieceTriggerBinding,
+    runId: string,
+    payload: unknown,
+  ): Promise<PieceWorkerResult> {
+    return this.hook(binding, "onStart", { payload, runId });
   }
 
   // Trigger delivery is at-least-once, and a durable store puts that at risk:
@@ -833,6 +891,7 @@ export class TriggerSupervisor {
       payload?: unknown;
       webhookUrl?: string;
       runUser?: RunUser | null;
+      runId?: string;
     } = {},
   ): Promise<PieceWorkerResult> {
     // onDisable still has to release what an earlier enable registered.
@@ -858,6 +917,17 @@ export class TriggerSupervisor {
     // credential the connection resolved to.
     const redactValues = secretsFor(auth);
     const reactor = await this.reactorFor(binding, hook, options.runUser);
+    const flows =
+      hook === "test" || hook === "onDisable"
+        ? undefined
+        : this.options.flowsFor?.(binding.workflowId, options.runId);
+    const hostCalls =
+      pieceStore || flows
+        ? {
+            ...(pieceStore ? storeHandlers(pieceStore) : {}),
+            ...(flows ? flowsHandlers(flows) : {}),
+          }
+        : undefined;
     this.throwIfStopped();
     return this.worker.runTriggerHook(
       {
@@ -868,7 +938,11 @@ export class TriggerSupervisor {
         auth,
         ...(redactValues.length > 0 ? { redactValues } : {}),
         ...(pieceStore ? { durableStore: true } : {}),
-        identity: { flowId: binding.workflowId, projectId: PROJECT_SCOPE_KEY },
+        identity: {
+          flowId: binding.workflowId,
+          projectId: PROJECT_SCOPE_KEY,
+          ...(options.runId ? { runId: options.runId } : {}),
+        },
         isRepublish: options.isRepublish,
         payload: options.payload,
         // A poll binding gets an unroutable URL on purpose: a live one would
@@ -877,10 +951,13 @@ export class TriggerSupervisor {
           options.webhookUrl ??
           `http://localhost:0/v1/webhooks/${binding.workflowId}`,
         ...(this.egress ? { egress: this.egress } : {}),
+        ...(flows
+          ? { flows: flows.publicUrl ? { publicUrl: flows.publicUrl } : {} }
+          : {}),
       },
       {
         timeoutMs: this.hookTimeoutMs,
-        ...(pieceStore ? { hostCalls: storeHandlers(pieceStore) } : {}),
+        ...(hostCalls ? { hostCalls } : {}),
         ...(reactor ? { reactor } : {}),
       },
     );
@@ -1029,7 +1106,9 @@ export class TriggerSupervisor {
     let reachedProvider = false;
     try {
       const runtime = await this.deliveryFor(binding);
-      const webhook = runtime.delivery === "webhook";
+      // Callable Flow is called by this reactor's runs: no public URL, no polling.
+      const inProcess = isCallableFlow(binding);
+      const webhook = runtime.delivery === "webhook" && !inProcess;
       // The reactor's webhook service owns the token and the URL it lives in,
       // so the piece is handed an address rather than a credential to place.
       const webhookUrl = webhook
@@ -1062,7 +1141,9 @@ export class TriggerSupervisor {
         status: await this.armedStatus(store, binding.workflowId),
         store_state: VESTIGIAL_STORE_STATE,
         interval_ms: intervalMs,
-        next_poll_at: new Date(now.getTime() + intervalMs).toISOString(),
+        next_poll_at: inProcess
+          ? null
+          : new Date(now.getTime() + intervalMs).toISOString(),
         last_poll_at: null,
         last_error: null,
         consecutive_failures: 0,
@@ -1505,6 +1586,13 @@ export class TriggerSupervisor {
         );
         continue;
       }
+      // Its earlier firings still hold every slot: polled now, a trigger that
+      // advances its own position (a backfill's cursor) would hand out work
+      // that can only queue, and expire or be skipped there. Left due, it is
+      // polled on the first tick after a slot frees.
+      if (!isSchedule(binding) && this.options.pollHeld?.(row.workflow_id)) {
+        continue;
+      }
       started.push(
         isSchedule(binding)
           ? this.startOnLane(
@@ -1714,7 +1802,8 @@ export class TriggerSupervisor {
     now: Date,
     rewind: Rewind,
     success?: PollSuccess,
-  ): Promise<void> {
+    parent?: RunParent,
+  ): Promise<string[]> {
     if (items.length === 0) {
       if (success) {
         await store.recordPollSuccess(
@@ -1724,7 +1813,7 @@ export class TriggerSupervisor {
           success.nextPollAtIso,
         );
       }
-      return;
+      return [];
     }
     const kind = pieceTriggerKind(binding.block);
     const runIds = await store.journalTriggerItems(
@@ -1734,6 +1823,7 @@ export class TriggerSupervisor {
           workflowId: binding.workflowId,
           triggerKind: kind,
           triggerPayload: item,
+          ...(parent ? { parent } : {}),
         },
       })),
       DEDUPE_TTL_MS,
@@ -1755,6 +1845,7 @@ export class TriggerSupervisor {
     for (const { runId, item } of journaled) {
       this.fire(binding.workflowId, item, kind, runId);
     }
+    return journaled.map(({ runId }) => runId);
   }
 
   // Each refused item is recorded once: the rewound cursor delivers it again,

@@ -1,7 +1,17 @@
 // @vitest-environment happy-dom
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
+// Warm the transform once; the per-test resetModules then only re-evaluates.
+import "@powerhousedao/reactor-browser";
 import type * as reactorBrowserModule from "@powerhousedao/reactor-browser";
 import type * as launchQueueModule from "./launch-queue.js";
 
@@ -56,6 +66,13 @@ async function loadModule(): Promise<LaunchQueueModule> {
 }
 
 describe("launch-queue", () => {
+  // The first cold import of reactor-browser's source nears the 5s test
+  // timeout under a full run; pay it once here, outside any test.
+  beforeAll(async () => {
+    await import("@powerhousedao/reactor-browser");
+    await import("./launch-queue.js");
+  }, 30_000);
+
   beforeEach(() => {
     vi.clearAllMocks();
     delete window.launchQueue;

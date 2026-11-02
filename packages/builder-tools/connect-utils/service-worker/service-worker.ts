@@ -36,6 +36,7 @@ import {
 // the worker bundle. The IDB schema constants are shared with the SPA writer
 // (apps/connect/src/utils/pwa-idb.ts) so the two can't desync.
 import {
+  isAppShellNavigation,
   mergeManifest,
   type PHConnectPwaUrlPattern,
   PWA_IDB_KEY,
@@ -48,6 +49,7 @@ import {
   EMBEDDED_BASE_MANIFEST,
   EXTRA_RUNTIME_CACHING,
   NAVIGATE_FALLBACK_DENYLIST_EXTRA,
+  STATIC_FILES,
 } from "virtual:ph-sw-config";
 
 declare const self: ServiceWorkerGlobalScope &
@@ -335,10 +337,14 @@ const stripQueryCacheKey: WorkboxPlugin = {
     return request.url;
   },
 };
+// A navigation to a file (icon.svg, a public/ file) is not the app's: it falls
+// through to the precache or the network, as a fetch of it would.
+const scopePath = new URL(self.registration.scope).pathname;
 registerRoute(
   new Route(
     ({ request, url }) =>
       request.mode === "navigate" &&
+      isAppShellNavigation(url.pathname, scopePath, STATIC_FILES) &&
       !denylist.some((re) => re.test(url.pathname + url.search)),
     new NetworkFirst({
       cacheName: "ph-shell",

@@ -72,22 +72,26 @@ const PIECE_ENTRY = join(PIECE_PKG, "dist/node/pieces/docling/index.mjs");
 let service: WorkflowRuntimeService;
 let reactor: InProcessReactorClientModule;
 let docling: Awaited<ReturnType<typeof startMiniDocling>>;
-let keyRef = "";
-let wrongRef = "";
 let created = 0;
 
+// The key is minted for the connection: a secret resolves only for its owner.
 async function makeDoclingConnection(options: {
   base_url: string;
-  keyRef: string;
+  key: string;
 }): Promise<string> {
   const id = `conn-docling-${++created}`;
+  const keyRef = (
+    await (
+      await service.secrets()
+    ).create({ value: options.key, label: "docling api key", ownerId: id })
+  ).ref;
   await createDocument(reactor, "connection", id, [
     actions.setConnector({
       connectorId: `${PIECE.name}#docling-serve`,
       authType: "CUSTOM_AUTH",
     }),
     actions.setConfig({ config: { base_url: options.base_url } }),
-    actions.setSecretRef({ id: "sr-1", name: "api_key", ref: options.keyRef }),
+    actions.setSecretRef({ id: "sr-1", name: "api_key", ref: keyRef }),
     actions.recordCheckResult({ status: "OK", checkedAt: FIXED_NOW }),
   ]);
   return id;
@@ -117,14 +121,6 @@ describe.skipIf(!existsSync(PIECE_PKG))(
       (service as unknown as { designEgress?: unknown }).designEgress = {
         allowAddresses: ["127.0.0.1/32", "::1/128"],
       };
-
-      const secrets = await service.secrets();
-      keyRef = (
-        await secrets.create({ value: "k-docling", label: "docling api key" })
-      ).ref;
-      wrongRef = (
-        await secrets.create({ value: "wrong-key", label: "docling (wrong)" })
-      ).ref;
     });
 
     afterAll(async () => {
@@ -136,7 +132,7 @@ describe.skipIf(!existsSync(PIECE_PKG))(
     it("records OK with the version-labelled account name for a healthy server", async () => {
       const id = await makeDoclingConnection({
         base_url: docling.baseUrl,
-        keyRef,
+        key: "k-docling",
       });
 
       const result = await service.checkConnection(id, TEST_CTX);
@@ -155,7 +151,7 @@ describe.skipIf(!existsSync(PIECE_PKG))(
     it("records ERROR with the 401 detail for a rejected key", async () => {
       const id = await makeDoclingConnection({
         base_url: docling.baseUrl,
-        keyRef: wrongRef,
+        key: "wrong-key",
       });
 
       const result = await service.checkConnection(id, TEST_CTX);
@@ -170,7 +166,7 @@ describe.skipIf(!existsSync(PIECE_PKG))(
     it("records ERROR when the server is unreachable", async () => {
       const id = await makeDoclingConnection({
         base_url: "http://127.0.0.1:1",
-        keyRef,
+        key: "k-docling",
       });
 
       const result = await service.checkConnection(id, TEST_CTX);

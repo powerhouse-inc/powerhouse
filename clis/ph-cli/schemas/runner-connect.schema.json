@@ -5,7 +5,9 @@
   "properties": {
     "name": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
     },
     "runner": {
       "type": "object",
@@ -98,6 +100,24 @@
               "const": false
             }
           ]
+        },
+        "proxy": {
+          "type": "object",
+          "properties": {
+            "target": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uri"
+                },
+                {
+                  "$ref": "#/$defs/__schema0"
+                }
+              ]
+            }
+          },
+          "required": ["target"],
+          "additionalProperties": false
         }
       },
       "required": ["module"],
@@ -406,6 +426,11 @@
             "studioMode": {
               "description": "Studio mode. Enables builder-only capabilities: Connect loads the vetra package and exposes DocumentModel (and vetra spec types) as creatable documents. Forced on by `ph vetra` / `ph connect studio`; false by default.",
               "default": false,
+              "type": "boolean"
+            },
+            "cookieBanner": {
+              "description": "Show the analytics cookie consent banner on a first visit, when a plugin that needs consent (Sentry, OpenPanel) is active. When false, no banner is shown and analytics consent stays rejected. `ph vetra` turns it off for its local Studio; true by default.",
+              "default": true,
               "type": "boolean"
             },
             "workflowsEnabled": {
@@ -829,10 +854,14 @@
                   "description": "Evaluate `where` and `match` conditions on grants. Requires authGroups. Do not enable on a fleet `preflight:auth` reports as crossing a reducer version.",
                   "default": false,
                   "type": "boolean"
+                },
+                "undoV3": {
+                  "description": "Support base-reducer 3 (id-targeted undo), which new documents then take. A peer without it is held from base-reducer 3 documents until it upgrades. Unset leaves the reactor's default.",
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false,
-              "description": "Enforcement flags. Each implies its predecessors, and the reactor refuses to boot on a set that names a later flag without an earlier one. These are consensus settings: a Connect syncing with a fleet must carry the same flags the fleet does, or the two reach different replay outcomes for the same history and diverge."
+              "description": "Reactor feature flags. The four enforcement flags each imply their predecessors, and the reactor refuses to boot on a set that names a later one without an earlier one. They are consensus settings: a Connect syncing with a fleet must carry the same enforcement flags the fleet does, or the two reach different replay outcomes for the same history and diverge. undoV3 has no prerequisites; peers negotiate it."
             },
             "createSignaturePolicy": {
               "description": "What new documents are created as. `v2-required` documents accept only v2 action signatures and take content-addressed ids; set `legacy` while any peer Connect syncs with predates them. Existing documents keep their policy.",
@@ -1243,49 +1272,55 @@
                   "url": {
                     "anyOf": [
                       {
-                        "type": "string",
-                        "format": "uri"
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ]
                       },
                       {
                         "$ref": "#/$defs/__schema0"
                       }
                     ]
-                  }
-                },
-                "required": ["url"],
-                "additionalProperties": false
-              },
-              "projection": {
-                "type": "object",
-                "properties": {
-                  "enabled": {
-                    "type": "boolean"
                   },
-                  "dbPoolSize": {
+                  "requestTimeoutMs": {
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 9007199254740991
-                  }
-                },
-                "additionalProperties": false
-              },
-              "executors": {
-                "type": "object",
-                "properties": {
-                  "numWorkers": {
+                  },
+                  "breaker": {
                     "anyOf": [
                       {
-                        "type": "integer",
-                        "exclusiveMinimum": 0,
-                        "maximum": 9007199254740991
+                        "type": "boolean",
+                        "const": false
                       },
                       {
-                        "type": "string",
-                        "const": "auto"
+                        "type": "object",
+                        "properties": {
+                          "failures": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          },
+                          "openMs": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "additionalProperties": false
                       }
                     ]
+                  },
+                  "realtime": {
+                    "type": "boolean"
                   }
                 },
+                "required": ["url"],
                 "additionalProperties": false
               }
             },
@@ -1299,10 +1334,36 @@
             "primary": {
               "type": "string"
             },
-            "default": {
+            "drives": {
               "type": "object",
-              "properties": {},
-              "additionalProperties": {}
+              "propertyNames": {
+                "type": "string",
+                "minLength": 1
+              },
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "newDrives": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "router": {
+          "type": "object",
+          "properties": {
+            "probeTimeoutMs": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "provisionalRouteMs": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
           },
           "additionalProperties": false
@@ -1323,6 +1384,9 @@
                   "type": "boolean"
                 },
                 "authConditions": {
+                  "type": "boolean"
+                },
+                "undoV3": {
                   "type": "boolean"
                 }
               },
@@ -1359,38 +1423,9 @@
           },
           "additionalProperties": false
         },
-        "packages": {
-          "type": "object",
-          "properties": {
-            "registryUrl": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        },
         "namespace": {
           "type": "string",
           "minLength": 1
-        },
-        "auth": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "admins": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "renown": {
-              "type": "object",
-              "properties": {},
-              "additionalProperties": {}
-            }
-          },
-          "additionalProperties": false
         },
         "drives": {
           "anyOf": [
@@ -1416,6 +1451,13 @@
                         "type": "string",
                         "const": "id"
                       }
+                    ]
+                  },
+                  "documentType": {
+                    "type": "string",
+                    "enum": [
+                      "powerhouse/document-drive",
+                      "powerhouse/reactor-drive"
                     ]
                   },
                   "name": {

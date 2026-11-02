@@ -113,6 +113,11 @@ const config: Config = {
               to: `/academy/Build/GettingStartedBuilding/${slug}`,
             },
           ]),
+          // The custom-scalar guide replaced the document-engineering scalar page.
+          {
+            from: "/academy/Reference/EditorsUI/CreateCustomScalars",
+            to: "/academy/Build/DocumentModelCreation/CustomScalars",
+          },
           // Old manual Get Started -> Build track (Manual Todo tutorial)
           ...[
             "ExploreDemoPackage",

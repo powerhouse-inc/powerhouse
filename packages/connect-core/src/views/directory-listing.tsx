@@ -3,6 +3,7 @@ import {
   makeDriveSlug,
   makeNodeSlug,
   useDocumentById,
+  useDriveNodes,
   useLinkProps,
 } from "@powerhousedao/reactor-browser";
 import type {
@@ -48,11 +49,11 @@ function HomeLink(props: { children: ReactNode }) {
 
 // A row's date is a nicety: it shows "-" when the document can't load.
 class Quiet extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
+  override state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
   }
-  render() {
+  override render() {
     return this.state.failed ? "-" : this.props.children;
   }
 }
@@ -83,7 +84,17 @@ const byKindThenName = (a: Node, b: Node) =>
 /** Core's drive fallback: a listing of the open folder; an open document shows instead. */
 export function DirectoryListing({ drive, folder, children }: DriveViewProps) {
   if (children) return children;
-  const nodes = drive.state.global.nodes;
+  return <FolderListing drive={drive} folder={folder} />;
+}
+
+function FolderListing({
+  drive,
+  folder,
+}: {
+  drive: DocumentDriveDocument;
+  folder: FolderNode | undefined;
+}) {
+  const nodes = useDriveNodes(drive.header.id) ?? [];
   const path = folderPath(nodes, folder);
   const parent = path.at(-2);
   const entries = nodes

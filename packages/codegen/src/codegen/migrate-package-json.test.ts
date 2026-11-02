@@ -1,5 +1,9 @@
-import { packageJsonExports } from "@powerhousedao/shared/clis/constants";
+import {
+  packageJsonExports,
+  packageScripts,
+} from "@powerhousedao/shared/clis/constants";
 import type { PackageJson } from "read-pkg";
+import { packageJsonTemplate } from "templates";
 import { describe, expect, it } from "vitest";
 import { migratedPackageJson } from "./migrate.js";
 
@@ -20,7 +24,7 @@ const generatedBefore = {
       node: "./dist/node/subgraphs/index.mjs",
     },
   },
-  scripts: { custom: "echo custom" },
+  scripts: { custom: "echo custom", tsc: "tsc && tsc -p hosts" },
   dependencies: { leftover: "1.0.0" },
 } as unknown as PackageJson;
 
@@ -52,5 +56,70 @@ describe("migratedPackageJson", () => {
     });
     expect(migrated.scripts).toHaveProperty("custom", "echo custom");
     expect(migrated).not.toHaveProperty("dependencies");
+  });
+});
+
+describe("a project's dependency pins", () => {
+  const pins = { "date-fns": "4.3.0", rolldown: "1.0.2", vite: "8.0.14" };
+  const refs = {
+    "date-fns": "$date-fns",
+    rolldown: "$rolldown",
+    vite: "$vite",
+  };
+
+  it("replaces the **/ resolutions earlier scaffolds wrote and keeps the project's own", () => {
+    const migrated = migratedPackageJson(
+      {
+        ...generatedBefore,
+        resolutions: {
+          "**/date-fns": "4.3.0",
+          "**/rolldown": "1.0.2",
+          "**/vite": "8.0.14",
+          "left-pad": "1.3.0",
+        },
+        overrides: { "left-pad": "1.3.0" },
+      } as unknown as PackageJson,
+      {},
+    );
+    expect(migrated.resolutions).toEqual({ "left-pad": "1.3.0", ...pins });
+    expect(migrated.overrides).toEqual({ "left-pad": "1.3.0", ...refs });
+  });
+
+  it("adds them to a project that has none", () => {
+    const migrated = migratedPackageJson(generatedBefore, {});
+    expect(migrated.resolutions).toEqual(pins);
+    expect(migrated.overrides).toEqual(refs);
+  });
+});
+
+describe("the lint scripts", () => {
+  it("generate the Connect route tree before the type-checked lint, in new and migrated projects", () => {
+    const migrated = migratedPackageJson(generatedBefore, {});
+    const scaffolded = JSON.parse(
+      packageJsonTemplate("new-project", {}, {}),
+    ) as {
+      scripts: Record<string, string>;
+    };
+
+    for (const script of ["lint", "lint:fix"] as const) {
+      expect(migrated.scripts?.[script]).toMatch(
+        /^ph-cli generate connect-routes && oxlint --type-aware --type-check/,
+      );
+      expect(scaffolded.scripts[script]).toBe(packageScripts[script]);
+    }
+  });
+});
+
+describe("the tsc script", () => {
+  it("generates the Connect route tree before tsc, in new and migrated projects", () => {
+    const migrated = migratedPackageJson(generatedBefore, {});
+    const scaffolded = JSON.parse(
+      packageJsonTemplate("new-project", {}, {}),
+    ) as {
+      scripts: Record<string, string>;
+    };
+
+    expect(migrated.scripts?.tsc).toBe("ph-cli generate connect-routes && tsc");
+    expect(scaffolded.scripts.tsc).toBe(packageScripts.tsc);
   });
 });

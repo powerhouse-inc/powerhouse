@@ -1,6 +1,8 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createServer } from "vite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   collectPackagePwaContributions,
@@ -53,6 +55,56 @@ describe("connectPwaPlugins", () => {
         },
       }),
     ).not.toThrow();
+  });
+});
+
+describe("connectPwaPlugins on the dev server", () => {
+  it("serves a build's manifest and link, and registers no worker", async () => {
+    const root = mkdtempSync(join(tmpdir(), "connect-pwa-dev-"));
+    writeFileSync(
+      join(root, "index.html"),
+      `<html><head></head><body></body></html>`,
+    );
+    const server = await createServer({
+      root,
+      base: "/app/",
+      configFile: false,
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { host: "127.0.0.1", port: 0 },
+      plugins: connectPwaPlugins({
+        offlineEnabled: true,
+        pwa: { manifest: { name: "Sektar" } },
+      }),
+    });
+    try {
+      await server.listen();
+      const { port } = server.httpServer!.address() as AddressInfo;
+      const origin = `http://127.0.0.1:${port}/app/`;
+
+      // Both the plain link and the one Connect re-attaches with a revision.
+      for (const query of ["", "?ph-manifest-rev=2"]) {
+        const response = await fetch(`${origin}manifest.webmanifest${query}`);
+        expect(response.headers.get("content-type")).toBe(
+          "application/manifest+json",
+        );
+        const served = (await response.json()) as Record<string, unknown>;
+        expect(served.name).toBe("Sektar");
+        expect(served).toHaveProperty("file_handlers");
+      }
+
+      const html = await server.transformIndexHtml(
+        "/",
+        `<html><head></head><body></body></html>`,
+      );
+      expect(html).toContain(
+        `<link rel="manifest" href="/app/manifest.webmanifest">`,
+      );
+      expect(html).not.toContain("serviceWorker.register");
+    } finally {
+      await server.close();
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

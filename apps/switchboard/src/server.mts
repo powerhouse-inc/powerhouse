@@ -4,6 +4,7 @@ import { getConfig } from "@powerhousedao/config/node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import {
   CatchUpPriority,
+  computeProcessorTiming,
   DriveCollectionId,
   EventBus,
   IN_MEMORY_PGLITE_STORAGE_FACTS,
@@ -14,19 +15,27 @@ import {
   ReactorClientBuilder,
   createHybridProjectionCoordinatorFactory,
   instrumentPgPool,
-  parseCatchUpPriority,
+  MemoryTelemetry,
   parseDriveUrl,
-  type CatchUpPrioritySetting,
+  ProcessorTimingSettings,
+  parseKeyframeSettings,
   type Database,
   type InProcessReactorClientModule,
+  type InProcessReactorModule,
+  type IStoreMaintenance,
   type JwtHandler,
+  type KeyframeSettings,
   type PoolInstrumentation,
   type ReactorStorageFacts,
   UnsupportedStoredProtocolError,
+  withProgressHeartbeat,
 } from "@powerhousedao/reactor";
 import {
+  createHeapSnapshotWriter,
   HttpPackageLoader,
   ImportPackageLoader,
+  memoryFileSink,
+  NodeMemorySampler,
   PackageManagementService,
   PackagesSubgraph,
   initializeAndStartAPI,
@@ -35,6 +44,7 @@ import {
   reportFailure,
   resolveRenownConfig,
   runDetached,
+  telemetryDir,
   type CanonicalDocumentId,
   type ClientInitializerDependencies,
   type CredentialVerifier,
@@ -44,13 +54,21 @@ import {
   type ResolvedRenownConfig,
 } from "@powerhousedao/reactor-api";
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
-import { ThreadedPGlite } from "@powerhousedao/reactor-api/pglite-node";
+import {
+  disableWasmWrapperTiering,
+  maintenanceOf,
+  pgliteWorkerEntryPath,
+  ThreadedPGlite,
+  type PGliteLike,
+} from "@powerhousedao/reactor-api/pglite-node";
 import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
 import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
 import { createAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import {
+  createReactorDriveWriteStrategy,
   DriveNodeView,
   NodeProcessor,
+  REACTOR_DRIVE_DOCUMENT_TYPE,
   ReactorDriveClient,
   type ReactorDriveDatabase,
 } from "@powerhousedao/reactor-drive";
@@ -67,7 +85,6 @@ import {
   type IRenown,
   type SwitchboardRequestFn,
 } from "@renown/sdk/node";
-import * as Sentry from "@sentry/node";
 import { childLogger, setLogLevel, type ILogger } from "document-model";
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
@@ -80,10 +97,14 @@ import { Pool } from "pg";
 import type { ViteDevServer } from "vite";
 import { registerAttachmentRoutes } from "./attachments/index.js";
 import {
+  parseOAuthApps,
+  type OAuthAppConfig,
+} from "./workflow/oauth-apps-config.js";
+import {
   registerAttachmentReferenceReadModel,
   registerAttachmentReferenceReadModelOnModule,
 } from "./attachment-reference-read-model.mjs";
-import { installFatalErrorShutdown } from "./fatal-shutdown.mjs";
+import { installFatalErrorShutdown, raiseSigterm } from "./fatal-shutdown.mjs";
 import {
   resolvePrivacy,
   startPrivacy,
@@ -93,7 +114,6 @@ import {
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import {
   createSwitchboardPluginHost,
-  isPluginHostEnabled,
   type SwitchboardPluginHost,
 } from "./plugin-host.mjs";
 import {
@@ -102,16 +122,19 @@ import {
 } from "./projection-worker.mjs";
 import {
   buildWorkerDbConfig,
-  resolveHostPoolSize,
   keepImportableSources,
   resolveWorkerModelSources,
   resolveWorkerPoolOptions,
 } from "./worker-pool.mjs";
-import { inspectionThrottleFromEnv } from "./inspection-throttle.mjs";
 import { initProfilerFromEnv } from "./profiler.js";
-import { initFeatureFlags } from "./feature-flags.js";
-import { resolveInspectionEnabled } from "./inspection-flag.mjs";
-import { resolveMcpEnabled } from "./mcp-flag.mjs";
+import { switchboardConfigFromEnv } from "./config/from-env.js";
+import { startProcessorTimingLog } from "./processor-timing-log.mjs";
+import {
+  mergeSwitchboardConfig,
+  switchboardConfigSchema,
+  type SwitchboardConfig,
+  type SwitchboardConfigInput,
+} from "./config/schema.js";
 import {
   WORKFLOW_PACKAGE_NAME,
   WORKFLOW_TELEMETRY_SCOPE,
@@ -119,7 +142,6 @@ import {
   modelManifestSource,
   assertWorkflowPackageLoadable,
   isWorkflowSingletonConflict,
-  resolveWorkflowsEnabled,
   retryWorkflowSingleton,
   workflowSingletonLossHandler,
   type WorkflowSingletonRetry,
@@ -133,32 +155,39 @@ import {
 import { runPglitePreflight } from "./pglite-preflight.js";
 import {
   createPgliteStoreFactory,
-  resolvePgliteWorkersEnabled,
+  openStoresTogether,
+  READ_STORE,
+  REACTOR_STORE,
   terminateOnPoisoned,
+  vacuumFullTimingOf,
+  type PgliteStoreSettings,
+  type StoresOpening,
 } from "./pglite-store.mjs";
 import {
   CURRENT_PG_MAJOR,
   isSupportedMajor,
   type SupportedPgMajor,
 } from "./pglite-version.js";
-import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
-import { resolveCreateSignaturePolicy } from "./create-signature-policy.mjs";
-import { reactorDbUrlOf, workerPoolIssues } from "./boot-preconditions.mjs";
+import { reactorFeatureFlagsOf } from "./reactor-feature-flags.mjs";
+import { createSignaturePolicyFor } from "./create-signature-policy.mjs";
+import { workerPoolIssues } from "./boot-preconditions.mjs";
+import { renownLayers } from "./renown-layers.mjs";
 import {
+  getDelegationTrustPolicyConfig,
   getRenownSignerConfig,
   getRenownTrustPolicyConfig,
   initRenown,
 } from "./renown.js";
-import type { StartServerOptions, SwitchboardReactor } from "./types.js";
+import type {
+  StartServerOptions,
+  SwitchboardDeps,
+  SwitchboardReactor,
+} from "./types.js";
 import {
   StoredDocumentsRefusedError,
   resolveUnsupportedStoredDocuments,
 } from "./unsupported-stored-documents.mjs";
-import {
-  addDefaultDrive,
-  addDefaultReactorDrive,
-  isPostgresUrl,
-} from "./utils.mjs";
+import { ensureDrive, isPostgresUrl } from "./utils.mjs";
 import { acquireStoreLocks } from "./store-lock.mjs";
 import {
   defaultStoreDirs,
@@ -168,16 +197,23 @@ import { isDotenvDisabled } from "@powerhousedao/shared/clis/project-env";
 
 const defaultLogger = childLogger(["switchboard"]);
 
-const LogLevel = (process.env.LOG_LEVEL as ILogger["level"] | "") || "info";
-setLogLevel(LogLevel);
-
+// Edges map process.env after importing this, so the cwd .env is in it by then.
 if (!isDotenvDisabled()) dotenv.config();
 
-// Feature flag constants
-const DOCUMENT_MODEL_SUBGRAPHS_ENABLED = "DOCUMENT_MODEL_SUBGRAPHS_ENABLED";
-const DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT = true;
+/** Process-wide settings an edge applies once, before its first `startSwitchboard`. */
+export function initSwitchboardProcess(
+  options: Pick<SwitchboardConfigInput, "logLevel"> = {},
+): void {
+  setLogLevel(options.logLevel ?? "info");
+}
 
-const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
+// Module hooks are process-wide; registering them per server would stack them.
+let httpsHooksRegistered = false;
+function registerHttpsHooks(): void {
+  if (httpsHooksRegistered) return;
+  httpsHooksRegistered = true;
+  register(httpsHooksPath, import.meta.url);
+}
 
 // How many ports forward from the requested one we will try before giving up.
 const PORT_FALLBACK_ATTEMPTS = 20;
@@ -192,9 +228,6 @@ function warnIgnoredFlushInterval(logger: ILogger): void {
     "PGLITE_FLUSH_INTERVAL_MS is set but ignored: PGlite stores no longer snapshot on a timer.",
   );
 }
-
-// When set, runs both reactor and read-model PGLite instances purely in-memory.
-const PGLITE_IN_MEMORY = process.env.PH_PGLITE_IN_MEMORY === "1";
 
 /**
  * Attempt to bind a throwaway TCP server to the given port. Resolves true if
@@ -249,8 +282,46 @@ function resolveConfigPath(configFile: string | undefined): string {
   return configFile ?? path.join(process.cwd(), "powerhouse.config.json");
 }
 
+/**
+ * The config file's `workflows.oauthApps`, client file paths made absolute
+ * from the config file's folder. An unreadable file or a malformed entry
+ * means none: a missing app is reported when a sign-in asks for it.
+ */
+function readConfigOAuthApps(
+  configPath: string,
+  logger: ILogger,
+): OAuthAppConfig[] {
+  let raw: unknown;
+  try {
+    raw = (getConfig(configPath) as { workflows?: { oauthApps?: unknown } })
+      .workflows?.oauthApps;
+  } catch {
+    return [];
+  }
+  return parseOAuthApps(
+    raw,
+    path.dirname(path.resolve(configPath)),
+    (id, relay) =>
+      logger.warn(
+        `workflows.oauthApps "${id}": relay ${JSON.stringify(relay)} is not an object with clientId, redirectUri and tokenUrl; ignored`,
+      ),
+  );
+}
+
 // An unreadable config file means "not configured", not a boot failure:
 // workflows are opt-in.
+/** `PH_KEYFRAMES` (or a caller's layer) wins whole over the project config. */
+export function resolveKeyframes(
+  configured: SwitchboardConfig["storage"]["keyframes"],
+  fromFile: unknown,
+  configPath: string,
+): KeyframeSettings | undefined {
+  if (configured) return configured;
+  return fromFile === undefined
+    ? undefined
+    : parseKeyframeSettings(fromFile, `${configPath} reactor.keyframes`);
+}
+
 function readConfigWorkflowsEnabled(configPath: string): boolean {
   try {
     return getConfig(configPath).workflows?.enabled ?? false;
@@ -264,7 +335,8 @@ async function resolveServerPort(
   strictPort: boolean,
   logger: ILogger,
 ): Promise<number> {
-  if (strictPort) return requested;
+  // 0 asks the OS for a free port at bind time: nothing to probe.
+  if (requested === 0 || strictPort) return requested;
   for (let i = 0; i < PORT_FALLBACK_ATTEMPTS; i++) {
     const candidate = requested + i;
     if (await isPortAvailable(candidate)) {
@@ -290,6 +362,8 @@ type ReactorStorage = {
   kysely: Kysely<Database>;
   poolInstrumentation: PoolInstrumentation | undefined;
   storageFacts: ReactorStorageFacts;
+  /** Absent on Postgres, where the host does not own the connection. */
+  storeMaintenance?: IStoreMaintenance;
 };
 
 export async function createReactorKysely(opts: {
@@ -297,15 +371,13 @@ export async function createReactorKysely(opts: {
   reactorPgliteDir: string | null;
   reactorPgliteMajor: SupportedPgMajor | null;
   inMemory: boolean;
-  /**
-   * Resolved lazily: only the Postgres branch has a host pool, and
-   * {@link resolveHostPoolSize} throws on a bad REACTOR_DB_POOL_SIZE_HOST.
-   * Called eagerly it would fail a PGlite-backed server over a value that
-   * path never reads.
-   */
+  /** Called only on the Postgres branch, the one with a host pool. */
   hostPoolSize: () => number;
   /** Open the PGlite store in its own worker thread. */
   pgliteWorkers: boolean;
+  pgliteSettings?: PgliteStoreSettings;
+  /** The store, when it's already opening. */
+  openingStore?: PGliteLike;
   logger: ILogger;
 }): Promise<ReactorStorage> {
   const {
@@ -315,6 +387,8 @@ export async function createReactorKysely(opts: {
     inMemory,
     hostPoolSize,
     pgliteWorkers,
+    pgliteSettings,
+    openingStore,
     logger,
   } = opts;
 
@@ -340,15 +414,18 @@ export async function createReactorKysely(opts: {
   if (!reactorPgliteDir || reactorPgliteMajor === null) {
     throw new Error("Reactor PGLite directory not resolved");
   }
-  const openStore = await createPgliteStoreFactory({
-    label: "reactor-storage",
-    major: reactorPgliteMajor,
-    parsers: "none",
-    inMemory,
-    threaded: pgliteWorkers,
-    logger,
-  });
-  const pglite = openStore(reactorPgliteDir);
+  const pglite =
+    openingStore ??
+    (
+      await createPgliteStoreFactory({
+        ...REACTOR_STORE,
+        major: reactorPgliteMajor,
+        inMemory,
+        threaded: pgliteWorkers,
+        settings: pgliteSettings,
+        logger,
+      })
+    )(reactorPgliteDir);
   const dialectOptions =
     pglite instanceof ThreadedPGlite
       ? terminateOnPoisoned(reactorPgliteDialectOptions(logger), pglite)
@@ -361,6 +438,10 @@ export async function createReactorKysely(opts: {
     storageFacts: inMemory
       ? IN_MEMORY_PGLITE_STORAGE_FACTS
       : PGLITE_PATH_STORAGE_FACTS,
+    storeMaintenance:
+      pglite instanceof ThreadedPGlite
+        ? pglite
+        : maintenanceOf(pglite as { fs?: unknown }),
   };
 }
 
@@ -395,10 +476,15 @@ export function resolvePgliteStorageDirs(opts: {
   reactorDbUrl: string | undefined;
   /** The caller passed its own reactor — the reactor-side dir is unused. */
   callerReactor: boolean;
+  /** The relocated `.ph` root (PH_USER_DATA_DIR at the edge). */
+  userDataDir?: string;
   phDir?: string;
 }): PgliteStorageDirs {
   const { dbPath, reactorDbUrl, callerReactor } = opts;
-  const defaults = defaultStoreDirs(process.env, opts.phDir);
+  const defaults = defaultStoreDirs(
+    { PH_USER_DATA_DIR: opts.userDataDir },
+    opts.phDir,
+  );
   const readModelPath = dbPath || defaults.readModel;
   const reactorPath = reactorDbUrl || defaults.reactor;
   const reactorPgliteDir = callerReactor
@@ -427,7 +513,7 @@ export function resolvePgliteStorageDirs(opts: {
   };
 }
 
-/** Derive the remote attachment service config for switchboard's own `/attachments/*` API. */
+/** The remote attachment service config for switchboard's own `/attachments/*` API; `attachments.serviceUrl` carries PH_SWITCHBOARD_PUBLIC_URL. */
 export function deriveAttachmentServiceConfig(
   options: Pick<StartServerOptions, "attachmentServiceUrl" | "https">,
   serverPort: number,
@@ -435,9 +521,7 @@ export function deriveAttachmentServiceConfig(
 ): { remoteUrl: string; jwtHandler: JwtHandler | undefined } {
   const protocol = options.https ? "https" : "http";
   const remoteUrl =
-    options.attachmentServiceUrl ??
-    process.env.PH_SWITCHBOARD_PUBLIC_URL ??
-    `${protocol}://localhost:${serverPort}`;
+    options.attachmentServiceUrl ?? `${protocol}://localhost:${serverPort}`;
   const jwtHandler: JwtHandler | undefined = renown
     ? async (url: string) =>
         renown.user
@@ -447,11 +531,22 @@ export function deriveAttachmentServiceConfig(
   return { remoteUrl, jwtHandler };
 }
 
+/** Sentry starts only under SENTRY_DSN (observability.mts), and is a lot to load. */
+async function captureInSentry(error: unknown): Promise<void> {
+  if (!process.env.SENTRY_DSN) return;
+  const Sentry = await import("@sentry/node");
+  Sentry.captureException(error);
+}
+
 async function initServer(
-  serverPort: number,
+  requestedPort: number,
   options: StartServerOptions,
+  config: SwitchboardConfig,
   renown: IRenown | null,
   renownConfig: ResolvedRenownConfig,
+  reportError: (error: unknown) => void,
+  /** Filled in once the stores start, for a boot that fails after that. */
+  opening: { stores?: StoresOpening },
 ) {
   const {
     dev,
@@ -463,11 +558,12 @@ async function initServer(
   // R2 plugin pipeline (FEATURE_PLUGIN_HOST_ENABLED): flag off, the inline
   // path below runs byte-identically; flag on, carved subsystems run as
   // built-in plugins through the hook moments marked along this function.
-  const pluginHost: SwitchboardPluginHost | null = isPluginHostEnabled()
+  const pluginHost: SwitchboardPluginHost | null = config.features.pluginHost
     ? createSwitchboardPluginHost(
         {
           logger,
           options: options as unknown as Record<string, unknown>,
+          config,
           renown,
         },
         options.pluginComposition,
@@ -479,15 +575,20 @@ async function initServer(
     // stays OFF. The mcp/workflows plugins set these true at
     // transformServerOptions; their absence must actually deactivate.
     options.mcp ??= false;
-    options.workflows = { enabled: options.workflows?.enabled === true };
+    options.workflows = {
+      ...options.workflows,
+      enabled: options.workflows?.enabled === true,
+    };
   }
-  logger.level = LogLevel;
-  const dbPath =
-    options.dbPath ??
-    process.env.DATABASE_URL ??
-    process.env.PH_SWITCHBOARD_DATABASE_URL;
-
-  const reactorDbUrl = reactorDbUrlOf(options.dbPath, process.env);
+  logger.level = config.logLevel;
+  const dbPath = config.storage.readModel.url;
+  const reactorDbUrl = config.storage.reactor.url;
+  const inMemory = config.storage.inMemory;
+  const pgliteSettings: PgliteStoreSettings = {
+    fsync: config.storage.pglite.fsync,
+    maintenance: vacuumFullTimingOf(config.storage.pglite.vacuumFull),
+    workerMemoryMb: config.storage.pglite.workerMemoryMb,
+  };
   // Postgres URLs or local PGlite dirs under the project's .ph tree. When
   // the caller passes in a reactor, the reactor-side PGLite dir is unused —
   // the caller owns its own storage. Only the read-model dir is still needed
@@ -502,6 +603,7 @@ async function initServer(
     dbPath,
     reactorDbUrl,
     callerReactor: options.reactor !== undefined,
+    userDataDir: config.storage.userDataDir,
   });
   if (sharedPgliteDir !== null) {
     logger.warn(
@@ -518,13 +620,13 @@ async function initServer(
   // One process per PGlite store, before anything (the pre-flight included)
   // touches it: hosts share one .ph tree, so a second `ph run …` / `ph vetra`
   // in the same project must fail here instead of tearing the store.
-  if (!PGLITE_IN_MEMORY) acquireStoreLocks(pgliteDirs);
+  if (!inMemory) acquireStoreLocks(pgliteDirs);
   warnIgnoredFlushInterval(logger);
   const detectedMajors = await runPglitePreflight({
     dirs: pgliteDirs,
     forcePgVersion: options.forcePgVersion,
     migratePglite: options.migratePglite,
-    inMemory: PGLITE_IN_MEMORY,
+    inMemory,
     logger,
   });
 
@@ -547,8 +649,12 @@ async function initServer(
     ? resolvePgliteMajorForDir(readModelPgliteDir)
     : null;
 
-  const inspectionThrottle = inspectionThrottleFromEnv(process.env);
-  let workerPool = resolveWorkerPoolOptions(options.workerPool, process.env);
+  const inspectionThrottle =
+    config.inspection.callsPerMinute === undefined
+      ? {}
+      : { callsPerMinute: config.inspection.callsPerMinute };
+  // The env is empty: the edges mapped it into the config.
+  let workerPool = resolveWorkerPoolOptions(options.workerPool, {});
   if (workerPool && options.reactor) {
     logger.warn(
       "Worker pool configuration ignored: the caller-provided reactor owns its own executor",
@@ -561,8 +667,7 @@ async function initServer(
       workers: workerPool.numWorkers,
       projectionWorker: false,
       reactorDbUrl,
-      authEnforcement:
-        resolveReactorFeatureFlags(process.env).flags.authEnforcement === true,
+      authEnforcement: config.protocol.featureFlags.authEnforcement,
       renownSource: renownConfig.source,
     }).at(0);
     if (issue) throw new Error(issue);
@@ -570,12 +675,12 @@ async function initServer(
 
   const unsupportedStoredDocuments = resolveUnsupportedStoredDocuments(
     options.unsupportedStoredDocuments,
-    process.env,
+    {},
   );
 
   let projectionWorker = resolveProjectionWorkerOptions(
     options.projectionWorker,
-    process.env,
+    {},
   );
   if (projectionWorker && options.reactor) {
     logger.warn(
@@ -600,35 +705,33 @@ async function initServer(
 
   // HTTP registry package loading
   const configPath = resolveConfigPath(options.configFile);
-  const config = getConfig(configPath);
-  const registryUrl =
-    options.registryUrl ??
-    process.env.PH_REGISTRY_URL ??
-    config.packageRegistryUrl;
-  const registryPackages = process.env.PH_REGISTRY_PACKAGES;
-  const dynamicModelLoading =
-    options.dynamicModelLoading ?? process.env.DYNAMIC_MODEL_LOADING === "true";
+  const fileConfig = getConfig(configPath);
+  const registryUrl = options.registryUrl ?? fileConfig.packageRegistryUrl;
+  const registryPackages = config.packages.registryPackages;
+  const dynamicModelLoading = options.dynamicModelLoading === true;
   let httpLoader: HttpPackageLoader | undefined;
 
   if (registryUrl) {
     // Register HTTP/HTTPS module loader hooks for dynamic package imports
-    register(httpsHooksPath, import.meta.url);
-    httpLoader = new HttpPackageLoader({ registryUrl });
-    registryPackages?.split(",").forEach((p) => {
-      const name = p.trim();
+    registerHttpsHooks();
+    httpLoader = new HttpPackageLoader({
+      registryUrl,
+      cacheDir: path.join(
+        resolvePhDir(undefined, {
+          PH_USER_DATA_DIR: config.storage.userDataDir,
+        }),
+        "registry-packages",
+      ),
+    });
+    for (const name of registryPackages) {
       if (!packages.includes(name)) {
         packages.push(name);
       }
-    });
+    }
   }
 
   // Registry packages import from the on-disk cache, which workers can read.
-  const registryPackageNames = new Set(
-    (registryPackages ?? "")
-      .split(",")
-      .map((p) => p.trim())
-      .filter(Boolean),
-  );
+  const registryPackageNames = new Set(registryPackages.filter(Boolean));
   const resolveRegistryModels = async (
     identifier: string,
   ): Promise<string | null> =>
@@ -650,7 +753,7 @@ async function initServer(
       reason,
     );
     // SIGTERM takes the builder's withSignalHandlers() path: kill, hooks, db.
-    process.kill(process.pid, "SIGTERM");
+    raiseSigterm();
   };
   // Resolved in startSwitchboard, which owns the flag mechanism; initServer
   // only reads the answer.
@@ -660,7 +763,7 @@ async function initServer(
   // transformServerOptions above).
   const privacyConfig = pluginHost
     ? ({ enabled: false } as ResolvedPrivacy)
-    : resolvePrivacy(options.privacy, process.env);
+    : resolvePrivacy(options.privacy, {});
 
   // Through the package manager like any other, so one route carries the
   // models, the subgraphs and the piece.
@@ -676,8 +779,16 @@ async function initServer(
   let ownedReactorModule: InProcessReactorClientModule | undefined;
   // Paces an owned reactor's processor backfills; fed by this server's load.
   const catchUpPriority = new CatchUpPriority(
-    catchUpPrioritySettingFromEnv(process.env.PH_CATCH_UP_PRIORITY, logger),
+    config.protocol.catchUpPriority === "dynamic"
+      ? { mode: "dynamic" }
+      : { mode: "fixed", level: config.protocol.catchUpPriority },
   );
+  const processorTiming = new ProcessorTimingSettings({
+    level: config.protocol.processorTiming,
+    windowMs: config.protocol.processorTimingWindowMs,
+    slowBatchMs: config.protocol.processorSlowBatchMs,
+  });
+  const memoryTelemetry = createMemoryTelemetry(config, reactorLogger);
   // The models workers and workflow pieces import; only on a reactor built here.
   let workerModels: ModelManifestSource | undefined;
   // Bound once the api serves the renown read model; see `localCredentialCheck`.
@@ -719,18 +830,21 @@ async function initServer(
       kysely: baseKysely,
       poolInstrumentation,
       storageFacts,
+      storeMaintenance,
     } = await createReactorKysely({
       reactorDbUrl,
       reactorPgliteDir,
       reactorPgliteMajor,
-      inMemory: PGLITE_IN_MEMORY,
-      hostPoolSize: () => resolveHostPoolSize(process.env),
+      inMemory,
+      hostPoolSize: () => config.workers.hostPoolSize,
       pgliteWorkers: options.pgliteWorkers === true,
+      pgliteSettings,
+      openingStore: opening.stores?.reactor,
       logger,
     });
 
-    const maxSkipThreshold = parseInt(process.env.MAX_SKIP_THRESHOLD ?? "", 10);
-    const hasSkipThreshold = !isNaN(maxSkipThreshold) && maxSkipThreshold > 0;
+    const maxSkipThreshold = config.protocol.maxSkipThreshold;
+    const hasSkipThreshold = maxSkipThreshold !== undefined;
     if (hasSkipThreshold) {
       logger.info(`Reactor maxSkipThreshold set to ${maxSkipThreshold}`);
     }
@@ -738,11 +852,14 @@ async function initServer(
     // Flip these per document-sharing fleet, never per node: replay decisions
     // are consensus outcomes, so nodes that disagree on the flags diverge.
     const { flags: reactorFeatureFlags, enabled: enabledFeatureFlags } =
-      resolveReactorFeatureFlags(process.env);
+      reactorFeatureFlagsOf(config.protocol.featureFlags);
     if (enabledFeatureFlags.length > 0) {
       logger.info(
         `Reactor feature flags enabled: ${enabledFeatureFlags.join(", ")}`,
       );
+    }
+    if (reactorFeatureFlags.undoV3 === false) {
+      logger.info("Reactor undoV3 is off: new documents take base-reducer 2");
     }
 
     const reactorBuilder = new ReactorBuilder()
@@ -750,11 +867,27 @@ async function initServer(
       .withKysely(baseKysely)
       .withStorageFacts(storageFacts)
       .withFeatures({
-        legacyProcessorIds:
-          process.env.REACTOR_LEGACY_PROCESSOR_IDS !== "false",
+        legacyProcessorIds: config.protocol.legacyProcessorIds,
       })
       .withUnsupportedStoredDocuments(unsupportedStoredDocuments)
-      .withCatchUpPriority(catchUpPriority);
+      .withCatchUpPriority(catchUpPriority)
+      .withProcessorTiming(processorTiming)
+      .withMemoryTelemetry(memoryTelemetry);
+
+    const keyframes = resolveKeyframes(
+      config.storage.keyframes,
+      fileConfig.reactor?.keyframes,
+      configPath,
+    );
+    if (keyframes) {
+      logger.info(
+        `Keyframes: default ${JSON.stringify(keyframes.default ?? {})}, ${Object.keys(keyframes.types ?? {}).length} document type(s) with their own rule`,
+      );
+      reactorBuilder.withKeyframes(keyframes);
+    }
+    if (storeMaintenance) {
+      reactorBuilder.withStoreMaintenance(storeMaintenance);
+    }
 
     // Feeds `module.pools`, which ReactorInstrumentation reads to emit
     // reactor.db.pool.{acquire.wait_duration,size,idle,waiting}. Without this
@@ -788,15 +921,12 @@ async function initServer(
       signalHandlers: options.signalHandlers,
       documentModels: [...documentModels, ...vetraDocumentModels],
       upgradeManifests,
-      executorConfig:
-        hasSkipThreshold || enabledFeatureFlags.length > 0
-          ? {
-              ...(hasSkipThreshold ? { maxSkipThreshold } : {}),
-              ...(enabledFeatureFlags.length > 0
-                ? { featureFlags: reactorFeatureFlags }
-                : {}),
-            }
-          : undefined,
+      // Always: an explicit undoV3 false enables nothing but must still reach
+      // the reactor.
+      executorConfig: {
+        ...(hasSkipThreshold ? { maxSkipThreshold } : {}),
+        featureFlags: reactorFeatureFlags,
+      },
       documentModelLoader:
         httpLoader && dynamicModelLoading
           ? httpLoader.documentModelLoader
@@ -805,10 +935,10 @@ async function initServer(
       signer: renown
         ? getRenownSignerConfig(renown, options.identity?.keypairPath)
         : undefined,
-      createSignaturePolicy: resolveCreateSignaturePolicy(process.env, {
-        hasSigner: renown !== null,
-        logger,
-      }),
+      createSignaturePolicy: createSignaturePolicyFor(
+        config.protocol.createSignaturePolicy,
+        { hasSigner: renown !== null, logger },
+      ),
       trustPolicy: reactorFeatureFlags.authEnforcement
         ? await getRenownTrustPolicyConfig(
             renownConfig.source === "self"
@@ -830,7 +960,7 @@ async function initServer(
                 },
             renown,
           )
-        : undefined,
+        : getDelegationTrustPolicyConfig(renown),
     });
 
     // File sources give workers and workflow pieces importable paths for the
@@ -919,9 +1049,28 @@ async function initServer(
       if (apiRef.current) await apiRef.current.dispose();
     });
 
+    const reactorDriveSchemaDb = baseKysely.withSchema(
+      REACTOR_SCHEMA,
+    ) as unknown as Kysely<ReactorDriveDatabase>;
+    const nodeView = new DriveNodeView(reactorDriveSchemaDb);
+    driveNodeView = nodeView;
+    clientBuilder
+      .withDriveNodeSource(nodeView)
+      .withDriveWriteStrategy(
+        REACTOR_DRIVE_DOCUMENT_TYPE,
+        createReactorDriveWriteStrategy,
+      );
+
     let module: InProcessReactorClientModule;
     try {
-      module = await clientBuilder.buildModule();
+      module = await withProgressHeartbeat(
+        {
+          logger,
+          label:
+            "Starting the reactor (migrations, document view, indexer, processors)",
+        },
+        () => clientBuilder.buildModule(),
+      );
     } catch (error) {
       try {
         await baseKysely.destroy();
@@ -941,16 +1090,13 @@ async function initServer(
       const instrumentation = new ReactorInstrumentation(module.reactorModule);
       instrumentation.start();
       reactorLogger.info("Reactor metrics instrumentation started");
+      memoryTelemetry.addGauge("otel", () => instrumentation.stats());
     }
 
-    const reactorDriveSchemaDb = baseKysely.withSchema(
-      REACTOR_SCHEMA,
-    ) as unknown as Kysely<ReactorDriveDatabase>;
-    driveNodeView = new DriveNodeView(reactorDriveSchemaDb);
     const reactorDriveClient = new ReactorDriveClient({
       read: module.read,
       write: module.write,
-      readModel: driveNodeView,
+      readModel: nodeView,
     });
 
     ownedReactorModule = module;
@@ -966,10 +1112,14 @@ async function initServer(
     const permissionsDb = baseKysely.withSchema(REACTOR_SCHEMA);
     try {
       if (readModelDb) {
-        await backfillPermissionTables(
-          readModelDb,
-          permissionsDb as unknown as Kysely<unknown>,
-          logger,
+        await withProgressHeartbeat(
+          { logger, label: "Moving the permission tables" },
+          () =>
+            backfillPermissionTables(
+              readModelDb,
+              permissionsDb as unknown as Kysely<unknown>,
+              logger,
+            ),
         );
       }
     } catch (error) {
@@ -991,6 +1141,7 @@ async function initServer(
     return {
       module,
       reactorDriveClient,
+      driveNodes: nodeView,
       attachmentReferenceProjection: { status: "available" as const },
       permissionsDb:
         permissionsDb as unknown as Kysely<DocumentPermissionDatabase>,
@@ -1045,9 +1196,6 @@ async function initServer(
   // TODO get path from powerhouse config
   const basePath = process.cwd();
 
-  const reportError = (error: unknown) => {
-    Sentry.captureException(error);
-  };
   const reporting = { logger, report: reportError };
 
   // import Vite loader only if dev mode is enabled
@@ -1085,12 +1233,11 @@ async function initServer(
   }
   if (httpLoader) {
     packageLoaders.push(httpLoader);
-    registryPackages?.split(",").forEach((p) => {
-      const name = p.trim();
+    for (const name of registryPackages) {
       if (!packages.includes(name)) {
         packages.push(name);
       }
-    });
+    }
   }
 
   const apiLogger = logger.child(["reactor-api"]);
@@ -1099,39 +1246,98 @@ async function initServer(
   // PG_VERSION. reactor-api calls the factory synchronously, so the legacy
   // module is preloaded above.
   let pgliteFactory: PgliteFactory | undefined;
+  let storeFailed: (error: unknown) => void = () => undefined;
+  const storesFailed = new Promise<never>((_, reject) => {
+    storeFailed = reject;
+  });
+  storesFailed.catch(() => undefined);
   if (readModelPgliteDir && readModelPgliteMajor !== null) {
-    const openReadStore = await createPgliteStoreFactory({
-      label: "read-storage",
-      major: readModelPgliteMajor,
-      parsers: "utc-timestamps",
-      inMemory: PGLITE_IN_MEMORY,
+    const storeOptions = {
+      inMemory,
       threaded: options.pgliteWorkers === true,
+      settings: pgliteSettings,
       logger,
+    };
+    const openReadStore = await createPgliteStoreFactory({
+      ...storeOptions,
+      ...READ_STORE,
+      major: readModelPgliteMajor,
     });
-    pgliteFactory = (connectionString) =>
-      openReadStore(connectionString ?? readModelPgliteDir);
+    // With a thread each, the stores needn't take turns. Two on one dir must,
+    // and in the main thread nothing would overlap.
+    const openReactorStore =
+      storeOptions.threaded &&
+      pgliteWorkerEntryPath !== null &&
+      sharedPgliteDir === null &&
+      reactorPgliteDir &&
+      reactorPgliteMajor !== null
+        ? await createPgliteStoreFactory({
+            ...storeOptions,
+            ...REACTOR_STORE,
+            major: reactorPgliteMajor,
+          })
+        : undefined;
+    pgliteFactory = (connectionString) => {
+      const dir = connectionString ?? readModelPgliteDir;
+      if (
+        !openReactorStore ||
+        !reactorPgliteDir ||
+        dir !== readModelPgliteDir
+      ) {
+        return openReadStore(dir);
+      }
+      // Here, not any sooner: reactor-api refuses what it won't run before it
+      // reaches for this store, and a refused boot touches neither.
+      opening.stores ??= openStoresTogether(
+        () => openReactorStore(reactorPgliteDir),
+        () => openReadStore(dir),
+      );
+      opening.stores.failed.catch(storeFailed);
+      return opening.stores.readModel;
+    };
   }
 
-  const api = await initializeAndStartAPI(
+  const startingApi = initializeAndStartAPI(
     initializeClient,
     {
-      port: serverPort,
+      port: requestedPort,
       dbPath: readModelPath,
       pgliteFactory,
       https: options.https,
       packageLoaders: packageLoaders.length > 0 ? packageLoaders : undefined,
       packages: packages,
       processorConfig: options.processorConfig,
+      ...(renown ? { hostSigner: renown.signer } : {}),
       processors: vetraProcessorFactory
         ? { "@powerhousedao/vetra": [vetraProcessorFactory] }
         : {},
       configFile: configPath,
+      server: {
+        basePath: config.server.basePath,
+        gatewayAdapter: config.server.gatewayAdapter,
+        publicUrl: config.server.publicUrl,
+        host: config.server.host,
+      },
+      auth: {
+        ...authSectionOf(config.auth),
+        stateDir: resolvePhDir(
+          undefined,
+          config.storage.userDataDir
+            ? { PH_USER_DATA_DIR: config.storage.userDataDir }
+            : process.env,
+        ),
+      },
+      attachments: { storage: config.attachments.storage },
       mcp: options.mcp ?? true,
       inspection:
-        options.inspection === false ? false : { throttle: inspectionThrottle },
+        options.inspection === false
+          ? false
+          : { throttle: inspectionThrottle, admin: config.inspection.admin },
       logger: apiLogger,
       reportError,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
+      // The final update before readiness picks up everything added until then.
+      hostRefreshesSupergraph: true,
       // Already resolved for this reactor's own identity; reuse it so an
       // invalid RENOWN_SOURCE is reported once, not once per resolution.
       renown: renownConfig,
@@ -1139,10 +1345,27 @@ async function initServer(
     },
     "switchboard",
   );
+  // A store that can't open ends the boot now, with its own error, rather
+  // than as a closed store's error once something reaches for the other one.
+  const api = await Promise.race([startingApi, storesFailed]);
   apiRef.current = api;
+  const serverPort = api.port;
 
   if (renownConfig.source === "self") {
     const { graphqlManager: manager } = api;
+    // Credentials are checked from the first request, before the router update
+    // that readiness waits for: a package's read model gets its handler now.
+    if (
+      !manager.hasSubgraphHandler(RENOWN_READ_MODEL_SUBGRAPH) &&
+      manager.getSubgraphByName(RENOWN_READ_MODEL_SUBGRAPH)
+    ) {
+      try {
+        await manager.updateRouter(true);
+      } catch (error) {
+        await abortBoot(api);
+        throw error;
+      }
+    }
     // Refuse to serve rather than 401 every request: the read model comes from
     // a loaded package, so a missing one is a deployment mistake.
     if (!manager.hasSubgraphHandler(RENOWN_READ_MODEL_SUBGRAPH)) {
@@ -1183,7 +1406,7 @@ async function initServer(
       | ReturnType<typeof createRemoteAttachmentService>
       | undefined;
   } else {
-    registerAttachmentRoutes(api);
+    registerAttachmentRoutes(api, { config: config.attachments });
     attachmentService = createRemoteAttachmentService(
       deriveAttachmentServiceConfig(options, serverPort, renown),
     );
@@ -1192,7 +1415,7 @@ async function initServer(
   if (process.env.SENTRY_DSN) {
     // Register Sentry error handler after all routes are established.
     // The adapter calls the framework-specific Sentry setup internally.
-    api.httpAdapter.setupSentryErrorHandler(Sentry);
+    api.httpAdapter.setupSentryErrorHandler(await import("@sentry/node"));
   }
 
   // The framework wiring takes the halves; `client` (the facade) stays for
@@ -1233,7 +1456,15 @@ async function initServer(
       // under it, not under the reactor's.
       webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
       http: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME),
+      // The host's option, else the config file's: under uniform runners the
+      // plugins own the workflows switch and the classic config read is skipped.
+      oauthApps:
+        options.workflows?.oauthApps ??
+        readConfigOAuthApps(resolveConfigPath(options.configFile), logger),
       authorizationService: api.authorizationService,
+      // The manager that serves this reactor's subgraphs: a piece's index read
+      // runs through it in process, as the run's user.
+      indexQueries: api.graphqlManager,
       // The manager that already loads this reactor's packages: the project it
       // runs in is one of them, so its own pieces arrive with the rest.
       pieces: api.packageManager,
@@ -1330,7 +1561,11 @@ async function initServer(
   }
   if (workflows) {
     lateSubgraphs.push(registerWorkflowSubgraph(workflows));
-    await workflows.start();
+    const runtime = workflows;
+    await withProgressHeartbeat(
+      { logger, label: "Starting the workflow runtime" },
+      () => runtime.start(),
+    );
     logger.info("Workflow runtime started");
     api.inspection?.facts.setWorkflows(true);
   }
@@ -1397,10 +1632,21 @@ async function initServer(
   const stopCatchUpLoad = ownedReactorModule
     ? feedCatchUpPriority(catchUpPriority, api.httpServer)
     : () => {};
+  const stopTimingLog = startOwnedTimingLog(
+    ownedReactorModule?.reactorModule,
+    processorTiming,
+    config.protocol.processorTimingLogMs,
+    reactorLogger,
+  );
+  if (ownedReactorModule?.reactorModule && config.telemetry.memory.enabled) {
+    memoryTelemetry.start();
+  }
   let apiDrained: Promise<void> | undefined;
   const drainApi = () =>
     (apiDrained ??= (async () => {
       stopCatchUpLoad();
+      stopTimingLog();
+      memoryTelemetry.stop();
       if (pluginHost) await pluginHost.observe("onShutdown");
       await privacy?.stop();
       await workflowsRetry?.stop();
@@ -1499,6 +1745,22 @@ async function initServer(
     );
   }
 
+  // Create default drive if provided
+  if (options.drive) {
+    if (!renown) {
+      throw new Error("Cannot create default drive without Renown identity");
+    }
+
+    defaultDriveUrl = await ensureDrive(
+      client,
+      options.drive,
+      serverPort,
+      logger,
+    );
+  }
+
+  // Ready once this server serves its own drives. Remote drives stay out: they
+  // replicate from another server, which may be down.
   void runDetached(
     "Marking the API ready",
     async () => {
@@ -1512,34 +1774,20 @@ async function initServer(
           "Final router update before readiness failed: @error",
         );
       }
+      try {
+        await options.readyAfter;
+      } catch (error) {
+        reportFailure(
+          reporting,
+          error,
+          "Not ready: the drives seeded after start failed: @error",
+        );
+        return;
+      }
       api.readiness.markReady();
     },
     reporting,
   );
-
-  // Create default drive if provided
-  if (options.drive) {
-    if (!renown) {
-      throw new Error("Cannot create default drive without Renown identity");
-    }
-
-    const driveType = options.drive.documentType ?? "powerhouse/document-drive";
-    if (driveType === "powerhouse/reactor-drive") {
-      defaultDriveUrl = await addDefaultReactorDrive(
-        client,
-        options.drive,
-        serverPort,
-        logger,
-      );
-    } else {
-      defaultDriveUrl = await addDefaultDrive(
-        client,
-        options.drive,
-        serverPort,
-        logger,
-      );
-    }
-  }
 
   // add vite middleware after express app is initialized if applicable
   if (vite) {
@@ -1640,10 +1888,28 @@ async function initServer(
  * it twice, or receiving a signal around it, tears down once.
  */
 export const startSwitchboard = async (
-  options: StartServerOptions = {},
+  input: SwitchboardConfigInput = {},
+  deps: SwitchboardDeps = {},
 ): Promise<SwitchboardReactor> => {
-  const requestedPort = options.port ?? DEFAULT_PORT;
-  const logger = options.logger ?? defaultLogger;
+  assertConfigShape(input);
+  const configPath = resolveConfigPath(input.configFile);
+  const fileConfig = getConfig(configPath);
+  // The file's auth lies under the env and the caller, as under the env vars.
+  const config = switchboardConfigSchema.parse(
+    mergeSwitchboardConfig(
+      {
+        auth: {
+          enabled: fileConfig.auth?.enabled,
+          admins: fileConfig.auth?.admins,
+        },
+      },
+      input,
+    ),
+  );
+  const logger = deps.logger ?? defaultLogger;
+  if (disableWasmWrapperTiering()) {
+    logger.info("Wasm wrapper tier-up off on Node 24 (nodejs/node#66366)");
+  }
   // Here as well as in index.mts, so a host embedding the server is profiled.
   if (process.env.PYROSCOPE_SERVER_ADDRESS) {
     await initProfilerFromEnv(process.env).catch((error: unknown) =>
@@ -1651,66 +1917,45 @@ export const startSwitchboard = async (
     );
   }
   const serverPort = await resolveServerPort(
-    requestedPort,
-    options.strictPort ?? false,
+    config.server.port,
+    config.server.strictPort,
     logger,
   );
 
-  // Initialize feature flags
-  const featureFlags = await initFeatureFlags();
-
-  const enableDocumentModelSubgraphs = await featureFlags.getBooleanValue(
-    DOCUMENT_MODEL_SUBGRAPHS_ENABLED,
-    options.enableDocumentModelSubgraphs ??
-      DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT,
-  );
-
-  options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
-
+  const options = serverOptionsOf(config, deps);
   // CLASSIC resolution of the carved subsystems' switches — flag-on, the
-  // plugins own these (presence is activation): the resolvers are skipped so
-  // an ABSENT plugin can actually deactivate its subsystem (initServer
-  // normalizes unset values to off after transformServerOptions). An explicit
-  // caller option always wins on both paths. The inspection flag is a core
-  // capability (not carved) and resolves classically either way.
-  if (!isPluginHostEnabled()) {
-    options.mcp = await resolveMcpEnabled({
-      featureFlags,
-      option: options.mcp,
-    });
-    const configPathForFlags = resolveConfigPath(options.configFile);
-    const workflowsEnabled = await resolveWorkflowsEnabled({
-      featureFlags,
-      override: options.workflows?.enabled,
-      configEnabled: readConfigWorkflowsEnabled(configPathForFlags),
-    });
-    options.workflows = { enabled: workflowsEnabled };
+  // plugins own these (presence is activation): an ABSENT plugin can actually
+  // deactivate its subsystem (initServer normalizes unset values to off after
+  // transformServerOptions). An explicit config value always wins on both
+  // paths. The inspection switch is a core capability (not carved).
+  if (!config.features.pluginHost) {
+    options.mcp = config.features.mcp ?? true;
+    options.workflows = {
+      enabled:
+        config.features.workflows ?? readConfigWorkflowsEnabled(configPath),
+    };
   }
-  options.inspection = await resolveInspectionEnabled({
-    featureFlags,
-    option: options.inspection,
-  });
-  options.pgliteWorkers = await resolvePgliteWorkersEnabled({
-    featureFlags,
-    option: options.pgliteWorkers,
-  });
   // This switchboard's own identity authenticates against the same Renown
   // instance it verifies incoming credentials against, unless told otherwise.
   const renownConfig = resolveRenownConfig(
-    getConfig(resolveConfigPath(options.configFile)).auth?.renown,
-    process.env,
+    renownLayers(fileConfig.auth?.renown, config.auth.renown),
+    {},
     logger,
   );
+  const userDataDir = config.storage.userDataDir;
   options.identity = {
     ...options.identity,
     baseUrl: options.identity?.baseUrl ?? renownConfig.url,
-    // Under a shell's PH_USER_DATA_DIR the identity lives in the user's .ph
-    // tree with the stores, never in the install dir. Unset: unchanged —
-    // renown's own `<cwd>/.ph/.keypair.json` default applies.
+    // Under a relocated .ph tree the identity lives in the user's .ph tree
+    // with the stores, never in the install dir. Unset: unchanged — renown's
+    // own `<cwd>/.ph/.keypair.json` default applies.
     keypairPath:
       options.identity?.keypairPath ??
-      (process.env.PH_USER_DATA_DIR
-        ? path.join(resolvePhDir(), ".keypair.json")
+      (userDataDir
+        ? path.join(
+            resolvePhDir(undefined, { PH_USER_DATA_DIR: userDataDir }),
+            ".keypair.json",
+          )
         : undefined),
   };
 
@@ -1718,7 +1963,7 @@ export const startSwitchboard = async (
     "Feature flags: @flags",
     JSON.stringify(
       {
-        DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
+        DOCUMENT_MODEL_SUBGRAPHS_ENABLED: options.enableDocumentModelSubgraphs,
         MCP_ENABLED: options.mcp,
         INSPECTION_ENABLED: options.inspection,
         PH_PGLITE_WORKERS: options.pgliteWorkers,
@@ -1732,7 +1977,7 @@ export const startSwitchboard = async (
   // Initialize Renown if identity options are provided or keypair exists
   let renown: IRenown | null = null;
   try {
-    renown = await initRenown(options.identity);
+    renown = await initRenown({ ...options.identity, userDataDir });
   } catch (e) {
     logger.warn("Failed to initialize ConnectCrypto: @error", e);
     if (options.identity.requireExisting) {
@@ -1743,10 +1988,25 @@ export const startSwitchboard = async (
     }
   }
 
+  const reportError =
+    deps.reportError ??
+    ((error: unknown) => {
+      void captureInSentry(error);
+    });
+  const opening: { stores?: StoresOpening } = {};
   try {
-    return await initServer(serverPort, options, renown, renownConfig);
+    return await initServer(
+      serverPort,
+      options,
+      config,
+      renown,
+      renownConfig,
+      reportError,
+      opening,
+    );
   } catch (e) {
-    Sentry.captureException(e);
+    await opening.stores?.close();
+    await captureInSentry(e);
     if (StoredDocumentsRefusedError.isError(e)) {
       logger.error(e.message);
     } else {
@@ -1755,6 +2015,85 @@ export const startSwitchboard = async (
     throw e;
   }
 };
+
+// Parsing strips unknown keys, so a caller still passing the old options would boot on defaults.
+function assertConfigShape(input: SwitchboardConfigInput): void {
+  const unknown = Object.keys(input).filter(
+    (key) => !(key in switchboardConfigSchema.shape),
+  );
+  if (unknown.length > 0) {
+    throw new Error(
+      `startSwitchboard(config, deps) got unknown config keys: ${unknown.join(", ")}. ` +
+        "It takes the @powerhousedao/switchboard/config shape; runtime objects go in deps.",
+    );
+  }
+}
+
+/** The options view plugins transform, from the config and deps. */
+function serverOptionsOf(
+  config: SwitchboardConfig,
+  deps: SwitchboardDeps,
+): StartServerOptions {
+  const { executor, projection } = config.workers;
+  return {
+    reactor: deps.reactor,
+    fatalErrorShutdown: deps.fatalErrorShutdown,
+    signalHandlers: deps.signalHandlers,
+    readyAfter: deps.readyAfter,
+    pluginComposition: deps.pluginComposition,
+    logger: deps.logger,
+    registryUrl: config.packages.registryUrl,
+    configFile: config.configFile,
+    port: config.server.port,
+    strictPort: config.server.strictPort,
+    dev: config.server.dev,
+    dbPath: config.storage.readModel.url,
+    drive: config.drive as StartServerOptions["drive"],
+    packages: [...config.packages.list],
+    remoteDrives: [...config.remoteDrives],
+    https: config.server.https,
+    identity: config.identity,
+    attachmentServiceUrl: config.attachments.serviceUrl,
+    mcp: config.features.mcp,
+    inspection: config.inspection.enabled,
+    pgliteWorkers: config.storage.pglite.workers,
+    workflows:
+      config.features.workflows === undefined
+        ? undefined
+        : { enabled: config.features.workflows },
+    privacy: {
+      enabled: config.features.privacy.enabled,
+      deploymentSecret: config.features.privacy.deploymentSecret,
+      intervalMs: config.features.privacy.intervalMs,
+      deadlineMs: config.features.privacy.deadlineMs,
+      markerGraceMs: config.features.privacy.markerGraceMs,
+      purgeTimeoutMs: config.features.privacy.purgeTimeoutMs,
+      signer: deps.privacySigner,
+    },
+    processorConfig: config.processorConfig,
+    disableLocalPackages: config.packages.disableLocal,
+    enableDocumentModelSubgraphs: config.features.documentModelSubgraphs,
+    dynamicModelLoading: config.packages.dynamic,
+    migratePglite: config.storage.migratePglite,
+    forcePgVersion: config.storage.forcePgVersion,
+    workerPool: {
+      numWorkers: executor.count,
+      dbPoolSizePerWorker: executor.poolSize,
+      acquireTimeoutMs: executor.acquireTimeoutMs,
+    },
+    projectionWorker: {
+      enabled: projection.enabled,
+      dbPoolSize: projection.poolSize,
+    },
+    unsupportedStoredDocuments: config.protocol.unsupportedStoredDocuments,
+  };
+}
+
+/** reactor-api's auth section; renown is resolved here, not there. */
+function authSectionOf(auth: SwitchboardConfig["auth"]) {
+  const { renown: _renown, ...section } = auth;
+  return section;
+}
 
 export {
   applySwitchboardReactorDefaults,
@@ -1767,21 +2106,60 @@ export {
 } from "./unsupported-stored-documents.mjs";
 
 if (import.meta.main) {
-  await startSwitchboard({ fatalErrorShutdown: true });
+  const config = switchboardConfigFromEnv(process.env);
+  initSwitchboardProcess(config);
+  await startSwitchboard(config, { fatalErrorShutdown: true });
 }
 
-/** `PH_CATCH_UP_PRIORITY`: `dynamic` (the default) or a fixed level `0`-`7`. */
-function catchUpPrioritySettingFromEnv(
-  value: string | undefined,
+/** Off in config, no timers or observers exist; a lever can still start it. */
+function createMemoryTelemetry(
+  config: SwitchboardConfig,
   logger: ILogger,
-): CatchUpPrioritySetting {
-  const setting = parseCatchUpPriority(value);
-  if (setting) return setting;
-  logger.warn(
-    "PH_CATCH_UP_PRIORITY=@Value is neither dynamic nor a level 0-7; using dynamic",
-    JSON.stringify(value),
-  );
-  return { mode: "dynamic" };
+): MemoryTelemetry {
+  const { memory, dir, heapSnapshotDir } = config.telemetry;
+  const directory = dir ?? telemetryDir();
+  return new MemoryTelemetry({
+    sampler: new NodeMemorySampler(),
+    config: {
+      enabled: memory.enabled,
+      intervalMs: memory.intervalMs,
+      outputs: memory.outputs,
+      filePath: memory.file.path,
+      fileMaxMb: memory.file.maxMb,
+      fileKeep: memory.file.keep,
+      ringSize: memory.ringSize,
+      consoleIntervalMs: memory.consoleIntervalMs,
+      workers: memory.workers,
+      windowMin: memory.windowMin,
+    },
+    fileSink: (settings) =>
+      memoryFileSink(settings, { dir: directory, logger }),
+    heapSnapshot: createHeapSnapshotWriter({
+      dir: heapSnapshotDir ?? directory,
+    }),
+    logger,
+  });
+}
+
+/** For a host with no ph-cli display: the slowest processors, through the log. */
+function startOwnedTimingLog(
+  module: InProcessReactorModule | undefined,
+  settings: ProcessorTimingSettings,
+  intervalMs: number,
+  logger: ILogger,
+): () => void {
+  if (!module || intervalMs <= 0) return () => {};
+  return startProcessorTimingLog({
+    intervalMs,
+    read: () =>
+      computeProcessorTiming(
+        module.processorManager.getAll(),
+        module.catchUp.status(),
+        settings.level,
+        settings.windowMs,
+      ),
+    log: (line) => logger.info("@Line", line),
+  });
 }
 
 /**

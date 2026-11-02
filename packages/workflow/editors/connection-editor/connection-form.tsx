@@ -41,6 +41,8 @@ import {
   planForConnection,
   planFromAuth,
   plansFromAuth,
+  REACTOR_SERVICE_LABEL,
+  serviceName,
   UNKNOWN_AUTH,
   type AuthField,
   type AuthPlan,
@@ -194,6 +196,8 @@ function SavedSecret(props: {
 function SecretField(props: {
   field: AuthField;
   refValue: string;
+  // The secret is minted for this connection; only it resolves the secret.
+  connectionId: string | undefined;
   connectionName: string;
   onCommit: (ref: string) => void;
   onRemove: () => void;
@@ -213,14 +217,19 @@ function SecretField(props: {
   // Mints a new ref instead of rotating the existing one.
   const [separate, setSeparate] = useState(false);
 
-  const stored = managed && stat !== null && stat?.status !== "DELETED";
+  // Another connection's secret reads as unset: this one cannot resolve it.
+  const foreign = !!stat?.ownerId && stat.ownerId !== props.connectionId;
+  const stored =
+    managed && stat !== null && stat?.status !== "DELETED" && !foreign;
   const problem = !refValue
     ? null
     : stat?.status === "DELETED"
       ? "The saved value was deleted on the switchboard. Paste a new one."
       : stat === null
         ? "The saved reference no longer resolves. Paste the value again."
-        : null;
+        : foreign
+          ? "This secret belongs to another connection; enter it again."
+          : null;
   const showEditor = !stored || editing;
 
   const cancel = () => {
@@ -232,13 +241,20 @@ function SecretField(props: {
 
   const save = () => {
     if (!value || busy) return;
+    const { connectionId } = props;
+    if (!connectionId) {
+      setError("Save the connection before entering its secrets.");
+      return;
+    }
     setBusy(true);
     setError(null);
     const label = `${props.connectionName || "connection"} · ${field.displayName}`;
+    // Only this connection's own secret, and only by whoever may change it,
+    // is rotated; any other is replaced.
     const request =
-      stored && !separate
+      stored && !separate && stat?.ownerId === connectionId && stat.manageable
         ? actions.rotateSecret(refValue, value)
-        : actions.createSecret(value, label);
+        : actions.createSecret(connectionId, value, label);
     request
       .then((result) => {
         cancel();
@@ -606,6 +622,8 @@ export function ConnectionForm(props: {
         supported: state.authType !== "OIDC",
       };
 
+  // The service is fixed once chosen; the picker is only for a new connection.
+  const boundService = serviceName(state.connectorId, catalog);
   const config = (state.config ?? {}) as Record<string, unknown>;
   const refByName = new Map(state.secretRefs.map((ref) => [ref.name, ref.ref]));
 
@@ -629,47 +647,67 @@ export function ConnectionForm(props: {
     <div className="flex flex-col gap-6">
       <div>
         <LabelRow label="Service" />
-        <Select
-          value={reactor ? REACTOR_CONNECTOR_ID : packageName}
-          loading={catalog === null}
-          placeholder="Choose the service to connect"
-          options={[
-            ...(props.offerReactor !== false || reactor
-              ? [
-                  {
-                    value: REACTOR_CONNECTOR_ID,
-                    label: "Powerhouse documents",
-                    description:
-                      "Lets a step read or write documents on this Switchboard",
-                  },
-                ]
-              : []),
-            ...(catalog ?? []).map((entry) => ({
-              value: entry.name,
-              label: entry.displayName,
-              // Its only sign-in method is one this runtime can't store.
-              ...(planFromAuth(entry.auth).authType === UNKNOWN_AUTH
-                ? { disabled: true, description: AUTH_TYPE_LABEL[UNKNOWN_AUTH] }
-                : { description: entry.description }),
-              icon: entry.logoUrl ? (
-                <img
-                  src={entry.logoUrl}
-                  alt=""
-                  loading="lazy"
-                  className="h-4 w-4 shrink-0 object-contain"
-                />
-              ) : undefined,
-            })),
-          ]}
-          onChange={(name) => {
-            if (name === REACTOR_CONNECTOR_ID) {
-              callbacks.pickReactor();
-              return;
-            }
-            const picked = catalog?.find((entry) => entry.name === name);
-            if (picked) callbacks.pickPiece(picked);
-          }}
-        />
+        {boundService !== null ? (
+          <div
+            role="group"
+            aria-label="Service"
+            className="flex items-center gap-2 py-1.5 text-sm text-foreground"
+          >
+            {piece?.logoUrl ? (
+              <img
+                src={piece.logoUrl}
+                alt=""
+                className="h-4 w-4 shrink-0 object-contain"
+              />
+            ) : null}
+            <span className="truncate">{boundService}</span>
+          </div>
+        ) : (
+          <Select
+            value=""
+            loading={catalog === null}
+            placeholder="Choose the service to connect"
+            options={[
+              ...(props.offerReactor !== false
+                ? [
+                    {
+                      value: REACTOR_CONNECTOR_ID,
+                      label: REACTOR_SERVICE_LABEL,
+                      description:
+                        "Lets a step read or write documents on this Switchboard",
+                    },
+                  ]
+                : []),
+              ...(catalog ?? []).map((entry) => ({
+                value: entry.name,
+                label: entry.displayName,
+                // Its only sign-in method is one this runtime can't store.
+                ...(planFromAuth(entry.auth).authType === UNKNOWN_AUTH
+                  ? {
+                      disabled: true,
+                      description: AUTH_TYPE_LABEL[UNKNOWN_AUTH],
+                    }
+                  : { description: entry.description }),
+                icon: entry.logoUrl ? (
+                  <img
+                    src={entry.logoUrl}
+                    alt=""
+                    loading="lazy"
+                    className="h-4 w-4 shrink-0 object-contain"
+                  />
+                ) : undefined,
+              })),
+            ]}
+            onChange={(name) => {
+              if (name === REACTOR_CONNECTOR_ID) {
+                callbacks.pickReactor();
+                return;
+              }
+              const picked = catalog?.find((entry) => entry.name === name);
+              if (picked) callbacks.pickPiece(picked);
+            }}
+          />
+        )}
         {piece ? <HintText text={piece.description} /> : null}
       </div>
 
@@ -754,6 +792,7 @@ export function ConnectionForm(props: {
             <SecretField
               key={field.name}
               field={field}
+              connectionId={props.connectionId}
               connectionName={state.name}
               refValue={refByName.get(field.name) ?? ""}
               onCommit={(ref) => {

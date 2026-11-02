@@ -2,6 +2,7 @@ import type { PHConnectDefaultDrive } from "@powerhousedao/shared/clis";
 import { describe, expect, it } from "vitest";
 import {
   mergeDefaultDrives,
+  placeConnectDrives,
   projectDrivesIntoConnect,
   rebaseDriveUrl,
 } from "../src/connect-projection.js";
@@ -138,6 +139,102 @@ describe("projectDrivesIntoConnect", () => {
       url: "https://lab.example/d/vetra-abc",
       name: null,
       icon: null,
+    });
+  });
+});
+
+describe("placeConnectDrives", () => {
+  const reactor = {
+    backends: {
+      main: { kind: "worker" as const },
+      sb: {
+        kind: "remote" as const,
+        remote: { url: "http://localhost:4001/d/b" },
+      },
+      other: {
+        kind: "remote" as const,
+        remote: { url: "http://localhost:4002/api/d/home" },
+      },
+    },
+  };
+
+  it("annotates each remote drive with the backend serving it", () => {
+    const placed = placeConnectDrives(reactor, [
+      remote("http://localhost:4001/d/b"),
+      remote("http://localhost:4002/api/d/c"),
+      remote("http://elsewhere/d/x"),
+      local("drive-a"),
+    ]);
+    expect(placed.defaultDrives).toEqual([
+      { ...remote("http://localhost:4001/d/b"), backend: "sb" },
+      { ...remote("http://localhost:4002/api/d/c"), backend: "other" },
+      remote("http://elsewhere/d/x"),
+      local("drive-a"),
+    ]);
+    expect(placed.collections).toBeUndefined();
+  });
+
+  it("skips a remote backend whose url is still an output token (a host build)", () => {
+    const token = { $output: "switchboard.drives.sektar.url" };
+    const unresolved = {
+      backends: {
+        sb: {
+          kind: "remote" as const,
+          remote: { url: token as unknown as string },
+        },
+      },
+    };
+    const drives = [remote("http://localhost:4001/d/b"), local("drive-a")];
+    expect(placeConnectDrives(unresolved, drives)).toEqual({
+      defaultDrives: drives,
+    });
+  });
+
+  it("keeps no copy of a drive placed on its switchboard", () => {
+    const placed = placeConnectDrives(
+      { ...reactor, placement: { drives: { b: "sb", c: "main" } } },
+      [
+        remote("http://localhost:4001/d/b"),
+        remote("http://localhost:4001/d/c"),
+      ],
+    );
+    expect(placed.defaultDrives).toEqual([
+      { ...remote("http://localhost:4001/d/b"), backend: "sb", sync: false },
+      { ...remote("http://localhost:4001/d/c"), backend: "sb" },
+    ]);
+  });
+
+  it("matches a declared slug to its hashed served slug", () => {
+    const placed = placeConnectDrives(
+      { ...reactor, placement: { drives: { b: "sb" } } },
+      [remote("http://localhost:4001/d/b-0123abcd")],
+    );
+    expect(placed.defaultDrives[0]).toMatchObject({
+      backend: "sb",
+      sync: false,
+    });
+  });
+
+  it("lists placed drives that are not default drives as collections", () => {
+    const placed = placeConnectDrives(
+      {
+        ...reactor,
+        placement: { drives: { b: "sb", workflows: "sb", notes: "main" } },
+      },
+      [remote("http://localhost:4001/d/b")],
+    );
+    expect(placed.collections).toEqual({
+      workflows: { backend: "sb", sync: false },
+    });
+  });
+
+  it("leaves the drives alone without remote backends", () => {
+    const drives = [remote("http://localhost:4001/d/b"), local("a")];
+    expect(
+      placeConnectDrives({ backends: { main: { kind: "worker" } } }, drives),
+    ).toEqual({ defaultDrives: drives });
+    expect(placeConnectDrives(undefined, drives)).toEqual({
+      defaultDrives: drives,
     });
   });
 });

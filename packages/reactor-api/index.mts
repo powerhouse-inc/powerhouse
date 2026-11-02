@@ -1,3 +1,4 @@
+export * from "./src/api-config.js";
 export * from "./src/graphql/index.js";
 export * from "./src/graphql/errors.js";
 export * from "./src/http/index.js";
@@ -16,6 +17,11 @@ export * from "./src/packages/http-loader.js";
 export * from "./src/packages/import-loader.js";
 export * from "./src/packages/package-manager.js";
 export * from "./src/packages/subgraph-extraction.js";
+export type { ScalarExport } from "./src/packages/scalar-exports.js";
+export type {
+  RegisteredScalar,
+  ScalarRegistry,
+} from "./src/utils/scalar-types.js";
 export * from "./src/server.js";
 export * from "./src/services/attachment-access.service.js";
 export * from "./src/services/authorized-attachment.service.js";
@@ -25,8 +31,10 @@ export * from "./src/services/renown-config.js";
 export * from "./src/services/renown-credential-verifier.js";
 export * from "./src/services/document-permission.service.js";
 export * from "./src/services/permission-cache.js";
+export * from "./src/services/readable-documents.js";
 export * from "./src/services/privacy-permissions.js";
 export * from "./src/services/package-management.service.js";
 export * from "./src/services/package-storage.js";
+export * from "./src/telemetry/index.js";
 export * from "./src/types.js";
 export * from "./src/utils/index.js";

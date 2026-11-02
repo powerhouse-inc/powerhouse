@@ -199,6 +199,13 @@ export type SetLastTestInput = {
   testedAt: Scalars["DateTime"]["input"];
 };
 
+export type SetManagedByInput = {
+  /** The managing document; omit to clear */
+  documentId?: InputMaybe<Scalars["PHID"]["input"]>;
+  documentType?: InputMaybe<Scalars["String"]["input"]>;
+  label?: InputMaybe<Scalars["String"]["input"]>;
+};
+
 export type SetPolicyInput = {
   concurrency?: InputMaybe<ConcurrencyMode>;
   defaultRetry?: InputMaybe<SetPolicyRetryPolicyInput>;
@@ -363,6 +370,15 @@ export type WorkflowEdge = {
   to: Scalars["OID"]["output"];
 };
 
+/** What manages a workflow: the document that defines it, and how to name it to a person. */
+export type WorkflowManager = {
+  documentId: Scalars["PHID"]["output"];
+  /** e.g. sektar/integration */
+  documentType: Scalars["String"]["output"];
+  /** e.g. Powerhouse - Google Calendar */
+  label: Scalars["String"]["output"];
+};
+
 export type WorkflowPolicy = {
   /** ENFORCED. SINGLETON drops a firing while a run is active (journaled CANCELLED, not dropped silently); QUEUE serialises; PARALLEL runs concurrently. */
   concurrency: ConcurrencyMode;
@@ -372,7 +388,7 @@ export type WorkflowPolicy = {
   journalAsDocument: Scalars["Boolean"]["output"];
   /** ENFORCED under PARALLEL: how many runs of this workflow may execute at once; null is unbounded. SINGLETON and QUEUE are 1 by definition. */
   maxParallelRuns: Maybe<Scalars["Int"]["output"]>;
-  /** NOT YET ENFORCED. Bounds how long a run may stay suspended on a waitpoint - but nothing suspends: waitpoints, run.pause and generateResumeUrl all throw, so there is no suspended state to bound. */
+  /** Bounds how long a run may stay suspended on a waitpoint: a waitpoint expires this long after it is created, ending the run CANCELLED with WaitpointExpired. A Delay longer than this is refused. */
   maxSuspensionDays: Scalars["Int"]["output"];
   /** ENFORCED. What happens to a run whose steps have all failed terminally: PARK takes the trigger out of the supervisor's ENABLED set until the workflow is re-published or re-enabled, NOTIFY logs at error level (the only notification channel this engine has), IGNORE does nothing. */
   onFailure: FailureMode;
@@ -388,6 +404,8 @@ export type WorkflowState = {
   /** Denormalised for inspectors; written by the runtime. */
   lastRunAt: Maybe<Scalars["DateTime"]["output"]>;
   lastRunStatus: Maybe<RunStatus>;
+  /** Who keeps this workflow as it is, e.g. an app's integration; null: people edit it. Editors show a managed workflow read-only. */
+  managedBy: Maybe<WorkflowManager>;
   name: Scalars["String"]["output"];
   policy: WorkflowPolicy;
   /** Last published snapshot; version !== published.version means unpublished changes. */

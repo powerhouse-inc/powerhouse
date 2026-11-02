@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "6.2.3-dev.77",
+  "version": "6.2.3-dev.90",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -13,6 +13,11 @@
   },
   "type": "module",
   "exports": {
+    "./scalars": {
+      "source": "./scalars.ts",
+      "import": "./dist/scalars.js",
+      "types": "./dist/scalars.d.ts"
+    },
     ".": {
       "source": "./index.ts",
       "import": "./dist/index.js",
@@ -51,15 +56,16 @@
     "@types/jest": "^29.5.14",
     "@types/mime": "^4.0.0",
     "@types/node": "catalog:",
-    "change-case": "catalog:",
+    "graphql": "catalog:",
     "mutative": "^1.0.5",
     "tsdown": "catalog:",
     "tsx": "catalog:",
-    "vitest": "catalog:",
-    "zod": "catalog:"
+    "vitest": "catalog:"
   },
   "dependencies": {
-    "@powerhousedao/shared": "workspace:*"
+    "@powerhousedao/shared": "workspace:*",
+    "change-case": "catalog:",
+    "zod": "catalog:"
   },
   "description": "Powerhouse document model — foundational data structure for local-first, event-sourced documents with typed operations, reducers, and GraphQL schema validation.",
   "keywords": [

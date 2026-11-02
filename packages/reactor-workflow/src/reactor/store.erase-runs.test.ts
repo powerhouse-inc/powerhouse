@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { createFreshRelationalDb } from "../../test/helpers/pglite.js";
+import { waitpointRow } from "../../test/helpers/waitpoints.js";
 import { WorkflowRunStore } from "./store.js";
 
 const step = (stepId: string) => ({
@@ -257,5 +258,66 @@ describe("eraseRunsForDocuments", () => {
     expect(await store.getRun(runId)).toBeUndefined();
     expect(await store.getSteps(runId)).toEqual([]);
     expect(await store.getRunDocuments(runId)).toEqual([]);
+  });
+
+  // A claim, admission or leg committing past the erase finds no row to write to.
+  it("leaves nothing for a WAITING run claimed or journaled after its erase", async () => {
+    const { store, start } = await freshStore();
+    const doomed = randomUUID();
+    const runId = await start({ payload: { documentId: doomed } });
+    const waitpoint = waitpointRow(runId);
+    await store.createWaitpoint(waitpoint);
+    await store.finishRun(runId, {
+      status: "WAITING",
+      steps: [step("a"), step("b")],
+      waiting: { stepId: "s", waitpointId: waitpoint.id },
+    } as never);
+    expect((await store.getRun(runId))?.status).toBe("WAITING");
+
+    await store.eraseRunsForDocuments([doomed]);
+
+    expect(await store.claimWaitingRun(runId)).toBe(false);
+    // The leg a claim that won the race would run.
+    await store.recordStep(runId, 2, step("c"));
+    await store.recordRunDocuments(runId, ["doc-later"]);
+    await expect(
+      store.createWaitpoint(waitpointRow(runId, { step_path: "t" })),
+    ).rejects.toThrow(/no longer exists/);
+    await store.finishRun(runId, {
+      status: "SUCCEEDED",
+      steps: [step("a"), step("b"), step("c")],
+    } as never);
+
+    expect(await store.getRun(runId)).toBeUndefined();
+    expect(await store.getSteps(runId)).toEqual([]);
+    expect(await store.getRunDocuments(runId)).toEqual([]);
+    expect((await store.listWaitpointsForRuns([runId])).get(runId)).toEqual([]);
+  });
+
+  it("leaves nothing for a PENDING run admitted or journaled after its erase", async () => {
+    const { store } = await freshStore();
+    const doomed = randomUUID();
+    const runId = await store.enqueueRun({
+      workflowId: "wf-erase",
+      triggerKind: "document-event",
+      triggerPayload: { documentId: doomed },
+    });
+
+    await store.eraseRunsForDocuments([doomed]);
+
+    expect(
+      await store.beginRun(runId, {
+        workflowName: "Erase",
+        workflowVersion: 1,
+      }),
+    ).toBe(false);
+    await store.recordStep(runId, 0, step("a"));
+    await store.finishRun(runId, {
+      status: "SUCCEEDED",
+      steps: [step("a")],
+    } as never);
+    expect(await store.getRun(runId)).toBeUndefined();
+    expect(await store.getSteps(runId)).toEqual([]);
+    expect(await store.admitAbandonedRuns()).toEqual([]);
   });
 });

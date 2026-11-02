@@ -233,7 +233,7 @@ export class ReactorHost {
         return;
       }
       if (msg.k === "sync-op") {
-        void this.handleOp(msg, this.options.onSyncOp, "sync", reply);
+        void this.handleSyncOp(msg, reply);
         return;
       }
       if (msg.k === "db-op") {
@@ -553,6 +553,29 @@ export class ReactorHost {
       async () => {
         await this.awaitClientReady();
         return handler(message.method, message.args);
+      },
+      (value) => value,
+    );
+  }
+
+  /** An `add` or `remove` changes the remotes every tab lists. */
+  private async handleSyncOp(
+    message: RpcSyncOp,
+    reply: IHostResponder,
+  ): Promise<void> {
+    const handler = this.options.onSyncOp;
+    if (!this.requireHandler(handler, message, reply, "sync")) {
+      return;
+    }
+    const changesRemotes =
+      message.method === "add" || message.method === "remove";
+    await reply.run(
+      message.id,
+      async () => {
+        await this.awaitClientReady();
+        const value = await handler(message.method, message.args);
+        if (changesRemotes) await this.broadcastRemotes();
+        return value;
       },
       (value) => value,
     );

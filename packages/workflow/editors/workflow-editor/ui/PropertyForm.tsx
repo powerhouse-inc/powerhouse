@@ -1,8 +1,10 @@
 // Property-driven config form, modeled on the Activepieces piece-properties
 // panel: one control per prop, typed by the descriptor.
 import {
+  createContext,
   lazy,
   Suspense,
+  useContext,
   useEffect,
   useId,
   useRef,
@@ -69,7 +71,7 @@ import {
   optionIcon,
   richTextMode,
 } from "./prop-controls.js";
-import { PropLayout } from "./prop-layout.js";
+import { essentialNames, PropLayout } from "./prop-layout.js";
 import { isEmptyValue } from "./validation.js";
 
 // Splices text at the field's cursor and returns the updated value.
@@ -152,7 +154,11 @@ const NO_ENDPOINT = "[no endpoint yet — see Endpoint URL above]";
 // placeholders; unsubstituted, an author is told to paste "{{webhookUrl}}".
 export function fillPiecePlaceholders(
   text: string,
-  values: { webhookUrl?: string; webhookTimeoutSeconds?: number },
+  values: {
+    webhookUrl?: string;
+    webhookTimeoutSeconds?: number;
+    pausedFlowTimeoutDays?: number;
+  },
 ): string {
   return text
     .replace(/\{\{\s*webhookUrl\s*\}\}/g, values.webhookUrl ?? NO_ENDPOINT)
@@ -161,8 +167,19 @@ export function fillPiecePlaceholders(
       values.webhookTimeoutSeconds === undefined
         ? "{{webhookTimeoutSeconds}}"
         : String(values.webhookTimeoutSeconds),
+    )
+    .replace(
+      /\{\{\s*pausedFlowTimeoutDays\s*\}\}/g,
+      values.pausedFlowTimeoutDays === undefined
+        ? "the workflow's maximum suspension"
+        : String(values.pausedFlowTimeoutDays),
     );
 }
+
+// Workflow-wide values for piece markdown, set by the editor from the document.
+export const PiecePlaceholderContext = createContext<{
+  pausedFlowTimeoutDays?: number;
+}>({});
 
 // Marks controls whose runtime support has not landed yet.
 export function AvailableSoon(props: { children?: ReactNode }) {
@@ -303,7 +320,45 @@ function OptionSelect(props: {
   );
 }
 
-// Rows of nested forms for an ARRAY prop with item properties.
+const SUMMARY_CHARS = 60;
+
+// One line per ARRAY item: its filled values, a set switch by its name.
+export function itemSummary(
+  fields: BlockFormProp[],
+  row: Record<string, unknown>,
+): string {
+  const parts: string[] = [];
+  for (const field of fields) {
+    const value = row[field.name];
+    if (value === true) {
+      parts.push(field.displayName.toLowerCase());
+      continue;
+    }
+    if (value === undefined || value === null || value === false) continue;
+    const option = field.staticOptions?.find((o) => o.value === value);
+    const text = option ? option.label : stringifyValue(value).trim();
+    if (!text) continue;
+    parts.push(
+      text.length > SUMMARY_CHARS ? `${text.slice(0, SUMMARY_CHARS)}…` : text,
+    );
+  }
+  return parts.join(" · ");
+}
+
+// Rows of nested forms for an ARRAY prop with item properties; each folds to a
+// one-line summary.
+// "Branches" adds a branch; a name that is not a plural adds an item.
+export function addItemLabel(displayName: string): string {
+  const name = displayName.trim().toLowerCase();
+  if (!/^[a-z]+s$/.test(name) || name.endsWith("ss")) return "Add item";
+  const singular = name.endsWith("ies")
+    ? `${name.slice(0, -3)}y`
+    : /(ss|x|z|ch|sh)es$/.test(name)
+      ? name.slice(0, -2)
+      : name.slice(0, -1);
+  return `Add ${singular}`;
+}
+
 function ArrayRows(props: {
   prop: BlockFormProp;
   value: unknown;
@@ -319,45 +374,88 @@ function ArrayRows(props: {
           : {},
       )
     : [];
+  // Rows open by index; an added row opens, the rest start folded.
+  const [open, setOpen] = useState<ReadonlySet<number>>(() => new Set());
+  const toggle = (index: number) =>
+    setOpen((current) => {
+      const next = new Set(current);
+      if (!next.delete(index)) next.add(index);
+      return next;
+    });
   const update = (next: Record<string, unknown>[]) =>
     props.onCommit(next.length > 0 ? next : undefined);
+  const remove = (index: number) => {
+    update(rows.filter((_, i) => i !== index));
+    setOpen(
+      (current) =>
+        new Set(
+          [...current]
+            .filter((i) => i !== index)
+            .map((i) => (i > index ? i - 1 : i)),
+        ),
+    );
+  };
   return (
     <div
-      className={`flex flex-col gap-2 ${props.invalid ? "rounded-md ring-1 ring-wf-warn/50" : ""}`}
+      className={`flex flex-col gap-1.5 ${props.invalid ? "rounded-md ring-1 ring-wf-warn/50" : ""}`}
     >
-      {rows.map((row, index) => (
-        <div
-          key={index}
-          className="rounded-lg border border-solid border-foreground/10 bg-muted/40 p-3"
-        >
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">
-              Item {index + 1}
-            </span>
-            <IconButton
-              icon="trash"
-              label={`Remove item ${index + 1}`}
-              onClick={() => update(rows.filter((_, i) => i !== index))}
-            />
+      {rows.map((row, index) => {
+        const expanded = open.has(index);
+        const summary = itemSummary(fields, row);
+        return (
+          <div
+            key={index}
+            className="rounded-md border border-solid border-foreground/10 bg-muted/40"
+          >
+            <div className="flex items-center gap-1 py-1 pl-1 pr-1">
+              <button
+                type="button"
+                aria-expanded={expanded}
+                onClick={() => toggle(index)}
+                className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-0.5 text-left text-[13px] hover:bg-foreground/5"
+              >
+                <Icon
+                  name={expanded ? "chevronDown" : "chevron"}
+                  className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                />
+                <span
+                  className={`truncate ${summary ? "text-foreground" : "text-muted-foreground"}`}
+                >
+                  {summary || `Item ${index + 1}`}
+                </span>
+              </button>
+              <IconButton
+                icon="trash"
+                label={`Remove item ${index + 1}`}
+                onClick={() => remove(index)}
+              />
+            </div>
+            {expanded ? (
+              <div className="border-t border-solid border-foreground/10 px-3 pb-3 pt-2">
+                <PropertyForm
+                  props={fields}
+                  value={row}
+                  onChange={(next) =>
+                    update(rows.map((entry, i) => (i === index ? next : entry)))
+                  }
+                  scopeStepId={props.scopeStepId}
+                  nested
+                />
+              </div>
+            ) : null}
           </div>
-          <PropertyForm
-            props={fields}
-            value={row}
-            onChange={(next) =>
-              update(rows.map((entry, i) => (i === index ? next : entry)))
-            }
-            scopeStepId={props.scopeStepId}
-            nested
-          />
-        </div>
-      ))}
+        );
+      })}
       <Button
         size="sm"
         className="self-start"
-        onClick={() => update([...rows, withPropDefaults(fields, {})])}
+        onClick={() => {
+          update([...rows, withPropDefaults(fields, {})]);
+          setOpen((current) => new Set(current).add(rows.length));
+        }}
       >
         <Icon name="plus" className="h-3.5 w-3.5" />
-        Add item
+        {addItemLabel(props.prop.displayName)}
       </Button>
     </div>
   );
@@ -610,6 +708,7 @@ function PropField(props: {
   explainOptionsError?: (message: string) => string;
 }) {
   const { prop, value } = props;
+  const placeholders = useContext(PiecePlaceholderContext);
   const fieldId = useId();
   const optionsUnavailable = Boolean(
     props.nested && prop.hasDynamicResolver && !props.loadOptions,
@@ -774,7 +873,7 @@ function PropField(props: {
         stringifyValue(
           prop.description ?? prop.defaultValue ?? prop.displayName,
         ),
-        { webhookUrl: props.webhookUrl },
+        { ...placeholders, webhookUrl: props.webhookUrl },
       );
       // The fallback keeps the text readable while the chunk loads, rather
       // than collapsing the panel's height and reflowing it.
@@ -1657,8 +1756,13 @@ export function PropertyForm(props: {
   // A hidden field's value is not cleared: switching scheme to None and back
   // must not silently discard the secret ref the author already minted.
   const visible = props.props.filter((prop) => isPropVisible(prop, current));
-  const essential = visible.filter((prop) => !prop.advanced);
-  const advanced = visible.filter((prop) => prop.advanced);
+  const kept = essentialNames(props.props, props.groups);
+  const essential = visible.filter(
+    (prop) => !prop.advanced || kept.has(prop.name),
+  );
+  const advanced = visible.filter(
+    (prop) => prop.advanced && !kept.has(prop.name),
+  );
   const [showAdvanced, setShowAdvanced] = useState(false);
   // Closed even when advanced fields hold values, so the count goes in the
   // label — else config already in effect reads as config that is not there.
@@ -1706,7 +1810,7 @@ export function PropertyForm(props: {
 
   return (
     <div
-      className={`flex flex-col ${props.nested ? "gap-4" : "gap-5"}`}
+      className={`flex flex-col ${props.nested ? "gap-3" : "gap-5"}`}
       onBlur={echo.onBlur}
     >
       <PropLayout

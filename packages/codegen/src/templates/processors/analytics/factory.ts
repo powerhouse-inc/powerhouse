@@ -7,16 +7,13 @@ export const analyticsFactoryTemplate = (v: {
   documentTypes: string[];
 }) =>
   ts`
-import type { 
-  ProcessorApp,
-  ProcessorFactoryBuilder,
-  ProcessorRecord, 
+import type {
   IProcessorHostModule,
+  ProcessorFactoryBuilder,
 } from "@powerhousedao/reactor-browser";
-import { type PHDocumentHeader } from "document-model";
 import { ${v.pascalCaseName} } from "./processor.js";
 
-export const ${v.camelCaseName}FactoryBuilder: ProcessorFactoryBuilder = (module: IProcessorHostModule) => async (driveHeader: PHDocumentHeader, processorApp?: ProcessorApp) => {
+export const ${v.camelCaseName}FactoryBuilder: ProcessorFactoryBuilder = (module: IProcessorHostModule) => async () => {
   return [
     {
       processor: new ${v.pascalCaseName}(module.analyticsStore),

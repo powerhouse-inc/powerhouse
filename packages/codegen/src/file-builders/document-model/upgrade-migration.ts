@@ -1,4 +1,4 @@
-import { getPHCustomScalarByTypeName } from "@powerhousedao/document-engineering/graphql";
+import { getCatalogScalar } from "document-model/scalars";
 import type { DocumentSpecification } from "@powerhousedao/shared/document-model";
 import type {
   DocumentNode,
@@ -153,9 +153,12 @@ function analyzeScope(args: {
     }
     const zero = zeroValueForType(field.type, newDoc, new Set());
     if (!zero.ok) {
+      const scalar = zero.projectScalar
+        ? `, whose type uses the project scalar ${zero.projectScalar}`
+        : "";
       return {
         kind: "manual",
-        reason: `no initial value could be derived for the added ${scope} state field "${fieldName}"`,
+        reason: `no initial value could be derived for the added ${scope} state field "${fieldName}"${scalar}`,
       };
     }
     fill[fieldName] = zero.value;
@@ -164,7 +167,9 @@ function analyzeScope(args: {
   return { kind: "fill", fill };
 }
 
-type ZeroValueResult = { ok: true; value: unknown } | { ok: false };
+type ZeroValueResult =
+  | { ok: true; value: unknown }
+  | { ok: false; projectScalar?: string };
 
 function zeroValueForType(
   typeNode: TypeNode,
@@ -194,11 +199,6 @@ function zeroValueForType(
 
   const definition = findTypeDefinition(schemaDoc, name);
   if (!definition) {
-    const scalar = getPHCustomScalarByTypeName(name);
-    const defaultValue = scalar?.getDefaultValue?.();
-    if (defaultValue !== undefined) {
-      return { ok: true, value: defaultValue };
-    }
     return { ok: false };
   }
 
@@ -214,7 +214,7 @@ function zeroValueForType(
     for (const field of definition.fields ?? []) {
       const fieldZero = zeroValueForType(field.type, schemaDoc, visitedTypes);
       if (!fieldZero.ok) {
-        return { ok: false };
+        return fieldZero;
       }
       value[field.name.value] = fieldZero.value;
     }
@@ -222,12 +222,9 @@ function zeroValueForType(
     return { ok: true, value };
   }
   if (definition.kind === Kind.SCALAR_TYPE_DEFINITION) {
-    const scalar = getPHCustomScalarByTypeName(name);
-    const defaultValue = scalar?.getDefaultValue?.();
-    if (defaultValue !== undefined) {
-      return { ok: true, value: defaultValue };
-    }
-    return { ok: false };
+    return getCatalogScalar(name)
+      ? { ok: false }
+      : { ok: false, projectScalar: name };
   }
 
   // unions, interfaces: no mechanical zero value

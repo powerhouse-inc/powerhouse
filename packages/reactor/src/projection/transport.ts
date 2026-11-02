@@ -1,4 +1,5 @@
 import { Worker, type WorkerOptions } from "node:worker_threads";
+import { registerTelemetryWorker } from "../telemetry/gauges.js";
 import type {
   ProjectionParentMessage,
   ProjectionWorkerMessage,
@@ -39,6 +40,13 @@ export function createProjectionThreadTransport(
   options?: WorkerOptions,
 ): IProjectionTransport {
   const worker = new Worker(scriptPath, options);
+  const forget = registerTelemetryWorker(
+    options?.name ?? `projection#${worker.threadId}`,
+    async () => ({
+      heapUsed: (await worker.getHeapStatistics()).used_heap_size,
+    }),
+  );
+  worker.once("exit", forget);
   return {
     postMessage(message) {
       worker.postMessage(message);

@@ -96,3 +96,12 @@ export const PARKED_TRIGGER_STATUS = "PARKED";
  * not finish and nothing is wrong with the workflow", which is what the
  * document model's RunStatus.CANCELLED means. */
 export const CANCELLED_RUN_STATUS = "CANCELLED";
+
+/** How long a run may stay suspended; null when the policy sets no bound. */
+export function maxSuspensionMs(
+  runnable: Pick<RunnableDefinition, "policy">,
+): number | null {
+  const policy = runnable.policy as Record<string, unknown> | undefined | null;
+  const days = positive(policy?.maxSuspensionDays);
+  return days === null ? null : days * 86_400_000;
+}

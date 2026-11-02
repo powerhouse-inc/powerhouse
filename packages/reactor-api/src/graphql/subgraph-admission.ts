@@ -53,38 +53,69 @@ export type DocumentModelAdmission<T> = {
   refusals: DocumentModelRefusal<T>[];
 };
 
+/** Whether the server admits one built model, and why not when it refuses it. */
+export type DocumentModelVerdict =
+  | {
+      admitted: true;
+      schema: DocumentModelSchema;
+      /** Why its own subgraph is refused; its generated types still serve. */
+      subgraphRefusal?: string;
+    }
+  | { admitted: false; reason: string };
+
+/**
+ * The server's decision on one built model: it refuses a model whose schema
+ * does not build or that generates a reserved type name.
+ */
+export function admitDocumentModel(
+  resolved: ResolvedDocumentModelSchema<DocumentModelSource>,
+  reserved: ReservedTypeNames,
+): DocumentModelVerdict {
+  if (resolved.schema === undefined) {
+    return {
+      admitted: false,
+      reason: `has an unusable schema: ${resolved.error.message}`,
+    };
+  }
+  const { model, schema } = resolved;
+  const taken = reservedTypeNamesTaken(model, reserved, schema.generated);
+  if (taken.length > 0) {
+    return {
+      admitted: false,
+      reason: `generates reserved type names: ${taken.join(", ")}`,
+    };
+  }
+  return {
+    admitted: true,
+    schema,
+    ...(schema.subgraphError !== undefined && {
+      subgraphRefusal: `has an unusable subgraph schema: ${schema.subgraphError.message}`,
+    }),
+  };
+}
+
 /** Usable models; a refused latest version refuses every version of its model. */
 export function admitDocumentModels<T extends DocumentModelSource>(
   resolved: readonly ResolvedDocumentModelSchema<T>[],
   reserved: ReservedTypeNames,
 ): DocumentModelAdmission<T> {
   const latest = new Set(
-    filterLatestDocumentModelVersions(resolved.map(({ model }) => model)),
+    latestDocumentModelVersions(resolved.map(({ model }) => model)),
   );
-  const candidates: {
-    model: T;
-    key: string;
-    schema?: DocumentModelSchema;
-    refusal?: { reason: string; subgraphOnly: boolean };
-  }[] = [];
-  for (const { model, key, schema, error } of resolved) {
-    if (!schema) {
-      const reason = `has an unusable schema: ${error.message}`;
-      candidates.push({ model, key, refusal: { reason, subgraphOnly: false } });
-      continue;
-    }
-    const taken = reservedTypeNamesTaken(model, reserved, schema.generated);
-    if (taken.length > 0) {
-      const reason = `generates reserved type names: ${taken.join(", ")}`;
-      candidates.push({ model, key, refusal: { reason, subgraphOnly: false } });
-      continue;
-    }
-    const refusal = schema.subgraphError && {
-      reason: `has an unusable subgraph schema: ${schema.subgraphError.message}`,
-      subgraphOnly: true,
+  const candidates = resolved.map((entry) => {
+    const verdict = admitDocumentModel(entry, reserved);
+    const refusal = !verdict.admitted
+      ? { reason: verdict.reason, subgraphOnly: false }
+      : verdict.subgraphRefusal !== undefined
+        ? { reason: verdict.subgraphRefusal, subgraphOnly: true }
+        : undefined;
+    return {
+      model: entry.model,
+      key: entry.key,
+      schema: verdict.admitted ? verdict.schema : undefined,
+      refusal,
     };
-    candidates.push({ model, key, schema, refusal });
-  }
+  });
 
   const refusedModels = new Set(
     candidates
@@ -105,7 +136,7 @@ export function admitDocumentModels<T extends DocumentModelSource>(
       admission.refusals.push({
         model,
         key,
-        version: specVersion(model),
+        version: documentModelVersion(model),
         everyVersion,
         ...refusal,
       });
@@ -120,24 +151,28 @@ export function admitDocumentModels<T extends DocumentModelSource>(
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
 
-const specVersion = (model: DocumentModelSource) =>
+/** The version of a model: its latest specification's. */
+export const documentModelVersion = (model: DocumentModelSource): number =>
   model.documentModel.global.specifications.at(-1)?.version ?? 0;
 
-/** The latest version of each document model. */
-function filterLatestDocumentModelVersions<T extends DocumentModelSource>(
+/**
+ * The latest version of each model, by name: the only one whose own subgraph
+ * the server registers.
+ */
+export function latestDocumentModelVersions<T extends DocumentModelSource>(
   documentModels: readonly T[],
 ): T[] {
   const latestByName = new Map<string, T>();
-
   for (const documentModel of documentModels) {
-    const name = documentModel.documentModel.global.name;
+    const { name } = documentModel.documentModel.global;
     const existing = latestByName.get(name);
-
-    if (!existing || specVersion(documentModel) > specVersion(existing)) {
+    if (
+      !existing ||
+      documentModelVersion(documentModel) > documentModelVersion(existing)
+    ) {
       latestByName.set(name, documentModel);
     }
   }
-
   return Array.from(latestByName.values());
 }
 
@@ -150,7 +185,7 @@ export function documentModelSubgraphSources<T extends DocumentModelSource>(
     model: T;
     types: NonNullable<DocumentModelSchema["subgraph"]>;
   }[] = [];
-  for (const model of filterLatestDocumentModelVersions(admitted)) {
+  for (const model of latestDocumentModelVersions(admitted)) {
     if (DOCUMENT_MODELS_TO_EXCLUDE.includes(model.documentModel.global.id)) {
       continue;
     }

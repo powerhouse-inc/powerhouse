@@ -76,6 +76,7 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   setPHDocumentEditorConfig: vi.fn(),
   setSelectedDrive: vi.fn(),
   useAppModuleById: () => undefined,
+  useDriveNode: () => undefined,
   useDrives: () => mockDrives.drives,
   useIsAddDriveEnabled: () => false,
   makeDriveSlug: (drive: { header: { slug: string } }) => drive.header.slug,

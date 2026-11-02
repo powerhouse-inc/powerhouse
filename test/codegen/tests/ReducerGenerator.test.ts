@@ -25,11 +25,11 @@ function makeVariableAndTypeNamesFromContext(context: GenerationContext) {
 
 // Custom DirectoryManager for testing that works with in-memory file system
 class TestDirectoryManager extends DirectoryManager {
-  async ensureExists(dirPath: string): Promise<void> {
+  override async ensureExists(dirPath: string): Promise<void> {
     // Skip directory creation for in-memory file system
   }
 
-  async createSourceFile(project: Project, filePath: string) {
+  override async createSourceFile(project: Project, filePath: string) {
     // Mirror the base manager (a no-op override here) so this stays genuinely async.
     await this.ensureExists(filePath);
     // Check if file already exists and return it, otherwise create new one
@@ -40,7 +40,7 @@ class TestDirectoryManager extends DirectoryManager {
     return project.createSourceFile(filePath);
   }
 
-  getReducerPath(
+  override getReducerPath(
     rootDir: string,
     docModelName: string,
     moduleName: string,

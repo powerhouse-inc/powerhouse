@@ -1,4 +1,5 @@
 import type {
+  PhAiChatImage,
   PhAiToolAnnotations,
   PhAiToolDescriptor,
 } from "@powerhousedao/shared/document-model";
@@ -29,6 +30,31 @@ export interface AiSettings {
   autoApproveWrites: boolean;
 }
 
+/**
+ * An endpoint the host app picked for the chat, which takes the place of the
+ * user's settings. It holds no API key: the endpoint holds its own (see
+ * `gatewayConnection`), and write tools always ask for approval.
+ */
+export interface AiConnection {
+  /** OpenAI-compatible base URL; a relative path resolves against the page. */
+  baseUrl: string;
+  /** Model id, sent as is. A gateway may answer with its own. */
+  model: string;
+  /** Sets each request's credentials, e.g. the user's bearer. */
+  fetch?: typeof fetch;
+}
+
+/** An image attached to a user message. */
+export interface ChatImage {
+  /** `data:<mediaType>;base64,...` */
+  dataUrl: string;
+  mediaType: string;
+  name?: string;
+}
+
+/** A sent image, under the handle tools reach it by. */
+export type AiChatImage = PhAiChatImage;
+
 /** MCP-compatible annotation hints; structural, no MCP SDK dependency. */
 export type AiToolAnnotations = PhAiToolAnnotations;
 
@@ -36,7 +62,7 @@ export type AiToolAnnotations = PhAiToolAnnotations;
  * Provider-agnostic tool descriptor accepted by the chat agent.
  *
  * Structurally compatible with the MCP tool records produced by
- * `createReactorMcpProvider`: the callback parameter is `never` so any
+ * `toMcpTool`: the callback parameter is `never` so any
  * per-tool-args function type is assignable, and the result is `unknown`
  * because the envelope shape (MCP `CallToolResult`) is unwrapped at the
  * adapter boundary.
@@ -46,26 +72,9 @@ export type AiToolDescriptor = PhAiToolDescriptor;
 /** Tool descriptors the app resolves when the user sends a message. */
 export type AiToolsProvider = () => Promise<AiToolDescriptor[]>;
 
-/** Tool names whose execution mutates the reactor and requires approval. */
-export const WRITE_TOOLS: ReadonlySet<string> = new Set([
-  "createDocument",
-  "addActions",
-  "deleteDocument",
-  "addDrive",
-  "deleteDrive",
-  "addRemoteDrive",
-]);
-
-/**
- * Whether executing the tool mutates state and requires user approval:
- * the built-in write tools, or any tool flagged destructive in its
- * annotations (covers package-provided tools outside the built-in set).
- */
-export function isWriteTool(
-  name: string,
-  annotations?: AiToolAnnotations,
-): boolean {
-  return WRITE_TOOLS.has(name) || annotations?.destructiveHint === true;
+/** Whether running the tool needs approval: anything not annotated read-only. */
+export function isWriteTool(annotations?: AiToolAnnotations): boolean {
+  return annotations?.readOnlyHint !== true;
 }
 
 export type ToolCallState =
@@ -78,6 +87,7 @@ export type ToolCallState =
 /** One rendered unit inside a chat message. */
 export type ChatPart =
   | { type: "text"; text: string }
+  | { type: "image"; dataUrl: string; name?: string }
   | {
       type: "tool";
       toolCallId: string;

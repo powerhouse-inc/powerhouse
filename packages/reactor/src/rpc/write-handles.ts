@@ -3,6 +3,7 @@ import {
   JobBatchHandle,
   jobIdsOf,
   NodeHandle,
+  placeholderJob,
   WriteHandleFactory,
   type HandleReader,
   type IJobStagePort,
@@ -14,12 +15,7 @@ import type {
   WriteHandle,
 } from "../client/types.js";
 import { settlesStage, type JobStage } from "../shared/awaiter.js";
-import {
-  JobStatus,
-  type ConsistencyToken,
-  type JobInfo,
-  type ViewFilter,
-} from "../shared/types.js";
+import type { ConsistencyToken, JobInfo, ViewFilter } from "../shared/types.js";
 import type { WireBatchWriteHandle, WireWriteHandle } from "./protocol.js";
 
 /**
@@ -132,17 +128,6 @@ export function writeResultToWire(value: unknown): unknown {
     }
   }
   return value;
-}
-
-function placeholderJob(id: string, documentId: string): JobInfo {
-  return {
-    id,
-    documentId,
-    status: JobStatus.PENDING,
-    createdAtUtcIso: "",
-    consistencyToken: { version: 1, createdAtUtcIso: "", coordinates: [] },
-    meta: { batchId: "", batchJobIds: [] },
-  };
 }
 
 function delay(ms: number, signal: AbortSignal | undefined): Promise<void> {

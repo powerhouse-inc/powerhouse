@@ -1,3 +1,4 @@
+import { loadDriveNodes } from "../hooks/drive-nodes.js";
 import { getPHStore } from "../hooks/ph-store.js";
 import type {
   DocumentDriveDocument,
@@ -63,7 +64,7 @@ export async function buildFolderZip(
   fetchDocument: (id: string) => Promise<PHDocument>,
   onProgress?: (done: number, total: number) => void,
 ): Promise<FolderZipResult> {
-  const allNodes = drive.state.global.nodes;
+  const allNodes = await loadDriveNodes(drive.header.id, { refresh: true });
   const topName = sanitize(
     folderNode?.name ?? (drive.state.global.name || drive.header.name),
   );

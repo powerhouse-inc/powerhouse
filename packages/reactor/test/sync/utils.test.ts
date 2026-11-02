@@ -1,13 +1,18 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import { validateBatchStructure } from "../../src/core/utils.js";
+import { Mailbox } from "../../src/sync/mailbox.js";
 import { SyncOperation } from "../../src/sync/sync-operation.js";
-import type { RemoteFilter } from "../../src/sync/types.js";
+import {
+  SyncOperationStatus,
+  type RemoteFilter,
+} from "../../src/sync/types.js";
 import {
   batchOperationsByDocument,
   consolidateSyncOperations,
   createIdleHealth,
   filterOperations,
+  trimMailboxFromAckOrdinal,
 } from "../../src/sync/utils.js";
 
 describe("filterOperations", () => {
@@ -649,5 +654,63 @@ describe("consolidateSyncOperations", () => {
     expect(result[0].operations.map((o) => o.context.ordinal)).toEqual([1, 2]);
     expect(result[1].jobId).toBe("j3");
     expect(result[1].jobDependencies).toEqual(["j1"]);
+  });
+});
+
+describe("trimMailboxFromAckOrdinal", () => {
+  const syncOpAt = (id: string, ordinal: number): SyncOperation =>
+    new SyncOperation(
+      id,
+      `job-${id}`,
+      [],
+      "remote",
+      "doc",
+      ["global"],
+      "main",
+      [
+        {
+          operation: { index: ordinal, action: { id: `a-${id}` } },
+          context: {
+            documentId: "doc",
+            documentType: "test",
+            scope: "global",
+            branch: "main",
+            ordinal,
+          },
+        } as unknown as OperationWithContext,
+      ],
+    );
+
+  it("keeps a release backfill below the ack until it is pushed", () => {
+    const mailbox = new Mailbox();
+    const released = syncOpAt("released", 3);
+    released.awaitingPush = true;
+    const acked = syncOpAt("acked", 4);
+    mailbox.add(released, acked);
+
+    trimMailboxFromAckOrdinal(mailbox, 10);
+
+    expect(mailbox.items).toEqual([released]);
+    expect(released.status).toBe(SyncOperationStatus.Unknown);
+    expect(acked.status).toBe(SyncOperationStatus.Applied);
+
+    released.started();
+    trimMailboxFromAckOrdinal(mailbox, 10);
+    expect(mailbox.items).toEqual([released]);
+
+    released.pushed();
+    trimMailboxFromAckOrdinal(mailbox, 10);
+    expect(mailbox.items).toEqual([]);
+    expect(released.status).toBe(SyncOperationStatus.Applied);
+  });
+
+  it("keeps a pushed item above the ack", () => {
+    const mailbox = new Mailbox();
+    const pending = syncOpAt("pending", 12);
+    mailbox.add(pending);
+
+    trimMailboxFromAckOrdinal(mailbox, 10);
+
+    expect(mailbox.items).toEqual([pending]);
   });
 });

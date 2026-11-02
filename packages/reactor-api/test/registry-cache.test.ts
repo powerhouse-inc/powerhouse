@@ -492,9 +492,9 @@ describe("a registry package with external dependencies", () => {
     expect(reported[0]).toContain("PH_PACKAGES");
     // Neither the cache nor the package manager repeats it.
     expect(warnings.filter((line) => line.includes("native"))).toEqual([]);
-    expect(
-      warnings.filter((line) => line.includes("All package loaders failed")),
-    ).toEqual([]);
+    expect(warnings.filter((line) => line.includes("Failed to load"))).toEqual(
+      [],
+    );
   });
 
   it("answers an entry it does not ship as absent, not as missing dependencies", async () => {
@@ -549,5 +549,74 @@ describe("a registry package with external dependencies", () => {
 
     expect(again.source).toBe("download");
     expect(again.missingExternalDependencies).toEqual(["native-not-installed"]);
+  });
+});
+
+describe("a package's scalars over the registry", () => {
+  const SCALARS = [
+    `import { defineScalar } from "document-model/scalars";`,
+    `import { z } from "zod";`,
+    `export const Iban = defineScalar({ name: "Iban", schema: z.string().regex(/^[A-Z]{2}\\d{2}/) });`,
+    `export const pattern = "not a scalar";`,
+    `export const nothing = null;`,
+  ].join("\n");
+
+  let warnings: string[];
+
+  beforeEach(() => {
+    warnings = [];
+    vi.spyOn(console, "warn").mockImplementation((...parts: unknown[]) => {
+      warnings.push(parts.map(String).join(" "));
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("loads the definitions its node/scalars entry exports", async () => {
+    serveTree(ROOT, { "node/scalars/index.mjs": SCALARS });
+
+    const scalars = await newLoader().loadScalars(PKG);
+
+    expect(scalars.map((entry) => entry.exportName)).toEqual(["Iban"]);
+    const [entry] = scalars;
+    if (!("definition" in entry)) throw new Error("Iban is not a definition");
+    expect(entry.definition.name).toBe("Iban");
+    expect(entry.definition.schema.safeParse("DE89").success).toBe(true);
+    expect(entry.definition.schema.safeParse("nope").success).toBe(false);
+  });
+
+  it("fetches a cache entry again when the host that wrote it did not look for scalars", async () => {
+    serveTree(ROOT, { "node/scalars/index.mjs": SCALARS });
+    await newCache().ensurePackage(PKG, VERSION);
+    const manifestFile = path.join(entryDir(), MANIFEST_FILE);
+    const cached = JSON.parse(await readFile(manifestFile, "utf8")) as {
+      entries: Record<string, string>;
+      files: Record<string, string>;
+      entryKinds?: string[];
+    };
+    delete cached.entries.scalars;
+    delete cached.files["node/scalars/index.mjs"];
+    delete cached.entryKinds;
+    await writeFile(manifestFile, JSON.stringify(cached));
+
+    const scalars = await newLoader().loadScalars(PKG);
+
+    expect(scalars.map((entry) => entry.exportName)).toEqual(["Iban"]);
+    const refreshed = JSON.parse(await readFile(manifestFile, "utf8")) as {
+      entries: Record<string, string>;
+    };
+    expect(refreshed.entries.scalars).toBe("node/scalars/index.mjs");
+  });
+
+  it("loads a package that serves none as shipping none", async () => {
+    const result = await new PackageManager([newLoader()], {
+      packages: [PKG],
+    }).init();
+
+    expect(result.scalars.get(PKG)).toEqual([]);
+    expect(result.subgraphs.get(PKG)).toHaveLength(1);
+    expect(warnings.filter((line) => line.includes("scalars"))).toEqual([]);
   });
 });

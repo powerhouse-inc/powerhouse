@@ -404,6 +404,7 @@ export class LocalChannel implements IChannel {
       );
       return;
     }
+    for (const syncOp of syncOps) syncOp.pushed();
     this.clearPushRetry();
     if (this.heardPeer) {
       this.markSuccess();

@@ -297,6 +297,27 @@ module.exports = {
 };
 ```
 
+## Catch-up and telemetry output
+
+While a reactor catches up, `ph vetra` and `ph switchboard` show progress below the server's output. With processor timing on (see `PH_PROCESSOR_TIMING` in the deployment docs) they also list the busiest processors of the last minute, and one summary when catch-up ends. Without a terminal, the same comes as log lines:
+
+```
+catch-up: sektar (8 drives) 47% · vetra (10 drives) 0% · priority 4 dynamic
+catch-up slowest (60 s): FilesIndex·files 41s (handler 12s read 25s fill 4.1s) 3.1k op/s eta 59s · SearchIndex·mail 9.8s (handler 8.9s read 0.6s fill 0.3s) 410 op/s
+catch-up done in 4m12s; slowest since start: FilesIndex·files 2m01s · SearchIndex·mail 38s
+```
+
+With `console` in `PH_MEMORY_TELEMETRY_OUTPUT`, a memory line comes through stderr every five minutes:
+
+```
+memory: rss 4.12 GB (+61 MB/min) · heap 2.35 GB, post-GC 2.10 GB (+49 MB/min) · pglite 3.60 GB · 1830 ops/30s, 17 MB/1k ops · top: processors.bufferedLiveOps +2.9k/min
+```
+
+| Variable               | Meaning                                                       | Default |
+| ---------------------- | ------------------------------------------------------------- | ------- |
+| `PH_CATCH_UP_PROGRESS` | `false` turns all of this output off, the memory line as well | _unset_ |
+| `PH_CATCH_UP_TOP`      | How many of the slowest processors to list; `0` hides them    | `5`     |
+
 ## Troubleshooting
 
 ### Common Issues

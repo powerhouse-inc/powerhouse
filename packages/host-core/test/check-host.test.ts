@@ -112,6 +112,11 @@ describe("checkHost: one issue per stage", () => {
       /drive: \{ from, slug \} was removed/,
     ],
     ["unknown-runner-key", "runner", /Unrecognized key: "strictPortt"/],
+    [
+      "remote-graphql-url",
+      "reactor.backends.sb.remote.url",
+      /reads switchboard's endpoints\.graphql; it must be a switchboard drive address/,
+    ],
   ])("declared: %s", async (host, at, message) => {
     const result = await check("invariants", host);
     expectOne(result.issues, { stage: "declared", path: at }, message);
@@ -326,6 +331,39 @@ describe("checkHost: one issue per stage", () => {
     expect(result.issues).toEqual([]);
   });
 
+  it("declared: Connect refuses placement.primary, standalone and as a member", async () => {
+    const reactor = {
+      backends: {
+        main: { kind: "worker", storage: { kind: "idb" } },
+        sb: { kind: "remote", remote: { url: "http://127.0.0.1:1/d/inv" } },
+      },
+      placement: { primary: "sb" },
+    };
+    writeHost("invariants", "connect-primary", {
+      name: "inv-connect-primary",
+      runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+      reactor,
+    });
+    writeHost("invariants", "compound-connect-primary", {
+      name: "inv-compound-connect-primary",
+      runner: { module: "@powerhousedao/host-core/runners/compound" },
+      children: { app: { host: "connect", reactor } },
+    });
+    const at = async (host: string) =>
+      (await check("invariants", host)).issues.map((i) => [
+        i.stage,
+        i.path,
+        i.message,
+      ]);
+    const refused = [
+      "declared",
+      "reactor.placement.primary",
+      "Connect doesn't use placement.primary. To choose where new drives go, use placement.newDrives.",
+    ];
+    expect(await at("connect-primary")).toEqual([refused]);
+    expect(await at("compound-connect-primary")).toEqual([refused]);
+  });
+
   it("declared: a verb the runner does not export", async () => {
     const result = await check("invariants", "switchboard", { verb: "start" });
     expect(result.issues).toHaveLength(1);
@@ -333,5 +371,63 @@ describe("checkHost: one issue per stage", () => {
     expect(result.issues[0].message).toMatch(
       /does not support the verb "start"/,
     );
+  });
+});
+
+describe("checkHost: warnings", () => {
+  it("warns when two members declare one port, and only then", async () => {
+    writeHost("matrix", "two-ui", {
+      name: "lab-two-ui",
+      runner: { module: "@powerhousedao/host-core/runners/compound" },
+      children: {
+        "cli-switchboard": { host: "switchboard" },
+        "ui-a": { host: "ui" },
+        "ui-b": { host: "ui" },
+        "ui-c": { host: "ui", runner: { port: 3006 } },
+      },
+    });
+    const result = await check("matrix", "two-ui", {
+      outputs: cannedSource("matrix"),
+    });
+    expect(result.warnings).toEqual([
+      {
+        stage: "declared",
+        file: "hosts/two-ui/host.js",
+        path: "children.ui-b.runner.port",
+        message:
+          "ui-a and ui-b both use port 3005. One will move to the next free port and lose its browser data.",
+      },
+    ]);
+    expect(result.issues.map((i) => i.message)).not.toContainEqual(
+      expect.stringMatching(/port 3005/),
+    );
+    expect((await check("matrix", "cli-map")).warnings).toEqual([]);
+  });
+
+  it("counts a runner's default port when a member names none", async () => {
+    writeHost("matrix", "ui-default", {
+      name: "lab-ui-default",
+      runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+      reactor: { backends: { main: { kind: "worker" } } },
+    });
+    writeHost("matrix", "two-default", {
+      name: "lab-two-default",
+      runner: { module: "@powerhousedao/host-core/runners/compound" },
+      children: {
+        "ui-a": { host: "ui-default" },
+        "ui-b": { host: "ui-default" },
+        "ui-c": { host: "ui-default", runner: { port: 3001 } },
+      },
+    });
+    const result = await check("matrix", "two-default");
+    expect(result.warnings).toEqual([
+      {
+        stage: "declared",
+        file: "hosts/two-default/host.js",
+        path: "children.ui-b.runner.port",
+        message:
+          "ui-a and ui-b both use port 3000. One will move to the next free port and lose its browser data.",
+      },
+    ]);
   });
 });

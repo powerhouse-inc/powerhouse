@@ -440,6 +440,29 @@ interface IKeyframeStore {
 
 Keyframes trade storage space for reduced replay time on documents with many operations.
 
+A keyframe is a cache of a fold of the operation log. A read takes the latest keyframe at or below the wanted revision, or none, and replays the rest, so deleting a keyframe can make a cold read slower but cannot make it wrong.
+
+**Interval and keep.** `ReactorBuilder.withKeyframes` takes a rule per document type plus a default. `interval` writes a keyframe every N revisions. `keep` is the number kept per document stream (`documentId`, `scope`, `branch`), newest first. Without configuration the rule is interval 10, keep unlimited. A switchboard reads the same shape from `reactor.keyframes` in `powerhouse.config.json`, and `PH_KEYFRAMES` (JSON) replaces it whole. Workers get the settings in their `init` message.
+
+```json
+{
+  "reactor": {
+    "keyframes": {
+      "default": { "interval": 10, "keep": 4 },
+      "types": { "acme/email": { "interval": 50, "keep": 1 } }
+    }
+  }
+}
+```
+
+`keep: null` under a type keeps all keyframes of that type when the default has a limit.
+
+**Prune on write.** Writing a keyframe under a rule with a `keep` also deletes the stream's rows beyond the newest `keep`, in the same statement (`putKeyframeAndPrune`), so the table is bounded without a job. Only rows below the written revision go. Only head writes mint keyframes; a historical read never does, which would bring back what pruning removed.
+
+**Clean-up.** Existing rows and the keyframes of deleted documents (`WriteIdentity.isDeleted`, or the view's flag) are handled by one action, `KeyframeCleanupService`, reached as an admin inspection op, in the reactor monitor's Keyframes tab, and with `ph keyframes`. A dry run only reads and reports rows and bytes per type, per reason and the largest streams. A real run walks the documents by keyset and deletes by id in small statements, at most 100 rows and 32 MB each, outside any job's transaction, with `FOR UPDATE SKIP LOCKED` so it never waits on a job and cannot deadlock with one. It gives way at the catch-up priority's pace and parks at level 0. Progress lives in memory; running it again finds only what is left. It takes no lock against writers because a stale plan stays right: new keyframes only push old rows further past `keep`.
+
+**Reclaim.** A `DELETE` leaves dead tuples, which `VACUUM` makes reusable without shrinking the files. `reclaimKeyframeSpace` runs `VACUUM FULL` on the `Keyframe` table alone, never the whole store. On PGlite a host passes `withStoreMaintenance`, and the rewrite runs through the store's maintenance lane at the first second without a statement, giving up after 15 minutes. The store answers nothing during the rewrite, and it needs free disk of about twice the table's live size. On Postgres the action only says what to do: run `VACUUM FULL reactor."Keyframe"` in a quiet moment, which takes an `ACCESS EXCLUSIVE` lock and stalls writes that mint a keyframe, or use `pg_repack`, which does not hold that lock.
+
 ---
 
 ## Synchronization

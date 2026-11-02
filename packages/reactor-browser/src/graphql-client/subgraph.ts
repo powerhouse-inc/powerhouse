@@ -1,6 +1,7 @@
 import { Kind, type DocumentNode } from "graphql";
 import { GraphQLClient } from "graphql-request";
 import type { SdkFunctionWrapper } from "../graphql/gen/schema.js";
+import type { GraphQLFetch } from "./transport.js";
 
 /**
  * The factory a GraphQL code generator produces for a schema.
@@ -131,11 +132,17 @@ type SubgraphBinding = {
 export class SubgraphSdkRegistry {
   private readonly url: string;
   private readonly middleware: SdkFunctionWrapper | undefined;
+  private readonly fetch: GraphQLFetch | undefined;
   private readonly bindings = new Map<string, SubgraphBinding>();
 
-  constructor(url: string, middleware?: SdkFunctionWrapper) {
+  constructor(
+    url: string,
+    middleware?: SdkFunctionWrapper,
+    fetch?: GraphQLFetch,
+  ) {
     this.url = url;
     this.middleware = middleware;
+    this.fetch = fetch;
   }
 
   /**
@@ -170,7 +177,7 @@ export class SubgraphSdkRegistry {
     }
 
     const binding: SubgraphBinding = {
-      transport: new GraphQLClient(this.urlFor(name)),
+      transport: new GraphQLClient(this.urlFor(name), { fetch: this.fetch }),
     };
     this.bindings.set(name, binding);
     return binding;

@@ -8,8 +8,11 @@ import {
   type BatchLoadRequest,
   type BatchLoadResult,
   type ConsistencyToken,
+  type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type DocumentRelationship,
+  type IDriveNodeSource,
+  type IDriveReadClient,
   type IReactorClient,
   type IReactorReadClient,
   type IReactorWriteClient,
@@ -20,6 +23,8 @@ import {
   type PropagationMode,
   type ReactorInfo,
   type SearchFilter,
+  type UndoRedoAvailability,
+  type UndoRedoTargets,
   type ViewFilter,
 } from "@powerhousedao/reactor";
 import type {
@@ -35,6 +40,7 @@ import { messageOf } from "./errors.js";
 import {
   UNKNOWN_REACTOR_INFO,
   type BackendFacts,
+  type BackendHealth,
   type ReactorReach,
   type RouterDiagnostic,
 } from "./types.js";
@@ -56,7 +62,8 @@ export type BackendSubmit = {
     actions: Action[],
     signal?: AbortSignal,
   ): Promise<JobInfo>;
-  create(
+  /** Absent where a create has no non-waiting form; it then waits as without `submit`. */
+  create?(
     document: PHDocument,
     parentIdentifier?: string,
     signal?: AbortSignal,
@@ -82,6 +89,27 @@ export interface IRoutableBackend {
   readonly read?: IReactorReadClient;
   /** The write half, when the backend has one; the router's writes use it. */
   readonly write?: IReactorWriteClient;
+  /**
+   * Drive node reads served without reading the drive document. Drive reads
+   * prefer it over `read.drives` and over the drive's state.
+   */
+  readonly drives?: IDriveReadClient;
+  /**
+   * The node reads behind `drives`, where a drive's subtree can be asked for
+   * without paging through every node in the drive.
+   */
+  readonly driveNodes?: IDriveNodeSource;
+  /**
+   * The relationship types that can link a file to its drive, all removed with
+   * the file. Absent, the reactor's own `child`.
+   */
+  readonly driveFileLinkTypes?: readonly string[];
+  /**
+   * Whether the backend can be reached now, without sending a request. While
+   * it answers "down", the router's ownership probes answer "unknown" without
+   * asking. Absent, the backend is probed every time.
+   */
+  readonly health?: () => BackendHealth;
 
   get<TDocument extends PHDocument>(
     identifier: string,
@@ -143,7 +171,7 @@ export interface IRoutableBackend {
   ): () => void;
   getCreateSignaturePolicy(): Promise<SignaturePolicy>;
   getCreateProtocolVersions(
-    parentIdentifier?: string,
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions>;
 
@@ -176,6 +204,16 @@ export interface IRoutableBackend {
   getJob(jobId: string, signal?: AbortSignal): Promise<JobInfo | undefined>;
   waitForJob(job: string | JobInfo, signal?: AbortSignal): Promise<JobInfo>;
 
+  /**
+   * Reads several documents in as few requests as the backend can, in the
+   * order given; rejects if any is unavailable.
+   */
+  getMany?<TDocument extends PHDocument>(
+    documentIds: string[],
+    view?: ViewFilter,
+    signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
+  ): Promise<TDocument[]>;
   isDocumentIdTaken?(
     documentId: string,
     signal?: AbortSignal,
@@ -233,6 +271,31 @@ export interface IRoutableBackend {
     signal?: AbortSignal,
   ): Promise<PagedResults<DocumentModelModule>>;
   getDocumentModelModule?(documentType: string): Promise<DocumentModelModule>;
+  /** The backend's own client signs what it submits. */
+  undo?<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+  redo?<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+  undoRedoTargets?(
+    documentIdentifier: string,
+    scope?: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets>;
+  undoRedoAvailability?(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability>;
 }
 
 export type RoutableBackendConfig = {
@@ -243,7 +306,16 @@ export type RoutableBackendConfig = {
   readonly reach: ReactorReach;
   /** True when the backend itself refuses a misroute with WrongBackendError. */
   readonly refusesMisroutes: boolean;
+  /**
+   * The document types the backend can create, read with the facts. Absent, or
+   * read as `undefined`, the backend loads models on demand and creates are
+   * not checked.
+   */
+  readonly documentTypes?: () => Promise<readonly string[] | undefined>;
 };
+
+/** A facts read that failed, as opposed to one that answered `undefined`. */
+const UNREAD: unique symbol = Symbol("unread");
 
 /** The backend cannot serve this call, by declaration. Nothing was sent. */
 export class UnsupportedByBackendError extends Error {
@@ -279,6 +351,7 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
   return {
     supports: SUPPORTS_EVERYTHING,
     ...(read === undefined ? {} : { read }),
+    ...(read?.drives === undefined ? {} : { drives: read.drives }),
     ...(write === undefined ? {} : { write }),
     submit: {
       execute: (identifier, branch, actions, signal) =>
@@ -307,8 +380,8 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
     subscribe: (search, callback, view) =>
       client.subscribe(search, callback, view),
     getCreateSignaturePolicy: () => client.getCreateSignaturePolicy(),
-    getCreateProtocolVersions: (parent, signal) =>
-      client.getCreateProtocolVersions(parent, signal),
+    getCreateProtocolVersions: (options, signal) =>
+      client.getCreateProtocolVersions(options, signal),
     create: (document, parent, signal) =>
       client.create(document, parent, signal),
     execute: (identifier, branch, actions, signal, subject) =>
@@ -328,6 +401,20 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
     waitForJob: (job, signal) => client.waitForJob(job, signal),
     isDocumentIdTaken: (documentId, signal) =>
       client.isDocumentIdTaken(documentId, signal),
+    getMany: <TDocument extends PHDocument>(
+      documentIds: string[],
+      view?: ViewFilter,
+      signal?: AbortSignal,
+      consistencyToken?: ConsistencyToken,
+    ) =>
+      consistencyToken === undefined
+        ? client.getMany<TDocument>(documentIds, view, signal)
+        : client.getMany<TDocument>(
+            documentIds,
+            view,
+            signal,
+            consistencyToken,
+          ),
     resolveIdOrSlug: (identifier, view, signal) =>
       client.resolveIdOrSlug(identifier, view, signal),
     evaluateActions: (identifier, branch, candidates, subject, signal) =>
@@ -359,6 +446,14 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
       client.getDocumentModelModules(namespace, paging, signal),
     getDocumentModelModule: (documentType) =>
       client.getDocumentModelModule(documentType),
+    undo: (identifier, scope, branch, signal) =>
+      client.undo(identifier, scope, branch, signal),
+    redo: (identifier, scope, branch, signal) =>
+      client.redo(identifier, scope, branch, signal),
+    undoRedoTargets: (identifier, scope, view, signal) =>
+      client.undoRedoTargets(identifier, scope, view, signal),
+    undoRedoAvailability: (identifier, scope, branch, signal) =>
+      client.undoRedoAvailability(identifier, scope, branch, signal),
   };
 }
 
@@ -369,6 +464,7 @@ export class RouterBackend {
   readonly reach: ReactorReach;
   readonly refusesMisroutes: boolean;
   private readonly source: RoutableBackendConfig["facts"];
+  private readonly typesSource: RoutableBackendConfig["documentTypes"];
   private current: BackendFacts;
 
   constructor(config: RoutableBackendConfig) {
@@ -377,6 +473,7 @@ export class RouterBackend {
     this.reach = config.reach;
     this.refusesMisroutes = config.refusesMisroutes;
     this.source = config.facts;
+    this.typesSource = config.documentTypes;
     this.current =
       typeof config.facts === "function"
         ? { reactor: UNKNOWN_REACTOR_INFO, reach: config.reach, known: false }
@@ -387,24 +484,50 @@ export class RouterBackend {
     return this.current;
   }
 
+  /** The backend's own report, or `undefined` when it declares none. */
+  health(): BackendHealth | undefined {
+    return this.api.health?.();
+  }
+
   /** Re-reads the facts; a failed read leaves them unknown and says so. */
   async refreshFacts(onDiagnostic: RouterDiagnostic): Promise<void> {
-    if (typeof this.source !== "function") {
+    const source = this.source;
+    const typesSource = this.typesSource;
+    if (typeof source !== "function" && typesSource === undefined) {
       return;
     }
+    const [reactor, types] = await Promise.all([
+      typeof source === "function"
+        ? this.read("its facts", source, onDiagnostic)
+        : Promise.resolve(source),
+      typesSource === undefined
+        ? Promise.resolve(undefined)
+        : this.read("its document types", typesSource, onDiagnostic),
+    ]);
+    const known = reactor !== UNREAD && types !== UNREAD;
+    this.current = {
+      reactor: reactor === UNREAD ? UNKNOWN_REACTOR_INFO : reactor,
+      reach: this.reach,
+      known,
+      ...(types === UNREAD || types === undefined
+        ? {}
+        : { documentTypes: new Set(types) }),
+    };
+  }
+
+  private async read<T>(
+    what: string,
+    source: () => Promise<T>,
+    onDiagnostic: RouterDiagnostic,
+  ): Promise<T | typeof UNREAD> {
     try {
-      const reactor = await this.source();
-      this.current = { reactor, reach: this.reach, known: true };
+      return await source();
     } catch (error) {
-      this.current = {
-        reactor: UNKNOWN_REACTOR_INFO,
-        reach: this.reach,
-        known: false,
-      };
       onDiagnostic(
-        `facts: backend ${this.name} could not report its facts (${messageOf(error)}); placing it as unknown`,
+        `facts: backend ${this.name} could not report ${what} (${messageOf(error)}); placing it as unknown`,
         error,
       );
+      return UNREAD;
     }
   }
 }

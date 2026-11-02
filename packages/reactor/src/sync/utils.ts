@@ -53,9 +53,7 @@ export function trimMailboxFromBatch(
   }
 }
 
-/**
- * Trims a mailbox using the ack ordinal.
- */
+/** Trims by ack ordinal; an item awaiting push is kept: others moved the ack. */
 export function trimMailboxFromAckOrdinal(
   mailbox: IMailbox,
   ackOrdinal: number,
@@ -67,6 +65,7 @@ export function trimMailboxFromAckOrdinal(
   // 1. sync ops are still in the mailbox when marked as applied
   // 2. we remove syncops as a single batch
   for (const syncOp of mailbox.items) {
+    if (syncOp.awaitingPush) continue;
     let maxOrdinal = 0;
     for (const op of syncOp.operations) {
       maxOrdinal = Math.max(maxOrdinal, op.context.ordinal);
@@ -577,6 +576,7 @@ export function classifyJobFailure(errorName: string): SyncOperationErrorType {
     case "PurgeTooLargeError":
       return "PURGE_PRECONDITION";
     case "ReservedActionError":
+    case "SubmittedUndoRefusedError":
       return "RESERVED_ACTION";
     default:
       return "UNCLASSIFIED";

@@ -1,4 +1,7 @@
-import { writeFileEnsuringDir } from "@powerhousedao/shared/clis";
+import {
+  packageScripts,
+  writeFileEnsuringDir,
+} from "@powerhousedao/shared/clis";
 import { deriveProjectPorts } from "@powerhousedao/shared/clis/project-ports";
 import { existsSync, readFileSync } from "node:fs";
 import {
@@ -7,6 +10,7 @@ import {
 } from "file-builders";
 import { loadJsonFile } from "load-json-file";
 import { join } from "path";
+import { isDeepStrictEqual } from "util";
 import { writeHostsTypesDts } from "../../codegen/generate-hosts.js";
 import {
   hostsTsconfigTemplate,
@@ -14,21 +18,21 @@ import {
 } from "../hosts/host-typing-files.js";
 import { writeJsonFile } from "write-json-file";
 import {
-  agentsTemplate,
-  buildCursorMcpTemplate,
   buildHostsTemplates,
-  buildMcpTemplate,
   buildPowerhouseConfigTemplate,
   claudeSettingsLocalTemplate,
-  claudeTemplate,
+  claudeSettingsTemplate,
   connectEntrypointTemplate,
+  cursorCliTemplate,
   cursorMcpTemplate,
+  cursorReactorMcpServer,
   dockerfileTemplate,
   documentModelsIndexTemplate,
   documentModelsTemplate,
   editorsIndexTemplate,
   editorsTemplate,
   factoryBuildersTemplate,
+  geminiReactorMcpServer,
   geminiSettingsTemplate,
   hostStyleTemplate,
   indexHtmlTemplate,
@@ -38,12 +42,14 @@ import {
   mcpTemplate,
   nginxConfTemplate,
   npmrcTemplate,
+  obsoleteClaudeSettingsLocalRules,
   oxfmtConfigTemplate,
   oxlintConfigTemplate,
   pnpmWorkspaceTemplate,
   processorsFactoryTemplate,
   processorsIndexTemplate,
   reactorTsTemplate,
+  reactorMcpServer,
   readmeTemplate,
   subgraphsIndexTemplate,
   switchboardEntrypointTemplate,
@@ -56,7 +62,7 @@ import {
   HOST_STYLESHEET,
   localPackageNames,
 } from "@powerhousedao/shared/clis/package-style";
-import { formatSafe } from "utils";
+import { formatFileText, formatSafe } from "utils";
 import {
   connectThemeMessages,
   migratedStyle,
@@ -64,6 +70,14 @@ import {
   readStyle,
 } from "./migrate-style.js";
 import {
+  type AgentFileAction,
+  type AgentFileResult,
+  writeAgentInstructionFiles,
+} from "./agent-files.js";
+import { CODEGEN_PACKAGE, codegenSkills, syncSkills } from "./agent-skills.js";
+import {
+  type JsonObject,
+  mergedJsonSettings,
   mergedVitestConfig,
   readIfExists,
   withProjectArrayEntries,
@@ -94,7 +108,7 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
   );
   await writeFileEnsuringDir(
     join(projectDir, "main.tsx"),
-    await formatSafe(mainTsxTemplate),
+    await formatSafe(mainTsxTemplate, "tsx"),
   );
   const oxlintPath = join(projectDir, ".oxlintrc.json");
   await writeFileEnsuringDir(
@@ -342,25 +356,16 @@ async function writeHostsTypingFiles(projectDir: string) {
   await writeJsonFile(pkgPath, pkg, { indent: 2 });
 }
 
-export async function writeAiConfigFiles(projectDir = process.cwd()) {
-  // All six files are preserve-on-migrate; none is refresh. Per-file rationale:
-  //
-  // CLAUDE.md / AGENTS.md: project instructions for coding agents — prose the
-  // user extends by hand; nothing in the toolchain regenerates them.
-  await seedUserOwnedFile(
-    join(projectDir, "CLAUDE.md"),
-    claudeTemplate.trimStart(),
+/** The agent guidance and settings files, and what was done to each. */
+export async function writeAiConfigFiles(
+  projectDir = process.cwd(),
+): Promise<AgentFileResult[]> {
+  const results = await writeAgentInstructionFiles(projectDir);
+  results.push(
+    ...(await syncSkills(projectDir, codegenSkills(), CODEGEN_PACKAGE)),
   );
-  await seedUserOwnedFile(
-    join(projectDir, "AGENTS.md"),
-    agentsTemplate.trimStart(),
-  );
-  // .mcp.json / .cursor/mcp.json: committed files carrying the project's
-  // name-derived switchboard port as a literal (applyProjectCustomizations
-  // bakes it in at init; the static templates here carry only the default
-  // port, so overwriting on migrate also reset that port). The one tool that
-  // does manage them afterwards — `ph vetra` via syncMcpPort — patches the
-  // port in place precisely so hand-added servers and keys survive.
+  // .mcp.json / .cursor/mcp.json: committed files that may hold hand-added
+  // servers; migrateReactorMcpEntries rewrites only the reactor-mcp entry.
   await seedUserOwnedFile(
     join(projectDir, ".mcp.json"),
     mcpTemplate.trimStart(),
@@ -369,19 +374,128 @@ export async function writeAiConfigFiles(projectDir = process.cwd()) {
     join(projectDir, ".cursor/mcp.json"),
     cursorMcpTemplate.trimStart(),
   );
-  // .gemini/settings.json: the user's Gemini CLI settings; nothing in the
-  // toolchain writes it after scaffolding.
-  await seedUserOwnedFile(
-    join(projectDir, ".gemini/settings.json"),
-    geminiSettingsTemplate.trimStart(),
-  );
-  // .claude/settings.local.json: per-machine state — Claude Code itself
-  // appends the permission grants the user approves during sessions, so an
-  // existing one holds accumulated approvals no template can reproduce.
-  await seedUserOwnedFile(
-    join(projectDir, ".claude/settings.local.json"),
-    claudeSettingsLocalTemplate.trimStart(),
-  );
+  // Agent settings gain the keys migrate owns; the user's own keys stay.
+  const { context } = JSON.parse(geminiSettingsTemplate) as JsonObject;
+  const settings: [string, string, JsonObject?, JsonObject?][] = [
+    [".claude/settings.json", claudeSettingsTemplate],
+    [".cursor/cli.json", cursorCliTemplate],
+    // Gemini's MCP servers stay the project's; migrate owns `context`.
+    [".gemini/settings.json", geminiSettingsTemplate, { context }],
+    // Claude Code appends the user's grants here; migrate only drops old rules.
+    [
+      ".claude/settings.local.json",
+      claudeSettingsLocalTemplate,
+      {},
+      { permissions: obsoleteClaudeSettingsLocalRules },
+    ],
+  ];
+  for (const [path, template, owned, obsolete] of settings) {
+    const action = await writeJsonSettings(
+      join(projectDir, path),
+      template,
+      owned,
+      obsolete,
+    );
+    results.push({ path, action });
+  }
+  for (const migrated of await migrateReactorMcpEntries(projectDir)) {
+    const known = results.find((result) => result.path === migrated.path);
+    if (known) known.action = "updated";
+    else results.push(migrated);
+  }
+  return results;
+}
+
+async function writeJsonSettings(
+  filePath: string,
+  template: string,
+  owned = JSON.parse(template) as JsonObject,
+  obsolete?: JsonObject,
+): Promise<AgentFileAction> {
+  const existing = readIfExists(filePath);
+  const contents =
+    existing === undefined
+      ? template
+      : mergedJsonSettings(filePath, existing, owned, obsolete);
+  if (contents === undefined) return "left alone";
+  await writeFileEnsuringDir(filePath, await formatSafe(contents, "json"));
+  return existing === undefined ? "written" : "updated";
+}
+
+const LOCAL_MCP_URL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/mcp\/?$/;
+
+const npxLauncher = ["--no", "ph-cli", "mcp"];
+// The `ph mcp` entries written before the launcher ran through node: npx needs `cmd /c` on Windows.
+const NPX_LAUNCHERS: Record<string, object> = {
+  ".mcp.json": { type: "stdio", command: "npx", args: npxLauncher },
+  ".cursor/mcp.json": {
+    type: "stdio",
+    command: "npx",
+    args: [
+      "--no",
+      "--prefix",
+      "${workspaceFolder}",
+      "ph-cli",
+      "mcp",
+      "--project-dir",
+      "${workspaceFolder}",
+    ],
+  },
+  ".gemini/settings.json": { command: "npx", args: npxLauncher },
+};
+
+function isOldReactorMcpEntry(path: string, entry: Record<string, unknown>) {
+  const url = entry.httpUrl ?? entry.url;
+  if (typeof url === "string") return LOCAL_MCP_URL.test(url);
+  return isDeepStrictEqual(entry, NPX_LAUNCHERS[path]);
+}
+
+/** Point an older project's `reactor-mcp` entries, a local URL or the npx
+ * launcher, at `node --run mcp`, adding the `mcp` script it runs. */
+export async function migrateReactorMcpEntries(
+  projectDir: string,
+): Promise<AgentFileResult[]> {
+  const entries: [string, object][] = [
+    [".mcp.json", reactorMcpServer],
+    [".cursor/mcp.json", cursorReactorMcpServer],
+    [".gemini/settings.json", geminiReactorMcpServer],
+  ];
+  const results: AgentFileResult[] = [];
+  for (const [path, entry] of entries) {
+    const existing = readIfExists(join(projectDir, path));
+    if (existing === undefined) continue;
+    let parsed: { mcpServers?: Record<string, Record<string, unknown>> };
+    try {
+      parsed = JSON.parse(existing) as typeof parsed;
+    } catch {
+      // Hand-broken JSON is the author's to fix.
+      continue;
+    }
+    const servers = parsed.mcpServers;
+    const current = servers?.["reactor-mcp"];
+    if (!servers || !current || !isOldReactorMcpEntry(path, current)) {
+      continue;
+    }
+    servers["reactor-mcp"] = { ...entry };
+    await writeFileEnsuringDir(
+      join(projectDir, path),
+      await formatSafe(`${JSON.stringify(parsed, null, 2)}\n`, "json"),
+    );
+    results.push({ path, action: "updated" });
+  }
+  if (results.length > 0) await addMcpScript(projectDir);
+  return results;
+}
+
+/** The `mcp` script `node --run mcp` runs; a project's own is kept. */
+async function addMcpScript(projectDir: string) {
+  const pkgPath = join(projectDir, "package.json");
+  if (!existsSync(pkgPath)) return;
+  const pkg = (await loadJsonFile(pkgPath)) as Record<string, unknown>;
+  const scripts = (pkg.scripts ?? {}) as Record<string, string>;
+  if (scripts.mcp) return;
+  pkg.scripts = { ...scripts, mcp: packageScripts.mcp };
+  await writeJsonFile(pkgPath, pkg, { indent: 2 });
 }
 
 export async function writeProjectRootFiles(
@@ -467,28 +581,17 @@ export async function applyProjectCustomizations(args: {
   }
   config.vetra = vetra;
   await writeJsonFile(configPath, config, { indent: 2 });
-
-  // The MCP configs carry the switchboard port as a literal, because an MCP
-  // client resolves them at session start and cannot read the project config.
-  // Keep them in step with the port just assigned.
-  const mcpFiles: [string, string][] = [
-    [".mcp.json", buildMcpTemplate(ports.switchboardPort)],
-    [
-      join(".cursor", "mcp.json"),
-      buildCursorMcpTemplate(ports.switchboardPort),
-    ],
-  ];
-  for (const [rel, contents] of mcpFiles) {
-    const target = join(projectDir, rel);
-    if (!existsSync(target)) continue;
-    await writeFileEnsuringDir(target, contents.trimStart());
-  }
+  // A cloned template may still point reactor-mcp at its own port.
+  await migrateReactorMcpEntries(projectDir);
 }
 
 export async function writeCIFiles(projectDir = process.cwd()) {
   await writeFileEnsuringDir(
     join(projectDir, ".github/workflows/sync-and-publish.yml"),
-    syncAndPublishWorkflowTemplate,
+    await formatFileText(
+      "sync-and-publish.yml",
+      syncAndPublishWorkflowTemplate,
+    ),
   );
   await writeFileEnsuringDir(
     join(projectDir, "Dockerfile"),
@@ -508,11 +611,13 @@ export async function writeCIFiles(projectDir = process.cwd()) {
   );
 }
 
+/** Returns what was done to each agent file. */
 export async function writeAllGeneratedProjectFiles(
   projectDir = process.cwd(),
-) {
+): Promise<AgentFileResult[]> {
   await writeGeneratedProjectRootFiles(projectDir);
   await writeModuleFiles(projectDir);
-  await writeAiConfigFiles(projectDir);
+  const agentFiles = await writeAiConfigFiles(projectDir);
   await writeCIFiles(projectDir);
+  return agentFiles;
 }

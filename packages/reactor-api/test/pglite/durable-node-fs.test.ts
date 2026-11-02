@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createDurableNodeFs,
   resolvePgliteFsync,
+  resolvePgliteMaintenance,
   type DurableNodeFsOptions,
 } from "../../src/pglite/durable-node-fs.js";
 import { syncDirectory } from "../../src/pglite/sync-tree.js";
@@ -58,7 +59,7 @@ function spyHostFs(): HostFsSpy {
     throw errnoError("EPERM", "EPERM: operation not permitted, fsync");
   };
   class Base extends NodeFS {
-    async init(pg: PGlite, opts: Parameters<NodeFS["init"]>[1]) {
+    override async init(pg: PGlite, opts: Parameters<NodeFS["init"]>[1]) {
       const { emscriptenOpts } = await super.init(pg, opts);
       const base = emscriptenOpts as { preRun?: ((mod: TrackedMod) => void)[] };
       const track = (mod: TrackedMod) => {
@@ -322,7 +323,7 @@ describe("createDurableNodeFs", () => {
 
   it("throws when the base options carry no instantiateWasm", async () => {
     class Bare extends NodeFS {
-      async init(pg: PGlite, opts: Parameters<NodeFS["init"]>[1]) {
+      override async init(pg: PGlite, opts: Parameters<NodeFS["init"]>[1]) {
         const { emscriptenOpts } = await super.init(pg, opts);
         const { instantiateWasm: _dropped, ...rest } = emscriptenOpts as Record<
           string,
@@ -343,5 +344,60 @@ describe("createDurableNodeFs", () => {
     expect(resolvePgliteFsync({})).toBe(true);
     expect(resolvePgliteFsync({ PH_PGLITE_FSYNC: "1" })).toBe(true);
     expect(resolvePgliteFsync({ PH_PGLITE_FSYNC: "0" })).toBe(false);
+  });
+
+  describe("resolvePgliteMaintenance", () => {
+    it("defaults to off; quiet keeps every DurableNodeFs default", () => {
+      expect(resolvePgliteMaintenance({})).toEqual({ vacuumFullAboveBytes: 0 });
+      expect(resolvePgliteMaintenance({ PH_PGLITE_VACUUM_FULL: "" })).toEqual({
+        vacuumFullAboveBytes: 0,
+      });
+      expect(
+        resolvePgliteMaintenance({ PH_PGLITE_VACUUM_FULL: " Quiet " }),
+      ).toEqual({});
+    });
+
+    it("off disables the one-time VACUUM FULL, whatever the threshold says", () => {
+      expect(
+        resolvePgliteMaintenance({
+          PH_PGLITE_VACUUM_FULL: "off",
+          PH_PGLITE_VACUUM_FULL_ABOVE_MB: "10",
+        }),
+      ).toEqual({ vacuumFullAboveBytes: 0 });
+    });
+
+    it("forced restores the 30 min deadline, which the explicit knob overrides", () => {
+      expect(
+        resolvePgliteMaintenance({ PH_PGLITE_VACUUM_FULL: "forced" }),
+      ).toEqual({ vacuumFullMaxDeferMs: 30 * 60_000 });
+      expect(
+        resolvePgliteMaintenance({
+          PH_PGLITE_VACUUM_FULL: "forced",
+          PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS: "600000",
+        }),
+      ).toEqual({ vacuumFullMaxDeferMs: 600_000 });
+    });
+
+    it("reads the threshold in MB and the timings in ms, ignoring invalid values", () => {
+      expect(
+        resolvePgliteMaintenance({
+          PH_PGLITE_VACUUM_FULL: "quiet",
+          PH_PGLITE_VACUUM_FULL_ABOVE_MB: "512",
+          PH_PGLITE_VACUUM_FULL_QUIET_MS: "0",
+          PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS: "-5",
+        }),
+      ).toEqual({
+        vacuumFullAboveBytes: 512 * 1024 * 1024,
+        vacuumFullQuietMs: 0,
+      });
+    });
+
+    it("rejects an unknown mode", () => {
+      expect(() =>
+        resolvePgliteMaintenance({ PH_PGLITE_VACUUM_FULL: "later" }),
+      ).toThrow(
+        'Invalid PH_PGLITE_VACUUM_FULL: later. Expected "off", "quiet" or "forced".',
+      );
+    });
   });
 });

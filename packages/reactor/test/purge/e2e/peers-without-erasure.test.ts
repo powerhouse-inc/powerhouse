@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { addRelationshipAction } from "../../../src/actions/index.js";
 import { SyncEventTypes } from "../../../src/sync/types.js";
-import { createDocModelDocument } from "../../factories.js";
+import { createDocModelDocument, undoV3Flags } from "../../factories.js";
 import {
   buildNode,
   expectPurged,
@@ -85,7 +85,13 @@ describe("peers without erasure [Postgres]", () => {
   it("holds the marker for a silent peer and one lacking document-purge, and each receives it alone on upgrade", async () => {
     await succeeded(
       host.reactor,
-      host.reactor.create(createDocModelDocument({ id: "x" })),
+      host.reactor.create(
+        // Within the baseline, so neither peer is held from the document itself.
+        createDocModelDocument({
+          id: "x",
+          protocolVersions: { "base-reducer": 2 },
+        }),
+      ),
     );
     await succeeded(
       host.reactor,
@@ -170,5 +176,124 @@ describe("peers without erasure [Postgres]", () => {
     for (const node of [host, silent, narrow]) {
       expect(await quarantined(node)).not.toContain("x");
     }
+  });
+});
+
+describe("base-reducer 3", () => {
+  // A silent peer is held from a base-reducer 3 document itself, so only a
+  // peer that announces undoV3 without document-purge is held from the marker.
+  describe("a peer without erasure [Postgres]", () => {
+    const mesh = new Mesh();
+    const featureFlags = undoV3Flags();
+    let dbs: PgDatabase[];
+    let host: Node;
+    let narrow: Node;
+
+    beforeEach(async () => {
+      dbs = [
+        await PgDatabase.create("reactor_e2e_peers_host"),
+        await PgDatabase.create("reactor_e2e_peers_narrow"),
+      ];
+      host = await buildNode({
+        name: "a",
+        db: dbs[0]!,
+        mesh,
+        catchUpIntervalMs: PROBE_MS,
+        featureFlags,
+      });
+      narrow = await buildNode({
+        name: "n",
+        db: dbs[1]!,
+        mesh,
+        catchUpIntervalMs: PROBE_MS,
+        featureFlags,
+      });
+      await succeeded(host.reactor, host.reactor.create(legacyDrive("d")));
+      await mesh.link(host, narrow, "d", {
+        b: {
+          announce: () => manifestWithout("document-purge", 0, featureFlags),
+        },
+      });
+    });
+
+    afterEach(async () => {
+      try {
+        await stopNode(host);
+        await stopNode(narrow);
+      } finally {
+        mesh.clear();
+        for (const db of dbs) await db.destroy();
+      }
+    });
+
+    it("holds the marker for a peer lacking document-purge, which receives it alone on upgrade", async () => {
+      await succeeded(
+        host.reactor,
+        host.reactor.create(
+          createDocModelDocument({
+            id: "x",
+            protocolVersions: { "base-reducer": 3 },
+          }),
+        ),
+      );
+      expect(
+        (await host.reactor.get("x")).header.protocolVersions?.["base-reducer"],
+      ).toBe(3);
+      await succeeded(
+        host.reactor,
+        host.reactor.execute("d", "main", [
+          addRelationshipAction("d", "x", "child"),
+        ]),
+      );
+      await succeeded(host.reactor, host.reactor.deleteDocument("x"));
+      await until("n holds x's delete", async () =>
+        (await narrow.module.operationIndex.get("x")).results.some(
+          (op) => op.action.type === "DELETE_DOCUMENT",
+        ),
+      );
+
+      const { ordinal } = await purge(host, "x");
+      await expectPurged(host.db, "x", { signerKey: host.key.did });
+      await until(
+        "the host holds x for a->n",
+        async () =>
+          (await host.sync!.listHolds({ remoteName: "a->n", documentId: "x" }))
+            .length > 0,
+      );
+      expect(
+        await host.sync!.listHolds({ remoteName: "a->n", documentId: "x" }),
+      ).toEqual([
+        expect.objectContaining({
+          documentId: "x",
+          branch: "main",
+          reason: expect.objectContaining(HELD),
+        }),
+      ]);
+
+      await quiesce();
+      expect(await tombstone(narrow.db, "x"), "n not purged").toBeUndefined();
+      const deliveredBefore = mesh.deliveredOperations("a->n").length;
+
+      const narrowChannel = mesh.channels.get("n->a")!;
+      narrowChannel.options.announce = () => fullManifest(1, featureFlags);
+      narrowChannel.reannounce();
+
+      await waitForTombstone(narrow.db, "x");
+      await expectPurged(narrow.db, "x", { signerKey: host.key.did });
+      const released = mesh
+        .deliveredOperations("a->n")
+        .slice(deliveredBefore)
+        .filter((op) => op.context.documentId === "x");
+      expect(
+        released.map((op) => [op.operation.action.type, op.context.ordinal]),
+        "n receives the marker alone",
+      ).toEqual([["PURGE_DOCUMENT", ordinal]]);
+      expect(
+        await host.sync!.listHolds({ remoteName: "a->n", documentId: "x" }),
+      ).toEqual([]);
+      for (const node of [host, narrow]) {
+        expect(await quarantined(node)).not.toContain("x");
+      }
+    });
   });
 });

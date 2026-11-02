@@ -102,32 +102,38 @@ export async function startPrivacySwitchboard(): Promise<PrivacySwitchboard> {
     }
   };
 
-  // Imported after the env is set: PH_PGLITE_IN_MEMORY is read at load.
-  const { startSwitchboard } =
-    await import("@powerhousedao/switchboard/server");
+  const [
+    { startSwitchboard },
+    { switchboardConfigFromEnv },
+    { callerOverEnv },
+  ] = await Promise.all([
+    import("@powerhousedao/switchboard/server"),
+    import("@powerhousedao/switchboard/config/env"),
+    import("@powerhousedao/switchboard/config"),
+  ]);
   let switchboard: SwitchboardReactor;
   try {
-    switchboard = await startSwitchboard({
-      port: SWITCHBOARD_PORT,
-      strictPort: true,
-      mcp: false,
-      workflows: { enabled: false },
-      disableLocalPackages: true,
-      configFile,
-      // Signs the marker; Connect runs without authEnforcement and trusts it.
-      identity: { keypairPath: join(tempRoot, "identity.json") },
-      drive: {
-        id: ERASURE_DRIVE_ID,
-        slug: ERASURE_DRIVE_ID,
-        global: { name: ERASURE_DRIVE_NAME, icon: "" },
-        local: {
-          availableOffline: true,
-          listeners: [],
-          sharingType: "public",
-          triggers: [],
+    switchboard = await startSwitchboard(
+      callerOverEnv(switchboardConfigFromEnv(process.env), {
+        server: { port: SWITCHBOARD_PORT, strictPort: true },
+        features: { mcp: false, workflows: false },
+        packages: { disableLocal: true },
+        configFile,
+        // Signs the marker; Connect runs without authEnforcement and trusts it.
+        identity: { keypairPath: join(tempRoot, "identity.json") },
+        drive: {
+          id: ERASURE_DRIVE_ID,
+          slug: ERASURE_DRIVE_ID,
+          global: { name: ERASURE_DRIVE_NAME, icon: "" },
+          local: {
+            availableOffline: true,
+            listeners: [],
+            sharingType: "public",
+            triggers: [],
+          },
         },
-      },
-    });
+      }),
+    );
   } catch (error) {
     restoreEnv();
     await rm(tempRoot, { recursive: true, force: true });

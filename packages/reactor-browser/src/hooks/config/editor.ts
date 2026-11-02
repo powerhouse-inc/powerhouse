@@ -48,7 +48,7 @@ export const setAllowedDocumentTypes =
 
 /** Defines the document types a drive supports.
  *
- * Defaults to all of the document types registered in the reactor.
+ * Unset or empty, it means every document type registered in the reactor.
  */
 export function useAllowedDocumentTypes() {
   const definedAllowedDocumentTypes =

@@ -98,6 +98,13 @@ export class JobAwaiter implements IJobStageAwaiter {
     this.subscribeToEvents();
   }
 
+  /** Sizes for telemetry. */
+  stats(): Record<string, number> {
+    let waiters = 0;
+    for (const pending of this.pendingJobs.values()) waiters += pending.length;
+    return { pendingJobs: this.pendingJobs.size, waiters };
+  }
+
   private subscribeToEvents(): void {
     this.unsubscribers.push(
       this.eventBus.subscribe(

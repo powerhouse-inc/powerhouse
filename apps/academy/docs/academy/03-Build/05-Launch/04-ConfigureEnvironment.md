@@ -272,6 +272,12 @@ PH_WORKFLOWS_ENABLED=true
 `PH_WORKFLOWS_ENABLED` also accepts `1` and `0`, and it overrides
 `workflows.enabled` in the config file.
 
+A Switchboard host file that lists `runner.plugins` is different: there the
+workflows plugin's presence turns the runtime on, and the env var and config
+file can't. `PH_WORKFLOWS_ENABLED=false` still turns it off, so a host whose
+workflows stop it starting can boot without them. See
+[Hosts, runners and plugins](../../04-Reference/09-HostsAndRunners/00-HostsRunnersAndPlugins.md).
+
 Connect has no env var: it follows the config file, or
 `ph connect build --workflows true`.
 

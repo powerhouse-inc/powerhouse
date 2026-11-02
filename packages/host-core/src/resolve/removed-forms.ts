@@ -45,7 +45,7 @@ function checkReactor(
     const producer = typeof host === "string" ? host : "switchboard";
     found.push({
       path: `${base}reactor.backends.${name}.remote.host`,
-      message: `remote: { host } was removed; use remote: { url: ${producer}.endpoints.graphql } with ${producer} from ../${producer}/outputs.js, or remote: { url: ${outputToken(producer, ["endpoints", "graphql"])} }.`,
+      message: `remote: { host } was removed; use a drive address: remote: { url: ${producer}.drives.<slug>.url } with ${producer} from ../${producer}/outputs.js, or remote: { url: ${outputToken(producer, ["drives", "<slug>", "url"])} }.`,
     });
   }
 }

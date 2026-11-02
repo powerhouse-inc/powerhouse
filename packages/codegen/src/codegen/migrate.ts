@@ -1,4 +1,5 @@
 import {
+  BOILERPLATE_DEPENDENCY_OVERRIDES,
   externalDevDependencies,
   FEATURE_DEPENDENCIES,
   getPackageManagerAtPowerhouseProjectDirPath,
@@ -10,11 +11,17 @@ import {
   packageScripts,
   PEER_EXTERNAL_DEPENDENCIES,
   runCmd,
+  versionSatisfies,
   VERSIONED_DEV_DEPENDENCIES,
   VERSIONED_PEER_DEPENDENCIES,
 } from "@powerhousedao/shared/clis";
-import console from "console";
-import { writeAllGeneratedProjectFiles } from "file-builders";
+import {
+  assertAgentFilesCommitted,
+  managedAgentPaths,
+  pinFields,
+  syncPackageSkills,
+  writeAllGeneratedProjectFiles,
+} from "file-builders";
 import { cpSync, mkdirSync, readdirSync, rmSync, statSync } from "fs";
 import npmFetch from "npm-registry-fetch";
 import { join } from "path";
@@ -31,11 +38,13 @@ import {
   pipe,
   prop,
 } from "remeda";
+import { toYarnResolutions } from "templates";
 import type { Project } from "ts-morph";
 import { buildTsMorphProject, fixGenerateMockImports } from "utils";
 import { writePackage } from "write-package";
 import { detectFeatures, type Feature } from "./features.js";
 import { generateAll } from "./generate.js";
+import { migratePowerhouseConfig } from "./migrate-powerhouse-config.js";
 import { migrateTsconfigFiles } from "./migrate-tsconfig.js";
 import { sortByKey } from "./utils.js";
 
@@ -250,8 +259,71 @@ export function resolveManagedDependencies(input: {
     ),
     sortByKey,
   );
+  // Decided on what the migration leaves, so a second run decides the same.
+  const pins = scaffoldPins({
+    optionalDependencies: packageJson.optionalDependencies,
+    peerDependencies,
+    devDependencies,
+    overrides: packageJson.overrides,
+    resolutions: packageJson.resolutions,
+    workspaces: packageJson.workspaces,
+  });
 
-  return { peerDependencies, devDependencies };
+  return {
+    peerDependencies,
+    devDependencies: sortByKey({ ...devDependencies, ...pins }),
+  };
+}
+
+// The scaffold's pins, minus any package the project manages itself: one it
+// overrides or resolves on its own, or lists in any field with a spec the pin
+// is not in (a local or git spec, or a range such as ^2.30.0). Pinning that
+// one would change the version the project chose; npm fails with EOVERRIDE.
+// A project with `workspaces` gets none: npm counts a workspace package of a
+// pinned name as a direct dependency and rejects any override for it.
+function scaffoldPins(
+  packageJson: Pick<
+    PackageJson,
+    | "optionalDependencies"
+    | "peerDependencies"
+    | "dependencies"
+    | "devDependencies"
+    | "overrides"
+    | "resolutions"
+    | "workspaces"
+  >,
+): Record<string, string> {
+  if (packageJson.workspaces !== undefined) return {};
+  const fields = [
+    packageJson.optionalDependencies,
+    packageJson.peerDependencies,
+    packageJson.dependencies,
+    packageJson.devDependencies,
+  ];
+  // Entries this function writes, now or in an earlier scaffold, are not the
+  // project's own; nor is an identical entry the project wrote itself.
+  const { resolutions, overrides } = pinFields();
+  const legacy: Record<string, unknown> = toYarnResolutions(
+    BOILERPLATE_DEPENDENCY_OVERRIDES,
+  );
+  const ownKeys = [
+    ...Object.entries(packageJson.overrides ?? {}).filter(
+      ([key, value]) => overrides[key] !== value,
+    ),
+    ...Object.entries(packageJson.resolutions ?? {}).filter(
+      ([key, value]) => resolutions[key] !== value && legacy[key] !== value,
+    ),
+  ].map(([key]) => key.replace(/^\*\*\//, ""));
+  return Object.fromEntries(
+    Object.entries(BOILERPLATE_DEPENDENCY_OVERRIDES).filter(
+      ([name, version]) =>
+        fields.every(
+          (field) =>
+            field?.[name] === undefined ||
+            versionSatisfies(version, field[name]),
+        ) && !ownKeys.some((key) => key === name || key.startsWith(`${name}@`)),
+    ),
+  );
 }
 
 // Exports and scripts are replaced with the current ones, so an entry `ph build`
@@ -273,6 +345,32 @@ export function migratedPackageJson(
   // Runtime `dependencies` block is no longer emitted — the bundled dist
   // self-contains everything except the declared peers.
   delete (updated as { dependencies?: unknown }).dependencies;
+  // The `**/` keys earlier scaffolds wrote go: pnpm 9 and 10 reject them.
+  const pins = pinFields(scaffoldPins(updated));
+  // A `**/` key keeps a value the project set, under the name pnpm accepts.
+  const legacy: Record<string, string> = toYarnResolutions(
+    BOILERPLATE_DEPENDENCY_OVERRIDES,
+  );
+  const resolutions = {
+    ...Object.fromEntries(
+      Object.entries(packageJson.resolutions ?? {}).flatMap(([key, value]) =>
+        key in legacy
+          ? value === legacy[key]
+            ? []
+            : [[key.slice("**/".length), value]]
+          : [[key, value]],
+      ),
+    ),
+    ...pins.resolutions,
+  };
+  const overrides: NonNullable<PackageJson["overrides"]> = {
+    ...packageJson.overrides,
+    ...pins.overrides,
+  };
+  if (keys(resolutions).length > 0) updated.resolutions = resolutions;
+  else delete updated.resolutions;
+  if (keys(overrides).length > 0) updated.overrides = overrides;
+  else delete updated.overrides;
   return updated;
 }
 
@@ -281,6 +379,8 @@ export async function migrate(
   projectDir = process.cwd(),
   options: { skipInstall?: boolean } = {},
 ) {
+  // Before any write, so a stop leaves the project untouched.
+  assertAgentFilesCommitted(projectDir, managedAgentPaths(projectDir));
   const fullyQualifiedVersion =
     await getFullyQualifiedWorkspacePackageVersion(version);
 
@@ -309,10 +409,15 @@ export async function migrate(
   console.log("Removing legacy lint/format config files...");
   removeLegacyLintFormatFiles(projectDir);
   console.log("Overwriting project root files...");
-  await writeAllGeneratedProjectFiles(projectDir);
+  const agentFiles = await writeAllGeneratedProjectFiles(projectDir);
   console.log("Removing compiler options TypeScript 7 dropped...");
   for (const file of migrateTsconfigFiles(projectDir)) {
     console.log(`  updated ${file}`);
+  }
+  if (migratePowerhouseConfig(projectDir)) {
+    console.log(
+      "Removed the scaffolded connect.instance defaults from powerhouse.config.json, so Vetra Studio picks its reactor client",
+    );
   }
   console.log("Moving unversioned document models...");
   moveLegacyDocumentModels(projectDir);
@@ -322,6 +427,15 @@ export async function migrate(
   if (!options.skipInstall) {
     console.log("Installing dependencies...");
     await installProjectDependencies(projectDir);
+  }
+  // Packages' skills come from the versions just installed.
+  agentFiles.push(...(await syncPackageSkills(projectDir)));
+  console.log("Agent files (review with git diff):");
+  for (const { path, action } of agentFiles) {
+    console.log(`  ${path}: ${action}`);
+  }
+  for (const { notice } of agentFiles) {
+    if (notice) console.warn(notice);
   }
   console.log("Re-generating code...");
   await generateAll(project);

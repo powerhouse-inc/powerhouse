@@ -52,7 +52,7 @@ describe("identityFromDocumentState", () => {
     const identity = identityFromDocumentState(
       { header: { slug: "new-slug", name: "Stale Echo" } },
       { slug: "old-slug", name: "Current Name" },
-      { preserveName: true },
+      { preserveName: true, preserveSlug: false },
     );
 
     expect(identity).toEqual({ slug: "new-slug", name: "Current Name" });

@@ -1,3 +1,221 @@
+## 6.2.3-dev.90 (2026-11-02)
+
+### 🚀 Features
+
+- **desktop:** fold a stack into a few thousand files ([9ff7083857](https://github.com/powerhouse-inc/powerhouse/commit/9ff7083857))
+- **ph-run:** run a host with none of the tools that build one ([ff0ac7910f](https://github.com/powerhouse-inc/powerhouse/commit/ff0ac7910f))
+- **ai:** a host can offer a demo key ([11147a01dc](https://github.com/powerhouse-inc/powerhouse/commit/11147a01dc))
+- **reactor-browser:** approve a whole turn, or auto-approve through a gateway ([36100f1a6a](https://github.com/powerhouse-inc/powerhouse/commit/36100f1a6a))
+- **desktop:** a sign-in page and a local key for generated shells ([7cce4b7316](https://github.com/powerhouse-inc/powerhouse/commit/7cce4b7316))
+- **desktop:** grant generated shells the system browser opener ([db0642a856](https://github.com/powerhouse-inc/powerhouse/commit/db0642a856))
+- **reactor-browser:** export the desktop shell for other sign-ins ([a0dcb5016e](https://github.com/powerhouse-inc/powerhouse/commit/a0dcb5016e))
+- **renown:** sign in through the system browser from a desktop window ([e787eab695](https://github.com/powerhouse-inc/powerhouse/commit/e787eab695))
+- **switchboard:** verify delegated signers with authEnforcement off ([b896f23cfe](https://github.com/powerhouse-inc/powerhouse/commit/b896f23cfe))
+
+### 🩹 Fixes
+
+- **reactor-router,reactor-browser:** remote drive writes that reach a reactor-drive and outlast a request ([dd97654823](https://github.com/powerhouse-inc/powerhouse/commit/dd97654823))
+- **desktop:** the stack ships the packages its hosts' plugins come from ([faa1168ba4](https://github.com/powerhouse-inc/powerhouse/commit/faa1168ba4))
+- **desktop:** pack and test the stack on Windows ([c6317e2c15](https://github.com/powerhouse-inc/powerhouse/commit/c6317e2c15))
+- **reactor-browser:** keep asking a gateway that answers with an error ([84872cbdb4](https://github.com/powerhouse-inc/powerhouse/commit/84872cbdb4))
+- **reactor:** keep the trust context optional for direct callers ([1760590c37](https://github.com/powerhouse-inc/powerhouse/commit/1760590c37))
+- **reactor-workflow:** stop a run's async context pinning its output ([65a4a0c4a6](https://github.com/powerhouse-inc/powerhouse/commit/65a4a0c4a6))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.89 (2026-11-02)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.88 (2026-11-01)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **reactor-browser:** a switchboard backend's breaker takes unset fields as defaults, or false to never open ([634b82893f](https://github.com/powerhouse-inc/powerhouse/commit/634b82893f))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+- **reactor-browser:** undo(count, scope) and redo(count, scope) on the remote controller ([8f49ffda8c](https://github.com/powerhouse-inc/powerhouse/commit/8f49ffda8c))
+- **reactor-browser:** undo, redo and undo targets on the light client ([a8d36c3180](https://github.com/powerhouse-inc/powerhouse/commit/a8d36c3180))
+- **reactor-api:** undoRedoTargets query ([24ebdc6f9a](https://github.com/powerhouse-inc/powerhouse/commit/24ebdc6f9a))
+- **shared:** base-reducer 3 capability table, retraction rule and RETRACT ([b006a95770](https://github.com/powerhouse-inc/powerhouse/commit/b006a95770))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a pending RETRACT follows its local target through a rebase ([5ce883f878](https://github.com/powerhouse-inc/powerhouse/commit/5ce883f878))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-browser:** let chat tools show images and reach the chat's images ([dbb82ccf55](https://github.com/powerhouse-inc/powerhouse/commit/dbb82ccf55))
+- **reactor-browser:** reach the attachment client outside React ([9200c244da](https://github.com/powerhouse-inc/powerhouse/commit/9200c244da))
+- **reactor-browser:** raise the chat agent's limit to 250 steps per message ([32b2edf2e4](https://github.com/powerhouse-inc/powerhouse/commit/32b2edf2e4))
+- **reactor-browser:** let the chat agent take up to 100 steps per message ([e701baf425](https://github.com/powerhouse-inc/powerhouse/commit/e701baf425))
+- **reactor-browser:** an embeddable chat panel over a keyless gateway ([1c2a1d0a87](https://github.com/powerhouse-inc/powerhouse/commit/1c2a1d0a87))
+
+### 🩹 Fixes
+
+- **connect:** offer the agent's tools on the store, not as a Connect import ([37d4a76d78](https://github.com/powerhouse-inc/powerhouse/commit/37d4a76d78))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.85 (2026-10-30)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.84 (2026-10-30)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-browser:** useAttachmentUpload preprocess takes the document id ([763f18b39a](https://github.com/powerhouse-inc/powerhouse/commit/763f18b39a))
+- **reactor-browser:** export SYNC_REMOTES_CHANGED_EVENT from ./rpc ([371ad9d132](https://github.com/powerhouse-inc/powerhouse/commit/371ad9d132))
+- **reactor-browser:** fetchDriveInfo takes a token provider ([ddecd39600](https://github.com/powerhouse-inc/powerhouse/commit/ddecd39600))
+- **reactor-browser:** every tab learns of sync remotes added or removed in one ([586c752322](https://github.com/powerhouse-inc/powerhouse/commit/586c752322))
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+- **reactor-browser:** a request deadline and a fetch seam on GraphQLReactorClient ([04964d9ba7](https://github.com/powerhouse-inc/powerhouse/commit/04964d9ba7))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+- **reactor-browser:** a GraphQLReactorClient signer can be a function read per push ([44c401935a](https://github.com/powerhouse-inc/powerhouse/commit/44c401935a))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+- **reactor-browser:** a switchboard that hangs past the router's probe deadline opens the breaker ([4ed5966c9f](https://github.com/powerhouse-inc/powerhouse/commit/4ed5966c9f))
+- **reactor-browser:** a switchboard backend on Node sees a 421 as itself ([197d490368](https://github.com/powerhouse-inc/powerhouse/commit/197d490368))
+- **reactor-browser:** a Switchboard backend takes typed document models ([9df082c147](https://github.com/powerhouse-inc/powerhouse/commit/9df082c147))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **connect-core,reactor-browser:** a sign-in gate when the backend refuses the caller ([77eda7795b](https://github.com/powerhouse-inc/powerhouse/commit/77eda7795b))
+- **reactor-mcp:** shared tool definitions with MCP and ai SDK adapters ([db60951c54](https://github.com/powerhouse-inc/powerhouse/commit/db60951c54))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **reactor-browser:** the backend-auth classifier stays free of node-only imports ([6c7be7b93a](https://github.com/powerhouse-inc/powerhouse/commit/6c7be7b93a))
+- **reactor-api,reactor-browser:** serve document state with interface types ([72a44ee3fb](https://github.com/powerhouse-inc/powerhouse/commit/72a44ee3fb))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.3-dev.79 (2026-10-28)
+
+### 🚀 Features
+
+- ⚠️  **switchboard:** startSwitchboard(config, deps) reads only its config ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+- **ph-cli,codegen:** ph mcp, a stdio launcher for reactor-mcp that starts vetra on the first tool call, and generated mcp configs that run it ([c64883e693](https://github.com/powerhouse-inc/powerhouse/commit/c64883e693))
+- **codegen,vetra,ph-cli,connect:** project agent guidance as a managed AGENTS.md block and skills, and eval fixes ([#3303](https://github.com/powerhouse-inc/powerhouse/pull/3303))
+- **reactor-browser:** the light client heads new documents with newDocument and the host's per-type selection ([49a6772cb4](https://github.com/powerhouse-inc/powerhouse/commit/49a6772cb4))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a wrapped new document takes the host's signature policy ([2eda9c8106](https://github.com/powerhouse-inc/powerhouse/commit/2eda9c8106))
+- **codegen,shared,vetra,ph-cli,document-model,reactor,reactor-api:** scaffolds get their dependencies, migration-file works, new documents count 0 per scope, subgraphs filter plain ids, and vetra sets the preview drive's app ([6fe1ead94c](https://github.com/powerhouse-inc/powerhouse/commit/6fe1ead94c))
+- **vetra,document-model,reactor-browser,reactor-mcp:** schemas and api docs say what the code does, and getDocumentModelSchema has a compact form ([ea4f1c1f30](https://github.com/powerhouse-inc/powerhouse/commit/ea4f1c1f30))
+- **reactor-browser:** addDrive takes the default policy only without a full client ([c30b184bb9](https://github.com/powerhouse-inc/powerhouse/commit/c30b184bb9))
+- **reactor-browser:** addDrive takes the default signature policy on a Switchboard without createDefaults ([098c2d089b](https://github.com/powerhouse-inc/powerhouse/commit/098c2d089b))
+- **reactor-browser:** RemoteDocumentController creates on a Switchboard without createDefaults ([1ccb0e1138](https://github.com/powerhouse-inc/powerhouse/commit/1ccb0e1138))
+- **reactor-browser, reactor-drive:** new documents take base-reducer 2 ([c597453995](https://github.com/powerhouse-inc/powerhouse/commit/c597453995))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** startSwitchboard(config, deps) reads only its config  ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+  startSwitchboard(options) is now startSwitchboard(config, deps).
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.78 (2026-10-27)
+
+### 🚀 Features
+
+- **portle:** scaffold @powerhousedao/portle, the switchboard plugin that gates publication through Portle ([68ab561f7d](https://github.com/powerhouse-inc/powerhouse/commit/68ab561f7d))
+- **reactor-browser,connect-core,connect:** read drive nodes from read.drives through a per-drive cache, not from the drive document ([c51c39602e](https://github.com/powerhouse-inc/powerhouse/commit/c51c39602e))
+- **reactor-api,reactor-browser,switchboard:** type-neutral drive node queries and read.drives on the remote client ([b8a09950c0](https://github.com/powerhouse-inc/powerhouse/commit/b8a09950c0))
+- **reactor-api,switchboard:** vacuum full policy knob, no forced rewrite under load by default ([d6dcbf5cd0](https://github.com/powerhouse-inc/powerhouse/commit/d6dcbf5cd0))
+
+### 🩹 Fixes
+
+- **reactor-browser:** addDocument caches the new file's drive node ([2edd19f221](https://github.com/powerhouse-inc/powerhouse/commit/2edd19f221))
+- **registry:** a failed tarball write no longer records its attachment ([5d3ae94bd8](https://github.com/powerhouse-inc/powerhouse/commit/5d3ae94bd8))
+- **reactor-browser:** a node this tab writes shows at once, not after the drive's refresh interval ([d363830d67](https://github.com/powerhouse-inc/powerhouse/commit/d363830d67))
+- **reactor-api:** the one-time VACUUM FULL is off by default; quiet and forced are opt-ins ([fd7c19e313](https://github.com/powerhouse-inc/powerhouse/commit/fd7c19e313))
+
+### 🔥 Performance
+
+- **reactor-browser,reactor-router,connect-core:** batch multi-document reads into getMany ([5b7cdef949](https://github.com/powerhouse-inc/powerhouse/commit/5b7cdef949))
+- **reactor-browser,connect:** refresh one drive on change instead of re-listing every drive ([221593d6ae](https://github.com/powerhouse-inc/powerhouse/commit/221593d6ae))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.77 (2026-10-26)
 
 ### 🚀 Features

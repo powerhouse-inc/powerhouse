@@ -212,6 +212,8 @@ export interface WebhookReply {
   status: number;
   body?: string;
   contentType?: string;
+  /** Extra response headers, lowercased; the host sets content-type and framing. */
+  headers?: Record<string, string>;
   /** The handler did not process this delivery (its owner is shutting down),
    * so its dedupe key is dropped and the sender's retry is delivered again.
    * Unset, a delivery counts as seen whatever the status. */

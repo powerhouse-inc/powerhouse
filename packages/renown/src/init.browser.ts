@@ -83,7 +83,7 @@ export class RenownBuilder extends BaseRenownBuilder {
    * Build and initialize the Renown instance.
    * Initializes IndexedDB for key storage before building.
    */
-  async build(): Promise<Renown> {
+  override async build(): Promise<Renown> {
     const keyStorage = await BrowserKeyStorage.create(this.#keyDbName);
     this.withKeyPairStorage(keyStorage);
     const renown = await super.build();

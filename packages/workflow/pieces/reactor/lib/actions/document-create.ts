@@ -34,6 +34,7 @@ import {
   parseProp,
   type FolderTarget,
 } from "../reactor.js";
+import { applied, appliedDocument } from "../writes.js";
 
 const BLOCK = "document-create";
 
@@ -102,30 +103,47 @@ async function createIn(
 ): Promise<PHDocument> {
   const documentType = module.documentModel.global.id;
   if (target.kind !== "drive" && !name) {
-    return reactor.createEmpty(
-      documentType,
-      target.kind === "parent" ? { parentIdentifier: target.parentId } : {},
+    return appliedDocument(
+      await reactor.write.createEmpty(
+        documentType,
+        target.kind === "parent" ? { parentIdentifier: target.parentId } : {},
+      ),
     );
   }
-  const document = module.utils.createDocument() as PHDocument;
   // A drive node takes its name from the header.
-  if (name) document.header.name = name;
+  const document = await reactor.newDocument(documentType, {
+    parentIdentifier:
+      target.kind === "drive"
+        ? target.driveId
+        : target.kind === "parent"
+          ? target.parentId
+          : undefined,
+    name: name || undefined,
+  });
   if (target.kind === "drive") {
     // A drive file is a child document plus the drive's node for it.
-    const created = await reactor.create(document, target.driveId);
-    await reactor.execute(target.driveId, DEFAULT_BRANCH, [
+    const created = await appliedDocument(
+      await reactor.write.create(document, target.driveId),
+    );
+    const addFile = [
       plainAction("ADD_FILE", {
         id: created.header.id,
         name: created.header.name || created.header.id,
         documentType,
         parentFolder: target.folderId,
       }),
-    ]);
+    ];
+    await applied(
+      await reactor.write.execute(target.driveId, DEFAULT_BRANCH, addFile),
+      addFile,
+    );
     return created;
   }
-  return reactor.create(
-    document,
-    target.kind === "parent" ? target.parentId : undefined,
+  return appliedDocument(
+    await reactor.write.create(
+      document,
+      target.kind === "parent" ? target.parentId : undefined,
+    ),
   );
 }
 
@@ -206,7 +224,14 @@ export const documentCreateAction = createAction({
 
     const created = await createIn(reactor, module, target, name);
     const document = followUps.length
-      ? await reactor.execute(created.header.id, DEFAULT_BRANCH, followUps)
+      ? await appliedDocument(
+          await reactor.write.execute(
+            created.header.id,
+            DEFAULT_BRANCH,
+            followUps,
+          ),
+          followUps,
+        )
       : created;
     return { ...documentReference(document.header), ...reader.output() };
   },

@@ -26,6 +26,8 @@ import {
   type WireInspectorDriveIntegrity,
   type WireInspectorDrivePage,
   type WireInspectorProcessor,
+  type WireMemoryTelemetry,
+  type WireProcessorTimingReport,
   type WireQueueState,
   type WireReactorInfo,
   type WireRemoteCursor,
@@ -212,6 +214,9 @@ export function createInspectionResolvers(
     documentModels: (): Promise<WireInspectorDocumentModel[]> =>
       inspector.listDocumentModels(),
 
+    loadsModelsOnDemand: (): Promise<boolean> =>
+      inspector.loadsModelsOnDemand(),
+
     drives: async (
       _parent: unknown,
       args: { cursor?: string | null; limit?: number | null },
@@ -261,6 +266,21 @@ export function createInspectionResolvers(
 
     processors: operator(async (): Promise<WireInspectorProcessor[]> =>
       (await inspector.getProcessors()).map(toWireProcessor),
+    ),
+
+    processorTiming: operator((): Promise<WireProcessorTimingReport> =>
+      inspector.getProcessorTiming(),
+    ),
+
+    memoryTelemetry: operator(
+      (args: {
+        limit?: number | null;
+        sinceIso?: string | null;
+      }): Promise<WireMemoryTelemetry> =>
+        inspector.getMemoryTelemetry(
+          args.limit ?? undefined,
+          args.sinceIso ?? undefined,
+        ),
     ),
 
     catchUpStatus: operator(() => inspector.getCatchUpStatus()),

@@ -22,6 +22,7 @@
     "test/registry-e2e/fixture/package/build/",
     "packages/reactor-browser/test/fixtures/registry/",
     "test/registry-e2e/results/",
-    "**/routeTree.gen.ts"
+    "**/routeTree.gen.ts",
+    "packages/document-model/test/definition/kernel/goldens/"
   ]
 }

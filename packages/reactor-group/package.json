@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-group",
-  "version": "6.2.3-dev.77",
+  "version": "6.2.3-dev.90",
   "description": "Platform document model for groups of member addresses, referenced by { group } principals in the auth scope.",
   "keywords": [
     "powerhouse",
@@ -50,7 +50,6 @@
     "generate": "ph-cli generate"
   },
   "dependencies": {
-    "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "document-model": "workspace:*",
     "zod": "catalog:"
@@ -58,9 +57,18 @@
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "tsdown": "catalog:",
     "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@powerhousedao/reactor-browser": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@powerhousedao/reactor-browser": {
+      "optional": true
+    }
   }
 }

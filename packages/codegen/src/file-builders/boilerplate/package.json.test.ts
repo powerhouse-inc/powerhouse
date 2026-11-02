@@ -5,6 +5,7 @@ import {
   packageJsonTemplate,
   toYarnResolutions,
 } from "templates";
+import { buildBoilerplatePackageJson } from "./package.json.js";
 
 describe("boilerplate dependency overrides", () => {
   it("renders the override pins as pnpm overrides in pnpm-workspace.yaml", () => {
@@ -48,6 +49,31 @@ describe("boilerplate dependency overrides", () => {
     const out = packageJsonTemplate("test-project", {}, { vitest: "4.1.1" });
     expect(JSON.parse(out)).not.toHaveProperty("resolutions");
   });
+
+  it("pins date-fns, rolldown and vite in the fields every package manager reads", async () => {
+    const parsed = JSON.parse(
+      await buildBoilerplatePackageJson({ name: "p", version: "6.3.0-dev.1" }),
+    ) as {
+      devDependencies: Record<string, string>;
+      resolutions: Record<string, string>;
+      overrides: Record<string, string>;
+    };
+    expect(parsed.devDependencies).toMatchObject({
+      "date-fns": "4.3.0",
+      rolldown: "1.0.2",
+      vite: "8.0.14",
+    });
+    expect(parsed.resolutions).toEqual({
+      "date-fns": "4.3.0",
+      rolldown: "1.0.2",
+      vite: "8.0.14",
+    });
+    expect(parsed.overrides).toEqual({
+      "date-fns": "$date-fns",
+      rolldown: "$rolldown",
+      vite: "$vite",
+    });
+  });
 });
 
 describe("boilerplate release-age policy", () => {
@@ -65,6 +91,23 @@ describe("boilerplate release-age policy", () => {
         '  - "@renown/*"',
         "  - document-model",
       ].join("\n"),
+    );
+  });
+});
+
+describe("the scaffold's connect-core", () => {
+  it("pins connect-core in devDependencies and peers it at Connect's version", async () => {
+    const parsed = JSON.parse(
+      await buildBoilerplatePackageJson({ name: "p", version: "6.3.0-dev.1" }),
+    ) as {
+      peerDependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+    expect(parsed.devDependencies["@powerhousedao/connect-core"]).toBe(
+      parsed.devDependencies["@powerhousedao/connect"],
+    );
+    expect(parsed.peerDependencies["@powerhousedao/connect-core"]).toBe(
+      "6.3.0-dev.1",
     );
   });
 });

@@ -33,10 +33,12 @@ GraphQL has a set of built-in **scalar types**:
 - `Boolean`: `true` or `false`.
 - `ID`: A unique identifier, often used as a key for a field. It is serialized in the same way as a String; however, it is not intended to be human-readable.
 
-In addition to these standard types, the Powerhouse Document-Engineering system introduces custom scalars that are linked to reusable front-end components. These scalars are tailored for the web3 ecosystem and will be explored in the Component Library section of the documentation.
+Powerhouse built-in scalars come from `document-model/scalars` and are available by name in the schema. See the [built-in scalar names](/academy/Build/DocumentModelCreation/CustomScalars#name-the-export-after-the-scalar) for the full list. Editor components for those types are documented in [Document-Engineering](/academy/Reference/EditorsUI/DocumentEngineering).
 
-:::tip[Custom Scalar: OID]
-Powerhouse provides the `OID` (Object ID) scalar type, which is a custom scalar specifically designed for unique identifiers in document models. It provides automatic ID generation capabilities when used with the `generateId()` function from the document-model core library.
+To define a scalar of your own with a zod schema, see [Custom scalars](/academy/Build/DocumentModelCreation/CustomScalars).
+
+:::tip[Built-in scalar: OID]
+Powerhouse provides the `OID` (Object ID) scalar for unique identifiers in document models. Use `generateId()` from the document-model core library to generate an id for an `OID` field.
 :::
 
 ### Lists and non-null
@@ -106,7 +108,7 @@ type TodoListStats {
   - `stats: TodoListStats!` _(advanced)_: Holds aggregated statistics about the to-do items.
 
 - **`TodoItem` type**:
-  - `id: OID!`: Each `TodoItem` has a unique identifier using Powerhouse's custom `OID` scalar. This is crucial for referencing specific items, for example, when updating or deleting them.
+  - `id: OID!`: Each `TodoItem` has a unique identifier using the built-in `OID` scalar. This is crucial for referencing specific items, for example, when updating or deleting them.
   - `text: String!`: The textual description of the to-do item. It cannot be null, ensuring every to-do has a description.
   - `checked: Boolean!`: Indicates whether the to-do item is completed. It defaults to a boolean value (true or false) and cannot be null.
 

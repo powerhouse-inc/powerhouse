@@ -12,8 +12,8 @@ import type { SwitchboardHostContext } from "../plugin-host.mjs";
 /**
  * R2.5 — the workflows subsystem as a built-in plugin. Presence is activation
  * (an explicit options.workflows.enabled === false still wins, mirroring the
- * mcp carve); the PH_WORKFLOWS_ENABLED env/config resolution governs the
- * classic path only.
+ * mcp carve, and PH_WORKFLOWS_ENABLED=false is one); turning workflows on from
+ * the env or the config file is for the classic path only.
  *
  * The plugin also DECLARES the drive the runtime serves — the Workflows drive
  * that opens in Workflow Studio — as a drive contribution (workflow-plugins

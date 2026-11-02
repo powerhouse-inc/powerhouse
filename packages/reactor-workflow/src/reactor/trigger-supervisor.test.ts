@@ -62,6 +62,8 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
   let store: WorkflowRunStore;
   let supervisor: TriggerSupervisor;
   let fired: { workflowId: string; payload: unknown; kind: string }[];
+  // Workflows whose slots are full (pollHeld)
+  const held = new Set<string>();
 
   const binding = () => ({
     workflowId: WF,
@@ -110,6 +112,7 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
       fire: (workflowId, payload, kind) => {
         fired.push({ workflowId, payload, kind });
       },
+      pollHeld: (workflowId) => held.has(workflowId),
       cacheDir,
       // The feed is on loopback, which the default policy refuses.
       egress: { allowAddresses: ["127.0.0.1/32", "::1/128"] },
@@ -184,6 +187,31 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     expect(row?.last_error).toBeNull();
   }, 60_000);
 
+  // A trigger that advances its own position when polled (the backfill's
+  // for-every) must not hand out work while the earlier firings still hold
+  // every slot: queued, that work can expire or be skipped by a park.
+  it("leaves a held workflow's poll due until its slots free", async () => {
+    feedItems.unshift({
+      guid: "g3",
+      title: "Third",
+      pubDate: "Mon, 01 Sep 2026 10:00:00 GMT",
+    });
+    const before = fired.length;
+    held.add(WF);
+    await forceDue();
+    await supervisor.tick();
+    expect(fired).toHaveLength(before);
+    // Not polled: the cursor stays and the row is still due
+    expect(await store.getPieceStoreValue("FLOW", WF, CURSOR_KEY)).toBe("g2");
+    expect((await store.getTriggerState(WF))?.next_poll_at).toBe(PAST);
+
+    held.delete(WF);
+    await supervisor.tick();
+    expect(fired).toHaveLength(before + 1);
+    expect((fired[before].payload as { title?: string }).title).toBe("Third");
+    expect(await store.getPieceStoreValue("FLOW", WF, CURSOR_KEY)).toBe("g3");
+  }, 60_000);
+
   it("marks a failed onEnable as ERROR and schedules a retry", async () => {
     broken = true;
     const changed = {
@@ -220,12 +248,13 @@ describe.skipIf(!rssBundle)("TriggerSupervisor", () => {
     await supervisor.remove(WF);
     const row = await store.getTriggerState(WF);
     expect(row?.status).toBe("DISABLED");
-    expect(await store.getPieceStoreValue("FLOW", WF, CURSOR_KEY)).toBe("g2");
+    expect(await store.getPieceStoreValue("FLOW", WF, CURSOR_KEY)).toBe("g3");
 
+    const before = fired.length;
     await store.upsertTriggerState({ ...row!, next_poll_at: PAST });
     await supervisor.tick();
     // DISABLED rows are never due.
-    expect(fired).toHaveLength(1);
+    expect(fired).toHaveLength(before);
   }, 60_000);
 
   it("disables zombie rows whose workflow left the registry", async () => {

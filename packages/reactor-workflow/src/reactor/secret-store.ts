@@ -1,11 +1,14 @@
 // Managed secrets in the relational "secrets" namespace, AES-256-GCM at rest;
 // master key from PH_WORKFLOWS_SECRETS_MASTER_KEY or a generated key file.
+import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import {
   parseSecretRef,
   secretRefFromId,
   SecretDeletedError,
   SecretNotFoundError,
+  SecretOwnerMismatchError,
+  type SecretOwner,
   type SecretStat,
   type SecretStore,
 } from "../pieces/index.js";
@@ -29,6 +32,10 @@ const KEY_CHECK_LABEL = "reactor-workflow/secrets/key-check/v1";
 export interface SecretRow {
   id: string;
   label: string | null;
+  // The document the secret was minted for; null on pre-ownership rows.
+  owner_id: string | null;
+  // Lower-cased address of the user who saved it; null when anonymous.
+  created_by: string | null;
   version: number;
   // base64(iv || tag || ciphertext); null once deleted.
   enc: string | null;
@@ -54,6 +61,8 @@ async function up(db: IRelationalDb<SecretsDB>): Promise<void> {
     .createTable("secret")
     .addColumn("id", "text", (col) => col.primaryKey())
     .addColumn("label", "text")
+    .addColumn("owner_id", "text")
+    .addColumn("created_by", "text")
     .addColumn("version", "integer", (col) => col.notNull())
     .addColumn("enc", "text")
     .addColumn("status", "text", (col) => col.notNull())
@@ -61,6 +70,14 @@ async function up(db: IRelationalDb<SecretsDB>): Promise<void> {
     .addColumn("updated_at", "text", (col) => col.notNull())
     .ifNotExists()
     .execute();
+  // Additive migration for namespaces created before secrets had owners.
+  for (const column of ["owner_id", "created_by"]) {
+    try {
+      await db.schema.alterTable("secret").addColumn(column, "text").execute();
+    } catch {
+      // column already exists
+    }
+  }
   await db.schema
     .createTable("secret_key_check")
     .addColumn("id", "text", (col) => col.primaryKey())
@@ -101,6 +118,19 @@ export class MasterKeyMismatchError extends Error {
   }
 }
 
+function readKeyFile(file: string): Buffer | undefined {
+  try {
+    const key = Buffer.from(readFileSync(file, "utf8").trim(), "hex");
+    if (key.length !== KEY_BYTES) {
+      throw new Error(`Key file "${file}" is not 32 bytes of hex`);
+    }
+    return key;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    return undefined;
+  }
+}
+
 function loadKey(options: LocalSecretStoreOptions): Buffer {
   const hex = options.masterKeyHex ?? process.env[MASTER_KEY_ENV];
   if (hex !== undefined) {
@@ -110,17 +140,17 @@ function loadKey(options: LocalSecretStoreOptions): Buffer {
     return Buffer.from(hex, "hex");
   }
   if (options.keyFile === false) throw new MasterKeyRequiredError();
-  const file = options.keyFile ?? join(process.cwd(), ".ph", "secrets.key");
-  try {
-    const key = Buffer.from(readFileSync(file, "utf8").trim(), "hex");
-    if (key.length !== KEY_BYTES) {
-      throw new Error(`Key file "${file}" is not 32 bytes of hex`);
-    }
-    return key;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-  }
-  const key = randomBytes(KEY_BYTES);
+  const file = options.keyFile ?? join(resolvePhDir(), "secrets.key");
+  const kept = readKeyFile(file);
+  if (kept) return kept;
+  // A shell's stores from before this followed PH_USER_DATA_DIR are encrypted
+  // with the key left in the working directory, so a relocated tree takes a
+  // copy of it. The original stays: every other identity needs it too.
+  const left =
+    options.keyFile === undefined
+      ? readKeyFile(join(resolvePhDir(process.cwd(), {}), "secrets.key"))
+      : undefined;
+  const key = left ?? randomBytes(KEY_BYTES);
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, key.toString("hex") + "\n", { mode: 0o600 });
   return key;
@@ -248,6 +278,8 @@ export class LocalEncryptedSecretStore implements SecretStore {
     return {
       ref: secretRefFromId(row.id),
       label: row.label,
+      ownerId: row.owner_id,
+      createdBy: row.created_by,
       version: row.version,
       status: row.status as SecretStat["status"],
       createdAt: row.created_at,
@@ -255,11 +287,20 @@ export class LocalEncryptedSecretStore implements SecretStore {
     };
   }
 
-  async create(input: { value: string; label?: string }): Promise<SecretStat> {
+  async create(input: {
+    value: string;
+    label?: string;
+    ownerId: string | null;
+    createdBy?: string | null;
+  }): Promise<SecretStat> {
+    if (input.ownerId === "")
+      throw new Error("A secret needs an owning document");
     const now = new Date().toISOString();
     const row: SecretRow = {
       id: randomBytes(16).toString("hex"),
       label: input.label ?? null,
+      owner_id: input.ownerId,
+      created_by: input.createdBy?.toLowerCase() ?? null,
       version: 1,
       enc: this.encrypt(input.value),
       status: "ACTIVE",
@@ -291,8 +332,15 @@ export class LocalEncryptedSecretStore implements SecretStore {
     return this.toStat(updated);
   }
 
-  async get(ref: string): Promise<string> {
+  // Ownership is checked before the value is decrypted; unowned never resolves.
+  // `null` reads a host secret (an OAuth app's), which no document owns.
+  async get(ref: string, owner: SecretOwner | null): Promise<string> {
     const row = await this.row(ref);
+    if (owner === null) {
+      if (row.owner_id !== null) throw new SecretOwnerMismatchError("host");
+    } else if (row.owner_id === null || row.owner_id !== owner.documentId) {
+      throw new SecretOwnerMismatchError(owner.kind);
+    }
     if (row.status !== "ACTIVE" || row.enc === null) {
       throw new SecretDeletedError(ref);
     }

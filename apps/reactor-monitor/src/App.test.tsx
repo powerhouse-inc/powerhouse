@@ -55,6 +55,13 @@ describe("App", () => {
     }
   });
 
+  it("opens the host builder from the views", () => {
+    const view = render(<App store={freshStore()} />);
+    fireEvent.click(view.getByRole("button", { name: "Build host" }));
+    expect(view.getByRole("navigation", { name: "Steps" })).toBeTruthy();
+    expect(view.getByRole("heading", { name: "Start" })).toBeTruthy();
+  });
+
   it("provisions an in-process reactor from the form and shows its queue snapshot", async () => {
     const view = render(<App buildDescriptor={testDescriptor} />);
 
@@ -191,5 +198,44 @@ describe("App", () => {
       WAIT,
     );
     expect(view.getByText("Select a reactor to inspect it.")).toBeTruthy();
+  }, 30_000);
+
+  it("imports a pasted host export as a set and provisions it", async () => {
+    const store = freshStore();
+    const view = render(<App buildDescriptor={testDescriptor} store={store} />);
+    const exported = {
+      format: "ph-host-export",
+      version: 1,
+      project: { name: "lab", root: "/project" },
+      name: "bench",
+      host: {
+        name: "bench",
+        runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+        reactor: {
+          backends: {
+            main: { kind: "in-process", storage: { kind: "memory" } },
+          },
+        },
+      },
+      members: {},
+    };
+
+    fireEvent.change(view.getByTestId("host-import-text"), {
+      target: { value: JSON.stringify(exported) },
+    });
+    fireEvent.click(view.getByRole("button", { name: "Load" }));
+    fireEvent.click(view.getByRole("button", { name: "Save & provision" }));
+
+    const select = view.getByTestId("monitor-set-select") as HTMLSelectElement;
+    expect(select.value).toBe("bench");
+    expect(store.getSetSource("bench")).toEqual({
+      project: { name: "lab", root: "/project" },
+      host: "bench",
+    });
+    await waitFor(
+      () => expect(view.getByText("bench.main")).toBeTruthy(),
+      WAIT,
+    );
+    await waitFor(() => expect(view.getByTitle("ready")).toBeTruthy(), WAIT);
   }, 30_000);
 });

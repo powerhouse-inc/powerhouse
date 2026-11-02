@@ -153,7 +153,7 @@ The `ReactorClient` automatically signs all actions before submitting them to th
 
 `ReactorClient` holds an `ISigner` instance. Every mutation method -- `execute()`, `create()`, `createChild()`, `add()`, `remove()`, `move()` -- calls `signActions()` internally before submitting to the reactor. If an action already has valid signatures, it is passed through unchanged.
 
-`execute()`, `executeAsync()` and `executeBatch()` resolve a slug to the document id before signing, because the signature is bound to the id the write is stored under.
+`write.execute()` and `write.executeBatch()` resolve a slug to the document id before signing, because the signature is bound to the id the write is stored under.
 
 A `RemoteDocumentController` built with a slug does the same. Before it signs a push, it asks the remote for the document's id. If the id cannot be resolved, the push fails and nothing is signed.
 
@@ -281,31 +281,31 @@ import { withSignaturePolicy } from "@powerhousedao/shared/document-model";
 
 // v2-required, under a derived id
 const document = module.utils.createDocument();
-await client.create(document);
-await client.createEmpty("powerhouse/document-model");
-await client.drives.create({ global: { name: "Drive" } });
+await client.write.create(document);
+await client.write.createEmpty("powerhouse/document-model");
+await client.write.drives.create({ global: { name: "Drive" } });
 
 // legacy, for one document
-await client.createEmpty("powerhouse/document-model", {
+await client.write.createEmpty("powerhouse/document-model", {
   signaturePolicy: "legacy",
 });
-await client.drives.create({
+await client.write.drives.create({
   global: { name: "Drive" },
   signaturePolicy: "legacy",
 });
-await client.create(
+await client.write.create(
   withSignaturePolicy(module.utils.createDocument(), "legacy", {
     id: "my-document",
   }),
 );
 ```
 
-`client.create()` and `client.drives.addFile()` create the document under the header it carries. `withSignaturePolicy(document, policy, { id })` gives a document that has not been created a fresh header under `policy`; only a legacy header takes `id`.
+`client.write.create()` and `client.write.drives.addFile()` create the document under the header it carries. `withSignaturePolicy(document, policy, { id })` gives a document that has not been created a fresh header under `policy`; only a legacy header takes `id`.
 Under `v2-required` a given `id` is ignored and the id is derived, so code that needs a fixed id must ask for `legacy`.
 
 A `CREATE_DOCUMENT` whose id does not recompute from its own input is refused as `ID_MISMATCH`, and so is a legacy `CREATE_DOCUMENT` that takes an id of that shape. A copy of a v2-required document is v2-required, under a new derived id. A copy of a legacy document is created under the creation default below. An imported `.phd` keeps the policy it was exported with.
 
-The NOOP an `UNDO` becomes and the action a `REDO` rebuilds are signed by the reactor's own signer. A reactor with no signer stores them unsigned, and every peer refuses them on a v2-required document, so a host that writes to v2-required documents must be given a signer. A client with no signer cannot create a v2-required document at all: its `CREATE_DOCUMENT` is unsigned.
+On base-reducer 1 and 2, the NOOP an `UNDO` becomes and the action a `REDO` rebuilds are signed by the reactor's own signer. A reactor with no signer stores them unsigned, and every peer refuses them on a v2-required document, so a host that writes to v2-required documents must be given a signer. Base-reducer 3 refuses a submitted `UNDO` or `REDO`: `IReactorClient.undo` and `redo` submit a `RETRACT` the client signs instead; see [Undo and redo](/academy/Reference/Reactor/UndoRedo). A client with no signer cannot create a v2-required document at all: its `CREATE_DOCUMENT` is unsigned.
 
 ### The creation default
 
@@ -344,7 +344,7 @@ const reactorBuilder = new ReactorBuilder().withExecutorConfig({
 ```
 
 - `enforce` (the default) refuses the write.
-- `log` records every refusal and stores the write anyway.
+- `log` records every refusal and stores the write anyway, except a `DUPLICATE_ACTION` on a base-reducer 3 document outside its `document` and `auth` scopes. Undo there works by action id, so a repeated id is refused in both modes.
 
 Each refusal emits a `SIGNATURE_REFUSED` event on the reactor event bus, with the refusal `code`, the signature `scheme`, the admission `path` (`mutation` or `load`), and whether it was `enforced`. `@powerhousedao/opentelemetry-instrumentation-reactor` counts these as `reactor.signature.refusals`.
 

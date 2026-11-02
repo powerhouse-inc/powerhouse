@@ -26,7 +26,7 @@ export class ReportsSubgraph extends BaseSubgraph {
   async onSetup(): Promise<void> {
     this.http.get("reports/:id", async (_request, ctx) => {
       try {
-        const document = await this.reactorClient.get<PHDocument>(
+        const document = await this.readClient.get<PHDocument>(
           ctx.params.id,
           undefined,
           ctx.signal,

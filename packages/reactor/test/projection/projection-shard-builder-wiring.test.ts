@@ -114,6 +114,29 @@ describe("withProjectionShards consistency wiring", () => {
     return { module: built, transports };
   }
 
+  it("sends the keyframe settings to each shard", async () => {
+    db = await createDefaultDatabase();
+    const { transports, factory } = createFakeProjectionTransports();
+    const keyframes = {
+      default: { keep: 4 },
+      types: { "a/b": { interval: 50 } },
+    };
+    module = await new ReactorBuilder()
+      .withKysely(db)
+      .withKeyframes(keyframes)
+      .withProjectionShards({
+        db: SHARD_DB,
+        shardCount: 1,
+        preReadyKinds: ["document-view", "document-indexer"],
+        postReadyKinds: [],
+        shutdownGraceMs: 10,
+      })
+      .withProjectionWorkerFactory(factory)
+      .buildModule();
+
+    expect(transports[0]!.sentOfType("init")[0]!.keyframes).toEqual(keyframes);
+  });
+
   it("advances the host consistency trackers the read path waits on", async () => {
     const { module: built, transports } = await buildShardedModule();
 

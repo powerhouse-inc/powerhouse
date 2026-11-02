@@ -60,7 +60,7 @@ Connect will be available at: `http://localhost:4000/develop/powerhouse/connect`
 
 ## Runtime configuration
 
-Connect's runtime settings (renown URL, package registry, default drives, log level, etc.) live in `powerhouse.config.json` rather than environment variables. See [RUNTIME-CONFIG.md](./RUNTIME-CONFIG.md) for the full overview of how values are set, merged, and read by the SPA.
+Connect's runtime settings (renown URL, package registry, default drives, log level, etc.) live in `powerhouse.config.json` rather than environment variables. See [runtime-config.md](./skills/customize-connect/references/runtime-config.md) for the full overview of how values are set, merged, and read by the SPA.
 
 ## Routes
 
@@ -86,9 +86,9 @@ hosts/connect/routes/
 - The tree is generated into `.ph/connect-routes.gen.ts`, which types `createFileRoute`, `Link` and `useNavigate` with the project's routes.
 - Without a routes folder, Connect uses its prebuilt route tree.
 
-The [customize-connect skill](./skills/customize-connect/SKILL.md) indexes the task-by-task guides in [`docs/customizing/`](./docs/customizing/), for people and coding agents. Contributor notes (UI screenshots and the files behind the customization surface) are in `apps/connect/CUSTOMIZING.md` in the Powerhouse monorepo; the published package leaves them out.
+The [customize-connect skill](./skills/customize-connect/SKILL.md) indexes the task-by-task guides in [`references/`](./skills/customize-connect/references/), for people and coding agents. Contributor notes (UI screenshots and the files behind the customization surface) are in `apps/connect/CUSTOMIZING.md` in the Powerhouse monorepo; the published package leaves them out.
 
-Code that does not build with Vite adds code routes with `registerConnectRoutes` from `@powerhousedao/connect/router`: it receives Connect's routes (`appRoute` for the layout, `rootRoute` for a full page, `settingsRoute` for a tab) and returns the routes to add; see [Extend Connect from a package](./docs/customizing/packages.md#register-routes-from-code).
+Code that does not build with Vite adds code routes with `registerConnectRoutes` from `@powerhousedao/connect/router`: it receives Connect's routes (`appRoute` for the layout, `rootRoute` for a full page, `settingsRoute` for a tab) and returns the routes to add; see [Extend Connect from a package](./skills/customize-connect/references/packages.md#register-routes-from-code).
 
 ## Troubleshooting
 

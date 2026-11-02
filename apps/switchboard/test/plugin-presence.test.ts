@@ -1,5 +1,4 @@
 import { mkdtemp, rm } from "node:fs/promises";
-import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HostPlugin, ResolvedPlugin } from "@powerhousedao/host-core";
@@ -9,18 +8,9 @@ import {
   builtinSwitchboardPlugins,
   createSwitchboardPluginHost,
 } from "../src/plugin-host.mjs";
-import { startSwitchboard, type StartServerOptions } from "../src/server.mjs";
-
-// `port: 0` would bind a random port the switchboard does not report back, so
-// the test picks a free one and pins it.
-async function freePort(): Promise<number> {
-  const server = createServer();
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const address = server.address();
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-  if (!address || typeof address === "string") throw new Error("no port");
-  return address.port;
-}
+import type { SwitchboardConfigInput } from "../src/config/schema.js";
+import type { startSwitchboard, SwitchboardDeps } from "../src/server.mjs";
+import { bootSwitchboard } from "./boot-helpers.js";
 
 function stubLogger(): ILogger {
   const logger = {
@@ -43,7 +33,7 @@ function stubLogger(): ILogger {
  * — case 5 below covers workflow presence on its own, lighter path.
  */
 async function withPluginHostSwitchboard(
-  optionsOverride: Partial<StartServerOptions>,
+  override: { config?: SwitchboardConfigInput; deps?: SwitchboardDeps },
   run: (
     switchboard: Awaited<ReturnType<typeof startSwitchboard>>,
   ) => Promise<void>,
@@ -63,20 +53,20 @@ async function withPluginHostSwitchboard(
   let switchboard: Awaited<ReturnType<typeof startSwitchboard>> | undefined;
 
   try {
-    switchboard = await startSwitchboard({
-      workflows: { enabled: false },
-      dbPath: join(tempRoot, "read-model"),
-      port: await freePort(),
-      strictPort: true,
-      disableLocalPackages: true,
-      identity: { keypairPath: join(tempRoot, "identity.json") },
-      drive: {
-        slug: "default-drive",
-        global: { name: "Default Drive" },
+    switchboard = await bootSwitchboard(
+      {
+        server: { port: 0 },
+        storage: { readModel: { url: join(tempRoot, "read-model") } },
+        features: { workflows: false, ...override.config?.features },
+        packages: { disableLocal: true },
+        identity: { keypairPath: join(tempRoot, "identity.json") },
+        drive: {
+          slug: "default-drive",
+          global: { name: "Default Drive" },
+        },
       },
-      logger: stubLogger(),
-      ...optionsOverride,
-    });
+      { logger: stubLogger(), ...override.deps },
+    );
     await run(switchboard);
     await switchboard.shutdown();
     switchboard = undefined;
@@ -125,7 +115,7 @@ describe("plugin-host composition presence (FEATURE_PLUGIN_HOST_ENABLED)", () =>
 
   it("EMPTY composition ([]): attachments absent", async () => {
     await withPluginHostSwitchboard(
-      { pluginComposition: [] },
+      { deps: { pluginComposition: [] } },
       async (switchboard) => {
         expect(switchboard.attachmentService).toBeUndefined();
         expect(await getReservation(switchboard.port)).toBe(404);
@@ -139,7 +129,7 @@ describe("plugin-host composition presence (FEATURE_PLUGIN_HOST_ENABLED)", () =>
   // its subsystem.
   it("EMPTY composition ([]): /mcp does not mount — presence is activation", async () => {
     await withPluginHostSwitchboard(
-      { pluginComposition: [] },
+      { deps: { pluginComposition: [] } },
       async (switchboard) => {
         expect(switchboard.mcpEnabled).toBe(false);
         expect(await postMcp(switchboard.port)).toBe(404);
@@ -153,7 +143,7 @@ describe("plugin-host composition presence (FEATURE_PLUGIN_HOST_ENABLED)", () =>
     );
     expect(mcpOnly).toHaveLength(1);
     await withPluginHostSwitchboard(
-      { pluginComposition: mcpOnly },
+      { deps: { pluginComposition: mcpOnly } },
       async (switchboard) => {
         expect(switchboard.mcpEnabled).toBe(true);
         expect(await postMcp(switchboard.port)).not.toBe(404);
@@ -164,10 +154,13 @@ describe("plugin-host composition presence (FEATURE_PLUGIN_HOST_ENABLED)", () =>
   }, 60_000);
 
   it("an explicit mcp: false option still wins over the default composition", async () => {
-    await withPluginHostSwitchboard({ mcp: false }, async (switchboard) => {
-      expect(switchboard.mcpEnabled).toBe(false);
-      expect(await postMcp(switchboard.port)).toBe(404);
-    });
+    await withPluginHostSwitchboard(
+      { config: { features: { mcp: false } } },
+      async (switchboard) => {
+        expect(switchboard.mcpEnabled).toBe(false);
+        expect(await postMcp(switchboard.port)).toBe(404);
+      },
+    );
   }, 60_000);
 });
 

@@ -1,5 +1,284 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — undo v3: new documents undo by retraction
+
+### ✨ Highlights
+
+1. **New documents are base-reducer 3** — `undoV3` is on by default. On a version 3 document an undo is a `RETRACT { target }` that names the undone action by id and is signed by its author, so replicas that hold the same operations derive the same state whatever order they arrived in
+2. **Base-reducer 1 and 2 documents behave exactly as before** — an existing document keeps its version and is never upgraded; its undo, redo, admission and sync do not change
+3. **Upgrade the Switchboard first** — a peer below this release cannot hold base-reducer 3 documents
+
+---
+
+### NEW FEATURES
+
+#### ↩️ Undo and redo through the client
+
+- `write.undo` and `write.redo` (in-process client, `GraphQLReactorClient` and the router) submit `UNDO`/`REDO` on base-reducer 1 and 2. On 3 they resolve the target and submit a `RETRACT` signed by the client.
+- `undoRedoTargets` and `undoRedoAvailability` report what an undo or redo would retract now; the Switchboard serves the targets as the `undoRedoTargets` query, and `IReactor.resolveUndoRedo` resolves them in the reactor.
+- `RemoteDocumentController.undo(count, scope)` and `redo(count, scope)` keep their signature; on 3 each step applies a `RETRACT` resolved from the controller's own log.
+- The design-system undo controls (`useUndo`, `useRedo`) and Connect's document toolbar undo a version 3 document through the reactor client, and keep dispatching `UNDO`/`REDO` for every other document.
+- The workflow editors undo a version 3 document by retracting the last edit; their undo-group and redo ids on 3 are UUIDv7 (`<id>~ug:<group>`).
+- reactor-mcp `addActions` turns each `UNDO`/`REDO` step on a version 3 document into one `RETRACT`.
+
+✅ **What to try:** create a document with `client.read.newDocument` and `client.write.create`, edit it, call `client.write.undo(id)`: the stored operation is a `RETRACT` whose `input.target` is the edit's action id.
+
+---
+
+### BREAKING CHANGES
+
+#### Older peers are held from base-reducer 3 documents
+
+A peer below this release does not list base-reducer 3 in its sync manifest, so this release holds every version 3 document, and every operation on it, from that peer until it upgrades. A peer below this release that receives one anyway refuses it as `UNSUPPORTED_PROTOCOL`. Until the Switchboard is upgraded, documents created on an upgraded Connect or light client stay there.
+
+#### `undoV3=false` refuses to boot over stored base-reducer 3 documents
+
+`undoV3=false` makes new documents base-reducer 2. `REACTOR_UNDO_V3` is on for any value except the literal `false`. Set it with `REACTOR_UNDO_V3=false` or `protocol.featureFlags.undoV3: false` (Switchboard), `reactor.protocol.featureFlags.undoV3: false` (ph-cli host file), `connect.reactor.featureFlags.undoV3: false` (Connect) or `withExecutorConfig({ featureFlags: { undoV3: false } })`. A host with it off that stores a base-reducer 3 document refuses to boot with `UnsupportedStoredProtocolError`, naming the version and how many stored documents need it: `N stored document(s) require base-reducer 3, which this reactor does not run`. `REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only` (or `withUnsupportedStoredDocuments("read-only")`) boots it and serves those documents read-only.
+
+#### Defaults that now follow the feature flags
+
+A caller that passes nothing now gets the reactor's default flags, so it announces, creates and accepts base-reducer 3: `SyncManager`'s `localPeer.flags`, `ReactorClient`'s `protocolSelection.flags` and `DocumentIntegrityService`'s `protocolSupport` default to `resolveFeatureFlags()` instead of no flags.
+
+#### `RETRACT` is a reserved operation name
+
+`ph generate`, Vetra and the document model editor refuse an operation named `RETRACT` (in any case) on every model. A model that defines one must rename it.
+
+#### Base-reducer numbers this build does not know
+
+A document whose base-reducer number this build does not know is read, derived and synced as the highest version the reader runs: a reactor, and its in-process client, run it as the highest version the reactor supports; the light client and local reducers run it as 3. Before, it ran as base-reducer 2. A reactor still refuses writes to it unless its support lists the number.
+
+#### A repeated action id is refused on base-reducer 3
+
+On a version 3 document, outside its `document` and `auth` scopes, admission refuses an action id the stream already holds as `DUPLICATE_ACTION` under `signatureVerification: "log"` too: a mutation fails and a load drops the operation. Base-reducer 1 and 2 still only log it.
+
+#### `IOperationStore.findReferencing`
+
+`IOperationStore` gains an optional `findReferencing(documentId, scope, branch, actionIds, signal?)`. A store without it still works, but the reactor then scans the whole stream on every base-reducer 3 write.
+
+#### Migrations 030 and 031
+
+030 adds `idx_operation_retracts`. 031 replaces 023's created-protocol-versions index with one keyed by document type, which changes the stored-protocol query every host runs at boot; results for base-reducer 1 and 2 documents are unchanged. A build that does not list a migration the database has run does not start, so going back to an older build needs a migration down first (see the migration guide).
+
+---
+
+### MIGRATION GUIDE
+
+1. Upgrade every Switchboard before Connect builds and light clients.
+2. To stop creating base-reducer 3 documents, set `undoV3=false`. Once one is stored, the host also needs `REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only` to boot, and those documents are read-only on it.
+3. To run an older build on a database this release migrated, stop the host and migrate down with this release's packages, which carry the `down()` of the newer migrations:
+
+   ```typescript
+   import { REACTOR_SCHEMA, runMigrations } from "@powerhousedao/reactor";
+   import { runReactorDriveMigrations } from "@powerhousedao/reactor-drive";
+   import type { Kysely } from "kysely";
+
+   // The release before undo v3: drops the 030 and 031 indexes.
+   export async function revertToPreviousRelease(db: Kysely<any>): Promise<void> {
+     const reactor = await runMigrations(db, REACTOR_SCHEMA, "029_create_permission_tables");
+     if (!reactor.success) throw reactor.error;
+   }
+
+   // 6.2.3: also reverts 024 to 029 and drops their tables (document purges, sync markers,
+   // purge refusals, remote persistence, write identity, permissions).
+   export async function revertTo623(db: Kysely<any>): Promise<void> {
+     const reactor = await runMigrations(db, REACTOR_SCHEMA, "023_index_created_protocol_versions");
+     if (!reactor.success) throw reactor.error;
+     const drive = await runReactorDriveMigrations(db, REACTOR_SCHEMA, "0002_document_name");
+     if (!drive.success) throw drive.error;
+   }
+   ```
+
+   On Postgres, pass a Kysely `PostgresDialect` over the reactor database URL (`PH_REACTOR_DATABASE_URL`). On an embedded PGlite store, pass `new PGliteDialect(new PGlite(".ph/reactor-storage"))` (`kysely-pglite-dialect`); a store whose `PG_VERSION` is 16 needs PGlite 0.2 (`pglite-legacy-02`). The drive tables live in the same database. Then start the older build, with `REACTOR_UNSUPPORTED_STORED_DOCUMENTS=read-only` if any base-reducer 3 document is stored. No CLI migrates down, and Connect's in-browser store has no rollback path.
+4. Store implementers outside this repository: implement `findReferencing` over an index of `actionReferences(row.action)`.
+
+---
+
+## 🚀 **Unreleased** — `ph host check` warns about members on one port
+
+### ⚡ Two compound members that declare one port are a warning
+
+Under `ph run`, a Connect or switchboard whose port is taken moves to the next free port, so a compound with two members on one port still runs. A moved Connect is a new browser origin, though, and comes up without its drives, sign-in and local data. `ph host check` now prints a warning for such a pair, for example `warning  children.connect.runner.port: cli-connect and connect both use port 6347. One will move to the next free port and lose its browser data.` Warnings never change the exit code. `checkHost()` returns them as `warnings`, beside `issues`.
+
+✅ **What to try:** add `connect: { host: "connect" }` to `hosts/cli/host.js` in a scaffolded project and run `FEATURE_UNIFORM_RUNNERS_ENABLED=true ph host check cli`.
+
+---
+
+## 🚀 **Unreleased** — router settings in the host config
+
+### ✨ Host config sets where new drives go, and the router's timeouts and breaker
+
+A Connect host's `reactor.placement.newDrives` names the backend new drives are created on. A switchboard there means the drive is created on it with no copy in this browser; drives the host declares locally are still created in the browser. When that switchboard isn't answering, Connect shows "<sb> isn't answering, so the drive wasn't created."; when it refuses, Connect names it and its reason, or opens the sign-in prompt. The drive is not created in the browser instead, and a Connect that can't build the router for that switchboard fails to start. Without `newDrives`, new drives are created in the browser as before, or on the only switchboard when there is no browser reactor. A Connect with no browser reactor and several switchboards must set it.
+
+`reactor.router` takes `probeTimeoutMs` (default 3 s) and `provisionalRouteMs` (default 30 s). A remote backend's `remote` block takes `requestTimeoutMs` (default 30 s), `breaker` (`{ failures, openMs }`, default 3 failures then 30 s; `false` never stops trying) and `realtime` (default true); a local backend refuses them. Connect serves these as `instance.router` and on each `instance.remoteBackends[]` entry, and builds its router and switchboard backends from them.
+
+⚠️ **Breaking (unreleased host config):** a Connect host refuses `placement.primary` with "Connect doesn't use placement.primary. To choose where new drives go, use placement.newDrives." Switchboard hosts keep it. Connect's `instance.reactorWorker` now follows the browser reactor's own kind, so a remote listed first no longer turns a `worker` backend in-process.
+
+`RoutingOptions.defaultBackend` (`@powerhousedao/reactor-router`) names the backend a new collection goes to when nothing places it; a create it refuses fails rather than landing elsewhere. A parentless create asks for its defaults from the backend its id is placed on, else the default backend. `createSwitchboardBackend`'s `breaker` (`@powerhousedao/reactor-browser`) takes partial settings or `false`.
+
+✅ **What to try:** give a Connect host with a switchboard backend `sb` `placement: { newDrives: "sb" }`, run it and add a drive: it appears on the switchboard and `syncManager.list()` in the tab has no remote for it. Stop the switchboard and add another: Connect shows that sb isn't answering.
+
+---
+## 🚀 **Unreleased** — move a drive in Connect, attachments by drive
+
+### ✨ Move a drive between its switchboard and this browser
+
+For each drive the host keeps on a switchboard, Connect's drive settings now say where it opens and offer one action: **Keep a copy in this browser** for a drive that opens on the switchboard, or **Open on <switchboard> only** for one this browser keeps a copy of. Keeping a copy, or resetting to a config that keeps one, adds the drive's sync remote and waits until the copy holds what the switchboard holds before reads move to it, in every tab; if the copy never arrives, the drive stays on the switchboard and the sync remote is removed again. Opening on the switchboard only removes the sync remote and routes the drive there; the copy already in the browser is left in place, unread, so keeping a copy again later picks up from it.
+
+The choice applies to this browser only. It is stored in IndexedDB, every open tab follows it, and it survives a reload. Drive settings mark a moved drive "Moved in this browser. Host config: …", with **Reset to config**. A move is dropped once the host config changes the placement it replaced. A Connect with no reactor in the browser opens every drive on its switchboard and offers no move.
+
+Placements now reach the router after boot, once each drive is read from its switchboard, so a switchboard that does not answer no longer delays startup. A drive a plugin serves under a hashed slug (`projectHash: true`) is found among its switchboard's drives, so its placement applies under its real id and slug. The drive settings modal (`DriveSettingsModal`, `@powerhousedao/design-system/connect`) takes `children`, rendered after the location settings.
+
+### ✨ Router: config placements after construction
+
+`RoutingReactorClient.setConfiguredPlacement(key, backend | undefined)` (`@powerhousedao/reactor-router`) sets the config layer for one collection after the client is built, as an entry of `collections` would. A runtime placement still wins, and `describeRouting()` reports the row with `origin: "config"`.
+
+### ✨ Attachments go to the switchboard that holds their document
+
+`RoutingAttachmentService` (`@powerhousedao/reactor-attachments/client`) sends each call to the attachment service of the backend that serves its `documentId`, found through a resolver such as `RoutingReactorClient.locate`. A call without a document, or for a backend with no service of its own, uses the fallback service. `reserve` takes an optional `documentId` (it is not sent to the server), and so do `preprocess(file, { documentId })`, `upload({ file, documentId })` and `useAttachmentUpload().preprocess(file, { documentId })` (`@powerhousedao/reactor-browser`). A Connect linked to more than one switchboard installs this service, with the first switchboard's attachments as the fallback.
+
+✅ **What to try:** in a host whose Connect places drive `b` on switchboard `sb`, open Connect, then `?modal=drive-settings&driveId=<b's id>`, and choose **Keep a copy in this browser**: `b` now syncs into the browser, and a second tab shows the same.
+
+---
+## 🚀 **Unreleased** — Connect opens drives on its switchboards
+
+### ⚡ A drive placed on a switchboard keeps no copy in the browser
+
+Connect now applies a host's `reactor.placement.drives`. A drive placed on its switchboard's remote backend opens there: Connect adds no sync remote for it, removes one an earlier boot added, and routes every read, listing and write to that switchboard. Its local data, if any, stays in the browser unread. A drive placed on a local backend, or not listed, keeps a synced copy as before. New drives are still created in the browser.
+
+A Connect can link to several switchboards: the router gets one backend per switchboard, named by its key in `reactor.backends`, and a sign-in or sign-out reaches every one of them. A Connect with only a remote backend (no reactor in the browser) opens every drive on its switchboard, and its attachments go there.
+
+### ⚡ The router lists a duplicated document from where it is routed
+
+`RoutingReactorClient.read.find` (`@powerhousedao/reactor-router`) used to keep the first backend's copy of a document several backends return. It now keeps the copy from the backend the router already routes that id to: a drive's correction, runtime or config placement or learned route, else the document's cached route. With no route, backend order decides as before, and nothing extra is probed. A drive placed on a remote is therefore listed from the remote even while a stale local copy remains.
+
+### ⚡ What the Connect runner serves
+
+The connect runner derives three fields of the served config from the host, which `powerhouse.config.json` refuses:
+
+- `instance.remoteBackends: [{ name, url }]`, one per remote backend, `url` being its drive address;
+- `drives.defaultDrives[].backend` (the remote backend serving a remote default drive) and `.sync` (`false` when placed on it);
+- `instance.collections: { <slug>: { backend, sync } }` for drives placed on a switchboard that are not default drives, such as a plugin's `workflows` drive.
+
+`projectReactorToConnect` (`@powerhousedao/host-core`) adds `instance.remoteBackends`, and `placeConnectDrives(reactor, defaultDrives)` computes the other two. The runner no longer forces `instance.multiReactor: true`: `reactorClient` selects the router. A `placement.drives` key may now name a drive the Connect host attaches through `config.drives.defaultDrives`.
+
+### ✨ Tabs agree on sync remotes
+
+A sync remote one tab adds or removes in the shared worker now reaches every tab's `syncManager.list()`: the worker announces the change after `add` and `remove`, as it does for local peers. `fetchDriveInfo(url, tokenProvider?)` takes an optional token provider (default: the signed-in Renown user's).
+
+✅ **What to try:** in a host with a switchboard `sb` and a Connect linked to `sb.drives.b.url` with `placement: { drives: { b: "sb" } }`, run `ph run`, open Connect, and edit drive `b`: the edit lands on the switchboard, and `syncManager.list()` in the tab has no remote for `b`.
+
+---
+## 🚀 **Unreleased** — a Switchboard as a router backend (`@powerhousedao/reactor-browser`)
+
+### ✨ `createSwitchboardBackend`
+
+`createSwitchboardBackend({ name, url, tokenProvider, signer, documentModels, ... })` from `@powerhousedao/reactor-browser/graphql-client` returns `{ config, notifyCredentialsChanged, dispose }`. `config` is a `RoutableBackendConfig` for `RoutingReactorClient`, so a host other than Connect, such as the monitor, can route to a Switchboard. `url` is the Switchboard's GraphQL endpoint. Connect's own copy of this backend is gone, and Connect now builds its remote through this function.
+
+- **Explicit credentials.** The descriptor names its token provider and signer. `signer: undefined` pushes unsigned and never falls back to the logged-in Renown user. A function is read on every push. Connect passes `ambientRenownTokenProvider` and the new `ambientRenownSigner`, so it still signs only while someone is logged in. A `GraphQLReactorClient` `signer` option may also be such a function.
+- **Request deadline.** Each request is bounded, headers through body, at `requestTimeoutMs`, which defaults to 30 s. A request past the deadline rejects with a `TimeoutError`. `GraphQLReactorClient` takes the same option, plus `fetch` for the transport.
+- **Breaker and health.** Three transport failures in a row open the breaker for 30 s (configurable through `breaker`). A transport failure is a network error, a 5xx, or a deadline: the request's own, or the router's probe deadline (`probeTimeoutMs`), so a Switchboard that hangs is marked down after three probes and local creates stop waiting on it. While the breaker is open, nothing is sent: every call throws `SwitchboardUnreachableError`, `health()` reports `"down"`, and the router stops probing the backend. A GraphQL error is an answer, so it does not count, and neither does an abort by the caller.
+- **Facts.** One `SwitchboardFacts` query reads the reactor info, including `access` from the server, and the document types the Switchboard serves. The router's create pre-check uses the types only when the Switchboard's model list is closed. The new inspection field `loadsModelsOnDemand` says whether it is. When a Switchboard loads models on demand, or is too old to say, its types stay open and creates are not checked. A Switchboard that lacks `documentServed`, `createDefaults` or `inspection` fails the read, so the router holds its facts as unknown.
+- **421.** A refusal forgets the drive the request named, so the next request sends no stale `Drive-Id`. Under Node, the default transport (`switchboardFetch`) sends request bodies as streams. Node's fetch resends a request that got a 421, and the resend of a buffered body can fail with a `TypeError` instead of returning the 421. Browsers keep buffered bodies.
+
+### 🐛 Switchboard `/ready` waits for its drives
+
+`/ready` used to answer 200 about 80 ms before the default drive existed, so a client that waited for `/ready` and then opened `/d/<slug>` could get a 404. It now turns 200 only once the default drive is served. Under `ph run`, it also waits for the drives the host declares and the drives its plugins contribute. `startSwitchboard` takes `readyAfter`, a promise that `/ready` also waits for; if it rejects, the server stays not ready. Remote drives don't hold readiness back, because they sync from another server that may be down.
+
+✅ **What to try:** start a Switchboard with `ph run`, poll `/ready`, and open `/d/<slug>` on the first 200: the drive is there.
+
+---
+
+## 🚀 **Unreleased** — host config: a remote link is a switchboard drive address
+
+### ⚡ `remote.url` names a drive, and `reactor.placement.drives` says where each drive opens
+
+A `remote` backend in a host file now links to a switchboard by the address of one of its drives, `<switchboard>/d/<slug>`, for every host kind: Connect, the assistant agent and the reactor monitor. A GraphQL endpoint names the switchboard but not a drive, and sync needs the drive. An `endpoints.graphql` output token or a `/graphql` URL in `remote.url` now fails validation with an error that names the replacement:
+
+```js
+// before
+sb: { kind: "remote", remote: { url: switchboard.endpoints.graphql } },
+// after
+sb: { kind: "remote", remote: { url: switchboard.drives.powerhouse.url } },
+// or { $output: { host: "switchboard", path: ["drives", "powerhouse", "url"] } }
+```
+
+The generated `assistant` and `cli` hosts use the new form. A project scaffolded earlier keeps its old host files (generation never overwrites them), so edit `hosts/assistant/host.js` and `hosts/cli/host.js` as above. One switchboard is one remote backend: two backends whose drive addresses share a switchboard are refused; list the second drive under `reactor.drives` instead.
+
+`reactor.placement.drives` maps a declared drive slug to a backend. The drive's own remote backend means "open it on the switchboard, with no copy here"; a local backend means "keep a synced copy"; an unlisted drive keeps a synced copy. The host is refused when a value names no backend, places a drive on a switchboard it is not on, names a slug linked on two switchboards (or kept here and linked on one), or (where the config names every drive, plugin `config.drive` links included) uses a key that names no drive. A `reactor.drives[]` entry's `remote.url` must be a drive address too. `placementKeyIssues(host)` (`@powerhousedao/host-core/schema`) runs the key check on a declared host whose runner and reactor are already merged, for a tool that parses `declaredHostSchemas.reactorHostSchema` itself, as the reactor monitor's import now does.
+
+`switchboardOfDrive(url)` (`@powerhousedao/host-core/schema`, and `@powerhousedao/shared/host-tokens`) splits a drive address into `{ base, graphql, slug }`. The reactor monitor's remote descriptors take a drive address too: the provision form asks for one, `ph host export` imports read `drives.<slug>.url`, and a saved monitoring set whose remote is a GraphQL URL fails with a message naming the drive address to use.
+
+✅ **What to try:** in a project's `hosts/cli/host.js`, set the `sb` backend's `remote.url` to `{ $output: { host: "switchboard", path: ["endpoints", "graphql"] } }` and run `FEATURE_UNIFORM_RUNNERS_ENABLED=true ph host check cli`: it reports that `remote.url` must be a switchboard drive address and names `switchboard.drives.<slug>.url`.
+
+---
+
+## 🚀 **Unreleased** — router placement, deadlines and document-type facts (`@powerhousedao/reactor-router`)
+
+### ✨ Move a drive while the router runs
+
+`RoutingReactorClient.setPlacement(key, backend | undefined)` places a collection or drive on a backend for this client only, above the `collections` the router was built with; `undefined` removes it and the config applies again. `onRoutingChange(listener)` reports each placement, learned, corrected or forgotten collection route and returns the unsubscribe. Precedence is now corrected > runtime > config > learned > placed: a refusal still corrects either kind of placement, and a later `setPlacement` for that key replaces the correction. `describeRouting()` rows gain `origin` (`"config"` or `"runtime"`) and `configured` (the config's backend), so a client can show where it differs from its config. Nothing is persisted; the caller stores its own runtime placements.
+
+### ⚡ A hung or missing backend no longer stalls the others
+
+- **Probe deadline.** An ownership probe that does not answer within `probeTimeoutMs` (default 3 s) answers "unknown", so a local create finishes even while a remote hangs.
+- **Health.** A backend may declare `health(): "up" | "down"`. While it reports down, probes answer "unknown" without a request, and `describeRouting().health` lists each declared state.
+- **Provisional routes.** A route found on a backend while an earlier one in the order did not hold the document is probed again after `provisionalRouteMs` (default 30 s), so a document read from a remote during initial sync moves to the local copy once it arrives. Corrected routes and placements never expire.
+- **Routing by collection.** When several backends serve a document, it goes to its drive's corrected, placed or learned backend, so a stale local copy of a drive placed on a remote never wins.
+
+### ✨ Document-type facts and `locate`
+
+`RoutableBackendConfig.documentTypes?: () => Promise<readonly string[] | undefined>` is read with the facts and lands in `BackendFacts.documentTypes`. A read that answers `undefined` means the backend loads models on demand: creates are not checked, and the facts stay known. A failed read of the facts or of the types makes `known` false. A create of a type the target backend lacks (`create`, `createAsync`, a batch that creates, `drives.create`, `drives.addFile`) throws `UnsupportedByBackendError` before anything is sent. `locate(identifier, signal?)` names the backend a document routes to, for an attachment service that routes by document.
+
+✅ **What to try:** build a router over two backends with `collections: { [driveId]: "local" }`, call `setPlacement(driveId, "remote")`, and `describeRouting()` shows the drive on `remote` with `origin: "runtime"` and `configured: "local"`.
+
+---
+
+## 🚀 **Unreleased** — UUIDv7 action ids and same-millisecond auth bursts
+
+### ⚡ Action ids sort in creation order; auth bursts are admitted
+
+Action ids are now UUIDv7 from `generateActionId` (`@powerhousedao/shared/document-model`), for every document version, including base-reducer 1 and 2 documents. Ids from one process strictly increase, so actions built in the same millisecond keep their creation order wherever the id breaks a tie. `createAction`, the genesis `CREATE_DOCUMENT`/`UPGRADE_DOCUMENT` actions, `purgeDocumentAction`, the base-reducer 1/2 undo marker, the reactor and drive action builders and the workflow piece's `plainAction` use it. Document, node and folder ids stay UUIDv4, and so do the workflow editors' undo-group and redo ids on base-reducer 1 and 2 documents (base-reducer 3 documents use UUIDv7 there; see the undo v3 entry). Code that parsed action ids as v4 should treat them as opaque strings.
+
+Auth-scope actions are now stamped with `nextAuthTimestamp`, which strictly increases per process. A burst such as `initializeAuth` followed by `setGrant` built in one millisecond no longer fails with `AuthTimestampNotMonotonicError`. The error is still exported, and the executor still refuses an auth stamp at or below the stream's newest one, for example one set by hand or minted by another process. Every other scope keeps the wall clock. The auth clock is one per process, shared by every document, so a burst runs ahead by one millisecond per auth action built in the same millisecond, across all documents: granting 3 grants on each of 500 documents at once (`grantOnDocuments`) stamps the last grants about 1.5 s ahead. Content built before the clock catches up sorts before those grants and may be denied under `documentDecisions`; resubmit it once the clock passes the burst. If the wall clock steps back after a run-ahead, the process's auth writes are refused until the clock passes the highest stamp it sent. See ADR 0007.
+
+✅ **What to try:** with `documentDecisions` and `authEnforcement` on, execute `[initializeAuth(...), setGrant(...), setGrant(...)]` built in one tick: the job succeeds and the three auth operations carry stamps one millisecond apart.
+
+---
+
+## 🚀 **Unreleased** — PGlite maintenance no longer forces a VACUUM FULL under load
+
+### ⚡ VACUUM FULL waits for a quiet store, by default
+
+A PGlite store whose `base/` exceeds 256 MB at open gets a one-time `VACUUM FULL`. It used to run 30 minutes after open whether or not the store had gone quiet; on a 20 GB store that held the only connection for a quarter of an hour, every processor batch, workflow tick and request hit Knex's 60 s acquire timeout, and the directory needed about twice its size in free disk meanwhile. The one-time rewrite is now off by default: on a store that is live data rather than bloat it reclaims nothing, a minute of quiet arrives naturally between jobs, and the copies it writes need about twice the store's size in free disk. The new `PH_PGLITE_VACUUM_FULL` setting chooses the policy:
+
+```bash
+PH_PGLITE_VACUUM_FULL=off       # default: never (a rewrite needs twice the store's size in free disk)
+PH_PGLITE_VACUUM_FULL=quiet     # only after the quiet window, however long that takes
+PH_PGLITE_VACUUM_FULL=forced    # the previous behaviour: also 30 min after open, under load
+PH_PGLITE_VACUUM_FULL_ABOVE_MB=256        # the size that makes a store eligible
+PH_PGLITE_VACUUM_FULL_QUIET_MS=60000      # the quiet window
+PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS=0      # an explicit deadline overrides the mode
+```
+
+`resolvePgliteMaintenance(env)` in `@powerhousedao/reactor-api/pglite-node` reads them, and both the switchboard's stores and `getDbClient`'s read store apply them. A finished `VACUUM FULL` now logs its duration and the `base/` size before and after; before, only a failure was logged. An unknown mode refuses to boot, since the point is never to run the forced rewrite by accident.
+
+✅ **What to try:** boot a switchboard with `PH_PGLITE_VACUUM_FULL=quiet` on a store over 256 MB and watch the log: `VACUUM FULL waits until the store has had no writes for 60000 ms` with no `or at most ... from open` clause, then `VACUUM FULL finished in N ms; A -> B bytes` once the store has been idle a minute.
+
+---
+
+## 🚀 **Unreleased** — reactor fixes for base-reducer 1 and 2 documents
+
+### 🐛 Bug fixes (`@powerhousedao/reactor`)
+
+- **A cold read of revision 0 no longer serves a later keyframe's state.** `writeCache.getState(id, scope, branch, 0)` treated `0` as "no target", resumed from the newest keyframe and returned the head.
+- **A held document reaches the peer once that peer can run it.** A document held from a peer that could not run its protocol version was released with its original ordinals, below the peer's ack, and the next ack trim dropped it unsent. Release backfills now stay in the outbox until a push succeeds. This covers GraphQL peers. A local or worker peer (`LocalChannel`) still drops a push at or below its inbox ack, so a document released toward it never loads there yet.
+- **A stored refusal no longer re-holds a document after the peer restarts.** A receiver's `UNSUPPORTED_PROTOCOL` dead letter answered the reactor revision that wrote it; reloading it on restart reported it again and the sender held the document for good. Loading dead letters now drops and deletes those rows once this reactor can run the document; a refusal of a document it still cannot run is kept.
+- **Re-evaluated rows reach `reactor.get`.** With `documentDecisions` on, a write or load whose backdated auth change re-evaluated the document wrote the re-appended rows but left them out of the job result and `JOB_WRITE_READY`, so the document view kept serving the state from before the pass.
+
+✅ **What to try:** with `documentDecisions` and `authEnforcement` on, grant a writer, let it write, then remove the grant with an earlier timestamp: `reactor.get` now serves the document without the denied write.
+
+---
+
 ## 🚀 **Unreleased** — reactor client halves
 
 ### ✨ Highlights
@@ -18,9 +297,9 @@
 
 ```typescript
 const handle = await module.write.execute(invoiceId, "main", actions);
-const { token } = await handle.written;                 // operations are in the log
+const { token } = await handle.written; // operations are in the log
 const invoice = await module.read.get(invoiceId, undefined, undefined, token);
-const same = await handle.document();                   // readable, then the gated read-back
+const same = await handle.document(); // readable, then the gated read-back
 ```
 
 `written` and `readable` reject with `JobFailedError` only when the job itself failed; a reducer error stays on `receipt.job.result`. Over RPC the halves are `read.*` and `write.*` (protocol version 4); the router (`@powerhousedao/reactor-router`) exposes `RoutingReadClient` and `RoutingWriteClient`; `@powerhousedao/reactor-browser` and the GraphQL browser client carry `read` and `write` too, and `window.ph.reactor = { read, write }` sits beside `window.ph.reactorClient`.
@@ -33,7 +312,12 @@ const same = await handle.document();                   // readable, then the ga
 
 ```graphql
 query ($id: String!, $c: ConsistencyTokenInput!) {
-  document(idOrSlug: $id, consistency: $c) { document { id lastModifiedAtUtcIso } }
+  document(idOrSlug: $id, consistency: $c) {
+    document {
+      id
+      lastModifiedAtUtcIso
+    }
+  }
 }
 ```
 
@@ -66,6 +350,47 @@ None on the wire, and none at compile time for callers of `IReactorClient`. Beha
 ### DOCUMENTATION
 
 - `docs/adr/0006-reactor-client-halves.md` records the decision, the alternatives and the consequences.
+
+---
+
+## 🚀 **Unreleased** — new documents are headed with `newDocument`
+
+### ✨ Highlights
+
+1. **One place chooses a new document's versions** — `newDocument` heads a new, uncreated document with the protocol versions the client selects for its type and parent, and the client's create signature policy; every first-party create path goes through it
+2. **The reactor core selects like a client** — `IReactor.create` gives a header without `protocolVersions` the versions the reactor selects for its type, as `newDocument` would (base-reducer 3 for a model whose reducer `createReducer` builds while `undoV3` is on, the default; otherwise 2)
+3. **`RemoteDocumentController` falls back when a host has no `createDefaults`** — it creates through `createEmptyDocument`, as before. This client already needs a Switchboard that serves document `meta` and `protocolVersions`, which the released 6.2.3 does not, so the fallback does not make it work against 6.2.3
+
+---
+
+### NEW FEATURES
+
+#### 🧱 `newDocument`
+
+`IReactorReadClient.newDocument(documentType, options?, signal?)` (also on `IReactorClient`, the router client and `GraphQLReactorClient`) returns a document headed with the versions `getCreateProtocolVersions` selects and the client's create signature policy. `NewDocumentOptions` extends `CreateDocumentOptions` with `protocolVersions`, `signaturePolicy`, `initialState`, `name` and `id` (kept only under the legacy policy). Pass the result to `write.create` or `write.drives.addFile`. With `undoV3` on, the default, a new document of a model whose reducer `createReducer` builds is base-reducer 3; any other new document is base-reducer 2. See the undo v3 entry.
+
+`Query.createDefaults` takes an optional `documentType`; the light client asks with it and caps the answer at what it runs. A Switchboard that predates the argument answers reactor-wide, and one without `createDefaults` gives the baseline.
+
+`copyNode` takes an optional `CopyNodeOptions` whose `protocolVersions` override a copy's versions; `ReactorDriveClient` refuses the override.
+
+The `CREATE_DOCUMENT` codec (`createDocumentAction`, `upgradeDocumentAction`, `creationActions`, `creationState`, `documentFromCreation`) is exported from `@powerhousedao/shared/document-model`; `@powerhousedao/reactor` still re-exports the two action creators.
+
+### BREAKING CHANGES
+
+- `getCreateProtocolVersions(parentIdentifier?, signal?)` is now `getCreateProtocolVersions({ documentType, parentIdentifier }, signal?)` on `IReactorReadClient`, `IReactorClient` and `IRoutableBackend`.
+- `IReactorReadClient`, `IReactorClient` and `IReactorBrowserClient` declare `newDocument`; out-of-repo implementations must add it.
+- `IReactor.create` fills a header without `protocolVersions` with the reactor's selection for the document type instead of a fixed `{ "base-reducer": 2 }`; the clients (`create`, `write.create`, `write.drives.addFile`) do the same with their selection. A `Reactor` constructed by hand, outside `ReactorBuilder`, has no selector and refuses such a header.
+- `ReactorWriteClient.emptyDocument` and `RoutingWriteClient.emptyDocument` are removed; use `newDocument`.
+- `RemoteControllerGraphQLClient` adds `GetCreateDefaults` and `GetCreateProtocolVersions`. `RemoteDocumentController.pull` without a `documentId` heads the document with the host's `createDefaults`, so `pull()` itself now queries the host and can reject; the first push creates the remote with `CreateDocument` from that header instead of `CreateEmptyDocument`. `undo(count)` is unchanged.
+- `RemoteDocumentController.from(controller)` without a `documentId` reads the host's `createDefaults` at its first push, so that push can now reject on a failed read. It then creates the remote with `CreateDocument` from the wrapped document's id, initial state and protocol versions, under the host's signature policy, instead of `CreateEmptyDocument`. A legacy header under a v2-required host takes a new, derived id. A Switchboard without `createDefaults` still gets `CreateEmptyDocument`.
+- Importing a `.phd` file keeps the file's `protocolVersions`. A file without them keeps the loader's legacy baseline, base-reducer 1 (legacy replay), as an import is not a create; before this release it was created at base-reducer 2.
+
+### MIGRATION GUIDE
+
+1. Replace `getCreateProtocolVersions(parentId)` with `getCreateProtocolVersions({ documentType, parentIdentifier: parentId })`.
+2. Build new documents with `client.newDocument(type, options)` rather than `module.utils.createDocument()` plus `withSignaturePolicy`, and hand the result to `create` or `drives.addFile`.
+3. Code that constructs a `Reactor` by hand and creates versionless headers through it should build it with `ReactorBuilder`, call `reactor.setCreateProtocol(selector)` with a `CreateVersionSelector`, or give the header `protocolVersions`.
+4. A hand-built `RemoteControllerGraphQLClient` adds `GetCreateDefaults` and `GetCreateProtocolVersions`; one from the generated SDK has them.
 
 ---
 
@@ -118,6 +443,14 @@ The durable NodeFS subclass and the conversion live in `@powerhousedao/reactor-a
 - The "Removed stale PGLite lockfile" warning no longer fires on every boot; `postmaster.pid` and `pg_wal/xlogtemp.*` left by a clean close are removed before open.
 - A periodic VACUUM and CHECKPOINT still runs inside the store; the CHECKPOINT bounds how much WAL a reopen after a crash replays.
 - First boot of a new store and the one-time conversion sync the written tree once instead of after every file: a fresh store is ready in under a second instead of 8 s, and a 45 MB snapshot converts in 0.3 s instead of 5 s, with the same bytes on disk before the first write is acknowledged.
+
+---
+## 🚀 **Unreleased** — a failed action with a skip keeps the rewind
+
+### BUG FIXES AND IMPROVEMENTS
+
+- When an action with a skip throws, the base reducer now keeps the rewound state and the skip, for every base-reducer version. It used to restore the pre-skip state and zero the skip while the stored operation kept it, so replicas holding the same log could end with different states after a load reshuffle.
+- Existing documents whose stored history has a failed operation with a skip keep their old state while a write-cache keyframe at or after that operation exists. They converge once those keyframes are rebuilt (inspector admin op `rebuildKeyframes`, then the next cold rebuild) or the document is synced fresh. The document view catches up on the next write to that scope.
 
 ---
 
@@ -219,6 +552,24 @@ A reactor with no signer stores the operations it synthesizes from `UNDO` and `R
 3. Make sure every host that writes documents has a signer: switchboard needs a Renown identity (`ph login`), and a library host needs `withSigner`.
 4. Remove `REQUIRE_SIGNATURES` from deployments.
 5. Once the whole fleet runs this release, drop the legacy override; new documents are then v2-required.
+
+---
+
+## 🚀 **Unreleased** — with documentDecisions on, a load places a late operation by timestamp, not by the sender's index
+
+### 🔁 Fewer permanent divergences when a late operation arrives (documentDecisions on)
+
+When a reactor loaded operations from a peer, it treated a local operation as preceding the batch whenever its local index was below the batch's lowest index on the peer. After reshuffles the two index spaces are unrelated (a switchboard can run hundreds of indexes ahead of a spoke). So a late operation stamped before a spoke's own newer ones was appended behind them, and the spoke's document differed from everyone else's for good.
+
+With `documentDecisions` on (`REACTOR_DOCUMENT_DECISIONS=true`; off by default, and every replica that shares a document needs it, since each must place its own writes by timestamp):
+
+- A local operation stamped after the earliest incoming operation is now always treated as concurrent, and the load reshuffles it into timestamp order.
+- Operations on that same earliest timestamp still go by index, as before. A batch delivered whole keeps the sender's order unless the load reshuffles, which orders same-millisecond operations by action id, as before this change. When a catch-up splits a same-millisecond batch across loads, the sender's order holds only while the receiver's index for the first part is below the sender's index for the rest; otherwise the rest falls back to the reshuffle's tie-break, action id, as before this change.
+- An execute batch whose actions are stamped out of order (for example `[a@100, b@90]`) is now stored in timestamp order (`b, a`), the order a peer that receives it split or reshuffles it places it in. Actions with equal timestamps keep their batch order on the author; a peer whose load reshuffles them still orders them by action id, as before this change.
+
+With `documentDecisions` off, loads decide exactly as before.
+
+**Trade-off:** with the flag on, a peer batch whose earliest operation is stamped before local operations now reshuffles them, even when the sender's index was ahead. Where the old rule appended, such a load now costs a reshuffle. If that reshuffle moves more operations than `maxSkipThreshold` allows, for example a spoke holding over 1000 operations stamped after a long-delayed peer operation, the load fails with `EXCESSIVE_SHUFFLE` instead of appending. Same-millisecond ties between different authors are still decided by index, as before. An out-of-order execute batch now applies in timestamp order on its author too, so an action that depends on a later-stamped one in the same batch can fail there, as it already could on any peer that received the batch split or reshuffled it.
 
 ---
 

@@ -13,7 +13,10 @@ import type { IJobExecutionHandle, Job } from "../../../src/queue/types.js";
 import { JobQueueState, RetryAccounting } from "../../../src/queue/types.js";
 import type { IDocumentModelResolver } from "../../../src/registry/document-model-resolver.js";
 import { NullDocumentModelResolver } from "../../../src/registry/document-model-resolver.js";
-import { ModuleNotFoundError } from "../../../src/registry/errors.js";
+import {
+  ModelNotWorkerImportableError,
+  ModuleNotFoundError,
+} from "../../../src/registry/errors.js";
 import {
   AuthTimestampNotMonotonicError,
   DocumentDeletedError,
@@ -260,6 +263,80 @@ describe("JobResultHandler", () => {
         expect(failed.map((e) => e.jobId)).toEqual(["P"]);
       });
       expect(failed[0].error.name).toBe("ModuleNotFoundError");
+    });
+
+    it("refuses a create at base-reducer 3 whose model workers cannot import", async () => {
+      vi.mocked(resolver.recoverMissingModel).mockRejectedValue(
+        new ModelNotWorkerImportableError("host/only"),
+      );
+      const job = createTestJob({
+        kind: "load",
+        documentId: "doc-3",
+        scope: "document",
+        maxRetries: 3,
+        operations: [
+          {
+            index: 0,
+            skip: 0,
+            hash: "",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            action: {
+              id: "c1",
+              type: "CREATE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
+              input: {
+                documentId: "doc-3",
+                model: "host/only",
+                protocolVersions: { "base-reducer": 3 },
+              },
+            },
+          } as Job["operations"][number],
+        ],
+      });
+      const handle = createTestHandle(job);
+
+      await handler.handleResult(
+        handle,
+        { success: false, job, error: new ModuleNotFoundError("host/only") },
+        callbacks(),
+      );
+
+      expect(queue.retryJob).not.toHaveBeenCalled();
+      const failure = vi.mocked(handle.fail).mock.calls[0][0] as ErrorInfo;
+      expect(failure.name).toBe("UnsupportedProtocolVersionError");
+      expect(failure.message).toContain(
+        "requires base-reducer 3, which this reactor cannot run for host/only",
+      );
+    });
+
+    it("keeps a write's failure when its model workers cannot import", async () => {
+      vi.mocked(resolver.recoverMissingModel).mockRejectedValue(
+        new ModelNotWorkerImportableError("host/only"),
+      );
+      const job = createTestJob({
+        maxRetries: 3,
+        actions: [
+          {
+            id: "w1",
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            input: {},
+          },
+        ],
+      });
+      const handle = createTestHandle(job);
+
+      await handler.handleResult(
+        handle,
+        { success: false, job, error: new ModuleNotFoundError("host/only") },
+        callbacks(),
+      );
+
+      expect(queue.retryJob).not.toHaveBeenCalled();
+      const failure = vi.mocked(handle.fail).mock.calls[0][0] as ErrorInfo;
+      expect(failure.name).toBe("ModelNotWorkerImportableError");
     });
 
     it("falls through to terminal failure when retryJob throws after model load", async () => {

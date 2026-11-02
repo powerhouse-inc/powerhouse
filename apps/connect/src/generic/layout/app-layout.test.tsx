@@ -29,6 +29,7 @@ import {
   addConnectRoutes,
   connectRoutes,
 } from "@powerhousedao/connect-core/router";
+import { useConnectChrome } from "@powerhousedao/connect/layout";
 import { AppLayout } from "./app-layout.js";
 import { Sidebar } from "./sidebar.js";
 
@@ -260,5 +261,73 @@ describe("Connect's _app layout", () => {
     await vi.waitFor(() => expect(shownPage()).toBe("home"));
     expect(screen.getByTestId("project-layout")).toBeTruthy();
     expect(sidebar()!.contains(screen.getByTestId("help"))).toBe(true);
+  });
+
+  const frame = () => (
+    <AppLayout
+      header={<header data-testid="header" />}
+      footer={<footer data-testid="footer" />}
+    />
+  );
+  const inOrder = (a: Element, b: Element) =>
+    !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  it("puts a header and footer around the page, beside the sidebar", async () => {
+    mount("/reports", frame);
+    await vi.waitFor(() => expect(shownPage()).toBe("reports"));
+    const header = screen.getByTestId("header");
+    const footer = screen.getByTestId("footer");
+    const shown = screen.getByTestId("page");
+    expect(inOrder(header, shown) && inOrder(shown, footer)).toBe(true);
+    expect(sidebar()!.contains(header)).toBe(false);
+    expect(sidebar()).toBeTruthy();
+  });
+
+  it("drops the sidebar, header and footer when embedded", async () => {
+    window.history.replaceState(null, "", "/?embed=1");
+    try {
+      mount("/reports", frame);
+      await vi.waitFor(() => expect(shownPage()).toBe("reports"));
+      expect(sidebar()).toBeNull();
+      expect(screen.queryByTestId("header")).toBeNull();
+      expect(screen.queryByTestId("footer")).toBeNull();
+    } finally {
+      window.history.replaceState(null, "", "/");
+    }
+  });
+
+  it("tells a replaced layout what Connect's shows", async () => {
+    const seen: Record<string, unknown> = {};
+    const layout = (name: string) =>
+      function ProjectLayout() {
+        seen[name] = useConnectChrome();
+        return <Outlet />;
+      };
+    for (const path of ["/reports", "/focus", "/compact"]) {
+      mount(path, layout(path));
+      await vi.waitFor(() => expect(shownPage()).toBe(path.slice(1)));
+      cleanup();
+      unbind?.();
+      unbind = undefined;
+      restore?.();
+      restore = undefined;
+    }
+    expect(seen).toEqual({
+      "/reports": {
+        embedded: false,
+        sidebarHidden: false,
+        sidebarCollapsed: false,
+      },
+      "/focus": {
+        embedded: false,
+        sidebarHidden: true,
+        sidebarCollapsed: false,
+      },
+      "/compact": {
+        embedded: false,
+        sidebarHidden: false,
+        sidebarCollapsed: true,
+      },
+    });
   });
 });

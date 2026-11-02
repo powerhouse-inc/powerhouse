@@ -1,19 +1,17 @@
-import { DEFAULT_SWITCHBOARD_PORT } from "@powerhousedao/shared/clis/constants";
-import { json } from "@tmpl/core";
+/** Cursor gives no launch directory, so node runs ph-cli from `${workspaceFolder}`. */
+export const cursorReactorMcpServer = {
+  type: "stdio",
+  command: "node",
+  args: [
+    "${workspaceFolder}/node_modules/@powerhousedao/ph-cli/dist/cli.mjs",
+    "mcp",
+    "--project-dir",
+    "${workspaceFolder}",
+  ],
+};
 
-/** Cursor's copy of the MCP config. Same literal-port reasoning as `.mcp.json`. */
-export const buildCursorMcpTemplate = (port: number) =>
-  json`
-{
-  "mcpServers": {
-    "reactor-mcp": {
-      "type": "http",
-      "url": "http://localhost:${String(port)}/mcp"
-    }
-  }
-}
-`.raw;
-
-export const cursorMcpTemplate = buildCursorMcpTemplate(
-  DEFAULT_SWITCHBOARD_PORT,
-);
+export const cursorMcpTemplate = `${JSON.stringify(
+  { mcpServers: { "reactor-mcp": cursorReactorMcpServer } },
+  null,
+  2,
+)}\n`;

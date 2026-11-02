@@ -29,8 +29,8 @@ let manifestRevision = 0;
 /**
  * Force the browser to re-consume `manifest.webmanifest` by replacing the
  * `<link rel="manifest">` element with a fresh, cache-busting one. No-op when
- * there is no DOM or no manifest link (dev mode / offline disabled — the build
- * only injects the link when the service worker is enabled).
+ * there is no DOM or no manifest link (offline disabled — the link is only
+ * injected when offline support is enabled).
  */
 export function refreshPwaManifestLink(): void {
   if (typeof document === "undefined") return;

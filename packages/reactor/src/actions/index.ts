@@ -1,57 +1,35 @@
 import type {
   Action,
   AddRelationshipActionInput,
-  CreateDocumentActionInput,
   DeleteDocumentActionInput,
   RemoveRelationshipActionInput,
   UpdateRelationshipActionInput,
-  UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
 import {
   actions as documentActions,
-  generateId,
+  generateActionId,
 } from "@powerhousedao/shared/document-model";
 
 export { documentActions };
-
-/**
- * Creates a CREATE_DOCUMENT action for document creation.
- */
-export function createDocumentAction(input: CreateDocumentActionInput): Action {
-  return {
-    id: generateId(),
-    type: "CREATE_DOCUMENT",
-    scope: "document",
-    timestampUtcMs: new Date().toISOString(),
-    input,
-  };
-}
-
-/**
- * Creates an UPGRADE_DOCUMENT action to set initial document state.
- */
-export function upgradeDocumentAction(
-  input: UpgradeDocumentActionInput,
-): Action {
-  return {
-    id: generateId(),
-    type: "UPGRADE_DOCUMENT",
-    scope: "document",
-    timestampUtcMs: new Date().toISOString(),
-    input,
-  };
-}
+export {
+  createDocumentAction,
+  upgradeDocumentAction,
+} from "@powerhousedao/shared/document-model";
 
 /**
  * Creates a DELETE_DOCUMENT action for document deletion.
  */
-export function deleteDocumentAction(documentId: string): Action {
+export function deleteDocumentAction(
+  documentId: string,
+  options: { keepSlug?: boolean } = {},
+): Action {
   const input: DeleteDocumentActionInput = {
     documentId,
+    ...(options.keepSlug ? { keepSlug: true } : {}),
   };
 
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "DELETE_DOCUMENT",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
@@ -80,7 +58,7 @@ export function addRelationshipAction(
   };
 
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "ADD_RELATIONSHIP",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
@@ -106,7 +84,7 @@ export function updateRelationshipAction(
   };
 
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "UPDATE_RELATIONSHIP",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
@@ -129,7 +107,7 @@ export function removeRelationshipAction(
   };
 
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "REMOVE_RELATIONSHIP",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),

@@ -7,17 +7,15 @@ export const relationalDbFactoryTemplate = (v: {
   documentTypes: string[];
 }) =>
   ts`
-import type { 
+import type {
   IProcessorHostModule,
-  ProcessorApp,
   ProcessorFactoryBuilder,
   ProcessorFilter,
-  ProcessorRecord,
- } from "@powerhousedao/reactor-browser"
+} from "@powerhousedao/reactor-browser";
 import type { PHDocumentHeader } from "document-model";
 import { ${v.pascalCaseName} } from "./processor.js";
 
-export const ${v.camelCaseName}FactoryBuilder: ProcessorFactoryBuilder = (module: IProcessorHostModule) => async (driveHeader: PHDocumentHeader, processorApp?: ProcessorApp) => {
+export const ${v.camelCaseName}FactoryBuilder: ProcessorFactoryBuilder = (module: IProcessorHostModule) => async (driveHeader: PHDocumentHeader) => {
   // Create a namespace for the processor and the provided drive id
   const namespace = ${v.pascalCaseName}.getNamespace(driveHeader.id);
 

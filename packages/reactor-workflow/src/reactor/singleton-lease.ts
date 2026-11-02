@@ -156,6 +156,12 @@ export interface AcquireSingletonOptions {
    * is only logged.
    */
   selfFence?: boolean;
+  /**
+   * The journal is embedded and this process has it open, so nobody else can
+   * be alive behind the lease: a restart takes back its own at once. Waiting
+   * for the heartbeat to go stale is for a holder that might still be running.
+   */
+  exclusive?: boolean;
   env?: Record<string, string | undefined>;
 }
 
@@ -293,7 +299,11 @@ export async function acquireWorkflowSingletonLease(
           // process opening the journal would fail the old one's live runs.
           eb.and([
             eb("owner", "=", owner),
-            eb("heartbeat_at", "<=", dbNowPlus(-staleMs)),
+            eb(
+              "heartbeat_at",
+              "<=",
+              dbNowPlus(options.exclusive ? 0 : -staleMs),
+            ),
           ]),
         ]),
       )

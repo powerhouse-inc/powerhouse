@@ -4,6 +4,7 @@ import {
   backendsToDescriptors,
   backendToDescriptor,
   isStructuralMultiReactor,
+  remoteBackends,
   remoteBackendUrls,
   type ProjectedDescriptor,
 } from "../src/backend-projection.js";
@@ -26,6 +27,16 @@ describe("backendToDescriptor (P4.1)", () => {
       packages: { dynamic: true },
       featureFlags: { documentDecisions: true },
     });
+  });
+
+  it("rides undoV3:false onto the descriptor", () => {
+    expect(
+      backendToDescriptor(
+        "local",
+        { kind: "in-process" },
+        { featureFlags: { undoV3: false } },
+      ).featureFlags,
+    ).toEqual({ undoV3: false });
   });
 
   it("carries the declared kind (kind is required by the schema)", () => {
@@ -121,5 +132,25 @@ describe("structural multi-reactor (P4.2 inputs)", () => {
     expect(remoteBackendUrls(twoBackends)).toEqual([
       "http://localhost:7064/d/drive",
     ]);
+  });
+
+  it("remoteBackends keeps each remote's host key, primary first", () => {
+    expect(
+      remoteBackends({
+        backends: {
+          main: { kind: "worker" },
+          a: { kind: "remote", remote: { url: "http://a:1/d/x" } },
+          b: { kind: "remote", remote: { url: "http://b:2/d/y" } },
+        },
+        placement: { primary: "b" },
+      }),
+    ).toEqual([
+      { name: "b", url: "http://b:2/d/y" },
+      { name: "a", url: "http://a:1/d/x" },
+    ]);
+    expect(remoteBackends({ backends: { main: { kind: "worker" } } })).toEqual(
+      [],
+    );
+    expect(remoteBackends(undefined)).toEqual([]);
   });
 });

@@ -2,6 +2,7 @@ import { EditorLoader } from "./editor-loader.js";
 import { useUndoRedoShortcuts } from "@powerhousedao/connect/hooks";
 import { dismissToast, toast } from "@powerhousedao/connect/services";
 import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
+import { useBaseReducer3UndoRedo } from "@powerhousedao/design-system/connect";
 import {
   EditorDocumentProvider,
   getRevisionFromDate,
@@ -147,10 +148,16 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     !editorModule.documentTypes.includes(documentType) &&
     !editorModule.documentTypes.includes("*");
 
-  const canUndo = globalRevisionNumber > 0 || localRevisionNumber > 0;
-  const canRedo = !!document?.clipboard.length;
-  const addUndoAction = () => dispatch(undo());
-  const addRedoAction = () => dispatch(redo());
+  // Base-reducer 3 undoes through the client, so the author signs the
+  // RETRACT and presses run in order; without a client the controls are
+  // disabled. Undefined below base-reducer 3, which dispatches UNDO and REDO.
+  const clientUndoRedo = useBaseReducer3UndoRedo(document);
+  const canUndo =
+    clientUndoRedo?.canUndo ??
+    (globalRevisionNumber > 0 || localRevisionNumber > 0);
+  const canRedo = clientUndoRedo?.canRedo ?? !!document?.clipboard.length;
+  const addUndoAction = clientUndoRedo?.undo ?? (() => dispatch(undo()));
+  const addRedoAction = clientUndoRedo?.redo ?? (() => dispatch(redo()));
   useUndoRedoShortcuts({
     undo: addUndoAction,
     redo: addRedoAction,

@@ -11,6 +11,7 @@ import {
   type Counter,
   type Histogram,
   type Meter,
+  type ObservableCallback,
   type ObservableGauge,
   type Span,
   type Tracer,
@@ -50,6 +51,7 @@ export class WorkflowTelemetry {
     "inFlight" | "waiting" | "loop",
     ObservableGauge
   >;
+  private suspendedGauge?: ObservableGauge;
   private poolGauges?: Record<
     "size" | "active" | "idle" | "waiting",
     ObservableGauge
@@ -246,6 +248,21 @@ export class WorkflowTelemetry {
       this.meter.removeBatchObservableCallback(callback, observables);
   }
 
+  // WAITING runs, as the owning runtime last counted them.
+  observeSuspended(count: () => number): () => void {
+    // Created once: a replaced runtime re-observes the same instrument.
+    this.suspendedGauge ??= this.meter.createObservableGauge(
+      "workflow.runs.suspended",
+      { description: "Runs suspended on a waitpoint", unit: "{run}" },
+    );
+    const gauge = this.suspendedGauge;
+    const callback: ObservableCallback = (result) => {
+      result.observe(count());
+    };
+    gauge.addCallback(callback);
+    return () => gauge.removeCallback(callback);
+  }
+
   private createPoolGauges() {
     const gauge = (name: string, description: string) =>
       this.meter.createObservableGauge(name, { description, unit: "{worker}" });
@@ -398,16 +415,38 @@ export function failSpan(span: Span, error: unknown): void {
   });
 }
 
-// Every promise-returning method of `target` runs in a span parented on `parent`.
+// Every promise-returning method of `target` runs in a span parented on `parent`,
+// and so do the methods of each object `nested` names, as `prefix.name.method`.
 export function tracedMethods<T extends object>(
   target: T,
   telemetry: WorkflowTelemetry,
   prefix: string,
   parent: Context,
+  nested: readonly string[] = [],
 ): T {
+  const wrapped = new Map<string, object>();
   return new Proxy(target, {
     get(object, property, receiver) {
       const value = Reflect.get(object, property, receiver) as unknown;
+      if (
+        typeof property === "string" &&
+        nested.includes(property) &&
+        typeof value === "object" &&
+        value !== null
+      ) {
+        let inner = wrapped.get(property);
+        if (!inner) {
+          inner = tracedMethods(
+            value,
+            telemetry,
+            `${prefix}.${property}`,
+            parent,
+            nested,
+          );
+          wrapped.set(property, inner);
+        }
+        return inner;
+      }
       if (typeof value !== "function" || typeof property !== "string") {
         return value;
       }

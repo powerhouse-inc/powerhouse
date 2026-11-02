@@ -3,6 +3,7 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
+import { replayDocument } from "@powerhousedao/shared/document-model";
 import { generateMock } from "@powerhousedao/shared/document-model/mock";
 import type {
   AddDocumentTypeInput,
@@ -81,6 +82,54 @@ describe("BaseOperations Operations", () => {
         "Processor type cannot be empty",
       );
       expect(updatedDocument.state.global.type).toBe("");
+    });
+
+    it("accepts relational", () => {
+      const updatedDocument = reducer(
+        document,
+        setProcessorType({ type: "relational" }),
+      );
+
+      expect(updatedDocument.operations.global[0].error).toBeUndefined();
+      expect(updatedDocument.state.global.type).toBe("relational");
+    });
+
+    it("rejects a type codegen cannot generate, naming the error", () => {
+      const updatedDocument = reducer(
+        document,
+        setProcessorType({ type: "read-model" }),
+      );
+
+      expect(updatedDocument.operations.global[0].error).toBe(
+        'UnsupportedProcessorTypeError: "read-model" is not a processor type. Use one of: analytics, relational.',
+      );
+      expect(updatedDocument.state.global.type).toBe("");
+    });
+
+    it("still replays a history that set an unsupported type", () => {
+      // Before the check, the reducer stored any string, so such histories exist.
+      const applied = reducer(
+        document,
+        setProcessorType({ type: "analytics" }),
+      );
+      const [operation] = applied.operations.global;
+      const legacy = {
+        ...operation,
+        action: { ...operation.action, input: { type: "read-model" } },
+      };
+
+      const replayed = replayDocument(
+        applied.initialState,
+        { global: [legacy], local: [] },
+        reducer,
+        applied.header,
+      );
+
+      expect(replayed.operations.global).toHaveLength(1);
+      expect(replayed.operations.global[0].error).toMatch(
+        /^UnsupportedProcessorTypeError/,
+      );
+      expect(replayed.state.global.type).toBe("");
     });
   });
 

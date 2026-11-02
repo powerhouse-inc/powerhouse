@@ -352,7 +352,6 @@ import { type TodoListDocument } from "../../document-models/todo-list/index.js"
 import { TodoIndexerProcessor } from "../../processors/todo-indexer/index.js";
 
 export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactorClient = subgraph.reactorClient;
   const relationalDb = subgraph.relationalDb;
 
   return {

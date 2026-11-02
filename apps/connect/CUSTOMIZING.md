@@ -2,7 +2,7 @@
 
 Working on Connect's customization surface in this monorepo: the tools and the files behind it.
 
-To customize Connect from a project, start from the [customize-connect skill](./skills/customize-connect/SKILL.md): its table maps each change to a guide in [`docs/customizing/`](./docs/customizing/), for people and coding agents alike. The skill is what ships with the package; keep it, not this file, as the index of the guides.
+To customize Connect from a project, start from the [customize-connect skill](./skills/customize-connect/SKILL.md): its table maps each change to a guide in [`references/`](./skills/customize-connect/references/), for people and coding agents alike. The skill is what ships with the package; keep it, not this file, as the index of the guides.
 
 ## UI screenshots of core's views
 
@@ -46,7 +46,7 @@ pnpm --filter @powerhousedao/connect-core ui:shots --list
 
 ## Runtime config fields
 
-The developer side of [RUNTIME-CONFIG.md](./RUNTIME-CONFIG.md).
+The developer side of [runtime-config.md](./skills/customize-connect/references/runtime-config.md).
 
 ### Adding or changing a field
 

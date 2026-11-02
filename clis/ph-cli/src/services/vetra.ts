@@ -1,7 +1,11 @@
 import type { VetraProcessorConfigType } from "@powerhousedao/config";
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
 import type { IReactorClient } from "@powerhousedao/reactor";
-import { getConfig } from "@powerhousedao/shared/clis";
+import {
+  getConfig,
+  type PHConnectDefaultDrive,
+  type PHConnectRuntimeConfig,
+} from "@powerhousedao/shared/clis";
 import { addDefaultDrive } from "@powerhousedao/switchboard/utils";
 import { join } from "node:path";
 import { blue, green, red, yellow, type Color } from "colorette";
@@ -9,24 +13,34 @@ import type { ILogger } from "document-model";
 import { childLogger, setLogLevel } from "document-model";
 import { createLogger } from "vite";
 import type { VetraArgs } from "../types.js";
-import { generateProjectDriveId, POWERHOUSE_CONFIG_FILE } from "../utils.js";
+import {
+  generateProjectDriveId,
+  getProjectInfo,
+  POWERHOUSE_CONFIG_FILE,
+} from "../utils.js";
 import { wasFlagExplicitlyPassed } from "../utils/cli-connect-override.js";
 import {
   configureVetraGithubUrl,
   sleep,
 } from "../utils/configure-vetra-github-url.js";
-import { POWERHOUSE_DRIVE_ICON } from "../utils/drive-icons.js";
 import { mergeDefaultDrives, rebaseDriveUrl } from "@powerhousedao/host-core";
 import { parseDefaultDrivesUrl } from "../utils/parse-default-drives.js";
 import { resolveSwitchboardPort } from "../utils/resolve-switchboard-port.js";
 import {
   clearVetraRuntime,
+  legacyMcpConfigs,
   probeVetraRuntime,
   syncMcpPort,
   writeVetraRuntime,
+  type VetraRuntimeRecord,
 } from "../utils/vetra-runtime.js";
+import { stopVetra } from "../utils/vetra-launch.js";
 import { runConnectStudio } from "./connect-studio.js";
-import { startSwitchboard } from "./switchboard.js";
+import {
+  POWERHOUSE_DRIVE_ICON,
+  seedWorkflowsDrive,
+  startSwitchboard,
+} from "@powerhousedao/ph-run/switchboard";
 
 const VETRA_DRIVE_NAME = "vetra";
 
@@ -61,10 +75,12 @@ function createViteLogger(color: Color) {
   return customLogger;
 }
 
-async function startVetraPreviewDrive(
+/** Creates the Vetra Preview drive, or opens it, and opens it in `app` when given. */
+export async function startVetraPreviewDrive(
   reactor: IReactorClient,
   port: number,
   verbose?: boolean,
+  app?: string,
 ): Promise<string | null> {
   const previewDriveId = generateProjectDriveId("preview");
 
@@ -84,7 +100,15 @@ async function startVetraPreviewDrive(
     },
   };
 
-  const driveUrl = await addDefaultDrive(reactor, previewDrive, port);
+  const driveUrl = await addDefaultDrive(
+    reactor,
+    { ...previewDrive, preferredEditor: app },
+    port,
+  );
+
+  if (app && driveUrl) {
+    await openDriveIn(reactor, previewDriveId, app);
+  }
 
   if (verbose && driveUrl) {
     console.log(blue(`Vetra Switchboard: Preview drive: ${driveUrl}`));
@@ -92,35 +116,49 @@ async function startVetraPreviewDrive(
   return driveUrl ?? null;
 }
 
-// Opens in Workflow Studio; only seeded when the switchboard runs workflows.
-// Exported for the switchboard bridge runner: a hosts project with
-// reactor.workflows enabled seeds the SAME project-hashed drive this vetra
-// path does, until drive provisioning becomes a plugin contribution.
-export async function seedWorkflowsDrive(
+/** Sets the drive's app unless it already has it; a drive from an earlier run keeps its old one otherwise. */
+async function openDriveIn(
   reactor: IReactorClient,
-  port: number,
-  verbose?: boolean,
-): Promise<string | null> {
-  const workflowsDrive = {
-    id: generateProjectDriveId("workflows"),
-    slug: "workflows",
-    global: { name: "Workflows" },
-    preferredEditor: "workflow-studio",
-    local: {
-      availableOffline: true,
-      listeners: [],
-      sharingType: "public" as const,
-      triggers: [],
-    },
-  };
-
-  const driveUrl = await addDefaultDrive(reactor, workflowsDrive, port);
-
-  if (verbose && driveUrl) {
-    console.log(blue(`Vetra Switchboard: Workflows drive: ${driveUrl}`));
+  driveId: string,
+  app: string,
+): Promise<void> {
+  const drive = await reactor.read.get(driveId);
+  if (drive.header.meta?.preferredEditor === app) {
+    return;
   }
-  return driveUrl ?? null;
+  const handle = await reactor.write.setPreferredEditor(driveId, app);
+  await handle.readable;
 }
+
+// Studio's drives, read and written on the local Switchboard, so Studio and agents see one set
+// of drives (not with a remote Vetra drive, or a project that sets multiReactor or reactorClient), and no cookie banner.
+export function buildVetraStudioOverride(
+  defaultDrives: PHConnectDefaultDrive[],
+  options: {
+    remoteDrive?: string;
+    projectConnect?: PHConnectRuntimeConfig;
+  } = {},
+): PHConnectRuntimeConfig {
+  const override: PHConnectRuntimeConfig = {
+    drives: { defaultDrives, preserveStrategy: "preserve-all" },
+  };
+  // A first visit's cookie dialog covers the local Studio, agents' browsers included.
+  if (options.projectConnect?.app?.cookieBanner === undefined) {
+    override.app = { cookieBanner: false };
+  }
+  const instance = options.projectConnect?.instance;
+  if (
+    !options.remoteDrive &&
+    instance?.multiReactor === undefined &&
+    instance?.reactorClient === undefined
+  ) {
+    override.instance = {
+      reactorClient: "remote",
+    } as typeof override.instance;
+  }
+  return override;
+}
+
 async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
   const {
     connectPort,
@@ -202,6 +240,8 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
           switchboard.reactor,
           actualSwitchboardPort,
           verbose,
+          getConfig(join(process.cwd(), POWERHOUSE_CONFIG_FILE)).vetra
+            ?.previewDrive?.app,
         );
       } catch (error) {
         console.error(error);
@@ -211,11 +251,17 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
     let workflowsDriveUrl: string | null = null;
     if (switchboard.workflowsEnabled) {
       try {
+        // Opens in Workflow Studio.
         workflowsDriveUrl = await seedWorkflowsDrive(
           switchboard.reactor,
           actualSwitchboardPort,
-          verbose,
+          getProjectInfo().path,
         );
+        if (verbose && workflowsDriveUrl) {
+          console.log(
+            blue(`Vetra Switchboard: Workflows drive: ${workflowsDriveUrl}`),
+          );
+        }
       } catch (error) {
         console.error(error);
       }
@@ -286,21 +332,39 @@ export async function startVetra(args: VetraArgs) {
   const projectDir = process.cwd();
   const { readPackageSync } = await import("read-pkg");
   const projectName = readPackageSync({ cwd: projectDir }).name;
-  const probe = await probeVetraRuntime(projectDir, projectName);
+  let probe = await probeVetraRuntime(projectDir, projectName);
 
-  if (probe.status === "live") {
+  if (
+    args.restart &&
+    (probe.status === "live" || probe.status === "starting")
+  ) {
+    console.log(`Stopping this project's Vetra (pid ${probe.record.pid})...`);
+    await stopVetra({ projectDir, projectName });
+    probe = await probeVetraRuntime(projectDir, projectName);
+  }
+
+  if (probe.status === "live" || probe.status === "starting") {
     console.log();
-    console.log(green("Vetra is already running for this project."));
-    console.log(
-      green(`   ➜ Connect:     http://localhost:${probe.record.connectPort}`),
-    );
     console.log(
       green(
-        `   ➜ Switchboard: http://localhost:${probe.record.switchboardPort}/graphql`,
+        probe.status === "live"
+          ? "Vetra is already running for this project."
+          : "Vetra is already starting for this project.",
+      ),
+    );
+    const { record } = probe;
+    console.log(
+      green(
+        `   ➜ Connect:     ${record.connectUrl ?? `http://localhost:${record.connectPort}`}`,
       ),
     );
     console.log(
-      `Stop that instance (pid ${probe.record.pid}) if you need to restart it.`,
+      green(
+        `   ➜ Switchboard: ${record.switchboardUrl ?? `http://localhost:${record.switchboardPort}/graphql`}`,
+      ),
+    );
+    console.log(
+      `Run \`ph vetra --restart\` to restart it, or stop it (pid ${probe.record.pid}).`,
     );
     return;
   }
@@ -349,15 +413,22 @@ export async function startVetra(args: VetraArgs) {
 
     // Record what we actually bound, so a second `ph vetra` can tell a live
     // instance from a stale file, and so an agent can see the real ports.
-    writeVetraRuntime(projectDir, {
+    const runtimeRecord: VetraRuntimeRecord = {
       pid: process.pid,
       projectName,
       switchboardPort: actualSwitchboardPort,
       connectPort,
+      switchboardUrl: `http://localhost:${actualSwitchboardPort}/graphql`,
       mcpUrl: `http://localhost:${actualSwitchboardPort}/mcp`,
+      ...(disableConnect
+        ? {}
+        : { connectUrl: `http://localhost:${connectPort}/` }),
       startedAt: new Date().toISOString(),
-    });
-    const releaseRuntimeRecord = () => clearVetraRuntime(projectDir);
+    };
+    writeVetraRuntime(projectDir, runtimeRecord);
+    // A restarted Vetra may already have written its own.
+    const releaseRuntimeRecord = () =>
+      clearVetraRuntime(projectDir, process.pid);
     process.on("exit", releaseRuntimeRecord);
     process.on("SIGINT", () => {
       releaseRuntimeRecord();
@@ -379,6 +450,13 @@ export async function startVetra(args: VetraArgs) {
           `Updated ${driftedMcpFiles.join(" and ")} to port ${actualSwitchboardPort}. ` +
             `Reconnect your MCP client (/mcp) to pick it up. ` +
             `This edit is local — do not commit it.`,
+        ),
+      );
+    }
+    if (legacyMcpConfigs(projectDir).length > 0) {
+      console.log(
+        yellow(
+          "reactor-mcp still points at a URL; run `ph migrate` to switch it to the `ph mcp` launcher.",
         ),
       );
     }
@@ -438,13 +516,18 @@ export async function startVetra(args: VetraArgs) {
           ? [{ url: browserWorkflowsDriveUrl, name: null, icon: null }]
           : []),
       ];
-      const configuredDefaultDrives =
-        getConfig(join(projectDir, POWERHOUSE_CONFIG_FILE)).connect?.drives
-          ?.defaultDrives ?? [];
-      const resolvedDefaultDrives = mergeDefaultDrives(
-        vetraDriveEntries,
-        configuredDefaultDrives,
-      );
+      // Read again each time Studio restarts for a changed powerhouse.config.json.
+      const studioDrives = () => {
+        const projectConnect = getConfig(
+          join(projectDir, POWERHOUSE_CONFIG_FILE),
+        ).connect;
+        const drives = mergeDefaultDrives(
+          vetraDriveEntries,
+          projectConnect?.drives?.defaultDrives ?? [],
+        );
+        return { projectConnect, drives };
+      };
+      const resolvedDefaultDrives = studioDrives().drives;
 
       if (verbose) {
         console.log("Starting Connect...");
@@ -474,14 +557,15 @@ export async function startVetra(args: VetraArgs) {
       // runConnectStudio so it survives the `wasFlagExplicitlyPassed`
       // gating (the user didn't pass --default-drives-url; vetra is setting
       // it itself).
-      const vetraDrivesOverride = {
-        drives: {
-          defaultDrives: resolvedDefaultDrives,
-          preserveStrategy: "preserve-all" as const,
-        },
+      const vetraDrivesOverride = () => {
+        const { projectConnect, drives } = studioDrives();
+        return buildVetraStudioOverride(drives, {
+          remoteDrive,
+          projectConnect,
+        });
       };
 
-      await runConnectStudio(
+      const studio = await runConnectStudio(
         {
           ...args,
           port: connectPort,
@@ -497,7 +581,17 @@ export async function startVetra(args: VetraArgs) {
         },
         customViteLogger,
         vetraDrivesOverride,
+        { reloadOnConfigChange: true },
       );
+      // Vite may have taken another port, and the base path is Connect's.
+      const connectUrl = studio.resolvedUrls?.local[0];
+      if (connectUrl && connectUrl !== runtimeRecord.connectUrl) {
+        writeVetraRuntime(projectDir, {
+          ...runtimeRecord,
+          connectPort: Number(new URL(connectUrl).port) || connectPort,
+          connectUrl,
+        });
+      }
     }
   } catch (error) {
     console.error(error);

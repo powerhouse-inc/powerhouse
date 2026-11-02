@@ -6,4 +6,4 @@ Connect dist `powerhouse.config.json` JSON Schema; it imports field shapes from
 `@powerhousedao/shared`. The committed `connect-utils/runtime-config.schema.json`
 is **generated** — never hand-edit it. After changing a config field rebuild
 this package and run `pnpm tsx scripts/emit-schemas.ts` from the repo root.
-Full workflow: `apps/connect/RUNTIME-CONFIG.md` → "Adding or changing a config field".
+Full workflow: `apps/connect/CUSTOMIZING.md` → "Adding or changing a field".

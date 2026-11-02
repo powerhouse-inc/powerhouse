@@ -1,4 +1,4 @@
-import { typeDefs } from "@powerhousedao/document-engineering/graphql";
+import { documentModelScalars } from "document-model/scalars";
 import { buildSchema, printSchema } from "graphql";
 
 export const hiddenQueryTypeDefDoc = `type Query {
@@ -6,7 +6,15 @@ export const hiddenQueryTypeDefDoc = `type Query {
 }
 `;
 
-export const typeDefsDoc = typeDefs.join("\n");
+/** The scalars every model may use without declaring them, by name. */
+export const standardLibScalars = new Map(
+  documentModelScalars.map((definition) => [definition.name, definition]),
+);
+
+export const typeDefsDoc = Array.from(
+  standardLibScalars.keys(),
+  (name) => `scalar ${name}`,
+).join("\n");
 
 export const initialSchemaDoc = `${hiddenQueryTypeDefDoc}\n${typeDefsDoc}`;
 

@@ -35,6 +35,9 @@
       "path": "../reactor-browser"
     },
     {
+      "path": "../reactor-mcp"
+    },
+    {
       "path": "../shared"
     }
   ]

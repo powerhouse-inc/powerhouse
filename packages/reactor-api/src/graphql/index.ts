@@ -1,6 +1,7 @@
 export * from "./analytics-subgraph.js";
 export * from "./auth/index.js";
 export * from "./base-subgraph.js";
+export * from "./index-subgraph.js";
 export * from "./gateway/auth-middleware.js";
 export * from "./gateway/factory.js";
 export * from "./gateway/types.js";

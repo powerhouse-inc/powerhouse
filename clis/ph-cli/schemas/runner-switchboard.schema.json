@@ -5,7 +5,9 @@
   "properties": {
     "name": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
     },
     "runner": {
       "type": "object",
@@ -20,8 +22,8 @@
         },
         "port": {
           "type": "integer",
-          "exclusiveMinimum": 0,
-          "maximum": 9007199254740991
+          "minimum": 0,
+          "maximum": 65535
         },
         "host": {
           "type": "string",
@@ -88,7 +90,507 @@
     },
     "config": {
       "type": "object",
-      "properties": {},
+      "properties": {
+        "switchboard": {
+          "type": "object",
+          "properties": {
+            "server": {
+              "type": "object",
+              "properties": {
+                "strictPort": {
+                  "type": "boolean"
+                },
+                "basePath": {
+                  "type": "string"
+                },
+                "publicUrl": {
+                  "type": "string"
+                },
+                "host": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "gatewayAdapter": {
+                  "type": "string",
+                  "enum": ["apollo", "mercurius", "stitching"]
+                },
+                "https": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "keyPath": {
+                          "type": "string"
+                        },
+                        "certPath": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["keyPath", "certPath"]
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            },
+            "storage": {
+              "type": "object",
+              "properties": {
+                "inMemory": {
+                  "type": "boolean"
+                },
+                "userDataDir": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "pglite": {
+                  "type": "object",
+                  "properties": {
+                    "fsync": {
+                      "type": "boolean"
+                    },
+                    "workers": {
+                      "type": "boolean"
+                    },
+                    "workerMemoryMb": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    },
+                    "vacuumFull": {
+                      "type": "object",
+                      "properties": {
+                        "mode": {
+                          "type": "string",
+                          "enum": ["off", "quiet", "forced"]
+                        },
+                        "aboveMb": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "quietMs": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "maxDeferMs": {
+                          "type": "number",
+                          "minimum": 0
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "migratePglite": {
+                  "type": "boolean"
+                },
+                "forcePgVersion": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "const": 16
+                    },
+                    {
+                      "type": "number",
+                      "const": 17
+                    }
+                  ]
+                },
+                "keyframes": {
+                  "type": "object",
+                  "properties": {
+                    "default": {
+                      "type": "object",
+                      "properties": {
+                        "interval": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        "keep": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "types": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "interval": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          },
+                          "keep": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "auth": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "resolveIdentity": {
+                  "type": "boolean"
+                },
+                "requireAuthenticatedCaller": {
+                  "type": "boolean"
+                },
+                "requireAuthenticatedCallerExemptPaths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "admins": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "defaultProtection": {
+                  "type": "boolean"
+                },
+                "attachmentReadsFollowDocumentPolicy": {
+                  "type": "boolean"
+                },
+                "documentPermissions": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "cacheTtlMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "skipCredentialVerification": {
+                  "type": "boolean"
+                },
+                "credentialCacheTtlMs": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "wsRecheckMs": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "ownerClaim": {
+                  "type": "boolean"
+                },
+                "offlineCredentials": {
+                  "type": "boolean"
+                },
+                "renown": {
+                  "type": "object",
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "enum": ["self", "remote", "kept"]
+                    },
+                    "url": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "switchboardUrl": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "inspection": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "admin": {
+                  "type": "boolean"
+                },
+                "callsPerMinute": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                }
+              },
+              "additionalProperties": false
+            },
+            "workers": {
+              "type": "object",
+              "properties": {
+                "executor": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "string",
+                          "const": "auto"
+                        }
+                      ]
+                    },
+                    "poolSize": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "acquireTimeoutMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "hostPoolSize": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "projection": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "poolSize": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "packages": {
+              "type": "object",
+              "properties": {
+                "registryUrl": {
+                  "type": "string"
+                },
+                "registryPackages": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "list": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "disableLocal": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "features": {
+              "type": "object",
+              "properties": {
+                "mcp": {
+                  "type": "boolean"
+                },
+                "workflows": {
+                  "type": "boolean"
+                },
+                "documentModelSubgraphs": {
+                  "type": "boolean"
+                },
+                "privacy": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "deploymentSecret": {
+                      "type": "string"
+                    },
+                    "intervalMs": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "deadlineMs": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "markerGraceMs": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "purgeTimeoutMs": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "attachments": {
+              "type": "object",
+              "properties": {
+                "storage": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "filesystem"
+                        }
+                      },
+                      "required": ["kind"]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "s3"
+                        },
+                        "s3": {
+                          "type": "object",
+                          "properties": {
+                            "endpoint": {
+                              "type": "string"
+                            },
+                            "region": {
+                              "type": "string"
+                            },
+                            "bucket": {
+                              "type": "string"
+                            },
+                            "accessKeyId": {
+                              "type": "string"
+                            },
+                            "secretAccessKey": {
+                              "type": "string"
+                            },
+                            "prefix": {
+                              "type": "string"
+                            },
+                            "forcePathStyle": {
+                              "type": "boolean"
+                            },
+                            "uploadTtlSeconds": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991
+                            },
+                            "downloadTtlSeconds": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "endpoint",
+                            "region",
+                            "bucket",
+                            "accessKeyId",
+                            "secretAccessKey",
+                            "prefix",
+                            "forcePathStyle",
+                            "uploadTtlSeconds",
+                            "downloadTtlSeconds"
+                          ]
+                        }
+                      },
+                      "required": ["kind", "s3"]
+                    }
+                  ]
+                },
+                "urlSigningSecret": {
+                  "type": "string"
+                },
+                "downloadTargetMaxTtlSeconds": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "serviceUrl": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "identity": {
+              "type": "object",
+              "properties": {
+                "keypairPath": {
+                  "type": "string"
+                },
+                "requireExisting": {
+                  "type": "boolean"
+                },
+                "baseUrl": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "configFile": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
       "additionalProperties": false
     },
     "profile": {
@@ -210,49 +712,55 @@
                   "url": {
                     "anyOf": [
                       {
-                        "type": "string",
-                        "format": "uri"
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ]
                       },
                       {
                         "$ref": "#/$defs/__schema0"
                       }
                     ]
-                  }
-                },
-                "required": ["url"],
-                "additionalProperties": false
-              },
-              "projection": {
-                "type": "object",
-                "properties": {
-                  "enabled": {
-                    "type": "boolean"
                   },
-                  "dbPoolSize": {
+                  "requestTimeoutMs": {
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 9007199254740991
-                  }
-                },
-                "additionalProperties": false
-              },
-              "executors": {
-                "type": "object",
-                "properties": {
-                  "numWorkers": {
+                  },
+                  "breaker": {
                     "anyOf": [
                       {
-                        "type": "integer",
-                        "exclusiveMinimum": 0,
-                        "maximum": 9007199254740991
+                        "type": "boolean",
+                        "const": false
                       },
                       {
-                        "type": "string",
-                        "const": "auto"
+                        "type": "object",
+                        "properties": {
+                          "failures": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          },
+                          "openMs": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "additionalProperties": false
                       }
                     ]
+                  },
+                  "realtime": {
+                    "type": "boolean"
                   }
                 },
+                "required": ["url"],
                 "additionalProperties": false
               }
             },
@@ -266,10 +774,36 @@
             "primary": {
               "type": "string"
             },
-            "default": {
+            "drives": {
               "type": "object",
-              "properties": {},
-              "additionalProperties": {}
+              "propertyNames": {
+                "type": "string",
+                "minLength": 1
+              },
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "newDrives": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "router": {
+          "type": "object",
+          "properties": {
+            "probeTimeoutMs": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "provisionalRouteMs": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
           },
           "additionalProperties": false
@@ -290,6 +824,9 @@
                   "type": "boolean"
                 },
                 "authConditions": {
+                  "type": "boolean"
+                },
+                "undoV3": {
                   "type": "boolean"
                 }
               },
@@ -326,38 +863,9 @@
           },
           "additionalProperties": false
         },
-        "packages": {
-          "type": "object",
-          "properties": {
-            "registryUrl": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        },
         "namespace": {
           "type": "string",
           "minLength": 1
-        },
-        "auth": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "admins": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "renown": {
-              "type": "object",
-              "properties": {},
-              "additionalProperties": {}
-            }
-          },
-          "additionalProperties": false
         },
         "drives": {
           "anyOf": [
@@ -383,6 +891,13 @@
                         "type": "string",
                         "const": "id"
                       }
+                    ]
+                  },
+                  "documentType": {
+                    "type": "string",
+                    "enum": [
+                      "powerhouse/document-drive",
+                      "powerhouse/reactor-drive"
                     ]
                   },
                   "name": {

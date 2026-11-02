@@ -170,6 +170,211 @@
       ]
     },
     {
+      "name": "router",
+      "displayName": "Router",
+      "description": "Continues on the first branch whose condition holds, else on Otherwise. Each branch tests one value, as Branch does.",
+      "requireAuth": false,
+      "ports": ["otherwise", "error"],
+      "props": [
+        {
+          "name": "branches",
+          "displayName": "Branches",
+          "type": "ARRAY",
+          "required": true,
+          "hasDynamicResolver": false,
+          "description": "Tested in order; the first that holds is taken.",
+          "properties": [
+            {
+              "name": "name",
+              "displayName": "Name",
+              "type": "SHORT_TEXT",
+              "required": false,
+              "hasDynamicResolver": false,
+              "description": "Labels the branch's port."
+            },
+            {
+              "name": "left",
+              "displayName": "Value",
+              "type": "SHORT_TEXT",
+              "required": true,
+              "hasDynamicResolver": false,
+              "description": "What to test, usually an expression.",
+              "placeholder": "{{steps.fetch.output.status}}"
+            },
+            {
+              "name": "operator",
+              "displayName": "Condition",
+              "type": "STATIC_DROPDOWN",
+              "required": true,
+              "hasDynamicResolver": false,
+              "description": "How the value is tested.",
+              "defaultValue": "TEXT_EXACTLY_MATCHES",
+              "staticOptions": [
+                {
+                  "label": "Text is exactly",
+                  "value": "TEXT_EXACTLY_MATCHES"
+                },
+                {
+                  "label": "Text is not exactly",
+                  "value": "TEXT_DOES_NOT_EXACTLY_MATCH"
+                },
+                {
+                  "label": "Text contains",
+                  "value": "TEXT_CONTAINS"
+                },
+                {
+                  "label": "Text does not contain",
+                  "value": "TEXT_DOES_NOT_CONTAIN"
+                },
+                {
+                  "label": "Text starts with",
+                  "value": "TEXT_STARTS_WITH"
+                },
+                {
+                  "label": "Text does not start with",
+                  "value": "TEXT_DOES_NOT_START_WITH"
+                },
+                {
+                  "label": "Text ends with",
+                  "value": "TEXT_ENDS_WITH"
+                },
+                {
+                  "label": "Text does not end with",
+                  "value": "TEXT_DOES_NOT_END_WITH"
+                },
+                {
+                  "label": "Number equals",
+                  "value": "NUMBER_IS_EQUAL_TO"
+                },
+                {
+                  "label": "Number is greater than",
+                  "value": "NUMBER_IS_GREATER_THAN"
+                },
+                {
+                  "label": "Number is less than",
+                  "value": "NUMBER_IS_LESS_THAN"
+                },
+                {
+                  "label": "Date is",
+                  "value": "DATE_IS_EQUAL"
+                },
+                {
+                  "label": "Date is before",
+                  "value": "DATE_IS_BEFORE"
+                },
+                {
+                  "label": "Date is after",
+                  "value": "DATE_IS_AFTER"
+                },
+                {
+                  "label": "Is true",
+                  "value": "BOOLEAN_IS_TRUE"
+                },
+                {
+                  "label": "Is false",
+                  "value": "BOOLEAN_IS_FALSE"
+                },
+                {
+                  "label": "List contains",
+                  "value": "LIST_CONTAINS"
+                },
+                {
+                  "label": "List does not contain",
+                  "value": "LIST_DOES_NOT_CONTAIN"
+                },
+                {
+                  "label": "List is empty",
+                  "value": "LIST_IS_EMPTY"
+                },
+                {
+                  "label": "List is not empty",
+                  "value": "LIST_IS_NOT_EMPTY"
+                },
+                {
+                  "label": "Exists",
+                  "value": "EXISTS"
+                },
+                {
+                  "label": "Does not exist",
+                  "value": "DOES_NOT_EXIST"
+                }
+              ]
+            },
+            {
+              "name": "right",
+              "displayName": "Compared with",
+              "type": "SHORT_TEXT",
+              "required": true,
+              "hasDynamicResolver": false,
+              "description": "The value the condition compares to.",
+              "showWhen": {
+                "prop": "operator",
+                "oneOf": [
+                  "TEXT_EXACTLY_MATCHES",
+                  "TEXT_DOES_NOT_EXACTLY_MATCH",
+                  "TEXT_CONTAINS",
+                  "TEXT_DOES_NOT_CONTAIN",
+                  "TEXT_STARTS_WITH",
+                  "TEXT_DOES_NOT_START_WITH",
+                  "TEXT_ENDS_WITH",
+                  "TEXT_DOES_NOT_END_WITH",
+                  "NUMBER_IS_EQUAL_TO",
+                  "NUMBER_IS_GREATER_THAN",
+                  "NUMBER_IS_LESS_THAN",
+                  "DATE_IS_EQUAL",
+                  "DATE_IS_BEFORE",
+                  "DATE_IS_AFTER",
+                  "LIST_CONTAINS",
+                  "LIST_DOES_NOT_CONTAIN"
+                ]
+              }
+            },
+            {
+              "name": "caseSensitive",
+              "displayName": "Case sensitive",
+              "type": "CHECKBOX",
+              "required": false,
+              "hasDynamicResolver": false,
+              "description": "Match letter case exactly.",
+              "showWhen": {
+                "prop": "operator",
+                "oneOf": [
+                  "TEXT_EXACTLY_MATCHES",
+                  "TEXT_DOES_NOT_EXACTLY_MATCH",
+                  "TEXT_CONTAINS",
+                  "TEXT_DOES_NOT_CONTAIN",
+                  "TEXT_STARTS_WITH",
+                  "TEXT_DOES_NOT_START_WITH",
+                  "TEXT_ENDS_WITH",
+                  "TEXT_DOES_NOT_END_WITH",
+                  "LIST_CONTAINS",
+                  "LIST_DOES_NOT_CONTAIN"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "loop",
+      "displayName": "Loop on items",
+      "description": "Runs the steps under For each item once per item, in order, then continues After loop. Those steps read the current item and its index (from 1) from this step's output.",
+      "requireAuth": false,
+      "ports": ["next", "each", "error"],
+      "props": [
+        {
+          "name": "items",
+          "displayName": "Items",
+          "type": "SHORT_TEXT",
+          "required": true,
+          "hasDynamicResolver": false,
+          "description": "An expression that resolves to a list.",
+          "placeholder": "{{steps.fetch.output.rows}}"
+        }
+      ]
+    },
+    {
       "name": "assert",
       "displayName": "Assert",
       "description": "Fails the step when its value is blank or rejected, so a bad value stops the run instead of reaching a step with a side effect.",
@@ -215,6 +420,411 @@
           "type": "SHORT_TEXT",
           "required": false,
           "hasDynamicResolver": false
+        }
+      ]
+    },
+    {
+      "name": "delay",
+      "displayName": "Delay",
+      "description": "Suspends the run for a while, or until a date, then carries on. The run holds no worker while it waits.",
+      "requireAuth": false,
+      "ports": ["next", "error"],
+      "props": [
+        {
+          "name": "mode",
+          "displayName": "Mode",
+          "type": "STATIC_DROPDOWN",
+          "required": true,
+          "hasDynamicResolver": false,
+          "defaultValue": "for",
+          "staticOptions": [
+            {
+              "label": "Delay for",
+              "value": "for"
+            },
+            {
+              "label": "Delay until",
+              "value": "until"
+            }
+          ]
+        },
+        {
+          "name": "amount",
+          "displayName": "Amount",
+          "type": "NUMBER",
+          "required": true,
+          "hasDynamicResolver": false,
+          "showWhen": {
+            "prop": "mode",
+            "oneOf": ["for"]
+          }
+        },
+        {
+          "name": "unit",
+          "displayName": "Unit",
+          "type": "STATIC_DROPDOWN",
+          "required": true,
+          "hasDynamicResolver": false,
+          "defaultValue": "minutes",
+          "staticOptions": [
+            {
+              "label": "Seconds",
+              "value": "seconds"
+            },
+            {
+              "label": "Minutes",
+              "value": "minutes"
+            },
+            {
+              "label": "Hours",
+              "value": "hours"
+            },
+            {
+              "label": "Days",
+              "value": "days"
+            }
+          ],
+          "showWhen": {
+            "prop": "mode",
+            "oneOf": ["for"]
+          }
+        },
+        {
+          "name": "until",
+          "displayName": "Until",
+          "type": "DATE_TIME",
+          "required": true,
+          "hasDynamicResolver": false,
+          "description": "ISO 8601 date and time; a past one does not wait.",
+          "showWhen": {
+            "prop": "mode",
+            "oneOf": ["until"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "approval",
+      "displayName": "Request approval",
+      "description": "Suspends the run until someone approves or rejects it in the workflow editor. The decision is the step's output.",
+      "requireAuth": false,
+      "ports": ["next", "error"],
+      "props": [
+        {
+          "name": "title",
+          "displayName": "Title",
+          "type": "SHORT_TEXT",
+          "required": true,
+          "hasDynamicResolver": false
+        },
+        {
+          "name": "body",
+          "displayName": "Details",
+          "type": "LONG_TEXT",
+          "required": false,
+          "hasDynamicResolver": false,
+          "description": "Markdown shown to the approver; expressions are filled in when the run pauses."
+        },
+        {
+          "name": "approveLabel",
+          "displayName": "Approve label",
+          "type": "SHORT_TEXT",
+          "required": false,
+          "hasDynamicResolver": false,
+          "defaultValue": "Approve"
+        },
+        {
+          "name": "rejectLabel",
+          "displayName": "Reject label",
+          "type": "SHORT_TEXT",
+          "required": false,
+          "hasDynamicResolver": false,
+          "defaultValue": "Reject"
+        },
+        {
+          "name": "reasonRequiredOn",
+          "displayName": "Reason required",
+          "type": "STATIC_DROPDOWN",
+          "required": false,
+          "hasDynamicResolver": false,
+          "defaultValue": "none",
+          "staticOptions": [
+            {
+              "label": "Never",
+              "value": "none"
+            },
+            {
+              "label": "On reject",
+              "value": "reject"
+            },
+            {
+              "label": "Always",
+              "value": "both"
+            }
+          ]
+        },
+        {
+          "name": "approvers",
+          "displayName": "Approvers",
+          "type": "ARRAY",
+          "required": false,
+          "hasDynamicResolver": false,
+          "description": "DIDs or addresses allowed to decide in the editor; empty lets anyone who can edit the workflow."
+        },
+        {
+          "name": "expiresAfter",
+          "displayName": "Expires after",
+          "type": "NUMBER",
+          "required": false,
+          "hasDynamicResolver": false,
+          "description": "Ends the run if nobody decides in time; the workflow's maxSuspensionDays still applies."
+        },
+        {
+          "name": "expiresUnit",
+          "displayName": "Expiry unit",
+          "type": "STATIC_DROPDOWN",
+          "required": false,
+          "hasDynamicResolver": false,
+          "defaultValue": "days",
+          "staticOptions": [
+            {
+              "label": "Seconds",
+              "value": "seconds"
+            },
+            {
+              "label": "Minutes",
+              "value": "minutes"
+            },
+            {
+              "label": "Hours",
+              "value": "hours"
+            },
+            {
+              "label": "Days",
+              "value": "days"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "stop",
+      "displayName": "Stop run",
+      "description": "Ends the run successfully without running further steps. In a run that holds a request (a sync webhook or a /sync resume) it answers with the response set here, or 200 with {} when none is.",
+      "requireAuth": false,
+      "ports": ["error"],
+      "props": [
+        {
+          "name": "responseType",
+          "displayName": "Response type",
+          "type": "STATIC_DROPDOWN",
+          "required": false,
+          "hasDynamicResolver": false,
+          "defaultValue": "json",
+          "staticOptions": [
+            {
+              "label": "JSON",
+              "value": "json"
+            },
+            {
+              "label": "Raw",
+              "value": "raw"
+            },
+            {
+              "label": "Redirect",
+              "value": "redirect"
+            }
+          ]
+        },
+        {
+          "name": "status",
+          "displayName": "Status",
+          "type": "NUMBER",
+          "required": false,
+          "hasDynamicResolver": false,
+          "description": "HTTP status; 200 when blank.",
+          "showWhen": {
+            "prop": "responseType",
+            "oneOf": ["json", "raw"]
+          }
+        },
+        {
+          "name": "headers",
+          "displayName": "Headers",
+          "type": "OBJECT",
+          "required": false,
+          "hasDynamicResolver": false,
+          "showWhen": {
+            "prop": "responseType",
+            "oneOf": ["json", "raw"]
+          }
+        },
+        {
+          "name": "body",
+          "displayName": "JSON body",
+          "type": "JSON",
+          "required": false,
+          "hasDynamicResolver": false,
+          "showWhen": {
+            "prop": "responseType",
+            "oneOf": ["json"]
+          }
+        },
+        {
+          "name": "text",
+          "displayName": "Raw body",
+          "type": "LONG_TEXT",
+          "required": false,
+          "hasDynamicResolver": false,
+          "showWhen": {
+            "prop": "responseType",
+            "oneOf": ["raw"]
+          }
+        },
+        {
+          "name": "redirectUrl",
+          "displayName": "Redirect URL",
+          "type": "SHORT_TEXT",
+          "required": true,
+          "hasDynamicResolver": false,
+          "showWhen": {
+            "prop": "responseType",
+            "oneOf": ["redirect"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "waitForWebhook",
+      "displayName": "Respond and wait for webhook",
+      "description": "Answers the request the run holds with this response and the step's resume URL (in the x-resume-webhook-url header, and in a JSON body when asked), then suspends the run until that URL is called. The resuming request's body, headers and query are the step's output.",
+      "requireAuth": false,
+      "ports": ["next", "error"],
+      "props": [
+        {
+          "name": "responseType",
+          "displayName": "Response type",
+          "type": "STATIC_DROPDOWN",
+          "required": false,
+          "hasDynamicResolver": false,
+          "defaultValue": "json",
+          "staticOptions": [
+            {
+              "label": "JSON",
+              "value": "json"
+            },
+            {
+              "label": "Raw",
+              "value": "raw"
+            },
+            {
+              "label": "Redirect",
+              "value": "redirect"
+            }
+          ]
+        },
+        {
+          "name": "status",
+          "displayName": "Status",
+          "type": "NUMBER",
+          "required": false,
+          "hasDynamicResolver": false,
+          "description": "HTTP status; 200 when blank.",
+          "showWhen": {
+            "prop": "responseType",
+            "oneOf": ["json", "raw"]
+          }
+        },
+        {
+          "name": "headers",
+          "displayName": "Headers",
+          "type": "OBJECT",
+          "required": false,
+          "hasDynamicResolver": false,
+          "showWhen": {
+            "prop": "responseType",
+            "oneOf": ["json", "raw"]
+          }
+        },
+        {
+          "name": "body",
+          "displayName": "JSON body",
+          "type": "JSON",
+          "required": false,
+          "hasDynamicResolver": false,
+          "showWhen": {
+            "prop": "responseType",
+            "oneOf": ["json"]
+          }
+        },
+        {
+          "name": "text",
+          "displayName": "Raw body",
+          "type": "LONG_TEXT",
+          "required": false,
+          "hasDynamicResolver": false,
+          "showWhen": {
+            "prop": "responseType",
+            "oneOf": ["raw"]
+          }
+        },
+        {
+          "name": "redirectUrl",
+          "displayName": "Redirect URL",
+          "type": "SHORT_TEXT",
+          "required": true,
+          "hasDynamicResolver": false,
+          "showWhen": {
+            "prop": "responseType",
+            "oneOf": ["redirect"]
+          }
+        },
+        {
+          "name": "includeResumeUrl",
+          "displayName": "Add resumeUrl to the body",
+          "type": "CHECKBOX",
+          "required": false,
+          "hasDynamicResolver": false,
+          "description": "Adds a resumeUrl field to a JSON object body. POST to it to resume; append /sync to wait for the run's answer.",
+          "defaultValue": true,
+          "showWhen": {
+            "prop": "responseType",
+            "oneOf": ["json"]
+          }
+        },
+        {
+          "name": "expiresAfter",
+          "displayName": "Expires after",
+          "type": "NUMBER",
+          "required": false,
+          "hasDynamicResolver": false,
+          "description": "Ends the run if nobody calls the URL in time; the workflow's maxSuspensionDays still applies."
+        },
+        {
+          "name": "expiresUnit",
+          "displayName": "Expiry unit",
+          "type": "STATIC_DROPDOWN",
+          "required": false,
+          "hasDynamicResolver": false,
+          "defaultValue": "days",
+          "staticOptions": [
+            {
+              "label": "Seconds",
+              "value": "seconds"
+            },
+            {
+              "label": "Minutes",
+              "value": "minutes"
+            },
+            {
+              "label": "Hours",
+              "value": "hours"
+            },
+            {
+              "label": "Days",
+              "value": "days"
+            }
+          ]
         }
       ]
     }
@@ -556,7 +1166,109 @@
       "requireAuth": false,
       "ports": ["next"],
       "hasSampleData": false,
-      "props": []
+      "props": [
+        {
+          "name": "inputs",
+          "displayName": "Inputs",
+          "description": "Fields a run asks for. The editor's Run shows them as a form; a fire missing a required field, or with one of the wrong type, is refused.",
+          "type": "ARRAY",
+          "required": false,
+          "hasDynamicResolver": false,
+          "properties": [
+            {
+              "name": "displayName",
+              "displayName": "Field Name",
+              "type": "SHORT_TEXT",
+              "required": true,
+              "hasDynamicResolver": false,
+              "placeholder": "e.g. Email address"
+            },
+            {
+              "name": "name",
+              "displayName": "Payload Key",
+              "description": "Read as {{trigger.payload.<key>}}.",
+              "type": "SHORT_TEXT",
+              "required": true,
+              "hasDynamicResolver": false,
+              "placeholder": "e.g. email"
+            },
+            {
+              "name": "type",
+              "displayName": "Field Type",
+              "type": "STATIC_DROPDOWN",
+              "required": true,
+              "hasDynamicResolver": false,
+              "defaultValue": "text",
+              "staticOptions": [
+                {
+                  "value": "text",
+                  "label": "Text"
+                },
+                {
+                  "value": "text_area",
+                  "label": "Long text"
+                },
+                {
+                  "value": "number",
+                  "label": "Number"
+                },
+                {
+                  "value": "toggle",
+                  "label": "Checkbox"
+                },
+                {
+                  "value": "date",
+                  "label": "Date"
+                },
+                {
+                  "value": "dropdown",
+                  "label": "Dropdown"
+                },
+                {
+                  "value": "json",
+                  "label": "JSON"
+                }
+              ]
+            },
+            {
+              "name": "options",
+              "displayName": "Options",
+              "description": "One per line: a value, or Label = value to show a label and send the value.",
+              "type": "LONG_TEXT",
+              "required": true,
+              "hasDynamicResolver": false,
+              "showWhen": {
+                "prop": "type",
+                "oneOf": ["dropdown"]
+              }
+            },
+            {
+              "name": "description",
+              "displayName": "Field Description",
+              "type": "SHORT_TEXT",
+              "required": false,
+              "hasDynamicResolver": false,
+              "placeholder": "Shown under the field"
+            },
+            {
+              "name": "defaultValue",
+              "displayName": "Default Value",
+              "description": "As text: 42, true, 2026-01-31, or JSON.",
+              "type": "SHORT_TEXT",
+              "required": false,
+              "hasDynamicResolver": false
+            },
+            {
+              "name": "required",
+              "displayName": "Required",
+              "type": "CHECKBOX",
+              "required": false,
+              "hasDynamicResolver": false,
+              "defaultValue": false
+            }
+          ]
+        }
+      ]
     }
   ]
 }

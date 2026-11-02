@@ -3,8 +3,8 @@ import {
   assertProtocolConsistency,
   primaryBackend,
   projectReactorToConnect,
+  reactorBlockToSwitchboardConfig,
   reactorClientMode,
-  projectReactorToSwitchboard,
   protocolConflicts,
   protocolEnv,
   type ReactorConfig,
@@ -56,10 +56,19 @@ describe("protocolEnv", () => {
       REACTOR_DOCUMENT_DECISIONS: "true",
     });
   });
+
+  it("maps undoV3 onto REACTOR_UNDO_V3", () => {
+    expect(protocolEnv({ featureFlags: { undoV3: false } })).toEqual({
+      REACTOR_UNDO_V3: "false",
+    });
+    expect(protocolEnv({ featureFlags: { undoV3: true } })).toEqual({
+      REACTOR_UNDO_V3: "true",
+    });
+  });
 });
 
-describe("projectReactorToSwitchboard", () => {
-  it("projects protocol, storage, readModel, dynamic packages, workflows", () => {
+describe("reactorBlockToSwitchboardConfig", () => {
+  it("maps protocol, storage, readModel, dynamic packages, workflows", () => {
     const reactor: ReactorConfig = {
       backends: {
         main: {
@@ -72,34 +81,42 @@ describe("projectReactorToSwitchboard", () => {
       workflows: true,
       protocol: fullProtocol,
     };
-    const { env, options } = projectReactorToSwitchboard(reactor);
-    expect(env).toMatchObject({
-      REACTOR_DOCUMENT_DECISIONS: "true",
-      CREATE_SIGNATURE_POLICY: "legacy",
-      PH_REACTOR_DATABASE_URL: "/data/pglite",
-      DYNAMIC_MODEL_LOADING: "true",
-      PH_WORKFLOWS_ENABLED: "1",
+    expect(reactorBlockToSwitchboardConfig(reactor)).toEqual({
+      storage: {
+        reactor: { url: "/data/pglite" },
+        readModel: { url: "dev.db" },
+      },
+      protocol: fullProtocol,
+      packages: { dynamic: true },
+      features: { workflows: true },
     });
-    expect(options.dbPath).toBe("dev.db");
+  });
+
+  it("keeps the read model out of the reactor store", () => {
+    expect(
+      reactorBlockToSwitchboardConfig({
+        backends: {
+          main: { kind: "in-process", readModel: { url: "/data/read" } },
+        },
+      }),
+    ).toEqual({ storage: { readModel: { url: "/data/read" } } });
   });
 
   it("uses the postgres url for a postgres backend", () => {
-    const { env } = projectReactorToSwitchboard({
+    const layer = reactorBlockToSwitchboardConfig({
       backends: {
         main: {
           kind: "in-process",
           storage: { kind: "postgres", url: "postgres://x" },
+          readModel: { url: "" },
         },
       },
     });
-    expect(env.PH_REACTOR_DATABASE_URL).toBe("postgres://x");
+    expect(layer.storage).toEqual({ reactor: { url: "postgres://x" } });
   });
 
   it("emits nothing for an empty reactor block", () => {
-    expect(projectReactorToSwitchboard(undefined)).toEqual({
-      env: {},
-      options: {},
-    });
+    expect(reactorBlockToSwitchboardConfig(undefined)).toEqual({});
   });
 });
 
@@ -143,9 +160,118 @@ describe("projectReactorToConnect", () => {
         local: { kind: "worker" },
         sb: { kind: "remote", remote: { url: "http://x/graphql" } },
       },
-      placement: { primary: "local" },
     });
     expect(connect.instance?.reactorClient).toBe("router");
+  });
+
+  it("reactorWorker follows the browser reactor, wherever it is listed", () => {
+    const sb = { kind: "remote" as const, remote: { url: "http://x/d/b" } };
+    expect(
+      projectReactorToConnect({ backends: { sb, tab: { kind: "worker" } } })
+        .connect.instance?.reactorWorker,
+    ).toBe(true);
+    expect(
+      projectReactorToConnect({ backends: { sb, tab: { kind: "in-process" } } })
+        .connect.instance?.reactorWorker,
+    ).toBe(false);
+  });
+
+  it("serves the router settings the host sets, in router and remote modes", () => {
+    const sb = { kind: "remote" as const, remote: { url: "http://x/d/b" } };
+    const router = { probeTimeoutMs: 1_000, provisionalRouteMs: 300_000 };
+    expect(
+      projectReactorToConnect({
+        backends: { main: { kind: "worker" }, sb },
+        placement: { newDrives: "sb" },
+        router,
+      }).connect.instance?.router,
+    ).toEqual({ newDrives: "sb", ...router });
+    expect(
+      projectReactorToConnect({
+        backends: { sb },
+        placement: { newDrives: "sb" },
+      }).connect.instance?.router,
+    ).toEqual({ newDrives: "sb" });
+    // The browser reactor is the default: naming it serves nothing.
+    expect(
+      projectReactorToConnect({
+        backends: { main: { kind: "worker" }, sb },
+        placement: { newDrives: "main" },
+      }).connect.instance,
+    ).not.toHaveProperty("router");
+    // A switchboard with no address yet (an unresolved token) isn't served,
+    // so neither is newDrives naming it.
+    const unresolved = projectReactorToConnect({
+      backends: {
+        main: { kind: "worker" },
+        sb: {
+          kind: "remote",
+          remote: {
+            url: {
+              $output: { host: "switchboard", path: ["drives", "b", "url"] },
+            } as unknown as string,
+          },
+        },
+      },
+      placement: { newDrives: "sb" },
+    }).connect.instance;
+    expect(unresolved?.remoteBackends).toEqual([]);
+    expect(unresolved).not.toHaveProperty("router");
+    // No switchboard, no router.
+    expect(
+      projectReactorToConnect({
+        backends: { main: { kind: "worker" } },
+        router,
+      }).connect.instance,
+    ).not.toHaveProperty("router");
+  });
+
+  it("serves each switchboard's connection settings with its backend", () => {
+    const { connect } = projectReactorToConnect({
+      backends: {
+        main: { kind: "worker" },
+        a: {
+          kind: "remote",
+          remote: {
+            url: "http://a:1/d/x",
+            requestTimeoutMs: 10_000,
+            breaker: { failures: 5, openMs: 120_000 },
+            realtime: false,
+          },
+        },
+        b: {
+          kind: "remote",
+          remote: { url: "http://b:2/d/y", breaker: false },
+        },
+      },
+    });
+    expect(connect.instance?.remoteBackends).toEqual([
+      {
+        name: "a",
+        url: "http://a:1/d/x",
+        requestTimeoutMs: 10_000,
+        breaker: { failures: 5, openMs: 120_000 },
+        realtime: false,
+      },
+      { name: "b", url: "http://b:2/d/y", breaker: false },
+    ]);
+  });
+
+  it("serves the remote backends by host key in router and remote modes", () => {
+    const sb = { kind: "remote" as const, remote: { url: "http://x/d/b" } };
+    expect(
+      projectReactorToConnect({
+        backends: { main: { kind: "worker" }, sb },
+      }).connect.instance?.remoteBackends,
+    ).toEqual([{ name: "sb", url: "http://x/d/b" }]);
+    expect(
+      projectReactorToConnect({ backends: { sb } }).connect.instance
+        ?.remoteBackends,
+    ).toEqual([{ name: "sb", url: "http://x/d/b" }]);
+    expect(
+      projectReactorToConnect({ backends: { main: { kind: "worker" } } })
+        .connect.instance,
+    ).not.toHaveProperty("remoteBackends");
   });
 
   it("no declared backends → no reactorClient (legacy fallback preserved)", () => {
@@ -208,6 +334,17 @@ describe("assertProtocolConsistency (the enforcement teeth)", () => {
 });
 
 describe("protocolConflicts", () => {
+  it("reads REACTOR_UNDO_V3 as the switchboard does: on unless exactly false", () => {
+    const on = { featureFlags: { undoV3: true } };
+    const off = { featureFlags: { undoV3: false } };
+    expect(protocolConflicts(on, { REACTOR_UNDO_V3: "true" })).toEqual([]);
+    expect(protocolConflicts(on, { REACTOR_UNDO_V3: "1" })).toEqual([]);
+    expect(protocolConflicts(off, { REACTOR_UNDO_V3: "false" })).toEqual([]);
+    expect(protocolConflicts(on, { REACTOR_UNDO_V3: "false" })).toHaveLength(1);
+    expect(protocolConflicts(off, { REACTOR_UNDO_V3: "true" })).toHaveLength(1);
+    expect(protocolConflicts(off, { REACTOR_UNDO_V3: "0" })).toHaveLength(1);
+  });
+
   it("is empty without a protocol, an env, or a contradiction", () => {
     expect(protocolConflicts(undefined, { REACTOR_AUTH_GROUPS: "x" })).toEqual(
       [],

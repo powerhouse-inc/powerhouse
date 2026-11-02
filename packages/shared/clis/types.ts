@@ -59,6 +59,20 @@ export type PHConnectDefaultDriveLocal = z.infer<
   typeof C.connectDefaultDriveLocalSchema
 >;
 export type PHConnectDefaultDrive = z.infer<typeof C.connectDefaultDriveSchema>;
+/** A served default drive: remote entries carry their `backend` and `sync`. */
+export type PHConnectRuntimeDefaultDrive = z.infer<
+  typeof C.connectRuntimeDefaultDriveSchema
+>;
+export type PHConnectRuntimeDefaultDriveRemote = z.infer<
+  typeof C.connectRuntimeDefaultDriveRemoteSchema
+>;
+export type PHConnectRemoteBackend = z.infer<
+  typeof C.connectRemoteBackendSchema
+>;
+export type PHConnectRouterSettings = z.infer<
+  typeof C.connectRouterSettingsSchema
+>;
+export type PHConnectCollection = z.infer<typeof C.connectCollectionSchema>;
 export type PHConnectDriveSection = z.infer<typeof C.connectDriveSectionSchema>;
 export type PHConnectDriveSections = z.infer<
   typeof C.connectDriveSectionsSchema
@@ -97,8 +111,9 @@ export type PHReactorClientMode = z.infer<
 >;
 /** Served `instance`: the authored fields plus the derived `reactorClient`. */
 export type PHConnectInstance = z.infer<typeof C.connectRuntimeInstanceSchema>;
-/** Each flag implies its predecessors, and must match the fleet Connect syncs
- * with or the two compute different replay outcomes. */
+/** The four enforcement flags each imply their predecessors, and must match
+ * the fleet Connect syncs with or the two compute different replay outcomes.
+ * `undoV3` has no prerequisites and is negotiated with peers. */
 export type PHConnectReactorFeatureFlags = z.infer<
   typeof C.connectReactorFeatureFlagsSchema
 >;
@@ -147,11 +162,17 @@ export type PHConnectRuntimeConfig = z.infer<
 export type PHReactorRenown = {
   /** "self" reads this reactor's own renown read model; "remote" (default)
    * queries a Renown or Switchboard instance. */
-  source?: "remote" | "self";
+  source?: "remote" | "self" | "kept";
   /** Renown base URL; also the instance this reactor's own identity uses. */
   url?: string;
   /** Switchboard GraphQL endpoint to read credentials from directly. */
   switchboardUrl?: string;
+};
+
+/** `reactor.keyframes`: parts left out come from `default`, then the built-in rule. */
+export type PHKeyframeRule = {
+  interval?: number;
+  keep?: number | null;
 };
 
 export type PowerhouseConfig = {
@@ -181,6 +202,10 @@ export type PowerhouseConfig = {
       filesystemPath?: string;
       postgresUrl?: string;
     };
+    keyframes?: {
+      default?: PHKeyframeRule;
+      types?: Record<string, PHKeyframeRule>;
+    };
   };
   auth?: {
     enabled?: boolean;
@@ -204,6 +229,11 @@ export type PowerhouseConfig = {
     driveId?: string;
     driveUrl?: string;
     connectPort?: number;
+    /** The Vetra Preview drive `ph vetra` creates in watch mode. */
+    previewDrive?: {
+      /** The id of the drive app the drive opens in, set each time `ph vetra` starts. */
+      app?: string;
+    };
   };
   // The project's agent host (hosts/assistant, clint mastra-runner).
   assistant?: {

@@ -162,8 +162,8 @@ export function TodoDemo() {
 
   async function create() {
     if (!client) return;
-    const created = await client.create(createTodoDocument());
-    setDocumentId(created.header.id);
+    const handle = await client.write.create(createTodoDocument());
+    setDocumentId(handle.documentId);
   }
 
   return (

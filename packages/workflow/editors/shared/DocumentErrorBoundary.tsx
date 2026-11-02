@@ -73,13 +73,13 @@ type Props = {
 type State = { error: unknown; attempt: number };
 
 export class DocumentErrorBoundary extends Component<Props, State> {
-  state: State = { error: undefined, attempt: 0 };
+  override state: State = { error: undefined, attempt: 0 };
 
   static getDerivedStateFromError(error: unknown): Partial<State> {
     return { error };
   }
 
-  componentDidCatch(error: unknown, info: ErrorInfo) {
+  override componentDidCatch(error: unknown, info: ErrorInfo) {
     console.error(
       `Failed to render document ${this.props.documentId ?? "(unknown id)"}:`,
       error,
@@ -99,7 +99,7 @@ export class DocumentErrorBoundary extends Component<Props, State> {
     this.props.onDismiss?.();
   };
 
-  render() {
+  override render() {
     if (this.state.error !== undefined) {
       return (
         <DocumentLoadError

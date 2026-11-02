@@ -69,7 +69,7 @@ type LineItem {
 ### State schema features:
 
 - Uses **GraphQL-like definitions** for a **clear, structured schema**.
-- Supports **custom scalar types** like `OID`, `Currency`, and `DateTime`. Or other Web3 specific scalars
+- Supports **built-in scalars** by name, such as `OID`, `Currency`, and `DateTime`.
 - Defines **relationships** using object references (`OID!`).
 
 The state schema acts as a **template** for document instances. Every new invoice created will follow this structure.

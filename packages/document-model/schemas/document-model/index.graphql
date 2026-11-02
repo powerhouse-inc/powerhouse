@@ -133,6 +133,7 @@ type Mutation {
   setOperationReducer(
     input: SetOperationReducerInput!
   ): DocumentModelGlobalState!
+  setOperationScope(input: SetOperationScopeInput!): DocumentModelGlobalState!
   moveOperation(input: MoveOperationInput!): DocumentModelGlobalState!
   deleteOperation(input: DeleteOperationInput!): DocumentModelGlobalState!
   reorderModuleOperations(
@@ -203,6 +204,7 @@ union DocumentModelInput =
   | SetOperationDescriptionInput
   | SetOperationTemplateInput
   | SetOperationReducerInput
+  | SetOperationScopeInput
   | MoveOperationInput
   | DeleteOperationInput
   | ReorderModuleOperationsInput

@@ -26,6 +26,9 @@
       "path": "packages/document-model"
     },
     {
+      "path": "packages/portle"
+    },
+    {
       "path": "packages/reactor-browser"
     },
     {

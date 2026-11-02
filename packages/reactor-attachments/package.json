@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-attachments",
-  "version": "6.2.3-dev.77",
+  "version": "6.2.3-dev.90",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -43,10 +43,10 @@
     "@aws-sdk/client-s3": "catalog:",
     "@aws-sdk/s3-request-presigner": "catalog:",
     "@noble/hashes": "^1.8.0",
-    "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "change-case": "catalog:",
+    "document-model": "workspace:*",
     "graphql": "catalog:",
     "kysely": "catalog:"
   },

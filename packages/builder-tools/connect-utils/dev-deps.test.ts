@@ -1,8 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { describe, expect, it } from "vitest";
-import { connectOptimizeDeps } from "./dev-deps.js";
+import { connectOptimizeDeps, dependencyStoreOf } from "./dev-deps.js";
 import {
   CONNECT_ROUTE_FILE_DEPS,
   CORE_ROUTE_TREE_SPECIFIER,
@@ -57,5 +57,27 @@ describe("CONNECT_ROUTE_FILE_DEPS", () => {
       connectOptimizeDeps("/p", "/p/hosts/lab/routes", []).entries,
     ).toEqual(["index.html", "hosts/lab/routes/**/*.{js,jsx,ts,tsx}"]);
     expect(connectOptimizeDeps("/p", false, []).entries).toBeUndefined();
+  });
+});
+
+describe("dependencyStoreOf", () => {
+  const at = (...parts: string[]) => [""].concat(parts).join(sep);
+
+  it("is the outermost node_modules of a pnpm install", () => {
+    expect(
+      dependencyStoreOf(
+        at("p", "node_modules", ".pnpm", "c@1", "node_modules", "@ph", "c"),
+      ),
+    ).toBe(at("p", "node_modules"));
+  });
+
+  it("is the node_modules of a flat install", () => {
+    expect(dependencyStoreOf(at("p", "node_modules", "@ph", "c"))).toBe(
+      at("p", "node_modules"),
+    );
+  });
+
+  it("is null for a workspace link", () => {
+    expect(dependencyStoreOf(at("repo", "apps", "connect"))).toBeNull();
   });
 });

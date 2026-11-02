@@ -18,6 +18,7 @@ export interface IReactorBrowserReadClient extends Pick<
   | "subscribe"
   | "waitForJob"
   | "getJobStatus"
+  | "drives"
 > {}
 
 /**
@@ -54,8 +55,13 @@ export interface IReactorBrowserClient extends Pick<
   | "subscribe"
   | "execute"
   | "getOperations"
+  | "newDocument"
   | "create"
   | "deleteDocument"
+  | "undo"
+  | "redo"
+  | "undoRedoTargets"
+  | "undoRedoAvailability"
 > {
   readonly read: IReactorBrowserReadClient;
   readonly write: IReactorBrowserWriteClient;

@@ -4,16 +4,19 @@
  */
 import { createAction } from "document-model";
 import {
+  SetManagedByInputSchema,
   SetWorkflowDescriptionInputSchema,
   SetWorkflowNameInputSchema,
   SetWorkflowStatusInputSchema,
 } from "../schema/zod.js";
 import type {
+  SetManagedByInput,
   SetWorkflowDescriptionInput,
   SetWorkflowNameInput,
   SetWorkflowStatusInput,
 } from "../types.js";
 import type {
+  SetManagedByAction,
   SetWorkflowDescriptionAction,
   SetWorkflowNameAction,
   SetWorkflowStatusAction,
@@ -43,5 +46,14 @@ export const setWorkflowStatus = (input: SetWorkflowStatusInput) =>
     { ...input },
     undefined,
     SetWorkflowStatusInputSchema,
+    "global",
+  );
+
+export const setManagedBy = (input: SetManagedByInput) =>
+  createAction<SetManagedByAction>(
+    "SET_MANAGED_BY",
+    { ...input },
+    undefined,
+    SetManagedByInputSchema,
     "global",
   );

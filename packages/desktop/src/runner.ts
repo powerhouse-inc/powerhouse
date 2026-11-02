@@ -1,7 +1,9 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import {
+  CONNECT_RUNNER,
   compoundWiringSchema,
   getVerb,
   loadHost,
@@ -10,11 +12,17 @@ import {
   validateHost,
   type RunnerContext,
   type RunnerHandle,
+  type PluginEntryData,
 } from "@powerhousedao/host-core";
-import { defineHostSchemas } from "@powerhousedao/host-core/schema";
+import {
+  defineHostSchemas,
+  HOST_NAME_MESSAGE,
+  hostNameSchema,
+} from "@powerhousedao/host-core/schema";
 import { z } from "zod";
 import { APP_JSON_FILE, loadAppJson } from "./app-json.js";
-import { bundleStack } from "./bundle-stack.js";
+import { bundleBackend } from "./bundle-backend.js";
+import { bundleStack, pluginPackagesOf } from "./bundle-stack.js";
 import { ICON_SOURCE, projectShell } from "./shell-project.js";
 import {
   detectToolchain,
@@ -80,13 +88,17 @@ const schemas = defineHostSchemas((base) => {
   const desktopRunnerOptionsSchema = base.runnerBaseSchema
     .extend({
       shell: shellOptionsSchema.optional(),
-      /** build: vendor ph-cli into the staged stack (default true). */
+      /** build: vendor ph-run into the staged stack (default true). */
       vendorStack: z.boolean().optional(),
-      /** build: the ph-cli version/tag to vendor (default "dev"). */
+      /** build: the ph-run version/tag to vendor (default "dev"). */
       phCliVersion: z.string().min(1).optional(),
       /** build: full install spec override (e.g. a pnpm-pack tarball path)
-       * for a ph-cli not yet on the registry. */
+       * for a ph-run not yet on the registry. */
       phCliSpec: z.string().min(1).optional(),
+      /** build: fold the vendored stack into a few hundred files with
+       * Rolldown, or set PH_DESKTOP_BUNDLE_BACKEND=1. Off by default until an
+       * installed build has proven it. */
+      bundleBackend: z.boolean().optional(),
     })
     .strict();
 
@@ -138,7 +150,17 @@ function hostDirOf(
   host: Pick<DesktopHost, "name">,
   ctx: RunnerContext,
 ): string {
-  return path.join(ctx.projectRoot, "hosts", host.name);
+  const hostsDir = path.resolve(ctx.projectRoot, "hosts");
+  const dir = path.resolve(hostsDir, host.name);
+  if (
+    !hostNameSchema.safeParse(host.name).success ||
+    path.dirname(dir) !== hostsDir
+  ) {
+    throw new Error(
+      `"${host.name}" can't name a host folder. ${HOST_NAME_MESSAGE}`,
+    );
+  }
+  return dir;
 }
 
 /** The connect member's port — the shell's readiness probe and window URL. */
@@ -330,6 +352,52 @@ async function buildMembers(
   }
 }
 
+/** What the members' plugins need, as the stack resolves them as the project
+ * does, from its own node_modules. */
+async function memberPluginPackages(
+  host: DesktopHost,
+  ctx: RunnerContext,
+): Promise<string[]> {
+  const projectRequire = createRequire(
+    path.join(ctx.projectRoot, "package.json"),
+  );
+  const resolves = (specifier: string) => {
+    try {
+      projectRequire.resolve(specifier);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const packages = new Set<string>();
+  for (const wrapper of Object.values(host.children)) {
+    const member = await loadHost(ctx.projectRoot, wrapper.host);
+    // Connect's plugins are compiled into the build it serves, and all it reads
+    // of them at run time is optional. Only a server loads any.
+    if (member.host.runner.module === CONNECT_RUNNER) continue;
+    const entries = member.host.runner.plugins as PluginEntryData[] | undefined;
+    const where = `hosts/${wrapper.host}/host.js`;
+    for (const name of pluginPackagesOf(entries ?? [], where, resolves)) {
+      packages.add(name);
+    }
+  }
+  return [...packages].sort();
+}
+
+/** Folds a stack that was just vendored, when the host asks for that. */
+async function bundleIfAsked(
+  staged: { stackDir: string; vendored: boolean },
+  asked: boolean | undefined,
+  ctx: RunnerContext,
+): Promise<void> {
+  if (!staged.vendored) return;
+  if (!(asked ?? ctx.env.PH_DESKTOP_BUNDLE_BACKEND === "1")) return;
+  await bundleBackend({
+    stackDir: staged.stackDir,
+    logger: (line) => console.log(line),
+  });
+}
+
 /** PH_DESKTOP_LOCAL_PACKAGES: tarballs to vendor in place of the registry's
  * (a machine path, so an env var rather than a host-file option). */
 function localPackagesDir(ctx: RunnerContext): string | undefined {
@@ -367,13 +435,15 @@ export async function build(
       phCliVersion: runnerOptions.phCliVersion,
       phCliSpec: runnerOptions.phCliSpec ?? ctx.env.PH_DESKTOP_PHCLI_SPEC,
       localPackagesDir: localPackagesDir(ctx),
+      plugins: await memberPluginPackages(host, ctx),
       connectPort: port,
       // the generated shell lives under hosts/ — never stage it into itself
       excludeDirs: [shellDir],
     });
+    await bundleIfAsked(staged, runnerOptions.bundleBackend, ctx);
     console.log(
       `[${host.name}] stack staged at ${staged.stackDir}` +
-        `${staged.vendored ? " (ph-cli vendored)" : ""}.`,
+        `${staged.vendored ? " (ph-run vendored)" : ""}.`,
     );
 
     const bundles = tauriBundlesForHost();
@@ -415,11 +485,13 @@ export async function build(
     phCliVersion: runnerOptions.phCliVersion,
     phCliSpec: runnerOptions.phCliSpec ?? ctx.env.PH_DESKTOP_PHCLI_SPEC,
     localPackagesDir: localPackagesDir(ctx),
+    plugins: await memberPluginPackages(host, ctx),
     connectPort: port,
   });
+  await bundleIfAsked(result, runnerOptions.bundleBackend, ctx);
   console.log(
     `[${host.name}] stack staged at ${result.stackDir}` +
-      `${result.vendored ? " (ph-cli vendored)" : ""} — the shell runs it with ` +
+      `${result.vendored ? " (ph-run vendored)" : ""} — the shell runs it with ` +
       `no environment (resources fallback).`,
   );
 }

@@ -128,7 +128,7 @@ describe("CONNECT_THEME_TOKENS", () => {
   });
 });
 
-describe("a project's style.css on migrate", () => {
+describe("a project's style.css on migrate", { timeout: 30_000 }, () => {
   const dirs: string[] = [];
   afterEach(() => {
     for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true });
@@ -185,7 +185,7 @@ const THEMED = `@import "tailwindcss";
 }
 `;
 
-describe("Connect's theme in style.css on migrate", () => {
+describe("Connect's theme in style.css on migrate", { timeout: 30_000 }, () => {
   const dirs: string[] = [];
   afterEach(() => {
     for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true });

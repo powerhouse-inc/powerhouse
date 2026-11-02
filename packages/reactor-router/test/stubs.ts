@@ -80,6 +80,10 @@ export class FakeBackend {
   refuses = false;
   /** Declares a non-waiting submit. */
   submits = false;
+  /** Members that record the call and never answer. */
+  readonly hanging = new Set<string>();
+  /** Declares `health` with this answer. */
+  health: "up" | "down" | undefined = undefined;
 
   constructor(
     readonly name: string,
@@ -170,7 +174,15 @@ export class FakeBackend {
     return this.require(identifier, method);
   }
 
-  private run<T>(method: string, args: readonly unknown[], body: () => T) {
+  private run<T>(
+    method: string,
+    args: readonly unknown[],
+    body: () => T,
+  ): Promise<T> {
+    if (this.hanging.has(method)) {
+      this.calls.push({ method, args });
+      return new Promise<T>(() => {});
+    }
     return Promise.resolve().then(() => {
       this.record(method, args);
       return body();
@@ -185,6 +197,10 @@ export class FakeBackend {
           "get",
           [identifier],
           () => this.require(identifier, "get") as T,
+        ),
+      getMany: <T extends PHDocument>(identifiers: string[]) =>
+        this.run("getMany", [identifiers], () =>
+          identifiers.map((id) => this.require(id, "getMany") as T),
         ),
       getOperations: (identifier) =>
         this.run("getOperations", [identifier], () => {
@@ -202,10 +218,20 @@ export class FakeBackend {
           this.require(identifier, "getOutgoingRelationships");
           return { results: [], options: { cursor: "", limit: 0 } };
         }),
-      getIncomingRelationships: (identifier) =>
+      getIncomingRelationships: (identifier, relationshipType) =>
         this.run("getIncomingRelationships", [identifier], () => {
           this.require(identifier, "getIncomingRelationships");
-          return { results: [], options: { cursor: "", limit: 0 } };
+          const results = this.relationships
+            .filter(
+              (edge) =>
+                edge.targetId === identifier &&
+                edge.relationshipType === relationshipType,
+            )
+            .flatMap((edge) => {
+              const source = this.documents.get(edge.sourceId);
+              return source === undefined ? [] : [source];
+            });
+          return { results, options: { cursor: "", limit: results.length } };
         }),
       getOutgoingRelationshipEdges: (identifier) =>
         this.run("getOutgoingRelationshipEdges", [identifier], () => {
@@ -235,8 +261,8 @@ export class FakeBackend {
       },
       getCreateSignaturePolicy: () =>
         this.run("getCreateSignaturePolicy", [], () => "legacy" as const),
-      getCreateProtocolVersions: (parent) =>
-        this.run("getCreateProtocolVersions", [parent], () => ({
+      getCreateProtocolVersions: (options) =>
+        this.run("getCreateProtocolVersions", [options], () => ({
           "base-reducer": 2,
         })),
       create: <T extends PHDocument>(document: PHDocument, parent?: string) =>
@@ -397,6 +423,9 @@ export class FakeBackend {
             }),
         },
       });
+    }
+    if (this.health !== undefined) {
+      Object.assign(api, { health: () => this.health ?? "up" });
     }
     for (const member of this.undeclared) {
       delete (api as Partial<Record<Member, unknown>>)[member];

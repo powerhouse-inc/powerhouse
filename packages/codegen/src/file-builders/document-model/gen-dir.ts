@@ -22,6 +22,7 @@ import {
   documentModelSchemaIndexTemplate,
 } from "templates";
 import { VariableDeclarationKind } from "ts-morph";
+import { getOperationsWithProjectScalarInput } from "../../codegen/project-scalars.js";
 import {
   buildObjectLiteral,
   formatSourceFileWithPrettier,
@@ -222,7 +223,10 @@ export async function makeDocumentModelGenActionsFile(
 export async function makeDocumentModelGenReducerFile(
   args: DocumentModelFileMakerArgs,
 ) {
-  const template = documentModelGenReducerFileTemplate(args);
+  const template = documentModelGenReducerFileTemplate(
+    args,
+    getOperationsWithProjectScalarInput(args.specification),
+  );
   const { project, genDirPath } = args;
 
   const filePath = path.join(genDirPath, "reducer.ts");

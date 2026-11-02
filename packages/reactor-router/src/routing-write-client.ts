@@ -1,8 +1,6 @@
 import {
   buildCreateJobs,
-  createEmptyDocument,
   JobStatus,
-  selectDocumentModelModule,
   upgradeDocumentJob,
   type ActionCandidate,
   type ActionEvaluations,
@@ -11,17 +9,21 @@ import {
   type BatchLoadRequest,
   type BatchLoadResult,
   type BatchWriteHandle,
-  type CreateDocumentOptions,
   type IReactorWriteClient,
   type JobInfo,
   type MoveRelationshipHandles,
+  type NewDocumentOptions,
   type PropagationMode,
+  type UndoRedoAvailability,
+  type UndoRedoTargets,
   type UpgradeDocumentOptions,
+  type ViewFilter,
   type WriteHandle,
   type WriteTargetDescription,
 } from "@powerhousedao/reactor";
 import {
   actions as documentActions,
+  createVersionsOf,
   type Action,
   type AuthSubject,
   type PHDocument,
@@ -116,6 +118,35 @@ function createdByLoad(request: BatchLoadRequest): Set<string> {
       .filter((job) => job.operations[0]?.action.type === CREATE_DOCUMENT)
       .map((job) => job.documentId),
   );
+}
+
+/** The document type a CREATE_DOCUMENT input names, or `""`. */
+function modelOf(input: unknown): string {
+  if (typeof input !== "object" || input === null) {
+    return "";
+  }
+  const model = (input as { model?: unknown }).model;
+  return typeof model === "string" ? model : "";
+}
+
+function typesCreatedByExecution(request: BatchExecutionRequest): string[] {
+  return request.jobs.flatMap((job) =>
+    job.actions
+      .filter((action) => action.type === CREATE_DOCUMENT)
+      .map((action) => modelOf(action.input))
+      .filter((model) => model !== ""),
+  );
+}
+
+function typesCreatedByLoad(request: BatchLoadRequest): string[] {
+  return request.jobs.flatMap((job) => {
+    const first = job.operations.at(0);
+    const model =
+      first !== undefined && first.action.type === CREATE_DOCUMENT
+        ? modelOf(first.action.input)
+        : "";
+    return model === "" ? [] : [model];
+  });
 }
 
 /** The create job of a create batch first, then the rest. */
@@ -241,12 +272,15 @@ export class RoutingWriteClient implements IReactorWriteClient {
       document.header.id,
       parentIdentifier,
       async (target) => {
+        await this.dispatcher.assertCreatable("create", target, [
+          document.header.documentType,
+        ]);
         const write = target.api.write;
         if (write !== undefined) {
           return write.create(document, parentIdentifier, signal);
         }
         const submit = target.api.submit;
-        if (submit !== undefined) {
+        if (submit?.create !== undefined) {
           const result = await submit.create(
             document,
             parentIdentifier,
@@ -274,10 +308,10 @@ export class RoutingWriteClient implements IReactorWriteClient {
 
   async createEmpty(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<WriteHandle> {
-    const document = await this.emptyDocument(
+    const document = await this.read.newDocument(
       documentModelType,
       options,
       signal,
@@ -360,6 +394,105 @@ export class RoutingWriteClient implements IReactorWriteClient {
     );
   }
 
+  /** The owning backend resolves the target and signs the write. */
+  undo(
+    documentIdentifier: string,
+    scope?: string,
+    branch: string = DEFAULT_BRANCH,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    return this.onDocumentWrite(
+      "undo",
+      documentIdentifier,
+      (write) => write.undo(documentIdentifier, scope, branch, signal),
+      async (backend) => {
+        const document = await declared(backend, "undo")(
+          documentIdentifier,
+          scope,
+          branch,
+          signal,
+        );
+        return this.handles.completed(document.header.id, branch, document);
+      },
+    );
+  }
+
+  /** See {@link undo}. */
+  redo(
+    documentIdentifier: string,
+    scope?: string,
+    branch: string = DEFAULT_BRANCH,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    return this.onDocumentWrite(
+      "redo",
+      documentIdentifier,
+      (write) => write.redo(documentIdentifier, scope, branch, signal),
+      async (backend) => {
+        const document = await declared(backend, "redo")(
+          documentIdentifier,
+          scope,
+          branch,
+          signal,
+        );
+        return this.handles.completed(document.header.id, branch, document);
+      },
+    );
+  }
+
+  undoRedoTargets(
+    documentIdentifier: string,
+    scope?: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets> {
+    return this.dispatcher.onDocument(
+      "undoRedoTargets",
+      documentIdentifier,
+      (backend) => {
+        const write = backend.api.write;
+        return write === undefined
+          ? declared(backend, "undoRedoTargets")(
+              documentIdentifier,
+              scope,
+              view,
+              signal,
+            )
+          : write.undoRedoTargets(documentIdentifier, scope, view, signal);
+      },
+      ATTEMPT.read,
+    );
+  }
+
+  undoRedoAvailability(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability> {
+    return this.dispatcher.onDocument(
+      "undoRedoAvailability",
+      documentIdentifier,
+      (backend) => {
+        const write = backend.api.write;
+        return write === undefined
+          ? declared(backend, "undoRedoAvailability")(
+              documentIdentifier,
+              scope,
+              branch,
+              signal,
+            )
+          : write.undoRedoAvailability(
+              documentIdentifier,
+              scope,
+              branch,
+              signal,
+            );
+      },
+      ATTEMPT.read,
+    );
+  }
+
   /** Every job's document must resolve to one backend; nothing is sent otherwise. */
   async executeBatch(
     request: BatchExecutionRequest,
@@ -369,7 +502,12 @@ export class RoutingWriteClient implements IReactorWriteClient {
     const { value: batch, backend } = await this.dispatcher.onDocuments(
       "executeBatch",
       identifiers,
-      (target) => {
+      async (target) => {
+        await this.dispatcher.assertCreatable(
+          "executeBatch",
+          target,
+          typesCreatedByExecution(request),
+        );
         const write = target.api.write;
         return write === undefined
           ? this.batchOn(target, request, signal)
@@ -392,7 +530,12 @@ export class RoutingWriteClient implements IReactorWriteClient {
     const { value: result, backend } = await this.dispatcher.onDocuments(
       "loadBatch",
       identifiers,
-      (target) => {
+      async (target) => {
+        await this.dispatcher.assertCreatable(
+          "loadBatch",
+          target,
+          typesCreatedByLoad(request),
+        );
         const write = target.api.write;
         return write === undefined
           ? declared(target, "loadBatch")(request, signal)
@@ -661,8 +804,11 @@ export class RoutingWriteClient implements IReactorWriteClient {
       document.header.id,
       parentIdentifier,
       async (target, beforeSubmit) => {
+        await this.dispatcher.assertCreatable("createAsync", target, [
+          document.header.documentType,
+        ]);
         const submit = target.api.submit;
-        if (submit !== undefined) {
+        if (submit?.create !== undefined) {
           return submit.create(document, parentIdentifier, signal);
         }
         const parentId =
@@ -671,8 +817,17 @@ export class RoutingWriteClient implements IReactorWriteClient {
             : await beforeSubmit(() =>
                 resolveOn(target, parentIdentifier, signal),
               );
+        const protocolVersions = await createVersionsOf(
+          document,
+          (options) =>
+            beforeSubmit(() =>
+              target.api.getCreateProtocolVersions(options, signal),
+            ),
+          parentId,
+        );
         const jobs = await buildCreateJobs(
           document,
+          protocolVersions,
           parentId,
           this.context.signer,
           signal,
@@ -723,24 +878,6 @@ export class RoutingWriteClient implements IReactorWriteClient {
     );
     this.dispatcher.recordJob(job.id, owner);
     return job;
-  }
-
-  /** A new empty document of the type, with the router's creation defaults. */
-  async emptyDocument(
-    documentModelType: string,
-    options: CreateDocumentOptions | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<PHDocument> {
-    const module = selectDocumentModelModule(
-      await this.read.allModules(signal),
-      documentModelType,
-      options?.documentModelVersion,
-    );
-    const [policy, versions] = await Promise.all([
-      this.read.getCreateSignaturePolicy(),
-      this.read.getCreateProtocolVersions(options?.parentIdentifier, signal),
-    ]);
-    return createEmptyDocument(module, options, policy, versions);
   }
 
   // Internals

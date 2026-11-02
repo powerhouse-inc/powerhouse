@@ -13,44 +13,56 @@ import { mkdtemp, rm } from "node:fs/promises";
 import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { registerAttachmentRoutes } from "../../src/attachments/index.js";
+import { switchboardConfigFromEnv } from "../../src/config/from-env.js";
+import {
+  callerOverEnv,
+  switchboardConfigSchema,
+} from "../../src/config/schema.js";
 import { deriveAttachmentServiceConfig } from "../../src/server.mjs";
 
 describe("deriveAttachmentServiceConfig", () => {
-  const ORIGINAL_PUBLIC_URL = process.env.PH_SWITCHBOARD_PUBLIC_URL;
-
-  afterEach(() => {
-    if (ORIGINAL_PUBLIC_URL === undefined) {
-      delete process.env.PH_SWITCHBOARD_PUBLIC_URL;
-    } else {
-      process.env.PH_SWITCHBOARD_PUBLIC_URL = ORIGINAL_PUBLIC_URL;
-    }
-  });
+  // An edge's config, as the server derives the options view from it.
+  const serviceUrlOf = (env: Record<string, string>, caller?: string) =>
+    switchboardConfigSchema.parse(
+      callerOverEnv(switchboardConfigFromEnv(env), {
+        attachments: { serviceUrl: caller },
+      }),
+    ).attachments.serviceUrl;
 
   it("defaults to http://localhost:${port} with no auth when renown is null", () => {
-    delete process.env.PH_SWITCHBOARD_PUBLIC_URL;
     const config = deriveAttachmentServiceConfig({}, 4001, null);
     expect(config.remoteUrl).toBe("http://localhost:4001");
     expect(config.jwtHandler).toBeUndefined();
   });
 
   it("uses https when options.https is set", () => {
-    delete process.env.PH_SWITCHBOARD_PUBLIC_URL;
     const config = deriveAttachmentServiceConfig({ https: true }, 4443, null);
     expect(config.remoteUrl).toBe("https://localhost:4443");
   });
 
   it("prefers PH_SWITCHBOARD_PUBLIC_URL over the localhost default", () => {
-    process.env.PH_SWITCHBOARD_PUBLIC_URL = "https://sb.example.com";
-    const config = deriveAttachmentServiceConfig({}, 4001, null);
+    const config = deriveAttachmentServiceConfig(
+      {
+        attachmentServiceUrl: serviceUrlOf({
+          PH_SWITCHBOARD_PUBLIC_URL: "https://sb.example.com",
+        }),
+      },
+      4001,
+      null,
+    );
     expect(config.remoteUrl).toBe("https://sb.example.com");
   });
 
   it("prefers the explicit attachmentServiceUrl option above all else", () => {
-    process.env.PH_SWITCHBOARD_PUBLIC_URL = "https://sb.example.com";
     const config = deriveAttachmentServiceConfig(
-      { attachmentServiceUrl: "https://override.example.com" },
+      {
+        attachmentServiceUrl: serviceUrlOf(
+          { PH_SWITCHBOARD_PUBLIC_URL: "https://sb.example.com" },
+          "https://override.example.com",
+        ),
+      },
       4001,
       null,
     );

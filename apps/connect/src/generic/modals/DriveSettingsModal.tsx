@@ -14,6 +14,8 @@ import {
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { SharingType } from "@powerhousedao/shared/document-drive";
 import { useMemo } from "react";
+import { useDrivePlacement } from "@powerhousedao/connect/store";
+import { DrivePlacementSection } from "./DrivePlacementSection.js";
 
 export function DriveSettingsModal() {
   const phModal = usePHModal();
@@ -32,6 +34,7 @@ export function DriveSettingsModal() {
   }, [remotes, drive]);
 
   const systemInfo = useDriveSystemInfo(drive);
+  const movable = useDrivePlacement(driveId) !== undefined;
 
   if (!driveId || !drive) {
     return null;
@@ -75,6 +78,8 @@ export function DriveSettingsModal() {
       onOpenChange={(status) => {
         if (!status) return closePHModal();
       }}
-    />
+    >
+      {movable ? <DrivePlacementSection driveId={driveId} /> : null}
+    </ConnectDriveSettingsModal>
   );
 }

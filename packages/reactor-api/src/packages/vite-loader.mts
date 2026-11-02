@@ -7,6 +7,7 @@ import type {
   DocumentModelModule,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
+import { getCodegenStatusRegistry } from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +15,7 @@ import { readPackage } from "read-pkg";
 import type { Logger, PluginOption, ViteDevServer } from "vite";
 import { createLogger, createServer } from "vite";
 import { extractDocumentModels } from "./document-model-detection.js";
+import { type ScalarExport, scalarExportsOf } from "./scalar-exports.js";
 import { extractSubgraphs } from "./subgraph-extraction.js";
 import {
   BUILT_PIECE_LIST,
@@ -31,6 +33,7 @@ import {
   PACKAGE_MODULE_FAILED,
   debounce,
   extractUpgradeManifests,
+  failedLoadHeader,
   isSubpath,
 } from "./util.js";
 import { runDetached, type ReportError } from "../utils/detached.js";
@@ -123,6 +126,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   async #load(
     identifier: string,
     subpath: string,
+    kind: string,
   ): Promise<LoadedModule | undefined> {
     const id = await this.#resolve(identifier, subpath);
     if (id === undefined) {
@@ -138,8 +142,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       this.logger.error(
-        "Failed to load @subpath of @pkg from @id: @error",
-        subpath,
+        `${failedLoadHeader(kind)}\n  @id: @error`,
         identifier,
         id,
         message,
@@ -158,6 +161,10 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
 
   private getSubgraphsPath(identifier: string): string {
     return path.posix.join(identifier, "./subgraphs");
+  }
+
+  private getScalarsPath(identifier: string): string {
+    return path.posix.join(identifier, "./scalars");
   }
 
   private getProcessorsPath(identifier: string): string {
@@ -198,7 +205,11 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
       "Loading document models from",
       this.getDocumentModelsPath(identifier),
     );
-    const loaded = await this.#load(identifier, "document-models");
+    const loaded = await this.#load(
+      identifier,
+      "document-models",
+      "document models",
+    );
     if (!loaded) return [];
 
     const documentModels = extractDocumentModels(loaded.namespace);
@@ -217,7 +228,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
       "document-models",
       "document-models/upgrade-manifests",
     ]) {
-      const loaded = await this.#load(identifier, subpath);
+      const loaded = await this.#load(identifier, subpath, "upgrade manifests");
       if (!loaded) continue;
       const manifests = extractUpgradeManifests(loaded.namespace);
       if (manifests.length > 0) {
@@ -235,7 +246,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
       "Loading subgraphs from",
       this.getSubgraphsPath(identifier),
     );
-    const loaded = await this.#load(identifier, "subgraphs");
+    const loaded = await this.#load(identifier, "subgraphs", "subgraphs");
     if (!loaded) return [];
 
     const subgraphs = extractSubgraphs(loaded.namespace);
@@ -247,6 +258,20 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     return subgraphs;
   }
 
+  async loadScalars(identifier: string): Promise<ScalarExport[]> {
+    this.logger.verbose(
+      "Loading scalars from",
+      this.getScalarsPath(identifier),
+    );
+    const loaded = await this.#load(identifier, "scalars", "scalars");
+    if (!loaded) return [];
+    const scalars = scalarExportsOf(loaded.namespace);
+    this.logger.debug(
+      `  ➜  Loaded ${scalars.length} Scalars from: ${identifier}`,
+    );
+    return scalars;
+  }
+
   async loadProcessors(
     identifier: string,
   ): Promise<ProcessorFactoryBuilder | null> {
@@ -254,7 +279,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
       "Loading processors from",
       this.getProcessorsPath(identifier),
     );
-    const loaded = await this.#load(identifier, "processors");
+    const loaded = await this.#load(identifier, "processors", "processors");
     const factory = loaded?.namespace.processorFactory;
     if (typeof factory === "function") {
       this.logger.verbose(`  ➜  Loaded Processor Factory from: ${identifier}`);
@@ -269,7 +294,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   // and what it names is still the built bundle a worker will load.
   async loadPieces(identifier: string): Promise<PackagePieceEntry[]> {
     this.logger.verbose("Loading pieces from", this.getPiecesPath(identifier));
-    const loaded = await this.#load(identifier, PIECES_SUBPATH);
+    const loaded = await this.#load(identifier, PIECES_SUBPATH, "pieces");
     if (!loaded) return [];
 
     const root = this.pieceRoot(identifier, loaded.id);
@@ -295,12 +320,20 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   // failed load leaves the last good set.
   #watch<T>(
     label: string,
+    reported: { pkg: string; kind: string },
     matches: (changedPath: string) => unknown,
     load: () => Promise<T>,
     handler: (value: T) => void,
     options?: ISubscriptionOptions,
   ): () => void {
     let subscribed = true;
+    // Read by reactor-mcp's getCodegenStatus, e.g. for broken generated code.
+    const report = (failure?: string) =>
+      getCodegenStatusRegistry().reportLoad(
+        reported.pkg,
+        reported.kind,
+        failure,
+      );
     const reloadOnce = debounce(
       () =>
         runDetached(
@@ -312,10 +345,12 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
               value = await load();
             } catch (e) {
               if ((e as NodeJS.ErrnoException).code === PACKAGE_MODULE_FAILED) {
+                report(`[${this.name}] ${(e as Error).message}`);
                 return;
               }
               throw e;
             }
+            report();
             if (subscribed) handler(value);
           },
           { logger: this.logger, report: this.#reportError },
@@ -339,10 +374,14 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     handler: (documentModels: DocumentModelModule[]) => void,
     options?: ISubscriptionOptions,
   ): () => void {
-    const documentModelsPath = this.getDocumentModelsPath(identifier);
+    const watched = [
+      this.getDocumentModelsPath(identifier),
+      this.getScalarsPath(identifier),
+    ];
     return this.#watch(
       `Reloading the document models of ${identifier}`,
-      (changedPath) => isSubpath(documentModelsPath, changedPath),
+      { pkg: identifier, kind: "document models" },
+      (changedPath) => watched.some((dir) => isSubpath(dir, changedPath)),
       () => this.loadDocumentModels(identifier),
       handler,
       options,
@@ -357,8 +396,25 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     const subgraphsPath = this.getSubgraphsPath(identifier);
     return this.#watch(
       `Reloading the subgraphs of ${identifier}`,
+      { pkg: identifier, kind: "subgraphs" },
       (changedPath) => isSubpath(subgraphsPath, changedPath),
       () => this.loadSubgraphs(identifier),
+      handler,
+      options,
+    );
+  }
+
+  onScalarsChange(
+    identifier: string,
+    handler: (scalars: ScalarExport[]) => void,
+    options?: ISubscriptionOptions,
+  ): () => void {
+    const scalarsPath = this.getScalarsPath(identifier);
+    return this.#watch(
+      `Reloading the scalars of ${identifier}`,
+      { pkg: identifier, kind: "scalars" },
+      (changedPath) => isSubpath(scalarsPath, changedPath),
+      () => this.loadScalars(identifier),
       handler,
       options,
     );
@@ -372,6 +428,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     const processorsPath = this.getProcessorsPath(identifier);
     return this.#watch(
       `Reloading the processors of ${identifier}`,
+      { pkg: identifier, kind: "processors" },
       (changedPath) => isSubpath(processorsPath, changedPath),
       () => this.loadProcessors(identifier),
       handler,
@@ -393,6 +450,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     }
     return this.#watch(
       `Reloading the pieces of ${identifier}`,
+      { pkg: identifier, kind: "pieces" },
       (changedPath) => watched.some((dir) => isSubpath(dir, changedPath)),
       () => this.loadPieces(identifier),
       handler,
@@ -436,11 +494,13 @@ export async function startViteServer(root: string, logger?: Logger) {
   const vite = await createServer({
     root,
     configFile: false,
-    logger,
+    customLogger: logger,
     server: {
       middlewareMode: true,
-      // It loads modules, never serves a page: no HMR port to collide on.
+      // It loads modules, never serves a page: no HMR, and no WebSocket port
+      // (24678 by default) for a second project's Vetra to collide on.
       hmr: false,
+      ws: false,
       watch: { ignored: ["**/.ph/**", ignoreBuildOutputButPieces(root)] },
     },
     appType: "custom",

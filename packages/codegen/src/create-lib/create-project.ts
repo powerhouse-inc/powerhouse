@@ -6,10 +6,15 @@ import { gitIgnoreTemplate } from "templates";
 import { runOxfmt } from "utils";
 import {
   applyProjectCustomizations,
+  syncPackageSkills,
   writeAllGeneratedProjectFiles,
   writeGeneratedHostsFiles,
   writeProjectRootFiles,
 } from "file-builders";
+import {
+  commitInitialProjectAndReport,
+  type InitialCommitResult,
+} from "./initial-commit.js";
 
 // Install recipes for `--clone`. Only managers with a cache-miss-fails
 // offline mode are listed; yarn needs an opt-in offline mirror and bun has
@@ -46,6 +51,10 @@ type CreateProjectArgs = {
    * (ph-cli) resolves the feature flag; codegen never sniffs env itself. */
   uniformRunners?: boolean;
 };
+
+/** `initialCommit` is undefined when `ph init` did not create the repository. */
+export type CreateProjectResult = { initialCommit?: InitialCommitResult };
+
 export async function createProject({
   name,
   packageManager,
@@ -56,7 +65,7 @@ export async function createProject({
   skipInstall,
   clone,
   uniformRunners,
-}: CreateProjectArgs) {
+}: CreateProjectArgs): Promise<CreateProjectResult> {
   const appPath = path.join(process.cwd(), name);
 
   if (fs.existsSync(appPath)) {
@@ -66,7 +75,7 @@ export async function createProject({
   }
 
   if (clone) {
-    await createProjectFromClone({
+    return createProjectFromClone({
       name,
       appPath,
       clone,
@@ -76,7 +85,6 @@ export async function createProject({
       remoteDrive,
       uniformRunners,
     });
-    return;
   }
 
   // Create a new directory for the project
@@ -103,8 +111,7 @@ export async function createProject({
     packageManager,
   });
   await writeAllGeneratedProjectFiles();
-  // Must run last: it rewrites `.mcp.json` / `.cursor/mcp.json`, which
-  // `writeAllGeneratedProjectFiles` has only just created.
+  // Must run last: it edits files `writeAllGeneratedProjectFiles` just created.
   await applyProjectCustomizations({ name, projectDir: appPath, remoteDrive });
   if (uniformRunners) {
     await writeGeneratedHostsFiles(appPath, name);
@@ -122,6 +129,7 @@ export async function createProject({
       packageManager === "pnpm" ? " --config.minimum-release-age=0" : "";
     runCmd(`${packageManager} install${extra}`);
     console.log(chalk.green(`\n✅ Project dependencies installed\n`));
+    await syncPackageSkills(appPath);
   }
 
   // Use the installed version of `oxfmt` to format the generated code
@@ -129,8 +137,13 @@ export async function createProject({
   await runOxfmt();
   console.log(chalk.green(`✅ Boilerplate files formatted\n`));
 
+  const initialCommit = skipGitInit
+    ? undefined
+    : commitInitialProjectAndReport(appPath);
+
   // Project creation complete
   console.log(chalk.bold(`🎉 Successfully created project "${name}" 🎉\n`));
+  return { initialCommit };
 }
 
 /**
@@ -153,7 +166,7 @@ async function createProjectFromClone(args: {
   skipInstall?: boolean;
   remoteDrive?: string;
   uniformRunners?: boolean;
-}) {
+}): Promise<CreateProjectResult> {
   const {
     name,
     appPath,
@@ -229,7 +242,12 @@ async function createProjectFromClone(args: {
     console.log(chalk.green(`\n✅ Dependencies installed from lockfile\n`));
   }
 
+  const initialCommit = skipGitInit
+    ? undefined
+    : commitInitialProjectAndReport(appPath);
+
   console.log(
     chalk.bold(`🎉 Successfully cloned project "${name}" from "${clone}" 🎉\n`),
   );
+  return { initialCommit };
 }

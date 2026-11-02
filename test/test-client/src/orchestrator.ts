@@ -6,6 +6,7 @@ import path from "node:path";
 import { Command } from "commander";
 import { bold, blue, green, red, gray, yellow } from "colorette";
 import type { Action } from "@powerhousedao/shared/document-model";
+import { generateActionId } from "@powerhousedao/shared/document-model";
 import { GraphQLClient } from "./client/graphql-client.js";
 import { DOCUMENT_MODEL_TYPE } from "./types.js";
 
@@ -20,17 +21,13 @@ interface OrchestratorOptions {
   verbose: boolean;
 }
 
-function generateId(): string {
-  return `test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
 function createAddFileAction(
   documentId: string,
   documentName: string,
   documentType: string,
 ): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "ADD_FILE",
     timestampUtcMs: new Date().toISOString(),
     input: {

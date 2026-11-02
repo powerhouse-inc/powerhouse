@@ -2,7 +2,7 @@ import type { JobInfo } from "@powerhousedao/reactor";
 
 /** A call the Switchboard GraphQL surface cannot express. */
 export class GraphQLOperationNotSupportedError extends Error {
-  readonly name = "GraphQLOperationNotSupportedError";
+  override readonly name = "GraphQLOperationNotSupportedError";
   readonly operation: string;
 
   constructor(operation: string, reason: string) {
@@ -10,7 +10,9 @@ export class GraphQLOperationNotSupportedError extends Error {
     this.operation = operation;
   }
 
-  static isError(error: unknown): error is GraphQLOperationNotSupportedError {
+  static override isError(
+    error: unknown,
+  ): error is GraphQLOperationNotSupportedError {
     return (
       Error.isError(error) && error.name === "GraphQLOperationNotSupportedError"
     );
@@ -22,7 +24,7 @@ export class GraphQLOperationNotSupportedError extends Error {
  * `Drive-Id` it carried names a drive that Switchboard does not own.
  */
 export class GraphQLWrongBackendError extends Error {
-  readonly name = "GraphQLWrongBackendError";
+  override readonly name = "GraphQLWrongBackendError";
   readonly status = 421;
   /** The drive the Switchboard refused, or `""` when its answer names none. */
   readonly driveId: string;
@@ -38,7 +40,7 @@ export class GraphQLWrongBackendError extends Error {
     this.payload = payload;
   }
 
-  static isError(error: unknown): error is GraphQLWrongBackendError {
+  static override isError(error: unknown): error is GraphQLWrongBackendError {
     return (
       Error.isError(error) &&
       error.name === "GraphQLWrongBackendError" &&
@@ -53,7 +55,7 @@ export class GraphQLWrongBackendError extends Error {
  * recognise it.
  */
 export class BatchJobFailedError extends Error {
-  readonly name = "BatchJobFailedError";
+  override readonly name = "BatchJobFailedError";
   readonly key: string;
   readonly jobs: Readonly<Record<string, JobInfo>>;
 
@@ -66,7 +68,7 @@ export class BatchJobFailedError extends Error {
     this.jobs = jobs;
   }
 
-  static isError(error: unknown): error is BatchJobFailedError {
+  static override isError(error: unknown): error is BatchJobFailedError {
     return (
       Error.isError(error) &&
       error.name === "BatchJobFailedError" &&
@@ -76,6 +78,32 @@ export class BatchJobFailedError extends Error {
   }
 }
 
+/** A validation error naming root field `field` unknown: a host from before it. */
+export function queriesUnknownField(error: unknown, field: string): boolean {
+  return hasErrorStarting(error, `Cannot query field "${field}" on type "`);
+}
+
+/** A validation error naming `argument` unknown: a host from before it. */
+export function queriesUnknownArgument(
+  error: unknown,
+  argument: string,
+): boolean {
+  return hasErrorStarting(error, `Unknown argument "${argument}" on field "`);
+}
+
+function hasErrorStarting(error: unknown, prefix: string): boolean {
+  const errors = (error as { response?: { errors?: unknown } } | null)?.response
+    ?.errors;
+  if (!Array.isArray(errors)) {
+    return false;
+  }
+  return errors.some(
+    (entry) =>
+      typeof (entry as { message?: unknown } | null)?.message === "string" &&
+      (entry as { message: string }).message.startsWith(prefix),
+  );
+}
+
 /**
  * The reactor's `JobFailedError`, rebuilt from a job the Switchboard reported
  * FAILED; this entry imports the reactor for types only. A write handle's
@@ -83,7 +111,7 @@ export class BatchJobFailedError extends Error {
  * reactor's is.
  */
 export class JobFailedError extends Error {
-  readonly name = "JobFailedError";
+  override readonly name = "JobFailedError";
   readonly job: JobInfo;
 
   constructor(job: JobInfo) {
@@ -91,7 +119,7 @@ export class JobFailedError extends Error {
     this.job = job;
   }
 
-  static isError(error: unknown): error is JobFailedError {
+  static override isError(error: unknown): error is JobFailedError {
     return (
       Error.isError(error) &&
       error.name === "JobFailedError" &&

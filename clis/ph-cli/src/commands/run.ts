@@ -46,7 +46,7 @@ export const runHost = command({
       await explainHost({ host: args.host, topic: args.explain });
       return;
     }
-    const { startRun } = await import("../services/run/start-run.js");
+    const { startRun } = await import("@powerhousedao/ph-run/start-run");
     await startRun({ host: args.host, verb: args.verb, debug: args.debug });
   },
 });

@@ -121,6 +121,21 @@ export const runtimeKeys = {
         limit: runsScope.limit ?? null,
       },
     ] as const,
+  // Under allRuns, so a run that starts, resumes or ends refreshes it.
+  waitingRuns: (
+    scope: string,
+    waiting: { driveId?: string; workflowId?: string; first?: number },
+  ) =>
+    [
+      scope,
+      "runs",
+      "waiting",
+      {
+        driveId: waiting.driveId ?? null,
+        workflowId: waiting.workflowId ?? null,
+        first: waiting.first ?? null,
+      },
+    ] as const,
   run: (scope: string, runId: string) => [scope, "run", runId] as const,
   // Per viewer: the identity is only served to a signed-in caller.
   reactorAccess: (scope: string, viewer: string | null) =>

@@ -65,6 +65,18 @@ describe("run record read/write/clear", () => {
     });
   });
 
+  it.each(["../../escape", "a/b", "a\\b", "/abs", ".hidden", "..", ""])(
+    "never touches a path outside .ph/run for the name %j",
+    (name) => {
+      const dir = makeProject();
+      expect(() => writeRunRecord(dir, record({ host: name }))).toThrow();
+      expect(readRunRecord(dir, name)).toBeUndefined();
+      writeFileSync(path.join(dir, "escape.json"), "{}");
+      clearRunRecord(dir, "../../escape");
+      expect(existsSync(path.join(dir, "escape.json"))).toBe(true);
+    },
+  );
+
   it("keeps hosts separate by name", () => {
     const dir = makeProject();
     writeRunRecord(dir, record({ host: "vetra" }));

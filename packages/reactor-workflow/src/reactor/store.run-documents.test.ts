@@ -2,35 +2,54 @@ import { describe, expect, it } from "vitest";
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
 import { WorkflowRunStore } from "./store.js";
 
+// Documents are recorded only for a run the journal holds.
+async function storeWithRuns(count: number) {
+  const store = await WorkflowRunStore.create(createTestRelationalDb());
+  const runs: string[] = [];
+  for (let index = 0; index < count; index++) {
+    runs.push(
+      await store.startRun({
+        workflowId: "wf-docs",
+        workflowName: "Docs",
+        workflowVersion: 1,
+        triggerKind: "manual",
+      }),
+    );
+  }
+  return { store, runs };
+}
+
 describe("run documents", () => {
   it("keeps each document a run was handed once, per run", async () => {
-    const store = await WorkflowRunStore.create(createTestRelationalDb());
+    const {
+      store,
+      runs: [a, b],
+    } = await storeWithRuns(2);
 
-    await store.recordRunDocuments("docs-run-a", ["doc-1", "doc-2", "doc-1"]);
-    await store.recordRunDocuments("docs-run-a", ["doc-2"]);
-    await store.recordRunDocuments("docs-run-b", ["doc-3"]);
-    await store.recordRunDocuments("docs-run-b", []);
+    await store.recordRunDocuments(a!, ["doc-1", "doc-2", "doc-1"]);
+    await store.recordRunDocuments(a!, ["doc-2"]);
+    await store.recordRunDocuments(b!, ["doc-3"]);
+    await store.recordRunDocuments(b!, []);
 
-    expect((await store.getRunDocuments("docs-run-a")).sort()).toEqual([
+    expect((await store.getRunDocuments(a!)).sort()).toEqual([
       "doc-1",
       "doc-2",
     ]);
-    expect(await store.getRunDocuments("docs-run-b")).toEqual(["doc-3"]);
+    expect(await store.getRunDocuments(b!)).toEqual(["doc-3"]);
     expect(await store.getRunDocuments("docs-run-c")).toEqual([]);
   });
 
   it("reads many runs' documents in one call", async () => {
-    const store = await WorkflowRunStore.create(createTestRelationalDb());
-    await store.recordRunDocuments("batch-docs-a", ["doc-1", "doc-2"]);
-    await store.recordRunDocuments("batch-docs-b", ["doc-3"]);
+    const {
+      store,
+      runs: [a, b],
+    } = await storeWithRuns(2);
+    await store.recordRunDocuments(a!, ["doc-1", "doc-2"]);
+    await store.recordRunDocuments(b!, ["doc-3"]);
 
-    const byRun = await store.getRunDocumentsForRuns([
-      "batch-docs-a",
-      "batch-docs-b",
-      "batch-docs-c",
-    ]);
-    expect(byRun.get("batch-docs-a")?.sort()).toEqual(["doc-1", "doc-2"]);
-    expect(byRun.get("batch-docs-b")).toEqual(["doc-3"]);
+    const byRun = await store.getRunDocumentsForRuns([a!, b!, "batch-docs-c"]);
+    expect(byRun.get(a!)?.sort()).toEqual(["doc-1", "doc-2"]);
+    expect(byRun.get(b!)).toEqual(["doc-3"]);
     expect(byRun.get("batch-docs-c")).toEqual([]);
   });
 });

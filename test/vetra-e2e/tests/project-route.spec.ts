@@ -19,8 +19,6 @@ test("renders a project route and keeps it in history", async ({ page }) => {
   // The loader read the app's PH store.
   await expect(page.getByTestId("hello-drive-count")).toHaveText(/Drives: \d+/);
 
-  // The cookie banner covers the page until it is answered.
-  await page.getByRole("button", { name: "Accept configured cookies" }).click();
   await page.getByRole("link", { name: "Home" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(heading).toBeHidden();
@@ -52,7 +50,6 @@ test("sorts reports through the URL and links into Connect's drive", async ({
   await expect(page.getByText("Vetra", { exact: true }).first()).toBeVisible({
     timeout: LONG_VISIBLE_TIMEOUT,
   });
-  await page.getByRole("button", { name: "Accept configured cookies" }).click();
 
   // A client-side navigation, so the loaders see the drives the app has listed.
   const reportsLink = page.locator('#sidebar a[href$="/reports"]');
@@ -119,7 +116,6 @@ test("shows Connect's 404 page, with the sidebar, for an unknown path", async ({
   await expect(page.locator("#sidebar")).toBeVisible();
   await expect(page).toHaveURL(/\/no\/such\/page$/);
 
-  await page.getByRole("button", { name: "Accept configured cookies" }).click();
   await page.getByRole("link", { name: "Go to the home page" }).click();
   await expect(page).toHaveURL(/\/$/);
 });

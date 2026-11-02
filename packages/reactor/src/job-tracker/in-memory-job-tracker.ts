@@ -9,12 +9,25 @@ import {
 import {
   createConsistencyToken,
   createEmptyConsistencyToken,
+  deletedADocument,
   summarizeSubmittedActions,
 } from "../executor/util.js";
 import type { Job } from "../queue/types.js";
 import type { ErrorInfo } from "../shared/types.js";
 import { JobStatus, type JobInfo } from "../shared/types.js";
 import type { IJobTracker } from "./interfaces.js";
+
+/** Sizes for telemetry. */
+export type JobTrackerStats = {
+  size: number;
+  pending: number;
+  running: number;
+  writeReady: number;
+  readReady: number;
+  failed: number;
+  failedWithPayload: number;
+  failedPayloadBytes: number;
+};
 
 /**
  * In-memory implementation of IJobTracker.
@@ -24,6 +37,10 @@ import type { IJobTracker } from "./interfaces.js";
 export class InMemoryJobTracker implements IJobTracker {
   private jobs = new Map<string, JobInfo>();
   private unsubscribers: Unsubscribe[] = [];
+  private readonly byStatus = new Map<JobStatus, number>();
+  // Serialized size of each failed job's payload, measured when it failed.
+  private readonly failedBytes = new Map<string, number>();
+  private failedBytesTotal = 0;
 
   constructor(private eventBus: IEventBus) {
     this.subscribeToEvents();
@@ -63,7 +80,7 @@ export class InMemoryJobTracker implements IJobTracker {
     const job = this.jobs.get(jobId);
     if (job && job.status === JobStatus.RUNNING) {
       const consistencyToken = createConsistencyToken(event.operations);
-      this.jobs.set(jobId, {
+      this.put({
         ...job,
         status: JobStatus.WRITE_READY,
         consistencyToken,
@@ -74,6 +91,9 @@ export class InMemoryJobTracker implements IJobTracker {
           event.operations,
           event.submittedActionIds,
         ),
+        ...(deletedADocument(event.operations, event.submittedActionIds)
+          ? { deletedDocument: true }
+          : {}),
       });
     }
   }
@@ -82,7 +102,7 @@ export class InMemoryJobTracker implements IJobTracker {
     const jobId = event.jobId;
     const job = this.jobs.get(jobId);
     if (job && job.status === JobStatus.WRITE_READY) {
-      this.jobs.set(jobId, {
+      this.put({
         ...job,
         status: JobStatus.READ_READY,
       });
@@ -109,7 +129,7 @@ export class InMemoryJobTracker implements IJobTracker {
   }
 
   registerJob(jobInfo: JobInfo): void {
-    this.jobs.set(jobInfo.id, { ...jobInfo });
+    this.put({ ...jobInfo });
   }
 
   markRunning(jobId: string): void {
@@ -117,7 +137,7 @@ export class InMemoryJobTracker implements IJobTracker {
     if (!job) {
       // Job not found - might have been registered elsewhere
       // Create minimal job entry
-      this.jobs.set(jobId, {
+      this.put({
         id: jobId,
         documentId: "",
         status: JobStatus.RUNNING,
@@ -128,7 +148,7 @@ export class InMemoryJobTracker implements IJobTracker {
       return;
     }
 
-    this.jobs.set(jobId, {
+    this.put({
       ...job,
       status: JobStatus.RUNNING,
     });
@@ -137,7 +157,7 @@ export class InMemoryJobTracker implements IJobTracker {
   markFailed(jobId: string, error: ErrorInfo, job?: Job): void {
     const existing = this.jobs.get(jobId);
     if (!existing) {
-      this.jobs.set(jobId, {
+      this.put({
         id: jobId,
         documentId: job?.documentId ?? "",
         status: JobStatus.FAILED,
@@ -151,7 +171,7 @@ export class InMemoryJobTracker implements IJobTracker {
       return;
     }
 
-    this.jobs.set(jobId, {
+    this.put({
       ...existing,
       status: JobStatus.FAILED,
       completedAtUtcIso: new Date().toISOString(),
@@ -164,5 +184,49 @@ export class InMemoryJobTracker implements IJobTracker {
   getJobStatus(jobId: string): JobInfo | null {
     const job = this.jobs.get(jobId);
     return job ? { ...job } : null;
+  }
+
+  /** What the tracker holds, kept current on each transition, so O(1). */
+  stats(): JobTrackerStats {
+    const count = (status: JobStatus) => this.byStatus.get(status) ?? 0;
+    return {
+      size: this.jobs.size,
+      pending: count(JobStatus.PENDING),
+      running: count(JobStatus.RUNNING),
+      writeReady: count(JobStatus.WRITE_READY),
+      readReady: count(JobStatus.READ_READY),
+      failed: count(JobStatus.FAILED),
+      failedWithPayload: this.failedBytes.size,
+      failedPayloadBytes: this.failedBytesTotal,
+    };
+  }
+
+  private put(job: JobInfo): void {
+    const previous = this.jobs.get(job.id);
+    if (previous) {
+      this.byStatus.set(
+        previous.status,
+        (this.byStatus.get(previous.status) ?? 1) - 1,
+      );
+    }
+    this.byStatus.set(job.status, (this.byStatus.get(job.status) ?? 0) + 1);
+    this.jobs.set(job.id, job);
+
+    this.failedBytesTotal -= this.failedBytes.get(job.id) ?? 0;
+    this.failedBytes.delete(job.id);
+    if (job.status === JobStatus.FAILED && job.job) {
+      const bytes = payloadBytes(job.job);
+      this.failedBytes.set(job.id, bytes);
+      this.failedBytesTotal += bytes;
+    }
+  }
+}
+
+/** The JSON size of what a failed job holds on to; failures are rare enough. */
+function payloadBytes(job: Job): number {
+  try {
+    return JSON.stringify([job.actions, job.operations]).length;
+  } catch {
+    return 0;
   }
 }

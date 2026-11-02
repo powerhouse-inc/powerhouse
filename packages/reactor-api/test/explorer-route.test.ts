@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { ExpressHttpAdapter } from "../src/graphql/gateway/adapter-http-express.js";
-import { config } from "../src/config.js";
 import { getExplorerPrefix } from "../src/server.js";
 
 /**
@@ -26,7 +25,7 @@ describe("explorer route registration", () => {
     const { port } = server.address() as { port: number };
     try {
       adapter.getRoute(
-        `${getExplorerPrefix(config.basePath)}/:endpoint?`,
+        `${getExplorerPrefix("/")}/:endpoint?`,
         () => new Response("graphiql", { status: 200 }),
       );
 

@@ -3,6 +3,7 @@ import {
   FacadeWriteClient,
   warnOnce,
   type IDriveClient,
+  type IDriveNodeSource,
   type IReactorClient,
   type IReactorReadClient,
   type IReactorWriteClient,
@@ -24,9 +25,12 @@ import {
   getOperationAST,
   type GraphQLSchema,
   Kind,
+  OperationTypeNode,
+  parse,
   print,
   visit,
 } from "graphql";
+import { AuthenticationRequiredError } from "./errors.js";
 import type { IncomingHttpHeaders } from "http";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type http from "node:http";
@@ -56,6 +60,13 @@ import type {
   IAuthorizationService,
 } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
+import type { ReadableDocumentsLike } from "../services/readable-documents.js";
+import {
+  EMPTY_SCALAR_REGISTRY,
+  type RegisteredScalar,
+  sameScalarRegistry,
+  type ScalarRegistry,
+} from "../utils/scalar-types.js";
 import {
   buildDocumentModelSchema,
   buildSubgraphSchemaModule,
@@ -95,6 +106,7 @@ import {
 import { filterBuildableSubgraphs } from "./gateway/adapter-gateway-stitching.js";
 import {
   getAuthContext,
+  setAuthContext,
   type AuthFetchMiddleware,
 } from "./gateway/auth-middleware.js";
 import {
@@ -181,8 +193,15 @@ export type GraphQLManagerOptions = {
   /** Defaults to 4001. */
   port?: number;
   authorizationService: IAuthorizationService;
+  /** The readable-documents read model, handed to every subgraph. */
+  readableDocuments?: ReadableDocumentsLike;
   /** Resolvers dispatch to it for reactor-drive parents. */
   reactorDriveClient?: IDriveClient;
+  /**
+   * Type-neutral drive node reads behind the reactor subgraph's `driveNodes`,
+   * `driveNode` and `driveDescendants`. Without it those fields refuse.
+   */
+  driveNodes?: IDriveNodeSource;
   syncServingGate?: SyncScopeGate;
   httpRoutes?: HttpRouteService;
   attachments?: IAttachmentClientProvider;
@@ -310,6 +329,9 @@ export class GraphQLManager {
   /** Cached document models for schema generation - updated on init and regenerate */
   private cachedDocumentModels: DocumentModelModule[] = [];
 
+  /** Every model the reactor reported at the last fetch, admitted or not. */
+  #fetchedModels: DocumentModelModule[] = [];
+
   private readonly subgraphHandlerCache = new Map<
     string,
     {
@@ -371,6 +393,18 @@ export class GraphQLManager {
       }
     | undefined;
 
+  /** The scalars the package manager registered. */
+  #scalarRegistry: ScalarRegistry = EMPTY_SCALAR_REGISTRY;
+
+  /** The registered scalars the schema declares, resolves and reserves: those
+   * whose name no registered core or host subgraph defines. */
+  #scalars: ScalarRegistry = EMPTY_SCALAR_REGISTRY;
+
+  /** Scalar refusals logged: name, package and the subgraph owning the name. */
+  #scalarRefusals = new Set<string>();
+
+  readonly #loggedScalarResolvers = new WeakMap<ISubgraph, Set<string>>();
+
   /** Generated types no document model contributes, but `IDocument`. */
   #modelFreeTypeNames: ReadonlySet<string> | undefined;
 
@@ -415,6 +449,8 @@ export class GraphQLManager {
    * it for reactor-drive parents.
    */
   readonly reactorDriveClient?: IDriveClient;
+  /** See {@link GraphQLManagerOptions.driveNodes}. */
+  readonly driveNodes?: IDriveNodeSource;
   private readonly authorizationService: IAuthorizationService;
   /** Route service in use: the injected one, or one built on first need. */
   #fallbackRoutes: HttpRouteService | undefined;
@@ -439,6 +475,7 @@ export class GraphQLManager {
   private readonly featureFlags: GraphqlManagerFeatureFlags;
   private readonly port: number;
   private readonly syncServingGate?: SyncScopeGate;
+  private readonly readableDocuments?: ReadableDocumentsLike;
   private readonly httpRoutes?: HttpRouteService;
   private readonly attachments?: IAttachmentClientProvider;
   private readonly inspection?: IReactorInspectionSource;
@@ -479,7 +516,9 @@ export class GraphQLManager {
     this.port = options.port ?? 4001;
     this.authorizationService = options.authorizationService;
     this.reactorDriveClient = options.reactorDriveClient;
+    this.driveNodes = options.driveNodes;
     this.syncServingGate = options.syncServingGate;
+    this.readableDocuments = options.readableDocuments;
     this.httpRoutes = options.httpRoutes;
     this.attachments = options.attachments;
     this.inspection = options.inspection;
@@ -498,7 +537,10 @@ export class GraphQLManager {
     coreSubgraphs: SubgraphClass[],
     authMiddleware?: AuthFetchMiddleware,
     requireAuthMiddleware?: RequireAuthFetchMiddleware,
+    scalars: ScalarRegistry = EMPTY_SCALAR_REGISTRY,
   ) {
+    this.#scalarRegistry = scalars;
+    await this.#syncScalars();
     this.#authMiddleware = authMiddleware;
     this.#requireAuthMiddleware = requireAuthMiddleware;
     this.logger.debug(`Initializing Subgraph Manager...`);
@@ -514,6 +556,7 @@ export class GraphQLManager {
     // check if Document Drive model is available
     const modulesResult = await this.#readClient.getDocumentModelModules();
     const models = modulesResult.results;
+    this.#fetchedModels = models;
 
     const driveModel = models.find(
       (it: DocumentModelModule) =>
@@ -637,9 +680,94 @@ export class GraphQLManager {
     // An unbuilt subgraph claims nothing, so build before the supergraph.
     await this.#setupSubgraphs(this.subgraphs);
 
+    // The caller refreshes it once packages are in: composing is the slowest
+    // part of a boot, and doing it here as well would only repeat this one.
     await this.#createSupergraphGateway();
+  }
 
-    return this.updateRouter();
+  /** Rejects when the rebuild fails; the next change retries it. */
+  async applyScalarRegistry(scalars: ScalarRegistry): Promise<void> {
+    if (scalars === this.#scalarRegistry) return;
+    if (this.#inHook.getStore()?.active) {
+      // The outer change admits the scalars when it ends.
+      this.#scalarRegistry = scalars;
+      return;
+    }
+    await this.#enqueue(async () => {
+      this.#scalarRegistry = scalars;
+      await this.#syncScalars();
+    });
+  }
+
+  /** Admit the scalars against the registered subgraphs and, once models are
+   * served, rebuild against them if they changed. */
+  async #syncScalars(): Promise<void> {
+    const admitted = this.#admitScalars();
+    if (admitted === this.#scalars) return;
+    const previous = this.#scalars;
+    this.#scalars = admitted;
+    if (!this.initialized) return;
+    try {
+      if (this.featureFlags.enableDocumentModelSubgraphs) {
+        await this.#regenerateDocumentModelSubgraphs();
+      } else {
+        // Without model subgraphs the models stay as fetched at startup.
+        this.cachedDocumentModels = this.#admitModels(this.#fetchedModels);
+        this.#scheduleRouterUpdate();
+      }
+    } catch (error) {
+      // The next change sees the scalars as unapplied and rebuilds again.
+      this.#scalars = previous;
+      throw error;
+    }
+    // A hook run by the rebuild may have registered a subgraph that takes a
+    // scalar's name; admit again until nothing changes.
+    await this.#syncScalars();
+  }
+
+  /** The registered scalars whose name no registered core or host subgraph
+   * defines; that subgraph keeps the name. Package subgraphs reserve nothing.
+   * Each refusal logs once until it goes away. */
+  #admitScalars(): ScalarRegistry {
+    const registered = { names: new Set(this.#scalarRegistry.keys()) };
+    const subgraphs = new Set(
+      [this.coreSubgraphsMap, this.subgraphs].flatMap((map) =>
+        Array.from(map.values()).flat(),
+      ),
+    );
+    const owners = new Map<string, ISubgraph>();
+    for (const subgraph of subgraphs) {
+      const origin = this.#originOf(subgraph);
+      if (origin !== CORE_ORIGIN && origin !== HOST_ORIGIN) continue;
+      for (const name of findSubgraphTypeCollisions(
+        registered,
+        subgraph.typeDefs,
+      )) {
+        if (!owners.has(name)) owners.set(name, subgraph);
+      }
+    }
+    const admitted = new Map<string, RegisteredScalar>();
+    const logged = new Set<string>();
+    for (const [name, scalar] of this.#scalarRegistry) {
+      const owner = owners.get(name);
+      if (!owner) {
+        admitted.set(name, scalar);
+        continue;
+      }
+      const refusal = `${name}\n${scalar.packageName}\n${owner.name}`;
+      logged.add(refusal);
+      if (this.#scalarRefusals.has(refusal)) continue;
+      this.logger.error(
+        "Refusing scalar @scalar of package @package: subgraph @subgraph defines a type of that name",
+        name,
+        scalar.packageName,
+        owner.name,
+      );
+    }
+    this.#scalarRefusals = logged;
+    return sameScalarRegistry(admitted, this.#scalars)
+      ? this.#scalars
+      : admitted;
   }
 
   /**
@@ -657,6 +785,7 @@ export class GraphQLManager {
     try {
       const modulesResult = await this.#readClient.getDocumentModelModules();
       const models = modulesResult.results;
+      this.#fetchedModels = models;
       this.cachedDocumentModels = this.#admitModels(models);
 
       const registeredNames = await this.#setupDocumentModelSubgraphs(
@@ -706,11 +835,14 @@ export class GraphQLManager {
 
   /** Models whose schemas build and take no reserved name. */
   #admitModels(models: DocumentModelModule[]): DocumentModelModule[] {
-    const reserved = reservedTypeNames(
-      Array.from(this.coreSubgraphsMap.values(), (subgraphs) =>
-        subgraphs.map((subgraph) => subgraph.typeDefs),
-      ).flat(),
+    const reserved = new Map(
+      reservedTypeNames(
+        Array.from(this.coreSubgraphsMap.values(), (subgraphs) =>
+          subgraphs.map((subgraph) => subgraph.typeDefs),
+        ).flat(),
+      ),
     );
+    for (const name of this.#scalars.keys()) reserved.set(name, true);
     const { admitted, schemas, refusals } = admitDocumentModels(
       this.#schemaCache.resolve(models),
       reserved,
@@ -762,6 +894,7 @@ export class GraphQLManager {
             documentPermissionService: this.documentPermissionService,
             authorizationService: this.authorizationService,
             syncServingGate: this.syncServingGate,
+            readableDocuments: this.readableDocuments,
             attachments: this.attachments,
             inspection: this.inspection,
           },
@@ -801,6 +934,88 @@ export class GraphQLManager {
     return undefined;
   }
 
+  /**
+   * Runs a query against one registered subgraph in process, as `user`:
+   * the same resolvers, the same request context and the same
+   * authenticated-caller floor an HTTP request to `/graphql/<name>` gets,
+   * without HTTP. For a host-side caller that acts for a principal (the
+   * workflow runtime, for a piece's index lookup as the run's user).
+   *
+   * Only `query` operations: a mutation is a write, and writes go through
+   * the write half, which signs and journals them.
+   */
+  async executeSubgraph(
+    name: string,
+    request: {
+      query: string;
+      variables?: Record<string, unknown>;
+      user?: Context["user"];
+    },
+  ): Promise<{
+    data?: Record<string, unknown> | null;
+    errors?: { message: string }[];
+  }> {
+    const entry = this.#internalSubgraphHandlers.get(name);
+    if (!entry) {
+      throw new Error(
+        this.getSubgraphByName(name)
+          ? `Subgraph "${name}" is registered but has no handler yet`
+          : `Unknown subgraph: ${name}`,
+      );
+    }
+    if (this.#requireAuthMiddleware !== undefined && !request.user) {
+      throw new AuthenticationRequiredError();
+    }
+    const operation = getOperationAST(parse(request.query), undefined);
+    if (operation?.operation !== OperationTypeNode.QUERY) {
+      throw new Error(
+        `executeSubgraph runs queries only; ${operation?.operation ?? "no operation"} refused`,
+      );
+    }
+    // The subgraph's own handler at its real mount path, as
+    // `executeSubgraphQuery` addresses it; the principal is recorded on the
+    // request as the auth middleware would have recorded a bearer's.
+    const url = new URL(entry.path, `http://localhost:${this.port}/`);
+    const http = new Request(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({
+        query: request.query,
+        variables: request.variables ?? {},
+      }),
+    });
+    if (request.user) {
+      setAuthContext(http, {
+        user: request.user,
+        admins: this.authorizationService.config.admins,
+        auth_enabled: this.authService !== undefined,
+      });
+    }
+    const response = await entry.handler(http);
+    const body = (await response.json().catch(() => undefined)) as
+      | {
+          data?: Record<string, unknown> | null;
+          errors?: { message: string }[];
+        }
+      | undefined;
+    if (!response.ok && !body?.errors?.length) {
+      throw new Error(
+        `Subgraph "${name}" query failed: ${response.status}${
+          body ? ` ${JSON.stringify(body)}` : ""
+        }`,
+      );
+    }
+    return {
+      data: body?.data ?? null,
+      ...(body?.errors?.length
+        ? { errors: body.errors.map((e) => ({ message: e.message })) }
+        : {}),
+    };
+  }
+
   /** Every registered subgraph named `name`, core or not, in any bucket: the
    * in-process handler map is keyed by bare name, so a name has one owner. */
   #holdersOf(name: string): Set<ISubgraph> {
@@ -824,25 +1039,22 @@ export class GraphQLManager {
   }
 
   #generated(): GeneratedDocumentModelTypes {
-    if (this.#generatedTypes?.models !== this.cachedDocumentModels) {
-      const types = getGeneratedDocumentModelTypes(
-        this.cachedDocumentModels,
-        this.#modelSchemas,
-      );
-      const sdl = print({
-        kind: Kind.DOCUMENT,
-        definitions: types.definitions,
-      });
-      // Unchanged types keep their identity, so handlers built on them stay.
-      this.#generatedTypes = {
-        models: this.cachedDocumentModels,
-        types:
-          sdl === this.#generatedTypes?.sdl
-            ? this.#generatedTypes.types
-            : types,
-        sdl,
-      };
+    const previous = this.#generatedTypes;
+    const sameScalars = previous?.types.scalars === this.#scalars;
+    if (previous?.models === this.cachedDocumentModels && sameScalars) {
+      return previous.types;
     }
+    const types = getGeneratedDocumentModelTypes(
+      this.cachedDocumentModels,
+      this.#modelSchemas,
+      this.#scalars,
+    );
+    const sdl = print({ kind: Kind.DOCUMENT, definitions: types.definitions });
+    this.#generatedTypes = {
+      models: this.cachedDocumentModels,
+      types: previous?.sdl === sdl && sameScalars ? previous.types : types,
+      sdl,
+    };
     return this.#generatedTypes.types;
   }
 
@@ -854,6 +1066,24 @@ export class GraphQLManager {
           ? subgraph.generatedTypeNames
           : undefined,
     };
+  }
+
+  #warnAuthoredScalarResolvers(subgraph: ISubgraph): void {
+    let logged = this.#loggedScalarResolvers.get(subgraph);
+    if (!logged) {
+      logged = new Set();
+      this.#loggedScalarResolvers.set(subgraph, logged);
+    }
+    for (const scalar of Object.keys(subgraph.resolvers)) {
+      if (!this.#scalars.has(scalar)) continue;
+      if (logged.has(scalar)) continue;
+      logged.add(scalar);
+      this.logger.warn(
+        "Subgraph @name provides its own resolver for registered scalar @scalar; the registered validation is not applied.",
+        subgraph.name,
+        scalar,
+      );
+    }
   }
 
   /** Whether `subgraph`'s own typeDefs refer to a document model's types. */
@@ -890,13 +1120,30 @@ export class GraphQLManager {
     return uses;
   }
 
-  /** The generated type names `subgraph` redefines under the current models. */
-  #typeCollisions(subgraph: ISubgraph): string[] {
+  /** The generated type names `subgraph` redefines under the current models.
+   * A core or host subgraph takes a registered scalar's name instead. */
+  #typeCollisions(
+    subgraph: ISubgraph,
+    origin = this.#originOf(subgraph),
+  ): string[] {
     try {
-      return findSubgraphTypeCollisions(
+      const collisions = findSubgraphTypeCollisions(
         this.#generated(),
         subgraph.typeDefs,
         this.#schemaOptions(subgraph).ownTypeNames,
+      );
+      if (
+        (origin !== CORE_ORIGIN && origin !== HOST_ORIGIN) ||
+        !collisions.some((name) => this.#scalars.has(name))
+      ) {
+        return collisions;
+      }
+      const modelTypes = getGeneratedDocumentModelTypes(
+        this.cachedDocumentModels,
+        this.#modelSchemas,
+      ).names;
+      return collisions.filter(
+        (name) => !this.#scalars.has(name) || modelTypes.has(name),
       );
     } catch {
       // Malformed typeDefs fail where the schema is built, and are logged there.
@@ -939,7 +1186,7 @@ export class GraphQLManager {
         holder,
         origin: this.#originOf(holder),
       })),
-      () => this.#typeCollisions(instance),
+      () => this.#typeCollisions(instance, origin),
     );
     switch (admission.action) {
       case "skip":
@@ -1175,9 +1422,30 @@ export class GraphQLManager {
     );
   }
 
+  /** Every change ends by admitting the scalars again, whether or not it
+   * succeeded: a subgraph that never registered must not keep a name. */
   #serialize<T>(task: () => Promise<T>): Promise<T> {
+    // A change nested in a hook runs inside the outer change, which admits
+    // the scalars when it ends.
     if (this.#inHook.getStore()?.active) return task();
-    const run = this.#registryChanges.then(() => this.#inHook.exit(task));
+    return this.#enqueue(async () => {
+      try {
+        return await task();
+      } finally {
+        // The change's own outcome is what its caller sees.
+        await this.#syncScalars().catch((error: unknown) => {
+          reportFailure(
+            this.#reporting,
+            error,
+            "Could not apply the registered scalars after a change: @error",
+          );
+        });
+      }
+    });
+  }
+
+  #enqueue<T>(change: () => Promise<T>): Promise<T> {
+    const run = this.#registryChanges.then(() => this.#inHook.exit(change));
     this.#registryChanges = run.catch(() => undefined);
     return run;
   }
@@ -1346,6 +1614,7 @@ export class GraphQLManager {
       documentPermissionService: this.documentPermissionService,
       authorizationService: this.authorizationService,
       syncServingGate: this.syncServingGate,
+      readableDocuments: this.readableDocuments,
       attachments: this.attachments,
       inspection: this.inspection,
       credentials: createCredentialInvalidator(this.authService),
@@ -1356,20 +1625,23 @@ export class GraphQLManager {
    * Apply a package change: `packaged` holds every loaded package's subgraph
    * classes. Removals run before additions, so a name one package gives up
    * can be taken by another in the same change. Changes apply one at a time;
-   * the router refresh is scheduled, not awaited.
+   * the router refresh is scheduled, not awaited, unless `refresh` leaves it
+   * to the caller.
    */
   applyPackageSubgraphs(
     packaged: ReadonlyMap<string, readonly SubgraphClass[]>,
     supergraph = "graphql",
+    refresh = true,
   ): Promise<void> {
     return this.#serialize(() =>
-      this.#applyPackageSubgraphs(packaged, supergraph),
+      this.#applyPackageSubgraphs(packaged, supergraph, refresh),
     );
   }
 
   async #applyPackageSubgraphs(
     packaged: ReadonlyMap<string, readonly SubgraphClass[]>,
     supergraph: string,
+    refresh: boolean,
   ): Promise<void> {
     // Includes packages registered through registerSubgraph, e.g. at boot.
     const known = new Set([
@@ -1433,7 +1705,7 @@ export class GraphQLManager {
       await this.#pruneOrigin(packageName, registered);
     }
 
-    this.#scheduleRouterUpdate();
+    if (refresh) this.#scheduleRouterUpdate();
   }
 
   /**
@@ -1761,7 +2033,8 @@ export class GraphQLManager {
             if (cached.subgraph === subgraph) {
               const current =
                 cached.generated === this.#generated() ||
-                !this.#usesModelTypes(subgraph);
+                (!this.#usesModelTypes(subgraph) &&
+                  cached.generated.scalars === this.#scalars);
               if (current) continue;
             } else if (this.#origins.has(cached.subgraph)) {
               this.logger.warn(
@@ -1777,6 +2050,7 @@ export class GraphQLManager {
           }
 
           const generated = this.#generated();
+          this.#warnAuthoredScalarResolvers(subgraph);
           const schema = createSchema(
             this.cachedDocumentModels,
             this.#boundResolvers(subgraph),
@@ -1996,6 +2270,7 @@ export class GraphQLManager {
   }
 
   #buildSubgraphSchemaModule(subgraph: ISubgraph) {
+    this.#warnAuthoredScalarResolvers(subgraph);
     return buildSubgraphSchemaModule(
       this.cachedDocumentModels,
       this.#boundResolvers(subgraph),

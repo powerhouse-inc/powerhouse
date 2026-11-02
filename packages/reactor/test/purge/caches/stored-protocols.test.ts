@@ -68,7 +68,7 @@ describe("stored protocol scan after a purge", () => {
     expect(
       await countDocumentsCreatedWith(baseDb, schema, [refused.hash]),
     ).toBe(0);
-    await expect(check()).resolves.toBeUndefined();
+    await expect(check()).resolves.toEqual(new Map());
   });
 
   it("never matches a marker at index 0, even one carrying protocolVersions", async () => {
@@ -96,6 +96,6 @@ describe("stored protocol scan after a purge", () => {
         "refuse",
         createMockLogger(),
       ),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual(new Map());
   });
 });

@@ -1,5 +1,6 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { monitorController } from "./src/server/vite-plugin.ts";
 
 export default defineConfig(({ command }) => ({
   resolve: {
@@ -14,7 +15,7 @@ export default defineConfig(({ command }) => ({
         }
       : {}),
   },
-  plugins: [react()],
+  plugins: [react(), monitorController()],
   worker: {
     format: "es",
   },

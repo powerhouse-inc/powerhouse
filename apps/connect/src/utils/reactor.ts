@@ -7,6 +7,7 @@ import {
   ReactorBuilder,
   ReactorClientBuilder,
   setDriveMetadata,
+  trackDriveArrival,
   untilDriveListed,
   waitForDocumentReady,
   type BrowserReactorClientModule,
@@ -21,10 +22,16 @@ import {
   PGLITE_IDB_STORAGE_FACTS,
   type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
+import {
+  actionIdsFrom,
+  caughtUp,
+  type PlacementSync,
+} from "@powerhousedao/connect-core/runtime";
+import type { RoutingReactorClient } from "@powerhousedao/reactor-router";
 import type {
-  PHConnectDefaultDrive,
   PHConnectDefaultDriveLocal,
   PHConnectDefaultDriveRemote,
+  PHConnectRuntimeDefaultDrive,
 } from "@powerhousedao/shared/clis";
 import type { RuntimePowerhouseConfig } from "@powerhousedao/shared/connect";
 import type {
@@ -132,7 +139,7 @@ export async function createBrowserReactor(
 
 export function getDefaultDrives(
   runtimeConfig: RuntimePowerhouseConfig,
-): PHConnectDefaultDrive[] {
+): PHConnectRuntimeDefaultDrive[] {
   return runtimeConfig.connect.drives?.defaultDrives ?? [];
 }
 
@@ -149,22 +156,59 @@ export function getDefaultDrives(
  * this browser's local reactor; its fixed id makes later boots skip it).
  *
  * @param drives - Array of default-drive entries
+ * @returns The remote entries that were not added
  */
 export async function addDefaultDrivesForNewReactor(
-  drives: PHConnectDefaultDrive[],
-): Promise<void> {
-  await Promise.all(
-    drives.map((drive) =>
-      "url" in drive
-        ? addRemoteDefaultDrive(drive)
-        : addLocalDefaultDrive(drive),
-    ),
+  drives: PHConnectRuntimeDefaultDrive[],
+): Promise<PHConnectDefaultDriveRemote[]> {
+  const missed = await Promise.all(
+    drives.map(async (drive) => {
+      if (!("url" in drive)) {
+        await addLocalDefaultDrive(drive);
+        return undefined;
+      }
+      return (await addRemoteDefaultDrive(drive)) ? undefined : drive;
+    }),
   );
+  return missed.filter((drive) => drive !== undefined);
 }
 
+/**
+ * Adds the default drives, and again at sign-in those a signed-out person could
+ * not reach. A host behind sign-in answers 404 for a drive it will not show, so
+ * on a first run nothing can be added until the person has signed in, and
+ * nothing else would ask again before a reload.
+ *
+ * Someone signed in from the start was already refused with their credentials:
+ * signing in again cannot change that, so there is nothing to wait for.
+ */
+export async function addDefaultDrivesThroughSignIn(
+  renown: Pick<IRenown, "on" | "user">,
+  drives: PHConnectRuntimeDefaultDrive[],
+): Promise<void> {
+  const signedInAtStart = renown.user !== undefined;
+  const missed = await addDefaultDrivesForNewReactor(drives);
+  if (missed.length === 0 || signedInAtStart) return;
+
+  const addMissed = () =>
+    trackDriveArrival(addDefaultDrivesForNewReactor(missed));
+  if (renown.user) {
+    await addMissed();
+    return;
+  }
+  const unsubscribe = renown.on("user", (user) => {
+    if (!user) return;
+    unsubscribe();
+    addMissed().catch((error: unknown) =>
+      console.error("Failed to add default drives after sign-in:", error),
+    );
+  });
+}
+
+/** @returns Whether the drive was added. */
 async function addRemoteDefaultDrive(
   drive: PHConnectDefaultDriveRemote,
-): Promise<void> {
+): Promise<boolean> {
   const MAX_ATTEMPTS = 3;
   const BACKOFF_MS = 2000;
 
@@ -220,6 +264,7 @@ async function addRemoteDefaultDrive(
       );
     }
   }
+  return driveId !== undefined;
 }
 
 /**
@@ -270,4 +315,79 @@ async function addLocalDefaultDrive(
   } catch (error) {
     console.error(`Failed to create local default drive ${drive.id}:`, error);
   }
+}
+
+const COPY_TIMEOUT_MS = 30_000;
+const COPY_RECHECK_MS = 250;
+
+/** Adds what the copy here stored since the last read; false while it is not held here. */
+async function readCopy(
+  driveId: string,
+  held: Record<string, Set<string>>,
+  from: Record<string, number>,
+): Promise<boolean> {
+  const local = getPHStore()?.reactorClientModule?.client;
+  if (!local) return false;
+  try {
+    for (const scope of Object.keys(held)) {
+      const read = await actionIdsFrom(
+        local.read,
+        driveId,
+        scope,
+        from[scope] ?? 0,
+      );
+      for (const id of read.ids) held[scope].add(id);
+      from[scope] = read.next;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Resolves once the local copy holds what the switchboard held when called; rejects after the timeout. */
+async function untilCaughtUp(driveId: string, remote: string): Promise<void> {
+  const router = getFullReactorClient() as
+    | Pick<RoutingReactorClient, "backends">
+    | undefined;
+  const backend = router?.backends.find((b) => b.name === remote);
+  if (!backend) {
+    throw new Error(`No switchboard named ${remote} to copy from`);
+  }
+  const scopes = Object.keys((await backend.api.get(driveId)).header.revision);
+  const source: Record<string, string[]> = {};
+  const held: Record<string, Set<string>> = {};
+  for (const scope of scopes) {
+    source[scope] = (await actionIdsFrom(backend.api, driveId, scope, 0)).ids;
+    held[scope] = new Set();
+  }
+  const from: Record<string, number> = {};
+  const deadline = Date.now() + COPY_TIMEOUT_MS;
+  for (;;) {
+    if ((await readCopy(driveId, held, from)) && caughtUp(held, source)) {
+      return;
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `The copy in this browser did not catch up with ${remote} within ${COPY_TIMEOUT_MS / 1000} s`,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, COPY_RECHECK_MS));
+  }
+}
+
+/** The tab's sync remotes, for moving a drive; a copy is ready once it holds what the switchboard holds. */
+export function placementSync(): PlacementSync {
+  const syncManager = () =>
+    getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
+  return {
+    list: () => syncManager()?.list() ?? [],
+    remove: async (name) => {
+      await syncManager()?.remove(name);
+    },
+    add: async (url, driveId) => {
+      await addRemoteDrive(url, driveId);
+    },
+    untilCopied: (driveId, remote) => untilCaughtUp(driveId, remote),
+  };
 }

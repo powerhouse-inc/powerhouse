@@ -1,0 +1,26 @@
+diff --git a/build/storage.js b/build/storage.js
+index 87697c6fe0cf87c7d9c3fe1edfe9a10fdc8a3c7e..935e37c4fc1ed0e52278c26aa9cb692bf541f000 100644
+--- a/build/storage.js
++++ b/build/storage.js
+@@ -891,6 +891,8 @@ var Storage = class {
+ 				await (0, node_stream_promises.pipeline)(uploadStream, transformHash, localStorageWriteStream, { signal });
+ 			});
+ 			localStorageWriteStream.on("close", async () => {
++				// A failed write records no attachment: the write would land after the error is answered
++				if (localStorageWriteStream.errored) return;
+ 				try {
+ 					debug$1("uploaded tarball %o for %o", filename, pkgName);
+ 					await this.updatePackage(pkgName, async (data) => {
+diff --git a/build/storage.mjs b/build/storage.mjs
+index 14f2972ff0e509916266daf7aeb851b938a6170c..256eeee05742673277cfefd8104cdf1ddbae30db 100644
+--- a/build/storage.mjs
++++ b/build/storage.mjs
+@@ -887,6 +887,8 @@ var Storage = class {
+ 				await pipeline(uploadStream, transformHash, localStorageWriteStream, { signal });
+ 			});
+ 			localStorageWriteStream.on("close", async () => {
++				// A failed write records no attachment: the write would land after the error is answered
++				if (localStorageWriteStream.errored) return;
+ 				try {
+ 					debug("uploaded tarball %o for %o", filename, pkgName);
+ 					await this.updatePackage(pkgName, async (data) => {

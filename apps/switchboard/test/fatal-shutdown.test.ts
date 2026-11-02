@@ -28,6 +28,46 @@ describe("installFatalErrorShutdown", () => {
     vi.useRealTimers();
   });
 
+  it("doesn't log a closed pipe during shutdown, as that only raises it again", () => {
+    const proc = makeProc();
+    const error = vi.fn();
+    installFatalErrorShutdown({ error } as never, proc as never);
+    const closed = Object.assign(new Error("write EPIPE"), { code: "EPIPE" });
+
+    proc.emit("uncaughtException", closed);
+    proc.emit("uncaughtException", closed);
+    proc.emit("uncaughtException", new Error("something else"));
+
+    expect(error).toHaveBeenCalledTimes(2);
+    expect(error.mock.calls[0][1]).toBe(closed);
+    expect(error.mock.calls[1][1]).not.toBe(closed);
+  });
+
+  describe("on Windows, where killing a process ends it on the spot", () => {
+    it("calls SIGTERM's listeners, so the stores close first", () => {
+      const proc = Object.assign(makeProc(), { platform: "win32" as const });
+      const onSigterm = vi.fn();
+      proc.on("SIGTERM", onSigterm);
+      installFatalErrorShutdown(logger, proc as never);
+
+      proc.emit("uncaughtException", new Error("boom"));
+
+      expect(onSigterm).toHaveBeenCalledOnce();
+      expect(proc.kill).not.toHaveBeenCalled();
+      expect(proc.exit).not.toHaveBeenCalled();
+      expect(proc.exitCode).toBe(1);
+    });
+
+    it("exits if nothing is listening to shut anything down", () => {
+      const proc = Object.assign(makeProc(), { platform: "win32" as const });
+      installFatalErrorShutdown(logger, proc as never);
+
+      proc.emit("uncaughtException", new Error("boom"));
+
+      expect(proc.exit).toHaveBeenCalledWith(1);
+    });
+  });
+
   it.each(["uncaughtException", "unhandledRejection"])(
     "routes %s through SIGTERM with exit code 1",
     (event) => {

@@ -261,9 +261,11 @@ export type MergePagedOptions<T> = FanInOptions & {
   /** Two backends' copies of one item share this; `""` never de-duplicates. */
   readonly identify: (item: T) => string;
   readonly paging: PagingOptions | undefined;
+  /** The backend an identity is routed to; its copy wins a duplicate. */
+  readonly routedTo?: (identity: string) => string | undefined;
 };
 
-/** Backend-major order, first copy wins; `limit` applies per backend. */
+/** Backend-major order; a duplicate keeps the routed copy, else the first. */
 export async function mergePaged<T>(
   participants: readonly PagedParticipant[],
   call: (
@@ -290,17 +292,21 @@ export async function mergePaged<T>(
   );
 
   const results: T[] = [];
-  const seen = new Set<string>();
+  const seen = new Map<string, number>();
   const nextCursors: BackendCursor[] = [];
   const continued: PagedParticipant[] = [];
   for (const answer of answers) {
     for (const item of answer.value.results) {
       const identity = options.identify(item);
       if (identity !== "") {
-        if (seen.has(identity)) {
+        const first = seen.get(identity);
+        if (first !== undefined) {
+          if (options.routedTo?.(identity) === answer.backend.name) {
+            results[first] = item;
+          }
           continue;
         }
-        seen.add(identity);
+        seen.set(identity, results.length);
       }
       results.push(item);
     }

@@ -1,3 +1,280 @@
+## 6.2.3-dev.90 (2026-11-02)
+
+### 🚀 Features
+
+- **desktop:** fold a stack into a few thousand files ([9ff7083857](https://github.com/powerhouse-inc/powerhouse/commit/9ff7083857))
+- **ph-run:** run a host with none of the tools that build one ([ff0ac7910f](https://github.com/powerhouse-inc/powerhouse/commit/ff0ac7910f))
+- **desktop:** a sign-in page and a local key for generated shells ([7cce4b7316](https://github.com/powerhouse-inc/powerhouse/commit/7cce4b7316))
+- **desktop:** grant generated shells the system browser opener ([db0642a856](https://github.com/powerhouse-inc/powerhouse/commit/db0642a856))
+- **switchboard:** verify delegated signers with authEnforcement off ([b896f23cfe](https://github.com/powerhouse-inc/powerhouse/commit/b896f23cfe))
+
+### 🩹 Fixes
+
+- **desktop:** the stack ships the packages its hosts' plugins come from ([faa1168ba4](https://github.com/powerhouse-inc/powerhouse/commit/faa1168ba4))
+- **desktop:** pack and test the stack on Windows ([c6317e2c15](https://github.com/powerhouse-inc/powerhouse/commit/c6317e2c15))
+- **reactor:** keep the trust context optional for direct callers ([1760590c37](https://github.com/powerhouse-inc/powerhouse/commit/1760590c37))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.89 (2026-11-02)
+
+This was a version bump only for @powerhousedao/reactor-monitor-app to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.88 (2026-11-01)
+
+This was a version bump only for @powerhousedao/reactor-monitor-app to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **reactor-monitor-app:** the Router view routes a started app as its Connect does ([8668131606](https://github.com/powerhouse-inc/powerhouse/commit/8668131606))
+- **reactor-monitor-app:** builder chooses where new drives go and each switchboard connection ([78224a1f4a](https://github.com/powerhouse-inc/powerhouse/commit/78224a1f4a))
+- **reactor-monitor-app:** host-rules offer Connect's router settings ([e1aafa7cb8](https://github.com/powerhouse-inc/powerhouse/commit/e1aafa7cb8))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+- **reactor-monitor-app:** show port clashes on the Reactors step with a fix ([477ec947a8](https://github.com/powerhouse-inc/powerhouse/commit/477ec947a8))
+- **reactor:** undoV3 feature flag, off by default ([5e69f6cd0f](https://github.com/powerhouse-inc/powerhouse/commit/5e69f6cd0f))
+
+### 🩹 Fixes
+
+- **reactor-monitor-app:** opening a second switchboard keeps new drives where they go ([32115af5e0](https://github.com/powerhouse-inc/powerhouse/commit/32115af5e0))
+- **apps-reactor-monitor:** headline only a line that says what failed ([166268d79f](https://github.com/powerhouse-inc/powerhouse/commit/166268d79f))
+- **apps-reactor-monitor:** say how the copy picks each clashing port ([3764263573](https://github.com/powerhouse-inc/powerhouse/commit/3764263573))
+- **apps-reactor-monitor:** only the last line of a failed run names its cause ([eddbfd2dae](https://github.com/powerhouse-inc/powerhouse/commit/eddbfd2dae))
+- **reactor-monitor-app:** the Router view never sends new drives somewhere Connect wouldn't ([5f03c9a0dc](https://github.com/powerhouse-inc/powerhouse/commit/5f03c9a0dc))
+- **reactor-monitor-app:** router settings review: labels, ids, a narrower delete and one primary ([ded5799dce](https://github.com/powerhouse-inc/powerhouse/commit/ded5799dce))
+- **apps-reactor-monitor:** load host-rules ports under plain node ([f507416387](https://github.com/powerhouse-inc/powerhouse/commit/f507416387))
+- **apps-reactor-monitor:** a failed start leads with the cause from its log ([fa69426405](https://github.com/powerhouse-inc/powerhouse/commit/fa69426405))
+- **apps-reactor-monitor:** check the copy's ports in the builder too ([b314508b19](https://github.com/powerhouse-inc/powerhouse/commit/b314508b19))
+- **reactor-monitor-app:** import refuses placement.primary on a Connect, and its primary follows Connect ([13f98f91b6](https://github.com/powerhouse-inc/powerhouse/commit/13f98f91b6))
+- **reactor-monitor-app:** lead a failed start with its reason, fold the log tail ([5c950656c5](https://github.com/powerhouse-inc/powerhouse/commit/5c950656c5))
+- **reactor-monitor-app:** refuse a copy whose members would share a port ([767d6c69a5](https://github.com/powerhouse-inc/powerhouse/commit/767d6c69a5))
+- **reactor-monitor-app:** give an added member a free port; refuse two members on one port ([11345ff71e](https://github.com/powerhouse-inc/powerhouse/commit/11345ff71e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor:** keyframe clean-up with a dry run ([9be5cad060](https://github.com/powerhouse-inc/powerhouse/commit/9be5cad060))
+- **reactor:** memory telemetry correlated with operations processed ([c8d0779075](https://github.com/powerhouse-inc/powerhouse/commit/c8d0779075))
+- **reactor:** per-processor timing, top 5 in the catch-up output ([ca20e898e4](https://github.com/powerhouse-inc/powerhouse/commit/ca20e898e4))
+- **switchboard:** add the AI gateway plugin ([e9a4cd0dc1](https://github.com/powerhouse-inc/powerhouse/commit/e9a4cd0dc1))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.85 (2026-10-30)
+
+This was a version bump only for @powerhousedao/reactor-monitor-app to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.84 (2026-10-30)
+
+This was a version bump only for @powerhousedao/reactor-monitor-app to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** route a copy by the config it runs ([d11d85e424](https://github.com/powerhouse-inc/powerhouse/commit/d11d85e424))
+- **reactor-monitor-app:** route a started Connect's reactors from Use it ([6cf25c1cf4](https://github.com/powerhouse-inc/powerhouse/commit/6cf25c1cf4))
+- **reactor-monitor-app:** host rules judge saving a Router move as placement ([476a74111d](https://github.com/powerhouse-inc/powerhouse/commit/476a74111d))
+- **reactor-monitor-app:** route over switchboards and move drives at runtime ([25d74b05c2](https://github.com/powerhouse-inc/powerhouse/commit/25d74b05c2))
+- **apps-reactor-monitor:** a Connect may link drives on several switchboards ([95c4947409](https://github.com/powerhouse-inc/powerhouse/commit/95c4947409))
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+- **reactor-monitor-app:** name every linked drive by slug in the route seed ([8370f3e8dd](https://github.com/powerhouse-inc/powerhouse/commit/8370f3e8dd))
+- **reactor-monitor-app:** keep a started app's moves across a new start ([e8035c45c1](https://github.com/powerhouse-inc/powerhouse/commit/e8035c45c1))
+- **reactor-monitor-app:** the Router view's tables keep their height ([a52e14b270](https://github.com/powerhouse-inc/powerhouse/commit/a52e14b270))
+- **reactor-monitor-app:** serve.ts loads again under plain node ([5dc4c7f347](https://github.com/powerhouse-inc/powerhouse/commit/5dc4c7f347))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+- **apps-reactor-monitor:** name a drive added to a switchboard, saved in this host ([804c4f2115](https://github.com/powerhouse-inc/powerhouse/commit/804c4f2115))
+- **apps-reactor-monitor:** "Where this app keeps its drives" card for Connect ([48c8d4b6ac](https://github.com/powerhouse-inc/powerhouse/commit/48c8d4b6ac))
+- **apps-reactor-monitor:** link a Connect to switchboard drives in the host rules ([9b7a19066f](https://github.com/powerhouse-inc/powerhouse/commit/9b7a19066f))
+- **apps-reactor-monitor:** policy for drive links, drive lists and placement ([ffa8b1ecb0](https://github.com/powerhouse-inc/powerhouse/commit/ffa8b1ecb0))
+- **apps-reactor-monitor:** import refuses a placement key that names no drive ([01652396c1](https://github.com/powerhouse-inc/powerhouse/commit/01652396c1))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+
+### 🩹 Fixes
+
+- **apps-reactor-monitor:** refuse a drive name a switchboard plugin already uses ([ff831b7d25](https://github.com/powerhouse-inc/powerhouse/commit/ff831b7d25))
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+- **apps-reactor-monitor:** copy an env link into a wrapper as it is ([935da0a9e2](https://github.com/powerhouse-inc/powerhouse/commit/935da0a9e2))
+- **apps-reactor-monitor:** name the folder for a placement key a wrapper's plugins hide ([43cab375b7](https://github.com/powerhouse-inc/powerhouse/commit/43cab375b7))
+- **apps-reactor-monitor:** link a second drive for a Connect that declares no drives ([44edf4ab1e](https://github.com/powerhouse-inc/powerhouse/commit/44edf4ab1e))
+- **apps-reactor-monitor:** show a switchboard's drive address in Use it ([ddb1199c35](https://github.com/powerhouse-inc/powerhouse/commit/ddb1199c35))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **reactor-monitor:** give a copy's Connect a fixed port of its own ([2302f04f24](https://github.com/powerhouse-inc/powerhouse/commit/2302f04f24))
+- **reactor-monitor:** link to the running Connect from a builder copy ([2b418ff13d](https://github.com/powerhouse-inc/powerhouse/commit/2b418ff13d))
+- **reactor-monitor:** report a started Connect's app URL ([ceb1bb14c7](https://github.com/powerhouse-inc/powerhouse/commit/ceb1bb14c7))
+- **apps-reactor-monitor:** link switchboards by a drive address ([2059829ebc](https://github.com/powerhouse-inc/powerhouse/commit/2059829ebc))
+- **reactor-monitor:** start, stop and save builder drafts from Use it ([0a228efa74](https://github.com/powerhouse-inc/powerhouse/commit/0a228efa74))
+- **reactor-monitor:** copy the project into a draft and list it per switchboard ([5ac8af6cff](https://github.com/powerhouse-inc/powerhouse/commit/5ac8af6cff))
+- **reactor-monitor:** open the host builder from the views ([65d66d91d4](https://github.com/powerhouse-inc/powerhouse/commit/65d66d91d4))
+- **reactor-monitor:** host builder stepper and its steps ([02665ec029](https://github.com/powerhouse-inc/powerhouse/commit/02665ec029))
+- **reactor-monitor:** one managed descriptor per compound member ([63bd4580cb](https://github.com/powerhouse-inc/powerhouse/commit/63bd4580cb))
+- **reactor-monitor:** client methods for capabilities, export and drafts ([fdb84fa3f2](https://github.com/powerhouse-inc/powerhouse/commit/fdb84fa3f2))
+- **reactor-monitor:** serve capabilities, export and draft routes ([3633418a4a](https://github.com/powerhouse-inc/powerhouse/commit/3633418a4a))
+- **reactor-monitor:** start a draft host from a throwaway copy of its project ([4abb04b4b2](https://github.com/powerhouse-inc/powerhouse/commit/4abb04b4b2))
+- **reactor-monitor:** materialize a draft host into a throwaway project ([adf31afe72](https://github.com/powerhouse-inc/powerhouse/commit/adf31afe72))
+- **reactor-monitor:** builder draft, persistence and engine hook ([1b2f65fdc9](https://github.com/powerhouse-inc/powerhouse/commit/1b2f65fdc9))
+- **reactor-monitor:** host-files writes the host.js files an export stands for ([8ea300e746](https://github.com/powerhouse-inc/powerhouse/commit/8ea300e746))
+- **reactor-monitor:** carry host-rules issues on the controller wire ([df9b116a52](https://github.com/powerhouse-inc/powerhouse/commit/df9b116a52))
+- **reactor-monitor:** let setters change a host's display name ([4743cf5b12](https://github.com/powerhouse-inc/powerhouse/commit/4743cf5b12))
+- **reactor-monitor:** add the host builder's controller contract ([8a5d8a752d](https://github.com/powerhouse-inc/powerhouse/commit/8a5d8a752d))
+- **reactor-monitor:** add setter_denied and base_changed controller errors ([3a8797a980](https://github.com/powerhouse-inc/powerhouse/commit/3a8797a980))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **reactor-monitor:** stopping a starting copy is not a failed start ([ab5dd17e33](https://github.com/powerhouse-inc/powerhouse/commit/ab5dd17e33))
+- **reactor-monitor:** follow a builder copy by its status, across reloads and set switches ([60ae8debc0](https://github.com/powerhouse-inc/powerhouse/commit/60ae8debc0))
+- **reactor-monitor:** browser reactors a copy brought go when the copy does ([1f4e8ed72a](https://github.com/powerhouse-inc/powerhouse/commit/1f4e8ed72a))
+- **reactor-monitor:** keep why an import row has no remote URL ([c5fab52dd2](https://github.com/powerhouse-inc/powerhouse/commit/c5fab52dd2))
+- **reactor-monitor:** keep PH_PACKAGES out of a draft's env ([2daedfa771](https://github.com/powerhouse-inc/powerhouse/commit/2daedfa771))
+- **reactor-monitor:** load a draft's own project package from its source root ([aac6201584](https://github.com/powerhouse-inc/powerhouse/commit/aac6201584))
+- **reactor-monitor:** confirm a rebase only against the current draft ([edc70d920a](https://github.com/powerhouse-inc/powerhouse/commit/edc70d920a))
+- **reactor-monitor:** preview a rebase before saving it ([7de6790d4d](https://github.com/powerhouse-inc/powerhouse/commit/7de6790d4d))
+- **reactor-monitor:** recover a draft whose project host changed ([e9364bae75](https://github.com/powerhouse-inc/powerhouse/commit/e9364bae75))
+- **reactor-monitor:** no sideways scroll in the sidebar; attach the download link ([98287fc0d8](https://github.com/powerhouse-inc/powerhouse/commit/98287fc0d8))
+- **reactor-monitor:** keep the builder in the viewport on every step ([b294b89a08](https://github.com/powerhouse-inc/powerhouse/commit/b294b89a08))
+- **reactor-monitor:** allow only a safe file name in a name setter ([66cd1a4970](https://github.com/powerhouse-inc/powerhouse/commit/66cd1a4970))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.3-dev.79 (2026-10-28)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** offer workers per switchboard and add switchboards with their own folders ([bfa70ab9c5](https://github.com/powerhouse-inc/powerhouse/commit/bfa70ab9c5))
+- **reactor-monitor-app:** lift one switchboard per host; each needs its own store, search data folder and port ([8d1f6ea16b](https://github.com/powerhouse-inc/powerhouse/commit/8d1f6ea16b))
+- **reactor-monitor-app:** let the builder write a switchboard's own settings and its search data folder ([32a7e9280a](https://github.com/powerhouse-inc/powerhouse/commit/32a7e9280a))
+- **reactor-monitor-app:** read each member's runner config like its reactor block ([289eb3f679](https://github.com/powerhouse-inc/powerhouse/commit/289eb3f679))
+- ⚠️  **switchboard:** startSwitchboard(config, deps) reads only its config ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+- **ph-cli,codegen:** ph mcp, a stdio launcher for reactor-mcp that starts vetra on the first tool call, and generated mcp configs that run it ([c64883e693](https://github.com/powerhouse-inc/powerhouse/commit/c64883e693))
+- **reactor-monitor-app:** hot reload and add options, with ids unique per member ([fa0a0903f8](https://github.com/powerhouse-inc/powerhouse/commit/fa0a0903f8))
+- **codegen,vetra,ph-cli,connect:** project agent guidance as a managed AGENTS.md block and skills, and eval fixes ([#3303](https://github.com/powerhouse-inc/powerhouse/pull/3303))
+- **reactor-monitor-app:** judge a host builder's options with reasons ([33a2121428](https://github.com/powerhouse-inc/powerhouse/commit/33a2121428))
+- **reactor-monitor-app:** validate a draft host per member and backend ([ba2012b616](https://github.com/powerhouse-inc/powerhouse/commit/ba2012b616))
+- **reactor-monitor-app:** matrix owner and error codes on the controller wire ([c3b4305e33](https://github.com/powerhouse-inc/powerhouse/commit/c3b4305e33))
+
+### 🩹 Fixes
+
+- **reactor-monitor-app:** resolve output links as the compound does, and pair access control by them ([58d8dfc005](https://github.com/powerhouse-inc/powerhouse/commit/58d8dfc005))
+- **reactor-monitor-app:** read a missing host env key as unset when selecting options ([f797a8d5a9](https://github.com/powerhouse-inc/powerhouse/commit/f797a8d5a9))
+- **reactor-monitor-app:** one environment per host, and one switchboard for now ([f0f59bd646](https://github.com/powerhouse-inc/powerhouse/commit/f0f59bd646))
+- **reactor-monitor-app:** a search data folder is remove-only and reported as storage ([28a3cba311](https://github.com/powerhouse-inc/powerhouse/commit/28a3cba311))
+- **reactor-monitor-app:** one switchboard per host, process-wide env, and hot reload off that overrides the folder ([ce03482a3e](https://github.com/powerhouse-inc/powerhouse/commit/ce03482a3e))
+- **reactor-monitor-app:** keep builder storage folders under .ph or user data ([0bf33d297c](https://github.com/powerhouse-inc/powerhouse/commit/0bf33d297c))
+- **reactor-monitor-app:** check placement, shared stores, nested compounds and env as the switchboard reads it ([6dec50d38f](https://github.com/powerhouse-inc/powerhouse/commit/6dec50d38f))
+- **reactor-monitor-app:** keep builder folders inside the project and allow removing a member folder ([e114dc3821](https://github.com/powerhouse-inc/powerhouse/commit/e114dc3821))
+- **codegen,shared,vetra,ph-cli,document-model,reactor,reactor-api:** scaffolds get their dependencies, migration-file works, new documents count 0 per scope, subgraphs filter plain ids, and vetra sets the preview drive's app ([6fe1ead94c](https://github.com/powerhouse-inc/powerhouse/commit/6fe1ead94c))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** startSwitchboard(config, deps) reads only its config  ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+  startSwitchboard(options) is now startSwitchboard(config, deps).
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.78 (2026-10-27)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** mount the switchboards panel and gate managed remotes ([b1f656af9c](https://github.com/powerhouse-inc/powerhouse/commit/b1f656af9c))
+- **reactor-monitor-app:** switchboards panel over the controller ([ed242d12b5](https://github.com/powerhouse-inc/powerhouse/commit/ed242d12b5))
+- **reactor-monitor-app:** controller client and managed remote descriptors ([ae148ecf90](https://github.com/powerhouse-inc/powerhouse/commit/ae148ecf90))
+- **portle:** scaffold @powerhousedao/portle, the switchboard plugin that gates publication through Portle ([68ab561f7d](https://github.com/powerhouse-inc/powerhouse/commit/68ab561f7d))
+- **reactor-monitor-app:** host the controller in vite dev and a serve script ([8eb1ef41a5](https://github.com/powerhouse-inc/powerhouse/commit/8eb1ef41a5))
+- **reactor-monitor-app:** wire host import into App ([40eb392822](https://github.com/powerhouse-inc/powerhouse/commit/40eb392822))
+- **reactor-monitor-app:** controller HTTP routes behind host, origin and token guards ([67b653a0ba](https://github.com/powerhouse-inc/powerhouse/commit/67b653a0ba))
+- **reactor-monitor-app:** host import panel and drop zone ([a805ea0b3b](https://github.com/powerhouse-inc/powerhouse/commit/a805ea0b3b))
+- **reactor-monitor-app:** node controller over spawnHost and checkHost ([7066d843cb](https://github.com/powerhouse-inc/powerhouse/commit/7066d843cb))
+- **reactor-monitor-app:** controller wire schemas ([a9c71bf980](https://github.com/powerhouse-inc/powerhouse/commit/a9c71bf980))
+- **reactor-monitor-app:** importSet with provenance ([ccbfff454b](https://github.com/powerhouse-inc/powerhouse/commit/ccbfff454b))
+- **reactor-monitor-app:** parse and plan exported hosts ([8438ab491a](https://github.com/powerhouse-inc/powerhouse/commit/8438ab491a))
+- **reactor-api,switchboard:** vacuum full policy knob, no forced rewrite under load by default ([d6dcbf5cd0](https://github.com/powerhouse-inc/powerhouse/commit/d6dcbf5cd0))
+
+### 🩹 Fixes
+
+- **reactor-monitor-app:** back off the panel poll and forget vanished starts ([c398d4daa7](https://github.com/powerhouse-inc/powerhouse/commit/c398d4daa7))
+- **reactor-monitor-app:** re-probe managed remotes when their set returns ([70e1d0b111](https://github.com/powerhouse-inc/powerhouse/commit/70e1d0b111))
+- **reactor-monitor-app:** require an address for the admin preset's ADMINS ([aaceb8b9d4](https://github.com/powerhouse-inc/powerhouse/commit/aaceb8b9d4))
+- **reactor-monitor-app:** forget a probe whose descriptor left the active set ([c91edade73](https://github.com/powerhouse-inc/powerhouse/commit/c91edade73))
+- **reactor-monitor-app:** pick a project with hosts and keep the log tail in view ([e698ca2112](https://github.com/powerhouse-inc/powerhouse/commit/e698ca2112))
+- **reactor-monitor-app:** test the dev plugin's gates; operator env for both hosts ([2c4b3436c1](https://github.com/powerhouse-inc/powerhouse/commit/2c4b3436c1))
+- **reactor-monitor-app:** allowlist browser env and harden the controller ([ac2c23e6a4](https://github.com/powerhouse-inc/powerhouse/commit/ac2c23e6a4))
+- **reactor-monitor-app:** catch unreadable exports and require http(s) URLs ([eb37b2aba1](https://github.com/powerhouse-inc/powerhouse/commit/eb37b2aba1))
+- **reactor-monitor-app:** plan nested and malformed exports correctly ([f71159430b](https://github.com/powerhouse-inc/powerhouse/commit/f71159430b))
+- **reactor-monitor-app:** stop reading reactor.auth, which main removed ([982743f145](https://github.com/powerhouse-inc/powerhouse/commit/982743f145))
+- **reactor-monitor-app:** track page drags by enter/leave depth ([ee1aa95318](https://github.com/powerhouse-inc/powerhouse/commit/ee1aa95318))
+- **reactor-monitor-app:** type the origin cases and drop an always-true host test ([1493e70608](https://github.com/powerhouse-inc/powerhouse/commit/1493e70608))
+- **registry:** a failed tarball write no longer records its attachment ([5d3ae94bd8](https://github.com/powerhouse-inc/powerhouse/commit/5d3ae94bd8))
+- **reactor-api:** the one-time VACUUM FULL is off by default; quiet and forced are opt-ins ([fd7c19e313](https://github.com/powerhouse-inc/powerhouse/commit/fd7c19e313))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.77 (2026-10-26)
 
 ### 🚀 Features

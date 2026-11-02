@@ -14,6 +14,7 @@ import { useIsEmbedded } from "../runtime/embedded.js";
 import { ThemeToggle } from "./theme-toggle.js";
 import { linkClass } from "./index-table.js";
 import * as modalViews from "./modals.js";
+import { BackendAuthGate, useBackendAuthGate } from "./backend-auth-gate.js";
 
 // The layout shares the modals' chunk, so it renders them directly.
 const coreModals: ConnectModals = Object.fromEntries(
@@ -23,16 +24,19 @@ const coreModals: ConnectModals = Object.fromEntries(
   ]),
 );
 
-/** Core's root: the page, in the theme. */
+/** Core's root: the page, in the theme. When the app's backend refused the
+ * caller, the sign-in gate stands in for every route, so a shell that
+ * replaces core's layout still gets it. */
 export function CoreRoot() {
   initTheme();
   useTheme();
+  const gate = useBackendAuthGate();
   return (
     <div className="h-screen overflow-auto bg-core-bg text-core-fg">
       {/* The matched routes' head: the document title. */}
       <HeadContent />
       <Suspense name="CoreRoot">
-        <Outlet />
+        {gate ? <BackendAuthGate mode={gate} /> : <Outlet />}
       </Suspense>
       <ModalOutlet modals={coreModals} />
     </div>

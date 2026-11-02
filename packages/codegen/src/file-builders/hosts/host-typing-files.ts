@@ -27,6 +27,7 @@ export const HOST_TYPE_MAP_MODULES: readonly (readonly [string, string[]])[] = [
       "@powerhousedao/switchboard/plugins/attachments",
       "@powerhousedao/switchboard/plugins/privacy",
       "@powerhousedao/switchboard/plugins/workflows",
+      "@powerhousedao/switchboard/plugins/ai",
     ],
   ],
   ["@powerhousedao/connect", ["@powerhousedao/connect/plugin-configs"]],

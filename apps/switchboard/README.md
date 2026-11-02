@@ -161,8 +161,11 @@ ph switchboard
 ```
 
 The same settings are available programmatically via
-`startSwitchboard({ workerPool: { numWorkers, dbPoolSizePerWorker, acquireTimeoutMs } })`,
-which takes precedence over the environment variables.
+`startSwitchboard({ workers: { executor: { count, poolSize, acquireTimeoutMs } } })`.
+`startSwitchboard` reads only its config: map the environment with
+`switchboardConfigFromEnv` (`@powerhousedao/switchboard/config/env`) and lay
+your own layer over it with `callerOverEnv` (`@powerhousedao/switchboard/config`)
+to keep the environment variables working.
 
 ### Projection Worker
 
@@ -187,7 +190,7 @@ initialize at all — an unreachable database, an exhausted pooler, an
 unmigrated schema — boot fails immediately with the worker's own error and
 exits non-zero instead of waiting out the init timeout.
 
-Programmatically: `startSwitchboard({ projectionWorker: { enabled, dbPoolSize } })`.
+Programmatically: `startSwitchboard({ workers: { projection: { enabled, poolSize } } })`.
 
 ### Creation Signature Policy
 
@@ -221,9 +224,9 @@ With `read-only` it starts and logs a warning. Every write into those documents
 and every operation received for them is refused; the rest of the store works
 as usual. The check runs once on the host, so it covers the executor worker
 pool too. Any other value fails the boot. Programmatically:
-`startSwitchboard({ unsupportedStoredDocuments: "read-only" })`.
+`startSwitchboard({ protocol: { unsupportedStoredDocuments: "read-only" } })`.
 
-### Reactor Enforcement Flags
+### Reactor Feature Flags
 
 | Variable                       | Description                                                        | Default |
 | ------------------------------ | ------------------------------------------------------------------ | ------- |
@@ -231,16 +234,22 @@ pool too. Any other value fails the boot. Programmatically:
 | `REACTOR_AUTH_ENFORCEMENT`     | Enforce the auth scope's policy at admission, replay and read      | `false` |
 | `REACTOR_AUTH_GROUPS`          | Let `{ group }` principals match against group-document rosters    | `false` |
 | `REACTOR_AUTH_CONDITIONS`      | Evaluate `where` / `match` conditions on grants                    | `false` |
+| `REACTOR_UNDO_V3`              | Support base-reducer 3 (id-targeted undo)                          | `true`  |
 
-Set each to the literal `true` to enable. Each flag requires the one above it,
-and switchboard refuses to start on a set that skips one — a partially enforcing
-reactor would apply less than the operator asked for.
+Set an enforcement flag to the literal `true` to enable it. Each requires the one
+above it, and switchboard refuses to start on a set that skips one — a partially
+enforcing reactor would apply less than the operator asked for.
+`REACTOR_UNDO_V3` has no prerequisites and is on unless set to the literal
+`false` (an empty value counts as on). New documents then take base-reducer 3,
+and a peer without it is held from those documents until it upgrades.
+Programmatically: `protocol.featureFlags.undoV3`.
 
-These change replay outcomes, which are consensus outcomes, so **a flag flips
-for a whole document-sharing fleet, never per node**. Two nodes that share
+The enforcement flags change replay outcomes, which are consensus outcomes, so
+**a flag flips for a whole document-sharing fleet, never per node**. Two nodes that share
 documents and disagree on the flags diverge, exactly as two nodes on
 incompatible versions would. Connect carries the same flags in
-`connect.reactor.featureFlags` (see `apps/connect/RUNTIME-CONFIG.md`); a fleet
+`connect.reactor.featureFlags` (see
+`apps/connect/skills/customize-connect/references/runtime-config.md`); a fleet
 that includes browser replicas has to set them there too.
 
 Sweep the store before enabling either auth flag — neither unsafe condition is
@@ -280,6 +289,39 @@ Switchboard supports multiple storage backends:
 - **Filesystem**: Local file-based storage (default)
 - **PostgreSQL**: Persistent database storage
 - **Redis**: Caching layer (optional)
+
+### Keyframes
+
+A keyframe is a stored copy of a whole document that saves a cold read from replaying its full history. Set how often one is written and how many a document stream keeps, per document type, in `powerhouse.config.json`:
+
+```json
+{
+  "reactor": {
+    "keyframes": {
+      "default": { "interval": 10, "keep": 4 },
+      "types": {
+        "acme/email": { "interval": 50, "keep": 1 },
+        "acme/invoice": { "keep": 12 }
+      }
+    }
+  }
+}
+```
+
+A rule takes what it leaves out from `default`. `"keep": null` keeps every keyframe. Without this block a keyframe is written every 10 revisions and all of them stay. `PH_KEYFRAMES` holds the same JSON and replaces the block whole.
+
+New keyframes then stay within `keep` on their own. To apply a `keep` to keyframes already stored, and to remove all keyframes of deleted documents, use the reactor monitor's Keyframes tab or the CLI. Both need `INSPECTION_ADMIN_ENABLED=true` and a caller in the host's `ADMINS`:
+
+```bash
+ph keyframes preview --url http://localhost:4001/graphql   # reads only
+ph keyframes clean --yes --url http://localhost:4001/graphql
+ph keyframes reclaim --yes --url http://localhost:4001/graphql
+```
+
+A clean-up deletes in small paced statements beside live traffic and can be run again at any time. It frees space inside the table, which new rows reuse; the disk only shrinks after `reclaim`, which rewrites the `Keyframe` table:
+
+- **PGlite:** runs in the store's maintenance lane at the first second without a statement, and reports the store as busy after 15 minutes. The store answers nothing during the rewrite. It needs free disk of about twice the table's live size.
+- **Postgres:** `reclaim` only says what to do. Run `VACUUM FULL reactor."Keyframe"` in a quiet moment; it takes an `ACCESS EXCLUSIVE` lock, so writes that add a keyframe wait for it. `pg_repack` does the same without holding the lock.
 
 ### Observability
 

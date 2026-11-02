@@ -7,7 +7,7 @@
  */
 
 export class WorkerBusyError extends Error {
-  readonly name = "WorkerBusyError";
+  override readonly name = "WorkerBusyError";
   constructor(workerId: string, jobId: string) {
     super(
       `worker ${workerId} is busy; cannot dispatch job ${jobId} while another job is in flight`,
@@ -16,7 +16,7 @@ export class WorkerBusyError extends Error {
 }
 
 export class WorkerExitedError extends Error {
-  readonly name = "WorkerExitedError";
+  override readonly name = "WorkerExitedError";
   constructor(
     workerId: string,
     readonly exitCode: number,
@@ -32,7 +32,7 @@ export class WorkerExitedError extends Error {
 }
 
 export class WorkerAbortTimeoutError extends Error {
-  readonly name = "WorkerAbortTimeoutError";
+  override readonly name = "WorkerAbortTimeoutError";
   constructor(
     workerId: string,
     readonly correlationId: string,
@@ -45,7 +45,7 @@ export class WorkerAbortTimeoutError extends Error {
 }
 
 export class WorkerInitFailedError extends Error {
-  readonly name = "WorkerInitFailedError";
+  override readonly name = "WorkerInitFailedError";
   constructor(
     workerId: string,
     readonly reason: string,
@@ -56,7 +56,7 @@ export class WorkerInitFailedError extends Error {
 }
 
 export class WorkerLoadModelFailedError extends Error {
-  readonly name = "WorkerLoadModelFailedError";
+  override readonly name = "WorkerLoadModelFailedError";
   constructor(
     workerId: string,
     readonly documentType: string,
@@ -72,7 +72,7 @@ export class WorkerLoadModelFailedError extends Error {
 }
 
 export class WorkerShutdownTimeoutError extends Error {
-  readonly name = "WorkerShutdownTimeoutError";
+  override readonly name = "WorkerShutdownTimeoutError";
   constructor(
     workerId: string,
     readonly graceMs: number,

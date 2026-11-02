@@ -35,7 +35,8 @@ import {
   registerAttachmentReferenceReadModelOnModule,
 } from "../src/attachment-reference-read-model.mjs";
 import { applySwitchboardReactorDefaults } from "../src/builder-defaults.mjs";
-import { startSwitchboard } from "../src/server.mjs";
+import type { startSwitchboard } from "../src/server.mjs";
+import { bootSwitchboard } from "./boot-helpers.js";
 
 const REF_A = `attachment://v1:${"a".repeat(64)}` as const;
 const REF_B = `attachment://v1:${"b".repeat(64)}` as const;
@@ -155,15 +156,16 @@ describe("Switchboard attachment-reference read model registration", () => {
     let switchboard: Awaited<ReturnType<typeof startSwitchboard>> | undefined;
 
     try {
-      switchboard = await startSwitchboard({
-        reactor: callerModule,
-        dbPath: readModelPath,
-        port: 0,
-        mcp: false,
-        disableLocalPackages: true,
-        identity: { keypairPath: join(tempRoot, "identity.json") },
-        logger,
-      });
+      switchboard = await bootSwitchboard(
+        {
+          server: { port: 0 },
+          storage: { readModel: { url: readModelPath } },
+          features: { mcp: false },
+          packages: { disableLocal: true },
+          identity: { keypairPath: join(tempRoot, "identity.json") },
+        },
+        { reactor: callerModule, logger },
+      );
 
       expect(switchboard.reactor).toBe(callerModule.client);
       expect(switchboard.attachmentReferenceProjection).toEqual({
@@ -332,15 +334,16 @@ describe("Switchboard attachment-reference read model registration", () => {
     let switchboard: Awaited<ReturnType<typeof startSwitchboard>> | undefined;
 
     try {
-      switchboard = await startSwitchboard({
-        reactor: callerModule,
-        dbPath: join(tempRoot, "read-model"),
-        port: 0,
-        mcp: false,
-        disableLocalPackages: true,
-        identity: { keypairPath: join(tempRoot, "identity.json") },
-        logger: stubLogger(),
-      });
+      switchboard = await bootSwitchboard(
+        {
+          server: { port: 0 },
+          storage: { readModel: { url: join(tempRoot, "read-model") } },
+          features: { mcp: false },
+          packages: { disableLocal: true },
+          identity: { keypairPath: join(tempRoot, "identity.json") },
+        },
+        { reactor: callerModule, logger: stubLogger() },
+      );
 
       expect(switchboard.reactor).toBe(callerModule.client);
       expect(switchboard.attachmentReferenceProjection).toEqual({

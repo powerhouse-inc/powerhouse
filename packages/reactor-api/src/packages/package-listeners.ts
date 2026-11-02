@@ -113,6 +113,18 @@ export function setupEventListeners(
     }
   });
 
+  pkgManager.onScalarsChange(async (scalars) => {
+    try {
+      await graphqlManager.applyScalarRegistry(scalars);
+    } catch (error) {
+      reportFailure(
+        reporting,
+        error,
+        "Scalar change left subgraphs stale: @error",
+      );
+    }
+  });
+
   pkgManager.onSubgraphsChange(async (packagedSubgraphs) => {
     try {
       await graphqlManager.applyPackageSubgraphs(packagedSubgraphs);

@@ -240,7 +240,7 @@ export function externalDepsPlugin(
       if (inDir(importer, options.forbidDirs)) {
         throw new Error(
           `${show(importer)} imports ${name}, which needs ${what}. ` +
-            "Document models run in Connect and on every host: use it from a subgraph, processor or piece instead.",
+            "Document models and scalars run in Connect and on every host: use it from a subgraph, processor or piece instead.",
         );
       }
       if (!found.has(name)) {

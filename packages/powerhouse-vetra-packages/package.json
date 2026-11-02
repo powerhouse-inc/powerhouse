@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/powerhouse-vetra-packages",
-  "version": "6.2.3-dev.77",
+  "version": "6.2.3-dev.90",
   "description": "",
   "keywords": [],
   "author": "",
@@ -109,7 +109,6 @@
   },
   "devDependencies": {
     "@powerhousedao/design-system": "workspace:*",
-    "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@tailwindcss/cli": "catalog:",

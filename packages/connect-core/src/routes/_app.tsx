@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { coreView } from "@powerhousedao/connect-core/router";
+import { coreRouteOptions, coreView } from "@powerhousedao/connect-core/router";
 
 /** The layout's options; none yet. */
-export const options = {};
+export const options = coreRouteOptions({});
 
 // Pathless: the header and content area around home, drives, settings and a
 // project's _app/ routes. A layout renders `ContentOutlet` for its content.

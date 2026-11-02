@@ -304,7 +304,7 @@ describe("PieceWorkerPool", () => {
       expect(fakes.built).toHaveLength(2);
     });
 
-    it("once a request switched TLS verification off", async () => {
+    it("not when a request set NODE_TLS_REJECT_UNAUTHORIZED: the TLS guard verifies anyway", async () => {
       const fakes = pool();
       const first = fakes.pool.session().runAction(runRequest("a"));
       await settled();
@@ -312,7 +312,9 @@ describe("PieceWorkerPool", () => {
       fakes.built[0].finish();
       await first;
 
-      expect(fakes.built[0].disposed).toBe(true);
+      expect(fakes.built[0].disposed).toBe(false);
+      await serve(fakes, runRequest("b"));
+      expect(fakes.built).toHaveLength(1);
     });
 
     it("past 80% of its heap budget", async () => {

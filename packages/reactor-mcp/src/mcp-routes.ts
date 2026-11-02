@@ -15,22 +15,20 @@ interface NodeRouteAdapter {
     ) => void | Promise<void>,
   ): void;
 }
+import type { RemoteDriveAllowlist } from "./admin-tools.js";
+import type { McpAccess } from "./host-access.js";
 import { logger } from "./logger.js";
 import { createServer } from "./server.js";
 
-/**
- * An authorized request names the subject its tools read as. Anonymous is an
- * empty subject, never the host's signer.
- */
+/** The subject the tools read as (anonymous is `{}`, never the host's signer). */
+type McpGrant = { subject: AuthSubject; access?: McpAccess };
+
+/** An authorized request names its subject and the host ACL its tools answer to. */
 export type McpAuthorizationResult =
-  | { authorized: true; subject: AuthSubject }
+  | ({ authorized: true } & McpGrant)
   | { authorized: false; status: number; message: string };
 
-/**
- * Authorizes an incoming /mcp request before it reaches the MCP transport.
- * MCP tools run with unrestricted reactor access, so this is the only gate;
- * an open endpoint must opt in by returning `authorized: true`.
- */
+/** Authorizes an /mcp request before the transport; an open endpoint opts in with `authorized: true`. */
 export type McpRequestAuthorizer = (
   req: IncomingMessage,
 ) => Promise<McpAuthorizationResult>;
@@ -39,6 +37,8 @@ export interface SetupMcpServerOptions {
   client: IReactorClient;
   syncManager?: ISyncManager;
   authorizeRequest: McpRequestAuthorizer;
+  /** URLs `addRemoteDrive` may fetch; omitted, the tool is not mounted. */
+  remoteDriveUrls?: RemoteDriveAllowlist;
 }
 
 function jsonRpcError(message: string, code = -32000): string {
@@ -68,7 +68,7 @@ type AuthorizedRouteHandler = (
   req: IncomingMessage,
   res: ServerResponse,
   body: unknown,
-  subject: AuthSubject,
+  grant: McpGrant,
 ) => void | Promise<void>;
 
 /**
@@ -99,7 +99,7 @@ function withAuthorization(
         .end(jsonRpcError(result.message));
       return;
     }
-    await handler(req, res, body, result.subject);
+    await handler(req, res, body, result);
   };
 }
 
@@ -116,7 +116,7 @@ export function setupMcpServer(
   httpAdapter.mountNodeRoute(
     "POST",
     "/mcp",
-    withAuthorization(authorizeRequest, async (req, res, body, subject) => {
+    withAuthorization(authorizeRequest, async (req, res, body, grant) => {
       // Stateless mode: every request owns its McpServer + transport so
       // concurrent or slow handlers cannot collide on a shared Protocol
       // instance (which throws "Already connected to a transport").
@@ -124,7 +124,9 @@ export function setupMcpServer(
         const server = await createServer({
           client: options.client,
           syncManager: options.syncManager,
-          subject,
+          subject: grant.subject,
+          access: grant.access,
+          remoteDriveUrls: options.remoteDriveUrls,
         });
         const transport = createTransport({ sessionIdGenerator: undefined });
         res.on("close", () => {

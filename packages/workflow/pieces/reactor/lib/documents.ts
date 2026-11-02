@@ -1,10 +1,14 @@
 // Pure helpers over what the reactor client returns: documents, model modules
-// and the actions sent to them. Type-only imports, so the bundle stays small.
+// and the actions sent to them. No barrel imports, so the bundle stays small.
 import type {
   Action,
   DocumentModelModule,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import {
+  generateActionId,
+  nextAuthTimestamp,
+} from "@powerhousedao/shared/document-model/action-id";
 
 export const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 export const DRIVE_DOCUMENT_TYPES = new Set([
@@ -122,8 +126,9 @@ export function plainAction(
   scope: string = DEFAULT_SCOPE,
 ): Action {
   return {
-    id: crypto.randomUUID(),
-    timestampUtcMs: new Date().toISOString(),
+    id: generateActionId(),
+    timestampUtcMs:
+      scope === "auth" ? nextAuthTimestamp() : new Date().toISOString(),
     type,
     input,
     scope,

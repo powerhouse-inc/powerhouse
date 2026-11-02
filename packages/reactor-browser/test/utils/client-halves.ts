@@ -22,6 +22,7 @@ const READ_METHODS = [
   "getDocumentModelModuleForDocument",
   "getCreateSignaturePolicy",
   "getCreateProtocolVersions",
+  "newDocument",
   "resolveIdOrSlug",
   "isServed",
 ];
@@ -37,6 +38,8 @@ const WRITE_METHODS = [
   "upgradeDocument",
   "addRelationship",
   "removeRelationship",
+  "undo",
+  "redo",
 ];
 
 function emptyToken(): ConsistencyToken {

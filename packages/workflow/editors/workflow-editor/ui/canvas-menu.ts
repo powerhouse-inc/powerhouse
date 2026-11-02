@@ -1,6 +1,6 @@
 // Right-click menu contents and placement; pure so the canvas only has to
 // map an action id onto the editor callbacks.
-import { NEXT_PORT } from "@powerhousedao/pieces-framework/workflow";
+import { NEXT_PORT, stepPorts } from "@powerhousedao/pieces-framework/workflow";
 import { stepBlock, type BlockRef } from "./blocks.js";
 import type { PointModel, WorkflowModel } from "./model.js";
 
@@ -39,7 +39,8 @@ function hasNextPort(model: WorkflowModel, id: string, portsOf: PortsOf) {
   if (model.trigger?.id === id) return true;
   const step = model.steps.find((entry) => entry.id === id);
   return step
-    ? (portsOf(stepBlock(step))?.includes(NEXT_PORT) ?? false)
+    ? (stepPorts(stepBlock(step), step.config, portsOf)?.includes(NEXT_PORT) ??
+        false)
     : false;
 }
 

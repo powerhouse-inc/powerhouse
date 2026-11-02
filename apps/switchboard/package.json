@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "6.2.3-dev.77",
+  "version": "6.2.3-dev.90",
   "main": "dist/index.mjs",
   "exports": {
     ".": {
@@ -18,6 +18,16 @@
       "source": "./src/utils.mts",
       "types": "./dist/utils.d.mts",
       "import": "./dist/utils.mjs"
+    },
+    "./config": {
+      "source": "./src/config/schema.ts",
+      "types": "./dist/config/schema.d.mts",
+      "import": "./dist/config/schema.mjs"
+    },
+    "./config/env": {
+      "source": "./src/config/from-env.ts",
+      "types": "./dist/config/from-env.d.mts",
+      "import": "./dist/config/from-env.mjs"
     },
     "./boot": {
       "source": "./src/boot.mts",
@@ -47,6 +57,12 @@
       "types": "./dist/plugins/workflows.d.mts",
       "import": "./dist/plugins/workflows.mjs",
       "default": "./dist/plugins/workflows.mjs"
+    },
+    "./plugins/ai": {
+      "source": "./src/plugins/ai.mts",
+      "types": "./dist/plugins/ai.d.mts",
+      "import": "./dist/plugins/ai.mjs",
+      "default": "./dist/plugins/ai.mjs"
     }
   },
   "engines": {
@@ -78,9 +94,6 @@
   "dependencies": {
     "@electric-sql/pglite": "catalog:",
     "@electric-sql/pglite-tools": "catalog:",
-    "@openfeature/core": "catalog:",
-    "@openfeature/env-var-provider": "catalog:",
-    "@openfeature/server-sdk": "catalog:",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.218.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.218.0",
@@ -105,7 +118,6 @@
     "@powerhousedao/reactor-privacy": "workspace:*",
     "@powerhousedao/reactor-workflow": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
-    "@powerhousedao/vetra": "workspace:*",
     "@powerhousedao/workflow": "workspace:*",
     "@pyroscope/nodejs": "^0.4.5",
     "@renown/sdk": "workspace:*",
@@ -121,20 +133,34 @@
     "pg": "catalog:",
     "pglite-legacy-02": "npm:@electric-sql/pglite@0.2.17",
     "pglite-tools-legacy-02": "npm:@electric-sql/pglite-tools@0.2.4",
-    "vite": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@openfeature/core": "catalog:",
+    "@openfeature/env-var-provider": "catalog:",
+    "@openfeature/server-sdk": "catalog:",
+    "@powerhousedao/vetra": "workspace:*",
     "@types/express": "^4.17.25",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
-    "tsdown": "catalog:",
     "concurrently": "catalog:",
     "nodemon": "catalog:",
     "react": "catalog:",
+    "tsdown": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "react": ">=19.0.0"
+    "@powerhousedao/vetra": "workspace:*",
+    "react": ">=19.0.0",
+    "vite": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@powerhousedao/vetra": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
   }
 }

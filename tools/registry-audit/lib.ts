@@ -20,7 +20,7 @@ import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline as streamPipeline } from "node:stream/promises";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -54,6 +54,31 @@ export const SWITCHBOARD_SERVER = join(
   "dist",
   "server.mjs",
 );
+
+/**
+ * Boots the local Switchboard build the way its edges do: the caller's config
+ * layer over the process env's (PH_PGLITE_IN_MEMORY among them).
+ */
+export async function startLocalSwitchboard<T>(
+  caller: Record<string, unknown>,
+): Promise<T> {
+  type Layer = Record<string, unknown>;
+  const dist = dirname(SWITCHBOARD_SERVER);
+  const load = <M>(file: string) =>
+    import(pathToFileURL(join(dist, file)).href) as Promise<M>;
+  const [server, env, config] = await Promise.all([
+    load<{ startSwitchboard: (config: Layer) => Promise<T> }>("server.mjs"),
+    load<{ switchboardConfigFromEnv: (env: NodeJS.ProcessEnv) => Layer }>(
+      "config/from-env.mjs",
+    ),
+    load<{ callerOverEnv: (env: Layer, caller: Layer) => Layer }>(
+      "config/schema.mjs",
+    ),
+  ]);
+  return server.startSwitchboard(
+    config.callerOverEnv(env.switchboardConfigFromEnv(process.env), caller),
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Manifest

@@ -1,6 +1,9 @@
-import type { CatchUpPrioritySetting } from "@powerhousedao/reactor";
+import type {
+  CatchUpPrioritySetting,
+  MemoryTelemetryChange,
+} from "@powerhousedao/reactor";
 import type { ProcessorRerunOptions } from "@powerhousedao/shared/processors";
-import type { ProcessorLevers } from "../types.js";
+import type { MemoryLevers, ProcessorLevers } from "../types.js";
 import {
   GraphqlInspectionTransport,
   type RemoteInspectionTransportOptions,
@@ -31,6 +34,20 @@ export const INSPECTION_ADMIN_OPERATIONS = {
   ) {
     inspectionSetCatchUpPriority(mode: $mode, level: $level)
   }`,
+  setMemoryTelemetry: `mutation ReactorInspectionSetMemoryTelemetry(
+    $enabled: Boolean!
+    $intervalMs: Int
+    $outputs: [String!]
+  ) {
+    inspectionSetMemoryTelemetry(
+      enabled: $enabled
+      intervalMs: $intervalMs
+      outputs: $outputs
+    )
+  }`,
+  writeHeapSnapshot: `mutation ReactorInspectionWriteHeapSnapshot($force: Boolean) {
+    inspectionWriteHeapSnapshot(force: $force)
+  }`,
 } as const;
 
 /** reactor-api mounts the levers beside inspection, at `<graphql>/inspection-admin`. */
@@ -39,7 +56,7 @@ export function inspectionAdminEndpoint(url: string): string {
 }
 
 /** Processor levers over a host's `inspection-admin` subgraph, served only to its listed admins. */
-export class RemoteProcessorLevers implements ProcessorLevers {
+export class RemoteProcessorLevers implements ProcessorLevers, MemoryLevers {
   private readonly transport: GraphqlInspectionTransport;
 
   constructor(options: RemoteInspectionTransportOptions) {
@@ -89,5 +106,22 @@ export class RemoteProcessorLevers implements ProcessorLevers {
         ? { mode: "fixed", level: setting.level }
         : { mode: "dynamic", level: null },
     );
+  }
+
+  async setMemoryTelemetry(change: MemoryTelemetryChange): Promise<void> {
+    await this.transport.request(
+      "setMemoryTelemetry",
+      INSPECTION_ADMIN_OPERATIONS.setMemoryTelemetry,
+      change,
+    );
+  }
+
+  async writeHeapSnapshot(force = false): Promise<string> {
+    const data = await this.transport.request<{
+      inspectionWriteHeapSnapshot: string;
+    }>("writeHeapSnapshot", INSPECTION_ADMIN_OPERATIONS.writeHeapSnapshot, {
+      force,
+    });
+    return data.inspectionWriteHeapSnapshot;
   }
 }

@@ -37,6 +37,14 @@ export class SyncAwaiter {
    * @param signal - Optional abort signal
    * @returns The sync result
    */
+  /** Sizes for telemetry. */
+  stats(): Record<string, number> {
+    return {
+      pendingWaiters: this.pendingWaiters.size,
+      completedResults: this.completedResults.size,
+    };
+  }
+
   waitForSync(jobId: string, signal?: AbortSignal): Promise<SyncResult> {
     if (signal?.aborted) {
       return Promise.reject(new Error("Operation aborted"));

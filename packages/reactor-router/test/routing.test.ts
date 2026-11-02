@@ -16,6 +16,7 @@ import {
   CrossBackendBatchError,
   CrossBackendRelationshipError,
   FanInPartialFailureError,
+  MisrouteUnresolvedError,
   NoEligibleBackendError,
   RoutingReactorClient,
   UnsupportedByBackendError,
@@ -236,6 +237,137 @@ describe("placement through the client", () => {
     expect(one.count("create") + one.count("executeBatch")).toBe(0);
     expect(two.count("create")).toBe(4);
     expect(two.count("executeBatch")).toBe(4);
+  });
+
+  it("places a parentless create on the default backend", async () => {
+    expect(parentless.some((id) => hashedTo(id, 2) === 0)).toBe(true);
+    const local = new FakeBackend("local");
+    const sb = new FakeBackend("sb", undefined, REMOTE);
+    const client = router([local.config(), sb.config()], {
+      primaryBackend: "local",
+      defaultBackend: "sb",
+    });
+
+    for (const id of parentless.slice(0, 4)) {
+      await client.create(fakeDocument({ id }));
+    }
+    for (const id of parentless.slice(4)) {
+      await client.createAsync(fakeDocument({ id }));
+    }
+
+    expect(local.count("create") + local.count("executeBatch")).toBe(0);
+    expect(sb.count("create")).toBe(4);
+    expect(sb.count("executeBatch")).toBe(4);
+  });
+
+  it("asks the default backend for parentless create defaults", async () => {
+    const local = new FakeBackend("local");
+    const sb = new FakeBackend("sb", undefined, REMOTE);
+    const client = router([local.config(), sb.config()], {
+      primaryBackend: "local",
+      defaultBackend: "sb",
+    });
+
+    await client.getCreateSignaturePolicy();
+    await client.getCreateProtocolVersions({ documentType: "test/document" });
+
+    expect(sb.count("getCreateSignaturePolicy")).toBe(1);
+    expect(sb.count("getCreateProtocolVersions")).toBe(1);
+    expect(local.called("getCreateSignaturePolicy")).toBe(false);
+    expect(local.called("getCreateProtocolVersions")).toBe(false);
+  });
+
+  it("creates a drive with no id or slug on the default backend", async () => {
+    const local = new FakeBackend("local");
+    const sb = new FakeBackend("sb", undefined, REMOTE);
+    const client = router([local.config(), sb.config()], {
+      primaryBackend: "local",
+      defaultBackend: "sb",
+    });
+
+    await client.write.drives.create({ global: { name: "Drive" } });
+
+    expect(sb.called("executeBatch") || sb.called("create")).toBe(true);
+    expect(local.called("executeBatch") || local.called("create")).toBe(false);
+  });
+
+  it("puts a placement above the default backend", async () => {
+    const local = new FakeBackend("local");
+    const sb = new FakeBackend("sb", undefined, REMOTE);
+    const client = router([local.config(), sb.config()], {
+      defaultBackend: "sb",
+      collections: { placed: "local" },
+    });
+
+    await client.create(fakeDocument({ id: "placed" }));
+
+    expect(local.count("create")).toBe(1);
+    expect(sb.called("create")).toBe(false);
+  });
+
+  it("fails a create the default backend refuses, rather than placing it elsewhere", async () => {
+    const local = new FakeBackend("local");
+    const sb = new FakeBackend("sb", undefined, REMOTE);
+    const api = sb.api();
+    const client = router(
+      [
+        local.config(),
+        sb.config({
+          backend: {
+            ...api,
+            create: (document: PHDocument) =>
+              Promise.reject(
+                new WrongBackendError({
+                  documentId: document.header.id,
+                  rejectedBy: "sb",
+                  operation: "create",
+                }),
+              ),
+          },
+        }),
+      ],
+      { primaryBackend: "local", defaultBackend: "sb" },
+    );
+
+    await expect(
+      client.create(fakeDocument({ id: parentless[0] })),
+    ).rejects.toBeInstanceOf(MisrouteUnresolvedError);
+    expect(local.called("create")).toBe(false);
+  });
+
+  it("hashes a create past a default backend the collection can't use", async () => {
+    const plain = new FakeBackend("plain");
+    const node = new FakeBackend("node", workflowInfo(), REMOTE);
+    const client = router([plain.config(), node.config()], {
+      defaultBackend: "plain",
+      requirements: { [parentless[0]]: { workflows: true } },
+    });
+
+    await client.create(fakeDocument({ id: parentless[0] }));
+
+    expect(node.count("create")).toBe(1);
+    expect(plain.called("create")).toBe(false);
+  });
+
+  it("writes to an existing drive where it is, whatever the default backend", async () => {
+    const local = new FakeBackend("local");
+    const sb = new FakeBackend("sb", undefined, REMOTE);
+    local.seed(fakeDocument({ id: "drive-here" }));
+    const client = router([local.config(), sb.config()], {
+      primaryBackend: "local",
+      defaultBackend: "sb",
+    });
+
+    await client.rename("drive-here", "renamed");
+
+    expect(local.count("execute")).toBe(1);
+    expect(sb.called("execute")).toBe(false);
+  });
+
+  it("refuses a default backend it does not hold", () => {
+    expect(() =>
+      router([new FakeBackend("local").config()], { defaultBackend: "sb" }),
+    ).toThrow(/Unknown reactor backend "sb" \(defaultBackend\)/);
   });
 
   const createJob = (id: string) => ({

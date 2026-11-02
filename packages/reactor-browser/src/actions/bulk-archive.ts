@@ -1,8 +1,6 @@
+import { loadDriveNodes } from "../hooks/drive-nodes.js";
 import { getPHStore } from "../hooks/ph-store.js";
-import type {
-  DocumentDriveDocument,
-  Node,
-} from "@powerhousedao/shared/document-drive";
+import type { Node } from "@powerhousedao/shared/document-drive";
 import { isFolderNode } from "@powerhousedao/shared/document-drive";
 import {
   isDocumentZip,
@@ -42,12 +40,10 @@ export async function expandBulkArchive(
     throw new Error("Archive contains no Powerhouse documents");
   }
 
-  const reactorClient = getPHStore()?.reactorClient;
-  if (!reactorClient) {
+  if (!getPHStore()?.reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
-  const drive = (await reactorClient.get(driveId)) as DocumentDriveDocument;
-  const knownNodes = [...drive.state.global.nodes];
+  const knownNodes = [...(await loadDriveNodes(driveId, { refresh: true }))];
 
   // A recreated folder is looked up once per archive path and shared by
   // every leaf under it; the drive's existing folders are the seed.

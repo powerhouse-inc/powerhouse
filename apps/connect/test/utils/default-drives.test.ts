@@ -25,6 +25,7 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   ReactorBuilder: class {},
   ReactorClientBuilder: class {},
   setDriveMetadata: vi.fn(),
+  trackDriveArrival: <T>(promise: Promise<T>) => promise,
   untilDriveListed: vi.fn(),
   waitForDocumentReady: vi.fn(),
 }));
@@ -50,7 +51,10 @@ import {
   waitForDocumentReady,
 } from "@powerhousedao/reactor-browser";
 import type { PHConnectDefaultDrive } from "@powerhousedao/shared/clis";
-import { addDefaultDrivesForNewReactor } from "../../src/utils/reactor.js";
+import {
+  addDefaultDrivesForNewReactor,
+  addDefaultDrivesThroughSignIn,
+} from "../../src/utils/reactor.js";
 
 function setPh(value: Record<string, unknown>): void {
   (window as unknown as { ph: Record<string, unknown> }).ph = value;
@@ -209,5 +213,139 @@ describe("addDefaultDrivesForNewReactor (issue #2838)", () => {
       { id: "drive-1", global: { name: "", icon: null } },
       undefined,
     );
+  });
+});
+
+describe("addDefaultDrivesThroughSignIn", () => {
+  const url = "http://localhost:7540/d/sektar";
+  const other = "http://localhost:7540/d/mail";
+  const person = { address: "0xabc" };
+
+  function fakeRenown(user?: typeof person) {
+    const listeners = new Set<(user?: typeof person) => void>();
+    return {
+      user,
+      on: vi.fn((_event: string, listener: (user?: typeof person) => void) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      }),
+      emit(next?: typeof person) {
+        this.user = next;
+        for (const listener of [...listeners]) listener(next);
+      },
+    };
+  }
+
+  // What a host behind sign-in answers: not an auth error, a 404.
+  async function refuseThenWait(run: Promise<void>) {
+    await vi.runAllTimersAsync();
+    await run;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    setPh({});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    setPh({});
+  });
+
+  it("adds at sign-in the drives a signed-out person could not reach", async () => {
+    const add = addRemoteDrive as Mock;
+    add.mockRejectedValueOnce(new Error("404"));
+    add.mockRejectedValueOnce(new Error("404"));
+    add.mockRejectedValueOnce(new Error("404"));
+    add.mockResolvedValueOnce("drive-id");
+    const renown = fakeRenown();
+
+    await refuseThenWait(
+      addDefaultDrivesThroughSignIn(renown as never, [{ url }]),
+    );
+    expect(add).toHaveBeenCalledTimes(3);
+
+    renown.emit(person);
+    await vi.runAllTimersAsync();
+
+    expect(add).toHaveBeenCalledTimes(4);
+    expect(add).toHaveBeenLastCalledWith(url);
+  });
+
+  it("asks again only for the drives it missed, and only once", async () => {
+    const add = addRemoteDrive as Mock;
+    add.mockImplementation((drive: string) =>
+      drive === url && add.mock.calls.length < 5
+        ? Promise.reject(new Error("404"))
+        : Promise.resolve("drive-id"),
+    );
+    const renown = fakeRenown();
+
+    await refuseThenWait(
+      addDefaultDrivesThroughSignIn(renown as never, [{ url }, { url: other }]),
+    );
+    const before = add.mock.calls.length;
+
+    renown.emit(person);
+    renown.emit(person);
+    await vi.runAllTimersAsync();
+
+    expect(add.mock.calls.slice(before)).toEqual([[url]]);
+  });
+
+  it("asks at once if the person signed in during the attempts", async () => {
+    const add = addRemoteDrive as Mock;
+    add.mockRejectedValueOnce(new Error("404"));
+    add.mockRejectedValueOnce(new Error("404"));
+    add.mockRejectedValueOnce(new Error("404"));
+    add.mockResolvedValueOnce("drive-id");
+    const renown = fakeRenown();
+
+    const run = addDefaultDrivesThroughSignIn(renown as never, [{ url }]);
+    renown.user = person;
+    await refuseThenWait(run);
+
+    expect(add).toHaveBeenCalledTimes(4);
+    expect(renown.on).not.toHaveBeenCalled();
+  });
+
+  it("does not wait for a sign-in when the person was already signed in", async () => {
+    (addRemoteDrive as Mock).mockRejectedValue(new Error("404"));
+    const renown = fakeRenown(person);
+
+    await refuseThenWait(
+      addDefaultDrivesThroughSignIn(renown as never, [{ url }]),
+    );
+
+    expect(renown.on).not.toHaveBeenCalled();
+  });
+
+  it("does not wait for a sign-in when nothing was missed", async () => {
+    (addRemoteDrive as Mock).mockResolvedValue("drive-id");
+    const renown = fakeRenown();
+
+    await refuseThenWait(
+      addDefaultDrivesThroughSignIn(renown as never, [{ url }]),
+    );
+
+    expect(renown.on).not.toHaveBeenCalled();
+  });
+
+  it("ignores a sign-out", async () => {
+    const add = addRemoteDrive as Mock;
+    add.mockRejectedValue(new Error("404"));
+    const renown = fakeRenown();
+
+    await refuseThenWait(
+      addDefaultDrivesThroughSignIn(renown as never, [{ url }]),
+    );
+    renown.emit(undefined);
+    await vi.runAllTimersAsync();
+
+    expect(add).toHaveBeenCalledTimes(3);
   });
 });

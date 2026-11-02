@@ -7,6 +7,11 @@ import { isFileNode } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { EditorModule } from "document-model";
 import { DEFAULT_DRIVE_EDITOR_ID, DRIVE_DOCUMENT_TYPES } from "../constants.js";
+import {
+  getDriveNode,
+  loadDriveNodes,
+  peekDriveNode,
+} from "../hooks/drive-nodes.js";
 import type { PHStore } from "../hooks/ph-store.js";
 import { preloadEditorModule } from "../utils/preload-editor.js";
 import {
@@ -48,8 +53,56 @@ export function findDriveBySlugOrId(
   return findDriveBySlug(store.drives, ref);
 }
 
-function findNode(drive: DocumentDriveDocument | undefined, nodeId: string) {
-  return drive?.state.global.nodes.find((node) => node.id === nodeId);
+// The cached node, else a fresh read: a just-created node may postdate the cache.
+async function findNode(store: PHStore, driveId: string, nodeId: string) {
+  const cached = peekDriveNode(driveId, nodeId, store);
+  if (cached) return cached;
+  try {
+    return await getDriveNode(driveId, nodeId, { store, refresh: true });
+  } catch {
+    return undefined;
+  }
+}
+
+async function findNodeBySlug(store: PHStore, driveId: string, slug: string) {
+  try {
+    const nodes = await loadDriveNodes(driveId, { store });
+    return nodes.find((n) => n.id === slug || makeNodeSlug(n) === slug);
+  } catch {
+    return undefined;
+  }
+}
+
+/** `waitForArrival` for an async read, re-run on each arrival. */
+function waitForNodeArrival<T>(
+  read: () => Promise<T | undefined>,
+  arrivals: DriveArrivals | undefined,
+  signal: AbortSignal,
+  maxWaitMs = DRIVE_ARRIVAL_MAX_WAIT_MS,
+): Promise<T | undefined> {
+  if (!arrivals?.isPending() || signal.aborted) {
+    return Promise.resolve(undefined);
+  }
+  return new Promise((resolve) => {
+    let settled = false;
+    let unsubscribe = () => {};
+    const finish = (result: T | undefined) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      unsubscribe();
+      signal.removeEventListener("abort", onAbort);
+      resolve(result);
+    };
+    const onAbort = () => finish(undefined);
+    const timer = setTimeout(onAbort, maxWaitMs);
+    signal.addEventListener("abort", onAbort, { once: true });
+    unsubscribe = arrivals.subscribe(() => {
+      void read().then((next) => {
+        if (next !== undefined || !arrivals.isPending()) finish(next);
+      });
+    });
+  });
 }
 
 /** Resolves with `read()` once it is defined, nothing is still arriving, the
@@ -197,21 +250,20 @@ export async function resolveDriveRoute(
   // Ids without a UUID or derived-id shape resolve by the slug the app writes.
   const nodeId =
     extractNodeIdFromSlug(nodeSlug) ??
-    drive.state.global.nodes.find(
-      (n) => n.id === nodeSlug || makeNodeSlug(n) === nodeSlug,
-    )?.id;
+    (await findNodeBySlug(store, driveId, nodeSlug))?.id;
   // Only the drive's own remote can still bring its nodes.
   const driveArrivals = arrivals && {
     ...arrivals,
     isPending: () => arrivals.isDrivePending(driveId),
   };
-  // A just-created node may not be in the listed drive yet; ask the reactor.
+  // A node still syncing in is read again on each arrival.
   const node = nodeId
-    ? ((await waitForArrival(
-        () => findNode(findDriveBySlugOrId(store, driveId) ?? drive, nodeId),
+    ? ((await findNode(store, driveId, nodeId)) ??
+      (await waitForNodeArrival(
+        () => findNode(store, driveId, nodeId),
         driveArrivals,
         signal,
-      )) ?? findNode(await fetchDrive(store, driveId, signal), nodeId))
+      )))
     : undefined;
   if (!node) return { kind: "node-not-found", driveId };
   await settleWithin(

@@ -191,7 +191,10 @@ describe("PublishGuard", () => {
 
 // The package storage class Verdaccio writes tarballs through, reached via an
 // instance since local-storage doesn't export it
-function localStoragePrototype(dir: string): { writeTarball: unknown } {
+function localStoragePrototype(dir: string): {
+  writeTarball: unknown;
+  savePackage: unknown;
+} {
   const silent = () => undefined;
   const logger = { error: silent, warn: silent, info: silent, debug: silent };
   const db = new LocalDatabase(
@@ -205,6 +208,7 @@ function localStoragePrototype(dir: string): { writeTarball: unknown } {
   );
   return Object.getPrototypeOf(db.getPackageStorage("probe")) as {
     writeTarball: unknown;
+    savePackage: unknown;
   };
 }
 
@@ -305,12 +309,38 @@ describe("a publish whose tarball upload fails", () => {
         );
         return Promise.resolve(stream);
       });
+    // Packument writes recording the failed tarball land only after the
+    // failure is answered, as a slow disk can order them
+    const file = `${PKG}-1.1.0-dev.1.tgz`;
+    type Save = (name: string, manifest: Packument) => Promise<void>;
+    const files = proto as { savePackage: Save };
+    const savePackage = files.savePackage;
+    let answered!: () => void;
+    const answer = new Promise<void>((resolve) => (answered = resolve));
+    const late: Promise<void>[] = [];
+    const save = vi.spyOn(files, "savePackage").mockImplementation(function (
+      this: unknown,
+      name,
+      manifest,
+    ) {
+      if (manifest._attachments?.[file] === undefined) {
+        return savePackage.call(this, name, manifest);
+      }
+      const write = answer.then(() => savePackage.call(this, name, manifest));
+      late.push(write);
+      return write;
+    });
     try {
       const failed = await publish("1.1.0-dev.1", "dev");
       expect(failed.ok).toBe(false);
       expect(writeTarball).toHaveBeenCalledTimes(1);
+      answered();
+      await Promise.allSettled(late);
+      expect(late).toHaveLength(0);
     } finally {
+      answered();
       writeTarball.mockRestore();
+      save.mockRestore();
     }
 
     const afterFailure = await packument();

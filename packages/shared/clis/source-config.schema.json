@@ -98,6 +98,50 @@
               "description": "Required when `type: postgres`."
             }
           }
+        },
+        "keyframes": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "How many keyframes a document stream keeps and how often one is written. Without this block: a keyframe every 10 revisions, all kept. `PH_KEYFRAMES` overrides it.",
+          "properties": {
+            "default": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Write a keyframe every N revisions."
+                },
+                "keep": {
+                  "type": ["integer", "null"],
+                  "minimum": 1,
+                  "description": "Keyframes kept per document stream, newest first; null keeps them all."
+                }
+              },
+              "description": "The rule for every type `types` does not name."
+            },
+            "types": {
+              "type": "object",
+              "description": "Rules by exact document type, over `default`.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Write a keyframe every N revisions."
+                  },
+                  "keep": {
+                    "type": ["integer", "null"],
+                    "minimum": 1,
+                    "description": "Keyframes kept per document stream, newest first; null keeps them all."
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -227,6 +271,17 @@
         "connectPort": {
           "type": "integer",
           "description": "Port `ph vetra`'s Connect dev server listens on. Assigned per project by `ph init`. Overridden by PH_VETRA_CONNECT_PORT or --connect-port."
+        },
+        "previewDrive": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The Vetra Preview drive `ph vetra` creates in watch mode.",
+          "properties": {
+            "app": {
+              "type": "string",
+              "description": "Id of the drive app the preview drive opens in, e.g. a drive editor's `config.id`. `ph vetra` sets it on the drive each time it starts; leaving it out keeps the drive's current app."
+            }
+          }
         }
       }
     },
@@ -559,6 +614,11 @@
             "studioMode": {
               "description": "Studio mode. Enables builder-only capabilities: Connect loads the vetra package and exposes DocumentModel (and vetra spec types) as creatable documents. Forced on by `ph vetra` / `ph connect studio`; false by default.",
               "default": false,
+              "type": "boolean"
+            },
+            "cookieBanner": {
+              "description": "Show the analytics cookie consent banner on a first visit, when a plugin that needs consent (Sentry, OpenPanel) is active. When false, no banner is shown and analytics consent stays rejected. `ph vetra` turns it off for its local Studio; true by default.",
+              "default": true,
               "type": "boolean"
             },
             "workflowsEnabled": {
@@ -968,10 +1028,14 @@
                   "description": "Evaluate `where` and `match` conditions on grants. Requires authGroups. Do not enable on a fleet `preflight:auth` reports as crossing a reducer version.",
                   "default": false,
                   "type": "boolean"
+                },
+                "undoV3": {
+                  "description": "Support base-reducer 3 (id-targeted undo), which new documents then take. A peer without it is held from base-reducer 3 documents until it upgrades. Unset leaves the reactor's default.",
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false,
-              "description": "Enforcement flags. Each implies its predecessors, and the reactor refuses to boot on a set that names a later flag without an earlier one. These are consensus settings: a Connect syncing with a fleet must carry the same flags the fleet does, or the two reach different replay outcomes for the same history and diverge."
+              "description": "Reactor feature flags. The four enforcement flags each imply their predecessors, and the reactor refuses to boot on a set that names a later one without an earlier one. They are consensus settings: a Connect syncing with a fleet must carry the same enforcement flags the fleet does, or the two reach different replay outcomes for the same history and diverge. undoV3 has no prerequisites; peers negotiate it."
             },
             "createSignaturePolicy": {
               "description": "What new documents are created as. `v2-required` documents accept only v2 action signatures and take content-addressed ids; set `legacy` while any peer Connect syncs with predates them. Existing documents keep their policy.",

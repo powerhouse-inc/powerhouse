@@ -17,7 +17,9 @@ import {
   symlink,
   writeFile,
 } from "node:fs/promises";
-import { findPackageJSON, isBuiltin } from "node:module";
+// A default import: a runtime whose node:module lacks findPackageJSON, such
+// as Bun, still links this module, and the lookup below then finds nothing.
+import nodeModule, { isBuiltin } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -25,6 +27,7 @@ import { pathToFileURL } from "node:url";
 export const PACKAGE_ENTRIES = {
   documentModels: "node/document-models/index.mjs",
   subgraphs: "node/subgraphs/index.mjs",
+  scalars: "node/scalars/index.mjs",
   processors: "node/processors/index.mjs",
 } as const;
 
@@ -76,6 +79,7 @@ export type RegistryCacheManifest = {
   version: string;
   /** Entries the package serves, CDN-relative; absent ones are left out. */
   entries: Partial<Record<PackageEntryKind, string>>;
+  entryKinds: PackageEntryKind[];
   /** CDN-relative path -> sha256 hex. */
   files: Record<string, string>;
   /** Bare specifiers the graph imports. */
@@ -238,8 +242,15 @@ export class RegistryPackageCache {
       await this.discard(dir);
       return null;
     }
-    // An entry without externalDependencies is an older format: fetch it again.
-    if (typeof manifest.externalDependencies !== "object") {
+    // An entry without externalDependencies, or one cached before an entry
+    // kind existed, is an older format: fetch it again.
+    if (
+      typeof manifest.externalDependencies !== "object" ||
+      !Array.isArray(manifest.entryKinds) ||
+      Object.keys(PACKAGE_ENTRIES).some(
+        (kind) => !manifest.entryKinds.includes(kind as PackageEntryKind),
+      )
+    ) {
       await this.discard(dir);
       return null;
     }
@@ -395,7 +406,7 @@ export class RegistryPackageCache {
     }
     if (Object.keys(entries).length === 0) {
       throw new Error(
-        `${name}@${version} serves no document models, subgraphs or processors`,
+        `${name}@${version} serves no document models, subgraphs, scalars or processors`,
       );
     }
     const packageManifest = await this.fetchBounded(
@@ -406,6 +417,7 @@ export class RegistryPackageCache {
       name,
       version,
       entries,
+      entryKinds: Object.keys(PACKAGE_ENTRIES) as PackageEntryKind[],
       files: Object.fromEntries(
         Object.entries(files).sort(([a], [b]) => a.localeCompare(b)),
       ),
@@ -642,7 +654,7 @@ function packageRoot(
 ): string | null {
   let found: string | undefined;
   try {
-    found = findPackageJSON(specifier, base);
+    found = nodeModule.findPackageJSON(specifier, base);
   } catch {
     return null;
   }

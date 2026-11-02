@@ -39,6 +39,7 @@ vi.mock("@powerhousedao/reactor-workflow", async (importOriginal) => {
 });
 
 const { startSwitchboard } = await import("../src/server.mjs");
+const { bootSwitchboard } = await import("./boot-helpers.js");
 
 function stubLogger(): ILogger & { warn: ReturnType<typeof vi.fn> } {
   const logger = {
@@ -63,15 +64,16 @@ describe("booting Switchboard when another process holds the singleton", () => {
 
     try {
       // The boot RESOLVES. That is the whole finding.
-      switchboard = await startSwitchboard({
-        workflows: { enabled: true },
-        dbPath: join(tempRoot, "read-model"),
-        port: 0,
-        mcp: false,
-        disableLocalPackages: true,
-        identity: { keypairPath: join(tempRoot, "identity.json") },
-        logger,
-      });
+      switchboard = await bootSwitchboard(
+        {
+          server: { port: 0 },
+          storage: { readModel: { url: join(tempRoot, "read-model") } },
+          features: { workflows: true, mcp: false },
+          packages: { disableLocal: true },
+          identity: { keypairPath: join(tempRoot, "identity.json") },
+        },
+        { logger },
+      );
 
       // The API is up and serving: the reactor answers, the document models
       // are registered, everything but workflows works.

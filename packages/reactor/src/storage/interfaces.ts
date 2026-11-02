@@ -63,7 +63,7 @@ export class DocumentAlreadyExistsError extends Error {
     this.documentId = documentId;
   }
 
-  static isError(error: unknown): error is DocumentAlreadyExistsError {
+  static override isError(error: unknown): error is DocumentAlreadyExistsError {
     return Error.isError(error) && error.name === "DocumentAlreadyExistsError";
   }
 }
@@ -105,7 +105,7 @@ export class AppendConditionFailedError extends Error {
     this.name = "AppendConditionFailedError";
   }
 
-  static isError(error: unknown): error is AppendConditionFailedError {
+  static override isError(error: unknown): error is AppendConditionFailedError {
     return Error.isError(error) && error.name === "AppendConditionFailedError";
   }
 
@@ -302,6 +302,19 @@ export interface IOperationStore {
     signal?: AbortSignal,
   ): Promise<Set<string>>;
 
+  /**
+   * The ids among `actionIds` that some stored action in the stream references
+   * (`actionReferences`), rewound rows included. Optional: without it the
+   * reactor scans the stream, so an implementation should index the references.
+   */
+  findReferencing?(
+    documentId: string,
+    scope: string,
+    branch: string,
+    actionIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Set<string>>;
+
   /** The latest row of each of `opIds` stored in one stream. */
   getOperationsByIds(
     documentId: string,
@@ -333,6 +346,29 @@ export interface IKeyframeStore {
     branch: string,
     revision: number,
     document: PHDocument,
+    signal?: AbortSignal,
+  ): Promise<void>;
+
+  /**
+   * Stores a snapshot and, in the same statement, deletes the stream's oldest
+   * keyframes beyond the newest `keep`, counting the one stored. Only rows
+   * below `revision` go, so a late write never removes a newer keyframe.
+   *
+   * @param documentId - The document id
+   * @param scope - The operation scope
+   * @param branch - The branch name
+   * @param revision - The operation index this snapshot corresponds to
+   * @param document - The full document state to persist
+   * @param keep - Keyframes to keep in this stream, at least 1
+   * @param signal - Optional abort signal to cancel the request
+   */
+  putKeyframeAndPrune(
+    documentId: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    document: PHDocument,
+    keep: number,
     signal?: AbortSignal,
   ): Promise<void>;
 
@@ -418,6 +454,8 @@ export type WriteIdentityUpsert = {
   slug: string | null;
   documentType: string;
   isDeleted: boolean;
+  /** Leaves the slug of an existing row as it is. */
+  keepSlug?: boolean;
 };
 
 /**

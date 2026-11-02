@@ -5,6 +5,7 @@ import {
   runTone,
   formatDuration,
   formatMs,
+  formatUntil,
   formatWhen,
   runStats,
   workflowHealth,
@@ -70,6 +71,36 @@ describe("formatWhen", () => {
   it("falls back to the date after a day", () => {
     const iso = ago(86_400_000);
     expect(formatWhen(iso)).toBe(new Date(iso).toLocaleDateString());
+  });
+});
+
+describe("formatUntil", () => {
+  const now = new Date("2026-06-15T12:00:00.000Z");
+  const ahead = (ms: number) => new Date(now.getTime() + ms).toISOString();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each([
+    [-1, null],
+    [0, null],
+    [59_999, "in under a minute"],
+    [60_000, "in 1m"],
+    [3_600_000, "in 1h"],
+    [86_400_000, "in 1d"],
+    [6 * 86_400_000, "in 6d"],
+  ])("%d ms ahead → %s", (ms, text) => {
+    expect(formatUntil(ahead(ms))).toBe(text);
+  });
+
+  it("falls back to the date after a week", () => {
+    const iso = ahead(7 * 86_400_000);
+    expect(formatUntil(iso)).toBe(`on ${new Date(iso).toLocaleDateString()}`);
   });
 });
 

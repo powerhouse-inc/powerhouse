@@ -1,0 +1,96 @@
+{
+  "name": "@powerhousedao/ph-run",
+  "version": "6.2.3-dev.90",
+  "description": "Runs a project's hosts, with none of the tools that build one",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "bin": {
+    "ph-run": "./dist/cli.mjs"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    "./runners/connect": {
+      "source": "./src/runners/connect.ts",
+      "types": "./dist/runners/connect.d.mts",
+      "import": "./dist/runners/connect.mjs",
+      "default": "./dist/runners/connect.mjs"
+    },
+    "./runners/switchboard": {
+      "source": "./src/runners/switchboard.ts",
+      "types": "./dist/runners/switchboard.d.mts",
+      "import": "./dist/runners/switchboard.mjs",
+      "default": "./dist/runners/switchboard.mjs"
+    },
+    "./classic-args": {
+      "source": "./src/services/classic-args.ts",
+      "types": "./dist/services/classic-args.d.mts",
+      "import": "./dist/services/classic-args.mjs",
+      "default": "./dist/services/classic-args.mjs"
+    },
+    "./connect-serve": {
+      "source": "./src/services/connect-serve.ts",
+      "types": "./dist/services/connect-serve.d.mts",
+      "import": "./dist/services/connect-serve.mjs",
+      "default": "./dist/services/connect-serve.mjs"
+    },
+    "./connect-server": {
+      "source": "./src/services/connect-server.ts",
+      "types": "./dist/services/connect-server.d.mts",
+      "import": "./dist/services/connect-server.mjs",
+      "default": "./dist/services/connect-server.mjs"
+    },
+    "./member-config": {
+      "source": "./src/runners/member-config.ts",
+      "types": "./dist/runners/member-config.d.mts",
+      "import": "./dist/runners/member-config.mjs",
+      "default": "./dist/runners/member-config.mjs"
+    },
+    "./start-run": {
+      "source": "./src/services/run/start-run.ts",
+      "types": "./dist/services/run/start-run.d.mts",
+      "import": "./dist/services/run/start-run.mjs",
+      "default": "./dist/services/run/start-run.mjs"
+    },
+    "./switchboard": {
+      "source": "./src/services/switchboard.ts",
+      "types": "./dist/services/switchboard.d.mts",
+      "import": "./dist/services/switchboard.mjs",
+      "default": "./dist/services/switchboard.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "cd ../.. && oxlint clis/ph-run",
+    "test": "vitest --run",
+    "build": "tsdown"
+  },
+  "dependencies": {
+    "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/host-core": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/switchboard": "workspace:*",
+    "cmd-ts": "catalog:",
+    "document-model": "workspace:*",
+    "dotenv": "catalog:",
+    "sirv": "^3.0.2",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsdown": "catalog:"
+  }
+}

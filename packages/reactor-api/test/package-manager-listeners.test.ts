@@ -12,7 +12,7 @@ function makeLoader(): IPackageLoader {
     loadSubgraphs: () =>
       Promise.resolve([
         class extends BaseSubgraph {
-          name = "alpha";
+          override name = "alpha";
         },
       ] as SubgraphClass[]),
     loadProcessors: () => Promise.resolve(null),

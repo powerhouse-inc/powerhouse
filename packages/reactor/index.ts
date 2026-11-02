@@ -18,17 +18,31 @@ export {
   DriveClientFacade,
   type BatchSubmitter,
   type DriveClientDeps,
+  type DriveNodeLookups,
 } from "./src/client/drive-client.js";
+export { collectAllPages } from "./src/shared/collect-all-pages.js";
 export { warnOnce } from "./src/client/deprecations.js";
 export {
   DriveReadClient,
+  toLegacyNode,
   type DriveReadDeps,
 } from "./src/client/drive-read-client.js";
 export {
   DriveWriteClient,
   type DriveWriteHalf,
   type DriveWriteReads,
+  type DriveWriteStrategies,
 } from "./src/client/drive-write-client.js";
+export type {
+  DriveClientOptions,
+  DriveNodeKind,
+  DriveNodePage,
+  DriveNodeRecord,
+  DriveWriteStrategyContext,
+  DriveWriteStrategyFactory,
+  IDriveNodeSource,
+  IDriveWriteStrategy,
+} from "./src/client/drive-nodes.js";
 export {
   buildCreateJobs,
   createEmptyDocument,
@@ -55,7 +69,9 @@ export {
   JobFailedError,
   JobBatchHandle,
   JobSetHandle,
+  jobIdsOf,
   mergeConsistencyTokens,
+  placeholderJob,
   WriteHandleFactory,
   type HandleReader,
   type IJobStagePort,
@@ -76,7 +92,10 @@ export {
   type ActionCandidate,
   type ActionEvaluations,
   type CreateDocumentOptions,
+  type NewDocumentOptions,
+  type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
+  type CopyNodeOptions,
   type IDriveClient,
   type IDriveReadClient,
   type IDriveWriteClient,
@@ -90,6 +109,7 @@ export {
   type WriteReceipt,
   type WriteTargetDescription,
   type ProtocolSelection,
+  type UndoRedoAvailability,
   type UpgradeDocumentOptions,
 } from "./src/client/types.js";
 export {
@@ -139,6 +159,7 @@ export {
   type ReactorFeatures,
   type ReactorModule,
   type SyncModule,
+  type UndoRedoTargets,
 } from "./src/core/types.js";
 export {
   JobAwaiter,
@@ -163,9 +184,17 @@ export {
   InvalidSignatureError,
   JOB_NOT_FOUND_ERROR_NAME,
   RelationshipNotFoundError,
+  storedRefusalName,
+  SubmittedUndoRefusedError,
+  UnsupportedProtocolVersionError,
   UnsupportedStoredProtocolError,
+  type StoredProtocolRefusal,
 } from "./src/shared/errors.js";
 export type { UnsupportedStoredDocuments } from "./src/core/stored-protocol-check.js";
+export {
+  featureFlagFingerprint,
+  resolveFeatureFlags,
+} from "./src/core/feature-flags.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
 export { parsePagingOptions, type ParsedPaging } from "./src/shared/utils.js";
 export {
@@ -191,6 +220,7 @@ export {
   type SignatureScheme,
   type SignatureVerificationHandler,
   type SignatureTrustPolicy,
+  type SignatureTrustContext,
   type SignatureVerificationMode,
   type SignerConfig,
 } from "./src/signer/types.js";
@@ -216,6 +246,7 @@ export {
   EventBusAggregateError,
   ReactorEventTypes,
   type ModelLoadedEvent,
+  type StoredModelRefusedEvent,
   type JobPendingEvent,
   type JobReadReadyEvent,
   type JobRunningEvent,
@@ -494,6 +525,14 @@ export type {
   WriteCacheConfig,
 } from "./src/cache/write-cache-types.js";
 export { type IWriteCache } from "./src/cache/write/interfaces.js";
+export {
+  DEFAULT_KEYFRAME_RULE,
+  parseKeyframeSettings,
+  resolveKeyframeRule,
+  type KeyframeRule,
+  type KeyframeRuleOverride,
+  type KeyframeSettings,
+} from "./src/storage/keyframes/keyframe-settings.js";
 
 // Migrations
 export {
@@ -663,7 +702,17 @@ export type {
   ProcessorFilter,
   ProcessorRecord,
   ProcessorPhase,
+  ProcessorQueueDepth,
   ProcessorStatus,
+  ProcessorTiming,
+  ProcessorTimingBatch,
+  ProcessorTimingCounters,
+  ProcessorTimingDocumentType,
+  ProcessorTimingHorizon,
+  ProcessorTimingLastRun,
+  ProcessorTimingLevel,
+  ProcessorTimingPath,
+  ProcessorTimingRun,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
 export {
@@ -672,6 +721,28 @@ export {
   type ReactorHostModuleBaseOptions,
 } from "./src/processors/host-module.js";
 export { DocumentIntegrityService } from "./src/admin/document-integrity-service.js";
+export { KEYFRAME_ADMIN_OPERATIONS } from "./src/admin/keyframe-admin-operations.js";
+export {
+  DEFAULT_KEYFRAME_CLEANUP_LIMITS,
+  KeyframeCleanupService,
+  type KeyframeCleanupLimits,
+  type KeyframeCleanupOptions,
+} from "./src/admin/keyframe-cleanup-service.js";
+export type {
+  IKeyframeCleanup,
+  IStoreMaintenance,
+  KeyframeCleanupReason,
+  KeyframeCleanupReasonReport,
+  KeyframeCleanupRun,
+  KeyframeCleanupState,
+  KeyframeCleanupStreamReport,
+  KeyframeCleanupTotals,
+  KeyframeCleanupTypeReport,
+  KeyframeReclaim,
+  KeyframeReclaimState,
+  TableRewriteRequest,
+  TableRewriteResult,
+} from "./src/admin/keyframe-cleanup-types.js";
 export type {
   IDocumentIntegrityService,
   KeyframeValidationIssue,
@@ -681,6 +752,7 @@ export type {
   ValidationResult,
 } from "./src/admin/types.js";
 export * from "./src/processors/index.js";
+export * from "./src/telemetry/index.js";
 export * from "./src/catch-up/index.js";
 export * from "./src/inspector/index.js";
 
@@ -698,6 +770,8 @@ export {
   GroupInUseError,
   PurgeTooLargeError,
   ReservedActionError,
+  RetractionRefusedError,
+  type RetractionRefusalReason,
 } from "./src/shared/errors.js";
 export {
   acquirePurgeLocks,
@@ -723,3 +797,10 @@ export {
   DocumentPurgeService,
   type EnqueuePurgeOptions,
 } from "./src/admin/document-purge-service.js";
+export {
+  startProgressHeartbeat,
+  withProgressHeartbeat,
+  type ProgressHeartbeat,
+  type ProgressHeartbeatLogger,
+  type ProgressHeartbeatOptions,
+} from "./src/utils/progress-heartbeat.js";

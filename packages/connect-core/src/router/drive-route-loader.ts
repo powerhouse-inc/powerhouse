@@ -4,6 +4,7 @@ import {
   findDriveBySlugOrId,
   makeDriveSlug,
   makeNodeSlug,
+  peekDriveNode,
   resolveDriveRoute,
 } from "@powerhousedao/reactor-browser";
 import { notFound, redirect } from "@tanstack/react-router";
@@ -120,7 +121,8 @@ function canonicalParams(
   const drive = findDriveBySlugOrId(store, data.driveId);
   if (!drive) return undefined;
   if (!data.nodeId) return { driveSlug: makeDriveSlug(drive) };
-  const node = drive.state.global.nodes.find((n) => n.id === data.nodeId);
+  // resolveDriveRoute cached the node it resolved.
+  const node = peekDriveNode(drive.header.id, data.nodeId, store);
   if (!node) return undefined;
   return { driveSlug: makeDriveSlug(drive), nodeSlug: makeNodeSlug(node) };
 }

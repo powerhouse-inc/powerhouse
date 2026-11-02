@@ -406,7 +406,11 @@ describe("testStep", () => {
 
   it("redacts a secret variable in the test run and refuses to replay it", async () => {
     const plaintext = "sk-live-4c1d7e9a2b";
-    const { ref } = await secrets.create({ value: plaintext, label: "api" });
+    const { ref } = await secrets.create({
+      value: plaintext,
+      label: "api",
+      ownerId: "wf-secret",
+    });
     documents.apply(
       "wf-secret",
       actions.setTrigger({

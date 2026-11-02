@@ -2,218 +2,16 @@ import type {
   CreateDocumentAction,
   DocumentModelPHState,
 } from "@powerhousedao/shared/document-model";
+import { documentFromCreation } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
-  createDocumentFromAction,
 } from "../../../src/executor/util.js";
-
-describe("createDocumentFromAction", () => {
-  it("should create a document with minimal input", () => {
-    const action = {
-      id: "action-1",
-      type: "CREATE_DOCUMENT",
-      scope: "document",
-      timestampUtcMs: "2024-01-01T00:00:00.000Z",
-      input: {
-        documentId: "doc-123",
-        model: "powerhouse/document-model",
-        protocolVersions: { "base-reducer": 2 },
-      },
-    } as CreateDocumentAction;
-
-    const document = createDocumentFromAction(action);
-
-    expect(document.header.id).toBe("doc-123");
-    expect(document.header.documentType).toBe("powerhouse/document-model");
-    expect(document.header.slug).toBe("doc-123");
-    expect(document.operations).toEqual({});
-    expect(document.clipboard).toEqual([]);
-    expect(document.state).toBeDefined();
-    expect(document.initialState).toBeDefined();
-  });
-
-  it("should populate signing information when provided", () => {
-    const action = {
-      id: "action-1",
-      type: "CREATE_DOCUMENT",
-      scope: "document",
-      timestampUtcMs: "2024-01-01T00:00:00.000Z",
-      input: {
-        documentId: "doc-123",
-        model: "powerhouse/document-model",
-        signing: {
-          publicKey: { kty: "test" },
-          nonce: "12345",
-          createdAtUtcIso: "2024-01-01T00:00:00.000Z",
-        },
-        protocolVersions: { "base-reducer": 2 },
-      },
-    } as CreateDocumentAction;
-
-    const document = createDocumentFromAction(action);
-
-    expect(document.header.sig).toEqual({
-      publicKey: { kty: "test" },
-      nonce: "12345",
-    });
-    expect(document.header.createdAtUtcIso).toBe("2024-01-01T00:00:00.000Z");
-    expect(document.header.lastModifiedAtUtcIso).toBe(
-      "2024-01-01T00:00:00.000Z",
-    );
-  });
-
-  it("should populate all optional header fields", () => {
-    const action = {
-      id: "action-1",
-      type: "CREATE_DOCUMENT",
-      scope: "document",
-      timestampUtcMs: "2024-01-01T00:00:00.000Z",
-      input: {
-        documentId: "doc-123",
-        model: "powerhouse/document-model",
-        slug: "my-custom-slug",
-        name: "My Document",
-        branch: "feature-branch",
-        meta: {
-          customField: "customValue",
-        },
-        protocolVersions: { "base-reducer": 2 },
-      },
-    } as CreateDocumentAction;
-
-    const document = createDocumentFromAction(action);
-
-    expect(document.header.slug).toBe("my-custom-slug");
-    expect(document.header.name).toBe("My Document");
-    expect(document.header.branch).toBe("feature-branch");
-    expect(document.header.meta).toEqual({
-      customField: "customValue",
-    });
-  });
-
-  it("should default slug to documentId when slug is undefined", () => {
-    const action = {
-      id: "action-1",
-      type: "CREATE_DOCUMENT",
-      scope: "document",
-      timestampUtcMs: "2024-01-01T00:00:00.000Z",
-      input: {
-        documentId: "doc-456",
-        model: "powerhouse/document-model",
-        protocolVersions: { "base-reducer": 2 },
-      },
-    } as CreateDocumentAction;
-
-    const document = createDocumentFromAction(action);
-
-    expect(document.header.slug).toBe("doc-456");
-  });
-
-  it("should default slug to documentId when slug is empty string", () => {
-    const action = {
-      id: "action-1",
-      type: "CREATE_DOCUMENT",
-      scope: "document",
-      timestampUtcMs: "2024-01-01T00:00:00.000Z",
-      input: {
-        documentId: "doc-789",
-        model: "powerhouse/document-model",
-        slug: "",
-        protocolVersions: { "base-reducer": 2 },
-      },
-    } as CreateDocumentAction;
-
-    const document = createDocumentFromAction(action);
-
-    expect(document.header.slug).toBe("doc-789");
-  });
-
-  it("should initialize document with default base state", () => {
-    const action = {
-      id: "action-1",
-      type: "CREATE_DOCUMENT",
-      scope: "document",
-      timestampUtcMs: "2024-01-01T00:00:00.000Z",
-      input: {
-        documentId: "doc-123",
-        model: "powerhouse/document-model",
-        protocolVersions: { "base-reducer": 2 },
-      },
-    } as CreateDocumentAction;
-
-    const document = createDocumentFromAction(action);
-
-    expect(document.state).toBeDefined();
-    expect(document.initialState).toBeDefined();
-    expect(document.state).toEqual(document.initialState);
-    expect(document.state.document).toBeDefined();
-  });
-
-  it("should initialize operations as empty object", () => {
-    const action = {
-      id: "action-1",
-      type: "CREATE_DOCUMENT",
-      scope: "document",
-      timestampUtcMs: "2024-01-01T00:00:00.000Z",
-      input: {
-        documentId: "doc-123",
-        model: "powerhouse/document-model",
-        protocolVersions: { "base-reducer": 2 },
-      },
-    } as CreateDocumentAction;
-
-    const document = createDocumentFromAction(action);
-
-    expect(document.operations).toEqual({});
-    expect(Object.keys(document.operations).length).toBe(0);
-  });
-
-  it("should initialize clipboard as empty array", () => {
-    const action = {
-      id: "action-1",
-      type: "CREATE_DOCUMENT",
-      scope: "document",
-      timestampUtcMs: "2024-01-01T00:00:00.000Z",
-      input: {
-        documentId: "doc-123",
-        model: "powerhouse/document-model",
-        protocolVersions: { "base-reducer": 2 },
-      },
-    } as CreateDocumentAction;
-
-    const document = createDocumentFromAction(action);
-
-    expect(document.clipboard).toEqual([]);
-    expect(document.clipboard.length).toBe(0);
-  });
-
-  it("should create independent document instances", () => {
-    const action = {
-      id: "action-1",
-      type: "CREATE_DOCUMENT",
-      scope: "document",
-      timestampUtcMs: "2024-01-01T00:00:00.000Z",
-      input: {
-        documentId: "doc-123",
-        model: "powerhouse/document-model",
-        protocolVersions: { "base-reducer": 2 },
-      },
-    } as CreateDocumentAction;
-
-    const document1 = createDocumentFromAction(action);
-    const document2 = createDocumentFromAction(action);
-
-    expect(document1).not.toBe(document2);
-    expect(document1.header).not.toBe(document2.header);
-    expect(document1.state).not.toBe(document2.state);
-  });
-});
 
 describe("applyUpgradeDocumentAction", () => {
   it("should merge initialState with existing document state (initial upgrade)", () => {
-    const document = createDocumentFromAction({
+    const document = documentFromCreation({
       id: "action-1",
       type: "CREATE_DOCUMENT",
       scope: "document",
@@ -254,7 +52,7 @@ describe("applyUpgradeDocumentAction", () => {
   });
 
   it("should handle state field instead of initialState", () => {
-    const document = createDocumentFromAction({
+    const document = documentFromCreation({
       id: "action-1",
       type: "CREATE_DOCUMENT",
       scope: "document",
@@ -292,7 +90,7 @@ describe("applyUpgradeDocumentAction", () => {
   });
 
   it("should preserve existing state when no initialState or state provided", () => {
-    const document = createDocumentFromAction({
+    const document = documentFromCreation({
       id: "action-1",
       type: "CREATE_DOCUMENT",
       scope: "document",
@@ -332,7 +130,7 @@ describe("applyUpgradeDocumentAction", () => {
   });
 
   it("should return unchanged document for same version (no-op)", () => {
-    const document = createDocumentFromAction({
+    const document = documentFromCreation({
       id: "action-1",
       type: "CREATE_DOCUMENT",
       scope: "document",
@@ -366,7 +164,7 @@ describe("applyUpgradeDocumentAction", () => {
   });
 
   it("should throw DowngradeNotSupportedError for downgrade attempt", () => {
-    const document = createDocumentFromAction({
+    const document = documentFromCreation({
       id: "action-1",
       type: "CREATE_DOCUMENT",
       scope: "document",
@@ -401,7 +199,7 @@ describe("applyUpgradeDocumentAction", () => {
 
 describe("applyDeleteDocumentAction", () => {
   it("should mark document as deleted", () => {
-    const document = createDocumentFromAction({
+    const document = documentFromCreation({
       id: "action-1",
       type: "CREATE_DOCUMENT",
       scope: "document",
@@ -432,7 +230,7 @@ describe("applyDeleteDocumentAction", () => {
   });
 
   it("should use current time if timestampUtcMs not provided", () => {
-    const document = createDocumentFromAction({
+    const document = documentFromCreation({
       id: "action-1",
       type: "CREATE_DOCUMENT",
       scope: "document",
@@ -468,7 +266,7 @@ describe("applyDeleteDocumentAction", () => {
   });
 
   it("should preserve other document state fields", () => {
-    const document = createDocumentFromAction({
+    const document = documentFromCreation({
       id: "action-1",
       type: "CREATE_DOCUMENT",
       scope: "document",

@@ -1,3 +1,4 @@
+import type { CodegenStatusRegistry } from "@powerhousedao/shared/processors";
 import type { Project } from "ts-morph";
 import type { BaseDocumentGen } from "./base-document-gen.js";
 import { DocumentCodegenManager } from "./document-codegen-manager.js";
@@ -23,11 +24,13 @@ export class DocumentCodegenFactory {
     config: Config,
     project: Project,
     interactiveMode: boolean = false,
+    status?: CodegenStatusRegistry,
   ): DocumentCodegenManager {
     const manager = new DocumentCodegenManager(
       config,
       project,
       interactiveMode,
+      status,
     );
 
     // Register all the standard generators
@@ -55,11 +58,13 @@ export class DocumentCodegenFactory {
     generators: Array<new (config: Config) => any>,
     project: Project,
     interactiveMode: boolean = false,
+    status?: CodegenStatusRegistry,
   ): DocumentCodegenManager {
     const manager = new DocumentCodegenManager(
       config,
       project,
       interactiveMode,
+      status,
     );
 
     for (const generatorClass of generators) {

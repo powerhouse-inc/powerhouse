@@ -4,9 +4,9 @@
  * identically whichever framework the host chose.
  */
 import type { IncomingMessage } from "node:http";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IHttpAdapter } from "../../src/graphql/gateway/types.js";
-import { HttpRouteService } from "../../src/http/index.js";
+import { HttpRouteService, type PublicOrigin } from "../../src/http/index.js";
 import type { AuthService } from "../../src/services/auth.service.js";
 
 export type ScopeHarness = {
@@ -53,7 +53,7 @@ export function runRouteScopeTests(
     function service(options?: {
       basePath?: string;
       authService?: AuthService;
-      publicUrl?: string;
+      publicUrl?: PublicOrigin;
       trustProxy?: boolean;
     }) {
       return new HttpRouteService({
@@ -329,6 +329,24 @@ export function runRouteScopeTests(
         );
       });
 
+      it("reads a late-bound origin when the URL is read", () => {
+        // A scope is claimed before the server listens, when an ephemeral
+        // port is not known yet.
+        let origin = "http://localhost:0";
+        const scope = service({ publicUrl: () => origin }).scopeFor(
+          "document-model",
+        );
+        const route = scope.get(
+          "x",
+          { auth: "public" },
+          () => new Response(""),
+        );
+        origin = "http://localhost:4123";
+
+        expect(scope.baseUrl).toBe("http://localhost:4123/api/document-model");
+        expect(route.url).toBe("http://localhost:4123/api/document-model/x");
+      });
+
       it("degrades to a path when the host knows no public origin", () => {
         // The only case where the "absolute" contract cannot be met. Worth
         // asserting so it stays a deliberate fallback rather than the default.
@@ -525,6 +543,33 @@ export function runRouteScopeTests(
       });
 
       expect(seen).toBe(exact);
+    });
+
+    it("aborts the handler's signal on a disconnect, not when the body is read", async () => {
+      let abortedOnEntry: boolean | undefined;
+      let disconnected = () => {};
+      const gone = new Promise<void>((resolve) => {
+        disconnected = resolve;
+      });
+
+      const scope = service().scopeFor("pkg");
+      scope.post("wait", { auth: "public" }, async (_req, ctx) => {
+        abortedOnEntry = ctx.signal.aborted;
+        ctx.signal.addEventListener("abort", disconnected);
+        await gone;
+        return new Response(null, { status: 204 });
+      });
+
+      const controller = new AbortController();
+      const call = fetch(`${h.url}/api/pkg/wait`, {
+        method: "POST",
+        body: "{}",
+        signal: controller.signal,
+      }).catch(() => undefined);
+      await vi.waitFor(() => expect(abortedOnEntry).toBe(false));
+      controller.abort();
+      await gone;
+      await call;
     });
 
     it("refuses a body past maxBodyBytes with 413", async () => {

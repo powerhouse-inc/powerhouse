@@ -4,11 +4,12 @@
 // init and the SIGINT/SIGTERM flush.
 import "./observability.mjs";
 
+import { getConfig } from "@powerhousedao/config/node";
 import * as Sentry from "@sentry/node";
 import { childLogger } from "document-model";
-import { config } from "./config.js";
+import { binSwitchboardConfig } from "./config/bin.js";
 import { initProfilerFromEnv } from "./profiler.js";
-import { startSwitchboard } from "./server.mjs";
+import { initSwitchboardProcess, startSwitchboard } from "./server.mjs";
 import { StoredDocumentsRefusedError } from "./unsupported-stored-documents.mjs";
 
 const logger = childLogger(["switchboard"]);
@@ -48,12 +49,12 @@ const cliMigratePglite = process.argv.slice(2).includes("--migrate-pglite");
 // logging and continuing hides a dead switchboard from the supervisor, which
 // would otherwise never restart it.
 try {
-  await startSwitchboard({
-    ...config,
-    migratePglite: cliMigratePglite || config.migratePglite,
-    forcePgVersion: config.forcePgVersion ?? undefined,
-    fatalErrorShutdown: true,
+  const config = binSwitchboardConfig(process.env, {
+    filePort: getConfig().switchboard?.port,
+    migratePglite: cliMigratePglite,
   });
+  initSwitchboardProcess(config);
+  await startSwitchboard(config, { fatalErrorShutdown: true });
 } catch (e) {
   // startSwitchboard already reported a refusal to the operator.
   if (!StoredDocumentsRefusedError.isError(e)) {

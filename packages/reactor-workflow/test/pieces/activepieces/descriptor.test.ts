@@ -322,6 +322,96 @@ describe("requireReactor", () => {
   });
 });
 
+describe("action timeout and retry defaults", () => {
+  it("copies what createAction declares, and nothing when undeclared", () => {
+    const piece = createPiece({
+      displayName: "Slow",
+      auth: PieceAuth.None(),
+      logoUrl: "",
+      authors: [],
+      actions: [
+        createAction({
+          name: "agent",
+          displayName: "Agent",
+          description: "",
+          auth: PieceAuth.None(),
+          props: {},
+          defaultTimeoutSeconds: 300,
+          defaultRetry: { maxAttempts: 1 },
+          run: noop,
+        }),
+        createAction({
+          name: "plain",
+          displayName: "Plain",
+          description: "",
+          auth: PieceAuth.None(),
+          props: {},
+          run: noop,
+        }),
+      ],
+      triggers: [],
+    }) as unknown as ApPiece;
+    const [agent, plain] = buildDescriptor(piece, {
+      packageName: "@acme/piece-slow",
+      version: "1.0.0",
+    }).actions;
+    expect(agent.defaultTimeoutSeconds).toBe(300);
+    expect(agent.defaultRetry).toEqual({ maxAttempts: 1 });
+    expect("defaultTimeoutSeconds" in plain).toBe(false);
+    expect("defaultRetry" in plain).toBe(false);
+  });
+
+  it("retries an Activepieces action that asks to by default, 3 attempts", () => {
+    const descriptor = buildDescriptor(
+      {
+        displayName: "Upstream",
+        actions: {
+          retried: {
+            name: "retried",
+            errorHandlingOptions: { retryOnFailure: { defaultValue: true } },
+            run: noop,
+          },
+          declared: {
+            name: "declared",
+            defaultRetry: { maxAttempts: 1 },
+            errorHandlingOptions: { retryOnFailure: { defaultValue: true } },
+            run: noop,
+          },
+          offered: {
+            name: "offered",
+            errorHandlingOptions: { retryOnFailure: { defaultValue: false } },
+            run: noop,
+          },
+        },
+      },
+      { packageName: "@acme/piece-upstream", version: "1.0.0" },
+    );
+    const [retried, declared, offered] = descriptor.actions;
+    expect(retried.defaultRetry).toEqual({ maxAttempts: 3 });
+    expect(declared.defaultRetry).toEqual({ maxAttempts: 1 });
+    expect("defaultRetry" in offered).toBe(false);
+  });
+
+  it("drops defaults a foreign bundle mangled", () => {
+    const descriptor = buildDescriptor(
+      {
+        displayName: "Foreign",
+        actions: {
+          odd: {
+            name: "odd",
+            defaultTimeoutSeconds: -5,
+            defaultRetry: { maxAttempts: "3" },
+            run: noop,
+          },
+        },
+      },
+      { packageName: "@acme/piece-foreign", version: "1.0.0" },
+    );
+    expect("defaultTimeoutSeconds" in descriptor.actions[0]).toBe(false);
+    expect("defaultRetry" in descriptor.actions[0]).toBe(false);
+  });
+});
+
 describe("describeProperties", () => {
   it("translates a DYNAMIC props() result into descriptors", () => {
     const resolved = describeProperties({
@@ -386,5 +476,63 @@ describe("trigger renewal", () => {
     const described = describeEvent({ strategy: "CRON", cronExpression: "x" });
     expect(described).not.toHaveProperty("renew");
     expect(described.unsupported?.feature).toBe("renewConfiguration");
+  });
+});
+
+describe("trigger onStart", () => {
+  const describeHook = (onStart?: unknown) =>
+    buildDescriptor(
+      {
+        displayName: "Hooks",
+        triggers: {
+          event: {
+            name: "event",
+            displayName: "Event",
+            type: "WEBHOOK",
+            props: {},
+            ...(onStart !== undefined ? { onStart } : {}),
+            run: () => Promise.resolve([]),
+          } as never,
+        },
+      },
+      { packageName: "@acme/piece-hooks", version: "1.0.0" },
+    ).triggers[0];
+
+  it("marks a trigger that declares onStart", () => {
+    expect(
+      describeHook(async (ctx: { store: { put(k: string): Promise<void> } }) =>
+        ctx.store.put("k"),
+      ).onStart,
+    ).toBe(true);
+  });
+
+  it("leaves out none, and createTrigger's no-op default", () => {
+    expect(describeHook()).not.toHaveProperty("onStart");
+    expect(describeHook(async () => Promise.resolve())).not.toHaveProperty(
+      "onStart",
+    );
+    expect(describeHook(async () => {})).not.toHaveProperty("onStart");
+  });
+
+  it("leaves out the no-op default however it was compiled", () => {
+    // The exact source text of each compiled form, as a function.
+    const compiled = (source: string): unknown =>
+      // oxlint-disable-next-line no-implied-eval, no-unsafe-call -- test sources only
+      new Function(`return ${source}`)();
+    for (const source of [
+      "function () { return Promise.resolve(); }",
+      "async function () {}",
+      "async () => { await Promise.resolve(); }",
+      "() => __awaiter(this, void 0, void 0, function* () { return Promise.resolve(); })",
+      "function () { return __async(this, null, function* () { return Promise.resolve(); }); }",
+    ]) {
+      expect(describeHook(compiled(source)), source).not.toHaveProperty(
+        "onStart",
+      );
+    }
+    expect(
+      describeHook(compiled("async () => { await globalThis.fetch('x'); }"))
+        .onStart,
+    ).toBe(true);
   });
 });

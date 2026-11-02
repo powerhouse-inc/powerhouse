@@ -2,7 +2,10 @@ import {
   driveDocumentModelModule,
   type DocumentDriveDocument,
 } from "@powerhousedao/shared/document-drive";
-import { withSignaturePolicy } from "@powerhousedao/shared/document-model";
+import {
+  type PeerManifest,
+  withSignaturePolicy,
+} from "@powerhousedao/shared/document-model";
 import {
   ConsoleLogger,
   documentModelDocumentModelModule,
@@ -30,7 +33,11 @@ import type { IChannelFactory } from "../../src/sync/interfaces.js";
 import { SyncBuilder } from "../../src/sync/sync-builder.js";
 import type { ChannelConfig, SyncEnvelope } from "../../src/sync/types.js";
 import type { ReactorFeatureFlags } from "../../src/executor/types.js";
-import { createDocModelDocument } from "../factories.js";
+import { createDocModelDocument, undoV3Flags } from "../factories.js";
+import {
+  CASCADE_TIE_FLAGS,
+  sameMillisecondCascade,
+} from "./cascade-tie-scenario.js";
 import { TestChannel } from "../sync/channels/test-channel.js";
 import { TestP256Signer } from "../utils/p256-signer.js";
 import { TRUST_ANY_SIGNER } from "../utils/signed-as.js";
@@ -165,6 +172,7 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
       .withSync(new SyncBuilder().withChannelFactory(channelFactory));
 
     if (mode === "workers") {
+      builder.withExecutorConfig({ featureFlags: flags });
       const db = dbConfigFor(PG_TEST_URL, TEST_DATABASE);
       const logger = new ConsoleLogger(["test", "worker"]);
       builder
@@ -194,7 +202,7 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
                 },
                 db,
                 models: builder.getResolvedModelManifest() ?? [],
-                executorConfig: {},
+                executorConfig: { featureFlags: flags },
               },
               logger,
             }),
@@ -270,13 +278,16 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
     return ids;
   }
 
-  async function runScenario(mode: "workers" | "in-process"): Promise<void> {
+  async function runScenario(
+    mode: "workers" | "in-process",
+    version = 2,
+  ): Promise<void> {
     const {
       module: clientModule,
       reactorModule,
       sent,
       channel,
-    } = await build(mode);
+    } = await build(mode, version === 3 ? undoV3Flags() : undefined);
     const { reactor } = reactorModule;
     const children = childIds();
 
@@ -287,7 +298,19 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
     const driveId = drive.header.id;
     await settled((await reactor.create(drive)).id);
     for (const id of children) {
-      await settled((await reactor.create(createDocModelDocument({ id }))).id);
+      await settled(
+        (
+          await reactor.create(
+            createDocModelDocument({
+              id,
+              protocolVersions: { "base-reducer": version },
+            }),
+          )
+        ).id,
+      );
+      expect(
+        (await reactor.get(id)).header.protocolVersions?.["base-reducer"],
+      ).toBe(version);
       await settled(
         (
           await reactor.execute(driveId, "main", [
@@ -302,6 +325,9 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
       DriveCollectionId.forDrive(driveId),
       { type: "internal", parameters: {} },
       { documentId: [], scope: [], branch: "main" },
+      undefined,
+      undefined,
+      onThisBuild(reactorModule, version),
     );
     await vi.waitUntil(() => channel().outbox.latestOrdinal > 0, {
       timeout: 10_000,
@@ -350,17 +376,34 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
     );
   }
 
+  /**
+   * No peer answers the handshake. On base-reducer 3 the remote stands for a
+   * peer on this build, since a silent one is held from the document.
+   */
+  function onThisBuild(
+    reactorModule: InProcessReactorModule,
+    version: number,
+  ): PeerManifest | undefined {
+    return version === 3
+      ? reactorModule.syncModule!.syncManager.localManifest()
+      : undefined;
+  }
+
   async function addRemote(
     reactorModule: InProcessReactorModule,
     name: string,
     driveId: string,
     sentTo: Harness["sentTo"],
+    version = 2,
   ): Promise<void> {
     await reactorModule.syncModule!.syncManager.add(
       name,
       DriveCollectionId.forDrive(driveId),
       { type: "internal", parameters: {} },
       { documentId: [], scope: [], branch: "main" },
+      undefined,
+      undefined,
+      onThisBuild(reactorModule, version),
     );
     await vi.waitUntil(() => sentTo(name).length > 0, { timeout: 10_000 });
   }
@@ -380,6 +423,7 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
   /** R holds drive N and doc k; N holds doc m; each drive has a remote. */
   async function nestedDrives(
     flags?: Partial<ReactorFeatureFlags>,
+    version = 2,
   ): Promise<void> {
     const {
       module: clientModule,
@@ -393,10 +437,24 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
     const N = n.header.id;
     await client.create(r);
     await client.create(n, R);
-    await client.create(createDocModelDocument({ id: "nested-k" }), R);
-    await client.create(createDocModelDocument({ id: "nested-m" }), N);
-    await addRemote(reactorModule, "remote-r", R, sentTo);
-    await addRemote(reactorModule, "remote-n", N, sentTo);
+    const protocolVersions = { "base-reducer": version };
+    await client.create(
+      createDocModelDocument({ id: "nested-k", protocolVersions }),
+      R,
+    );
+    await client.create(
+      createDocModelDocument({ id: "nested-m", protocolVersions }),
+      N,
+    );
+    for (const id of ["nested-k", "nested-m"]) {
+      expect(
+        (await reactorModule.reactor.get(id)).header.protocolVersions?.[
+          "base-reducer"
+        ],
+      ).toBe(version);
+    }
+    await addRemote(reactorModule, "remote-r", R, sentTo, version);
+    await addRemote(reactorModule, "remote-n", N, sentTo, version);
 
     const outcome = await client
       .deleteDocument(R, PropagationMode.Cascade)
@@ -472,8 +530,21 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
     await plainTree(ENFORCING);
   }, 60_000);
 
+  it("converges a depth-2 cascade made in one millisecond with a second reactor", async () => {
+    const { module: clientModule, reactorModule } = await build(
+      "in-process",
+      CASCADE_TIE_FLAGS,
+    );
+    await sameMillisecondCascade(
+      clientModule.client,
+      reactorModule.reactor,
+      "pg-tie",
+    );
+  }, 60_000);
+
   async function removedFile(
     flags?: Partial<ReactorFeatureFlags>,
+    version = 2,
   ): Promise<void> {
     const {
       module: clientModule,
@@ -486,9 +557,16 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
     await client.create(drive);
     await client.drives.addFile(
       driveId,
-      createDocModelDocument({ id: "removed-file" }),
+      createDocModelDocument({
+        id: "removed-file",
+        protocolVersions: { "base-reducer": version },
+      }),
     );
-    await addRemote(reactorModule, "remote-d", driveId, sentTo);
+    expect(
+      (await reactorModule.reactor.get("removed-file")).header
+        .protocolVersions?.["base-reducer"],
+    ).toBe(version);
+    await addRemote(reactorModule, "remote-d", driveId, sentTo, version);
 
     await client.drives.removeNode(driveId, "removed-file");
 
@@ -517,4 +595,22 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
   it("serves every child's delete to the remote, under the worker pool", async () => {
     await runScenario("workers");
   }, 60_000);
+
+  describe("base-reducer 3", () => {
+    it("deletes nested drives, each delete served to its drive's remote", async () => {
+      await nestedDrives(undoV3Flags(), 3);
+    }, 60_000);
+
+    it("serves a removed file's delete to its drive's remote", async () => {
+      await removedFile(undoV3Flags(), 3);
+    }, 60_000);
+
+    it("serves every child's delete to the remote, in process", async () => {
+      await runScenario("in-process", 3);
+    }, 60_000);
+
+    it("serves every child's delete to the remote, under the worker pool", async () => {
+      await runScenario("workers", 3);
+    }, 60_000);
+  });
 });

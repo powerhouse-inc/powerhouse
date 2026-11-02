@@ -1,6 +1,15 @@
+import { useBackendAuthGate } from "@powerhousedao/connect-core/runtime";
 import { Outlet, useRouterState } from "@tanstack/react-router";
-import { Suspense } from "react";
+import { lazy, Suspense } from "react";
 import { useReleasePrerenderedShell } from "./prerendered-shell.js";
+
+// Loaded only when a backend refused the caller: it lives with core's views,
+// which the pages otherwise load lazily.
+const BackendAuthGate = lazy(() =>
+  import("@powerhousedao/connect-core/views").then((m) => ({
+    default: m.BackendAuthGate,
+  })),
+);
 
 /** What every page shares; the sidebar is the `_app` layout's. */
 export function Root() {
@@ -9,10 +18,13 @@ export function Root() {
     select: (state) => !!state.resolvedLocation && state.status === "idle",
   });
   useReleasePrerenderedShell(routed);
+  // The backend refused this caller: the sign-in gate takes the place of the
+  // routes (a host's own shell included) until the caller is one it accepts.
+  const gate = useBackendAuthGate();
   return (
     <div className="h-screen overflow-auto bg-background text-foreground">
       <Suspense name="Root">
-        <Outlet />
+        {gate ? <BackendAuthGate mode={gate} /> : <Outlet />}
       </Suspense>
     </div>
   );

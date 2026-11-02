@@ -1,6 +1,11 @@
 import {
+  collectAllPages,
   DriveClient,
   DriveClientFacade,
+  JobFailedError,
+  JobStatus,
+  toLegacyNode,
+  type CopyNodeOptions,
   type IDriveReadClient,
   type IDriveWriteClient,
   type NodeWriteHandle,
@@ -9,14 +14,19 @@ import {
   type ViewFilter,
   type WriteHandle,
 } from "@powerhousedao/reactor";
-import type {
-  DocumentDriveDocument,
-  DriveInput,
-  Node,
+import {
+  driveDocumentType,
+  type DocumentDriveDocument,
+  type DriveInput,
+  type Node,
 } from "@powerhousedao/shared/document-drive";
-import type { ISigner, PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  ISigner,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
-import type { RouterBackend } from "./backend.js";
+import type { IRoutableBackend, RouterBackend } from "./backend.js";
 import { ATTEMPT, type RouteDispatcher } from "./dispatcher.js";
 import { jobIdsOfHandle } from "./routing-handles.js";
 import { DEFAULT_BRANCH } from "./types.js";
@@ -36,6 +46,49 @@ export async function resolveOn(
   return document.header.id;
 }
 
+/** The id of the live document `identifier` names on one backend, if any. */
+async function liveDocumentOn(
+  backend: RouterBackend,
+  identifier: string,
+  signal?: AbortSignal,
+): Promise<string | undefined> {
+  const served = await backend.api.isServed(identifier, undefined, signal);
+  return served ? resolveOn(backend, identifier, signal) : undefined;
+}
+
+/**
+ * A backend's facade members, with `execute` over its `submit` where it has
+ * one: the job is submitted, waited for and its document read back, so no one
+ * request has to outlast the write.
+ */
+function facadeMembersOf(api: IRoutableBackend): IRoutableBackend {
+  const submit = api.submit;
+  if (submit === undefined) {
+    return api;
+  }
+  return {
+    ...api,
+    execute: async <TDocument extends PHDocument>(
+      identifier: string,
+      branch: string,
+      actions: Action[],
+      signal?: AbortSignal,
+    ): Promise<TDocument> => {
+      const job = await submit.execute(identifier, branch, actions, signal);
+      const settled = await api.waitForJob(job, signal);
+      if (settled.status === JobStatus.FAILED) {
+        throw new JobFailedError(settled);
+      }
+      return api.get<TDocument>(
+        job.documentId || identifier,
+        { branch },
+        signal,
+        settled.consistencyToken,
+      );
+    },
+  };
+}
+
 /** The drive client over a backend's facade members, with its halves exposed. */
 class FacadeDriveClient extends DriveClient {
   get readHalf(): IDriveReadClient {
@@ -48,9 +101,11 @@ class FacadeDriveClient extends DriveClient {
 }
 
 /**
- * Each backend's drive halves: the backend's own `read.drives` and
- * `write.drives` when it has client halves, otherwise the drive client over
- * its facade members, built once on first use.
+ * Each backend's drive halves. Reads use the backend's `drives` node reads,
+ * else its `read.drives`; writes its `write.drives`. Without those, the drive
+ * client over its facade members, built once on first use, whose writes read
+ * nodes through {@link readOn}, so they reach a drive that keeps no nodes in
+ * its state.
  */
 export class BackendDrives {
   private readonly facades = new Map<string, FacadeDriveClient>();
@@ -61,22 +116,55 @@ export class BackendDrives {
   ) {}
 
   readOn(backend: RouterBackend): IDriveReadClient {
-    return backend.api.read?.drives ?? this.facadeOf(backend).readHalf;
+    return (
+      backend.api.drives ??
+      backend.api.read?.drives ??
+      this.facadeOf(backend).readHalf
+    );
   }
 
   writeOn(backend: RouterBackend): IDriveWriteClient {
     return backend.api.write?.drives ?? this.facadeOf(backend).writeHalf;
   }
 
+  /** A node and its subtree; a backend that cannot ask lists the whole drive. */
+  private async nodesFrom(
+    backend: RouterBackend,
+    driveId: string,
+    nodeId: string,
+    signal?: AbortSignal,
+  ): Promise<Node[]> {
+    const source = backend.api.driveNodes;
+    if (source !== undefined) {
+      const nodes = await source.getDescendants(driveId, nodeId, signal);
+      return nodes.map(toLegacyNode);
+    }
+    const page = await this.readOn(backend).listNodes(
+      driveId,
+      undefined,
+      undefined,
+      signal,
+    );
+    return collectAllPages(page, signal);
+  }
+
   private facadeOf(backend: RouterBackend): FacadeDriveClient {
     let client = this.facades.get(backend.name);
     if (client === undefined) {
       client = new FacadeDriveClient(
-        backend.api,
+        facadeMembersOf(backend.api),
         this.logger,
         (request, signal) => backend.api.executeBatch(request, signal),
         this.signer,
         (identifier, signal) => resolveOn(backend, identifier, signal),
+        undefined,
+        {
+          lookupLiveDocument: (identifier, signal) =>
+            liveDocumentOn(backend, identifier, signal),
+          nodesFrom: (driveId, nodeId, signal) =>
+            this.nodesFrom(backend, driveId, nodeId, signal),
+          fileLinkTypes: backend.api.driveFileLinkTypes,
+        },
       );
       this.facades.set(backend.name, client);
     }
@@ -106,7 +194,7 @@ export class RoutingDriveReadClient implements IDriveReadClient {
     );
   }
 
-  /** Read from the drive's own backend: its nodes live in that drive's state. */
+  /** Read from the drive's own backend, which holds that drive's nodes. */
   listNodes(
     driveIdentifier: string,
     parentFolder?: string | null,
@@ -142,7 +230,12 @@ export class RoutingDriveWriteClient implements IDriveWriteClient {
     const handle = await this.dispatcher.onBackend(
       "drives.create",
       backend,
-      (target) => this.drives.writeOn(target).create(input, signal),
+      async (target) => {
+        await this.dispatcher.assertCreatable("drives.create", target, [
+          driveDocumentType,
+        ]);
+        return this.drives.writeOn(target).create(input, signal);
+      },
       ATTEMPT.write,
     );
     this.recordJobs(handle, backend.name);
@@ -168,6 +261,9 @@ export class RoutingDriveWriteClient implements IDriveWriteClient {
       DEFAULT_BRANCH,
       async (backend) => {
         owner = backend.name;
+        await this.dispatcher.assertCreatable("drives.addFile", backend, [
+          document.header.documentType,
+        ]);
         await this.dispatcher.assertCreatableBeside(
           "drives.addFile",
           backend,
@@ -255,9 +351,16 @@ export class RoutingDriveWriteClient implements IDriveWriteClient {
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<WriteHandle> {
     return this.onDrive("drives.copyNode", driveIdentifier, (drives) =>
-      drives.copyNode(driveIdentifier, srcNodeId, targetParentFolderId, signal),
+      drives.copyNode(
+        driveIdentifier,
+        srcNodeId,
+        targetParentFolderId,
+        signal,
+        options,
+      ),
     );
   }
 
@@ -290,7 +393,7 @@ export class RoutingDriveWriteClient implements IDriveWriteClient {
   private async placeNewDrive(input: DriveInput): Promise<RouterBackend> {
     const key = input.id ?? input.slug ?? "";
     if (key === "") {
-      return this.dispatcher.primary;
+      return this.dispatcher.createHome;
     }
     const collection = this.dispatcher.collectionFor(key, DEFAULT_BRANCH);
     const route = await this.dispatcher.placed(() =>

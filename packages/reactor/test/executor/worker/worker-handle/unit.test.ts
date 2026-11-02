@@ -120,6 +120,21 @@ describe("WorkerHandle", () => {
       expect(init.executorConfig).toEqual({ maxSkipThreshold: 42 });
     });
 
+    it("forwards the keyframe settings so pooled workers mint by the same rules", async () => {
+      const transport = new FakeWorkerTransport({ autoReady: true });
+      const keyframes = { default: { keep: 4 } };
+      const handle = new WorkerHandle({
+        workerId: "worker-0",
+        index: 0,
+        transport,
+        initPayload: { ...makeInitPayload(), keyframes },
+        logger: createMockLogger(),
+      });
+      await handle.start();
+      const init = transport.getSentMessages()[0] as InitMessage;
+      expect(init.keyframes).toEqual(keyframes);
+    });
+
     it("forwards the signer spec so pooled workers sign synthesized operations", async () => {
       const transport = new FakeWorkerTransport({ autoReady: true });
       const handle = makeHandle(transport);

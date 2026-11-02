@@ -77,3 +77,23 @@ describe("a package's stylesheet against Connect's theme", () => {
     expect(css).toContain("background-color: var(--background) !important;");
   });
 });
+
+// The editor scaffold wraps its UI in ph-default-styles for these.
+describe("ph-default-styles", () => {
+  it("styles the editors' buttons, selects and checkboxes", async () => {
+    const css = await build(join(root, "style.css"), []);
+    for (const selector of [
+      ".ph-default-styles button {",
+      ".ph-default-styles button:disabled {",
+      '.ph-default-styles button[type="submit"] {',
+      ".ph-default-styles select {",
+      '.ph-default-styles input[type="checkbox"]',
+    ]) {
+      expect(css).toContain(selector);
+    }
+    const button = css.slice(css.indexOf(".ph-default-styles button {"));
+    expect(button.slice(0, button.indexOf("}"))).toContain(
+      "border-color: var(--input)",
+    );
+  });
+});

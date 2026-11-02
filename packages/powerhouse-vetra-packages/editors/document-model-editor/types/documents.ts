@@ -1,5 +1,15 @@
 export type Scope = string;
 
+/** A state value as the initial-state editor reads and writes it. */
+export type Serializable =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | Serializable[]
+  | { [key: string]: Serializable };
+
 export type DocumentActionHandlers = {
   // Creation handlers that return IDs
   addModule: (name: string) => Promise<string | undefined>;

@@ -43,6 +43,8 @@ const PORT_TEXT: Record<string, string> = {
   true: "Runs when the condition is true",
   false: "Runs when the condition is false",
   error: "Runs when the step before it fails",
+  each: "Runs once for each item of the loop before it",
+  otherwise: "Runs when no branch of the router before it holds",
 };
 
 function stepSummary(record: RunStepRecord | undefined, ran: boolean): string {
@@ -72,7 +74,10 @@ export function StepTip(props: {
       </span>
       {props.port ? (
         <span className="text-muted-foreground">
-          {PORT_TEXT[props.port] ?? `Runs on "${props.port}"`}
+          {PORT_TEXT[props.port] ??
+            (/^branch_\d+$/.test(props.port)
+              ? "Runs when its router branch holds"
+              : `Runs on "${props.port}"`)}
         </span>
       ) : null}
       <span className="mt-1">{stepSummary(props.record, props.ran)}</span>

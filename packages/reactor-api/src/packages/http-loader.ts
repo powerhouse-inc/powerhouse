@@ -22,6 +22,7 @@ import {
   type CachedRegistryPackage,
   type PackageEntryKind,
 } from "./registry-cache.js";
+import { type ScalarExport, scalarExportsOf } from "./scalar-exports.js";
 import { extractSubgraphs } from "./subgraph-extraction.js";
 import type { PackagePieceEntry } from "./types.js";
 import { extractUpgradeManifests } from "./util.js";
@@ -216,8 +217,10 @@ export class HttpPackageLoader implements IPackageLoader {
           { code: REGISTRY_ENTRY_ABSENT },
         );
       }
-      // `ph build` refuses document models that import them.
-      if (kind !== "documentModels") this.assertExternalDependencies(cached);
+      // `ph build` refuses document models and scalars that import them.
+      if (kind !== "documentModels" && kind !== "scalars") {
+        this.assertExternalDependencies(cached);
+      }
       const module = (await import(
         /* @vite-ignore */ pathToFileURL(filePath).href
       )) as Record<string, unknown>;
@@ -243,7 +246,7 @@ export class HttpPackageLoader implements IPackageLoader {
     if (!this.reportedExternal.has(id)) {
       this.reportedExternal.add(id);
       this.logger.error(
-        "@package needs packages with native addons or WebAssembly modules that are not installed (@deps); its subgraphs and processors are not loaded, its document models and pieces are. Install it locally with `ph install --local @name`, or list it in PH_PACKAGES for a Docker image.",
+        "@package needs packages with native addons or WebAssembly modules that are not installed (@deps); its subgraphs and processors are not loaded, its document models, scalars and pieces are. Install it locally with `ph install --local @name`, or list it in PH_PACKAGES for a Docker image.",
         id,
         list,
         cached.name,
@@ -302,6 +305,14 @@ export class HttpPackageLoader implements IPackageLoader {
       `Loaded ${subgraphs.length} subgraphs from ${packageName}`,
     );
     return subgraphs;
+  }
+
+  async loadScalars(packageSpec: string): Promise<ScalarExport[]> {
+    const { name: packageName } = this.parsePackageSpec(packageSpec);
+    const { module } = await this.importEntry(packageSpec, "scalars");
+    const scalars = scalarExportsOf(module);
+    this.logger.verbose(`Loaded ${scalars.length} scalars from ${packageName}`);
+    return scalars;
   }
 
   async loadProcessors(

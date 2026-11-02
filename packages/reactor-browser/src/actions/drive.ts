@@ -8,7 +8,7 @@ import {
   type PollBehavior,
 } from "@powerhousedao/reactor";
 import {
-  driveCreateDocument,
+  driveDocumentType,
   setAvailableOffline,
   setDriveIcon as createSetDriveIconAction,
   setDriveName as createSetDriveNameAction,
@@ -17,14 +17,16 @@ import {
   type DriveInput,
   type SharingType,
 } from "@powerhousedao/shared/document-drive";
-import type { PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  PHBaseState,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import {
   DEFAULT_SIGNATURE_POLICY,
   requestedSignaturePolicy,
-  withSignaturePolicy,
-  type ProtocolVersions,
-  type SignaturePolicy,
+  type NewDocumentHeaderOptions,
 } from "@powerhousedao/shared/document-model";
+import { GraphQLOperationNotSupportedError } from "../graphql-client/errors.js";
 import { fetchDriveInfo } from "./drive-info.js";
 import { getUserPermissions } from "../utils/user.js";
 import { showPHModal } from "../hooks/modals.js";
@@ -124,20 +126,6 @@ export async function waitForDocumentReady(
   });
 }
 
-/** The full client's creation default, else the library's. */
-async function createSignaturePolicy(): Promise<SignaturePolicy> {
-  const client = getFullReactorClient();
-  return client
-    ? client.read.getCreateSignaturePolicy()
-    : DEFAULT_SIGNATURE_POLICY;
-}
-
-/** What the full client selects for a drive, which has no parent. */
-async function createProtocolVersions(): Promise<ProtocolVersions> {
-  const client = getFullReactorClient();
-  return client ? client.read.getCreateProtocolVersions() : {};
-}
-
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
   const { isAllowedToCreateDocuments } = getUserPermissions();
   if (!isAllowedToCreateDocuments) {
@@ -152,30 +140,46 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
   // A configured id (e.g. a local default drive) overrides the generated one,
   // and only a legacy drive can take a chosen id. Empty strings are the "not
   // provided" signal used by the Add Drive modal.
-  const driveDoc = withSignaturePolicy(
-    driveCreateDocument({
+  const options: NewDocumentHeaderOptions = {
+    initialState: {
       global: {
         name: input.global.name || "",
         icon: input.global.icon ?? null,
         nodes: [],
       },
-    }),
-    requestedSignaturePolicy(
-      input,
-      input.id ? "legacy" : await createSignaturePolicy(),
-    ),
-    {
-      id: input.id || undefined,
-      protocolVersions: {
-        ...(await createProtocolVersions()),
-        ...input.protocolVersions,
-      },
-    },
-  );
+    } as Partial<PHBaseState>,
+    signaturePolicy: input.id
+      ? requestedSignaturePolicy(input, "legacy")
+      : input.signaturePolicy,
+    id: input.id || undefined,
+    protocolVersions: input.protocolVersions,
+  };
+  let driveDoc: DocumentDriveDocument;
+  try {
+    driveDoc = await reactorClient.newDocument<DocumentDriveDocument>(
+      driveDocumentType,
+      options,
+    );
+  } catch (error) {
+    // A full client's host must name the policy; a bare light client against
+    // a Switchboard without createDefaults takes the library's default.
+    if (
+      getFullReactorClient() ||
+      !GraphQLOperationNotSupportedError.isError(error)
+    ) {
+      throw error;
+    }
+    driveDoc = await reactorClient.newDocument<DocumentDriveDocument>(
+      driveDocumentType,
+      { ...options, signaturePolicy: DEFAULT_SIGNATURE_POLICY },
+    );
+  }
 
   if (preferredEditor) {
     driveDoc.header.meta = { preferredEditor };
   }
+  // The document's name too, as a rename sets it: what reads header.name sees the drive's.
+  if (input.global.name) driveDoc.header.name = input.global.name;
 
   const handle = await reactorClient.write.create(driveDoc);
   return await handle.document<DocumentDriveDocument>();

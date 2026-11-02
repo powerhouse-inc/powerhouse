@@ -545,8 +545,8 @@ Options:
   --packages <pkg...>     List of packages to be loaded. If defined, packages specified
                         in the config file are ignored.
 
-  --base-path <path>      Base path for the API endpoints. Sets the BASE_PATH environment
-                        variable used by the server to prefix all routes.
+  --base-path <path>      Base path for the API endpoints, used by the server to prefix
+                        all routes. Overrides the BASE_PATH environment variable.
 
 Identity Options:
   --use-identity          Enable identity using the keypair from 'ph login'. This allows the

@@ -180,7 +180,7 @@ const { ref } = await upload.send(stream);
 Store `result.ref` in document state through a normal action — there are no special "attach" actions. The reducer treats the ref like any other string field.
 
 ```typescript
-await reactor.client.execute(documentId, "main", [
+await reactor.write.execute(documentId, "main", [
   setAgentImage({ attachment: ref }),
 ]);
 ```
@@ -223,7 +223,7 @@ const results = await attachments.preprocess(file);
 With the ref in hand you can write it into document state through a normal action, then upload the bytes:
 
 ```typescript
-await client.execute(documentId, "main", [
+await client.write.execute(documentId, "main", [
   attachInvoice({ scan: results.ref, vendorName: "Acme" }),
 ]);
 
@@ -238,7 +238,7 @@ Execute and reserve are awaited separately so each failure is handled on its own
 
 ```typescript
 await Promise.all([
-  client.execute(documentId, "main", [
+  client.write.execute(documentId, "main", [
     attachInvoice({ scan: results.ref, vendorName: "Acme" }),
   ]),
   attachments.reserve(results.options, (handle) =>
@@ -263,7 +263,7 @@ const submit = useCallback(async () => {
 
   // Execute with the generated ref. `scan` is just a string here; the action
   // and codegen never see the file or the attachments package.
-  await client.execute(documentId, "main", [
+  await client.write.execute(documentId, "main", [
     attachInvoice({ scan: results.ref, vendorName: "Acme" }),
   ]);
 
@@ -447,7 +447,7 @@ Upload bytes are only observable through an `uploadTransport` that can see them;
 If a document model previously inlined binary content, the migration is small and mechanical:
 
 - **Schema** — replace `data: String` (or composite fields like `{ image, imageMediaType, imageUrl }`) with a single `attachment: AttachmentRef` field on the input and the state type.
-- **Write path** — replace the base64-encoding step with a reservation and upload. Either reserve on the service directly (`attachments.reserve({ mimeType, fileName })` then `upload.send(stream)`, dispatching with `result.ref`), or use the client (`attachments.preprocess(file)` then `client.execute(...)` with `results.ref` and `attachments.reserve(results.options, ...)`). In the browser, `useAttachmentUpload()` wraps the client flow and reports byte progress.
+- **Write path** — replace the base64-encoding step with a reservation and upload. Either reserve on the service directly (`attachments.reserve({ mimeType, fileName })` then `upload.send(stream)`, dispatching with `result.ref`), or use the client (`attachments.preprocess(file)` then `client.write.execute(...)` with `results.ref` and `attachments.reserve(results.options, ...)`). In the browser, `useAttachmentUpload()` wraps the client flow and reports byte progress.
 - **Read path** — replace data-URI assembly with `attachments.get(ref, { documentId })`. In a browser, drain the stream into a `Blob` and use `URL.createObjectURL` (remember to `revokeObjectURL` on cleanup).
 - **Graceful degradation** — code paths that may run without an attachment service (mock environments, tests, off-line previews) should branch on `if (!attachments)`. Writers should surface a clear error to the user; readers should skip the attachment and render a placeholder.
 

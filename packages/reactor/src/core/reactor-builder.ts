@@ -38,16 +38,28 @@ import {
   type ICatchUpConsumer,
 } from "../catch-up/types.js";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
+import { KeyframeCleanupService } from "../admin/keyframe-cleanup-service.js";
+import type { IStoreMaintenance } from "../admin/keyframe-cleanup-types.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
+import {
+  DEFAULT_KEYFRAME_RULE,
+  type KeyframeSettings,
+} from "../storage/keyframes/keyframe-settings.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import { EventBus } from "../events/event-bus.js";
 import { resolveFeatureFlags } from "./feature-flags.js";
 import {
   checkStoredProtocols,
+  storedModelRefusals,
   type UnsupportedStoredDocuments,
 } from "./stored-protocol-check.js";
 import type { IEventBus } from "../events/interfaces.js";
-import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
+import {
+  ReactorEventTypes,
+  type JobWriteReadyEvent,
+  type StoredModelRefusedEvent,
+} from "../events/types.js";
+import { storedRefusalName } from "../shared/errors.js";
 import {
   KyselyExecutionScope,
   type IExecutionScope,
@@ -94,6 +106,7 @@ import type {
 import {
   DocumentModelResolver,
   NullDocumentModelResolver,
+  type IDocumentModelResolver,
 } from "../registry/document-model-resolver.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
 import type {
@@ -155,10 +168,14 @@ import {
 } from "../inspector/storage-facts.js";
 import type { ReactorStorageFacts } from "../inspector/types.js";
 import { CatchUpPriority } from "../processors/catch-up-priority.js";
+import { ProcessorTimingSettings } from "../processors/processor-stats.js";
+import { SyncManager } from "../sync/sync-manager.js";
+import type { MemoryTelemetry } from "../telemetry/memory-telemetry.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
 import { resolveModelSources } from "./model-sources.js";
 import type { DocumentModelSource } from "./model-sources.js";
 import { Reactor } from "./reactor.js";
+import { CreateProtocolSelector } from "../client/create-protocol.js";
 import type {
   Database,
   DegradedComponent,
@@ -167,6 +184,7 @@ import type {
   IReactor,
   ReactorFeatures,
 } from "./types.js";
+import { createProtocolGate } from "../protocol/gate.js";
 
 /**
  * Dependencies provided to read-model factories registered via
@@ -396,6 +414,8 @@ export class ReactorBuilder {
   private executorManager: IJobExecutorManager | undefined;
   private executorConfig: JobExecutorConfig = {};
   private writeCacheConfig?: Partial<WriteCacheConfig>;
+  private keyframeSettings?: KeyframeSettings;
+  private storeMaintenance?: IStoreMaintenance;
   private migrationStrategy: MigrationStrategy = "auto";
   private unsupportedStoredDocuments: UnsupportedStoredDocuments = "refuse";
   private syncBuilder?: SyncBuilder;
@@ -430,6 +450,9 @@ export class ReactorBuilder {
   private instrumentedPools: PoolInstrumentation[] = [];
   private catchUpConfig: CatchUpConfig = defaultCatchUpConfig;
   private catchUpPriority: CatchUpPriority = new CatchUpPriority();
+  private processorTiming: ProcessorTimingSettings =
+    new ProcessorTimingSettings();
+  private memoryTelemetry: MemoryTelemetry | undefined;
   private extraPeerCapabilities: PeerCapability[] = [];
 
   withLogger(logger: ILogger): this {
@@ -459,6 +482,11 @@ export class ReactorBuilder {
   }
 
   /** The registry plus any capabilities added with withPeerCapabilities. */
+  /** The loader-backed resolver the CREATE gate uses; undefined without a loader. */
+  getModelResolver(): IDocumentModelResolver | undefined {
+    return this.modelResolver;
+  }
+
   getPeerCapabilities(): readonly PeerCapability[] {
     return mergePeerCapabilities(PEER_CAPABILITIES, this.extraPeerCapabilities);
   }
@@ -520,6 +548,21 @@ export class ReactorBuilder {
     return this;
   }
 
+  /**
+   * Interval and keep per document type, plus a default. Workers get the same
+   * settings. Without this call: a keyframe every 10 revisions, all kept.
+   */
+  withKeyframes(settings: KeyframeSettings): this {
+    this.keyframeSettings = settings;
+    return this;
+  }
+
+  /** How a host that owns the store's connection rewrites a table of it. */
+  withStoreMaintenance(maintenance: IStoreMaintenance): this {
+    this.storeMaintenance = maintenance;
+    return this;
+  }
+
   withDriveContainerTypes(types: string[]): this {
     this.driveContainerTypes = new Set(types);
     return this;
@@ -559,6 +602,21 @@ export class ReactorBuilder {
    */
   withCatchUpPriority(priority: CatchUpPriority): this {
     this.catchUpPriority = priority;
+    return this;
+  }
+
+  /** Records where processors spend their time. Defaults to off. */
+  withProcessorTiming(settings: ProcessorTimingSettings): this {
+    this.processorTiming = settings;
+    return this;
+  }
+
+  /**
+   * Gives `telemetry` this reactor's gauges and event counts and puts it on the
+   * module. It is never started here; the host decides.
+   */
+  withMemoryTelemetry(telemetry: MemoryTelemetry): this {
+    this.memoryTelemetry = telemetry;
     return this;
   }
 
@@ -944,6 +1002,11 @@ export class ReactorBuilder {
     this.moduleOnlyModelKeys = resolvedSources.moduleOnlyKeys;
 
     const documentModelRegistry = new DocumentModelRegistry();
+    const protocolGate = createProtocolGate(
+      this.executorConfig.protocolSupport ?? {},
+      documentModelRegistry,
+      this.logger,
+    );
     if (this.upgradeManifests.length > 0) {
       const results = documentModelRegistry.registerUpgradeManifests(
         ...this.upgradeManifests,
@@ -995,12 +1058,13 @@ export class ReactorBuilder {
     // The schema is no acknowledgment, but nothing would re-pull it.
     await groupCommit?.flusher.flush();
 
-    await checkStoredProtocols(
+    const deferredStoredModels = await checkStoredProtocols(
       baseDatabase,
       REACTOR_SCHEMA,
       this.executorConfig.protocolSupport ?? {},
       this.unsupportedStoredDocuments,
       this.logger,
+      (documentType) => protocolGate.registeredModules(documentType),
     );
 
     const database = baseDatabase.withSchema(REACTOR_SCHEMA);
@@ -1020,19 +1084,54 @@ export class ReactorBuilder {
         )
       : new NullDocumentModelResolver(documentModelRegistry);
     if (resolver instanceof DocumentModelResolver) {
-      resolver.setModelLoadedHook((documentType) =>
-        eventBus.emit(ReactorEventTypes.MODEL_LOADED, { documentType }),
-      );
+      const logger = this.logger;
+      resolver.setModelLoadedHook(async (documentType) => {
+        // Reported first, so a failing MODEL_LOADED subscriber cannot hide it;
+        // a failing refusal subscriber cannot hide MODEL_LOADED either.
+        let refusedError: Error | undefined;
+        const refusals = storedModelRefusals(
+          documentType,
+          deferredStoredModels,
+          protocolGate.support,
+          protocolGate.registeredModules(documentType),
+        );
+        if (refusals.length > 0) {
+          // Writes are refused per job; this only tells the operator.
+          logger.error(
+            "Loaded model @documentType cannot run its stored documents (@refusals); they stay read-only",
+            documentType,
+            refusals.map(storedRefusalName).join(", "),
+          );
+          try {
+            await eventBus.emit(ReactorEventTypes.STORED_MODEL_REFUSED, {
+              documentType,
+              refusals,
+            } satisfies StoredModelRefusedEvent);
+          } catch (error) {
+            refusedError =
+              error instanceof Error ? error : new Error(String(error));
+          }
+        }
+        await eventBus.emit(ReactorEventTypes.MODEL_LOADED, { documentType });
+        if (refusedError !== undefined) {
+          throw refusedError;
+        }
+      });
       resolver.rememberManifest(this.resolvedModelManifest ?? []);
       this.modelResolver = resolver;
     }
-    const queue = this.queueInstance ?? new InMemoryQueue(eventBus, resolver);
+    const queue =
+      this.queueInstance ?? new InMemoryQueue(eventBus, resolver, protocolGate);
     const jobTracker = new InMemoryJobTracker(eventBus);
 
     const cacheConfig: WriteCacheConfig = {
       maxDocuments: this.writeCacheConfig?.maxDocuments ?? 100,
       ringBufferSize: this.writeCacheConfig?.ringBufferSize ?? 10,
-      keyframeInterval: this.writeCacheConfig?.keyframeInterval ?? 10,
+      keyframeInterval:
+        this.writeCacheConfig?.keyframeInterval ??
+        DEFAULT_KEYFRAME_RULE.interval,
+      keyframes: this.resolveKeyframeSettings(),
+      gate: protocolGate,
     };
 
     const writeCache = new KyselyWriteCache(
@@ -1140,6 +1239,7 @@ export class ReactorBuilder {
           operationIndex,
           this.executorConfig.jobTimeoutMs,
           this.executorConfig.deferredJobTtlMs,
+          protocolGate,
         );
         executorManager = poolManager;
         executorStartCount = pool.numWorkers;
@@ -1172,6 +1272,7 @@ export class ReactorBuilder {
           resolver,
           this.executorConfig.jobTimeoutMs,
           this.executorConfig.deferredJobTtlMs,
+          protocolGate,
         );
       }
     }
@@ -1274,6 +1375,7 @@ export class ReactorBuilder {
       {
         legacyProcessorIds: this.features.legacyProcessorIds !== false,
         catchUpPriority: this.catchUpPriority,
+        processorTiming: this.processorTiming,
       },
     );
     processorManager.attachCatchUp(
@@ -1393,6 +1495,26 @@ export class ReactorBuilder {
       catchUp,
       [unsubscribeMarkerEviction],
       [() => processorManager.shutdown()],
+      protocolGate,
+    );
+    const createModelResolver = this.modelResolver;
+    reactor.setCreateProtocol(
+      new CreateProtocolSelector({
+        selection: {
+          capabilities: this.getPeerCapabilities(),
+          flags: featureFlags,
+          collectionsOf: () => Promise.resolve({}),
+          loadModel: createModelResolver
+            ? (documentType) =>
+                createModelResolver.ensureModelLoaded(documentType)
+            : undefined,
+        },
+        resolveParent: () => Promise.resolve(undefined),
+        modules: async (documentType, signal) =>
+          (await reactor.getDocumentModels(documentType, undefined, signal))
+            .results,
+        logger: this.logger,
+      }),
     );
 
     const localPeer: LocalPeer = {
@@ -1413,6 +1535,8 @@ export class ReactorBuilder {
       forgetDocument: (documentId) => {
         documentMetaCache.invalidate(documentId);
       },
+      modelRefusal: (documentType, versions) =>
+        protocolGate.refusalOf(versions, documentType),
     };
     let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {
@@ -1454,6 +1578,9 @@ export class ReactorBuilder {
         queue,
         operationIndex,
         database as unknown as Kysely<DocumentViewDatabase>,
+        operationStore,
+        documentMetaCache,
+        protocolGate,
       );
       groupReevaluationTrigger.attachCatchUp(
         settledWatermark,
@@ -1463,10 +1590,19 @@ export class ReactorBuilder {
       catchUp.addConsumer(groupReevaluationTrigger, "host");
     }
 
+    const keyframeCleanup = new KeyframeCleanupService(database, {
+      schema: REACTOR_SCHEMA,
+      settings: this.resolveKeyframeSettings(),
+      priority: this.catchUpPriority,
+      maintenance: this.storeMaintenance,
+    });
+
     const module: InProcessReactorModule = {
       eventBus,
       documentModelRegistry,
       featureFlags,
+      protocolSupport: this.executorConfig.protocolSupport ?? {},
+      loadsModelsOnDemand: this.documentModelLoader !== undefined,
       queue,
       jobTracker,
       executorManager,
@@ -1491,12 +1627,15 @@ export class ReactorBuilder {
       degradedComponents,
       catchUp,
       catchUpPriority: this.catchUpPriority,
+      processorTiming: this.processorTiming,
+      memoryTelemetry: this.memoryTelemetry,
       settledWatermark,
       documentPurgeService: new DocumentPurgeService(
         queue,
         jobTracker,
         eventBus,
       ),
+      keyframeCleanup,
       storageFacts: { ...storageFacts },
       groupCommitStorage: groupCommit && {
         health: groupCommit.health,
@@ -1504,6 +1643,7 @@ export class ReactorBuilder {
       },
       shutdown: this.createShutdown(reactor, database),
     };
+    this.shutdownHooks.push(() => keyframeCleanup.shutdown());
 
     catchUp.start();
 
@@ -1520,7 +1660,76 @@ export class ReactorBuilder {
       this.attachSignalHandlers(module);
     }
 
+    this.attachMemoryTelemetry(module, eventBus, collectionMembershipCache);
+
     return module;
+  }
+
+  /** Module gauges, only for a host that gave a telemetry instance. */
+  private attachMemoryTelemetry(
+    module: InProcessReactorModule,
+    eventBus: IEventBus,
+    collectionMembership: CollectionMembershipCache,
+  ): void {
+    const telemetry = this.memoryTelemetry;
+    if (!telemetry) return;
+    telemetry.attachEventBus(eventBus);
+    const {
+      documentIndexerConsistencyTracker,
+      documentViewConsistencyTracker,
+      executorManager,
+      jobTracker,
+      processorManager,
+      processorManagerConsistencyTracker,
+      queue,
+      syncModule,
+      writeCache,
+    } = module;
+    if (jobTracker instanceof InMemoryJobTracker) {
+      telemetry.addGauge("jobTracker", () => jobTracker.stats());
+    }
+    if (queue instanceof InMemoryQueue) {
+      telemetry.addGauge("queue", () => queue.stats());
+    }
+    if (
+      executorManager instanceof SimpleJobExecutorManager ||
+      executorManager instanceof WorkerPoolJobExecutorManager
+    ) {
+      telemetry.addGauge("deferredJobs", () => executorManager.deferredStats());
+    }
+    if (processorManager instanceof ProcessorManager) {
+      telemetry.addGauge(
+        "processors",
+        () => processorManager.queueStats().totals,
+      );
+    }
+    const trackers = [
+      documentViewConsistencyTracker,
+      documentIndexerConsistencyTracker,
+      processorManagerConsistencyTracker,
+    ].filter(
+      (tracker): tracker is ConsistencyTracker =>
+        tracker instanceof ConsistencyTracker,
+    );
+    telemetry.addGauge("consistency", () => {
+      const totals = { keys: 0, waiters: 0 };
+      for (const tracker of trackers) {
+        const { keys = 0, waiters = 0 } = tracker.stats();
+        totals.keys += keys;
+        totals.waiters += waiters;
+      }
+      return totals;
+    });
+    telemetry.addGauge("collectionMembership", () =>
+      collectionMembership.stats(),
+    );
+    if (writeCache instanceof KyselyWriteCache) {
+      telemetry.addGauge("writeCache", () => writeCache.stats());
+    }
+    const syncManager = syncModule?.syncManager;
+    if (syncManager instanceof SyncManager) {
+      telemetry.addGauge("sync", () => syncManager.stats());
+    }
   }
 
   private assertAdditionalChannelFactories(): void {
@@ -1684,6 +1893,8 @@ export class ReactorBuilder {
       postReadyKinds: config.postReadyKinds,
       indexing,
       catchUp: this.catchUpConfig,
+      protocolSupport: this.executorConfig.protocolSupport,
+      keyframes: this.resolveKeyframeSettings(),
       factory,
       logger: this.logger!,
       hostBus: eventBus,
@@ -1764,11 +1975,21 @@ export class ReactorBuilder {
           executorConfig: this.executorConfig,
           signer: this.workerSigner,
           trustPolicy: this.workerTrustPolicy,
+          keyframes: this.resolveKeyframeSettings(),
         },
         logger,
         poolInstrumentation,
       });
     };
+  }
+
+  /** One answer for every writer: the main thread and all its workers. */
+  private resolveKeyframeSettings(): KeyframeSettings {
+    const settings = this.keyframeSettings ?? {};
+    const interval = this.writeCacheConfig?.keyframeInterval;
+    return interval === undefined
+      ? settings
+      : { ...settings, default: { interval, ...settings.default } };
   }
 
   /**

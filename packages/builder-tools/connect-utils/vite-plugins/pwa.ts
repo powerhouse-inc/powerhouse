@@ -1,5 +1,5 @@
 import { type PHConnectPwa } from "@powerhousedao/shared/connect";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin, PluginOption } from "vite";
@@ -156,6 +156,18 @@ export const BASE_PRECACHE: ConnectPrecacheOptions = {
   ],
 };
 
+/** The files under `dir` (a project's public/), by path relative to it. */
+export function staticFilesIn(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) =>
+      join(entry.parentPath, entry.name)
+        .slice(dir.length + 1)
+        .replaceAll("\\", "/"),
+    );
+}
+
 const SW_FILENAME = "service-worker.ts";
 
 /**
@@ -205,6 +217,25 @@ function phSwConfigPlugin(data: Record<string, unknown>): Plugin {
 }
 
 /**
+ * Connect's `?ph-manifest-rev` link (pwa-manifest-link.ts) is the service
+ * worker's to ignore. The dev server has none, and vite-plugin-pwa matches the
+ * whole URL there, so without this the link would get index.html.
+ */
+function devManifestRevisionPlugin(): Plugin {
+  return {
+    name: "ph-connect-pwa-dev-manifest-revision",
+    apply: "serve",
+    configureServer(server) {
+      const manifestUrl = `${server.config.base}manifest.webmanifest`;
+      server.middlewares.use((req, _res, next) => {
+        if (req.url?.startsWith(`${manifestUrl}?`)) req.url = manifestUrl;
+        next();
+      });
+    },
+  };
+}
+
+/**
  * Service-worker / PWA support for Connect, gated by `connect.app.offline`.
  *
  * When enabled (the default), Workbox `injectManifest` bundles Connect's
@@ -229,8 +260,10 @@ export function connectPwaPlugins(options: {
   pwa?: PHConnectPwa;
   /** The project's name and icons in place of Connect's. */
   brand?: ProjectPwaBrand;
+  /** The project's public/ files, relative to it, which no navigation gets the shell for. */
+  staticFiles?: string[];
 }): PluginOption[] {
-  const { offlineEnabled, pwa, brand } = options;
+  const { offlineEnabled, pwa, brand, staticFiles = [] } = options;
 
   if (!offlineEnabled) {
     return [
@@ -257,10 +290,12 @@ export function connectPwaPlugins(options: {
     EMBEDDED_BASE_MANIFEST: manifest,
     EXTRA_RUNTIME_CACHING: pwa?.runtimeCaching ?? [],
     NAVIGATE_FALLBACK_DENYLIST_EXTRA: pwa?.navigateFallbackDenylist ?? [],
+    STATIC_FILES: staticFiles,
   };
 
   return [
     connectPwaIconsPlugin(),
+    devManifestRevisionPlugin(),
     VitePWA({
       strategies: "injectManifest",
       // Absolute srcDir → swSrc is builder-tools' own SW source; the emitted
@@ -271,8 +306,10 @@ export function connectPwaPlugins(options: {
       // posts SKIP_WAITING when the user accepts (see serviceWorkerManager).
       registerType: "prompt",
       injectRegister: null,
-      // ph connect studio keeps running without a service worker.
-      devOptions: { enabled: false },
+      // The dev server gets the build's manifest and link, so it installs like
+      // a build. It gets no worker: nothing registers one (injectRegister above,
+      // and the SPA skips it in development), so hot reload stays uncached.
+      devOptions: { enabled: true },
       // Icons are emitted by connectPwaIconsPlugin and precached via the png
       // glob, so the plugin must not also try to resolve them from /public.
       includeManifestIcons: false,

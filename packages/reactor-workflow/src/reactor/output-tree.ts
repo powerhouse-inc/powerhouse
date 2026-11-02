@@ -3,7 +3,9 @@
 import {
   DOCUMENT_REF_KEY,
   isDocumentRefMarker,
+  manualInputTypeName,
   type DocumentReference,
+  type ManualInput,
 } from "@powerhousedao/pieces-framework/workflow";
 import {
   Kind,
@@ -356,6 +358,15 @@ export function webhookTriggerTree(): OutputTreeNode[] {
     leaf("queryParams", "JSONObject!"),
     leaf("body", "Unknown", "Parsed JSON or form fields; text otherwise"),
   ];
+}
+
+// The core manual trigger's payload, one leaf per declared input.
+export function manualTriggerTree(
+  inputs: readonly ManualInput[],
+): OutputTreeNode[] {
+  return inputs.map((input) =>
+    leaf(input.name, manualInputTypeName(input), input.description),
+  );
 }
 
 export function documentEventTree(

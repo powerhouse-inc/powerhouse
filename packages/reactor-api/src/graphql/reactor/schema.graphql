@@ -207,6 +207,39 @@ type PeerAgreement {
   limitedBy: [PeerAgreementLimit!]!
 }
 
+# The kind of a drive node.
+enum DriveNodeKind {
+  FILE
+  FOLDER
+}
+
+# A file node: the document it names, placed in a drive.
+type DriveFileNode {
+  id: ID!
+  driveId: ID!
+  name: String!
+  parentFolder: ID
+  documentType: String!
+}
+
+# A folder node.
+type DriveFolderNode {
+  id: ID!
+  driveId: ID!
+  name: String!
+  parentFolder: ID
+}
+
+# A drive node, of any drive document type.
+union DriveNode = DriveFileNode | DriveFolderNode
+
+# A page of drive nodes. nextCursor resumes after the last node served.
+type DriveNodePage {
+  results: [DriveNode!]!
+  nextCursor: String
+  hasMore: Boolean!
+}
+
 type DocumentWithChildren {
   document: PHDocument!
   childIds: [String!]!
@@ -217,6 +250,12 @@ type CreateDefaults {
   # "legacy" or "v2-required"; a client refuses a value it does not know
   signaturePolicy: String!
   protocolVersions: JSONObject!
+}
+
+# Action ids; absent when there is nothing to undo or redo
+type UndoRedoTargets {
+  undoTarget: String
+  redoTarget: String
 }
 
 type MoveRelationshipResult {
@@ -674,7 +713,17 @@ type Query {
 
   # The signature policy and protocol versions a new document gets, under the
   # parent when one is named. A parent the caller may not read is refused.
-  createDefaults(parentIdOrSlug: String): CreateDefaults!
+  # With documentType, protocolVersions fit that type's reducer.
+  createDefaults(parentIdOrSlug: String, documentType: String): CreateDefaults!
+
+  # The rows a base-reducer 3 undo and redo of the scope would retract now, for
+  # the caller to sign a RETRACT of. A scope the caller may not read has none;
+  # below base-reducer 3 there are none.
+  undoRedoTargets(
+    documentIdOrSlug: String!
+    scope: String
+    branch: String
+  ): UndoRedoTargets!
 
   # Get operations for a document with filtering and pagination
   documentOperations(
@@ -742,6 +791,22 @@ type Query {
 
   # Supreme admin, or an address bound to a channel in the collection
   peerAgreement(collectionId: String!): PeerAgreement!
+
+  # A drive's nodes, for every drive document type. Omit parentFolder for every
+  # node in the drive; pass null for the root level. A drive the caller may not
+  # read lists nothing, and a file node is listed only with its document.
+  driveNodes(
+    driveId: ID!
+    parentFolder: ID
+    paging: PagingInput
+    kind: DriveNodeKind
+  ): DriveNodePage!
+
+  # One drive node; null when absent or withheld from the caller.
+  driveNode(driveId: ID!, id: ID!): DriveNode
+
+  # Every node under root (inclusive) the caller may read.
+  driveDescendants(driveId: ID!, root: ID!): [DriveNode!]!
 }
 
 type Mutation {

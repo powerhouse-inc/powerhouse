@@ -34,7 +34,7 @@ type AppModuleState {
   """
   status: StatusType!
   """
-  Document type ids this app handles. `null` means the app accepts any document type; an empty list means it accepts none.
+  Document type ids this app handles. `null` and an empty list both mean the app accepts every document type.
   """
   allowedDocumentTypes: [String!]
   """

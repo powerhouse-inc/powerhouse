@@ -201,6 +201,11 @@ export type LocalPeer = {
   ) => Promise<{ [protocol: string]: number } | undefined>;
   /** Drops a purged document from the host cache behind protocolVersionsOf. */
   forgetDocument?: (documentId: string) => void;
+  /** Why this reactor cannot run `documentType` at `versions` (refusalFor with its models). */
+  modelRefusal?: (
+    documentType: string,
+    versions: { [protocol: string]: number },
+  ) => { protocol: string; version: number } | undefined;
 };
 
 /** The tombstone index, as the sync manager reads it at startup. */

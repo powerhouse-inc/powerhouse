@@ -37,6 +37,10 @@
   ],
   "pieces": [
     {
+      "id": "@powerhousedao/piece-ai",
+      "name": "AI"
+    },
+    {
       "id": "@powerhousedao/piece-reactor",
       "name": "Powerhouse Reactor"
     }

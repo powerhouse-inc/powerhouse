@@ -28,7 +28,7 @@ export default {
           url: {
             $concat: [
               { $output: { host: "switchboard", path: ["origin"] } },
-              "/graphql",
+              "/d/lab",
             ],
           },
         },

@@ -33,6 +33,7 @@ import {
   useSetSelectedNode,
 } from "../src/hooks/selected-node.js";
 import type { IDocumentCache } from "../src/types/documents.js";
+import { driveNodesCacheOf } from "./utils/drive-nodes.js";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -91,6 +92,7 @@ const module = {
 function appStore() {
   return createPHStore({
     drives: [appDrive],
+    driveNodes: driveNodesCacheOf(appDrive, makeDrive("mine")),
     selectedDriveId: appDrive.header.id,
     selectedNodeId: FILE_ID,
     documentCache,

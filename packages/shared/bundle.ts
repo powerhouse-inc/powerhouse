@@ -22,8 +22,13 @@ await build({
     // piece workers and must not load the document-model barrel (zod, crypto).
     "document-model/version.ts",
     "document-model/errors.ts",
+    "document-model/action-id.ts",
+    // Its own declaration file, so editors' `dispatch` type is readable by name.
+    "document-model/dispatch.ts",
     "document-drive/index.ts",
     "processors/index.ts",
+    // Test helpers; their PGlite peers are optional.
+    "processors/testing.ts",
     "registry/index.ts",
     // Browser-safe deep entries: Connect and the design system import these
     // directly so they don't pull the registry barrel's node:fs helpers into
@@ -34,6 +39,12 @@ await build({
     // Zod-only Connect config schema: host-core's neutral entries and the
     // connect runner import it without the connect barrel.
     "connect/connect-config-schema.ts",
+    // Dependency-free: the `${origin}` placeholder a proxied Connect's config
+    // carries. Connect resolves it in the browser; host-core, the connect
+    // runner and the portle plugin write and route by it.
+    "connect/origin-placeholder.ts",
+    // Node only: serving a built Connect swaps its shell, with no bundler around.
+    "connect/app-shell.ts",
     // Output tokens (zod only): host-core re-exports them, and the Connect
     // config schema's declared form makes its URL fields token-able.
     "host-tokens/index.ts",
@@ -62,7 +73,7 @@ await build({
 // Sub-paths so cli.ts and command files can import only what they need
 // without pulling the full clis bundle on the cold path.
 await build({
-  entry: ["clis/args/*.ts"],
+  entry: ["clis/args/*.ts", "!clis/args/*.test.ts"],
   outDir: "dist/clis/args",
   platform: "node",
   clean: false,

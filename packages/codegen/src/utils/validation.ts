@@ -1,4 +1,8 @@
-import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import {
+  isReservedOperationName,
+  type DocumentModelGlobalState,
+} from "@powerhousedao/shared/document-model";
+import { pascalCase } from "change-case";
 
 /**
  * Validation result for DocumentModelGlobalState code generation requirements
@@ -129,6 +133,10 @@ export function validateDocumentModelState(
     }
   }
 
+  if (typeof documentModelState.name === "string") {
+    errors.push(...stateTypeNameErrors(documentModelState.name, latestSpec));
+  }
+
   // Validate modules array (required but can be empty)
   if (!Array.isArray(latestSpec.modules)) {
     errors.push('Latest specification must have a "modules" array');
@@ -176,6 +184,13 @@ export function validateDocumentModelState(
             );
           }
 
+          if (
+            typeof operation.name === "string" &&
+            isReservedOperationName(operation.name)
+          ) {
+            errors.push(reservedOperationNameError(operation.name, moduleId));
+          }
+
           // operation.schema can be null or string (required property)
           if (
             operation.schema !== null &&
@@ -211,4 +226,80 @@ export function validateDocumentModelState(
     isValid: errors.length === 0,
     errors,
   };
+}
+
+function reservedOperationNameError(
+  operationName: string,
+  moduleName: string,
+): string {
+  return `Operation "${operationName}" in module "${moduleName}" has a reserved name`;
+}
+
+/**
+ * Throws when an operation in any specification has a name a base action
+ * reserves; codegen generates every specification.
+ */
+export function assertNoReservedOperationNames(
+  documentModelState: DocumentModelGlobalState,
+): void {
+  const errors: string[] = [];
+  for (const specification of documentModelState.specifications) {
+    for (const module of specification.modules) {
+      for (const operation of module.operations) {
+        if (
+          typeof operation.name === "string" &&
+          isReservedOperationName(operation.name)
+        ) {
+          errors.push(
+            `${reservedOperationNameError(operation.name, module.name)} (specification v${specification.version})`,
+          );
+        }
+      }
+    }
+  }
+  if (errors.length > 0) {
+    throw new Error(
+      `Cannot generate document model "${documentModelState.name}": ${errors.join("; ")}`,
+    );
+  }
+}
+
+type SpecificationState = DocumentModelGlobalState["specifications"][number];
+
+/** The types a GraphQL schema declares with `type Name`. */
+function declaredTypes(schema: string): string[] {
+  return [...schema.matchAll(/\btype\s+([A-Za-z_]\w*)/g)].map((m) => m[1]);
+}
+
+/** Codegen imports `<Name>State` and `<Name>LocalState` from the generated schema. */
+function stateTypeNameErrors(
+  modelName: string,
+  specification: SpecificationState,
+): string[] {
+  const pascalName = pascalCase(modelName);
+  const scopes = [
+    {
+      scope: "Global",
+      typeName: `${pascalName}State`,
+      state: specification.state.global,
+    },
+    {
+      scope: "Local",
+      typeName: `${pascalName}LocalState`,
+      state: specification.state.local,
+    },
+  ];
+  const errors: string[] = [];
+  for (const { scope, typeName, state } of scopes) {
+    // Codegen reads a scope's schema whenever it is not empty.
+    if (typeof state?.schema !== "string" || state.schema.trim() === "") {
+      continue;
+    }
+    const types = declaredTypes(state.schema);
+    if (types.includes(typeName)) continue;
+    errors.push(
+      `${scope} state schema must define \`type ${typeName}\`: codegen names the ${scope.toLowerCase()} state of model "${modelName}" ${typeName}, but the schema defines ${types.length ? types.join(", ") : "no type"}. Rename the type in SET_STATE_SCHEMA, or rename the model.`,
+    );
+  }
+  return errors;
 }

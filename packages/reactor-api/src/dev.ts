@@ -22,7 +22,9 @@ import type { DocumentModelModule } from "document-model";
 import { logger } from "document-model";
 import dotenv from "dotenv";
 import { isDotenvDisabled } from "@powerhousedao/shared/clis/project-env";
+import { reactorApiConfigFromEnv } from "./api-config.js";
 import { initializeAndStartAPI } from "./server.js";
+import { resolveRenownConfig } from "./services/renown-config.js";
 import type { ClientInitializerDependencies } from "./server.js";
 
 if (!isDotenvDisabled()) dotenv.config();
@@ -57,6 +59,8 @@ async function main() {
   await initializeAndStartAPI(
     initializeClient,
     {
+      ...reactorApiConfigFromEnv(process.env),
+      renown: resolveRenownConfig(undefined, process.env, logger),
       port,
       dbPath,
       mcp: true,

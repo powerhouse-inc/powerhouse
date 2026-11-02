@@ -1,3 +1,213 @@
+## 6.2.3-dev.90 (2026-11-02)
+
+### 🚀 Features
+
+- **desktop:** fold a stack into a few thousand files ([9ff7083857](https://github.com/powerhouse-inc/powerhouse/commit/9ff7083857))
+- **ph-run:** run a host with none of the tools that build one ([ff0ac7910f](https://github.com/powerhouse-inc/powerhouse/commit/ff0ac7910f))
+- **shared:** a node build leaves out what only a browser runs ([7b9d548b09](https://github.com/powerhouse-inc/powerhouse/commit/7b9d548b09))
+- **desktop:** a sign-in page and a local key for generated shells ([7cce4b7316](https://github.com/powerhouse-inc/powerhouse/commit/7cce4b7316))
+- **renown:** credentials no Renown holds ([337ddba394](https://github.com/powerhouse-inc/powerhouse/commit/337ddba394))
+- **reactor:** set a slug after creation, and a live slug over a deleted id ([234deeae76](https://github.com/powerhouse-inc/powerhouse/commit/234deeae76))
+- **desktop:** grant generated shells the system browser opener ([db0642a856](https://github.com/powerhouse-inc/powerhouse/commit/db0642a856))
+- **switchboard:** verify delegated signers with authEnforcement off ([b896f23cfe](https://github.com/powerhouse-inc/powerhouse/commit/b896f23cfe))
+- **reactor-api:** owner claim, kept credentials, a bind address and host facts ([21def9b8fe](https://github.com/powerhouse-inc/powerhouse/commit/21def9b8fe))
+
+### 🩹 Fixes
+
+- **shared:** a node build keeps an editors/index.ts that exports more than editors ([2f7c664f51](https://github.com/powerhouse-inc/powerhouse/commit/2f7c664f51))
+- **shared,powerhouse-vetra-packages:** the prerendered Connect shell gets its editors ([1b3794d1c1](https://github.com/powerhouse-inc/powerhouse/commit/1b3794d1c1))
+- **desktop:** the stack ships the packages its hosts' plugins come from ([faa1168ba4](https://github.com/powerhouse-inc/powerhouse/commit/faa1168ba4))
+- **desktop:** pack and test the stack on Windows ([c6317e2c15](https://github.com/powerhouse-inc/powerhouse/commit/c6317e2c15))
+- **reactor:** keep the trust context optional for direct callers ([1760590c37](https://github.com/powerhouse-inc/powerhouse/commit/1760590c37))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.89 (2026-11-02)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.88 (2026-11-01)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **shared:** serve Connect's router settings and per-switchboard connection settings ([b090b4d0f1](https://github.com/powerhouse-inc/powerhouse/commit/b090b4d0f1))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+- **reactor:** sync refuses before load a base-reducer 3 document whose model this reactor cannot run ([a75861b101](https://github.com/powerhouse-inc/powerhouse/commit/a75861b101))
+- **shared:** base-reducer 3 capability table, retraction rule and RETRACT ([b006a95770](https://github.com/powerhouse-inc/powerhouse/commit/b006a95770))
+
+### 🩹 Fixes
+
+- **shared:** a replay takes a passed base-reducer version only for a header number this build does not know ([0c05c18cde](https://github.com/powerhouse-inc/powerhouse/commit/0c05c18cde))
+- **shared:** an UNDO's replay runs under the base-reducer version its reducer runs ([74ea776ae4](https://github.com/powerhouse-inc/powerhouse/commit/74ea776ae4))
+- **shared:** a skip's replay runs under the base-reducer version its reducer runs ([1692b7ee44](https://github.com/powerhouse-inc/powerhouse/commit/1692b7ee44))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-browser:** let chat tools show images and reach the chat's images ([dbb82ccf55](https://github.com/powerhouse-inc/powerhouse/commit/dbb82ccf55))
+- **reactor:** keyframe clean-up with a dry run ([9be5cad060](https://github.com/powerhouse-inc/powerhouse/commit/9be5cad060))
+- **switchboard:** read keyframe rules from the project config and PH_KEYFRAMES ([b5a9401c6c](https://github.com/powerhouse-inc/powerhouse/commit/b5a9401c6c))
+- **reactor:** per-processor timing, top 5 in the catch-up output ([ca20e898e4](https://github.com/powerhouse-inc/powerhouse/commit/ca20e898e4))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.85 (2026-10-30)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.84 (2026-10-30)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🚀 Features
+
+- **shared:** add stored definition types and latestVersionOf ([95aa962203](https://github.com/powerhouse-inc/powerhouse/commit/95aa962203))
+- **shared:** served Connect config carries remoteBackends, collections and default-drive placement ([67426c7182](https://github.com/powerhouse-inc/powerhouse/commit/67426c7182))
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor-api:** send webhook reply headers ([dd5bae688f](https://github.com/powerhouse-inc/powerhouse/commit/dd5bae688f))
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **connect:** a proxied Connect names its switchboard as ${origin}; the runner proxies the switchboard's paths ([bdaffdb580](https://github.com/powerhouse-inc/powerhouse/commit/bdaffdb580))
+- **shared:** switchboardOfDrive splits a switchboard drive address ([9b79f7d899](https://github.com/powerhouse-inc/powerhouse/commit/9b79f7d899))
+- **reactor-mcp:** shared tool definitions with MCP and ai SDK adapters ([db60951c54](https://github.com/powerhouse-inc/powerhouse/commit/db60951c54))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **codegen:** pin date-fns, vite and rolldown for every package manager ([635f41d7cc](https://github.com/powerhouse-inc/powerhouse/commit/635f41d7cc))
+- **shared:** keep test files out of the clis/args bundle ([13781fdc71](https://github.com/powerhouse-inc/powerhouse/commit/13781fdc71))
+- **shared:** decode spawnAsync output as UTF-8 and reject with SpawnError ([3d9a582153](https://github.com/powerhouse-inc/powerhouse/commit/3d9a582153))
+- **shared,ph-cli:** leave --ignore-local unset when it is not passed ([7e8b8fd487](https://github.com/powerhouse-inc/powerhouse/commit/7e8b8fd487))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.3-dev.79 (2026-10-28)
+
+### 🚀 Features
+
+- **ph-cli:** map the env to the switchboard config at the service edge ([9a58c9593e](https://github.com/powerhouse-inc/powerhouse/commit/9a58c9593e))
+- ⚠️  **switchboard:** startSwitchboard(config, deps) reads only its config ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+- **ph-cli,codegen:** ph mcp, a stdio launcher for reactor-mcp that starts vetra on the first tool call, and generated mcp configs that run it ([c64883e693](https://github.com/powerhouse-inc/powerhouse/commit/c64883e693))
+- **codegen,vetra,ph-cli,connect:** project agent guidance as a managed AGENTS.md block and skills, and eval fixes ([#3303](https://github.com/powerhouse-inc/powerhouse/pull/3303))
+- **reactor-browser:** the light client heads new documents with newDocument and the host's per-type selection ([49a6772cb4](https://github.com/powerhouse-inc/powerhouse/commit/49a6772cb4))
+- ⚠️  **reactor:** build new documents with newDocument and select versions per document type ([5125e8e0b4](https://github.com/powerhouse-inc/powerhouse/commit/5125e8e0b4))
+- **shared:** action ids are UUIDv7 and auth stamps strictly increase ([40806a0090](https://github.com/powerhouse-inc/powerhouse/commit/40806a0090))
+
+### 🩹 Fixes
+
+- **ph-cli:** map the shell and the project .env as one env, and keep shell values the shell's ([006937578a](https://github.com/powerhouse-inc/powerhouse/commit/006937578a))
+- **shared:** genesis CREATE/UPGRADE actions take UUIDv7 ids after the move to shared ([#3296](https://github.com/powerhouse-inc/powerhouse/issues/3296))
+- **shared:** a failed action with a skip keeps the rewind ([8fdf61bba6](https://github.com/powerhouse-inc/powerhouse/commit/8fdf61bba6))
+- **codegen,shared,vetra,ph-cli,document-model,reactor,reactor-api:** scaffolds get their dependencies, migration-file works, new documents count 0 per scope, subgraphs filter plain ids, and vetra sets the preview drive's app ([6fe1ead94c](https://github.com/powerhouse-inc/powerhouse/commit/6fe1ead94c))
+- **vetra,document-model,reactor-browser,reactor-mcp:** schemas and api docs say what the code does, and getDocumentModelSchema has a compact form ([ea4f1c1f30](https://github.com/powerhouse-inc/powerhouse/commit/ea4f1c1f30))
+- **shared:** a failed action with a skip keeps the rewind" ([c8675e0d34](https://github.com/powerhouse-inc/powerhouse/commit/c8675e0d34))
+- **shared:** a failed action with a skip keeps the rewind ([580cb26e45](https://github.com/powerhouse-inc/powerhouse/commit/580cb26e45))
+- **document-model:** purge and addUndo action ids come from generateActionId ([37c1e07f4f](https://github.com/powerhouse-inc/powerhouse/commit/37c1e07f4f))
+- **document-model:** the v1/v2 undo marker takes a UUIDv7 id ([4c3cde0d83](https://github.com/powerhouse-inc/powerhouse/commit/4c3cde0d83))
+- **document-model:** keep the base-reducer 1/2 undo marker on the wall clock ([7da578402d](https://github.com/powerhouse-inc/powerhouse/commit/7da578402d))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** startSwitchboard(config, deps) reads only its config  ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+  startSwitchboard(options) is now startSwitchboard(config, deps).
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+- **reactor:** build new documents with newDocument and select versions per document type  ([5125e8e0b4](https://github.com/powerhouse-inc/powerhouse/commit/5125e8e0b4))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.78 (2026-10-27)
+
+### 🚀 Features
+
+- **portle:** scaffold @powerhousedao/portle, the switchboard plugin that gates publication through Portle ([68ab561f7d](https://github.com/powerhouse-inc/powerhouse/commit/68ab561f7d))
+- **reactor-api,switchboard:** vacuum full policy knob, no forced rewrite under load by default ([d6dcbf5cd0](https://github.com/powerhouse-inc/powerhouse/commit/d6dcbf5cd0))
+- **ph-cli,shared:** ph host export behind FEATURE_UNIFORM_RUNNERS_ENABLED ([6c78f617a8](https://github.com/powerhouse-inc/powerhouse/commit/6c78f617a8))
+
+### 🩹 Fixes
+
+- **registry:** a failed tarball write no longer records its attachment ([5d3ae94bd8](https://github.com/powerhouse-inc/powerhouse/commit/5d3ae94bd8))
+- **reactor-api:** the one-time VACUUM FULL is off by default; quiet and forced are opt-ins ([fd7c19e313](https://github.com/powerhouse-inc/powerhouse/commit/fd7c19e313))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.77 (2026-10-26)
 
 ### 🚀 Features

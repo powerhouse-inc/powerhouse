@@ -271,6 +271,32 @@ describe("hasRevisionConflict", () => {
 });
 
 describe("buildPulledDocument", () => {
+  it("carries the remote header's protocol versions", () => {
+    const initial = {
+      ...makeInitialDoc(),
+      header: {
+        ...makeInitialDoc().header,
+        protocolVersions: { "base-reducer": 2 },
+      },
+    };
+
+    const pulled = buildPulledDocument(
+      makeRemoteDocData({ protocolVersions: { "base-reducer": 3 } }),
+      {},
+      initial,
+      "main",
+    );
+    const unversioned = buildPulledDocument(
+      makeRemoteDocData({ protocolVersions: null as never }),
+      {},
+      initial,
+      "main",
+    );
+
+    expect(pulled.header.protocolVersions).toEqual({ "base-reducer": 3 });
+    expect(unversioned.header.protocolVersions).toEqual({ "base-reducer": 2 });
+  });
+
   it("reconstructs a PHDocument from remote data and operations", () => {
     const remoteDoc = makeRemoteDocData({
       id: "remote-1",

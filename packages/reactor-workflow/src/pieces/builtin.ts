@@ -1,5 +1,6 @@
 // Pieces the runtime ships and registers itself. They are this package's own
 // code, so they are described and run in process rather than in the worker.
+import { randomBytes } from "node:crypto";
 import type { BlockIdentity } from "@powerhousedao/pieces-framework/block-type";
 import {
   PIECE_ACTION_PORTS,
@@ -11,11 +12,16 @@ import {
   type PieceDescriptor,
 } from "./activepieces/descriptor.js";
 import { getActions, type ApPiece } from "./activepieces/types.js";
+import type { RunResponse } from "./activepieces/worker/protocol.js";
+import { jsonSafe } from "./activepieces/worker/json-safe.js";
 import {
   CORE_PIECE_NAME,
   CORE_PIECE_VERSION,
+  CoreCannotPauseError,
   corePiece,
   isPorted,
+  type CoreActionContext,
+  type CoreWaitpointCall,
 } from "./core/index.js";
 
 export interface BuiltinPiece {
@@ -82,19 +88,87 @@ export class UnknownBuiltinActionError extends Error {
   }
 }
 
-// Only propsValue is served: a built-in action reaches nothing else.
+// A core waitpoint call as the host's port takes it: the response resolved,
+// with the token its resume URL was built from.
+export type BuiltinWaitpointCall = Omit<CoreWaitpointCall, "responseToSend"> & {
+  responseToSend?: RunResponse;
+  token?: string;
+};
+
+// Served: propsValue, and to a core block that waits, the run's waitpoints.
+export interface BuiltinRunOptions {
+  // Bound to the step; absent where the run cannot suspend.
+  waitpoints?: {
+    create(
+      call: BuiltinWaitpointCall,
+    ): Promise<{ id: string; resumeUrl: string }>;
+    // Where resume URLs live; absent where the host serves none.
+    resumeBaseUrl?: string;
+  };
+  // Set when the step re-enters the run it suspended.
+  resume?: { payload: unknown };
+}
+
+// Resolves a response that embeds the resume URL with a token minted here.
+// Without a base URL it is dropped, and the host refuses the WEBHOOK call.
+function resolvedCall(
+  call: CoreWaitpointCall,
+  resumeBaseUrl: string | undefined,
+): BuiltinWaitpointCall {
+  const { responseToSend, ...rest } = call;
+  if (typeof responseToSend !== "function") {
+    return responseToSend ? { ...rest, responseToSend } : rest;
+  }
+  if (!resumeBaseUrl) return rest;
+  const token = randomBytes(32).toString("base64url");
+  const url = `${resumeBaseUrl.replace(/\/+$/, "")}/${token}`;
+  return { ...rest, responseToSend: responseToSend(url), token };
+}
+
 export async function runBuiltinAction(
   builtin: BuiltinPiece,
   actionName: string,
   propsValue: Record<string, unknown>,
-): Promise<{ output: unknown; port?: string }> {
+  options: BuiltinRunOptions = {},
+): Promise<{
+  output: unknown;
+  port?: string;
+  paused?: { waitpointId: string };
+  response?: RunResponse;
+  stopped?: boolean;
+}> {
   const action = getActions(builtin.piece)[actionName] as unknown;
   if (!action || typeof (action as { run?: unknown }).run !== "function") {
     throw new UnknownBuiltinActionError(builtin.name, actionName);
   }
+  let paused: { waitpointId: string } | undefined;
+  let stopped: RunResponse | undefined;
+  const { waitpoints, resume } = options;
+  const context: CoreActionContext = {
+    propsValue,
+    executionType: resume ? "RESUME" : "BEGIN",
+    ...(resume ? { resumePayload: resume.payload } : {}),
+    run: {
+      canPause: waitpoints !== undefined,
+      createWaitpoint: (call) => {
+        if (!waitpoints) throw new CoreCannotPauseError(actionName);
+        return waitpoints.create(resolvedCall(call, waitpoints.resumeBaseUrl));
+      },
+      waitForWaitpoint: (waitpointId) => {
+        if (!waitpoints) throw new CoreCannotPauseError(actionName);
+        paused = { waitpointId };
+      },
+      // As upstream's run.stop: no response answers 200 with `{}`.
+      stop: (params) => {
+        stopped = (jsonSafe(params?.response ?? {}) ?? {}) as RunResponse;
+      },
+    },
+  };
   const output = await (
     action as { run: (ctx: unknown) => Promise<unknown> }
-  ).run({ propsValue });
+  ).run(context);
+  if (paused) return { output, paused };
+  if (stopped) return { output, response: stopped, stopped: true };
   return {
     output,
     ...(isPorted(action) ? { port: action.portOf(output) } : {}),

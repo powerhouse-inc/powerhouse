@@ -55,9 +55,11 @@ export async function ensureDrive(
   // header before persistence; falls back to createEmpty otherwise.
   let driveId: string;
   if (wantedId || preferredEditor) {
-    const module = await client.getDocumentModelModule(DRIVE_DOCUMENT_TYPE);
-    const doc = module.utils.createDocument() as any;
-    if (wantedId) doc.header.id = wantedId;
+    // Only a legacy drive can take a chosen id.
+    const doc = await client.newDocument(
+      DRIVE_DOCUMENT_TYPE,
+      wantedId ? { signaturePolicy: "legacy", id: wantedId } : undefined,
+    );
     if (preferredEditor) doc.header.meta = { preferredEditor };
     const created = await client.create(doc);
     driveId = (created as any).header.id;

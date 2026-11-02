@@ -4,7 +4,10 @@ import type { RegistryConfig } from "../src/types.js";
 import { buildVerdaccioConfig } from "../src/verdaccio-config.js";
 
 type VerdaccioConfig = ReturnType<typeof buildVerdaccioConfig> & {
-  uplinks: Record<string, { url: string; maxage: string }>;
+  uplinks: Record<
+    string,
+    { url: string; maxage: string; fail_timeout?: string }
+  >;
   packages: Record<string, { proxy?: string }>;
   auth: Record<string, unknown>;
   plugins?: string;
@@ -59,6 +62,12 @@ describe("buildVerdaccioConfig", () => {
     const cfg = buildVerdaccioConfig(baseConfig()) as VerdaccioConfig;
 
     expect(cfg.uplinks.npmjs.maxage).toBe("2m");
+  });
+
+  it("never takes the uplink offline after failed requests", () => {
+    const cfg = buildVerdaccioConfig(baseConfig()) as VerdaccioConfig;
+
+    expect(cfg.uplinks.npmjs.fail_timeout).toBe("0s");
   });
 
   it("honors a custom uplinkMaxage value", () => {

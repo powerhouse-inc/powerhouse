@@ -89,6 +89,10 @@ export {
   type XhrUploadTransportOptions,
 } from "./switchboard/index.js";
 export { NullAttachmentTransport } from "./null-attachment-transport.js";
+export {
+  RoutingAttachmentService,
+  type AttachmentRouteResolver,
+} from "./routing/routing-attachment-service.js";
 export { AttachmentBuilder } from "./attachment-builder.js";
 export type { AttachmentBuildResult } from "./attachment-builder.js";
 export {

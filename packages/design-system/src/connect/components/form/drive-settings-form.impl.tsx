@@ -2,7 +2,7 @@ import { Icon, PowerhouseButton } from "#design-system";
 import type { DriveSystemInfoState } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { SharingType } from "@powerhousedao/shared/document-drive";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { SubmitHandler } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { Disclosure } from "../disclosure/disclosure.js";
@@ -28,6 +28,8 @@ type DriveSettingsFormProps = {
   onSubmit: DriveSettingsFormSubmitHandler;
   handleCancel: () => void;
   handleDeleteDrive: () => void;
+  /** Rendered after the location settings, e.g. where the drive opens. */
+  children?: ReactNode;
 };
 
 export type DriveSettingsFormSubmitHandler = SubmitHandler<Inputs>;
@@ -40,6 +42,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
     systemInfo,
     onSubmit,
     handleDeleteDrive,
+    children,
   } = props;
   const name = drive.header.name;
 
@@ -74,6 +77,12 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
         <LocationInfo location={location} />
         <AvailableOfflineToggle {...register("availableOffline")} />
       </Disclosure>
+      {children ? (
+        <>
+          <Divider className="my-3" />
+          {children}
+        </>
+      ) : null}
       <Divider className="my-3" />
       <Disclosure
         isOpen={showAbout}

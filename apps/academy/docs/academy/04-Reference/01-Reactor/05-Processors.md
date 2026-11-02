@@ -70,10 +70,21 @@ type ProcessorRecord = {
   processor: IProcessor;
   filter: ProcessorFilter;
   startFrom?: "beginning" | "current";
+  replayState?: "latest" | "collapse" | "exact" | "operations";
+  id?: string; // stable cursor key; derived from the processor's namespace or class name when omitted
 };
 ```
 
 `processor` and `filter` are required. `startFrom` is covered under [catch-up and ordering](#catch-up-and-ordering).
+
+`replayState` sets what a replayed operation carries. A replay (first install, catch-up after a restart, rerun, retry) reads operations from the index, which keeps no `resultingState`; a live delivery always carries the executor's state after the operation.
+
+| `replayState`      | A replayed operation carries                                                                                               |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `latest` (default) | Every operation, with the document's latest state. It can be newer than the operation, never older than a state already delivered for that stream. |
+| `collapse`         | Per document stream, one delivery with the latest state; the operations it includes are skipped. Only for processors whose output depends on the latest state alone. |
+| `exact`            | Every operation, with its state at its own revision. Slower.                                                               |
+| `operations`       | Every operation, without state.                                                                                            |
 
 ### The IProcessor interface
 
@@ -84,7 +95,7 @@ interface IProcessor {
 }
 ```
 
-`onOperations` is called post-ready with the operations that matched this processor's filter, during both live routing and backfill. Each `OperationWithContext` is `{ operation, context }`; `context` carries `documentId`, `documentType`, `scope`, `branch`, the global `ordinal`, and optionally `resultingState`.
+`onOperations` is called post-ready with the operations that matched this processor's filter, during both live routing and backfill. Each `OperationWithContext` is `{ operation, context }`; `context` carries `documentId`, `documentType`, `scope`, `branch`, the global `ordinal`, and optionally `resultingState`. On a replay, `resultingState` is what the record's `replayState` says.
 
 `onDisconnect` runs when the factory is unregistered or its drive is deleted. The manager wraps this call: a throw is caught and logged, never propagated. It is not a deletion signal; see [Deletion and erasure](#deletion-and-erasure).
 
@@ -191,13 +202,18 @@ interface IProcessorHostModuleBase {
 - **`analyticsStore`** — the analytics store for time-series rollups.
 - **`relationalDb`** — an `IRelationalDb` (a Kysely instance plus `createNamespace` / `queryNamespace`) for relational indexing. See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling).
 - **`processorApp`** — `"connect" | "switchboard"`. How a processor learns which app hosts it. Read this rather than the factory's `processorApp?` argument.
-- **`dispatch`** — writes back to the reactor via `dispatch.execute(docId, branch, actions, signal?, meta?)`, returning `{ id, status }`. In Connect this is wired to the reactor client's async execute. Do not `await client.execute()` from inside `onOperations`. The promise resolves only at `READ_READY`, which the current batch cannot reach while your callback is still running. Use `dispatch` and handle the result in a later `onOperations` call (see [Processor best practices](/academy/Build/WorkWithData/ProcessorBestPractices)).
+- **`dispatch`** — how a processor writes. Each member resolves once the write is accepted, answers with the job's `{ id, status }`, and does not wait for the commit:
+  - `execute(docId, branch, actions, signal?, meta?)` submits actions on one document.
+  - `createInDrive(driveId, document, parentFolder?, signal?)` adds a document to a drive and also returns its `documentId`. The document's own creation has completed when it resolves; the drive's file node has been accepted.
+  - `deleteDocument(docId, propagate?, signal?)` deletes a document; pass `"cascade"` to delete its orphaned children too.
+
+  Do not wait for a write to reach `READ_READY` from inside `onOperations`: the current batch cannot get there while your callback is still running. Use `dispatch` and handle the result in a later `onOperations` call (see [Processor best practices](/academy/Build/WorkWithData/ProcessorBestPractices)).
 - **`getReadModel(name)`** — looks up a registered read model by its `name`. Reactor-registered names are typed: `getReadModel("document-view")` returns `IDocumentView` and `"document-indexer"` returns `IDocumentIndexer`; other names take an explicit type argument. Connect's implementation throws `Read model "<name>" not found` when there is no match.
 - **`config?`** — optional `Map<string, unknown>` of host config.
-- **`client`** — the `IReactorClient` for reading documents and drives. See [IReactorClient](/academy/Reference/Reactor/ReactorClient).
+- **`read`** — the `IReactorReadClient` for reading documents, relationships, operations, and drives (`read.drives`). Reads are gated. See [IReactorClient](/academy/Reference/Reactor/ReactorClient).
 - **`attachments`** — the `IAttachmentClient` for uploading and downloading attachments. In Switchboard it makes no caller check, because a processor acts for no caller. See the [Attachment service](/academy/Reference/Reactor/AttachmentService).
 
-These six core fields are `IProcessorHostModuleBase` in `@powerhousedao/shared`. `@powerhousedao/reactor` adds `client` and the typed `getReadModel` as `IReactorProcessorHostModuleBase`; `@powerhousedao/reactor-browser` and `@powerhousedao/reactor-api` add `attachments` as `IProcessorHostModule`, since neither shared nor reactor can depend on reactor-attachments. Connect sets `processorApp: "connect"`.
+These six core fields are `IProcessorHostModuleBase` in `@powerhousedao/shared`. `@powerhousedao/reactor` adds `read` and the typed `getReadModel` as `IReactorProcessorHostModuleBase`; `@powerhousedao/reactor-browser` and `@powerhousedao/reactor-api` add `attachments` as `IProcessorHostModule`, since neither shared nor reactor can depend on reactor-attachments. Connect sets `processorApp: "connect"`.
 
 `IProcessorDispatch` and `ProcessorDispatchResult` are defined in shared but are not part of the public reactor export surface; treat the `dispatch` handle on the module as the supported entry point.
 

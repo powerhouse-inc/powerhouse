@@ -6,8 +6,12 @@ import type {
 import type {
   CreateDocumentAction,
   PHDocumentHeader,
+  SetSlugActionInput,
 } from "@powerhousedao/shared/document-model";
-import { createDocumentFromAction } from "../executor/util.js";
+import {
+  documentFromCreation,
+  isDenied,
+} from "@powerhousedao/shared/document-model";
 
 // The marker counts: a peer can receive a drive's marker without its delete.
 export function isDriveDeletion(op: OperationWithContext): boolean {
@@ -27,6 +31,22 @@ export function extractDriveHeader(
   return state.header as PHDocumentHeader | undefined;
 }
 
+/** A creation header with the slug the document has now, which only SET_SLUG changes. */
+export function withCurrentSlug(
+  header: PHDocumentHeader,
+  headerOperations: readonly OperationWithContext[],
+): PHDocumentHeader {
+  const named = headerOperations
+    .filter(
+      ({ operation }) =>
+        operation.action.type === "SET_SLUG" && !isDenied(operation),
+    )
+    .at(-1);
+  if (!named) return header;
+  const { slug } = named.operation.action.input as SetSlugActionInput;
+  return { ...header, slug };
+}
+
 // The index keeps no resultingState, so its rows rebuild it from the input.
 export function extractCreationHeader(
   op: OperationWithContext,
@@ -34,7 +54,7 @@ export function extractCreationHeader(
   if (op.operation.action.type !== "CREATE_DOCUMENT") return undefined;
   return (
     extractDriveHeader(op) ??
-    createDocumentFromAction(op.operation.action as CreateDocumentAction).header
+    documentFromCreation(op.operation.action as CreateDocumentAction).header
   );
 }
 
@@ -108,6 +128,25 @@ function namespaceOf(processor: object): string | undefined {
 function classNameOf(processor: object): string | undefined {
   const name = processor.constructor.name;
   return name && name !== "Object" ? name : undefined;
+}
+
+/**
+ * A readable name per record, independent of the cursor key: id, then class
+ * name, then namespace, then index. Class comes before namespace because a
+ * relational processor's namespace embeds the drive id.
+ */
+export function resolveProcessorNames(records: ProcessorRecord[]): string[] {
+  const seen = new Map<string, number>();
+  return records.map((record, i) => {
+    const base =
+      nonEmpty(record.id) ??
+      classNameOf(record.processor) ??
+      namespaceOf(record.processor) ??
+      `#${i}`;
+    const count = seen.get(base) ?? 0;
+    seen.set(base, count + 1);
+    return count === 0 ? base : `${base}#${count}`;
+  });
 }
 
 // Cursor key of each record within its factory and drive. Legacy mode keeps

@@ -1,0 +1,53 @@
+scalar Unknown
+scalar DateTime
+scalar Address
+scalar AttachmentRef
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+scalar Iban
+scalar Bic
+
+type PaymentFixtureState {
+  iban: Iban
+  accounts: [Iban!]!
+  bic: Bic
+}
+
+# payments
+
+input BankInput {
+  bic: Bic!
+}
+
+input PayeeInput {
+  iban: Iban!
+  bank: BankInput
+  name: String
+}
+
+input SetPaymentInput {
+  iban: Iban!
+  payee: Iban
+  bic: Bic!
+  accounts: [Iban!]!
+  payees: [Iban]
+  payeeGroups: [[Bic!]!]
+  beneficiary: PayeeInput!
+  beneficiaries: [PayeeInput!]
+  note: String
+}

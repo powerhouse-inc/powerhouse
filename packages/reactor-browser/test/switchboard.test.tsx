@@ -2,7 +2,7 @@
 
 import type { DocumentModelModule } from "document-model";
 import lzString from "lz-string";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { GetDocumentWithOperationsDocument } from "../src/graphql/gen/schema.js";
 import {
   buildDocumentSubgraphUrl,
@@ -59,6 +59,25 @@ const fakeInvoiceModel = {
 } as unknown as DocumentModelModule;
 
 describe("Switchboard hooks", () => {
+  it.each([
+    "type Note { body: String! } type Link { href: String! } union Entry = Note | Link",
+    "interface Entry { label: String! } type Note implements Entry { label: String! }",
+  ])("uses the generic query for abstract state types: %s", (declaration) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const model = structuredClone(fakeInvoiceModel);
+    model.documentModel.global.specifications[0].state.global.schema = `${declaration}\ntype PowerhouseInvoiceState { entries: [Entry!] }`;
+    const url = buildDocumentSubgraphUrl(
+      "http://localhost:4001/graphql/r",
+      "powerhouse/invoice",
+      "doc-1",
+      model,
+    );
+    expect(decodeExplorerState(url).document).toBe(
+      getDocumentGraphqlQuery().trim(),
+    );
+    warn.mockRestore();
+  });
+
   it("should return the proper switchboard url", () => {
     const url = getSwitchboardGatewayUrlFromDriveUrl(
       "https://example.com/d/123",

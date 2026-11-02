@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { createFreshRelationalDb } from "../../test/helpers/pglite.js";
 import { InMemorySecretProvider } from "../pieces/index.js";
+import { LocalEncryptedSecretStore } from "./secret-store.js";
 import { resolveVariables } from "./variables.js";
 
 const REF = `secret://v1:${"a".repeat(32)}`;
@@ -21,6 +23,7 @@ describe("resolveVariables", () => {
         { key: "legacy", value: { b: 2 } },
       ],
       secrets,
+      "wf-test",
     );
     expect(Object.fromEntries(variables.map((v) => [v.key, v.value]))).toEqual({
       text: "12",
@@ -42,19 +45,44 @@ describe("resolveVariables", () => {
       resolveVariables(
         [{ key: "b", value: "maybe", type: "BOOLEAN" }],
         secrets,
+        "wf-test",
       ),
     ).rejects.toThrow('Variable "b" is a BOOLEAN');
     await expect(
-      resolveVariables([{ key: "j", value: "{", type: "JSON" }], secrets),
+      resolveVariables(
+        [{ key: "j", value: "{", type: "JSON" }],
+        secrets,
+        "wf-test",
+      ),
     ).rejects.toThrow('Variable "j" is JSON, but its value does not parse');
   });
 
   it("names the ref, not a value, when a secret does not resolve", async () => {
     const missing = `secret://v1:${"c".repeat(32)}`;
     await expect(
-      resolveVariables([{ key: "s", value: missing, type: "SECRET" }], secrets),
+      resolveVariables(
+        [{ key: "s", value: missing, type: "SECRET" }],
+        secrets,
+        "wf-test",
+      ),
     ).rejects.toThrow(
       `Secret variable "s" could not be resolved: No secret found for ref "${missing}"`,
+    );
+  });
+
+  it("resolves a SECRET only for the workflow it was minted for", async () => {
+    const store = await LocalEncryptedSecretStore.create(
+      createFreshRelationalDb(),
+      { masterKeyHex: "ab".repeat(32) },
+    );
+    const { ref } = await store.create({ value: "wf-a-key", ownerId: "wf-a" });
+    const variables = [{ key: "s", value: ref, type: "SECRET" as const }];
+
+    await expect(
+      resolveVariables(variables, store, "wf-a"),
+    ).resolves.toMatchObject({ secretValues: ["wf-a-key"] });
+    await expect(resolveVariables(variables, store, "wf-b")).rejects.toThrow(
+      'Secret variable "s" could not be resolved: This secret belongs to another workflow; enter it again',
     );
   });
 });

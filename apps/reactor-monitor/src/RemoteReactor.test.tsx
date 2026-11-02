@@ -176,8 +176,8 @@ async function provisionRemoteReactor(
   fireEvent.change(view.getByPlaceholderText("alpha"), {
     target: { value: name },
   });
-  fireEvent.change(view.getByPlaceholderText("http://localhost:4001/graphql"), {
-    target: { value: "http://switchboard.test/graphql" },
+  fireEvent.change(view.getByLabelText("Switchboard drive address"), {
+    target: { value: "http://switchboard.test/d/powerhouse" },
   });
   if (bearer !== undefined) {
     fireEvent.change(view.getByLabelText("Bearer token"), {
@@ -242,7 +242,9 @@ describe("remote reactor in the monitor app", () => {
     fireEvent.click(view.getByRole("button", { name: "Provision" }));
 
     expect(
-      view.getByText("A GraphQL URL is required for a remote reactor"),
+      view.getByText(
+        "A switchboard drive address is required for a remote reactor",
+      ),
     ).toBeTruthy();
     expect(view.getByText("No reactors provisioned yet.")).toBeTruthy();
   });
@@ -256,9 +258,7 @@ describe("remote reactor in the monitor app", () => {
     });
 
     expect(view.queryByDisplayValue("local only (brokered)")).toBeNull();
-    expect(
-      view.getByPlaceholderText("http://localhost:4001/graphql"),
-    ).toBeTruthy();
+    expect(view.getByLabelText("Switchboard drive address")).toBeTruthy();
     expect(view.getByTestId("provision-remote-note").textContent).toMatch(
       /attaches to that reactor and\s+inspects it/,
     );
@@ -341,6 +341,31 @@ describe("remote reactor in the monitor app", () => {
     expect(view.queryByTestId("operator-bearer-form")).toBeNull();
   }, 20_000);
 
+  it("fails a saved remote stored by its GraphQL url, naming the drive address", async () => {
+    const saved = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => saved.get(key) ?? null,
+      setItem: (key: string, value: string) => void saved.set(key, value),
+    };
+    new MonitoringSetsStore(storage).setActiveDescriptors([
+      {
+        kind: "remote",
+        name: "old-switchboard",
+        remote: { url: "http://switchboard.test/graphql" },
+      },
+    ]);
+    const view = render(<App store={new MonitoringSetsStore(storage)} />);
+    await waitFor(
+      () =>
+        expect(
+          view.getByTitle(
+            'failed: Reactor "old-switchboard": http://switchboard.test/graphql is not a switchboard drive address (<switchboard>/d/<slug>): use http://switchboard.test/d/<slug>, one of the switchboard\'s drives.',
+          ),
+        ).toBeTruthy(),
+      WAIT,
+    );
+  });
+
   it("takes a pasted bearer on a remote restored from a saved set", async () => {
     const host: Host = { access: null, adminBearer: "admin-token" };
     const saved = new Map<string, string>();
@@ -352,7 +377,7 @@ describe("remote reactor in the monitor app", () => {
       {
         kind: "remote",
         name: "restored-switchboard",
-        remote: { url: "http://switchboard.test/graphql" },
+        remote: { url: "http://switchboard.test/d/powerhouse" },
       },
     ]);
     const originalFetch = globalThis.fetch;

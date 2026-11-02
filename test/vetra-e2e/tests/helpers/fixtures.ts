@@ -6,6 +6,7 @@ import coverageOptions from "../../mcr.config.js";
 export { expect } from "@playwright/test";
 
 const REACTOR_WORKER_STORAGE_KEY = "ph:reactorWorker";
+const REACTOR_CLIENT_STORAGE_KEY = "ph:reactorClient";
 
 export function reactorWorkerModeRequested(): boolean {
   const flag = process.env.PH_REACTOR_WORKER;
@@ -21,9 +22,14 @@ const test = testBase.extend<{
     async ({ context }, use) => {
       const enabled = reactorWorkerModeRequested();
       if (enabled) {
-        await context.addInitScript((key) => {
-          window.localStorage.setItem(key, "true");
-        }, REACTOR_WORKER_STORAGE_KEY);
+        // Studio's configured remote client would otherwise win over the worker flag.
+        await context.addInitScript(
+          ([workerKey, clientKey]) => {
+            window.localStorage.setItem(workerKey, "true");
+            window.localStorage.setItem(clientKey, "worker");
+          },
+          [REACTOR_WORKER_STORAGE_KEY, REACTOR_CLIENT_STORAGE_KEY],
+        );
       }
       await use(enabled);
     },

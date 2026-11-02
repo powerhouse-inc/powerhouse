@@ -61,6 +61,11 @@ export class ConsistencyTracker implements IConsistencyTracker {
   private state = new Map<ConsistencyKey, number>();
   private waiters: Waiter[] = [];
 
+  /** Sizes for telemetry. */
+  stats(): Record<string, number> {
+    return { keys: this.state.size, waiters: this.waiters.length };
+  }
+
   update(coordinates: ConsistencyCoordinate[]): void {
     const deduplicated = this.deduplicateCoordinates(coordinates);
 

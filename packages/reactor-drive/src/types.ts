@@ -30,7 +30,10 @@ export type ReactorDriveDocumentModelModule =
 /**
  * Metadata carried on the `drive/child` relationship for file children.
  * The parentFolderId is null when the file lives directly under the drive root.
- * Files don't carry their name here — it lives on the child document's header.
+ * A file's name lives on the child document's header; the optional name here
+ * is the requested name for a link made before the projection knew the
+ * document's name (a relink of existing documents), and a later SET_NAME
+ * still replaces it.
  * documentType is duplicated here so the projection never depends on the order
  * in which CREATE_DOCUMENT and ADD_RELATIONSHIP arrive; documentType is
  * immutable after document creation, so the duplication is safe.
@@ -39,6 +42,7 @@ export type DriveChildFileMetadata = {
   kind: "file";
   parentFolderId: string | null;
   documentType: string;
+  name?: string;
 };
 
 export type AddFolderActionInput = {

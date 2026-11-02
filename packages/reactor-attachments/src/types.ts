@@ -71,6 +71,8 @@ export type UploadFirstReserveAttachmentOptions = {
   extension?: string | null;
   clientHash?: undefined;
   sizeBytes?: undefined;
+  /** The document the attachment is for; a routing service reserves on its backend. */
+  documentId?: string;
 };
 
 /**
@@ -94,6 +96,8 @@ export type HashFirstReserveAttachmentOptions = {
    * ingest: an upload whose actual byte count differs is rejected.
    */
   sizeBytes: number;
+  /** The document the attachment is for; a routing service reserves on its backend. */
+  documentId?: string;
 };
 
 /**

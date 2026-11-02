@@ -1,4 +1,5 @@
 import type { PHGlobalEventHandlerAdders } from "../types/global.js";
+import { addBackendAuthEventHandler } from "./backend-auth.js";
 import {
   addAllowListEventHandler,
   addAnalyticsDatabaseNameEventHandler,
@@ -61,6 +62,7 @@ import {
 import { addDocumentCacheEventHandler } from "./document-cache.js";
 import { addDraggingNodeEventHandler } from "./node-drag-and-drop.js";
 import { addDrivesEventHandler } from "./drives.js";
+import { addDriveNodesEventHandler } from "./drive-nodes.js";
 import { addGraphQLReactorClientEventHandler } from "./graphql-reactor-client.js";
 import { addLoadingEventHandler } from "./loading.js";
 import { addModalEventHandler } from "./modals.js";
@@ -86,6 +88,8 @@ import { addVetraPackageManagerEventHandler } from "./vetra-packages.js";
 export const commonGlobalEventHandlerFunctions = {
   loading: addLoadingEventHandler,
   drives: addDrivesEventHandler,
+  backendAuth: addBackendAuthEventHandler,
+  driveNodes: addDriveNodesEventHandler,
   selectedDriveId: () => {
     addSelectedDriveIdEventHandler();
     addSyncSelectionOnPopStateEventHandler();
@@ -171,6 +175,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   toast: addToastEventHandler,
   // Set once by the host on its store; no event to listen for.
   navigation: () => {},
+  aiTools: () => {},
 };
 export function addPHEventHandlers() {
   callEventHandlerRegisterFunctions(phGlobalEventHandlerRegisterFunctions);

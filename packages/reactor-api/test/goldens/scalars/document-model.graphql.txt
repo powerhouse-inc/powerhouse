@@ -1,0 +1,157 @@
+directive @key(fields: _FieldSet!) repeatable on OBJECT | INTERFACE
+
+directive @requires(fields: _FieldSet!) on FIELD_DEFINITION
+
+directive @provides(fields: _FieldSet!) on FIELD_DEFINITION
+
+directive @external on FIELD_DEFINITION
+
+directive @extends on OBJECT | INTERFACE
+
+directive @tag(name: String!) repeatable on FIELD_DEFINITION | INTERFACE | OBJECT | UNION | ARGUMENT_DEFINITION | SCALAR | ENUM | ENUM_VALUE | INPUT_OBJECT | INPUT_FIELD_DEFINITION
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar Unknown
+
+scalar DateTime
+
+scalar Address
+
+scalar AttachmentRef
+
+scalar Amount_Tokens
+
+scalar EthereumAddress
+
+scalar EmailAddress
+
+scalar Amount_Percentage
+
+scalar Date
+
+scalar URL
+
+scalar Amount_Money
+
+scalar OLabel
+
+scalar Currency
+
+scalar PHID
+
+scalar OID
+
+scalar Amount_Fiat
+
+scalar Amount_Currency
+
+scalar Amount_Crypto
+
+scalar Amount
+
+scalar Upload
+
+"""
+The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSONObject
+
+type PHOperationContext {
+  signer: Signer
+}
+
+type Signer {
+  user: SignerUser
+  app: SignerApp
+  signatures: [String!]!
+}
+
+type SignerUser {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+type SignerApp {
+  name: String!
+  key: String!
+}
+
+type Operation {
+  id: String!
+  type: String!
+  index: Int!
+  timestampUtcMs: DateTime!
+  hash: String!
+  skip: Int
+  inputText: String
+  error: String
+  context: PHOperationContext
+}
+
+interface IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type CatalogFixture_CatalogFixtureState {
+  amount: Amount
+  happenedAt: DateTime
+  owner: EthereumAddress
+  address: Address
+  attachment: AttachmentRef
+  metadata: Unknown
+}
+
+type CatalogFixture implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  initialState: CatalogFixture_CatalogFixtureState!
+  state: CatalogFixture_CatalogFixtureState!
+  stateJSON: JSONObject
+}
+
+type GqlDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type DriveDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+scalar _FieldSet
+
+type _Service {
+  sdl: String
+}
+
+type Query {
+  _service: _Service!
+}

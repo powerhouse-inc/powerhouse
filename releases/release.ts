@@ -13,6 +13,7 @@ const SENTRY_INJECT_DIRS = [
   "packages/reactor-api/dist",
   "clis/ph-cli/dist",
   "clis/ph-cmd/dist",
+  "clis/ph-run/dist",
 ];
 
 type Channel = "dev" | "staging" | "production" | "rc";

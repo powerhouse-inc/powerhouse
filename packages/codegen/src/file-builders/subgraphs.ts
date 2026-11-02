@@ -15,6 +15,7 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateDirectory,
   getOrCreateSourceFile,
+  projectPath,
 } from "utils";
 
 export async function tsMorphGenerateSubgraph(args: {
@@ -92,11 +93,11 @@ async function makeCustomSubgraphFiles(
   dirPath: string,
   v: { pascalCaseName: string; camelCaseName: string },
 ) {
-  // Schema — skip prettier, contains gql tagged template literal
   const schemaPath = path.join(dirPath, "schema.ts");
   const schema = getOrCreateSourceFile(project, schemaPath);
   if (!schema.alreadyExists) {
     schema.sourceFile.replaceWithText(customSubgraphSchemaTemplate(v));
+    await formatSourceFileWithPrettier(schema.sourceFile);
   }
 
   // Resolvers
@@ -112,7 +113,8 @@ export async function makeSubgraphsIndexFile(args: {
   project: Project;
   subgraphsDir: string;
 }) {
-  const { project, subgraphsDir } = args;
+  const { project } = args;
+  const subgraphsDir = projectPath(project, args.subgraphsDir);
   // skipAddingFilesFromTsConfig leaves other subgraphs out of the project; add
   // their index files so the aggregate exports every subgraph, not just the new one.
   project.addSourceFilesAtPaths(path.join(subgraphsDir, "**", "index.ts"));

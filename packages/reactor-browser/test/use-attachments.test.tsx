@@ -15,6 +15,7 @@ import {
   setAttachmentService,
 } from "../src/hooks/attachment-service.js";
 import {
+  getAttachmentClient,
   useAttachmentPreview,
   useAttachmentUpload,
   useAttachments,
@@ -143,6 +144,23 @@ describe("useAttachments", () => {
   });
 });
 
+describe("getAttachmentClient", () => {
+  beforeEach(() => {
+    delete (window as { ph?: unknown }).ph;
+  });
+
+  it("returns undefined until a service is installed", () => {
+    expect(getAttachmentClient()).toBeUndefined();
+  });
+
+  it("is the same client the hook hands out", async () => {
+    install(makeService());
+    const { result } = await renderHook(() => useAttachments());
+    expect(result.current).toBeDefined();
+    expect(getAttachmentClient()).toBe(result.current);
+  });
+});
+
 describe("useAttachmentUpload", () => {
   beforeEach(() => {
     delete (window as { ph?: unknown }).ph;
@@ -172,6 +190,28 @@ describe("useAttachmentUpload", () => {
 
     expect(result.current.stage).toBe("hashing");
     expect(preprocessed.sizeBytes).toBe(SIZE);
+  });
+
+  it("names the document in the reservation it uploads with", async () => {
+    const reserve = vi.fn(() =>
+      Promise.resolve({
+        reservationId: "res-1",
+        ref: REF,
+        expiresAtUtc: "2027-01-01T00:00:00.000Z",
+        send: () => Promise.resolve(uploadResult()),
+      } as unknown as IAttachmentUpload),
+    );
+    install(makeService({ reserve }));
+    const { result } = await renderHook(() => useAttachmentUpload());
+
+    const preprocessed = await act(() =>
+      result.current.preprocess(new Blob([CONTENT]), { documentId: "doc-1" }),
+    );
+    await act(() => result.current.upload(preprocessed));
+
+    expect(reserve).toHaveBeenCalledWith(
+      expect.objectContaining({ documentId: "doc-1" }),
+    );
   });
 
   it("publishes real byte progress and finishes at 100 percent", async () => {

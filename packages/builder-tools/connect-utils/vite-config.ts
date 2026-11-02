@@ -20,8 +20,7 @@ import {
   type InlineConfig,
   type PluginOption,
 } from "vite";
-import { createHtmlPlugin } from "vite-plugin-html";
-import { connectOptimizeDeps } from "./dev-deps.js";
+import { connectOptimizeDeps, dependencyStoreOf } from "./dev-deps.js";
 import type { IConnectOptions } from "./types.js";
 import {
   buildHashFromBuildOptions,
@@ -36,6 +35,7 @@ import { connectAppShellPlugin } from "./vite-plugins/app-shell.js";
 import {
   connectRouterChunkGroups,
   connectRoutes,
+  HOST_ROUTES_DIR,
   hasProjectAppLayout,
   ignoreBuildOutput,
   ignoreDotPhButRouteTree,
@@ -62,7 +62,7 @@ import {
   collectProjectPwaContribution,
   validateProjectPwaConfig,
 } from "./vite-plugins/pwa-packages.js";
-import { connectPwaPlugins } from "./vite-plugins/pwa.js";
+import { connectPwaPlugins, staticFilesIn } from "./vite-plugins/pwa.js";
 import { reactSelfHostPlugin } from "./vite-plugins/react-self-host.js";
 import { reactorWorkerDevPlugin } from "./vite-plugins/reactor-worker-dev.js";
 import { connectThemeBootPlugin } from "./vite-plugins/theme-boot.js";
@@ -71,10 +71,70 @@ import { vendorImportMapPlugin } from "./vite-plugins/vendor-import-map.js";
 export function getConnectHtmlTags(
   options: {
     registryUrl?: string | null;
+    /** The project's own name, from `connect.branding.appName`. */
+    appName?: string;
     injectTo?: HtmlTagDescriptor["injectTo"];
   } = {},
 ) {
-  const { registryUrl, injectTo = "head" } = options;
+  const { registryUrl, appName, injectTo = "head" } = options;
+  // What a shared link shows, the iOS share sheet included. Connect's address,
+  // description and picture aren't a project's, so a project's name drops them.
+  const connectCard: HtmlTagDescriptor[] = appName
+    ? []
+    : [
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:url",
+            content: "https://apps.powerhouse.io/powerhouse/connect/",
+          },
+          injectTo,
+        },
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:description",
+            content:
+              "Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.",
+          },
+          injectTo,
+        },
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:image",
+            content:
+              "https://cf-ipfs.com/ipfs/bafkreigrmclndf2jpbolaq22535q2sw5t44uad3az3dpvkzrnt4lpjt63e",
+          },
+          injectTo,
+        },
+        {
+          tag: "meta",
+          attrs: {
+            name: "twitter:card",
+            content: "summary_large_image",
+          },
+          injectTo,
+        },
+        {
+          tag: "meta",
+          attrs: {
+            name: "twitter:image",
+            content:
+              "https://cf-ipfs.com/ipfs/bafkreigrmclndf2jpbolaq22535q2sw5t44uad3az3dpvkzrnt4lpjt63e",
+          },
+          injectTo,
+        },
+        {
+          tag: "meta",
+          attrs: {
+            name: "twitter:description",
+            content:
+              "Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.",
+          },
+          injectTo,
+        },
+      ];
   return [
     {
       tag: "meta",
@@ -88,7 +148,7 @@ export function getConnectHtmlTags(
       tag: "meta",
       attrs: {
         property: "og:title",
-        content: "Connect",
+        content: appName ?? "Connect",
       },
       injectTo,
     },
@@ -103,64 +163,13 @@ export function getConnectHtmlTags(
     {
       tag: "meta",
       attrs: {
-        property: "og:url",
-        content: "https://apps.powerhouse.io/powerhouse/connect/",
-      },
-      injectTo,
-    },
-    {
-      tag: "meta",
-      attrs: {
-        property: "og:description",
-        content:
-          "Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.",
-      },
-      injectTo,
-    },
-    {
-      tag: "meta",
-      attrs: {
-        property: "og:image",
-        content:
-          "https://cf-ipfs.com/ipfs/bafkreigrmclndf2jpbolaq22535q2sw5t44uad3az3dpvkzrnt4lpjt63e",
-      },
-      injectTo,
-    },
-    {
-      tag: "meta",
-      attrs: {
-        name: "twitter:card",
-        content: "summary_large_image",
-      },
-      injectTo,
-    },
-    {
-      tag: "meta",
-      attrs: {
-        name: "twitter:image",
-        content:
-          "https://cf-ipfs.com/ipfs/bafkreigrmclndf2jpbolaq22535q2sw5t44uad3az3dpvkzrnt4lpjt63e",
-      },
-      injectTo,
-    },
-    {
-      tag: "meta",
-      attrs: {
         name: "twitter:title",
-        content: "Connect",
+        content: appName ?? "Connect",
       },
       injectTo,
     },
-    {
-      tag: "meta",
-      attrs: {
-        name: "twitter:description",
-        content:
-          "Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.",
-      },
-      injectTo,
-    },
-  ] as const satisfies HtmlTagDescriptor[];
+    ...connectCard,
+  ] satisfies HtmlTagDescriptor[];
 }
 
 function viteLogger({
@@ -291,10 +300,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     packageRegistryUrl: phPackageRegistryUrl,
   });
 
-  const connectHtmlTags = getConnectHtmlTags({
-    registryUrl: phPackageRegistryUrl,
-  });
-
   // Dev needs a placeholder importmap for devReactImportmapPlugin to rewrite;
   // builds get their map from reactSelfHostPlugin's boot script instead.
   const devImportmapTag =
@@ -312,12 +317,21 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const plugins: PluginOption[] = [
     tailwind(),
     react(),
-    createHtmlPlugin({
-      minify: false,
-      inject: {
-        tags: [...connectHtmlTags, ...devImportmapTag],
+    // Tags only: vite-plugin-html's dev history fallback served the shell for
+    // every navigation, a public/ file's too.
+    {
+      name: "ph-connect-html-tags",
+      transformIndexHtml: {
+        order: "pre",
+        handler: () => [
+          ...getConnectHtmlTags({
+            registryUrl: phPackageRegistryUrl,
+            appName: projectBrand.name,
+          }),
+          ...devImportmapTag,
+        ],
       },
-    }),
+    },
   ] as const;
 
   if (uploadSentrySourcemaps) {
@@ -457,6 +471,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       offlineEnabled,
       pwa: mergedPwa,
       brand: projectBrand,
+      staticFiles: staticFilesIn(join(options.dirname, "public")),
     });
   })();
 
@@ -467,32 +482,31 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     "react-dom/client",
   ];
 
-  // pnpm `link:` deps (e.g. a downstream project linking @powerhousedao/*
-  // packages from a sibling monorepo checkout) live outside Vite's
-  // auto-detected workspace root. Their `node_modules/.pnpm/...` assets
-  // then 403 through `/@fs/`, returning a 760-byte HTML body where the
-  // binary should be — which breaks PGlite at startup with "Invalid FS
-  // bundle size: 760 !== 4939170". Resolve key linked packages back to
-  // their real workspace roots and allow Vite to serve from there.
+  // Linked deps live outside Vite's root; their /@fs/ assets would 403.
   const linkedRoots = [
     "@powerhousedao/reactor-browser",
     "@powerhousedao/connect",
     "@electric-sql/pglite",
-  ]
-    .map((pkg) => {
-      try {
-        return searchForWorkspaceRoot(
-          realpathSync(join(options.dirname, "node_modules", pkg)),
-        );
-      } catch {
-        return null;
-      }
-    })
-    .filter((p): p is string => p !== null);
+  ].flatMap((pkg) => {
+    let real: string;
+    try {
+      real = realpathSync(join(options.dirname, "node_modules", pkg));
+    } catch {
+      return [];
+    }
+    const store = dependencyStoreOf(real);
+    return [searchForWorkspaceRoot(real), ...(store ? [store] : [])];
+  });
 
   const routesDir =
     resolveConnectRoutesDir(options.dirname, options.routes) ?? false;
-  const routes = connectRoutes(options.dirname, routesDir);
+  // Dev mounts hosts/connect/routes/ before it exists, so a folder added later shows without a restart.
+  const mountedRoutesDir =
+    routesDir ||
+    (mode === "development" && options.routes === undefined
+      ? join(options.dirname, HOST_ROUTES_DIR)
+      : false);
+  const routes = connectRoutes(options.dirname, mountedRoutesDir);
   const customShell = hasProjectAppLayout(routesDir || undefined);
   const hostStylesheet = hostStylesheetPath(options.dirname, routesDir);
 
@@ -519,7 +533,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
           "**/backup-documents/**",
           // Test coverage reports: rewritten by every test run.
           "**/coverage/**",
-          ignoreDotPhButRouteTree(options.dirname, routesDir),
+          ignoreDotPhButRouteTree(options.dirname, mountedRoutesDir),
           ignoreBuildOutput(options.dirname),
         ],
       },
@@ -555,7 +569,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     envPrefix: ["PH_CONNECT_"],
     optimizeDeps: connectOptimizeDeps(
       options.dirname,
-      routesDir,
+      mountedRoutesDir,
       routes.include,
     ),
     plugins: [
@@ -571,7 +585,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       }),
       // Dev-only: rewrite the importmap to Vite's pre-bundled React so Connect
       // and CDN editors share one instance (build uses reactSelfHostPlugin).
-      devReactImportmapPlugin(options.dirname, routesDir),
+      devReactImportmapPlugin(options.dirname, mountedRoutesDir),
       // Dev-only: serve the reactor SharedWorker bundle (built lazily) at the
       // stable URL the tab probes; production builds emit it via
       // prebuildReactorWorker in `ph connect build`.

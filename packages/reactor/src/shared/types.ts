@@ -157,6 +157,12 @@ export type JobInfo = {
   result?: JobResultSummary;
 
   /**
+   * Set once the job has deleted its document. That document then answers to
+   * no read, so reading it cannot decide who may see this job.
+   */
+  deletedDocument?: boolean;
+
+  /**
    * A token for coordinating reads, only valid once a job reaches COMPLETED.
    */
   consistencyToken: ConsistencyToken;

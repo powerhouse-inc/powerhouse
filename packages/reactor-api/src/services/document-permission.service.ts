@@ -59,6 +59,7 @@ export class DocumentPermissionService {
    * the document it touched.
    */
   readonly permissionCache: PermissionCache;
+  readonly #listeners = new Set<(documentId: string) => void>();
 
   constructor(
     private readonly db: Kysely<DocumentPermissionDatabase>,
@@ -70,6 +71,29 @@ export class DocumentPermissionService {
       (documentIds) => this.loadPermissionSnapshots(documentIds),
       cacheOptions,
     );
+  }
+
+  /**
+   * Called with the document id after every write through this service
+   * (grant, revoke, protection, owner, deletion), once the cache entry is
+   * invalidated: what a projection of the permission data (the readable
+   * documents read model) follows. Returns the unsubscribe.
+   */
+  onChange(listener: (documentId: string) => void): () => void {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  }
+
+  /** The one place a write ends: the cache entry goes, the listeners hear. */
+  #touched(documentId: string): void {
+    this.permissionCache.invalidate(documentId);
+    for (const listener of this.#listeners) {
+      try {
+        listener(documentId);
+      } catch {
+        // a listener's failure is its own; the write already happened
+      }
+    }
   }
 
   // ============================================
@@ -162,7 +186,7 @@ export class DocumentPermissionService {
         }),
       )
       .execute()
-      .finally(() => this.permissionCache.invalidate(documentId));
+      .finally(() => this.#touched(documentId));
 
     const result = await this.db
       .selectFrom("DocumentPermission")
@@ -193,7 +217,7 @@ export class DocumentPermissionService {
       .where("documentId", "=", documentId)
       .where("userAddress", "=", userAddress.toLowerCase())
       .execute()
-      .finally(() => this.permissionCache.invalidate(documentId));
+      .finally(() => this.#touched(documentId));
   }
 
   /**
@@ -209,14 +233,14 @@ export class DocumentPermissionService {
       .where("documentId", "=", documentId)
       .returning("id")
       .execute()
-      .finally(() => this.permissionCache.invalidate(documentId));
+      .finally(() => this.#touched(documentId));
 
     const operations = await this.db
       .deleteFrom("OperationUserPermission")
       .where("documentId", "=", documentId)
       .returning("id")
       .execute()
-      .finally(() => this.permissionCache.invalidate(documentId));
+      .finally(() => this.#touched(documentId));
 
     return {
       DocumentPermission: permissions.length,
@@ -231,7 +255,7 @@ export class DocumentPermissionService {
       .where("documentId", "=", documentId)
       .returning("documentId")
       .execute()
-      .finally(() => this.permissionCache.invalidate(documentId));
+      .finally(() => this.#touched(documentId));
     return rows.length;
   }
 
@@ -313,7 +337,7 @@ export class DocumentPermissionService {
         oc.columns(["documentId", "operationType", "userAddress"]).doNothing(),
       )
       .execute()
-      .finally(() => this.permissionCache.invalidate(documentId));
+      .finally(() => this.#touched(documentId));
 
     const result = await this.db
       .selectFrom("OperationUserPermission")
@@ -346,7 +370,7 @@ export class DocumentPermissionService {
       .where("operationType", "=", operationType)
       .where("userAddress", "=", userAddress.toLowerCase())
       .execute()
-      .finally(() => this.permissionCache.invalidate(documentId));
+      .finally(() => this.#touched(documentId));
   }
 
   /**
@@ -550,7 +574,7 @@ export class DocumentPermissionService {
         }),
       )
       .execute()
-      .finally(() => this.permissionCache.invalidate(documentId));
+      .finally(() => this.#touched(documentId));
   }
 
   /**
@@ -587,7 +611,7 @@ export class DocumentPermissionService {
         }),
       )
       .execute()
-      .finally(() => this.permissionCache.invalidate(documentId));
+      .finally(() => this.#touched(documentId));
   }
 
   /**
@@ -619,7 +643,7 @@ export class DocumentPermissionService {
         }),
       )
       .execute()
-      .finally(() => this.permissionCache.invalidate(documentId));
+      .finally(() => this.#touched(documentId));
 
     // Grant ADMIN permission to the owner
     await this.grantPermission(

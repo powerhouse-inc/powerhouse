@@ -98,11 +98,10 @@ export type ReactorSyncConfig = {
  */
 export type ReactorRemoteConfig = {
   /**
-   * The reactor's GraphQL endpoint -- the same URL the Sync tab's add-remote
-   * form takes, e.g. `http://localhost:4001/graphql`. The inspection subgraph
-   * is mounted beneath it at `/inspection`, which is what
-   * {@link inspectionEndpoint} derives unless {@link inspectionUrl} overrides
-   * it.
+   * A drive address on the switchboard, `<switchboard>/d/<slug>`, e.g.
+   * `http://localhost:4001/d/powerhouse`. Its GraphQL endpoint is
+   * `<switchboard>/graphql`, and the inspection subgraph is mounted beneath
+   * that at `/inspection` unless {@link inspectionUrl} overrides it.
    */
   url: string;
   /**
@@ -264,6 +263,10 @@ export interface ManagedReactorBase {
    * remote's while its host serves `inspection-admin` to this caller.
    */
   readonly processorLevers?: ProcessorLevers;
+  /** Telemetry switch and heap snapshot; served alongside `processorLevers`. */
+  readonly memoryLevers?: MemoryLevers;
+  /** Keyframe clean-up and reclaim, reached like `processorLevers`. */
+  readonly keyframeLevers?: KeyframeLevers;
   /** Raw SQL against the reactor's own store; present when `info.access.sql`. */
   readonly dbQuery?: IReactorDbQuery;
   readonly syncManager: MonitorSyncManager | undefined;
@@ -330,6 +333,22 @@ export type ProcessorLevers = Pick<
   "retryProcessor" | "rerunProcessor" | "setCatchUpPriority"
 >;
 
+/** The memory telemetry levers, served beside the processor ones. */
+export type MemoryLevers = Pick<
+  IInspectorAdmin,
+  "setMemoryTelemetry" | "writeHeapSnapshot"
+>;
+
+/** The keyframe levers a remote can serve beside its read-only inspection. */
+export type KeyframeLevers = Pick<
+  IInspectorAdmin,
+  | "startKeyframeCleanup"
+  | "getKeyframeCleanup"
+  | "cancelKeyframeCleanup"
+  | "reclaimKeyframeSpace"
+  | "getKeyframeReclaim"
+>;
+
 /** A running reactor reached over its host's inspection subgraph; read-only. */
 export interface ManagedRemoteReactor extends ManagedReactorBase {
   readonly kind: "remote";
@@ -339,7 +358,8 @@ export interface ManagedRemoteReactor extends ManagedReactorBase {
   readonly syncAdmin?: undefined;
   /** The inspection endpoint this handle talks to. */
   readonly endpoint: string;
-  /** The descriptor's `remote.url`; sibling subgraphs derive from it. */
+  /** The switchboard's GraphQL endpoint, from the descriptor's drive
+   * address; sibling subgraphs derive from it. */
   readonly url: string;
   /** The inspection auth, for sibling subgraph reads of the same reactor. */
   readonly headers?: RemoteInspectionHeaders;

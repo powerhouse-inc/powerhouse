@@ -21,6 +21,10 @@ export function buildDriveDeclarationSchema(
      * only the id and keeps the declared slug (the classic Workflows drive:
      * `/d/workflows`, id `workflows-<hash>`). */
     projectHash: z.union([z.boolean(), z.literal("id")]).optional(),
+    /** What a missing drive is created as. Default powerhouse/document-drive. */
+    documentType: z
+      .enum(["powerhouse/document-drive", "powerhouse/reactor-drive"])
+      .optional(),
     name: z.string().min(1).optional(),
     icon: z.string().optional(),
     preferredEditor: z.string().optional(),

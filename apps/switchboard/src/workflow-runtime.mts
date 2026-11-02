@@ -18,6 +18,7 @@ import {
   createCanonicalDocumentIdResolver,
   type CanonicalDocumentId,
   type Context,
+  type GraphQLManager,
   type IAttachmentAccessService,
   type IAuthorizationService,
   type IPackagePieceSource,
@@ -38,13 +39,20 @@ import type {
   IWebhookScope,
   ScopedRouteHandle,
 } from "@powerhousedao/shared/processors";
-import type { Principal } from "@powerhousedao/shared/document-model";
+import type {
+  Principal,
+  UserActionSigner,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import {
   callbackUrlOf,
   registerOAuthCallback,
 } from "./workflow/oauth-callback.js";
+import {
+  registerWaitpointRoutes,
+  waitpointBaseUrlOf,
+} from "./workflow/waitpoint-routes.js";
 import type {
   ReactorAccessInfo,
   ReactorIdentity,
@@ -57,9 +65,6 @@ type WorkflowEngineModule = typeof WorkflowEngine;
 /** The npm name the workflow package owns: its HTTP namespace and its models. */
 export const WORKFLOW_PACKAGE_NAME = "@powerhousedao/workflow";
 export const WORKFLOW_TELEMETRY_SCOPE = "@powerhousedao/reactor-workflow";
-
-/** The env var and OpenFeature flag key that turns workflows on. */
-export const PH_WORKFLOWS_ENABLED = "PH_WORKFLOWS_ENABLED";
 
 /** Whether the operation intake is indexing. Same shape as the attachment
  * reference projection, because it is the same limitation. */
@@ -77,40 +82,6 @@ const SINGLETON_LOST: WorkflowTriggersCapability = {
   status: "unavailable",
   reason: "workflow-singleton-lost",
 };
-
-/** The slice of switchboard's OpenFeature client this needs. */
-export interface BooleanFlagSource {
-  getBooleanValue(flagKey: string, defaultValue: boolean): Promise<boolean>;
-}
-
-export interface WorkflowsFlagInput {
-  featureFlags: BooleanFlagSource;
-  /** The host's own answer; wins over everything. */
-  override?: boolean;
-  /** `workflows.enabled` from the powerhouse config file. */
-  configEnabled?: boolean;
-  /** Defaults to process.env; the tests pass their own. */
-  env?: Record<string, string | undefined>;
-}
-
-/** Precedence, unchanged from the reactor-api resolver this replaces: the
- * host's option, then PH_WORKFLOWS_ENABLED, then the config file, then off. */
-export async function resolveWorkflowsEnabled({
-  featureFlags,
-  override,
-  configEnabled = false,
-  env = process.env,
-}: WorkflowsFlagInput): Promise<boolean> {
-  if (override !== undefined) return override;
-
-  // The env layer is switchboard's OpenFeature client, which casts only
-  // "true"/"false": the numeric forms reactor-api took are answered here.
-  const raw = env[PH_WORKFLOWS_ENABLED]?.trim();
-  if (raw === "1") return true;
-  if (raw === "0") return false;
-
-  return featureFlags.getBooleanValue(PH_WORKFLOWS_ENABLED, configEnabled);
-}
 
 // The package manager reports an unresolvable package and continues; for one
 // the host added itself that is a misconfigured switchboard, not a degraded
@@ -306,7 +277,18 @@ export interface ComposeWorkflowRuntimeDeps {
   /** The workflow package's HTTP namespace; the OAuth2 callback lives on it.
    * Absent leaves OAuth2 connections unable to sign in. */
   http?: IHttpScope;
+  /** The publisher's OAuth2 apps, by id: client file paths per kind, and
+   * the relay a web sign-in goes through without a web client file. */
+  oauthApps?: {
+    id: string;
+    clients: { desktop?: string; web?: string };
+    relay?: { clientId: string; redirectUri: string; tokenUrl: string };
+  }[];
   authorizationService: IAuthorizationService;
+  /** Answers a piece's read of a read-model index (`ctx.reactor.query`) in
+   * process, as the run's user: the GraphQL manager that serves the same
+   * subgraphs over HTTP. Absent, pieces get the method refused by name. */
+  indexQueries?: Pick<GraphQLManager, "executeSubgraph">;
   /** Where the pieces installed packages ship come from; absent leaves the
    * runtime with none and only published bundles resolvable. */
   pieces?: IPackagePieceSource;
@@ -338,13 +320,16 @@ export interface ComposeWorkflowRuntimeDeps {
    * True when the journal's database is an embedded one no other process can
    * open (PGlite). Nothing can then take the lease, so a renewal that stalls
    * (a busy queue, a blocked event loop) is logged rather than turning
-   * workflows off.
+   * workflows off, and a restart takes back the lease a killed process left
+   * rather than booting without workflows until it goes stale.
    */
   exclusiveJournal?: boolean;
   /** Called once when the composed runtime has shut down for losing the
    * singleton; see {@link workflowSingletonLossHandler}. */
   onSingletonLost?: (loss: WorkflowEngine.WorkflowSingletonLoss) => void;
 }
+
+type WorkflowRuntimeSecrets = WorkflowEngine.WorkflowRuntimeService["secrets"];
 
 export interface ComposedWorkflowRuntime {
   subgraph: SubgraphClass;
@@ -354,6 +339,8 @@ export interface ComposedWorkflowRuntime {
   /** The owner name this host holds the workflow singleton under; undefined
    * when the lease was not taken (a suite that opted out). */
   singletonOwner?: string;
+  /** The runtime's secret store, for host secrets its own surface never lists. */
+  secrets: WorkflowRuntimeSecrets;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -444,6 +431,75 @@ export function reactorAccessOf(
     authEnforcement: flags ? flags.authEnforcement : true,
     authConditions: flags?.authConditions === true,
     identity,
+  };
+}
+
+/**
+ * A piece's read of a read-model index, run in process as the run's user
+ * through the same GraphQL manager that serves the index over HTTP. The
+ * request's caller is the run user's address on the host's own network and
+ * chain, what a Renown bearer for that address would carry; the index's
+ * access declarations decide from the address.
+ *
+ * A run with no user (its publish was unsigned or host-signed) is refused
+ * before this under enforcement. With enforcement off the host acts for such
+ * a run already, signing its writes with its own key, so its index reads are
+ * the host's too: the request's caller is the host's signed-in address. A
+ * host with no signed-in identity reads anonymously, which the
+ * authenticated-caller floor refuses as it would an anonymous HTTP request.
+ *
+ * A caller the policy gives no rows is refused here. The index would answer it
+ * with nothing, which a piece cannot tell from "nothing exists", and an upsert
+ * would then create a duplicate of everything: a granter who left ADMINS must
+ * stop a run, not double its documents.
+ */
+export function indexQueryFor(
+  manager: Pick<GraphQLManager, "executeSubgraph">,
+  clientModule: InProcessReactorClientModule | undefined,
+  authorization?: Pick<IAuthorizationService, "config" | "isSupremeAdmin">,
+): NonNullable<WorkflowEngine.WorkflowRuntimeHostDeps["queryIndex"]> {
+  const signer = clientModule?.signer;
+  const host = signer?.user as Partial<UserActionSigner> | undefined;
+  const hostKey = signer?.app?.key ?? "";
+  const chainId = host?.chainId ?? 1;
+  const networkId = host?.networkId ?? "eip155";
+  return async (request, runUser) => {
+    const user = runUser
+      ? {
+          address: runUser.address,
+          chainId,
+          networkId,
+          appKey: runUser.subject.key ?? hostKey,
+        }
+      : host?.address
+        ? { address: host.address, chainId, networkId, appKey: hostKey }
+        : undefined;
+    if (
+      authorization?.config.policy === AuthorizationPolicy.ADMIN_ONLY &&
+      !authorization.isSupremeAdmin(user?.address)
+    ) {
+      return {
+        data: null,
+        errors: [
+          {
+            message: user
+              ? `Forbidden: ${user.address} is not an admin of this host, so it reads no index`
+              : "Forbidden: this run has no person behind it, so it reads no index",
+          },
+        ],
+      };
+    }
+    const result = await manager.executeSubgraph(request.subgraph, {
+      query: request.query,
+      variables: request.variables,
+      user,
+    });
+    return {
+      data: (result.data as Record<string, unknown> | null | undefined) ?? null,
+      ...(result.errors
+        ? { errors: result.errors.map((e) => ({ message: e.message })) }
+        : {}),
+    };
   };
 }
 
@@ -614,6 +670,7 @@ export async function composeWorkflowRuntime(
           logger: deps.logger,
           ...(deps.storageId ? { storageId: deps.storageId } : {}),
           selfFence: deps.exclusiveJournal !== true,
+          exclusive: deps.exclusiveJournal === true,
           onLost: (lost) => {
             loss.lost = true;
             if (lost.reason === "taken") loss.heldBy = lost.heldBy;
@@ -684,6 +741,7 @@ async function composeClaimed(
   const runtime = engine.createWorkflowRuntime({
     relationalDb: deps.relationalDb,
     secretsKeyFile: deps.secretsKeyFile,
+    ...(deps.oauthApps?.length ? { oauthApps: deps.oauthApps } : {}),
     reactorClient: deps.reactorClient,
     assertCanRead: readAssertion(deps.authorizationService, deps.reactorClient),
     subjectOf: (caller) => callerSubject((caller as Context).user),
@@ -697,6 +755,15 @@ async function composeClaimed(
       : {}),
     hostPrincipal: hostPrincipalOf(access),
     hostIdentity: hostIdentityOf(access),
+    ...(deps.indexQueries
+      ? {
+          queryIndex: indexQueryFor(
+            deps.indexQueries,
+            deps.clientModule,
+            deps.authorizationService,
+          ),
+        }
+      : {}),
     ...(models
       ? {
           modelManifest: () => models.modelManifest(),
@@ -705,6 +772,7 @@ async function composeClaimed(
         }
       : {}),
     webhooks: deps.webhooks,
+    waitpointBaseUrl: deps.http ? waitpointBaseUrlOf(deps.http) : undefined,
     attachments: deps.attachments,
     canReadAttachmentRef: attachmentReadPolicy(deps.attachmentAccess),
     logger: deps.logger,
@@ -713,12 +781,16 @@ async function composeClaimed(
   });
 
   // Set before anything below can throw, so a failed compose stops it.
-  const routes: { oauthCallback?: ScopedRouteHandle } = {};
+  const routes: {
+    oauthCallback?: ScopedRouteHandle;
+    waitpoints?: ScopedRouteHandle[];
+  } = {};
   const registration: TriggersRegistration = { tornDown: false };
   const tearDown = () => {
     if (registration.tornDown) return;
     registration.tornDown = true;
     routes.oauthCallback?.dispose();
+    for (const handle of routes.waitpoints ?? []) handle.dispose();
     runtime.shutdown();
     // After the shutdown, so a batch already queued for it is refused and
     // replays on the next owner instead of being acknowledged here.
@@ -753,6 +825,7 @@ async function composeClaimed(
   let stopped = false;
   if (deps.http) {
     routes.oauthCallback = registerOAuthCallback(deps.http, runtime);
+    routes.waitpoints = registerWaitpointRoutes(deps.http, runtime);
   }
 
   return {
@@ -765,6 +838,7 @@ async function composeClaimed(
       return loss.lost ? SINGLETON_LOST : triggers;
     },
     ...(lease ? { singletonOwner: lease.owner } : {}),
+    secrets: () => runtime.secrets(),
 
     async start() {
       if (registration.tornDown) return;

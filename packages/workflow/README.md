@@ -12,7 +12,9 @@ reactor piece that lets a workflow read and write documents.
   manifests.
 - **Editors.** The Workflow Editor (a React Flow canvas over the workflow
   document), the Connection Editor, and **Workflow Studio**, a drive-level app
-  that lists workflows, connections and runs.
+  that lists workflows, connections and runs. A workflow on the core manual
+  trigger has a Run now button; when the published trigger declares `inputs`,
+  it opens a form for them (or a raw JSON payload) before firing.
 - **AI tools.** `aiTools` — read-only descriptors the Connect assistant
   discovers: the piece catalog, connection documents and connection health,
   plus the workflow-authoring tools.

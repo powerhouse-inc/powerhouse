@@ -100,6 +100,9 @@ export type ApAction = Partial<
   ports?: unknown;
   // "read" | "write"; anything else reads as undeclared.
   requireReactor?: unknown;
+  // For a step that sets none; read defensively off a foreign bundle.
+  defaultTimeoutSeconds?: unknown;
+  defaultRetry?: unknown;
   run: (ctx: unknown) => Promise<unknown>;
   // Called instead of run by a single-step test.
   test?: (ctx: unknown) => Promise<unknown>;

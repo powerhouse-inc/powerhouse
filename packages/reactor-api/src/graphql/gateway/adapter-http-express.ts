@@ -1,7 +1,6 @@
 import bodyParser from "body-parser";
 import cors from "cors";
 import type { CorsOptions } from "cors";
-import devcert from "devcert";
 import type express from "express";
 import type { Express } from "express";
 import { Router } from "express";
@@ -259,6 +258,8 @@ export class ExpressHttpAdapter implements IHttpAdapter {
     let server: http.Server;
 
     if (tls === true) {
+      // Only for local HTTPS, and it does work as it loads.
+      const { default: devcert } = await import("devcert");
       const { cert, key } = (await devcert.certificateFor("localhost")) as {
         cert: Buffer;
         key: Buffer;

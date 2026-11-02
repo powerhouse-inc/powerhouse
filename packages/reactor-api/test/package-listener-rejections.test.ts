@@ -13,6 +13,7 @@ import {
 } from "../src/graphql/graphql-manager.js";
 import type { PackageManager } from "../src/packages/package-manager.js";
 import { setupEventListeners } from "../src/packages/package-listeners.js";
+import type { ScalarRegistry } from "../src/utils/scalar-types.js";
 import type {
   IProcessorHostModule,
   Processor,
@@ -33,6 +34,7 @@ const silentLogger: ILogger = {
 function makePackageManager() {
   const handlers: {
     documentModels?: (models: Record<string, unknown[]>) => void;
+    scalars?: (scalars: ScalarRegistry) => void;
     processors?: (processors: Map<string, Processor>) => void;
   } = {};
   const pkgManager = {
@@ -43,6 +45,9 @@ function makePackageManager() {
       },
     ),
     onSubgraphsChange: vi.fn(),
+    onScalarsChange: vi.fn((handler: (scalars: ScalarRegistry) => void) => {
+      handlers.scalars = handler;
+    }),
     onProcessorsChange: vi.fn(
       (handler: (processors: Map<string, Processor>) => void) => {
         handlers.processors = handler;
@@ -143,6 +148,28 @@ describe("package listeners do not leak rejections", () => {
 
     expect(reportError).toHaveBeenCalledWith(failure);
     expect(reportError).toHaveBeenCalledWith(registerFailure);
+    expect(unhandled).toEqual([]);
+  });
+
+  it("reports a scalars change that leaves subgraphs stale", async () => {
+    const failure = new Error("rebuild failed");
+    const graphqlManager = makeGraphQLManager({} as IReactorClient);
+    vi.spyOn(graphqlManager, "applyScalarRegistry").mockRejectedValue(failure);
+    const { pkgManager, handlers } = makePackageManager();
+    const reportError = vi.fn();
+
+    setupEventListeners(
+      pkgManager,
+      graphqlManager,
+      makeProcessorManager(),
+      moduleFor,
+      undefined,
+      { logger: silentLogger, reportError },
+    );
+    handlers.scalars!(new Map());
+    await nextMacrotask();
+
+    expect(reportError).toHaveBeenCalledExactlyOnceWith(failure);
     expect(unhandled).toEqual([]);
   });
 

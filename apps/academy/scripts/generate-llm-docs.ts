@@ -22,7 +22,7 @@ interface SidebarItem {
   dirName?: string;
 }
 
-async function generateLLMDocs() {
+function generateLLMDocs() {
   try {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
@@ -36,23 +36,8 @@ async function generateLLMDocs() {
     const llmsTxt = generateLLMsIndex(sortedFiles);
     const llmsFullTxt = generateLLMsFullContent(sortedFiles);
 
-    // Write llms.txt (index)
-    fs.writeFileSync(path.resolve(__dirname, "..", "llms.txt"), llmsTxt);
     fs.writeFileSync(path.join(staticDir, "llms.txt"), llmsTxt);
-
-    // Write llms-full.txt (full content)
-    fs.writeFileSync(
-      path.resolve(__dirname, "..", "llms-full.txt"),
-      llmsFullTxt,
-    );
     fs.writeFileSync(path.join(staticDir, "llms-full.txt"), llmsFullTxt);
-
-    // Keep legacy filename for backward compatibility
-    fs.writeFileSync(
-      path.resolve(__dirname, "..", "academy_LLM_docs.md"),
-      llmsFullTxt,
-    );
-    fs.writeFileSync(path.join(staticDir, "academy_LLM_docs.md"), llmsFullTxt);
 
     console.log(
       `✅ llms.txt generated (${Math.round(llmsTxt.length / 1024)}KB)`,

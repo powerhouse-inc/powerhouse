@@ -4,7 +4,13 @@ import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { updatePackage } from "write-package";
 import { TEST_OUTPUT, WITH_EDITORS } from "../constants.js";
-import { cpForce, mkdirRecursive, rmForce, runTsc } from "../utils.js";
+import {
+  commitProject,
+  cpForce,
+  mkdirRecursive,
+  rmForce,
+  runTsc,
+} from "../utils.js";
 const parentOutDir = join(TEST_OUTPUT, "migrate");
 await rmForce(parentOutDir);
 await mkdirRecursive(parentOutDir);
@@ -24,6 +30,8 @@ describe("migrate", () => {
         compilerOptions: { baseUrl: ".", moduleResolution: "node" },
       }),
     );
+    // migrate stops on uncommitted agent files.
+    await commitProject(legacyDocumentModelsDir);
     const version = "dev";
     await migrate(version, legacyDocumentModelsDir);
     const migrated = JSON.parse(readFileSync(extraTsconfig, "utf8")) as {
@@ -44,6 +52,16 @@ describe("migrate", () => {
     await rmForce(
       join(legacyDocumentModelsDir, "node_modules", "@powerhousedao", "shared"),
     );
+    // The same for ph-cli: the tsc script runs `ph-cli generate connect-routes`,
+    // which the registry version may not have yet.
+    await rmForce(
+      join(legacyDocumentModelsDir, "node_modules", "@powerhousedao", "ph-cli"),
+    );
+    for (const shim of ["ph-cli", "ph-cli.cmd", "ph-cli.ps1"]) {
+      await rmForce(
+        join(legacyDocumentModelsDir, "node_modules", ".bin", shim),
+      );
+    }
     await runTsc(legacyDocumentModelsDir);
   });
 });

@@ -12,7 +12,9 @@ export class UnsupportedDocumentTypeError extends Error {
     this.name = "UnsupportedDocumentTypeError";
   }
 
-  static isError(error: unknown): error is UnsupportedDocumentTypeError {
+  static override isError(
+    error: unknown,
+  ): error is UnsupportedDocumentTypeError {
     return (
       Error.isError(error) && error.name === "UnsupportedDocumentTypeError"
     );
@@ -21,14 +23,14 @@ export class UnsupportedDocumentTypeError extends Error {
 
 export class DocumentModelNotFoundError extends Error {
   readonly documentType: string;
-  readonly name = "DocumentModelNotFoundError";
+  override readonly name = "DocumentModelNotFoundError";
 
   constructor(documentType: string) {
     super(`Document model module for type ${documentType} not found`);
     this.documentType = documentType;
   }
 
-  static isError(error: unknown): error is DocumentModelNotFoundError {
+  static override isError(error: unknown): error is DocumentModelNotFoundError {
     return Error.isError(error) && error.name === "DocumentModelNotFoundError";
   }
 }
@@ -52,7 +54,7 @@ export class NoSelectedDocumentError extends Error {
 /** A dispatched action the document did not apply: its operation is stored at `index`, state
  * unchanged, because the reducer threw (`reducer-error`) or the write was denied (`denied`). */
 export class OperationRejectedError extends Error {
-  readonly name = "OperationRejectedError";
+  override readonly name = "OperationRejectedError";
   readonly actionId: string;
   readonly actionType: string;
   readonly index: number;
@@ -83,7 +85,7 @@ export class OperationRejectedError extends Error {
       : new OperationRejectedError(documentId, scope, operation, outcome);
   }
 
-  static isError(error: unknown): error is OperationRejectedError {
+  static override isError(error: unknown): error is OperationRejectedError {
     return Error.isError(error) && error.name === "OperationRejectedError";
   }
 }

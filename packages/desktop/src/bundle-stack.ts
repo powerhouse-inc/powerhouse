@@ -1,6 +1,11 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  normalizePluginEntries,
+  type PluginEntryData,
+} from "@powerhousedao/host-core";
 
 /**
  * P6.3 — stage the shippable STACK into the shell project: everything the
@@ -16,11 +21,105 @@ import path from "node:path";
  *     package.json               minimal, names the project
  *     dist/                      the package's build (ph build)
  *     .ph/connect-build/dist/    the BUILT Connect (ph run connect build)
- *     node_modules/              vendored @powerhousedao/ph-cli (hoisted,
+ *     node_modules/              vendored @powerhousedao/ph-run (hoisted,
  *                                real files — computed-specifier imports and
  *                                PGlite wasm forbid bundling)
  */
 const CONNECT_BUILD_DIR = path.join(".ph", "connect-build", "dist");
+const BROWSER_ONLY_IN_DIST = [
+  "__react__",
+  "__reactor_worker__",
+  "__vendor__",
+  "assets",
+  "browser",
+];
+
+/** The package a module specifier belongs to. */
+function packageOf(specifier: string): string {
+  const parts = specifier.split("/");
+  return parts.slice(0, specifier.startsWith("@") ? 2 : 1).join("/");
+}
+
+/** The packages to ship for a host's plugins. One that doesn't resolve is a
+ * browser built-in of Connect's, already in the built app, and resolves no
+ * better in the stack (host-core's plugins-resolve). */
+export function pluginPackagesOf(
+  entries: readonly PluginEntryData[],
+  where: string,
+  resolves: (specifier: string) => boolean,
+): string[] {
+  return normalizePluginEntries(entries, where)
+    .filter((entry) => entry.enabled && !entry.module.startsWith("."))
+    .filter((entry) => resolves(entry.module))
+    .map((entry) => packageOf(entry.module));
+}
+
+/** Where a stack keeps the OAuth clients its config names. */
+const OAUTH_CLIENTS_DIR = "oauth";
+/** Where a stack keeps the AI demo key its config names. */
+const AI_DIR = "ai";
+
+interface StagedConfig {
+  ai?: { demoKeyFile?: string };
+  workflows?: {
+    oauthApps?: { id?: string; clients?: { desktop?: string; web?: string } }[];
+  };
+}
+
+/**
+ * The project's config, with its OAuth clients made the app's own. They sit
+ * outside the project, so a packaged app would find nothing at those paths. A
+ * desktop client ships with the app: it can't keep its secret, so sign-ins
+ * always use PKCE. A web client belongs to a server and never leaves the machine.
+ */
+function stageConfig(
+  projectRoot: string,
+  stackDir: string,
+  log: (message: string) => void,
+): void {
+  const source = path.join(projectRoot, "powerhouse.config.json");
+  if (!fs.existsSync(source)) return;
+  const config = JSON.parse(fs.readFileSync(source, "utf8")) as StagedConfig;
+  // Whoever has the installer can read this. Without the file it ships no key,
+  // and the app offers none.
+  if (config.ai?.demoKeyFile) {
+    const from = path.resolve(projectRoot, config.ai.demoKeyFile);
+    delete config.ai.demoKeyFile;
+    if (fs.existsSync(from)) {
+      const file = path.basename(from);
+      fs.mkdirSync(path.join(stackDir, AI_DIR), { recursive: true });
+      fs.copyFileSync(from, path.join(stackDir, AI_DIR, file));
+      config.ai.demoKeyFile = `./${AI_DIR}/${file}`;
+      log("  AI demo key staged");
+    } else {
+      log("  no AI demo key: this build won't offer one");
+    }
+  }
+  for (const app of config.workflows?.oauthApps ?? []) {
+    if (!app.clients) continue;
+    const desktop = app.clients.desktop;
+    const from = desktop && path.resolve(projectRoot, desktop);
+    app.clients = {};
+    if (!from || !fs.existsSync(from)) {
+      log(`  oauth app ${app.id}: no desktop client, so it can't sign in`);
+      continue;
+    }
+    const file = path.basename(from);
+    fs.mkdirSync(path.join(stackDir, OAUTH_CLIENTS_DIR), { recursive: true });
+    fs.copyFileSync(from, path.join(stackDir, OAUTH_CLIENTS_DIR, file));
+    app.clients.desktop = `./${OAUTH_CLIENTS_DIR}/${file}`;
+    log(`  oauth app ${app.id}: desktop client staged`);
+  }
+  fs.writeFileSync(
+    path.join(stackDir, "powerhouse.config.json"),
+    `${JSON.stringify(config, null, 2)}
+`,
+  );
+}
+
+/** What runs a stack: `ph run` without the tools that build one, which is
+ * most of ph-cli's dependencies. */
+const RUN_PACKAGE = "@powerhousedao/ph-run";
 
 export interface BundleStackOptions {
   projectRoot: string;
@@ -28,20 +127,22 @@ export interface BundleStackOptions {
   /** Vendor the runtime packages (slow). Skipped when false — an existing
    * vendored tree is left in place. */
   vendor?: boolean;
-  /** The ph-cli version/tag to vendor. Default: "dev". NOTE: the vendored
-   * ph-cli must carry the `run` command — registry tags published before
-   * uniform-runners landed cannot run a stack; until a nightly catches up,
-   * pass `phCliSpec` with a locally packed tarball instead. */
+  /** The version/tag of ph-run to vendor, which ph-cli publishes alongside.
+   * Default: "dev". Until a nightly carries it, pass `phCliSpec` with a locally
+   * packed tarball instead. */
   phCliVersion?: string;
-  /** Overrides the ph-cli install spec entirely (e.g. a `pnpm pack` tarball
-   * path for a not-yet-published build). */
+  /** Overrides ph-run's install spec entirely (e.g. a `pnpm pack` tarball path
+   * for a not-yet-published build). */
   phCliSpec?: string;
   /** A directory of `pnpm pack` tarballs (env PH_DESKTOP_LOCAL_PACKAGES).
    * Each replaces its package everywhere in the vendored tree: a packed
-   * ph-cli alone would still pull its dependencies, at the same version
+   * ph-run alone would still pull its dependencies, at the same version
    * number, from the registry. `pnpm pack:desktop-stack` in the monorepo
-   * packs the set ph-cli and host-core need. */
+   * packs the set ph-run and host-core need. */
   localPackagesDir?: string;
+  /** Packages the hosts' plugins come from. The stack resolves them from its
+   * own node_modules, and ph-run brings only what it depends on. */
+  plugins?: readonly string[];
   /** The connect member's port — written into the stack's shell.json so the
    * shell knows where to probe/navigate with no environment at all. */
   connectPort?: number;
@@ -105,14 +206,12 @@ export function readLocalPackages(dir: string): Record<string, string> {
   const specs: Record<string, string> = {};
   for (const file of tarballs.sort()) {
     const tarball = path.join(root, file);
-    const manifest = spawnSync(
-      "tar",
-      ["-xzOf", tarball, "package/package.json"],
-      {
-        encoding: "utf8",
-        windowsHide: true,
-      },
-    );
+    // By name from its folder: GNU tar reads the `C:` of a Windows path as a host.
+    const manifest = spawnSync("tar", ["-xzOf", file, "package/package.json"], {
+      cwd: root,
+      encoding: "utf8",
+      windowsHide: true,
+    });
     if (manifest.status !== 0) {
       throw new Error(
         `bundle-stack: ${tarball} has no package/package.json: ${manifest.stderr}`,
@@ -137,6 +236,8 @@ export interface StackManifestOptions {
   phCliSpec?: string;
   /** Package name → spec, from readLocalPackages. */
   local?: Record<string, string>;
+  /** Packages to depend on besides ph-run and host-core. */
+  plugins?: readonly string[];
 }
 
 /**
@@ -147,19 +248,21 @@ export interface StackManifestOptions {
 export function stackManifest(options: StackManifestOptions) {
   const local = options.local ?? {};
   const spec = (pkg: string, fallback: string) => local[pkg] ?? fallback;
+  const plugins = (options.plugins ?? []).map((pkg): [string, string] => [
+    pkg,
+    spec(pkg, options.version),
+  ]);
   return {
     name: options.name,
     private: true,
     type: "module",
     dependencies: {
-      "@powerhousedao/ph-cli": spec(
-        "@powerhousedao/ph-cli",
-        options.phCliSpec ?? options.version,
-      ),
+      [RUN_PACKAGE]: spec(RUN_PACKAGE, options.phCliSpec ?? options.version),
       "@powerhousedao/host-core": spec(
         "@powerhousedao/host-core",
         options.version,
       ),
+      ...Object.fromEntries(plugins),
     },
     ...(Object.keys(local).length > 0 ? { overrides: local } : {}),
   };
@@ -175,6 +278,45 @@ function vendoredFromLocal(stackDir: string): boolean {
   );
 }
 
+/** Types and source maps, which nothing reads at runtime. */
+const UNREAD_FILE = /\.(d\.[cm]?ts|map)$/i;
+const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/;
+/** Licences stay, as the packages' terms ask. */
+const PACKAGE_NOTES = /^(readme|changelog|history)(\..*)?$/i;
+
+/**
+ * Removes what a running app never reads. Windows creates and scans each file
+ * on its own, so these, over half the stack, were over half the install.
+ *
+ * @returns How many files went
+ */
+export function pruneStack(dir: string, inPackages = false): number {
+  let removed = 0;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === "__tests__") {
+        removed += fs
+          .readdirSync(full, { recursive: true, withFileTypes: true })
+          .filter((file) => file.isFile()).length;
+        fs.rmSync(full, { recursive: true, force: true });
+        continue;
+      }
+      removed += pruneStack(full, inPackages || entry.name === "node_modules");
+      if (fs.readdirSync(full).length === 0) fs.rmdirSync(full);
+    } else if (
+      entry.isFile() &&
+      (UNREAD_FILE.test(entry.name) ||
+        TEST_FILE.test(entry.name) ||
+        (inPackages && PACKAGE_NOTES.test(entry.name)))
+    ) {
+      fs.rmSync(full);
+      removed++;
+    }
+  }
+  return removed;
+}
+
 export function bundleStack(options: BundleStackOptions): BundleStackResult {
   const log = options.logger ?? console.log;
   const stackDir = path.join(options.shellProjectDir, "dist-stack");
@@ -186,6 +328,8 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     "agents",
     "dist",
     ".ph",
+    OAUTH_CLIENTS_DIR,
+    AI_DIR,
     "powerhouse.config.json",
     "package.json",
   ]) {
@@ -201,6 +345,14 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     options.excludeDirs ?? [],
   );
   log(`  hosts/ ${hostsStaged ? "staged" : "absent — skipped"}`);
+  // The local key's process: the stack holds no @powerhousedao/desktop, and
+  // this file needs nothing from it.
+  const localKey = fileURLToPath(
+    new URL("./local-key/local-key.mjs", import.meta.url),
+  );
+  if (fs.existsSync(localKey)) {
+    fs.copyFileSync(localKey, path.join(stackDir, "local-key.mjs"));
+  }
   // The built Connect at the path the stack's connect runner serves by default.
   for (const dir of ["agents", "dist", CONNECT_BUILD_DIR]) {
     const copied = copyIfExists(
@@ -208,6 +360,14 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
       path.join(stackDir, dir),
     );
     log(`  ${dir}/ ${copied ? "staged" : "absent — skipped"}`);
+  }
+  // The window gets the build staged above. A server reads dist/node, and a
+  // project that once built Connect into dist still has that build there.
+  for (const dir of BROWSER_ONLY_IN_DIST) {
+    fs.rmSync(path.join(stackDir, "dist", dir), {
+      recursive: true,
+      force: true,
+    });
   }
 
   // Inside the package there is no nested shell — the shell IS the window —
@@ -231,10 +391,7 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
       );
     }
   }
-  copyIfExists(
-    path.join(options.projectRoot, "powerhouse.config.json"),
-    path.join(stackDir, "powerhouse.config.json"),
-  );
+  stageConfig(options.projectRoot, stackDir, log);
 
   // shell.json: the stack's contract with the shell. The no-env (packaged)
   // path has nobody to set PH_WIN_CONNECT_PORT, so the shell reads the probe
@@ -248,12 +405,20 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
   }
 
   // A minimal manifest: names the project (lock identity) and depends on
-  // ph-cli so the vendored tree resolves exactly like a real install.
+  // ph-run so the vendored tree resolves exactly like a real install.
   const sourcePkg = JSON.parse(
     fs.readFileSync(path.join(options.projectRoot, "package.json"), "utf8"),
-  ) as { name?: string };
+  ) as { name?: string; version?: string; exports?: unknown };
   const version = options.phCliVersion ?? "dev";
   const name = sourcePkg.name ?? "powerhouse-desktop-stack";
+  // The stack is the project's own package to the reactor, which loads it by
+  // path: its pieces take this version, and workers find its models through
+  // these exports. Without them the pieces are dropped, and a workflow pinned
+  // to one quietly runs whatever the registry has instead.
+  const project = {
+    ...(sourcePkg.version ? { version: sourcePkg.version } : {}),
+    ...(sourcePkg.exports ? { exports: sourcePkg.exports } : {}),
+  };
   const vendor = options.vendor !== false;
   const local = options.localPackagesDir
     ? readLocalPackages(options.localPackagesDir)
@@ -268,14 +433,23 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
   fs.writeFileSync(
     path.join(stackDir, "package.json"),
     `${JSON.stringify(
-      local
-        ? stackManifest({ name, version, phCliSpec: options.phCliSpec, local })
-        : {
-            name,
-            private: true,
-            type: "module",
-            dependencies: { "@powerhousedao/ph-cli": version },
-          },
+      {
+        ...(local
+          ? stackManifest({
+              name,
+              version,
+              phCliSpec: options.phCliSpec,
+              local,
+              plugins: options.plugins,
+            })
+          : {
+              name,
+              private: true,
+              type: "module",
+              dependencies: { [RUN_PACKAGE]: version },
+            }),
+        ...project,
+      },
       null,
       2,
     )}\n`,
@@ -284,11 +458,17 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
   let vendored = false;
   if (vendor) {
     // Local: the manifest names every spec. Registry: host-core rides along
-    // with ph-cli, since host files resolve runner modules (the generic
+    // with ph-run, since host files resolve runner modules (the generic
     // compound) from the STACK's own node_modules.
     const specs = local
       ? ""
-      : `"${options.phCliSpec ?? `@powerhousedao/ph-cli@${version}`}" "@powerhousedao/host-core@${version}"`;
+      : [
+          options.phCliSpec ?? `${RUN_PACKAGE}@${version}`,
+          `@powerhousedao/host-core@${version}`,
+          ...(options.plugins ?? []).map((pkg) => `${pkg}@${version}`),
+        ]
+          .map((spec) => `"${spec}"`)
+          .join(" ");
     log(
       local
         ? `  vendoring ${Object.keys(local).length} local packages from ${options.localPackagesDir} (hoisted, real files)…`
@@ -310,6 +490,8 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
   } else {
     log("  vendoring skipped (vendor: false) — existing tree left in place");
   }
+
+  log(`  ${pruneStack(stackDir)} files a running app never reads removed`);
 
   return { stackDir, vendored };
 }

@@ -3,6 +3,7 @@ import type { AnyRoute, AnyRouter } from "@tanstack/react-router";
 import { useMatches, useRouter } from "@tanstack/react-router";
 import type { ComponentType } from "react";
 import { useMemo } from "react";
+import { useIsEmbedded } from "../runtime/embedded.js";
 import { useRoutesById } from "./route-tree.js";
 
 /** A sidebar link to the route that declares it in `staticData.nav`. */
@@ -54,4 +55,25 @@ export function useSidebarMode(): SidebarMode | undefined {
       matches.findLast((match) => match.staticData.sidebar !== undefined)
         ?.staticData.sidebar,
   });
+}
+
+/** What a layout shows of Connect's chrome on the matched route. */
+export type ConnectChrome = {
+  /** Connect runs inside another app (`?embed=1`): no sidebar, header or footer. */
+  embedded: boolean;
+  /** No sidebar: embedded, or the route's `staticData.sidebar` is "hidden". */
+  sidebarHidden: boolean;
+  /** The route's `staticData.sidebar` is "collapsed". */
+  sidebarCollapsed: boolean;
+};
+
+/** The chrome Connect's `_app` layout shows, for a layout that replaces it. */
+export function useConnectChrome(): ConnectChrome {
+  const embedded = useIsEmbedded();
+  const mode = useSidebarMode();
+  return {
+    embedded,
+    sidebarHidden: embedded || mode === "hidden",
+    sidebarCollapsed: !embedded && mode === "collapsed",
+  };
 }

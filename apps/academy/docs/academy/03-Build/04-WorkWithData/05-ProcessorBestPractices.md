@@ -57,7 +57,7 @@ For relational processors, `RelationalDbProcessor` has `deleteDocumentRows`, `is
 The `dispatch` API lets a processor mutate documents by executing actions. It is available on the `IProcessorHostModule` object passed to your factory.
 
 ```typescript
-import type { Action } from "document-model";
+import type { Action, PHDocument } from "document-model";
 
 interface IProcessorDispatch {
   execute(
@@ -67,6 +67,17 @@ interface IProcessorDispatch {
     signal?: AbortSignal,
     meta?: Record<string, unknown>,
   ): Promise<ProcessorDispatchResult>;
+  createInDrive(
+    driveId: string,
+    document: PHDocument,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<ProcessorDispatchResult & { documentId: string }>;
+  deleteDocument(
+    docId: string,
+    propagate?: "none" | "cascade",
+    signal?: AbortSignal,
+  ): Promise<ProcessorDispatchResult>;
 }
 
 type ProcessorDispatchResult = {
@@ -75,7 +86,7 @@ type ProcessorDispatchResult = {
 };
 ```
 
-Under the hood, `dispatch.execute()` calls `reactorClient.executeAsync()` — it submits the job to the reactor and returns immediately with the job info. The processor does not wait for the job to complete.
+`dispatch.execute()` submits the job to the reactor and returns as soon as it is accepted, with the job's id and status. The processor does not wait for the job to complete. `createInDrive` adds a document to a drive; the document's own creation has completed when it resolves, and the drive's file node has been accepted. `deleteDocument` deletes a document, and with `"cascade"` its orphaned children.
 
 ### Accessing `dispatch` in a factory
 
@@ -160,14 +171,14 @@ The processor dispatches the `CREATE_PAYMENT` action and moves on. It does not w
 | `signal`  | `AbortSignal`             | No       | Cancellation signal                           |
 | `meta`    | `Record<string, unknown>` | No       | Additional metadata for the job               |
 
-### Why not `reactorClient`?
+### Why not wait for the write?
 
-:::warning[Anti-pattern: using reactorClient directly]
-Do not use `reactorClient` methods directly from inside a processor. Use `dispatch` instead.
+:::warning[Anti-pattern: waiting on a write from inside a processor]
+A processor writes through `dispatch` and reads through `module.read`. Do not wait for a write to reach `READ_READY` (or read the written document back) from inside a processor.
 
 **Why:**
 
-1. **Potential blocking.** Methods like `reactorClient.execute()` wait for the job to reach `READ_READY` status before returning. This means the call could potentially wait on processors to finish their current batch — including the very processor making the call.
+1. **Potential blocking.** `READ_READY` waits on processors to finish their current batch — including the very processor making the call.
 
 2. **Unnecessary round-trip.** The processor will receive the resulting operations through `onOperations` anyway. Waiting for the result synchronously adds latency without benefit.
 
@@ -176,8 +187,9 @@ Do not use `reactorClient` methods directly from inside a processor. Use `dispat
 **Instead of:**
 
 ```typescript
-// Bad: blocks until job completes
-const doc = await reactorClient.execute(docId, "main", actions);
+// Bad: blocks until the job is READ_READY
+const result = await this.dispatch.execute(docId, "main", actions);
+await module.read.waitForJob(result.id); // module: the host module
 ```
 
 **Use:**

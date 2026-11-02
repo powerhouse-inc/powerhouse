@@ -1,5 +1,6 @@
 export * from "./adapter.js";
 export * from "./auth.js";
+export * from "./drive-nodes.js";
 export * from "./errors.js";
 export * from "./graphql-reactor-client.js";
 export * from "./graphql-reactor-provider.js";
@@ -8,3 +9,5 @@ export * from "./signing.js";
 export * from "./static-package-manager.js";
 export * from "./subgraph.js";
 export * from "./subscriptions.js";
+export * from "./switchboard-backend.js";
+export * from "./transport.js";

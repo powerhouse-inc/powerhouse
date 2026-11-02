@@ -4,24 +4,30 @@ import { JsonView } from "@uiw/react-json-view";
 import { useState } from "react";
 import { Icon } from "./icons.js";
 
-function CopyReference(props: { expression: string }) {
+function CopyButton(props: {
+  text: string;
+  label: string;
+  icon: "braces" | "copy";
+  // The hover group that reveals it.
+  group: "key" | "value";
+}) {
   const [copied, setCopied] = useState(false);
   return (
     <button
       type="button"
-      title={`Copy ${props.expression}`}
-      aria-label={`Copy ${props.expression}`}
+      title={props.label}
+      aria-label={props.label}
       // Takes no space until hovered, so the colons stay aligned.
-      className="ml-1 hidden h-4 w-4 items-center justify-center rounded align-middle text-muted-foreground hover:bg-accent hover:text-foreground group-hover/key:inline-flex"
+      className={`ml-1 hidden h-4 w-4 items-center justify-center rounded align-middle text-muted-foreground hover:bg-accent hover:text-foreground ${props.group === "key" ? "group-hover/key:inline-flex" : "group-hover/value:inline-flex"}`}
       onClick={(event) => {
         event.stopPropagation();
-        void navigator.clipboard.writeText(props.expression).then(() => {
+        void navigator.clipboard.writeText(props.text).then(() => {
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
         });
       }}
     >
-      <Icon name={copied ? "check" : "braces"} className="h-3 w-3" />
+      <Icon name={copied ? "check" : props.icon} className="h-3 w-3" />
     </button>
   );
 }
@@ -55,8 +61,11 @@ export default function DataTree(props: { value: object; root?: string }) {
           <span {...rest} className="group/key">
             {children}
             {props.root && keys && keys.length > 0 ? (
-              <CopyReference
-                expression={`{{${props.root}.${keys.join(".")}}}`}
+              <CopyButton
+                text={`{{${props.root}.${keys.join(".")}}}`}
+                label={`Copy {{${props.root}.${keys.join(".")}}}`}
+                icon="braces"
+                group="key"
               />
             ) : null}
           </span>
@@ -72,7 +81,18 @@ export default function DataTree(props: { value: object; root?: string }) {
               empty
             </span>
           ) : (
-            <span {...rest}>{children}</span>
+            // Long values wrap, and the copy button takes the full value.
+            <span className="group/value">
+              <span {...rest}>{children}</span>
+              {typeof value === "string" ? (
+                <CopyButton
+                  text={value}
+                  label="Copy value"
+                  icon="copy"
+                  group="value"
+                />
+              ) : null}
+            </span>
           )
         }
       />

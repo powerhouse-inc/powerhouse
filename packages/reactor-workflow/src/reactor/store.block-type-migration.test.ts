@@ -140,7 +140,13 @@ describe("the block_type migration", () => {
       "other_thing",
     );
 
-    await store.recordStep("run-legacy", 2, {
+    const runId = await store.startRun({
+      workflowId: "wf-piece",
+      workflowName: "Piece",
+      workflowVersion: 1,
+      triggerKind: "manual",
+    });
+    await store.recordStep(runId, 2, {
       stepId: "c",
       key: "c",
       pieceName: "@acme/piece-x",
@@ -149,7 +155,7 @@ describe("the block_type migration", () => {
       output: { ok: true },
       port: "next",
     });
-    const written = (await store.getSteps("run-legacy")).find(
+    const written = (await store.getSteps(runId)).find(
       (step) => step.step_id === "c",
     );
     expect(written?.block_name).toBe("send_mail");

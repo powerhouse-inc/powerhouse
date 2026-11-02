@@ -2,9 +2,11 @@
 // negative fixture (the hash matches no producer).
 export const outputsHash = "sha256:00000000000000000000000000000000";
 export const outputs = {
-  endpoints: {
-    graphql: {
-      $output: { host: "switchboard", path: ["endpoints", "graphql"] },
+  drives: {
+    inv: {
+      url: {
+        $output: { host: "switchboard", path: ["drives", "inv", "url"] },
+      },
     },
   },
 };

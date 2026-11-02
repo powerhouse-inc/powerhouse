@@ -30,8 +30,8 @@ declare global {
  * onReadModelsRegistering step in R2 step 2; until then it registers on both
  * paths (a dormant read model when the plugin is absent, harmless).
  *
- * Inputs (carve map): api (routes), options.attachmentServiceUrl /
- * PH_SWITCHBOARD_PUBLIC_URL / https + serverPort + renown (service config).
+ * Inputs (carve map): api (routes), config.attachments (signing, TTL),
+ * options.attachmentServiceUrl / https + serverPort + renown (service config).
  */
 export const attachmentsPlugin: HostPlugin<{
   onHttpMounting: (ctx: SwitchboardHostContext) => void;
@@ -43,6 +43,7 @@ export const attachmentsPlugin: HostPlugin<{
     onHttpMounting: (ctx) => {
       registerAttachmentRoutes(
         ctx.api as Parameters<typeof registerAttachmentRoutes>[0],
+        { config: ctx.config?.attachments },
       );
       ctx.attachmentService = createRemoteAttachmentService(
         deriveAttachmentServiceConfig(

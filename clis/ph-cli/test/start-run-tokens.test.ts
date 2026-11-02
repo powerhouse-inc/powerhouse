@@ -13,7 +13,7 @@ import path from "node:path";
 import { writeRunRecord } from "@powerhousedao/host-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { explainHost } from "../src/services/run/explain.js";
-import { startRun } from "../src/services/run/start-run.js";
+import { startRun } from "@powerhousedao/ph-run/start-run";
 
 /**
  * Standalone `ph run` over output tokens (typed-host-configs T3): a
@@ -294,7 +294,7 @@ describe("standalone ph run resolves output tokens", () => {
     await expect(
       startRun({ host: "connect", projectRoot: remoteHost.dir }),
     ).rejects.toThrow(
-      /remote: \{ host \} was removed; use remote: \{ url: switchboard\.endpoints\.graphql \}.*\{ \$output: \{ host: "switchboard", path: \["endpoints", "graphql"\] \} \}/s,
+      /remote: \{ host \} was removed; use a drive address: remote: \{ url: switchboard\.drives\.<slug>\.url \}.*\{ \$output: \{ host: "switchboard", path: \["drives", "<slug>", "url"\] \} \}/s,
     );
   });
 
@@ -392,5 +392,36 @@ describe("--explain outputs", () => {
     expect(out).toContain(
       "reactor.drives[0].remote.url ← $output switchboard › drives.sektar.url",
     );
+  });
+});
+
+describe("a build's NODE_ENV", () => {
+  const initial = process.env.NODE_ENV;
+  afterEach(() => {
+    process.env.NODE_ENV = initial;
+  });
+
+  async function nodeEnvAfter(verb: string): Promise<string | undefined> {
+    const dir = mkdtempSync(path.join(tmpdir(), "ph-start-run-env-"));
+    temporary.push(dir);
+    await startRun({ host: "absent", verb, projectRoot: dir }).catch(
+      () => undefined,
+    );
+    return process.env.NODE_ENV;
+  }
+
+  it("is settled before a host loads, as loading one can load React", async () => {
+    delete process.env.NODE_ENV;
+    expect(await nodeEnvAfter("build")).toBe("production");
+  });
+
+  it("stays what the caller set", async () => {
+    process.env.NODE_ENV = "development";
+    expect(await nodeEnvAfter("build")).toBe("development");
+  });
+
+  it("is left alone by a verb that runs something", async () => {
+    delete process.env.NODE_ENV;
+    expect(await nodeEnvAfter("run")).toBeUndefined();
   });
 });

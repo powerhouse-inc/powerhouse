@@ -93,7 +93,7 @@ export type ProcessorModuleState = {
   processorApps: Array<Scalars["String"]["output"]>;
   /** Lifecycle status. While DRAFT the processor definition is editable and codegen is skipped; switching to CONFIRMED triggers scaffold generation. */
   status: StatusType;
-  /** Processor implementation kind (e.g. 'read-model', 'relational-db'). Determines which scaffold codegen emits. */
+  /** Processor implementation kind: `analytics` or `relational`. Determines which scaffold codegen emits; codegen generates nothing for any other value. */
   type: Scalars["String"]["output"];
 };
 

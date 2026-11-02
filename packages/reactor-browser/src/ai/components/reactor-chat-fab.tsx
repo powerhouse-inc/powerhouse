@@ -9,7 +9,7 @@ import { ChatWindow } from "./chat-window.js";
  * Bottom-right floating action button that opens the reactor AI chat window.
  *
  * `getTools` lazily resolves the reactor tool descriptors (from
- * `createReactorMcpProvider` bound to the browser reactor client) when the
+ * `toMcpTool` bound to the browser reactor client) when the
  * user sends a message.
  */
 export function ReactorChatFab({ getTools }: { getTools?: AiToolsProvider }) {

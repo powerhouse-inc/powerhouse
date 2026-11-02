@@ -7,6 +7,8 @@ export default defineConfig({
     "src/server.mts",
     "src/utils.mts",
     "src/boot.mts",
+    "src/config/schema.ts",
+    "src/config/from-env.ts",
     "src/install-packages.mts",
     "src/migrate.mts",
     // R2: the built-in plugins, published as subpaths so host.js runner.plugins
@@ -15,6 +17,7 @@ export default defineConfig({
     "src/plugins/attachments.mts",
     "src/plugins/privacy.mts",
     "src/plugins/workflows.mts",
+    "src/plugins/ai.mts",
   ],
   platform: "node",
   outDir: "dist",

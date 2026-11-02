@@ -36,6 +36,7 @@ import {
 } from "remeda";
 import type { Project } from "ts-morph";
 import {
+  assertNoReservedOperationNames,
   getAppMetadata,
   getEditorDirNames,
   getEditorMetadata,
@@ -46,6 +47,7 @@ import {
   getSubgraphDirNames,
   getSubgraphMetadata,
   loadDocumentModelInDir,
+  projectPath,
   readPiecesList,
 } from "utils";
 import { loadDocumentModel } from "./utils.js";
@@ -54,6 +56,7 @@ export async function generateDocumentModel(
   documentModelState: DocumentModelGlobalState,
   project: Project,
 ) {
+  assertNoReservedOperationNames(documentModelState);
   await tsMorphGenerateDocumentModel(documentModelState, project);
 }
 
@@ -97,7 +100,9 @@ export async function generateAllDocumentModels(project: Project) {
 }
 export async function generateFromFile(filePath: string, project: Project) {
   // load document model spec from file
-  const documentModelState = await loadDocumentModel(filePath);
+  const documentModelState = await loadDocumentModel(
+    projectPath(project, filePath),
+  );
 
   // delegate to shared generation function
   await generateDocumentModel(documentModelState, project);
@@ -437,14 +442,35 @@ export async function generatePieceAction(
     pieceDir?: string;
     actionName: string;
     requireReactor?: PieceRequireReactor;
+    defaultTimeoutSeconds?: number;
+    defaultMaxAttempts?: number;
   },
   project: Project,
 ) {
+  const { defaultTimeoutSeconds, defaultMaxAttempts } = args;
+  if (
+    defaultTimeoutSeconds !== undefined &&
+    !(Number.isFinite(defaultTimeoutSeconds) && defaultTimeoutSeconds > 0)
+  ) {
+    throw new Error(
+      `defaultTimeoutSeconds must be a positive number, got ${defaultTimeoutSeconds}`,
+    );
+  }
+  if (
+    defaultMaxAttempts !== undefined &&
+    !(Number.isInteger(defaultMaxAttempts) && defaultMaxAttempts > 0)
+  ) {
+    throw new Error(
+      `defaultMaxAttempts must be a positive integer, got ${defaultMaxAttempts}`,
+    );
+  }
   await tsMorphGeneratePieceAction({
     project,
     pieceDir: resolvePieceDir(project, args.pieceDir),
     actionName: args.actionName,
     requireReactor: args.requireReactor,
+    defaultTimeoutSeconds,
+    defaultMaxAttempts,
   });
 }
 

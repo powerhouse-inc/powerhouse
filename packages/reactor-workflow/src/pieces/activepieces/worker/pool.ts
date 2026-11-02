@@ -358,6 +358,26 @@ export class PieceWorkerPool {
     return { size: this.size, active, idle, waiting: this.waiters.run.length };
   }
 
+  // Memory of the live children, from each one's last report.
+  memoryStats(): Record<string, number> {
+    let childRssTotal = 0;
+    let childRssMax = 0;
+    let childHeapUsedTotal = 0;
+    for (const child of this.children) {
+      const memory = child.worker.health?.().memory;
+      if (!memory) continue;
+      childRssTotal += memory.rss;
+      childRssMax = Math.max(childRssMax, memory.rss);
+      childHeapUsedTotal += memory.heapUsed;
+    }
+    return {
+      children: this.children.size,
+      childRssTotal,
+      childRssMax,
+      childHeapUsedTotal,
+    };
+  }
+
   // Kills every child, mid-request ones too, and refuses queued requests.
   // For shutdown; a live run does not survive it.
   dispose(): void {
@@ -541,8 +561,10 @@ export class PieceWorkerPool {
     if (this.disposed || child.doomed) return true;
     if (child.requests >= this.maxRequests) return true;
     if (!health) return false;
-    // Dead or timed out: the next request would fork a stranger anyway.
-    if (!health.alive || health.tlsPoisoned) return true;
+    // Dead or timed out: the next request would fork a stranger anyway. A
+    // request that set NODE_TLS_REJECT_UNAUTHORIZED=0 no longer retires the
+    // child: the TLS guard (worker/tls-guard.ts) verifies regardless.
+    if (!health.alive) return true;
     return (
       health.memory !== undefined &&
       health.memory.heapUsed > HEAP_RETIREMENT * this.heapMb * MIB

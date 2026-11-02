@@ -1,3 +1,239 @@
+## 6.2.3-dev.90 (2026-11-02)
+
+### 🚀 Features
+
+- **desktop:** fold a stack into a few thousand files ([9ff7083857](https://github.com/powerhouse-inc/powerhouse/commit/9ff7083857))
+- **ph-run:** run a host with none of the tools that build one ([ff0ac7910f](https://github.com/powerhouse-inc/powerhouse/commit/ff0ac7910f))
+- **switchboard:** open both PGlite stores at once ([484877830e](https://github.com/powerhouse-inc/powerhouse/commit/484877830e))
+- **ai:** a host can offer a demo key ([11147a01dc](https://github.com/powerhouse-inc/powerhouse/commit/11147a01dc))
+- **desktop:** a sign-in page and a local key for generated shells ([7cce4b7316](https://github.com/powerhouse-inc/powerhouse/commit/7cce4b7316))
+- **renown:** credentials no Renown holds ([337ddba394](https://github.com/powerhouse-inc/powerhouse/commit/337ddba394))
+- **switchboard:** ensureDrive, by slug ([8ae38afcb6](https://github.com/powerhouse-inc/powerhouse/commit/8ae38afcb6))
+- **desktop:** grant generated shells the system browser opener ([db0642a856](https://github.com/powerhouse-inc/powerhouse/commit/db0642a856))
+- **reactor-browser:** export the desktop shell for other sign-ins ([a0dcb5016e](https://github.com/powerhouse-inc/powerhouse/commit/a0dcb5016e))
+- **switchboard:** verify delegated signers with authEnforcement off ([b896f23cfe](https://github.com/powerhouse-inc/powerhouse/commit/b896f23cfe))
+
+### 🩹 Fixes
+
+- **switchboard:** a self-verifying host mounts its renown read model at once ([c51a4c2881](https://github.com/powerhouse-inc/powerhouse/commit/c51a4c2881))
+- **switchboard:** load Sentry only for a host that reports to it ([2f5196e31b](https://github.com/powerhouse-inc/powerhouse/commit/2f5196e31b))
+- **switchboard:** close the stores on a fatal error on Windows ([d07d995c57](https://github.com/powerhouse-inc/powerhouse/commit/d07d995c57))
+- **reactor-api:** compose the supergraph less often at boot ([f70f2223f9](https://github.com/powerhouse-inc/powerhouse/commit/f70f2223f9))
+- **switchboard:** workers can't verify kept credentials either ([e3563478f9](https://github.com/powerhouse-inc/powerhouse/commit/e3563478f9))
+- **workflow:** a restart takes back its own lease on an embedded journal ([e83365c6d4](https://github.com/powerhouse-inc/powerhouse/commit/e83365c6d4))
+- **desktop:** the stack ships the packages its hosts' plugins come from ([faa1168ba4](https://github.com/powerhouse-inc/powerhouse/commit/faa1168ba4))
+- **desktop:** pack and test the stack on Windows ([c6317e2c15](https://github.com/powerhouse-inc/powerhouse/commit/c6317e2c15))
+- **switchboard:** the env can turn workflows off under the plugin host ([51543d6302](https://github.com/powerhouse-inc/powerhouse/commit/51543d6302))
+- **switchboard:** recreate a drive whose id a deleted drive holds ([059fad1f3f](https://github.com/powerhouse-inc/powerhouse/commit/059fad1f3f))
+- **reactor-api:** refuse an owner claim on a host others can reach ([62f3a39c6a](https://github.com/powerhouse-inc/powerhouse/commit/62f3a39c6a))
+- **reactor:** keep the trust context optional for direct callers ([1760590c37](https://github.com/powerhouse-inc/powerhouse/commit/1760590c37))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.89 (2026-11-02)
+
+### 🚀 Features
+
+- **workflow:** router, loop and sub-flow blocks ([16f3ee7c3c](https://github.com/powerhouse-inc/powerhouse/commit/16f3ee7c3c))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.88 (2026-11-01)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.87 (2026-10-31)
+
+### 🚀 Features
+
+- **host-core:** warn when two compound members declare one port ([493216cf65](https://github.com/powerhouse-inc/powerhouse/commit/493216cf65))
+- **document-model:** add the code-first definition kernel ([5cf4c8ec4b](https://github.com/powerhouse-inc/powerhouse/commit/5cf4c8ec4b))
+- **reactor:** stored documents of a model this reactor cannot run defer until the model loads ([eb6d1a0fd4](https://github.com/powerhouse-inc/powerhouse/commit/eb6d1a0fd4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.3-dev.86 (2026-10-30)
+
+### 🚀 Features
+
+- **reactor-api:** rewrite one table through the PGlite maintenance lane ([ee99ab7edd](https://github.com/powerhouse-inc/powerhouse/commit/ee99ab7edd))
+- **switchboard:** read keyframe rules from the project config and PH_KEYFRAMES ([b5a9401c6c](https://github.com/powerhouse-inc/powerhouse/commit/b5a9401c6c))
+- **switchboard:** configure processor timing and memory telemetry ([f196cf8eb2](https://github.com/powerhouse-inc/powerhouse/commit/f196cf8eb2))
+- **reactor:** memory telemetry correlated with operations processed ([c8d0779075](https://github.com/powerhouse-inc/powerhouse/commit/c8d0779075))
+- **reactor:** per-processor timing, top 5 in the catch-up output ([ca20e898e4](https://github.com/powerhouse-inc/powerhouse/commit/ca20e898e4))
+- **switchboard:** add the AI gateway plugin ([e9a4cd0dc1](https://github.com/powerhouse-inc/powerhouse/commit/e9a4cd0dc1))
+
+### 🩹 Fixes
+
+- **switchboard:** take only the message from a provider's error ([ba02a57f3f](https://github.com/powerhouse-inc/powerhouse/commit/ba02a57f3f))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.85 (2026-10-30)
+
+### 🚀 Features
+
+- **switchboard:** waitpoint resume routes, confirm page and subgraph fields ([d471c7b7b3](https://github.com/powerhouse-inc/powerhouse/commit/d471c7b7b3))
+- **switchboard:** oauthSignIn tells how a sign-in with a publisher app would go ([d3e2c84321](https://github.com/powerhouse-inc/powerhouse/commit/d3e2c84321))
+- **switchboard:** read an OAuth2 app's relay from workflows.oauthApps ([f29bc5b5fa](https://github.com/powerhouse-inc/powerhouse/commit/f29bc5b5fa))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank Pfeift
+
+## 6.2.3-dev.84 (2026-10-30)
+
+### 🚀 Features
+
+- **switchboard:** oauthSignIn tells how a sign-in with a publisher app would go ([d3e2c84321](https://github.com/powerhouse-inc/powerhouse/commit/d3e2c84321))
+- **switchboard:** read an OAuth2 app's relay from workflows.oauthApps ([f29bc5b5fa](https://github.com/powerhouse-inc/powerhouse/commit/f29bc5b5fa))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
+## 6.2.3-dev.83 (2026-10-30)
+
+### 🩹 Fixes
+
+- **connect:** a kept copy is ready once it holds the switchboard's revision ([f327ce1fa6](https://github.com/powerhouse-inc/powerhouse/commit/f327ce1fa6))
+- **connect:** wait for the copy in every tab, and re-read moves before reconciling at boot ([243e0813d7](https://github.com/powerhouse-inc/powerhouse/commit/243e0813d7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.82 (2026-10-29)
+
+### 🚀 Features
+
+- **reactor-router:** a backend's document types may read as open ([df1583eab1](https://github.com/powerhouse-inc/powerhouse/commit/df1583eab1))
+- **reactor-browser:** createSwitchboardBackend, a Switchboard as a router backend ([f2b6b608af](https://github.com/powerhouse-inc/powerhouse/commit/f2b6b608af))
+
+### 🩹 Fixes
+
+- **reactor-browser:** a switchboard that loads models on demand gets no create pre-check ([cd57ceec10](https://github.com/powerhouse-inc/powerhouse/commit/cd57ceec10))
+- **switchboard:** /ready waits for the default drive ([27cee3f720](https://github.com/powerhouse-inc/powerhouse/commit/27cee3f720))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.81 (2026-10-29)
+
+### 🚀 Features
+
+- **workflow:** multi-provider AI piece ([59cea966ff](https://github.com/powerhouse-inc/powerhouse/commit/59cea966ff))
+
+### 🩹 Fixes
+
+- **switchboard,ph-cli:** a drive pinned to an id this store cannot take is made under its slug ([39aff95981](https://github.com/powerhouse-inc/powerhouse/commit/39aff95981))
+- **workflow-runtime:** bind secrets to the connection or workflow that owns them ([40a52be27a](https://github.com/powerhouse-inc/powerhouse/commit/40a52be27a))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.80 (2026-10-29)
+
+### 🚀 Features
+
+- **vetra-studio:** publish @powerhousedao/vetra-studio ([8bf7e24674](https://github.com/powerhouse-inc/powerhouse/commit/8bf7e24674))
+- **reactor-workflow:** pollNow runs an armed trigger at once ("sync now") ([2a620c707b](https://github.com/powerhouse-inc/powerhouse/commit/2a620c707b))
+- **switchboard:** workflowRuntime.host names the switchboard an app runs on ([4680f3d307](https://github.com/powerhouse-inc/powerhouse/commit/4680f3d307))
+- **workflow:** publisher OAuth2 apps and a per-connection scope override ([5868eab4f2](https://github.com/powerhouse-inc/powerhouse/commit/5868eab4f2))
+- **reactor,switchboard:** boot reports progress instead of going silent ([e85fcfd84e](https://github.com/powerhouse-inc/powerhouse/commit/e85fcfd84e))
+- **vetra-studio:** studio sign-in, an agent logs the studio Connect in with an access token ([da56737a56](https://github.com/powerhouse-inc/powerhouse/commit/da56737a56))
+- **workflow:** ctx.reactor.query, an in-process read of an index subgraph for pieces ([fba34399f4](https://github.com/powerhouse-inc/powerhouse/commit/fba34399f4))
+- **reactor-mcp:** shared tool definitions with MCP and ai SDK adapters ([db60951c54](https://github.com/powerhouse-inc/powerhouse/commit/db60951c54))
+- **document-model,codegen,reactor-api,ph-cli:** projects define their own GraphQL scalars ([968fa45a44](https://github.com/powerhouse-inc/powerhouse/commit/968fa45a44))
+
+### 🩹 Fixes
+
+- **switchboard:** a run with no user asks an index as the host itself ([45b1279368](https://github.com/powerhouse-inc/powerhouse/commit/45b1279368))
+- **ci:** install academy lint dependencies and restore codegen test cwd ([c99d5e4fe4](https://github.com/powerhouse-inc/powerhouse/commit/c99d5e4fe4))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.3-dev.79 (2026-10-28)
+
+### 🚀 Features
+
+- ⚠️  **switchboard:** drop the attachment and registry-cache env fallbacks ([4b8b99bd71](https://github.com/powerhouse-inc/powerhouse/commit/4b8b99bd71))
+- **switchboard:** config layer schema and boot facts from a config ([0c29e1715a](https://github.com/powerhouse-inc/powerhouse/commit/0c29e1715a))
+- ⚠️  **switchboard:** startSwitchboard(config, deps) reads only its config ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+- **switchboard:** merge config layers with each key's precedence ([505c38302e](https://github.com/powerhouse-inc/powerhouse/commit/505c38302e))
+- **switchboard:** map the environment to a switchboard config layer ([85d0b63665](https://github.com/powerhouse-inc/powerhouse/commit/85d0b63665))
+- **switchboard:** a zod schema for the switchboard's configuration ([8bc4e01aa6](https://github.com/powerhouse-inc/powerhouse/commit/8bc4e01aa6))
+- **ph-cli,codegen:** ph mcp, a stdio launcher for reactor-mcp that starts vetra on the first tool call, and generated mcp configs that run it ([c64883e693](https://github.com/powerhouse-inc/powerhouse/commit/c64883e693))
+- **codegen,vetra,ph-cli,connect:** project agent guidance as a managed AGENTS.md block and skills, and eval fixes ([#3303](https://github.com/powerhouse-inc/powerhouse/pull/3303))
+
+### 🩹 Fixes
+
+- **switchboard:** config auth keys take effect over the config file ([654f94c546](https://github.com/powerhouse-inc/powerhouse/commit/654f94c546))
+- **switchboard:** refuse the old startSwitchboard options shape ([03ac2daa1d](https://github.com/powerhouse-inc/powerhouse/commit/03ac2daa1d))
+- **switchboard:** an invalid PORT warns instead of failing the mapping ([8c514a0d6f](https://github.com/powerhouse-inc/powerhouse/commit/8c514a0d6f))
+- **switchboard:** load .env before reading LOG_LEVEL ([564a89796c](https://github.com/powerhouse-inc/powerhouse/commit/564a89796c))
+- **reactor-api,switchboard:** turn wasm wrapper tier-up off on Node 24 ([#66366](https://github.com/powerhouse-inc/powerhouse/issues/66366))
+- **codegen,shared,vetra,ph-cli,document-model,reactor,reactor-api:** scaffolds get their dependencies, migration-file works, new documents count 0 per scope, subgraphs filter plain ids, and vetra sets the preview drive's app ([6fe1ead94c](https://github.com/powerhouse-inc/powerhouse/commit/6fe1ead94c))
+
+### ⚠️  Breaking Changes
+
+- **switchboard:** drop the attachment and registry-cache env fallbacks  ([4b8b99bd71](https://github.com/powerhouse-inc/powerhouse/commit/4b8b99bd71))
+- **switchboard:** startSwitchboard(config, deps) reads only its config  ([29d223ebff](https://github.com/powerhouse-inc/powerhouse/commit/29d223ebff))
+  startSwitchboard(options) is now startSwitchboard(config, deps).
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.78 (2026-10-27)
+
+### 🚀 Features
+
+- **portle:** scaffold @powerhousedao/portle, the switchboard plugin that gates publication through Portle ([68ab561f7d](https://github.com/powerhouse-inc/powerhouse/commit/68ab561f7d))
+- **reactor-api,reactor-browser,switchboard:** type-neutral drive node queries and read.drives on the remote client ([b8a09950c0](https://github.com/powerhouse-inc/powerhouse/commit/b8a09950c0))
+- **reactor-api,switchboard:** vacuum full policy knob, no forced rewrite under load by default ([d6dcbf5cd0](https://github.com/powerhouse-inc/powerhouse/commit/d6dcbf5cd0))
+
+### 🩹 Fixes
+
+- **registry:** a failed tarball write no longer records its attachment ([5d3ae94bd8](https://github.com/powerhouse-inc/powerhouse/commit/5d3ae94bd8))
+- **reactor-api:** the one-time VACUUM FULL is off by default; quiet and forced are opt-ins ([fd7c19e313](https://github.com/powerhouse-inc/powerhouse/commit/fd7c19e313))
+- **switchboard:** port 0 reports the bound port ([3218c7105d](https://github.com/powerhouse-inc/powerhouse/commit/3218c7105d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.77 (2026-10-26)
 
 ### 🚀 Features

@@ -90,7 +90,7 @@ export class OwnershipGuard {
     identifier: string,
   ): Promise<Ownership> {
     const key = `${backend.name}\u0000${identifier}`;
-    if (this.owned.get(key) !== "") {
+    if (this.owned.get(key) !== undefined) {
       return "yes";
     }
     const answer = await this.probe(backend, identifier);

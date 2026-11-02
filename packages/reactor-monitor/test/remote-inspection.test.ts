@@ -376,7 +376,7 @@ function remoteDescriptor(
     kind: "remote",
     name: "switchboard",
     remote: {
-      url: "http://host.example/graphql",
+      url: "http://host.example/d/powerhouse",
       fetch: fetchImpl,
       ...overrides,
     },
@@ -870,6 +870,19 @@ describe("RemoteSyncManagerClient", () => {
 });
 
 describe("provisioning a remote reactor", () => {
+  it("refuses a GraphQL url, naming the drive address to use", async () => {
+    const server = fakeInspectionServer();
+    await expect(
+      provisionRemote(
+        remoteDescriptor(server.fetchImpl, {
+          url: "http://host.example/graphql",
+        }),
+      ),
+    ).rejects.toThrow(
+      'Reactor "switchboard": http://host.example/graphql is not a switchboard drive address (<switchboard>/d/<slug>): use http://host.example/d/<slug>, one of the switchboard\'s drives.',
+    );
+  });
+
   it("carries reach and the info the reactor reported", async () => {
     const server = fakeInspectionServer({
       workflows: true,

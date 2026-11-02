@@ -13,6 +13,7 @@ import {
   type CatchUpStatus,
   type FactoryProgress,
   type InspectorProcessorInfo,
+  type InspectorProcessorTimingReport,
   type ProcessorPhase,
   type ProcessorProgress,
 } from "@powerhousedao/reactor";
@@ -41,6 +42,7 @@ import {
   type ProgressTone,
 } from "../components/ProgressBar.js";
 import { withHead } from "../lib/catch-up.js";
+import { ProcessorTimingView } from "./ProcessorTimingView.js";
 
 export type ProcessorsTabProps = {
   readonly inspector: MonitorInspector;
@@ -132,7 +134,15 @@ function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
 
-function processorName(row: ProcessorProgress, perDrive: boolean): string {
+function processorName(
+  row: ProcessorProgress,
+  perDrive: boolean,
+  timing: InspectorProcessorTimingReport | undefined,
+): string {
+  const named = timing?.processors.find(
+    (entry) => entry.processorId === row.processorId,
+  );
+  if (named) return `${named.name} · ${named.driveLabel}`;
   return perDrive ? row.driveId : `${row.driveId} #${row.processorIndex}`;
 }
 
@@ -288,6 +298,12 @@ export function ProcessorsTab({
   const [priority, setPriority] = useState<CatchUpPriorityState | undefined>();
   const [settingPriority, setSettingPriority] = useState(false);
   const [priorityError, setPriorityError] = useState<string | null>(null);
+  // Undefined when the host serves no timing (an older one).
+  const [timing, setTiming] = useState<
+    InspectorProcessorTimingReport | undefined
+  >();
+  const [timingRead, setTimingRead] = useState(false);
+  const [view, setView] = useState<"progress" | "time">("progress");
   // Bumped as a set starts and ends: a read begun before it is stale.
   const prioritySets = useRef(0);
 
@@ -313,6 +329,12 @@ export function ProcessorsTab({
     } catch {
       if (prioritySets.current === sets) setPriority(undefined);
     }
+    try {
+      setTiming(await inspector.getProcessorTiming());
+    } catch {
+      setTiming(undefined);
+    }
+    setTimingRead(true);
   }, [inspector]);
 
   useEffect(() => {
@@ -418,6 +440,8 @@ export function ProcessorsTab({
     [levers, load],
   );
 
+  const timingOn = timing !== undefined && timing.level !== "off";
+  const timeView = timingOn && view === "time";
   const leversOpen = admin.enabled && !!levers;
   const priorityClosedReason = leversOpen
     ? undefined
@@ -478,7 +502,7 @@ export function ProcessorsTab({
   const processorRow = (row: ProcessorProgress, perDrive: boolean) => {
     const processor = byId.get(row.processorId);
     if (!processor) return null;
-    const name = processorName(row, perDrive);
+    const name = processorName(row, perDrive, timing);
     return (
       <tr
         className={processor.status === "errored" ? "rm-row-error" : undefined}
@@ -548,6 +572,21 @@ export function ProcessorsTab({
       <div className="rm-tab-header">
         <h2>Processors</h2>
         <div className="rm-actions">
+          {timingOn ? (
+            <label className="rm-priority-control">
+              View
+              <select
+                aria-label="View"
+                onChange={(event) =>
+                  setView(event.target.value === "time" ? "time" : "progress")
+                }
+                value={view}
+              >
+                <option value="progress">Progress</option>
+                <option value="time">Time</option>
+              </select>
+            </label>
+          ) : null}
           <label className="rm-priority-control" title={priorityClosedReason}>
             Catch-up priority
             <select
@@ -642,54 +681,64 @@ export function ProcessorsTab({
         </p>
       ) : null}
 
-      <div className="rm-table-wrap">
-        <table className="rm-table" data-testid="processor-progress">
-          <thead>
-            <tr>
-              <th>
-                <SelectBox
-                  disabled={!leversOpen}
-                  ids={allIds}
-                  label="Select every processor"
-                  onChange={select}
-                  selected={selected}
-                />
-              </th>
-              <th>Processor</th>
-              <th>Status</th>
-              <th>Progress</th>
-              <th>Last Ordinal</th>
-              <th>Error</th>
-              <th>Error At</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {processors.length === 0 ? (
+      {timingRead && !timingOn ? (
+        <p className="rm-note" data-testid="timing-off">
+          Processor timing is off on this reactor; set PH_PROCESSOR_TIMING=basic
+        </p>
+      ) : null}
+
+      {timeView && timing ? (
+        <ProcessorTimingView report={timing} />
+      ) : (
+        <div className="rm-table-wrap">
+          <table className="rm-table" data-testid="processor-progress">
+            <thead>
               <tr>
-                <td className="rm-table-empty" colSpan={COLUMNS}>
-                  {loading ? "Loading..." : "No processors registered"}
-                </td>
+                <th>
+                  <SelectBox
+                    disabled={!leversOpen}
+                    ids={allIds}
+                    label="Select every processor"
+                    onChange={select}
+                    selected={selected}
+                  />
+                </th>
+                <th>Processor</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>Last Ordinal</th>
+                <th>Error</th>
+                <th>Error At</th>
+                <th />
               </tr>
-            ) : (
-              progress.factories.map((factory) => {
-                const perDrive =
-                  factory.processors.length === factory.driveCount;
-                return (
-                  <Fragment key={factory.factoryId}>
-                    {factoryRow(factory)}
-                    {collapsed.has(factory.factoryId)
-                      ? null
-                      : factory.processors.map((row) =>
-                          processorRow(row, perDrive),
-                        )}
-                  </Fragment>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {processors.length === 0 ? (
+                <tr>
+                  <td className="rm-table-empty" colSpan={COLUMNS}>
+                    {loading ? "Loading..." : "No processors registered"}
+                  </td>
+                </tr>
+              ) : (
+                progress.factories.map((factory) => {
+                  const perDrive =
+                    factory.processors.length === factory.driveCount;
+                  return (
+                    <Fragment key={factory.factoryId}>
+                      {factoryRow(factory)}
+                      {collapsed.has(factory.factoryId)
+                        ? null
+                        : factory.processors.map((row) =>
+                            processorRow(row, perDrive),
+                          )}
+                    </Fragment>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

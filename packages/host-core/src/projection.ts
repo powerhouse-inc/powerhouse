@@ -1,21 +1,24 @@
 /**
  * @powerhousedao/host-core/projection — platform-neutral projections of a
- * host's blocks onto runtime shapes (switchboard env, Connect runtime config,
+ * host's blocks onto runtime shapes (switchboard config, Connect runtime config,
  * reactor-monitor descriptors) and the v2 run-record schema. No `node:`
  * import may reach this entry (the build asserts it).
  */
 
 export {
   assertProtocolConsistency,
+  browserBackend,
   primaryBackend,
   projectReactorToConnect,
-  projectReactorToSwitchboard,
   protocolConflicts,
+  protocolEnvAgrees,
   protocolEnv,
+  reactorBlockToSwitchboardConfig,
   reactorClientMode,
   type ConnectReactorProjection,
+  type ConnectRouterSettings,
   type ReactorClientMode,
-  type SwitchboardReactorProjection,
+  type SwitchboardReactorLayer,
 } from "./reactor-config.js";
 export {
   backendsToDescriptors,
@@ -25,6 +28,7 @@ export {
   type ProjectedDescriptor,
   type ProjectedStorage,
 } from "./backend-projection.js";
+export { applyChildWrapper, type MemberDraft } from "./child-wrapper.js";
 export {
   mergeDefaultDrives,
   projectDrivesIntoConnect,

@@ -13,6 +13,7 @@ export const PACKAGES_DEPENDENCIES = [
   "document-model",
   "@powerhousedao/opentelemetry-instrumentation-reactor",
   "@powerhousedao/pieces-framework",
+  "@powerhousedao/portle",
   "@powerhousedao/reactor",
   "@powerhousedao/reactor-api",
   "@powerhousedao/reactor-attachments",
@@ -27,6 +28,7 @@ export const PACKAGES_DEPENDENCIES = [
   "@powerhousedao/registry",
   "@powerhousedao/switchboard-gui",
   "@powerhousedao/vetra",
+  "@powerhousedao/vetra-studio",
   "@powerhousedao/workflow",
   "@powerhousedao/analytics-engine-core",
   "@powerhousedao/analytics-engine-knex",
@@ -38,7 +40,11 @@ export const PACKAGES_DEPENDENCIES = [
   "@renown/sdk",
 ] as const;
 
-export const CLIS_DEPENDENCIES = ["ph-cmd", "@powerhousedao/ph-cli"];
+export const CLIS_DEPENDENCIES = [
+  "ph-cmd",
+  "@powerhousedao/ph-cli",
+  "@powerhousedao/ph-run",
+];
 export const APPS_DEPENDENCIES = [
   "@powerhousedao/connect",
   "@powerhousedao/switchboard",

@@ -99,6 +99,8 @@ export const POWERHOUSE_GLOBAL_DIR = join(HOME_DIR, PH_GLOBAL_DIR_NAME);
 export const VERSIONED_PEER_DEPENDENCIES = [
   "document-model",
   "@powerhousedao/reactor-browser",
+  // Offered routes import it; the Connect that loads the package provides it.
+  "@powerhousedao/connect-core",
 ];
 
 type PeerSpec = { peer: string; dev: string };
@@ -109,6 +111,8 @@ export const ANALYTICS_ENGINE_CORE_PACKAGE =
 export const GRAPHQL_PACKAGE = "graphql";
 export const GRAPHQL_TAG_PACKAGE = "graphql-tag";
 export const PIECES_FRAMEWORK_PACKAGE = "@powerhousedao/pieces-framework";
+export const KYSELY_PACKAGE = "kysely";
+export const RELATIONAL_DB_PROCESSOR_CLASS = "RelationalDbProcessor";
 
 // External peerDependencies of every generated project.
 // `peer` is the consumer-facing range; `dev` is the exact build-tested pin.
@@ -134,6 +138,19 @@ export const FEATURE_DEPENDENCIES = {
     peerExternal: {},
     devVersioned: [],
   },
+  // The schema `ph generate migration-file` writes imports kysely's types, and
+  // queries import its `sql`; the host's kysely runs them.
+  relationalDbProcessor: {
+    peerVersioned: [],
+    peerExternal: { [KYSELY_PACKAGE]: { peer: "^0.28", dev: "0.28.16" } },
+    devVersioned: [],
+  },
+  // A subgraph's BaseSubgraph is the host's: the build leaves it external.
+  subgraph: {
+    peerVersioned: [REACTOR_API_PACKAGE],
+    peerExternal: {},
+    devVersioned: [],
+  },
   // Each piece is bundled whole (build-pieces.mts), framework included, so the
   // framework is only ever needed to compile the piece's own source.
   piece: {
@@ -153,6 +170,7 @@ export const FEATURE_DEPENDENCIES = {
 export const VERSIONED_DEPENDENCIES = [
   ...VERSIONED_PEER_DEPENDENCIES,
   ...FEATURE_DEPENDENCIES.analyticsProcessor.peerVersioned,
+  ...FEATURE_DEPENDENCIES.subgraph.peerVersioned,
 ];
 
 // Transitive dependencies whose postinstall scripts the generated project
@@ -174,9 +192,10 @@ export const BOILERPLATE_ALLOWED_BUILDS = [
 
 // Single-version pins the boilerplate enforces on generated projects,
 // avoiding duplicates from coexisting version ranges. Rendered as pnpm
-// `overrides` (pnpm-workspace.yaml) and as yarn v1 `resolutions`
-// (package.json). Generated-project only — never change the monorepo
-// catalog for this (a re-resolution there pulls a tsc-crashing TS6 beta).
+// `overrides` (pnpm-workspace.yaml) and as package.json `resolutions` and
+// `overrides`, with each pin also an exact devDependency. Generated-project
+// only — never change the monorepo catalog for this (a re-resolution there
+// pulls a tsc-crashing TS6 beta).
 export const BOILERPLATE_DEPENDENCY_OVERRIDES = {
   "date-fns": "4.3.0",
   vite: "8.0.14",
@@ -196,6 +215,8 @@ export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/host-core",
   "@powerhousedao/clint",
   "@powerhousedao/desktop",
+  // the Vetra Studio plugins the scaffolded vetra host composes (verb dev)
+  "@powerhousedao/vetra-studio",
   // the switchboard plugins the scaffolded switchboard host composes
   // (workflows, mcp, …) and their PHPluginConfigs types for tsc -p hosts.
   "@powerhousedao/switchboard",
@@ -235,6 +256,11 @@ export const packageJsonExports = {
     types: "./dist/types/subgraphs/index.d.ts",
     node: "./dist/node/subgraphs/index.mjs",
   },
+  "./scalars": {
+    types: "./dist/types/scalars/index.d.ts",
+    browser: "./dist/browser/scalars/index.js",
+    node: "./dist/node/scalars/index.mjs",
+  },
   // The routes the package offers other Connects; built when it has any.
   "./connect-routes": {
     browser: "./dist/browser/connect-routes.js",
@@ -261,11 +287,13 @@ export const packageJsonExports = {
 
 export const packageScripts = {
   "test:watch": "vitest",
-  lint: "oxlint --type-aware --type-check",
-  "lint:fix": "oxlint --type-aware --type-check --fix",
+  // Routes type-check against the tree, which Vetra or a build would write.
+  lint: "ph-cli generate connect-routes && oxlint --type-aware --type-check",
+  "lint:fix":
+    "ph-cli generate connect-routes && oxlint --type-aware --type-check --fix",
   format: "oxfmt",
   "format:check": "oxfmt --check",
-  tsc: "tsc",
+  tsc: "ph-cli generate connect-routes && tsc",
   "tsc:watch": "tsc --watch",
   generate: "ph-cli generate",
   connect: "ph-cli connect",
@@ -273,6 +301,8 @@ export const packageScripts = {
   reactor: "ph-cli reactor",
   service: "ph-cli service",
   vetra: "ph-cli vetra",
+  // The MCP configs run it as `node --run mcp`, which needs no shell on Windows.
+  mcp: "ph-cli mcp",
   "service-startup":
     "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
   "service-unstartup":
@@ -333,12 +363,11 @@ export const externalDevDependencies = {
   "@vitejs/plugin-react": "^6.0.1",
   "@vitest/coverage-v8": "5.0.3",
   oxfmt: "0.68.0",
-  oxlint: "1.70.0",
-  "oxlint-tsgolint": "0.23.0",
+  oxlint: "1.83.0",
+  "oxlint-tsgolint": "7.0.2001",
   tailwindcss: "^4.1.16",
   typescript: "~7.0.2",
   vite: "^8.0.10",
-  "vite-tsconfig-paths": "6.1.1",
   vitest: "5.0.3",
 } as const;
 

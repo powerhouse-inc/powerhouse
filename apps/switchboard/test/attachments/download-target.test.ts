@@ -8,12 +8,26 @@ import type {
   AttachmentAccessResult,
   IAttachmentAccessService,
 } from "@powerhousedao/reactor-api";
+import type { ILogger } from "document-model";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { AttachmentActorContext } from "../../src/attachments/auth.js";
 import { registerAttachmentRoutes } from "../../src/attachments/index.js";
-import { makeDownloadTargetHandler } from "../../src/attachments/routes.js";
+import {
+  downloadTargetTtlCapSeconds,
+  makeDownloadTargetHandler,
+} from "../../src/attachments/routes.js";
 import { AttachmentUrlSigner } from "../../src/attachments/url-signer.js";
+import { switchboardConfigFromEnv } from "../../src/config/from-env.js";
+
+const silentLogger = {
+  verbose: () => {},
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  child: () => silentLogger,
+} as unknown as ILogger;
 
 const HASH = "a".repeat(64) as AttachmentHash;
 const REF = `attachment://v1:${HASH}`;
@@ -331,23 +345,12 @@ describe("makeDownloadTargetHandler", () => {
     expect(prepareDownloadTarget).toHaveBeenCalledWith(HASH, 300);
   });
 
-  describe("ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS", () => {
-    const ORIGINAL = process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS;
-
-    afterEach(() => {
-      if (ORIGINAL === undefined) {
-        delete process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS;
-      } else {
-        process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS = ORIGINAL;
-      }
-    });
-
+  describe("ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS, mapped at the edge", () => {
     async function ttlFor(configured: string | undefined, query = "") {
-      if (configured === undefined) {
-        delete process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS;
-      } else {
-        process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS = configured;
-      }
+      const config = switchboardConfigFromEnv(
+        { ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS: configured },
+        { logger: silentLogger },
+      );
       const { access } = makeAccess(ALLOWED);
       const prepareDownloadTarget = vi.fn().mockResolvedValue({
         kind: "presigned-get",
@@ -359,7 +362,14 @@ describe("makeDownloadTargetHandler", () => {
       const attachments = makeAttachments({
         backend: { kind: "s3", prepareDownloadTarget } as never,
       });
-      const handler = makeDownloadTargetHandler(attachments, access, SIGNER);
+      const handler = makeDownloadTargetHandler(
+        attachments,
+        access,
+        SIGNER,
+        downloadTargetTtlCapSeconds(
+          config.attachments?.downloadTargetMaxTtlSeconds,
+        ),
+      );
       await handler(
         makeReq({
           url: `/attachments/${HASH}/download-target?documentId=${DOC_ID}${query}`,

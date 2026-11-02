@@ -301,6 +301,8 @@ describe("OpenFileDocumentsModal", () => {
     const select = screen.getByRole("combobox");
     fireEvent.keyDown(select, { key: "ArrowDown" });
     fireEvent.click(await screen.findByText("Drive B"));
+    // Drive B's nodes load before its rows are checked against them.
+    await waitForReady();
     fireEvent.click(importButton());
 
     expect(store.selectedDriveId).toBe(driveB.header.id);

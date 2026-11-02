@@ -64,6 +64,49 @@ export const REMOTE_INFO = {
   syncChannels: ["gql"],
 };
 
+export const REMOTE_DOCUMENT_TYPES = [DRIVE_TYPE, "powerhouse/document-model"];
+
+/**
+ * The `SwitchboardFacts` answer; `over` replaces parts of it. `onDemand`
+ * "unreported" is a Switchboard older than `loadsModelsOnDemand`.
+ */
+export function switchboardFacts(
+  over: {
+    info?: Record<string, unknown>;
+    documentTypes?: readonly string[];
+    queries?: readonly string[];
+    onDemand?: boolean | "unreported";
+  } = {},
+) {
+  const fields = (names: readonly string[]) => ({
+    fields: names.map((name) => ({ name })),
+  });
+  return {
+    inspection: {
+      info: { ...REMOTE_INFO, access: null, ...over.info },
+      documentModels: (over.documentTypes ?? REMOTE_DOCUMENT_TYPES).map(
+        (documentType) => ({ documentType }),
+      ),
+    },
+    queries: fields(
+      over.queries ?? ["documentServed", "createDefaults", "inspection"],
+    ),
+    inspectionFields: fields(
+      over.onDemand === "unreported"
+        ? ["info", "documentModels"]
+        : ["info", "documentModels", "loadsModelsOnDemand"],
+    ),
+  };
+}
+
+/** The `SwitchboardModelLoading` answer. */
+export function modelLoading(onDemand: boolean) {
+  return { inspection: { loadsModelsOnDemand: onDemand } };
+}
+
+/** A reply `serve` never sends: the request hangs until the stub closes. */
+export const HANG: Reply = Object.freeze({ status: 0, body: "" });
+
 export function data(value: unknown): Reply {
   return { status: 200, body: JSON.stringify({ data: value }) };
 }
@@ -91,13 +134,16 @@ export function switchboard(
       unknown
     >;
     switch (received.body.operationName) {
-      case "RemoteReactorInfo":
-        return data({ inspection: { info: REMOTE_INFO } });
+      case "SwitchboardFacts":
+        return data(switchboardFacts());
+      case "SwitchboardModelLoading":
+        return data(modelLoading(false));
       case "GetDocumentServed":
         return data({
           documentServed: (variables.idOrSlug as string) in documents,
         });
-      case "GetDocument": {
+      case "GetDocument":
+      case "GetDocumentAtConsistency": {
         const id = variables.identifier as string;
         if (!(id in documents)) {
           return data({ document: null });
@@ -114,6 +160,12 @@ export function switchboard(
           createDocument: wireDocument(header.id, header.documentType),
         });
       }
+      case "MutateDocumentAsync":
+        return data({
+          mutateDocumentAsync: settledJob(
+            variables.documentIdentifier as string,
+          ),
+        });
       case "MutateDocumentWithOperations": {
         const id = variables.documentIdentifier as string;
         return data({
@@ -134,6 +186,11 @@ export function switchboard(
             })),
           },
         });
+      case "GetJobStatus": {
+        // Every job this stub hands out settled at once, named `job-<documentId>`.
+        const jobId = variables.jobId as string;
+        return data({ jobStatus: settledJob(jobId.replace(/^job-/, "")) });
+      }
       case "FindDocuments":
         return data({
           findDocuments: {
@@ -149,6 +206,16 @@ export function switchboard(
             cursor: null,
           },
         });
+      // The router reads a drive's nodes through the node queries; the stub's
+      // drives hold no nodes.
+      case "GetDriveNodes":
+        return data({
+          driveNodes: { results: [], nextCursor: null, hasMore: false },
+        });
+      case "GetDriveNode":
+        return data({ driveNode: null });
+      case "GetDriveDescendants":
+        return data({ driveDescendants: [] });
       default:
         throw new Error(`unexpected operation ${received.body.operationName}`);
     }
@@ -177,6 +244,7 @@ export async function serve(
           body: JSON.stringify({ errors: [{ message: String(error) }] }),
         };
       }
+      if (answer === HANG) return;
       response.writeHead(answer.status, {
         "content-type": "application/json; charset=utf-8",
       });
@@ -191,7 +259,10 @@ export async function serve(
     url: `http://127.0.0.1:${port}/graphql`,
     received,
     close: () =>
-      new Promise<void>((resolve) => instance.close(() => resolve())),
+      new Promise<void>((resolve) => {
+        instance.close(() => resolve());
+        instance.closeAllConnections();
+      }),
   };
 }
 

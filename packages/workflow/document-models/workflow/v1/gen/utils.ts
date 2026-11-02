@@ -52,6 +52,7 @@ export const initialGlobalState: WorkflowGlobalState = {
   published: null,
   lastRunAt: null,
   lastRunStatus: null,
+  managedBy: null,
 };
 export const initialLocalState: WorkflowLocalState = {};
 

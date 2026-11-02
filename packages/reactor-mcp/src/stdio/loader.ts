@@ -57,6 +57,8 @@ export class VitePackageLoader implements IPackageLoader {
       logLevel: "info",
       server: {
         hmr: false,
+        // No WebSocket port (24678 by default) to collide on.
+        ws: false,
         middlewareMode: true,
         warmup: {
           ssrFiles: [this.fullPath],

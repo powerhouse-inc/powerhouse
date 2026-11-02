@@ -2,6 +2,7 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import { describe, expect, it } from "vitest";
 import {
+  featureFlagFingerprint,
   FLAG_PREREQUISITES,
   resolveFeatureFlags,
   validateFeatureFlags,
@@ -74,6 +75,7 @@ describe("feature flag validation", () => {
       "authEnforcement",
       "authGroups",
       "authConditions",
+      "undoV3",
     ]);
   });
 
@@ -177,6 +179,7 @@ describe("resolveFeatureFlags", () => {
       authEnforcement: false,
       authGroups: false,
       authConditions: false,
+      undoV3: true,
     });
     expect(resolveFeatureFlags({})).toEqual(resolveFeatureFlags());
   });
@@ -187,6 +190,7 @@ describe("resolveFeatureFlags", () => {
       authEnforcement: false,
       authGroups: false,
       authConditions: false,
+      undoV3: true,
     });
   });
 
@@ -215,8 +219,34 @@ describe("resolveFeatureFlags", () => {
       authEnforcement: true,
       authGroups: false,
       authConditions: false,
+      undoV3: true,
     });
 
     module.reactor.kill();
+  });
+});
+
+describe("featureFlagFingerprint", () => {
+  const defaults = resolveFeatureFlags();
+
+  it("lists the flags that differ from the defaults", () => {
+    expect(featureFlagFingerprint({})).toBe("");
+    expect(featureFlagFingerprint(defaults)).toBe("");
+    expect(featureFlagFingerprint({ undoV3: undefined })).toBe("");
+    expect(
+      featureFlagFingerprint({
+        authEnforcement: true,
+        documentDecisions: true,
+      }),
+    ).toBe("authEnforcement,documentDecisions");
+    expect(featureFlagFingerprint({ multiReactor: true })).toBe("multiReactor");
+  });
+
+  it("tells an unset flag from one turned from its default", () => {
+    const turned = { undoV3: !defaults.undoV3 };
+    expect(featureFlagFingerprint(turned)).not.toBe(featureFlagFingerprint({}));
+    expect(featureFlagFingerprint(turned)).toBe(
+      defaults.undoV3 ? "!undoV3" : "undoV3",
+    );
   });
 });

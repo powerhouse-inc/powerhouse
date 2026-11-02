@@ -112,6 +112,8 @@ test.describe("document erasure", () => {
         {
           origin: "http://localhost:3001",
           localStorage: [
+            // The tab's own reactor holds the copy to erase; Studio's remote client has none.
+            { name: "ph:reactorClient", value: "in-process" },
             { name: "/:display-cookie-banner", value: "false" },
             {
               name: "/:acceptedCookies",

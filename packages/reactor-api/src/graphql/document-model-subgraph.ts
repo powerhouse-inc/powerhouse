@@ -11,9 +11,9 @@ import { GraphQLError, Kind, parse } from "graphql";
 import { optionalOneOf, requireOneOf } from "./argument-aliases.js";
 import {
   documentModelSubgraphTypes,
-  getDocumentModelSchemaName,
   getDocumentModelSubgraphName,
 } from "../utils/create-schema.js";
+import { getDocumentModelSchemaName } from "./model-schema-templates.js";
 import type { CanonicalDocumentId } from "../services/authorization.service.js";
 import { BaseSubgraph } from "./base-subgraph.js";
 import { toGqlPhDocument } from "./reactor/adapters.js";
@@ -225,12 +225,10 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     return { ...page, items: await this.readableByHost(page.items, ctx) };
   }
 
-  /**
-   * Generate __resolveType functions for union types found in the document model schema.
-   * Parses the state schema to find union definitions and their member types,
-   * then uses unique field presence to discriminate between member types at runtime.
-   */
-  private generateUnionResolvers(): Record<string, DocumentModelResolverMap> {
+  private generateAbstractTypeResolvers(): Record<
+    string,
+    DocumentModelResolverMap
+  > {
     const documentName = getDocumentModelSchemaName(
       this.documentModel.documentModel.global,
     );
@@ -251,24 +249,54 @@ export class DocumentModelSubgraph extends BaseSubgraph {
       return {};
     }
 
-    // Build map: object type name -> field names
+    // Object type name -> its fields and interfaces, union name -> its
+    // members; extensions included.
     const objectFieldsMap = new Map<string, string[]>();
+    const objectInterfaces = new Map<string, string[]>();
+    const unionMembers = new Map<string, string[]>();
     for (const def of ast.definitions) {
-      if (def.kind === Kind.OBJECT_TYPE_DEFINITION) {
-        objectFieldsMap.set(
-          def.name.value,
-          def.fields?.map((f) => f.name.value) ?? [],
-        );
+      if (
+        def.kind === Kind.UNION_TYPE_DEFINITION ||
+        def.kind === Kind.UNION_TYPE_EXTENSION
+      ) {
+        unionMembers.set(def.name.value, [
+          ...(unionMembers.get(def.name.value) ?? []),
+          ...(def.types?.map((t) => t.name.value) ?? []),
+        ]);
+      }
+      if (
+        def.kind === Kind.OBJECT_TYPE_DEFINITION ||
+        def.kind === Kind.OBJECT_TYPE_EXTENSION
+      ) {
+        const name = def.name.value;
+        objectFieldsMap.set(name, [
+          ...(objectFieldsMap.get(name) ?? []),
+          ...(def.fields?.map((f) => f.name.value) ?? []),
+        ]);
+        objectInterfaces.set(name, [
+          ...(objectInterfaces.get(name) ?? []),
+          ...(def.interfaces?.map((i) => i.name.value) ?? []),
+        ]);
       }
     }
 
     const resolvers: Record<string, DocumentModelResolverMap> = {};
 
     for (const def of ast.definitions) {
-      if (def.kind !== Kind.UNION_TYPE_DEFINITION) continue;
+      if (
+        def.kind !== Kind.UNION_TYPE_DEFINITION &&
+        def.kind !== Kind.INTERFACE_TYPE_DEFINITION
+      ) {
+        continue;
+      }
 
-      const unionName = def.name.value;
-      const memberTypes = def.types?.map((t) => t.name.value) ?? [];
+      const abstractName = def.name.value;
+      const memberTypes =
+        def.kind === Kind.UNION_TYPE_DEFINITION
+          ? (unionMembers.get(abstractName) ?? [])
+          : [...objectInterfaces]
+              .filter(([, interfaces]) => interfaces.includes(abstractName))
+              .map(([objectName]) => objectName);
       if (memberTypes.length === 0) continue;
 
       // Compute unique fields per member type
@@ -283,10 +311,14 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         uniqueFields[memberType] = ownFields.filter((f) => !otherFields.has(f));
       }
 
-      const prefixedUnionName = `${documentName}_${unionName}`;
-
-      resolvers[prefixedUnionName] = {
+      resolvers[`${documentName}_${abstractName}`] = {
         __resolveType: (obj: Record<string, unknown>) => {
+          const declared = memberTypes.find(
+            (memberType) =>
+              obj.__typename === memberType ||
+              obj.__typename === `${documentName}_${memberType}`,
+          );
+          if (declared) return `${documentName}_${declared}`;
           for (const memberType of memberTypes) {
             const fields = uniqueFields[memberType] ?? [];
             if (fields.length > 0 && fields.some((f) => f in obj)) {
@@ -318,7 +350,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         ) ?? [];
 
     return {
-      ...this.generateUnionResolvers(),
+      ...this.generateAbstractTypeResolvers(),
       Query: {
         // Namespace resolver: returns empty object so nested field resolvers can run
         [documentName]: () => ({}),

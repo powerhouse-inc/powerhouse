@@ -22,6 +22,7 @@ import type { IAttachmentAccessService } from "./services/attachment-access.serv
 import type { IAttachmentClientProvider } from "./services/authorized-attachment.service.js";
 import type { IAuthorizationService } from "./services/authorization.service.js";
 import type { AuthService } from "./services/auth.service.js";
+import type { ReadableDocumentsLike } from "./services/readable-documents.js";
 export type {
   IPackageLoader,
   IPackageLoaderOptions,
@@ -52,6 +53,8 @@ export type ReadinessGate = {
 
 export type API = {
   httpAdapter: IHttpAdapter;
+  /** The port the HTTP server bound; the ephemeral one when 0 was requested. */
+  port: number;
   /** The listening server, for host-side observers such as request load. */
   httpServer: http.Server;
   /** Hands each package a namespaced slice of the HTTP surface. */
@@ -80,6 +83,12 @@ export type API = {
   /** The read-model relational store, for the same host-composed component:
    * its tables belong in this database and nothing else hands one over. */
   relationalDb: IRelationalDb;
+  /**
+   * The readable-documents read model: the host ACL's read closure in the
+   * relational store, for index subgraphs to join on. Maintained by the API
+   * and stopped with it.
+   */
+  readableDocuments: ReadableDocumentsLike;
   /** Present when the host serves inspection; `facts` takes late-bound facts. */
   inspection?: IReactorInspectionSource;
   /**

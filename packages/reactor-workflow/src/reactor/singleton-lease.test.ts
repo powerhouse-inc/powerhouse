@@ -275,6 +275,40 @@ describe("the workflow singleton lease", () => {
     expect(rebooted.owner).toBe(owner);
     expect(await rebooted.heartbeat()).toBe(true);
   });
+
+  it("takes back its own lease at once when nobody else can open the journal", async () => {
+    const { relationalDb } = fixture();
+    const claim = {
+      relationalDb,
+      logger: silent,
+      storageId: "/home/me/.ph/read-storage",
+      selfFence: false,
+      exclusive: true,
+    };
+    await acquireWorkflowSingletonLease(claim);
+
+    const rebooted = await acquireWorkflowSingletonLease(claim);
+
+    expect(await rebooted.heartbeat()).toBe(true);
+  });
+
+  it("keeps someone else's lease, even with the journal to itself", async () => {
+    const { relationalDb } = fixture();
+    await acquireWorkflowSingletonLease({
+      relationalDb,
+      logger: silent,
+      owner: "someone-else",
+    });
+
+    await expect(
+      acquireWorkflowSingletonLease({
+        relationalDb,
+        logger: silent,
+        owner: "me",
+        exclusive: true,
+      }),
+    ).rejects.toThrow(WorkflowSingletonConflictError);
+  });
 });
 
 // A rolling deploy under a stable PH_WORKFLOWS_SINGLETON_OWNER: the old pod and

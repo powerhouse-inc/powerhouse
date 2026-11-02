@@ -6,7 +6,7 @@ export default {
   runner: { module: "@powerhousedao/ph-cli/runners/connect" },
   reactor: {
     backends: {
-      sb: { kind: "remote", remote: { url: switchboard.endpoints.graphql } },
+      sb: { kind: "remote", remote: { url: switchboard.drives.inv.url } },
     },
   },
 };

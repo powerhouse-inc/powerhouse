@@ -19,6 +19,7 @@ import {
   type RunsScope,
   type RuntimeClient,
   type SecretStat,
+  type WaitingRunsScope,
 } from "./runtime-client.js";
 import {
   openIdbCacheStore,
@@ -34,6 +35,7 @@ import {
   runQuery,
   runsQuery,
   secretStatQuery,
+  waitingRunsQuery,
 } from "./runtime-queries.js";
 import {
   PieceSourceProvider,
@@ -161,16 +163,38 @@ export function useRunPagesQuery(
   );
 }
 
+// A suspended run changes when someone decides, so it is polled slowly.
+const WAITING_RUN_POLL_MS = 30_000;
+
 // One run with its steps' input and output; polled until it finishes.
 export function useRunQuery(runId: string, options: { pollMs?: number } = {}) {
   const { client, queryClient } = useRuntime();
   return useQuery(
     {
       ...runQuery(client, runId),
-      refetchInterval: (query) =>
-        options.pollMs && query.state.data?.endedAt == null
-          ? options.pollMs
-          : false,
+      refetchInterval: (query) => {
+        const data = query.state.data;
+        if (!options.pollMs || data?.endedAt != null) return false;
+        return data?.status === "WAITING"
+          ? Math.max(options.pollMs, WAITING_RUN_POLL_MS)
+          : options.pollMs;
+      },
+    },
+    queryClient,
+  );
+}
+
+// Runs paused at a waitpoint, polled while `active`.
+export function useWaitingRunsQuery(
+  scope: WaitingRunsScope,
+  options: { active?: boolean; pollMs?: number } = {},
+) {
+  const { client, queryClient } = useRuntime();
+  return useQuery(
+    {
+      ...waitingRunsQuery(client, scope),
+      enabled: options.active ?? true,
+      refetchInterval: options.pollMs ?? false,
     },
     queryClient,
   );
@@ -247,8 +271,22 @@ export function useRuntimeActions() {
       fireWorkflow: (workflowId: string, payload?: unknown) =>
         client.fireWorkflow(workflowId, payload).finally(runsChanged),
       rerunRun: (runId: string) => client.rerunRun(runId).finally(runsChanged),
-      createSecret: (value: string, label?: string) =>
-        client.createSecret(value, label).then(secretSaved),
+      resolveWaitpoint: (
+        waitpoint: { id: string; runId: string },
+        approved: boolean,
+        reason?: string,
+      ) =>
+        client.resolveWaitpoint(waitpoint.id, approved, reason).finally(() => {
+          runsChanged();
+          invalidate(runtimeKeys.run(client.url, waitpoint.runId));
+        }),
+      cancelRun: (runId: string) =>
+        client.cancelRun(runId).finally(() => {
+          runsChanged();
+          invalidate(runtimeKeys.run(client.url, runId));
+        }),
+      createSecret: (documentId: string, value: string, label?: string) =>
+        client.createSecret(documentId, value, label).then(secretSaved),
       rotateSecret: (ref: string, value: string) =>
         client.rotateSecret(ref, value).then(secretSaved),
       checkConnection: (connectionId: string) =>

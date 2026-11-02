@@ -216,6 +216,11 @@ export const connectAppSchema = z
         "Studio mode. Enables builder-only capabilities: Connect loads the vetra package and exposes DocumentModel (and vetra spec types) as creatable documents. Forced on by `ph vetra` / `ph connect studio`; false by default.",
       default: false,
     }),
+    cookieBanner: z.boolean().optional().meta({
+      description:
+        "Show the analytics cookie consent banner on a first visit, when a plugin that needs consent (Sentry, OpenPanel) is active. When false, no banner is shown and analytics consent stays rejected. `ph vetra` turns it off for its local Studio; true by default.",
+      default: true,
+    }),
     workflowsEnabled: z
       .boolean()
       .optional()
@@ -549,9 +554,13 @@ export const connectReactorFeatureFlagsSchema = z
         "Evaluate `where` and `match` conditions on grants. Requires authGroups. Do not enable on a fleet `preflight:auth` reports as crossing a reducer version.",
       default: false,
     }),
+    undoV3: z.boolean().optional().meta({
+      description:
+        "Support base-reducer 3 (id-targeted undo), which new documents then take. A peer without it is held from base-reducer 3 documents until it upgrades. Unset leaves the reactor's default.",
+    }),
   })
   .describe(
-    "Enforcement flags. Each implies its predecessors, and the reactor refuses to boot on a set that names a later flag without an earlier one. These are consensus settings: a Connect syncing with a fleet must carry the same flags the fleet does, or the two reach different replay outcomes for the same history and diverge.",
+    "Reactor feature flags. The four enforcement flags each imply their predecessors, and the reactor refuses to boot on a set that names a later one without an earlier one. They are consensus settings: a Connect syncing with a fleet must carry the same enforcement flags the fleet does, or the two reach different replay outcomes for the same history and diverge. undoV3 has no prerequisites; peers negotiate it.",
   );
 
 export const connectReactorSchema = z
@@ -861,10 +870,84 @@ export const connectCompositionEntrySchema = z.strictObject({
   config: z.record(z.string(), z.unknown()).optional(),
 });
 
-/** `instance` plus `reactorClient`, derived from the host's reactor backends. */
+/** A switchboard Connect routes to, from one of the host's remote backends. */
+export const connectRemoteBackendSchema = z.strictObject({
+  name: z.string().min(1).describe("The backend's key in the host config."),
+  url: z
+    .string()
+    .describe("A drive address on the switchboard: <switchboard>/d/<slug>."),
+  requestTimeoutMs: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe("Give up on one request after this long. Default 30000."),
+  breaker: z
+    .union([
+      z.literal(false),
+      z.strictObject({
+        failures: z.number().int().min(1).optional(),
+        openMs: z.number().int().nonnegative().optional(),
+      }),
+    ])
+    .optional()
+    .describe(
+      "After `failures` failed requests in a row, send nothing for `openMs`. false: never stop trying.",
+    ),
+  realtime: z
+    .boolean()
+    .optional()
+    .describe("Live updates over a socket. Default true."),
+});
+
+/** The router settings a host sets for Connect. */
+export const connectRouterSettingsSchema = z.strictObject({
+  newDrives: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "The remoteBackends[].name new drives are created on, with no copy in this browser. Absent: the browser reactor, else the only switchboard.",
+    ),
+  probeTimeoutMs: z.number().int().nonnegative().optional(),
+  provisionalRouteMs: z.number().int().nonnegative().optional(),
+});
+
+/** `sync: false` keeps no copy in this browser; unset means true. */
+export const connectCollectionSchema = z.strictObject({
+  backend: z.string().min(1),
+  sync: z.boolean().optional(),
+});
+
+/** `collections` holds placed drives that are not default drives, keyed by declared slug. */
 export const connectRuntimeInstanceSchema = connectInstanceSchema.extend({
   reactorClient: connectReactorClientModeSchema.optional(),
+  remoteBackends: z.array(connectRemoteBackendSchema).optional(),
+  collections: z.record(z.string(), connectCollectionSchema).optional(),
+  router: connectRouterSettingsSchema.optional(),
 });
+
+/** A remote default drive plus the backend serving it. */
+export const connectRuntimeDefaultDriveRemoteSchema =
+  connectDefaultDriveRemoteSchema.extend({
+    backend: z.string().min(1).optional(),
+    sync: z.boolean().optional(),
+  });
+
+export const connectRuntimeDefaultDriveSchema = z.union([
+  connectRuntimeDefaultDriveRemoteSchema,
+  connectDefaultDriveLocalSchema,
+]);
+
+export const connectRuntimeDrivesSchema = withMetaOf(
+  connectDrivesSchema.extend({
+    defaultDrives: withMetaOf(
+      z.array(connectRuntimeDefaultDriveSchema).optional(),
+      connectDrivesSchema.shape.defaultDrives,
+    ),
+  }),
+  connectDrivesSchema,
+);
 
 /** The manifest plus `categories`, derived from contributors' `category`. */
 export const connectRuntimePwaManifestSchema = connectPwaManifestSchema.extend({
@@ -878,6 +961,7 @@ export const connectRuntimePwaSchema = connectPwaSchema.extend({
 /** The served `connect` block (runtime powerhouse.config.json). */
 export const connectRuntimeConfigSchema = connectConfigSchema.extend({
   composition: z.array(connectCompositionEntrySchema).optional(),
+  drives: connectRuntimeDrivesSchema.optional(),
   instance: connectRuntimeInstanceSchema.optional(),
   pwa: connectRuntimePwaSchema.optional(),
 });

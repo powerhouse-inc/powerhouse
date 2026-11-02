@@ -15,6 +15,7 @@ const DURABLE = {
   fsync: true,
   maintenanceIntervalMs: 0,
   vacuumFullAboveBytes: 0,
+  rewriteQuietMs: 0,
 };
 
 describe("ThreadedPGlite over DurableNodeFs", () => {
@@ -44,6 +45,45 @@ describe("ThreadedPGlite over DurableNodeFs", () => {
     open.push(pg);
     return pg;
   }
+
+  it(
+    "rewrites a table inside the worker, beside its queue",
+    async () => {
+      const pg = start(await tempDir());
+      await pg.waitReady;
+      await pg.exec("create table kept (id int primary key, doc text)");
+      await pg.query("insert into kept values ($1, $2)", [1, "x".repeat(5000)]);
+
+      const result = await pg.rewriteTable({
+        schema: "public",
+        table: "kept",
+        requiredFreeBytes: 0,
+      });
+
+      expect(result).toMatchObject({ outcome: "done" });
+      const { rows } = await pg.query<{ id: number }>("select id from kept");
+      expect(rows).toEqual([{ id: 1 }]);
+    },
+    BOOT_TIMEOUT_MS,
+  );
+
+  it(
+    "refuses a rewrite on a store in memory",
+    async () => {
+      const pg = startThreadedPGlite();
+      open.push(pg);
+      await pg.waitReady;
+
+      const result = await pg.rewriteTable({
+        schema: "public",
+        table: "kept",
+        requiredFreeBytes: 0,
+      });
+
+      expect(result).toMatchObject({ outcome: "refused" });
+    },
+    BOOT_TIMEOUT_MS,
+  );
 
   it(
     "persists across a close and a new worker on the same dir",

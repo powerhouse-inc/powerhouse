@@ -24,7 +24,8 @@ const SOURCE = readFileSync(
 const schema = buildSchema(SOURCE);
 
 /**
- * The SDL before the read/write split, sorted. The only change the split may
+ * The SDL before the read/write split, with the `undoRedoTargets` query,
+ * sorted. The only change the split may
  * make to the wire is {@link CONSISTENCY_FIELDS} taking a `consistency`
  * argument and the two input types it needs.
  */
@@ -43,14 +44,30 @@ const CONSISTENCY_FIELDS = [
 
 const ADDED_TYPES = ["ConsistencyCoordinateInput", "ConsistencyTokenInput"];
 
-/** The schema with exactly the allowed addition taken out again. */
+/** The drive node queries, added after the split, and the types they return. */
+const NODE_QUERY_FIELDS = ["driveDescendants", "driveNode", "driveNodes"];
+
+const NODE_QUERY_TYPES = [
+  "DriveFileNode",
+  "DriveFolderNode",
+  "DriveNode",
+  "DriveNodeKind",
+  "DriveNodePage",
+];
+
+/** The schema with exactly the allowed additions taken out again. */
 function withoutTheAddition(source: string): GraphQLSchema {
   let inQuery = false;
   const stripped = visit(parse(source), {
     InputObjectTypeDefinition: (node) =>
       ADDED_TYPES.includes(node.name.value) ? null : undefined,
+    EnumTypeDefinition: (node) =>
+      NODE_QUERY_TYPES.includes(node.name.value) ? null : undefined,
+    UnionTypeDefinition: (node) =>
+      NODE_QUERY_TYPES.includes(node.name.value) ? null : undefined,
     ObjectTypeDefinition: {
       enter: (node) => {
+        if (NODE_QUERY_TYPES.includes(node.name.value)) return null;
         inQuery = node.name.value === "Query";
       },
       leave: () => {
@@ -58,6 +75,9 @@ function withoutTheAddition(source: string): GraphQLSchema {
       },
     },
     FieldDefinition: (node) => {
+      if (inQuery && NODE_QUERY_FIELDS.includes(node.name.value)) {
+        return null;
+      }
       if (!inQuery || !CONSISTENCY_FIELDS.includes(node.name.value)) {
         return undefined;
       }
@@ -85,7 +105,7 @@ function fieldTypes(
 }
 
 describe("reactor schema", () => {
-  it("is the baseline plus the consistency argument and nothing else", () => {
+  it("is the baseline plus the consistency argument and the drive node queries, nothing else", () => {
     // Both sides printed the same way, so a formatter touching the baseline
     // file changes nothing.
     expect(

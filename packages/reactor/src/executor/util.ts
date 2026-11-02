@@ -1,7 +1,6 @@
 import type {
   Action,
-  CreateDocumentAction,
-  CreateDocumentActionInput,
+  DeleteDocumentActionInput,
   Operation,
   OperationWithContext,
   PHDocument,
@@ -9,8 +8,6 @@ import type {
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
-  createPresignedHeader,
-  defaultBaseState,
   deriveOperationId,
   DOCUMENT_DELETED_REASON,
   DOCUMENT_SCOPE_ACTION_TYPES,
@@ -69,66 +66,6 @@ export type TargetedAction = {
   type: string;
   input: unknown;
 };
-
-/**
- * Creates a PHDocument from a CREATE_DOCUMENT action input.
- * Reconstructs the document header and initializes the base state.
- *
- * @param action - The CREATE_DOCUMENT action containing the document parameters
- * @returns A newly constructed PHDocument with initialized header and base state
- */
-export function createDocumentFromAction(
-  action: CreateDocumentAction,
-): PHDocument {
-  const input = action.input as CreateDocumentActionInput;
-
-  // Reconstruct the document from CreateDocumentActionInput
-  const header = createPresignedHeader();
-  header.id = input.documentId;
-  header.documentType = input.model;
-
-  if (input.signing) {
-    header.createdAtUtcIso = input.signing.createdAtUtcIso;
-    header.lastModifiedAtUtcIso = input.signing.createdAtUtcIso;
-    header.sig = {
-      publicKey: input.signing.publicKey,
-      nonce: input.signing.nonce,
-    };
-  }
-
-  // Populate optional mutable header fields
-  if (input.slug !== undefined) {
-    header.slug = input.slug;
-  }
-  // Default slug to document ID if empty (matching legacy behavior)
-  if (!header.slug) {
-    header.slug = input.documentId;
-  }
-  if (input.name !== undefined) {
-    header.name = input.name;
-  }
-  if (input.branch !== undefined) {
-    header.branch = input.branch;
-  }
-  if (input.meta !== undefined) {
-    header.meta = input.meta;
-  }
-  if (input.protocolVersions !== undefined) {
-    header.protocolVersions = input.protocolVersions;
-  }
-
-  // A placeholder: UPGRADE_DOCUMENT writes the model's real initial values.
-  const baseState = defaultBaseState();
-  const document: PHDocument = {
-    header,
-    operations: {},
-    state: baseState,
-    initialState: baseState,
-    clipboard: [],
-  };
-
-  return document;
-}
 
 /**
  * Calculate the next operation index for a specific scope.
@@ -386,6 +323,24 @@ export function summarizeSubmittedActions(
   };
 }
 
+/** Whether a DELETE_DOCUMENT the job was given took effect. */
+export function deletedADocument(
+  operations: OperationWithContext[],
+  submitted: string[] | undefined,
+): boolean {
+  if (!submitted || submitted.length === 0) {
+    return false;
+  }
+
+  const ids = new Set(submitted);
+  return operations.some(
+    ({ operation }) =>
+      ids.has(operation.action.id) &&
+      operation.action.type === "DELETE_DOCUMENT" &&
+      operationOutcome(operation).kind === "applied",
+  );
+}
+
 /** Tombstones a job has read, each under the shared lock it took first. */
 export class PurgeFence {
   constructor(
@@ -547,6 +502,7 @@ const IDENTITY_ACTIONS: ReadonlySet<string> = new Set([
   "CREATE_DOCUMENT",
   "UPGRADE_DOCUMENT",
   "DELETE_DOCUMENT",
+  "SET_SLUG",
 ]);
 
 /**
@@ -559,22 +515,31 @@ export function writeIdentityRows(
 ): WriteIdentityUpsert[] {
   const rows: WriteIdentityUpsert[] = [];
   for (const { operation, context } of operations) {
-    if (context.scope !== "document") continue;
-    if (!IDENTITY_ACTIONS.has(operation.action.type)) continue;
+    const { type } = operation.action;
+    if (context.scope !== "document" && type !== "SET_SLUG") continue;
+    if (!IDENTITY_ACTIONS.has(type)) continue;
     if (isPurgeMarker(operation) || isDenied(operation)) continue;
     if (!context.resultingState) continue;
 
     const state = JSON.parse(context.resultingState) as Record<string, unknown>;
     const identity = identityFromDocumentState(state);
     const isDeleted = isDeletedDocumentState(state);
+    const keptByDelete =
+      isDeleted &&
+      (operation.action.input as DeleteDocumentActionInput).keepSlug === true;
     rows.push({
       documentId: context.documentId,
       branch: context.branch,
-      slug: isDeleted
-        ? null
-        : resolvableSlug(identity.slug, context.documentId),
+      slug:
+        isDeleted && !keptByDelete
+          ? null
+          : resolvableSlug(identity.slug, context.documentId),
       documentType: identity.documentType ?? context.documentType,
       isDeleted,
+      // Both echo the slug the document was created with, not its current one.
+      ...(keptByDelete || type === "UPGRADE_DOCUMENT"
+        ? { keepSlug: true }
+        : {}),
     });
   }
   return rows;

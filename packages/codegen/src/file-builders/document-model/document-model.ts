@@ -20,10 +20,16 @@ import {
   unique,
   uniqueBy,
 } from "remeda";
-import { documentModelsTemplate, upgradeManifestsTemplate } from "templates";
+import {
+  documentModelsIndexTemplate,
+  documentModelsTemplate,
+  resolveModuleErrors,
+  upgradeManifestsTemplate,
+} from "templates";
 import { SyntaxKind, type Project } from "ts-morph";
 import {
   ensureDirectoriesExist,
+  formatJson,
   formatSourceFileWithPrettier,
   getInitialStates,
   getOrCreateDirectory,
@@ -31,6 +37,7 @@ import {
   getVariableDeclarationByTypeName,
 } from "utils";
 import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
+import { assertProjectScalarsModuleExists } from "../../codegen/project-scalars.js";
 import {
   makeDocumentModelDocumentTypeFile,
   makeDocumentModelGenActionsFile,
@@ -84,6 +91,11 @@ export async function tsMorphGenerateDocumentModel(
   );
   const documentModelsDirPath = documentModelsDir.getPath();
   const projectDir = documentModelsDir.getParentOrThrow().getPath();
+  assertProjectScalarsModuleExists({
+    modelName: name,
+    specifications,
+    projectDir,
+  });
   const documentModelDirName = kebabCase(name);
   const documentModelDirPath = join(
     documentModelsDirPath,
@@ -122,6 +134,14 @@ export async function tsMorphGenerateDocumentModel(
       "Document model has incorrect version at the latest version index",
     );
   }
+
+  // Throws on an error name defined with two codes, before anything is written.
+  const errorWarnings = new Set(
+    specifications.flatMap(({ modules }) =>
+      modules.flatMap((module) => resolveModuleErrors(module).warnings),
+    ),
+  );
+  for (const warning of errorWarnings) console.warn(`⚠ ${warning}`);
 
   await writeDocumentModelStateJsonFile({
     documentModelState,
@@ -374,7 +394,7 @@ async function makeDocumentModelsIndexFile(args: {
   const { project, documentModelsDirPath } = args;
   const sourceFile = project.createSourceFile(
     join(documentModelsDirPath, "index.ts"),
-    "",
+    documentModelsIndexTemplate,
     { overwrite: true },
   );
   pipe(
@@ -430,8 +450,10 @@ async function writeDocumentModelStateJsonFile({
   documentModelDirName: string;
 }) {
   const filePath = join(documentModelDirPath, `${documentModelDirName}.json`);
-  const documentModelStateJson = JSON.stringify(documentModelState, null, 2);
-  await writeFile(filePath, documentModelStateJson);
+  await writeFile(
+    filePath,
+    await formatJson(`${documentModelDirName}.json`, documentModelState),
+  );
 }
 
 async function makeDocumentModelIndexFile(args: {

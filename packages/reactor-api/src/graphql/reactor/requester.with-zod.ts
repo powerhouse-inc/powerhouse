@@ -18,12 +18,16 @@ import {
   DocumentRelationshipResultPageDTO,
   DocumentWithChildrenAndOperationsDTO,
   DocumentWithChildrenDTO,
+  DriveNodeDTO,
+  DriveNodeListDTO,
+  DriveNodePageDTO,
   JobChangeEventDTO,
   JobInfoFieldsDTO,
   MoveRelationshipResultDTO,
   OperationResultPageDTO,
   PHDocumentDTO,
   PHDocumentResultPageDTO,
+  UndoRedoTargetsDTO,
 } from "./validation.js";
 
 type OperationName = keyof Sdk;
@@ -102,6 +106,33 @@ const operationValidators: OperationValidators = {
   GetCreateDefaults: (data) => {
     if (data.createDefaults) {
       CreateDefaultsDTO.parse(data.createDefaults);
+    }
+  },
+  GetCreateProtocolVersions: (data) => {
+    if (data.createDefaults) {
+      CreateDefaultsDTO.pick({ protocolVersions: true }).parse(
+        data.createDefaults,
+      );
+    }
+  },
+  GetUndoRedoTargets: (data) => {
+    if (data.undoRedoTargets) {
+      UndoRedoTargetsDTO.parse(data.undoRedoTargets);
+    }
+  },
+  GetDriveNodes: (data) => {
+    if (data.driveNodes) {
+      DriveNodePageDTO.parse(data.driveNodes);
+    }
+  },
+  GetDriveNode: (data) => {
+    if (data.driveNode) {
+      DriveNodeDTO.parse(data.driveNode);
+    }
+  },
+  GetDriveDescendants: (data) => {
+    if (data.driveDescendants) {
+      DriveNodeListDTO.parse(data.driveDescendants);
     }
   },
   EvaluateActions: (data) => {

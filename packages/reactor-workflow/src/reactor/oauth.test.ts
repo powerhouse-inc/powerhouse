@@ -1,6 +1,11 @@
 // OAuth2 sign-in end to end: a fixture piece served by a local npm, a real
 // provider token endpoint on loopback, and a PGlite-backed secret store.
+import { readFileSync } from "node:fs";
 import http from "node:http";
+import https from "node:https";
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { AddressInfo } from "node:net";
 import { createHash } from "node:crypto";
 import {
@@ -10,6 +15,7 @@ import {
   type ConnectionDocument,
 } from "@powerhousedao/workflow/document-models/connection";
 import type { Action } from "document-model";
+import type { Kysely } from "kysely";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   createFreshRelationalDb,
@@ -20,12 +26,14 @@ import {
   type PieceSources,
 } from "../../test/helpers/piece-sources.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
+import type { SecretOwner } from "../pieces/index.js";
 import type { WorkflowRuntimeHostDeps } from "./host.js";
 import { resolveConnectionWithSecrets } from "./lib.js";
 import {
   OAUTH_TOKEN,
   OAuthAttemptStore,
   postTokenForm,
+  relayEgress,
   StoreTokenRefresher,
   tokenDue,
   type OAuthTokenSet,
@@ -33,9 +41,16 @@ import {
 import type { WorkflowRuntimeService } from "./service.js";
 
 const PIECE = { name: "@activepieces/piece-oauth-app", version: "1.0.0" };
+// The same app without PKCE of its own, so a test sees who turned it on.
+const NO_PKCE_PIECE = {
+  name: "@activepieces/piece-oauth-no-pkce",
+  version: "1.0.0",
+};
 const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
+const OTHER_CTX = { headers: {}, db: {}, user: { address: "0xdef" } } as never;
 const REDIRECT =
   "https://switchboard.example/api/@powerhousedao/workflow/oauth/callback";
+const RELAY = "https://relay.example/api/oauth/callback";
 const EGRESS_ENV = "PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES";
 
 interface TokenRequest {
@@ -150,6 +165,88 @@ function startProvider() {
   });
 }
 
+const TLS_FIXTURE = (name: string) =>
+  readFileSync(new URL(`../../test/fixtures/tls/${name}`, import.meta.url));
+
+// The relay's token broker on loopback https: it adds the web client's
+// secret itself, so it refuses any request that carries one.
+function startBroker() {
+  const requests: Record<string, string>[] = [];
+  const challenges = new Map<string, string>();
+  const server = https.createServer(
+    {
+      key: TLS_FIXTURE("localhost-key.pem"),
+      cert: TLS_FIXTURE("localhost-cert.pem"),
+    },
+    (req, res) => {
+      let body = "";
+      req.on("data", (chunk: Buffer) => (body += chunk.toString()));
+      req.on("end", () => {
+        const form = Object.fromEntries(new URLSearchParams(body));
+        requests.push(form);
+        const reply = (status: number, json: unknown) => {
+          res.writeHead(status, { "content-type": "application/json" });
+          res.end(JSON.stringify(json));
+        };
+        if (
+          form.client_id !== "relay-cid" ||
+          "client_secret" in form ||
+          req.headers.authorization !== undefined
+        ) {
+          return reply(401, { error: "invalid_client" });
+        }
+        if (form.grant_type === "authorization_code") {
+          const verified =
+            challenges.get(form.code) ===
+            createHash("sha256")
+              .update(String(form.code_verifier))
+              .digest("base64url");
+          if (!verified || form.redirect_uri !== RELAY) {
+            return reply(400, { error: "invalid_grant" });
+          }
+          challenges.delete(form.code);
+          return reply(200, {
+            access_token: "at-relay",
+            refresh_token: "rt-relay",
+            token_type: "Bearer",
+            expires_in: 3600,
+          });
+        }
+        if (
+          form.grant_type === "refresh_token" &&
+          form.refresh_token === "rt-relay"
+        ) {
+          return reply(200, {
+            access_token: "at-relay-refreshed",
+            expires_in: 3600,
+          });
+        }
+        reply(400, { error: "unsupported_grant_type" });
+      });
+    },
+  );
+  return new Promise<{
+    tokenUrl: string;
+    requests: Record<string, string>[];
+    issue(code: string, authorizationUrl: string): void;
+    stop(): Promise<void>;
+  }>((resolve) => {
+    server.listen(0, "127.0.0.1", () => {
+      resolve({
+        tokenUrl: `https://127.0.0.1:${(server.address() as AddressInfo).port}/api/oauth/token`,
+        requests,
+        issue: (code, authorizationUrl) => {
+          challenges.set(
+            code,
+            new URL(authorizationUrl).searchParams.get("code_challenge") ?? "",
+          );
+        },
+        stop: () => new Promise((done) => server.close(() => done())),
+      });
+    });
+  });
+}
+
 // Documents a runtime reads and writes, reduced for real.
 function documentStore() {
   const documents = new Map<string, ConnectionDocument>();
@@ -175,12 +272,16 @@ function documentStore() {
   };
 }
 
+const ownedBy = (documentId: string): SecretOwner => ({
+  documentId,
+  kind: "connection",
+});
+
 describe("OAuth2 sign-in", () => {
   let provider: Awaited<ReturnType<typeof startProvider>>;
   let sources: PieceSources;
   let service: WorkflowRuntimeService;
   let store: ReturnType<typeof documentStore>;
-  let clientSecretRef = "";
   const previousEgress = process.env[EGRESS_ENV];
 
   beforeAll(async () => {
@@ -213,16 +314,38 @@ const app = {
 module.exports = { app };
 `,
         },
+        {
+          ...NO_PKCE_PIECE,
+          code: `
+const app = {
+  displayName: "OAuth App Fixture",
+  actions: {},
+  auth: {
+    type: "OAUTH2",
+    displayName: "Connection",
+    required: true,
+    authUrl: "https://provider.example/{subdomain}/authorize",
+    tokenUrl: "http://127.0.0.1:${provider.port}/{subdomain}/token",
+    scope: ["read", "write"],
+    extra: { include_granted_scopes: "true" },
+    props: {
+      subdomain: { type: "SHORT_TEXT", displayName: "Subdomain", required: true },
+    },
+  },
+};
+module.exports = { app };
+`,
+        },
       ],
     });
     store = documentStore();
     service = testRuntime({
       reactorClient: store.client,
       relationalDb: createTestRelationalDb(),
+      subjectOf: (caller: { user?: { address: string } }) => ({
+        address: caller.user?.address,
+      }),
     } as unknown as WorkflowRuntimeHostDeps);
-    clientSecretRef = (
-      await (await service.secrets()).create({ value: "app-secret" })
-    ).ref;
   });
 
   afterAll(async () => {
@@ -232,12 +355,21 @@ module.exports = { app };
     await provider.stop();
   });
 
-  function connection(config: Record<string, unknown>): string {
+  // The client secret is minted for the connection, as the editor does.
+  async function connection(
+    config: Record<string, unknown>,
+    piece = PIECE.name,
+  ): Promise<string> {
     let document = utils.createDocument();
+    const clientSecretRef = (
+      await (
+        await service.secrets()
+      ).create({ value: "app-secret", ownerId: document.header.id })
+    ).ref;
     document = reducer(
       document,
       actions.setConnector({
-        connectorId: `${PIECE.name}#oauth-app`,
+        connectorId: `${piece}#oauth-app`,
         authType: "OAUTH2",
       }),
     );
@@ -254,8 +386,8 @@ module.exports = { app };
     return document.header.id;
   }
 
-  async function signIn(connectionId: string) {
-    const started = await service.startOAuth(connectionId, CTX, {
+  async function signIn(connectionId: string, ctx = CTX) {
+    const started = await service.startOAuth(connectionId, ctx, {
       redirectUri: REDIRECT,
     });
     provider.issue("code-1", started.authorizationUrl);
@@ -269,7 +401,7 @@ module.exports = { app };
   }
 
   it("sends the user to the provider with the app, scopes and a PKCE challenge", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     const started = await service.startOAuth(id, CTX, {
       redirectUri: REDIRECT,
     });
@@ -289,6 +421,8 @@ module.exports = { app };
       include_granted_scopes: "true",
     });
     expect(url.searchParams.get("code_challenge")).toMatch(/^[\w-]{43}$/);
+    // Its own client: the host's callback and a bare nonce as the state
+    expect(started.state).toMatch(/^[\w-]{43}$/);
     await expect(service.oauthAttempt(started.state, CTX)).resolves.toEqual({
       connectionId: id,
       status: "PENDING",
@@ -298,7 +432,7 @@ module.exports = { app };
   });
 
   it("stores the token, marks the connection OK and shapes it for pieces", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     const { started, result } = await signIn(id);
 
     expect(result).toEqual({ ok: true, detail: null, returnUrl: null });
@@ -340,8 +474,78 @@ module.exports = { app };
     );
   });
 
+  it("refuses a client secret copied from another connection", async () => {
+    const owner = await connection({ client_id: "cid", subdomain: "acme" });
+    const thief = await connection({ client_id: "cid", subdomain: "acme" });
+    const ownerSecret = store.documents
+      .get(owner)!
+      .state.global.secretRefs.find((ref) => ref.name === "client_secret")!;
+    await store.client.execute(thief, "main", [
+      actions.setSecretRef({ ...ownerSecret, id: "sr-secret" }),
+    ]);
+    const before = provider.requests.length;
+
+    const { result } = await signIn(thief);
+
+    expect(result).toMatchObject({
+      ok: false,
+      detail: "This secret belongs to another connection; enter it again",
+    });
+    expect(provider.requests).toHaveLength(before);
+  });
+
+  it("mints its own token rather than rotate one copied from another connection", async () => {
+    const owner = await connection({ client_id: "cid", subdomain: "acme" });
+    await signIn(owner);
+    const ownerToken = store.documents
+      .get(owner)!
+      .state.global.secretRefs.find((ref) => ref.name === OAUTH_TOKEN)!;
+    const secrets = await service.secrets();
+    const before = await secrets.get(ownerToken.ref, ownedBy(owner));
+    const thief = await connection({ client_id: "cid", subdomain: "acme" });
+    await store.client.execute(thief, "main", [
+      actions.setSecretRef(ownerToken),
+    ]);
+
+    await signIn(thief);
+
+    const thiefToken = store.documents
+      .get(thief)!
+      .state.global.secretRefs.find((ref) => ref.name === OAUTH_TOKEN)!;
+    expect(thiefToken.ref).not.toBe(ownerToken.ref);
+    expect((await secrets.stat(thiefToken.ref)).ownerId).toBe(thief);
+    await expect(secrets.get(ownerToken.ref, ownedBy(owner))).resolves.toBe(
+      before,
+    );
+  });
+
+  it("rotates its signer's own token, but mints another user a new one", async () => {
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
+    const token = () =>
+      store.documents
+        .get(id)!
+        .state.global.secretRefs.find((ref) => ref.name === OAUTH_TOKEN)!.ref;
+    const secrets = await service.secrets();
+
+    await signIn(id);
+    const first = token();
+    expect((await secrets.stat(first)).createdBy).toBe("0xabc");
+    await signIn(id);
+    expect(token()).toBe(first);
+    expect((await secrets.stat(first)).version).toBe(2);
+
+    await signIn(id, OTHER_CTX);
+    expect(token()).not.toBe(first);
+    expect(await secrets.stat(token())).toMatchObject({
+      ownerId: id,
+      createdBy: "0xdef",
+      version: 1,
+    });
+    expect((await secrets.stat(first)).version).toBe(2);
+  });
+
   it("uses a state once", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     const { started } = await signIn(id);
     const before = provider.requests.length;
     await expect(
@@ -354,7 +558,7 @@ module.exports = { app };
   });
 
   it("records the provider's refusal on the attempt, not the connection", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     const started = await service.startOAuth(id, CTX, {
       redirectUri: REDIRECT,
     });
@@ -373,7 +577,7 @@ module.exports = { app };
   });
 
   it("refuses a token for an app the connection no longer names", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     const started = await service.startOAuth(id, CTX, {
       redirectUri: REDIRECT,
     });
@@ -389,25 +593,27 @@ module.exports = { app };
   });
 
   it("asks for the app before signing in", async () => {
-    const id = connection({ subdomain: "acme" });
+    const id = await connection({ subdomain: "acme" });
     await expect(
       service.startOAuth(id, CTX, { redirectUri: REDIRECT }),
     ).rejects.toThrow("Set the client ID before connecting");
-    const noSubdomain = connection({ client_id: "cid" });
+    const noSubdomain = await connection({ client_id: "cid" });
     await expect(
       service.startOAuth(noSubdomain, CTX, { redirectUri: REDIRECT }),
     ).rejects.toThrow('Set "subdomain" before connecting');
   });
 
   it("refreshes a token close to expiry and keeps its refresh token", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     await signIn(id);
     const document = store.documents.get(id)!;
     const tokenRef = document.state.global.secretRefs.find(
       (ref) => ref.name === OAUTH_TOKEN,
     )!.ref;
     const secrets = await service.secrets();
-    const stored = JSON.parse(await secrets.get(tokenRef)) as OAuthTokenSet;
+    const stored = JSON.parse(
+      await secrets.get(tokenRef, ownedBy(id)),
+    ) as OAuthTokenSet;
     await secrets.rotate(
       tokenRef,
       JSON.stringify({ ...stored, claimed_at: stored.claimed_at - 3500 }),
@@ -433,7 +639,9 @@ module.exports = { app };
     ]);
     expect(first.auth).toMatchObject({ access_token: "at-refreshed-1" });
     expect(second.auth).toMatchObject({ access_token: "at-refreshed-1" });
-    const refreshed = JSON.parse(await secrets.get(tokenRef)) as OAuthTokenSet;
+    const refreshed = JSON.parse(
+      await secrets.get(tokenRef, ownedBy(id)),
+    ) as OAuthTokenSet;
     expect(refreshed).toMatchObject({
       access_token: "at-refreshed-1",
       refresh_token: "rt-1",
@@ -442,14 +650,16 @@ module.exports = { app };
   });
 
   it("drops a refresh that a newer sign-in overtook", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     await signIn(id);
     const document = store.documents.get(id)!;
     const tokenRef = document.state.global.secretRefs.find(
       (ref) => ref.name === OAUTH_TOKEN,
     )!.ref;
     const secrets = await service.secrets();
-    const stored = JSON.parse(await secrets.get(tokenRef)) as OAuthTokenSet;
+    const stored = JSON.parse(
+      await secrets.get(tokenRef, ownedBy(id)),
+    ) as OAuthTokenSet;
     await secrets.rotate(
       tokenRef,
       JSON.stringify({
@@ -463,10 +673,13 @@ module.exports = { app };
     });
 
     const held = provider.holdSlowRefresh();
-    const refreshing = refresher.refreshIfDue({
-      config: document.state.global.config as Record<string, unknown>,
-      secretRefs: document.state.global.secretRefs,
-    });
+    const refreshing = refresher.refreshIfDue(
+      {
+        config: document.state.global.config as Record<string, unknown>,
+        secretRefs: document.state.global.secretRefs,
+      },
+      id,
+    );
     await held.arrived;
     // The user reconnects while the refresh is still out.
     const reconnected = { ...stored, access_token: "at-reconnected" };
@@ -474,20 +687,22 @@ module.exports = { app };
     held.release();
     await refreshing;
 
-    expect(JSON.parse(await secrets.get(tokenRef))).toMatchObject({
+    expect(JSON.parse(await secrets.get(tokenRef, ownedBy(id)))).toMatchObject({
       access_token: "at-reconnected",
     });
   });
 
   it("keeps a token that still works when its refresh is refused", async () => {
-    const id = connection({ client_id: "cid", subdomain: "acme" });
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
     await signIn(id);
     const document = store.documents.get(id)!;
     const tokenRef = document.state.global.secretRefs.find(
       (ref) => ref.name === OAUTH_TOKEN,
     )!.ref;
     const secrets = await service.secrets();
-    const stored = JSON.parse(await secrets.get(tokenRef)) as OAuthTokenSet;
+    const stored = JSON.parse(
+      await secrets.get(tokenRef, ownedBy(id)),
+    ) as OAuthTokenSet;
     const refresher = new StoreTokenRefresher(() => service.secrets(), {
       allowAddresses: ["127.0.0.1/32"],
     });
@@ -524,6 +739,336 @@ module.exports = { app };
     await expect(resolve()).rejects.toThrow(
       "Refreshing the OAuth2 token failed; reconnect",
     );
+  });
+  describe("through the publisher's app", () => {
+    const LOOPBACK =
+      "http://localhost:7540/api/@powerhousedao/workflow/oauth/callback";
+    let appService: WorkflowRuntimeService;
+    let broker: Awaited<ReturnType<typeof startBroker>>;
+    // The token requests trust the broker's self-signed certificate.
+    const previousCa = https.globalAgent.options.ca;
+
+    beforeAll(async () => {
+      broker = await startBroker();
+      https.globalAgent.options.ca = TLS_FIXTURE("localhost-cert.pem");
+      const dir = await mkdtemp(join(tmpdir(), "oauth-apps-"));
+      const web = join(dir, "web.json");
+      const desktop = join(dir, "desktop.json");
+      await writeFile(
+        web,
+        JSON.stringify({
+          web: { client_id: "cid", client_secret: "app-secret" },
+        }),
+      );
+      await writeFile(
+        desktop,
+        JSON.stringify({
+          installed: { client_id: "desk-cid", client_secret: "desk-secret" },
+        }),
+      );
+      appService = testRuntime({
+        reactorClient: store.client,
+        relationalDb: createTestRelationalDb(),
+        oauthApps: [
+          { id: "sektar", clients: { web, desktop } },
+          { id: "web-only", clients: { web } },
+          // No web client file: a web sign-in goes through the relay.
+          { id: "relayed", clients: { desktop }, relay: relay() },
+          // A web client file wins over the relay.
+          { id: "relay-and-web", clients: { web, desktop }, relay: relay() },
+        ],
+      } as unknown as WorkflowRuntimeHostDeps);
+    });
+
+    afterAll(async () => {
+      https.globalAgent.options.ca = previousCa;
+      await broker.stop();
+    });
+
+    function relay() {
+      return {
+        clientId: "relay-cid",
+        redirectUri: RELAY,
+        tokenUrl: broker.tokenUrl,
+      };
+    }
+
+    it("signs in with the web client for a public callback, asking only the connection's scopes", async () => {
+      const id = await connection({
+        oauth_app: "sektar",
+        oauth_scopes: "read",
+        subdomain: "acme",
+      });
+      const started = await appService.startOAuth(id, CTX, {
+        redirectUri: REDIRECT,
+      });
+      const url = new URL(started.authorizationUrl);
+      expect(url.searchParams.get("client_id")).toBe("cid");
+      expect(url.searchParams.get("scope")).toBe("read");
+      // No relay on the app: the host's own callback, the state as ever
+      expect(url.searchParams.get("redirect_uri")).toBe(REDIRECT);
+      expect(started.redirectUri).toBe(REDIRECT);
+      expect(started.state).toMatch(/^[\w-]{43}$/);
+      provider.issue("code-1", started.authorizationUrl);
+      await expect(
+        appService.completeOAuth({ state: started.state, code: "code-1" }),
+      ).resolves.toEqual({ ok: true, detail: null, returnUrl: null });
+
+      // The token remembers its client, and a refresh uses it: the
+      // connection itself holds no client id.
+      const document = store.documents.get(id)!;
+      // What the sign-in covers: the provider names no scope, so what was asked
+      expect(
+        (document.state.global.config as Record<string, unknown>)
+          .oauth_granted_scopes,
+      ).toEqual(["read"]);
+      const tokenRef = document.state.global.secretRefs.find(
+        (ref) => ref.name === OAUTH_TOKEN,
+      )!.ref;
+      const secrets = await appService.secrets();
+      const owner = { documentId: id, kind: "connection" as const };
+      const stored = JSON.parse(
+        await secrets.get(tokenRef, owner),
+      ) as OAuthTokenSet;
+      expect(stored.client_id).toBe("cid");
+      expect(stored.client_secret_ref).toMatch(/^secret:\/\/v1:/);
+      await secrets.rotate(
+        tokenRef,
+        JSON.stringify({ ...stored, claimed_at: stored.claimed_at - 3500 }),
+      );
+      const refresher = new StoreTokenRefresher(() => appService.secrets(), {
+        allowAddresses: ["127.0.0.1/32"],
+      });
+      const resolved = await resolveConnectionWithSecrets(
+        document,
+        secrets,
+        { piecePackage: PIECE.name },
+        refresher,
+      );
+      const auth = resolved.auth as { access_token?: unknown };
+      expect(String(auth.access_token)).toMatch(/^at-refreshed-/);
+      const refreshed = JSON.parse(
+        await secrets.get(tokenRef, owner),
+      ) as OAuthTokenSet;
+      expect(refreshed.client_id).toBe("cid");
+    });
+
+    it("signs in with the desktop client and PKCE for a callback to this machine", async () => {
+      const id = await connection({ oauth_app: "sektar", subdomain: "acme" });
+      const started = await appService.startOAuth(id, CTX, {
+        redirectUri: LOOPBACK,
+      });
+      const url = new URL(started.authorizationUrl);
+      expect(url.searchParams.get("client_id")).toBe("desk-cid");
+      expect(url.searchParams.get("redirect_uri")).toBe(LOOPBACK);
+      expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+      // No override: the piece's own scopes
+      expect(url.searchParams.get("scope")).toBe("read write");
+    });
+
+    it("signs in through the app's relay for a public callback, with PKCE and the callback in the state", async () => {
+      const id = await connection(
+        { oauth_app: "relayed", subdomain: "acme" },
+        NO_PKCE_PIECE.name,
+      );
+      const started = await appService.startOAuth(id, CTX, {
+        redirectUri: REDIRECT,
+      });
+      const url = new URL(started.authorizationUrl);
+      expect(url.searchParams.get("client_id")).toBe("relay-cid");
+      expect(url.searchParams.get("redirect_uri")).toBe(RELAY);
+      expect(started.redirectUri).toBe(RELAY);
+      // The piece asks for no PKCE; the relay turns it on
+      expect(url.searchParams.get("code_challenge")).toBeTruthy();
+      expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+      expect(url.searchParams.get("state")).toBe(started.state);
+      const [nonce, target, ...rest] = started.state.split(".");
+      expect(rest).toEqual([]);
+      expect(nonce).toMatch(/^[\w-]{43}$/);
+      expect(target).not.toMatch(/=/);
+      expect(Buffer.from(target!, "base64url").toString("utf8")).toBe(REDIRECT);
+
+      // The relay forwards code and the whole state to the host's callback.
+      // The code goes to the broker's token URL with the relay's redirect
+      // URI, as the provider saw it, the verifier and no secret.
+      broker.issue("code-r", started.authorizationUrl);
+      const before = broker.requests.length;
+      const providerBefore = provider.requests.length;
+      await expect(
+        appService.completeOAuth({ state: started.state, code: "code-r" }),
+      ).resolves.toEqual({ ok: true, detail: null, returnUrl: null });
+      expect(provider.requests.length).toBe(providerBefore);
+      const [exchange] = broker.requests.slice(before);
+      expect(exchange).toEqual({
+        grant_type: "authorization_code",
+        code: "code-r",
+        redirect_uri: RELAY,
+        code_verifier: expect.stringMatching(/^[\w-]+$/) as string,
+        client_id: "relay-cid",
+      });
+
+      // The token remembers the relay; a refresh goes there too, without a secret.
+      const document = store.documents.get(id)!;
+      const tokenRef = document.state.global.secretRefs.find(
+        (ref) => ref.name === OAUTH_TOKEN,
+      )!.ref;
+      const secrets = await appService.secrets();
+      const owner = { documentId: id, kind: "connection" as const };
+      const stored = JSON.parse(
+        await secrets.get(tokenRef, owner),
+      ) as OAuthTokenSet;
+      expect(stored).toMatchObject({
+        access_token: "at-relay",
+        token_url: broker.tokenUrl,
+        redirect_url: RELAY,
+        client_id: "relay-cid",
+        relayed: true,
+      });
+      expect(stored.client_secret_ref).toBeUndefined();
+      await secrets.rotate(
+        tokenRef,
+        JSON.stringify({ ...stored, claimed_at: stored.claimed_at - 3500 }),
+      );
+      const refresher = new StoreTokenRefresher(() => appService.secrets(), {
+        allowAddresses: ["127.0.0.1/32"],
+      });
+      const resolved = await resolveConnectionWithSecrets(
+        document,
+        secrets,
+        { piecePackage: NO_PKCE_PIECE.name },
+        refresher,
+      );
+      expect((resolved.auth as { access_token?: unknown }).access_token).toBe(
+        "at-relay-refreshed",
+      );
+      expect(broker.requests.at(-1)).toEqual({
+        grant_type: "refresh_token",
+        refresh_token: "rt-relay",
+        client_id: "relay-cid",
+      });
+      const refreshed = JSON.parse(
+        await secrets.get(tokenRef, owner),
+      ) as OAuthTokenSet;
+      expect(refreshed).toMatchObject({
+        access_token: "at-relay-refreshed",
+        refresh_token: "rt-relay",
+        relayed: true,
+      });
+    });
+
+    it("keeps the desktop client and the loopback callback for a relayed app on this machine", async () => {
+      const id = await connection(
+        { oauth_app: "relayed", subdomain: "acme" },
+        NO_PKCE_PIECE.name,
+      );
+      const started = await appService.startOAuth(id, CTX, {
+        redirectUri: LOOPBACK,
+      });
+      const url = new URL(started.authorizationUrl);
+      expect(url.searchParams.get("client_id")).toBe("desk-cid");
+      expect(url.searchParams.get("redirect_uri")).toBe(LOOPBACK);
+      expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+      expect(started.state).toMatch(/^[\w-]{43}$/);
+    });
+
+    it("signs in with a web client file directly, even when the app has a relay", async () => {
+      const id = await connection(
+        { oauth_app: "relay-and-web", subdomain: "acme" },
+        NO_PKCE_PIECE.name,
+      );
+      const started = await appService.startOAuth(id, CTX, {
+        redirectUri: REDIRECT,
+      });
+      const url = new URL(started.authorizationUrl);
+      expect(url.searchParams.get("client_id")).toBe("cid");
+      expect(url.searchParams.get("redirect_uri")).toBe(REDIRECT);
+      expect(started.redirectUri).toBe(REDIRECT);
+      // As without a relay: the piece's PKCE (none) and a bare nonce
+      expect(url.searchParams.has("code_challenge")).toBe(false);
+      expect(started.state).toMatch(/^[\w-]{43}$/);
+    });
+
+    it("sends no PKCE through an app without a relay when the piece asks for none", async () => {
+      const id = await connection(
+        { oauth_app: "sektar", subdomain: "acme" },
+        NO_PKCE_PIECE.name,
+      );
+      const started = await appService.startOAuth(id, CTX, {
+        redirectUri: REDIRECT,
+      });
+      const url = new URL(started.authorizationUrl);
+      expect(url.searchParams.get("redirect_uri")).toBe(REDIRECT);
+      expect(url.searchParams.has("code_challenge")).toBe(false);
+      expect(started.state).toMatch(/^[\w-]{43}$/);
+    });
+
+    it("tells how it would sign in, as startOAuth does", async () => {
+      const mode = (appId: string, redirectUri: string) =>
+        appService.oauthSignInMode(appId, redirectUri);
+      await expect(mode("relayed", LOOPBACK)).resolves.toBe("desktop");
+      await expect(mode("relayed", REDIRECT)).resolves.toBe("relay");
+      await expect(mode("relay-and-web", REDIRECT)).resolves.toBe("web");
+      await expect(mode("web-only", LOOPBACK)).resolves.toBe("none");
+      await expect(mode("unknown", REDIRECT)).resolves.toBe("none");
+    });
+
+    it("refuses an app without a client of the kind the callback needs", async () => {
+      const id = await connection({ oauth_app: "web-only", subdomain: "acme" });
+      await expect(
+        appService.startOAuth(id, CTX, { redirectUri: LOOPBACK }),
+      ).rejects.toThrow(
+        'The app "web-only" has no desktop client on this host',
+      );
+    });
+  });
+});
+
+describe("an attempt store from before relays", () => {
+  it("takes an attempt without a client secret once it has started", async () => {
+    const db = createFreshRelationalDb();
+    // The table as it was: the client secret ref required.
+    const legacy = (await db.createNamespace("oauth")) as Kysely<unknown>;
+    await legacy.schema
+      .createTable("oauth_attempt")
+      .addColumn("state", "text", (col) => col.primaryKey())
+      .addColumn("connection_id", "text", (col) => col.notNull())
+      .addColumn("client_id", "text", (col) => col.notNull())
+      .addColumn("client_secret_ref", "text", (col) => col.notNull())
+      .addColumn("code_verifier", "text")
+      .addColumn("redirect_uri", "text", (col) => col.notNull())
+      .addColumn("token_url", "text", (col) => col.notNull())
+      .addColumn("authorization_method", "text")
+      .addColumn("return_url", "text")
+      .addColumn("created_by", "text")
+      .addColumn("status", "text", (col) => col.notNull())
+      .addColumn("error", "text")
+      .addColumn("created_at", "text", (col) => col.notNull())
+      .addColumn("expires_at", "text", (col) => col.notNull())
+      .execute();
+
+    const attempts = await OAuthAttemptStore.create(db);
+    const { state } = await attempts.start({
+      connectionId: "c1",
+      method: {
+        authUrl: "https://p.example/auth",
+        tokenUrl: "https://p.example/token",
+        scope: [],
+      },
+      props: {},
+      clientId: "relay-cid",
+      clientSecretRef: null,
+      redirectUri: "https://relay.example/cb",
+      tokenUrl: "https://relay.example/token",
+      pkce: true,
+      stateSuffix: "c3VmZml4",
+    });
+    expect(state).toMatch(/^[\w-]{43}\.c3VmZml4$/);
+    const claimed = await attempts.claim(state);
+    expect(claimed).toMatchObject({
+      client_secret_ref: null,
+      token_url: "https://relay.example/token",
+      redirect_uri: "https://relay.example/cb",
+    });
   });
 });
 
@@ -612,6 +1157,39 @@ describe("postTokenForm", () => {
       postTokenForm(`http://localhost:${provider.port}/acme/token`, {}, {}),
     ).rejects.toThrow("is not reachable from here");
     expect(provider.requests).toHaveLength(0);
+  });
+
+  it("lets a relay's token URL reach private space over https, nothing else", async () => {
+    // A cluster may route its own domains internally: sektar.vetra.io
+    // resolved to a ClusterIP inside Vetra (2026-10-30).
+    const broker = await startBroker();
+    const previousCa = https.globalAgent.options.ca;
+    https.globalAgent.options.ca = TLS_FIXTURE("localhost-cert.pem");
+    try {
+      const form = {
+        grant_type: "refresh_token",
+        refresh_token: "rt-relay",
+        client_id: "relay-cid",
+      };
+      await expect(postTokenForm(broker.tokenUrl, form, {})).rejects.toThrow(
+        "is not reachable from here",
+      );
+      await expect(
+        postTokenForm(broker.tokenUrl, form, {}, relayEgress()),
+      ).resolves.toMatchObject({ access_token: "at-relay-refreshed" });
+      // Plain http still needs an address the operator named.
+      await expect(
+        postTokenForm(
+          `http://127.0.0.1:${provider.port}/acme/token`,
+          {},
+          {},
+          relayEgress(),
+        ),
+      ).rejects.toThrow("is not reachable from here");
+    } finally {
+      https.globalAgent.options.ca = previousCa;
+      await broker.stop();
+    }
   });
 
   it("reports the provider's own error", async () => {

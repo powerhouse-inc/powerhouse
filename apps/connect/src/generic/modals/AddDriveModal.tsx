@@ -1,4 +1,10 @@
 import { toast } from "@powerhousedao/connect/services";
+import {
+  newDriveError,
+  NewDriveRefusedError,
+  newDrivesBlocked,
+  NewDriveUnansweredError,
+} from "@powerhousedao/connect-core/runtime";
 import type {
   AddRemoteDriveInput,
   AppOptions,
@@ -14,8 +20,10 @@ import {
   getDrives,
   getPHNavigation,
   setSelectedDrive,
+  showPHModal,
   useAppModules,
   usePHModal,
+  useVetraPackages,
   waitForDocumentReady,
   getPHStore,
 } from "@powerhousedao/reactor-browser";
@@ -30,7 +38,15 @@ export function AddDriveModal() {
   const phModal = usePHModal();
   const open = phModal?.type === "addDrive";
   const appModules = useAppModules();
-  const onAddLocalDrive = async (data: AppOptions) => {
+  const packages = useVetraPackages();
+  /** True when the switchboard refused the caller, so signing in may help. */
+  const onAddLocalDrive = async (data: AppOptions): Promise<boolean> => {
+    const blocked = newDrivesBlocked();
+    if (blocked) {
+      console.error(blocked);
+      toast(blocked.message, { type: "connect-warning" });
+      return false;
+    }
     try {
       const app = appModules?.find((a) => a.config.id === data.id);
       const newDrive = await addDrive(
@@ -56,13 +72,24 @@ export function AddDriveModal() {
       });
 
       if (!newDrive) {
-        return;
+        return false;
       }
 
       setSelectedDrive(newDrive);
     } catch (e) {
-      console.error(e);
+      const failure = newDriveError(getFullReactorClient(), e);
+      console.error(failure);
+      if (failure instanceof NewDriveRefusedError && failure.auth) {
+        return true;
+      }
+      if (
+        failure instanceof NewDriveUnansweredError ||
+        failure instanceof NewDriveRefusedError
+      ) {
+        toast(failure.message, { type: "connect-warning" });
+      }
     }
+    return false;
   };
 
   const onAddRemoteDrive = async (data: AddRemoteDriveInput) => {
@@ -104,8 +131,9 @@ export function AddDriveModal() {
     }
   };
   async function onAddLocalDriveSubmit(data: AppOptions) {
-    await onAddLocalDrive(data);
+    const signIn = await onAddLocalDrive(data);
     closePHModal();
+    if (signIn) showPHModal({ type: "driveAuthRequired" });
   }
 
   async function onAddRemoteDriveSubmit(data: AddRemoteDriveInput) {
@@ -128,7 +156,7 @@ export function AddDriveModal() {
       onOpenChange={(status) => {
         if (!status) return closePHModal();
       }}
-      appOptions={getCreateDriveAppOptions(appModules)}
+      appOptions={getCreateDriveAppOptions(appModules, packages)}
     />
   );
 }

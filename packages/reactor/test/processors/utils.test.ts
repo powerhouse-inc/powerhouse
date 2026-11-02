@@ -1,4 +1,7 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import type {
+  OperationWithContext,
+  PHDocumentHeader,
+} from "@powerhousedao/shared/document-model";
 import type {
   IProcessor,
   ProcessorFilter,
@@ -7,7 +10,9 @@ import type {
 import { describe, expect, it } from "vitest";
 import {
   matchesFilter,
+  resolveProcessorNames,
   resolveProcessorSlots,
+  withCurrentSlug,
 } from "../../src/processors/utils.js";
 
 function createOperation(context: {
@@ -307,6 +312,42 @@ describe("matchesFilter", () => {
   });
 });
 
+describe("resolveProcessorNames", () => {
+  const onDisconnect = () => Promise.resolve();
+  const onOperations = () => Promise.resolve();
+
+  class FilesIndex {
+    namespace = "FilesIndex_drive1";
+    onDisconnect = onDisconnect;
+    onOperations = onOperations;
+  }
+
+  it("prefers the id, then the class, then the namespace, then the index", () => {
+    expect(
+      resolveProcessorNames([
+        { id: "mine", processor: new FilesIndex(), filter: {} },
+        { processor: new FilesIndex(), filter: {} },
+        {
+          processor: { namespace: "ns", onDisconnect, onOperations },
+          filter: {},
+        },
+        { processor: { onDisconnect, onOperations }, filter: {} },
+      ]),
+    ).toEqual(["mine", "FilesIndex", "ns", "#3"]);
+  });
+
+  it("numbers records that share a processor", () => {
+    const processor = new FilesIndex();
+    expect(
+      resolveProcessorNames([
+        { processor, filter: {} },
+        { processor, filter: {} },
+        { processor, filter: {} },
+      ]),
+    ).toEqual(["FilesIndex", "FilesIndex#1", "FilesIndex#2"]);
+  });
+});
+
 describe("resolveProcessorSlots", () => {
   const stub: IProcessor = {
     onOperations: () => Promise.resolve(),
@@ -365,5 +406,36 @@ describe("resolveProcessorSlots", () => {
         false,
       ),
     ).toEqual(["0", "1"]);
+  });
+});
+
+describe("withCurrentSlug", () => {
+  const header = { id: "drive", slug: "drive" } as PHDocumentHeader;
+  const named = (slug: string, error?: string) =>
+    ({
+      operation: {
+        action: { type: "SET_SLUG", input: { slug } },
+        ...(error ? { error } : {}),
+      },
+    }) as unknown as OperationWithContext;
+
+  it("keeps the creation header when the document never took a slug", () => {
+    expect(withCurrentSlug(header, [])).toBe(header);
+  });
+
+  it("takes the last slug the document was given", () => {
+    expect(withCurrentSlug(header, [named("first"), named("mail")]).slug).toBe(
+      "mail",
+    );
+  });
+
+  it("ignores any other header operation", () => {
+    const other = {
+      operation: {
+        action: { type: "SET_PREFERRED_EDITOR", input: {} },
+      },
+    } as unknown as OperationWithContext;
+
+    expect(withCurrentSlug(header, [named("mail"), other]).slug).toBe("mail");
   });
 });

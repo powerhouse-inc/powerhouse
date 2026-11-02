@@ -5,5 +5,15 @@
   },
   "include": ["**/*"],
   "exclude": ["dist", "node_modules"],
-  "references": [{ "path": "../host-core" }]
+  "references": [
+    {
+      "path": "../host-core"
+    },
+    {
+      "path": "../reactor-api"
+    },
+    {
+      "path": "../renown"
+    }
+  ]
 }

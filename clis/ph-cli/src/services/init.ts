@@ -107,7 +107,7 @@ export async function startInit(args: InitArgs) {
     }
 
     console.log(chalk.bold("\n🚀 Initializing a new project...\n"));
-    await createProject({
+    const { initialCommit } = await createProject({
       ...args,
       name,
       packageManager: parsedPackageManager,
@@ -121,11 +121,16 @@ export async function startInit(args: InitArgs) {
       console.log();
       console.log("To link your project to GitHub:");
       console.log();
-      console.log("  1. Create a new repository on GitHub");
-      console.log(`  2. cd ${name}`);
-      console.log("  3. git add . && git commit -m 'Initial commit'");
-      console.log("  4. git remote add origin <your-github-url>");
-      console.log(`  5. git push -u origin main`);
+      const steps = [
+        "Create a new repository on GitHub",
+        `cd ${name}`,
+        ...(initialCommit?.committed
+          ? []
+          : ["git add . && git commit -m 'Initial commit'"]),
+        "git remote add origin <your-github-url>",
+        "git push -u origin main",
+      ];
+      steps.forEach((step, index) => console.log(`  ${index + 1}. ${step}`));
       console.log();
     }
   } catch (error) {

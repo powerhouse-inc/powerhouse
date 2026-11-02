@@ -343,6 +343,21 @@ describe("document-dispatch", () => {
     });
   });
 
+  it("fails a dispatch whose action the reducer rejects, naming it", async () => {
+    const target = await newConnection("Kept");
+    const error = (await write(documentDispatchAction, {
+      documentId: target.documentId,
+      actions: [
+        {
+          type: "SET_CONNECTOR",
+          input: { connectorId: "acme", authType: "REACTOR" },
+        },
+      ],
+    }).catch((thrown: unknown) => thrown)) as Error;
+    expect(error.name).toBe("ReactorActionsFailedError");
+    expect(error.message).toMatch(/^Action SET_CONNECTOR failed: /);
+  });
+
   it("enforces the allowed action types", async () => {
     const target = await newConnection("Guarded");
     await expect(

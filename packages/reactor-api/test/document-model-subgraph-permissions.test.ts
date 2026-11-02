@@ -669,6 +669,54 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     });
   });
 
+  describe("creator ownership", () => {
+    const ownedSubgraph = () => {
+      const documentPermissionService = {
+        initializeDocumentProtection: vi.fn().mockResolvedValue(undefined),
+      };
+      const owned = new DocumentModelSubgraph(mockDocumentModel, {
+        ...buildSubgraphArgs({
+          ...mockAuthorizationService,
+          config: {
+            admins: [],
+            defaultProtection: true,
+            policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+          },
+        }),
+        documentPermissionService,
+      } as unknown as SubgraphArgs);
+      return { owned, documentPermissionService };
+    };
+
+    it("protects a document created with createDocument for its creator", async () => {
+      const { owned, documentPermissionService } = ownedSubgraph();
+
+      await owned.mutationResolvers.createDocument(
+        null,
+        { name: "Test Document" },
+        createContext({ userAddress: "0xcreator" }),
+      );
+
+      expect(
+        documentPermissionService.initializeDocumentProtection,
+      ).toHaveBeenCalledExactlyOnceWith("doc-123", "0xcreator", true);
+    });
+
+    it("protects a document created with createEmptyDocument for its creator", async () => {
+      const { owned, documentPermissionService } = ownedSubgraph();
+
+      await owned.mutationResolvers.createEmptyDocument(
+        null,
+        {},
+        createContext({ userAddress: "0xcreator" }),
+      );
+
+      expect(
+        documentPermissionService.initializeDocumentProtection,
+      ).toHaveBeenCalledExactlyOnceWith("doc-123", "0xcreator", true);
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // Mutation: operations (setName, setValue, restrictedOp, etc.)
   // They all go through assertCanExecuteOperation → canMutate

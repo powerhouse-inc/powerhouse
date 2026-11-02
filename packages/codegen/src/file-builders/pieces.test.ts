@@ -18,11 +18,10 @@ import {
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
 import { createOrUpdateManifest } from "./manifest.js";
 
-const originalCwd = process.cwd();
 const temporary: string[] = [];
 
 // A project of the shape `ph init` leaves behind, minus everything a piece
-// does not touch; buildTsMorphProject needs the tsconfig and chdirs into it.
+// does not touch.
 function makeProject(packageName = "@acme/ledger", version = "2.0.0") {
   const dir = mkdtempSync(join(tmpdir(), "ph-pieces-"));
   temporary.push(dir);
@@ -46,7 +45,6 @@ const readList = (dir: string) =>
   readFileSync(join(dir, "pieces", "index.ts"), "utf8");
 
 afterEach(() => {
-  process.chdir(originalCwd);
   for (const dir of temporary.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -292,6 +290,56 @@ describe("generatePieceAction with requireReactor", () => {
       '// "read" or "write" gives this action context.reactor',
     );
     expect(action("get-record")).not.toContain("await context.reactor");
+  });
+});
+
+describe("generatePieceAction step defaults", () => {
+  it("writes the given defaults, and commented examples without them", async () => {
+    const dir = makeProject();
+    const project = buildTsMorphProject(dir);
+    await generatePiece({ pieceName: "acme-crm", auth: "none" }, project);
+    await generatePieceAction(
+      {
+        actionName: "slow-record",
+        defaultTimeoutSeconds: 120,
+        defaultMaxAttempts: 5,
+      },
+      project,
+    );
+    await generatePieceAction({ actionName: "get-record" }, project);
+    await project.save();
+
+    const action = (name: string) =>
+      readFileSync(
+        join(dir, "pieces", "acme-crm", "lib", "actions", `${name}.ts`),
+        "utf8",
+      );
+    expect(action("slow-record")).toContain("\n  defaultTimeoutSeconds: 120,");
+    expect(action("slow-record")).toContain(
+      "\n  defaultRetry: { maxAttempts: 5 },",
+    );
+    expect(action("get-record")).toContain("// defaultTimeoutSeconds: 30,");
+    expect(action("get-record")).toContain(
+      '// defaultRetry: { maxAttempts: 3, backoff: "EXPONENTIAL", initialDelaySeconds: 5 },',
+    );
+  });
+
+  it("rejects non-positive values", async () => {
+    const dir = makeProject();
+    const project = buildTsMorphProject(dir);
+    await generatePiece({ pieceName: "acme-crm", auth: "none" }, project);
+    await expect(
+      generatePieceAction(
+        { actionName: "a", defaultTimeoutSeconds: 0 },
+        project,
+      ),
+    ).rejects.toThrow("defaultTimeoutSeconds");
+    await expect(
+      generatePieceAction(
+        { actionName: "a", defaultMaxAttempts: 1.5 },
+        project,
+      ),
+    ).rejects.toThrow("defaultMaxAttempts");
   });
 });
 

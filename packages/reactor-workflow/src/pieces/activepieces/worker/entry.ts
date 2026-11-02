@@ -9,7 +9,7 @@ import {
 import { RemoteKeyValueStore } from "../context/remote-store.js";
 import { RemoteOutput } from "../context/remote-output.js";
 import { captureConsole } from "./logs.js";
-import { setHostCallTimeout } from "./host-call.js";
+import { callHost, setHostCallTimeout } from "./host-call.js";
 import {
   openWorkerReactor,
   type WorkerReactorSession,
@@ -60,12 +60,24 @@ import {
 } from "../unsupported.js";
 import { installEgressGuard, runWithEgressPolicy } from "./egress.js";
 import {
+  hostFlows,
+  hostServerContext,
+  installHostFetch,
+} from "./host-origin.js";
+import { installTlsGuard } from "./tls-guard.js";
+import {
   finishRequestTimings,
   markWorkerReady,
   startRequestTimings,
   timed,
   withRequestTimings,
 } from "./timings.js";
+import {
+  FILES_UPLOAD,
+  WAITPOINT_CREATE,
+  type CreatedWaitpoint,
+  type WaitpointCall,
+} from "./protocol.js";
 import type {
   StagedInput,
   PieceModuleRef,
@@ -133,10 +145,16 @@ const REACTOR_ERROR_NAMES = new Set<string>([
   ReactorRequestClosedError,
 ]);
 
-function errorName(error: unknown, fallback: string | undefined): string {
+// An error's own name first: bundled pieces are minified, so a class name can
+// read "mc" while the error says "AI_APICallError".
+export function errorName(
+  error: unknown,
+  fallback: string | undefined,
+): string {
   if (typeof error !== "object" || error === null) return fallback || "Error";
   const named = (error as { name?: unknown }).name;
   if (typeof named === "string" && REACTOR_ERROR_NAMES.has(named)) return named;
+  if (typeof named === "string" && named && named !== "Error") return named;
   return error.constructor.name || fallback || "Error";
 }
 
@@ -222,8 +240,10 @@ async function resolveOptions(
   const { context, touched } = buildPropertyContext({
     searchValue: request.searchValue,
     projectId: request.projectId,
-    // Design-time default: an empty flows listing instead of a throwing stub.
-    flows: { list: () => Promise.resolve({ data: [] }) },
+    // Without a host listing, an empty one instead of a throwing stub.
+    flows: request.flows
+      ? hostFlows
+      : { list: () => Promise.resolve({ data: [] }) },
     ...(session ? { reactor: session.client } : {}),
   });
   const refresherValues = {
@@ -347,7 +367,12 @@ async function handleRun(message: RunMessage): Promise<WorkerResponse> {
   }
   assertRunnable(piece, piece.displayName, request.auth);
   const files = request.stagingDir
-    ? new StagedFilesService(request.stagingDir)
+    ? new StagedFilesService(
+        request.stagingDir,
+        request.uploadFiles
+          ? (file) => callHost<string>(FILES_UPLOAD, file)
+          : undefined,
+      )
     : new DataUriFilesService();
   // A durable store answers every get/put over the call channel, so a write
   // survives this worker; without one the value lives only in this heap.
@@ -385,7 +410,7 @@ async function runAction(
   // Before the props are normalised, not after: a processor that cannot coerce
   // says so on console.error, and the worker's stdio goes nowhere.
   const restoreConsole = request.captureLogs ? captureConsole() : undefined;
-  const { context, touched } = buildActionContext({
+  const { context, touched, paused, response, stopped } = buildActionContext({
     propsValue: await preparePropsValue(
       `action "${request.actionName}"`,
       action.props,
@@ -404,6 +429,19 @@ async function runAction(
     ...reactor,
     resumePayload: request.resumePayload,
     executionType: request.executionType,
+    canPause: request.canPause,
+    ...(request.canPause
+      ? {
+          waitpoints: {
+            create: (call: WaitpointCall) =>
+              callHost<CreatedWaitpoint>(WAITPOINT_CREATE, call),
+          },
+        }
+      : {}),
+    ...(request.resumeBaseUrl ? { resumeBaseUrl: request.resumeBaseUrl } : {}),
+    ...(request.flows
+      ? { flows: hostFlows, server: hostServerContext(request.flows) }
+      : {}),
     identity: request.identity,
   });
   let output: unknown;
@@ -422,6 +460,9 @@ async function runAction(
     id: message.id,
     type: "result",
     output: jsonSafe(output),
+    ...(paused() ? { paused: paused() } : {}),
+    ...(response() ? { response: response() } : {}),
+    ...(stopped() ? { stopped: true } : {}),
     ...(files instanceof StagedFilesService && files.staged().length > 0
       ? { files: files.staged() }
       : {}),
@@ -481,7 +522,9 @@ async function handleTriggerHook(
     isRepublish: request.isRepublish,
     payload: request.payload,
     webhookUrl: request.webhookUrl,
-    server: request.server,
+    ...(request.flows
+      ? { flows: hostFlows, server: hostServerContext(request.flows) }
+      : { server: request.server }),
     files: runsPiece ? new DataUriFilesService() : undefined,
     ...reactorOption(session),
   });
@@ -647,6 +690,9 @@ function dispatch(message: WorkerRequestMessage): Promise<WorkerResponse> {
 export function startPieceWorker(): void {
   // A piece cannot then keep a pristine copy of the socket layer.
   installEgressGuard();
+  // Nor switch certificate checks off for everyone (NODE_TLS_REJECT_UNAUTHORIZED=0)
+  installTlsGuard();
+  installHostFetch();
   process.on("message", onMessage);
   markWorkerReady();
 }

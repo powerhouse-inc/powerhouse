@@ -22,14 +22,20 @@ export const tsconfigPathsTemplate = json`
 "processors/*": [
   "./processors/*/index.ts"
 ],
+"scalars": [
+  "./scalars/index.ts"
+],
+"scalars/*": [
+  "./scalars/*/index.ts"
+],
 "subgraphs": [
   "./subgraphs/index.ts"
 ],
 "subgraphs/*": [
   "./subgraphs/*/index.ts"
 ],
-// Connect's routes plus hosts/connect/routes/, once a build generates the tree;
-// until then the imports fall back to core's own tree.
+// Connect's routes plus hosts/connect/routes/, once Vetra, a build or npm run tsc
+// generates the tree; until then the imports fall back to core's own tree.
 "@powerhousedao/connect-core/route-tree": [
   "./.ph/connect-routes.gen.ts"
 ],

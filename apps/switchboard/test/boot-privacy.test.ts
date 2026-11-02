@@ -1,11 +1,11 @@
 import { mkdtemp, rm } from "node:fs/promises";
-import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ILogger } from "document-model";
 import pg from "pg";
 import { describe, expect, it, vi } from "vitest";
-import { startSwitchboard } from "../src/server.mjs";
+import type { startSwitchboard } from "../src/server.mjs";
+import { bootSwitchboard } from "./boot-helpers.js";
 
 const ADMIN = "0xadad00000000000000000000000000000000adad";
 const SECRET = "switchboard-privacy-test-deployment-secret-0123";
@@ -56,31 +56,20 @@ async function withEnv<T>(
   }
 }
 
-async function freePort(): Promise<number> {
-  const server = createServer();
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const address = server.address();
-  await new Promise((resolve) => server.close(resolve));
-  if (address === null || typeof address === "string") {
-    throw new Error("no port");
-  }
-  return address.port;
-}
-
 async function boot(
   tempRoot: string,
   logger: ILogger = stubLogger(),
 ): Promise<Switchboard> {
-  return startSwitchboard({
-    workflows: { enabled: false },
-    dbPath: join(tempRoot, "read-model"),
-    port: await freePort(),
-    strictPort: true,
-    mcp: false,
-    disableLocalPackages: true,
-    identity: { keypairPath: join(tempRoot, "identity.json") },
-    logger,
-  });
+  return bootSwitchboard(
+    {
+      server: { port: 0 },
+      storage: { readModel: { url: join(tempRoot, "read-model") } },
+      features: { workflows: false, mcp: false },
+      packages: { disableLocal: true },
+      identity: { keypairPath: join(tempRoot, "identity.json") },
+    },
+    { logger },
+  );
 }
 
 async function queryErasure(switchboard: Switchboard) {

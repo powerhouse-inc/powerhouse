@@ -6,7 +6,6 @@ import type { AddressInfo } from "node:net";
 import {
   coreTrigger,
   createConnectionInBrowser,
-  createSecret,
   createWorkflowInBrowser,
   fireAndWait,
   gql,
@@ -246,7 +245,6 @@ test.describe("Postgres", () => {
   test("a connection checks out and a workflow writes and reads rows", async ({
     stack,
   }) => {
-    const password = await createSecret("pieces", "Postgres test password");
     const connectionId = await createConnectionInBrowser(
       stack.page,
       stack.drive,
@@ -262,7 +260,7 @@ test.describe("Postgres", () => {
           enable_ssl: false,
           reject_unauthorized: false,
         },
-        secrets: { password },
+        secrets: { password: "pieces" },
       },
     );
 

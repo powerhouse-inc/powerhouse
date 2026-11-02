@@ -1,0 +1,3241 @@
+{
+  "scenarios": [
+    {
+      "name": "rewind-stamped-before-window",
+      "source": "load-rewind: re-appends a live row stamped before the conflict window",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "x",
+                "name": "x"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.030Z",
+              "hash": "LPCmj/EEpSlnfS2gzgMFXqf0QSY=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "y",
+                "name": "y"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.010Z",
+              "hash": "g9GX09v7zGIEy1AS1Yrp9LfHhN4=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 2,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "y",
+                "name": "y"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.010Z",
+              "hash": "g9GX09v7zGIEy1AS1Yrp9LfHhN4=",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#3",
+              "input": {
+                "id": "z",
+                "name": "z"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.020Z",
+              "hash": "J2I2JPRGwHVoKOAwgbweAkGGLPA=",
+              "error": null
+            },
+            {
+              "index": 4,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "x",
+                "name": "x"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.030Z",
+              "hash": "LPCmj/EEpSlnfS2gzgMFXqf0QSY=",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "y",
+                    "name": "y",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "z",
+                    "name": "z",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "x",
+                    "name": "x",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "x",
+                    "name": "x",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "y",
+                    "name": "y",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "z",
+                    "name": "z",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "rewind-predecessor-rule",
+      "source": "load-rewind: re-appends a live row the predecessor rule leaves out",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "a",
+                "name": "a"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.000Z",
+              "hash": "3xSDpzObSY2G0x9y905d2UAsGww=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "b",
+                "name": "b"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.010Z",
+              "hash": "rJp3uLY6e+7DG7NxJSYmF630eoI=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#3",
+              "input": {
+                "id": "c",
+                "name": "c"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.020Z",
+              "hash": "LB1j07Fgk31x+KnqAaatjo1TanA=",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 3,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "a",
+                "name": "a"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.000Z",
+              "hash": "3xSDpzObSY2G0x9y905d2UAsGww=",
+              "error": null
+            },
+            {
+              "index": 4,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "b",
+                "name": "b"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.010Z",
+              "hash": "rJp3uLY6e+7DG7NxJSYmF630eoI=",
+              "error": null
+            },
+            {
+              "index": 5,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#4",
+              "input": {
+                "id": "d",
+                "name": "d"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.015Z",
+              "hash": "uWi91/TBc8/hBB0qNHT60SpQbsQ=",
+              "error": null
+            },
+            {
+              "index": 6,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#3",
+              "input": {
+                "id": "c",
+                "name": "c"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.020Z",
+              "hash": "LB1j07Fgk31x+KnqAaatjo1TanA=",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "a",
+                    "name": "a",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "b",
+                    "name": "b",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "d",
+                    "name": "d",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "c",
+                    "name": "c",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "a",
+                    "name": "a",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "b",
+                    "name": "b",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "c",
+                    "name": "c",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "d",
+                    "name": "d",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "rewind-earlier-head",
+      "source": "load-rewind: re-appends a row stored after the earlier head it rewinds to",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "p",
+                "name": "p"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.000Z",
+              "hash": "VDgx/5awTieLo6qcC3Ceus/Mapw=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 1,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "q",
+                "name": "q"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:59.990Z",
+              "hash": "zTC9Nh6j8avcSDhtkzpyz5e7u8Q=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "p",
+                "name": "p"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.000Z",
+              "hash": "VDgx/5awTieLo6qcC3Ceus/Mapw=",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#3",
+              "input": {
+                "id": "r",
+                "name": "r"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:59.980Z",
+              "hash": "zR7/Ww/dl2ukFZwvUStTJhcX9lw=",
+              "error": null
+            },
+            {
+              "index": 4,
+              "skip": 4,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#3",
+              "input": {
+                "id": "r",
+                "name": "r"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:59.980Z",
+              "hash": "zR7/Ww/dl2ukFZwvUStTJhcX9lw=",
+              "error": null
+            },
+            {
+              "index": 5,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#4",
+              "input": {
+                "id": "s",
+                "name": "s"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:59.985Z",
+              "hash": "AsHymZeJoRU+orRscVCpPKoq0h4=",
+              "error": null
+            },
+            {
+              "index": 6,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "q",
+                "name": "q"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:59.990Z",
+              "hash": "zTC9Nh6j8avcSDhtkzpyz5e7u8Q=",
+              "error": null
+            },
+            {
+              "index": 7,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "p",
+                "name": "p"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.000Z",
+              "hash": "VDgx/5awTieLo6qcC3Ceus/Mapw=",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "r",
+                    "name": "r",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "s",
+                    "name": "s",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "q",
+                    "name": "q",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "p",
+                    "name": "p",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "p",
+                    "name": "p",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "q",
+                    "name": "q",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "r",
+                    "name": "r",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "s",
+                    "name": "s",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "rewind-moves-local-undo",
+      "source": "load-rewind: keeps an undo the reshuffle moves on the operation it undid",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "x",
+                "name": "x"
+              },
+              "timestampUtcMs": "2025-12-31T23:59:00.000Z",
+              "hash": "LPCmj/EEpSlnfS2gzgMFXqf0QSY=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#2",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 2,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#3",
+              "input": {
+                "id": "z",
+                "name": "z"
+              },
+              "timestampUtcMs": "2025-12-31T23:59:30.000Z",
+              "hash": "kW2qff6sSozrx7q1GhYoNVHbBLc=",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 0,
+              "type": "NOOP",
+              "id": "NOOP#2",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "kW2qff6sSozrx7q1GhYoNVHbBLc=",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "z",
+                    "name": "z",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "z",
+                    "name": "z",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "rewind-moves-peer-undo",
+      "source": "load-rewind: keeps a peer's undo on the operation it undid",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "x",
+                "name": "x"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.000Z",
+              "hash": "LPCmj/EEpSlnfS2gzgMFXqf0QSY=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "w",
+                "name": "w"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.020Z",
+              "hash": "CwmC0kYP0vAjDUmf/zNxohBm130=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#3",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:01:00.010Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "w",
+                "name": "w"
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.020Z",
+              "hash": "CwmC0kYP0vAjDUmf/zNxohBm130=",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "x",
+                    "name": "x",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "w",
+                    "name": "w",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "x",
+                    "name": "x",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "w",
+                    "name": "w",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "append-peer-undo",
+      "source": "load-append-undo: keeps a peer's undo on the operation it undid",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "undoing",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "x",
+                "name": "x"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "LPCmj/EEpSlnfS2gzgMFXqf0QSY=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#2",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": []
+              }
+            ]
+          }
+        },
+        {
+          "name": "receiving",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "x",
+                "name": "x"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "LPCmj/EEpSlnfS2gzgMFXqf0QSY=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#3",
+              "input": {
+                "id": "l",
+                "name": "l"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:02.000Z",
+              "hash": "XqPj7/Tg4Lt2TBD6Y7g/70gzU1A=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#2",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "x",
+                    "name": "x",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "x",
+                    "name": "x",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "noop-headed-reshuffle-local",
+      "source": "load-noop-head: derives the same state on every path as the live op set",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "x",
+                "name": "x"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:40.000Z",
+              "hash": "LPCmj/EEpSlnfS2gzgMFXqf0QSY=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "w",
+                "name": "w"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:50.000Z",
+              "hash": "CwmC0kYP0vAjDUmf/zNxohBm130=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#3",
+              "input": {
+                "id": "y",
+                "name": "y"
+              },
+              "timestampUtcMs": "2025-12-31T23:59:00.000Z",
+              "hash": "5ojfvt6JTViDM0YwnKqn2cgJNA4=",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#4",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:07.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 4,
+              "skip": 4,
+              "type": "NOOP",
+              "id": "NOOP#4",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:07.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 5,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#5",
+              "input": {
+                "id": "z",
+                "name": "z"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:30.000Z",
+              "hash": "X6izJx80QnWn3EV/i4MEArgrCZ4=",
+              "error": null
+            },
+            {
+              "index": 6,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "x",
+                "name": "x"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:40.000Z",
+              "hash": "LPCmj/EEpSlnfS2gzgMFXqf0QSY=",
+              "error": "Module \"x\" already exists in the latest specification"
+            },
+            {
+              "index": 7,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "w",
+                "name": "w"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:50.000Z",
+              "hash": "CwmC0kYP0vAjDUmf/zNxohBm130=",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "x",
+                    "name": "x",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "z",
+                    "name": "z",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "w",
+                    "name": "w",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "x",
+                    "name": "x",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "z",
+                    "name": "z",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "w",
+                    "name": "w",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "double-undo",
+      "source": "effective-ops-rules (i): two consecutive UNDOs",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "a",
+                "name": "a"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "3xSDpzObSY2G0x9y905d2UAsGww=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "b",
+                "name": "b"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "rJp3uLY6e+7DG7NxJSYmF630eoI=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#3",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:05.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#4",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:07.000Z",
+              "hash": "",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": []
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "double-undo-then-reshuffle",
+      "source": "effective-ops-rules (i): keeps both undone across a load reshuffle",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "a",
+                "name": "a"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "3xSDpzObSY2G0x9y905d2UAsGww=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "b",
+                "name": "b"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "rJp3uLY6e+7DG7NxJSYmF630eoI=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#3",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:05.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#4",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:07.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 4,
+              "skip": 4,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#5",
+              "input": {
+                "id": "z",
+                "name": "z"
+              },
+              "timestampUtcMs": "2025-12-31T23:50:08.000Z",
+              "hash": "kW2qff6sSozrx7q1GhYoNVHbBLc=",
+              "error": null
+            },
+            {
+              "index": 5,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "a",
+                "name": "a"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "3xSDpzObSY2G0x9y905d2UAsGww=",
+              "error": null
+            },
+            {
+              "index": 6,
+              "skip": 0,
+              "type": "NOOP",
+              "id": "NOOP#4",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:07.000Z",
+              "hash": "ruuODcnFCsYVEB6MuFwpzaSTKXY=",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "z",
+                    "name": "z",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "a",
+                    "name": "a",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "z",
+                    "name": "z",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "a",
+                    "name": "a",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "double-undo-then-backdated-execute",
+      "source": "effective-ops-rules (i): keeps both undone across a backdated execute",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "a",
+                "name": "a"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "3xSDpzObSY2G0x9y905d2UAsGww=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "b",
+                "name": "b"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "rJp3uLY6e+7DG7NxJSYmF630eoI=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#3",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:05.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#4",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:07.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 4,
+              "skip": 4,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#5",
+              "input": {
+                "id": "z",
+                "name": "z"
+              },
+              "timestampUtcMs": "2025-12-31T23:50:09.000Z",
+              "hash": "kW2qff6sSozrx7q1GhYoNVHbBLc=",
+              "error": null
+            },
+            {
+              "index": 5,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "a",
+                "name": "a"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "ruuODcnFCsYVEB6MuFwpzaSTKXY=",
+              "error": null
+            },
+            {
+              "index": 6,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "b",
+                "name": "b"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "/TiR1KoQvY5c0lc1r71hqQ2rmi8=",
+              "error": null
+            },
+            {
+              "index": 7,
+              "skip": 0,
+              "type": "NOOP",
+              "id": "NOOP#4",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:07.000Z",
+              "hash": "/TiR1KoQvY5c0lc1r71hqQ2rmi8=",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "z",
+                    "name": "z",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "a",
+                    "name": "a",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "b",
+                    "name": "b",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "z",
+                    "name": "z",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "a",
+                    "name": "a",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "b",
+                    "name": "b",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "undo-then-redo-refused",
+      "source": "effective-ops-rules (ii): REDO is refused once the stream holds a NOOP marker",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "a",
+                "name": "a"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "3xSDpzObSY2G0x9y905d2UAsGww=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "b",
+                "name": "b"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "rJp3uLY6e+7DG7NxJSYmF630eoI=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#3",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:05.000Z",
+              "hash": "",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "a",
+                    "name": "a",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "a",
+                    "name": "a",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": ["a: Cannot redo: no operations in the clipboard"]
+    },
+    {
+      "name": "undo-reexecute-undo",
+      "source": "effective-ops-rules (ii): one effective set when the undone action is executed again",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "a",
+                "name": "a"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "3xSDpzObSY2G0x9y905d2UAsGww=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "b",
+                "name": "b"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "rJp3uLY6e+7DG7NxJSYmF630eoI=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#3",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:05.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#4",
+              "input": {
+                "id": "b2",
+                "name": "b2"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:07.000Z",
+              "hash": "joXNj1K023sJnpzWEoX660GM+k0=",
+              "error": null
+            },
+            {
+              "index": 4,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#5",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:09.000Z",
+              "hash": "",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "a",
+                    "name": "a",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "a",
+                    "name": "a",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "reshuffle-reappends-local-noop",
+      "source": "effective-ops-rules (iii): an UNDO after a reshuffle re-appended a local NOOP",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "m0",
+                "name": "m0"
+              },
+              "timestampUtcMs": "2025-12-31T23:51:01.000Z",
+              "hash": "aOTOXcXBpia6ygbwMxXOWtaplRk=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#2",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 2,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#3",
+              "input": {
+                "id": "m1",
+                "name": "m1"
+              },
+              "timestampUtcMs": "2025-12-31T23:50:04.000Z",
+              "hash": "oeuy6z7c+WxbWMebH5KyLsTMTVc=",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 0,
+              "type": "NOOP",
+              "id": "NOOP#2",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "oeuy6z7c+WxbWMebH5KyLsTMTVc=",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "m1",
+                    "name": "m1",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "m1",
+                    "name": "m1",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": [
+        "a: Cannot undo: no more operations to undo in scope history"
+      ]
+    },
+    {
+      "name": "reshuffle-reappends-local-noop-over-two",
+      "source": "effective-ops-rules (iii): the later UNDO is accepted and changes nothing",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "m0",
+                "name": "m0"
+              },
+              "timestampUtcMs": "2025-12-31T23:51:01.000Z",
+              "hash": "aOTOXcXBpia6ygbwMxXOWtaplRk=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "mx",
+                "name": "mx"
+              },
+              "timestampUtcMs": "2025-12-31T23:51:03.010Z",
+              "hash": "ZFm9Tjdzl6HdsCkWCj6Z1uXbF8M=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#3",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:05.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 3,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#4",
+              "input": {
+                "id": "m1",
+                "name": "m1"
+              },
+              "timestampUtcMs": "2025-12-31T23:50:06.000Z",
+              "hash": "oeuy6z7c+WxbWMebH5KyLsTMTVc=",
+              "error": null
+            },
+            {
+              "index": 4,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "m0",
+                "name": "m0"
+              },
+              "timestampUtcMs": "2025-12-31T23:51:01.000Z",
+              "hash": "aOTOXcXBpia6ygbwMxXOWtaplRk=",
+              "error": null
+            },
+            {
+              "index": 5,
+              "skip": 0,
+              "type": "NOOP",
+              "id": "NOOP#3",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:05.000Z",
+              "hash": "N67bNV4JRswsAuY1vfOjLMdPUmg=",
+              "error": null
+            },
+            {
+              "index": 6,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#5",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:07.000Z",
+              "hash": "",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "m1",
+                    "name": "m1",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "m0",
+                    "name": "m0",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "m0",
+                    "name": "m0",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "m1",
+                    "name": "m1",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "content-headed-reshuffle",
+      "source": "effective-ops-rules (iv): a content-headed reshuffle",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "x",
+                "name": "x"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "LPCmj/EEpSlnfS2gzgMFXqf0QSY=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 1,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "z",
+                "name": "z"
+              },
+              "timestampUtcMs": "2025-12-31T23:50:02.000Z",
+              "hash": "kW2qff6sSozrx7q1GhYoNVHbBLc=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "x",
+                "name": "x"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "LPCmj/EEpSlnfS2gzgMFXqf0QSY=",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "z",
+                    "name": "z",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "x",
+                    "name": "x",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "x",
+                    "name": "x",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "z",
+                    "name": "z",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "noop-headed-reshuffle-peer",
+      "source": "effective-ops-rules (iv): a NOOP-headed reshuffle",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "m0",
+                "name": "m0"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "aOTOXcXBpia6ygbwMxXOWtaplRk=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "m1",
+                "name": "m1"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "LOzmNZhH8FX6b7QVnP0tPZdOXsU=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 2,
+              "type": "NOOP",
+              "id": "NOOP#3",
+              "input": {},
+              "timestampUtcMs": "2025-12-31T23:50:04.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "m0",
+                "name": "m0"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "aOTOXcXBpia6ygbwMxXOWtaplRk=",
+              "error": "Module \"m0\" already exists in the latest specification"
+            },
+            {
+              "index": 4,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#2",
+              "input": {
+                "id": "m1",
+                "name": "m1"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "LOzmNZhH8FX6b7QVnP0tPZdOXsU=",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "m0",
+                    "name": "m0",
+                    "operations": [],
+                    "description": ""
+                  },
+                  {
+                    "id": "m1",
+                    "name": "m1",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "m0",
+                    "name": "m0",
+                    "description": "",
+                    "operations": []
+                  },
+                  {
+                    "id": "m1",
+                    "name": "m1",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "incoming-noop-sorts-first",
+      "source": "load-noop-skip: keeps the reshuffle's skip when the NOOP sorts first",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "m0",
+                "name": "m0"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:02.000Z",
+              "hash": "aOTOXcXBpia6ygbwMxXOWtaplRk=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#2",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 2,
+              "type": "NOOP",
+              "id": "NOOP#3",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 0,
+              "type": "NOOP",
+              "id": "NOOP#2",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "Fd20qtObIUDJwJHse6VqFK8ObWY=",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": []
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "local-noop-reappended",
+      "source": "load-noop-skip: leaves a re-appended local NOOP's skip at zero",
+      "kind": "document-model",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#1",
+              "input": {
+                "id": "m0",
+                "name": "m0"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:02.000Z",
+              "hash": "aOTOXcXBpia6ygbwMxXOWtaplRk=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#2",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 2,
+              "type": "ADD_MODULE",
+              "id": "ADD_MODULE#3",
+              "input": {
+                "id": "m1",
+                "name": "m1"
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "oeuy6z7c+WxbWMebH5KyLsTMTVc=",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 0,
+              "type": "NOOP",
+              "id": "NOOP#2",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "oeuy6z7c+WxbWMebH5KyLsTMTVc=",
+              "error": null
+            }
+          ],
+          "served": {
+            "id": "",
+            "name": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "extension": "",
+            "description": "",
+            "specifications": [
+              {
+                "state": {
+                  "local": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  },
+                  "global": {
+                    "schema": "",
+                    "examples": [],
+                    "initialValue": ""
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "m1",
+                    "name": "m1",
+                    "operations": [],
+                    "description": ""
+                  }
+                ],
+                "version": 1,
+                "changeLog": []
+              }
+            ]
+          },
+          "replayDocument": {
+            "id": "",
+            "name": "",
+            "extension": "",
+            "description": "",
+            "author": {
+              "name": "",
+              "website": ""
+            },
+            "specifications": [
+              {
+                "version": 1,
+                "changeLog": [],
+                "state": {
+                  "global": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  },
+                  "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                  }
+                },
+                "modules": [
+                  {
+                    "id": "m1",
+                    "name": "m1",
+                    "description": "",
+                    "operations": []
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "lost-own-operation",
+      "source": "lost-operation-resend (#6): a sender skip retracts the receiver's own row",
+      "kind": "drive",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_FOLDER",
+              "id": "ADD_FOLDER#1",
+              "input": {
+                "id": "x",
+                "name": "x",
+                "parentFolder": null
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.000Z",
+              "hash": "IoEi7C/dGOVUzu+1d4wiF9gn/Oc=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 1,
+              "type": "ADD_FOLDER",
+              "id": "ADD_FOLDER#2",
+              "input": {
+                "id": "y",
+                "name": "y",
+                "parentFolder": null
+              },
+              "timestampUtcMs": "2026-01-01T00:00:50.000Z",
+              "hash": "AJFSZhdPmFdTWCai2R0khesgs8U=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 0,
+              "type": "ADD_FOLDER",
+              "id": "ADD_FOLDER#3",
+              "input": {
+                "id": "w",
+                "name": "w",
+                "parentFolder": null
+              },
+              "timestampUtcMs": "2026-01-01T00:01:10.000Z",
+              "hash": "BnWPn2vkb04mTyUBn6acQeaT1/c=",
+              "error": null
+            }
+          ],
+          "served": {
+            "icon": null,
+            "name": "",
+            "nodes": [
+              {
+                "id": "w",
+                "kind": "folder",
+                "name": "w",
+                "parentFolder": null
+              },
+              {
+                "id": "y",
+                "kind": "folder",
+                "name": "y",
+                "parentFolder": null
+              }
+            ]
+          },
+          "replayDocument": {
+            "name": "",
+            "nodes": [
+              {
+                "id": "w",
+                "name": "w",
+                "parentFolder": null,
+                "kind": "folder"
+              },
+              {
+                "id": "x",
+                "name": "x",
+                "parentFolder": null,
+                "kind": "folder"
+              },
+              {
+                "id": "y",
+                "name": "y",
+                "parentFolder": null,
+                "kind": "folder"
+              }
+            ],
+            "icon": null
+          }
+        },
+        {
+          "name": "b",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_FOLDER",
+              "id": "ADD_FOLDER#2",
+              "input": {
+                "id": "y",
+                "name": "y",
+                "parentFolder": null
+              },
+              "timestampUtcMs": "2026-01-01T00:00:50.000Z",
+              "hash": "AJFSZhdPmFdTWCai2R0khesgs8U=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 0,
+              "type": "ADD_FOLDER",
+              "id": "ADD_FOLDER#1",
+              "input": {
+                "id": "x",
+                "name": "x",
+                "parentFolder": null
+              },
+              "timestampUtcMs": "2026-01-01T00:01:00.000Z",
+              "hash": "IoEi7C/dGOVUzu+1d4wiF9gn/Oc=",
+              "error": null
+            }
+          ],
+          "served": {
+            "icon": null,
+            "name": "",
+            "nodes": [
+              {
+                "id": "x",
+                "kind": "folder",
+                "name": "x",
+                "parentFolder": null
+              },
+              {
+                "id": "y",
+                "kind": "folder",
+                "name": "y",
+                "parentFolder": null
+              }
+            ]
+          },
+          "replayDocument": {
+            "name": "",
+            "nodes": [
+              {
+                "id": "x",
+                "name": "x",
+                "parentFolder": null,
+                "kind": "folder"
+              },
+              {
+                "id": "y",
+                "name": "y",
+                "parentFolder": null,
+                "kind": "folder"
+              }
+            ],
+            "icon": null
+          }
+        }
+      ],
+      "refusals": []
+    },
+    {
+      "name": "trivial-append-peer-undo",
+      "source": "lost-operation-resend (#6b): keeps A's own op live when B undoes an op concurrently",
+      "kind": "drive",
+      "replicas": [
+        {
+          "name": "a",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_FOLDER",
+              "id": "ADD_FOLDER#1",
+              "input": {
+                "id": "b1",
+                "name": "b1",
+                "parentFolder": null
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "/8HuRwEB2ypkfuj77NhkNgkJ52c=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 0,
+              "type": "ADD_FOLDER",
+              "id": "ADD_FOLDER#2",
+              "input": {
+                "id": "a1",
+                "name": "a1",
+                "parentFolder": null
+              },
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "WuRLyuMbK8AP0S0dLBNb4TxRmF0=",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#3",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:05.000Z",
+              "hash": "",
+              "error": null
+            }
+          ],
+          "served": {
+            "icon": null,
+            "name": "",
+            "nodes": [
+              {
+                "id": "b1",
+                "kind": "folder",
+                "name": "b1",
+                "parentFolder": null
+              }
+            ]
+          },
+          "replayDocument": {
+            "name": "",
+            "nodes": [
+              {
+                "id": "b1",
+                "name": "b1",
+                "parentFolder": null,
+                "kind": "folder"
+              }
+            ],
+            "icon": null
+          }
+        },
+        {
+          "name": "b",
+          "rows": [
+            {
+              "index": 0,
+              "skip": 0,
+              "type": "ADD_FOLDER",
+              "id": "ADD_FOLDER#1",
+              "input": {
+                "id": "b1",
+                "name": "b1",
+                "parentFolder": null
+              },
+              "timestampUtcMs": "2026-01-01T00:00:01.000Z",
+              "hash": "/8HuRwEB2ypkfuj77NhkNgkJ52c=",
+              "error": null
+            },
+            {
+              "index": 1,
+              "skip": 1,
+              "type": "NOOP",
+              "id": "NOOP#3",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:05.000Z",
+              "hash": "",
+              "error": null
+            },
+            {
+              "index": 2,
+              "skip": 2,
+              "type": "ADD_FOLDER",
+              "id": "ADD_FOLDER#2",
+              "input": {
+                "id": "a1",
+                "name": "a1",
+                "parentFolder": null
+              },
+              "timestampUtcMs": "2026-01-01T00:00:03.000Z",
+              "hash": "WuRLyuMbK8AP0S0dLBNb4TxRmF0=",
+              "error": null
+            },
+            {
+              "index": 3,
+              "skip": 0,
+              "type": "NOOP",
+              "id": "NOOP#3",
+              "input": {},
+              "timestampUtcMs": "2026-01-01T00:00:05.000Z",
+              "hash": "8TP+WjX3bXXvmyBDclSfO0p/nQ0=",
+              "error": null
+            }
+          ],
+          "served": {
+            "icon": null,
+            "name": "",
+            "nodes": [
+              {
+                "id": "a1",
+                "kind": "folder",
+                "name": "a1",
+                "parentFolder": null
+              }
+            ]
+          },
+          "replayDocument": {
+            "name": "",
+            "nodes": [
+              {
+                "id": "a1",
+                "name": "a1",
+                "parentFolder": null,
+                "kind": "folder"
+              }
+            ],
+            "icon": null
+          }
+        }
+      ],
+      "refusals": []
+    }
+  ]
+}

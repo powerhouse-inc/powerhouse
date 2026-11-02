@@ -194,22 +194,23 @@ A specialized AI agent that guides users through document model creation with re
 </details>
 :::
 
-#### 0. Configure the Reactor MCP
+#### 0. Check the Reactor MCP configuration
 
-Add the following to your Claude MCP settings (`~/.claude/mcp.json` for Claude Code, or the MCP servers section in Claude Desktop):
+`ph init` already wrote the Reactor MCP configuration into your project's `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "reactor-mcp": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:4001/mcp"]
+      "type": "stdio",
+      "command": "node",
+      "args": ["--run", "mcp"]
     }
   }
 }
 ```
 
-This only needs to be done once. Make sure `ph vetra` is running before starting a Claude session that uses the MCP.
+`ph mcp` serves the reactor-mcp tools over stdio from the project's own `ph-cli`. `node --run mcp` runs the project's `mcp` script (`ph-cli mcp`), which works on every platform. On the first tool call it connects to the project's running Vetra, or starts `ph vetra --watch` in the background and writes its output to `.ph/vetra.log`, so you don't need to start Vetra first. A project created before `ph mcp` points reactor-mcp at `http://localhost:4001/mcp`; run `ph migrate` to switch it to the launcher.
 
 #### 1. Start the Reactor MCP:
 

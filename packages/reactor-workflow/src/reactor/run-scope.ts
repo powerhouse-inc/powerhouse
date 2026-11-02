@@ -3,7 +3,11 @@
 // the block executor is shared across concurrent runs, so the scope travels
 // with the async context rather than on the executor.
 import type { AuthSubject } from "@powerhousedao/shared/document-model";
-import type { IPieceWorker } from "../pieces/index.js";
+import type {
+  FlowsPort,
+  IPieceWorker,
+  WaitpointPort,
+} from "../pieces/index.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 
 export interface ReactorConnectionScope {
@@ -42,6 +46,10 @@ export interface ActiveRun {
   runUser?: RunUser | null;
   // Where the run's attachments may come from, for the host's read check.
   attachments?: RunAttachmentOrigins;
+  // Absent where the run cannot suspend: no journal, or a single-step test.
+  waitpoints?: WaitpointPort;
+  // ctx.flows and ctx.server; absent, both throw.
+  flows?: FlowsPort;
 }
 
 export interface RunAttachmentOrigins {
@@ -53,11 +61,31 @@ export interface RunAttachmentOrigins {
 
 const storage = new AsyncLocalStorage<ActiveRun>();
 
+let scopesOpened = 0;
+let scopesCollected = 0;
+const collectedScopes = new FinalizationRegistry<undefined>(() => {
+  scopesCollected += 1;
+});
+
 export function withRunScope<T>(
   scope: ActiveRun,
   fn: () => Promise<T>,
 ): Promise<T> {
+  scopesOpened += 1;
+  collectedScopes.register(scope, undefined);
   return storage.run(scope, fn);
+}
+
+// `held` is the scopes still on the heap: the runs in flight, the finished ones
+// the next major GC will take, and any something keeps. Only the last kind
+// climbs across GCs, and no structure we can count would show it: what keeps a
+// scope is an async context, not a list.
+export function runScopeStats(): Record<string, number> {
+  return {
+    opened: scopesOpened,
+    collected: scopesCollected,
+    held: scopesOpened - scopesCollected,
+  };
 }
 
 export function currentWorkflowId(): string | undefined {
@@ -97,4 +125,12 @@ export function currentStepTest(): boolean {
 // Undefined outside a run, or when the run binds no reactor connection.
 export function currentRunUser(): RunUser | null | undefined {
   return storage.getStore()?.runUser;
+}
+
+export function currentWaitpoints(): WaitpointPort | undefined {
+  return storage.getStore()?.waitpoints;
+}
+
+export function currentFlows(): FlowsPort | undefined {
+  return storage.getStore()?.flows;
 }

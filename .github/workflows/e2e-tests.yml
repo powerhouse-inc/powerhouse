@@ -36,7 +36,8 @@ jobs:
     # name-suffix keeps both check-run names identical to the former
     # standalone jobs so branch protection and artifact consumers see no change.
     name: Run Vetra E2E Tests${{ matrix.name-suffix }}
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -120,7 +121,8 @@ jobs:
 
   package-e2e-tests:
     name: Run Package E2E Tests
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - name: Checkout repository
@@ -187,7 +189,8 @@ jobs:
 
   workflow-piece-e2e-tests:
     name: Run Workflow Piece E2E Tests
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - name: Checkout repository
@@ -298,7 +301,8 @@ jobs:
 
   analytics-engine-integration-tests:
     name: Run Analytics Engine Integration Tests
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     # The pg suite expects postgresql://postgres:password@localhost:5555/analytics
     # (packages/analytics-engine/pg/package.json); nothing else gated it before.
@@ -387,9 +391,46 @@ jobs:
           path: packages/analytics-engine/browser/test-results/
           retention-days: 30
 
+  switchboard-e2e-tests:
+    name: Run Switchboard E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The suites start their own switchboards on PGlite: the shared one on
+    # SWITCHBOARD_PORT, renown-self-auth's on 4022 and 4023, and router's on 4024.
+    # No Postgres.
+    env:
+      SWITCHBOARD_PORT: 4001
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.10.1
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Setup bun global install
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      # Only the suite and what it depends on, switchboard's bin included.
+      - name: Install and build
+        run: bash .github/actions/setup/install-and-build.sh "@powerhousedao/test-switchboard..."
+
+      - name: Run switchboard E2E tests
+        run: pnpm test:e2e:switchboard
+
   recipes-e2e-tests:
     name: Run Recipes E2E Tests
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - name: Checkout repository
@@ -499,9 +540,11 @@ jobs:
           ${{ github.event_name == 'pull_request' && '--skip drive-override' || '' }}
         env:
           RECIPES_DIR: ${{ github.workspace }}/recipes-checkout
+          # onnxruntime-node's postinstall otherwise fetches CUDA binaries from nuget
+          ONNXRUNTIME_NODE_INSTALL: skip
 
   notify-discord:
-    if: always() && github.event_name != 'pull_request' && (needs.vetra-e2e-tests.result == 'failure' || needs.package-e2e-tests.result == 'failure' || needs.workflow-piece-e2e-tests.result == 'failure' || needs.recipes-e2e-tests.result == 'failure')
+    if: always() && github.event_name != 'pull_request' && (needs.vetra-e2e-tests.result == 'failure' || needs.package-e2e-tests.result == 'failure' || needs.workflow-piece-e2e-tests.result == 'failure' || needs.recipes-e2e-tests.result == 'failure' || needs.switchboard-e2e-tests.result == 'failure')
     runs-on: ubuntu-24.04
     needs:
       [
@@ -509,12 +552,14 @@ jobs:
         package-e2e-tests,
         workflow-piece-e2e-tests,
         recipes-e2e-tests,
+        switchboard-e2e-tests,
       ]
     steps:
       - name: Send Discord notification
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_FAILURES }}
           DISCORD_USER_MAPPING: ${{ secrets.DISCORD_USER_MAPPING }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
           # Aggregate over the dev/worker matrix; the run link shows which leg failed.
           VETRA_RESULT: ${{ needs.vetra-e2e-tests.result }}
           PACKAGE_RESULT: ${{ needs.package-e2e-tests.result }}
@@ -553,13 +598,15 @@ jobs:
             fi
           fi
 
-          curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
-            "embeds": [{
-              "title": "⚠️ E2E Tests Failed",
-              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed jobs:** '"${FAILED_JOBS}"'\n**Workflow run:** [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
-              "color": 16711680
-            }]
-          }'
+          # The message goes in through env and jq: quotes in it broke the shell and the JSON
+          COMMIT="${COMMIT_MESSAGE%%$'\n'*}"
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          DESCRIPTION=$(printf '**Author:** %s\n**Commit:** [`%s`](%s)\n**Failed jobs:** %s\n**Workflow run:** [${{ github.run_id }}](%s)' \
+            "$MENTION_STRING" "$COMMIT" "$COMMIT_URL" "$FAILED_JOBS" "$RUN_URL")
+          jq -n --arg description "$DESCRIPTION" \
+            '{embeds: [{title: "⚠️ E2E Tests Failed", description: $description, color: 16711680}]}' |
+            curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d @-
 
   duration-watch:
     name: CI duration watch
@@ -573,6 +620,7 @@ jobs:
         workflow-piece-e2e-tests,
         recipes-e2e-tests,
         analytics-engine-integration-tests,
+        switchboard-e2e-tests,
       ]
     if: always()
     runs-on: ubuntu-latest

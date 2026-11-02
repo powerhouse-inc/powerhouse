@@ -8,14 +8,15 @@ import type {
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
+  creationActions,
   DowngradeNotSupportedError,
+  headNewDocument,
   normalizeDocumentModelVersion,
-  requestedSignaturePolicy,
-  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
+
+export { selectDocumentModelModule } from "@powerhousedao/shared/document-model";
 import {
   addRelationshipAction,
-  createDocumentAction,
   upgradeDocumentAction,
 } from "../actions/index.js";
 import type { ExecutionJobPlan } from "../core/types.js";
@@ -24,53 +25,22 @@ import type { ConsistencyToken, JobInfo } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
 import {
   DEFAULT_UPGRADE_CONFLICT_RETRIES,
-  type CreateDocumentOptions,
+  type NewDocumentOptions,
   type UpgradeDocumentOptions,
 } from "./types.js";
 
-/** The signed jobs that create `document`, and attach it to `parentId`. */
+/** The signed jobs that create `document` at `protocolVersions`, and attach it to `parentId`. */
 export async function buildCreateJobs(
   document: PHDocument,
+  protocolVersions: ProtocolVersions,
   parentId: string | undefined,
   signer: ISigner,
   signal?: AbortSignal,
 ): Promise<ExecutionJobPlan[]> {
   const documentId = document.header.id;
   const branch = document.header.branch || "main";
-
-  const createInput: CreateDocumentActionInput = {
-    model: document.header.documentType,
-    version: 0,
-    documentId,
-    signing: {
-      signature: documentId,
-      publicKey: document.header.sig.publicKey,
-      nonce: document.header.sig.nonce,
-      createdAtUtcIso: document.header.createdAtUtcIso,
-      documentType: document.header.documentType,
-    },
-    slug: document.header.slug,
-    name: document.header.name,
-    branch: document.header.branch,
-    meta: document.header.meta,
-    protocolVersions: document.header.protocolVersions ?? {
-      "base-reducer": 2,
-    },
-  };
-
   const createActions: Action[] = await signActions(
-    [
-      createDocumentAction(createInput),
-      upgradeDocumentAction({
-        documentId,
-        model: document.header.documentType,
-        fromVersion: 0,
-        toVersion: normalizeDocumentModelVersion(
-          (document.state as Partial<typeof document.state>).document?.version,
-        ),
-        initialState: document.state,
-      }),
-    ],
+    creationActions(document, protocolVersions),
     signer,
     { documentId, branch },
     signal,
@@ -108,60 +78,14 @@ export async function buildCreateJobs(
   return jobs;
 }
 
-/** The registered module for a type: the requested version, else the latest. */
-export function selectDocumentModelModule(
-  modules: readonly DocumentModelModule[],
-  documentModelType: string,
-  documentModelVersion?: number,
-): DocumentModelModule {
-  const matching = modules.filter(
-    (m) => m.documentModel.global.id === documentModelType,
-  );
-
-  if (documentModelVersion !== undefined) {
-    const requested = normalizeDocumentModelVersion(documentModelVersion);
-    const module = matching.find(
-      (m) => normalizeDocumentModelVersion(m.version) === requested,
-    );
-    if (!module) {
-      throw new Error(
-        `Document model not found for type: ${documentModelType} with version: ${documentModelVersion}`,
-      );
-    }
-    return module;
-  }
-
-  const latest = matching.reduce<DocumentModelModule | undefined>(
-    (best, current) => {
-      if (best === undefined) return current;
-      const currentVersion = normalizeDocumentModelVersion(current.version);
-      const bestVersion = normalizeDocumentModelVersion(best.version);
-      return currentVersion > bestVersion ? current : best;
-    },
-    undefined,
-  );
-  if (!latest) {
-    throw new Error(`Document model not found for type: ${documentModelType}`);
-  }
-  return latest;
-}
-
-/** A new, empty document of `module`, under the create defaults given. */
+/** A new, uncreated document of `module`, under the create defaults given. */
 export function createEmptyDocument(
   module: DocumentModelModule,
-  options: CreateDocumentOptions | undefined,
+  options: NewDocumentOptions | undefined,
   defaultPolicy: SignaturePolicy,
   baseVersions: ProtocolVersions,
 ): PHDocument {
-  const document = withSignaturePolicy(
-    module.utils.createDocument(),
-    requestedSignaturePolicy(options, defaultPolicy),
-    { protocolVersions: { ...baseVersions, ...options?.protocolVersions } },
-  );
-  document.state.document.version = normalizeDocumentModelVersion(
-    module.version,
-  );
-  return document;
+  return headNewDocument(module, options, defaultPolicy, baseVersions);
 }
 
 export type UpgradeDocumentDeps = {

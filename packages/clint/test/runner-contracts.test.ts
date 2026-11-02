@@ -47,7 +47,10 @@ const declaredAssistantHost = () =>
           kind: "remote",
           remote: {
             url: {
-              $output: { host: "switchboard", path: ["endpoints", "graphql"] },
+              $output: {
+                host: "switchboard",
+                path: ["drives", "powerhouse", "url"],
+              },
             },
           },
         },
@@ -72,7 +75,7 @@ const assistantHost = () => {
       backends: {
         switchboard: {
           kind: "remote",
-          remote: { url: "http://127.0.0.1:4001/graphql" },
+          remote: { url: "http://127.0.0.1:4001/d/powerhouse" },
         },
       },
     },

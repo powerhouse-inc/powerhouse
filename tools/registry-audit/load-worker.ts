@@ -16,9 +16,7 @@
  * to the package's install scaffold, so the Switchboard's package loader resolves
  * the named package (and its dependencies) from that scaffold's node_modules.
  */
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
-import { REPO_ROOT } from "./lib.js";
+import { startLocalSwitchboard } from "./lib.js";
 
 type DocModule = { documentModel?: { global?: { id?: string } } };
 type SwitchboardHandle = {
@@ -30,10 +28,6 @@ type SwitchboardHandle = {
   };
   shutdown: () => Promise<void>;
 };
-type StartSwitchboard = (
-  opts: Record<string, unknown>,
-) => Promise<SwitchboardHandle>;
-
 function emit(obj: unknown): void {
   console.log(`__SBLOAD__ ${JSON.stringify(obj)}`);
 }
@@ -43,20 +37,10 @@ async function main(): Promise<void> {
   const ext = arg && arg !== "none" ? arg : undefined;
   const t0 = Date.now();
 
-  const serverUrl = pathToFileURL(
-    join(REPO_ROOT, "apps", "switchboard", "dist", "server.mjs"),
-  ).href;
-  const mod = (await import(serverUrl)) as {
-    startSwitchboard: StartSwitchboard;
-  };
-
-  const sb = await mod.startSwitchboard({
-    port: 0,
-    strictPort: false,
-    packages: ext ? [ext] : [],
-    disableLocalPackages: true,
-    mcp: false,
-    enableDocumentModelSubgraphs: true,
+  const sb = await startLocalSwitchboard<SwitchboardHandle>({
+    server: { port: 0, strictPort: false },
+    packages: { list: ext ? [ext] : [], disableLocal: true },
+    features: { mcp: false, documentModelSubgraphs: true },
   });
 
   const res = await sb.reactor.getDocumentModelModules();

@@ -41,21 +41,23 @@ By acting as the backbone for document models in the Powerhouse framework, they 
 Reactors provide the foundation for advanced features like real-time collaboration, history tracking, and decentralized audits.
 This modular, flexible infrastructure enables organizations to build efficient and robust decentralized systems, tailored for modern network organizations
 
-## Getting an IReactorClient
+## Getting a reactor client
 
-There are a few ways to obtain an `IReactorClient`, depending on where your code runs.
+Whichever host you run in, the client comes in two halves: reads go through `read` (`IReactorReadClient`) and writes through `write` (`IReactorWriteClient`), whose writes return a handle to wait on. `IReactorClient` is the single object that carries both. How you obtain them depends on where your code runs.
 
-**In an app (React).** Call the `useReactorClient()` hook from `@powerhousedao/reactor-browser`. It returns the `IReactorClient` for the running reactor.
+**In an app (React).** Call the `useReactorClient()` hook from `@powerhousedao/reactor-browser`. It returns the browser client for the running reactor, with `client.read` and `client.write`. `useReactorHalves()` returns `{ read, write }` alone, and `window.ph.reactor` holds the same pair. The browser halves carry a subset: `read` has `get`, `getMany`, `find`, `getOperations`, `subscribe`, `waitForJob`, and `getJobStatus`; `write` has `execute`, `create`, and `deleteDocument`.
 
 ```typescript
 import { useReactorClient } from "@powerhousedao/reactor-browser";
 
 const client = useReactorClient();
+const handle = await client.write.execute(docId, "main", actions);
+const updated = await handle.document();
 ```
 
 The same module exposes sibling hooks: `useSync` (the `ISyncManager`), `useSyncList` (its remotes), `useModelRegistry` (the document-model registry), `useDatabase` (the Kysely database), and `usePGlite` (the PGlite instance).
 
-**Standalone (scripts, tests, servers).** Build a client with `ReactorClientBuilder`. Wire a reactor with either `.withReactorBuilder(builder)` or `.withReactor(reactor, eventBus, documentIndexer, documentView)`, add `.withSigner(...)` and `.withDocumentModelLoader(...)` as needed, then call `.build()` (returns the client) or `.buildModule()` (returns the client plus the wired module).
+**Standalone (scripts, tests, servers).** Build a client with `ReactorClientBuilder`. Wire a reactor with either `.withReactorBuilder(builder)` or `.withReactor(reactor, eventBus, documentIndexer, documentView)`, add `.withSigner(...)` and `.withDocumentModelLoader(...)` as needed, then call `.build()` (returns the client) or `.buildModule()` (returns the client, its `read` and `write` halves, and the wired module).
 
 ```typescript
 import { ReactorClientBuilder } from "@powerhousedao/reactor";
@@ -68,35 +70,42 @@ const client = await new ReactorClientBuilder()
 
 `buildModule()` throws if neither `withReactorBuilder` nor `withReactor` was set. For the low-level builder detail, see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage).
 
-**In a generated subgraph (server-side).** A generated subgraph extends `BaseSubgraph`, which holds the client as the `reactorClient` property. The generated `getResolvers(subgraph)` reads it off the instance; inside a method on the subgraph class, use `this.reactorClient`. The GraphQL resolver `context` does not carry the reactor.
+**In a generated subgraph (server-side).** A generated subgraph extends `BaseSubgraph`. Resolvers get the halves on the GraphQL context as `ctx.clients`: `ctx.clients.read` is always there, and `ctx.clients.write` exists only while a Mutation field runs. Reaching for `ctx.clients.write` in a query or subscription throws `WriteClientUnavailableError` naming the field. For setup-time lookups outside a resolver, use `subgraph.readClient` (`this.readClient` inside the subgraph class).
 
 ```typescript
-import { type BaseSubgraph } from "@powerhousedao/reactor-api";
+import { type BaseSubgraph, type Context } from "@powerhousedao/reactor-api";
 
-// resolvers.ts (generated scaffold)
-export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactor = subgraph.reactorClient; // IReactorClient
-
-  return {
-    Query: {
-      todoList: (_parent: unknown, args: { id: string }) => reactor.get(args.id),
+// resolvers.ts
+export const getResolvers = (subgraph: BaseSubgraph) => ({
+  Query: {
+    todoList: (_parent: unknown, args: { id: string }, ctx: Context) =>
+      ctx.clients.read.get(args.id),
+  },
+  Mutation: {
+    renameTodoList: async (
+      _parent: unknown,
+      args: { id: string; name: string },
+      ctx: Context,
+    ) => {
+      const handle = await ctx.clients.write.rename(args.id, args.name);
+      return handle.document();
     },
-  };
-};
+  },
+});
 ```
 
 For attachments, a resolver calls `subgraph.attachmentsFor(ctx)`, which returns an `IAttachmentClient` bound to the request's caller. See [Attachment service](/academy/Reference/Reactor/AttachmentService#inside-the-switchboard).
 
-**In a generated processor (server-side).** The processor factory builder receives the host module; the client is `module.client`. `IProcessorHostModule` from `@powerhousedao/reactor-browser` (or `@powerhousedao/reactor-api`) exposes `relationalDb`, `analyticsStore`, `dispatch`, `getReadModel`, `client`, and `attachments`. See [Processors](/academy/Reference/Reactor/Processors) for the full registration flow.
+**In a generated processor (server-side).** The processor factory builder receives the host module. A processor reads through `module.read` and writes through `module.dispatch` (`execute`, `createInDrive`, `deleteDocument`), so it never needs the write client. `IProcessorHostModule` from `@powerhousedao/reactor-browser` (or `@powerhousedao/reactor-api`) exposes `relationalDb`, `analyticsStore`, `dispatch`, `getReadModel`, `read`, and `attachments`. See [Processors](/academy/Reference/Reactor/Processors) for the full registration flow.
 
 ```typescript
 import type { ProcessorFactoryBuilder } from "@powerhousedao/reactor-browser";
 
 // factory.ts (generated scaffold)
 export const factoryBuilder: ProcessorFactoryBuilder = (module) => {
-  const { client } = module; // client: IReactorClient
+  const { read, dispatch } = module;
   return async () => {
-    // use client.get(...), client.drives, client.execute(...)
+    // use read.get(...), read.drives, dispatch.execute(...)
     return [];
   };
 };
@@ -104,7 +113,7 @@ export const factoryBuilder: ProcessorFactoryBuilder = (module) => {
 
 ## The ReactorClient API
 
-The `IReactorClient` is the primary interface for interacting with a reactor programmatically. It wraps lower-level APIs to provide a simpler, Promise-based interface for document operations.
+The reactor client is the primary interface for interacting with a reactor programmatically. It wraps lower-level APIs to provide a simpler, Promise-based interface for document operations, split into a read half and a write half.
 
 How the client and the reactor's components fit together:
 
@@ -118,7 +127,9 @@ import type { IReactorClient } from "@powerhousedao/reactor-browser";
 `@powerhousedao/reactor-browser` re-exports a curated subset of reactor types for browser environments (editors, drive-apps, subgraphs) — including `IReactorClient`, `DocumentChangeType`, `ReactorBuilder`, and `ReactorClientBuilder`. Other types used on these pages (`ViewFilter`, `SearchFilter`, `PagingOptions`, `PagedResults`, `PropagationMode`, `JobInfo`, `JobStatus`, `DocumentChangeEvent`, `OperationFilter`, `IReactor`, `ReactorEventTypes`, `SyncEventTypes`, `QueueEventTypes`) are not re-exported; import them from `@powerhousedao/reactor`. Outside the browser, import everything from `@powerhousedao/reactor`.
 :::
 
-### Reading documents
+### Reading documents (`client.read`)
+
+Reads never enqueue. `get`, `getMany`, `find`, `resolveIdOrSlug`, and the relationship reads take an optional `consistencyToken` as their last parameter, which makes the read wait until the read models hold a write you made.
 
 | Method                                                                         | Description                                       |
 | ------------------------------------------------------------------------------ | ------------------------------------------------- |
@@ -155,27 +166,33 @@ type SearchFilter = {
 
 All list methods support pagination via `PagingOptions` (`{ cursor, limit }`) and return `PagedResults<T>` with a `next()` helper for fetching the next page.
 
-### Writing documents
+### Writing documents (`client.write`)
+
+Every write resolves once its job is accepted and returns a `WriteHandle`. Await `handle.written` (operations are in the log), `handle.readable` (read models hold the write), or `handle.document()` (the updated document). Each receipt carries a `token` to pass to a read.
 
 | Method                                                                                      | Description                                                        |
 | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | `create(document, parentIdentifier?)`                                                       | Create a document from a full `PHDocument` object                  |
 | `createEmpty(documentModelType, options?)`                                                  | Create an empty document of a given type                           |
-| `createAsync(document, parentIdentifier?)`                                                  | Submit a create and return immediately with its jobs (`create`, `parent`) |
-| `createEmptyAsync(documentModelType, options?)`                                             | Submit an empty-document create and return immediately with its jobs |
-| `execute(documentIdentifier, branch, actions)`                                              | Apply actions and wait for completion                              |
-| `executeAsync(documentIdentifier, branch, actions)`                                         | Submit actions and return immediately with a `JobInfo`             |
-| `executeBatch(request)`                                                                     | Submit multiple jobs in dependency order and wait for all to settle |
+| `execute(documentIdentifier, branch, actions)`                                              | Sign and submit actions on one document                            |
+| `executeBatch(request)`                                                                     | Submit multiple jobs in dependency order; returns a `BatchWriteHandle` |
 | `loadBatch(request)`                                                                        | Load batches of pre-existing operations across documents          |
 | `rename(documentIdentifier, name, branch?)`                                                 | Rename a document                                                  |
 | `setPreferredEditor(documentIdentifier, preferredEditor, branch?)`                          | Set the document's preferred editor (`null` clears it)            |
-| `addRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`            | Add a typed relationship between two documents                     |
+| `addRelationship(sourceIdentifier, targetIdentifier, relationshipType, metadata?, branch?)` | Add a typed relationship between two documents                     |
+| `updateRelationship(sourceIdentifier, targetIdentifier, relationshipType, metadata, branch?)` | Replace an existing relationship's metadata                      |
 | `removeRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`         | Remove a typed relationship between two documents                  |
 | `moveRelationship(sourceParent, targetParent, targetIdentifier, relationshipType, branch?)` | Move a relationship from one source to another                     |
 | `deleteDocument(identifier, propagate?)`                                                    | Delete a document (`PropagationMode.Cascade` deletes children too) |
 | `deleteDocuments(identifiers, propagate?)`                                                  | Bulk delete                                                        |
 
-To create a document inside a drive, use `client.drives.addFile`. See the [Drives](/academy/Reference/Reactor/ReactorClient#drives-clientdrives) section on the IReactorClient reference page.
+```typescript
+const handle = await client.write.execute(docId, "main", actions);
+const { token } = await handle.written;
+const doc = await client.read.get(docId, undefined, undefined, token);
+```
+
+To create a document inside a drive, use `client.write.drives.addFile`. See the [Drives](/academy/Reference/Reactor/ReactorClient#drives) section on the IReactorClient reference page.
 
 ### Subscribing to changes
 
@@ -192,14 +209,14 @@ const unsubscribe = reactorClient.subscribe(
 
 ### Job tracking
 
-Write operations return `JobInfo` objects. A job tracks the lifecycle of a set of actions as they move through the reactor.
+Every write creates a job. A job tracks the lifecycle of a set of actions as they move through the reactor. A handle's stages wait on the job for you; to get the raw `JobInfo`, pass `handle.jobId` to the read half.
 
 ```typescript
-const job = await reactorClient.executeAsync(docId, "main", actions);
-const completed = await reactorClient.waitForJob(job.id);
+const handle = await reactorClient.write.execute(docId, "main", actions);
+const completed = await reactorClient.read.waitForJob(handle.jobId);
 ```
 
-You can also poll with `getJobStatus(jobId)`.
+You can also poll with `read.getJobStatus(jobId)`.
 
 For the full API reference, see [IReactorClient API Reference](/academy/Reference/Reactor/ReactorClient).
 
@@ -220,7 +237,7 @@ PENDING → RUNNING → WRITE_READY → READ_READY
 | `READ_READY`  | All read models have finished processing — document is fully readable |
 | `FAILED`      | Job encountered an unrecoverable error                                |
 
-Only `READ_READY` and `FAILED` are terminal statuses. The `execute()` method on `IReactorClient` waits until `READ_READY` before resolving; `executeAsync()` returns immediately with a `JobInfo` at `PENDING`.
+Only `READ_READY` and `FAILED` are terminal statuses. `write.execute()` resolves as soon as the job is accepted; `handle.written` resolves at `WRITE_READY` and `handle.readable` at `READ_READY`. Both reject with `JobFailedError` when the job reaches `FAILED`.
 
 The path a job takes from the queue to `READ_READY`:
 

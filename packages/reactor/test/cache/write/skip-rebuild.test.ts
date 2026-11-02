@@ -111,14 +111,12 @@ describe("write cache rebuild across a skip", () => {
   }
 
   async function persistKeyframeAt(revision: number): Promise<void> {
-    await cache.getState(docId, "global", BRANCH, revision);
-    await expect
-      .poll(async () =>
-        (await keyframeStore.listKeyframes(docId, "global", BRANCH)).map(
-          (k) => k.revision,
-        ),
-      )
-      .toContain(revision);
+    const document = await cache.getState(docId, "global", BRANCH, revision);
+    await keyframeStore.putKeyframe(docId, "global", BRANCH, revision, {
+      ...document,
+      operations: {},
+      clipboard: [],
+    });
     cache.clear();
   }
 

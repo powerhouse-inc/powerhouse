@@ -7,16 +7,19 @@ import {
   type BatchLoadRequest,
   type BatchLoadResult,
   type ConsistencyToken,
-  type CreateDocumentOptions,
+  type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type DocumentRelationship,
   type IReactorClient,
   type JobInfo,
+  type NewDocumentOptions,
   type OperationFilter,
   type PagedResults,
   type PagingOptions,
   type PropagationMode,
   type SearchFilter,
+  type UndoRedoAvailability,
+  type UndoRedoTargets,
   type UpgradeDocumentOptions,
   type ViewFilter,
 } from "@powerhousedao/reactor";
@@ -39,6 +42,7 @@ import { RoutingWriteClient } from "./routing-write-client.js";
 import {
   DEFAULT_SUBSCRIPTION_DEDUP_SIZE,
   type RouterTableSnapshot,
+  type RoutingChangeListener,
   type RoutingOptions,
 } from "./types.js";
 
@@ -139,6 +143,43 @@ export class RoutingReactorClient implements IReactorClient {
     return this.dispatcher.table.describe();
   }
 
+  /**
+   * Places a collection (a collection key or a bare drive id, as in
+   * `collections`) on a backend for this client only, above the config;
+   * `undefined` removes the runtime placement. Precedence: corrected, runtime,
+   * config, learned, placed. A refusal still corrects it, and a later
+   * `setPlacement` for the same key replaces that correction.
+   */
+  setPlacement(key: string, backend: string | undefined): void {
+    this.dispatcher.table.setPlacement(key, backend);
+  }
+
+  /** A late `collections` entry, below runtime; `undefined` removes it. */
+  setConfiguredPlacement(key: string, backend: string | undefined): void {
+    this.dispatcher.table.setConfiguredPlacement(key, backend);
+  }
+
+  /**
+   * Calls `listener` whenever a collection route changes: a placement, a
+   * learned or corrected route, or a route forgotten after a refusal.
+   * Returns the unsubscribe.
+   */
+  onRoutingChange(listener: RoutingChangeListener): () => void {
+    return this.dispatcher.table.onChange(listener);
+  }
+
+  /**
+   * The name of the backend a call for this document would go to, by its
+   * route, a probe or, for an id no backend holds, its placement; it does
+   * not throw for an unknown id.
+   */
+  async locate(identifier: string, signal?: AbortSignal): Promise<string> {
+    signal?.throwIfAborted();
+    const backend = await this.dispatcher.resolveDocumentBackend(identifier);
+    signal?.throwIfAborted();
+    return backend.name;
+  }
+
   /** Re-reads the facts of the named backend, or of every backend. */
   refreshFacts(name?: string): Promise<void> {
     return this.dispatcher.refreshFacts(name);
@@ -169,10 +210,18 @@ export class RoutingReactorClient implements IReactorClient {
   }
 
   getCreateProtocolVersions(
-    parentIdentifier?: string,
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    return this.read.getCreateProtocolVersions(parentIdentifier, signal);
+    return this.read.getCreateProtocolVersions(options, signal);
+  }
+
+  newDocument<TDocument extends PHDocument = PHDocument>(
+    documentModelType: string,
+    options?: NewDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.read.newDocument<TDocument>(documentModelType, options, signal);
   }
 
   getMany<TDocument extends PHDocument>(
@@ -354,7 +403,7 @@ export class RoutingReactorClient implements IReactorClient {
    */
   async createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
     warnOnce(
@@ -372,10 +421,10 @@ export class RoutingReactorClient implements IReactorClient {
 
   async createEmptyAsync(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    const document = await this.write.emptyDocument(
+    const document = await this.read.newDocument(
       documentModelType,
       options,
       signal,
@@ -486,6 +535,61 @@ export class RoutingReactorClient implements IReactorClient {
     const batch = await this.write.executeBatch(request, signal);
     await batch.readable;
     return { jobs: batch.jobs };
+  }
+
+  /** The owning backend resolves the target and signs the write. */
+  async undo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const handle = await this.write.undo(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+    return handle.document<TDocument>(undefined, signal);
+  }
+
+  /** See {@link undo}. */
+  async redo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const handle = await this.write.redo(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
+    return handle.document<TDocument>(undefined, signal);
+  }
+
+  undoRedoTargets(
+    documentIdentifier: string,
+    scope?: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets> {
+    return this.write.undoRedoTargets(documentIdentifier, scope, view, signal);
+  }
+
+  undoRedoAvailability(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability> {
+    return this.write.undoRedoAvailability(
+      documentIdentifier,
+      scope,
+      branch,
+      signal,
+    );
   }
 
   /**

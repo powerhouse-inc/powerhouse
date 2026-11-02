@@ -48,6 +48,7 @@ export type RunnerVerb<O = unknown> = (
 export interface HostSchemaIssue {
   path: PropertyKey[];
   message: string;
+  code?: string;
 }
 
 /** zod-shaped structurally, so a runner may bring its own zod instance. */
@@ -126,6 +127,13 @@ const NON_VERB_EXPORTS = new Set([
   "default",
 ]);
 
+/** ph-cli's runners are ph-run's plus the verbs that build. A packaged app has
+ * only ph-run, and its host files, generated against ph-cli's, name ph-cli's. */
+export function runnerFallback(specifier: string): string | undefined {
+  const name = /^@powerhousedao\/ph-cli\/(runners\/.+)$/.exec(specifier)?.[1];
+  return name ? `@powerhousedao/ph-run/${name}` : undefined;
+}
+
 export async function resolveRunnerModule(
   projectRoot: string,
   specifier: string,
@@ -133,9 +141,19 @@ export async function resolveRunnerModule(
   const projectRequire = createRequire(
     pathToFileURL(path.join(projectRoot, "package.json")).href,
   );
+  const resolveFirst = (candidates: string[]): string => {
+    const [first, ...rest] = candidates;
+    try {
+      return projectRequire.resolve(first);
+    } catch (error) {
+      if (rest.length === 0) throw error;
+      return resolveFirst(rest);
+    }
+  };
   let resolved: string;
   try {
-    resolved = projectRequire.resolve(specifier);
+    const fallback = runnerFallback(specifier);
+    resolved = resolveFirst(fallback ? [specifier, fallback] : [specifier]);
   } catch {
     throw new RunnerError(
       `Cannot resolve runner module "${specifier}" from ${projectRoot}.`,
@@ -418,10 +436,12 @@ export function hostSchemaIssues<O>(
       (issue.path.map(String).join(".") || "<root>") +
       (element ? ` (${element})` : "");
     // A token in a field that does not take one: say so, rather than
-    // the field type's own "expected string".
-    const message = tokenKeyOf(valueAt(host, issue.path))
-      ? "this field does not take an output token (it is not token-able); spell the value literally."
-      : issue.message;
+    // the field type's own "expected string". A refinement's own message
+    // about a token stands.
+    const message =
+      issue.code !== "custom" && tokenKeyOf(valueAt(host, issue.path))
+        ? "this field does not take an output token (it is not token-able); spell the value literally."
+        : issue.message;
     return {
       path: formatPath(
         issue.path.filter(

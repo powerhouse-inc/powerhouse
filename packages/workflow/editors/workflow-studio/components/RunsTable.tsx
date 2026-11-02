@@ -42,6 +42,7 @@ import { useSearchParam, useSearchParamDraft } from "../../shared/url-param.js";
 import { DataViewer } from "../../shared/data-viewer.js";
 import { Button, Icon, StatusText } from "./ui.js";
 import { StepError } from "../../workflow-editor/ui/StepError.js";
+import { CancelRunButton, RunWaitpoints } from "./Waitpoints.js";
 
 type StatusFilter = "ALL" | (typeof RUN_STATUSES)[number];
 const STATUS_FILTERS: readonly StatusFilter[] = ["ALL", ...RUN_STATUSES];
@@ -94,9 +95,34 @@ function TimelineBar(props: { span?: TimelineSpan; tone: Tone }) {
   );
 }
 
+// "#2", or "#2.1" inside a nested loop: the iteration numbers of a path.
+export function iterationLabel(path: string): string {
+  const numbers = [...path.matchAll(/\[(\d+)\]/g)].map((match) => match[1]);
+  return `#${numbers.join(".")}`;
+}
+
+// Set when the run's detail holds only the first iteration rows.
+export function cappedIterationsNote(run: RunRecord): string | null {
+  if (!run.iterationsTotal) return null;
+  const shown = run.iterations?.length ?? 0;
+  return `Showing ${shown} of ${run.iterationsTotal} loop iteration steps.`;
+}
+
+// The iteration rows of a top-level loop, grouped under it in run order.
+export function loopIterations(
+  run: RunRecord,
+  loopId: string,
+): RunStepRecord[] {
+  return (run.iterations ?? []).filter((step) =>
+    step.path?.startsWith(`${loopId}[`),
+  );
+}
+
 function StepRow(props: {
   step: RunStepRecord;
   name?: string;
+  // Set on a loop iteration's row, e.g. "#2".
+  iteration?: string;
   span?: TimelineSpan;
   // The listing row has no input or output; the run's own fetch brings them.
   dataPending?: boolean;
@@ -110,7 +136,10 @@ function StepRow(props: {
   });
   const [open, setOpen] = useState(false);
   return (
-    <div role="listitem" className="border-t border-solid border-border">
+    <div
+      role="listitem"
+      className={`border-t border-solid border-border ${props.iteration ? "pl-6" : ""}`}
+    >
       <button
         type="button"
         aria-expanded={open}
@@ -131,6 +160,11 @@ function StepRow(props: {
           title={`Key: ${step.stepKey}`}
         >
           {props.name ?? step.stepKey}
+          {props.iteration ? (
+            <span className="ml-1.5 font-normal text-muted-foreground">
+              {props.iteration}
+            </span>
+          ) : null}
         </span>
         <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
           {meta.logoUrl ? (
@@ -296,7 +330,19 @@ function RunDetail(props: {
         ? full.error.message
         : String(full.error)
       : null;
-  const timeline = runTimeline(run);
+  // Iterations are timed on the run's scale, keyed by their path.
+  const timeline = runTimeline({
+    ...run,
+    steps: [
+      ...run.steps,
+      ...(run.iterations ?? []).map((step) => ({
+        ...step,
+        stepId: step.path!,
+      })),
+    ],
+  });
+  // A loop body step is shown by its iterations, not its last one again.
+  const iterated = new Set((run.iterations ?? []).map((step) => step.stepId));
   const [rerunning, setRerunning] = useState(false);
   const [rerunError, setRerunError] = useState<string | null>(null);
   return (
@@ -305,6 +351,14 @@ function RunDetail(props: {
         <p className="rounded-md bg-wf-fail/10 px-3 py-2 text-[13px] text-wf-fail">
           {describeRunError(run.error, names)}
         </p>
+      ) : null}
+      {run.waitpoints ? (
+        <RunWaitpoints
+          waitpoints={run.waitpoints}
+          names={names}
+          steps={run.steps}
+          onChanged={props.onChanged}
+        />
       ) : null}
       {run.warningNotes.length > 0 ? (
         <ul
@@ -351,6 +405,11 @@ function RunDetail(props: {
           </Button>
         ) : null}
         {rerunError ? <span className="text-wf-fail">{rerunError}</span> : null}
+        {run.status === "WAITING" ? (
+          <span className="ml-auto flex items-center gap-2">
+            <CancelRunButton run={run} onChanged={props.onChanged} />
+          </span>
+        ) : null}
       </div>
       <div
         role="list"
@@ -359,18 +418,37 @@ function RunDetail(props: {
       >
         <TriggerRow run={run} />
         {run.steps.map((step) => (
-          <StepRow
-            key={step.stepId + step.stepKey}
-            step={step}
-            name={names.get(step.stepKey)}
-            span={timeline.get(step.stepId)}
-            dataPending={dataPending}
-            dataError={dataError}
-          />
+          <Fragment key={step.stepId + step.stepKey}>
+            {iterated.has(step.stepId) ? null : (
+              <StepRow
+                step={step}
+                name={names.get(step.stepKey)}
+                span={timeline.get(step.stepId)}
+                dataPending={dataPending}
+                dataError={dataError}
+              />
+            )}
+            {loopIterations(run, step.stepId).map((iteration) => (
+              <StepRow
+                key={iteration.path}
+                step={iteration}
+                name={names.get(iteration.stepKey)}
+                iteration={iterationLabel(iteration.path!)}
+                span={timeline.get(iteration.path!)}
+                dataPending={dataPending}
+                dataError={dataError}
+              />
+            ))}
+          </Fragment>
         ))}
         {run.steps.length === 0 ? (
           <p className="border-t border-solid border-border px-3 py-2 pl-10 text-xs text-muted-foreground">
             No steps ran.
+          </p>
+        ) : null}
+        {cappedIterationsNote(run) ? (
+          <p className="border-t border-solid border-border px-3 py-2 pl-10 text-xs text-muted-foreground">
+            {cappedIterationsNote(run)}
           </p>
         ) : null}
       </div>
@@ -489,6 +567,7 @@ export function RunsTable(props: {
     () => ({
       ALL: scoped.length,
       RUNNING: scoped.filter((run) => run.status === "RUNNING").length,
+      WAITING: scoped.filter((run) => run.status === "WAITING").length,
       SUCCEEDED: scoped.filter((run) => run.status === "SUCCEEDED").length,
       FAILED: scoped.filter((run) => run.status === "FAILED").length,
     }),

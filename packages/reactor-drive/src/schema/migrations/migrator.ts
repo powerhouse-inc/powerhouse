@@ -4,12 +4,14 @@ import * as migration0001 from "./0001_drive_node.js";
 import * as migration0002 from "./0002_document_name.js";
 import * as migration0003 from "./0003_drive_node_listing_indexes.js";
 import * as migration0004 from "./0004_drop_drive_node_parent_name.js";
+import * as migration0005 from "./0005_drive_node_sibling_name_index.js";
 
 const migrations = {
   "0001_drive_node": migration0001,
   "0002_document_name": migration0002,
   "0003_drive_node_listing_indexes": migration0003,
   "0004_drop_drive_node_parent_name": migration0004,
+  "0005_drive_node_sibling_name_index": migration0005,
 };
 
 const REACTOR_DRIVE_MIGRATION_TABLE = "kysely_migration_reactor_drive";
@@ -28,9 +30,11 @@ class ProgrammaticMigrationProvider implements MigrationProvider {
   }
 }
 
+/** Migrates to the latest, or up or down to `upTo` when given. */
 export async function runReactorDriveMigrations(
   db: Kysely<unknown>,
   schema: string,
+  upTo?: string,
 ): Promise<ReactorDriveMigrationResult> {
   try {
     await sql`CREATE SCHEMA IF NOT EXISTS ${sql.id(schema)}`.execute(db);
@@ -54,7 +58,9 @@ export async function runReactorDriveMigrations(
   let error: unknown;
   let results: Awaited<ReturnType<typeof migrator.migrateToLatest>>["results"];
   try {
-    const result = await migrator.migrateToLatest();
+    const result = upTo
+      ? await migrator.migrateTo(upTo)
+      : await migrator.migrateToLatest();
     error = result.error;
     results = result.results;
   } catch (e) {

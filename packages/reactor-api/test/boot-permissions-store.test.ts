@@ -9,7 +9,7 @@ import {
 } from "@powerhousedao/reactor";
 import type { DocumentModelModule } from "document-model";
 import { sql, type Kysely } from "kysely";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   initializeAndStartAPI,
   resolvePermissionCacheTtlMs,
@@ -40,17 +40,11 @@ async function tableNames(db: Kysely<unknown>): Promise<string[]> {
 let dispose: (() => Promise<void>) | undefined;
 let permissionsDb: Kysely<DocumentPermissionDatabase> | undefined;
 
-beforeEach(() => {
-  vi.stubEnv("AUTH_ENABLED", "true");
-  vi.stubEnv("DOCUMENT_PERMISSIONS_ENABLED", "true");
-});
-
 afterEach(async () => {
   await dispose?.();
   dispose = undefined;
   await permissionsDb?.destroy();
   permissionsDb = undefined;
-  vi.unstubAllEnvs();
 });
 
 describe("the host-built document permission service", () => {
@@ -71,6 +65,7 @@ describe("the host-built document permission service", () => {
         port: 0,
         dbPath: undefined,
         mcp: false,
+        auth: { enabled: true, documentPermissions: { enabled: true } },
         verifyCredential: () => Promise.resolve(true),
       },
       "switchboard",
@@ -107,6 +102,7 @@ describe("the host-built document permission service", () => {
         port: 0,
         dbPath: undefined,
         mcp: false,
+        auth: { enabled: true, documentPermissions: { enabled: true } },
         verifyCredential: () => Promise.resolve(true),
       },
       "switchboard",

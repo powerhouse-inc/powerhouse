@@ -2,7 +2,12 @@
 // header, the table and the editor toolbar never disagree about a run.
 import type { RunRecord } from "../../workflow-editor/runtime-client.js";
 
-export const RUN_STATUSES = ["RUNNING", "SUCCEEDED", "FAILED"] as const;
+export const RUN_STATUSES = [
+  "RUNNING",
+  "WAITING",
+  "SUCCEEDED",
+  "FAILED",
+] as const;
 
 // Every status maps to one of five tones; colour carries meaning nowhere else.
 export type Tone = "ok" | "fail" | "warn" | "run" | "idle";
@@ -35,7 +40,8 @@ export const RUN_TONE: Record<string, Tone> = {
   SUCCEEDED: "ok",
   FAILED: "fail",
   RUNNING: "run",
-  WAITING: "run",
+  // Paused for an approval, a webhook or a delay: someone may need to act.
+  WAITING: "warn",
   PENDING: "idle",
   PARKED: "warn",
   CANCELLED: "idle",
@@ -185,6 +191,17 @@ export function formatWhen(startedAt: string): string {
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
   return new Date(startedAt).toLocaleDateString();
+}
+
+// A future instant, relative: "in 5m", "in 3h", "in 2d"; a past one is null.
+export function formatUntil(iso: string): string | null {
+  const diff = new Date(iso).getTime() - Date.now();
+  if (diff <= 0) return null;
+  if (diff < 60_000) return "in under a minute";
+  if (diff < 3_600_000) return `in ${Math.floor(diff / 60_000)}m`;
+  if (diff < 86_400_000) return `in ${Math.floor(diff / 3_600_000)}h`;
+  if (diff < 7 * 86_400_000) return `in ${Math.floor(diff / 86_400_000)}d`;
+  return `on ${new Date(iso).toLocaleDateString()}`;
 }
 
 export function formatAbsolute(iso: string): string {

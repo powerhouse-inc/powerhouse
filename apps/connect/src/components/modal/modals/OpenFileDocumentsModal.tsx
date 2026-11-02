@@ -27,6 +27,7 @@ import {
   setSelectedDrive,
   showPHModal,
   useDocumentTypes,
+  useDriveNodes,
   useDrives,
   usePHModal,
   useUserPermissions,
@@ -130,6 +131,7 @@ export function OpenFileDocumentsModal() {
   const selectedDrive = drives?.find(
     (drive) => drive.header.id === selectedDriveId,
   );
+  const selectedDriveNodes = useDriveNodes(selectedDrive?.header.id);
 
   const driveOptions = (drives ?? []).map((drive) => ({
     label: getDriveName(drive),
@@ -148,10 +150,13 @@ export function OpenFileDocumentsModal() {
       parsed: cached instanceof Promise ? undefined : cached,
     };
   });
+  // Rows stay "checking" until the drive's nodes are in.
   const plan = selectedDrive
     ? planOpenFileImports({
-        entries,
-        nodes: selectedDrive.state.global.nodes,
+        entries: selectedDriveNodes
+          ? entries
+          : entries.map((entry) => ({ ...entry, parsed: undefined })),
+        nodes: selectedDriveNodes ?? [],
         documentTypes,
       })
     : new Map<string, never>();

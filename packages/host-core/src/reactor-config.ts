@@ -1,12 +1,16 @@
 /**
- * The shared `reactor` host-config block and its projections onto today's
- * Switchboard env / Connect runtime config. Phase 2 of uniform-runners: makes
+ * The shared `reactor` host-config block and its projections onto the
+ * Switchboard config / Connect runtime config. Phase 2 of uniform-runners: makes
  * the reactor block live through the bridge runners, BEFORE track R replaces
  * the projection with reactor-monitor's provision(). The headline is
  * single-sourced `reactor.protocol` — both projections read the same block, so
  * client and server cannot diverge, and a contradicting pre-set env fails boot.
  */
 
+import {
+  remoteBackends,
+  type ServedRemoteBackend,
+} from "./backend-projection.js";
 import type {
   ReactorBackend,
   ReactorBackendKind,
@@ -24,8 +28,9 @@ export type {
   ReactorStorageConfig,
 } from "./host-schemas.js";
 
-/** The single primary backend for phase-2 projection (multi-backend routing is
- * track R). Prefers placement.primary, else "main"/"local", else the first. */
+/** A switchboard host's own store. Prefers placement.primary, else
+ * "main"/"local", else the first. Connect refuses placement.primary: its
+ * reactor is {@link browserBackend}. */
 export function primaryBackend(
   reactor: ReactorConfig | undefined,
 ): ReactorBackend | undefined {
@@ -51,6 +56,7 @@ const FLAG_ENV: Record<
   authEnforcement: "REACTOR_AUTH_ENFORCEMENT",
   authGroups: "REACTOR_AUTH_GROUPS",
   authConditions: "REACTOR_AUTH_CONDITIONS",
+  undoV3: "REACTOR_UNDO_V3",
 };
 
 /** The env vars a protocol block maps onto, with their string values. Only
@@ -74,32 +80,38 @@ export function protocolEnv(
   return env;
 }
 
-export interface SwitchboardReactorProjection {
-  /** Env the switchboard server reads at boot. Only keys the block sets. */
-  env: Record<string, string>;
-  /** Options passed to startSwitchboard (DB path). */
-  options: { dbPath?: string };
+/** The switchboard config layer a reactor block maps to (the shape of
+ * `@powerhousedao/switchboard/config`'s input). Only keys the block sets. */
+export interface SwitchboardReactorLayer {
+  storage?: { reactor?: { url: string }; readModel?: { url: string } };
+  protocol?: ReactorProtocol;
+  packages?: { dynamic: true };
+  features?: { workflows: boolean };
 }
 
-/** Project the reactor block onto the switchboard's env + options. */
-export function projectReactorToSwitchboard(
+/** The reactor block as a switchboard config layer. The reactor store and the
+ * read model are separate fields: `readModel.url` never moves the reactor. */
+export function reactorBlockToSwitchboardConfig(
   reactor: ReactorConfig | undefined,
-): SwitchboardReactorProjection {
-  const env = protocolEnv(reactor?.protocol);
+): SwitchboardReactorLayer {
+  const layer: SwitchboardReactorLayer = {};
   const backend = primaryBackend(reactor);
-  const options: { dbPath?: string } = {};
-
-  if (backend?.storage) {
-    const s = backend.storage;
-    const dbUrl = s.kind === "postgres" ? s.url : s.dataDir;
-    if (dbUrl) env.PH_REACTOR_DATABASE_URL = dbUrl;
+  const storage = backend?.storage;
+  const reactorUrl =
+    storage?.kind === "postgres" ? storage.url : storage?.dataDir;
+  const readModelUrl = backend?.readModel?.url;
+  if (reactorUrl || readModelUrl) {
+    layer.storage = {
+      ...(reactorUrl ? { reactor: { url: reactorUrl } } : {}),
+      ...(readModelUrl ? { readModel: { url: readModelUrl } } : {}),
+    };
   }
-  if (backend?.readModel?.url) options.dbPath = backend.readModel.url;
-  if (backend?.packages?.dynamic) env.DYNAMIC_MODEL_LOADING = "true";
+  if (reactor?.protocol) layer.protocol = reactor.protocol;
+  if (backend?.packages?.dynamic) layer.packages = { dynamic: true };
   if (reactor?.workflows !== undefined) {
-    env.PH_WORKFLOWS_ENABLED = reactor.workflows ? "1" : "0";
+    layer.features = { workflows: reactor.workflows };
   }
-  return { env, options };
+  return layer;
 }
 
 /** The four reactor-client shapes a Connect host can select (mirrors the
@@ -110,6 +122,16 @@ const LOCAL_BACKEND_KINDS = new Set<ReactorBackendKind>([
   "in-process",
   "worker",
 ]);
+
+/** Connect's browser reactor: its first in-process or worker backend. */
+export function browserBackend(
+  reactor: ReactorConfig | undefined,
+): (ReactorBackend & { name: string }) | undefined {
+  const entry = Object.entries(reactor?.backends ?? {}).find(([, backend]) =>
+    LOCAL_BACKEND_KINDS.has(backend.kind),
+  );
+  return entry ? { ...entry[1], name: entry[0] } : undefined;
+}
 
 /**
  * Which reactor client the backend topology asks for:
@@ -131,41 +153,89 @@ export function reactorClientMode(
   const hasRemote = kinds.some((k) => k === "remote");
   if (hasLocal && hasRemote) return "router";
   if (hasRemote) return "remote";
-  return primaryBackend(reactor)?.kind === "worker" ? "worker" : "in-process";
+  return browserBackend(reactor)?.kind === "worker" ? "worker" : "in-process";
+}
+
+/** The router settings Connect serves: only the keys the host sets. */
+export interface ConnectRouterSettings {
+  /** A remote backend's host key; absent, the browser reactor (or the only switchboard). */
+  newDrives?: string;
+  probeTimeoutMs?: number;
+  provisionalRouteMs?: number;
+}
+
+/** Served only when `newDrives` names a served remote backend: a local one
+ * is the default, and Connect refuses one it has no address for. */
+function connectRouterSettings(
+  reactor: ReactorConfig | undefined,
+  served: readonly ServedRemoteBackend[],
+): ConnectRouterSettings | undefined {
+  const newDrives = reactor?.placement?.newDrives;
+  const { probeTimeoutMs, provisionalRouteMs } = reactor?.router ?? {};
+  const router: ConnectRouterSettings = {
+    ...(newDrives !== undefined &&
+    served.some((remote) => remote.name === newDrives)
+      ? { newDrives }
+      : {}),
+    ...(probeTimeoutMs !== undefined ? { probeTimeoutMs } : {}),
+    ...(provisionalRouteMs !== undefined ? { provisionalRouteMs } : {}),
+  };
+  return Object.keys(router).length > 0 ? router : undefined;
 }
 
 export interface ConnectReactorProjection {
   /** Patch merged into the connect runtime config (connect.*). */
   connect: {
     reactor?: ReactorProtocol;
-    instance?: { reactorWorker?: boolean; reactorClient?: ReactorClientMode };
+    instance?: {
+      reactorWorker?: boolean;
+      reactorClient?: ReactorClientMode;
+      remoteBackends?: ServedRemoteBackend[];
+      router?: ConnectRouterSettings;
+    };
     app?: { workflowsEnabled?: boolean };
   };
 }
 
 /** Project the reactor block onto the Connect runtime config: protocol →
  * connect.reactor (same shape), backend topology → instance.reactorWorker
- * (legacy) + instance.reactorClient (the explicit 4-way selector),
- * workflows → app.workflowsEnabled. */
+ * (the browser reactor's kind), instance.reactorClient, and with a
+ * switchboard instance.remoteBackends and instance.router, workflows →
+ * app.workflowsEnabled. */
 export function projectReactorToConnect(
   reactor: ReactorConfig | undefined,
 ): ConnectReactorProjection {
   const connect: ConnectReactorProjection["connect"] = {};
   if (reactor?.protocol) connect.reactor = reactor.protocol;
-  const backend = primaryBackend(reactor);
   const mode = reactorClientMode(reactor);
-  if (backend?.kind !== undefined || mode !== undefined) {
+  if (mode !== undefined) {
+    const routed = mode === "router" || mode === "remote";
+    const served = routed ? remoteBackends(reactor) : [];
+    const router = routed ? connectRouterSettings(reactor, served) : undefined;
     connect.instance = {
-      ...(backend?.kind !== undefined
-        ? { reactorWorker: backend.kind === "worker" }
-        : {}),
-      ...(mode !== undefined ? { reactorClient: mode } : {}),
+      reactorWorker: browserBackend(reactor)?.kind === "worker",
+      reactorClient: mode,
+      ...(routed ? { remoteBackends: served } : {}),
+      ...(router ? { router } : {}),
     };
   }
   if (reactor?.workflows !== undefined) {
     connect.app = { workflowsEnabled: reactor.workflows };
   }
   return { connect };
+}
+
+/** Whether an env value means what the host's value does. The switchboard
+ * reads REACTOR_UNDO_V3 as on unless it is exactly "false". */
+export function protocolEnvAgrees(
+  varName: string,
+  envValue: string,
+  hostValue: string,
+): boolean {
+  if (varName === FLAG_ENV.undoV3) {
+    return (envValue !== "false") === (hostValue === "true");
+  }
+  return envValue === hostValue;
 }
 
 /** Each pre-set env var that CONTRADICTS the host's protocol block, as a
@@ -180,7 +250,12 @@ export function protocolConflicts(
   return Object.entries(protocolEnv(protocol)).flatMap(
     ([varName, hostValue]) => {
       const envValue = env[varName];
-      if (envValue === undefined || envValue === hostValue) return [];
+      if (
+        envValue === undefined ||
+        protocolEnvAgrees(varName, envValue, hostValue)
+      ) {
+        return [];
+      }
       return [
         `reactor.protocol conflict: ${varName} is "${envValue}" in the environment ` +
           `but "${hostValue}" in ${hostFile}. These are fleet-consensus settings — ` +

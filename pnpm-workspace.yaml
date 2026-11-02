@@ -37,8 +37,12 @@ catalog:
   "@mastra/memory": 1.30.0
   "mastra": 1.30.0
   "marked": 18.0.12
-  "ai": 7.0.83
-  "@ai-sdk/openai-compatible": 3.0.37
+  "ai": 7.0.130
+  "@ai-sdk/anthropic": 4.0.74
+  "@ai-sdk/google": 4.0.90
+  "@ai-sdk/openai": 4.0.86
+  "@ai-sdk/openai-compatible": 3.0.65
+  "@ai-sdk/typesafe-ai": 3.0.15
   "@aws-sdk/client-s3": 3.1087.0
   "@aws-sdk/s3-request-presigner": 3.1087.0
   "typescript": 7.0.2
@@ -206,4 +210,6 @@ patchedDependencies:
   '@electric-sql/pglite-tools@0.2.4': patches/@electric-sql__pglite-tools@0.2.4.patch
   # Backports 14.0.0-next-9.33's sync fstat; the async one's EBADF crashes the registry.
   '@verdaccio/local-storage@14.0.0-next-9.31': patches/@verdaccio__local-storage@14.0.0-next-9.31.patch
+  # A failed tarball write still recorded its attachment, re-saving the packument after the failed publish's rollback.
+  '@verdaccio/store@9.0.0-next-9.31': patches/@verdaccio__store@9.0.0-next-9.31.patch
   cmd-ts@0.15.0: patches/cmd-ts@0.15.0.patch

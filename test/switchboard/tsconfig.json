@@ -21,6 +21,9 @@
       "path": "../../packages/reactor-browser"
     },
     {
+      "path": "../../packages/reactor-router"
+    },
+    {
       "path": "../../packages/renown"
     },
     {

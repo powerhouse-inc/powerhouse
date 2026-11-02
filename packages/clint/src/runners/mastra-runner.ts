@@ -8,7 +8,10 @@ import {
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
-import { defineHostSchemas } from "@powerhousedao/host-core/schema";
+import {
+  defineHostSchemas,
+  switchboardOfDrive,
+} from "@powerhousedao/host-core/schema";
 import { z } from "zod";
 import {
   attachRemoteReactor,
@@ -26,10 +29,11 @@ import {
 
 /**
  * mastra-runner (P5.6): the headless agent host. Its reactor is a REMOTE
- * attach — a lone `remote` backend whose `remote.url` is the running
- * switchboard's GraphQL endpoint (typically the output token
- * `switchboard.endpoints.graphql`, resolved before the verb runs); it depends
- * on that switchboard and never starts one. `run`/`serve` expose an
+ * attach — a lone `remote` backend whose `remote.url` is a drive address on
+ * the running switchboard (typically the output token
+ * `switchboard.drives.powerhouse.url`, resolved before the verb runs); it
+ * attaches to that switchboard's GraphQL endpoint, depends on it and never
+ * starts one. `run`/`serve` expose an
  * OpenAI-compatible chat-completions endpoint (streaming SSE +
  * non-streaming, stateless baseline — the caller owns session state);
  * without a configured model it answers as the DEMO agent. `build` compiles
@@ -41,9 +45,9 @@ export const kind = "reactor";
 /** The verbs this runner exports (`promptFromMessages` is a helper). */
 export const verbs = ["run", "serve", "build"] as const;
 
-/** The token a host writes for the switchboard endpoint (error hints). */
+/** The token a host writes for the switchboard's drive address (error hints). */
 const REMOTE_URL_HINT =
-  'remote: { url: switchboard.endpoints.graphql } (from ../switchboard/outputs.js), or literally { url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } } }';
+  'remote: { url: switchboard.drives.<slug>.url } (from ../switchboard/outputs.js), or literally { url: { $output: { host: "switchboard", path: ["drives", "<slug>", "url"] } } }';
 
 /**
  * The agent host, from one definition in two forms: DECLARED (`apiKey` may
@@ -121,9 +125,8 @@ declare global {
 
 const DEFAULT_AGENT_PORT = 4910;
 
-/** The remote backend's switchboard url, as resolved before the verb. The
- * sibling-reference resolver (`remote: { host }`) is gone: an output token
- * names the endpoint the switchboard actually bound. */
+/** The GraphQL endpoint of the switchboard the remote backend's drive
+ * address names, as resolved before the verb. */
 function remoteUrl(host: MastraHost): string {
   const backends = Object.values(host.reactor?.backends ?? {});
   const remote = backends.find((b) => b.kind === "remote");
@@ -135,13 +138,15 @@ function remoteUrl(host: MastraHost): string {
     );
   }
   const url = remote.remote?.url;
-  if (typeof url !== "string" || url.length === 0) {
+  const switchboard =
+    typeof url === "string" ? switchboardOfDrive(url) : undefined;
+  if (!switchboard) {
     throw new Error(
-      `hosts/${host.name}: the remote backend needs the switchboard's ` +
-        `GraphQL url: ${REMOTE_URL_HINT}.`,
+      `hosts/${host.name}: the remote backend needs a drive address on the ` +
+        `switchboard (<switchboard>/d/<slug>): ${REMOTE_URL_HINT}.`,
     );
   }
-  return url;
+  return switchboard.graphql;
 }
 
 type ChatMessage = { role: string; content: unknown };

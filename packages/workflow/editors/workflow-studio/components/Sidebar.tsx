@@ -16,6 +16,7 @@ import { errorMessage } from "../../shared/DocumentErrorBoundary.js";
 import { CONNECTION_TONE, toneOf, workflowHealth } from "./run-format.js";
 import type { WorkflowDocument } from "document-models/workflow";
 import { Icon, StatusDot } from "./ui.js";
+import { ApprovalBadge, type PendingApprovals } from "./Waitpoints.js";
 import {
   DeleteWorkflowDialog,
   deleteWorkflow,
@@ -116,6 +117,9 @@ function DeleteButton(props: { node: FileNode; label: string }) {
 function NodeRow(props: {
   node: FileNode;
   lastRunStatus?: string;
+  approvals?: number;
+  approvalsCapped?: boolean;
+  onShowApprovals?: () => void;
   active: boolean;
   onOpen: () => void;
   onEdit?: () => void;
@@ -174,6 +178,12 @@ function NodeRow(props: {
       keyShortcuts={props.keyShortcuts}
       trailing={
         <span className="mr-1.5 flex shrink-0 items-center">
+          <ApprovalBadge
+            count={props.approvals ?? 0}
+            capped={props.approvalsCapped ?? false}
+            onClick={props.onShowApprovals}
+            className="mr-0.5"
+          />
           {props.onEdit ? (
             <button
               type="button"
@@ -227,6 +237,8 @@ function Section(props: {
   empty: string;
   nodes: FileNode[];
   lastRuns?: Map<string, string>;
+  approvals?: PendingApprovals;
+  onShowApprovals?: (node: FileNode) => void;
   activeId?: string | null;
   onOpen: (node: FileNode) => void;
   onEdit?: (node: FileNode) => void;
@@ -299,6 +311,13 @@ function Section(props: {
               <NodeRow
                 node={node}
                 lastRunStatus={props.lastRuns?.get(node.id)}
+                approvals={props.approvals?.byWorkflow.get(node.id)}
+                approvalsCapped={props.approvals?.capped}
+                onShowApprovals={
+                  props.onShowApprovals
+                    ? () => props.onShowApprovals!(node)
+                    : undefined
+                }
                 active={props.activeId === node.id}
                 onOpen={() => props.onOpen(node)}
                 onEdit={props.onEdit ? () => props.onEdit!(node) : undefined}
@@ -336,6 +355,9 @@ export function Sidebar(props: {
   connections: FileNode[];
   // Each workflow's latest run status, by workflow id.
   lastRuns: Map<string, string>;
+  approvals: PendingApprovals;
+  // Opens the waiting list: the drive's, or one workflow's.
+  onShowApprovals: (workflowId?: string) => void;
   activeId?: string | null;
   allRunsActive: boolean;
   creating: boolean;
@@ -348,8 +370,19 @@ export function Sidebar(props: {
   onCreateConnection: () => void;
 }) {
   return (
-    <aside className="w-60 shrink-0 overflow-y-auto border-r border-solid border-border bg-muted/50 py-3">
-      <Row active={props.allRunsActive} onClick={props.onShowAllRuns}>
+    <aside className="max-h-56 w-full shrink-0 overflow-y-auto border-b border-solid border-border bg-muted/50 py-3 md:max-h-none md:w-60 md:border-r md:border-b-0">
+      <Row
+        active={props.allRunsActive}
+        onClick={props.onShowAllRuns}
+        trailing={
+          <ApprovalBadge
+            count={props.approvals.total}
+            capped={props.approvals.capped}
+            onClick={() => props.onShowApprovals()}
+            className="mr-2"
+          />
+        }
+      >
         <Icon name="list" className="text-muted-foreground" />
         <span>Overview</span>
       </Row>
@@ -359,6 +392,8 @@ export function Sidebar(props: {
         empty="No workflows yet."
         nodes={props.workflows}
         lastRuns={props.lastRuns}
+        approvals={props.approvals}
+        onShowApprovals={(node) => props.onShowApprovals(node.id)}
         activeId={props.activeId}
         onOpen={props.onOpenWorkflow}
         onEdit={props.onEditWorkflow}

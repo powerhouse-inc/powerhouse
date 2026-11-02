@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/desktop",
-  "version": "6.2.3-dev.77",
+  "version": "6.2.3-dev.90",
   "description": "The desktop runner for uniform-runners hosts: the generic compound stack wrapped in a native shell — dev opens the window, build stages the shippable stack.",
   "repository": {
     "type": "git",
@@ -39,9 +39,13 @@
   "dependencies": {
     "@powerhousedao/host-core": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@renown/sdk": "workspace:*",
+    "rolldown": "catalog:",
+    "viem": "~2.50.4",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "ethers": "^6.17.0",
     "tsdown": "catalog:",
     "vitest": "catalog:"
   }

@@ -11,11 +11,20 @@ import {
   type BlockIdentity,
 } from "@powerhousedao/pieces-framework/block-type";
 import {
+  APPROVAL_BLOCK,
   ASSERT_BLOCK,
   BRANCH_BLOCK,
+  CALL_FLOW_BLOCK,
+  CALLABLE_FLOW_TRIGGER,
+  LOOP_BLOCK,
+  ROUTER_BLOCK,
+  DELAY_BLOCK,
   isCoreBlock,
   MANUAL_TRIGGER,
+  RETURN_RESPONSE_BLOCK,
   SCHEDULE_TRIGGER,
+  STOP_BLOCK,
+  WAIT_FOR_WEBHOOK_BLOCK,
   WEBHOOK_TRIGGER,
 } from "./blocks.js";
 import { useEffect, useSyncExternalStore } from "react";
@@ -50,10 +59,55 @@ const CORE_META: Record<string, BlockMeta> = {
     subtitle: "Core",
     glyph: "⑂",
   },
+  [blockKey(ROUTER_BLOCK)]: {
+    displayName: "Router",
+    subtitle: "Core",
+    glyph: "⑃",
+  },
+  [blockKey(LOOP_BLOCK)]: {
+    displayName: "Loop on items",
+    subtitle: "Core",
+    glyph: "↻",
+  },
   [blockKey(ASSERT_BLOCK)]: {
     displayName: "Assert",
     subtitle: "Core",
     glyph: "!",
+  },
+  [blockKey(DELAY_BLOCK)]: {
+    displayName: "Delay",
+    subtitle: "Core",
+    glyph: "⧗",
+  },
+  [blockKey(APPROVAL_BLOCK)]: {
+    displayName: "Request approval",
+    subtitle: "Core",
+    glyph: "✓",
+  },
+  [blockKey(STOP_BLOCK)]: {
+    displayName: "Stop run",
+    subtitle: "Core",
+    glyph: "■",
+  },
+  [blockKey(WAIT_FOR_WEBHOOK_BLOCK)]: {
+    displayName: "Respond and wait for webhook",
+    subtitle: "Core",
+    glyph: "⇄",
+  },
+  [blockKey(CALLABLE_FLOW_TRIGGER)]: {
+    displayName: "Callable workflow",
+    subtitle: "Trigger",
+    glyph: "↳",
+  },
+  [blockKey(CALL_FLOW_BLOCK)]: {
+    displayName: "Call workflow",
+    subtitle: "Core",
+    glyph: "↳",
+  },
+  [blockKey(RETURN_RESPONSE_BLOCK)]: {
+    displayName: "Return response",
+    subtitle: "Core",
+    glyph: "↩",
   },
 };
 
@@ -245,6 +299,11 @@ export function ensurePieceLogos(source?: PieceCatalogSource): Promise<void> {
   return current.load;
 }
 
+// Another piece's blocks the Core tab names itself, whatever the piece calls them.
+export function namedByCoreTab(block: BlockIdentity): boolean {
+  return !isCoreBlock(block) && blockKey(block) in CORE_META;
+}
+
 export function blockMeta(block: BlockIdentity): BlockMeta {
   const key = blockKey(block);
   const core = CORE_META[key] as BlockMeta | undefined;
@@ -267,6 +326,19 @@ export function blockMeta(block: BlockIdentity): BlockMeta {
     // Shown until the catalog arrives, and whenever the logo fails to load.
     glyph: short.slice(0, 1).toUpperCase() || "?",
   };
+}
+
+// About what a step card's subtitle line holds at text-xs.
+export const CARD_SUBTITLE_CHARS = 26;
+
+// A step card's subtitle: the action, led by its piece when that fits.
+export function stepSubtitle(
+  meta: BlockMeta,
+  maxChars = CARD_SUBTITLE_CHARS,
+): string {
+  if (meta.subtitle === "Core") return meta.displayName;
+  const both = `${meta.subtitle} · ${meta.displayName}`;
+  return both.length <= maxChars ? both : meta.displayName;
 }
 
 function titleCase(value: string): string {

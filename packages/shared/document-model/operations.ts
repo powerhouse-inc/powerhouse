@@ -1,8 +1,24 @@
 import type { Draft } from "mutative";
 import { castDraft, create } from "mutative";
-import { noop, type Action } from "./actions.js";
+import type { Action } from "./actions.js";
 import type { PHDocument } from "./documents.js";
-import { nextSkipNumber, sortOperations } from "./documents.js";
+import { nextSkipNumber, sortOperations } from "./operation-order.js";
+import type { NOOPAction } from "./types.js";
+import { generateActionId } from "./utils.js";
+
+/**
+ * The NOOP base-reducers 1 and 2 synthesize for an undo. It takes the wall
+ * clock in every scope, never the auth clock.
+ */
+function undoMarker(scope: string): NOOPAction {
+  return {
+    id: generateActionId(),
+    timestampUtcMs: new Date().toISOString(),
+    type: "NOOP",
+    input: {},
+    scope,
+  };
+}
 
 // updates the name of the document
 export function setNameOperation<TDocument extends PHDocument>(
@@ -34,6 +50,13 @@ export function setPreferredEditorOperation<TDocument extends PHDocument>(
   };
 }
 
+export function setSlugOperation<TDocument extends PHDocument>(
+  document: TDocument,
+  input: { slug: string },
+): TDocument {
+  return { ...document, header: { ...document.header, slug: input.slug } };
+}
+
 export function undoOperation<TDocument extends PHDocument>(
   document: TDocument,
   action: Action,
@@ -58,7 +81,7 @@ export function undoOperation<TDocument extends PHDocument>(
     const operations = [...document.operations[scope]];
     const sortedOperations = sortOperations(operations);
 
-    draft.action = noop(scope) as Draft<Action>;
+    draft.action = undoMarker(scope) as Draft<Action>;
 
     const lastOperation = sortedOperations.at(-1);
     let nextIndex = lastOperation?.index ?? -1;
@@ -143,7 +166,7 @@ export function undoOperationV2<TDocument extends PHDocument>(
       );
     }
 
-    draft.action = noop(scope) as Draft<Action>;
+    draft.action = undoMarker(scope) as Draft<Action>;
     draft.skip = 1;
   });
 }
@@ -261,6 +284,12 @@ export type Operation = {
   /** Error message for a failed action */
   error?: string;
 
+  /** The name of the error a reducer threw, e.g. "BookNotStartedError"; not stored. */
+  errorName?: string;
+
+  /** The `errorCode` of the error a reducer threw, e.g. "BOOK_NOT_STARTED"; not stored. */
+  errorCode?: string;
+
   /**
    * If authorization rejected the action, this records the reason why.
    */
@@ -291,7 +320,7 @@ export type DocumentOperations = Record<string, Operation[]>;
  */
 export type OperationOutcome =
   | { kind: "applied" }
-  | { kind: "reducer-error"; message: string }
+  | { kind: "reducer-error"; message: string; name?: string; code?: string }
   | { kind: "denied"; reason: string };
 
 /**
@@ -304,7 +333,12 @@ export function operationOutcome(operation: Operation): OperationOutcome {
   }
 
   if (operation.error !== undefined) {
-    return { kind: "reducer-error", message: operation.error };
+    return {
+      kind: "reducer-error",
+      message: operation.error,
+      ...(operation.errorName !== undefined && { name: operation.errorName }),
+      ...(operation.errorCode !== undefined && { code: operation.errorCode }),
+    };
   }
 
   return { kind: "applied" };

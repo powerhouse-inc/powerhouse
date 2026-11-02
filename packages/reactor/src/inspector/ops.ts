@@ -23,6 +23,11 @@ export const INSPECTOR_OPS = {
     tier: "read",
     gql: "documentModels",
   },
+  loadsModelsOnDemand: {
+    rpc: "registry.loadsModelsOnDemand",
+    tier: "read",
+    gql: "loadsModelsOnDemand",
+  },
   listDrives: { rpc: "drives.list", tier: "read", gql: "drives" },
   checkDriveIntegrity: {
     rpc: "drives.checkIntegrity",
@@ -36,6 +41,16 @@ export const INSPECTOR_OPS = {
   },
   getQueueState: { rpc: "queue.getState", tier: "read", gql: "queueState" },
   getProcessors: { rpc: "processors.getAll", tier: "read", gql: "processors" },
+  getProcessorTiming: {
+    rpc: "processors.timing",
+    tier: "read",
+    gql: "processorTiming",
+  },
+  getMemoryTelemetry: {
+    rpc: "telemetry.memory",
+    tier: "read",
+    gql: "memoryTelemetry",
+  },
   getCatchUpStatus: {
     rpc: "catchUp.status",
     tier: "read",
@@ -62,8 +77,15 @@ export const INSPECTOR_OPS = {
   rerunProcessor: { rpc: "processors.rerun", tier: "admin" },
   sweepCatchUp: { rpc: "catchUp.sweepNow", tier: "admin" },
   setCatchUpPriority: { rpc: "catchUp.setPriority", tier: "admin" },
+  setMemoryTelemetry: { rpc: "telemetry.setMemory", tier: "admin" },
+  writeHeapSnapshot: { rpc: "telemetry.heapSnapshot", tier: "admin" },
   rebuildKeyframes: { rpc: "integrity.rebuildKeyframes", tier: "admin" },
   rebuildSnapshots: { rpc: "integrity.rebuildSnapshots", tier: "admin" },
+  startKeyframeCleanup: { rpc: "keyframes.startCleanup", tier: "admin" },
+  getKeyframeCleanup: { rpc: "keyframes.cleanupStatus", tier: "admin" },
+  cancelKeyframeCleanup: { rpc: "keyframes.cancelCleanup", tier: "admin" },
+  reclaimKeyframeSpace: { rpc: "keyframes.reclaim", tier: "admin" },
+  getKeyframeReclaim: { rpc: "keyframes.reclaimStatus", tier: "admin" },
   queryDb: { rpc: "db.query", tier: "sql" },
 } as const satisfies {
   readonly [

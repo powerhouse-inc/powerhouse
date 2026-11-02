@@ -323,3 +323,76 @@ export function mergedVitestConfig(
   }
   return templateFile.getFullText();
 }
+
+export type JsonObject = { [key: string]: unknown };
+
+const isJsonObject = (value: unknown): value is JsonObject =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/* Missing keys come from `owned`; arrays gain its entries; the project's scalars win. */
+function withOwnedKeys(project: JsonObject, owned: JsonObject): JsonObject {
+  const result = { ...project };
+  for (const [key, value] of Object.entries(owned)) {
+    const current = result[key];
+    if (current === undefined) {
+      result[key] = value;
+    } else if (Array.isArray(value)) {
+      const entries = Array.isArray(current)
+        ? (current as unknown[])
+        : [current];
+      const added = (value as unknown[]).filter((v) => !entries.includes(v));
+      result[key] = [...entries, ...added];
+    } else if (isJsonObject(value) && isJsonObject(current)) {
+      result[key] = withOwnedKeys(current, value);
+    }
+  }
+  return result;
+}
+
+/* Arrays and objects the removal empties go too. */
+function withoutEntries(project: JsonObject, removed: JsonObject): JsonObject {
+  const result = { ...project };
+  for (const [key, value] of Object.entries(removed)) {
+    const current = result[key];
+    let kept: unknown[] | JsonObject;
+    if (Array.isArray(value) && Array.isArray(current)) {
+      kept = current.filter((entry) => !value.includes(entry));
+      if (kept.length === current.length) continue;
+      if (kept.length === 0) delete result[key];
+      else result[key] = kept;
+    } else if (isJsonObject(value) && isJsonObject(current)) {
+      kept = withoutEntries(current, value);
+      if (Object.keys(kept).length === 0 && Object.keys(current).length > 0) {
+        delete result[key];
+      } else {
+        result[key] = kept;
+      }
+    }
+  }
+  return result;
+}
+
+/** The project's JSON settings with the `owned` keys merged in and the
+ * `obsolete` entries removed; undefined when nothing changes or the file
+ * can't be read. */
+export function mergedJsonSettings(
+  fileName: string,
+  existing: string,
+  owned: JsonObject,
+  obsolete: JsonObject = {},
+): string | undefined {
+  // TypeScript asserts its file names use forward slashes.
+  const parsed = ts.parseConfigFileTextToJson(
+    fileName.replaceAll("\\", "/"),
+    existing,
+  );
+  if (parsed.error || !isJsonObject(parsed.config)) {
+    console.warn(`⚠ ${fileName}: could not be read as JSON; left as it is.`);
+    return undefined;
+  }
+  const merged = withoutEntries(withOwnedKeys(parsed.config, owned), obsolete);
+  const text = JSON.stringify(merged, null, 2);
+  return text === JSON.stringify(parsed.config, null, 2)
+    ? undefined
+    : `${text}\n`;
+}

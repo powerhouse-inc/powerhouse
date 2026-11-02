@@ -20,5 +20,5 @@ Source of truth for Connect's `powerhouse.config.json`:
   into the config at boot; not part of schema generation).
 
 After changing a config field, rebuild and run `pnpm tsx scripts/emit-schemas.ts`
-from the repo root. Full workflow: `apps/connect/RUNTIME-CONFIG.md` →
-"Adding or changing a config field".
+from the repo root. Full workflow: `apps/connect/CUSTOMIZING.md` →
+"Adding or changing a field".

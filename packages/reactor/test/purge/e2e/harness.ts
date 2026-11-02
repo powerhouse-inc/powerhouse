@@ -1109,18 +1109,25 @@ export function servingGate(node: Node, subject: AuthSubject): ServingGate {
 }
 
 /** A manifest as a peer from before this spec announces it. */
-export function manifestWithout(protocol: string, sequence = 0): PeerManifest {
+export function manifestWithout(
+  protocol: string,
+  sequence = 0,
+  flags: Partial<ReactorFeatureFlags> = {},
+): PeerManifest {
   return localPeerManifest(
     PEER_CAPABILITIES.filter((capability) => capability.name !== protocol),
-    {},
+    flags,
     undefined,
     sequence,
   );
 }
 
 /** The full local manifest, as the same peer announces it after upgrading. */
-export function fullManifest(sequence = 1): PeerManifest {
-  return localPeerManifest(PEER_CAPABILITIES, {}, undefined, sequence);
+export function fullManifest(
+  sequence = 1,
+  flags: Partial<ReactorFeatureFlags> = {},
+): PeerManifest {
+  return localPeerManifest(PEER_CAPABILITIES, flags, undefined, sequence);
 }
 
 export const WRITE_READY = ReactorEventTypes.JOB_WRITE_READY;
@@ -1147,7 +1154,12 @@ export class CaptureChannels {
   }
 
   /** A remote announcing document-purge; a silent one is held from markers. */
-  async add(node: Node, remoteName: string, driveId: string): Promise<void> {
+  async add(
+    node: Node,
+    remoteName: string,
+    driveId: string,
+    manifest: PeerManifest = fullManifest(),
+  ): Promise<void> {
     await node.sync!.add(
       remoteName,
       DriveCollectionId.forDrive(driveId),
@@ -1155,7 +1167,7 @@ export class CaptureChannels {
       FILTER,
       undefined,
       undefined,
-      fullManifest(),
+      manifest,
     );
   }
 

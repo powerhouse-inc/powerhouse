@@ -7,6 +7,7 @@ import { renderHook } from "vitest-browser-react";
 import { createPHStore, PHStoreProvider } from "../src/hooks/ph-store.js";
 import { useSelectedDocumentOfType } from "../src/hooks/selected-document.js";
 import type { IDocumentCache } from "../src/types/documents.js";
+import { driveNodesCacheOf } from "./utils/drive-nodes.js";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -59,6 +60,7 @@ describe("useSelectedDocumentOfType", () => {
   it("keeps the hook order when the document type arrives later", async () => {
     const store = createPHStore({
       drives: [drive],
+      driveNodes: driveNodesCacheOf(drive),
       selectedDriveId: "a-id",
       selectedNodeId: DOC_ID,
       documentCache,

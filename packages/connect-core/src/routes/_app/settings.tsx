@@ -1,5 +1,6 @@
 import type { ConnectRouterContext } from "@powerhousedao/connect-core/router";
 import {
+  coreRouteOptions,
   coreView,
   redirectToSettingsTab,
   settingsTitle,
@@ -9,7 +10,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 /** The settings page's options: the tab redirect and title. Its tabs are its
  * child routes with `staticData.settings`. */
-export const options = {
+export const options = coreRouteOptions({
   // Bare /settings and a disabled tab go to the first tab. `any`: checking the
   // router's context against a typed parameter here is circular.
   beforeLoad: redirectToSettingsTab as (context: any) => void,
@@ -30,7 +31,7 @@ export const options = {
       },
     ],
   }),
-};
+});
 
 // The tab list beside the shown tab.
 export const Route = createFileRoute("/_app/settings")({

@@ -13,8 +13,10 @@ import {
   buildNodeBuildConfig,
   buildPieceBuildConfig,
   findBundledSharedDeps,
+  hostStubOf,
   IMAGE_EXTENSIONS,
   nodeBuildConfig,
+  onlyReexportsEditors,
   PIECE_ENTRY_GLOB,
 } from "./build-config.mts";
 
@@ -161,6 +163,103 @@ describe("buildNodeBuildConfig", () => {
 
   it("the exported default externalizes the shared set", () => {
     expect(sharedMatchers(nodeBuildConfig).length).toBeGreaterThan(0);
+  });
+
+  it("has no entry for a single editor, which a host never renders", () => {
+    const entry = buildNodeBuildConfig().entry as string[];
+    expect(entry).not.toContain("editors/*/index.ts");
+    expect(entry).not.toContain("editors/*/module.ts");
+    expect(browserEntry).toContain("editors/*/index.ts");
+  });
+
+  it("keeps the plugins it's given alongside its own", () => {
+    const mine = { name: "mine" };
+    const plugins = buildNodeBuildConfig({ plugins: [mine] }).plugins as {
+      name: string;
+    }[][];
+    expect(plugins.flat().map((plugin) => plugin.name)).toEqual([
+      "ph:no-browser-code-on-hosts",
+      "mine",
+    ]);
+  });
+});
+
+describe("hostStubOf", () => {
+  const generatedIndex = [
+    "// generated",
+    'export { Files } from "./files/module.js";',
+    'export { TripEditor } from "./trip-editor/module.js";',
+    'export { editors } from "./editors.js";',
+  ].join("\n");
+
+  it("leaves a host no editors, wherever the package's index.ts finds them", () => {
+    expect(hostStubOf("/project/editors/editors.ts")).toBe(
+      "export const editors = [];",
+    );
+    expect(
+      hostStubOf(
+        "C:\\project\\editors\\index.ts",
+        "c:/project",
+        false,
+        () => generatedIndex,
+      ),
+    ).toBe("export const editors = [];");
+  });
+
+  it("builds an editors/index.ts that exports anything else as written", () => {
+    const withHelper = `${generatedIndex}\nexport { brandSwatchClass } from "./brand.js";`;
+    expect(
+      hostStubOf(
+        "/project/editors/index.ts",
+        "/project",
+        false,
+        () => withHelper,
+      ),
+    ).toBeUndefined();
+    expect(onlyReexportsEditors(withHelper)).toBe(false);
+    expect(onlyReexportsEditors("")).toBe(false);
+  });
+
+  it("builds editors/index.ts as written for a package rendered in Node, but no editors list", () => {
+    expect(
+      hostStubOf("/project/editors/index.ts", "/project", true, () => {
+        throw new Error("not read when the package keeps its editor exports");
+      }),
+    ).toBeUndefined();
+    expect(hostStubOf("/project/editors/editors.ts", "/project", true)).toBe(
+      "export const editors = [];",
+    );
+  });
+
+  it("drops a document model's hooks, in any version", () => {
+    for (const file of [
+      "/project/document-models/invoice/v1/hooks.ts",
+      "D:\\project\\document-models\\invoice\\v12\\hooks.ts",
+    ]) {
+      expect(hostStubOf(file)).toBe("export {};");
+    }
+  });
+
+  it("leaves a host no assistant tools, only at the project's root", () => {
+    expect(hostStubOf("D:\\project\\ai\\tools.ts", "d:/project")).toContain(
+      "aiTools = []",
+    );
+    expect(
+      hostStubOf("/project/processors/ai/tools.ts", "/project"),
+    ).toBeUndefined();
+  });
+
+  it("leaves everything a host does run", () => {
+    for (const file of [
+      "/project/document-models/invoice/v1/module.ts",
+      "/project/document-models/invoice/v1/src/hooks.ts",
+      "/project/document-models/invoice/hooks.ts",
+      "/project/processors/index.ts",
+      "/project/editors/sektar/kit/format.ts",
+      "/project/subgraphs/editors/index.ts.bak",
+    ]) {
+      expect(hostStubOf(file)).toBeUndefined();
+    }
   });
 });
 

@@ -5,6 +5,7 @@ import type {
   UpgradeDocumentAction,
 } from "@powerhousedao/shared/document-model";
 import {
+  documentFromCreation,
   createDocumentState,
   isPurgeMarker,
   PURGE_DOCUMENT,
@@ -13,7 +14,6 @@ import {
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
-  createDocumentFromAction,
 } from "../executor/util.js";
 import { DocumentNotFoundError } from "../shared/errors.js";
 import type { IOperationStore } from "../storage/interfaces.js";
@@ -198,7 +198,7 @@ export class DocumentMetaCache implements IDocumentMetaCache {
     const createAction = createOp.action as CreateDocumentAction;
     const documentType = createAction.input.model;
 
-    let document = createDocumentFromAction(createAction);
+    let document = documentFromCreation(createAction);
     let documentScopeRevision = 0;
     let purged = false;
 

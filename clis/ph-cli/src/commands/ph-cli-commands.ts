@@ -6,9 +6,11 @@ import { host } from "./host.js";
 import { init } from "./init.js";
 import { inspect } from "./inspect.js";
 import { install } from "./install.js";
+import { keyframes } from "./keyframes.js";
 import { list } from "./list.js";
 import { login } from "./login.js";
 import { logout } from "./logout.js";
+import { mcp } from "./mcp.js";
 import { migrate } from "./migrate.js";
 import { publish } from "./publish.js";
 import { registryLogin } from "./registry-login.js";
@@ -30,7 +32,9 @@ const baseCommands = {
   "access-token": accessToken,
   "registry-login": registryLogin,
   inspect,
+  keyframes,
   list,
+  mcp,
   migrate,
   switchboard,
   login,

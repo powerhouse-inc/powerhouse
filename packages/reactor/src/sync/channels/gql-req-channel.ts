@@ -1389,6 +1389,7 @@ export class GqlRequestChannel implements IChannel {
         },
         undefined,
       );
+      for (const syncOp of syncOps) syncOp.pushed();
       return;
     } catch (error) {
       if (gatedUnder === undefined || !this.rejectsAgreementFields(error)) {
@@ -1407,6 +1408,7 @@ export class GqlRequestChannel implements IChannel {
       { envelopes: this.envelopesFor(remaining) },
       undefined,
     );
+    for (const syncOp of remaining) syncOp.pushed();
   }
 
   /** One envelope per SyncOperation, with key/dependsOn for batch ordering. */

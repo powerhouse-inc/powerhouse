@@ -2,28 +2,57 @@ import type { ConfigEntry, Manifest } from "@powerhousedao/shared";
 import { defaultManifest, fileExists } from "@powerhousedao/shared/clis";
 import { ManifestSchema } from "@powerhousedao/shared/document-model";
 import { loadJsonFile } from "load-json-file";
+import { writeFile } from "node:fs/promises";
 import { join } from "path";
 import {
   concat,
   filter,
   isIncludedIn,
+  isPlainObject,
   map,
   merge,
   pipe,
   prop,
   uniqueBy,
 } from "remeda";
-import { writeJsonFile } from "write-json-file";
+import { formatJson } from "utils";
+
+function withUnknownKeys(parsed: unknown, raw: unknown): unknown {
+  if (Array.isArray(parsed) && Array.isArray(raw)) {
+    return parsed.map((value, index) => withUnknownKeys(value, raw[index]));
+  }
+  if (isPlainObject(parsed) && isPlainObject(raw)) {
+    return Object.fromEntries([
+      ...Object.entries(parsed).map(([key, value]) => [
+        key,
+        withUnknownKeys(value, raw[key]),
+      ]),
+      ...Object.entries(raw).filter(([key]) => !Object.hasOwn(parsed, key)),
+    ]);
+  }
+  return parsed;
+}
+
+function parseManifest(raw: unknown): Manifest {
+  return withUnknownKeys(ManifestSchema.parse(raw), raw) as Manifest;
+}
+
+// Parsing puts keys in the schema's order, so a rewrite changes no key order.
+async function writeManifest(manifestPath: string, manifest: Manifest) {
+  await writeFile(
+    manifestPath,
+    await formatJson("powerhouse.manifest.json", parseManifest(manifest)),
+  );
+}
 
 export async function getOrCreateManifestFile(
   manifestPath: string,
 ): Promise<Manifest> {
   const hasManifestFile = await fileExists(manifestPath);
   if (!hasManifestFile) {
-    await writeJsonFile(manifestPath, defaultManifest, { indent: 2 });
+    await writeManifest(manifestPath, defaultManifest);
   }
-  const manifestFile = await loadJsonFile(manifestPath);
-  return ManifestSchema.parse(manifestFile);
+  return parseManifest(await loadJsonFile(manifestPath));
 }
 
 // Generic over the entry: a `pieces` entry carries fields `PowerhouseModule`
@@ -77,11 +106,7 @@ export async function pruneManifestSection(
   const filtered = existing.filter((entry) => validSet.has(entry.id));
   // Skip the write when nothing changed.
   if (filtered.length === existing.length) return;
-  await writeJsonFile(
-    manifestPath,
-    { ...manifest, [kind]: filtered },
-    { indent: 2 },
-  );
+  await writeManifest(manifestPath, { ...manifest, [kind]: filtered });
 }
 
 /* Creates a powerhouse.manifest.json file, or updates an existing one with the data provided */
@@ -126,6 +151,6 @@ export async function createOrUpdateManifest(
       : {}),
     config: makeUpdatedConfig(existingManifest.config, manifestData.config),
   };
-  await writeJsonFile(manifestPath, updatedManifest, { indent: 2 });
+  await writeManifest(manifestPath, updatedManifest);
   return updatedManifest;
 }

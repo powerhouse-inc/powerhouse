@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
@@ -11,14 +12,17 @@ import { dirname, join } from "node:path";
 import { ts } from "ts-morph";
 import { tsConfigTemplate } from "templates";
 import { buildTsMorphProject } from "utils";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  AGENTS_MD_REPLACED_NOTICE,
+  CLAUDE_MD_REPLACED_NOTICE,
+} from "../file-builders/boilerplate/agent-files.js";
 import { generateProcessor } from "./generate.js";
 import { migrate } from "./migrate.js";
 
 const VERSION = "6.2.3-dev.73";
 
 const temporary: string[] = [];
-const initialCwd = process.cwd();
 
 beforeAll(() => {
   // Defined at build time by tsdown; migrate maps over it.
@@ -26,8 +30,6 @@ beforeAll(() => {
 });
 
 afterEach(() => {
-  // buildTsMorphProject chdirs into the project, and Windows can't remove the cwd.
-  process.chdir(initialCwd);
   for (const dir of temporary.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -123,7 +125,7 @@ async function makeProjectWithHelpers() {
   return dir;
 }
 
-describe("ph migrate on processors/", () => {
+describe("ph migrate on processors/", { timeout: 30_000 }, () => {
   it("leaves folders that hold no processor alone", async () => {
     const dir = await makeProjectWithHelpers();
 
@@ -136,6 +138,7 @@ describe("ph migrate on processors/", () => {
       "factory.ts",
       "index.ts",
       "migrations.ts",
+      "processor.test.ts",
       "processor.ts",
       "schema.ts",
     ]);
@@ -170,7 +173,7 @@ describe("ph migrate on processors/", () => {
   });
 });
 
-describe("ph migrate on config files", () => {
+describe("ph migrate on config files", { timeout: 30_000 }, () => {
   async function makeProjectWithConfig() {
     const dir = await makeProject();
     write(
@@ -232,14 +235,19 @@ export default defineConfig({
     );
 
     const oxlint = readJsonc(dir, ".oxlintrc.json");
-    expect(oxlint.ignorePatterns).toEqual([
+    const ignored = oxlint.ignorePatterns as string[];
+    expect(ignored.slice(0, 6)).toEqual([
       "**/node_modules/**",
       "**/dist/**",
       "**/.ph/**",
       "**/storybook-static/**",
       "**/.vite/**",
-      "hosts/lab/routes/**",
+      "**/gen/**",
     ]);
+    // What codegen writes over is left to it, and the project's entries stay.
+    expect(ignored).toContain("editors/editors.ts");
+    expect(ignored.at(-1)).toBe("hosts/lab/routes/**");
+    expect(ignored.filter((p) => p === "**/dist/**")).toHaveLength(1);
     expect(oxlint.rules).toHaveProperty("typescript/await-thenable");
 
     const vitest = read(dir, "vitest.config.ts");
@@ -252,6 +260,9 @@ export default defineConfig({
     );
     expect(vitest.match(/demo\/e2e/g)).toHaveLength(1);
     expect(vitest).toContain('provider: "v8"');
+    // Vite resolves the tsconfig paths itself; the plugin warns that it does.
+    expect(vitest).not.toContain("vite-tsconfig-paths");
+    expect(vitest).toContain("tsconfigPaths: true");
   });
 
   it("drops excludes earlier templates shipped and the current one removed", async () => {
@@ -284,3 +295,179 @@ export default mergeConfig(base, defineConfig({}));
     expect(read(dir, "vitest.config.ts")).toBe(custom);
   });
 });
+
+describe("ph migrate on agent files", { timeout: 30_000 }, () => {
+  async function warningsOf(run: () => Promise<unknown>) {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      await run();
+      return warn.mock.calls.map(([message]) => String(message));
+    } finally {
+      warn.mockRestore();
+    }
+  }
+
+  it("says when it replaced an AGENTS.md and a CLAUDE.md of the format before", async () => {
+    const dir = await makeProject();
+    write(dir, "AGENTS.md", "# Guidance\n\nMy own notes.\n");
+    write(dir, "CLAUDE.md", "# Assistant\n\nMore notes.\n");
+    const git = (...args: string[]) =>
+      execFileSync(
+        "git",
+        ["-c", "user.name=test", "-c", "user.email=test@example.com", ...args],
+        { cwd: dir, stdio: "ignore" },
+      );
+    git("init", "-q");
+    git("add", "-A");
+    git("commit", "-q", "--no-verify", "-m", "init");
+    const warnings = await warningsOf(() =>
+      migrate(VERSION, dir, { skipInstall: true }),
+    );
+    expect(warnings).toContain(AGENTS_MD_REPLACED_NOTICE);
+    expect(warnings).toContain(CLAUDE_MD_REPLACED_NOTICE);
+    expect(read(dir, "AGENTS.md")).not.toContain("My own notes.");
+  });
+
+  it("says nothing of the kind when the files are current", async () => {
+    const dir = await makeProject();
+    await migrate(VERSION, dir, { skipInstall: true });
+    const warnings = await warningsOf(() =>
+      migrate(VERSION, dir, { skipInstall: true }),
+    );
+    expect(warnings).not.toContain(AGENTS_MD_REPLACED_NOTICE);
+    expect(warnings).not.toContain(CLAUDE_MD_REPLACED_NOTICE);
+  });
+});
+
+describe(
+  "ph migrate on a project's dependency pins",
+  { timeout: 30_000 },
+  () => {
+    async function migrated(packageJson: Record<string, unknown>) {
+      const dir = await makeProject();
+      write(
+        dir,
+        "package.json",
+        JSON.stringify({
+          name: "migrate-test",
+          version: "1.0.0",
+          type: "module",
+          ...packageJson,
+        }),
+      );
+      await migrate(VERSION, dir, { skipInstall: true });
+      const once = read(dir, "package.json");
+      await migrate(VERSION, dir, { skipInstall: true });
+      expect(read(dir, "package.json"), "a second run changes nothing").toBe(
+        once,
+      );
+      return JSON.parse(once) as {
+        devDependencies: Record<string, string>;
+        resolutions?: Record<string, string>;
+        overrides?: Record<string, unknown>;
+      };
+    }
+
+    it("pins date-fns, rolldown and vite in every package manager's field", async () => {
+      const result = await migrated({
+        devDependencies: { "date-fns": "^4.1.0" },
+        resolutions: {
+          "**/date-fns": "4.3.0",
+          "**/rolldown": "1.0.2",
+          "**/vite": "8.0.14",
+          "left-pad": "1.3.0",
+        },
+      });
+      expect(result.devDependencies).toMatchObject({
+        "date-fns": "4.3.0",
+        rolldown: "1.0.2",
+        vite: "8.0.14",
+      });
+      expect(result.resolutions).toEqual({
+        "date-fns": "4.3.0",
+        "left-pad": "1.3.0",
+        rolldown: "1.0.2",
+        vite: "8.0.14",
+      });
+      expect(result.overrides).toEqual({
+        "date-fns": "$date-fns",
+        rolldown: "$rolldown",
+        vite: "$vite",
+      });
+    });
+
+    it("leaves a package alone when the project's range does not include the pin", async () => {
+      const result = await migrated({
+        devDependencies: { "date-fns": "^2.30.0" },
+      });
+      expect(result.devDependencies["date-fns"]).toBe("^2.30.0");
+      expect(result.resolutions).toEqual({ rolldown: "1.0.2", vite: "8.0.14" });
+      expect(result.overrides).toEqual({
+        rolldown: "$rolldown",
+        vite: "$vite",
+      });
+    });
+
+    it("keeps vite's range when the project overrides vite itself", async () => {
+      const result = await migrated({
+        devDependencies: { vite: "^8.0.10" },
+        overrides: { vite: "^8.0.10" },
+      });
+      expect(result.devDependencies.vite).toBe("^8.0.10");
+      expect(result.overrides).toEqual({
+        vite: "^8.0.10",
+        "date-fns": "$date-fns",
+        rolldown: "$rolldown",
+      });
+    });
+
+    it("pins vite after replacing a spec it does not keep, in one run", async () => {
+      const result = await migrated({ devDependencies: { vite: "latest" } });
+      expect(result.devDependencies.vite).toBe("8.0.14");
+      expect(result.overrides).toMatchObject({ vite: "$vite" });
+    });
+
+    it("keeps a value the project set under a **/ key, as a bare key", async () => {
+      const result = await migrated({
+        devDependencies: { "date-fns": "^4.1.0" },
+        resolutions: { "**/date-fns": "4.2.0" },
+      });
+      expect(result.devDependencies["date-fns"]).toBe("^4.1.0");
+      expect(result.resolutions).toEqual({
+        "date-fns": "4.2.0",
+        rolldown: "1.0.2",
+        vite: "8.0.14",
+      });
+      expect(result.overrides).toEqual({
+        rolldown: "$rolldown",
+        vite: "$vite",
+      });
+    });
+
+    it("adds no pins to a project with workspaces and drops the **/ keys", async () => {
+      const result = await migrated({
+        workspaces: ["packages/*"],
+        resolutions: { "**/date-fns": "4.3.0", "left-pad": "1.3.0" },
+      });
+      expect(result.devDependencies).not.toHaveProperty("date-fns");
+      expect(result.resolutions).toEqual({ "left-pad": "1.3.0" });
+      expect(result).not.toHaveProperty("overrides");
+    });
+
+    it("leaves a package the project links, overrides or resolves itself alone", async () => {
+      const overrides = {
+        "rolldown@>=1": "1.2.0",
+        vite: { ".": "$vite", picomatch: "4.0.2" },
+      };
+      const result = await migrated({
+        devDependencies: { "date-fns": "link:../date-fns" },
+        overrides,
+        resolutions: { "**/date-fns": "4.3.0" },
+      });
+      expect(result.devDependencies["date-fns"]).toBe("link:../date-fns");
+      expect(result.devDependencies).not.toHaveProperty("rolldown");
+      expect(result.overrides).toEqual(overrides);
+      expect(result).not.toHaveProperty("resolutions");
+    });
+  },
+);

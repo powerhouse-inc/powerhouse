@@ -20,12 +20,12 @@ export class PackagesSubgraph extends BaseSubgraph {
     this.logger.verbose(`constructor()`);
   }
 
-  name = "packages";
+  override name = "packages";
   hasSubscriptions = false;
 
-  typeDefs = gql(schemaSource);
+  override typeDefs = gql(schemaSource);
 
-  resolvers = {
+  override resolvers = {
     Query: {
       Packages: () => ({}),
     },
@@ -101,7 +101,7 @@ export class PackagesSubgraph extends BaseSubgraph {
     },
   };
 
-  onSetup(): Promise<void> {
+  override onSetup(): Promise<void> {
     this.logger.debug("Setting up PackagesSubgraph");
     return Promise.resolve();
   }

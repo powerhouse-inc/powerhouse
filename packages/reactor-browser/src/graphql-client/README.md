@@ -169,8 +169,12 @@ the full reactor client implement:
 | `find(search, view?, paging?, signal?)`           | Paged documents by type, parent or ids; `useDocumentsOfType` reads by type.        |
 | `create(document, parentIdentifier?, signal?)`    | Emits `Created`.                                                                  |
 | `execute(identifier, branch, actions, signal?)`   | Fetches the document, stamps and signs a single action, pushes, emits `Updated`.  |
+| `executeAsync(identifier, branch, actions, signal?)` | What `execute` writes, through `mutateDocumentAsync`: returns the job once the Switchboard holds it, and announces `Updated` once it is readable. A Switchboard backend writes through this, so no one request has to outlast a write. |
 | `deleteDocument(identifier, propagate?, signal?)` | Emits `Deleted`.                                                                  |
 | `subscribe(search, callback, view?)`              | Local emissions plus, lazily, the server's.                                       |
+| `undo` / `redo(identifier, scope?, branch?, ...)` | Submits UNDO or REDO, signed by this client; on base-reducer 3 a RETRACT of the target `undoRedoTargets` resolves. |
+| `undoRedoTargets(identifier, scope?, view?, ...)` | The base-reducer 3 targets, resolved by the Switchboard as the caller.            |
+| `undoRedoAvailability(identifier, scope?, ...)`   | On base-reducer 3, read from `undoRedoTargets`.                                   |
 
 The interface is declared as a `Pick` of the reactor's own `IReactorClient`, so
 the signatures cannot drift.
@@ -188,16 +192,21 @@ interface:
 | `getJob(jobId, signal?)`                                | One `jobStatus` read, no polling; `undefined` when the server answers none.                                                                          |
 | `waitForJob(jobOrId, signal?)`                          | Polls `jobStatus` until READ_READY or FAILED.                                                                                                        |
 | `setPreferredEditor(identifier, editor, branch?)`       | A signed `SET_PREFERRED_EDITOR` through `execute`.                                                                                                   |
-| `getCreateSignaturePolicy`, `getCreateProtocolVersions` | Read from `createDefaults`. A Switchboard without that query throws `GraphQLOperationNotSupportedError`.                                             |
+| `getCreateSignaturePolicy`                              | Read from `createDefaults`. A Switchboard without that query throws `GraphQLOperationNotSupportedError`. |
+| `getCreateProtocolVersions`                             | What the Switchboard's `createDefaults` selects for the type and parent, as given: capped at what this build runs (a version of another known protocol it does not run, or a malformed answer, is refused) and fitted down to what this client's `documentModels` can predict. A Switchboard from before per-type selection answers reactor-wide; one without the query gives base-reducer 2, though `getCreateSignaturePolicy` refuses there. |
+| `newDocument`                                           | Heads a model's new document with `getCreateProtocolVersions` and `getCreateSignaturePolicy`; the module comes from `documentModels`, or the built-in drive model. |
+| `read.drives.getNode(driveId, nodeId, signal?)`         | Asks `driveNode`. Any drive type; the legacy `Node` shape. Absent or withheld throws.                                                                |
+| `read.drives.listNodes(driveId, parentFolder?, ...)`    | Asks `driveNodes`, paged; `next()` follows the cursor. Omit `parentFolder` for every node, `null` for the root level.                                |
 
-`drives`, `resolveIdOrSlug`, `rename`, `createEmpty` and the document-model
-module getters are not implemented here.
+`resolveIdOrSlug`, `rename`, `createEmpty`, `write.drives` and the
+document-model module getters are not implemented here.
 
 Plus what only this client has:
 
 | Method                                    | Notes                                              |
 | ----------------------------------------- | -------------------------------------------------- |
 | `subgraph(name, getSdk)`                  | Binds a typed subgraph SDK. See below.             |
+| `nodeSource()`                            | The node queries as an `IDriveNodeSource`.         |
 | `request(document, variables?, options?)` | Runs a one-off document against the same endpoint. |
 | `dispose()`                               | Closes the realtime socket. The provider calls it. |
 
@@ -474,10 +483,11 @@ Known and deliberate. Nothing here is a bug report.
   `addDocument`, `addFileWithProgress` and `copyNode` helpers throw or no-op for
   the same reason. Render editor components the app imports directly, and build
   actions the app declares itself.
-- **No drives, and jobs only on the class.** They are not on
-  `IReactorBrowserClient`, so the hooks never call them. There is no drive
-  bootstrapping anywhere: `create(document, parentIdentifier?)` is the only
-  parenting the hooks use.
+- **Drive reads only, and jobs only on the class.** `read.drives` reads nodes
+  through the Switchboard's `driveNodes`, `driveNode` and `driveDescendants`
+  queries, which need a Switchboard configured with a node source, and takes
+  drive ids, not slugs. There are no drive writes and no drive bootstrapping:
+  `create(document, parentIdentifier?)` is the only parenting the hooks use.
 - **Realtime degrades to local-only.** A socket that cannot be opened, or is
   refused because the Switchboard requires auth and the subscriber is anonymous,
   is logged once and ignored. The client keeps emitting its own changes. The

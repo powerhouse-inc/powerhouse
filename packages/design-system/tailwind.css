@@ -100,7 +100,7 @@ input[type="number"] {
     @apply font-sans text-sm font-normal leading-none text-foreground;
   }
 
-  /* Default styles for text input fields and textareas based on Storybook */
+  /* Default styles for text input fields, selects and textareas based on Storybook */
   .ph-default-styles input[type="text"],
   .ph-default-styles input[type="email"],
   .ph-default-styles input[type="password"],
@@ -136,6 +136,44 @@ input[type="number"] {
   .ph-default-styles input[type="number"]:is([readonly], [disabled]),
   .ph-default-styles textarea:is([readonly], [disabled]) {
     @apply bg-background text-muted-foreground;
+  }
+
+  .ph-default-styles select {
+    @apply mb-2.5 box-border w-full rounded-md border border-input bg-card px-3 py-1.75 font-sans text-sm font-normal leading-5 text-foreground;
+  }
+
+  .ph-default-styles select:disabled {
+    @apply bg-background text-muted-foreground;
+  }
+
+  .ph-default-styles input[type="checkbox"],
+  .ph-default-styles input[type="radio"] {
+    @apply size-4 accent-primary;
+  }
+
+  /* Buttons: outlined; a utility class on one still wins, as base styles do. */
+  .ph-default-styles button {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-input bg-card px-3 py-1.5 font-sans text-sm font-medium leading-5 text-foreground transition-colors;
+  }
+
+  .ph-default-styles button:hover:not(:disabled) {
+    @apply bg-accent text-accent-foreground;
+  }
+
+  .ph-default-styles button:focus-visible {
+    @apply outline-none ring-2 ring-ring/50 ring-offset-2;
+  }
+
+  .ph-default-styles button:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  .ph-default-styles button[type="submit"] {
+    @apply border-primary bg-primary text-primary-foreground;
+  }
+
+  .ph-default-styles button[type="submit"]:hover:not(:disabled) {
+    @apply bg-primary/90 text-primary-foreground;
   }
 
   /* Default styles for anchor/links */

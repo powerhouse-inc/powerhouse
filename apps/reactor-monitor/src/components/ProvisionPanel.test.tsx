@@ -93,19 +93,29 @@ describe("ProvisionPanel", () => {
     fireEvent.change(view.getByPlaceholderText("alpha"), {
       target: { value: "authed" },
     });
-    fireEvent.change(
-      view.getByPlaceholderText("http://localhost:4001/graphql"),
-      {
-        target: { value: "http://localhost:4001/graphql" },
-      },
-    );
+    const url = view.getByLabelText("Switchboard drive address");
+    fireEvent.change(url, {
+      target: { value: "http://localhost:4001/graphql" },
+    });
+    fireEvent.click(view.getByRole("button", { name: "Provision" }));
+
+    expect(onProvision).not.toHaveBeenCalled();
+    expect(
+      view.getByText(
+        "http://localhost:4001/graphql is not a switchboard drive address (<switchboard>/d/<slug>): use http://localhost:4001/d/<slug>, one of the switchboard's drives.",
+      ),
+    ).toBeTruthy();
+
+    fireEvent.change(url, {
+      target: { value: "http://localhost:4001/d/powerhouse" },
+    });
     fireEvent.change(bearer, { target: { value: "  tok-1  " } });
     fireEvent.click(view.getByRole("button", { name: "Provision" }));
 
     expect(onProvision).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: "remote",
-        remoteUrl: "http://localhost:4001/graphql",
+        remoteUrl: "http://localhost:4001/d/powerhouse",
         bearer: "tok-1",
       }),
     );

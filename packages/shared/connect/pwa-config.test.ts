@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PHConnectPwa } from "../clis/types.js";
-import { mergePwaConfig, type PwaContribution } from "./pwa-config.js";
+import {
+  isAppShellNavigation,
+  mergePwaConfig,
+  type PwaContribution,
+} from "./pwa-config.js";
 
 const pkg = (source: string, config: PHConnectPwa): PwaContribution => ({
   source,
@@ -313,5 +317,30 @@ describe("mergePwaConfig", () => {
       onWarn,
     );
     expect(onWarn).not.toHaveBeenCalled();
+  });
+});
+
+describe("isAppShellNavigation", () => {
+  it("answers the app's routes with the shell", () => {
+    expect(isAppShellNavigation("/", "/", [])).toBe(true);
+    expect(isAppShellNavigation("/d/my-drive/doc-abc", "/", [])).toBe(true);
+    expect(isAppShellNavigation("/index.html", "/", [])).toBe(true);
+  });
+
+  it("lets a request for a file with an extension through", () => {
+    expect(isAppShellNavigation("/icon.svg", "/", [])).toBe(false);
+    expect(isAppShellNavigation("/app/assets/logo.PNG", "/app/", [])).toBe(
+      false,
+    );
+  });
+
+  it("lets a public/ file through, under the base path too", () => {
+    expect(isAppShellNavigation("/LICENSE", "/", ["LICENSE"])).toBe(false);
+    expect(
+      isAppShellNavigation("/app/docs/README", "/app/", ["docs/README"]),
+    ).toBe(false);
+    expect(isAppShellNavigation("/app/README", "/app/", ["docs/README"])).toBe(
+      true,
+    );
   });
 });

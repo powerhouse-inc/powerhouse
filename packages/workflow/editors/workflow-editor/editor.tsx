@@ -10,9 +10,10 @@ import type {
   WorkflowAction,
   WorkflowDocument,
 } from "document-models/workflow";
-import { useSelectedWorkflowDocument } from "document-models/workflow";
+import { reducer, useSelectedWorkflowDocument } from "document-models/workflow";
 import { WORKFLOW_UNDO } from "./undo-policy.js";
 import { useMemo } from "react";
+import { PiecePlaceholderContext } from "./ui/PropertyForm.js";
 import { useWorkflowModel } from "./document/useWorkflowModel.js";
 import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
 import type { OutputTreeNode, RuntimeClient } from "./runtime-client.js";
@@ -102,9 +103,13 @@ function LastRunFact(props: { workflowId: string }) {
       Last run
       <span className={`h-1.5 w-1.5 rounded-full ${TONE_DOT[tone]}`} />
       <span className={TONE_TEXT[tone]}>{formatWhen(run.startedAt)}</span>
-      <span className="tabular-nums">
-        {formatDuration(run.startedAt, run.endedAt)}
-      </span>
+      {run.status === "WAITING" ? (
+        <span className={TONE_TEXT[tone]}>waiting</span>
+      ) : (
+        <span className="tabular-nums">
+          {formatDuration(run.startedAt, run.endedAt)}
+        </span>
+      )}
     </span>
   );
 }
@@ -133,7 +138,23 @@ function WorkflowEditor() {
     () => ({
       workflowId,
       getBlockForm: (block) => client.getBlockForm(block),
-      loadOptions: (...args) => client.loadBlockOptions(...args),
+      loadOptions: (
+        block,
+        propName,
+        input,
+        connectionId,
+        searchValue,
+        reactorConnectionId,
+      ) =>
+        client.loadBlockOptions(
+          block,
+          propName,
+          input,
+          connectionId,
+          searchValue,
+          reactorConnectionId,
+          workflowId,
+        ),
       testTrigger: () => client.testTrigger(workflowId, driveId),
       testStep: (stepId) => client.testStep(workflowId, stepId, driveId),
       webhookEndpoint: () => client.fetchWebhookEndpoint(workflowId, driveId),
@@ -155,10 +176,14 @@ function WorkflowEditor() {
       fetchRun: (runId) => client.fetchRun(runId),
       blockResolutions: () => client.blockResolutions(workflowId),
       secrets: {
-        save: ({ ref, value, label }) =>
-          ref
+        // Only this workflow's own secret, and only by whoever may change it,
+        // is rotated; any other is replaced.
+        save: async ({ ref, value, label }) => {
+          const stat = ref ? await client.fetchSecretStat(ref) : null;
+          return ref && stat?.ownerId === workflowId && stat.manageable
             ? actions.rotateSecret(ref, value)
-            : actions.createSecret(value, label),
+            : actions.createSecret(workflowId, value, label);
+        },
         stat: (ref) => client.fetchSecretStat(ref),
       },
     }),
@@ -228,6 +253,16 @@ function WorkflowEditor() {
     [client, queryClient, model, workflowId, modules],
   );
 
+  const maxSuspensionDays = document.state.global.policy.maxSuspensionDays;
+  const placeholders = useMemo(
+    // Zero or less sets no bound, so there is no number to show.
+    () => ({
+      pausedFlowTimeoutDays:
+        maxSuspensionDays > 0 ? maxSuspensionDays : undefined,
+    }),
+    [maxSuspensionDays],
+  );
+
   return (
     <DesignTimeProvider
       service={designTime}
@@ -235,19 +270,26 @@ function WorkflowEditor() {
       scope={client.url}
     >
       <ExpressionScopeSourceProvider value={scopeSource}>
-        <div className="flex h-full min-h-0 flex-col bg-background">
-          <WorkflowEditorApp
-            model={model}
-            callbacks={callbacks}
-            leading={<BackButton documentId={workflowId} />}
-            trailing={
-              <>
-                <LastRunFact workflowId={workflowId} />
-                <UndoRedo documentId={workflowId} policy={WORKFLOW_UNDO} />
-              </>
-            }
-          />
-        </div>
+        <PiecePlaceholderContext.Provider value={placeholders}>
+          <div className="flex h-full min-h-0 flex-col bg-background">
+            <WorkflowEditorApp
+              model={model}
+              callbacks={callbacks}
+              leading={<BackButton documentId={workflowId} />}
+              trailing={
+                <>
+                  <LastRunFact workflowId={workflowId} />
+                  <UndoRedo
+                    documentId={workflowId}
+                    reducer={reducer}
+                    policy={WORKFLOW_UNDO}
+                    readOnly={model.readOnly}
+                  />
+                </>
+              }
+            />
+          </div>
+        </PiecePlaceholderContext.Provider>
       </ExpressionScopeSourceProvider>
     </DesignTimeProvider>
   );

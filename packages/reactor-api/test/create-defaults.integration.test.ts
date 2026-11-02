@@ -39,10 +39,25 @@ const QUERY = /* GraphQL */ `
   }
 `;
 
+const TYPED_QUERY = /* GraphQL */ `
+  query GetCreateProtocolVersions(
+    $parentIdOrSlug: String
+    $documentType: String!
+  ) {
+    createDefaults(
+      parentIdOrSlug: $parentIdOrSlug
+      documentType: $documentType
+    ) {
+      protocolVersions
+    }
+  }
+`;
+
 async function createDefaults(
   server: ReactorHttpServer,
   parentIdOrSlug?: string,
   bearer?: string,
+  documentType?: string,
 ): Promise<GraphQLResponse> {
   const response = await fetch(server.url, {
     method: "POST",
@@ -50,7 +65,14 @@ async function createDefaults(
       "content-type": "application/json",
       ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
     },
-    body: JSON.stringify({ query: QUERY, variables: { parentIdOrSlug } }),
+    body: JSON.stringify(
+      documentType === undefined
+        ? { query: QUERY, variables: { parentIdOrSlug } }
+        : {
+            query: TYPED_QUERY,
+            variables: { parentIdOrSlug, documentType },
+          },
+    ),
   });
   return (await response.json()) as GraphQLResponse;
 }
@@ -82,8 +104,36 @@ describe("Query.createDefaults", () => {
     expect(response.errors).toBeUndefined();
     expect(response.data?.createDefaults).toEqual({
       signaturePolicy: await module.client.getCreateSignaturePolicy(),
-      protocolVersions: await module.client.getCreateProtocolVersions(),
+      protocolVersions: await module.client.getCreateProtocolVersions({
+        documentType: undefined,
+      }),
     });
+  });
+
+  it("fits the protocol versions to a named document type", async () => {
+    const select = vi.spyOn(module.client.read, "getCreateProtocolVersions");
+    try {
+      const response = await createDefaults(
+        server,
+        secret,
+        READER,
+        "powerhouse/not-registered",
+      );
+
+      expect(response.errors).toBeUndefined();
+      expect(select).toHaveBeenCalledWith({
+        documentType: "powerhouse/not-registered",
+        parentIdentifier: secret,
+      });
+      expect(response.data?.createDefaults?.protocolVersions).toEqual({
+        ...(await module.client.getCreateProtocolVersions({
+          documentType: undefined,
+        })),
+        "base-reducer": 2,
+      });
+    } finally {
+      select.mockRestore();
+    }
   });
 
   it("selects the protocol versions under the parent for a caller who may read it", async () => {
@@ -92,9 +142,15 @@ describe("Query.createDefaults", () => {
       const response = await createDefaults(server, secret, READER);
 
       expect(response.errors).toBeUndefined();
-      expect(select).toHaveBeenCalledWith(secret);
+      expect(select).toHaveBeenCalledWith({
+        documentType: undefined,
+        parentIdentifier: secret,
+      });
       expect(response.data?.createDefaults?.protocolVersions).toEqual(
-        await module.client.getCreateProtocolVersions(secret),
+        await module.client.getCreateProtocolVersions({
+          documentType: undefined,
+          parentIdentifier: secret,
+        }),
       );
     } finally {
       select.mockRestore();

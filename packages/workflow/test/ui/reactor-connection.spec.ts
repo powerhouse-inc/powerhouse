@@ -73,9 +73,9 @@ test.describe("Reactor connection setup", () => {
   test("access is edited, and each step's declaration shows", async ({
     app,
   }) => {
-    await expect(
-      app.getByRole("combobox").filter({ hasText: "Powerhouse documents" }),
-    ).toBeVisible();
+    await expect(app.getByRole("group", { name: "Service" })).toHaveText(
+      "Powerhouse documents",
+    );
     // A reactor connection is checked, not signed in.
     // Until the Switchboard has the new connection, it reads as forbidden.
     await expect(async () => {

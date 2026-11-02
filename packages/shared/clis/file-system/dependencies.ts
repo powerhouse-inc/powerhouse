@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import type { Agent } from "package-manager-detector";
 import { readPackage } from "read-pkg";
-import { clean, compare, valid } from "semver";
+import { clean, compare, satisfies, valid } from "semver";
 import { spawnAsync } from "./spawn-async.js";
 
 export async function fetchNpmVersionFromRegistryForTag(
@@ -20,6 +20,11 @@ export async function fetchNpmVersionFromRegistryForTag(
     );
   }
   return cleanedVersion;
+}
+
+/** Whether `version` is in the semver `range`; false when it is not a range. */
+export function versionSatisfies(version: string, range: string): boolean {
+  return satisfies(version, range);
 }
 
 export function lowestVersion(versions: readonly string[]): string | undefined {

@@ -16,6 +16,7 @@ export {
 } from "./app-json.js";
 export {
   bundleStack,
+  pruneStack,
   type BundleStackOptions,
   type BundleStackResult,
 } from "./bundle-stack.js";
@@ -54,3 +55,4 @@ export {
   type ResolvedShell,
   type ShellOptions,
 } from "./shell.js";
+export { bundleBackend, type BundleBackendResult } from "./bundle-backend.js";

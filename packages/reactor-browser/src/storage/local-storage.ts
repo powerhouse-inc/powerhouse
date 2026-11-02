@@ -64,7 +64,7 @@ export class BrowserLocalStorage<V> extends BaseStorage<V> {
     return this.#readMap().values();
   }
 
-  [Symbol.iterator](): IterableIterator<[string, V]> {
+  override [Symbol.iterator](): IterableIterator<[string, V]> {
     return this.#readMap().entries();
   }
 }

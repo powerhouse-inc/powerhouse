@@ -1,3 +1,4 @@
+import { KEYFRAME_ADMIN_OPERATIONS } from "@powerhousedao/reactor";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
@@ -82,6 +83,17 @@ describe("INSPECTION_OPERATIONS against reactor-api's inspection SDL", () => {
       ]),
     );
   });
+});
+
+describe("KEYFRAME_ADMIN_OPERATIONS against reactor-api's inspection-admin SDL", () => {
+  const schema = inspectionAdminSchema();
+
+  it.each(Object.entries(KEYFRAME_ADMIN_OPERATIONS))(
+    "%s validates",
+    (_name, document) => {
+      expect(errorsOf(schema, document)).toEqual([]);
+    },
+  );
 });
 
 describe("INSPECTION_ADMIN_OPERATIONS against reactor-api's inspection-admin SDL", () => {

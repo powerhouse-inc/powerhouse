@@ -4,6 +4,7 @@ import { build as buildCmd } from "../src/commands/build.js";
 import { build, connect, preview, studio } from "../src/commands/connect.js";
 import { generateAllCmd } from "../src/commands/generate-all.js";
 import { generateAppCmd } from "../src/commands/generate-app.js";
+import { generateConnectRoutesCmd } from "../src/commands/generate-connect-routes.js";
 import { generateDocumentModelCmd } from "../src/commands/generate-document-model.js";
 import { generateEditorCmd } from "../src/commands/generate-editor.js";
 import { generateMigrationFileCmd } from "../src/commands/generate-migration-file.js";
@@ -15,8 +16,10 @@ import { generateSubgraphCmd } from "../src/commands/generate-subgraph.js";
 import { generate } from "../src/commands/generate.js";
 import { inspect } from "../src/commands/inspect.js";
 import { install } from "../src/commands/install.js";
+import { keyframes } from "../src/commands/keyframes.js";
 import { list } from "../src/commands/list.js";
 import { login } from "../src/commands/login.js";
+import { mcp } from "../src/commands/mcp.js";
 import { migrate } from "../src/commands/migrate.js";
 import { phCli } from "../src/commands/ph-cli.js";
 import { switchboard } from "../src/commands/switchboard.js";
@@ -35,6 +38,7 @@ const commands = [
   { name: "piece-action", command: generatePieceActionCmd },
   { name: "piece-trigger", command: generatePieceTriggerCmd },
   { name: "migration-file", command: generateMigrationFileCmd },
+  { name: "connect-routes", command: generateConnectRoutesCmd },
   { name: "vetra", command: vetra },
   { name: "build", command: buildCmd },
   { name: "connect", command: connect },
@@ -43,7 +47,9 @@ const commands = [
   { name: "connect preview", command: preview },
   { name: "access token", command: accessToken },
   { name: "inspect", command: inspect },
+  { name: "keyframes", command: keyframes },
   { name: "list", command: list },
+  { name: "mcp", command: mcp },
   { name: "migrate", command: migrate },
   { name: "switchboard", command: switchboard },
   { name: "login", command: login },

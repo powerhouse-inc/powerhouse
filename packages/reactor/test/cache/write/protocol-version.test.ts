@@ -97,10 +97,28 @@ describe("protocol version on rebuild", () => {
 
   it("carries base-reducer 2 from a create the reactor wrote", async () => {
     const document = await seedAndRebuild(
-      createCreateDocumentOperation(generateId(), DOC_TYPE),
+      createCreateDocumentOperation(
+        generateId(),
+        DOC_TYPE,
+        {},
+        { protocolVersions: { "base-reducer": 2 } },
+      ),
     );
 
     expect(document.header.protocolVersions).toEqual({ "base-reducer": 2 });
+  });
+
+  it("carries base-reducer 3 from a create the reactor wrote", async () => {
+    const document = await seedAndRebuild(
+      createCreateDocumentOperation(
+        generateId(),
+        DOC_TYPE,
+        {},
+        { protocolVersions: { "base-reducer": 3 } },
+      ),
+    );
+
+    expect(document.header.protocolVersions).toEqual({ "base-reducer": 3 });
   });
 
   it("rejects a create that records no protocol version", async () => {

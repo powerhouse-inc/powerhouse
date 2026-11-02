@@ -18,6 +18,7 @@ import {
   toProgressState,
   type AttachmentProgressState,
 } from "./attachment-progress.js";
+import { getPHStore } from "./ph-store.js";
 
 /**
  * One client per service, shared across every component.
@@ -39,6 +40,12 @@ function clientFor(service: IAttachmentService): IAttachmentClient {
 /** Returns an IAttachmentClient wrapping the current IAttachmentService, or undefined if none is set. */
 export function useAttachments(): IAttachmentClient | undefined {
   const service = useAttachmentService();
+  return service ? clientFor(service) : undefined;
+}
+
+/** The client {@link useAttachments} returns, for code outside React. */
+export function getAttachmentClient(): IAttachmentClient | undefined {
+  const service = getPHStore()?.attachmentService;
   return service ? clientFor(service) : undefined;
 }
 
@@ -272,7 +279,11 @@ export function useAttachmentPreview({
 }
 
 export type UseAttachmentUploadReturn = {
-  preprocess: (file: Blob) => Promise<PreprocessResult>;
+  /** `documentId` names the document the file is for, so it is stored where that document lives. */
+  preprocess: (
+    file: Blob,
+    options?: { documentId?: string },
+  ) => Promise<PreprocessResult>;
   upload: (results: PreprocessResult) => Promise<void>;
   /** Aborts the transfer in flight; the upload promise rejects. */
   cancel: () => void;
@@ -320,12 +331,15 @@ export function useAttachmentUpload(): UseAttachmentUploadReturn {
   }, []);
 
   const preprocess = useCallback(
-    async (file: Blob): Promise<PreprocessResult> => {
+    async (
+      file: Blob,
+      options?: { documentId?: string },
+    ): Promise<PreprocessResult> => {
       if (!client) throw new Error("AttachmentClient not available");
       const runId = ++runIdRef.current;
       setState({ ...IDLE_UPLOAD, stage: "hashing" });
       try {
-        return await client.preprocess(file);
+        return await client.preprocess(file, options);
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         if (mountedRef.current && runId === runIdRef.current) {

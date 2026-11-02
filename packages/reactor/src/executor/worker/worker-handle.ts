@@ -19,6 +19,7 @@ import type {
   WorkerInFlightSnapshot,
 } from "../interfaces.js";
 import type { Job } from "../../queue/types.js";
+import type { KeyframeSettings } from "../../storage/keyframes/keyframe-settings.js";
 import type { JobExecutorConfig } from "../types.js";
 import { fromErrorInfo } from "./error-info.js";
 import {
@@ -63,6 +64,8 @@ export type WorkerInitPayload = {
   signer?: FactorySpec;
   /** Builds the worker's signature trust policy. */
   trustPolicy?: FactorySpec;
+  /** Omitted = the built-in keyframe rule. */
+  keyframes?: KeyframeSettings;
 };
 
 export type WorkerHandleOptions = {
@@ -185,6 +188,7 @@ export class WorkerHandle implements IExecutorWorker {
       executorConfig: this.initPayload.executorConfig,
       signer: this.initPayload.signer,
       trustPolicy: this.initPayload.trustPolicy,
+      keyframes: this.initPayload.keyframes,
     });
     await ready;
     this.phase = "ready";

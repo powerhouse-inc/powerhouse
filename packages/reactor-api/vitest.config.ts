@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
@@ -24,10 +25,19 @@ export default defineConfig({
         find: /^@powerhousedao\/reactor\/rpc$/,
         replacement: resolve(REACTOR_SOURCE, "src/rpc/index.ts"),
       },
+      // Node resolves `graphql` to its CommonJS entry, the copy
+      // @apollo/subgraph requires. Vite would pick the ESM entry, a second
+      // copy, so tests would see errors production never sends.
+      {
+        find: /^graphql$/,
+        replacement: createRequire(import.meta.url).resolve("graphql"),
+      },
     ],
   },
   test: {
     exclude: baseExclude,
+    // Node 24's V8 double-frees tiered wasm wrappers after a PGlite worker exits (nodejs/node#66366).
+    execArgv: ["--wasm-wrapper-tiering-budget=1000000000"],
     // PGLite WASM cold boot plus initdb's fsync pass can exceed the default
     // 5s testTimeout / 10s hookTimeout on CI runners under coverage
     // instrumentation. Same rationale as packages/reactor.

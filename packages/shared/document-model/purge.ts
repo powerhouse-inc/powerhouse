@@ -2,7 +2,7 @@ import type { Action } from "./actions.js";
 import type { Operation, OperationWithContext } from "./operations.js";
 import { DOCUMENT_PURGE_PROTOCOL } from "./peer-agreement.js";
 import type { PurgeDocumentAction, PurgeDocumentActionInput } from "./types.js";
-import { deriveOperationId, generateId } from "./utils.js";
+import { deriveOperationId, generateActionId } from "./utils.js";
 
 export const PURGE_DOCUMENT = "PURGE_DOCUMENT";
 
@@ -37,7 +37,7 @@ export function purgeDocumentAction(
 ): PurgeDocumentAction {
   const timestampUtcMs = options.timestampUtcMs ?? new Date().toISOString();
   return {
-    id: options.id ?? generateId(),
+    id: options.id ?? generateActionId(),
     type: PURGE_DOCUMENT,
     scope: "document",
     timestampUtcMs,

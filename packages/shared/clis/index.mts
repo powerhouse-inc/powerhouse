@@ -6,6 +6,7 @@ export * from "./args/help.js";
 export * from "./args/init.js";
 export * from "./args/inspect.js";
 export * from "./args/install.js";
+export * from "./args/keyframes.js";
 export * from "./args/list.js";
 export * from "./args/login.js";
 export * from "./args/migrate.js";

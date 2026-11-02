@@ -14,15 +14,61 @@ export {
   resolveReactorWorkerEnabled,
 } from "./reactor-worker-flag.js";
 export type { ReactorWorkerFlagInput } from "./reactor-worker-flag.js";
-export { resolveReactorClientMode } from "./reactor-client-mode.js";
+export {
+  REACTOR_CLIENT_QUERY_KEY,
+  REACTOR_CLIENT_STORAGE_KEY,
+  newDrivesBlocked,
+  resolveReactorClientMode,
+} from "./reactor-client-mode.js";
 export type { ReactorClientMode } from "./reactor-client-mode.js";
 export {
   createAppReactorClient,
   getAppDrives,
   planReactorClient,
   refreshAppDrives,
+  relistAppDrives,
   selectAppReactorClient,
 } from "./app-reactor-client.js";
+export {
+  NewDriveRefusedError,
+  NewDriveUnansweredError,
+  newDriveError,
+} from "./new-drive.js";
+export {
+  applyPlacementEntries,
+  keepsLocalCopy,
+  LOCAL_BACKEND_NAME,
+  localDrivePlacements,
+  placementKeys,
+  removeLocalCopies,
+  resolveSwitchboardDrives,
+  servedUrl,
+  servesSlug,
+  switchboardDrives,
+} from "./drive-placement.js";
+export type {
+  PlacementEntry,
+  ResolvedSwitchboardDrive,
+  ResolveSwitchboardDrivesOptions,
+  SwitchboardDrive,
+} from "./drive-placement.js";
+export {
+  actionIdsFrom,
+  caughtUp,
+  DrivePlacements,
+  effectiveBackend,
+  findServedDrive,
+  needsCopy,
+} from "./drive-placements.js";
+export type {
+  DrivePlacement,
+  OperationReader,
+  PlacementRouter,
+  PlacementStore,
+  PlacementSync,
+} from "./drive-placements.js";
+export { useBackendAuthGate } from "./backend-auth-gate.js";
+export type { BackendAuthGateMode } from "./backend-auth-gate.js";
 export type {
   AppReactorClientParams,
   CreateAppReactorClientOptions,

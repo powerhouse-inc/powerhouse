@@ -1,0 +1,136 @@
+{
+  "format": "ph-host-export",
+  "version": 1,
+  "project": {
+    "name": "my-project",
+    "root": "/project"
+  },
+  "name": "connect",
+  "host": {
+    "name": "my-project-connect",
+    "runner": {
+      "module": "@powerhousedao/ph-cli/runners/connect",
+      "port": 6491,
+      "plugins": [
+        {
+          "module": "@powerhousedao/connect/plugins/generic",
+          "config": {
+            "allowAddDrive": true,
+            "sections": {
+              "remote": {
+                "enabled": true,
+                "allowAdd": true,
+                "allowDelete": true
+              },
+              "local": {
+                "enabled": true,
+                "allowAdd": true,
+                "allowDelete": true
+              }
+            },
+            "icons": null,
+            "homeBackground": null
+          }
+        }
+      ]
+    },
+    "config": {
+      "branding": {
+        "appName": "Powerhouse Connect",
+        "icon": null,
+        "loader": null
+      },
+      "home": {
+        "background": null
+      },
+      "app": {
+        "logLevel": "info",
+        "basePath": "/",
+        "offline": true,
+        "studioMode": false
+      },
+      "ai": {
+        "assistantEnabled": false
+      },
+      "packages": {
+        "externalEnabled": true,
+        "liveReload": false
+      },
+      "drives": {
+        "allowAddDrive": true,
+        "defaultDrives": [],
+        "sections": {
+          "remote": {
+            "enabled": true,
+            "allowAdd": true,
+            "allowDelete": true
+          },
+          "local": {
+            "enabled": true,
+            "allowAdd": true,
+            "allowDelete": true
+          }
+        },
+        "icons": null
+      },
+      "renown": {
+        "url": "https://www.renown.id",
+        "networkId": "eip155",
+        "chainId": 1
+      },
+      "sentry": {
+        "dsn": null,
+        "env": "dev",
+        "tracing": false
+      },
+      "openPanel": {
+        "clientId": "",
+        "trackUiEvents": true,
+        "trackOperations": true
+      },
+      "instance": {
+        "namespace": null,
+        "reactorWorker": false,
+        "multiReactor": false
+      },
+      "reactor": {
+        "featureFlags": {
+          "documentDecisions": false,
+          "authEnforcement": false,
+          "authGroups": false,
+          "authConditions": false
+        },
+        "createSignaturePolicy": "v2-required",
+        "unsupportedStoredDocuments": "refuse"
+      }
+    },
+    "profile": {
+      "appId": "inc.powerhouse.connect.my-project",
+      "name": "my-project"
+    },
+    "reactor": {
+      "protocol": {
+        "featureFlags": {
+          "documentDecisions": false,
+          "authEnforcement": false,
+          "authGroups": false,
+          "authConditions": false
+        },
+        "createSignaturePolicy": "v2-required",
+        "unsupportedStoredDocuments": "refuse"
+      },
+      "backends": {
+        "main": {
+          "kind": "worker"
+        }
+      },
+      "drives": [
+        {
+          "slug": "powerhouse",
+          "name": "my-project"
+        }
+      ]
+    }
+  },
+  "members": {}
+}
