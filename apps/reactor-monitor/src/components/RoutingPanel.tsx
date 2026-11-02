@@ -793,7 +793,11 @@ export function RoutingPanel({
                   </tr>
                 ) : (
                   snapshot.collections.map((entry) => {
-                    const drive = topology?.seed?.drives[entry.collectionId];
+                    const drive =
+                      topology?.seed &&
+                      Object.hasOwn(topology.seed.drives, entry.collectionId)
+                        ? topology.seed.drives[entry.collectionId]
+                        : undefined;
                     const drift = driftOf(
                       entry,
                       (reactor) => hostBackendOf(reactor) ?? reactor,

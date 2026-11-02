@@ -404,6 +404,28 @@ describe("routeSeedOf", () => {
       expect(seed?.drives).toEqual({ "id-powerhouse": "powerhouse" });
     });
 
+    it("names the drives of a list that binds them by name", () => {
+      const seed = mappedSeed([
+        {
+          path: `${connect}.reactor.drives`,
+          value: {
+            $map: {
+              over: { $output: { host: "switchboard", path: ["drives"] } },
+              as: "d",
+              to: {
+                slug: { $key: "d" },
+                remote: { url: { $item: { as: "d", path: ["url"] } } },
+              },
+            },
+          },
+        },
+      ]);
+      expect(seed?.drives).toEqual({
+        "id-powerhouse": "powerhouse",
+        "id-field-notes": "field-notes",
+      });
+    });
+
     it("names nothing from a list that renames its drives", () => {
       const seed = mappedSeed([
         {

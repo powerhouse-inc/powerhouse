@@ -2,6 +2,7 @@
 import {
   applySetters,
   connectReach,
+  isRecord,
   membersOf,
   routerSettingLines,
   routerSettings,
@@ -14,10 +15,6 @@ import type { RemoteSettings, RouteSeed } from "../lib/route-seed.js";
 import { ROUTE_COPY } from "./copy.js";
 import type { BuilderDraft } from "./draft.js";
 import type { BuilderRun } from "./run.js";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function isPath(value: unknown, path: readonly string[]): boolean {
   return (
@@ -34,10 +31,17 @@ function mappedSwitchboard(
 ): string | undefined {
   const map = valueAt(member.reactor, ["drives", "$map"]);
   if (!isRecord(map) || !isRecord(map.over)) return undefined;
+  // Unnamed, or named by `as`: host-core reads both the same.
+  const bound = (name: unknown) =>
+    name === true || (typeof map.as === "string" && name === map.as);
+  const item = valueAt(map, ["to", "remote", "url", "$item"]);
+  const url = isRecord(item)
+    ? bound(item.as) && isPath(item.path, ["url"])
+    : isPath(item, ["url"]);
   if (
     !isPath(valueAt(map.over, ["$output", "path"]), ["drives"]) ||
-    !isPath(valueAt(map, ["to", "remote", "url", "$item"]), ["url"]) ||
-    valueAt(map, ["to", "slug", "$key"]) !== true
+    !url ||
+    !bound(valueAt(map, ["to", "slug", "$key"]))
   ) {
     return undefined;
   }
@@ -179,10 +183,7 @@ export function routeSeedOf({
   // The monitor's browser reactor holds none of these until they are created.
   if (browser !== undefined) {
     for (const [key, slug] of Object.entries(drives)) {
-      if (Object.hasOwn(collections, key) || Object.hasOwn(placement, slug)) {
-        continue;
-      }
-      copies[key] = browser;
+      if (!Object.hasOwn(placement, slug)) copies[key] = browser;
     }
     for (const slug of reach.ownDrives) {
       if (Object.hasOwn(placement, slug)) continue;
