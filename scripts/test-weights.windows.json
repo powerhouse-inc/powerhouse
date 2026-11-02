@@ -4,6 +4,7 @@
   "@powerhousedao/connect-core": 1,
   "@powerhousedao/load-test-connect": 1,
   "@powerhousedao/ph-cli": 6,
+  "@powerhousedao/ph-run": 6,
   "@powerhousedao/reactor-api": 130,
   "@powerhousedao/reactor-mcp": 21,
   "@powerhousedao/reactor-workflow": 77,

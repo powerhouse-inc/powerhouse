@@ -9,6 +9,7 @@
   "@powerhousedao/e2e-utils": 0,
   "@powerhousedao/load-test-connect": 1,
   "@powerhousedao/ph-cli": 5,
+  "@powerhousedao/ph-run": 5,
   "@powerhousedao/pieces-framework": 1,
   "@powerhousedao/portle": 1,
   "@powerhousedao/powerhouse-vetra-packages": 1,

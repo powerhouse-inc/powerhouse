@@ -22,6 +22,9 @@
     "ph-cmd": {
       "paths": ["clis/ph-cmd/**"]
     },
+    "ph-run": {
+      "paths": ["clis/ph-run/**"]
+    },
     "analytics-engine": {
       "paths": ["packages/analytics-engine/**"],
       "aliases": [

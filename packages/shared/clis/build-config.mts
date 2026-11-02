@@ -60,6 +60,7 @@ const nodeNeverBundle = [
   "@powerhousedao/connect-core",
   // published code would never need the cli
   "@powerhousedao/ph-cli",
+  "@powerhousedao/ph-run",
   // the reactor-api host must provide a single class identity for
   // BaseSubgraph/BaseProcessor — inlining a copy here breaks the
   // prototype-chain check the package loader uses to detect subgraphs.
