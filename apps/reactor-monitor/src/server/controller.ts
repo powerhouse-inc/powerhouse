@@ -35,6 +35,7 @@ import {
   type Project,
   type RefusedSetter,
 } from "../controller/api.ts";
+import { blankExport } from "../host-rules/catalog.ts";
 import { checkSetter } from "../host-rules/policy.ts";
 import type { HostRuleIssue, HostRulesContext } from "../host-rules/schema.ts";
 import { applySetters } from "../host-rules/setters.ts";
@@ -533,8 +534,11 @@ export function createMonitorController(
     return root;
   };
 
-  const resolve = (request: HostRequest) => {
-    const root = hostRoot(request.project, request.host);
+  const resolve = (request: HostRequest & { blank?: true }) => {
+    // A blank host's folder is written into the copy, not read from the project.
+    const root = request.blank
+      ? projectRoot(request.project)
+      : hostRoot(request.project, request.host);
     const env = request.env ?? {};
     const denied = deniedEnvKeys(env);
     if (denied.length > 0) {
@@ -574,17 +578,32 @@ export function createMonitorController(
     return { export: envelope, baseDigest: await baseDigest(envelope) };
   };
 
+  const blankBase = async (host: string): Promise<ExportResponse> => {
+    const envelope = blankExport();
+    if (host !== envelope.name) {
+      throw new ControllerError(
+        "bad_request",
+        `A blank host is named ${envelope.name}, not ${host}.`,
+      );
+    }
+    return { export: envelope, baseDigest: await baseDigest(envelope) };
+  };
+
   /** The request's setters over the current export, checked as the UI did. */
   const draftEnvelope = async (
     request: DraftRequest,
     root: string,
     env: Record<string, string>,
   ): Promise<{ envelope: HostExport; ruleIssues: HostRuleIssue[] }> => {
-    const base = await runExport(root, request.host, env);
+    const base = request.blank
+      ? await blankBase(request.host)
+      : await runExport(root, request.host, env);
     if (base.baseDigest !== request.baseDigest) {
       throw new ControllerError(
         "base_changed",
-        `hosts/${request.host} changed since the draft was made. Reload it and review your changes again.`,
+        request.blank
+          ? "The monitor's blank host changed since the draft was made. Start a new one and make your changes again."
+          : `hosts/${request.host} changed since the draft was made. Reload it and review your changes again.`,
       );
     }
     let envelope = base.export;

@@ -120,6 +120,8 @@ export const draftRequestSchema = z.strictObject({
   host: hostField,
   baseDigest: baseDigestSchema,
   setters: z.array(setterSchema),
+  /** The base is the monitor's blank host, not an export of `host`. */
+  blank: z.literal(true).optional(),
   env: envSchema.optional(),
 });
 export type DraftRequest = z.infer<typeof draftRequestSchema>;
