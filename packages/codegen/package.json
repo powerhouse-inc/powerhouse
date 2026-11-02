@@ -74,10 +74,17 @@
     "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
     "@types/npm-registry-fetch": "^8.0.9",
     "graphql": "catalog:",
-    "tsdown": "catalog:"
+    "tsdown": "catalog:",
+    "vite": "catalog:"
   },
   "peerDependencies": {
-    "graphql": "^16"
+    "graphql": "^16",
+    "vite": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   },
   "description": "Powerhouse code generator — generates TypeScript types, reducers, and editor scaffolding from GraphQL document model schemas.",
   "keywords": [

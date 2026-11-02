@@ -42,6 +42,7 @@ export default defineConfig({
       "src/file-builders/boilerplate/generated-hosts.test.ts",
       "src/file-builders/hosts/outputs-file.test.ts",
       "src/file-builders/boilerplate/migrate-style.test.ts",
+      "test/code-first/*.test.ts",
     ],
     exclude: ["**/node_modules/**", "**/dist/**"],
   },
