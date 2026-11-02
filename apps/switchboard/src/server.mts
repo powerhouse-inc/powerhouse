@@ -1353,6 +1353,19 @@ async function initServer(
 
   if (renownConfig.source === "self") {
     const { graphqlManager: manager } = api;
+    // Credentials are checked from the first request, before the router update
+    // that readiness waits for: a package's read model gets its handler now.
+    if (
+      !manager.hasSubgraphHandler(RENOWN_READ_MODEL_SUBGRAPH) &&
+      manager.getSubgraphByName(RENOWN_READ_MODEL_SUBGRAPH)
+    ) {
+      try {
+        await manager.updateRouter(true);
+      } catch (error) {
+        await abortBoot(api);
+        throw error;
+      }
+    }
     // Refuse to serve rather than 401 every request: the read model comes from
     // a loaded package, so a missing one is a deployment mistake.
     if (!manager.hasSubgraphHandler(RENOWN_READ_MODEL_SUBGRAPH)) {
