@@ -2,6 +2,7 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { createReducer } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
@@ -20,6 +21,9 @@ import {
 } from "../../factories.js";
 
 const DOC_TYPE = "powerhouse/document-model";
+
+/** These suites replay through untagged mock reducers, which base-reducer 2 runs. */
+const BASE_REDUCER_2 = { protocolVersions: { "base-reducer": 2 } };
 
 function makeConfig(): WriteCacheConfig {
   return { maxDocuments: 10, ringBufferSize: 5, keyframeInterval: 100 };
@@ -119,9 +123,12 @@ describe("KyselyWriteCache D7 - cold rebuild with validated upgrades", () => {
       0,
       (txn) => {
         txn.addOperations(
-          createCreateDocumentOperation(docId, DOC_TYPE, {
-            timestampUtcMs: t1,
-          }),
+          createCreateDocumentOperation(
+            docId,
+            DOC_TYPE,
+            { timestampUtcMs: t1 },
+            BASE_REDUCER_2,
+          ),
         );
         txn.addOperations(
           createUpgradeDocumentOperation(
@@ -197,7 +204,9 @@ describe("KyselyWriteCache D7 - cold rebuild with validated upgrades", () => {
       "main",
       0,
       (txn) => {
-        txn.addOperations(createCreateDocumentOperation(docId, DOC_TYPE));
+        txn.addOperations(
+          createCreateDocumentOperation(docId, DOC_TYPE, {}, BASE_REDUCER_2),
+        );
         txn.addOperations(
           createUpgradeDocumentOperation(
             docId,
@@ -253,7 +262,9 @@ describe("KyselyWriteCache D7 - cold rebuild with validated upgrades", () => {
       "main",
       0,
       (txn) => {
-        txn.addOperations(createCreateDocumentOperation(docId, DOC_TYPE));
+        txn.addOperations(
+          createCreateDocumentOperation(docId, DOC_TYPE, {}, BASE_REDUCER_2),
+        );
         txn.addOperations(upgradeOp);
       },
     );
@@ -316,9 +327,12 @@ describe("KyselyWriteCache D7 - cold rebuild with validated upgrades", () => {
       0,
       (txn) => {
         txn.addOperations(
-          createCreateDocumentOperation(docId, DOC_TYPE, {
-            timestampUtcMs: t1,
-          }),
+          createCreateDocumentOperation(
+            docId,
+            DOC_TYPE,
+            { timestampUtcMs: t1 },
+            BASE_REDUCER_2,
+          ),
         );
         txn.addOperations(
           createUpgradeDocumentOperation(
@@ -431,7 +445,9 @@ describe("KyselyWriteCache D8 - warm rebuild version pinning", () => {
       "main",
       0,
       (txn) => {
-        txn.addOperations(createCreateDocumentOperation(docId, DOC_TYPE));
+        txn.addOperations(
+          createCreateDocumentOperation(docId, DOC_TYPE, {}, BASE_REDUCER_2),
+        );
         txn.addOperations(
           createUpgradeDocumentOperation(
             docId,
@@ -506,7 +522,9 @@ describe("KyselyWriteCache D8 - warm rebuild version pinning", () => {
       "main",
       0,
       (txn) => {
-        txn.addOperations(createCreateDocumentOperation(docId, DOC_TYPE));
+        txn.addOperations(
+          createCreateDocumentOperation(docId, DOC_TYPE, {}, BASE_REDUCER_2),
+        );
         txn.addOperations(
           createUpgradeDocumentOperation(
             docId,
@@ -598,7 +616,9 @@ describe("KyselyWriteCache D8 - warm rebuild version pinning", () => {
       "main",
       0,
       (txn) => {
-        txn.addOperations(createCreateDocumentOperation(docId, DOC_TYPE));
+        txn.addOperations(
+          createCreateDocumentOperation(docId, DOC_TYPE, {}, BASE_REDUCER_2),
+        );
         txn.addOperations(
           createUpgradeDocumentOperation(
             docId,
@@ -720,9 +740,12 @@ describe("KyselyWriteCache D9 - upgrade reducers run at the boundary", () => {
       0,
       (txn) => {
         txn.addOperations(
-          createCreateDocumentOperation(docId, DOC_TYPE, {
-            timestampUtcMs: t1,
-          }),
+          createCreateDocumentOperation(
+            docId,
+            DOC_TYPE,
+            { timestampUtcMs: t1 },
+            BASE_REDUCER_2,
+          ),
         );
         txn.addOperations(
           createUpgradeDocumentOperation(
@@ -850,9 +873,12 @@ describe("KyselyWriteCache - held-back upgrades respect document-scope order", (
       0,
       (txn) => {
         txn.addOperations(
-          createCreateDocumentOperation(docId, DOC_TYPE, {
-            timestampUtcMs: t1,
-          }),
+          createCreateDocumentOperation(
+            docId,
+            DOC_TYPE,
+            { timestampUtcMs: t1 },
+            BASE_REDUCER_2,
+          ),
         );
         txn.addOperations(
           createUpgradeDocumentOperation(
@@ -910,9 +936,12 @@ describe("KyselyWriteCache - held-back upgrades respect document-scope order", (
       0,
       (txn) => {
         txn.addOperations(
-          createCreateDocumentOperation(docId, DOC_TYPE, {
-            timestampUtcMs: t1,
-          }),
+          createCreateDocumentOperation(
+            docId,
+            DOC_TYPE,
+            { timestampUtcMs: t1 },
+            BASE_REDUCER_2,
+          ),
         );
         txn.addOperations(
           createUpgradeDocumentOperation(
@@ -981,9 +1010,12 @@ describe("KyselyWriteCache - positional reads below the upgrade boundary", () =>
       0,
       (txn) => {
         txn.addOperations(
-          createCreateDocumentOperation(docId, DOC_TYPE, {
-            timestampUtcMs: t1,
-          }),
+          createCreateDocumentOperation(
+            docId,
+            DOC_TYPE,
+            { timestampUtcMs: t1 },
+            BASE_REDUCER_2,
+          ),
         );
         txn.addOperations(
           createUpgradeDocumentOperation(
@@ -1105,5 +1137,282 @@ describe("KyselyWriteCache - positional reads below the upgrade boundary", () =>
     const positional = await cache.getState(docId, "global", "main", 2);
 
     expect(positional.state.document.version).toBe(2);
+  });
+});
+
+describe("base-reducer 3", () => {
+  /** Tagged, so base-reducer 3 derives through it; leaves state as it was. */
+  const keepsState = createReducer(() => undefined);
+  let keyframeStore: IKeyframeStore;
+  let operationStore: IOperationStore;
+  let cache: KyselyWriteCache;
+  let db: unknown;
+
+  beforeEach(async () => {
+    const setup = await createTestOperationStore();
+    operationStore = setup.store;
+    keyframeStore = setup.keyframeStore;
+    db = setup.db;
+  });
+
+  afterEach(async () => {
+    await cache?.shutdown();
+    try {
+      await (db as { destroy: () => Promise<void> }).destroy();
+    } catch {
+      // ignore
+    }
+  });
+
+  async function start(
+    getModuleFn: ReturnType<typeof vi.fn>,
+    computeUpgradePathFn: ReturnType<typeof vi.fn> = vi
+      .fn()
+      .mockReturnValue([]),
+  ): Promise<void> {
+    cache = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      makeVersionedRegistry(
+        getModuleFn as never,
+        computeUpgradePathFn as never,
+      ),
+      makeConfig(),
+    );
+    await cache.startup();
+  }
+
+  function modules(): ReturnType<typeof vi.fn> {
+    return vi.fn().mockImplementation(() => ({ reducer: keepsState }));
+  }
+
+  async function createV3(docId: string, ...after: Operation[]): Promise<void> {
+    await operationStore.apply(
+      docId,
+      DOC_TYPE,
+      "document",
+      "main",
+      0,
+      (txn) => {
+        txn.addOperations(
+          createCreateDocumentOperation(
+            docId,
+            DOC_TYPE,
+            { timestampUtcMs: "2024-01-01T00:00:01.000Z" },
+            { protocolVersions: { "base-reducer": 3 } },
+          ),
+        );
+        for (const operation of after) {
+          txn.addOperations(operation);
+        }
+      },
+    );
+    const { results } = await operationStore.getSince(
+      docId,
+      "document",
+      "main",
+      -1,
+    );
+    expect(
+      (results[0].action.input as { protocolVersions?: Record<string, number> })
+        .protocolVersions?.["base-reducer"],
+    ).toBe(3);
+  }
+
+  /** Global operations `from`..`to`; an empty scope expects revision 0. */
+  async function addGlobal(
+    docId: string,
+    from: number,
+    to: number,
+  ): Promise<void> {
+    await operationStore.apply(
+      docId,
+      DOC_TYPE,
+      "global",
+      "main",
+      from === 1 ? 0 : from,
+      (txn) => {
+        for (let i = from; i <= to; i++) {
+          txn.addOperations(createTestOperation(docId, { index: i, skip: 0 }));
+        }
+      },
+    );
+  }
+
+  /** v0 -> v1 at the start, v1 -> v2 at global revision 2. */
+  async function seedUpgradeAtBoundaryTwo(docId: string): Promise<void> {
+    const t = (second: number) => `2024-01-01T00:00:0${second}.000Z` as const;
+    await createV3(
+      docId,
+      createUpgradeDocumentOperation(
+        docId,
+        0,
+        1,
+        {},
+        { index: 1, timestampUtcMs: t(2) },
+      ),
+      createUpgradeDocumentOperation(
+        docId,
+        1,
+        2,
+        {},
+        {
+          index: 2,
+          timestampUtcMs: t(5),
+          action: {
+            id: "upgrade-positional-v3",
+            type: "UPGRADE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: t(5),
+            input: {
+              documentId: docId,
+              fromVersion: 1,
+              toVersion: 2,
+              revision: { global: 2 },
+            },
+          } as unknown as Operation["action"],
+        },
+      ),
+    );
+    await operationStore.apply(docId, DOC_TYPE, "global", "main", 0, (txn) => {
+      for (const [index, second] of [
+        [0, 3],
+        [1, 4],
+        [2, 6],
+      ]) {
+        txn.addOperations(
+          createTestOperation(docId, {
+            index,
+            skip: 0,
+            timestampUtcMs: t(second),
+          }),
+        );
+      }
+    });
+  }
+
+  it("uses upgradePath when manifest is registered and fromVersion>0", async () => {
+    const computeUpgradePathFn = vi.fn().mockReturnValue([]);
+    await start(modules(), computeUpgradePathFn);
+    await seedUpgradeAtBoundaryTwo("v3-manifest");
+
+    await cache.getState("v3-manifest", "global", "main");
+
+    expect(computeUpgradePathFn).toHaveBeenCalledWith(DOC_TYPE, 1, 2);
+  });
+
+  it("does not apply an upgrade past the target revision, and clamps the document-scope revision", async () => {
+    await start(modules());
+    await seedUpgradeAtBoundaryTwo("v3-positional-below");
+
+    const positional = await cache.getState(
+      "v3-positional-below",
+      "global",
+      "main",
+      1,
+    );
+
+    expect(positional.state.document.version).toBe(1);
+    expect(positional.header.revision.document).toBe(2);
+  });
+
+  it("still applies every upgrade on head reads", async () => {
+    await start(modules());
+    await seedUpgradeAtBoundaryTwo("v3-positional-head");
+
+    const head = await cache.getState("v3-positional-head", "global", "main");
+
+    expect(head.state.document.version).toBe(2);
+    expect(head.header.revision.document).toBe(3);
+    expect(head.header.protocolVersions?.["base-reducer"]).toBe(3);
+  });
+
+  it("applies the upgrade for positional reads at or past its boundary", async () => {
+    await start(modules());
+    await seedUpgradeAtBoundaryTwo("v3-positional-at");
+
+    const positional = await cache.getState(
+      "v3-positional-at",
+      "global",
+      "main",
+      2,
+    );
+
+    expect(positional.state.document.version).toBe(2);
+  });
+
+  it("uses pinned version from base document in warm rebuild", async () => {
+    const docId = "v3-version-pin";
+    const getModuleFn = modules();
+    await start(getModuleFn);
+    await createV3(
+      docId,
+      createUpgradeDocumentOperation(
+        docId,
+        0,
+        2,
+        { document: { version: 2 } },
+        { index: 1 },
+      ),
+    );
+    await addGlobal(docId, 1, 20);
+
+    const doc10 = await cache.getState(docId, "global", "main", 10);
+    expect(doc10.state.document.version).toBe(2);
+    getModuleFn.mockClear();
+
+    await cache.getState(docId, "global", "main", 15);
+
+    const calls = getModuleFn.mock.calls;
+    expect(
+      calls.filter(
+        (c: unknown[]) =>
+          c[0] === DOC_TYPE && (c[1] === 2 || c[1] === undefined),
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      calls.filter((c: unknown[]) => c[0] === DOC_TYPE && c[1] === 1),
+    ).toHaveLength(0);
+  });
+
+  it("falls back to cold rebuild when new UPGRADE_DOCUMENT found in document scope", async () => {
+    const docId = "v3-upgrade-fallback";
+    await start(modules());
+    await createV3(
+      docId,
+      createUpgradeDocumentOperation(
+        docId,
+        0,
+        1,
+        { document: { version: 1 } },
+        { index: 1 },
+      ),
+    );
+    await addGlobal(docId, 1, 10);
+    expect(await cache.getState(docId, "global", "main", 5)).toBeDefined();
+
+    await operationStore.apply(
+      docId,
+      DOC_TYPE,
+      "document",
+      "main",
+      2,
+      (txn) => {
+        txn.addOperations(
+          createUpgradeDocumentOperation(
+            docId,
+            1,
+            2,
+            { document: { version: 2 } },
+            { index: 2, timestampUtcMs: new Date().toISOString() },
+          ),
+        );
+      },
+    );
+    await addGlobal(docId, 11, 15);
+
+    const result = await cache.getState(docId, "global", "main", 15);
+
+    expect(result.state.document.version).toBe(2);
   });
 });

@@ -29,166 +29,173 @@ import {
 import { assertOneRuleAgreement, storedRows } from "./one-rule-agreement.js";
 
 // Asserted straight after the load: no re-delivery restores what it rewinds.
-describe("a load reshuffle", () => {
-  let module: InProcessReactorModule | undefined;
-  let docId: string;
-  let base: number;
+describe("base-reducer 2", () => {
+  describe("a load reshuffle", () => {
+    let module: InProcessReactorModule | undefined;
+    let docId: string;
+    let base: number;
 
-  afterEach(() => {
-    module?.reactor.kill();
-    module = undefined;
-  });
+    afterEach(() => {
+      module?.reactor.kill();
+      module = undefined;
+    });
 
-  async function build(
-    featureFlags: Partial<ReactorFeatureFlags> = {},
-  ): Promise<void> {
-    module = await new ReactorBuilder()
-      .withDocumentModelSources([documentModelDocumentModelModule as never])
-      .withExecutorConfig({ featureFlags })
-      .buildModule();
-    const document = createDocModelDocument({ signaturePolicy: "legacy" });
-    docId = document.header.id;
-    const created = await settle(await module.reactor.create(document));
-    expect(created.error?.message ?? created.status).toBe(JobStatus.READ_READY);
-    base = Date.now() + 60_000;
-  }
-
-  async function settle(job: JobInfo): Promise<JobInfo> {
-    let status = await module!.reactor.getJobStatus(job.id);
-    while (
-      status.status !== JobStatus.READ_READY &&
-      status.status !== JobStatus.FAILED
-    ) {
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      status = await module!.reactor.getJobStatus(job.id);
+    async function build(
+      featureFlags: Partial<ReactorFeatureFlags> = {},
+    ): Promise<void> {
+      module = await new ReactorBuilder()
+        .withDocumentModelSources([documentModelDocumentModelModule as never])
+        .withExecutorConfig({ featureFlags })
+        .buildModule();
+      const document = createDocModelDocument({
+        signaturePolicy: "legacy",
+        protocolVersions: { "base-reducer": 2 },
+      });
+      docId = document.header.id;
+      const created = await settle(await module.reactor.create(document));
+      expect(created.error?.message ?? created.status).toBe(
+        JobStatus.READ_READY,
+      );
+      base = Date.now() + 60_000;
     }
-    return status;
-  }
 
-  function moduleAction(id: string, offsetMs: number): Action {
-    return {
-      ...addModule({ id, name: id }),
-      timestampUtcMs: new Date(base + offsetMs).toISOString(),
-    };
-  }
+    async function settle(job: JobInfo): Promise<JobInfo> {
+      let status = await module!.reactor.getJobStatus(job.id);
+      while (
+        status.status !== JobStatus.READ_READY &&
+        status.status !== JobStatus.FAILED
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        status = await module!.reactor.getJobStatus(job.id);
+      }
+      return status;
+    }
 
-  function asOperation(action: Action, index: number, skip = 0): Operation {
-    return {
-      id: deriveOperationId(docId, action.scope, "main", action.id),
-      index,
-      skip,
-      hash: "",
-      timestampUtcMs: action.timestampUtcMs,
-      action,
-    };
-  }
+    function moduleAction(id: string, offsetMs: number): Action {
+      return {
+        ...addModule({ id, name: id }),
+        timestampUtcMs: new Date(base + offsetMs).toISOString(),
+      };
+    }
 
-  async function execute(actions: Action[]): Promise<void> {
-    const job = await settle(
-      await module!.reactor.execute(docId, "main", actions),
-    );
-    expect(job.error?.message ?? job.status).toBe(JobStatus.READ_READY);
-  }
+    function asOperation(action: Action, index: number, skip = 0): Operation {
+      return {
+        id: deriveOperationId(docId, action.scope, "main", action.id),
+        index,
+        skip,
+        hash: "",
+        timestampUtcMs: action.timestampUtcMs,
+        action,
+      };
+    }
 
-  async function load(operations: Operation[]): Promise<void> {
-    const job = await settle(
-      await module!.reactor.load(docId, "main", operations),
-    );
-    expect(job.error?.message ?? job.status).toBe(JobStatus.READ_READY);
-  }
+    async function execute(actions: Action[]): Promise<void> {
+      const job = await settle(
+        await module!.reactor.execute(docId, "main", actions),
+      );
+      expect(job.error?.message ?? job.status).toBe(JobStatus.READ_READY);
+    }
 
-  async function stored(): Promise<Operation[]> {
-    const result = (await module!.reactor.getOperations(docId, {
-      branch: "main",
-      scopes: ["global"],
-    })) as Record<string, { results: Operation[] } | undefined>;
-    return result.global?.results ?? [];
-  }
+    async function load(operations: Operation[]): Promise<void> {
+      const job = await settle(
+        await module!.reactor.load(docId, "main", operations),
+      );
+      expect(job.error?.message ?? job.status).toBe(JobStatus.READ_READY);
+    }
 
-  async function live(): Promise<string[]> {
-    return garbageCollect(sortOperations(await stored())).map(
-      (operation) => (operation.action.input as { id: string }).id,
-    );
-  }
+    async function stored(): Promise<Operation[]> {
+      const result = (await module!.reactor.getOperations(docId, {
+        branch: "main",
+        scopes: ["global"],
+      })) as Record<string, { results: Operation[] } | undefined>;
+      return result.global?.results ?? [];
+    }
 
-  async function modules(): Promise<string[]> {
-    const document = await module!.reactor.get<DocumentModelDocument>(docId);
-    return document.state.global.specifications[0].modules.map(
-      (entry) => entry.id,
-    );
-  }
+    async function live(): Promise<string[]> {
+      return garbageCollect(sortOperations(await stored())).map(
+        (operation) => (operation.action.input as { id: string }).id,
+      );
+    }
 
-  it("re-appends a live row stamped before the conflict window", async () => {
-    await build();
-    await execute([moduleAction("x", 30)]);
-    // Not repositioned without documentDecisions: stored after x.
-    await execute([moduleAction("y", 10)]);
+    async function modules(): Promise<string[]> {
+      const document = await module!.reactor.get<DocumentModelDocument>(docId);
+      return document.state.global.specifications[0].modules.map(
+        (entry) => entry.id,
+      );
+    }
 
-    await load([asOperation(moduleAction("z", 20), 0)]);
+    it("re-appends a live row stamped before the conflict window", async () => {
+      await build();
+      await execute([moduleAction("x", 30)]);
+      // Not repositioned without documentDecisions: stored after x.
+      await execute([moduleAction("y", 10)]);
 
-    expect(await live()).toEqual(["y", "z", "x"]);
-    expect(await modules()).toEqual(["y", "z", "x"]);
-  });
+      await load([asOperation(moduleAction("z", 20), 0)]);
 
-  it("re-appends a live row the predecessor rule leaves out", async () => {
-    await build();
-    const a = moduleAction("a", 0);
-    await load([
-      asOperation(a, 0),
-      asOperation(moduleAction("b", 10), 1),
-      asOperation(moduleAction("c", 20), 2),
-    ]);
+      expect(await live()).toEqual(["y", "z", "x"]);
+      expect(await modules()).toEqual(["y", "z", "x"]);
+    });
 
-    await load([asOperation(a, 10), asOperation(moduleAction("d", 15), 11)]);
+    it("re-appends a live row the predecessor rule leaves out", async () => {
+      await build();
+      const a = moduleAction("a", 0);
+      await load([
+        asOperation(a, 0),
+        asOperation(moduleAction("b", 10), 1),
+        asOperation(moduleAction("c", 20), 2),
+      ]);
 
-    expect(await live()).toEqual(["a", "b", "d", "c"]);
-    expect(await modules()).toEqual(["a", "b", "d", "c"]);
-  });
+      await load([asOperation(a, 10), asOperation(moduleAction("d", 15), 11)]);
 
-  it("re-appends a row stored after the earlier head it rewinds to", async () => {
-    await build();
-    await execute([moduleAction("p", 0)]);
-    // q heads a reshuffle at index 1, skip 1.
-    await load([asOperation(moduleAction("q", -10), 0)]);
-    expect(await live()).toEqual(["q", "p"]);
-    await execute([moduleAction("r", -20)]);
+      expect(await live()).toEqual(["a", "b", "d", "c"]);
+      expect(await modules()).toEqual(["a", "b", "d", "c"]);
+    });
 
-    await load([asOperation(moduleAction("s", -15), 0)]);
+    it("re-appends a row stored after the earlier head it rewinds to", async () => {
+      await build();
+      await execute([moduleAction("p", 0)]);
+      // q heads a reshuffle at index 1, skip 1.
+      await load([asOperation(moduleAction("q", -10), 0)]);
+      expect(await live()).toEqual(["q", "p"]);
+      await execute([moduleAction("r", -20)]);
 
-    expect(await live()).toEqual(["r", "s", "q", "p"]);
-    expect(await modules()).toEqual(["r", "s", "q", "p"]);
-  });
+      await load([asOperation(moduleAction("s", -15), 0)]);
 
-  // The executor stamps the NOOP an UNDO becomes with its own clock.
-  it("keeps an undo the reshuffle moves on the operation it undid", async () => {
-    await build();
-    await execute([moduleAction("x", -120_000)]);
-    await execute([undo()]);
-    expect(await modules()).toEqual([]);
+      expect(await live()).toEqual(["r", "s", "q", "p"]);
+      expect(await modules()).toEqual(["r", "s", "q", "p"]);
+    });
 
-    await load([asOperation(moduleAction("z", -90_000), 0)]);
+    // The executor stamps the NOOP an UNDO becomes with its own clock.
+    it("keeps an undo the reshuffle moves on the operation it undid", async () => {
+      await build();
+      await execute([moduleAction("x", -120_000)]);
+      await execute([undo()]);
+      expect(await modules()).toEqual([]);
 
-    expect(await modules()).toEqual(["z"]);
-    expect(await live()).toContain("z");
-  });
+      await load([asOperation(moduleAction("z", -90_000), 0)]);
 
-  // A NOOP records no target: a reshuffle moving a peer's undo away from the
-  // operation it undid leaves the skip on whatever sorts before it.
-  it.fails("keeps a peer's undo on the operation it undid", async () => {
-    await build();
-    await load([asOperation(moduleAction("x", 0), 0)]);
-    await execute([moduleAction("w", 20)]);
-    const noop: Action = {
-      id: "peer-undo",
-      type: "NOOP",
-      scope: "global",
-      input: {},
-      timestampUtcMs: new Date(base + 10).toISOString(),
-    };
+      expect(await modules()).toEqual(["z"]);
+      expect(await live()).toContain("z");
+    });
 
-    await load([asOperation(noop, 1, 1)]);
+    // A NOOP records no target: a reshuffle moving a peer's undo away from the
+    // operation it undid leaves the skip on whatever sorts before it.
+    it.fails("keeps a peer's undo on the operation it undid", async () => {
+      await build();
+      await load([asOperation(moduleAction("x", 0), 0)]);
+      await execute([moduleAction("w", 20)]);
+      const noop: Action = {
+        id: "peer-undo",
+        type: "NOOP",
+        scope: "global",
+        input: {},
+        timestampUtcMs: new Date(base + 10).toISOString(),
+      };
 
-    expect(await modules()).toEqual(["w"]);
+      await load([asOperation(noop, 1, 1)]);
+
+      expect(await modules()).toEqual(["w"]);
+    });
   });
 });
 

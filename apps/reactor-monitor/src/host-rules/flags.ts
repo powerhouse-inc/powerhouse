@@ -7,7 +7,7 @@ export const FLAG_PREREQUISITES = {
   undoV3: [],
 } as const satisfies Record<string, readonly string[]>;
 export type FeatureFlag = keyof typeof FLAG_PREREQUISITES;
-/** The flags the access ladder sets; a host file cannot set undoV3 yet. */
+/** The flags the access ladder sets; undoV3 is not access control. */
 export type LadderFlag = Exclude<FeatureFlag, "undoV3">;
 
 /** The access-control ladder, bottom up: level n turns on the first n flags. */

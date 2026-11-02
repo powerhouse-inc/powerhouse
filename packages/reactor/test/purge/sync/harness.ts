@@ -52,6 +52,18 @@ export const FULL_MANIFEST: PeerManifest = localPeerManifest(
   PEER_CAPABILITIES,
   {},
 );
+/** MANIFEST_WITHOUT_PURGE from a peer that runs base-reducer 3. */
+export const MANIFEST_WITHOUT_PURGE_UNDO_V3: PeerManifest = localPeerManifest(
+  PEER_CAPABILITIES.filter(
+    (capability) => capability.name !== DOCUMENT_PURGE_PROTOCOL,
+  ),
+  { undoV3: true },
+);
+/** FULL_MANIFEST from a peer that runs base-reducer 3. */
+export const FULL_MANIFEST_UNDO_V3: PeerManifest = localPeerManifest(
+  PEER_CAPABILITIES,
+  { undoV3: true },
+);
 
 export type MockReactor = {
   load: Mock;

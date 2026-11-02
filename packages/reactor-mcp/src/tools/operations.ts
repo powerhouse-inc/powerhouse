@@ -8,10 +8,18 @@ import type {
   Action,
   AuthSubject,
   DocumentModelModule,
+  Operation,
   OperationOutcome,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { operationOutcome } from "@powerhousedao/shared/document-model";
+import {
+  creationState,
+  operationOutcome,
+  stateReducerOf,
+  undoCapabilitiesOf,
+  undoNeedsTargets,
+  undoRedoBatch,
+} from "@powerhousedao/shared/document-model";
 import { pascalCase } from "change-case";
 import type { ReactorToolClient, ReactorToolReadClient } from "./client.js";
 import {
@@ -422,6 +430,164 @@ async function refusedBatch(
   }
 }
 
+function isUndoRedo(type: string): type is "UNDO" | "REDO" {
+  return type === "UNDO" || type === "REDO";
+}
+
+/** Every stored row of one scope. */
+async function scopeOperations(
+  client: ReactorToolReadClient,
+  documentId: string,
+  branch: string,
+  scope: string,
+  signal?: AbortSignal,
+): Promise<Operation[]> {
+  const rows: Operation[] = [];
+  let cursor: string | undefined = "0";
+  while (cursor !== undefined) {
+    const page = await client.getOperations(
+      documentId,
+      { branch, scopes: [scope] },
+      undefined,
+      { cursor, limit: OPERATIONS_PAGE_SIZE },
+      signal,
+    );
+    rows.push(...page.results);
+    cursor = page.results.length > 0 ? page.nextCursor : undefined;
+  }
+  return rows;
+}
+
+type RetractionBatch = {
+  actions: Action[];
+  /** The input each submitted action came from. */
+  sources: number[];
+};
+
+// Base-reducer 3 (or a number this build does not know) retracts by target:
+// each step of a counted UNDO or REDO becomes one RETRACT, resolved over the
+// stored rows and the earlier actions. Undefined for every other document.
+async function retractionBatch(
+  client: ReactorToolReadClient,
+  document: PHDocument,
+  module: DocumentModelModule,
+  inputs: readonly ActionInput[],
+  actions: readonly Action[],
+  options: ExecuteActionsOptions,
+  signal?: AbortSignal,
+): Promise<RetractionBatch | undefined> {
+  const { branch = DEFAULT_BRANCH } = options;
+  const caps = undoCapabilitiesOf(document.header);
+  if (
+    caps === undefined ||
+    !undoNeedsTargets(caps) ||
+    !actions.some((action) => isUndoRedo(action.type))
+  ) {
+    return undefined;
+  }
+  const counts = actions.map((action) =>
+    isUndoRedo(action.type) ? (action.input as { count?: unknown }).count : 0,
+  );
+  const invalid = actions.flatMap((action, index): ActionFailure[] => {
+    const count = counts[index];
+    if (
+      !isUndoRedo(action.type) ||
+      (Number.isInteger(count) && (count as number) >= 1)
+    ) {
+      return [];
+    }
+    return [
+      {
+        index,
+        type: action.type,
+        code: "INVALID_ACTION",
+        errors: ["count must be a positive integer"],
+      },
+    ];
+  });
+  if (invalid.length > 0) throw actionFailuresError(invalid, module);
+  const reducer = stateReducerOf(module.reducer);
+  if (reducer === undefined) {
+    throw new ReactorToolError(
+      "INVALID_ACTION",
+      `Document model ${document.header.documentType} has no state reducer to resolve undo targets with`,
+    );
+  }
+  const id = document.header.id;
+  const operations: Record<string, Operation[]> = {};
+  for (const action of actions) {
+    if (!isUndoRedo(action.type) || action.scope in operations) continue;
+    operations[action.scope] = await scopeOperations(
+      client,
+      id,
+      branch,
+      action.scope,
+      signal,
+    );
+  }
+  // The served document's initialState is its head state; a scope re-derives from creation.
+  const initialState =
+    creationState(
+      await scopeOperations(client, id, branch, "document", signal),
+    ) ?? (module.utils.createDocument() as PHDocument).initialState;
+  const batch = undoRedoBatch(
+    { ...document, initialState, operations },
+    caps,
+    reducer,
+  );
+  const sources: number[] = [];
+  for (const [index, action] of actions.entries()) {
+    const before = batch.actions.length;
+    if (isUndoRedo(action.type)) {
+      try {
+        for (let step = 0; step < (counts[index] as number); step++) {
+          batch.undoOrRedo(action.type, action.scope);
+        }
+      } catch (error) {
+        throw actionFailuresError(
+          [
+            {
+              index,
+              type: action.type,
+              code: "INVALID_ACTION",
+              errors: [error instanceof Error ? error.message : String(error)],
+            },
+          ],
+          module,
+        );
+      }
+    } else {
+      // Built again as it is added: the job runs in creation order.
+      batch.add(validateActions(module, [inputs[index]], options).actions[0]);
+    }
+    for (let i = before; i < batch.actions.length; i++) sources.push(index);
+  }
+  return { actions: [...batch.actions], sources };
+}
+
+// A counted UNDO or REDO was submitted as one action per step; it reports once,
+// with its last row and its first denial, else its first error.
+function perInput(
+  inputs: readonly Action[],
+  sources: readonly number[],
+  submitted: readonly ActionResult[],
+): ActionResult[] {
+  return inputs.map((action, index): ActionResult => {
+    const steps = submitted.filter((r) => sources[r.index] === index);
+    const operationIndex = steps.at(-1)?.operationIndex;
+    const error =
+      steps.find((step) => step.error?.kind === "denied")?.error ??
+      steps.find((step) => step.error)?.error;
+    return {
+      index,
+      type: action.type,
+      scope: action.scope,
+      ...(operationIndex !== undefined && { operationIndex }),
+      ...(error && { error }),
+    };
+  });
+}
+
 /** Validates every action, then executes them as one batch and reports each action's outcome. */
 export async function executeActions(
   client: ReactorToolClient,
@@ -433,12 +599,28 @@ export async function executeActions(
   const document = await getDocument(client, documentId, signal, { branch });
   const id = document.header.id;
   const module = await getDocumentModelForDocument(client, document, signal);
-  const { actions, failures } = validateActions(module, inputs, options);
-  if (failures.length > 0) throw actionFailuresError(failures, module);
+  const validated = validateActions(module, inputs, options);
+  if (validated.failures.length > 0) {
+    throw actionFailuresError(validated.failures, module);
+  }
   const before = { ...document.header.revision };
-  if (actions.length === 0) {
+  if (validated.actions.length === 0) {
     return { documentId: id, revision: before, success: true, results: [] };
   }
+  const retraction = await retractionBatch(
+    client,
+    document,
+    module,
+    inputs,
+    validated.actions,
+    options,
+    signal,
+  );
+  const actions = retraction?.actions ?? validated.actions;
+  const reported = (submitted: ActionResult[]): ActionResult[] =>
+    retraction
+      ? perInput(validated.actions, retraction.sources, submitted)
+      : submitted;
   const result = (action: Action, index: number): ActionResult => ({
     index,
     type: action.type,
@@ -461,7 +643,9 @@ export async function executeActions(
       documentId: id,
       revision: before,
       success: false,
-      results: actions.map((a, i) => ({ ...result(a, i), error: errors[i] })),
+      results: reported(
+        actions.map((a, i) => ({ ...result(a, i), error: errors[i] })),
+      ),
     };
   }
   const outcomes = await actionOutcomes(
@@ -471,15 +655,17 @@ export async function executeActions(
     before,
     signal,
   );
-  const results = actions.map((action, index): ActionResult => {
-    const outcome = outcomes.get(action.id);
-    const error = outcomeError(outcome, module, action.type);
-    return {
-      ...result(action, index),
-      ...(outcome && { operationIndex: outcome.operationIndex }),
-      ...(error && { error }),
-    };
-  });
+  const results = reported(
+    actions.map((action, index): ActionResult => {
+      const outcome = outcomes.get(action.id);
+      const error = outcomeError(outcome, module, action.type);
+      return {
+        ...result(action, index),
+        ...(outcome && { operationIndex: outcome.operationIndex }),
+        ...(error && { error }),
+      };
+    }),
+  );
   return {
     documentId: id,
     revision: await revisionAfter(client, receipt, signal),

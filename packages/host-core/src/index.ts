@@ -238,6 +238,7 @@ export {
   primaryBackend,
   projectReactorToConnect,
   protocolConflicts,
+  protocolEnvAgrees,
   protocolEnv,
   reactorBlockToSwitchboardConfig,
   reactorClientMode,

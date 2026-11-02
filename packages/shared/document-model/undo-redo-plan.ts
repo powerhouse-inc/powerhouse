@@ -3,8 +3,8 @@ import { redo, retract, undo } from "./actions.js";
 import type { BaseReducerCapabilities } from "./base-reducer-protocol.js";
 import {
   assertNever,
-  createdCapabilities,
-  optionalBaseReducerCapabilities,
+  capabilitiesOf,
+  resolveBaseReducerVersion,
 } from "./base-reducer-protocol.js";
 import type { PHDocumentHeader } from "./documents.js";
 import { NoUndoRedoTargetError } from "./errors.js";
@@ -22,14 +22,18 @@ export type UndoRedoAvailability = {
   canRedo: boolean;
 };
 
-/** An older host serves no header versions; CREATE_DOCUMENT carries them. */
+/**
+ * An older host serves no header versions; CREATE_DOCUMENT carries them. A
+ * number this build does not know runs as the highest it runs.
+ */
 export function undoCapabilitiesOf(
   header: PHDocumentHeader,
   createInput?: Partial<CreateDocumentActionInput>,
 ): BaseReducerCapabilities | undefined {
-  return (
-    optionalBaseReducerCapabilities(header) ?? createdCapabilities(createInput)
-  );
+  const version =
+    resolveBaseReducerVersion(header.protocolVersions) ??
+    resolveBaseReducerVersion(createInput?.protocolVersions);
+  return version === undefined ? undefined : capabilitiesOf(version);
 }
 
 /** Whether undo resolves a target before it can be planned. */
@@ -90,20 +94,50 @@ export function undoRedoAvailabilityOf(
   }
 }
 
-/** Runs `run` after every earlier call with the same key has settled. */
+/**
+ * Runs `run` after every earlier call with the same key has settled. A caller
+ * whose `signal` aborts stops waiting and rejects with its reason; the key
+ * stays held until the earlier calls settle.
+ */
 export function serializeByKey<T>(
   chains: Map<string, Promise<unknown>>,
   key: string,
   run: () => Promise<T>,
+  signal?: AbortSignal,
 ): Promise<T> {
-  const next = (chains.get(key) ?? Promise.resolve())
-    .catch(() => undefined)
-    .then(run);
-  chains.set(key, next);
-  void next
+  const prior = (chains.get(key) ?? Promise.resolve()).catch(() => undefined);
+  const next = (signal ? settledUnlessAborted(prior, signal) : prior).then(
+    () => {
+      signal?.throwIfAborted();
+      return run();
+    },
+  );
+  const tail = signal
+    ? Promise.all([prior, next.catch(() => undefined)])
+    : next;
+  chains.set(key, tail);
+  void tail
     .catch(() => undefined)
     .finally(() => {
-      if (chains.get(key) === next) chains.delete(key);
+      if (chains.get(key) === tail) chains.delete(key);
     });
   return next;
+}
+
+function settledUnlessAborted(
+  prior: Promise<unknown>,
+  signal: AbortSignal,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(signal.reason as Error);
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
+    void prior.then(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    });
+  });
 }

@@ -74,7 +74,7 @@ Clear and consistent naming makes your operations understandable. A common conve
 
 The name you provide in Vetra Studio (or Connect) (e.g., `ADD_TODO_ITEM`) directly corresponds to the operation type that will be recorded and that your reducers will handle.
 
-The base actions reserve six names: `UNDO`, `REDO`, `SET_NAME`, `SET_PREFERRED_EDITOR`, `NOOP` and `PURGE_DOCUMENT`. The document model editor refuses a reserved name, and `ph generate` and Vetra's codegen refuse a specification that contains one.
+The base actions reserve seven names: `UNDO`, `REDO`, `SET_NAME`, `SET_PREFERRED_EDITOR`, `NOOP`, `PURGE_DOCUMENT` and `RETRACT`. The check ignores case, so `retract` is reserved too. The document model editor refuses a reserved name, and `ph generate` and Vetra's codegen refuse a specification that contains one.
 
 ### 3. Input types (payloads)
 

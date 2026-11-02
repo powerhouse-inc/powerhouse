@@ -233,3 +233,44 @@ describe("an UNDO on a header without a base-reducer version", () => {
     ).toThrow("carries no base-reducer protocol version");
   });
 });
+
+describe("a header at a number this build does not know, with no version passed", () => {
+  const rows = [add(0, 0, "x"), add(1, 0, "y"), retract(2, "r", "x")];
+  const reduced = (header: PHDocument<TestState>) => {
+    let doc = header;
+    for (const operation of rows) {
+      doc = reducer(doc, operation.action, undefined, {
+        skip: operation.skip,
+        replayOptions: { operation },
+        skipIndexValidation: true,
+      });
+    }
+    return doc;
+  };
+
+  it("reduces as base-reducer 3", () => {
+    const doc = reduced(document(7));
+
+    expect(doc.header.protocolVersions?.["base-reducer"]).toBe(7);
+    expect(doc.state.global.items).toEqual(rebuild(3, rows).state.global.items);
+    expect(doc.state.global.items).toEqual(["y"]);
+  });
+
+  it.each([1, 2, 3] as const)(
+    "reduces a header at base-reducer %i as that version",
+    (version) => {
+      expect(reduced(document(version)).state.global.items).toEqual(
+        rebuild(version, rows).state.global.items,
+      );
+    },
+  );
+
+  it("still throws on a header without a version", () => {
+    const doc = document(2);
+    delete (doc.header as { protocolVersions?: unknown }).protocolVersions;
+
+    expect(() => reduced(doc)).toThrow(
+      "carries no base-reducer protocol version",
+    );
+  });
+});

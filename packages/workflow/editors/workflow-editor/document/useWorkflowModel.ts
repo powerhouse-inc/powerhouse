@@ -1,6 +1,6 @@
 // The only file coupling the editor UI to the Powerhouse document: maps the
 // workflow document state to the plain view model and callbacks to actions.
-import { generateId } from "document-model";
+import { generateId, type Operation } from "document-model";
 import {
   actions,
   useSelectedWorkflowDocument,
@@ -9,7 +9,11 @@ import {
   type WorkflowState,
 } from "document-models/workflow";
 import { useMemo, useRef } from "react";
-import { groupedAction, newUndoGroup } from "../../shared/undo-plan.js";
+import {
+  documentCapabilities,
+  groupedAction,
+  newUndoGroup,
+} from "../../shared/undo-plan.js";
 import { planFollowUp, type AddedBlock } from "../ui/add-follow-up.js";
 import { stepBlock, triggerBlock, type BlockRef } from "../ui/blocks.js";
 import {
@@ -154,6 +158,12 @@ export function useWorkflowModel(): {
 } {
   const [document, write] = useSelectedWorkflowDocument();
   const state = document.state.global;
+  // Base-reducer 3 groups an edit in ids that lead with a UUIDv7.
+  const caps = documentCapabilities(
+    document.header,
+    (document.operations as Record<string, Operation[] | undefined>)
+      .document?.[0],
+  );
   // Managed (managedBy): nothing the editor does is written; the app that
   // manages it would put it back anyway.
   const managed = Boolean(state.managedBy);
@@ -180,7 +190,7 @@ export function useWorkflowModel(): {
       setTrigger: (input) => {
         // Keep the trigger id stable so edges from it survive edits.
         const id = state.trigger?.id ?? generateId();
-        const group = newUndoGroup();
+        const group = newUndoGroup(caps);
         dispatch(
           groupedAction(
             actions.setTrigger({
@@ -196,6 +206,7 @@ export function useWorkflowModel(): {
                 : {}),
             }),
             group,
+            caps,
           ),
         );
         return { id, group, block: triggerBlock(input) };
@@ -216,7 +227,7 @@ export function useWorkflowModel(): {
       clearTrigger: () => dispatch(actions.clearTrigger({})),
       addStep: (input) => {
         const id = generateId();
-        const group = newUndoGroup();
+        const group = newUndoGroup(caps);
         dispatch(
           groupedAction(
             actions.addStep({
@@ -230,6 +241,7 @@ export function useWorkflowModel(): {
               position: input.position,
             }),
             group,
+            caps,
           ),
         );
         return { id, group, block: stepBlock(input) };
@@ -310,7 +322,7 @@ export function useWorkflowModel(): {
         if (!edge) return undefined;
         const stepId = generateId();
         const continuing = generateId();
-        const group = newUndoGroup();
+        const group = newUndoGroup(caps);
         dispatch(
           [
             actions.addStep({
@@ -336,7 +348,7 @@ export function useWorkflowModel(): {
               to: edge.to,
               port,
             }),
-          ].map((action) => groupedAction(action, group)),
+          ].map((action) => groupedAction(action, group, caps)),
         );
         return {
           id: stepId,
@@ -372,7 +384,7 @@ export function useWorkflowModel(): {
       },
       appendStep: (fromId, port, input) => {
         const stepId = generateId();
-        const group = newUndoGroup();
+        const group = newUndoGroup(caps);
         dispatch(
           [
             actions.addStep({
@@ -390,7 +402,7 @@ export function useWorkflowModel(): {
               to: stepId,
               port,
             }),
-          ].map((action) => groupedAction(action, group)),
+          ].map((action) => groupedAction(action, group, caps)),
         );
         return { id: stepId, group, block: stepBlock(input) };
       },
@@ -427,13 +439,13 @@ export function useWorkflowModel(): {
               : []),
           ];
           dispatch(
-            followUps.map((action) => groupedAction(action, added.group)),
+            followUps.map((action) => groupedAction(action, added.group, caps)),
           );
         };
         attempt();
       },
     }),
-    [dispatch, state],
+    [dispatch, state, caps],
   );
 
   return { model, callbacks };

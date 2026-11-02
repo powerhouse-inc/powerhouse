@@ -53,6 +53,7 @@ export type {
   SwitchboardDrive,
 } from "./drive-placement.js";
 export {
+  actionIdsFrom,
   caughtUp,
   DrivePlacements,
   effectiveBackend,
@@ -61,6 +62,7 @@ export {
 } from "./drive-placements.js";
 export type {
   DrivePlacement,
+  OperationReader,
   PlacementRouter,
   PlacementStore,
   PlacementSync,
