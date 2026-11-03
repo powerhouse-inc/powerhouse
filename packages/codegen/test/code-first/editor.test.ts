@@ -253,7 +253,7 @@ describe("an editor for a model whose export name a template also uses", () => {
     expect(read(dir, "editors/notes-editor/editor.tsx")).toContain(
       'import { documentModel } from "../../src/models.js";',
     );
-  }, 20_000);
+  });
 });
 
 it("type-checks editor names that match the framework type imports", async () => {
@@ -267,4 +267,4 @@ it("type-checks editor names that match the framework type imports", async () =>
     await generateEditor({ editorName, documentTypes: ["acme/todo-list"] });
   }
   expect(typeCheck(dir)).toBe("");
-}, 20_000);
+});
