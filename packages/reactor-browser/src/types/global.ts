@@ -17,6 +17,7 @@ import type {
 import type { PHGlobalConfig } from "./config.js";
 import type { IDocumentCache } from "./documents.js";
 import type { PHModal } from "./modals.js";
+import type { SwitchboardDirectory } from "./switchboards.js";
 import type { IPackageDiscoveryService } from "./package-discovery.js";
 import type {
   IReactorBrowserClient,
@@ -139,6 +140,8 @@ export type PHGlobal = PHGlobalConfig & {
   /** Replaces `reactorClientModule.client` in full-client actions; Connect's router. */
   fullReactorClient?: IReactorClient;
   attachmentService?: IAttachmentService;
+  /** The switchboards the app reaches; see `resolveSwitchboard`. */
+  switchboards?: SwitchboardDirectory;
   reactorGraphQLClient?: ReactorGraphQLClient | undefined;
   renown?: IRenown | LOADING;
   vetraPackageManager?: IPackageManager;

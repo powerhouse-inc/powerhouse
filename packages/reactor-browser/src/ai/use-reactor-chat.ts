@@ -6,6 +6,8 @@ import {
   useSyncExternalStore,
 } from "react";
 import type { ModelMessage } from "ai";
+import { useReactorHalves } from "../hooks/reactor.js";
+import { useSwitchboards } from "../hooks/switchboards.js";
 import { ReactorChatAgent } from "./agent.js";
 import { useChatContext } from "./context.js";
 import {
@@ -19,6 +21,7 @@ import type {
   AiConnection,
   AiSettings,
   AiToolDescriptor,
+  AiToolServices,
   AiToolsProvider,
   ChatImage,
   ChatMessage,
@@ -106,6 +109,13 @@ export function useReactorChat(
 
   const settings = useSyncExternalStore(subscribeAiSettings, getAiSettings);
   const context = useChatContext();
+  // The provided store's services, as each tool call finds them.
+  const switchboards = useSwitchboards();
+  const reactor = useReactorHalves();
+  const servicesRef = useRef<AiToolServices>({});
+  useEffect(() => {
+    servicesRef.current = { switchboards, reactor };
+  }, [switchboards, reactor]);
 
   const handleEvent = useCallback((event: AgentEvent) => {
     const assistantId = assistantIdRef.current;
@@ -248,6 +258,7 @@ export function useReactorChat(
           instructions,
           tools,
           context,
+          services: () => servicesRef.current,
           onEvent: handleEvent,
           signal: controller.signal,
           history: historyRef.current,

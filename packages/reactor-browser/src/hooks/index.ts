@@ -84,6 +84,7 @@ export * from "./use-on-drop-file.js";
 export * from "./user-permissions.js";
 export * from "./vetra-packages.js";
 export * from "./attachment-service.js";
+export * from "./switchboards.js";
 export * from "./close-node.js";
 export * from "./link-props.js";
 export * from "./use-attachments.js";

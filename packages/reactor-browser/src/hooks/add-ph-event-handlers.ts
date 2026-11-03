@@ -75,6 +75,7 @@ import {
 } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
 import { addSelectedDriveIdEventHandler } from "./selected-drive.js";
+import { addSwitchboardsEventHandler } from "./switchboards.js";
 import {
   addResetSelectedNodeEventHandler,
   addSelectedNodeIdEventHandler,
@@ -110,6 +111,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   reactor: addReactorHalvesEventHandler,
   fullReactorClient: addFullReactorClientEventHandler,
   attachmentService: addAttachmentServiceEventHandler,
+  switchboards: addSwitchboardsEventHandler,
   features: addFeaturesEventHandler,
   modal: addModalEventHandler,
   renown: addRenownEventHandler,

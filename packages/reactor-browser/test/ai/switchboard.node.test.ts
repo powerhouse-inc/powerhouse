@@ -5,12 +5,16 @@ import {
 } from "@powerhousedao/reactor";
 import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 import {
+  LIST_SWITCHBOARDS_TOOL_NAME,
   SWITCHBOARD_INTROSPECTION_QUERY,
   SWITCHBOARD_SCHEMA_TOOL_NAME,
+  createListSwitchboardsTool,
   createSwitchboardSchemaTool,
   resolveDriveSwitchboard,
   summarizeIntrospectionSchema,
 } from "../../src/ai/switchboard.js";
+import type { AiToolContext } from "../../src/ai/types.js";
+import { createSwitchboardDirectory } from "../../src/utils/switchboard-directory.js";
 
 function makeRemote(
   driveId: string,
@@ -319,37 +323,48 @@ describe("createSwitchboardSchemaTool", () => {
 
   function makeTool(
     fetchImpl: Mock<FetchLike>,
-    overrides: {
-      token?: string | undefined;
-      remotes?: Remote[];
-    } = {},
-    selectedDriveId: string | null = "drive-1",
+    overrides: { token?: string | undefined } = {},
   ) {
-    const { token, remotes = [gqlRemote] } = overrides;
     return createSwitchboardSchemaTool({
-      getSyncManager: () => makeFakeSyncManager(remotes),
-      getSelectedDriveId: () => selectedDriveId ?? undefined,
-      tokenProvider: () => Promise.resolve(token),
+      tokenProvider: () => Promise.resolve(overrides.token),
       fetchImpl,
       timeoutMs: 1_000,
     });
   }
+
+  // What the agent hands the tool: the host's directory, here of synced drives.
+  function contextOf(remotes: Remote[] = [gqlRemote]): AiToolContext {
+    return {
+      switchboards: createSwitchboardDirectory({
+        syncManager: () => makeFakeSyncManager(remotes),
+      }),
+    };
+  }
+
+  const twoRemotes = () => [
+    gqlRemote,
+    makeRemote("drive-2", {
+      type: "gql",
+      parameters: { url: "http://localhost:4002/graphql/r" },
+    }),
+  ];
 
   it("has the expected read-only descriptor shape", () => {
     const tool = makeTool(makeFetch(200, introspectionBody));
     expect(tool.name).toBe(SWITCHBOARD_SCHEMA_TOOL_NAME);
     expect(tool.annotations).toEqual({ readOnlyHint: true });
     expect(tool.inputSchema).toHaveProperty("driveId");
+    expect(tool.inputSchema).toHaveProperty("switchboard");
     expect(tool.description).toContain("Read-only");
   });
 
-  it("posts the introspection query to the resolved graphql endpoint with the bearer token", async () => {
+  it("posts the introspection query to the only switchboard with the bearer token", async () => {
     const fetchImpl = makeFetch(200, introspectionBody);
     const tool = makeTool(fetchImpl, { token: "test-token" });
-    const result = (await tool.callback(undefined as never)) as Record<
-      string,
-      unknown
-    >;
+    const result = (await tool.callback(
+      undefined as never,
+      contextOf(),
+    )) as Record<string, unknown>;
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     const [url, init] = fetchImpl.mock.calls[0];
@@ -363,6 +378,7 @@ describe("createSwitchboardSchemaTool", () => {
     expect(headers["authorization"]).toBe("Bearer test-token");
 
     expect(result).toEqual({
+      switchboard: "localhost:4001",
       switchboardUrl: "http://localhost:4001",
       graphqlUrl: "http://localhost:4001/graphql",
       queries: [
@@ -380,7 +396,7 @@ describe("createSwitchboardSchemaTool", () => {
   it("omits the authorization header when no token is available", async () => {
     const fetchImpl = makeFetch(200, introspectionBody);
     const tool = makeTool(fetchImpl, { token: undefined });
-    await tool.callback(undefined as never);
+    await tool.callback(undefined as never, contextOf());
     const headers = fetchImpl.mock.calls[0][1]?.headers as Record<
       string,
       string
@@ -390,14 +406,18 @@ describe("createSwitchboardSchemaTool", () => {
 
   it("rejects with the sign-in error on HTTP 401", async () => {
     const tool = makeTool(makeFetch(401, { errors: [] }));
-    await expect(tool.callback(undefined as never)).rejects.toThrow(
+    await expect(
+      tool.callback(undefined as never, contextOf()),
+    ).rejects.toThrow(
       "Switchboard at http://localhost:4001/graphql refused the request (HTTP 401). Sign in to the switchboard (Renown) and try again.",
     );
   });
 
   it("rejects with an error for other non-2xx responses", async () => {
     const tool = makeTool(makeFetch(500, {}, "Internal Server Error"));
-    await expect(tool.callback(undefined as never)).rejects.toThrow(
+    await expect(
+      tool.callback(undefined as never, contextOf()),
+    ).rejects.toThrow(
       "Switchboard introspection failed: HTTP 500 Internal Server Error from http://localhost:4001/graphql",
     );
   });
@@ -405,56 +425,60 @@ describe("createSwitchboardSchemaTool", () => {
   it("rejects with a reachability error when fetch fails", async () => {
     const fetchImpl = vi.fn(() => Promise.reject(new Error("fetch failed")));
     const tool = createSwitchboardSchemaTool({
-      getSyncManager: () => makeFakeSyncManager([gqlRemote]),
-      getSelectedDriveId: () => "drive-1",
       tokenProvider: () => Promise.resolve(undefined),
       fetchImpl,
     });
-    await expect(tool.callback(undefined as never)).rejects.toThrow(
+    await expect(
+      tool.callback(undefined as never, contextOf()),
+    ).rejects.toThrow(
       "Switchboard at http://localhost:4001/graphql is not reachable: fetch failed",
     );
   });
 
-  it("rejects when the drive has no switchboard", async () => {
-    const tool = makeTool(
-      makeFetch(200, introspectionBody),
-      {
-        remotes: [],
-      },
-      "drive-local",
-    );
-    await expect(tool.callback(undefined as never)).rejects.toThrow(
-      'Drive "drive-local" has no switchboard: it is not synced to a remote switchboard.',
+  it("rejects when the app reaches no switchboard", async () => {
+    const tool = makeTool(makeFetch(200, introspectionBody));
+    await expect(
+      tool.callback(undefined as never, contextOf([])),
+    ).rejects.toThrow(
+      "This app reaches no switchboard; it is connected to none.",
     );
   });
 
-  it("rejects when no drive is selected and none is given", async () => {
-    const tool = makeTool(
-      makeFetch(200, introspectionBody),
-      { remotes: [gqlRemote] },
-      null,
-    );
+  it("rejects when the host provides no switchboard directory", async () => {
+    const tool = makeTool(makeFetch(200, introspectionBody));
     await expect(tool.callback(undefined as never)).rejects.toThrow(
-      "No drive is currently selected and no driveId was given.",
+      "This app provides no switchboard directory",
     );
   });
 
-  it("uses the driveId argument over the selected drive", async () => {
+  it("refuses to guess between two switchboards, naming them", async () => {
     const fetchImpl = makeFetch(200, introspectionBody);
-    const tool = makeTool(
-      fetchImpl,
-      {
-        remotes: [
-          gqlRemote,
-          makeRemote("drive-2", {
-            type: "gql",
-            parameters: { url: "http://localhost:4002/graphql/r" },
-          }),
-        ],
-      },
-      "drive-1",
+    const tool = makeTool(fetchImpl);
+    await expect(
+      tool.callback(undefined as never, contextOf(twoRemotes())),
+    ).rejects.toThrow(
+      /several switchboards \(localhost:4001 .*; localhost:4002 .*name one with "switchboard"/,
     );
-    await tool.callback({ driveId: "drive-2" } as never);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("goes to the switchboard of the drive asked about", async () => {
+    const fetchImpl = makeFetch(200, introspectionBody);
+    const tool = makeTool(fetchImpl);
+    await tool.callback(
+      { driveId: "drive-2" } as never,
+      contextOf(twoRemotes()),
+    );
+    expect(fetchImpl.mock.calls[0][0]).toBe("http://localhost:4002/graphql");
+  });
+
+  it("takes the switchboard by name", async () => {
+    const fetchImpl = makeFetch(200, introspectionBody);
+    const tool = makeTool(fetchImpl);
+    await tool.callback(
+      { switchboard: "localhost:4002" } as never,
+      contextOf(twoRemotes()),
+    );
     expect(fetchImpl.mock.calls[0][0]).toBe("http://localhost:4002/graphql");
   });
 
@@ -465,29 +489,48 @@ describe("createSwitchboardSchemaTool", () => {
         data: null,
       }),
     );
-    await expect(tool.callback(undefined as never)).rejects.toThrow(
-      "Introspection is disabled.",
-    );
+    await expect(
+      tool.callback(undefined as never, contextOf()),
+    ).rejects.toThrow("Introspection is disabled.");
   });
 
   it("rejects when the response has no GraphQL schema", async () => {
     const tool = makeTool(makeFetch(200, { data: { __schema: null } }));
-    await expect(tool.callback(undefined as never)).rejects.toThrow(
+    await expect(
+      tool.callback(undefined as never, contextOf()),
+    ).rejects.toThrow(
       "Switchboard at http://localhost:4001/graphql did not return a GraphQL schema.",
     );
   });
+});
 
-  it("defaults the drive id from window.ph.selectedDriveId", async () => {
-    (globalThis as Record<string, unknown>).window = {
-      ph: { selectedDriveId: "drive-1" },
+describe("listSwitchboards", () => {
+  it("lists the host's switchboards by the names other tools take", async () => {
+    const tool = createListSwitchboardsTool();
+    expect(tool.name).toBe(LIST_SWITCHBOARDS_TOOL_NAME);
+    expect(tool.annotations).toEqual({ readOnlyHint: true });
+
+    const context: AiToolContext = {
+      switchboards: createSwitchboardDirectory({
+        remoteBackends: [{ name: "sb", url: "http://localhost:2540/d/sektar" }],
+      }),
     };
-    const fetchImpl = makeFetch(200, introspectionBody);
-    const tool = createSwitchboardSchemaTool({
-      getSyncManager: () => makeFakeSyncManager([gqlRemote]),
-      tokenProvider: () => Promise.resolve(undefined),
-      fetchImpl,
+    expect(await tool.callback(undefined as never, context)).toEqual({
+      switchboards: [
+        {
+          name: "sb",
+          url: "http://localhost:2540",
+          graphqlUrl: "http://localhost:2540/graphql",
+          via: "backend",
+          workflows: "unknown",
+        },
+      ],
     });
-    await tool.callback(undefined as never);
-    expect(fetchImpl.mock.calls[0][0]).toBe("http://localhost:4001/graphql");
+  });
+
+  it("says so when the host provides no directory", async () => {
+    await expect(
+      createListSwitchboardsTool().callback(undefined as never),
+    ).rejects.toThrow("This app provides no switchboard directory");
   });
 });

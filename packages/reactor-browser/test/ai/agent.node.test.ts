@@ -17,10 +17,13 @@ import type {
   AgentEvent,
   AiSettings,
   AiToolAnnotations,
+  AiToolContext,
   AiToolDescriptor,
+  AiToolServices,
   ChatContext,
 } from "../../src/ai/types.js";
 import { isWriteTool } from "../../src/ai/types.js";
+import type { SwitchboardDirectory } from "../../src/types/switchboards.js";
 
 const USAGE = {
   inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
@@ -843,6 +846,46 @@ describe("images attached to the chat", () => {
     ]);
   });
 
+  it("hands each call the host's services as they stand then", async () => {
+    const seen: unknown[] = [];
+    const getLocation = makeTool("getLocation", (_args, context) => {
+      seen.push((context as AiToolContext | undefined)?.switchboards);
+      return Promise.resolve({ content: [{ type: "text", text: "here" }] });
+    });
+    const model = streamModel([
+      [
+        ...toolCallParts("call-1", "getLocation", {}),
+        ...finishParts("tool-calls"),
+      ],
+      [
+        ...toolCallParts("call-2", "getLocation", {}),
+        ...finishParts("tool-calls"),
+      ],
+      [...textParts("text-1", "Done."), ...finishParts("stop")],
+    ]);
+    const first: SwitchboardDirectory = {
+      list: () => [],
+      locate: () => Promise.resolve(undefined),
+    };
+    const second: SwitchboardDirectory = { ...first };
+    let services: AiToolServices = { switchboards: first };
+    const agent = new ReactorChatAgent({
+      settings: SETTINGS,
+      tools: [getLocation],
+      context: {},
+      services: () => {
+        const now = services;
+        // The host's directory changes between the two calls.
+        services = { switchboards: second };
+        return now;
+      },
+      onEvent: () => {},
+      model,
+    });
+    await agent.send("where?");
+    expect(seen).toEqual([first, second]);
+  });
+
   it("forgets them with the conversation", async () => {
     const model = streamModel([
       [...textParts("text-1", "Noted."), ...finishParts("stop")],
@@ -934,6 +977,43 @@ describe("buildSystemPrompt", () => {
     });
     expect(prompt).toContain(
       "This drive is not synced to a switchboard, so no switchboard endpoints are available for it.",
+    );
+  });
+
+  it("names the one switchboard the host reaches, drive or no drive", () => {
+    const prompt = buildSystemPrompt({
+      switchboards: [
+        { name: "sb", url: "http://localhost:2540", workflows: true },
+      ],
+    });
+    expect(prompt).toContain(
+      "This app reaches one switchboard: sb at http://localhost:2540, runs workflows. Tools that ask a switchboard use it without being told",
+    );
+    expect(prompt).not.toContain("not synced");
+  });
+
+  it("lists several switchboards and how to name one", () => {
+    const prompt = buildSystemPrompt({
+      driveId: "drive-1",
+      driveName: "My Drive",
+      switchboards: [
+        { name: "laptop", url: "http://localhost:2540", workflows: true },
+        {
+          name: "cloud",
+          url: "https://cloud.example.com",
+          workflows: "unknown",
+        },
+      ],
+    });
+    expect(prompt).toContain(
+      'This app reaches several switchboards: laptop at http://localhost:2540, runs workflows; cloud at https://cloud.example.com. Tools that ask a switchboard take its name as "switchboard"',
+    );
+    expect(prompt).not.toContain("not synced");
+  });
+
+  it("says when the host reaches no switchboard", () => {
+    expect(buildSystemPrompt({ switchboards: [] })).toContain(
+      "This app reaches no switchboard",
     );
   });
 

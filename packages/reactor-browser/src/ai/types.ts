@@ -1,8 +1,11 @@
 import type {
   PhAiChatImage,
   PhAiToolAnnotations,
+  PhAiToolContext,
   PhAiToolDescriptor,
 } from "@powerhousedao/shared/document-model";
+import type { ReactorBrowserHalves } from "../types/reactor-browser-client.js";
+import type { SwitchboardDirectory } from "../types/switchboards.js";
 
 /**
  * Browser-side AI chat over the reactor.
@@ -72,6 +75,21 @@ export type AiToolDescriptor = PhAiToolDescriptor;
 /** Tool descriptors the app resolves when the user sends a message. */
 export type AiToolsProvider = () => Promise<AiToolDescriptor[]>;
 
+/** The host's services a tool may use, handed over on each call. */
+export interface AiToolServices {
+  /** The switchboards the host reaches; pass it to `resolveSwitchboard`. */
+  switchboards?: SwitchboardDirectory;
+  /** The host's reactor client, read and write halves. */
+  reactor?: ReactorBrowserHalves;
+}
+
+/**
+ * What the agent passes a tool next to its arguments: the turn's signal and
+ * images, and the host's services. A tool reads what it needs from here, not
+ * from a global.
+ */
+export type AiToolContext = PhAiToolContext & AiToolServices;
+
 /** Whether running the tool needs approval: anything not annotated read-only. */
 export function isWriteTool(annotations?: AiToolAnnotations): boolean {
   return annotations?.readOnlyHint !== true;
@@ -121,6 +139,13 @@ export interface ChatContext {
   documentType?: string;
   documentName?: string;
   documentId?: string;
+  /** The switchboards the host reaches; absent when it gives no directory. */
+  switchboards?: {
+    name: string;
+    url: string;
+    workflows: boolean | "unknown";
+  }[];
+  /** The selected drive's synced switchboard, for a host with no directory. */
   switchboardUrl?: string;
   switchboardGraphqlUrl?: string;
 }

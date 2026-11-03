@@ -24,7 +24,9 @@ import type {
   AiChatImage,
   AiConnection,
   AiSettings,
+  AiToolContext,
   AiToolDescriptor,
+  AiToolServices,
   ChatContext,
   ChatImage,
 } from "./types.js";
@@ -235,6 +237,28 @@ export function unwrapToolResult(raw: unknown): unknown {
   return raw;
 }
 
+/** Which switchboards the host reaches, and how the tools pick one. */
+function switchboardsLine(
+  switchboards: NonNullable<ChatContext["switchboards"]>,
+): string {
+  const describe = (entry: (typeof switchboards)[number]) => {
+    const workflows =
+      entry.workflows === "unknown"
+        ? ""
+        : entry.workflows
+          ? ", runs workflows"
+          : ", runs no workflows";
+    return `${entry.name} at ${entry.url}${workflows}`;
+  };
+  if (switchboards.length === 0) {
+    return "This app reaches no switchboard, so tools that ask one will fail.";
+  }
+  if (switchboards.length === 1) {
+    return `This app reaches one switchboard: ${describe(switchboards[0])}. Tools that ask a switchboard use it without being told; getSwitchboardSchema lists what it exposes.`;
+  }
+  return `This app reaches several switchboards: ${switchboards.map(describe).join("; ")}. Tools that ask a switchboard take its name as "switchboard" when they can't tell which one is meant; listSwitchboards lists them.`;
+}
+
 /** Builds the system prompt, grounding the agent in the current selection. */
 export function buildSystemPrompt(context: ChatContext): string {
   const lines: string[] = [
@@ -268,7 +292,9 @@ export function buildSystemPrompt(context: ChatContext): string {
         ".",
     );
   }
-  if (context.switchboardUrl) {
+  if (context.switchboards) {
+    lines.push(switchboardsLine(context.switchboards));
+  } else if (context.switchboardUrl) {
     selection.push(
       `The switchboard for this drive is at ${context.switchboardUrl}; its GraphQL endpoint is ${context.switchboardGraphqlUrl ?? ""}. Use the getSwitchboardSchema tool to list the queries and mutations it exposes.`,
     );
@@ -300,6 +326,8 @@ export interface ReactorChatAgentOptions {
   instructions?: string;
   tools: AiToolDescriptor[];
   context: ChatContext;
+  /** The host's services, read for each tool call so a running turn sees changes. */
+  services?: () => AiToolServices;
   onEvent: (event: AgentEvent) => void;
   signal?: AbortSignal;
   /** Test seam: override the model (e.g. a mock language model). */
@@ -423,10 +451,12 @@ export class ReactorChatAgent {
         description: descriptor.description,
         inputSchema: z.object(descriptor.inputSchema),
         execute: async (args: unknown, { toolCallId }) => {
-          const raw = await descriptor.callback(args as never, {
+          const toolContext: AiToolContext = {
+            ...this.options.services?.(),
             signal,
             chatImages: this.chatImages,
-          });
+          };
+          const raw = await descriptor.callback(args as never, toolContext);
           const returned = toolResultImages(raw);
           if (returned.length > 0) toolImages.set(toolCallId, returned);
           return boundedToolResult(unwrapToolResult(raw));

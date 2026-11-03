@@ -2,6 +2,7 @@ import { isFileNode, isFolderNode } from "@powerhousedao/shared/document-drive";
 import { useSelectedDriveSafe } from "../hooks/selected-drive.js";
 import { useSelectedDocumentId } from "../hooks/selected-document.js";
 import { useSelectedNode } from "../hooks/selected-node.js";
+import { useSwitchboards } from "../hooks/switchboards.js";
 import { resolveDriveSwitchboard } from "./switchboard.js";
 import type { ChatContext } from "./types.js";
 
@@ -14,6 +15,7 @@ export function useChatContext(): ChatContext {
   const [drive] = useSelectedDriveSafe();
   const node = useSelectedNode();
   const documentId = useSelectedDocumentId();
+  const switchboards = useSwitchboards();
 
   const context: ChatContext = {
     driveId: drive?.header.id,
@@ -36,6 +38,14 @@ export function useChatContext(): ChatContext {
     context.documentName = node.name;
     context.documentType = node.documentType;
     context.documentId = documentId;
+  }
+  if (switchboards) {
+    context.switchboards = switchboards.list().map((entry) => ({
+      name: entry.name,
+      url: entry.base,
+      workflows: entry.workflows,
+    }));
+    return context;
   }
   const sb = resolveDriveSwitchboard(drive?.header.id);
   if (sb) {

@@ -4,6 +4,7 @@ export type * from "./global.js";
 export type * from "./modals.js";
 export type * from "./reactor.js";
 export type * from "./reactor-browser-client.js";
+export type * from "./switchboards.js";
 export type * from "./timeline.js";
 export type * from "./toast.js";
 export type * from "./upload.js";
