@@ -15,8 +15,12 @@ import {
 } from "./ui/blocks.js";
 import { checkTriggerStrategy } from "@powerhousedao/pieces-framework/workflow";
 
-export const DEFAULT_RUNTIME_URL =
-  "http://localhost:4001/graphql/workflow-runtime";
+/** A switchboard's workflow-runtime subgraph, beside its GraphQL gateway. */
+export function workflowRuntimeUrl(switchboard: {
+  graphqlUrl: string;
+}): string {
+  return `${switchboard.graphqlUrl.replace(/\/+$/, "")}/workflow-runtime`;
+}
 
 export interface Transport {
   url: string;
@@ -27,6 +31,8 @@ export interface RuntimeClientOptions {
   fetch?: typeof fetch;
   // Bearer token source; defaults to the ambient Renown token.
   token?: () => Promise<string | null | undefined>;
+  // Aborts every request of this client, e.g. when the user stops a turn.
+  signal?: AbortSignal;
 }
 
 function createTransport(
@@ -37,17 +43,21 @@ function createTransport(
   const tokenOf = options.token ?? ambientRenownTokenProvider;
   return {
     url,
-    gql: (query, variables) => gql(url, doFetch, tokenOf, query, variables),
+    gql: (query, variables) =>
+      gql(url, doFetch, tokenOf, query, variables, options.signal),
   };
 }
 
-// A runtime error with its GraphQL extension code, when the server sent one.
+// A runtime error with its GraphQL extension code, when the server sent one,
+// or one of this client's: RUNTIME_UNREACHABLE, RUNTIME_REFUSED,
+// NO_WORKFLOW_RUNTIME, RUNTIME_HTTP_ERROR.
 export class RuntimeRequestError extends Error {
   constructor(
     message: string,
     readonly code?: string,
+    options?: { cause?: unknown },
   ) {
-    super(message);
+    super(message, options);
     this.name = "RuntimeRequestError";
   }
 }
@@ -65,23 +75,60 @@ async function gql<T>(
   tokenOf: () => Promise<string | null | undefined>,
   query: string,
   variables: Record<string, unknown>,
+  signal?: AbortSignal,
 ): Promise<T> {
   // Mirrors the reactor-browser switchboard AI tool's auth: attach the
   // Renown bearer token when one is available, else go out anonymously.
   const token = await tokenOf();
-  const response = await doFetch(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-  const body = (await response.json()) as {
+  let response: Response;
+  try {
+    response = await doFetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ query, variables }),
+      signal,
+    });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    // A refused connection, a CORS refusal or a dropped network: the
+    // browser says only "Failed to fetch", so say where it went.
+    throw new RuntimeRequestError(
+      `The workflow runtime at ${url} could not be reached: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+      "RUNTIME_UNREACHABLE",
+      { cause: error },
+    );
+  }
+  if (response.status === 401 || response.status === 403) {
+    throw new RuntimeRequestError(
+      `The workflow runtime at ${url} refused the request (HTTP ${response.status}). Sign in and try again.`,
+      "RUNTIME_REFUSED",
+    );
+  }
+  if (response.status === 404) {
+    throw new RuntimeRequestError(
+      `No workflow runtime answers at ${url} (HTTP 404): its switchboard runs no workflows.`,
+      "NO_WORKFLOW_RUNTIME",
+    );
+  }
+  let body: {
     data?: T;
     errors?: { message: string; extensions?: { code?: unknown } }[];
-  };
-  const first = body.errors?.[0];
+  } | null;
+  try {
+    body = (await response.json()) as typeof body;
+  } catch (error) {
+    throw new RuntimeRequestError(
+      `The workflow runtime at ${url} answered HTTP ${response.status} without a GraphQL response.`,
+      "RUNTIME_HTTP_ERROR",
+      { cause: error },
+    );
+  }
+  const first = body?.errors?.[0];
   if (first) {
     const code = first.extensions?.code;
     throw new RuntimeRequestError(
@@ -89,7 +136,13 @@ async function gql<T>(
       typeof code === "string" ? code : undefined,
     );
   }
-  if (!body.data) throw new Error("Empty GraphQL response");
+  if (!response.ok) {
+    throw new RuntimeRequestError(
+      `The workflow runtime at ${url} answered HTTP ${response.status}.`,
+      "RUNTIME_HTTP_ERROR",
+    );
+  }
+  if (!body?.data) throw new Error("Empty GraphQL response");
   return body.data;
 }
 

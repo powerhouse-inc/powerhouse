@@ -2,15 +2,11 @@
 // a piece offers, a block's config props, the built-in core blocks with
 // the expression syntax, run history and manual firing. Complements the
 // connector/connection tools in tools.ts, which cover the catalog and auth.
-import type { PhAiToolDescriptor } from "@powerhousedao/shared/document-model";
+import type {
+  PhAiToolContext,
+  PhAiToolDescriptor,
+} from "@powerhousedao/shared/document-model";
 import { z } from "zod";
-import {
-  fetchPieceActions,
-  fetchPieceTriggers,
-  fetchRuns,
-  fireWorkflow,
-  getBlockForm,
-} from "../editors/workflow-editor/runtime-api.js";
 import type { BlockFormProp } from "../editors/workflow-editor/ui/forms.js";
 import { REACTOR_CONNECTOR_ID } from "../document-models/connection/v1/src/reactor-connection.js";
 import {
@@ -18,7 +14,7 @@ import {
   REACTOR_PIECE,
   type BlockRef,
 } from "../editors/workflow-editor/ui/blocks.js";
-import { syncRuntimeUrl } from "./runtime-url.js";
+import { runtimeFor, switchboardInput } from "./runtime.js";
 import { flowPorts } from "@powerhousedao/pieces-framework/workflow";
 
 const READ_ONLY = {
@@ -93,15 +89,22 @@ export const getWorkflowPieceBlocksTool: PhAiToolDescriptor = {
     packageName: z
       .string()
       .describe("Piece package name, e.g. @activepieces/piece-http."),
+    switchboard: switchboardInput,
   },
   annotations: { title: "Get Workflow Piece Blocks", ...READ_ONLY },
-  callback: async (args: { packageName: string }) => {
-    syncRuntimeUrl();
+  callback: async (
+    args: { packageName: string; switchboard?: string },
+    context?: PhAiToolContext,
+  ) => {
+    const { client, switchboard } = await runtimeFor(context, {
+      switchboard: args.switchboard,
+    });
     const [actions, triggers] = await Promise.all([
-      fetchPieceActions(args.packageName),
-      fetchPieceTriggers(args.packageName),
+      client.fetchPieceActions(args.packageName),
+      client.fetchPieceTriggers(args.packageName),
     ]);
     return {
+      switchboard: switchboard.name,
       packageName: args.packageName,
       actions: actions.map((action) => ({
         pieceName: action.pieceName,
@@ -137,25 +140,33 @@ export const getWorkflowBlockConfigTool: PhAiToolDescriptor = {
       .string()
       .describe("Action or trigger name, e.g. branch or send_request."),
     kind: z.enum(["action", "trigger"]).describe("action or trigger."),
+    switchboard: switchboardInput,
   },
   annotations: { title: "Get Workflow Block Config", ...READ_ONLY },
-  callback: async (args: BlockRef) => {
+  callback: async (
+    args: BlockRef & { switchboard?: string },
+    context?: PhAiToolContext,
+  ) => {
     const block: BlockRef = {
       pieceName: args.pieceName,
       pieceVersion: args.pieceVersion,
       name: args.name,
       kind: args.kind,
     };
-    syncRuntimeUrl();
-    const form = await getBlockForm(block);
+    const runtime = await runtimeFor(context, {
+      switchboard: args.switchboard,
+    });
+    const form = await runtime.getBlockForm(block);
     if (!form) {
       return {
+        switchboard: runtime.switchboard.name,
         ...blockFields(block),
         error:
           "Unknown block. Use getConnectors and getWorkflowPieceBlocks to find valid blocks (documents live in @powerhousedao/piece-reactor), or listWorkflowCoreBlocks for built-ins.",
       };
     }
     return {
+      switchboard: runtime.switchboard.name,
       ...blockFields(block),
       title: form.title,
       kind: kindOf(block),
@@ -171,14 +182,19 @@ export const getWorkflowBlockConfigTool: PhAiToolDescriptor = {
 export const listWorkflowCoreBlocksTool: PhAiToolDescriptor = {
   name: "listWorkflowCoreBlocks",
   description: `Lists the built-in blocks of the ${CORE_PIECE} piece (manual, schedule and webhook triggers, branch and assert) with their pinned fields and config props, plus the expression syntax and the rules for building a powerhouse/workflow document. Documents are read and written by the @powerhousedao/piece-reactor blocks; list those with getWorkflowPieceBlocks.`,
-  inputSchema: {},
+  inputSchema: { switchboard: switchboardInput },
   annotations: { title: "List Workflow Core Blocks", ...READ_ONLY },
-  callback: async () => {
-    syncRuntimeUrl();
+  callback: async (
+    args: { switchboard?: string },
+    context?: PhAiToolContext,
+  ) => {
+    const runtime = await runtimeFor(context, {
+      switchboard: args.switchboard,
+    });
     // The reactor serves the core piece's descriptors, as it does any piece's.
     const [actions, triggers] = await Promise.all([
-      fetchPieceActions(CORE_PIECE),
-      fetchPieceTriggers(CORE_PIECE),
+      runtime.client.fetchPieceActions(CORE_PIECE),
+      runtime.client.fetchPieceTriggers(CORE_PIECE),
     ]);
     const blocks: BlockRef[] = [
       ...triggers.map((entry) => ({ ...entry, kind: "trigger" as const })),
@@ -189,8 +205,11 @@ export const listWorkflowCoreBlocksTool: PhAiToolDescriptor = {
       name: entry.name,
       kind: entry.kind,
     }));
-    const forms = await Promise.all(blocks.map(getBlockForm));
+    const forms = await Promise.all(
+      blocks.map((block) => runtime.getBlockForm(block)),
+    );
     return {
+      switchboard: runtime.switchboard.name,
       blocks: blocks.flatMap((block, index) => {
         const form = forms[index];
         if (!form) return [];
@@ -230,20 +249,29 @@ export const listWorkflowRunsTool: PhAiToolDescriptor = {
       .max(100)
       .optional()
       .describe("Maximum runs to return (default 10)."),
+    switchboard: switchboardInput,
   },
   annotations: { title: "List Workflow Runs", ...READ_ONLY },
-  callback: async (args: {
-    workflowId?: string;
-    driveId?: string;
-    limit?: number;
-  }) => {
-    syncRuntimeUrl();
-    const runs = await fetchRuns({
+  callback: async (
+    args: {
+      workflowId?: string;
+      driveId?: string;
+      limit?: number;
+      switchboard?: string;
+    },
+    context?: PhAiToolContext,
+  ) => {
+    const { client, switchboard } = await runtimeFor(context, {
+      switchboard: args.switchboard,
+      documentId: args.workflowId ?? args.driveId,
+    });
+    const runs = await client.fetchRuns({
       workflowId: args.workflowId,
       driveId: args.driveId,
       limit: args.limit ?? 10,
     });
     return {
+      switchboard: switchboard.name,
       runs: runs.map((run) => ({
         id: run.id,
         workflowId: run.workflowId,
@@ -273,6 +301,7 @@ export const fireWorkflowTool: PhAiToolDescriptor = {
       .record(z.string(), z.unknown())
       .optional()
       .describe("Trigger payload object."),
+    switchboard: switchboardInput,
   },
   annotations: {
     title: "Fire Workflow",
@@ -281,12 +310,22 @@ export const fireWorkflowTool: PhAiToolDescriptor = {
     idempotentHint: false,
     openWorldHint: false,
   },
-  callback: (args: {
-    workflowId: string;
-    payload?: Record<string, unknown>;
-  }) => {
-    syncRuntimeUrl();
-    return fireWorkflow(args.workflowId, args.payload ?? {});
+  callback: async (
+    args: {
+      workflowId: string;
+      payload?: Record<string, unknown>;
+      switchboard?: string;
+    },
+    context?: PhAiToolContext,
+  ) => {
+    const { client, switchboard } = await runtimeFor(context, {
+      switchboard: args.switchboard,
+      documentId: args.workflowId,
+    });
+    return {
+      switchboard: switchboard.name,
+      ...(await client.fireWorkflow(args.workflowId, args.payload ?? {})),
+    };
   },
 };
 

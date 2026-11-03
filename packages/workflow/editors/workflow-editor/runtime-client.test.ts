@@ -74,6 +74,97 @@ describe("gql (via fetchConnections)", () => {
   });
 });
 
+describe("gql failures", () => {
+  const URL = "http://sb/graphql/workflow-runtime";
+
+  async function failure(response: () => Promise<Response>) {
+    vi.stubGlobal("fetch", response);
+    try {
+      await runtimeClient.createRuntimeClient(URL).fetchConnections();
+    } catch (error) {
+      return error as RuntimeClientModule.RuntimeRequestError;
+    }
+    throw new Error("the request succeeded");
+  }
+
+  it("names the runtime a refused connection was for", async () => {
+    const error = await failure(() =>
+      Promise.reject(new TypeError("Failed to fetch")),
+    );
+    expect(error).toBeInstanceOf(runtimeClient.RuntimeRequestError);
+    expect(error.code).toBe("RUNTIME_UNREACHABLE");
+    expect(error.message).toBe(
+      `The workflow runtime at ${URL} could not be reached: Failed to fetch`,
+    );
+  });
+
+  it("says a sign-in is needed on 401 and 403", async () => {
+    for (const status of [401, 403]) {
+      const error = await failure(() =>
+        Promise.resolve(
+          new Response('{"error":"Authentication required"}', { status }),
+        ),
+      );
+      expect(error.code).toBe("RUNTIME_REFUSED");
+      expect(error.message).toContain(`(HTTP ${status}). Sign in`);
+    }
+  });
+
+  it("says the switchboard runs no workflows on 404", async () => {
+    const error = await failure(() =>
+      Promise.resolve(new Response("Cannot POST", { status: 404 })),
+    );
+    expect(error.code).toBe("NO_WORKFLOW_RUNTIME");
+  });
+
+  it("reports an answer that is no GraphQL response", async () => {
+    const error = await failure(() =>
+      Promise.resolve(
+        new Response("<html>Bad gateway</html>", { status: 502 }),
+      ),
+    );
+    expect(error.code).toBe("RUNTIME_HTTP_ERROR");
+    expect(error.message).toBe(
+      `The workflow runtime at ${URL} answered HTTP 502 without a GraphQL response.`,
+    );
+  });
+
+  it("keeps a GraphQL error's own message and code", async () => {
+    const error = await failure(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            errors: [
+              {
+                message: "not synced yet",
+                extensions: { code: "WORKFLOW_SYNCING" },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+    expect(error.message).toBe("not synced yet");
+    expect(runtimeClient.isSyncingError(error)).toBe(true);
+  });
+
+  it("passes the user's stop through as an abort, not as unreachable", async () => {
+    const controller = new AbortController();
+    vi.stubGlobal("fetch", (_url: string, init: RequestInit) => {
+      controller.abort();
+      expect(init.signal).toBe(controller.signal);
+      return Promise.reject(new DOMException("aborted", "AbortError"));
+    });
+    const request = runtimeClient
+      .createRuntimeClient(URL, { signal: controller.signal })
+      .fetchConnections();
+    await expect(request).rejects.not.toBeInstanceOf(
+      runtimeClient.RuntimeRequestError,
+    );
+  });
+});
+
 // A fake runtime per URL, answering the catalog with that URL's own piece.
 function runtimeServer() {
   const calls: string[] = [];

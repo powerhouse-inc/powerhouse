@@ -1,20 +1,25 @@
 // Opt-in integration check against a running workflow runtime:
 //   PH_WORKFLOWS_RUNTIME_URL=http://localhost:4002/graphql/workflow-runtime pnpm vitest run ai/workflow-tools.live.test.ts
-import { beforeAll, describe, expect, it } from "vitest";
-import { setRuntimeUrl } from "../editors/workflow-editor/runtime-api.js";
+import { describe, expect, it } from "vitest";
+import { switchboardAt, toolContext } from "../test/switchboards.js";
 import { workflowTools } from "./workflow-tools.js";
 
 const url = process.env.PH_WORKFLOWS_RUNTIME_URL;
 
 describe.skipIf(!url)("workflow tools against a live runtime", () => {
   const tool = (name: string) => workflowTools.find((t) => t.name === name)!;
-
-  beforeAll(() => setRuntimeUrl(url!));
+  // The switchboard whose runtime the URL names; the body runs even when skipped.
+  const context = toolContext({
+    switchboards: [
+      switchboardAt((url ?? "").replace(/\/graphql\/workflow-runtime\/?$/, "")),
+    ],
+  });
 
   it("resolves the HTTP send_request block and its props", async () => {
-    const blocks = (await tool("getWorkflowPieceBlocks").callback({
-      packageName: "@activepieces/piece-http",
-    } as never)) as {
+    const blocks = (await tool("getWorkflowPieceBlocks").callback(
+      { packageName: "@activepieces/piece-http" } as never,
+      context,
+    )) as {
       actions: {
         pieceName: string;
         pieceVersion: string;
@@ -23,12 +28,15 @@ describe.skipIf(!url)("workflow tools against a live runtime", () => {
     };
     const send = blocks.actions.find((a) => a.actionName === "send_request");
     expect(send).toBeDefined();
-    const config = (await tool("getWorkflowBlockConfig").callback({
-      pieceName: send!.pieceName,
-      pieceVersion: send!.pieceVersion,
-      name: send!.actionName,
-      kind: "action",
-    } as never)) as {
+    const config = (await tool("getWorkflowBlockConfig").callback(
+      {
+        pieceName: send!.pieceName,
+        pieceVersion: send!.pieceVersion,
+        name: send!.actionName,
+        kind: "action",
+      } as never,
+      context,
+    )) as {
       props: { name: string; required: boolean }[];
       requiresConnection: boolean;
     };
@@ -37,9 +45,10 @@ describe.skipIf(!url)("workflow tools against a live runtime", () => {
   }, 60_000);
 
   it("lists runs", async () => {
-    const runs = (await tool("listWorkflowRuns").callback({
-      limit: 3,
-    } as never)) as { runs: unknown[] };
+    const runs = (await tool("listWorkflowRuns").callback(
+      { limit: 3 } as never,
+      context,
+    )) as { runs: unknown[] };
     expect(Array.isArray(runs.runs)).toBe(true);
   }, 30_000);
 });

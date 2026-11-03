@@ -2,8 +2,12 @@
 // piece catalog, connection documents, and connection health. The `aiTools`
 // export is how the host app discovers this package's tools (the line in the
 // project index is synced by `ph generate`).
-import { getPHStore } from "@powerhousedao/reactor-browser";
-import type { PhAiToolDescriptor } from "@powerhousedao/shared/document-model";
+import type { ReactorBrowserHalves } from "@powerhousedao/reactor-browser";
+import type { AiToolContext } from "@powerhousedao/reactor-browser/ai";
+import type {
+  PhAiToolContext,
+  PhAiToolDescriptor,
+} from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import {
   connectorIdForPiece,
@@ -12,16 +16,11 @@ import {
   planFromAuth,
   type AuthField,
 } from "../editors/connection-editor/piece-auth.js";
-import {
-  checkConnection as runConnectionCheck,
-  fetchConnections,
-  fetchPieceActions,
-  fetchPieceCatalog,
-  fetchPieceTriggers,
-  searchPieces,
-  type PieceSummary,
+import type {
+  AiRuntime,
+  PieceSummary,
 } from "../editors/workflow-editor/runtime-api.js";
-import { syncRuntimeUrl } from "./runtime-url.js";
+import { runtimeFor, switchboardInput } from "./runtime.js";
 import { workflowTools } from "./workflow-tools.js";
 
 const MAX_CONNECTORS = 20;
@@ -60,11 +59,14 @@ function toField(field: AuthField, secret: boolean): ConnectorField {
   };
 }
 
-async function connectorDetail(piece: PieceSummary): Promise<ConnectorDetail> {
+async function connectorDetail(
+  runtime: AiRuntime,
+  piece: PieceSummary,
+): Promise<ConnectorDetail> {
   const plan = planFromAuth(piece.auth);
   const [actions, triggers] = await Promise.all([
-    fetchPieceActions(piece.name),
-    fetchPieceTriggers(piece.name),
+    runtime.client.fetchPieceActions(piece.name),
+    runtime.client.fetchPieceTriggers(piece.name),
   ]);
   return {
     connectorId: connectorIdForPiece(piece.name),
@@ -88,6 +90,7 @@ async function connectorDetail(piece: PieceSummary): Promise<ConnectorDetail> {
 // rankings interleaved; null while its index builds, where it has none, or
 // when it ranks nothing (a package name, say).
 async function rankedPieces(
+  runtime: AiRuntime,
   catalog: PieceSummary[],
   query: string,
 ): Promise<PieceSummary[] | null> {
@@ -95,7 +98,7 @@ async function rankedPieces(
   try {
     results = await Promise.all(
       (["action", "trigger"] as const).map((kind) =>
-        searchPieces(query, { kind, limit: 50 }),
+        runtime.client.searchPieces(query, { kind, limit: 50 }),
       ),
     );
   } catch {
@@ -121,14 +124,17 @@ async function rankedPieces(
  * at {@link MAX_CONNECTORS}. Full auth/action/trigger detail is fetched only
  * for the surviving entries (stage two).
  */
-export async function getConnectors(query?: string): Promise<{
+export async function getConnectors(
+  runtime: AiRuntime,
+  query?: string,
+): Promise<{
+  switchboard: string;
   total: number;
   matches: number;
   truncated: boolean;
   connectors: ConnectorDetail[];
 }> {
-  syncRuntimeUrl();
-  const catalog = await fetchPieceCatalog();
+  const catalog = await runtime.fetchPieceCatalog();
   const needle = query?.trim().toLowerCase();
   // A package name is an answer, not a search.
   const exact = catalog.filter((piece) => piece.name.toLowerCase() === needle);
@@ -136,15 +142,18 @@ export async function getConnectors(query?: string): Promise<{
     ? [...catalog]
     : exact.length > 0
       ? exact
-      : ((await rankedPieces(catalog, needle)) ??
+      : ((await rankedPieces(runtime, catalog, needle)) ??
         catalog.filter((piece) =>
           [piece.name, piece.displayName, piece.description].some((field) =>
             field.toLowerCase().includes(needle),
           ),
         ));
   const page = matches.slice(0, MAX_CONNECTORS);
-  const connectors = await Promise.all(page.map(connectorDetail));
+  const connectors = await Promise.all(
+    page.map((piece) => connectorDetail(runtime, piece)),
+  );
   return {
+    switchboard: runtime.switchboard.name,
     total: catalog.length,
     matches: matches.length,
     truncated: matches.length > page.length,
@@ -175,15 +184,17 @@ export interface ConnectionDetail {
  * piece's auth plan. Only field names and opaque refs are surfaced; secret
  * values never do.
  */
-export async function getConnections(): Promise<{
+export async function getConnections(
+  runtime: AiRuntime,
+  reactor?: ReactorBrowserHalves,
+): Promise<{
+  switchboard: string;
   connections: ConnectionDetail[];
 }> {
-  syncRuntimeUrl();
   const [catalog, summaries] = await Promise.all([
-    fetchPieceCatalog(),
-    fetchConnections(),
+    runtime.fetchPieceCatalog(),
+    runtime.client.fetchConnections(),
   ]);
-  const client = getPHStore()?.reactorClient;
   const connections = await Promise.all(
     summaries.map(async (summary) => {
       const piece = catalog.find(
@@ -191,9 +202,9 @@ export async function getConnections(): Promise<{
       );
       const plan = planFromAuth(piece?.auth ?? null);
       let state: ConnectionState | undefined;
-      if (client) {
+      if (reactor) {
         try {
-          const document = await client.get(summary.id);
+          const document = await reactor.read.get(summary.id);
           state = (document.state as { global?: ConnectionState }).global;
         } catch {
           state = undefined;
@@ -222,7 +233,7 @@ export async function getConnections(): Promise<{
       };
     }),
   );
-  return { connections };
+  return { switchboard: runtime.switchboard.name, connections };
 }
 
 const READ_ONLY = {
@@ -236,29 +247,49 @@ export const getConnectorsTool: PhAiToolDescriptor = {
   name: "getConnectors",
   description:
     'Lists the connectors (pieces) available to the workflow runtime with their auth fields, actions, and triggers. Without a query it returns up to 20 connectors; pass `query` to search, best match first: words can name the piece or what it does (e.g. "slack send message"), in any order, and small typos are tolerated. Secret fields are listed by name only, never by value.',
-  inputSchema: { query: z.string().optional() },
+  inputSchema: { query: z.string().optional(), switchboard: switchboardInput },
   annotations: { title: "Get Connectors", ...READ_ONLY },
-  callback: (args: { query?: string }) => getConnectors(args.query),
+  callback: async (
+    args: { query?: string; switchboard?: string },
+    context?: PhAiToolContext,
+  ) =>
+    getConnectors(
+      await runtimeFor(context, { switchboard: args.switchboard }),
+      args.query,
+    ),
 };
 
 export const getConnectionsTool: PhAiToolDescriptor = {
   name: "getConnections",
   description:
     "Lists the project's connection documents with their credential status: which required secrets and config values are still missing, and the last account label. Secret values are never included. A connection with authType REACTOR is bound through a step's or trigger's reactorConnectionId, never connectionId.",
-  inputSchema: {},
+  inputSchema: { switchboard: switchboardInput },
   annotations: { title: "Get Connections", ...READ_ONLY },
-  callback: () => getConnections(),
+  callback: async (args: { switchboard?: string }, context?: PhAiToolContext) =>
+    getConnections(
+      await runtimeFor(context, { switchboard: args.switchboard }),
+      (context as AiToolContext | undefined)?.reactor,
+    ),
 };
 
 export const checkConnectionTool: PhAiToolDescriptor = {
   name: "checkConnection",
   description:
     "Runs a connection's own check against its stored credentials to verify they work. Takes a connection id (from getConnections) and reports success, the failure detail, and the account label when the provider returns one.",
-  inputSchema: { connectionId: z.string() },
+  inputSchema: { connectionId: z.string(), switchboard: switchboardInput },
   annotations: { title: "Check Connection", ...READ_ONLY },
-  callback: (args: { connectionId: string }) => {
-    syncRuntimeUrl();
-    return runConnectionCheck(args.connectionId);
+  callback: async (
+    args: { connectionId: string; switchboard?: string },
+    context?: PhAiToolContext,
+  ) => {
+    const runtime = await runtimeFor(context, {
+      switchboard: args.switchboard,
+      documentId: args.connectionId,
+    });
+    return {
+      switchboard: runtime.switchboard.name,
+      ...(await runtime.client.checkConnection(args.connectionId)),
+    };
   },
 };
 

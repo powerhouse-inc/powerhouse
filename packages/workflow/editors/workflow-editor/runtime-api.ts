@@ -1,11 +1,13 @@
-// Ambient runtime client for the AI tools, which run outside any editor.
-// Editors never import this: each one gets its own client from RuntimeProvider.
+// The AI tools' runtime: tools run outside any editor, so each call names the
+// switchboard it asks. Editors never import this: each one gets its own client
+// from RuntimeProvider.
 import type { BlockRef } from "@powerhousedao/pieces-framework/block-type";
+import type { SwitchboardEntry } from "@powerhousedao/reactor-browser";
 import {
   createRuntimeClient,
-  DEFAULT_RUNTIME_URL,
-  type RunsScope,
+  workflowRuntimeUrl,
   type RuntimeClient,
+  type RuntimeClientOptions,
 } from "./runtime-client.js";
 import {
   blockFormQuery,
@@ -14,31 +16,36 @@ import {
 } from "./runtime-queries.js";
 
 export type * from "./runtime-client.js";
-export { DEFAULT_RUNTIME_URL };
 
-let ambient: RuntimeClient = createRuntimeClient(DEFAULT_RUNTIME_URL);
-// Keys start with the URL, so switching runtimes needs no cache reset.
-const ambientQueries = createRuntimeQueryClient();
+// Keys start with the URL, so every switchboard has its own entries.
+const queries = createRuntimeQueryClient();
 
-export function setRuntimeUrl(url: string): void {
-  if (url !== ambient.url) ambient = createRuntimeClient(url);
+/** One switchboard's runtime, for one tool call. */
+export interface AiRuntime {
+  switchboard: SwitchboardEntry;
+  client: RuntimeClient;
+  getBlockForm(block: BlockRef): ReturnType<typeof fetchBlockForm>;
+  fetchPieceCatalog(): ReturnType<typeof fetchCatalog>;
 }
 
-export const getBlockForm = (block: BlockRef) =>
-  ambientQueries.fetchQuery(blockFormQuery(ambient, block));
-export const fetchPieceCatalog = () =>
-  ambientQueries.fetchQuery(catalogQuery(ambient));
-export const fetchPieceActions = (packageName: string) =>
-  ambient.fetchPieceActions(packageName);
-export const fetchPieceTriggers = (packageName: string) =>
-  ambient.fetchPieceTriggers(packageName);
-export const searchPieces = (
-  query: string,
-  filter: Parameters<RuntimeClient["searchPieces"]>[1],
-) => ambient.searchPieces(query, filter);
-export const fetchConnections = () => ambient.fetchConnections();
-export const checkConnection = (connectionId: string) =>
-  ambient.checkConnection(connectionId);
-export const fetchRuns = (scope?: RunsScope) => ambient.fetchRuns(scope);
-export const fireWorkflow = (workflowId: string, payload?: unknown) =>
-  ambient.fireWorkflow(workflowId, payload);
+function fetchBlockForm(client: RuntimeClient, block: BlockRef) {
+  return queries.fetchQuery(blockFormQuery(client, block));
+}
+
+function fetchCatalog(client: RuntimeClient) {
+  return queries.fetchQuery(catalogQuery(client));
+}
+
+/** The runtime of `switchboard`; the catalog and block forms are cached per URL. */
+export function runtimeAt(
+  switchboard: SwitchboardEntry,
+  options: RuntimeClientOptions = {},
+): AiRuntime {
+  const client = createRuntimeClient(workflowRuntimeUrl(switchboard), options);
+  return {
+    switchboard,
+    client,
+    getBlockForm: (block) => fetchBlockForm(client, block),
+    fetchPieceCatalog: () => fetchCatalog(client),
+  };
+}

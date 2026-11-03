@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { schemaFetch, type RuntimeRoot } from "../test/runtime-schema.js";
+import { switchboardAt, toolContext } from "../test/switchboards.js";
 import type * as WorkflowToolsModule from "./workflow-tools.js";
 
 const CORE = "@powerhousedao/piece-core";
@@ -68,7 +69,9 @@ interface BlockArg {
 
 // The tools' requests, executed against the real workflow-runtime schema.
 function serve(root: RuntimeRoot) {
-  vi.stubGlobal("fetch", schemaFetch(root).fetch);
+  const server = schemaFetch(root);
+  vi.stubGlobal("fetch", server.fetch);
+  return server;
 }
 
 let tools: typeof WorkflowToolsModule;
@@ -82,10 +85,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function tool(name: string) {
+// The tool, called as a host with one switchboard (http://sb) calls it.
+function tool(name: string, context = toolContext()) {
   const found = tools.workflowTools.find((t) => t.name === name);
   if (!found) throw new Error(`no tool ${name}`);
-  return found;
+  return {
+    ...found,
+    callback: (args: never) => found.callback(args, context),
+  };
 }
 
 describe("workflow authoring tools", () => {
@@ -377,5 +384,53 @@ describe("workflow authoring tools", () => {
     } as never);
     expect(result).toMatchObject({ runId: "r9", status: "SUCCEEDED" });
     expect(fired).toMatchObject({ workflowId: "w1", payload: { name: "x" } });
+  });
+
+  it("names the switchboard each answer came from", async () => {
+    const server = serve({
+      pieceActions: ({ packageName }: { packageName: string }) => ({
+        name: packageName,
+        version: "1.0.0",
+        actions: [],
+      }),
+      pieceTriggers: ({ packageName }: { packageName: string }) => ({
+        name: packageName,
+        version: "1.0.0",
+        triggers: [],
+      }),
+    });
+    const result = (await tool("getWorkflowPieceBlocks").callback({
+      packageName: HTTP,
+    } as never)) as { switchboard: string };
+    expect(result.switchboard).toBe("sb");
+    expect(server.sent.map((request) => request.url)).toEqual([
+      "http://sb/graphql/workflow-runtime",
+      "http://sb/graphql/workflow-runtime",
+    ]);
+  });
+
+  it("fires a workflow on the switchboard that serves it", async () => {
+    const server = serve({
+      fire: () => ({
+        runId: "r1",
+        status: "SUCCEEDED",
+        error: null,
+        steps: [],
+      }),
+    });
+    const context = toolContext({
+      switchboards: [
+        switchboardAt("http://laptop:2540", { name: "laptop" }),
+        switchboardAt("https://cloud.example.com", { name: "cloud" }),
+      ],
+      placed: { w1: "cloud" },
+    });
+    const result = await tool("fireWorkflow", context).callback({
+      workflowId: "w1",
+    } as never);
+    expect(result).toMatchObject({ switchboard: "cloud", runId: "r1" });
+    expect(server.sent.map((request) => request.url)).toEqual([
+      "https://cloud.example.com/graphql/workflow-runtime",
+    ]);
   });
 });

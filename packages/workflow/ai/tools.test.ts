@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { installDriveWindow } from "../test/drive-window.js";
+import type * as RuntimeApiModule from "../editors/workflow-editor/runtime-api.js";
 import { schemaFetch, type RuntimeRoot } from "../test/runtime-schema.js";
+import { switchboardAt, toolContext } from "../test/switchboards.js";
 import type * as ToolsModule from "./tools.js";
 
 const IMAP_PIECE = {
@@ -74,24 +75,21 @@ function serve(root: RuntimeRoot) {
   return server;
 }
 
-function installWindow(
-  client?: {
-    get: (id: string) => Promise<{ state: { global?: unknown } }>;
-  },
-  remotes?: Record<string, string>,
-): void {
-  installDriveWindow({
-    selectedDriveId: "drive-1",
-    reactorClient: client,
-    remotes,
-  });
-}
-
 let tools: typeof ToolsModule;
+let runtimeApi: typeof RuntimeApiModule;
+
+// The runtime of the one switchboard at http://sb.
+const runtime = () => runtimeApi.runtimeAt(switchboardAt("http://sb"));
+
+const reader = (
+  get: (id: string) => Promise<{ state: { global?: unknown } }>,
+) => toolContext({ reactorGet: get }).reactor;
 
 beforeEach(async () => {
   vi.resetModules();
   tools = await import("./tools.js");
+  // The same module instance tools.js uses, so its cache starts empty.
+  runtimeApi = await import("../editors/workflow-editor/runtime-api.js");
 });
 
 afterEach(() => {
@@ -102,7 +100,7 @@ describe("getConnectors", () => {
   it("returns the full plan for each catalog entry", async () => {
     serve({ pieceCatalog: [IMAP_PIECE], ...LISTINGS });
 
-    const result = await tools.getConnectors();
+    const result = await tools.getConnectors(runtime());
 
     expect(result.total).toBe(1);
     expect(result.matches).toBe(1);
@@ -155,11 +153,11 @@ describe("getConnectors", () => {
   it("narrows the catalog with a case-insensitive query", async () => {
     serve({ pieceCatalog: [IMAP_PIECE, SLACK_PIECE], ...LISTINGS });
 
-    const match = await tools.getConnectors("Emails");
+    const match = await tools.getConnectors(runtime(), "Emails");
     expect(match.matches).toBe(1);
     expect(match.connectors[0].pieceName).toBe(IMAP_PIECE.name);
 
-    const miss = await tools.getConnectors("zoom");
+    const miss = await tools.getConnectors(runtime(), "zoom");
     expect(miss.matches).toBe(0);
     expect(miss.connectors).toEqual([]);
   });
@@ -196,7 +194,7 @@ describe("getConnectors", () => {
       },
     });
 
-    const result = await tools.getConnectors("send message");
+    const result = await tools.getConnectors(runtime(), "send message");
 
     expect(asked).toEqual([
       expect.objectContaining({ query: "send message", kind: "action" }),
@@ -220,13 +218,13 @@ describe("getConnectors", () => {
       },
     });
 
-    const exact = await tools.getConnectors(SLACK_PIECE.name);
+    const exact = await tools.getConnectors(runtime(), SLACK_PIECE.name);
     expect(exact.connectors.map((entry) => entry.pieceName)).toEqual([
       SLACK_PIECE.name,
     ]);
     expect(searches).toBe(0);
 
-    const fallback = await tools.getConnectors("emails");
+    const fallback = await tools.getConnectors(runtime(), "emails");
     expect(fallback.connectors.map((entry) => entry.pieceName)).toEqual([
       IMAP_PIECE.name,
     ]);
@@ -244,7 +242,7 @@ describe("getConnectors", () => {
       }),
     });
 
-    const result = await tools.getConnectors("emails");
+    const result = await tools.getConnectors(runtime(), "emails");
 
     expect(result.connectors.map((entry) => entry.pieceName)).toEqual([
       IMAP_PIECE.name,
@@ -260,7 +258,7 @@ describe("getConnectors", () => {
     }));
     serve({ pieceCatalog: catalog, ...LISTINGS });
 
-    const result = await tools.getConnectors();
+    const result = await tools.getConnectors(runtime());
 
     expect(result.total).toBe(25);
     expect(result.connectors).toHaveLength(20);
@@ -270,7 +268,7 @@ describe("getConnectors", () => {
   it("asks for an OAuth2 app and flags the sign-in it still needs", async () => {
     serve({ pieceCatalog: [SLACK_PIECE], ...LISTINGS });
 
-    const result = await tools.getConnectors();
+    const result = await tools.getConnectors(runtime());
 
     expect(result.connectors[0]).toMatchObject({
       connectorId: "@activepieces/piece-slack#slack",
@@ -334,11 +332,11 @@ describe("getConnections", () => {
               },
         ),
     };
-    installWindow(client);
     serve({ pieceCatalog: [IMAP_PIECE], connections: CONNECTIONS });
 
-    const result = await tools.getConnections();
+    const result = await tools.getConnections(runtime(), reader(client.get));
 
+    expect(result.switchboard).toBe("sb");
     expect(result.connections).toEqual([
       {
         id: "conn-1",
@@ -364,27 +362,25 @@ describe("getConnections", () => {
   });
 
   it("treats null and empty-string config values as missing, not false/0", async () => {
-    installWindow({
-      get: () =>
-        Promise.resolve({
-          state: {
-            global: {
-              config: {
-                host: null,
-                port: 0,
-                username: "",
-                verifySsl: false,
-              },
-              secretRefs: [
-                { id: "oid-1", name: "password", ref: "secret://v1:abc" },
-              ],
+    const get = () =>
+      Promise.resolve({
+        state: {
+          global: {
+            config: {
+              host: null,
+              port: 0,
+              username: "",
+              verifySsl: false,
             },
+            secretRefs: [
+              { id: "oid-1", name: "password", ref: "secret://v1:abc" },
+            ],
           },
-        }),
-    });
+        },
+      });
     serve({ pieceCatalog: [IMAP_PIECE], connections: [CONNECTIONS[1]] });
 
-    const result = await tools.getConnections();
+    const result = await tools.getConnections(runtime(), reader(get));
 
     // IMAP_PIECE's required config fields are host and username.
     expect(result.connections[0].missingConfig.sort()).toEqual([
@@ -394,9 +390,6 @@ describe("getConnections", () => {
   });
 
   it("treats an unknown connector as authless", async () => {
-    installWindow({
-      get: () => Promise.resolve({ state: { global: {} } }),
-    });
     serve({
       pieceCatalog: [IMAP_PIECE],
       connections: [
@@ -411,37 +404,57 @@ describe("getConnections", () => {
       ],
     });
 
-    const result = await tools.getConnections();
+    const result = await tools.getConnections(
+      runtime(),
+      reader(() => Promise.resolve({ state: { global: {} } })),
+    );
 
     expect(result.connections[0]).toMatchObject({
       missingSecrets: [],
       missingConfig: [],
     });
   });
+
+  it("reports what the runtime holds when the host gives no reactor", async () => {
+    serve({ pieceCatalog: [IMAP_PIECE], connections: [CONNECTIONS[1]] });
+
+    const result = await tools.getConnections(runtime());
+
+    // Without the document, nothing is known to be stored.
+    expect(result.connections[0].missingSecrets).toEqual(["password"]);
+  });
 });
 
 describe("checkConnection", () => {
-  it("passes the mutation result through and targets the drive's subgraph", async () => {
-    const server = serve({
-      checkConnection: ({ connectionId }: { connectionId: string }) =>
-        connectionId === "conn-1"
-          ? { ok: true, detail: "Connected", accountLabel: "user@example.com" }
-          : { ok: false, detail: "Unknown connection", accountLabel: null },
-    });
-    installWindow(undefined, { "drive-1": "http://remote:4001/graphql/r" });
+  type Check = (
+    args: { connectionId: string; switchboard?: string },
+    context?: unknown,
+  ) => Promise<unknown>;
+  const check = () => tools.checkConnectionTool.callback as Check;
+  const checks = {
+    checkConnection: ({ connectionId }: { connectionId: string }) =>
+      connectionId === "conn-1"
+        ? { ok: true, detail: "Connected", accountLabel: "user@example.com" }
+        : { ok: false, detail: "Unknown connection", accountLabel: null },
+  };
 
-    const check = tools.checkConnectionTool.callback as (args: {
-      connectionId: string;
-    }) => Promise<unknown>;
-    const good = await check({ connectionId: "conn-1" });
+  it("passes the mutation result through from the only switchboard's runtime", async () => {
+    const server = serve(checks);
+    const context = toolContext({
+      switchboards: [switchboardAt("http://remote:4001")],
+    });
+
+    const good = await check()({ connectionId: "conn-1" }, context);
     expect(good).toEqual({
+      switchboard: "sb",
       ok: true,
       detail: "Connected",
       accountLabel: "user@example.com",
     });
 
-    const bad = await check({ connectionId: "conn-2" });
+    const bad = await check()({ connectionId: "conn-2" }, context);
     expect(bad).toEqual({
+      switchboard: "sb",
       ok: false,
       detail: "Unknown connection",
       accountLabel: null,
@@ -451,6 +464,73 @@ describe("checkConnection", () => {
       "http://remote:4001/graphql/workflow-runtime",
       "http://remote:4001/graphql/workflow-runtime",
     ]);
+  });
+
+  it("asks the switchboard serving the connection, or the one named", async () => {
+    const server = serve(checks);
+    const context = toolContext({
+      switchboards: [
+        switchboardAt("http://laptop:2540", { name: "laptop" }),
+        switchboardAt("https://cloud.example.com", { name: "cloud" }),
+      ],
+      placed: { "conn-1": "cloud" },
+    });
+
+    await check()({ connectionId: "conn-1" }, context);
+    await check()({ connectionId: "conn-1", switchboard: "laptop" }, context);
+
+    expect(server.sent.map((request) => request.url)).toEqual([
+      "https://cloud.example.com/graphql/workflow-runtime",
+      "http://laptop:2540/graphql/workflow-runtime",
+    ]);
+  });
+});
+
+describe("picking the switchboard", () => {
+  type Call = (args: object, context?: unknown) => Promise<unknown>;
+  const getConnectorsCall = () => tools.getConnectorsTool.callback as Call;
+
+  it("refuses to guess between two switchboards that run workflows", async () => {
+    const server = serve({ pieceCatalog: [IMAP_PIECE], ...LISTINGS });
+    const context = toolContext({
+      switchboards: [
+        switchboardAt("http://laptop:2540", { name: "laptop" }),
+        switchboardAt("https://cloud.example.com", { name: "cloud" }),
+      ],
+    });
+
+    await expect(getConnectorsCall()({}, context)).rejects.toThrow(
+      /several switchboards \(laptop \(http:\/\/laptop:2540, runs workflows\); cloud .*name one with "switchboard"/,
+    );
+    expect(server.sent).toEqual([]);
+
+    const named = (await getConnectorsCall()(
+      { switchboard: "cloud" },
+      context,
+    )) as { switchboard: string };
+    expect(named.switchboard).toBe("cloud");
+  });
+
+  it("says so when the host gives no switchboards, instead of guessing a URL", async () => {
+    const server = serve({ pieceCatalog: [IMAP_PIECE], ...LISTINGS });
+
+    await expect(getConnectorsCall()({})).rejects.toThrow(
+      /provides no switchboard directory/,
+    );
+    await expect(
+      getConnectorsCall()({}, toolContext({ switchboards: [] })),
+    ).rejects.toThrow(/reaches no switchboard/);
+    expect(server.sent).toEqual([]);
+  });
+
+  it("names the runtime it could not reach", async () => {
+    vi.stubGlobal("fetch", () =>
+      Promise.reject(new TypeError("Failed to fetch")),
+    );
+
+    await expect(getConnectorsCall()({}, toolContext())).rejects.toThrow(
+      "The workflow runtime at http://sb/graphql/workflow-runtime could not be reached: Failed to fetch",
+    );
   });
 });
 

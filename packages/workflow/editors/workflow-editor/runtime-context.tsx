@@ -42,7 +42,7 @@ import {
   type PieceCatalogSource,
 } from "./ui/piece-source.js";
 import { runtimeKeys } from "./ui/query-keys.js";
-import { useWorkflowRuntimeUrl } from "./use-runtime-url.js";
+import { useWorkflowRuntime } from "./use-workflow-runtime.js";
 
 export interface RuntimeContextValue {
   client: RuntimeClient;
@@ -114,10 +114,19 @@ export function RuntimeProvider(props: {
   );
 }
 
-// Resolves the selected drive's runtime URL and provides a client for it.
+// Resolves the selected drive's runtime and provides a client for it; says
+// why when no switchboard's runtime can be picked.
 export function WorkflowRuntimeProvider(props: { children: ReactNode }) {
-  const url = useWorkflowRuntimeUrl();
-  return <RuntimeProvider url={url}>{props.children}</RuntimeProvider>;
+  const runtime = useWorkflowRuntime();
+  if (runtime.status === "resolving") return null;
+  if (runtime.status === "unavailable") {
+    return (
+      <p role="alert" className="p-4 text-sm text-wf-fail">
+        The workflow runtime is unavailable: {runtime.error.message}
+      </p>
+    );
+  }
+  return <RuntimeProvider url={runtime.url}>{props.children}</RuntimeProvider>;
 }
 
 export function useRuntime(): RuntimeContextValue {
