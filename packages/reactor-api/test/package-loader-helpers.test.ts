@@ -122,6 +122,20 @@ describe("isExpectedLoaderMiss", () => {
     expect(isExpectedLoaderMiss(err, pkg)).toBe(true);
   });
 
+  it("matches a local package's subpath as Windows names it", () => {
+    // A local project is loaded by its absolute path, as a packaged desktop
+    // stack is; one without scalars misses `<path>\scalars`.
+    const local = "D:\\apps\\Sektar\\stack";
+    const miss = moduleNotFound(
+      `Cannot find module 'D:\\apps\\Sektar\\stack\\scalars' imported from D:\\apps\\Sektar\\stack\\node_modules\\.stack\\chunk.mjs`,
+    );
+    expect(isExpectedLoaderMiss(miss, local, "scalars")).toBe(true);
+    const transitive = moduleNotFound(
+      `Cannot find package 'react' imported from D:\\apps\\Sektar\\stack\\dist\\index.mjs`,
+    );
+    expect(isExpectedLoaderMiss(transitive, local, "scalars")).toBe(false);
+  });
+
   it("does NOT treat transitive resolution failures as expected", () => {
     // A bundle for `pkg` loaded successfully, but its bare `import "react"`
     // didn't resolve. That's a real bundle-side bug, not a loader miss.
