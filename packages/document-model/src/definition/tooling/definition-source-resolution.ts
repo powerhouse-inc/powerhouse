@@ -94,7 +94,7 @@ function isCanonicalText(value: string): boolean {
   return isNFC(value);
 }
 
-function isWithin(root: string, path: string): boolean {
+export function isWithin(root: string, path: string): boolean {
   const child = relative(root, path);
   return child !== ".." && !child.startsWith(`..${sep}`) && !isAbsolute(child);
 }
@@ -109,7 +109,7 @@ type SpecifierResult =
       readonly message: string;
     };
 
-function normalizeSpecifier(value: string): SpecifierResult {
+export function normalizeSpecifier(value: string): SpecifierResult {
   if (
     !value.startsWith("./") ||
     /[\\#?]/.test(value) ||
@@ -152,7 +152,7 @@ function normalizeSpecifier(value: string): SpecifierResult {
  * Resolves symlinks as far as the path exists, so a source that is not
  * written yet is still judged against the real package root.
  */
-function realPathThroughExistingParent(path: string): string {
+export function realPathThroughExistingParent(path: string): string {
   let current = path;
   const suffix: string[] = [];
   while (!existsSync(current)) {
@@ -162,6 +162,27 @@ function realPathThroughExistingParent(path: string): string {
     current = parent;
   }
   return resolve(realpathSync.native(current), ...suffix);
+}
+
+/** Where a lexically contained module really lives, unless a symlink takes it out of the package. */
+export function realModulePath(
+  packageRoot: string,
+  packageRootIdentity: string,
+  specifier: `./${string}`,
+):
+  | { readonly ok: true; readonly moduleIdentity: string }
+  | { readonly ok: false; readonly reason: "unresolvable" | "outside" } {
+  let moduleIdentity: string;
+  try {
+    moduleIdentity = realPathThroughExistingParent(
+      resolve(packageRoot, ...specifier.slice(2).split("/")),
+    );
+  } catch {
+    return { ok: false, reason: "unresolvable" };
+  }
+  return isWithin(packageRootIdentity, moduleIdentity)
+    ? { ok: true, moduleIdentity }
+    : { ok: false, reason: "outside" };
 }
 
 type EntryResult =
@@ -270,11 +291,8 @@ function normalizeEntry(
 
   const source: DefinitionSource =
     exportPath === undefined ? { specifier } : { specifier, exportPath };
-  const declaredPath = resolve(packageRoot, ...specifier.slice(2).split("/"));
-  let moduleIdentity: string;
-  try {
-    moduleIdentity = realPathThroughExistingParent(declaredPath);
-  } catch {
+  const real = realModulePath(packageRoot, packageRootIdentity, specifier);
+  if (!real.ok && real.reason === "unresolvable") {
     return invalidEntry(
       specifierPath,
       "The definition source path could not be resolved.",
@@ -284,7 +302,7 @@ function normalizeEntry(
       source,
     );
   }
-  if (!isWithin(packageRootIdentity, moduleIdentity)) {
+  if (!real.ok) {
     return {
       diagnostic: toolingDiagnostics.create({
         code: "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE",
@@ -299,7 +317,7 @@ function normalizeEntry(
       }),
     };
   }
-  return { source: { source, position, moduleIdentity } };
+  return { source: { source, position, moduleIdentity: real.moduleIdentity } };
 }
 
 function duplicateDiagnostics(
@@ -388,7 +406,7 @@ const CONFIG_FAILURE_REPAIR: Record<ConfigReadFailure, string> = {
   "not-an-object": "Make the config file a single JSON object.",
 };
 
-function readConfigObject(
+export function readConfigObject(
   configFile: string,
 ):
   | { readonly ok: true; readonly value: Readonly<Record<string, unknown>> }
@@ -443,18 +461,28 @@ function selectionDiagnostic(
   });
 }
 
+/** The selected config file, its directory, and that directory's real path when it exists. */
+export function packageRoots(request: DefinitionSourceSelectionRequest): {
+  readonly configFile: string;
+  readonly packageRoot: string;
+  readonly packageRootIdentity: string;
+} {
+  const configFile = resolve(request.configFile ?? CONFIG_FILE_NAME);
+  const packageRoot = dirname(configFile);
+  try {
+    const packageRootIdentity = realpathSync.native(packageRoot);
+    return { configFile, packageRoot, packageRootIdentity };
+  } catch {
+    // Reading the config reports the missing directory.
+    return { configFile, packageRoot, packageRootIdentity: packageRoot };
+  }
+}
+
 export function resolveDefinitionSources(
   request: DefinitionSourceSelectionRequest,
 ): InternalResolution {
-  const configFile = resolve(request.configFile ?? CONFIG_FILE_NAME);
-  const packageRoot = dirname(configFile);
-  let packageRootIdentity = packageRoot;
-  try {
-    packageRootIdentity = realpathSync.native(packageRoot);
-  } catch {
-    // The config read below reports the missing directory.
-  }
-  const roots = { packageRoot, packageRootIdentity };
+  const { configFile, ...roots } = packageRoots(request);
+  const { packageRoot, packageRootIdentity } = roots;
 
   if (request.allowMissingConfig === true && !existsSync(configFile)) {
     return skipped(roots, "definition-sources-absent", DEFAULT_AUTHORING_MODE);
