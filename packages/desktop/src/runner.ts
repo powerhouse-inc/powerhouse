@@ -19,6 +19,7 @@ import {
   HOST_NAME_MESSAGE,
   hostNameSchema,
 } from "@powerhousedao/host-core/schema";
+import { memberProjectFiles } from "./member-files.js";
 import { z } from "zod";
 import { APP_JSON_FILE, loadAppJson } from "./app-json.js";
 import { bundleBackend } from "./bundle-backend.js";
@@ -90,7 +91,8 @@ const schemas = defineHostSchemas((base) => {
       shell: shellOptionsSchema.optional(),
       /** build: vendor ph-run into the staged stack (default true). */
       vendorStack: z.boolean().optional(),
-      /** build: the ph-run version/tag to vendor (default "dev"). */
+      /** build: the ph-run version/tag to vendor (default: the project's
+       * ph-cli version, else "dev"). */
       phCliVersion: z.string().min(1).optional(),
       /** build: full install spec override (e.g. a pnpm-pack tarball path)
        * for a ph-run not yet on the registry. */
@@ -309,6 +311,7 @@ export async function dev(
       hostDir,
       app,
       connectPort: port,
+      version: projectVersion(ctx.projectRoot),
     });
     const tauri = preflightOrThrow(detectToolchain(ctx.projectRoot), host.name);
     provisionShell(shellDir, tauri, changed);
@@ -398,6 +401,18 @@ async function memberPluginPackages(
   return [...packages].sort();
 }
 
+/** The project's own version, which its installers carry. */
+function projectVersion(projectRoot: string): string | undefined {
+  try {
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(projectRoot, "package.json"), "utf8"),
+    ) as { version?: string };
+    return manifest.version;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Folds a stack that was just vendored, when the host asks for that. */
 async function bundleIfAsked(
   staged: { stackDir: string; vendored: boolean },
@@ -437,6 +452,7 @@ export async function build(
       hostDir,
       app,
       connectPort: port,
+      version: projectVersion(ctx.projectRoot),
     });
     const tauri = preflightOrThrow(detectToolchain(ctx.projectRoot), host.name);
     provisionShell(shellDir, tauri, changed);
@@ -450,6 +466,7 @@ export async function build(
       phCliSpec: runnerOptions.phCliSpec ?? ctx.env.PH_DESKTOP_PHCLI_SPEC,
       localPackagesDir: localPackagesDir(ctx),
       plugins: await memberPluginPackages(host, ctx),
+      projectFiles: await memberProjectFiles(host, ctx.projectRoot),
       connectPort: port,
       // the generated shell lives under hosts/ — never stage it into itself
       excludeDirs: [shellDir],
@@ -500,6 +517,7 @@ export async function build(
     phCliSpec: runnerOptions.phCliSpec ?? ctx.env.PH_DESKTOP_PHCLI_SPEC,
     localPackagesDir: localPackagesDir(ctx),
     plugins: await memberPluginPackages(host, ctx),
+    projectFiles: await memberProjectFiles(host, ctx.projectRoot),
     connectPort: port,
   });
   await bundleIfAsked(result, runnerOptions.bundleBackend, ctx);

@@ -41,8 +41,17 @@ export interface ProjectShellInput {
   /** The connect member's port — baked into the remote capability so the
    * served Connect origin can reach the shell's launch-queue commands. */
   connectPort: number;
+  /** The app's version: the project's package.json version. */
+  version?: string;
   /** The sign-in page's script, where the built one isn't to hand. */
   signInScript?: Buffer;
+}
+
+/** The version the installers and the macOS bundle carry: the numeric x.y.z
+ * of the project's version, as Windows' bundlers take nothing else. */
+export function bundleVersion(version: string | undefined): string {
+  const numeric = /^(\d+)\.(\d+)\.(\d+)/.exec(version ?? "");
+  return numeric ? numeric.slice(1).join(".") : "0.1.0";
 }
 
 export interface ProjectShellResult {
@@ -375,7 +384,7 @@ function tauriConf(input: ProjectShellInput): string {
   const conf = {
     $schema: "https://schema.tauri.app/config/2",
     productName: app.productName,
-    version: "0.1.0",
+    version: bundleVersion(input.version),
     identifier: app.identifier,
     build: { frontendDist: "./ui" },
     app: {
@@ -412,6 +421,12 @@ function tauriConf(input: ProjectShellInput): string {
       ...(fileAssociations ? { fileAssociations } : {}),
       externalBin: ["binaries/node"],
       resources: { "./dist-stack": "stack" },
+      // Ad-hoc: a signature over the whole bundle, so a downloaded app gets
+      // macOS's "Open Anyway" rather than "damaged". APPLE_SIGNING_IDENTITY
+      // overrides it. Tauri re-signs the node sidecar as well, and under the
+      // hardened runtime V8 can't JIT without an entitlement: only
+      // notarization needs that runtime, so it stays off until then.
+      macOS: { signingIdentity: "-", hardenedRuntime: false },
     },
   };
   return JSON.stringify(conf, null, 2) + "\n";

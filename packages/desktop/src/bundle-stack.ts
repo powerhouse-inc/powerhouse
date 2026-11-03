@@ -128,8 +128,8 @@ export interface BundleStackOptions {
    * vendored tree is left in place. */
   vendor?: boolean;
   /** The version/tag of ph-run to vendor, which ph-cli publishes alongside.
-   * Default: "dev". Until a nightly carries it, pass `phCliSpec` with a locally
-   * packed tarball instead. */
+   * Default: the ph-cli the project has installed, else "dev". Until a nightly
+   * carries it, pass `phCliSpec` with a locally packed tarball instead. */
   phCliVersion?: string;
   /** Overrides ph-run's install spec entirely (e.g. a `pnpm pack` tarball path
    * for a not-yet-published build). */
@@ -143,6 +143,9 @@ export interface BundleStackOptions {
   /** Packages the hosts' plugins come from. The stack resolves them from its
    * own node_modules, and ph-run brings only what it depends on. */
   plugins?: readonly string[];
+  /** Files the hosts name by a project path, such as drive icons, staged at
+   * the same paths: at run time the stack is the project root. */
+  projectFiles?: readonly string[];
   /** The connect member's port — written into the stack's shell.json so the
    * shell knows where to probe/navigate with no environment at all. */
   connectPort?: number;
@@ -161,6 +164,79 @@ function copyIfExists(from: string, to: string): boolean {
   if (!fs.existsSync(from)) return false;
   fs.cpSync(from, to, { recursive: true });
   return true;
+}
+
+/** The version of a package the project has installed, if it has. */
+export function installedVersion(
+  projectRoot: string,
+  pkg: string,
+): string | undefined {
+  try {
+    const manifest = JSON.parse(
+      fs.readFileSync(
+        path.join(projectRoot, "node_modules", pkg, "package.json"),
+        "utf8",
+      ),
+    ) as { version?: string };
+    return manifest.version;
+  } catch {
+    return undefined;
+  }
+}
+
+type VersionOptions = Pick<
+  BundleStackOptions,
+  "projectRoot" | "phCliVersion" | "phCliSpec" | "plugins"
+>;
+
+/** The ph-run a stack runs: what the project was built and tested with, not
+ * whatever a tag points at when the build runs. It comes with ph-cli, at its
+ * version. */
+function runVersion(options: VersionOptions): string {
+  return (
+    options.phCliVersion ??
+    installedVersion(options.projectRoot, "@powerhousedao/ph-cli") ??
+    "dev"
+  );
+}
+
+/** What a registry vendoring installs. host-core rides along with ph-run, as
+ * host files resolve runner modules (the generic compound) from the stack's
+ * own node_modules. Each package comes at the version the project has, and a
+ * version the host names is used for all of them. */
+export function registrySpecs(options: VersionOptions): string[] {
+  const version = runVersion(options);
+  const versionOf = (pkg: string) =>
+    options.phCliVersion ??
+    installedVersion(options.projectRoot, pkg) ??
+    version;
+  return [
+    options.phCliSpec ?? `${RUN_PACKAGE}@${version}`,
+    ...["@powerhousedao/host-core", ...(options.plugins ?? [])].map(
+      (pkg) => `${pkg}@${versionOf(pkg)}`,
+    ),
+  ];
+}
+
+/** Stages each project file that exists, at its project path. One outside
+ * the project has no place in the stack. */
+function stageProjectFiles(
+  projectRoot: string,
+  stackDir: string,
+  files: readonly string[],
+): number {
+  let staged = 0;
+  for (const file of new Set(files)) {
+    const from = path.resolve(projectRoot, file);
+    const relative = path.relative(projectRoot, from);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) continue;
+    if (!fs.statSync(from, { throwIfNoEntry: false })?.isFile()) continue;
+    const to = path.join(stackDir, relative);
+    fs.mkdirSync(path.dirname(to), { recursive: true });
+    fs.copyFileSync(from, to);
+    staged++;
+  }
+  return staged;
 }
 
 /**
@@ -392,6 +468,16 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     }
   }
   stageConfig(options.projectRoot, stackDir, log);
+  if (options.projectFiles && options.projectFiles.length > 0) {
+    const staged = stageProjectFiles(
+      options.projectRoot,
+      stackDir,
+      options.projectFiles,
+    );
+    log(
+      `  ${staged} of ${options.projectFiles.length} files the hosts name staged`,
+    );
+  }
 
   // shell.json: the stack's contract with the shell. The no-env (packaged)
   // path has nobody to set PH_WIN_CONNECT_PORT, so the shell reads the probe
@@ -409,7 +495,7 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
   const sourcePkg = JSON.parse(
     fs.readFileSync(path.join(options.projectRoot, "package.json"), "utf8"),
   ) as { name?: string; version?: string; exports?: unknown };
-  const version = options.phCliVersion ?? "dev";
+  const version = runVersion(options);
   const name = sourcePkg.name ?? "powerhouse-desktop-stack";
   // The stack is the project's own package to the reactor, which loads it by
   // path: its pieces take this version, and workers find its models through
@@ -457,16 +543,10 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
 
   let vendored = false;
   if (vendor) {
-    // Local: the manifest names every spec. Registry: host-core rides along
-    // with ph-run, since host files resolve runner modules (the generic
-    // compound) from the STACK's own node_modules.
+    // Local: the manifest names every spec.
     const specs = local
       ? ""
-      : [
-          options.phCliSpec ?? `${RUN_PACKAGE}@${version}`,
-          `@powerhousedao/host-core@${version}`,
-          ...(options.plugins ?? []).map((pkg) => `${pkg}@${version}`),
-        ]
+      : registrySpecs(options)
           .map((spec) => `"${spec}"`)
           .join(" ");
     log(
