@@ -126,7 +126,12 @@ function isNamedExtension(node: {
   return Object.hasOwn(EXTENSION_TARGETS, node.kind);
 }
 
-function foldTypeExtensions(
+/**
+ * Folds every extension into the type it extends. A repeated definition or
+ * member keeps its first occurrence and is reported; an extension-only type
+ * starts from its first extension.
+ */
+export function foldTypeExtensions(
   definitions: LocationFreeGraphQLDocumentNode["definitions"],
   path: DefinitionPath,
 ): FoldedTypeDefinitions {
