@@ -4,6 +4,7 @@ import {
 } from "../../src/codegen/index.js";
 import type { Project } from "ts-morph";
 import { projectPath } from "../../src/utils/source-files.js";
+import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import {
   copyFileSync,
@@ -17,7 +18,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createOrUpdateManifest } from "../../src/file-builders/manifest.js";
 import {
@@ -27,6 +28,8 @@ import {
 } from "../../src/templates/index.mjs";
 import { ViteTypeScriptSourceImportAdapter } from "../../src/utils/definition-source-importer.js";
 import { buildTsMorphProject, formatSafe } from "../../src/utils/index.mjs";
+
+const require = createRequire(import.meta.url);
 
 const packagesDir = fileURLToPath(new URL("../../../", import.meta.url));
 
@@ -100,7 +103,10 @@ export function tree(root: string): Record<string, string> {
       )
       .map((entry): [string, string] => {
         const path = join(entry.parentPath, entry.name);
-        return [relative(root, path), readFileSync(path, "utf8")];
+        return [
+          relative(root, path).replaceAll("\\", "/"),
+          readFileSync(path, "utf8"),
+        ];
       }),
   );
 }
@@ -134,14 +140,15 @@ export async function inProject<T>(
 }
 
 export function typeCheck(dir: string): string {
-  try {
-    execFileSync(join(packagesDir, "../node_modules/.bin/tsc"), ["-p", dir], {
-      encoding: "utf8",
-    });
-    return "";
-  } catch (error) {
-    return (error as { stdout: string }).stdout;
-  }
+  return execFileSync(
+    process.execPath,
+    [
+      join(dirname(require.resolve("typescript/package.json")), "bin/tsc"),
+      "-p",
+      dir,
+    ],
+    { encoding: "utf8" },
+  );
 }
 
 export async function importSource(

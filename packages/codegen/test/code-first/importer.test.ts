@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, parse, relative } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadCodeFirstInventory } from "../../src/file-builders/document-model/code-first-inventory.js";
 import { tsConfigTemplate } from "../../src/templates/index.mjs";
@@ -50,7 +50,7 @@ const reexportTodoList = (path: string) =>
     relative(
       dirname(join(dir, path)),
       join(dir, "document-models/todo-list/index.js"),
-    ),
+    ).replaceAll("\\", "/"),
   )};\n`;
 
 function selectOnly(root: string, specifier: `./${string}`) {
@@ -86,21 +86,25 @@ async function load(root: string) {
 }
 
 describe("the executed module is the checked package file", () => {
-  it("runs a nested ./@fs/<absolute path> source and its helper from the package, never from that absolute path", async () => {
-    const outside = realpathSync(
+  it("runs a nested Vite filesystem-route source and its helper from the package, never from outside", async () => {
+    const outside = realpathSync.native(
       mkdtempSync(join(tmpdir(), "ph-importer-outside-")),
     );
     made.push(outside);
     const marker = join(outside, "ran");
     writeFileSync(join(outside, "model.ts"), recordsRun(marker));
     writeFileSync(join(outside, "helper.ts"), recordsRun(marker));
-    const twin = `@fs${outside}/model.ts`;
+    const twin = `@fs/${relative(parse(outside).root, outside).replaceAll("\\", "/")}/model.ts`;
     write(
       dir,
       twin,
       `${reexportTodoList(twin)}export { helper } from "./helper.ts";\n`,
     );
-    write(dir, `@fs${outside}/helper.ts`, 'export const helper = "package";\n');
+    write(
+      dir,
+      join(dirname(twin), "helper.ts"),
+      'export const helper = "package";\n',
+    );
     selectOnly(dir, `./${twin}`);
 
     expect({
@@ -140,7 +144,9 @@ describe("the executed module is the checked package file", () => {
   );
 
   it("refuses a package whose path Vite would cut at '#', and never runs the file the cut names", async () => {
-    const parent = realpathSync(mkdtempSync(join(tmpdir(), "ph-importer-")));
+    const parent = realpathSync.native(
+      mkdtempSync(join(tmpdir(), "ph-importer-")),
+    );
     made.push(parent);
     const root = join(parent, "acme#things");
     renameSync(dir, root);
