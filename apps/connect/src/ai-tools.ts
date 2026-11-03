@@ -3,6 +3,7 @@ import { reactorAdminTools } from "@powerhousedao/reactor-mcp/admin-tools";
 import { reactorTools, toMcpTool } from "@powerhousedao/reactor-mcp/tools";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import {
+  createListSwitchboardsTool,
   createSwitchboardSchemaTool,
   type AiToolDescriptor,
 } from "@powerhousedao/reactor-browser/ai";
@@ -51,6 +52,7 @@ export function getConnectReactorTools(): Promise<AiToolDescriptor[]> {
   );
   return Promise.resolve([
     ...builtInTools,
+    createListSwitchboardsTool(),
     createSwitchboardSchemaTool(),
     ...packageTools,
   ]);

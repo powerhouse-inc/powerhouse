@@ -22,6 +22,7 @@ import { SYNC_REMOTES_CHANGED_EVENT } from "@powerhousedao/reactor-browser/rpc";
 import {
   addPHEventHandlers,
   addRemoteDrive,
+  createSwitchboardDirectory,
   DocumentCache,
   fetchDriveInfo,
   DRIVE_DOCUMENT_TYPES,
@@ -42,6 +43,7 @@ import {
   setRenown,
   setSelectedDrive,
   setSelectedNode,
+  setSwitchboards,
   setVetraPackageManager,
   type BrowserReactorClientModule,
   type IDocumentModelLoader,
@@ -632,6 +634,16 @@ export async function createReactor(
 
   setReactorClientModule(reactorClientModule);
   setReactorClient(appReactorClient);
+  // The switchboards this tab reaches: the configured backends by name, and
+  // each synced drive's switchboard, read as drives are added.
+  setSwitchboards(
+    createSwitchboardDirectory({
+      remoteBackends,
+      router,
+      syncManager: () =>
+        reactorClientModule?.reactorModule?.syncModule?.syncManager,
+    }),
+  );
 
   const switchboardOrigin = attachmentsOrigin(
     remoteBackends.at(0)?.url,
