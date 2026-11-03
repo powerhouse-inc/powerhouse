@@ -17,6 +17,7 @@ export const phCliCommandNames = [
   "keyframes",
   "mcp",
   "migrate",
+  "model",
   "switchboard",
   "reactor",
   "login",

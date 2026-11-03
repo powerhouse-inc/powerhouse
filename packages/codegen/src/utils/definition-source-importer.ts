@@ -6,6 +6,11 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+/**
+ * @experimental A fresh package revision per run, so `ph model` never reuses
+ * a module evaluated before an edit. Experimental while code-first projects
+ * are introduced.
+ */
 export function uncachedDefinitionSourceRevision(): Sha256Digest {
   return `sha256:${createHash("sha256").update(randomUUID()).digest("hex")}`;
 }
@@ -33,6 +38,11 @@ type Environment = {
   readonly sourceFiles: Map<string, readonly string[]>;
 };
 
+/**
+ * @experimental ph-cli's `ph model` commands import code-first sources
+ * through the one TypeScript import adapter codegen already owns.
+ * Experimental while code-first projects are introduced.
+ */
 export class ViteTypeScriptSourceImportAdapter implements TypeScriptSourceImportInterface {
   #revision: Sha256Digest | undefined;
   #environment: Environment = {

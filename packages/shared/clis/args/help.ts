@@ -13,6 +13,7 @@ import { listArgs } from "./list.js";
 import { loginArgs } from "./login.js";
 import { mcpArgs } from "./mcp.js";
 import { migrateArgs } from "./migrate.js";
+import { modelCheckArgs } from "./model.js";
 import { publishArgs } from "./publish.js";
 import { registryLoginArgs } from "./registry.js";
 import { runArgs } from "./run.js";
@@ -130,6 +131,13 @@ const allPhCliHelpCommands = {
     name: "migrate",
     args: migrateArgs,
     description: "Run migrations",
+    handler: () => {},
+  }),
+  model: helpCommand({
+    name: "model",
+    args: modelCheckArgs,
+    description:
+      "Check or inspect this package's document models (experimental): `ph model check|inspect`",
     handler: () => {},
   }),
   switchboard: helpCommand({
