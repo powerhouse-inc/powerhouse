@@ -1,3 +1,25 @@
+## 6.2.3-dev.91 (2026-11-03)
+
+### 🚀 Features
+
+- **codegen:** scaffold code-first model projects ([6d2d5d2bfb](https://github.com/powerhouse-inc/powerhouse/commit/6d2d5d2bfb))
+- **document-model:** compile code-first declarations into a stored document model ([cd5900328a](https://github.com/powerhouse-inc/powerhouse/commit/cd5900328a))
+- **reactor-browser:** a light client creates at the host's base-reducer 3 ([836e85a2b1](https://github.com/powerhouse-inc/powerhouse/commit/836e85a2b1))
+- **workflow:** the workflow editors undo a base-reducer 3 document by retracting the last edit ([973f28a193](https://github.com/powerhouse-inc/powerhouse/commit/973f28a193))
+- **shared:** a base-reducer number this build does not know runs as base-reducer 3 ([aa0891fd35](https://github.com/powerhouse-inc/powerhouse/commit/aa0891fd35))
+
+### 🩹 Fixes
+
+- **reactor-browser:** route an unknown base-reducer number's undo as 3 ([01320f10ca](https://github.com/powerhouse-inc/powerhouse/commit/01320f10ca))
+- **shared:** a queued undo or redo whose signal aborts stops waiting ([bb7899f9f5](https://github.com/powerhouse-inc/powerhouse/commit/bb7899f9f5))
+- **reactor-browser:** light-client undo availability is false on a scope the Switchboard withholds ([4ac1d68521](https://github.com/powerhouse-inc/powerhouse/commit/4ac1d68521))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.90 (2026-11-02)
 
 ### 🚀 Features

@@ -1,3 +1,24 @@
+## 6.2.3-dev.91 (2026-11-03)
+
+### 🚀 Features
+
+- **codegen:** scaffold code-first model projects ([6d2d5d2bfb](https://github.com/powerhouse-inc/powerhouse/commit/6d2d5d2bfb))
+- **document-model:** compile code-first declarations into a stored document model ([cd5900328a](https://github.com/powerhouse-inc/powerhouse/commit/cd5900328a))
+- **workflow:** the workflow editors undo a base-reducer 3 document by retracting the last edit ([973f28a193](https://github.com/powerhouse-inc/powerhouse/commit/973f28a193))
+
+### 🩹 Fixes
+
+- **workflow:** keep undo and redo from writing to a managed workflow ([0716ce5926](https://github.com/powerhouse-inc/powerhouse/commit/0716ce5926))
+- **workflow:** base-reducer 3 undo derives which rows applied ([7cdfd0cf02](https://github.com/powerhouse-inc/powerhouse/commit/7cdfd0cf02))
+- **workflow:** undo and redo on a versionless document fall back to dispatch ([2a7a073324](https://github.com/powerhouse-inc/powerhouse/commit/2a7a073324))
+- **workflow:** base-reducer 3 undo passes over a row that threw ([9420932c6e](https://github.com/powerhouse-inc/powerhouse/commit/9420932c6e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.90 (2026-11-02)
 
 ### 🚀 Features

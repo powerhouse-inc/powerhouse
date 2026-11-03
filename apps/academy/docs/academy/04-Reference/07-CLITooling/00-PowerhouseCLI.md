@@ -293,6 +293,8 @@ Generate a document model
 
 **Dir** - Name of the directory of an existing document model to re-generate (my-document-model or document-models/my-document-model) - Usage: `--dir <dir>`
 
+**Name** - Experimental. Create a code-first document model with this name, with its editor - Usage: `--name, -n <str>`
+
 
 
 
@@ -300,6 +302,8 @@ Generate a document model
 **All** - Re-generate all existing document models in the current project - Usage: `--all, -a`
 
 **Extract** - Write a powerhouse/document-model spec for each existing document model into specs/document-models/ - Usage: `--extract, -x`
+
+**Code First** - Experimental. Generate with code-first authoring, whatever definitionSources in powerhouse.config.json selects - Usage: `--code-first`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 

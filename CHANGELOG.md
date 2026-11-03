@@ -1,3 +1,76 @@
+## 6.2.3-dev.91 (2026-11-03)
+
+### 🚀 Features
+
+- **codegen:** scaffold code-first model projects ([6d2d5d2bfb](https://github.com/powerhouse-inc/powerhouse/commit/6d2d5d2bfb))
+- **codegen:** scaffold code-first document-model projects ([#3367](https://github.com/powerhouse-inc/powerhouse/pull/3367))
+- **design-system:** undo and redo of a base-reducer 3 document go through the reactor client ([e5549a7fac](https://github.com/powerhouse-inc/powerhouse/commit/e5549a7fac))
+- **document-model:** compile code-first declarations into a stored document model ([cd5900328a](https://github.com/powerhouse-inc/powerhouse/commit/cd5900328a))
+- **document-model:** add defineDocumentModel and document-model families ([51b0417f95](https://github.com/powerhouse-inc/powerhouse/commit/51b0417f95))
+- **document-model:** materialize code-first models and export the experimental API ([61271b6aaf](https://github.com/powerhouse-inc/powerhouse/commit/61271b6aaf))
+- **document-model:** add defineDocumentModel, materialize and document-model families ([#3359](https://github.com/powerhouse-inc/powerhouse/pull/3359))
+- **document-model:** add code-first source tooling ([a4ddefd2f5](https://github.com/powerhouse-inc/powerhouse/commit/a4ddefd2f5))
+- **host-core:** accept undoV3 in a host's reactor protocol ([0c01d5f2fb](https://github.com/powerhouse-inc/powerhouse/commit/0c01d5f2fb))
+- **ph-cli:** add code-first model generation ([421d506827](https://github.com/powerhouse-inc/powerhouse/commit/421d506827))
+- ⚠️  **reactor:** undoV3 on by default ([6cfee95943](https://github.com/powerhouse-inc/powerhouse/commit/6cfee95943))
+- ⚠️  **reactor:** undo v3 re-land surfaces, undoV3 on and release notes ([#3348](https://github.com/powerhouse-inc/powerhouse/pull/3348))
+- **reactor-browser:** a light client creates at the host's base-reducer 3 ([836e85a2b1](https://github.com/powerhouse-inc/powerhouse/commit/836e85a2b1))
+- **reactor-drive:** migrate the drive schema down or up to a named migration ([265ca53aaf](https://github.com/powerhouse-inc/powerhouse/commit/265ca53aaf))
+- **reactor-mcp:** addActions submits an UNDO or REDO on base-reducer 3 as one RETRACT per step ([c19970f749](https://github.com/powerhouse-inc/powerhouse/commit/c19970f749))
+- **reactor-monitor:** read undoV3 off the ladder ([a2ec221523](https://github.com/powerhouse-inc/powerhouse/commit/a2ec221523))
+- **reactor-monitor:** host rules for a blank host and for starting a draft ([f86b774187](https://github.com/powerhouse-inc/powerhouse/commit/f86b774187))
+- **reactor-monitor:** the controller starts a blank host in a project it serves ([a39c7d5ca9](https://github.com/powerhouse-inc/powerhouse/commit/a39c7d5ca9))
+- **reactor-monitor:** start the builder from a blank host ([832938caea](https://github.com/powerhouse-inc/powerhouse/commit/832938caea))
+- **reactor-monitor-app:** builder layout tests and a Blank host ([#3364](https://github.com/powerhouse-inc/powerhouse/pull/3364))
+- **shared:** a base-reducer number this build does not know runs as base-reducer 3 ([aa0891fd35](https://github.com/powerhouse-inc/powerhouse/commit/aa0891fd35))
+- **shared:** accept undoV3 in connect.reactor.featureFlags ([7d18c276ea](https://github.com/powerhouse-inc/powerhouse/commit/7d18c276ea))
+- **shared:** add experimental definition source configuration ([feb1f6d736](https://github.com/powerhouse-inc/powerhouse/commit/feb1f6d736))
+- **switchboard:** configure undoV3 from the env or protocol.featureFlags ([52a08f6530](https://github.com/powerhouse-inc/powerhouse/commit/52a08f6530))
+- **workflow:** the workflow editors undo a base-reducer 3 document by retracting the last edit ([973f28a193](https://github.com/powerhouse-inc/powerhouse/commit/973f28a193))
+
+### 🩹 Fixes
+
+- **academy:** build on node 24, which still ships corepack ([7e3dc2dd8b](https://github.com/powerhouse-inc/powerhouse/commit/7e3dc2dd8b))
+- **codegen:** make code-first tests portable in CI ([4a88e415bb](https://github.com/powerhouse-inc/powerhouse/commit/4a88e415bb))
+- **connect:** a kept copy is current once it holds the switchboard's actions, not its revision ([0461481b94](https://github.com/powerhouse-inc/powerhouse/commit/0461481b94))
+- **connect,reactor-monitor:** fingerprint the worker's flags against their defaults ([5fa7a930dc](https://github.com/powerhouse-inc/powerhouse/commit/5fa7a930dc))
+- **ph-run:** a Connect host's reactor namespace alone still reaches Connect ([265365bcaf](https://github.com/powerhouse-inc/powerhouse/commit/265365bcaf))
+- **ph-run:** a bare Connect host keeps the Renown instance from the env ([1f989e5445](https://github.com/powerhouse-inc/powerhouse/commit/1f989e5445))
+- **reactor:** only a fresh receiver takes a loaded UNDO's base-reducer from its CREATE ([d9443c341f](https://github.com/powerhouse-inc/powerhouse/commit/d9443c341f))
+- **reactor:** a throwing STORED_MODEL_REFUSED subscriber no longer hides MODEL_LOADED ([77fca3270d](https://github.com/powerhouse-inc/powerhouse/commit/77fca3270d))
+- **reactor:** refuse a loaded UNDO operation on base-reducer 1 and 2 ([eb24c7d6d9](https://github.com/powerhouse-inc/powerhouse/commit/eb24c7d6d9))
+- **reactor:** refuse a loaded UNDO in a fresh receiver's first load ([68c86569ac](https://github.com/powerhouse-inc/powerhouse/commit/68c86569ac))
+- **reactor:** refuse a loaded UNDO operation on base-reducer 1 and 2 ([#3365](https://github.com/powerhouse-inc/powerhouse/pull/3365))
+- **reactor-browser:** light-client undo availability is false on a scope the Switchboard withholds ([4ac1d68521](https://github.com/powerhouse-inc/powerhouse/commit/4ac1d68521))
+- **reactor-browser:** route an unknown base-reducer number's undo as 3 ([01320f10ca](https://github.com/powerhouse-inc/powerhouse/commit/01320f10ca))
+- **reactor-monitor:** review fixes for the blank host ([a1adf30219](https://github.com/powerhouse-inc/powerhouse/commit/a1adf30219))
+- **reactor-monitor:** list only roots with hosts, keep removed catalog folders removed ([3bc61c422b](https://github.com/powerhouse-inc/powerhouse/commit/3bc61c422b))
+- **reactor-monitor-app:** each started copy's Connect gets its own browser storage ([1dcda38689](https://github.com/powerhouse-inc/powerhouse/commit/1dcda38689))
+- **reactor-monitor-app:** review fixes for mapped drives and copy storage ([f4b6a134c7](https://github.com/powerhouse-inc/powerhouse/commit/f4b6a134c7))
+- **reactor-monitor-app:** name mapped drives only from a whole-list map ([cac3dcf3e7](https://github.com/powerhouse-inc/powerhouse/commit/cac3dcf3e7))
+- **reactor-monitor-app:** a mapped list must open its switchboard's drives ([4f944147e9](https://github.com/powerhouse-inc/powerhouse/commit/4f944147e9))
+- **reactor-monitor-app:** a mapped list may name its binding ([62e1027b62](https://github.com/powerhouse-inc/powerhouse/commit/62e1027b62))
+- **reactor-monitor-app:** a $map into a record is no mapped drive list ([cf1101b96c](https://github.com/powerhouse-inc/powerhouse/commit/cf1101b96c))
+- **reactor-monitor-app:** name mapped drives, fresh storage per copy ([#3363](https://github.com/powerhouse-inc/powerhouse/pull/3363))
+- **shared:** a queued undo or redo whose signal aborts stops waiting ([bb7899f9f5](https://github.com/powerhouse-inc/powerhouse/commit/bb7899f9f5))
+- **shared:** refuse a replayed UNDO row on base-reducer 1 and 2 ([0ffc24fc1f](https://github.com/powerhouse-inc/powerhouse/commit/0ffc24fc1f))
+- **workflow:** base-reducer 3 undo passes over a row that threw ([9420932c6e](https://github.com/powerhouse-inc/powerhouse/commit/9420932c6e))
+- **workflow:** undo and redo on a versionless document fall back to dispatch ([2a7a073324](https://github.com/powerhouse-inc/powerhouse/commit/2a7a073324))
+- **workflow:** base-reducer 3 undo derives which rows applied ([7cdfd0cf02](https://github.com/powerhouse-inc/powerhouse/commit/7cdfd0cf02))
+- **workflow:** keep undo and redo from writing to a managed workflow ([0716ce5926](https://github.com/powerhouse-inc/powerhouse/commit/0716ce5926))
+- **workflow:** keep undo and redo from writing to a managed workflow ([#3362](https://github.com/powerhouse-inc/powerhouse/pull/3362))
+
+### ⚠️  Breaking Changes
+
+- **reactor:** undo v3 re-land surfaces, undoV3 on and release notes  ([#3348](https://github.com/powerhouse-inc/powerhouse/pull/3348))
+- **reactor:** undoV3 on by default  ([6cfee95943](https://github.com/powerhouse-inc/powerhouse/commit/6cfee95943))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.90 (2026-11-02)
 
 ### 🚀 Features

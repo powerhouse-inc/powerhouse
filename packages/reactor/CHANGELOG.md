@@ -1,3 +1,32 @@
+## 6.2.3-dev.91 (2026-11-03)
+
+### 🚀 Features
+
+- **codegen:** scaffold code-first model projects ([6d2d5d2bfb](https://github.com/powerhouse-inc/powerhouse/commit/6d2d5d2bfb))
+- **document-model:** compile code-first declarations into a stored document model ([cd5900328a](https://github.com/powerhouse-inc/powerhouse/commit/cd5900328a))
+- ⚠️  **reactor:** undoV3 on by default ([6cfee95943](https://github.com/powerhouse-inc/powerhouse/commit/6cfee95943))
+- **workflow:** the workflow editors undo a base-reducer 3 document by retracting the last edit ([973f28a193](https://github.com/powerhouse-inc/powerhouse/commit/973f28a193))
+- **shared:** a base-reducer number this build does not know runs as base-reducer 3 ([aa0891fd35](https://github.com/powerhouse-inc/powerhouse/commit/aa0891fd35))
+
+### 🩹 Fixes
+
+- **reactor:** refuse a loaded UNDO in a fresh receiver's first load ([68c86569ac](https://github.com/powerhouse-inc/powerhouse/commit/68c86569ac))
+- **reactor:** refuse a loaded UNDO operation on base-reducer 1 and 2 ([eb24c7d6d9](https://github.com/powerhouse-inc/powerhouse/commit/eb24c7d6d9))
+- **connect,reactor-monitor:** fingerprint the worker's flags against their defaults ([5fa7a930dc](https://github.com/powerhouse-inc/powerhouse/commit/5fa7a930dc))
+- **shared:** a queued undo or redo whose signal aborts stops waiting ([bb7899f9f5](https://github.com/powerhouse-inc/powerhouse/commit/bb7899f9f5))
+- **reactor:** a throwing STORED_MODEL_REFUSED subscriber no longer hides MODEL_LOADED ([77fca3270d](https://github.com/powerhouse-inc/powerhouse/commit/77fca3270d))
+- **reactor:** only a fresh receiver takes a loaded UNDO's base-reducer from its CREATE ([d9443c341f](https://github.com/powerhouse-inc/powerhouse/commit/d9443c341f))
+
+### ⚠️  Breaking Changes
+
+- **reactor:** undoV3 on by default  ([6cfee95943](https://github.com/powerhouse-inc/powerhouse/commit/6cfee95943))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.90 (2026-11-02)
 
 ### 🚀 Features

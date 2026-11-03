@@ -1,3 +1,37 @@
+## 6.2.3-dev.91 (2026-11-03)
+
+### 🚀 Features
+
+- **codegen:** scaffold code-first model projects ([6d2d5d2bfb](https://github.com/powerhouse-inc/powerhouse/commit/6d2d5d2bfb))
+- **reactor-monitor:** start the builder from a blank host ([832938caea](https://github.com/powerhouse-inc/powerhouse/commit/832938caea))
+- **reactor-monitor:** the controller starts a blank host in a project it serves ([a39c7d5ca9](https://github.com/powerhouse-inc/powerhouse/commit/a39c7d5ca9))
+- **reactor-monitor:** host rules for a blank host and for starting a draft ([f86b774187](https://github.com/powerhouse-inc/powerhouse/commit/f86b774187))
+- **document-model:** compile code-first declarations into a stored document model ([cd5900328a](https://github.com/powerhouse-inc/powerhouse/commit/cd5900328a))
+- ⚠️  **reactor:** undoV3 on by default ([6cfee95943](https://github.com/powerhouse-inc/powerhouse/commit/6cfee95943))
+- **reactor-monitor:** read undoV3 off the ladder ([a2ec221523](https://github.com/powerhouse-inc/powerhouse/commit/a2ec221523))
+- **workflow:** the workflow editors undo a base-reducer 3 document by retracting the last edit ([973f28a193](https://github.com/powerhouse-inc/powerhouse/commit/973f28a193))
+
+### 🩹 Fixes
+
+- **reactor-monitor-app:** a $map into a record is no mapped drive list ([cf1101b96c](https://github.com/powerhouse-inc/powerhouse/commit/cf1101b96c))
+- **reactor-monitor-app:** a mapped list may name its binding ([62e1027b62](https://github.com/powerhouse-inc/powerhouse/commit/62e1027b62))
+- **reactor-monitor-app:** a mapped list must open its switchboard's drives ([4f944147e9](https://github.com/powerhouse-inc/powerhouse/commit/4f944147e9))
+- **reactor-monitor-app:** name mapped drives only from a whole-list map ([cac3dcf3e7](https://github.com/powerhouse-inc/powerhouse/commit/cac3dcf3e7))
+- **reactor-monitor-app:** review fixes for mapped drives and copy storage ([f4b6a134c7](https://github.com/powerhouse-inc/powerhouse/commit/f4b6a134c7))
+- **reactor-monitor:** list only roots with hosts, keep removed catalog folders removed ([3bc61c422b](https://github.com/powerhouse-inc/powerhouse/commit/3bc61c422b))
+- **reactor-monitor:** review fixes for the blank host ([a1adf30219](https://github.com/powerhouse-inc/powerhouse/commit/a1adf30219))
+- **reactor-monitor-app:** each started copy's Connect gets its own browser storage ([1dcda38689](https://github.com/powerhouse-inc/powerhouse/commit/1dcda38689))
+
+### ⚠️  Breaking Changes
+
+- **reactor:** undoV3 on by default  ([6cfee95943](https://github.com/powerhouse-inc/powerhouse/commit/6cfee95943))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.90 (2026-11-02)
 
 ### 🚀 Features

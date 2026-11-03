@@ -1,3 +1,25 @@
+## 6.2.3-dev.91 (2026-11-03)
+
+### 🚀 Features
+
+- **codegen:** scaffold code-first model projects ([6d2d5d2bfb](https://github.com/powerhouse-inc/powerhouse/commit/6d2d5d2bfb))
+- **shared:** add experimental definition source configuration ([feb1f6d736](https://github.com/powerhouse-inc/powerhouse/commit/feb1f6d736))
+- **document-model:** compile code-first declarations into a stored document model ([cd5900328a](https://github.com/powerhouse-inc/powerhouse/commit/cd5900328a))
+- **shared:** accept undoV3 in connect.reactor.featureFlags ([7d18c276ea](https://github.com/powerhouse-inc/powerhouse/commit/7d18c276ea))
+- **workflow:** the workflow editors undo a base-reducer 3 document by retracting the last edit ([973f28a193](https://github.com/powerhouse-inc/powerhouse/commit/973f28a193))
+- **shared:** a base-reducer number this build does not know runs as base-reducer 3 ([aa0891fd35](https://github.com/powerhouse-inc/powerhouse/commit/aa0891fd35))
+
+### 🩹 Fixes
+
+- **shared:** refuse a replayed UNDO row on base-reducer 1 and 2 ([0ffc24fc1f](https://github.com/powerhouse-inc/powerhouse/commit/0ffc24fc1f))
+- **shared:** a queued undo or redo whose signal aborts stops waiting ([bb7899f9f5](https://github.com/powerhouse-inc/powerhouse/commit/bb7899f9f5))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.90 (2026-11-02)
 
 ### 🚀 Features

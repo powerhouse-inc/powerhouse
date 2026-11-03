@@ -1,3 +1,25 @@
+## 6.2.3-dev.91 (2026-11-03)
+
+### 🚀 Features
+
+- **ph-cli:** add code-first model generation ([421d506827](https://github.com/powerhouse-inc/powerhouse/commit/421d506827))
+- **codegen:** scaffold code-first model projects ([6d2d5d2bfb](https://github.com/powerhouse-inc/powerhouse/commit/6d2d5d2bfb))
+- **document-model:** compile code-first declarations into a stored document model ([cd5900328a](https://github.com/powerhouse-inc/powerhouse/commit/cd5900328a))
+- **shared:** accept undoV3 in connect.reactor.featureFlags ([7d18c276ea](https://github.com/powerhouse-inc/powerhouse/commit/7d18c276ea))
+- **host-core:** accept undoV3 in a host's reactor protocol ([0c01d5f2fb](https://github.com/powerhouse-inc/powerhouse/commit/0c01d5f2fb))
+- **workflow:** the workflow editors undo a base-reducer 3 document by retracting the last edit ([973f28a193](https://github.com/powerhouse-inc/powerhouse/commit/973f28a193))
+
+### 🩹 Fixes
+
+- **ph-run:** a bare Connect host keeps the Renown instance from the env ([1f989e5445](https://github.com/powerhouse-inc/powerhouse/commit/1f989e5445))
+- **ph-run:** a Connect host's reactor namespace alone still reaches Connect ([265365bcaf](https://github.com/powerhouse-inc/powerhouse/commit/265365bcaf))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.90 (2026-11-02)
 
 ### 🚀 Features
