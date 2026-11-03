@@ -12,6 +12,7 @@ import { login } from "./login.js";
 import { logout } from "./logout.js";
 import { mcp } from "./mcp.js";
 import { migrate } from "./migrate.js";
+import { model } from "./model.js";
 import { publish } from "./publish.js";
 import { registryLogin } from "./registry-login.js";
 import { runHost } from "./run.js";
@@ -36,6 +37,7 @@ const baseCommands = {
   list,
   mcp,
   migrate,
+  model,
   switchboard,
   login,
   logout,

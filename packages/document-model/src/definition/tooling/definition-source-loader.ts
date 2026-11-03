@@ -23,7 +23,10 @@ import { compareCodeUnits } from "../kernel/primitives.js";
 import {
   compareDefinitionSources,
   type InternalResolution,
+  normalizeSpecifier,
+  packageRoots,
   publicResolution,
+  realModulePath,
   resolveDefinitionSources,
 } from "./definition-source-resolution.js";
 import type {
@@ -479,6 +482,89 @@ function sortBySource<T>(
   );
 }
 
+function revisionDiagnostic(revision: unknown): DefinitionDiagnostic {
+  return toolingDiagnostics.create({
+    code: "PH-CONFIG-SOURCE-INVALID",
+    path: ["packageRevision"],
+    message:
+      "The package revision is not a SHA-256 identifier, so no import can be bound to it.",
+    expected: "sha256: followed by 64 lowercase hexadecimal digits",
+    received:
+      typeof revision === "string" ? revision : describeReceived(revision),
+    repair: "Pass a revision digest of the package's current files.",
+  });
+}
+
+function refusedModule(
+  specifier: `./${string}`,
+  code: "PH-CONFIG-SOURCE-INVALID" | "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE",
+  message: string,
+): { readonly ok: false; readonly diagnostic: DefinitionDiagnostic } {
+  return {
+    ok: false,
+    diagnostic: toolingDiagnostics.create({
+      code,
+      source: { specifier },
+      path: [],
+      message,
+      expected:
+        "a './' module path whose real path stays inside the package root",
+      received: specifier,
+      repair:
+        "Keep the module inside the package, and do not reach it through a symlink that leaves the package.",
+    }),
+  };
+}
+
+type PackageModule = {
+  readonly specifier: `./${string}`;
+  readonly packageRootIdentity: string;
+  readonly moduleIdentity: string;
+};
+
+/** The selected sources' containment rules, so a module outside the package is never imported. */
+function containedPackageModule(
+  request: DefinitionSourceSelectionRequest & {
+    readonly specifier: `./${string}`;
+  },
+):
+  | ({ readonly ok: true } & PackageModule)
+  | { readonly ok: false; readonly diagnostic: DefinitionDiagnostic } {
+  const { packageRoot, packageRootIdentity } = packageRoots(request);
+  const normalized = normalizeSpecifier(request.specifier);
+  if (!normalized.ok) {
+    return refusedModule(
+      request.specifier,
+      normalized.code,
+      normalized.message,
+    );
+  }
+  const real = realModulePath(
+    packageRoot,
+    packageRootIdentity,
+    normalized.specifier,
+  );
+  if (real.ok) {
+    return {
+      ok: true,
+      specifier: normalized.specifier,
+      packageRootIdentity,
+      moduleIdentity: real.moduleIdentity,
+    };
+  }
+  return real.reason === "outside"
+    ? refusedModule(
+        request.specifier,
+        "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE",
+        "The package module resolves through a symlink that leaves the package root.",
+      )
+    : refusedModule(
+        request.specifier,
+        "PH-CONFIG-SOURCE-INVALID",
+        "The package module path could not be resolved.",
+      );
+}
+
 function empty(resolution: DefinitionSourceResolution): LoadedDefinitionSet {
   return { ...resolution, documentModels: [], upgradeManifests: [] };
 }
@@ -522,20 +608,7 @@ export class DefinitionSourceLoader {
         packageRoot: resolution.packageRoot,
         sourceSet: resolution.sourceSet,
         status: "failed",
-        diagnostics: [
-          toolingDiagnostics.create({
-            code: "PH-CONFIG-SOURCE-INVALID",
-            path: ["packageRevision"],
-            message:
-              "The package revision is not a SHA-256 identifier, so no import can be bound to it.",
-            expected: "sha256: followed by 64 lowercase hexadecimal digits",
-            received:
-              typeof request.packageRevision === "string"
-                ? request.packageRevision
-                : describeReceived(request.packageRevision),
-            repair: "Pass a revision digest of the package's current files.",
-          }),
-        ],
+        diagnostics: [revisionDiagnostic(request.packageRevision)],
       });
     }
     await this.#retainRevision(request.packageRevision);
@@ -594,6 +667,47 @@ export class DefinitionSourceLoader {
     };
   }
 
+  /**
+   * @experimental Imports one package module through the same importer and
+   * package revision as the selected sources, so a module both reach is
+   * evaluated once. A module outside the package root is refused as an
+   * outside source is. Experimental: tooling uses it for the project scalars
+   * module while code-first projects are introduced.
+   */
+  async importPackageModule(
+    request: DefinitionSourceLoadRequest & {
+      readonly specifier: `./${string}`;
+    },
+  ): Promise<
+    | {
+        readonly ok: true;
+        readonly namespace: Readonly<Record<string, unknown>>;
+      }
+    | {
+        readonly ok: false;
+        readonly diagnostics: readonly DefinitionDiagnostic[];
+      }
+  > {
+    request.signal?.throwIfAborted();
+    if (!isSha256Digest(request.packageRevision)) {
+      return {
+        ok: false,
+        diagnostics: [revisionDiagnostic(request.packageRevision)],
+      };
+    }
+    const contained = containedPackageModule(request);
+    if (!contained.ok)
+      return { ok: false, diagnostics: [contained.diagnostic] };
+    await this.#retainRevision(request.packageRevision);
+    const imported = await this.#import(contained, request);
+    return imported.ok
+      ? { ok: true, namespace: imported.value }
+      : {
+          ok: false,
+          diagnostics: imported.diagnostics({ specifier: request.specifier }),
+        };
+  }
+
   async dispose(): Promise<void> {
     const revision = this.#revision;
     this.#imports.clear();
@@ -613,42 +727,49 @@ export class DefinitionSourceLoader {
     }
   }
 
+  /** One evaluation per module and revision, whichever path asks first. */
+  async #import(
+    module: PackageModule,
+    request: DefinitionSourceLoadRequest,
+  ): Promise<ImportedNamespace> {
+    const { moduleIdentity } = module;
+    let namespace = this.#imports.get(moduleIdentity);
+    if (namespace === undefined) {
+      namespace = this.#importer.importModule({
+        // Use the real root so symlink aliases cannot evaluate the module twice.
+        packageRoot: module.packageRootIdentity,
+        specifier: module.specifier,
+        packageRevision: request.packageRevision,
+        ...(request.signal !== undefined && { signal: request.signal }),
+      });
+      this.#imports.set(moduleIdentity, namespace);
+      void namespace.catch(() => this.#imports.delete(moduleIdentity));
+    }
+    try {
+      return { ok: true, value: namespaceSnapshot(await namespace) };
+    } catch (error) {
+      const missing = !existsSync(moduleIdentity);
+      return {
+        ok: false,
+        diagnostics: (source) => importDiagnostics(error, source, missing),
+      };
+    }
+  }
+
   async #importModules(
     resolution: InternalResolution,
     request: DefinitionSourceLoadRequest,
   ): Promise<Map<string, ImportedNamespace>> {
     const results = new Map<string, ImportedNamespace>();
-
     // Evaluate serially so aliases and their family share one module evaluation.
-    for (const entry of resolution.resolved) {
-      const { moduleIdentity, source } = entry;
+    for (const { moduleIdentity, source } of resolution.resolved) {
       if (results.has(moduleIdentity)) continue;
-      let namespace = this.#imports.get(moduleIdentity);
-      if (namespace === undefined) {
-        namespace = this.#importer.importModule({
-          // Use the real root so symlink aliases cannot evaluate the module twice.
-          packageRoot: resolution.packageRootIdentity,
-          specifier: source.specifier,
-          packageRevision: request.packageRevision,
-          ...(request.signal !== undefined && { signal: request.signal }),
-        });
-        this.#imports.set(moduleIdentity, namespace);
-
-        void namespace.catch(() => this.#imports.delete(moduleIdentity));
-      }
-      try {
-        results.set(moduleIdentity, {
-          ok: true,
-          value: namespaceSnapshot(await namespace),
-        });
-      } catch (error) {
-        const missing = !existsSync(moduleIdentity);
-        results.set(moduleIdentity, {
-          ok: false,
-          diagnostics: (failedSource) =>
-            importDiagnostics(error, failedSource, missing),
-        });
-      }
+      const module = {
+        specifier: source.specifier,
+        packageRootIdentity: resolution.packageRootIdentity,
+        moduleIdentity,
+      };
+      results.set(moduleIdentity, await this.#import(module, request));
     }
     return results;
   }

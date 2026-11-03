@@ -872,6 +872,154 @@
           }
         ]
       }
+    },
+    {
+      "files": [
+        "packages/document-model/src/definition/tooling/{graphql,adapters,report}/**/*.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)schema-first(/|$)",
+                "message": "Only tooling/project/project-definitions.ts imports tooling/schema-first/, so schema first stays deletable. Take the schema-first piece as a producer or adapter that project-definitions.ts passes in."
+              },
+              {
+                "regex": "(^|/)project(/|$)",
+                "message": "tooling/project/ composes the other tooling layers and nothing below it imports it. Move the shared piece into adapters/ or report/, or take it as a parameter."
+              },
+              {
+                "regex": "^(\\.\\./)+(model|runtime)(/|$)",
+                "message": "Tooling reads normalized artifacts and must not import definition/model/ or definition/runtime/. Import the kernel or compiler piece instead, or take the value as a parameter."
+              },
+              {
+                "regex": "[Ss]ubgraph",
+                "message": "Subgraphs build on document-model tooling, not the reverse. Keep subgraph code out of tooling and pass what tooling needs in."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/document-model/src/definition/tooling/check/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)schema-first(/|$)",
+                "message": "Only tooling/project/project-definitions.ts imports tooling/schema-first/, so schema first stays deletable. Take the schema-first piece as a producer or adapter that project-definitions.ts passes in."
+              },
+              {
+                "regex": "(^|/)project(/|$)",
+                "message": "tooling/project/ composes the other tooling layers and nothing below it imports it. Move the shared piece into adapters/ or report/, or take it as a parameter."
+              },
+              {
+                "regex": "(^|/)inspect(/|$)",
+                "message": "check/ must not import inspect/. Move what both need into report/ or adapters/."
+              },
+              {
+                "regex": "^(\\.\\./)+(model|runtime)(/|$)",
+                "message": "Tooling reads normalized artifacts and must not import definition/model/ or definition/runtime/. Import the kernel or compiler piece instead, or take the value as a parameter."
+              },
+              {
+                "regex": "[Ss]ubgraph",
+                "message": "Subgraphs build on document-model tooling, not the reverse. Keep subgraph code out of tooling and pass what tooling needs in."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/document-model/src/definition/tooling/inspect/**/*.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)schema-first(/|$)",
+                "message": "Only tooling/project/project-definitions.ts imports tooling/schema-first/, so schema first stays deletable. Take the schema-first piece as a producer or adapter that project-definitions.ts passes in."
+              },
+              {
+                "regex": "(^|/)project(/|$)",
+                "message": "tooling/project/ composes the other tooling layers and nothing below it imports it. Move the shared piece into adapters/ or report/, or take it as a parameter."
+              },
+              {
+                "regex": "(^|/)check(/|$)",
+                "message": "inspect/ must not import check/. Move what both need into report/ or adapters/."
+              },
+              {
+                "regex": "^(\\.\\./)+(model|runtime)(/|$)",
+                "message": "Tooling reads normalized artifacts and must not import definition/model/ or definition/runtime/. Import the kernel or compiler piece instead, or take the value as a parameter."
+              },
+              {
+                "regex": "[Ss]ubgraph",
+                "message": "Subgraphs build on document-model tooling, not the reverse. Keep subgraph code out of tooling and pass what tooling needs in."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/document-model/src/definition/tooling/project/unregistered-definitions.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)schema-first(/|$)",
+                "message": "Only tooling/project/project-definitions.ts imports tooling/schema-first/, so schema first stays deletable. Take the schema-first piece as a producer or adapter that project-definitions.ts passes in."
+              },
+              {
+                "regex": "^(\\.\\./)+(model|runtime)(/|$)",
+                "message": "Tooling reads normalized artifacts and must not import definition/model/ or definition/runtime/. Import the kernel or compiler piece instead, or take the value as a parameter."
+              },
+              {
+                "regex": "[Ss]ubgraph",
+                "message": "Subgraphs build on document-model tooling, not the reverse. Keep subgraph code out of tooling and pass what tooling needs in."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/document-model/src/definition/tooling/schema-first/**/*.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)project(/|$)",
+                "message": "tooling/project/ composes the other tooling layers and nothing below it imports it. Move the shared piece into adapters/ or report/, or take it as a parameter."
+              },
+              {
+                "regex": "^(\\.\\./)+(model|runtime)(/|$)",
+                "message": "Tooling reads normalized artifacts and must not import definition/model/ or definition/runtime/. Import the kernel or compiler piece instead, or take the value as a parameter."
+              },
+              {
+                "regex": "[Ss]ubgraph",
+                "message": "Subgraphs build on document-model tooling, not the reverse. Keep subgraph code out of tooling and pass what tooling needs in."
+              }
+            ]
+          }
+        ]
+      }
     }
   ],
   "ignorePatterns": [

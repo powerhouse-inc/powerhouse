@@ -4,7 +4,7 @@ import {
   type TelemetryClient,
 } from "@powerhousedao/shared/clis/telemetry";
 import { assertNodeVersion } from "@powerhousedao/shared/clis/utils";
-import { run } from "cmd-ts";
+import { run, runSafely } from "cmd-ts";
 import { phCliHelp } from "./commands/ph-cli-help.js";
 import { phCli } from "./commands/ph-cli.js";
 import { getVersion } from "./get-version.js";
@@ -19,7 +19,12 @@ let sentryClient: TelemetryClient | undefined = undefined;
 // Commands whose second positional is itself a subcommand (vs. a project
 // name / file path). Keeping this explicit avoids high-cardinality tag
 // values like `subcommand:my-package` polluting Sentry.
-const COMMANDS_WITH_SUBCOMMANDS = new Set(["connect", "vetra", "host"]);
+const COMMANDS_WITH_SUBCOMMANDS = new Set([
+  "connect",
+  "vetra",
+  "host",
+  "model",
+]);
 
 function detectPackageManager(): string | undefined {
   // npm, pnpm, yarn and bun all set npm_config_user_agent like
@@ -29,6 +34,28 @@ function detectPackageManager(): string | undefined {
   const ua = process.env.npm_config_user_agent;
   if (!ua) return undefined;
   return ua.split(" ")[0]?.split("/")[0] || undefined;
+}
+
+/**
+ * `ph model` exits 1 only for invalid models, so an argument error or a crash
+ * the command could not report itself, such as its lazy import failing, is 2.
+ */
+async function runModelCli(
+  cli: Parameters<typeof runSafely>[0],
+  args: string[],
+): Promise<void> {
+  try {
+    const result = await runSafely(cli, args);
+    if (result._tag === "error") {
+      const { exitCode, message, into } = result.error.config;
+      (into === "stdout" ? console.log : console.error)(message);
+      process.exitCode = exitCode === 1 ? 2 : exitCode;
+    }
+  } catch (error) {
+    await sentryClient?.captureCliError(error);
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 2;
+  }
 }
 
 async function main() {
@@ -82,6 +109,8 @@ async function main() {
   ) {
     const argsWithDefaultConnectSubCommand = ["connect", "studio", ...restArgs];
     await run(cli, argsWithDefaultConnectSubCommand);
+  } else if (command === "model") {
+    await runModelCli(cli, args);
   } else {
     await run(cli, args);
   }

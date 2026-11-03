@@ -12,40 +12,16 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { DefinitionSourceLoader } from "../../src/definition/tooling/definition-source-loader.js";
-import type { TypeScriptSourceImportInterface } from "../../src/definition/tooling/definition-source-types.js";
 import {
   countingImporter,
   LOADER_CONTRACT_CASES,
   materializeFixturePackage,
+  nodeImporter,
   packageRevisionOf,
   runLoaderSelection,
 } from "./loader-contract.js";
-
-function nodeImporter(): TypeScriptSourceImportInterface {
-  const roots = new Map<string, string>();
-  return {
-    importModule: async ({ packageRoot, specifier, packageRevision }) => {
-      let root = roots.get(packageRevision);
-      if (root === undefined) {
-        root = realpathSync.native(mkdtempSync(join(tmpdir(), "ph-revision-")));
-        cpSync(packageRoot, root, { recursive: true });
-        roots.set(packageRevision, root);
-      }
-      const url = pathToFileURL(join(root, specifier));
-      return (await import(url.href)) as Readonly<Record<string, unknown>>;
-    },
-    disposeRevision: (revision) => {
-      for (const [key, root] of [...roots]) {
-        if (revision !== undefined && key !== revision) continue;
-        roots.delete(key);
-        rmSync(root, { recursive: true, force: true });
-      }
-    },
-  };
-}
 
 const HELPER_EDIT =
   "export function normalizeTitle(title: string): string {\n  return title.toUpperCase();\n}\n";
@@ -217,6 +193,55 @@ describe("DefinitionSourceLoader", () => {
         "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE",
       ]);
       expect(importer.imported).toEqual([]);
+    } finally {
+      fixture.dispose();
+      outside.dispose();
+    }
+  });
+
+  it("refuses a package module outside the package root", async () => {
+    const outside = materializeFixturePackage("control");
+    const fixture = materializeFixturePackage("control");
+    try {
+      mkdirSync(join(fixture.root, "scalars"));
+      symlinkSync(
+        join(outside.root, "src", "invoice.ts"),
+        join(fixture.root, "scalars", "index.ts"),
+      );
+      const importer = countingImporter(nodeImporter());
+      const loader = new DefinitionSourceLoader(importer);
+      const imported = async (specifier: `./${string}`) => {
+        const result = await loader.importPackageModule({
+          configFile: join(fixture.root, "powerhouse.config.json"),
+          packageRevision: packageRevisionOf(fixture.root),
+          specifier,
+        });
+        return result.ok
+          ? Object.keys(result.namespace).length > 0
+          : result.diagnostics.map(({ code, source, path }) => ({
+              code,
+              source,
+              path,
+            }));
+      };
+      expect(await imported("./../outside.ts")).toEqual([
+        {
+          code: "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE",
+          source: { specifier: "./../outside.ts" },
+          path: [],
+        },
+      ]);
+      expect(await imported("./scalars/index.ts")).toEqual([
+        {
+          code: "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE",
+          source: { specifier: "./scalars/index.ts" },
+          path: [],
+        },
+      ]);
+      expect(importer.imported).toEqual([]);
+      expect(await imported("./src/invoice.ts")).toBe(true);
+      expect(importer.imported).toEqual(["./src/invoice.ts"]);
+      await loader.dispose();
     } finally {
       fixture.dispose();
       outside.dispose();
@@ -470,3 +495,64 @@ it.each([true, false])(
     }
   },
 );
+
+describe("importPackageModule", () => {
+  it("shares one evaluation with the selected sources and imports again after a failure", async () => {
+    const fixture = materializeFixturePackage("control");
+    try {
+      writeFileSync(
+        join(fixture.root, "src", "flaky.ts"),
+        "export const ok = 1;\n",
+      );
+      writeFileSync(join(fixture.root, "broken.config.json"), "{");
+      const node = nodeImporter();
+      let failures = 1;
+      const importer = countingImporter({
+        importModule: (request) =>
+          request.specifier !== "./src/flaky.ts"
+            ? node.importModule(request)
+            : failures-- > 0
+              ? Promise.reject(new Error("flaky"))
+              : Promise.resolve({ ok: 1 }),
+        disposeRevision: (revision) => node.disposeRevision?.(revision),
+      });
+      const loader = new DefinitionSourceLoader(importer);
+      const packageRevision = packageRevisionOf(fixture.root);
+      await loader.normalizeDefinitionSources({
+        configFile: join(fixture.root, "powerhouse.config.json"),
+        packageRevision,
+      });
+      const exportsOf = async (specifier: `./${string}`, config: string) => {
+        const result = await loader.importPackageModule({
+          configFile: join(fixture.root, config),
+          packageRevision,
+          specifier,
+        });
+        return result.ok
+          ? Object.keys(result.namespace).sort()
+          : result.diagnostics.map(({ code }) => code);
+      };
+      expect(await exportsOf("./src/invoice.ts", "broken.config.json")).toEqual(
+        ["invoiceFamily", "invoiceV1"],
+      );
+      expect(
+        await exportsOf("./src/flaky.ts", "powerhouse.config.json"),
+      ).toEqual(["PH-IMPORT-FAILED"]);
+      expect(
+        await exportsOf("./src/flaky.ts", "powerhouse.config.json"),
+      ).toEqual(["ok"]);
+      expect(
+        await exportsOf("./src/flaky.ts", "powerhouse.config.json"),
+      ).toEqual(["ok"]);
+      expect(importer.imported).toEqual([
+        "./src/catalog.ts",
+        "./src/invoice.ts",
+        "./src/flaky.ts",
+        "./src/flaky.ts",
+      ]);
+      await loader.dispose();
+    } finally {
+      fixture.dispose();
+    }
+  });
+});

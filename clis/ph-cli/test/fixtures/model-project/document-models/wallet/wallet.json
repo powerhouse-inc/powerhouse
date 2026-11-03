@@ -1,0 +1,49 @@
+{
+  "id": "example/wallet",
+  "name": "Wallet",
+  "description": "A wallet.",
+  "extension": ".wallet",
+  "author": { "name": "Fixture", "website": null },
+  "specifications": [
+    {
+      "version": 1,
+      "changeLog": [],
+      "state": {
+        "global": {
+          "schema": "scalar Iban\n\ntype WalletState {\n  owner: String!\n  iban: Iban\n  balance: Amount_Money\n}",
+          "initialValue": "{\"owner\":\"\",\"iban\":null,\"balance\":null}",
+          "examples": []
+        },
+        "local": { "schema": "", "initialValue": "{}", "examples": [] }
+      },
+      "modules": [
+        {
+          "id": "funds",
+          "name": "funds",
+          "description": null,
+          "operations": [
+            {
+              "id": "set-balance",
+              "name": "SET_BALANCE",
+              "description": null,
+              "scope": "global",
+              "schema": "input SetBalanceInput {\n  iban: Iban!\n  balance: Amount_Money!\n}",
+              "reducer": "state.iban = action.input.iban;\nstate.balance = action.input.balance;",
+              "template": null,
+              "errors": [
+                {
+                  "id": "frozen",
+                  "name": "WalletFrozen",
+                  "code": "WALLET_FROZEN",
+                  "description": null,
+                  "template": null
+                }
+              ],
+              "examples": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

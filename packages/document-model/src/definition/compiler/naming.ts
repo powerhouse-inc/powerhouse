@@ -303,3 +303,12 @@ export function checkDerivedNameCollisions(
   }
   return diagnostics;
 }
+
+/** The symbol spellings codegen derives from a stored schema-first name. */
+export function deriveDocumentModelSymbolNames(name: string) {
+  return {
+    typeName: pascalCase(name),
+    memberName: camelCase(name),
+    constantName: constantCase(name),
+  };
+}

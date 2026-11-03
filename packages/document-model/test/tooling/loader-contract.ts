@@ -17,7 +17,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { sha256 } from "../../src/definition/kernel/hashes.js";
 import { DefinitionSourceLoader } from "../../src/definition/tooling/definition-source-loader.js";
 import type {
@@ -43,6 +43,11 @@ export function materializeFixturePackage(name: string): {
   symlinkSync(
     DOCUMENT_MODEL_PACKAGE,
     join(root, "node_modules", "document-model"),
+  );
+  // Project scalar modules import zod, as a real package does.
+  symlinkSync(
+    realpathSync.native(join(DOCUMENT_MODEL_PACKAGE, "node_modules", "zod")),
+    join(root, "node_modules", "zod"),
   );
   return {
     root,
@@ -384,4 +389,28 @@ export async function runLoaderSelection(
   } finally {
     fixture.dispose();
   }
+}
+
+/** Imports through Node from a copy of the package bound to one revision. */
+export function nodeImporter(): TypeScriptSourceImportInterface {
+  const roots = new Map<string, string>();
+  return {
+    importModule: async ({ packageRoot, specifier, packageRevision }) => {
+      let root = roots.get(packageRevision);
+      if (root === undefined) {
+        root = realpathSync.native(mkdtempSync(join(tmpdir(), "ph-revision-")));
+        cpSync(packageRoot, root, { recursive: true });
+        roots.set(packageRevision, root);
+      }
+      const url = pathToFileURL(join(root, specifier));
+      return (await import(url.href)) as Readonly<Record<string, unknown>>;
+    },
+    disposeRevision: (revision) => {
+      for (const [key, root] of [...roots]) {
+        if (revision !== undefined && key !== revision) continue;
+        roots.delete(key);
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  };
 }
