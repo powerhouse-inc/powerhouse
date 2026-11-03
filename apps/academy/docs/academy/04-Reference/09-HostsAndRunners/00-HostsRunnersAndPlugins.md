@@ -436,11 +436,14 @@ plugins: [
   listed, Connect loads the workflow package (Workflow Studio exists) and
   attaches `drive` as a remote default drive; absent from a declared
   composition, `app.workflowsEnabled` is zeroed. The drive must be the
-  switchboard's — Workflow Studio reaches the workflow runtime through the
-  selected drive's switchboard, so a local copy of the drive would point the
-  studio at the wrong endpoint. Connect warns when a drive names a drive app
-  that no installed package provides, and Workflow Studio warns when its
-  drive has no switchboard behind it.
+  switchboard's: Workflow Studio and the assistant's workflow tools reach the
+  workflow runtime of the switchboard that serves the drive, or the only
+  switchboard Connect reaches that runs workflows. Connect lists the
+  switchboards it reaches (its remote backends by name, and each synced
+  drive's switchboard); with several running workflows, the tools take a
+  `switchboard` name and say which ones there are. Connect warns when a drive
+  names a drive app that no installed package provides, and Workflow Studio
+  says why when no switchboard's runtime can be picked.
 
 **Read the link from the switchboard's outputs instead of spelling the
 URL.** `drive` takes an output token: `switchboard.drives.workflows.url` from
