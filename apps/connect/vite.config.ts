@@ -1,3 +1,4 @@
+import { isHtmlNavigation } from "@powerhousedao/shared/connect/origin-placeholder";
 import tailwind from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
@@ -137,7 +138,13 @@ export default defineConfig(({ command }) => ({
         ws: true,
         changeOrigin: true,
       },
-      "/d": { target: "http://127.0.0.1:4001", changeOrigin: true },
+      // A page load under /d/<drive> is Connect's own route: serve the app.
+      "/d": {
+        target: "http://127.0.0.1:4001",
+        changeOrigin: true,
+        bypass: (req) =>
+          isHtmlNavigation(req.headers.accept) ? req.url : undefined,
+      },
     },
   },
 }));
