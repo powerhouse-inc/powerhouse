@@ -5,6 +5,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import { ReactorToolError } from "./errors.js";
+import { operationsByActionType } from "./model-operations.js";
 import { unknownValueMessage } from "./suggest.js";
 
 /** Marks a base action that runs in whichever scope it is sent to; never itself a scope. */
@@ -162,7 +163,11 @@ export function operationSchemaSlice(
   operationName: string,
 ): OperationSlice {
   const operations = actionOperations(module);
-  const operation = operations.find((op) => op.name === operationName);
+  const storedName =
+    operationsByActionType(module).get(operationName)?.storedName;
+  const operation =
+    operations.find((op) => op.name === operationName) ??
+    operations.find((op) => op.name === storedName);
   if (!operation) {
     throw new ReactorToolError(
       "NOT_FOUND",
@@ -179,7 +184,7 @@ export function operationSchemaSlice(
   }
   const spec = latestSpecification(module)
     ?.modules.flatMap((m) => m.operations)
-    .find((op) => op.name === operationName);
+    .find((op) => op.name === operation.name);
   const errors = (spec?.errors ?? [])
     .filter((e) => e.name)
     .map((e) => ({
