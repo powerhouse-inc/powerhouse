@@ -11,6 +11,10 @@ export default defineProject({
         find: /^document-model$/,
         replacement: fileURLToPath(new URL("./index.ts", import.meta.url)),
       },
+      {
+        find: /^document-model\/scalars$/,
+        replacement: fileURLToPath(new URL("./scalars.ts", import.meta.url)),
+      },
     ],
   },
   test: {
