@@ -26,6 +26,11 @@ import type * as WorkflowModel from "../document-models/workflow/v1/index.js";
 
 export const PKG = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const ROOT = resolve(PKG, "../..");
+
+/** A file under Vite's /@fs/ prefix: a Windows path needs the slash before its drive. */
+function viteFsUrl(path: string): string {
+  return `/@fs/${path.replaceAll("\\", "/").replace(/^\/+/, "")}`;
+}
 const SWITCHBOARD_PORT = Number(process.env.UI_SHOTS_SWITCHBOARD_PORT ?? 4001);
 const CONNECT_PORT = Number(process.env.UI_SHOTS_CONNECT_PORT ?? 3100);
 export const SWITCHBOARD = `http://localhost:${SWITCHBOARD_PORT}`;
@@ -129,19 +134,20 @@ export async function ensureServers(): Promise<ChildProcess[]> {
   if (!(await isUp(CONNECT))) {
     if (connectDev()) {
       console.log(`▶ starting Connect (vite dev) on :${CONNECT_PORT}`);
+      // Vite's own script under node: Windows can't spawn the pnpm shim
+      // without a shell, and killing a shell would leave Vite running.
       started.push(
         startServer(
           "connect",
-          "pnpm",
+          process.execPath,
           [
-            "exec",
-            "vite",
+            join(CONNECT_APP, "node_modules/vite/bin/vite.js"),
             "dev",
             "--port",
             String(CONNECT_PORT),
             "--strictPort",
           ],
-          join(ROOT, "apps/connect"),
+          CONNECT_APP,
         ),
       );
     } else {
@@ -299,13 +305,13 @@ export async function warmConnect(): Promise<void> {
             (window as { __warm?: boolean }).__warm = true;
             const results = await Promise.allSettled(
               modules.map(
-                (path) => import(/* @vite-ignore */ `/@fs${root}/${path}`),
+                (path) => import(/* @vite-ignore */ `${root}/${path}`),
               ),
             );
             return results.filter((result) => result.status === "rejected")
               .length;
           },
-          { root: ROOT, modules: WARM_MODULES },
+          { root: viteFsUrl(ROOT), modules: WARM_MODULES },
         )
         .catch(() => -1);
       // A re-optimise answers with a full reload shortly after the imports.
@@ -364,7 +370,7 @@ export async function openHarness<A>(
           };
           harness.mount(arg);
         },
-        { path: `/@fs${PKG}/test/ui/harness/${name}.tsx`, arg },
+        { path: viteFsUrl(join(PKG, "test/ui/harness", `${name}.tsx`)), arg },
       );
   }
   await page.route(`${CONNECT}/__harness/**`, async (route) => {
@@ -403,13 +409,13 @@ const MODEL_SOURCES = {
  */
 function pageHelpersScript(): string {
   const drives = connectDev()
-    ? `/@fs${ROOT}/packages/reactor-browser/src/actions/drive.ts`
+    ? viteFsUrl(join(ROOT, "packages/reactor-browser/src/actions/drive.ts"))
     : "@powerhousedao/reactor-browser";
   const sources = connectDev()
     ? Object.fromEntries(
         Object.entries(MODEL_SOURCES).map(([type, path]) => [
           type,
-          `/@fs${PKG}/${path}`,
+          viteFsUrl(join(PKG, path)),
         ]),
       )
     : null;
