@@ -289,8 +289,7 @@ async function checkCompound(
   const wiring = (
     isPlainObject(host.config) ? host.config : {}
   ) as CompoundWiring;
-  // The generic compound's mapping; a runner with its own (desktop's
-  // `serve`) is checked as if it were generic.
+  // The generic compound's mapping, which desktop's run/serve also use.
   const verb = compoundStartVerb(
     subject.verb,
     host.runner as { defaultVerb?: string },

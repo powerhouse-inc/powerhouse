@@ -182,12 +182,13 @@ async function connectPort(
   );
 }
 
-export async function run(
+async function startStack(
   host: DesktopHost,
   ctx: RunnerContext,
+  verb: "run" | "serve",
 ): Promise<DesktopHandle> {
   const compound = await compoundModule();
-  const started = await compound.run(host, ctx);
+  const started = await compound[verb](host, ctx);
   return {
     outputs: outputsSchema.parse({}),
     // runCompound has already awaited every member's readiness.
@@ -196,7 +197,20 @@ export async function run(
   };
 }
 
-export const serve = run;
+export async function run(
+  host: DesktopHost,
+  ctx: RunnerContext,
+): Promise<DesktopHandle> {
+  return startStack(host, ctx, "run");
+}
+
+/** Every member at `serve`, as the generic compound's `serve`. */
+export async function serve(
+  host: DesktopHost,
+  ctx: RunnerContext,
+): Promise<DesktopHandle> {
+  return startStack(host, ctx, "serve");
+}
 
 export interface ShellHandle extends DesktopHandle {
   /** Resolves when the shell window exits — the runner's keep-alive. */
