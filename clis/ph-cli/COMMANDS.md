@@ -26,6 +26,8 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [List](#list)
 - [Mcp](#mcp)
 - [Migrate](#migrate)
+- [Model Check](#model-check)
+- [Model Inspect](#model-inspect)
 - [Switchboard](#switchboard)
 - [Login](#login)
 - [Install](#install)
@@ -1203,6 +1205,84 @@ The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `
 Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version.<br><br>
 **usage:** `--force, -f`<br>
 
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Model Check
+Check this package's document models: the code-first sources
+definitionSources selects and the stored schema-first models in
+documentModelsDir, through one set of checks. Writes nothing.
+
+`tsc` cannot run these checks: a code-first model compiles when its module is
+evaluated.
+
+Exit codes:
+  0  ok, or skipped. Skipped means no code-first source is selected and the
+     package has no stored model, so nothing was read. Read "status".
+  1  invalid. The models were read and at least one is wrong.
+  2  failed. The configuration or a module could not be read, the arguments
+     are wrong, or the command could not run.
+
+Output:
+  ph model check          a readable report on stdout
+  ph model check --json   exactly one JSON report on stdout and nothing else
+Logs, including what the package's modules print while they load, go to
+stderr. When the command cannot run at all, it prints only a message on
+stderr and exits 2.
+
+Experimental: the command, its output and the JSON report can change in any release.
+### flags
+#### Json <br>
+Print exactly one JSON report on stdout and nothing else<br><br>
+**usage:** `--json`<br>
+**default**: `false`
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Model Inspect
+Describe this package's document models without checking them: for each
+model its digest and compatibility, and for each of its versions the source,
+scopes, scalars and operations. With <documentType>@<version>, describe that
+version only and add its full definition to the JSON report. Writes nothing.
+
+Exit codes:
+  0  ok, or skipped. Skipped means no code-first source is selected and the
+     package has no stored model, so nothing was read. Read "status".
+  1  invalid. The models were read and at least one is wrong.
+  2  failed. The configuration or a module could not be read, the arguments
+     are wrong, or the command could not run.
+
+Output:
+  ph model inspect          a readable report on stdout
+  ph model inspect --json   exactly one JSON report on stdout and nothing else
+Logs, including what the package's modules print while they load, go to
+stderr. When the command cannot run at all, it prints only a message on
+stderr and exits 2.
+
+Experimental: the command, its output and the JSON report can change in any release.
+### arguments
+#### Document Type Version <br>
+Inspect one model version, such as acme/invoice@1 (default: every model)<br><br>
+**usage:** `[documentType@version]`<br>
+
+
+### flags
+#### Json <br>
+Print exactly one JSON report on stdout and nothing else<br><br>
+**usage:** `--json`<br>
+**default**: `false`
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>

@@ -74,6 +74,7 @@
     "document-model": "workspace:*",
     "dotenv": "catalog:",
     "enquirer": "catalog:",
+    "graphql": "catalog:",
     "kysely": "catalog:",
     "package-manager-detector": "catalog:",
     "pg": "catalog:",

@@ -21,6 +21,7 @@ import { list } from "../src/commands/list.js";
 import { login } from "../src/commands/login.js";
 import { mcp } from "../src/commands/mcp.js";
 import { migrate } from "../src/commands/migrate.js";
+import { modelCheck, modelInspect } from "../src/commands/model.js";
 import { phCli } from "../src/commands/ph-cli.js";
 import { switchboard } from "../src/commands/switchboard.js";
 import { uninstall } from "../src/commands/uninstall.js";
@@ -51,6 +52,8 @@ const commands = [
   { name: "list", command: list },
   { name: "mcp", command: mcp },
   { name: "migrate", command: migrate },
+  { name: "model check", command: modelCheck },
+  { name: "model inspect", command: modelInspect },
   { name: "switchboard", command: switchboard },
   { name: "login", command: login },
   { name: "install", command: install },
