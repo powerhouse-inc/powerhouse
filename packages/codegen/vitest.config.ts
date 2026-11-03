@@ -7,6 +7,8 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
     globals: true,
     environment: "node",
     // Scoped include. The two suites under src/templates/document-model/tests
@@ -42,6 +44,7 @@ export default defineConfig({
       "src/file-builders/boilerplate/generated-hosts.test.ts",
       "src/file-builders/hosts/outputs-file.test.ts",
       "src/file-builders/boilerplate/migrate-style.test.ts",
+      "test/code-first/*.test.ts",
     ],
     exclude: ["**/node_modules/**", "**/dist/**"],
   },

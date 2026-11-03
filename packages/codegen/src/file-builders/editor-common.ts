@@ -114,6 +114,36 @@ export async function makeEditorsFile(args: {
     }),
   );
 
+  const importedNames = new Set(
+    sourceFile
+      .getImportDeclarations()
+      .filter(
+        (declaration) =>
+          declaration.getModuleSpecifierValue() !== "document-model",
+      )
+      .flatMap((declaration) =>
+        declaration
+          .getNamedImports()
+          .map(
+            (specifier) =>
+              specifier.getAliasNode()?.getText() ?? specifier.getName(),
+          ),
+      ),
+  );
+  if (importedNames.has("EditorModule")) {
+    let namespaceImport = "documentModelTypes";
+    while (importedNames.has(namespaceImport)) namespaceImport += "_";
+    sourceFile.getImportDeclarationOrThrow("document-model").remove();
+    sourceFile.addImportDeclaration({
+      isTypeOnly: true,
+      namespaceImport,
+      moduleSpecifier: "document-model",
+    });
+    sourceFile
+      .getVariableDeclarationOrThrow("editors")
+      .setType(`${namespaceImport}.EditorModule[]`);
+  }
+
   await formatSourceFileWithPrettier(sourceFile);
 }
 

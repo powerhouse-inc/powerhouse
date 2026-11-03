@@ -63,6 +63,8 @@ const documentModelArgs = (overrides: object) => ({
   ...common,
   all: false,
   extract: false,
+  name: undefined,
+  codeFirst: false,
   ...overrides,
 });
 const pieceArgs = (

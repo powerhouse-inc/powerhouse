@@ -56,6 +56,10 @@ Path to a document model spec (.phd or .json) to generate from<br><br>
 Name of the directory of an existing document model to re-generate (my-document-model or document-models/my-document-model)<br><br>
 **usage:** `--dir <dir>`<br>
 
+#### Name <br>
+Experimental. Create a code-first document model with this name, with its editor<br><br>
+**usage:** `--name, -n <str>`<br>
+
 
 ### flags
 #### All <br>
@@ -65,6 +69,10 @@ Re-generate all existing document models in the current project<br><br>
 #### Extract <br>
 Write a powerhouse/document-model spec for each existing document model into specs/document-models/<br><br>
 **usage:** `--extract, -x`<br>
+
+#### Code First <br>
+Experimental. Generate with code-first authoring, whatever definitionSources in powerhouse.config.json selects<br><br>
+**usage:** `--code-first`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>

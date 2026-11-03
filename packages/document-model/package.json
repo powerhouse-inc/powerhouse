@@ -38,6 +38,11 @@
       "node": "./dist/node.mjs",
       "types": "./dist/node.d.mts"
     },
+    "./tooling": {
+      "source": "./tooling.ts",
+      "node": "./dist/tooling.mjs",
+      "types": "./dist/tooling.d.mts"
+    },
     "./core": {
       "source": "./index.ts",
       "import": "./dist/index.js",

@@ -1,9 +1,9 @@
-import { generateAll } from "@powerhousedao/codegen";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { extractAllDocuments, saveSpec } from "@powerhousedao/vetra/codegen";
 import { probeHostsFolder } from "@powerhousedao/host-core";
 import { isUniformRunnersEnabled } from "../utils/feature-flags.js";
 import { warnSubgraphTypeConflicts } from "../utils/warn-subgraph-type-conflicts.js";
+import { selectProjectModelGeneration } from "./definitions/authoring-mode.js";
 import { startGenerateHosts } from "./generate-hosts.js";
 
 export async function startGenerateAll(
@@ -25,7 +25,7 @@ export async function startGenerateAll(
     }
     return;
   }
-  await generateAll(project);
+  await selectProjectModelGeneration(projectDir).generateAll(project);
   await project.save();
   await warnSubgraphTypeConflicts(projectDir);
   if (

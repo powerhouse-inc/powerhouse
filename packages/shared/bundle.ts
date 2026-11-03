@@ -85,6 +85,7 @@ await build({
 await build({
   entry: [
     "clis/constants.ts",
+    "clis/definition-sources.ts",
     "clis/project-ports.ts",
     "clis/project-env.ts",
     "clis/ph-dir.ts",

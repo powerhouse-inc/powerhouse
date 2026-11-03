@@ -1,0 +1,11 @@
+{
+  "definitionSources": {
+    "formatVersion": 2,
+    "mode": "code-first",
+    "entries": [
+      {
+        "specifier": "./src/models.ts"
+      }
+    ]
+  }
+}
