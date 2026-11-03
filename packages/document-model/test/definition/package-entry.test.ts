@@ -32,8 +32,10 @@ describe("the package entry", () => {
       "DefinitionError",
       "defineDocumentModel",
       "defineDocumentModelFamily",
+      "inspectDocumentModelDefinition",
       "materialize",
       "ph",
+      "projectDocumentModelGraphQL",
     ]);
     expect(
       names.filter(
