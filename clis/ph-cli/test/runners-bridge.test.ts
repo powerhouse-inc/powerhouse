@@ -90,6 +90,31 @@ describe("connect bridge runner", () => {
     );
   });
 
+  it("serves the browser reactor's in-memory store to Connect", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    vi.mocked(runConnectStudio).mockClear();
+    await runner.dev(
+      connect(
+        connectHost({
+          reactor: {
+            backends: {
+              main: { kind: "in-process", storage: { kind: "memory" } },
+            },
+          },
+        }),
+      ),
+      ctx,
+    );
+    const callerOverride = vi.mocked(runConnectStudio).mock.calls[0][2];
+    expect(callerOverride?.instance).toMatchObject({
+      reactorWorker: false,
+      reactorClient: "in-process",
+      storage: "memory",
+    });
+  });
+
   it("run is dev-studio in phase 0; defaults apply without runner.port", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =
