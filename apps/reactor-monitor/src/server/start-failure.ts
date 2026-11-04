@@ -74,19 +74,20 @@ const LAST_LINE_MAX = 200;
 
 // spawnHost's own notes in the tail, not the run's output.
 const SPAWN_NOTES = /^(?:logFile|onOutput): /;
+const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*[A-Za-z]`, "g");
 
 /** Where a run that never got ready stopped printing. */
 export function lastOutput(tail: string): string | undefined {
   const line = tail
     .split("\n")
-    .map((each) => each.trimEnd())
+    .map((each) => (each.split("\r").at(-1) ?? "").replace(ANSI, "").trimEnd())
     .findLast(
       (each) =>
         each.trim() !== "" &&
         !noise(each) &&
         !SPAWN_NOTES.test(each) &&
         !/^\s/.test(each) &&
-        !/^[{}[\]]$/.test(each),
+        !/^[{}[\]][,;)]*$/.test(each),
     );
   if (!line) return undefined;
   return line.length > LAST_LINE_MAX

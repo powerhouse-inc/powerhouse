@@ -108,6 +108,14 @@ describe("startFailure", () => {
     expect(
       startFailure(timeout(`${stalled}onOutput: log buffer full\n`)).message,
     ).toContain("Loading packages");
+    const esc = String.fromCharCode(27);
+    expect(
+      startFailure(
+        timeout(
+          `${esc}[32m[sb]${esc}[0m Downloading 1%\rDownloading 97%\n  "a": 1\n},\n`,
+        ),
+      ).message,
+    ).toBe('Didn\'t finish starting: its last output was "Downloading 97%".');
     const long = `[sb] ${"x".repeat(400)}`;
     expect(startFailure(timeout(long)).message).toBe(
       `Didn't finish starting: its last output was "${long.slice(0, 199)}…".`,
@@ -117,11 +125,12 @@ describe("startFailure", () => {
   it("leads with Connect's missing build when serve exits on it", () => {
     const tail = [
       "[connect] composition plan (verb=serve): 2 active of 2 declared",
-      "No Connect build to serve: .ph/connect-build/dist/index.html is missing. Build it first with `ph connect build`.",
+      "[07:42:19.02] [switchboard][reactor] Shutdown complete",
+      "No Connect build to serve: .ph/connect-build/dist/index.html is missing. Build it first with `ph connect build`, or `ph run <host> build` for a host's Connect.",
       "",
     ].join("\n");
     expect(startFailure(exited(tail)).message).toBe(
-      "Stopped while starting: No Connect build to serve: .ph/connect-build/dist/index.html is missing. Build it first with `ph connect build`.",
+      "Stopped while starting: No Connect build to serve: .ph/connect-build/dist/index.html is missing. Build it first with `ph connect build`, or `ph run <host> build` for a host's Connect.",
     );
   });
 

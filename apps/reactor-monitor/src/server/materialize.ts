@@ -294,12 +294,28 @@ function withSourceBuilds(envelope: HostExport, source: string): HostExport {
   const copy = structuredClone(envelope);
   const host = copy.host as unknown as Record<string, unknown>;
   const children = isRecord(host.children) ? host.children : {};
-  for (const member of membersOf({ envelope: copy })) {
-    if (member.role !== "connect") continue;
+  const outDirOf = (member: Member) => {
+    const outDir = member.runner.outDir ?? DEFAULT_CONNECT_OUTDIR;
+    // `${projectRoot}` and the like resolve in the copy, as they should.
+    return typeof outDir === "string" && !outDir.includes("${")
+      ? path.resolve(source, outDir)
+      : undefined;
+  };
+  const connects = membersOf({ envelope: copy }).filter(
+    (member) => member.role === "connect",
+  );
+  // A build the copy makes itself is the one to serve.
+  const built = connects.flatMap((member) => {
+    const outDir = outDirOf(member);
+    return memberVerb(copy, member) === "build" && outDir ? [outDir] : [];
+  });
+  for (const member of connects) {
     const verb = memberVerb(copy, member);
     if (verb !== "run" && verb !== "serve") continue;
-    const outDir = member.runner.outDir ?? DEFAULT_CONNECT_OUTDIR;
-    if (typeof outDir !== "string" || path.isAbsolute(outDir)) continue;
+    const raw = member.runner.outDir;
+    if (typeof raw === "string" && path.isAbsolute(raw)) continue;
+    const outDir = outDirOf(member);
+    if (!outDir || built.includes(outDir)) continue;
     // A child's wrapper, not the member body other children may share.
     const definition =
       member.path === "host"
@@ -310,7 +326,7 @@ function withSourceBuilds(envelope: HostExport, source: string): HostExport {
     if (!isRecord(definition)) continue;
     definition.runner = {
       ...(isRecord(definition.runner) ? definition.runner : {}),
-      outDir: path.resolve(source, outDir),
+      outDir,
     };
   }
   return copy;

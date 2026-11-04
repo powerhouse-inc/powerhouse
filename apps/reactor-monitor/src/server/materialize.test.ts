@@ -429,7 +429,10 @@ describe("materialize", () => {
     });
     members.outside = connect("outside", 3201, { outDir: "../elsewhere" });
     members.studio = connect("studio", 3301, { defaultVerb: "dev" });
-    members.builder = connect("builder", 3401, { defaultVerb: "build" });
+    members.builder = connect("builder", 3401, {
+      defaultVerb: "build",
+      outDir: "own-build",
+    });
     members.fixed = connect("fixed", 3501, { outDir: "/abs/build" });
     for (const key of ["custom", "outside", "studio", "builder", "fixed"]) {
       children[key] = { host: key };
@@ -456,6 +459,40 @@ describe("materialize", () => {
     expect(hostFile(projectDir, "custom")).toMatchObject({
       runner: { outDir: "custom-out" },
     });
+  });
+
+  it("serves the copy's own build when a member builds that folder", () => {
+    const envelope = duo(source);
+    const members = envelope.members as Record<string, unknown>;
+    members.builder = {
+      name: "builder",
+      runner: {
+        module: "@powerhousedao/ph-cli/runners/connect",
+        port: 3401,
+        defaultVerb: "build",
+      },
+    };
+    members.rooted = {
+      name: "rooted",
+      runner: {
+        module: "@powerhousedao/ph-cli/runners/connect",
+        port: 3501,
+        defaultVerb: "serve",
+        outDir: "${projectRoot}/out",
+      },
+    };
+    const children = (envelope.host as { children: Record<string, unknown> })
+      .children;
+    children.builder = { host: "builder" };
+    children.rooted = { host: "rooted" };
+    const { projectDir } = materialize(instanceDir, source, envelope);
+    const runners = (
+      hostFile(projectDir, "duo") as {
+        children: Record<string, { runner?: { outDir?: string } }>;
+      }
+    ).children;
+    expect(runners.ui.runner?.outDir).toBeUndefined();
+    expect(runners.rooted.runner?.outDir).toBeUndefined();
   });
 
   it("leaves Connect's build alone when the whole host builds", () => {
