@@ -1,0 +1,48 @@
+{
+  "id": "test/extensions",
+  "name": "Extensions",
+  "author": {
+    "name": "Powerhouse",
+    "website": null
+  },
+  "extension": "extensions",
+  "description": "A model whose stored SDL extends its types.",
+  "specifications": [
+    {
+      "version": 1,
+      "changeLog": [],
+      "state": {
+        "global": {
+          "schema": "enum ExtensionsStatus {\n  OPEN\n}\n\nextend enum ExtensionsStatus {\n  CLOSED\n}\n\ntype ExtensionsState {\n  title: String!\n  status: ExtensionsStatus!\n}\n\nextend type ExtensionsState {\n  note: String\n}",
+          "initialValue": "{\"title\":\"\",\"status\":\"OPEN\",\"note\":null,\"flagged\":null}",
+          "examples": []
+        },
+        "local": {
+          "schema": "",
+          "initialValue": "",
+          "examples": []
+        }
+      },
+      "modules": [
+        {
+          "id": "1f6e5a73-5a1f-4f6e-8a1f-6e5a735a1f6e",
+          "name": "statuses",
+          "description": "",
+          "operations": [
+            {
+              "id": "2a7f6b84-6b2a-4a7f-9b2a-7f6b846b2a7f",
+              "name": "SET_STATUS",
+              "description": "",
+              "schema": "input SetStatusInput {\n  status: ExtensionsStatus!\n}\n\nextend input SetStatusInput {\n  reason: String\n}\n\nextend type ExtensionsState {\n  flagged: Boolean\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

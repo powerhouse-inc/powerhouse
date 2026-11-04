@@ -1020,6 +1020,104 @@
           }
         ]
       }
+    },
+    {
+      "files": [
+        "packages/document-model/src/definition/{kernel,dsl,compiler,model,runtime}/**/*.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["graphql", "graphql/*"],
+                "message": "Only definition/tooling/ loads the optional graphql peer. This layer ships in document-model's browser-safe main entry; build location-free AST nodes from the shared types instead."
+              },
+              {
+                "regex": "^node:",
+                "message": "Node built-ins belong to definition/tooling/. This layer runs in the browser."
+              },
+              {
+                "regex": "(^|/)tooling(/|$)",
+                "message": "definition/tooling/ builds on this layer, so this layer never imports it. Move the shared piece down or take it as a parameter."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/{reactor-api,reactor-mcp}/src/**/*.{ts,tsx,mts}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)document-model/(src|dist)(/|$)",
+                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts as @experimental instead of reaching into a deep path."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/{reactor-browser,reactor}/src/**/*.{ts,tsx,mts}",
+        "packages/vetra/{codegen,document-models,editors,processors,subgraphs}/**/*.{ts,tsx,mts}",
+        "packages/vetra/index.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "document-model",
+                "importNames": [
+                  "inspectDocumentModelDefinition",
+                  "projectDocumentModelGraphQL"
+                ],
+                "message": "Native versus stored is chosen in one place per host: reactor-api's graphql/document-model-schema/source.ts and reactor-mcp's tools/model-operations.ts. Read the model through those hosts, or add this package's single selection point with an arch test."
+              }
+            ],
+            "patterns": [
+              {
+                "regex": "(^|/)document-model/(src|dist)(/|$)",
+                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts as @experimental instead of reaching into a deep path."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/reactor-api/src/graphql/document-model-schema/**/*.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)document-model/(src|dist)(/|$)",
+                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts as @experimental instead of reaching into a deep path."
+              },
+              {
+                "regex": "(^|/)utils/create-schema(\\.js)?$",
+                "message": "utils/create-schema.ts selects the schema through this folder, so importing it back makes a cycle. Move the shared helper into document-model-schema/schema-ast.ts."
+              },
+              {
+                "regex": "[Ss]ubgraph",
+                "message": "Document-model schema building does not depend on subgraph hosting. Subgraphs build on this folder from their own."
+              }
+            ]
+          }
+        ]
+      }
     }
   ],
   "ignorePatterns": [

@@ -84,6 +84,7 @@ import {
 import { callerSubject } from "./base-subgraph.js";
 import type { IReactorInspectionSource } from "./inspection/source.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
+import { PackageScalarBindingLog } from "./document-model-schema/package-scalars.js";
 import { RequestClientBinder, type RequestClients } from "./request-clients.js";
 import {
   admitDocumentModels,
@@ -412,6 +413,8 @@ export class GraphQLManager {
 
   /** Refusals logged: model id, source key and reason. */
   #refusals = new Set<string>();
+
+  readonly #scalarBindings = new PackageScalarBindingLog();
 
   readonly #schemaCache: DocumentModelSchemaCache;
 
@@ -866,6 +869,7 @@ export class GraphQLManager {
     }
     this.#refusals = logged;
     this.#modelSchemas = schemas;
+    this.#scalarBindings.report(admitted, this.#scalars, this.logger);
     return admitted;
   }
 

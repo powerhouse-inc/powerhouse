@@ -3,28 +3,12 @@ import type {
   InputTypeDefinition,
   NamedGraphQLTypeDefinition,
   PowerhouseScalarName,
-  StoredScalarDefinition,
   TypeReferenceDefinition,
 } from "@powerhousedao/shared/document-model";
 import { documentModelScalars } from "../../scalars/catalog.js";
 import type { ScalarDefinition } from "../../scalars/types.js";
+import { storedScalarDefinition } from "../../scalars/stored-definition.js";
 import { compareCodeUnits } from "../kernel/primitives.js";
-
-function storedScalarDefinition(
-  definition: ScalarDefinition,
-): StoredScalarDefinition {
-  return {
-    kind: "powerhouse.scalar",
-    formatVersion: 1,
-    name: definition.name,
-    representation: definition.representation ?? "json",
-    description: definition.description ?? "",
-    coercion: {
-      source: definition.coercion === undefined ? "derived" : "explicit",
-    },
-    coercionProfile: "catalog-v1",
-  };
-}
 
 export function scalarReferences(
   catalogScalars: ReadonlySet<string>,

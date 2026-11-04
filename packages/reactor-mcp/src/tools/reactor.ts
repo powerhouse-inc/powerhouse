@@ -16,6 +16,7 @@ import {
 } from "./documents.js";
 import { ReactorToolError, toReactorToolError } from "./errors.js";
 import { applyJsonPath, JsonPathError } from "./jsonpath.js";
+import { structuredDefinition } from "./model-operations.js";
 import {
   createDocument,
   deleteDocument,
@@ -129,7 +130,8 @@ export const getDocumentModelSchemaTool = defineTool({
   title: "Read a document model schema",
   description: `Read a document model's schema. Without options it returns the operation names per module.
 Pass "compact" before addActions for every action's type, scope and input definition, and the types those inputs use.
-Pass "operation" for one action's input schema (GraphQL SDL), "state" for a state schema, or "filter" for a JSONPath over the latest specification.`,
+Pass "operation" for one action's input schema (GraphQL SDL), "state" for a state schema, or "filter" for a JSONPath over the latest specification.
+Pass "definition" to also return the structured definition of a model authored in code.`,
   inputSchema: z.object({
     type: z
       .string()
@@ -138,6 +140,12 @@ Pass "operation" for one action's input schema (GraphQL SDL), "state" for a stat
       .boolean()
       .optional()
       .describe("Return every action's type, scope and input definition"),
+    definition: z
+      .boolean()
+      .optional()
+      .describe(
+        "Also return the structured definition of a model authored in code; ignored with compact, operation, state or filter",
+      ),
     operation: z
       .string()
       .optional()
@@ -158,6 +166,12 @@ Pass "operation" for one action's input schema (GraphQL SDL), "state" for a stat
   outputSchema: z.object({
     type: z.string(),
     model: documentModelSummarySchema.optional(),
+    definition: z
+      .unknown()
+      .optional()
+      .describe(
+        "The structured definition of a model authored in code, alongside model; change it in the package's source, not through document actions",
+      ),
     compact: compactDocumentModelSchemaSchema.optional(),
     operation: operationSliceSchema.optional(),
     state: stateSliceSchema.optional(),
@@ -174,7 +188,12 @@ Pass "operation" for one action's input schema (GraphQL SDL), "state" for a stat
       };
     }
     if (!args.operation && !args.state && !args.filter) {
-      return { type, model: documentModelSummary(module) };
+      const definition = args.definition && structuredDefinition(module);
+      return {
+        type,
+        model: documentModelSummary(module),
+        ...(definition && { definition }),
+      };
     }
     let value: unknown;
     if (args.filter) {

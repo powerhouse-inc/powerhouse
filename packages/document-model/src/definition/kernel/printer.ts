@@ -67,7 +67,7 @@ function hasControlCodePoint(value: string): boolean {
  * in neither a quote nor a backslash. Every other description prints as an
  * escaped single-line string, which always round-trips.
  */
-function blockStringable(value: string): boolean {
+export function blockStringable(value: string): boolean {
   if (!value.includes(LINE)) return false;
   if (value.includes('"""')) return false;
   if (value.endsWith('"') || value.endsWith("\\")) return false;

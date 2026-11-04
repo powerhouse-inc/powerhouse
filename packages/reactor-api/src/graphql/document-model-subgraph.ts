@@ -2,17 +2,17 @@ import type {
   WriteReceipt,
   WriteTargetDescription,
 } from "@powerhousedao/reactor";
-import { camelCase } from "change-case";
 import {
   setName,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
-import { GraphQLError, Kind, parse } from "graphql";
+import { GraphQLError, Kind } from "graphql";
 import { optionalOneOf, requireOneOf } from "./argument-aliases.js";
 import {
   documentModelSubgraphTypes,
   getDocumentModelSubgraphName,
 } from "../utils/create-schema.js";
+import { documentModelSchemaSource } from "./document-model-schema/source.js";
 import { getDocumentModelSchemaName } from "./model-schema-templates.js";
 import type { CanonicalDocumentId } from "../services/authorization.service.js";
 import { BaseSubgraph } from "./base-subgraph.js";
@@ -130,7 +130,7 @@ export interface DocumentModelMutationResolvers<
     ctx: Context,
   ) => Promise<TDocument>;
   /** Dynamic operation resolvers (sync and async variants). */
-  [operationName: string]: DocumentModelResolverFn;
+  [storedName: string]: DocumentModelResolverFn;
 }
 
 /** The resolvers that a `DocumentModelSubgraph` exposes. */
@@ -160,7 +160,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
   constructor(
     documentModel: DocumentModelModule,
     args: SubgraphArgs,
-    types = documentModelSubgraphTypes(documentModel.documentModel.global),
+    types = documentModelSubgraphTypes(documentModel),
   ) {
     super(args);
     this.documentModel = documentModel;
@@ -232,29 +232,16 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     const documentName = getDocumentModelSchemaName(
       this.documentModel.documentModel.global,
     );
-    const specification =
-      this.documentModel.documentModel.global.specifications.at(-1);
-    if (!specification) return {};
-
-    const globalSchema = specification.state.global.schema ?? "";
-    const localSchema = specification.state.local.schema ?? "";
-    const fullSchema = `${globalSchema}\n${localSchema}`;
-
-    if (!fullSchema.trim()) return {};
-
-    let ast;
-    try {
-      ast = parse(fullSchema);
-    } catch {
-      return {};
-    }
+    const definitions = documentModelSchemaSource(
+      this.documentModel,
+    ).stateDefinitions();
 
     // Object type name -> its fields and interfaces, union name -> its
     // members; extensions included.
     const objectFieldsMap = new Map<string, string[]>();
     const objectInterfaces = new Map<string, string[]>();
     const unionMembers = new Map<string, string[]>();
-    for (const def of ast.definitions) {
+    for (const def of definitions) {
       if (
         def.kind === Kind.UNION_TYPE_DEFINITION ||
         def.kind === Kind.UNION_TYPE_EXTENSION
@@ -282,7 +269,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
     const resolvers: Record<string, DocumentModelResolverMap> = {};
 
-    for (const def of ast.definitions) {
+    for (const def of definitions) {
       if (
         def.kind !== Kind.UNION_TYPE_DEFINITION &&
         def.kind !== Kind.INTERFACE_TYPE_DEFINITION
@@ -342,12 +329,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     const documentName = getDocumentModelSchemaName(
       this.documentModel.documentModel.global,
     );
-    const operations =
-      this.documentModel.documentModel.global.specifications
-        .at(-1)
-        ?.modules.flatMap((module) =>
-          module.operations.filter((op) => op.name),
-        ) ?? [];
+    const operations = documentModelSchemaSource(
+      this.documentModel,
+    ).mutationOperations();
 
     return {
       ...this.generateAbstractTypeResolvers(),
@@ -640,7 +624,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         // Generate sync and async mutations for each operation
         ...operations.reduce((mutations, op) => {
           // Sync mutation
-          mutations[camelCase(op.name!)] = async (
+          mutations[op.camelName] = async (
             _: unknown,
             args: {
               documentIdOrSlug?: string | null;
@@ -658,7 +642,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
             const handle = await this.assertCanExecuteOperation(
               documentIdOrSlug,
-              op.name!,
+              op.storedName,
               ctx,
             );
             const effectiveDocId = handle.fetchIdentifier;
@@ -671,9 +655,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               documentType,
             );
 
-            const action = this.documentModel.actions[camelCase(op.name!)];
+            const action = this.documentModel.actions[op.creatorKey];
             if (!action) {
-              throw new GraphQLError(`Action ${op.name} not found`);
+              throw new GraphQLError(`Action ${op.storedName} not found`);
             }
 
             let receipt: WriteReceipt;
@@ -686,7 +670,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               receipt = await written.readable;
             } catch (error) {
               throw new GraphQLError(
-                error instanceof Error ? error.message : `Failed to ${op.name}`,
+                error instanceof Error
+                  ? error.message
+                  : `Failed to ${op.storedName}`,
               );
             }
             const updatedDoc = await readAsCaller(
@@ -698,7 +684,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           };
 
           // Async mutation - returns job ID
-          mutations[`${camelCase(op.name!)}Async`] = async (
+          mutations[`${op.camelName}Async`] = async (
             _: unknown,
             args: {
               documentIdOrSlug?: string | null;
@@ -716,7 +702,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
             const handle = await this.assertCanExecuteOperation(
               documentIdOrSlug,
-              op.name!,
+              op.storedName,
               ctx,
             );
             const effectiveDocId = handle.fetchIdentifier;
@@ -729,9 +715,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               documentType,
             );
 
-            const action = this.documentModel.actions[camelCase(op.name!)];
+            const action = this.documentModel.actions[op.creatorKey];
             if (!action) {
-              throw new GraphQLError(`Action ${op.name} not found`);
+              throw new GraphQLError(`Action ${op.storedName} not found`);
             }
 
             try {
@@ -743,7 +729,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               return written.jobId;
             } catch (error) {
               throw new GraphQLError(
-                error instanceof Error ? error.message : `Failed to ${op.name}`,
+                error instanceof Error
+                  ? error.message
+                  : `Failed to ${op.storedName}`,
               );
             }
           };
