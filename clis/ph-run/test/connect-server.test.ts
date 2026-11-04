@@ -284,6 +284,12 @@ describe("the built-in Connect server", () => {
       ).rejects.toThrow(
         `No Connect build to serve: ${join(elsewhere, "index.html").split("\\").join("/")} is missing.`,
       );
+      mkdirSync(join(project, "..build"));
+      await expect(
+        runConnectServer(argsFor("..build", port), {}, project),
+      ).rejects.toThrow(
+        "No Connect build to serve: ..build/index.html is missing.",
+      );
       const probe = createServer();
       await new Promise<void>((done, fail) => {
         probe.once("error", fail);

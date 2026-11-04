@@ -343,7 +343,11 @@ export function assertConnectBuild(
   if (existsSync(file)) return;
   const relative = path.relative(dirname, file);
   const shown = (
-    relative.startsWith("..") || path.isAbsolute(relative) ? file : relative
+    relative === ".." ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
+      ? file
+      : relative
   )
     .split(path.sep)
     .join("/");

@@ -340,7 +340,7 @@ export async function spawnHost(
     }
     if (aborted || Date.now() >= deadline) {
       const phase: SpawnHostPhase = aborted ? "aborted" : "timeout";
-      // Where it got to, not what it printed while being stopped.
+      // On a timeout, where it got to, not what it printed while being stopped.
       const seen = tail;
       const stopped = await stop();
       throw new SpawnHostError(
