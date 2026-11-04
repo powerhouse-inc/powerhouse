@@ -172,6 +172,19 @@ export function withSourcePackages(
   return copy;
 }
 
+/** The controller's database in each backend's storage, as a host names one. */
+export function withDatabaseUrl(
+  envelope: HostExport,
+  backends: readonly string[],
+  url: string,
+): HostExport {
+  const copy = structuredClone(envelope);
+  for (const at of backends) {
+    ensureRecordAt(copy, [...at.split("."), "storage"]).url = url;
+  }
+  return copy;
+}
+
 function ensureRecord(
   parent: Record<string, unknown>,
   key: string,

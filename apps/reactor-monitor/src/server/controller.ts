@@ -37,15 +37,21 @@ import {
   type RefusedSetter,
 } from "../controller/api.ts";
 import { blankExport } from "../host-rules/catalog.ts";
+import { membersOf as draftMembers } from "../host-rules/members.ts";
 import { checkSetter } from "../host-rules/policy.ts";
 import type { HostRuleIssue, HostRulesContext } from "../host-rules/schema.ts";
 import { applySetters } from "../host-rules/setters.ts";
-import { validateDraft } from "../host-rules/validate.ts";
+import {
+  controllerDatabaseBackends,
+  validateDraft,
+} from "../host-rules/validate.ts";
+import type { DatabaseServer } from "./databases.ts";
 import { LogRing } from "./logs.ts";
 import {
   copyConnectPorts,
   MaterializeError,
   materialize,
+  withDatabaseUrl,
 } from "./materialize.ts";
 import { startFailure } from "./start-failure.ts";
 
@@ -98,6 +104,8 @@ export interface MonitorControllerOptions {
   stopTimeoutMs?: number;
   /** Whether nothing listens on `port`; default: try to listen on it. */
   portFree?: (port: number) => Promise<boolean>;
+  /** Where each start that wants Postgres gets its own database. */
+  postgres?: DatabaseServer;
 }
 
 export interface MonitorController {
@@ -188,6 +196,30 @@ export function splitPackages(env: Record<string, string>): {
     .map((name) => name.trim())
     .filter((name) => name.length > 0);
   return { env: rest as Record<string, string>, packages };
+}
+
+const REACTOR_DATABASE = "PH_REACTOR_DATABASE_URL";
+const SWITCHBOARD_DATABASE = "PH_SWITCHBOARD_DATABASE_URL";
+
+const isPostgresUrl = (value: string | undefined) =>
+  value !== undefined && /^postgres(ql)?:\/\//i.test(value);
+
+/** Which of the env's database urls names Postgres for the switchboards. */
+export function envDatabaseOf(
+  env: Record<string, string>,
+): HostRulesContext["envDatabase"] {
+  if (Object.hasOwn(env, REACTOR_DATABASE)) {
+    return isPostgresUrl(env[REACTOR_DATABASE]) ? "reactor" : undefined;
+  }
+  return isPostgresUrl(env[SWITCHBOARD_DATABASE]) ? "switchboard" : undefined;
+}
+
+/** The env names the store a block without one takes, and the env wins. */
+function namesDatabase(env: Record<string, string>): boolean {
+  return (
+    Object.hasOwn(env, REACTOR_DATABASE) ||
+    Object.hasOwn(env, SWITCHBOARD_DATABASE)
+  );
 }
 
 export function deniedEnvKeys(env: Record<string, string>): string[] {
@@ -435,6 +467,8 @@ interface Entry {
   view: Instance;
   /** `tempRoot/<id>`: removed when the instance ends. */
   instanceDir: string;
+  /** The controller's database for it: dropped when the instance ends. */
+  database?: string;
   dataDir: string;
   logs: LogRing;
   abort: AbortController;
@@ -444,6 +478,16 @@ interface Entry {
 }
 
 const LIVE = new Set<Instance["status"]>(["starting", "running", "stopping"]);
+
+/** What a start holds before it is an entry; released if it never is one. */
+type Claim = { database?: string };
+
+type PreparedRun = {
+  root: string;
+  dataDir: string;
+  env: Record<string, string>;
+  source?: Instance["source"];
+};
 
 export function createMonitorController(
   options: MonitorControllerOptions,
@@ -552,11 +596,89 @@ export function createMonitorController(
     return { root, host: request.host, env: { ...serverEnv, ...env } };
   };
 
+  const databases = options.postgres;
+  const envDatabase = envDatabaseOf(serverEnv);
+
   const capabilities = (): HostRulesContext => ({
-    postgres: false,
+    postgres: databases !== undefined,
+    ...(envDatabase ? { envDatabase } : {}),
     controller: true,
     renownSource: serverEnv.RENOWN_SOURCE === "self" ? "self" : "remote",
   });
+
+  /** The switchboard backends of `envelope` the controller gives a database. */
+  const wantedBackends = (
+    envelope: HostExport,
+    env: Record<string, string>,
+  ): string[] => {
+    if (!databases || namesDatabase(env)) return [];
+    const context = capabilities();
+    return controllerDatabaseBackends(
+      draftMembers({ envelope }, context),
+      context,
+    );
+  };
+
+  /** wantedBackends of a host started from its own files: the env carries the url. */
+  const inPlaceBackends = async (
+    root: string,
+    host: string,
+    env: Record<string, string>,
+  ): Promise<string[]> => {
+    if (!databases || namesDatabase(env)) return [];
+    let envelope: HostExport;
+    try {
+      envelope = await exporter({
+        projectRoot: root,
+        host,
+        env: childEnv(path.join(tempRoot, "check"), env),
+      });
+    } catch {
+      // The check reports what stops this host.
+      return [];
+    }
+    const context = capabilities();
+    const members = draftMembers({ envelope }, context);
+    const backends = controllerDatabaseBackends(members, context);
+    if (backends.length === 0) return [];
+    const others = members.filter(
+      (member) =>
+        member.role === "switchboard" &&
+        !member.backends.some(
+          (backend) => backend.primary && backends.includes(backend.at),
+        ),
+    );
+    if (others.length > 0) {
+      throw new ControllerError(
+        "bad_request",
+        `hosts/${host} needs the controller's Postgres database, which it would get through ${REACTOR_DATABASE}, and ${others.map((member) => member.key).join(", ")} would keep its data there too. Start it from the builder, which gives the database to one switchboard alone.`,
+      );
+    }
+    return backends;
+  };
+
+  const createDatabase = async (claim: Claim) => {
+    if (!databases) throw new Error("no Postgres server");
+    try {
+      const database = await databases.create();
+      claim.database = database.name;
+      return database;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new ControllerError(
+        "internal",
+        `Could not make a Postgres database: ${message}`,
+      );
+    }
+  };
+
+  const dropDatabase = async (name: string) => {
+    try {
+      await databases?.drop(name);
+    } catch (error) {
+      console.warn(`[ph-monitor] could not drop database ${name}:`, error);
+    }
+  };
 
   const runExport = async (
     root: string,
@@ -702,6 +824,13 @@ export function createMonitorController(
 
   const snapshot = (entry: Entry): Instance => structuredClone(entry.view);
 
+  const release = async (entry: Entry) => {
+    await removeDir(entry.instanceDir);
+    const name = entry.database;
+    entry.database = undefined;
+    if (name) await dropDatabase(name);
+  };
+
   const launch = async (
     entry: Entry,
     root: string,
@@ -737,7 +866,7 @@ export function createMonitorController(
         if (entry.view.status !== "running") return;
         entry.view.status = "exited";
         entry.view.exit = exitOf(exit);
-        await removeDir(entry.instanceDir);
+        await release(entry);
       });
     } catch (error) {
       entry.logs.flush();
@@ -753,7 +882,7 @@ export function createMonitorController(
           tail: entry.logs.tail(TAIL_LINES),
         };
       }
-      await removeDir(entry.instanceDir);
+      await release(entry);
     }
   };
 
@@ -768,7 +897,7 @@ export function createMonitorController(
       entry.view.exit ??= exitOf(exit);
     }
     if (entry.view.status !== "failed") entry.view.status = "exited";
-    await removeDir(entry.instanceDir);
+    await release(entry);
     entries.delete(entry.view.id);
     return snapshot(entry);
   };
@@ -781,12 +910,7 @@ export function createMonitorController(
   /** The instance limit, the check and the launch; `prepare` fills instanceDir. */
   const startResolved = async (
     host: string,
-    env: Record<string, string>,
-    prepare: (instanceDir: string) => Promise<{
-      root: string;
-      dataDir: string;
-      source?: Instance["source"];
-    }>,
+    prepare: (instanceDir: string, claim: Claim) => Promise<PreparedRun>,
   ): Promise<Instance> => {
     if (disposing) {
       throw new ControllerError("shutting_down", "The controller is stopping.");
@@ -800,9 +924,10 @@ export function createMonitorController(
     }
     const id = randomUUID();
     const instanceDir = path.join(tempRoot, id);
+    const claim: Claim = {};
     const checked = (async () => {
-      const run = await prepare(instanceDir);
-      const issues = await runCheck(run.root, host, env, run.dataDir);
+      const run = await prepare(instanceDir, claim);
+      const issues = await runCheck(run.root, host, run.env, run.dataDir);
       if (issues.length > 0) {
         throw new ControllerError(
           "check_failed",
@@ -818,6 +943,7 @@ export function createMonitorController(
       run = await checked;
     } catch (error) {
       await removeDir(instanceDir);
+      if (claim.database) await dropDatabase(claim.database);
       throw error;
     } finally {
       checking.delete(checked);
@@ -830,14 +956,16 @@ export function createMonitorController(
         status: "starting",
         startedAt: new Date().toISOString(),
         ...(run.source ? { source: run.source } : {}),
+        ...(claim.database ? { database: claim.database } : {}),
       },
       instanceDir,
+      ...(claim.database ? { database: claim.database } : {}),
       dataDir: run.dataDir,
       logs: new LogRing(LOG_LINES),
       abort: new AbortController(),
     };
     entries.set(id, entry);
-    entry.starting = launch(entry, run.root, host, env);
+    entry.starting = launch(entry, run.root, host, run.env);
     return snapshot(entry);
   };
 
@@ -853,13 +981,26 @@ export function createMonitorController(
     hosts: (project) => hostsOf(projectRoot(project)),
     check: async (request) => {
       const { root, host, env } = resolve(request);
-      return runCheck(root, host, env, path.join(tempRoot, "check"));
+      const wanted = await inPlaceBackends(root, host, env);
+      // A check never connects: the server's own url stands in.
+      const checkEnv =
+        wanted.length > 0 && databases
+          ? { ...env, [REACTOR_DATABASE]: databases.url }
+          : env;
+      return runCheck(root, host, checkEnv, path.join(tempRoot, "check"));
     },
     start: async (request) => {
       const { root, host, env } = resolve(request);
-      return startResolved(host, env, (instanceDir) =>
-        Promise.resolve({ root, dataDir: instanceDir }),
-      );
+      return startResolved(host, async (instanceDir, claim) => {
+        const wanted = await inPlaceBackends(root, host, env);
+        if (wanted.length === 0) return { root, dataDir: instanceDir, env };
+        const { url } = await createDatabase(claim);
+        return {
+          root,
+          dataDir: instanceDir,
+          env: { ...env, [REACTOR_DATABASE]: url },
+        };
+      });
     },
     capabilities,
     exportHost: (project, host) => {
@@ -871,9 +1012,15 @@ export function createMonitorController(
       const { env, packages } = splitPackages(resolved);
       const { envelope, ruleIssues } = await draftEnvelope(request, root, env);
       if (ruleIssues.length > 0) return { ruleIssues, issues: [] };
+      const wanted = wantedBackends(envelope, env);
+      // A check never connects: the server's own url stands in.
+      const checked =
+        wanted.length > 0 && databases
+          ? withDatabaseUrl(envelope, wanted, databases.url)
+          : envelope;
       const dir = path.join(tempRoot, `check-${randomUUID()}`);
       try {
-        const copy = materializeIn(dir, root, envelope, packages);
+        const copy = materializeIn(dir, root, checked, packages);
         const issues = await runCheck(copy.projectDir, host, env, copy.dataDir);
         return { ruleIssues: [], issues };
       } finally {
@@ -883,7 +1030,7 @@ export function createMonitorController(
     startDraft: async (request) => {
       const { root, host, env: resolved } = resolve(request);
       const { env, packages } = splitPackages(resolved);
-      return startResolved(host, env, async (instanceDir) => {
+      return startResolved(host, async (instanceDir, claim) => {
         const { envelope, ruleIssues } = await draftEnvelope(
           request,
           root,
@@ -898,10 +1045,20 @@ export function createMonitorController(
           );
         }
         await assertCopyPortsFree(envelope);
-        const copy = materializeIn(instanceDir, root, envelope, packages);
+        const wanted = wantedBackends(envelope, env);
+        const run =
+          wanted.length > 0
+            ? withDatabaseUrl(
+                envelope,
+                wanted,
+                (await createDatabase(claim)).url,
+              )
+            : envelope;
+        const copy = materializeIn(instanceDir, root, run, packages);
         return {
           root: copy.projectDir,
           dataDir: copy.dataDir,
+          env,
           source: {
             project: root,
             host,

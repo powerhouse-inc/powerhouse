@@ -593,7 +593,10 @@ function namedStore(backend: MemberBackend | undefined): boolean {
 }
 
 /** The switchboard keeps its data in the database the controller's env names. */
-export function envStored(member: Member, context: Context): boolean {
+export function envStored(
+  member: Member,
+  context: Pick<HostRulesContext, "envDatabase">,
+): boolean {
   if (member.role !== "switchboard" || member.placementMissing) return false;
   if (context.envDatabase === "reactor") return true;
   if (context.envDatabase !== "switchboard") return false;
@@ -603,7 +606,7 @@ export function envStored(member: Member, context: Context): boolean {
 /** Each switchboard's primary backend that needs a database from the controller. */
 export function controllerDatabaseBackends(
   members: Member[],
-  context: Context,
+  context: Pick<HostRulesContext, "envDatabase">,
 ): string[] {
   const backends = members.flatMap((member) => {
     if (member.role !== "switchboard" || envStored(member, context)) return [];

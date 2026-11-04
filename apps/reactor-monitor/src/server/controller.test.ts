@@ -32,6 +32,7 @@ import {
   portFree,
   splitPackages,
 } from "./controller.ts";
+import type { DatabaseServer } from "./databases.ts";
 import { LogRing } from "./logs.ts";
 import { blankExport, folderTemplate } from "../host-rules/catalog.ts";
 import { hostOptions } from "../host-rules/options.ts";
@@ -1326,6 +1327,233 @@ describe("createMonitorController", () => {
       await controller.dispose();
       expect(existsSync(controller.tempRoot)).toBe(false);
       expect(process.listenerCount("exit")).toBe(listeners);
+    });
+  });
+
+  describe("a Postgres database per start", () => {
+    const SERVER = "postgres://u:p@db:5432/fix_g1";
+    const SB_A = "members.sb-a.reactor.backends.main";
+
+    function fakeDatabases() {
+      const live = new Set<string>();
+      let next = 0;
+      const made = vi.fn(() => {
+        const name = `fix_g1_${++next}`;
+        live.add(name);
+        return Promise.resolve({ name, url: `postgres://u:p@db:5432/${name}` });
+      });
+      const drop = vi.fn((name: string) => {
+        live.delete(name);
+        return Promise.resolve();
+      });
+      const server: DatabaseServer = { url: SERVER, create: made, drop };
+      return { server, live, made };
+    }
+
+    /** sb-a on the controller's Postgres; sb-b keeps its folder. */
+    const postgresDraft = async (): Promise<DraftRequest> => ({
+      project: allowed,
+      host: "duo",
+      baseDigest: await baseDigest(duoExport(allowed)),
+      setters: [
+        { path: `${SB_A}.storage.kind`, value: "postgres" },
+        { path: `${SB_A}.storage.dataDir`, value: { $delete: true } },
+      ],
+    });
+
+    /** A standalone switchboard that names Postgres and no url. */
+    function soloExport(root: string): HostExport {
+      return {
+        format: "ph-host-export",
+        version: 1,
+        project: { name: "p", root },
+        name: "solo",
+        host: {
+          name: "solo",
+          runner: { module: SWITCHBOARD, port: 4801 },
+          reactor: {
+            backends: {
+              main: { kind: "in-process", storage: { kind: "postgres" } },
+            },
+          },
+        },
+        members: {},
+      } as HostExport;
+    }
+
+    beforeEach(() => {
+      addHost(allowed, "duo");
+      addHost(allowed, "solo");
+    });
+
+    it("offers Postgres only with a server, and says what the env names", () => {
+      expect(create().controller.capabilities()).toEqual({
+        postgres: false,
+        controller: true,
+        renownSource: "remote",
+      });
+      void controller?.dispose();
+      const { server } = fakeDatabases();
+      expect(
+        create({ postgres: server }).controller.capabilities(),
+      ).toMatchObject({ postgres: true });
+      for (const [env, envDatabase] of [
+        [{ PH_REACTOR_DATABASE_URL: "postgres://h/r" }, "reactor"],
+        [{ PH_SWITCHBOARD_DATABASE_URL: "postgresql://h/s" }, "switchboard"],
+        [{ PH_REACTOR_DATABASE_URL: "./.ph/r" }, undefined],
+        [
+          {
+            PH_REACTOR_DATABASE_URL: "./.ph/r",
+            PH_SWITCHBOARD_DATABASE_URL: "postgres://h/s",
+          },
+          undefined,
+        ],
+      ] as const) {
+        void controller?.dispose();
+        expect(
+          create({ serverEnv: env }).controller.capabilities().envDatabase,
+        ).toBe(envDatabase);
+      }
+    });
+
+    it("gives two copies their own database in the host file and drops each on stop", async () => {
+      const { server, live } = fakeDatabases();
+      const { controller, launches, checks } = create({ postgres: server });
+      const [one, two] = await Promise.all([
+        controller.startDraft(await postgresDraft()),
+        controller.startDraft(await postgresDraft()),
+      ]);
+      expect(new Set([one.database, two.database]).size).toBe(2);
+      expect([...live].sort()).toEqual([one.database, two.database].sort());
+      for (const [index, started] of [one, two].entries()) {
+        const project = launches[index].options.projectRoot;
+        const sbA = hostFileOf(project, "sb-a") as {
+          reactor: { backends: { main: { storage: unknown } } };
+        };
+        const sbB = hostFileOf(project, "sb-b") as typeof sbA;
+        expect(sbA.reactor.backends.main.storage).toEqual({
+          kind: "postgres",
+          url: `postgres://u:p@db:5432/${started.database}`,
+        });
+        expect(sbB.reactor.backends.main.storage).toEqual({
+          kind: "path",
+          dataDir: "./.ph/b",
+        });
+        expect(launches[index].options.env).not.toHaveProperty(
+          "PH_REACTOR_DATABASE_URL",
+        );
+      }
+      expect(checks).toHaveLength(2);
+      expect(controller.get(one.id).database).toBe(one.database);
+      await controller.stop(one.id);
+      expect([...live]).toEqual([two.database]);
+      launches[1].ready();
+      await until(() => controller.get(two.id).status === "running");
+      launches[1].exit({ code: 1 });
+      await until(() => live.size === 0);
+    });
+
+    it("drops the database when the check or the launch fails", async () => {
+      const { server, made, live } = fakeDatabases();
+      const failing = create({
+        postgres: server,
+        check: () =>
+          Promise.resolve([
+            { path: "", message: "nope" } as unknown as HostIssue,
+          ]),
+      });
+      const error = await failing.controller
+        .startDraft(await postgresDraft())
+        .catch((e: unknown) => e);
+      expect(error).toMatchObject({ code: "check_failed" });
+      expect(made).toHaveBeenCalledTimes(1);
+      expect(live.size).toBe(0);
+      await failing.controller.dispose();
+
+      const { controller, launches } = create({ postgres: server });
+      const { id } = await controller.startDraft(await postgresDraft());
+      expect(live.size).toBe(1);
+      launches[0].fail(new Error("boom"));
+      await until(() => controller.get(id).status === "failed");
+      await until(() => live.size === 0);
+    });
+
+    it("hands out nothing when the env names a database, which wins", async () => {
+      const { server, made } = fakeDatabases();
+      const { controller, launches } = create({
+        postgres: server,
+        serverEnv: { PH_SWITCHBOARD_DATABASE_URL: "postgres://h/s" },
+      });
+      const started = await controller.startDraft(await postgresDraft());
+      expect(started.database).toBeUndefined();
+      expect(made).not.toHaveBeenCalled();
+      const sbA = hostFileOf(launches[0].options.projectRoot, "sb-a") as {
+        reactor: { backends: { main: { storage: unknown } } };
+      };
+      expect(sbA.reactor.backends.main.storage).toEqual({ kind: "postgres" });
+    });
+
+    it("checks a copy with the server's url, making no database", async () => {
+      const { server, made } = fakeDatabases();
+      const seen: unknown[] = [];
+      const { controller } = create({
+        postgres: server,
+        check: (input) => {
+          seen.push(hostFileOf(input.projectRoot, "sb-a"));
+          return Promise.resolve([]);
+        },
+      });
+      expect(await controller.checkDraft(await postgresDraft())).toEqual({
+        ruleIssues: [],
+        issues: [],
+      });
+      expect(seen).toMatchObject([
+        { reactor: { backends: { main: { storage: { url: SERVER } } } } },
+      ]);
+      expect(made).not.toHaveBeenCalled();
+    });
+
+    it("gives a host started in place its database through the env", async () => {
+      const { server, made, live } = fakeDatabases();
+      const { controller, launches, checks } = create({
+        postgres: server,
+        exportHost: (input) => Promise.resolve(soloExport(input.projectRoot)),
+      });
+      expect(
+        (await controller.check({ project: allowed, host: "solo" })).length,
+      ).toBe(0);
+      expect(checks[0].env.PH_REACTOR_DATABASE_URL).toBe(SERVER);
+      expect(made).not.toHaveBeenCalled();
+
+      const started = await controller.start({
+        project: allowed,
+        host: "solo",
+      });
+      const url = `postgres://u:p@db:5432/${started.database}`;
+      expect(checks[1].env.PH_REACTOR_DATABASE_URL).toBe(url);
+      expect(launches[0].options.env?.PH_REACTOR_DATABASE_URL).toBe(url);
+      await controller.stop(started.id);
+      expect(live.size).toBe(0);
+    });
+
+    it("refuses an in-place host whose other switchboards the env would move", async () => {
+      const { server, made } = fakeDatabases();
+      const duo = duoExport(allowed);
+      (duo.members["sb-a"] as { reactor: unknown }).reactor = {
+        backends: {
+          main: { kind: "in-process", storage: { kind: "postgres" } },
+        },
+      };
+      const { controller } = create({
+        postgres: server,
+        exportHost: () => Promise.resolve(duo),
+      });
+      const error = await controller
+        .start({ project: allowed, host: "duo" })
+        .catch((e: unknown) => e);
+      expect(error).toMatchObject({ code: "bad_request" });
+      expect((error as Error).message).toContain("b would keep its data there");
+      expect(made).not.toHaveBeenCalled();
     });
   });
 
