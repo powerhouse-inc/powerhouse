@@ -555,7 +555,7 @@ function storageRule(
           typeof readModel === "string" ? readModel : undefined,
         );
       }
-      if (kind !== "postgres" || storage.url !== undefined) continue;
+      if (kind !== "postgres" || storage.url) continue;
       if (!context.postgres && !envStored(member, context)) {
         report("capability", `${at}.kind`, REASONS.noPostgres);
       }
@@ -587,9 +587,10 @@ function resolvedDataDir(
 /** The block's own store: a Postgres url, or a folder. */
 function namedStore(backend: MemberBackend | undefined): boolean {
   const storage = isRecord(backend?.body.storage) ? backend.body.storage : {};
-  return backend?.storage === "postgres"
-    ? typeof storage.url === "string"
-    : storage.dataDir !== undefined;
+  // Truthy, as ph-run reads them: an empty url or folder names nothing.
+  return Boolean(
+    backend?.storage === "postgres" ? storage.url : storage.dataDir,
+  );
 }
 
 /** The switchboard keeps its data in the database the controller's env names. */
@@ -806,7 +807,8 @@ function storesOf(member: Member, env: HostEnv, context: Context): Store[] {
       controllerDb: true,
     };
   } else if (primary?.storage === "postgres") {
-    const url = typeof storage.url === "string" ? storage.url : undefined;
+    const url =
+      typeof storage.url === "string" && storage.url ? storage.url : undefined;
     reactor = {
       kind: "reactor",
       key: url ?? "postgres:controller",

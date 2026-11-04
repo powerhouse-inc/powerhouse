@@ -349,6 +349,22 @@ describe("validateDraft", () => {
       expect(issues(own, {}, BARE)).toEqual([]);
     });
 
+    it("counts an empty Postgres address as none, as ph-run does", () => {
+      const empty = draft({
+        [`${SB_REACTOR}.backends.main`]: {
+          kind: "in-process",
+          storage: { kind: "postgres", url: "" },
+        },
+      });
+      expect(issues(empty, {}, BARE)).toEqual([
+        [
+          "capability",
+          `${SB_REACTOR}.backends.main.storage.kind`,
+          REASONS.noPostgres,
+        ],
+      ]);
+    });
+
     it("takes the database the controller's env names instead", () => {
       for (const envDatabase of ["reactor", "switchboard"] as const) {
         expect(issues(draft(postgres), {}, { ...BARE, envDatabase })).toEqual(
