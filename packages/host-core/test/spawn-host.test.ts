@@ -13,6 +13,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { isPidAlive } from "../src/run-record.js";
 import {
+  SPAWN_STOPPING_NOTE,
   spawnHost,
   SpawnHostError,
   type SpawnedHost,
@@ -290,8 +291,9 @@ describe("spawnHost", () => {
     );
     expect(error.phase).toBe("timeout");
     expect(error.exit?.forced).toBe(false);
-    expect(error.outputTail).toContain("fake ph run");
-    expect(error.outputTail).not.toContain("fake: shutting down");
+    const [before, after] = error.outputTail.split(SPAWN_STOPPING_NOTE);
+    expect(before).toContain("fake ph run");
+    expect(after).toContain("fake: shutting down");
   });
 
   it.skipIf(process.platform === "win32")(

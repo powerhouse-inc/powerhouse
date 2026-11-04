@@ -53,6 +53,9 @@ export interface SpawnedHost {
 
 export type SpawnHostPhase = "exited" | "timeout" | "aborted";
 
+/** The tail line before which a timed-out or aborted run's output is its own. */
+export const SPAWN_STOPPING_NOTE = "spawnHost: stopping it";
+
 export class SpawnHostError extends Error {
   constructor(
     message: string,
@@ -340,15 +343,15 @@ export async function spawnHost(
     }
     if (aborted || Date.now() >= deadline) {
       const phase: SpawnHostPhase = aborted ? "aborted" : "timeout";
-      // On a timeout, where it got to, not what it printed while being stopped.
-      const seen = tail;
+      const ended = tail === "" || tail.endsWith("\n") ? "" : "\n";
+      tail = (tail + `${ended}${SPAWN_STOPPING_NOTE}\n`).slice(-TAIL_BYTES);
       const stopped = await stop();
       throw new SpawnHostError(
         phase === "aborted"
           ? `spawnHost: aborted before ph run ${options.host} was ready.`
           : `spawnHost: ph run ${options.host} wrote no run record within ${readyTimeoutMs} ms.`,
         phase,
-        seen,
+        tail,
         stopped,
       );
     }
