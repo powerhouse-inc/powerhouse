@@ -6,6 +6,7 @@ import { FOLDER_REASONS, SETTINGS_ELSEWHERE } from "./policy.js";
 import type { HostRulesContext, HostEnv } from "./schema.js";
 import { applySetters } from "./setters.js";
 import {
+  controllerDatabaseBackends,
   onOff,
   REASONS,
   shapeWording,
@@ -283,13 +284,7 @@ describe("validateDraft", () => {
             storage: { kind: "postgres", url: "postgres://x/db" },
           },
         },
-        [
-          [
-            "postgres",
-            `${SB_REACTOR}.backends.main.storage.url`,
-            REASONS.postgresUrl,
-          ],
-        ],
+        [],
       ],
       [
         "Connect in a folder",
@@ -343,6 +338,24 @@ describe("validateDraft", () => {
         ],
       ]);
     });
+
+    it("takes a Postgres address the host names, with no controller database", () => {
+      const own = draft({
+        [`${SB_REACTOR}.backends.main`]: {
+          kind: "in-process",
+          storage: { kind: "postgres", url: "postgres://x/db" },
+        },
+      });
+      expect(issues(own, {}, BARE)).toEqual([]);
+    });
+
+    it("takes the database the controller's env names instead", () => {
+      for (const envDatabase of ["reactor", "switchboard"] as const) {
+        expect(issues(draft(postgres), {}, { ...BARE, envDatabase })).toEqual(
+          [],
+        );
+      }
+    });
   });
 
   describe("background workers", () => {
@@ -357,6 +370,25 @@ describe("validateDraft", () => {
       ]);
       expect(issues(stack(), workers("0"))).toEqual([]);
       expect(issues(draft(postgres), workers("2"))).toEqual([]);
+    });
+
+    it("counts the database the controller's env names as Postgres", () => {
+      const env = (envDatabase: "reactor" | "switchboard") => ({
+        ...FULL,
+        envDatabase,
+      });
+      expect(issues(stack(), workers("2"), env("reactor"))).toEqual([]);
+      expect(issues(stack(), workers("2"), env("switchboard"))).toEqual([]);
+      const folder = draft({
+        [`${SB_REACTOR}.backends.main`]: {
+          kind: "in-process",
+          storage: { kind: "path", dataDir: ".ph/reactor-storage" },
+        },
+      });
+      expect(issues(folder, workers("2"), env("reactor"))).toEqual([]);
+      expect(issues(folder, workers("2"), env("switchboard"))).toEqual([
+        ["workers", `env.REACTOR_WORKERS`, REASONS.workersStorage],
+      ]);
     });
 
     it("keeps the search data folder apart from Postgres storage", () => {
@@ -566,6 +598,43 @@ describe("validateDraft", () => {
         ],
       ]);
       expect(issues(draft(postgres, second(own)))).toEqual([]);
+    });
+
+    it("puts every switchboard in the database the controller's env names", () => {
+      expect(
+        issues(second(own), {}, { ...FULL, envDatabase: "reactor" }),
+      ).toEqual([
+        [
+          "storage",
+          `${SB2_MAIN}.storage.kind`,
+          "sb2 and sb would both keep their data in the controller's Postgres database, so each would change the other's documents. Only one switchboard in a host can use it.",
+        ],
+      ]);
+      expect(
+        issues(second(own), {}, { ...FULL, envDatabase: "switchboard" }),
+      ).toEqual([]);
+    });
+
+    it("names the backends that need a database from the controller", () => {
+      const backends = (envelope: HostExport, context = FULL) =>
+        controllerDatabaseBackends(
+          validateDraft({ envelope }, context).members,
+          context,
+        );
+      expect(backends(draft(postgres, second(own)))).toEqual([
+        `${SB_REACTOR}.backends.main`,
+      ]);
+      expect(backends(second(own))).toEqual([]);
+      expect(
+        backends(draft(postgres), { ...FULL, envDatabase: "switchboard" }),
+      ).toEqual([]);
+      const named = draft({
+        [`${SB_REACTOR}.backends.main`]: {
+          kind: "in-process",
+          storage: { kind: "postgres", url: "postgres://x/db" },
+        },
+      });
+      expect(backends(named)).toEqual([]);
     });
 
     it("refuses two switchboards on one port", () => {

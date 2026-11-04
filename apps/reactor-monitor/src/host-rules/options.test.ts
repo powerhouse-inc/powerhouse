@@ -150,6 +150,32 @@ describe("hostOptions", () => {
     ).toEqual(off(REASONS.noPostgres));
   });
 
+  it("shows a switchboard in the database the controller's env names", () => {
+    const env = { ...BARE, envDatabase: "reactor" as const };
+    const status = statuses({ envelope: stack() }, env);
+    expect(status(`${SB}:storage:main:postgres`)).toEqual(SELECTED);
+    expect(status(`${SB}:storage:main:path`)).toEqual(
+      off(SETTING_REASONS.databaseFromEnv),
+    );
+    expect(status(`${SB}:storage:main:memory`)).toEqual(
+      off(SETTING_REASONS.databaseFromEnv),
+    );
+    expect(status(`${SB}:workers:2`)).toEqual(ON);
+    const folder = {
+      envelope: withSetters({
+        [SB_MAIN]: {
+          kind: "in-process",
+          storage: { kind: "path", dataDir: ".ph/reactor-storage" },
+        },
+      }),
+    };
+    const filled = statuses(folder, { ...BARE, envDatabase: "switchboard" });
+    expect(filled(`${SB}:storage:main:path`)).toEqual(SELECTED);
+    expect(statuses(folder, env)(`${SB}:storage:main:path`)).toEqual(
+      off(SETTING_REASONS.databaseFromEnv),
+    );
+  });
+
   it("keeps a folder's path when switching to it and drops it for Postgres", () => {
     const draft = { envelope: stack() };
     const path = option(draft, `${SB}:storage:main:path`);

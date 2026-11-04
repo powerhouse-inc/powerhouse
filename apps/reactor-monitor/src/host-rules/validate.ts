@@ -27,6 +27,7 @@ import {
   switchboardSettings,
   valueAt,
   type Member,
+  type MemberBackend,
 } from "./members.ts";
 import {
   checkEnvKey,
@@ -45,6 +46,8 @@ import {
   type HostRulesContext,
   type RuleName,
 } from "./schema.ts";
+
+type Context = z.output<typeof hostRulesContextSchema>;
 
 const STORAGE_KINDS = {
   controller: ["path", "postgres"],
@@ -71,8 +74,6 @@ export const REASONS = {
   noController:
     "Starting a switchboard needs the monitor's controller, which isn't running.",
   noPostgres: "The controller has no Postgres database.",
-  postgresUrl:
-    "The Postgres connection comes from the controller's config. Remove the address.",
   workersDev:
     "Turn off hot reload to use background workers. Hot-reloaded document models can't move to a worker.",
   workersTrust:
@@ -480,7 +481,7 @@ function ladderRule(members: Member[], env: HostEnv, report: Report): void {
 function storageRule(
   members: Member[],
   env: HostEnv,
-  context: z.output<typeof hostRulesContextSchema>,
+  context: Context,
   report: Report,
 ): void {
   for (const member of members) {
@@ -554,11 +555,8 @@ function storageRule(
           typeof readModel === "string" ? readModel : undefined,
         );
       }
-      if (kind !== "postgres") continue;
-      if (storage.url !== undefined) {
-        report("postgres", `${at}.url`, REASONS.postgresUrl);
-      }
-      if (!context.postgres) {
+      if (kind !== "postgres" || storage.url !== undefined) continue;
+      if (!context.postgres && !envStored(member, context)) {
         report("capability", `${at}.kind`, REASONS.noPostgres);
       }
     }
@@ -586,10 +584,42 @@ function resolvedDataDir(
   return optional ? {} : { unset: name };
 }
 
+/** The block's own store: a Postgres url, or a folder. */
+function namedStore(backend: MemberBackend | undefined): boolean {
+  const storage = isRecord(backend?.body.storage) ? backend.body.storage : {};
+  return backend?.storage === "postgres"
+    ? typeof storage.url === "string"
+    : storage.dataDir !== undefined;
+}
+
+/** The switchboard keeps its data in the database the controller's env names. */
+export function envStored(member: Member, context: Context): boolean {
+  if (member.role !== "switchboard" || member.placementMissing) return false;
+  if (context.envDatabase === "reactor") return true;
+  if (context.envDatabase !== "switchboard") return false;
+  return !namedStore(member.backends.find((backend) => backend.primary));
+}
+
+/** Each switchboard's primary backend that needs a database from the controller. */
+export function controllerDatabaseBackends(
+  members: Member[],
+  context: Context,
+): string[] {
+  const backends = members.flatMap((member) => {
+    if (member.role !== "switchboard" || envStored(member, context)) return [];
+    if (member.placementMissing) return [];
+    const primary = member.backends.find((backend) => backend.primary);
+    return primary?.storage === "postgres" && !namedStore(primary)
+      ? [primary.at]
+      : [];
+  });
+  return [...new Set(backends)];
+}
+
 /** The switchboard's database can only be shared when it is in Postgres. */
-function sharedDb(member: Member): boolean {
+function sharedDb(member: Member, context: Context): boolean {
   const primary = member.backends.find((backend) => backend.primary);
-  return primary?.storage === "postgres";
+  return primary?.storage === "postgres" || envStored(member, context);
 }
 
 type WorkerSetting<T> = {
@@ -660,13 +690,13 @@ export function workerSettings(
 function workersRule(
   members: Member[],
   env: HostEnv,
-  context: z.output<typeof hostRulesContextSchema>,
+  context: Context,
   report: Report,
 ): void {
   for (const member of members) {
     if (member.role !== "switchboard") continue;
     // A missing primary backend is reported once, as the placement.
-    const unshared = !member.placementMissing && !sharedDb(member);
+    const unshared = !member.placementMissing && !sharedDb(member, context);
     const { count, projection } = workerSettings(member, env);
     if (count.value !== undefined && count.value > 0) {
       if (unshared) report("workers", count.at, REASONS.workersStorage);
@@ -752,7 +782,7 @@ function storeKey(value: string): string {
 }
 
 /** Where a switchboard keeps its documents and its search data, as it boots. */
-function storesOf(member: Member, env: HostEnv): Store[] {
+function storesOf(member: Member, env: HostEnv, context: Context): Store[] {
   const primary = member.placementMissing
     ? undefined
     : member.backends.find((backend) => backend.primary);
@@ -765,7 +795,14 @@ function storesOf(member: Member, env: HostEnv): Store[] {
       ? resolvedDataDir(env, storage.dataDir).value
       : undefined;
   let reactor: Store;
-  if (primary?.storage === "postgres") {
+  if (envStored(member, context)) {
+    reactor = {
+      kind: "reactor",
+      key: "postgres:env",
+      at: primary ? `${primary.at}.storage.kind` : member.path,
+      controllerDb: true,
+    };
+  } else if (primary?.storage === "postgres") {
     const url = typeof storage.url === "string" ? storage.url : undefined;
     reactor = {
       kind: "reactor",
@@ -823,7 +860,12 @@ function storeMessage(member: Member, other: Member, store: Store): string {
 }
 
 /** Each switchboard needs its own store and search data folder. */
-function storesRule(members: Member[], env: HostEnv, report: Report): void {
+function storesRule(
+  members: Member[],
+  env: HostEnv,
+  context: Context,
+  report: Report,
+): void {
   const switchboards = members.filter(
     (member) => member.role === "switchboard",
   );
@@ -844,7 +886,7 @@ function storesRule(members: Member[], env: HostEnv, report: Report): void {
         `${member.key} and ${twin.key} share one set of reactor settings, so they would keep their data in the same place, which corrupts both. Give ${member.key} its own reactor settings.`,
       );
     }
-    for (const store of storesOf(member, env)) {
+    for (const store of storesOf(member, env, context)) {
       const other = claims.get(store.key);
       if (!other) {
         claims.set(store.key, member);
@@ -910,7 +952,7 @@ export function validateDraft(
   protocolRule(draft.envelope, members, env, report);
   ladderRule(members, env, report);
   storageRule(members, env, context, report);
-  storesRule(members, env, report);
+  storesRule(members, env, context, report);
   portRule(members, context.controller, report);
   configRule(members, env, report);
   workersRule(members, env, context, report);

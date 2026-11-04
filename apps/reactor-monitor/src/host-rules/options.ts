@@ -44,11 +44,14 @@ import {
 import { applySetters } from "./setters.js";
 import {
   REASONS,
+  envStored,
   validateDraft,
   workerSettings,
   type Validation,
 } from "./validate.js";
 import type { z } from "zod";
+
+type Context = z.output<typeof hostRulesContextSchema>;
 
 export type OptionGroup =
   | "access"
@@ -109,6 +112,8 @@ export const ADD_REASONS = {
 export const SETTING_REASONS = {
   fromEnv:
     "The host's environment sets this for every switchboard, which overrides each one's own choice. Remove it from the environment to choose here.",
+  databaseFromEnv:
+    "The monitor's own environment names the Postgres database this switchboard keeps its data in, which overrides the choice here.",
 } as const;
 
 export const HOT_RELOAD_REASONS = {
@@ -514,10 +519,24 @@ export function applyOption(
   return { draft: { ...draft, envelope: applied.envelope } };
 }
 
+/** A switchboard store option the controller's env database overrides. */
+function envStoredOption(
+  option: HostOption,
+  member: Member | undefined,
+  context: Context,
+): boolean {
+  if (option.group !== "storage" || !member || !envStored(member, context)) {
+    return false;
+  }
+  const backend = member.backends.find((b) => b.at === option.backend);
+  return !backend || backend.primary;
+}
+
 function isSelected(
   option: HostOption,
   members: Member[],
   env: HostEnv,
+  context: Context,
 ): boolean {
   const member = members.find((candidate) => candidate.path === option.member);
   const backend = member?.backends.find(
@@ -540,6 +559,9 @@ function isSelected(
         })
       );
     case "storage": {
+      if (envStoredOption(option, member, context)) {
+        return option.value === "postgres";
+      }
       const fallback =
         member?.role === "switchboard" && (!backend || backend.primary)
           ? "path"
@@ -728,7 +750,8 @@ function judge(
   before: Set<string>,
   devHost: boolean,
 ): OptionStatus {
-  const selected = isSelected(option, base.members, draft.env ?? {});
+  const member = base.members.find((m) => m.path === option.member);
+  const selected = isSelected(option, base.members, draft.env ?? {}, context);
   if (selected) return { ...option, selected, enabled: true };
   const ruled =
     option.blocked ??
@@ -738,7 +761,9 @@ function judge(
         ? HOT_RELOAD_REASONS.hostWide
         : setByEnv(option, base.members, draft.env ?? {})
           ? SETTING_REASONS.fromEnv
-          : undefined);
+          : envStoredOption(option, member, context)
+            ? SETTING_REASONS.databaseFromEnv
+            : undefined);
   if (ruled) return { ...option, selected, enabled: false, reason: ruled };
   const candidate = applyOption(draft, option);
   if (candidate.refused) {
