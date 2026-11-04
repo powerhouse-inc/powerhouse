@@ -101,7 +101,6 @@ function writePending(
   }
 }
 
-/** `url`: a switchboard's first drive address; `app`: a Connect's page. */
 /** A copy that began and then failed; its message already says so. */
 export class StartFailedError extends Error {
   constructor(message: string) {
@@ -110,10 +109,13 @@ export class StartFailedError extends Error {
   }
 }
 
+/** `url`: a switchboard's first drive address; `app`: a Connect's page;
+ * `agent`: an assistant's API. */
 export type RunReactor = {
   name: string;
   url?: string;
   app?: string;
+  agent?: string;
   /** A switchboard's drives by declared slug. */
   drives?: InstanceOutputs["drives"];
 };
@@ -204,12 +206,13 @@ export function monitoringSetOf(
 
 export function reactorsOf(instance: Instance): RunReactor[] {
   return [
-    ...(instance.outputs || instance.app
+    ...(instance.outputs || instance.app || instance.agent
       ? [
           {
             name: instance.host,
             url: instance.outputs && driveAddressOf(instance.outputs),
             app: instance.app,
+            agent: instance.agent,
           },
         ]
       : []),
@@ -217,6 +220,7 @@ export function reactorsOf(instance: Instance): RunReactor[] {
       name,
       url: member.outputs && driveAddressOf(member.outputs),
       app: member.app,
+      agent: member.agent,
       ...(member.outputs ? { drives: member.outputs.drives } : {}),
     })),
   ];

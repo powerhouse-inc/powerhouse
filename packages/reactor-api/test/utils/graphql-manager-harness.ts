@@ -153,6 +153,7 @@ export type HarnessOptions = HarnessClients & {
   attachments?: IAttachmentClientProvider;
   inspection?: IReactorInspectionSource;
   reportError?: (error: unknown) => void;
+  gatewayAdapter?: IGatewayAdapter<Context>;
 };
 
 export function makeHarness(options: HarnessOptions = {}) {
@@ -182,7 +183,7 @@ export function makeHarness(options: HarnessOptions = {}) {
     syncManager: {} as ISyncManager,
     logger: options.logger ?? makeHarnessLogger(),
     httpAdapter,
-    gatewayAdapter,
+    gatewayAdapter: options.gatewayAdapter ?? gatewayAdapter,
     featureFlags: {
       enableDocumentModelSubgraphs:
         options.enableDocumentModelSubgraphs ?? false,

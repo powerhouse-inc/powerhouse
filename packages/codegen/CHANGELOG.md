@@ -1,3 +1,19 @@
+## 6.2.3-dev.93 (2026-11-04)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.92 (2026-11-04)
+
+### 🚀 Features
+
+- **ph-cli:** add experimental ph model check and inspect ([9973f75d0d](https://github.com/powerhouse-inc/powerhouse/commit/9973f75d0d))
+- **shared,codegen:** declare model command args and export the import adapter ([610fe0417a](https://github.com/powerhouse-inc/powerhouse/commit/610fe0417a))
+- **document-model:** load projects for check and inspect ([a018f5f129](https://github.com/powerhouse-inc/powerhouse/commit/a018f5f129))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.91 (2026-11-03)
 
 ### 🚀 Features

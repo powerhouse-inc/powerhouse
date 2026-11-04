@@ -414,10 +414,42 @@ describe("shell projection", () => {
     );
     expect(git).toContain('git = "https://g/x"');
     expect(git).toContain('tag = "v2"');
-    // omitted shell → crates.io version default
+    // omitted shell → crates.io version default, a floor a lock still on
+    // 0.1.0 (which can't run a stack from ph-run) doesn't satisfy
     expect(projectInto().read("Cargo.toml")).toMatch(
-      /ph-desktop-shell = "0\.1"/,
+      /ph-desktop-shell = "0\.1\.1"/,
     );
+  });
+
+  it("gives the installers the project's version, as the numbers Windows takes", () => {
+    const versionOf = (version?: string) => {
+      const dir = tempDir("ph-proj-");
+      const app = appJsonSchema.parse(validApp);
+      const { shellDir } = projectShell({
+        hostDir: dir,
+        app,
+        connectPort: 6494,
+        version,
+      });
+      return (
+        JSON.parse(
+          readFileSync(path.join(shellDir, "tauri.conf.json"), "utf8"),
+        ) as { version: string }
+      ).version;
+    };
+    expect(versionOf("1.0.7")).toBe("1.0.7");
+    expect(versionOf("1.2.3-dev.4")).toBe("1.2.3");
+    expect(versionOf(undefined)).toBe("0.1.0");
+  });
+
+  it("signs the macOS bundle ad hoc, without the runtime node can't JIT under", () => {
+    const conf = JSON.parse(projectInto().read("tauri.conf.json")) as {
+      bundle: { macOS: { signingIdentity: string; hardenedRuntime: boolean } };
+    };
+    expect(conf.bundle.macOS).toEqual({
+      signingIdentity: "-",
+      hardenedRuntime: false,
+    });
   });
 });
 

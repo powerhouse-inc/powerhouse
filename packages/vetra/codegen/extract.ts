@@ -11,8 +11,6 @@
 import {
   generateId,
   type DocumentModelDocument,
-  type DocumentModelGlobalState,
-  type DocumentModelPHState,
 } from "@powerhousedao/shared/document-model";
 import {
   getAppMetadata,
@@ -23,11 +21,11 @@ import {
   getProcessorMetadata,
   getSubgraphDirNames,
   getSubgraphMetadata,
-  loadDocumentModelInDir,
 } from "@powerhousedao/codegen/utils";
-import { documentModelDocumentModelModule } from "document-model";
 import { readdirSync } from "node:fs";
 import type { Project } from "ts-morph";
+
+import { extractDocumentModelDocuments } from "./schema-first/extract-document-models.js";
 
 const isDefined = <T>(v: T | undefined | null): v is T => v != null;
 
@@ -142,30 +140,6 @@ export function extractSubgraphDocuments(
       doc.header.name = name;
       return doc;
     });
-}
-
-export function extractDocumentModelDocuments(
-  project: Project,
-): DocumentModelDocument[] {
-  const { directory: documentModelsDir } = getOrCreateDirectory(
-    project,
-    "document-models",
-  );
-  return readdirSync(documentModelsDir.getPath(), { withFileTypes: true })
-    .map(loadDocumentModelInDir)
-    .filter(isDefined)
-    .map(buildDocumentModelDocument);
-}
-
-function buildDocumentModelDocument(
-  globalState: DocumentModelGlobalState,
-): DocumentModelDocument {
-  const state = documentModelDocumentModelModule.utils.createState({
-    global: globalState,
-  } as Partial<DocumentModelPHState>);
-  const doc = documentModelDocumentModelModule.utils.createDocument(state);
-  doc.header.name = globalState.name;
-  return doc;
 }
 
 export type ExtractedDocuments = {

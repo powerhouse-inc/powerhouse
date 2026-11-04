@@ -5,6 +5,7 @@ import type {
   DocumentModelPHState,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
+import { definitionModuleMismatch } from "../../compiler/module-definition.js";
 import { checkDocumentModelDefinitionShape } from "../../compiler/wire-shape.js";
 import {
   rejectionReceived,
@@ -164,27 +165,14 @@ function artifact(
   }
   const definition = module.definition as DocumentModelDefinition;
 
-  if (definition.model.documentType !== documentType) {
-    return invalid(
-      collector,
-      [...path, "definition", "model", "documentType"],
-      "The structured definition and the stored model describe different document types.",
-      documentType,
-      definition.model.documentType,
-      "Materialize the module and its definition from the same declaration.",
-    );
-  }
-  if (!definition.specifications.some((entry) => entry.version === version)) {
-    return invalid(
-      collector,
-      [...path, "definition", "specifications"],
-      `The specification history carries no version ${version}, which is the version this module serves.`,
-      `a specification for version ${version}`,
-      definition.specifications
-        .map((entry) => String(entry.version))
-        .join(", "),
-      "Compose the versions with defineDocumentModelFamily so every module carries the complete history.",
-    );
+  const mismatch = definitionModuleMismatch(
+    definition,
+    { documentType, version },
+    [...path, "definition"],
+  );
+  if (mismatch !== undefined) {
+    collector.add(mismatch);
+    return undefined;
   }
   return {
     kind: "powerhouse.document-model-artifact",

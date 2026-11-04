@@ -253,6 +253,28 @@ describe("Use it, wired", () => {
     expect(startButton(view)).toHaveProperty("disabled", true);
   });
 
+  it("lists a running assistant with its agent API address", async () => {
+    const { storage } = await storageWith(projectBase(hostExport("assistant")));
+    const assistant: Instance = {
+      ...instance("running"),
+      host: "assistant",
+      members: undefined,
+      agent: "http://127.0.0.1:4920/v1",
+    };
+    const wiring = setup({
+      startDraft: () => Promise.resolve(instance("starting")),
+      get: () => Promise.resolve(assistant),
+    });
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await started(view);
+
+    const running = within(view.getByLabelText("Running copy"));
+    expect(running.getByText("assistant")).toBeTruthy();
+    expect(running.getByText("http://127.0.0.1:4920/v1")).toBeTruthy();
+    expect(running.queryByRole("link", { name: "Open Connect" })).toBeNull();
+    expect(running.getByRole("status").textContent).toBe("Running a copy.");
+  });
+
   it("stops the copy through the managed hook", async () => {
     const { storage } = await storageWith(projectBase(stack()));
     const wiring = setup();

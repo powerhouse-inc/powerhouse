@@ -12,7 +12,6 @@
  */
 import {
   generateApp,
-  generateDocumentModel,
   generateEditor,
   generateProcessor,
   generateSubgraph,
@@ -37,14 +36,6 @@ import type {
   ProcessorModuleDocument,
 } from "../document-models/processor-module/v1/gen/index.js";
 import type { SubgraphModuleDocument } from "../document-models/subgraph-module/v1/gen/index.js";
-import type { DocumentModelDocument } from "@powerhousedao/shared/document-model";
-
-export async function generateDocumentModelFromDocument(
-  doc: DocumentModelDocument,
-  project: Project,
-): Promise<void> {
-  await generateDocumentModel(doc.state.global, project);
-}
 
 export async function generateEditorFromDocument(
   doc: DocumentEditorDocument,

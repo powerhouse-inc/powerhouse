@@ -106,12 +106,14 @@ export function isExpectedLoaderMiss(
   if (error.message.startsWith("Invalid package name:")) return true;
   if (code === "ERR_MODULE_NOT_FOUND") {
     // Match `'pkg'`, `"pkg"`, `'pkg/...'`, or `"pkg/..."`. Anything else is a
-    // transitive resolution failure inside a successfully-fetched bundle.
-    return (
-      error.message.includes(`'${pkg}'`) ||
-      error.message.includes(`"${pkg}"`) ||
-      error.message.includes(`'${pkg}/`) ||
-      error.message.includes(`"${pkg}/`)
+    // transitive resolution failure inside a successfully-fetched bundle. A
+    // local package is an absolute path, which Windows names with backslashes
+    // (`'D:\stack\scalars'`); no package name has one.
+    const slashed = (text: string) => text.replaceAll("\\", "/");
+    const message = slashed(error.message);
+    const name = slashed(pkg);
+    return [`'${name}'`, `"${name}"`, `'${name}/`, `"${name}/`].some((quoted) =>
+      message.includes(quoted),
     );
   }
   return false;

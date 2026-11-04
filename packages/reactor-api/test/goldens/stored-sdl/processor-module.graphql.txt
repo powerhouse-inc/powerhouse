@@ -1,0 +1,434 @@
+# generated types
+
+scalar Unknown
+
+scalar DateTime
+
+scalar Address
+
+scalar AttachmentRef
+
+scalar Amount_Tokens
+
+scalar EthereumAddress
+
+scalar EmailAddress
+
+scalar Amount_Percentage
+
+scalar Date
+
+scalar URL
+
+scalar Amount_Money
+
+scalar OLabel
+
+scalar Currency
+
+scalar PHID
+
+scalar OID
+
+scalar Amount_Fiat
+
+scalar Amount_Currency
+
+scalar Amount_Crypto
+
+scalar Amount
+
+scalar Upload
+
+scalar JSONObject
+
+type PHOperationContext {
+  signer: Signer
+}
+
+type Signer {
+  user: SignerUser
+  app: SignerApp
+  signatures: [String!]!
+}
+
+type SignerUser {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+type SignerApp {
+  name: String!
+  key: String!
+}
+
+type Operation {
+  id: String!
+  type: String!
+  index: Int!
+  timestampUtcMs: DateTime!
+  hash: String!
+  skip: Int
+  inputText: String
+  error: String
+  context: PHOperationContext
+}
+
+interface IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+"""
+Configuration for a processor contributed by the package. A processor receives
+operations from documents of matching types and runs server-side logic (e.g.
+building a read model, indexing, syncing to an external system).
+"""
+type ProcessorModule_ProcessorModuleState {
+  """
+  Display name of the processor. Also determines the generated folder name under `processors/`.
+  """
+  name: String!
+  """
+  Processor implementation kind: `analytics` or `relational`. Determines which scaffold codegen emits; codegen generates nothing for any other value.
+  """
+  type: String!
+  """
+  Document types this processor subscribes to. Each entry has a stable id so it can be removed individually.
+  """
+  documentTypes: [ProcessorModule_DocumentTypeItem!]!
+  """
+  Lifecycle status. While DRAFT the processor definition is editable and codegen is skipped; switching to CONFIRMED triggers scaffold generation.
+  """
+  status: ProcessorModule_StatusType!
+  """
+  Drive-app names this processor is attached to. The processor runs in the context of each listed app.
+  """
+  processorApps: [String!]!
+}
+
+"""
+A document type id (e.g. 'my-org/invoice') attached to the processor with a stable entry id.
+"""
+type ProcessorModule_DocumentTypeItem {
+  """Stable identifier for the entry; used to remove it."""
+  id: OID!
+  """Document type id this processor subscribes to."""
+  documentType: String!
+}
+
+"""
+Lifecycle status of a module definition.
+- DRAFT: still being edited; codegen does not run.
+- CONFIRMED: locked in; codegen produces the corresponding scaffold.
+"""
+enum ProcessorModule_StatusType {
+  DRAFT
+  CONFIRMED
+}
+
+type ProcessorModule implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  initialState: ProcessorModule_ProcessorModuleState!
+  state: ProcessorModule_ProcessorModuleState!
+  stateJSON: JSONObject
+}
+
+type GqlDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type DriveDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+# legacy API
+
+"""Queries: ProcessorModule Document"""
+type ProcessorModuleQueries {
+  getDocument(docId: PHID!, driveId: PHID): ProcessorModule
+  getDocuments(driveId: String!): [ProcessorModule!]
+}
+
+type Query {
+  ProcessorModule: ProcessorModuleQueries
+}
+
+"""Mutations: ProcessorModule"""
+type Mutation {
+  ProcessorModule_createDocument(name: String!, driveId: String): String
+  ProcessorModule_setProcessorName(driveId: String, docId: PHID, input: ProcessorModule_SetProcessorNameInput): Int
+  ProcessorModule_setProcessorType(driveId: String, docId: PHID, input: ProcessorModule_SetProcessorTypeInput): Int
+  ProcessorModule_addDocumentType(driveId: String, docId: PHID, input: ProcessorModule_AddDocumentTypeInput): Int
+  ProcessorModule_removeDocumentType(driveId: String, docId: PHID, input: ProcessorModule_RemoveDocumentTypeInput): Int
+  ProcessorModule_addProcessorApp(driveId: String, docId: PHID, input: ProcessorModule_AddProcessorAppInput): Int
+  ProcessorModule_removeProcessorApp(driveId: String, docId: PHID, input: ProcessorModule_RemoveProcessorAppInput): Int
+  ProcessorModule_setProcessorStatus(driveId: String, docId: PHID, input: ProcessorModule_SetProcessorStatusInput): Int
+}
+
+"""Module: BaseOperations"""
+input ProcessorModule_SetProcessorNameInput {
+  name: String!
+}
+
+input ProcessorModule_SetProcessorTypeInput {
+  type: String!
+}
+
+input ProcessorModule_AddDocumentTypeInput {
+  id: OID!
+  documentType: String!
+}
+
+input ProcessorModule_RemoveDocumentTypeInput {
+  id: OID!
+}
+
+input ProcessorModule_AddProcessorAppInput {
+  processorApp: String!
+}
+
+input ProcessorModule_RemoveProcessorAppInput {
+  processorApp: String!
+}
+
+input ProcessorModule_SetProcessorStatusInput {
+  status: ProcessorModule_StatusType!
+}
+
+# new API
+
+scalar Unknown
+
+scalar DateTime
+
+scalar Address
+
+scalar AttachmentRef
+
+scalar Amount_Tokens
+
+scalar EthereumAddress
+
+scalar EmailAddress
+
+scalar Amount_Percentage
+
+scalar Date
+
+scalar URL
+
+scalar Amount_Money
+
+scalar OLabel
+
+scalar Currency
+
+scalar PHID
+
+scalar OID
+
+scalar Amount_Fiat
+
+scalar Amount_Currency
+
+scalar Amount_Crypto
+
+scalar Amount
+
+scalar Upload
+
+scalar JSONObject
+
+type Revision {
+  scope: String!
+  revision: Int!
+}
+
+"""Hash configuration for document state"""
+type ProcessorModule_PHHashConfig {
+  algorithm: String!
+  encoding: String!
+}
+
+"""Document scope state (same for all document types)"""
+type ProcessorModule_PHDocumentScopeState {
+  version: Int!
+  hash: ProcessorModule_PHHashConfig!
+  isDeleted: Boolean
+  deletedAtUtcIso: String
+  deletedBy: String
+  deletionReason: String
+}
+
+"""Full state with all scopes for ProcessorModule"""
+type ProcessorModule_FullState {
+  auth: JSONObject!
+  document: ProcessorModule_PHDocumentScopeState!
+  global: ProcessorModule_ProcessorModuleState!
+  local: JSONObject!
+}
+
+input ProcessorModule_ViewFilterInput {
+  branch: String
+  scopes: [String!]
+}
+
+input ProcessorModule_PagingInput {
+  limit: Int
+  offset: Int
+  cursor: String
+}
+
+input ProcessorModule_SearchFilterInput {
+  parentId: String
+  identifiers: [String!] @deprecated(reason: "Ignored. Filter by parentId.")
+}
+
+"""
+Mutation result type for ProcessorModule operations with typed state.
+Matches ReactorSubgraph PHDocument pattern with revisionsList.
+"""
+type ProcessorModuleMutationResult {
+  id: String!
+  slug: String
+  preferredEditor: String
+  name: String!
+  documentType: String!
+  state: ProcessorModule_FullState!
+  revisionsList: [Revision!]!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+}
+
+"""Document with children for ProcessorModule"""
+type ProcessorModule_DocumentWithChildren {
+  document: ProcessorModuleMutationResult!
+  childIds: [String!]!
+}
+
+"""Paginated result type for ProcessorModule documents"""
+type ProcessorModule_DocumentResultPage {
+  items: [ProcessorModuleMutationResult!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+"""Queries: ProcessorModule Document"""
+type ProcessorModuleQueries {
+  """Get a specific ProcessorModule document by identifier"""
+  document(idOrSlug: String, identifier: String @deprecated(reason: "Use idOrSlug."), view: ProcessorModule_ViewFilterInput): ProcessorModule_DocumentWithChildren
+  """Get all ProcessorModule documents (paged)"""
+  documents(paging: ProcessorModule_PagingInput): ProcessorModule_DocumentResultPage!
+  """Find ProcessorModule documents by search criteria"""
+  findDocuments(search: ProcessorModule_SearchFilterInput, view: ProcessorModule_ViewFilterInput, paging: ProcessorModule_PagingInput): ProcessorModule_DocumentResultPage!
+  """Get outgoing relationships of a ProcessorModule document"""
+  documentOutgoingRelationships(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), relationshipType: String!, view: ProcessorModule_ViewFilterInput, paging: ProcessorModule_PagingInput): ProcessorModule_DocumentResultPage!
+  """Get incoming relationships to a ProcessorModule document"""
+  documentIncomingRelationships(targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, view: ProcessorModule_ViewFilterInput, paging: ProcessorModule_PagingInput): ProcessorModule_DocumentResultPage!
+}
+
+"""Mutations: ProcessorModule"""
+type ProcessorModuleMutations {
+  createDocument(name: String!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug."), slug: String, preferredEditor: String, initialState: ProcessorModule_InitialStateInput): ProcessorModuleMutationResult!
+  createEmptyDocument(parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")): ProcessorModuleMutationResult!
+  setProcessorName(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ProcessorModule_SetProcessorNameInput!): ProcessorModuleMutationResult!
+  setProcessorNameAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ProcessorModule_SetProcessorNameInput!): String!
+  setProcessorType(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ProcessorModule_SetProcessorTypeInput!): ProcessorModuleMutationResult!
+  setProcessorTypeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ProcessorModule_SetProcessorTypeInput!): String!
+  addDocumentType(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ProcessorModule_AddDocumentTypeInput!): ProcessorModuleMutationResult!
+  addDocumentTypeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ProcessorModule_AddDocumentTypeInput!): String!
+  removeDocumentType(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ProcessorModule_RemoveDocumentTypeInput!): ProcessorModuleMutationResult!
+  removeDocumentTypeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ProcessorModule_RemoveDocumentTypeInput!): String!
+  addProcessorApp(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ProcessorModule_AddProcessorAppInput!): ProcessorModuleMutationResult!
+  addProcessorAppAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ProcessorModule_AddProcessorAppInput!): String!
+  removeProcessorApp(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ProcessorModule_RemoveProcessorAppInput!): ProcessorModuleMutationResult!
+  removeProcessorAppAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ProcessorModule_RemoveProcessorAppInput!): String!
+  setProcessorStatus(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ProcessorModule_SetProcessorStatusInput!): ProcessorModuleMutationResult!
+  setProcessorStatusAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ProcessorModule_SetProcessorStatusInput!): String!
+}
+
+type Query {
+  ProcessorModule: ProcessorModuleQueries!
+}
+
+type Mutation {
+  ProcessorModule: ProcessorModuleMutations!
+}
+
+"""Input Types for Initial State"""
+input ProcessorModule_ProcessorModuleStateInput {
+  name: String
+  type: String
+  documentTypes: [ProcessorModule_DocumentTypeItemInput]
+  status: ProcessorModule_StatusType
+  processorApps: [String]
+}
+
+input ProcessorModule_DocumentTypeItemInput {
+  id: OID
+  documentType: String
+}
+
+input ProcessorModule_InitialStateInput {
+  local: JSONObject
+  global: ProcessorModule_ProcessorModuleStateInput
+}
+
+"""Module: BaseOperations"""
+input ProcessorModule_SetProcessorNameInput {
+  name: String!
+}
+
+input ProcessorModule_SetProcessorTypeInput {
+  type: String!
+}
+
+input ProcessorModule_AddDocumentTypeInput {
+  id: OID!
+  documentType: String!
+}
+
+input ProcessorModule_RemoveDocumentTypeInput {
+  id: OID!
+}
+
+input ProcessorModule_AddProcessorAppInput {
+  processorApp: String!
+}
+
+input ProcessorModule_RemoveProcessorAppInput {
+  processorApp: String!
+}
+
+input ProcessorModule_SetProcessorStatusInput {
+  status: ProcessorModule_StatusType!
+}

@@ -1,3 +1,31 @@
+## 6.2.3-dev.93 (2026-11-04)
+
+### 🩹 Fixes
+
+- **desktop:** a release build runs the stack it was built and tested with ([0f3dd07874](https://github.com/powerhouse-inc/powerhouse/commit/0f3dd07874))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.92 (2026-11-04)
+
+### 🚀 Features
+
+- **ph-cli:** add experimental ph model check and inspect ([9973f75d0d](https://github.com/powerhouse-inc/powerhouse/commit/9973f75d0d))
+- **document-model:** load projects for check and inspect ([a018f5f129](https://github.com/powerhouse-inc/powerhouse/commit/a018f5f129))
+
+### 🩹 Fixes
+
+- **desktop:** serve starts every member at serve, as ph host check checks it ([e0f277d47a](https://github.com/powerhouse-inc/powerhouse/commit/e0f277d47a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.91 (2026-11-03)
 
 ### 🚀 Features
