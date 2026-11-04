@@ -1,6 +1,8 @@
 import type { HostExport } from "@powerhousedao/host-core/schema";
 import {
+  listRunRecords,
   SpawnHostError,
+  writeRunRecord,
   type HostExit,
   type HostIssue,
   type SpawnedHost,
@@ -407,6 +409,39 @@ describe("createMonitorController", () => {
     expect(launches[0].options).not.toHaveProperty("verb");
   });
 
+  it("shows an in-place start the running in-place instances' records", async () => {
+    addHost(allowed, "agent");
+    const { controller, launches } = create();
+    const recordsOf = (id: string) => {
+      const dir = path.join(controller.tempRoot, id);
+      return listRunRecords(dir, { PH_USER_DATA_DIR: dir });
+    };
+    const record = (host: string, pid: number) => ({
+      version: 2 as const,
+      host,
+      projectName: "p",
+      kind: "reactor" as const,
+      verb: "run",
+      pid,
+      startedAt: new Date(0).toISOString(),
+      outputs: SWITCHBOARD_OUTPUTS,
+    });
+    const sb = await controller.start({ project: allowed, host: "sb" });
+    const sbDir = path.join(controller.tempRoot, sb.id);
+    const env = { PH_USER_DATA_DIR: sbDir };
+    writeRunRecord(sbDir, record("sb", 4000), env);
+    writeRunRecord(sbDir, record("mirrored", 1234), env);
+    const starting = await controller.start({ project: allowed, host: "sb" });
+    expect(recordsOf(starting.id)).toEqual([]);
+    launches[0].ready(SWITCHBOARD_OUTPUTS);
+    await until(() => controller.get(sb.id).status === "running");
+
+    const agent = await controller.start({ project: allowed, host: "agent" });
+    expect(recordsOf(agent.id)).toEqual([record("sb", 4000)]);
+    const again = await controller.start({ project: allowed, host: "sb" });
+    expect(recordsOf(again.id)).toEqual([]);
+  });
+
   it("refuses to start a host with check issues", async () => {
     const issue: HostIssue = {
       stage: "resolve",
@@ -779,6 +814,33 @@ describe("createMonitorController", () => {
         controller.startDraft(await draft({ startId: "s-2" })),
       ).rejects.toThrow(ControllerError);
       expect(controller.checking()).toEqual([]);
+    });
+
+    it("keeps a copy's run records its own", async () => {
+      const { controller, launches } = create();
+      const sb = await controller.start({ project: allowed, host: "sb" });
+      const sbDir = path.join(controller.tempRoot, sb.id);
+      writeRunRecord(
+        sbDir,
+        {
+          version: 2,
+          host: "sb",
+          projectName: "p",
+          kind: "reactor",
+          verb: "run",
+          pid: 4000,
+          startedAt: new Date(0).toISOString(),
+          outputs: SWITCHBOARD_OUTPUTS,
+        },
+        { PH_USER_DATA_DIR: sbDir },
+      );
+      launches[0].ready(SWITCHBOARD_OUTPUTS);
+      await until(() => controller.get(sb.id).status === "running");
+      const copy = await controller.startDraft(await draft());
+      const dataDir = path.join(controller.tempRoot, copy.id, "data");
+      expect(listRunRecords(dataDir, { PH_USER_DATA_DIR: dataDir })).toEqual(
+        [],
+      );
     });
 
     it("exports a project host with its digest", async () => {

@@ -5,6 +5,7 @@ import {
   readProjectName,
   spawnHost,
   SpawnHostError,
+  writeRunRecord,
   type HostExit,
   type HostIssue,
   type SpawnedHost,
@@ -923,6 +924,28 @@ export function createMonitorController(
     return Promise.all([...entries.keys()].map(stop));
   };
 
+  /**
+   * The own run records of the running in-place instances of `root`, written
+   * into `dataDir` so the new instance's `$output` tokens find them. Another
+   * instance of the same host is left out: its record would hold the lock.
+   */
+  const mirrorRunRecords = (root: string, host: string, dataDir: string) => {
+    for (const { view, dataDir: from } of entries.values()) {
+      if (
+        view.status !== "running" ||
+        view.source ||
+        view.project !== root ||
+        view.host === host
+      ) {
+        continue;
+      }
+      for (const record of listRunRecords(from, { PH_USER_DATA_DIR: from })) {
+        if (record.pid !== view.pid) continue;
+        writeRunRecord(dataDir, record, { PH_USER_DATA_DIR: dataDir });
+      }
+    }
+  };
+
   /** The instance limit, the check and the launch; `prepare` fills instanceDir. */
   const startResolved = async (
     host: string,
@@ -1025,6 +1048,7 @@ export function createMonitorController(
         if (wanted.refused) {
           throw new ControllerError("bad_request", wanted.refused);
         }
+        mirrorRunRecords(root, host, instanceDir);
         if (wanted.backends.length === 0) {
           return { root, dataDir: instanceDir, env };
         }
