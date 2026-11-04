@@ -668,6 +668,7 @@ describe("Use it, wired", () => {
     });
     sentBeforeReload(wiring, Date.now() - 20 * 60_000);
     const view = render(<Wired storage={storage} wiring={wiring} />);
+    expect(runText(view)).toBe("");
     await waitFor(() => expect(runText(view)).toContain("Running a copy"));
     expect(wiring.list).toHaveBeenCalledOnce();
     expect(wiring.managed.attach).not.toHaveBeenCalled();

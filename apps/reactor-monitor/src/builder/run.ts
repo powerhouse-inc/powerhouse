@@ -413,7 +413,11 @@ export function useBuilderRun({
     const mine = () =>
       !abort.signal.aborted &&
       (current.current === undefined || current.current === waiting);
-    const sent = readPending(pending);
+    const stored = readPending(pending);
+    // A start long over is not this page's run.
+    const sent =
+      stored && Date.now() < stored.at + STALE_MS ? stored : undefined;
+    if (stored && !sent) writePending(pending, undefined);
     if (sent && current.current === undefined) {
       current.current = waiting;
       setState({ status: "starting", reactors: [] });
@@ -440,7 +444,6 @@ export function useBuilderRun({
       let failures = 0;
       let drafts: Instance[] = [];
       let ours: Instance | undefined;
-      const stale = sent !== undefined && Date.now() >= sent.at + STALE_MS;
       for (let first = true; ; first = false) {
         if (!first) {
           await new Promise((resolve) =>
@@ -476,7 +479,7 @@ export function useBuilderRun({
       }
       if (sent) writePending(pending, undefined);
       // A tab whose own start just ended takes on no other copy as its run.
-      const found = !sent || stale ? (ours ?? drafts.at(0)) : ours;
+      const found = sent ? ours : drafts.at(0);
       if (!found) {
         if (current.current === waiting) {
           current.current = undefined;
