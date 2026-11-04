@@ -180,4 +180,34 @@ describe("startFailure", () => {
       "hosts/cli could not be loaded: no host.js",
     );
   });
+
+  it("names a resolve failure past its indented continuation", () => {
+    const reason =
+      'hosts/assistant/host.js: assistant needs outputs from host "switchboard", which is not running. Start it first: ph run switchboard (or run a compound that includes it).';
+    const tail = [
+      reason,
+      "  (needed by `reactor.backends.switchboard.remote.url`: $output switchboard › drives.powerhouse.url)",
+      "",
+    ].join("\n");
+    expect(startFailure(exited(tail))).toEqual({
+      message: `Stopped while starting: ${reason}`,
+      phase: "exited",
+      tail,
+      context: "ph run cli exited (code 1) before writing its run record.",
+    });
+    const shared =
+      'hosts/assistant/host.js: assistant needs outputs from host "switchboard", which runs as member "sb" of "cli" and member "sb" of "desktop"; stop all but one, or run switchboard on its own.';
+    expect(
+      failureReason(
+        `${shared}\n  (needed by \`a\`: $output switchboard › origin)`,
+      ),
+    ).toBe(shared);
+  });
+
+  it("names nothing when a failure line is followed by an object dump", () => {
+    const tail = ["hosts/cli could not be loaded", "{", '  "a": 1', "}"].join(
+      "\n",
+    );
+    expect(failureReason(tail)).toBe(undefined);
+  });
 });
