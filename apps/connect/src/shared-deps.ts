@@ -60,10 +60,11 @@ export function normalizeVendorImports(
 let cached: Promise<SharedDeps | null> | null = null;
 
 /**
- * The production vendor's shared-deps table: import-map entries for the
- * shared dependency set plus the resolved version of every shared package
- * in this build. Fails soft (`null`) when the vendor is not present (dev,
- * or a `PH_CONNECT_VENDOR=0` build) — callers treat that as "no sharing".
+ * The vendor's shared-deps table: import-map entries for the shared
+ * dependency set plus the resolved version of every shared package in this
+ * build. Fails soft (`null`) when the vendor is not present (dev without
+ * a prebuilt vendor, or a `PH_CONNECT_VENDOR=0` build) — callers treat that
+ * as "no sharing".
  * The promise is cached: the vendor table is immutable per build.
  */
 export function getSharedDeps(): Promise<SharedDeps | null> {
@@ -119,7 +120,7 @@ export function sharedImportsFromImportMap(
   );
 }
 
-/** Dev has no vendor table, but its import map points the shared deps at shims a worker can import. */
+/** Without a vendor table, dev's import map points the shared deps at shims a worker can import. */
 export function pageSharedImports(): Record<string, string> {
   const script = document.querySelector('script[type="importmap"]');
   return sharedImportsFromImportMap(script?.textContent, window.location.href);
