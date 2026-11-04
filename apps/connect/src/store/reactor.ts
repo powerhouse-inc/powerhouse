@@ -105,6 +105,7 @@ import {
   subscribeLocalPackageChanges,
 } from "../utils/worker-package-sources.js";
 import {
+  PRIMARY_IDB_NAMES,
   REACTOR_INSTANCE_NAMESPACE,
   REACTOR_STORE_IN_MEMORY,
   RELATIONAL_PGLITE_NAME,
@@ -238,18 +239,19 @@ export async function clearReactorStorage() {
     const reactorModule = module.reactorModule;
     await closeWithin(reactorModule?.groupCommitStorage ?? reactorModule?.pg);
   }
-  // Its stores die with the page; the IndexedDB ones below belong to others.
-  if (REACTOR_STORE_IN_MEMORY) return;
-
   // Dropping tables in PGlite with relaxedDurability can lose pending IDB
   // writes on reload; delete the whole DB so startup re-migrates from scratch.
-  const dbs = await indexedDB.databases();
-  const targets = dbs
-    .map((d) => d.name)
-    .filter(
-      (n): n is string =>
-        !!n && !n.startsWith("ph-pglite-backup::") && /pglite|reactor/i.test(n),
-    );
+  // An in-memory store clears only its namespace's leftovers from idb runs.
+  const targets = REACTOR_STORE_IN_MEMORY
+    ? [...PRIMARY_IDB_NAMES]
+    : (await indexedDB.databases())
+        .map((d) => d.name)
+        .filter(
+          (n): n is string =>
+            !!n &&
+            !n.startsWith("ph-pglite-backup::") &&
+            /pglite|reactor/i.test(n),
+        );
 
   await Promise.all(
     targets.map(

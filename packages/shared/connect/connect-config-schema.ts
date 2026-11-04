@@ -922,12 +922,10 @@ export const connectCollectionSchema = z.strictObject({
 /** `collections` holds placed drives that are not default drives, keyed by declared slug. */
 export const connectRuntimeInstanceSchema = connectInstanceSchema.extend({
   reactorClient: connectReactorClientModeSchema.optional(),
-  storage: z
-    .enum(["idb", "memory"])
-    .optional()
-    .describe(
+  storage: z.enum(["idb", "memory"]).optional().meta({
+    description:
       "Where the browser reactor keeps its stores. `memory`: nothing outlives the page (or its shared worker). Absent: idb.",
-    ),
+  }),
   remoteBackends: z.array(connectRemoteBackendSchema).optional(),
   collections: z.record(z.string(), connectCollectionSchema).optional(),
   router: connectRouterSettingsSchema.optional(),
