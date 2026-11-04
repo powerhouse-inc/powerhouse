@@ -495,6 +495,39 @@ describe("materialize", () => {
     expect(runners.rooted.runner?.outDir).toBe(path.join(source, "out"));
   });
 
+  it("matches a build and a serve by where the copy puts them", () => {
+    const envelope = duo(source);
+    const members = envelope.members as Record<string, unknown>;
+    const children = (envelope.host as { children: Record<string, unknown> })
+      .children;
+    const connect = (name: string, port: number, runner: object) => ({
+      name,
+      runner: {
+        module: "@powerhousedao/ph-cli/runners/connect",
+        port,
+        ...runner,
+      },
+    });
+    members.builder = connect("builder", 3401, {
+      defaultVerb: "build",
+      outDir: "${userData}/out",
+    });
+    members.web = connect("web", 3501, { defaultVerb: "serve", outDir: "out" });
+    members.data = connect("data", 3601, {
+      defaultVerb: "serve",
+      outDir: "${userData}/out",
+    });
+    for (const key of ["builder", "web", "data"]) children[key] = { host: key };
+    const { projectDir } = materialize(instanceDir, source, envelope);
+    const runners = (
+      hostFile(projectDir, "duo") as {
+        children: Record<string, { runner?: { outDir?: string } }>;
+      }
+    ).children;
+    expect(runners.web.runner?.outDir).toBe(path.join(source, "out"));
+    expect(runners.data.runner?.outDir).toBeUndefined();
+  });
+
   it("leaves Connect's build alone when the whole host builds", () => {
     const envelope = duo(source);
     (envelope.host as { runner: object }).runner = {

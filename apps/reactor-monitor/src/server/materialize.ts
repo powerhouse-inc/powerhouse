@@ -294,14 +294,23 @@ function withSourceBuilds(envelope: HostExport, source: string): HostExport {
   const copy = structuredClone(envelope);
   const host = copy.host as unknown as Record<string, unknown>;
   const children = isRecord(host.children) ? host.children : {};
+  // Where a member's outDir lands when the copy runs, and in the source.
   const outDirOf = (member: Member) => {
     const raw = member.runner.outDir ?? DEFAULT_CONNECT_OUTDIR;
     if (typeof raw !== "string") return undefined;
-    // `ph run` in the source resolves both to its root by default.
-    const outDir = raw
-      .replaceAll("${projectRoot}", () => source)
-      .replaceAll("${userData}", () => source);
-    return outDir.includes("${") ? undefined : path.resolve(source, outDir);
+    const at = (root: string) =>
+      path.resolve(
+        root,
+        raw
+          .replaceAll("${projectRoot}", () => root)
+          .replaceAll("${userData}", () =>
+            root === source ? source : `${root}/<userData>`,
+          ),
+      );
+    // `ph run` in the source resolves both tokens to its root by default.
+    return raw.replaceAll(/\$\{(?:projectRoot|userData)\}/g, "").includes("${")
+      ? undefined
+      : { inCopy: at(path.resolve("/<copy>")), inSource: at(source) };
   };
   const connects = membersOf({ envelope: copy }).filter(
     (member) => member.role === "connect",
@@ -309,15 +318,16 @@ function withSourceBuilds(envelope: HostExport, source: string): HostExport {
   // A build the copy makes itself is the one to serve.
   const built = connects.flatMap((member) => {
     const outDir = outDirOf(member);
-    return memberVerb(copy, member) === "build" && outDir ? [outDir] : [];
+    return memberVerb(copy, member) === "build" && outDir
+      ? [outDir.inCopy]
+      : [];
   });
   for (const member of connects) {
     const verb = memberVerb(copy, member);
     if (verb !== "run" && verb !== "serve") continue;
-    const raw = member.runner.outDir;
-    if (typeof raw === "string" && path.isAbsolute(raw)) continue;
     const outDir = outDirOf(member);
-    if (!outDir || built.includes(outDir)) continue;
+    if (!outDir || built.includes(outDir.inCopy)) continue;
+    if (outDir.inSource === outDir.inCopy) continue;
     // A child's wrapper, not the member body other children may share.
     const definition =
       member.path === "host"
@@ -328,7 +338,7 @@ function withSourceBuilds(envelope: HostExport, source: string): HostExport {
     if (!isRecord(definition)) continue;
     definition.runner = {
       ...(isRecord(definition.runner) ? definition.runner : {}),
-      outDir,
+      outDir: outDir.inSource,
     };
   }
   return copy;
