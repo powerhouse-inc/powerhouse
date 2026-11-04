@@ -285,6 +285,13 @@ describe("runRecordOutputSource", () => {
       },
     });
     expect(twice.lookup({ host: "switchboard" }).status).toBe("available");
+    const ownRoot = runRecordOutputSource(compound, {
+      consumer: "agent",
+      projectName: "lab",
+      producers,
+      env: { PH_OUTPUT_DATA_DIRS: compound },
+    });
+    expect(ownRoot.lookup({ host: "connect" }).status).toBe("available");
     writeRunRecord(compound, record());
     const both = source.lookup({ host: "switchboard" });
     expect(both.status).toBe("unavailable");

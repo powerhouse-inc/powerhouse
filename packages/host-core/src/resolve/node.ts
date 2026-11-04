@@ -91,8 +91,8 @@ export const OUTPUT_DATA_DIRS_ENV = "PH_OUTPUT_DATA_DIRS";
 type Env = Readonly<Record<string, string | undefined>>;
 
 /** The other roots, each once, never the process's own. */
-function siblingEnvs(env: Env): Env[] {
-  const own = env.PH_USER_DATA_DIR && path.resolve(env.PH_USER_DATA_DIR);
+function siblingEnvs(projectRoot: string, env: Env): Env[] {
+  const own = path.resolve(defaultUserDataDir(projectRoot, env));
   const dirs = new Set(
     (env[OUTPUT_DATA_DIRS_ENV] ?? "")
       .split(path.delimiter)
@@ -125,7 +125,7 @@ export function runRecordOutputSource(
 ): OutputSource {
   const { consumer, producers, projectName } = options;
   const env = options.env ?? process.env;
-  const siblings = siblingEnvs(env);
+  const siblings = siblingEnvs(projectRoot, env);
   return {
     lookup(ref) {
       const notRunning = `${consumer} needs outputs from host "${ref.host}", which is not running. Start it first: ph run ${ref.host} (or run a compound that includes it).`;
