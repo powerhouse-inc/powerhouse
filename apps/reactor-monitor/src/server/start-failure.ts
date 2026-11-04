@@ -72,6 +72,9 @@ function sentence(text: string): string {
 
 const LAST_LINE_MAX = 200;
 
+// spawnHost's own notes in the tail, not the run's output.
+const SPAWN_NOTES = /^(?:logFile|onOutput): /;
+
 /** Where a run that never got ready stopped printing. */
 export function lastOutput(tail: string): string | undefined {
   const line = tail
@@ -81,6 +84,7 @@ export function lastOutput(tail: string): string | undefined {
       (each) =>
         each.trim() !== "" &&
         !noise(each) &&
+        !SPAWN_NOTES.test(each) &&
         !/^\s/.test(each) &&
         !/^[{}[\]]$/.test(each),
     );
@@ -106,7 +110,7 @@ export function startFailure(error: SpawnHostError): StartFailure {
       context: spawned,
     };
   }
-  // A run that timed out or was stopped printed no failure of its own.
+  // A stopped run, or one that printed nothing, has no failure of its own.
   const reason =
     error.phase === "exited" ? failureReason(error.outputTail) : undefined;
   return reason

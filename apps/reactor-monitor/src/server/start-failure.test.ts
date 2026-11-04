@@ -105,6 +105,9 @@ describe("startFailure", () => {
     expect(startFailure(timeout(PORT_TAKEN_TAIL)).message).toBe(
       'Didn\'t finish starting: its last output was "Port 16347 is already in use".',
     );
+    expect(
+      startFailure(timeout(`${stalled}onOutput: log buffer full\n`)).message,
+    ).toContain("Loading packages");
     const long = `[sb] ${"x".repeat(400)}`;
     expect(startFailure(timeout(long)).message).toBe(
       `Didn't finish starting: its last output was "${long.slice(0, 199)}…".`,
