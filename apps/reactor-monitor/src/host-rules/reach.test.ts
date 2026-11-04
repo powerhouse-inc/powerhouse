@@ -209,10 +209,25 @@ describe("linking a Connect to a switchboard's drives", () => {
     let draft: HostDraft = { envelope: stack() };
     draft = addDrive(draft, SB, "Shared");
     draft = choose(draft, `${UI}:reach:open:sb:shared`);
+    expect(status(draft, `${UI}:reach:open:sb:powerhouse`)).toEqual(
+      off(REACH_REASONS.clash("powerhouse")),
+    );
     draft = choose(draft, `${UI}:reach:remove:main`);
     expect(issues(draft)).toEqual([]);
     const reach = reachOf(draft);
     expect(reach.notes).toEqual([REACH_REASONS.remoteOnly]);
+    // Its own drive had nowhere to live, so it goes and the name is free.
+    expect(reach.member.reactor?.drives).toEqual([]);
+    expect(reach.ownDrives).toEqual([]);
+    expect(status(draft, `${UI}:reach:open:sb:powerhouse`)).toEqual(ON);
+    const resolved = JSON.parse(
+      JSON.stringify(reach.member.reactor),
+      (_key, value: unknown) => {
+        const ref = (value as { $output?: { path: string[] } } | null)?.$output;
+        return ref ? `http://127.0.0.1:4001/d/${ref.path[1]}` : value;
+      },
+    ) as unknown;
+    expect(reactorSchema.safeParse(resolved).error?.issues).toBeUndefined();
     expect(status(draft, `${UI}:placement:shared:copy`)).toEqual(
       off(REACH_REASONS.remoteOnly),
     );
