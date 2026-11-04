@@ -18,6 +18,7 @@ import { MISSING_RENOWN_ENDPOINT_MESSAGE } from "../../src/utils/renown-trust.js
 vi.mock("../../src/pglite.db.js", () => ({
   getReactorPGlite: () => Promise.resolve({}),
   discardReactorPGlite: () => Promise.resolve(),
+  REACTOR_STORAGE_FACTS: {},
 }));
 
 const WALLET = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";

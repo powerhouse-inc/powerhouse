@@ -4,7 +4,11 @@ import {
   isMigratableMajor,
   type DetectedMajor,
 } from "./pglite-major.js";
-import { REACTOR_IDB_NAME, RELATIONAL_IDB_NAME } from "./storage-namespace.js";
+import {
+  REACTOR_IDB_NAME,
+  REACTOR_STORE_IN_MEMORY,
+  RELATIONAL_IDB_NAME,
+} from "./storage-namespace.js";
 
 export {
   CURRENT_PG_MAJOR,
@@ -16,6 +20,13 @@ export {
   type SupportedPgMajor,
   type DetectedMajor,
 } from "./pglite-major.js";
+
+// An in-memory store has no data dir: always the current major, never migrated.
+function readStoreMajor(idbName: string): Promise<number | null> {
+  return REACTOR_STORE_IN_MEMORY
+    ? Promise.resolve(null)
+    : readPgVersionFile(idbName);
+}
 
 let cachedReactorMajor: DetectedMajor | undefined;
 let inflight: Promise<DetectedMajor> | undefined;
@@ -45,7 +56,7 @@ export async function detectReactorPgMajor(): Promise<DetectedMajor> {
   if (inflight) return inflight;
 
   inflight = (async () => {
-    const major = coerceMajor(await readPgVersionFile(REACTOR_IDB_NAME));
+    const major = coerceMajor(await readStoreMajor(REACTOR_IDB_NAME));
     cachedReactorMajor = major;
     notifyMajorChanged();
     return major;
@@ -69,7 +80,7 @@ export function invalidateReactorPgMajorCache(): void {
 }
 
 export async function detectRelationalPgMajor(): Promise<DetectedMajor> {
-  return coerceMajor(await readPgVersionFile(RELATIONAL_IDB_NAME));
+  return coerceMajor(await readStoreMajor(RELATIONAL_IDB_NAME));
 }
 
 export function subscribeMigrationMajor(cb: () => void): () => void {
@@ -94,8 +105,8 @@ export async function detectMigrationMajor(): Promise<DetectedMajor> {
 
   migrationInflight = (async () => {
     const majors = await Promise.all([
-      readPgVersionFile(REACTOR_IDB_NAME),
-      readPgVersionFile(RELATIONAL_IDB_NAME),
+      readStoreMajor(REACTOR_IDB_NAME),
+      readStoreMajor(RELATIONAL_IDB_NAME),
     ]);
     const legacy = majors.find(isMigratableMajor) ?? null;
     cachedMigrationMajor = legacy;

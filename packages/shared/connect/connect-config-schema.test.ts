@@ -196,6 +196,7 @@ const runtimeOnly: [string, unknown][] = [
     "instance.reactorClient",
     { instance: { ...instance, reactorClient: "worker" } },
   ],
+  ["instance.storage", { instance: { ...instance, storage: "memory" } }],
   [
     "pwa.manifest.categories",
     { pwa: { manifest: { categories: ["finance"] } } },
@@ -286,6 +287,10 @@ describe("connectConfigSchema", () => {
     expect(connectRuntimeConfigSchema.safeParse(instanceExtra).success).toBe(
       false,
     );
+    const switchboardStorage = { instance: { ...instance, storage: "path" } };
+    expect(
+      connectRuntimeConfigSchema.safeParse(switchboardStorage).success,
+    ).toBe(false);
   });
 
   it("fills no defaults on parse", () => {

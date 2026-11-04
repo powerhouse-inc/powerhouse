@@ -66,6 +66,8 @@ export type WorkerReactorClientArgs = {
   featureFlags: Partial<ReactorFeatureFlags>;
   /** The resolved multiReactor flag; the worker has no runtime config either. */
   multiReactor: boolean;
+  /** Keep the stores in memory, not IndexedDB. */
+  storeInMemory?: boolean;
   /** What the worker's client creates new documents as. */
   createSignaturePolicy?: SignaturePolicy;
   /** Whether the worker boots over stored documents this build does not run. */
@@ -113,6 +115,7 @@ export function buildWorkerVersion(
     featureFlags: featureFlagFingerprint({
       ...args.featureFlags,
       multiReactor: args.multiReactor,
+      storeInMemory: args.storeInMemory,
     }),
   };
 }
@@ -130,6 +133,7 @@ export function buildWorkerConstruct(args: WorkerReactorClientArgs) {
     renownChainId: args.renownChainId,
     featureFlags: args.featureFlags,
     multiReactor: args.multiReactor,
+    storeInMemory: args.storeInMemory,
     createSignaturePolicy: args.createSignaturePolicy,
     unsupportedStoredDocuments: args.unsupportedStoredDocuments,
     renownEndpoints: args.renownEndpoints,

@@ -27,6 +27,7 @@ vi.mock("@electric-sql/pglite/live", () => ({ live: {} }));
 
 vi.mock("../../src/utils/storage-namespace.js", () => ({
   REACTOR_PGLITE_NAME: "test-reactor",
+  REACTOR_STORE_IN_MEMORY: false,
   RELATIONAL_PGLITE_NAME: "test-relational",
 }));
 

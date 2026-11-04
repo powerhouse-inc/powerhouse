@@ -100,6 +100,33 @@ describe("worker version fingerprint", () => {
     }
   });
 
+  it("carries an in-memory store, and retires a worker on the other kind", async () => {
+    expect(buildWorkerConstruct(args()).storeInMemory).toBeUndefined();
+    expect(
+      buildWorkerConstruct(args({ storeInMemory: true })).storeInMemory,
+    ).toBe(true);
+    expect(
+      buildWorkerVersion(args({ storeInMemory: false })).featureFlags,
+    ).toBe("");
+    const host = new ReactorHost({
+      build: () => Promise.resolve({} as IReactorClient),
+    });
+    const first = openTab(host);
+    const second = openTab(host);
+    try {
+      await expect(first.hello(buildWorkerVersion(args()))).resolves.toEqual({
+        ok: true,
+      });
+      await expect(
+        second.hello(buildWorkerVersion(args({ storeInMemory: true }))),
+      ).resolves.toEqual({ ok: false });
+      expect(host.retired).toBe(true);
+    } finally {
+      first.close();
+      second.close();
+    }
+  });
+
   // undoV3 has a default: a tab that turns it the other way retires the
   // worker, and one that spells the default out does not.
   const undoV3 = resolveFeatureFlags().undoV3;

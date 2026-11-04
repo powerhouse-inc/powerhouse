@@ -19,7 +19,6 @@ import {
   type GroupCommitPGliteInstance,
   LocalChannelFactory,
   LocalChannelPortRegistry,
-  PGLITE_IDB_STORAGE_FACTS,
   type UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
 import {
@@ -41,7 +40,11 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type { IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
-import { discardReactorPGlite, getReactorPGlite } from "../pglite.db.js";
+import {
+  discardReactorPGlite,
+  getReactorPGlite,
+  REACTOR_STORAGE_FACTS,
+} from "../pglite.db.js";
 import { reloadPageForPoisonedStore } from "./poisoned-store-budget.js";
 import { configureConnectChannelScheme } from "./reactor-channel-scheme.js";
 import { toStoredDocumentsRefused } from "./stored-documents-refused.js";
@@ -95,7 +98,7 @@ export async function createBrowserReactor(
       onDiagnostic: (message, error) =>
         console.error(`[reactor] pglite: ${message}`, error),
     })
-    .withStorageFacts(PGLITE_IDB_STORAGE_FACTS);
+    .withStorageFacts(REACTOR_STORAGE_FACTS);
   // No brokered-port seam on the main thread, so the registry stays empty.
   configureConnectChannelScheme(reactorBuilder, {
     multiReactor,

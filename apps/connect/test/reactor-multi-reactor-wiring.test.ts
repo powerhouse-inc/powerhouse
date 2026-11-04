@@ -15,6 +15,7 @@ import { createBrowserReactor } from "../src/utils/reactor.js";
 vi.mock("../src/pglite.db.js", () => ({
   getReactorPGlite: () => Promise.resolve({}),
   discardReactorPGlite: () => Promise.resolve(),
+  REACTOR_STORAGE_FACTS: {},
 }));
 
 function stubRenown(): IRenown {

@@ -3,6 +3,7 @@ import {
   DriveCollectionId,
   HardenedPGliteDialect,
   type GroupCommitPGliteInstance,
+  IN_MEMORY_PGLITE_STORAGE_FACTS,
   InMemoryQueue,
   queryThroughDialect,
   PGLITE_IDB_STORAGE_FACTS,
@@ -116,6 +117,8 @@ type WorkerConstruct = {
   featureFlags?: Partial<ReactorFeatureFlags>;
   // Absent (an older tab) means off.
   multiReactor?: boolean;
+  // Absent (an older tab) means IndexedDB.
+  storeInMemory?: boolean;
   // What new documents are created as; absent means the reactor's default.
   createSignaturePolicy?: SignaturePolicy;
   // Absent means the reactor's default, refuse.
@@ -154,6 +157,18 @@ type OwnedStorage = {
   relationalNamespace?: string;
 };
 const owned: OwnedStorage = {};
+// Set from the construct before either store opens.
+let storeInMemory = false;
+
+function storeDataDir(namespace: string): string {
+  return storeInMemory ? "memory://" : `idb://${namespace}`;
+}
+
+// An in-memory store has no data dir: always the current major.
+async function readStoreMajor(namespace: string) {
+  if (storeInMemory) return null;
+  return coerceMajor(await readPgVersionFile(`/pglite/${namespace}`));
+}
 // Another worker (a retired one, or a second gen) may still have these stores open.
 const storeLocks = createStoreLocks();
 let inspector: ReactorInspector | undefined;
@@ -185,7 +200,7 @@ async function buildWorkerCrypto(chainId: number | undefined) {
 // Open against the major already on disk so a legacy PG16 dir isn't read by PG17.
 async function openReactorPglite(namespace: string) {
   await storeLocks.acquire(namespace);
-  const detected = coerceMajor(await readPgVersionFile(`/pglite/${namespace}`));
+  const detected = await readStoreMajor(namespace);
   const major = resolvePgMajorForRuntime(detected);
   if (major !== 17) {
     console.warn(
@@ -195,7 +210,7 @@ async function openReactorPglite(namespace: string) {
   const { PGlite } = await loadPGliteModule(major);
   // Not relaxed: group commit flushes through syncToFs, which a relaxed
   // instance resolves before the sync has run.
-  const pg = new PGlite(`idb://${namespace}`, { relaxedDurability: false });
+  const pg = new PGlite(storeDataDir(namespace), { relaxedDurability: false });
   await pg.waitReady;
   return { pg, detected };
 }
@@ -220,9 +235,7 @@ async function openRelational(namespace: string): Promise<RelationalStore> {
   let pg: { close: () => Promise<void> } | undefined;
   try {
     await storeLocks.acquire(namespace);
-    const detected = coerceMajor(
-      await readPgVersionFile(`/pglite/${namespace}`),
-    );
+    const detected = await readStoreMajor(namespace);
     const major = resolvePgMajorForRuntime(detected);
     if (major !== 17) {
       console.warn(
@@ -233,7 +246,7 @@ async function openRelational(namespace: string): Promise<RelationalStore> {
       loadPGliteModule(major),
       loadPgLive(major),
     ]);
-    const opened = new PGlite(`idb://${namespace}`, {
+    const opened = new PGlite(storeDataDir(namespace), {
       relaxedDurability: true,
       extensions: { live },
     });
@@ -245,7 +258,7 @@ async function openRelational(namespace: string): Promise<RelationalStore> {
       }),
     });
     console.info(
-      `[reactor.worker] Relational store opened: idb://${namespace} (Postgres ${major}).`,
+      `[reactor.worker] Relational store opened: ${storeDataDir(namespace)} (Postgres ${major}).`,
     );
     return {
       pg: opened as unknown as PgLiveModuleNs.PGliteWithLive,
@@ -460,15 +473,19 @@ const host = new ReactorHost({
 
       owned.reactorNamespace = construct.namespace;
       owned.relationalNamespace = construct.relationalNamespace;
+      storeInMemory = construct.storeInMemory ?? false;
       // Armed only after this open: concurrent PGlite constructors consume the
       // same cached one-shot wasm "Response" object.
       const reactor = await openReactorPglite(construct.namespace);
       const pg = reactor.pg;
       owned.reactorPg = pg;
-      owned.reactorIdb = `/pglite/${construct.namespace}`;
-      owned.relationalIdb = `/pglite/${construct.relationalNamespace}`;
-      const relationalMajor = coerceMajor(
-        await readPgVersionFile(owned.relationalIdb),
+      // Unset in memory: admin clear and migrate then have no files to touch.
+      if (!storeInMemory) {
+        owned.reactorIdb = `/pglite/${construct.namespace}`;
+        owned.relationalIdb = `/pglite/${construct.relationalNamespace}`;
+      }
+      const relationalMajor = await readStoreMajor(
+        construct.relationalNamespace,
       );
       relational.arm(construct.relationalNamespace);
       // A store is migratable when coerceMajor kept it (a supported legacy
@@ -505,7 +522,11 @@ const host = new ReactorHost({
           onDiagnostic: (message, error) =>
             console.error(`[reactor.worker] pglite: ${message}`, error),
         })
-        .withStorageFacts(PGLITE_IDB_STORAGE_FACTS);
+        .withStorageFacts(
+          storeInMemory
+            ? IN_MEMORY_PGLITE_STORAGE_FACTS
+            : PGLITE_IDB_STORAGE_FACTS,
+        );
       configureConnectChannelScheme(reactorBuilder, {
         multiReactor: construct.multiReactor ?? false,
         createLocalChannelFactory: () => localPeers.createChannelFactory(),

@@ -1,5 +1,8 @@
 import { invalidateReactorPgMajorCache } from "./pglite-runtime.js";
-import { REACTOR_PGLITE_NAME } from "./storage-namespace.js";
+import {
+  REACTOR_PGLITE_NAME,
+  REACTOR_STORE_IN_MEMORY,
+} from "./storage-namespace.js";
 
 export const PENDING_PG_SEED_KEY = "ph:pending-pg-seed";
 
@@ -13,6 +16,11 @@ export const PENDING_PG_SEED_KEY = "ph:pending-pg-seed";
 export async function seedPendingPgVersion(): Promise<void> {
   const raw = localStorage.getItem(PENDING_PG_SEED_KEY);
   if (!raw) return;
+  if (REACTOR_STORE_IN_MEMORY) {
+    // No data dir to seed: an in-memory store always opens at the current major.
+    localStorage.removeItem(PENDING_PG_SEED_KEY);
+    return;
+  }
 
   const major = parseInt(raw, 10);
   console.info(`[pglite-seed] Seeding fresh PG${major} data dir...`);

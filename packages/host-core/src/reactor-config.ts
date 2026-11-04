@@ -183,6 +183,27 @@ function connectRouterSettings(
   return Object.keys(router).length > 0 ? router : undefined;
 }
 
+/** The stores a browser reactor can keep: IndexedDB or none. */
+export type ConnectStorageKind = "idb" | "memory";
+
+function connectStorage(
+  backend: ReactorBackend | undefined,
+): ConnectStorageKind | undefined {
+  const kind = backend?.storage?.kind;
+  return kind === "idb" || kind === "memory" ? kind : undefined;
+}
+
+/** Why the browser reactor's declared store can't be served: Connect keeps
+ * IndexedDB instead of a folder or Postgres. */
+export function unservedConnectStorage(
+  reactor: ReactorConfig | undefined,
+): string | undefined {
+  const browser = browserBackend(reactor);
+  const kind = browser?.storage?.kind;
+  if (!browser || !kind || connectStorage(browser)) return undefined;
+  return `reactor.backends.${browser.name}.storage "${kind}": Connect's browser reactor can't use it and keeps IndexedDB instead.`;
+}
+
 export interface ConnectReactorProjection {
   /** Patch merged into the connect runtime config (connect.*). */
   connect: {
@@ -190,6 +211,7 @@ export interface ConnectReactorProjection {
     instance?: {
       reactorWorker?: boolean;
       reactorClient?: ReactorClientMode;
+      storage?: ConnectStorageKind;
       remoteBackends?: ServedRemoteBackend[];
       router?: ConnectRouterSettings;
     };
@@ -199,7 +221,8 @@ export interface ConnectReactorProjection {
 
 /** Project the reactor block onto the Connect runtime config: protocol →
  * connect.reactor (same shape), backend topology → instance.reactorWorker
- * (the browser reactor's kind), instance.reactorClient, and with a
+ * (the browser reactor's kind), instance.reactorClient, instance.storage
+ * (the browser reactor's store), and with a
  * switchboard instance.remoteBackends and instance.router, workflows →
  * app.workflowsEnabled. */
 export function projectReactorToConnect(
@@ -212,9 +235,12 @@ export function projectReactorToConnect(
     const routed = mode === "router" || mode === "remote";
     const served = routed ? remoteBackends(reactor) : [];
     const router = routed ? connectRouterSettings(reactor, served) : undefined;
+    const browser = browserBackend(reactor);
+    const storage = connectStorage(browser);
     connect.instance = {
-      reactorWorker: browserBackend(reactor)?.kind === "worker",
+      reactorWorker: browser?.kind === "worker",
       reactorClient: mode,
+      ...(storage ? { storage } : {}),
       ...(routed ? { remoteBackends: served } : {}),
       ...(router ? { router } : {}),
     };

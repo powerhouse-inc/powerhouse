@@ -106,6 +106,7 @@ import {
 } from "../utils/worker-package-sources.js";
 import {
   REACTOR_INSTANCE_NAMESPACE,
+  REACTOR_STORE_IN_MEMORY,
   RELATIONAL_PGLITE_NAME,
 } from "../utils/storage-namespace.js";
 import {
@@ -237,6 +238,8 @@ export async function clearReactorStorage() {
     const reactorModule = module.reactorModule;
     await closeWithin(reactorModule?.groupCommitStorage ?? reactorModule?.pg);
   }
+  // Its stores die with the page; IndexedDB holds none of them (as in the worker).
+  if (REACTOR_STORE_IN_MEMORY) return;
 
   // Dropping tables in PGlite with relaxedDurability can lose pending IDB
   // writes on reload; delete the whole DB so startup re-migrates from scratch.
@@ -530,6 +533,7 @@ export async function createReactor(
       renownChainId,
       featureFlags: reactorFeatureFlags,
       multiReactor,
+      storeInMemory: REACTOR_STORE_IN_MEMORY,
       createSignaturePolicy,
       unsupportedStoredDocuments,
       renownEndpoints,

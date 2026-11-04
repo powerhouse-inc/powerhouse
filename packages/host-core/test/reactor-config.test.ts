@@ -3,6 +3,7 @@ import {
   assertProtocolConsistency,
   primaryBackend,
   projectReactorToConnect,
+  unservedConnectStorage,
   reactorBlockToSwitchboardConfig,
   reactorClientMode,
   protocolConflicts,
@@ -143,6 +144,47 @@ describe("projectReactorToConnect", () => {
       reactorWorker: false,
       reactorClient: "in-process",
     });
+  });
+
+  it("serves the browser reactor's store", () => {
+    const sb = { kind: "remote" as const, remote: { url: "http://x/d/b" } };
+    for (const kind of ["memory", "idb"] as const) {
+      expect(
+        projectReactorToConnect({
+          backends: { local: { kind: "in-process", storage: { kind } } },
+        }).connect.instance,
+      ).toEqual({
+        reactorWorker: false,
+        reactorClient: "in-process",
+        storage: kind,
+      });
+      expect(
+        projectReactorToConnect({
+          backends: { sb, tab: { kind: "worker", storage: { kind } } },
+        }).connect.instance?.storage,
+      ).toBe(kind);
+    }
+    expect(
+      projectReactorToConnect({
+        backends: { sb: { ...sb, storage: { kind: "memory" } } },
+      }).connect.instance?.storage,
+    ).toBeUndefined();
+  });
+
+  it("names a browser store Connect can't keep", () => {
+    expect(
+      unservedConnectStorage({
+        backends: { tab: { kind: "worker", storage: { kind: "path" } } },
+      }),
+    ).toMatch(/reactor\.backends\.tab\.storage "path".*keeps IndexedDB/);
+    expect(
+      unservedConnectStorage({
+        backends: { tab: { kind: "in-process", storage: { kind: "memory" } } },
+      }),
+    ).toBeUndefined();
+    expect(
+      unservedConnectStorage({ backends: { tab: { kind: "in-process" } } }),
+    ).toBeUndefined();
   });
 
   it("a lone remote backend → reactorClient remote (no local, no PGlite)", () => {
