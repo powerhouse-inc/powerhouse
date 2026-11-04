@@ -33,15 +33,21 @@ import {
 } from "./run.js";
 
 const ID = "11111111-0000-4000-8000-000000000000";
+const SENT_DIGEST = "a".repeat(64);
 
-function instance(status: Instance["status"]): Instance {
+function instance(status: Instance["status"], id = ID): Instance {
   return {
-    id: ID,
+    id,
     project: "/tmp/copy",
     host: "stack",
     status,
     startedAt: "2026-10-28T00:00:00.000Z",
-    source: { project: PROJECT, host: "stack" },
+    source: {
+      project: PROJECT,
+      host: "stack",
+      baseDigest: SENT_DIGEST,
+      setters: [],
+    },
     ...(status === "running"
       ? {
           members: {
@@ -452,7 +458,16 @@ describe("Use it, wired", () => {
       BARE,
     );
     const browser = browserReactors(engine.envelope, engine.members);
-    wiring.pending.setItem(PENDING_START_KEY, JSON.stringify({ at, browser }));
+    wiring.pending.setItem(
+      PENDING_START_KEY,
+      JSON.stringify({
+        at,
+        host: "stack",
+        baseDigest: SENT_DIGEST,
+        setters: "[]",
+        browser,
+      }),
+    );
   }
 
   it("keeps the start a tab sent while it was in flight", async () => {
@@ -542,6 +557,41 @@ describe("Use it, wired", () => {
       ["ui.main", ID],
     ]);
     expect(wiring.managed.attach).toHaveBeenCalledWith(instance("running"));
+    expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
+  });
+
+  it("after a reload mid-start, waits for its own copy past another one", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const OTHER = "22222222-0000-4000-8000-000000000000";
+    const other = {
+      ...instance("running", OTHER),
+      source: { project: PROJECT, host: "stack", baseDigest: "b".repeat(64) },
+    };
+    const wiring = setup({
+      list: vi
+        .fn<() => Promise<Instance[]>>()
+        .mockResolvedValueOnce([other])
+        .mockResolvedValue([other, instance("starting")]),
+    });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"));
+    expect(wiring.added.map((d) => ownerOf(d))).toEqual([ID]);
+    expect(wiring.managed.attach).toHaveBeenCalledOnce();
+    expect(wiring.managed.attach).toHaveBeenCalledWith(instance("running"));
+  });
+
+  it("after a reload mid-start, lets go when the controller can't be asked", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const wiring = setup({
+      list: () => Promise.reject(new Error("Controller unreachable")),
+    });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    expect(runText(view)).toBe("");
     expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
   });
 
