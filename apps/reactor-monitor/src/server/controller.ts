@@ -322,7 +322,7 @@ function appOf(raw: unknown): string | undefined {
   return parsed.success ? parsed.data.endpoints.connect : undefined;
 }
 
-// clint-runner's own `{ agents }` needs none: its members carry these.
+// A mastra-runner assistant's; clint-runner's own `{ agents, proxy }` isn't read.
 const agentOutputsSchema = z.object({
   endpoints: z.object({ openai: z.string() }),
 });

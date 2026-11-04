@@ -100,7 +100,7 @@ type Logs = { next: number; lines: LogLine[] };
 
 type Output = { label: string; url: string };
 
-function outputsOf(
+function servedRows(
   served: Omit<InstanceMember, "host">,
   prefix = "",
 ): Output[] {
@@ -124,9 +124,9 @@ function outputsOf(
 /** The instance's own outputs, then each member's under its key. */
 function rowOutputs(instance: Instance): Output[] {
   return [
-    ...outputsOf(instance),
+    ...servedRows(instance),
     ...Object.entries(instance.members ?? {}).flatMap(([key, member]) =>
-      outputsOf(member, `${key} `),
+      servedRows(member, `${key} `),
     ),
   ];
 }
@@ -168,8 +168,8 @@ function InstanceRow({
       </div>
       {outputs.length > 0 ? (
         <dl className="rm-switchboards__outputs">
-          {outputs.map((output) => (
-            <div key={output.label}>
+          {outputs.map((output, index) => (
+            <div key={`${index}:${output.label}`}>
               <dt>{output.label}</dt>
               <dd>
                 <code>{output.url}</code>
