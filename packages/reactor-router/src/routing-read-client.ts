@@ -60,6 +60,7 @@ const documentIdentity = (document: PHDocument): string => document.header.id;
 export class RoutingReadClient implements IReactorReadClient {
   readonly drives: RoutingDriveReadClient;
   private readonly dispatcher: RouteDispatcher;
+  private readonly reportedExclusions = new Set<string>();
 
   constructor(
     private readonly context: RoutingContext,
@@ -533,6 +534,7 @@ export class RoutingReadClient implements IReactorReadClient {
         return "";
       },
       onDiagnostic,
+      this.reportedExclusions,
     );
     const options = { mode: "strict", onDiagnostic } as const;
     return await mergePaged(

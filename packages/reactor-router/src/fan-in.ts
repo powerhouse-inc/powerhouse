@@ -156,12 +156,16 @@ export async function fanInExistence(
   return false;
 }
 
-/** Backends whose `refusal` is `""`; others are reported; none left refuses. */
+/**
+ * Backends whose `refusal` is `""`; none left refuses. Each exclusion is
+ * reported once per `reported` set: it is declared, so it recurs on every call.
+ */
 export function supportingBackends(
   operation: string,
   backends: readonly RouterBackend[],
   refusal: (backend: RouterBackend) => string,
   onDiagnostic: RouterDiagnostic,
+  reported: Set<string> = new Set(),
 ): readonly RouterBackend[] {
   const supporting: RouterBackend[] = [];
   const refused: UnsupportedByBackendError[] = [];
@@ -179,10 +183,10 @@ export function supportingBackends(
     throw refused[0];
   }
   for (const error of refused) {
-    onDiagnostic(
-      `${operation}: backend ${error.backend} was excluded (${error.reason})`,
-      error,
-    );
+    const message = `${operation}: backend ${error.backend} was excluded (${error.reason})`;
+    if (reported.has(message)) continue;
+    reported.add(message);
+    onDiagnostic(message);
   }
   return supporting;
 }

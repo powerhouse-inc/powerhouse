@@ -113,7 +113,8 @@ export type RouterTableSnapshot = {
 export type RouterDiagnostic = (message: string, detail?: unknown) => void;
 
 export const warnDiagnostic: RouterDiagnostic = (message, detail) => {
-  console.warn(`[reactor-router] ${message}`, detail);
+  if (detail === undefined) console.warn(`[reactor-router] ${message}`);
+  else console.warn(`[reactor-router] ${message}`, detail);
 };
 
 export const DEFAULT_MISROUTE_ATTEMPTS = 3;

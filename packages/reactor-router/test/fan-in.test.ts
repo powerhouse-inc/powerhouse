@@ -292,6 +292,35 @@ describe("supportingBackends", () => {
     expect(reported.join()).toMatch(/find: backend two was excluded/);
   });
 
+  it("reports a declared exclusion once, without an error", () => {
+    const reported: unknown[][] = [];
+    const seen = new Set<string>();
+    const exclude = (search: string) =>
+      supportingBackends(
+        "find",
+        pool("one", "two"),
+        (backend) =>
+          backend.name === "two" && search === "ids"
+            ? "the backend does not serve this search"
+            : "",
+        (...args) => reported.push(args),
+        seen,
+      );
+
+    exclude("ids");
+    expect(exclude("type").map((backend) => backend.name)).toEqual([
+      "one",
+      "two",
+    ]);
+    exclude("ids");
+
+    expect(reported).toEqual([
+      [
+        "find: backend two was excluded (the backend does not serve this search)",
+      ],
+    ]);
+  });
+
   it("refuses the read when no backend supports it", () => {
     expect(() =>
       supportingBackends("find", pool("one", "two"), () => "no", silent),

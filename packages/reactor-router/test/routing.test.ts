@@ -526,6 +526,31 @@ describe("fan-in reads through the client", () => {
     );
   });
 
+  it("reports a declined find once per router", async () => {
+    const local = new FakeBackend("connect-local");
+    const remote = new FakeBackend(
+      "switchboard-remote",
+      workflowInfo(),
+      REMOTE,
+    );
+    remote.supports = { find: () => false, pointInTimeViews: false };
+    const reported: unknown[][] = [];
+    const client = router([local.config(), remote.config()], {
+      onDiagnostic: (...args) => reported.push(args),
+    });
+
+    await client.find({ type: "test/note" });
+    await client.find({ type: "test/note" });
+
+    expect(
+      reported.filter(([message]) => String(message).includes("excluded")),
+    ).toEqual([
+      [
+        "find: backend switchboard-remote was excluded (the backend does not serve this search)",
+      ],
+    ]);
+  });
+
   it("refuses a find no backend supports, as a rejection", async () => {
     const one = new FakeBackend("one");
     one.supports = { find: () => false, pointInTimeViews: true };
