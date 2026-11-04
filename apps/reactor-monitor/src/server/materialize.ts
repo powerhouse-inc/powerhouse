@@ -297,8 +297,10 @@ function withSourceBuilds(envelope: HostExport, source: string): HostExport {
   const outDirOf = (member: Member) => {
     const raw = member.runner.outDir ?? DEFAULT_CONNECT_OUTDIR;
     if (typeof raw !== "string") return undefined;
-    const outDir = raw.replaceAll("${projectRoot}", source);
-    // Other tokens (`${userData}`) name the copy's own folders.
+    // `ph run` in the source resolves both to its root by default.
+    const outDir = raw
+      .replaceAll("${projectRoot}", () => source)
+      .replaceAll("${userData}", () => source);
     return outDir.includes("${") ? undefined : path.resolve(source, outDir);
   };
   const connects = membersOf({ envelope: copy }).filter(

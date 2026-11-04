@@ -461,7 +461,7 @@ describe("materialize", () => {
     });
   });
 
-  it("serves the copy's own build when a member builds that folder, and resolves ${projectRoot} in the source", () => {
+  it("serves the copy's own build when a member builds that folder, and resolves path tokens in the source", () => {
     const envelope = duo(source);
     const members = envelope.members as Record<string, unknown>;
     members.builder = {
@@ -478,7 +478,7 @@ describe("materialize", () => {
         module: "@powerhousedao/ph-cli/runners/connect",
         port: 3501,
         defaultVerb: "serve",
-        outDir: "${projectRoot}/out",
+        outDir: "${userData}/out",
       },
     };
     const children = (envelope.host as { children: Record<string, unknown> })
