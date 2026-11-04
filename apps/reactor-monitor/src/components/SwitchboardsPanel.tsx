@@ -732,7 +732,9 @@ function ControllerSection({
                 onAttach={() => managed.attach(instance)}
                 onStop={() => void stop(instance.id)}
                 onToggleLogs={() => toggleLogs(instance.id)}
-                projectName={projectName(instance.project)}
+                projectName={projectName(
+                  instance.source?.project ?? instance.project,
+                )}
               />
             ))}
           </ul>

@@ -391,6 +391,25 @@ describe("SwitchboardsPanel", () => {
     ]);
   });
 
+  it("names a copy's row by the project it was copied from", async () => {
+    const fake = fakeClient();
+    const view = render(
+      <SwitchboardsPanel managed={fakeManaged(fake.client)} pollMs={POLL} />,
+    );
+    await ready(view);
+
+    fireEvent.click(view.getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(fake.started).toHaveLength(1));
+    const row = await view.findByTestId("switchboard-inst-1");
+    const instance = fake.instances.get("inst-1")!;
+    instance.project = "/tmp/ph-monitor-1/inst-1/project";
+    instance.source = { project: ROOT, host: "sb" };
+    fake.run("inst-1");
+    await waitFor(() => expect(row.textContent).toMatch(/running/));
+    expect(within(row).getByText("proj")).toBeTruthy();
+    expect(within(row).queryByText("project")).toBeNull();
+  });
+
   it("offers no Attach for an instance that serves no switchboard", async () => {
     const fake = fakeClient();
     const managed = fakeManaged(fake.client);
