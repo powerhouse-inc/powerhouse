@@ -201,7 +201,7 @@ export function unservedConnectStorage(
   const browser = browserBackend(reactor);
   const kind = browser?.storage?.kind;
   if (!browser || !kind || connectStorage(browser)) return undefined;
-  return `reactor.backends.${browser.name}.storage "${kind}" applies only to a switchboard; Connect keeps this reactor in IndexedDB.`;
+  return `reactor.backends.${browser.name}.storage "${kind}": Connect's browser reactor can't use it and keeps IndexedDB instead.`;
 }
 
 export interface ConnectReactorProjection {

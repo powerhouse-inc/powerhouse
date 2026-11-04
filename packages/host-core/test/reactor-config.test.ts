@@ -176,7 +176,7 @@ describe("projectReactorToConnect", () => {
       unservedConnectStorage({
         backends: { tab: { kind: "worker", storage: { kind: "path" } } },
       }),
-    ).toMatch(/reactor\.backends\.tab\.storage "path".*IndexedDB/);
+    ).toMatch(/reactor\.backends\.tab\.storage "path".*keeps IndexedDB/);
     expect(
       unservedConnectStorage({
         backends: { tab: { kind: "in-process", storage: { kind: "memory" } } },
