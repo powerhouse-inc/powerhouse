@@ -1,6 +1,7 @@
 import { isPidAlive } from "@powerhousedao/host-core";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { createRequire } from "node:module";
+import os from "node:os";
 import type { Client } from "pg";
 
 /** The Postgres server the controller hands databases out from. */
@@ -15,11 +16,12 @@ export interface DatabaseServer {
 export const PG_URL_ENV = "PH_MONITOR_PG_URL";
 
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
-// 63 bytes, less `_<pid>_<12 hex>`.
-const MAX_PREFIX = 40;
+// 63 bytes, less `_<6 hex>_<pid>_<12 hex>`.
+const MAX_PREFIX = 35;
+const CONNECT_TIMEOUT_MS = 10_000;
 const DEFAULT_PREFIX = "ph_monitor";
 
-/** The url's database names the ones made from it: `<db>_<pid>_<hex>`. */
+/** The url's database prefixes those made: `<db>_<machine>_<pid>_<hex>`. */
 export function databasePrefix(serverUrl: string): string {
   let url: URL;
   try {
@@ -46,10 +48,20 @@ export function databaseUrl(serverUrl: string, name: string): string {
   return url.toString();
 }
 
-/** The pid in a name this prefix made, if it is one. */
-export function ownerOf(prefix: string, name: string): number | undefined {
-  if (!name.startsWith(`${prefix}_`)) return undefined;
-  const match = /^(\d+)_[0-9a-f]{12}$/.exec(name.slice(prefix.length + 1));
+/** Another machine's pids mean nothing here, so names carry the machine. */
+export function machineTag(hostname: string = os.hostname()): string {
+  return createHash("sha256").update(hostname).digest("hex").slice(0, 6);
+}
+
+/** The pid in a name this prefix made on this machine, if it is one. */
+export function ownerOf(
+  prefix: string,
+  name: string,
+  machine: string = machineTag(),
+): number | undefined {
+  const own = `${prefix}_${machine}_`;
+  if (!name.startsWith(own)) return undefined;
+  const match = /^(\d+)_[0-9a-f]{12}$/.exec(name.slice(own.length));
   return match ? Number(match[1]) : undefined;
 }
 
@@ -64,7 +76,10 @@ async function withClient<T>(
   serverUrl: string,
   run: (query: Query) => Promise<T>,
 ): Promise<T> {
-  const client = new (loadClient())({ connectionString: serverUrl });
+  const client = new (loadClient())({
+    connectionString: serverUrl,
+    connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
+  });
   await client.connect();
   try {
     return await run((sql, params) => client.query(sql, params));
@@ -84,6 +99,7 @@ export function postgresServer(
   pid: number = process.pid,
 ): DatabaseServer {
   const prefix = databasePrefix(serverUrl);
+  const machine = machineTag();
   let swept: Promise<void> | undefined;
 
   const drop = (name: string) => {
@@ -99,7 +115,7 @@ export function postgresServer(
       names = await withClient(serverUrl, async (query) => {
         const { rows } = await query(
           "SELECT datname FROM pg_database WHERE starts_with(datname, $1)",
-          [`${prefix}_`],
+          [`${prefix}_${machine}_`],
         );
         return rows.map((row) => (row as { datname: string }).datname);
       });
@@ -108,7 +124,7 @@ export function postgresServer(
       return;
     }
     for (const name of names) {
-      const owner = ownerOf(prefix, name);
+      const owner = ownerOf(prefix, name, machine);
       if (owner === undefined || owner === pid || isPidAlive(owner)) continue;
       try {
         await drop(name);
@@ -123,7 +139,7 @@ export function postgresServer(
     create: async () => {
       swept ??= sweep();
       await swept;
-      const name = `${prefix}_${pid}_${randomBytes(6).toString("hex")}`;
+      const name = `${prefix}_${machine}_${pid}_${randomBytes(6).toString("hex")}`;
       await withClient(serverUrl, async (query) => {
         await query(`CREATE DATABASE "${name}"`);
       });

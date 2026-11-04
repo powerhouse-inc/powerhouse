@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   databasePrefix,
   databaseUrl,
+  machineTag,
   ownerOf,
   postgresServer,
 } from "./databases.ts";
@@ -18,8 +19,8 @@ describe("databasePrefix", () => {
     expect(() => databasePrefix("not a url")).toThrow(/not a URL/);
     expect(() => databasePrefix("mysql://h/db")).toThrow(/postgres:\/\//);
     expect(() => databasePrefix("postgres://h/Fix")).toThrow(/lowercase/);
-    expect(() => databasePrefix(`postgres://h/${"a".repeat(41)}`)).toThrow(
-      /at most 40/,
+    expect(() => databasePrefix(`postgres://h/${"a".repeat(36)}`)).toThrow(
+      /at most 35/,
     );
   });
 });
@@ -33,11 +34,16 @@ describe("databaseUrl", () => {
 });
 
 describe("ownerOf", () => {
-  it("reads the pid from a name this prefix made", () => {
-    expect(ownerOf("fix", "fix_123_0123456789ab")).toBe(123);
-    expect(ownerOf("fix", "fix_x_123_0123456789ab")).toBeUndefined();
-    expect(ownerOf("fix", "fix_123_0123")).toBeUndefined();
-    expect(ownerOf("fix", "other_123_0123456789ab")).toBeUndefined();
+  it("reads the pid from a name this prefix made on this machine", () => {
+    const here = machineTag("here");
+    expect(here).toMatch(/^[0-9a-f]{6}$/);
+    expect(machineTag("there")).not.toBe(here);
+    expect(ownerOf("fix", `fix_${here}_123_0123456789ab`, here)).toBe(123);
+    expect(
+      ownerOf("fix", `fix_${machineTag("there")}_123_0123456789ab`, here),
+    ).toBeUndefined();
+    expect(ownerOf("fix", `fix_${here}_123_0123`, here)).toBeUndefined();
+    expect(ownerOf("fix", "fix_123_0123456789ab", here)).toBeUndefined();
   });
 });
 
