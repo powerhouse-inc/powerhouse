@@ -71,6 +71,27 @@ describe("switchboard runner checkBoot", () => {
     expect(await issuesOf(postgres, { REACTOR_WORKERS: "2" })).toEqual([]);
   });
 
+  it("reports a Postgres store that nothing names, unless the env does", async () => {
+    const storeless = host({
+      reactor: {
+        backends: {
+          main: { kind: "in-process", storage: { kind: "postgres" } },
+        },
+      },
+    });
+    expect(await issuesOf(storeless, {})).toEqual([
+      expect.stringMatching(
+        /storage is Postgres, but nothing names the database/,
+      ),
+    ]);
+    expect(
+      await issuesOf(storeless, {
+        PH_REACTOR_DATABASE_URL: POSTGRES,
+        REACTOR_WORKERS: "2",
+      }),
+    ).toEqual([]);
+  });
+
   it("ignores an empty readModel.url, as the server's dbPath option does", async () => {
     const postgres = host({
       reactor: {

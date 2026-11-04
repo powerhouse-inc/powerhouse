@@ -227,6 +227,17 @@ export async function memberSwitchboardConfig(
   );
 }
 
+/** A Postgres store no url names: the server would use a folder instead. */
+export function missingPostgresUrl(
+  reactor: ReactorConfig | undefined,
+  config: SwitchboardConfigInput,
+  hostFileLabel: string,
+): string | undefined {
+  if (primaryBackend(reactor)?.storage?.kind !== "postgres") return undefined;
+  if (config.storage?.reactor?.url) return undefined;
+  return `${hostFileLabel}: the reactor's storage is Postgres, but nothing names the database. Set the backend's storage.url, or PH_REACTOR_DATABASE_URL.`;
+}
+
 /**
  * Fails when the operator's env contradicts the member's protocol block, then
  * creates the block's path-storage dir (the server's own mkdir is not

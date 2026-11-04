@@ -20,6 +20,7 @@ import {
   memberEnvOf,
   memberSwitchboardConfig,
   memberSwitchboardConfigSchema,
+  missingPostgresUrl,
   prepareMemberStorage,
   reactorBlockConflicts,
   readModelAsReactorStore,
@@ -363,6 +364,8 @@ async function start(
     pluginHost: entriesDeclared,
     defaults: https === undefined ? {} : { server: { https } },
   });
+  const noDatabase = missingPostgresUrl(host.reactor, memberConfig, hostFile);
+  if (noDatabase) throw new Error(noDatabase);
 
   // R2 step 2: a declared composition activates the plugin pipeline — the
   // runner resolves the entries against the PROJECT dependency tree and
@@ -602,6 +605,10 @@ export async function checkBoot(
       message: error instanceof Error ? error.message : String(error),
     });
     return issues;
+  }
+  const noDatabase = missingPostgresUrl(host.reactor, config, ctx.file);
+  if (noDatabase) {
+    issues.push({ path: "reactor.backends", message: noDatabase });
   }
   const facts = await switchboardBootFactsOf(config, {
     // As the `dev` verb starts it.
