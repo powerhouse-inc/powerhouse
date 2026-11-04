@@ -221,7 +221,7 @@ describe("runRecordOutputSource", () => {
     ).toEqual({ origin: "http://localhost:4801" });
   });
 
-  it("reads PH_OUTPUT_DATA_DIRS after its own root, standalone and as a member", async () => {
+  it("reads PH_OUTPUT_DATA_DIRS after its own root, standalone and as a member, and names two", async () => {
     const { runRecordOutputSource } = await import("../src/resolve/node.js");
     const dir = makeProject();
     const own = makeProject();
@@ -241,7 +241,10 @@ describe("runRecordOutputSource", () => {
       startedAt: "x",
       outputs: { origin: "http://localhost:4801" },
     });
-    writeRunRecord(compound, record());
+    writeRunRecord(
+      compound,
+      record({ members: { "vetra-studio": member("connect", 2064) } }),
+    );
     const info = (name: string): ProducerInfo => ({
       folder: name,
       name,
@@ -272,6 +275,22 @@ describe("runRecordOutputSource", () => {
       status: "available",
       outputs: { port: 2064 },
     });
+    const twice = runRecordOutputSource(dir, {
+      consumer: "agent",
+      projectName: "lab",
+      producers,
+      env: {
+        ...env,
+        PH_OUTPUT_DATA_DIRS: `${sibling}${path.delimiter}${sibling}/`,
+      },
+    });
+    expect(twice.lookup({ host: "switchboard" }).status).toBe("available");
+    writeRunRecord(compound, record());
+    const both = source.lookup({ host: "switchboard" });
+    expect(both.status).toBe("unavailable");
+    expect(both.status === "unavailable" ? both.message : "").toMatch(
+      /runs as "lab-switchboard" \(pid \d+\) and member "vetra-switchboard" of "vetra"; stop all but one/,
+    );
     const alone = runRecordOutputSource(dir, {
       consumer: "agent",
       projectName: "lab",
