@@ -386,6 +386,22 @@ describe("SwitchboardsPanel", () => {
     ]);
   });
 
+  it("offers no Attach for an instance that serves no switchboard", async () => {
+    const fake = fakeClient();
+    const managed = fakeManaged(fake.client);
+    const view = render(<SwitchboardsPanel managed={managed} pollMs={POLL} />);
+    await ready(view);
+
+    fireEvent.click(view.getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(fake.started).toHaveLength(1));
+    const row = await view.findByTestId("switchboard-inst-1");
+    const instance = fake.instances.get("inst-1")!;
+    instance.status = "running";
+    instance.agent = "http://127.0.0.1:4920/v1";
+    await waitFor(() => expect(row.textContent).toMatch(/agent API/));
+    expect(within(row).queryByRole("button", { name: "Attach" })).toBeNull();
+  });
+
   it("defaults to the first project that has hosts", async () => {
     const { client } = fakeClient({
       projects: () =>

@@ -15,6 +15,7 @@ import {
   type ControllerClient,
   type HostIssue,
 } from "../controller/client.js";
+import { managedDescriptors } from "../controller/managed.js";
 import type { ManagedDescriptors } from "../controller/use-managed-descriptors.js";
 import type { MonitoringSetSource } from "../monitoring-sets.js";
 
@@ -200,7 +201,7 @@ function InstanceRow({
         </>
       ) : null}
       <div className="rm-switchboards__actions">
-        {instance.status === "running" && !attached ? (
+        {!attached && managedDescriptors(instance, []).length > 0 ? (
           <button
             className="rm-btn rm-btn-small"
             onClick={onAttach}
