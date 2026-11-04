@@ -271,12 +271,18 @@ describe("the built-in Connect server", () => {
       await expect(
         runConnectServer(argsFor(".ph/connect-build/dist/", port), {}, project),
       ).rejects.toThrow(
-        "No Connect build to serve: .ph/connect-build/dist/index.html is missing. Build it first with `ph connect build`.",
+        "No Connect build to serve: .ph/connect-build/dist/index.html is missing. Build it first with `ph connect build`, or `ph run <host> build` for a host's Connect.",
       );
       await expect(
         runConnectServer(argsFor("empty-build", port), {}, project),
       ).rejects.toThrow(
-        'No Connect build to serve: empty-build/index.html is missing. Build it first with `ph connect build --outDir "empty-build"`.',
+        'No Connect build to serve: empty-build/index.html is missing. Build it first with `ph connect build --outDir "empty-build"`, or `ph run <host> build` for a host\'s Connect.',
+      );
+      const elsewhere = join(project, "..", "ph-elsewhere-build");
+      await expect(
+        runConnectServer(argsFor(elsewhere, port), {}, project),
+      ).rejects.toThrow(
+        `No Connect build to serve: ${join(elsewhere, "index.html").split("\\").join("/")} is missing.`,
       );
       const probe = createServer();
       await new Promise<void>((done, fail) => {

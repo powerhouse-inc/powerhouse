@@ -339,9 +339,12 @@ export function assertConnectBuild(
   outDirAbs: string,
   dirname: string,
 ): void {
-  if (existsSync(path.join(outDirAbs, "index.html"))) return;
-  const shown = path
-    .relative(dirname, path.join(outDirAbs, "index.html"))
+  const file = path.join(outDirAbs, "index.html");
+  if (existsSync(file)) return;
+  const relative = path.relative(dirname, file);
+  const shown = (
+    relative.startsWith("..") || path.isAbsolute(relative) ? file : relative
+  )
     .split(path.sep)
     .join("/");
   const build =
@@ -349,7 +352,7 @@ export function assertConnectBuild(
       ? "ph connect build"
       : `ph connect build --outDir ${JSON.stringify(outDirArg)}`;
   throw new Error(
-    `No Connect build to serve: ${shown} is missing. Build it first with \`${build}\`.`,
+    `No Connect build to serve: ${shown} is missing. Build it first with \`${build}\`, or \`ph run <host> build\` for a host's Connect.`,
   );
 }
 
