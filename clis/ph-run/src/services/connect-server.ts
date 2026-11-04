@@ -15,6 +15,7 @@ import tls from "node:tls";
 import sirv from "sirv";
 import type { ConnectPreviewArgs } from "./classic-args.js";
 import {
+  assertConnectBuild,
   cacheHeaders,
   connectBaseOf,
   isProxiedRequest,
@@ -251,6 +252,7 @@ export async function runConnectServer(
 ): Promise<ConnectServer> {
   serveOverride ??= overrideFromEnv();
   const outDir = path.resolve(dirname, args.outDir);
+  assertConnectBuild(args.outDir, outDir, dirname);
   const base = connectBaseOf(args, outDir, dirname);
   const target = proxy ? new URL(new URL(proxy).origin) : undefined;
 
