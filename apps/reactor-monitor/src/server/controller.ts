@@ -322,6 +322,16 @@ function appOf(raw: unknown): string | undefined {
   return parsed.success ? parsed.data.endpoints.connect : undefined;
 }
 
+// A mastra-runner assistant's; clint-runner's own `{ agents, proxy }` isn't read.
+const agentOutputsSchema = z.object({
+  endpoints: z.object({ openai: z.string() }),
+});
+
+function agentOf(raw: unknown): string | undefined {
+  const parsed = agentOutputsSchema.safeParse(raw);
+  return parsed.success ? parsed.data.endpoints.openai : undefined;
+}
+
 function membersOf(
   members: SpawnedHost["members"],
 ): Record<string, InstanceMember> | undefined {
@@ -330,12 +340,14 @@ function membersOf(
     Object.entries(members).map(([key, member]) => {
       const outputs = outputsOf(member.outputs);
       const app = appOf(member.outputs);
+      const agent = agentOf(member.outputs);
       return [
         key,
         {
           host: member.host,
           ...(outputs ? { outputs } : {}),
           ...(app ? { app } : {}),
+          ...(agent ? { agent } : {}),
         },
       ];
     }),
@@ -729,6 +741,8 @@ export function createMonitorController(
       if (outputs) entry.view.outputs = outputs;
       const app = appOf(spawned.outputs);
       if (app) entry.view.app = app;
+      const agent = agentOf(spawned.outputs);
+      if (agent) entry.view.agent = agent;
       const members = membersOf(spawned.members);
       if (members) entry.view.members = members;
       if (entry.view.status === "starting") entry.view.status = "running";

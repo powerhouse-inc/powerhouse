@@ -195,6 +195,8 @@ export const instanceMemberSchema = z.object({
   outputs: instanceOutputsSchema.optional(),
   /** A Connect member's app URL. */
   app: z.string().optional(),
+  /** An assistant member's OpenAI-compatible API URL. */
+  agent: z.string().optional(),
 });
 export type InstanceMember = z.infer<typeof instanceMemberSchema>;
 
@@ -208,6 +210,8 @@ export const instanceSchema = z.object({
   outputs: instanceOutputsSchema.optional(),
   /** A standalone Connect's app URL. */
   app: z.string().optional(),
+  /** A standalone assistant's OpenAI-compatible API URL. */
+  agent: z.string().optional(),
   /** A compound's members; `outputs` above is a standalone host's only. */
   members: z.record(z.string(), instanceMemberSchema).optional(),
   /** A draft's project host; `project` above is then the throwaway copy. */

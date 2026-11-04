@@ -239,7 +239,9 @@ function Running({
           ? "Starting a copy. This can take a minute."
           : run.status === "stopping"
             ? "Stopping the copy…"
-            : "Running a copy. Its reactors are in the reactor list."}
+            : run.attached.remote.length > 0 || run.attached.browser.length > 0
+              ? "Running a copy. Its reactors are in the reactor list."
+              : "Running a copy."}
       </p>
       {run.problem ? (
         <p className="hb-error">
@@ -255,6 +257,11 @@ function Running({
               <b>{reactor.name}</b>{" "}
               {reactor.url ? (
                 <span className="hb-mono hb-note">{reactor.url}</span>
+              ) : null}
+              {reactor.agent ? (
+                <span className="hb-note">
+                  agent API <span className="hb-mono">{reactor.agent}</span>
+                </span>
               ) : null}
               {reactor.app ? (
                 <a href={reactor.app} rel="noreferrer" target="_blank">
