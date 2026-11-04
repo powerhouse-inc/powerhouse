@@ -193,6 +193,17 @@ function connectStorage(
   return kind === "idb" || kind === "memory" ? kind : undefined;
 }
 
+/** Why the browser reactor's declared store can't be served: Connect keeps
+ * IndexedDB instead of a folder or Postgres. */
+export function unservedConnectStorage(
+  reactor: ReactorConfig | undefined,
+): string | undefined {
+  const browser = browserBackend(reactor);
+  const kind = browser?.storage?.kind;
+  if (!browser || !kind || connectStorage(browser)) return undefined;
+  return `reactor.backends.${browser.name}.storage "${kind}" applies only to a switchboard; Connect keeps this reactor in IndexedDB.`;
+}
+
 export interface ConnectReactorProjection {
   /** Patch merged into the connect runtime config (connect.*). */
   connect: {

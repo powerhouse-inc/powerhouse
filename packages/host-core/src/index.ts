@@ -242,6 +242,7 @@ export {
   protocolEnv,
   reactorBlockToSwitchboardConfig,
   reactorClientMode,
+  unservedConnectStorage,
   type ConnectReactorProjection,
   type ConnectRouterSettings,
   type ConnectStorageKind,

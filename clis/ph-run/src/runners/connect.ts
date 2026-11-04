@@ -20,6 +20,7 @@ import {
   type DriveDeclaration,
   projectDrivesIntoConnect,
   projectReactorToConnect,
+  unservedConnectStorage,
   refineConnectReactor,
   remoteBackendUrls,
   type ReactorConfig,
@@ -267,6 +268,9 @@ function callerOverrideRaw(
       namespace: base.instance?.namespace ?? reactorNamespace,
     } as typeof base.instance;
   const { connect } = projectReactorToConnect(reactor);
+  const unserved = unservedConnectStorage(reactor);
+  if (unserved)
+    console.warn(`[connect] hosts/${host.name}/host.js: ${unserved}`);
   const structural = isStructuralMultiReactor(reactor);
   if (!connect.reactor && !connect.instance && !connect.app && !structural) {
     // `base` IS host.config when the host has one; a host without a config

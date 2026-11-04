@@ -3,6 +3,7 @@ import {
   assertProtocolConsistency,
   primaryBackend,
   projectReactorToConnect,
+  unservedConnectStorage,
   reactorBlockToSwitchboardConfig,
   reactorClientMode,
   protocolConflicts,
@@ -167,6 +168,22 @@ describe("projectReactorToConnect", () => {
       projectReactorToConnect({
         backends: { sb: { ...sb, storage: { kind: "memory" } } },
       }).connect.instance?.storage,
+    ).toBeUndefined();
+  });
+
+  it("names a browser store Connect can't keep", () => {
+    expect(
+      unservedConnectStorage({
+        backends: { tab: { kind: "worker", storage: { kind: "path" } } },
+      }),
+    ).toMatch(/reactor\.backends\.tab\.storage "path".*IndexedDB/);
+    expect(
+      unservedConnectStorage({
+        backends: { tab: { kind: "in-process", storage: { kind: "memory" } } },
+      }),
+    ).toBeUndefined();
+    expect(
+      unservedConnectStorage({ backends: { tab: { kind: "in-process" } } }),
     ).toBeUndefined();
   });
 
