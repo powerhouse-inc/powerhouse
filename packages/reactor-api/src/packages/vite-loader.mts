@@ -77,6 +77,8 @@ interface LoadedModule {
   namespace: Record<string, unknown>;
 }
 
+const FILE_EVENTS = ["change", "add", "unlink"] as const;
+
 export class VitePackageLoader implements ISubscribablePackageLoader {
   private readonly logger = childLogger(["reactor-api", "vite-loader"]);
 
@@ -85,6 +87,10 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   private readonly importers: string[];
 
   readonly #reportError?: ReportError;
+
+  // One watcher listener per event for every subscription, so Vite's watcher
+  // stays under its listener limit however many packages are watched.
+  readonly #fileListeners = new Set<(changedPath: string) => void>();
 
   readonly name = "VitePackageLoader";
 
@@ -360,14 +366,26 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     const listener = (changedPath: string) => {
       if (matches(changedPath)) void reloadOnce();
     };
-    const events = ["change", "add", "unlink"] as const;
-    for (const event of events) this.vite.watcher.on(event, listener);
+    if (this.#fileListeners.size === 0) {
+      for (const event of FILE_EVENTS) {
+        this.vite.watcher.on(event, this.#dispatchFileEvent);
+      }
+    }
+    this.#fileListeners.add(listener);
 
     return () => {
       subscribed = false;
-      for (const event of events) this.vite.watcher.off(event, listener);
+      if (!this.#fileListeners.delete(listener)) return;
+      if (this.#fileListeners.size > 0) return;
+      for (const event of FILE_EVENTS) {
+        this.vite.watcher.off(event, this.#dispatchFileEvent);
+      }
     };
   }
+
+  readonly #dispatchFileEvent = (changedPath: string) => {
+    for (const listener of [...this.#fileListeners]) listener(changedPath);
+  };
 
   onDocumentModelsChange(
     identifier: string,

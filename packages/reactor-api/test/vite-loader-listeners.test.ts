@@ -77,6 +77,33 @@ describe("VitePackageLoader change listeners", () => {
     expect(handler).toHaveBeenCalledOnce();
   });
 
+  it("adds one watcher listener per event however many subscribe", () => {
+    const { vite, watcher } = fakeVite();
+    const warnings: Error[] = [];
+    const onWarning = (warning: Error) => warnings.push(warning);
+    process.on("warning", onWarning);
+    const loader = VitePackageLoader.build(vite);
+    const unsubscribes = [PKG_A, PKG_B].flatMap((pkg) => [
+      loader.onDocumentModelsChange(pkg, vi.fn()),
+      loader.onSubgraphsChange(pkg, vi.fn()),
+      loader.onScalarsChange(pkg, vi.fn()),
+      loader.onProcessorsChange(pkg, vi.fn()),
+      loader.onPiecesChange(pkg, vi.fn()),
+      loader.onDocumentModelsChange(pkg, vi.fn()),
+    ]);
+
+    const counts = () =>
+      ["change", "add", "unlink"].map((event) => watcher.listenerCount(event));
+    expect(counts()).toEqual([1, 1, 1]);
+    unsubscribes.slice(1).forEach((unsubscribe) => unsubscribe());
+    expect(counts()).toEqual([1, 1, 1]);
+    unsubscribes[0]();
+    unsubscribes[0]();
+    expect(counts()).toEqual([0, 0, 0]);
+    process.off("warning", onWarning);
+    expect(warnings).toEqual([]);
+  });
+
   it("reports a failed reload through reportError", async () => {
     const { vite, watcher } = fakeVite();
     const reportError = vi.fn();
