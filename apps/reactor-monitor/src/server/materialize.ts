@@ -271,6 +271,35 @@ function copyProject(source: string, target: string): void {
   visit(source, target, []);
 }
 
+const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist";
+
+/** The copy skips Connect's build, so link it: `serve` only reads it. */
+function linkConnectBuilds(
+  envelope: HostExport,
+  source: string,
+  target: string,
+): void {
+  for (const member of membersOf({ envelope })) {
+    if (member.role !== "connect" || member.runner.defaultVerb === "build") {
+      continue;
+    }
+    const outDir = member.runner.outDir ?? DEFAULT_CONNECT_OUTDIR;
+    if (typeof outDir !== "string" || path.isAbsolute(outDir)) continue;
+    let from: string;
+    let to: string;
+    try {
+      from = containedPath(source, outDir);
+      to = containedPath(target, outDir);
+    } catch {
+      continue;
+    }
+    if (!fs.existsSync(from) || fs.existsSync(to)) continue;
+    fs.mkdirSync(path.dirname(to), { recursive: true });
+    const real = fs.realpathSync(from);
+    fs.symlinkSync(real, to, linkType(real));
+  }
+}
+
 export interface Materialized {
   projectDir: string;
   dataDir: string;
@@ -312,5 +341,6 @@ export function materialize(
     path.join(sourceRoot, "node_modules"),
     containedPath(projectDir, "node_modules"),
   );
+  linkConnectBuilds(envelope, sourceRoot, projectDir);
   return { projectDir, dataDir };
 }

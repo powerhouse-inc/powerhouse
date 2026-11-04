@@ -407,6 +407,63 @@ describe("materialize", () => {
     );
   });
 
+  it("links each Connect's build from the source, keeping .ph the copy's own", () => {
+    const build = path.join(source, ".ph", "connect-build", "dist");
+    mkdirSync(build, { recursive: true });
+    writeFileSync(path.join(build, "index.html"), "<title>built</title>");
+    mkdirSync(path.join(source, ".ph", "run"));
+    mkdirSync(path.join(source, "custom-out"));
+    const envelope = duo(source);
+    const members = envelope.members as Record<string, unknown>;
+    const children = (envelope.host as { children: Record<string, unknown> })
+      .children;
+    for (const [key, port, outDir] of [
+      ["ui2", 3101, "custom-out"],
+      ["ui3", 3201, "never-built"],
+    ] as const) {
+      members[key] = {
+        name: key,
+        runner: {
+          module: "@powerhousedao/ph-cli/runners/connect",
+          port,
+          outDir,
+        },
+      };
+      children[key] = { host: key };
+    }
+    const before = listTree(source);
+    const { projectDir } = materialize(instanceDir, source, envelope);
+    expect(listTree(source)).toEqual(before);
+
+    const linked = path.join(projectDir, ".ph", "connect-build", "dist");
+    expect(lstatSync(linked).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(linked)).toBe(build);
+    expect(readFileSync(path.join(linked, "index.html"), "utf8")).toBe(
+      "<title>built</title>",
+    );
+    expect(lstatSync(path.join(projectDir, ".ph")).isSymbolicLink()).toBe(
+      false,
+    );
+    expect(existsSync(path.join(projectDir, ".ph", "run"))).toBe(false);
+    expect(lstatSync(path.join(projectDir, "custom-out")).isDirectory()).toBe(
+      true,
+    );
+    expect(existsSync(path.join(projectDir, "never-built"))).toBe(false);
+  });
+
+  it("links no build for a Connect without one, or outside the project", () => {
+    mkdirSync(path.join(base, "elsewhere"));
+    const envelope = duo(source);
+    const ui = (envelope.members as Record<string, { runner: object }>).ui;
+    ui.runner = { ...ui.runner, outDir: "../elsewhere" };
+    const { projectDir } = materialize(instanceDir, source, envelope);
+    expect(existsSync(path.join(projectDir, ".ph"))).toBe(false);
+    expect(readdirSync(path.dirname(projectDir)).sort()).toEqual([
+      "data",
+      "project",
+    ]);
+  });
+
   it("lists the source root in each switchboard's own packages, and only there", () => {
     const envelope = duo(source);
     const host = envelope.host as unknown as {
