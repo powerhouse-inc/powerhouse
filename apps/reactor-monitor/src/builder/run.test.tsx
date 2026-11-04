@@ -33,7 +33,7 @@ import {
 } from "./run.js";
 
 const ID = "11111111-0000-4000-8000-000000000000";
-const SENT_DIGEST = "a".repeat(64);
+const SENT_ID = "start-1";
 
 function instance(status: Instance["status"], id = ID): Instance {
   return {
@@ -42,12 +42,7 @@ function instance(status: Instance["status"], id = ID): Instance {
     host: "stack",
     status,
     startedAt: "2026-10-28T00:00:00.000Z",
-    source: {
-      project: PROJECT,
-      host: "stack",
-      baseDigest: SENT_DIGEST,
-      setters: [],
-    },
+    source: { project: PROJECT, host: "stack", startId: SENT_ID },
     ...(status === "running"
       ? {
           members: {
@@ -138,8 +133,8 @@ function setup(
     startDraft?: () => Promise<Instance>;
     get?: () => Promise<Instance>;
     list?: () => Promise<Instance[]>;
-    /** Starts the fake controller still has in their check. */
-    checking?: number;
+    /** `startId`s the fake controller still has in their check. */
+    checking?: string[];
   } = {},
 ) {
   const startDraft = vi.fn(
@@ -155,7 +150,7 @@ function setup(
   const list = vi.fn(overrides.list ?? (() => Promise.resolve([])));
   const listing = async () => ({
     instances: await list(),
-    checking: overrides.checking ?? 0,
+    checking: overrides.checking ?? [],
   });
   const client = {
     ...fakeBuilderClient({ startDraft }).client,
@@ -232,7 +227,10 @@ describe("Use it, wired", () => {
     const view = render(<Wired storage={storage} wiring={wiring} />);
     await started(view);
 
-    expect(wiring.startDraft).toHaveBeenCalledWith(requestOf(draft));
+    expect(wiring.startDraft).toHaveBeenCalledWith({
+      ...requestOf(draft),
+      startId: expect.any(String) as unknown,
+    });
     expect(wiring.added.map((d) => [d.name, d.kind, ownerOf(d)])).toEqual([
       ["ui.main", "worker", ID],
     ]);
@@ -471,13 +469,7 @@ describe("Use it, wired", () => {
     const browser = browserReactors(engine.envelope, engine.members);
     wiring.pending.setItem(
       PENDING_START_KEY,
-      JSON.stringify({
-        at,
-        host: "stack",
-        baseDigest: SENT_DIGEST,
-        setters: "[]",
-        browser,
-      }),
+      JSON.stringify({ id: SENT_ID, at, browser }),
     );
   }
 
@@ -557,7 +549,7 @@ describe("Use it, wired", () => {
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([])
         .mockResolvedValue([instance("starting")]),
-      checking: 1,
+      checking: [SENT_ID],
     });
     sentBeforeReload(wiring);
     const view = render(<Wired storage={storage} wiring={wiring} />);
@@ -577,14 +569,14 @@ describe("Use it, wired", () => {
     const OTHER = "22222222-0000-4000-8000-000000000000";
     const other = {
       ...instance("running", OTHER),
-      source: { project: PROJECT, host: "stack", baseDigest: "b".repeat(64) },
+      source: { project: PROJECT, host: "stack", startId: "start-0" },
     };
     const wiring = setup({
       list: vi
         .fn<() => Promise<Instance[]>>()
         .mockResolvedValueOnce([other])
         .mockResolvedValue([other, instance("starting")]),
-      checking: 1,
+      checking: [SENT_ID],
     });
     sentBeforeReload(wiring);
     const view = render(<Wired storage={storage} wiring={wiring} />);
@@ -596,7 +588,7 @@ describe("Use it, wired", () => {
 
   it("after a reload mid-start, lets go once nothing is left in the check", async () => {
     const { storage } = await storageWith(projectBase(stack()));
-    const wiring = setup({ checking: 0 });
+    const wiring = setup({ checking: ["start-0"] });
     sentBeforeReload(wiring, Date.now() - 5000);
     const view = render(<Wired storage={storage} wiring={wiring} />);
     await waitFor(() =>

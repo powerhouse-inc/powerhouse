@@ -547,26 +547,6 @@ describe("createMonitorController", () => {
     await controller.start({ project: allowed, host: "sb" });
   });
 
-  it("counts a start as checking until it is listed", async () => {
-    let release: () => void = () => {};
-    const gate = new Promise<void>((r) => (release = r));
-    const { controller } = create({
-      check: async () => {
-        await gate;
-        return [];
-      },
-    });
-    const first = controller.start({ project: allowed, host: "sb" });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(controller.checking()).toBe(1);
-    expect(controller.list()).toEqual([]);
-    release();
-    const started = await first;
-    expect(controller.checking()).toBe(0);
-    expect(controller.list().map((i) => i.id)).toEqual([started.id]);
-    await controller.stop(started.id);
-  });
-
   it("serves new log lines since a cursor", async () => {
     const { controller, launches } = create();
     const started = await controller.start({ project: allowed, host: "sb" });
@@ -748,6 +728,40 @@ describe("createMonitorController", () => {
       }
       throw new Error("resolved");
     };
+
+    it("lists a start's id as checking until the copy is listed, then in its source", async () => {
+      let release: () => void = () => {};
+      const gate = new Promise<void>((r) => (release = r));
+      const { controller } = create({
+        check: async () => {
+          await gate;
+          return [];
+        },
+      });
+      const first = controller.startDraft(await draft({ startId: "s-1" }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(controller.checking()).toEqual(["s-1"]);
+      expect(controller.list()).toEqual([]);
+      release();
+      const started = await first;
+      expect(controller.checking()).toEqual([]);
+      expect(started.source?.startId).toBe("s-1");
+      expect(controller.list().map((i) => i.id)).toEqual([started.id]);
+      await controller.stop(started.id);
+    });
+
+    it("forgets a refused start's id", async () => {
+      const { controller } = create({
+        check: () =>
+          Promise.resolve([
+            { stage: "declared", file: "f", path: "p", message: "no" },
+          ]),
+      });
+      await expect(
+        controller.startDraft(await draft({ startId: "s-2" })),
+      ).rejects.toThrow(ControllerError);
+      expect(controller.checking()).toEqual([]);
+    });
 
     it("exports a project host with its digest", async () => {
       const { controller, exports } = create();

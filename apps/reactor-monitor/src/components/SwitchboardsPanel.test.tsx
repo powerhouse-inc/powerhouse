@@ -45,7 +45,7 @@ function fakeClient(overrides: Partial<ControllerClient> = {}) {
     listing: () =>
       Promise.resolve({
         instances: [...instances.values()].map((i) => structuredClone(i)),
-        checking: 0,
+        checking: [],
       }),
     get: (id) => {
       const instance = instances.get(id);

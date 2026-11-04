@@ -130,6 +130,8 @@ export const draftRequestSchema = z.strictObject({
   /** The base is the monitor's blank host, not an export of `host`. */
   blank: z.literal(true).optional(),
   env: envSchema.optional(),
+  /** `POST drafts`: the caller's id for this start, echoed in `source` and `checking`. */
+  startId: z.string().min(1).max(64).optional(),
 });
 export type DraftRequest = z.infer<typeof draftRequestSchema>;
 
@@ -218,6 +220,8 @@ export const instanceSchema = z.object({
       /** The draft the copy runs: its base and the setters over it. */
       baseDigest: baseDigestSchema.optional(),
       setters: z.array(setterSchema).optional(),
+      /** The `startId` the draft was started with. */
+      startId: z.string().optional(),
     })
     .optional(),
   exit: z
@@ -241,8 +245,8 @@ export type Instance = z.infer<typeof instanceSchema>;
 
 export const instancesResponseSchema = z.object({
   instances: z.array(instanceSchema),
-  /** Starts still in their check; each is listed only once it passes. */
-  checking: z.number().int().nonnegative().optional(),
+  /** `startId`s of draft starts still in their check; each is listed once it passes. */
+  checking: z.array(z.string()).optional(),
 });
 export type InstancesResponse = z.infer<typeof instancesResponseSchema>;
 

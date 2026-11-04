@@ -29,17 +29,17 @@ const WATCH_MS = 3000;
 const PENDING_MS = 90_000;
 /** Until then a start may not have reached the controller's check yet. */
 const ARRIVE_MS = 2000;
+/** Listing failures in a row after which a reloaded page stops waiting. */
+const LIST_FAILURES = 3;
 export const PENDING_START_KEY = "ph:reactor-monitor:builder-start";
 
 type BrowserReactor = ReturnType<typeof browserReactors>[number];
 
 /** A start sent from this tab whose answer it hasn't read yet. */
 type PendingStart = {
+  /** The `startId` sent; the copy echoes it in `source`. */
+  id: string;
   at: number;
-  /** Matched against a copy's `source`: which draft was sent. */
-  host: string;
-  baseDigest: string;
-  setters: string;
   browser: BrowserReactor[];
 };
 
@@ -76,14 +76,12 @@ function readPending(
   if (raw === null) return undefined;
   try {
     const json = JSON.parse(raw) as Partial<PendingStart>;
-    const { at, host, baseDigest, setters, browser } = json;
-    return typeof at === "number" &&
-      isText(host) &&
-      isText(baseDigest) &&
-      isText(setters) &&
+    const { id, at, browser } = json;
+    return isText(id) &&
+      typeof at === "number" &&
       Array.isArray(browser) &&
       browser.every(isBrowserReactor)
-      ? { at, host, baseDigest, setters, browser }
+      ? { id, at, browser }
       : undefined;
   } catch {
     return undefined;
@@ -251,16 +249,6 @@ type RunState = Omit<BuilderRun, "browser" | "attached">;
 const GONE = new Set(["exited", "failed"]);
 const BUSY = new Set(["starting", "stopping"]);
 
-/** Whether `instance` is the copy `sent` started. */
-function startedBy(sent: PendingStart, instance: Instance): boolean {
-  const { source } = instance;
-  return (
-    source?.host === sent.host &&
-    source.baseDigest === sent.baseDigest &&
-    JSON.stringify(source.setters ?? []) === sent.setters
-  );
-}
-
 /** Builder-started copies the controller still runs, newest first. */
 function liveDrafts(instances: readonly Instance[]): Instance[] {
   return instances
@@ -419,12 +407,16 @@ export function useBuilderRun({
       setState({ status: "starting", reactors: [] });
     }
     /** Whether to stop looking for the copy `sent` started. */
-    const gaveUp = (checking: number | undefined) => {
-      if (!sent) return true;
+    const gaveUp = (checking: string[] | undefined, failures: number) => {
+      if (!sent || failures >= LIST_FAILURES) return true;
       const now = Date.now();
       if (now >= sent.at + PENDING_MS) return true;
-      // Refused, failed or never arrived: nothing is left in the check.
-      return checking === 0 && now >= sent.at + ARRIVE_MS;
+      // Refused, failed or never arrived: no longer in the check.
+      return (
+        checking !== undefined &&
+        !checking.includes(sent.id) &&
+        now >= sent.at + ARRIVE_MS
+      );
     };
     void (async () => {
       let failures = 0;
@@ -437,7 +429,7 @@ export function useBuilderRun({
           );
           if (!mine()) return;
         }
-        let checking: number | undefined;
+        let checking: string[] | undefined;
         try {
           const listing = await client.listing();
           drafts = liveDrafts(listing.instances);
@@ -445,11 +437,12 @@ export function useBuilderRun({
           failures = 0;
         } catch {
           if (!sent) return;
+          drafts = [];
           failures++;
         }
         if (!mine()) return;
-        ours = sent && drafts.find((instance) => startedBy(sent, instance));
-        if (ours || gaveUp(checking)) break;
+        ours = sent && drafts.find((i) => i.source?.startId === sent.id);
+        if (ours || gaveUp(checking, failures)) break;
       }
       if (sent) writePending(pending, undefined);
       const found = ours ?? drafts.at(0);
@@ -489,19 +482,13 @@ export function useBuilderRun({
   const start = useCallback(
     async (draft: BuilderDraft, engine: BuilderEngine) => {
       if (!client) return;
-      const request = requestOf(draft);
+      const request = { ...requestOf(draft), startId: crypto.randomUUID() };
       const browser = browserReactors(engine.envelope, engine.members);
       const token = Symbol("run");
       current.current = token;
       const live = () => mounted.current && current.current === token;
       setState({ status: "starting", reactors: [] });
-      writePending(pending, {
-        at: Date.now(),
-        host: request.host,
-        baseDigest: request.baseDigest,
-        setters: JSON.stringify(request.setters),
-        browser,
-      });
+      writePending(pending, { id: request.startId, at: Date.now(), browser });
       let instance: Instance;
       try {
         instance = await client.startDraft(request);
