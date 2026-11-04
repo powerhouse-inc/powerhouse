@@ -428,7 +428,7 @@ describe("createMonitorController", () => {
     expect(launches[2].options.env).toMatchObject({
       PH_OUTPUT_DATA_DIRS: dirOf(sb.id),
     });
-    expect(checks.at(-1)?.env.PH_OUTPUT_DATA_DIRS).toBe(dirOf(sb.id));
+    expect(checks.at(-1)?.env).not.toHaveProperty("PH_OUTPUT_DATA_DIRS");
     await controller.stop(sb.id);
     await controller.stop(copy.id);
     await controller.start({ project: allowed, host: "sb" });
@@ -444,6 +444,30 @@ describe("createMonitorController", () => {
         }),
       ),
     ).toBe("env_denied");
+  });
+
+  it("names an in-place start still in its check to one started beside it", async () => {
+    addHost(allowed, "agent");
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    let sbDir: string | undefined;
+    const { controller, launches } = create({
+      check: async (input) => {
+        if (input.host === "sb") {
+          sbDir = input.env.PH_USER_DATA_DIR;
+          await gate;
+        }
+        return [];
+      },
+    });
+    const sb = controller.start({ project: allowed, host: "sb" });
+    await until(() => sbDir !== undefined);
+    await controller.start({ project: allowed, host: "agent" });
+    expect(launches[0].options.env).toMatchObject({
+      PH_OUTPUT_DATA_DIRS: sbDir,
+    });
+    release();
+    await sb;
   });
 
   it("refuses to start a host with check issues", async () => {

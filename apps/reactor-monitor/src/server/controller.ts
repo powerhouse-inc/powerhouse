@@ -925,17 +925,29 @@ export function createMonitorController(
     return Promise.all([...entries.keys()].map(stop));
   };
 
-  /** The data dirs of the in-place instances of `root` still up: an in-place
-   * start reads its `$output` tokens from their run records too. */
-  const siblingDataDirs = (root: string): Record<string, string> => {
-    const dirs = [...entries.values()]
-      .filter(
-        ({ view }) =>
-          (view.status === "starting" || view.status === "running") &&
-          !view.source &&
-          view.project === root,
-      )
-      .map((entry) => entry.dataDir);
+  /** In-place starts between their prepare and their entry, by id. */
+  const preparing = new Map<string, { root: string; dataDir: string }>();
+
+  /** The data dirs of the other in-place instances of `root` still up or in
+   * their check: an in-place start reads `$output` from their records too. */
+  const siblingDataDirs = (
+    id: string,
+    root: string,
+  ): Record<string, string> => {
+    const dirs = [
+      ...[...entries.values()]
+        .filter(
+          ({ view }) =>
+            view.id !== id &&
+            (view.status === "starting" || view.status === "running") &&
+            !view.source &&
+            view.project === root,
+        )
+        .map((entry) => entry.dataDir),
+      ...[...preparing]
+        .filter(([other, run]) => other !== id && run.root === root)
+        .map(([, run]) => run.dataDir),
+    ];
     return dirs.length > 0
       ? { [OUTPUT_DATA_DIRS_ENV]: dirs.join(path.delimiter) }
       : {};
@@ -962,6 +974,7 @@ export function createMonitorController(
     const checked = (async () => {
       try {
         const run = await prepare(instanceDir, claim);
+        if (!run.source) preparing.set(id, run);
         const issues = await runCheck(run.root, host, run.env, run.dataDir);
         if (issues.length > 0) {
           throw new ControllerError(
@@ -984,6 +997,7 @@ export function createMonitorController(
       run = await checked;
     } finally {
       checking.delete(checked);
+      preparing.delete(id);
     }
     const entry: Entry = {
       view: {
@@ -1002,7 +1016,10 @@ export function createMonitorController(
       abort: new AbortController(),
     };
     entries.set(id, entry);
-    entry.starting = launch(entry, run.root, host, run.env);
+    const env = run.source
+      ? run.env
+      : { ...run.env, ...siblingDataDirs(id, run.root) };
+    entry.starting = launch(entry, run.root, host, env);
     return snapshot(entry);
   };
 
@@ -1043,15 +1060,14 @@ export function createMonitorController(
         if (wanted.refused) {
           throw new ControllerError("bad_request", wanted.refused);
         }
-        const withSiblings = { ...env, ...siblingDataDirs(root) };
         if (wanted.backends.length === 0) {
-          return { root, dataDir: instanceDir, env: withSiblings };
+          return { root, dataDir: instanceDir, env };
         }
         const { url } = await createDatabase(claim);
         return {
           root,
           dataDir: instanceDir,
-          env: { ...withSiblings, [REACTOR_DATABASE]: url },
+          env: { ...env, [REACTOR_DATABASE]: url },
         };
       });
     },
