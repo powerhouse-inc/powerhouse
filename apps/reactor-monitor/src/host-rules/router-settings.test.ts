@@ -135,6 +135,13 @@ describe("where new drives go", () => {
     const back = choose(onSb, `${UI}:newDrives:browser`);
     expect(reactorOf(back).placement).toEqual({ drives: { shared: "sb" } });
     expect(find(back, `${UI}:newDrives:browser`).selected).toBe(true);
+
+    // Nothing else placed: the block goes with its last key.
+    const only = set(linked(), { [`${UI}.reactor.placement`]: {} });
+    const placed = choose(only, `${UI}:newDrives:on:sb`);
+    expect(reactorOf(placed).placement).toEqual({ newDrives: "sb" });
+    const cleared = choose(placed, `${UI}:newDrives:browser`);
+    expect(reactorOf(cleared).placement).toBeUndefined();
   });
 
   it("can't choose this browser for a Connect with no browser reactor", () => {
@@ -346,7 +353,7 @@ describe("connection and router presets", () => {
     let reset = never;
     for (const [id] of defaults) reset = choose(reset, id);
     expect(Object.keys(remote(reset))).toEqual(["url"]);
-    expect(reactorOf(reset).router).toEqual({});
+    expect(reactorOf(reset).router).toBeUndefined();
     for (const [id] of defaults) expect(find(reset, id).selected).toBe(true);
   });
 
