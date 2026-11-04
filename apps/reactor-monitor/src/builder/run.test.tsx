@@ -24,18 +24,25 @@ import {
 } from "./draft.js";
 import { builderEngine } from "./engine.js";
 import { HostBuilder } from "./HostBuilder.js";
-import { browserDescriptors, monitoringSetOf, useBuilderRun } from "./run.js";
+import {
+  browserDescriptors,
+  browserReactors,
+  monitoringSetOf,
+  PENDING_START_KEY,
+  useBuilderRun,
+} from "./run.js";
 
 const ID = "11111111-0000-4000-8000-000000000000";
+const SENT_ID = "start-1";
 
-function instance(status: Instance["status"]): Instance {
+function instance(status: Instance["status"], id = ID): Instance {
   return {
-    id: ID,
+    id,
     project: "/tmp/copy",
     host: "stack",
     status,
     startedAt: "2026-10-28T00:00:00.000Z",
-    source: { project: PROJECT, host: "stack" },
+    source: { project: PROJECT, host: "stack", startId: SENT_ID },
     ...(status === "running"
       ? {
           members: {
@@ -58,6 +65,9 @@ function instance(status: Instance["status"]): Instance {
       : {}),
   };
 }
+
+const unreachable = () =>
+  new ControllerRequestError("network", "Controller unreachable: reset.");
 
 const notFound = () =>
   new ControllerRequestError("not_found", "No instance.", 404);
@@ -83,10 +93,12 @@ function Wired({
   wiring,
   onSaveSet,
   storage,
+  pending = wiring.pending,
 }: {
   wiring: Wiring;
   onSaveSet?: (request: unknown) => string;
   storage: ReturnType<typeof memoryStorage>;
+  pending?: ReturnType<typeof memoryStorage>;
 }) {
   const [owned, setOwned] = useState(new Map<string, string[]>());
   const run = useBuilderRun({
@@ -105,6 +117,7 @@ function Wired({
     },
     pollMs: 1,
     watchMs: 5,
+    pending,
   });
   return (
     <HostBuilder
@@ -123,6 +136,8 @@ function setup(
     startDraft?: () => Promise<Instance>;
     get?: () => Promise<Instance>;
     list?: () => Promise<Instance[]>;
+    /** `startId`s the fake controller still has in their check. */
+    checking?: string[] | (() => string[]);
   } = {},
 ) {
   const startDraft = vi.fn(
@@ -136,14 +151,27 @@ function setup(
         .mockResolvedValue(instance("running")),
   );
   const list = vi.fn(overrides.list ?? (() => Promise.resolve([])));
-  const client = { ...fakeBuilderClient({ startDraft }).client, get, list };
+  const listing = async () => ({
+    instances: await list(),
+    checking:
+      typeof overrides.checking === "function"
+        ? overrides.checking()
+        : (overrides.checking ?? []),
+  });
+  const client = {
+    ...fakeBuilderClient({ startDraft }).client,
+    get,
+    list,
+    listing,
+  };
   const managed = {
     attach: vi.fn(),
     stopInstance: vi.fn(() => Promise.resolve()),
     dropInstance: vi.fn(),
   };
   const added: ReactorDescriptor[] = [];
-  return { client, startDraft, get, list, managed, added };
+  const pending = memoryStorage();
+  return { client, startDraft, get, list, managed, added, pending };
 }
 
 const startButton = (view: ReturnType<typeof render>) =>
@@ -205,7 +233,10 @@ describe("Use it, wired", () => {
     const view = render(<Wired storage={storage} wiring={wiring} />);
     await started(view);
 
-    expect(wiring.startDraft).toHaveBeenCalledWith(requestOf(draft));
+    expect(wiring.startDraft).toHaveBeenCalledWith({
+      ...requestOf(draft),
+      startId: expect.any(String) as unknown,
+    });
     expect(wiring.added.map((d) => [d.name, d.kind, ownerOf(d)])).toEqual([
       ["ui.main", "worker", ID],
     ]);
@@ -455,6 +486,319 @@ describe("Use it, wired", () => {
     await waitFor(() => expect(runText(view)).toContain("Running a copy"));
     expect(wiring.managed.attach).toHaveBeenCalledWith(instance("running"));
     expect(wiring.added).toEqual([]);
+  });
+
+  /** A start sent from this tab whose answer the reload lost. */
+  function sentBeforeReload(wiring: Wiring, at = Date.now()) {
+    const engine = builderEngine(
+      newDraft(projectBase(stack()), "0".repeat(64)),
+      BARE,
+    );
+    const browser = browserReactors(engine.envelope, engine.members);
+    wiring.pending.setItem(
+      PENDING_START_KEY,
+      JSON.stringify({ id: SENT_ID, at, browser }),
+    );
+  }
+
+  it("keeps the start a tab sent while it was in flight", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    let held!: (value: Instance) => void;
+    const wiring = setup({
+      startDraft: () =>
+        new Promise<Instance>((resolve) => {
+          held = resolve;
+        }),
+    });
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    fireEvent.click(startButton(view));
+    await waitFor(() => expect(wiring.startDraft).toHaveBeenCalled());
+    const sent = JSON.parse(
+      wiring.pending.getItem(PENDING_START_KEY) ?? "null",
+    ) as { browser: { descriptor: { name: string } }[] };
+    expect(sent.browser.map((entry) => entry.descriptor.name)).toEqual([
+      "ui.main",
+    ]);
+
+    held(instance("starting"));
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"));
+    expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
+  });
+
+  it("forgets the start it sent once the controller refuses it", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const wiring = setup({
+      startDraft: () =>
+        Promise.reject(
+          new ControllerRequestError("check_failed", "Failed.", 422),
+        ),
+    });
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    fireEvent.click(startButton(view));
+    await waitFor(() =>
+      expect(view.getByText("Couldn't start: Failed.")).toBeTruthy(),
+    );
+    expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
+  });
+
+  it("keeps the start it sent when the answer never came", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const wiring = setup({
+      startDraft: () =>
+        Promise.reject(
+          new ControllerRequestError(
+            "network",
+            "Controller unreachable: Failed to fetch",
+          ),
+        ),
+    });
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    fireEvent.click(startButton(view));
+    await waitFor(() =>
+      expect(view.getByText(/Controller unreachable/)).toBeTruthy(),
+    );
+    expect(wiring.pending.getItem(PENDING_START_KEY)).not.toBe(null);
+  });
+
+  it("after a reload mid-start, waits for the copy to show up and takes it on", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const wiring = setup({
+      list: vi
+        .fn<() => Promise<Instance[]>>()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValue([instance("starting")]),
+      checking: [SENT_ID],
+    });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() => expect(runText(view)).toContain("Starting a copy"));
+    expect(startButton(view)).toHaveProperty("disabled", true);
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"));
+    expect(wiring.list.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(wiring.added.map((d) => [d.name, ownerOf(d)])).toEqual([
+      ["ui.main", ID],
+    ]);
+    expect(wiring.managed.attach).toHaveBeenCalledWith(instance("running"));
+    expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
+  });
+
+  it("after a reload mid-start, waits for its own copy past another one", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const OTHER = "22222222-0000-4000-8000-000000000000";
+    const other = {
+      ...instance("running", OTHER),
+      source: { project: PROJECT, host: "stack", startId: "start-0" },
+    };
+    const wiring = setup({
+      list: vi
+        .fn<() => Promise<Instance[]>>()
+        .mockResolvedValueOnce([other])
+        .mockResolvedValue([other, instance("starting")]),
+      checking: [SENT_ID],
+    });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"));
+    expect(wiring.added.map((d) => ownerOf(d))).toEqual([ID]);
+    expect(wiring.managed.attach).toHaveBeenCalledOnce();
+    expect(wiring.managed.attach).toHaveBeenCalledWith(instance("running"));
+  });
+
+  it("after a reload mid-start, lets go once its start left the check, taking on no other copy", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const OTHER = "22222222-0000-4000-8000-000000000000";
+    const other = {
+      ...instance("running", OTHER),
+      source: { project: PROJECT, host: "stack", startId: "start-0" },
+    };
+    let checks = 0;
+    const wiring = setup({
+      list: () => Promise.resolve([other]),
+      checking: () => (checks++ === 0 ? [SENT_ID] : []),
+    });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() => expect(wiring.list).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    expect(runText(view)).toBe("");
+    expect(wiring.managed.attach).not.toHaveBeenCalled();
+    expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
+  });
+
+  it("after a reload, takes on no other copy when its recent start isn't in the check", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const other = {
+      ...instance("running", "22222222-0000-4000-8000-000000000000"),
+      source: { project: PROJECT, host: "stack", startId: "start-0" },
+    };
+    const wiring = setup({ list: () => Promise.resolve([other]) });
+    sentBeforeReload(wiring, Date.now() - 6000);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    expect(runText(view)).toBe("");
+    expect(wiring.managed.attach).not.toHaveBeenCalled();
+  });
+
+  it("after a reload mid-start, says why it can't list while it waits", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const list = vi
+      .fn<() => Promise<Instance[]>>()
+      .mockRejectedValueOnce(unreachable())
+      .mockImplementation(async () => {
+        await held;
+        return [instance("starting")];
+      });
+    const wiring = setup({ list, checking: [SENT_ID] });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(runText(view)).toContain("Controller unreachable: reset."),
+    );
+    release();
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"));
+    expect(runText(view)).not.toContain("unreachable");
+  });
+
+  it("after a reload, treats a long-over start as gone and picks up the live copy as before", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const OTHER = "22222222-0000-4000-8000-000000000000";
+    const other = {
+      ...instance("running", OTHER),
+      source: { project: PROJECT, host: "stack", startId: "start-0" },
+    };
+    const wiring = setup({
+      list: () => Promise.resolve([other]),
+      get: () => Promise.resolve(other),
+    });
+    sentBeforeReload(wiring, Date.now() - 20 * 60_000);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    expect(runText(view)).toBe("");
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"));
+    expect(wiring.list).toHaveBeenCalledOnce();
+    expect(wiring.managed.attach).not.toHaveBeenCalled();
+    expect(wiring.added).toEqual([]);
+    expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
+  });
+
+  it("after a reload mid-start, lets go when the controller refuses the listing", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const list = vi
+      .fn<() => Promise<Instance[]>>()
+      .mockResolvedValueOnce([])
+      .mockRejectedValue(
+        new ControllerRequestError("bad_token", "Missing token.", 401),
+      );
+    const wiring = setup({ list, checking: [SENT_ID] });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    expect(wiring.list).toHaveBeenCalledTimes(2);
+    expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
+  });
+
+  it("after a reload mid-start, waits out listing failures once its start was seen in the check", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const down = unreachable();
+    const list = vi
+      .fn<() => Promise<Instance[]>>()
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(down)
+      .mockRejectedValueOnce(down)
+      .mockRejectedValueOnce(down)
+      .mockRejectedValueOnce(down)
+      .mockResolvedValue([instance("starting")]);
+    const wiring = setup({ list, checking: [SENT_ID] });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"), {
+      timeout: 5000,
+    });
+    expect(wiring.added.map((d) => ownerOf(d))).toEqual([ID]);
+  });
+
+  it("after a reload mid-start, stops after listing failures when its start was never seen", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const wiring = setup({
+      list: () => Promise.reject(unreachable()),
+    });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    expect(wiring.list).toHaveBeenCalledTimes(5);
+    expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
+  });
+
+  it("after a reload mid-start, keeps looking while the controller can't be asked", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const list = vi
+      .fn<() => Promise<Instance[]>>()
+      .mockRejectedValueOnce(unreachable())
+      .mockResolvedValue([instance("starting")]);
+    const wiring = setup({ list });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"));
+    expect(wiring.added.map((d) => ownerOf(d))).toEqual([ID]);
+  });
+
+  it("after a reload mid-start, attaches a copy that already runs", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const wiring = setup({
+      list: () => Promise.resolve([instance("running")]),
+      get: () => Promise.resolve(instance("running")),
+    });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"));
+    expect(wiring.managed.attach).toHaveBeenCalledWith(instance("running"));
+    expect(wiring.added.map((d) => [d.name, ownerOf(d)])).toEqual([
+      ["ui.main", ID],
+    ]);
+  });
+
+  it("looks once when no start was in flight, and lets an old one go", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const idle = setup();
+    const first = render(<Wired storage={storage} wiring={idle} />);
+    await waitFor(() =>
+      expect(startButton(first)).toHaveProperty("disabled", false),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(idle.list).toHaveBeenCalledOnce();
+    first.unmount();
+
+    const stale = setup();
+    sentBeforeReload(stale, Date.now() - 10 * 60_000);
+    const second = render(<Wired storage={storage} wiring={stale} />);
+    await waitFor(() =>
+      expect(startButton(second)).toHaveProperty("disabled", false),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(stale.list).toHaveBeenCalledOnce();
+    expect(runText(second)).toBe("");
+    expect(stale.pending.getItem(PENDING_START_KEY)).toBe(null);
   });
 
   it("offers to rebase when the project host changed since the draft began", async () => {

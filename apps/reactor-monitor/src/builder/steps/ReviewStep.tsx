@@ -6,7 +6,7 @@ import type { BuilderClient } from "../client.js";
 import { issueCount, NO_CONTROLLER } from "../copy.js";
 import { checkReason } from "../../host-rules/index.js";
 import { blankOf, isBlankImport, requestOf } from "../draft.js";
-import { IssueList } from "../IssueList.js";
+import { HostIssueList, IssueList } from "../IssueList.js";
 import { JsonPreview } from "../JsonPreview.js";
 import type { StepProps } from "./types.js";
 
@@ -69,23 +69,7 @@ function ControllerCheck({
             The controller found: {issueCount(found).toLowerCase()}.
           </p>
           <IssueList issues={result.ruleIssues} />
-          {result.issues.length > 0 ? (
-            <ul className="hb-issues">
-              {result.issues.map((issue) => (
-                <li
-                  className="hb-issue"
-                  key={`${issue.stage}\0${issue.file}\0${issue.path}\0${issue.message}`}
-                >
-                  <span>{issue.message}</span>
-                  <span className="hb-fpath hb-mono">
-                    {[issue.stage, issue.file, issue.path, issue.hint]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          <HostIssueList issues={result.issues} />
         </>
       ) : null}
     </div>

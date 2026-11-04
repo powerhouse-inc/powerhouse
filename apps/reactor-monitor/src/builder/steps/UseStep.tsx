@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import type { HostImportRequest } from "../../components/HostImportPanel.js";
-import { errorMessage } from "../../controller/client.js";
+import {
+  ControllerRequestError,
+  errorMessage,
+  type HostIssue,
+} from "../../controller/client.js";
 import {
   changedFiles,
   hostFiles,
@@ -11,6 +15,7 @@ import type { BuilderClient } from "../client.js";
 import {
   connectReach,
   startReason,
+  type HostRuleIssue,
   type Member,
 } from "../../host-rules/index.js";
 import type { Project } from "../../controller/api.js";
@@ -25,6 +30,7 @@ import {
   type BuilderDraft,
 } from "../draft.js";
 import type { BuilderEngine } from "../engine.js";
+import { HostIssueList, IssueList } from "../IssueList.js";
 import { routeSeedOf, startedMembers } from "../route.js";
 import {
   monitoringSetOf,
@@ -33,6 +39,25 @@ import {
   type RunReactor,
 } from "../run.js";
 import type { StepProps } from "./types.js";
+
+/** Why the last Start didn't run, with the controller's findings. */
+type StartFailure = {
+  headline: string;
+  ruleIssues: readonly HostRuleIssue[];
+  issues: readonly HostIssue[];
+};
+
+function startFailureOf(error: unknown): StartFailure {
+  if (error instanceof StartFailedError) {
+    return { headline: error.message, ruleIssues: [], issues: [] };
+  }
+  const refused = error instanceof ControllerRequestError ? error : undefined;
+  return {
+    headline: `Couldn't start: ${errorMessage(error)}`,
+    ruleIssues: refused?.ruleIssues ?? [],
+    issues: refused?.issues ?? [],
+  };
+}
 
 /** Whether the controller serves the project and host the draft comes from. */
 function useServed(
@@ -306,6 +331,7 @@ export function UseStep({
   draft,
   engine,
   onDraft,
+  onStep,
   run,
   onStart,
   onStop,
@@ -329,6 +355,7 @@ export function UseStep({
   const served = useServed(client, draft);
   const [setName, setSetName] = useState(engine.envelope.name);
   const [status, setStatus] = useState("");
+  const [failure, setFailure] = useState<StartFailure>();
   const [saved, setSaved] = useState<string[]>([]);
   const blank = blankOf(draft);
   const blocker = startReason({
@@ -355,12 +382,12 @@ export function UseStep({
   const start = async () => {
     if (!onStart) return;
     setStatus("");
+    setFailure(undefined);
     try {
       await onStart(draft, engine);
     } catch (error) {
       if (isBaseChanged(error)) onBaseChanged();
-      else if (error instanceof StartFailedError) setStatus(error.message);
-      else setStatus(`Couldn't start: ${errorMessage(error)}`);
+      else setFailure(startFailureOf(error));
     }
   };
 
@@ -413,6 +440,15 @@ export function UseStep({
             onStop={onStop}
             run={run}
           />
+        ) : null}
+        {failure ? (
+          <>
+            <p className="hb-error" role="status">
+              {failure.headline}
+            </p>
+            <IssueList issues={failure.ruleIssues} onStep={onStep} />
+            <HostIssueList issues={failure.issues} />
+          </>
         ) : null}
       </div>
       <div className="hb-card hb-sec">
