@@ -344,14 +344,16 @@ export async function spawnHost(
     if (aborted || Date.now() >= deadline) {
       const phase: SpawnHostPhase = aborted ? "aborted" : "timeout";
       const ended = tail === "" || tail.endsWith("\n") ? "" : "\n";
-      tail = (tail + `${ended}${SPAWN_STOPPING_NOTE}\n`).slice(-TAIL_BYTES);
+      const ran = `${tail}${ended}${SPAWN_STOPPING_NOTE}\n`;
+      tail = "";
       const stopped = await stop();
       throw new SpawnHostError(
         phase === "aborted"
           ? `spawnHost: aborted before ph run ${options.host} was ready.`
           : `spawnHost: ph run ${options.host} wrote no run record within ${readyTimeoutMs} ms.`,
         phase,
-        tail,
+        // What it printed while stopping can't push out where it got to.
+        ran + tail,
         stopped,
       );
     }
