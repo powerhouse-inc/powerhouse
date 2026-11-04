@@ -27,6 +27,8 @@ const POLL_MS = 1000;
 const WATCH_MS = 3000;
 /** How long a reloaded page looks for a start it sent: the check's 60 s, and the copy. */
 const PENDING_MS = 90_000;
+/** Until then a start may not have reached the controller's check yet. */
+const ARRIVE_MS = 2000;
 export const PENDING_START_KEY = "ph:reactor-monitor:builder-start";
 
 type BrowserReactor = ReturnType<typeof browserReactors>[number];
@@ -222,7 +224,7 @@ export function reactorsOf(instance: Instance): RunReactor[] {
 }
 
 export type BuilderRunOptions = {
-  client: Pick<ControllerClient, "startDraft" | "get" | "list"> | undefined;
+  client: Pick<ControllerClient, "startDraft" | "get" | "listing"> | undefined;
   managed: Pick<
     ManagedDescriptors,
     "attach" | "stopInstance" | "dropInstance" | "owned"
@@ -416,44 +418,48 @@ export function useBuilderRun({
       current.current = waiting;
       setState({ status: "starting", reactors: [] });
     }
-    const letGo = () => {
-      if (sent) writePending(pending, undefined);
-      if (current.current !== waiting) return;
-      current.current = undefined;
-      setState(undefined);
+    /** Whether to stop looking for the copy `sent` started. */
+    const gaveUp = (checking: number | undefined) => {
+      if (!sent) return true;
+      const now = Date.now();
+      if (now >= sent.at + PENDING_MS) return true;
+      // Refused, failed or never arrived: nothing is left in the check.
+      return checking === 0 && now >= sent.at + ARRIVE_MS;
     };
     void (async () => {
-      let drafts: Instance[];
-      try {
-        drafts = liveDrafts(await client.list());
-      } catch {
-        // No controller to ask: nothing it started can be picked up.
-        if (mine()) letGo();
-        return;
-      }
-      if (!mine()) return;
-      let ours = sent && drafts.find((instance) => startedBy(sent, instance));
       let failures = 0;
-      while (sent && !ours && Date.now() < sent.at + PENDING_MS) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, backoffMs(pollMs, failures)),
-        );
-        if (!mine()) return;
+      let drafts: Instance[] = [];
+      let ours: Instance | undefined;
+      for (let first = true; ; first = false) {
+        if (!first) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, backoffMs(pollMs, failures)),
+          );
+          if (!mine()) return;
+        }
+        let checking: number | undefined;
         try {
-          drafts = liveDrafts(await client.list());
+          const listing = await client.listing();
+          drafts = liveDrafts(listing.instances);
+          checking = listing.checking;
           failures = 0;
         } catch {
+          if (!sent) return;
           failures++;
         }
         if (!mine()) return;
-        ours = drafts.find((instance) => startedBy(sent, instance));
-      }
-      const found = ours ?? drafts.at(0);
-      if (!found) {
-        letGo();
-        return;
+        ours = sent && drafts.find((instance) => startedBy(sent, instance));
+        if (ours || gaveUp(checking)) break;
       }
       if (sent) writePending(pending, undefined);
+      const found = ours ?? drafts.at(0);
+      if (!found) {
+        if (current.current === waiting) {
+          current.current = undefined;
+          setState(undefined);
+        }
+        return;
+      }
       // The reload lost Start's answer, so nothing of this copy is set up yet.
       if (sent && ours && !latest.current.owned.get(ours.id)?.length) {
         const { id } = ours;
@@ -474,19 +480,21 @@ export function useBuilderRun({
     })();
     return () => {
       abort.abort();
-      if (current.current === waiting) current.current = undefined;
+      if (current.current !== waiting) return;
+      current.current = undefined;
+      setState(undefined);
     };
   }, [client, pending, pollMs, running, followStarting, attach]);
 
   const start = useCallback(
     async (draft: BuilderDraft, engine: BuilderEngine) => {
       if (!client) return;
+      const request = requestOf(draft);
+      const browser = browserReactors(engine.envelope, engine.members);
       const token = Symbol("run");
       current.current = token;
       const live = () => mounted.current && current.current === token;
       setState({ status: "starting", reactors: [] });
-      const request = requestOf(draft);
-      const browser = browserReactors(engine.envelope, engine.members);
       writePending(pending, {
         at: Date.now(),
         host: request.host,

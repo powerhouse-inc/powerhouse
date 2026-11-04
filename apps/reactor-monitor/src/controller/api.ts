@@ -241,7 +241,10 @@ export type Instance = z.infer<typeof instanceSchema>;
 
 export const instancesResponseSchema = z.object({
   instances: z.array(instanceSchema),
+  /** Starts still in their check; each is listed only once it passes. */
+  checking: z.number().int().nonnegative().optional(),
 });
+export type InstancesResponse = z.infer<typeof instancesResponseSchema>;
 
 export const logLineSchema = z.object({
   seq: z.number().int(),

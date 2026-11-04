@@ -547,6 +547,26 @@ describe("createMonitorController", () => {
     await controller.start({ project: allowed, host: "sb" });
   });
 
+  it("counts a start as checking until it is listed", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    const { controller } = create({
+      check: async () => {
+        await gate;
+        return [];
+      },
+    });
+    const first = controller.start({ project: allowed, host: "sb" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(controller.checking()).toBe(1);
+    expect(controller.list()).toEqual([]);
+    release();
+    const started = await first;
+    expect(controller.checking()).toBe(0);
+    expect(controller.list().map((i) => i.id)).toEqual([started.id]);
+    await controller.stop(started.id);
+  });
+
   it("serves new log lines since a cursor", async () => {
     const { controller, launches } = create();
     const started = await controller.start({ project: allowed, host: "sb" });

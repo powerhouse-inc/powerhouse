@@ -113,6 +113,8 @@ export interface MonitorController {
   /** Starts the draft from a throwaway copy of its project. */
   startDraft(request: DraftRequest): Promise<Instance>;
   list(): Instance[];
+  /** Starts still in their check, not listed until they pass. */
+  checking(): number;
   get(id: string): Instance;
   logs(id: string, since: number): LogsResponse;
   /** Stops a live instance; forgets it either way. */
@@ -912,6 +914,7 @@ export function createMonitorController(
       });
     },
     list: () => [...entries.values()].map(snapshot),
+    checking: () => checking.size,
     get: (id) => snapshot(entryOf(id)),
     logs: (id, since) => entryOf(id).logs.since(since),
     stop,

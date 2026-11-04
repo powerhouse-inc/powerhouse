@@ -374,6 +374,7 @@ export function UseStep({
 
   const start = async () => {
     if (!onStart) return;
+    setStatus("");
     setFailure(undefined);
     try {
       await onStart(draft, engine);
