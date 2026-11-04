@@ -130,6 +130,8 @@ export const draftRequestSchema = z.strictObject({
   /** The base is the monitor's blank host, not an export of `host`. */
   blank: z.literal(true).optional(),
   env: envSchema.optional(),
+  /** `POST drafts`: the caller's id for this start, echoed in `source` and `checking`. */
+  startId: z.string().min(1).max(64).optional(),
 });
 export type DraftRequest = z.infer<typeof draftRequestSchema>;
 
@@ -195,6 +197,8 @@ export const instanceMemberSchema = z.object({
   outputs: instanceOutputsSchema.optional(),
   /** A Connect member's app URL. */
   app: z.string().optional(),
+  /** An assistant member's OpenAI-compatible API URL. */
+  agent: z.string().optional(),
 });
 export type InstanceMember = z.infer<typeof instanceMemberSchema>;
 
@@ -208,6 +212,8 @@ export const instanceSchema = z.object({
   outputs: instanceOutputsSchema.optional(),
   /** A standalone Connect's app URL. */
   app: z.string().optional(),
+  /** A standalone assistant's OpenAI-compatible API URL. */
+  agent: z.string().optional(),
   /** A compound's members; `outputs` above is a standalone host's only. */
   members: z.record(z.string(), instanceMemberSchema).optional(),
   /** A draft's project host; `project` above is then the throwaway copy. */
@@ -218,6 +224,8 @@ export const instanceSchema = z.object({
       /** The draft the copy runs: its base and the setters over it. */
       baseDigest: baseDigestSchema.optional(),
       setters: z.array(setterSchema).optional(),
+      /** The `startId` the draft was started with. */
+      startId: z.string().optional(),
     })
     .optional(),
   /** The Postgres database the controller made for this start. */
@@ -243,7 +251,10 @@ export type Instance = z.infer<typeof instanceSchema>;
 
 export const instancesResponseSchema = z.object({
   instances: z.array(instanceSchema),
+  /** `startId`s of draft starts still in their check; each is listed once it passes. */
+  checking: z.array(z.string()).optional(),
 });
+export type InstancesResponse = z.infer<typeof instancesResponseSchema>;
 
 export const logLineSchema = z.object({
   seq: z.number().int(),

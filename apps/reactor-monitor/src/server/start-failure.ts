@@ -1,10 +1,14 @@
-import type { SpawnHostError } from "@powerhousedao/host-core";
+import { stripVTControlCharacters } from "node:util";
+import {
+  SPAWN_STOPPING_NOTE,
+  type SpawnHostError,
+} from "@powerhousedao/host-core";
 
 export type StartFailure = {
   message: string;
   phase: string;
   tail: string;
-  /** What spawnHost saw, when `message` leads with a reason from the log. */
+  /** What spawnHost saw, when `message` leads with a line from the log. */
   context?: string;
 };
 
@@ -70,13 +74,53 @@ function sentence(text: string): string {
   return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
+const LAST_LINE_MAX = 200;
+
+// spawnHost's own notes in the tail, not the run's output.
+const SPAWN_NOTES = /^(?:logFile|onOutput): /;
+/** What a terminal would show of a line: its last carriage-return frame. */
+function shown(line: string): string {
+  const frames = stripVTControlCharacters(line).split("\r");
+  return (frames.findLast((frame) => frame.trim() !== "") ?? "").trimEnd();
+}
+
+/** Where a run that never got ready stopped printing. */
+export function lastOutput(tail: string): string | undefined {
+  const ran = tail.split(`\n${SPAWN_STOPPING_NOTE}\n`)[0];
+  const line = (ran.startsWith(`${SPAWN_STOPPING_NOTE}\n`) ? "" : ran)
+    .split("\n")
+    .map(shown)
+    .findLast(
+      (each) =>
+        each.trim() !== "" &&
+        !noise(each) &&
+        !SPAWN_NOTES.test(each) &&
+        !/^\s/.test(each) &&
+        !/^[{}[\]][,;)]*$/.test(each),
+    );
+  if (!line) return undefined;
+  return line.length > LAST_LINE_MAX
+    ? `${line.slice(0, LAST_LINE_MAX - 1)}…`
+    : line;
+}
+
 /** The reason first, the spawn sentence as context, without spawnHost's prefix. */
 export function startFailure(error: SpawnHostError): StartFailure {
   const spawned = error.message
     .split("\n--- output tail ---\n")[0]
     .replace(/^spawnHost: /, "");
   const lead = LEADS[error.phase] ?? "Couldn't start";
-  // A run that timed out or was stopped printed no failure of its own.
+  const last =
+    error.phase === "timeout" ? lastOutput(error.outputTail) : undefined;
+  if (last) {
+    return {
+      message: `${lead}: its last output was "${last}".`,
+      phase: error.phase,
+      tail: error.outputTail,
+      context: spawned,
+    };
+  }
+  // A stopped run, or one that printed nothing, has no failure of its own.
   const reason =
     error.phase === "exited" ? failureReason(error.outputTail) : undefined;
   return reason

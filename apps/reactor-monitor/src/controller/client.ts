@@ -72,6 +72,8 @@ export interface ControllerClient {
   /** Starts a throwaway copy of the draft's project; poll `get` until running. */
   startDraft(request: DraftRequest): Promise<Instance>;
   list(): Promise<Instance[]>;
+  /** `list`, with the `startId`s of draft starts still in their check. */
+  listing(): Promise<{ instances: Instance[]; checking: string[] }>;
   get(id: string): Promise<Instance>;
   logs(id: string, since: number): Promise<LogsResponse>;
   /** A 404 means the controller no longer knows the instance: it is gone. */
@@ -155,6 +157,13 @@ export function createControllerClient(
   };
 
   const instancePath = (id: string) => `instances/${encodeURIComponent(id)}`;
+  const listing = async () => {
+    const { instances, checking } = await call(
+      instancesResponseSchema,
+      "instances",
+    );
+    return { instances, checking: checking ?? [] };
+  };
 
   return {
     projects: async () =>
@@ -188,8 +197,8 @@ export function createControllerClient(
       }),
     startDraft: (request) =>
       call(instanceSchema, "drafts", { method: "POST", body: request }),
-    list: async () =>
-      (await call(instancesResponseSchema, "instances")).instances,
+    list: async () => (await listing()).instances,
+    listing,
     get: (id) => call(instanceSchema, instancePath(id)),
     logs: (id, since) =>
       call(logsResponseSchema, `${instancePath(id)}/logs?since=${since}`),

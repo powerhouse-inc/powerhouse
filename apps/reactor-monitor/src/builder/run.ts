@@ -6,6 +6,7 @@ import type { HostImportRequest } from "../components/HostImportPanel.js";
 import type { Instance, InstanceOutputs } from "../controller/api.js";
 import {
   backoffMs,
+  ControllerRequestError,
   errorMessage,
   isNotFound,
   type ControllerClient,
@@ -19,13 +20,87 @@ import type { ManagedDescriptors } from "../controller/use-managed-descriptors.j
 import type { Member } from "../host-rules/index.js";
 import { planImport } from "../lib/host-import.js";
 import { NO_ADDRESS_YET, START_GONE } from "./copy.js";
-import { requestOf, type BuilderDraft } from "./draft.js";
+import { requestOf, type BuilderDraft, type DraftStorage } from "./draft.js";
 import type { BuilderEngine } from "./engine.js";
 
 const POLL_MS = 1000;
 const WATCH_MS = 3000;
+/** Until then a start may not have reached the controller's check yet. */
+const ARRIVE_MS = 5000;
+/** Listing failures in a row after which a reloaded page stops waiting: before and after it saw its start in the check. */
+const LIST_FAILURES = 5;
+const LIST_FAILURES_SEEN = 8;
+/** A stored start older than this is long over: not this page's run. */
+const STALE_MS = 10 * 60_000;
+export const PENDING_START_KEY = "ph:reactor-monitor:builder-start";
 
-/** `url`: a switchboard's first drive address; `app`: a Connect's page. */
+type BrowserReactor = ReturnType<typeof browserReactors>[number];
+
+/** A start sent from this tab whose answer it hasn't read yet. */
+type PendingStart = {
+  /** The `startId` sent; the copy echoes it in `source`. */
+  id: string;
+  at: number;
+  browser: BrowserReactor[];
+};
+
+const isText = (value: unknown): value is string => typeof value === "string";
+
+function isBrowserReactor(value: unknown): value is BrowserReactor {
+  if (typeof value !== "object" || value === null) return false;
+  const entry = value as Record<string, unknown>;
+  return (
+    typeof entry.descriptor === "object" &&
+    entry.descriptor !== null &&
+    isText(entry.member) &&
+    isText(entry.backend)
+  );
+}
+
+function sessionStore(): DraftStorage | undefined {
+  try {
+    return typeof window === "undefined" ? undefined : window.sessionStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+function readPending(
+  storage: DraftStorage | undefined,
+): PendingStart | undefined {
+  let raw: string | null;
+  try {
+    raw = storage?.getItem(PENDING_START_KEY) ?? null;
+  } catch {
+    return undefined;
+  }
+  if (raw === null) return undefined;
+  try {
+    const json = JSON.parse(raw) as Partial<PendingStart>;
+    const { id, at, browser } = json;
+    return isText(id) &&
+      typeof at === "number" &&
+      Array.isArray(browser) &&
+      browser.every(isBrowserReactor)
+      ? { id, at, browser }
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writePending(
+  storage: DraftStorage | undefined,
+  pending: PendingStart | undefined,
+): void {
+  try {
+    if (pending) storage?.setItem(PENDING_START_KEY, JSON.stringify(pending));
+    else storage?.removeItem(PENDING_START_KEY);
+  } catch {
+    // A start this tab can't remember is only lost to a reload.
+  }
+}
+
 /** A copy that began and then failed; its message already says so. */
 export class StartFailedError extends Error {
   constructor(message: string) {
@@ -34,10 +109,13 @@ export class StartFailedError extends Error {
   }
 }
 
+/** `url`: a switchboard's first drive address; `app`: a Connect's page;
+ * `agent`: an assistant's API. */
 export type RunReactor = {
   name: string;
   url?: string;
   app?: string;
+  agent?: string;
   /** A switchboard's drives by declared slug. */
   drives?: InstanceOutputs["drives"];
 };
@@ -128,12 +206,13 @@ export function monitoringSetOf(
 
 export function reactorsOf(instance: Instance): RunReactor[] {
   return [
-    ...(instance.outputs || instance.app
+    ...(instance.outputs || instance.app || instance.agent
       ? [
           {
             name: instance.host,
             url: instance.outputs && driveAddressOf(instance.outputs),
             app: instance.app,
+            agent: instance.agent,
           },
         ]
       : []),
@@ -141,13 +220,14 @@ export function reactorsOf(instance: Instance): RunReactor[] {
       name,
       url: member.outputs && driveAddressOf(member.outputs),
       app: member.app,
+      agent: member.agent,
       ...(member.outputs ? { drives: member.outputs.drives } : {}),
     })),
   ];
 }
 
 export type BuilderRunOptions = {
-  client: Pick<ControllerClient, "startDraft" | "get" | "list"> | undefined;
+  client: Pick<ControllerClient, "startDraft" | "get" | "listing"> | undefined;
   managed: Pick<
     ManagedDescriptors,
     "attach" | "stopInstance" | "dropInstance" | "owned"
@@ -158,6 +238,8 @@ export type BuilderRunOptions = {
   /** While starting; a running copy is checked every `watchMs`. */
   pollMs?: number;
   watchMs?: number;
+  /** Where a start in flight is kept across a reload; defaults to sessionStorage. */
+  pending?: DraftStorage;
 };
 
 export type BuilderRunControls = {
@@ -171,6 +253,20 @@ type RunState = Omit<BuilderRun, "browser" | "attached">;
 
 const GONE = new Set(["exited", "failed"]);
 const BUSY = new Set(["starting", "stopping"]);
+
+/** A random id; `crypto.randomUUID` is missing outside secure contexts. */
+function startIdOf(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/** No controller answer was read, so the start may still have been taken. */
+function isUnanswered(error: unknown): boolean {
+  return (
+    error instanceof ControllerRequestError &&
+    (error.code === "network" || error.code === "bad_response")
+  );
+}
 
 /** Builder-started copies the controller still runs, newest first. */
 function liveDrafts(instances: readonly Instance[]): Instance[] {
@@ -187,8 +283,10 @@ export function useBuilderRun({
   onAddDescriptors,
   pollMs = POLL_MS,
   watchMs = WATCH_MS,
+  pending: injected,
 }: BuilderRunOptions): BuilderRunControls {
   const [state, setState] = useState<RunState>();
+  const [pending] = useState(() => injected ?? sessionStore());
   // The run this hook follows; a loop for any other one stops quietly.
   const current = useRef<symbol | undefined>(undefined);
   const mounted = useRef(true);
@@ -201,6 +299,10 @@ export function useBuilderRun({
   }, []);
 
   const { attach, stopInstance, dropInstance, owned, reactors } = managed;
+  const latest = useRef({ owned, onAddDescriptors });
+  useEffect(() => {
+    latest.current = { owned, onAddDescriptors };
+  });
 
   /** The instance once it leaves `starting`, or undefined if this run was let go. */
   const settle = useCallback(
@@ -306,53 +408,144 @@ export function useBuilderRun({
     [settle, running, attach, dropInstance],
   );
 
-  // After a reload, pick up the copy the controller still runs.
+  // After a reload, pick up the copy the controller still runs, or wait for
+  // the one a start sent before the reload while the controller checks it.
   useEffect(() => {
     if (!client) return;
     const abort = new AbortController();
+    const waiting = Symbol("waiting");
+    const mine = () =>
+      !abort.signal.aborted &&
+      (current.current === undefined || current.current === waiting);
+    const stored = readPending(pending);
+    // A start long over is not this page's run.
+    const sent =
+      stored && Date.now() < stored.at + STALE_MS ? stored : undefined;
+    if (stored && !sent) writePending(pending, undefined);
+    if (sent && current.current === undefined) {
+      current.current = waiting;
+      setState({ status: "starting", reactors: [] });
+    }
+    /** Whether to stop looking for the copy `sent` started. */
+    let seen = false;
+    const gaveUp = (
+      checking: string[] | undefined,
+      failures: number,
+      refused: boolean,
+    ) => {
+      if (!sent || refused) return true;
+      if (checking === undefined) {
+        return failures >= (seen ? LIST_FAILURES_SEEN : LIST_FAILURES);
+      }
+      if (checking.includes(sent.id)) {
+        seen = true;
+        return false;
+      }
+      // Refused, failed or never arrived: not in the check, and not listed.
+      return seen || Date.now() >= sent.at + ARRIVE_MS;
+    };
     void (async () => {
-      let found: Instance | undefined;
-      try {
-        found = liveDrafts(await client.list()).at(0);
-      } catch {
+      let failures = 0;
+      let drafts: Instance[] = [];
+      let ours: Instance | undefined;
+      for (let first = true; ; first = false) {
+        if (!first) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, backoffMs(pollMs, failures)),
+          );
+          if (!mine()) return;
+        }
+        let checking: string[] | undefined;
+        let refused = false;
+        let problem: string | undefined;
+        try {
+          const listing = await client.listing();
+          drafts = liveDrafts(listing.instances);
+          checking = listing.checking;
+          failures = 0;
+        } catch (error) {
+          if (!sent) return;
+          drafts = [];
+          failures++;
+          // A restarted controller won't answer for this page's start.
+          refused =
+            error instanceof ControllerRequestError &&
+            error.code === "bad_token";
+          problem = errorMessage(error);
+        }
+        if (!mine()) return;
+        if (current.current === waiting) {
+          setState((previous) => previous && { ...previous, problem });
+        }
+        ours = sent && drafts.find((i) => i.source?.startId === sent.id);
+        if (ours) break;
+        if (gaveUp(checking, failures, refused)) break;
+      }
+      if (sent) writePending(pending, undefined);
+      // A tab whose own start just ended takes on no other copy as its run.
+      const found = sent ? ours : drafts.at(0);
+      if (!found) {
+        if (current.current === waiting) {
+          current.current = undefined;
+          setState(undefined);
+        }
         return;
       }
-      if (abort.signal.aborted || !found || current.current) return;
+      // The reload lost Start's answer, so nothing of this copy is set up yet.
+      if (sent && ours && !latest.current.owned.get(ours.id)?.length) {
+        const { id } = ours;
+        latest.current.onAddDescriptors(
+          sent.browser.map(({ descriptor, member, backend }) =>
+            withOwner(descriptor, id, { member, backend }),
+          ),
+        );
+      }
       if (found.status === "running") {
         const token = Symbol("run");
         current.current = token;
+        if (ours) attach(found);
         running(found, token);
       } else {
         await followStarting(found.id);
       }
     })();
-    return () => abort.abort();
-  }, [client, running, followStarting]);
+    return () => {
+      abort.abort();
+      if (current.current !== waiting) return;
+      current.current = undefined;
+      setState(undefined);
+    };
+  }, [client, pending, pollMs, running, followStarting, attach]);
 
   const start = useCallback(
     async (draft: BuilderDraft, engine: BuilderEngine) => {
       if (!client) return;
+      const request = { ...requestOf(draft), startId: startIdOf() };
+      const browser = browserReactors(engine.envelope, engine.members);
       const token = Symbol("run");
       current.current = token;
       const live = () => mounted.current && current.current === token;
       setState({ status: "starting", reactors: [] });
+      writePending(pending, { id: request.startId, at: Date.now(), browser });
       let instance: Instance;
       try {
-        instance = await client.startDraft(requestOf(draft));
+        instance = await client.startDraft(request);
       } catch (error) {
+        // Unanswered, as when a reload aborts it: the controller may still start it.
+        if (!isUnanswered(error)) writePending(pending, undefined);
         if (live()) {
           current.current = undefined;
           setState(undefined);
         }
         throw error;
       }
+      writePending(pending, undefined);
       if (!live()) return;
       const { id } = instance;
       setState({ id, status: "starting", reactors: [] });
       onAddDescriptors(
-        browserReactors(engine.envelope, engine.members).map(
-          ({ descriptor, member, backend }) =>
-            withOwner(descriptor, id, { member, backend }),
+        browser.map(({ descriptor, member, backend }) =>
+          withOwner(descriptor, id, { member, backend }),
         ),
       );
       let settled: Instance | undefined;
@@ -380,7 +573,7 @@ export function useBuilderRun({
       attach(settled);
       running(settled, token);
     },
-    [client, settle, running, attach, dropInstance, onAddDescriptors],
+    [client, pending, settle, running, attach, dropInstance, onAddDescriptors],
   );
 
   const stop = useCallback(async () => {

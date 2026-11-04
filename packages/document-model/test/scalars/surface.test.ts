@@ -14,6 +14,7 @@ describe("scalar subpath", () => {
       "isScalarDefinition",
       "scalarCatalog",
       "scalarDefinitionVersion",
+      "storedScalarDefinition",
     ]);
   });
 
