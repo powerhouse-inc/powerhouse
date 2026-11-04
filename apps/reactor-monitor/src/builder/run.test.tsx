@@ -615,6 +615,46 @@ describe("Use it, wired", () => {
     expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
   });
 
+  it("after a reload, takes on no other copy when its recent start isn't in the check", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const other = {
+      ...instance("running", "22222222-0000-4000-8000-000000000000"),
+      source: { project: PROJECT, host: "stack", startId: "start-0" },
+    };
+    const wiring = setup({ list: () => Promise.resolve([other]) });
+    sentBeforeReload(wiring, Date.now() - 6000);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    expect(runText(view)).toBe("");
+    expect(wiring.managed.attach).not.toHaveBeenCalled();
+  });
+
+  it("after a reload mid-start, says why it can't list while it waits", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const list = vi
+      .fn<() => Promise<Instance[]>>()
+      .mockRejectedValueOnce(unreachable())
+      .mockImplementation(async () => {
+        await held;
+        return [instance("starting")];
+      });
+    const wiring = setup({ list, checking: [SENT_ID] });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(runText(view)).toContain("Controller unreachable: reset."),
+    );
+    release();
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"));
+    expect(runText(view)).not.toContain("unreachable");
+  });
+
   it("after a reload, treats a long-over start as gone and picks up the live copy as before", async () => {
     const { storage } = await storageWith(projectBase(stack()));
     const OTHER = "22222222-0000-4000-8000-000000000000";
@@ -626,7 +666,7 @@ describe("Use it, wired", () => {
       list: () => Promise.resolve([other]),
       get: () => Promise.resolve(other),
     });
-    sentBeforeReload(wiring, Date.now() - 10 * 60_000);
+    sentBeforeReload(wiring, Date.now() - 20 * 60_000);
     const view = render(<Wired storage={storage} wiring={wiring} />);
     await waitFor(() => expect(runText(view)).toContain("Running a copy"));
     expect(wiring.list).toHaveBeenCalledOnce();
@@ -683,7 +723,7 @@ describe("Use it, wired", () => {
     await waitFor(() =>
       expect(startButton(view)).toHaveProperty("disabled", false),
     );
-    expect(wiring.list).toHaveBeenCalledTimes(3);
+    expect(wiring.list).toHaveBeenCalledTimes(5);
     expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
   });
 

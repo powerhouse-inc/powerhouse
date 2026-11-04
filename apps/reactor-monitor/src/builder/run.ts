@@ -27,8 +27,11 @@ const POLL_MS = 1000;
 const WATCH_MS = 3000;
 /** Until then a start may not have reached the controller's check yet. */
 const ARRIVE_MS = 5000;
-/** Listing failures in a row after which a reloaded page stops waiting, unless it saw its start in the check. */
-const LIST_FAILURES = 3;
+/** Listing failures in a row after which a reloaded page stops waiting: before and after it saw its start in the check. */
+const LIST_FAILURES = 5;
+const LIST_FAILURES_SEEN = 8;
+/** A stored start older than this is long over: not this page's run. */
+const STALE_MS = 10 * 60_000;
 export const PENDING_START_KEY = "ph:reactor-monitor:builder-start";
 
 type BrowserReactor = ReturnType<typeof browserReactors>[number];
@@ -423,7 +426,9 @@ export function useBuilderRun({
       refused: boolean,
     ) => {
       if (!sent || refused) return true;
-      if (checking === undefined) return !seen && failures >= LIST_FAILURES;
+      if (checking === undefined) {
+        return failures >= (seen ? LIST_FAILURES_SEEN : LIST_FAILURES);
+      }
       if (checking.includes(sent.id)) {
         seen = true;
         return false;
@@ -435,8 +440,7 @@ export function useBuilderRun({
       let failures = 0;
       let drafts: Instance[] = [];
       let ours: Instance | undefined;
-      // Given up at once: the stored start is long over, not this page's run.
-      let stale = false;
+      const stale = sent !== undefined && Date.now() >= sent.at + STALE_MS;
       for (let first = true; ; first = false) {
         if (!first) {
           await new Promise((resolve) =>
@@ -446,6 +450,7 @@ export function useBuilderRun({
         }
         let checking: string[] | undefined;
         let refused = false;
+        let problem: string | undefined;
         try {
           const listing = await client.listing();
           drafts = liveDrafts(listing.instances);
@@ -455,16 +460,19 @@ export function useBuilderRun({
           if (!sent) return;
           drafts = [];
           failures++;
-          // Only an unreachable controller may answer later; bad_token won't.
-          refused = !isUnanswered(error);
+          // A restarted controller won't answer for this page's start.
+          refused =
+            error instanceof ControllerRequestError &&
+            error.code === "bad_token";
+          problem = errorMessage(error);
         }
         if (!mine()) return;
+        if (current.current === waiting) {
+          setState((previous) => previous && { ...previous, problem });
+        }
         ours = sent && drafts.find((i) => i.source?.startId === sent.id);
         if (ours) break;
-        if (gaveUp(checking, failures, refused)) {
-          stale = first && checking !== undefined;
-          break;
-        }
+        if (gaveUp(checking, failures, refused)) break;
       }
       if (sent) writePending(pending, undefined);
       // A tab whose own start just ended takes on no other copy as its run.
