@@ -214,6 +214,11 @@ export async function devReactImportmapPlugin(
         cfg.optimizeDeps.exclude = [
           ...new Set([...(cfg.optimizeDeps.exclude ?? []), ...heavyLibs]),
         ];
+        // Without it, Connect in dev asks for no shared-deps table.
+        cfg.define = {
+          ...cfg.define,
+          PH_CONNECT_SHARED_DEPS_URL: JSON.stringify(vendor!.sharedDeps),
+        };
       }
       cfg.optimizeDeps.include = [...include];
     },

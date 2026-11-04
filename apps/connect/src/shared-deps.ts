@@ -3,7 +3,8 @@ import {
   resolveDynamicBaseUrl,
 } from "@powerhousedao/shared/connect";
 
-// Set by `ph connect build`: the content-hashed shared-deps module URL.
+// Set by `ph connect build`, and by a dev server that serves a prebuilt
+// vendor: the content-hashed shared-deps module URL.
 declare const PH_CONNECT_SHARED_DEPS_URL: string | undefined;
 
 function builtSharedDepsUrl(): string | undefined {
@@ -12,14 +13,17 @@ function builtSharedDepsUrl(): string | undefined {
     : undefined;
 }
 
-/** The shared-deps module URL: this build's hashed copy, else the stable dev path. */
+/**
+ * The shared-deps module URL: this build's hashed copy, else the stable path.
+ * Null on a dev server without a vendor, where the request could only 404.
+ */
 export function sharedDepsModuleUrl(
   runtimeBase: string,
-  built: string | undefined = builtSharedDepsUrl(),
-): string {
-  return built
-    ? resolveDynamicBaseUrl(built, runtimeBase)
-    : `${runtimeBase}__vendor__/shared-deps.js`;
+  built: string | undefined,
+  dev: boolean,
+): string | null {
+  if (built) return resolveDynamicBaseUrl(built, runtimeBase);
+  return dev ? null : `${runtimeBase}__vendor__/shared-deps.js`;
 }
 
 export type SharedDeps = {
@@ -64,10 +68,14 @@ let cached: Promise<SharedDeps | null> | null = null;
  */
 export function getSharedDeps(): Promise<SharedDeps | null> {
   cached ??= (async () => {
+    const url = sharedDepsModuleUrl(
+      import.meta.env.BASE_URL,
+      builtSharedDepsUrl(),
+      import.meta.env.DEV,
+    );
+    if (url === null) return null;
     try {
-      const mod = (await import(
-        /* @vite-ignore */ sharedDepsModuleUrl(import.meta.env.BASE_URL)
-      )) as {
+      const mod = (await import(/* @vite-ignore */ url)) as {
         imports: Record<string, string>;
         versions: Record<string, string>;
       };
