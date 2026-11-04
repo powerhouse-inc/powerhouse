@@ -23,7 +23,13 @@ import {
   type DraftStorage,
   type StepId,
 } from "./draft.js";
-import { stepOf, useBuilderEngine, type BuilderEngine } from "./engine.js";
+import {
+  builderEngine,
+  flippedSettings,
+  stepOf,
+  useBuilderEngine,
+  type BuilderEngine,
+} from "./engine.js";
 import type { BuilderRun } from "./run.js";
 import { BasicsStep } from "./steps/BasicsStep.js";
 import { EnvironmentStep } from "./steps/EnvironmentStep.js";
@@ -146,9 +152,16 @@ export function HostBuilder({
     if (locked || !draft || !engine || option.selected || !option.enabled) {
       return;
     }
-    const changed = changedCount(engine.envelope, option.setters);
-    setDraft(addEdit(draft, option.setters));
-    setOthers(changed > 1 ? changed - 1 : undefined);
+    const next = addEdit(draft, option.setters);
+    const others =
+      Math.max(0, changedCount(engine.envelope, option.setters) - 1) +
+      flippedSettings(
+        engine.options,
+        builderEngine(next, engine.context).options,
+        option,
+      );
+    setDraft(next);
+    setOthers(others > 0 ? others : undefined);
   };
   const edit = (setters: Setter[]) => {
     if (locked || !draft) return;
