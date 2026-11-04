@@ -1,3 +1,4 @@
+import { stripVTControlCharacters } from "node:util";
 import {
   SPAWN_STOPPING_NOTE,
   type SpawnHostError,
@@ -77,17 +78,9 @@ const LAST_LINE_MAX = 200;
 
 // spawnHost's own notes in the tail, not the run's output.
 const SPAWN_NOTES = /^(?:logFile|onOutput): /;
-const ESC = String.fromCharCode(27);
-const BEL = String.fromCharCode(7);
-// CSI (colors, cursor) and OSC (titles, links) sequences.
-const ANSI = new RegExp(
-  `${ESC}(?:\\[[0-9;?]*[ -/]*[@-~]|\\][^${BEL}${ESC}]*(?:${BEL}|${ESC}\\\\))`,
-  "g",
-);
-
 /** What a terminal would show of a line: its last carriage-return frame. */
 function shown(line: string): string {
-  const frames = line.replace(ANSI, "").split("\r");
+  const frames = stripVTControlCharacters(line).split("\r");
   return (frames.findLast((frame) => frame.trim() !== "") ?? "").trimEnd();
 }
 

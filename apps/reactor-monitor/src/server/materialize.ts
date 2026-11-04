@@ -295,11 +295,11 @@ function withSourceBuilds(envelope: HostExport, source: string): HostExport {
   const host = copy.host as unknown as Record<string, unknown>;
   const children = isRecord(host.children) ? host.children : {};
   const outDirOf = (member: Member) => {
-    const outDir = member.runner.outDir ?? DEFAULT_CONNECT_OUTDIR;
-    // `${projectRoot}` and the like resolve in the copy, as they should.
-    return typeof outDir === "string" && !outDir.includes("${")
-      ? path.resolve(source, outDir)
-      : undefined;
+    const raw = member.runner.outDir ?? DEFAULT_CONNECT_OUTDIR;
+    if (typeof raw !== "string") return undefined;
+    const outDir = raw.replaceAll("${projectRoot}", source);
+    // Other tokens (`${userData}`) name the copy's own folders.
+    return outDir.includes("${") ? undefined : path.resolve(source, outDir);
   };
   const connects = membersOf({ envelope: copy }).filter(
     (member) => member.role === "connect",

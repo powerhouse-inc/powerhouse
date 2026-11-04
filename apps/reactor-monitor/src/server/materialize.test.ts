@@ -461,7 +461,7 @@ describe("materialize", () => {
     });
   });
 
-  it("serves the copy's own build when a member builds that folder", () => {
+  it("serves the copy's own build when a member builds that folder, and resolves ${projectRoot} in the source", () => {
     const envelope = duo(source);
     const members = envelope.members as Record<string, unknown>;
     members.builder = {
@@ -492,7 +492,7 @@ describe("materialize", () => {
       }
     ).children;
     expect(runners.ui.runner?.outDir).toBeUndefined();
-    expect(runners.rooted.runner?.outDir).toBeUndefined();
+    expect(runners.rooted.runner?.outDir).toBe(path.join(source, "out"));
   });
 
   it("leaves Connect's build alone when the whole host builds", () => {
