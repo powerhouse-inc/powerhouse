@@ -282,6 +282,8 @@ function copyProject(
 }
 
 const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist";
+// What the copy writes or replaces itself: never linked to the source.
+const COPY_OWNED = [".ph/run", "hosts", "node_modules"];
 
 /** The verb a member runs at when the controller starts the host. */
 function memberVerb(envelope: HostExport, member: Member): string {
@@ -320,7 +322,7 @@ function connectBuildsOf(envelope: HostExport, source: string): ConnectBuilds {
   const overlaps = (a: string, b: string) =>
     a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
   const sorted = [...served]
-    .filter((dir) => ![...written].some((other) => overlaps(dir, other)))
+    .filter((dir) => ![...written, ...COPY_OWNED].some((o) => overlaps(dir, o)))
     .sort((a, b) => a.length - b.length);
   return {
     inside: sorted.filter(

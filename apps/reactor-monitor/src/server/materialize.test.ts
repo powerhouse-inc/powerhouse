@@ -505,6 +505,15 @@ describe("materialize", () => {
     expect(existsSync(path.join(third.projectDir, ".ph"))).toBe(false);
   });
 
+  it("never links a folder the copy writes itself", () => {
+    mkdirSync(path.join(source, ".ph", "run"), { recursive: true });
+    const envelope = duo(source);
+    const ui = (envelope.members as Record<string, { runner: object }>).ui;
+    ui.runner = { ...ui.runner, outDir: ".ph" };
+    const { projectDir } = materialize(instanceDir, source, envelope);
+    expect(existsSync(path.join(projectDir, ".ph"))).toBe(false);
+  });
+
   it("points a build outside the project at the source's, linking nothing", () => {
     mkdirSync(path.join(base, "elsewhere"));
     const envelope = duo(source);
