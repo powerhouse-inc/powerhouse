@@ -1557,14 +1557,61 @@ describe("createMonitorController", () => {
       });
       const issues = await controller.check({ project: allowed, host: "duo" });
       expect(issues.map((issue) => issue.path)).toEqual(["reactor.backends"]);
-      expect(issues[0].message).toContain("b would keep its data there");
+      expect(issues[0].message).toContain(
+        "a, b would all keep their data there",
+      );
       expect(checks).toHaveLength(0);
       const error = await controller
         .start({ project: allowed, host: "duo" })
         .catch((e: unknown) => e);
       expect(error).toMatchObject({ code: "bad_request" });
-      expect((error as Error).message).toContain("b would keep its data there");
+      expect((error as Error).message).toContain(
+        "a, b would all keep their data there",
+      );
       expect(made).not.toHaveBeenCalled();
+    });
+
+    it("refuses an in-place host whose switchboards would share the database", async () => {
+      const { server, made } = fakeDatabases();
+      const duo = duoExport(allowed);
+      for (const key of ["sb-a", "sb-b"]) {
+        (duo.members[key] as { reactor: unknown }).reactor = {
+          backends: {
+            main: { kind: "in-process", storage: { kind: "postgres" } },
+          },
+        };
+      }
+      const { controller } = create({
+        postgres: server,
+        exportHost: () => Promise.resolve(duo),
+      });
+      const error = await controller
+        .start({ project: allowed, host: "duo" })
+        .catch((e: unknown) => e);
+      expect(error).toMatchObject({ code: "bad_request" });
+      expect(made).not.toHaveBeenCalled();
+    });
+
+    it("drops a failed start's database before stopAll returns", async () => {
+      const { server, live } = fakeDatabases();
+      let release = () => {};
+      const { controller } = create({
+        postgres: server,
+        check: () =>
+          new Promise((resolve) => {
+            release = () =>
+              resolve([{ path: "", message: "nope" } as unknown as HostIssue]);
+          }),
+      });
+      const started = controller
+        .startDraft(await postgresDraft())
+        .catch((e: unknown) => e);
+      await until(() => live.size === 1);
+      const stopped = controller.stopAll();
+      release();
+      await stopped;
+      expect(live.size).toBe(0);
+      expect(await started).toMatchObject({ code: "check_failed" });
     });
   });
 

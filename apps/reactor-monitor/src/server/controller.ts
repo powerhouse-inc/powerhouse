@@ -201,8 +201,9 @@ export function splitPackages(env: Record<string, string>): {
 const REACTOR_DATABASE = "PH_REACTOR_DATABASE_URL";
 const SWITCHBOARD_DATABASE = "PH_SWITCHBOARD_DATABASE_URL";
 
+// As the switchboard tells a Postgres url from a folder.
 const isPostgresUrl = (value: string | undefined) =>
-  value !== undefined && /^postgres(ql)?:\/\//i.test(value);
+  value?.startsWith("postgres") === true;
 
 /** Which of the env's database urls names Postgres for the switchboards. */
 export function envDatabaseOf(
@@ -642,17 +643,14 @@ export function createMonitorController(
     const members = draftMembers({ envelope }, context);
     const backends = controllerDatabaseBackends(members, context);
     if (backends.length === 0) return { backends };
-    const others = members.filter(
-      (member) =>
-        member.role === "switchboard" &&
-        !member.backends.some(
-          (backend) => backend.primary && backends.includes(backend.at),
-        ),
+    // The env reaches every switchboard in the host, so only one may run.
+    const switchboards = members.filter(
+      (member) => member.role === "switchboard",
     );
-    if (others.length > 0) {
+    if (switchboards.length > 1) {
       return {
         backends,
-        refused: `hosts/${host} needs the controller's Postgres database, which it would get through ${REACTOR_DATABASE}, and ${others.map((member) => member.key).join(", ")} would keep its data there too. Start it from the builder, which gives the database to one switchboard alone.`,
+        refused: `hosts/${host} needs the controller's Postgres database, which it would get through ${REACTOR_DATABASE}, and ${switchboards.map((member) => member.key).join(", ")} would all keep their data there. Start it from the builder, which gives each switchboard its own place.`,
       };
     }
     return { backends };
@@ -927,25 +925,28 @@ export function createMonitorController(
     const instanceDir = path.join(tempRoot, id);
     const claim: Claim = {};
     const checked = (async () => {
-      const run = await prepare(instanceDir, claim);
-      const issues = await runCheck(run.root, host, run.env, run.dataDir);
-      if (issues.length > 0) {
-        throw new ControllerError(
-          "check_failed",
-          `hosts/${host} failed its check with ${issues.length} issue(s).`,
-          issues,
-        );
+      try {
+        const run = await prepare(instanceDir, claim);
+        const issues = await runCheck(run.root, host, run.env, run.dataDir);
+        if (issues.length > 0) {
+          throw new ControllerError(
+            "check_failed",
+            `hosts/${host} failed its check with ${issues.length} issue(s).`,
+            issues,
+          );
+        }
+        return run;
+      } catch (error) {
+        // Before `checking` lets go, so stopAll waits for the cleanup.
+        await removeDir(instanceDir);
+        if (claim.database) await dropDatabase(claim.database);
+        throw error;
       }
-      return run;
     })();
     checking.add(checked);
     let run: Awaited<typeof checked>;
     try {
       run = await checked;
-    } catch (error) {
-      await removeDir(instanceDir);
-      if (claim.database) await dropDatabase(claim.database);
-      throw error;
     } finally {
       checking.delete(checked);
     }
