@@ -312,7 +312,9 @@ function connectBuildsOf(envelope: HostExport, source: string): ConnectBuilds {
     if (typeof outDir !== "string" || path.isAbsolute(outDir)) continue;
     const relative = path.relative(source, path.resolve(source, outDir));
     if (relative === "" || path.isAbsolute(relative)) continue;
-    const builds = memberVerb(envelope, member) === "build";
+    const verb = memberVerb(envelope, member);
+    if (verb !== "build" && verb !== "run" && verb !== "serve") continue;
+    const builds = verb === "build";
     if (relative.split(path.sep)[0] === "..") {
       if (!builds) outside.set(member.path, path.resolve(source, outDir));
       continue;

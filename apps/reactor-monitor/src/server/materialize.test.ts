@@ -514,6 +514,17 @@ describe("materialize", () => {
     expect(existsSync(path.join(projectDir, ".ph"))).toBe(false);
   });
 
+  it("copies, not links, the outDir of a Connect at dev, which reads no build", () => {
+    mkdirSync(path.join(source, "custom-out"));
+    const envelope = duo(source);
+    const ui = (envelope.members as Record<string, { runner: object }>).ui;
+    ui.runner = { ...ui.runner, outDir: "custom-out", defaultVerb: "dev" };
+    const { projectDir } = materialize(instanceDir, source, envelope);
+    expect(lstatSync(path.join(projectDir, "custom-out")).isDirectory()).toBe(
+      true,
+    );
+  });
+
   it("points a build outside the project at the source's, linking nothing", () => {
     mkdirSync(path.join(base, "elsewhere"));
     const envelope = duo(source);
