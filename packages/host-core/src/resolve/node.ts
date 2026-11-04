@@ -83,19 +83,40 @@ export function producerOutputsSchemas(
   };
 }
 
+/** Further `.ph` roots whose live run records a standalone `$output` reads
+ * (`path.delimiter`-separated): a launcher that gives each child its own
+ * PH_USER_DATA_DIR names its siblings' here. Locks never read them. */
+export const OUTPUT_DATA_DIRS_ENV = "PH_OUTPUT_DATA_DIRS";
+
+type Env = Readonly<Record<string, string | undefined>>;
+
+function recordEnvs(env: Env): Env[] {
+  const dirs = (env[OUTPUT_DATA_DIRS_ENV] ?? "")
+    .split(path.delimiter)
+    .filter((dir) => dir !== "" && dir !== env.PH_USER_DATA_DIR);
+  return [env, ...dirs.map((dir) => ({ PH_USER_DATA_DIR: dir }))];
+}
+
 /**
  * Standalone `$output` source: the producer's live v2 run record. Its own
  * standalone record first (keyed by the producer's `name`); else a live
- * compound of this project with exactly one member running that host. A
- * missing, stale, foreign or output-less record means "not running", and the
- * lookup fails naming the producer and how to start it (no fallback to the
- * producer's declared config, no waiting).
+ * compound of this project with exactly one member running that host. Both
+ * are looked up under the process's `.ph` root, then each of
+ * PH_OUTPUT_DATA_DIRS. A missing, stale, foreign or output-less record means
+ * "not running", and the lookup fails naming the producer and how to start
+ * it (no fallback to the producer's declared config, no waiting).
  */
 export function runRecordOutputSource(
   projectRoot: string,
-  options: { consumer: string; producers: ProducerMap; projectName: string },
+  options: {
+    consumer: string;
+    producers: ProducerMap;
+    projectName: string;
+    env?: Env;
+  },
 ): OutputSource {
   const { consumer, producers, projectName } = options;
+  const envs = recordEnvs(options.env ?? process.env);
   return {
     lookup(ref) {
       const notRunning = `${consumer} needs outputs from host "${ref.host}", which is not running. Start it first: ph run ${ref.host} (or run a compound that includes it).`;
@@ -107,16 +128,19 @@ export function runRecordOutputSource(
       const withSchema =
         schema !== undefined && schema !== null ? { schema } : {};
       if (ref.member === undefined && info && !("error" in info)) {
-        const probe = probeRun(projectRoot, info.name, projectName);
-        if (probe.status === "live" && probe.record.outputs) {
-          return {
-            status: "available",
-            outputs: probe.record.outputs,
-            ...withSchema,
-          };
+        for (const env of envs) {
+          const probe = probeRun(projectRoot, info.name, projectName, env);
+          if (probe.status === "live" && probe.record.outputs) {
+            return {
+              status: "available",
+              outputs: probe.record.outputs,
+              ...withSchema,
+            };
+          }
         }
       }
-      const members = listRunRecords(projectRoot)
+      const members = envs
+        .flatMap((env) => listRunRecords(projectRoot, env))
         .filter(
           (record) =>
             record.members !== undefined &&

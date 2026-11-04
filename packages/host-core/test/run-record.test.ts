@@ -17,6 +17,7 @@ import {
   writeRunRecord,
   type RunRecord,
 } from "../src/run-record.js";
+import type { ProducerInfo } from "../src/resolve/node.js";
 
 const temporary: string[] = [];
 afterEach(() => {
@@ -120,13 +121,12 @@ describe("run record read/write/clear", () => {
     expect(() => clearRunRecord(dir, "vetra")).not.toThrow();
   });
 
-  it("writes, reads, lists, probes and clears under an env's PH_USER_DATA_DIR", () => {
+  it("reads, lists, probes and clears under an env's PH_USER_DATA_DIR", () => {
     const dir = makeProject();
     const userData = makeProject();
     const env = { PH_USER_DATA_DIR: userData };
     // A child with PH_USER_DATA_DIR=userData writes here.
-    writeRunRecord(dir, record(), env);
-    expect(existsSync(path.join(userData, ".ph/run/vetra.json"))).toBe(true);
+    writeRunRecord(userData, record());
     expect(readRunRecord(dir, "vetra")).toBeUndefined();
     expect(readRunRecord(dir, "vetra", env)?.host).toBe("vetra");
     expect(listRunRecords(dir, env).map((r) => r.host)).toEqual(["vetra"]);
@@ -219,5 +219,65 @@ describe("runRecordOutputSource", () => {
         { outputs: source },
       ),
     ).toEqual({ origin: "http://localhost:4801" });
+  });
+
+  it("reads PH_OUTPUT_DATA_DIRS after its own root, standalone and as a member", async () => {
+    const { runRecordOutputSource } = await import("../src/resolve/node.js");
+    const dir = makeProject();
+    const own = makeProject();
+    const sibling = makeProject();
+    const compound = makeProject();
+    const env = {
+      PH_USER_DATA_DIR: own,
+      PH_OUTPUT_DATA_DIRS: [sibling, compound].join(path.delimiter),
+    };
+    writeRunRecord(sibling, {
+      version: 2,
+      host: "lab-switchboard",
+      projectName: "lab",
+      kind: "reactor",
+      verb: "run",
+      pid: process.pid,
+      startedAt: "x",
+      outputs: { origin: "http://localhost:4801" },
+    });
+    writeRunRecord(compound, record());
+    const info = (name: string): ProducerInfo => ({
+      folder: name,
+      name,
+      specifier: "fake-runner",
+      runner: {
+        kind: "reactor",
+        run: () => Promise.resolve(undefined),
+        hostSchema: {
+          safeParse: (v: unknown) => ({ success: true, data: v }),
+        },
+      },
+    });
+    const producers = new Map([
+      ["switchboard", info("lab-switchboard")],
+      ["connect", info("connect")],
+    ]);
+    const source = runRecordOutputSource(dir, {
+      consumer: "agent",
+      projectName: "lab",
+      producers,
+      env,
+    });
+    expect(source.lookup({ host: "switchboard" })).toMatchObject({
+      status: "available",
+      outputs: { origin: "http://localhost:4801" },
+    });
+    expect(source.lookup({ host: "connect" })).toMatchObject({
+      status: "available",
+      outputs: { port: 2064 },
+    });
+    const alone = runRecordOutputSource(dir, {
+      consumer: "agent",
+      projectName: "lab",
+      producers,
+      env: { PH_USER_DATA_DIR: own },
+    });
+    expect(alone.lookup({ host: "switchboard" }).status).toBe("unavailable");
   });
 });
