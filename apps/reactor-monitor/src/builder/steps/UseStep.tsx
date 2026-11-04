@@ -239,8 +239,7 @@ function Running({
           ? "Starting a copy. This can take a minute."
           : run.status === "stopping"
             ? "Stopping the copy…"
-            : run.browser.length > 0 ||
-                run.reactors.some((reactor) => reactor.url)
+            : run.attached.remote.length > 0 || run.attached.browser.length > 0
               ? "Running a copy. Its reactors are in the reactor list."
               : "Running a copy."}
       </p>
