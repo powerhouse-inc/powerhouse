@@ -79,6 +79,36 @@ describe("parseHostExport", () => {
     ]);
   });
 
+  it("names a missing or non-object body by its envelope path", () => {
+    const cli = fixture("cli");
+    const cases: [unknown, string][] = [
+      [{ format: "nope" }, "host"],
+      [{ ...cli, host: 5 }, "host"],
+      [{ ...cli, members: { ...cli.members, connect: 5 } }, "members.connect"],
+    ];
+    for (const [value, path] of cases) {
+      const { export: exp, issues } = parseHostExport(JSON.stringify(value));
+      expect(exp).toBeUndefined();
+      const body = issues.find(
+        (issue) => issue.file === EXPORT_FILE && issue.path === path,
+      );
+      expect(body?.message).toMatch(/expected object/);
+      expect(issues.filter((issue) => issue.path === "")).toEqual([]);
+    }
+  });
+
+  it("reports an object host body's fields in its host file, not its summary", () => {
+    const { issues } = parseHostExport(
+      JSON.stringify({ ...fixture("cli"), host: {} }),
+    );
+    expect(issues.map((issue) => [issue.file, issue.path])).toEqual([
+      ["hosts/cli/host.js", "name"],
+      ["hosts/cli/host.js", "runner"],
+      [EXPORT_FILE, "members.switchboard"],
+      [EXPORT_FILE, "members.connect"],
+    ]);
+  });
+
   it("names a missing member by the child that reaches it", () => {
     const cli = fixture("cli");
     const { connect: _connect, ...members } = cli.members;

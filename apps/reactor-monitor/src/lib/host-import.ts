@@ -76,8 +76,10 @@ function pathOf(path: Path): string {
 }
 
 function bodyIssues(folder: string, body: unknown): ImportIssue[] {
+  // The envelope names a missing or non-object body by its own path.
+  if (!isRecord(body)) return [];
   const schema =
-    isRecord(body) && "children" in body
+    "children" in body
       ? declaredHostSchemas.compoundHostSchema
       : declaredHostSchemas.reactorHostSchema;
   const result = schema.safeParse(body);
@@ -143,10 +145,13 @@ export function parseHostExport(text: string): {
       issues.push(...found);
     }
     for (const issue of result.error.issues) {
-      const at = locate(issue.path, name);
+      let at = locate(issue.path, name);
+      if (at.path.length === 0 && at.file !== EXPORT_FILE) {
+        // A body-root issue is the summary the re-parse replaced.
+        if (reparsed.has(at.file)) continue;
+        at = { file: EXPORT_FILE, path: issue.path };
+      }
       const path = pathOf(at.path);
-      // A body-root issue is the summary the re-parse replaced.
-      if (reparsed.has(at.file) && at.path.length === 0) continue;
       if (seen.has(`${at.file}\0${path}\0${issue.message}`)) continue;
       issues.push({
         severity: "error",
