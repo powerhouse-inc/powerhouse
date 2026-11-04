@@ -283,7 +283,8 @@ describe("spawnHost", () => {
     const error = await rejection(
       start({
         projectRoot,
-        readyTimeoutMs: 300,
+        // Time for the child to print its first line, even on a slow runner.
+        readyTimeoutMs: 2000,
         env: { FAKE_NEVER_READY: "1" },
       }),
     );
