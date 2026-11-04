@@ -204,10 +204,31 @@ describe("startFailure", () => {
     ).toBe(shared);
   });
 
-  it("names nothing when a failure line is followed by an object dump", () => {
-    const tail = ["hosts/cli could not be loaded", "{", '  "a": 1', "}"].join(
+  it("names nothing when a failure line opens an object dump", () => {
+    const tail = ["hosts/cli could not be loaded {", '  "a": 1', "}"].join(
       "\n",
     );
     expect(failureReason(tail)).toBe(undefined);
+  });
+
+  it("names a line ending in a colon with its first detail", () => {
+    const tail = [
+      'hosts/connect/host.js failed validation against the hostSchema of "x":',
+      "  - port: expected number",
+      "  - name: required",
+    ].join("\n");
+    expect(failureReason(tail)).toBe(
+      'hosts/connect/host.js failed validation against the hostSchema of "x": - port: expected number',
+    );
+  });
+
+  it("names the resolver's other failures", () => {
+    for (const reason of [
+      "hosts/sb/host.js: reads $env FOO, which is not set. Set FOO in the environment.",
+      'hosts/ui/host.js: reads $output sb › origin, but host "sb" has no output at origin.',
+      "hosts/ui/host.js: is a malformed $output token.",
+    ]) {
+      expect(failureReason(`${reason}\n  (needed by \`a\`)`)).toBe(reason);
+    }
   });
 });

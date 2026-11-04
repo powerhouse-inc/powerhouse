@@ -39,7 +39,7 @@ function logLine(line: string): boolean {
 
 // Words a failure says; progress and status lines ("catch-up: … 0%") don't.
 const FAILURE_WORDS =
-  /\b(?:error|errors|fail(?:s|ed|ure)?|refused|denied|EADDRINUSE|EACCES|ENOENT|already in use|cannot|can't|could not|couldn't|unable to|not found|no such|invalid|missing|timed out|not running|needs outputs)\b/i;
+  /\b(?:error|errors|fail(?:s|ed|ure)?|refused|denied|EADDRINUSE|EACCES|ENOENT|already in use|cannot|can't|could not|couldn't|unable to|not found|no such|invalid|missing|timed out|not running|not set|needs outputs|no output|malformed)\b/i;
 
 /** A line saying what failed: not a log, progress or status line. */
 function failureLine(line: string): boolean {
@@ -62,14 +62,20 @@ export function failureReason(tail: string): string | undefined {
     .map((line) => line.trimEnd())
     .filter((line) => line.trim() !== "" && !noise(line));
   let at = lines.length - 1;
+  let dump = false;
   while (at >= 0 && (/^\s/.test(lines[at]) || /^[}\]]$/.test(lines[at]))) {
+    if (!/^\s/.test(lines[at])) dump = true;
     at -= 1;
   }
   if (at < 0) return undefined;
   const error = ERROR_LINE.exec(lines[at]);
   if (error) return error[1];
-  const continued = lines.slice(at + 1).every((line) => /^\s/.test(line));
-  return continued && failureLine(lines[at]) ? lines[at] : undefined;
+  if (dump || !failureLine(lines[at])) return undefined;
+  // A line ending in ":" leads its details: name the first of them with it.
+  const detail = lines[at + 1]?.trim();
+  return lines[at].endsWith(":") && detail
+    ? `${lines[at]} ${detail}`
+    : lines[at];
 }
 
 function sentence(text: string): string {
