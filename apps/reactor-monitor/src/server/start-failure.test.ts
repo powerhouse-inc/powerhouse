@@ -77,15 +77,48 @@ describe("startFailure", () => {
         tail,
       });
     }
-    // A timeout's log is a run still going, never the cause.
-    const timeout = new SpawnHostError(
-      "spawnHost: ph run cli wrote no run record within 1000 ms.",
-      "timeout",
-      PORT_TAKEN_TAIL,
-      EXITED,
+  });
+
+  it("names where a run that timed out stopped printing", () => {
+    const stalled = [
+      "[18:06:47.10] [reactor-api] Starting",
+      "[18:06:48.54] [reactor-api][package-manager] Loading packages: /p, @powerhousedao/workflow",
+      "{",
+      '  "drives": ["powerhouse"]',
+      "}",
+      "",
+    ].join("\n");
+    const timeout = (tail: string) =>
+      new SpawnHostError(
+        "spawnHost: ph run desktop wrote no run record within 120000 ms.",
+        "timeout",
+        tail,
+        EXITED,
+      );
+    expect(startFailure(timeout(stalled))).toEqual({
+      message:
+        'Didn\'t finish starting: its last output was "[18:06:48.54] [reactor-api][package-manager] Loading packages: /p, @powerhousedao/workflow".',
+      phase: "timeout",
+      tail: stalled,
+      context: "ph run desktop wrote no run record within 120000 ms.",
+    });
+    expect(startFailure(timeout(PORT_TAKEN_TAIL)).message).toBe(
+      'Didn\'t finish starting: its last output was "Port 16347 is already in use".',
     );
-    expect(startFailure(timeout).message).toBe(
-      "Didn't finish starting: ph run cli wrote no run record within 1000 ms.",
+    const long = `[sb] ${"x".repeat(400)}`;
+    expect(startFailure(timeout(long)).message).toBe(
+      `Didn't finish starting: its last output was "${long.slice(0, 199)}…".`,
+    );
+  });
+
+  it("leads with Connect's missing build when serve exits on it", () => {
+    const tail = [
+      "[connect] composition plan (verb=serve): 2 active of 2 declared",
+      "No Connect build to serve: .ph/connect-build/dist/index.html is missing. Build it first with `ph connect build`.",
+      "",
+    ].join("\n");
+    expect(startFailure(exited(tail)).message).toBe(
+      "Stopped while starting: No Connect build to serve: .ph/connect-build/dist/index.html is missing. Build it first with `ph connect build`.",
     );
   });
 

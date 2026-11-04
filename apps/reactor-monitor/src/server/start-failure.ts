@@ -70,12 +70,42 @@ function sentence(text: string): string {
   return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
+const LAST_LINE_MAX = 200;
+
+/** Where a run that never got ready stopped printing. */
+export function lastOutput(tail: string): string | undefined {
+  const line = tail
+    .split("\n")
+    .map((each) => each.trimEnd())
+    .findLast(
+      (each) =>
+        each.trim() !== "" &&
+        !noise(each) &&
+        !/^\s/.test(each) &&
+        !/^[{}[\]]$/.test(each),
+    );
+  if (!line) return undefined;
+  return line.length > LAST_LINE_MAX
+    ? `${line.slice(0, LAST_LINE_MAX - 1)}…`
+    : line;
+}
+
 /** The reason first, the spawn sentence as context, without spawnHost's prefix. */
 export function startFailure(error: SpawnHostError): StartFailure {
   const spawned = error.message
     .split("\n--- output tail ---\n")[0]
     .replace(/^spawnHost: /, "");
   const lead = LEADS[error.phase] ?? "Couldn't start";
+  const last =
+    error.phase === "timeout" ? lastOutput(error.outputTail) : undefined;
+  if (last) {
+    return {
+      message: `${lead}: its last output was "${last}".`,
+      phase: error.phase,
+      tail: error.outputTail,
+      context: spawned,
+    };
+  }
   // A run that timed out or was stopped printed no failure of its own.
   const reason =
     error.phase === "exited" ? failureReason(error.outputTail) : undefined;
