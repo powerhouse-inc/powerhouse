@@ -11,6 +11,10 @@ export const REACTOR_INSTANCE_NAMESPACE = resolveReactorNamespace({
 
 export const REACTOR_PGLITE_NAME = REACTOR_INSTANCE_NAMESPACE;
 
+/** The host asked for a reactor that keeps nothing past the page. */
+export const REACTOR_STORE_IN_MEMORY =
+  getRuntimeConfig().connect.instance?.storage === "memory";
+
 export const RELATIONAL_PGLITE_NAME =
   REACTOR_INSTANCE_NAMESPACE === ROOT_STORAGE_NAMESPACE
     ? DEFAULT_RELATIONAL_PROCESSOR_DB_NAME

@@ -106,6 +106,7 @@ import {
 } from "../utils/worker-package-sources.js";
 import {
   REACTOR_INSTANCE_NAMESPACE,
+  REACTOR_STORE_IN_MEMORY,
   RELATIONAL_PGLITE_NAME,
 } from "../utils/storage-namespace.js";
 import {
@@ -530,6 +531,7 @@ export async function createReactor(
       renownChainId,
       featureFlags: reactorFeatureFlags,
       multiReactor,
+      storeInMemory: REACTOR_STORE_IN_MEMORY,
       createSignaturePolicy,
       unsupportedStoredDocuments,
       renownEndpoints,

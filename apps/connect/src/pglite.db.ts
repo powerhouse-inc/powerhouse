@@ -1,5 +1,9 @@
 import type { PGlite } from "@electric-sql/pglite";
-import { HardenedPGliteDialect } from "@powerhousedao/reactor";
+import {
+  HardenedPGliteDialect,
+  IN_MEMORY_PGLITE_STORAGE_FACTS,
+  PGLITE_IDB_STORAGE_FACTS,
+} from "@powerhousedao/reactor";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { Kysely } from "kysely";
 import {
@@ -13,6 +17,7 @@ import {
 import { reloadPageForPoisonedStore } from "./utils/poisoned-store-budget.js";
 import {
   REACTOR_PGLITE_NAME,
+  REACTOR_STORE_IN_MEMORY,
   RELATIONAL_PGLITE_NAME,
 } from "./utils/storage-namespace.js";
 
@@ -24,6 +29,10 @@ import {
 // worker realm re-downloads the wasm.
 export const PGLITE_USE_WORKER: boolean = false;
 
+export const REACTOR_STORAGE_FACTS = REACTOR_STORE_IN_MEMORY
+  ? IN_MEMORY_PGLITE_STORAGE_FACTS
+  : PGLITE_IDB_STORAGE_FACTS;
+
 async function createMainThreadPGlite(
   major: SupportedPgMajor,
   dbName: string,
@@ -34,7 +43,8 @@ async function createMainThreadPGlite(
     major === 16
       ? await import("pglite-legacy-02/live")
       : await import("@electric-sql/pglite/live");
-  return new PGlite(`idb://${dbName}`, {
+  const dataDir = REACTOR_STORE_IN_MEMORY ? "memory://" : `idb://${dbName}`;
+  return new PGlite(dataDir, {
     relaxedDurability,
     extensions: { live },
   }) as unknown as PGlite;
@@ -114,7 +124,8 @@ function pgliteSingleton(opts: {
             `[${opts.label}] Opening legacy Postgres ${major} data dir. Migrate to PG17 from the banner or the Inspector → Debug tab.`,
           );
         }
-        return PGLITE_USE_WORKER
+        // The PGlite worker always opens IndexedDB.
+        return PGLITE_USE_WORKER && !REACTOR_STORE_IN_MEMORY
           ? createWorkerPGlite(major, opts.dbName)
           : createMainThreadPGlite(major, opts.dbName, opts.relaxedDurability);
       });
