@@ -99,7 +99,10 @@ export const APP_VIEWS = ["Inspect", "Router", "Build host"] as const;
 export type AppView = (typeof APP_VIEWS)[number];
 
 /** Re-reads a remote reactor's info; the panel re-renders its gates from it. */
-function useInfoRecheck(reactor: ManagedReactor) {
+function useInfoRecheck(
+  reactor: ManagedReactor,
+  onReachable?: (name: string, reason?: string) => void,
+) {
   const [, setChecks] = useState(0);
   const [rechecking, setRechecking] = useState(false);
   const [recheckError, setRecheckError] = useState("");
@@ -112,12 +115,15 @@ function useInfoRecheck(reactor: ManagedReactor) {
     setRecheckError("");
     try {
       await reactor.refreshInfo();
+      onReachable?.(reactor.name);
     } catch (error) {
-      setRecheckError(error instanceof Error ? error.message : String(error));
+      const message = error instanceof Error ? error.message : String(error);
+      setRecheckError(message);
+      onReachable?.(reactor.name, message);
     }
     setRechecking(false);
     setChecks((count) => count + 1);
-  }, [reactor]);
+  }, [reactor, onReachable]);
 
   return { recheck, rechecking, recheckError };
 }
@@ -126,11 +132,16 @@ function useInfoRecheck(reactor: ManagedReactor) {
 function ReadyPanel({
   reactor,
   tab,
+  onReachable,
 }: {
   readonly reactor: ManagedReactor;
   readonly tab: InspectorTab;
+  readonly onReachable?: (name: string, reason?: string) => void;
 }): ReactNode {
-  const { recheck, rechecking, recheckError } = useInfoRecheck(reactor);
+  const { recheck, rechecking, recheckError } = useInfoRecheck(
+    reactor,
+    onReachable,
+  );
   const registry = useReactorMonitorRegistry();
   const admin = adminGateFor(reactor);
   const sql = sqlGateFor(reactor);
@@ -265,9 +276,11 @@ function ReadyPanel({
 function InspectorPanel({
   entry,
   tab,
+  onReachable,
 }: {
   readonly entry: ManagedReactorEntry | undefined;
   readonly tab: InspectorTab;
+  readonly onReachable?: (name: string, reason?: string) => void;
 }): ReactNode {
   if (!entry) {
     return (
@@ -291,7 +304,14 @@ function InspectorPanel({
     );
   }
   // Keyed so re-check state belongs to one handle.
-  return <ReadyPanel key={entry.name} reactor={entry.reactor} tab={tab} />;
+  return (
+    <ReadyPanel
+      key={entry.name}
+      onReachable={onReachable}
+      reactor={entry.reactor}
+      tab={tab}
+    />
+  );
 }
 
 type AppBodyProps = {
@@ -346,6 +366,32 @@ function AppBody({
    * same object with `.router` (the built routing client) and
    * `.routerDescribe()` — see RoutingPanel. Never set in production builds.
    */
+  // A failed remote whose switchboard a start now serves is provisioned again,
+  // once per start.
+  const retried = useRef(new Set<string>());
+  const coveredKey = [...managed.covered].sort().join("\u0000");
+  useEffect(() => {
+    const covered = new Set(coveredKey ? coveredKey.split("\u0000") : []);
+    for (const name of retried.current) {
+      if (!covered.has(name)) retried.current.delete(name);
+    }
+    for (const failed of entries) {
+      if (failed.status !== "failed" || failed.descriptor.kind !== "remote") {
+        continue;
+      }
+      if (!covered.has(failed.name) || retried.current.has(failed.name)) {
+        continue;
+      }
+      retried.current.add(failed.name);
+      registry.provision(failed.descriptor).catch((error: unknown) => {
+        console.error(
+          `[reactor-monitor] failed to provision "${failed.name}":`,
+          error,
+        );
+      });
+    }
+  }, [entries, coveredKey, registry]);
+
   useEffect(() => {
     const env = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
     if (env?.DEV) {
@@ -372,6 +418,7 @@ function AppBody({
           onProvision={onProvision}
           onSelect={onSelect}
           selected={selected}
+          unreachable={managed.unreachable}
         />
         {switchboards}
       </div>
@@ -414,7 +461,11 @@ function AppBody({
               ))}
             </nav>
             <div className="reactor-monitor__panel">
-              <InspectorPanel entry={entry} tab={activeTab} />
+              <InspectorPanel
+                entry={entry}
+                onReachable={managed.setUnreachable}
+                tab={activeTab}
+              />
             </div>
           </>
         ) : view === "Router" ? (

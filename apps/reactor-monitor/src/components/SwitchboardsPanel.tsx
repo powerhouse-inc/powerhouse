@@ -729,7 +729,7 @@ function ControllerSection({
           <ul className="rm-switchboards__instances">
             {instances.map((instance) => (
               <InstanceRow
-                attached={managed.attachedIds.has(instance.id)}
+                attached={managed.isAttached(instance)}
                 instance={instance}
                 key={instance.id}
                 logs={logs[instance.id]}

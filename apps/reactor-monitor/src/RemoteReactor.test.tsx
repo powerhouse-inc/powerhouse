@@ -4,7 +4,7 @@ import type {
   WireReactorInfo,
 } from "@powerhousedao/reactor";
 import type { ReactorDescriptor } from "@powerhousedao/reactor-monitor";
-import { fireEvent, render, waitFor } from "@testing-library/react";
+import { fireEvent, render, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { App } from "./App.js";
 import {
@@ -36,6 +36,8 @@ type Host = {
   syncChannels?: readonly string[];
   /** Whether the host serves inspection-admin to an operator. */
   levers?: boolean;
+  /** The host is gone: every request fails to connect. */
+  down?: boolean;
 };
 
 const OPERATOR: WireInspectorAccess = { admin: false, sql: false };
@@ -107,6 +109,7 @@ function fakeInspectionFetch(host: Host): typeof fetch {
   };
 
   return (input, init) => {
+    if (host.down) return Promise.reject(new TypeError("Failed to fetch"));
     const body = JSON.parse((init?.body as string | undefined) ?? "{}") as {
       query: string;
     };
@@ -513,6 +516,31 @@ describe("remote reactor in the monitor app", () => {
     expect(view.getByTestId("admin-gate-note").textContent).toBe(
       READS_ONLY_REASON,
     );
+  }, 20_000);
+
+  it("marks a remote unreachable in the reactor list when a re-check fails, until one succeeds", async () => {
+    const host: Host = { access: null };
+    const view = remoteApp(host);
+    await provisionRemoteReactor(view, "gone-switchboard");
+    const list = view.getByLabelText("Reactor list");
+
+    host.down = true;
+    fireEvent.click(view.getByTestId("remote-recheck"));
+    await waitFor(
+      () => expect(within(list).getByText("unreachable")).toBeTruthy(),
+      WAIT,
+    );
+    expect(within(list).getByText("unreachable").title).toMatch(
+      /^unreachable: .*Failed to fetch/,
+    );
+
+    host.down = false;
+    fireEvent.click(view.getByTestId("remote-recheck"));
+    await waitFor(
+      () => expect(within(list).getByText("ready")).toBeTruthy(),
+      WAIT,
+    );
+    expect(within(list).queryByText("unreachable")).toBeNull();
   }, 20_000);
 
   it("says why the Events tab is empty rather than hitting a bus that is not there", async () => {
