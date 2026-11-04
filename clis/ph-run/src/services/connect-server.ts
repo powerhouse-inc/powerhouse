@@ -244,12 +244,15 @@ function noBuildMessage(
   outDir: string,
   dirname: string,
 ): string {
-  const shown = path.relative(dirname, outDir) || ".";
+  const shown = path
+    .relative(dirname, path.join(outDir, "index.html"))
+    .split(path.sep)
+    .join("/");
   const build =
     path.resolve(dirname, DEFAULT_CONNECT_OUTDIR) === outDir
       ? "ph connect build"
-      : `ph connect build --outDir ${outDirArg}`;
-  return `No Connect build to serve: ${path.join(shown, "index.html")} is missing. Build it first with \`${build}\`.`;
+      : `ph connect build --outDir ${JSON.stringify(outDirArg)}`;
+  return `No Connect build to serve: ${shown} is missing. Build it first with \`${build}\`.`;
 }
 
 export async function runConnectServer(

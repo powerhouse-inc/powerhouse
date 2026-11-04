@@ -276,7 +276,7 @@ describe("the built-in Connect server", () => {
       await expect(
         runConnectServer(argsFor("empty-build", port), {}, project),
       ).rejects.toThrow(
-        "No Connect build to serve: empty-build/index.html is missing. Build it first with `ph connect build --outDir empty-build`.",
+        'No Connect build to serve: empty-build/index.html is missing. Build it first with `ph connect build --outDir "empty-build"`.',
       );
       const probe = createServer();
       await new Promise<void>((done, fail) => {
