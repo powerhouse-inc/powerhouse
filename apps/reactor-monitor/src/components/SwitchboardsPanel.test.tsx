@@ -105,7 +105,7 @@ function fakeManaged(
     withheld: [],
     attachedIds: new Set(),
     isAttached: () => false,
-    covered: new Set(),
+    covered: new Map(),
     unreachable: new Map(),
     setUnreachable: vi.fn(),
     owned: new Map(),

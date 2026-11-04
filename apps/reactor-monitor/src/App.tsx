@@ -359,30 +359,26 @@ function AppBody({
     onAddDescriptors,
   });
 
-  /**
-   * Dev-only scripting handle: exposes the live registry on the window so
-   * operator tooling (live verification passes, demo scripts) can provision,
-   * link, and drive reactors programmatically. The Router view augments this
-   * same object with `.router` (the built routing client) and
-   * `.routerDescribe()` — see RoutingPanel. Never set in production builds.
-   */
   // A failed remote whose switchboard a start now serves is provisioned again,
   // once per start.
   const retried = useRef(new Set<string>());
-  const coveredKey = [...managed.covered].sort().join("\u0000");
+  const coveredKey = [...managed.covered]
+    .map(([name, ids]) => `${name}\u0001${[...ids].sort().join(",")}`)
+    .sort()
+    .join("\u0000");
   useEffect(() => {
     const covered = new Set(coveredKey ? coveredKey.split("\u0000") : []);
-    for (const name of retried.current) {
-      if (!covered.has(name)) retried.current.delete(name);
+    for (const key of retried.current) {
+      if (!covered.has(key)) retried.current.delete(key);
     }
-    for (const failed of entries) {
-      if (failed.status !== "failed" || failed.descriptor.kind !== "remote") {
+    const byName = new Map(entries.map((e) => [e.name, e] as const));
+    for (const key of covered) {
+      const failed = byName.get(key.slice(0, key.indexOf("\u0001")));
+      if (failed?.status !== "failed" || failed.descriptor.kind !== "remote") {
         continue;
       }
-      if (!covered.has(failed.name) || retried.current.has(failed.name)) {
-        continue;
-      }
-      retried.current.add(failed.name);
+      if (retried.current.has(key)) continue;
+      retried.current.add(key);
       registry.provision(failed.descriptor).catch((error: unknown) => {
         console.error(
           `[reactor-monitor] failed to provision "${failed.name}":`,
@@ -392,6 +388,13 @@ function AppBody({
     }
   }, [entries, coveredKey, registry]);
 
+  /**
+   * Dev-only scripting handle: exposes the live registry on the window so
+   * operator tooling (live verification passes, demo scripts) can provision,
+   * link, and drive reactors programmatically. The Router view augments this
+   * same object with `.router` (the built routing client) and
+   * `.routerDescribe()` — see RoutingPanel. Never set in production builds.
+   */
   useEffect(() => {
     const env = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
     if (env?.DEV) {
