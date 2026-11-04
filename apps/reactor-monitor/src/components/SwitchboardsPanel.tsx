@@ -72,14 +72,18 @@ function IssueTable({
         <thead>
           <tr>
             <th>Stage</th>
+            <th>File</th>
             <th>Path</th>
             <th>Message</th>
           </tr>
         </thead>
         <tbody>
           {issues.map((issue, index) => (
-            <tr key={`${issue.path}:${index}`}>
+            <tr key={`${issue.file}:${issue.path}:${index}`}>
               <td>{issue.stage}</td>
+              <td>
+                <code>{issue.file}</code>
+              </td>
               <td>
                 <code>{issue.path || "(root)"}</code>
               </td>

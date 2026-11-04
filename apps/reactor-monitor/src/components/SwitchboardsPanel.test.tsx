@@ -236,7 +236,7 @@ describe("SwitchboardsPanel", () => {
     );
   });
 
-  it("checks a host with the env map and lists issues by path", async () => {
+  it("checks a host with the env map and lists issues by file and path", async () => {
     const issues: HostIssue[] = [
       {
         stage: "resolve",
@@ -265,6 +265,7 @@ describe("SwitchboardsPanel", () => {
 
     const table = await view.findByTestId("switchboards-issues");
     expect(table.textContent).toMatch(/resolve/);
+    expect(within(table).getByText("hosts/sb/host.js")).toBeTruthy();
     expect(within(table).getByText("runner.port")).toBeTruthy();
     expect(table.textContent).toMatch(/MONITOR_PORT is not set/);
     expect(table.textContent).toMatch(/set it in the env/);
