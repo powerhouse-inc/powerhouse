@@ -24,7 +24,13 @@ import {
 } from "./draft.js";
 import { builderEngine } from "./engine.js";
 import { HostBuilder } from "./HostBuilder.js";
-import { browserDescriptors, monitoringSetOf, useBuilderRun } from "./run.js";
+import {
+  browserDescriptors,
+  browserReactors,
+  monitoringSetOf,
+  PENDING_START_KEY,
+  useBuilderRun,
+} from "./run.js";
 
 const ID = "11111111-0000-4000-8000-000000000000";
 
@@ -83,10 +89,12 @@ function Wired({
   wiring,
   onSaveSet,
   storage,
+  pending = wiring.pending,
 }: {
   wiring: Wiring;
   onSaveSet?: (request: unknown) => string;
   storage: ReturnType<typeof memoryStorage>;
+  pending?: ReturnType<typeof memoryStorage>;
 }) {
   const [owned, setOwned] = useState(new Map<string, string[]>());
   const run = useBuilderRun({
@@ -105,6 +113,7 @@ function Wired({
     },
     pollMs: 1,
     watchMs: 5,
+    pending,
   });
   return (
     <HostBuilder
@@ -143,7 +152,8 @@ function setup(
     dropInstance: vi.fn(),
   };
   const added: ReactorDescriptor[] = [];
-  return { client, startDraft, get, list, managed, added };
+  const pending = memoryStorage();
+  return { client, startDraft, get, list, managed, added, pending };
 }
 
 const startButton = (view: ReturnType<typeof render>) =>
@@ -433,6 +443,122 @@ describe("Use it, wired", () => {
     await waitFor(() => expect(runText(view)).toContain("Running a copy"));
     expect(wiring.managed.attach).toHaveBeenCalledWith(instance("running"));
     expect(wiring.added).toEqual([]);
+  });
+
+  /** A start sent from this tab whose answer the reload lost. */
+  function sentBeforeReload(wiring: Wiring, at = Date.now()) {
+    const engine = builderEngine(
+      newDraft(projectBase(stack()), "0".repeat(64)),
+      BARE,
+    );
+    const browser = browserReactors(engine.envelope, engine.members);
+    wiring.pending.setItem(PENDING_START_KEY, JSON.stringify({ at, browser }));
+  }
+
+  it("keeps the start a tab sent while it was in flight", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    let held!: (value: Instance) => void;
+    const wiring = setup({
+      startDraft: () =>
+        new Promise<Instance>((resolve) => {
+          held = resolve;
+        }),
+    });
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    fireEvent.click(startButton(view));
+    await waitFor(() => expect(wiring.startDraft).toHaveBeenCalled());
+    const sent = JSON.parse(
+      wiring.pending.getItem(PENDING_START_KEY) ?? "null",
+    ) as { browser: { descriptor: { name: string } }[] };
+    expect(sent.browser.map((entry) => entry.descriptor.name)).toEqual([
+      "ui.main",
+    ]);
+
+    held(instance("starting"));
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"));
+    expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
+  });
+
+  it("forgets the start it sent once the controller refuses it", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const wiring = setup({
+      startDraft: () =>
+        Promise.reject(
+          new ControllerRequestError("check_failed", "Failed.", 422),
+        ),
+    });
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    fireEvent.click(startButton(view));
+    await waitFor(() =>
+      expect(view.getByText("Couldn't start: Failed.")).toBeTruthy(),
+    );
+    expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
+  });
+
+  it("after a reload mid-start, waits for the copy to show up and takes it on", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const wiring = setup({
+      list: vi
+        .fn<() => Promise<Instance[]>>()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValue([instance("starting")]),
+    });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() => expect(runText(view)).toContain("Starting a copy"));
+    expect(startButton(view)).toHaveProperty("disabled", true);
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"));
+    expect(wiring.list.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(wiring.added.map((d) => [d.name, ownerOf(d)])).toEqual([
+      ["ui.main", ID],
+    ]);
+    expect(wiring.managed.attach).toHaveBeenCalledWith(instance("running"));
+    expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
+  });
+
+  it("after a reload mid-start, attaches a copy that already runs", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const wiring = setup({
+      list: () => Promise.resolve([instance("running")]),
+      get: () => Promise.resolve(instance("running")),
+    });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"));
+    expect(wiring.managed.attach).toHaveBeenCalledWith(instance("running"));
+    expect(wiring.added.map((d) => [d.name, ownerOf(d)])).toEqual([
+      ["ui.main", ID],
+    ]);
+  });
+
+  it("looks once when no start was in flight, and lets an old one go", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const idle = setup();
+    const first = render(<Wired storage={storage} wiring={idle} />);
+    await waitFor(() =>
+      expect(startButton(first)).toHaveProperty("disabled", false),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(idle.list).toHaveBeenCalledOnce();
+    first.unmount();
+
+    const stale = setup();
+    sentBeforeReload(stale, Date.now() - 10 * 60_000);
+    const second = render(<Wired storage={storage} wiring={stale} />);
+    await waitFor(() =>
+      expect(startButton(second)).toHaveProperty("disabled", false),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(stale.list).toHaveBeenCalledOnce();
+    expect(runText(second)).toBe("");
+    expect(stale.pending.getItem(PENDING_START_KEY)).toBe(null);
   });
 
   it("offers to rebase when the project host changed since the draft began", async () => {
