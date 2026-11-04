@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import {
   createServer as createHttpServer,
   request,
@@ -260,6 +260,31 @@ describe("the built-in Connect server", () => {
     } finally {
       await second.close();
       await first.close();
+    }
+  });
+
+  it("refuses to start without a build, before binding its port", async () => {
+    const project = mkdtempSync(join(tmpdir(), "ph-connect-nobuild-"));
+    try {
+      mkdirSync(join(project, "empty-build"));
+      const port = await freePort();
+      await expect(
+        runConnectServer(argsFor(".ph/connect-build/dist/", port), {}, project),
+      ).rejects.toThrow(
+        "No Connect build to serve: .ph/connect-build/dist/index.html is missing. Build it first with `ph connect build`.",
+      );
+      await expect(
+        runConnectServer(argsFor("empty-build", port), {}, project),
+      ).rejects.toThrow(
+        "No Connect build to serve: empty-build/index.html is missing. Build it first with `ph connect build --outDir empty-build`.",
+      );
+      const probe = createServer();
+      await new Promise<void>((done, fail) => {
+        probe.once("error", fail);
+        probe.listen(port, "127.0.0.1", () => probe.close(() => done()));
+      });
+    } finally {
+      rmSync(project, { recursive: true, force: true });
     }
   });
 });
