@@ -6,10 +6,10 @@ import type {
   DocumentModelGlobalState,
   DocumentModelPHState,
 } from "@powerhousedao/shared/document-model";
-import { logger } from "../../logger.js";
-import { BaseDocumentGen } from "../base-document-gen.js";
-import type { CodegenInput } from "../types.js";
-import { minimalBackupDocument, warnSubgraphTypeConflicts } from "./utils.js";
+import { logger } from "../../../logger.js";
+import { BaseDocumentGen } from "../../base-document-gen.js";
+import type { CodegenInput } from "../../types.js";
+import { minimalBackupDocument, warnSubgraphTypeConflicts } from "../utils.js";
 
 /**
  * Generator for document model documents

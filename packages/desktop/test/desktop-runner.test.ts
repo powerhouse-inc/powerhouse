@@ -15,8 +15,10 @@ import {
   readLocalPackages,
   pluginPackagesOf,
   pruneStack,
+  registrySpecs,
   stackManifest,
 } from "../src/bundle-stack.js";
+import { memberProjectFiles } from "../src/member-files.js";
 import { resolveShell, shellEnv, tauriConfigPatch } from "../src/shell.js";
 import * as runner from "../src/runner.js";
 
@@ -279,6 +281,117 @@ describe("bundle-stack staging", () => {
     );
     expect(existsSync(path.join(stackDir, "dist", "assets"))).toBe(false);
     expect(existsSync(path.join(stackDir, "dist", "browser"))).toBe(false);
+  });
+});
+
+describe("the files a stack's hosts name", () => {
+  it("are the drive icons a server member declares, not URLs or Connect's", async () => {
+    const dir = makeProject();
+    writeFileSync(
+      path.join(dir, "hosts", "switchboard", "host.js"),
+      `export default {
+        name: "desk-switchboard",
+        runner: { module: "no-build-runner", port: 7123 },
+        reactor: { drives: [
+          { slug: "books", icon: "./icons/books.png" },
+          { slug: "web", icon: "https://example.com/web.png" },
+          { slug: "plain" },
+        ] },
+      };`,
+    );
+    writeFileSync(
+      path.join(dir, "hosts", "desktop", "host.js"),
+      `export default {
+        name: "desktop",
+        runner: { module: "@powerhousedao/desktop/runner" },
+        children: {
+          "desktop-switchboard": {
+            host: "switchboard",
+            reactor: { drives: [{ slug: "own", icon: "./icons/own.png" }] },
+          },
+          "desktop-connect": { host: "connect" },
+        },
+        config: { runtimeRecord: false },
+      };`,
+    );
+    const { loadHost } = await import("@powerhousedao/host-core");
+    const host = runner.hostSchema.parse((await loadHost(dir, "desktop")).host);
+    expect(await memberProjectFiles(host, dir)).toEqual([
+      "./icons/books.png",
+      "./icons/own.png",
+    ]);
+  });
+
+  it("are staged at their project paths, and nothing from outside the project", () => {
+    const parent = tempDir("ph-desktop-files-");
+    const projectRoot = path.join(parent, "project");
+    mkdirSync(path.join(projectRoot, "icons"), { recursive: true });
+    writeFileSync(path.join(projectRoot, "package.json"), "{}");
+    writeFileSync(path.join(projectRoot, "icons", "books.png"), "png");
+    writeFileSync(path.join(parent, "outside.png"), "png");
+    const { stackDir } = bundleStack({
+      projectRoot,
+      shellProjectDir: path.join(parent, "shell"),
+      vendor: false,
+      projectFiles: ["./icons/books.png", "../outside.png", "./icons/gone.png"],
+      logger: () => undefined,
+    });
+    expect(
+      readFileSync(path.join(stackDir, "icons", "books.png"), "utf8"),
+    ).toBe("png");
+    expect(existsSync(path.join(stackDir, "icons", "gone.png"))).toBe(false);
+    expect(existsSync(path.join(parent, "shell", "outside.png"))).toBe(false);
+  });
+});
+
+describe("the versions a stack vendors", () => {
+  function projectWith(installed: Record<string, string>): string {
+    const dir = tempDir("ph-desktop-versions-");
+    for (const [pkg, version] of Object.entries(installed)) {
+      const at = path.join(dir, "node_modules", pkg);
+      mkdirSync(at, { recursive: true });
+      writeFileSync(
+        path.join(at, "package.json"),
+        JSON.stringify({ name: pkg, version }),
+      );
+    }
+    return dir;
+  }
+
+  it("are the ones the project has installed, not what a tag points at", () => {
+    const projectRoot = projectWith({
+      "@powerhousedao/ph-cli": "6.2.3-dev.90",
+      "@powerhousedao/host-core": "6.2.3-dev.90",
+      "plain-plugin": "2.0.0",
+    });
+    expect(
+      registrySpecs({
+        projectRoot,
+        plugins: ["plain-plugin", "@powerhousedao/portle"],
+      }),
+    ).toEqual([
+      "@powerhousedao/ph-run@6.2.3-dev.90",
+      "@powerhousedao/host-core@6.2.3-dev.90",
+      "plain-plugin@2.0.0",
+      // not installed: ph-cli's version, as the monorepo releases together
+      "@powerhousedao/portle@6.2.3-dev.90",
+    ]);
+  });
+
+  it("are all the one the host names, and dev with nothing to go on", () => {
+    const projectRoot = projectWith({
+      "@powerhousedao/ph-cli": "6.2.3-dev.90",
+    });
+    expect(
+      registrySpecs({ projectRoot, phCliVersion: "6.2.3-dev.91" }),
+    ).toEqual([
+      "@powerhousedao/ph-run@6.2.3-dev.91",
+      "@powerhousedao/host-core@6.2.3-dev.91",
+    ]);
+    expect(registrySpecs({ projectRoot: projectWith({}) })).toEqual([
+      "@powerhousedao/ph-run@dev",
+      "@powerhousedao/host-core@dev",
+    ]);
   });
 });
 

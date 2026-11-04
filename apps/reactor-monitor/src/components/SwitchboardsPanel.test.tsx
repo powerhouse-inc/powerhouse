@@ -342,6 +342,82 @@ describe("SwitchboardsPanel", () => {
     expect(managed.attach).toHaveBeenCalledTimes(1);
   });
 
+  it("lists a compound's member outputs and an assistant's agent API in its row", async () => {
+    const fake = fakeClient();
+    const managed = fakeManaged(fake.client);
+    const view = render(<SwitchboardsPanel managed={managed} pollMs={POLL} />);
+    await ready(view);
+
+    fireEvent.click(view.getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(fake.started).toHaveLength(1));
+    const row = await view.findByTestId("switchboard-inst-1");
+    const instance = fake.instances.get("inst-1")!;
+    instance.status = "running";
+    instance.pid = 4242;
+    instance.members = {
+      "cli-switchboard": {
+        host: "switchboard",
+        outputs: {
+          origin: "http://localhost:7347",
+          graphql: "http://localhost:7347/graphql",
+          drives: {
+            powerhouse: {
+              id: "powerhouse",
+              url: "http://localhost:7347/d/powerhouse",
+            },
+          },
+        },
+      },
+      "cli-connect": { host: "connect", app: "http://localhost:6347/" },
+      agent: { host: "assistant", agent: "http://127.0.0.1:4920/v1" },
+    };
+    await waitFor(() => expect(row.textContent).toMatch(/running/));
+    const items = within(row)
+      .getAllByRole("definition")
+      .map((dd) => [dd.previousElementSibling?.textContent, dd.textContent]);
+    expect(items).toEqual([
+      ["cli-switchboard graphql", "http://localhost:7347/graphql"],
+      [
+        "cli-switchboard drive powerhouse",
+        "http://localhost:7347/d/powerhouse",
+      ],
+      ["cli-connect connect", "http://localhost:6347/"],
+      ["agent agent API", "http://127.0.0.1:4920/v1"],
+    ]);
+  });
+
+  it("offers no Attach for an instance that serves no switchboard", async () => {
+    const fake = fakeClient();
+    const managed = fakeManaged(fake.client);
+    const view = render(<SwitchboardsPanel managed={managed} pollMs={POLL} />);
+    await ready(view);
+
+    fireEvent.click(view.getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(fake.started).toHaveLength(1));
+    const row = await view.findByTestId("switchboard-inst-1");
+    const instance = fake.instances.get("inst-1")!;
+    instance.status = "running";
+    instance.agent = "http://127.0.0.1:4920/v1";
+    await waitFor(() => expect(row.textContent).toMatch(/agent API/));
+    expect(within(row).queryByRole("button", { name: "Attach" })).toBeNull();
+  });
+
+  it("drops a row's addresses once its instance exited", async () => {
+    const fake = fakeClient();
+    const managed = fakeManaged(fake.client);
+    const view = render(<SwitchboardsPanel managed={managed} pollMs={POLL} />);
+    await ready(view);
+
+    fireEvent.click(view.getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(fake.started).toHaveLength(1));
+    const row = await view.findByTestId("switchboard-inst-1");
+    fake.run("inst-1");
+    await waitFor(() => expect(row.textContent).toMatch(/drive powerhouse/));
+    fake.instances.get("inst-1")!.status = "exited";
+    await waitFor(() => expect(row.textContent).toMatch(/exited/));
+    expect(row.textContent).not.toMatch(/graphql|drive powerhouse/);
+  });
+
   it("defaults to the first project that has hosts", async () => {
     const { client } = fakeClient({
       projects: () =>

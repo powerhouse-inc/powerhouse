@@ -506,10 +506,22 @@ describe("reactor tools", () => {
         [1, "INVALID_ACTION"],
         [3, "INVALID_ACTION"],
       ]);
-      expect(error.message).toContain("3 actions failed:");
-      expect(error.message).toContain("[0] SET_MODEL_NAM: unknown action type");
-      expect(error.message).toContain("Did you mean: SET_MODEL_NAME");
-      expect(error.message).toContain("Input schema for SET_MODEL_NAME:");
+      const lines = error.message.split("\n");
+      expect(lines.slice(0, 7)).toEqual([
+        "3 actions failed:",
+        "  [0] SET_MODEL_NAM: unknown action type",
+        "  [1] SET_MODEL_NAME: name: expected string, received undefined",
+        `  [3] SET_MODEL_NAME: scope "local" does not match the operation's scope "global"`,
+        "",
+        "Did you mean: SET_MODEL_NAME, SET_MODEL_ID, SET_MODULE_NAME?",
+        "Valid action types for powerhouse/document-model:",
+      ]);
+      expect(lines.slice(-4)).toEqual([
+        "Input schema for SET_MODEL_NAME:",
+        "input SetModelNameInput {",
+        "    name: String!",
+        "}",
+      ]);
       expect((await client.get(documentId)).header.revision).toEqual(before);
     });
 
@@ -1522,11 +1534,17 @@ describe("reactor tools", () => {
 
     it("slices one operation, the state, or a JSONPath", async () => {
       const type = "powerhouse/document-drive";
-      const { operation } = await call<{
-        operation: { name: string; scope: string; schema: string };
-      }>(getDocumentModelSchemaTool, { type, operation: "ADD_FILE" });
-      expect(operation).toMatchObject({ name: "ADD_FILE", scope: "global" });
-      expect(operation.schema).toContain("input AddFileInput");
+      const { operation } = await call<{ operation: unknown }>(
+        getDocumentModelSchemaTool,
+        { type, operation: "ADD_FILE" },
+      );
+      expect(operation).toEqual({
+        name: "ADD_FILE",
+        module: "Node",
+        scope: "global",
+        schema:
+          "input AddFileInput {\n    id: ID!\n    name: String!\n    documentType: String!\n    parentFolder: ID\n}",
+      });
 
       const { state } = await call<{ state: { schema: string } }>(
         getDocumentModelSchemaTool,

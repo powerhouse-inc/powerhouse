@@ -4,6 +4,7 @@ import {
   isBrowserEnvKey,
   MAX_ENV_ENTRIES,
   type Instance,
+  type InstanceMember,
   type LogLine,
   type Project,
 } from "../controller/api.js";
@@ -14,6 +15,7 @@ import {
   type ControllerClient,
   type HostIssue,
 } from "../controller/client.js";
+import { managedDescriptors } from "../controller/managed.js";
 import type { ManagedDescriptors } from "../controller/use-managed-descriptors.js";
 import type { MonitoringSetSource } from "../monitoring-sets.js";
 
@@ -97,6 +99,39 @@ function IssueTable({
 
 type Logs = { next: number; lines: LogLine[] };
 
+type Output = { label: string; url: string };
+
+function servedRows(
+  served: Omit<InstanceMember, "host">,
+  prefix = "",
+): Output[] {
+  return [
+    ...(served.outputs
+      ? [
+          { label: `${prefix}graphql`, url: served.outputs.graphql },
+          ...Object.entries(served.outputs.drives).map(([name, drive]) => ({
+            label: `${prefix}drive ${name}`,
+            url: drive.url,
+          })),
+        ]
+      : []),
+    ...(served.app ? [{ label: `${prefix}connect`, url: served.app }] : []),
+    ...(served.agent
+      ? [{ label: `${prefix}agent API`, url: served.agent }]
+      : []),
+  ];
+}
+
+/** The instance's own outputs, then each member's under its key. */
+function rowOutputs(instance: Instance): Output[] {
+  return [
+    ...servedRows(instance),
+    ...Object.entries(instance.members ?? {}).flatMap(([key, member]) =>
+      servedRows(member, `${key} `),
+    ),
+  ];
+}
+
 function InstanceRow({
   instance,
   projectName,
@@ -115,6 +150,7 @@ function InstanceRow({
   readonly onStop: () => void;
 }): ReactNode {
   const live = !["exited", "failed"].includes(instance.status);
+  const outputs = live ? rowOutputs(instance) : [];
   const badge =
     instance.status === "running"
       ? "rm-badge rm-badge-ok"
@@ -131,17 +167,13 @@ function InstanceRow({
         <span className="rm-note">{projectName}</span>
         <span className={badge}>{instance.status}</span>
       </div>
-      {instance.outputs ? (
+      {outputs.length > 0 ? (
         <dl className="rm-switchboards__outputs">
-          <dt>graphql</dt>
-          <dd>
-            <code>{instance.outputs.graphql}</code>
-          </dd>
-          {Object.entries(instance.outputs.drives).map(([name, drive]) => (
-            <div key={name}>
-              <dt>drive {name}</dt>
+          {outputs.map((output, index) => (
+            <div key={`${index}:${output.label}`}>
+              <dt>{output.label}</dt>
               <dd>
-                <code>{drive.url}</code>
+                <code>{output.url}</code>
               </dd>
             </div>
           ))}
@@ -169,7 +201,7 @@ function InstanceRow({
         </>
       ) : null}
       <div className="rm-switchboards__actions">
-        {instance.status === "running" && !attached ? (
+        {!attached && managedDescriptors(instance, []).length > 0 ? (
           <button
             className="rm-btn rm-btn-small"
             onClick={onAttach}

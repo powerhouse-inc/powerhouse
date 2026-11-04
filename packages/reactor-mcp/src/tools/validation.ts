@@ -9,6 +9,7 @@ import {
 import { camelCase } from "change-case";
 import { z } from "zod";
 import { ReactorToolError, type ActionFailure } from "./errors.js";
+import { operationsByActionType } from "./model-operations.js";
 import { actionOperations, ANY_SCOPE, type ModelOperation } from "./schema.js";
 import { suggestNames } from "./suggest.js";
 
@@ -88,6 +89,7 @@ export function validateActions(
   options: ValidateActionsOptions = {},
 ): ValidatedActions {
   const operations = new Map(actionOperations(module).map((o) => [o.name, o]));
+  const byActionType = operationsByActionType(module);
   const allowed = options.allowedActionTypes
     ? new Set(options.allowedActionTypes)
     : undefined;
@@ -106,7 +108,10 @@ export function validateActions(
         `not an allowed action type (allowed: ${[...allowed].join(", ")})`,
       ]);
     }
-    const operation = operations.get(entry.type);
+    const structured = operations.has(entry.type)
+      ? undefined
+      : byActionType.get(entry.type);
+    const operation = operations.get(structured?.storedName ?? entry.type);
     if (!operation) {
       return fail("INVALID_ACTION", ["unknown action type"]);
     }
@@ -124,7 +129,9 @@ export function validateActions(
     }
     const creator =
       BASE_CREATORS[entry.type] ??
-      (module.actions[camelCase(entry.type)] as ActionCreator | undefined);
+      (module.actions[structured?.creatorKey ?? camelCase(entry.type)] as
+        | ActionCreator
+        | undefined);
     if (!creator) {
       return fail("INVALID_ACTION", [
         `the model has no action creator for ${entry.type}`,
@@ -146,13 +153,17 @@ export function formatActionFailures(
 ): string {
   const operations: ModelOperation[] = module ? actionOperations(module) : [];
   const names = operations.map((o) => o.name);
+  const byActionType = module && operationsByActionType(module);
+  const nameOf = (type: string) =>
+    names.includes(type) ? type : (byActionType?.get(type)?.storedName ?? type);
   const count = failures.length;
   const lines = failures.map(
     (f) => `  [${f.index}] ${f.type}: ${f.errors.join("; ")}`,
   );
   const sections: string[] = [];
   const unknown = failures.filter(
-    (f) => f.code === "INVALID_ACTION" && module && !names.includes(f.type),
+    (f) =>
+      f.code === "INVALID_ACTION" && module && !names.includes(nameOf(f.type)),
   );
   if (unknown.length > 0) {
     const suggestions = new Set(
@@ -167,7 +178,8 @@ export function formatActionFailures(
   }
   const shown = new Set<string>();
   for (const f of failures) {
-    const operation = operations.find((o) => o.name === f.type);
+    const name = nameOf(f.type);
+    const operation = operations.find((o) => o.name === name);
     if (
       f.code !== "INVALID_ACTION" ||
       !operation?.schema ||
