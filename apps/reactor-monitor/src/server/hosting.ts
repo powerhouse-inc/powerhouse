@@ -1,6 +1,11 @@
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 import type { MonitorController } from "./controller.ts";
+import {
+  PG_URL_ENV,
+  postgresServer,
+  type DatabaseServer,
+} from "./databases.ts";
 
 /** Project roots the controller may start hosts from, `path.delimiter`-joined. */
 export const PROJECT_ROOTS_ENV = "PH_MONITOR_PROJECT_ROOTS";
@@ -32,6 +37,14 @@ export function serverEnvFromEnv(
     if (value !== undefined) passed[key] = value;
   }
   return passed;
+}
+
+/** The Postgres server PH_MONITOR_PG_URL names, if any. */
+export function postgresFromEnv(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): DatabaseServer | undefined {
+  const url = env[PG_URL_ENV]?.trim();
+  return url ? postgresServer(url) : undefined;
 }
 
 export function newToken(): string {

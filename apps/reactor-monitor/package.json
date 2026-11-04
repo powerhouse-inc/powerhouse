@@ -34,6 +34,7 @@
     "@powerhousedao/reactor-monitor": "workspace:*",
     "@powerhousedao/reactor-router": "workspace:*",
     "@powerhousedao/workflow": "workspace:*",
+    "pg": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "zod": "catalog:"
@@ -41,6 +42,7 @@
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.0.1",
+    "@types/pg": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",

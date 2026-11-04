@@ -228,6 +228,8 @@ export const instanceSchema = z.object({
       startId: z.string().optional(),
     })
     .optional(),
+  /** The Postgres database the controller made for this start. */
+  database: z.string().optional(),
   exit: z
     .object({
       code: z.number().int().nullable(),

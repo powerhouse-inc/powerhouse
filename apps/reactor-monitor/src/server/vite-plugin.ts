@@ -6,6 +6,7 @@ import type { MonitorController } from "./controller.ts";
 import {
   isLoopbackListen,
   newToken,
+  postgresFromEnv,
   PROJECT_ROOTS_ENV,
   projectRootsFromEnv,
   serverEnvFromEnv,
@@ -46,9 +47,11 @@ async function mount(
 ): Promise<Mounted> {
   const [{ createMonitorController }, { createControllerHandler }] =
     await Promise.all([import("./controller.ts"), import("./http.ts")]);
+  const postgres = postgresFromEnv(env);
   const controller = createMonitorController({
     projectRoots: projectRootsFromEnv(env),
     serverEnv: serverEnvFromEnv(env),
+    ...(postgres ? { postgres } : {}),
     checkWorker: path.join(root, "src", "server", "check-worker.ts"),
     stopTimeoutMs: STOP_TIMEOUT_MS,
     ...(options.tmpDir !== undefined ? { tmpDir: options.tmpDir } : {}),

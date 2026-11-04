@@ -44,6 +44,8 @@ export function isDelete(value: Setter["value"]): value is { $delete: true } {
 export const hostRulesContextSchema = z.object({
   /** The controller has a Postgres server to hand out (PH_MONITOR_PG_URL). */
   postgres: z.boolean(),
+  /** Which *_DATABASE_URL in the controller's env names Postgres. */
+  envDatabase: z.enum(["reactor", "switchboard"]).optional(),
   /** A controller is mounted, so switchboards can be started. */
   controller: z.boolean(),
   /** Where switchboards read signer credentials (reactor-api default: remote). */

@@ -8,6 +8,7 @@ import { createMonitorController } from "./controller.ts";
 import {
   newToken,
   PASS_ENV,
+  postgresFromEnv,
   PROJECT_ROOTS_ENV,
   projectRootsFromEnv,
   serverEnvFromEnv,
@@ -20,7 +21,9 @@ import { createStaticHandler } from "./static.ts";
 const USAGE = `usage: node src/server/serve.ts --project <root>… [--env KEY=VALUE…] [--port <n>]
 Serves the built monitor (dist/) and its controller on 127.0.0.1.
 Project roots also come from ${PROJECT_ROOTS_ENV}. --env and ${PASS_ENV} (names of
-this process's vars) set env for every started host, code-loading keys included.`;
+this process's vars) set env for every started host, code-loading keys included.
+PH_MONITOR_PG_URL names a Postgres server: each start that wants Postgres gets
+its own database there, named after the url's database and dropped on stop.`;
 
 let parsed: ReturnType<typeof parse>;
 function parse() {
@@ -75,10 +78,12 @@ for (const pair of parsed.values.env ?? []) {
 
 let controller: ReturnType<typeof createMonitorController>;
 try {
+  const postgres = postgresFromEnv();
   controller = createMonitorController({
     projectRoots: roots,
     serverEnv,
     stopTimeoutMs: STOP_TIMEOUT_MS,
+    ...(postgres ? { postgres } : {}),
   });
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

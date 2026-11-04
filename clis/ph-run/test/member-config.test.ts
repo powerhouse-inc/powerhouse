@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   memberEnvOf,
   memberSwitchboardConfig,
+  missingPostgresUrl,
 } from "../src/runners/member-config.js";
 
 type Env = Record<string, string | undefined>;
@@ -330,5 +331,72 @@ describe("memberEnvOf", () => {
     });
     rmSync(path.join(dir, ".env"));
     expect(memberEnvOf({}, dir)).toEqual({ shell: {}, dotenv: {} });
+  });
+});
+
+describe("missingPostgresUrl", () => {
+  const storeless: ReactorConfig = {
+    backends: { main: { kind: "in-process", storage: { kind: "postgres" } } },
+  };
+  const storeOf = async (
+    reactor: ReactorConfig,
+    shell: Env,
+    dotenv: Env = {},
+  ) => {
+    const config = await memberSwitchboardConfig(
+      { reactor },
+      { shell, dotenv },
+      { pluginHost: false },
+    );
+    return {
+      url: config.storage?.reactor?.url,
+      missing: missingPostgresUrl(reactor, config, "hosts/x/host.js"),
+    };
+  };
+
+  it("refuses a Postgres store that nothing names", async () => {
+    expect((await storeOf(storeless, {})).missing).toMatch(
+      /^hosts\/x\/host\.js: the reactor's storage is Postgres, but nothing names the database/,
+    );
+  });
+
+  it("takes the url from the env when the block names none", async () => {
+    expect(
+      await storeOf(storeless, { PH_REACTOR_DATABASE_URL: "postgres://h/env" }),
+    ).toEqual({ url: "postgres://h/env", missing: undefined });
+    expect(
+      await storeOf(
+        storeless,
+        {},
+        { PH_REACTOR_DATABASE_URL: "postgres://h/file" },
+      ),
+    ).toEqual({ url: "postgres://h/file", missing: undefined });
+  });
+
+  it("takes the block's url, which only the shell overrides", async () => {
+    expect(await storeOf(postgresBlock, {})).toEqual({
+      url: "postgres://host/block",
+      missing: undefined,
+    });
+    expect(
+      (
+        await storeOf(
+          postgresBlock,
+          {},
+          { PH_REACTOR_DATABASE_URL: "postgres://h/file" },
+        )
+      ).url,
+    ).toBe("postgres://host/block");
+    expect(
+      (
+        await storeOf(postgresBlock, {
+          PH_REACTOR_DATABASE_URL: "postgres://h/env",
+        })
+      ).url,
+    ).toBe("postgres://h/env");
+  });
+
+  it("says nothing of other stores", async () => {
+    expect((await storeOf(pathBlock, {})).missing).toBeUndefined();
   });
 });
