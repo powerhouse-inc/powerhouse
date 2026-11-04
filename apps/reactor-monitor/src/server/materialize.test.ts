@@ -407,141 +407,70 @@ describe("materialize", () => {
     );
   });
 
-  it("links each Connect's build from the source, keeping .ph the copy's own", () => {
-    const build = path.join(source, ".ph", "connect-build", "dist");
-    mkdirSync(build, { recursive: true });
-    writeFileSync(path.join(build, "index.html"), "<title>built</title>");
-    mkdirSync(path.join(source, ".ph", "run"));
-    mkdirSync(path.join(source, "custom-out"));
+  it("points each serving Connect at the source's build, by its absolute path", () => {
+    mkdirSync(path.join(source, ".ph", "connect-build", "dist"), {
+      recursive: true,
+    });
     const envelope = duo(source);
     const members = envelope.members as Record<string, unknown>;
     const children = (envelope.host as { children: Record<string, unknown> })
       .children;
-    for (const [key, port, outDir] of [
-      ["ui2", 3101, "custom-out"],
-      ["ui3", 3201, "never-built"],
-    ] as const) {
-      members[key] = {
-        name: key,
-        runner: {
-          module: "@powerhousedao/ph-cli/runners/connect",
-          port,
-          outDir,
-        },
-      };
-      children[key] = { host: key };
-    }
-    const before = listTree(source);
-    const { projectDir } = materialize(instanceDir, source, envelope);
-    expect(listTree(source)).toEqual(before);
-
-    const linked = path.join(projectDir, ".ph", "connect-build", "dist");
-    expect(lstatSync(linked).isSymbolicLink()).toBe(true);
-    expect(readlinkSync(linked)).toBe(build);
-    expect(readFileSync(path.join(linked, "index.html"), "utf8")).toBe(
-      "<title>built</title>",
-    );
-    expect(lstatSync(path.join(projectDir, ".ph")).isSymbolicLink()).toBe(
-      false,
-    );
-    expect(existsSync(path.join(projectDir, ".ph", "run"))).toBe(false);
-    expect(readlinkSync(path.join(projectDir, "custom-out"))).toBe(
-      path.join(source, "custom-out"),
-    );
-    expect(existsSync(path.join(projectDir, "never-built"))).toBe(false);
-  });
-
-  it("links the outer of two nested builds once, and none for a member that builds", () => {
-    mkdirSync(path.join(source, "out", "web"), { recursive: true });
-    mkdirSync(path.join(source, "own"));
-    const envelope = duo(source);
-    const members = envelope.members as Record<string, unknown>;
-    const children = (envelope.host as { children: Record<string, unknown> })
-      .children;
-    const connectAt = (port: number, runner: object) => ({
+    const connect = (name: string, port: number, runner: object) => ({
+      name,
       runner: {
         module: "@powerhousedao/ph-cli/runners/connect",
         port,
         ...runner,
       },
     });
-    members.ui = { name: "ui", ...connectAt(3001, { outDir: "out/web" }) };
-    members.outer = { name: "outer", ...connectAt(3101, { outDir: "out" }) };
-    members.builder = {
-      name: "builder",
-      ...connectAt(3201, { outDir: "own", defaultVerb: "build" }),
-    };
-    children.outer = { host: "outer" };
-    children.builder = { host: "builder" };
+    members.custom = connect("custom", 3101, {
+      outDir: "custom-out",
+      defaultVerb: "serve",
+    });
+    members.outside = connect("outside", 3201, { outDir: "../elsewhere" });
+    members.studio = connect("studio", 3301, { defaultVerb: "dev" });
+    members.builder = connect("builder", 3401, { defaultVerb: "build" });
+    members.fixed = connect("fixed", 3501, { outDir: "/abs/build" });
+    for (const key of ["custom", "outside", "studio", "builder", "fixed"]) {
+      children[key] = { host: key };
+    }
+    const before = listTree(source);
     const { projectDir } = materialize(instanceDir, source, envelope);
-    expect(readlinkSync(path.join(projectDir, "out"))).toBe(
-      path.join(source, "out"),
-    );
-    expect(lstatSync(path.join(projectDir, "own")).isSymbolicLink()).toBe(
-      false,
-    );
+    expect(listTree(source)).toEqual(before);
+    expect(existsSync(path.join(projectDir, ".ph"))).toBe(false);
 
-    const building = duo(source);
-    (building.host as { runner: object }).runner = {
+    const runners = (
+      hostFile(projectDir, "duo") as {
+        children: Record<string, { runner?: { outDir?: string } }>;
+      }
+    ).children;
+    expect(runners.ui.runner?.outDir).toBe(
+      path.join(source, ".ph", "connect-build", "dist"),
+    );
+    expect(runners.custom.runner?.outDir).toBe(path.join(source, "custom-out"));
+    expect(runners.outside.runner?.outDir).toBe(path.join(base, "elsewhere"));
+    expect(runners.studio.runner?.outDir).toBeUndefined();
+    expect(runners.builder.runner?.outDir).toBeUndefined();
+    expect(runners.fixed.runner?.outDir).toBeUndefined();
+    // The member's own file is shared by every child that wraps it.
+    expect(hostFile(projectDir, "custom")).toMatchObject({
+      runner: { outDir: "custom-out" },
+    });
+  });
+
+  it("leaves Connect's build alone when the whole host builds", () => {
+    const envelope = duo(source);
+    (envelope.host as { runner: object }).runner = {
       module: "@powerhousedao/host-core/runners/compound",
       defaultVerb: "build",
     };
-    mkdirSync(path.join(source, ".ph", "connect-build", "dist"), {
-      recursive: true,
-    });
-    const other = path.join(base, "tmp", "other");
-    const copy = materialize(other, source, building);
-    expect(existsSync(path.join(copy.projectDir, ".ph"))).toBe(false);
-
-    const shared = duo(source);
-    (shared.members as Record<string, unknown>).builder = {
-      name: "builder",
-      ...connectAt(3201, { defaultVerb: "build" }),
-    };
-    (shared.host as { children: Record<string, unknown> }).children.builder = {
-      host: "builder",
-    };
-    const third = materialize(path.join(base, "tmp", "third"), source, shared);
-    expect(existsSync(path.join(third.projectDir, ".ph"))).toBe(false);
-  });
-
-  it("never links a folder the copy writes itself", () => {
-    mkdirSync(path.join(source, ".ph", "run"), { recursive: true });
-    const envelope = duo(source);
-    const ui = (envelope.members as Record<string, { runner: object }>).ui;
-    ui.runner = { ...ui.runner, outDir: ".ph" };
     const { projectDir } = materialize(instanceDir, source, envelope);
-    expect(existsSync(path.join(projectDir, ".ph"))).toBe(false);
-  });
-
-  it("copies, not links, the outDir of a Connect at dev, which reads no build", () => {
-    mkdirSync(path.join(source, "custom-out"));
-    const envelope = duo(source);
-    const ui = (envelope.members as Record<string, { runner: object }>).ui;
-    ui.runner = { ...ui.runner, outDir: "custom-out", defaultVerb: "dev" };
-    const { projectDir } = materialize(instanceDir, source, envelope);
-    expect(lstatSync(path.join(projectDir, "custom-out")).isDirectory()).toBe(
-      true,
-    );
-  });
-
-  it("points a build outside the project at the source's, linking nothing", () => {
-    mkdirSync(path.join(base, "elsewhere"));
-    const envelope = duo(source);
-    const ui = (envelope.members as Record<string, { runner: object }>).ui;
-    ui.runner = { ...ui.runner, outDir: "../elsewhere" };
-    const { projectDir } = materialize(instanceDir, source, envelope);
-    expect(existsSync(path.join(projectDir, ".ph"))).toBe(false);
-    expect(readdirSync(path.dirname(projectDir)).sort()).toEqual([
-      "data",
-      "project",
-    ]);
-    expect(hostFile(projectDir, "duo")).toMatchObject({
-      children: { ui: { runner: { outDir: path.join(base, "elsewhere") } } },
-    });
-    expect(hostFile(projectDir, "ui")).toMatchObject({
-      runner: { outDir: "../elsewhere" },
-    });
+    const runners = (
+      hostFile(projectDir, "duo") as {
+        children: Record<string, { runner?: { outDir?: string } }>;
+      }
+    ).children;
+    expect(runners.ui.runner?.outDir).toBeUndefined();
   });
 
   it("lists the source root in each switchboard's own packages, and only there", () => {

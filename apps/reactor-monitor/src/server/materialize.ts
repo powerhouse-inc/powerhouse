@@ -250,17 +250,13 @@ function skipped(at: readonly string[]): boolean {
 
 /** The project's own files, copied: Connect serves them from the copy, and
  * nothing it or vite writes can reach the source. Links are not followed. */
-function copyProject(
-  source: string,
-  target: string,
-  linked: ReadonlySet<string>,
-): void {
+function copyProject(source: string, target: string): void {
   let files = 0;
   let bytes = 0;
   const visit = (from: string, to: string, relative: string[]) => {
     for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
       const at = [...relative, entry.name];
-      if (skipped(at) || linked.has(at.join("/"))) continue;
+      if (skipped(at)) continue;
       const src = path.join(from, entry.name);
       const dest = containedPath(to, entry.name);
       if (entry.isDirectory()) {
@@ -282,8 +278,6 @@ function copyProject(
 }
 
 const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist";
-// What the copy writes or replaces itself: never linked to the source.
-const COPY_OWNED = [".ph/run", "hosts", "node_modules"];
 
 /** The verb a member runs at when the controller starts the host. */
 function memberVerb(envelope: HostExport, member: Member): string {
@@ -294,58 +288,18 @@ function memberVerb(envelope: HostExport, member: Member): string {
     : "run";
 }
 
-type ConnectBuilds = {
-  /** Project-relative folders, shortest first, none inside another. */
-  inside: string[];
-  /** Members whose relative outDir leaves the project, by envelope path. */
-  outside: Map<string, string>;
-};
-
-/** Each serving Connect member's build folder; none a member that builds writes. */
-function connectBuildsOf(envelope: HostExport, source: string): ConnectBuilds {
-  const served = new Set<string>();
-  const written = new Set<string>();
-  const outside = new Map<string, string>();
-  for (const member of membersOf({ envelope })) {
-    if (member.role !== "connect") continue;
-    const outDir = member.runner.outDir ?? DEFAULT_CONNECT_OUTDIR;
-    if (typeof outDir !== "string" || path.isAbsolute(outDir)) continue;
-    const relative = path.relative(source, path.resolve(source, outDir));
-    if (relative === "" || path.isAbsolute(relative)) continue;
-    const verb = memberVerb(envelope, member);
-    if (verb !== "build" && verb !== "run" && verb !== "serve") continue;
-    const builds = verb === "build";
-    if (relative.split(path.sep)[0] === "..") {
-      if (!builds) outside.set(member.path, path.resolve(source, outDir));
-      continue;
-    }
-    (builds ? written : served).add(relative.split(path.sep).join("/"));
-  }
-  const overlaps = (a: string, b: string) =>
-    a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
-  const sorted = [...served]
-    .filter((dir) => ![...written, ...COPY_OWNED].some((o) => overlaps(dir, o)))
-    .sort((a, b) => a.length - b.length);
-  return {
-    inside: sorted.filter(
-      (dir, at) => !sorted.slice(0, at).some((up) => dir.startsWith(`${up}/`)),
-    ),
-    outside,
-  };
-}
-
-/** A relative outDir outside the project, made absolute: the copy sits elsewhere. */
-function withSourceBuilds(
-  envelope: HostExport,
-  outside: ReadonlyMap<string, string>,
-): HostExport {
-  if (outside.size === 0) return envelope;
+/** The copy has no build: a Connect that serves one reads the source's, by
+ * its absolute path. One that builds keeps writing inside the copy. */
+function withSourceBuilds(envelope: HostExport, source: string): HostExport {
   const copy = structuredClone(envelope);
   const host = copy.host as unknown as Record<string, unknown>;
   const children = isRecord(host.children) ? host.children : {};
   for (const member of membersOf({ envelope: copy })) {
-    const outDir = outside.get(member.path);
-    if (outDir === undefined) continue;
+    if (member.role !== "connect") continue;
+    const verb = memberVerb(copy, member);
+    if (verb !== "run" && verb !== "serve") continue;
+    const outDir = member.runner.outDir ?? DEFAULT_CONNECT_OUTDIR;
+    if (typeof outDir !== "string" || path.isAbsolute(outDir)) continue;
     // A child's wrapper, not the member body other children may share.
     const definition =
       member.path === "host"
@@ -356,26 +310,10 @@ function withSourceBuilds(
     if (!isRecord(definition)) continue;
     definition.runner = {
       ...(isRecord(definition.runner) ? definition.runner : {}),
-      outDir,
+      outDir: path.resolve(source, outDir),
     };
   }
   return copy;
-}
-
-/** Connect's builds, linked rather than copied: `serve` only reads them. */
-function linkConnectBuilds(
-  builds: readonly string[],
-  source: string,
-  target: string,
-): void {
-  for (const dir of builds) {
-    const from = containedPath(source, dir);
-    const to = containedPath(target, dir);
-    if (!fs.existsSync(from) || fs.existsSync(to)) continue;
-    fs.mkdirSync(path.dirname(to), { recursive: true });
-    const real = fs.realpathSync(from);
-    fs.symlinkSync(real, to, linkType(real));
-  }
 }
 
 export interface Materialized {
@@ -395,11 +333,10 @@ export function materialize(
   envelope: HostExport,
   options: MaterializeOptions = {},
 ): Materialized {
-  const builds = connectBuildsOf(envelope, sourceRoot);
   const files = renderHostFiles(
     withSourcePackages(
       withCopyStorage(
-        withSourceBuilds(withFreePorts(envelope), builds.outside),
+        withSourceBuilds(withFreePorts(envelope), sourceRoot),
         path.basename(instanceDir),
       ),
       sourceRoot,
@@ -411,7 +348,7 @@ export function materialize(
   const dataDir = containedPath(instanceDir, "data");
   fs.mkdirSync(projectDir);
   fs.mkdirSync(dataDir);
-  copyProject(sourceRoot, projectDir, new Set(builds.inside));
+  copyProject(sourceRoot, projectDir);
   const hostsDir = containedPath(projectDir, "hosts");
   fs.mkdirSync(hostsDir, { recursive: true });
   for (const [folder, source] of files) {
@@ -423,6 +360,5 @@ export function materialize(
     path.join(sourceRoot, "node_modules"),
     containedPath(projectDir, "node_modules"),
   );
-  linkConnectBuilds(builds.inside, sourceRoot, projectDir);
   return { projectDir, dataDir };
 }
