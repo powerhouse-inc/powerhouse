@@ -217,8 +217,11 @@ describe("startFailure", () => {
       "  - port: expected number",
       "  - name: required",
     ].join("\n");
+    expect(failureReason("hosts/cli failed its check:")).toBe(
+      "hosts/cli failed its check",
+    );
     expect(failureReason(tail)).toBe(
-      'hosts/connect/host.js failed validation against the hostSchema of "x": - port: expected number',
+      'hosts/connect/host.js failed validation against the hostSchema of "x": port: expected number',
     );
   });
 
@@ -227,6 +230,8 @@ describe("startFailure", () => {
       "hosts/sb/host.js: reads $env FOO, which is not set. Set FOO in the environment.",
       'hosts/ui/host.js: reads $output sb › origin, but host "sb" has no output at origin.',
       "hosts/ui/host.js: is a malformed $output token.",
+      "hosts/ui/host.js: reads $output sb › origin, but no outputs are available here.",
+      'hosts/ui/host.js: names host "sb", which was not loaded.',
     ]) {
       expect(failureReason(`${reason}\n  (needed by \`a\`)`)).toBe(reason);
     }
