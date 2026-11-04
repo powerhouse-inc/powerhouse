@@ -255,7 +255,7 @@ describe("where new drives go", () => {
   it("forgets newDrives with the switchboard it names", () => {
     const draft = choose(linked(), `${UI}:newDrives:on:sb`);
     const unlinked = choose(draft, `${UI}:reach:unlink:shared`);
-    expect(reactorOf(unlinked).placement).toEqual({ drives: {} });
+    expect(reactorOf(unlinked).placement).toBeUndefined();
     expect(issues(unlinked)).toEqual([]);
   });
 

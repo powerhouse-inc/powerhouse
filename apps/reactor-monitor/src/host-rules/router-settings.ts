@@ -183,17 +183,6 @@ export function routerSettingLines(settings: RouterSettings): string[] {
 
 const DELETE = { $delete: true } as const;
 
-/** Deletes these keys of a block, or the block when nothing else is left. */
-function deleteKeys(block: unknown, at: string, keys: string[]): Setter[] {
-  const others = isRecord(block)
-    ? Object.keys(block).filter((key) => !keys.includes(key))
-    : [];
-  if (isRecord(block) && others.length === 0) {
-    return [{ path: at, value: DELETE }];
-  }
-  return keys.map((key) => ({ path: `${at}.${key}`, value: DELETE }));
-}
-
 export type RouterGroup =
   | "newDrives"
   | "requestTimeout"
@@ -228,7 +217,7 @@ function breakerValue(breaker: BreakerSetting): string {
   return breaker === false ? "never" : `${breaker.failures}/${breaker.openMs}`;
 }
 
-/** The default preset writes `reset`; a hand-set value shows read-only. */
+/** The default preset removes the key; a hand-set value shows read-only. */
 function msOptions(
   base: Omit<RouterOption, "id" | "value" | "label" | "setters">,
   prefix: string,
@@ -236,7 +225,6 @@ function msOptions(
   fallback: number,
   raw: unknown,
   path: string,
-  reset: Setter[],
   copy: Setter[],
   label: (ms: number) => string,
   zero: string,
@@ -246,7 +234,7 @@ function msOptions(
     id: `${prefix}:${ms}`,
     value: String(ms),
     label: `${label(ms)}${ms === fallback ? DEFAULT_MARK : ""}`,
-    setters: [...copy, ...(ms === fallback ? reset : [{ path, value: ms }])],
+    setters: [...copy, { path, value: ms === fallback ? DELETE : ms }],
   }));
   if (typeof raw === "number" && !presets.includes(raw)) {
     options.push({
@@ -269,11 +257,10 @@ function newDrivesOptions(
   const reach = connectReach(member, members);
   const settings = routerSettings(member, members);
   const prefix = `${member.path}:newDrives`;
-  const hasPrimary =
-    valueAt(member.reactor, ["placement", "primary"]) !== undefined;
-  const clearPrimary: Setter[] = hasPrimary
-    ? [{ path: `${at}.placement.primary`, value: DELETE }]
-    : [];
+  const clearPrimary: Setter[] =
+    valueAt(member.reactor, ["placement", "primary"]) === undefined
+      ? []
+      : [{ path: `${at}.placement.primary`, value: DELETE }];
   return [
     {
       id: `${prefix}:browser`,
@@ -283,11 +270,8 @@ function newDrivesOptions(
       member: member.path,
       setters: [
         ...copy,
-        ...deleteKeys(
-          member.reactor?.placement,
-          `${at}.placement`,
-          hasPrimary ? ["newDrives", "primary"] : ["newDrives"],
-        ),
+        { path: `${at}.placement.newDrives`, value: DELETE },
+        ...clearPrimary,
       ],
       ...(reach.keepsCopy ? {} : { blocked: ROUTER_REASONS.noBrowser }),
     },
@@ -324,7 +308,6 @@ function connectionOptions(
     ROUTER_DEFAULTS.requestTimeoutMs,
     remote.requestTimeoutMs,
     path("requestTimeoutMs"),
-    [{ path: path("requestTimeoutMs"), value: DELETE }],
     copy,
     ROUTER_LABELS.waitUpTo,
     ROUTER_LABELS.setToByHand("no limit"),
@@ -394,7 +377,6 @@ export function routerOptions(
       ROUTER_DEFAULTS.probeTimeoutMs,
       valueAt(member.reactor, ["router", "probeTimeoutMs"]),
       `${at}.router.probeTimeoutMs`,
-      deleteKeys(member.reactor?.router, `${at}.router`, ["probeTimeoutMs"]),
       copy,
       ROUTER_LABELS.waitUpTo,
       ROUTER_LABELS.setToByHand("no limit"),
@@ -406,9 +388,6 @@ export function routerOptions(
       ROUTER_DEFAULTS.provisionalRouteMs,
       valueAt(member.reactor, ["router", "provisionalRouteMs"]),
       `${at}.router.provisionalRouteMs`,
-      deleteKeys(member.reactor?.router, `${at}.router`, [
-        "provisionalRouteMs",
-      ]),
       copy,
       ROUTER_LABELS.lookAgain,
       ROUTER_LABELS.setByHand("look again every time"),

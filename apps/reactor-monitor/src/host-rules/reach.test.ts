@@ -141,6 +141,7 @@ describe("linking a Connect to a switchboard's drives", () => {
     });
     const copied = choose(linked, `${UI}:placement:shared:copy`);
     expect(reachOf(copied).links[0].remoteOnly).toBe(false);
+    expect(reachOf(copied).member.reactor).not.toHaveProperty("placement");
     expect(issues(copied)).toEqual([]);
   });
 
@@ -313,7 +314,7 @@ describe("saving a Router move to the host config", () => {
     const copy = save(draft, "shared", "main");
     expect(copy).toMatchObject({ enabled: true, selected: false });
     const copied = applyOption(draft, copy).draft;
-    expect(placement(copied)).toEqual({ drives: {} });
+    expect(placement(copied)).toBeUndefined();
     expect(issues(copied)).toEqual([]);
     expect(save(copied, "shared", "main").selected).toBe(true);
 

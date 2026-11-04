@@ -8,16 +8,9 @@ type Row = { id: number; key: string; value: string };
 
 let nextRow = 0;
 
-/** The first row with a name sets it; a later one is ignored. */
 function envOf(rows: readonly Row[]): HostEnv {
   return Object.fromEntries(
-    rows
-      .filter(
-        (row, index) =>
-          row.key !== "" &&
-          rows.findIndex((other) => other.key === row.key) === index,
-      )
-      .map((row) => [row.key, row.value]),
+    rows.filter((row) => row.key !== "").map((row) => [row.key, row.value]),
   );
 }
 
@@ -85,9 +78,7 @@ export function EnvironmentStep({ draft, engine, onDraft }: StepProps) {
               </button>
               <div className="hb-verdict">
                 {repeated ? (
-                  <p className="hb-why">
-                    Another row above sets this name, so this row is ignored.
-                  </p>
+                  <p className="hb-why">Another row above sets this name.</p>
                 ) : null}
                 {issues.map((issue) => (
                   <p className="hb-why" key={issue.message}>
