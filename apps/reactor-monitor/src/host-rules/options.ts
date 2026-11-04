@@ -565,7 +565,9 @@ function isSelected(
       const fallback =
         member?.role === "switchboard" && (!backend || backend.primary)
           ? "path"
-          : undefined;
+          : backend?.mode === "browser"
+            ? "idb"
+            : undefined;
       return (backend?.storage ?? fallback) === option.value;
     }
     case "backendKind":
