@@ -107,7 +107,8 @@ describe("connect bridge runner", () => {
       ),
       ctx,
     );
-    const callerOverride = vi.mocked(runConnectStudio).mock.calls[0][2];
+    const passed = vi.mocked(runConnectStudio).mock.calls[0][2];
+    const callerOverride = typeof passed === "function" ? passed() : passed;
     expect(callerOverride?.instance).toMatchObject({
       reactorWorker: false,
       reactorClient: "in-process",
