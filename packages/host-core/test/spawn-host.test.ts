@@ -13,6 +13,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { isPidAlive } from "../src/run-record.js";
 import {
+  SPAWN_STOPPING_NOTE,
   spawnHost,
   SpawnHostError,
   type SpawnedHost,
@@ -32,6 +33,7 @@ process.on("exit", () => {
   } catch {}
 });
 process.on("SIGTERM", () => {
+  if (process.env.FAKE_NEVER_READY) console.log("fake: shutting down");
   if (!process.env.FAKE_IGNORE_TERM) process.exit(0);
 });
 console.log("fake ph run", process.argv.slice(2).join(" "));
@@ -282,12 +284,16 @@ describe("spawnHost", () => {
     const error = await rejection(
       start({
         projectRoot,
-        readyTimeoutMs: 300,
+        // Time for the child to print its first line, even on a slow runner.
+        readyTimeoutMs: 2000,
         env: { FAKE_NEVER_READY: "1" },
       }),
     );
     expect(error.phase).toBe("timeout");
     expect(error.exit?.forced).toBe(false);
+    const [before, after] = error.outputTail.split(SPAWN_STOPPING_NOTE);
+    expect(before).toContain("fake ph run");
+    expect(after).toContain("fake: shutting down");
   });
 
   it.skipIf(process.platform === "win32")(

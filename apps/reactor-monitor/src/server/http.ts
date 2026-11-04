@@ -158,7 +158,10 @@ export function createControllerHandler(options: {
     }
     if (parts.length === 1) {
       if (method === "GET") {
-        return sendJson(res, 200, { instances: controller.list() });
+        return sendJson(res, 200, {
+          instances: controller.list(),
+          checking: controller.checking(),
+        });
       }
       if (method === "POST") {
         const request = hostRequestSchema.parse(await readJson(req));

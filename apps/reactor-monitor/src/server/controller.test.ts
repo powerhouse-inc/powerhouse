@@ -467,6 +467,23 @@ describe("createMonitorController", () => {
     await controller.stop(started.id);
   });
 
+  it("reports a standalone assistant's agent API URL", async () => {
+    const { controller, launches } = create();
+    const started = await controller.start({ project: allowed, host: "sb" });
+    launches[0].ready({
+      origin: "http://127.0.0.1:4920",
+      endpoints: {
+        openai: "http://127.0.0.1:4920/v1",
+        ready: "http://127.0.0.1:4920/ready",
+      },
+    });
+    await until(() => controller.get(started.id).status === "running");
+    expect(controller.get(started.id).agent).toBe("http://127.0.0.1:4920/v1");
+    expect(controller.get(started.id).outputs).toBeUndefined();
+    expect(controller.get(started.id).app).toBeUndefined();
+    await controller.stop(started.id);
+  });
+
   it("aborts a start that is stopped before it is ready", async () => {
     const { controller, launches } = create();
     const started = await controller.start({ project: allowed, host: "sb" });
@@ -729,6 +746,40 @@ describe("createMonitorController", () => {
       throw new Error("resolved");
     };
 
+    it("lists a start's id as checking until the copy is listed, then in its source", async () => {
+      let release: () => void = () => {};
+      const gate = new Promise<void>((r) => (release = r));
+      const { controller } = create({
+        check: async () => {
+          await gate;
+          return [];
+        },
+      });
+      const first = controller.startDraft(await draft({ startId: "s-1" }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(controller.checking()).toEqual(["s-1"]);
+      expect(controller.list()).toEqual([]);
+      release();
+      const started = await first;
+      expect(controller.checking()).toEqual([]);
+      expect(started.source?.startId).toBe("s-1");
+      expect(controller.list().map((i) => i.id)).toEqual([started.id]);
+      await controller.stop(started.id);
+    });
+
+    it("forgets a refused start's id", async () => {
+      const { controller } = create({
+        check: () =>
+          Promise.resolve([
+            { stage: "declared", file: "f", path: "p", message: "no" },
+          ]),
+      });
+      await expect(
+        controller.startDraft(await draft({ startId: "s-2" })),
+      ).rejects.toThrow(ControllerError);
+      expect(controller.checking()).toEqual([]);
+    });
+
     it("exports a project host with its digest", async () => {
       const { controller, exports } = create();
       const reply = await controller.exportHost(allowed, "duo");
@@ -815,6 +866,19 @@ describe("createMonitorController", () => {
             endpoints: { connect: "http://localhost:6491/" },
           },
         },
+        agent: {
+          host: "agent",
+          runnerModule: "@powerhousedao/clint/mastra-runner",
+          kind: "reactor",
+          verb: "run",
+          outputs: {
+            origin: "http://127.0.0.1:4920",
+            endpoints: {
+              openai: "http://127.0.0.1:4920/v1",
+              ready: "http://127.0.0.1:4920/ready",
+            },
+          },
+        },
       } as SpawnedHost["members"]);
       await until(() => controller.get(id).status === "running");
       expect(controller.get(id).outputs).toBeUndefined();
@@ -837,6 +901,7 @@ describe("createMonitorController", () => {
           },
         },
         ui: { host: "ui", app: "http://localhost:6491/" },
+        agent: { host: "agent", agent: "http://127.0.0.1:4920/v1" },
       });
       await controller.stop(id);
       expect(existsSync(path.join(controller.tempRoot, id))).toBe(false);

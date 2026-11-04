@@ -206,6 +206,74 @@ describe("UseStep", () => {
     await waitFor(() => expect(onBaseChanged).toHaveBeenCalledOnce());
   });
 
+  it("lists the controller's findings under a start it refused at the check", async () => {
+    const onStart = vi.fn(() =>
+      Promise.reject(
+        new ControllerRequestError(
+          "check_failed",
+          "hosts/switchboard failed its check with 1 issue(s).",
+          422,
+          [
+            {
+              stage: "declared",
+              file: "hosts/switchboard/host.js",
+              path: "reactor.backends.sb.remote.url",
+              message: 'names host "sb", which cannot be loaded.',
+            },
+          ],
+        ),
+      ),
+    );
+    const { view } = renderStep(UseStep, {
+      envelope: hostExport("switchboard"),
+      context: FULL,
+      extra: { client: fakeBuilderClient().client, onStart },
+    });
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    fireEvent.click(startButton(view));
+    await waitFor(() =>
+      expect(view.getByRole("status").textContent).toBe(
+        "Couldn't start: hosts/switchboard failed its check with 1 issue(s).",
+      ),
+    );
+    expect(
+      view.getByText('names host "sb", which cannot be loaded.'),
+    ).toBeTruthy();
+    expect(
+      view.getByText(
+        "declared · hosts/switchboard/host.js · reactor.backends.sb.remote.url",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("links each rule finding of a refused start to its step", async () => {
+    const onStart = vi.fn(() =>
+      Promise.reject(
+        new ControllerRequestError(
+          "check_failed",
+          "hosts/switchboard has 1 problem(s) to fix first.",
+          422,
+          undefined,
+          [{ rule: "env", path: "env.NODE_OPTIONS", message: "Not allowed." }],
+        ),
+      ),
+    );
+    const { view, onStep } = renderStep(UseStep, {
+      envelope: hostExport("switchboard"),
+      context: FULL,
+      extra: { client: fakeBuilderClient().client, onStart },
+    });
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    fireEvent.click(startButton(view));
+    await waitFor(() => expect(view.getByText("Not allowed.")).toBeTruthy());
+    fireEvent.click(view.getByRole("button", { name: "Go to Environment" }));
+    expect(onStep).toHaveBeenCalledWith("environment");
+  });
+
   it("copies each changed host file", async () => {
     const writeText = vi.fn(() => Promise.resolve());
     Object.defineProperty(navigator, "clipboard", {

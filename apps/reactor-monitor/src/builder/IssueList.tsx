@@ -1,3 +1,4 @@
+import type { HostIssue } from "../controller/client.js";
 import type { HostRuleIssue } from "../host-rules/index.js";
 import { STEP_LABELS } from "./copy.js";
 import type { StepId } from "./draft.js";
@@ -40,6 +41,32 @@ export function IssueList({
       {shown.length < issues.length ? (
         <li className="hb-note">and {issues.length - shown.length} more</li>
       ) : null}
+    </ul>
+  );
+}
+
+/** The controller's `checkHost` findings: the sentence, then stage, file and path. */
+export function HostIssueList({
+  issues,
+}: {
+  readonly issues: readonly HostIssue[];
+}) {
+  if (issues.length === 0) return null;
+  return (
+    <ul className="hb-issues">
+      {issues.map((issue) => (
+        <li
+          className="hb-issue"
+          key={`${issue.stage}\0${issue.file}\0${issue.path}\0${issue.message}`}
+        >
+          <span>{issue.message}</span>
+          <span className="hb-fpath hb-mono">
+            {[issue.stage, issue.file, issue.path, issue.hint]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
+        </li>
+      ))}
     </ul>
   );
 }

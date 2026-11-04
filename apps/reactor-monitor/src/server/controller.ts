@@ -113,6 +113,8 @@ export interface MonitorController {
   /** Starts the draft from a throwaway copy of its project. */
   startDraft(request: DraftRequest): Promise<Instance>;
   list(): Instance[];
+  /** `startId`s of draft starts still in their check, not listed until they pass. */
+  checking(): string[];
   get(id: string): Instance;
   logs(id: string, since: number): LogsResponse;
   /** Stops a live instance; forgets it either way. */
@@ -322,6 +324,16 @@ function appOf(raw: unknown): string | undefined {
   return parsed.success ? parsed.data.endpoints.connect : undefined;
 }
 
+// A mastra-runner assistant's; clint-runner's own `{ agents, proxy }` isn't read.
+const agentOutputsSchema = z.object({
+  endpoints: z.object({ openai: z.string() }),
+});
+
+function agentOf(raw: unknown): string | undefined {
+  const parsed = agentOutputsSchema.safeParse(raw);
+  return parsed.success ? parsed.data.endpoints.openai : undefined;
+}
+
 function membersOf(
   members: SpawnedHost["members"],
 ): Record<string, InstanceMember> | undefined {
@@ -330,12 +342,14 @@ function membersOf(
     Object.entries(members).map(([key, member]) => {
       const outputs = outputsOf(member.outputs);
       const app = appOf(member.outputs);
+      const agent = agentOf(member.outputs);
       return [
         key,
         {
           host: member.host,
           ...(outputs ? { outputs } : {}),
           ...(app ? { app } : {}),
+          ...(agent ? { agent } : {}),
         },
       ];
     }),
@@ -474,6 +488,7 @@ export function createMonitorController(
   const entries = new Map<string, Entry>();
   // Starts still in their check: not yet entries, but stopAll waits for them.
   const checking = new Set<Promise<unknown>>();
+  const startsChecking = new Set<string>();
   let disposing = false;
 
   const listProjects = (): Project[] => {
@@ -729,6 +744,8 @@ export function createMonitorController(
       if (outputs) entry.view.outputs = outputs;
       const app = appOf(spawned.outputs);
       if (app) entry.view.app = app;
+      const agent = agentOf(spawned.outputs);
+      if (agent) entry.view.agent = agent;
       const members = membersOf(spawned.members);
       if (members) entry.view.members = members;
       if (entry.view.status === "starting") entry.view.status = "running";
@@ -883,35 +900,44 @@ export function createMonitorController(
     startDraft: async (request) => {
       const { root, host, env: resolved } = resolve(request);
       const { env, packages } = splitPackages(resolved);
-      return startResolved(host, env, async (instanceDir) => {
-        const { envelope, ruleIssues } = await draftEnvelope(
-          request,
-          root,
-          env,
-        );
-        if (ruleIssues.length > 0) {
-          throw new ControllerError(
-            "check_failed",
-            `hosts/${host} has ${ruleIssues.length} problem(s) to fix first.`,
-            undefined,
-            { ruleIssues },
+      const { startId } = request;
+      // Until it is listed, so a caller that lost the answer can tell.
+      if (startId) startsChecking.add(startId);
+      try {
+        return await startResolved(host, env, async (instanceDir) => {
+          const { envelope, ruleIssues } = await draftEnvelope(
+            request,
+            root,
+            env,
           );
-        }
-        await assertCopyPortsFree(envelope);
-        const copy = materializeIn(instanceDir, root, envelope, packages);
-        return {
-          root: copy.projectDir,
-          dataDir: copy.dataDir,
-          source: {
-            project: root,
-            host,
-            baseDigest: request.baseDigest,
-            setters: request.setters,
-          },
-        };
-      });
+          if (ruleIssues.length > 0) {
+            throw new ControllerError(
+              "check_failed",
+              `hosts/${host} has ${ruleIssues.length} problem(s) to fix first.`,
+              undefined,
+              { ruleIssues },
+            );
+          }
+          await assertCopyPortsFree(envelope);
+          const copy = materializeIn(instanceDir, root, envelope, packages);
+          return {
+            root: copy.projectDir,
+            dataDir: copy.dataDir,
+            source: {
+              project: root,
+              host,
+              baseDigest: request.baseDigest,
+              setters: request.setters,
+              ...(startId ? { startId } : {}),
+            },
+          };
+        });
+      } finally {
+        if (startId) startsChecking.delete(startId);
+      }
     },
     list: () => [...entries.values()].map(snapshot),
+    checking: () => [...startsChecking],
     get: (id) => snapshot(entryOf(id)),
     logs: (id, since) => entryOf(id).logs.since(since),
     stop,

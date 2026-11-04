@@ -63,6 +63,28 @@ describe.each(SERVERS)("%s with a proxied switchboard", (_name, server) => {
     serve = server;
   });
 
+  it("refuses to start with no build in its outDir", async () => {
+    const empty = mkdtempSync(join(tmpdir(), "ph-preview-empty-"));
+    try {
+      await expect(
+        serve(
+          {
+            outDir: empty,
+            port: await freePort(),
+            host: "127.0.0.1",
+            strictPort: true,
+          } as ConnectPreviewArgs,
+          {},
+          PROJECT,
+        ),
+      ).rejects.toThrow(
+        /^No Connect build to serve: .*index\.html is missing\./,
+      );
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
+  });
+
   it("leaves the switchboard's paths to the proxy, even while it swaps the shell", async () => {
     const port = await freePort();
     // A composition turns the shell swap on, which answers extensionless paths

@@ -1,7 +1,13 @@
 import type { HostExport } from "@powerhousedao/host-core/schema";
 import fs from "node:fs";
 import path from "node:path";
-import { isRecord, membersOf, valueAt } from "../host-rules/members.ts";
+import {
+  hostVerb,
+  isRecord,
+  type Member,
+  membersOf,
+  valueAt,
+} from "../host-rules/members.ts";
 import {
   COPY_CONNECT_PORT_OFFSET,
   copyPortClashes,
@@ -271,6 +277,73 @@ function copyProject(source: string, target: string): void {
   visit(source, target, []);
 }
 
+const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist";
+
+/** The verb a member runs at when the controller starts the host. */
+function memberVerb(envelope: HostExport, member: Member): string {
+  const verb = hostVerb(envelope);
+  if (member.path === "host" || verb !== "run") return verb;
+  return typeof member.runner.defaultVerb === "string"
+    ? member.runner.defaultVerb
+    : "run";
+}
+
+/** The copy has no build: a Connect that serves one reads the source's, by
+ * its absolute path. One that builds keeps writing inside the copy. */
+function withSourceBuilds(envelope: HostExport, source: string): HostExport {
+  const copy = structuredClone(envelope);
+  const host = copy.host as unknown as Record<string, unknown>;
+  const children = isRecord(host.children) ? host.children : {};
+  // Where a member's outDir lands when the copy runs, and in the source.
+  const outDirOf = (member: Member) => {
+    const raw = member.runner.outDir ?? DEFAULT_CONNECT_OUTDIR;
+    if (typeof raw !== "string") return undefined;
+    const at = (root: string) =>
+      path.resolve(
+        root,
+        raw
+          .replaceAll("${projectRoot}", () => root)
+          .replaceAll("${userData}", () =>
+            root === source ? source : `${root}/<userData>`,
+          ),
+      );
+    // `ph run` in the source resolves both tokens to its root by default.
+    return raw.replaceAll(/\$\{(?:projectRoot|userData)\}/g, "").includes("${")
+      ? undefined
+      : { inCopy: at(path.resolve("/<copy>")), inSource: at(source) };
+  };
+  const connects = membersOf({ envelope: copy }).filter(
+    (member) => member.role === "connect",
+  );
+  // A build the copy makes itself is the one to serve.
+  const built = connects.flatMap((member) => {
+    const outDir = outDirOf(member);
+    return memberVerb(copy, member) === "build" && outDir
+      ? [outDir.inCopy]
+      : [];
+  });
+  for (const member of connects) {
+    const verb = memberVerb(copy, member);
+    if (verb !== "run" && verb !== "serve") continue;
+    const outDir = outDirOf(member);
+    if (!outDir || built.includes(outDir.inCopy)) continue;
+    if (outDir.inSource === outDir.inCopy) continue;
+    // A child's wrapper, not the member body other children may share.
+    const definition =
+      member.path === "host"
+        ? host
+        : Object.hasOwn(children, member.key)
+          ? children[member.key]
+          : undefined;
+    if (!isRecord(definition)) continue;
+    definition.runner = {
+      ...(isRecord(definition.runner) ? definition.runner : {}),
+      outDir: outDir.inSource,
+    };
+  }
+  return copy;
+}
+
 export interface Materialized {
   projectDir: string;
   dataDir: string;
@@ -290,7 +363,10 @@ export function materialize(
 ): Materialized {
   const files = renderHostFiles(
     withSourcePackages(
-      withCopyStorage(withFreePorts(envelope), path.basename(instanceDir)),
+      withCopyStorage(
+        withSourceBuilds(withFreePorts(envelope), sourceRoot),
+        path.basename(instanceDir),
+      ),
       sourceRoot,
       options.packages,
     ),

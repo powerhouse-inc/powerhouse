@@ -300,6 +300,7 @@ describe("controller HTTP handler", () => {
       (await call("GET", "/__ph-monitor/instances")).body,
     );
     expect(listed.instances.map((i) => i.id)).toEqual([instance.id]);
+    expect(listed.checking).toEqual([]);
 
     const logs = logsResponseSchema.parse(
       (await call("GET", `/__ph-monitor/instances/${instance.id}/logs?since=0`))

@@ -54,6 +54,7 @@ export {
   type RunProbe,
 } from "./run-record.js";
 export {
+  SPAWN_STOPPING_NOTE,
   spawnHost,
   SpawnHostError,
   type HostExit,
