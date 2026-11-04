@@ -4,7 +4,7 @@ export type StartFailure = {
   message: string;
   phase: string;
   tail: string;
-  /** What spawnHost saw, when `message` leads with a reason from the log. */
+  /** What spawnHost saw, when `message` leads with a line from the log. */
   context?: string;
 };
 
