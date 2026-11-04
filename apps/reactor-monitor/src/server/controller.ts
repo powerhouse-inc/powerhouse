@@ -1,6 +1,7 @@
 import {
   isPidAlive,
   listRunRecords,
+  OUTPUT_DATA_DIRS_ENV,
   probeHostsFolder,
   readProjectName,
   spawnHost,
@@ -142,6 +143,7 @@ const CHECK_TIMEOUT_MS = 60_000;
 const INJECTED_KEYS = [
   "FEATURE_UNIFORM_RUNNERS_ENABLED",
   "PH_USER_DATA_DIR",
+  OUTPUT_DATA_DIRS_ENV,
   "PH_NO_TELEMETRY",
   "PH_NO_DOTENV",
 ];
@@ -923,6 +925,22 @@ export function createMonitorController(
     return Promise.all([...entries.keys()].map(stop));
   };
 
+  /** The data dirs of the in-place instances of `root` still up: an in-place
+   * start reads its `$output` tokens from their run records too. */
+  const siblingDataDirs = (root: string): Record<string, string> => {
+    const dirs = [...entries.values()]
+      .filter(
+        ({ view }) =>
+          (view.status === "starting" || view.status === "running") &&
+          !view.source &&
+          view.project === root,
+      )
+      .map((entry) => entry.dataDir);
+    return dirs.length > 0
+      ? { [OUTPUT_DATA_DIRS_ENV]: dirs.join(path.delimiter) }
+      : {};
+  };
+
   /** The instance limit, the check and the launch; `prepare` fills instanceDir. */
   const startResolved = async (
     host: string,
@@ -1025,14 +1043,15 @@ export function createMonitorController(
         if (wanted.refused) {
           throw new ControllerError("bad_request", wanted.refused);
         }
+        const withSiblings = { ...env, ...siblingDataDirs(root) };
         if (wanted.backends.length === 0) {
-          return { root, dataDir: instanceDir, env };
+          return { root, dataDir: instanceDir, env: withSiblings };
         }
         const { url } = await createDatabase(claim);
         return {
           root,
           dataDir: instanceDir,
-          env: { ...env, [REACTOR_DATABASE]: url },
+          env: { ...withSiblings, [REACTOR_DATABASE]: url },
         };
       });
     },
