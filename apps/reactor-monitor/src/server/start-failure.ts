@@ -1,4 +1,7 @@
-import type { SpawnHostError } from "@powerhousedao/host-core";
+import {
+  SPAWN_STOPPING_NOTE,
+  type SpawnHostError,
+} from "@powerhousedao/host-core";
 
 export type StartFailure = {
   message: string;
@@ -74,13 +77,26 @@ const LAST_LINE_MAX = 200;
 
 // spawnHost's own notes in the tail, not the run's output.
 const SPAWN_NOTES = /^(?:logFile|onOutput): /;
-const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*[A-Za-z]`, "g");
+const ESC = String.fromCharCode(27);
+const BEL = String.fromCharCode(7);
+// CSI (colors, cursor) and OSC (titles, links) sequences.
+const ANSI = new RegExp(
+  `${ESC}(?:\\[[0-9;?]*[ -/]*[@-~]|\\][^${BEL}${ESC}]*(?:${BEL}|${ESC}\\\\))`,
+  "g",
+);
+
+/** What a terminal would show of a line: its last carriage-return frame. */
+function shown(line: string): string {
+  const frames = line.replace(ANSI, "").split("\r");
+  return (frames.findLast((frame) => frame.trim() !== "") ?? "").trimEnd();
+}
 
 /** Where a run that never got ready stopped printing. */
 export function lastOutput(tail: string): string | undefined {
-  const line = tail
+  const ran = tail.split(`\n${SPAWN_STOPPING_NOTE}\n`)[0];
+  const line = (ran.startsWith(`${SPAWN_STOPPING_NOTE}\n`) ? "" : ran)
     .split("\n")
-    .map((each) => (each.split("\r").at(-1) ?? "").replace(ANSI, "").trimEnd())
+    .map(shown)
     .findLast(
       (each) =>
         each.trim() !== "" &&

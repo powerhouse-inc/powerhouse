@@ -1,4 +1,4 @@
-import { SpawnHostError } from "@powerhousedao/host-core";
+import { SPAWN_STOPPING_NOTE, SpawnHostError } from "@powerhousedao/host-core";
 import { describe, expect, it } from "vitest";
 import { PORT_TAKEN_TAIL } from "./__fixtures__/spawn-tails.ts";
 import { failureReason, startFailure } from "./start-failure.ts";
@@ -112,10 +112,19 @@ describe("startFailure", () => {
     expect(
       startFailure(
         timeout(
-          `${esc}[32m[sb]${esc}[0m Downloading 1%\rDownloading 97%\n  "a": 1\n},\n`,
+          `${esc}[32m[sb]${esc}[0m ${esc}[?25lDownloading 1%\rDownloading 97%\r\n  "a": 1\n},\n`,
         ),
       ).message,
     ).toBe('Didn\'t finish starting: its last output was "Downloading 97%".');
+    expect(
+      startFailure(
+        timeout(
+          `[sb] Loading packages: /p\n${SPAWN_STOPPING_NOTE}\n[sb] Shutdown complete\n`,
+        ),
+      ).message,
+    ).toBe(
+      'Didn\'t finish starting: its last output was "[sb] Loading packages: /p".',
+    );
     const long = `[sb] ${"x".repeat(400)}`;
     expect(startFailure(timeout(long)).message).toBe(
       `Didn't finish starting: its last output was "${long.slice(0, 199)}…".`,
