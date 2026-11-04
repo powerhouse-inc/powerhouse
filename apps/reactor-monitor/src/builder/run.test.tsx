@@ -501,6 +501,28 @@ describe("Use it, wired", () => {
     expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
   });
 
+  it("keeps the start it sent when the answer never came", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const wiring = setup({
+      startDraft: () =>
+        Promise.reject(
+          new ControllerRequestError(
+            "network",
+            "Controller unreachable: Failed to fetch",
+          ),
+        ),
+    });
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    fireEvent.click(startButton(view));
+    await waitFor(() =>
+      expect(view.getByText(/Controller unreachable/)).toBeTruthy(),
+    );
+    expect(wiring.pending.getItem(PENDING_START_KEY)).not.toBe(null);
+  });
+
   it("after a reload mid-start, waits for the copy to show up and takes it on", async () => {
     const { storage } = await storageWith(projectBase(stack()));
     const wiring = setup({

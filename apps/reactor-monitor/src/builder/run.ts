@@ -6,6 +6,7 @@ import type { HostImportRequest } from "../components/HostImportPanel.js";
 import type { Instance, InstanceOutputs } from "../controller/api.js";
 import {
   backoffMs,
+  ControllerRequestError,
   errorMessage,
   isNotFound,
   type ControllerClient,
@@ -441,7 +442,10 @@ export function useBuilderRun({
       try {
         instance = await client.startDraft(requestOf(draft));
       } catch (error) {
-        writePending(pending, undefined);
+        // Unanswered, as when a reload aborts it: the controller may still start it.
+        const unanswered =
+          error instanceof ControllerRequestError && error.code === "network";
+        if (!unanswered) writePending(pending, undefined);
         if (live()) {
           current.current = undefined;
           setState(undefined);
