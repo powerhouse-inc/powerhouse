@@ -445,13 +445,56 @@ describe("materialize", () => {
       false,
     );
     expect(existsSync(path.join(projectDir, ".ph", "run"))).toBe(false);
-    expect(lstatSync(path.join(projectDir, "custom-out")).isDirectory()).toBe(
-      true,
+    expect(readlinkSync(path.join(projectDir, "custom-out"))).toBe(
+      path.join(source, "custom-out"),
     );
     expect(existsSync(path.join(projectDir, "never-built"))).toBe(false);
   });
 
-  it("links no build for a Connect without one, or outside the project", () => {
+  it("links the outer of two nested builds once, and none for a member that builds", () => {
+    mkdirSync(path.join(source, "out", "web"), { recursive: true });
+    mkdirSync(path.join(source, "own"));
+    const envelope = duo(source);
+    const members = envelope.members as Record<string, unknown>;
+    const children = (envelope.host as { children: Record<string, unknown> })
+      .children;
+    const connectAt = (port: number, runner: object) => ({
+      runner: {
+        module: "@powerhousedao/ph-cli/runners/connect",
+        port,
+        ...runner,
+      },
+    });
+    members.ui = { name: "ui", ...connectAt(3001, { outDir: "out/web" }) };
+    members.outer = { name: "outer", ...connectAt(3101, { outDir: "out" }) };
+    members.builder = {
+      name: "builder",
+      ...connectAt(3201, { outDir: "own", defaultVerb: "build" }),
+    };
+    children.outer = { host: "outer" };
+    children.builder = { host: "builder" };
+    const { projectDir } = materialize(instanceDir, source, envelope);
+    expect(readlinkSync(path.join(projectDir, "out"))).toBe(
+      path.join(source, "out"),
+    );
+    expect(lstatSync(path.join(projectDir, "own")).isSymbolicLink()).toBe(
+      false,
+    );
+
+    const building = duo(source);
+    (building.host as { runner: object }).runner = {
+      module: "@powerhousedao/host-core/runners/compound",
+      defaultVerb: "build",
+    };
+    mkdirSync(path.join(source, ".ph", "connect-build", "dist"), {
+      recursive: true,
+    });
+    const other = path.join(base, "tmp", "other");
+    const copy = materialize(other, source, building);
+    expect(existsSync(path.join(copy.projectDir, ".ph"))).toBe(false);
+  });
+
+  it("points a build outside the project at the source's, linking nothing", () => {
     mkdirSync(path.join(base, "elsewhere"));
     const envelope = duo(source);
     const ui = (envelope.members as Record<string, { runner: object }>).ui;
@@ -462,6 +505,12 @@ describe("materialize", () => {
       "data",
       "project",
     ]);
+    expect(hostFile(projectDir, "duo")).toMatchObject({
+      children: { ui: { runner: { outDir: path.join(base, "elsewhere") } } },
+    });
+    expect(hostFile(projectDir, "ui")).toMatchObject({
+      runner: { outDir: path.join(base, "elsewhere") },
+    });
   });
 
   it("lists the source root in each switchboard's own packages, and only there", () => {

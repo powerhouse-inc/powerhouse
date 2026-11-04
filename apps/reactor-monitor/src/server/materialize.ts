@@ -1,7 +1,13 @@
 import type { HostExport } from "@powerhousedao/host-core/schema";
 import fs from "node:fs";
 import path from "node:path";
-import { isRecord, membersOf, valueAt } from "../host-rules/members.ts";
+import {
+  hostVerb,
+  isRecord,
+  type Member,
+  membersOf,
+  valueAt,
+} from "../host-rules/members.ts";
 import {
   COPY_CONNECT_PORT_OFFSET,
   copyPortClashes,
@@ -244,13 +250,17 @@ function skipped(at: readonly string[]): boolean {
 
 /** The project's own files, copied: Connect serves them from the copy, and
  * nothing it or vite writes can reach the source. Links are not followed. */
-function copyProject(source: string, target: string): void {
+function copyProject(
+  source: string,
+  target: string,
+  linked: ReadonlySet<string>,
+): void {
   let files = 0;
   let bytes = 0;
   const visit = (from: string, to: string, relative: string[]) => {
     for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
       const at = [...relative, entry.name];
-      if (skipped(at)) continue;
+      if (skipped(at) || linked.has(at.join("/"))) continue;
       const src = path.join(from, entry.name);
       const dest = containedPath(to, entry.name);
       if (entry.isDirectory()) {
@@ -273,27 +283,94 @@ function copyProject(source: string, target: string): void {
 
 const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist";
 
-/** The copy skips Connect's build, so link it: `serve` only reads it. */
-function linkConnectBuilds(
-  envelope: HostExport,
-  source: string,
-  target: string,
-): void {
+/** The verb a member runs at when the controller starts the host. */
+function memberVerb(envelope: HostExport, member: Member): string {
+  const verb = hostVerb(envelope);
+  if (member.path === "host" || verb !== "run") return verb;
+  return typeof member.runner.defaultVerb === "string"
+    ? member.runner.defaultVerb
+    : "run";
+}
+
+type ConnectBuilds = {
+  /** Project-relative folders, shortest first, none inside another. */
+  inside: string[];
+  /** Members whose relative outDir leaves the project, by envelope path. */
+  outside: Map<string, string>;
+};
+
+/** Each Connect member's build folder; a member that builds writes it, so it has none. */
+function connectBuildsOf(envelope: HostExport, source: string): ConnectBuilds {
+  const inside = new Set<string>();
+  const outside = new Map<string, string>();
   for (const member of membersOf({ envelope })) {
-    if (member.role !== "connect" || member.runner.defaultVerb === "build") {
+    if (member.role !== "connect" || memberVerb(envelope, member) === "build") {
       continue;
     }
     const outDir = member.runner.outDir ?? DEFAULT_CONNECT_OUTDIR;
     if (typeof outDir !== "string" || path.isAbsolute(outDir)) continue;
-    let from: string;
-    let to: string;
-    try {
-      from = containedPath(source, outDir);
-      to = containedPath(target, outDir);
-    } catch {
-      continue;
+    const relative = path.relative(source, path.resolve(source, outDir));
+    if (relative === "" || path.isAbsolute(relative)) continue;
+    if (relative.split(path.sep)[0] === "..") {
+      outside.set(member.path, path.resolve(source, outDir));
+    } else {
+      inside.add(relative.split(path.sep).join("/"));
     }
-    if (!fs.existsSync(from) || fs.existsSync(to)) continue;
+  }
+  const sorted = [...inside].sort((a, b) => a.length - b.length);
+  return {
+    inside: sorted.filter(
+      (dir, at) => !sorted.slice(0, at).some((up) => dir.startsWith(`${up}/`)),
+    ),
+    outside,
+  };
+}
+
+/** A relative outDir outside the project, made absolute: the copy sits elsewhere. */
+function withSourceBuilds(
+  envelope: HostExport,
+  outside: ReadonlyMap<string, string>,
+): HostExport {
+  if (outside.size === 0) return envelope;
+  const copy = structuredClone(envelope);
+  const host = copy.host as unknown as Record<string, unknown>;
+  const children = isRecord(host.children) ? host.children : {};
+  const members = copy.members as Record<string, unknown>;
+  for (const member of membersOf({ envelope: copy })) {
+    const outDir = outside.get(member.path);
+    if (outDir === undefined) continue;
+    const definitions =
+      member.path === "host"
+        ? [host]
+        : [
+            Object.hasOwn(members, member.folder)
+              ? members[member.folder]
+              : undefined,
+            Object.hasOwn(children, member.key)
+              ? children[member.key]
+              : undefined,
+          ];
+    for (const definition of definitions) {
+      if (!isRecord(definition)) continue;
+      definition.runner = {
+        ...(isRecord(definition.runner) ? definition.runner : {}),
+        outDir,
+      };
+    }
+  }
+  return copy;
+}
+
+/** Connect's builds, linked rather than copied: `serve` only reads them. */
+function linkConnectBuilds(
+  builds: readonly string[],
+  source: string,
+  target: string,
+): void {
+  for (const dir of builds) {
+    const from = containedPath(source, dir);
+    if (!fs.existsSync(from)) continue;
+    const to = containedPath(target, dir);
     fs.mkdirSync(path.dirname(to), { recursive: true });
     const real = fs.realpathSync(from);
     fs.symlinkSync(real, to, linkType(real));
@@ -317,9 +394,13 @@ export function materialize(
   envelope: HostExport,
   options: MaterializeOptions = {},
 ): Materialized {
+  const builds = connectBuildsOf(envelope, sourceRoot);
   const files = renderHostFiles(
     withSourcePackages(
-      withCopyStorage(withFreePorts(envelope), path.basename(instanceDir)),
+      withCopyStorage(
+        withSourceBuilds(withFreePorts(envelope), builds.outside),
+        path.basename(instanceDir),
+      ),
       sourceRoot,
       options.packages,
     ),
@@ -329,7 +410,7 @@ export function materialize(
   const dataDir = containedPath(instanceDir, "data");
   fs.mkdirSync(projectDir);
   fs.mkdirSync(dataDir);
-  copyProject(sourceRoot, projectDir);
+  copyProject(sourceRoot, projectDir, new Set(builds.inside));
   const hostsDir = containedPath(projectDir, "hosts");
   fs.mkdirSync(hostsDir, { recursive: true });
   for (const [folder, source] of files) {
@@ -341,6 +422,6 @@ export function materialize(
     path.join(sourceRoot, "node_modules"),
     containedPath(projectDir, "node_modules"),
   );
-  linkConnectBuilds(envelope, sourceRoot, projectDir);
+  linkConnectBuilds(builds.inside, sourceRoot, projectDir);
   return { projectDir, dataDir };
 }
