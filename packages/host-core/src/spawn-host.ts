@@ -347,6 +347,14 @@ export async function spawnHost(
       const ran = `${tail}${ended}${SPAWN_STOPPING_NOTE}\n`;
       tail = "";
       const stopped = await stop();
+      let timer: NodeJS.Timeout | undefined;
+      await Promise.race([
+        closed,
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, CLOSE_WAIT_MS);
+        }),
+      ]);
+      clearTimeout(timer);
       throw new SpawnHostError(
         phase === "aborted"
           ? `spawnHost: aborted before ph run ${options.host} was ready.`
