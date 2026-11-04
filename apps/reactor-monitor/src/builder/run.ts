@@ -25,10 +25,10 @@ import type { BuilderEngine } from "./engine.js";
 
 const POLL_MS = 1000;
 const WATCH_MS = 3000;
-/** How long a reloaded page looks for a start it sent: the check's 60 s, and the copy. */
+/** A start sent longer ago than this is no longer looked for after a reload. */
 const PENDING_MS = 90_000;
 /** Until then a start may not have reached the controller's check yet. */
-const ARRIVE_MS = 2000;
+const ARRIVE_MS = 5000;
 /** Listing failures in a row after which a reloaded page stops waiting. */
 const LIST_FAILURES = 3;
 export const PENDING_START_KEY = "ph:reactor-monitor:builder-start";
@@ -249,6 +249,12 @@ type RunState = Omit<BuilderRun, "browser" | "attached">;
 const GONE = new Set(["exited", "failed"]);
 const BUSY = new Set(["starting", "stopping"]);
 
+/** A random id; `crypto.randomUUID` is missing outside secure contexts. */
+function startIdOf(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 /** Builder-started copies the controller still runs, newest first. */
 function liveDrafts(instances: readonly Instance[]): Instance[] {
   return instances
@@ -409,13 +415,11 @@ export function useBuilderRun({
     /** Whether to stop looking for the copy `sent` started. */
     const gaveUp = (checking: string[] | undefined, failures: number) => {
       if (!sent || failures >= LIST_FAILURES) return true;
-      const now = Date.now();
-      if (now >= sent.at + PENDING_MS) return true;
-      // Refused, failed or never arrived: no longer in the check.
+      // Refused, failed or never arrived: not in the check, and not listed.
       return (
         checking !== undefined &&
         !checking.includes(sent.id) &&
-        now >= sent.at + ARRIVE_MS
+        Date.now() >= sent.at + ARRIVE_MS
       );
     };
     void (async () => {
@@ -445,7 +449,8 @@ export function useBuilderRun({
         if (ours || gaveUp(checking, failures)) break;
       }
       if (sent) writePending(pending, undefined);
-      const found = ours ?? drafts.at(0);
+      // A tab whose own start ended takes on no other copy as its run.
+      const found = sent ? ours : drafts.at(0);
       if (!found) {
         if (current.current === waiting) {
           current.current = undefined;
@@ -482,7 +487,7 @@ export function useBuilderRun({
   const start = useCallback(
     async (draft: BuilderDraft, engine: BuilderEngine) => {
       if (!client) return;
-      const request = { ...requestOf(draft), startId: crypto.randomUUID() };
+      const request = { ...requestOf(draft), startId: startIdOf() };
       const browser = browserReactors(engine.envelope, engine.members);
       const token = Symbol("run");
       current.current = token;

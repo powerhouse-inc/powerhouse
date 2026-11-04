@@ -586,16 +586,25 @@ describe("Use it, wired", () => {
     expect(wiring.managed.attach).toHaveBeenCalledWith(instance("running"));
   });
 
-  it("after a reload mid-start, lets go once nothing is left in the check", async () => {
+  it("after a reload mid-start, lets go once its start left the check, taking on no other copy", async () => {
     const { storage } = await storageWith(projectBase(stack()));
-    const wiring = setup({ checking: ["start-0"] });
-    sentBeforeReload(wiring, Date.now() - 5000);
+    const OTHER = "22222222-0000-4000-8000-000000000000";
+    const other = {
+      ...instance("running", OTHER),
+      source: { project: PROJECT, host: "stack", startId: "start-0" },
+    };
+    const wiring = setup({
+      list: () => Promise.resolve([other]),
+      checking: ["start-0"],
+    });
+    sentBeforeReload(wiring, Date.now() - 10_000);
     const view = render(<Wired storage={storage} wiring={wiring} />);
     await waitFor(() =>
       expect(startButton(view)).toHaveProperty("disabled", false),
     );
     expect(wiring.list).toHaveBeenCalledOnce();
     expect(runText(view)).toBe("");
+    expect(wiring.managed.attach).not.toHaveBeenCalled();
     expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
   });
 
