@@ -1,3 +1,15 @@
+## 6.2.3-dev.93 (2026-11-04)
+
+### 🩹 Fixes
+
+- **desktop:** a release build runs the stack it was built and tested with ([0f3dd07874](https://github.com/powerhouse-inc/powerhouse/commit/0f3dd07874))
+- **reactor-api:** a local package's missing subpath is a miss on Windows too ([06aac15960](https://github.com/powerhouse-inc/powerhouse/commit/06aac15960))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.92 (2026-11-04)
 
 ### 🚀 Features

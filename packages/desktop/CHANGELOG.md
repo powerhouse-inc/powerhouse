@@ -1,3 +1,14 @@
+## 6.2.3-dev.93 (2026-11-04)
+
+### 🩹 Fixes
+
+- **desktop:** a release build runs the stack it was built and tested with ([0f3dd07874](https://github.com/powerhouse-inc/powerhouse/commit/0f3dd07874))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.92 (2026-11-04)
 
 ### 🚀 Features
