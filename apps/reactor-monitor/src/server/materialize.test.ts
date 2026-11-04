@@ -492,6 +492,17 @@ describe("materialize", () => {
     const other = path.join(base, "tmp", "other");
     const copy = materialize(other, source, building);
     expect(existsSync(path.join(copy.projectDir, ".ph"))).toBe(false);
+
+    const shared = duo(source);
+    (shared.members as Record<string, unknown>).builder = {
+      name: "builder",
+      ...connectAt(3201, { defaultVerb: "build" }),
+    };
+    (shared.host as { children: Record<string, unknown> }).children.builder = {
+      host: "builder",
+    };
+    const third = materialize(path.join(base, "tmp", "third"), source, shared);
+    expect(existsSync(path.join(third.projectDir, ".ph"))).toBe(false);
   });
 
   it("points a build outside the project at the source's, linking nothing", () => {
@@ -509,7 +520,7 @@ describe("materialize", () => {
       children: { ui: { runner: { outDir: path.join(base, "elsewhere") } } },
     });
     expect(hostFile(projectDir, "ui")).toMatchObject({
-      runner: { outDir: path.join(base, "elsewhere") },
+      runner: { outDir: "../elsewhere" },
     });
   });
 

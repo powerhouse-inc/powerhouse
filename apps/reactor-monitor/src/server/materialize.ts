@@ -299,25 +299,29 @@ type ConnectBuilds = {
   outside: Map<string, string>;
 };
 
-/** Each Connect member's build folder; a member that builds writes it, so it has none. */
+/** Each serving Connect member's build folder; none a member that builds writes. */
 function connectBuildsOf(envelope: HostExport, source: string): ConnectBuilds {
-  const inside = new Set<string>();
+  const served = new Set<string>();
+  const written = new Set<string>();
   const outside = new Map<string, string>();
   for (const member of membersOf({ envelope })) {
-    if (member.role !== "connect" || memberVerb(envelope, member) === "build") {
-      continue;
-    }
+    if (member.role !== "connect") continue;
     const outDir = member.runner.outDir ?? DEFAULT_CONNECT_OUTDIR;
     if (typeof outDir !== "string" || path.isAbsolute(outDir)) continue;
     const relative = path.relative(source, path.resolve(source, outDir));
     if (relative === "" || path.isAbsolute(relative)) continue;
+    const builds = memberVerb(envelope, member) === "build";
     if (relative.split(path.sep)[0] === "..") {
-      outside.set(member.path, path.resolve(source, outDir));
-    } else {
-      inside.add(relative.split(path.sep).join("/"));
+      if (!builds) outside.set(member.path, path.resolve(source, outDir));
+      continue;
     }
+    (builds ? written : served).add(relative.split(path.sep).join("/"));
   }
-  const sorted = [...inside].sort((a, b) => a.length - b.length);
+  const overlaps = (a: string, b: string) =>
+    a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
+  const sorted = [...served]
+    .filter((dir) => ![...written].some((other) => overlaps(dir, other)))
+    .sort((a, b) => a.length - b.length);
   return {
     inside: sorted.filter(
       (dir, at) => !sorted.slice(0, at).some((up) => dir.startsWith(`${up}/`)),
@@ -335,28 +339,21 @@ function withSourceBuilds(
   const copy = structuredClone(envelope);
   const host = copy.host as unknown as Record<string, unknown>;
   const children = isRecord(host.children) ? host.children : {};
-  const members = copy.members as Record<string, unknown>;
   for (const member of membersOf({ envelope: copy })) {
     const outDir = outside.get(member.path);
     if (outDir === undefined) continue;
-    const definitions =
+    // A child's wrapper, not the member body other children may share.
+    const definition =
       member.path === "host"
-        ? [host]
-        : [
-            Object.hasOwn(members, member.folder)
-              ? members[member.folder]
-              : undefined,
-            Object.hasOwn(children, member.key)
-              ? children[member.key]
-              : undefined,
-          ];
-    for (const definition of definitions) {
-      if (!isRecord(definition)) continue;
-      definition.runner = {
-        ...(isRecord(definition.runner) ? definition.runner : {}),
-        outDir,
-      };
-    }
+        ? host
+        : Object.hasOwn(children, member.key)
+          ? children[member.key]
+          : undefined;
+    if (!isRecord(definition)) continue;
+    definition.runner = {
+      ...(isRecord(definition.runner) ? definition.runner : {}),
+      outDir,
+    };
   }
   return copy;
 }
@@ -369,8 +366,8 @@ function linkConnectBuilds(
 ): void {
   for (const dir of builds) {
     const from = containedPath(source, dir);
-    if (!fs.existsSync(from)) continue;
     const to = containedPath(target, dir);
+    if (!fs.existsSync(from) || fs.existsSync(to)) continue;
     fs.mkdirSync(path.dirname(to), { recursive: true });
     const real = fs.realpathSync(from);
     fs.symlinkSync(real, to, linkType(real));
