@@ -608,6 +608,40 @@ describe("Use it, wired", () => {
     expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
   });
 
+  it("after a reload mid-start, waits out listing failures once its start was seen in the check", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const unreachable = new Error("Controller unreachable");
+    const list = vi
+      .fn<() => Promise<Instance[]>>()
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(unreachable)
+      .mockRejectedValueOnce(unreachable)
+      .mockRejectedValueOnce(unreachable)
+      .mockRejectedValueOnce(unreachable)
+      .mockResolvedValue([instance("starting")]);
+    const wiring = setup({ list, checking: [SENT_ID] });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"), {
+      timeout: 5000,
+    });
+    expect(wiring.added.map((d) => ownerOf(d))).toEqual([ID]);
+  });
+
+  it("after a reload mid-start, stops after listing failures when its start was never seen", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const wiring = setup({
+      list: () => Promise.reject(new Error("Controller unreachable")),
+    });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    expect(wiring.list).toHaveBeenCalledTimes(3);
+    expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
+  });
+
   it("after a reload mid-start, keeps looking while the controller can't be asked", async () => {
     const { storage } = await storageWith(projectBase(stack()));
     const list = vi

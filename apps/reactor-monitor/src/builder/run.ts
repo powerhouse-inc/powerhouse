@@ -25,11 +25,9 @@ import type { BuilderEngine } from "./engine.js";
 
 const POLL_MS = 1000;
 const WATCH_MS = 3000;
-/** A start sent longer ago than this is no longer looked for after a reload. */
-const PENDING_MS = 90_000;
 /** Until then a start may not have reached the controller's check yet. */
 const ARRIVE_MS = 5000;
-/** Listing failures in a row after which a reloaded page stops waiting. */
+/** Listing failures in a row after which a reloaded page stops waiting, unless it saw its start in the check. */
 const LIST_FAILURES = 3;
 export const PENDING_START_KEY = "ph:reactor-monitor:builder-start";
 
@@ -404,23 +402,22 @@ export function useBuilderRun({
     const mine = () =>
       !abort.signal.aborted &&
       (current.current === undefined || current.current === waiting);
-    const stored = readPending(pending);
-    const sent =
-      stored && Date.now() < stored.at + PENDING_MS ? stored : undefined;
-    if (stored && !sent) writePending(pending, undefined);
+    const sent = readPending(pending);
     if (sent && current.current === undefined) {
       current.current = waiting;
       setState({ status: "starting", reactors: [] });
     }
     /** Whether to stop looking for the copy `sent` started. */
+    let seen = false;
     const gaveUp = (checking: string[] | undefined, failures: number) => {
-      if (!sent || failures >= LIST_FAILURES) return true;
+      if (!sent) return true;
+      if (checking === undefined) return !seen && failures >= LIST_FAILURES;
+      if (checking.includes(sent.id)) {
+        seen = true;
+        return false;
+      }
       // Refused, failed or never arrived: not in the check, and not listed.
-      return (
-        checking !== undefined &&
-        !checking.includes(sent.id) &&
-        Date.now() >= sent.at + ARRIVE_MS
-      );
+      return seen || Date.now() >= sent.at + ARRIVE_MS;
     };
     void (async () => {
       let failures = 0;
