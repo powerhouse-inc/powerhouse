@@ -19,7 +19,7 @@ function sourcesIn(dir: string): string[] {
 }
 
 const sources = sourcesIn(SRC).map((file) => ({
-  path: relative(SRC, file),
+  path: relative(SRC, file).replaceAll("\\", "/"),
   text: readFileSync(file, "utf8"),
 }));
 

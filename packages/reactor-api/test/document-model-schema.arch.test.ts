@@ -34,7 +34,7 @@ function resolveRelative(from: string, specifier: string): string | undefined {
   );
 }
 
-const fromSrc = (path: string) => relative(SRC, path);
+const fromSrc = (path: string) => relative(SRC, path).replaceAll("\\", "/");
 
 describe("document-model schema boundaries", () => {
   const files = sourcesIn(SRC);
