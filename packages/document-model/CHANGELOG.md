@@ -1,3 +1,17 @@
+## 6.2.3-dev.92 (2026-11-04)
+
+### 🚀 Features
+
+- **ph-cli:** add experimental ph model check and inspect ([9973f75d0d](https://github.com/powerhouse-inc/powerhouse/commit/9973f75d0d))
+- **document-model:** load projects for check and inspect ([a018f5f129](https://github.com/powerhouse-inc/powerhouse/commit/a018f5f129))
+- **document-model:** check and inspect normalized definitions ([4a828e76e0](https://github.com/powerhouse-inc/powerhouse/commit/4a828e76e0))
+- **document-model:** normalize stored schema-first models ([a7e04a4ad7](https://github.com/powerhouse-inc/powerhouse/commit/a7e04a4ad7))
+- **document-model:** parse stored SDL in tooling ([ccc702390d](https://github.com/powerhouse-inc/powerhouse/commit/ccc702390d))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.91 (2026-11-03)
 
 ### 🚀 Features

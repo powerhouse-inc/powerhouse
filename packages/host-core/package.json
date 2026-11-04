@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/host-core",
-  "version": "6.2.3-dev.91",
+  "version": "6.2.3-dev.92",
   "publishConfig": {
     "access": "public"
   },

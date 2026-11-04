@@ -1,3 +1,25 @@
+## 6.2.3-dev.92 (2026-11-04)
+
+### 🚀 Features
+
+- **document-model:** parse stored SDL in tooling ([ccc702390d](https://github.com/powerhouse-inc/powerhouse/commit/ccc702390d))
+- **document-model:** normalize stored schema-first models ([a7e04a4ad7](https://github.com/powerhouse-inc/powerhouse/commit/a7e04a4ad7))
+- **document-model:** check and inspect normalized definitions ([4a828e76e0](https://github.com/powerhouse-inc/powerhouse/commit/4a828e76e0))
+- **document-model:** load projects for check and inspect ([a018f5f129](https://github.com/powerhouse-inc/powerhouse/commit/a018f5f129))
+- **ph-cli:** add experimental ph model check and inspect ([9973f75d0d](https://github.com/powerhouse-inc/powerhouse/commit/9973f75d0d))
+- **ph-cli:** add experimental ph model check and ph model inspect ([#3368](https://github.com/powerhouse-inc/powerhouse/pull/3368))
+- **shared,codegen:** declare model command args and export the import adapter ([610fe0417a](https://github.com/powerhouse-inc/powerhouse/commit/610fe0417a))
+
+### 🩹 Fixes
+
+- **desktop:** serve starts every member at serve, as ph host check checks it ([e0f277d47a](https://github.com/powerhouse-inc/powerhouse/commit/e0f277d47a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.91 (2026-11-03)
 
 ### 🚀 Features
