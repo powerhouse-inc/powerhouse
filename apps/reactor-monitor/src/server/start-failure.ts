@@ -68,13 +68,23 @@ export function failureReason(tail: string): string | undefined {
     at -= 1;
   }
   if (at < 0) return undefined;
+  // zod's issues (`✖ …`, `  → at …`) start in column 0 under their header.
+  if (lines[at].startsWith("✖")) {
+    let head = at;
+    while (head > 0 && /^(?:\s|✖|→)/.test(lines[head])) head -= 1;
+    if (!/^(?:\s|✖|→)/.test(lines[head]) && lines[head].endsWith(":")) {
+      at = head;
+    }
+  }
   const error = ERROR_LINE.exec(lines[at]);
-  if (error) return error[1];
-  if (dump || !failureLine(lines[at])) return undefined;
-  if (!lines[at].endsWith(":")) return lines[at];
+  if (!error && (dump || !failureLine(lines[at]))) return undefined;
+  const line = error ? error[1] : lines[at];
+  if (!line.endsWith(":")) return line;
   // A line ending in ":" leads its details: name the first of them with it.
-  const detail = lines[at + 1]?.trim().replace(/^[-*•]\s+/, "");
-  return detail ? `${lines[at]} ${detail}` : lines[at].slice(0, -1);
+  const detail = lines[at + 1]?.trim().replace(/^[-*•✖]\s+/, "");
+  return detail && !/^[[{(]$/.test(detail)
+    ? `${line} ${detail}`
+    : line.slice(0, -1);
 }
 
 function sentence(text: string): string {

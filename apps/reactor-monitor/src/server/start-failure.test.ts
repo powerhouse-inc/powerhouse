@@ -236,4 +236,21 @@ describe("startFailure", () => {
       expect(failureReason(`${reason}\n  (needed by \`a\`)`)).toBe(reason);
     }
   });
+
+  it("names a zod error's header with its first issue", () => {
+    const tail = [
+      "hosts/web/host.js: invalid compound host:",
+      "✖ Invalid input: expected number, received string",
+      "  → at port",
+      "✖ Invalid input: expected string, received undefined",
+      "  → at name",
+    ].join("\n");
+    expect(failureReason(tail)).toBe(
+      "hosts/web/host.js: invalid compound host: Invalid input: expected number, received string",
+    );
+    expect(failureReason("✖ Build failed")).toBe("✖ Build failed");
+    expect(failureReason("hosts/x failed its check:\n  [\n  1\n  ]")).toBe(
+      "hosts/x failed its check",
+    );
+  });
 });
