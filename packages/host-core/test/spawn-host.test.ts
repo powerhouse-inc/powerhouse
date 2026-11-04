@@ -32,6 +32,7 @@ process.on("exit", () => {
   } catch {}
 });
 process.on("SIGTERM", () => {
+  if (process.env.FAKE_NEVER_READY) console.log("fake: shutting down");
   if (!process.env.FAKE_IGNORE_TERM) process.exit(0);
 });
 console.log("fake ph run", process.argv.slice(2).join(" "));
@@ -288,6 +289,8 @@ describe("spawnHost", () => {
     );
     expect(error.phase).toBe("timeout");
     expect(error.exit?.forced).toBe(false);
+    expect(error.outputTail).toContain("fake ph run");
+    expect(error.outputTail).not.toContain("fake: shutting down");
   });
 
   it.skipIf(process.platform === "win32")(
