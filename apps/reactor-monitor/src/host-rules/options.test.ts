@@ -346,9 +346,9 @@ describe("hostOptions", () => {
     expect(statuses(turnedOff)(`${SB}:hotReload:off`)).toEqual(SELECTED);
   });
 
-  it("offers browser storage to in-browser reactors", () => {
+  it("offers browser storage to in-browser reactors, IndexedDB by default", () => {
     const status = statuses({ envelope: stack() });
-    expect(status(`${UI}:storage:main:idb`)).toEqual(ON);
+    expect(status(`${UI}:storage:main:idb`)).toEqual(SELECTED);
     expect(status(`${UI}:storage:main:memory`)).toEqual(ON);
     expect(status(`${UI}:storage:main:path`)).toEqual(
       off("Only a switchboard can store in a folder."),
@@ -360,6 +360,13 @@ describe("hostOptions", () => {
     );
     expect(status(`${UI}:backendKind:main:worker`)).toEqual(SELECTED);
     expect(status(`${UI}:backendKind:main:in-process`)).toEqual(ON);
+    const draft = { envelope: stack() };
+    const memory = applyOption(
+      draft,
+      option(draft, `${UI}:storage:main:memory`),
+    ).draft;
+    expect(statuses(memory)(`${UI}:storage:main:memory`)).toEqual(SELECTED);
+    expect(statuses(memory)(`${UI}:storage:main:idb`)).toEqual(ON);
   });
 
   it("gives every option its own id, even for two children of one folder", () => {

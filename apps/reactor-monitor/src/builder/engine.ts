@@ -73,6 +73,48 @@ export function useBuilderEngine(
   );
 }
 
+function settingKey(option: OptionStatus): string {
+  return JSON.stringify([
+    option.group,
+    option.member,
+    option.backend,
+    option.drive,
+  ]);
+}
+
+function selectedBySetting(
+  options: readonly OptionStatus[],
+): Map<string, string[]> {
+  const selected = new Map<string, string[]>();
+  for (const option of options) {
+    const key = settingKey(option);
+    const values = selected.get(key) ?? [];
+    if (option.selected) values.push(option.value);
+    selected.set(key, values);
+  }
+  return selected;
+}
+
+/**
+ * How many settings shown both before and after an edit now have another
+ * choice selected, besides the chosen option's own.
+ */
+export function flippedSettings(
+  before: readonly OptionStatus[],
+  after: readonly OptionStatus[],
+  chosen: OptionStatus,
+): number {
+  const was = selectedBySetting(before);
+  const own = settingKey(chosen);
+  let flipped = 0;
+  for (const [key, values] of selectedBySetting(after)) {
+    const previous = was.get(key);
+    if (key === own || previous === undefined) continue;
+    if (JSON.stringify(previous) !== JSON.stringify(values)) flipped += 1;
+  }
+  return flipped;
+}
+
 const OPTION_STEP: Record<OptionGroup, StepId> = {
   access: "reactor",
   storage: "reactor",

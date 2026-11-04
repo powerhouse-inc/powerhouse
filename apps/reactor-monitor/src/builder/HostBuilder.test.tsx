@@ -4,7 +4,7 @@ import type { HostExport } from "@powerhousedao/host-core/schema";
 import { describe, expect, it, vi } from "vitest";
 import { baseDigest } from "../controller/api.js";
 import { ControllerRequestError } from "../controller/client.js";
-import { stack } from "../host-rules/__fixtures__/hosts.js";
+import { hostExport, stack } from "../host-rules/__fixtures__/hosts.js";
 import {
   fakeBuilderClient,
   memoryStorage,
@@ -22,12 +22,19 @@ import {
 import { applySetters } from "../host-rules/setters.js";
 import { HostBuilder } from "./HostBuilder.js";
 
-async function savedDraft(change: (draft: BuilderDraft) => BuilderDraft) {
+async function savedDraft(
+  change: (draft: BuilderDraft) => BuilderDraft,
+  envelope: HostExport = stack(),
+) {
   const storage = memoryStorage();
-  const envelope = stack();
   const draft = change(
     newDraft(
-      { kind: "project", project: PROJECT, host: "stack", export: envelope },
+      {
+        kind: "project",
+        project: PROJECT,
+        host: envelope.name,
+        export: envelope,
+      },
       await baseDigest(envelope),
     ),
   );
@@ -111,6 +118,18 @@ describe("HostBuilder", () => {
     expect(view.getByRole("heading", { name: "Environment" })).toBeTruthy();
   });
 
+  it("names the host in the summary by its Name, not its folder", async () => {
+    const storage = await savedDraft((draft) => ({ ...draft, step: "basics" }));
+    const view = render(<HostBuilder storage={storage} />);
+    const name = view.getByRole("textbox", { name: /Name/ });
+    fireEvent.change(name, { target: { value: "stack-sweep" } });
+    fireEvent.keyDown(name, { key: "Enter" });
+    const summary = within(
+      view.getByRole("complementary", { name: "Summary" }),
+    );
+    expect(summary.getByText("stack-sweep")).toBeTruthy();
+  });
+
   it("says when an edit changed other settings, and undoes it", async () => {
     const storage = await savedDraft((draft) => ({
       ...draft,
@@ -146,6 +165,27 @@ describe("HostBuilder", () => {
     expect(
       within(view.getByRole("group", { name: "Access control" }))
         .getByRole("button", { name: "Off" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+
+  it("counts the settings an edit flips as other settings it changed", async () => {
+    const storage = await savedDraft(
+      (draft) => ({ ...draft, step: "reactor" }),
+      hostExport("cli"),
+    );
+    const view = render(<HostBuilder storage={storage} />);
+    fireEvent.click(view.getByRole("tab", { name: /cli-connect/ }));
+    expect(view.queryByRole("status")).toBeNull();
+    fireEvent.click(
+      view.getByRole("button", { name: "Keep drives in this browser" }),
+    );
+    expect(view.getByRole("status").textContent).toContain(
+      "Your edit changed 2 other settings.",
+    );
+    expect(
+      within(view.getByRole("group", { name: "powerhouse on cli-switchboard" }))
+        .getByRole("button", { name: "Copy in this browser" })
         .getAttribute("aria-pressed"),
     ).toBe("true");
   });
