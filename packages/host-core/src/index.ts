@@ -244,6 +244,7 @@ export {
   reactorClientMode,
   type ConnectReactorProjection,
   type ConnectRouterSettings,
+  type ConnectStorageKind,
   type ReactorClientMode,
   type SwitchboardReactorLayer,
 } from "./reactor-config.js";

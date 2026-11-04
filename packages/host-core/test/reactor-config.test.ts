@@ -145,6 +145,31 @@ describe("projectReactorToConnect", () => {
     });
   });
 
+  it("serves the browser reactor's store", () => {
+    const sb = { kind: "remote" as const, remote: { url: "http://x/d/b" } };
+    for (const kind of ["memory", "idb"] as const) {
+      expect(
+        projectReactorToConnect({
+          backends: { local: { kind: "in-process", storage: { kind } } },
+        }).connect.instance,
+      ).toEqual({
+        reactorWorker: false,
+        reactorClient: "in-process",
+        storage: kind,
+      });
+      expect(
+        projectReactorToConnect({
+          backends: { sb, tab: { kind: "worker", storage: { kind } } },
+        }).connect.instance?.storage,
+      ).toBe(kind);
+    }
+    expect(
+      projectReactorToConnect({
+        backends: { sb: { ...sb, storage: { kind: "memory" } } },
+      }).connect.instance?.storage,
+    ).toBeUndefined();
+  });
+
   it("a lone remote backend → reactorClient remote (no local, no PGlite)", () => {
     const { connect } = projectReactorToConnect({
       backends: { sb: { kind: "remote", remote: { url: "http://x/graphql" } } },
