@@ -120,12 +120,13 @@ describe("run record read/write/clear", () => {
     expect(() => clearRunRecord(dir, "vetra")).not.toThrow();
   });
 
-  it("reads, lists, probes and clears under an env's PH_USER_DATA_DIR", () => {
+  it("writes, reads, lists, probes and clears under an env's PH_USER_DATA_DIR", () => {
     const dir = makeProject();
     const userData = makeProject();
     const env = { PH_USER_DATA_DIR: userData };
     // A child with PH_USER_DATA_DIR=userData writes here.
-    writeRunRecord(userData, record());
+    writeRunRecord(dir, record(), env);
+    expect(existsSync(path.join(userData, ".ph/run/vetra.json"))).toBe(true);
     expect(readRunRecord(dir, "vetra")).toBeUndefined();
     expect(readRunRecord(dir, "vetra", env)?.host).toBe("vetra");
     expect(listRunRecords(dir, env).map((r) => r.host)).toEqual(["vetra"]);

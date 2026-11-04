@@ -97,8 +97,12 @@ export function readProjectName(projectDir: string): string {
   return path.basename(path.resolve(projectDir));
 }
 
-export function writeRunRecord(projectDir: string, record: RunRecord): void {
-  const target = recordPath(projectDir, record.host);
+export function writeRunRecord(
+  projectDir: string,
+  record: RunRecord,
+  env: Env = process.env,
+): void {
+  const target = recordPath(projectDir, record.host, env);
   const valid = runRecordSchema.parse(record);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, `${JSON.stringify(valid, null, 2)}\n`);
