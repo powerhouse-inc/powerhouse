@@ -351,12 +351,16 @@ export function assertConnectBuild(
   )
     .split(path.sep)
     .join("/");
+  // A default build, maybe another project's (a monitor copy serves its source's).
+  const project = path.resolve(outDirAbs, "../../..");
   const build =
-    path.resolve(dirname, DEFAULT_CONNECT_OUTDIR) === outDirAbs
-      ? "ph connect build"
-      : `ph connect build --outDir ${JSON.stringify(outDirArg)}`;
+    path.resolve(project, DEFAULT_CONNECT_OUTDIR) !== outDirAbs
+      ? `\`ph connect build --outDir ${JSON.stringify(outDirArg)}\``
+      : project === path.resolve(dirname)
+        ? "`ph connect build`"
+        : `\`ph connect build\` in ${project.split(path.sep).join("/")}`;
   throw new Error(
-    `No Connect build to serve: ${shown} is missing. Build it first with \`${build}\`, or \`ph run <host> build\` for a host's Connect.`,
+    `No Connect build to serve: ${shown} is missing. Build it first with ${build}, or \`ph run <host> build\` for a host's Connect.`,
   );
 }
 

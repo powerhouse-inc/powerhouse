@@ -284,6 +284,16 @@ describe("the built-in Connect server", () => {
       ).rejects.toThrow(
         `No Connect build to serve: ${join(elsewhere, "index.html").split("\\").join("/")} is missing.`,
       );
+      const source = join(project, "source");
+      await expect(
+        runConnectServer(
+          argsFor(join(source, ".ph/connect-build/dist"), port),
+          {},
+          join(project, "copy"),
+        ),
+      ).rejects.toThrow(
+        `Build it first with \`ph connect build\` in ${source.split("\\").join("/")}, or`,
+      );
       mkdirSync(join(project, "..build"));
       await expect(
         runConnectServer(argsFor("..build", port), {}, project),
