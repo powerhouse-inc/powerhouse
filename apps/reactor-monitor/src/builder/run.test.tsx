@@ -241,6 +241,7 @@ describe("Use it, wired", () => {
     expect(running.getByText("assistant")).toBeTruthy();
     expect(running.getByText("http://127.0.0.1:4920/v1")).toBeTruthy();
     expect(running.queryByRole("link", { name: "Open Connect" })).toBeNull();
+    expect(running.getByRole("status").textContent).toBe("Running a copy.");
   });
 
   it("stops the copy through the managed hook", async () => {

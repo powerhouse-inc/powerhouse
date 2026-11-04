@@ -239,7 +239,10 @@ function Running({
           ? "Starting a copy. This can take a minute."
           : run.status === "stopping"
             ? "Stopping the copy…"
-            : "Running a copy. Its reactors are in the reactor list."}
+            : run.browser.length > 0 ||
+                run.reactors.some((reactor) => reactor.url)
+              ? "Running a copy. Its reactors are in the reactor list."
+              : "Running a copy."}
       </p>
       {run.problem ? (
         <p className="hb-error">

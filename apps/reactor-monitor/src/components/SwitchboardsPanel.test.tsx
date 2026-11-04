@@ -402,6 +402,22 @@ describe("SwitchboardsPanel", () => {
     expect(within(row).queryByRole("button", { name: "Attach" })).toBeNull();
   });
 
+  it("drops a row's addresses once its instance exited", async () => {
+    const fake = fakeClient();
+    const managed = fakeManaged(fake.client);
+    const view = render(<SwitchboardsPanel managed={managed} pollMs={POLL} />);
+    await ready(view);
+
+    fireEvent.click(view.getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(fake.started).toHaveLength(1));
+    const row = await view.findByTestId("switchboard-inst-1");
+    fake.run("inst-1");
+    await waitFor(() => expect(row.textContent).toMatch(/drive powerhouse/));
+    fake.instances.get("inst-1")!.status = "exited";
+    await waitFor(() => expect(row.textContent).toMatch(/exited/));
+    expect(row.textContent).not.toMatch(/graphql|drive powerhouse/);
+  });
+
   it("defaults to the first project that has hosts", async () => {
     const { client } = fakeClient({
       projects: () =>

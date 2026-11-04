@@ -150,7 +150,7 @@ function InstanceRow({
   readonly onStop: () => void;
 }): ReactNode {
   const live = !["exited", "failed"].includes(instance.status);
-  const outputs = rowOutputs(instance);
+  const outputs = live ? rowOutputs(instance) : [];
   const badge =
     instance.status === "running"
       ? "rm-badge rm-badge-ok"
