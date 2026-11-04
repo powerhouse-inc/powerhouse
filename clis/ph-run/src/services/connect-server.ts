@@ -1,4 +1,3 @@
-import { DEFAULT_CONNECT_OUTDIR } from "@powerhousedao/shared/clis";
 import { isHtmlNavigation } from "@powerhousedao/shared/connect/origin-placeholder";
 import { existsSync } from "node:fs";
 import {
@@ -16,6 +15,7 @@ import tls from "node:tls";
 import sirv from "sirv";
 import type { ConnectPreviewArgs } from "./classic-args.js";
 import {
+  assertConnectBuild,
   cacheHeaders,
   connectBaseOf,
   isProxiedRequest,
@@ -239,22 +239,6 @@ function listen(
   });
 }
 
-function noBuildMessage(
-  outDirArg: string,
-  outDir: string,
-  dirname: string,
-): string {
-  const shown = path
-    .relative(dirname, path.join(outDir, "index.html"))
-    .split(path.sep)
-    .join("/");
-  const build =
-    path.resolve(dirname, DEFAULT_CONNECT_OUTDIR) === outDir
-      ? "ph connect build"
-      : `ph connect build --outDir ${JSON.stringify(outDirArg)}`;
-  return `No Connect build to serve: ${shown} is missing. Build it first with \`${build}\`.`;
-}
-
 export async function runConnectServer(
   args: ConnectPreviewArgs,
   serveOverride?: ConnectServeOverride,
@@ -268,9 +252,7 @@ export async function runConnectServer(
 ): Promise<ConnectServer> {
   serveOverride ??= overrideFromEnv();
   const outDir = path.resolve(dirname, args.outDir);
-  if (!existsSync(path.join(outDir, "index.html"))) {
-    throw new Error(noBuildMessage(args.outDir, outDir, dirname));
-  }
+  assertConnectBuild(args.outDir, outDir, dirname);
   const base = connectBaseOf(args, outDir, dirname);
   const target = proxy ? new URL(new URL(proxy).origin) : undefined;
 

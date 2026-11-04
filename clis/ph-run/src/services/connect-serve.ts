@@ -1,5 +1,8 @@
 import { getConfig } from "@powerhousedao/config/node";
-import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
+import {
+  DEFAULT_CONNECT_OUTDIR,
+  type PHConnectRuntimeConfig,
+} from "@powerhousedao/shared/clis";
 import { deepMerge, normalizeBasePath } from "@powerhousedao/shared/connect";
 import {
   APP_SHELLS_FILE,
@@ -328,6 +331,26 @@ export function precompressedAssets(
       next();
     });
   };
+}
+
+/** Throws, naming the missing file and the build, when `outDirAbs` holds no build. */
+export function assertConnectBuild(
+  outDirArg: string,
+  outDirAbs: string,
+  dirname: string,
+): void {
+  if (existsSync(path.join(outDirAbs, "index.html"))) return;
+  const shown = path
+    .relative(dirname, path.join(outDirAbs, "index.html"))
+    .split(path.sep)
+    .join("/");
+  const build =
+    path.resolve(dirname, DEFAULT_CONNECT_OUTDIR) === outDirAbs
+      ? "ph connect build"
+      : `ph connect build --outDir ${JSON.stringify(outDirArg)}`;
+  throw new Error(
+    `No Connect build to serve: ${shown} is missing. Build it first with \`${build}\`.`,
+  );
 }
 
 /** The served base: `--base`, else what the dist or the project was built with. */

@@ -1,4 +1,5 @@
 import {
+  assertConnectBuild,
   cacheHeaders,
   connectBaseOf,
   overrideFromEnv,
@@ -43,6 +44,7 @@ export async function runConnectPreview(
   const mode = "production";
 
   const outDirAbs = path.resolve(dirname, outDir);
+  assertConnectBuild(outDir, outDirAbs, dirname);
   const base = connectBaseOf(args, outDirAbs, dirname);
 
   // Build tooling, so only here: a packaged app doesn't have it.
