@@ -188,6 +188,8 @@ describe.skipIf(process.platform === "win32")(
   () => {
     let base: string;
     let project: string;
+    // An in-place Connect writes into its project, so the reader runs here.
+    let readerProject: string;
     let controller: MonitorController;
     let server: http.Server;
     let api: string;
@@ -195,9 +197,10 @@ describe.skipIf(process.platform === "win32")(
     beforeAll(async () => {
       base = realpathSync(mkdtempSync(path.join(tmpdir(), "ph-monitor-e2e-")));
       project = makeProject(base);
+      readerProject = makeProject(path.join(base, "reader"));
       mkdirSync(path.join(base, "tmp"));
       controller = createMonitorController({
-        projectRoots: [project],
+        projectRoots: [project, readerProject],
         tmpDir: path.join(base, "tmp"),
         readyTimeoutMs: 150_000,
       });
@@ -303,7 +306,7 @@ describe.skipIf(process.platform === "win32")(
 
     it("resolves an in-place host's $output from a switchboard running in place beside it", async () => {
       const posted = await call("POST", "instances", {
-        project,
+        project: readerProject,
         host: "reader",
       });
       expect(posted.status, JSON.stringify(posted.body)).toBe(202);
@@ -314,11 +317,21 @@ describe.skipIf(process.platform === "win32")(
       await call("DELETE", `instances/${alone.id}`);
 
       const sb = instanceSchema.parse(
-        (await call("POST", "instances", { project, host: "sb" })).body,
+        (
+          await call("POST", "instances", {
+            project: readerProject,
+            host: "sb",
+          })
+        ).body,
       );
       expect((await settled(sb.id)).status).toBe("running");
       const reader = instanceSchema.parse(
-        (await call("POST", "instances", { project, host: "reader" })).body,
+        (
+          await call("POST", "instances", {
+            project: readerProject,
+            host: "reader",
+          })
+        ).body,
       );
       const running = await settled(reader.id);
       expect(running.error).toBeUndefined();
