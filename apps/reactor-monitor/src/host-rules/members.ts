@@ -46,6 +46,12 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** The host's own `name`, which Host basics edits; "" when it has none. */
+export function hostName(envelope: HostExport): string {
+  const host = envelope.host as unknown;
+  return isRecord(host) && typeof host.name === "string" ? host.name : "";
+}
+
 function roleOf(runner: Record<string, unknown>): MemberRole {
   const module = typeof runner.module === "string" ? runner.module : "";
   if (module.endsWith(SWITCHBOARD_RUNNER)) return "switchboard";

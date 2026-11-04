@@ -111,6 +111,18 @@ describe("HostBuilder", () => {
     expect(view.getByRole("heading", { name: "Environment" })).toBeTruthy();
   });
 
+  it("names the host in the summary by its Name, not its folder", async () => {
+    const storage = await savedDraft((draft) => ({ ...draft, step: "basics" }));
+    const view = render(<HostBuilder storage={storage} />);
+    const name = view.getByRole("textbox", { name: /Name/ });
+    fireEvent.change(name, { target: { value: "stack-sweep" } });
+    fireEvent.keyDown(name, { key: "Enter" });
+    const summary = within(
+      view.getByRole("complementary", { name: "Summary" }),
+    );
+    expect(summary.getByText("stack-sweep")).toBeTruthy();
+  });
+
   it("says when an edit changed other settings, and undoes it", async () => {
     const storage = await savedDraft((draft) => ({
       ...draft,

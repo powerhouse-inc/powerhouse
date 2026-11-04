@@ -1,3 +1,4 @@
+import { hostName } from "../host-rules/members.js";
 import { issueCount, ROLE_LABELS } from "./copy.js";
 import type { BuilderDraft, StepId } from "./draft.js";
 import type { BuilderEngine } from "./engine.js";
@@ -46,7 +47,9 @@ export function SummaryPanel({
           </span>
           <div className="hb-field">
             <span className="hb-flabel">Host</span>
-            <span className="hb-mono">{engine.envelope.name}</span>
+            <span className="hb-mono">
+              {hostName(engine.envelope) || engine.envelope.name}
+            </span>
           </div>
           <div className="hb-field">
             <span className="hb-flabel">Reactors</span>
