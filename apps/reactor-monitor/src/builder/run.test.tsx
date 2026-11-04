@@ -66,6 +66,9 @@ function instance(status: Instance["status"], id = ID): Instance {
   };
 }
 
+const unreachable = () =>
+  new ControllerRequestError("network", "Controller unreachable: reset.");
+
 const notFound = () =>
   new ControllerRequestError("not_found", "No instance.", 404);
 
@@ -134,7 +137,7 @@ function setup(
     get?: () => Promise<Instance>;
     list?: () => Promise<Instance[]>;
     /** `startId`s the fake controller still has in their check. */
-    checking?: string[];
+    checking?: string[] | (() => string[]);
   } = {},
 ) {
   const startDraft = vi.fn(
@@ -150,7 +153,10 @@ function setup(
   const list = vi.fn(overrides.list ?? (() => Promise.resolve([])));
   const listing = async () => ({
     instances: await list(),
-    checking: overrides.checking ?? [],
+    checking:
+      typeof overrides.checking === "function"
+        ? overrides.checking()
+        : (overrides.checking ?? []),
   });
   const client = {
     ...fakeBuilderClient({ startDraft }).client,
@@ -593,31 +599,70 @@ describe("Use it, wired", () => {
       ...instance("running", OTHER),
       source: { project: PROJECT, host: "stack", startId: "start-0" },
     };
+    let checks = 0;
     const wiring = setup({
       list: () => Promise.resolve([other]),
-      checking: ["start-0"],
+      checking: () => (checks++ === 0 ? [SENT_ID] : []),
     });
-    sentBeforeReload(wiring, Date.now() - 10_000);
+    sentBeforeReload(wiring);
     const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() => expect(wiring.list).toHaveBeenCalledTimes(2));
     await waitFor(() =>
       expect(startButton(view)).toHaveProperty("disabled", false),
     );
-    expect(wiring.list).toHaveBeenCalledOnce();
     expect(runText(view)).toBe("");
     expect(wiring.managed.attach).not.toHaveBeenCalled();
     expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
   });
 
-  it("after a reload mid-start, waits out listing failures once its start was seen in the check", async () => {
+  it("after a reload, treats a long-over start as gone and picks up the live copy as before", async () => {
     const { storage } = await storageWith(projectBase(stack()));
-    const unreachable = new Error("Controller unreachable");
+    const OTHER = "22222222-0000-4000-8000-000000000000";
+    const other = {
+      ...instance("running", OTHER),
+      source: { project: PROJECT, host: "stack", startId: "start-0" },
+    };
+    const wiring = setup({
+      list: () => Promise.resolve([other]),
+      get: () => Promise.resolve(other),
+    });
+    sentBeforeReload(wiring, Date.now() - 10 * 60_000);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() => expect(runText(view)).toContain("Running a copy"));
+    expect(wiring.list).toHaveBeenCalledOnce();
+    expect(wiring.managed.attach).not.toHaveBeenCalled();
+    expect(wiring.added).toEqual([]);
+    expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
+  });
+
+  it("after a reload mid-start, lets go when the controller refuses the listing", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
     const list = vi
       .fn<() => Promise<Instance[]>>()
       .mockResolvedValueOnce([])
-      .mockRejectedValueOnce(unreachable)
-      .mockRejectedValueOnce(unreachable)
-      .mockRejectedValueOnce(unreachable)
-      .mockRejectedValueOnce(unreachable)
+      .mockRejectedValue(
+        new ControllerRequestError("bad_token", "Missing token.", 401),
+      );
+    const wiring = setup({ list, checking: [SENT_ID] });
+    sentBeforeReload(wiring);
+    const view = render(<Wired storage={storage} wiring={wiring} />);
+    await waitFor(() =>
+      expect(startButton(view)).toHaveProperty("disabled", false),
+    );
+    expect(wiring.list).toHaveBeenCalledTimes(2);
+    expect(wiring.pending.getItem(PENDING_START_KEY)).toBe(null);
+  });
+
+  it("after a reload mid-start, waits out listing failures once its start was seen in the check", async () => {
+    const { storage } = await storageWith(projectBase(stack()));
+    const down = unreachable();
+    const list = vi
+      .fn<() => Promise<Instance[]>>()
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(down)
+      .mockRejectedValueOnce(down)
+      .mockRejectedValueOnce(down)
+      .mockRejectedValueOnce(down)
       .mockResolvedValue([instance("starting")]);
     const wiring = setup({ list, checking: [SENT_ID] });
     sentBeforeReload(wiring);
@@ -631,7 +676,7 @@ describe("Use it, wired", () => {
   it("after a reload mid-start, stops after listing failures when its start was never seen", async () => {
     const { storage } = await storageWith(projectBase(stack()));
     const wiring = setup({
-      list: () => Promise.reject(new Error("Controller unreachable")),
+      list: () => Promise.reject(unreachable()),
     });
     sentBeforeReload(wiring);
     const view = render(<Wired storage={storage} wiring={wiring} />);
@@ -646,7 +691,7 @@ describe("Use it, wired", () => {
     const { storage } = await storageWith(projectBase(stack()));
     const list = vi
       .fn<() => Promise<Instance[]>>()
-      .mockRejectedValueOnce(new Error("Controller unreachable"))
+      .mockRejectedValueOnce(unreachable())
       .mockResolvedValue([instance("starting")]);
     const wiring = setup({ list });
     sentBeforeReload(wiring);

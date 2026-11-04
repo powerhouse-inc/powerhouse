@@ -253,6 +253,14 @@ function startIdOf(): string {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+/** No controller answer was read, so the start may still have been taken. */
+function isUnanswered(error: unknown): boolean {
+  return (
+    error instanceof ControllerRequestError &&
+    (error.code === "network" || error.code === "bad_response")
+  );
+}
+
 /** Builder-started copies the controller still runs, newest first. */
 function liveDrafts(instances: readonly Instance[]): Instance[] {
   return instances
@@ -409,8 +417,12 @@ export function useBuilderRun({
     }
     /** Whether to stop looking for the copy `sent` started. */
     let seen = false;
-    const gaveUp = (checking: string[] | undefined, failures: number) => {
-      if (!sent) return true;
+    const gaveUp = (
+      checking: string[] | undefined,
+      failures: number,
+      refused: boolean,
+    ) => {
+      if (!sent || refused) return true;
       if (checking === undefined) return !seen && failures >= LIST_FAILURES;
       if (checking.includes(sent.id)) {
         seen = true;
@@ -423,6 +435,8 @@ export function useBuilderRun({
       let failures = 0;
       let drafts: Instance[] = [];
       let ours: Instance | undefined;
+      // Given up at once: the stored start is long over, not this page's run.
+      let stale = false;
       for (let first = true; ; first = false) {
         if (!first) {
           await new Promise((resolve) =>
@@ -431,23 +445,30 @@ export function useBuilderRun({
           if (!mine()) return;
         }
         let checking: string[] | undefined;
+        let refused = false;
         try {
           const listing = await client.listing();
           drafts = liveDrafts(listing.instances);
           checking = listing.checking;
           failures = 0;
-        } catch {
+        } catch (error) {
           if (!sent) return;
           drafts = [];
           failures++;
+          // Only an unreachable controller may answer later; bad_token won't.
+          refused = !isUnanswered(error);
         }
         if (!mine()) return;
         ours = sent && drafts.find((i) => i.source?.startId === sent.id);
-        if (ours || gaveUp(checking, failures)) break;
+        if (ours) break;
+        if (gaveUp(checking, failures, refused)) {
+          stale = first && checking !== undefined;
+          break;
+        }
       }
       if (sent) writePending(pending, undefined);
-      // A tab whose own start ended takes on no other copy as its run.
-      const found = sent ? ours : drafts.at(0);
+      // A tab whose own start just ended takes on no other copy as its run.
+      const found = !sent || stale ? (ours ?? drafts.at(0)) : ours;
       if (!found) {
         if (current.current === waiting) {
           current.current = undefined;
@@ -496,9 +517,7 @@ export function useBuilderRun({
         instance = await client.startDraft(request);
       } catch (error) {
         // Unanswered, as when a reload aborts it: the controller may still start it.
-        const unanswered =
-          error instanceof ControllerRequestError && error.code === "network";
-        if (!unanswered) writePending(pending, undefined);
+        if (!isUnanswered(error)) writePending(pending, undefined);
         if (live()) {
           current.current = undefined;
           setState(undefined);
