@@ -600,7 +600,8 @@ export function createMonitorController(
   const envDatabase = envDatabaseOf(serverEnv);
 
   const capabilities = (): HostRulesContext => ({
-    postgres: databases !== undefined,
+    // The env's database wins, so the controller would hand nothing out.
+    postgres: databases !== undefined && !namesDatabase(serverEnv),
     ...(envDatabase ? { envDatabase } : {}),
     controller: true,
     renownSource: serverEnv.RENOWN_SOURCE === "self" ? "self" : "remote",
@@ -624,8 +625,8 @@ export function createMonitorController(
     root: string,
     host: string,
     env: Record<string, string>,
-  ): Promise<string[]> => {
-    if (!databases || namesDatabase(env)) return [];
+  ): Promise<{ backends: string[]; refused?: string }> => {
+    if (!databases || namesDatabase(env)) return { backends: [] };
     let envelope: HostExport;
     try {
       envelope = await exporter({
@@ -635,12 +636,12 @@ export function createMonitorController(
       });
     } catch {
       // The check reports what stops this host.
-      return [];
+      return { backends: [] };
     }
     const context = capabilities();
     const members = draftMembers({ envelope }, context);
     const backends = controllerDatabaseBackends(members, context);
-    if (backends.length === 0) return [];
+    if (backends.length === 0) return { backends };
     const others = members.filter(
       (member) =>
         member.role === "switchboard" &&
@@ -649,12 +650,12 @@ export function createMonitorController(
         ),
     );
     if (others.length > 0) {
-      throw new ControllerError(
-        "bad_request",
-        `hosts/${host} needs the controller's Postgres database, which it would get through ${REACTOR_DATABASE}, and ${others.map((member) => member.key).join(", ")} would keep its data there too. Start it from the builder, which gives the database to one switchboard alone.`,
-      );
+      return {
+        backends,
+        refused: `hosts/${host} needs the controller's Postgres database, which it would get through ${REACTOR_DATABASE}, and ${others.map((member) => member.key).join(", ")} would keep its data there too. Start it from the builder, which gives the database to one switchboard alone.`,
+      };
     }
-    return backends;
+    return { backends };
   };
 
   const createDatabase = async (claim: Claim) => {
@@ -982,9 +983,19 @@ export function createMonitorController(
     check: async (request) => {
       const { root, host, env } = resolve(request);
       const wanted = await inPlaceBackends(root, host, env);
+      if (wanted.refused) {
+        return [
+          {
+            stage: "boot",
+            file: `hosts/${host}/host.js`,
+            path: "reactor.backends",
+            message: wanted.refused,
+          },
+        ];
+      }
       // A check never connects: the server's own url stands in.
       const checkEnv =
-        wanted.length > 0 && databases
+        wanted.backends.length > 0 && databases
           ? { ...env, [REACTOR_DATABASE]: databases.url }
           : env;
       return runCheck(root, host, checkEnv, path.join(tempRoot, "check"));
@@ -993,7 +1004,12 @@ export function createMonitorController(
       const { root, host, env } = resolve(request);
       return startResolved(host, async (instanceDir, claim) => {
         const wanted = await inPlaceBackends(root, host, env);
-        if (wanted.length === 0) return { root, dataDir: instanceDir, env };
+        if (wanted.refused) {
+          throw new ControllerError("bad_request", wanted.refused);
+        }
+        if (wanted.backends.length === 0) {
+          return { root, dataDir: instanceDir, env };
+        }
         const { url } = await createDatabase(claim);
         return {
           root,

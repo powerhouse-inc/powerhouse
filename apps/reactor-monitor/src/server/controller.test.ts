@@ -1397,6 +1397,13 @@ describe("createMonitorController", () => {
       expect(
         create({ postgres: server }).controller.capabilities(),
       ).toMatchObject({ postgres: true });
+      void controller?.dispose();
+      expect(
+        create({
+          postgres: server,
+          serverEnv: { PH_SWITCHBOARD_DATABASE_URL: "./.ph/db" },
+        }).controller.capabilities().postgres,
+      ).toBe(false);
       for (const [env, envDatabase] of [
         [{ PH_REACTOR_DATABASE_URL: "postgres://h/r" }, "reactor"],
         [{ PH_SWITCHBOARD_DATABASE_URL: "postgresql://h/s" }, "switchboard"],
@@ -1544,10 +1551,14 @@ describe("createMonitorController", () => {
           main: { kind: "in-process", storage: { kind: "postgres" } },
         },
       };
-      const { controller } = create({
+      const { controller, checks } = create({
         postgres: server,
         exportHost: () => Promise.resolve(duo),
       });
+      const issues = await controller.check({ project: allowed, host: "duo" });
+      expect(issues.map((issue) => issue.path)).toEqual(["reactor.backends"]);
+      expect(issues[0].message).toContain("b would keep its data there");
+      expect(checks).toHaveLength(0);
       const error = await controller
         .start({ project: allowed, host: "duo" })
         .catch((e: unknown) => e);
