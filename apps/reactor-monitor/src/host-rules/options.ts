@@ -105,8 +105,10 @@ export const ADD_REASONS = {
     "This host runs one reactor. Make it a host with several reactors to add more.",
   owner:
     "Add a switchboard or Connect first. An in-browser reactor is saved with one of them.",
-  noSwitchboard: "This project has no switchboard to add.",
-  noConnect: "This project has no Connect to add.",
+  noSwitchboard:
+    "This host runs no switchboard, and the builder only adds more of what a host already runs. Add a switchboard child to the host's host.js first.",
+  noConnect:
+    "This host runs no Connect, and the builder only adds more of what a host already runs. Add a Connect child to the host's host.js first.",
 } as const;
 
 export const SETTING_REASONS = {
