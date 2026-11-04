@@ -467,6 +467,25 @@ function openOptions(
 function removeOptions(reach: ConnectReach): ReachOption[] {
   const { member } = reach;
   const { at, copy } = blockOf(member);
+  const list = driveList(member);
+  // Left with only switchboards, nothing keeps the Connect's own drives.
+  const ownDropped: Setter[] =
+    reach.local.length === 1 &&
+    member.backends.some((backend) => backend.kind === "remote") &&
+    list &&
+    reach.ownDrives.length > 0
+      ? [
+          {
+            path: `${at}.drives`,
+            value: list.filter(
+              (entry) =>
+                !isRecord(entry) ||
+                typeof entry.slug !== "string" ||
+                isRecord(entry.remote),
+            ) as never,
+          },
+        ]
+      : [];
   const options: ReachOption[] = reach.local.map((backend) => ({
     id: `${member.path}:reach:remove:${backend.name}`,
     group: "reach",
@@ -478,9 +497,9 @@ function removeOptions(reach: ConnectReach): ReachOption[] {
       ...copy,
       { path: `${at}.backends.${backend.name}`, value: DELETE },
       ...forgetBackend(member, at, backend.name),
+      ...ownDropped,
     ],
   }));
-  const list = driveList(member);
   for (const link of reach.links) {
     const setters: Setter[] = [...copy];
     if (link.source.kind === "drive") {
