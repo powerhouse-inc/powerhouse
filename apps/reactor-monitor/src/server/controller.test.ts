@@ -407,6 +407,69 @@ describe("createMonitorController", () => {
     expect(launches[0].options).not.toHaveProperty("verb");
   });
 
+  it("names the in-place instances still up to an in-place start", async () => {
+    addHost(allowed, "agent");
+    addHost(allowed, "duo");
+    const { controller, launches, checks } = create();
+    const dirOf = (id: string) => path.join(controller.tempRoot, id);
+    const sb = await controller.start({ project: allowed, host: "sb" });
+    expect(launches[0].options.env).not.toHaveProperty("PH_OUTPUT_DATA_DIRS");
+    launches[0].ready(SWITCHBOARD_OUTPUTS);
+    await until(() => controller.get(sb.id).status === "running");
+    const copy = await controller.startDraft({
+      project: allowed,
+      host: "duo",
+      baseDigest: await baseDigest(duoExport(allowed)),
+      setters: [],
+    });
+    expect(launches[1].options.env).not.toHaveProperty("PH_OUTPUT_DATA_DIRS");
+
+    const agent = await controller.start({ project: allowed, host: "agent" });
+    expect(launches[2].options.env).toMatchObject({
+      PH_OUTPUT_DATA_DIRS: dirOf(sb.id),
+    });
+    expect(checks.at(-1)?.env).not.toHaveProperty("PH_OUTPUT_DATA_DIRS");
+    await controller.stop(sb.id);
+    await controller.stop(copy.id);
+    await controller.start({ project: allowed, host: "sb" });
+    expect(launches[3].options.env).toMatchObject({
+      PH_OUTPUT_DATA_DIRS: dirOf(agent.id),
+    });
+    expect(
+      await codeOf(
+        controller.start({
+          project: allowed,
+          host: "agent",
+          env: { PH_OUTPUT_DATA_DIRS: "/elsewhere" },
+        }),
+      ),
+    ).toBe("env_denied");
+  });
+
+  it("names an in-place start still in its check to one started beside it", async () => {
+    addHost(allowed, "agent");
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    let sbDir: string | undefined;
+    const { controller, launches } = create({
+      check: async (input) => {
+        if (input.host === "sb") {
+          sbDir = input.env.PH_USER_DATA_DIR;
+          await gate;
+        }
+        return [];
+      },
+    });
+    const sb = controller.start({ project: allowed, host: "sb" });
+    await until(() => sbDir !== undefined);
+    await controller.start({ project: allowed, host: "agent" });
+    expect(launches[0].options.env).toMatchObject({
+      PH_OUTPUT_DATA_DIRS: sbDir,
+    });
+    release();
+    await sb;
+  });
+
   it("refuses to start a host with check issues", async () => {
     const issue: HostIssue = {
       stage: "resolve",

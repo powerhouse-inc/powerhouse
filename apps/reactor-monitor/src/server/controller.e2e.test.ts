@@ -151,6 +151,21 @@ function makeProject(base: string): string {
 };
 `,
   );
+  // Reads the in-place sb's live outputs.
+  mkdirSync(path.join(dir, "hosts", "reader"));
+  writeFileSync(
+    path.join(dir, "hosts", "reader", "host.js"),
+    `export default {
+  name: "monitor-e2e-reader",
+  runner: {
+    module: "@powerhousedao/ph-cli/runners/connect",
+    port: 6496,
+    proxy: { target: { $output: { host: "sb", path: ["origin"] } } },
+  },
+  reactor: { backends: { main: { kind: "worker" } } },
+};
+`,
+  );
   // An unset $env fails the check, so nothing starts.
   mkdirSync(path.join(dir, "hosts", "needs-env"));
   writeFileSync(
@@ -173,6 +188,8 @@ describe.skipIf(process.platform === "win32")(
   () => {
     let base: string;
     let project: string;
+    // An in-place Connect writes into its project, so the reader runs here.
+    let readerProject: string;
     let controller: MonitorController;
     let server: http.Server;
     let api: string;
@@ -180,9 +197,10 @@ describe.skipIf(process.platform === "win32")(
     beforeAll(async () => {
       base = realpathSync(mkdtempSync(path.join(tmpdir(), "ph-monitor-e2e-")));
       project = makeProject(base);
+      readerProject = makeProject(path.join(base, "reader"));
       mkdirSync(path.join(base, "tmp"));
       controller = createMonitorController({
-        projectRoots: [project],
+        projectRoots: [project, readerProject],
         tmpDir: path.join(base, "tmp"),
         readyTimeoutMs: 150_000,
       });
@@ -272,6 +290,55 @@ describe.skipIf(process.platform === "win32")(
       expect((await call("GET", `instances/${id}`)).status).toBe(404);
       await expect(fetch(graphql, { method: "POST" })).rejects.toThrow();
     }, 240_000);
+
+    const settled = async (id: string): Promise<Instance> => {
+      const deadline = Date.now() + 150_000;
+      for (;;) {
+        const instance = instanceSchema.parse(
+          (await call("GET", `instances/${id}`)).body,
+        );
+        if (instance.status !== "starting" || Date.now() > deadline) {
+          return instance;
+        }
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    };
+
+    it("resolves an in-place host's $output from a switchboard running in place beside it", async () => {
+      const posted = await call("POST", "instances", {
+        project: readerProject,
+        host: "reader",
+      });
+      expect(posted.status, JSON.stringify(posted.body)).toBe(202);
+      const alone = instanceSchema.parse(posted.body);
+      expect((await settled(alone.id)).error?.message).toMatch(
+        /needs outputs from host "sb", which is not running/,
+      );
+      await call("DELETE", `instances/${alone.id}`);
+
+      const sb = instanceSchema.parse(
+        (
+          await call("POST", "instances", {
+            project: readerProject,
+            host: "sb",
+          })
+        ).body,
+      );
+      expect((await settled(sb.id)).status).toBe("running");
+      const reader = instanceSchema.parse(
+        (
+          await call("POST", "instances", {
+            project: readerProject,
+            host: "reader",
+          })
+        ).body,
+      );
+      const running = await settled(reader.id);
+      expect(running.error).toBeUndefined();
+      expect(running.status).toBe("running");
+      await call("DELETE", `instances/${reader.id}`);
+      await call("DELETE", `instances/${sb.id}`);
+    }, 360_000);
 
     it("starts a builder draft with a second switchboard, attaches both, removes the copy on stop", async () => {
       const exported = await call(
