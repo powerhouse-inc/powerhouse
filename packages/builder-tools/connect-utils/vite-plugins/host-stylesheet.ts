@@ -2,6 +2,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  statSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -66,9 +67,15 @@ export function hostStylesheetPlugin(
     // ph-config drops updates of files only CSS imports, so style.css takes them.
     hotUpdate(ctx) {
       if (normalizePath(ctx.file) !== hostId) return;
-      if (ctx.type === "create" && placeholder && existsSync(placeholder)) {
-        const now = new Date();
-        utimesSync(placeholder, now, now);
+      const stat =
+        ctx.type === "create" && placeholder
+          ? statSync(placeholder, { throwIfNoEntry: false })
+          : undefined;
+      if (placeholder && stat) {
+        // Tailwind rebuilds only on a strictly later mtime; Date.now() is whole
+        // milliseconds, so it can land before the file's own sub-ms mtime.
+        const next = Math.max(Date.now(), stat.mtimeMs + 1) / 1000;
+        utimesSync(placeholder, next, next);
       }
       const modules =
         this.environment.moduleGraph.getModulesByFile(stylesheetId);
