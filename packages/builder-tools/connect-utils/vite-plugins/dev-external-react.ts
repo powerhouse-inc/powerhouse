@@ -1,4 +1,7 @@
-import { EXTERNALIZABLE_SHARED_SPECIFIERS } from "@powerhousedao/shared/connect";
+import {
+  DYNAMIC_BASE_PLACEHOLDER,
+  EXTERNALIZABLE_SHARED_SPECIFIERS,
+} from "@powerhousedao/shared/connect";
 import { createRequire } from "node:module";
 import { createReadStream } from "node:fs";
 import path from "node:path";
@@ -214,6 +217,14 @@ export async function devReactImportmapPlugin(
         cfg.optimizeDeps.exclude = [
           ...new Set([...(cfg.optimizeDeps.exclude ?? []), ...heavyLibs]),
         ];
+        // Without it, Connect in dev asks for no shared-deps table. The
+        // placeholder resolves to the page's base at runtime.
+        cfg.define = {
+          ...cfg.define,
+          PH_CONNECT_SHARED_DEPS_URL: JSON.stringify(
+            DYNAMIC_BASE_PLACEHOLDER + vendor!.sharedDeps.replace(/^\/+/, ""),
+          ),
+        };
       }
       cfg.optimizeDeps.include = [...include];
     },

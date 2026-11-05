@@ -10,18 +10,29 @@ import {
 } from "./shared-deps.js";
 
 describe("sharedDepsModuleUrl", () => {
-  it("falls back to the stable dev path when the build sets no hashed URL", () => {
-    expect(sharedDepsModuleUrl("/app/")).toBe("/app/__vendor__/shared-deps.js");
+  it("falls back to the stable path when the build sets no hashed URL", () => {
+    expect(sharedDepsModuleUrl("/app/", undefined, false)).toBe(
+      "/app/__vendor__/shared-deps.js",
+    );
+  });
+
+  it("asks for nothing on a dev server without a vendor", () => {
+    expect(sharedDepsModuleUrl("/app/", undefined, true)).toBeNull();
+  });
+
+  it("uses a dev server's prebuilt vendor", () => {
+    const url = "/__vendor__/shared-deps-abc.js";
+    expect(sharedDepsModuleUrl("/", url, true)).toBe(url);
   });
 
   it("keeps a concrete subpath base's URL as built", () => {
     const url = "/connect/__vendor__/shared-deps-abc.js";
-    expect(sharedDepsModuleUrl("/connect/", url)).toBe(url);
+    expect(sharedDepsModuleUrl("/connect/", url, false)).toBe(url);
   });
 
   it("keeps a root base's URL as built", () => {
     const url = "/__vendor__/shared-deps-abc.js";
-    expect(sharedDepsModuleUrl("/", url)).toBe(url);
+    expect(sharedDepsModuleUrl("/", url, false)).toBe(url);
   });
 
   it("resolves a dynamic-base build's placeholder to the runtime base", () => {
@@ -29,6 +40,7 @@ describe("sharedDepsModuleUrl", () => {
       sharedDepsModuleUrl(
         "/app/",
         "/__PH_DYNAMIC_BASE__/__vendor__/shared-deps-abc.js",
+        false,
       ),
     ).toBe("/app/__vendor__/shared-deps-abc.js");
   });

@@ -805,7 +805,7 @@ async function buildVendorAtomic(
       `export const imports = ${JSON.stringify(
         withVendorBase(meta.imports, base),
       )};\n` + `export const versions = ${JSON.stringify(versions)};\n`;
-    // The hashed copy is what production loads; the stable name serves dev.
+    // Connect loads the hashed copy; the stable name is for other readers.
     const sharedDepsFile = `shared-deps-${createHash("sha256")
       .update(sharedDepsSource)
       .digest("hex")
