@@ -25,7 +25,7 @@ can load and still fail at runtime, so don't publish it.`,
     }
     try {
       const { runBuild } = await import("../services/build.js");
-      await runBuild(args);
+      await runBuild(args, { checkDefinitions: true, ownsProcess: true });
     } catch (error) {
       // The message includes its cause; --debug adds the stack and the cause again.
       console.error(

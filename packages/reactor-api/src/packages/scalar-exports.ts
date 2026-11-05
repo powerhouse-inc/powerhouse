@@ -8,6 +8,11 @@ export type ScalarExport =
   | { readonly exportName: string; readonly definition: ScalarDefinition }
   | { readonly exportName: string; readonly unsupportedVersion: unknown };
 
+/**
+ * @experimental The scalar exports of a package's `scalars` entry, as this
+ * host reads them; ph-cli passes them to `buildScalarRegistry` for release
+ * evidence.
+ */
 export function scalarExportsOf(
   namespace: Readonly<Record<string, unknown>>,
 ): ScalarExport[] {

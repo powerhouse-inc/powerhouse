@@ -1,4 +1,5 @@
 import type {
+  DefinitionDiagnostic,
   DocumentModelGlobalState,
   DocumentModelSpecificationDefinition,
 } from "@powerhousedao/shared/document-model";
@@ -103,37 +104,71 @@ export function structuredDefinitionDigest(
   return digest;
 }
 
+/** Why a model that carries a definition is served from its stored SDL. */
+export type StoredFallback =
+  | {
+      readonly reason: "invalid" | "mismatch";
+      readonly diagnostics: readonly DefinitionDiagnostic[];
+    }
+  | { readonly reason: "unreadable"; readonly error: unknown };
+
 /**
  * The one place a host selects how a document model's schema is built: from
  * its structured definition when it carries a valid, matching one, else from
- * its stored SDL.
+ * its stored SDL. Logs nothing; `fallback` says why a definition is not served.
  */
-export function documentModelSchemaSource(
-  model: DocumentModelSource,
-): DocumentModelSchemaSource {
+export function selectDocumentModelSchemaSource(model: DocumentModelSource): {
+  readonly source: DocumentModelSchemaSource;
+  readonly fallback?: StoredFallback;
+} {
   const { global } = model.documentModel;
   let inspection: DocumentModelDefinitionInspection;
   try {
     inspection = inspectDocumentModelDefinition(model);
   } catch (error) {
-    warnOnce(global.id, "unreadable", error);
-    return storedSchemaSource(global);
+    return {
+      source: storedSchemaSource(global),
+      fallback: { reason: "unreadable", error },
+    };
   }
   if (inspection.kind === "stored") {
-    if (inspection.reason === "invalid" || inspection.reason === "mismatch") {
-      warnOnce(global.id, inspection.reason, inspection.diagnostics);
-    }
-    return storedSchemaSource(global);
+    return {
+      source: storedSchemaSource(global),
+      ...((inspection.reason === "invalid" ||
+        inspection.reason === "mismatch") && {
+        fallback: {
+          reason: inspection.reason,
+          diagnostics: inspection.diagnostics,
+        },
+      }),
+    };
   }
   const entry = project(inspection);
   if ("error" in entry) {
-    warnOnce(global.id, "unreadable", entry.error);
-    return storedSchemaSource(global);
+    return {
+      source: storedSchemaSource(global),
+      fallback: { reason: "unreadable", error: entry.error },
+    };
   }
   let source = entry.sources.get(global.name);
   if (source === undefined) {
     source = structuredSchemaSource(entry.projection, global);
     entry.sources.set(global.name, source);
+  }
+  return { source };
+}
+
+/** {@link selectDocumentModelSchemaSource}, logging a fallback once per document type and reason. */
+export function documentModelSchemaSource(
+  model: DocumentModelSource,
+): DocumentModelSchemaSource {
+  const { source, fallback } = selectDocumentModelSchemaSource(model);
+  if (fallback !== undefined) {
+    warnOnce(
+      model.documentModel.global.id,
+      fallback.reason,
+      "diagnostics" in fallback ? fallback.diagnostics : fallback.error,
+    );
   }
   return source;
 }

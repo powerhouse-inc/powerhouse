@@ -630,6 +630,10 @@ Bundle the shared dependency set instead of externalizing it (default: externali
 Unsafe: build even when tsc reports type errors, without asking. The package can load and still fail at runtime<br><br>
 **usage:** `--ignore-type-errors`<br>
 **default**: `false`
+#### Release <br>
+Experimental: check every document model as for a release and stop the build, previous output intact, when the check finds them invalid or cannot run; then write the release approval ph publish verifies<br><br>
+**usage:** `--release`<br>
+**default**: `false`
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
@@ -1222,6 +1226,19 @@ documentModelsDir, through one set of checks. Writes nothing.
 `tsc` cannot run these checks: a code-first model compiles when its module is
 evaluated.
 
+--release (experimental) runs the checks `ph build --release` runs: these,
+the release checks, and host validation, which validates every model and the
+package's scalars entry as a host that installed the package would.
+
+--prepack (experimental) loads nothing. It reads the release approval
+`ph build --release` wrote in .ph/build/release-approval.json and exits 0
+when it matches this package, 1 when it does not (missing, unreadable, stale
+or refused), naming the reasons, and 2 when it cannot be checked. To stop a
+plain `npm publish` too, add it to package.json, then run
+`ph build --release` (package.json is published, so the approval covers it):
+  "scripts": { "prepack": "ph-cli model check --prepack" }
+With --json it prints {"decision": ..., "reasons": [...]}.
+
 Exit codes:
   0  ok, or skipped. Skipped means no code-first source is selected and the
      package has no stored model, so nothing was read. Read "status".
@@ -1238,6 +1255,14 @@ stderr and exits 2.
 
 Experimental: the command, its output and the JSON report can change in any release.
 ### flags
+#### Release <br>
+Experimental: check as ph build --release does, with the release checks and host validation over every model. Writes nothing<br><br>
+**usage:** `--release`<br>
+**default**: `false`
+#### Prepack <br>
+Experimental: without loading the package, exit 0 when the release approval ph build --release wrote matches it, 1 when it does not, and 2 when it cannot be checked. For a "prepack" script, so npm publish stops too<br><br>
+**usage:** `--prepack`<br>
+**default**: `false`
 #### Json <br>
 Print exactly one JSON report on stdout and nothing else<br><br>
 **usage:** `--json`<br>

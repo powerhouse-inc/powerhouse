@@ -1,4 +1,5 @@
 import type {
+  DefinitionCheckProfile,
   DefinitionCheckReport,
   DefinitionDiagnostic,
   DefinitionPath,
@@ -20,8 +21,9 @@ import type {
 import type { DefinitionCheck } from "./types.js";
 
 /**
- * The checks `ph model check` runs on document models. A later layer adds its
- * own with `[...documentModelChecks, ...theirs]`.
+ * @experimental The checks `ph model check` runs on document models. A later
+ * layer, such as ph-cli's release profile, adds its own with
+ * `[...documentModelChecks, ...theirs]`.
  */
 export const documentModelChecks: readonly DefinitionCheck[] = Object.freeze([
   storedMaterializationCheck,
@@ -57,8 +59,9 @@ function relocated(
 /**
  * @experimental Runs every check over a loaded project and builds the stored
  * check report with the project's load diagnostics. `definitions` adds
- * inventory entries a caller checked itself. Experimental while code-first
- * projects are introduced.
+ * inventory entries a caller checked itself; `profile` (default `edit`) names
+ * the check list the caller ran. Experimental while code-first projects are
+ * introduced.
  */
 export async function checkProjectDefinitions<
   TInput extends DefinitionCheckInput = DefinitionCheckInput,
@@ -67,6 +70,7 @@ export async function checkProjectDefinitions<
   options: {
     readonly checks?: readonly DefinitionCheck<TInput>[];
     readonly definitions?: DefinitionCheckReport["definitions"];
+    readonly profile?: DefinitionCheckProfile;
   } = {},
 ): Promise<DefinitionCheckReport> {
   const relocations = project.relocations ?? new Map();
@@ -77,6 +81,7 @@ export async function checkProjectDefinitions<
     }
   }
   return definitionCheckReport({
+    profile: options.profile ?? "edit",
     sourceSet: project.sourceSet,
     ...(project.skipReason !== undefined && {
       skipReason: project.skipReason,

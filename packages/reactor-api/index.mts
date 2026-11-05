@@ -17,7 +17,14 @@ export * from "./src/packages/http-loader.js";
 export * from "./src/packages/import-loader.js";
 export * from "./src/packages/package-manager.js";
 export * from "./src/packages/subgraph-extraction.js";
+export {
+  type HostValidationFinding,
+  type HostValidationResult,
+  validateDocumentModelsForHost,
+} from "./src/packages/host-validation.js";
+export { scalarExportsOf } from "./src/packages/scalar-exports.js";
 export type { ScalarExport } from "./src/packages/scalar-exports.js";
+export { buildScalarRegistry } from "./src/packages/scalar-registry.js";
 export type {
   RegisteredScalar,
   ScalarRegistry,

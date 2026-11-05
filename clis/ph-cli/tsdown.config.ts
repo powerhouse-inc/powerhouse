@@ -13,6 +13,8 @@ export default defineConfig({
     // and resolve them from its own node_modules (ph-cli is a devDependency).
     "runners/connect": "src/runners/connect.ts",
     "runners/switchboard": "src/runners/switchboard.ts",
+    // Forked by `ph build` to load the package's own modules out of process.
+    "definitions-worker": "src/services/model/definitions-worker.ts",
   },
   outDir: "dist",
   clean: true,

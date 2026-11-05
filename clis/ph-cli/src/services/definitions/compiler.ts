@@ -1,7 +1,7 @@
 import { SpawnError, spawnAsync } from "@powerhousedao/shared/clis";
 import { mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import type { Agent } from "package-manager-detector";
 import { resolveCommand } from "package-manager-detector";
 import { z } from "zod";
@@ -11,6 +11,11 @@ import {
   pathWithin,
   toPosixPath,
 } from "./paths.js";
+import {
+  buildInfoFile,
+  outFileOutputs,
+  outputDirectories,
+} from "../compiler-output/emit.js";
 import { configDirOptions, readConfig } from "./config-inputs.js";
 import { explainedRoots, listedFiles } from "./compiler-output.js";
 
@@ -139,44 +144,17 @@ function outputFiles(
   const { options, sources, configFile } = project;
   const directory = dirname(configFile);
   const root = project.emitRoot;
-  const buildInfo =
-    options.tsBuildInfoFile !== undefined
-      ? resolve(directory, options.tsBuildInfoFile)
-      : options.outFile !== undefined
-        ? resolve(
-            directory,
-            options.outFile.replace(/\.[^.]+$/, "") + ".tsbuildinfo",
-          )
-        : options.outDir !== undefined
-          ? resolve(
-              directory,
-              options.outDir,
-              options.rootDir === undefined ? "" : relative(root, directory),
-              basename(configFile).replace(/\.json$/i, ".tsbuildinfo"),
-            )
-          : configFile.replace(/\.json$/i, ".tsbuildinfo");
   const files =
     emitsBuildInfoInBuildMode ||
     options.composite ||
     options.incremental ||
     options.tsBuildInfoFile !== undefined
-      ? [buildInfo]
+      ? [buildInfoFile(options, configFile)]
       : [];
   if (options.noEmit) return files;
+  if (options.outFile !== undefined)
+    return [...files, ...outFileOutputs(options, configFile)];
   const declares = options.declaration === true || options.composite === true;
-  if (options.outFile !== undefined) {
-    const output = resolve(directory, options.outFile);
-    if (!options.emitDeclarationOnly)
-      files.push(output, ...(options.sourceMap ? [output + ".map"] : []));
-    if (declares)
-      files.push(
-        output.replace(/\.[^.]+$/, ".d.ts"),
-        ...(options.declarationMap
-          ? [output.replace(/\.[^.]+$/, ".d.ts.map")]
-          : []),
-      );
-    return files;
-  }
   for (const source of sources) {
     if (/\.json$/i.test(source)) {
       if (!options.emitDeclarationOnly) {
@@ -526,12 +504,10 @@ function checkedCompilePlan(
   for (const project of projects) {
     if (project.external) continue;
     if (!project.options.noEmit) {
-      for (const option of [
-        project.options.outDir,
-        project.options.declarationDir,
-      ]) {
-        if (option === undefined) continue;
-        const path = resolve(dirname(project.configFile), option);
+      for (const path of outputDirectories(
+        project.options,
+        dirname(project.configFile),
+      )) {
         const target = canonicalPath(path);
         if (pathWithin(packageRoot, target) === null)
           throw new Error(
