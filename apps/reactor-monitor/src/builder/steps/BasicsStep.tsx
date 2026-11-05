@@ -1,18 +1,14 @@
 import { useState } from "react";
 import { checkSetter } from "../../host-rules/index.js";
-import { isRecord } from "../../host-rules/members.js";
+import { hostName, isRecord } from "../../host-rules/members.js";
 import { IssueList } from "../IssueList.js";
 import { stepOf } from "../engine.js";
 import type { StepProps } from "./types.js";
 
 const NAME_PATH = "host.name";
 
-function hostName(host: unknown): string {
-  return isRecord(host) && typeof host.name === "string" ? host.name : "";
-}
-
 export function BasicsStep({ draft, engine, onEdit }: StepProps) {
-  const current = hostName(engine.envelope.host);
+  const current = hostName(engine.envelope);
   const [name, setName] = useState(current);
   const [shown, setShown] = useState(current);
   const [refused, setRefused] = useState("");
