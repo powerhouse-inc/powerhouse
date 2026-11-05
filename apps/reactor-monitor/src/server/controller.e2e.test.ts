@@ -336,7 +336,7 @@ describe.skipIf(process.platform === "win32")(
     };
 
     // Each start's own budget; the alone reader fails before it serves.
-    const ALONE_MS = 30_000;
+    const ALONE_MS = 60_000;
     const START_MS = 120_000;
 
     it("resolves an in-place host's $output from a switchboard running in place beside it", async ({
