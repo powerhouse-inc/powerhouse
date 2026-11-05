@@ -121,9 +121,11 @@ beforeAll(() => {
   ];
   const fromSrc = (path: string) => relative(SRC, path).replaceAll("\\", "/");
   files = absolute.map(fromSrc);
-  // The API reports paths case-folded on case-insensitive file systems.
+  // The API reports paths with forward slashes, case-folded on
+  // case-insensitive file systems.
+  const apiPath = (path: string) => path.toLowerCase().replaceAll("\\", "/");
   const srcFiles = new Map(
-    sourcesIn(SRC).map((path) => [path.toLowerCase(), fromSrc(path)]),
+    sourcesIn(SRC).map((path) => [apiPath(path), fromSrc(path)]),
   );
   edges = [];
   for (const path of absolute) {
@@ -134,9 +136,7 @@ beforeAll(() => {
     specifiers.forEach((specifier, index) => {
       const resolved = symbols[index]?.declarations[0]?.path;
       const local =
-        resolved === undefined
-          ? undefined
-          : srcFiles.get(resolved.toLowerCase());
+        resolved === undefined ? undefined : srcFiles.get(apiPath(resolved));
       edges.push({
         from,
         to: local ?? specifier.text,

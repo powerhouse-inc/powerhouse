@@ -261,7 +261,7 @@ describe("two builds of one package started together", () => {
       .map(({ stdout }, index) => ({ stdout, other: [second, first][index] }))
       .filter(({ stdout }) => stdout.includes("Another build"));
     expect(waited).toHaveLength(1);
-    const lock = join(".ph", "build", "lock");
+    const lock = ".ph/build/lock";
     expect(waited[0].stdout).toMatch(
       new RegExp(
         `Another build of this package holds ${escaped(lock)} \\(host ${escaped(hostname())}, pid ${waited[0].other.child.pid}, run [^)]+\\); waiting for it to finish\\.\\.\\. If that build is gone, delete ${escaped(lock)}\\.\n`,

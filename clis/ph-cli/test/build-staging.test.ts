@@ -205,7 +205,7 @@ describe("a staged build", () => {
     expect(files(made.dist)).toEqual(CLASSIC_OUTPUT);
     expect(scratchLeft(made)).toEqual([]);
     expect(readdirSync(join(made.root, ".ph", "build"))).toEqual(["runs"]);
-    expect(logs).toContain("✔ Types emitted to dist/types");
+    expect(logs).toContain(`✔ Types emitted to ${join("dist", "types")}`);
     expect(warnings).toEqual([]);
     // A package that selects no code-first source checks nothing.
     expect(
@@ -544,7 +544,10 @@ describe("a build that does not finish leaves the previous output as it was", ()
     await expect(buildPackage(args)).rejects.toThrow("EIO: injected");
 
     const stageLinks = injected.linked
-      .map((to) => /\.dist\.ph-stage-[^/]+\/(.*)$/.exec(to)?.[1])
+      .map(
+        (to) =>
+          /\.dist\.ph-stage-[^/]+\/(.*)$/.exec(to.replaceAll(sep, "/"))?.[1],
+      )
       .filter((file) => file !== undefined);
     expect(stageLinks).toEqual(
       expect.arrayContaining(["browser/index.js", "node/index.mjs"]),
@@ -696,100 +699,112 @@ describe("a build that does not finish leaves the previous output as it was", ()
   }, 240_000);
 });
 
-describe("a build stopped by a signal its process handles", () => {
-  it("removes what the step running at the signal writes before it settles", async () => {
-    const made = project();
-    await buildPackage(args);
-    made.write("index.ts", `${made.read("index.ts")}export const added = 1;\n`);
-    const before = previousOutput(made);
-    const stopped: StandardBuildStep = {
-      id: "stopped",
-      after: ["typecheck"],
-      run: async ({ session }) => {
-        const stage = session.stage();
-        process.kill(process.pid, "SIGTERM");
-        await sleep(300);
-        // A bundler that goes on writing after the signal.
-        mkdirSync(join(stage, "browser"), { recursive: true });
-        writeFileSync(join(stage, "browser", "late.js"), "late\n");
-      },
-    };
-    const embedding = () => undefined;
-    process.on("SIGTERM", embedding);
-
-    try {
-      await expect(
-        buildPackage(args, { steps: [...standardBuildSteps, stopped] }),
-      ).rejects.toThrow(new BuildStopped("SIGTERM"));
-    } finally {
-      process.removeListener("SIGTERM", embedding);
-    }
-
-    expect(previousOutput(made)).toEqual(before);
-    expect(scratchLeft(made)).toEqual([]);
-  }, 120_000);
-
-  it("keeps the lock until the step running at the signal settles, so another build waits for it", async () => {
-    const made = project();
-    await buildPackage(args);
-    made.write("index.ts", `${made.read("index.ts")}export const added = 1;\n`);
-    const lockFile = join(made.root, ".ph", "build", "lock");
-    const holder = () =>
-      (JSON.parse(readFileSync(lockFile, "utf8")) as { runId: string }).runId;
-    const held: string[] = [];
-    let second: Promise<unknown> | undefined;
-    const writing: StandardBuildStep = {
-      id: "writing",
-      after: ["typecheck"],
-      run: async ({ session }) => {
-        const stage = session.stage();
-        const first = holder();
-        process.kill(process.pid, "SIGTERM");
-        await sleep(50);
-        second = buildPackage(args);
-        for (let write = 0; write < 5; write++) {
-          await sleep(200);
-          held.push(holder() === first ? "first" : "another");
+// On Windows, process.kill ends the process instead of delivering the signal.
+describe.skipIf(process.platform === "win32")(
+  "a build stopped by a signal its process handles",
+  () => {
+    it("removes what the step running at the signal writes before it settles", async () => {
+      const made = project();
+      await buildPackage(args);
+      made.write(
+        "index.ts",
+        `${made.read("index.ts")}export const added = 1;\n`,
+      );
+      const before = previousOutput(made);
+      const stopped: StandardBuildStep = {
+        id: "stopped",
+        after: ["typecheck"],
+        run: async ({ session }) => {
+          const stage = session.stage();
+          process.kill(process.pid, "SIGTERM");
+          await sleep(300);
           // A bundler that goes on writing after the signal.
-          mkdirSync(stage, { recursive: true });
-          writeFileSync(join(stage, `late-${write}.js`), "late\n");
-        }
-      },
-    };
-    const embedding = () => undefined;
-    process.on("SIGTERM", embedding);
+          mkdirSync(join(stage, "browser"), { recursive: true });
+          writeFileSync(join(stage, "browser", "late.js"), "late\n");
+        },
+      };
+      const embedding = () => undefined;
+      process.on("SIGTERM", embedding);
 
-    try {
-      await expect(
-        buildPackage(args, { steps: [...standardBuildSteps, writing] }),
-      ).rejects.toThrow(new BuildStopped("SIGTERM"));
-      await second;
-    } finally {
-      process.removeListener("SIGTERM", embedding);
-    }
+      try {
+        await expect(
+          buildPackage(args, { steps: [...standardBuildSteps, stopped] }),
+        ).rejects.toThrow(new BuildStopped("SIGTERM"));
+      } finally {
+        process.removeListener("SIGTERM", embedding);
+      }
 
-    expect(held).toEqual(["first", "first", "first", "first", "first"]);
-    expect(
-      logs.filter((line) => line.startsWith("Another build")),
-    ).toHaveLength(1);
-    expect(made.read("dist/types/index.d.ts")).toContain(
-      "export declare const added = 1;",
-    );
-    expect(files(made.dist)).toEqual([...CLASSIC_OUTPUT, ...INDEX_MAPS].sort());
-    expect(scratchLeft(made)).toEqual([]);
-  }, 240_000);
+      expect(previousOutput(made)).toEqual(before);
+      expect(scratchLeft(made)).toEqual([]);
+    }, 120_000);
 
-  it("leaves nothing a stopped run wrote beside the output after the next build", async () => {
-    const made = project();
-    made.write(".dist.ph-stage-gone/browser/late.js", "late\n");
-    made.write(".dist.ph-old-gone/index.js", "old\n");
+    it("keeps the lock until the step running at the signal settles, so another build waits for it", async () => {
+      const made = project();
+      await buildPackage(args);
+      made.write(
+        "index.ts",
+        `${made.read("index.ts")}export const added = 1;\n`,
+      );
+      const lockFile = join(made.root, ".ph", "build", "lock");
+      const holder = () =>
+        (JSON.parse(readFileSync(lockFile, "utf8")) as { runId: string }).runId;
+      const held: string[] = [];
+      let second: Promise<unknown> | undefined;
+      const writing: StandardBuildStep = {
+        id: "writing",
+        after: ["typecheck"],
+        run: async ({ session }) => {
+          const stage = session.stage();
+          const first = holder();
+          process.kill(process.pid, "SIGTERM");
+          await sleep(50);
+          second = buildPackage(args);
+          for (let write = 0; write < 5; write++) {
+            await sleep(200);
+            held.push(holder() === first ? "first" : "another");
+            // A bundler that goes on writing after the signal.
+            mkdirSync(stage, { recursive: true });
+            writeFileSync(join(stage, `late-${write}.js`), "late\n");
+          }
+        },
+      };
+      const embedding = () => undefined;
+      process.on("SIGTERM", embedding);
 
-    await buildPackage(args);
+      try {
+        await expect(
+          buildPackage(args, { steps: [...standardBuildSteps, writing] }),
+        ).rejects.toThrow(new BuildStopped("SIGTERM"));
+        await second;
+      } finally {
+        process.removeListener("SIGTERM", embedding);
+      }
 
-    expect(files(made.dist)).toEqual(CLASSIC_OUTPUT);
-    expect(scratchLeft(made)).toEqual([]);
-  }, 120_000);
-});
+      expect(held).toEqual(["first", "first", "first", "first", "first"]);
+      expect(
+        logs.filter((line) => line.startsWith("Another build")),
+      ).toHaveLength(1);
+      expect(made.read("dist/types/index.d.ts")).toContain(
+        "export declare const added = 1;",
+      );
+      expect(files(made.dist)).toEqual(
+        [...CLASSIC_OUTPUT, ...INDEX_MAPS].sort(),
+      );
+      expect(scratchLeft(made)).toEqual([]);
+    }, 240_000);
+
+    it("leaves nothing a stopped run wrote beside the output after the next build", async () => {
+      const made = project();
+      made.write(".dist.ph-stage-gone/browser/late.js", "late\n");
+      made.write(".dist.ph-old-gone/index.js", "old\n");
+
+      await buildPackage(args);
+
+      expect(files(made.dist)).toEqual(CLASSIC_OUTPUT);
+      expect(scratchLeft(made)).toEqual([]);
+    }, 120_000);
+  },
+);
 
 describe("replacing an output another process holds open", () => {
   it("retries, then moves entry by entry and says so", async () => {

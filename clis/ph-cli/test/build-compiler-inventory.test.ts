@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildInfoFile,
@@ -9,7 +9,7 @@ import {
   parseShownConfig,
 } from "../src/services/package-build/staging/inventory.js";
 
-const root = join("/", "work", "my package");
+const root = resolve("/", "work", "my package");
 const at = {
   configFile: join(root, "tsconfig.json"),
   packageRoot: root,

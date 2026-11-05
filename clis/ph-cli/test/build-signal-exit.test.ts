@@ -48,37 +48,42 @@ afterEach(() => {
   made?.dispose();
 });
 
-it("puts back a compiler output a step rewrites after the signal, when a signal-exit callback keeps the process running", async () => {
-  made = createStagedProject();
-  process.chdir(made.root);
-  // The first build loads rolldown, whose signal-exit listens for signals.
-  await buildPackage(args);
-  const emitter = (globalThis as Record<symbol, unknown>)[
-    Symbol.for("signal-exit emitter")
-  ] as SignalExitEmitter;
-  expect(emitter.count).toBe(1);
-  const before = previousOutput(made);
-  const late: StandardBuildStep = {
-    id: "late",
-    after: ["typecheck"],
-    run: async () => {
-      process.kill(process.pid, "SIGTERM");
-      await sleep(100);
-      // tsc, or a step like it, writing a compiler output after the signal.
-      made!.write("dist/types/index.d.ts", "export declare const late: 1;\n");
-    },
-  };
-  const keepRunning = () => true;
-  emitter.on("exit", keepRunning);
+// On Windows, process.kill ends the process instead of delivering the signal.
+it.skipIf(process.platform === "win32")(
+  "puts back a compiler output a step rewrites after the signal, when a signal-exit callback keeps the process running",
+  async () => {
+    made = createStagedProject();
+    process.chdir(made.root);
+    // The first build loads rolldown, whose signal-exit listens for signals.
+    await buildPackage(args);
+    const emitter = (globalThis as Record<symbol, unknown>)[
+      Symbol.for("signal-exit emitter")
+    ] as SignalExitEmitter;
+    expect(emitter.count).toBe(1);
+    const before = previousOutput(made);
+    const late: StandardBuildStep = {
+      id: "late",
+      after: ["typecheck"],
+      run: async () => {
+        process.kill(process.pid, "SIGTERM");
+        await sleep(100);
+        // tsc, or a step like it, writing a compiler output after the signal.
+        made!.write("dist/types/index.d.ts", "export declare const late: 1;\n");
+      },
+    };
+    const keepRunning = () => true;
+    emitter.on("exit", keepRunning);
 
-  try {
-    await expect(
-      buildPackage(args, { steps: [...standardBuildSteps, late] }),
-    ).rejects.toThrow(new BuildStopped("SIGTERM"));
-  } finally {
-    emitter.removeListener("exit", keepRunning);
-  }
+    try {
+      await expect(
+        buildPackage(args, { steps: [...standardBuildSteps, late] }),
+      ).rejects.toThrow(new BuildStopped("SIGTERM"));
+    } finally {
+      emitter.removeListener("exit", keepRunning);
+    }
 
-  expect(previousOutput(made)).toEqual(before);
-  expect(scratchLeft(made)).toEqual([]);
-}, 120_000);
+    expect(previousOutput(made)).toEqual(before);
+    expect(scratchLeft(made)).toEqual([]);
+  },
+  120_000,
+);
