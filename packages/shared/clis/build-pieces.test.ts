@@ -1,15 +1,24 @@
 // The pure helpers behind the pieces half of `ph build`: what gets written
 // beside a piece, how the manifest is enriched, and what fails a build.
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  realpathSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { runInNewContext } from "node:vm";
 import type { Manifest } from "../document-model/types.js";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   assertPieceVersion,
   assertPiecesOutDir,
+  buildPieces,
   bundlePackageJson,
   createJsonReplacer,
   DESCRIBE_HELPERS,
@@ -20,6 +29,7 @@ import {
   piecePackageJson,
   resolvePieceLocation,
   type BuiltPiece,
+  type PieceBuildOptions,
   planPieces,
 } from "./build-pieces.mts";
 
@@ -599,6 +609,150 @@ describe("planPieces", () => {
     const dir = makeProject(["pieces/index.ts", "pieces/hello/index.ts"]);
     expect(planPieces(dir, "build")[0].outDir).toBe(
       join("build", "node", "pieces", "hello"),
+    );
+  });
+});
+
+// A staged build writes the output directory somewhere else, and must read and
+// name it exactly as a build in place does.
+describe("buildPieces with writeTo", () => {
+  const piece = (displayName: string) =>
+    `export const piece = { displayName: "${displayName}", description: "Says hello.", ` +
+    "actions: { say: {} }, triggers: {} };\n";
+  const output = (outDir: string, displayName: string, main: string) => ({
+    [`${outDir}/node/pieces/index.mjs`]:
+      'export const pieces = [{ name: "@acme/piece-hello", entry: "dist/node/pieces/hello/index.mjs" }, ' +
+      '{ name: "@acme/piece-vendored", bundle: "dist/node/pieces/vendored" }];\n',
+    [`${outDir}/node/pieces/vendored/package.json`]: JSON.stringify({
+      name: "@acme/piece-vendored",
+      version: "0.0.1",
+      main,
+    }),
+    [`${outDir}/node/pieces/vendored/${main}`]: piece(displayName),
+  });
+  const source = { "pieces/index.ts": "", "pieces/hello/index.ts": "" };
+
+  // Stands in for tsdown: writes the bundle where the config says.
+  const bundle: PieceBuildOptions["bundle"] = (config) => {
+    mkdirSync(String(config.outDir), { recursive: true });
+    writeFileSync(join(String(config.outDir), "index.mjs"), piece("Hello"));
+    return Promise.resolve();
+  };
+
+  async function build(projectRoot: string, writeTo?: string) {
+    const logs: string[] = [];
+    const log = vi
+      .spyOn(console, "log")
+      .mockImplementation((...messages: unknown[]) => {
+        logs.push(messages.join(" "));
+      });
+    try {
+      const built = await buildPieces(
+        {
+          projectRoot,
+          outDir: "dist",
+          ...(writeTo ? { writeTo } : {}),
+          pieces: planPieces(projectRoot, "dist"),
+        },
+        { name: "@acme/pkg", version: "1.2.3", license: "MIT" },
+        { bundle },
+      );
+      return { built, logs };
+    } finally {
+      log.mockRestore();
+    }
+  }
+
+  const tree = (dir: string) =>
+    Object.fromEntries(
+      readdirSync(dir, { recursive: true, withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .map((entry): [string, string] => {
+          const file = join(entry.parentPath, entry.name);
+          return [relative(dir, file), readFileSync(file, "utf8")];
+        }),
+    );
+
+  it("writes every piece file there and names them as a build in place", async () => {
+    const inPlace = writeProject({
+      ...source,
+      ...output("dist", "Vendored", "main.mjs"),
+    });
+    // An earlier build's bundle stays in the output directory while the stage
+    // is written; nothing else is there, so a lookup there finds nothing.
+    const { "dist/node/pieces/index.mjs": _list, ...stale } = output(
+      "dist",
+      "Stale",
+      "stale.mjs",
+    );
+    const staged = writeProject({
+      ...source,
+      ...output(".dist.ph-stage-1", "Vendored", "main.mjs"),
+      ...stale,
+    });
+    const previous = tree(join(staged, "dist"));
+
+    const expected = await build(inPlace);
+    const result = await build(staged, join(staged, ".dist.ph-stage-1"));
+
+    expect(expected.built).toEqual([
+      {
+        name: "@acme/piece-hello",
+        version: "1.2.3",
+        displayName: "Hello",
+        description: "Says hello.",
+        bundle: "dist/node/pieces/hello",
+        descriptor: "dist/node/pieces/hello/descriptor.json",
+      },
+      {
+        name: "@acme/piece-vendored",
+        version: "1.2.3",
+        displayName: "Vendored",
+        description: "Says hello.",
+        bundle: "dist/node/pieces/vendored",
+        descriptor: "dist/node/pieces/vendored/descriptor.json",
+      },
+    ]);
+    expect(expected.logs).toEqual([
+      "\n▶ Building piece hello...",
+      "piece: @acme/piece-hello@1.2.3 -> dist/node/pieces/hello (1 actions, 0 triggers)",
+      "piece: @acme/piece-vendored@1.2.3 -> dist/node/pieces/vendored (1 actions, 0 triggers)",
+    ]);
+    expect(result.built).toEqual(expected.built);
+    expect(result.logs).toEqual(expected.logs);
+    expect(tree(join(staged, ".dist.ph-stage-1"))).toEqual(
+      tree(join(inPlace, "dist")),
+    );
+    expect(tree(join(staged, "dist"))).toEqual(previous);
+  });
+
+  it("reads a list that locates its pieces from import.meta.url as a build in place does", async () => {
+    const urlOutput = (outDir: string) => ({
+      [`${outDir}/node/pieces/index.mjs`]:
+        'import { fileURLToPath } from "node:url";\n' +
+        'export const pieces = [{ name: "@acme/piece-hello", ' +
+        'entry: fileURLToPath(new URL("./hello/index.mjs", import.meta.url)) }];\n',
+      [`${outDir}/node/pieces/hello/index.mjs`]: piece("Hello"),
+    });
+    // Real paths: import.meta.url names one, and so does a build's cwd.
+    const inPlace = realpathSync(
+      writeProject({ ...source, ...urlOutput("dist") }),
+    );
+    const staged = realpathSync(
+      writeProject({ ...source, ...urlOutput(".dist.ph-stage-1") }),
+    );
+
+    const expected = await build(inPlace);
+    const result = await build(staged, join(staged, ".dist.ph-stage-1"));
+
+    expect(expected.logs).toEqual([
+      "\n▶ Building piece hello...",
+      "piece: @acme/piece-hello@1.2.3 -> dist/node/pieces/hello (1 actions, 0 triggers)",
+    ]);
+    expect(result.logs).toEqual(expected.logs);
+    expect(result.built).toEqual(expected.built);
+    expect(tree(join(staged, ".dist.ph-stage-1"))).toEqual(
+      tree(join(inPlace, "dist")),
     );
   });
 });

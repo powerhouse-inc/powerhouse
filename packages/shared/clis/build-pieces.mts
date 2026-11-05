@@ -8,6 +8,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -64,6 +65,13 @@ export type PiecePlan = {
 export type PieceBuildTarget = {
   projectRoot: string;
   outDir: string;
+  /**
+   * @experimental Absolute: the directory that stands in for
+   * `<projectRoot>/<outDir>` on disk during this build. Every path the build
+   * names stays under `outDir`. Experimental while staged builds are
+   * introduced.
+   */
+  writeTo?: string;
   pieces: PiecePlan[];
 };
 
@@ -122,11 +130,47 @@ export type PieceBuildOptions = {
 
 const toPosix = (p: string) => p.split(sep).join("/");
 
+/**
+ * An output directory, absolute, and the directory written in its place;
+ * `toReal` is `to` as `import.meta.url` spells it, through any symlink.
+ */
+type Redirect = { from: string; to: string; toReal: string };
+
+/** `relative(dir, path)` leaves `dir`: `..`, `../…`, or another root. */
+const leaves = (inside: string) =>
+  inside === ".." || inside.startsWith(`..${sep}`) || isAbsolute(inside);
+
+// Where a path is on disk: moved to `to` when it lies under `from`.
+function onDisk(path: string, redirect: Redirect | undefined): string {
+  if (!redirect) return path;
+  const inside = relative(redirect.from, path);
+  return leaves(inside) ? path : join(redirect.to, inside);
+}
+
+// Where a path in the written directory stands in the output: the inverse of
+// onDisk, for a location a module derived from its own URL.
+function toLogical(path: string, redirect: Redirect | undefined): string {
+  if (!redirect) return path;
+  for (const dir of [redirect.to, redirect.toReal]) {
+    const inside = relative(dir, path);
+    if (!leaves(inside)) return join(redirect.from, inside);
+  }
+  return path;
+}
+
 export function statSafe(p: string) {
   try {
     return statSync(p);
   } catch {
     return null;
+  }
+}
+
+function realpathSafe(p: string) {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
   }
 }
 
@@ -261,11 +305,19 @@ function createJsonReplacer() {
 // answers through a file, leaving both its streams to the piece.
 export const DESCRIBE_SCRIPT = `
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { isAbsolute, join } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const job = JSON.parse(readFileSync(process.argv[2], "utf8"));
 ${DESCRIBE_HELPERS}
+// The parent's onDisk, for the paths a list names under the output directory.
+function onDisk(path) {
+  if (!job.redirect) return path;
+  const inside = relative(job.redirect.from, path);
+  const leaves = inside === ".." || inside.startsWith(".." + sep) || isAbsolute(inside);
+  return leaves ? path : join(job.redirect.to, inside);
+}
+
 // Says why the child gave up in the one place the parent always reads, so a
 // failure reports the cause and never the text of this script.
 function fail(message) {
@@ -279,7 +331,7 @@ function entryFile(piece) {
   if (typeof declared !== "string") return undefined;
   const path = isAbsolute(declared) ? declared : join(job.projectRoot, declared);
   if (piece.entry) return path;
-  const pkgFile = join(path, "package.json");
+  const pkgFile = join(onDisk(path), "package.json");
   if (!existsSync(pkgFile)) return undefined;
   const pkg = JSON.parse(readFileSync(pkgFile, "utf8"));
   return join(path, typeof pkg.main === "string" ? pkg.main : "index.mjs");
@@ -287,7 +339,7 @@ function entryFile(piece) {
 
 let listModule;
 try {
-  listModule = await import(pathToFileURL(job.listPath).href);
+  listModule = await import(pathToFileURL(onDisk(job.listPath)).href);
 } catch (error) {
   fail(job.listPath + " threw on import: " + (error instanceof Error ? error.message : String(error)));
 }
@@ -300,9 +352,9 @@ const out = { list, pieces: [], errors: [] };
 for (const piece of list) {
   const file = entryFile(piece);
   // A missing file is the parent's to report, with the message it owns.
-  if (!file || !existsSync(file)) continue;
+  if (!file || !existsSync(onDisk(file))) continue;
   try {
-    const mod = await import(pathToFileURL(file).href);
+    const mod = await import(pathToFileURL(onDisk(file)).href);
     const found = findPiece(mod);
     if (!found) {
       throw new Error(
@@ -349,6 +401,14 @@ export function describePieces(
   projectRoot: string,
   listPath: string,
 ): DescribeResult {
+  return describePiecesThrough(projectRoot, listPath, undefined);
+}
+
+function describePiecesThrough(
+  projectRoot: string,
+  listPath: string,
+  redirect: Redirect | undefined,
+): DescribeResult {
   const dir = mkdtempSync(join(tmpdir(), "ph-build-pieces-"));
   const rel = toPosix(relative(projectRoot, listPath));
   try {
@@ -356,7 +416,10 @@ export function describePieces(
     const scriptFile = join(dir, "describe.mjs");
     const outFile = join(dir, "describe.json");
     writeFileSync(scriptFile, DESCRIBE_SCRIPT);
-    writeFileSync(jobFile, JSON.stringify({ projectRoot, listPath, outFile }));
+    writeFileSync(
+      jobFile,
+      JSON.stringify({ projectRoot, listPath, outFile, redirect }),
+    );
     try {
       execFileSync(process.execPath, [scriptFile, jobFile], {
         timeout: 60_000,
@@ -389,21 +452,34 @@ export function resolvePieceLocation(
   projectRoot: string,
   outDir: string,
 ): PieceLocation {
+  return locatePieceThrough(piece, projectRoot, outDir, undefined);
+}
+
+function locatePieceThrough(
+  piece: PackagePiece,
+  projectRoot: string,
+  outDir: string,
+  redirect: Redirect | undefined,
+): PieceLocation {
   const declared = piece.entry ?? piece.bundle;
   if (typeof declared !== "string" || declared === "") {
     throw new Error(
       `pieces: "${piece.name}" declares neither an entry nor a bundle`,
     );
   }
-  const path = isAbsolute(declared) ? declared : join(projectRoot, declared);
+  // A list may derive a location from import.meta.url, which names the
+  // written directory: it is read as the output it stands in for.
+  const shown = isAbsolute(declared) ? toLogical(declared, redirect) : declared;
+  const path = isAbsolute(declared) ? shown : join(projectRoot, declared);
   const form = piece.entry ? "entry" : "bundle";
+  const disk = onDisk(path, redirect);
   const present =
     form === "entry"
-      ? statSafe(path)?.isFile()
-      : statSafe(join(path, "package.json"))?.isFile();
+      ? statSafe(disk)?.isFile()
+      : statSafe(join(disk, "package.json"))?.isFile();
   if (!present) {
     throw new Error(
-      `pieces: "${piece.name}" declares ${declared}, which is missing`,
+      `pieces: "${piece.name}" declares ${shown}, which is missing`,
     );
   }
   const dir = form === "entry" ? dirname(path) : path;
@@ -414,7 +490,7 @@ export function resolvePieceLocation(
   if (inside === "" || inside.startsWith("..") || isAbsolute(inside)) {
     const expected = toPosix(join(outDir, "node", "pieces"));
     throw new Error(
-      `pieces: "${piece.name}" declares ${declared}, which is outside ${expected}/; ` +
+      `pieces: "${piece.name}" declares ${shown}, which is outside ${expected}/; ` +
         `a piece is built to ${expected}/<dir>/index.mjs and its entry must point there`,
     );
   }
@@ -556,6 +632,13 @@ export async function buildPieces(
 ): Promise<BuiltPiece[]> {
   const { projectRoot, outDir } = target;
   assertPiecesOutDir(target);
+  const redirect = target.writeTo
+    ? {
+        from: resolve(projectRoot, outDir),
+        to: target.writeTo,
+        toReal: realpathSafe(target.writeTo),
+      }
+    : undefined;
   // resolve, not join: an absolute --out-dir is what the browser and node
   // steps hand tsdown, and joining it onto the project root mangles it.
   const externalByDir = new Map<string, Map<string, ExternalDependency>>();
@@ -566,7 +649,7 @@ export async function buildPieces(
     await options.bundle(
       buildPieceBuildConfig({
         entry: resolve(projectRoot, piece.entry),
-        outDir,
+        outDir: onDisk(outDir, redirect),
         ...(options.trace
           ? {
               plugins: [
@@ -590,18 +673,19 @@ export async function buildPieces(
   // The list is the source of truth for names; a package that
   // built pieces without a list has nothing a host could read.
   const listPath = pieceListPath(target);
-  if (!existsSync(listPath)) {
+  if (!existsSync(onDisk(listPath, redirect))) {
     throw new Error(
       `pieces: ${toPosix(relative(projectRoot, listPath))} was not built; ` +
         `pieces/index.ts must export the list of pieces this package ships`,
     );
   }
-  const described = describePieces(projectRoot, listPath);
+  const described = describePiecesThrough(projectRoot, listPath, redirect);
 
   const built: BuiltPiece[] = [];
   const listedDirs = new Set<string>();
   for (const piece of described.list) {
-    const location = resolvePieceLocation(piece, projectRoot, outDir);
+    const location = locatePieceThrough(piece, projectRoot, outDir, redirect);
+    const dirOnDisk = onDisk(location.dir, redirect);
     assertPieceVersion(piece, pkg);
     const failure = described.errors.find((e) => e.name === piece.name);
     if (failure) {
@@ -618,7 +702,7 @@ export async function buildPieces(
     listedDirs.add(relDir);
 
     writeFileSync(
-      join(location.dir, "descriptor.json"),
+      join(dirOnDisk, "descriptor.json"),
       JSON.stringify(
         pieceDescriptor(piece, pkg.version, metadata),
         createJsonReplacer(),
@@ -637,9 +721,9 @@ export async function buildPieces(
               externalByDir.get(resolve(location.dir))?.values() ?? [],
             ),
           })
-        : bundlePackageJson(location.dir, pkg.version);
+        : bundlePackageJson(dirOnDisk, pkg.version);
     writeFileSync(
-      join(location.dir, "package.json"),
+      join(dirOnDisk, "package.json"),
       JSON.stringify(piecePackage, null, 2) + "\n",
     );
     console.log(

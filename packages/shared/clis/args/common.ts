@@ -55,6 +55,15 @@ export const buildArgs = {
     defaultValue: () => false as const,
     defaultValueIsSerializable: true,
   }),
+  /** @experimental Builds for a release: the release check, then a release approval. */
+  release: flag({
+    type: boolean,
+    long: "release",
+    description:
+      "Experimental: check every document model as for a release and stop the build, previous output intact, when the check finds them invalid or cannot run; then write the release approval ph publish verifies",
+    defaultValue: () => false as const,
+    defaultValueIsSerializable: true,
+  }),
   ...debugArgs,
 };
 
