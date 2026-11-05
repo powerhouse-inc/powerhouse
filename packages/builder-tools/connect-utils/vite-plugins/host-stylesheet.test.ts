@@ -3,6 +3,7 @@ import {
   mkdtempSync,
   rmSync,
   statSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -74,8 +75,35 @@ describe("the project's style.css", () => {
       { environment },
       { file: normalizePath(host), modules: [], type: "create" },
     );
-    expect(statSync(placeholder).mtimeMs).toBeGreaterThanOrEqual(before);
+    expect(statSync(placeholder).mtimeMs).toBeGreaterThan(before);
     expect(load(id)).toContain(HOST_IMPORT);
+  });
+
+  it("touches the placeholder past its own mtime, not just to the clock", () => {
+    const plugin = hostStylesheetPlugin(project, hostStylesheetPath(project));
+    const cacheDir = join(project, "node_modules/.vite");
+    (plugin.configResolved as (config: unknown) => void)({
+      command: "serve",
+      cacheDir,
+    });
+    const placeholder = join(cacheDir, "ph-host-stylesheet.css");
+    const ahead = (Date.now() + 5) / 1000;
+    utimesSync(placeholder, ahead, ahead);
+    const before = statSync(placeholder).mtimeMs;
+    const hotUpdate = plugin.hotUpdate as (
+      this: unknown,
+      ctx: { file: string; modules: unknown[]; type: string },
+    ) => unknown;
+    const environment = { moduleGraph: { getModulesByFile: () => undefined } };
+    hotUpdate.call(
+      { environment },
+      {
+        file: normalizePath(writeHostStyle("connect")),
+        modules: [],
+        type: "create",
+      },
+    );
+    expect(statSync(placeholder).mtimeMs).toBeGreaterThan(before);
   });
 
   const stylesheet = () => join(project, "style.css");
