@@ -75,6 +75,7 @@ export async function runConnectBuild(
     // as a plain `ph build`.
     noSharedDeps: false,
     ignoreTypeErrors: false,
+    release: false,
   });
 
   // Production shared-dependency vendor: prebuilt into <outDir>/__vendor__

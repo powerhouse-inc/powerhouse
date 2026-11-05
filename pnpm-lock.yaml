@@ -984,6 +984,9 @@ importers:
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../../packages/reactor
+      '@powerhousedao/reactor-api':
+        specifier: workspace:*
+        version: link:../../packages/reactor-api
       '@powerhousedao/reactor-mcp':
         specifier: workspace:*
         version: link:../../packages/reactor-mcp

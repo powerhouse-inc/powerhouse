@@ -883,6 +883,10 @@
           {
             "patterns": [
               {
+                "regex": "(^|/)release(/|$)",
+                "message": "tooling/release/ builds on this layer, so this layer never imports it. Move what both need into report/ or adapters/types.ts."
+              },
+              {
                 "regex": "(^|/)schema-first(/|$)",
                 "message": "Only tooling/project/project-definitions.ts imports tooling/schema-first/, so schema first stays deletable. Take the schema-first piece as a producer or adapter that project-definitions.ts passes in."
               },
@@ -923,12 +927,59 @@
                 "message": "check/ must not import inspect/. Move what both need into report/ or adapters/."
               },
               {
+                "regex": "(^|/)release(/|$)",
+                "message": "check/ and inspect/ sit below tooling/release/, so they never import it. Move what both need into report/ or adapters/types.ts."
+              },
+              {
                 "regex": "^(\\.\\./)+(model|runtime)(/|$)",
                 "message": "Tooling reads normalized artifacts and must not import definition/model/ or definition/runtime/. Import the kernel or compiler piece instead, or take the value as a parameter."
               },
               {
                 "regex": "[Ss]ubgraph",
                 "message": "Subgraphs build on document-model tooling, not the reverse. Keep subgraph code out of tooling and pass what tooling needs in."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/document-model/src/definition/tooling/release/**/*.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)(inspect|project|schema-first|graphql)(/|$)",
+                "message": "tooling/release/ reads normalized artifacts and the release evidence a caller passes in. It imports only root tooling files, report/, adapters/types.ts, check/types.ts and the kernel; take anything else as part of the evidence."
+              },
+              {
+                "group": ["**/check/**", "!**/check/types.js"],
+                "message": "tooling/release/ imports only check/types.ts from check/. Move a shared helper into report/, or register the check with [...documentModelChecks, ...releaseChecks] instead of importing it."
+              },
+              {
+                "group": ["**/adapters/**", "!**/adapters/types.js"],
+                "message": "tooling/release/ imports only adapters/types.ts from adapters/. Read the normalized artifacts in the check input instead of running an adapter."
+              },
+              {
+                "regex": "^(\\.\\./)+(model|runtime|dsl|compiler)(/|$)",
+                "message": "tooling/release/ reads normalized artifacts and must not import definition/model/, runtime/, dsl/ or compiler/. Import the kernel piece instead, or take the value as part of the evidence."
+              },
+              {
+                "regex": "[Ss]ubgraph",
+                "message": "Subgraphs build on document-model tooling, not the reverse. Keep subgraph code out of tooling and pass what tooling needs in."
+              },
+              {
+                "group": [
+                  "*",
+                  "!./**",
+                  "!../**",
+                  "!@powerhousedao/shared/document-model"
+                ],
+                "message": "tooling/release/ imports no Node built-in and no package beyond the kernel's shared types (@powerhousedao/shared/document-model). Take what it needs as part of the evidence a caller passes in."
               }
             ]
           }
@@ -957,12 +1008,35 @@
                 "message": "inspect/ must not import check/. Move what both need into report/ or adapters/."
               },
               {
+                "regex": "(^|/)release(/|$)",
+                "message": "check/ and inspect/ sit below tooling/release/, so they never import it. Move what both need into report/ or adapters/types.ts."
+              },
+              {
                 "regex": "^(\\.\\./)+(model|runtime)(/|$)",
                 "message": "Tooling reads normalized artifacts and must not import definition/model/ or definition/runtime/. Import the kernel or compiler piece instead, or take the value as a parameter."
               },
               {
                 "regex": "[Ss]ubgraph",
                 "message": "Subgraphs build on document-model tooling, not the reverse. Keep subgraph code out of tooling and pass what tooling needs in."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/document-model/src/definition/tooling/*.ts",
+        "packages/document-model/src/definition/tooling/project/**/*.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)release(/|$)",
+                "message": "tooling/release/ builds on this layer, so this layer never imports it. Callers register release checks with checkProjectDefinitions(project, { checks: [...documentModelChecks, ...releaseChecks] })."
               }
             ]
           }
@@ -978,6 +1052,10 @@
           "error",
           {
             "patterns": [
+              {
+                "regex": "(^|/)release(/|$)",
+                "message": "tooling/release/ builds on this layer, so this layer never imports it. Callers register release checks with checkProjectDefinitions(project, { checks: [...documentModelChecks, ...releaseChecks] })."
+              },
               {
                 "regex": "(^|/)schema-first(/|$)",
                 "message": "Only tooling/project/project-definitions.ts imports tooling/schema-first/, so schema first stays deletable. Take the schema-first piece as a producer or adapter that project-definitions.ts passes in."
@@ -1004,6 +1082,10 @@
           "error",
           {
             "patterns": [
+              {
+                "regex": "(^|/)release(/|$)",
+                "message": "tooling/release/ builds on this layer, so this layer never imports it. Callers register release checks with checkProjectDefinitions(project, { checks: [...documentModelChecks, ...releaseChecks] })."
+              },
               {
                 "regex": "(^|/)project(/|$)",
                 "message": "tooling/project/ composes the other tooling layers and nothing below it imports it. Move the shared piece into adapters/ or report/, or take it as a parameter."
@@ -1087,6 +1169,272 @@
               {
                 "regex": "(^|/)document-model/(src|dist)(/|$)",
                 "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts as @experimental instead of reaching into a deep path."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["clis/ph-cli/src/services/package-build/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)commands(/|$)",
+                "message": "Services never import commands/. Move the shared piece into the service and have the command call it."
+              },
+              {
+                "regex": "(^|/)publish(/|$)",
+                "message": "The build never imports publish/. Move what both need into services/release/."
+              },
+              {
+                "regex": "(^|/)[Ss]ubgraph",
+                "message": "Subgraph build steps register through standardBuildSteps with `after`; the build core never imports them."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["clis/ph-cli/src/services/package-build/staging/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)commands(/|$)",
+                "message": "Services never import commands/. Move the shared piece into the service and have the command call it."
+              },
+              {
+                "regex": "(^|/)(steps|pipeline)(/|$)|(^|/)run-build(\\.js)?$|^(\\.\\./)+build(\\.js)?$",
+                "message": "staging/ sits below steps/, the pipeline, run-build.ts and services/build.ts. Take the value as a parameter instead of importing upward."
+              },
+              {
+                "regex": "(^|/)(publish|release|model)(/|$)",
+                "message": "staging/ only moves files. Keep release, publish and model logic in their own services."
+              },
+              {
+                "regex": "(^|/)[Ss]ubgraph",
+                "message": "Subgraph build steps register through standardBuildSteps with `after`; the build core never imports them."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["clis/ph-cli/src/services/package-build/steps/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)commands(/|$)",
+                "message": "Services never import commands/. Move the shared piece into the service and have the command call it."
+              },
+              {
+                "regex": "(^|/)publish(/|$)",
+                "message": "The build never imports publish/. Move what both need into services/release/."
+              },
+              {
+                "regex": "(^|/)[Ss]ubgraph",
+                "message": "Subgraph build steps register through standardBuildSteps with `after`; the build core never imports them."
+              },
+              {
+                "regex": "(^|/)run-build(\\.js)?$|^(\\.\\./)+build(\\.js)?$",
+                "message": "steps/ sits below run-build.ts and services/build.ts, which compose and run them. Put what a step needs in BuildContext instead of importing the runner."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["clis/ph-cli/src/services/compiler-output/**/*.ts"],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "process",
+            "message": "This module is pure: it reads no process state (cwd, env, pid, argv). Take the value as a parameter from the effectful caller."
+          }
+        ],
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)commands(/|$)",
+                "message": "Services never import commands/. Move the shared piece into the service and have the command call it."
+              },
+              {
+                "regex": "^(fs|fs/promises|child_process|os|process)$",
+                "message": "This module is pure: it imports no Node built-in except node:path and node:crypto, decides from values and touches no files, processes or process state. Take what it needs as a parameter, and do the I/O in staging/, steps/ or release/files.ts."
+              },
+              {
+                "group": ["node:*", "node:*/**", "!node:path", "!node:crypto"],
+                "message": "This module is pure: it imports no Node built-in except node:path and node:crypto, decides from values and touches no files, processes or process state. Take what it needs as a parameter, and do the I/O in staging/, steps/ or release/files.ts."
+              },
+              {
+                "regex": "^\\.\\./",
+                "message": "compiler-output/ holds TypeScript's output rules, which the definitions compiler and the build both read; it imports neither. Pass what it needs in."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["clis/ph-cli/src/services/package-build/pipeline/**/*.ts"],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "process",
+            "message": "This module is pure: it reads no process state (cwd, env, pid, argv). Take the value as a parameter from the effectful caller."
+          }
+        ],
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)commands(/|$)",
+                "message": "Services never import commands/. Move the shared piece into the service and have the command call it."
+              },
+              {
+                "regex": "^(fs|fs/promises|child_process|os|process)$",
+                "message": "This module is pure: it imports no Node built-in except node:path and node:crypto, decides from values and touches no files, processes or process state. Take what it needs as a parameter, and do the I/O in staging/, steps/ or release/files.ts."
+              },
+              {
+                "group": ["node:*", "node:*/**", "!node:path", "!node:crypto"],
+                "message": "This module is pure: it imports no Node built-in except node:path and node:crypto, decides from values and touches no files, processes or process state. Take what it needs as a parameter, and do the I/O in staging/, steps/ or release/files.ts."
+              },
+              {
+                "regex": "(^|/)(steps|staging|release|publish|model)(/|$)|(^|/)run-build(\\.js)?$|^(\\.\\./)+build(\\.js)?$",
+                "message": "The pipeline core and the inventory are the bottom of the build: they import no other build folder. Pass what they need in."
+              },
+              {
+                "regex": "(^|/)[Ss]ubgraph",
+                "message": "Subgraph build steps register through standardBuildSteps with `after`; the build core never imports them."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["clis/ph-cli/src/services/package-build/staging/inventory.ts"],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "process",
+            "message": "This module is pure: it reads no process state (cwd, env, pid, argv). Take the value as a parameter from the effectful caller."
+          }
+        ],
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)commands(/|$)",
+                "message": "Services never import commands/. Move the shared piece into the service and have the command call it."
+              },
+              {
+                "regex": "^(fs|fs/promises|child_process|os|process)$",
+                "message": "This module is pure: it imports no Node built-in except node:path and node:crypto, decides from values and touches no files, processes or process state. Take what it needs as a parameter, and do the I/O in staging/, steps/ or release/files.ts."
+              },
+              {
+                "group": ["node:*", "node:*/**", "!node:path", "!node:crypto"],
+                "message": "This module is pure: it imports no Node built-in except node:path and node:crypto, decides from values and touches no files, processes or process state. Take what it needs as a parameter, and do the I/O in staging/, steps/ or release/files.ts."
+              },
+              {
+                "regex": "(^|/)(steps|pipeline|staging|release|publish|model)(/|$)|(^|/)run-build(\\.js)?$|^(\\.\\./)+build(\\.js)?$",
+                "message": "inventory.ts is the pure part of staging/: it reads compiler-output/ and no other build folder. Pass what it needs in."
+              },
+              {
+                "regex": "^\\./",
+                "message": "inventory.ts is the one pure file in staging/; its siblings touch files, locks and processes. Take their results as parameters instead of importing them."
+              },
+              {
+                "regex": "(^|/)[Ss]ubgraph",
+                "message": "Subgraph build steps register through standardBuildSteps with `after`; the build core never imports them."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["clis/ph-cli/src/services/release/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)commands(/|$)",
+                "message": "Services never import commands/. Move the shared piece into the service and have the command call it."
+              },
+              {
+                "regex": "(^|/)(package-build|publish|model)(/|$)|(^|/)build(\\.js)?$",
+                "message": "services/release/ sits below the build, publish and model services; they import it, never the reverse. Take the value as a parameter."
+              },
+              {
+                "regex": "(^|/)[Ss]ubgraph",
+                "message": "Release evidence comes from reactor-api's host validation entry, never from a subgraph module. Expose what release needs from reactor-api's public entry instead."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "clis/ph-cli/src/services/release/revision.ts",
+        "clis/ph-cli/src/services/release/approval.ts",
+        "clis/ph-cli/src/services/release/issuance.ts",
+        "clis/ph-cli/src/services/release/npm-args.ts",
+        "clis/ph-cli/src/services/release/scalar-bindings.ts"
+      ],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "process",
+            "message": "This module is pure: it reads no process state (cwd, env, pid, argv). Take the value as a parameter from the effectful caller."
+          }
+        ],
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)commands(/|$)",
+                "message": "Services never import commands/. Move the shared piece into the service and have the command call it."
+              },
+              {
+                "regex": "^(fs|fs/promises|child_process|os|process)$",
+                "message": "This module is pure: it imports no Node built-in except node:path and node:crypto, decides from values and touches no files, processes or process state. Take what it needs as a parameter, and do the I/O in staging/, steps/ or release/files.ts."
+              },
+              {
+                "group": ["node:*", "node:*/**", "!node:path", "!node:crypto"],
+                "message": "This module is pure: it imports no Node built-in except node:path and node:crypto, decides from values and touches no files, processes or process state. Take what it needs as a parameter, and do the I/O in staging/, steps/ or release/files.ts."
+              },
+              {
+                "regex": "(^|/)(package-build|publish|model)(/|$)|(^|/)build(\\.js)?$|^\\./(files|evidence|verify)(\\.js)?$",
+                "message": "This release module is pure. Do the walk, npm pack, file reads and approval checks in release/files.ts, evidence.ts or verify.ts and pass the values in."
+              },
+              {
+                "regex": "(^|/)[Ss]ubgraph",
+                "message": "Release evidence comes from reactor-api's host validation entry, never from a subgraph module. Expose what release needs from reactor-api's public entry instead."
               }
             ]
           }

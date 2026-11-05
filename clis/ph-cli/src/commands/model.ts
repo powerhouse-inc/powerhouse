@@ -30,6 +30,19 @@ documentModelsDir, through one set of checks. Writes nothing.
 \`tsc\` cannot run these checks: a code-first model compiles when its module is
 evaluated.
 
+--release (experimental) runs the checks \`ph build --release\` runs: these,
+the release checks, and host validation, which validates every model and the
+package's scalars entry as a host that installed the package would.
+
+--prepack (experimental) loads nothing. It reads the release approval
+\`ph build --release\` wrote in .ph/build/release-approval.json and exits 0
+when it matches this package, 1 when it does not (missing, unreadable, stale
+or refused), naming the reasons, and 2 when it cannot be checked. To stop a
+plain \`npm publish\` too, add it to package.json, then run
+\`ph build --release\` (package.json is published, so the approval covers it):
+  "scripts": { "prepack": "ph-cli model check --prepack" }
+With --json it prints {"decision": ..., "reasons": [...]}.
+
 ${EXIT_CODES}
 
 ${OUTPUT("check")}

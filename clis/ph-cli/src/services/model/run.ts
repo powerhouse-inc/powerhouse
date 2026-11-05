@@ -1,14 +1,6 @@
-import {
-  uncachedDefinitionSourceRevision,
-  ViteTypeScriptSourceImportAdapter,
-} from "@powerhousedao/codegen/utils";
 import type { DefinitionCheckReport } from "@powerhousedao/shared/document-model";
-import {
-  DefinitionSourceLoader,
-  loadProjectDefinitions,
-  type ProjectDefinitions,
-} from "document-model/tooling";
-import { join } from "node:path";
+import type { ProjectDefinitions } from "document-model/tooling";
+import { type ProjectModules, readProjectDefinitions } from "./project.js";
 
 export type ModelStreams = {
   readonly out: (text: string) => void;
@@ -62,25 +54,6 @@ async function stdoutTo<T>(
   }
 }
 
-async function readProject<R>(
-  projectRoot: string,
-  read: (project: ProjectDefinitions) => R | Promise<R>,
-): Promise<R> {
-  const importer = new ViteTypeScriptSourceImportAdapter();
-  const loader = new DefinitionSourceLoader(importer);
-  try {
-    const project = await loadProjectDefinitions({
-      loader,
-      configFile: join(projectRoot, "powerhouse.config.json"),
-      packageRevision: uncachedDefinitionSourceRevision(),
-      importedFiles: (specifier) => importer.filesImportedBy(specifier),
-    });
-    return await read(project);
-  } finally {
-    await loader.dispose();
-  }
-}
-
 /**
  * Loads the project once, builds a report from it and prints the report.
  * Returns the exit code: 0 ok or skipped, 1 invalid, 2 failed or not run.
@@ -91,7 +64,10 @@ export async function runModelCommand<R extends { readonly status: Status }>(
   request: {
     readonly name: string;
     readonly json: boolean;
-    readonly read: (project: ProjectDefinitions) => R | Promise<R>;
+    readonly read: (
+      project: ProjectDefinitions,
+      modules: ProjectModules,
+    ) => R | Promise<R>;
     readonly render: (report: R) => string;
   },
   options: ModelRunOptions,
@@ -100,7 +76,7 @@ export async function runModelCommand<R extends { readonly status: Status }>(
   const projectRoot = options.projectRoot ?? process.cwd();
   try {
     const report = await stdoutTo(streams.err, () =>
-      readProject(projectRoot, request.read),
+      readProjectDefinitions(projectRoot, request.read),
     );
     const text = request.json ? JSON.stringify(report) : request.render(report);
     streams.out(`${text}\n`);

@@ -39,6 +39,12 @@ Publish a package to the Powerhouse registry. This is a thin wrapper around npm 
 that automatically sets the registry URL.
 
 This command:
+0. With a release approval from ph build --release (experimental), checks that it matches
+   the package and warns when it does not. --require-approval exits 1 instead; it forwards
+   only --tag, --access, --otp, --dry-run, --provenance, --json and --loglevel to npm,
+   refuses npm configuration in the environment that selects another package
+   (npm_config_workspace, npm_config_workspaces, npm_config_include_workspace_root),
+   and publishes with --ignore-scripts, so lifecycle scripts cannot change the checked files
 1. Resolves the registry URL (--registry flag > PH_REGISTRY_URL env > powerhouse.config.json > default)
 2. Checks authentication with the registry via npm whoami
 3. Forwards all additional arguments to npm publish
@@ -55,6 +61,33 @@ This command:
 
     if (!projectPath) {
       throw new Error("Could not find project path.");
+    }
+
+    const { checkApprovalBeforePublish } =
+      await import("../services/release/verify.js");
+    if (args.requireApproval) {
+      const {
+        ALLOWED_NPM_ARGUMENTS,
+        refusedNpmArguments,
+        targetSelectingNpmEnvironment,
+      } = await import("../services/release/npm-args.js");
+      const refused = refusedNpmArguments(args.forwardedArgs);
+      if (refused.length > 0) {
+        console.error(
+          `✘ ph publish --require-approval publishes only the package it checked, so it forwards only these npm arguments: ${ALLOWED_NPM_ARGUMENTS}. Not allowed: ${refused.join(" ")}`,
+        );
+        process.exit(1);
+      }
+      const selecting = targetSelectingNpmEnvironment(process.env);
+      if (selecting.length > 0) {
+        console.error(
+          `✘ ph publish --require-approval publishes only the package it checked, but the environment sets npm configuration that selects another package: ${selecting.join(", ")}. Unset it and publish again.`,
+        );
+        process.exit(1);
+      }
+    }
+    if (!checkApprovalBeforePublish(projectPath, args.requireApproval)) {
+      process.exit(1);
     }
 
     const { checkNpmAuth, npmPublish, resolveRegistryUrl } =
@@ -145,6 +178,21 @@ This command:
       console.log(
         ">>> command",
         `npm publish --registry ${registryUrl} ${forwardedArgs.join(" ")}`,
+      );
+    }
+
+    if (args.requireApproval) {
+      // The approval checked this package's files as they are: a prepack,
+      // prepare or prepublishOnly script would change them after that check,
+      // and an .npmrc `workspace` would publish another package, which npm
+      // refuses alongside --workspaces=false.
+      forwardedArgs = [
+        ...forwardedArgs,
+        "--ignore-scripts",
+        "--workspaces=false",
+      ];
+      console.log(
+        "Lifecycle scripts are skipped (--ignore-scripts) and workspaces are off (--workspaces=false), so npm publishes the files the approval matched.",
       );
     }
 
