@@ -550,7 +550,7 @@ describe("savePlacement", () => {
         children: Record<string, { reactor: Record<string, unknown> }>;
       }
     ).children.ui;
-    expect(ui.reactor.placement).toEqual({ drives: {} });
+    expect(ui.reactor.placement).toBeUndefined();
     expect(savePlacement(storage, seed, "shared", "main")).toEqual({
       ok: false,
       reason: SAVE_PLACEMENT.already,

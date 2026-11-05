@@ -54,4 +54,39 @@ describe("EnvironmentStep", () => {
     fireEvent.click(view.getByRole("button", { name: "Remove LOG_LEVEL" }));
     expect(onDraft).toHaveBeenLastCalledWith({ ...draft, env: {} });
   });
+
+  it("keeps the first row of a repeated name and says the later one is ignored", () => {
+    const { view, onDraft, draft } = renderStep(EnvironmentStep, {
+      envelope: stack(),
+      context: FULL,
+    });
+    const add = (key: string, value: string, index: number) => {
+      fireEvent.click(view.getByRole("button", { name: "Add a variable" }));
+      const name = view.getAllByRole("textbox", { name: "Name" })[index];
+      fireEvent.change(name, { target: { value: key } });
+      fireEvent.blur(name);
+      fireEvent.change(
+        view.getAllByRole("textbox", { name: `Value of ${key}` })[index],
+        { target: { value } },
+      );
+    };
+    add("LOG_LEVEL", "debug", 0);
+    add("LOG_LEVEL", "info", 1);
+    expect(onDraft).toHaveBeenLastCalledWith({
+      ...draft,
+      env: { LOG_LEVEL: "debug" },
+    });
+    expect(
+      view.getByText(
+        "Another row above sets this name, so this row is ignored.",
+      ),
+    ).toBeTruthy();
+    fireEvent.click(
+      view.getAllByRole("button", { name: "Remove LOG_LEVEL" })[0],
+    );
+    expect(onDraft).toHaveBeenLastCalledWith({
+      ...draft,
+      env: { LOG_LEVEL: "info" },
+    });
+  });
 });
