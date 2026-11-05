@@ -15,7 +15,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { addEdit, newDraft, requestOf } from "../builder/draft.ts";
 import { routeSeedOf } from "../builder/route.ts";
 import { browserReactors, reactorsOf } from "../builder/run.ts";
@@ -25,6 +25,7 @@ import {
   errorResponseSchema,
   exportResponseSchema,
   instanceSchema,
+  logsResponseSchema,
   TOKEN_HEADER,
   type Instance,
 } from "../controller/api.ts";
@@ -53,6 +54,9 @@ const SCAFFOLD_CONFIG = path.resolve(
   "../../../../packages/host-core/test/fixtures/hosts/scaffold/powerhouse.config.json",
 );
 const HOST_NAME = "monitor-e2e-switchboard";
+const READY_TIMEOUT_MS = 150_000;
+// A start's check runs in a worker bounded at 60 s; a stop at 30 s.
+const CALL_TIMEOUT_MS = 90_000;
 const TOKEN = "e2e".repeat(16);
 
 function makeProject(base: string): string {
@@ -202,7 +206,7 @@ describe.skipIf(process.platform === "win32")(
       controller = createMonitorController({
         projectRoots: [project, readerProject],
         tmpDir: path.join(base, "tmp"),
-        readyTimeoutMs: 150_000,
+        readyTimeoutMs: READY_TIMEOUT_MS,
       });
       const handler = createControllerHandler({ controller, token: TOKEN });
       server = http.createServer((req, res) =>
@@ -215,15 +219,27 @@ describe.skipIf(process.platform === "win32")(
       api = `http://127.0.0.1:${(server.address() as AddressInfo).port}/__ph-monitor`;
     });
 
+    // A failed or timed-out test can't leave an instance for the next one.
+    afterEach(async () => {
+      await controller.stopAll();
+    }, 120_000);
+
     afterAll(async () => {
       await controller.dispose();
       await new Promise((r) => server.close(r));
       rmSync(base, { recursive: true, force: true });
     });
 
-    const call = async (method: string, route: string, body?: unknown) => {
+    const call = async (
+      method: string,
+      route: string,
+      body?: unknown,
+      signal?: AbortSignal,
+    ) => {
+      const timeout = AbortSignal.timeout(CALL_TIMEOUT_MS);
       const res = await fetch(`${api}/${route}`, {
         method,
+        signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
         headers: {
           [TOKEN_HEADER]: TOKEN,
           ...(body ? { "content-type": "application/json" } : {}),
@@ -291,53 +307,63 @@ describe.skipIf(process.platform === "win32")(
       await expect(fetch(graphql, { method: "POST" })).rejects.toThrow();
     }, 240_000);
 
-    const settled = async (id: string): Promise<Instance> => {
-      const deadline = Date.now() + 150_000;
+    /** The instance once it leaves "starting"; throws, with its logs, past `budgetMs`. */
+    const settled = async (
+      id: string,
+      budgetMs: number,
+      signal: AbortSignal,
+    ): Promise<Instance> => {
+      const deadline = Date.now() + budgetMs;
       for (;;) {
+        signal.throwIfAborted();
         const instance = instanceSchema.parse(
-          (await call("GET", `instances/${id}`)).body,
+          (await call("GET", `instances/${id}`, undefined, signal)).body,
         );
-        if (instance.status !== "starting" || Date.now() > deadline) {
-          return instance;
+        if (instance.status !== "starting") return instance;
+        if (Date.now() > deadline) {
+          const { lines } = logsResponseSchema.parse(
+            (await call("GET", `instances/${id}/logs`, undefined, signal)).body,
+          );
+          throw new Error(
+            `${instance.host} still starting after ${budgetMs} ms:\n${lines
+              .slice(-40)
+              .map((line) => line.text)
+              .join("\n")}`,
+          );
         }
         await new Promise((r) => setTimeout(r, 500));
       }
     };
 
-    it("resolves an in-place host's $output from a switchboard running in place beside it", async () => {
-      const posted = await call("POST", "instances", {
-        project: readerProject,
-        host: "reader",
-      });
+    // Each start's own budget; the alone reader fails before it serves.
+    const ALONE_MS = 30_000;
+    const START_MS = 120_000;
+
+    it("resolves an in-place host's $output from a switchboard running in place beside it", async ({
+      signal,
+    }) => {
+      const post = (host: string) =>
+        call("POST", "instances", { project: readerProject, host }, signal);
+      const posted = await post("reader");
       expect(posted.status, JSON.stringify(posted.body)).toBe(202);
-      const alone = instanceSchema.parse(posted.body);
-      expect((await settled(alone.id)).error?.message).toMatch(
+      const alone = await settled(
+        instanceSchema.parse(posted.body).id,
+        ALONE_MS,
+        signal,
+      );
+      // Exited, not timed out: the resolver fails before anything starts.
+      expect(alone.error?.phase).toBe("exited");
+      expect(alone.error?.message).toMatch(
         /needs outputs from host "sb", which is not running/,
       );
-      await call("DELETE", `instances/${alone.id}`);
+      await call("DELETE", `instances/${alone.id}`, undefined, signal);
 
-      const sb = instanceSchema.parse(
-        (
-          await call("POST", "instances", {
-            project: readerProject,
-            host: "sb",
-          })
-        ).body,
-      );
-      expect((await settled(sb.id)).status).toBe("running");
-      const reader = instanceSchema.parse(
-        (
-          await call("POST", "instances", {
-            project: readerProject,
-            host: "reader",
-          })
-        ).body,
-      );
-      const running = await settled(reader.id);
+      const sb = instanceSchema.parse((await post("sb")).body);
+      expect((await settled(sb.id, START_MS, signal)).status).toBe("running");
+      const reader = instanceSchema.parse((await post("reader")).body);
+      const running = await settled(reader.id, START_MS, signal);
       expect(running.error).toBeUndefined();
       expect(running.status).toBe("running");
-      await call("DELETE", `instances/${reader.id}`);
-      await call("DELETE", `instances/${sb.id}`);
     }, 360_000);
 
     it("starts a builder draft with a second switchboard, attaches both, removes the copy on stop", async () => {
