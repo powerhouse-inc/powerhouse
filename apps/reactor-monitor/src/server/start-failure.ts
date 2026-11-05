@@ -39,7 +39,7 @@ function logLine(line: string): boolean {
 
 // Words a failure says; progress and status lines ("catch-up: … 0%") don't.
 const FAILURE_WORDS =
-  /\b(?:error|errors|fail(?:s|ed|ure)?|refused|denied|EADDRINUSE|EACCES|ENOENT|already in use|cannot|can't|could not|couldn't|unable to|not found|no such|invalid|missing|timed out)\b/i;
+  /\b(?:error|errors|fail(?:s|ed|ure)?|refused|denied|EADDRINUSE|EACCES|ENOENT|already in use|cannot|can't|could not|couldn't|unable to|not found|no such|invalid|missing|timed out|not running|not set|not loaded|not a token|needs outputs|no outputs?|exports no|malformed)\b/i;
 
 /** A line saying what failed: not a log, progress or status line. */
 function failureLine(line: string): boolean {
@@ -52,22 +52,39 @@ function failureLine(line: string): boolean {
   );
 }
 
-/** The last line only: an uncaught error past its stack, else a failure line. */
+/**
+ * The last line, past its indented continuations: an uncaught error past its
+ * stack, else a failure line.
+ */
 export function failureReason(tail: string): string | undefined {
   const lines = tail
     .split("\n")
     .map((line) => line.trimEnd())
     .filter((line) => line.trim() !== "" && !noise(line));
   let at = lines.length - 1;
+  let dump = false;
   while (at >= 0 && (/^\s/.test(lines[at]) || /^[}\]]$/.test(lines[at]))) {
+    if (!/^\s/.test(lines[at])) dump = true;
     at -= 1;
   }
   if (at < 0) return undefined;
+  // zod's issues (`✖ …`, `  → at …`) start in column 0 under their header.
+  if (lines[at].startsWith("✖")) {
+    let head = at;
+    while (head > 0 && /^(?:\s|✖|→)/.test(lines[head])) head -= 1;
+    if (!/^(?:\s|✖|→)/.test(lines[head]) && lines[head].endsWith(":")) {
+      at = head;
+    }
+  }
   const error = ERROR_LINE.exec(lines[at]);
-  if (error) return error[1];
-  return at === lines.length - 1 && failureLine(lines[at])
-    ? lines[at]
-    : undefined;
+  if (!error && (dump || !failureLine(lines[at]))) return undefined;
+  const line = error ? error[1] : lines[at];
+  if (!line.endsWith(":")) return line;
+  // A line ending in ":" leads its details: name the first of them with it.
+  const detail = lines[at + 1]?.trim().replace(/^[-*•✖]\s+/, "");
+  return detail && !/^[[{(]$/.test(detail)
+    ? `${line} ${detail}`
+    : line.slice(0, -1);
 }
 
 function sentence(text: string): string {

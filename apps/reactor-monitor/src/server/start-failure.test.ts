@@ -180,4 +180,77 @@ describe("startFailure", () => {
       "hosts/cli could not be loaded: no host.js",
     );
   });
+
+  it("names a resolve failure past its indented continuation", () => {
+    const reason =
+      'hosts/assistant/host.js: assistant needs outputs from host "switchboard", which is not running. Start it first: ph run switchboard (or run a compound that includes it).';
+    const tail = [
+      reason,
+      "  (needed by `reactor.backends.switchboard.remote.url`: $output switchboard › drives.powerhouse.url)",
+      "",
+    ].join("\n");
+    expect(startFailure(exited(tail))).toEqual({
+      message: `Stopped while starting: ${reason}`,
+      phase: "exited",
+      tail,
+      context: "ph run cli exited (code 1) before writing its run record.",
+    });
+    const shared =
+      'hosts/assistant/host.js: assistant needs outputs from host "switchboard", which runs as member "sb" of "cli" and member "sb" of "desktop"; stop all but one, or run switchboard on its own.';
+    expect(
+      failureReason(
+        `${shared}\n  (needed by \`a\`: $output switchboard › origin)`,
+      ),
+    ).toBe(shared);
+  });
+
+  it("names nothing when a failure line opens an object dump", () => {
+    const tail = ["hosts/cli could not be loaded {", '  "a": 1', "}"].join(
+      "\n",
+    );
+    expect(failureReason(tail)).toBe(undefined);
+  });
+
+  it("names a line ending in a colon with its first detail", () => {
+    const tail = [
+      'hosts/connect/host.js failed validation against the hostSchema of "x":',
+      "  - port: expected number",
+      "  - name: required",
+    ].join("\n");
+    expect(failureReason("hosts/cli failed its check:")).toBe(
+      "hosts/cli failed its check",
+    );
+    expect(failureReason(tail)).toBe(
+      'hosts/connect/host.js failed validation against the hostSchema of "x": port: expected number',
+    );
+  });
+
+  it("names the resolver's other failures", () => {
+    for (const reason of [
+      "hosts/sb/host.js: reads $env FOO, which is not set. Set FOO in the environment.",
+      'hosts/ui/host.js: reads $output sb › origin, but host "sb" has no output at origin.',
+      "hosts/ui/host.js: is a malformed $output token.",
+      "hosts/ui/host.js: reads $output sb › origin, but no outputs are available here.",
+      'hosts/ui/host.js: names host "sb", which was not loaded.',
+    ]) {
+      expect(failureReason(`${reason}\n  (needed by \`a\`)`)).toBe(reason);
+    }
+  });
+
+  it("names a zod error's header with its first issue", () => {
+    const tail = [
+      "hosts/web/host.js: invalid compound host:",
+      "✖ Invalid input: expected number, received string",
+      "  → at port",
+      "✖ Invalid input: expected string, received undefined",
+      "  → at name",
+    ].join("\n");
+    expect(failureReason(tail)).toBe(
+      "hosts/web/host.js: invalid compound host: Invalid input: expected number, received string",
+    );
+    expect(failureReason("✖ Build failed")).toBe("✖ Build failed");
+    expect(failureReason("hosts/x failed its check:\n  [\n  1\n  ]")).toBe(
+      "hosts/x failed its check",
+    );
+  });
 });

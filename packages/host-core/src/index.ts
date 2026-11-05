@@ -288,6 +288,7 @@ export {
 export * from "./resolve/index.js";
 export {
   loadProducers,
+  OUTPUT_DATA_DIRS_ENV,
   processResolveEnv,
   producerOutputsSchemas,
   runRecordOutputSource,
