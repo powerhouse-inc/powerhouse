@@ -1,7 +1,6 @@
 import {
   getCatalogScalar,
   SCALAR_DEFINITION_VERSION,
-  type ScalarDefinition,
 } from "document-model/scalars";
 import { specifiedScalarTypes } from "graphql";
 import { reservedTypeNames } from "../utils/create-schema.js";
@@ -53,6 +52,11 @@ function reservedBy(
   return reservedTypeNames([]).has(name) ? "document-model schema" : undefined;
 }
 
+/**
+ * @experimental The registry this host serves package scalars from, and the
+ * exports it refuses; ph-cli builds one to validate a package as this host
+ * would.
+ */
 export function buildScalarRegistry(
   packages: ReadonlyMap<string, readonly ScalarExport[]>,
 ): { registry: ScalarRegistry; refusals: readonly ScalarRefusal[] } {

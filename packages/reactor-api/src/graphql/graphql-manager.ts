@@ -42,6 +42,10 @@ import {
   HttpRouteService,
   type IHttpScope,
 } from "../http/index.js";
+import {
+  describeHostValidationFinding,
+  validateDocumentModelsForHost,
+} from "../packages/host-validation.js";
 import { debounce } from "../packages/util.js";
 import {
   reportFailure,
@@ -220,6 +224,12 @@ export type GraphQLManagerOptions = {
    * periodic sweep off, leaving only the re-check on invalidation.
    */
   wsCredentialRecheckIntervalMs?: number;
+  /**
+   * @experimental What admission does with a model that host validation
+   * reports a finding for: `log` (the default) serves it and logs, `refuse`
+   * leaves it out of the served schema and logs one refusal per model.
+   */
+  hostValidation?: "log" | "refuse";
 };
 
 type TrackedOrigin = Exclude<
@@ -416,6 +426,11 @@ export class GraphQLManager {
 
   readonly #scalarBindings = new PackageScalarBindingLog();
 
+  readonly #hostValidation: "log" | "refuse";
+
+  /** Host-validation refusals logged: model id, version and findings. */
+  #hostRefusals = new Set<string>();
+
   readonly #schemaCache: DocumentModelSchemaCache;
 
   /** The schemas of the admitted document models. */
@@ -526,6 +541,7 @@ export class GraphQLManager {
     this.attachments = options.attachments;
     this.inspection = options.inspection;
     this.#reporting = { logger: options.logger, report: options.reportError };
+    this.#hostValidation = options.hostValidation ?? "log";
 
     this.driveOwnershipCache = new DriveOwnershipCache(
       options.driveStore ?? this.#readClient,
@@ -847,7 +863,7 @@ export class GraphQLManager {
     );
     for (const name of this.#scalars.keys()) reserved.set(name, true);
     const { admitted, schemas, refusals } = admitDocumentModels(
-      this.#schemaCache.resolve(models),
+      this.#schemaCache.resolve(this.#hostValidated(models)),
       reserved,
     );
     const logged = new Set<string>();
@@ -871,6 +887,36 @@ export class GraphQLManager {
     this.#modelSchemas = schemas;
     this.#scalarBindings.report(admitted, this.#scalars, this.logger);
     return admitted;
+  }
+
+  /** Under `hostValidation: "refuse"`, the models host validation finds
+   * nothing in. Each refusal logs once until it goes away. */
+  #hostValidated(models: DocumentModelModule[]): DocumentModelModule[] {
+    if (this.#hostValidation === "log") return models;
+    const logged = new Set<string>();
+    const kept = models.filter((model) => {
+      const { findings } = validateDocumentModelsForHost(
+        [model],
+        this.#scalars,
+      );
+      if (findings.length === 0) return true;
+      const id = model.documentModel.global.id;
+      const reasons = findings.map(describeHostValidationFinding).join("; ");
+      const refusal = `${id}\n${model.version}\n${reasons}`;
+      logged.add(refusal);
+      if (!this.#hostRefusals.has(refusal)) {
+        this.logger.error(
+          model.version === undefined
+            ? "Refusing document model @documentType from the GraphQL schema: @reasons"
+            : `Refusing version ${model.version} of document model @documentType from the GraphQL schema: @reasons`,
+          id,
+          reasons,
+        );
+      }
+      return false;
+    });
+    this.#hostRefusals = logged;
+    return kept;
   }
 
   async #setupDocumentModelSubgraphs(

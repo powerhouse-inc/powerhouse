@@ -154,6 +154,7 @@ export type HarnessOptions = HarnessClients & {
   inspection?: IReactorInspectionSource;
   reportError?: (error: unknown) => void;
   gatewayAdapter?: IGatewayAdapter<Context>;
+  hostValidation?: "log" | "refuse";
 };
 
 export function makeHarness(options: HarnessOptions = {}) {
@@ -199,6 +200,7 @@ export function makeHarness(options: HarnessOptions = {}) {
     attachments: options.attachments,
     inspection: options.inspection,
     reportError: options.reportError,
+    hostValidation: options.hostValidation,
   });
 
   return {
