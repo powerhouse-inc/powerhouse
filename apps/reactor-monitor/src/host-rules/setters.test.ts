@@ -87,6 +87,28 @@ describe("applySetters", () => {
     });
   });
 
+  it("drops a router or placement block its last key leaves empty", () => {
+    const D = { $delete: true } as const;
+    const reactor = `${SB}.reactor`;
+    const result = apply(
+      { path: `${reactor}.router.probeTimeoutMs`, value: 1000 },
+      { path: `${reactor}.placement.drives.lab`, value: "main" },
+      { path: `${reactor}.placement.newDrives`, value: "main" },
+      { path: `${reactor}.router.probeTimeoutMs`, value: D },
+      { path: `${reactor}.placement.drives.lab`, value: D },
+    );
+    expect(result.issues).toEqual([]);
+    expect(at(result, reactor)).not.toHaveProperty("router");
+    expect(at(result, `${reactor}.placement`)).toEqual({ newDrives: "main" });
+    const cleared = applySetters(result.envelope, [
+      { path: `${reactor}.placement.newDrives`, value: D },
+    ]);
+    expect(at(cleared, reactor)).not.toHaveProperty("placement");
+    // An empty backends block is not the same as none.
+    const emptied = apply({ path: `${reactor}.backends.main`, value: D });
+    expect(at(emptied, `${reactor}.backends`)).toEqual({});
+  });
+
   it("deletes a missing key without creating its parents", () => {
     const result = apply({
       path: "members.switchboard.reactor.backends.other.readModel",
