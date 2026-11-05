@@ -29,6 +29,10 @@ import {
   type DocumentViewDatabase,
   type ProcessorCursorRow,
 } from "../read-models/types.js";
+import {
+  lowerCursorsAboveHead,
+  type CursorRowsDatabase,
+} from "../read-models/cursor-rows.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import { findPurged } from "../storage/kysely/document-purges.js";
 import {
@@ -167,6 +171,12 @@ export class ProcessorManager
   }
 
   override async init(): Promise<void> {
+    // Before the rows load, so no processor starts above a lost index tail.
+    await lowerCursorsAboveHead(
+      this.db as unknown as Kysely<CursorRowsDatabase>,
+      (cursor) => cursor.kind === "processor",
+      this.logger,
+    );
     await this.loadAllCursors();
     await super.init();
     await this.discoverExistingDrives();
