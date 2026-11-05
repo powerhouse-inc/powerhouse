@@ -72,14 +72,18 @@ function IssueTable({
         <thead>
           <tr>
             <th>Stage</th>
+            <th>File</th>
             <th>Path</th>
             <th>Message</th>
           </tr>
         </thead>
         <tbody>
           {issues.map((issue, index) => (
-            <tr key={`${issue.path}:${index}`}>
+            <tr key={`${issue.file}:${issue.path}:${index}`}>
               <td>{issue.stage}</td>
+              <td>
+                <code>{issue.file}</code>
+              </td>
               <td>
                 <code>{issue.path || "(root)"}</code>
               </td>
@@ -725,14 +729,16 @@ function ControllerSection({
           <ul className="rm-switchboards__instances">
             {instances.map((instance) => (
               <InstanceRow
-                attached={managed.attachedIds.has(instance.id)}
+                attached={managed.isAttached(instance)}
                 instance={instance}
                 key={instance.id}
                 logs={logs[instance.id]}
                 onAttach={() => managed.attach(instance)}
                 onStop={() => void stop(instance.id)}
                 onToggleLogs={() => toggleLogs(instance.id)}
-                projectName={projectName(instance.project)}
+                projectName={projectName(
+                  instance.source?.project ?? instance.project,
+                )}
               />
             ))}
           </ul>

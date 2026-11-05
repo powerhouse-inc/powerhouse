@@ -104,6 +104,10 @@ function fakeManaged(
     visible: [],
     withheld: [],
     attachedIds: new Set(),
+    isAttached: () => false,
+    covered: new Map(),
+    unreachable: new Map(),
+    setUnreachable: vi.fn(),
     owned: new Map(),
     reactors: new Map(),
     notices: [],
@@ -236,7 +240,7 @@ describe("SwitchboardsPanel", () => {
     );
   });
 
-  it("checks a host with the env map and lists issues by path", async () => {
+  it("checks a host with the env map and lists issues by file and path", async () => {
     const issues: HostIssue[] = [
       {
         stage: "resolve",
@@ -265,6 +269,7 @@ describe("SwitchboardsPanel", () => {
 
     const table = await view.findByTestId("switchboards-issues");
     expect(table.textContent).toMatch(/resolve/);
+    expect(within(table).getByText("hosts/sb/host.js")).toBeTruthy();
     expect(within(table).getByText("runner.port")).toBeTruthy();
     expect(table.textContent).toMatch(/MONITOR_PORT is not set/);
     expect(table.textContent).toMatch(/set it in the env/);
@@ -389,6 +394,25 @@ describe("SwitchboardsPanel", () => {
       ["cli-connect connect", "http://localhost:6347/"],
       ["agent agent API", "http://127.0.0.1:4920/v1"],
     ]);
+  });
+
+  it("names a copy's row by the project it was copied from", async () => {
+    const fake = fakeClient();
+    const view = render(
+      <SwitchboardsPanel managed={fakeManaged(fake.client)} pollMs={POLL} />,
+    );
+    await ready(view);
+
+    fireEvent.click(view.getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(fake.started).toHaveLength(1));
+    const row = await view.findByTestId("switchboard-inst-1");
+    const instance = fake.instances.get("inst-1")!;
+    instance.project = "/tmp/ph-monitor-1/inst-1/project";
+    instance.source = { project: ROOT, host: "sb" };
+    fake.run("inst-1");
+    await waitFor(() => expect(row.textContent).toMatch(/running/));
+    expect(within(row).getByText("proj")).toBeTruthy();
+    expect(within(row).queryByText("project")).toBeNull();
   });
 
   it("offers no Attach for an instance that serves no switchboard", async () => {

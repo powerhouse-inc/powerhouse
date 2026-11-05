@@ -54,6 +54,8 @@ export type ProvisionPanelProps = {
   readonly onSelect: (name: string) => void;
   readonly onProvision: (request: ProvisionRequest) => void;
   readonly onKill: (name: string) => void;
+  /** Ready remotes that no longer answer, by name: why. */
+  readonly unreachable?: ReadonlyMap<string, string>;
 };
 
 function statusLabel(entry: ManagedReactorEntry): string {
@@ -63,12 +65,36 @@ function statusLabel(entry: ManagedReactorEntry): string {
   return entry.status;
 }
 
+function badgeOf(
+  entry: ManagedReactorEntry,
+  unreachable: string | undefined,
+): { text: string; title: string; className: string } {
+  if (entry.status === "ready" && unreachable !== undefined) {
+    return {
+      text: "unreachable",
+      title: `unreachable: ${unreachable}`,
+      className: "rm-badge rm-badge-error",
+    };
+  }
+  return {
+    text: entry.status,
+    title: statusLabel(entry),
+    className:
+      entry.status === "ready"
+        ? "rm-badge rm-badge-ok"
+        : entry.status === "failed"
+          ? "rm-badge rm-badge-error"
+          : "rm-badge",
+  };
+}
+
 export function ProvisionPanel({
   entries,
   selected,
   onSelect,
   onProvision,
   onKill,
+  unreachable,
 }: ProvisionPanelProps) {
   const [name, setName] = useState("");
   const [kind, setKind] = useState<ReactorKind>("in-process");
@@ -235,44 +261,38 @@ export function ProvisionPanel({
         </p>
       ) : (
         <ul className="rm-reactor-list">
-          {entries.map((entry) => (
-            <li
-              key={entry.name}
-              className={
-                entry.name === selected
-                  ? "rm-reactor-item rm-reactor-item-selected"
-                  : "rm-reactor-item"
-              }
-            >
-              <button
-                className="rm-reactor-select"
-                onClick={() => onSelect(entry.name)}
-                type="button"
+          {entries.map((entry) => {
+            const badge = badgeOf(entry, unreachable?.get(entry.name));
+            return (
+              <li
+                key={entry.name}
+                className={
+                  entry.name === selected
+                    ? "rm-reactor-item rm-reactor-item-selected"
+                    : "rm-reactor-item"
+                }
               >
-                <strong>{entry.name}</strong>
-                <span className="rm-note">{entry.descriptor.kind}</span>
-                <span
-                  className={
-                    entry.status === "ready"
-                      ? "rm-badge rm-badge-ok"
-                      : entry.status === "failed"
-                        ? "rm-badge rm-badge-error"
-                        : "rm-badge"
-                  }
-                  title={statusLabel(entry)}
+                <button
+                  className="rm-reactor-select"
+                  onClick={() => onSelect(entry.name)}
+                  type="button"
                 >
-                  {entry.status}
-                </span>
-              </button>
-              <button
-                className="rm-btn rm-btn-small"
-                onClick={() => onKill(entry.name)}
-                type="button"
-              >
-                Kill
-              </button>
-            </li>
-          ))}
+                  <strong>{entry.name}</strong>
+                  <span className="rm-note">{entry.descriptor.kind}</span>
+                  <span className={badge.className} title={badge.title}>
+                    {badge.text}
+                  </span>
+                </button>
+                <button
+                  className="rm-btn rm-btn-small"
+                  onClick={() => onKill(entry.name)}
+                  type="button"
+                >
+                  Kill
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </aside>

@@ -192,3 +192,40 @@ export function managedDescriptors(
     ];
   });
 }
+
+/** The GraphQL URL of the switchboard a remote descriptor's drive address names. */
+export function switchboardOf(
+  descriptor: ReactorDescriptor,
+): string | undefined {
+  return descriptor.kind === "remote" && descriptor.remote
+    ? switchboardOfDrive(descriptor.remote.url)?.graphql
+    : undefined;
+}
+
+/** The descriptors not managed by an instance, by the switchboard each links to. */
+export function plainRemotes(
+  descriptors: readonly ReactorDescriptor[],
+): Map<string, string[]> {
+  const byGraphql = new Map<string, string[]>();
+  for (const descriptor of descriptors) {
+    if (isManaged(descriptor)) continue;
+    const graphql = switchboardOf(descriptor);
+    if (graphql === undefined) continue;
+    byGraphql.set(graphql, [
+      ...(byGraphql.get(graphql) ?? []),
+      descriptor.name,
+    ]);
+  }
+  return byGraphql;
+}
+
+/** Plain remote descriptors at a switchboard the running instance serves. */
+export function coveredBy(
+  instance: Instance,
+  descriptors: readonly ReactorDescriptor[],
+): string[] {
+  const plain = plainRemotes(descriptors);
+  return managedDescriptors(instance, []).flatMap(
+    (descriptor) => plain.get(switchboardOf(descriptor) ?? "") ?? [],
+  );
+}

@@ -20,11 +20,14 @@ import {
   type ControllerClient,
 } from "./client.js";
 import {
+  coveredBy,
   instanceReactors,
   isManaged,
   managedDescriptors,
   ownerOf,
+  plainRemotes,
   servesDescriptor,
+  switchboardOf,
   type InstanceReactors,
   type ManagedBy,
   type ManagedDescriptor,
@@ -65,13 +68,21 @@ export interface ManagedDescriptors {
   withheld: readonly WithheldDescriptor[];
   /** Instance ids with a descriptor in the active set. */
   attachedIds: ReadonlySet<string>;
+  /** Whether every switchboard the instance serves is in the active set. */
+  isAttached: (instance: Instance) => boolean;
+  /** Plain remote descriptors a running instance serves, by name: those instances. */
+  covered: ReadonlyMap<string, readonly string[]>;
+  /** Ready remotes known to be unreachable, by name: why. */
+  unreachable: ReadonlyMap<string, string>;
+  /** Records a remote's last re-check; `reason` undefined when it answered. */
+  setUnreachable: (name: string, reason?: string) => void;
   /** Browser reactors in the active set, by the instance that owns them. */
   owned: ReadonlyMap<string, readonly string[]>;
   /** Each instance's reactors in the active set, by the member each one is. */
   reactors: ReadonlyMap<string, InstanceReactors>;
   notices: readonly ManagedNotice[];
   dismissNotice: (id: number) => void;
-  /** Adds a descriptor per switchboard the instance serves. */
+  /** Adds a descriptor per switchboard the instance serves and the set lacks. */
   attach: (instance: Instance) => void;
   /** handleKill's managed branch: stops the descriptor's instance. */
   kill: (name: string) => void;
@@ -88,6 +99,10 @@ const keyOf = (descriptor: ManagedDescriptor) =>
   `${descriptor.name}\u0000${descriptor.managedBy.instanceId}\u0000${descriptor.managedBy.member ?? ""}`;
 
 const LIVE = new Set(["starting", "running"]);
+
+/** A descriptor's name and drive address: a same-named reactor elsewhere is another. */
+const identityOf = (descriptor: ReactorDescriptor) =>
+  `${descriptor.name}\u0000${descriptor.remote?.url ?? ""}`;
 
 /** One descriptor per (instance, member). */
 const targetOf = (managedBy: ManagedBy) =>
@@ -121,6 +136,62 @@ export function useManagedDescriptors(
       for (const timer of pending) clearTimeout(timer);
       pending.clear();
     };
+  }, []);
+
+  /** Per running instance, the plain remote descriptors it serves, as identities. */
+  const covering = useRef(new Map<string, ReadonlySet<string>>());
+  /** Unreachable marks by name, each for the descriptor (url) it was made on. */
+  const [marks, setMarks] = useState<
+    ReadonlyMap<string, { identity: string; reason: string }>
+  >(() => new Map());
+  /** Marks `names` unreachable for `reason`, or clears them without one. */
+  const mark = useCallback((names: readonly string[], reason?: string) => {
+    const current = new Map(
+      latest.current.map((d) => [d.name, identityOf(d)] as const),
+    );
+    setMarks((previous) => {
+      const next = new Map(previous);
+      for (const name of names) {
+        const identity = current.get(name);
+        if (reason === undefined) next.delete(name);
+        // A name that left the set meanwhile is not marked.
+        else if (identity !== undefined) next.set(name, { identity, reason });
+      }
+      const same =
+        next.size === previous.size &&
+        [...next].every(
+          ([name, m]) =>
+            previous.get(name)?.identity === m.identity &&
+            previous.get(name)?.reason === m.reason,
+        );
+      return same ? previous : next;
+    });
+  }, []);
+  const setUnreachable = useCallback(
+    (name: string, reason?: string) => mark([name], reason),
+    [mark],
+  );
+
+  /** Records what a running instance serves; returns the names newly covered. */
+  const cover = useCallback((instance: Instance): string[] => {
+    const before = covering.current.get(instance.id) ?? new Set<string>();
+    const byName = new Map(latest.current.map((d) => [d.name, d] as const));
+    const covered = coveredBy(instance, latest.current).map((name) => ({
+      name,
+      identity: identityOf(byName.get(name)!),
+    }));
+    const identities = new Set(covered.map((c) => c.identity));
+    if (identities.size > 0) covering.current.set(instance.id, identities);
+    else covering.current.delete(instance.id);
+    const fresh = covered.filter((c) => !before.has(c.identity));
+    if (
+      fresh.length > 0 ||
+      identities.size !== before.size ||
+      [...before].some((identity) => !identities.has(identity))
+    ) {
+      bump();
+    }
+    return fresh.map((c) => c.name);
   }, []);
 
   const [notices, setNotices] = useState<ManagedNotice[]>([]);
@@ -196,6 +267,12 @@ export function useManagedDescriptors(
         failures.current.delete(key);
       }
     }
+    const identities = new Set(descriptors.map(identityOf));
+    setMarks((previous) =>
+      [...previous.values()].every((m) => identities.has(m.identity))
+        ? previous
+        : new Map([...previous].filter(([, m]) => identities.has(m.identity))),
+    );
     const ownerIds = new Set(descriptors.flatMap((d) => ownerOf(d) ?? []));
     for (const id of owners.current.keys()) {
       if (!ownerIds.has(id)) owners.current.delete(id);
@@ -319,6 +396,28 @@ export function useManagedDescriptors(
   const attachedIds = new Set(
     managedList.map((descriptor) => descriptor.managedBy.instanceId),
   );
+  const isAttached = (instance: Instance) => {
+    if (attachedIds.has(instance.id)) return true;
+    const plain = plainRemotes(descriptors);
+    const served = managedDescriptors(instance, []);
+    return (
+      served.length > 0 &&
+      served.every((descriptor) => plain.has(switchboardOf(descriptor) ?? ""))
+    );
+  };
+  const identities = new Map(descriptors.map((d) => [identityOf(d), d.name]));
+  const covered = new Map<string, string[]>();
+  for (const [id, coveredIds] of covering.current) {
+    for (const identity of coveredIds) {
+      const name = identities.get(identity);
+      if (name !== undefined)
+        covered.set(name, [...(covered.get(name) ?? []), id]);
+    }
+  }
+  const unreachable = new Map<string, string>();
+  for (const [name, m] of marks) {
+    if (identities.get(m.identity) === name) unreachable.set(name, m.reason);
+  }
 
   const owned = new Map<string, string[]>();
   for (const descriptor of descriptors) {
@@ -334,10 +433,16 @@ export function useManagedDescriptors(
       const attached = new Set(
         current.filter(isManaged).map((d) => targetOf(d.managedBy)),
       );
+      const plain = plainRemotes(current);
+      mark(cover(instance));
       const added = managedDescriptors(
         instance,
         current.map((d) => d.name),
-      ).filter((descriptor) => !attached.has(targetOf(descriptor.managedBy)));
+      ).filter(
+        (descriptor) =>
+          !attached.has(targetOf(descriptor.managedBy)) &&
+          !plain.has(switchboardOf(descriptor) ?? ""),
+      );
       if (added.length === 0) return;
       for (const descriptor of added) {
         probes.current.set(keyOf(descriptor), { state: "released" });
@@ -347,11 +452,12 @@ export function useManagedDescriptors(
       bump();
       onAttached?.(added[0].name);
     },
-    [onAttached, update],
+    [cover, mark, onAttached, update],
   );
 
   const kill = useCallback(
     (name: string) => {
+      mark([name]);
       const descriptor = latest.current.find((d) => d.name === name);
       if (!descriptor || !isManaged(descriptor)) return;
       probes.current.delete(keyOf(descriptor));
@@ -374,7 +480,7 @@ export function useManagedDescriptors(
         })
         .finally(() => stopping.current.delete(id));
     },
-    [client, drop, notify],
+    [client, drop, mark, notify],
   );
 
   const stopInstance = useCallback(
@@ -428,6 +534,32 @@ export function useManagedDescriptors(
           );
         }
       }
+      for (const instance of instances) {
+        if (instance.status === "running") mark(cover(instance));
+      }
+      const stopped = [...covering.current].filter(
+        ([id]) => byId.get(id)?.status !== "running",
+      );
+      for (const [id] of stopped) covering.current.delete(id);
+      if (stopped.length > 0) bump();
+      // A switchboard another running instance still serves stays reachable.
+      const served = new Set(
+        [...covering.current.values()].flatMap((ids) => [...ids]),
+      );
+      const byIdentity = new Map(
+        latest.current.map((d) => [identityOf(d), d.name] as const),
+      );
+      for (const [id, coveredIds] of stopped) {
+        const status = byId.get(id)?.status;
+        mark(
+          [...coveredIds]
+            .filter((identity) => !served.has(identity))
+            .flatMap((identity) => byIdentity.get(identity) ?? []),
+          status === undefined
+            ? "the controller no longer runs its switchboard"
+            : `its switchboard is ${status}`,
+        );
+      }
       // Only owners known to exist: a list sent before a start can't drop.
       const gone = new Set(
         [...owners.current]
@@ -437,7 +569,7 @@ export function useManagedDescriptors(
       );
       if (gone.size > 0) drop(() => false, undefined, gone);
     },
-    [drop],
+    [cover, drop, mark],
   );
 
   const dropInstance = useCallback(
@@ -447,8 +579,11 @@ export function useManagedDescriptors(
   );
 
   const forget = useCallback(
-    (name: string) => drop((d) => d.name === name),
-    [drop],
+    (name: string) => {
+      mark([name]);
+      drop((d) => d.name === name);
+    },
+    [drop, mark],
   );
 
   const dismissNotice = useCallback((id: number) => {
@@ -460,6 +595,10 @@ export function useManagedDescriptors(
     visible,
     withheld,
     attachedIds,
+    isAttached,
+    covered,
+    unreachable,
+    setUnreachable,
     owned,
     reactors,
     notices,

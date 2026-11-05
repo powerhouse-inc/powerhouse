@@ -171,6 +171,16 @@ function accessCell(info: MonitorReactorInfo): CapabilityCell {
   };
 }
 
+const KEPT_IN: Record<
+  Exclude<MonitorReactorInfo["storage"]["persistence"], "unknown">,
+  string
+> = {
+  idb: "in this browser's IndexedDB",
+  memory: "in memory",
+  path: "in a folder on the host's disk",
+  server: "on a database server",
+};
+
 /** The grid's cells, from the handle's reach and the reactor's reported info. */
 export function capabilityCells(
   reach: MonitorReach,
@@ -207,7 +217,7 @@ export function capabilityCells(
       note:
         storage.persistence === "unknown"
           ? "The reactor could not report its store."
-          : `A ${storage.engine} store kept in ${storage.persistence}.`,
+          : `A ${storage.engine} store kept ${KEPT_IN[storage.persistence]}.`,
     },
     {
       label: "Durable",

@@ -2,6 +2,7 @@
 import {
   IN_MEMORY_PGLITE_STORAGE_FACTS,
   PGLITE_IDB_STORAGE_FACTS,
+  PGLITE_PATH_STORAGE_FACTS,
   POSTGRES_STORAGE_FACTS,
   UNKNOWN_STORAGE_FACTS,
   type ReactorStorageFacts,
@@ -77,6 +78,9 @@ describe("OverviewTab capability grid", () => {
     expect(badgeFor(container, "Hosting")).toBe("in-process");
     expect(badgeFor(container, "Inspection")).toBe("direct");
     expect(badgeFor(container, "Storage")).toBe("pglite / idb");
+    expect(
+      view.getByText("A pglite store kept in this browser's IndexedDB."),
+    ).toBeTruthy();
     expect(badgeFor(container, "Durable")).toBe("yes");
     expect(badgeFor(container, "Workflows")).toBe("no");
     expect(badgeFor(container, "Sync channels")).toBe("local");
@@ -124,6 +128,7 @@ describe("OverviewTab capability grid", () => {
 
     const container = view.container as HTMLElement;
     expect(badgeFor(container, "Storage")).toBe("pglite / memory");
+    expect(view.getByText("A pglite store kept in memory.")).toBeTruthy();
     expect(badgeFor(container, "Durable")).toBe("no");
     expect(badgeFor(container, "Sync channels")).toBe("none");
     expect(view.getByText(/this reactor is an island/)).toBeTruthy();
@@ -136,6 +141,24 @@ describe("OverviewTab capability grid", () => {
     expect(container.querySelectorAll(".rm-cap .rm-badge-error")).toHaveLength(
       0,
     );
+  });
+
+  it("says where a remote's folder store lives", () => {
+    const view = render(
+      <OverviewTab
+        reactor={stubReactor(
+          "remote",
+          { hosting: "remote", inspection: "rpc" },
+          info(PGLITE_PATH_STORAGE_FACTS, []),
+        )}
+      />,
+    );
+
+    const container = view.container as HTMLElement;
+    expect(badgeFor(container, "Storage")).toBe("pglite / path");
+    expect(
+      view.getByText("A pglite store kept in a folder on the host's disk."),
+    ).toBeTruthy();
   });
 
   it("says a worker whose info could not be read reports an unknown store", () => {
@@ -174,6 +197,9 @@ describe("OverviewTab capability grid", () => {
     const container = view.container as HTMLElement;
     expect(badgeFor(container, "Hosting")).toBe("remote");
     expect(badgeFor(container, "Storage")).toBe("postgres / server");
+    expect(
+      view.getByText("A postgres store kept on a database server."),
+    ).toBeTruthy();
     expect(badgeFor(container, "Workflows")).toBe("yes");
     expect(badgeFor(container, "Access")).toBe("reads only");
     expect(

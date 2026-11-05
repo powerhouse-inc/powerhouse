@@ -109,6 +109,8 @@ function fakeController() {
   let gate: Promise<void> = Promise.resolve();
   let deleteAnswers404 = false;
   let nextId = 1;
+  /** Ports whose switchboard answers its inspection subgraph. */
+  const serving = new Set<number>();
 
   const handle = async (url: string, init: RequestInit): Promise<Response> => {
     const method = init.method ?? "GET";
@@ -180,6 +182,30 @@ function fakeController() {
           : input.url;
     if (url.startsWith(CONTROLLER_PREFIX)) return handle(url, init ?? {});
     calls.push(`NET ${url}`);
+    const port = [...serving].find(
+      (served) => url === `${graphqlOf(served)}/inspection`,
+    );
+    if (port !== undefined) {
+      return Promise.resolve(
+        json(200, {
+          data: {
+            inspection: {
+              info: {
+                storage: {
+                  engine: "pglite",
+                  persistence: "path",
+                  durable: true,
+                  selfHeal: false,
+                },
+                workflows: false,
+                syncChannels: [],
+                access: null,
+              },
+            },
+          },
+        }),
+      );
+    }
     return Promise.reject(new TypeError(`no network in this test: ${url}`));
   });
 
@@ -197,6 +223,8 @@ function fakeController() {
     answerDeleteWith404: () => {
       deleteAnswers404 = true;
     },
+    serve: (port: number) => serving.add(port),
+    unserve: (port: number) => serving.delete(port),
   };
 }
 
@@ -302,6 +330,57 @@ describe("App with controller-managed switchboards", () => {
     expect(store.getActiveDescriptors()).toEqual([]);
     expect(view.queryByTestId("switchboards-notices")).toBeNull();
     expect(bearerOf(5101)).toBeNull();
+  });
+
+  it("starts an imported set's switchboard without a second reactor, and marks its own unreachable once it stops", async () => {
+    mountController();
+    const plain = {
+      kind: "remote",
+      name: "cli-switchboard.main",
+      remote: { url: driveOf(5401) },
+    } as ReactorDescriptor;
+    const store = storeWith(plain);
+    const view = render(<App store={store} />);
+    const list = reactorList(view);
+    await waitFor(
+      () => expect(within(list).getByTitle(/^failed/)).toBeTruthy(),
+      WAIT,
+    );
+    const panel = view.getByLabelText("Switchboards");
+    await waitFor(() =>
+      expect(
+        (within(panel).getByLabelText("Host") as HTMLSelectElement).value,
+      ).toBe("sb"),
+    );
+
+    fireEvent.click(within(panel).getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(controller.instances.size).toBe(1));
+    const [id] = controller.instances.keys();
+    controller.serve(5401);
+    controller.instances.set(id, instance(id, "running", 5401));
+
+    await waitFor(
+      () => expect(within(list).getByTitle("ready")).toBeTruthy(),
+      WAIT,
+    );
+    const row = view.getByTestId(`switchboard-${id}`);
+    await waitFor(() => expect(row.textContent).toMatch(/attached/), WAIT);
+    expect(within(row).queryByRole("button", { name: "Attach" })).toBeNull();
+    expect(store.getActiveDescriptors().map((d) => d.name)).toEqual([
+      "cli-switchboard.main",
+    ]);
+    expect(within(list).getAllByRole("listitem")).toHaveLength(1);
+
+    controller.unserve(5401);
+    controller.instances.set(id, instance(id, "exited"));
+    await waitFor(
+      () =>
+        expect(
+          within(list).getByTitle("unreachable: its switchboard is exited"),
+        ).toBeTruthy(),
+      WAIT,
+    );
+    expect(within(list).getByText("unreachable")).toBeTruthy();
   });
 
   it("attaches every member of a compound, and kill stops it and drops them all", async () => {
