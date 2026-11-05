@@ -16,7 +16,18 @@ export type {
   LoadedDefinitionSet,
   TypeScriptSourceImportInterface,
 } from "./src/definition/tooling/definition-source-types.js";
-export { checkProjectDefinitions } from "./src/definition/tooling/check/check-project-definitions.js";
+export {
+  checkProjectDefinitions,
+  documentModelChecks,
+} from "./src/definition/tooling/check/check-project-definitions.js";
+export type { DefinitionCheck } from "./src/definition/tooling/check/types.js";
+export type { DefinitionCheckInput } from "./src/definition/tooling/report/types.js";
+export { releaseChecks } from "./src/definition/tooling/release/release-checks.js";
+export type {
+  HostValidationEvidence,
+  ReleaseCheckInput,
+  ReleaseEvidence,
+} from "./src/definition/tooling/release/types.js";
 export { inspectProjectDefinitions } from "./src/definition/tooling/inspect/inspect-project-definitions.js";
 export type {
   DefinitionInspectionReport,

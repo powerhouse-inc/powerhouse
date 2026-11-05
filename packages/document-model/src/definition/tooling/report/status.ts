@@ -1,4 +1,5 @@
 import type {
+  DefinitionCheckProfile,
   DefinitionCheckReport,
   DefinitionCheckSkipReason,
   DefinitionDiagnostic,
@@ -87,8 +88,9 @@ function compareInventoryEntries(
   );
 }
 
-/** Builds the stored check report. Profile is `edit`: release checks come later. */
+/** Builds the stored check report. */
 export function definitionCheckReport(input: {
+  readonly profile: DefinitionCheckProfile;
   readonly sourceSet: DefinitionSourceSet;
   readonly skipReason?: DefinitionCheckSkipReason;
   readonly artifacts: readonly NormalizedDocumentModelArtifact[];
@@ -118,7 +120,7 @@ export function definitionCheckReport(input: {
   const common = {
     kind: "powerhouse.definition-check",
     formatVersion: 1,
-    profile: "edit",
+    profile: input.profile,
     sourceSet: input.sourceSet,
     definitions,
     diagnostics,

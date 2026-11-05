@@ -16,8 +16,9 @@ export type UnregisteredDefinition = {
 };
 
 /**
- * What every registered check reads. A wider input lets a later layer
- * register checks that need more, without changing the runner.
+ * @experimental What every registered check reads. A wider input, such as
+ * ph-cli's release evidence, lets a later layer register checks that need
+ * more, without changing the runner.
  */
 export type DefinitionCheckInput = {
   readonly sourceSet: DefinitionSourceSet;
