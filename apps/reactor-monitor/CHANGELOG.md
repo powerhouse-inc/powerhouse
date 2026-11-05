@@ -1,3 +1,64 @@
+## 6.2.3-dev.94 (2026-11-05)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** make and drop Postgres databases on a server ([21859fbdc1](https://github.com/powerhouse-inc/powerhouse/commit/21859fbdc1))
+
+### 🩹 Fixes
+
+- **reactor-monitor-app:** restore the first-row-wins env step ([d5a420221c](https://github.com/powerhouse-inc/powerhouse/commit/d5a420221c))
+- **reactor-monitor-app:** drop own drives only when a switchboard stays ([a1d5b32d07](https://github.com/powerhouse-inc/powerhouse/commit/a1d5b32d07))
+- **reactor-monitor-app:** drop an emptied router or placement block when applying the delete ([4bb7f1eae0](https://github.com/powerhouse-inc/powerhouse/commit/4bb7f1eae0))
+- **reactor-monitor-app:** drop Connect's own drives with its only browser reactor ([b190beb52f](https://github.com/powerhouse-inc/powerhouse/commit/b190beb52f))
+- **reactor-monitor-app:** drop an emptied router or placement block with its last default ([9880af29ab](https://github.com/powerhouse-inc/powerhouse/commit/9880af29ab))
+- **reactor-monitor-app:** keep the first of two env rows with one name ([8f882bc899](https://github.com/powerhouse-inc/powerhouse/commit/8f882bc899))
+- **reactor-monitor-app:** say why Add a reactor can't add a kind the host doesn't run ([9834fb7ece](https://github.com/powerhouse-inc/powerhouse/commit/9834fb7ece))
+- **reactor-monitor-app:** count settings an edit flips in the builder's changed-settings banner ([41dfaf7149](https://github.com/powerhouse-inc/powerhouse/commit/41dfaf7149))
+- **reactor-monitor-app:** name the host in the builder summary by its Name ([49a897aa1f](https://github.com/powerhouse-inc/powerhouse/commit/49a897aa1f))
+- **reactor-monitor-app:** show IndexedDB pressed for a browser reactor with no storage ([0cccb0cdc4](https://github.com/powerhouse-inc/powerhouse/commit/0cccb0cdc4))
+- **reactor-monitor-app:** match build and serve outDirs where the copy puts them ([24138cc456](https://github.com/powerhouse-inc/powerhouse/commit/24138cc456))
+- **reactor-monitor-app:** resolve a serving Connect's ${userData} outDir in the source ([e099c0b926](https://github.com/powerhouse-inc/powerhouse/commit/e099c0b926))
+- **reactor-monitor:** drop a long-over start before waiting on it ([#3371](https://github.com/powerhouse-inc/powerhouse/issues/3371))
+- **reactor-monitor-app:** refuse any multi-switchboard host in place, drop before settling ([8c4e39389f](https://github.com/powerhouse-inc/powerhouse/commit/8c4e39389f))
+- **reactor-monitor-app:** resolve ${projectRoot} outDirs in the source; strip escapes with node ([0ef36289b7](https://github.com/powerhouse-inc/powerhouse/commit/0ef36289b7))
+- **reactor-monitor-app:** an empty storage url or folder names no store ([884b04021f](https://github.com/powerhouse-inc/powerhouse/commit/884b04021f))
+- **reactor-monitor-app:** quote a timeout's last line from before it was stopped ([befe30e9cf](https://github.com/powerhouse-inc/powerhouse/commit/befe30e9cf))
+- **reactor-monitor-app:** offer no database the env overrides; check reports the refusal ([ce9f3e5e32](https://github.com/powerhouse-inc/powerhouse/commit/ce9f3e5e32))
+- **reactor-monitor-app:** sweep only this machine's databases, time out connects ([497fc054b8](https://github.com/powerhouse-inc/powerhouse/commit/497fc054b8))
+- **reactor-monitor:** only a long-over or token-refused start ends the wait early ([#3371](https://github.com/powerhouse-inc/powerhouse/issues/3371))
+- **reactor-monitor-app:** serve a build the copy makes itself; clean timeout lines ([e706dfb227](https://github.com/powerhouse-inc/powerhouse/commit/e706dfb227))
+- **reactor-monitor:** end a reloaded tab's wait on a refused listing, not on an old start ([#3371](https://github.com/powerhouse-inc/powerhouse/issues/3371))
+- **reactor-monitor-app:** hand each Postgres start its own database ([dd67b368be](https://github.com/powerhouse-inc/powerhouse/commit/dd67b368be))
+- **reactor-monitor-app:** point a copy's Connect at the source's build instead of linking it ([0194702c75](https://github.com/powerhouse-inc/powerhouse/commit/0194702c75))
+- **reactor-monitor-app:** take a host's own Postgres url, show the env's database ([42a116a1e8](https://github.com/powerhouse-inc/powerhouse/commit/42a116a1e8))
+- **reactor-monitor:** keep waiting through listing failures once the start was seen ([6a73f99fbd](https://github.com/powerhouse-inc/powerhouse/commit/6a73f99fbd))
+- **reactor-monitor-app:** link builds only for Connect members that run or serve ([5f6dc4b686](https://github.com/powerhouse-inc/powerhouse/commit/5f6dc4b686))
+- **reactor-monitor:** wait for a cut-off start while the controller checks it ([#3371](https://github.com/powerhouse-inc/powerhouse/issues/3371))
+- **reactor-monitor-app:** never link a folder the copy writes itself ([147e7cc25c](https://github.com/powerhouse-inc/powerhouse/commit/147e7cc25c))
+- **reactor-monitor:** match a cut-off start by the id it was sent with ([#3371](https://github.com/powerhouse-inc/powerhouse/issues/3371))
+- **reactor-monitor-app:** never link a build folder a member writes ([40541c100f](https://github.com/powerhouse-inc/powerhouse/commit/40541c100f))
+- **reactor-monitor:** say the copy's reactors are in the list only when some are attached ([08e44a9635](https://github.com/powerhouse-inc/powerhouse/commit/08e44a9635))
+- **reactor-monitor-app:** skip spawnHost's own notes in a timeout's last output ([fb256ce7ad](https://github.com/powerhouse-inc/powerhouse/commit/fb256ce7ad))
+- **reactor-monitor-app:** link builds by the member's run verb, never copy them ([76e25b84e9](https://github.com/powerhouse-inc/powerhouse/commit/76e25b84e9))
+- **reactor-monitor:** end a reloaded tab's wait once nothing is in the check ([#3371](https://github.com/powerhouse-inc/powerhouse/issues/3371))
+- **reactor-monitor:** hide an ended row's addresses and don't point an assistant copy at the reactor list ([c3a968d3df](https://github.com/powerhouse-inc/powerhouse/commit/c3a968d3df))
+- **reactor-monitor:** take on only the copy the cut-off start sent ([#3371](https://github.com/powerhouse-inc/powerhouse/issues/3371))
+- **reactor-monitor:** offer Attach only for an instance that serves a switchboard ([695c2b8ce5](https://github.com/powerhouse-inc/powerhouse/commit/695c2b8ce5))
+- **reactor-monitor:** label the agent API in the Running card and key panel outputs uniquely ([d365ce8bcb](https://github.com/powerhouse-inc/powerhouse/commit/d365ce8bcb))
+- **reactor-monitor-app:** name a timed-out start's last output ([44212e6c79](https://github.com/powerhouse-inc/powerhouse/commit/44212e6c79))
+- **reactor-monitor:** keep an unanswered start across the reload that aborted it ([8470e9e8cd](https://github.com/powerhouse-inc/powerhouse/commit/8470e9e8cd))
+- **reactor-monitor-app:** link Connect's build into a builder copy ([0dc3202b32](https://github.com/powerhouse-inc/powerhouse/commit/0dc3202b32))
+- **reactor-monitor:** adopt a copy whose start a reload cut off ([53dd4f4e5b](https://github.com/powerhouse-inc/powerhouse/commit/53dd4f4e5b))
+- **reactor-monitor:** show compound members' and assistants' outputs in the Switchboards panel row ([08d663e8ae](https://github.com/powerhouse-inc/powerhouse/commit/08d663e8ae))
+- **reactor-monitor:** list a running assistant and its API in the builder's Running card ([92b2dfbbf3](https://github.com/powerhouse-inc/powerhouse/commit/92b2dfbbf3))
+- **reactor-monitor:** report an assistant's agent API URL on its instance ([617da978f1](https://github.com/powerhouse-inc/powerhouse/commit/617da978f1))
+- **reactor-monitor:** list a refused start's check findings under Start ([c80d14c8e1](https://github.com/powerhouse-inc/powerhouse/commit/c80d14c8e1))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.93 (2026-11-04)
 
 This was a version bump only for @powerhousedao/reactor-monitor-app to align it with other projects, there were no code changes.
