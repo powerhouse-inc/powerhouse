@@ -1,6 +1,6 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
@@ -163,5 +163,52 @@ describe("BaseReadModel catch-up [Postgres]", () => {
 
     expect(model.applied).toEqual([later]);
     expect(startedAt).toBe(head!);
+  });
+
+  it("lowers a cursor above the ordinal head at boot, so a new operation applies", async () => {
+    function makeModel() {
+      return new RecordingModel(
+        db as unknown as Kysely<DocumentViewDatabase>,
+        operationIndex,
+        {} as IWriteCache,
+        new ConsistencyTracker(),
+        {
+          readModelId: READ_MODEL_ID,
+          rebuildStateOnInit: false,
+          purgeFence: "none",
+        },
+      );
+    }
+    await commit("doc-a", "doc-b", "doc-c", "doc-d");
+    await makeModel().init();
+
+    // A failover onto a lagging replica: the index lost 3 and 4, the cursor did not.
+    await db
+      .deleteFrom("operation_index_operations")
+      .where("ordinal", ">", 2)
+      .execute();
+    const { rows } = await sql<{ schema: string }>`
+      select table_schema as schema from information_schema.tables
+      where table_name = 'operation_index_operations'`.execute(db);
+    const table = `"${rows[0]!.schema}"."operation_index_operations"`;
+    await sql`select setval(pg_get_serial_sequence(${table}, 'ordinal'), 2)`.execute(
+      db,
+    );
+    await (db as unknown as Kysely<DocumentViewDatabase>)
+      .updateTable("ViewState")
+      .set({ lastOrdinal: 4 })
+      .where("readModelId", "=", READ_MODEL_ID)
+      .execute();
+
+    const restarted = makeModel();
+    await restarted.init();
+    expect(restarted.appliedThrough).toBe(2);
+
+    const [next] = await commit("doc-new");
+    expect(next).toBe(3);
+    await restarted.indexOperations(
+      await operationIndex.getByOrdinals([next!]),
+    );
+    expect(restarted.applied).toEqual([3]);
   });
 });
