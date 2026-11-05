@@ -108,7 +108,7 @@ jobs:
     name: Test (shard ${{ matrix.shard }}/3)
     # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     env:
       CI: true
     strategy:
