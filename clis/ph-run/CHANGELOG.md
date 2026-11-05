@@ -1,3 +1,25 @@
+## 6.2.3-dev.94 (2026-11-05)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** make and drop Postgres databases on a server ([21859fbdc1](https://github.com/powerhouse-inc/powerhouse/commit/21859fbdc1))
+
+### 🩹 Fixes
+
+- **ph-run:** warn when Connect can't keep the declared browser store ([7a7341a20c](https://github.com/powerhouse-inc/powerhouse/commit/7a7341a20c))
+- **ph-run:** point a missing default build at the project it belongs to ([9ea76f2029](https://github.com/powerhouse-inc/powerhouse/commit/9ea76f2029))
+- **ph-run:** show an outDir named ..x relative to the project ([dd7e8b2ab7](https://github.com/powerhouse-inc/powerhouse/commit/dd7e8b2ab7))
+- **ph-run:** show a missing build outside the project by its absolute path ([11d2a97bd3](https://github.com/powerhouse-inc/powerhouse/commit/11d2a97bd3))
+- **ph-run:** refuse a Postgres store that no url names ([793d565ea5](https://github.com/powerhouse-inc/powerhouse/commit/793d565ea5))
+- **ph-run:** refuse a missing build under vite preview too ([b134bb4584](https://github.com/powerhouse-inc/powerhouse/commit/b134bb4584))
+- **ph-run:** name the missing build with forward slashes and a quoted outDir ([962364043f](https://github.com/powerhouse-inc/powerhouse/commit/962364043f))
+- **ph-run:** refuse to serve Connect without a build ([72475d8597](https://github.com/powerhouse-inc/powerhouse/commit/72475d8597))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.93 (2026-11-04)
 
 This was a version bump only for @powerhousedao/ph-run to align it with other projects, there were no code changes.

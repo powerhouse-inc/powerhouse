@@ -1,3 +1,14 @@
+## 6.2.3-dev.94 (2026-11-05)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** make and drop Postgres databases on a server ([21859fbdc1](https://github.com/powerhouse-inc/powerhouse/commit/21859fbdc1))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.93 (2026-11-04)
 
 This was a version bump only for @powerhousedao/pieces-framework to align it with other projects, there were no code changes.

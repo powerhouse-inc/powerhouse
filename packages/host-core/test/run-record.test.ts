@@ -17,6 +17,7 @@ import {
   writeRunRecord,
   type RunRecord,
 } from "../src/run-record.js";
+import type { ProducerInfo } from "../src/resolve/node.js";
 
 const temporary: string[] = [];
 afterEach(() => {
@@ -218,5 +219,91 @@ describe("runRecordOutputSource", () => {
         { outputs: source },
       ),
     ).toEqual({ origin: "http://localhost:4801" });
+  });
+
+  it("reads PH_OUTPUT_DATA_DIRS after its own root, standalone and as a member, and names two", async () => {
+    const { runRecordOutputSource } = await import("../src/resolve/node.js");
+    const dir = makeProject();
+    const own = makeProject();
+    const sibling = makeProject();
+    const compound = makeProject();
+    const env = {
+      PH_USER_DATA_DIR: own,
+      PH_OUTPUT_DATA_DIRS: [sibling, compound].join(path.delimiter),
+    };
+    writeRunRecord(sibling, {
+      version: 2,
+      host: "lab-switchboard",
+      projectName: "lab",
+      kind: "reactor",
+      verb: "run",
+      pid: process.pid,
+      startedAt: "x",
+      outputs: { origin: "http://localhost:4801" },
+    });
+    writeRunRecord(
+      compound,
+      record({ members: { "vetra-studio": member("connect", 2064) } }),
+    );
+    const info = (name: string): ProducerInfo => ({
+      folder: name,
+      name,
+      specifier: "fake-runner",
+      runner: {
+        kind: "reactor",
+        run: () => Promise.resolve(undefined),
+        hostSchema: {
+          safeParse: (v: unknown) => ({ success: true, data: v }),
+        },
+      },
+    });
+    const producers = new Map([
+      ["switchboard", info("lab-switchboard")],
+      ["connect", info("connect")],
+    ]);
+    const source = runRecordOutputSource(dir, {
+      consumer: "agent",
+      projectName: "lab",
+      producers,
+      env,
+    });
+    expect(source.lookup({ host: "switchboard" })).toMatchObject({
+      status: "available",
+      outputs: { origin: "http://localhost:4801" },
+    });
+    expect(source.lookup({ host: "connect" })).toMatchObject({
+      status: "available",
+      outputs: { port: 2064 },
+    });
+    const twice = runRecordOutputSource(dir, {
+      consumer: "agent",
+      projectName: "lab",
+      producers,
+      env: {
+        ...env,
+        PH_OUTPUT_DATA_DIRS: `${sibling}${path.delimiter}${sibling}/`,
+      },
+    });
+    expect(twice.lookup({ host: "switchboard" }).status).toBe("available");
+    const ownRoot = runRecordOutputSource(compound, {
+      consumer: "agent",
+      projectName: "lab",
+      producers,
+      env: { PH_OUTPUT_DATA_DIRS: compound },
+    });
+    expect(ownRoot.lookup({ host: "connect" }).status).toBe("available");
+    writeRunRecord(compound, record());
+    const both = source.lookup({ host: "switchboard" });
+    expect(both.status).toBe("unavailable");
+    expect(both.status === "unavailable" ? both.message : "").toMatch(
+      /runs as "lab-switchboard" \(pid \d+\) and member "vetra-switchboard" of "vetra"; stop all but one/,
+    );
+    const alone = runRecordOutputSource(dir, {
+      consumer: "agent",
+      projectName: "lab",
+      producers,
+      env: { PH_USER_DATA_DIR: own },
+    });
+    expect(alone.lookup({ host: "switchboard" }).status).toBe("unavailable");
   });
 });

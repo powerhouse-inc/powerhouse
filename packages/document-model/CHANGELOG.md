@@ -1,3 +1,16 @@
+## 6.2.3-dev.94 (2026-11-05)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** make and drop Postgres databases on a server ([21859fbdc1](https://github.com/powerhouse-inc/powerhouse/commit/21859fbdc1))
+- **document-model:** project code-first definitions to GraphQL and inspect them ([040c744422](https://github.com/powerhouse-inc/powerhouse/commit/040c744422))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.93 (2026-11-04)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

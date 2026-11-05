@@ -1,3 +1,21 @@
+## 6.2.3-dev.94 (2026-11-05)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** make and drop Postgres databases on a server ([21859fbdc1](https://github.com/powerhouse-inc/powerhouse/commit/21859fbdc1))
+
+### 🩹 Fixes
+
+- **connect:** clear no IndexedDB from an in-memory tab, as the worker does ([31332bf988](https://github.com/powerhouse-inc/powerhouse/commit/31332bf988))
+- **connect:** clear an in-memory instance's own idb leftovers ([8e116cb4fb](https://github.com/powerhouse-inc/powerhouse/commit/8e116cb4fb))
+- **connect:** leave IndexedDB alone when the reactor store is in memory ([68841bee69](https://github.com/powerhouse-inc/powerhouse/commit/68841bee69))
+- **connect:** keep the reactor stores in memory when the host asks ([2300dc95d4](https://github.com/powerhouse-inc/powerhouse/commit/2300dc95d4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.93 (2026-11-04)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

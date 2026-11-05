@@ -1,3 +1,19 @@
+## 6.2.3-dev.94 (2026-11-05)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** make and drop Postgres databases on a server ([21859fbdc1](https://github.com/powerhouse-inc/powerhouse/commit/21859fbdc1))
+
+### 🩹 Fixes
+
+- **connect:** clear an in-memory instance's own idb leftovers ([8e116cb4fb](https://github.com/powerhouse-inc/powerhouse/commit/8e116cb4fb))
+- **host-core:** serve the browser reactor's storage to Connect ([d06345ccdf](https://github.com/powerhouse-inc/powerhouse/commit/d06345ccdf))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.93 (2026-11-04)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.

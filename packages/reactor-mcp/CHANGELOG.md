@@ -1,3 +1,16 @@
+## 6.2.3-dev.94 (2026-11-05)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** make and drop Postgres databases on a server ([21859fbdc1](https://github.com/powerhouse-inc/powerhouse/commit/21859fbdc1))
+- **reactor-mcp:** accept code-first action types and return definitions on request ([a07044a16d](https://github.com/powerhouse-inc/powerhouse/commit/a07044a16d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.93 (2026-11-04)
 
 This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.

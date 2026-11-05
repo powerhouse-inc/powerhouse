@@ -83,19 +83,49 @@ export function producerOutputsSchemas(
   };
 }
 
+/** Further `.ph` roots whose live run records a standalone `$output` reads
+ * (`path.delimiter`-separated): a launcher that gives each child its own
+ * PH_USER_DATA_DIR names its siblings' here. Locks never read them. */
+export const OUTPUT_DATA_DIRS_ENV = "PH_OUTPUT_DATA_DIRS";
+
+type Env = Readonly<Record<string, string | undefined>>;
+
+/** The other roots, each once, never the process's own. */
+function siblingEnvs(projectRoot: string, env: Env): Env[] {
+  const own = path.resolve(defaultUserDataDir(projectRoot, env));
+  const dirs = new Set(
+    (env[OUTPUT_DATA_DIRS_ENV] ?? "")
+      .split(path.delimiter)
+      .filter((dir) => dir !== "")
+      .map((dir) => path.resolve(dir)),
+  );
+  return [...dirs]
+    .filter((dir) => dir !== own)
+    .map((dir) => ({ PH_USER_DATA_DIR: dir }));
+}
+
 /**
  * Standalone `$output` source: the producer's live v2 run record. Its own
- * standalone record first (keyed by the producer's `name`); else a live
- * compound of this project with exactly one member running that host. A
- * missing, stale, foreign or output-less record means "not running", and the
- * lookup fails naming the producer and how to start it (no fallback to the
- * producer's declared config, no waiting).
+ * standalone record under the process's `.ph` root first (keyed by the
+ * producer's `name`); else exactly one of: a standalone record under a
+ * PH_OUTPUT_DATA_DIRS root, or a member running that host in a live compound
+ * of this project under any root. A missing, stale, foreign or output-less
+ * record means "not running", and the lookup fails naming the producer and
+ * how to start it (no fallback to the producer's declared config, no
+ * waiting).
  */
 export function runRecordOutputSource(
   projectRoot: string,
-  options: { consumer: string; producers: ProducerMap; projectName: string },
+  options: {
+    consumer: string;
+    producers: ProducerMap;
+    projectName: string;
+    env?: Env;
+  },
 ): OutputSource {
   const { consumer, producers, projectName } = options;
+  const env = options.env ?? process.env;
+  const siblings = siblingEnvs(projectRoot, env);
   return {
     lookup(ref) {
       const notRunning = `${consumer} needs outputs from host "${ref.host}", which is not running. Start it first: ph run ${ref.host} (or run a compound that includes it).`;
@@ -106,8 +136,10 @@ export function runRecordOutputSource(
         info && !("error" in info) ? info.runner.outputsSchema : undefined;
       const withSchema =
         schema !== undefined && schema !== null ? { schema } : {};
+      const standalone: { label: string; outputs: Record<string, unknown> }[] =
+        [];
       if (ref.member === undefined && info && !("error" in info)) {
-        const probe = probeRun(projectRoot, info.name, projectName);
+        const probe = probeRun(projectRoot, info.name, projectName, env);
         if (probe.status === "live" && probe.record.outputs) {
           return {
             status: "available",
@@ -115,8 +147,18 @@ export function runRecordOutputSource(
             ...withSchema,
           };
         }
+        for (const sibling of siblings) {
+          const other = probeRun(projectRoot, info.name, projectName, sibling);
+          if (other.status === "live" && other.record.outputs) {
+            standalone.push({
+              label: `"${info.name}" (pid ${other.record.pid})`,
+              outputs: other.record.outputs,
+            });
+          }
+        }
       }
-      const members = listRunRecords(projectRoot)
+      const members = [env, ...siblings]
+        .flatMap((root) => listRunRecords(projectRoot, root))
         .filter(
           (record) =>
             record.members !== undefined &&
@@ -130,19 +172,23 @@ export function runRecordOutputSource(
                 member.host === ref.host &&
                 (ref.member === undefined || key === ref.member),
             )
-            .map(([key, member]) => ({ compound: record.host, key, member })),
+            .map(([key, member]) => ({
+              label: `member "${key}" of "${record.host}"`,
+              outputs: member.outputs,
+            })),
         );
-      if (members.length === 1) {
+      const found = [...standalone, ...members];
+      if (found.length === 1) {
         return {
           status: "available",
-          outputs: members[0].member.outputs,
+          outputs: found[0].outputs,
           ...withSchema,
         };
       }
-      if (members.length > 1) {
+      if (found.length > 1) {
         return {
           status: "unavailable",
-          message: `${consumer} needs outputs from host "${ref.host}", which runs as ${members.map((m) => `member "${m.key}" of "${m.compound}"`).join(" and ")}; stop all but one, or run ${ref.host} on its own.`,
+          message: `${consumer} needs outputs from host "${ref.host}", which runs as ${found.map((m) => m.label).join(" and ")}; stop all but one, or run ${ref.host} on its own.`,
         };
       }
       return { status: "unavailable", message: notRunning };
