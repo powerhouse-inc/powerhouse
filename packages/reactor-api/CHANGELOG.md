@@ -1,3 +1,16 @@
+## 6.2.3-dev.94 (2026-11-05)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** make and drop Postgres databases on a server ([21859fbdc1](https://github.com/powerhouse-inc/powerhouse/commit/21859fbdc1))
+- **reactor-api:** serve code-first document models from their structured definition ([381832cc4d](https://github.com/powerhouse-inc/powerhouse/commit/381832cc4d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.93 (2026-11-04)
 
 ### 🩹 Fixes

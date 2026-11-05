@@ -1,3 +1,26 @@
+## 6.2.3-dev.94 (2026-11-05)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** make and drop Postgres databases on a server ([21859fbdc1](https://github.com/powerhouse-inc/powerhouse/commit/21859fbdc1))
+
+### 🩹 Fixes
+
+- **host-core:** word the unserved-store warning for Connect only ([ada71b4982](https://github.com/powerhouse-inc/powerhouse/commit/ada71b4982))
+- **ph-run:** warn when Connect can't keep the declared browser store ([7a7341a20c](https://github.com/powerhouse-inc/powerhouse/commit/7a7341a20c))
+- **host-core:** export ConnectStorageKind from the projection entry ([5bb0fb93e2](https://github.com/powerhouse-inc/powerhouse/commit/5bb0fb93e2))
+- **host-core:** serve the browser reactor's storage to Connect ([d06345ccdf](https://github.com/powerhouse-inc/powerhouse/commit/d06345ccdf))
+- **host-core:** wait for a stopped run's output to close before reporting it ([f330acc01c](https://github.com/powerhouse-inc/powerhouse/commit/f330acc01c))
+- **host-core:** keep a stopped run's output apart from the tail it got to ([cee9ae734b](https://github.com/powerhouse-inc/powerhouse/commit/cee9ae734b))
+- **host-core:** mark where a timed-out start is stopped, keeping its full tail ([8b6583ee33](https://github.com/powerhouse-inc/powerhouse/commit/8b6583ee33))
+- **ph-run:** show an outDir named ..x relative to the project ([dd7e8b2ab7](https://github.com/powerhouse-inc/powerhouse/commit/dd7e8b2ab7))
+- **host-core:** keep a timed-out start's tail from before it was stopped ([70ad9f60ff](https://github.com/powerhouse-inc/powerhouse/commit/70ad9f60ff))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.93 (2026-11-04)
 
 This was a version bump only for @powerhousedao/host-core to align it with other projects, there were no code changes.

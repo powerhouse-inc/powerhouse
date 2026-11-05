@@ -35,6 +35,21 @@ function indexError(container: Container, segment: string): string | undefined {
   return undefined;
 }
 
+/** Blocks whose absence means the same as empty: a delete that empties one drops it. */
+const PRUNED = [
+  "reactor.router",
+  "reactor.placement",
+  "reactor.placement.drives",
+];
+
+function isEmptyObject(value: unknown): boolean {
+  return (
+    isContainer(value) &&
+    !Array.isArray(value) &&
+    Object.keys(value).length === 0
+  );
+}
+
 function opaque(path: readonly string[]): string {
   return `${path.join(".")} is filled in from a token, so its parts can't be changed.`;
 }
@@ -46,6 +61,7 @@ function applyOne(root: Container, setter: Setter): string | undefined {
   const { segments, subject } = parsed;
   const remove = isDelete(setter.value);
   let current: Container = root;
+  const parents: Container[] = [];
   for (let index = 0; index < segments.length - 1; index++) {
     const segment = segments[index];
     const at = segments.slice(0, index + 1).join(".");
@@ -61,6 +77,7 @@ function applyOne(root: Container, setter: Setter): string | undefined {
     }
     if (!isContainer(next))
       return `${at} is a single value, not a group of settings.`;
+    parents.push(current);
     current = next;
   }
   const last = segments[segments.length - 1];
@@ -71,7 +88,15 @@ function applyOne(root: Container, setter: Setter): string | undefined {
   if (remove) {
     if (Array.isArray(current))
       return "Items in a list can't be removed one by one.";
-    if (exists) delete current[last];
+    if (!exists) return undefined;
+    delete current[last];
+    for (let depth = segments.length - 1; depth > subject.length; depth--) {
+      const block = segments.slice(subject.length, depth).join(".");
+      if (!PRUNED.includes(block) || !isEmptyObject(current)) break;
+      const parent = parents[depth - 1] as Record<string, unknown>;
+      delete parent[segments[depth - 1]];
+      current = parent;
+    }
     return undefined;
   }
   // A new member is added by setting its whole wrapper or, on a blank host, folder.

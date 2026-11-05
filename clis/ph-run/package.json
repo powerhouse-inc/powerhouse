@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-run",
-  "version": "6.2.3-dev.93",
+  "version": "6.2.3-dev.94",
   "description": "Runs a project's hosts, with none of the tools that build one",
   "license": "AGPL-3.0-only",
   "type": "module",

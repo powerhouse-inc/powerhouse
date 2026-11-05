@@ -1,3 +1,19 @@
+## 6.2.3-dev.94 (2026-11-05)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** make and drop Postgres databases on a server ([21859fbdc1](https://github.com/powerhouse-inc/powerhouse/commit/21859fbdc1))
+
+### 🩹 Fixes
+
+- **ph-run:** refuse a Postgres store that no url names ([793d565ea5](https://github.com/powerhouse-inc/powerhouse/commit/793d565ea5))
+- **ph-run:** refuse a missing build under vite preview too ([b134bb4584](https://github.com/powerhouse-inc/powerhouse/commit/b134bb4584))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.93 (2026-11-04)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
