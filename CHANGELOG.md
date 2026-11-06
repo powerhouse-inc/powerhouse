@@ -1,3 +1,47 @@
+## 6.2.3-dev.95 (2026-11-06)
+
+### 🚀 Features
+
+- **document-model:** add release checks and a release check profile ([5c397616dc](https://github.com/powerhouse-inc/powerhouse/commit/5c397616dc))
+- **host-core:** writeRunRecord takes the env it writes under ([fc5bdfe724](https://github.com/powerhouse-inc/powerhouse/commit/fc5bdfe724))
+- **host-core:** a standalone $output also reads PH_OUTPUT_DATA_DIRS ([51ed13a88c](https://github.com/powerhouse-inc/powerhouse/commit/51ed13a88c))
+- **ph-cli:** stage ph build, record release approvals, verify ph publish ([aaed86bf24](https://github.com/powerhouse-inc/powerhouse/commit/aaed86bf24))
+- **ph-cli:** stage ph build, record release approvals, verify ph publish ([#3381](https://github.com/powerhouse-inc/powerhouse/pull/3381))
+- **reactor-api:** validate document models for a host, with opt-in refusal ([992371c4fb](https://github.com/powerhouse-inc/powerhouse/commit/992371c4fb))
+- **shared:** let buildPieces write to a stage, and add release flags ([5f60af9cd2](https://github.com/powerhouse-inc/powerhouse/commit/5f60af9cd2))
+
+### 🩹 Fixes
+
+- **builder-tools:** base-prefix the dev vendor's shared-deps URL ([e70ac5e055](https://github.com/powerhouse-inc/powerhouse/commit/e70ac5e055))
+- **builder-tools:** touch the host placeholder past its own mtime so Tailwind rebuilds ([2711e038ba](https://github.com/powerhouse-inc/powerhouse/commit/2711e038ba))
+- **connect:** ask a dev server for the shared-deps table only when it serves a vendor ([386f5cbc1c](https://github.com/powerhouse-inc/powerhouse/commit/386f5cbc1c))
+- **connect:** quiet dev vendor 404, router and watcher warnings ([#3377](https://github.com/powerhouse-inc/powerhouse/pull/3377))
+- **host-core:** two producers across PH_OUTPUT_DATA_DIRS roots are ambiguous ([c7d9b19ba3](https://github.com/powerhouse-inc/powerhouse/commit/c7d9b19ba3))
+- **host-core:** never read the process's own root as a PH_OUTPUT_DATA_DIRS sibling ([447bd7ad52](https://github.com/powerhouse-inc/powerhouse/commit/447bd7ad52))
+- **reactor-api:** share one Vite watcher listener across package subscriptions ([5e3d3d6134](https://github.com/powerhouse-inc/powerhouse/commit/5e3d3d6134))
+- **reactor-monitor-app:** headline a failure line past its indented continuation ([08c7717803](https://github.com/powerhouse-inc/powerhouse/commit/08c7717803))
+- **reactor-monitor-app:** an in-place start sees its siblings' run records ([f543009d00](https://github.com/powerhouse-inc/powerhouse/commit/f543009d00))
+- **reactor-monitor-app:** headline the resolver's other failures and a colon line's detail ([37ef24a110](https://github.com/powerhouse-inc/powerhouse/commit/37ef24a110))
+- **reactor-monitor-app:** name in-place siblings' data dirs instead of copying records ([9cca92a906](https://github.com/powerhouse-inc/powerhouse/commit/9cca92a906))
+- **reactor-monitor-app:** a colon line's detail without its bullet; more resolver words ([78fefba105](https://github.com/powerhouse-inc/powerhouse/commit/78fefba105))
+- **reactor-monitor-app:** name in-place siblings still in their check, after the start's own ([e74e2dc776](https://github.com/powerhouse-inc/powerhouse/commit/e74e2dc776))
+- **reactor-monitor-app:** headline a zod error's header with its first issue ([aa0165dd5b](https://github.com/powerhouse-inc/powerhouse/commit/aa0165dd5b))
+- **reactor-monitor-app:** say where a store keeps its data in the Overview storage note ([dd60d2935e](https://github.com/powerhouse-inc/powerhouse/commit/dd60d2935e))
+- **reactor-monitor-app:** name a copy's Switchboards row by its source project ([1f812ba39e](https://github.com/powerhouse-inc/powerhouse/commit/1f812ba39e))
+- **reactor-monitor-app:** show each check issue's file in the Switchboards Check table ([b160674b20](https://github.com/powerhouse-inc/powerhouse/commit/b160674b20))
+- **reactor-monitor-app:** name a missing or non-object export body by its envelope path ([9f7939aceb](https://github.com/powerhouse-inc/powerhouse/commit/9f7939aceb))
+- **reactor-monitor-app:** link a start to the set's own remote for its switchboard, and mark it unreachable when that stops ([70382beacc](https://github.com/powerhouse-inc/powerhouse/commit/70382beacc))
+- **reactor-monitor-app:** key unreachable marks by descriptor, and keep a switchboard another start serves reachable ([#3379](https://github.com/powerhouse-inc/powerhouse/issues/3379))
+- **reactor-monitor-app:** in-place $output across instances; headline ([#3375](https://github.com/powerhouse-inc/powerhouse/pull/3375))
+- **reactor-monitor-app:** Switchboards panel, Overview and import errors ([#3379](https://github.com/powerhouse-inc/powerhouse/pull/3379))
+- **reactor-router:** report a declared find exclusion once per router, without a stack ([0e93181b54](https://github.com/powerhouse-inc/powerhouse/commit/0e93181b54))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.94 (2026-11-05)
 
 ### 🚀 Features

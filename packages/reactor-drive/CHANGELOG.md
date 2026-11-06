@@ -1,3 +1,13 @@
+## 6.2.3-dev.95 (2026-11-06)
+
+### 🚀 Features
+
+- **ph-cli:** stage ph build, record release approvals, verify ph publish ([aaed86bf24](https://github.com/powerhouse-inc/powerhouse/commit/aaed86bf24))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.94 (2026-11-05)
 
 ### 🚀 Features

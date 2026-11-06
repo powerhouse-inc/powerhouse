@@ -1,3 +1,32 @@
+## 6.2.3-dev.95 (2026-11-06)
+
+### 🚀 Features
+
+- **ph-cli:** stage ph build, record release approvals, verify ph publish ([aaed86bf24](https://github.com/powerhouse-inc/powerhouse/commit/aaed86bf24))
+- **host-core:** a standalone $output also reads PH_OUTPUT_DATA_DIRS ([51ed13a88c](https://github.com/powerhouse-inc/powerhouse/commit/51ed13a88c))
+
+### 🩹 Fixes
+
+- **reactor-monitor-app:** key unreachable marks by descriptor, and keep a switchboard another start serves reachable ([#3379](https://github.com/powerhouse-inc/powerhouse/issues/3379))
+- **reactor-monitor-app:** link a start to the set's own remote for its switchboard, and mark it unreachable when that stops ([70382beacc](https://github.com/powerhouse-inc/powerhouse/commit/70382beacc))
+- **reactor-monitor-app:** name a missing or non-object export body by its envelope path ([9f7939aceb](https://github.com/powerhouse-inc/powerhouse/commit/9f7939aceb))
+- **reactor-monitor-app:** show each check issue's file in the Switchboards Check table ([b160674b20](https://github.com/powerhouse-inc/powerhouse/commit/b160674b20))
+- **reactor-monitor-app:** name a copy's Switchboards row by its source project ([1f812ba39e](https://github.com/powerhouse-inc/powerhouse/commit/1f812ba39e))
+- **reactor-monitor-app:** say where a store keeps its data in the Overview storage note ([dd60d2935e](https://github.com/powerhouse-inc/powerhouse/commit/dd60d2935e))
+- **reactor-monitor-app:** headline a zod error's header with its first issue ([aa0165dd5b](https://github.com/powerhouse-inc/powerhouse/commit/aa0165dd5b))
+- **reactor-monitor-app:** name in-place siblings still in their check, after the start's own ([e74e2dc776](https://github.com/powerhouse-inc/powerhouse/commit/e74e2dc776))
+- **reactor-monitor-app:** a colon line's detail without its bullet; more resolver words ([78fefba105](https://github.com/powerhouse-inc/powerhouse/commit/78fefba105))
+- **reactor-monitor-app:** name in-place siblings' data dirs instead of copying records ([9cca92a906](https://github.com/powerhouse-inc/powerhouse/commit/9cca92a906))
+- **reactor-monitor-app:** headline the resolver's other failures and a colon line's detail ([37ef24a110](https://github.com/powerhouse-inc/powerhouse/commit/37ef24a110))
+- **reactor-monitor-app:** an in-place start sees its siblings' run records ([f543009d00](https://github.com/powerhouse-inc/powerhouse/commit/f543009d00))
+- **reactor-monitor-app:** headline a failure line past its indented continuation ([08c7717803](https://github.com/powerhouse-inc/powerhouse/commit/08c7717803))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.94 (2026-11-05)
 
 ### 🚀 Features

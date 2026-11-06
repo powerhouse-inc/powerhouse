@@ -1,3 +1,21 @@
+## 6.2.3-dev.95 (2026-11-06)
+
+### 🚀 Features
+
+- **ph-cli:** stage ph build, record release approvals, verify ph publish ([aaed86bf24](https://github.com/powerhouse-inc/powerhouse/commit/aaed86bf24))
+- **reactor-api:** validate document models for a host, with opt-in refusal ([992371c4fb](https://github.com/powerhouse-inc/powerhouse/commit/992371c4fb))
+
+### 🩹 Fixes
+
+- **builder-tools:** base-prefix the dev vendor's shared-deps URL ([e70ac5e055](https://github.com/powerhouse-inc/powerhouse/commit/e70ac5e055))
+- **reactor-api:** share one Vite watcher listener across package subscriptions ([5e3d3d6134](https://github.com/powerhouse-inc/powerhouse/commit/5e3d3d6134))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.94 (2026-11-05)
 
 ### 🚀 Features

@@ -1,3 +1,19 @@
+## 6.2.3-dev.95 (2026-11-06)
+
+### 🚀 Features
+
+- **ph-cli:** stage ph build, record release approvals, verify ph publish ([aaed86bf24](https://github.com/powerhouse-inc/powerhouse/commit/aaed86bf24))
+
+### 🩹 Fixes
+
+- **reactor-router:** report a declared find exclusion once per router, without a stack ([0e93181b54](https://github.com/powerhouse-inc/powerhouse/commit/0e93181b54))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.94 (2026-11-05)
 
 ### 🚀 Features

@@ -1,3 +1,22 @@
+## 6.2.3-dev.95 (2026-11-06)
+
+### 🚀 Features
+
+- **ph-cli:** stage ph build, record release approvals, verify ph publish ([aaed86bf24](https://github.com/powerhouse-inc/powerhouse/commit/aaed86bf24))
+- **host-core:** a standalone $output also reads PH_OUTPUT_DATA_DIRS ([51ed13a88c](https://github.com/powerhouse-inc/powerhouse/commit/51ed13a88c))
+- **host-core:** writeRunRecord takes the env it writes under ([fc5bdfe724](https://github.com/powerhouse-inc/powerhouse/commit/fc5bdfe724))
+
+### 🩹 Fixes
+
+- **host-core:** never read the process's own root as a PH_OUTPUT_DATA_DIRS sibling ([447bd7ad52](https://github.com/powerhouse-inc/powerhouse/commit/447bd7ad52))
+- **host-core:** two producers across PH_OUTPUT_DATA_DIRS roots are ambiguous ([c7d9b19ba3](https://github.com/powerhouse-inc/powerhouse/commit/c7d9b19ba3))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.94 (2026-11-05)
 
 ### 🚀 Features

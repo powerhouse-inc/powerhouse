@@ -1,3 +1,21 @@
+## 6.2.3-dev.95 (2026-11-06)
+
+### 🚀 Features
+
+- **ph-cli:** stage ph build, record release approvals, verify ph publish ([aaed86bf24](https://github.com/powerhouse-inc/powerhouse/commit/aaed86bf24))
+
+### 🩹 Fixes
+
+- **builder-tools:** touch the host placeholder past its own mtime so Tailwind rebuilds ([2711e038ba](https://github.com/powerhouse-inc/powerhouse/commit/2711e038ba))
+- **builder-tools:** base-prefix the dev vendor's shared-deps URL ([e70ac5e055](https://github.com/powerhouse-inc/powerhouse/commit/e70ac5e055))
+- **connect:** ask a dev server for the shared-deps table only when it serves a vendor ([386f5cbc1c](https://github.com/powerhouse-inc/powerhouse/commit/386f5cbc1c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.94 (2026-11-05)
 
 ### 🚀 Features
