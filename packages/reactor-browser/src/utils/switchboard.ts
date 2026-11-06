@@ -10,7 +10,7 @@ import {
   type UnionTypeDefinitionNode,
 } from "graphql";
 import lzString from "lz-string";
-import { GQL_CHANNEL_SUFFIX } from "../ai/switchboard.js";
+import { GQL_CHANNEL_SUFFIX } from "./gql-channel.js";
 import { GetDocumentWithOperationsDocument } from "../graphql/gen/schema.js";
 
 export async function getDriveIdBySlug(driveUrl: string, slug: string) {

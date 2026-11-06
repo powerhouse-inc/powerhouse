@@ -3,6 +3,7 @@ import { DriveCollectionId, type ISyncManager } from "@powerhousedao/reactor";
 import type { PhAiToolContext } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import { ambientRenownTokenProvider } from "../graphql-client/auth.js";
+import { GQL_CHANNEL_SUFFIX } from "../utils/gql-channel.js";
 import { resolveSwitchboard } from "../utils/switchboard-directory.js";
 import type { AiToolContext, AiToolDescriptor } from "./types.js";
 
@@ -30,8 +31,7 @@ export function getBrowserSyncManager(): ISyncManager | undefined {
     ?.syncManager;
 }
 
-/** Suffix of the per-drive GraphQL channel endpoint the switchboard serves. */
-export const GQL_CHANNEL_SUFFIX = "/graphql/r";
+export { GQL_CHANNEL_SUFFIX };
 
 /**
  * Resolves the switchboard that serves a drive, if any.
