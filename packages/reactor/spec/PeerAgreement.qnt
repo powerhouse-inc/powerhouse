@@ -1,6 +1,6 @@
 // -*- mode: Bluespec; -*-
 /**
- * Peer protocol agreement (docs/plans/2026-09-25-peer-protocol-agreement.md),
+ * Peer protocol agreement (PR #3125),
  * restricted to the `base-reducer` capability with versions {1, 2, 3}.
  *
  * Modelled: pairwise manifests (touch, re-touch on a revision mismatch, the

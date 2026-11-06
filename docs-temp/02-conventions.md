@@ -253,7 +253,7 @@ The repo is developed on Windows as well as Linux, and this shows up in conventi
 |---|---|
 | `docs/adr/` | `0001-lazy-drive-sync.md`, `0002-reactor-browser-client-interface.md`. The `/adr` skill writes new ones |
 | `docs/specs/` | `auth-scope.md` (the auth-scope design — long and authoritative), `gql-gen.md`, `relational-db-processor.md`, `migrate-codegen-fixes.md`, `template.md` |
-| `docs/plans/`, `docs/superpowers/` | Design plans and captured evidence |
+| `docs/plans/` | Plans for work still in progress; removed once it lands |
 | `packages/reactor/CLAUDE.md`, `docs/ARCHITECTURE.md`, `src/sync/design.md` | The reactor, from short to long |
 | `packages/reactor-api/ARCHITECTURE.md` | The HTTP/gateway adapter split |
 | `apps/connect/RUNTIME-CONFIG.md` | The Connect config precedence ladder — read before changing a config field |

@@ -1,6 +1,6 @@
 # Peer protocol agreement model
 
-A Quint model of `docs/plans/2026-09-25-peer-protocol-agreement.md`, restricted to the
+A Quint model of peer protocol agreement (PR #3125), restricted to the
 `base-reducer` capability with versions 1, 2 and 3, on the line A - S - B (S is the server
 and relay, A and B are its clients).
 

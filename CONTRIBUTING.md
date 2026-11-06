@@ -19,7 +19,7 @@ running the apps, testing, and the commit/PR/release flow.
 | `test/` | Integration and e2e test projects (not published) |
 | `scripts/` | Utility scripts and helpers (including `new-worktree.sh`) |
 | `docs/adr/` | Architecture decision records |
-| `docs/superpowers/` | The spec → plan → evidence workflow used for agent-driven work |
+| `docs/plans/` | Plans for work still in progress; removed once it lands |
 
 ## Prerequisites
 
@@ -144,8 +144,6 @@ pnpm lint:fix   # oxlint --fix, then oxfmt
 
 ## Working with agents
 
-Agent-driven work in this repo follows the `docs/superpowers` workflow: a
-design spec in `docs/superpowers/specs/`, a step-by-step plan in
-`docs/superpowers/plans/`, and evidence of execution in
-`docs/superpowers/evidence/`. Land the spec and the plan before making code
-changes.
+Agent-driven work keeps its plan in `docs/plans/` while in progress; land the
+plan before making code changes and remove it once the work lands. Record
+decisions as ADRs in `docs/adr/`.

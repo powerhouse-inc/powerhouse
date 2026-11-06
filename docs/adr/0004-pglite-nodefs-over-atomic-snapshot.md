@@ -3,9 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-01
 - **Deciders:** thegoldenmule
-- **Implemented by:** branch `feat/retire-atomic-node-fs`
-- **Implementation notes:** the subclass, conversion, preflight and test plan
-  are in `docs/plans/2026-10-01-retire-atomic-node-fs.md`.
+- **Implemented by:** PR #3170 (3c5c126a62)
 
 ## Context
 
@@ -163,8 +161,8 @@ once. A fresh store reaches `waitReady` in 0.7 s instead of 7.7 s with the
 same bytes on disk; initdb's 1613 interleaved `fsync`s and 746 `fdatasync`s
 become ~1000 back-to-back `fsync`s costing ~30 ms. Conversion and the PG16→17
 restore sync their trees the same way, once, after the last write. The knob
-stays for the per-commit `fdatasync` cost. Plan:
-`docs/plans/2026-10-05-fast-pglite-first-boot.md`.
+stays for the per-commit `fdatasync` cost. Implemented in
+PR #3170 (3c5c126a62).
 
 ## Alternatives considered
 

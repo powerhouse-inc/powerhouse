@@ -112,5 +112,5 @@ the check passes by construction.
 
 ## Related
 
-- Design: `docs/superpowers/specs/2026-09-15-connect-shared-deps-design.md`
+- Implementation: PR #3028 (64ad96aabb)
 - Decision record: `docs/adr/0003-connect-shared-deps-bundle.md`

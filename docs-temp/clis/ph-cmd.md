@@ -90,9 +90,7 @@ That is the right emphasis — this is a launcher whose main risk is getting ver
 resolution wrong, and a broken self-update is the one failure a user cannot recover
 from with the tool itself.
 
-`docs/superpowers/evidence/1958-self-update/` holds captured evidence for that work
-(`01-notice-registry-fetch.txt`, `02-self-update-success.txt`,
-`03-self-update-failure.txt`).
+Captured evidence for that work is in PR #3001.
 
 ### Beyond the package
 
