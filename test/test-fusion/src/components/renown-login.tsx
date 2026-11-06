@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useRenown,
   useRenownAuth,
   useRenownLoginMethods,
 } from "@powerhousedao/reactor-browser/renown";
@@ -18,6 +19,9 @@ export function RenownLogin() {
     logout,
   } = useRenownAuth();
   const methods = useRenownLoginMethods();
+  // Before Renown has initialized, login() falls back to the default portal
+  // (https://www.renown.id) with no app identity: keep the buttons disabled.
+  const ready = useRenown() !== undefined;
 
   if (user) {
     return (
@@ -44,7 +48,7 @@ export function RenownLogin() {
 
   const wallet = methods.find((m) => m.id === LoginMethod.WALLET);
   const others = methods.filter((m) => m.id !== LoginMethod.WALLET);
-  const busy = pending || status === "loading";
+  const busy = !ready || pending || status === "loading";
 
   return (
     <div className="flex w-72 flex-col gap-3 rounded-2xl border border-black/10 p-6 dark:border-white/15">
@@ -65,6 +69,18 @@ export function RenownLogin() {
           or
           <div className="h-px flex-1 bg-current opacity-30" />
         </div>
+      ) : null}
+      {methods.length === 0 ? (
+        // Redirect mode: no adapters are mounted, so login() sends the user
+        // to the Renown portal, which returns them here with `?user=`.
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => login()}
+          className="h-10 w-full rounded-lg bg-foreground text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          Continue with Renown
+        </button>
       ) : null}
       {others.map((m) => (
         <button

@@ -23,7 +23,12 @@ export async function proxy(request: NextRequest) {
   // Unauthenticated visitors can only see the login screen and the reactor
   // client demo, which is meant to run both anonymously and signed in.
   if (!authed && !isPublicPath(pathname)) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const login = new URL("/login", request.url);
+    // A redirect sign-in returning to a protected path carries the DID in
+    // `?user=`; keep it, or the login page never sees the sign-in.
+    const user = request.nextUrl.searchParams.get("user");
+    if (user) login.searchParams.set("user", user);
+    return NextResponse.redirect(login);
   }
   // Already signed in? Skip the login screen.
   if (authed && pathname === "/login") {

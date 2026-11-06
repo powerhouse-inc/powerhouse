@@ -4,6 +4,7 @@ import { GraphQLReactorProvider } from "@powerhousedao/reactor-browser/graphql-c
 import { Suspense } from "react";
 import { ExtensibilityProbe } from "@/components/extensibility-probe";
 import { TodoDemo } from "@/components/todo-demo";
+import { rehydratedRenownToken } from "@/lib/reactor-token";
 import { SWITCHBOARD_URL } from "@/lib/renown";
 import { todoDocumentModels } from "@/lib/todo-document";
 
@@ -16,6 +17,7 @@ export default function DocumentsPage() {
   return (
     <GraphQLReactorProvider
       url={SWITCHBOARD_URL}
+      tokenProvider={rehydratedRenownToken}
       documentModels={todoDocumentModels}
     >
       <Suspense fallback={null}>
