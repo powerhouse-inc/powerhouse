@@ -1,8 +1,9 @@
 # Plan: Caller-bound attachments for subgraphs
 
 Date: 2026-10-01
-Status: draft for implementation, not started. Written for agents
-implementing from `main`. Paths are relative to `packages/reactor-api/src`
+Status: stages 0-1 merged in #3156 (0b37d6001b); remaining: stage 2 (the workflow port still
+checks refs itself via `canReadAttachmentRef`) and refusing an upload-first send after expiry.
+Written for agents implementing from `main`. Paths are relative to `packages/reactor-api/src`
 unless stated.
 
 ## Overview

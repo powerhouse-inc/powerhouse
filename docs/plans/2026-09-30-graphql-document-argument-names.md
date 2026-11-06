@@ -1,7 +1,7 @@
 # Plan: GraphQL document argument names
 
 Date: 2026-09-30
-Status: proposal, not started
+Status: stages 1-4 and the test-client part of 5b merged in #3150 (a03d06b941); remaining: rest of 5b (switchboard-lb, lb-loadtest), 5c-5e (reactor-api operations.graphql, reactor-browser, renown), the stage 6 ACADEMY_LLM_COMPLETE.md deletions, stage 7 (recipes) and removing the deprecated arguments.
 
 ## Overview
 

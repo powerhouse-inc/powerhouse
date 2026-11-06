@@ -1,7 +1,8 @@
 # Testing policy (draft)
 
 Date: 2026-10-02
-Status: draft, not adopted. The rollout plan is
+Status: draft, not adopted: no `docs/testing-policy.md`, no CLAUDE.md pointer, no review
+checklist yet (test files already cite R1-R7). The rollout plan is
 `2026-10-02-testing-policy-rollout.md`, next to this file.
 
 ## Provenance

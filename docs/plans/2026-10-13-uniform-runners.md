@@ -4,11 +4,11 @@ One package type; every Powerhouse application — Connect, Switchboard, Vetra,
 desktop shells, agent APIs, agent CLIs — defined as a **host** in the project's
 `hosts/` folder and started by a **runner** via `ph run <host> [verb]`.
 
-Status: in progress on `main`, dark behind `FEATURE_UNIFORM_RUNNERS_ENABLED`
-(ph-cli-side env toggle, hand-rolled predicate — no OpenFeature in the CLI).
+Status: all phases built on `main` but dark behind `FEATURE_UNIFORM_RUNNERS_ENABLED`
+(ph-cli-side env toggle, hand-rolled predicate — no OpenFeature in the CLI); remaining: turn it
+on, remove the flag and its gating, and delete the legacy boot paths. The `// LEGACY(uniform-runners)`
+markers were never added, so that cleanup needs a fresh inventory.
 Entry point: `ph init --uniform-runners` (or the env flag) scaffolds `hosts/`.
-Superseded code is marked `// LEGACY(uniform-runners): …` — that grep is the
-cleanup inventory for flag removal.
 
 ## The model
 

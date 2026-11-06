@@ -1,7 +1,9 @@
 # Plan: roll out the testing policy across the existing code base
 
 Date: 2026-10-02
-Status: proposal, not started. The policy this rolls out is
+Status: phases 1-4 landed (#3172 2f402b19cd, #3177; the 1d gate-contract test was later removed
+by fcccf0dfca); remaining: phase 0 (adoption) and the Windows item, which waits on Track D of
+`2026-10-02-reactor-tests-on-windows.md`. The policy this rolls out is
 `2026-10-02-testing-policy.md`, next to this file. Rule numbers (R1–R7)
 refer to that document.
 
@@ -171,8 +173,7 @@ gets amended before Phase 2.
       catch-up-guards PGlite harness. The composed tests passed without
       source changes: the real pairs agree on the contracts the mocks
       assumed — now guarded instead of presumed.
-- [x] Inventory recorded with file:line citations in
-      `docs/plans/2026-10-02-seam-inventory.md`.
+- [x] Inventory recorded with file:line citations in #3172 (2f402b19cd).
 
 ## Phase 3 — degraded-branch audit (R3) and tooling
 

@@ -1,14 +1,8 @@
 # Plan: Make the reactor suite pass on Windows
 
 Date: 2026-10-02 (against `main` at 141abde841, 6.2.3-dev.38)
-Status: Tracks A and B done on `windows-fixes` (acf2bb02b8, 9cc40d56bf,
-50ce21313f, 85827187e2, 0d70428d87) and verified: the suite is fully green
-on this machine — 302/302 files, 4,027 passed and 19 expected-fail in 502s,
-coverage written. A2 needed a second pass (see the amendment there): the
-bare `bash` fix resolves to WSL's launcher under PowerShell, and Git Bash
-spawned directly lacks its own `usr/bin` on PATH. Track C needs no code
-change, but the second run found the memory ceiling Track D has to budget
-for. Track D not started.
+Status: Tracks A-C merged in #3171 (cf4007efcb); remaining: Track D, the CI gate (reactor in
+`test:ci:platform` and `test-weights.windows.json`, Postgres in `check-windows.yml`).
 Paths are relative to the repo root unless they start with `packages/reactor`.
 
 ## Motivation

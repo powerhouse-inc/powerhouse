@@ -1,6 +1,7 @@
 # Plan: Hybrid projection worker (one worker, host keeps subscriptions + processors)
 
 Date: 2026-09-08 (revised the same day, after PR #2987 merged)
+Status: steps 1-7 merged in #2988 (8f7e1a5bfa); remaining: the bench sweep against Run 11, staging metrics and parity checks, and the k8s `REACTOR_PROJECTION_WORKER=1` rollout (see Remaining).
 Branch: `main` — `feat/reactor-host-observability` is fully merged
 (#2987, `630664faa`); nothing remains on the branch.
 

@@ -1,7 +1,10 @@
 # Plan: Make the reactor SharedWorker loadable in packaged Connect
 
 Date: 2026-10-02 (against `main` at dabeba9600)
-Status: proposal, not started. Written for agents implementing from `main`.
+Status: phases 0-3 and the core of phase 4 merged in #3167 (0a6a2c6e19); remaining: the four
+unchecked follow-ups (vendor HTTP-cache check, tab convergence after reload, browser-support note
+in `apps/connect/RUNTIME-CONFIG.md`, worker-on-by-default decision). Written for agents
+implementing from `main`.
 Paths are relative to the repo root unless marked as observed in a consumer
 project.
 
