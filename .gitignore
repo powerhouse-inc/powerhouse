@@ -26,6 +26,10 @@ CLAUDE.md
 !.claude/commands/
 !.claude/commands/**
 !.claude/skills/
+!.claude/agents/
+!.claude/hooks/
+!.claude/settings.json
+!.claude/README.md
 coverage/
 coverage-reports/
 vitest-timings.json
