@@ -546,7 +546,10 @@ describe("connectRoutes", () => {
     expect(replacement).toMatch(/connect[\\/]dist[\\/]route-tree\.js$/);
     expect(replacement).not.toMatch(/connect-core[\\/]dist/);
     // Not imported: Connect's views read the runtime config as they load.
-    expect(existsSync(replacement)).toBe(true);
+    expect(
+      existsSync(replacement),
+      "build @powerhousedao/connect first: this reads its dist",
+    ).toBe(true);
   });
 });
 
@@ -585,13 +588,18 @@ describe("project route types", () => {
       routesDir!,
       connectRoutesGeneratorConfig(connectDir, fixture, routesDir!),
     );
-    const typecheck = () =>
+    // tsc reports on stdout; show it (e.g. TS6305: build connect first) on failure.
+    let diagnostics = "";
+    try {
       execFileSync(
         join(repoRoot, "node_modules/.bin/tsc"),
         ["-p", join(fixture, "hosts/connect/routes/tsconfig.json")],
         { cwd: fixture, encoding: "utf8", stdio: "pipe" },
       );
-    expect(typecheck).not.toThrow();
+    } catch (err) {
+      diagnostics = String((err as { stdout?: string }).stdout || err);
+    }
+    expect(diagnostics).toBe("");
   }, 120_000);
 });
 
