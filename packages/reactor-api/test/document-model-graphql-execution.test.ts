@@ -133,6 +133,40 @@ describe("mutation authorization", () => {
   );
 });
 
+describe("mutation authorization before input validation", () => {
+  function refusingInput(module: DocumentModelModule): DocumentModelModule {
+    const addEntry = () => {
+      throw new Error("Invalid action input");
+    };
+    return { ...module, actions: { ...module.actions, addEntry } };
+  }
+
+  it.each([
+    ["schema-first", asSchemaFirst(ledgerModel())],
+    ["code-first", ledgerModel()],
+    ["code-first served stored", asStored(ledgerModel())],
+  ])(
+    "answers a caller without permission Forbidden whatever the %s input",
+    async (_name, module) => {
+      const write = `mutation { Ledger { addEntry(docId: "doc-1", input: { id: "a", amount: 1 }) { id } } }`;
+      const denied = hostFor(
+        refusingInput(module),
+        recordingAuthorization("ADD_ENTRY").authorization,
+      );
+      const allowed = hostFor(
+        refusingInput(module),
+        recordingAuthorization().authorization,
+      );
+      expect(messages(await denied.run(write))).toEqual([
+        'Forbidden: insufficient permissions to execute operation "ADD_ENTRY" on this document',
+      ]);
+      expect(messages(await allowed.run(write))).toEqual([
+        "Invalid action input",
+      ]);
+    },
+  );
+});
+
 describe("mutation failure messages", () => {
   function withoutCreator(module: DocumentModelModule): DocumentModelModule {
     const { addEntry: _addEntry, ...actions } = module.actions;

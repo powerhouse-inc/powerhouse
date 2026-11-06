@@ -707,7 +707,7 @@ function applyByRule<TState extends PHBaseState>(
   );
 
   let next = document;
-  let failure: { thrown: unknown } | undefined;
+  let error: string | undefined;
   if (rebuild) {
     let thrown: unknown;
     const onThrow = (operation: Operation, caught: unknown) => {
@@ -723,13 +723,13 @@ function applyByRule<TState extends PHBaseState>(
         (operation) => operation.action.id === appendedId,
       );
     if (threw) {
-      failure = { thrown };
+      error = errorMessage(thrown);
     }
   } else if (!isDenied(appended)) {
     try {
       next = reduceOne(document, appended, reducerFor);
     } catch (caught) {
-      failure = { thrown: caught };
+      error = errorMessage(caught);
     }
   }
 
@@ -737,7 +737,7 @@ function applyByRule<TState extends PHBaseState>(
   const row: Operation = {
     ...appended,
     hash: replayHash ? replayHash : hashDocumentStateForScope(next, scope),
-    ...(failure === undefined ? {} : failedOperationFields(failure.thrown)),
+    ...(error === undefined ? {} : { error }),
     ...(options.reuseOperationResultingState
       ? {
           resultingState: JSON.stringify(
@@ -758,17 +758,6 @@ function applyByRule<TState extends PHBaseState>(
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return typeof error === "string" ? error : "Action failed";
-}
-
-function failedOperationFields(
-  error: unknown,
-): Pick<Operation, "error" | "errorName" | "errorCode"> {
-  const { name, code } = reducerErrorIdentity(error);
-  return {
-    error: errorMessage(error),
-    ...(name !== undefined && { errorName: name }),
-    ...(code !== undefined && { errorCode: code }),
-  };
 }
 
 /**
@@ -811,13 +800,9 @@ function reducerErrorIdentity(error: unknown): {
   code?: string;
 } {
   if (typeof error !== "object" || error === null) return {};
-  const { name, errorCode, constructor } = error as {
-    name?: unknown;
-    errorCode?: unknown;
-    constructor?: { name?: unknown };
-  };
+  const { name, errorCode } = error as { name?: unknown; errorCode?: unknown };
   // Generated error classes leave `name` as "Error"; their class has the name.
-  const className = constructor?.name;
+  const className = (error as object).constructor.name;
   const named = [name, className].find(
     (candidate): candidate is string =>
       typeof candidate === "string" &&

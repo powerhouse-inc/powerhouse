@@ -7,10 +7,6 @@ Install the library:
 - NPM: `npm install @acaldas/document-model-libs`
 - Yarn: `yarn add @acaldas/document-model-libs`
 
-## Converting a published model to code first
-
-To declare a published schema-first model in code without changing the ids and operation names its documents already store, see [Converting a published schema-first model to code first](./src/definition/CONVERTING.md).
-
 ## Documentation
 
 The full documentation for this package is available at: https://acaldas.github.io/document-model-libs/

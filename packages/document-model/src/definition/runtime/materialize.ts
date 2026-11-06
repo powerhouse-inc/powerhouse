@@ -351,16 +351,6 @@ function materializeVersion(
 
   const definition: DocumentModelDefinition = cloneJson({
     ...version.definition,
-    compatibility: {
-      ...version.definition.compatibility,
-      identity: versions.some(
-        (candidate) =>
-          candidate.definition.compatibility.identity ===
-          "explicit-schema-first",
-      )
-        ? "explicit-schema-first"
-        : "derived-v1",
-    },
     specifications: versions.map((candidate) => candidate.specification),
   });
   recordModelPackageScalars(definition, version.packageScalars);

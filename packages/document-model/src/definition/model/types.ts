@@ -102,25 +102,11 @@ type ModelOperationContext<
   readonly dispatch: SignalDispatch | undefined;
 };
 
-type StoredIdentity = {
-  /**
-   * @experimental The id the published schema-first model stores. Omit it to
-   * derive one from the key.
-   */
-  readonly id?: string;
-  /**
-   * @experimental The name the published schema-first model stores, such as
-   * `SET_TITLE` for the key `setTitle` or `title_operations` for the module
-   * key `titleOperations`. It must be another spelling of the key.
-   */
-  readonly name?: string;
-};
-
 type ModelOperationConfig<
   TState,
   TInput extends InputDescriptor,
   TErrors extends ErrorDeclarations,
-> = StoredIdentity & {
+> = {
   readonly description?: string;
   readonly input: TInput;
   readonly errors?: TErrors;
@@ -256,7 +242,7 @@ export interface DocumentModelContext<
     const TOperations extends Readonly<Record<string, ModelOperationToken>>,
   >(
     key: TKey,
-    config: StoredIdentity & {
+    config: {
       readonly description?: string;
       readonly operations: (builders: {
         readonly global: ModelOperationBuilder<

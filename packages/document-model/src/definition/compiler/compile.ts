@@ -41,7 +41,6 @@ import {
   deriveDocumentModelErrorNames,
   deriveDocumentModelModuleNames,
   deriveDocumentModelOperationNames,
-  deriveDocumentModelSymbolNames,
   deriveOperationErrorClassName,
   type DocumentModelNames,
   PLATFORM_ACTION_TYPES,
@@ -61,11 +60,6 @@ export type OperationErrorClass = new (message?: string) => Error & {
 };
 
 export type OperationErrorDeclaration = {
-  /**
-   * @experimental The id a published model stores for this error. Omit it
-   * to derive one from the keys.
-   */
-  readonly id?: string | null;
   readonly code?: string | null;
   readonly name?: string | null;
   readonly description?: string | null;
@@ -73,11 +67,6 @@ export type OperationErrorDeclaration = {
 };
 
 export type DefinitionExampleDeclaration = {
-  /**
-   * @experimental The id a published model stores for this example. Omit it
-   * to derive one from the keys.
-   */
-  readonly id?: string | null;
   readonly key: string;
   readonly value: string;
 };
@@ -96,8 +85,6 @@ export type OperationReducer = (
 
 export type OperationDeclaration = {
   readonly key: string;
-  readonly id: string | null;
-  readonly name: string | null;
   readonly scope: "global" | "local";
   readonly input: InputDescriptor;
   readonly description: string | null;
@@ -110,8 +97,6 @@ export type OperationDeclaration = {
 
 export type ModuleDeclaration = {
   readonly key: string;
-  readonly id: string | null;
-  readonly name: string | null;
   readonly description: string | null;
   readonly operations: readonly OperationDeclaration[];
 };
@@ -229,7 +214,7 @@ function exampleDefinitions(
       return;
     }
     keys.set(example.key, index);
-    const id = example.id ?? identity(example.key, keyPath);
+    const id = identity(example.key, keyPath);
     if (id === undefined) return;
     definitions.push({ id, key: example.key, value: example.value });
   });
@@ -244,19 +229,17 @@ function errorDefinitions(
   path: DefinitionPath,
 ): CompiledErrorDefinition[] {
   return Object.entries(operation.errors).flatMap(([key, declaration]) => {
-    const id =
-      declaration.id ??
-      deriveId(
-        collector,
-        {
-          kind: "error",
-          documentType,
-          moduleKey,
-          operationKey: operation.key,
-          errorKey: key,
-        },
-        [...path, "errors", key],
-      );
+    const id = deriveId(
+      collector,
+      {
+        kind: "error",
+        documentType,
+        moduleKey,
+        operationKey: operation.key,
+        errorKey: key,
+      },
+      [...path, "errors", key],
+    );
     if (id === undefined) return [];
     const names = deriveDocumentModelErrorNames(key, declaration);
     return [
@@ -375,28 +358,6 @@ function materializeInitialValue(
   return undefined;
 }
 
-function declaresStoredIds(
-  config: DocumentModelCompilationConfig,
-  modules: readonly ModuleDeclaration[],
-): boolean {
-  const stored = (examples: readonly DefinitionExampleDeclaration[]) =>
-    examples.some((example) => example.id != null);
-  return (
-    stored(config.scopes.global.examples) ||
-    stored(config.scopes.local.examples) ||
-    modules.some(
-      (module) =>
-        module.id !== null ||
-        module.operations.some(
-          (operation) =>
-            operation.id !== null ||
-            stored(operation.examples) ||
-            Object.values(operation.errors).some((error) => error.id != null),
-        ),
-    )
-  );
-}
-
 export function compileDocumentModelVersion(
   config: DocumentModelCompilationConfig,
   modules: readonly ModuleDeclaration[],
@@ -420,7 +381,7 @@ export function compileDocumentModelVersion(
       message: `Specification ID ${id} is already claimed by another declaration.`,
       expected: "one ID per module, operation, error, and example",
       received: id,
-      repair: "Give the two declarations distinct keys or stored ids.",
+      repair: "Give the two declarations distinct keys.",
       related: [{ path: first, message: "First claimed here." }],
     });
   };
@@ -460,31 +421,12 @@ export function compileDocumentModelVersion(
     }
     moduleKeys.set(module.key, moduleIndex);
 
-    const moduleNames = deriveDocumentModelModuleNames(
-      config.name,
-      module.key,
-      module.name === null ? {} : { storedName: module.name },
+    const moduleNames = deriveDocumentModelModuleNames(config.name, module.key);
+    const moduleId = deriveId(
+      collector,
+      { kind: "module", documentType, moduleKey: module.key },
+      [...modulePath, "key"],
     );
-    if (
-      module.name !== null &&
-      deriveDocumentModelSymbolNames(module.name).memberName !== module.key
-    ) {
-      collector.add({
-        code: "PH-DM-DECLARATION-INVALID",
-        path: [...modulePath, "name"],
-        message: `Stored module name ${JSON.stringify(module.name)} is not a spelling of the key ${JSON.stringify(module.key)}, so a reader deriving the key from the stored name would find another module.`,
-        expected: `a name whose camelCase spelling is ${module.key}`,
-        received: module.name,
-        repair: `Rename the module key to ${JSON.stringify(deriveDocumentModelSymbolNames(module.name).memberName)}, or omit name.`,
-      });
-    }
-    const moduleId =
-      module.id ??
-      deriveId(
-        collector,
-        { kind: "module", documentType, moduleKey: module.key },
-        [...modulePath, "key"],
-      );
     if (moduleId !== undefined) claimIdentity(moduleId, [...modulePath, "id"]);
 
     const operations: DraftModule["operations"][number][] = [];
@@ -499,27 +441,8 @@ export function compileDocumentModelVersion(
         "operations",
         operationIndex,
       ];
-      const names = deriveDocumentModelOperationNames(
-        operation.key,
-        operation.name === null ? {} : { storedName: operation.name },
-      );
+      const names = deriveDocumentModelOperationNames(operation.key);
       derivedOperations.push({ key: operation.key, names });
-      if (operation.name !== null) {
-        const spelled = deriveDocumentModelSymbolNames(operation.name);
-        if (
-          spelled.memberName !== operation.key ||
-          spelled.constantName !== names.actionType
-        ) {
-          collector.add({
-            code: "PH-DM-DECLARATION-INVALID",
-            path: [...operationPath, "name"],
-            message: `Stored operation name ${JSON.stringify(operation.name)} is not a spelling of the key ${JSON.stringify(operation.key)}, so hosts would derive another GraphQL field or action type from it than ${names.actionType}.`,
-            expected: `a spelling of ${operation.key}, such as ${names.actionType}`,
-            received: operation.name,
-            repair: `Rename the operation key to ${JSON.stringify(spelled.memberName)}, or omit name.`,
-          });
-        }
-      }
       if (names.creatorKey !== operation.key) {
         collector.add({
           code: "PH-DM-DECLARATION-INVALID",
@@ -540,18 +463,16 @@ export function compileDocumentModelVersion(
           repair: "Rename the operation.",
         });
       }
-      const operationId =
-        operation.id ??
-        deriveId(
-          collector,
-          {
-            kind: "operation",
-            documentType,
-            moduleKey: module.key,
-            operationKey: operation.key,
-          },
-          [...operationPath, "key"],
-        );
+      const operationId = deriveId(
+        collector,
+        {
+          kind: "operation",
+          documentType,
+          moduleKey: module.key,
+          operationKey: operation.key,
+        },
+        [...operationPath, "key"],
+      );
       if (operationId !== undefined) {
         claimIdentity(operationId, [...operationPath, "id"]);
       }
@@ -801,9 +722,7 @@ export function compileDocumentModelVersion(
       kind: "powerhouse.document-model",
       formatVersion: 1,
       compatibility: {
-        identity: declaresStoredIds(config, modules)
-          ? "explicit-schema-first"
-          : "derived-v1",
+        identity: "derived-v1",
         scalarCoercion: "catalog-v1",
         serialization: "canonical-v1",
       },

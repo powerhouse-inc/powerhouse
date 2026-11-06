@@ -1,5 +1,5 @@
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
-import { camelCase, pascalCase } from "change-case";
+import { camelCase, constantCase, pascalCase } from "change-case";
 import { childLogger } from "document-model";
 import { parse } from "graphql";
 import {
@@ -82,6 +82,9 @@ export function storedSchemaSource(
         .map((op) => ({
           camelName: camelCase(op.name!),
           storedName: op.name!,
+          // The type the generated creator dispatches; for a schema-first
+          // model it is the stored name itself.
+          permissionKey: constantCase(op.name!),
           creatorKey: camelCase(op.name!),
         })) ?? [],
   };

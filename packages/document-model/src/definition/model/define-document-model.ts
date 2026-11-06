@@ -28,7 +28,6 @@ import {
   type ModelCollector,
   modelCollector,
   normalizeExamples,
-  optionalStoredId,
   optionalString,
   requiredString,
   requiredText,
@@ -350,8 +349,6 @@ function normalizeConfig(
 }
 
 const OPERATION_KEYS = [
-  "id",
-  "name",
   "description",
   "input",
   "errors",
@@ -360,8 +357,7 @@ const OPERATION_KEYS = [
   "reducerTemplate",
   "reduce",
 ];
-const ERROR_TEXT_KEYS = ["code", "name", "description", "template"] as const;
-const ERROR_KEYS = ["id", ...ERROR_TEXT_KEYS];
+const ERROR_KEYS = ["code", "name", "description", "template"] as const;
 
 function normalizeErrors(
   collector: ModelCollector,
@@ -404,11 +400,9 @@ function normalizeErrors(
       ERROR_KEYS,
     );
     if (metadata === undefined) continue;
-    const id = optionalStoredId(collector, metadata.id, [...errorPath, "id"]);
     const entry: Record<string, string | null> = {};
-    let valid = id !== undefined;
-    if (id) entry.id = id;
-    for (const member of ERROR_TEXT_KEYS) {
+    let valid = true;
+    for (const member of ERROR_KEYS) {
       if (!Object.hasOwn(metadata, member)) continue;
       const text = optionalString(collector, metadata[member], [
         ...errorPath,
@@ -483,11 +477,7 @@ function operationBuilder<TState, TScope extends "global" | "local">(
     }
     const text = (key: string) =>
       optionalString(collector, config[key], [...path, key]) ?? null;
-    const id = optionalStoredId(collector, config.id, [...path, "id"]);
-    if (id === undefined) return reject();
     stage.declarations.set(token, {
-      id,
-      name: text("name"),
       scope,
       input: descriptor as InputDescriptor,
       description: text("description"),
@@ -538,8 +528,6 @@ function normalizeModuleKey(
   return moduleKey;
 }
 
-const MODULE_KEYS = ["id", "name", "description", "operations"];
-
 function normalizeModule(
   collector: ModelCollector,
   key: unknown,
@@ -548,17 +536,14 @@ function normalizeModule(
   const moduleKey = normalizeModuleKey(collector, key);
   const declaration = take(
     collector,
-    snapshotRecord(config, MODULE_KEYS, ["module"]),
-    MODULE_KEYS,
+    snapshotRecord(config, ["description", "operations"], ["module"]),
+    ["description", "operations"],
   );
   if (declaration === undefined || moduleKey === undefined) return undefined;
   const description = optionalString(collector, declaration.description, [
     "module",
     "description",
   ]);
-  const id = optionalStoredId(collector, declaration.id, ["module", "id"]);
-  const name = optionalString(collector, declaration.name, ["module", "name"]);
-  if (id === undefined || name === undefined) return undefined;
   if (typeof declaration.operations !== "function") {
     collector.add({
       code: "PH-DM-DECLARATION-INVALID",
@@ -648,8 +633,6 @@ function normalizeModule(
   }
   return {
     key: moduleKey,
-    id,
-    name,
     description: description ?? null,
     operations,
   };

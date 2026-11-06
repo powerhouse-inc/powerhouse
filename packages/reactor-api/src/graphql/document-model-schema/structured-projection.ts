@@ -54,6 +54,7 @@ export function structuredSchemaSource(
             camelName: camelCase(operation.name),
             inputTypeName: `${documentName()}_${input.name.value}`,
             storedName: operation.name,
+            permissionKey: operation.actionType,
             creatorKey: operation.creatorKey,
           },
         ];

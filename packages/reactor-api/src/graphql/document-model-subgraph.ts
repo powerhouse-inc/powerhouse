@@ -236,6 +236,18 @@ export class DocumentModelSubgraph extends BaseSubgraph {
       "documentIdOrSlug",
       "docId",
     );
+    const handle = await this.assertCanExecuteOperation(
+      documentIdOrSlug,
+      op.permissionKey,
+      ctx,
+    );
+    const clients = this.clientsOf(ctx);
+    await this.#assertDocumentType(
+      clients,
+      handle.fetchIdentifier,
+      documentIdOrSlug,
+      documentType,
+    );
     const creator = this.documentModel.actions[op.creatorKey];
     if (!creator) {
       throw new GraphQLError(`Action ${op.storedName} not found`);
@@ -248,18 +260,6 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         error instanceof Error ? error.message : `Failed to ${op.storedName}`,
       );
     }
-    const handle = await this.assertCanExecuteOperation(
-      documentIdOrSlug,
-      action.type,
-      ctx,
-    );
-    const clients = this.clientsOf(ctx);
-    await this.#assertDocumentType(
-      clients,
-      handle.fetchIdentifier,
-      documentIdOrSlug,
-      documentType,
-    );
     return { clients, documentId: handle.fetchIdentifier, action };
   }
 

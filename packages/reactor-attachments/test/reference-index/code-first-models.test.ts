@@ -5,7 +5,7 @@ import { AttachmentSchemaCompiler } from "../../index.js";
 
 const REF = `attachment://v1:${"a".repeat(64)}` as const;
 
-function attachmentModel(storedName?: string): DocumentModelModule {
+function attachmentModel(): DocumentModelModule {
   const model = defineDocumentModel({
     id: "test/attachments",
     name: "Attachments",
@@ -30,7 +30,6 @@ function attachmentModel(storedName?: string): DocumentModelModule {
   const files = model.module("files", {
     operations: ({ global }) => ({
       attachFile: global({
-        ...(storedName === undefined ? {} : { name: storedName }),
         input: ph.input({
           fields: { ref: ph.AttachmentRef({ required: true }) },
         }),
@@ -46,32 +45,26 @@ function attachmentModel(storedName?: string): DocumentModelModule {
 }
 
 describe("AttachmentSchemaCompiler on code-first models", () => {
-  it.each([
-    ["a derived", undefined, "AttachFile"],
-    ["a schema-first", "ATTACH_FILE", "ATTACH_FILE"],
-  ] as const)(
-    "finds the operation of %s stored name by its action type",
-    (_label, storedName, expectedStoredName) => {
-      const module = attachmentModel(storedName);
-      const [operation] =
-        module.documentModel.global.specifications[0].modules[0].operations;
-      const action = (
-        module.actions as unknown as {
-          attachFile: (input: { ref: string }) => {
-            type: string;
-            input: unknown;
-          };
-        }
-      ).attachFile({ ref: REF });
-      const extractor = new AttachmentSchemaCompiler().forModuleAction(
-        module,
-        action.type,
-      );
-      expect([operation.name, action.type]).toStrictEqual([
-        expectedStoredName,
-        "ATTACH_FILE",
-      ]);
-      expect(extractor.extract(action as never)).toEqual([REF]);
-    },
-  );
+  it("finds the operation of a code-first stored name by its action type", () => {
+    const module = attachmentModel();
+    const [operation] =
+      module.documentModel.global.specifications[0].modules[0].operations;
+    const action = (
+      module.actions as unknown as {
+        attachFile: (input: { ref: string }) => {
+          type: string;
+          input: unknown;
+        };
+      }
+    ).attachFile({ ref: REF });
+    const extractor = new AttachmentSchemaCompiler().forModuleAction(
+      module,
+      action.type,
+    );
+    expect([operation.name, action.type]).toStrictEqual([
+      "AttachFile",
+      "ATTACH_FILE",
+    ]);
+    expect(extractor.extract(action as never)).toEqual([REF]);
+  });
 });

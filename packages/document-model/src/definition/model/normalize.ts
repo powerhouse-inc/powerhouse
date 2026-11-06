@@ -11,7 +11,6 @@ import {
 } from "../kernel/data-properties.js";
 import { DefinitionDiagnosticCollector } from "../kernel/diagnostic-collector.js";
 import { describeReceived } from "../kernel/diagnostics.js";
-import { isNFC } from "../kernel/primitives.js";
 import {
   type ModelDiagnosticCode,
   modelDiagnostics,
@@ -133,33 +132,6 @@ export function optionalString(
   return undefined;
 }
 
-export function optionalStoredId(
-  collector: ModelCollector,
-  value: unknown,
-  path: DefinitionPath,
-): string | null | undefined {
-  if (value === undefined || value === null) return null;
-  if (typeof value === "string" && value.trim() !== "" && isNFC(value)) {
-    return value;
-  }
-  collector.add({
-    code: "PH-DM-IDENTITY-INVALID",
-    path,
-    message:
-      "A stored id must be a nonempty string already in Unicode NFC, as the published model stores it.",
-    expected: "the id the published model stores",
-    received:
-      typeof value === "string"
-        ? JSON.stringify(value)
-        : describeReceived(value),
-    repair:
-      "Copy the id from the published model's specification, or omit id to derive one from the key.",
-  });
-  return undefined;
-}
-
-const EXAMPLE_KEYS = ["id", "key", "value"];
-
 export function normalizeExamples(
   collector: ModelCollector,
   value: unknown,
@@ -172,12 +144,11 @@ export function normalizeExamples(
     const examplePath = [...path, index];
     const example = take(
       collector,
-      snapshotDataRecord(entry, EXAMPLE_KEYS, examplePath),
-      EXAMPLE_KEYS,
+      snapshotDataRecord(entry, ["key", "value"], examplePath),
+      ["key", "value"],
     );
     if (example === undefined) return [];
     const key = requiredString(collector, example.key, [...examplePath, "key"]);
-    const id = optionalStoredId(collector, example.id, [...examplePath, "id"]);
     if (typeof example.value !== "string") {
       collector.add({
         code: "PH-DM-DECLARATION-INVALID",
@@ -189,8 +160,6 @@ export function normalizeExamples(
       });
       return [];
     }
-    return key === undefined || id === undefined
-      ? []
-      : [{ id, key, value: example.value }];
+    return key === undefined ? [] : [{ key, value: example.value }];
   });
 }

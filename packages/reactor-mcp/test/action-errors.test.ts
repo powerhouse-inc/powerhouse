@@ -219,15 +219,15 @@ describe("addActions results for a code-first model's error", () => {
     module.reactor.kill();
   });
 
-  it("names the executed operation's error and code on a new document", async () => {
-    const created = await (
-      await module.client.write.createEmpty("test/limits")
-    ).document();
-    expect(created.header.protocolVersions?.["base-reducer"]).toBe(3);
+  it("names the executed operation's error when two operations share its code", async () => {
+    const document = model.utils.createDocument();
+    await (
+      await module.client.write.create(document)
+    ).readable;
     const result = await toMcpTool(addActionsTool, {
       client: module.client,
     }).callback({
-      documentId: created.header.id,
+      documentId: document.header.id,
       actions: [{ type: "SECOND", input: {} }],
     });
     expect(
