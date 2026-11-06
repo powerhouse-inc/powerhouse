@@ -1,3 +1,25 @@
+## 6.2.3-dev.96 (2026-11-06)
+
+### 🚀 Features
+
+- **connect:** publish the switchboards Connect reaches, and list them for the assistant ([709185bf97](https://github.com/powerhouse-inc/powerhouse/commit/709185bf97))
+- **reactor-browser:** a switchboard directory to pick the switchboard a call goes to ([6a3ec6cac8](https://github.com/powerhouse-inc/powerhouse/commit/6a3ec6cac8))
+- **test-fusion:** switchable Renown login mode and split switchboard URLs ([1150e67063](https://github.com/powerhouse-inc/powerhouse/commit/1150e67063))
+
+### 🩹 Fixes
+
+- **codegen:** pin the Solana programs in generated projects ([e26ebfe004](https://github.com/powerhouse-inc/powerhouse/commit/e26ebfe004))
+- **connect:** the dev server serves the app for a page load under /d/ ([58deab64e2](https://github.com/powerhouse-inc/powerhouse/commit/58deab64e2))
+- **reactor-browser:** break the import cycle through the switchboard directory ([540af565a6](https://github.com/powerhouse-inc/powerhouse/commit/540af565a6))
+- **reactor-workflow:** record a refused OAuth2 sign-in on its connection ([cbfe1e72fb](https://github.com/powerhouse-inc/powerhouse/commit/cbfe1e72fb))
+- **test-fusion:** keep the login buttons disabled until Renown is ready ([bf845c4300](https://github.com/powerhouse-inc/powerhouse/commit/bf845c4300))
+- **workflow:** reach the workflow runtime of the switchboard the call is about ([a0a8f11044](https://github.com/powerhouse-inc/powerhouse/commit/a0a8f11044))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.95 (2026-11-06)
 
 ### 🚀 Features

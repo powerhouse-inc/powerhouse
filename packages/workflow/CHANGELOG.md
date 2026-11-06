@@ -1,3 +1,14 @@
+## 6.2.3-dev.96 (2026-11-06)
+
+### 🩹 Fixes
+
+- **workflow:** reach the workflow runtime of the switchboard the call is about ([a0a8f11044](https://github.com/powerhouse-inc/powerhouse/commit/a0a8f11044))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.95 (2026-11-06)
 
 ### 🚀 Features

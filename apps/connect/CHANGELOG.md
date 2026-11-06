@@ -1,3 +1,18 @@
+## 6.2.3-dev.96 (2026-11-06)
+
+### 🚀 Features
+
+- **connect:** publish the switchboards Connect reaches, and list them for the assistant ([709185bf97](https://github.com/powerhouse-inc/powerhouse/commit/709185bf97))
+
+### 🩹 Fixes
+
+- **connect:** the dev server serves the app for a page load under /d/ ([58deab64e2](https://github.com/powerhouse-inc/powerhouse/commit/58deab64e2))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.95 (2026-11-06)
 
 ### 🚀 Features

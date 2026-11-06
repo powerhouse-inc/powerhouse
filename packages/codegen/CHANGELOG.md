@@ -1,3 +1,14 @@
+## 6.2.3-dev.96 (2026-11-06)
+
+### 🩹 Fixes
+
+- **codegen:** pin the Solana programs in generated projects ([e26ebfe004](https://github.com/powerhouse-inc/powerhouse/commit/e26ebfe004))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.95 (2026-11-06)
 
 ### 🚀 Features

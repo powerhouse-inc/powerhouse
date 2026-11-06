@@ -1,3 +1,14 @@
+## 6.2.3-dev.96 (2026-11-06)
+
+### 🩹 Fixes
+
+- **reactor-workflow:** record a refused OAuth2 sign-in on its connection ([cbfe1e72fb](https://github.com/powerhouse-inc/powerhouse/commit/cbfe1e72fb))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.95 (2026-11-06)
 
 ### 🚀 Features

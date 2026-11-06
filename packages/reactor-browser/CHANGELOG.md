@@ -1,3 +1,18 @@
+## 6.2.3-dev.96 (2026-11-06)
+
+### 🚀 Features
+
+- **reactor-browser:** a switchboard directory to pick the switchboard a call goes to ([6a3ec6cac8](https://github.com/powerhouse-inc/powerhouse/commit/6a3ec6cac8))
+
+### 🩹 Fixes
+
+- **reactor-browser:** break the import cycle through the switchboard directory ([540af565a6](https://github.com/powerhouse-inc/powerhouse/commit/540af565a6))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.95 (2026-11-06)
 
 ### 🚀 Features
