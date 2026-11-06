@@ -1,5 +1,6 @@
 import {
   BOILERPLATE_DEPENDENCY_OVERRIDES,
+  BOILERPLATE_TRANSITIVE_OVERRIDES,
   externalDevDependencies,
   makeVersionedDependenciesMap,
   PEER_EXTERNAL_DEPENDENCIES,
@@ -14,14 +15,19 @@ import { packageJsonTemplate } from "templates";
  * yarn, bun and pnpm 10 read `resolutions`. npm and bun read `overrides`,
  * where `$name` follows the project's own exact devDependency: a literal
  * version fails with EOVERRIDE once the package is also a direct dependency.
+ * A transitive pin is no direct dependency, so its override is the version.
  * pnpm 11 and later read only `overrides` in pnpm-workspace.yaml.
  */
 export function pinFields(
   pins: Record<string, string> = BOILERPLATE_DEPENDENCY_OVERRIDES,
+  transitive: Record<string, string> = BOILERPLATE_TRANSITIVE_OVERRIDES,
 ) {
   return {
-    resolutions: { ...pins },
-    overrides: mapValues(pins, (_, name) => `$${name}`),
+    resolutions: { ...pins, ...transitive },
+    overrides: {
+      ...mapValues(pins, (_, name) => `$${name}`),
+      ...transitive,
+    },
   };
 }
 

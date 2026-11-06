@@ -196,16 +196,24 @@ export const BOILERPLATE_ALLOWED_BUILDS = [
 // `overrides`, with each pin also an exact devDependency. Generated-project
 // only — never change the monorepo catalog for this (a re-resolution there
 // pulls a tsc-crashing TS6 beta).
-//
-// The Solana pins hold @privy-io/react-auth's optional peers to the kit that
-// installs: its open ranges (`@solana-program/system >=0.8.0`) let a fresh
-// install take system 0.16 and token 0.16+, which import
-// `@solana/kit/program-client-core` (kit ^8), while the kit that installs is
-// 5.5.1, and `ph connect build` fails. These are the monorepo lockfile's versions.
 export const BOILERPLATE_DEPENDENCY_OVERRIDES = {
   "date-fns": "4.3.0",
   vite: "8.0.14",
   rolldown: "1.0.2",
+} as const satisfies Record<string, string>;
+
+// Pins on packages a generated project only gets through its dependencies,
+// rendered like the ones above but never as devDependencies, so the npm
+// `overrides` entry is the literal version. npm checks a direct dependency's
+// peers against the project: @solana/kit's optional `typescript ^5` peer
+// against the project's TypeScript 7 fails `ph init` with ERESOLVE.
+//
+// They hold @privy-io/react-auth's optional peers to the kit that installs:
+// its open ranges (`@solana-program/system >=0.8.0`) let a fresh install take
+// system 0.16 and token 0.16+, which import `@solana/kit/program-client-core`
+// (kit ^8), while the kit that installs is 5.5.1, and `ph connect build`
+// fails. These are the monorepo lockfile's versions.
+export const BOILERPLATE_TRANSITIVE_OVERRIDES = {
   "@solana/kit": "5.5.1",
   "@solana-program/system": "0.10.0",
   "@solana-program/token": "0.9.0",

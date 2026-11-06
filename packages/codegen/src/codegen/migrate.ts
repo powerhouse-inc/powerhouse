@@ -1,5 +1,6 @@
 import {
   BOILERPLATE_DEPENDENCY_OVERRIDES,
+  BOILERPLATE_TRANSITIVE_OVERRIDES,
   externalDevDependencies,
   FEATURE_DEPENDENCIES,
   getPackageManagerAtPowerhouseProjectDirPath,
@@ -281,39 +282,21 @@ export function resolveManagedDependencies(input: {
 // one would change the version the project chose; npm fails with EOVERRIDE.
 // A project with `workspaces` gets none: npm counts a workspace package of a
 // pinned name as a direct dependency and rejects any override for it.
-function scaffoldPins(
-  packageJson: Pick<
-    PackageJson,
-    | "optionalDependencies"
-    | "peerDependencies"
-    | "dependencies"
-    | "devDependencies"
-    | "overrides"
-    | "resolutions"
-    | "workspaces"
-  >,
-): Record<string, string> {
+type PinnedFields = Pick<
+  PackageJson,
+  | "optionalDependencies"
+  | "peerDependencies"
+  | "dependencies"
+  | "devDependencies"
+  | "overrides"
+  | "resolutions"
+  | "workspaces"
+>;
+
+function scaffoldPins(packageJson: PinnedFields): Record<string, string> {
   if (packageJson.workspaces !== undefined) return {};
-  const fields = [
-    packageJson.optionalDependencies,
-    packageJson.peerDependencies,
-    packageJson.dependencies,
-    packageJson.devDependencies,
-  ];
-  // Entries this function writes, now or in an earlier scaffold, are not the
-  // project's own; nor is an identical entry the project wrote itself.
-  const { resolutions, overrides } = pinFields();
-  const legacy: Record<string, unknown> = toYarnResolutions(
-    BOILERPLATE_DEPENDENCY_OVERRIDES,
-  );
-  const ownKeys = [
-    ...Object.entries(packageJson.overrides ?? {}).filter(
-      ([key, value]) => overrides[key] !== value,
-    ),
-    ...Object.entries(packageJson.resolutions ?? {}).filter(
-      ([key, value]) => resolutions[key] !== value && legacy[key] !== value,
-    ),
-  ].map(([key]) => key.replace(/^\*\*\//, ""));
+  const fields = dependencyFields(packageJson);
+  const ownKeys = ownPinKeys(packageJson);
   return Object.fromEntries(
     Object.entries(BOILERPLATE_DEPENDENCY_OVERRIDES).filter(
       ([name, version]) =>
@@ -321,9 +304,58 @@ function scaffoldPins(
           (field) =>
             field?.[name] === undefined ||
             versionSatisfies(version, field[name]),
-        ) && !ownKeys.some((key) => key === name || key.startsWith(`${name}@`)),
+        ) && !ownsPin(ownKeys, name),
     ),
   );
+}
+
+// The transitive pins (BOILERPLATE_TRANSITIVE_OVERRIDES), minus any package the
+// project lists itself or overrides or resolves on its own: their npm override
+// is the literal version, which npm rejects for a direct dependency.
+function scaffoldTransitivePins(
+  packageJson: PinnedFields,
+): Record<string, string> {
+  if (packageJson.workspaces !== undefined) return {};
+  const fields = dependencyFields(packageJson);
+  const ownKeys = ownPinKeys(packageJson);
+  return Object.fromEntries(
+    Object.entries(BOILERPLATE_TRANSITIVE_OVERRIDES).filter(
+      ([name]) =>
+        fields.every((field) => field?.[name] === undefined) &&
+        !ownsPin(ownKeys, name),
+    ),
+  );
+}
+
+function dependencyFields(packageJson: PinnedFields) {
+  return [
+    packageJson.optionalDependencies,
+    packageJson.peerDependencies,
+    packageJson.dependencies,
+    packageJson.devDependencies,
+  ];
+}
+
+// The packages the project overrides or resolves itself. Entries the scaffold
+// writes, now or in an earlier scaffold, are not the project's own; nor is an
+// identical entry the project wrote itself.
+function ownPinKeys(packageJson: PinnedFields): string[] {
+  const { resolutions, overrides } = pinFields();
+  const legacy: Record<string, unknown> = toYarnResolutions(
+    BOILERPLATE_DEPENDENCY_OVERRIDES,
+  );
+  return [
+    ...Object.entries(packageJson.overrides ?? {}).filter(
+      ([key, value]) => overrides[key] !== value,
+    ),
+    ...Object.entries(packageJson.resolutions ?? {}).filter(
+      ([key, value]) => resolutions[key] !== value && legacy[key] !== value,
+    ),
+  ].map(([key]) => key.replace(/^\*\*\//, ""));
+}
+
+function ownsPin(ownKeys: string[], name: string) {
+  return ownKeys.some((key) => key === name || key.startsWith(`${name}@`));
 }
 
 // Exports and scripts are replaced with the current ones, so an entry `ph build`
@@ -346,7 +378,10 @@ export function migratedPackageJson(
   // self-contains everything except the declared peers.
   delete (updated as { dependencies?: unknown }).dependencies;
   // The `**/` keys earlier scaffolds wrote go: pnpm 9 and 10 reject them.
-  const pins = pinFields(scaffoldPins(updated));
+  const pins = pinFields(
+    scaffoldPins(updated),
+    scaffoldTransitivePins(updated),
+  );
   // A `**/` key keeps a value the project set, under the name pnpm accepts.
   const legacy: Record<string, string> = toYarnResolutions(
     BOILERPLATE_DEPENDENCY_OVERRIDES,

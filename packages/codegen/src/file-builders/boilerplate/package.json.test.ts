@@ -1,4 +1,7 @@
-import { BOILERPLATE_DEPENDENCY_OVERRIDES } from "@powerhousedao/shared/clis";
+import {
+  BOILERPLATE_DEPENDENCY_OVERRIDES,
+  BOILERPLATE_TRANSITIVE_OVERRIDES,
+} from "@powerhousedao/shared/clis";
 import { describe, expect, it } from "vitest";
 import {
   pnpmWorkspaceTemplate,
@@ -9,9 +12,10 @@ import { buildBoilerplatePackageJson } from "./package.json.js";
 
 describe("boilerplate dependency overrides", () => {
   it("renders the override pins as pnpm overrides in pnpm-workspace.yaml", () => {
-    for (const [pkg, version] of Object.entries(
-      BOILERPLATE_DEPENDENCY_OVERRIDES,
-    )) {
+    for (const [pkg, version] of Object.entries({
+      ...BOILERPLATE_DEPENDENCY_OVERRIDES,
+      ...BOILERPLATE_TRANSITIVE_OVERRIDES,
+    })) {
       // YAML keys with @ or / are quoted.
       const key = /[@/]/.test(pkg) ? `"${pkg}"` : pkg;
       expect(pnpmWorkspaceTemplate).toContain(`  ${key}: "${version}"`);
@@ -23,9 +27,6 @@ describe("boilerplate dependency overrides", () => {
       "**/date-fns": "4.3.0",
       "**/rolldown": "1.0.2",
       "**/vite": "8.0.14",
-      "**/@solana/kit": "5.5.1",
-      "**/@solana-program/system": "0.10.0",
-      "**/@solana-program/token": "0.9.0",
     });
   });
 
@@ -47,9 +48,6 @@ describe("boilerplate dependency overrides", () => {
       "**/date-fns": "4.3.0",
       "**/rolldown": "1.0.2",
       "**/vite": "8.0.14",
-      "**/@solana/kit": "5.5.1",
-      "**/@solana-program/system": "0.10.0",
-      "**/@solana-program/token": "0.9.0",
     });
   });
 
@@ -66,23 +64,24 @@ describe("boilerplate dependency overrides", () => {
       resolutions: Record<string, string>;
       overrides: Record<string, string>;
     };
-    const pins = {
-      "date-fns": "4.3.0",
-      rolldown: "1.0.2",
-      vite: "8.0.14",
+    const pins = { "date-fns": "4.3.0", rolldown: "1.0.2", vite: "8.0.14" };
+    const solana = {
       "@solana/kit": "5.5.1",
       "@solana-program/system": "0.10.0",
       "@solana-program/token": "0.9.0",
     };
     expect(parsed.devDependencies).toMatchObject(pins);
-    expect(parsed.resolutions).toEqual(pins);
+    // Never direct dependencies: npm would check @solana/kit's typescript ^5
+    // peer against the project's TypeScript 7 and fail with ERESOLVE.
+    for (const name of Object.keys(solana)) {
+      expect(parsed.devDependencies).not.toHaveProperty(name);
+    }
+    expect(parsed.resolutions).toEqual({ ...pins, ...solana });
     expect(parsed.overrides).toEqual({
       "date-fns": "$date-fns",
       rolldown: "$rolldown",
       vite: "$vite",
-      "@solana/kit": "$@solana/kit",
-      "@solana-program/system": "$@solana-program/system",
-      "@solana-program/token": "$@solana-program/token",
+      ...solana,
     });
   });
 });

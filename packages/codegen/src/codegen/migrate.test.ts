@@ -343,16 +343,13 @@ describe(
   "ph migrate on a project's dependency pins",
   { timeout: 30_000 },
   () => {
-    // Pinned in every project that doesn't pin them itself (see constants).
+    // Transitive pins (see constants): overridden in every project that
+    // neither lists nor pins them itself, at the version, and never added as
+    // devDependencies.
     const SOLANA = {
       "@solana/kit": "5.5.1",
       "@solana-program/system": "0.10.0",
       "@solana-program/token": "0.9.0",
-    };
-    const SOLANA_REFS = {
-      "@solana/kit": "$@solana/kit",
-      "@solana-program/system": "$@solana-program/system",
-      "@solana-program/token": "$@solana-program/token",
     };
 
     async function migrated(packageJson: Record<string, unknown>) {
@@ -394,8 +391,10 @@ describe(
         "date-fns": "4.3.0",
         rolldown: "1.0.2",
         vite: "8.0.14",
-        ...SOLANA,
       });
+      for (const name of Object.keys(SOLANA)) {
+        expect(result.devDependencies).not.toHaveProperty(name);
+      }
       expect(result.resolutions).toEqual({
         "date-fns": "4.3.0",
         "left-pad": "1.3.0",
@@ -407,7 +406,7 @@ describe(
         "date-fns": "$date-fns",
         rolldown: "$rolldown",
         vite: "$vite",
-        ...SOLANA_REFS,
+        ...SOLANA,
       });
     });
 
@@ -424,7 +423,7 @@ describe(
       expect(result.overrides).toEqual({
         rolldown: "$rolldown",
         vite: "$vite",
-        ...SOLANA_REFS,
+        ...SOLANA,
       });
     });
 
@@ -438,7 +437,7 @@ describe(
         vite: "^8.0.10",
         "date-fns": "$date-fns",
         rolldown: "$rolldown",
-        ...SOLANA_REFS,
+        ...SOLANA,
       });
     });
 
@@ -463,7 +462,20 @@ describe(
       expect(result.overrides).toEqual({
         rolldown: "$rolldown",
         vite: "$vite",
-        ...SOLANA_REFS,
+        ...SOLANA,
+      });
+    });
+
+    it("leaves a Solana pin to a project that lists the package itself", async () => {
+      const result = await migrated({
+        devDependencies: { "@solana/kit": "^5.4.0" },
+      });
+      expect(result.devDependencies["@solana/kit"]).toBe("^5.4.0");
+      expect(result.overrides).not.toHaveProperty("@solana/kit");
+      expect(result.resolutions).not.toHaveProperty("@solana/kit");
+      expect(result.overrides).toMatchObject({
+        "@solana-program/system": "0.10.0",
+        "@solana-program/token": "0.9.0",
       });
     });
 
@@ -490,7 +502,7 @@ describe(
       expect(result.devDependencies["date-fns"]).toBe("link:../date-fns");
       expect(result.devDependencies).not.toHaveProperty("rolldown");
       // Only the pins it leaves to the scaffold are added.
-      expect(result.overrides).toEqual({ ...overrides, ...SOLANA_REFS });
+      expect(result.overrides).toEqual({ ...overrides, ...SOLANA });
       expect(result.resolutions).toEqual(SOLANA);
     });
   },
