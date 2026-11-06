@@ -60,22 +60,17 @@ describe("generated document-model subgraph reads as the caller", () => {
   const ids = (page: unknown) =>
     (page as Page).items.map((item) => item.id).sort();
 
-  it("document strips the domain scopes a caller may not read", async () => {
+  it("document is refused like a missing one to a caller who may read no domain scope", async () => {
     const { secret, query } = await fixture();
-    const read = async (address?: string) =>
-      holdsGlobal(
-        (
-          (await query("document")(
-            undefined,
-            { identifier: secret },
-            contextFor(address),
-          )) as { document: Served }
-        ).document,
-      );
+    const read = (address?: string) =>
+      query("document")(undefined, { identifier: secret }, contextFor(address));
+    const missing = `Failed to fetch document: Document not found: ${secret}`;
 
-    expect(await read()).toBe(false);
-    expect(await read(OUTSIDER)).toBe(false);
-    expect(await read(READER)).toBe(true);
+    await expect(read()).rejects.toThrow(missing);
+    await expect(read(OUTSIDER)).rejects.toThrow(missing);
+    expect(
+      holdsGlobal(((await read(READER)) as { document: Served }).document),
+    ).toBe(true);
   });
 
   it("documents and findDocuments withhold what a caller may not read", async () => {
