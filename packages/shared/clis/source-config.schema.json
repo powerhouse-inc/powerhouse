@@ -1355,7 +1355,7 @@
                 "properties": {
                   "specifier": {
                     "type": "string",
-                    "pattern": "^\\./.*\\.(?:[cm]?[jt]s|[jt]sx)$",
+                    "pattern": "^\\./.*\\.(?:[jt]sx?|m[jt]s)$",
                     "description": "POSIX package-relative module path beginning with './'. It may not leave the package root."
                   },
                   "exportPath": {

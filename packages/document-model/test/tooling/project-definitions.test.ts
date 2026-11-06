@@ -211,6 +211,86 @@ describe("loadProjectDefinitions on a schema-first package", () => {
     ).toEqual(["author", "description", "extension", "name", "specifications"]);
   });
 
+  describe("a stored initial value the state schema rejects", () => {
+    const INVOICE = {
+      specifier: "./document-models/invoice/invoice.json",
+    } as const;
+    const invoice = (initialValue: string) =>
+      loadFixture("stored", {
+        files: {
+          "document-models/invoice/invoice.json": storedModel(
+            "example/invoice",
+            "Invoice",
+            {
+              globalSchema:
+                "enum Status {\n  DRAFT\n  ISSUED\n}\n\ntype Line {\n  label: String!\n  amount: Amount_Money\n}\n\ntype InvoiceState {\n  number: String!\n  status: Status!\n  lines: [Line!]!\n  iban: Iban\n  parent: InvoiceState\n}",
+              initialValue,
+            },
+          ),
+        },
+      });
+
+    it("accepts a value that matches enums, lists, scalars and a recursive type", async () => {
+      const { report } = await invoice(
+        '{"number":"1","status":"DRAFT","lines":[{"label":"a","amount":null}],"iban":null,"parent":{"number":"0","status":"ISSUED","lines":[],"parent":null}}',
+      );
+      expect({
+        status: report.status,
+        diagnostics: report.diagnostics,
+      }).toEqual({ status: "ok", diagnostics: [] });
+    });
+
+    it.each([
+      [
+        "an enum value the enum does not declare",
+        '{"number":"1","status":"BOGUS","lines":[]}',
+        [["status"]],
+      ],
+      [
+        "a missing required field",
+        '{"status":"DRAFT","lines":[]}',
+        [["number"]],
+      ],
+      [
+        "a wrong scalar type inside a list item",
+        '{"number":"1","status":"DRAFT","lines":[{"label":42}]}',
+        [["lines", 0, "label"]],
+      ],
+    ])("reports %s", async (_, initialValue, issuePaths) => {
+      const { report } = await invoice(initialValue);
+      expect({
+        status: report.status,
+        diagnostics: report.diagnostics.map(
+          ({ code, source, path, message, expected, received, repair }) => ({
+            code,
+            source,
+            path,
+            message,
+            expected,
+            issuePaths: (
+              JSON.parse(received ?? "[]") as { path: unknown }[]
+            ).map(({ path: issuePath }) => issuePath),
+            repair,
+          }),
+        ),
+      }).toEqual({
+        status: "invalid",
+        diagnostics: [
+          {
+            code: "PH-DM-INITIAL-VALUE-INVALID",
+            source: INVOICE,
+            path: ["specifications", 0, "state", "global", "initialValue"],
+            message: "The InvoiceState schema rejects this initial value.",
+            expected: "a value InvoiceState accepts",
+            issuePaths,
+            repair:
+              "Correct the stored initial value so the declared state schema accepts it.",
+          },
+        ],
+      });
+    });
+  });
+
   it("names a scalar the stored schema declares or a type extension uses without an export", async () => {
     const wallet = JSON.parse(
       readFileSync(
@@ -408,6 +488,7 @@ describe("loadProjectDefinitions on code-first and mixed packages", () => {
           kind: "document-model",
           unit: "./document-models/notes/",
           specifier: "./document-models/notes/model.ts",
+          reason: "unreached",
         },
       ]);
       expect(report.status).toBe("invalid");

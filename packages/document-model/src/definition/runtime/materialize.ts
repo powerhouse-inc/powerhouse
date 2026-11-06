@@ -36,6 +36,7 @@ import type {
   CompiledOperation,
   OperationErrorClass,
 } from "../compiler/compile.js";
+import { recordModelPackageScalars } from "../../scalars/model-scalars.js";
 import { describeReceived } from "../kernel/diagnostics.js";
 import { compiledVersionOf } from "../model/define-document-model.js";
 import { modelDiagnostics } from "../model/diagnostic-codes.js";
@@ -350,8 +351,19 @@ function materializeVersion(
 
   const definition: DocumentModelDefinition = cloneJson({
     ...version.definition,
+    compatibility: {
+      ...version.definition.compatibility,
+      identity: versions.some(
+        (candidate) =>
+          candidate.definition.compatibility.identity ===
+          "explicit-schema-first",
+      )
+        ? "explicit-schema-first"
+        : "derived-v1",
+    },
     specifications: versions.map((candidate) => candidate.specification),
   });
+  recordModelPackageScalars(definition, version.packageScalars);
   return {
     version: version.config.version,
     reducer: behavior.reducer,

@@ -12,6 +12,7 @@ import {
   readdirSync,
   readFileSync,
   readlinkSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -55,6 +56,7 @@ const injected = vi.hoisted(() => ({
     | ((to: string) => NodeJS.ErrnoException | undefined)
     | undefined,
   linked: [] as string[],
+  dev: undefined as ((path: string) => number | undefined) | undefined,
 }));
 
 vi.mock("node:fs", async (importOriginal) => {
@@ -72,6 +74,13 @@ vi.mock("node:fs", async (importOriginal) => {
       fs.linkSync(from, to);
       injected.linked.push(String(to));
     },
+    statSync: ((path: string, options?: NodeFs.StatSyncOptions) => {
+      const stat = fs.statSync(path, options);
+      const dev = injected.dev?.(String(path));
+      return dev === undefined || stat === undefined
+        ? stat
+        : Object.assign(stat, { dev });
+    }) as typeof fs.statSync,
     rmSync: (path: string, options?: NodeFs.RmOptions) => {
       const error = injected.rm?.(String(path));
       if (error) throw error;
@@ -122,6 +131,7 @@ beforeEach(() => {
   injected.rm = undefined;
   injected.link = undefined;
   injected.linked = [];
+  injected.dev = undefined;
   prompt.mockReset();
   vi.stubEnv("CI", "1");
   const capture =
@@ -246,7 +256,7 @@ describe("a staged build", () => {
     );
   }, 120_000);
 
-  it("runs tsc with main's command lines, in the package", async () => {
+  it("runs tsc in the package on a config that extends the package's, and leaves none behind", async () => {
     const made = project();
     await buildPackage(args);
     await buildPackage(args);
@@ -254,15 +264,53 @@ describe("a staged build", () => {
     rmSync(made.dist, { recursive: true });
     await buildPackage(args);
 
+    const generated: unknown = expect.stringMatching(
+      /^\.tsconfig\.ph-stage-[\w-]+\.json$/,
+    );
     expect(made.tscCalls().map(({ args, cwd }) => [cwd, ...args])).toEqual([
       [made.root, "--showConfig"],
-      [made.root, "--build", "--force"],
+      [made.root, "--build", "--force", generated],
       [made.root, "--showConfig"],
-      [made.root, "--build"],
+      [made.root, "--build", generated],
       [made.root, "--showConfig"],
-      [made.root, "--build", "--force"],
+      [made.root, "--build", "--force", generated],
     ]);
+    expect(
+      readdirSync(made.root).filter((entry) => entry.includes(".ph-")),
+    ).toEqual([]);
   }, 240_000);
+
+  it.skipIf(process.platform === "win32")(
+    "writes the declarations and maps tsc writes in place",
+    async () => {
+      const made = project();
+      made.write(
+        "tsconfig.json",
+        made
+          .read("tsconfig.json")
+          .replace(
+            '"declaration": true,',
+            '"declaration": true, "declarationMap": true,',
+          ),
+      );
+      made.write(
+        "index.ts",
+        `${made.read("index.ts")}export const added = 1;\n`,
+      );
+      await buildPackage(args);
+      const staged = treeDigest(made.root, ["dist/types"]);
+      expect(Object.keys(staged)).toContain("dist/types/index.d.ts.map");
+
+      const tsc = spawnSync(join(made.root, "node_modules", ".bin", "tsc"), [
+        "--build",
+        "--force",
+      ]);
+
+      expect(tsc.status).toBe(0);
+      expect(treeDigest(made.root, ["dist/types"])).toEqual(staged);
+    },
+    120_000,
+  );
 
   it("runs the steps a command passes through runBuild, and exits 1 on their refusal", async () => {
     const made = project();
@@ -386,12 +434,16 @@ describe("a staged build", () => {
     });
 
     try {
-      session.protectCompilerOutputs([
-        { path: join(made.root, ".ph"), kind: "directory" },
-        { path: join(made.root, "compiler-alias"), kind: "directory" },
-        { path: join(made.root, "root-alias"), kind: "directory" },
-        { path: join(made.root, "lib"), kind: "directory" },
-      ]);
+      await session.prepareCompiler({
+        configFile: join(made.root, "tsconfig.json"),
+        config: { options: {}, exclude: undefined, references: [] },
+        outputs: [
+          { path: join(made.root, ".ph"), kind: "directory" },
+          { path: join(made.root, "compiler-alias"), kind: "directory" },
+          { path: join(made.root, "root-alias"), kind: "directory" },
+          { path: join(made.root, "lib"), kind: "directory" },
+        ],
+      });
       made.write("lib/index.d.ts", "export declare const rewritten: 1;\n");
       session.rollback();
     } finally {
@@ -399,6 +451,35 @@ describe("a staged build", () => {
     }
 
     expect(made.read("lib/index.d.ts")).toBe("export declare const kept: 1;\n");
+    expect(scratchLeft(made)).toEqual([]);
+  });
+
+  it("puts back a compiler output that is the output itself, saved whole when tsc's files in it are not known", async () => {
+    const made = project();
+    made.write("dist/index.js", "export const kept = 1;\n");
+    made.write("dist/index.d.ts", "export declare const kept: 1;\n");
+    const before = treeDigest(made.root, ["dist"]);
+    const session = await openBuildSession({
+      packageRoot: made.root,
+      outDir: "dist",
+      cleanedEntries: [],
+      linkCleanedEntries: false,
+    });
+
+    try {
+      await session.prepareCompiler({
+        configFile: join(made.root, "tsconfig.json"),
+        config: { options: {}, exclude: undefined, references: [] },
+        outputs: [{ path: made.dist, kind: "directory" }],
+      });
+      made.write("dist/index.d.ts", "export declare const rewritten: 1;\n");
+      session.compilerOutputsWritten();
+      session.rollback();
+    } finally {
+      session.close();
+    }
+
+    expect(treeDigest(made.root, ["dist"])).toEqual(before);
     expect(scratchLeft(made)).toEqual([]);
   });
 
@@ -697,6 +778,76 @@ describe("a build that does not finish leaves the previous output as it was", ()
       "export declare const first = 1;\nexport declare const second = 2;\n",
     );
   }, 240_000);
+
+  it("when tsc emits into the output directory itself the module the node bundle of the same entry replaces", async () => {
+    const made = project();
+    made.write("node/index.mts", 'export const value = "OLD";\n');
+    made.write("index.ts", 'export { value } from "./node/index.mjs";\n');
+    const config = JSON.parse(made.read("tsconfig.json")) as {
+      compilerOptions: Record<string, unknown>;
+      include: string[];
+    };
+    delete config.compilerOptions.declarationDir;
+    Object.assign(config.compilerOptions, {
+      outDir: "dist",
+      rootDir: ".",
+      emitDeclarationOnly: false,
+    });
+    config.include = ["index.ts", "node/**/*.mts"];
+    made.write("tsconfig.json", JSON.stringify(config));
+    await buildPackage(args);
+    const before = previousOutput(made);
+    made.write("node/index.mts", `export const value = "NEW";\n${TYPE_ERROR}`);
+
+    await expect(buildPackage(args)).rejects.toThrow(BuildRefusal);
+
+    expect(made.read("dist/node/index.mjs")).toBe(
+      '//#region node/index.mts\nconst value = "OLD";\n//#endregion\nexport { value };\n\n//# sourceMappingURL=index.mjs.map',
+    );
+    expect(previousOutput(made)).toEqual(before);
+    expect(scratchLeft(made)).toEqual([]);
+  }, 240_000);
+
+  it.skipIf(process.platform === "win32")(
+    "when the build info is a symbolic link to a cache file, which tsc then rebuilds from",
+    async () => {
+      const made = project();
+      await buildPackage(args);
+      mkdirSync(join(made.root, "cache"));
+      renameSync(
+        join(made.root, "tsconfig.tsbuildinfo"),
+        join(made.root, "cache", "build.tsbuildinfo"),
+      );
+      symlinkSync(
+        join("cache", "build.tsbuildinfo"),
+        join(made.root, "tsconfig.tsbuildinfo"),
+      );
+      made.write(
+        "index.ts",
+        `${made.read("index.ts")}export const added = 1;\n`,
+      );
+      const compiled = () =>
+        treeDigest(made.root, ["dist", "tsconfig.tsbuildinfo", "cache"]);
+      const before = compiled();
+      made.write("reactor/index.ts", "export const = ;\n");
+
+      await expect(buildPackage(args)).rejects.toThrow(/reactor\/index\.ts/);
+      expect(compiled()).toEqual(before);
+      expect(scratchLeft(made)).toEqual([]);
+
+      const tsc = spawnSync(join(made.root, "node_modules", ".bin", "tsc"), [
+        "--build",
+      ]);
+      expect(tsc.status).toBe(0);
+      expect(made.read("dist/types/index.d.ts")).toContain(
+        "export declare const added = 1;",
+      );
+      expect(readlinkSync(join(made.root, "tsconfig.tsbuildinfo"))).toBe(
+        join("cache", "build.tsbuildinfo"),
+      );
+    },
+    240_000,
+  );
 });
 
 // On Windows, process.kill ends the process instead of delivering the signal.
@@ -972,6 +1123,375 @@ describe("where a staged build cannot run as an unstaged one would, it writes in
       expect(lstatSync(fifo).isFIFO()).toBe(true);
       rmSync(fifo);
       expect(files(made.dist)).toEqual(CLASSIC_OUTPUT);
+      expect(scratchLeft(made)).toEqual([]);
+    },
+    240_000,
+  );
+});
+
+describe("a build that does not finish leaves what every project tsc builds wrote", () => {
+  const base = {
+    module: "nodenext",
+    moduleResolution: "nodenext",
+    target: "esnext",
+    strict: true,
+    skipLibCheck: true,
+    types: [],
+  };
+  const include = ["index.ts", "document-models/**/*", "editors/**/*"];
+  const layouts: [
+    string,
+    (made: StagedProject) => void,
+    readonly string[],
+    string,
+  ][] = [
+    [
+      "a solution config whose referenced project writes dist/types",
+      (made) => {
+        made.write(
+          "tsconfig.json",
+          JSON.stringify({ files: [], references: [{ path: "./compiler" }] }),
+        );
+        made.write(
+          "compiler/tsconfig.json",
+          JSON.stringify({
+            compilerOptions: {
+              ...base,
+              composite: true,
+              emitDeclarationOnly: true,
+              rootDir: "..",
+              outDir: "../dist/types",
+            },
+            include: include.map((path) => `../${path}`),
+          }),
+        );
+      },
+      ["dist", "compiler", "tsconfig.tsbuildinfo"],
+      "dist/types/index.d.ts",
+    ],
+    [
+      "a single project without build info that writes dist itself",
+      (made) => {
+        made.write(
+          "tsconfig.json",
+          JSON.stringify({
+            compilerOptions: {
+              ...base,
+              declaration: true,
+              emitDeclarationOnly: true,
+              outDir: "./dist",
+            },
+            include,
+          }),
+        );
+      },
+      ["dist", "tsconfig.tsbuildinfo"],
+      "dist/index.d.ts",
+    ],
+    [
+      "a solution config whose referenced project writes dist itself",
+      (made) => {
+        made.write(
+          "tsconfig.json",
+          JSON.stringify({ files: [], references: [{ path: "./compiler" }] }),
+        );
+        made.write(
+          "compiler/tsconfig.json",
+          JSON.stringify({
+            compilerOptions: {
+              ...base,
+              composite: true,
+              emitDeclarationOnly: true,
+              rootDir: "..",
+              outDir: "../dist",
+            },
+            include: include.map((path) => `../${path}`),
+          }),
+        );
+      },
+      ["dist", "compiler", "tsconfig.tsbuildinfo"],
+      "dist/index.d.ts",
+    ],
+    [
+      "a referenced project that writes child/lib",
+      (made) => {
+        made.write(
+          "tsconfig.json",
+          JSON.stringify({
+            compilerOptions: {
+              ...base,
+              declaration: true,
+              emitDeclarationOnly: true,
+              incremental: true,
+              declarationDir: "./dist/types",
+            },
+            include,
+            exclude: ["dist", "child"],
+            references: [{ path: "./child" }],
+          }),
+        );
+        made.write("child/index.ts", "export const child = 1;\n");
+        made.write(
+          "child/tsconfig.json",
+          JSON.stringify({
+            compilerOptions: {
+              ...base,
+              composite: true,
+              emitDeclarationOnly: true,
+              rootDir: ".",
+              outDir: "lib",
+            },
+            include: ["index.ts"],
+          }),
+        );
+      },
+      ["dist", "child", "tsconfig.tsbuildinfo"],
+      "child/lib/index.d.ts",
+    ],
+    [
+      "declarations beside the sources",
+      (made) => {
+        made.write(
+          "tsconfig.json",
+          JSON.stringify({
+            compilerOptions: {
+              ...base,
+              declaration: true,
+              emitDeclarationOnly: true,
+              incremental: true,
+            },
+            include,
+            exclude: ["dist"],
+          }),
+        );
+      },
+      [
+        "dist",
+        "index.d.ts",
+        "document-models",
+        "editors",
+        "tsconfig.tsbuildinfo",
+      ],
+      "index.d.ts",
+    ],
+  ];
+
+  it.each(layouts)(
+    "with %s",
+    async (_, layout, compiled, declarations) => {
+      const made = project();
+      layout(made);
+      await buildPackage(args);
+      made.write(
+        "index.ts",
+        `${made.read("index.ts")}export const added = 1;\n`,
+      );
+      if (existsSync(join(made.root, "child")))
+        made.write(
+          "child/index.ts",
+          "export const child = 1;\nexport const added = 2;\n",
+        );
+      const before = treeDigest(made.root, compiled);
+      made.write("reactor/index.ts", "export const = ;\n");
+
+      await expect(buildPackage(args)).rejects.toThrow(/reactor\/index\.ts/);
+
+      expect(treeDigest(made.root, compiled)).toEqual(before);
+      expect(scratchLeft(made)).toEqual([]);
+      rmSync(join(made.root, "reactor"), { recursive: true });
+      await buildPackage(args);
+      expect(made.read(declarations)).toContain("export declare const added");
+    },
+    240_000,
+  );
+
+  it("with a single project without build info that writes dist, which holds the output", async () => {
+    const made = project();
+    made.write(
+      "tsconfig.json",
+      JSON.stringify({
+        compilerOptions: {
+          ...base,
+          declaration: true,
+          emitDeclarationOnly: true,
+          outDir: "./dist",
+        },
+        include,
+      }),
+    );
+    const nested = { ...args, outDir: "dist/bundle" };
+    await buildPackage(nested);
+    made.write("index.ts", `${made.read("index.ts")}export const added = 1;\n`);
+    const before = treeDigest(made.root, ["dist"]);
+    made.write("reactor/index.ts", "export const = ;\n");
+
+    await expect(buildPackage(nested)).rejects.toThrow(/reactor\/index\.ts/);
+
+    expect(treeDigest(made.root, ["dist"])).toEqual(before);
+    expect(
+      readdirSync(made.dist).filter((entry) => entry.startsWith(".")),
+    ).toEqual([]);
+    expect(scratchLeft(made)).toEqual([]);
+    rmSync(join(made.root, "reactor"), { recursive: true });
+    await buildPackage(nested);
+    expect(made.read("dist/index.d.ts")).toContain(
+      "export declare const added",
+    );
+  }, 240_000);
+
+  it.each(layouts)(
+    "with %s, when it is the package's first build",
+    async (_, layout, compiled) => {
+      const made = project();
+      layout(made);
+      const before = treeDigest(made.root, compiled);
+      made.write("reactor/index.ts", "export const = ;\n");
+
+      await expect(buildPackage(args)).rejects.toThrow(/reactor\/index\.ts/);
+
+      expect(treeDigest(made.root, compiled)).toEqual(before);
+      expect(existsSync(made.dist)).toBe(false);
+      expect(scratchLeft(made)).toEqual([]);
+    },
+    240_000,
+  );
+});
+
+describe("an output the stage's rename cannot replace is built in place", () => {
+  it("when dist is on another filesystem than the package", async () => {
+    const made = project();
+    await buildPackage(args);
+    made.write("index.ts", `${made.read("index.ts")}export const added = 1;\n`);
+    injected.dev = (path) => (path === made.dist ? 0x7e57 : undefined);
+
+    await buildPackage(args);
+
+    expect(warnings).toEqual([
+      writesInPlace(
+        "dist is on another filesystem than the directory that holds it",
+      ),
+    ]);
+    expect(made.read("dist/types/index.d.ts")).toContain(
+      "export declare const added = 1;",
+    );
+    expect(scratchLeft(made)).toEqual([]);
+  }, 240_000);
+
+  it.skipIf(process.platform !== "darwin")(
+    "when dist is a mounted volume, which stays mounted and keeps its files through a failed build",
+    async () => {
+      const made = project();
+      await buildPackage(args);
+      const image = join(dirname(made.root), "dist-volume");
+      const hdiutil = (...argv: string[]) =>
+        expect(spawnSync("hdiutil", argv).status).toBe(0);
+      hdiutil(
+        "create",
+        "-quiet",
+        "-size",
+        "20m",
+        "-fs",
+        "APFS",
+        "-volname",
+        "dist",
+        image,
+      );
+      const built = join(dirname(made.root), "built");
+      cpSync(made.dist, built, { recursive: true });
+      hdiutil(
+        "attach",
+        "-quiet",
+        "-nobrowse",
+        "-mountpoint",
+        made.dist,
+        `${image}.dmg`,
+      );
+      const mounted = () =>
+        lstatSync(made.dist).dev !== lstatSync(made.root).dev;
+      try {
+        cpSync(built, made.dist, { recursive: true });
+        made.write(
+          "index.ts",
+          `${made.read("index.ts")}export const added = 1;\n`,
+        );
+
+        await buildPackage(args);
+        expect(mounted()).toBe(true);
+        expect(made.read("dist/types/index.d.ts")).toContain("added = 1");
+        made.write("reactor/index.ts", "export const = ;\n");
+        await expect(buildPackage(args)).rejects.toThrow(/reactor\/index\.ts/);
+        expect(mounted()).toBe(true);
+        expect(made.read("dist/types/index.d.ts")).toContain("added = 1");
+        rmSync(join(made.root, "reactor"), { recursive: true });
+        await buildPackage(args);
+
+        expect(mounted()).toBe(true);
+        expect(
+          warnings.filter(
+            (line) => !line.startsWith("⚠ dist is on another filesystem"),
+          ),
+        ).toEqual([]);
+        expect(scratchLeft(made)).toEqual([]);
+      } finally {
+        const table = spawnSync("mount", { encoding: "utf8" }).stdout;
+        for (const line of table.split("\n")) {
+          const at = /^\S+ on (.*) \(/.exec(line)?.[1];
+          if (at?.startsWith(made.root)) {
+            spawnSync("hdiutil", ["detach", "-quiet", "-force", at]);
+          }
+        }
+      }
+    },
+    240_000,
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "when dist holds an absolute symlink into dist, and the stylesheet is written through it as main writes it",
+    async () => {
+      const made = project();
+      await buildPackage(args);
+      renameSync(
+        join(made.dist, "style.css"),
+        join(made.dist, "style-target.css"),
+      );
+      symlinkSync(
+        join(made.dist, "style-target.css"),
+        join(made.dist, "style.css"),
+      );
+      made.write("style.css", ".rebuilt { color: red; }\n");
+
+      await buildPackage(args);
+
+      expect(warnings).toEqual([
+        writesInPlace("dist/style.css is a symbolic link into dist"),
+      ]);
+      expect(readlinkSync(join(made.dist, "style.css"))).toBe(
+        join(made.dist, "style-target.css"),
+      );
+      expect(made.read("dist/style-target.css")).toContain(".rebuilt");
+    },
+    240_000,
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "but not when dist holds a relative symlink that stays in dist, which the staged build writes through",
+    async () => {
+      const made = project();
+      await buildPackage(args);
+      renameSync(
+        join(made.dist, "style.css"),
+        join(made.dist, "style-target.css"),
+      );
+      symlinkSync("style-target.css", join(made.dist, "style.css"));
+      made.write("style.css", ".rebuilt { color: red; }\n");
+
+      await buildPackage(args);
+
+      expect(warnings).toEqual([]);
+      expect(readlinkSync(join(made.dist, "style.css"))).toBe(
+        "style-target.css",
+      );
+      expect(made.read("dist/style-target.css")).toContain(".rebuilt");
       expect(scratchLeft(made)).toEqual([]);
     },
     240_000,

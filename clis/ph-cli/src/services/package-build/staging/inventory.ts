@@ -1,4 +1,5 @@
-import { dirname, isAbsolute, relative, sep } from "node:path";
+import { dirname } from "node:path";
+import { pathWithin } from "@powerhousedao/shared/clis/real-paths";
 import {
   buildInfoFile,
   type EmitOptions,
@@ -17,8 +18,20 @@ const optionalString = (value: unknown) =>
 const optionalBoolean = (value: unknown) =>
   typeof value === "boolean" ? value : undefined;
 
-/** The options in `tsc --showConfig` output, or undefined when it is not JSON. */
-export function parseShownConfig(text: string): EmitOptions | undefined {
+export type ShownConfig = {
+  readonly options: EmitOptions & { readonly incremental?: boolean };
+  /** As printed: with no `exclude` of its own, tsc's default, which names the output directories. */
+  readonly exclude: readonly string[] | undefined;
+  readonly references: readonly string[];
+};
+
+const strings = (value: unknown) =>
+  Array.isArray(value) && value.every((entry) => typeof entry === "string")
+    ? (value as string[])
+    : undefined;
+
+/** The config in `tsc --showConfig` output, or undefined when it is not JSON. */
+export function parseShownConfig(text: string): ShownConfig | undefined {
   let shown: unknown;
   try {
     shown = JSON.parse(text);
@@ -26,12 +39,29 @@ export function parseShownConfig(text: string): EmitOptions | undefined {
     return undefined;
   }
   if (typeof shown !== "object" || shown === null) return undefined;
-  const options = (shown as { compilerOptions?: unknown }).compilerOptions;
+  const { compilerOptions, exclude, references } = shown as Record<
+    string,
+    unknown
+  >;
+  return {
+    options: emitOptions(compilerOptions),
+    exclude: strings(exclude),
+    references: Array.isArray(references)
+      ? references.flatMap((reference: unknown) => {
+          const path = (reference as { path?: unknown } | null)?.path;
+          return typeof path === "string" ? [path] : [];
+        })
+      : [],
+  };
+}
+
+function emitOptions(options: unknown): ShownConfig["options"] {
   if (typeof options !== "object" || options === null) return {};
   const record = options as Record<string, unknown>;
   return {
     declaration: optionalBoolean(record.declaration),
     composite: optionalBoolean(record.composite),
+    incremental: optionalBoolean(record.incremental),
     declarationDir: optionalString(record.declarationDir),
     outDir: optionalString(record.outDir),
     outFile: optionalString(record.outFile),
@@ -42,16 +72,6 @@ export function parseShownConfig(text: string): EmitOptions | undefined {
     sourceMap: optionalBoolean(record.sourceMap),
     declarationMap: optionalBoolean(record.declarationMap),
   };
-}
-
-function inside(root: string, path: string): boolean {
-  const rel = relative(root, path);
-  return (
-    rel !== "" &&
-    rel !== ".." &&
-    !rel.startsWith(`..${sep}`) &&
-    !isAbsolute(rel)
-  );
 }
 
 /**
@@ -71,12 +91,10 @@ export function compilerOutputInventory(
     readonly buildDirectory: string;
   },
 ): CompilerOutput[] {
-  const inPackage = (path: string) => inside(at.packageRoot, path);
+  const inPackage = (path: string) => Boolean(pathWithin(at.packageRoot, path));
   const directories = outputDirectories(options, dirname(at.configFile))
     .filter(inPackage)
-    .filter(
-      (dir) => dir !== at.buildDirectory && !inside(dir, at.buildDirectory),
-    );
+    .filter((dir) => pathWithin(dir, at.buildDirectory) === null);
   return [
     ...[buildInfoFile(options, at.configFile)]
       .filter(inPackage)

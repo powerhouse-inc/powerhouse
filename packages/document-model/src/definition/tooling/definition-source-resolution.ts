@@ -1,5 +1,8 @@
 import {
+  COMMONJS_DEFINITION_SOURCE,
+  COMMONJS_DEFINITION_SOURCE_REPAIR,
   DEFAULT_AUTHORING_MODE,
+  DEFINITION_SOURCE_EXTENSION,
   parseDefinitionSourcesConfig,
 } from "@powerhousedao/shared/clis/definition-sources";
 import type {
@@ -8,8 +11,12 @@ import type {
   DefinitionPath,
   DefinitionSource,
 } from "@powerhousedao/shared/document-model";
+import {
+  pathWithin,
+  realPathThroughExistingParent,
+} from "@powerhousedao/shared/clis/real-paths";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { dirname, isAbsolute, posix, relative, resolve, sep } from "node:path";
+import { dirname, posix, resolve } from "node:path";
 import {
   compareDefinitionPaths,
   sortDefinitionDiagnostics,
@@ -94,11 +101,6 @@ function isCanonicalText(value: string): boolean {
   return isNFC(value);
 }
 
-export function isWithin(root: string, path: string): boolean {
-  const child = relative(root, path);
-  return child !== ".." && !child.startsWith(`..${sep}`) && !isAbsolute(child);
-}
-
 type SpecifierResult =
   | { readonly ok: true; readonly specifier: `./${string}` }
   | {
@@ -107,6 +109,8 @@ type SpecifierResult =
         | "PH-CONFIG-SOURCE-INVALID"
         | "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE";
       readonly message: string;
+      readonly expected?: string;
+      readonly repair?: string;
     };
 
 export function normalizeSpecifier(value: string): SpecifierResult {
@@ -137,7 +141,17 @@ export function normalizeSpecifier(value: string): SpecifierResult {
       message: "The normalized definition source path leaves the package root.",
     };
   }
-  if (!/\.(?:[cm]?[jt]s|[jt]sx)$/.test(value)) {
+  if (COMMONJS_DEFINITION_SOURCE.test(value)) {
+    return {
+      ok: false,
+      code: "PH-CONFIG-SOURCE-INVALID",
+      message:
+        "A definition source is evaluated as an ES module, so a CommonJS module cannot be one.",
+      expected: "a .ts, .mts, .tsx, .js, .mjs or .jsx module",
+      repair: COMMONJS_DEFINITION_SOURCE_REPAIR,
+    };
+  }
+  if (!DEFINITION_SOURCE_EXTENSION.test(value)) {
     return {
       ok: false,
       code: "PH-CONFIG-SOURCE-INVALID",
@@ -146,22 +160,6 @@ export function normalizeSpecifier(value: string): SpecifierResult {
     };
   }
   return { ok: true, specifier: `./${normalized}` };
-}
-
-/**
- * Resolves symlinks as far as the path exists, so a source that is not
- * written yet is still judged against the real package root.
- */
-export function realPathThroughExistingParent(path: string): string {
-  let current = path;
-  const suffix: string[] = [];
-  while (!existsSync(current)) {
-    const parent = dirname(current);
-    if (parent === current) return path;
-    suffix.unshift(relative(parent, current));
-    current = parent;
-  }
-  return resolve(realpathSync.native(current), ...suffix);
 }
 
 /** Where a lexically contained module really lives, unless a symlink takes it out of the package. */
@@ -180,7 +178,7 @@ export function realModulePath(
   } catch {
     return { ok: false, reason: "unresolvable" };
   }
-  return isWithin(packageRootIdentity, moduleIdentity)
+  return pathWithin(packageRootIdentity, moduleIdentity) !== null
     ? { ok: true, moduleIdentity }
     : { ok: false, reason: "outside" };
 }
@@ -259,9 +257,12 @@ function normalizeEntry(
         code: normalized.code,
         path: specifierPath,
         message: normalized.message,
-        expected: "a './' path contained by the selected package root",
+        expected:
+          normalized.expected ??
+          "a './' path contained by the selected package root",
         received: entry.specifier,
         repair:
+          normalized.repair ??
           "Move the module inside the package and spell its path relative to the config file.",
       }),
     };

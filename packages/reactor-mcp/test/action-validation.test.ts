@@ -1,6 +1,11 @@
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { defineDocumentModel, materialize, ph } from "document-model";
 import { describe, expect, it } from "vitest";
-import { formatActionFailures, validateActions } from "../src/tools/index.js";
+import {
+  formatActionFailures,
+  operationSchemaSlice,
+  validateActions,
+} from "../src/tools/index.js";
 import { Ledger } from "./fixtures/code-first-package/document-models/ledger.js";
 
 const ledger = Ledger as unknown as DocumentModelModule;
@@ -132,4 +137,71 @@ describe("validateActions reads the module's current definition", () => {
       expect(failuresOf(module)).toEqual(unknown);
     },
   );
+});
+
+describe("a model operation whose action type is a base action's", () => {
+  const counter = defineDocumentModel({
+    id: "test/counter",
+    name: "Counter",
+    description: "",
+    extension: "counter",
+    version: 1,
+    author: { name: "Powerhouse" },
+    scopes: {
+      global: {
+        schema: ph.object("CounterState", {
+          fields: { total: ph.Int({ required: true }) },
+        }),
+        initialValue: { total: 0 },
+      },
+      local: { schema: null, initialValue: {} },
+    },
+  });
+  const counters = counter.module("counters", {
+    operations: ({ global }) => ({
+      noop: global({
+        input: ph.input({ fields: { amount: ph.Int({ required: true }) } }),
+        reduce(state, input) {
+          state.total += input.amount;
+        },
+      }),
+    }),
+  });
+  const model = materialize(
+    counter.version({ modules: [counters] }),
+  ) as unknown as DocumentModelModule;
+
+  it("builds NOOP from the model's own creator, keeping its input", () => {
+    const { actions, failures } = validateActions(model, [
+      { type: "NOOP", input: { amount: 2 } },
+      { type: "NOOP", input: {} },
+    ]);
+    expect(
+      actions.map(({ type, scope, input }) => ({ type, scope, input })),
+    ).toEqual([{ type: "NOOP", scope: "global", input: { amount: 2 } }]);
+    expect(failures).toEqual([
+      {
+        index: 1,
+        type: "NOOP",
+        code: "INVALID_ACTION",
+        errors: ["amount: expected number, received undefined"],
+      },
+    ]);
+  });
+
+  it("describes NOOP with the model's input schema", () => {
+    expect(operationSchemaSlice(model, "NOOP")).toEqual({
+      name: "Noop",
+      module: "Counters",
+      scope: "global",
+      schema: "input NoopInput {\n  amount: Int!\n}\n",
+    });
+  });
+
+  it("keeps the base NOOP for a model without one", () => {
+    const { actions } = validateActions(ledger, [{ type: "NOOP", input: {} }]);
+    expect(actions.map(({ type, input }) => ({ type, input }))).toEqual([
+      { type: "NOOP", input: {} },
+    ]);
+  });
 });

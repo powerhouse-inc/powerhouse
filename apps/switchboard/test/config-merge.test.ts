@@ -224,3 +224,25 @@ describe("startSwitchboard", () => {
     ).rejects.toThrow("unknown config keys: port, dbPath");
   });
 });
+
+describe("packages.hostValidation", () => {
+  it("defaults to log", () => {
+    expect(resolved({}, {}).packages.hostValidation).toBe("log");
+  });
+
+  it("reads PH_HOST_VALIDATION and a caller's config", () => {
+    expect(
+      resolved({ PH_HOST_VALIDATION: " refuse " }, {}).packages.hostValidation,
+    ).toBe("refuse");
+    expect(
+      resolved({}, { packages: { hostValidation: "refuse" } }).packages
+        .hostValidation,
+    ).toBe("refuse");
+  });
+
+  it("refuses an unknown PH_HOST_VALIDATION", () => {
+    expect(() => resolved({ PH_HOST_VALIDATION: "strict" }, {})).toThrow(
+      'PH_HOST_VALIDATION must be "log" or "refuse", got "strict"',
+    );
+  });
+});

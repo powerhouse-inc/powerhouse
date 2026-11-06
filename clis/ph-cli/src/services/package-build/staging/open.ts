@@ -1,12 +1,21 @@
 import { randomBytes } from "node:crypto";
-import { lstatSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { canonicalPath, pathWithin } from "../../definitions/paths.js";
+import { lstatSync, readdirSync, readlinkSync, statSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import {
+  pathWithin,
+  realPathThroughExistingParent,
+} from "@powerhousedao/shared/clis/real-paths";
 import { CannotStage, creating, unstageableEntryIn } from "./files.js";
-import { BUILD_DIRECTORY, LOCK_FILE, RUNS_DIRECTORY } from "./journal.js";
+import { BUILD_DIRECTORY, LOCK_FILE } from "../../build-control.js";
+import { RUNS_DIRECTORY } from "./journal.js";
 import { acquireBuildLock, type BuildLock } from "./lock.js";
 import { recoverStaleRuns } from "./recovery.js";
-import { type BuildSession, shownPath, StagedBuildSession } from "./session.js";
+import {
+  type BuildSession,
+  scratchBeside,
+  shownPath,
+  StagedBuildSession,
+} from "./session.js";
 
 /**
  * The first symlink among the output and its parents inside the package:
@@ -16,14 +25,51 @@ function symlinkOnPath(
   packageRoot: string,
   output: string,
 ): string | undefined {
-  const root = canonicalPath(packageRoot);
+  const root = realPathThroughExistingParent(packageRoot);
   for (let dir = output; ; dir = dirname(dir)) {
     if (lstatSync(dir, { throwIfNoEntry: false })?.isSymbolicLink()) {
       return dir;
     }
-    const parent = canonicalPath(dirname(dir), { resolveMissingLinks: true });
+    const parent = realPathThroughExistingParent(dirname(dir));
     if (parent === root || pathWithin(root, parent) === null) return;
   }
+}
+
+/**
+ * The output is a mount point, or otherwise on another filesystem than the
+ * directory beside it: the stage's rename cannot replace it.
+ */
+function onAnotherFilesystem(output: string): boolean {
+  const dev = statSync(output, { throwIfNoEntry: false })?.dev;
+  return dev !== undefined && dev !== statSync(dirname(output)).dev;
+}
+
+function linkIntoOutput(
+  logical: string,
+  output: string,
+  stage: string,
+): string | undefined {
+  const visit = (dir: string): string | undefined => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        const found = visit(path);
+        if (found) return found;
+        continue;
+      }
+      if (!entry.isSymbolicLink()) continue;
+      const target = readlinkSync(path);
+      const copied = isAbsolute(target)
+        ? target
+        : resolve(stage, relative(logical, dirname(path)), target);
+      if (pathWithin(logical, copied) !== null) return path;
+      if (pathWithin(output, copied) !== null) return path;
+    }
+    return undefined;
+  };
+  return lstatSync(logical, { throwIfNoEntry: false })?.isDirectory()
+    ? visit(logical)
+    : undefined;
 }
 
 /**
@@ -42,7 +88,9 @@ class InPlaceSession implements BuildSession {
   stage(): string {
     return this.logical;
   }
-  protectCompilerOutputs(): void {}
+  prepareCompiler(): Promise<undefined> {
+    return Promise.resolve(undefined);
+  }
   compilerOutputsWritten(): void {}
   commit(): void {}
   close(): void {
@@ -73,12 +121,12 @@ function newRunId(): string {
  * Takes the package's lock and finishes what dead builds left, then opens a
  * staged session, or an in-place one when staging cannot run as an unstaged
  * build would: the output or a directory on its path in the package is a
- * symlink, the output holds an entry a copy cannot take (a FIFO, socket or
- * device, or one this process cannot read), the output holds `.ph/build`,
- * whose lock and journal a swap would move away, or the stage beside the
- * output cannot be written. Only when `.ph/build` cannot hold the lock does the
- * build run without one, as builds did before staging. One warning says why
- * a build writes in place.
+ * symlink, the output is on another filesystem than its parent, it holds an
+ * entry a copy cannot take (a FIFO, socket or device, or one this process
+ * cannot read) or a symlink into itself, it holds `.ph/build`, whose lock and
+ * journal a swap would move away, or the stage beside it cannot be written.
+ * Only when `.ph/build` cannot hold the lock does the build run without one,
+ * as builds did before staging. One warning says why a build writes in place.
  */
 export async function openBuildSession(options: {
   readonly packageRoot: string;
@@ -90,10 +138,9 @@ export async function openBuildSession(options: {
 }): Promise<BuildSession> {
   const { packageRoot, outDir, cleanedEntries, linkCleanedEntries } = options;
   const logical = resolve(packageRoot, outDir);
-  const output = canonicalPath(logical, { resolveMissingLinks: true });
+  const output = realPathThroughExistingParent(logical);
   const writesPackageDist =
-    output ===
-    canonicalPath(join(packageRoot, "dist"), { resolveMissingLinks: true });
+    output === realPathThroughExistingParent(join(packageRoot, "dist"));
   const shown = (path: string) => shownPath(packageRoot, path);
   const inPlace = (reason: string, lock: BuildLock | undefined) => {
     console.warn(
@@ -121,15 +168,32 @@ export async function openBuildSession(options: {
     if (link !== undefined) {
       return inPlace(`${shown(link)} is a symbolic link`, lock);
     }
+    if (onAnotherFilesystem(logical)) {
+      return inPlace(
+        `${shown(logical)} is on another filesystem than the directory that holds it`,
+        lock,
+      );
+    }
     const unstageable = unstageableEntryIn(logical);
     if (unstageable !== undefined) {
       return inPlace(`${shown(unstageable.path)} ${unstageable.reason}`, lock);
+    }
+    const intoOutput = linkIntoOutput(
+      logical,
+      output,
+      scratchBeside(logical, "stage", runId),
+    );
+    if (intoOutput !== undefined) {
+      return inPlace(
+        `${shown(intoOutput)} is a symbolic link into ${shown(logical)}`,
+        lock,
+      );
     }
     const control = [BUILD_DIRECTORY, join(RUNS_DIRECTORY, runId)].find(
       (dir) =>
         pathWithin(
           output,
-          canonicalPath(join(packageRoot, dir), { resolveMissingLinks: true }),
+          realPathThroughExistingParent(join(packageRoot, dir)),
         ) !== null,
     );
     if (control !== undefined) {

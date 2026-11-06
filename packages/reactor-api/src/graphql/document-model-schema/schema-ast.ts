@@ -75,6 +75,8 @@ export function definedTypeNames(
     .map((def) => (def as DefinitionNode & { name: NameNode }).name.value);
 }
 
+const UNSERVED_DIRECTIVES = new Set(["equals"]);
+
 /** Prefix type definition names and type references found in `names`. */
 function prefixTypeNames(
   doc: DocumentNode,
@@ -82,6 +84,8 @@ function prefixTypeNames(
   names: ReadonlySet<string>,
 ): DocumentNode {
   return visit(doc, {
+    Directive: (node) =>
+      UNSERVED_DIRECTIVES.has(node.name.value) ? null : undefined,
     enter(node: ASTNode) {
       if (!TYPE_NAME_KINDS.has(node.kind)) return undefined;
       const { name } = node as ASTNode & { name: NameNode };

@@ -26,14 +26,16 @@ export function sortedSchema(schema: GraphQLSchema): string {
   return graphqlCjs.printSchema(graphqlCjs.lexicographicSortSchema(schema));
 }
 
-function memoryReactor(module: DocumentModelModule): {
+function memoryReactor(
+  module: DocumentModelModule,
+  initial: PHDocument = module.utils.createDocument(),
+): {
   client: IReactorClient;
   current: () => PHDocument;
 } {
-  let document = module.utils.createDocument();
-  document = {
-    ...document,
-    header: { ...document.header, id: "doc-1", slug: "doc-1" },
+  let document: PHDocument = {
+    ...initial,
+    header: { ...initial.header, id: "doc-1", slug: "doc-1" },
   };
   const execute = (_id: string, _branch: string, actions: Action[]) => {
     for (const action of actions) document = module.reducer(document, action);
@@ -90,8 +92,9 @@ export type ModelHost = {
 export function hostFor(
   module: DocumentModelModule,
   authorization: IAuthorizationService = recordingAuthorization().authorization,
+  initial?: PHDocument,
 ): ModelHost {
-  const { client, current } = memoryReactor(module);
+  const { client, current } = memoryReactor(module, initial);
   const subgraph = new DocumentModelSubgraph(module, {
     reactorClient: client,
     authorizationService: authorization,

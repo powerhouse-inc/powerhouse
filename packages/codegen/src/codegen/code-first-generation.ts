@@ -1,6 +1,7 @@
 import { kebabCase } from "change-case";
-import { existsSync, realpathSync } from "node:fs";
-import { basename, dirname, join, relative, sep } from "node:path";
+import { realPathThroughExistingParent } from "@powerhousedao/shared/clis/real-paths";
+import { existsSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 import { firstBy, isTruthy, prop, uniqueBy } from "remeda";
 import type { Project } from "ts-morph";
 import { getEditorDirNames, getEditorMetadata, projectPath } from "utils";
@@ -56,13 +57,6 @@ const noStoredModels: ModelGenerationSource = {
 const inventoryOf = (project: Project) =>
   loadCodeFirstInventory(projectPath(project, "."));
 
-/** The path with symlinks and, where the filesystem ignores it, case resolved. */
-function canonicalPath(path: string): string {
-  if (existsSync(path)) return realpathSync.native(path);
-  const parent = dirname(path);
-  return parent === path ? path : join(canonicalPath(parent), basename(path));
-}
-
 /** What the selected code-first sources own, each mapped to one source. */
 type CodeFirstOwnership = {
   readonly projectDir: string;
@@ -88,7 +82,7 @@ function ownershipOf(inventory: CodeFirstInventory): CodeFirstOwnership {
     ),
     files: new Map(
       [...inventory.sourceFiles].map(([file, specifier]) => [
-        canonicalPath(file),
+        realPathThroughExistingParent(file),
         specifier,
       ]),
     ),
@@ -96,14 +90,14 @@ function ownershipOf(inventory: CodeFirstInventory): CodeFirstOwnership {
 }
 
 function sourceInside(directory: string, owner: CodeFirstOwnership) {
-  const root = `${canonicalPath(directory)}${sep}`;
+  const root = `${realPathThroughExistingParent(directory)}${sep}`;
   for (const [file, specifier] of owner.files) {
     if (file.startsWith(root))
       return {
-        file: relative(canonicalPath(owner.projectDir), file).replaceAll(
-          "\\",
-          "/",
-        ),
+        file: relative(
+          realPathThroughExistingParent(owner.projectDir),
+          file,
+        ).replaceAll("\\", "/"),
         source: specifier,
       };
   }
@@ -160,6 +154,28 @@ function assertSingleOwner(
       "Document model generation has conflicting sources, so nothing was generated:",
       ...conflicts.map((conflict) => `- ${conflict}`),
       "Rename or remove one side of each conflict, then generate again.",
+    ].join("\n"),
+  );
+}
+
+function unknownEditorDocumentType(
+  documentType: string,
+  inventory: CodeFirstInventory,
+  existingEditorDir: string | undefined,
+): Error {
+  const declared = [
+    ...new Set(inventory.documentModels.map(prop("documentType"))),
+  ];
+  const moduleFile = `editors/${existingEditorDir}/module.ts`;
+  return new Error(
+    [
+      existingEditorDir === undefined
+        ? `No code-first or schema-first document model in this package declares document type ${documentType}.`
+        : `${moduleFile} edits document type ${documentType}, which no code-first or schema-first document model in this package declares.`,
+      `Code-first models declare: ${declared.length === 0 ? "none" : declared.join(", ")}.`,
+      existingEditorDir === undefined
+        ? "Pass --document-type with a document type a model declares."
+        : `If the model's document type changed, set documentTypes in ${moduleFile} to the new type, then generate the editor again.`,
     ].join("\n"),
   );
 }
@@ -231,6 +247,22 @@ export function codeFirstModelGeneration(
       [prop("version"), "desc"],
     );
     if (model === undefined) {
+      const [documentType] = documentTypes;
+      const stored = source
+        .planAllDocumentModels(project)
+        .models.some(({ id }) => id === documentType);
+      if (!stored) {
+        throw unknownEditorDocumentType(
+          documentType,
+          inventory,
+          editorDirName !== undefined &&
+            existsSync(
+              projectPath(project, `editors/${editorDirName}/module.ts`),
+            )
+            ? editorDirName
+            : undefined,
+        );
+      }
       await source.generateEditor(request, project);
       return;
     }
@@ -294,13 +326,13 @@ export function codeFirstModelGeneration(
         );
       }
       const names = codeFirstDocumentModelTemplateArgs(args);
-      const directory = canonicalPath(
+      const directory = realPathThroughExistingParent(
         projectPath(project, `document-models/${names.kebabName}`),
       );
       const exportName = `${names.pascalName}V1`;
       const conflicts = [
         ...planned.flatMap((model) => [
-          ...(canonicalPath(model.directory) === directory
+          ...(realPathThroughExistingParent(model.directory) === directory
             ? [
                 `${model.label} already owns the scaffold directory document-models/${names.kebabName}.`,
               ]
@@ -330,8 +362,8 @@ export function codeFirstModelGeneration(
         .planAllDocumentModels(project)
         .models.filter(
           (model) =>
-            canonicalPath(model.directory) !==
-            canonicalPath(incoming.directory),
+            realPathThroughExistingParent(model.directory) !==
+            realPathThroughExistingParent(incoming.directory),
         );
       const models = [...others, incoming];
       assertSingleOwner(

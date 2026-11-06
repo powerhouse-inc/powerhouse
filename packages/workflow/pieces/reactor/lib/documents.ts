@@ -92,10 +92,46 @@ export interface ModelDescription {
   actions: ModelAction[];
 }
 
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+const listOf = (value: unknown, key: string): unknown[] => {
+  const list = isRecord(value) ? value[key] : undefined;
+  return Array.isArray(list) ? list : [];
+};
+
+/**
+ * A code-first module's definition maps stored names to action types. The
+ * definition is read as untrusted: hosts serve a module whose definition is
+ * invalid from its stored model, and so does this.
+ */
+function actionTypesByStoredName(
+  module: DocumentModelModule,
+  version: number | undefined,
+): ReadonlyMap<string, string> {
+  const specification = listOf(
+    (module as { definition?: unknown }).definition,
+    "specifications",
+  ).find((spec) => isRecord(spec) && spec.version === version);
+  return new Map(
+    listOf(specification, "modules")
+      .flatMap((specModule) => listOf(specModule, "operations"))
+      .flatMap((operation) =>
+        isRecord(operation) &&
+        typeof operation.name === "string" &&
+        typeof operation.actionType === "string"
+          ? [[operation.name, operation.actionType] as const]
+          : [],
+      ),
+  );
+}
+
 // The latest specification's operations and state schema.
 export function describeModel(module: DocumentModelModule): ModelDescription {
   const model = module.documentModel.global;
   const latest = model.specifications.at(-1);
+  const actionTypes = actionTypesByStoredName(module, latest?.version);
   return {
     documentType: model.id,
     name: model.name,
@@ -106,7 +142,7 @@ export function describeModel(module: DocumentModelModule): ModelDescription {
           operation.name
             ? [
                 {
-                  type: operation.name,
+                  type: actionTypes.get(operation.name) ?? operation.name,
                   module: specModule.name,
                   scope: operation.scope || DEFAULT_SCOPE,
                   inputSchema: operation.schema ?? null,

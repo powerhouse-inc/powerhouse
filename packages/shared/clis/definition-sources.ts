@@ -22,6 +22,19 @@ export const DEFAULT_AUTHORING_MODE: AuthoringMode = "schema-first";
 /** @experimental The only `definitionSources.formatVersion` this release reads. */
 export const DEFINITION_SOURCES_FORMAT_VERSION = 1;
 
+/**
+ * @experimental The extensions a definition source may have. Hosts evaluate
+ * every source as an ES module.
+ */
+export const DEFINITION_SOURCE_EXTENSION = /\.(?:[jt]sx?|m[jt]s)$/;
+
+/** @experimental A CommonJS module, which cannot be a definition source. */
+export const COMMONJS_DEFINITION_SOURCE = /\.c[jt]s$/;
+
+/** @experimental How to make a CommonJS module a definition source. */
+export const COMMONJS_DEFINITION_SOURCE_REPAIR =
+  "Rename the module to .ts, .mts, .js or .mjs and declare its definitions with ES module exports.";
+
 const DEFINITION_SOURCES_MODES = ["code-first", "schema-first"] as const;
 
 type DefinitionSourcesParseResult =

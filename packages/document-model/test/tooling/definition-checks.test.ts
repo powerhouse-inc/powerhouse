@@ -976,6 +976,49 @@ describe("unregistered-definitions", () => {
             kind: "document-model",
             unit: "./document-models/notes/",
             specifier: "./document-models/notes/index.ts",
+            reason: "unreached",
+          },
+          {
+            kind: "document-model",
+            unit: "./document-models/orders/",
+            specifier: "./document-models/orders/index.ts",
+            reason: "not-exported",
+          },
+        ],
+      }).then((diagnostics) =>
+        diagnostics.map(({ source, message, expected, received }) => ({
+          source,
+          message,
+          expected,
+          received,
+        })),
+      ),
+    ).toEqual([
+      {
+        source: { specifier: "./document-models/notes/index.ts" },
+        message:
+          "./document-models/notes/ declares a code-first document model that no definitionSources entry reaches, so the package leaves it out.",
+        expected:
+          "a definitionSources entry that reaches ./document-models/notes/index.ts",
+        received: "no entry",
+      },
+      {
+        source: { specifier: "./document-models/orders/index.ts" },
+        message:
+          "./document-models/orders/ declares a code-first document model that a selected source imports but does not export, so the package leaves it out.",
+        expected:
+          "a definitionSources entry that exports the model ./document-models/orders/index.ts declares",
+        received: "imported, not exported",
+      },
+    ]);
+    expect(
+      await run("unregistered-definitions", {
+        unregistered: [
+          {
+            kind: "document-model",
+            unit: "./document-models/notes/",
+            specifier: "./document-models/notes/index.ts",
+            reason: "unreached",
           },
         ],
       }),
@@ -1046,11 +1089,16 @@ describe("duplicate-identities: platform action types", () => {
 });
 
 describe("graphql-schema: graphql-js validation", () => {
-  const shelf = (globalSchema: string, operationSchema?: string) =>
+  const shelf = (
+    globalSchema: string,
+    operationSchema?: string,
+    initialValue?: string,
+  ) =>
     schemaFirst(
       JSON.parse(
         storedModel("test/shelf", "Shelf", {
           globalSchema,
+          ...(initialValue !== undefined && { initialValue }),
           ...(operationSchema !== undefined && {
             modules: [
               {
@@ -1164,6 +1212,8 @@ describe("graphql-schema: graphql-js validation", () => {
   it("reports a missing transitive interface on the implementing type", async () => {
     const artifact = shelf(
       "interface Node {\n  id: ID!\n}\n\ninterface Named implements Node {\n  id: ID!\n  title: String!\n}\n\ntype ShelfState implements Named {\n  id: ID!\n  title: String!\n}",
+      undefined,
+      '{"id":"","title":""}',
     );
     const owner = artifact.definition.specifications[0].types.findIndex(
       ({ name }) => name === "ShelfState",

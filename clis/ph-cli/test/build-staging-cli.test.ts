@@ -3,10 +3,12 @@
 
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import {
+  chmodSync,
   closeSync,
   constants,
   existsSync,
   openSync,
+  readdirSync,
   writeFileSync,
 } from "node:fs";
 import { hostname } from "node:os";
@@ -185,21 +187,29 @@ describe.skipIf(process.platform === "win32")(
       expect(scratchLeft(made)).toEqual([]);
     }, 180_000);
 
-    it("by SIGKILL is undone by the next build, which then succeeds", async () => {
+    it("by SIGKILL leaves the previous output and build info as they were, and is undone by the next build, which then succeeds", async () => {
       const made = await builtOnce();
       const fifo = hangBrowserBundle(made);
       const before = previousOutput(made);
+      made.write(
+        "index.ts",
+        `${made.read("index.ts")}export const added = 1;\n`,
+      );
       const { child, ended } = startBuild(made);
       await bundlerWaiting(fifo);
       child.kill("SIGKILL");
       expect((await ended).signal).toBe("SIGKILL");
-      // What the killed build left: its lock, its run, its stage.
       expect(previousOutput(made)).toEqual(before);
-      const [stage, run, lock, ...rest] = scratchLeft(made);
-      expect(rest).toEqual([]);
-      expect(run).toMatch(/^runs\//);
-      expect(stage).toBe(`.dist.ph-stage-${run.slice("runs/".length)}`);
-      expect(lock).toBe("lock");
+      const run = scratchLeft(made).find((entry) => entry.startsWith("runs/"));
+      const id = run?.slice("runs/".length);
+      expect(scratchLeft(made).sort()).toEqual(
+        [
+          `.dist.ph-stage-${id}`,
+          `.tsconfig.tsbuildinfo.ph-stage-${id}`,
+          `runs/${id}`,
+          "lock",
+        ].sort(),
+      );
       made.write("reactor/index.ts", "export const reactor = 1;\n");
 
       const next = await build(made);
@@ -212,6 +222,9 @@ describe.skipIf(process.platform === "win32")(
       expect(
         existsSync(join(made.dist, "browser", "reactor", "index.js")),
       ).toBe(true);
+      expect(made.read("dist/types/index.d.ts")).toContain(
+        "export declare const added = 1;",
+      );
     }, 180_000);
   },
 );
@@ -219,8 +232,9 @@ describe.skipIf(process.platform === "win32")(
 describe.skipIf(process.platform === "win32")(
   "a build killed while tsc runs",
   () => {
-    it("has its declarations restored before the next tsc, which rebuilds them", async () => {
+    it("leaves the previous declarations and build info, and the next tsc rebuilds them", async () => {
       const made = await builtOnce();
+      const before = previousOutput(made);
       const declarations = made.read("dist/types/index.d.ts");
       made.write(
         "index.ts",
@@ -228,10 +242,9 @@ describe.skipIf(process.platform === "win32")(
       );
       const { child, ended } = startBuild(made, { PH_TEST_TSC_HANG: "1" });
       await until(() => existsSync(join(made.root, "tsc-wrote")));
-      // tsc had written the new declarations when the build died.
-      expect(made.read("dist/types/index.d.ts")).toContain("added");
       process.kill(-child.pid!, "SIGKILL");
       await ended;
+      expect(previousOutput(made)).toEqual(before);
 
       const next = await build(made);
 
@@ -245,6 +258,162 @@ describe.skipIf(process.platform === "win32")(
       );
       expect(scratchLeft(made)).toEqual([]);
     }, 180_000);
+  },
+);
+
+describe.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+  "a build killed after tsc wrote declarations it keeps in place",
+  () => {
+    const valued = (made: StagedProject, value: string) =>
+      made.write(
+        "index.ts",
+        `${made.read("index.ts").replace(/export const value = .*\n/, "")}export const value = "${value}" as const;\n`,
+      );
+    const layouts: [string, (made: StagedProject) => void, string][] = [
+      [
+        "lib",
+        (made) =>
+          made.write(
+            "tsconfig.json",
+            made.read("tsconfig.json").replace('"./dist/types"', '"./lib"'),
+          ),
+        "lib/index.d.ts",
+      ],
+      [
+        "dist itself, from a project without build info",
+        (made) =>
+          made.write(
+            "tsconfig.json",
+            made
+              .read("tsconfig.json")
+              .replace('"incremental": true,', "")
+              .replace(
+                '"declarationDir": "./dist/types"',
+                '"outDir": "./dist"',
+              ),
+          ),
+        "dist/index.d.ts",
+      ],
+      [
+        "dist itself, from a referenced project",
+        (made) => {
+          const { compilerOptions, include } = JSON.parse(
+            made.read("tsconfig.json"),
+          ) as { compilerOptions: object; include: string[] };
+          made.write(
+            "compiler/tsconfig.json",
+            JSON.stringify({
+              compilerOptions: {
+                ...compilerOptions,
+                incremental: undefined,
+                declarationDir: undefined,
+                composite: true,
+                rootDir: "..",
+                outDir: "../dist",
+              },
+              include: include.map((path) => `../${path}`),
+            }),
+          );
+          made.write(
+            "tsconfig.json",
+            JSON.stringify({ files: [], references: [{ path: "./compiler" }] }),
+          );
+        },
+        "dist/index.d.ts",
+      ],
+    ];
+    const built = (made: StagedProject, declarations: string) => {
+      const node = join(made.root, "dist", "node");
+      const bundled = readdirSync(node, { recursive: true })
+        .map(String)
+        .filter((file) => file.endsWith(".mjs"))
+        .map((file) => made.read(join("dist", "node", file)))
+        .join("\n");
+      return {
+        declarations: /value: "(\w+)"/.exec(made.read(declarations))?.[1],
+        bundle: /value = "(\w+)"/.exec(bundled)?.[1],
+      };
+    };
+
+    it.each(layouts.slice(1))(
+      "into %s, is undone by the next build",
+      async (_, layout, declarations) => {
+        const made = project();
+        layout(made);
+        valued(made, "ZERO");
+        expect((await build(made)).code).toBe(0);
+        const before = previousOutput(made);
+        valued(made, "A");
+        const { child, ended } = startBuild(made, { PH_TEST_TSC_HANG: "1" });
+        await until(() => existsSync(join(made.root, "tsc-wrote")));
+        process.kill(-child.pid!, "SIGKILL");
+        await ended;
+        expect(built(made, declarations)).toEqual({
+          declarations: "A",
+          bundle: "ZERO",
+        });
+        made.write(
+          "index.ts",
+          `${made.read("index.ts")}export const broken: number = "not a number";\n`,
+        );
+
+        const next = await build(made);
+
+        expect(next.code).toBe(1);
+        expect(next.stderr).toContain(
+          "⚠ An earlier build of this package stopped before it finished; its partial output was removed and the previous output restored.\n",
+        );
+        expect(previousOutput(made)).toEqual(before);
+        expect(scratchLeft(made)).toEqual([]);
+      },
+      240_000,
+    );
+
+    it.each(layouts)(
+      "into %s, is not undone over a later build that wrote in place while .ph/build could not be written",
+      async (_, layout, declarations) => {
+        const made = project();
+        layout(made);
+        valued(made, "ZERO");
+        expect((await build(made)).code).toBe(0);
+        valued(made, "A");
+        const { child, ended } = startBuild(made, { PH_TEST_TSC_HANG: "1" });
+        await until(() => existsSync(join(made.root, "tsc-wrote")));
+        process.kill(-child.pid!, "SIGKILL");
+        await ended;
+        const control = join(made.root, ".ph", "build");
+        chmodSync(control, 0o555);
+        valued(made, "B");
+        try {
+          expect((await build(made)).code).toBe(0);
+        } finally {
+          chmodSync(control, 0o755);
+        }
+        expect(built(made, declarations)).toEqual({
+          declarations: "B",
+          bundle: "B",
+        });
+        made.write(
+          "powerhouse.manifest.json",
+          made
+            .read("powerhouse.manifest.json")
+            .replace('"@fixture/classic-package"', '"@fixture/renamed"'),
+        );
+
+        const refused = await build(made);
+
+        expect(refused.code).toBe(1);
+        expect(built(made, declarations)).toEqual({
+          declarations: "B",
+          bundle: "B",
+        });
+        expect(refused.stderr).toContain(
+          "⚠ An earlier build of this package stopped before it finished, and a build that wrote dist in place ran after it; the earlier build's partial output was removed and the newer files were kept.\n",
+        );
+        expect(scratchLeft(made)).toEqual([]);
+      },
+      240_000,
+    );
   },
 );
 

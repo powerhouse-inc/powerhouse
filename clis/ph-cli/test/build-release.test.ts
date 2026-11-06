@@ -64,11 +64,24 @@ const LEDGER_WITH_GENERATED = `import { LEDGER_DESCRIPTION } from "./generated.j
   "description: LEDGER_DESCRIPTION",
 )}`;
 
+const entry = (path: string, types = true) => ({
+  ...(types && { types: `./dist/types/${path}.d.ts` }),
+  browser: `./dist/browser/${path}.js`,
+  node: `./dist/node/${path}.mjs`,
+});
+
+const EXPORTS = {
+  ".": entry("index"),
+  "./document-models": entry("document-models/index"),
+  "./document-models/*": entry("document-models/*/index", false),
+  "./editors": entry("editors/index"),
+};
+
 /**
  * The classic fixture, with the code-first ledger unless `codeFirst` is
- * false, published as `ph init` publishes (`files: ["/dist"]`), in a git work
- * tree that ignores what a generated project ignores and what the test stubs
- * write.
+ * false, published as `ph init` publishes (`files: ["/dist"]`, with the
+ * generated exports), in a git work tree that ignores what a generated
+ * project ignores and what the test stubs write.
  */
 function releaseProject(codeFirst = true): StagedProject {
   const made = createStagedProject();
@@ -82,7 +95,20 @@ function releaseProject(codeFirst = true): StagedProject {
   const pkg = JSON.parse(made.read("package.json")) as Record<string, unknown>;
   made.write(
     "package.json",
-    `${JSON.stringify({ ...pkg, files: ["/dist"] }, null, 2)}\n`,
+    `${JSON.stringify(
+      {
+        ...pkg,
+        files: ["/dist"],
+        exports: codeFirst
+          ? { ...EXPORTS, "./scalars": entry("scalars/index", false) }
+          : EXPORTS,
+        ...(codeFirst && {
+          peerDependencies: { "document-model": "*", zod: "*" },
+        }),
+      },
+      null,
+      2,
+    )}\n`,
   );
   made.write(
     ".gitignore",
@@ -290,19 +316,143 @@ describe("ph build --release", () => {
     expect(await prepack(made.root)).toEqual(APPROVED);
   }, 240_000);
 
-  it("approves a package whose output directory links to another directory in it", async () => {
+  it("writes no approval for a package whose output directory is a link, which npm does not pack through", async () => {
     const made = releaseProject();
     mkdirSync(join(made.root, "artifacts"));
     symlinkSync("artifacts", made.dist);
 
+    const failure = await buildPackage(args).catch((error: unknown) => error);
+
+    expect(failure).toEqual(
+      new BuildRefusal(
+        '✘ No release approval was written: the packed package does not install and import in a scratch consumer: exports["."] names ./dist/types/index.d.ts, which the package does not contain, exports["."] names ./dist/browser/index.js, which the package does not contain, exports["."] names ./dist/node/index.mjs, which the package does not contain, exports["./document-models"] names ./dist/types/document-models/index.d.ts, which the package does not contain, exports["./document-models"] names ./dist/browser/document-models/index.js, which the package does not contain and 14 more. The new output is in place; build again with --release to approve it.',
+      ),
+    );
+    expect(existsSync(join(made.root, "artifacts", "node", "index.mjs"))).toBe(
+      true,
+    );
+    expect(existsSync(join(made.root, APPROVAL))).toBe(false);
+  }, 240_000);
+
+  it("writes no approval when a bundle imports a package the package declares only as a devDependency", async () => {
+    const made = releaseProject();
+    const pkg = JSON.parse(made.read("package.json")) as Record<
+      string,
+      unknown
+    >;
+    made.write(
+      "package.json",
+      JSON.stringify({
+        ...pkg,
+        peerDependencies: { "document-model": "*" },
+        devDependencies: { zod: "*" },
+      }),
+    );
+
+    const failure = await buildPackage(args).catch((error: unknown) => error);
+
+    expect(failure).toEqual(
+      new BuildRefusal(
+        "✘ No release approval was written: the packed package does not install and import in a scratch consumer: node consumer cannot import @fixture/classic-package/document-models/ledger: Cannot find package 'zod' imported from node_modules/@fixture/classic-package/dist/node/scalars/index.mjs, node consumer cannot import @fixture/classic-package/scalars: Cannot find package 'zod' imported from node_modules/@fixture/classic-package/dist/node/scalars/index.mjs, browser consumer cannot import @fixture/classic-package/document-models/ledger: Cannot find package 'zod' imported from node_modules/@fixture/classic-package/dist/browser/scalars/index.js, browser consumer cannot import @fixture/classic-package/scalars: Cannot find package 'zod' imported from node_modules/@fixture/classic-package/dist/browser/scalars/index.js. The new output is in place; build again with --release to approve it.",
+      ),
+    );
+    expect(existsSync(join(made.root, APPROVAL))).toBe(false);
+  }, 240_000);
+
+  it("keeps the build's lock out of an approval that covers the packed .ph, so it holds once the build ends", async () => {
+    const made = releaseProject(false);
+    const pkg = JSON.parse(made.read("package.json")) as Record<
+      string,
+      unknown
+    >;
+    made.write(
+      "package.json",
+      JSON.stringify({ ...pkg, files: ["/dist", ".ph"] }),
+    );
+    made.write(".ph/payload.js", "export const payload = 1;\n");
+
     await buildPackage(args);
 
-    expect(logs).toContain(`✔ Release approval written to ${APPROVAL}`);
-    expect(readApproval(made).packageRevision.excluded).toEqual([
-      "artifacts",
-      "tsconfig.tsbuildinfo",
-    ]);
+    expect(existsSync(join(made.root, ".ph", "build", "lock"))).toBe(false);
+    expect(
+      readApproval(made)
+        .publishedFiles.map(({ path }) => path)
+        .filter((path) => path.startsWith(".ph/")),
+    ).toEqual([".ph/payload.js"]);
     expect(await prepack(made.root)).toEqual(APPROVED);
+    made.write(".ph/payload.js", "export const payload = 2;\n");
+    expect(await prepack(made.root)).toEqual(
+      stale(
+        "1 published file changed since the approval was made: .ph/payload.js",
+      ),
+    );
+  }, 240_000);
+
+  it("approves the generated optional exports the build did not write, and refuses one it did write under another path", async () => {
+    const made = releaseProject(false);
+    const pkg = JSON.parse(made.read("package.json")) as {
+      exports: Record<string, unknown>;
+    };
+    const generated = {
+      ...pkg.exports,
+      "./scalars": entry("scalars/index", false),
+      "./connect-routes": { browser: "./dist/browser/connect-routes.js" },
+      "./pieces": { node: "./dist/node/pieces/index.mjs" },
+    };
+    made.write("package.json", JSON.stringify({ ...pkg, exports: generated }));
+
+    await buildPackage(args);
+    expect(await prepack(made.root)).toEqual(APPROVED);
+
+    made.write("scalars/index.ts", "export const scalars = [];\n");
+    made.write(
+      "package.json",
+      JSON.stringify({
+        ...pkg,
+        exports: { ...generated, "./scalars": entry("scalar/index", false) },
+      }),
+    );
+    const failure = await buildPackage(args).catch((error: unknown) => error);
+
+    expect(failure).toEqual(
+      new BuildRefusal(
+        "✘ No release approval was written: the packed package does not install and import in a scratch consumer: exports[\"./scalars\"] names ./dist/browser/scalar/index.js, which the package does not contain, exports[\"./scalars\"] names ./dist/node/scalar/index.mjs, which the package does not contain, node consumer cannot import @fixture/classic-package/scalars: Cannot find module 'node_modules/@fixture/classic-package/dist/node/scalar/index.mjs', browser consumer cannot import @fixture/classic-package/scalars: Cannot find module 'node_modules/@fixture/classic-package/dist/browser/scalar/index.js'. The new output is in place; build again with --release to approve it.",
+      ),
+    );
+    expect(existsSync(join(made.dist, "node", "scalars", "index.mjs"))).toBe(
+      true,
+    );
+  }, 240_000);
+
+  it("writes no approval when an export names a file the package does not contain, and skips an entry the package does not ship", async () => {
+    const made = releaseProject(false);
+    const pkg = JSON.parse(made.read("package.json")) as Record<
+      string,
+      unknown
+    >;
+    made.write(
+      "package.json",
+      JSON.stringify({
+        ...pkg,
+        exports: {
+          ...EXPORTS,
+          "./editors": {
+            ...entry("editors/index"),
+            node: "./dist/node/editor/index.mjs",
+          },
+          "./pieces": entry("pieces/index"),
+        },
+      }),
+    );
+
+    const failure = await buildPackage(args).catch((error: unknown) => error);
+
+    expect(failure).toEqual(
+      new BuildRefusal(
+        "✘ No release approval was written: the packed package does not install and import in a scratch consumer: exports[\"./editors\"] names ./dist/node/editor/index.mjs, which the package does not contain, node consumer cannot import @fixture/classic-package/editors: Cannot find module 'node_modules/@fixture/classic-package/dist/node/editor/index.mjs'. The new output is in place; build again with --release to approve it.",
+      ),
+    );
+    expect(existsSync(join(made.root, APPROVAL))).toBe(false);
   }, 240_000);
 
   it("writes no approval when tsc's type errors were accepted", async () => {

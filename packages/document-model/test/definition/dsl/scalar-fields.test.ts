@@ -185,6 +185,37 @@ describe("ph.scalar", () => {
     });
   });
 
+  it("refuses a misspelled scalar factory when it is read", () => {
+    const factories = ph as unknown as Record<string, unknown>;
+    expect(rejection(() => factories.EmailAdress)).toMatchObject({
+      code: "PH-SCALAR-UNKNOWN",
+      severity: "error",
+      phase: "definition",
+      path: ["EmailAdress"],
+      message: "ph.EmailAdress names no catalog scalar.",
+      received: "ph.EmailAdress",
+    });
+    expect(rejection(() => factories.EmailAdress).expected).toContain(
+      " EmailAddress, ",
+    );
+  });
+
+  it("refuses a host-only scalar factory as the reactor host's own", () => {
+    const factories = ph as unknown as Record<string, unknown>;
+    expect(rejection(() => factories.JSONObject)).toMatchObject({
+      code: "PH-SCALAR-INTERNAL",
+      definition: { kind: "scalar", key: "JSONObject" },
+      message:
+        "JSONObject is internal to the reactor host. A document model cannot use it.",
+    });
+  });
+
+  it("leaves other unknown keys and symbols undefined", () => {
+    const factories = ph as unknown as Record<PropertyKey, unknown>;
+    expect(factories.then).toBeUndefined();
+    expect(factories[Symbol.iterator]).toBeUndefined();
+  });
+
   it("refuses a value that is not a scalar definition", () => {
     expect(
       rejection(() => ph.scalar({ name: "Fake", schema: z.string() } as never)),

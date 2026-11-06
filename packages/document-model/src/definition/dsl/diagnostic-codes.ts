@@ -68,6 +68,11 @@ export const dslDiagnostics = defineDiagnosticCatalog(
       meaning:
         "ph.scalar received a value that is not a scalar definition of this release's format",
     },
+    "PH-SCALAR-UNKNOWN": {
+      severity: "error",
+      phase: "definition",
+      meaning: "A ph.<Scalar>() factory names no catalog scalar",
+    },
   },
   kernelDiagnostics,
 );

@@ -1,12 +1,10 @@
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import nodePath, { join } from "node:path";
+import { BUILD_DIRECTORY } from "../../build-control.js";
 import type { DirectoryMode } from "./files.js";
 import type { CompilerOutput } from "./inventory.js";
 
-/** Scratch space of `ph build`, per package. */
-export const BUILD_DIRECTORY = join(".ph", "build");
 export const RUNS_DIRECTORY = join(BUILD_DIRECTORY, "runs");
-export const LOCK_FILE = join(BUILD_DIRECTORY, "lock");
 const JOURNAL_FILE = "journal.json";
 
 /**
@@ -48,6 +46,11 @@ export type CompilerSnapshot = {
   readonly modes?: readonly DirectoryMode[];
 };
 
+export type PendingBuildInfo = {
+  readonly path: string;
+  readonly target: string;
+};
+
 /** Paths as `toJournalPath` records them: package paths from the package root, copies from the run directory. */
 export type RunJournal = {
   readonly format: 1;
@@ -60,6 +63,9 @@ export type RunJournal = {
   readonly stage: string;
   readonly retired: string;
   readonly compiler: readonly CompilerSnapshot[] | null;
+  readonly generatedConfig?: string;
+  readonly pendingBuildInfo?: PendingBuildInfo;
+  readonly outputDigest?: string;
 };
 
 const STATES: readonly JournalState[] = [
@@ -131,6 +137,15 @@ function parseSnapshot(value: unknown): CompilerSnapshot | undefined {
   return { path, kind, copy, created, modes };
 }
 
+function parsePendingBuildInfo(
+  value: unknown,
+): PendingBuildInfo | undefined | null {
+  if (value === undefined) return undefined;
+  if (typeof value !== "object" || value === null) return null;
+  const { path, target } = value as Record<string, unknown>;
+  return isString(path) && isString(target) ? { path, target } : null;
+}
+
 const isDirectoryMode = (value: unknown): value is DirectoryMode =>
   Array.isArray(value) &&
   value.length === 2 &&
@@ -158,6 +173,12 @@ export function readJournal(runDir: string): RunJournal | undefined {
   ) {
     return undefined;
   }
+  const optional = (key: string) =>
+    record[key] === undefined || isString(record[key]);
+  if (!optional("generatedConfig") || !optional("outputDigest"))
+    return undefined;
+  const pending = parsePendingBuildInfo(record.pendingBuildInfo);
+  if (pending === null) return undefined;
   const undo = UNDO_STEPS.find((step) => step === record.undo) ?? null;
   if ((record.state === "rolling-back") !== (undo !== null)) return undefined;
   let compiler: CompilerSnapshot[] | null = null;
@@ -181,5 +202,10 @@ export function readJournal(runDir: string): RunJournal | undefined {
     stage: record.stage,
     retired: record.retired,
     compiler,
+    ...(isString(record.generatedConfig) && {
+      generatedConfig: record.generatedConfig,
+    }),
+    ...(pending !== undefined && { pendingBuildInfo: pending }),
+    ...(isString(record.outputDigest) && { outputDigest: record.outputDigest }),
   };
 }

@@ -162,11 +162,11 @@ const EXPECTED_READS: Record<string, string[]> = {
  * A resolver counts as guarded when its source references the authorization
  * service — directly, or via the BaseSubgraph assertCan-and-canReadDocument
  * helpers (including the *Canonical variants for already-resolved ids), or via
- * the packages requireAdmin, analytics assertCanReadAnalytics or
- * document-model readableItems helpers.
+ * the packages requireAdmin, analytics assertCanReadAnalytics,
+ * document-model readableItems or authorizedAction helpers.
  */
 const GUARD_PATTERN =
-  /\bassertCan(Read|Write|Create|ExecuteOperation|ExecuteOperations)(Canonical)?\b|\bauthorizationService\b|\bcanReadDocument\b|\bservesDocument\b|\blistsDocument\b|\brequireAdmin\b|\bassertCanReadAnalytics\b|\breadableItems\b|\breadableByHost\b|\bisOperator\b|\bservedDocument\b|\breadableIds\b/;
+  /\bassertCan(Read|Write|Create|ExecuteOperation|ExecuteOperations)(Canonical)?\b|\bauthorizationService\b|\bcanReadDocument\b|\bservesDocument\b|\blistsDocument\b|\brequireAdmin\b|\bassertCanReadAnalytics\b|\breadableItems\b|\bauthorizedAction\b|\breadableByHost\b|\bisOperator\b|\bservedDocument\b|\breadableIds\b/;
 
 function resolverSource(value: unknown): string {
   if (typeof value === "function") return value.toString();

@@ -176,3 +176,54 @@ export function inspectDocumentModelDefinition(
   }
   return { kind: "structured", definition, specification };
 }
+
+/**
+ * An operation of a model authored in code: the name it is stored under and
+ * the key of its action creator.
+ *
+ * @experimental
+ */
+export type StructuredOperation = {
+  readonly storedName: string;
+  readonly creatorKey: string;
+};
+
+// An inspected specification is a snapshot nothing mutates, so its index is
+// built once.
+const operationIndexes = new WeakMap<
+  DocumentModelSpecificationDefinition,
+  ReadonlyMap<string, StructuredOperation>
+>();
+
+const NO_OPERATIONS: ReadonlyMap<string, StructuredOperation> = new Map();
+
+/**
+ * The operations of a model authored in code, keyed by action type. Empty for
+ * a model served from its stored specification, whose operations are stored
+ * under their action types.
+ *
+ * @experimental
+ */
+export function operationsByActionType(
+  module: InspectableDocumentModelModule,
+): ReadonlyMap<string, StructuredOperation> {
+  const inspection = inspectDocumentModelDefinition(module);
+  if (inspection.kind !== "structured") return NO_OPERATIONS;
+  const { specification } = inspection;
+  let byActionType = operationIndexes.get(specification);
+  if (byActionType === undefined) {
+    byActionType = new Map(
+      specification.modules
+        .flatMap((specModule) => specModule.operations)
+        .map((operation) => [
+          operation.actionType,
+          {
+            storedName: operation.name ?? operation.actionType,
+            creatorKey: operation.creatorKey,
+          },
+        ]),
+    );
+    operationIndexes.set(specification, byActionType);
+  }
+  return byActionType;
+}

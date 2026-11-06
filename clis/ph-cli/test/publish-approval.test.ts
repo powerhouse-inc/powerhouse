@@ -1,6 +1,7 @@
 import { DEFAULT_REGISTRY_URL } from "@powerhousedao/shared/clis";
 import { publishArgs } from "@powerhousedao/shared/clis/args";
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   realpathSync,
@@ -20,6 +21,7 @@ import {
   ALLOWED_NPM_ARGUMENTS,
   targetSelectingNpmEnvironment,
 } from "../src/services/release/npm-args.js";
+import { readTarball } from "../src/services/release/pack.js";
 import { packageRevision } from "../src/services/release/revision.js";
 
 vi.mock("@powerhousedao/shared/clis", async (importOriginal) => {
@@ -318,11 +320,17 @@ describe("ph publish and the release approval", () => {
     expect(npmPublish).not.toHaveBeenCalled();
   });
 
-  it("with --require-approval, publishes with lifecycle scripts skipped and says so", async () => {
+  it("with --require-approval, publishes the tarball it checked with lifecycle scripts skipped, and says so", async () => {
     const root = builtPackage();
     approve(root);
     // npm run sets it to the global prefix, which selects no other package.
     vi.stubEnv("npm_config_prefix", "/usr/local");
+    let tarball = "";
+    vi.mocked(npmPublish).mockImplementationOnce(({ args }) => {
+      tarball = args?.[0] ?? "";
+      expect(existsSync(tarball)).toBe(true);
+      return Promise.resolve({ stdout: "published" });
+    });
 
     expect(
       await publish({
@@ -333,15 +341,17 @@ describe("ph publish and the release approval", () => {
 
     expect(output.log).toEqual([
       "✔ approved: the release approval matches this package",
-      "Lifecycle scripts are skipped (--ignore-scripts) and workspaces are off (--workspaces=false), so npm publishes the files the approval matched.",
+      "Lifecycle scripts are skipped (--ignore-scripts) and workspaces are off (--workspaces=false), so npm publishes the tarball the approval matched.",
       ...PUBLISHED,
     ]);
+    expect(tarball.endsWith("fixture-published-1.0.0.tgz")).toBe(true);
     expect(vi.mocked(npmPublish).mock.calls).toEqual([
       [
         {
           registryUrl: DEFAULT_REGISTRY_URL,
           cwd: root,
           args: [
+            tarball,
             "--tag",
             "dev",
             "--access=public",
@@ -352,6 +362,30 @@ describe("ph publish and the release approval", () => {
         },
       ],
     ]);
+    expect(existsSync(tarball)).toBe(false);
+  });
+
+  it("with --require-approval, publishes the bytes it checked when a file changes while auth is pending", async () => {
+    const root = builtPackage();
+    approve(root);
+    vi.mocked(checkNpmAuth).mockImplementationOnce(() => {
+      writeFileSync(
+        join(root, "dist", "node", "index.mjs"),
+        "export const a = 999;\n",
+      );
+      return Promise.resolve("testuser");
+    });
+    let published: string | undefined;
+    vi.mocked(npmPublish).mockImplementationOnce(({ args }) => {
+      published = readTarball(args?.[0] ?? "")
+        .get("dist/node/index.mjs")
+        ?.toString("utf8");
+      return Promise.resolve({ stdout: "published" });
+    });
+
+    expect(await publish({ requireApproval: true })).toEqual(new Exit(0));
+
+    expect(published).toBe("export const a = 1;\n");
   });
 });
 

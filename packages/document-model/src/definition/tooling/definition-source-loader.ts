@@ -499,6 +499,7 @@ function refusedModule(
   specifier: `./${string}`,
   code: "PH-CONFIG-SOURCE-INVALID" | "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE",
   message: string,
+  refusal: { readonly expected?: string; readonly repair?: string } = {},
 ): { readonly ok: false; readonly diagnostic: DefinitionDiagnostic } {
   return {
     ok: false,
@@ -508,9 +509,11 @@ function refusedModule(
       path: [],
       message,
       expected:
+        refusal.expected ??
         "a './' module path whose real path stays inside the package root",
       received: specifier,
       repair:
+        refusal.repair ??
         "Keep the module inside the package, and do not reach it through a symlink that leaves the package.",
     }),
   };
@@ -537,6 +540,7 @@ function containedPackageModule(
       request.specifier,
       normalized.code,
       normalized.message,
+      normalized,
     );
   }
   const real = realModulePath(
