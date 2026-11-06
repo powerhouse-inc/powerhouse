@@ -120,6 +120,7 @@ import {
   OAuthError,
   StoreTokenRefresher,
   type OAuthAttemptView,
+  type OAuthSignInRefusedError,
   type OAuthStart,
   type OAuthTokenRefresher,
 } from "./oauth.js";
@@ -1293,7 +1294,29 @@ export class WorkflowRuntimeService {
     return (this.tokenRefresher ??= new StoreTokenRefresher(
       () => this.secrets(),
       this.designEgress,
+      (connectionId, error) => this.recordSignInRefused(connectionId, error),
     ));
+  }
+
+  // A provider that refuses a connection's refresh token has ended its
+  // sign-in. Recorded as a check would record it, so whatever shows the
+  // connection asks for a new sign-in; the next sign-in's check clears it.
+  // Once per refusal, not once per poll.
+  private async recordSignInRefused(
+    connectionId: string,
+    error: OAuthSignInRefusedError,
+  ): Promise<void> {
+    const state = (await this.connectionDocument(connectionId)).state.global;
+    // Revocation is a decision: a check never writes over it either.
+    if (state.status === "REVOKED") return;
+    if (state.status === "ERROR" && state.lastError === error.message) return;
+    await this.host.reactorClient.execute(connectionId, "main", [
+      connectionActions.recordCheckResult({
+        status: "ERROR",
+        checkedAt: new Date().toISOString(),
+        error: error.message,
+      }),
+    ]);
   }
 
   /** The seeding failure a restart is needed to clear, or undefined while the

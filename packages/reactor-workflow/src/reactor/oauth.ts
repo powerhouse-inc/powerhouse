@@ -81,11 +81,31 @@ export interface OAuthTokenSet {
 }
 
 export class OAuthError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    // The provider's own error code (RFC 6749 §5.2), when it answered with one.
+    readonly code?: string,
+  ) {
     super(message);
     this.name = "OAuthError";
   }
 }
+
+// The provider no longer accepts the connection's sign-in: its refresh token
+// is expired or revoked (invalid_grant), or the stored token is unreadable.
+// Only signing in again fixes it, so it is recorded on the connection.
+export class OAuthSignInRefusedError extends OAuthError {
+  constructor(message: string, code?: string) {
+    super(message, code);
+    this.name = "OAuthSignInRefused";
+  }
+}
+
+// What a refresh refused this way tells the host, to record on the connection.
+export type SignInRefusedListener = (
+  connectionId: string,
+  error: OAuthSignInRefusedError,
+) => Promise<void>;
 
 async function up(db: IRelationalDb<OAuthDB>): Promise<void> {
   await db.schema
@@ -449,6 +469,7 @@ export async function postTokenForm(
         : "";
     throw new OAuthError(
       `Token endpoint refused (${typeof error === "string" ? error : status})${description}`,
+      typeof error === "string" ? error : undefined,
     );
   }
   if (typeof parsed.access_token !== "string") {
@@ -582,7 +603,9 @@ export async function exchangeCode(
 export function parseTokenSet(value: string): OAuthTokenSet {
   const parsed = JSON.parse(value) as OAuthTokenSet;
   if (typeof parsed.access_token !== "string") {
-    throw new OAuthError("Stored OAuth2 token is malformed; reconnect");
+    throw new OAuthSignInRefusedError(
+      "Stored OAuth2 token is malformed; reconnect",
+    );
   }
   return parsed;
 }
@@ -623,6 +646,8 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
   constructor(
     private readonly secrets: () => Promise<SecretStore>,
     private readonly egress?: EgressPolicy,
+    // Told when the provider refuses the sign-in itself, to record it.
+    private readonly onSignInRefused?: SignInRefusedListener,
   ) {}
 
   refreshIfDue(
@@ -661,7 +686,15 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
   ): Promise<void> {
     const store = await this.secrets();
     const read = (ref: string) => store.get(ref, owner);
-    const tokens = parseTokenSet(await read(tokenRef));
+    let tokens: OAuthTokenSet;
+    try {
+      tokens = parseTokenSet(await read(tokenRef));
+    } catch (error) {
+      if (error instanceof OAuthSignInRefusedError) {
+        await this.signInRefused(owner.documentId, error);
+      }
+      throw error;
+    }
     if (!tokenDue(tokens, Math.round(Date.now() / 1000))) return;
     let auth: { form: Record<string, string>; headers: Record<string, string> };
     if (tokens.relayed) {
@@ -695,6 +728,15 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
       );
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
+      const message = `Refreshing the OAuth2 token failed; reconnect: ${detail}`;
+      // The provider refused the refresh token itself: the sign-in is over,
+      // even while the stored token still works. A timeout or an outage is
+      // not, and a later call retries it.
+      const refused =
+        error instanceof OAuthError && error.code === "invalid_grant"
+          ? new OAuthSignInRefusedError(message, error.code)
+          : undefined;
+      if (refused) await this.signInRefused(owner.documentId, refused);
       // The stored token still works until it expires; a later call retries.
       if (!tokenExpired(tokens, Math.round(Date.now() / 1000))) {
         oauthLogger.warn(
@@ -702,9 +744,7 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
         );
         return;
       }
-      throw new OAuthError(
-        `Refreshing the OAuth2 token failed; reconnect: ${detail}`,
-      );
+      throw refused ?? new OAuthError(message);
     }
     // A sign-in that landed meanwhile is newer than this refresh.
     const current = parseTokenSet(await read(tokenRef));
@@ -718,5 +758,20 @@ export class StoreTokenRefresher implements OAuthTokenRefresher {
       tokenRef,
       JSON.stringify(tokenSetFrom(response, tokens, tokens)),
     );
+  }
+
+  // A failure to record it leaves the run's own error to say it.
+  private async signInRefused(
+    connectionId: string,
+    error: OAuthSignInRefusedError,
+  ): Promise<void> {
+    if (!this.onSignInRefused) return;
+    try {
+      await this.onSignInRefused(connectionId, error);
+    } catch (cause) {
+      oauthLogger.warn(
+        `Recording the refused OAuth2 sign-in of connection ${connectionId} failed: ${cause instanceof Error ? cause.message : String(cause)}`,
+      );
+    }
   }
 }

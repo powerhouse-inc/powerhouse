@@ -835,6 +835,16 @@ set as a managed secret named `token` on the connection and runs the
 connection check. Resolution refreshes the token 15 minutes before it
 expires and rotates that secret in place.
 
+A refresh the provider refuses with `invalid_grant` (the refresh token
+expired or was revoked) ends the sign-in, and so does a stored token that
+cannot be read. The runtime records it on the connection as a check would:
+`status` ERROR, the refusal in `lastError`, once per refusal rather than once
+per poll. A REVOKED connection keeps its status. A run or poll that needed the
+token fails with `OAuthSignInRefused`. The stored token is still used until it
+expires. A refresh that fails for another reason (a timeout, an outage)
+records nothing, and the next call tries again. The next sign-in's check
+records OK.
+
 Token requests leave from the reactor process, so they are held to the egress
 policy pieces run under: `https` to a public address, or an address named in
 `PH_WORKFLOWS_EGRESS_ALLOW_ADDRESSES`, over `http` too.

@@ -36,6 +36,7 @@ import {
   relayEgress,
   StoreTokenRefresher,
   tokenDue,
+  type OAuthTokenRefresher,
   type OAuthTokenSet,
 } from "./oauth.js";
 import type { WorkflowRuntimeService } from "./service.js";
@@ -113,6 +114,16 @@ function startProvider() {
         return reply(200, {
           access_token: `at-refreshed-${refreshCount}`,
           expires_in: 3600,
+        });
+      }
+      // As Google answers a refresh token that expired or was revoked.
+      if (
+        form.grant_type === "refresh_token" &&
+        form.refresh_token === "rt-revoked"
+      ) {
+        return reply(400, {
+          error: "invalid_grant",
+          error_description: "Token has been expired or revoked.",
         });
       }
       if (
@@ -740,6 +751,82 @@ module.exports = { app };
       "Refreshing the OAuth2 token failed; reconnect",
     );
   });
+
+  // The runtime's own refresher, which runs and checks resolve through.
+  const runtimeRefresher = () =>
+    (
+      service as unknown as { oauthRefresher(): OAuthTokenRefresher }
+    ).oauthRefresher();
+
+  async function withToken(id: string, patch: Partial<OAuthTokenSet>) {
+    const tokenRef = store.documents
+      .get(id)!
+      .state.global.secretRefs.find((ref) => ref.name === OAUTH_TOKEN)!.ref;
+    const secrets = await service.secrets();
+    const stored = JSON.parse(
+      await secrets.get(tokenRef, ownedBy(id)),
+    ) as OAuthTokenSet;
+    await secrets.rotate(tokenRef, JSON.stringify({ ...stored, ...patch }));
+    return stored;
+  }
+
+  it("records a sign-in the provider refuses on the connection, once", async () => {
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
+    await signIn(id);
+    const secrets = await service.secrets();
+    const resolve = () =>
+      resolveConnectionWithSecrets(
+        store.documents.get(id)!,
+        secrets,
+        { piecePackage: PIECE.name },
+        runtimeRefresher(),
+      );
+
+    // Due, not expired: the token still works, but the sign-in is over.
+    const stored = await withToken(id, {
+      refresh_token: "rt-revoked",
+      claimed_at: Math.round(Date.now() / 1000) - 3500,
+    });
+    await expect(resolve()).resolves.toMatchObject({
+      auth: { access_token: "at-1" },
+    });
+    expect(store.documents.get(id)!.state.global).toMatchObject({
+      status: "ERROR",
+      lastError:
+        "Refreshing the OAuth2 token failed; reconnect: Token endpoint refused (invalid_grant): Token has been expired or revoked.",
+    });
+    const written = store.documents.get(id)!.operations.global.length;
+
+    // Expired: the call fails by name, and the connection is not written again.
+    await withToken(id, { claimed_at: stored.claimed_at - 3700 });
+    await expect(resolve()).rejects.toMatchObject({
+      name: "OAuthSignInRefused",
+    });
+    expect(store.documents.get(id)!.operations.global).toHaveLength(written);
+
+    // Signing in again clears it.
+    await signIn(id);
+    expect(store.documents.get(id)!.state.global.status).toBe("OK");
+  });
+
+  it("leaves the connection alone when a refresh fails for another reason", async () => {
+    const id = await connection({ client_id: "cid", subdomain: "acme" });
+    await signIn(id);
+    await withToken(id, {
+      refresh_token: "rt-unknown",
+      claimed_at: Math.round(Date.now() / 1000) - 3700,
+    });
+    await expect(
+      resolveConnectionWithSecrets(
+        store.documents.get(id)!,
+        await service.secrets(),
+        { piecePackage: PIECE.name },
+        runtimeRefresher(),
+      ),
+    ).rejects.toMatchObject({ name: "OAuthError" });
+    expect(store.documents.get(id)!.state.global.status).toBe("OK");
+  });
+
   describe("through the publisher's app", () => {
     const LOOPBACK =
       "http://localhost:7540/api/@powerhousedao/workflow/oauth/callback";
