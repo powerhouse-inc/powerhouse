@@ -167,6 +167,15 @@
   },
   "overrides": [
     {
+      "files": [".claude/workflows/*.js"],
+      "globals": {
+        "args": "readonly",
+        "agent": "readonly",
+        "phase": "readonly",
+        "log": "readonly"
+      }
+    },
+    {
       "files": ["**/*.js", "**/*.cjs", "**/*.mjs"],
       "rules": {
         "constructor-super": "error",

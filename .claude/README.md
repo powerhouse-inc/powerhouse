@@ -22,7 +22,6 @@ Project-scoped agents, commands, skills and hooks for this monorepo.
 - `/doc-clarity <section>` - review prose clarity and scope. Suggestions only.
 - `/doc-capture <section|path> [url]` - refresh a UI walkthrough from a live Playwright capture.
 - `/doc-status` - which academy sections have gap reports and open findings.
-- `/release-notes` - see the skill of the same name below.
 
 Doc sections are the ids in `test/ph-lora/ph-lora-mapping.json`. Run order per
 section: review, fix, voice, clarity. Background: `test/ph-lora/initial-strategy.md`.
@@ -34,7 +33,7 @@ section: review, fix, voice, clarity. Background: `test/ph-lora/initial-strategy
 
 ## Workflows (`workflows/`)
 
-- `bench-fix-loop` - runs `/bench-fix` task by task until no VERIFIED task is left. Sequential, never pushes. Local only for now (not committed).
+- `bench-fix-loop` - runs `/bench-fix` task by task until no VERIFIED task is left. Sequential, never pushes.
 
 ## Hooks (`hooks/`)
 
