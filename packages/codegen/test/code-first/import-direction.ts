@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { ts } from "ts-morph";
 
 export function importDirectionViolations(
@@ -24,7 +24,8 @@ export function importDirectionViolations(
   ];
   const isTest = (file: string) =>
     /\.(test|spec)\.[mc]?[jt]sx?$/.test(file) || /__tests__/.test(file);
-  const rel = (file: string) => relative(root, file).replaceAll("\\", "/");
+  const posixPath = (file: string) => file.replaceAll("\\", "/");
+  const rel = (file: string) => posixPath(relative(root, file));
 
   const dm = join(root, "packages/document-model/src");
   const ranks: Record<string, number> = {
@@ -113,7 +114,7 @@ export function importDirectionViolations(
       /^packages\/codegen\/src\/.*(code-first|definition-source)/.test(path)) &&
     !/\/(?:model-generation|authoring-mode)\.ts$|\/schema-first\//.test(path);
   const isFlagSwitch = (file: string) =>
-    /\/(?:model-generation|authoring-mode)\.ts$/.test(file);
+    /\/(?:model-generation|authoring-mode)\.ts$/.test(posixPath(file));
 
   const generation = [
     ...walk(join(root, "packages/codegen/src")),
@@ -149,12 +150,15 @@ export function importDirectionViolations(
         ).options,
       );
     }
-    return ts.resolveModuleName(
+    const resolved = ts.resolveModuleName(
       specifier,
       file,
       compilerOptions.get(configPath)!,
       host,
     ).resolvedModule?.resolvedFileName;
+    // TypeScript answers with "/" on Windows too; the walked files use the
+    // platform separator.
+    return resolved === undefined ? undefined : resolve(resolved);
   };
 
   const errors: string[] = [];
@@ -217,7 +221,7 @@ export function importDirectionViolations(
       if (!(from in ranks)) fail(file, specifier, "unmapped definition layer");
       if (to !== "outside" && ranks[to] > ranks[from])
         fail(file, specifier, `${from} cannot import ${to}`);
-      if (specifier === "change-case" && !file.endsWith("/compiler/naming.ts"))
+      if (specifier === "change-case" && !path.endsWith("/compiler/naming.ts"))
         fail(file, specifier, "change-case belongs to naming only");
       if (from !== "tooling" && /^(node:|graphql$|ts-morph$)/.test(specifier))
         fail(file, specifier, "Node and heavy dependencies belong to tooling");
@@ -260,7 +264,7 @@ export function importDirectionViolations(
     if (generationSet.has(file)) {
       if (normalized?.includes("/packages/document-model/src/"))
         fail(file, specifier, "use public document-model entrypoints");
-      if (file.includes("/packages/codegen/") && /ph-cli/.test(specifier))
+      if (path.startsWith("packages/codegen/") && /ph-cli/.test(specifier))
         fail(file, specifier, "codegen cannot import CLI");
     }
 
@@ -468,7 +472,7 @@ export function importDirectionViolations(
       ts.isImportDeclaration(node) &&
       ts.isStringLiteral(node.moduleSpecifier) &&
       node.moduleSpecifier.text.endsWith("/generate.js") &&
-      !file.includes("/schema-first/")
+      !posixPath(file).includes("/schema-first/")
     ) {
       const legacy = new Set([
         "generateDocumentModel",
@@ -604,7 +608,7 @@ export function importDirectionViolations(
         node.moduleSpecifier.text.startsWith(".")
       ) {
         const target = resolveImport(file, node.moduleSpecifier.text);
-        if (target && roots.some((dir) => target.startsWith(dir + "/"))) {
+        if (target && roots.some((dir) => target.startsWith(dir + sep))) {
           if (!valueGraph.has(file)) valueGraph.set(file, new Set());
           valueGraph.get(file)!.add(target);
         }
