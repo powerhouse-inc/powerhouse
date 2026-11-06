@@ -60,11 +60,21 @@ describe("migratedPackageJson", () => {
 });
 
 describe("a project's dependency pins", () => {
-  const pins = { "date-fns": "4.3.0", rolldown: "1.0.2", vite: "8.0.14" };
+  const pins = {
+    "date-fns": "4.3.0",
+    rolldown: "1.0.2",
+    vite: "8.0.14",
+    "@solana/kit": "5.5.1",
+    "@solana-program/system": "0.10.0",
+    "@solana-program/token": "0.9.0",
+  };
   const refs = {
     "date-fns": "$date-fns",
     rolldown: "$rolldown",
     vite: "$vite",
+    "@solana/kit": "$@solana/kit",
+    "@solana-program/system": "$@solana-program/system",
+    "@solana-program/token": "$@solana-program/token",
   };
 
   it("replaces the **/ resolutions earlier scaffolds wrote and keeps the project's own", () => {

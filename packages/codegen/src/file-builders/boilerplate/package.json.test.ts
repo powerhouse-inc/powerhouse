@@ -12,7 +12,9 @@ describe("boilerplate dependency overrides", () => {
     for (const [pkg, version] of Object.entries(
       BOILERPLATE_DEPENDENCY_OVERRIDES,
     )) {
-      expect(pnpmWorkspaceTemplate).toContain(`  ${pkg}: "${version}"`);
+      // YAML keys with @ or / are quoted.
+      const key = /[@/]/.test(pkg) ? `"${pkg}"` : pkg;
+      expect(pnpmWorkspaceTemplate).toContain(`  ${key}: "${version}"`);
     }
   });
 
@@ -21,6 +23,9 @@ describe("boilerplate dependency overrides", () => {
       "**/date-fns": "4.3.0",
       "**/rolldown": "1.0.2",
       "**/vite": "8.0.14",
+      "**/@solana/kit": "5.5.1",
+      "**/@solana-program/system": "0.10.0",
+      "**/@solana-program/token": "0.9.0",
     });
   });
 
@@ -42,6 +47,9 @@ describe("boilerplate dependency overrides", () => {
       "**/date-fns": "4.3.0",
       "**/rolldown": "1.0.2",
       "**/vite": "8.0.14",
+      "**/@solana/kit": "5.5.1",
+      "**/@solana-program/system": "0.10.0",
+      "**/@solana-program/token": "0.9.0",
     });
   });
 
@@ -50,7 +58,7 @@ describe("boilerplate dependency overrides", () => {
     expect(JSON.parse(out)).not.toHaveProperty("resolutions");
   });
 
-  it("pins date-fns, rolldown and vite in the fields every package manager reads", async () => {
+  it("pins date-fns, rolldown, vite and the Solana programs in the fields every package manager reads", async () => {
     const parsed = JSON.parse(
       await buildBoilerplatePackageJson({ name: "p", version: "6.3.0-dev.1" }),
     ) as {
@@ -58,20 +66,23 @@ describe("boilerplate dependency overrides", () => {
       resolutions: Record<string, string>;
       overrides: Record<string, string>;
     };
-    expect(parsed.devDependencies).toMatchObject({
+    const pins = {
       "date-fns": "4.3.0",
       rolldown: "1.0.2",
       vite: "8.0.14",
-    });
-    expect(parsed.resolutions).toEqual({
-      "date-fns": "4.3.0",
-      rolldown: "1.0.2",
-      vite: "8.0.14",
-    });
+      "@solana/kit": "5.5.1",
+      "@solana-program/system": "0.10.0",
+      "@solana-program/token": "0.9.0",
+    };
+    expect(parsed.devDependencies).toMatchObject(pins);
+    expect(parsed.resolutions).toEqual(pins);
     expect(parsed.overrides).toEqual({
       "date-fns": "$date-fns",
       rolldown: "$rolldown",
       vite: "$vite",
+      "@solana/kit": "$@solana/kit",
+      "@solana-program/system": "$@solana-program/system",
+      "@solana-program/token": "$@solana-program/token",
     });
   });
 });
