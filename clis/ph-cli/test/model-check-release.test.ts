@@ -146,6 +146,113 @@ describe("ph model check --release", () => {
     ]);
   }, 60_000);
 
+  it("exits 1 when the scalars entry exports an Iban with the model's metadata and another validator", async () => {
+    const root = project(
+      "code-first",
+      scalarsEntry(IBAN.replace("/^[A-Z]{2}\\d{2}[A-Z0-9]{11,30}$/", "/^DE/")),
+    );
+
+    const result = await check(root, { json: true, release: true });
+
+    expect(result.code).toBe(1);
+    const report = JSON.parse(result.stdout) as DefinitionCheckReport;
+    const metadata = {
+      coercion: { source: "derived" },
+      coercionProfile: "catalog-v1",
+      description: "International bank account number",
+      formatVersion: 1,
+      kind: "powerhouse.scalar",
+      name: "Iban",
+      representation: "string",
+    };
+    expect(report.diagnostics.map(where)).toEqual([
+      {
+        code: "PH-REL-HOST-SCALAR-MISMATCH",
+        phase: "package",
+        path: ["specifications", 0, "scalars", 1],
+        received: JSON.stringify({
+          ...metadata,
+          validator: {
+            jsonSchema: {
+              $schema: "https://json-schema.org/draft/2020-12/schema",
+              pattern: "^DE",
+              type: "string",
+            },
+          },
+        }),
+      },
+    ]);
+  }, 60_000);
+
+  describe("an Iban refined in a way JSON Schema cannot express", () => {
+    const refined = (prefix: string) =>
+      IBAN.replace(
+        "z.string().regex(/^[A-Z]{2}\\d{2}[A-Z0-9]{11,30}$/)",
+        `z.string().refine((value) => value.startsWith("${prefix}"))`,
+      ).replace('  example: "DE89370400440532013000",\n', "");
+
+    it("exits 0 when the scalars entry exports the Iban the model uses", async () => {
+      const root = project("code-first", {
+        ...scalarsEntry('export { Iban } from "./iban.js";\n'),
+        "scalars/iban.ts": refined("DE"),
+      });
+
+      const result = await check(root, { json: true, release: true });
+
+      expect(result.code).toBe(0);
+      const report = JSON.parse(result.stdout) as DefinitionCheckReport;
+      expect(report.diagnostics).toEqual([]);
+    }, 60_000);
+
+    it("exits 1 when the scalars entry exports one refined the other way", async () => {
+      const root = project("code-first", {
+        ...scalarsEntry(refined("NL")),
+        "scalars/iban.ts": refined("DE"),
+      });
+
+      const result = await check(root, { json: true, release: true });
+
+      expect(result.code).toBe(1);
+      const report = JSON.parse(result.stdout) as DefinitionCheckReport;
+      const validator = (prefix: string) =>
+        JSON.stringify({
+          coercion: { source: "derived" },
+          coercionProfile: "catalog-v1",
+          description: "International bank account number",
+          formatVersion: 1,
+          kind: "powerhouse.scalar",
+          name: "Iban",
+          representation: "string",
+          validator: {
+            zod: {
+              checks: [
+                {
+                  check: "custom",
+                  fn: { function: `(value) => value.startsWith("${prefix}")` },
+                  type: "custom",
+                },
+              ],
+              type: "string",
+            },
+          },
+        });
+      expect(
+        report.diagnostics.map((diagnostic) => ({
+          ...where(diagnostic),
+          expected: diagnostic.expected,
+        })),
+      ).toEqual([
+        {
+          code: "PH-REL-HOST-SCALAR-UNCOMPARABLE",
+          phase: "package",
+          path: ["specifications", 0, "scalars", 1],
+          expected: validator("DE"),
+          received: validator("NL"),
+        },
+      ]);
+    }, 60_000);
+  });
+
   it("fails with the reason when the scalars entry throws", async () => {
     const root = project(
       "code-first",

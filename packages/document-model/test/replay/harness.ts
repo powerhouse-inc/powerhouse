@@ -1,7 +1,6 @@
 import type {
   Action,
   DocumentModelModule,
-  Operation,
   PHBaseState,
   PHDocument,
   ReducerOptions,
@@ -40,6 +39,7 @@ function operationRows(document: AnyDocument) {
         type: operation.action.type,
         input: operation.action.input ?? null,
         error: operation.error ?? null,
+        hash: operation.hash,
       })),
     );
 }
@@ -100,13 +100,6 @@ export function streamHistory(
   return { snapshots, documents };
 }
 
-const blanked = (operation: Operation): Operation => ({
-  ...operation,
-  hash: "",
-  error: undefined,
-  resultingState: undefined,
-});
-
 export function replayArchive(
   module: AnyModule,
   recorded: AnyDocument,
@@ -114,10 +107,14 @@ export function replayArchive(
   const operations = Object.fromEntries(
     Object.entries(recorded.operations).map(([scope, rows]) => [
       scope,
-      rows.map(blanked),
+      rows.map((row) => ({
+        ...row,
+        error: undefined,
+        resultingState: undefined,
+      })),
     ]),
   );
-  return replayDocument(
+  const replayed = replayDocument(
     recorded.initialState,
     operations,
     module.reducer,
@@ -126,6 +123,32 @@ export function replayArchive(
     {},
     { reuseOperationResultingState: false },
   );
+  for (const [scope, rows] of Object.entries(recorded.operations)) {
+    const persisted = rows.at(-1)?.hash;
+    if (!persisted) continue;
+    const derived = hashDocumentStateForScope(
+      replayed as unknown as { state: Record<string, unknown> },
+      scope,
+    );
+    if (persisted !== derived) {
+      throw new Error(
+        `${scope} persisted hash ${persisted}, replay derives ${derived}.`,
+      );
+    }
+  }
+  return {
+    ...replayed,
+    operations: Object.fromEntries(
+      Object.entries(replayed.operations).map(([scope, rows]) => [
+        scope,
+        rows.map((row, position) =>
+          recorded.operations[scope]?.[position]?.hash === ""
+            ? { ...row, hash: "" }
+            : row,
+        ),
+      ]),
+    ),
+  };
 }
 
 export type PrefixDifference = {

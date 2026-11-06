@@ -5,6 +5,7 @@ import type {
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
 import type {
   DocumentModelDocumentModelModule,
+  DocumentModelModule,
   DocumentModelPHState,
   StateReducer,
 } from "@powerhousedao/shared/document-model";
@@ -13,8 +14,11 @@ import {
   documentModelStateReducer,
 } from "@powerhousedao/shared/document-model";
 import {
+  defineDocumentModel,
   documentModelCreateDocument,
   documentModelDocumentModelModule,
+  materialize,
+  ph,
 } from "document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { addActionsTool, toMcpTool } from "../src/index.js";
@@ -156,6 +160,87 @@ describe("addActions results for a rejected action", () => {
       message: "DescriptionTakenError",
       name: "DescriptionTakenError",
       code: "DESCRIPTION_TAKEN",
+    });
+  });
+});
+
+describe("addActions results for a code-first model's error", () => {
+  const definition = defineDocumentModel({
+    id: "test/limits",
+    name: "Limits",
+    description: "",
+    extension: "lim",
+    version: 1,
+    author: { name: "Powerhouse" },
+    scopes: {
+      global: {
+        schema: ph.object("LimitsState", {
+          fields: { total: ph.Int({ required: true }) },
+        }),
+        initialValue: { total: 0 },
+      },
+      local: { schema: null, initialValue: {} },
+    },
+  });
+  const limits = definition.module("limits", {
+    operations: ({ global }) => ({
+      first: global({
+        input: ph.input({ fields: {} }),
+        errors: { FirstFailure: { code: "SHARED" } },
+        reduce(_state, _input, ctx) {
+          throw new ctx.errors.FirstFailure();
+        },
+      }),
+      second: global({
+        input: ph.input({ fields: {} }),
+        errors: { SecondFailure: { code: "SHARED" } },
+        reduce(_state, _input, ctx) {
+          throw new ctx.errors.SecondFailure("second refused");
+        },
+      }),
+    }),
+  });
+  const model = materialize(
+    definition.version({ modules: [limits] }),
+  ) as unknown as DocumentModelModule;
+
+  let module: InProcessReactorClientModule;
+
+  beforeEach(async () => {
+    module = await new ReactorClientBuilder()
+      .withReactorBuilder(
+        new ReactorBuilder().withDocumentModelSources([model]),
+      )
+      .withSigner(await createP256Signer())
+      .buildModule();
+  });
+
+  afterEach(() => {
+    module.reactor.kill();
+  });
+
+  it("names the executed operation's error when two operations share its code", async () => {
+    const document = model.utils.createDocument();
+    await (
+      await module.client.write.create(document)
+    ).readable;
+    const result = await toMcpTool(addActionsTool, {
+      client: module.client,
+    }).callback({
+      documentId: document.header.id,
+      actions: [{ type: "SECOND", input: {} }],
+    });
+    expect(
+      (
+        result.structuredContent as {
+          results: { error?: Record<string, string> }[];
+        }
+      ).results[0].error,
+    ).toStrictEqual({
+      kind: "reducer-error",
+      message: "second refused",
+      name: "SecondFailure",
+      code: "SHARED",
     });
   });
 });

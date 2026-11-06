@@ -89,6 +89,7 @@ await build({
     "clis/project-ports.ts",
     "clis/project-env.ts",
     "clis/ph-dir.ts",
+    "clis/real-paths.ts",
     "clis/utils.ts",
     "clis/command-names.ts",
     "clis/feature-flags.ts",

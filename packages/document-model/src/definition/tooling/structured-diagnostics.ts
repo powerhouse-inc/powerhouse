@@ -2,6 +2,7 @@ import type {
   DefinitionDiagnostic,
   DefinitionPath,
   DefinitionRef,
+  DefinitionRelatedLocation,
   DefinitionSource,
 } from "@powerhousedao/shared/document-model";
 import { snapshotArray, snapshotRecord } from "../kernel/data-properties.js";
@@ -68,6 +69,55 @@ function isPathSegment(segment: unknown): boolean {
   );
 }
 
+function definitionPath(value: unknown): DefinitionPath | undefined {
+  const path = snapshotArray(value, []);
+  return path.ok && path.value.every(isPathSegment)
+    ? (path.value as DefinitionPath)
+    : undefined;
+}
+
+function relatedSource(value: unknown): DefinitionSource | undefined | null {
+  if (value === undefined) return undefined;
+  const snapshot = snapshotRecord(value, undefined, []);
+  if (!snapshot.ok) return null;
+  const { specifier, exportPath } = snapshot.value;
+  if (typeof specifier !== "string" || !specifier.startsWith("./")) {
+    return null;
+  }
+  const source = { specifier: specifier as `./${string}` };
+  if (exportPath === undefined) return source;
+  const path = snapshotArray(exportPath, []);
+  if (!path.ok || !path.value.every((key) => typeof key === "string")) {
+    return null;
+  }
+  return { ...source, exportPath: path.value as string[] };
+}
+
+function relatedLocations(
+  value: unknown,
+): readonly DefinitionRelatedLocation[] | undefined | null {
+  if (value === undefined) return undefined;
+  const list = snapshotArray(value, []);
+  if (!list.ok) return null;
+  const locations: DefinitionRelatedLocation[] = [];
+  for (const candidate of list.value) {
+    const entry = snapshotRecord(candidate, undefined, []);
+    if (!entry.ok) return null;
+    const path = definitionPath(entry.value.path);
+    const source = relatedSource(entry.value.source);
+    const { message } = entry.value;
+    if (path === undefined || source === null || typeof message !== "string") {
+      return null;
+    }
+    locations.push({
+      ...(source !== undefined && { source }),
+      path,
+      message,
+    });
+  }
+  return locations;
+}
+
 export function structuredDiagnostics(
   value: unknown,
   source: DefinitionSource,
@@ -88,14 +138,15 @@ export function structuredDiagnostics(
     const entry = snapshotRecord(candidate, undefined, []);
     if (!entry.ok) return undefined;
     const { code, message, repair, expected, received } = entry.value;
-    const path = snapshotArray(entry.value.path, []);
+    const path = definitionPath(entry.value.path);
+    const related = relatedLocations(entry.value.related);
     if (
       typeof code !== "string" ||
       !Object.hasOwn(toolingDiagnostics.codes, code) ||
       typeof message !== "string" ||
       typeof repair !== "string" ||
-      !path.ok ||
-      !path.value.every(isPathSegment) ||
+      path === undefined ||
+      related === null ||
       (expected !== undefined && typeof expected !== "string") ||
       (received !== undefined && typeof received !== "string")
     ) {
@@ -107,11 +158,12 @@ export function structuredDiagnostics(
         code: code as ToolingDiagnosticCode,
         source,
         ...(definition !== undefined && { definition }),
-        path: path.value as DefinitionPath,
+        path,
         message,
         ...(expected !== undefined && { expected }),
         ...(received !== undefined && { received }),
         repair,
+        ...(related !== undefined && { related }),
       }),
     );
   }

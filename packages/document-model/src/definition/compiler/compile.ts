@@ -45,6 +45,7 @@ import {
   type DocumentModelNames,
   PLATFORM_ACTION_TYPES,
 } from "./naming.js";
+import type { ScalarDefinition } from "../../scalars/types.js";
 import { assignStoredSegments } from "./segments.js";
 import {
   declareProjectScalars,
@@ -163,6 +164,7 @@ export type CompiledDocumentModelVersion = {
   readonly initialGlobalState: JsonValue;
   readonly initialLocalState: JsonValue;
   readonly modules: readonly CompiledModule[];
+  readonly packageScalars: ReadonlyMap<string, ScalarDefinition>;
 };
 
 type Collector = DefinitionDiagnosticCollector<CompilerDiagnosticCode>;
@@ -737,5 +739,6 @@ export function compileDocumentModelVersion(
     initialGlobalState: globalInitialValue.value,
     initialLocalState: localInitialValue.value,
     modules: compiledModules,
+    packageScalars: walk.packageScalars,
   };
 }

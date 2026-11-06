@@ -32,6 +32,7 @@ import {
   toReactorToolError,
   type ActionFailure,
 } from "./errors.js";
+import { resolveOperation } from "./schema.js";
 import { unknownValueMessage } from "./suggest.js";
 import {
   actionFailuresError,
@@ -333,8 +334,9 @@ function modelErrorFinder(
       return [{ name: className, code: code?.trim() || className }];
     });
   // The action's own operation first, as two operations may share an error name.
+  const ownName = resolveOperation(module, actionType)?.operation.name;
   const candidates = [
-    ...declared(operations.find((o) => o.name === actionType)?.errors ?? []),
+    ...declared(operations.find((o) => o.name === ownName)?.errors ?? []),
     ...declared(operations.flatMap((o) => o.errors)),
   ];
   return (name, code, message) =>

@@ -9,8 +9,12 @@ import {
 import { camelCase } from "change-case";
 import { z } from "zod";
 import { ReactorToolError, type ActionFailure } from "./errors.js";
-import { operationsByActionType } from "./model-operations.js";
-import { actionOperations, ANY_SCOPE, type ModelOperation } from "./schema.js";
+import {
+  actionOperations,
+  ANY_SCOPE,
+  resolveOperation,
+  type ModelOperation,
+} from "./schema.js";
 import { suggestNames } from "./suggest.js";
 
 export const actionInputSchema = z.object({
@@ -88,8 +92,6 @@ export function validateActions(
   inputs: readonly ActionInput[],
   options: ValidateActionsOptions = {},
 ): ValidatedActions {
-  const operations = new Map(actionOperations(module).map((o) => [o.name, o]));
-  const byActionType = operationsByActionType(module);
   const allowed = options.allowedActionTypes
     ? new Set(options.allowedActionTypes)
     : undefined;
@@ -108,13 +110,11 @@ export function validateActions(
         `not an allowed action type (allowed: ${[...allowed].join(", ")})`,
       ]);
     }
-    const structured = operations.has(entry.type)
-      ? undefined
-      : byActionType.get(entry.type);
-    const operation = operations.get(structured?.storedName ?? entry.type);
-    if (!operation) {
+    const resolved = resolveOperation(module, entry.type);
+    if (!resolved) {
       return fail("INVALID_ACTION", ["unknown action type"]);
     }
+    const { operation } = resolved;
     if (entry.scope === ANY_SCOPE) {
       return fail("INVALID_ACTION", [
         `"${ANY_SCOPE}" is not a scope; name one, e.g. "global"`,
@@ -127,11 +127,11 @@ export function validateActions(
         `scope "${scope}" does not match the operation's scope "${operation.scope}"`,
       ]);
     }
-    const creator =
-      BASE_CREATORS[entry.type] ??
-      (module.actions[structured?.creatorKey ?? camelCase(entry.type)] as
-        | ActionCreator
-        | undefined);
+    const creator = resolved.base
+      ? BASE_CREATORS[entry.type]
+      : (module.actions[resolved.creatorKey ?? camelCase(entry.type)] as
+          | ActionCreator
+          | undefined);
     if (!creator) {
       return fail("INVALID_ACTION", [
         `the model has no action creator for ${entry.type}`,
@@ -153,9 +153,8 @@ export function formatActionFailures(
 ): string {
   const operations: ModelOperation[] = module ? actionOperations(module) : [];
   const names = operations.map((o) => o.name);
-  const byActionType = module && operationsByActionType(module);
   const nameOf = (type: string) =>
-    names.includes(type) ? type : (byActionType?.get(type)?.storedName ?? type);
+    (module && resolveOperation(module, type)?.operation.name) ?? type;
   const count = failures.length;
   const lines = failures.map(
     (f) => `  [${f.index}] ${f.type}: ${f.errors.join("; ")}`,

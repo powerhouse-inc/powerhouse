@@ -36,6 +36,7 @@ import type {
   CompiledOperation,
   OperationErrorClass,
 } from "../compiler/compile.js";
+import { recordModelPackageScalars } from "../../scalars/model-scalars.js";
 import { describeReceived } from "../kernel/diagnostics.js";
 import { compiledVersionOf } from "../model/define-document-model.js";
 import { modelDiagnostics } from "../model/diagnostic-codes.js";
@@ -352,6 +353,7 @@ function materializeVersion(
     ...version.definition,
     specifications: versions.map((candidate) => candidate.specification),
   });
+  recordModelPackageScalars(definition, version.packageScalars);
   return {
     version: version.config.version,
     reducer: behavior.reducer,

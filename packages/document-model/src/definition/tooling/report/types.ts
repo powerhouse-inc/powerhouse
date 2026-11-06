@@ -13,6 +13,8 @@ export type UnregisteredDefinition = {
   readonly unit: `./${string}`;
   /** The module an entry should name to register it. */
   readonly specifier: `./${string}`;
+  /** Whether a selected source evaluated its declaring files without exporting its model. */
+  readonly reason: "unreached" | "not-exported";
 };
 
 /**

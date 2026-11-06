@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   accessSync,
   chmodSync,
@@ -7,6 +8,8 @@ import {
   lstatSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
+  readlinkSync,
   renameSync,
   rmSync,
   type Stats,
@@ -124,6 +127,60 @@ export function removeTree(path: string): void {
     }
     remove();
   }
+}
+
+/**
+ * Makes `path` a copy of `from`. A directory that is there is emptied and
+ * refilled rather than removed, so a mount point or a directory another
+ * process holds stays where it is.
+ */
+export function replaceTree(from: string, path: string): void {
+  const into =
+    lstatSync(path, { throwIfNoEntry: false })?.isDirectory() &&
+    lstatSync(from).isDirectory();
+  if (!into) {
+    removeTree(path);
+    cloneTree(from, path);
+    return;
+  }
+  openDirectories(path);
+  for (const entry of readdirSync(path)) removeTree(join(path, entry));
+  cloneTree(from, path);
+}
+
+/**
+ * The tree by the bytes of its files and the targets of its links. Times
+ * and inodes are left out: a touch changes them, and a rewrite can keep them.
+ */
+export function treeFingerprint(
+  root: string,
+  skipped: ReadonlySet<string>,
+  unmarked: ReadonlySet<string> = new Set(),
+): string {
+  const hash = createHash("sha256");
+  const visit = (path: string, rel: string) => {
+    const stat = lstatSync(path);
+    if (stat.isFile()) {
+      const bytes = readFileSync(path);
+      hash.update(`f\0${rel}\0${bytes.length}\0`).update(bytes);
+      return;
+    }
+    if (stat.isSymbolicLink()) {
+      hash.update(`l\0${rel}\0${readlinkSync(path)}\0`);
+      return;
+    }
+    if (!stat.isDirectory()) {
+      hash.update(`o\0${rel}\0`);
+      return;
+    }
+    if (rel !== "" && !unmarked.has(rel)) hash.update(`d\0${rel}\0`);
+    for (const entry of readdirSync(path).sort()) {
+      const child = rel === "" ? entry : `${rel}/${entry}`;
+      if (!skipped.has(child)) visit(join(path, entry), child);
+    }
+  };
+  if (exists(root)) visit(root, "");
+  return hash.digest("hex");
 }
 
 type Unstageable = { readonly path: string; readonly reason: string };

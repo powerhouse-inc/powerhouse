@@ -45,6 +45,7 @@ import {
 import {
   builtInScalarFactories,
   catalogScalarFactories,
+  refuseScalarFactory,
   scalarField,
 } from "./scalar-fields.js";
 import { buildValidator } from "./zod.js";
@@ -291,13 +292,27 @@ function implementingMembers(
   };
 }
 
+function scalarFactoryGuard<T extends object>(builders: T): Readonly<T> {
+  return new Proxy(Object.freeze(builders), {
+    get(target, key, receiver) {
+      if (
+        typeof key === "string" &&
+        /^[A-Z]/.test(key) &&
+        !Object.hasOwn(target, key)
+      )
+        refuseScalarFactory(key);
+      return Reflect.get(target, key, receiver) as unknown;
+    },
+  });
+}
+
 /**
  * @experimental The field and type builders of a code-first document model:
  * scalar factories such as `ph.String()` and `ph.PHID()`, `ph.scalar` for a
  * project scalar, and `list`, `ref`, `enum`, `object`, `interface`, `input`,
  * and `union`.
  */
-export const ph = Object.freeze({
+export const ph = scalarFactoryGuard({
   ...builtInScalarFactories,
   ...catalogScalarFactories,
   scalar: scalarField,

@@ -202,6 +202,7 @@ const packagesSchema = z.object({
   dynamic: z.boolean().default(false),
   list: z.array(z.string()).default([]),
   disableLocal: z.boolean().default(false),
+  hostValidation: z.enum(["log", "refuse"]).default("log"),
 });
 
 const privacySchema = z.object({

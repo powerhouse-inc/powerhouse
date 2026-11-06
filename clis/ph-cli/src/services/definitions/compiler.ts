@@ -6,11 +6,10 @@ import type { Agent } from "package-manager-detector";
 import { resolveCommand } from "package-manager-detector";
 import { z } from "zod";
 import {
-  canonicalConfigFile,
-  canonicalPath,
   pathWithin,
-  toPosixPath,
-} from "./paths.js";
+  realPathThroughExistingParent,
+} from "@powerhousedao/shared/clis/real-paths";
+import { canonicalConfigFile, toPosixPath } from "./paths.js";
 import {
   buildInfoFile,
   outFileOutputs,
@@ -347,7 +346,7 @@ async function showEmptyProjectConfig(
   const config = z
     .object({ references: configSchema.shape.references })
     .parse(readConfig(configFile));
-  const directory = canonicalPath(
+  const directory = realPathThroughExistingParent(
     mkdtempSync(join(tmpdir(), ".ph-preflight-")),
   );
   try {
@@ -431,21 +430,23 @@ async function refreshProject(
   if (!listed.ok && files.length === 0 && !/TS18003/.test(listed.output)) {
     throw new CompilerDiagnostic(listed.output, project.configFile, false);
   }
-  const roots = new Set(rootFiles.map((file) => canonicalPath(file)));
+  const roots = new Set(
+    rootFiles.map((file) => realPathThroughExistingParent(file)),
+  );
   let sources = files.filter(
     (file) =>
       (/\.[cm]?[jt]sx?$/i.test(file) ||
         (project.options.resolveJsonModule === true &&
           /\.json$/i.test(file))) &&
       !/\.d\.[cm]?ts$/i.test(file) &&
-      (roots.has(canonicalPath(file)) ||
+      (roots.has(realPathThroughExistingParent(file)) ||
         !toPosixPath(file).includes("/node_modules/")),
   );
   if (
     sources.some(
       (file) =>
-        !roots.has(canonicalPath(file)) &&
-        pathWithin(packageRoot, canonicalPath(file)) === null,
+        !roots.has(realPathThroughExistingParent(file)) &&
+        pathWithin(packageRoot, realPathThroughExistingParent(file)) === null,
     )
   ) {
     const preserved = await listProjectFiles(
@@ -463,19 +464,20 @@ async function refreshProject(
       spellings
         .filter(
           (file) =>
-            roots.has(canonicalPath(file)) ||
+            roots.has(realPathThroughExistingParent(file)) ||
             !toPosixPath(file).includes("/node_modules/"),
         )
-        .map((path) => canonicalPath(path)),
+        .map((path) => realPathThroughExistingParent(path)),
     );
     const libraries = new Set(
       spellings
         .filter((file) => toPosixPath(file).includes("/node_modules/"))
-        .map((path) => canonicalPath(path)),
+        .map((path) => realPathThroughExistingParent(path)),
     );
     sources = sources.filter(
       (file) =>
-        !libraries.has(canonicalPath(file)) || local.has(canonicalPath(file)),
+        !libraries.has(realPathThroughExistingParent(file)) ||
+        local.has(realPathThroughExistingParent(file)),
     );
   }
   return {
@@ -508,14 +510,15 @@ function checkedCompilePlan(
         project.options,
         dirname(project.configFile),
       )) {
-        const target = canonicalPath(path);
+        const target = realPathThroughExistingParent(path);
         if (pathWithin(packageRoot, target) === null)
           throw new Error(
             `tsc would write to ${JSON.stringify(path)} outside the package.`,
           );
         if (
           !project.sources.some(
-            (file) => pathWithin(target, canonicalPath(file)) !== null,
+            (file) =>
+              pathWithin(target, realPathThroughExistingParent(file)) !== null,
           )
         ) {
           if (pathWithin(packageRoot, path) !== null)
@@ -526,7 +529,7 @@ function checkedCompilePlan(
     }
     for (const path of outputFiles(project, emitsBuildInfoInBuildMode)) {
       if (/\.json$/i.test(path) && project.sources.includes(path)) continue;
-      const target = canonicalPath(path, { resolveMissingLinks: true });
+      const target = realPathThroughExistingParent(path);
       if (pathWithin(packageRoot, target) === null)
         throw new Error(
           `tsc would write to ${JSON.stringify(path)} outside the package.`,

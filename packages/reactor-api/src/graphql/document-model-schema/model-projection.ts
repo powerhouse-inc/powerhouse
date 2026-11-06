@@ -12,15 +12,17 @@ import {
 export type ModelMutationOperation = {
   readonly camelName: string;
   readonly inputTypeName: string;
-  /** The operation name authorization and error messages use. */
+  /** The operation name error messages use. */
   readonly storedName: string;
+  /** The key a caller's permission to run the operation is checked under. */
+  readonly permissionKey: string;
   /** The key of the operation's action creator. */
   readonly creatorKey: string;
 };
 
 export type MutationResolverOperation = Pick<
   ModelMutationOperation,
-  "camelName" | "storedName" | "creatorKey"
+  "camelName" | "storedName" | "permissionKey" | "creatorKey"
 >;
 
 /**

@@ -3,6 +3,7 @@ import {
   type DefinitionDiagnostic,
   type DefinitionSource,
 } from "@powerhousedao/shared/document-model";
+import { pathWithin } from "@powerhousedao/shared/clis/real-paths";
 import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import type { ScalarDefinition } from "../../../scalars/types.js";
@@ -12,7 +13,6 @@ import type {
   DefinitionRelocation,
   ProducedDefinitions,
 } from "../adapters/producer.js";
-import { isWithin } from "../definition-source-resolution.js";
 import { toolingDiagnostics } from "../diagnostic-codes.js";
 import { describeThrown } from "../structured-diagnostics.js";
 import { loadProjectScalars } from "./project-scalars.js";
@@ -105,7 +105,7 @@ function storedModelFiles(
       );
       continue;
     }
-    if (isWithin(packageRootIdentity, real)) files.push(file);
+    if (pathWithin(packageRootIdentity, real) !== null) files.push(file);
     else diagnostics.push(outsidePackage(packageSpecifier(packageRoot, file)));
   }
   return { files, diagnostics };

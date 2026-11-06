@@ -1,17 +1,15 @@
 import { execSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { type Agent, resolveCommand } from "package-manager-detector";
 import { BuildRefusal } from "../pipeline/steps.js";
-import { BUILD_DIRECTORY } from "../staging/journal.js";
+import { BUILD_DIRECTORY } from "../../build-control.js";
 import {
   declarationDirectory,
   type EmitOptions,
 } from "../../compiler-output/emit.js";
-import {
-  compilerOutputInventory,
-  parseShownConfig,
-} from "../staging/inventory.js";
+import { compilerOutputs } from "../staging/compiler.js";
+import { parseShownConfig, type ShownConfig } from "../staging/inventory.js";
 import type { StandardBuildStep } from "./context.js";
 
 const TYPE_ERROR_RISK =
@@ -22,11 +20,11 @@ export const UNSAFE_BUILD_WARNING =
   TYPE_ERROR_RISK +
   " Fix them before you publish or deploy it.";
 
-// The root project's options, as `tsc --showConfig` prints them.
-function showCompilerOptions(
+/** The root project's config, as `tsc --showConfig` prints it. */
+function showCompilerConfig(
   agent: Agent,
   projectRoot: string,
-): EmitOptions | undefined {
+): ShownConfig | undefined {
   const showConfig = resolveCommand(agent, "execute-local", [
     "tsc",
     "--showConfig",
@@ -90,33 +88,43 @@ async function confirmBuildDespiteTypeErrors(): Promise<void> {
 /**
  * Runs tsc, which checks the project and writes its declarations either way,
  * as `tsc --build` in the package: the same command, build info and output
- * places as without staging. What it rewrites is copied first, so a build
- * that does not finish puts it back.
+ * places as without staging. When the session can, tsc builds a generated
+ * sibling config that writes into the stage; otherwise what it rewrites is
+ * copied first, so a build that does not finish puts it back.
  */
 export const typecheckStep: StandardBuildStep = {
   id: "typecheck",
   run: async ({ agent, args, outDir, projectRoot, session, findings }) => {
-    const options = showCompilerOptions(agent, projectRoot);
+    const config = showCompilerConfig(agent, projectRoot);
     const force =
-      options !== undefined && declarationsMissing(options, projectRoot);
+      config !== undefined && declarationsMissing(config.options, projectRoot);
+    let generated: string | undefined;
+    if (config !== undefined) {
+      const configFile = join(projectRoot, "tsconfig.json");
+      const outputs = await compilerOutputs(config, {
+        configFile,
+        packageRoot: projectRoot,
+        buildDirectory: join(projectRoot, BUILD_DIRECTORY),
+        agent,
+        output: session.output,
+      });
+      generated = await session.prepareCompiler({
+        configFile,
+        config,
+        outputs,
+      });
+      findings.compilerOutputs = outputs.map(({ path }) => path);
+    }
     const tscCommand = resolveCommand(agent, "execute-local", [
       "tsc",
       "--build",
       ...(force ? ["--force"] : []),
+      ...(generated ? [relative(projectRoot, generated)] : []),
     ]);
     if (tscCommand === null) {
       throw new BuildRefusal(
         "You need to have typescript installed to use the `build` command.",
       );
-    }
-    if (options !== undefined) {
-      const outputs = compilerOutputInventory(options, {
-        configFile: join(projectRoot, "tsconfig.json"),
-        packageRoot: projectRoot,
-        buildDirectory: join(projectRoot, BUILD_DIRECTORY),
-      });
-      session.protectCompilerOutputs(outputs);
-      findings.compilerOutputs = outputs.map(({ path }) => path);
     }
     console.log("\n▶ Type-checking and emitting types via tsc...");
     try {

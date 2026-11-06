@@ -3,6 +3,8 @@ import type {
   DefinitionDiagnostic,
 } from "@powerhousedao/shared/document-model";
 import { DefinitionSourceLoader } from "document-model/tooling";
+import { chmodSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   check,
@@ -85,6 +87,87 @@ describe("ph model check on a healthy project", () => {
           return definition;
         }),
       ).toEqual(definitions);
+    },
+    60_000,
+  );
+
+  it("counts a model that a selected source imports and exports", async () => {
+    const result = await check(
+      project("mixed", {
+        "document-models/extra/index.ts": LEDGER_SOURCE.replaceAll(
+          "ledger",
+          "extra",
+        ).replaceAll("Ledger", "Extra"),
+        "document-models/ledger/index.ts": `export { Extra } from "../extra/index.js";\n${LEDGER_SOURCE}`,
+      }),
+      true,
+    );
+    expect(result.code).toBe(0);
+    expect(parsed(result.stdout)).toMatchObject({
+      status: "ok",
+      definitions: [
+        {
+          key: "example/extra",
+          source: { specifier: LEDGER, exportPath: ["Extra"] },
+        },
+        {
+          key: "example/ledger",
+          source: { specifier: LEDGER, exportPath: ["Ledger"] },
+        },
+        WALLET_DEFINITION,
+      ],
+      diagnostics: [],
+    });
+  }, 60_000);
+
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "fails on a source file under the models directory it cannot read",
+    async () => {
+      const root = project("mixed", {
+        "document-models/extra/index.ts": LEDGER_SOURCE.replaceAll(
+          "ledger",
+          "extra",
+        ).replaceAll("Ledger", "Extra"),
+      });
+      const locked = join(root, "document-models/extra/index.ts");
+      chmodSync(locked, 0o000);
+      try {
+        const result = await check(root, true);
+        const report = parsed(result.stdout);
+        expect({
+          code: result.code,
+          status: report.status,
+          diagnostics: report.diagnostics.map(
+            ({ code, phase, source, path, message, expected, repair }) => ({
+              code,
+              phase,
+              source,
+              path,
+              message,
+              expected,
+              repair,
+            }),
+          ),
+        }).toEqual({
+          code: 2,
+          status: "failed",
+          diagnostics: [
+            {
+              code: "PH-IMPORT-FAILED",
+              phase: "import",
+              source: { specifier: "./document-models/extra/index.ts" },
+              path: [],
+              message:
+                "This path under the document models directory could not be read, so the scan cannot tell whether it declares a code-first model that no definitionSources entry reaches.",
+              expected: "a readable file or directory",
+              repair:
+                "Fix the permissions of the path, or move it out of the document models directory.",
+            },
+          ],
+        });
+      } finally {
+        chmodSync(locked, 0o644);
+      }
     },
     60_000,
   );
@@ -368,6 +451,75 @@ const BROKEN = [
       path: [],
     },
     line: "PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/extra/index.ts (root): ./document-models/extra/ declares a code-first document model that no definitionSources entry reaches",
+  },
+  ...(["index.js", "index.mjs", "index.jsx"] as const).map((file) => ({
+    name: `a code-first model in ${file} no definitionSources entry reaches`,
+    shape: "mixed" as const,
+    files: () => ({
+      [`document-models/extra/${file}`]: LEDGER_SOURCE.replaceAll(
+        "ledger",
+        "extra",
+      ).replaceAll("Ledger", "Extra"),
+    }),
+    exitCode: 1,
+    status: "invalid" as const,
+    found: {
+      code: "PH-PKG-DEFINITION-UNREGISTERED" as const,
+      phase: "package" as const,
+      source: { specifier: `./document-models/extra/${file}` },
+      path: [],
+    },
+    line: `PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/extra/${file} (root): ./document-models/extra/ declares a code-first document model that no definitionSources entry reaches`,
+  })),
+  {
+    name: "a code-first model a selected source imports only for its side effects",
+    shape: "mixed",
+    files: () => ({
+      "document-models/extra/index.ts": LEDGER_SOURCE.replaceAll(
+        "ledger",
+        "extra",
+      ).replaceAll("Ledger", "Extra"),
+      "document-models/ledger/index.ts": `import "../extra/index.js";\n${LEDGER_SOURCE}`,
+    }),
+    exitCode: 1,
+    status: "invalid",
+    found: {
+      code: "PH-PKG-DEFINITION-UNREGISTERED",
+      phase: "package",
+      source: { specifier: "./document-models/extra/index.ts" },
+      path: [],
+    },
+    line: "PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/extra/index.ts (root): ./document-models/extra/ declares a code-first document model that a selected source imports but does not export, so the package leaves it out. Expected: a definitionSources entry that exports the model ./document-models/extra/index.ts declares Received: imported, not exported",
+  },
+  {
+    name: "a misspelled catalog scalar factory",
+    shape: "code-first",
+    files: () =>
+      ledgerWith("currency: ph.Currency(),", "currency: ph.Curency(),"),
+    exitCode: 1,
+    status: "invalid",
+    found: {
+      code: "PH-SCALAR-UNKNOWN",
+      phase: "definition",
+      source: { specifier: LEDGER },
+      path: ["Curency"],
+    },
+    line: "PH-SCALAR-UNKNOWN [error/definition] ./document-models/ledger/index.ts /Curency: ph.Curency names no catalog scalar.",
+  },
+  {
+    name: "a scalar factory only the reactor host declares",
+    shape: "code-first",
+    files: () =>
+      ledgerWith("currency: ph.Currency(),", "currency: ph.JSONObject(),"),
+    exitCode: 1,
+    status: "invalid",
+    found: {
+      code: "PH-SCALAR-INTERNAL",
+      phase: "definition",
+      source: { specifier: LEDGER },
+      path: ["definition"],
+    },
+    line: "PH-SCALAR-INTERNAL [error/definition] ./document-models/ledger/index.ts scalar JSONObject /definition: JSONObject is internal to the reactor host. A document model cannot use it.",
   },
   {
     name: "a module that throws while it loads",

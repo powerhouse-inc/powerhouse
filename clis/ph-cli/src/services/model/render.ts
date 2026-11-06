@@ -2,12 +2,12 @@ import type {
   DefinitionCheckReport,
   DefinitionCheckSkipReason,
   DefinitionDiagnostic,
-  DefinitionSource,
 } from "@powerhousedao/shared/document-model";
 import {
   type DefinitionInspectionReport,
   type DocumentModelInspection,
   formatDefinitionDiagnostic,
+  formatDefinitionSource,
 } from "document-model/tooling";
 
 const SKIP_REASONS: Readonly<Record<DefinitionCheckSkipReason, string>> = {
@@ -20,12 +20,6 @@ const SKIP_REASONS: Readonly<Record<DefinitionCheckSkipReason, string>> = {
 
 const plural = (count: number, noun: string) =>
   `${count} ${noun}${count === 1 ? "" : "s"}`;
-
-function formatSource({ specifier, exportPath }: DefinitionSource): string {
-  return exportPath === undefined
-    ? specifier
-    : `${specifier}#/${exportPath.join("/")}`;
-}
 
 function statusLine(
   report: DefinitionCheckReport | DefinitionInspectionReport,
@@ -60,7 +54,7 @@ export function renderCheckReport(report: DefinitionCheckReport): string {
     ...skipped(report.skipReason),
     ...report.definitions.map(
       ({ kind, key, version, source }) =>
-        `  ${kind} ${key}${version === undefined ? "" : ` v${version}`} ${formatSource(source)}`,
+        `  ${kind} ${key}${version === undefined ? "" : ` v${version}`} ${formatDefinitionSource(source)}`,
     ),
     ...diagnosticLines(report.diagnostics),
   ].join("\n");
@@ -88,7 +82,7 @@ function versionLines(
 ): string[] {
   return [
     `  ${documentType}@${model.version}`,
-    `    source ${formatSource(model.source)}`,
+    `    source ${formatDefinitionSource(model.source)}`,
     `    scopes global ${model.scopes.global}, local ${model.scopes.local ?? "none"}`,
     `    scalars ${
       model.scalars.length === 0

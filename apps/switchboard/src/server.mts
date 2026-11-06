@@ -1336,6 +1336,7 @@ async function initServer(
       logger: apiLogger,
       reportError,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
+      hostValidation: options.hostValidation,
       // The final update before readiness picks up everything added until then.
       hostRefreshesSupergraph: true,
       // Already resolved for this reactor's own identity; reuse it so an
@@ -2074,6 +2075,7 @@ function serverOptionsOf(
     disableLocalPackages: config.packages.disableLocal,
     enableDocumentModelSubgraphs: config.features.documentModelSubgraphs,
     dynamicModelLoading: config.packages.dynamic,
+    hostValidation: config.packages.hostValidation,
     migratePglite: config.storage.migratePglite,
     forcePgVersion: config.storage.forcePgVersion,
     workerPool: {

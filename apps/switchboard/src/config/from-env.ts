@@ -8,6 +8,7 @@ import {
   type ProcessorTimingLevel,
 } from "@powerhousedao/reactor";
 import {
+  type HostValidationMode,
   reactorApiConfigFromEnv,
   resolveRenownConfig,
 } from "@powerhousedao/reactor-api";
@@ -194,6 +195,7 @@ export function switchboardConfigFromEnv(
         p.trim(),
       ),
       dynamic: flag(env.DYNAMIC_MODEL_LOADING),
+      hostValidation: hostValidationFromEnv(env.PH_HOST_VALIDATION),
     },
     features: {
       mcp: openFeatureFlag(env.MCP_ENABLED),
@@ -346,6 +348,19 @@ function createSignaturePolicyFromEnv(
   if (!isSignaturePolicy(raw)) {
     throw new Error(
       `CREATE_SIGNATURE_POLICY must be "legacy" or "v2-required", got "${raw}"`,
+    );
+  }
+  return raw;
+}
+
+function hostValidationFromEnv(
+  value: string | undefined,
+): HostValidationMode | undefined {
+  const raw = value?.trim();
+  if (!raw) return undefined;
+  if (raw !== "log" && raw !== "refuse") {
+    throw new Error(
+      `PH_HOST_VALIDATION must be "log" or "refuse", got "${raw}"`,
     );
   }
   return raw;

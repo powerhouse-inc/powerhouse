@@ -12,11 +12,12 @@ export type HostValidationFindingData =
       readonly scalar: string;
     }
   | {
-      readonly kind: "scalar-mismatch";
+      /** `scalar-uncomparable`: equal metadata, validators that could not be compared. */
+      readonly kind: "scalar-mismatch" | "scalar-uncomparable";
       readonly documentType: string;
       readonly scalar: string;
       readonly packageName: string;
-      /** Canonical JSON of the stored scalar metadata. */
+      /** Canonical JSON of the stored scalar metadata, with the validator when known. */
       readonly declared: string;
       readonly registered: string;
     }

@@ -30,20 +30,30 @@ describe("parseShownConfig", () => {
             tsBuildInfoFile: "./cache/tsc.tsbuildinfo",
           },
           files: ["./index.ts"],
+          exclude: ["dist"],
+          references: [{ path: "./child" }],
         }),
       ),
     ).toEqual({
-      composite: true,
-      declarationMap: true,
-      outFile: "./out/bundle.js",
-      sourceMap: true,
-      tsBuildInfoFile: "./cache/tsc.tsbuildinfo",
+      options: {
+        composite: true,
+        declarationMap: true,
+        outFile: "./out/bundle.js",
+        sourceMap: true,
+        tsBuildInfoFile: "./cache/tsc.tsbuildinfo",
+      },
+      exclude: ["dist"],
+      references: ["./child"],
     });
   });
 
   it("reads output that is not JSON as no options", () => {
     expect(parseShownConfig("error TS5083: Cannot read file")).toBe(undefined);
-    expect(parseShownConfig('{"files": []}')).toEqual({});
+    expect(parseShownConfig('{"files": []}')).toEqual({
+      options: {},
+      exclude: undefined,
+      references: [],
+    });
   });
 });
 

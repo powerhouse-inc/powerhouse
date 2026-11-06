@@ -154,18 +154,55 @@ describe("publishedFiles", () => {
     ]);
   });
 
-  it("leaves out the package's .ph scratch when the package publishes it", () => {
+  it("covers every .ph file npm packs but the approval itself", () => {
     const root = packageWith({
       "package.json": JSON.stringify({ name: "p", version: "1.0.0" }),
       ".ph/build/release-approval.json": "{}",
+      ".ph/payload.js": "payload",
       "index.js": "i",
     });
 
-    expect(publishedFiles(root).map(({ path }) => path)).toEqual([
-      "index.js",
-      "package.json",
+    expect(publishedFiles(root)).toEqual([
+      { path: ".ph/payload.js", sha256: sha("payload") },
+      { path: "index.js", sha256: sha("i") },
+      {
+        path: "package.json",
+        sha256: sha(JSON.stringify({ name: "p", version: "1.0.0" })),
+      },
     ]);
   });
+
+  it.each([
+    { files: ["dist", ".ph"], what: "lists .ph" },
+    { files: undefined, what: "has no files list" },
+  ])(
+    "makes the approval stale when a packed .ph file changes, for a package that $what",
+    async ({ files }) => {
+      const root = packageWith({
+        "package.json": JSON.stringify({ name: "p", version: "1.0.0", files }),
+        "dist/index.js": "export const a = 1;\n",
+        ".ph/payload.js": "old payload\n",
+      });
+      approve(root);
+      expect(JSON.parse((await prepack(root)).stdout)).toEqual({
+        decision: "approved",
+        reasons: [],
+      });
+
+      writeFileSync(join(root, ".ph/payload.js"), "changed after approval\n");
+
+      expect(await prepack(root)).toEqual({
+        code: 1,
+        stdout: `${JSON.stringify({
+          decision: "stale",
+          reasons: [
+            "1 published file changed since the approval was made: .ph/payload.js",
+          ],
+        })}\n`,
+        stderr: "",
+      });
+    },
+  );
 
   it("refuses to list another package that an .npmrc workspace selects, even with the same name and version", () => {
     const identity = JSON.stringify({

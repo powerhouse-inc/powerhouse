@@ -111,6 +111,10 @@
       "source": "./clis/ph-dir.ts",
       "import": "./dist/clis/ph-dir.mjs"
     },
+    "./clis/real-paths": {
+      "source": "./clis/real-paths.ts",
+      "import": "./dist/clis/real-paths.mjs"
+    },
     "./clis/utils": {
       "source": "./clis/utils.ts",
       "import": "./dist/clis/utils.mjs"

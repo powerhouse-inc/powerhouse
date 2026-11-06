@@ -19,6 +19,7 @@ export * from "./src/packages/package-manager.js";
 export * from "./src/packages/subgraph-extraction.js";
 export {
   type HostValidationFinding,
+  type HostValidationMode,
   type HostValidationResult,
   validateDocumentModelsForHost,
 } from "./src/packages/host-validation.js";

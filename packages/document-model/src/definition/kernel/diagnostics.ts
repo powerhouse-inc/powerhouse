@@ -242,7 +242,11 @@ function formatPointer(path: DefinitionPath): string {
 }
 
 function formatSource(source: DefinitionSource | undefined): string {
-  if (source === undefined) return "(no source)";
+  return source === undefined ? "(no source)" : formatDefinitionSource(source);
+}
+
+/** @experimental A source as `specifier#/export/path`, each segment escaped as a JSON Pointer token. */
+export function formatDefinitionSource(source: DefinitionSource): string {
   const exportPath = source.exportPath ?? [];
   return exportPath.length === 0
     ? source.specifier

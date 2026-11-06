@@ -6,6 +6,12 @@ import {
 } from "../graphql/document-model-schema/source.js";
 import type { ScalarRegistry } from "../utils/scalar-types.js";
 
+/**
+ * @experimental What a host does with a model host validation reports a
+ * finding for: `log` serves it and logs, `refuse` leaves it out.
+ */
+export type HostValidationMode = "log" | "refuse";
+
 /** @experimental One reason this host would not serve a model as declared. */
 export type HostValidationFinding =
   | {
@@ -14,11 +20,21 @@ export type HostValidationFinding =
       readonly scalar: string;
     }
   | {
-      readonly kind: "scalar-mismatch";
+      /**
+       * `scalar-uncomparable`: the metadata are equal and the validators
+       * differ in checks JSON Schema cannot express (refinements, transforms,
+       * custom checks), so the host cannot tell whether they accept the same
+       * values.
+       */
+      readonly kind: "scalar-mismatch" | "scalar-uncomparable";
       readonly documentType: string;
       readonly scalar: string;
       readonly packageName: string;
-      /** Canonical JSON of the stored scalar metadata. */
+      /**
+       * Canonical JSON of the stored scalar metadata, with the validator's
+       * JSON Schema (mismatch) or zod source (uncomparable) when the model
+       * carries the definition it was compiled with.
+       */
       readonly declared: string;
       readonly registered: string;
     }
@@ -56,7 +72,13 @@ function findingsOf(
   return packageScalarFindings([model], registry).map((finding) =>
     finding.kind === "unbound"
       ? { ...finding, kind: "scalar-unbound" }
-      : { ...finding, kind: "scalar-mismatch" },
+      : {
+          ...finding,
+          kind:
+            finding.kind === "mismatch"
+              ? "scalar-mismatch"
+              : "scalar-uncomparable",
+        },
   );
 }
 
@@ -85,6 +107,8 @@ export function describeHostValidationFinding(
       return `package scalar ${finding.scalar} has no registered binding`;
     case "scalar-mismatch":
       return `package scalar ${finding.scalar} is declared as ${finding.declared}, but package ${finding.packageName} registers ${finding.registered}`;
+    case "scalar-uncomparable":
+      return `package scalar ${finding.scalar} is declared as ${finding.declared}, and package ${finding.packageName} registers ${finding.registered}, whose validators could not be compared`;
     case "definition-invalid":
     case "definition-mismatch":
       return `its definition is ${finding.kind === "definition-invalid" ? "invalid" : "for another module"}: ${finding.diagnostics.map(({ path, message }) => `${path.join(".")}: ${message}`).join(" ")}`;

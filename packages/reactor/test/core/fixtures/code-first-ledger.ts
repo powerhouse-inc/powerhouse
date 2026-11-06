@@ -49,14 +49,26 @@ const addAmount = { amount: ph.Int({ required: true }) };
 
 const supportedVersions = [1, 2] as const;
 
-const upgradeManifest: UpgradeManifest<typeof supportedVersions> = {
+export const upgradeManifest: UpgradeManifest<typeof supportedVersions> = {
   documentType: config.id,
   latestVersion: 2,
   supportedVersions,
   upgrades: {
     v2: {
       toVersion: 2,
-      upgradeReducer: (document) => document,
+      upgradeReducer: (document) => {
+        const withCurrency = <T extends { global: object }>(state: T) => ({
+          ...state,
+          global: { ...state.global, currency: "USD" },
+        });
+        return {
+          ...document,
+          state: withCurrency(document.state as { global: object }),
+          initialState: withCurrency(
+            document.initialState as { global: object },
+          ),
+        } as typeof document;
+      },
       description: "",
     },
   },

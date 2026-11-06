@@ -216,3 +216,52 @@ describe("firstDifference", () => {
     });
   });
 });
+
+describe("a code-first reducer that persists a wrong hash with correct state", () => {
+  const corrupted: AnyModule = {
+    ...codeFirst,
+    reducer: ((document, action, dispatch, options) => {
+      const next = codeFirst.reducer(document, action, dispatch, options);
+      const rows = next.operations[action.scope] ?? [];
+      return {
+        ...next,
+        operations: {
+          ...next.operations,
+          [action.scope]: rows.map((row, position) =>
+            position === rows.length - 1 ? { ...row, hash: "WRONG" } : row,
+          ),
+        },
+      };
+    }) as AnyModule["reducer"],
+  };
+  const [success] = PARITY_HISTORIES;
+
+  it("parts from schema first at the first appended row", () => {
+    const left = streamHistory(
+      schemaFirst,
+      freshDocument(success),
+      success.steps,
+    );
+    const right = streamHistory(
+      corrupted,
+      freshDocument(success),
+      success.steps,
+    );
+    expect(firstDifference(left.snapshots, right.snapshots)).toMatchObject({
+      prefix: 1,
+      coordinate: "operations",
+    });
+  });
+
+  it("fails archive replay on schema first", () => {
+    const recorded = streamHistory(
+      corrupted,
+      freshDocument(success),
+      success.steps,
+    );
+    const document = recorded.documents[1];
+    expect(() => replayArchive(schemaFirst, document)).toThrow(
+      "global persisted hash WRONG, replay derives j+hY5ZoFd7IpAX5hCk64LmDAyu0=.",
+    );
+  });
+});

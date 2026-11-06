@@ -151,9 +151,11 @@ export function admitDocumentModels<T extends DocumentModelSource>(
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
 
-/** The version of a model: its latest specification's. */
+/** The version of a model: its module's own, else its latest specification's. */
 export const documentModelVersion = (model: DocumentModelSource): number =>
-  model.documentModel.global.specifications.at(-1)?.version ?? 0;
+  model.version ??
+  model.documentModel.global.specifications.at(-1)?.version ??
+  0;
 
 /**
  * The latest version of each model, by name: the only one whose own subgraph
