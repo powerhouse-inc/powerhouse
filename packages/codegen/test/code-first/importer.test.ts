@@ -302,3 +302,27 @@ it("reports a broken project alias without recommending a nonexistent npm packag
   );
   expect(loaded.diagnostics[0]?.repair).not.toContain("Install scalars");
 });
+
+it("refuses a CommonJS module instead of evaluating it as ESM", async () => {
+  const marker = join(dir, "cjs-ran");
+  write(
+    dir,
+    "src/entry.cjs",
+    `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "ran");\nmodule.exports = {};\n`,
+  );
+  const adapter = new ViteTypeScriptSourceImportAdapter();
+  try {
+    await expect(
+      adapter.importModule({
+        packageRoot: dir,
+        specifier: "./src/entry.cjs",
+        packageRevision: revision("c"),
+      }),
+    ).rejects.toThrow(
+      "./src/entry.cjs is a CommonJS module, and Vite evaluates definition sources as ES modules. Rename the module to .ts, .mts, .js or .mjs and declare its definitions with ES module exports.",
+    );
+    expect(existsSync(marker)).toBe(false);
+  } finally {
+    await adapter.disposeRevision();
+  }
+});

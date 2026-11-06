@@ -10,6 +10,7 @@ import {
 import { hostname } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+import { pendingPrefix, takeoverPrefix } from "../../build-control.js";
 import { currentBootId } from "./boot-id.js";
 import { removeTree } from "./files.js";
 
@@ -130,7 +131,7 @@ function holderOf(file: string): Holder | undefined {
 function createOwned(file: string, owner: LockOwner): boolean {
   const pending = join(
     dirname(file),
-    `.${basename(file)}.${owner.runId}.pending`,
+    `${pendingPrefix(basename(file))}${owner.runId}.pending`,
   );
   writeFileSync(pending, JSON.stringify(owner));
   try {
@@ -145,7 +146,10 @@ function createOwned(file: string, owner: LockOwner): boolean {
 }
 
 const takeoverFile = (lockFile: string, staleId: string) =>
-  `${lockFile}.takeover-${encodeURIComponent(staleId)}`;
+  join(
+    dirname(lockFile),
+    `${takeoverPrefix(basename(lockFile))}${encodeURIComponent(staleId)}`,
+  );
 
 /** A file a live or unknown holder keeps, which this build waits for. */
 type Blocked = { readonly file: string; readonly holder: Holder };
@@ -188,8 +192,8 @@ function takeOver(
  * contender links it next.
  */
 function removeTakeoverFiles(lockFile: string): void {
-  const takeover = `${basename(lockFile)}.takeover-`;
-  const pending = `.${basename(lockFile)}.`;
+  const takeover = takeoverPrefix(basename(lockFile));
+  const pending = pendingPrefix(basename(lockFile));
   for (const entry of readdirSync(dirname(lockFile))) {
     const file = join(dirname(lockFile), entry);
     if (

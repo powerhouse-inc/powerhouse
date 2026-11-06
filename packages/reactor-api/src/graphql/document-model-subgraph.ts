@@ -4,6 +4,7 @@ import type {
 } from "@powerhousedao/reactor";
 import {
   setName,
+  type Action,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError, Kind } from "graphql";
@@ -12,6 +13,7 @@ import {
   documentModelSubgraphTypes,
   getDocumentModelSubgraphName,
 } from "../utils/create-schema.js";
+import type { MutationResolverOperation } from "./document-model-schema/model-projection.js";
 import { documentModelSchemaSource } from "./document-model-schema/source.js";
 import { getDocumentModelSchemaName } from "./model-schema-templates.js";
 import type { CanonicalDocumentId } from "../services/authorization.service.js";
@@ -46,6 +48,12 @@ export type DocumentModelResolverMap = Record<string, DocumentModelResolverFn>;
 
 /** View filter shared across query resolvers. */
 type ViewArg = { branch?: string; scopes?: string[] };
+
+type OperationArgs = {
+  documentIdOrSlug?: string | null;
+  docId?: string | null;
+  input: unknown;
+};
 
 /** Paging argument shared across query resolvers. */
 type PagingArg = { limit?: number; offset?: number; cursor?: string };
@@ -215,6 +223,44 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         `Document with id ${requested} is not of type ${documentType}`,
       );
     }
+  }
+
+  async #authorizedAction(
+    op: MutationResolverOperation,
+    args: OperationArgs,
+    documentType: string,
+    ctx: Context,
+  ): Promise<{ clients: RequestClients; documentId: string; action: Action }> {
+    const documentIdOrSlug = requireOneOf<string>(
+      args,
+      "documentIdOrSlug",
+      "docId",
+    );
+    const handle = await this.assertCanExecuteOperation(
+      documentIdOrSlug,
+      op.permissionKey,
+      ctx,
+    );
+    const clients = this.clientsOf(ctx);
+    await this.#assertDocumentType(
+      clients,
+      handle.fetchIdentifier,
+      documentIdOrSlug,
+      documentType,
+    );
+    const creator = this.documentModel.actions[op.creatorKey];
+    if (!creator) {
+      throw new GraphQLError(`Action ${op.storedName} not found`);
+    }
+    let action: Action;
+    try {
+      action = creator(args.input);
+    } catch (error) {
+      throw new GraphQLError(
+        error instanceof Error ? error.message : `Failed to ${op.storedName}`,
+      );
+    }
+    return { clients, documentId: handle.fetchIdentifier, action };
   }
 
   /** Drops the items the host's own ACL refuses the caller. */
@@ -626,47 +672,17 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           // Sync mutation
           mutations[op.camelName] = async (
             _: unknown,
-            args: {
-              documentIdOrSlug?: string | null;
-              docId?: string | null;
-              input: unknown;
-            },
+            args: OperationArgs,
             ctx: Context,
           ) => {
-            const documentIdOrSlug = requireOneOf<string>(
-              args,
-              "documentIdOrSlug",
-              "docId",
-            );
-            const { input } = args;
-
-            const handle = await this.assertCanExecuteOperation(
-              documentIdOrSlug,
-              op.storedName,
-              ctx,
-            );
-            const effectiveDocId = handle.fetchIdentifier;
-            const clients = this.clientsOf(ctx);
-
-            await this.#assertDocumentType(
-              clients,
-              effectiveDocId,
-              documentIdOrSlug,
-              documentType,
-            );
-
-            const action = this.documentModel.actions[op.creatorKey];
-            if (!action) {
-              throw new GraphQLError(`Action ${op.storedName} not found`);
-            }
+            const { clients, documentId, action } =
+              await this.#authorizedAction(op, args, documentType, ctx);
 
             let receipt: WriteReceipt;
             try {
-              const written = await clients.write.execute(
-                effectiveDocId,
-                "main",
-                [action(input)],
-              );
+              const written = await clients.write.execute(documentId, "main", [
+                action,
+              ]);
               receipt = await written.readable;
             } catch (error) {
               throw new GraphQLError(
@@ -686,46 +702,16 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           // Async mutation - returns job ID
           mutations[`${op.camelName}Async`] = async (
             _: unknown,
-            args: {
-              documentIdOrSlug?: string | null;
-              docId?: string | null;
-              input: unknown;
-            },
+            args: OperationArgs,
             ctx: Context,
           ) => {
-            const documentIdOrSlug = requireOneOf<string>(
-              args,
-              "documentIdOrSlug",
-              "docId",
-            );
-            const { input } = args;
-
-            const handle = await this.assertCanExecuteOperation(
-              documentIdOrSlug,
-              op.storedName,
-              ctx,
-            );
-            const effectiveDocId = handle.fetchIdentifier;
-            const clients = this.clientsOf(ctx);
-
-            await this.#assertDocumentType(
-              clients,
-              effectiveDocId,
-              documentIdOrSlug,
-              documentType,
-            );
-
-            const action = this.documentModel.actions[op.creatorKey];
-            if (!action) {
-              throw new GraphQLError(`Action ${op.storedName} not found`);
-            }
+            const { clients, documentId, action } =
+              await this.#authorizedAction(op, args, documentType, ctx);
 
             try {
-              const written = await clients.write.execute(
-                effectiveDocId,
-                "main",
-                [action(input)],
-              );
+              const written = await clients.write.execute(documentId, "main", [
+                action,
+              ]);
               return written.jobId;
             } catch (error) {
               throw new GraphQLError(

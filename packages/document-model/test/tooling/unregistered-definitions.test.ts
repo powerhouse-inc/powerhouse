@@ -1,4 +1,5 @@
 import {
+  chmodSync,
   mkdirSync,
   mkdtempSync,
   realpathSync,
@@ -30,6 +31,24 @@ function packageWith(files: Record<string, string>): string {
  * `graph` maps each selected source to the package files its import
  * evaluated, as the import adapter reports them.
  */
+function scan(
+  root: string,
+  graph: Readonly<Record<`./${string}`, readonly string[]>> = {},
+  documentModelsDir = "document-models",
+  loadedDocumentTypes: ReadonlySet<string> = new Set(),
+) {
+  return findUnregisteredDefinitions({
+    packageRoot: root,
+    documentModelsDir: join(root, documentModelsDir),
+    sources: Object.keys(graph).map((specifier) => ({
+      specifier: specifier as `./${string}`,
+    })),
+    importedFiles: (specifier) =>
+      (graph[specifier as `./${string}`] ?? []).map((path) => join(root, path)),
+    loadedDocumentTypes,
+  });
+}
+
 function units(
   root: string,
   graph: Readonly<Record<`./${string}`, readonly string[]>> = {},
@@ -43,7 +62,8 @@ function units(
     })),
     importedFiles: (specifier) =>
       (graph[specifier as `./${string}`] ?? []).map((path) => join(root, path)),
-  }).map(({ unit, specifier }) => `${unit} -> ${specifier}`);
+    loadedDocumentTypes: new Set(),
+  }).unregistered.map(({ unit, specifier }) => `${unit} -> ${specifier}`);
 }
 
 const DECLARES =
@@ -212,4 +232,119 @@ describe("findUnregisteredDefinitions", () => {
       "./models/orders/ -> ./models/orders/index.ts",
     ]);
   });
+
+  it("scans every module file a definition source can name", () => {
+    const root = packageWith({
+      "document-models/a/index.js": DECLARES,
+      "document-models/b/index.mjs": DECLARES,
+      "document-models/c/index.jsx": DECLARES,
+      "document-models/d/index.mts": DECLARES,
+      "document-models/e/index.cjs": DECLARES,
+      "document-models/f/index.d.ts": DECLARES,
+      "document-models/g/index.test.js": DECLARES,
+    });
+    expect(units(root)).toEqual([
+      "./document-models/a/ -> ./document-models/a/index.js",
+      "./document-models/b/ -> ./document-models/b/index.mjs",
+      "./document-models/c/ -> ./document-models/c/index.jsx",
+      "./document-models/d/ -> ./document-models/d/index.mts",
+    ]);
+  });
+
+  it("reports a reached unit whose literal id no selected source produced", () => {
+    const declaring = (id: string) =>
+      `import { defineDocumentModel } from "document-model";\nexport const model = defineDocumentModel({ scopes: { global: { id: "nested" } }, "id": ${JSON.stringify(id)} });`;
+    const root = packageWith({
+      "document-models/ledger/index.ts": declaring("example/ledger"),
+      "document-models/orders/index.ts": declaring("example/orders"),
+      "document-models/computed/index.ts":
+        'import { defineDocumentModel } from "document-model";\nconst id = "example/computed";\nexport const model = defineDocumentModel({ id });',
+    });
+    const graph = {
+      "./document-models/ledger/index.ts": [
+        "document-models/ledger/index.ts",
+        "document-models/orders/index.ts",
+        "document-models/computed/index.ts",
+      ],
+    };
+    const reasons = (loaded: readonly string[]) =>
+      scan(root, graph, "document-models", new Set(loaded)).unregistered.map(
+        ({ unit, reason }) => `${unit} ${reason}`,
+      );
+    expect(reasons(["example/ledger"])).toEqual([
+      "./document-models/orders/ not-exported",
+    ]);
+    expect(reasons(["example/ledger", "example/orders"])).toEqual([]);
+    expect(reasons(["example/ledger", "nested"])).toEqual([
+      "./document-models/orders/ not-exported",
+    ]);
+  });
+
+  it("does not report a reached unit whose id its source text cannot settle", () => {
+    const declaring = (members: string) =>
+      `import { defineDocumentModel } from "document-model";\nexport const model = defineDocumentModel({ ${members} });`;
+    const root = packageWith({
+      "document-models/escaped/index.ts": declaring(
+        String.raw`id: "example/\u006eotes"`,
+      ),
+      "document-models/spread/index.ts": declaring(
+        'id: "example/base", ...{ id: "example/notes" }',
+      ),
+      "document-models/overridden/index.ts": declaring(
+        'id: "example/base", id: noteId',
+      ),
+      "document-models/last/index.ts": declaring(
+        'id: "example/base", id: "example/last"',
+      ),
+    });
+    const files = [
+      "document-models/escaped/index.ts",
+      "document-models/spread/index.ts",
+      "document-models/overridden/index.ts",
+      "document-models/last/index.ts",
+    ];
+    expect(
+      scan(
+        root,
+        { "./document-models/escaped/index.ts": files },
+        "document-models",
+        new Set(["example/notes"]),
+      ).unregistered.map(({ unit, reason }) => `${unit} ${reason}`),
+    ).toEqual(["./document-models/last/ not-exported"]);
+  });
+
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "reports a file or nested directory it cannot read, but leaves model directories to the stored-model reader",
+    () => {
+      const root = packageWith({
+        "document-models/orders/index.ts": DECLARES,
+        "document-models/orders/v1/definition.ts": DECLARES,
+        "document-models/returns/index.ts": DECLARES,
+      });
+      const locked = [
+        join(root, "document-models/orders/index.ts"),
+        join(root, "document-models/orders/v1"),
+        join(root, "document-models/returns"),
+      ];
+      for (const path of locked) chmodSync(path, 0o000);
+      try {
+        const result = scan(root);
+        expect({
+          unregistered: result.unregistered.map(({ unit }) => unit),
+          unreadable: result.diagnostics.map(({ code, source }) => [
+            code,
+            source?.specifier,
+          ]),
+        }).toEqual({
+          unregistered: [],
+          unreadable: [
+            ["PH-IMPORT-FAILED", "./document-models/orders/v1"],
+            ["PH-IMPORT-FAILED", "./document-models/orders/index.ts"],
+          ],
+        });
+      } finally {
+        for (const path of locked) chmodSync(path, 0o755);
+      }
+    },
+  );
 });

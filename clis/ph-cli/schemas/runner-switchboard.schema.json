@@ -434,6 +434,10 @@
                 },
                 "disableLocal": {
                   "type": "boolean"
+                },
+                "hostValidation": {
+                  "type": "string",
+                  "enum": ["log", "refuse"]
                 }
               },
               "additionalProperties": false

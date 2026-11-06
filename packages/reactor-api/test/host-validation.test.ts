@@ -1,6 +1,11 @@
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import type { ILogger } from "document-model";
-import { defineScalar } from "document-model/scalars";
+import {
+  defineDocumentModel,
+  type ILogger,
+  materialize,
+  ph,
+} from "document-model";
+import { defineScalar, type ScalarDefinition } from "document-model/scalars";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { documentModelSchemaSource } from "../src/graphql/document-model-schema/source.js";
@@ -105,6 +110,182 @@ describe("validateDocumentModelsForHost", () => {
             '{"coercion":{"source":"derived"},"coercionProfile":"catalog-v1","description":"Another account number.","formatVersion":1,"kind":"powerhouse.scalar","name":"Iban","representation":"string"}',
         },
       ],
+    });
+  });
+
+  describe("a binding with the model's metadata and another validator", () => {
+    const NlIban = defineScalar({
+      name: "Iban",
+      description: "An international bank account number.",
+      schema: z.string().regex(/^NL/),
+    });
+    const metadata =
+      '"coercion":{"source":"derived"},"coercionProfile":"catalog-v1","description":"An international bank account number.","formatVersion":1,"kind":"powerhouse.scalar","name":"Iban","representation":"string"';
+    const mismatch = (packageName: string) => ({
+      kind: "scalar-mismatch",
+      documentType: "test/board",
+      scalar: "Iban",
+      packageName,
+      declared: `{${metadata},"validator":{"jsonSchema":{"$schema":"https://json-schema.org/draft/2020-12/schema","pattern":"^[A-Z]{2}[0-9]{2}[A-Z0-9]+$","type":"string"}}}`,
+      registered: `{${metadata},"validator":{"jsonSchema":{"$schema":"https://json-schema.org/draft/2020-12/schema","pattern":"^NL","type":"string"}}}`,
+    });
+
+    it("is a mismatch on a host where another package registers it first", () => {
+      const { registry: host } = buildScalarRegistry(
+        new Map([
+          ["@other/pkg", scalarExportsOf({ Iban: NlIban })],
+          [PACKAGE, scalarExportsOf({ Iban, Bic })],
+        ]),
+      );
+      expect(validateDocumentModelsForHost([boardModel()], host)).toEqual({
+        findings: [mismatch("@other/pkg")],
+      });
+    });
+
+    it("is a mismatch where the package's own scalars entry exports it", () => {
+      expect(
+        validateDocumentModelsForHost(
+          [boardModel()],
+          registry({ Iban: NlIban, Bic }),
+        ),
+      ).toEqual({ findings: [mismatch(PACKAGE)] });
+    });
+
+    it("is no finding when the other definition validates alike", () => {
+      const SameIban = defineScalar({
+        name: "Iban",
+        description: "An international bank account number.",
+        schema: z.string().regex(/^[A-Z]{2}[0-9]{2}[A-Z0-9]+$/),
+      });
+      expect(
+        validateDocumentModelsForHost(
+          [boardModel()],
+          registry({ Iban: SameIban, Bic }),
+        ),
+      ).toEqual({ findings: [] });
+    });
+  });
+
+  describe("a binding with the model's metadata and a check JSON Schema cannot express", () => {
+    const startsWithDe = (value: string) => value.startsWith("DE");
+    const startsWithNl = (value: string) => value.startsWith("NL");
+    const countryCode = (check: (value: string) => boolean) =>
+      defineScalar({ name: "CountryCode", schema: z.string().refine(check) });
+    const DeCode = countryCode(startsWithDe);
+    const model = (scalar: ScalarDefinition) =>
+      materialize(
+        defineDocumentModel({
+          id: "test/bank",
+          name: "Bank",
+          description: "A bank.",
+          extension: "bank",
+          version: 1,
+          author: { name: "Powerhouse" },
+          scopes: {
+            global: {
+              schema: ph.object("BankState", {
+                fields: { country: ph.scalar(scalar) },
+              }),
+              initialValue: { country: null },
+            },
+            local: { schema: null, initialValue: {} },
+          },
+        }).version({ modules: [] }),
+      ) as unknown as DocumentModelModule;
+    const metadata =
+      '"coercion":{"source":"derived"},"coercionProfile":"catalog-v1","description":"","formatVersion":1,"kind":"powerhouse.scalar","name":"CountryCode","representation":"string"';
+    const refined = (check: (value: string) => boolean) =>
+      `{${metadata},"validator":{"zod":{"checks":[{"check":"custom","fn":{"function":${JSON.stringify(String(check))}},"type":"custom"}],"type":"string"}}}`;
+
+    it("is uncomparable when the binding refines the other way", () => {
+      const NlCode = countryCode(startsWithNl);
+      expect(DeCode.schema.safeParse("DE00").success).toBe(true);
+      expect(NlCode.schema.safeParse("DE00").success).toBe(false);
+
+      expect(
+        validateDocumentModelsForHost(
+          [model(DeCode)],
+          registry({ CountryCode: NlCode }),
+        ),
+      ).toEqual({
+        findings: [
+          {
+            kind: "scalar-uncomparable",
+            documentType: "test/bank",
+            scalar: "CountryCode",
+            packageName: PACKAGE,
+            declared: refined(startsWithDe),
+            registered: refined(startsWithNl),
+          },
+        ],
+      });
+    });
+
+    it("is no finding when the host binds the scalar the model was compiled with", () => {
+      expect(
+        validateDocumentModelsForHost(
+          [model(DeCode)],
+          registry({ CountryCode: DeCode }),
+        ),
+      ).toEqual({ findings: [] });
+    });
+
+    it("is no finding for another definition with the same check", () => {
+      expect(
+        validateDocumentModelsForHost(
+          [model(DeCode)],
+          registry({ CountryCode: countryCode(startsWithDe) }),
+        ),
+      ).toEqual({ findings: [] });
+    });
+
+    it("is a mismatch when object scalars differ in a field named error", () => {
+      const StringError = defineScalar({
+        name: "CountryCode",
+        schema: z.object({ error: z.string() }),
+      });
+      const NumberError = defineScalar({
+        name: "CountryCode",
+        schema: z.object({ error: z.number() }),
+      });
+      const { findings } = validateDocumentModelsForHost(
+        [model(StringError)],
+        registry({ CountryCode: NumberError }),
+      );
+      expect(findings.map(({ kind }) => kind)).toStrictEqual([
+        "scalar-mismatch",
+      ]);
+    });
+
+    it("is uncomparable when the checks differ only where JSON Schema drops them", () => {
+      const host = (hostname: RegExp) =>
+        defineScalar({ name: "Site", schema: z.url({ hostname }) });
+      const siteModel = materialize(
+        defineDocumentModel({
+          id: "test/site",
+          name: "Site",
+          description: "A site.",
+          extension: "site",
+          version: 1,
+          author: { name: "Powerhouse" },
+          scopes: {
+            global: {
+              schema: ph.object("SiteState", {
+                fields: { url: ph.scalar(host(/^a\.example$/)) },
+              }),
+              initialValue: { url: null },
+            },
+            local: { schema: null, initialValue: {} },
+          },
+        }).version({ modules: [] }),
+      ) as unknown as DocumentModelModule;
+
+      expect(
+        validateDocumentModelsForHost(
+          [siteModel],
+          registry({ Site: host(/^b\.example$/) }),
+        ).findings.map(({ kind }) => kind),
+      ).toEqual(["scalar-uncomparable"]);
     });
   });
 

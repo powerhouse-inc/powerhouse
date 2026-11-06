@@ -107,6 +107,44 @@ export function modelOperations(module: DocumentModelModule): ModelOperation[] {
   );
 }
 
+/** @experimental */
+export type ResolvedOperation = {
+  readonly operation: ModelOperation;
+  readonly base: boolean;
+  readonly creatorKey?: string;
+};
+
+const MODEL_SHADOWS_BASE = new Set(["NOOP"]);
+
+/**
+ * @experimental The operation an action type names: a base action the base
+ * reducer reduces itself, else the model's own (by stored name, then by action
+ * type), else the base NOOP.
+ */
+export function resolveOperation(
+  module: DocumentModelModule,
+  type: string,
+): ResolvedOperation | undefined {
+  const base = BASE_OPERATIONS.find((op) => op.name === type);
+  if (base && !MODEL_SHADOWS_BASE.has(type)) {
+    return { operation: base, base: true };
+  }
+  const own = modelOperations(module);
+  const byName = own.find((op) => op.name === type);
+  if (byName) return { operation: byName, base: false };
+  const structured = operationsByActionType(module).get(type);
+  const byActionType =
+    structured && own.find((op) => op.name === structured.storedName);
+  if (structured && byActionType) {
+    return {
+      operation: byActionType,
+      base: false,
+      creatorKey: structured.creatorKey,
+    };
+  }
+  return base && { operation: base, base: true };
+}
+
 /** Every action type the document accepts: the model's and the base ones. */
 export function actionOperations(
   module: DocumentModelModule,
@@ -162,19 +200,14 @@ export function operationSchemaSlice(
   module: DocumentModelModule,
   operationName: string,
 ): OperationSlice {
-  const operations = actionOperations(module);
-  const storedName =
-    operationsByActionType(module).get(operationName)?.storedName;
-  const operation =
-    operations.find((op) => op.name === operationName) ??
-    operations.find((op) => op.name === storedName);
+  const operation = resolveOperation(module, operationName)?.operation;
   if (!operation) {
     throw new ReactorToolError(
       "NOT_FOUND",
       unknownValueMessage(
         "operation",
         operationName,
-        operations.map((op) => op.name),
+        actionOperations(module).map((op) => op.name),
         {
           context: `for ${module.documentModel.global.id}`,
           knownLabel: "Valid action types",

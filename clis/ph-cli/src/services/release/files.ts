@@ -12,14 +12,14 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, posix, relative, resolve, sep } from "node:path";
-import { z } from "zod";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import {
   type ApprovalRead,
   parseReleaseApproval,
   RELEASE_APPROVAL_PATH,
   type ReleaseApproval,
 } from "./approval.js";
+import { packedDigests, packRelease } from "./pack.js";
 import { byPath, type FileDigest } from "./revision.js";
 
 const ALWAYS_EXCLUDED = new Set(["node_modules", ".git", ".ph"]);
@@ -140,74 +140,19 @@ export function revisionFiles(
     .sort(byPath);
 }
 
-const packListing = z.array(
-  z.object({
-    name: z.string(),
-    version: z.string(),
-    files: z.array(z.object({ path: z.string() })),
-  }),
-);
-
-const packageIdentity = z.object({ name: z.string(), version: z.string() });
-
-/** npm refuses `--workspaces=false` while its configuration selects one. */
-const SELECTS_WORKSPACE = /--no-workspaces and --workspace/;
-
-const selectsAnotherPackage = (packageRoot: string) =>
-  `npm's configuration (a workspace setting in the environment or an .npmrc) selects a package other than the one in ${packageRoot}; the release approval covers that package only.`;
-
 /**
- * What `npm pack` would publish from the package root, with digests. The
- * package's own scratch under .ph is left out: it changes on every build.
- * Workspaces are off, so npm lists the root package or refuses; a listing
- * of another package than the root's package.json names throws as well.
+ * What `npm pack` publishes from the package root, with digests read from the
+ * packed tarball. Workspaces are off, so npm packs the root package or
+ * refuses; a tarball of another package than the root's package.json names
+ * throws as well.
  */
 export function publishedFiles(packageRoot: string): FileDigest[] {
-  const packed = spawnSync(
-    "npm",
-    ["pack", "--dry-run", "--json", "--ignore-scripts", "--workspaces=false"],
-    {
-      cwd: packageRoot,
-      encoding: "utf8",
-      maxBuffer: 256 * 1024 * 1024,
-      stdio: ["ignore", "pipe", "pipe"],
-      shell: process.platform === "win32",
-    },
-  );
-  if (packed.status !== 0) {
-    if (SELECTS_WORKSPACE.test(`${packed.stdout}${packed.stderr}`)) {
-      throw new Error(selectsAnotherPackage(packageRoot));
-    }
-    throw new Error(
-      `npm pack could not list the published files: ${(packed.stderr || packed.error?.message || packed.stdout).trim()}`,
-    );
+  const packed = packRelease(packageRoot);
+  try {
+    return packedDigests(packed);
+  } finally {
+    packed.dispose();
   }
-  const listings = packListing.parse(JSON.parse(packed.stdout));
-  const root = packageIdentity.parse(
-    JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8")),
-  );
-  const packs = listings.map(({ name, version }) => `${name}@${version}`);
-  const [listing] = listings;
-  if (
-    listings.length !== 1 ||
-    listing.name !== root.name ||
-    listing.version !== root.version
-  ) {
-    throw new Error(
-      `npm pack lists ${packs.join(", ") || "no package"}, not ${root.name}@${root.version}: ${selectsAnotherPackage(packageRoot)}`,
-    );
-  }
-  return listing.files
-    .map(({ path }) => posix.normalize(toPosix(path)))
-    .filter((path) => path !== ".ph" && !path.startsWith(".ph/"))
-    .flatMap((path) => {
-      const digest = digestOf(packageRoot, path);
-      if (digest === undefined) {
-        throw new Error(`npm pack lists ${path}, which cannot be read.`);
-      }
-      return [digest];
-    })
-    .sort(byPath);
 }
 
 const approvalFile = (packageRoot: string) =>

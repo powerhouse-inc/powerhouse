@@ -11,6 +11,7 @@ import {
   type FieldKind,
   type InputField,
 } from "./input-schema.js";
+import { isRecord } from "./documents.js";
 
 // DynamicProperties allows text, static dropdowns and JSON only, so numbers
 // are text and booleans a yes/no dropdown; coerceInput restores their types.
@@ -69,10 +70,6 @@ export function inputProps(schema: ActionInputSchema): DynamicPropsValue {
   const props: Record<string, unknown> = {};
   for (const field of schema.root) props[field.name] = propFor(field, schema);
   return props as DynamicPropsValue;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 // JSON's number grammar, so "", "0x10" and "1e" are not numbers.

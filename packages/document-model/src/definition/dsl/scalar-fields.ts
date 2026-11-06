@@ -128,23 +128,39 @@ export function scalarField<
   DefaultFlag<TDefault>
 > {
   if (!isScalarDefinition(definition)) refuseScalarDefinition(definition);
-  if (hostOnlyScalars.has(definition.name)) {
-    dslDiagnostics.fail({
-      code: "PH-SCALAR-INTERNAL",
-      definition: { kind: "scalar", key: definition.name },
-      path: ["definition"],
-      message: `${definition.name} is internal to the reactor host. A document model cannot use it.`,
-      received: definition.name,
-      repair:
-        "Use ph.Unknown() for an unconstrained value, or ph.object(...) for a structured one.",
-    });
-  }
+  if (hostOnlyScalars.has(definition.name))
+    refuseHostOnlyScalar(definition.name);
   return createScalarField(
     definition.name,
     definition.schema,
     options,
     definition,
   );
+}
+
+function refuseHostOnlyScalar(name: string): never {
+  return dslDiagnostics.fail({
+    code: "PH-SCALAR-INTERNAL",
+    definition: { kind: "scalar", key: name },
+    path: ["definition"],
+    message: `${name} is internal to the reactor host. A document model cannot use it.`,
+    received: name,
+    repair:
+      "Use ph.Unknown() for an unconstrained value, or ph.object(...) for a structured one.",
+  });
+}
+
+export function refuseScalarFactory(name: string): never {
+  if (hostOnlyScalars.has(name)) refuseHostOnlyScalar(name);
+  return dslDiagnostics.fail({
+    code: "PH-SCALAR-UNKNOWN",
+    path: [name],
+    message: `ph.${name} names no catalog scalar.`,
+    expected: `a scalar factory: ${[...Object.keys(builtInScalarFactories), ...Object.keys(catalogScalarFactories).sort()].join(", ")}`,
+    received: `ph.${name}`,
+    repair:
+      "Correct the factory name, or declare a project scalar with defineScalar and use it as ph.scalar(definition).",
+  });
 }
 
 const EXPECTED_DEFINITION =

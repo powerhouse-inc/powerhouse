@@ -84,7 +84,10 @@ import {
 } from "./graphql/gateway/require-auth-middleware.js";
 import type { DriveStore } from "./graphql/gateway/drive-ownership-cache.js";
 import type { IHttpAdapter, TlsOptions } from "./graphql/gateway/types.js";
-import { GraphQLManager } from "./graphql/graphql-manager.js";
+import {
+  GraphQLManager,
+  type GraphQLManagerOptions,
+} from "./graphql/graphql-manager.js";
 import {
   CORE_PACKAGE_NAME,
   HttpRouteService,
@@ -246,6 +249,11 @@ type Options = {
   enableDocumentModelSubgraphs?: boolean;
   /** The host refreshes the supergraph itself, once its last subgraphs are in. */
   hostRefreshesSupergraph?: boolean;
+  /**
+   * @experimental What admission does with a model host validation reports a
+   * finding for: `log` (the default) serves it, `refuse` leaves it out.
+   */
+  hostValidation?: GraphQLManagerOptions["hostValidation"];
   logger?: ILogger;
   /** Receives failures in background work that is logged and skipped. */
   reportError?: ReportError;
@@ -532,6 +540,7 @@ type SetupGraphQLManagerOptions = {
   documentPermissionService?: DocumentPermissionService;
   enableDocumentModelSubgraphs?: boolean;
   hostRefreshesSupergraph?: boolean;
+  hostValidation?: GraphQLManagerOptions["hostValidation"];
   port?: number;
   reactorDriveClient?: IDriveClient;
   driveNodes?: IDriveNodeSource;
@@ -566,6 +575,7 @@ async function setupGraphQLManager({
   documentPermissionService,
   enableDocumentModelSubgraphs,
   hostRefreshesSupergraph,
+  hostValidation,
   port,
   reactorDriveClient,
   driveNodes,
@@ -596,6 +606,7 @@ async function setupGraphQLManager({
     featureFlags: {
       enableDocumentModelSubgraphs,
     },
+    hostValidation,
     port,
     authorizationService,
     reactorDriveClient,
@@ -1355,6 +1366,7 @@ async function _setupAPI(
     documentPermissionService,
     enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
     hostRefreshesSupergraph: options.hostRefreshesSupergraph,
+    hostValidation: options.hostValidation,
     port: boundPort,
     reactorDriveClient,
     driveNodes,

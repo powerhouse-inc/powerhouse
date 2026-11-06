@@ -6,15 +6,19 @@ import {
   verifyReleaseApproval,
 } from "./approval.js";
 import { publishedFiles, readReleaseApproval, revisionFiles } from "./files.js";
+import { packedDigests, packRelease, type PackedRelease } from "./pack.js";
+import type { FileDigest } from "./revision.js";
 
 /**
  * Compares the package as it is now with its release approval: the files
  * the revision reads, with the output directory and exclusions the approval
- * records, and what `npm pack` publishes. Throws when either cannot be read.
+ * records, and what `npm pack` publishes, or `published` when the caller
+ * already packed it. Throws when either cannot be read.
  */
 export function verifyRelease(
   packageRoot: string,
   read: ApprovalRead = readReleaseApproval(packageRoot),
+  published?: readonly FileDigest[],
 ): ReleaseDecision {
   if (read.kind !== "found") return decisionWithoutApproval(read);
   const { approval } = read;
@@ -24,7 +28,7 @@ export function verifyRelease(
       approval.outDir,
       ...approval.packageRevision.excluded,
     ]),
-    publishedFiles: publishedFiles(packageRoot),
+    publishedFiles: published ?? publishedFiles(packageRoot),
   });
 }
 
@@ -45,21 +49,36 @@ export function renderReleaseDecision(decision: ReleaseDecision): string {
 }
 
 /**
+ * Whether `ph publish` goes on. With `--require-approval`, `packed` is the
+ * tarball the approval was checked against: publish that file, and call its
+ * `dispose` once done.
+ */
+export type PublishCheck =
+  | { readonly proceed: false }
+  | { readonly proceed: true; readonly packed?: PackedRelease };
+
+/**
  * Checks the release approval before `ph publish` resolves a registry.
  * Without an approval file and without `required`, does nothing, as before
  * approvals existed. Otherwise a decision other than approved is a warning,
- * or with `required` a refusal. Returns whether publishing goes on.
+ * or with `required` a refusal.
  */
 export function checkApprovalBeforePublish(
   packageRoot: string,
   required: boolean,
-): boolean {
+): PublishCheck {
   const read = readReleaseApproval(packageRoot);
-  if (read.kind === "missing" && !required) return true;
+  if (read.kind === "missing" && !required) return { proceed: true };
   let text: string;
+  let packed: PackedRelease | undefined;
   let approved = false;
   try {
-    const decision = verifyRelease(packageRoot, read);
+    if (required && read.kind === "found") packed = packRelease(packageRoot);
+    const decision = verifyRelease(
+      packageRoot,
+      read,
+      packed && packedDigests(packed),
+    );
     approved = decision.decision === "approved";
     text = renderReleaseDecision(decision);
   } catch (error) {
@@ -67,16 +86,17 @@ export function checkApprovalBeforePublish(
   }
   if (approved) {
     console.log(`✔ ${text}`);
-    return true;
+    return { proceed: true, packed };
   }
+  packed?.dispose();
   if (required) {
     console.error(
       `✘ ${text}\nph publish --require-approval publishes only an approved package. Run ph build --release, then publish again.`,
     );
-    return false;
+    return { proceed: false };
   }
   console.warn(
     `⚠ ${text}\nPublishing anyway. Run ph build --release to approve this package, or pass --require-approval to stop here instead.`,
   );
-  return true;
+  return { proceed: true };
 }

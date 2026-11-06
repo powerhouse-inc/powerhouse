@@ -498,7 +498,7 @@ function astEquals(
     : null;
 }
 
-function definitionEquals(field: {
+export function definitionEquals(field: {
   readonly directives?: readonly DirectiveUseDefinition[];
 }): string | null {
   const value = field.directives

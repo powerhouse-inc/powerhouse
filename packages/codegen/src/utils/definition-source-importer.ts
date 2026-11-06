@@ -1,3 +1,7 @@
+import {
+  COMMONJS_DEFINITION_SOURCE,
+  COMMONJS_DEFINITION_SOURCE_REPAIR,
+} from "@powerhousedao/shared/clis/definition-sources";
 import type { Sha256Digest } from "@powerhousedao/shared/document-model";
 import type { TypeScriptSourceImportInterface } from "document-model/tooling";
 import { createHash, randomUUID } from "node:crypto";
@@ -107,6 +111,11 @@ async function importPhysicalModule(
   packageRoot: string,
   specifier: `./${string}`,
 ) {
+  if (COMMONJS_DEFINITION_SOURCE.test(specifier)) {
+    throw new Error(
+      `${specifier} is a CommonJS module, and Vite evaluates definition sources as ES modules. ${COMMONJS_DEFINITION_SOURCE_REPAIR}`,
+    );
+  }
   const file = realpathSync.native(
     resolve(packageRoot, ...specifier.slice(2).split("/")),
   );

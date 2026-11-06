@@ -1,4 +1,5 @@
 import { ts, tsx } from "@tmpl/core";
+import { documentHeaderInfo } from "../document-editor/header-info.js";
 
 export type CodeFirstEditorTemplateArgs = {
   readonly exportName: string;
@@ -64,6 +65,8 @@ export default function Editor({
           </p>
         )}
         <hr />
+
+        ${documentHeaderInfo}
 
         <div className="mt-6">
           <h3 className="text-base">Document State</h3>

@@ -12,6 +12,7 @@ describe("scalar subpath", () => {
       "documentModelScalars",
       "getCatalogScalar",
       "isScalarDefinition",
+      "modelPackageScalars",
       "scalarCatalog",
       "scalarDefinitionVersion",
       "storedScalarDefinition",

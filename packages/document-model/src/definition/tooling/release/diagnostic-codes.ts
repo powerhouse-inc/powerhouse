@@ -15,6 +15,12 @@ export const releaseDiagnostics = defineDiagnosticCatalog(
       meaning:
         "A model declares a package scalar whose stored metadata differs from the binding the package registers",
     },
+    "PH-REL-HOST-SCALAR-UNCOMPARABLE": {
+      severity: "error",
+      phase: "package",
+      meaning:
+        "A model declares a package scalar whose validator and the registered binding's differ in checks JSON Schema cannot express, so they could not be compared",
+    },
     "PH-REL-HOST-DEFINITION-INVALID": {
       severity: "error",
       phase: "definition",

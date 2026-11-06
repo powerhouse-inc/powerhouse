@@ -11,9 +11,9 @@ import { standardBuildSteps } from "../src/services/package-build/steps/standard
 import type { BuildArgs } from "../src/types.js";
 import {
   createStagedProject,
-  previousOutput,
   scratchLeft,
   type StagedProject,
+  treeDigest,
 } from "./staged-build-project.js";
 
 const args = {
@@ -54,13 +54,19 @@ it.skipIf(process.platform === "win32")(
   async () => {
     made = createStagedProject();
     process.chdir(made.root);
+    made.write(
+      "tsconfig.json",
+      made.read("tsconfig.json").replace('"./dist/types"', '"./lib"'),
+    );
+    const compiled = () =>
+      treeDigest(made!.root, ["dist", "lib", "tsconfig.tsbuildinfo"]);
     // The first build loads rolldown, whose signal-exit listens for signals.
     await buildPackage(args);
     const emitter = (globalThis as Record<symbol, unknown>)[
       Symbol.for("signal-exit emitter")
     ] as SignalExitEmitter;
     expect(emitter.count).toBe(1);
-    const before = previousOutput(made);
+    const before = compiled();
     const late: StandardBuildStep = {
       id: "late",
       after: ["typecheck"],
@@ -68,7 +74,7 @@ it.skipIf(process.platform === "win32")(
         process.kill(process.pid, "SIGTERM");
         await sleep(100);
         // tsc, or a step like it, writing a compiler output after the signal.
-        made!.write("dist/types/index.d.ts", "export declare const late: 1;\n");
+        made!.write("lib/index.d.ts", "export declare const late: 1;\n");
       },
     };
     const keepRunning = () => true;
@@ -82,7 +88,7 @@ it.skipIf(process.platform === "win32")(
       emitter.removeListener("exit", keepRunning);
     }
 
-    expect(previousOutput(made)).toEqual(before);
+    expect(compiled()).toEqual(before);
     expect(scratchLeft(made)).toEqual([]);
   },
   120_000,

@@ -2,6 +2,7 @@
   "@powerhousedao/analytics-engine-core": 1,
   "@powerhousedao/analytics-engine-graphql": 1,
   "@powerhousedao/analytics-engine-knex": 0,
+  "@powerhousedao/builder-tools": 6,
   "@powerhousedao/codegen": 2,
   "@powerhousedao/connect": 3,
   "@powerhousedao/connect-core": 1,

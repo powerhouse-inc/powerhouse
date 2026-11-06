@@ -9,6 +9,7 @@ export { defineScalar } from "./src/scalars/define-scalar.js";
  * it with the metadata a definition stores for that scalar.
  */
 export { storedScalarDefinition } from "./src/scalars/stored-definition.js";
+export { modelPackageScalars } from "./src/scalars/model-scalars.js";
 export {
   isScalarDefinition,
   scalarDefinitionVersion,

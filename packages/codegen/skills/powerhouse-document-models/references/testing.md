@@ -6,7 +6,7 @@
 
 ## Coverage rule
 
-- Run `npm run test:coverage` after any reducer change. Coverage counts `document-models/**/src/reducers/**`.
+- Run `npm run test:coverage` after any reducer change. Coverage counts schema-first reducers in `document-models/**/src/reducers/**` and code-first modules in `document-models/**/v*/modules/**`.
 - Reducers stay at 95% or more on lines, branches, functions and statements. Below that, add tests in `document-models/<name>/v<n>/tests/` until it passes. Don't lower the threshold or exclude files.
 - Cover the happy path and every error defined with `ADD_OPERATION_ERROR`. Each error is a branch.
 - Import the reducer, `utils`, action creators and input schemas from `document-models/<name>/v<n>`, as the generated tests do.

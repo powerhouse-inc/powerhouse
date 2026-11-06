@@ -1,12 +1,13 @@
 import type {
   DocumentModelDefinition,
   DocumentModelModule,
-  DocumentModelSpecificationDefinition,
 } from "@powerhousedao/shared/document-model";
 import {
   childLogger,
   inspectDocumentModelDefinition,
+  operationsByActionType as modelOperationsByActionType,
   type DocumentModelDefinitionInspection,
+  type StructuredOperation,
 } from "document-model";
 
 const logger = childLogger(["reactor-mcp", "model-operations"]);
@@ -14,11 +15,6 @@ const logger = childLogger(["reactor-mcp", "model-operations"]);
 type ModelSource = {
   readonly documentModel: Pick<DocumentModelModule["documentModel"], "global">;
   readonly definition?: unknown;
-};
-
-export type StructuredOperation = {
-  readonly storedName: string;
-  readonly creatorKey: string;
 };
 
 const logged = new Set<string>();
@@ -48,15 +44,6 @@ export function structuredDefinition(
   return inspection.kind === "structured" ? inspection.definition : null;
 }
 
-// An inspected specification is a snapshot nothing mutates, so its index is
-// built once.
-const indexes = new WeakMap<
-  DocumentModelSpecificationDefinition,
-  ReadonlyMap<string, StructuredOperation>
->();
-
-const NONE: ReadonlyMap<string, StructuredOperation> = new Map();
-
 /**
  * The operations of a model authored in code, keyed by action type; empty for
  * a model served from its stored specification. Callers consult it only for a
@@ -66,23 +53,6 @@ const NONE: ReadonlyMap<string, StructuredOperation> = new Map();
 export function operationsByActionType(
   module: ModelSource,
 ): ReadonlyMap<string, StructuredOperation> {
-  const inspection = inspect(module);
-  if (inspection.kind !== "structured") return NONE;
-  const { specification } = inspection;
-  let byActionType = indexes.get(specification);
-  if (byActionType === undefined) {
-    byActionType = new Map(
-      specification.modules
-        .flatMap((m) => m.operations)
-        .map((operation) => [
-          operation.actionType,
-          {
-            storedName: operation.name ?? operation.actionType,
-            creatorKey: operation.creatorKey,
-          },
-        ]),
-    );
-    indexes.set(specification, byActionType);
-  }
-  return byActionType;
+  inspect(module);
+  return modelOperationsByActionType(module);
 }

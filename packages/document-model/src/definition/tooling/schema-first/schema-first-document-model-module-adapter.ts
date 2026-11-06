@@ -19,6 +19,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { scalarCatalog } from "../../../scalars/catalog.js";
 import type { ScalarDefinition } from "../../../scalars/types.js";
+import { serializeAndValidateInitialValue } from "../../compiler/initial-value.js";
 import { scalarReferences } from "../../compiler/stored-scalar.js";
 import {
   deriveDocumentModelNames,
@@ -48,6 +49,7 @@ import {
   structuredTypes,
 } from "../graphql/ast-to-structured.js";
 import { parseSchema } from "../graphql/parse-schema.js";
+import { storedStateDescriptor } from "./state-descriptor.js";
 
 type Collector = DefinitionDiagnosticCollector<ToolingDiagnosticCode>;
 
@@ -220,20 +222,57 @@ function normalizeOperation(
   };
 }
 
+function acceptedByRoot(
+  collector: Collector,
+  initialValue: JsonValue,
+  root: string,
+  types: {
+    readonly byName: ReadonlyMap<string, NamedGraphQLTypeDefinition>;
+    readonly scalars: readonly ScalarDefinition[];
+  },
+  path: DefinitionPath,
+): boolean {
+  const descriptor = storedStateDescriptor(types.byName, root, types.scalars);
+  if (descriptor === undefined) return true;
+  const checked = serializeAndValidateInitialValue(descriptor, initialValue);
+  if (checked.ok) return true;
+  collector.add({
+    code: "PH-DM-INITIAL-VALUE-INVALID",
+    path,
+    message: `The ${root} schema rejects this initial value.`,
+    expected: `a value ${root} accepts`,
+    received: checked.message,
+    repair:
+      "Correct the stored initial value so the declared state schema accepts it.",
+  });
+  return false;
+}
+
 function rootState(
   collector: Collector,
   stored: DocumentSpecification["state"]["global"],
   root: string | null,
   path: DefinitionPath,
   scope: "global" | "local",
+  types: {
+    readonly byName: ReadonlyMap<string, NamedGraphQLTypeDefinition>;
+    readonly scalars: readonly ScalarDefinition[];
+  },
 ): StateDefinition | undefined {
+  const initialValuePath = [...path, "initialValue"];
   const initialValue = parseInitialValue(
     collector,
     stored.initialValue,
-    [...path, "initialValue"],
+    initialValuePath,
     scope === "local",
   );
-  if (initialValue === undefined) return undefined;
+  if (
+    initialValue === undefined ||
+    (root !== null &&
+      !acceptedByRoot(collector, initialValue, root, types, initialValuePath))
+  ) {
+    return undefined;
+  }
   const materialized = {
     initialValue: stored.initialValue,
     examples: stored.examples.map(({ id, value }) => ({ id, value })),
@@ -432,6 +471,7 @@ function normalizeSpecification(
     roots.global,
     [...path, "state", "global"],
     "global",
+    { byName: typesByName, scalars },
   );
   const local = rootState(
     collector,
@@ -439,6 +479,7 @@ function normalizeSpecification(
     hasLocalRoot ? roots.local : null,
     [...path, "state", "local"],
     "local",
+    { byName: typesByName, scalars },
   );
   if (global === undefined || global.root === null || local === undefined) {
     return undefined;

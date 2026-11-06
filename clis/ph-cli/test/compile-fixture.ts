@@ -11,7 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { z } from "zod";
-import { canonicalPath } from "../src/services/definitions/paths.js";
+import { realPathThroughExistingParent } from "@powerhousedao/shared/clis/real-paths";
 
 const workspaceModules = resolve(import.meta.dirname, "../../../node_modules");
 // 7.0.2 is the workspace's own TypeScript; 5.9.3 reaches the pnpm store only
@@ -72,7 +72,9 @@ export function compileFixture(
       "The compile fixture cannot run on this platform; gate the test on fixtureRuns.",
     );
   }
-  const parent = canonicalPath(mkdtempSync(join(tmpdir(), "ph-compile-plan-")));
+  const parent = realPathThroughExistingParent(
+    mkdtempSync(join(tmpdir(), "ph-compile-plan-")),
+  );
   disposals.push(() => rmSync(parent, { recursive: true, force: true }));
   const root = join(parent, options.name ?? "package");
   const shared = join(parent, "shared");

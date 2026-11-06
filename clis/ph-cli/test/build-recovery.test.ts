@@ -8,6 +8,7 @@ import {
   readdirSync,
   realpathSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -16,11 +17,16 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   fromJournalPath,
   type JournalState,
+  readJournal,
+  type RunJournal,
   toJournalPath,
   type UndoStep,
   writeJournal,
 } from "../src/services/package-build/staging/journal.js";
-import { replayRun } from "../src/services/package-build/staging/recovery.js";
+import {
+  outputDigest,
+  replayRun,
+} from "../src/services/package-build/staging/recovery.js";
 import { treeDigest } from "./staged-build-project.js";
 
 const roots: string[] = [];
@@ -57,6 +63,7 @@ function deadRun(
   state: JournalState,
   disk: Readonly<Record<string, string>>,
   undo: UndoStep | null = null,
+  recorded: Partial<RunJournal> = {},
 ): { root: string; runDir: string } {
   const root = join(
     realpathSync.native(mkdtempSync(join(tmpdir(), "ph recovery "))),
@@ -87,6 +94,7 @@ function deadRun(
       },
       { path: "dist/new-dir", kind: "directory", copy: null, created: null },
     ],
+    ...recorded,
   });
   return { root, runDir };
 }
@@ -261,6 +269,241 @@ describe("replayRun", () => {
       }),
     );
   });
+
+  it("finishes an installing run, then puts the build info tsc wrote for its stage in place", () => {
+    const { root } = deadRun(
+      "installing",
+      {
+        ...prefixed(".dist.ph-old-dead", OLD),
+        ...prefixed(".dist.ph-stage-dead", NEW),
+        ".tsconfig.tsbuildinfo.ph-stage-dead": "build info for the stage\n",
+      },
+      null,
+      {
+        compiler: [],
+        pendingBuildInfo: {
+          path: ".tsconfig.tsbuildinfo.ph-stage-dead",
+          target: "tsconfig.tsbuildinfo",
+        },
+      },
+    );
+
+    expect(replayRun(root, join(root, ".ph/build/runs/dead"))).toBe(
+      "completed",
+    );
+
+    expect(tree(root)).toEqual(
+      expected({
+        ...prefixed("dist", NEW),
+        "tsconfig.tsbuildinfo": "build info for the stage\n",
+        ".ph/build/runs/": "",
+      }),
+    );
+  });
+
+  it("undoes a building run that sent tsc to its stage: what it wrote for tsc goes, the build info stays", () => {
+    const { root } = deadRun(
+      "building",
+      {
+        ...prefixed("dist", OLD),
+        ...prefixed(".dist.ph-stage-dead", NEW),
+        ".tsconfig.ph-stage-dead.json": "{}\n",
+        ".tsconfig.tsbuildinfo.ph-stage-dead": "build info for the stage\n",
+      },
+      null,
+      {
+        compiler: [],
+        generatedConfig: ".tsconfig.ph-stage-dead.json",
+        pendingBuildInfo: {
+          path: ".tsconfig.tsbuildinfo.ph-stage-dead",
+          target: "tsconfig.tsbuildinfo",
+        },
+      },
+    );
+
+    expect(replayRun(root, join(root, ".ph/build/runs/dead"))).toBe(
+      "rolled-back",
+    );
+
+    expect(tree(root)).toEqual(
+      expected({
+        ...prefixed("dist", OLD),
+        "tsconfig.tsbuildinfo": "build info tsc wrote\n",
+        ".ph/build/runs/": "",
+      }),
+    );
+  });
+
+  it("sees a bundle another build adds beside declarations tsc wrote into a directory it created", () => {
+    const root = realpathSync.native(
+      mkdtempSync(join(tmpdir(), "ph-recovery-sibling-")),
+    );
+    roots.push(root);
+    const output = join(root, "dist");
+    const compiler = [
+      {
+        path: "dist/node/types",
+        kind: "directory",
+        copy: null,
+        created: "dist",
+      },
+    ] as const;
+    const before = outputDigest(root, output, compiler);
+
+    write(root, { "dist/node/types/index.d.ts": "new types\n" });
+    expect(outputDigest(root, output, compiler)).toBe(before);
+
+    write(root, { "dist/node/index.mjs": "later bundle\n" });
+    expect(outputDigest(root, output, compiler)).not.toBe(before);
+  });
+
+  it("keeps the compiler outputs of a build that rewrote the output after the run saved them", () => {
+    const { root, runDir } = deadRun("building", {
+      ...prefixed("dist", OLD),
+      ...prefixed(".dist.ph-stage-dead", NEW),
+    });
+    const journal = readJournal(runDir)!;
+    writeJournal(runDir, {
+      ...journal,
+      outputDigest: outputDigest(root, join(root, "dist"), journal.compiler!),
+    });
+    rmSync(join(root, "dist"), { recursive: true });
+    write(root, {
+      ...prefixed("dist", NEW),
+      "tsconfig.tsbuildinfo": "build info of the later build\n",
+    });
+
+    expect(replayRun(root, runDir)).toBe("superseded");
+
+    expect(tree(root)).toEqual(
+      expected({
+        ...prefixed("dist", NEW),
+        "tsconfig.tsbuildinfo": "build info of the later build\n",
+        ".ph/build/runs/": "",
+      }),
+    );
+  });
+
+  it.each([
+    [
+      "keeps the compiler snapshot of an output only touched since",
+      "rolled-back",
+      {
+        "dist/index.js": "old index\n",
+        "dist/types/index.d.ts": "old types\n",
+      },
+    ],
+    [
+      "drops it for an output rewritten since with the same size and times",
+      "superseded",
+      {
+        "dist/index.js": "new index\n",
+        "dist/types/index.d.ts": "new types\n",
+      },
+    ],
+  ] as const)("%s", (_, replayed, files) => {
+    const { root, runDir } = deadRun(
+      "building",
+      {
+        "dist/index.js": "old index\n",
+        "dist/notes.txt": "notes\n",
+        "dist/types/index.d.ts": "new types\n",
+        ".ph/build/runs/dead/compiler/1/index.d.ts": "old types\n",
+      },
+      null,
+      {
+        compiler: [
+          {
+            path: "tsconfig.tsbuildinfo",
+            kind: "build-info",
+            copy: "compiler/0",
+            created: null,
+          },
+          {
+            path: "dist/types",
+            kind: "directory",
+            copy: "compiler/1",
+            created: null,
+          },
+        ],
+      },
+    );
+    const bundle = join(root, "dist", "index.js");
+    utimesSync(bundle, 1_700_000_000, 1_700_000_000);
+    const journal = readJournal(runDir)!;
+    writeJournal(runDir, {
+      ...journal,
+      outputDigest: outputDigest(root, join(root, "dist"), journal.compiler!),
+    });
+    if (replayed === "rolled-back") {
+      utimesSync(join(root, "dist", "notes.txt"), 1_800_000_000, 1_800_000_000);
+    } else {
+      writeFileSync(bundle, "new index\n");
+      utimesSync(bundle, 1_700_000_000, 1_700_000_000);
+    }
+
+    expect(replayRun(root, runDir)).toBe(replayed);
+
+    expect(tree(root)).toEqual(
+      expected({
+        ...files,
+        "dist/notes.txt": "notes\n",
+        "tsconfig.tsbuildinfo":
+          replayed === "rolled-back"
+            ? "build info before tsc\n"
+            : "build info tsc wrote\n",
+        ".ph/build/runs/": "",
+      }),
+    );
+  });
+
+  it.each([
+    ["building", null, []],
+    ["rolling-back", "stage", ["dist/index.d.ts"]],
+  ] as const)(
+    "undoes a %s run whose tsc created the output, also when it is repeated after a cut",
+    (state, undo, alreadyUndone) => {
+      const compiler = [
+        {
+          path: "tsconfig.tsbuildinfo",
+          kind: "build-info" as const,
+          copy: "compiler/0",
+          created: null,
+        },
+        ...["dist/index.d.ts", "dist/models/thing.d.ts"].map((path) => ({
+          path,
+          kind: "file" as const,
+          copy: null,
+          created: "dist",
+        })),
+      ];
+      const { root, runDir } = deadRun(
+        state,
+        prefixed(".dist.ph-stage-dead", NEW),
+        undo,
+        { compiler },
+      );
+      const journal = readJournal(runDir)!;
+      writeJournal(runDir, {
+        ...journal,
+        outputDigest: outputDigest(root, join(root, "dist"), compiler),
+      });
+      write(root, {
+        "dist/index.d.ts": "new types\n",
+        "dist/models/thing.d.ts": "new types\n",
+      });
+      for (const path of alreadyUndone) rmSync(join(root, path));
+
+      expect(replayRun(root, runDir)).toBe("rolled-back");
+
+      expect(tree(root)).toEqual(
+        expected({
+          "tsconfig.tsbuildinfo": "build info before tsc\n",
+          ".ph/build/runs/": "",
+        }),
+      );
+    },
+  );
 
   it("only removes a run directory whose journal cannot be read", () => {
     const { root, runDir } = deadRun("building", {

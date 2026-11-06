@@ -117,6 +117,24 @@ function hostFindingDiagnostic(
         ...(related.length > 0 && { related }),
       });
     }
+    case "scalar-uncomparable": {
+      const { source, path, related } = attribution(
+        sites,
+        finding,
+        `This version also declares ${finding.scalar}.`,
+      );
+      return releaseDiagnostics.create({
+        code: "PH-REL-HOST-SCALAR-UNCOMPARABLE",
+        ...(source !== undefined && { source }),
+        definition: { kind: "scalar", key: finding.scalar },
+        path,
+        message: `${documentType} declares package scalar ${finding.scalar} with a validator that differs from the one package ${finding.packageName} registers in checks JSON Schema cannot express (refinements, transforms, custom checks), so the validators could not be compared, and a host serves the registered binding.`,
+        expected: finding.declared,
+        received: finding.registered,
+        repair: `Use the ${finding.scalar} binding that scalars/index.ts exports in the model, so the model and the package declare one ${finding.scalar}.`,
+        ...(related.length > 0 && { related }),
+      });
+    }
     case "definition-invalid":
     case "definition-mismatch": {
       const { source, path, related } = attribution(

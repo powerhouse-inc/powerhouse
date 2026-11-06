@@ -1,18 +1,26 @@
-import { isAbsolute } from "node:path";
+import { existsSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
 import { getVersion } from "../../../get-version.js";
 import {
+  listed,
   PH_CLI_BINDING,
   RELEASE_APPROVAL_PATH,
 } from "../../release/approval.js";
+import { checkPackedConsumer } from "../../release/consumer.js";
 import {
   packagePath,
-  publishedFiles,
   revisionFiles,
   writeReleaseApproval,
 } from "../../release/files.js";
 import { changedWhileBuilt, planApproval } from "../../release/issuance.js";
+import {
+  packedDigests,
+  packRelease,
+  type PackedRelease,
+} from "../../release/pack.js";
 import { type FileDigest, packageRevision } from "../../release/revision.js";
 import { BuildRefusal } from "../pipeline/steps.js";
+import type { BuildSession } from "../staging/session.js";
 import type { BuildFindings, StandardBuildStep } from "./context.js";
 
 const under = (path: string, directory: string) =>
@@ -48,6 +56,20 @@ export const releaseStartStep: StandardBuildStep = {
   },
 };
 
+/** Exports `ph init` declares whose entry the build skips when its source is absent. */
+const OPTIONAL_EXPORTS: Readonly<Record<string, string>> = {
+  "./scalars": "scalars/index.ts",
+  "./pieces": "pieces/index.ts",
+};
+
+const unbuiltExports = (projectRoot: string, findings: BuildFindings) =>
+  new Set([
+    ...Object.entries(OPTIONAL_EXPORTS)
+      .filter(([, source]) => !existsSync(join(projectRoot, source)))
+      .map(([subpath]) => subpath),
+    ...(findings.offersRoutes ? [] : ["./connect-routes"]),
+  ]);
+
 const notWritten = (why: string) =>
   new BuildRefusal(
     `✘ No release approval was written: ${why}. The new output is in place; build again with --release to approve it.`,
@@ -56,28 +78,30 @@ const notWritten = (why: string) =>
 /**
  * With `--release`, once the output is replaced: records what the release
  * check approved and what `npm pack` publishes from the new output, unless
- * tsc's errors were accepted or the package changed while it was built.
+ * tsc's errors were accepted, the package changed while it was built, or the
+ * packed tarball fails to install and import in a scratch consumer.
  */
 export const releaseApprovalStep: StandardBuildStep = {
   id: "release-approval",
   when: "committed",
-  run: ({ args, projectRoot, outDir, session, findings }) => {
+  run: async ({ args, projectRoot, outDir, session, findings }) => {
     if (args.release) {
-      recordApproval(
+      await recordApproval(
         projectRoot,
         outputDirectories(projectRoot, outDir, session.output),
         findings,
+        session,
       );
     }
-    return Promise.resolve();
   },
 };
 
-function recordApproval(
+async function recordApproval(
   projectRoot: string,
   outputs: readonly [string, ...string[]],
   findings: BuildFindings,
-): void {
+  session: BuildSession,
+): Promise<void> {
   const plan = planApproval({
     typesOk: findings.typesOk,
     release: findings.release,
@@ -93,11 +117,34 @@ function recordApproval(
   const files = revisionFiles(projectRoot, [output, ...excluded]);
   const changed = changedWhileBuilt(plan, files);
   if (changed !== undefined) throw notWritten(changed);
-  let published: FileDigest[];
+  let packed: PackedRelease;
   try {
-    published = publishedFiles(projectRoot);
+    packed = packRelease(projectRoot);
   } catch (error) {
     throw notWritten(error instanceof Error ? error.message : String(error));
+  }
+  let published: FileDigest[];
+  const stop = new AbortController();
+  const unwatch = session.onCancel(() => {
+    stop.abort();
+    packed.dispose();
+  });
+  try {
+    const failures = await checkPackedConsumer(
+      projectRoot,
+      packed,
+      unbuiltExports(projectRoot, findings),
+      stop.signal,
+    );
+    if (failures.length > 0) {
+      throw notWritten(
+        `the packed package does not install and import in a scratch consumer: ${listed(failures)}`,
+      );
+    }
+    published = packedDigests(packed);
+  } finally {
+    unwatch();
+    packed.dispose();
   }
   const phCliVersion = getVersion();
   writeReleaseApproval(projectRoot, {

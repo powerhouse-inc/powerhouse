@@ -1,7 +1,17 @@
-import { lstatSync, mkdirSync } from "node:fs";
-import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
-import { canonicalPath } from "../../definitions/paths.js";
 import {
+  lstatSync,
+  mkdirSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, dirname, extname, join } from "node:path";
+import {
+  pathWithin,
+  realPathThroughExistingParent,
+} from "@powerhousedao/shared/clis/real-paths";
+import {
+  CannotStage,
   cloneTree,
   creating,
   exists,
@@ -13,9 +23,10 @@ import {
   renamePatiently,
   unstageableEntryIn,
 } from "./files.js";
-import type { CompilerOutput } from "./inventory.js";
+import { type CompilerRedirect, redirectRootProject } from "./compiler.js";
+import type { CompilerOutput, ShownConfig } from "./inventory.js";
+import { BUILD_DIRECTORY } from "../../build-control.js";
 import {
-  BUILD_DIRECTORY,
   type CompilerSnapshot,
   fromJournalPath,
   type JournalState,
@@ -25,17 +36,14 @@ import {
   writeJournal,
 } from "./journal.js";
 import type { BuildLock } from "./lock.js";
-import { isScratchOf, rollBack, type RunPaths, runPaths } from "./recovery.js";
-
-function within(root: string, path: string): string | undefined {
-  const rel = relative(root, path);
-  return rel === "" ||
-    rel === ".." ||
-    rel.startsWith(`..${sep}`) ||
-    isAbsolute(rel)
-    ? undefined
-    : rel;
-}
+import {
+  installBuildInfo,
+  isScratchOf,
+  outputDigest,
+  rollBack,
+  type RunPaths,
+  runPaths,
+} from "./recovery.js";
 
 const isUnreadable = (error: unknown) => {
   const code = (error as { code?: unknown } | null)?.code;
@@ -43,15 +51,14 @@ const isUnreadable = (error: unknown) => {
 };
 
 /** `path` is `dir` or holds it. */
-const isOrHolds = (path: string, dir: string) =>
-  path === dir || within(path, dir) !== undefined;
+const isOrHolds = (path: string, dir: string) => pathWithin(path, dir) !== null;
 
 /** The outermost directory of `path`, inside the package, that does not exist. */
 function outermostMissing(packageRoot: string, path: string): string {
   let missing = path;
   for (
     let parent = dirname(path);
-    within(packageRoot, parent) !== undefined && !exists(parent);
+    pathWithin(packageRoot, parent) && !exists(parent);
     parent = dirname(parent)
   ) {
     missing = parent;
@@ -63,6 +70,15 @@ function outermostMissing(packageRoot: string, path: string): string {
 export const shownPath = (packageRoot: string, path: string) =>
   toJournalPath(packageRoot, path) || "the package root";
 
+export const scratchBeside = (path: string, kind: string, runId: string) =>
+  join(dirname(path), `.${basename(path)}.ph-${kind}-${runId}`);
+
+export type CompilerRun = {
+  readonly configFile: string;
+  readonly config: ShownConfig;
+  readonly outputs: readonly CompilerOutput[];
+};
+
 /** One `ph build` of one package, as the steps and the step runner see it. */
 export type BuildSession = {
   /** The output directory's real path, for comparing it with other paths. */
@@ -71,8 +87,11 @@ export type BuildSession = {
   readonly writesPackageDist: boolean;
   /** The directory every output write targets. */
   stage(): string;
-  /** Call before tsc runs, with what it is about to rewrite. */
-  protectCompilerOutputs(outputs: readonly CompilerOutput[]): void;
+  /**
+   * Call before tsc runs, with what it is about to write. Returns the
+   * generated config tsc builds instead when it can write into the stage.
+   */
+  prepareCompiler(compiler: CompilerRun): Promise<string | undefined>;
   /** Call once tsc has written, whatever it reported, before any bundle step. */
   compilerOutputsWritten(): void;
   commit(): void;
@@ -120,6 +139,7 @@ export class StagedBuildSession implements BuildSession {
   private seeded = false;
   private compilerWritten = false;
   private restored = false;
+  private redirected: readonly string[] = [];
   private readonly cleanedEntries: readonly string[];
   private readonly linkCleanedEntries: boolean;
 
@@ -167,8 +187,7 @@ export class StagedBuildSession implements BuildSession {
     const { packageRoot, logical, runId } = options;
     const runDir = join(packageRoot, RUNS_DIRECTORY, runId);
     try {
-      const beside = (kind: string) =>
-        join(dirname(logical), `.${basename(logical)}.ph-${kind}-${runId}`);
+      const beside = (kind: string) => scratchBeside(logical, kind, runId);
       const journal: RunJournal = {
         format: 1,
         runId,
@@ -200,7 +219,18 @@ export class StagedBuildSession implements BuildSession {
     }
   }
 
-  private record(changes: Partial<Pick<RunJournal, "state" | "compiler">>) {
+  private record(
+    changes: Partial<
+      Pick<
+        RunJournal,
+        | "state"
+        | "compiler"
+        | "generatedConfig"
+        | "pendingBuildInfo"
+        | "outputDigest"
+      >
+    >,
+  ) {
     this.journal = { ...this.journal, ...changes };
     writeJournal(this.runDir, this.journal);
   }
@@ -218,8 +248,11 @@ export class StagedBuildSession implements BuildSession {
   private compilerOutputsInOutput(): string[] {
     // Compared by real path: tsc's outputs are recorded that way.
     return (this.journal.compiler ?? []).flatMap(({ path }) => {
-      const rel = within(this.output, fromJournalPath(this.packageRoot, path));
-      return rel === undefined ? [] : [rel];
+      const rel = pathWithin(
+        this.output,
+        fromJournalPath(this.packageRoot, path),
+      );
+      return rel ? [rel] : [];
     });
   }
 
@@ -242,8 +275,15 @@ export class StagedBuildSession implements BuildSession {
           : this.compilerOutputsInOutput().map((rel) => join(output, rel)),
       );
       const keep = (source: string) => !skipped.has(source);
+      // tsc rewrites files in place, so what it writes into is copied.
       const linked = (this.linkCleanedEntries ? this.cleanedEntries : [])
-        .map((dir) => join(output, dir))
+        .filter((entry) => {
+          const real = join(this.output, entry);
+          return !this.redirected.some(
+            (path) => isOrHolds(real, path) || isOrHolds(path, real),
+          );
+        })
+        .map((entry) => join(output, entry))
         .filter(
           (dir) =>
             keep(dir) &&
@@ -264,6 +304,90 @@ export class StagedBuildSession implements BuildSession {
     return stage;
   }
 
+  async prepareCompiler(compiler: CompilerRun): Promise<string | undefined> {
+    this.assertOpen();
+    const redirect = redirectRootProject(compiler.config, {
+      configFile: compiler.configFile,
+      packageRoot: this.packageRoot,
+      output: this.output,
+      stage: this.paths.stage,
+      pending: (target) => scratchBeside(target, "stage", this.runId),
+    });
+    let config: string | undefined;
+    let staged: readonly string[] = [];
+    if (redirect) {
+      config = await this.writeCompilerConfig(compiler.configFile, redirect);
+      if (config) staged = redirect.staged;
+    }
+    const real = (path: string) => realPathThroughExistingParent(path);
+    this.protectCompilerOutputs(
+      compiler.outputs.filter(
+        ({ path }) => !staged.some((dir) => isOrHolds(dir, real(path))),
+      ),
+    );
+    if (!config) return undefined;
+    this.redirected = staged;
+    this.stage();
+    return config;
+  }
+
+  /**
+   * Writes the config that sends the root project's outputs into the stage,
+   * beside the package's so `${configDir}` and its relative paths mean the
+   * same, with the package config's modification time so tsc finds the
+   * project up to date when it would. The pending build info starts as a
+   * copy of the real one. Undefined when the package does not let the run
+   * write them: tsc then writes in place.
+   */
+  private async writeCompilerConfig(
+    configFile: string,
+    redirect: CompilerRedirect,
+  ): Promise<string | undefined> {
+    const generated = join(
+      dirname(configFile),
+      `.${basename(configFile, extname(configFile))}.ph-stage-${this.runId}.json`,
+    );
+    const pending = redirect.pendingBuildInfo;
+    const recorded = (path: string) => toJournalPath(this.packageRoot, path);
+    this.record({
+      generatedConfig: recorded(generated),
+      ...(pending && {
+        pendingBuildInfo: {
+          path: recorded(pending.path),
+          target: recorded(pending.target),
+        },
+      }),
+    });
+    try {
+      await creating(shownPath(this.packageRoot, dirname(configFile)), () => {
+        writeFileSync(
+          generated,
+          `${JSON.stringify(
+            {
+              extends: `./${basename(configFile)}`,
+              compilerOptions: redirect.compilerOptions,
+              ...(redirect.exclude && { exclude: redirect.exclude }),
+            },
+            null,
+            2,
+          )}\n`,
+        );
+        const { atime, mtime } = statSync(configFile);
+        utimesSync(generated, atime, mtime);
+        if (pending && exists(pending.target)) {
+          cloneTree(pending.target, pending.path);
+        }
+      });
+      return generated;
+    } catch (error) {
+      if (!(error instanceof CannotStage)) throw error;
+      removeTree(generated);
+      if (pending) removeTree(pending.path);
+      this.record({ generatedConfig: undefined, pendingBuildInfo: undefined });
+      return undefined;
+    }
+  }
+
   /**
    * Copies what tsc is about to rewrite into the run, or notes it absent, so
    * a build that does not finish puts it back. Call before tsc runs. An
@@ -274,10 +398,8 @@ export class StagedBuildSession implements BuildSession {
    * owner-writable, so the run can always be removed; the journal keeps
    * their modes for a restore.
    */
-  protectCompilerOutputs(outputs: readonly CompilerOutput[]): void {
-    this.assertOpen();
-    const real = (path: string) =>
-      canonicalPath(path, { resolveMissingLinks: true });
+  private protectCompilerOutputs(outputs: readonly CompilerOutput[]): void {
+    const real = (path: string) => realPathThroughExistingParent(path);
     const control = [
       real(join(this.packageRoot, BUILD_DIRECTORY)),
       real(this.runDir),
@@ -317,7 +439,14 @@ export class StagedBuildSession implements BuildSession {
         snapshots.push({ path: recorded, kind, copy: null, created });
       }
     }
-    this.record({ compiler: snapshots });
+    const digest =
+      snapshots.length > 0
+        ? outputDigest(this.packageRoot, this.paths.output, snapshots)
+        : undefined;
+    this.record({
+      compiler: snapshots,
+      ...(digest !== undefined && { outputDigest: digest }),
+    });
   }
 
   /**
@@ -328,6 +457,8 @@ export class StagedBuildSession implements BuildSession {
   compilerOutputsWritten(): void {
     this.assertOpen();
     this.compilerWritten = true;
+    const generated = this.journal.generatedConfig;
+    if (generated) removeTree(fromJournalPath(this.packageRoot, generated));
     if (this.seeded) this.carryOverCompilerOutputs(this.paths.stage);
   }
 
@@ -387,6 +518,7 @@ export class StagedBuildSession implements BuildSession {
           removeTree(stage);
         }
       }
+      installBuildInfo(this.packageRoot, this.journal.pendingBuildInfo);
       this.status = "committed";
       if (entryByEntry) this.warnNotAtomic();
     } catch (error) {

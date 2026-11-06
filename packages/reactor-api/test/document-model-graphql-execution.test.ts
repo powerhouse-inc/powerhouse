@@ -86,11 +86,16 @@ describe("a code-first model executes as its schema-first twin", () => {
 
 describe("mutation authorization", () => {
   const forbidden =
-    'Forbidden: insufficient permissions to execute operation "AddEntry" on this document';
+    'Forbidden: insufficient permissions to execute operation "ADD_ENTRY" on this document';
   const twoWrites = [
     `mutation { Ledger { addEntry(docId: "doc-1", input: { id: "a", amount: 1 }) { id } } }`,
     `mutation { Ledger { addEntryAsync(docId: "doc-1", input: { id: "b", amount: 2 }) } }`,
   ];
+  const styles = [
+    ["schema-first", asSchemaFirst(ledgerModel())],
+    ["code-first", ledgerModel()],
+    ["code-first served stored", asStored(ledgerModel())],
+  ] as const;
 
   async function checkedAs(module: DocumentModelModule, denied?: string) {
     const { authorization, checked } = recordingAuthorization(denied);
@@ -100,28 +105,66 @@ describe("mutation authorization", () => {
     return { checked, messages: results.flatMap(messages), host };
   }
 
-  it.each([
-    ["code-first", ledgerModel()],
-    ["code-first served stored", asStored(ledgerModel())],
-  ])(
-    "checks a %s mutation against its stored name, as main does",
+  it.each(styles)(
+    "checks a %s mutation against the type of the action it dispatches",
     async (_name, module) => {
-      const outcome = await checkedAs(module, "ADD_ENTRY");
-      expect(outcome.checked).toEqual(["AddEntry", "AddEntry"]);
+      const outcome = await checkedAs(module);
+      const dispatched = outcome.host
+        .document()
+        .operations.global.map(({ action }) => action.type);
       expect(outcome.messages).toEqual([]);
+      expect(dispatched).toEqual(["ADD_ENTRY", "ADD_ENTRY"]);
+      expect(outcome.checked).toEqual(["ADD_ENTRY", "ADD_ENTRY"]);
     },
   );
 
-  it("keeps denying a code-first mutation restricted under its stored name", async () => {
-    const outcome = await checkedAs(ledgerModel(), "AddEntry");
-    expect(outcome.messages).toEqual([forbidden, forbidden]);
-    expect(
-      (outcome.host.document().state as { global?: unknown }).global,
-    ).toEqual({
-      title: null,
-      entries: [],
-    });
-  });
+  it.each(styles)(
+    "denies a %s mutation restricted under its action type",
+    async (_name, module) => {
+      const outcome = await checkedAs(module, "ADD_ENTRY");
+      expect(outcome.messages).toEqual([forbidden, forbidden]);
+      expect(
+        (outcome.host.document().state as { global?: unknown }).global,
+      ).toEqual({
+        title: null,
+        entries: [],
+      });
+    },
+  );
+});
+
+describe("mutation authorization before input validation", () => {
+  function refusingInput(module: DocumentModelModule): DocumentModelModule {
+    const addEntry = () => {
+      throw new Error("Invalid action input");
+    };
+    return { ...module, actions: { ...module.actions, addEntry } };
+  }
+
+  it.each([
+    ["schema-first", asSchemaFirst(ledgerModel())],
+    ["code-first", ledgerModel()],
+    ["code-first served stored", asStored(ledgerModel())],
+  ])(
+    "answers a caller without permission Forbidden whatever the %s input",
+    async (_name, module) => {
+      const write = `mutation { Ledger { addEntry(docId: "doc-1", input: { id: "a", amount: 1 }) { id } } }`;
+      const denied = hostFor(
+        refusingInput(module),
+        recordingAuthorization("ADD_ENTRY").authorization,
+      );
+      const allowed = hostFor(
+        refusingInput(module),
+        recordingAuthorization().authorization,
+      );
+      expect(messages(await denied.run(write))).toEqual([
+        'Forbidden: insufficient permissions to execute operation "ADD_ENTRY" on this document',
+      ]);
+      expect(messages(await allowed.run(write))).toEqual([
+        "Invalid action input",
+      ]);
+    },
+  );
 });
 
 describe("mutation failure messages", () => {

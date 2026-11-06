@@ -16,6 +16,7 @@ const hostFinding = z.looseObject({
   kind: z.enum([
     "scalar-unbound",
     "scalar-mismatch",
+    "scalar-uncomparable",
     "definition-invalid",
     "definition-mismatch",
   ]),

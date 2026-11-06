@@ -2,6 +2,10 @@ import type {
   DefinitionDiagnostic,
   Sha256Digest,
 } from "@powerhousedao/shared/document-model";
+import {
+  pathWithin,
+  realPathThroughExistingParent,
+} from "@powerhousedao/shared/clis/real-paths";
 import { realpathSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -13,11 +17,7 @@ import type {
 import { compareArtifacts, sortedUniqueDiagnostics } from "../report/status.js";
 import type { LoadedDefinitionProject } from "../report/types.js";
 import type { DefinitionSourceLoader } from "../definition-source-loader.js";
-import {
-  isWithin,
-  readConfigObject,
-  realPathThroughExistingParent,
-} from "../definition-source-resolution.js";
+import { readConfigObject } from "../definition-source-resolution.js";
 import { toolingDiagnostics } from "../diagnostic-codes.js";
 import { readStoredDocumentModels } from "../schema-first/stored-models.js";
 import { findUnregisteredDefinitions } from "./unregistered-definitions.js";
@@ -96,12 +96,13 @@ function documentModelsDirectory(
     };
   }
   const path = resolve(packageRoot, configured);
-  let inside = isWithin(packageRoot, path);
+  let inside = pathWithin(packageRoot, path) !== null;
   try {
-    inside &&= isWithin(
-      realpathSync.native(packageRoot),
-      realPathThroughExistingParent(path),
-    );
+    inside &&=
+      pathWithin(
+        realpathSync.native(packageRoot),
+        realPathThroughExistingParent(path),
+      ) !== null;
   } catch {
     inside = false;
   }
@@ -214,6 +215,23 @@ export async function loadProjectDefinitions(request: {
   const selectionKnown = !loaded.diagnostics.some(
     ({ phase, severity }) => phase === "configuration" && severity === "error",
   );
+  const scan =
+    selectionKnown && modelsDir !== undefined
+      ? findUnregisteredDefinitions({
+          packageRoot,
+          documentModelsDir: modelsDir,
+          sources: loaded.sourceSet.sources,
+          importedFiles,
+          loadedDocumentTypes: new Set([
+            ...loaded.documentModels.map(
+              ({ value }) => value.documentModel.global.id,
+            ),
+            ...loaded.diagnostics.flatMap(({ definition }) =>
+              definition?.kind === "document-model" ? [definition.key] : [],
+            ),
+          ]),
+        })
+      : { unregistered: [], diagnostics: [] };
   return {
     packageRoot,
     sourceSet: loaded.sourceSet,
@@ -230,18 +248,11 @@ export async function loadProjectDefinitions(request: {
           ...loaded.diagnostics,
           ...directory.diagnostics,
           ...produced.flatMap(({ diagnostics }) => diagnostics),
+          ...scan.diagnostics,
         ],
         packageRoot,
       ),
     ),
-    unregistered:
-      selectionKnown && modelsDir !== undefined
-        ? findUnregisteredDefinitions({
-            packageRoot,
-            documentModelsDir: modelsDir,
-            sources: loaded.sourceSet.sources,
-            importedFiles,
-          })
-        : [],
+    unregistered: scan.unregistered,
   };
 }

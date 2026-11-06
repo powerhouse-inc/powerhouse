@@ -101,8 +101,9 @@ describe("scalar factories", () => {
 
   it("does not offer the host-only JSONObject", () => {
     expect(Object.keys(ph)).not.toContain("JSONObject");
-    // @ts-expect-error JSONObject is internal to the reactor host
-    expect(ph.JSONObject).toBeUndefined();
+    expect(() => (ph as Record<string, unknown>).JSONObject).toThrow(
+      "JSONObject is internal to the reactor host. A document model cannot use it.",
+    );
   });
 
   it("keeps built-in validators aligned with generated Zod", () => {

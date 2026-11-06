@@ -14,6 +14,7 @@ import {
   powerhousePackageSchema,
 } from "../connect/schema-fragments.js";
 import { LOG_LEVELS } from "./constants.js";
+import { DEFINITION_SOURCE_EXTENSION } from "./definition-sources.js";
 
 const keyframeRuleSchema = {
   type: "object",
@@ -66,7 +67,7 @@ const definitionSourcesSchema = {
             properties: {
               specifier: {
                 type: "string",
-                pattern: "^\\./.*\\.(?:[cm]?[jt]s|[jt]sx)$",
+                pattern: `^\\./.*${DEFINITION_SOURCE_EXTENSION.source}`,
                 description:
                   "POSIX package-relative module path beginning with './'. It may not leave the package root.",
               },

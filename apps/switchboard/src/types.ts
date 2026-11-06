@@ -6,7 +6,10 @@ import type {
   ModelManifestEntry,
   UnsupportedStoredDocuments,
 } from "@powerhousedao/reactor";
-import type { AttachmentReferenceProjectionCapability } from "@powerhousedao/reactor-api";
+import type {
+  AttachmentReferenceProjectionCapability,
+  HostValidationMode,
+} from "@powerhousedao/reactor-api";
 import type { IErasureService } from "@powerhousedao/reactor-privacy";
 import type { PrivacyOptions } from "./privacy.mjs";
 import type { WorkflowTriggersCapability } from "./workflow-runtime.mjs";
@@ -182,6 +185,12 @@ export type StartServerOptions = {
    * Disabled by default — enable with DYNAMIC_MODEL_LOADING=true env var.
    */
   dynamicModelLoading?: boolean;
+  /**
+   * @experimental What the API does with a package model host validation
+   * reports a finding for: `log` (the default) serves it, `refuse` leaves it
+   * out of the served schema. Env: PH_HOST_VALIDATION.
+   */
+  hostValidation?: HostValidationMode;
   logger?: ILogger;
   /**
    * When true, on startup any local PGLite data dirs whose `PG_VERSION` is

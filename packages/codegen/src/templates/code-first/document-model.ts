@@ -216,6 +216,16 @@ describe("${v.displayName} v1 items", () => {
     );
   });
 
+  it("records the declared error for a missing item", () => {
+    const document = reducer(
+      utils.createDocument(),
+      actions.setItemDone({ id: "item-2", done: true }),
+    );
+    expect(document.operations.global.at(-1)?.error).toBe(
+      "No item has id item-2.",
+    );
+  });
+
   it("refuses an input the declaration does not allow", () => {
     expect(() =>
       actions.addItem({ id: "item-1", label: 1 as unknown as string }),

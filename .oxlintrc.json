@@ -1429,8 +1429,8 @@
                 "message": "This module is pure: it imports no Node built-in except node:path and node:crypto, decides from values and touches no files, processes or process state. Take what it needs as a parameter, and do the I/O in staging/, steps/ or release/files.ts."
               },
               {
-                "regex": "(^|/)(package-build|publish|model)(/|$)|(^|/)build(\\.js)?$|^\\./(files|evidence|verify)(\\.js)?$",
-                "message": "This release module is pure. Do the walk, npm pack, file reads and approval checks in release/files.ts, evidence.ts or verify.ts and pass the values in."
+                "regex": "(^|/)(package-build|publish|model)(/|$)|(^|/)build(\\.js)?$|^\\./(files|evidence|verify|pack|consumer)(\\.js)?$",
+                "message": "This release module is pure. Do the walk, file reads and approval checks in release/files.ts, evidence.ts or verify.ts, npm pack in release/pack.ts and the scratch install in release/consumer.ts, and pass the values in."
               },
               {
                 "regex": "(^|/)[Ss]ubgraph",

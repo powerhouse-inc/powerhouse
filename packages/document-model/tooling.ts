@@ -1,4 +1,7 @@
-export { formatDefinitionDiagnostic } from "./src/definition/kernel/diagnostics.js";
+export {
+  formatDefinitionDiagnostic,
+  formatDefinitionSource,
+} from "./src/definition/kernel/diagnostics.js";
 export { adaptCodeFirstDocumentModelSource } from "./src/definition/tooling/adapters/code-first-document-model-source-adapter.js";
 export type {
   NormalizedDocumentModelArtifact,

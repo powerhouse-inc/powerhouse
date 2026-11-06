@@ -44,6 +44,7 @@ import {
 } from "../http/index.js";
 import {
   describeHostValidationFinding,
+  type HostValidationMode,
   validateDocumentModelsForHost,
 } from "../packages/host-validation.js";
 import { debounce } from "../packages/util.js";
@@ -229,7 +230,7 @@ export type GraphQLManagerOptions = {
    * reports a finding for: `log` (the default) serves it and logs, `refuse`
    * leaves it out of the served schema and logs one refusal per model.
    */
-  hostValidation?: "log" | "refuse";
+  hostValidation?: HostValidationMode;
 };
 
 type TrackedOrigin = Exclude<
@@ -426,7 +427,7 @@ export class GraphQLManager {
 
   readonly #scalarBindings = new PackageScalarBindingLog();
 
-  readonly #hostValidation: "log" | "refuse";
+  readonly #hostValidation: HostValidationMode;
 
   /** Host-validation refusals logged: model id, version and findings. */
   #hostRefusals = new Set<string>();

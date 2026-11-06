@@ -36,7 +36,11 @@ export type {
  * @experimental Hosts and readers choose the native or the stored path from
  * the inspection kind.
  */
-export { inspectDocumentModelDefinition } from "./runtime/inspection.js";
+export {
+  inspectDocumentModelDefinition,
+  operationsByActionType,
+  type StructuredOperation,
+} from "./runtime/inspection.js";
 /** @experimental Whether a module's structured definition can be served. */
 export type {
   DocumentModelDefinitionInspection,

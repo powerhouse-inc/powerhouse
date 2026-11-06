@@ -25,6 +25,7 @@ describe("layer diagnostic catalogs", () => {
       "PH-SCALAR-FACTORY-AS-FIELD",
       "PH-SCALAR-INTERNAL",
       "PH-SCALAR-DEFINITION-INVALID",
+      "PH-SCALAR-UNKNOWN",
     ]);
     expect(own(compilerDiagnostics.codes, dslDiagnostics.codes)).toStrictEqual([
       "PH-DM-DUPLICATE-ACTION",

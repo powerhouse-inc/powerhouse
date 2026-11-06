@@ -30,6 +30,12 @@ const EXTRA_BUILD_DEPS: Record<string, string[]> = {
     "@powerhousedao/clint",
     "@powerhousedao/connect",
   ],
+  // The vendor tests build with Connect's vite; the route tests read Connect's
+  // dist and typecheck test/versioned-documents' routes with its installed deps.
+  "@powerhousedao/builder-tools": [
+    "@powerhousedao/connect",
+    "@powerhousedao/versioned-documents",
+  ],
   // The controller e2e spawns real switchboards through ph-cli's dist, and
   // serves Connect's dist.
   "@powerhousedao/reactor-monitor-app": [

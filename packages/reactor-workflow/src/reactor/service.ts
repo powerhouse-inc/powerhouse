@@ -99,9 +99,11 @@ import {
   generateId,
   hashDocumentStateForScope,
   isDenied,
+  operationsByActionType,
   sortOperations,
   type Operation,
   type Action,
+  type DocumentModelModule,
   type ILogger,
   type OperationWithContext,
 } from "document-model";
@@ -4791,15 +4793,10 @@ export class WorkflowRuntimeService {
     try {
       const module =
         await this.host.reactorClient.getDocumentModelModule(documentType);
-      const latest = module.documentModel.global.specifications.at(-1);
-      for (const specModule of latest?.modules ?? []) {
-        for (const operation of specModule.operations) {
-          if (operation.name === actionType && operation.schema) {
-            return fieldsFromSdl(operation.schema, { input: operation.name });
-          }
-        }
-      }
-      return [];
+      const operation = operationForActionType(module, actionType);
+      return operation?.name && operation.schema
+        ? fieldsFromSdl(operation.schema, { input: operation.name })
+        : [];
     } catch {
       return [];
     }
@@ -8289,4 +8286,17 @@ function collectAttachmentRefs(value: unknown, found: Set<string>): void {
     for (const entry of Object.values(value))
       collectAttachmentRefs(entry, found);
   }
+}
+
+function operationForActionType(
+  module: DocumentModelModule,
+  actionType: string,
+) {
+  const structured = operationsByActionType(module);
+  const storedName =
+    structured.size === 0 ? actionType : structured.get(actionType)?.storedName;
+  return module.documentModel.global.specifications
+    .at(-1)
+    ?.modules.flatMap((specModule) => specModule.operations)
+    .find((operation) => operation.name === storedName);
 }

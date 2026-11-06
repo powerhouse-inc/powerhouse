@@ -52,6 +52,14 @@ const ZOD_VERSION = (() => {
 
 let dir: string;
 
+// The vendor build loads this package's built entry; without it every build returns null.
+function requireBuiltBundle() {
+  expect(
+    existsSync(join(__dirname, "../dist/index.mjs")),
+    "build @powerhousedao/builder-tools first: the vendor build loads dist/index.mjs",
+  ).toBe(true);
+}
+
 beforeAll(() => {
   dir = mkdtempSync(join(DIRNAME, "node_modules/.ph-vendor-test-"));
 });
@@ -60,6 +68,8 @@ afterAll(() => {
 });
 
 describe("prebuildConnectVendor production options", () => {
+  beforeAll(requireBuiltBundle);
+
   it("builds with explicit base + production nodeEnv and emits shared-deps.js with versions", async () => {
     const vendorDir = join(dir, "prod");
     const result = await prebuildConnectVendor({
@@ -175,6 +185,8 @@ const readMeta = (vendorDir: string) =>
   };
 
 describe("vendor URLs are content-addressed", () => {
+  beforeAll(requireBuiltBundle);
+
   it("keeps the URLs when a rebuild produces the same content", async () => {
     const vendorDir = join(dir, "stable");
     const opts = {
@@ -213,6 +225,8 @@ describe("vendor URLs are content-addressed", () => {
 });
 
 describe("vendored dynamic-base helpers", () => {
+  beforeAll(requireBuiltBundle);
+
   it("leave a concrete base's URLs alone and resolve a dynamic build's placeholder", async () => {
     const vendorDir = join(dir, "shared-connect");
     const v = (await prebuildConnectVendor({
@@ -248,6 +262,8 @@ describe("vendored dynamic-base helpers", () => {
 });
 
 describe("prebuildConnectVendor default base", () => {
+  beforeAll(requireBuiltBundle);
+
   // A package with an emitted asset and a BASE_URL read, like Connect's
   // in-browser PGlite (`new URL("./pglite.data", import.meta.url)`).
   const FIXTURE = "ph-vendor-base-fixture";
@@ -297,6 +313,8 @@ describe("prebuildConnectVendor default base", () => {
 });
 
 describe("vendor cache key", () => {
+  beforeAll(requireBuiltBundle);
+
   it("rebuilds when the base or NODE_ENV changes", async () => {
     const vendorDir = join(dir, "key");
     const build = (base: string, nodeEnv: "development" | "production") =>

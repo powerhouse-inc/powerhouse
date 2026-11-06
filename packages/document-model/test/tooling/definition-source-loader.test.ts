@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import "document-model";
 import { DefinitionSourceLoader } from "../../src/definition/tooling/definition-source-loader.js";
 import {
   countingImporter,
@@ -123,6 +124,33 @@ describe("DefinitionSourceLoader", () => {
     );
   });
 
+  it("keeps the other claimant of a duplicate name as a related location", async () => {
+    const { diagnostics } = await runLoaderSelection(
+      { fixture: "failures", configFile: "duplicate.config.json" },
+      nodeImporter,
+    );
+    expect(
+      diagnostics.map(({ code, source, path, related }) => ({
+        code,
+        source,
+        path,
+        related,
+      })),
+    ).toEqual([
+      {
+        code: "PH-DM-DUPLICATE-NAME",
+        source: { specifier: "./src/duplicate.ts" },
+        path: ["modules", 1, "key"],
+        related: [
+          {
+            path: ["modules", 0, "key"],
+            message: "The first module with this key was declared here.",
+          },
+        ],
+      },
+    ]);
+  });
+
   it("keeps an ordinary import failure in the import phase", async () => {
     const { diagnostics } = await runLoaderSelection(
       { fixture: "failures", configFile: "throwing.config.json" },
@@ -189,6 +217,42 @@ describe("DefinitionSourceLoader", () => {
         packageRevision: packageRevisionOf(fixture.root),
       });
       expect(result.status).toBe("failed");
+      expect(result.diagnostics.map(({ code }) => code)).toEqual([
+        "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE",
+      ]);
+      expect(importer.imported).toEqual([]);
+    } finally {
+      fixture.dispose();
+      outside.dispose();
+    }
+  });
+
+  it("rejects a dangling symlink that points outside the package root", async () => {
+    const outside = materializeFixturePackage("control");
+    const fixture = materializeFixturePackage("configs");
+    try {
+      const packageRevision = packageRevisionOf(fixture.root);
+      symlinkSync(
+        join(outside.root, "src", "not-written-yet.ts"),
+        join(fixture.root, "src", "linked.ts"),
+      );
+      writeFileSync(
+        join(fixture.root, "symlink.config.json"),
+        JSON.stringify({
+          definitionSources: {
+            formatVersion: 1,
+            mode: "code-first",
+            entries: [{ specifier: "./src/linked.ts" }],
+          },
+        }),
+      );
+      const importer = countingImporter(nodeImporter());
+      const result = await new DefinitionSourceLoader(
+        importer,
+      ).normalizeDefinitionSources({
+        configFile: join(fixture.root, "symlink.config.json"),
+        packageRevision,
+      });
       expect(result.diagnostics.map(({ code }) => code)).toEqual([
         "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE",
       ]);
@@ -427,6 +491,54 @@ it.each(["./src/catalog", "./src", "./src/catalog.ts/"])(
       expect(result.status).toBe("failed");
       expect(result.diagnostics.map(({ code }) => code)).toEqual([
         "PH-CONFIG-SOURCE-INVALID",
+      ]);
+    } finally {
+      fixture.dispose();
+    }
+  },
+);
+
+it.each(["./src/entry.cjs", "./src/entry.cts"])(
+  "refuses a CommonJS source before importing it: %s",
+  async (specifier) => {
+    const fixture = materializeFixturePackage("control");
+    try {
+      const configFile = join(fixture.root, "powerhouse.config.json");
+      writeFileSync(join(fixture.root, specifier), "module.exports = {};\n");
+      writeFileSync(
+        configFile,
+        JSON.stringify({
+          definitionSources: {
+            formatVersion: 1,
+            mode: "code-first",
+            entries: [{ specifier }],
+          },
+        }),
+      );
+      const result = await new DefinitionSourceLoader({
+        importModule() {
+          throw new Error("unexpected import");
+        },
+      }).normalizeDefinitionSources({
+        configFile,
+        packageRevision: packageRevisionOf(fixture.root),
+      });
+      expect(
+        result.diagnostics.map(({ code, message, expected, repair }) => ({
+          code,
+          message,
+          expected,
+          repair,
+        })),
+      ).toEqual([
+        {
+          code: "PH-CONFIG-SOURCE-INVALID",
+          message:
+            "A definition source is evaluated as an ES module, so a CommonJS module cannot be one.",
+          expected: "a .ts, .mts, .tsx, .js, .mjs or .jsx module",
+          repair:
+            "Rename the module to .ts, .mts, .js or .mjs and declare its definitions with ES module exports.",
+        },
       ]);
     } finally {
       fixture.dispose();

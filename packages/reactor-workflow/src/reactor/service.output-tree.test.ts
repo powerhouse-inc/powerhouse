@@ -1,4 +1,5 @@
 // Document block output trees take their roots from the model spec.
+import { defineDocumentModel, materialize, ph } from "document-model";
 import { describe, expect, it } from "vitest";
 import { testRuntime } from "../../test/helpers/runtime.js";
 import { REACTOR_PIECE } from "./reactor-piece.js";
@@ -44,11 +45,52 @@ input SetUrlInput { url: URL! }
   },
 };
 
+const notes = defineDocumentModel({
+  id: "acme/notes",
+  name: "Notes",
+  description: "",
+  extension: "notes",
+  version: 1,
+  author: { name: "Acme" },
+  scopes: {
+    global: {
+      schema: ph.object("NotesState", {
+        fields: { title: ph.String({ required: true }) },
+      }),
+      initialValue: { title: "" },
+    },
+    local: { schema: null, initialValue: {} },
+  },
+});
+const NOTES_MODULE = materialize(
+  notes.version({
+    modules: [
+      notes.module("main", {
+        operations: ({ global }) => ({
+          setTitle: global({
+            input: ph.input({
+              fields: { title: ph.String({ required: true }) },
+            }),
+            reduce(state, input) {
+              state.title = input.title;
+            },
+          }),
+        }),
+      }),
+    ],
+  }),
+);
+
+const MODULES: Record<string, unknown> = {
+  "acme/invoice": INVOICE_MODULE,
+  "acme/notes": NOTES_MODULE,
+};
+
 const service = testRuntime({
   reactorClient: {
     getDocumentModelModule: (documentType: string) =>
-      documentType === "acme/invoice"
-        ? Promise.resolve(INVOICE_MODULE)
+      documentType in MODULES
+        ? Promise.resolve(MODULES[documentType])
         : Promise.reject(new Error(`No model ${documentType}`)),
   } as never,
 });
@@ -83,5 +125,27 @@ describe("document block output trees", () => {
     const input = action?.children?.find((node) => node.name === "input");
 
     expect(input?.children).toEqual([{ name: "url", type: "URL!" }]);
+  });
+
+  it.each([
+    [
+      "roots a code-first input at the action type it dispatches",
+      "SET_TITLE",
+      [{ name: "title", type: "String!" }],
+    ],
+    [
+      "gives a code-first stored name no input; no action carries it",
+      "SetTitle",
+      undefined,
+    ],
+  ])("%s", async (_, actionType, children) => {
+    const tree = await service.blockOutputTree(
+      block("trigger", "document-event"),
+      { documentType: "acme/notes", actionType },
+    );
+    const action = tree.nodes.find((node) => node.name === "action");
+    const input = action?.children?.find((node) => node.name === "input");
+
+    expect(input?.children).toEqual(children);
   });
 });

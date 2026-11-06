@@ -17,6 +17,8 @@ import { structuredSchemaSource } from "./structured-projection.js";
 
 /** The part of a document model module its schema is built from. */
 export type DocumentModelSource = {
+  /** The module's own version, when it is a module. */
+  version?: number;
   documentModel: { global: DocumentModelGlobalState };
   definition?: unknown;
 };

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { inspectDocumentModelDefinition } from "../../../src/definition/index.js";
+import {
+  inspectDocumentModelDefinition,
+  operationsByActionType,
+} from "../../../src/definition/index.js";
 import { TaskFamily } from "../fixtures/family-model.js";
 import {
   codeFirstParity,
@@ -258,5 +261,21 @@ describe("inspectDocumentModelDefinition", () => {
     expect(replaced.kind === "structured" && replaced.definition).not.toBe(
       first.definition,
     );
+  });
+});
+
+describe("operationsByActionType", () => {
+  it("names each code-first operation's stored name and creator by action type", () => {
+    expect([...operationsByActionType(TaskFamily.at(1))]).toStrictEqual([
+      ["ADD_TASK", { storedName: "AddTask", creatorKey: "addTask" }],
+      ["SET_TITLE", { storedName: "SetTitle", creatorKey: "setTitle" }],
+    ]);
+  });
+
+  it.each([
+    ["a schema-first module", schemaFirstParity],
+    ["an invalid definition", { ...codeFirstParity, definition: [] }],
+  ])("is empty for %s, served from its stored model", (_, module) => {
+    expect(operationsByActionType(module).size).toBe(0);
   });
 });

@@ -34,6 +34,7 @@ describe("the package entry", () => {
       "defineDocumentModelFamily",
       "inspectDocumentModelDefinition",
       "materialize",
+      "operationsByActionType",
       "ph",
       "projectDocumentModelGraphQL",
     ]);

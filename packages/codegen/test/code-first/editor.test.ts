@@ -1,6 +1,14 @@
-import { mkdirSync, renameSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { prop } from "remeda";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   generateEditor as generatePublicEditor,
@@ -58,6 +66,20 @@ describe("generateEditor for a code-first model", () => {
       "}: EditorProps<\n  DocumentOf<typeof documentModel>,\n  ActionOf<typeof documentModel>\n>) {",
     );
     expect(editor).toContain("dispatch(documentModel.actions.setName(name),");
+    expect(
+      [...editor.matchAll(/<h3 className="text-base">([^<]+)<\/h3>/g)].map(
+        ([, title]) => title,
+      ),
+    ).toStrictEqual([
+      "ID",
+      "Created",
+      "Type",
+      "Last Modified",
+      "Document State",
+    ]);
+    expect(editor).toContain(
+      "value={new Date(document.header.createdAtUtcIso).toLocaleString()}",
+    );
     expect(await formatFileText("editor.tsx", editor)).toBe(editor);
     expect(read(dir, "editors/todo-editor/module.ts")).toBe(`/**
  * WARNING: DO NOT EDIT
@@ -174,8 +196,43 @@ export const TodoEditor: documentModelTypes.EditorModule<
     await expect(
       generateEditor({ ...todoEditor, documentTypes: ["acme/missing"] }),
     ).rejects.toThrow(
-      "Failed to get document type metadata for document type: acme/missing.",
+      "No code-first or schema-first document model in this package declares document type acme/missing.\nCode-first models declare: acme/todo-list.\nPass --document-type with a document type a model declares.",
     );
+  });
+
+  it("names the stale editor and its fix after the model's document type changes", async () => {
+    await generateEditor();
+    const model = join(dir, "document-models/todo-list");
+    for (const entry of readdirSync(model, { recursive: true })) {
+      const file = join(model, String(entry));
+      if (!file.endsWith(".ts")) continue;
+      const text = readFileSync(file, "utf8");
+      writeFileSync(
+        file,
+        text.replaceAll("acme/todo-list", "acme/renamed-list"),
+      );
+    }
+
+    await expect(
+      inProject(dir, (project) => generation().generateAllEditors(project)),
+    ).rejects.toThrow(
+      "editors/todo-editor/module.ts edits document type acme/todo-list, which no code-first or schema-first document model in this package declares.\nCode-first models declare: acme/renamed-list.\nIf the model's document type changed, set documentTypes in editors/todo-editor/module.ts to the new type, then generate the editor again.",
+    );
+
+    const module = join(dir, "editors/todo-editor/module.ts");
+    writeFileSync(
+      module,
+      readFileSync(module, "utf8").replaceAll(
+        '"acme/todo-list"',
+        '"acme/renamed-list"',
+      ),
+    );
+    const result = await inProject(dir, (project) =>
+      generation().generateAllEditors(project),
+    );
+    expect(result.editors.map(prop("documentTypes"))).toStrictEqual([
+      ["acme/renamed-list"],
+    ]);
   });
 });
 
