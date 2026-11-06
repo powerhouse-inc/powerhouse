@@ -247,9 +247,11 @@ export async function checkPackedConsumer(
   return [
     ...missing.map((entry) => `${entry}, which the package does not contain`),
     ...failures.flat(),
-  ].map((failure) =>
-    failure
+  ].map((failure) => {
+    const shown = failure
       .replaceAll(`${consumerRoot}${sep}`, "")
-      .replaceAll(consumerRoot, "."),
-  );
+      .replaceAll(consumerRoot, ".");
+    // The same refusal on every platform: paths as package specifiers spell them.
+    return sep === "\\" ? shown.replaceAll("\\", "/") : shown;
+  });
 }

@@ -38,6 +38,15 @@ export async function compilerOutputs(
 ): Promise<CompilerOutput[]> {
   const root = compilerOutputInventory(config.options, at);
   const real = (path: string) => realPathThroughExistingParent(path);
+  const packageIdentity = real(at.packageRoot);
+  const inPackage = (path: string) =>
+    pathWithin(packageIdentity, real(path)) !== null;
+  // A reference to another package is that package's build: its outputs are
+  // not this package's to restore, and reading its project graph spawns tsc
+  // once or twice per project it reaches.
+  const referencesInPackage = config.references.some((reference) =>
+    inPackage(resolve(dirname(at.configFile), reference)),
+  );
   const holdsOutput = (dir: string) =>
     pathWithin(real(dir), at.output) !== null;
   const protectsOutput = root.some(
@@ -47,7 +56,7 @@ export async function compilerOutputs(
       !(redirectable(config) && real(path) === at.output),
   );
   if (
-    config.references.length === 0 &&
+    !referencesInPackage &&
     !writesBesideSources(config.options) &&
     !protectsOutput
   ) {
@@ -57,7 +66,8 @@ export async function compilerOutputs(
   if (!prepared.ok) return root;
   const { directories, files } = prepared.plan.outputs;
   const absolute = (path: string) => resolve(at.packageRoot, path);
-  const owned = (path: string) => pathWithin(path, at.buildDirectory) === null;
+  const owned = (path: string) =>
+    inPackage(path) && pathWithin(path, at.buildDirectory) === null;
   const dirs = directories
     .map(absolute)
     .filter((dir) => owned(dir) && !holdsOutput(dir));

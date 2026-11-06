@@ -280,6 +280,31 @@ describe("a staged build", () => {
     ).toEqual([]);
   }, 240_000);
 
+  it("reads no project graph for a reference to another package", async () => {
+    const made = project();
+    made.write("../other/index.ts", "export const other = 1;\n");
+    made.write(
+      "../other/tsconfig.json",
+      JSON.stringify({
+        compilerOptions: { composite: true, outDir: "lib" },
+        include: ["index.ts"],
+      }),
+    );
+    const config = JSON.parse(made.read("tsconfig.json")) as object;
+    made.write(
+      "tsconfig.json",
+      JSON.stringify({ ...config, references: [{ path: "../other" }] }),
+    );
+    await buildPackage(args);
+
+    expect(
+      made.tscCalls().map(({ args, cwd }) => [cwd, ...args.slice(0, 1)]),
+    ).toEqual([
+      [made.root, "--showConfig"],
+      [made.root, "--build"],
+    ]);
+  }, 120_000);
+
   it.skipIf(process.platform === "win32")(
     "writes the declarations and maps tsc writes in place",
     async () => {
