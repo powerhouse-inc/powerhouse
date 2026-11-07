@@ -72,9 +72,14 @@ export async function delegateInit(
 
   const tag = parseTag(args);
   const phCliVersionOrTag = args.version ?? tag;
+  // How ph itself was installed globally (null for a source checkout).
+  const { detectGlobalInstall, runningEntryRealPath } =
+    await import("./self-update.js");
+  const installedWith =
+    detectGlobalInstall(await runningEntryRealPath()).pm ?? undefined;
   const { pm, forwardedFlags, detectedFrom } = resolveInitPackageManager(
     args,
-    detectPackageManager,
+    (options) => detectPackageManager({ ...options, installedWith }),
   );
   if (detectedFrom) {
     console.log(

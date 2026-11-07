@@ -1,5 +1,5 @@
 import { spawn as spawnChild } from "cross-spawn";
-import { readFile as readFileAsync } from "node:fs/promises";
+import { readFile as readFileAsync, realpath } from "node:fs/promises";
 
 import { getStream } from "./version-check.js";
 
@@ -11,6 +11,24 @@ export type InstallDetection =
 
 const PACKAGE_NAME = "ph-cmd";
 
+// pnpm 11 links global packages from the store, wherever store-dir points:
+// <store>/v11/links/@/ph-cmd/<version>/<hash>/node_modules/ph-cmd
+const PNPM_STORE_LINK = new RegExp(
+  `/v\\d+/links/@/${PACKAGE_NAME}/[^/]+/[^/]+/node_modules/${PACKAGE_NAME}$`,
+);
+
+/**
+ * Real path of the running bundle, which identifies the global install (and
+ * its package manager). argv[1] is the entry script; the ESM loader already
+ * resolved symlinks, realpath is belt-and-braces.
+ */
+export async function runningEntryRealPath(): Promise<string> {
+  const entry = process.argv[1];
+  return entry
+    ? await realpath(entry)
+    : import.meta.url.replace(/^file:\/\//, "");
+}
+
 function normalizePath(p: string): string {
   return p.replace(/\\/g, "/").replace(/\/+$/, "");
 }
@@ -20,6 +38,7 @@ function normalizePath(p: string): string {
  * real path of the running bundle (the bin entry is a symlink; the ESM
  * loader resolves it). Path signatures:
  *   pnpm:  <global>/node_modules/.pnpm/ph-cmd@<v>/node_modules/ph-cmd/...
+ *   pnpm 11: <store>/v11/links/@/ph-cmd/<v>/<hash>/node_modules/ph-cmd/...
  *   bun:   <home>/.bun/install/global/node_modules/ph-cmd/...
  *   yarn:  <global>/yarn/global/node_modules/ph-cmd/...  (yarn classic)
  *   npm:   <prefix>/lib/node_modules/ph-cmd/... (any plain node_modules)
@@ -37,7 +56,10 @@ export function detectGlobalInstall(rawPath: string): InstallDetection {
   if (!pkgDir || !pkgDir.endsWith(`/${PACKAGE_NAME}`)) {
     return { pm: null, reason: "unknown" };
   }
-  if (real.includes(`/node_modules/.pnpm/${PACKAGE_NAME}@`)) {
+  if (
+    real.includes(`/node_modules/.pnpm/${PACKAGE_NAME}@`) ||
+    PNPM_STORE_LINK.test(pkgDir)
+  ) {
     return { pm: "pnpm", pkgRoot: pkgDir };
   }
   if (real.includes("/.bun/install/global/node_modules/")) {

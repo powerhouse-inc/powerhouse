@@ -6,7 +6,10 @@ import {
 } from "../init-package-manager.js";
 
 /** A detector that reports `pm` and records the options it was called with. */
-function detector(pm: Agent, source: "user-agent" | "path" | "fallback") {
+function detector(
+  pm: Agent,
+  source: "user-agent" | "install" | "path" | "fallback",
+) {
   const calls: { allowed?: readonly Agent[] }[] = [];
   const detect: DetectFn = (options) => {
     calls.push(options);

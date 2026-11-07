@@ -169,4 +169,73 @@ describe("detectPackageManager", () => {
       }),
     ).toEqual({ pm: "bun", source: "path" });
   });
+
+  posixIt("prefers how ph was installed over the PATH order", () => {
+    expect(
+      detectPackageManager({
+        env: { PATH: [binDir({ bun: {} }), binDir({ pnpm: {} })].join(":") },
+        platform: "linux",
+        installedWith: "pnpm",
+      }),
+    ).toEqual({ pm: "pnpm", source: "install" });
+  });
+
+  posixIt("ignores an npm install, which says nothing about preference", () => {
+    expect(
+      detectPackageManager({
+        env: { PATH: [binDir({ bun: {} }), binDir({ pnpm: {} })].join(":") },
+        platform: "linux",
+        installedWith: "npm",
+      }),
+    ).toEqual({ pm: "bun", source: "path" });
+  });
+
+  posixIt("prefers the user agent over how ph was installed", () => {
+    expect(
+      detectPackageManager({
+        env: {
+          npm_config_user_agent: "bun/1.2.0 npm/? node/v22.6.0 linux x64",
+          PATH: binDir({ pnpm: {} }),
+        },
+        platform: "linux",
+        installedWith: "pnpm",
+      }),
+    ).toEqual({ pm: "bun", source: "user-agent" });
+  });
+
+  posixIt("skips the install manager when its pnpm is too old", () => {
+    expect(
+      detectPackageManager({
+        env: {
+          PATH: [
+            binDir({ pnpm: { version: "9.15.0" } }),
+            binDir({ bun: {} }),
+          ].join(":"),
+        },
+        platform: "linux",
+        installedWith: "pnpm",
+      }),
+    ).toEqual({ pm: "bun", source: "path" });
+  });
+
+  posixIt("skips the install manager when it is no longer on PATH", () => {
+    expect(
+      detectPackageManager({
+        env: { PATH: binDir({ pnpm: {} }) },
+        platform: "linux",
+        installedWith: "yarn",
+      }),
+    ).toEqual({ pm: "pnpm", source: "path" });
+  });
+
+  posixIt("skips the install manager when it is not allowed (--clone)", () => {
+    expect(
+      detectPackageManager({
+        env: { PATH: [binDir({ bun: {} }), binDir({ pnpm: {} })].join(":") },
+        platform: "linux",
+        installedWith: "bun",
+        allowed: ["pnpm", "npm"],
+      }),
+    ).toEqual({ pm: "pnpm", source: "path" });
+  });
 });

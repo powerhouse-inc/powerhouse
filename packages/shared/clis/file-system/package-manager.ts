@@ -18,7 +18,11 @@ const PATH_PREFERENCE: readonly Agent[] = ["bun", "pnpm"];
  */
 const MIN_VERSION: Partial<Record<Agent, string>> = { pnpm: "10.14.0" };
 
-export type PackageManagerSource = "user-agent" | "path" | "fallback";
+export type PackageManagerSource =
+  | "user-agent"
+  | "install"
+  | "path"
+  | "fallback";
 
 export interface DetectPackageManagerOptions {
   /** Defaults to `process.env`. Reads npm_config_user_agent, PATH, PATHEXT. */
@@ -27,6 +31,8 @@ export interface DetectPackageManagerOptions {
   platform?: NodeJS.Platform;
   /** Managers the caller can work with. Defaults to npm, pnpm, yarn, bun. */
   allowed?: readonly Agent[];
+  /** The manager that installed the running CLI globally, if known. */
+  installedWith?: Agent;
 }
 
 /**
@@ -34,8 +40,10 @@ export interface DetectPackageManagerOptions {
  * flag. In order:
  *   1. the manager that launched us (`npm_config_user_agent`, set by
  *      npx / pnpm dlx / yarn dlx / bunx and by package scripts)
- *   2. bun, then pnpm, if found on PATH
- *   3. npm
+ *   2. the manager that installed the CLI globally (`installedWith`), unless
+ *      that is npm
+ *   3. bun, then pnpm, if found on PATH
+ *   4. npm
  * A manager older than its MIN_VERSION is skipped. A version-manager shim
  * (corepack, asdf, mise) on PATH counts as installed if `--version` works.
  */
@@ -57,14 +65,24 @@ export function detectPackageManager(
     return { pm: fromUserAgent, source: "user-agent" };
   }
 
-  for (const pm of PATH_PREFERENCE) {
+  // npm is the default for global installs, so it says nothing about what
+  // the user prefers; pnpm, bun or yarn was a deliberate choice.
+  const fromInstall =
+    options.installedWith && options.installedWith !== "npm"
+      ? options.installedWith
+      : undefined;
+  const candidates: [Agent, PackageManagerSource][] = [
+    ...(fromInstall ? [[fromInstall, "install"] as [Agent, "install"]] : []),
+    ...PATH_PREFERENCE.map((pm): [Agent, "path"] => [pm, "path"]),
+  ];
+  for (const [pm, source] of candidates) {
     if (!allowed.includes(pm)) continue;
     const file = findOnPath(pm, env, platform);
     if (!file) continue;
     if (MIN_VERSION[pm] && !isRecentEnough(pm, readVersion(file, env))) {
       continue;
     }
-    return { pm, source: "path" };
+    return { pm, source };
   }
 
   return { pm: "npm", source: "fallback" };

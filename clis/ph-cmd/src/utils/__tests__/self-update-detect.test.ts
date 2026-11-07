@@ -27,6 +27,28 @@ describe("detectGlobalInstall", () => {
     });
   });
 
+  it("detects a pnpm 11 global install (store links path)", () => {
+    const result = detectGlobalInstall(
+      "/home/u/.local/share/pnpm/store/v11/links/@/ph-cmd/6.2.3/212fc435116389e830e9ae76ec55fcdc6e58d8ac27756556244e532a71c9e4da/node_modules/ph-cmd/dist/cli.mjs",
+    );
+    expect(result).toEqual({
+      pm: "pnpm",
+      pkgRoot:
+        "/home/u/.local/share/pnpm/store/v11/links/@/ph-cmd/6.2.3/212fc435116389e830e9ae76ec55fcdc6e58d8ac27756556244e532a71c9e4da/node_modules/ph-cmd",
+    });
+  });
+
+  it("detects a pnpm 11 global install in a custom Windows store", () => {
+    const result = detectGlobalInstall(
+      "D:\\pnpm-store\\v11\\links\\@\\ph-cmd\\6.2.3\\abc123\\node_modules\\ph-cmd\\dist\\cli.mjs",
+    );
+    expect(result).toEqual({
+      pm: "pnpm",
+      pkgRoot:
+        "D:/pnpm-store/v11/links/@/ph-cmd/6.2.3/abc123/node_modules/ph-cmd",
+    });
+  });
+
   it("detects a bun global install", () => {
     const result = detectGlobalInstall(
       "/home/u/.bun/install/global/node_modules/ph-cmd/dist/cli.mjs",

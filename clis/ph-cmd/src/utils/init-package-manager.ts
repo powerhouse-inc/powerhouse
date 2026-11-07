@@ -2,7 +2,7 @@ import type { Agent } from "package-manager-detector";
 
 export type DetectFn = (options: { allowed?: readonly Agent[] }) => {
   pm: Agent;
-  source: "user-agent" | "path" | "fallback";
+  source: "user-agent" | "install" | "path" | "fallback";
 };
 
 export interface InitPackageManagerArgs {
@@ -28,7 +28,7 @@ export function resolveInitPackageManager(
 ): {
   pm: Agent;
   forwardedFlags: string[];
-  detectedFrom?: "user-agent" | "path";
+  detectedFrom?: "user-agent" | "install" | "path";
 } {
   const { npm, pnpm, yarn, bun, packageManager } = args;
   const explicit: Agent | undefined = npm
