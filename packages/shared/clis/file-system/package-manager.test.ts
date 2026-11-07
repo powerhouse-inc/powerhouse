@@ -7,16 +7,23 @@ import { detectPackageManager } from "./package-manager.js";
 const dirs: string[] = [];
 
 /** A temp dir holding fake binaries, for use as a PATH entry. */
-function binDir(files: Record<string, { mode?: number }>): string {
+function binDir(
+  files: Record<string, { mode?: number; version?: string }>,
+): string {
   const dir = mkdtempSync(path.join(tmpdir(), "ph-pm-detect-"));
   dirs.push(dir);
-  for (const [name, { mode = 0o755 }] of Object.entries(files)) {
+  for (const [name, { mode = 0o755, version = "10.20.0" }] of Object.entries(
+    files,
+  )) {
     const file = path.join(dir, name);
-    writeFileSync(file, "#!/bin/sh\n");
+    writeFileSync(file, `#!/bin/sh\necho ${version}\n`);
     chmodSync(file, mode);
   }
   return dir;
 }
+
+// The fake binaries are POSIX shell scripts and PATH is joined with ":".
+const posixIt = it.skipIf(process.platform === "win32");
 
 afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true });
@@ -27,14 +34,14 @@ describe("detectPackageManager", () => {
     expect(
       detectPackageManager({
         env: {
-          npm_config_user_agent: "pnpm/9.15.0 npm/? node/v22.12.0 linux x64",
+          npm_config_user_agent: "pnpm/10.20.0 npm/? node/v22.12.0 linux x64",
           PATH: "",
         },
       }),
     ).toEqual({ pm: "pnpm", source: "user-agent" });
   });
 
-  it("prefers the user agent over binaries found on PATH", () => {
+  posixIt("prefers the user agent over binaries found on PATH", () => {
     expect(
       detectPackageManager({
         env: {
@@ -45,7 +52,7 @@ describe("detectPackageManager", () => {
     ).toEqual({ pm: "bun", source: "user-agent" });
   });
 
-  it("ignores a user agent naming an unsupported package manager", () => {
+  posixIt("ignores a user agent naming an unsupported package manager", () => {
     expect(
       detectPackageManager({
         env: {
@@ -56,7 +63,7 @@ describe("detectPackageManager", () => {
     ).toEqual({ pm: "bun", source: "path" });
   });
 
-  it("finds pnpm on PATH when no user agent is set", () => {
+  posixIt("finds pnpm on PATH when no user agent is set", () => {
     const empty = binDir({});
     const withPnpm = binDir({ pnpm: {} });
     expect(
@@ -67,7 +74,7 @@ describe("detectPackageManager", () => {
     ).toEqual({ pm: "pnpm", source: "path" });
   });
 
-  it("prefers bun over pnpm when both are on PATH", () => {
+  posixIt("prefers bun over pnpm when both are on PATH", () => {
     expect(
       detectPackageManager({
         env: { PATH: [binDir({ pnpm: {} }), binDir({ bun: {} })].join(":") },
@@ -76,7 +83,7 @@ describe("detectPackageManager", () => {
     ).toEqual({ pm: "bun", source: "path" });
   });
 
-  it("picks pnpm over bun when bun is not allowed (--clone)", () => {
+  posixIt("picks pnpm over bun when bun is not allowed (--clone)", () => {
     expect(
       detectPackageManager({
         env: { PATH: [binDir({ bun: {} }), binDir({ pnpm: {} })].join(":") },
@@ -86,7 +93,7 @@ describe("detectPackageManager", () => {
     ).toEqual({ pm: "pnpm", source: "path" });
   });
 
-  it("skips a non-executable file on POSIX", () => {
+  posixIt("skips a non-executable file on POSIX", () => {
     expect(
       detectPackageManager({
         env: { PATH: binDir({ pnpm: { mode: 0o644 } }) },
@@ -96,22 +103,22 @@ describe("detectPackageManager", () => {
   });
 
   it("matches PATHEXT extensions on Windows", () => {
-    const dir = binDir({ "pnpm.CMD": { mode: 0o644 } });
+    const dir = binDir({ "bun.CMD": { mode: 0o644 } });
     expect(
       detectPackageManager({
         env: { Path: `C:\\nope;${dir}`, PATHEXT: ".COM;.EXE;.CMD" },
         platform: "win32",
       }),
-    ).toEqual({ pm: "pnpm", source: "path" });
+    ).toEqual({ pm: "bun", source: "path" });
   });
 
-  it("falls back to npm when nothing is detected", () => {
+  posixIt("falls back to npm when nothing is detected", () => {
     expect(
       detectPackageManager({ env: { PATH: binDir({}) }, platform: "linux" }),
     ).toEqual({ pm: "npm", source: "fallback" });
   });
 
-  it("only returns an allowed package manager", () => {
+  posixIt("only returns an allowed package manager", () => {
     expect(
       detectPackageManager({
         env: {
@@ -122,5 +129,44 @@ describe("detectPackageManager", () => {
         allowed: ["pnpm", "npm"],
       }),
     ).toEqual({ pm: "npm", source: "fallback" });
+  });
+
+  posixIt("skips a pnpm on PATH older than 10.14.0", () => {
+    expect(
+      detectPackageManager({
+        env: { PATH: binDir({ pnpm: { version: "10.13.1" } }) },
+        platform: "linux",
+      }),
+    ).toEqual({ pm: "npm", source: "fallback" });
+  });
+
+  posixIt("accepts a pnpm on PATH at exactly 10.14.0", () => {
+    expect(
+      detectPackageManager({
+        env: { PATH: binDir({ pnpm: { version: "10.14.0" } }) },
+        platform: "linux",
+      }),
+    ).toEqual({ pm: "pnpm", source: "path" });
+  });
+
+  posixIt("skips a pnpm on PATH whose version cannot be read", () => {
+    expect(
+      detectPackageManager({
+        env: { PATH: binDir({ pnpm: { version: "not-a-version" } }) },
+        platform: "linux",
+      }),
+    ).toEqual({ pm: "npm", source: "fallback" });
+  });
+
+  posixIt("skips an old pnpm in the user agent and keeps looking", () => {
+    expect(
+      detectPackageManager({
+        env: {
+          npm_config_user_agent: "pnpm/9.15.0 npm/? node/v22.12.0 linux x64",
+          PATH: binDir({ bun: {} }),
+        },
+        platform: "linux",
+      }),
+    ).toEqual({ pm: "bun", source: "path" });
   });
 });

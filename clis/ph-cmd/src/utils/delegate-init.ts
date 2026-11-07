@@ -1,5 +1,6 @@
 import type { Agent } from "package-manager-detector";
 import { execSync } from "node:child_process";
+import { resolveInitPackageManager } from "./init-package-manager.js";
 
 const PH_CLI_PACKAGE = "@powerhousedao/ph-cli";
 // `init` was added to ph-cli in the 6.x rewrite. Older versions (still on
@@ -24,6 +25,7 @@ export interface DelegateInitArgs {
   staging?: boolean;
   rc?: boolean;
   debug?: boolean;
+  clone?: string;
 }
 
 /**
@@ -43,7 +45,6 @@ export async function delegateInit(
     detectPackageManager,
     fetchNpmVersionFromRegistryForTag,
     handleMutuallyExclusiveOptions,
-    parsePackageManager,
     parseTag,
   } = await import("@powerhousedao/shared/clis");
 
@@ -71,23 +72,23 @@ export async function delegateInit(
 
   const tag = parseTag(args);
   const phCliVersionOrTag = args.version ?? tag;
-  const explicitPm = parsePackageManager(args);
-  const userArgs = process.argv.slice(3);
-  const pm =
-    explicitPm ??
-    detectPackageManager(
-      userArgs.some((a) => a === "--clone" || a.startsWith("--clone="))
-        ? { allowed: ["pnpm", "npm"] }
-        : {},
-    ).pm;
+  const { pm, forwardedFlags, detectedFrom } = resolveInitPackageManager(
+    args,
+    detectPackageManager,
+  );
+  if (detectedFrom) {
+    console.log(
+      `Using ${pm} (detected). Pass --npm, --pnpm, --yarn or --bun to choose another.`,
+    );
+  }
   // `process.argv` here is `[node, ph-cmd-bin, <subcommand>, ...userArgs]`.
-  // Forward everything from the user, prepending caller-supplied flags. A
-  // detected manager is forwarded as a flag so ph-cli installs the project's
+  // Forward everything from the user, prepending caller-supplied flags and
+  // the detected package manager, so ph-cli installs the project's
   // dependencies with the same manager that ran it.
   const forwardedArgs = [
     ...extraForwardedArgs,
-    ...(explicitPm ? [] : [`--${pm}`]),
-    ...userArgs,
+    ...forwardedFlags,
+    ...process.argv.slice(3),
   ];
 
   // Resolve the tag to a concrete version up front and verify it's >= 6.x.
