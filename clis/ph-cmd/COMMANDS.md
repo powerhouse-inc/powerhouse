@@ -24,7 +24,7 @@ The name of your project. A new directory will be created in your current direct
 **usage:** `--name, -n <str>`<br>
 
 #### Package Manager <br>
-Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager.<br><br>
+Package manager that installs the project: `npm`, `pnpm`, `yarn` or `bun`. Defaults to the one that launched ph (npx, pnpm dlx, bunx), else the one that installed ph (unless npm), else bun, then pnpm 10.14 or later if installed, else npm.<br><br>
 **usage:** `--package-manager, -p <value>`<br>
 
 #### Tag <br>
@@ -40,7 +40,7 @@ Remote drive identifier.<br><br>
 **usage:** `--remote-drive, -r <str>`<br>
 
 #### Clone <br>
-Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored).<br><br>
+Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's lockfile: pnpm-lock.yaml with pnpm, package-lock.json with npm (other package managers are refused; --version/--tag are ignored).<br><br>
 **usage:** `--clone <str>`<br>
 
 
@@ -170,7 +170,7 @@ The name of your project. A new directory will be created in your current direct
 **usage:** `--name, -n <str>`<br>
 
 #### Package Manager <br>
-Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager.<br><br>
+Package manager that installs the project: `npm`, `pnpm`, `yarn` or `bun`. Defaults to the one that launched ph (npx, pnpm dlx, bunx), else the one that installed ph (unless npm), else bun, then pnpm 10.14 or later if installed, else npm.<br><br>
 **usage:** `--package-manager, -p <value>`<br>
 
 #### Tag <br>
@@ -186,7 +186,7 @@ Remote drive identifier.<br><br>
 **usage:** `--remote-drive, -r <str>`<br>
 
 #### Clone <br>
-Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored).<br><br>
+Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's lockfile: pnpm-lock.yaml with pnpm, package-lock.json with npm (other package managers are refused; --version/--tag are ignored).<br><br>
 **usage:** `--clone <str>`<br>
 
 
