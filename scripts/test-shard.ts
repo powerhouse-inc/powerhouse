@@ -91,7 +91,7 @@ const shards = split(packages(), total);
 if (first === "--print") {
   for (const [i, s] of shards.entries()) {
     console.log(
-      `shard ${i + 1}/${total}  ~${s.weight}s  ${s.names.length} pkgs`,
+      `shard ${i + 1}/${total}  ~${s.weight.toFixed(1)}s  ${s.names.length} pkgs`,
     );
     for (const n of s.names) console.log(`    ${n}`);
   }
@@ -118,7 +118,14 @@ console.log(`shard ${index}/${total}: ${mine.names.join(" ")}`);
 // output and exit code, not a Node stack trace from this script.
 const result = spawnSync(
   "pnpm",
-  [...mine.names.map((n) => `--filter=${n}`), "--no-bail", "run", "test"],
+  [
+    ...mine.names.map((n) => `--filter=${n}`),
+    "--no-sort",
+    "--workspace-concurrency=1",
+    "--no-bail",
+    "run",
+    "test",
+  ],
   {
     cwd: root,
     stdio: "inherit",

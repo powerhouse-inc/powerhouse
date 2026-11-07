@@ -50,6 +50,9 @@ jobs:
       - name: Install deps (frozen lockfile)
         run: pnpm install-ci
 
+      - name: Check test shard scheduling and coverage
+        run: node --test scripts/test-shard.test.mjs
+
       - name: Install release tool dependencies
         run: bun install
         working-directory: releases
@@ -102,8 +105,6 @@ jobs:
       - name: Typecheck consumer project
         run: pnpm typecheck:consumers
 
-  # The whole suite, split three ways. Three is the useful maximum: switchboard
-  # alone is 44s of the 137s total, so a fourth shard would sit idle.
   test:
     name: Test (shard ${{ matrix.shard }}/3)
     # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
