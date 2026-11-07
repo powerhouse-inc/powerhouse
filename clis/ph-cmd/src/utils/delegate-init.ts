@@ -1,5 +1,6 @@
 import type { Agent } from "package-manager-detector";
 import { execSync } from "node:child_process";
+import { resolveInitPackageManager } from "./init-package-manager.js";
 
 const PH_CLI_PACKAGE = "@powerhousedao/ph-cli";
 // `init` was added to ph-cli in the 6.x rewrite. Older versions (still on
@@ -24,6 +25,7 @@ export interface DelegateInitArgs {
   staging?: boolean;
   rc?: boolean;
   debug?: boolean;
+  clone?: string;
 }
 
 /**
@@ -40,9 +42,9 @@ export async function delegateInit(
   extraForwardedArgs: string[] = [],
 ): Promise<void> {
   const {
+    detectPackageManager,
     fetchNpmVersionFromRegistryForTag,
     handleMutuallyExclusiveOptions,
-    parsePackageManager,
     parseTag,
   } = await import("@powerhousedao/shared/clis");
 
@@ -70,10 +72,29 @@ export async function delegateInit(
 
   const tag = parseTag(args);
   const phCliVersionOrTag = args.version ?? tag;
-  const pm = parsePackageManager(args) ?? "npm";
+  // How ph itself was installed globally (null for a source checkout).
+  const { detectGlobalInstall, runningEntryRealPath } =
+    await import("./self-update.js");
+  const installedWith =
+    detectGlobalInstall(await runningEntryRealPath()).pm ?? undefined;
+  const { pm, forwardedFlags, detectedFrom } = resolveInitPackageManager(
+    args,
+    (options) => detectPackageManager({ ...options, installedWith }),
+  );
+  if (detectedFrom) {
+    console.log(
+      `Using ${pm} (detected). Pass --npm, --pnpm, --yarn or --bun to choose another.`,
+    );
+  }
   // `process.argv` here is `[node, ph-cmd-bin, <subcommand>, ...userArgs]`.
-  // Forward everything from the user, prepending caller-supplied flags.
-  const forwardedArgs = [...extraForwardedArgs, ...process.argv.slice(3)];
+  // Forward everything from the user, prepending caller-supplied flags and
+  // the detected package manager, so ph-cli installs the project's
+  // dependencies with the same manager that ran it.
+  const forwardedArgs = [
+    ...extraForwardedArgs,
+    ...forwardedFlags,
+    ...process.argv.slice(3),
+  ];
 
   // Resolve the tag to a concrete version up front and verify it's >= 6.x.
   // `--version` is user-supplied so we trust it and only resolve when a tag

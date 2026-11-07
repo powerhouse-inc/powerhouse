@@ -1,4 +1,7 @@
-import { packageJsonExports } from "@powerhousedao/shared/clis/constants";
+import {
+  BOILERPLATE_ALLOWED_BUILDS,
+  packageJsonExports,
+} from "@powerhousedao/shared/clis/constants";
 import { execFileSync } from "node:child_process";
 import {
   existsSync,
@@ -66,6 +69,25 @@ describe("a new project's pieces entry", () => {
     expect(subgraphsIndex).not.toContain("export");
     expect(existsSync(join(dir, "pieces"))).toBe(false);
     expect(detectFeatures(dir)).not.toContain("piece");
+  });
+});
+
+// bun runs dependency install scripts only for trusted packages. A
+// `trustedDependencies` list replaces bun's built-in allowlist, so it must
+// name every package in the scaffold's tree that has one: the same set the
+// boilerplate's pnpm-workspace.yaml `allowBuilds` approves.
+describe("a new project's bun trusted dependencies", () => {
+  it("trusts exactly the packages pnpm is allowed to build", () => {
+    const pkg = JSON.parse(
+      packageJsonTemplate(
+        "test-project",
+        {},
+        {},
+        { a: "1.0.0" },
+        { a: "1.0.0" },
+      ),
+    ) as { trustedDependencies?: string[] };
+    expect(pkg.trustedDependencies).toEqual([...BOILERPLATE_ALLOWED_BUILDS]);
   });
 });
 

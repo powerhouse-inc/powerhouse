@@ -1,4 +1,7 @@
-import { packageJsonExports } from "@powerhousedao/shared/clis";
+import {
+  BOILERPLATE_ALLOWED_BUILDS,
+  packageJsonExports,
+} from "@powerhousedao/shared/clis";
 import { json } from "@tmpl/core";
 
 function innerJsonBody(value: object): string {
@@ -13,6 +16,15 @@ function sortedJsonBody(value: Record<string, string>): string {
 }
 
 export const exportsTemplate = innerJsonBody(packageJsonExports);
+
+// bun's counterpart of pnpm's `allowBuilds` (pnpm-workspace.yaml). The list
+// replaces bun's built-in allowlist, so it names every package with an
+// install script in a fresh scaffold's tree. npm, pnpm and yarn ignore it.
+const trustedDependenciesTemplate = JSON.stringify(
+  BOILERPLATE_ALLOWED_BUILDS,
+  null,
+  2,
+).replace(/\n/g, "\n  ");
 
 // The `**/`-prefixed `resolutions` keys scaffolds wrote before bare names.
 // Only yarn 1 and bun read them: pnpm 9 and 10 reject them, while npm, yarn 4
@@ -80,7 +92,8 @@ export const packageJsonTemplate = (
   },
   "devDependencies": {
     ${sortedJsonBody(devDependencies)}
-  }${pinBlocks}
+  },
+  "trustedDependencies": ${trustedDependenciesTemplate}${pinBlocks}
 }
 `.raw;
 };

@@ -7,7 +7,7 @@ import {
   positional,
   string,
 } from "cmd-ts";
-import { debugArgs, packageManagerArgs } from "./common.js";
+import { AGENTS, debugArgs, packageManagerArgs } from "./common.js";
 
 export const initArgs = {
   namePositional: positional({
@@ -24,6 +24,13 @@ export const initArgs = {
       "The name of your project. A new directory will be created in your current directory with this name.",
   }),
   ...packageManagerArgs,
+  packageManager: option({
+    type: optional(oneOf(AGENTS)),
+    long: "package-manager",
+    short: "p",
+    description:
+      "Package manager that installs the project: `npm`, `pnpm`, `yarn` or `bun`. Defaults to the one that launched ph (npx, pnpm dlx, bunx), else the one that installed ph (unless npm), else bun, then pnpm 10.14 or later if installed, else npm.",
+  }),
   tag: option({
     type: optional(oneOf(["latest", "staging", "dev", "rc"])),
     long: "tag",
@@ -70,7 +77,7 @@ export const initArgs = {
     type: optional(string),
     long: "clone",
     description:
-      "Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored).",
+      "Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's lockfile: pnpm-lock.yaml with pnpm, package-lock.json with npm (other package managers are refused; --version/--tag are ignored).",
   }),
   ...debugArgs,
 };

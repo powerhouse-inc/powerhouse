@@ -20,6 +20,7 @@ export * from "./args/vetra.js";
 export * from "./constants.js";
 export * from "./ph-dir.js";
 export * from "./file-system/dependencies.js";
+export * from "./file-system/package-manager.js";
 export * from "./file-system/directory-exists.js";
 export * from "./file-system/file-exists.js";
 export * from "./file-system/get-config.js";

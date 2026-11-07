@@ -58,7 +58,7 @@ Initialize a new project
 ### Options
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n <str>`
 
-**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
+**Package Manager** - Package manager that installs the project: `npm`, `pnpm`, `yarn` or `bun`. Defaults to the one that launched ph (npx, pnpm dlx, bunx), else the one that installed ph (unless npm), else bun, then pnpm 10.14 or later if installed, else npm. - Usage: `--package-manager, -p <value>`
 
 **Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc". - Usage: `--tag, -t <value>`
 
@@ -66,7 +66,7 @@ Initialize a new project
 
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
-**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone <str>`
+**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's lockfile: pnpm-lock.yaml with pnpm, package-lock.json with npm (other package managers are refused; --version/--tag are ignored). - Usage: `--clone <str>`
 
 
 
@@ -174,7 +174,7 @@ Initialize a new global project
 ### Options
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n <str>`
 
-**Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
+**Package Manager** - Package manager that installs the project: `npm`, `pnpm`, `yarn` or `bun`. Defaults to the one that launched ph (npx, pnpm dlx, bunx), else the one that installed ph (unless npm), else bun, then pnpm 10.14 or later if installed, else npm. - Usage: `--package-manager, -p <value>`
 
 **Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", "dev", or "rc". - Usage: `--tag, -t <value>`
 
@@ -182,7 +182,7 @@ Initialize a new global project
 
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
-**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's pnpm-lock.yaml (requires --pnpm; --version/--tag are ignored). - Usage: `--clone <str>`
+**Clone** - Path to an existing scaffolded project to clone instead of resolving deps from scratch. Install runs offline from the cloned project's lockfile: pnpm-lock.yaml with pnpm, package-lock.json with npm (other package managers are refused; --version/--tag are ignored). - Usage: `--clone <str>`
 
 
 

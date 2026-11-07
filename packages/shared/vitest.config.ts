@@ -39,6 +39,7 @@ export default defineConfig({
       "clis/real-paths.test.ts",
       "clis/args/vetra-ports.test.ts",
       "clis/file-system/spawn-async.test.ts",
+      "clis/file-system/package-manager.test.ts",
       "connect/background.test.ts",
       "connect/config-loader.test.ts",
       "connect/env-config.test.ts",
