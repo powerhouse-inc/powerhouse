@@ -1,5 +1,6 @@
 import { createProject } from "@powerhousedao/codegen";
 import {
+  detectPackageManager,
   handleMutuallyExclusiveOptions,
   parsePackageManager,
   parseTag,
@@ -75,14 +76,27 @@ export async function startInit(args: InitArgs) {
     "package manager",
   );
 
-  const parsedPackageManager =
-    parsePackageManager({
-      npm,
-      pnpm,
-      yarn,
-      bun,
-      packageManager,
-    }) ?? "npm";
+  let parsedPackageManager = parsePackageManager({
+    npm,
+    pnpm,
+    yarn,
+    bun,
+    packageManager,
+  });
+  if (!parsedPackageManager) {
+    // --clone needs an offline-capable install (see CLONE_RECIPES in codegen).
+    const detected = detectPackageManager(
+      clone ? { allowed: ["pnpm", "npm"] } : {},
+    );
+    parsedPackageManager = detected.pm;
+    if (detected.source !== "fallback") {
+      console.log(
+        chalk.dim(
+          `Using ${detected.pm} (detected). Pass --npm, --pnpm, --yarn or --bun to choose another.`,
+        ),
+      );
+    }
+  }
 
   const parsedTag = parseTag({
     tag,

@@ -40,6 +40,7 @@ export async function delegateInit(
   extraForwardedArgs: string[] = [],
 ): Promise<void> {
   const {
+    detectPackageManager,
     fetchNpmVersionFromRegistryForTag,
     handleMutuallyExclusiveOptions,
     parsePackageManager,
@@ -70,10 +71,24 @@ export async function delegateInit(
 
   const tag = parseTag(args);
   const phCliVersionOrTag = args.version ?? tag;
-  const pm = parsePackageManager(args) ?? "npm";
+  const explicitPm = parsePackageManager(args);
+  const userArgs = process.argv.slice(3);
+  const pm =
+    explicitPm ??
+    detectPackageManager(
+      userArgs.some((a) => a === "--clone" || a.startsWith("--clone="))
+        ? { allowed: ["pnpm", "npm"] }
+        : {},
+    ).pm;
   // `process.argv` here is `[node, ph-cmd-bin, <subcommand>, ...userArgs]`.
-  // Forward everything from the user, prepending caller-supplied flags.
-  const forwardedArgs = [...extraForwardedArgs, ...process.argv.slice(3)];
+  // Forward everything from the user, prepending caller-supplied flags. A
+  // detected manager is forwarded as a flag so ph-cli installs the project's
+  // dependencies with the same manager that ran it.
+  const forwardedArgs = [
+    ...extraForwardedArgs,
+    ...(explicitPm ? [] : [`--${pm}`]),
+    ...userArgs,
+  ];
 
   // Resolve the tag to a concrete version up front and verify it's >= 6.x.
   // `--version` is user-supplied so we trust it and only resolve when a tag
