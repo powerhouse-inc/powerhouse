@@ -1,3 +1,16 @@
+## 6.2.3-dev.97 (2026-11-07)
+
+### 🩹 Fixes
+
+- **codegen:** the Solana pins are overrides only, so `ph init --npm` installs ([9904b3ccdb](https://github.com/powerhouse-inc/powerhouse/commit/9904b3ccdb))
+- **document-model,reactor-api,reactor-mcp,switchboard,workflow,ph-cli:** code-first models work on every host, and ph build and ph publish keep their guarantees ([1d7aeb5727](https://github.com/powerhouse-inc/powerhouse/commit/1d7aeb5727))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.96 (2026-11-06)
 
 ### 🩹 Fixes

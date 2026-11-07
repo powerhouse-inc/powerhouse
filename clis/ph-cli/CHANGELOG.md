@@ -1,3 +1,14 @@
+## 6.2.3-dev.97 (2026-11-07)
+
+### 🩹 Fixes
+
+- **ph-cli:** ph build reads no project graph for references to other packages, and consumer refusals show the same paths on Windows ([14cde93b65](https://github.com/powerhouse-inc/powerhouse/commit/14cde93b65))
+- **document-model,reactor-api,reactor-mcp,switchboard,workflow,ph-cli:** code-first models work on every host, and ph build and ph publish keep their guarantees ([1d7aeb5727](https://github.com/powerhouse-inc/powerhouse/commit/1d7aeb5727))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.96 (2026-11-06)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

@@ -1,3 +1,14 @@
+## 6.2.3-dev.97 (2026-11-07)
+
+### 🩹 Fixes
+
+- **reactor-api,document-model,shared:** check permission before input, and leave undo v3 and stored identity as on main ([3dc5eb9fdb](https://github.com/powerhouse-inc/powerhouse/commit/3dc5eb9fdb))
+- **document-model,reactor-api,reactor-mcp,switchboard,workflow,ph-cli:** code-first models work on every host, and ph build and ph publish keep their guarantees ([1d7aeb5727](https://github.com/powerhouse-inc/powerhouse/commit/1d7aeb5727))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.96 (2026-11-06)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
