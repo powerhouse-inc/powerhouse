@@ -125,6 +125,7 @@ const result = spawnSync(
     "--no-bail",
     "run",
     "test",
+    "--maxWorkers=2",
   ],
   {
     cwd: root,

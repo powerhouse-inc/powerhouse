@@ -6,7 +6,11 @@ seconds for `test-shard.ts`. Weights affect assignment to shards. The root
 
 CI builds the dependencies before running a shard. Its test commands use
 `--no-sort` so a package's tests do not wait for its dependencies' tests, with
-`--workspace-concurrency=2` to limit competition for runner CPU and memory.
+`--workspace-concurrency=2` and Vitest's `--maxWorkers=2` to limit competition
+for runner CPU and memory at both levels. Suites with `fileParallelism: false`
+still use one worker. A package limit alone lets each suite consume the whole
+runner; Windows CLI tests timed out while overlapping reactor-api without a
+worker limit.
 `--no-bail` keeps the remaining suites running after a failure; any failed suite
 still fails the job. Builds keep their dependency ordering.
 

@@ -101,6 +101,8 @@ test("suites overlap within the limit, all finish, and failures determine the ex
       `
       import { existsSync, writeFileSync } from "node:fs";
       import { setTimeout } from "node:timers/promises";
+      import assert from "node:assert/strict";
+      assert.equal(process.argv[3], "--maxWorkers=2");
       const name = process.argv[2];
       writeFileSync(new URL(name + ".started", import.meta.url), "");
       if (name === "c" && !["a", "b"].some((peer) => existsSync(new URL(peer + ".finished", import.meta.url)))) {
