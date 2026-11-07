@@ -73,7 +73,7 @@ for (const [suite, weights, total] of [
   });
 }
 
-test("suites overlap within the limit, all finish, and failures determine the exit code", () => {
+test("suites run without overlap, all finish, and failures determine the exit code", () => {
   const fixture = mkdtempSync(join(tmpdir(), "test-shard-"));
   try {
     mkdirSync(join(fixture, "scripts"));
@@ -99,24 +99,17 @@ test("suites overlap within the limit, all finish, and failures determine the ex
     writeFileSync(
       join(fixture, "suite.mjs"),
       `
-      import { existsSync, writeFileSync } from "node:fs";
+      import { closeSync, openSync, rmSync, writeFileSync } from "node:fs";
       import { setTimeout } from "node:timers/promises";
       import assert from "node:assert/strict";
-      assert.equal(process.argv[3], "--maxWorkers=2");
+      assert.equal(process.argv.length, 3);
       const name = process.argv[2];
+      const lock = new URL("active-suite", import.meta.url);
+      closeSync(openSync(lock, "wx"));
       writeFileSync(new URL(name + ".started", import.meta.url), "");
-      if (name === "c" && !["a", "b"].some((peer) => existsSync(new URL(peer + ".finished", import.meta.url)))) {
-        process.exit(9);
-      }
-      if (name !== "c") {
-        const peer = new URL((name === "a" ? "b" : "a") + ".started", import.meta.url);
-        const deadline = Date.now() + 8000;
-        while (!existsSync(peer)) {
-          if (Date.now() > deadline) process.exit(8);
-          await setTimeout(20);
-        }
-      }
+      await setTimeout(150);
       writeFileSync(new URL(name + ".finished", import.meta.url), "");
+      rmSync(lock);
       process.exit(name === process.env.FAIL_SUITE ? 7 : 0);
     `,
     );

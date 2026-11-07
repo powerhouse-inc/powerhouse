@@ -4,22 +4,20 @@
 seconds for `test-shard.ts`. Weights affect assignment to shards. The root
 `test:ci` and `test:ci:platform` scripts determine which packages run.
 
-CI builds the dependencies before running a shard. Its test commands use
-`--no-sort` so a package's tests do not wait for its dependencies' tests, with
-`--workspace-concurrency=2` and Vitest's `--maxWorkers=2` to limit competition
-for runner CPU and memory at both levels. Suites with `fileParallelism: false`
-still use one worker. A package limit alone lets each suite consume the whole
-runner; Windows CLI tests timed out while overlapping reactor-api without a
-worker limit.
-`--no-bail` keeps the remaining suites running after a failure; any failed suite
-still fails the job. Builds keep their dependency ordering.
+CI builds the dependencies before running a shard. Test commands use `--no-sort`
+and `--workspace-concurrency=1`: packages run one at a time, with each package's
+own Vitest worker settings. The earlier two-package schedule caused CLI and
+Switchboard timeouts even with two Vitest workers per package. `--no-bail` keeps
+remaining suites running after a failure; any failed suite still fails the job.
+Builds keep their dependency ordering.
 
-Switchboard runs two isolated test forks in CI and keeps one worker locally.
-The stored weights below predate that change; refresh them from GitHub runs
-after rollout rather than extrapolating Windows durations from local runs.
+Switchboard runs two isolated test forks on Linux CI and keeps one worker on
+Windows and locally. The stored weights below predate that Linux change; refresh
+them from successful GitHub runs after rollout.
 
 Run `node --test scripts/test-shard.test.mjs` to check package coverage, build
-selectors, concurrent execution, and failure propagation with the installed pnpm.
+selectors, execution without overlap, and failure propagation with the installed
+pnpm.
 
 `update-test-weights.py` reads the CI baseline collector's `suites_raw.json`.
 It takes the median successful Vitest duration for each package and platform,
@@ -27,18 +25,23 @@ rounded to one decimal place. Existing weights without samples stay unchanged.
 Packages removed from the checkout are reported and skipped. Invalid input or
 a period without measurements for both platforms fails before either file changes.
 
-The current refresh uses the `2026-11-05` snapshot, period `early Nov`, from PRs
-3365, 3369, and 3377. Each refreshed package has three samples: 33 Linux packages
-and 13 Windows packages. Packages without samples retain their existing weights.
-These historical durations are scheduling estimates; they do not measure the
-speedup from a new schedule or account for contention between concurrent suites.
+The current refresh uses successful PRs [3381], [3382], and [3383] from
+November 5–6, 2026, period `Nov 5-6 recent PRs`: 101 samples for 34 Linux packages
+and 39 samples for 13 Windows packages. Packages without samples retain their
+existing weights. These historical durations are scheduling estimates. Package
+contents and resource contention differ between runs, so they do not predict a
+speedup from the new schedule.
+
+[3381]: https://github.com/powerhouse-inc/powerhouse/pull/3381
+[3382]: https://github.com/powerhouse-inc/powerhouse/pull/3382
+[3383]: https://github.com/powerhouse-inc/powerhouse/pull/3383
 
 Run from the repository root with Python 3.9 or later:
 
 ```sh
 python3 scripts/update-test-weights.py \
-  .agent-local/ci-baseline/snapshots/2026-11-05/suites_raw.json \
-  --period 'early Nov'
+  .agent-local/ci-optimization/suites_raw.json \
+  --period 'Nov 5-6 recent PRs'
 ```
 
 The snapshot is a local analysis artifact and is not checked into Git. Pass its
@@ -50,7 +53,7 @@ fields:
 
 ```json
 {
-  "period": "early Nov",
+  "period": "Nov 5-6 recent PRs",
   "workflow": "Check Commit",
   "job": "Test (shard 1/3)",
   "package": "packages/reactor-api",

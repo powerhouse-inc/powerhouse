@@ -121,11 +121,10 @@ const result = spawnSync(
   [
     ...mine.names.map((n) => `--filter=${n}`),
     "--no-sort",
-    "--workspace-concurrency=2",
+    "--workspace-concurrency=1",
     "--no-bail",
     "run",
     "test",
-    "--maxWorkers=2",
   ],
   {
     cwd: root,
