@@ -1,3 +1,13 @@
+## 6.2.3-dev.98 (2026-11-07)
+
+### 🚀 Features
+
+- **ph-init:** detect the package manager instead of defaulting to npm ([5ea4161839](https://github.com/powerhouse-inc/powerhouse/commit/5ea4161839))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
 ## 6.2.3-dev.97 (2026-11-07)
 
 ### 🩹 Fixes

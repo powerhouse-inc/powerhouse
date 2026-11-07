@@ -1,3 +1,19 @@
+## 6.2.3-dev.98 (2026-11-07)
+
+### 🚀 Features
+
+- **ph-init:** trust the boilerplate's install scripts under bun ([a72f09ba3f](https://github.com/powerhouse-inc/powerhouse/commit/a72f09ba3f))
+- **ph-init:** prefer the package manager that installed ph ([49195e3c8a](https://github.com/powerhouse-inc/powerhouse/commit/49195e3c8a))
+- **ph-init:** detect the package manager instead of defaulting to npm ([5ea4161839](https://github.com/powerhouse-inc/powerhouse/commit/5ea4161839))
+
+### 🩹 Fixes
+
+- **ph-init:** skip pnpm older than 10.14 and test the forwarding logic ([04c65eef51](https://github.com/powerhouse-inc/powerhouse/commit/04c65eef51))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
 ## 6.2.3-dev.97 (2026-11-07)
 
 ### 🩹 Fixes

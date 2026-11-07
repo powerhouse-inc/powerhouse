@@ -1,3 +1,13 @@
+## 6.2.3-dev.98 (2026-11-07)
+
+### 🚀 Features
+
+- **ph-init:** trust the boilerplate's install scripts under bun ([a72f09ba3f](https://github.com/powerhouse-inc/powerhouse/commit/a72f09ba3f))
+
+### ❤️ Thank You
+
+- Frank Pfeift
+
 ## 6.2.3-dev.97 (2026-11-07)
 
 ### 🩹 Fixes
