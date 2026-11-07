@@ -1,5 +1,5 @@
 import { ConsoleLogger } from "document-model";
-import { sql, type Kysely } from "kysely";
+import type { Kysely } from "kysely";
 import {
   createKyselyWatermarkProbe,
   describeWaitingSessions,
@@ -7,21 +7,19 @@ import {
   type WatermarkSession,
 } from "../catch-up/settled-watermark.js";
 import {
-  RELEASED_CURSOR_STATUS,
-  SKIPPED_DOCUMENT_MARKER,
-  type DocumentViewDatabase,
-} from "../read-models/types.js";
+  lowerCursors,
+  readCursors,
+  type CatchUpCursorRow,
+  type CursorRowsDatabase,
+} from "../read-models/cursor-rows.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 
-export type CatchUpAdminDatabase = StorageDatabase & DocumentViewDatabase;
+export type {
+  CatchUpCursorKind,
+  CatchUpCursorRow,
+} from "../read-models/cursor-rows.js";
 
-export type CatchUpCursorKind = "read-model" | "processor";
-
-export type CatchUpCursorRow = {
-  kind: CatchUpCursorKind;
-  id: string;
-  lastOrdinal: number;
-};
+export type CatchUpAdminDatabase = CursorRowsDatabase;
 
 export type CatchUpStoreStatus = {
   head: number;
@@ -45,35 +43,6 @@ export type RescanRequest = {
   all: boolean;
   dryRun: boolean;
 };
-
-async function readCursors(
-  db: Kysely<CatchUpAdminDatabase>,
-): Promise<CatchUpCursorRow[]> {
-  const views = await db
-    .selectFrom("ViewState")
-    .select(["readModelId", "lastOrdinal"])
-    .where("readModelId", "not like", `%${SKIPPED_DOCUMENT_MARKER}%`)
-    .orderBy("readModelId")
-    .execute();
-  const processors = await db
-    .selectFrom("ProcessorCursor")
-    .select(["processorId", "lastOrdinal"])
-    .where("status", "!=", RELEASED_CURSOR_STATUS)
-    .orderBy("processorId")
-    .execute();
-  return [
-    ...views.map((row) => ({
-      kind: "read-model" as const,
-      id: row.readModelId,
-      lastOrdinal: row.lastOrdinal,
-    })),
-    ...processors.map((row) => ({
-      kind: "processor" as const,
-      id: row.processorId,
-      lastOrdinal: row.lastOrdinal,
-    })),
-  ];
-}
 
 /** One probe, the sessions it waits on, and every cursor with its lag. */
 export async function readCatchUpStatus(
@@ -129,27 +98,6 @@ export async function rescanCatchUp(
   const result = { changes, rowsAbove: Number(counted?.count ?? 0) };
   if (request.dryRun) return result;
 
-  const lower = (column: string) =>
-    sql<number>`least(${sql.ref(column)}, ${request.from})`;
-  const viewIds = chosen
-    .filter((cursor) => cursor.kind === "read-model")
-    .map((cursor) => cursor.id);
-  if (viewIds.length > 0) {
-    await db
-      .updateTable("ViewState")
-      .set({ lastOrdinal: lower("lastOrdinal") })
-      .where("readModelId", "in", viewIds)
-      .execute();
-  }
-  const processorIds = chosen
-    .filter((cursor) => cursor.kind === "processor")
-    .map((cursor) => cursor.id);
-  if (processorIds.length > 0) {
-    await db
-      .updateTable("ProcessorCursor")
-      .set({ lastOrdinal: lower("lastOrdinal") })
-      .where("processorId", "in", processorIds)
-      .execute();
-  }
+  await lowerCursors(db, chosen, request.from);
   return result;
 }
