@@ -1,3 +1,7 @@
+## 6.2.3-dev.99 (2026-11-08)
+
+This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
+
 ## 6.2.3-dev.98 (2026-11-07)
 
 This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
