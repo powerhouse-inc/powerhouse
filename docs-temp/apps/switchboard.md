@@ -57,7 +57,7 @@ graph TD
 | `src/pglite-dialect.ts`, `pglite-migration.ts`, `pglite-version.ts` | The PGlite storage path (with `@powerhousedao/pglite-fs` underneath) |
 | `src/migrate.mts` | `pnpm migrate` / `migrate:status` |
 | `src/worker-pool.mts` | The reactor's worker-pool executor |
-| `src/projection-worker.mts` | The hybrid projection worker (see `docs/plans/2026-09-08-hybrid-projection-worker.md`) |
+| `src/projection-worker.mts` | The hybrid projection worker (PR #2988) |
 | `src/attachments/`, `src/attachment-reference-read-model.mts` | Server side of `reactor-attachments` |
 | `src/observability.mts`, `metrics.ts`, `profiler.ts` | OpenTelemetry + Pyroscope + Sentry |
 | `src/renown.ts` | Server identity |

@@ -15,12 +15,10 @@ Each plan's Status line says what is done and what remains.
 
 | Plan | Remaining |
 |---|---|
-| `docs/plans/2026-09-08-hybrid-projection-worker.md` | Bench sweep, staging parity checks, `REACTOR_PROJECTION_WORKER=1` rollout |
-| `docs/plans/2026-09-30-graphql-document-argument-names.md` | Stages 5c-5e (reactor-browser, renown), stage 6 deletions, stage 7 (recipes), then drop the deprecated args |
-| `docs/plans/2026-10-01-subgraph-attachments.md` | Stage 2 (workflow reference-only access), refuse an upload send after the reservation expires |
+| `docs/plans/2026-09-30-graphql-document-argument-names.md` | Stage 5b leftovers (lb-loadtest, switchboard-lb `mixed-load.js`), 5c-5e (`operations.graphql`, reactor-browser, renown), delete both `ACADEMY_LLM_COMPLETE.md`, stage 7 (recipes `anonymous-subscriptions`), then drop the deprecated args |
+| `docs/plans/2026-10-01-subgraph-attachments.md` | Route workflow attachment reads through `AuthorizedAttachmentService` (stage 2 as written is obsolete), refuse an expired upload-first send |
 | `docs/plans/2026-10-02-reactor-tests-on-windows.md` | Track D: reactor gate in `check-windows.yml` |
-| `docs/plans/2026-10-02-reactor-worker-packaging.md` | Four follow-ups, incl. whether workers are on by default |
-| `docs/plans/2026-10-02-testing-policy.md`, `-rollout.md` | Never adopted (phase 0) |
+| `docs/plans/2026-10-02-testing-policy.md`, `-rollout.md` | Proof fixes and backfills landed; phase 0 (adopt the policy, CLAUDE.md pointers, review checklist) never done |
 | `docs/plans/2026-10-13-uniform-runners.md` | Built behind `FEATURE_UNIFORM_RUNNERS_ENABLED`; flip on, remove flag, delete legacy boot paths |
 
 ## Open work without a plan
@@ -31,6 +29,8 @@ Each plan's Status line says what is done and what remains.
 - **Multi-reactor:** rewind/replay protocol and remote admin mutations were deferred.
 - **Peer UNDO inside a load reshuffle**, base-reducer 2 documents only. `it.fails` in `packages/reactor/test/executor/load-rewind.test.ts`. Base-reducer 3 (the default) passes.
 - **undici HTTP 421 retry.** Worked around in `packages/reactor-browser/src/graphql-client/transport.ts`; never reported upstream.
+- **Hybrid projection worker** (#2988, plan removed): never benchmarked against Run 11 (needs a bench-host hybrid mode); staging parity checks and the `REACTOR_PROJECTION_WORKER=1` rollout belong to powerhouse-k8s-hosting.
+- **Reactor worker** (#3167, plan removed): nothing checks `typeof SharedWorker` before starting it, and no doc states browser support. New projects default to it via the hosts scaffold; legacy config still defaults off.
 - **Small:** no `events` before/after bench record for read-side catch-up (#3124); the `DYNAMIC_BASE_PLACEHOLDER` rewrite from #3167 was never verified.
 
 ## Known gaps in landed work

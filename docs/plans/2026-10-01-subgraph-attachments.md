@@ -1,8 +1,11 @@
 # Plan: Caller-bound attachments for subgraphs
 
 Date: 2026-10-01
-Status: stages 0-1 merged in #3156 (0b37d6001b); remaining: stage 2 (the workflow port still
-checks refs itself via `canReadAttachmentRef`) and refusing an upload-first send after expiry.
+Status: stages 0-1 merged in #3156 (0b37d6001b). Stage 2 as written is obsolete: #3192 made
+the workflow's ref check caller-bound (`attachmentReadPolicy`), so reference-only access would
+loosen it. Remaining: route the workflow port through `AuthorizedAttachmentService` with a
+run-user access service and delete `canReadAttachmentRef`; make `DirectAttachmentUpload.send`
+refuse an expired upload-first reservation (today only the sweep stops it).
 Written for agents implementing from `main`. Paths are relative to `packages/reactor-api/src`
 unless stated.
 
