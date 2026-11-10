@@ -56,6 +56,22 @@ export function interfaceConformanceProblems(
             repair: `Give ${received} a type compatible with ${expected}.`,
           });
         }
+        // GraphQL lets an object field add arguments only if they are optional.
+        const required = field?.args?.find(
+          (arg) =>
+            arg.type.required &&
+            arg.defaultValue === undefined &&
+            !ifaceField.args?.some(({ name }) => name === arg.name),
+        );
+        if (required !== undefined) {
+          problems.push({
+            owner: owner.name,
+            message: `${received} has the required argument ${required.name}, which the interface field ${expected} does not declare.`,
+            expected: `no required argument beyond those of ${expected}`,
+            received: `${required.name}: ${printTypeReference(required.type)}`,
+            repair: `Make ${required.name} nullable or give it a default value.`,
+          });
+        }
       }
     }
   }

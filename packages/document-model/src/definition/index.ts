@@ -55,3 +55,22 @@ export type {
   GlobalStateOf,
   LocalStateOf,
 } from "./runtime/types.js";
+export {
+  compileSubgraph,
+  createSubgraphEntryBuilders,
+  projectSubgraphGraphQL,
+  readSubgraphProtocol,
+  SUBGRAPH_PROTOCOL,
+} from "./subgraph/index.js";
+export type {
+  SubgraphArgsOf,
+  SubgraphBinding,
+  SubgraphCompilation,
+  SubgraphDescription,
+  SubgraphEntry,
+  SubgraphEntryBuilders,
+  SubgraphProtocol,
+  SubgraphProtocolRead,
+  SubgraphResolverCall,
+  SubgraphResolveTypeCall,
+} from "./subgraph/index.js";
