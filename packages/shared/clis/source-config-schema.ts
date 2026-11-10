@@ -226,7 +226,7 @@ export const sourceConfigSchema = {
           type: "object",
           additionalProperties: false,
           description:
-            "The drive the switchboard creates at boot, if no drive with its id exists. Each field is overridden by its PH_DEFAULT_DRIVE_* env var.",
+            "The drive the switchboard creates at boot, if neither its slug nor its id is taken. Each field is overridden by its PH_DEFAULT_DRIVE_* env var.",
           properties: {
             id: {
               type: "string",
