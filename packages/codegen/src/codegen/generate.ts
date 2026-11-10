@@ -18,22 +18,12 @@ import {
   tsMorphGeneratePieceAction,
   tsMorphGeneratePieceTrigger,
   tsMorphGenerateProcessor,
-  tsMorphGenerateSubgraph,
 } from "file-builders";
 import { derivePieceId } from "name-builders";
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { readPackage } from "read-pkg";
-import {
-  filter,
-  isDefined,
-  isIncludedIn,
-  isTruthy,
-  map,
-  pipe,
-  prop,
-  unique,
-} from "remeda";
+import { filter, isIncludedIn, isTruthy, map, pipe } from "remeda";
 import type { Project } from "ts-morph";
 import {
   assertNoReservedOperationNames,
@@ -44,8 +34,6 @@ import {
   getOrCreateDirectory,
   getProcessorDirNames,
   getProcessorMetadata,
-  getSubgraphDirNames,
-  getSubgraphMetadata,
   loadDocumentModelInDir,
   projectPath,
   readPiecesList,
@@ -173,48 +161,6 @@ export async function generateAllApps(project: Project) {
     );
   }
   return { apps, unreadableDirs };
-}
-export async function generateSubgraph(subgraphName: string, project: Project) {
-  await tsMorphGenerateSubgraph({ subgraphName, project });
-}
-
-/* Runs generate for each directory found in the project's `subgraphs` directory.
- * Returns the subgraphs it regenerated, and the directories whose `index.ts` it could not read.
- */
-export async function generateAllSubgraphs(project: Project) {
-  const { directory: subgraphsDir } = getOrCreateDirectory(
-    project,
-    "subgraphs",
-  );
-  const projectDir = subgraphsDir.getParentOrThrow().getPath();
-  const dirNames = getSubgraphDirNames(project);
-  /* The subgraph's name is found in the `index.ts` file */
-  const subgraphs = dirNames.map((dirName) => ({
-    dirName,
-    ...getSubgraphMetadata(project, dirName),
-  }));
-  const unreadableDirs = subgraphs
-    .filter(({ subgraphName }) => subgraphName === undefined)
-    .map(prop("dirName"));
-  const subgraphNames = pipe(
-    subgraphs,
-    map(prop("subgraphName")),
-    filter(isDefined),
-    unique(),
-  );
-  for (const subgraphName of subgraphNames) {
-    await generateSubgraph(subgraphName, project);
-  }
-
-  // An unreadable index.ts may be a subgraph's, so its manifest entry stays.
-  if (unreadableDirs.length === 0) {
-    await pruneManifestSection(
-      projectDir,
-      "subgraphs",
-      subgraphNames.map((name) => kebabCase(name)),
-    );
-  }
-  return { subgraphNames, unreadableDirs };
 }
 
 export async function generateProcessor(

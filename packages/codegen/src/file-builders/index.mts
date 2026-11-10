@@ -16,5 +16,6 @@ export * from "./manifest.js";
 export * from "./pieces.js";
 export * from "./processors/processor.js";
 export * from "./project-index.js";
+export * from "./subgraph-registration.js";
 export * from "./subgraphs.js";
 export type * from "./types.js";

@@ -1,0 +1,8 @@
+package.json
+powerhouse.manifest.json
+subgraphs/foo/index.ts
+subgraphs/foo/lib.ts
+subgraphs/foo/resolvers.ts
+subgraphs/foo/schema.ts
+subgraphs/index.ts
+tsconfig.json

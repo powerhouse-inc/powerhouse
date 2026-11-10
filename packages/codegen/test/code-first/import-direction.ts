@@ -34,10 +34,12 @@ export function importDirectionViolations(
     dsl: 2,
     compiler: 3,
     model: 4,
+    subgraph: 4,
     runtime: 5,
     tooling: 6,
     entry: 7,
   };
+  const siblings = new Set(["model", "subgraph"]);
   const layer = (file: string) => {
     const parts = relative(dm, file).split(/[\\/]/);
     if (parts[0] === "scalars") return "scalars";
@@ -50,6 +52,7 @@ export function importDirectionViolations(
     dsl: /^(@powerhousedao\/shared\/document-model|zod)$/,
     compiler: /^(@powerhousedao\/shared\/document-model|zod|change-case)$/,
     model: /^@powerhousedao\/shared\/document-model$/,
+    subgraph: /^(@powerhousedao\/shared\/document-model|zod)$/,
     runtime: /^(@powerhousedao\/shared\/document-model|zod)$/,
     tooling:
       /^(node:.*|@powerhousedao\/shared(?:\/.*)?|graphql(?:\/.*)?|zod|remeda)$/,
@@ -77,7 +80,8 @@ export function importDirectionViolations(
     check: 3,
     inspect: 3,
     release: 3,
-    project: 4,
+    subgraph: 4,
+    project: 5,
   };
   const cliRank = (file: string | undefined): [string, number] | undefined => {
     const match = /clis\/ph-cli\/src\/(.*)$/.exec(
@@ -114,7 +118,7 @@ export function importDirectionViolations(
       /^packages\/codegen\/src\/.*(code-first|definition-source)/.test(path)) &&
     !/\/model-generation\.ts$|\/schema-first\//.test(path);
   const isFlagSwitch = (file: string) =>
-    /\/(?:model-generation\.ts|services\/generate-document-model\.ts)$/.test(
+    /\/(?:(?:model|subgraph)-generation\.ts|services\/generate-(?:document-model|subgraph)\.ts)$/.test(
       posixPath(file),
     );
 
@@ -223,6 +227,12 @@ export function importDirectionViolations(
       if (!(from in ranks)) fail(file, specifier, "unmapped definition layer");
       if (to !== "outside" && ranks[to] > ranks[from])
         fail(file, specifier, `${from} cannot import ${to}`);
+      if (from !== to && siblings.has(from) && siblings.has(to))
+        fail(
+          file,
+          specifier,
+          `${from} and ${to} are siblings; neither imports the other`,
+        );
       if (specifier === "change-case" && !path.endsWith("/compiler/naming.ts"))
         fail(file, specifier, "change-case belongs to naming only");
       if (from !== "tooling" && /^(node:|graphql$|ts-morph$)/.test(specifier))
@@ -249,6 +259,12 @@ export function importDirectionViolations(
             clause.namedBindings.elements.every(
               (element) => element.isTypeOnly,
             ));
+        if (from === "subgraph" && specifier === "zod" && !typeOnly)
+          fail(
+            file,
+            specifier,
+            "subgraph imports zod types only; validators come from dsl/zod",
+          );
         if (
           specifier === "@powerhousedao/shared/document-model" &&
           !typeOnly &&
@@ -345,6 +361,23 @@ export function importDirectionViolations(
         "only tooling/project/project-definitions.ts may import tooling/schema-first",
       );
     if (
+      normalized?.includes(
+        "/packages/document-model/src/definition/tooling/subgraph/schema-first/",
+      ) &&
+      !path.startsWith(
+        "packages/document-model/src/definition/tooling/subgraph/schema-first/",
+      ) &&
+      ![
+        "packages/document-model/src/definition/tooling/subgraph/checks.ts",
+        "packages/document-model/src/definition/tooling/subgraph/input.ts",
+      ].includes(path)
+    )
+      fail(
+        file,
+        specifier,
+        "only tooling/subgraph/checks.ts and input.ts reach the schema-first SDL reader",
+      );
+    if (
       fromSub !== undefined &&
       ["graphql", "report", "check", "inspect"].includes(fromSub) &&
       normalized &&
@@ -355,7 +388,38 @@ export function importDirectionViolations(
         specifier,
         `tooling/${fromSub} reads normalized artifacts, not runtime/model/subgraph`,
       );
+    const subgraphModule = normalized
+      ? /\/packages\/document-model\/src\/definition\/subgraph\/([^/]+)$/.exec(
+          normalized,
+        )?.[1]
+      : undefined;
+    if (fromSub !== undefined && subgraphModule !== undefined) {
+      if (fromSub !== "subgraph")
+        fail(
+          file,
+          specifier,
+          "only tooling/subgraph reads definition/subgraph",
+        );
+      else if (
+        subgraphModule === "protocol.ts"
+          ? !path.endsWith("/tooling/subgraph/read.ts")
+          : subgraphModule !== "projection.ts"
+      )
+        fail(
+          file,
+          specifier,
+          "tooling/subgraph reads classes through read.ts's protocol reader and projects with subgraph/projection.ts; it never builds or compiles a subgraph",
+        );
+    }
+    // Reading schema-first SDL is the one edge from code-first ph-cli code
+    // into a schema-first module.
+    const schemaFirstSubgraphSeam =
+      path === "clis/ph-cli/src/services/model/subgraphs.ts" &&
+      normalized?.endsWith(
+        "/clis/ph-cli/src/services/model/schema-first/sdl-sources.ts",
+      ) === true;
     if (
+      !schemaFirstSubgraphSeam &&
       /^clis\/ph-cli\/src\/(commands\/model|services\/model\/)/.test(path) &&
       (specifier.includes("/schema-first") ||
         /adaptSchemaFirst/.test(node.getText(source)))
@@ -402,6 +466,7 @@ export function importDirectionViolations(
       );
     if (
       codeFirst &&
+      !schemaFirstSubgraphSeam &&
       normalized &&
       (/\/schema-first\//.test(normalized) ||
         /\/templates\/document-editor\/editor\.ts$/.test(normalized))

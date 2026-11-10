@@ -1,0 +1,15 @@
+import type { DocumentNode } from "graphql";
+import { gql } from "graphql-tag";
+
+export const schema: DocumentNode = gql`
+  """
+  Foo Subgraph Queries
+  """
+  type FooSubgraphQueries {
+    example(driveId: String!): String
+  }
+
+  type Query {
+    foo: FooSubgraphQueries!
+  }
+`;

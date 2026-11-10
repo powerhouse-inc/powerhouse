@@ -29,7 +29,7 @@ import {
 import { afterEach, describe, expect, it } from "vitest";
 import { getSubgraphMetadata } from "../utils/get-subgraph-metadata.js";
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
-import { makeSubgraphsIndexFile } from "./subgraphs.js";
+import { makeSubgraphsIndexFile } from "./subgraph-registration.js";
 
 const temporary: string[] = [];
 
@@ -165,7 +165,7 @@ describe("getSubgraphMetadata", () => {
 
     expect(
       getSubgraphMetadata(buildTsMorphProject(root), "statements"),
-    ).toEqual({ subgraphName: "statements" });
+    ).toEqual({ subgraphName: "statements", style: "schema-first" });
   });
 });
 

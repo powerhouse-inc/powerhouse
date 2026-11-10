@@ -6,6 +6,10 @@ export * from "./graphql.js";
 export * from "./install-added-dependencies.js";
 export * from "./kysely.js";
 export * from "./migrate.js";
+export {
+  generateAllSubgraphs,
+  generateSubgraphDir,
+} from "./subgraph-generation.js";
 export * from "./types.js";
 export * from "./utils.js";
 export {
@@ -27,4 +31,6 @@ export {
   generateAllEditors,
   generateAll,
   generateFromFile,
+  generateSubgraph,
+  type GenerateSubgraphOptions,
 } from "./project-generation.js";
