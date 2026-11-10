@@ -2,23 +2,6 @@ import type { Kysely, Transaction } from "kysely";
 import type { Database } from "./types.js";
 
 /**
- * The largest timestamp in a document's branch. Asked separately from the scope
- * heads because the largest timestamp is not always on the last-indexed
- * operation: a reshuffle can leave a later one behind it.
- */
-export function latestTimestampQuery(
-  db: Kysely<Database> | Transaction<Database>,
-  documentId: string,
-  branch: string,
-) {
-  return db
-    .selectFrom("Operation")
-    .select((eb) => eb.fn.max("timestampUtcMs").as("latestTimestamp"))
-    .where("documentId", "=", documentId)
-    .where("branch", "=", branch);
-}
-
-/**
  * The largest timestamp in one stream (document, scope, branch): a single
  * probe of idx_operation_scope_timestamp.
  */
@@ -37,12 +20,19 @@ export function streamLatestTimestampQuery(
 }
 
 /**
- * The head index of each scope in a document's branch, as a skip scan: a
- * recursive CTE hops from one distinct scope to the next (`scope >` the
- * previous, one unique_revision probe each), then a backward probe per scope
- * reads its largest index. The cost follows the number of scopes, not the
- * number of operations. A scope that exists only on another branch comes back
- * with a null index; callers drop rows where either column is null.
+ * The head index and newest timestamp of each scope in a document's branch, in
+ * one skip scan: a recursive CTE hops from one distinct scope to the next
+ * (`scope >` the previous, one index probe each), then per scope a backward
+ * probe of unique_revision reads its largest index and a probe of
+ * idx_operation_scope_timestamp reads its newest timestamp. The cost follows
+ * the number of scopes, not the number of operations.
+ *
+ * The largest timestamp is not always on the last-indexed operation (a
+ * reshuffle can leave a later one behind it), but the document's largest
+ * timestamp is the largest of its scopes' newest ones, so callers take the max
+ * of `latestTimestamp` over the rows. A scope that exists only on another
+ * branch comes back with null index and timestamp; callers drop rows where
+ * either is null.
  */
 export function scopeHeadsQuery(
   db: Kysely<Database> | Transaction<Database>,
@@ -89,6 +79,15 @@ export function scopeHeadsQuery(
         .orderBy("o.index", "desc")
         .limit(1)
         .as("index"),
+      eb
+        .selectFrom("Operation as o")
+        .select("o.timestampUtcMs")
+        .where("o.documentId", "=", documentId)
+        .whereRef("o.scope", "=", "s.scope")
+        .where("o.branch", "=", branch)
+        .orderBy("o.timestampUtcMs", "desc")
+        .limit(1)
+        .as("latestTimestamp"),
     ])
     .where("s.scope", "is not", null);
 }

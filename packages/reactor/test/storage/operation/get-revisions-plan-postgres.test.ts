@@ -56,6 +56,11 @@ describe("getRevisions query plans [Postgres]", () => {
     // One backward probe per scope, not a walk of every operation.
     expect(plan).toMatch(/Scan Backward using unique_revision/);
     expect(plan).toContain("Recursive Union");
+    // The newest timestamp per scope is a probe of the scope/timestamp index
+    // (an aliased scan is a per-scope subquery, not the scope hop's own scan).
+    expect(plan).toMatch(
+      /Scan (Backward )?using idx_operation_scope_timestamp on "Operation" o(_\d+)?\b/,
+    );
     expect(plan).not.toContain("Seq Scan");
   });
 

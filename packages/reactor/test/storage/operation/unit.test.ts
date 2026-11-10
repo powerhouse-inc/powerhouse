@@ -1024,6 +1024,18 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
       );
     }
 
+    it("takes the latest timestamp across scopes, not from the deepest one", async () => {
+      const documentId = generateId();
+      for (let i = 0; i <= 3; i++)
+        await writeAt(documentId, "global", i, `2026-01-01T00:00:0${i}.000Z`);
+      await writeAt(documentId, "local", 0, "2026-03-01T00:00:00.000Z");
+
+      const revisions = await store.getRevisions(documentId, "main");
+
+      expect(revisions.revision).toEqual({ global: 4, local: 1 });
+      expect(revisions.latestTimestamp).toBe("2026-03-01T00:00:00.000Z");
+    });
+
     it("ignores scopes that only have operations on another branch", async () => {
       const documentId = generateId();
       for (let i = 0; i <= 1; i++) await writeAt(documentId, "global", i);
