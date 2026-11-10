@@ -58,6 +58,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
+          standalone: true
           version: 12.10.1
 
       - name: Install Node.js
@@ -131,6 +132,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
+          standalone: true
           version: 12.10.1
 
       - name: Install Node.js
@@ -222,6 +224,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
+          standalone: true
           version: 12.10.1
 
       - name: Install Node.js
@@ -325,6 +328,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
+          standalone: true
           version: 12.10.1
 
       - name: Install Node.js
@@ -407,6 +411,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
+          standalone: true
           version: 12.10.1
 
       - name: Install Node.js
@@ -450,6 +455,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
+          standalone: true
           version: 12.10.1
 
       - name: Install Node.js
