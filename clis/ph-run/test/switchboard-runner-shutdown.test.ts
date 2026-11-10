@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -186,6 +186,38 @@ describe("switchboard handle shutdown (real server)", () => {
         expect(drive.url.startsWith(`${outputs.origin}/d/`)).toBe(true);
         expect((await fetch(drive.url)).ok).toBe(true);
       }
+    } finally {
+      await handle.shutdown?.();
+    }
+  }, 120_000);
+
+  it("keys the default drive output by its configured slug, not its id", async () => {
+    writeFileSync(
+      path.join(state.tempRoot, "powerhouse.config.json"),
+      JSON.stringify({
+        switchboard: { drive: { id: "acme-id", slug: "acme" } },
+      }),
+    );
+    const host = switchboardRunner.hostSchema.parse({
+      name: "lab-switchboard",
+      runner: { module: "m", port: 0 },
+    });
+    const handle = toStartedHandle(
+      await switchboardRunner.run(host, {
+        projectRoot: state.tempRoot,
+        verb: "run",
+        env: reactorEnv(),
+      } satisfies RunnerContext),
+      "sb",
+    );
+    try {
+      await handle.ready;
+      const outputs = handle.outputs as switchboardRunner.SwitchboardOutputs;
+      expect(Object.keys(outputs.drives)).toEqual(["acme"]);
+      expect(outputs.drives.acme).toEqual({
+        id: "acme-id",
+        url: `${outputs.origin}/d/acme`,
+      });
     } finally {
       await handle.shutdown?.();
     }
