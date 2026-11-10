@@ -51,6 +51,7 @@ const cliMigratePglite = process.argv.slice(2).includes("--migrate-pglite");
 try {
   const config = binSwitchboardConfig(process.env, {
     filePort: getConfig().switchboard?.port,
+    fileDrive: getConfig().switchboard?.drive,
     migratePglite: cliMigratePglite,
   });
   initSwitchboardProcess(config);
