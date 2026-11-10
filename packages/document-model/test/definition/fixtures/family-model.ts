@@ -40,7 +40,6 @@ export const taskV1Context = defineDocumentModel({
       }),
       initialValue: { tasks: [] },
     },
-    local: { schema: null, initialValue: {} },
   },
 });
 
@@ -63,7 +62,6 @@ export const taskV2Context = defineDocumentModel({
       }),
       initialValue: { title: "", tasks: [] },
     },
-    local: { schema: null, initialValue: {} },
   },
 });
 

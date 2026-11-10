@@ -147,6 +147,43 @@ describe("defineDocumentModel empty local state", () => {
     ).not.toHaveProperty("key");
   });
 
+  it("treats an omitted local scope as the empty form", () => {
+    const model = (local?: { schema: null; initialValue: {} }) =>
+      defineDocumentModel({
+        id: "test/omitted-local",
+        name: "OmittedLocal",
+        description: "",
+        extension: "ol",
+        version: 1,
+        author: { name: "Powerhouse" },
+        scopes: {
+          global: {
+            schema: ph.object("OmittedLocalState", {
+              fields: { title: ph.String({ required: true }) },
+            }),
+            initialValue: { title: "" },
+          },
+          ...(local === undefined ? {} : { local }),
+        },
+      });
+    const stored = (context: ReturnType<typeof model>) =>
+      JSON.stringify(materialize(context.version({ modules: [] })).definition);
+    expect(stored(model())).toBe(
+      stored(model({ schema: null, initialValue: {} })),
+    );
+  });
+
+  it("still requires the global scope", () => {
+    const diagnostics = diagnosticsOf(declare({}));
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({
+      code: "PH-DM-DECLARATION-INVALID",
+      path: ["scopes", "global"],
+      received: "absent",
+    });
+    expect(diagnostics[0]?.repair).toContain('ph.object("SampleState"');
+  });
+
   const rejected: readonly (readonly [string, unknown])[] = [
     ["null", null],
     ["an array", []],

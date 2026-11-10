@@ -51,7 +51,6 @@ export const ${v.camelName}Model = defineDocumentModel({
       }),
       initialValue: { items: [] },
     },
-    local: { schema: null, initialValue: {} },
   },
 });
 `.raw;

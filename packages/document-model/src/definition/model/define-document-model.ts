@@ -250,13 +250,25 @@ function normalizeScopes(
     return [];
   });
 
-  const global = normalizeScope(
-    collector,
-    scopes.global,
-    "global",
-    names.global,
-  );
-  const local = normalizeScope(collector, scopes.local, "local", names.local);
+  if (scopes.global === undefined) {
+    collector.add({
+      code: "PH-DM-DECLARATION-INVALID",
+      path: [...path, "global"],
+      message:
+        "A document model must declare a global scope; only local can be omitted.",
+      expected: "a global scope declaration",
+      received: "absent",
+      repair: `Add global: { schema: ph.object(${JSON.stringify(names.global)}, { fields: { ... } }), initialValue: { ... } }.`,
+    });
+  }
+  const global =
+    scopes.global === undefined
+      ? undefined
+      : normalizeScope(collector, scopes.global, "global", names.global);
+  const local =
+    scopes.local === undefined
+      ? { root: null, initialValue: {}, examples: [] }
+      : normalizeScope(collector, scopes.local, "local", names.local);
   if (global === undefined || global.root === null || local === undefined) {
     return undefined;
   }
@@ -702,8 +714,8 @@ function versionModules(
  */
 export function defineDocumentModel<
   const TGlobal extends StateRootDescriptor,
-  const TLocal extends StateRootDescriptor | null,
-  const TVersion extends number,
+  const TLocal extends StateRootDescriptor | null = null,
+  const TVersion extends number = number,
 >(
   config: DocumentModelConfig<TGlobal, TLocal, TVersion>,
 ): DocumentModelContext<TGlobal, TLocal, TVersion> {
