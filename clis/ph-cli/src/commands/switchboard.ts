@@ -41,7 +41,11 @@ This command:
 
     const { startSwitchboard } =
       await import("@powerhousedao/ph-run/switchboard");
-    const { defaultDriveUrl, renown } = await startSwitchboard(args);
+    const { getConfig } = await import("@powerhousedao/config/node");
+    const { defaultDriveUrl, renown } = await startSwitchboard({
+      ...args,
+      fileDrive: getConfig().switchboard?.drive,
+    });
     console.log("   ➜  Switchboard:", defaultDriveUrl);
     if (renown) {
       console.log("   ➜  Identity:", renown.did);

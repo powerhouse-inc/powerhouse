@@ -1,10 +1,13 @@
 import type { ResolvedPlugin } from "@powerhousedao/host-core";
-import { DEFAULT_DRIVE_ICON } from "@powerhousedao/shared/clis";
+import type { PHSwitchboardDriveConfig } from "@powerhousedao/shared/clis";
 import {
   callerOverEnv,
   type SwitchboardConfigInput,
 } from "@powerhousedao/switchboard/config";
-import { switchboardConfigFromEnv } from "@powerhousedao/switchboard/config/env";
+import {
+  defaultDrive,
+  switchboardConfigFromEnv,
+} from "@powerhousedao/switchboard/config/env";
 import { addDefaultDrive } from "@powerhousedao/switchboard/utils";
 import {
   initSwitchboardProcess,
@@ -43,20 +46,7 @@ export function allowLocalhostEgress(env: NodeJS.ProcessEnv = process.env) {
 // for both PGlite stores (two writers on one PGDATA).
 export const defaultSwitchboardOptions = {
   port: 4001,
-  drive: {
-    id: "powerhouse",
-    slug: "powerhouse",
-    global: {
-      name: "Powerhouse",
-      icon: DEFAULT_DRIVE_ICON,
-    },
-    local: {
-      availableOffline: true,
-      listeners: [],
-      sharingType: "public",
-      triggers: [],
-    },
-  },
+  drive: defaultDrive({}),
   mcp: true,
 } satisfies StartServerOptions;
 
@@ -96,6 +86,8 @@ export type StartSwitchboardOptions = Omit<SwitchboardArgs, "mcp"> & {
   pluginComposition?: ResolvedPlugin[];
   /** Drives the caller seeds after start; `/ready` waits for them. */
   readyAfter?: Promise<unknown>;
+  /** powerhouse.config.json `switchboard.drive`; the caller reads the project's file. */
+  fileDrive?: PHSwitchboardDriveConfig;
 };
 
 export async function startSwitchboard(
@@ -140,6 +132,7 @@ export function switchboardConfigOf(
     keypairPath,
     requireIdentity,
     basePath,
+    fileDrive,
     ...serverOptions
   } = options;
 
@@ -149,7 +142,10 @@ export function switchboardConfigOf(
   // Choose the appropriate default configuration
   const defaultOptions = useVetraDrive
     ? getDefaultVetraSwitchboardOptions(vetraDriveId)
-    : defaultSwitchboardOptions;
+    : {
+        ...defaultSwitchboardOptions,
+        drive: defaultDrive(process.env, fileDrive),
+      };
 
   // Build identity options if enabled
   const identity: IdentityOptions | undefined =

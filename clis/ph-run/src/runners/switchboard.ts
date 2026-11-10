@@ -431,8 +431,13 @@ async function start(
       throw error;
     }
   };
+  const { getConfig: getProjectConfig } =
+    await import("@powerhousedao/config/node");
+  const fileDrive = getProjectConfig(
+    path.join(ctx.projectRoot, "powerhouse.config.json"),
+  ).switchboard?.drive;
   const switchboard = await startSwitchboard(
-    { ...serverArgs, readyAfter },
+    { ...serverArgs, readyAfter, fileDrive },
     undefined,
     memberConfig,
   );
