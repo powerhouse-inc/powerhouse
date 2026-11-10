@@ -43,7 +43,7 @@ env:
 jobs:
   publish:
     name: Publish ${{ inputs.branch }} to ${{ inputs.environment }}
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     # Pushes to cr.vetra.io have stalled for up to 20 minutes.
     timeout-minutes: 40
     steps:

@@ -24,7 +24,7 @@ on:
 
 jobs:
   test-package-managers:
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     timeout-minutes: 10
     strategy:
       fail-fast: false

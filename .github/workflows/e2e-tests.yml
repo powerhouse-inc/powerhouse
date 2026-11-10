@@ -37,7 +37,7 @@ jobs:
     # standalone jobs so branch protection and artifact consumers see no change.
     name: Run Vetra E2E Tests${{ matrix.name-suffix }}
     # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -64,7 +64,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: "pnpm"
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install-ci
@@ -91,12 +91,14 @@ jobs:
         working-directory: ./test/vetra-e2e
 
       - name: Cache Playwright browsers
+        if: runner.environment == 'github-hosted'
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
+        if: runner.environment == 'github-hosted'
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./test/vetra-e2e
 
@@ -122,7 +124,7 @@ jobs:
   package-e2e-tests:
     name: Run Package E2E Tests
     # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     timeout-minutes: 45
     steps:
       - name: Checkout repository
@@ -137,7 +139,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: "pnpm"
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install-ci
@@ -159,12 +161,14 @@ jobs:
         working-directory: ./test/package-e2e
 
       - name: Cache Playwright browsers
+        if: runner.environment == 'github-hosted'
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
+        if: runner.environment == 'github-hosted'
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./test/package-e2e
 
@@ -190,7 +194,7 @@ jobs:
   workflow-piece-e2e-tests:
     name: Run Workflow Piece E2E Tests
     # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     timeout-minutes: 30
     steps:
       - name: Checkout repository
@@ -228,7 +232,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: "pnpm"
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install-ci
@@ -271,14 +275,14 @@ jobs:
         working-directory: ./packages/workflow
 
       - name: Cache Playwright browsers
-        if: steps.workflow-ui.outputs.run == 'true'
+        if: runner.environment == 'github-hosted' && steps.workflow-ui.outputs.run == 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
-        if: steps.workflow-ui.outputs.run == 'true'
+        if: runner.environment == 'github-hosted' && steps.workflow-ui.outputs.run == 'true'
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./packages/workflow
 
@@ -302,7 +306,7 @@ jobs:
   analytics-engine-integration-tests:
     name: Run Analytics Engine Integration Tests
     # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     timeout-minutes: 30
     # The pg suite expects postgresql://postgres:password@localhost:5555/analytics
     # (packages/analytics-engine/pg/package.json); nothing else gated it before.
@@ -331,7 +335,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: "pnpm"
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
 
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
@@ -350,12 +354,14 @@ jobs:
       # This job installs every browser, so it gets its own key ("all") — sharing
       # the chromium key would pin whichever job saved first and miss forever.
       - name: Cache Playwright browsers
+        if: runner.environment == 'github-hosted'
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-all-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
+        if: runner.environment == 'github-hosted'
         run: pnpm exec playwright install
         working-directory: packages/analytics-engine/browser
 
@@ -393,7 +399,7 @@ jobs:
 
   switchboard-e2e-tests:
     name: Run Switchboard E2E Tests
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     timeout-minutes: 30
     # The suites start their own switchboards on PGlite: the shared one on
     # SWITCHBOARD_PORT, renown-self-auth's on 4022 and 4023, and router's on 4024.
@@ -413,7 +419,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: "pnpm"
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
 
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
@@ -430,7 +436,7 @@ jobs:
   recipes-e2e-tests:
     name: Run Recipes E2E Tests
     # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     timeout-minutes: 45
     steps:
       - name: Checkout repository
@@ -456,7 +462,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: "pnpm"
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: pnpm install-ci
@@ -507,7 +513,7 @@ jobs:
       # Same key format as the other jobs, so when a recipes version matches
       # this repo's Playwright version, the jobs share one cache entry.
       - name: Cache Playwright browsers
-        if: steps.recipes-playwright.outputs.versions != ''
+        if: runner.environment == 'github-hosted' && steps.recipes-playwright.outputs.versions != ''
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
@@ -522,7 +528,7 @@ jobs:
       # would delete the second version's restored Chromium and the second
       # install would download it again. The env var below turns that cleanup off.
       - name: Install Playwright Browsers
-        if: steps.recipes-playwright.outputs.versions != ''
+        if: runner.environment == 'github-hosted' && steps.recipes-playwright.outputs.versions != ''
         working-directory: ${{ runner.temp }}
         env:
           VERSIONS: ${{ steps.recipes-playwright.outputs.versions }}
@@ -545,7 +551,7 @@ jobs:
 
   notify-discord:
     if: always() && github.event_name != 'pull_request' && (needs.vetra-e2e-tests.result == 'failure' || needs.package-e2e-tests.result == 'failure' || needs.workflow-piece-e2e-tests.result == 'failure' || needs.recipes-e2e-tests.result == 'failure' || needs.switchboard-e2e-tests.result == 'failure')
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     needs:
       [
         vetra-e2e-tests,
@@ -623,7 +629,7 @@ jobs:
         switchboard-e2e-tests,
       ]
     if: always()
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     permissions:
       actions: read
       checks: read

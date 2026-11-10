@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   check:
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     env:
       CI: true
 
@@ -40,7 +40,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: "pnpm"
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
 
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
@@ -108,7 +108,7 @@ jobs:
   test:
     name: Test (shard ${{ matrix.shard }}/3)
     # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     timeout-minutes: 40
     env:
       CI: true
@@ -140,13 +140,13 @@ jobs:
       # reactor-browser runs half its suite in a real chromium (vitest browser
       # mode). Keyed on the shard's packages so the split can be rebalanced freely.
       - name: Install playwright chromium
-        if: contains(steps.shard.outputs.selectors, '@powerhousedao/reactor-browser...')
+        if: runner.environment == 'github-hosted' && contains(steps.shard.outputs.selectors, '@powerhousedao/reactor-browser...')
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./packages/reactor-browser
 
       # The monitor's builder layout tests measure the page in chromium.
       - name: Install playwright chromium for the monitor
-        if: contains(steps.shard.outputs.selectors, '@powerhousedao/reactor-monitor-app...')
+        if: runner.environment == 'github-hosted' && contains(steps.shard.outputs.selectors, '@powerhousedao/reactor-monitor-app...')
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./apps/reactor-monitor
 
@@ -165,7 +165,7 @@ jobs:
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
     needs: [check, test]
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     steps:
       - name: Send Discord notification
         env:

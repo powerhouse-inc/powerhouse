@@ -56,7 +56,7 @@ permissions:
 
 jobs:
   do-codegen-tests:
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     env:
       CI: true
 
@@ -80,7 +80,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: "pnpm"
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
 
       # Only test-codegen and the workspace packages it depends on.
       - name: Install and build
@@ -133,7 +133,7 @@ jobs:
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
     needs: [do-codegen-tests, do-codegen-tests-windows]
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     steps:
       - name: Send Discord notification
         env:

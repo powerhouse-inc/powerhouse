@@ -31,7 +31,7 @@ jobs:
   # This CAN block merges — a broken mapping means ph-lora is flying blind.
   validate-mapping:
     name: Validate ph-lora mapping
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
 
     steps:
       - name: Checkout
@@ -46,7 +46,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: pnpm
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
 
       - name: Install deps
         run: pnpm install-ci
@@ -58,7 +58,7 @@ jobs:
   # Never blocks merges — opens a GitHub issue instead.
   drift-check:
     name: Check for doc drift
-    runs-on: vetra-ubuntu-runner
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'vetra-ubuntu-runner' }}
     needs: validate-mapping
     # Never block merges — this is advisory only
     continue-on-error: true
@@ -79,7 +79,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: pnpm
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
 
       - name: Install deps
         run: pnpm install-ci

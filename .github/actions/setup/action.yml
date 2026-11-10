@@ -21,7 +21,7 @@ runs:
       with:
         node-version: 24
         registry-url: https://registry.npmjs.org
-        cache: pnpm
+        cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
         cache-dependency-path: pnpm-lock.yaml
 
     - name: Setup bun global install
