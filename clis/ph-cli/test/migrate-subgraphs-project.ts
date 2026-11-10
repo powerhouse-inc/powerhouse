@@ -6,7 +6,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 import { gqlModule, installSubgraphDependencies } from "./subgraph-project.js";
 
 /**
@@ -167,7 +167,7 @@ export function writeProject(files: Readonly<Record<string, string>>): string {
   return root;
 }
 
-/** Every file of the project outside node_modules, by relative path. */
+/** Every file of the project outside node_modules, by its `/`-separated relative path. */
 export function snapshot(root: string, dir = root): Record<string, string> {
   const files: Record<string, string> = {};
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -175,7 +175,10 @@ export function snapshot(root: string, dir = root): Record<string, string> {
     if (entry.isDirectory() && entry.name !== "node_modules") {
       Object.assign(files, snapshot(root, path));
     } else if (entry.isFile()) {
-      files[relative(root, path)] = readFileSync(path, "utf8");
+      files[relative(root, path).split(sep).join("/")] = readFileSync(
+        path,
+        "utf8",
+      );
     }
   }
   return files;
