@@ -1,11 +1,14 @@
 import type { DefinitionCheckReport } from "@powerhousedao/shared/document-model";
 import {
   checkProjectDefinitions,
+  documentModelChecks,
   type ProjectDefinitions,
+  subgraphChecks,
 } from "document-model/tooling";
 import type { ReleaseDecision } from "../release/approval.js";
 import type { ReleaseCheck } from "../release/evidence.js";
 import type { ProjectModules } from "./project.js";
+import { readProjectSubgraphs } from "./subgraphs.js";
 import {
   type ModelRunOptions,
   processStreams,
@@ -13,19 +16,49 @@ import {
 } from "./run.js";
 import { renderCheckReport } from "./render.js";
 
+async function subgraphContributions(
+  project: ProjectDefinitions,
+  modules: ProjectModules,
+) {
+  const subgraphs = await readProjectSubgraphs(project, modules);
+  if (subgraphs === undefined) return undefined;
+  return {
+    checks: subgraphChecks,
+    input: { subgraphs: subgraphs.input },
+    inventory: subgraphs.inventory,
+  };
+}
+
 /**
  * The edit and the release profile of the definition check, as `ph model
  * check` runs them and the definitions worker runs them for `ph build`.
  */
 export const definitionChecks = {
-  edit: (project: ProjectDefinitions): Promise<DefinitionCheckReport> =>
-    checkProjectDefinitions(project),
+  edit: async (
+    project: ProjectDefinitions,
+    modules: ProjectModules,
+  ): Promise<DefinitionCheckReport> => {
+    const contributions = await subgraphContributions(project, modules);
+    if (contributions === undefined) return checkProjectDefinitions(project);
+    return checkProjectDefinitions(
+      { ...project, ...contributions.input },
+      {
+        checks: [...documentModelChecks, ...contributions.checks],
+        definitions: contributions.inventory,
+      },
+    );
+  },
   release: async (
     project: ProjectDefinitions,
     modules: ProjectModules,
   ): Promise<ReleaseCheck> => {
+    const contributions = await subgraphContributions(project, modules);
     const { checkForRelease } = await import("../release/evidence.js");
-    return await checkForRelease(project, modules);
+    return await checkForRelease(
+      project,
+      modules,
+      contributions === undefined ? {} : { contributions },
+    );
   },
 };
 
@@ -54,7 +87,7 @@ export async function runModelCheck(
       read: async (project, modules) =>
         args.release
           ? (await definitionChecks.release(project, modules)).report
-          : await definitionChecks.edit(project),
+          : await definitionChecks.edit(project, modules),
       render: renderCheckReport,
     },
     options,
