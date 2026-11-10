@@ -29,8 +29,6 @@ export async function runSwitchboardMigrations(
     return;
   }
 
-  console.log(`Database: ${dbPath}`);
-
   const pool = new Pool({ connectionString: dbPath });
 
   const db = new Kysely<any>({
