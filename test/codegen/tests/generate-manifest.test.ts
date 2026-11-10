@@ -213,4 +213,39 @@ describe("generateManifest", () => {
       },
     ]);
   });
+
+  it("should keep boolean config entries", async () => {
+    const testOutDirPath = join(testOutputParentDir, "boolean-config");
+    await mkdirRecursive(testOutDirPath);
+    const entry = {
+      name: "AUTH_ENABLED",
+      type: "boolean" as const,
+      default: "false",
+    };
+    await createOrUpdateManifest({ config: [entry] }, testOutDirPath);
+    await createOrUpdateManifest(
+      { description: "update keeps config" },
+      testOutDirPath,
+    );
+
+    const manifest = JSON.parse(
+      await readFile(join(testOutDirPath, "powerhouse.manifest.json"), "utf-8"),
+    ) as Manifest;
+    expect(manifest.config).toEqual([entry]);
+  });
+
+  it("should name the accepted config types when one is wrong", async () => {
+    const testOutDirPath = join(testOutputParentDir, "invalid-config-type");
+    await mkdirRecursive(testOutDirPath);
+    const error = (await createOrUpdateManifest(
+      { config: [{ name: "X", type: "toggle" }] } as unknown as Manifest,
+      testOutDirPath,
+    ).catch((e: unknown) => e)) as {
+      issues?: { path: unknown[]; message: string }[];
+    };
+    expect(error.issues?.[0]?.path).toEqual(["config", 0, "type"]);
+    expect(error.issues?.[0]?.message).toBe(
+      'type must be one of "var", "secret", "boolean"',
+    );
+  });
 });
