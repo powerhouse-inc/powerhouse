@@ -1,0 +1,8 @@
+[
+  {
+    "specifier": "./src/manifest-a.ts"
+  },
+  {
+    "specifier": "./src/manifest-b.ts"
+  }
+]

@@ -104,7 +104,7 @@ describe("ph model check --release", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe(
       [
-        "invalid: 1 definition (code-first, 1 selected source)",
+        "invalid: 1 definition (./document-models: 1 code-first entry, 0 stored models)",
         "  document-model example/ledger v1 ./document-models/ledger/index.ts#/Ledger",
         "PH-REL-HOST-SCALAR-UNBOUND [error/package] ./document-models/ledger/index.ts#/Ledger scalar Iban /specifications/0/scalars/1: example/ledger declares package scalar Iban, but the package registers no binding for it, so a host serves Iban values without validating them. Expected: an export named Iban in the package's scalars entry Received: no binding Repair: Export the defineScalar binding the model uses from scalars/index.ts under the name Iban.",
         "1 error, 0 warnings",

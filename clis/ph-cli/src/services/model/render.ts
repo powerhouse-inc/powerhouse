@@ -11,29 +11,23 @@ import {
 } from "document-model/tooling";
 
 const SKIP_REASONS: Readonly<Record<DefinitionCheckSkipReason, string>> = {
-  "explicit-schema-first-mode":
-    'powerhouse.config.json sets definitionSources mode "schema-first"',
-  "definition-sources-absent":
-    "powerhouse.config.json declares no definitionSources",
-  "definition-sources-empty": "definitionSources lists no entries",
+  "no-document-models": "The models directory holds no document model",
 };
 
-const plural = (count: number, noun: string) =>
-  `${count} ${noun}${count === 1 ? "" : "s"}`;
+const plural = (count: number, noun: string, nouns = `${noun}s`) =>
+  `${count} ${count === 1 ? noun : nouns}`;
 
 function statusLine(
   report: DefinitionCheckReport | DefinitionInspectionReport,
   counted: string,
 ): string {
-  const { mode, sources } = report.sourceSet;
-  return `${report.status}: ${counted} (${mode}, ${plural(sources.length, "selected source")})`;
+  const { documentModelsDir, sources, stored } = report.sourceSet;
+  return `${report.status}: ${counted} (${documentModelsDir}: ${plural(sources.length, "code-first entry", "code-first entries")}, ${plural(stored.length, "stored model")})`;
 }
 
 function skipped(reason: DefinitionCheckSkipReason | undefined): string[] {
   if (reason === undefined) return [];
-  return [
-    `${SKIP_REASONS[reason]} and the package has no stored document model, so nothing was checked.`,
-  ];
+  return [`${SKIP_REASONS[reason]}, so nothing was checked.`];
 }
 
 function diagnosticLines(
@@ -123,7 +117,7 @@ export function renderInspectionReport(
     ),
     ...(report.status === "skipped"
       ? [
-          "No code-first source is selected and the package has no stored document model, so there is nothing to inspect.",
+          "The models directory holds no document model, so there is nothing to inspect.",
         ]
       : []),
     ...report.families.flatMap(familyLines),

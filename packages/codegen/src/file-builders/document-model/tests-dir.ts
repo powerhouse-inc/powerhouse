@@ -30,6 +30,7 @@ import {
   hasGenerateMockImport,
   updateVersionedImports,
 } from "utils";
+import { importingFrom } from "./import-paths.js";
 
 export async function makeDocumentModelModulesOperationTestFiles(
   fileMakerArgs: DocumentModelFileMakerArgs,
@@ -40,8 +41,9 @@ export async function makeDocumentModelModulesOperationTestFiles(
 }
 
 export async function makeOperationModuleTestFile(
-  args: DocumentModelModuleFileMakerArgs,
+  input: DocumentModelModuleFileMakerArgs,
 ) {
+  const args = importingFrom(input, input.testsDirPath);
   const {
     project,
     module,
@@ -275,7 +277,9 @@ export async function makeDocumentModelTestFile(
   args: DocumentModelFileMakerArgs,
 ) {
   const { project, version, testsDirPath } = args;
-  const template = documentModelTestFileTemplate(args);
+  const template = documentModelTestFileTemplate(
+    importingFrom(args, testsDirPath),
+  );
 
   const filePath = path.join(testsDirPath, "document-model.test.ts");
 

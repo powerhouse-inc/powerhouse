@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { selectModelGeneration } from "@powerhousedao/codegen";
+import { modelGeneration } from "@powerhousedao/codegen";
 import { createOrUpdateManifest } from "@powerhousedao/codegen/file-builders";
 import {
   documentModelsIndexTemplate,
@@ -81,10 +81,7 @@ async function createCodeFirstPackage(): Promise<string> {
     );
   }
   const project = buildTsMorphProject(root);
-  await selectModelGeneration({
-    projectDir: root,
-    codeFirst: true,
-  }).scaffoldDocumentModel(
+  await modelGeneration.scaffoldDocumentModel(
     {
       name: "todo list",
       documentType: "acme/todo-list",
@@ -139,6 +136,34 @@ describe("Vetra codegen in a code-first package", () => {
       'the schema-first model "Todo List" would overwrite document-models/todo-list/index.ts',
     );
     expect(files(dir)).toStrictEqual(before);
+  });
+
+  it("regenerates a stored model and keeps the code-first model's exports and manifest entry", async () => {
+    const generator = new DocumentModelGenerator(
+      { PH_CONFIG: {} as PowerhouseConfig, CURRENT_WORKING_DIR: dir },
+      buildTsMorphProject(dir),
+    );
+    await generator.generate({
+      documentId: "doc-1",
+      documentType: "powerhouse/document-model",
+      scope: "global",
+      branch: "main",
+      state: { global: storedSpec },
+    });
+    const index = files(dir)["document-models/index.ts"];
+    expect(index).toContain(
+      'export { SubgraphModule as SubgraphModuleV1 } from "./subgraph-module/v1/module.js";',
+    );
+    expect(index).toContain(
+      "export const TodoListV1 = codeFirstSource0.TodoList;",
+    );
+    const manifest = JSON.parse(files(dir)["powerhouse.manifest.json"]) as {
+      documentModels: { id: string }[];
+    };
+    expect(manifest.documentModels.map(({ id }) => id)).toEqual([
+      "acme/todo-list",
+      "powerhouse/subgraph",
+    ]);
   });
 
   it("extracts only the stored model directories", () => {

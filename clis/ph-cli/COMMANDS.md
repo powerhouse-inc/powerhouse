@@ -73,7 +73,7 @@ Write a powerhouse/document-model spec for each existing document model into spe
 **usage:** `--extract, -x`<br>
 
 #### Code First <br>
-Experimental. Generate with code-first authoring, whatever definitionSources in powerhouse.config.json selects<br><br>
+Experimental. With --name, create the model code-first. Existing models of both styles are discovered without it<br><br>
 **usage:** `--code-first`<br>
 
 #### Debug <br>
@@ -1219,9 +1219,9 @@ show help<br><br>
 
 
 ## Model Check
-Check this package's document models: the code-first sources
-definitionSources selects and the stored schema-first models in
-documentModelsDir, through one set of checks. Writes nothing.
+Check this package's document models through one set of checks:
+every model directory in documentModelsDir, whether it stores a schema-first
+<name>.json or exports a code-first model from its index.ts. Writes nothing.
 
 `tsc` cannot run these checks: a code-first model compiles when its module is
 evaluated.
@@ -1240,8 +1240,8 @@ plain `npm publish` too, add it to package.json, then run
 With --json it prints {"decision": ..., "reasons": [...]}.
 
 Exit codes:
-  0  ok, or skipped. Skipped means no code-first source is selected and the
-     package has no stored model, so nothing was read. Read "status".
+  0  ok, or skipped. Skipped means the package has no document model, so
+     nothing was checked. Read "status".
   1  invalid. The models were read and at least one is wrong.
   2  failed. The configuration or a module could not be read, the arguments
      are wrong, or the command could not run.
@@ -1283,8 +1283,8 @@ scopes, scalars and operations. With <documentType>@<version>, describe that
 version only and add its full definition to the JSON report. Writes nothing.
 
 Exit codes:
-  0  ok, or skipped. Skipped means no code-first source is selected and the
-     package has no stored model, so nothing was read. Read "status".
+  0  ok, or skipped. Skipped means the package has no document model, so
+     nothing was checked. Read "status".
   1  invalid. The models were read and at least one is wrong.
   2  failed. The configuration or a module could not be read, the arguments
      are wrong, or the command could not run.

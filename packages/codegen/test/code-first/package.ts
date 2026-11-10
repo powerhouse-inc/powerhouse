@@ -1,9 +1,8 @@
 import {
-  selectModelGeneration,
+  modelGeneration,
   type GenerateCodeFirstDocumentModelArgs,
 } from "../../src/codegen/index.js";
 import type { Project } from "ts-morph";
-import { projectPath } from "../../src/utils/source-files.js";
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import {
@@ -140,15 +139,24 @@ export async function inProject<T>(
 }
 
 export function typeCheck(dir: string): string {
-  return execFileSync(
-    process.execPath,
-    [
-      join(dirname(require.resolve("typescript/package.json")), "bin/tsc"),
-      "-p",
-      dir,
-    ],
-    { encoding: "utf8" },
-  );
+  try {
+    return execFileSync(
+      process.execPath,
+      [
+        join(dirname(require.resolve("typescript/package.json")), "bin/tsc"),
+        "-p",
+        dir,
+      ],
+      { encoding: "utf8" },
+    );
+  } catch (error) {
+    // tsc prints its errors on stdout, which the thrown message leaves out.
+    const { stdout } = error as { stdout?: string };
+    if (typeof stdout === "string" && stdout !== "") {
+      throw new Error(`tsc -p ${dir} failed:\n${stdout}`, { cause: error });
+    }
+    throw error;
+  }
 }
 
 export async function importSource(
@@ -210,8 +218,5 @@ export function generateCodeFirstDocumentModel(
   args: GenerateCodeFirstDocumentModelArgs,
   project: Project,
 ) {
-  return selectModelGeneration({
-    projectDir: projectPath(project, "."),
-    codeFirst: true,
-  }).scaffoldDocumentModel(args, project);
+  return modelGeneration.scaffoldDocumentModel(args, project);
 }

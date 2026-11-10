@@ -91,7 +91,7 @@ describe("the built ph-cli model command", () => {
   it("exits 1 for an invalid project", () => {
     const result = phCli(
       noisyProject({
-        "document-models/extra/index.ts": LEDGER_SOURCE.replaceAll(
+        "document-models/extra/model.ts": LEDGER_SOURCE.replaceAll(
           "ledger",
           "extra",
         ).replaceAll("Ledger", "Extra"),
@@ -100,7 +100,7 @@ describe("the built ph-cli model command", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toContain(
-      "PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/extra/index.ts (root):",
+      "PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/extra/model.ts (root):",
     );
   }, 60_000);
 

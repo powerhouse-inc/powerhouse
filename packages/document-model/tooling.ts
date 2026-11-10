@@ -9,6 +9,13 @@ export type {
 } from "./src/definition/tooling/adapters/types.js";
 export { DefinitionSourceLoader } from "./src/definition/tooling/definition-source-loader.js";
 export { resolveDefinitionSelection } from "./src/definition/tooling/definition-source-resolution.js";
+export {
+  DEFAULT_DOCUMENT_MODELS_DIR,
+  discoverDocumentModelDirectories,
+  resolveDocumentModelsDir,
+  type DocumentModelDirectories,
+  type DocumentModelDirectory,
+} from "./src/definition/tooling/model-directories.js";
 export type {
   DefinitionSourceLoadRequest,
   DefinitionSourceOrigin,
@@ -37,6 +44,11 @@ export type {
   DocumentModelFamilyInspection,
   DocumentModelInspection,
 } from "./src/definition/tooling/inspect/types.js";
+export {
+  codeFirstDeclarationFiles,
+  findUnregisteredDefinitions,
+} from "./src/definition/tooling/project/unregistered-definitions.js";
+export { unregisteredDefinitionDiagnostics } from "./src/definition/tooling/check/checks/unregistered-definitions.js";
 export {
   loadProjectDefinitions,
   type ProjectDefinitions,

@@ -302,7 +302,7 @@ describe("ph build --release", () => {
     expect(await prepack(made.root)).toEqual(APPROVED);
   }, 240_000);
 
-  it("approves a package that selects no code-first source", async () => {
+  it("approves a package whose model directories export no model", async () => {
     const made = releaseProject(false);
 
     await buildPackage(args);
@@ -505,7 +505,7 @@ describe("ph build --release", () => {
       problem: "a scalar the scalars entry no longer exports",
       entry: "export {};\n",
       report: [
-        "invalid: 1 definition (code-first, 1 selected source)",
+        "invalid: 1 definition (./document-models: 2 code-first entries, 0 stored models)",
         "  document-model example/ledger v1 ./document-models/ledger/index.ts#/Ledger",
         "PH-REL-HOST-SCALAR-UNBOUND [error/package] ./document-models/ledger/index.ts#/Ledger scalar Iban /specifications/0/scalars/1: example/ledger declares package scalar Iban, but the package registers no binding for it, so a host serves Iban values without validating them. Expected: an export named Iban in the package's scalars entry Received: no binding Repair: Export the defineScalar binding the model uses from scalars/index.ts under the name Iban.",
         "1 error, 0 warnings",
@@ -515,7 +515,7 @@ describe("ph build --release", () => {
       problem: "a scalars entry that throws",
       entry: 'throw new Error("scalars exploded");\n',
       report: [
-        "failed: 1 definition (code-first, 1 selected source)",
+        "failed: 1 definition (./document-models: 2 code-first entries, 0 stored models)",
         "  document-model example/ledger v1 ./document-models/ledger/index.ts#/Ledger",
         "PH-REL-HOST-VALIDATION-INCOMPLETE [error/import] (no source) (root): Host validation did not run, so this check cannot tell whether a host serves the package's models as declared. Received: ./scalars/index.ts could not be loaded: scalars exploded Repair: Fix what stopped host validation, then run the release check again.",
         "1 error, 0 warnings",

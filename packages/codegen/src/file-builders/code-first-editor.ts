@@ -11,8 +11,8 @@ import {
   codeFirstEditorModuleTemplate,
   codeFirstEditorTemplate,
 } from "../templates/code-first/editor.js";
-import { emittedImportPath } from "./document-model/code-first-aggregates.js";
-import type { CodeFirstModel } from "./document-model/code-first-inventory.js";
+import { emittedImportPath } from "./document-model/aggregates.js";
+import type { CodeFirstModel } from "./document-model/document-model-inventory.js";
 import { makeEditorsFile, makeEditorsIndexFile } from "./editor-common.js";
 import { createOrUpdateManifest } from "./manifest.js";
 

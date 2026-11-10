@@ -31,7 +31,12 @@ const STORED: DefinitionSource = {
 };
 
 function sourceSet(...sources: DefinitionSource[]): DefinitionSourceSet {
-  const value = { mode: "code-first", origin: "config", sources } as const;
+  const value = {
+    origin: "discovery",
+    documentModelsDir: "./document-models",
+    sources,
+    stored: [],
+  } as const;
   return { ...value, digest: canonicalDigest(value) };
 }
 
@@ -997,17 +1002,17 @@ describe("unregistered-definitions", () => {
       {
         source: { specifier: "./document-models/notes/index.ts" },
         message:
-          "./document-models/notes/ declares a code-first document model that no definitionSources entry reaches, so the package leaves it out.",
+          "./document-models/notes/ declares a code-first document model that no model entry module exports, so the package leaves it out.",
         expected:
-          "a definitionSources entry that reaches ./document-models/notes/index.ts",
+          "./document-models/notes/index.ts exporting the model ./document-models/notes/index.ts declares",
         received: "no entry",
       },
       {
         source: { specifier: "./document-models/orders/index.ts" },
         message:
-          "./document-models/orders/ declares a code-first document model that a selected source imports but does not export, so the package leaves it out.",
+          "./document-models/orders/ declares a code-first document model that an entry module imports but does not export, so the package leaves it out.",
         expected:
-          "a definitionSources entry that exports the model ./document-models/orders/index.ts declares",
+          "an entry module that exports the model ./document-models/orders/index.ts declares",
         received: "imported, not exported",
       },
     ]);
@@ -1030,12 +1035,12 @@ describe("unregistered-definitions", () => {
         source: { specifier: "./document-models/notes/index.ts" },
         path: [],
         message:
-          "./document-models/notes/ declares a code-first document model that no definitionSources entry reaches, so the package leaves it out.",
+          "./document-models/notes/ declares a code-first document model that no model entry module exports, so the package leaves it out.",
         expected:
-          "a definitionSources entry that reaches ./document-models/notes/index.ts",
+          "./document-models/notes/index.ts exporting the model ./document-models/notes/index.ts declares",
         received: "no entry",
         repair:
-          'Add { "specifier": "./document-models/notes/index.ts" } to definitionSources.entries in powerhouse.config.json. If definitionSources is absent or schema-first, set it to { "formatVersion": 1, "mode": "code-first", "entries": [{ "specifier": "./document-models/notes/index.ts" }] }; schema-first models keep generating from their stored files.',
+          "Export the value materialize(...) returned from ./document-models/notes/index.ts.",
       },
     ]);
   });

@@ -30,7 +30,9 @@ async function check(
   try {
     return {
       ok: true,
-      result: await readProjectDefinitions(projectRoot, read),
+      result: await readProjectDefinitions(projectRoot, read, {
+        allowMissingConfig: true,
+      }),
     };
   } catch (error) {
     return {

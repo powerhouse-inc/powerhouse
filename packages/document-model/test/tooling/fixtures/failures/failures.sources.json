@@ -1,0 +1,8 @@
+[
+  {
+    "specifier": "./src/healthy.ts"
+  },
+  {
+    "specifier": "./src/structured.ts"
+  }
+]

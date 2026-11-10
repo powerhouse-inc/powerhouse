@@ -7,19 +7,21 @@ import { DefinitionSourceLoader } from "document-model/tooling";
 import {
   existsSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { planDefinitionSourceRegistration } from "../../src/file-builders/definition-sources.js";
-import { writeCodeFirstAggregates } from "../../src/file-builders/document-model/code-first-aggregates.js";
-import { loadCodeFirstInventory } from "../../src/file-builders/document-model/code-first-inventory.js";
+import { writeDocumentModelAggregates } from "../../src/file-builders/document-model/aggregates.js";
+import { loadDocumentModelInventory } from "../../src/file-builders/document-model/document-model-inventory.js";
 import { ViteTypeScriptSourceImportAdapter } from "../../src/utils/definition-source-importer.js";
 import { buildTsMorphProject, formatSafe } from "../../src/utils/index.mjs";
 import {
+  addTodoListVersion2,
   createPackage,
   importSource,
   inProject,
@@ -44,97 +46,19 @@ const scaffold = (
   args: Parameters<typeof generateCodeFirstDocumentModel>[0] = todo,
 ) => generateCodeFirstDocumentModel(args, buildTsMorphProject(dir));
 
-async function register(source: { specifier: `./${string}` }) {
-  const { registration, commit } = await planDefinitionSourceRegistration(
-    dir,
-    source,
-  );
-  await commit();
-  return registration;
-}
-
 async function refreshAggregates() {
   await inProject(dir, async (project) =>
-    writeCodeFirstAggregates(project, await loadCodeFirstInventory(dir)),
+    writeDocumentModelAggregates(
+      project,
+      await loadDocumentModelInventory(dir),
+    ),
   );
 }
 
-describe("planDefinitionSourceRegistration", () => {
-  const source = { specifier: "./document-models/todo-list/index.ts" } as const;
-  const codeFirst = (entries: unknown[]) => ({
-    definitionSources: { formatVersion: 1, mode: "code-first", entries },
-  });
-
-  it("creates the field and keeps the other keys and the indentation", async () => {
-    writeFileSync(
-      join(dir, "powerhouse.config.json"),
-      `${JSON.stringify({ a: 1 }, null, 4)}\n`,
-    );
-    expect(await register(source)).toBe("created");
-    expect(config()).toBe(
-      `${JSON.stringify({ a: 1, ...codeFirst([source]) }, null, 4)}\n`,
-    );
-  });
-
-  it("converts an explicit schema-first selection", async () => {
-    writeConfig(dir, {
-      definitionSources: { formatVersion: 1, mode: "schema-first" },
-    });
-    expect(await register(source)).toBe("converted");
-    expect(readJson(dir, "powerhouse.config.json")).toStrictEqual(
-      codeFirst([source]),
-    );
-  });
-
-  it("appends after the existing entries and writes them back as read", async () => {
-    mkdirSync(join(dir, "src"));
-    writeFileSync(join(dir, "src/ledger.ts"), "export {};\n");
-    const ledger = { exportPath: ["Ledger"], specifier: "./src/ledger.ts" };
-    writeConfig(dir, codeFirst([ledger]));
-    expect(await register(source)).toBe("added");
-    expect(readJson(dir, "powerhouse.config.json")).toStrictEqual(
-      codeFirst([ledger, source]),
-    );
-  });
-
-  it("leaves the file alone when the source is already listed", async () => {
-    await register(source);
-    const before = config();
-    expect(await register(source)).toBe("unchanged");
-    expect(config()).toBe(before);
-  });
-
-  it.each([
-    ["a malformed file", "{ not json", /JSON/],
-    ["a config that is not an object", "[]", /must hold a JSON object/],
-    [
-      "an unsupported format version",
-      JSON.stringify({
-        definitionSources: { formatVersion: 2, mode: "code-first" },
-      }),
-      /formatVersion 2/,
-    ],
-    [
-      "an unknown mode",
-      JSON.stringify({
-        definitionSources: { formatVersion: 1, mode: "typescript" },
-      }),
-      /definitionSources\.mode/,
-    ],
-    [
-      "an entry the loader rejects",
-      JSON.stringify(codeFirst([{ specifier: "document-models/a.ts" }])),
-      /PH-CONFIG-SOURCE-INVALID/,
-    ],
-  ])("refuses %s and leaves it untouched", async (_, contents, message) => {
-    writeFileSync(join(dir, "powerhouse.config.json"), contents);
-    await expect(register(source)).rejects.toThrow(message);
-    expect(config()).toBe(contents);
-  });
-});
-
 describe("generateCodeFirstDocumentModel", () => {
-  it("writes the model, registers it and exports it from the package", async () => {
+  it("writes the model where discovery finds it and exports it from the package", async () => {
+    writeConfig(dir, { logLevel: "warn" });
+    const before = config();
     expect(await scaffold()).toStrictEqual({
       written: [
         "document-models/todo-list/v1/definition.ts",
@@ -144,21 +68,13 @@ describe("generateCodeFirstDocumentModel", () => {
         "document-models/todo-list/v1/tests/items.test.ts",
         "document-models/todo-list/upgrades/index.ts",
         "document-models/todo-list/index.ts",
-        "powerhouse.config.json",
         "document-models/index.ts",
         "document-models/document-models.ts",
         "document-models/upgrade-manifests.ts",
         "powerhouse.manifest.json",
       ],
-      registration: "created",
     });
-    expect(readJson(dir, "powerhouse.config.json")).toStrictEqual({
-      definitionSources: {
-        formatVersion: 1,
-        mode: "code-first",
-        entries: [{ specifier: "./document-models/todo-list/index.ts" }],
-      },
-    });
+    expect(config()).toBe(before);
     expect(
       readJson(dir, "powerhouse.manifest.json").documentModels,
     ).toStrictEqual([{ id: "acme/todo-list", name: "Todo List" }]);
@@ -307,20 +223,6 @@ export const upgradeManifests: UpgradeManifest<readonly number[]>[] = [
     expect(config()).toBe(before);
   });
 
-  it("refuses a config it cannot merge without writing a model file", async () => {
-    writeConfig(dir, {
-      definitionSources: {
-        formatVersion: 1,
-        mode: "code-first",
-        entries: [{ specifier: "document-models/a.ts" }],
-      },
-    });
-    const before = config();
-    await expect(scaffold()).rejects.toThrow(/PH-CONFIG-SOURCE-INVALID/);
-    expect(existsSync(join(dir, "document-models/todo-list"))).toBe(false);
-    expect(config()).toBe(before);
-  });
-
   it("leaves the config untouched when the model files cannot be written", async () => {
     writeFileSync(join(dir, "document-models/todo-list"), "a file\n");
     const before = config();
@@ -336,28 +238,60 @@ export const upgradeManifests: UpgradeManifest<readonly number[]>[] = [
 });
 
 describe("code-first aggregates", () => {
-  const selectedModule = `export { TodoListV1 as chosen, todoListUpgradeManifest as manifest } from "../document-models/todo-list/index.js";\n`;
-
-  it("reaches a selected export path, and a host finds one module and one manifest", async () => {
+  it("executes reducers and an upgrade through the discovered family's generated exports", async () => {
     await scaffold();
-    mkdirSync(join(dir, "src"));
-    writeFileSync(join(dir, "src/selected.ts"), selectedModule);
-    writeConfig(dir, {
-      definitionSources: {
-        formatVersion: 1,
-        mode: "code-first",
-        entries: [
-          { specifier: "./src/selected.ts", exportPath: ["chosen"] },
-          { specifier: "./src/selected.ts", exportPath: ["manifest"] },
-        ],
+    addTodoListVersion2(dir);
+    await refreshAggregates();
+    writeFileSync(
+      join(dir, "verify-family.ts"),
+      `
+import { TodoListV1, TodoListV2, upgradeManifests } from "./document-models/index.js";
+import { applyUpgradeDocumentAction, computeUpgradeTransitions } from "document-model";
+const original = TodoListV1.reducer(TodoListV1.utils.createDocument(), TodoListV1.actions.addItem({ id: "proof", label: "Kept through upgrade" }));
+const before = original.state.document.version;
+const upgraded = applyUpgradeDocumentAction(original, {
+  id: "upgrade-proof", type: "UPGRADE_DOCUMENT", scope: "document", timestampUtcMs: new Date().toISOString(),
+  input: { documentId: original.header.id, model: original.header.documentType, fromVersion: 1, toVersion: 2 },
+}, computeUpgradeTransitions(upgradeManifests[0], 1, 2));
+export const proof = {
+  before,
+  after: upgraded.state.document.version,
+  state: upgraded.state.global,
+  latest: TodoListV2.utils.createDocument().state.document.version,
+  versions: upgradeManifests[0].supportedVersions,
+};
+`,
+    );
+    const { proof } = await importSource(dir, "./verify-family.ts");
+    expect(proof).toStrictEqual({
+      before: 1,
+      after: 2,
+      state: {
+        items: [{ id: "proof", label: "Kept through upgrade", done: false }],
       },
+      latest: 2,
+      versions: [1, 2],
     });
+  });
+
+  /** Moves the scaffolded entry to family.ts and gives the model a new index.ts. */
+  function replaceEntry(text: string) {
+    const model = join(dir, "document-models/todo-list");
+    renameSync(join(model, "index.ts"), join(model, "family.ts"));
+    writeFileSync(join(model, "index.ts"), text);
+  }
+
+  it("reaches a value under its exported name, and a host finds one module and one manifest", async () => {
+    await scaffold();
+    replaceEntry(
+      'export { TodoListV1 as chosen, todoListUpgradeManifest as manifest } from "./family.js";\n',
+    );
     await refreshAggregates();
     expect(read(dir, "document-models/index.ts")).toContain(
       "export const TodoListV1 = codeFirstSource0.chosen;",
     );
     expect(read(dir, "document-models/index.ts")).toContain(
-      `import * as codeFirstSource0 from "../src/selected.js";`,
+      `import * as codeFirstSource0 from "./todo-list/index.js";`,
     );
     expect(read(dir, "document-models/upgrade-manifests.ts")).toContain(
       "codeFirstSource0.manifest,",
@@ -376,74 +310,32 @@ describe("code-first aggregates", () => {
 
   it("indexes a module reachable only inside a collection", async () => {
     await scaffold();
-    writeFileSync(
-      join(dir, "document-models/list.ts"),
-      `import { TodoList, todoListUpgradeManifest } from "./todo-list/index.js";\nexport const all = { "todo-list": [TodoList], manifest: todoListUpgradeManifest };\n`,
+    replaceEntry(
+      `import { TodoList, todoListUpgradeManifest } from "./family.js";\nexport const all = { "todo-list": [TodoList], manifest: todoListUpgradeManifest };\n`,
     );
-    writeConfig(dir, {
-      definitionSources: {
-        formatVersion: 1,
-        mode: "code-first",
-        entries: [{ specifier: "./document-models/list.ts" }],
-      },
-    });
     await refreshAggregates();
     expect(read(dir, "document-models/index.ts")).toContain(
       `export const TodoListV1 = codeFirstSource0.all["todo-list"]["0"];`,
     );
   });
 
-  it.each(["directly", "through a symlink"])(
-    "refuses a selection of a generated aggregate %s and keeps the aggregates",
-    async (route) => {
-      await scaffold();
-      const before = read(dir, "document-models/index.ts");
-      let specifier = "./document-models/index.ts";
-      if (route === "through a symlink") {
-        symlinkSync(
-          join(dir, "document-models/index.ts"),
-          join(dir, "alias.ts"),
-        );
-        specifier = "./alias.ts";
-      }
-      writeConfig(dir, {
-        definitionSources: {
-          formatVersion: 1,
-          mode: "code-first",
-          entries: [{ specifier }],
-        },
-      });
-      await expect(refreshAggregates()).rejects.toThrow(
-        "Select the authored definition file instead",
-      );
-      expect(read(dir, "document-models/index.ts")).toBe(before);
-    },
-  );
-
-  it("refuses another case of an aggregate on a case-insensitive filesystem", async ({
-    skip,
-  }) => {
+  it("refuses a model entry that links to a generated barrel and keeps the barrels", async () => {
     await scaffold();
-    if (!existsSync(join(dir, "document-models/INDEX.ts"))) skip();
     const before = read(dir, "document-models/index.ts");
-    writeConfig(dir, {
-      definitionSources: {
-        formatVersion: 1,
-        mode: "code-first",
-        entries: [{ specifier: "./document-models/INDEX.ts" }],
-      },
-    });
+    mkdirSync(join(dir, "document-models/alias"));
+    symlinkSync(
+      join(dir, "document-models/index.ts"),
+      join(dir, "document-models/alias/index.ts"),
+    );
     await expect(refreshAggregates()).rejects.toThrow(
-      "Select the authored definition file instead",
+      "./document-models/alias/index.ts resolves to a barrel codegen generates",
     );
     expect(read(dir, "document-models/index.ts")).toBe(before);
   });
 
-  it("removes the code-first entries of a source no longer selected", async () => {
+  it("removes the code-first entries of a deleted model directory", async () => {
     await scaffold();
-    writeConfig(dir, {
-      definitionSources: { formatVersion: 1, mode: "code-first", entries: [] },
-    });
+    rmSync(join(dir, "document-models/todo-list"), { recursive: true });
     await refreshAggregates();
     expect(read(dir, "document-models/document-models.ts")).toContain(
       "export const documentModels = [] as const;",
@@ -474,17 +366,18 @@ describe("code-first aggregates", () => {
 
   it("creates no aggregate in a package with nothing to list", async () => {
     removePackage(join(dir, "document-models"));
-    writeConfig(dir, {
-      definitionSources: { formatVersion: 1, mode: "code-first", entries: [] },
-    });
     await refreshAggregates();
     expect(existsSync(join(dir, "document-models"))).toBe(false);
   });
 
-  it("keeps the raw text of a file it does not need to change", async () => {
-    const before = readFileSync(join(dir, "document-models/index.ts"), "utf8");
+  it("settles the barrels of a package without models in one write", async () => {
     await refreshAggregates();
-    expect(read(dir, "document-models/index.ts")).toBe(before);
+    const settled = read(dir, "document-models/index.ts");
+    expect(settled).toContain(
+      'export { upgradeManifests } from "./upgrade-manifests.js";',
+    );
+    await refreshAggregates();
+    expect(read(dir, "document-models/index.ts")).toBe(settled);
   });
 });
 
@@ -538,7 +431,7 @@ it("allows the family and its exported manifest to be selected together", async 
     path,
     readFileSync(path, "utf8") + "\nexport { family as TodoListFamily };\n",
   );
-  const inventory = await loadCodeFirstInventory(dir);
+  const inventory = await loadDocumentModelInventory(dir);
   expect(
     inventory.documentModels.map(({ documentType }) => documentType),
   ).toEqual([todo.documentType]);
@@ -548,7 +441,7 @@ it("allows the family and its exported manifest to be selected together", async 
   typeCheck(dir);
 });
 
-it("refuses an unlisted schema-first spec with the same document type", async () => {
+it("refuses a stored schema-first spec with the same document type", async () => {
   mkdirSync(join(dir, "document-models/existing"), { recursive: true });
   const fixture: unknown = JSON.parse(
     readFileSync(

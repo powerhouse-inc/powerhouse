@@ -3,6 +3,9 @@ import type { DocumentModelFileMakerArgs, MigrationPlan } from "file-builders";
 
 type UpgradeTransitionTemplateArgs = DocumentModelFileMakerArgs & {
   plan: MigrationPlan;
+  /** How `upgrades/v{N}.ts` imports the previous and the new version. */
+  fromVersionImportPath: string;
+  toVersionImportPath: string;
 };
 
 /**
@@ -29,8 +32,8 @@ export const upgradeTransitionTemplate = (v: UpgradeTransitionTemplateArgs) => {
  * This file is auto-generated and updated by codegen
  */
 import type { Action, PHDocument, UpgradeTransition } from "document-model";
-import type { ${v.phStateName} as StateV${v.version - 1} } from "${v.documentModelImportPath}/v${v.version - 1}";
-import type { ${v.phStateName} as StateV${v.version} } from "${v.documentModelImportPath}/v${v.version}";
+import type { ${v.phStateName} as StateV${v.version - 1} } from "${v.fromVersionImportPath}";
+import type { ${v.phStateName} as StateV${v.version} } from "${v.toVersionImportPath}";
 
 ${body}
 

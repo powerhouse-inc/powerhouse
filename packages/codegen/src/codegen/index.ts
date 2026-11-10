@@ -12,16 +12,13 @@ export {
   type CodeFirstGenerationResult,
   type GenerateCodeFirstDocumentModelArgs,
 } from "../file-builders/document-model/code-first-model.js";
-export {
-  selectModelGeneration,
-  type CodeFirstModelGeneration,
-  type GenerateEditorRequest,
-  type GeneratedDocumentModels,
-  type GeneratedEditors,
-  type ModelGeneration,
-  type ModelGenerationInput,
-  type SchemaFirstModelGeneration,
+export type {
+  GenerateEditorRequest,
+  GeneratedDocumentModels,
+  GeneratedEditors,
+  ModelGeneration,
 } from "./model-generation.js";
+export { modelGeneration } from "./document-model-generation.js";
 
 export {
   generateDocumentModel,

@@ -1,5 +1,8 @@
-import { loadDocumentModel } from "@powerhousedao/codegen";
-import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
+import { loadDocumentModel, modelGeneration } from "@powerhousedao/codegen";
+import {
+  buildTsMorphProject,
+  documentModelsDirOf,
+} from "@powerhousedao/codegen/utils";
 import {
   extractDocumentModelDocuments,
   getDocument,
@@ -8,23 +11,37 @@ import {
 import { handleMutuallyExclusiveOptions } from "@powerhousedao/shared/clis";
 import type { DocumentModelDocument } from "@powerhousedao/shared/document-model";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import type { GenerateDocumentModelArgs } from "../types.js";
 import { resolveModuleDirName } from "../utils/module-dir.js";
 import { warnSubgraphTypeConflicts } from "../utils/warn-subgraph-type-conflicts.js";
-import {
-  selectDocumentModelGeneration,
-  selectScaffoldGeneration,
-} from "./definitions/authoring-mode.js";
 import { scaffoldCodeFirstDocumentModel } from "./definitions/code-first-scaffold.js";
+
+/** The configured documentModelsDir, package-relative, for messages and paths. */
+function modelsDirOf(projectDir: string) {
+  return relative(projectDir, documentModelsDirOf(projectDir).path).replaceAll(
+    "\\",
+    "/",
+  );
+}
 
 export async function startGenerateDocumentModel(
   args: GenerateDocumentModelArgs,
   projectDir: string,
 ) {
-  const { document, dir, all, extract, name, debug } = args;
+  const { document, dir, all, extract, name, codeFirst, debug } = args;
   if (debug) {
     console.log({ args });
+  }
+  if (name !== undefined && !codeFirst) {
+    throw new Error(
+      "--name creates a code-first document model. Pass --code-first.",
+    );
+  }
+  if (codeFirst && name === undefined) {
+    throw new Error(
+      "--code-first only chooses how --name creates a model. Existing models of both styles are discovered without it; drop --code-first.",
+    );
   }
   const project = buildTsMorphProject(projectDir);
   if (name !== undefined) {
@@ -38,8 +55,12 @@ export async function startGenerateDocumentModel(
       },
       "generation mode",
     );
-    const generation = selectScaffoldGeneration(args, projectDir);
-    await scaffoldCodeFirstDocumentModel(generation, name, projectDir, project);
+    await scaffoldCodeFirstDocumentModel(
+      modelGeneration,
+      name,
+      projectDir,
+      project,
+    );
     return;
   }
   if (extract) {
@@ -52,17 +73,14 @@ export async function startGenerateDocumentModel(
   }
   if (all) {
     const { documentModels, unreadableDirs, codeFirstDocumentModels } =
-      await selectDocumentModelGeneration(
-        args,
-        projectDir,
-      ).generateAllDocumentModels(project);
+      await modelGeneration.generateAllDocumentModels(project);
     await project.save();
     if (
       documentModels.length === 0 &&
       unreadableDirs.length === 0 &&
       codeFirstDocumentModels.length === 0
     ) {
-      console.log("No document models found in document-models/.");
+      console.log(`No document models found in ${modelsDirOf(projectDir)}/.`);
     }
     for (const { name } of documentModels) {
       console.log(`Regenerated document model "${name}"`);
@@ -72,44 +90,36 @@ export async function startGenerateDocumentModel(
     }
     for (const dirName of unreadableDirs) {
       console.warn(
-        `Skipped document-models/${dirName}: expected a valid document model spec at document-models/${dirName}/${dirName}.json. Kept the manifest's document models.`,
+        `Skipped ${modelsDirOf(projectDir)}/${dirName}: it has no readable ${dirName}.json, and no index.ts in it exports a code-first model. Kept the manifest's document models.`,
       );
     }
     await warnSubgraphTypeConflicts(projectDir);
     return;
   } else if (document) {
-    const generation = selectDocumentModelGeneration(args, projectDir);
     if (document.endsWith(".phd")) {
       const doc = (await getDocument(document)) as DocumentModelDocument;
-      await generation.generateDocumentModel(doc.state.global, project);
+      await modelGeneration.generateDocumentModel(doc.state.global, project);
     } else {
       const state = await loadDocumentModel(document);
-      await generation.generateDocumentModel(state, project);
+      await modelGeneration.generateDocumentModel(state, project);
     }
   } else if (dir) {
+    const modelsDir = modelsDirOf(projectDir);
     const dirName = resolveModuleDirName(
       projectDir,
-      "document-models",
+      modelsDir,
       dir,
       "my-document-model",
     );
-    const specPath = join(
-      projectDir,
-      "document-models",
-      dirName,
-      `${dirName}.json`,
-    );
+    const specPath = join(projectDir, modelsDir, dirName, `${dirName}.json`);
     if (!existsSync(specPath)) {
-      throw new Error(`document-models/${dirName} has no ${dirName}.json.`);
+      throw new Error(`${modelsDir}/${dirName} has no ${dirName}.json.`);
     }
     const state = await loadDocumentModel(specPath);
-    await selectDocumentModelGeneration(args, projectDir).generateDocumentModel(
-      state,
-      project,
-    );
+    await modelGeneration.generateDocumentModel(state, project);
     await project.save();
     console.log(
-      `Regenerated document model "${state.name}" in document-models/${dirName}`,
+      `Regenerated document model "${state.name}" in ${modelsDir}/${dirName}`,
     );
     await warnSubgraphTypeConflicts(projectDir);
     return;

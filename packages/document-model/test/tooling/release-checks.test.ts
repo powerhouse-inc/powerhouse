@@ -35,7 +35,12 @@ const Iban = defineScalar({
 });
 
 function sourceSet(...sources: DefinitionSource[]): DefinitionSourceSet {
-  const value = { mode: "code-first", origin: "config", sources } as const;
+  const value = {
+    origin: "discovery",
+    documentModelsDir: "./document-models",
+    sources,
+    stored: [],
+  } as const;
   return { ...value, digest: canonicalDigest(value) };
 }
 

@@ -1,0 +1,6 @@
+[
+  {
+    "specifier": "./src/invoice.ts",
+    "exportPath": ["invoiceFamilies"]
+  }
+]

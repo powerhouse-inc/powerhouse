@@ -23,9 +23,9 @@ describe("code-first import direction", () => {
       "packages/document-model/src/definition/kernel/primitives.ts -> ../compiler/compile.js: kernel cannot import compiler",
     ],
     [
-      "packages/codegen/src/codegen/code-first-generation.ts",
+      "packages/codegen/src/codegen/document-model-generation.ts",
       'import { buildCommand } from "@powerhousedao/ph-cli/commands";',
-      "packages/codegen/src/codegen/code-first-generation.ts -> @powerhousedao/ph-cli/commands: codegen cannot import CLI",
+      "packages/codegen/src/codegen/document-model-generation.ts -> @powerhousedao/ph-cli/commands: codegen cannot import CLI",
     ],
   ])(
     "reports an injected wrong-direction import in %s",

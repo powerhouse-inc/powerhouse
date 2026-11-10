@@ -110,7 +110,7 @@ function unknownSelection(
     received: selected,
     repair:
       available.length === 0
-        ? "Add a document model to the package, or register its code-first source in definitionSources."
+        ? "Add a document model to the package: a stored <name>/<name>.json, or a code-first <name>/index.ts under the models directory."
         : `Inspect one of: ${listed}.`,
   });
 }
@@ -145,7 +145,7 @@ export function inspectProjectDefinitions(
   ]);
   return {
     kind: "powerhouse.definition-inspection",
-    formatVersion: 1,
+    formatVersion: 2,
     status: definitionStatus({
       ...(project.skipReason !== undefined && {
         skipReason: project.skipReason,

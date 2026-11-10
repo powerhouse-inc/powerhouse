@@ -6,15 +6,19 @@ import type { DefinitionRelocation } from "../adapters/producer.js";
 import type { NormalizedDocumentModelArtifact } from "../adapters/types.js";
 import type { DefinitionSourceSet } from "../definition-source-types.js";
 
-/** A code-first declaration under the document models directory that no `definitionSources` entry reaches. */
+/** A code-first declaration under the document models directory that no model entry exports. */
 export type UnregisteredDefinition = {
   readonly kind: "document-model";
   /** `./<documentModelsDir>/<name>/`. */
   readonly unit: `./${string}`;
-  /** The module an entry should name to register it. */
+  /** The declaring module: the directory's `index.ts` when it declares, else the first declaring file. */
   readonly specifier: `./${string}`;
-  /** Whether a selected source evaluated its declaring files without exporting its model. */
-  readonly reason: "unreached" | "not-exported";
+  /**
+   * `not-exported`: an entry module evaluated the declaring files without
+   * exporting the model. `stored-directory`: the directory holds a stored
+   * specification, so discovery reads it as schema-first.
+   */
+  readonly reason: "unreached" | "not-exported" | "stored-directory";
 };
 
 /**

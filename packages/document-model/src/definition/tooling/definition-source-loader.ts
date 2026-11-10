@@ -28,6 +28,7 @@ import {
   publicResolution,
   realModulePath,
   resolveDefinitionSources,
+  resolveRequestedSources,
 } from "./definition-source-resolution.js";
 import type {
   DefinitionSourceLoadRequest,
@@ -154,7 +155,7 @@ function claim(
       expected: "one value per logical definition",
       received: describe,
       repair:
-        "Export one canonical value for this definition and remove the other source entry.",
+        "Export one canonical value for this definition and remove the other export.",
       related: [
         {
           source: existing.source,
@@ -204,6 +205,10 @@ function collectUpgradeManifest(
   );
 }
 
+/**
+ * How many definitions `value` holds. One that an earlier source already
+ * collected is counted again without being collected twice.
+ */
 function visit(
   collected: Collected,
   value: unknown,
@@ -321,7 +326,7 @@ function checkManifestCoverage(collected: Collected): void {
           expected: `supportedVersions ${JSON.stringify(loaded)} with latestVersion ${String(loaded.at(-1))}`,
           received: `supportedVersions ${JSON.stringify(declared)} with latestVersion ${String(latestVersion)}`,
           repair:
-            "Select the whole family that materialize returned, so its modules and its manifest stay one declaration.",
+            "Export the whole family that materialize returned, so its modules and its manifest stay one declaration.",
         }),
       );
       continue;
@@ -400,11 +405,11 @@ function importDiagnostics(
         code: "PH-IMPORT-FAILED",
         source,
         path: [],
-        message: "definitionSources lists a module that does not exist.",
+        message: "This source module does not exist.",
         expected: "an existing module inside the package",
         received: source.specifier,
         repair:
-          "Fix the specifier, or remove the entry from definitionSources.entries in powerhouse.config.json.",
+          "Restore the module, or remove the model directory that names it.",
       }),
     ];
   }
@@ -569,15 +574,30 @@ function containedPackageModule(
       );
 }
 
-function empty(resolution: DefinitionSourceResolution): LoadedDefinitionSet {
-  return { ...resolution, documentModels: [], upgradeManifests: [] };
+/** What discovery read besides its sources; absent for requested sources. */
+type Discovered = Pick<
+  LoadedDefinitionSet,
+  "documentModelsDir" | "directories"
+>;
+
+function empty(
+  resolution: DefinitionSourceResolution,
+  discovered: Discovered,
+): LoadedDefinitionSet {
+  return {
+    ...resolution,
+    ...discovered,
+    documentModels: [],
+    upgradeManifests: [],
+    sourcesWithDefinitions: [],
+  };
 }
 
 /**
- * @experimental Imports the selected definition sources and finds the
+ * @experimental Imports the discovered definition sources and finds the
  * materialized document models, families and upgrade manifests they export.
  * It folds aliases, reports two values that claim one `documentType@version`,
- * and returns everything sorted by source, so neither config order nor
+ * and returns everything sorted by source, so neither directory order nor
  * import completion order changes a result. Validity belongs to the
  * adapters; registration belongs to the host.
  */
@@ -599,21 +619,54 @@ export class DefinitionSourceLoader {
     return publicResolution(resolveDefinitionSources(request));
   }
 
+  /**
+   * Imports the entry module of every model directory discovery finds and
+   * collects the models, families and upgrade manifests it exports.
+   */
   async normalizeDefinitionSources(
     request: DefinitionSourceLoadRequest,
   ): Promise<LoadedDefinitionSet> {
     request.signal?.throwIfAborted();
     const resolution = resolveDefinitionSources(request);
+    return await this.#normalize(resolution, request, {
+      ...(resolution.documentModelsDir !== undefined && {
+        documentModelsDir: resolution.documentModelsDir,
+      }),
+      directories: resolution.directories,
+    });
+  }
+
+  /**
+   * @experimental Loads sources the caller names, through the same imports
+   * and checks as discovered ones.
+   */
+  async normalizeRequestedSources(
+    request: DefinitionSourceLoadRequest & {
+      readonly sources: readonly unknown[];
+    },
+  ): Promise<LoadedDefinitionSet> {
+    request.signal?.throwIfAborted();
+    return await this.#normalize(resolveRequestedSources(request), request, {});
+  }
+
+  async #normalize(
+    resolution: InternalResolution,
+    request: DefinitionSourceLoadRequest,
+    discovered: Discovered,
+  ): Promise<LoadedDefinitionSet> {
     if (resolution.status !== "ready") {
-      return empty(publicResolution(resolution));
+      return empty(publicResolution(resolution), discovered);
     }
     if (!isSha256Digest(request.packageRevision)) {
-      return empty({
-        packageRoot: resolution.packageRoot,
-        sourceSet: resolution.sourceSet,
-        status: "failed",
-        diagnostics: [revisionDiagnostic(request.packageRevision)],
-      });
+      return empty(
+        {
+          packageRoot: resolution.packageRoot,
+          sourceSet: resolution.sourceSet,
+          status: "failed",
+          diagnostics: [revisionDiagnostic(request.packageRevision)],
+        },
+        discovered,
+      );
     }
     await this.#retainRevision(request.packageRevision);
     const namespaces = await this.#importModules(resolution, request);
@@ -622,11 +675,11 @@ export class DefinitionSourceLoader {
     const collected: Collected = {
       documentModels: [],
       upgradeManifests: [],
-      diagnostics: [],
+      diagnostics: [...resolution.diagnostics],
       visited: new Map(),
       claimed: new Map(),
     };
-
+    const sourcesWithDefinitions: DefinitionSource[] = [];
     for (const entry of resolution.resolved) {
       const namespace = namespaces.get(entry.moduleIdentity);
       if (namespace === undefined) continue;
@@ -639,19 +692,21 @@ export class DefinitionSourceLoader {
         collected.diagnostics.push(selected.diagnostic);
         continue;
       }
-      if (visit(collected, selected.value, entry.source, []) === 0) {
+      if (visit(collected, selected.value, entry.source, []) > 0) {
+        sourcesWithDefinitions.push(entry.source);
+      } else if (resolution.sourceSet.origin === "request") {
         collected.diagnostics.push(
           toolingDiagnostics.create({
             code: "PH-PKG-DEFINITION-UNRECOGNIZED",
             source: entry.source,
             path: [],
             message:
-              "This source exports no materialized document model, so selecting it loads nothing.",
+              "This source exports no materialized document model, so it adds no model to the package.",
             expected:
               "a module or family materialize returned, or a collection holding them",
             received: "no recognized definition",
             repair:
-              "Point this entry at the export that materialize(...) returned.",
+              "Export the value materialize(...) returned from this module.",
           }),
         );
       }
@@ -662,12 +717,14 @@ export class DefinitionSourceLoader {
     return {
       packageRoot: resolution.packageRoot,
       sourceSet: resolution.sourceSet,
+      ...discovered,
       status: diagnostics.some(({ severity }) => severity === "error")
         ? "failed"
         : "ready",
       diagnostics,
       documentModels: sortBySource(collected.documentModels),
       upgradeManifests: sortBySource(collected.upgradeManifests),
+      sourcesWithDefinitions,
     };
   }
 

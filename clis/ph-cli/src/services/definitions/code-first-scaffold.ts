@@ -1,4 +1,4 @@
-import type { CodeFirstModelGeneration } from "@powerhousedao/codegen";
+import type { ModelGeneration } from "@powerhousedao/codegen";
 import { capitalCase, kebabCase } from "change-case";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -6,7 +6,7 @@ import { readPackage } from "read-pkg";
 import type { Project } from "ts-morph";
 
 export async function scaffoldCodeFirstDocumentModel(
-  generation: CodeFirstModelGeneration,
+  generation: ModelGeneration,
   name: string,
   projectDir: string,
   project: Project,
@@ -36,11 +36,6 @@ export async function scaffoldCodeFirstDocumentModel(
   for (const path of result.written) {
     console.log(`Wrote ${path}`);
   }
-  console.log(
-    result.registration === "unchanged"
-      ? "powerhouse.config.json definitionSources already lists this model"
-      : `Registered ${documentType} in powerhouse.config.json definitionSources (${result.registration})`,
-  );
 
   await generation.generateEditor(
     {

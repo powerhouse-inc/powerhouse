@@ -60,7 +60,7 @@ describe("ph model inspect", () => {
     expect(result.code).toBe(0);
     expect(withoutDigests(result.stdout)).toBe(
       [
-        "ok: 2 models (code-first, 1 selected source)",
+        "ok: 2 models (./document-models: 1 code-first entry, 1 stored model)",
         ...LEDGER_LINES,
         ...WALLET_LINES,
         "0 errors, 0 warnings",
@@ -83,7 +83,10 @@ describe("ph model inspect", () => {
       expect(report).toMatchObject({
         kind: "powerhouse.definition-inspection",
         status: "ok",
-        sourceSet: { mode: shape },
+        sourceSet: {
+          origin: "discovery",
+          documentModelsDir: "./document-models",
+        },
         diagnostics: [],
       });
       expect(
@@ -118,7 +121,7 @@ describe("ph model inspect", () => {
     const human = await inspect(root, false, "example/wallet@1");
     expect(withoutDigests(human.stdout)).toBe(
       [
-        "ok: 1 model (code-first, 1 selected source)",
+        "ok: 1 model (./document-models: 1 code-first entry, 1 stored model)",
         ...WALLET_LINES,
         "The full definition of this model is in --json, as `definition`.",
         "0 errors, 0 warnings",
@@ -170,7 +173,7 @@ describe("ph model inspect", () => {
     const result = await inspect(root, false);
     expect(result.code).toBe(2);
     expect(result.stdout.split("\n").slice(0, 2)).toEqual([
-      "failed: 0 models (code-first, 1 selected source)",
+      "failed: 0 models (./document-models: 1 code-first entry, 0 stored models)",
       expect.stringMatching(
         /^PH-IMPORT-FAILED \[error\/import\] \.\/document-models\/ledger\/index\.ts \(root\): /,
       ),

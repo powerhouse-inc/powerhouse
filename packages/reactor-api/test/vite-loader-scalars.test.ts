@@ -56,6 +56,33 @@ async function watcherQuiet(quietMs = 1000): Promise<void> {
   }
 }
 
+async function watcherReady(
+  server: ViteDevServer,
+  directory: string,
+): Promise<void> {
+  const probes = new Set<string>();
+  let ready = false;
+  const onAdd = (file: string) => {
+    if (probes.has(resolve(file))) ready = true;
+  };
+  server.watcher.on("add", onAdd);
+  try {
+    await vi.waitFor(
+      async () => {
+        if (ready) return;
+        const probe = join(directory, `watcher-ready-${probes.size}.tmp`);
+        probes.add(probe);
+        await writeFile(probe, "");
+        expect(ready).toBe(true);
+      },
+      { timeout: 15_000, interval: 100 },
+    );
+  } finally {
+    server.watcher.off("add", onAdd);
+    await Promise.all([...probes].map((probe) => rm(probe, { force: true })));
+  }
+}
+
 type Ledger = {
   iban: unknown;
   actions: { setIban: (input: unknown) => unknown };
@@ -165,6 +192,8 @@ describe("VitePackageLoader and a project's scalars", () => {
     }
     const server = await startViteServer(bare);
     try {
+      // Files created during the watcher's initial scan emit no add event.
+      await watcherReady(server, bare);
       const bareLoader = VitePackageLoader.build(server);
       expect(await bareLoader.loadScalars(bare)).toEqual([]);
 

@@ -40,13 +40,14 @@ async function readStored(root: string) {
   };
   const loaded = await loader.normalizeDefinitionSources(load);
   try {
-    return await readStoredDocumentModels({
+    const produced = await readStoredDocumentModels({
       ...load,
       loader,
       packageRoot: loaded.packageRoot,
       loaded,
       documentModelsDir: join(root, "document-models"),
     });
+    return { ...produced, loaded };
   } finally {
     await loader.dispose();
   }
@@ -103,8 +104,16 @@ describe("readStoredDocumentModels with symlinks", () => {
         "Replace the symlink with a model file that really lives in this package.",
     });
     expect(produced.diagnostics).toEqual([
-      outsideDiagnostic("./document-models/escaped/escaped.json"),
       outsideDiagnostic("./document-models/leaked/leaked.json"),
+    ]);
+    // Discovery refuses the escaped directory before any reader sees it.
+    expect(
+      produced.loaded.diagnostics.map(({ code, source }) => [code, source]),
+    ).toEqual([
+      [
+        "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE",
+        { specifier: "./document-models/escaped" },
+      ],
     ]);
   });
 });

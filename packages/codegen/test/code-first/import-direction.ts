@@ -112,9 +112,11 @@ export function importDirectionViolations(
   const isCodeFirst = (path: string) =>
     (/^clis\/ph-cli\/src\//.test(path) ||
       /^packages\/codegen\/src\/.*(code-first|definition-source)/.test(path)) &&
-    !/\/(?:model-generation|authoring-mode)\.ts$|\/schema-first\//.test(path);
+    !/\/model-generation\.ts$|\/schema-first\//.test(path);
   const isFlagSwitch = (file: string) =>
-    /\/(?:model-generation|authoring-mode)\.ts$/.test(posixPath(file));
+    /\/(?:model-generation\.ts|services\/generate-document-model\.ts)$/.test(
+      posixPath(file),
+    );
 
   const generation = [
     ...walk(join(root, "packages/codegen/src")),
@@ -365,7 +367,9 @@ export function importDirectionViolations(
     if (
       codeFirst &&
       normalized &&
-      /\/file-builders\/document-model\/(?!code-first-)/.test(normalized)
+      /\/file-builders\/document-model\/(?!code-first-|aggregates\.ts$|document-model-inventory\.ts$)/.test(
+        normalized,
+      )
     )
       fail(
         file,
@@ -440,34 +444,6 @@ export function importDirectionViolations(
           "raw flag access belongs to the package switch",
         );
     }
-    if (
-      ts.isCallExpression(node) &&
-      ts.isIdentifier(node.expression) &&
-      node.expression.text === "parseDefinitionSourcesConfig" &&
-      ![
-        "packages/codegen/src/codegen/model-generation.ts",
-        "packages/codegen/src/file-builders/definition-sources.ts",
-        "packages/document-model/src/definition/tooling/definition-source-resolution.ts",
-      ].includes(path)
-    )
-      fail(
-        file,
-        "parseDefinitionSourcesConfig",
-        "parse only at mode selection, registration, or source resolution boundaries",
-      );
-    if (
-      ts.isIdentifier(node) &&
-      node.text === "DEFAULT_AUTHORING_MODE" &&
-      ![
-        "packages/codegen/src/codegen/model-generation.ts",
-        "packages/document-model/src/definition/tooling/definition-source-resolution.ts",
-      ].includes(path)
-    )
-      fail(
-        file,
-        "DEFAULT_AUTHORING_MODE",
-        "the shared default is read only by package switches",
-      );
     if (
       ts.isImportDeclaration(node) &&
       ts.isStringLiteral(node.moduleSpecifier) &&

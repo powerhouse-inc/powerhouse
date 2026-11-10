@@ -28,6 +28,7 @@ export async function readProjectDefinitions<R>(
     project: ProjectDefinitions,
     modules: ProjectModules,
   ) => R | Promise<R>,
+  options: { readonly allowMissingConfig?: boolean } = {},
 ): Promise<R> {
   const importer = new ViteTypeScriptSourceImportAdapter();
   const loader = new DefinitionSourceLoader(importer);
@@ -36,6 +37,7 @@ export async function readProjectDefinitions<R>(
     const project = await loadProjectDefinitions({
       loader,
       configFile: join(projectRoot, "powerhouse.config.json"),
+      ...(options.allowMissingConfig === true && { allowMissingConfig: true }),
       packageRevision,
       importedFiles: (specifier) => importer.filesImportedBy(specifier),
     });

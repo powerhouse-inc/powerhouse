@@ -4,10 +4,9 @@ import {
   type DefinitionSource,
 } from "@powerhousedao/shared/document-model";
 import { pathWithin } from "@powerhousedao/shared/clis/real-paths";
-import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { readFileSync, realpathSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import type { ScalarDefinition } from "../../../scalars/types.js";
-import { compareCodeUnits } from "../../kernel/primitives.js";
 import type {
   DefinitionProducer,
   DefinitionRelocation,
@@ -56,57 +55,44 @@ function outsidePackage(specifier: `./${string}`): DefinitionDiagnostic {
 }
 
 /**
- * A missing models directory holds no models; any other read failure is
- * reported. A symlinked model directory or file counts when its real path
- * stays in the package.
+ * The stored specifications discovery listed. A symlinked file counts when
+ * its real path stays in the package; anything but a readable file is
+ * reported, never skipped, because discovery already gave the directory to
+ * a schema-first model.
  */
 function storedModelFiles(
   packageRoot: string,
-  documentModelsDir: string,
+  stored: readonly DefinitionSource[],
 ): StoredModelFiles {
-  let names: string[];
   let packageRootIdentity: string;
   try {
     packageRootIdentity = realpathSync.native(packageRoot);
-    names = readdirSync(documentModelsDir).sort(compareCodeUnits);
   } catch (error) {
     return {
       files: [],
-      diagnostics:
-        (error as NodeJS.ErrnoException).code === "ENOENT"
-          ? []
-          : [
-              unreadable(
-                packageRoot,
-                documentModelsDir,
-                "document models directory",
-                error,
-              ),
-            ],
+      diagnostics: [
+        unreadable(packageRoot, packageRoot, "package root", error),
+      ],
     };
   }
   const files: string[] = [];
   const diagnostics: DefinitionDiagnostic[] = [];
-  for (const name of names) {
-    const directory = join(documentModelsDir, name);
-    const file = join(directory, `${name}.json`);
+  for (const { specifier } of stored) {
+    const file = join(packageRoot, ...specifier.slice(2).split("/"));
     let real: string;
     try {
-      if (
-        !statSync(directory, { throwIfNoEntry: false })?.isDirectory() ||
-        !statSync(file, { throwIfNoEntry: false })?.isFile()
-      ) {
-        continue;
+      if (!statSync(file).isFile()) {
+        throw new Error(`${specifier} is not a file.`);
       }
       real = realpathSync.native(file);
     } catch (error) {
       diagnostics.push(
-        unreadable(packageRoot, directory, "document model directory", error),
+        unreadable(packageRoot, file, "stored document model file", error),
       );
       continue;
     }
     if (pathWithin(packageRootIdentity, real) !== null) files.push(file);
-    else diagnostics.push(outsidePackage(packageSpecifier(packageRoot, file)));
+    else diagnostics.push(outsidePackage(specifier));
   }
   return { files, diagnostics };
 }
@@ -205,19 +191,15 @@ function adaptStoredModelFile(
 }
 
 /**
- * Normalizes every `<documentModelsDir>/<name>/<name>.json` a schema-first
- * package stores, with the project scalars `scalars/index.ts` exports. A
- * directory or file that cannot be read, or a file that cannot be adapted,
- * is a diagnostic.
+ * Normalizes every `<documentModelsDir>/<name>/<name>.json` discovery
+ * listed, with the project scalars `scalars/index.ts` exports. A file that
+ * cannot be read or adapted is a diagnostic.
  */
 export const readStoredDocumentModels: DefinitionProducer = async (input) => {
-  const { packageRoot, documentModelsDir } = input;
-  if (documentModelsDir === undefined) {
-    return { artifacts: [], diagnostics: [], relocations: new Map() };
-  }
+  const { packageRoot, loaded } = input;
   const { files, diagnostics } = storedModelFiles(
     packageRoot,
-    documentModelsDir,
+    loaded.sourceSet.stored,
   );
   if (files.length === 0) {
     return { artifacts: [], diagnostics, relocations: new Map() };

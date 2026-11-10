@@ -8,7 +8,6 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   check,
-  codeFirstConfig,
   createModelProject,
   expectNoAbsolutePath,
   LEDGER,
@@ -64,12 +63,12 @@ const WALLET_DEFINITION = {
 
 describe("ph model check on a healthy project", () => {
   it.each([
-    ["schema-first", "schema-first", [WALLET_DEFINITION]],
-    ["code-first", "code-first", [LEDGER_DEFINITION]],
-    ["mixed", "code-first", [LEDGER_DEFINITION, WALLET_DEFINITION]],
+    ["schema-first", [], [WALLET], [WALLET_DEFINITION]],
+    ["code-first", [LEDGER], [], [LEDGER_DEFINITION]],
+    ["mixed", [LEDGER], [WALLET], [LEDGER_DEFINITION, WALLET_DEFINITION]],
   ] as const)(
     "exits 0 for a %s project",
-    async (shape, mode, definitions) => {
+    async (shape, sources, stored, definitions) => {
       const result = await check(project(shape), true);
       expect(result.code).toBe(0);
       expect(result.stderr).toBe("");
@@ -77,7 +76,12 @@ describe("ph model check on a healthy project", () => {
       expect(report).toMatchObject({
         kind: "powerhouse.definition-check",
         status: "ok",
-        sourceSet: { mode, origin: "config" },
+        sourceSet: {
+          origin: "discovery",
+          documentModelsDir: "./document-models",
+          sources: sources.map((specifier) => ({ specifier })),
+          stored: stored.map((specifier) => ({ specifier })),
+        },
         diagnostics: [],
         summary: { errors: 0, warnings: 0 },
       });
@@ -91,14 +95,14 @@ describe("ph model check on a healthy project", () => {
     60_000,
   );
 
-  it("counts a model that a selected source imports and exports", async () => {
+  it("counts a model that another directory's entry imports and exports", async () => {
     const result = await check(
       project("mixed", {
-        "document-models/extra/index.ts": LEDGER_SOURCE.replaceAll(
+        "document-models/extra/model.ts": LEDGER_SOURCE.replaceAll(
           "ledger",
           "extra",
         ).replaceAll("Ledger", "Extra"),
-        "document-models/ledger/index.ts": `export { Extra } from "../extra/index.js";\n${LEDGER_SOURCE}`,
+        "document-models/ledger/index.ts": `export { Extra } from "../extra/model.js";\n${LEDGER_SOURCE}`,
       }),
       true,
     );
@@ -124,12 +128,12 @@ describe("ph model check on a healthy project", () => {
     "fails on a source file under the models directory it cannot read",
     async () => {
       const root = project("mixed", {
-        "document-models/extra/index.ts": LEDGER_SOURCE.replaceAll(
+        "document-models/extra/model.ts": LEDGER_SOURCE.replaceAll(
           "ledger",
           "extra",
         ).replaceAll("Ledger", "Extra"),
       });
-      const locked = join(root, "document-models/extra/index.ts");
+      const locked = join(root, "document-models/extra/model.ts");
       chmodSync(locked, 0o000);
       try {
         const result = await check(root, true);
@@ -155,10 +159,10 @@ describe("ph model check on a healthy project", () => {
             {
               code: "PH-IMPORT-FAILED",
               phase: "import",
-              source: { specifier: "./document-models/extra/index.ts" },
+              source: { specifier: "./document-models/extra/model.ts" },
               path: [],
               message:
-                "This path under the document models directory could not be read, so the scan cannot tell whether it declares a code-first model that no definitionSources entry reaches.",
+                "This path under the document models directory could not be read, so the scan cannot tell whether it declares a code-first model that no model entry exports.",
               expected: "a readable file or directory",
               repair:
                 "Fix the permissions of the path, or move it out of the document models directory.",
@@ -172,7 +176,7 @@ describe("ph model check on a healthy project", () => {
     60_000,
   );
 
-  it("follows a definition source that imports through tsconfig paths", async () => {
+  it("follows a model entry that imports through tsconfig paths", async () => {
     const result = await check(
       project("mixed", {
         "tsconfig.json": `{
@@ -183,8 +187,8 @@ describe("ph model check on a healthy project", () => {
     },
   },
 }`,
-        "definitions.ts": 'export { Ledger } from "document-models/ledger";\n',
-        "powerhouse.config.json": codeFirstConfig("./definitions.ts"),
+        "document-models/alias-ledger/index.ts":
+          'export { Ledger } from "document-models/ledger";\n',
       }),
       true,
     );
@@ -194,7 +198,10 @@ describe("ph model check on a healthy project", () => {
       definitions: [
         {
           key: "example/ledger",
-          source: { specifier: "./definitions.ts", exportPath: ["Ledger"] },
+          source: {
+            specifier: "./document-models/alias-ledger/index.ts",
+            exportPath: ["Ledger"],
+          },
         },
         WALLET_DEFINITION,
       ],
@@ -207,7 +214,7 @@ describe("ph model check on a healthy project", () => {
     expect(result.code).toBe(0);
     expect(result.stdout).toBe(
       [
-        "ok: 2 definitions (code-first, 1 selected source)",
+        "ok: 2 definitions (./document-models: 1 code-first entry, 1 stored model)",
         "  document-model example/ledger v1 ./document-models/ledger/index.ts#/Ledger",
         "  document-model example/wallet v1 ./document-models/wallet/wallet.json",
         "0 errors, 0 warnings",
@@ -230,13 +237,13 @@ describe("ph model check on a healthy project", () => {
     expect(json.code).toBe(0);
     expect(parsed(json.stdout)).toMatchObject({
       status: "skipped",
-      skipReason: "definition-sources-absent",
+      skipReason: "no-document-models",
       definitions: [],
     });
     expect((await check(root, false)).stdout).toBe(
       [
-        "skipped: 0 definitions (schema-first, 0 selected sources)",
-        "powerhouse.config.json declares no definitionSources and the package has no stored document model, so nothing was checked.",
+        "skipped: 0 definitions (./document-models: 0 code-first entries, 0 stored models)",
+        "The models directory holds no document model, so nothing was checked.",
         "0 errors, 0 warnings",
         "",
       ].join("\n"),
@@ -433,63 +440,65 @@ const BROKEN = [
     },
     line: "PH-CONFIG-SOURCE-INVALID [error/configuration] (no source) /documentModelsDir: documentModelsDir names a file, not a directory.",
   },
+  ...(["model.ts", "model.js", "model.mjs", "model.jsx"] as const).map(
+    (file) => ({
+      name: `a code-first model in ${file} no model entry exports`,
+      shape: "mixed" as const,
+      files: () => ({
+        [`document-models/extra/${file}`]: LEDGER_SOURCE.replaceAll(
+          "ledger",
+          "extra",
+        ).replaceAll("Ledger", "Extra"),
+      }),
+      exitCode: 1,
+      status: "invalid" as const,
+      found: {
+        code: "PH-PKG-DEFINITION-UNREGISTERED" as const,
+        phase: "package" as const,
+        source: { specifier: `./document-models/extra/${file}` },
+        path: [],
+      },
+      line: `PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/extra/${file} (root): ./document-models/extra/ declares a code-first document model that no model entry module exports`,
+    }),
+  ),
   {
-    name: "a code-first model no definitionSources entry reaches",
+    name: "a code-first model an entry imports only for its side effects",
     shape: "mixed",
     files: () => ({
-      "document-models/extra/index.ts": LEDGER_SOURCE.replaceAll(
+      "document-models/extra/model.ts": LEDGER_SOURCE.replaceAll(
         "ledger",
         "extra",
       ).replaceAll("Ledger", "Extra"),
+      "document-models/ledger/index.ts": `import "../extra/model.js";\n${LEDGER_SOURCE}`,
     }),
     exitCode: 1,
     status: "invalid",
     found: {
       code: "PH-PKG-DEFINITION-UNREGISTERED",
       phase: "package",
-      source: { specifier: "./document-models/extra/index.ts" },
+      source: { specifier: "./document-models/extra/model.ts" },
       path: [],
     },
-    line: "PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/extra/index.ts (root): ./document-models/extra/ declares a code-first document model that no definitionSources entry reaches",
+    line: "PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/extra/model.ts (root): ./document-models/extra/ declares a code-first document model that an entry module imports but does not export, so the package leaves it out. Expected: an entry module that exports the model ./document-models/extra/model.ts declares Received: imported, not exported",
   },
-  ...(["index.js", "index.mjs", "index.jsx"] as const).map((file) => ({
-    name: `a code-first model in ${file} no definitionSources entry reaches`,
-    shape: "mixed" as const,
-    files: () => ({
-      [`document-models/extra/${file}`]: LEDGER_SOURCE.replaceAll(
-        "ledger",
-        "extra",
-      ).replaceAll("Ledger", "Extra"),
-    }),
-    exitCode: 1,
-    status: "invalid" as const,
-    found: {
-      code: "PH-PKG-DEFINITION-UNREGISTERED" as const,
-      phase: "package" as const,
-      source: { specifier: `./document-models/extra/${file}` },
-      path: [],
-    },
-    line: `PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/extra/${file} (root): ./document-models/extra/ declares a code-first document model that no definitionSources entry reaches`,
-  })),
   {
-    name: "a code-first model a selected source imports only for its side effects",
+    name: "a code-first model in a directory that also stores a specification",
     shape: "mixed",
     files: () => ({
-      "document-models/extra/index.ts": LEDGER_SOURCE.replaceAll(
-        "ledger",
-        "extra",
-      ).replaceAll("Ledger", "Extra"),
-      "document-models/ledger/index.ts": `import "../extra/index.js";\n${LEDGER_SOURCE}`,
+      "document-models/ledger/ledger.json": storedModel(
+        "example/ledger-stored",
+        "LedgerStored",
+      ),
     }),
     exitCode: 1,
     status: "invalid",
     found: {
       code: "PH-PKG-DEFINITION-UNREGISTERED",
       phase: "package",
-      source: { specifier: "./document-models/extra/index.ts" },
+      source: { specifier: "./document-models/ledger/index.ts" },
       path: [],
     },
-    line: "PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/extra/index.ts (root): ./document-models/extra/ declares a code-first document model that a selected source imports but does not export, so the package leaves it out. Expected: a definitionSources entry that exports the model ./document-models/extra/index.ts declares Received: imported, not exported",
+    line: "PH-PKG-DEFINITION-UNREGISTERED [error/package] ./document-models/ledger/index.ts (root): ./document-models/ledger/ stores a schema-first specification",
   },
   {
     name: "a misspelled catalog scalar factory",

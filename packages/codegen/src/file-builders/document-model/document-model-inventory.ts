@@ -4,7 +4,10 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import {
   adaptCodeFirstDocumentModelSource,
   DefinitionSourceLoader,
+  type DocumentModelDirectory,
   formatDefinitionDiagnostic,
+  findUnregisteredDefinitions,
+  unregisteredDefinitionDiagnostics,
   type LoadedDefinition,
 } from "document-model/tooling";
 import { pascalCase } from "change-case";
@@ -31,9 +34,24 @@ export type CodeFirstModel = {
   readonly binding: CodeFirstBinding | undefined;
 };
 
-export type CodeFirstInventory = {
+/**
+ * Every document model of a package, read through discovery: the classified
+ * model directories, and the code-first models their entry modules export.
+ * Schema-first models stay files on disk; generation reads their stored
+ * specifications itself.
+ */
+export type DocumentModelInventory = {
   readonly projectDir: string;
+  /** Absolute: the configured directory discovery read. */
+  readonly documentModelsDir: string;
+  readonly directories: readonly DocumentModelDirectory[];
   readonly sources: readonly DefinitionSource[];
+  /**
+   * The entry modules that export a model or an upgrade manifest. An entry
+   * that re-exports another entry's is one of them, though `documentModels`
+   * and `upgradeManifests` name each value under its first entry only.
+   */
+  readonly codeFirstEntries: readonly DefinitionSource["specifier"][];
   readonly sourceFiles: ReadonlyMap<string, DefinitionSource["specifier"]>;
   readonly documentModels: readonly CodeFirstModel[];
   readonly upgradeManifests: readonly {
@@ -42,18 +60,22 @@ export type CodeFirstInventory = {
   }[];
 };
 
-const DOCUMENT_MODEL_AGGREGATE_FILES = [
-  "index.ts",
-  "document-models.ts",
-  "upgrade-manifests.ts",
-] as const;
+/** Where codegen writes the generated barrels, whatever `documentModelsDir` is. */
+export function canonicalDocumentModelsDir(projectDir: string): string {
+  return join(projectDir, "document-models");
+}
 
 const isImportableName = (name: string) =>
   name !== "default" && /^[A-Za-z_$][\w$]*$/.test(name);
 
-export async function loadCodeFirstInventory(
+/**
+ * Discovers the package's model directories and loads every code-first
+ * entry module. Throws, before anything is written, when discovery or a
+ * load fails, so no caller prunes or rewrites from a partial inventory.
+ */
+export async function loadDocumentModelInventory(
   projectDir: string,
-): Promise<CodeFirstInventory> {
+): Promise<DocumentModelInventory> {
   const configFile = join(projectDir, POWERHOUSE_CONFIG_FILE);
   const importer = new ViteTypeScriptSourceImportAdapter();
   const loader = new DefinitionSourceLoader(importer);
@@ -61,15 +83,6 @@ export async function loadCodeFirstInventory(
   const request = { configFile, allowMissingConfig: true };
   try {
     const selection = loader.resolve(request);
-    if (selection.status === "skipped") {
-      return {
-        projectDir,
-        sources: [],
-        sourceFiles: new Map(),
-        documentModels: [],
-        upgradeManifests: [],
-      };
-    }
     if (selection.status === "ready") {
       refuseGeneratedAggregates(projectDir, selection.sourceSet.sources);
     }
@@ -82,13 +95,41 @@ export async function loadCodeFirstInventory(
         console.warn(`⚠ ${formatDefinitionDiagnostic(diagnostic)}`);
       }
     }
-    if (loaded.status === "failed") {
+    if (loaded.status === "failed" || loaded.documentModelsDir === undefined) {
       throw new Error(
         [
-          `definitionSources in ${configFile} could not be loaded:`,
+          `The document models of ${projectDir} could not be loaded, so nothing was generated:`,
           ...loaded.diagnostics
             .filter(({ severity }) => severity === "error")
             .map(formatDefinitionDiagnostic),
+        ].join("\n"),
+      );
+    }
+    const { documentModelsDir, directories = [] } = loaded;
+
+    const scan = findUnregisteredDefinitions({
+      packageRoot: loaded.packageRoot,
+      documentModelsDir,
+      sources: loaded.sourceSet.sources,
+      importedFiles: (specifier) => importer.filesImportedBy(specifier),
+      loadedDocumentTypes: new Set(
+        loaded.documentModels.map(({ value }) => value.documentModel.global.id),
+      ),
+      storedUnits: new Set(
+        loaded.sourceSet.stored.map(({ specifier }) =>
+          specifier.replace(/[^/]+$/, ""),
+        ),
+      ),
+    });
+    const scanErrors = [
+      ...scan.diagnostics,
+      ...unregisteredDefinitionDiagnostics(scan.unregistered),
+    ];
+    if (scanErrors.length > 0) {
+      throw new Error(
+        [
+          `The document models of ${projectDir} could not be loaded, so nothing was generated:`,
+          ...scanErrors.map(formatDefinitionDiagnostic),
         ].join("\n"),
       );
     }
@@ -131,7 +172,12 @@ export async function loadCodeFirstInventory(
     }
     return {
       projectDir,
+      documentModelsDir,
+      directories,
       sources,
+      codeFirstEntries: loaded.sourcesWithDefinitions.map(
+        ({ specifier }) => specifier,
+      ),
       sourceFiles: new Map(
         specifiers.flatMap((specifier) =>
           importer
@@ -147,6 +193,37 @@ export async function loadCodeFirstInventory(
     };
   } finally {
     await loader.dispose();
+  }
+}
+
+const AGGREGATE_FILES = [
+  "index.ts",
+  "document-models.ts",
+  "upgrade-manifests.ts",
+] as const;
+
+const realPath = (path: string) =>
+  existsSync(path) ? realpathSync.native(path) : path;
+
+/**
+ * Discovery never lists the barrels, but a model directory's entry can be a
+ * symlink to one. Loading it would make generation read its own output.
+ */
+function refuseGeneratedAggregates(
+  projectDir: string,
+  sources: readonly DefinitionSource[],
+) {
+  const aggregates = new Set(
+    AGGREGATE_FILES.map((name) =>
+      realPath(join(canonicalDocumentModelsDir(projectDir), name)),
+    ),
+  );
+  for (const { specifier } of sources) {
+    if (aggregates.has(realPath(join(projectDir, specifier)))) {
+      throw new Error(
+        `${specifier} resolves to a barrel codegen generates. Give that model directory an authored index.ts instead.`,
+      );
+    }
   }
 }
 
@@ -171,24 +248,3 @@ function identityOf({ source, value }: LoadedDefinition<DocumentModelModule>) {
     aggregateExportName: `${pascalCase(artifact.definition.model.name)}V${artifact.version}`,
   };
 }
-
-function refuseGeneratedAggregates(
-  projectDir: string,
-  sources: readonly DefinitionSource[],
-) {
-  const aggregates = new Set(
-    DOCUMENT_MODEL_AGGREGATE_FILES.map((name) =>
-      realPath(join(projectDir, "document-models", name)),
-    ),
-  );
-  for (const { specifier } of sources) {
-    if (aggregates.has(realPath(join(projectDir, specifier)))) {
-      throw new Error(
-        `definitionSources selects ${specifier}, which codegen generates. Select the authored definition file instead.`,
-      );
-    }
-  }
-}
-
-const realPath = (path: string) =>
-  existsSync(path) ? realpathSync.native(path) : path;
