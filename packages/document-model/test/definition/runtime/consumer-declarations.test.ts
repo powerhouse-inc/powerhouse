@@ -259,10 +259,46 @@ const noLocal = defineDocumentModel({
       schema: ph.object("PlainState", { fields: { n: ph.Int() } }),
       initialValue: { n: null },
     },
-    local: { schema: null, initialValue: {} },
   },
 });
 
+const withLocal = Math.random() > 0.5;
+const either = defineDocumentModel({
+  id: "consumer/either",
+  name: "Either",
+  description: "A consumer's model whose local scope is chosen at runtime.",
+  extension: "either",
+  version: 1,
+  author: { name: "Consumer" },
+  scopes: {
+    global: {
+      schema: ph.object("EitherState", { fields: { n: ph.Int() } }),
+      initialValue: { n: null },
+    },
+    local: withLocal
+      ? {
+          schema: ph.object("EitherLocalState", {
+            fields: { note: ph.String() },
+          }),
+          initialValue: { note: null },
+        }
+      : { schema: null, initialValue: {} },
+  },
+});
+
+const PinnedState = ph.object("PinnedState", { fields: { n: ph.Int() } });
+const pinned = defineDocumentModel<typeof PinnedState, null, 1>({
+  id: "consumer/pinned",
+  name: "Pinned",
+  description: "A consumer's model with explicit type arguments.",
+  extension: "pinned",
+  version: 1,
+  author: { name: "Consumer" },
+  scopes: { global: { schema: PinnedState, initialValue: { n: null } } },
+});
+
+export const eitherV1 = either.version({ modules: [] });
+export const pinnedV1 = pinned.version({ modules: [] });
 export const v1 = model.version({ modules: [items] });
 export const Ledger = materialize(v1);
 export const plainV1 = noLocal.version({ modules: [] });
@@ -293,13 +329,24 @@ const added: { readonly type: "ADD_PERSON"; readonly scope: "global" } =
     filter: { status: "OPEN" },
   });
 const plain: GlobalStateOf<typeof Plain> = { n: 1 };
+const plainLocal: LocalStateOf<typeof Plain> = {};
+// @ts-expect-error a model that omits local has an empty local state
+const wrongPlainLocal: LocalStateOf<typeof Plain> = { note: null };
 
 // @ts-expect-error status is an enum
 Ledger.actions.addPerson({ name: "Ada", filter: { status: "LATE" } });
 // @ts-expect-error grid holds lists of integers
 const wrongGrid: GlobalStateOf<typeof Ledger> = { ...global, grid: [["a"]] };
 
-export { added, global, local, plain, wrongGrid };
+export {
+  added,
+  global,
+  local,
+  plain,
+  plainLocal,
+  wrongGrid,
+  wrongPlainLocal,
+};
 `;
 
 describe("a consumer's declaration emit", () => {
