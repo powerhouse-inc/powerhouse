@@ -243,6 +243,7 @@ describe("generateManifest", () => {
     ).catch((e: unknown) => e)) as {
       issues?: { path: unknown[]; message: string }[];
     };
+    expect(error).toBeDefined();
     expect(error.issues?.[0]?.path).toEqual(["config", 0, "type"]);
     expect(error.issues?.[0]?.message).toBe(
       'type must be one of "var", "secret", "boolean"',
