@@ -4,13 +4,15 @@ import {
 } from "@powerhousedao/shared/clis";
 
 /** The first value that is set; empty and blank count as unset. */
-function first(...values: (string | undefined)[]): string | undefined {
-  return values.map((value) => value?.trim()).find((value) => !!value);
+function first(...values: unknown[]): string | undefined {
+  return values
+    .map((value) => (typeof value === "string" ? value.trim() : undefined))
+    .find((value) => !!value);
 }
 
 /** The drive the switchboard creates at boot: today's drive, then
  * powerhouse.config.json `switchboard.drive`, then the PH_DEFAULT_DRIVE_*
- * env vars. Only a new drive gets these values (see addDefaultDrive). */
+ * env vars. Only a new drive gets these values (see ensureDrive in utils.mts). */
 export function defaultDrive(
   env: Readonly<Record<string, string | undefined>>,
   fileDrive: PHSwitchboardDriveConfig = {},

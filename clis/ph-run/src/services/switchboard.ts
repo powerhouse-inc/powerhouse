@@ -46,6 +46,8 @@ export function allowLocalhostEgress(env: NodeJS.ProcessEnv = process.env) {
 // for both PGlite stores (two writers on one PGDATA).
 export const defaultSwitchboardOptions = {
   port: 4001,
+  // Today's drive, for external callers of this export; switchboardConfigOf
+  // replaces it with the configured one.
   drive: defaultDrive({}),
   mcp: true,
 } satisfies StartServerOptions;

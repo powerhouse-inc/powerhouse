@@ -1,4 +1,7 @@
-import { DEFAULT_DRIVE_ICON } from "@powerhousedao/shared/clis";
+import {
+  DEFAULT_DRIVE_ICON,
+  type PHSwitchboardDriveConfig,
+} from "@powerhousedao/shared/clis";
 import { describe, expect, it } from "vitest";
 import { defaultDrive } from "../src/config/default-drive.js";
 
@@ -15,6 +18,14 @@ describe("defaultDrive", () => {
         triggers: [],
       },
     });
+  });
+
+  it("ignores non-string file fields", () => {
+    const fileDrive = { id: 123 } as unknown as PHSwitchboardDriveConfig;
+    expect(defaultDrive({ PH_DEFAULT_DRIVE_ID: "env-id" }, fileDrive).id).toBe(
+      "env-id",
+    );
+    expect(defaultDrive({}, fileDrive).id).toBe("powerhouse");
   });
 
   it("takes powerhouse.config.json over today's values", () => {
