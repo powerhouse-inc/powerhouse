@@ -240,6 +240,10 @@ Re-generate all existing subgraphs in the current project<br><br>
 Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/<br><br>
 **usage:** `--extract, -x`<br>
 
+#### Code First <br>
+Experimental. With --name or --document, create a new subgraph code-first. Existing subgraphs keep their own style; ph migrate --subgraph converts one<br><br>
+**usage:** `--code-first`<br>
+
 #### Skip Install <br>
 Don't install the dependencies the command adds to package.json<br><br>
 **usage:** `--skip-install`<br>
@@ -1203,11 +1207,23 @@ The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `
 The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages.<br><br>
 **usage:** `--version, -v <str>`<br>
 
+#### Subgraph <br>
+Convert only this directory of subgraphs/ into a code-first subgraph. Repeat it for more directories. Implies --subgraphs.<br><br>
+**usage:** `--subgraph <str>`<br>
+
 
 ### flags
 #### Force <br>
 Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version.<br><br>
 **usage:** `--force, -f`<br>
+
+#### Subgraphs <br>
+Convert every schema-first subgraph under subgraphs/ into a code-first one, keeping its schema and resolvers. Code-first subgraphs are skipped, and a subgraph that cannot keep the same schema is left as it is, with the reason. Upgrades no dependencies and regenerates nothing else.<br><br>
+**usage:** `--subgraphs`<br>
+
+#### Dry Run <br>
+With --subgraphs or --subgraph: print the diff of what would change, and write nothing.<br><br>
+**usage:** `--dry-run`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>
