@@ -1,4 +1,5 @@
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
+import { isCodeFirstBase } from "../graphql/code-first/admission.js";
 import { isSubgraphClass } from "../graphql/utils.js";
 
 /**
@@ -25,6 +26,10 @@ import { isSubgraphClass } from "../graphql/utils.js";
  * accepts regardless of the alias; hand-written packages may re-export a
  * class directly, which the direct branch accepts. A class reached through
  * both branches is returned once.
+ *
+ * A code-first base (a `Subgraph` subclass without `subgraphName`) that
+ * another accepted export extends is dropped: it is shared code, not a
+ * subgraph. A base nothing extends stays, and the host refuses it by name.
  */
 export function extractSubgraphs(
   namespace: Record<string, unknown>,
@@ -43,7 +48,13 @@ export function extractSubgraphs(
       }
     }
   }
-  return found;
+  return found.filter(
+    (candidate) =>
+      !isCodeFirstBase(candidate) ||
+      !found.some((other) =>
+        Object.prototype.isPrototypeOf.call(candidate, other),
+      ),
+  );
 }
 
 // Native ESM lists a namespace's exports by name; Vite's module runner

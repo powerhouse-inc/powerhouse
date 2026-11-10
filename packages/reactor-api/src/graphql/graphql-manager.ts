@@ -125,6 +125,7 @@ import {
   type DriveStore,
 } from "./gateway/drive-ownership-cache.js";
 import type { RequireAuthFetchMiddleware } from "./gateway/require-auth-middleware.js";
+import { codeFirstCheck } from "./code-first/admission.js";
 import { rootFields, SubgraphWsRouter } from "./subgraph-ws-router.js";
 import {
   DEFAULT_WS_CREDENTIAL_RECHECK_INTERVAL_MS,
@@ -1288,6 +1289,9 @@ export class GraphQLManager {
     origin: SubgraphOrigin = HOST_ORIGIN,
   ) {
     if (core) origin = CORE_ORIGIN;
+    // A code-first instance is checked here too: registerSubgraphInstance
+    // and restoring a refused instance construct nothing.
+    codeFirstCheck(subgraphInstance, "construction");
     // Rejections log rather than throw - package registration runs from a
     // detached async closure in server.ts, where a throw is an unhandled
     // rejection that takes the host down.
@@ -1311,7 +1315,12 @@ export class GraphQLManager {
       }
     }
 
-    await this.#runHook(() => subgraphInstance.onSetup?.());
+    // Inside the hook, so a code-first instance that onSetup changed fails
+    // the way a failed setup does.
+    await this.#runHook(async () => {
+      await subgraphInstance.onSetup?.();
+      codeFirstCheck(subgraphInstance, "setup");
+    });
 
     // After setup, so a subgraph that fails to set up leaves the holder.
     for (const evicted of evicts) {
@@ -1649,7 +1658,8 @@ export class GraphQLManager {
     subgraph: SubgraphClass,
     packageName?: string,
   ): ISubgraph {
-    return new subgraph({
+    codeFirstCheck(subgraph, "registration");
+    const instance = new subgraph({
       // Left undefined, the subgraph is core rather than contributed, and its
       // routes hang off reactor-api's own namespace. Not defaulted in the
       // parameter, because `undefined` is what keeps a core subgraph out of
@@ -1670,6 +1680,8 @@ export class GraphQLManager {
       inspection: this.inspection,
       credentials: createCredentialInvalidator(this.authService),
     });
+    codeFirstCheck(instance, "construction");
+    return instance;
   }
 
   /**

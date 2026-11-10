@@ -3,6 +3,12 @@ export * from "./src/graphql/index.js";
 export * from "./src/graphql/errors.js";
 export * from "./src/http/index.js";
 export * from "./src/graphql/types.js";
+export { CodeFirstSubgraphError } from "./src/graphql/code-first/errors.js";
+export { Subgraph } from "./src/graphql/code-first/subgraph.js";
+export type {
+  SchemaBuilder,
+  SubgraphSchemaEntry,
+} from "./src/graphql/code-first/schema-builder.js";
 export {
   AuthorizationPolicy,
   AuthorizedDocumentHandle,
