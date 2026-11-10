@@ -308,7 +308,7 @@ The memory leak signal is the used heap right after a major GC, not `heapUsed`, 
 | `PH_SWITCHBOARD_PUBLIC_URL`         | Public origin used for the remote attachment service                 | `http://localhost:$PORT`    |
 | `LOG_LEVEL`                         | Log level                                                            | `info`                      |
 
-> The same fields can be set in `powerhouse.config.json` under `switchboard.drive` (`id`, `slug`, `name`, `icon`, `preferredEditor`); an env var overrides its field. The drive is created only if no drive with its id exists: changing the name, icon or editor later does not change an existing drive, and a new id creates a second drive next to the old one.
+> The same fields can be set in `powerhouse.config.json` under `switchboard.drive` (`id`, `slug`, `name`, `icon`, `preferredEditor`); an env var overrides its field. The drive is created only if neither its slug nor its id is taken: changing the name, icon or editor later does not change an existing drive. A new id with the default slug creates a second drive next to the old one; if the slug is already held by a drive, that drive is used, and if another document holds it, no drive is created and the Switchboard logs an error.
 
 #### Error Tracking & Monitoring
 
