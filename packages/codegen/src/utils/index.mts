@@ -9,6 +9,11 @@ export * from "./get-piece-metadata.js";
 export * from "./get-processor-metadata.js";
 export * from "./get-subgraph-metadata.js";
 export * from "./source-files.js";
+export {
+  subgraphDirStyle,
+  subgraphDirStyles,
+  type SubgraphStyle,
+} from "./subgraph-style.js";
 export * from "./syntax-builders.js";
 export * from "./syntax-getters.js";
 export * from "./ts-morph-project.js";

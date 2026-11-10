@@ -1,4 +1,7 @@
-import { loadDocumentModelInDir } from "@powerhousedao/codegen/utils";
+import {
+  loadDocumentModelInDir,
+  subgraphDirStyle,
+} from "@powerhousedao/codegen/utils";
 import {
   findPackageSubgraphConflicts,
   type PackageSubgraph,
@@ -13,6 +16,8 @@ import { join } from "node:path";
 // Templates with substitutions are skipped: their SDL is only known at runtime.
 const GQL_TEMPLATE = /\bgql\s*`([^`]*)`/g;
 const SUBGRAPH_NAME = /\bname\s*=\s*["'`]([^"'`]+)["'`]/;
+const CODE_FIRST_NAME =
+  /\bstatic\s+(?:override\s+)?(?:readonly\s+)?subgraphName(?:\s*:\s*string)?\s*=\s*["'`]([^"'`$]+)["'`]/;
 const SUBGRAPH_EXPORT = /from\s+["']\.\/([^/"']+)\/index\.js["']/g;
 
 function directories(path: string): Dirent[] {
@@ -117,12 +122,38 @@ export async function findSubgraphNameConflict(
   return `Subgraph name "${subgraphName}" is taken by a ${holder} subgraph, so the server would refuse this one. Choose another name, such as "${subgraphName}-api".`;
 }
 
+function codeFirstName(dir: string): string | undefined {
+  const files = [
+    "index.ts",
+    ...readdirSync(dir, { recursive: true, encoding: "utf8" })
+      .filter((file) => file.endsWith(".ts") && file !== "index.ts")
+      .sort(),
+  ];
+  for (const file of files) {
+    const name = CODE_FIRST_NAME.exec(read(join(dir, file)) ?? "")?.[1];
+    if (name !== undefined) return name;
+  }
+  return undefined;
+}
+
 /** A warning per model or subgraph the server would refuse or leave out. */
 export async function lintSubgraphTypes(projectDir: string): Promise<string[]> {
   const models = loadModels(projectDir);
   const subgraphsDir = join(projectDir, "subgraphs");
   const subgraphs: PackageSubgraph[] = [];
   for (const dir of subgraphDirs(subgraphsDir)) {
+    if (subgraphDirStyle(subgraphsDir, dir) === "code-first") {
+      // Its schema is `ph` descriptors, which `ph model check` reads; this
+      // lint checks only its name, in index.ts or a module of its directory.
+      const name = codeFirstName(join(subgraphsDir, dir));
+      if (name !== undefined) {
+        subgraphs.push({
+          name,
+          typeDefs: { kind: Kind.DOCUMENT, definitions: [] },
+        });
+      }
+      continue;
+    }
     const typeDefs = readSchema(join(subgraphsDir, dir, "schema.ts"));
     if (!typeDefs) continue;
     const index = read(join(subgraphsDir, dir, "index.ts")) ?? "";

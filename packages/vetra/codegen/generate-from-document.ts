@@ -15,6 +15,7 @@ import {
   generateEditor,
   generateProcessor,
   generateSubgraph,
+  type GenerateSubgraphOptions,
 } from "@powerhousedao/codegen";
 import {
   PROCESSOR_APPS,
@@ -92,8 +93,9 @@ export async function generateProcessorFromDocument(
 export async function generateSubgraphFromDocument(
   doc: SubgraphModuleDocument,
   project: Project,
+  options?: GenerateSubgraphOptions,
 ): Promise<void> {
-  await generateSubgraph(doc.state.global.name, project);
+  await generateSubgraph(doc.state.global.name, project, options);
 }
 
 export async function generateAppFromDocument(

@@ -28,8 +28,8 @@ import {
   generateAllApps,
   generateAllPieces,
   generateAllProcessors,
-  generateAllSubgraphs,
 } from "./generate.js";
+import { generateAllSubgraphs } from "./subgraph-generation.js";
 import type {
   ModelGenerationSource,
   PlannedDocumentModel,

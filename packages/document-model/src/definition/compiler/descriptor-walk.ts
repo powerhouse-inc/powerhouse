@@ -48,11 +48,21 @@ function directivesOf(
   return directives.length > 0 ? { directives } : {};
 }
 
+export type DescriptorWalkOptions = {
+  /**
+   * Builds an object type that declares no fields instead of refusing it,
+   * for a caller that adds fields after the walk. That caller then reports
+   * what is still empty with `checkObjectFields`.
+   */
+  readonly deferObjectFields?: boolean;
+};
+
 export class DescriptorWalk {
   readonly definitions: NamedGraphQLTypeDefinition[] = [];
   readonly catalogScalars = new Set<string>();
   readonly packageScalars = new Map<string, ScalarDefinition>();
   readonly #collector: DefinitionDiagnosticCollector<CompilerDiagnosticCode>;
+  readonly #deferObjectFields: boolean;
   readonly #built = new Map<AnyTypeDescriptor, NamedGraphQLTypeDefinition>();
   readonly #visited = new Set<AnyTypeDescriptor>();
   readonly #claims = new Map<
@@ -62,8 +72,10 @@ export class DescriptorWalk {
 
   constructor(
     collector: DefinitionDiagnosticCollector<CompilerDiagnosticCode>,
+    options: DescriptorWalkOptions = {},
   ) {
     this.#collector = collector;
+    this.#deferObjectFields = options.deferObjectFields ?? false;
   }
 
   visitType(
@@ -126,15 +138,27 @@ export class DescriptorWalk {
     }
   }
 
-  checkInterfaceImplementations(): void {
+  checkInterfaceImplementations(
+    definitions: readonly NamedGraphQLTypeDefinition[] = this.definitions,
+  ): void {
     for (const { owner, ...problem } of interfaceConformanceProblems(
-      this.definitions,
+      definitions,
     )) {
       this.#collector.add({
         code: "PH-DM-INTERFACE-INVALID",
         path: this.#claims.get(owner)?.path ?? [],
         ...problem,
       });
+    }
+  }
+
+  checkObjectFields(definitions: readonly NamedGraphQLTypeDefinition[]): void {
+    for (const definition of definitions) {
+      if (definition.kind !== "object" || definition.fields.length > 0) {
+        continue;
+      }
+      const { kind, name } = definition;
+      this.#noFields(kind, name, this.#claims.get(name)?.path ?? []);
     }
   }
 
@@ -248,15 +272,11 @@ export class DescriptorWalk {
     name: string,
     path: DefinitionPath,
   ): FieldDefinition[] {
-    if (Object.keys(fields).length === 0) {
-      this.#collector.add({
-        code: "PH-DM-DECLARATION-INVALID",
-        path: [...path, "fields"],
-        message: `The ${kind} type ${JSON.stringify(name)} declares no fields, and GraphQL cannot build a schema that contains it.`,
-        expected: "at least one field",
-        received: "no fields",
-        repair: `Give ${JSON.stringify(name)} a field, or remove it from the model. Only ph.input({ fields: {} }) may be member-less, because it projects _empty: Boolean.`,
-      });
+    if (
+      Object.keys(fields).length === 0 &&
+      !(kind === "object" && this.#deferObjectFields)
+    ) {
+      this.#noFields(kind, name, path);
       throw new WalkAbort();
     }
     return Object.entries(fields).map(([key, field]) => ({
@@ -267,6 +287,21 @@ export class DescriptorWalk {
       type: this.#typeReference(field, [...path, "fields", key]),
       ...directivesOf(field),
     }));
+  }
+
+  #noFields(
+    kind: "object" | "interface",
+    name: string,
+    path: DefinitionPath,
+  ): void {
+    this.#collector.add({
+      code: "PH-DM-DECLARATION-INVALID",
+      path: [...path, "fields"],
+      message: `The ${kind} type ${JSON.stringify(name)} declares no fields, and GraphQL cannot build a schema that contains it.`,
+      expected: "at least one field",
+      received: "no fields",
+      repair: `Give ${JSON.stringify(name)} a field, or remove it from the model. Only ph.input({ fields: {} }) may be member-less, because it projects _empty: Boolean.`,
+    });
   }
 
   #inputFields(

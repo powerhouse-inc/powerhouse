@@ -8,6 +8,7 @@ import { readdirSync, readFileSync, statSync } from "fs";
 import { join } from "path";
 import { type PackageJson, readPackage } from "read-pkg";
 import { writePackage } from "write-package";
+import { subgraphDirStyles } from "../utils/subgraph-style.js";
 import { sortByKey } from "./utils.js";
 
 export type Feature = keyof typeof FEATURE_DEPENDENCIES;
@@ -48,8 +49,11 @@ function hasSubgraph(subgraphsDir: string): boolean {
       }
     }
   }
-  return false;
+  return hasCodeFirstSubgraph(subgraphsDir);
 }
+
+const hasCodeFirstSubgraph = (subgraphsDir: string) =>
+  subgraphDirStyles(subgraphsDir).some(({ style }) => style === "code-first");
 
 // The rule planPieces applies, so detection and the build agree: a piece is a
 // pieces/<name>/index.ts, and a bare pieces/index.ts beside none is not one.

@@ -17,8 +17,9 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
 import { detectFeatures, syncFeatureDependencies } from "./features.js";
-import { generateProcessor, generateSubgraph } from "./generate.js";
+import { generateProcessor } from "./generate.js";
 import { migratedPackageJson, resolveManagedDependencies } from "./migrate.js";
+import { generateSubgraph } from "./project-generation.js";
 
 const PIN = "6.2.3-dev.13";
 

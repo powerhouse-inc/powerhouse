@@ -1,10 +1,29 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type { BuildArgs } from "../types.js";
 import { BuildRefusal } from "./package-build/pipeline/steps.js";
 import { type BuildOptions, buildPackage } from "./package-build/run-build.js";
+import { standardBuildSteps } from "./package-build/steps/standard.js";
+import { subgraphStep } from "./subgraph-build-step.js";
 
 export { assertExternalDependenciesDeclared } from "./package-build/steps/bundles.js";
 export { assertManifestNameMatchesPackage } from "./package-build/steps/package-checks.js";
 export { createTraceFiles, traceFiles } from "./package-build/steps/trace.js";
+
+/**
+ * The gate loads codegen, so a build without `checkDefinitions` or without a
+ * `subgraphs/` directory never imports it.
+ */
+async function withSubgraphStep(options: BuildOptions): Promise<BuildOptions> {
+  if (!options.checkDefinitions) return options;
+  if (!existsSync(join(process.cwd(), "subgraphs"))) return options;
+  const { hasCodeFirstSubgraph } = await import("./model/subgraph-gate.js");
+  if (!hasCodeFirstSubgraph(process.cwd())) return options;
+  return {
+    ...options,
+    steps: [...(options.steps ?? standardBuildSteps), subgraphStep],
+  };
+}
 
 /**
  * `ph build`, and the package build `ph connect build` and the switchboard
@@ -20,7 +39,7 @@ export async function runBuild(
   options: BuildOptions = {},
 ): Promise<void> {
   try {
-    return await buildPackage(args, options);
+    return await buildPackage(args, await withSubgraphStep(options));
   } catch (error) {
     if (!(error instanceof BuildRefusal)) throw error;
     console.error(error.message);

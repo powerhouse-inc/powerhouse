@@ -53,3 +53,26 @@ export {
   loadProjectDefinitions,
   type ProjectDefinitions,
 } from "./src/definition/tooling/project/project-definitions.js";
+export {
+  subgraphChecks,
+  type SubgraphChecksInput,
+} from "./src/definition/tooling/subgraph/checks.js";
+export {
+  subgraphCheckInput,
+  type SubgraphCheckInput,
+  type SubgraphHostConflict,
+  type SubgraphImportFailure,
+  type SubgraphInventoryEntry,
+} from "./src/definition/tooling/subgraph/input.js";
+export {
+  type SubgraphInspection,
+  type SubgraphInspectionReport,
+  withSubgraphInspection,
+} from "./src/definition/tooling/subgraph/inspection.js";
+export {
+  type CodeFirstSubgraph,
+  readSubgraphDefinitions,
+  type SubgraphDefinitions,
+  type TypedSubgraphDefinition,
+} from "./src/definition/tooling/subgraph/read.js";
+export type { SchemaFirstSubgraphSource } from "./src/definition/tooling/subgraph/schema-first/sdl-conflicts.js";

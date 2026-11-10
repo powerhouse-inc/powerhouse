@@ -35,7 +35,7 @@ function definitionsWorker(): { path: string; execArgv: string[] } {
  * that ends without a reply, outlives `timeoutMs` or outlives a stop of the
  * build is killed, and the reply says why the check could not run.
  */
-function checkInChild<P extends DefinitionsProfile>(
+export function checkInChild<P extends DefinitionsProfile>(
   projectRoot: string,
   profile: P,
   session: BuildSession,

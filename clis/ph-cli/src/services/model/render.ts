@@ -8,6 +8,8 @@ import {
   type DocumentModelInspection,
   formatDefinitionDiagnostic,
   formatDefinitionSource,
+  type SubgraphInspection,
+  type SubgraphInspectionReport,
 } from "document-model/tooling";
 
 const SKIP_REASONS: Readonly<Record<DefinitionCheckSkipReason, string>> = {
@@ -104,8 +106,22 @@ function familyLines(family: FamilyInspection): string[] {
   ];
 }
 
+function subgraphLines(subgraph: SubgraphInspection): string[] {
+  if (subgraph.style === "schema-first") {
+    return [
+      `  ${subgraph.name ?? "(unnamed)"} schema-first ${formatDefinitionSource(subgraph.source)}`,
+    ];
+  }
+  return [
+    `  ${subgraph.name} code-first ${formatDefinitionSource(subgraph.source)}`,
+    `    digest ${subgraph.digest}`,
+    `    entries ${subgraph.entries.join(", ")}`,
+    `    types ${subgraph.types.length === 0 ? "none" : subgraph.types.join(", ")}`,
+  ];
+}
+
 export function renderInspectionReport(
-  report: DefinitionInspectionReport,
+  report: DefinitionInspectionReport | SubgraphInspectionReport,
 ): string {
   return [
     statusLine(
@@ -124,6 +140,12 @@ export function renderInspectionReport(
     ...(report.definition === undefined
       ? []
       : ["The full definition of this model is in --json, as `definition`."]),
+    ...("subgraphs" in report
+      ? [
+          `subgraphs: ${report.subgraphs.length}`,
+          ...report.subgraphs.flatMap(subgraphLines),
+        ]
+      : []),
     ...diagnosticLines(report.diagnostics),
   ].join("\n");
 }

@@ -138,7 +138,16 @@ export async function inProject<T>(
   return result;
 }
 
-export function typeCheck(dir: string): string {
+/** Runs `tsc -p dir`. With `declarations`, it also emits declaration files
+ * into a temporary directory, as `ph build` does, so an inferred type that
+ * cannot be named fails. */
+export function typeCheck(
+  dir: string,
+  options: { readonly declarations?: boolean } = {},
+): string {
+  const outDir = options.declarations
+    ? mkdtempSync(join(tmpdir(), "ph-declarations-"))
+    : undefined;
   try {
     return execFileSync(
       process.execPath,
@@ -146,6 +155,16 @@ export function typeCheck(dir: string): string {
         join(dirname(require.resolve("typescript/package.json")), "bin/tsc"),
         "-p",
         dir,
+        ...(outDir === undefined
+          ? []
+          : [
+              "--noEmit",
+              "false",
+              "--declaration",
+              "--emitDeclarationOnly",
+              "--outDir",
+              outDir,
+            ]),
       ],
       { encoding: "utf8" },
     );
@@ -156,6 +175,8 @@ export function typeCheck(dir: string): string {
       throw new Error(`tsc -p ${dir} failed:\n${stdout}`, { cause: error });
     }
     throw error;
+  } finally {
+    if (outDir !== undefined) rmSync(outDir, { recursive: true, force: true });
   }
 }
 

@@ -37,6 +37,12 @@ export const generateSubgraphCmd = command({
       description:
         "Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/",
     }),
+    /** @experimental */
+    codeFirst: flag({
+      long: "code-first",
+      description:
+        "Experimental. With --name or --document, create a new subgraph code-first. Existing subgraphs keep their own style; ph migrate --subgraph converts one",
+    }),
     ...skipInstallArgs,
     ...debugArgs,
   },
