@@ -1,6 +1,8 @@
 import { generateId } from "@powerhousedao/shared/document-model";
+import { addFolder } from "@powerhousedao/shared/document-drive";
 import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { up } from "../../../src/storage/migrations/032_index_operation_document_branch_timestamp.js";
 import {
   latestTimestampQuery,
   scopeHeadsQuery,
@@ -22,12 +24,18 @@ async function planOf(
   });
 }
 
+const indexName = "idx_operation_document_branch_timestamp";
+
 describe("getRevisions query plans [Postgres]", () => {
   let db: Kysely<DatabaseSchema>;
+  let store: Awaited<
+    ReturnType<typeof createTestOperationStorePostgres>
+  >["store"];
+  let schema: string;
   let cleanup: () => Promise<void>;
 
   beforeEach(async () => {
-    ({ db, cleanup } = await createTestOperationStorePostgres());
+    ({ db, store, schema, cleanup } = await createTestOperationStorePostgres());
   });
   afterEach(async () => {
     await cleanup();
@@ -52,14 +60,61 @@ describe("getRevisions query plans [Postgres]", () => {
   });
 
   it("leaves a pre-built index alone", async () => {
-    // The migration ran in beforeEach; running its statement again must be a no-op.
-    await expect(
-      db.schema
-        .createIndex("idx_operation_document_branch_timestamp")
-        .ifNotExists()
-        .on("Operation")
-        .expression(sql`"documentId", branch, "timestampUtcMs" desc`)
-        .execute(),
-    ).resolves.not.toThrow();
+    // The migration ran in beforeEach; running it again must be a no-op.
+    await expect(up(db)).resolves.toBeUndefined();
+    const rows = await db
+      .selectFrom("pg_catalog.pg_indexes" as never)
+      .select("indexname" as never)
+      .where("indexname" as never, "=", indexName as never)
+      .where("schemaname" as never, "=", schema as never)
+      .execute();
+    expect(rows).toHaveLength(1);
+  });
+
+  it("returns each scope's head and the latest timestamp from the main branch", async () => {
+    const documentId = generateId();
+    const write = (
+      scope: string,
+      branch: string,
+      index: number,
+      timestampUtcMs: string,
+    ) =>
+      store.apply(
+        documentId,
+        "powerhouse/document-drive",
+        scope,
+        branch,
+        index,
+        (txn) => {
+          txn.addOperations({
+            index,
+            timestampUtcMs,
+            hash: `hash-${scope}-${branch}-${index}`,
+            skip: 0,
+            id: generateId(),
+            action: addFolder({
+              id: generateId(),
+              name: `f-${index}`,
+              parentFolder: null,
+            }),
+          });
+        },
+      );
+    for (let i = 0; i <= 3; i++) {
+      await write("global", "main", i, `2026-01-01T00:00:0${i}.000Z`);
+    }
+    for (let i = 0; i <= 1; i++) {
+      await write("local", "main", i, `2026-02-01T00:00:0${i}.000Z`);
+    }
+    await write("header", "main", 0, "2026-01-15T00:00:00.000Z");
+    await write("auth", "draft", 0, "2026-09-01T00:00:00.000Z");
+    for (let i = 0; i <= 4; i++) {
+      await write("global", "draft", i, "2026-09-02T00:00:00.000Z");
+    }
+
+    const revisions = await store.getRevisions(documentId, "main");
+
+    expect(revisions.revision).toEqual({ global: 4, local: 2, header: 1 });
+    expect(revisions.latestTimestamp).toBe("2026-02-01T00:00:01.000Z");
   });
 });

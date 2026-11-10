@@ -1016,10 +1016,21 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
       const documentId = generateId();
       for (let i = 0; i <= 1; i++) await writeAt(documentId, "global", i);
       await writeAt(documentId, "local", 0, undefined, "draft");
+      // Draft shares `global` with main, at a higher index and a later time.
+      for (let i = 0; i <= 5; i++) {
+        await writeAt(
+          documentId,
+          "global",
+          i,
+          "2026-06-01T00:00:00.000Z",
+          "draft",
+        );
+      }
 
       const revisions = await store.getRevisions(documentId, "main");
 
       expect(revisions.revision).toEqual({ global: 2 });
+      expect(revisions.latestTimestamp).toBe("2026-01-01T00:00:00.000Z");
     });
 
     it("returns no revisions for a document with no operations", async () => {
