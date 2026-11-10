@@ -56,11 +56,11 @@ export function scopeHeadsQuery(
             .selectFrom("scopes as s")
             .select((eb2) =>
               eb2
-                .selectFrom("Operation as o")
-                .select("o.scope")
-                .where("o.documentId", "=", documentId)
-                .whereRef("o.scope", ">", "s.scope")
-                .orderBy("o.scope")
+                .selectFrom("Operation as hop")
+                .select("hop.scope")
+                .where("hop.documentId", "=", documentId)
+                .whereRef("hop.scope", ">", "s.scope")
+                .orderBy("hop.scope")
                 .limit(1)
                 .as("scope"),
             )
@@ -71,21 +71,21 @@ export function scopeHeadsQuery(
     .select((eb) => [
       "s.scope",
       eb
-        .selectFrom("Operation as o")
-        .select("o.index")
-        .where("o.documentId", "=", documentId)
-        .whereRef("o.scope", "=", "s.scope")
-        .where("o.branch", "=", branch)
-        .orderBy("o.index", "desc")
+        .selectFrom("Operation as head")
+        .select("head.index")
+        .where("head.documentId", "=", documentId)
+        .whereRef("head.scope", "=", "s.scope")
+        .where("head.branch", "=", branch)
+        .orderBy("head.index", "desc")
         .limit(1)
         .as("index"),
       eb
-        .selectFrom("Operation as o")
-        .select("o.timestampUtcMs")
-        .where("o.documentId", "=", documentId)
-        .whereRef("o.scope", "=", "s.scope")
-        .where("o.branch", "=", branch)
-        .orderBy("o.timestampUtcMs", "desc")
+        .selectFrom("Operation as ts")
+        .select("ts.timestampUtcMs")
+        .where("ts.documentId", "=", documentId)
+        .whereRef("ts.scope", "=", "s.scope")
+        .where("ts.branch", "=", branch)
+        .orderBy("ts.timestampUtcMs", "desc")
         .limit(1)
         .as("latestTimestamp"),
     ])

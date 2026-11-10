@@ -720,7 +720,7 @@ export class KyselyOperationStore implements IOperationStore {
     // its newest timestamp one probe of idx_operation_scope_timestamp. The
     // scopes are found by hopping from one distinct scope to the next, so the
     // cost follows the number of scopes, not the number of operations (a
-    // GROUP BY or a max over the document would walk every operation). A scope
+    // GROUP BY or a max over (documentId, branch) has no index to probe and reads every operation of the document). A scope
     // present only on another branch comes back with nulls and is skipped.
     const scopeHeads = await scopeHeadsQuery(
       this.queryExecutor,

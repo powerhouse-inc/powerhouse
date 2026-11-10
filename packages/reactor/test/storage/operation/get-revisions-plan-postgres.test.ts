@@ -1,6 +1,6 @@
 import { generateId } from "@powerhousedao/shared/document-model";
 import { addFolder } from "@powerhousedao/shared/document-drive";
-import { sql, type Kysely } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { up } from "../../../src/storage/migrations/032_index_operation_scope_timestamp.js";
 import {
@@ -13,13 +13,13 @@ import { createTestOperationStorePostgres } from "../../factories.js";
 /** The plan of `query` with sequential scans off, so it shows which index can serve it. */
 async function planOf(
   db: Kysely<DatabaseSchema>,
-  query: (conn: Kysely<DatabaseSchema>) => {
+  query: (conn: Transaction<DatabaseSchema>) => {
     explain: () => Promise<Record<string, unknown>[]>;
   },
 ): Promise<string> {
-  return db.connection().execute(async (conn) => {
-    await sql`set enable_seqscan = off`.execute(conn);
-    const rows = await query(conn).explain();
+  return db.transaction().execute(async (trx) => {
+    await sql`set local enable_seqscan = off`.execute(trx);
+    const rows = await query(trx).explain();
     return rows.map((row) => String(Object.values(row)[0])).join("\n");
   });
 }
@@ -54,12 +54,14 @@ describe("getRevisions query plans [Postgres]", () => {
       scopeHeadsQuery(conn, generateId(), "main"),
     );
     // One backward probe per scope, not a walk of every operation.
-    expect(plan).toMatch(/Scan Backward using unique_revision/);
+    expect(plan).toMatch(
+      /Backward using unique_revision on "Operation" head\b/,
+    );
     expect(plan).toContain("Recursive Union");
     // The newest timestamp per scope is a probe of the scope/timestamp index
-    // (an aliased scan is a per-scope subquery, not the scope hop's own scan).
+    // (the `ts` subquery; the scope hop is aliased `hop`, so this cannot be it).
     expect(plan).toMatch(
-      /Scan (Backward )?using idx_operation_scope_timestamp on "Operation" o(_\d+)?\b/,
+      /using idx_operation_scope_timestamp on "Operation" ts\b/,
     );
     expect(plan).not.toContain("Seq Scan");
   });
