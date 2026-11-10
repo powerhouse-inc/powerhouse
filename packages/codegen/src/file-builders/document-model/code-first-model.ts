@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { ManifestSchema } from "@powerhousedao/shared/document-model";
 import { join, relative, dirname } from "node:path";
+import { uniqueBy } from "remeda";
 import type { Project } from "ts-morph";
 import {
   formatSourceFileWithPrettier,
@@ -25,13 +26,9 @@ import {
   codeFirstVersionTemplate,
   type CodeFirstDocumentModelTemplateArgs,
 } from "../../templates/code-first/document-model.js";
-import {
-  planDefinitionSourceRegistration,
-  type DefinitionSourceRegistration,
-} from "../definition-sources.js";
 import { createOrUpdateManifest } from "../manifest.js";
-import { writeCodeFirstAggregates } from "./code-first-aggregates.js";
-import { loadCodeFirstInventory } from "./code-first-inventory.js";
+import { writeDocumentModelAggregates } from "./aggregates.js";
+import { loadDocumentModelInventory } from "./document-model-inventory.js";
 
 /** @experimental */
 export type GenerateCodeFirstDocumentModelArgs = {
@@ -44,7 +41,6 @@ export type GenerateCodeFirstDocumentModelArgs = {
 /** @experimental */
 export type CodeFirstGenerationResult = {
   readonly written: readonly string[];
-  readonly registration: DefinitionSourceRegistration;
 };
 
 export function codeFirstDocumentModelTemplateArgs({
@@ -68,13 +64,19 @@ export function codeFirstDocumentModelTemplateArgs({
   };
 }
 
+/**
+ * Writes a code-first model into `documentModelsDir`, where discovery finds
+ * it, then rebuilds the barrels and adds it to the manifest. Every file is
+ * restored when a step fails.
+ */
 export async function generateCodeFirstDocumentModel(
   args: GenerateCodeFirstDocumentModelArgs,
   project: Project,
+  documentModelsDir: string,
 ): Promise<CodeFirstGenerationResult> {
   const v = codeFirstDocumentModelTemplateArgs(args);
   const projectDir = projectPath(project, ".");
-  const modelDir = `document-models/${v.kebabName}`;
+  const modelDir = `${relative(projectDir, documentModelsDir).replaceAll("\\", "/")}/${v.kebabName}`;
   const files = [
     [`${modelDir}/v1/definition.ts`, codeFirstDefinitionTemplate(v)],
     [`${modelDir}/v1/modules/items.ts`, codeFirstItemsModuleTemplate(v)],
@@ -107,17 +109,11 @@ export async function generateCodeFirstDocumentModel(
       );
     }
   }
-  const { registration, commit } = await planDefinitionSourceRegistration(
-    projectDir,
-    { specifier: `./${modelDir}/index.ts` },
-  );
-
   const paths = [
     ...files.map(([path]) => join(projectDir, path)),
     ...["index.ts", "document-models.ts", "upgrade-manifests.ts"].map((name) =>
       join(projectDir, "document-models", name),
     ),
-    join(projectDir, "powerhouse.config.json"),
     manifestPath,
   ];
   const snapshots = paths.map((path) => ({
@@ -134,7 +130,7 @@ export async function generateCodeFirstDocumentModel(
     )
       newDirectories.add(dir);
   }
-  let aggregates: Awaited<ReturnType<typeof writeCodeFirstAggregates>>;
+  let aggregates: Awaited<ReturnType<typeof writeDocumentModelAggregates>>;
   try {
     for (const [path, text] of files) {
       const { sourceFile } = getOrCreateSourceFile(
@@ -145,15 +141,19 @@ export async function generateCodeFirstDocumentModel(
       await formatSourceFileWithPrettier(sourceFile);
       await sourceFile.save();
     }
-    await commit();
-
-    aggregates = await writeCodeFirstAggregates(
-      project,
-      await loadCodeFirstInventory(projectDir),
-    );
+    const inventory = await loadDocumentModelInventory(projectDir);
+    aggregates = await writeDocumentModelAggregates(project, inventory);
     for (const sourceFile of aggregates) await sourceFile.save();
     await createOrUpdateManifest(
-      { documentModels: [{ name: v.displayName, id: v.documentType }] },
+      {
+        documentModels: uniqueBy(
+          inventory.documentModels.map(({ documentType, name }) => ({
+            id: documentType,
+            name,
+          })),
+          ({ id }) => id,
+        ),
+      },
       projectDir,
     );
   } catch (cause) {
@@ -173,12 +173,10 @@ export async function generateCodeFirstDocumentModel(
   return {
     written: [
       ...files.map(([path]) => path),
-      ...(registration === "unchanged" ? [] : ["powerhouse.config.json"]),
       ...aggregates.map((sourceFile) =>
         relative(projectDir, sourceFile.getFilePath()).replaceAll("\\", "/"),
       ),
       "powerhouse.manifest.json",
     ],
-    registration,
   };
 }

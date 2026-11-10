@@ -1,7 +1,6 @@
 import type { ArgParser } from "cmd-ts/dist/cjs/argparser.js";
 import type { z } from "zod";
 import type * as C from "../connect/connect-config-schema.js";
-import type { DefinitionSourcesConfig } from "../document-model/definition-types.js";
 import type { getPackageManagerCommand } from "./args/common.js";
 import type {
   DRIVES_PRESERVE_STRATEGIES,
@@ -247,6 +246,4 @@ export type PowerhouseConfig = {
   };
   packageRegistryUrl?: string;
   connect?: PHConnectRuntimeConfig;
-  /** @experimental The modules that declare code-first definitions, or an explicit schema-first selection. */
-  definitionSources?: DefinitionSourcesConfig;
 };

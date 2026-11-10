@@ -217,10 +217,13 @@ describe("a staged build", () => {
     expect(readdirSync(join(made.root, ".ph", "build"))).toEqual(["runs"]);
     expect(logs).toContain(`✔ Types emitted to ${join("dist", "types")}`);
     expect(warnings).toEqual([]);
-    // A package that selects no code-first source checks nothing.
-    expect(
-      logs.filter((line) => line.includes("document model definitions")),
-    ).toEqual([]);
+    expect(logs).toContain(
+      [
+        "✔ skipped: 0 definitions (./document-models: 1 code-first entry, 0 stored models)",
+        "The models directory holds no document model, so nothing was checked.",
+        "0 errors, 0 warnings",
+      ].join("\n"),
+    );
     // tsdown labels the files it writes with the output, not the stage.
     expect(logs.filter((line) => line.includes(".ph-stage-"))).toEqual([]);
     expect(logs.some((line) => line.includes(`dist${sep}browser${sep}`))).toBe(
@@ -1690,9 +1693,19 @@ describe("the definitions step", () => {
       'ph.object("Ledger State"',
     );
 
-  it("prints nothing and goes on for a package whose definitionSources do not resolve", async () => {
+  it("ignores an obsolete registration during the optional definition check", async () => {
     const made = project();
     made.write("powerhouse.config.json", '{ "definitionSources": 42 }');
+
+    await buildPackage(args, checking);
+
+    expect(warnings).toEqual([]);
+    expect(files(made.dist)).toEqual(CLASSIC_OUTPUT);
+  }, 120_000);
+
+  it("prints nothing and goes on for a package without a code-first model", async () => {
+    const made = project();
+    made.write("document-models/thing/thing.json", "{}");
 
     await buildPackage(args, checking);
 
@@ -1700,7 +1713,6 @@ describe("the definitions step", () => {
       logs.filter((line) => line.includes("document model definitions")),
     ).toEqual([]);
     expect(warnings).toEqual([]);
-    expect(files(made.dist)).toEqual(CLASSIC_OUTPUT);
   }, 120_000);
 
   it("imports none of the package's modules unless ph build asks", async () => {
@@ -1719,7 +1731,7 @@ describe("the definitions step", () => {
     expect(imports()).toBe("imported\n");
   }, 240_000);
 
-  it("checks the selected sources and reports them", async () => {
+  it("checks the discovered models and reports them", async () => {
     codeFirstProject();
 
     await buildPackage(args, checking);
@@ -1727,7 +1739,7 @@ describe("the definitions step", () => {
     expect(logs).toContain("\n▶ Checking document model definitions...");
     expect(logs).toContain(
       [
-        "✔ ok: 1 definition (code-first, 1 selected source)",
+        "✔ ok: 1 definition (./document-models: 2 code-first entries, 0 stored models)",
         "  document-model example/ledger v1 ./document-models/ledger/index.ts#/Ledger",
         "0 errors, 0 warnings",
       ].join("\n"),
@@ -1742,7 +1754,7 @@ describe("the definitions step", () => {
     expect(warnings).toEqual([
       [
         "⚠ The definition check reported problems; the build goes on:",
-        "invalid: 0 definitions (code-first, 1 selected source)",
+        "invalid: 0 definitions (./document-models: 2 code-first entries, 0 stored models)",
         "PH-DEF-NAME-INVALID [error/definition] ./document-models/ledger/index.ts /name: A GraphQL name must match /^[_A-Za-z][_0-9A-Za-z]*$/ and must not start with two underscores. Expected: a GraphQL name such as InvoiceLineItem Received: Ledger State Repair: Use letters, digits, and underscores, start with a letter or one underscore, and avoid the reserved __ prefix.",
         "1 error, 0 warnings",
       ].join("\n"),
@@ -1763,7 +1775,7 @@ describe("the definitions step", () => {
     expect(errors).toEqual([
       [
         "✘ The release definition check stopped the build:",
-        "invalid: 0 definitions (code-first, 1 selected source)",
+        "invalid: 0 definitions (./document-models: 2 code-first entries, 0 stored models)",
         "PH-DEF-NAME-INVALID [error/definition] ./document-models/ledger/index.ts /name: A GraphQL name must match /^[_A-Za-z][_0-9A-Za-z]*$/ and must not start with two underscores. Expected: a GraphQL name such as InvoiceLineItem Received: Ledger State Repair: Use letters, digits, and underscores, start with a letter or one underscore, and avoid the reserved __ prefix.",
         "1 error, 0 warnings",
       ].join("\n"),

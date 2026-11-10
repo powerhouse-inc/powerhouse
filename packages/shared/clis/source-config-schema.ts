@@ -14,7 +14,6 @@ import {
   powerhousePackageSchema,
 } from "../connect/schema-fragments.js";
 import { LOG_LEVELS } from "./constants.js";
-import { DEFINITION_SOURCE_EXTENSION } from "./definition-sources.js";
 
 const keyframeRuleSchema = {
   type: "object",
@@ -32,72 +31,6 @@ const keyframeRuleSchema = {
         "Keyframes kept per document stream, newest first; null keeps them all.",
     },
   },
-} as const;
-
-const definitionSourceFormatVersionSchema = {
-  const: 1,
-  description: "Definition-source format version. Only 1 is supported.",
-} as const;
-
-const definitionSourcesSchema = {
-  type: "object",
-  description:
-    "Experimental. How this package authors its document models. Without it, `ph generate` uses the default authoring mode.",
-  oneOf: [
-    {
-      type: "object",
-      additionalProperties: false,
-      required: ["formatVersion", "mode", "entries"],
-      description:
-        "Code-first: the listed TypeScript modules declare the package's document models.",
-      properties: {
-        formatVersion: definitionSourceFormatVersionSchema,
-        mode: {
-          const: "code-first",
-          description: "This package declares its models in TypeScript.",
-        },
-        entries: {
-          type: "array",
-          description:
-            "The modules that declare code-first definitions. `ph generate` adds the entry of each model it scaffolds.",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["specifier"],
-            properties: {
-              specifier: {
-                type: "string",
-                pattern: `^\\./.*${DEFINITION_SOURCE_EXTENSION.source}`,
-                description:
-                  "POSIX package-relative module path beginning with './'. It may not leave the package root.",
-              },
-              exportPath: {
-                type: "array",
-                items: { type: "string" },
-                description:
-                  "Exact property keys into the imported namespace, outermost first. Omit it to select the namespace root.",
-              },
-            },
-          },
-        },
-      },
-    },
-    {
-      type: "object",
-      additionalProperties: false,
-      required: ["formatVersion", "mode"],
-      description:
-        "Schema-first: this package authors its models as SDL plus model.json.",
-      properties: {
-        formatVersion: definitionSourceFormatVersionSchema,
-        mode: {
-          const: "schema-first",
-          description:
-            "This package declares no code-first module. `entries` is forbidden here.",
-        },
-      },
-    },
-  ],
 } as const;
 
 export const SOURCE_CONFIG_SCHEMA_ID =
@@ -383,6 +316,5 @@ export const sourceConfigSchema = {
       description:
         "Connect-specific UI customisations. Copied verbatim into the runtime config at build time.",
     },
-    definitionSources: definitionSourcesSchema,
   },
 } as const;

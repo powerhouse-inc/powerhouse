@@ -14,11 +14,8 @@ import { afterEach, expect, it } from "vitest";
 import { makeSubgraphsIndexFile } from "../file-builders/subgraphs.js";
 import { getOrCreateSourceFile } from "../utils/source-files.js";
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
-import {
-  generateFromFile,
-  generateProcessor,
-  generateSubgraph,
-} from "./generate.js";
+import { generateProcessor, generateSubgraph } from "./generate.js";
+import { generateFromFile } from "./project-generation.js";
 
 const temporary: string[] = [];
 

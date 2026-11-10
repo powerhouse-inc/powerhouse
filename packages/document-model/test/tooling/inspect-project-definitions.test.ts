@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { inspectProjectDefinitions } from "../../src/definition/tooling/inspect/inspect-project-definitions.js";
-import { loadFixture, storedModel } from "./project-fixtures.js";
+import {
+  CONTROL_INVOICE_ENTRY,
+  loadFixture,
+  storedModel,
+} from "./project-fixtures.js";
 
 const WALLET_VERSION = {
   version: 1,
@@ -47,7 +51,7 @@ describe("inspectProjectDefinitions", () => {
     const report = inspectProjectDefinitions(project);
     expect(report).toEqual({
       kind: "powerhouse.definition-inspection",
-      formatVersion: 1,
+      formatVersion: 2,
       status: "ok",
       sourceSet: project.sourceSet,
       families: [{ ...WALLET_FAMILY, digest: project.artifacts[0].digest }],
@@ -56,7 +60,9 @@ describe("inspectProjectDefinitions", () => {
   });
 
   it("describes each served version of a code-first family under one digest", async () => {
-    const { project } = await loadFixture("control");
+    const { project } = await loadFixture("control", {
+      files: CONTROL_INVOICE_ENTRY,
+    });
     const { status, families } = inspectProjectDefinitions(project);
     expect(status).toBe("ok");
     expect(
@@ -85,15 +91,15 @@ describe("inspectProjectDefinitions", () => {
           {
             version: 1,
             source: {
-              specifier: "./src/catalog.ts",
-              exportPath: ["publishedInvoice"],
+              specifier: "./document-models/invoice/index.ts",
+              exportPath: ["invoiceFamily", "modules", "0"],
             },
             operations: [["setTitle", "SET_TITLE", "SetTitleInput"]],
           },
           {
             version: 2,
             source: {
-              specifier: "./src/invoice.ts",
+              specifier: "./document-models/invoice/index.ts",
               exportPath: ["invoiceFamily", "modules", "1"],
             },
             operations: [["setTitle", "SET_TITLE", "SetTitleInput"]],
@@ -132,7 +138,7 @@ describe("inspectProjectDefinitions", () => {
     const wallet = project.artifacts[1];
     expect(selected).toEqual({
       kind: "powerhouse.definition-inspection",
-      formatVersion: 1,
+      formatVersion: 2,
       status: "ok",
       sourceSet: project.sourceSet,
       families: [{ ...WALLET_FAMILY, digest: wallet.digest }],
@@ -149,7 +155,7 @@ describe("inspectProjectDefinitions", () => {
       }),
     ).toEqual({
       kind: "powerhouse.definition-inspection",
-      formatVersion: 1,
+      formatVersion: 2,
       status: "failed",
       sourceSet: project.sourceSet,
       families: [],

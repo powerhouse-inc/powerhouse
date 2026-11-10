@@ -1,10 +1,8 @@
 import { parse } from "cmd-ts";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { generateDocumentModelCmd } from "../src/commands/generate-document-model.js";
-import { selectProjectModelGeneration } from "../src/services/definitions/authoring-mode.js";
 import { startGenerateAll } from "../src/services/generate-all.js";
 import { startGenerateDocumentModel } from "../src/services/generate-document-model.js";
 import { startGenerateEditor } from "../src/services/generate-editor.js";
@@ -70,61 +68,23 @@ describe("ph generate document-model", () => {
   });
 });
 
-describe("the authoring switch", () => {
-  const schemaFirst = { formatVersion: 1, mode: "schema-first" };
-  const codeFirst = { formatVersion: 1, mode: "code-first", entries: [] };
-
-  it.each([
-    {
-      name: "absent config: the default",
-      config: {},
-      flag: false,
-      mode: "schema-first",
-    },
-    {
-      name: "explicit schema-first",
-      config: { definitionSources: schemaFirst },
-      flag: false,
-      mode: "schema-first",
-    },
-    {
-      name: "code-first config",
-      config: { definitionSources: codeFirst },
-      flag: false,
-      mode: "code-first",
-    },
-    {
-      name: "the flag over schema-first config",
-      config: { definitionSources: schemaFirst },
-      flag: true,
-      mode: "code-first",
-    },
-    {
-      name: "the flag over an invalid config",
-      config: { definitionSources: "code-first" },
-      flag: true,
-      mode: "code-first",
-    },
-  ])("$name selects $mode", ({ config, flag, mode }) => {
-    const dir = mkdtempSync(join(tmpdir(), "ph-cli-mode-"));
-    projects.push(dir);
-    writeJson(dir, "powerhouse.config.json", config);
-    expect(selectProjectModelGeneration(dir, flag).mode).toBe(mode);
-  });
-
-  it("refuses an invalid definitionSources without the flag", () => {
-    const dir = mkdtempSync(join(tmpdir(), "ph-cli-mode-"));
-    projects.push(dir);
-    writeJson(dir, "powerhouse.config.json", {
-      definitionSources: "code-first",
-    });
-    expect(() => selectProjectModelGeneration(dir)).toThrow(
-      'powerhouse.config.json has an invalid definitionSources (received "code-first")',
+describe("--code-first", () => {
+  it("only chooses how --name creates a model, and refuses to run alone", async () => {
+    const dir = await project();
+    const before = readdirSync(dir, { recursive: true });
+    await expect(
+      startGenerateDocumentModel(
+        modelArgs({ codeFirst: true, all: true }),
+        dir,
+      ),
+    ).rejects.toThrow(
+      "--code-first only chooses how --name creates a model. Existing models of both styles are discovered without it; drop --code-first.",
     );
+    expect(readdirSync(dir, { recursive: true })).toEqual(before);
   });
 });
 
-describe("--code-first --name in a package without definitionSources", () => {
+describe("--code-first --name", () => {
   let dir: string;
   let output: string[];
 
@@ -138,7 +98,7 @@ describe("--code-first --name in a package without definitionSources", () => {
     );
   }, 120_000);
 
-  it("prints what it wrote, the registration and the editor", () => {
+  it("prints what it wrote and the editor", () => {
     const model = "document-models/todo-list";
     expect(output).toEqual([
       `Wrote ${model}/v1/definition.ts`,
@@ -148,24 +108,16 @@ describe("--code-first --name in a package without definitionSources", () => {
       `Wrote ${model}/v1/tests/items.test.ts`,
       `Wrote ${model}/upgrades/index.ts`,
       `Wrote ${model}/index.ts`,
-      "Wrote powerhouse.config.json",
       "Wrote document-models/index.ts",
       "Wrote document-models/document-models.ts",
       "Wrote document-models/upgrade-manifests.ts",
       "Wrote powerhouse.manifest.json",
-      "Registered acme-things/todo-list in powerhouse.config.json definitionSources (created)",
       'Generated editor "Todo List Editor" in editors/todo-list-editor',
     ]);
   });
 
-  it("registers the model and lists it with its editor in the manifest", () => {
-    expect(readJson(dir, "powerhouse.config.json")).toEqual({
-      definitionSources: {
-        formatVersion: 1,
-        mode: "code-first",
-        entries: [{ specifier: "./document-models/todo-list/index.ts" }],
-      },
-    });
+  it("leaves the config alone and lists the model with its editor in the manifest", () => {
+    expect(readJson(dir, "powerhouse.config.json")).toEqual({});
     expect(readJson(dir, "powerhouse.manifest.json")).toMatchObject({
       documentModels: [{ id: "acme-things/todo-list", name: "Todo List" }],
       editors: [{ id: "todo-list-editor", name: "Todo List Editor" }],
@@ -176,7 +128,7 @@ describe("--code-first --name in a package without definitionSources", () => {
     expect(read(dir, "editors/editors.ts")).toContain("todo-list-editor");
   });
 
-  it("keeps the model and editor when everything regenerates, from the config alone", async () => {
+  it("keeps the model and editor when everything regenerates, from discovery alone", async () => {
     const files = [
       "document-models/index.ts",
       "document-models/document-models.ts",
@@ -204,21 +156,23 @@ describe("--code-first --name in a package without definitionSources", () => {
     ]);
   }, 120_000);
 
-  it("refuses the same --name again without the flag, before writing", async () => {
+  it("refuses the same --name again, before writing", async () => {
     const config = read(dir, "powerhouse.config.json");
     await expect(
-      startGenerateDocumentModel(modelArgs({ name: "todo list" }), dir),
+      startGenerateDocumentModel(
+        modelArgs({ codeFirst: true, name: "todo list" }),
+        dir,
+      ),
     ).rejects.toThrow("editors/todo-list-editor already exists");
     expect(read(dir, "powerhouse.config.json")).toBe(config);
   });
 });
 
-describe("a schema-first package", () => {
-  const schemaFirst = { formatVersion: 1, mode: "schema-first" };
+describe("a package without models", () => {
   let dir: string;
 
   beforeAll(async () => {
-    dir = await project({ definitionSources: schemaFirst });
+    dir = await project();
   });
 
   it("refuses --name without code-first and writes nothing", async () => {
@@ -227,9 +181,7 @@ describe("a schema-first package", () => {
     ).rejects.toThrow(
       "--name creates a code-first document model. Pass --code-first.",
     );
-    expect(readJson(dir, "powerhouse.config.json")).toEqual({
-      definitionSources: schemaFirst,
-    });
+    expect(readJson(dir, "powerhouse.config.json")).toEqual({});
     expect(existsSync(join(dir, "document-models", "todo"))).toBe(false);
   });
 
@@ -244,8 +196,8 @@ describe("a schema-first package", () => {
     );
   });
 
-  it("prints the usage line without reading definitionSources", async () => {
-    writeJson(dir, "powerhouse.config.json", { definitionSources: "invalid" });
+  it("prints the usage line without loading any model", async () => {
+    writeJson(dir, "powerhouse.config.json", { documentModelsDir: 42 });
     expect(
       await printed(() => startGenerateDocumentModel(modelArgs({}), dir)),
     ).toEqual([
@@ -254,16 +206,18 @@ describe("a schema-first package", () => {
   });
 });
 
-it("refuses malformed config rather than falling back to schema-first", async () => {
+it("refuses malformed config before generating anything", async () => {
   const dir = await createProject();
   try {
     writeFileSync(
       join(dir, "powerhouse.config.json"),
-      '{"definitionSources": {"mode":"code-first"},}',
+      '{"documentModelsDir": }',
     );
-    expect(() => selectProjectModelGeneration(dir)).toThrow(
-      "powerhouse.config.json",
-    );
+    const barrel = read(dir, "document-models/index.ts");
+    await expect(
+      startGenerateDocumentModel(modelArgs({ all: true }), dir),
+    ).rejects.toThrow(/could not be loaded[\s\S]*parse-failed/);
+    expect(read(dir, "document-models/index.ts")).toBe(barrel);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

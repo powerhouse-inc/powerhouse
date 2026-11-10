@@ -1,22 +1,19 @@
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import type { Project } from "ts-morph";
 import { projectPath } from "../utils/source-files.js";
-import { projectModelGeneration } from "./model-generation.js";
+import { modelGeneration } from "./document-model-generation.js";
 import { loadDocumentModel } from "./utils.js";
 
 export async function generateDocumentModel(
   documentModelState: DocumentModelGlobalState,
   project: Project,
 ) {
-  await projectModelGeneration(project).generateDocumentModel(
-    documentModelState,
-    project,
-  );
+  await modelGeneration.generateDocumentModel(documentModelState, project);
 }
 
 export async function generateAllDocumentModels(project: Project) {
   const { documentModels, unreadableDirs } =
-    await projectModelGeneration(project).generateAllDocumentModels(project);
+    await modelGeneration.generateAllDocumentModels(project);
   return { documentModels, unreadableDirs };
 }
 
@@ -31,20 +28,20 @@ export async function generateEditor(
   args: GenerateEditorArgs,
   project: Project,
 ) {
-  await projectModelGeneration(project).generateEditor(args, project);
+  await modelGeneration.generateEditor(args, project);
 }
 
 export async function generateAllEditors(project: Project) {
   const { editors, unreadableDirs } =
-    await projectModelGeneration(project).generateAllEditors(project);
+    await modelGeneration.generateAllEditors(project);
   return { editors, unreadableDirs };
 }
 
 export async function generateAll(project: Project) {
-  await projectModelGeneration(project).generateAll(project);
+  await modelGeneration.generateAll(project);
 }
 
 export async function generateFromFile(filePath: string, project: Project) {
   const state = await loadDocumentModel(projectPath(project, filePath));
-  await projectModelGeneration(project).generateDocumentModel(state, project);
+  await modelGeneration.generateDocumentModel(state, project);
 }

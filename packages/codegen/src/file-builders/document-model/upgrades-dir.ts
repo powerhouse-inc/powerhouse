@@ -31,7 +31,20 @@ export async function makeUpgradeFile(args: DocumentModelFileMakerArgs) {
     stateName: args.stateName,
     localStateName: args.localStateName,
   });
-  const template = upgradeTransitionTemplate({ ...args, plan });
+  const template = upgradeTransitionTemplate({
+    ...args,
+    plan,
+    fromVersionImportPath: args.importDocumentModel(
+      args.upgradesDirPath,
+      args.documentModelDirName,
+      `v${version - 1}`,
+    ),
+    toVersionImportPath: args.importDocumentModel(
+      args.upgradesDirPath,
+      args.documentModelDirName,
+      `v${version}`,
+    ),
+  });
 
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);

@@ -1,7 +1,7 @@
 import type { DocumentModelDocumentTypeMetadata } from "file-builders";
-import { readdirSync } from "fs";
+import { discoverDocumentModelDirectories } from "document-model/tooling";
+import { join } from "node:path";
 import { getDocumentModelVariableNames } from "name-builders";
-import { posix } from "path";
 import {
   filter,
   first,
@@ -14,11 +14,21 @@ import {
   when,
 } from "remeda";
 import type { Project } from "ts-morph";
-import { getOrCreateDirectory, loadDocumentModelInDir } from "utils";
+import {
+  getOrCreateDirectory,
+  loadDocumentModelSpec,
+  projectPath,
+} from "utils";
+import {
+  documentModelImport,
+  documentModelsDirOf,
+} from "./document-models-dir.js";
 
 type GetDocumentTypeMetadataArgs = {
   project: Project;
   documentModelId: string;
+  /** The directory of the files that import the model; needed outside ./document-models. */
+  importingDir?: string;
 };
 /** Gets the document model metadata for the --document-type argument
  * passed to the `generate --editor` and `generate --app` commands.
@@ -26,16 +36,27 @@ type GetDocumentTypeMetadataArgs = {
 export function getDocumentTypeMetadata({
   project,
   documentModelId,
+  importingDir,
 }: GetDocumentTypeMetadataArgs) {
+  const models = documentModelsDirOf(projectPath(project, "."));
   const { directory: documentModelsDir } = getOrCreateDirectory(
     project,
-    "document-models",
+    models.path,
   );
   const documentModelsDirPath = documentModelsDir.getPath();
 
   const documentModelVariableNames = pipe(
-    readdirSync(documentModelsDirPath, { withFileTypes: true }),
-    map(loadDocumentModelInDir),
+    discoverDocumentModelDirectories(
+      projectPath(project, "."),
+      documentModelsDirPath,
+    ).directories,
+    map((directory) =>
+      directory.kind === "stored"
+        ? loadDocumentModelSpec(
+            join(projectPath(project, "."), directory.specification),
+          )
+        : undefined,
+    ),
     filter(isDefined),
     filter((state) => isStrictEqual(state.id, documentModelId)),
     first(),
@@ -57,8 +78,9 @@ export function getDocumentTypeMetadata({
     documentModelDocumentTypeName: phDocumentTypeName,
     documentModelActionTypeName: actionTypeName,
     documentModelDirName: kebabCaseDocumentType,
-    documentModelImportPath: posix.join(
-      "document-models",
+    documentModelImportPath: documentModelImport(
+      models,
+      importingDir ?? projectPath(project, "."),
       kebabCaseDocumentType,
     ),
   };

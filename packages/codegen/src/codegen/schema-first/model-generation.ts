@@ -1,40 +1,24 @@
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import { getDocumentModelVariableNames } from "name-builders";
-import { existsSync, readdirSync, realpathSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
+import { discoverDocumentModelDirectories } from "document-model/tooling";
 import { join, relative, resolve } from "node:path";
 import { Project } from "ts-morph";
+import { documentModelsDirOf } from "../../utils/document-models-dir.js";
 import {
   getVariableDeclarationByTypeName,
-  loadDocumentModelInDir,
+  loadDocumentModelSpec,
   projectPath,
 } from "utils";
-import {
-  generateAll,
-  generateAllDocumentModels,
-  generateAllEditors,
-  generateDocumentModel,
-  generateEditor,
-} from "../generate.js";
+import { generateDocumentModel, generateEditor } from "../generate.js";
 import type {
   ModelGenerationSource,
   PlannedDocumentModel,
   PlannedModelExport,
 } from "../model-generation-source.js";
-import type { SchemaFirstModelGeneration } from "../model-generation.js";
-
-export const schemaFirstModelGeneration: SchemaFirstModelGeneration = {
-  mode: "schema-first",
-  generateDocumentModel,
-  async generateAllDocumentModels(project) {
-    return {
-      ...(await generateAllDocumentModels(project)),
-      codeFirstDocumentModels: [],
-    };
-  },
-  generateEditor,
-  generateAllEditors,
-  generateAll,
-};
+/** The configured models directory, where stored models are generated. */
+const modelsRoot = (project: Project) =>
+  documentModelsDirOf(projectPath(project, ".")).path;
 
 /** Where `tsMorphGenerateDocumentModel` writes `state`, and what it exports. */
 function plan(
@@ -44,10 +28,7 @@ function plan(
 ): PlannedDocumentModel {
   const { kebabCaseDocumentType, pascalCaseDocumentType } =
     getDocumentModelVariableNames(state.name);
-  const directory = projectPath(
-    project,
-    join("document-models", kebabCaseDocumentType),
-  );
+  const directory = join(modelsRoot(project), kebabCaseDocumentType);
   return {
     state,
     id: state.id,
@@ -64,27 +45,28 @@ export const schemaFirstModelSource: ModelGenerationSource = {
   planDocumentModel: (state, project) =>
     plan(state, project, `the schema-first model "${state.name}"`),
   planAllDocumentModels(project) {
-    const root = projectPath(project, "document-models");
-    const loaded = (
-      existsSync(root) ? readdirSync(root, { withFileTypes: true }) : []
-    )
-      .filter((dirent) => dirent.isDirectory())
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((dirent) => ({
-        dirName: dirent.name,
-        state: loadDocumentModelInDir(dirent),
-      }));
+    const root = modelsRoot(project);
+    const shown = relative(projectPath(project, "."), root).replaceAll(
+      "\\",
+      "/",
+    );
+    const loaded = discoverDocumentModelDirectories(
+      projectPath(project, "."),
+      root,
+    ).directories.map((directory) => ({
+      dirName: directory.name,
+      state:
+        directory.kind === "stored"
+          ? loadDocumentModelSpec(
+              join(projectPath(project, "."), directory.specification),
+            )
+          : undefined,
+    }));
     return {
       models: loaded.flatMap(({ dirName, state }) =>
         state === undefined
           ? []
-          : [
-              plan(
-                state,
-                project,
-                `document-models/${dirName}/${dirName}.json`,
-              ),
-            ],
+          : [plan(state, project, `${shown}/${dirName}/${dirName}.json`)],
       ),
       unreadableDirs: loaded
         .filter(({ state }) => state === undefined)
@@ -92,8 +74,7 @@ export const schemaFirstModelSource: ModelGenerationSource = {
     };
   },
   planExportNames(project, models): readonly PlannedModelExport[] {
-    if (models.length === 0) return [];
-    const root = projectPath(project, "document-models");
+    const root = modelsRoot(project);
     const snapshot = new Project({
       compilerOptions: project.getCompilerOptions(),
       fileSystem: project.getFileSystem(),

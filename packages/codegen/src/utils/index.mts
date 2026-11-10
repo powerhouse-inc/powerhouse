@@ -1,5 +1,6 @@
 export * from "./cli.js";
 export * from "./constants.js";
+export * from "./document-models-dir.js";
 export * from "./document-type-metadata.js";
 export * from "./format-with-prettier.js";
 export * from "./generate-mock-import.js";

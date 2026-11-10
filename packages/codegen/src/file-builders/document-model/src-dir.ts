@@ -18,6 +18,7 @@ import {
   getOrCreateSourceFile,
   getPreviousVersionSourceFile,
 } from "utils";
+import { importingFrom } from "./import-paths.js";
 
 export async function makeReducerOperationHandlersForModules(
   fileMakerArgs: DocumentModelFileMakerArgs,
@@ -31,16 +32,19 @@ export async function makeReducerOperationHandlersForModules(
   }
 }
 
-export async function makeReducerOperationHandlerForModule({
-  project,
-  module,
-  version,
-  srcDirPath,
-  genDirPath,
-  versionImportPath,
-  pascalCaseDocumentType,
-  camelCaseDocumentType,
-}: DocumentModelModuleFileMakerArgs) {
+export async function makeReducerOperationHandlerForModule(
+  args: DocumentModelModuleFileMakerArgs,
+) {
+  const {
+    project,
+    module,
+    version,
+    srcDirPath,
+    genDirPath,
+    versionImportPath,
+    pascalCaseDocumentType,
+    camelCaseDocumentType,
+  } = importingFrom(args, path.join(args.srcDirPath, "reducers"));
   const kebabCaseModuleName = kebabCase(module.name);
   const pascalCaseModuleName = pascalCase(module.name);
   const filePath = path.join(

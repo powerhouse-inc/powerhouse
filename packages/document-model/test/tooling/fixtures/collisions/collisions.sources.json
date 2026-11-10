@@ -1,0 +1,8 @@
+[
+  {
+    "specifier": "./src/first.ts"
+  },
+  {
+    "specifier": "./src/second.ts"
+  }
+]

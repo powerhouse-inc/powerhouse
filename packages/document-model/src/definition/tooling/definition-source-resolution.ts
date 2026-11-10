@@ -1,12 +1,9 @@
 import {
   COMMONJS_DEFINITION_SOURCE,
   COMMONJS_DEFINITION_SOURCE_REPAIR,
-  DEFAULT_AUTHORING_MODE,
   DEFINITION_SOURCE_EXTENSION,
-  parseDefinitionSourcesConfig,
 } from "@powerhousedao/shared/clis/definition-sources";
 import type {
-  DefinitionCheckSkipReason,
   DefinitionDiagnostic,
   DefinitionPath,
   DefinitionSource,
@@ -33,6 +30,12 @@ import type {
   DefinitionSourceSet,
 } from "./definition-source-types.js";
 import { toolingDiagnostics } from "./diagnostic-codes.js";
+import {
+  discoverDocumentModelDirectories,
+  type DocumentModelDirectory,
+  packageSpecifier,
+  resolveDocumentModelsDir,
+} from "./model-directories.js";
 
 export type ResolvedDefinitionSource = {
   readonly source: DefinitionSource;
@@ -45,6 +48,13 @@ export type ResolvedDefinitionSource = {
 export type InternalResolution = DefinitionSourceResolution & {
   readonly packageRootIdentity: string;
   readonly resolved: readonly ResolvedDefinitionSource[];
+};
+
+/** What discovery read besides the sources it resolved. */
+export type DiscoveryResolution = InternalResolution & {
+  /** Absolute; absent when the configured directory cannot be read. */
+  readonly documentModelsDir?: string;
+  readonly directories: readonly DocumentModelDirectory[];
 };
 
 const CONFIG_FILE_NAME = "./powerhouse.config.json";
@@ -64,11 +74,12 @@ function render(value: unknown): string {
 }
 
 function sourceSet(
-  mode: DefinitionSourceSet["mode"],
   origin: DefinitionSourceOrigin,
+  documentModelsDir: `./${string}`,
   sources: readonly DefinitionSource[],
+  stored: readonly DefinitionSource[] = [],
 ): DefinitionSourceSet {
-  const value = { mode, origin, sources };
+  const value = { origin, documentModelsDir, sources, stored };
   return { ...value, digest: canonicalDigest(value) };
 }
 
@@ -345,14 +356,15 @@ function duplicateDiagnostics(
         source: first.source,
         path: first.position,
         message:
-          "Several entries select the same module and export path, so one of them can only repeat the other's definitions.",
-        expected: "one entry per module and export path",
-        received: `${group.length} entries`,
-        repair: "Remove every duplicate entry except one.",
+          "Several sources reach the same module and export path, so one of them can only repeat the other's definitions. A model directory symlinked to another is one of them.",
+        expected: "one source per module and export path",
+        received: `${group.length} sources`,
+        repair:
+          "Remove every duplicate except one, or replace a symlinked model directory with the directory itself.",
         related: rest.map((entry) => ({
           source: entry.source,
           path: entry.position,
-          message: "This entry resolves to the same module and export path.",
+          message: "This source resolves to the same module and export path.",
         })),
       });
     });
@@ -362,36 +374,6 @@ type Roots = {
   readonly packageRoot: string;
   readonly packageRootIdentity: string;
 };
-
-function failed(
-  roots: Roots,
-  diagnostics: readonly DefinitionDiagnostic[],
-  origin: DefinitionSourceOrigin = "config",
-  sources: readonly DefinitionSource[] = [],
-): InternalResolution {
-  return {
-    ...roots,
-    status: "failed",
-    sourceSet: sourceSet("code-first", origin, sources),
-    diagnostics: sortDefinitionDiagnostics(diagnostics),
-    resolved: [],
-  };
-}
-
-function skipped(
-  roots: Roots,
-  skipReason: DefinitionCheckSkipReason,
-  mode: DefinitionSourceSet["mode"],
-): InternalResolution {
-  return {
-    ...roots,
-    status: "skipped",
-    skipReason,
-    sourceSet: sourceSet(mode, "config", []),
-    diagnostics: [],
-    resolved: [],
-  };
-}
 
 type ConfigReadFailure =
   | "missing"
@@ -435,33 +417,6 @@ export function readConfigObject(
   return { ok: true, value: parsed as Readonly<Record<string, unknown>> };
 }
 
-function selectionDiagnostic(
-  narrowed: Exclude<
-    ReturnType<typeof parseDefinitionSourcesConfig>,
-    { ok: true } | { reason: "missing" }
-  >,
-): DefinitionDiagnostic {
-  if (narrowed.reason === "unsupported-version") {
-    return toolingDiagnostics.create({
-      code: "PH-CONFIG-VERSION-UNSUPPORTED",
-      path: narrowed.path,
-      message:
-        "The definitionSources format version is not one this release reads.",
-      expected: "1",
-      received: render(narrowed.received),
-      repair: "Set definitionSources.formatVersion to 1, or upgrade ph.",
-    });
-  }
-  return toolingDiagnostics.create({
-    code: "PH-CONFIG-SOURCE-INVALID",
-    path: narrowed.path,
-    message: "The definitionSources selection is malformed.",
-    expected: narrowed.expected,
-    received: render(narrowed.received),
-    repair: `Set this member to ${narrowed.expected}.`,
-  });
-}
-
 /** The selected config file, its directory, and that directory's real path when it exists. */
 export function packageRoots(request: DefinitionSourceSelectionRequest): {
   readonly configFile: string;
@@ -479,76 +434,180 @@ export function packageRoots(request: DefinitionSourceSelectionRequest): {
   }
 }
 
-export function resolveDefinitionSources(
+type ResolutionBase = Roots & {
+  readonly documentModelsDir: `./${string}`;
+  readonly documentModelsPath?: string;
+  readonly diagnostics: readonly DefinitionDiagnostic[];
+};
+
+function readPackage(
   request: DefinitionSourceSelectionRequest,
-): InternalResolution {
+): ResolutionBase & { readonly ok: boolean } {
   const { configFile, ...roots } = packageRoots(request);
-  const { packageRoot, packageRootIdentity } = roots;
-
-  if (request.allowMissingConfig === true && !existsSync(configFile)) {
-    return skipped(roots, "definition-sources-absent", DEFAULT_AUTHORING_MODE);
+  const fallback = {
+    ...roots,
+    documentModelsDir: "./document-models" as const,
+  };
+  let config: Readonly<Record<string, unknown>> = {};
+  if (request.allowMissingConfig !== true || existsSync(configFile)) {
+    const read = readConfigObject(configFile);
+    if (!read.ok) {
+      return {
+        ...fallback,
+        ok: false,
+        diagnostics: [
+          toolingDiagnostics.create({
+            code: "PH-CONFIG-SOURCE-INVALID",
+            path: ["configFile"],
+            message:
+              "The selected Powerhouse config file could not be read; its directory is the package root.",
+            expected: "an existing config file holding one JSON object",
+            received: read.reason,
+            repair: CONFIG_FAILURE_REPAIR[read.reason],
+          }),
+        ],
+      };
+    }
+    config = read.value;
   }
-
-  const config = readConfigObject(configFile);
-  if (!config.ok) {
-    return failed(roots, [
-      toolingDiagnostics.create({
-        code: "PH-CONFIG-SOURCE-INVALID",
-        path: ["configFile"],
-        message:
-          "The selected Powerhouse config file could not be read; its directory is the package root.",
-        expected: "an existing config file holding one JSON object",
-        received: config.reason,
-        repair: CONFIG_FAILURE_REPAIR[config.reason],
-      }),
-    ]);
-  }
-
-  const origin = "config";
-  const narrowed = parseDefinitionSourcesConfig(config.value.definitionSources);
-  if (!narrowed.ok) {
-    return narrowed.reason === "missing"
-      ? skipped(roots, "definition-sources-absent", DEFAULT_AUTHORING_MODE)
-      : failed(roots, [selectionDiagnostic(narrowed)], origin);
-  }
-  if (narrowed.mode === "schema-first") {
-    return skipped(roots, "explicit-schema-first-mode", "schema-first");
-  }
-  if (narrowed.entries.length === 0) {
-    return skipped(roots, "definition-sources-empty", "code-first");
-  }
-  const entries = narrowed.entries;
-
-  const normalized = entries.map((value, index) =>
-    normalizeEntry(
-      value,
-      ["definitionSources", "entries", index],
-      packageRoot,
-      packageRootIdentity,
-    ),
-  );
-
-  const resolved = normalized
-    .flatMap((result) => ("source" in result ? [result.source] : []))
-    .sort((left, right) => compareDefinitionSources(left.source, right.source));
-  const sources = resolved.map((entry) => entry.source);
-  const entryDiagnostics = normalized.flatMap((result) =>
-    "diagnostic" in result ? [result.diagnostic] : [],
-  );
-  if (entryDiagnostics.length > 0) {
-    return failed(roots, entryDiagnostics, origin, sources);
-  }
-  const duplicates = duplicateDiagnostics(resolved);
-  if (duplicates.length > 0) {
-    return failed(roots, duplicates, origin, sources);
+  const directory = resolveDocumentModelsDir(roots.packageRoot, config);
+  if (!directory.ok) {
+    return { ...fallback, ok: false, diagnostics: [directory.diagnostic] };
   }
   return {
     ...roots,
-    status: "ready",
-    sourceSet: sourceSet("code-first", origin, sources),
+    ok: true,
+    documentModelsDir: packageSpecifier(roots.packageRoot, directory.path),
+    documentModelsPath: directory.path,
     diagnostics: [],
-    resolved,
   };
+}
+
+function failed(
+  base: ResolutionBase,
+  origin: DefinitionSourceOrigin,
+  diagnostics: readonly DefinitionDiagnostic[],
+  sources: readonly DefinitionSource[] = [],
+  stored: readonly DefinitionSource[] = [],
+): InternalResolution {
+  return {
+    packageRoot: base.packageRoot,
+    packageRootIdentity: base.packageRootIdentity,
+    status: "failed",
+    sourceSet: sourceSet(origin, base.documentModelsDir, sources, stored),
+    diagnostics: sortDefinitionDiagnostics(diagnostics),
+    resolved: [],
+  };
+}
+
+function resolveSources(
+  base: ResolutionBase,
+  origin: DefinitionSourceOrigin,
+  entries: readonly {
+    readonly value: unknown;
+    readonly position: DefinitionPath;
+  }[],
+  stored: readonly DefinitionSource[],
+  diagnostics: readonly DefinitionDiagnostic[],
+): InternalResolution {
+  const normalized = entries.map(({ value, position }) =>
+    normalizeEntry(value, position, base.packageRoot, base.packageRootIdentity),
+  );
+  const candidates = normalized
+    .flatMap((result) => ("source" in result ? [result.source] : []))
+    .sort((left, right) => compareDefinitionSources(left.source, right.source));
+  const resolved =
+    origin === "discovery"
+      ? candidates.filter(
+          (entry, index) =>
+            candidates.findIndex(
+              (other) => other.moduleIdentity === entry.moduleIdentity,
+            ) === index,
+        )
+      : candidates;
+  const sources = resolved.map((entry) => entry.source);
+  const errors = [
+    ...normalized.flatMap((result) =>
+      "diagnostic" in result ? [result.diagnostic] : [],
+    ),
+    ...duplicateDiagnostics(resolved),
+  ];
+  if (
+    errors.length > 0 ||
+    diagnostics.some(({ severity }) => severity === "error")
+  ) {
+    return failed(base, origin, [...diagnostics, ...errors], sources, stored);
+  }
+  const common = {
+    packageRoot: base.packageRoot,
+    packageRootIdentity: base.packageRootIdentity,
+    sourceSet: sourceSet(origin, base.documentModelsDir, sources, stored),
+    diagnostics: sortDefinitionDiagnostics(diagnostics),
+  };
+  return sources.length === 0
+    ? {
+        ...common,
+        status: "skipped",
+        skipReason: "no-document-models",
+        resolved: [],
+      }
+    : { ...common, status: "ready", resolved };
+}
+
+/**
+ * Discovers the package's model directories: each code-first directory's
+ * entry module becomes a source, each schema-first one's stored file is
+ * listed beside them. Nothing is imported.
+ */
+export function resolveDefinitionSources(
+  request: DefinitionSourceSelectionRequest,
+): DiscoveryResolution {
+  const base = readPackage(request);
+  if (!base.ok || base.documentModelsPath === undefined) {
+    return {
+      ...failed(base, "discovery", base.diagnostics),
+      directories: [],
+    };
+  }
+  const found = discoverDocumentModelDirectories(
+    base.packageRoot,
+    base.documentModelsPath,
+  );
+  const entries = found.directories.flatMap((directory) =>
+    directory.kind === "module"
+      ? [{ value: { specifier: directory.entry }, position: [] }]
+      : [],
+  );
+  const stored = found.directories.flatMap((directory) =>
+    directory.kind === "stored" ? [{ specifier: directory.specification }] : [],
+  );
+  return {
+    ...resolveSources(base, "discovery", entries, stored, found.diagnostics),
+    documentModelsDir: base.documentModelsPath,
+    directories: found.directories,
+  };
+}
+
+/**
+ * @experimental Resolves sources a caller names instead of discovering them.
+ */
+export function resolveRequestedSources(
+  request: DefinitionSourceSelectionRequest & {
+    readonly sources: readonly unknown[];
+  },
+): InternalResolution {
+  const base = readPackage(request);
+  if (!base.ok) return failed(base, "request", base.diagnostics);
+  return resolveSources(
+    base,
+    "request",
+    request.sources.map((value, index) => ({
+      value,
+      position: ["sources", index],
+    })),
+    [],
+    [],
+  );
 }
 
 export function publicResolution(
@@ -565,8 +624,8 @@ export function publicResolution(
 }
 
 /**
- * @experimental The selection a command would load, resolved without
- * importing anything and without any machine-specific path but the root.
+ * @experimental The sources discovery finds, resolved without importing
+ * anything and without any machine-specific path but the root.
  */
 export function resolveDefinitionSelection(
   request: DefinitionSourceSelectionRequest,

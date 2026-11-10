@@ -62,7 +62,7 @@ export type DocumentModelFamilyInspection = {
  */
 export type DefinitionInspectionReport = {
   readonly kind: "powerhouse.definition-inspection";
-  readonly formatVersion: 1;
+  readonly formatVersion: 2;
   readonly status: DefinitionStatus;
   readonly sourceSet: DefinitionSourceSet;
   readonly families: readonly DocumentModelFamilyInspection[];

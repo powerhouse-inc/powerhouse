@@ -4,12 +4,8 @@ import { basename, dirname, join, resolve } from "node:path";
 /** The directory in `<modulesDir>/` that `--dir` names, by name or by a path to it or a file in it */
 export function resolveModuleDirName(
   projectDir: string,
-  modulesDir:
-    | "document-models"
-    | "editors"
-    | "pieces"
-    | "processors"
-    | "subgraphs",
+  /** Package-relative, such as "editors" or the configured documentModelsDir. */
+  modulesDir: string,
   dir: string,
   example: string,
 ) {

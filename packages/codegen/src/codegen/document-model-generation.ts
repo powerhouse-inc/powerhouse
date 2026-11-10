@@ -4,13 +4,17 @@ import { existsSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { firstBy, isTruthy, prop, uniqueBy } from "remeda";
 import type { Project } from "ts-morph";
+import { codeFirstDeclarationFiles } from "document-model/tooling";
 import { getEditorDirNames, getEditorMetadata, projectPath } from "utils";
 import { generateCodeFirstDocumentEditor } from "../file-builders/code-first-editor.js";
-import { writeCodeFirstAggregates } from "../file-builders/document-model/code-first-aggregates.js";
 import {
-  loadCodeFirstInventory,
-  type CodeFirstInventory,
-} from "../file-builders/document-model/code-first-inventory.js";
+  assertDocumentModelAggregatesWritable,
+  writeDocumentModelAggregates,
+} from "../file-builders/document-model/aggregates.js";
+import {
+  loadDocumentModelInventory,
+  type DocumentModelInventory,
+} from "../file-builders/document-model/document-model-inventory.js";
 import {
   codeFirstDocumentModelTemplateArgs,
   generateCodeFirstDocumentModel,
@@ -32,32 +36,38 @@ import type {
   PlannedModelExport,
 } from "./model-generation-source.js";
 import type {
-  CodeFirstModelGeneration,
   GenerateEditorRequest,
   GeneratedDocumentModels,
   GeneratedEditors,
+  ModelGeneration,
 } from "./model-generation.js";
+import { schemaFirstModelSource } from "./schema-first/model-generation.js";
 
-const needsModelSource = (): never => {
-  throw new Error(
-    "Generating a stored specification requires a model source adapter.",
+async function inventoryOf(project: Project) {
+  const projectDir = projectPath(project, ".");
+  const inventory = await loadDocumentModelInventory(projectDir);
+  assertDocumentModelAggregatesWritable(project, projectDir);
+  return inventory;
+}
+
+async function finalizeModels(
+  project: Project,
+  inventory: DocumentModelInventory,
+) {
+  await writeDocumentModelAggregates(project, inventory);
+  const documentModels = uniqueBy(
+    inventory.documentModels.map(({ documentType, name }) => ({
+      id: documentType,
+      name,
+    })),
+    prop("id"),
   );
-};
+  if (documentModels.length > 0) {
+    await createOrUpdateManifest({ documentModels }, inventory.projectDir);
+  }
+}
 
-const noStoredModels: ModelGenerationSource = {
-  planDocumentModel: needsModelSource,
-  planAllDocumentModels: () => ({ models: [], unreadableDirs: [] }),
-  planExportNames: () => [],
-  generateDocumentModel: needsModelSource,
-  generateEditor({ documentTypes }) {
-    throw new Error(`No model source declares ${documentTypes[0]}.`);
-  },
-};
-
-const inventoryOf = (project: Project) =>
-  loadCodeFirstInventory(projectPath(project, "."));
-
-/** What the selected code-first sources own, each mapped to one source. */
+/** What the discovered code-first sources own, each mapped to one source. */
 type CodeFirstOwnership = {
   readonly projectDir: string;
   readonly documentTypes: ReadonlyMap<string, string>;
@@ -65,7 +75,7 @@ type CodeFirstOwnership = {
   readonly files: ReadonlyMap<string, string>;
 };
 
-function ownershipOf(inventory: CodeFirstInventory): CodeFirstOwnership {
+function ownershipOf(inventory: DocumentModelInventory): CodeFirstOwnership {
   const { projectDir, documentModels, upgradeManifests } = inventory;
   return {
     projectDir,
@@ -111,6 +121,11 @@ function conflictsOf(
   const sameType = owner.documentTypes.get(id);
   const inside = sourceInside(directory, owner);
   const shown = relative(owner.projectDir, directory).replaceAll("\\", "/");
+  // A stored file wins discovery, so a code-first model beside it is never loaded.
+  const declared =
+    inside === undefined && existsSync(directory)
+      ? codeFirstDeclarationFiles(owner.projectDir, directory).at(0)
+      : undefined;
   return [
     ...(sameType === undefined
       ? []
@@ -119,6 +134,11 @@ function conflictsOf(
       ? []
       : [
           `${label} would overwrite ${inside.file}, loaded from ${inside.source}, while writing ${shown}. Move shared runtime values outside generated model directories.`,
+        ]),
+    ...(declared === undefined
+      ? []
+      : [
+          `${label} would overwrite ${declared.slice(2)}, which declares a code-first document model, while writing ${shown}. Move the code-first model to a directory of its own.`,
         ]),
     ...exportNames.flatMap((name) => {
       const other = owner.exportNames.get(name);
@@ -160,7 +180,7 @@ function assertSingleOwner(
 
 function unknownEditorDocumentType(
   documentType: string,
-  inventory: CodeFirstInventory,
+  inventory: DocumentModelInventory,
   existingEditorDir: string | undefined,
 ): Error {
   const declared = [
@@ -180,12 +200,28 @@ function unknownEditorDocumentType(
   );
 }
 
-export function codeFirstModelGeneration(
-  source: ModelGenerationSource = noStoredModels,
-): CodeFirstModelGeneration {
+/**
+ * @experimental Generation for every model discovery finds: `source` plans
+ * and writes the stored specifications, and the inventory supplies the
+ * code-first models. Tests pass their own source.
+ */
+export function documentModelGeneration(
+  source: ModelGenerationSource = schemaFirstModelSource,
+): ModelGeneration {
+  function assertEditorModelOwnership(
+    project: Project,
+    inventory: DocumentModelInventory,
+  ) {
+    assertSingleOwner(
+      source.planAllDocumentModels(project).models,
+      ownershipOf(inventory),
+      source.planExportNames(project, []),
+    );
+  }
+
   async function documentModels(
     project: Project,
-    inventory: CodeFirstInventory,
+    inventory: DocumentModelInventory,
   ): Promise<GeneratedDocumentModels> {
     const projectDir = projectPath(project, ".");
     const owner = ownershipOf(inventory);
@@ -198,11 +234,28 @@ export function codeFirstModelGeneration(
     for (const { state } of plan.models) {
       await source.generateDocumentModel(state, project);
     }
-    const unreadableDirs = plan.unreadableDirs.filter(
-      (dirName) =>
-        sourceInside(join(projectDir, "document-models", dirName), owner) ===
-        undefined,
+    const entryPath = (specifier: `./${string}`) =>
+      realPathThroughExistingParent(join(projectDir, specifier));
+    const codeFirstEntries = new Set(inventory.codeFirstEntries.map(entryPath));
+    const directories = new Map(
+      inventory.directories.map((directory) => [directory.name, directory]),
     );
+    // A directory generation did not read may still hold a model, depending
+    // on what discovery found in it.
+    const unreadableDirs = plan.unreadableDirs.filter((dirName) => {
+      const directory = directories.get(dirName);
+      switch (directory?.kind) {
+        // Code-first when its entry exports a model. Otherwise it may hide one.
+        case "module":
+          return !codeFirstEntries.has(entryPath(directory.entry));
+        // Helpers, once a code-first model imports from them.
+        case "none":
+          return sourceInside(directory.path, owner) === undefined;
+        // A stored file or generated code is a model's, whoever imports it.
+        default:
+          return true;
+      }
+    });
     const codeFirstDocumentModels = uniqueBy(
       inventory.documentModels.map(({ documentType, name }) => ({
         id: documentType,
@@ -223,7 +276,7 @@ export function codeFirstModelGeneration(
         projectDir,
       );
     }
-    await writeCodeFirstAggregates(project, inventory);
+    await writeDocumentModelAggregates(project, inventory);
     return {
       documentModels: plan.models.map(prop("state")),
       unreadableDirs,
@@ -234,7 +287,7 @@ export function codeFirstModelGeneration(
   async function editor(
     request: GenerateEditorRequest,
     project: Project,
-    inventory: CodeFirstInventory,
+    inventory: DocumentModelInventory,
   ) {
     const { editorName, documentTypes, editorId, editorDirName } = request;
     if (documentTypes.length > 1) {
@@ -277,7 +330,7 @@ export function codeFirstModelGeneration(
 
   async function editors(
     project: Project,
-    inventory: CodeFirstInventory,
+    inventory: DocumentModelInventory,
   ): Promise<GeneratedEditors> {
     const read = getEditorDirNames(project).map((dirName) => ({
       dirName,
@@ -316,8 +369,8 @@ export function codeFirstModelGeneration(
   }
 
   return {
-    mode: "code-first",
     async scaffoldDocumentModel(args, project) {
+      const inventory = await inventoryOf(project);
       const planned = source.planAllDocumentModels(project).models;
       const stored = planned.find(({ id }) => id === args.documentType);
       if (stored !== undefined) {
@@ -325,16 +378,23 @@ export function codeFirstModelGeneration(
           `Document type ${args.documentType} is already registered by ${stored.label}.`,
         );
       }
-      const names = codeFirstDocumentModelTemplateArgs(args);
-      const directory = realPathThroughExistingParent(
-        projectPath(project, `document-models/${names.kebabName}`),
+      const declared = inventory.documentModels.find(
+        ({ documentType }) => documentType === args.documentType,
       );
+      if (declared !== undefined) {
+        throw new Error(
+          `Document type ${args.documentType} is already declared by ${declared.source.specifier}.`,
+        );
+      }
+      const names = codeFirstDocumentModelTemplateArgs(args);
+      const spelled = join(inventory.documentModelsDir, names.kebabName);
+      const directory = realPathThroughExistingParent(spelled);
       const exportName = `${names.pascalName}V1`;
       const conflicts = [
         ...planned.flatMap((model) => [
           ...(realPathThroughExistingParent(model.directory) === directory
             ? [
-                `${model.label} already owns the scaffold directory document-models/${names.kebabName}.`,
+                `${model.label} already owns the scaffold directory ${relative(inventory.projectDir, spelled).replaceAll("\\", "/")}.`,
               ]
             : []),
           ...(model.exportNames.includes(exportName)
@@ -353,7 +413,11 @@ export function codeFirstModelGeneration(
           ].join("\n"),
         );
       }
-      return await generateCodeFirstDocumentModel(args, project);
+      return await generateCodeFirstDocumentModel(
+        args,
+        project,
+        inventory.documentModelsDir,
+      );
     },
     async generateDocumentModel(state, project) {
       const inventory = await inventoryOf(project);
@@ -372,16 +436,23 @@ export function codeFirstModelGeneration(
         source.planExportNames(project, [incoming]),
       );
       await source.generateDocumentModel(state, project);
-      await writeCodeFirstAggregates(project, inventory);
+      await finalizeModels(project, inventory);
     },
     async generateAllDocumentModels(project) {
       return await documentModels(project, await inventoryOf(project));
     },
     async generateEditor(request, project) {
-      await editor(request, project, await inventoryOf(project));
+      const inventory = await inventoryOf(project);
+      assertEditorModelOwnership(project, inventory);
+      await editor(request, project, inventory);
+      await finalizeModels(project, inventory);
     },
     async generateAllEditors(project) {
-      return await editors(project, await inventoryOf(project));
+      const inventory = await inventoryOf(project);
+      assertEditorModelOwnership(project, inventory);
+      const result = await editors(project, inventory);
+      await finalizeModels(project, inventory);
+      return result;
     },
     async generateAll(project) {
       const inventory = await inventoryOf(project);
@@ -395,3 +466,6 @@ export function codeFirstModelGeneration(
     },
   };
 }
+
+/** @experimental The generation every command and Vetra's processor use. */
+export const modelGeneration: ModelGeneration = documentModelGeneration();

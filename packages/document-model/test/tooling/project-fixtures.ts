@@ -33,6 +33,12 @@ export function writeFiles(
   }
 }
 
+/** Gives the `control` fixture's family and its alias one conventional model entry. */
+export const CONTROL_INVOICE_ENTRY = {
+  "document-models/invoice/index.ts":
+    'export { invoiceFamily } from "../../src/invoice.js";\nexport { publishedInvoice } from "../../src/catalog.js";\n',
+} as const;
+
 export type LoadedFixture = {
   readonly root: string;
   readonly project: ProjectDefinitions;

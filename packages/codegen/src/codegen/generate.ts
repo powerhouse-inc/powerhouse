@@ -52,60 +52,16 @@ import {
 } from "utils";
 import { loadDocumentModel } from "./utils.js";
 
+/**
+ * Writes one stored model's generated files. It writes no barrel: the
+ * package's `generateDocumentModel` finishes through the shared writer.
+ */
 export async function generateDocumentModel(
   documentModelState: DocumentModelGlobalState,
   project: Project,
 ) {
   assertNoReservedOperationNames(documentModelState);
   await tsMorphGenerateDocumentModel(documentModelState, project);
-}
-
-/* Runs generate for each document model json file found in the project's `document-models` directory.
- * Returns the document models it regenerated, and the directories without a readable `<dir>.json`.
- */
-export async function generateAllDocumentModels(project: Project) {
-  const { directory: documentModelsDir } = getOrCreateDirectory(
-    project,
-    "document-models",
-  );
-  const documentModelsDirPath = documentModelsDir.getPath();
-  const projectDir = documentModelsDir.getParentOrThrow().getPath();
-  const dirents = existsSync(documentModelsDirPath)
-    ? readdirSync(documentModelsDirPath, { withFileTypes: true })
-        .filter((dirent) => dirent.isDirectory())
-        .sort((a, b) => a.name.localeCompare(b.name))
-    : [];
-  const loaded = dirents.map((dirent) => ({
-    dirName: dirent.name,
-    state: loadDocumentModelInDir(dirent),
-  }));
-  const unreadableDirs = loaded
-    .filter(({ state }) => state === undefined)
-    .map(prop("dirName"));
-  const documentModels = pipe(loaded, map(prop("state")), filter(isDefined));
-
-  for (const documentModelState of documentModels) {
-    await generateDocumentModel(documentModelState, project);
-  }
-
-  // An unreadable spec may be a document model's, so its manifest entry stays.
-  if (unreadableDirs.length === 0) {
-    await pruneManifestSection(
-      projectDir,
-      "documentModels",
-      documentModels.map((s) => s.id),
-    );
-  }
-  return { documentModels, unreadableDirs };
-}
-export async function generateFromFile(filePath: string, project: Project) {
-  // load document model spec from file
-  const documentModelState = await loadDocumentModel(
-    projectPath(project, filePath),
-  );
-
-  // delegate to shared generation function
-  await generateDocumentModel(documentModelState, project);
 }
 
 type GenerateEditorArgs = {
@@ -140,60 +96,6 @@ export async function generateEditor(
     editorName,
     editorId,
   });
-}
-
-/* Runs generate for all editors found in the project's `editors` directory.
- * Note: we intentionally filter out editors with the document type "powerhouse/document-drive".
- * These are handled separately by the `generateAllApps` function.
- * Returns the editors it regenerated, and the directories whose `module.ts` it could not read.
- */
-export async function generateAllEditors(project: Project) {
-  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
-  const projectDir = editorsDir.getParentOrThrow().getPath();
-  const dirNames = getEditorDirNames(project);
-
-  /* An editor's `id`, `name`, and `documentTypes` args can be found in the `module.ts` file */
-  const unreadableDirs = dirNames.filter(
-    (dirName) => !getEditorMetadata(project, dirName),
-  );
-  const editors = pipe(
-    dirNames,
-    map((dirName) => getEditorMetadata(project, dirName)),
-    filter(isTruthy),
-    filter(
-      ({ documentTypes }) =>
-        !isIncludedIn("powerhouse/document-drive", documentTypes),
-    ),
-  );
-
-  for (const editor of editors) {
-    const {
-      name: editorName,
-      id: editorId,
-      dirName: editorDirName,
-      documentTypes,
-    } = editor;
-
-    await generateEditor(
-      {
-        editorName,
-        editorId,
-        editorDirName,
-        documentTypes,
-      },
-      project,
-    );
-  }
-
-  // An unreadable module.ts may be an editor's, so its manifest entry stays.
-  if (unreadableDirs.length === 0) {
-    await pruneManifestSection(
-      projectDir,
-      "editors",
-      editors.map((e) => e.id),
-    );
-  }
-  return { editors, unreadableDirs };
 }
 
 type GenerateAppArgs = {
@@ -496,15 +398,4 @@ export async function generatePieceTrigger(
 export async function generateAllPieces(project: Project, only?: string) {
   const { packageName } = await readProjectPackage(project);
   await syncPiecesRegistration({ project, packageName, only });
-}
-
-/* Runs each module type's generateAll{moduleType} function for the current project */
-export async function generateAll(project: Project) {
-  await generateAllDocumentModels(project);
-  await generateAllEditors(project);
-  await generateAllApps(project);
-  await generateAllSubgraphs(project);
-  await generateAllProcessors(project);
-  await generateAllPieces(project);
-  syncProjectAiToolsExport(project);
 }

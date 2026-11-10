@@ -13,7 +13,7 @@ import { describeThrown } from "../structured-diagnostics.js";
 
 /**
  * Finds `defineDocumentModel(Family)` calls under the document models
- * directory that no selected source reaches. Declarations are read from
+ * directory that no discovered entry module reaches. Declarations are read from
  * source text, never run, so an unregistered model cannot fail the scan by
  * throwing. What a source reaches is the module graph its import evaluated.
  */
@@ -21,8 +21,7 @@ import { describeThrown } from "../structured-diagnostics.js";
 type Unit = Omit<UnregisteredDefinition, "reason"> & {
   /** Real paths. */
   readonly declaring: readonly string[];
-  /** `null` when a declaration's id cannot be read from its source text. */
-  readonly ids: readonly string[] | null;
+  readonly ids: readonly string[];
 };
 
 type Unreadable = { readonly path: string; readonly error: unknown }[];
@@ -238,7 +237,7 @@ function topLevelId(
 function declarations(
   code: string,
   strings: readonly string[],
-): { readonly declares: boolean; readonly ids: readonly string[] | null } {
+): { readonly declares: boolean; readonly ids: readonly string[] } {
   const { module, factory } = DECLARATION;
   const isFactory = new RegExp(`^${factory}$`);
   const callees = [
@@ -262,7 +261,7 @@ function declarations(
       ),
   ];
   let declares = false;
-  let ids: string[] | null = [];
+  const ids: string[] = [];
   for (const { callee, family } of callees) {
     const calls = new RegExp(
       `(?<![\\w$.])${callee}\\s*(?:<[^;()]*>\\s*)?\\((?:\\s*\\{)?`,
@@ -274,8 +273,7 @@ function declarations(
         family || !call[0].endsWith("{")
           ? undefined
           : topLevelId(code, strings, call.index + call[0].length - 1);
-      if (id === undefined) ids = null;
-      else ids?.push(id);
+      if (id !== undefined) ids.push(id);
     }
   }
   return { declares, ids };
@@ -306,7 +304,7 @@ function modelUnit(
 ): Unit | undefined {
   const declaring: {
     readonly entry: Entry;
-    readonly ids: readonly string[] | null;
+    readonly ids: readonly string[];
   }[] = [];
   for (const entry of sourceFilesUnder(
     directory,
@@ -334,9 +332,7 @@ function modelUnit(
     unit: `${packagePath(packageRoot, directory.path)}/`,
     specifier: packagePath(packageRoot, suggested.entry.path),
     declaring: declaring.map(({ entry }) => entry.real),
-    ids: declaring.some(({ ids }) => ids === null)
-      ? null
-      : declaring.flatMap(({ ids }) => ids ?? []),
+    ids: declaring.flatMap(({ ids }) => ids),
   };
 }
 
@@ -349,7 +345,7 @@ function unreadableDiagnostic(
     source: { specifier: packagePath(packageRoot, path) },
     path: [],
     message:
-      "This path under the document models directory could not be read, so the scan cannot tell whether it declares a code-first model that no definitionSources entry reaches.",
+      "This path under the document models directory could not be read, so the scan cannot tell whether it declares a code-first model that no model entry exports.",
     expected: "a readable file or directory",
     received: describeThrown(error),
     repair:
@@ -359,9 +355,9 @@ function unreadableDiagnostic(
 
 /**
  * Each `<documentModelsDir>/<name>/` whose sources declare a code-first model
- * that no selected source's import reached, or that a selected source reached
- * without exporting the model's literal id. A selected source that did not
- * import reaches files no one can name, so the scan then reports nothing.
+ * that no entry module's import reached, or that an entry reached without
+ * exporting the model's literal id. An entry that did not import reaches
+ * files no one can name, so the scan then reports nothing.
  */
 export function findUnregisteredDefinitions(request: {
   readonly packageRoot: string;
@@ -371,6 +367,8 @@ export function findUnregisteredDefinitions(request: {
   /** Absolute paths of every module the import of `specifier` evaluated, its own included. */
   readonly importedFiles: (specifier: string) => readonly string[];
   readonly loadedDocumentTypes: ReadonlySet<string>;
+  /** Units (`./<documentModelsDir>/<name>/`) a stored specification owns. */
+  readonly storedUnits?: ReadonlySet<string>;
 }): {
   readonly unregistered: readonly UnregisteredDefinition[];
   readonly diagnostics: readonly DefinitionDiagnostic[];
@@ -381,6 +379,7 @@ export function findUnregisteredDefinitions(request: {
     sources,
     importedFiles,
     loadedDocumentTypes,
+    storedUnits = new Set<string>(),
   } = request;
   const imported = sources.map(({ specifier }) => importedFiles(specifier));
   if (imported.some((files) => files.length === 0)) {
@@ -402,10 +401,7 @@ export function findUnregisteredDefinitions(request: {
   const unregistered = units.flatMap(
     ({ kind, unit, specifier, declaring, ids }): UnregisteredDefinition[] => {
       const isReached = declaring.some((file) => reached.has(file));
-      if (
-        isReached &&
-        (ids === null || ids.some((id) => loadedDocumentTypes.has(id)))
-      ) {
+      if (isReached && ids.every((id) => loadedDocumentTypes.has(id))) {
         return [];
       }
       return [
@@ -413,7 +409,11 @@ export function findUnregisteredDefinitions(request: {
           kind,
           unit,
           specifier,
-          reason: isReached ? "not-exported" : "unreached",
+          reason: storedUnits.has(unit)
+            ? "stored-directory"
+            : isReached
+              ? "not-exported"
+              : "unreached",
         },
       ];
     },
@@ -424,4 +424,27 @@ export function findUnregisteredDefinitions(request: {
       .filter(({ path }) => !modelDirectories.has(path))
       .map((entry) => unreadableDiagnostic(packageRoot, entry)),
   };
+}
+
+/**
+ * @experimental The package-relative files under `directory` that declare a
+ * code-first document model, read from source text without running them.
+ * Codegen refuses to write a stored model over them.
+ */
+export function codeFirstDeclarationFiles(
+  packageRoot: string,
+  directory: string,
+): readonly `./${string}`[] {
+  const packageRootIdentity = realPathOrSelf(packageRoot);
+  const real = realPathOrSelf(directory);
+  if (pathWithin(packageRootIdentity, real) === null) return [];
+  const unit = modelUnit(
+    packageRoot,
+    packageRootIdentity,
+    { name: "", path: directory, real, isDirectory: true },
+    [],
+  );
+  return (unit?.declaring ?? []).map((file) =>
+    packagePath(packageRootIdentity, file),
+  );
 }

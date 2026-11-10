@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, parse, relative } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { loadCodeFirstInventory } from "../../src/file-builders/document-model/code-first-inventory.js";
+import { loadDocumentModelInventory } from "../../src/file-builders/document-model/document-model-inventory.js";
 import { tsConfigTemplate } from "../../src/templates/index.mjs";
 import { ViteTypeScriptSourceImportAdapter } from "../../src/utils/definition-source-importer.js";
 import { buildTsMorphProject } from "../../src/utils/index.mjs";
@@ -21,7 +21,6 @@ import {
   generateCodeFirstDocumentModel,
   removePackage,
   todo,
-  writeConfig,
 } from "./package.js";
 
 let dir: string;
@@ -53,25 +52,26 @@ const reexportTodoList = (path: string) =>
     ).replaceAll("\\", "/"),
   )};\n`;
 
-function selectOnly(root: string, specifier: `./${string}`) {
-  writeConfig(root, {
-    definitionSources: {
-      formatVersion: 1,
-      mode: "code-first",
-      entries: [{ specifier }],
-    },
-  });
-}
-
-async function load(root: string) {
+/**
+ * Loads what discovery finds, or only `specifier` through the loader's
+ * requested sources, which import exactly as discovered ones do.
+ */
+async function load(root: string, specifier?: `./${string}`) {
   const loader = new DefinitionSourceLoader(
     new ViteTypeScriptSourceImportAdapter(),
   );
   try {
-    const loaded = await loader.normalizeDefinitionSources({
+    const request = {
       configFile: join(root, "powerhouse.config.json"),
       packageRevision: revision("1"),
-    });
+    };
+    const loaded =
+      specifier === undefined
+        ? await loader.normalizeDefinitionSources(request)
+        : await loader.normalizeRequestedSources({
+            ...request,
+            sources: [{ specifier }],
+          });
     return {
       status: loaded.status,
       diagnostics: loaded.diagnostics,
@@ -105,10 +105,8 @@ describe("the executed module is the checked package file", () => {
       join(dirname(twin), "helper.ts"),
       'export const helper = "package";\n',
     );
-    selectOnly(dir, `./${twin}`);
-
     expect({
-      ...(await load(dir)),
+      ...(await load(dir, `./${twin}`)),
       outsideRan: existsSync(marker),
     }).toStrictEqual({
       status: "ready",
@@ -129,10 +127,8 @@ describe("the executed module is the checked package file", () => {
       const marker = join(dir, "decoded-ran");
       write(dir, literal, reexportTodoList(literal));
       write(dir, decoded, recordsRun(marker));
-      selectOnly(dir, `./${literal}`);
-
       expect({
-        ...(await load(dir)),
+        ...(await load(dir, `./${literal}`)),
         decodedRan: existsSync(marker),
       }).toStrictEqual({
         status: "ready",
@@ -191,7 +187,7 @@ describe("project tsconfig paths", () => {
         ),
     );
 
-    const inventory = await loadCodeFirstInventory(dir);
+    const inventory = await loadDocumentModelInventory(dir);
     expect(
       inventory.documentModels.map(
         ({ documentType, name, version, binding }) => ({
@@ -293,8 +289,7 @@ it("reports a broken project alias without recommending a nonexistent npm packag
     "src/broken.ts",
     `${reexportTodoList("src/broken.ts")}import "scalars";\n`,
   );
-  selectOnly(dir, "./src/broken.ts");
-  const loaded = await load(dir);
+  const loaded = await load(dir, "./src/broken.ts");
   expect(loaded.status).toBe("failed");
   expect(loaded.diagnostics[0]?.repair).toContain("tsconfig");
   expect(loaded.diagnostics[0]?.message).not.toContain(

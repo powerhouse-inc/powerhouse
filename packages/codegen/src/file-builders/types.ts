@@ -56,6 +56,11 @@ export type DocumentModelFileMakerArgs = DocumentModelVariableNames & {
   documentModelDirName: string;
   documentModelDirPath: string;
   documentModelImportPath: string;
+  /**
+   * How a file in `fromDir` imports `<documentModelsDir>/<segments>`: the
+   * `document-models/*` alias in ./document-models, a relative path elsewhere.
+   */
+  importDocumentModel: (fromDir: string, ...segments: string[]) => string;
   versionDirName: string;
   versionDirPath: string;
   versionImportPath: string;

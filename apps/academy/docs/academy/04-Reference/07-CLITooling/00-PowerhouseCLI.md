@@ -305,7 +305,7 @@ Generate a document model
 
 **Extract** - Write a powerhouse/document-model spec for each existing document model into specs/document-models/ - Usage: `--extract, -x`
 
-**Code First** - Experimental. Generate with code-first authoring, whatever definitionSources in powerhouse.config.json selects - Usage: `--code-first`
+**Code First** - Experimental. With --name, create the model code-first. Existing models of both styles are discovered without it - Usage: `--code-first`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -1222,9 +1222,9 @@ Run migrations
 
 
 ## Model Check
-Check this package's document models: the code-first sources
-definitionSources selects and the stored schema-first models in
-documentModelsDir, through one set of checks. Writes nothing.
+Check this package's document models through one set of checks:
+every model directory in documentModelsDir, whether it stores a schema-first
+&lt;name&gt;.json or exports a code-first model from its index.ts. Writes nothing.
 
 `tsc` cannot run these checks: a code-first model compiles when its module is
 evaluated.
@@ -1243,8 +1243,8 @@ plain `npm publish` too, add it to package.json, then run
 With --json it prints \{"decision": ..., "reasons": [...]\}.
 
 Exit codes:
-  0  ok, or skipped. Skipped means no code-first source is selected and the
-     package has no stored model, so nothing was read. Read "status".
+  0  ok, or skipped. Skipped means the package has no document model, so
+     nothing was checked. Read "status".
   1  invalid. The models were read and at least one is wrong.
   2  failed. The configuration or a module could not be read, the arguments
      are wrong, or the command could not run.
@@ -1282,8 +1282,8 @@ scopes, scalars and operations. With &lt;documentType&gt;@&lt;version&gt;, descr
 version only and add its full definition to the JSON report. Writes nothing.
 
 Exit codes:
-  0  ok, or skipped. Skipped means no code-first source is selected and the
-     package has no stored model, so nothing was read. Read "status".
+  0  ok, or skipped. Skipped means the package has no document model, so
+     nothing was checked. Read "status".
   1  invalid. The models were read and at least one is wrong.
   2  failed. The configuration or a module could not be read, the arguments
      are wrong, or the command could not run.
