@@ -1,3 +1,18 @@
+## 6.2.3-dev.101 (2026-11-10)
+
+### 🩹 Fixes
+
+- **ci:** avoid competing package test processes ([2c2dee4745](https://github.com/powerhouse-inc/powerhouse/commit/2c2dee4745))
+- **ci:** bound workers within concurrent test suites ([50a6722880](https://github.com/powerhouse-inc/powerhouse/commit/50a6722880))
+
+### 🔥 Performance
+
+- **ci:** overlap test suites and cache dependency downloads ([6bd75d0db4](https://github.com/powerhouse-inc/powerhouse/commit/6bd75d0db4))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.100 (2026-11-09)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
