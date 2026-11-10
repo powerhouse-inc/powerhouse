@@ -222,6 +222,39 @@ export const sourceConfigSchema = {
           type: "number",
           description: "Port the switchboard HTTP server listens on.",
         },
+        drive: {
+          type: "object",
+          additionalProperties: false,
+          description:
+            "The drive the switchboard creates at boot, if no drive with its id exists. Each field is overridden by its PH_DEFAULT_DRIVE_* env var.",
+          properties: {
+            id: {
+              type: "string",
+              description:
+                'Drive id. Default "powerhouse". Overridden by PH_DEFAULT_DRIVE_ID.',
+            },
+            slug: {
+              type: "string",
+              description:
+                "Drive slug (/d/<slug>). Defaults to the id. Overridden by PH_DEFAULT_DRIVE_SLUG.",
+            },
+            name: {
+              type: "string",
+              description:
+                'Drive name. Default "Powerhouse". Overridden by PH_DEFAULT_DRIVE_NAME.',
+            },
+            icon: {
+              type: "string",
+              description:
+                "Drive icon URL. Overridden by PH_DEFAULT_DRIVE_ICON.",
+            },
+            preferredEditor: {
+              type: "string",
+              description:
+                "Editor the drive opens in. Overridden by PH_DEFAULT_DRIVE_PREFERRED_EDITOR.",
+            },
+          },
+        },
       },
     },
     studio: {
