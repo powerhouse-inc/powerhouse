@@ -7,8 +7,7 @@
  */
 import { ph, SUBGRAPH_PROTOCOL } from "document-model";
 import { parse } from "graphql";
-import { cp, mkdtemp, realpath, rm, symlink } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { cp, mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -28,16 +27,15 @@ let root = "";
 let copyB: CopyB;
 
 beforeAll(async () => {
-  root = await realpath(await mkdtemp(join(tmpdir(), "reactor-api-copy-b-")));
   const own = resolve(import.meta.dirname, "..");
+  // Inside this package's node_modules, copy B resolves its dependencies
+  // from the same node_modules as copy A, with no link to follow.
+  const cache = join(own, "node_modules", ".cache");
+  await mkdir(cache, { recursive: true });
+  root = await realpath(await mkdtemp(join(cache, "reactor-api-copy-b-")));
   const dir = join(root, "reactor-api");
   await cp(join(own, "dist"), join(dir, "dist"), { recursive: true });
   await cp(join(own, "package.json"), join(dir, "package.json"));
-  await symlink(
-    await realpath(join(own, "node_modules")),
-    join(dir, "node_modules"),
-    "junction",
-  );
   copyB = (await import(
     /* @vite-ignore */ pathToFileURL(join(dir, "dist/index.mjs")).href
   )) as CopyB;

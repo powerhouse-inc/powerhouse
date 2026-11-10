@@ -40,6 +40,12 @@ class Tickets extends Subgraph {
   readonly #secret = 42;
 
   static override getSchema(schema: SchemaBuilder<Tickets>) {
+    const ticketOpened = {
+      type: ph.ref(Ticket, { required: true }),
+      subscribe: async function* () {
+        yield await Promise.resolve({ id: "t-1", status: "OPEN" as const });
+      },
+    };
     return [
       schema.query("tickets", {
         args: { filter: ph.ref(TicketFilter, { required: true }) },
@@ -82,13 +88,8 @@ class Tickets extends Subgraph {
           return `${parent.id}: ${parent.status}`;
         },
       }),
-      schema.subscription("ticketOpened", {
-        type: ph.ref(Ticket, { required: true }),
-        // @ts-expect-error -- events without `resolve` carry the field's name.
-        subscribe: async function* () {
-          yield await Promise.resolve({ id: "t-1", status: "OPEN" as const });
-        },
-      }),
+      // @ts-expect-error -- events without `resolve` carry the field's name.
+      schema.subscription("ticketOpened", ticketOpened),
       schema.subscription("ticketCount", {
         type: ph.Int({ required: true }),
         subscribe: async function* () {
