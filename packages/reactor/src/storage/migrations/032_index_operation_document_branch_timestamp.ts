@@ -9,6 +9,15 @@ import { sql, type Kysely } from "kysely";
  *
  *   CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_operation_document_branch_timestamp
  *     ON reactor."Operation" ("documentId", branch, "timestampUtcMs" DESC);
+ *
+ * After a concurrent build, check it is valid:
+ *
+ *   select indisvalid from pg_index where indexrelid = 'reactor.idx_operation_document_branch_timestamp'::regclass;
+ *
+ * If it is false, drop it (DROP INDEX CONCURRENTLY reactor.idx_operation_document_branch_timestamp;)
+ * and build it again before deploying. A failed or cancelled concurrent build
+ * leaves an invalid index of the same name, which IF NOT EXISTS keeps, so this
+ * migration would record itself as applied while the planner never uses it.
  */
 export async function up(db: Kysely<any>): Promise<void> {
   await db.schema
