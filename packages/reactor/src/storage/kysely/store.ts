@@ -22,6 +22,7 @@ import {
 import { AtomicTransaction } from "../txn.js";
 import { MAX_BIND_PARAMETERS } from "./bind-parameters.js";
 import { findPurged } from "./document-purges.js";
+import { latestTimestampQuery } from "./revision-queries.js";
 import type { Database, InsertableOperation, OperationRow } from "./types.js";
 
 class _UniqueConstraintContext extends Error {
@@ -728,12 +729,11 @@ export class KyselyOperationStore implements IOperationStore {
 
     // Asked separately because the largest timestamp is not always on the
     // last-indexed operation: a reshuffle can leave a later one behind it.
-    const latest = await this.queryExecutor
-      .selectFrom("Operation")
-      .select((eb) => eb.fn.max("timestampUtcMs").as("latestTimestamp"))
-      .where("documentId", "=", documentId)
-      .where("branch", "=", branch)
-      .executeTakeFirst();
+    const latest = await latestTimestampQuery(
+      this.queryExecutor,
+      documentId,
+      branch,
+    ).executeTakeFirst();
 
     const revision: Record<string, number> = {};
     for (const row of scopeRevisions) {
