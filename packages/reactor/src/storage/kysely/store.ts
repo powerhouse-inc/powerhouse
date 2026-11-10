@@ -22,7 +22,7 @@ import {
 import { AtomicTransaction } from "../txn.js";
 import { MAX_BIND_PARAMETERS } from "./bind-parameters.js";
 import { findPurged } from "./document-purges.js";
-import { latestTimestampQuery } from "./revision-queries.js";
+import { latestTimestampQuery, scopeHeadsQuery } from "./revision-queries.js";
 import type { Database, InsertableOperation, OperationRow } from "./types.js";
 
 class _UniqueConstraintContext extends Error {
@@ -711,21 +711,18 @@ export class KyselyOperationStore implements IOperationStore {
   ): Promise<DocumentRevisions> {
     throwIfAborted(signal);
 
-    // The head of each scope in one pass. `index` is unique per
+    // The head of each scope as a skip scan. `index` is unique per
     // (documentId, scope, branch) -- the unique_revision constraint -- so the
-    // largest index in a scope identifies exactly one operation, and taking the
-    // maximum is the same answer as selecting the row that carries it. Asking
-    // for the maximum directly lets Postgres aggregate a single ordered walk of
-    // unique_revision instead of re-running a per-scope subquery once for every
-    // operation row in the document.
-    const scopeRevisions = await this.queryExecutor
-      .selectFrom("Operation")
-      .select("scope")
-      .select((eb) => eb.fn.max("index").as("index"))
-      .where("documentId", "=", documentId)
-      .where("branch", "=", branch)
-      .groupBy("scope")
-      .execute();
+    // largest index in a scope is one backward probe of that index. The scopes
+    // themselves are found by hopping from one distinct scope to the next, so
+    // the cost follows the number of scopes, not the number of operations (a
+    // GROUP BY would walk every operation in the document). A scope present
+    // only on another branch comes back with a null index and is skipped.
+    const scopeRevisions = await scopeHeadsQuery(
+      this.queryExecutor,
+      documentId,
+      branch,
+    ).execute();
 
     // Asked separately because the largest timestamp is not always on the
     // last-indexed operation: a reshuffle can leave a later one behind it.
@@ -737,6 +734,7 @@ export class KyselyOperationStore implements IOperationStore {
 
     const revision: Record<string, number> = {};
     for (const row of scopeRevisions) {
+      if (row.scope === null || row.index === null) continue;
       revision[row.scope] = row.index + 1;
     }
 

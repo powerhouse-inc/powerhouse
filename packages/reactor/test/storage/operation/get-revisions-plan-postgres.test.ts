@@ -1,7 +1,10 @@
 import { generateId } from "@powerhousedao/shared/document-model";
 import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { latestTimestampQuery } from "../../../src/storage/kysely/revision-queries.js";
+import {
+  latestTimestampQuery,
+  scopeHeadsQuery,
+} from "../../../src/storage/kysely/revision-queries.js";
 import type { Database as DatabaseSchema } from "../../../src/storage/kysely/types.js";
 import { createTestOperationStorePostgres } from "../../factories.js";
 
@@ -35,6 +38,16 @@ describe("getRevisions query plans [Postgres]", () => {
       latestTimestampQuery(conn, generateId(), "main"),
     );
     expect(plan).toContain("idx_operation_document_branch_timestamp");
+    expect(plan).not.toContain("Seq Scan");
+  });
+
+  it("finds each scope's head through unique_revision without a sequential scan", async () => {
+    const plan = await planOf(db, (conn) =>
+      scopeHeadsQuery(conn, generateId(), "main"),
+    );
+    // One backward probe per scope, not a walk of every operation.
+    expect(plan).toMatch(/Scan Backward using unique_revision/);
+    expect(plan).toContain("Recursive Union");
     expect(plan).not.toContain("Seq Scan");
   });
 

@@ -1012,6 +1012,16 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
       );
     }
 
+    it("ignores scopes that only have operations on another branch", async () => {
+      const documentId = generateId();
+      for (let i = 0; i <= 1; i++) await writeAt(documentId, "global", i);
+      await writeAt(documentId, "local", 0, undefined, "draft");
+
+      const revisions = await store.getRevisions(documentId, "main");
+
+      expect(revisions.revision).toEqual({ global: 2 });
+    });
+
     it("returns no revisions for a document with no operations", async () => {
       const revisions = await store.getRevisions(generateId(), "main");
 
