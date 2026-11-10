@@ -98,7 +98,6 @@ jobs:
           key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
-        if: runner.environment == 'github-hosted'
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./test/vetra-e2e
 
@@ -168,7 +167,6 @@ jobs:
           key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
-        if: runner.environment == 'github-hosted'
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./test/package-e2e
 
@@ -282,7 +280,7 @@ jobs:
           key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
-        if: runner.environment == 'github-hosted' && steps.workflow-ui.outputs.run == 'true'
+        if: steps.workflow-ui.outputs.run == 'true'
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./packages/workflow
 
@@ -361,7 +359,6 @@ jobs:
           key: playwright-all-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
-        if: runner.environment == 'github-hosted'
         run: pnpm exec playwright install
         working-directory: packages/analytics-engine/browser
 
@@ -528,7 +525,7 @@ jobs:
       # would delete the second version's restored Chromium and the second
       # install would download it again. The env var below turns that cleanup off.
       - name: Install Playwright Browsers
-        if: runner.environment == 'github-hosted' && steps.recipes-playwright.outputs.versions != ''
+        if: steps.recipes-playwright.outputs.versions != ''
         working-directory: ${{ runner.temp }}
         env:
           VERSIONS: ${{ steps.recipes-playwright.outputs.versions }}

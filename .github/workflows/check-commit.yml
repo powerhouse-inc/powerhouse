@@ -140,13 +140,13 @@ jobs:
       # reactor-browser runs half its suite in a real chromium (vitest browser
       # mode). Keyed on the shard's packages so the split can be rebalanced freely.
       - name: Install playwright chromium
-        if: runner.environment == 'github-hosted' && contains(steps.shard.outputs.selectors, '@powerhousedao/reactor-browser...')
+        if: contains(steps.shard.outputs.selectors, '@powerhousedao/reactor-browser...')
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./packages/reactor-browser
 
       # The monitor's builder layout tests measure the page in chromium.
       - name: Install playwright chromium for the monitor
-        if: runner.environment == 'github-hosted' && contains(steps.shard.outputs.selectors, '@powerhousedao/reactor-monitor-app...')
+        if: contains(steps.shard.outputs.selectors, '@powerhousedao/reactor-monitor-app...')
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./apps/reactor-monitor
 
