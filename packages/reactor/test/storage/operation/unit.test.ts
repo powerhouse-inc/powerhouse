@@ -823,12 +823,13 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
       scope: string,
       index: number,
       timestampUtcMs: string,
+      branch = "main",
     ): Promise<void> {
       await store.apply(
         documentId,
         documentType,
         scope,
-        "main",
+        branch,
         index,
         (txn) => {
           txn.addOperations({
@@ -880,6 +881,17 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
       await expect(
         store.getStreamLatestTimestamp(documentId, "auth", "main"),
       ).resolves.toBe("2026-01-01T00:00:05.000Z");
+    });
+
+    it("maxes over one scope and branch only", async () => {
+      const documentId = generateId();
+      await writeAt(documentId, "auth", 0, "2026-01-01T00:00:03.000Z");
+      await writeAt(documentId, "global", 0, "2026-01-01T00:00:08.000Z");
+      await writeAt(documentId, "auth", 0, "2026-01-01T00:00:09.000Z", "other");
+
+      await expect(
+        store.getStreamLatestTimestamp(documentId, "auth", "main"),
+      ).resolves.toBe("2026-01-01T00:00:03.000Z");
     });
 
     it("distinguishes branches", async () => {

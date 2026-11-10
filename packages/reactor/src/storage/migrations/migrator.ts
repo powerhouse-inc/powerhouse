@@ -34,7 +34,7 @@ import * as migration028 from "./028_create_write_identity.js";
 import * as migration029 from "./029_create_permission_tables.js";
 import * as migration030 from "./030_index_operation_retracts.js";
 import * as migration031 from "./031_index_created_model_protocol_versions.js";
-import * as migration032 from "./032_index_operation_document_branch_timestamp.js";
+import * as migration032 from "./032_index_operation_scope_timestamp.js";
 
 const migrations = {
   "001_create_operation_table": migration001,
@@ -68,7 +68,7 @@ const migrations = {
   "029_create_permission_tables": migration029,
   "030_index_operation_retracts": migration030,
   "031_index_created_model_protocol_versions": migration031,
-  "032_index_operation_document_branch_timestamp": migration032,
+  "032_index_operation_scope_timestamp": migration032,
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {

@@ -19,6 +19,24 @@ export function latestTimestampQuery(
 }
 
 /**
+ * The largest timestamp in one stream (document, scope, branch): a single
+ * probe of idx_operation_scope_timestamp.
+ */
+export function streamLatestTimestampQuery(
+  db: Kysely<Database> | Transaction<Database>,
+  documentId: string,
+  scope: string,
+  branch: string,
+) {
+  return db
+    .selectFrom("Operation")
+    .select((eb) => eb.fn.max("timestampUtcMs").as("latestTimestamp"))
+    .where("documentId", "=", documentId)
+    .where("scope", "=", scope)
+    .where("branch", "=", branch);
+}
+
+/**
  * The head index of each scope in a document's branch, as a skip scan: a
  * recursive CTE hops from one distinct scope to the next (`scope >` the
  * previous, one unique_revision probe each), then a backward probe per scope

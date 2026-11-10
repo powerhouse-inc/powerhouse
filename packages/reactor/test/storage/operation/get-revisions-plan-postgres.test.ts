@@ -2,10 +2,10 @@ import { generateId } from "@powerhousedao/shared/document-model";
 import { addFolder } from "@powerhousedao/shared/document-drive";
 import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { up } from "../../../src/storage/migrations/032_index_operation_document_branch_timestamp.js";
+import { up } from "../../../src/storage/migrations/032_index_operation_scope_timestamp.js";
 import {
-  latestTimestampQuery,
   scopeHeadsQuery,
+  streamLatestTimestampQuery,
 } from "../../../src/storage/kysely/revision-queries.js";
 import type { Database as DatabaseSchema } from "../../../src/storage/kysely/types.js";
 import { createTestOperationStorePostgres } from "../../factories.js";
@@ -24,7 +24,7 @@ async function planOf(
   });
 }
 
-const indexName = "idx_operation_document_branch_timestamp";
+const indexName = "idx_operation_scope_timestamp";
 
 describe("getRevisions query plans [Postgres]", () => {
   let db: Kysely<DatabaseSchema>;
@@ -41,11 +41,11 @@ describe("getRevisions query plans [Postgres]", () => {
     await cleanup();
   });
 
-  it("finds the latest timestamp through idx_operation_document_branch_timestamp", async () => {
+  it("finds a stream's latest timestamp through idx_operation_scope_timestamp", async () => {
     const plan = await planOf(db, (conn) =>
-      latestTimestampQuery(conn, generateId(), "main"),
+      streamLatestTimestampQuery(conn, generateId(), "auth", "main"),
     );
-    expect(plan).toContain("idx_operation_document_branch_timestamp");
+    expect(plan).toContain("idx_operation_scope_timestamp");
     expect(plan).not.toContain("Seq Scan");
   });
 

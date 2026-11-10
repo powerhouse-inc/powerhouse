@@ -22,7 +22,11 @@ import {
 import { AtomicTransaction } from "../txn.js";
 import { MAX_BIND_PARAMETERS } from "./bind-parameters.js";
 import { findPurged } from "./document-purges.js";
-import { latestTimestampQuery, scopeHeadsQuery } from "./revision-queries.js";
+import {
+  latestTimestampQuery,
+  scopeHeadsQuery,
+  streamLatestTimestampQuery,
+} from "./revision-queries.js";
 import type { Database, InsertableOperation, OperationRow } from "./types.js";
 
 class _UniqueConstraintContext extends Error {
@@ -752,13 +756,12 @@ export class KyselyOperationStore implements IOperationStore {
     branch: string,
     signal?: AbortSignal,
   ): Promise<string | undefined> {
-    const latest = await this.queryExecutor
-      .selectFrom("Operation")
-      .select((eb) => eb.fn.max("timestampUtcMs").as("latestTimestamp"))
-      .where("documentId", "=", documentId)
-      .where("scope", "=", scope)
-      .where("branch", "=", branch)
-      .executeTakeFirst();
+    const latest = await streamLatestTimestampQuery(
+      this.queryExecutor,
+      documentId,
+      scope,
+      branch,
+    ).executeTakeFirst();
 
     return latest?.latestTimestamp
       ? new Date(latest.latestTimestamp).toISOString()
