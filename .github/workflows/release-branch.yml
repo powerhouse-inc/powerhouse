@@ -55,7 +55,7 @@ concurrency:
 jobs:
   release:
     name: Release packages in monorepo
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     timeout-minutes: 30
     outputs:
       # Tag the release step just created (release.ts writes this directly to
@@ -186,7 +186,7 @@ jobs:
     # against release no-ops (no version bump), concurrent runs, and
     # locally-created tags that happen to match a channel pattern.
     if: ${{ needs.release.outputs.tag != '' }}
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     timeout-minutes: 20
     permissions:
       contents: write
@@ -281,7 +281,7 @@ jobs:
     name: Determine Downstream Parameters
     needs: release
     if: ${{ inputs.dry_run != true }}
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     outputs:
       channel: ${{ steps.params.outputs.channel }}
       version: ${{ steps.params.outputs.version }}
@@ -357,7 +357,7 @@ jobs:
         determine-downstream-params,
         trigger-downstream,
       ]
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     steps:
       - name: Download test step results
         if: ${{ needs.test-package-managers.result == 'failure' }}

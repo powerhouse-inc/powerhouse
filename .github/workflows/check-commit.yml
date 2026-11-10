@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     env:
       CI: true
 
@@ -108,7 +108,7 @@ jobs:
   test:
     name: Test (shard ${{ matrix.shard }}/3)
     # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
-    runs-on: ubuntu-24.04
+    runs-on: vetra-ubuntu-runner
     timeout-minutes: 40
     env:
       CI: true
@@ -165,7 +165,7 @@ jobs:
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
     needs: [check, test]
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     steps:
       - name: Send Discord notification
         env:

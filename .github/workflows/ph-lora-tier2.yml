@@ -31,7 +31,7 @@ jobs:
   # This CAN block merges — a broken mapping means ph-lora is flying blind.
   validate-mapping:
     name: Validate ph-lora mapping
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
 
     steps:
       - name: Checkout
@@ -58,7 +58,7 @@ jobs:
   # Never blocks merges — opens a GitHub issue instead.
   drift-check:
     name: Check for doc drift
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     needs: validate-mapping
     # Never block merges — this is advisory only
     continue-on-error: true

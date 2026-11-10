@@ -40,7 +40,7 @@ jobs:
   # of their own that can queue behind the runner cap.
   test-reactor:
     name: Test Reactor (shard ${{ matrix.shard }}/3)
-    runs-on: ubuntu-24.04
+    runs-on: vetra-ubuntu-runner
     container: node:24
     strategy:
       fail-fast: false
@@ -138,7 +138,7 @@ jobs:
   # the job count under the runner cap. Shares no artifact with test-reactor.
   integration-test:
     name: Sync Integration (${{ matrix.name }})
-    runs-on: ubuntu-24.04
+    runs-on: vetra-ubuntu-runner
     container: node:24
     timeout-minutes: 25
     strategy:
@@ -223,7 +223,7 @@ jobs:
     # starts instead of the day it walks into a timeout.
     needs: [test-reactor, integration-test]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     permissions:
       actions: read
       checks: read

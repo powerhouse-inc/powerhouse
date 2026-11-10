@@ -14,7 +14,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     strategy:
       fail-fast: false
       matrix:
@@ -134,7 +134,7 @@ jobs:
     name: Notify Cloud Auto-Update
     needs: build
     if: ${{ needs.build.outputs.tag != '' }}
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     steps:
       - name: Notify cloud switchboard
         env:
@@ -162,7 +162,7 @@ jobs:
     name: Update Switchboard + Connect Images in K8s Hosting
     needs: build
     if: ${{ needs.build.outputs.tag != '' }}
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     steps:
       - name: Determine target environments
         id: env
@@ -209,7 +209,7 @@ jobs:
     name: Update Registry Image in K8s Hosting
     needs: build
     if: ${{ needs.build.outputs.tag != '' }}
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     steps:
       - name: Determine target environments
         id: env

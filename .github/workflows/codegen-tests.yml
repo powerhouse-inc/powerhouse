@@ -56,7 +56,7 @@ permissions:
 
 jobs:
   do-codegen-tests:
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     env:
       CI: true
 
@@ -133,7 +133,7 @@ jobs:
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
     needs: [do-codegen-tests, do-codegen-tests-windows]
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     steps:
       - name: Send Discord notification
         env:

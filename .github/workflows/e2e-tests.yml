@@ -37,7 +37,7 @@ jobs:
     # standalone jobs so branch protection and artifact consumers see no change.
     name: Run Vetra E2E Tests${{ matrix.name-suffix }}
     # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
-    runs-on: ubuntu-24.04
+    runs-on: vetra-ubuntu-runner
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -122,7 +122,7 @@ jobs:
   package-e2e-tests:
     name: Run Package E2E Tests
     # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
-    runs-on: ubuntu-24.04
+    runs-on: vetra-ubuntu-runner
     timeout-minutes: 45
     steps:
       - name: Checkout repository
@@ -190,7 +190,7 @@ jobs:
   workflow-piece-e2e-tests:
     name: Run Workflow Piece E2E Tests
     # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
-    runs-on: ubuntu-24.04
+    runs-on: vetra-ubuntu-runner
     timeout-minutes: 30
     steps:
       - name: Checkout repository
@@ -302,7 +302,7 @@ jobs:
   analytics-engine-integration-tests:
     name: Run Analytics Engine Integration Tests
     # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
-    runs-on: ubuntu-24.04
+    runs-on: vetra-ubuntu-runner
     timeout-minutes: 30
     # The pg suite expects postgresql://postgres:password@localhost:5555/analytics
     # (packages/analytics-engine/pg/package.json); nothing else gated it before.
@@ -393,7 +393,7 @@ jobs:
 
   switchboard-e2e-tests:
     name: Run Switchboard E2E Tests
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     timeout-minutes: 30
     # The suites start their own switchboards on PGlite: the shared one on
     # SWITCHBOARD_PORT, renown-self-auth's on 4022 and 4023, and router's on 4024.
@@ -430,7 +430,7 @@ jobs:
   recipes-e2e-tests:
     name: Run Recipes E2E Tests
     # Pinned: Playwright 1.60 cannot install chromium on ubuntu-26.04, which ubuntu-latest now resolves to.
-    runs-on: ubuntu-24.04
+    runs-on: vetra-ubuntu-runner
     timeout-minutes: 45
     steps:
       - name: Checkout repository
@@ -545,7 +545,7 @@ jobs:
 
   notify-discord:
     if: always() && github.event_name != 'pull_request' && (needs.vetra-e2e-tests.result == 'failure' || needs.package-e2e-tests.result == 'failure' || needs.workflow-piece-e2e-tests.result == 'failure' || needs.recipes-e2e-tests.result == 'failure' || needs.switchboard-e2e-tests.result == 'failure')
-    runs-on: ubuntu-24.04
+    runs-on: vetra-ubuntu-runner
     needs:
       [
         vetra-e2e-tests,
@@ -623,7 +623,7 @@ jobs:
         switchboard-e2e-tests,
       ]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     permissions:
       actions: read
       checks: read

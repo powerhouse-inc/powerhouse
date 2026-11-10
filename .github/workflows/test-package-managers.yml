@@ -24,7 +24,7 @@ on:
 
 jobs:
   test-package-managers:
-    runs-on: ubuntu-latest
+    runs-on: vetra-ubuntu-runner
     timeout-minutes: 10
     strategy:
       fail-fast: false
