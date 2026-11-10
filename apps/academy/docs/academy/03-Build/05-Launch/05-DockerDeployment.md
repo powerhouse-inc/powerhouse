@@ -292,16 +292,23 @@ The memory leak signal is the used heap right after a major GC, not `heapUsed`, 
 
 #### Core Configuration
 
-| Variable                    | Description                                                          | Default                     |
-| --------------------------- | -------------------------------------------------------------------- | --------------------------- |
-| `PORT`                      | Port the server listens on (exported as `PH_SWITCHBOARD_PORT`)       | `3000`                      |
-| `PH_SWITCHBOARD_PORT`       | Explicit port override                                               | `$PORT`                     |
-| `PH_DEFAULT_DRIVE_TYPE`     | `powerhouse/document-drive` or `powerhouse/reactor-drive`            | _unset_                     |
-| `PH_PACKAGES`               | Comma-separated packages installed via pnpm at startup               | `""`                        |
-| `PH_REGISTRY_PACKAGES`      | Comma-separated packages loaded over HTTP from the registry at start | `""`                        |
-| `PH_REGISTRY_URL`           | Package registry base URL for HTTP package loading                   | `https://registry.vetra.io` |
-| `PH_SWITCHBOARD_PUBLIC_URL` | Public origin used for the remote attachment service                 | `http://localhost:$PORT`    |
-| `LOG_LEVEL`                 | Log level                                                            | `info`                      |
+| Variable                            | Description                                                          | Default                     |
+| ----------------------------------- | -------------------------------------------------------------------- | --------------------------- |
+| `PORT`                              | Port the server listens on (exported as `PH_SWITCHBOARD_PORT`)       | `3000`                      |
+| `PH_SWITCHBOARD_PORT`               | Explicit port override                                               | `$PORT`                     |
+| `PH_DEFAULT_DRIVE_TYPE`             | `powerhouse/document-drive` or `powerhouse/reactor-drive`            | _unset_                     |
+| `PH_DEFAULT_DRIVE_ID`               | Id of the drive created at boot                                      | `powerhouse`                |
+| `PH_DEFAULT_DRIVE_SLUG`             | Its slug (`/d/<slug>`)                                               | the id                      |
+| `PH_DEFAULT_DRIVE_NAME`             | Its name                                                             | `Powerhouse`                |
+| `PH_DEFAULT_DRIVE_ICON`             | Its icon URL                                                         | the Powerhouse icon         |
+| `PH_DEFAULT_DRIVE_PREFERRED_EDITOR` | Editor it opens in                                                   | _unset_                     |
+| `PH_PACKAGES`                       | Comma-separated packages installed via pnpm at startup               | `""`                        |
+| `PH_REGISTRY_PACKAGES`              | Comma-separated packages loaded over HTTP from the registry at start | `""`                        |
+| `PH_REGISTRY_URL`                   | Package registry base URL for HTTP package loading                   | `https://registry.vetra.io` |
+| `PH_SWITCHBOARD_PUBLIC_URL`         | Public origin used for the remote attachment service                 | `http://localhost:$PORT`    |
+| `LOG_LEVEL`                         | Log level                                                            | `info`                      |
+
+> The same fields can be set in `powerhouse.config.json` under `switchboard.drive` (`id`, `slug`, `name`, `icon`, `preferredEditor`); an env var overrides its field. The drive is created only if no drive with its id exists: changing the name, icon or editor later does not change an existing drive, and a new id creates a second drive next to the old one.
 
 #### Error Tracking & Monitoring
 
