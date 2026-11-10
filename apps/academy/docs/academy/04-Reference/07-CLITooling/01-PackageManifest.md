@@ -35,6 +35,18 @@ A package reads a boolean the way the Switchboard does: `process.env.AUTH_ENABLE
 
 ## Validation
 
-`ph generate` parses the manifest and stops on an invalid entry, naming the path and the problem,
-for example `config.0.type: type must be one of "var", "secret", "boolean"` or
-`config.2.default: default must be "true" or "false" for a boolean entry`.
+`ph generate` parses the manifest and stops on an invalid entry. The error is a JSON array with one
+item per problem. Each item gives its `path` as an array and its `message`, for example:
+
+```json
+[
+  {
+    "code": "invalid_value",
+    "path": ["config", 0, "type"],
+    "message": "type must be one of \"var\", \"secret\", \"boolean\""
+  }
+]
+```
+
+A boolean with a bad default gives `"path": ["config", 2, "default"]` and the message
+`default must be "true" or "false" for a boolean entry`.
