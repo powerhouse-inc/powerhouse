@@ -21,7 +21,7 @@ Repo traps that cost maintainers time. Each entry: symptom, cause, fix.
 
 ## Reactor runtime
 
-- **Event subscriber assertions race in tests.** `SimpleJobExecutor` emits `JOB_WRITE_READY` without awaiting it (`simple-job-executor.ts`). `WorkerPoolJobExecutorManager` awaits it. `EventBus.emit` awaits subscribers one at a time over a snapshot. Resolve a promise from the subscriber and await it instead of checking a flag.
+- **Event subscriber assertions race in tests.** Neither `SimpleJobExecutor` nor `WorkerPoolJobExecutorManager` awaits its `JOB_WRITE_READY` emit. `EventBus.emit` awaits subscribers one at a time over a snapshot. Resolve a promise from the subscriber and await it instead of checking a flag.
 - **Waiting for `WRITE_READY` hangs or ends early.** It isn't terminal. Only `READ_READY` and `FAILED` are.
 - **A new terminal job error retries until the limit.** `JobResultHandler` (`packages/reactor/src/executor/job-result-handler.ts`) retries any error missing from its `isError` allow-list. Add yours there. Only `name`, `message`, `stack` and `documentId` survive the queue and worker hops, so classify by `name`.
 
