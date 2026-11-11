@@ -1,0 +1,21 @@
+import { type BaseSubgraph } from "@powerhousedao/reactor-api";
+
+export const getResolvers = (
+  subgraph: BaseSubgraph,
+): Record<string, unknown> => {
+  // Reads go through the read client. Mutations take the write client from
+  // the resolver context, `ctx.clients.write`, which a query never gets.
+  // `subgraph.reactorClient` (the deprecated facade) still works meanwhile.
+  const read = subgraph.readClient;
+
+  return {
+    Query: {
+      foo: () => ({}), // namespace resolver for nested queries
+    },
+    FooSubgraphQueries: {
+      example: async (parent: unknown, args: { driveId: string }) => {
+        return "example";
+      },
+    },
+  };
+};

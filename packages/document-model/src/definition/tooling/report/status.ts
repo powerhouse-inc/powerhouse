@@ -119,7 +119,7 @@ export function definitionCheckReport(input: {
   ).length;
   const common = {
     kind: "powerhouse.definition-check",
-    formatVersion: 1,
+    formatVersion: 2,
     profile: input.profile,
     sourceSet: input.sourceSet,
     definitions,

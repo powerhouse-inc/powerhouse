@@ -1,9 +1,11 @@
 import type { DefinitionCheckReport } from "@powerhousedao/shared/document-model";
 import {
   checkProjectDefinitions,
+  type DefinitionCheck,
   documentModelChecks,
   type HostValidationEvidence,
   type ProjectDefinitions,
+  type ReleaseCheckInput,
   releaseChecks,
 } from "document-model/tooling";
 import { existsSync, readFileSync } from "node:fs";
@@ -27,6 +29,17 @@ export type ReleaseCheck = {
   readonly report: DefinitionCheckReport;
   readonly host: HostValidationEvidence;
   readonly scalars: readonly ScalarBinding[];
+};
+
+/**
+ * Checks another layer adds to the release profile, with the input they
+ * read and the inventory entries they cover. The command boundary passes
+ * them in, so release code imports no module of that layer.
+ */
+export type ReleaseContributions<TInput extends object> = {
+  readonly checks: readonly DefinitionCheck<ReleaseCheckInput & TInput>[];
+  readonly input: TInput;
+  readonly inventory: DefinitionCheckReport["definitions"];
 };
 
 const errorMessage = (error: unknown) =>
@@ -123,18 +136,36 @@ async function validateForHost(
 /**
  * The release profile: the edit checks plus the release checks, over every
  * artifact, stored models included, with host validation as evidence.
- * Writes nothing.
+ * `contributions` adds another layer's checks to the one report the
+ * approval records. Writes nothing.
  */
-export async function checkForRelease(
+export async function checkForRelease<TInput extends object>(
   project: ProjectDefinitions,
   modules: PackageModules,
+  options: { readonly contributions?: ReleaseContributions<TInput> } = {},
 ): Promise<ReleaseCheck> {
   const identity = packageIdentity(project.packageRoot);
   const host = await validateForHost(project, modules, identity);
-  const report = await checkProjectDefinitions(
-    { ...project, release: { host } },
-    { checks: [...documentModelChecks, ...releaseChecks], profile: "release" },
-  );
+  const { contributions } = options;
+  const input = { ...project, release: { host } };
+  const report =
+    contributions === undefined
+      ? await checkProjectDefinitions(input, {
+          checks: [...documentModelChecks, ...releaseChecks],
+          profile: "release",
+        })
+      : await checkProjectDefinitions<ReleaseCheckInput & TInput>(
+          { ...input, ...contributions.input },
+          {
+            checks: [
+              ...documentModelChecks,
+              ...releaseChecks,
+              ...contributions.checks,
+            ],
+            definitions: contributions.inventory,
+            profile: "release",
+          },
+        );
   return {
     report,
     host,

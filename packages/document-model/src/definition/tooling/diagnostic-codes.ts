@@ -7,24 +7,18 @@ export const toolingDiagnostics = defineDiagnosticCatalog(
       severity: "error",
       phase: "configuration",
       meaning:
-        "The config file, a definition source entry, or an export pointer cannot select a module export",
+        "The config file, the models directory, a model directory's entry, or an export pointer cannot select a module export",
     },
     "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE": {
       severity: "error",
       phase: "configuration",
       meaning:
-        "A definition source path, or the real path behind its symlinks, leaves the package root",
+        "The models directory, a model directory, or the real path behind its symlinks, leaves the package root",
     },
     "PH-CONFIG-DUPLICATE-SOURCE": {
       severity: "error",
       phase: "configuration",
-      meaning: "Two entries select the same module and export path",
-    },
-    "PH-CONFIG-VERSION-UNSUPPORTED": {
-      severity: "error",
-      phase: "configuration",
-      meaning:
-        "definitionSources declares a format version this release does not read",
+      meaning: "Two sources select the same module and export path",
     },
     "PH-IMPORT-FAILED": {
       severity: "error",
@@ -37,6 +31,12 @@ export const toolingDiagnostics = defineDiagnosticCatalog(
       phase: "package",
       meaning:
         "A selected export holds no materialized document model, family, or upgrade manifest",
+    },
+    "PH-PKG-STORED-SPEC-MISSING": {
+      severity: "warning",
+      phase: "package",
+      meaning:
+        "A model directory holds generated schema-first code without its stored specification",
     },
     "PH-PKG-DEFINITION-UNINSPECTABLE": {
       severity: "error",

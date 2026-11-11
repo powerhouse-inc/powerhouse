@@ -33,7 +33,7 @@ it("scaffolds a code-first model under Node's own module resolution", async () =
       },
     );
     expect(stdout.trim().split("\n").slice(-2)).toEqual([
-      "Registered acme-things/todo-list in powerhouse.config.json definitionSources (created)",
+      "Wrote powerhouse.manifest.json",
       'Generated editor "Todo List Editor" in editors/todo-list-editor',
     ]);
     expect(readJson(dir, "powerhouse.manifest.json")).toMatchObject({

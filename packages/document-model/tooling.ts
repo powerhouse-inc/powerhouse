@@ -9,6 +9,13 @@ export type {
 } from "./src/definition/tooling/adapters/types.js";
 export { DefinitionSourceLoader } from "./src/definition/tooling/definition-source-loader.js";
 export { resolveDefinitionSelection } from "./src/definition/tooling/definition-source-resolution.js";
+export {
+  DEFAULT_DOCUMENT_MODELS_DIR,
+  discoverDocumentModelDirectories,
+  resolveDocumentModelsDir,
+  type DocumentModelDirectories,
+  type DocumentModelDirectory,
+} from "./src/definition/tooling/model-directories.js";
 export type {
   DefinitionSourceLoadRequest,
   DefinitionSourceOrigin,
@@ -38,6 +45,34 @@ export type {
   DocumentModelInspection,
 } from "./src/definition/tooling/inspect/types.js";
 export {
+  codeFirstDeclarationFiles,
+  findUnregisteredDefinitions,
+} from "./src/definition/tooling/project/unregistered-definitions.js";
+export { unregisteredDefinitionDiagnostics } from "./src/definition/tooling/check/checks/unregistered-definitions.js";
+export {
   loadProjectDefinitions,
   type ProjectDefinitions,
 } from "./src/definition/tooling/project/project-definitions.js";
+export {
+  subgraphChecks,
+  type SubgraphChecksInput,
+} from "./src/definition/tooling/subgraph/checks.js";
+export {
+  subgraphCheckInput,
+  type SubgraphCheckInput,
+  type SubgraphHostConflict,
+  type SubgraphImportFailure,
+  type SubgraphInventoryEntry,
+} from "./src/definition/tooling/subgraph/input.js";
+export {
+  type SubgraphInspection,
+  type SubgraphInspectionReport,
+  withSubgraphInspection,
+} from "./src/definition/tooling/subgraph/inspection.js";
+export {
+  type CodeFirstSubgraph,
+  readSubgraphDefinitions,
+  type SubgraphDefinitions,
+  type TypedSubgraphDefinition,
+} from "./src/definition/tooling/subgraph/read.js";
+export type { SchemaFirstSubgraphSource } from "./src/definition/tooling/subgraph/schema-first/sdl-conflicts.js";

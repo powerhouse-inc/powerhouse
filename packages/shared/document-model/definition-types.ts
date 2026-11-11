@@ -552,32 +552,21 @@ export type DocumentModelDefinition = {
 
 export type DefinitionCheckProfile = "edit" | "release";
 
-export type DefinitionSourcesConfig = {
-  readonly formatVersion: 1;
-} & (
-  | {
-      readonly mode: "code-first";
-      readonly entries: readonly DefinitionSource[];
-    }
-  | { readonly mode: "schema-first"; readonly entries?: never }
-);
-
-export type DefinitionCheckRequest = {
-  readonly formatVersion: 1;
-  readonly profile: DefinitionCheckProfile;
-  readonly warningsAsErrors?: boolean;
-} & (
-  | {
-      readonly sourceMode: "code-first";
-      readonly sourceOrigin: "config" | "cli" | "request";
-      readonly sources: readonly [DefinitionSource, ...DefinitionSource[]];
-    }
-  | {
-      readonly sourceMode: "schema-first";
-      readonly sourceOrigin: "config";
-      readonly sources?: never;
-    }
-);
+/**
+ * The document model sources a check or inspection read. Discovery lists
+ * each model directory's entry module (code-first) and stored specification
+ * (schema-first); `request` means a caller named the modules itself.
+ */
+export type DefinitionSourceSet = {
+  readonly origin: "discovery" | "request";
+  /** The package-relative directory discovery read. */
+  readonly documentModelsDir: `./${string}`;
+  readonly digest: Sha256Digest;
+  /** Code-first entry modules, sorted. */
+  readonly sources: readonly DefinitionSource[];
+  /** Schema-first stored specifications, sorted. */
+  readonly stored: readonly DefinitionSource[];
+};
 
 export type DefinitionCompatibilitySelection = {
   readonly identity: "derived-v1" | "explicit-schema-first";
@@ -591,14 +580,9 @@ export type DefinitionCompatibilitySelection = {
 
 export type DefinitionCheckReport = {
   readonly kind: "powerhouse.definition-check";
-  readonly formatVersion: 1;
+  readonly formatVersion: 2;
   readonly profile: DefinitionCheckProfile;
-  readonly sourceSet: {
-    readonly mode: "code-first" | "schema-first";
-    readonly origin: "config" | "cli" | "request";
-    readonly digest: Sha256Digest;
-    readonly sources: readonly DefinitionSource[];
-  };
+  readonly sourceSet: DefinitionSourceSet;
   readonly definitions: readonly (DefinitionRef & {
     readonly digest?: Sha256Digest;
     readonly source: DefinitionSource;
@@ -620,10 +604,8 @@ export type DefinitionCheckReport = {
     }
 );
 
-export type DefinitionCheckSkipReason =
-  | "explicit-schema-first-mode"
-  | "definition-sources-absent"
-  | "definition-sources-empty";
+/** The package has no document model directory to check. */
+export type DefinitionCheckSkipReason = "no-document-models";
 
 /**
  * `fieldName` is `null` for a resolver bound to a type rather than a field.

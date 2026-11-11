@@ -1,4 +1,3 @@
-import { DEFAULT_AUTHORING_MODE } from "@powerhousedao/shared/clis/definition-sources";
 import { execFileSync } from "node:child_process";
 import {
   cpSync,
@@ -21,6 +20,7 @@ import {
   materializeFixturePackage,
   nodeImporter,
   packageRevisionOf,
+  requestedSources,
   runLoaderSelection,
 } from "./loader-contract.js";
 
@@ -46,7 +46,6 @@ describe("definition source loader contract", () => {
       const outcome = await runLoaderSelection(testCase, nodeImporter);
       expect({
         status: outcome.status,
-        mode: outcome.mode,
         origin: outcome.origin,
         diagnosticCodes: outcome.diagnosticCodes,
         documentModels: outcome.documentModels,
@@ -63,8 +62,8 @@ describe("definition source loader contract", () => {
 describe("DefinitionSourceLoader", () => {
   it("produces byte-identical results for two orderings of one selection", async () => {
     const [ordered, reordered] = await Promise.all(
-      ["powerhouse.config.json", "reordered.config.json"].map((configFile) =>
-        runLoaderSelection({ fixture: "control", configFile }, nodeImporter),
+      ["control.sources.json", "reordered.sources.json"].map((sources) =>
+        runLoaderSelection({ fixture: "control", sources }, nodeImporter),
       ),
     );
     expect(JSON.stringify(reordered.documentModels)).toBe(
@@ -77,22 +76,22 @@ describe("DefinitionSourceLoader", () => {
 
   it("names both duplicate positions", async () => {
     const { diagnostics } = await runLoaderSelection(
-      { fixture: "control", configFile: "duplicate.config.json" },
+      { fixture: "control", sources: "duplicate.sources.json" },
       nodeImporter,
     );
     expect(diagnostics.map(({ path, related }) => ({ path, related }))).toEqual(
       [
         {
-          path: ["definitionSources", "entries", 0],
+          path: ["sources", 0],
           related: [
             {
               source: {
                 specifier: "./src/invoice.ts",
                 exportPath: ["invoiceFamily"],
               },
-              path: ["definitionSources", "entries", 1],
+              path: ["sources", 1],
               message:
-                "This entry resolves to the same module and export path.",
+                "This source resolves to the same module and export path.",
             },
           ],
         },
@@ -102,7 +101,7 @@ describe("DefinitionSourceLoader", () => {
 
   it("keeps each structured diagnostic's own code, path, phase and repair", async () => {
     const { diagnostics } = await runLoaderSelection(
-      { fixture: "failures" },
+      { fixture: "failures", sources: "failures.sources.json" },
       nodeImporter,
     );
     expect(
@@ -126,7 +125,7 @@ describe("DefinitionSourceLoader", () => {
 
   it("keeps the other claimant of a duplicate name as a related location", async () => {
     const { diagnostics } = await runLoaderSelection(
-      { fixture: "failures", configFile: "duplicate.config.json" },
+      { fixture: "failures", sources: "duplicate.sources.json" },
       nodeImporter,
     );
     expect(
@@ -153,7 +152,7 @@ describe("DefinitionSourceLoader", () => {
 
   it("keeps an ordinary import failure in the import phase", async () => {
     const { diagnostics } = await runLoaderSelection(
-      { fixture: "failures", configFile: "throwing.config.json" },
+      { fixture: "failures", sources: "throwing.sources.json" },
       nodeImporter,
     );
     expect(
@@ -175,7 +174,7 @@ describe("DefinitionSourceLoader", () => {
 
   it("names both sources of a logical collision", async () => {
     const { diagnostics } = await runLoaderSelection(
-      { fixture: "collisions" },
+      { fixture: "collisions", sources: "collisions.sources.json" },
       nodeImporter,
     );
     expect(
@@ -199,21 +198,12 @@ describe("DefinitionSourceLoader", () => {
         join(outside.root, "src", "invoice.ts"),
         join(fixture.root, "src", "linked.ts"),
       );
-      writeFileSync(
-        join(fixture.root, "symlink.config.json"),
-        JSON.stringify({
-          definitionSources: {
-            formatVersion: 1,
-            mode: "code-first",
-            entries: [{ specifier: "./src/linked.ts" }],
-          },
-        }),
-      );
       const importer = countingImporter(nodeImporter());
       const result = await new DefinitionSourceLoader(
         importer,
-      ).normalizeDefinitionSources({
-        configFile: join(fixture.root, "symlink.config.json"),
+      ).normalizeRequestedSources({
+        configFile: join(fixture.root, "powerhouse.config.json"),
+        sources: [{ specifier: "./src/linked.ts" }],
         packageRevision: packageRevisionOf(fixture.root),
       });
       expect(result.status).toBe("failed");
@@ -236,21 +226,12 @@ describe("DefinitionSourceLoader", () => {
         join(outside.root, "src", "not-written-yet.ts"),
         join(fixture.root, "src", "linked.ts"),
       );
-      writeFileSync(
-        join(fixture.root, "symlink.config.json"),
-        JSON.stringify({
-          definitionSources: {
-            formatVersion: 1,
-            mode: "code-first",
-            entries: [{ specifier: "./src/linked.ts" }],
-          },
-        }),
-      );
       const importer = countingImporter(nodeImporter());
       const result = await new DefinitionSourceLoader(
         importer,
-      ).normalizeDefinitionSources({
-        configFile: join(fixture.root, "symlink.config.json"),
+      ).normalizeRequestedSources({
+        configFile: join(fixture.root, "powerhouse.config.json"),
+        sources: [{ specifier: "./src/linked.ts" }],
         packageRevision,
       });
       expect(result.diagnostics.map(({ code }) => code)).toEqual([
@@ -327,9 +308,10 @@ describe("DefinitionSourceLoader", () => {
       const request = () => ({
         configFile: join(fixture.root, "powerhouse.config.json"),
         packageRevision: packageRevisionOf(fixture.root),
+        sources: requestedSources(fixture.root, "control.sources.json"),
       });
-      const first = await loader.normalizeDefinitionSources(request());
-      const again = await loader.normalizeDefinitionSources(request());
+      const first = await loader.normalizeRequestedSources(request());
+      const again = await loader.normalizeRequestedSources(request());
       expect(importer.imported).toEqual([
         "./src/catalog.ts",
         "./src/invoice.ts",
@@ -337,7 +319,7 @@ describe("DefinitionSourceLoader", () => {
       expect(again.documentModels[0].value).toBe(first.documentModels[0].value);
 
       writeFileSync(join(fixture.root, "src", "helper.ts"), HELPER_EDIT);
-      const edited = await loader.normalizeDefinitionSources(request());
+      const edited = await loader.normalizeRequestedSources(request());
       expect(importer.imported).toHaveLength(4);
       const definitionOf = (value: unknown) =>
         JSON.stringify((value as { definition: unknown }).definition);
@@ -364,9 +346,10 @@ describe("DefinitionSourceLoader", () => {
     try {
       const loader = new DefinitionSourceLoader(nodeImporter());
       const received = async (packageRevision: unknown) => {
-        const result = await loader.normalizeDefinitionSources({
+        const result = await loader.normalizeRequestedSources({
           configFile: join(fixture.root, "powerhouse.config.json"),
           packageRevision: packageRevision as never,
+          sources: requestedSources(fixture.root, "control.sources.json"),
         });
         return [
           result.status,
@@ -394,10 +377,11 @@ describe("DefinitionSourceLoader", () => {
       const controller = new AbortController();
       controller.abort();
       await expect(
-        new DefinitionSourceLoader(nodeImporter()).normalizeDefinitionSources({
+        new DefinitionSourceLoader(nodeImporter()).normalizeRequestedSources({
           configFile: join(fixture.root, "powerhouse.config.json"),
           packageRevision: packageRevisionOf(fixture.root),
           signal: controller.signal,
+          sources: requestedSources(fixture.root, "control.sources.json"),
         }),
       ).rejects.toMatchObject({ name: "AbortError" });
     } finally {
@@ -405,25 +389,23 @@ describe("DefinitionSourceLoader", () => {
     }
   });
 
-  it("resolves the selection without importing anything", () => {
-    const first = materializeFixturePackage("control");
-    const second = materializeFixturePackage("control");
+  it("discovers the model directories without importing anything", () => {
+    const first = materializeFixturePackage("mixed");
+    const second = materializeFixturePackage("mixed");
     try {
       const importer = countingImporter(nodeImporter());
       const loader = new DefinitionSourceLoader(importer);
-      const resolve = (root: string, configFile = "powerhouse.config.json") =>
-        loader.resolve({ configFile: join(root, configFile) });
+      const resolve = (root: string) =>
+        loader.resolve({ configFile: join(root, "powerhouse.config.json") });
       const resolution = resolve(first.root);
       expect(resolution).toMatchObject({
         status: "ready",
         packageRoot: first.root,
         sourceSet: {
-          mode: "code-first",
-          origin: "config",
-          sources: [
-            { specifier: "./src/catalog.ts" },
-            { specifier: "./src/invoice.ts", exportPath: ["invoiceFamily"] },
-          ],
+          origin: "discovery",
+          documentModelsDir: "./document-models",
+          sources: [{ specifier: "./document-models/ledger/index.ts" }],
+          stored: [{ specifier: "./document-models/wallet/wallet.json" }],
         },
       });
 
@@ -431,9 +413,6 @@ describe("DefinitionSourceLoader", () => {
       expect(resolve(second.root).sourceSet.digest).toBe(
         resolution.sourceSet.digest,
       );
-      expect(
-        resolve(first.root, "reordered.config.json").sourceSet.digest,
-      ).toBe(resolution.sourceSet.digest);
       expect(importer.imported).toEqual([]);
     } finally {
       first.dispose();
@@ -450,9 +429,10 @@ describe("DefinitionSourceLoader", () => {
             "not a namespace" as unknown as Readonly<Record<string, unknown>>,
           ),
       });
-      const result = await loader.normalizeDefinitionSources({
+      const result = await loader.normalizeRequestedSources({
         configFile: join(fixture.root, "powerhouse.config.json"),
         packageRevision: packageRevisionOf(fixture.root),
+        sources: requestedSources(fixture.root, "control.sources.json"),
       });
       expect(
         result.diagnostics.map(({ code, source }) => [code, source]),
@@ -471,22 +451,18 @@ describe("DefinitionSourceLoader", () => {
 
 it.each(["./src/catalog", "./src", "./src/catalog.ts/"])(
   "refuses a source without a module-file extension: %s",
-  (specifier) => {
+  async (specifier) => {
     const fixture = materializeFixturePackage("control");
     try {
       const configFile = join(fixture.root, "powerhouse.config.json");
-      writeFileSync(
+      const result = await new DefinitionSourceLoader({
+        importModule() {
+          throw new Error("unexpected import");
+        },
+      }).normalizeRequestedSources({
         configFile,
-        JSON.stringify({
-          definitionSources: {
-            formatVersion: 1,
-            mode: "code-first",
-            entries: [{ specifier }],
-          },
-        }),
-      );
-      const result = new DefinitionSourceLoader(nodeImporter()).resolve({
-        configFile,
+        packageRevision: packageRevisionOf(fixture.root),
+        sources: [{ specifier }],
       });
       expect(result.status).toBe("failed");
       expect(result.diagnostics.map(({ code }) => code)).toEqual([
@@ -505,23 +481,14 @@ it.each(["./src/entry.cjs", "./src/entry.cts"])(
     try {
       const configFile = join(fixture.root, "powerhouse.config.json");
       writeFileSync(join(fixture.root, specifier), "module.exports = {};\n");
-      writeFileSync(
-        configFile,
-        JSON.stringify({
-          definitionSources: {
-            formatVersion: 1,
-            mode: "code-first",
-            entries: [{ specifier }],
-          },
-        }),
-      );
       const result = await new DefinitionSourceLoader({
         importModule() {
           throw new Error("unexpected import");
         },
-      }).normalizeDefinitionSources({
+      }).normalizeRequestedSources({
         configFile,
         packageRevision: packageRevisionOf(fixture.root),
+        sources: [{ specifier }],
       });
       expect(
         result.diagnostics.map(({ code, message, expected, repair }) => ({
@@ -585,7 +552,7 @@ it("loads the Node tooling entry without graphql", () => {
 });
 
 it.each([true, false])(
-  "reports the shared default when config exists = %s",
+  "discovers the default models directory when config exists = %s",
   (exists) => {
     const root = mkdtempSync(join(tmpdir(), "ph-loader-default-"));
     try {
@@ -599,8 +566,11 @@ it.each([true, false])(
       const result = loader.resolve({ configFile, allowMissingConfig: true });
       expect(result).toMatchObject({
         status: "skipped",
-        skipReason: "definition-sources-absent",
-        sourceSet: { mode: DEFAULT_AUTHORING_MODE },
+        skipReason: "no-document-models",
+        sourceSet: {
+          origin: "discovery",
+          documentModelsDir: "./document-models",
+        },
       });
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -630,9 +600,10 @@ describe("importPackageModule", () => {
       });
       const loader = new DefinitionSourceLoader(importer);
       const packageRevision = packageRevisionOf(fixture.root);
-      await loader.normalizeDefinitionSources({
+      await loader.normalizeRequestedSources({
         configFile: join(fixture.root, "powerhouse.config.json"),
         packageRevision,
+        sources: requestedSources(fixture.root, "control.sources.json"),
       });
       const exportsOf = async (specifier: `./${string}`, config: string) => {
         const result = await loader.importPackageModule({

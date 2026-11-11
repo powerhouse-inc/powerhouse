@@ -1,3 +1,4 @@
+import { modelGeneration } from "@powerhousedao/codegen";
 import {
   buildTsMorphProject,
   getEditorMetadata,
@@ -13,7 +14,6 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { GenerateEditorArgs } from "../types.js";
 import { resolveModuleDirName } from "../utils/module-dir.js";
-import { selectProjectModelGeneration } from "./definitions/authoring-mode.js";
 
 const MODULE_FILE_EXPECTATION =
   "an EditorModule with string literals for config.id, config.name and documentTypes";
@@ -41,9 +41,7 @@ export async function startGenerateEditor(
   const report: string[] = [];
   if (all) {
     const { editors, unreadableDirs } =
-      await selectProjectModelGeneration(projectDir).generateAllEditors(
-        project,
-      );
+      await modelGeneration.generateAllEditors(project);
     if (editors.length === 0 && unreadableDirs.length === 0) {
       report.push("No document editors found in editors/.");
     }
@@ -66,7 +64,7 @@ export async function startGenerateEditor(
         "Please specify a document type for the new editor to generate.",
       );
     }
-    await selectProjectModelGeneration(projectDir).generateEditor(
+    await modelGeneration.generateEditor(
       { editorName: name, documentTypes: [documentType] },
       project,
     );
@@ -97,7 +95,7 @@ export async function startGenerateEditor(
       dirName: editorDirName,
       documentTypes,
     } = editorArgs;
-    await selectProjectModelGeneration(projectDir).generateEditor(
+    await modelGeneration.generateEditor(
       {
         editorName,
         editorId,

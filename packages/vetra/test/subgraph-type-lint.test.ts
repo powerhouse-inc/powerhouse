@@ -230,6 +230,50 @@ describe("lintSubgraphTypes", () => {
 
     expect(await lintSubgraphTypes(root)).toEqual([]);
   });
+
+  it("checks only the name of a code-first subgraph, and the schema-first one beside it", async () => {
+    const root = makeProject({
+      "subgraph-module": template("SubgraphModule", "subgraphModule"),
+      ledger: schemaFile(`
+        type Operation {
+          id: ID
+        }
+        type Query {
+          ledger: Operation
+        }
+      `),
+    });
+    // Its schema.ts still holds SDL the lint would refuse; only its name
+    // is checked.
+    writeFileSync(
+      join(root, "subgraphs", "subgraph-module", "index.ts"),
+      'import { Subgraph } from "@powerhousedao/reactor-api";\n\nexport class SubgraphModuleSubgraph extends Subgraph {\n  static override readonly subgraphName = "subgraph-module";\n}\n',
+    );
+
+    expect(await lintSubgraphTypes(root)).toEqual([
+      'Subgraph "ledger" defines Operation (owned by "document-model schema"), so the supergraph leaves it out. Rename them in its schema.ts.',
+      'Subgraph "subgraph-module" has the name of a document model subgraph, so the server refuses it. Rename the subgraph.',
+    ]);
+  });
+  it("reads a code-first subgraph's name from a module in a subfolder that its index.ts re-exports", async () => {
+    const root = makeProject({
+      tools: template("Tools", "tools"),
+    });
+    const dir = join(root, "subgraphs", "tools");
+    mkdirSync(join(dir, "src"));
+    writeFileSync(
+      join(dir, "index.ts"),
+      'export { ToolsSubgraph } from "./src/tools.js";\n',
+    );
+    writeFileSync(
+      join(dir, "src", "tools.ts"),
+      'import { Subgraph } from "@powerhousedao/reactor-api";\n\nexport class ToolsSubgraph extends Subgraph {\n  static override readonly subgraphName = "system";\n}\n',
+    );
+
+    expect(await lintSubgraphTypes(root)).toEqual([
+      'Subgraph "system" has the name of a core subgraph, so the server refuses it. Rename the subgraph.',
+    ]);
+  });
 });
 
 describe("findSubgraphNameConflict", () => {

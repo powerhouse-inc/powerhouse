@@ -130,6 +130,12 @@ export function loadDocumentModelInDir(
     dirent.parentPath,
     `${dirent.name}/${dirent.name}.json`,
   );
+  return loadDocumentModelSpec(specPath);
+}
+
+export function loadDocumentModelSpec(
+  specPath: string,
+): DocumentModelGlobalState | undefined {
   if (!fileExistsSync(specPath)) return undefined;
   const parseResult = pipe(specPath, loadJsonFileSync, (stateFile) =>
     DocumentModelGlobalStateSchema().safeParse(stateFile),

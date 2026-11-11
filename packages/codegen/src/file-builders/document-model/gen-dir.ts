@@ -28,6 +28,7 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "utils";
+import { importingFrom } from "./import-paths.js";
 
 export async function makeDocumentModelGenDirOperationModulesFiles(
   fileMakerArgs: DocumentModelFileMakerArgs,
@@ -224,7 +225,7 @@ export async function makeDocumentModelGenReducerFile(
   args: DocumentModelFileMakerArgs,
 ) {
   const template = documentModelGenReducerFileTemplate(
-    args,
+    importingFrom(args, args.genDirPath),
     getOperationsWithProjectScalarInput(args.specification),
   );
   const { project, genDirPath } = args;

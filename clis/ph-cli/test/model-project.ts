@@ -29,15 +29,6 @@ const DOCUMENT_MODEL = join(
 export const LEDGER = "./document-models/ledger/index.ts";
 export const WALLET = "./document-models/wallet/wallet.json";
 
-export const codeFirstConfig = (...specifiers: string[]) =>
-  JSON.stringify({
-    definitionSources: {
-      formatVersion: 1,
-      mode: "code-first",
-      entries: specifiers.map((specifier) => ({ specifier })),
-    },
-  });
-
 /** The fixture parts each project shape starts from. */
 export const SHAPES = {
   empty: { parts: [], config: "{}" },
@@ -47,11 +38,11 @@ export const SHAPES = {
   },
   "code-first": {
     parts: ["scalars", "document-models/ledger"],
-    config: codeFirstConfig(LEDGER),
+    config: "{}",
   },
   mixed: {
     parts: ["scalars", "document-models/ledger", "document-models/wallet"],
-    config: codeFirstConfig(LEDGER),
+    config: "{}",
   },
 } as const satisfies Record<
   string,

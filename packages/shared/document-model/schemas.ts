@@ -749,20 +749,35 @@ export const PublisherSchema = z.object({
   url: z.string().optional(),
 });
 
-export const ConfigEntryTypeSchema = z.union([
-  z.literal("var"),
-  z.literal("secret"),
-]);
-
-export const ConfigEntrySchema = z.object({
-  name: z.string(),
-  type: ConfigEntryTypeSchema,
-  description: z.string().optional(),
-  required: z.boolean().optional(),
-  // The value the host falls back to, spelled as the env var would be. Only
-  // meaningful for `var`; a `secret` has no default worth publishing.
-  default: z.string().optional(),
+export const ConfigEntryTypeSchema = z.enum(["var", "secret", "boolean"], {
+  error: 'type must be one of "var", "secret", "boolean"',
 });
+
+export const ConfigEntrySchema = z
+  .object({
+    name: z.string(),
+    type: ConfigEntryTypeSchema,
+    description: z.string().optional(),
+    required: z.boolean().optional(),
+    // The value the host falls back to, spelled as the env var would be:
+    // "true" or "false" for a `boolean`. A `secret` has no default worth
+    // publishing; hosts ignore it.
+    default: z.string().optional(),
+  })
+  .superRefine((entry, ctx) => {
+    if (
+      entry.type === "boolean" &&
+      entry.default !== undefined &&
+      entry.default !== "true" &&
+      entry.default !== "false"
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["default"],
+        message: 'default must be "true" or "false" for a boolean entry',
+      });
+    }
+  });
 
 // PWA / service-worker overrides a package contributes to a Connect build: a
 // hand-kept mirror of `connectPwaSchema` (shared/connect/connect-config-schema.ts),

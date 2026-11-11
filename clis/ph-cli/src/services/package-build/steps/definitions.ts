@@ -35,7 +35,7 @@ function definitionsWorker(): { path: string; execArgv: string[] } {
  * that ends without a reply, outlives `timeoutMs` or outlives a stop of the
  * build is killed, and the reply says why the check could not run.
  */
-function checkInChild<P extends DefinitionsProfile>(
+export function checkInChild<P extends DefinitionsProfile>(
   projectRoot: string,
   profile: P,
   session: BuildSession,
@@ -91,8 +91,9 @@ function checkInChild<P extends DefinitionsProfile>(
 /**
  * Checks the package's definitions after tsc and before any bundle, when
  * `ph build` asks or with `--release`. Without `--release` it checks the
- * code-first sources the package selects, never stops the build, and skips
- * without a word a package that selects none. With `--release`
+ * package when discovery finds a code-first model directory or cannot read
+ * the models directory, never stops the build, and skips without a word a
+ * package with no code-first model. With `--release`
  * (experimental) it runs the release profile over every model, stored ones
  * included, and stops the build when the check is invalid or cannot run, a
  * configuration error included. The package's modules load only in the
@@ -111,12 +112,7 @@ export function definitionsStepWithin(timeoutMs: number): StandardBuildStep {
           configFile: join(projectRoot, "powerhouse.config.json"),
           allowMissingConfig: true,
         });
-        if (
-          selection.status !== "ready" ||
-          selection.sourceSet.sources.length === 0
-        ) {
-          return;
-        }
+        if (selection.status === "skipped") return;
       }
       const { renderCheckReport } = await import("../../model/render.js");
       const printReport = (report: DefinitionCheckReport) => {

@@ -52,6 +52,7 @@ export async function tsMorphGenerateDocumentEditor({
   const documentTypeMetadata = getDocumentTypeMetadata({
     project,
     documentModelId,
+    importingDir: editorDirPath,
   });
 
   const editorVariableNames = getEditorVariableNames(documentTypeMetadata);

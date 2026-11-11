@@ -31,7 +31,7 @@ const RANKS: [RegExp, number][] = [
   [/^services\/release\//, 1],
   [/^services\/package-build\/steps\//, 2],
   [/^services\/model\//, 2],
-  [/^services\/(package-build\/run-build|build)\.ts$/, 3],
+  [/^services\/(package-build\/run-build|build|subgraph-build-step)\.ts$/, 3],
   [/^commands\//, 4],
 ];
 
@@ -117,6 +117,7 @@ beforeAll(() => {
     ...sourcesIn(join(SRC, "services/compiler-output")),
     ...sourcesIn(join(SRC, "services/model")),
     join(SRC, "services/build.ts"),
+    join(SRC, "services/subgraph-build-step.ts"),
     ...sourcesIn(join(SRC, "commands")),
   ];
   const fromSrc = (path: string) => relative(SRC, path).replaceAll("\\", "/");

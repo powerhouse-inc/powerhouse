@@ -8,6 +8,7 @@ import {
   documentModelUtilsTemplate,
 } from "templates";
 import { formatSourceFileWithPrettier, getOrCreateSourceFile } from "utils";
+import { importingFrom } from "./import-paths.js";
 
 export async function makeDocumentModelVersionIndexFile(
   args: DocumentModelFileMakerArgs,
@@ -53,8 +54,10 @@ export async function makeDocumentModelRootActionsFile(
 export async function makeDocumentModelHooksFile(
   args: DocumentModelFileMakerArgs,
 ) {
-  const template = documentModelHooksFileTemplate(args);
   const { project, versionDirPath } = args;
+  const template = documentModelHooksFileTemplate(
+    importingFrom(args, versionDirPath),
+  );
 
   const filePath = path.join(versionDirPath, "hooks.ts");
 

@@ -1,3 +1,35 @@
+## 6.2.3-dev.102 (2026-11-11)
+
+### 🚀 Features
+
+- **ph-cli:** add ph migrate --subgraphs to convert schema-first subgraphs ([9925e763b3](https://github.com/powerhouse-inc/powerhouse/commit/9925e763b3))
+- **ph-cli:** check, inspect, build and release code-first subgraphs ([e4c28c0a22](https://github.com/powerhouse-inc/powerhouse/commit/e4c28c0a22))
+- **document-model:** add the code-first subgraph definition layer and checks ([ed3a0ddb00](https://github.com/powerhouse-inc/powerhouse/commit/ed3a0ddb00))
+
+### 🩹 Fixes
+
+- **ph-cli:** stop logging the database URL in switchboard migrate ([#3070](https://github.com/powerhouse-inc/powerhouse/pull/3070))
+
+### ❤️ Thank You
+
+- froid1911
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.3-dev.101 (2026-11-10)
+
+### 🩹 Fixes
+
+- **ci:** avoid competing package test processes ([2c2dee4745](https://github.com/powerhouse-inc/powerhouse/commit/2c2dee4745))
+- **ci:** bound workers within concurrent test suites ([50a6722880](https://github.com/powerhouse-inc/powerhouse/commit/50a6722880))
+
+### 🔥 Performance
+
+- **ci:** overlap test suites and cache dependency downloads ([6bd75d0db4](https://github.com/powerhouse-inc/powerhouse/commit/6bd75d0db4))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.100 (2026-11-09)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

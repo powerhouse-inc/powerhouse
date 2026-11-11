@@ -11,7 +11,11 @@ import type { DefinitionCheck } from "../../src/definition/tooling/check/types.j
 import type { DefinitionCheckInput } from "../../src/definition/tooling/report/types.js";
 import { inspectProjectDefinitions } from "../../src/definition/tooling/inspect/inspect-project-definitions.js";
 import { defaultDefinitionProducers } from "../../src/definition/tooling/project/project-definitions.js";
-import { loadFixture, storedModel } from "./project-fixtures.js";
+import {
+  CONTROL_INVOICE_ENTRY,
+  loadFixture,
+  storedModel,
+} from "./project-fixtures.js";
 
 const WALLET = { specifier: "./document-models/wallet/wallet.json" } as const;
 const LEDGER = { specifier: "./document-models/ledger/index.ts" } as const;
@@ -43,7 +47,7 @@ const brief = (diagnostics: readonly DefinitionDiagnostic[]) =>
 describe("loadProjectDefinitions on a schema-first package", () => {
   it("adapts each stored model with the package's project scalars", async () => {
     const { project, report } = await loadFixture("stored");
-    expect(project.skipReason).toBe("definition-sources-absent");
+    expect(project.skipReason).toBeUndefined();
     expect(project.unregistered).toEqual([]);
     expect(project.artifacts[0].definition.specifications[0].scalars).toEqual([
       {
@@ -68,7 +72,7 @@ describe("loadProjectDefinitions on a schema-first package", () => {
     ]);
     expect({ ...report, definitions: undefined }).toEqual({
       kind: "powerhouse.definition-check",
-      formatVersion: 1,
+      formatVersion: 2,
       profile: "edit",
       status: "ok",
       sourceSet: project.sourceSet,
@@ -401,18 +405,20 @@ describe("loadProjectDefinitions on a schema-first package", () => {
     ]);
   });
 
-  it("skips a schema-first package with nothing to check", async () => {
+  it("skips a package with no model directory", async () => {
     const { report } = await loadFixture("schema-first");
     expect({ status: report.status, skipReason: report.skipReason }).toEqual({
       status: "skipped",
-      skipReason: "explicit-schema-first-mode",
+      skipReason: "no-document-models",
     });
   });
 });
 
 describe("loadProjectDefinitions on code-first and mixed packages", () => {
   it("checks a code-first family and its alias", async () => {
-    const { report } = await loadFixture("control");
+    const { report } = await loadFixture("control", {
+      files: CONTROL_INVOICE_ENTRY,
+    });
     expect(report.status).toBe("ok");
     expect(
       report.definitions.map(({ key, version, source }) => ({
@@ -425,28 +431,29 @@ describe("loadProjectDefinitions on code-first and mixed packages", () => {
         key: "test/invoice",
         version: 1,
         source: {
-          specifier: "./src/catalog.ts",
-          exportPath: ["publishedInvoice"],
+          specifier: "./document-models/invoice/index.ts",
+          exportPath: ["invoiceFamily", "modules", "0"],
         },
       },
       {
         key: "test/invoice",
         version: 2,
         source: {
-          specifier: "./src/invoice.ts",
+          specifier: "./document-models/invoice/index.ts",
           exportPath: ["invoiceFamily", "modules", "1"],
         },
       },
     ]);
   });
 
-  it("reads both authoring modes through one shape", async () => {
+  it("reads both authoring styles through one shape", async () => {
     const { report } = await loadFixture("mixed");
     expect(report.status).toBe("ok");
     expect(report.sourceSet).toMatchObject({
-      mode: "code-first",
-      origin: "config",
+      origin: "discovery",
+      documentModelsDir: "./document-models",
       sources: [LEDGER],
+      stored: [WALLET],
     });
     expect(report.definitions.map(({ key, source }) => [key, source])).toEqual([
       [
@@ -475,13 +482,18 @@ describe("loadProjectDefinitions on code-first and mixed packages", () => {
     ]);
   });
 
-  it("reports a code-first model no entry reaches, in either mode", async () => {
+  it("reports a code-first model no entry reaches, with or without other models", async () => {
     const mixed = await loadFixture("mixed", {
-      files: { "document-models/notes/model.ts": ORPHAN },
+      files: {
+        "document-models/notes/model.ts": ORPHAN,
+        "powerhouse.config.json":
+          '{ "definitionSources": { "formatVersion": 1, "mode": "schema-first" } }',
+      },
     });
     const stored = await loadFixture("stored", {
       files: { "document-models/notes/model.ts": ORPHAN },
     });
+    expect(mixed.project.artifacts.length).toBeGreaterThan(0);
     for (const { project, report } of [mixed, stored]) {
       expect(project.unregistered).toEqual([
         {
@@ -500,22 +512,6 @@ describe("loadProjectDefinitions on code-first and mixed packages", () => {
         },
       ]);
     }
-  });
-
-  it("does not scan for unregistered models when the selection is unknown", async () => {
-    const { project, report } = await loadFixture("mixed", {
-      configFile: "unsupported.config.json",
-      files: {
-        "document-models/notes/model.ts": ORPHAN,
-        "unsupported.config.json":
-          '{ "definitionSources": { "formatVersion": 2, "mode": "code-first", "entries": [] } }',
-      },
-    });
-    expect(project.unregistered).toEqual([]);
-    expect(report.status).toBe("failed");
-    expect(brief(report.diagnostics).map(({ code }) => code)).toEqual([
-      "PH-CONFIG-VERSION-UNSUPPORTED",
-    ]);
   });
 });
 

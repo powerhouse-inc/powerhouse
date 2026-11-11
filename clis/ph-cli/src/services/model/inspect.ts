@@ -1,10 +1,14 @@
-import { inspectProjectDefinitions } from "document-model/tooling";
+import {
+  inspectProjectDefinitions,
+  withSubgraphInspection,
+} from "document-model/tooling";
 import {
   type ModelRunOptions,
   processStreams,
   runModelCommand,
 } from "./run.js";
 import { renderInspectionReport } from "./render.js";
+import { readProjectSubgraphs } from "./subgraphs.js";
 
 type Selection = { readonly documentType: string; readonly version: number };
 
@@ -48,11 +52,16 @@ export async function runModelInspect(
     {
       name: "ph model inspect",
       json: args.json,
-      read: (project) =>
-        inspectProjectDefinitions(
-          project,
-          selection === undefined ? {} : { selection },
-        ),
+      read: async (project, modules) => {
+        if (selection !== undefined) {
+          return inspectProjectDefinitions(project, { selection });
+        }
+        const report = inspectProjectDefinitions(project);
+        const subgraphs = await readProjectSubgraphs(project, modules);
+        return subgraphs === undefined
+          ? report
+          : withSubgraphInspection(project, report, subgraphs.input);
+      },
       render: renderInspectionReport,
     },
     options,

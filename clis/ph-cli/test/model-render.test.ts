@@ -11,7 +11,12 @@ describe("ph model check text output", () => {
   it("escapes a definition's export path the way diagnostics do", () => {
     const report = {
       status: "failed",
-      sourceSet: { mode: "code-first", sources: [source] },
+      sourceSet: {
+        origin: "discovery",
+        documentModelsDir: "./document-models",
+        sources: [source],
+        stored: [],
+      },
       definitions: [
         { kind: "document-model", key: "example/model", version: 1, source },
       ],
@@ -28,7 +33,7 @@ describe("ph model check text output", () => {
       ],
     } as unknown as DefinitionCheckReport;
     expect(renderCheckReport(report).split("\n")).toStrictEqual([
-      "failed: 1 definition (code-first, 1 selected source)",
+      "failed: 1 definition (./document-models: 1 code-first entry, 0 stored models)",
       "  document-model example/model v1 ./definitions.ts#/Models/a~1b~0c",
       "PH-DM-DECLARATION-INVALID [error/definition] ./definitions.ts#/Models/a~1b~0c (root): Example Repair: Example",
       "1 error, 0 warnings",

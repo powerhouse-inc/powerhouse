@@ -1,14 +1,1 @@
-{
-  "definitionSources": {
-    "formatVersion": 1,
-    "mode": "code-first",
-    "entries": [
-      {
-        "specifier": "./src/healthy.ts"
-      },
-      {
-        "specifier": "./src/structured.ts"
-      }
-    ]
-  }
-}
+{}

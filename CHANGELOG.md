@@ -1,3 +1,45 @@
+## 6.2.3-dev.102 (2026-11-11)
+
+### 🚀 Features
+
+- **codegen:** scaffold, classify and register both subgraph styles ([0d0f838348](https://github.com/powerhouse-inc/powerhouse/commit/0d0f838348))
+- **document-model:** add the code-first subgraph definition layer and checks ([ed3a0ddb00](https://github.com/powerhouse-inc/powerhouse/commit/ed3a0ddb00))
+- **document-model:** make the local scope optional in defineDocumentModel ([7b75717f0e](https://github.com/powerhouse-inc/powerhouse/commit/7b75717f0e))
+- **document-model:** make the local scope optional in defineDocumentModel ([#3395](https://github.com/powerhouse-inc/powerhouse/pull/3395))
+- **ph-cli:** check, inspect, build and release code-first subgraphs ([e4c28c0a22](https://github.com/powerhouse-inc/powerhouse/commit/e4c28c0a22))
+- **ph-cli:** add ph migrate --subgraphs to convert schema-first subgraphs ([9925e763b3](https://github.com/powerhouse-inc/powerhouse/commit/9925e763b3))
+- **reactor-api:** serve code-first Subgraph classes beside BaseSubgraph ([a46e86b443](https://github.com/powerhouse-inc/powerhouse/commit/a46e86b443))
+- **shared:** accept boolean manifest config entries ([#3012](https://github.com/powerhouse-inc/powerhouse/pull/3012))
+- **shared:** boolean config entries in the package manifest ([#3390](https://github.com/powerhouse-inc/powerhouse/pull/3390))
+- **subgraphs:** add code-first Subgraph classes and ph migrate --subgraphs ([#3394](https://github.com/powerhouse-inc/powerhouse/pull/3394))
+
+### 🩹 Fixes
+
+- **ph-cli:** stop logging the database URL in switchboard migrate ([#3070](https://github.com/powerhouse-inc/powerhouse/pull/3070))
+- **ph-cli:** stop logging the database URL in switchboard migrate ([#3388](https://github.com/powerhouse-inc/powerhouse/pull/3388))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+- froid1911
+- Yasiel Cabrera @YasielCabrera
+
+## 6.2.3-dev.101 (2026-11-10)
+
+### 🩹 Fixes
+
+- **ci:** bound workers within concurrent test suites ([50a6722880](https://github.com/powerhouse-inc/powerhouse/commit/50a6722880))
+- **ci:** avoid competing package test processes ([2c2dee4745](https://github.com/powerhouse-inc/powerhouse/commit/2c2dee4745))
+
+### 🔥 Performance
+
+- **ci:** overlap test suites and cache dependency downloads ([6bd75d0db4](https://github.com/powerhouse-inc/powerhouse/commit/6bd75d0db4))
+- **ci:** rebalance test shards and cache dependency downloads ([#3384](https://github.com/powerhouse-inc/powerhouse/pull/3384))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.100 (2026-11-09)
 
 This was a version bump only, there were no code changes.

@@ -44,7 +44,8 @@ import type { Project } from "ts-morph";
 import { buildTsMorphProject, fixGenerateMockImports } from "utils";
 import { writePackage } from "write-package";
 import { detectFeatures, type Feature } from "./features.js";
-import { selectModelGeneration } from "./model-generation.js";
+import { modelGeneration } from "./document-model-generation.js";
+import { assertDocumentModelAggregatesWritable } from "../file-builders/document-model/aggregates.js";
 import { migratePowerhouseConfig } from "./migrate-powerhouse-config.js";
 import { migrateTsconfigFiles } from "./migrate-tsconfig.js";
 import { sortByKey } from "./utils.js";
@@ -416,7 +417,10 @@ export async function migrate(
 ) {
   // Before any write, so a stop leaves the project untouched.
   assertAgentFilesCommitted(projectDir, managedAgentPaths(projectDir));
-  const generation = selectModelGeneration({ projectDir });
+  assertDocumentModelAggregatesWritable(
+    buildTsMorphProject(projectDir),
+    projectDir,
+  );
   const fullyQualifiedVersion =
     await getFullyQualifiedWorkspacePackageVersion(version);
 
@@ -474,7 +478,7 @@ export async function migrate(
     if (notice) console.warn(notice);
   }
   console.log("Re-generating code...");
-  await generation.generateAll(project);
+  await modelGeneration.generateAll(project);
   await project.save();
 }
 

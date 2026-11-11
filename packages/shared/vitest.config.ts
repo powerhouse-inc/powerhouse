@@ -26,6 +26,7 @@ export default defineConfig({
     // separate effort.
     include: [
       "document-model/set-slug.test.ts",
+      "document-model/config-entry-schema.test.ts",
       "constants.test.ts",
       "clis/build-config.test.ts",
       "clis/build-pieces.test.ts",

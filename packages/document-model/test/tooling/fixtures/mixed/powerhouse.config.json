@@ -1,7 +1,1 @@
-{
-  "definitionSources": {
-    "formatVersion": 1,
-    "mode": "code-first",
-    "entries": [{ "specifier": "./document-models/ledger/index.ts" }]
-  }
-}
+{}

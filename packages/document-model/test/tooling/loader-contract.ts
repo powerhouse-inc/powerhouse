@@ -1,4 +1,3 @@
-import { DEFAULT_AUTHORING_MODE } from "@powerhousedao/shared/clis/definition-sources";
 import type {
   DefinitionDiagnostic,
   DefinitionSource,
@@ -55,6 +54,10 @@ export function materializeFixturePackage(name: string): {
   };
 }
 
+export function requestedSources(root: string, file: string): unknown[] {
+  return JSON.parse(readFileSync(join(root, file), "utf8")) as unknown[];
+}
+
 export function packageRevisionOf(root: string): Sha256Digest {
   const parts: string[] = [];
   const walk = (directory: string, prefix: string): void => {
@@ -76,18 +79,23 @@ export type ExpectedDefinition = {
   readonly source: DefinitionSource;
 };
 
+/**
+ * Without `sources`, the loader discovers the fixture's model directories.
+ * With it, the loader loads the named list (a fixture JSON file holding an
+ * array of source entries).
+ */
 export type LoaderSelection = {
   readonly fixture: string;
 
   readonly configFile?: string;
+  readonly sources?: string;
 };
 
 export type LoaderContractCase = LoaderSelection & {
   readonly name: string;
   readonly expected: {
     readonly status: LoadedDefinitionSet["status"];
-    readonly mode: "code-first" | "schema-first";
-    readonly origin: "config" | "cli";
+    readonly origin: "discovery" | "request";
     readonly diagnosticCodes: readonly string[];
     readonly documentModels: readonly ExpectedDefinition[];
     readonly upgradeManifestTypes?: readonly string[];
@@ -108,8 +116,7 @@ const invoice = (
 
 const FAMILY_WITH_ALIAS = {
   status: "ready",
-  mode: "code-first",
-  origin: "config",
+  origin: "request",
   diagnosticCodes: [],
 
   documentModels: [
@@ -133,8 +140,7 @@ const LEDGER = (specifier: `./${string}`, name: string) => ({
 });
 
 const NOTHING_LOADED = {
-  mode: "code-first",
-  origin: "config",
+  origin: "request",
   documentModels: [],
   imported: [],
 } as const;
@@ -143,18 +149,19 @@ export const LOADER_CONTRACT_CASES: readonly LoaderContractCase[] = [
   {
     name: "loads a family and folds an alias selected from a second root",
     fixture: "control",
+    sources: "control.sources.json",
     expected: FAMILY_WITH_ALIAS,
   },
   {
     name: "produces the same result when the configured entries are reordered",
     fixture: "control",
-    configFile: "reordered.config.json",
+    sources: "reordered.sources.json",
     expected: FAMILY_WITH_ALIAS,
   },
   {
     name: "imports one module once however many export paths select it",
     fixture: "control",
-    configFile: "export-paths.config.json",
+    sources: "export-paths.sources.json",
     expected: {
       ...FAMILY_WITH_ALIAS,
       documentModels: [
@@ -167,7 +174,7 @@ export const LOADER_CONTRACT_CASES: readonly LoaderContractCase[] = [
   {
     name: "names both positions of a duplicated entry and imports nothing",
     fixture: "control",
-    configFile: "duplicate.config.json",
+    sources: "duplicate.sources.json",
     expected: {
       ...NOTHING_LOADED,
       status: "failed",
@@ -177,7 +184,7 @@ export const LOADER_CONTRACT_CASES: readonly LoaderContractCase[] = [
   {
     name: "reports a configured export that the namespace does not have",
     fixture: "control",
-    configFile: "missing-export.config.json",
+    sources: "missing-export.sources.json",
     expected: {
       ...NOTHING_LOADED,
       status: "failed",
@@ -188,6 +195,7 @@ export const LOADER_CONTRACT_CASES: readonly LoaderContractCase[] = [
   {
     name: "keeps every diagnostic a thrown DefinitionError carried",
     fixture: "failures",
+    sources: "failures.sources.json",
     expected: {
       ...NOTHING_LOADED,
       status: "failed",
@@ -199,7 +207,7 @@ export const LOADER_CONTRACT_CASES: readonly LoaderContractCase[] = [
   {
     name: "reports an ordinary import failure for one source only",
     fixture: "failures",
-    configFile: "throwing.config.json",
+    sources: "throwing.sources.json",
     expected: {
       ...NOTHING_LOADED,
       status: "failed",
@@ -211,7 +219,7 @@ export const LOADER_CONTRACT_CASES: readonly LoaderContractCase[] = [
   {
     name: "refuses to call a source that exports nothing a silent success",
     fixture: "failures",
-    configFile: "nothing.config.json",
+    sources: "nothing.sources.json",
     expected: {
       ...NOTHING_LOADED,
       status: "failed",
@@ -222,6 +230,7 @@ export const LOADER_CONTRACT_CASES: readonly LoaderContractCase[] = [
   {
     name: "reports two distinct values claiming one document type and version",
     fixture: "collisions",
+    sources: "collisions.sources.json",
     expected: {
       ...NOTHING_LOADED,
       status: "failed",
@@ -236,7 +245,7 @@ export const LOADER_CONTRACT_CASES: readonly LoaderContractCase[] = [
   {
     name: "diagnoses a manifest that claims a version no module publishes",
     fixture: "collisions",
-    configFile: "manifest.config.json",
+    sources: "manifest.sources.json",
     expected: {
       ...NOTHING_LOADED,
       status: "failed",
@@ -249,7 +258,7 @@ export const LOADER_CONTRACT_CASES: readonly LoaderContractCase[] = [
   {
     name: "reports two distinct manifests claiming one document type",
     fixture: "collisions",
-    configFile: "manifest-collision.config.json",
+    sources: "manifest-collision.sources.json",
     expected: {
       ...NOTHING_LOADED,
       status: "failed",
@@ -260,45 +269,35 @@ export const LOADER_CONTRACT_CASES: readonly LoaderContractCase[] = [
     },
   },
   {
-    name: "skips an explicit schema-first package without importing anything",
+    name: "skips a package whose sources live outside any model directory",
     fixture: "schema-first",
     expected: {
       ...NOTHING_LOADED,
+      origin: "discovery",
       status: "skipped",
-      mode: "schema-first",
       diagnosticCodes: [],
     },
   },
   {
-    name: "skips absent definitionSources using the shared default",
+    name: "skips a package without a models directory",
     fixture: "configs",
     expected: {
       ...NOTHING_LOADED,
+      origin: "discovery",
       status: "skipped",
-      mode: DEFAULT_AUTHORING_MODE,
       diagnosticCodes: [],
     },
   },
   {
-    name: "skips an empty code-first list",
+    name: "skips an empty requested list",
     fixture: "configs",
-    configFile: "empty.config.json",
+    sources: "empty.sources.json",
     expected: { ...NOTHING_LOADED, status: "skipped", diagnosticCodes: [] },
-  },
-  {
-    name: "fails a format version this release does not read",
-    fixture: "configs",
-    configFile: "unsupported.config.json",
-    expected: {
-      ...NOTHING_LOADED,
-      status: "failed",
-      diagnosticCodes: ["PH-CONFIG-VERSION-UNSUPPORTED"],
-    },
   },
   {
     name: "rejects a specifier that leaves the package root",
     fixture: "configs",
-    configFile: "outside.config.json",
+    sources: "outside.sources.json",
     expected: {
       ...NOTHING_LOADED,
       status: "failed",
@@ -308,7 +307,7 @@ export const LOADER_CONTRACT_CASES: readonly LoaderContractCase[] = [
   {
     name: "rejects a malformed entry and a non-relative specifier together",
     fixture: "configs",
-    configFile: "entry-shape.config.json",
+    sources: "entry-shape.sources.json",
     expected: {
       ...NOTHING_LOADED,
       status: "failed",
@@ -321,8 +320,29 @@ export const LOADER_CONTRACT_CASES: readonly LoaderContractCase[] = [
     configFile: "malformed.config.json.txt",
     expected: {
       ...NOTHING_LOADED,
+      origin: "discovery",
       status: "failed",
       diagnosticCodes: ["PH-CONFIG-SOURCE-INVALID"],
+    },
+  },
+  {
+    name: "discovers a conventional code-first entry beside a stored model",
+    fixture: "mixed",
+    expected: {
+      status: "ready",
+      origin: "discovery",
+      diagnosticCodes: [],
+      documentModels: [
+        {
+          documentType: "example/ledger",
+          version: 1,
+          source: {
+            specifier: "./document-models/ledger/index.ts",
+            exportPath: ["Ledger"],
+          },
+        },
+      ],
+      imported: ["./document-models/ledger/index.ts"],
     },
   },
 ];
@@ -345,7 +365,6 @@ export function countingImporter(
 
 export type ContractOutcome = {
   readonly status: LoadedDefinitionSet["status"];
-  readonly mode: string;
   readonly origin: string;
   readonly diagnosticCodes: readonly string[];
   readonly documentModels: readonly ExpectedDefinition[];
@@ -362,17 +381,23 @@ export async function runLoaderSelection(
   try {
     const importer = countingImporter(createImporter(fixture.root));
     const loader = new DefinitionSourceLoader(importer);
-    const result = await loader.normalizeDefinitionSources({
+    const request = {
       configFile: join(
         fixture.root,
         selection.configFile ?? "powerhouse.config.json",
       ),
       packageRevision: packageRevisionOf(fixture.root),
-    });
+    };
+    const result =
+      selection.sources === undefined
+        ? await loader.normalizeDefinitionSources(request)
+        : await loader.normalizeRequestedSources({
+            ...request,
+            sources: requestedSources(fixture.root, selection.sources),
+          });
     await loader.dispose();
     return {
       status: result.status,
-      mode: result.sourceSet.mode,
       origin: result.sourceSet.origin,
       diagnosticCodes: result.diagnostics.map(({ code }) => code),
       documentModels: result.documentModels.map(({ source, value }) => ({

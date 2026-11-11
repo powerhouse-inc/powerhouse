@@ -2,12 +2,7 @@ import type {
   DefinitionDiagnostic,
   Sha256Digest,
 } from "@powerhousedao/shared/document-model";
-import {
-  pathWithin,
-  realPathThroughExistingParent,
-} from "@powerhousedao/shared/clis/real-paths";
-import { realpathSync, statSync } from "node:fs";
-import { resolve } from "node:path";
+import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { adaptCodeFirstDocumentModelSource } from "../adapters/code-first-document-model-source-adapter.js";
 import type {
@@ -17,8 +12,6 @@ import type {
 import { compareArtifacts, sortedUniqueDiagnostics } from "../report/status.js";
 import type { LoadedDefinitionProject } from "../report/types.js";
 import type { DefinitionSourceLoader } from "../definition-source-loader.js";
-import { readConfigObject } from "../definition-source-resolution.js";
-import { toolingDiagnostics } from "../diagnostic-codes.js";
 import { readStoredDocumentModels } from "../schema-first/stored-models.js";
 import { findUnregisteredDefinitions } from "./unregistered-definitions.js";
 
@@ -31,8 +24,6 @@ export type ProjectDefinitions = LoadedDefinitionProject & {
   /** Absolute. No report carries it. */
   readonly packageRoot: string;
 };
-
-const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
 
 /** Code-first sources are authored in normalized coordinates, so they need no relocation. */
 const adaptSelectedModules: DefinitionProducer = ({ loaded }) => {
@@ -54,90 +45,9 @@ const adaptSelectedModules: DefinitionProducer = ({ loaded }) => {
   };
 };
 
-/** The readers a project loads with unless a caller passes its own; the one place an authoring mode is named. */
+/** The readers a project loads with unless a caller passes its own: code-first modules, then stored specifications. */
 export const defaultDefinitionProducers: readonly DefinitionProducer[] =
   Object.freeze([adaptSelectedModules, readStoredDocumentModels]);
-
-/** A path that cannot be inspected is left to the readers, which report it. */
-function namesNonDirectory(path: string): boolean {
-  try {
-    return statSync(path, { throwIfNoEntry: false })?.isDirectory() === false;
-  } catch {
-    return false;
-  }
-}
-
-/** The configured models directory, or why it cannot be scanned. */
-function documentModelsDirectory(
-  packageRoot: string,
-  configFile: string,
-): {
-  readonly path?: string;
-  readonly diagnostics: readonly DefinitionDiagnostic[];
-} {
-  const config = readConfigObject(resolve(configFile));
-  // The loader already reported an unreadable config.
-  if (!config.ok) return { diagnostics: [] };
-  const configured =
-    config.value.documentModelsDir ?? DEFAULT_DOCUMENT_MODELS_DIR;
-  if (typeof configured !== "string" || configured.trim() === "") {
-    return {
-      diagnostics: [
-        toolingDiagnostics.create({
-          code: "PH-CONFIG-SOURCE-INVALID",
-          path: ["documentModelsDir"],
-          message: "documentModelsDir is not a directory path.",
-          expected: "a package-relative path such as ./document-models",
-          received: JSON.stringify(configured),
-          repair:
-            "Set documentModelsDir to a package-relative directory, or remove it to use ./document-models.",
-        }),
-      ],
-    };
-  }
-  const path = resolve(packageRoot, configured);
-  let inside = pathWithin(packageRoot, path) !== null;
-  try {
-    inside &&=
-      pathWithin(
-        realpathSync.native(packageRoot),
-        realPathThroughExistingParent(path),
-      ) !== null;
-  } catch {
-    inside = false;
-  }
-  if (!inside) {
-    return {
-      diagnostics: [
-        toolingDiagnostics.create({
-          code: "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE",
-          path: ["documentModelsDir"],
-          message:
-            "documentModelsDir leaves the package root, so its models are not this package's.",
-          expected: "a directory inside the package",
-          received: configured,
-          repair: "Point documentModelsDir at a directory inside the package.",
-        }),
-      ],
-    };
-  }
-  if (namesNonDirectory(path)) {
-    return {
-      diagnostics: [
-        toolingDiagnostics.create({
-          code: "PH-CONFIG-SOURCE-INVALID",
-          path: ["documentModelsDir"],
-          message: "documentModelsDir names a file, not a directory.",
-          expected: "a package-relative directory such as ./document-models",
-          received: configured,
-          repair:
-            "Point documentModelsDir at the directory that holds the models, or remove it to use ./document-models.",
-        }),
-      ],
-    };
-  }
-  return { path, diagnostics: [] };
-}
 
 /** Tool and Node messages can quote the machine path a package lives at. */
 function packageRelative(
@@ -175,17 +85,18 @@ function packageRelative(
 }
 
 /**
- * @experimental Loads the selected code-first sources and the package's stored
- * schema-first models, and scans for code-first declarations no source
- * reaches. Artifacts and diagnostics are sorted and package relative.
- * `producers` replaces the default readers. `importedFiles` names the
- * absolute paths of every module the loader's import of a selected
- * specifier evaluated, so reach follows whatever the importer resolved.
- * Experimental while code-first projects are introduced.
+ * @experimental Loads the code-first model directories discovery finds and
+ * the package's stored schema-first models, and scans for code-first
+ * declarations no entry module reaches. Artifacts and diagnostics are
+ * sorted and package relative. `producers` replaces the default readers.
+ * `importedFiles` names the absolute paths of every module the loader's
+ * import of a discovered specifier evaluated, so reach follows whatever the
+ * importer resolved. Experimental while code-first projects are introduced.
  */
 export async function loadProjectDefinitions(request: {
   readonly loader: DefinitionSourceLoader;
   readonly configFile: string;
+  readonly allowMissingConfig?: boolean;
   readonly packageRevision: Sha256Digest;
   readonly signal?: AbortSignal;
   readonly producers?: readonly DefinitionProducer[];
@@ -200,8 +111,7 @@ export async function loadProjectDefinitions(request: {
   const loaded = await loader.normalizeDefinitionSources(load);
   request.signal?.throwIfAborted();
   const { packageRoot } = loaded;
-  const directory = documentModelsDirectory(packageRoot, request.configFile);
-  const modelsDir = directory.path;
+  const modelsDir = loaded.documentModelsDir;
   const input = {
     ...load,
     loader,
@@ -215,6 +125,9 @@ export async function loadProjectDefinitions(request: {
   const selectionKnown = !loaded.diagnostics.some(
     ({ phase, severity }) => phase === "configuration" && severity === "error",
   );
+  const artifacts = produced
+    .flatMap((result) => result.artifacts)
+    .sort(compareArtifacts);
   const scan =
     selectionKnown && modelsDir !== undefined
       ? findUnregisteredDefinitions({
@@ -222,6 +135,11 @@ export async function loadProjectDefinitions(request: {
           documentModelsDir: modelsDir,
           sources: loaded.sourceSet.sources,
           importedFiles,
+          storedUnits: new Set(
+            loaded.sourceSet.stored.map(({ specifier }) =>
+              specifier.replace(/[^/]+$/, ""),
+            ),
+          ),
           loadedDocumentTypes: new Set([
             ...loaded.documentModels.map(
               ({ value }) => value.documentModel.global.id,
@@ -235,10 +153,10 @@ export async function loadProjectDefinitions(request: {
   return {
     packageRoot,
     sourceSet: loaded.sourceSet,
-    ...(loaded.status === "skipped" && { skipReason: loaded.skipReason }),
-    artifacts: produced
-      .flatMap(({ artifacts }) => artifacts)
-      .sort(compareArtifacts),
+    ...(artifacts.length === 0 && {
+      skipReason: "no-document-models" as const,
+    }),
+    artifacts,
     relocations: new Map(
       produced.flatMap(({ relocations }) => [...relocations]),
     ),
@@ -246,7 +164,6 @@ export async function loadProjectDefinitions(request: {
       packageRelative(
         [
           ...loaded.diagnostics,
-          ...directory.diagnostics,
           ...produced.flatMap(({ diagnostics }) => diagnostics),
           ...scan.diagnostics,
         ],

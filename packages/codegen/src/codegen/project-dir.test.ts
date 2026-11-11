@@ -11,14 +11,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Project } from "ts-morph";
 import { afterEach, expect, it } from "vitest";
-import { makeSubgraphsIndexFile } from "../file-builders/subgraphs.js";
+import { makeSubgraphsIndexFile } from "../file-builders/subgraph-registration.js";
 import { getOrCreateSourceFile } from "../utils/source-files.js";
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
-import {
-  generateFromFile,
-  generateProcessor,
-  generateSubgraph,
-} from "./generate.js";
+import { generateProcessor } from "./generate.js";
+import { generateFromFile, generateSubgraph } from "./project-generation.js";
 
 const temporary: string[] = [];
 

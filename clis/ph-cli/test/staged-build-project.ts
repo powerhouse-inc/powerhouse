@@ -17,7 +17,7 @@ import {
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
-import { codeFirstConfig, LEDGER, LEDGER_SOURCE } from "./model-project.js";
+import { LEDGER_SOURCE } from "./model-project.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const PH_CLI = join(import.meta.dirname, "..", "dist", "cli.mjs");
@@ -207,7 +207,7 @@ const DOCUMENT_MODEL = join(
 );
 
 /**
- * Selects the model fixture's code-first ledger in a classic package, with
+ * Adds the model fixture's code-first ledger to a classic package, with
  * document-model and zod linked as an install would. tsc checks only what
  * the classic package always had; the ledger is the definition loader's.
  */
@@ -215,7 +215,7 @@ export function addCodeFirstLedger(
   project: StagedProject,
   ledger = LEDGER_SOURCE,
 ): void {
-  project.write("powerhouse.config.json", codeFirstConfig(LEDGER));
+  project.write("powerhouse.config.json", "{}");
   project.write("document-models/ledger/index.ts", ledger);
   cpSync(
     join(FIXTURES, "model-project", "scalars"),

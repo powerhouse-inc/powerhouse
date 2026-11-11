@@ -1,3 +1,4 @@
+import type { DocumentModelDirectory } from "./model-directories.js";
 import type {
   DefinitionCheckReport,
   DefinitionCheckSkipReason,
@@ -10,12 +11,13 @@ import type {
 } from "@powerhousedao/shared/document-model";
 
 /**
- * @experimental The selected sources, exactly as a definition report carries
- * them. Defined from the stored report type so the two cannot disagree.
+ * @experimental The discovered sources, exactly as a definition report
+ * carries them. Defined from the stored report type so the two cannot
+ * disagree.
  */
 export type DefinitionSourceSet = DefinitionCheckReport["sourceSet"];
 
-/** @experimental Where the selected source list came from. */
+/** @experimental Whether discovery or a caller chose the sources. */
 export type DefinitionSourceOrigin = DefinitionSourceSet["origin"];
 
 /**
@@ -34,7 +36,11 @@ export interface TypeScriptSourceImportInterface {
   disposeRevision?(packageRevision?: Sha256Digest): Promise<void> | void;
 }
 
-/** @experimental */
+/**
+ * @experimental The package whose models are discovered: the directory of
+ * `configFile`, read with the config's `documentModelsDir`. A missing config
+ * fails unless `allowMissingConfig`, which then reads the default directory.
+ */
 export type DefinitionSourceSelectionRequest = {
   readonly configFile?: string;
 
@@ -51,7 +57,7 @@ export type DefinitionSourceLoadRequest = DefinitionSourceSelectionRequest & {
   readonly signal?: AbortSignal;
 };
 
-/** @experimental A selection, resolved without importing anything. */
+/** @experimental The discovered sources, resolved without importing anything. */
 export type DefinitionSourceResolution = {
   readonly packageRoot: string;
   readonly sourceSet: DefinitionSourceSet;
@@ -74,8 +80,18 @@ export type LoadedDefinition<TValue> = {
 
 /** @experimental */
 export type LoadedDefinitionSet = DefinitionSourceResolution & {
+  /** Absolute; absent when the configured models directory cannot be read. */
+  readonly documentModelsDir?: string;
+  /** What discovery found in each model directory; absent for requested sources. */
+  readonly directories?: readonly DocumentModelDirectory[];
   readonly documentModels: readonly LoadedDefinition<DocumentModelModule>[];
   readonly upgradeManifests: readonly LoadedDefinition<
     UpgradeManifest<readonly number[]>
   >[];
+  /**
+   * The sources that export a definition. A value several sources export is
+   * listed above under the first one only, so a source that re-exports
+   * another's definitions is named here and nowhere else.
+   */
+  readonly sourcesWithDefinitions: readonly DefinitionSource[];
 };

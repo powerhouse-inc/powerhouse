@@ -1,0 +1,9 @@
+[
+  {
+    "specifier": "src/models.ts"
+  },
+  {
+    "specifier": "./src/models.ts",
+    "watch": true
+  }
+]

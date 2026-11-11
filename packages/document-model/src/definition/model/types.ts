@@ -36,7 +36,21 @@ type EmptyLocalScopeDeclaration = {
   readonly examples?: readonly DefinitionExampleDeclaration[];
 };
 
-/** @experimental */
+type LocalScopeDeclaration<TLocal extends StateRootDescriptor | null> =
+  TLocal extends StateRootDescriptor
+    ? StateScopeDeclaration<TLocal>
+    : EmptyLocalScopeDeclaration;
+
+type LocalScopeEntry<TLocal extends StateRootDescriptor | null> = [
+  TLocal,
+] extends [null]
+  ? { readonly local?: EmptyLocalScopeDeclaration }
+  : { readonly local: LocalScopeDeclaration<TLocal> };
+
+/**
+ * @experimental A model without local state can omit `scopes.local`, which
+ * means `local: { schema: null, initialValue: {} }`.
+ */
 export type DocumentModelConfig<
   TGlobal extends StateRootDescriptor,
   TLocal extends StateRootDescriptor | null,
@@ -55,10 +69,7 @@ export type DocumentModelConfig<
   readonly scopes: {
     readonly auxiliaryTypes?: readonly AnyTypeDescriptor[];
     readonly global: StateScopeDeclaration<TGlobal>;
-    readonly local: TLocal extends StateRootDescriptor
-      ? StateScopeDeclaration<TLocal>
-      : EmptyLocalScopeDeclaration;
-  };
+  } & LocalScopeEntry<TLocal>;
 };
 
 type LocalStateOfDescriptor<TLocal extends StateRootDescriptor | null> =

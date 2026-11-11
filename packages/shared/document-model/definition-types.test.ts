@@ -391,13 +391,14 @@ describe("DocumentScalarReferenceDefinition", () => {
 describe("DefinitionCheckReport", () => {
   const okReport: DefinitionCheckReport = {
     kind: "powerhouse.definition-check",
-    formatVersion: 1,
+    formatVersion: 2,
     profile: "edit",
     sourceSet: {
-      mode: "code-first",
-      origin: "config",
+      origin: "discovery",
+      documentModelsDir: "./document-models",
       digest: emptyDigest,
       sources: [invoiceSource],
+      stored: [],
     },
     definitions: [
       {
@@ -415,19 +416,20 @@ describe("DefinitionCheckReport", () => {
 
   const skippedReport: DefinitionCheckReport = {
     kind: "powerhouse.definition-check",
-    formatVersion: 1,
+    formatVersion: 2,
     profile: "release",
     sourceSet: {
-      mode: "schema-first",
-      origin: "config",
+      origin: "discovery",
+      documentModelsDir: "./document-models",
       digest: emptyDigest,
       sources: [],
+      stored: [],
     },
     definitions: [],
     diagnostics: [],
     summary: { errors: 0, warnings: 0 },
     status: "skipped",
-    skipReason: "explicit-schema-first-mode",
+    skipReason: "no-document-models",
   };
 
   it("records the executed profile", () => {
@@ -438,28 +440,25 @@ describe("DefinitionCheckReport", () => {
     >();
   });
 
-  it("pins the skip reason to the schema-first spelling", () => {
-    expect(skippedReport.skipReason).toBe("explicit-schema-first-mode");
+  it("skips only a package without document models", () => {
+    expect(skippedReport.skipReason).toBe("no-document-models");
     expectTypeOf<
       Extract<DefinitionCheckReport, { status: "skipped" }>["skipReason"]
-    >().toEqualTypeOf<
-      | "explicit-schema-first-mode"
-      | "definition-sources-absent"
-      | "definition-sources-empty"
-    >();
+    >().toEqualTypeOf<"no-document-models">();
   });
 
   it("requires skipReason when status is skipped", () => {
     // @ts-expect-error status "skipped" requires skipReason
     const skippedWithoutReason: DefinitionCheckReport = {
       kind: "powerhouse.definition-check",
-      formatVersion: 1,
+      formatVersion: 2,
       profile: "release",
       sourceSet: {
-        mode: "schema-first",
-        origin: "config",
+        origin: "discovery",
+        documentModelsDir: "./document-models",
         digest: emptyDigest,
         sources: [],
+        stored: [],
       },
       definitions: [],
       diagnostics: [],
@@ -472,20 +471,21 @@ describe("DefinitionCheckReport", () => {
   it("forbids skipReason when status is ok", () => {
     const okWithReason: DefinitionCheckReport = {
       kind: "powerhouse.definition-check",
-      formatVersion: 1,
+      formatVersion: 2,
       profile: "edit",
       sourceSet: {
-        mode: "code-first",
-        origin: "config",
+        origin: "discovery",
+        documentModelsDir: "./document-models",
         digest: emptyDigest,
         sources: [invoiceSource],
+        stored: [],
       },
       definitions: [],
       diagnostics: [],
       summary: { errors: 0, warnings: 0 },
       status: "ok",
       // @ts-expect-error skipReason is only allowed with status "skipped"
-      skipReason: "explicit-schema-first-mode",
+      skipReason: "no-document-models",
     };
     expect(okWithReason.status).toBe("ok");
   });
@@ -494,12 +494,13 @@ describe("DefinitionCheckReport", () => {
     // @ts-expect-error profile is required on every report
     const withoutProfile: DefinitionCheckReport = {
       kind: "powerhouse.definition-check",
-      formatVersion: 1,
+      formatVersion: 2,
       sourceSet: {
-        mode: "code-first",
-        origin: "config",
+        origin: "discovery",
+        documentModelsDir: "./document-models",
         digest: emptyDigest,
         sources: [invoiceSource],
+        stored: [],
       },
       definitions: [],
       diagnostics: [],

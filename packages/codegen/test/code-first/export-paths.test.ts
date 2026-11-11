@@ -1,8 +1,8 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { writeCodeFirstAggregates } from "../../src/file-builders/document-model/code-first-aggregates.js";
-import { loadCodeFirstInventory } from "../../src/file-builders/document-model/code-first-inventory.js";
+import { writeDocumentModelAggregates } from "../../src/file-builders/document-model/aggregates.js";
+import { loadDocumentModelInventory } from "../../src/file-builders/document-model/document-model-inventory.js";
 import { buildTsMorphProject } from "../../src/utils/index.mjs";
 import {
   createPackage,
@@ -12,7 +12,6 @@ import {
   read,
   removePackage,
   todo,
-  writeConfig,
 } from "./package.js";
 
 let dir: string;
@@ -32,30 +31,24 @@ describe("aggregates for a definition under an all-digit key", () => {
     ],
     ["an array position", "0", (value: string) => `[${value}]`],
   ])("read the exact key with %s", async (_, key, holding) => {
-    mkdirSync(join(dir, "src"));
+    const model = join(dir, "document-models/todo-list");
+    renameSync(join(model, "index.ts"), join(model, "family.ts"));
     writeFileSync(
-      join(dir, "src/models.ts"),
+      join(model, "index.ts"),
       [
-        'import { TodoList, todoListUpgradeManifest } from "../document-models/todo-list/index.js";',
+        'import { TodoList, todoListUpgradeManifest } from "./family.js";',
         `export const models = ${holding("TodoList")};`,
         `export const manifests = ${holding("todoListUpgradeManifest")};`,
         "",
       ].join("\n"),
     );
-    writeConfig(dir, {
-      definitionSources: {
-        formatVersion: 1,
-        mode: "code-first",
-        entries: [{ specifier: "./src/models.ts" }],
-      },
-    });
     writeFileSync(
       join(dir, "check.ts"),
       [
         'import { documentModels } from "./document-models/document-models.js";',
         'import { TodoListV1 } from "./document-models/index.js";',
         'import { upgradeManifests } from "./document-models/upgrade-manifests.js";',
-        'import { manifests, models } from "./src/models.js";',
+        'import { manifests, models } from "./document-models/todo-list/index.js";',
         "export const model = Object.values(models)[0];",
         "export const manifest = Object.values(manifests)[0];",
         "export const emittedModel = documentModels[0];",
@@ -67,7 +60,10 @@ describe("aggregates for a definition under an all-digit key", () => {
     );
 
     await inProject(dir, async (project) =>
-      writeCodeFirstAggregates(project, await loadCodeFirstInventory(dir)),
+      writeDocumentModelAggregates(
+        project,
+        await loadDocumentModelInventory(dir),
+      ),
     );
 
     const check = await importSource(dir, "./check.ts");

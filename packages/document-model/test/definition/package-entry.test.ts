@@ -30,6 +30,9 @@ describe("the package entry", () => {
     const names = Object.keys(definitionEntry).sort();
     expect(names).toStrictEqual([
       "DefinitionError",
+      "SUBGRAPH_PROTOCOL",
+      "compileSubgraph",
+      "createSubgraphEntryBuilders",
       "defineDocumentModel",
       "defineDocumentModelFamily",
       "inspectDocumentModelDefinition",
@@ -37,6 +40,8 @@ describe("the package entry", () => {
       "operationsByActionType",
       "ph",
       "projectDocumentModelGraphQL",
+      "projectSubgraphGraphQL",
+      "readSubgraphProtocol",
     ]);
     expect(
       names.filter(

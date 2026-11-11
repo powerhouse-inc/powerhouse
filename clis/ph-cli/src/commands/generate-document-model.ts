@@ -39,11 +39,11 @@ export const generateDocumentModelCmd = command({
       description:
         "Experimental. Create a code-first document model with this name, with its editor",
     }),
-    /** @experimental Opts into the code-first authoring strategy. */
+    /** @experimental Chooses code-first authoring for the model --name creates. */
     codeFirst: flag({
       long: "code-first",
       description:
-        "Experimental. Generate with code-first authoring, whatever definitionSources in powerhouse.config.json selects",
+        "Experimental. With --name, create the model code-first. Existing models of both styles are discovered without it",
     }),
     ...debugArgs,
   },

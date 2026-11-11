@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.3-dev.100)<br>
+# Powerhouse CLI Commands (6.2.3-dev.102)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -73,7 +73,7 @@ Write a powerhouse/document-model spec for each existing document model into spe
 **usage:** `--extract, -x`<br>
 
 #### Code First <br>
-Experimental. Generate with code-first authoring, whatever definitionSources in powerhouse.config.json selects<br><br>
+Experimental. With --name, create the model code-first. Existing models of both styles are discovered without it<br><br>
 **usage:** `--code-first`<br>
 
 #### Debug <br>
@@ -239,6 +239,10 @@ Re-generate all existing subgraphs in the current project<br><br>
 #### Extract <br>
 Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/<br><br>
 **usage:** `--extract, -x`<br>
+
+#### Code First <br>
+Experimental. With --name or --document, create a new subgraph code-first. Existing subgraphs keep their own style; ph migrate --subgraph converts one<br><br>
+**usage:** `--code-first`<br>
 
 #### Skip Install <br>
 Don't install the dependencies the command adds to package.json<br><br>
@@ -1203,11 +1207,23 @@ The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `
 The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages.<br><br>
 **usage:** `--version, -v <str>`<br>
 
+#### Subgraph <br>
+Convert only this directory of subgraphs/ into a code-first subgraph. Repeat it for more directories. Implies --subgraphs.<br><br>
+**usage:** `--subgraph <str>`<br>
+
 
 ### flags
 #### Force <br>
 Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version.<br><br>
 **usage:** `--force, -f`<br>
+
+#### Subgraphs <br>
+Convert every schema-first subgraph under subgraphs/ into a code-first one, keeping its schema and resolvers. Code-first subgraphs are skipped, and a subgraph that cannot keep the same schema is left as it is, with the reason. Upgrades no dependencies and regenerates nothing else.<br><br>
+**usage:** `--subgraphs`<br>
+
+#### Dry Run <br>
+With --subgraphs or --subgraph: print the diff of what would change, and write nothing.<br><br>
+**usage:** `--dry-run`<br>
 
 #### Debug <br>
 Log arguments passed to this command<br><br>
@@ -1219,9 +1235,9 @@ show help<br><br>
 
 
 ## Model Check
-Check this package's document models: the code-first sources
-definitionSources selects and the stored schema-first models in
-documentModelsDir, through one set of checks. Writes nothing.
+Check this package's document models through one set of checks:
+every model directory in documentModelsDir, whether it stores a schema-first
+<name>.json or exports a code-first model from its index.ts. Writes nothing.
 
 `tsc` cannot run these checks: a code-first model compiles when its module is
 evaluated.
@@ -1240,8 +1256,8 @@ plain `npm publish` too, add it to package.json, then run
 With --json it prints {"decision": ..., "reasons": [...]}.
 
 Exit codes:
-  0  ok, or skipped. Skipped means no code-first source is selected and the
-     package has no stored model, so nothing was read. Read "status".
+  0  ok, or skipped. Skipped means the package has no document model, so
+     nothing was checked. Read "status".
   1  invalid. The models were read and at least one is wrong.
   2  failed. The configuration or a module could not be read, the arguments
      are wrong, or the command could not run.
@@ -1283,8 +1299,8 @@ scopes, scalars and operations. With <documentType>@<version>, describe that
 version only and add its full definition to the JSON report. Writes nothing.
 
 Exit codes:
-  0  ok, or skipped. Skipped means no code-first source is selected and the
-     package has no stored model, so nothing was read. Read "status".
+  0  ok, or skipped. Skipped means the package has no document model, so
+     nothing was checked. Read "status".
   1  invalid. The models were read and at least one is wrong.
   2  failed. The configuration or a module could not be read, the arguments
      are wrong, or the command could not run.

@@ -8,8 +8,8 @@ const EXPERIMENTAL =
   "Experimental: the command, its output and the JSON report can change in any release.";
 
 const EXIT_CODES = `Exit codes:
-  0  ok, or skipped. Skipped means no code-first source is selected and the
-     package has no stored model, so nothing was read. Read "status".
+  0  ok, or skipped. Skipped means the package has no document model, so
+     nothing was checked. Read "status".
   1  invalid. The models were read and at least one is wrong.
   2  failed. The configuration or a module could not be read, the arguments
      are wrong, or the command could not run.`;
@@ -23,9 +23,9 @@ stderr and exits 2.`;
 
 export const modelCheck = command({
   name: "check",
-  description: `Check this package's document models: the code-first sources
-definitionSources selects and the stored schema-first models in
-documentModelsDir, through one set of checks. Writes nothing.
+  description: `Check this package's document models through one set of checks:
+every model directory in documentModelsDir, whether it stores a schema-first
+<name>.json or exports a code-first model from its index.ts. Writes nothing.
 
 \`tsc\` cannot run these checks: a code-first model compiles when its module is
 evaluated.

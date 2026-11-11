@@ -1,9 +1,8 @@
 import {
-  selectModelGeneration,
+  modelGeneration,
   type GenerateCodeFirstDocumentModelArgs,
 } from "../../src/codegen/index.js";
 import type { Project } from "ts-morph";
-import { projectPath } from "../../src/utils/source-files.js";
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import {
@@ -139,16 +138,46 @@ export async function inProject<T>(
   return result;
 }
 
-export function typeCheck(dir: string): string {
-  return execFileSync(
-    process.execPath,
-    [
-      join(dirname(require.resolve("typescript/package.json")), "bin/tsc"),
-      "-p",
-      dir,
-    ],
-    { encoding: "utf8" },
-  );
+/** Runs `tsc -p dir`. With `declarations`, it also emits declaration files
+ * into a temporary directory, as `ph build` does, so an inferred type that
+ * cannot be named fails. */
+export function typeCheck(
+  dir: string,
+  options: { readonly declarations?: boolean } = {},
+): string {
+  const outDir = options.declarations
+    ? mkdtempSync(join(tmpdir(), "ph-declarations-"))
+    : undefined;
+  try {
+    return execFileSync(
+      process.execPath,
+      [
+        join(dirname(require.resolve("typescript/package.json")), "bin/tsc"),
+        "-p",
+        dir,
+        ...(outDir === undefined
+          ? []
+          : [
+              "--noEmit",
+              "false",
+              "--declaration",
+              "--emitDeclarationOnly",
+              "--outDir",
+              outDir,
+            ]),
+      ],
+      { encoding: "utf8" },
+    );
+  } catch (error) {
+    // tsc prints its errors on stdout, which the thrown message leaves out.
+    const { stdout } = error as { stdout?: string };
+    if (typeof stdout === "string" && stdout !== "") {
+      throw new Error(`tsc -p ${dir} failed:\n${stdout}`, { cause: error });
+    }
+    throw error;
+  } finally {
+    if (outDir !== undefined) rmSync(outDir, { recursive: true, force: true });
+  }
 }
 
 export async function importSource(
@@ -210,8 +239,5 @@ export function generateCodeFirstDocumentModel(
   args: GenerateCodeFirstDocumentModelArgs,
   project: Project,
 ) {
-  return selectModelGeneration({
-    projectDir: projectPath(project, "."),
-    codeFirst: true,
-  }).scaffoldDocumentModel(args, project);
+  return modelGeneration.scaffoldDocumentModel(args, project);
 }

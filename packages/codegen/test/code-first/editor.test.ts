@@ -12,7 +12,7 @@ import { prop } from "remeda";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   generateEditor as generatePublicEditor,
-  selectModelGeneration,
+  modelGeneration,
   type GenerateEditorRequest,
 } from "../../src/codegen/index.js";
 import { buildTsMorphProject, formatFileText } from "../../src/utils/index.mjs";
@@ -25,7 +25,6 @@ import {
   removePackage,
   todo,
   typeCheck,
-  writeConfig,
   generateCodeFirstDocumentModel,
 } from "./package.js";
 
@@ -41,19 +40,24 @@ const todoEditor: GenerateEditorRequest = {
   documentTypes: ["acme/todo-list"],
 };
 
-const generation = () =>
-  selectModelGeneration({
-    projectDir: dir,
-  });
+const generation = () => modelGeneration;
 
 const generateEditor = (request = todoEditor) =>
   inProject(dir, (project) => generatePublicEditor(request, project));
 
-function select(entries: unknown[]) {
-  writeConfig(dir, {
-    definitionSources: { formatVersion: 1, mode: "code-first", entries },
-  });
+/** Moves a model's authored entry to family.ts and gives it a new index.ts. */
+function reexport(model: string, entry: string) {
+  const directory = join(dir, "document-models", model);
+  renameSync(join(directory, "index.ts"), join(directory, "family.ts"));
+  writeFileSync(join(directory, "index.ts"), entry);
 }
+
+/** Rebuilds the barrels after an entry changed what it exports. */
+const regenerateModels = () =>
+  inProject(dir, (project) => generation().generateAllDocumentModels(project));
+
+const ONLY_INSIDE_ANOTHER_VALUE =
+  'import { TodoList, todoListUpgradeManifest } from "./family.js";\nexport const all = { models: [TodoList], manifest: todoListUpgradeManifest };\n';
 
 describe("generateEditor for a code-first model", () => {
   it("imports the latest version by its export name and registers the editor", async () => {
@@ -149,26 +153,20 @@ export const TodoEditor: documentModelTypes.EditorModule<
     expect(read(dir, "editors/todo-editor/module.ts")).toBe(typed);
   });
 
-  it("imports the latest of two versions from the source that names it", async () => {
+  it("imports the latest of two versions by the name its entry exports", async () => {
     addTodoListVersion2(dir);
-    mkdirSync(join(dir, "src"));
-    writeFileSync(
-      join(dir, "src/models.ts"),
-      'export { TodoListV1, TodoListV2, todoListUpgradeManifest } from "../document-models/todo-list/index.js";\n',
+    reexport(
+      "todo-list",
+      'export { TodoListV1, TodoListV2, todoListUpgradeManifest } from "./family.js";\n',
     );
-    select([{ specifier: "./src/models.ts" }]);
     await generateEditor();
     expect(read(dir, "editors/todo-editor/editor.tsx")).toContain(
-      'import { TodoListV2 as documentModel } from "../../src/models.js";',
+      'import { TodoListV2 as documentModel } from "../../document-models/todo-list/index.js";',
     );
   });
 
   it("refuses a version exported only inside another value", async () => {
-    writeFileSync(
-      join(dir, "document-models/list.ts"),
-      'import { TodoList, todoListUpgradeManifest } from "./todo-list/index.js";\nexport const all = { models: [TodoList], manifest: todoListUpgradeManifest };\n',
-    );
-    select([{ specifier: "./document-models/list.ts" }]);
+    reexport("todo-list", ONLY_INSIDE_ANOTHER_VALUE);
     await expect(generateEditor()).rejects.toThrow(
       "exports version 1 of acme/todo-list only inside another value",
     );
@@ -179,11 +177,7 @@ export const TodoEditor: documentModelTypes.EditorModule<
     const files = ["editor.tsx", "module.ts"].map((name) =>
       read(dir, `editors/todo-editor/${name}`),
     );
-    writeFileSync(
-      join(dir, "document-models/list.ts"),
-      'import { TodoList, todoListUpgradeManifest } from "./todo-list/index.js";\nexport const all = { models: [TodoList], manifest: todoListUpgradeManifest };\n',
-    );
-    select([{ specifier: "./document-models/list.ts" }]);
+    reexport("todo-list", ONLY_INSIDE_ANOTHER_VALUE);
     await generateEditor();
     expect(
       ["editor.tsx", "module.ts"].map((name) =>
@@ -273,19 +267,15 @@ describe("an editor for a model whose export name a template also uses", () => {
         buildTsMorphProject(dir),
       );
     }
-    mkdirSync(join(dir, "src"));
-    writeFileSync(
-      join(dir, "src/models.ts"),
-      [
-        'export { TodoList as DocumentOf, todoListUpgradeManifest } from "../document-models/todo-list/index.js";',
-        'export { Notes as documentModel, notesUpgradeManifest } from "../document-models/notes/index.js";',
-        "",
-      ].join("\n"),
+    reexport(
+      "todo-list",
+      'export { TodoList as DocumentOf, todoListUpgradeManifest } from "./family.js";\n',
     );
-    select([
-      { specifier: "./document-models/editor/index.ts" },
-      { specifier: "./src/models.ts" },
-    ]);
+    reexport(
+      "notes",
+      'export { Notes as documentModel, notesUpgradeManifest } from "./family.js";\n',
+    );
+    await regenerateModels();
 
     await generateEditor({
       editorName: "Editor",
@@ -305,10 +295,10 @@ describe("an editor for a model whose export name a template also uses", () => {
       "export const Editor: documentModelTypes.EditorModule<",
     );
     expect(read(dir, "editors/todo-editor/editor.tsx")).toContain(
-      'import { DocumentOf as documentModel } from "../../src/models.js";',
+      'import { DocumentOf as documentModel } from "../../document-models/todo-list/index.js";',
     );
     expect(read(dir, "editors/notes-editor/editor.tsx")).toContain(
-      'import { documentModel } from "../../src/models.js";',
+      'import { documentModel } from "../../document-models/notes/index.js";',
     );
   });
 });

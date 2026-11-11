@@ -1114,7 +1114,37 @@
     },
     {
       "files": [
-        "packages/document-model/src/definition/{kernel,dsl,compiler,model,runtime}/**/*.ts"
+        "packages/document-model/src/definition/tooling/subgraph/**/*.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)release(/|$)",
+                "message": "tooling/subgraph/ ranks beside tooling/release/, not above it. ph-cli passes subgraphChecks to the release profile; release code never imports a subgraph module and subgraph code never imports release."
+              },
+              {
+                "regex": "(^|/)project(/|$)",
+                "message": "tooling/project/ composes the document-model tooling layers. tooling/subgraph/ takes the loaded project as input instead of importing project/."
+              },
+              {
+                "regex": "^(\\.\\./)+schema-first(/|$)",
+                "message": "tooling/subgraph/ reads schema-first SDL through its own tooling/subgraph/schema-first/ folder, not through tooling/schema-first/."
+              },
+              {
+                "regex": "^(\\.\\./)+(model|runtime)(/|$)",
+                "message": "Tooling reads normalized artifacts and must not import definition/model/ or definition/runtime/. Import the kernel, compiler or subgraph piece instead, or take the value as a parameter."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/document-model/src/definition/{kernel,dsl,compiler,model,subgraph,runtime}/**/*.ts"
       ],
       "rules": {
         "no-restricted-imports": [
@@ -1148,6 +1178,65 @@
               {
                 "regex": "(^|/)document-model/(src|dist)(/|$)",
                 "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts as @experimental instead of reaching into a deep path."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/reactor-api/src/**/*.{ts,tsx,mts}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)document-model/(src|dist)(/|$)",
+                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts as @experimental instead of reaching into a deep path."
+              },
+              {
+                "regex": "(^|/)code-first(/|$)",
+                "message": "Code-first subgraph hosting enters reactor-api through graphql-manager.ts, packages/subgraph-extraction.ts and the package entry only. Call codeFirstCheck from one of those, or export the piece from index.mts as @experimental."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "packages/reactor-api/src/graphql/graphql-manager.ts",
+        "packages/reactor-api/src/packages/subgraph-extraction.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)document-model/(src|dist)(/|$)",
+                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts as @experimental instead of reaching into a deep path."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/reactor-api/src/graphql/code-first/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)document-model/(src|dist)(/|$)",
+                "message": "Hosts and readers import document-model's public entries (document-model, document-model/scalars). Export the piece from src/definition/index.ts as @experimental instead of reaching into a deep path."
+              },
+              {
+                "regex": "(^|/)document-model-schema(/|$)",
+                "message": "Code-first subgraphs compile through document-model's public subgraph API, never through the host's document-model schema building."
               }
             ]
           }
@@ -1470,6 +1559,10 @@
               {
                 "regex": "[Ss]ubgraph",
                 "message": "Document-model schema building does not depend on subgraph hosting. Subgraphs build on this folder from their own."
+              },
+              {
+                "regex": "(^|/)code-first(/|$)",
+                "message": "Code-first subgraph hosting enters reactor-api through graphql-manager.ts, packages/subgraph-extraction.ts and the package entry only. Call codeFirstCheck from one of those, or export the piece from index.mts as @experimental."
               }
             ]
           }

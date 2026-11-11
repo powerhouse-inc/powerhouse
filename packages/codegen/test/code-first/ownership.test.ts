@@ -12,10 +12,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { basename, join, relative } from "node:path";
 import type { Project } from "ts-morph";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { selectModelGeneration } from "../../src/codegen/index.js";
+import { modelGeneration } from "../../src/codegen/index.js";
 import { loadDocumentModel } from "../../src/codegen/utils.js";
 import { buildTsMorphProject } from "../../src/utils/index.mjs";
 import {
@@ -24,7 +24,6 @@ import {
   removePackage,
   schemaFirstSpecPath,
   todo,
-  writeConfig,
 } from "./package.js";
 
 const caseInsensitiveFs = (() => {
@@ -51,7 +50,7 @@ afterEach(() => {
   for (const created of packages.splice(0)) removePackage(created);
 });
 
-const generation = () => selectModelGeneration({ projectDir: dir });
+const generation = () => modelGeneration;
 
 /** Every file and directory outside node_modules, with file bytes. */
 function disk(root: string): Record<string, string | null> {
@@ -107,16 +106,25 @@ async function expectRefusedWithoutWrites(
   expect(disk(dir)).toStrictEqual(diskBefore);
 }
 
+/**
+ * Moves the scaffolded model. Outside the models directory it is reached
+ * through `document-models/<name>-entry/index.ts`, which re-exports it.
+ */
 function moveCodeFirstModel(to: string) {
   mkdirSync(join(dir, to, ".."), { recursive: true });
   renameSync(join(dir, "document-models/todo-list"), join(dir, to));
-  writeConfig(dir, {
-    definitionSources: {
-      formatVersion: 1,
-      mode: "code-first",
-      entries: [{ specifier: `./${to}/index.ts` }],
-    },
-  });
+  if (!to.startsWith("document-models/")) {
+    reexportFrom(`document-models/${basename(to)}-entry`, to);
+  }
+}
+
+/** A model directory whose entry re-exports the code-first model at `from`. */
+function reexportFrom(entryDir: string, from: string) {
+  mkdirSync(join(dir, entryDir), { recursive: true });
+  writeFileSync(
+    join(dir, entryDir, "index.ts"),
+    `export * from "${relative(join(dir, entryDir), join(dir, from)).replaceAll("\\", "/")}/index.js";\n`,
+  );
 }
 
 function storeSpec(dirName: string, state: DocumentModelGlobalState) {
@@ -159,7 +167,7 @@ describe("generating one schema-first model in a code-first package", () => {
           { ...spec, id: "acme/imported", name: "Todo List" },
           project,
         ),
-      'the schema-first model "Todo List" and ./src/todo-list/index.ts both export TodoListV1 from document-models/index.ts.',
+      'the schema-first model "Todo List" and ./document-models/todo-list-entry/index.ts both export TodoListV1 from document-models/index.ts.',
     );
   });
 
@@ -188,7 +196,8 @@ describe("generating one schema-first model in a code-first package", () => {
           { ...spec, id: "acme/chores", name: "Chores" },
           project,
         ),
-      'the schema-first model "Chores" would overwrite document-models/tasks/index.ts, loaded from ./document-models/tasks/index.ts, while writing document-models/chores.',
+      "would overwrite document-models/tasks/index.ts",
+      "./document-models/chores/index.ts",
     );
   });
 
@@ -216,30 +225,20 @@ describe("generating one schema-first model in a code-first package", () => {
   });
 
   it.each([false, true])(
-    "preserves barrel-selected authored files, with stored specification present: %s",
+    "preserves authored files another entry imports, with stored specification present: %s",
     async (withSpec) => {
       moveCodeFirstModel("document-models/tasks");
-      mkdirSync(join(dir, "src"), { recursive: true });
-      writeFileSync(
-        join(dir, "src/models.ts"),
-        'export * from "../document-models/tasks/index.js";\n',
-      );
-      writeConfig(dir, {
-        definitionSources: {
-          formatVersion: 1,
-          mode: "code-first",
-          entries: [{ specifier: "./src/models.ts" }],
-        },
-      });
+      reexportFrom("document-models/tasks-entry", "document-models/tasks");
       if (withSpec)
         storeSpec("tasks", { ...spec, id: "acme/tasks", name: "Tasks" });
+      // Without a stored file, tasks/ is a model directory whose own entry loads it.
       await expectRefusedWithoutWrites(
         (project) =>
           generation().generateDocumentModel(
             { ...spec, id: "acme/tasks", name: "Tasks" },
             project,
           ),
-        "document-models/tasks/index.ts, loaded from ./src/models.ts",
+        `document-models/tasks/index.ts, loaded from ./document-models/${withSpec ? "tasks-entry" : "tasks"}/index.ts`,
       );
     },
   );
@@ -279,25 +278,14 @@ describe("generating every model in a code-first package", () => {
   );
 
   it.each(["generateAllDocumentModels", "generateAll"] as const)(
-    "%s preserves barrel-selected authored files beside a stored specification",
+    "%s preserves authored files another entry imports, beside a stored specification",
     async (method) => {
       moveCodeFirstModel("document-models/tasks");
-      mkdirSync(join(dir, "src"), { recursive: true });
-      writeFileSync(
-        join(dir, "src/models.ts"),
-        'export * from "../document-models/tasks/index.js";\n',
-      );
-      writeConfig(dir, {
-        definitionSources: {
-          formatVersion: 1,
-          mode: "code-first",
-          entries: [{ specifier: "./src/models.ts" }],
-        },
-      });
+      reexportFrom("document-models/tasks-entry", "document-models/tasks");
       storeSpec("tasks", { ...spec, id: "acme/tasks", name: "Tasks" });
       await expectRefusedWithoutWrites(
         (project) => generation()[method](project),
-        "document-models/tasks/index.ts, loaded from ./src/models.ts",
+        "document-models/tasks/index.ts, loaded from ./document-models/tasks-entry/index.ts",
       );
     },
   );
@@ -324,16 +312,6 @@ describe("generating every model in a code-first package", () => {
           ),
         );
       }
-      writeConfig(dir, {
-        definitionSources: {
-          formatVersion: 1,
-          mode: "code-first",
-          entries: [
-            { specifier: "./document-models/todo-list/index.ts" },
-            { specifier: "./document-models/other/index.ts" },
-          ],
-        },
-      });
       await expectRefusedWithoutWrites(
         (project) =>
           method === "generateDocumentModel"
@@ -402,7 +380,8 @@ describe("generating every model in a code-first package", () => {
     });
     await expectRefusedWithoutWrites(
       (project) => generation().generateAll(project),
-      "document-models/todo-list/todo-list.json would overwrite document-models/todo-list/index.ts, loaded from ./document-models/todo-list/index.ts, while writing document-models/todo-list.",
+      "PH-PKG-DEFINITION-UNREGISTERED",
+      "./document-models/todo-list/ stores a schema-first specification",
     );
   });
 });

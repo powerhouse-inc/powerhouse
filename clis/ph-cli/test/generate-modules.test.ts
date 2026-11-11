@@ -87,6 +87,7 @@ const subgraphArgs = (overrides: object) => ({
   all: false,
   extract: false,
   skipInstall: true,
+  codeFirst: false,
   ...overrides,
 });
 

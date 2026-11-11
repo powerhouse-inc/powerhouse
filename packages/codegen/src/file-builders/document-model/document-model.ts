@@ -6,27 +6,9 @@ import { createOrUpdateManifest } from "file-builders";
 import { getDocumentModelVariableNames } from "name-builders";
 import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
 import { join, posix, relative } from "node:path";
-import {
-  capitalize,
-  filter,
-  forEach,
-  isTruthy,
-  last,
-  map,
-  pipe,
-  prop,
-  sort,
-  subtract,
-  unique,
-  uniqueBy,
-} from "remeda";
-import {
-  documentModelsIndexTemplate,
-  documentModelsTemplate,
-  resolveModuleErrors,
-  upgradeManifestsTemplate,
-} from "templates";
-import { SyntaxKind, type Project } from "ts-morph";
+import { last, map, pipe, prop, sort, subtract, unique } from "remeda";
+import { resolveModuleErrors } from "templates";
+import type { Project } from "ts-morph";
 import {
   ensureDirectoriesExist,
   formatJson,
@@ -34,8 +16,12 @@ import {
   getInitialStates,
   getOrCreateDirectory,
   getOrCreateSourceFile,
-  getVariableDeclarationByTypeName,
+  projectPath,
 } from "utils";
+import {
+  documentModelImport,
+  documentModelsDirOf,
+} from "../../utils/document-models-dir.js";
 import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
 import { assertProjectScalarsModuleExists } from "../../codegen/project-scalars.js";
 import {
@@ -85,12 +71,13 @@ export async function tsMorphGenerateDocumentModel(
   project: Project,
 ) {
   const { name, id, specifications } = documentModelState;
+  const projectDir = projectPath(project, ".");
+  const models = documentModelsDirOf(projectDir);
   const { directory: documentModelsDir } = getOrCreateDirectory(
     project,
-    "document-models",
+    models.path,
   );
   const documentModelsDirPath = documentModelsDir.getPath();
-  const projectDir = documentModelsDir.getParentOrThrow().getPath();
   assertProjectScalarsModuleExists({
     modelName: name,
     specifications,
@@ -182,6 +169,8 @@ export async function tsMorphGenerateDocumentModel(
       documentModelDirPath,
       documentModelDirName,
       documentModelImportPath,
+      importDocumentModel: (fromDir, ...segments) =>
+        documentModelImport(models, fromDir, ...segments),
       versionDirPath,
       versionDirName,
       versionImportPath,
@@ -255,18 +244,6 @@ export async function tsMorphGenerateDocumentModel(
     documentModelDirPath,
     latestVersion,
   });
-  // skipAddingFilesFromTsConfig leaves other models out of the project; add
-  // the files the aggregates scan so every model is included, not just the new one.
-  project.addSourceFilesAtPaths([
-    join(documentModelsDirPath, "**", "module.ts"),
-    join(documentModelsDirPath, "**", "upgrade-manifest.ts"),
-  ]);
-  // /document-models/document-models.ts
-  await makeDocumentModelsFile({ project, documentModelsDirPath });
-  // /document-models/index.ts
-  await makeDocumentModelsIndexFile({ project, documentModelsDirPath });
-  // /document-models/upgrade-manifests.ts
-  await makeUpgradeManifestsFile({ project, documentModelsDirPath });
   await createOrUpdateManifest(
     {
       documentModels: [
@@ -278,165 +255,6 @@ export async function tsMorphGenerateDocumentModel(
     },
     projectDir,
   );
-}
-
-async function makeUpgradeManifestsFile(args: {
-  project: Project;
-  documentModelsDirPath: string;
-}) {
-  const { project, documentModelsDirPath } = args;
-  const sourceFile = project.createSourceFile(
-    join(documentModelsDirPath, "upgrade-manifests.ts"),
-    upgradeManifestsTemplate,
-    { overwrite: true },
-  );
-
-  const upgradeManifestsArray = sourceFile
-    .getVariableDeclarationOrThrow("upgradeManifests")
-    .getFirstDescendantByKindOrThrow(SyntaxKind.ArrayLiteralExpression);
-
-  pipe(
-    project.getSourceFiles(),
-    // find the upgrade manifest files for each document model
-    filter((sourceFile) => sourceFile.getBaseName() === "upgrade-manifest.ts"),
-    // get the upgrade manifest objects
-    map((sourceFile) =>
-      getVariableDeclarationByTypeName(sourceFile, "UpgradeManifest"),
-    ),
-    filter(isTruthy),
-    // get name and dir for adding to upgradeManifests array and making import specifier
-    map((variableDeclaration) => ({
-      name: variableDeclaration.getName(),
-      // the upgrade-manifest.ts file lives in `document-models/{document-model-dir}/upgrades`
-      documentModelDir: variableDeclaration
-        .getSourceFile()
-        .getDirectory()
-        .getParentOrThrow()
-        .getBaseName(),
-    })),
-    uniqueBy(prop("name")),
-    // make named imports and module specifier to add for each upgrade manifest
-    map(({ name, documentModelDir }) => ({
-      name,
-      namedImports: [name],
-      moduleSpecifier: posix.join(
-        "document-models",
-        documentModelDir,
-        "upgrades",
-      ),
-    })),
-    // add import of each upgrade manifest and add it to the upgradeManifests array
-    forEach(({ name, namedImports, moduleSpecifier }) => {
-      sourceFile.addImportDeclaration({ namedImports, moduleSpecifier });
-      upgradeManifestsArray.addElement(name);
-    }),
-  );
-
-  await formatSourceFileWithPrettier(sourceFile);
-}
-
-async function makeDocumentModelsFile(args: {
-  project: Project;
-  documentModelsDirPath: string;
-}) {
-  const { project, documentModelsDirPath } = args;
-  const sourceFile = project.createSourceFile(
-    join(documentModelsDirPath, "document-models.ts"),
-    documentModelsTemplate,
-    { overwrite: true },
-  );
-
-  const documentModelsArray = sourceFile
-    .getVariableDeclarationOrThrow("documentModels")
-    .getFirstDescendantByKindOrThrow(SyntaxKind.ArrayLiteralExpression);
-
-  pipe(
-    project
-      .getDirectoryOrThrow(documentModelsDirPath)
-      .getDescendantSourceFiles(),
-    filter((sourceFile) => sourceFile.getBaseName() === "module.ts"),
-    uniqueBy((sourceFile) => sourceFile.getFilePath()),
-    map((sourceFile) =>
-      getVariableDeclarationByTypeName(sourceFile, "DocumentModel"),
-    ),
-    filter(isTruthy),
-    map((variableDeclaration) => ({
-      name: variableDeclaration.getName(),
-      directory: variableDeclaration.getSourceFile().getDirectory(),
-    })),
-    map(({ name, directory }) => ({
-      name,
-      version: directory.getBaseName(),
-      documentModelDir: directory.getParentOrThrow().getBaseName(),
-    })),
-    filter(({ version }) => /^v\d+$/.test(version)),
-    map(({ name, version, documentModelDir }) => ({
-      name: `${name}${capitalize(version)}`,
-      // imports the document model with the version appended to the name
-      namedImports: [`${name} as ${name}${capitalize(version)}`],
-      moduleSpecifier: posix.join("document-models", documentModelDir, version),
-    })),
-    forEach(({ name, namedImports, moduleSpecifier }) => {
-      sourceFile.addImportDeclaration({
-        namedImports,
-        moduleSpecifier,
-      });
-      documentModelsArray.addElement(name);
-    }),
-  );
-  await formatSourceFileWithPrettier(sourceFile);
-}
-
-async function makeDocumentModelsIndexFile(args: {
-  project: Project;
-  documentModelsDirPath: string;
-}) {
-  const { project, documentModelsDirPath } = args;
-  const sourceFile = project.createSourceFile(
-    join(documentModelsDirPath, "index.ts"),
-    documentModelsIndexTemplate,
-    { overwrite: true },
-  );
-  pipe(
-    project
-      .getDirectoryOrThrow(documentModelsDirPath)
-      .getDescendantSourceFiles(),
-    filter((sourceFile) => sourceFile.getBaseName() === "module.ts"),
-    uniqueBy((sourceFile) => sourceFile.getFilePath()),
-    map((sourceFile) =>
-      getVariableDeclarationByTypeName(sourceFile, "DocumentModel"),
-    ),
-    filter(isTruthy),
-    map((variableDeclaration) => ({
-      name: variableDeclaration.getName(),
-      directory: variableDeclaration.getSourceFile().getDirectory(),
-    })),
-    map(({ name, directory }) => ({
-      name,
-      version: directory.getBaseName(),
-      documentModelDir: directory.getParentOrThrow().getBaseName(),
-    })),
-    filter(({ version }) => /^v\d+$/.test(version)),
-    map(({ name, version, documentModelDir }) => ({
-      // exports the document model with the version appended to the name
-      namedExports: [`${name} as ${name}${capitalize(version)}`],
-      moduleSpecifier: `./${documentModelDir}/${version}/module.js`,
-    })),
-    forEach(({ namedExports, moduleSpecifier }) => {
-      sourceFile.addExportDeclaration({
-        namedExports,
-        moduleSpecifier,
-      });
-    }),
-  );
-  // Upgrade manifests ride the same subpath so node-side package loaders
-  // (reactor-api) can pick them up without importing the package root, which
-  // would pull editors into a node process.
-  sourceFile.addExportDeclaration({
-    namedExports: ["upgradeManifests"],
-    moduleSpecifier: "./upgrade-manifests.js",
-  });
-  await formatSourceFileWithPrettier(sourceFile);
 }
 
 /** Writes a json file derived from a `documentModelState` */

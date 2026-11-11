@@ -1,13 +1,13 @@
-import { codeFirstModelGeneration } from "../../src/codegen/code-first-generation.js";
 import { migrate } from "../../src/codegen/migrate.js";
+import { SCAFFOLDED_CONNECT_INSTANCE } from "../../src/codegen/migrate-powerhouse-config.js";
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
-import { mkdirSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   generateAll as generatePublicAll,
   generateAllDocumentModels as generatePublicModels,
-  selectModelGeneration,
+  modelGeneration,
 } from "../../src/codegen/index.js";
 import { loadDocumentModel } from "../../src/codegen/utils.js";
 import { createOrUpdateManifest } from "../../src/file-builders/manifest.js";
@@ -50,10 +50,7 @@ afterEach(() => {
   for (const created of packages.splice(0)) removePackage(created);
 });
 
-const generation = (root = dir) =>
-  selectModelGeneration({
-    projectDir: root,
-  });
+const generation = () => modelGeneration;
 
 const aggregates = () => AGGREGATES.map(([path]) => read(dir, path));
 const manifest = () => readJson(dir, "powerhouse.manifest.json");
@@ -66,10 +63,7 @@ describe("bulk generation in a package with both kinds of models", () => {
     dir = await newPackage();
     state = await loadDocumentModel(copySchemaFirstSpec(dir));
     await inProject(dir, (project) =>
-      selectModelGeneration({ projectDir: dir }).generateDocumentModel(
-        state,
-        project,
-      ),
+      modelGeneration.generateDocumentModel(state, project),
     );
     await generateCodeFirstDocumentModel(todo, buildTsMorphProject(dir));
     for (const [editorName, documentType] of [
@@ -142,15 +136,23 @@ describe("bulk generation in a package with both kinds of models", () => {
     const before = tree(dir);
     await expect(
       migrate("6.2.3-dev.90", dir, { skipInstall: true }),
-    ).rejects.toThrow("Fix its JSON before generating");
+    ).rejects.toThrow(/powerhouse\.config\.json.*Fix its JSON/);
     expect(tree(dir)).toEqual(before);
   });
 
   it("keeps both models and the code-first editor during migration", async () => {
     Object.assign(globalThis, { WORKSPACE_PACKAGES: [] });
+    writeConfig(dir, { connect: { instance: SCAFFOLDED_CONNECT_INSTANCE } });
     await migrate("6.2.3-dev.90", dir, { skipInstall: true });
+    expect(readJson(dir, "powerhouse.config.json")).toHaveProperty(
+      "connect",
+      {},
+    );
     expect(read(dir, "document-models/document-models.ts")).toContain(
-      "codeFirstSource",
+      "SubgraphModuleV1",
+    );
+    expect(read(dir, "document-models/document-models.ts")).toContain(
+      "codeFirstSource0.TodoList",
     );
     expect(read(dir, "editors/todo-editor/module.ts")).toContain(
       'from "../../document-models/todo-list/index.js";',
@@ -178,20 +180,76 @@ describe("bulk generation in a package with both kinds of models", () => {
     ).toStrictEqual(["subgraph-editor", "todo-editor"]);
   });
 
-  it("keeps every model entry when a model directory cannot be read", async () => {
-    mkdirSync(join(dir, "document-models/broken"));
-    await createOrUpdateManifest(
-      { documentModels: [{ id: "acme/broken", name: "Broken" }] },
-      dir,
-    );
-    const result = await inProject(dir, (project) =>
-      generation().generateAllDocumentModels(project),
-    );
-    expect(result.unreadableDirs).toStrictEqual(["broken"]);
-    expect(
-      (manifest().documentModels as { id: string }[]).map(({ id }) => id),
-    ).toContain("acme/broken");
-  });
+  it.each([
+    {
+      holding: "nothing",
+      directory: "broken",
+      prepare: () => mkdirSync(join(dir, "document-models/broken")),
+    },
+    {
+      holding: "an entry that exports no model",
+      directory: "broken",
+      prepare: () => {
+        mkdirSync(join(dir, "document-models/broken"));
+        writeFileSync(
+          join(dir, "document-models/broken/index.ts"),
+          "export const helper = 1;\n",
+        );
+      },
+    },
+    {
+      holding:
+        "generated code without its specification, which a code-first model imports",
+      directory: "subgraph-module",
+      prepare: () => {
+        rmSync(
+          join(dir, "document-models/subgraph-module/subgraph-module.json"),
+        );
+        writeFileSync(
+          join(dir, "document-models/todo-list/index.ts"),
+          `${read(dir, "document-models/todo-list/index.ts")}\nimport "../subgraph-module/v1/gen/document-type.js";\n`,
+        );
+      },
+    },
+  ])(
+    "keeps every model entry when a model directory holds $holding",
+    async ({ directory, prepare }) => {
+      prepare();
+      await createOrUpdateManifest(
+        { documentModels: [{ id: "acme/stale", name: "Stale" }] },
+        dir,
+      );
+      const registered = manifest().documentModels;
+      const result = await inProject(dir, (project) =>
+        generation().generateAllDocumentModels(project),
+      );
+      expect(result.unreadableDirs).toStrictEqual([directory]);
+      expect(manifest().documentModels).toStrictEqual(registered);
+    },
+  );
+
+  it.each(["all", "zzz"])(
+    "prunes stale entries when model directory %s re-exports the code-first model",
+    async (alias) => {
+      mkdirSync(join(dir, "document-models", alias));
+      writeFileSync(
+        join(dir, "document-models", alias, "index.ts"),
+        'export * from "../todo-list/index.js";\n',
+      );
+      await createOrUpdateManifest(
+        { documentModels: [{ id: "acme/stale", name: "Stale" }] },
+        dir,
+      );
+      const result = await inProject(dir, (project) =>
+        generation().generateAllDocumentModels(project),
+      );
+      expect(result.unreadableDirs).toStrictEqual([]);
+      expect(manifest().documentModels).toStrictEqual([
+        { id: "powerhouse/subgraph", name: "Subgraph Module" },
+        { id: "acme/todo-list", name: "Todo List" },
+      ]);
+    },
+  );
 
   it("fails before writing anything when a code-first source cannot be loaded", async () => {
     const before = tree(dir);
@@ -240,13 +298,11 @@ describe("bulk generation with a code-first source outside document-models", () 
         join(dir, "document-models/todo-list"),
         join(dir, "src/todo-list"),
       );
-      writeConfig(dir, {
-        definitionSources: {
-          formatVersion: 1,
-          mode: "code-first",
-          entries: [{ specifier: "./src/todo-list/index.ts" }],
-        },
-      });
+      mkdirSync(join(dir, "document-models/todo-list"));
+      writeFileSync(
+        join(dir, "document-models/todo-list/index.ts"),
+        'export * from "../../src/todo-list/index.js";\n',
+      );
       const schemaFirst = {
         id: "powerhouse/subgraph",
         name: "Subgraph Module",
@@ -279,26 +335,26 @@ describe("bulk generation with a code-first source outside document-models", () 
 });
 
 describe("bulk generation in a package without models", () => {
-  it("writes what schema-first generation writes", async () => {
-    const schemaFirst = await newPackage();
+  it("leaves the barrels without a model export", async () => {
     dir = await newPackage();
-    writeConfig(dir, {
-      definitionSources: { formatVersion: 1, mode: "code-first", entries: [] },
-    });
-    for (const root of [schemaFirst, dir]) {
-      await inProject(root, (project) => generation(root).generateAll(project));
-    }
-    expect(tree(dir)).toStrictEqual({
-      ...tree(schemaFirst),
-      "powerhouse.config.json": read(dir, "powerhouse.config.json"),
-    });
+    await inProject(dir, (project) => modelGeneration.generateAll(project));
+    expect(aggregates()).toStrictEqual([
+      `/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
+export { upgradeManifests } from "./upgrade-manifests.js";
+`,
+      await formatSafe(documentModelsTemplate),
+      await formatSafe(upgradeManifestsTemplate),
+    ]);
   });
 });
 
-it("generates a code-first package without an additional source adapter", async () => {
+it("generates a code-first package with no stored model", async () => {
   const root = await newPackage();
   await generateCodeFirstDocumentModel(todo, buildTsMorphProject(root));
-  const generation = codeFirstModelGeneration();
+  const generation = modelGeneration;
   await inProject(root, (project) =>
     generation.generateEditor(
       { editorName: "Todo Editor", documentTypes: [todo.documentType] },
