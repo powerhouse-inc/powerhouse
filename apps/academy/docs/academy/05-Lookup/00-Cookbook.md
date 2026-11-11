@@ -467,9 +467,11 @@ ph init --package-manager yarn
 # Initialize a project with bun
 ph init --package-manager bun
 
-# Initialize a project with pnpm (preferred default)
+# Initialize a project with pnpm
 ph init --package-manager pnpm
 ```
+
+Without a package-manager flag, `ph init` picks one in this order: the one that launched `ph` (npx, pnpm dlx, bunx), the one that installed `ph` globally unless that was npm, bun if it is on your `PATH`, pnpm 10.14 or later if it is on your `PATH`, then npm. It prints `Using <pm> (detected)` when it detected one.
 
 ### Expected outcome
 
