@@ -8,6 +8,7 @@ State of open work as of 2026-11-06 (main `a88b2cfb13`).
 - `.claude/README.md` - repo agents, commands and the bench pipeline.
 - `docs/adr/` - architecture decisions. `docs/specs/auth-scope.md` - auth scope design and stage status.
 - `RELEASE.md`, `docs/BREAKING-CHANGES-GUIDE.md` - release flow.
+- `docs/handoffs/` - agent task prompts for open reactor work, one per item; index in its `README.md`.
 
 ## Plans in progress
 
