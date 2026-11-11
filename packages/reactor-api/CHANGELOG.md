@@ -1,3 +1,14 @@
+## 6.2.3-dev.102 (2026-11-11)
+
+### 🚀 Features
+
+- **reactor-api:** serve code-first Subgraph classes beside BaseSubgraph ([a46e86b443](https://github.com/powerhouse-inc/powerhouse/commit/a46e86b443))
+- **document-model:** add the code-first subgraph definition layer and checks ([ed3a0ddb00](https://github.com/powerhouse-inc/powerhouse/commit/ed3a0ddb00))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.101 (2026-11-10)
 
 ### 🩹 Fixes

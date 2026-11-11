@@ -1,3 +1,14 @@
+## 6.2.3-dev.102 (2026-11-11)
+
+### 🚀 Features
+
+- **document-model:** make the local scope optional in defineDocumentModel ([7b75717f0e](https://github.com/powerhouse-inc/powerhouse/commit/7b75717f0e))
+- **document-model:** add the code-first subgraph definition layer and checks ([ed3a0ddb00](https://github.com/powerhouse-inc/powerhouse/commit/ed3a0ddb00))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.101 (2026-11-10)
 
 ### 🩹 Fixes

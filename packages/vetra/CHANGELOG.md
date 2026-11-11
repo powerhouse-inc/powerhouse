@@ -1,3 +1,14 @@
+## 6.2.3-dev.102 (2026-11-11)
+
+### 🚀 Features
+
+- **codegen:** scaffold, classify and register both subgraph styles ([0d0f838348](https://github.com/powerhouse-inc/powerhouse/commit/0d0f838348))
+- **document-model:** add the code-first subgraph definition layer and checks ([ed3a0ddb00](https://github.com/powerhouse-inc/powerhouse/commit/ed3a0ddb00))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.101 (2026-11-10)
 
 ### 🩹 Fixes

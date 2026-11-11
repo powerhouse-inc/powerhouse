@@ -1,3 +1,16 @@
+## 6.2.3-dev.102 (2026-11-11)
+
+### 🚀 Features
+
+- **document-model:** make the local scope optional in defineDocumentModel ([7b75717f0e](https://github.com/powerhouse-inc/powerhouse/commit/7b75717f0e))
+- **ph-cli:** add ph migrate --subgraphs to convert schema-first subgraphs ([9925e763b3](https://github.com/powerhouse-inc/powerhouse/commit/9925e763b3))
+- **codegen:** scaffold, classify and register both subgraph styles ([0d0f838348](https://github.com/powerhouse-inc/powerhouse/commit/0d0f838348))
+- **document-model:** add the code-first subgraph definition layer and checks ([ed3a0ddb00](https://github.com/powerhouse-inc/powerhouse/commit/ed3a0ddb00))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.101 (2026-11-10)
 
 ### 🩹 Fixes

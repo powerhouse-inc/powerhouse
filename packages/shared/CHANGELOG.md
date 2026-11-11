@@ -1,3 +1,16 @@
+## 6.2.3-dev.102 (2026-11-11)
+
+### 🚀 Features
+
+- **ph-cli:** add ph migrate --subgraphs to convert schema-first subgraphs ([9925e763b3](https://github.com/powerhouse-inc/powerhouse/commit/9925e763b3))
+- **document-model:** add the code-first subgraph definition layer and checks ([ed3a0ddb00](https://github.com/powerhouse-inc/powerhouse/commit/ed3a0ddb00))
+- **shared:** accept boolean manifest config entries ([#3012](https://github.com/powerhouse-inc/powerhouse/pull/3012))
+
+### ❤️ Thank You
+
+- froid1911
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.2.3-dev.101 (2026-11-10)
 
 ### 🩹 Fixes
