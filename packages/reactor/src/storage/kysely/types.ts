@@ -1,3 +1,6 @@
+import type { Action } from "@powerhousedao/shared/document-model";
+import type { InitialAuthFact } from "./initial-auth-store.js";
+import type { Operation } from "@powerhousedao/shared/document-model";
 import type {
   ColumnType,
   Generated,
@@ -179,6 +182,20 @@ export interface WriteIdentityTable {
 }
 
 export interface Database {
+  InitialAuthCreation: {
+    intentKey: string;
+    requestDigest: string;
+    documentId: string;
+    envelope: ColumnType<Action[], string, string>;
+    facts: ColumnType<InitialAuthFact[], string, string>;
+    committed: boolean;
+  };
+  InitialAuthInbox: {
+    documentId: string;
+    actionId: string;
+    signerKey: string;
+    operation: ColumnType<Operation, string, string>;
+  };
   Operation: OperationTable;
   Keyframe: KeyframeTable;
   document_collections: DocumentCollectionTable;

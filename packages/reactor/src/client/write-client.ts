@@ -1,3 +1,5 @@
+import type { InitialAuthCreationRequest } from "../core/initial-auth/provider.js";
+import type { InitialAuthCoordinator } from "../core/initial-auth/coordinator.js";
 import type {
   Action,
   AuthSubject,
@@ -8,6 +10,12 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   actions,
+  AuthBootstrapError,
+  createCopyHeader,
+  generateId,
+  hasDerivedDocumentId,
+  parseInitialAuthCommitment,
+  validateAuthBootstrapEnvelope,
   capabilitiesOf,
   createVersionsOf,
   serializeByKey,
@@ -27,7 +35,7 @@ import type {
 } from "../core/types.js";
 import { signActions } from "../core/utils.js";
 import { buildDecisionModel } from "../decision/build-decision-model.js";
-import { SeededStateReader } from "../decision/read-gate.js";
+import { SeededStateReader, domainScopesOf } from "../decision/read-gate.js";
 import type { Evaluation } from "../decision/types.js";
 import {
   baseReducerResolver,
@@ -103,6 +111,7 @@ export type SubmittedExecution = {
  * model lookups and the read-back a handle's `document()` makes.
  */
 export class ReactorWriteClient implements IReactorWriteClient {
+  private readonly initialAuth: InitialAuthCoordinator | undefined;
   readonly drives: IDriveWriteClient;
 
   private readonly logger: ILogger;
@@ -120,6 +129,7 @@ export class ReactorWriteClient implements IReactorWriteClient {
   private readonly undoRedoChains = new Map<string, Promise<unknown>>();
 
   constructor(parts: ReactorClientParts, read: ReactorReadClient) {
+    this.initialAuth = parts.initialAuth;
     this.logger = parts.logger;
     this.baseReducer = baseReducerResolver(
       parts.protocolSelection.protocolSupport,
@@ -161,6 +171,23 @@ export class ReactorWriteClient implements IReactorWriteClient {
       },
       (options, signal) =>
         read.createProtocol.select(options, { loadModel: true }, signal),
+      undefined,
+      undefined,
+      (document) => this.initialAuth?.protectedModel(document) ?? false,
+      (source, draft, signal) =>
+        this.copyWithInitialAuth(
+          source.header.id,
+          {
+            requester: this.gating.readSubject(),
+            context: "local-copy",
+            idempotencyKey: draft.header.id,
+          },
+          {
+            name: draft.header.name,
+            protocolVersions: draft.header.protocolVersions,
+          },
+          signal,
+        ),
     );
   }
 
@@ -293,6 +320,35 @@ export class ReactorWriteClient implements IReactorWriteClient {
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<WriteHandle> {
+    if (this.initialAuth?.protectedModel(document)) {
+      const handle = await this.createWithInitialAuth(
+        document,
+        {
+          requester: {
+            ...(this.signer.user?.address
+              ? { address: this.signer.user.address }
+              : {}),
+            ...(this.signer.app?.key ? { key: this.signer.app.key } : {}),
+          },
+          idempotencyKey: document.header.id,
+          context: "local-client",
+        },
+        signal,
+      );
+      if (parentIdentifier) {
+        await handle.written;
+        const attached = await this.addRelationship(
+          parentIdentifier,
+          handle.documentId,
+          "child",
+          undefined,
+          "main",
+          signal,
+        );
+        await attached.written;
+      }
+      return handle;
+    }
     this.logger.verbose(
       "create(@id, @parentIdentifier)",
       document.header.id,
@@ -307,12 +363,244 @@ export class ReactorWriteClient implements IReactorWriteClient {
     return this.createHandle(document, batchResult, signal);
   }
 
+  /** Trusted in-process host entry; transport adapters supply their verified requester. */
+  async createWithInitialAuth(
+    document: PHDocument,
+    request: InitialAuthCreationRequest,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    if (!this.initialAuth)
+      throw new Error(
+        "Initial authorization creation is not configured on this host.",
+      );
+    const prepared = await this.initialAuth.prepare(
+      document,
+      request,
+      this.signer,
+      signal,
+    );
+    const job = await this.reactor.execute(
+      prepared.document.header.id,
+      prepared.document.header.branch,
+      prepared.actions,
+      signal,
+    );
+    return this.handles.forJobs(
+      job.id,
+      [job],
+      prepared.document.header.id,
+      prepared.document.header.branch,
+      signal,
+      this.createReader(),
+    );
+  }
+
+  async copyProtectedDocument(
+    sourceIdentifier: string,
+    options?: { name?: string; protocolVersions?: Record<string, number> },
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    return this.copyWithInitialAuth(
+      sourceIdentifier,
+      {
+        requester: this.gating.readSubject(),
+        context: "local-copy",
+        idempotencyKey: generateId(),
+      },
+      options,
+      signal,
+    );
+  }
+
+  async copyWithInitialAuth(
+    sourceIdentifier: string,
+    request: InitialAuthCreationRequest,
+    options?: { name?: string; protocolVersions?: Record<string, number> },
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    if (!this.initialAuth)
+      throw new AuthBootstrapError(
+        "unsupported-bootstrap",
+        "Initial authorization copying is not configured on this host.",
+      );
+    const copyRequest = {
+      sourceIdentifier,
+      ...(options === undefined ? {} : { options }),
+    };
+    const previous = await this.initialAuth.resumeCopy(request, copyRequest);
+    if (previous) {
+      const job = await this.reactor.execute(
+        previous.documentId,
+        previous.branch,
+        previous.actions,
+        signal,
+      );
+      return this.handles.forJobs(
+        job.id,
+        [job],
+        previous.documentId,
+        previous.branch,
+        signal,
+        this.createReader(),
+      );
+    }
+    const source = await this.reactor.getByIdOrSlug<PHDocument>(
+      sourceIdentifier,
+      undefined,
+      undefined,
+      signal,
+    );
+    if (source.header.protocolVersions?.["auth-bootstrap"] !== 1)
+      throw new AuthBootstrapError(
+        "invalid-bootstrap",
+        "The source is not an initialized protected document.",
+      );
+    const readable = await this.gating.readableScopes(
+      source,
+      { subject: request.requester },
+      signal,
+    );
+    if (!domainScopesOf(source).every(readable))
+      throw new AuthBootstrapError(
+        "invalid-bootstrap",
+        "Copying requires access to every source domain scope.",
+      );
+    const state = {
+      ...structuredClone(source.state),
+      auth: { version: 0, grants: [] },
+    };
+    const draft: PHDocument = {
+      ...source,
+      header: {
+        ...createCopyHeader({
+          documentType: source.header.documentType,
+          protocolVersions: {
+            ...source.header.protocolVersions,
+            ...options?.protocolVersions,
+          },
+        }),
+        name: options?.name ?? source.header.name,
+        meta: structuredClone(source.header.meta),
+      },
+      state,
+      initialState: state,
+      operations: {},
+      clipboard: [],
+    };
+    const prepared = await this.initialAuth.prepare(
+      draft,
+      request,
+      this.signer,
+      signal,
+      source,
+      copyRequest,
+    );
+    const job = await this.reactor.execute(
+      prepared.document.header.id,
+      prepared.document.header.branch,
+      prepared.actions,
+      signal,
+    );
+    return this.handles.forJobs(
+      job.id,
+      [job],
+      prepared.document.header.id,
+      prepared.document.header.branch,
+      signal,
+      this.createReader(),
+    );
+  }
+
+  /** Imports recorded history; authorization is admitted from its signed origin evidence. */
+  async importWithInitialAuth(
+    document: PHDocument,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    if (!this.initialAuth)
+      throw new AuthBootstrapError(
+        "unsupported-bootstrap",
+        "Initial authorization import is not configured on this host.",
+      );
+    const commitment = parseInitialAuthCommitment(document.header.initialAuth);
+    if (!hasDerivedDocumentId(document.header))
+      throw new AuthBootstrapError(
+        "invalid-bootstrap",
+        "The import identity differs from its creation commitment.",
+      );
+    const model = await this.read.getDocumentModelModuleForDocument({
+      ...document,
+      state: {
+        ...document.state,
+        document: {
+          ...document.state.document,
+          version: commitment.modelVersion,
+        },
+      },
+    });
+    const operations = Object.values(document.operations).flat();
+    const bootstrap = commitment.actionIds.map((id) => {
+      const matches = operations.filter(
+        (operation) => operation.action.id === id,
+      );
+      if (matches.length !== 1)
+        throw new AuthBootstrapError(
+          "incomplete-bootstrap",
+          "The import must contain each committed creation operation exactly once.",
+        );
+      return matches[0];
+    });
+    validateAuthBootstrapEnvelope(
+      bootstrap.map((operation) => operation.action),
+      document.header.id,
+      model.initialAuth?.template,
+    );
+    const jobs: JobInfo[] = [];
+    const submit = async (batch: typeof operations) => {
+      const job = await this.reactor.load(
+        document.header.id,
+        document.header.branch,
+        batch,
+        signal,
+      );
+      jobs.push(job);
+      await this.handles.forJobs(
+        job.id,
+        [job],
+        document.header.id,
+        document.header.branch,
+        signal,
+        this.createReader(),
+      ).readable;
+    };
+    await submit(bootstrap);
+    for (const scope of Object.keys(document.operations)) {
+      const following = document.operations[scope].filter(
+        (operation) => !commitment.actionIds.includes(operation.action.id),
+      );
+      if (following.length) await submit(following);
+    }
+    return this.handles.forJobs(
+      jobs[0].id,
+      jobs,
+      document.header.id,
+      document.header.branch,
+      signal,
+      this.createReader(),
+    );
+  }
+
   /** Signs and submits a document's create batch without waiting for it. */
   async submitCreate(
     document: PHDocument,
     parentIdentifier: string | undefined,
     signal: AbortSignal | undefined,
   ): Promise<BatchExecutionResult> {
+    if (this.initialAuth?.protectedModel(document)) {
+      const handle = await this.create(document, parentIdentifier, signal);
+      return {
+        jobs: { create: await this.reactor.getJobStatus(handle.jobId, signal) },
+      };
+    }
     const parentId = parentIdentifier
       ? await this.targets.resolveReference(parentIdentifier, "main", signal)
       : undefined;

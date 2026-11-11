@@ -1,3 +1,5 @@
+import { verifyActionSignature } from "../signer/verify-action-signature.js";
+import type { InitialAuthConfiguration } from "../core/initial-auth/provider.js";
 import type {
   Action,
   BaseReducerCapabilities,
@@ -11,6 +13,12 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
+  AuthBootstrapError,
+  initialAuthDigest,
+  isAuthBootstrapEnvelope,
+  hasAuthBootstrapHint,
+  parseInitialAuthCommitment,
+  validateAuthBootstrapEnvelope,
   acceptsSubmittedRetract,
   acceptsSubmittedUndoRedo,
   actionSignerIdentity,
@@ -44,6 +52,7 @@ import {
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
+import { z } from "zod";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import { scopeDerivation } from "../derivation/index.js";
 import { DriveCollectionId } from "../cache/operation-index-types.js";
@@ -168,6 +177,7 @@ function isValidISOTimestamp(value: string): boolean {
 }
 
 type ExecuteInScopeParams = {
+  bootstrap?: true;
   job: Job;
   startTime: number;
   stores: ExecutionStores;
@@ -552,6 +562,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     signer?: ISigner,
     trustPolicy?: SignatureTrustPolicy,
     flusher: IStorageFlusher = new NoopStorageFlusher(),
+    private readonly initialAuthConfiguration?: InitialAuthConfiguration,
   ) {
     this.flusher = flusher;
     this.signer = signer ?? new PassthroughSigner();
@@ -621,6 +632,612 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
   }
 
+  private async executeBootstrap(
+    params: ExecuteInScopeParams,
+  ): Promise<ScopeOutcome> {
+    const { job, stores, startTime, signal } = params;
+    if (
+      !stores.initialAuth ||
+      !this.initialAuthConfiguration ||
+      this.config.signatureVerification !== "enforce" ||
+      !this.featureFlags.authConditions
+    )
+      throw new AuthBootstrapError(
+        "unsupported-bootstrap",
+        "This host cannot admit initial authorization atomically and verify its origin.",
+      );
+    const creation = z
+      .object({ model: z.string(), initialAuth: z.unknown() })
+      .parse(job.actions[0].input);
+    const commitment = parseInitialAuthCommitment(creation.initialAuth);
+    const model = this.registry.getModule(
+      creation.model,
+      commitment.modelVersion,
+    );
+    const validated = validateAuthBootstrapEnvelope(
+      job.actions,
+      job.documentId,
+      model.initialAuth?.template,
+    );
+    const initial = z
+      .object({ initialState: z.unknown() })
+      .parse(job.actions[1].input).initialState;
+    if (!model.utils.isStateOfType(initial))
+      throw new AuthBootstrapError(
+        "invalid-bootstrap",
+        "The bootstrap initial state does not satisfy the selected document model.",
+      );
+    let prepared = await stores.initialAuth.document(job.documentId);
+    if (job.kind === "mutation" && !prepared)
+      throw new AuthBootstrapError(
+        "invalid-bootstrap",
+        "Local bootstrap requires a prepared, authorized host creation intent.",
+      );
+    const facts = prepared?.committed ? [] : (prepared?.facts ?? []);
+    if (!stores.documentLocks.exclusiveAll)
+      throw new AuthBootstrapError(
+        "unsupported-bootstrap",
+        "Initial authorization requires ordered document locks.",
+      );
+    await stores.documentLocks.exclusiveAll([
+      job.documentId,
+      ...facts.map((fact) => fact.documentId),
+    ]);
+    prepared = await stores.initialAuth.document(job.documentId);
+    if (
+      (
+        await stores.documentLocks.purged([
+          job.documentId,
+          ...(prepared?.committed ? [] : facts.map((fact) => fact.documentId)),
+        ])
+      ).size > 0
+    )
+      throw new AuthBootstrapError(
+        "invalid-bootstrap",
+        "A creation identity or authorization fact has been purged.",
+      );
+    if (prepared?.committed) {
+      if (
+        initialAuthDigest(prepared.envelope) !== initialAuthDigest(job.actions)
+      )
+        throw new AuthBootstrapError(
+          "invalid-bootstrap",
+          "The repeated bootstrap differs from its committed evidence.",
+        );
+      const committed: CommittedWrite[] = [];
+      for (const scope of ["document", "auth"]) {
+        const history = await stores.operationStore.getSince(
+          job.documentId,
+          scope,
+          job.branch,
+          -1,
+          undefined,
+          { cursor: "0", limit: 3 },
+          signal,
+        );
+        for (const operation of history.results)
+          if (commitment.actionIds.includes(operation.action.id))
+            committed.push({
+              documentId: job.documentId,
+              branch: job.branch,
+              scope,
+              actionId: operation.action.id,
+              opId: operation.id,
+            });
+      }
+      if (committed.length !== 3)
+        throw new AuthBootstrapError(
+          "incomplete-bootstrap",
+          "Committed initial authorization history is incomplete.",
+        );
+      const alreadyCommitted = await this.reloadCommitted(
+        committed,
+        stores,
+        signal,
+      );
+      return {
+        result: {
+          job,
+          success: true,
+          operations: [],
+          operationsWithContext: [],
+          duration: Date.now() - startTime,
+        },
+        pendingEvent: {
+          jobId: job.id,
+          jobMeta: job.meta,
+          operations: [],
+          alreadyCommitted,
+          submittedActionIds: submittedActionIds(job),
+        },
+      };
+    }
+    if (
+      !(await this.initialAuthConfiguration.trustOrigin({
+        documentType: creation.model,
+        modelVersion: commitment.modelVersion,
+        initializerKey: commitment.initializerKey,
+        origin: commitment.origin,
+      }))
+    )
+      throw new AuthBootstrapError(
+        "untrusted-origin",
+        "The initializer is not trusted to attest this model's creation bindings.",
+      );
+    for (const fact of facts) {
+      const current = await stores.operationStore.getRevisions(
+        fact.documentId,
+        fact.branch,
+        signal,
+      );
+      if (
+        initialAuthDigest(current.revision) !== initialAuthDigest(fact.revision)
+      )
+        throw new AuthBootstrapError(
+          "intent-conflict",
+          "An authorization fact changed before creation committed; use a new intent after reauthorizing creation.",
+        );
+    }
+    const outcomes: ScopeOutcome[] = [];
+    for (const scope of ["document", "auth"]) {
+      const part: Job = {
+        ...job,
+        scope,
+        actions: job.actions.filter((action) => action.scope === scope),
+        operations: job.operations.filter(
+          (operation) => operation.action.scope === scope,
+        ),
+      };
+      const outcome = await this.executeInScope({
+        ...params,
+        job: part,
+        bootstrap: true,
+      });
+      if (!outcome.result.success) return outcome;
+      if (
+        outcome.result.operations?.some(
+          (operation) => operation.error || operation.deniedReason,
+        )
+      )
+        throw new AuthBootstrapError(
+          "invalid-bootstrap",
+          "A bootstrap action was rejected; the entire creation is rolled back.",
+        );
+      outcomes.push(outcome);
+    }
+    const auth = await stores.writeCache.getState(
+      job.documentId,
+      "auth",
+      job.branch,
+      undefined,
+      signal,
+    );
+    if (
+      initialAuthDigest(auth.state.auth) !== initialAuthDigest(validated.policy)
+    )
+      throw new AuthBootstrapError(
+        "invalid-bootstrap",
+        "Bootstrap reduction did not produce the committed creator-less policy.",
+      );
+    await stores.initialAuth.commit(job.documentId, job.actions);
+    const operationsWithContext = outcomes.flatMap(
+      (outcome) => outcome.result.operationsWithContext ?? [],
+    );
+    return {
+      result: {
+        job,
+        success: true,
+        operations: outcomes.flatMap(
+          (outcome) => outcome.result.operations ?? [],
+        ),
+        operationsWithContext,
+        duration: Date.now() - startTime,
+      },
+      pendingEvent: {
+        jobId: job.id,
+        jobMeta: job.meta,
+        operations: operationsWithContext,
+        submittedActionIds: submittedActionIds(job),
+        collectionMemberships: await this.getCollectionMembershipsForOperations(
+          operationsWithContext,
+          stores,
+        ),
+      },
+    };
+  }
+
+  private async executeBootstrapLoad(
+    params: ExecuteInScopeParams,
+  ): Promise<ScopeOutcome> {
+    const { stores, job, startTime } = params;
+    if (!stores.initialAuth || !this.initialAuthConfiguration)
+      throw new AuthBootstrapError(
+        "unsupported-bootstrap",
+        "This receiver cannot stage initial authorization.",
+      );
+    for (const operation of job.operations) {
+      const verdict = await verifyActionSignature(
+        operation.action,
+        {
+          documentId: job.documentId,
+          branch: job.branch,
+          policy: "v2-required",
+        },
+        "load",
+        operation,
+      );
+      if (!verdict.ok)
+        throw new AuthBootstrapError(
+          "invalid-bootstrap",
+          `Invalid staged fragment: ${verdict.code}.`,
+        );
+      if (operation.action.type === "CREATE_DOCUMENT") {
+        const input = z
+          .object({ branch: z.string(), initialAuth: z.unknown() })
+          .parse(operation.action.input);
+        const commitment = parseInitialAuthCommitment(input.initialAuth);
+        if (
+          operation.action.id !== commitment.actionIds[0] ||
+          operation.action.scope !== "document" ||
+          input.branch !== job.branch ||
+          operation.action.context?.signer?.app.key !==
+            commitment.initializerKey
+        )
+          throw new AuthBootstrapError(
+            "invalid-bootstrap",
+            "A creation fragment must be signed by its committed initializer for the target branch.",
+          );
+      }
+    }
+    const committed = await stores.initialAuth.document(job.documentId);
+    if (committed?.committed) {
+      for (const operation of job.operations) {
+        const existing = committed.envelope.find(
+          (action) => action.id === operation.action.id,
+        );
+        if (
+          hasAuthBootstrapHint(operation.action) &&
+          (!existing ||
+            initialAuthDigest(existing) !== initialAuthDigest(operation.action))
+        )
+          throw new AuthBootstrapError(
+            "invalid-bootstrap",
+            "A repeated fragment differs from its committed action.",
+          );
+      }
+      const bootstrap = await this.executeBootstrap({
+        ...params,
+        job: { ...job, actions: committed.envelope },
+      });
+      const following = await stores.initialAuth.retainFollowing(
+        job.documentId,
+        job.operations.filter(
+          (operation) =>
+            !committed.envelope.some(
+              (action) => action.id === operation.action.id,
+            ),
+        ),
+      );
+      return this.executeFollowingBootstrap(params, bootstrap, following);
+    }
+    const fragments = await stores.initialAuth.stage(
+      job.documentId,
+      job.operations,
+    );
+    const create = fragments.find(
+      (operation) => operation.action.type === "CREATE_DOCUMENT",
+    );
+    const creation = z
+      .object({ initialAuth: z.unknown() })
+      .safeParse(create?.action.input);
+    if (!creation.success)
+      return {
+        result: {
+          job,
+          success: true,
+          operations: [],
+          operationsWithContext: [],
+          duration: Date.now() - startTime,
+        },
+        pendingEvent: { jobId: job.id, jobMeta: job.meta, operations: [] },
+      };
+    const commitment = parseInitialAuthCommitment(creation.data.initialAuth);
+    if (
+      !commitment.actionIds.every((id) =>
+        fragments.some(
+          (operation) =>
+            operation.action.id === id &&
+            operation.action.context?.signer?.app.key ===
+              commitment.initializerKey,
+        ),
+      )
+    )
+      return {
+        result: {
+          job,
+          success: true,
+          operations: [],
+          operationsWithContext: [],
+          duration: Date.now() - startTime,
+        },
+        pendingEvent: { jobId: job.id, jobMeta: job.meta, operations: [] },
+      };
+    const operations = commitment.actionIds.map((id, index) => {
+      const operation = fragments.find(
+        (candidate) =>
+          candidate.action.id === id &&
+          candidate.action.context?.signer?.app.key ===
+            commitment.initializerKey,
+      );
+      if (!operation)
+        throw new AuthBootstrapError(
+          "invalid-bootstrap",
+          "Staged creation fragments do not match the committed action IDs.",
+        );
+      return createOperation(
+        {
+          ...operation.action,
+          context: {
+            ...operation.action.context,
+            initialAuth: commitment.intentDigest,
+          },
+        },
+        index === 2 ? 0 : index,
+        0,
+        {
+          documentId: job.documentId,
+          branch: job.branch,
+          scope: index === 2 ? "auth" : "document",
+        },
+      );
+    });
+    const bootstrap = await this.executeBootstrap({
+      ...params,
+      job: {
+        ...job,
+        scope: "document",
+        operations,
+        actions: operations.map((operation) => operation.action),
+      },
+    });
+    return this.executeFollowingBootstrap(
+      params,
+      bootstrap,
+      fragments.filter(
+        (operation) => !commitment.actionIds.includes(operation.action.id),
+      ),
+    );
+  }
+
+  private async executeFollowingBootstrap(
+    params: ExecuteInScopeParams,
+    bootstrap: ScopeOutcome,
+    following: Operation[],
+  ): Promise<ScopeOutcome> {
+    if (!bootstrap.result.success || following.length === 0) return bootstrap;
+    const store = params.stores.initialAuth;
+    const initializer = (
+      await store?.document(params.job.documentId)
+    )?.envelope.at(2);
+    if (!store || !initializer)
+      throw new AuthBootstrapError(
+        "incomplete-bootstrap",
+        "Following operations require a committed bootstrap.",
+      );
+    const admissible = following.filter((operation) => {
+      const action = operation.action;
+      const initialUpgrade =
+        action.type === "UPGRADE_DOCUMENT" &&
+        z.object({ fromVersion: z.literal(0) }).safeParse(action.input).success;
+      return (
+        action.type !== "CREATE_DOCUMENT" &&
+        action.type !== "INITIALIZE_AUTH" &&
+        !initialUpgrade &&
+        isValidISOTimestamp(action.timestampUtcMs) &&
+        isValidISOTimestamp(operation.timestampUtcMs) &&
+        Number.isSafeInteger(operation.index) &&
+        operation.index >= 0 &&
+        Number.isSafeInteger(operation.skip) &&
+        operation.skip >= 0 &&
+        compareCanonical(action, initializer) > 0 &&
+        ["global", "local", "auth", "document", "header"].includes(action.scope)
+      );
+    });
+    const rejected = following.filter(
+      (operation) => !admissible.includes(operation),
+    );
+    if (rejected.length > 0) {
+      await store.discard(params.job.documentId, rejected);
+      this.logger.warn(
+        "Discarded @Count permanently invalid following operations for protected document @DocumentId",
+        rejected.length,
+        params.job.documentId,
+      );
+    }
+    const outcomes = [bootstrap];
+    const pendingScopes: string[] = [];
+    for (const scope of [
+      ...new Set(admissible.map((operation) => operation.action.scope)),
+    ]) {
+      const operations = admissible.filter(
+        (operation) => operation.action.scope === scope,
+      );
+      const invalidationsLength = params.postCommitInvalidations.length;
+      const membershipsLength = params.postCommitMembershipInvalidations.length;
+      const metadataLength = params.postCommitMetaInvalidations.length;
+      try {
+        const part = await store.followingScope(async () => {
+          const outcome = await this.executeInScope({
+            ...params,
+            job: { ...params.job, scope, actions: [], operations },
+          });
+          if (!outcome.result.success)
+            throw new JobRollbackSignal(outcome.result);
+          await store.discard(params.job.documentId, operations);
+          return outcome;
+        });
+        outcomes.push(part);
+      } catch (error) {
+        params.stores.writeCache.clear();
+        params.stores.documentMetaCache.clear();
+        params.stores.collectionMembershipCache.invalidate(
+          params.job.documentId,
+        );
+        for (const documentId of params.postCommitMembershipInvalidations.slice(
+          membershipsLength,
+        ))
+          params.stores.collectionMembershipCache.invalidate(documentId);
+        params.postCommitInvalidations.length = invalidationsLength;
+        params.postCommitMembershipInvalidations.length = membershipsLength;
+        params.postCommitMetaInvalidations.length = metadataLength;
+        params.signal?.throwIfAborted();
+        const failure =
+          error instanceof JobRollbackSignal ? error.result.error : error;
+        if (AuthTimestampNotMonotonicError.isError(failure)) {
+          const invalid = operations.filter(
+            (operation) => operation.timestampUtcMs === failure.timestampUtcMs,
+          );
+          await store.discard(params.job.documentId, invalid);
+          rejected.push(...invalid);
+        }
+        pendingScopes.push(scope);
+        this.logger.error(
+          "Protected document @DocumentId committed; following scope @Scope remains pending after @Error",
+          params.job.documentId,
+          scope,
+          error instanceof JobRollbackSignal ? error.result.error : error,
+        );
+      }
+    }
+    const operationsWithContext = outcomes.flatMap(
+      (outcome) => outcome.result.operationsWithContext ?? [],
+    );
+    return {
+      result: {
+        job: params.job,
+        success: true,
+        operations: outcomes.flatMap(
+          (outcome) => outcome.result.operations ?? [],
+        ),
+        operationsWithContext,
+        metadata: {
+          rejectedFollowingActionIds: rejected.map(
+            (operation) => operation.action.id,
+          ),
+          pendingFollowingScopes: pendingScopes,
+        },
+      },
+      pendingEvent: {
+        jobId: params.job.id,
+        jobMeta: params.job.meta,
+        operations: operationsWithContext,
+        alreadyCommitted: bootstrap.pendingEvent?.alreadyCommitted,
+        collectionMemberships: await this.getCollectionMembershipsForOperations(
+          operationsWithContext,
+          params.stores,
+        ),
+      },
+    };
+  }
+
+  private async assertBootstrapAdmission(
+    job: Job,
+    stores: ExecutionStores,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    const actions =
+      job.kind === "load"
+        ? job.operations.map((operation) => operation.action)
+        : job.actions;
+    for (const action of actions) {
+      if (action.type === "UPGRADE_DOCUMENT") {
+        const upgrade = z
+          .object({
+            model: z.string(),
+            fromVersion: z.number(),
+            toVersion: z.number(),
+          })
+          .safeParse(action.input);
+        if (
+          upgrade.success &&
+          upgrade.data.fromVersion === 0 &&
+          this.registry
+            .getAllModules()
+            .some(
+              (model) =>
+                model.documentModel.global.id === upgrade.data.model &&
+                (model.version ?? 1) === upgrade.data.toVersion &&
+                model.initialAuth !== undefined,
+            )
+        )
+          throw new AuthBootstrapError(
+            "incomplete-bootstrap",
+            "The initial upgrade to this model version requires its complete bootstrap envelope.",
+          );
+      }
+      if (action.type !== "CREATE_DOCUMENT") continue;
+      const input = z
+        .object({
+          model: z.string(),
+          initialAuth: z.unknown().optional(),
+          protocolVersions: z.record(z.string(), z.number()).optional(),
+        })
+        .safeParse(action.input);
+      if (!input.success) continue;
+      const matchingModels = this.registry
+        .getAllModules()
+        .filter((model) => model.documentModel.global.id === input.data.model);
+      const upgrade = actions.find(
+        (candidate) => candidate.type === "UPGRADE_DOCUMENT",
+      );
+      const version = z
+        .object({ toVersion: z.number() })
+        .safeParse(upgrade?.input);
+      const requiresBootstrap =
+        matchingModels.length > 0 &&
+        (version.success
+          ? matchingModels.some(
+              (model) =>
+                (model.version ?? 1) === version.data.toVersion &&
+                model.initialAuth !== undefined,
+            )
+          : matchingModels.every((model) => model.initialAuth !== undefined));
+      if (
+        input.data.initialAuth !== undefined ||
+        input.data.protocolVersions?.["auth-bootstrap"] !== undefined ||
+        requiresBootstrap
+      )
+        throw new AuthBootstrapError(
+          "incomplete-bootstrap",
+          "This creation requires the complete initial authorization envelope.",
+        );
+    }
+    const record = await stores.initialAuth?.document(job.documentId);
+    if (!record) return;
+    if (!record.committed)
+      throw new AuthBootstrapError(
+        "incomplete-bootstrap",
+        "The document's initial authorization has not committed.",
+      );
+    const initializer = record.envelope.at(2);
+    if (!initializer)
+      throw new AuthBootstrapError(
+        "incomplete-bootstrap",
+        "The document's initializer is unavailable.",
+      );
+    for (const action of actions) {
+      if (
+        action.type === "INITIALIZE_AUTH" ||
+        compareCanonical(action, initializer) <= 0
+      )
+        throw new AuthBootstrapError(
+          "invalid-bootstrap",
+          "Ordinary actions must follow the committed initial authorization.",
+        );
+    }
+    signal?.throwIfAborted();
+  }
+
   /**
    * Execute a single job by applying all its actions through the appropriate reducers.
    * Actions are processed sequentially in order.
@@ -656,9 +1273,34 @@ export class SimpleJobExecutor implements IJobExecutor {
     const postCommitMetaInvalidations: string[] = [];
 
     let outcome: ScopeOutcome;
+    let bootstrapLoad =
+      job.kind === "load" &&
+      job.operations.some((operation) =>
+        hasAuthBootstrapHint(operation.action),
+      );
+    let bootstrap = isAuthBootstrapEnvelope(job.actions) || bootstrapLoad;
+    const isolateLoad =
+      job.kind === "load" && this.initialAuthConfiguration !== undefined;
     try {
-      outcome = await this.executionScope.run(async (stores) => {
-        const scoped = await this.executeInScope({
+      if (bootstrap && !this.executionScope.runIsolated)
+        throw new AuthBootstrapError(
+          "unsupported-bootstrap",
+          "Initial authorization requires isolated transactional execution.",
+        );
+      const run =
+        bootstrap || isolateLoad
+          ? this.executionScope.runIsolated!.bind(this.executionScope)
+          : this.executionScope.run.bind(this.executionScope);
+      outcome = await run(async (stores) => {
+        if (
+          isolateLoad &&
+          !bootstrapLoad &&
+          (await stores.initialAuth?.pending(job.documentId))
+        ) {
+          bootstrapLoad = true;
+          bootstrap = true;
+        }
+        const parameters: ExecuteInScopeParams = {
           job,
           startTime,
           stores,
@@ -667,7 +1309,12 @@ export class SimpleJobExecutor implements IJobExecutor {
           postCommitInvalidations,
           postCommitMembershipInvalidations,
           postCommitMetaInvalidations,
-        });
+        };
+        const scoped = bootstrapLoad
+          ? await this.executeBootstrapLoad(parameters)
+          : bootstrap
+            ? await this.executeBootstrap(parameters)
+            : await this.executeInScope(parameters);
 
         if (!scoped.result.success) {
           throw new JobRollbackSignal(scoped.result);
@@ -694,6 +1341,12 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     for (const entry of postCommitInvalidations) {
       this.writeCache.invalidate(entry.documentId, entry.scope, entry.branch);
+    }
+    if (bootstrap || isolateLoad) {
+      this.evictTouchedStreams(touchedStreams);
+      this.writeCache.invalidate(job.documentId);
+      this.documentMetaCache.invalidate(job.documentId);
+      this.collectionMembershipCache.invalidate(job.documentId);
     }
 
     for (const documentId of postCommitMembershipInvalidations) {
@@ -892,6 +1545,8 @@ export class SimpleJobExecutor implements IJobExecutor {
     };
 
     const stored = await this.readStoredProtocol(job, stores, signal);
+    if (!params.bootstrap)
+      await this.assertBootstrapAdmission(job, stores, signal);
     if (stored.refusal) {
       return { result: buildErrorResult(job, stored.refusal, startTime) };
     }
@@ -1846,8 +2501,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   }
 
   /**
-   * Drops the cached state of every stream a job wrote, after its transaction
-   * did not commit.
+   * Drops public snapshots after rollback or publication of isolated writes.
    *
    * The caches are shared by reference with the copies the scope hands the job,
    * so a rollback undoes nothing in them: what the job put there survives, as
@@ -1864,7 +2518,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         this.collectionMembershipCache.invalidate(entry.documentId);
       } catch (error) {
         this.logger.error(
-          "Failed to evict cached state for rolled back @Stream : @Error",
+          "Failed to evict cached state for @Stream : @Error",
           entry,
           error,
         );

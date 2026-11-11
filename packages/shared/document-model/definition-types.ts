@@ -516,6 +516,7 @@ export type DocumentModelModuleDefinition = {
 };
 
 export type DocumentModelSpecificationDefinition = {
+  readonly initialAuth?: InitialAuthTemplate;
   readonly version: number;
   readonly scalars: readonly DocumentScalarReferenceDefinition[];
   readonly graphQLCompatibility: SchemaFirstGraphQLDocumentCompatibility | null;
@@ -530,7 +531,7 @@ export type DocumentModelSpecificationDefinition = {
 
 export type DocumentModelDefinition = {
   readonly kind: "powerhouse.document-model";
-  readonly formatVersion: 1;
+  readonly formatVersion: 1 | 2;
   readonly compatibility: {
     readonly identity: "derived-v1" | "explicit-schema-first";
     readonly scalarCoercion: ScalarValidationProfile;
@@ -707,3 +708,70 @@ export type SubgraphDefinition = SubgraphDefinitionBase &
         readonly access: "manual";
       }
   );
+
+export type Grant = {
+  /** Stable id. */
+  id: string;
+  description: string;
+  effect: "allow" | "deny";
+  principal: Principal;
+  capability: Capability;
+  /**
+   * The grant applies only when this condition holds. Until conditions are
+   * evaluated, a grant carrying one never applies.
+   */
+  where?: Condition;
+};
+
+export type Principal =
+  | { anyone: true }
+  | { address: string }
+  | { group: string }
+  | { match: Condition };
+
+export type Capability =
+  | { can: "read"; scope?: string }
+  | { can: "execute"; scope?: string; operation?: string[] };
+
+/**
+ * Boolean condition language for grants: deterministic, total, and
+ * JSON-serializable, versioned by `PHAuthState.version`.
+ */
+export type Condition =
+  | { eq: [Operand, Operand] }
+  | { ne: [Operand, Operand] }
+  | { in: [Operand, Operand[]] }
+  | { notIn: [Operand, Operand[]] }
+  | { lt: [Operand, Operand] }
+  | { lte: [Operand, Operand] }
+  | { gt: [Operand, Operand] }
+  | { gte: [Operand, Operand] }
+  | { exists: Operand }
+  | { and: Condition[] }
+  | { or: Condition[] }
+  | { not: Condition };
+
+/**
+ * A condition operand: `attr` is a dotted path into the decision context
+ * (e.g. "doc.global.status", "subject.address"); `lit` is a constant value.
+ */
+export type Operand =
+  | { attr: string }
+  | { lit: string | number | boolean | null };
+
+export type InitialAuthBindingDefinition = {
+  kind: "address" | "group";
+  source: "deployment" | "instance";
+};
+export type InitialAuthBindingSource = InitialAuthBindingDefinition["source"];
+export type InitialAuthTemplateGrant = Omit<Grant, "principal"> & {
+  principal: Principal | { binding: string };
+};
+export type InitialAuthTemplateBody = {
+  version: 1;
+  bindings: Record<string, InitialAuthBindingDefinition>;
+  grants: InitialAuthTemplateGrant[];
+};
+export type InitialAuthTemplate = InitialAuthTemplateBody & {
+  digest: Sha256Digest;
+};

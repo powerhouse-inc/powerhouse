@@ -1,4 +1,5 @@
 // Attachments
+export * from "./src/core/initial-auth/provider.js";
 export type { AttachmentHash, AttachmentRef } from "./src/attachments/index.js";
 
 // Action Creators

@@ -50,7 +50,7 @@ function invalidLedger(): DocumentModelModule {
   const module = ledgerModel() as Module;
   return {
     ...module,
-    definition: { ...module.definition, formatVersion: 2 },
+    definition: { ...module.definition, formatVersion: 999 },
   } as DocumentModelModule;
 }
 
@@ -438,7 +438,7 @@ describe("host admission", () => {
         [
           "Refusing version 1 of document model @documentType from the GraphQL schema: @reasons",
           "test/ledger",
-          "its definition is invalid: definition.formatVersion: This member has a fixed value.",
+          "its definition is invalid: definition.formatVersion: Unsupported document-model definition format.",
         ],
       ]);
       expect(warn).not.toHaveBeenCalled();

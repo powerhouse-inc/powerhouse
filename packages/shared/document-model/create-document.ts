@@ -58,6 +58,9 @@ export function creationActions(
     branch: header.branch,
     meta: header.meta,
     protocolVersions,
+    ...(header.initialAuth === undefined
+      ? {}
+      : { initialAuth: header.initialAuth }),
   };
   return [
     createDocumentAction(createInput),
@@ -123,6 +126,8 @@ export function documentFromCreation(action: CreateDocumentAction): PHDocument {
   if (input.protocolVersions !== undefined) {
     header.protocolVersions = input.protocolVersions;
   }
+  if (input.initialAuth !== undefined)
+    header.initialAuth = structuredClone(input.initialAuth);
 
   // A placeholder: UPGRADE_DOCUMENT writes the model's real initial values.
   const baseState = defaultBaseState();

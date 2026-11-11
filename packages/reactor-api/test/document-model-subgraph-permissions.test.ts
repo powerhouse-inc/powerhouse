@@ -129,6 +129,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     };
 
     mockReactorClient = {
+      getDocumentModelModule: vi.fn().mockResolvedValue(mockDocumentModel),
       resolveIdOrSlug: vi.fn((identifier: string) =>
         Promise.resolve(identifier),
       ),

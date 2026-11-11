@@ -52,10 +52,15 @@ export class DocumentMetaCache implements IDocumentMetaCache {
     this.lruTracker = new LRUTracker<string>();
   }
 
-  withScopedStore(operationStore: IOperationStore): DocumentMetaCache {
+  withScopedStore(
+    operationStore: IOperationStore,
+    isolated = false,
+  ): DocumentMetaCache {
     const scoped = new DocumentMetaCache(operationStore, this.config);
-    scoped.cache = this.cache;
-    scoped.lruTracker = this.lruTracker;
+    if (!isolated) {
+      scoped.cache = this.cache;
+      scoped.lruTracker = this.lruTracker;
+    }
     return scoped;
   }
 

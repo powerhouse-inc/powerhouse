@@ -161,6 +161,9 @@ function derivedCreateId(
       createdAtUtcIso: input.signing.createdAtUtcIso,
       nonce: input.signing.nonce,
       protocolVersions: input.protocolVersions,
+      ...(input.initialAuth === undefined
+        ? {}
+        : { initialAuth: input.initialAuth }),
     });
   } catch {
     return undefined;

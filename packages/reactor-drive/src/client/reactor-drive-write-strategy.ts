@@ -63,6 +63,7 @@ class CompositeWriteHandle implements WriteHandle {
   constructor(
     private readonly primary: WriteHandle,
     private readonly parts: readonly WriteHandle[],
+    private readonly target?: { documentId: string; read: IReactorReadClient },
   ) {}
 
   get jobId(): string {
@@ -70,7 +71,7 @@ class CompositeWriteHandle implements WriteHandle {
   }
 
   get documentId(): string {
-    return this.primary.documentId;
+    return this.target?.documentId ?? this.primary.documentId;
   }
 
   get branch(): string {
@@ -91,7 +92,14 @@ class CompositeWriteHandle implements WriteHandle {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    await this.readable;
+    const receipt = await this.readable;
+    if (this.target)
+      return this.target.read.get<TDocument>(
+        this.target.documentId,
+        view,
+        signal,
+        receipt.token,
+      );
     return this.primary.document<TDocument>(view, signal);
   }
 
@@ -106,6 +114,7 @@ class CompositeWriteHandle implements WriteHandle {
     }
     return {
       ...receipts[0],
+      documentId: this.documentId,
       token: mergeConsistencyTokens(receipts.map((receipt) => receipt.token)),
     };
   }
@@ -165,6 +174,57 @@ class ReactorDriveWriteStrategy implements IDriveWriteStrategy {
     parentFolder?: string,
     signal?: AbortSignal,
   ): Promise<WriteHandle> {
+    const selectedModel =
+      await this.read.getDocumentModelModuleForDocument(document);
+    if (document.header.protocolVersions?.["auth-bootstrap"] === 1) {
+      if (!(await this.write.isDocumentIdTaken(document.header.id, signal)))
+        throw new Error(
+          "The protected document must commit before attaching it to a drive.",
+        );
+      const linked = await this.write.execute(
+        driveIdentifier,
+        "main",
+        [
+          addRelationshipAction(
+            driveIdentifier,
+            document.header.id,
+            DRIVE_CHILD_RELATIONSHIP_TYPE,
+            {
+              kind: "file",
+              parentFolderId: parentFolder ?? null,
+              documentType: document.header.documentType,
+            },
+          ),
+        ],
+        signal,
+      );
+      return new CompositeWriteHandle(linked, [], {
+        documentId: document.header.id,
+        read: this.read,
+      });
+    }
+    if (selectedModel.initialAuth) {
+      const created = await this.write.create(document, undefined, signal);
+      await created.written;
+      const linked = await this.write.execute(
+        driveIdentifier,
+        "main",
+        [
+          addRelationshipAction(
+            driveIdentifier,
+            created.documentId,
+            DRIVE_CHILD_RELATIONSHIP_TYPE,
+            {
+              kind: "file",
+              parentFolderId: parentFolder ?? null,
+              documentType: document.header.documentType,
+            },
+          ),
+        ],
+        signal,
+      );
+      return new CompositeWriteHandle(created, [linked]);
+    }
     const documentId = document.header.id;
     const protocolVersions = await createVersionsOf(
       document,
@@ -451,6 +511,27 @@ class ReactorDriveWriteStrategy implements IDriveWriteStrategy {
         signal,
       );
       const documentType = srcDoc.header.documentType;
+      if (srcDoc.header.protocolVersions?.["auth-bootstrap"] === 1) {
+        if (!this.write.copyProtectedDocument)
+          throw new Error("This client cannot copy protected documents.");
+        const copied = await this.write.copyProtectedDocument(
+          node.id,
+          { name: node.name },
+          signal,
+        );
+        await copied.written;
+        newId = copied.documentId;
+        idMap.set(node.id, newId);
+        driveActions.push(
+          addRelationshipAction(
+            driveIdentifier,
+            newId,
+            DRIVE_CHILD_RELATIONSHIP_TYPE,
+            { kind: "file", parentFolderId: newParent, documentType },
+          ),
+        );
+        continue;
+      }
       const { results: allModules } = await this.read.getDocumentModelModules();
       const modulesForType = allModules.filter(
         (m) => m.documentModel.global.id === documentType,

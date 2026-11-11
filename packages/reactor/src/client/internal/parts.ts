@@ -1,3 +1,4 @@
+import type { InitialAuthCoordinator } from "../../core/initial-auth/coordinator.js";
 import type {
   ISigner,
   SignaturePolicy,
@@ -22,6 +23,7 @@ import type { WriteSideParts } from "./targets.js";
  * its side needs.
  */
 export type ReactorClientParts = {
+  initialAuth?: InitialAuthCoordinator;
   logger: ILogger;
   reactor: IReactor;
   signer: ISigner;

@@ -12,6 +12,11 @@ import type {
 } from "../compiler/compile.js";
 import type { DocumentModelActionType } from "../compiler/naming.js";
 import type {
+  AuthBindings,
+  InitialAuthContext,
+  InitialAuthDeclaration,
+} from "../auth/types.js";
+import type {
   AnyTypeDescriptor,
   InputDescriptor,
   InputOf,
@@ -216,20 +221,30 @@ export interface DocumentModelVersionDefinition<
   TVersion extends number = number,
   TState extends PHBaseState = PHBaseState,
   TActions extends Actions = Actions,
+  TBindings extends AuthBindings | undefined = AuthBindings | undefined,
 > {
   readonly kind: "powerhouse.document-model-version";
   readonly version: TVersion;
   readonly documentType: string;
+  readonly initialAuthDeclaration?: TBindings extends AuthBindings
+    ? InitialAuthDeclaration<TBindings>
+    : never;
   readonly [versionTokenBrand]?: {
     readonly state: TState;
     readonly actions: TActions;
   };
 }
 
-type DocumentModelVersionConfig<TModules extends readonly ModelModuleToken[]> =
-  {
-    readonly modules: TModules;
-  };
+type DocumentModelVersionConfig<
+  TState extends PHBaseState,
+  TModules extends readonly ModelModuleToken[],
+  TBindings extends AuthBindings | undefined,
+> = {
+  readonly modules: TModules;
+  readonly auth?: (
+    context: InitialAuthContext<TState, NoInfer<TModules>>,
+  ) => InitialAuthDeclaration<Extract<TBindings, AuthBindings>>;
+};
 
 /** @experimental The context `defineDocumentModel` returns. */
 export interface DocumentModelContext<
@@ -266,12 +281,18 @@ export interface DocumentModelContext<
       ModelState<TGlobal, TLocal>,
       Actions
     >[],
+    const TBindings extends AuthBindings | undefined = undefined,
   >(
-    config: DocumentModelVersionConfig<TModules>,
+    config: DocumentModelVersionConfig<
+      ModelState<TGlobal, TLocal>,
+      TModules,
+      TBindings
+    >,
   ): DocumentModelVersionDefinition<
     TVersion,
     ModelState<TGlobal, TLocal>,
-    ActionsOfModules<TModules>
+    ActionsOfModules<TModules>,
+    TBindings
   >;
 }
 

@@ -58,9 +58,19 @@ const NODE_QUERY_TYPES = [
 /** The schema with exactly the allowed additions taken out again. */
 function withoutTheAddition(source: string): GraphQLSchema {
   let inQuery = false;
+  let inActionContext = false;
   const stripped = visit(parse(source), {
-    InputObjectTypeDefinition: (node) =>
-      ADDED_TYPES.includes(node.name.value) ? null : undefined,
+    InputObjectTypeDefinition: {
+      enter(node) {
+        inActionContext = node.name.value === "ActionContextInput";
+        return ADDED_TYPES.includes(node.name.value) ? null : undefined;
+      },
+      leave() {
+        inActionContext = false;
+      },
+    },
+    InputValueDefinition: (node) =>
+      inActionContext && node.name.value === "initialAuth" ? null : undefined,
     EnumTypeDefinition: (node) =>
       NODE_QUERY_TYPES.includes(node.name.value) ? null : undefined,
     UnionTypeDefinition: (node) =>
@@ -69,12 +79,15 @@ function withoutTheAddition(source: string): GraphQLSchema {
       enter: (node) => {
         if (NODE_QUERY_TYPES.includes(node.name.value)) return null;
         inQuery = node.name.value === "Query";
+        inActionContext = node.name.value === "ActionContext";
       },
       leave: () => {
         inQuery = false;
+        inActionContext = false;
       },
     },
     FieldDefinition: (node) => {
+      if (inActionContext && node.name.value === "initialAuth") return null;
       if (inQuery && NODE_QUERY_FIELDS.includes(node.name.value)) {
         return null;
       }

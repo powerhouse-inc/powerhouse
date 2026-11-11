@@ -394,6 +394,27 @@ function permissionRowCheck(table: string): RowCheck {
 /** Every table the purge deletes from, with the predicate it deletes by. */
 export const DELETE_LIST: RowCheck[] = [
   {
+    table: "InitialAuthInbox",
+    count: (db, id) =>
+      countOf(
+        db
+          .selectFrom("InitialAuthInbox")
+          .select((eb) => eb.fn.countAll<number>().as("n"))
+          .where("documentId", "=", id),
+      ),
+  },
+  {
+    table: "InitialAuthCreation",
+    count: (db, id) =>
+      countOf(
+        db
+          .selectFrom("InitialAuthCreation")
+          .select((eb) => eb.fn.countAll<number>().as("n"))
+          .where("documentId", "=", id)
+          .where(sql<boolean>`envelope <> '[]'::jsonb or facts <> '[]'::jsonb`),
+      ),
+  },
+  {
     table: "Operation",
     count: (db, id) =>
       countOf(

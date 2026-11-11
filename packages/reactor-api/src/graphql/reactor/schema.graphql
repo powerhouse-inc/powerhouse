@@ -377,6 +377,7 @@ type ReactorSigner {
 }
 
 type ActionContext {
+  initialAuth: String
   signer: ReactorSigner
 }
 
@@ -447,6 +448,10 @@ against. They are recorded rather than enforced; a signature is verified from
 the params carried in its own tuple, which do not include them.
 """
 input ActionContextInput {
+  """
+  Untrusted routing hint for an atomically admitted initial authorization envelope.
+  """
+  initialAuth: String
   """
   The index of the last operation in the scope the action applies to.
   """

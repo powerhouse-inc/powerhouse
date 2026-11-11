@@ -1,3 +1,4 @@
+import type { InitialAuthTemplate } from "./initial-auth.js";
 import {
   baseReducerCapabilities,
   capabilitiesOf,
@@ -43,6 +44,7 @@ import {
 export type VersionedReducers = Record<number, Reducer<PHBaseState>>;
 
 export type VersionedReplayConfig = {
+  initialAuthTemplates?: Readonly<Record<number, InitialAuthTemplate>>;
   reducers: VersionedReducers;
   upgradeManifest?: UpgradeManifest<readonly number[]>;
 };

@@ -2,6 +2,7 @@ import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
+import { KyselyDocumentPurger } from "../../../src/storage/kysely/document-purger.js";
 import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
 import {
   REACTOR_SCHEMA,
@@ -41,6 +42,14 @@ type Table = (name: string) => ReturnType<typeof sql.id>;
 
 /** One row about ID per table, by the column the purge keys on. */
 const SEEDS: Record<string, (db: ReactorDb, t: Table) => Promise<unknown>> = {
+  InitialAuthCreation: (db, t) =>
+    sql`insert into ${t("InitialAuthCreation")} ("intentKey", "requestDigest", "documentId", envelope, facts, committed) values ('intent', 'digest', ${ID}, '[{"private":"initial-state"}]'::jsonb, '[{"private":"binding-fact"}]'::jsonb, true)`.execute(
+      db,
+    ),
+  InitialAuthInbox: (db, t) =>
+    sql`insert into ${t("InitialAuthInbox")} ("documentId", "actionId", "signerKey", operation) values (${ID}, 'fragment', 'key', '{"private":"pending-state"}'::jsonb)`.execute(
+      db,
+    ),
   Operation: (db, t) =>
     sql`insert into ${t("Operation")} ("jobId", "opId", "prevOpId", "documentId",
       "documentType", scope, branch, "timestampUtcMs", index, action, skip, hash)
@@ -165,6 +174,38 @@ describe("the e2e delete list [Postgres]", () => {
       await expect(expectNoRowsFor(db, ID)).rejects.toThrow();
     },
   );
+
+  it("scrubs creation payloads while retaining only the idempotency digest", async () => {
+    for (const table of ["InitialAuthCreation", "InitialAuthInbox"])
+      await SEEDS[table](db, (name) => sql.id(schema, name));
+    await db
+      .transaction()
+      .execute((transaction) =>
+        new KyselyDocumentPurger(transaction).deleteRows(ID),
+      );
+    expect(
+      await db
+        .selectFrom("InitialAuthCreation")
+        .selectAll()
+        .where("documentId", "=", ID)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({
+      intentKey: "intent",
+      requestDigest: "digest",
+      documentId: ID,
+      envelope: [],
+      facts: [],
+      committed: true,
+    });
+    expect(
+      await db
+        .selectFrom("InitialAuthInbox")
+        .selectAll()
+        .where("documentId", "=", ID)
+        .execute(),
+    ).toEqual([]);
+    await expectNoRowsFor(db, ID);
+  });
 
   it("does not count the marker, a hold on document-purge, or a group's referencers", async () => {
     const t: Table = (name) => sql.id(schema, name);

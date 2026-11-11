@@ -7,6 +7,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   creationActions,
+  isAuthBootstrapEnvelope,
   derivesByRule,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -767,7 +768,9 @@ export class Reactor implements IReactor {
     throwIfAborted(signal, () => new AbortError());
 
     const createdAtUtcIso = new Date().toISOString();
-    const scope = getSharedActionScope(actions);
+    const scope = isAuthBootstrapEnvelope(actions)
+      ? "document"
+      : getSharedActionScope(actions);
     const jobId = uuidv4();
     const jobMeta = buildSingleJobMeta(jobId, meta);
 
@@ -829,7 +832,11 @@ export class Reactor implements IReactor {
       throw new Error("load requires at least one operation");
     }
 
-    const scope = getSharedOperationScope(operations);
+    const scope = isAuthBootstrapEnvelope(
+      operations.map((operation) => operation.action),
+    )
+      ? "document"
+      : getSharedOperationScope(operations);
     const createdAtUtcIso = new Date().toISOString();
     const jobId = uuidv4();
     const jobMeta = buildSingleJobMeta(jobId, meta);

@@ -3,6 +3,18 @@ import { defineDiagnosticCatalog } from "../kernel/diagnostics.js";
 
 export const compilerDiagnostics = defineDiagnosticCatalog(
   {
+    "PH-AUTH-DECLARATION-INVALID": {
+      severity: "error",
+      phase: "authorization",
+      meaning:
+        "An initial authorization declaration contains invalid or foreign references",
+    },
+    "PH-AUTH-GROUP-DENY": {
+      severity: "warning",
+      phase: "authorization",
+      meaning:
+        "An unavailable group can skip a deny and expose an earlier allow",
+    },
     "PH-DM-DUPLICATE-ACTION": {
       severity: "error",
       phase: "definition",

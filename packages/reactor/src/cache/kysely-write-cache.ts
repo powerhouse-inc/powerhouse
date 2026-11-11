@@ -228,6 +228,7 @@ export class KyselyWriteCache implements IWriteCache {
   withScopedStores(
     operationStore: IOperationStore,
     keyframeStore: IKeyframeStore,
+    isolated = false,
   ): KyselyWriteCache {
     const scoped = new KyselyWriteCache(
       keyframeStore,
@@ -235,10 +236,12 @@ export class KyselyWriteCache implements IWriteCache {
       this.registry,
       { ...this.config, gate: this.gate },
     );
-    scoped.streams = this.streams;
-    scoped.lruTracker = this.lruTracker;
-    scoped.reads = this.reads;
-    scoped.fullReplays = this.fullReplays;
+    if (!isolated) {
+      scoped.streams = this.streams;
+      scoped.lruTracker = this.lruTracker;
+      scoped.reads = this.reads;
+      scoped.fullReplays = this.fullReplays;
+    }
     return scoped;
   }
 

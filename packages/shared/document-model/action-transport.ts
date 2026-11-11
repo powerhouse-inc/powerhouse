@@ -17,6 +17,7 @@ export type TransportSigner = {
 
 /** An action's context, as the wire declares it. */
 export type TransportActionContext = {
+  initialAuth?: string;
   prevOpIndex?: number;
   prevOpHash?: string;
   nonce?: string;
@@ -82,6 +83,8 @@ function toTransportContext(
   }
 
   const projected: TransportActionContext = {};
+  if (context.initialAuth !== undefined)
+    projected.initialAuth = context.initialAuth;
   if (context.prevOpIndex !== undefined) {
     projected.prevOpIndex = context.prevOpIndex;
   }

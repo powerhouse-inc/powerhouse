@@ -4,6 +4,7 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
+  AuthBootstrapError,
   decide,
   groupDocumentType,
   MAX_AUTH_GRANTS,
@@ -176,6 +177,20 @@ type ReferencerWalk = {
  */
 function authOf(document: PHDocument): PHAuthState | undefined {
   const state = document.state as { auth?: PHAuthState } | undefined;
+  if (
+    document.header.initialAuth !== undefined ||
+    document.header.protocolVersions?.["auth-bootstrap"] !== undefined
+  ) {
+    if (
+      !document.header.initialAuth ||
+      document.header.protocolVersions?.["auth-bootstrap"] !== 1 ||
+      state?.auth?.version !== 1
+    )
+      throw new AuthBootstrapError(
+        "incomplete-bootstrap",
+        "The document's initial authorization is not ready to serve.",
+      );
+  }
   return state?.auth;
 }
 
@@ -241,6 +256,11 @@ export class BareReadGate implements IReadGate {
     document: PHDocument,
     subject: AuthSubject,
   ): Promise<(scope: string) => boolean> {
+    if (document.header.protocolVersions?.["auth-bootstrap"] === 1)
+      throw new AuthBootstrapError(
+        "unsupported-bootstrap",
+        "Initial authorization requires the complete authorization read gate.",
+      );
     const auth = authOf(document);
     return Promise.resolve(
       (scope: string) =>

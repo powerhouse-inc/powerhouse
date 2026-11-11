@@ -17,7 +17,7 @@ export const modelDiagnostics = defineDiagnosticCatalog(
     "PH-AUTH-UNSUPPORTED": {
       severity: "error",
       phase: "authorization",
-      meaning: "A document model declares authorization, which core v1 rejects",
+      meaning: "Authorization was declared outside the version auth callback",
     },
   },
   compilerDiagnostics,
