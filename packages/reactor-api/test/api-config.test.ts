@@ -148,6 +148,44 @@ const rows: Array<[string, Record<string, string>, ReactorApiConfig]> = [
     { WS_CREDENTIAL_RECHECK_INTERVAL_MS: "250" },
     { auth: { wsRecheckMs: 250 } },
   ],
+  ["ACCESS=open", { ACCESS: "open" }, { auth: { access: { mode: "open" } } }],
+  [
+    "ACCESS=licensed with the gate",
+    {
+      ACCESS: "licensed",
+      VETRA_GATE_URL: "https://vetra.example/gate/check",
+      VETRA_GATE_TOKEN: "vgt_token",
+      VETRA_APP_ID: "app-1",
+      ACCESS_GATE_GRACE_MS: "3600000",
+    },
+    {
+      auth: {
+        access: {
+          mode: "licensed",
+          gateUrl: "https://vetra.example/gate/check",
+          gateToken: "vgt_token",
+          appId: "app-1",
+          graceMs: 3_600_000,
+        },
+      },
+    },
+  ],
+  [
+    "ACCESS is case-insensitive and trimmed",
+    { ACCESS: " Licensed " },
+    { auth: { access: { mode: "licensed" } } },
+  ],
+  [
+    "an unknown ACCESS is kept for the boot to refuse",
+    { ACCESS: "members" },
+    { auth: { access: { mode: "members" } } },
+  ],
+  ["empty ACCESS is unset", { ACCESS: "" }, {}],
+  [
+    "ACCESS_GATE_GRACE_MS=0",
+    { ACCESS_GATE_GRACE_MS: "0" },
+    { auth: { access: { graceMs: 0 } } },
+  ],
   [
     "INSPECTION_ADMIN_ENABLED",
     { INSPECTION_ADMIN_ENABLED: "true" },
@@ -196,6 +234,9 @@ describe("reactorApiConfigFromEnv", () => {
     ["CREDENTIAL_VERIFICATION_CACHE_TTL_MS", "-1", {}],
     ["WS_CREDENTIAL_RECHECK_INTERVAL_MS", "often", {}],
     ["WS_CREDENTIAL_RECHECK_INTERVAL_MS", " ", {}],
+    ["ACCESS_GATE_GRACE_MS", "a day", {}],
+    ["ACCESS_GATE_GRACE_MS", "-1", {}],
+    ["ACCESS_GATE_GRACE_MS", "1.5", {}],
   ])(
     "warns on an invalid %s=%j and leaves it unset",
     (key, value, expected) => {

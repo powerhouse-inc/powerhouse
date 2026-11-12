@@ -36,9 +36,31 @@ export type ReactorApiConfig = {
     ownerClaim?: boolean;
     /** Keep verified credentials, and rely on them while Renown is away. */
     offlineCredentials?: boolean;
+    /** Who may use the host beyond its admins; see {@link ReactorApiAccessConfig}. */
+    access?: ReactorApiAccessConfig;
   };
   inspection?: { admin?: boolean };
   attachments?: { storage?: AttachmentStorageConfig };
+};
+
+/**
+ * `ACCESS`: who may use the host.
+ * - `open` (the default): whatever the rest of the auth settings say;
+ * - `licensed`: anonymous callers are refused, and a verified caller who is
+ *   not in `ADMINS` is admitted only when Vetra's licence gate
+ *   (`VETRA_GATE_URL`, authenticated with `VETRA_GATE_TOKEN`) says so.
+ *
+ * `mode` is a string so that an unknown value reaches the boot, which refuses
+ * it by name instead of falling back silently.
+ */
+export type ReactorApiAccessConfig = {
+  mode?: "open" | "licensed" | (string & {});
+  gateUrl?: string;
+  /** Secret: never logged. */
+  gateToken?: string;
+  appId?: string;
+  /** How long Vetra's last yes still admits while Vetra is unreachable. */
+  graceMs?: number;
 };
 
 const defaultLogger = childLogger(["reactor-api", "config"]);
@@ -96,6 +118,13 @@ export function reactorApiConfigFromEnv(
               (raw) => resolveWsCredentialRecheckIntervalMs(raw, logger),
               isWsRecheckMs,
             ),
+      access: pruned({
+        mode: env.ACCESS?.trim().toLowerCase() || undefined,
+        gateUrl: env.VETRA_GATE_URL?.trim() || undefined,
+        gateToken: env.VETRA_GATE_TOKEN?.trim() || undefined,
+        appId: env.VETRA_APP_ID?.trim() || undefined,
+        graceMs: parseAccessGateGraceMs(env.ACCESS_GATE_GRACE_MS, logger),
+      }),
     }),
     inspection: pruned({ admin: exactlyTrue(env.INSPECTION_ADMIN_ENABLED) }),
     attachments: pruned({
@@ -135,6 +164,19 @@ function isWsRecheckMs(raw: string): boolean {
 
 function exactlyTrue(value: string | undefined): boolean | undefined {
   return value === undefined ? undefined : value === "true";
+}
+
+function parseAccessGateGraceMs(
+  raw: string | undefined,
+  logger: ILogger,
+): number | undefined {
+  if (raw === undefined || raw.trim() === "") return undefined;
+  const parsed = Number(raw);
+  if (Number.isInteger(parsed) && parsed >= 0) return parsed;
+  logger.warn(
+    `Ignoring invalid ACCESS_GATE_GRACE_MS="${raw}" (expected a non-negative integer of milliseconds) — using the default`,
+  );
+  return undefined;
 }
 
 function parseGatewayAdapter(
