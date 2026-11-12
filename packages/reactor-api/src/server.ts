@@ -51,7 +51,7 @@ import {
   type ProcessorFactory,
 } from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
-import type { ReactorApiConfig } from "./api-config.js";
+import type { ReactorApiAccessConfig, ReactorApiConfig } from "./api-config.js";
 import { coreSubgraphClasses } from "./config.js";
 import { createStartupAttachmentBackend } from "./attachment-backend.js";
 import {
@@ -116,6 +116,10 @@ import {
   type User,
   type CredentialVerifier,
 } from "./services/auth.service.js";
+import {
+  createVetraAccessGate,
+  type AccessGate,
+} from "./services/access-gate.js";
 import { createRenownCredentialVerifier } from "./services/renown-credential-verifier.js";
 import type {
   AuthorizationConfig,
@@ -219,6 +223,9 @@ type Options = {
     offlineCredentials?: boolean;
     /** Where `ownerClaim` and `offlineCredentials` keep their files. */
     stateDir?: string;
+    /** `ACCESS=licensed`: admit only admins and holders of a live licence,
+     *  as Vetra's gate answers. See {@link assertAccessConfig}. */
+    access?: ReactorApiAccessConfig;
   };
   /** Renown coordinates the host already resolved, used verbatim instead of
    * resolving the config file's `auth.renown` again (which would warn twice). */
@@ -291,6 +298,58 @@ export function assertAuthRequiredForDocumentPermissions(
         "document permissions.",
     );
   }
+}
+
+/**
+ * `ACCESS` fails closed at boot: an unknown mode, or `licensed` without a
+ * usable gate, refuses to start rather than run a host that admits either
+ * nobody or everybody. Returns whether the host runs licensed.
+ */
+export function assertAccessConfig(
+  access: ReactorApiAccessConfig | undefined,
+  skipCredentialVerification: boolean,
+): boolean {
+  const mode = access?.mode ?? "open";
+  if (mode === "open") return false;
+  if (mode === "members") {
+    throw new Error(
+      "ACCESS=members is not supported; use ACCESS=licensed with Vetra's gate",
+    );
+  }
+  if (mode !== "licensed") {
+    throw new Error(
+      `ACCESS=${mode} is not supported: use ACCESS=open (the default) or ACCESS=licensed`,
+    );
+  }
+  if (!access?.gateToken || !isGateUrl(access.gateUrl)) {
+    throw new Error(
+      "ACCESS=licensed needs VETRA_GATE_URL and VETRA_GATE_TOKEN " +
+        "(VETRA_GATE_URL must be https, or http on localhost)",
+    );
+  }
+  if (skipCredentialVerification) {
+    throw new Error(
+      "ACCESS=licensed refuses SKIP_CREDENTIAL_VERIFICATION: a licence " +
+        "belongs to a verified address, and skipping the check lets a caller " +
+        "claim any address.",
+    );
+  }
+  return true;
+}
+
+function isGateUrl(raw: string | undefined): boolean {
+  if (!raw) return false;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (url.protocol === "https:") return true;
+  return (
+    url.protocol === "http:" &&
+    (url.hostname === "localhost" || url.hostname === "127.0.0.1")
+  );
 }
 
 /**
@@ -756,7 +815,19 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   const admins = (optionAuth.admins ?? fileAuth?.admins ?? []).map((a) =>
     a.toLowerCase(),
   );
-  const authEnabled = optionAuth.enabled ?? fileAuth?.enabled ?? false;
+  /**
+   * `ACCESS=licensed` implies enforcement: identity is resolved, anonymous
+   * callers are refused, and every verified non-admin must hold a licence
+   * Vetra's gate confirms. The document policy stays OPEN among admitted
+   * callers (DOCUMENT_PERMISSIONS when enabled), never ADMIN_ONLY, which would
+   * let a licensee through the gate only to refuse them every document.
+   */
+  const licensed = assertAccessConfig(
+    optionAuth.access,
+    optionAuth.skipCredentialVerification ?? false,
+  );
+  const authEnabled =
+    licensed || (optionAuth.enabled ?? fileAuth?.enabled ?? false);
   const configuredRenown: RenownConfig | undefined = fileAuth?.renown;
 
   /**
@@ -770,7 +841,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
    * stays `OPEN`, which is the combination custom subgraphs need and the one
    * `AUTH_ENABLED` alone cannot express.
    */
-  const resolveCallerIdentity = optionAuth.resolveIdentity ?? authEnabled;
+  const resolveCallerIdentity =
+    licensed || (optionAuth.resolveIdentity ?? authEnabled);
 
   /**
    * Whether the require-authenticated-caller middleware is active: anonymous
@@ -787,7 +859,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
    * anonymous not".
    */
   const requireAuthenticatedCaller =
-    optionAuth.requireAuthenticatedCaller ?? false;
+    licensed || (optionAuth.requireAuthenticatedCaller ?? false);
 
   /**
    * The paths the floor above does not apply to. Comma-separated, like
@@ -911,8 +983,23 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
         renown.switchboardUrl ?? renown.url ?? "the default Renown instance",
       );
     }
+    let accessGate: AccessGate | undefined;
+    if (licensed && optionAuth.access?.gateUrl && optionAuth.access.gateToken) {
+      accessGate = createVetraAccessGate({
+        url: optionAuth.access.gateUrl,
+        token: optionAuth.access.gateToken,
+        appId: optionAuth.access.appId,
+        graceMs: optionAuth.access.graceMs,
+        logger: logger.child(["access-gate"]),
+      });
+      logger.info(
+        "ACCESS=licensed: non-admin callers are checked with Vetra (@url)",
+        optionAuth.access.gateUrl,
+      );
+    }
     authService = new AuthService({
       enabled: authEnabled,
+      ...(accessGate ? { accessGate } : {}),
       resolveIdentity: resolveCallerIdentity,
       admins,
       skipCredentialVerification,
@@ -1011,7 +1098,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   const policy =
     documentPermissionService || ownDocumentPermissions
       ? AuthorizationPolicy.DOCUMENT_PERMISSIONS
-      : authEnabled
+      : authEnabled && !licensed
         ? AuthorizationPolicy.ADMIN_ONLY
         : AuthorizationPolicy.OPEN;
   const authorizationConfig: AuthorizationConfig = {

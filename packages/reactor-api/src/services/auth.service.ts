@@ -1,5 +1,6 @@
 import type { RouteUser } from "@powerhousedao/shared/processors";
 import { verifyAuthBearerToken } from "@renown/sdk";
+import type { AccessGate } from "./access-gate.js";
 
 type VerifiedCredential =
   Awaited<ReturnType<typeof verifyAuthBearerToken>> extends false | (infer T)
@@ -42,7 +43,16 @@ export interface AuthConfig {
   credentialVerificationCacheTtlMs?: number; // How long successful Renown credential checks are cached; 0 disables caching
   verifyCredential?: CredentialVerifier; // Injected credential check; required when verification is on
   onVerified?: (user: User) => void; // Called with each caller whose bearer and credential verified
+  /**
+   * `ACCESS=licensed`: a verified caller who is not in `admins` is admitted
+   * only when the gate allows them (HTTP 403 / WebSocket refusal otherwise),
+   * and an open socket's recheck asks it again.
+   */
+  accessGate?: AccessGate;
 }
+
+/** What a caller the access gate refused is told. */
+export const NO_LICENCE_MESSAGE = "No licence for this app";
 
 const DEFAULT_CREDENTIAL_CACHE_TTL_MS = 60_000;
 const CREDENTIAL_CACHE_MAX_ENTRIES = 1_000;
@@ -200,6 +210,12 @@ export class AuthService implements ICredentialInvalidator {
           );
         }
       }
+      if (!(await this.admitted(user))) {
+        return new Response(JSON.stringify({ error: NO_LICENCE_MESSAGE }), {
+          status: 403,
+          headers: { "content-type": "application/json" },
+        });
+      }
       this.config.onVerified?.(user);
       return {
         user,
@@ -259,6 +275,10 @@ export class AuthService implements ICredentialInvalidator {
       }
     }
 
+    if (!(await this.admitted(user))) {
+      throw new Error(NO_LICENCE_MESSAGE);
+    }
+
     this.config.onVerified?.(user);
 
     // Note: We no longer block based on global allowed lists.
@@ -314,10 +334,25 @@ export class AuthService implements ICredentialInvalidator {
    * admission, so it costs at most one verifier call per identity per TTL.
    */
   async isCredentialValid(user: User): Promise<boolean> {
-    if (this.config.skipCredentialVerification) {
+    const credentialHolds =
+      this.config.skipCredentialVerification ||
+      (await this.verifyCredentialExists(
+        user.address,
+        user.chainId,
+        user.appKey,
+      ));
+    return credentialHolds && (await this.admitted(user));
+  }
+
+  /** ACCESS=licensed: admins pass; everyone else needs the gate's yes (or its grace). */
+  private async admitted(user: User): Promise<boolean> {
+    const gate = this.config.accessGate;
+    if (!gate) return true;
+    const address = user.address.toLowerCase();
+    if (this.config.admins.some((admin) => admin.toLowerCase() === address)) {
       return true;
     }
-    return this.verifyCredentialExists(user.address, user.chainId, user.appKey);
+    return (await gate.check(address)).allowed;
   }
 
   /**
