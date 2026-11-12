@@ -26,6 +26,7 @@ import {
   readModelAsReactorStore,
   switchboardDevMode,
 } from "./member-config.js";
+import { defaultDrive } from "@powerhousedao/switchboard/config/env";
 import { z } from "zod";
 import { classicSwitchboardArgs } from "../services/classic-args.js";
 import {
@@ -143,16 +144,6 @@ async function toSwitchboardArgs(
     // presence sets it, its absence must deactivate. Classic path: classic.
     mcp: composed ? undefined : classic.mcp,
   };
-}
-
-/** The drive the switchboard service creates by default
- * (services/switchboard.ts `defaultSwitchboardOptions.drive`). */
-const DEFAULT_DRIVE_SLUG = "powerhouse";
-
-/** The `<slug>` of the server-reported `…/d/<slug>` default drive URL. */
-function defaultDriveSlug(url: string | undefined): string {
-  const match = url ? /\/d\/([^/?#]+)\/?$/.exec(url) : null;
-  return match ? decodeURIComponent(match[1]) : DEFAULT_DRIVE_SLUG;
 }
 
 /** A drive in the plan with the slug its declaration used (a `projectHash:
@@ -431,8 +422,13 @@ async function start(
       throw error;
     }
   };
+  const { getConfig: getProjectConfig } =
+    await import("@powerhousedao/config/node");
+  const fileDrive = getProjectConfig(
+    path.join(ctx.projectRoot, "powerhouse.config.json"),
+  ).switchboard?.drive;
   const switchboard = await startSwitchboard(
-    { ...serverArgs, readyAfter },
+    { ...serverArgs, readyAfter, fileDrive },
     undefined,
     memberConfig,
   );
@@ -467,9 +463,15 @@ async function start(
   // The server creates its implicit default drive only when nothing replaces
   // it: no host declaration and no remote drive (services/switchboard.ts).
   const localHostDrives = hostDrives.filter((d) => d.drive.kind === "local");
-  const defaultSlug = defaultDriveSlug(switchboard.defaultDriveUrl);
+  // The configured default drive (env > powerhouse.config.json > today's):
+  // outputs key it by slug, and the server reports a URL by id, not slug.
+  const configured = defaultDrive(process.env, fileDrive);
+  const defaultSlug = configured.slug;
   if (hostDrives.length === 0 && remoteDrives.length === 0) {
-    drives[defaultSlug] = { id: defaultSlug, url: driveUrlOf(defaultSlug) };
+    drives[defaultSlug] = {
+      id: configured.id,
+      url: driveUrlOf(defaultSlug),
+    };
   }
   for (const { declaredSlug, drive } of localPlanned) {
     drives[declaredSlug] = {

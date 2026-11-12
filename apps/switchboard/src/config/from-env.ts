@@ -35,6 +35,8 @@ import {
   type SwitchboardConfigInput,
 } from "./schema.js";
 
+export { defaultDrive } from "./default-drive.js";
+
 type Env = Readonly<Record<string, string | undefined>>;
 type Logger = ILogger;
 

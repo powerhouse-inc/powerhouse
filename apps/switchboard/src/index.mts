@@ -49,8 +49,10 @@ const cliMigratePglite = process.argv.slice(2).includes("--migrate-pglite");
 // logging and continuing hides a dead switchboard from the supervisor, which
 // would otherwise never restart it.
 try {
+  const fileConfig = getConfig().switchboard;
   const config = binSwitchboardConfig(process.env, {
-    filePort: getConfig().switchboard?.port,
+    filePort: fileConfig?.port,
+    fileDrive: fileConfig?.drive,
     migratePglite: cliMigratePglite,
   });
   initSwitchboardProcess(config);
