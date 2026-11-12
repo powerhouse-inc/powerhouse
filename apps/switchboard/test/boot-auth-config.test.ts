@@ -21,7 +21,14 @@ function stubLogger(): ILogger & { info: Info } {
   return logger as unknown as ILogger & { info: Info };
 }
 
-const AUTH_VARS = ["AUTH_ENABLED", "ADMINS", "RESOLVE_CALLER_IDENTITY"];
+const AUTH_VARS = [
+  "AUTH_ENABLED",
+  "ADMINS",
+  "RESOLVE_CALLER_IDENTITY",
+  "ACCESS",
+  "VETRA_GATE_URL",
+  "VETRA_GATE_TOKEN",
+];
 
 /** Whether the switchboard enforces auth, from reactor-api's setup log. */
 async function bootsWithAuth(options: {
@@ -103,6 +110,36 @@ describe("booting Switchboard with auth", () => {
         file: {},
         config: { enabled: false },
         env: { AUTH_ENABLED: "true", ADMINS: ADMIN },
+      }),
+    ).toBe(true);
+  }, 60_000);
+
+  it("refuses to boot with ACCESS=members", async () => {
+    await expect(
+      bootsWithAuth({ file: {}, env: { ACCESS: "members" } }),
+    ).rejects.toThrow(
+      "ACCESS=members is not supported; use ACCESS=licensed with Vetra's gate",
+    );
+  }, 60_000);
+
+  it("refuses to boot with ACCESS=licensed and no gate", async () => {
+    await expect(
+      bootsWithAuth({ file: {}, env: { ACCESS: "licensed" } }),
+    ).rejects.toThrow(
+      "ACCESS=licensed needs VETRA_GATE_URL and VETRA_GATE_TOKEN",
+    );
+  }, 60_000);
+
+  it("enforces auth with ACCESS=licensed alone", async () => {
+    expect(
+      await bootsWithAuth({
+        file: {},
+        env: {
+          ACCESS: "licensed",
+          ADMINS: ADMIN,
+          VETRA_GATE_URL: "https://vetra.example/gate/check",
+          VETRA_GATE_TOKEN: "vgt_test",
+        },
       }),
     ).toBe(true);
   }, 60_000);

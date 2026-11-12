@@ -65,6 +65,21 @@ describe("switchboardConfigSchema", () => {
     });
     expect(config.attachments).toEqual({ storage: { kind: "filesystem" } });
     expect(config.auth.documentPermissions).toEqual({ enabled: false });
+    expect(config.auth.access).toEqual({ mode: "open" });
+  });
+
+  it("refuses ACCESS=members, pointing at licensed", () => {
+    expect(() =>
+      switchboardConfigSchema.parse({ auth: { access: { mode: "members" } } }),
+    ).toThrow(
+      "ACCESS=members is not supported; use ACCESS=licensed with Vetra's gate",
+    );
+  });
+
+  it("refuses an unknown ACCESS by name", () => {
+    expect(() =>
+      switchboardConfigSchema.parse({ auth: { access: { mode: "everyone" } } }),
+    ).toThrow("ACCESS=everyone is not supported");
   });
 
   it("keeps the defaults beside a nested value a layer sets", () => {

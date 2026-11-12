@@ -141,6 +141,31 @@ const telemetrySchema = z.object({
   heapSnapshotDir: z.string().min(1).optional(),
 });
 
+/**
+ * `ACCESS`. A string refined rather than an enum, so an unknown value is
+ * refused by name, and `members` points at what replaces it.
+ */
+const accessModeSchema = z.string().superRefine((mode, ctx) => {
+  if (mode === "open" || mode === "licensed") return;
+  ctx.addIssue({
+    code: "custom",
+    message:
+      mode === "members"
+        ? "ACCESS=members is not supported; use ACCESS=licensed with Vetra's gate"
+        : `ACCESS=${mode} is not supported: use ACCESS=open (the default) or ACCESS=licensed`,
+  });
+});
+
+/** Who may use the host beyond its admins (`ACCESS`, `VETRA_GATE_*`). */
+const accessSchema = z.object({
+  mode: accessModeSchema.default("open"),
+  gateUrl: z.string().min(1).optional(),
+  /** Secret: never logged. */
+  gateToken: z.string().min(1).optional(),
+  appId: z.string().min(1).optional(),
+  graceMs: nonNegativeInt.optional(),
+});
+
 const authSchema = z.object({
   enabled: z.boolean().default(false),
   /** Unset follows `enabled`. */
@@ -164,6 +189,7 @@ const authSchema = z.object({
   ownerClaim: z.boolean().default(false),
   /** Keep verified credentials, and rely on them while Renown is away. */
   offlineCredentials: z.boolean().default(false),
+  access: accessSchema.prefault({}),
   renown: z
     .object({
       source: z.enum(["self", "remote", "kept"]).optional(),
@@ -353,6 +379,15 @@ export type ReactorApiSectionsMatch = [
       MissingKeys<
         Section<ReactorApiConfig["auth"]>["documentPermissions"],
         SwitchboardConfig["auth"]["documentPermissions"]
+      >,
+      never
+    >
+  >,
+  Assert<
+    Same<
+      MissingKeys<
+        Section<ReactorApiConfig["auth"]>["access"],
+        SwitchboardConfig["auth"]["access"]
       >,
       never
     >
