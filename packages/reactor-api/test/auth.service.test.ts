@@ -8,7 +8,11 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AuthService } from "../src/services/auth.service.js";
+import {
+  AuthService,
+  MALFORMED_AUTHORIZATION,
+  parseAuthorization,
+} from "../src/services/auth.service.js";
 
 // ─── mock @renown/sdk ─────────────────────────────────────────────────────────
 
@@ -517,5 +521,113 @@ describe("AuthService.authenticateRequest()", () => {
       expect(result).toBeInstanceOf(Response);
       expect((result as Response).status).toBe(401);
     });
+  });
+});
+
+// ── the Authorization scheme ─────────────────────────────────────────────────
+
+describe("parseAuthorization()", () => {
+  it("reads the token of a Bearer credential, whatever the scheme's case", () => {
+    for (const header of [
+      "Bearer t0ken",
+      "bearer t0ken",
+      "BEARER t0ken",
+      "Bearer\tt0ken",
+      " Bearer  t0ken ",
+    ]) {
+      expect(parseAuthorization(header), header).toEqual({
+        kind: "bearer",
+        token: "t0ken",
+      });
+    }
+  });
+
+  it("treats a missing or blank header as absent", () => {
+    expect(parseAuthorization(undefined)).toEqual({ kind: "absent" });
+    expect(parseAuthorization("")).toEqual({ kind: "absent" });
+    expect(parseAuthorization("   ")).toEqual({ kind: "absent" });
+  });
+
+  it("refuses every other scheme, a scheme-less token and a Bearer with no token", () => {
+    for (const header of [
+      "Basic t0ken",
+      "Token t0ken",
+      "Foo t0ken",
+      "t0ken",
+      "Bearer",
+      "Bearer ",
+      "Bearer one two",
+      "Bearer: t0ken",
+    ]) {
+      expect(parseAuthorization(header), header).toEqual({ kind: "malformed" });
+    }
+  });
+});
+
+describe("AuthService refuses a credential that is not a Bearer", () => {
+  let service: AuthService;
+
+  beforeEach(() => {
+    mockVerifyAuthBearerToken.mockResolvedValue(makeVerified());
+    service = new AuthService({
+      enabled: true,
+      admins: ADMINS,
+      skipCredentialVerification: true,
+    });
+  });
+
+  it("answers 401 over HTTP without looking at the token", async () => {
+    for (const scheme of ["Basic", "Token", "Foo"]) {
+      const result = await service.authenticateRequest(
+        makeRequest("POST", { authorization: `${scheme} valid-token` }),
+      );
+      expect(result, scheme).toBeInstanceOf(Response);
+      expect((result as Response).status, scheme).toBe(401);
+      await expect((result as Response).json(), scheme).resolves.toEqual({
+        error: MALFORMED_AUTHORIZATION,
+      });
+    }
+    expect(mockVerifyAuthBearerToken).not.toHaveBeenCalled();
+  });
+
+  it("answers 401 to a scheme-less token and to a Bearer with no token, rather than anonymous", async () => {
+    for (const header of ["valid-token", "Bearer"]) {
+      const result = await service.verifyBearer(header);
+      expect(result, header).toBeInstanceOf(Response);
+      expect((result as Response).status, header).toBe(401);
+    }
+    expect(mockVerifyAuthBearerToken).not.toHaveBeenCalled();
+  });
+
+  it("still verifies a Bearer, whatever the scheme's case", async () => {
+    for (const header of ["Bearer valid-token", "bearer valid-token"]) {
+      const result = await service.verifyBearer(header);
+      expect(result, header).not.toBeInstanceOf(Response);
+      expect((result as { user?: { address: string } }).user?.address).toBe(
+        "0xuser",
+      );
+    }
+  });
+
+  it("refuses the same headers on a websocket connection, and keeps a missing one anonymous", async () => {
+    for (const authorization of [
+      "Basic valid-token",
+      "valid-token",
+      "Bearer",
+    ]) {
+      await expect(
+        service.authenticateWebSocketConnection({ authorization }),
+        authorization,
+      ).rejects.toThrow(MALFORMED_AUTHORIZATION);
+    }
+    expect(mockVerifyAuthBearerToken).not.toHaveBeenCalled();
+    await expect(
+      service.authenticateWebSocketConnection({}),
+    ).resolves.toBeNull();
+    await expect(
+      service.authenticateWebSocketConnection({
+        authorization: "bearer valid-token",
+      }),
+    ).resolves.toMatchObject({ address: "0xuser" });
   });
 });
