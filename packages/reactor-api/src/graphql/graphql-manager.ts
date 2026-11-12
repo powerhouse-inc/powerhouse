@@ -610,6 +610,14 @@ export class GraphQLManager {
       }
 
       const user = getAuthContext(request)?.user;
+      // ACCESS=licensed: discovery is not the exception it is elsewhere; a
+      // host that serves only licence holders has nothing for anonymous callers.
+      if (!user && this.authService?.refusesAnonymousCallers) {
+        return Response.json(
+          { error: "Authentication required" },
+          { status: 401 },
+        );
+      }
       try {
         // Read as the caller, so a drive whose domain it may not read serves
         // its header alone; discovery must still reach graphqlEndpoint.

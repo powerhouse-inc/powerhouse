@@ -217,6 +217,32 @@ describe("a host booted with ACCESS=licensed", () => {
     );
   });
 
+  it("refuses anonymous callers and strangers drive discovery too", async () => {
+    const api = await boot(licensed());
+    const status = async (address?: string) => {
+      const response = await fetch(
+        `http://localhost:${api.port}/d/no-such-drive`,
+        {
+          headers: address ? { authorization: `Bearer ${address}` } : {},
+        },
+      );
+      await response.text();
+      return response.status;
+    };
+    expect(await status()).toBe(401);
+    expect(await status(STRANGER)).toBe(403);
+    expect(await status(HOLDER)).toBe(404);
+  });
+
+  it("leaves anonymous drive discovery alone without ACCESS=licensed", async () => {
+    const api = await boot({ resolveIdentity: true, admins: [ADMIN] });
+    const response = await fetch(
+      `http://localhost:${api.port}/d/no-such-drive`,
+    );
+    await response.text();
+    expect(response.status).toBe(404);
+  });
+
   it("keeps /health and /ready open", async () => {
     const api = await boot(licensed());
     for (const path of ["/health", "/ready"]) {

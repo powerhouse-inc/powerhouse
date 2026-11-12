@@ -140,6 +140,14 @@ export class AuthService implements ICredentialInvalidator {
     return this.config.resolveIdentity ?? this.config.enabled;
   }
 
+  /**
+   * `ACCESS=licensed`: only admins and licence holders may use the host, so
+   * nothing is served to an anonymous caller, drive discovery included.
+   */
+  get refusesAnonymousCallers(): boolean {
+    return this.config.accessGate !== undefined;
+  }
+
   /** The context an unresolved request gets: no user, and no admin list to match against. */
   private anonymousContext(): AuthContext {
     return { user: undefined, admins: [], auth_enabled: this.config.enabled };
