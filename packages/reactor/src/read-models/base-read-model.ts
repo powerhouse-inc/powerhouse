@@ -35,6 +35,10 @@ import {
   findPurged,
 } from "../storage/kysely/document-purges.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
+import {
+  lowerCursorsAboveHead,
+  type CursorRowsDatabase,
+} from "./cursor-rows.js";
 import type { IReadModel, IReadModelReservation } from "./interfaces.js";
 import { SKIPPED_DOCUMENT_MARKER, type DocumentViewDatabase } from "./types.js";
 
@@ -303,6 +307,8 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
       }
       await this.initializeState(0);
       stored = 0;
+    } else if (stored > 0) {
+      stored = await this.lowerIfAboveHead(stored);
     }
 
     this.resetCursor(stored);
@@ -311,6 +317,17 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
       await this.applySkippedDocuments();
     }
     await this.replayFromCursor();
+  }
+
+  /** A cursor above the head after a lost index tail skips every new operation. */
+  private async lowerIfAboveHead(stored: number): Promise<number> {
+    const lowered = await lowerCursorsAboveHead(
+      this.db as unknown as Kysely<CursorRowsDatabase>,
+      (cursor) => cursor.kind === "read-model" && cursor.id === this.consumerId,
+      this.catchUpLogger,
+    );
+    if (lowered.length === 0) return stored;
+    return (await this.loadState()) ?? 0;
   }
 
   /** The live path: never moves the cursor. */
