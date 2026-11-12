@@ -90,7 +90,7 @@ describe("Query.documentServed", () => {
     expect(await served(server, secret, { bearer: READER })).toBe(true);
   });
 
-  it("differs from the document query, which serves such a document's header", async () => {
+  it("agrees with the document query, which refuses such a document as a missing one", async () => {
     const response = await fetch(server.url, {
       method: "POST",
       headers: {
@@ -102,10 +102,14 @@ describe("Query.documentServed", () => {
       }),
     });
     const body = (await response.json()) as {
-      data?: { document?: { document: { id: string } } };
+      data?: { document?: { document: { id: string } } | null };
+      errors?: { message: string }[];
     };
 
-    expect(body.data?.document?.document.id).toBe(secret);
+    expect(body.data?.document ?? null).toBeNull();
+    expect(body.errors?.[0]?.message).toBe(
+      `Failed to fetch document: Document not found: ${secret}`,
+    );
     expect(await served(server, secret, { bearer: OUTSIDER })).toBe(false);
   });
 

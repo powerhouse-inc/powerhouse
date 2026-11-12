@@ -83,6 +83,8 @@ describe("Permissions Integration Tests", () => {
 
     // Create mock ReactorClient with parent hierarchy
     mockReactorClient = {
+      // `document` and `documentOperations` first ask whether a listing would serve the document.
+      isServed: vi.fn().mockResolvedValue(true),
       get: vi.fn().mockImplementation((id: string) => {
         if (id === "doc-123") return Promise.resolve(mockDocument);
         if (id === "child-doc") return Promise.resolve(mockChildDocument);

@@ -81,6 +81,7 @@ const DOCUMENT = {
 
 function readClient(): IReactorReadClient {
   return {
+    isServed: () => Promise.resolve(true),
     get: () => Promise.resolve(DOCUMENT),
     getOutgoingRelationships: () => Promise.resolve({ results: [] }),
   } as unknown as IReactorReadClient;
