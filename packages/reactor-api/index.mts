@@ -39,6 +39,7 @@ export type {
 export * from "./src/server.js";
 export * from "./src/services/attachment-access.service.js";
 export * from "./src/services/authorized-attachment.service.js";
+export * from "./src/services/access-gate.js";
 export * from "./src/services/auth.service.js";
 export * from "./src/services/canonical-document-id.js";
 export * from "./src/services/renown-config.js";
