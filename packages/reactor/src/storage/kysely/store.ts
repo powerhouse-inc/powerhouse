@@ -22,6 +22,10 @@ import {
 import { AtomicTransaction } from "../txn.js";
 import { MAX_BIND_PARAMETERS } from "./bind-parameters.js";
 import { findPurged } from "./document-purges.js";
+import {
+  scopeHeadsQuery,
+  streamLatestTimestampQuery,
+} from "./revision-queries.js";
 import type { Database, InsertableOperation, OperationRow } from "./types.js";
 
 class _UniqueConstraintContext extends Error {
@@ -710,41 +714,40 @@ export class KyselyOperationStore implements IOperationStore {
   ): Promise<DocumentRevisions> {
     throwIfAborted(signal);
 
-    // The head of each scope in one pass. `index` is unique per
-    // (documentId, scope, branch) -- the unique_revision constraint -- so the
-    // largest index in a scope identifies exactly one operation, and taking the
-    // maximum is the same answer as selecting the row that carries it. Asking
-    // for the maximum directly lets Postgres aggregate a single ordered walk of
-    // unique_revision instead of re-running a per-scope subquery once for every
-    // operation row in the document.
-    const scopeRevisions = await this.queryExecutor
-      .selectFrom("Operation")
-      .select("scope")
-      .select((eb) => eb.fn.max("index").as("index"))
-      .where("documentId", "=", documentId)
-      .where("branch", "=", branch)
-      .groupBy("scope")
-      .execute();
+    // One skip scan gives each scope's head and newest timestamp. `index` is
+    // unique per (documentId, scope, branch) -- the unique_revision constraint
+    // -- so a scope's largest index is one backward probe of that index, and
+    // its newest timestamp one probe of idx_operation_scope_timestamp. The
+    // scopes are found by hopping from one distinct scope to the next, so the
+    // cost follows the number of scopes, not the number of operations (a
+    // GROUP BY or a max over (documentId, branch) has no index to probe and reads every operation of the document). A scope
+    // present only on another branch comes back with nulls and is skipped.
+    const scopeHeads = await scopeHeadsQuery(
+      this.queryExecutor,
+      documentId,
+      branch,
+    ).execute();
 
-    // Asked separately because the largest timestamp is not always on the
-    // last-indexed operation: a reshuffle can leave a later one behind it.
-    const latest = await this.queryExecutor
-      .selectFrom("Operation")
-      .select((eb) => eb.fn.max("timestampUtcMs").as("latestTimestamp"))
-      .where("documentId", "=", documentId)
-      .where("branch", "=", branch)
-      .executeTakeFirst();
-
+    // The largest timestamp is not always on the last-indexed operation (a
+    // reshuffle can leave a later one behind it), so it is the max over the
+    // scopes' newest timestamps, which equals the document's max.
     const revision: Record<string, number> = {};
-    for (const row of scopeRevisions) {
+    let latestMs = 0;
+    for (const row of scopeHeads) {
+      if (
+        row.scope === null ||
+        row.index === null ||
+        row.latestTimestamp === null
+      ) {
+        continue;
+      }
       revision[row.scope] = row.index + 1;
+      latestMs = Math.max(latestMs, new Date(row.latestTimestamp).getTime());
     }
 
     return {
       revision,
-      latestTimestamp: latest?.latestTimestamp
-        ? new Date(latest.latestTimestamp).toISOString()
-        : new Date(0).toISOString(),
+      latestTimestamp: new Date(latestMs).toISOString(),
     };
   }
 
@@ -754,13 +757,12 @@ export class KyselyOperationStore implements IOperationStore {
     branch: string,
     signal?: AbortSignal,
   ): Promise<string | undefined> {
-    const latest = await this.queryExecutor
-      .selectFrom("Operation")
-      .select((eb) => eb.fn.max("timestampUtcMs").as("latestTimestamp"))
-      .where("documentId", "=", documentId)
-      .where("scope", "=", scope)
-      .where("branch", "=", branch)
-      .executeTakeFirst();
+    const latest = await streamLatestTimestampQuery(
+      this.queryExecutor,
+      documentId,
+      scope,
+      branch,
+    ).executeTakeFirst();
 
     return latest?.latestTimestamp
       ? new Date(latest.latestTimestamp).toISOString()

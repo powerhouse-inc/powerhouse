@@ -823,12 +823,13 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
       scope: string,
       index: number,
       timestampUtcMs: string,
+      branch = "main",
     ): Promise<void> {
       await store.apply(
         documentId,
         documentType,
         scope,
-        "main",
+        branch,
         index,
         (txn) => {
           txn.addOperations({
@@ -880,6 +881,17 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
       await expect(
         store.getStreamLatestTimestamp(documentId, "auth", "main"),
       ).resolves.toBe("2026-01-01T00:00:05.000Z");
+    });
+
+    it("maxes over one scope and branch only", async () => {
+      const documentId = generateId();
+      await writeAt(documentId, "auth", 0, "2026-01-01T00:00:03.000Z");
+      await writeAt(documentId, "global", 0, "2026-01-01T00:00:08.000Z");
+      await writeAt(documentId, "auth", 0, "2026-01-01T00:00:09.000Z", "other");
+
+      await expect(
+        store.getStreamLatestTimestamp(documentId, "auth", "main"),
+      ).resolves.toBe("2026-01-01T00:00:03.000Z");
     });
 
     it("distinguishes branches", async () => {
@@ -1011,6 +1023,39 @@ describe.each(testFsBackends)("KyselyOperationStore [$name]", ({ backend }) => {
         },
       );
     }
+
+    it("takes the latest timestamp across scopes, not from the deepest one", async () => {
+      const documentId = generateId();
+      for (let i = 0; i <= 3; i++)
+        await writeAt(documentId, "global", i, `2026-01-01T00:00:0${i}.000Z`);
+      await writeAt(documentId, "local", 0, "2026-03-01T00:00:00.000Z");
+
+      const revisions = await store.getRevisions(documentId, "main");
+
+      expect(revisions.revision).toEqual({ global: 4, local: 1 });
+      expect(revisions.latestTimestamp).toBe("2026-03-01T00:00:00.000Z");
+    });
+
+    it("ignores scopes that only have operations on another branch", async () => {
+      const documentId = generateId();
+      for (let i = 0; i <= 1; i++) await writeAt(documentId, "global", i);
+      await writeAt(documentId, "local", 0, undefined, "draft");
+      // Draft shares `global` with main, at a higher index and a later time.
+      for (let i = 0; i <= 5; i++) {
+        await writeAt(
+          documentId,
+          "global",
+          i,
+          "2026-06-01T00:00:00.000Z",
+          "draft",
+        );
+      }
+
+      const revisions = await store.getRevisions(documentId, "main");
+
+      expect(revisions.revision).toEqual({ global: 2 });
+      expect(revisions.latestTimestamp).toBe("2026-01-01T00:00:00.000Z");
+    });
 
     it("returns no revisions for a document with no operations", async () => {
       const revisions = await store.getRevisions(generateId(), "main");
