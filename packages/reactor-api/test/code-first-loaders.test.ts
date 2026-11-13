@@ -175,6 +175,8 @@ describe("VitePackageLoader", () => {
           changed();
         });
       },
+      // The loader waits out the watcher's 50ms change throttle regardless:
+      // the replacement rewrites the index within 50ms of the unload.
       { debounce: 0 },
     );
     const edit = async (file: string, contents: string) => {
