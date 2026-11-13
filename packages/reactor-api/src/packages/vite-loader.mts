@@ -79,6 +79,11 @@ interface LoadedModule {
 
 const FILE_EVENTS = ["change", "add", "unlink"] as const;
 
+// Vite's chokidar drops a "change" for a path that already changed in the
+// last 50ms, and never emits it later. A reload must start after that window,
+// or a second quick write to the same file is read stale and never reloaded.
+const WATCHER_CHANGE_THROTTLE_MS = 50;
+
 export class VitePackageLoader implements ISubscribablePackageLoader {
   private readonly logger = childLogger(["reactor-api", "vite-loader"]);
 
@@ -361,7 +366,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
           },
           { logger: this.logger, report: this.#reportError },
         ),
-      options?.debounce ?? 100,
+      Math.max(options?.debounce ?? 100, WATCHER_CHANGE_THROTTLE_MS),
     );
     const listener = (changedPath: string) => {
       if (matches(changedPath)) void reloadOnce();

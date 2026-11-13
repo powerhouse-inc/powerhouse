@@ -68,7 +68,7 @@ export interface IPackageLoader {
 }
 
 export interface ISubscriptionOptions {
-  debounce?: number; // defaults to 100ms
+  debounce?: number; // defaults to 100ms; the Vite loader waits at least 50ms
 }
 
 export interface ISubscribablePackageLoader extends IPackageLoader {
