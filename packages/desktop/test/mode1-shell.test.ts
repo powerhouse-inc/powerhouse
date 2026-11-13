@@ -486,9 +486,10 @@ describe("shell projection", () => {
     expect(git).toContain('git = "https://g/x"');
     expect(git).toContain('tag = "v2"');
     // omitted shell → crates.io version default, a floor a lock still on
-    // 0.1.0 (which can't run a stack from ph-run) doesn't satisfy
+    // 0.1.0 (which can't run a stack from ph-run) or 0.1.1 (which has no
+    // updater) doesn't satisfy
     expect(projectInto().read("Cargo.toml")).toMatch(
-      /ph-desktop-shell = "0\.1\.1"/,
+      /ph-desktop-shell = "0\.1\.2"/,
     );
   });
 

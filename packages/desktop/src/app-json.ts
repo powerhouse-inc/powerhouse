@@ -257,10 +257,11 @@ export function updateEndpoints(updates: AppJsonUpdates): string[] {
 
 /** Default crates.io version requirement for the shell crate (D7.b: the flip
  * to crates.io default once published — the crate is live). A floor, not just
- * a series: 0.1.0 can't run a stack from ph-run, and a Cargo.lock that still
- * holds it satisfies "0.1", so a builder's lock would keep it forever. The
- * 0.1.0-dev.N releases sort below 0.1.0 and never match either. */
-export const DEFAULT_SHELL_CRATE_VERSION = "0.1.1";
+ * a series: 0.1.0 can't run a stack from ph-run and 0.1.1 has no updater (an
+ * app with `updates` would build and never ask), and a Cargo.lock that still
+ * holds one of them satisfies "0.1", so a builder's lock would keep it
+ * forever. The 0.1.x-dev.N releases sort below 0.1.x and never match either. */
+export const DEFAULT_SHELL_CRATE_VERSION = "0.1.2";
 
 export const APP_JSON_FILE = "app.json";
 
