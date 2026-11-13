@@ -11,8 +11,10 @@ export {
   loadAppJson,
   APP_JSON_FILE,
   DEFAULT_SHELL_CRATE_VERSION,
+  updateEndpoints,
   type AppJson,
   type AppJsonShellSource,
+  type AppJsonUpdates,
 } from "./app-json.js";
 export {
   bundleStack,
@@ -24,9 +26,21 @@ export {
   projectShell,
   ICON_SOURCE,
   SHELL_DIR,
+  UNSIGNED_BUILD_CONF,
   type ProjectShellInput,
   type ProjectShellResult,
 } from "./shell-project.js";
+export {
+  collectRelease,
+  feedFileName,
+  releaseBaseUrl,
+  releaseFileName,
+  releaseReport,
+  FEED_FILE_TEMPLATE,
+  RELEASE_DIR,
+  type CollectReleaseInput,
+  type CollectedRelease,
+} from "./release.js";
 export {
   rebaseBackground,
   scaffoldDesktopShell,
@@ -41,6 +55,7 @@ export {
   preflightOrThrow,
   resolveTauriCommand,
   runTauriIcon,
+  tauriBuildArgs,
   tauriBundlesForHost,
   type NodeTarget,
   type TauriCommand,

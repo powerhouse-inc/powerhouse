@@ -24,12 +24,19 @@ import { z } from "zod";
 import { APP_JSON_FILE, loadAppJson } from "./app-json.js";
 import { bundleBackend } from "./bundle-backend.js";
 import { bundleStack, pluginPackagesOf } from "./bundle-stack.js";
-import { ICON_SOURCE, projectShell } from "./shell-project.js";
+import { collectRelease, releaseBaseUrl, releaseReport } from "./release.js";
+import {
+  bundleVersion,
+  ICON_SOURCE,
+  projectShell,
+  UNSIGNED_BUILD_CONF,
+} from "./shell-project.js";
 import {
   detectToolchain,
   fetchNodeSidecar,
   preflightOrThrow,
   runTauriIcon,
+  tauriBuildArgs,
   tauriBundlesForHost,
   tauriSpawn,
   type TauriCommand,
@@ -448,14 +455,22 @@ export async function build(
   if (mode === "generated") {
     const hostDir = hostDirOf(host, ctx);
     const app = loadAppJson(hostDir);
+    const version = projectVersion(ctx.projectRoot);
     const { shellDir, binName, changed } = projectShell({
       hostDir,
       app,
       connectPort: port,
-      version: projectVersion(ctx.projectRoot),
+      version,
     });
     const tauri = preflightOrThrow(detectToolchain(ctx.projectRoot), host.name);
     provisionShell(shellDir, tauri, changed);
+    // The key reaches tauri through the environment it inherits.
+    const signingKey = Boolean(process.env.TAURI_SIGNING_PRIVATE_KEY);
+    // Said before the long build: a wrong address ends it here.
+    const releaseUrl =
+      app.updates && signingKey
+        ? releaseBaseUrl(app.updates, version, ctx.env)
+        : null;
 
     console.log(`[${host.name}] staging the stack into ${shellDir}…`);
     const staged = bundleStack({
@@ -482,19 +497,45 @@ export async function build(
       `[${host.name}] building '${binName}' (${tauri.via}: cargo tauri ` +
         `build --bundles ${bundles.join(",")})…`,
     );
+    if (app.updates && !signingKey) {
+      console.warn(
+        `[${host.name}] app.json turns updates on, but TAURI_SIGNING_PRIVATE_KEY ` +
+          `is not set: this build is not signed, so it cannot be offered as an ` +
+          `update. Set the key to build a release.`,
+      );
+    }
+    const started = Date.now();
     const result = spawnSyncTauri(
       tauri,
-      ["build", "--bundles", bundles.join(",")],
+      tauriBuildArgs(bundles, {
+        on: Boolean(app.updates),
+        signingKey,
+        unsignedConf: UNSIGNED_BUILD_CONF,
+      }),
       shellDir,
     );
+    const bundleDir = path.join(shellDir, "target", "release", "bundle");
+    // Before the build's own verdict: a build that made the .deb and then
+    // failed on the AppImage still has a release for the .deb.
+    if (app.updates && signingKey) {
+      const release = collectRelease({
+        bundleDir,
+        productName: app.productName,
+        version: bundleVersion(version),
+        baseUrl: releaseUrl,
+        since: started,
+      });
+      for (const line of releaseReport(release, releaseUrl)) {
+        console.log(`[${host.name}] ${line}`);
+      }
+    }
     if (result !== 0) {
       throw new Error(
         `hosts/${host.name}: \`cargo tauri build\` failed (exit ${result}).`,
       );
     }
     console.log(
-      `[${host.name}] desktop app built — installers under ` +
-        `${path.join(shellDir, "target", "release", "bundle")}.`,
+      `[${host.name}] desktop app built — installers under ${bundleDir}.`,
     );
     return;
   }

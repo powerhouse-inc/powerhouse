@@ -13,6 +13,7 @@ import {
   DEFAULT_SHELL_CRATE_VERSION,
   type AppJson,
   type AppJsonShellSource,
+  updateEndpoints,
 } from "./app-json.js";
 
 /**
@@ -33,6 +34,15 @@ import {
 export const SHELL_DIR = "tauri-shell";
 /** The icon source the runner feeds to `tauri icon` (copied from app.icon). */
 export const ICON_SOURCE = "app-icon.png";
+/** Beside tauri.conf.json in an app with updates: the settings of a build
+ * that has no signing key to hand, which cannot be offered as an update. */
+export const UNSIGNED_BUILD_CONF = "tauri.unsigned.conf.json";
+/** What a page may ask the shell about updates (ph-desktop-shell's update.rs).
+ * Granted in every app: one without updates answers that it has none. */
+const UPDATE_COMMANDS = ["update_state", "update_check", "update_install"];
+const UPDATE_PERMISSIONS = UPDATE_COMMANDS.map(
+  (command) => `allow-${command.replaceAll("_", "-")}`,
+);
 
 export interface ProjectShellInput {
   /** hosts/<host>/ — where app.json lives and tauri-shell/ is written. */
@@ -98,7 +108,14 @@ tauri = { version = "2", features = ["tray-icon", "devtools"] }
 # permission manifests (shell:allow-spawn etc.) from direct dependencies.
 tauri-plugin-shell = "2"
 tauri-plugin-single-instance = "2"
-${shellDependency(app.shell)}
+${
+  app.updates
+    ? `# The updater's settings are baked in by tauri::generate_context!, whose
+# output names serde_json in this crate.
+serde_json = "1"
+`
+    : ""
+}${shellDependency(app.shell)}
 
 [[bin]]
 name = ${JSON.stringify(binName)}
@@ -145,6 +162,9 @@ fn main() {
             "adopt_old_data",
             "start_stack",
             "switch_identity",
+            "update_state",
+            "update_check",
+            "update_install",
         ]),
     ))
     .expect("failed to run tauri-build");
@@ -427,10 +447,32 @@ function tauriConf(input: ProjectShellInput): string {
       // hardened runtime V8 can't JIT without an entitlement: only
       // notarization needs that runtime, so it stays off until then.
       macOS: { signingIdentity: "-", hardenedRuntime: false },
+      // Each installer gets a signature beside it, and macOS an archive of
+      // the app: what a running app downloads and checks. Signing needs
+      // TAURI_SIGNING_PRIVATE_KEY at build time.
+      ...(app.updates ? { createUpdaterArtifacts: true } : {}),
     },
+    ...(app.updates
+      ? {
+          plugins: {
+            updater: {
+              pubkey: app.updates.pubkey.trim(),
+              endpoints: updateEndpoints(app.updates),
+              // A feed's word is not signed, a release's signature is: the
+              // version the feed announces has to be the one that was signed,
+              // or an old release could be served as a new one.
+              requireSignedVersion: true,
+            },
+          },
+        }
+      : {}),
   };
   return JSON.stringify(conf, null, 2) + "\n";
 }
+
+/** Laid over tauri.conf.json for a build without the signing key. */
+const UNSIGNED_BUILD_CONF_JSON =
+  JSON.stringify({ bundle: { createUpdaterArtifacts: false } }, null, 2) + "\n";
 
 function defaultCapability(): string {
   return (
@@ -445,6 +487,7 @@ function defaultCapability(): string {
           "allow-take-launch-files",
           "allow-read-launch-file",
           "allow-log-from-webview",
+          ...UPDATE_PERMISSIONS,
           {
             identifier: "shell:allow-spawn",
             allow: [{ name: "binaries/node", sidecar: true, args: true }],
@@ -487,6 +530,7 @@ function connectCapability(connectPort: number): string {
           "allow-adopt-old-data",
           "allow-start-stack",
           "allow-switch-identity",
+          ...UPDATE_PERMISSIONS,
         ],
       },
       null,
@@ -611,9 +655,17 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
     ["dist-stack/README.md", DIST_STACK_README],
   ];
   if (app.signIn) files.push(["ui/sign-in.html", loadingHtml(app, art, true)]);
+  if (app.updates) files.push([UNSIGNED_BUILD_CONF, UNSIGNED_BUILD_CONF_JSON]);
   let changed = false;
   for (const [rel, content] of files) {
     if (writeIfChanged(path.join(shellDir, rel), content)) changed = true;
+  }
+  if (!app.updates) {
+    const stale = path.join(shellDir, UNSIGNED_BUILD_CONF);
+    if (fs.existsSync(stale)) {
+      fs.rmSync(stale);
+      changed = true;
+    }
   }
   // The shell gates on the page being there, so turning it off has to remove it.
   if (!app.signIn) {

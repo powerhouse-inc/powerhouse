@@ -155,6 +155,8 @@ export function scaffoldDesktopShell(
         mimeType: "application/vnd.powerhouse.document+zip",
       },
     ],
+    // Off until the app has a release feed and a signing key (app-json.ts).
+    updates: null,
   };
   // Fail fast if we ever emit something the loader would reject.
   appJsonSchema.parse(app);
