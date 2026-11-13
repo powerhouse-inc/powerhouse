@@ -10,12 +10,18 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { RunnerContext } from "@powerhousedao/host-core";
-import { appJsonSchema, loadAppJson, appSlug } from "../src/app-json.js";
+import {
+  appJsonSchema,
+  loadAppJson,
+  appSlug,
+  updateEndpoints,
+} from "../src/app-json.js";
 import { bundleStack } from "../src/bundle-stack.js";
-import { projectShell } from "../src/shell-project.js";
+import { projectShell, UNSIGNED_BUILD_CONF } from "../src/shell-project.js";
 import {
   nodeSidecarTarget,
   preflightOrThrow,
+  tauriBuildArgs,
   tauriBundlesForHost,
 } from "../src/shell-toolchain.js";
 import {
@@ -54,6 +60,71 @@ const validApp = {
   window: { title: "Taco Tent", width: 1200, height: 800 },
   fileAssociations: [{ ext: ["taco"], name: "Taco Doc" }],
 };
+
+// A release key pair as `tauri signer generate` writes it (a throwaway one).
+const PUBKEY = Buffer.from(
+  "untrusted comment: minisign public key: CA47C789AB9ABDC1\nRWTBvZqrichHyhJm0000000000000000000000000000000000000000\n",
+).toString("base64");
+const PRIVATE_KEY = Buffer.from(
+  "untrusted comment: rsign encrypted secret key\nRWRTY0Iy0000000000000000000000000000000000000000000000\n",
+).toString("base64");
+const updates = { github: "acme/taco", pubkey: PUBKEY };
+
+describe("app.json updates", () => {
+  const parse = (value: unknown) =>
+    appJsonSchema.safeParse({ ...validApp, updates: value });
+  const problems = (value: unknown) =>
+    parse(value).error?.issues.map((issue) => issue.message) ?? [];
+
+  it("is off unless app.json asks: omitted and null both mean no updates", () => {
+    expect(appJsonSchema.parse(validApp).updates).toBeUndefined();
+    expect(parse(null).success).toBe(true);
+  });
+
+  it("asks a GitHub repository's latest release, or the feeds it is given", () => {
+    expect(
+      updateEndpoints(appJsonSchema.parse({ ...validApp, updates }).updates!),
+    ).toEqual([
+      "https://github.com/acme/taco/releases/latest/download/latest-{{target}}-{{arch}}.json",
+    ]);
+    const own = {
+      endpoints: [
+        "https://a.example/latest.json",
+        "https://b.example/{{target}}",
+      ],
+      pubkey: PUBKEY,
+    };
+    expect(
+      updateEndpoints(
+        appJsonSchema.parse({ ...validApp, updates: own }).updates!,
+      ),
+    ).toEqual(own.endpoints);
+  });
+
+  it("wants one source for the feed, and https", () => {
+    expect(problems({ pubkey: PUBKEY })).toContain(
+      "updates: set github OR endpoints",
+    );
+    expect(
+      problems({ ...updates, endpoints: ["https://a.example/latest.json"] }),
+    ).toContain("updates: set github OR endpoints");
+    expect(
+      problems({ endpoints: ["http://a.example/latest.json"], pubkey: PUBKEY }),
+    ).toContain("an update feed must be an https address");
+    expect(problems({ github: "not a repository", pubkey: PUBKEY })).toContain(
+      'use "owner/repository"',
+    );
+  });
+
+  it("refuses the private key where the public one belongs, and anything that is no key", () => {
+    expect(
+      problems({ github: "acme/taco", pubkey: PRIVATE_KEY }).join(),
+    ).toMatch(/PRIVATE key/);
+    expect(problems({ github: "acme/taco", pubkey: "hello" }).join()).toMatch(
+      /not an update signing key/,
+    );
+  });
+});
 
 describe("app.json schema", () => {
   it("accepts a valid identity and rejects a non-reverse-DNS identifier", () => {
@@ -442,6 +513,82 @@ describe("shell projection", () => {
     expect(versionOf(undefined)).toBe("0.1.0");
   });
 
+  it("grants the update commands in every app, on both pages", () => {
+    const { read } = projectInto();
+    const buildScript = read("build.rs");
+    for (const file of ["default", "connect"]) {
+      const { permissions } = JSON.parse(read(`capabilities/${file}.json`)) as {
+        permissions: unknown[];
+      };
+      for (const command of [
+        "update_state",
+        "update_check",
+        "update_install",
+      ]) {
+        expect(buildScript).toContain(`"${command}"`);
+        expect(permissions).toContain(`allow-${command.replaceAll("_", "-")}`);
+      }
+    }
+  });
+
+  it("leaves the updater out of an app that did not ask for it", () => {
+    const { read, res } = projectInto();
+    const conf = JSON.parse(read("tauri.conf.json")) as {
+      plugins?: unknown;
+      bundle: { createUpdaterArtifacts?: boolean };
+    };
+    expect(conf.plugins).toBeUndefined();
+    expect(conf.bundle.createUpdaterArtifacts).toBeUndefined();
+    expect(read("Cargo.toml")).not.toContain("serde_json");
+    expect(existsSync(path.join(res.shellDir, UNSIGNED_BUILD_CONF))).toBe(
+      false,
+    );
+  });
+
+  it("gives an app with updates its feed, its key and signed installers", () => {
+    const { read } = projectInto({ updates });
+    const conf = JSON.parse(read("tauri.conf.json")) as {
+      plugins: { updater: Record<string, unknown> };
+      bundle: { createUpdaterArtifacts: boolean };
+    };
+    expect(conf.plugins.updater).toEqual({
+      pubkey: PUBKEY,
+      endpoints: [
+        "https://github.com/acme/taco/releases/latest/download/latest-{{target}}-{{arch}}.json",
+      ],
+      requireSignedVersion: true,
+    });
+    expect(conf.bundle.createUpdaterArtifacts).toBe(true);
+    // generate_context! names serde_json once the configuration has plugins
+    expect(read("Cargo.toml")).toMatch(/^serde_json = "1"$/m);
+    expect(JSON.parse(read(UNSIGNED_BUILD_CONF))).toEqual({
+      bundle: { createUpdaterArtifacts: false },
+    });
+  });
+
+  it("takes the updater away again when app.json no longer asks", () => {
+    const dir = tempDir("ph-proj-updates-");
+    writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
+    const on = appJsonSchema.parse({ ...validApp, updates });
+    const off = appJsonSchema.parse(validApp);
+    const { shellDir } = projectShell({
+      hostDir: dir,
+      app: on,
+      connectPort: 6494,
+    });
+    expect(existsSync(path.join(shellDir, UNSIGNED_BUILD_CONF))).toBe(true);
+    expect(
+      projectShell({ hostDir: dir, app: off, connectPort: 6494 }).changed,
+    ).toBe(true);
+    expect(existsSync(path.join(shellDir, UNSIGNED_BUILD_CONF))).toBe(false);
+    expect(
+      readFileSync(path.join(shellDir, "tauri.conf.json"), "utf8"),
+    ).not.toContain("updater");
+    expect(
+      projectShell({ hostDir: dir, app: off, connectPort: 6494 }).changed,
+    ).toBe(false);
+  });
+
   it("signs the macOS bundle ad hoc, without the runtime node can't JIT under", () => {
     const conf = JSON.parse(projectInto().read("tauri.conf.json")) as {
       bundle: { macOS: { signingIdentity: string; hardenedRuntime: boolean } };
@@ -468,6 +615,21 @@ describe("toolchain", () => {
     expect(tauriBundlesForHost("darwin")).toEqual(["app", "dmg"]);
     expect(tauriBundlesForHost("win32")).toEqual(["nsis"]);
     expect(tauriBundlesForHost("linux")).toEqual(["deb", "appimage"]);
+  });
+
+  it("builds unsigned when an app with updates has no key to hand", () => {
+    const unsignedConf = "tauri.unsigned.conf.json";
+    const plain = ["build", "--bundles", "deb,appimage"];
+    const bundles = ["deb", "appimage"];
+    expect(
+      tauriBuildArgs(bundles, { on: false, signingKey: false, unsignedConf }),
+    ).toEqual(plain);
+    expect(
+      tauriBuildArgs(bundles, { on: true, signingKey: true, unsignedConf }),
+    ).toEqual(plain);
+    expect(
+      tauriBuildArgs(bundles, { on: true, signingKey: false, unsignedConf }),
+    ).toEqual([...plain, "--config", unsignedConf]);
   });
 
   it("preflight fails with install guidance when the toolchain is incomplete", () => {
