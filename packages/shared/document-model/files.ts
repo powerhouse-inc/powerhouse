@@ -32,6 +32,14 @@ import {
   replayDocumentVersioned,
   type VersionedReplayConfig,
 } from "./versioned-replay.js";
+import {
+  AuthBootstrapError,
+  parseInitialAuthCommitment,
+  validateAuthBootstrapEnvelope,
+} from "./auth-bootstrap.js";
+import { hasDerivedDocumentId } from "./header.js";
+import { initialAuthDigest } from "./initial-auth.js";
+import { creationState } from "./create-document.js";
 
 function zipAsync(data: Zippable): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
@@ -101,9 +109,29 @@ function jsonEntry(value: unknown): Uint8Array {
 }
 
 export async function createZip(document: PHDocument): Promise<Uint8Array> {
+  let initialState = document.initialState || {};
+  if (document.header.protocolVersions?.["auth-bootstrap"] === 1) {
+    const commitment = parseInitialAuthCommitment(document.header.initialAuth);
+    const snapshot = creationState(document.operations.document ?? []);
+    const actions = Object.values(document.operations).flatMap((operations) =>
+      operations.map((operation) => operation.action),
+    );
+    if (
+      !snapshot ||
+      initialAuthDigest(snapshot) !== commitment.stateDigest ||
+      !commitment.actionIds.every((id) =>
+        actions.some((action) => action.id === id),
+      )
+    )
+      throw new AuthBootstrapError(
+        "incomplete-bootstrap",
+        "Export requires the complete readable bootstrap history.",
+      );
+    initialState = snapshot;
+  }
   return zipAsync({
     "header.json": jsonEntry(document.header),
-    "state.json": jsonEntry(document.initialState || {}),
+    "state.json": jsonEntry(initialState),
     "current-state.json": jsonEntry(document.state || {}),
     "operations.json": jsonEntry(
       filterDocumentOperationsResultingState(document.operations),
@@ -119,6 +147,11 @@ export async function createZip(document: PHDocument): Promise<Uint8Array> {
 export async function createMinimalZip(
   data: MinimalBackupData,
 ): Promise<Uint8Array> {
+  if (data.protocolVersions?.["auth-bootstrap"] !== undefined)
+    throw new AuthBootstrapError(
+      "incomplete-bootstrap",
+      "Protected documents require their complete signed bootstrap history in backups.",
+    );
   const now = new Date().toISOString();
   const header: PHDocumentHeader = {
     id: data.documentId,
@@ -214,6 +247,9 @@ function pinProtocolVersionsToCreate(
     return;
   }
   const input = create.action.input as CreateDocumentActionInput | undefined;
+  if (input?.initialAuth)
+    header.initialAuth = structuredClone(input.initialAuth);
+  else delete header.initialAuth;
   if (input?.protocolVersions) {
     header.protocolVersions = { ...input.protocolVersions };
   } else if (header.protocolVersions) {
@@ -237,6 +273,14 @@ async function loadFromZipData<TState extends PHBaseState>(
 ): Promise<PHDocument<TState>> {
   const { initialState, header, clearedOperations } =
     await parseZipData<TState>(data);
+  if (
+    header.initialAuth ||
+    header.protocolVersions?.["auth-bootstrap"] !== undefined
+  )
+    throw new AuthBootstrapError(
+      "unsupported-bootstrap",
+      "This archive requires a code-first initial authorization reader.",
+    );
 
   // document-scope ops are applied by dedicated platform handlers; auth ops replay here
   const replayOperations = Object.fromEntries(
@@ -263,6 +307,39 @@ async function loadFromZipDataVersioned<TState extends PHBaseState>(
 ): Promise<PHDocument<TState>> {
   const { initialState, header, clearedOperations } =
     await parseZipData<TState>(data);
+  if (
+    header.initialAuth ||
+    header.protocolVersions?.["auth-bootstrap"] !== undefined
+  ) {
+    const commitment = parseInitialAuthCommitment(header.initialAuth);
+    if (initialAuthDigest(initialState) !== commitment.stateDigest)
+      throw new AuthBootstrapError(
+        "invalid-bootstrap",
+        "The archive's initial state differs from its signed creation snapshot.",
+      );
+    if (!hasDerivedDocumentId(header))
+      throw new AuthBootstrapError(
+        "invalid-bootstrap",
+        "The archive's identity does not match its creation commitment.",
+      );
+    const actions = Object.values(clearedOperations).flatMap((operations) =>
+      operations.map((operation) => operation.action),
+    );
+    const envelope = commitment.actionIds.map((id) => {
+      const action = actions.find((candidate) => candidate.id === id);
+      if (!action)
+        throw new AuthBootstrapError(
+          "incomplete-bootstrap",
+          "The archive omits a committed creation action.",
+        );
+      return action;
+    });
+    validateAuthBootstrapEnvelope(
+      envelope,
+      header.id,
+      config.initialAuthTemplates?.[commitment.modelVersion],
+    );
+  }
 
   const result = replayDocumentVersioned<TState>(
     initialState,
@@ -272,7 +349,13 @@ async function loadFromZipDataVersioned<TState extends PHBaseState>(
     undefined,
     options,
   );
-
+  if (header.initialAuth)
+    return {
+      ...result,
+      state: structuredClone(result.state),
+      initialState: structuredClone(result.initialState),
+      operations: clearedOperations,
+    };
   return { ...result, operations: clearedOperations };
 }
 

@@ -79,7 +79,16 @@ export class InMemoryJobTracker implements IJobTracker {
     const jobId = event.jobId;
     const job = this.jobs.get(jobId);
     if (job && job.status === JobStatus.RUNNING) {
-      const consistencyToken = createConsistencyToken(event.operations);
+      const receiptOperations = event.alreadyCommitted
+        ? [
+            ...new Map(
+              [...event.alreadyCommitted, ...event.operations].map(
+                (operation) => [operation.operation.id, operation],
+              ),
+            ).values(),
+          ]
+        : event.operations;
+      const consistencyToken = createConsistencyToken(receiptOperations);
       this.put({
         ...job,
         status: JobStatus.WRITE_READY,
@@ -88,7 +97,7 @@ export class InMemoryJobTracker implements IJobTracker {
         // so the status alone cannot tell the caller one of its actions was
         // rejected. This is where it finds out.
         result: summarizeSubmittedActions(
-          event.operations,
+          receiptOperations,
           event.submittedActionIds,
         ),
         ...(deletedADocument(event.operations, event.submittedActionIds)

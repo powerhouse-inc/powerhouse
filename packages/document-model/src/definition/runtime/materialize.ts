@@ -27,6 +27,7 @@ import {
   defaultBaseState,
   isDocumentAction,
   normalizeDocumentModelVersion,
+  resolveInitialAuthTemplate,
 } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import type {
@@ -49,6 +50,7 @@ import type {
   CodeFirstDocumentModelModule,
   DocumentModelFamily,
 } from "./types.js";
+import type { AuthBindings } from "../auth/types.js";
 
 function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -331,7 +333,17 @@ function materializeVersion(
       return baseSaveToFileHandle(document, input);
     },
     loadFromInput(input) {
-      return baseLoadFromInputVersioned(input, { reducers, upgradeManifest });
+      return baseLoadFromInputVersioned(input, {
+        reducers,
+        upgradeManifest,
+        initialAuthTemplates: Object.fromEntries(
+          versions.flatMap((version) =>
+            version.initialAuth
+              ? [[version.config.version, version.initialAuth.template]]
+              : [],
+          ),
+        ),
+      });
     },
     isStateOfType(state): state is PHBaseState {
       return schemas.state(state).safeParse(state).success;
@@ -351,6 +363,11 @@ function materializeVersion(
 
   const definition: DocumentModelDefinition = cloneJson({
     ...version.definition,
+    formatVersion: versions.some(
+      (candidate) => candidate.initialAuth !== undefined,
+    )
+      ? 2
+      : 1,
     specifications: versions.map((candidate) => candidate.specification),
   });
   recordModelPackageScalars(definition, version.packageScalars);
@@ -364,6 +381,21 @@ function materializeVersion(
       cloneJson(storedGlobalState(version, versions)),
     ),
     definition,
+    ...(version.initialAuth === undefined
+      ? {}
+      : {
+          initialAuth: {
+            template: version.initialAuth.template,
+            diagnostics: version.initialAuth.diagnostics,
+            resolve(bindings: unknown) {
+              return resolveInitialAuthTemplate(
+                version.initialAuth?.template,
+                bindings,
+                version.config.id,
+              );
+            },
+          },
+        }),
   };
 }
 
@@ -413,9 +445,15 @@ function refuseDefinition(value: unknown): never {
 export function materialize<
   TState extends PHBaseState,
   TActions extends Actions,
+  TBindings extends AuthBindings | undefined,
 >(
-  definition: DocumentModelVersionDefinition<number, TState, TActions>,
-): CodeFirstDocumentModelModule<TState, TActions>;
+  definition: DocumentModelVersionDefinition<
+    number,
+    TState,
+    TActions,
+    TBindings
+  >,
+): CodeFirstDocumentModelModule<TState, TActions, TBindings>;
 export function materialize<
   const TVersions extends readonly DocumentModelVersionDefinition[],
 >(

@@ -75,6 +75,7 @@ query GetDocumentWithOperations(
             input
             scope
             context {
+              initialAuth
               signer {
                 user {
                   address
@@ -218,6 +219,7 @@ query GetDocumentOperations(
         input
         scope
         context {
+          initialAuth
           signer {
             user {
               address
@@ -608,6 +610,7 @@ query PollSyncEnvelopes(
             input
             scope
             context {
+              initialAuth
               signer {
                 user {
                   address

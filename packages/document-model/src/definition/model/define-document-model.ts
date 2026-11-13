@@ -34,6 +34,7 @@ import {
   take,
   takeArray,
 } from "./normalize.js";
+import { compileModelInitialAuth } from "../auth/compile.js";
 import type {
   DocumentModelConfig,
   DocumentModelContext,
@@ -196,11 +197,11 @@ function rejectAuthorization(
     code: "PH-AUTH-UNSUPPORTED",
     path: [...path, "auth"],
     message:
-      "A document model cannot declare authorization; core V1 rejects a model auth declaration.",
+      "Initial authorization belongs in the model version auth callback, not in the model configuration or state scopes.",
     expected: "no auth declaration",
     received: "auth",
     repair:
-      "Remove the auth declaration. Platform authorization state and its runtime behavior are unchanged and stay outside the model declaration.",
+      "Move the initial policy to context.version({ modules, auth }). Platform auth state and reducers cannot be replaced.",
   });
   return true;
 }
@@ -658,7 +659,7 @@ function versionModules(
 ): readonly ModuleDeclaration[] {
   const declaration = take(
     collector,
-    snapshotRecord(versionConfig, ["modules"], ["version"]),
+    snapshotRecord(versionConfig, ["modules", "auth"], ["version"]),
     ["modules"],
   );
   const modules =
@@ -755,12 +756,32 @@ export function defineDocumentModel<
         versionConfig,
       );
       collector.throwIfFailed();
-      const compiled = collector.capture(() =>
+      let compiled = collector.capture(() =>
         compileDocumentModelVersion(normalized, modules),
       );
       collector.throwIfFailed();
       if (compiled === undefined) {
         throw new TypeError("The model version could not be compiled.");
+      }
+      if (versionConfig.auth !== undefined) {
+        const initialAuth = compileModelInitialAuth(
+          compiled,
+          versionConfig.auth,
+        );
+        const specification = {
+          ...compiled.specification,
+          initialAuth: initialAuth.template,
+        };
+        compiled = {
+          ...compiled,
+          initialAuth,
+          specification,
+          definition: {
+            ...compiled.definition,
+            formatVersion: 2,
+            specifications: [specification],
+          },
+        };
       }
       const token = {
         kind: "powerhouse.document-model-version",

@@ -35,6 +35,9 @@ function client() {
     getDocumentModelModule: vi
       .fn()
       .mockResolvedValue(documentModelDocumentModelModule),
+    getDocumentModelModuleForDocument: vi
+      .fn()
+      .mockResolvedValue(documentModelDocumentModelModule),
     newDocument,
   };
   const write = {

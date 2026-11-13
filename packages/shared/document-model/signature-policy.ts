@@ -1,3 +1,4 @@
+import type { InitialAuthCommitment } from "./auth-bootstrap.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { canonicalJson } from "./action-signature.js";
 import { bytesToBase64Url } from "./crypto.js";
@@ -86,6 +87,7 @@ export function protocolVersionsFor(
 
 /** What the id of a v2-required document is a hash of. */
 export type DocumentIdParams = {
+  initialAuth?: InitialAuthCommitment;
   documentType: string;
   createdAtUtcIso: string;
   nonce: string;
@@ -100,6 +102,9 @@ export function deriveDocumentId(params: DocumentIdParams): string {
       createdAtUtcIso: params.createdAtUtcIso,
       nonce: params.nonce,
       protocolVersions: params.protocolVersions,
+      ...(params.initialAuth === undefined
+        ? {}
+        : { initialAuth: params.initialAuth }),
     },
     "document id",
   );

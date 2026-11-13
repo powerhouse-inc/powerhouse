@@ -38,11 +38,11 @@ export type CollectionMember = {
 };
 
 /** A purge transaction's statements; bound to the job's transaction. */
-export class KyselyDocumentPurger {
+export class KyselyDocumentPurger<TDatabase extends Database = Database> {
   private readonly db: Kysely<PurgeDatabase>;
 
   constructor(
-    db: Kysely<Database> | Transaction<Database>,
+    db: Kysely<TDatabase> | Transaction<TDatabase>,
     private readonly batchSize = DEFAULT_PURGE_DELETE_BATCH,
   ) {
     this.db = db as unknown as Kysely<PurgeDatabase>;
@@ -191,6 +191,19 @@ export class KyselyDocumentPurger {
   /** Deletes every row about the document; the counts are per table. */
   async deleteRows(documentId: string): Promise<PurgeRemovedRows> {
     const removed: PurgeRemovedRows = {};
+    const intents = await this.db
+      .updateTable("InitialAuthCreation")
+      .set({ envelope: "[]", facts: "[]" })
+      .where("documentId", "=", documentId)
+      .executeTakeFirst();
+    if (intents.numUpdatedRows > 0n)
+      removed.InitialAuthCreation = Number(intents.numUpdatedRows);
+    const inbox = await this.db
+      .deleteFrom("InitialAuthInbox")
+      .where("documentId", "=", documentId)
+      .executeTakeFirst();
+    if (inbox.numDeletedRows > 0n)
+      removed.InitialAuthInbox = Number(inbox.numDeletedRows);
 
     removed.Operation = await this.deleteBatched(async () => {
       const result = await this.db

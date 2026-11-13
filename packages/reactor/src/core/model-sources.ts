@@ -102,6 +102,15 @@ function addEntry(map: Map<string, ResolvedEntry>, entry: ResolvedEntry): void {
     map.set(key, entry);
     return;
   }
+  if (
+    (existing.module.initialAuth || entry.module.initialAuth) &&
+    existing.module.initialAuth?.template.digest !==
+      entry.module.initialAuth?.template.digest
+  ) {
+    throw new Error(
+      `Conflicting initial authorization declarations for document model ${key}.`,
+    );
+  }
   if (!existing.spec && entry.spec) {
     existing.spec = entry.spec;
   }

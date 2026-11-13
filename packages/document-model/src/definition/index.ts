@@ -6,6 +6,29 @@ export { projectDocumentModelGraphQL } from "./compiler/graphql-projection.js";
 /** @experimental The GraphQL documents a host serves for a specification. */
 export type { DocumentModelGraphQLProjection } from "./compiler/graphql-projection.js";
 export { ph } from "./dsl/field.js";
+export type {
+  AuthBinding,
+  AuthBindings,
+  AuthCondition,
+  AuthConditionContext,
+  AuthFields,
+  AuthGrant,
+  AuthOperation,
+  AuthOperationCatalog,
+  AuthPlatformOperations,
+  AuthPolicyBuilder,
+  AuthPrincipal,
+  AuthScope,
+  AuthScopeReference,
+  AuthTarget,
+  AuthValue,
+  BindingValues,
+  InitialAuthBindings,
+  InitialAuthBindingValues,
+  InitialAuthContext,
+  InitialAuthDeclaration,
+  InitialAuthRuntime,
+} from "./auth/types.js";
 export { DefinitionError } from "./kernel/diagnostics.js";
 export type { Ph } from "./dsl/field.js";
 export type {

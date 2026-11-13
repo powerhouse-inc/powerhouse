@@ -204,6 +204,13 @@ export class DriveWriteClient implements IDriveWriteClient {
       return drive.state.global.nodes;
     },
     private readonly fileLinkTypes: readonly string[] = ["child"],
+    private readonly protectedModel: (document: PHDocument) => boolean = () =>
+      false,
+    private readonly protectedCopy?: (
+      source: PHDocument,
+      draft: PHDocument,
+      signal?: AbortSignal,
+    ) => Promise<WriteHandle>,
   ) {
     this.executeBatch =
       typeof submitter === "function"
@@ -264,7 +271,25 @@ export class DriveWriteClient implements IDriveWriteClient {
       );
     }
 
+    let protectedCreation =
+      document.header.protocolVersions?.["auth-bootstrap"] === 1;
+    if (!protectedCreation && this.protectedModel(document)) {
+      const creation = await this.write.create(document, undefined, signal);
+      await this.complete(creation);
+      document = {
+        ...document,
+        header: { ...document.header, id: creation.documentId },
+      };
+      protectedCreation = true;
+    }
     const documentId = document.header.id;
+    if (
+      protectedCreation &&
+      !(await this.lookupLiveDocument(documentId, signal))
+    )
+      throw new Error(
+        "The protected document must commit before attaching it to a drive.",
+      );
     const driveId = await this.resolveReference(driveIdentifier, signal);
 
     const protocolVersions = await createVersionsOf(
@@ -274,7 +299,9 @@ export class DriveWriteClient implements IDriveWriteClient {
     );
     const documentActions: Action[] = await signActions(
       [
-        ...creationActions(document, protocolVersions),
+        ...(protectedCreation
+          ? []
+          : creationActions(document, protocolVersions)),
         addRelationshipAction(driveId, documentId, "child"),
       ],
       this.signer,
@@ -633,6 +660,13 @@ export class DriveWriteClient implements IDriveWriteClient {
       const resolvedName = resolvedNamesByTargetId.get(entry.targetId);
       if (resolvedName) {
         duplicated.header.name = resolvedName;
+      }
+      if (srcDoc.header.protocolVersions?.["auth-bootstrap"] === 1) {
+        if (!this.protectedCopy)
+          throw new Error("This host cannot copy protected documents.");
+        const copy = await this.protectedCopy(srcDoc, duplicated, signal);
+        await this.complete(copy);
+        duplicated.header.id = copy.documentId;
       }
       // A v2-required copy takes a derived id, which the drive's node must name.
       entry.targetId = duplicated.header.id;

@@ -181,6 +181,13 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
   }
 
   private handleWriteReady(event: JobWriteReadyEvent): void {
+    if (event.alreadyCommitted?.length) {
+      this.enqueueCommittedRead(event, [
+        ...event.alreadyCommitted,
+        ...event.operations,
+      ]);
+      return;
+    }
     if (event.operations.length === 0) {
       void this.emitEmptyReadReady(event);
       return;
@@ -205,6 +212,66 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
     });
   }
 
+  private enqueueCommittedRead(
+    event: JobWriteReadyEvent,
+    operations: OperationWithContext[],
+  ): void {
+    const dependencies = Promise.all([...this.chains.values()]);
+    const key = this.queueKeyFor({ ...event, operations });
+    const current = dependencies.then(async () => {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const reservations = reserveBatch(
+          this.preReady,
+          operations,
+          this.logger,
+        );
+        const results = await Promise.allSettled(
+          this.preReady.map((readModel) =>
+            indexReserved(readModel, operations, reservations),
+          ),
+        );
+        releaseBatch(reservations);
+        const rejected = results.find((result) => result.status === "rejected");
+        if (!rejected) {
+          await this.emitEmptyReadReady(event);
+          if (event.operations.length > 0) {
+            const postReservations = reserveBatch(
+              this.postReady,
+              event.operations,
+              this.logger,
+            );
+            try {
+              await indexStage(
+                this.postReady,
+                (readModel) =>
+                  indexReserved(readModel, event.operations, postReservations),
+                (error) =>
+                  this.logger.error(
+                    "Post-ready recovery indexing failed for job @JobId: @Error",
+                    event.jobId,
+                    error,
+                  ),
+              );
+            } finally {
+              releaseBatch(postReservations);
+            }
+          }
+          return;
+        }
+        if (attempt === 2)
+          this.logger.error(
+            "Committed creation read model recovery failed for job @jobId: @Error",
+            { jobId: event.jobId },
+            rejected.reason,
+          );
+      }
+    });
+    this.chains.set(key, current);
+    void current.finally(() => {
+      if (this.chains.get(key) === current) this.chains.delete(key);
+    });
+  }
+
   private async emitEmptyReadReady(event: JobWriteReadyEvent): Promise<void> {
     const readyEvent: JobReadReadyEvent = {
       jobId: event.jobId,
@@ -221,7 +288,7 @@ export class ReadModelCoordinator implements ILiveReadModelCoordinator {
     }
     this.emitBatchCompleted({
       jobId: event.jobId,
-      batchSize: 0,
+      batchSize: event.operations.length,
       chainWaitDurationMs: 0,
       preReadyDurationMs: 0,
       emitDurationMs: 0,

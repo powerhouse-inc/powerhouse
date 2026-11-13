@@ -1,4 +1,5 @@
 import { stringify } from "safe-stable-stringify";
+import type { InitialAuthCommitment } from "./auth-bootstrap.js";
 import type { Action } from "./actions.js";
 import {
   capabilitiesOf,
@@ -67,6 +68,8 @@ export type PHDocumentMeta = {
  * The header of a document.
  */
 export type PHDocumentHeader = {
+  /** Immutable, included in the derived identity when auth-bootstrap:1 is selected. */
+  initialAuth?: InitialAuthCommitment;
   /**
    * The id of the document.
    *

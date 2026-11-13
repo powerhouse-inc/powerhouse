@@ -112,6 +112,59 @@ async function addFileToDrive(
   return handle.readable;
 }
 
+async function createProtectedDocument(
+  clients: RequestClients,
+  document: PHDocument,
+  parentIdentifier: string | undefined,
+  subject: AuthSubject | undefined,
+): Promise<ReadBackTarget | undefined> {
+  const module = await clients.read.getDocumentModelModuleForDocument(document);
+  if (!module.initialAuth) return undefined;
+  if (!clients.write.createWithInitialAuth)
+    throw new GraphQLError(
+      "This host does not support protected document creation.",
+    );
+  const handle = await clients.write.createWithInitialAuth(document, {
+    requester: subject ?? {},
+    idempotencyKey: document.header.id,
+    context: "reactor-api",
+  });
+  const receipt = await handle.readable;
+  if (parentIdentifier) {
+    try {
+      const parent = await clients.read.get(parentIdentifier, {
+        subject: subject ?? {},
+      });
+      if (isDriveContainerType(parent.header.documentType)) {
+        await addFileToDrive(clients, parent.header.id, {
+          ...document,
+          header: {
+            ...document.header,
+            id: receipt.documentId,
+            protocolVersions: {
+              ...document.header.protocolVersions,
+              "auth-bootstrap": 1,
+            },
+          },
+        });
+      } else {
+        const attached = await clients.write.addRelationship(
+          parent.header.id,
+          receipt.documentId,
+          "child",
+        );
+        await attached.readable;
+      }
+    } catch (error) {
+      throw new GraphQLError(
+        `Document ${receipt.documentId} was created but could not be attached: ${error instanceof Error ? error.message : String(error)}`,
+        { extensions: { code: "INITIAL_AUTH_ATTACHMENT_FAILED", receipt } },
+      );
+    }
+  }
+  return receipt;
+}
+
 /** Removes a drive parent's node, waiting until the removal is readable. */
 async function removeNodeFromDrive(
   clients: RequestClients,
@@ -970,6 +1023,16 @@ export async function createDocument(
 
   let receipt: ReadBackTarget;
   try {
+    const protectedReceipt = await createProtectedDocument(
+      clients,
+      document,
+      parentIdOrSlug,
+      subject,
+    );
+    if (protectedReceipt)
+      return toGqlPhDocument(
+        await readAsCaller(clients.read, protectedReceipt, subject),
+      );
     if (parentIdOrSlug) {
       const parent = await clients.read.get(
         parentIdOrSlug,
@@ -986,6 +1049,11 @@ export async function createDocument(
       receipt = await handle.readable;
     }
   } catch (error) {
+    if (
+      error instanceof GraphQLError &&
+      error.extensions.code === "INITIAL_AUTH_ATTACHMENT_FAILED"
+    )
+      throw error;
     throw new GraphQLError(
       `Failed to create document: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
@@ -1018,6 +1086,23 @@ export async function createEmptyDocument(
 
   let receipt: ReadBackTarget;
   try {
+    const module = await clients.read.getDocumentModelModule(args.documentType);
+    if (module.initialAuth) {
+      const document = await clients.read.newDocument(args.documentType, {
+        name,
+        parentIdentifier: parentIdOrSlug,
+      });
+      const protectedReceipt = await createProtectedDocument(
+        clients,
+        document,
+        parentIdOrSlug,
+        subject,
+      );
+      if (protectedReceipt)
+        return toGqlPhDocument(
+          await readAsCaller(clients.read, protectedReceipt, subject),
+        );
+    }
     if (parentIdOrSlug) {
       const parent = await clients.read.get(
         parentIdOrSlug,
@@ -1040,6 +1125,11 @@ export async function createEmptyDocument(
       receipt = await handle.readable;
     }
   } catch (error) {
+    if (
+      error instanceof GraphQLError &&
+      error.extensions.code === "INITIAL_AUTH_ATTACHMENT_FAILED"
+    )
+      throw error;
     throw new GraphQLError(
       `Failed to create empty document: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
@@ -1094,6 +1184,13 @@ export async function createDocumentWithInitialState(
     Object.keys(module.documentModel.global.specifications.at(-1)?.state ?? {}),
   );
   const state = document.state as Record<string, Record<string, unknown>>;
+  if (
+    module.initialAuth &&
+    Object.keys(args.initialState).some((scope) => !allowedScopes.has(scope))
+  )
+    throw new GraphQLError(
+      "Initial authorization creation does not accept auth, document, or unknown state scopes.",
+    );
   for (const [scope, scopeState] of Object.entries(args.initialState)) {
     if (allowedScopes.has(scope) && scope in state) {
       state[scope] = { ...state[scope], ...scopeState };
@@ -1112,6 +1209,16 @@ export async function createDocumentWithInitialState(
   }
 
   let receipt: ReadBackTarget;
+  const protectedReceipt = await createProtectedDocument(
+    clients,
+    document,
+    parentIdOrSlug,
+    subject,
+  );
+  if (protectedReceipt)
+    return toGqlPhDocument(
+      await readAsCaller(clients.read, protectedReceipt, subject),
+    );
   if (parentIdOrSlug) {
     let parent: PHDocument;
     try {

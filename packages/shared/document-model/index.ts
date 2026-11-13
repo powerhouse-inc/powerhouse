@@ -24,6 +24,8 @@ export * from "./documents.js";
 export * from "./errors.js";
 export * from "./files.js";
 export * from "./header.js";
+export * from "./initial-auth.js";
+export * from "./auth-bootstrap.js";
 export * from "./new-document.js";
 export * from "./operations.js";
 export * from "./peer-agreement.js";
