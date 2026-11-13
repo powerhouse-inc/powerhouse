@@ -315,6 +315,64 @@ over exempting one that also serves something else. Note what this switch does
 adapter (`/health`, `/ready`, `/explorer`, `/d/:drive`) and package HTTP routes,
 which declare their own `auth` per route.
 
+##### Admitting only licence holders (`ACCESS=licensed`)
+
+A switchboard that Vetra runs as a shared instance of an app admits only its
+`ADMINS` and the callers holding a live licence of the instance's plan. Vetra
+answers the licence question; the switchboard asks it.
+
+| Variable               | Meaning                                                                                                                                                                    |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ACCESS`               | `open` (the default): nothing below applies. `licensed`: admit only `ADMINS` and licence holders. Any other value (including `members`) refuses to boot. Case-insensitive. |
+| `VETRA_GATE_URL`       | Vetra's gate, `…/api/@powerhousedao/vetra-cloud-package/apps/gate/check`. Must be `https` (`http` only on `localhost`/`127.0.0.1`).                                        |
+| `VETRA_GATE_TOKEN`     | The instance's gate token (`vgt_…`), sent as `Authorization: Bearer`. A secret: it is never logged.                                                                        |
+| `VETRA_APP_ID`         | Sent as `x-vetra-app-id`; informational.                                                                                                                                   |
+| `ACCESS_GATE_GRACE_MS` | How long Vetra's last "yes" for a caller still admits them while Vetra is unreachable. Default `86400000` (24 h).                                                          |
+
+`ACCESS=licensed` without `VETRA_GATE_URL` and `VETRA_GATE_TOKEN`, or together
+with `SKIP_CREDENTIAL_VERIFICATION`, refuses to boot: the host never runs
+admitting everybody or nobody by accident.
+
+What `licensed` implies:
+
+- Identity resolution and the require-authenticated-caller floor are on:
+  anonymous callers get a `401`, drive discovery (`/d/:drive`) included.
+  `/health`, `/ready` and package routes declared `auth: "public"` stay open.
+- A verified caller in `ADMINS` is admitted without asking Vetra. Anyone else
+  is admitted only when Vetra allows them; otherwise HTTP answers `403
+{"error": "No licence for this app"}` and a WebSocket connection is refused.
+  Open WebSockets are re-checked every `WS_CREDENTIAL_RECHECK_INTERVAL_MS` and
+  closed once the licence lapsed.
+- The document policy is `OPEN` among admitted callers (`DOCUMENT_PERMISSIONS`
+  when enabled), never `ADMIN_ONLY`, which would refuse a licensee every
+  document. `auth_enabled` still reports `true`.
+
+The contract with Vetra:
+
+```
+POST <VETRA_GATE_URL>
+Authorization: Bearer <VETRA_GATE_TOKEN>
+{ "address": "0x<40 hex, lower case>" }
+
+200 { "allowed": true|false, "reason": "admin"|"licence"|"member"|"none", "until": ISO|null, "ttlSeconds": n }
+400, 401   the request or the token is refused
+429, 5xx   Vetra is unavailable
+```
+
+Caching and outages:
+
+- Each answer, allowed or not, is kept per address for its `ttlSeconds`
+  (clamped to 1–300 s; 60 s when absent). Concurrent checks of one address
+  share one request. At most 10,000 addresses are kept; the oldest go first.
+- Vetra unreachable (network error, 5 s timeout, `429`, `5xx`, any other
+  status, an unreadable body): a caller Vetra allowed within
+  `ACCESS_GATE_GRACE_MS` stays admitted; a caller never seen, or last refused,
+  is refused. A failing Vetra is asked at most once per address every 5 s.
+- `401` (bad or revoked token) and `400` are never answered from grace: every
+  non-admin is refused and an error is logged, so a revoked token is final.
+- The grace store is in memory: a restart while Vetra is down admits only
+  `ADMINS` until Vetra answers again.
+
 #### Configuration File Method
 
 ```json

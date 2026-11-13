@@ -56,6 +56,15 @@ export function callerOverEnv(env: Layer, caller: Layer): Layer {
   for (const key of ENV_WINS_AUTH) {
     if (envAuth[key] !== undefined) auth[key] = envAuth[key];
   }
+  // ACCESS and VETRA_GATE_* win one by one, so a caller's gate URL survives an
+  // env that only sets the token, and the env's mode is never overridden.
+  if (isPlainObject(envAuth.access)) {
+    auth.access = mergeSection(
+      isPlainObject(auth.access) ? auth.access : {},
+      envAuth.access,
+      "auth.access",
+    );
+  }
   if (env.features?.documentModelSubgraphs !== undefined) {
     features.documentModelSubgraphs = env.features.documentModelSubgraphs;
   }

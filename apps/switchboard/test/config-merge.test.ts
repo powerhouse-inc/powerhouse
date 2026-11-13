@@ -151,6 +151,37 @@ describe("callerOverEnv keeps each key's precedence", () => {
     });
   });
 
+  it("lets each ACCESS env var win over the caller's access, key by key", () => {
+    const { auth } = resolved(
+      {
+        ACCESS: "licensed",
+        VETRA_GATE_TOKEN: "vgt_env",
+      },
+      {
+        auth: {
+          access: {
+            mode: "open",
+            gateUrl: "https://vetra.example/gate",
+            gateToken: "vgt_caller",
+          },
+        },
+      },
+    );
+    expect(auth.access).toEqual({
+      mode: "licensed",
+      gateUrl: "https://vetra.example/gate",
+      gateToken: "vgt_env",
+    });
+  });
+
+  it("keeps the caller's access when no ACCESS env var is set", () => {
+    const { auth } = resolved(
+      {},
+      { auth: { access: { mode: "licensed", gateToken: "vgt_caller" } } },
+    );
+    expect(auth.access).toEqual({ mode: "licensed", gateToken: "vgt_caller" });
+  });
+
   it.each([
     [{}, undefined, true],
     [{ MCP_ENABLED: "false" }, undefined, false],
