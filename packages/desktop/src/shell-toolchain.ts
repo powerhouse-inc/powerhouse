@@ -114,6 +114,21 @@ export function tauriBundlesForHost(
   }
 }
 
+/** `tauri build`'s arguments. An app with updates signs what it builds, so
+ * without the key (`TAURI_SIGNING_PRIVATE_KEY`) the build would fail at its
+ * last step: such a build leaves the signatures out instead, laying
+ * `unsignedConf` over the configuration, and still makes its installers. */
+export function tauriBuildArgs(
+  bundles: string[],
+  updates: { on: boolean; signingKey: boolean; unsignedConf: string },
+): string[] {
+  const args = ["build", "--bundles", bundles.join(",")];
+  if (updates.on && !updates.signingKey) {
+    args.push("--config", updates.unsignedConf);
+  }
+  return args;
+}
+
 export interface TauriCommand {
   /** The executable to spawn (e.g. "cargo" or a node path). */
   cmd: string;

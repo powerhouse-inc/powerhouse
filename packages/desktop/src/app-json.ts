@@ -3,6 +3,7 @@ import { validateBackground } from "@powerhousedao/shared/connect";
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import { FEED_FILE_TEMPLATE } from "./release.js";
 
 /**
  * `hosts/desktop/app.json` — the builder's desktop identity (phase 7, mode 1:
@@ -156,6 +157,63 @@ const shellSourceSchema = z
   })
   .optional();
 
+/** What is wrong with a release key, or null. The public half is base64 of a
+ * minisign public key, as `tauri signer generate` writes its .pub file; the
+ * private half looks alike at a glance and must never land in app.json. */
+function pubkeyProblem(value: string): string | null {
+  const text = Buffer.from(value.trim(), "base64").toString("utf8");
+  if (/secret key/i.test(text)) {
+    return "this is the PRIVATE key: put the public one here (the .pub file) and keep the private one in your CI secrets";
+  }
+  if (!/^untrusted comment: minisign public key/i.test(text)) {
+    return "not an update signing key: paste the content of the .pub file `tauri signer generate` writes";
+  }
+  return null;
+}
+
+/** An update feed's address: https, as a release build asks nothing else. */
+const feedUrlSchema = z.string().refine((value) => {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+}, "an update feed must be an https address");
+
+/** Updates, for an app that wants them: where it asks for a newer version and
+ * the key its releases are signed with. The window then offers each newer
+ * release, downloads it, checks its signature and installs it. Omitted or
+ * null: the app never asks, and is installed by hand as before. */
+const updatesSchema = z
+  .strictObject({
+    /** The GitHub repository whose releases carry the app ("owner/name"): the
+     * app asks its latest release for the feed file a build of its system
+     * wrote (release.ts). */
+    github: z
+      .string()
+      .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/, 'use "owner/repository"')
+      .optional(),
+    /** Or the feed's own addresses, asked in order. `{{target}}` and
+     * `{{arch}}` in one stand for the running app's system and processor,
+     * as in the feed file's name: `latest-{{target}}-{{arch}}.json`. */
+    endpoints: z.array(feedUrlSchema).min(1).optional(),
+    /** The public key the releases are signed with: the content of the .pub
+     * file `tauri signer generate` writes. The private key signs each build
+     * (TAURI_SIGNING_PRIVATE_KEY) and stays out of the repository. */
+    pubkey: z
+      .string()
+      .min(1)
+      .superRefine((value, ctx) => {
+        const problem = pubkeyProblem(value);
+        if (problem) ctx.addIssue({ code: "custom", message: problem });
+      }),
+  })
+  .refine((u) => Boolean(u.github) !== Boolean(u.endpoints), {
+    message: "updates: set github OR endpoints",
+  })
+  .nullable()
+  .optional();
+
 export const appJsonSchema = z.strictObject({
   identifier: identifierSchema,
   productName: z.string().min(1),
@@ -180,18 +238,30 @@ export const appJsonSchema = z.strictObject({
   loading: loadingSchema,
   window: windowSchema,
   fileAssociations: z.array(fileAssociationSchema).optional(),
+  updates: updatesSchema,
   shell: shellSourceSchema,
 });
 
 export type AppJson = z.infer<typeof appJsonSchema>;
 export type AppJsonShellSource = NonNullable<AppJson["shell"]>;
+export type AppJsonUpdates = NonNullable<AppJson["updates"]>;
+
+/** Where an app with updates asks for a newer version. */
+export function updateEndpoints(updates: AppJsonUpdates): string[] {
+  return (
+    updates.endpoints ?? [
+      `https://github.com/${updates.github}/releases/latest/download/${FEED_FILE_TEMPLATE}`,
+    ]
+  );
+}
 
 /** Default crates.io version requirement for the shell crate (D7.b: the flip
  * to crates.io default once published — the crate is live). A floor, not just
- * a series: 0.1.0 can't run a stack from ph-run, and a Cargo.lock that still
- * holds it satisfies "0.1", so a builder's lock would keep it forever. The
- * 0.1.0-dev.N releases sort below 0.1.0 and never match either. */
-export const DEFAULT_SHELL_CRATE_VERSION = "0.1.1";
+ * a series: 0.1.0 can't run a stack from ph-run and 0.1.1 has no updater (an
+ * app with `updates` would build and never ask), and a Cargo.lock that still
+ * holds one of them satisfies "0.1", so a builder's lock would keep it
+ * forever. The 0.1.x-dev.N releases sort below 0.1.x and never match either. */
+export const DEFAULT_SHELL_CRATE_VERSION = "0.1.2";
 
 export const APP_JSON_FILE = "app.json";
 
