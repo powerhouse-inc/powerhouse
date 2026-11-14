@@ -202,4 +202,51 @@ describe("source-config schema", () => {
     expect(Object.keys(props.assistant.properties ?? {})).toEqual(["port"]);
     expect(props.assistant.properties?.port.type).toBe("integer");
   });
+  it("switchboard recognises database, port and drive", () => {
+    const props = sourceConfigSchema.properties as unknown as Record<
+      string,
+      { properties?: Record<string, unknown> }
+    >;
+    expect(Object.keys(props.switchboard.properties ?? {}).sort()).toEqual([
+      "database",
+      "drive",
+      "port",
+    ]);
+  });
+
+  it("switchboard.drive is a closed object of string fields naming their env vars", () => {
+    const props = sourceConfigSchema.properties as unknown as Record<
+      string,
+      {
+        properties?: Record<
+          string,
+          {
+            type?: string;
+            additionalProperties?: boolean;
+            properties?: Record<
+              string,
+              { type?: string; description?: string }
+            >;
+          }
+        >;
+      }
+    >;
+    const drive = props.switchboard.properties?.drive;
+    expect(drive?.type).toBe("object");
+    expect(drive?.additionalProperties).toBe(false);
+    const fields = {
+      id: "PH_DEFAULT_DRIVE_ID",
+      slug: "PH_DEFAULT_DRIVE_SLUG",
+      name: "PH_DEFAULT_DRIVE_NAME",
+      icon: "PH_DEFAULT_DRIVE_ICON",
+      preferredEditor: "PH_DEFAULT_DRIVE_PREFERRED_EDITOR",
+    };
+    expect(Object.keys(drive?.properties ?? {}).sort()).toEqual(
+      Object.keys(fields).sort(),
+    );
+    for (const [field, env] of Object.entries(fields)) {
+      expect(drive?.properties?.[field].type).toBe("string");
+      expect(drive?.properties?.[field].description).toContain(env);
+    }
+  });
 });

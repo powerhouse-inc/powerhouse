@@ -175,6 +175,17 @@ export type PHKeyframeRule = {
   keep?: number | null;
 };
 
+/** powerhouse.config.json `switchboard.drive`: the drive the switchboard
+ * creates at boot. Each PH_DEFAULT_DRIVE_* env var overrides its field. */
+export type PHSwitchboardDriveConfig = {
+  id?: string;
+  /** Defaults to the id. */
+  slug?: string;
+  name?: string;
+  icon?: string;
+  preferredEditor?: string;
+};
+
 export type PowerhouseConfig = {
   // required
   logLevel: LogLevel;
@@ -217,6 +228,7 @@ export type PowerhouseConfig = {
       url?: string;
     };
     port?: number;
+    drive?: PHSwitchboardDriveConfig;
   };
   studio?: {
     port?: number;

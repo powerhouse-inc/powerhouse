@@ -871,6 +871,30 @@ describe("switchboardConfigFromEnv for the bin", () => {
     ).toBe(true);
   });
 
+  it("builds the bin's drive from switchboard.drive and PH_DEFAULT_DRIVE_*", () => {
+    const config = switchboardConfigSchema.parse(
+      binSwitchboardConfig(
+        {
+          PH_DEFAULT_DRIVE_ID: "tenant",
+          PH_DEFAULT_DRIVE_NAME: "Tenant",
+          PH_DEFAULT_DRIVE_TYPE: "powerhouse/reactor-drive",
+        },
+        {
+          migratePglite: false,
+          fileDrive: { name: "Acme", preferredEditor: "acme-app" },
+          logger: silent,
+        },
+      ),
+    );
+    expect(config.drive).toMatchObject({
+      id: "tenant",
+      slug: "tenant",
+      documentType: "powerhouse/reactor-drive",
+      global: { name: "Tenant" },
+      preferredEditor: "acme-app",
+    });
+  });
+
   it("throws the bin's errors only for the bin", () => {
     const env = { PH_FORCE_PG_VERSION: "15", PH_DEFAULT_DRIVE_TYPE: "x" };
     expect(() =>
