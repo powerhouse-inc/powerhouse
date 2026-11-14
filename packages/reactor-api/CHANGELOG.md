@@ -1,3 +1,17 @@
+## 6.2.3-dev.105 (2026-11-14)
+
+### 🚀 Features
+
+- **switchboard:** ACCESS=licensed admits licence holders via Vetra's gate ([#3398](https://github.com/powerhouse-inc/powerhouse/pull/3398))
+
+### 🩹 Fixes
+
+- **reactor-api:** VitePackageLoader live reload waits out the watcher's 50 ms change throttle ([#3401](https://github.com/powerhouse-inc/powerhouse/pull/3401))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
 ## 6.2.3-dev.104 (2026-11-13)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

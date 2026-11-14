@@ -1,3 +1,22 @@
+## 6.2.3-dev.105 (2026-11-14)
+
+### 🚀 Features
+
+- **desktop:** app.json updates turn on the updater and write the release feed ([15f916087e](https://github.com/powerhouse-inc/powerhouse/commit/15f916087e))
+- **desktop:** generated shells build on ph-desktop-shell 0.1.2, which has the updater ([2ba48a2167](https://github.com/powerhouse-inc/powerhouse/commit/2ba48a2167))
+- **desktop:** app.json updates turn on the updater and write the release feed ([#3400](https://github.com/powerhouse-inc/powerhouse/pull/3400))
+- **switchboard:** ACCESS=licensed admits licence holders via Vetra's gate ([#3398](https://github.com/powerhouse-inc/powerhouse/pull/3398))
+
+### 🩹 Fixes
+
+- **reactor-api:** VitePackageLoader live reload waits out the watcher's 50 ms change throttle ([#3401](https://github.com/powerhouse-inc/powerhouse/pull/3401))
+
+### ❤️ Thank You
+
+- Claude Fable 5.2
+- Frank @froid1911
+- liberuum
+
 ## 6.2.3-dev.104 (2026-11-13)
 
 This was a version bump only, there were no code changes.

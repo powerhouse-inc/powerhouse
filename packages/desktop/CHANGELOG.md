@@ -1,3 +1,15 @@
+## 6.2.3-dev.105 (2026-11-14)
+
+### 🚀 Features
+
+- **desktop:** generated shells build on ph-desktop-shell 0.1.2, which has the updater ([2ba48a2167](https://github.com/powerhouse-inc/powerhouse/commit/2ba48a2167))
+- **desktop:** app.json updates turn on the updater and write the release feed ([15f916087e](https://github.com/powerhouse-inc/powerhouse/commit/15f916087e))
+
+### ❤️ Thank You
+
+- Claude Fable 5.2
+- liberuum
+
 ## 6.2.3-dev.104 (2026-11-13)
 
 This was a version bump only for @powerhousedao/desktop to align it with other projects, there were no code changes.
