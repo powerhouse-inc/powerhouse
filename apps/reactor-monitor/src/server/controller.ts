@@ -141,7 +141,6 @@ const CHECK_TIMEOUT_MS = 60_000;
 
 /** Set by the controller itself; no config may override them. */
 const INJECTED_KEYS = [
-  "FEATURE_UNIFORM_RUNNERS_ENABLED",
   "PH_USER_DATA_DIR",
   OUTPUT_DATA_DIRS_ENV,
   "PH_NO_TELEMETRY",
@@ -176,7 +175,6 @@ export function childEnv(
   }
   return {
     ...base,
-    FEATURE_UNIFORM_RUNNERS_ENABLED: "1",
     PH_USER_DATA_DIR: dataDir,
     PH_NO_TELEMETRY: "1",
     PH_NO_DOTENV: "1",

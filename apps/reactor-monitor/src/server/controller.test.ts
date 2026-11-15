@@ -302,7 +302,6 @@ describe("createMonitorController", () => {
       "PH_USER_DATA_DIR",
       "PH_NO_DOTENV",
       "PH_NO_TELEMETRY",
-      "FEATURE_UNIFORM_RUNNERS_ENABLED",
       // base keys, any case
       "HOME",
       "TMPDIR",
@@ -393,7 +392,6 @@ describe("createMonitorController", () => {
         AUTH_ENABLED: "true",
         PH_USER_DATA_DIR: dataDir,
         PH_NO_DOTENV: "1",
-        FEATURE_UNIFORM_RUNNERS_ENABLED: "1",
       },
     });
     expect(checks[0].env.PATH).toBe(process.env.PATH);

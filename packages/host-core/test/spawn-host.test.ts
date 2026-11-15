@@ -251,7 +251,6 @@ describe("spawnHost", () => {
       expect(env.VITEST).toBeUndefined();
       expect(env).toMatchObject({
         FAKE_EXTRA: "x",
-        FEATURE_UNIFORM_RUNNERS_ENABLED: "1",
         PH_USER_DATA_DIR: host.dataDir,
         PH_NO_TELEMETRY: "1",
         PH_NO_DOTENV: "1",

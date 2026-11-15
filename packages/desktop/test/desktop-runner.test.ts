@@ -170,7 +170,6 @@ describe("env wiring and config projection", () => {
   it("wires the env trio from the project", () => {
     const dir = makeProject();
     const env = shellEnv(dir, 6123, {});
-    expect(env.FEATURE_UNIFORM_RUNNERS_ENABLED).toBe("1");
     expect(env.PH_RUN_PROJECT).toBe(dir);
     expect(env.PH_RUN_CLI).toContain(path.join("ph-cli", "dist", "cli.mjs"));
     expect(env.PH_WIN_CONNECT_PORT).toBe("6123");

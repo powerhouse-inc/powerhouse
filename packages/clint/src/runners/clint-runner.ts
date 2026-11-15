@@ -280,7 +280,6 @@ function childServices(
       name,
       command: () => `node "${phCliEntry}" run ${wrapper.host}`,
       env: () => ({
-        FEATURE_UNIFORM_RUNNERS_ENABLED: "1",
         PH_USER_DATA_DIR: defaultUserDataDir(ctx.projectRoot, ctx.env),
       }),
       readiness: {

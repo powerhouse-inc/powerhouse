@@ -67,7 +67,7 @@ export function resolvePhCliEntry(projectRoot: string): string {
   return path.join(path.dirname(pkgPath), "dist", "cli.mjs");
 }
 
-/** The env trio (plus flag and userData) the shell's uniform-runners mode
+/** The env trio (plus userData) the shell's uniform-runners mode
  * reads — wired by the RUNNER so nobody exports variables by hand. */
 export function shellEnv(
   projectRoot: string,
@@ -75,7 +75,6 @@ export function shellEnv(
   env: Record<string, string | undefined>,
 ): Record<string, string> {
   return {
-    FEATURE_UNIFORM_RUNNERS_ENABLED: "1",
     PH_RUN_PROJECT: projectRoot,
     PH_RUN_CLI: resolvePhCliEntry(projectRoot),
     PH_WIN_CONNECT_PORT: String(connectPort),
