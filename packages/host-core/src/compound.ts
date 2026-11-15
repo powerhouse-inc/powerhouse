@@ -22,6 +22,7 @@ import {
   writeRunRecord,
   type RunRecordMember,
 } from "./run-record.js";
+import { splitCompoundArgv } from "./runner-args.js";
 import { toStartedHandle, type StartedHandle } from "./runner-handle.js";
 import {
   CONNECT_RUNNER,
@@ -272,6 +273,18 @@ export async function runCompound(
     });
   }
 
+  // This invocation's arguments, per member: one no member accepts fails
+  // with nothing running.
+  const memberArgv = splitCompoundArgv(
+    ctx.argv ?? [],
+    hostInput.name,
+    prepared.map((m) => ({
+      key: m.key,
+      runner: m.specifier,
+      schema: m.runner.argsSchema,
+    })),
+  );
+
   if (wiring.cspRegistrySync && !prepared.some(takesCspRegistrySync)) {
     console.warn(
       `${compoundFile}: config.cspRegistrySync is set, but no member's runner declares runner.cspRegistrySync (members run: ${prepared.map((m) => m.specifier).join(", ")}); the baked Connect CSP is not patched for the runtime registry.`,
@@ -334,12 +347,14 @@ export async function runCompound(
       );
       const fn = getVerb(m.runner, m.specifier, memberVerb);
       const where = `${name} (${m.specifier} ${memberVerb})`;
+      const argv = memberArgv.get(name) ?? [];
       const handle = toStartedHandle(
         await fn(oneShot ? emptyMaps(validated, resolved) : validated, {
           projectRoot,
           env: ctx.env,
           verb: memberVerb,
           parent: { host: host.name, verb },
+          ...(argv.length > 0 ? { argv } : {}),
         }),
         where,
       );

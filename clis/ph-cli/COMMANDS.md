@@ -38,7 +38,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Uninstall](#uninstall)
 <br>
 ## Run
-Run a host from the project's hosts/ folder: `ph run <host> [verb]`. The host's own host.js names the runner module; the verb defaults to `run`.
+Run a host from the project's hosts/ folder: `ph run <host> [verb]`. The host's own host.js names the runner module; the verb defaults to `run`. Arguments after the verb go to the runner, which names the ones it accepts.
 ### arguments
 #### Host *[required]*<br>
 Folder name under hosts/ (e.g. vetra, connect).<br><br>
@@ -47,6 +47,10 @@ Folder name under hosts/ (e.g. vetra, connect).<br><br>
 #### Verb <br>
 Runner verb (default: run; e.g. dev, build, serve).<br><br>
 **usage:** `[verb]`<br>
+
+#### Runner Arguments *[required]*<br>
+Arguments for the host's runner (e.g. --port 4001); they win over the host file.<br><br>
+**usage:** `[...runner arguments]`<br>
 
 
 ### flags

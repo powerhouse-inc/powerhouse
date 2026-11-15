@@ -1,4 +1,11 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import http from "node:http";
 import net from "node:net";
 import { tmpdir } from "node:os";
@@ -463,5 +470,104 @@ export async function run() { return { ready: Promise.resolve(), shutdown() {} }
     const { startRun } = await import("@powerhousedao/ph-run/start-run");
     await startRun({ host: "agent", projectRoot: project });
     expect(readRunRecord(project, "lab-agent")).toBeUndefined();
+  });
+});
+
+describe("ph run arguments", () => {
+  /** A project whose `agent` host runs a runner that records its ctx.argv. */
+  function agentProject(argsSchema?: string): {
+    project: string;
+    sink: string;
+  } {
+    const project = makeProject({
+      agent: `export default { name: "lab-agent", runner: { module: "fake-agent" } };`,
+    });
+    const sink = path.join(project, "argv.json");
+    const pkg = path.join(project, "node_modules", "fake-agent");
+    mkdirSync(pkg, { recursive: true });
+    writeFileSync(
+      path.join(pkg, "package.json"),
+      JSON.stringify({
+        name: "fake-agent",
+        type: "module",
+        exports: "./index.js",
+      }),
+    );
+    writeFileSync(
+      path.join(pkg, "index.js"),
+      `import { writeFileSync } from "node:fs";
+export const kind = "reactor";
+export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
+${argsSchema === undefined ? "" : `export const argsSchema = ${argsSchema};`}
+export async function run(host, ctx) {
+  writeFileSync(${JSON.stringify(sink)}, JSON.stringify(ctx.argv ?? null));
+  return { ready: Promise.resolve(), shutdown() {} };
+}`,
+    );
+    return { project, sink };
+  }
+  const SCHEMA = `{ options: ["--port"], flags: ["--strictPort"], retired: { "--watch": "it is no longer needed." } }`;
+  const argvOf = (sink: string) =>
+    JSON.parse(readFileSync(sink, "utf8")) as string[] | null;
+
+  it("the arguments after the verb reach the runner as ctx.argv", async () => {
+    const { project, sink } = agentProject(SCHEMA);
+    const { startRun } = await import("@powerhousedao/ph-run/start-run");
+    await startRun({
+      host: "agent",
+      projectRoot: project,
+      argv: ["--port", "4001", "--strictPort"],
+    });
+    expect(argvOf(sink)).toEqual(["--port", "4001", "--strictPort"]);
+  });
+
+  it("a bare run carries no argv", async () => {
+    const { project, sink } = agentProject(SCHEMA);
+    const { startRun } = await import("@powerhousedao/ph-run/start-run");
+    await startRun({ host: "agent", projectRoot: project });
+    expect(argvOf(sink)).toBeNull();
+  });
+
+  it("an argument the runner's schema lacks fails before the verb", async () => {
+    const { project, sink } = agentProject(SCHEMA);
+    const { startRun } = await import("@powerhousedao/ph-run/start-run");
+    await expect(
+      startRun({ host: "agent", projectRoot: project, argv: ["--open"] }),
+    ).rejects.toThrow(
+      /hosts\/agent: its runner fake-agent does not accept --open\.[\s\S]*It accepts: --port, --strictPort\./,
+    );
+    expect(existsSync(sink)).toBe(false);
+  });
+
+  it("a runner without a schema takes no arguments", async () => {
+    const { project, sink } = agentProject();
+    const { startRun } = await import("@powerhousedao/ph-run/start-run");
+    await expect(
+      startRun({ host: "agent", projectRoot: project, argv: ["--port", "1"] }),
+    ).rejects.toThrow(
+      /hosts\/agent: its runner fake-agent accepts no arguments, but got: --port 1/,
+    );
+    expect(existsSync(sink)).toBe(false);
+  });
+
+  it("a retired switch warns once and does not reach the runner", async () => {
+    const { project, sink } = agentProject(SCHEMA);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const { startRun } = await import("@powerhousedao/ph-run/start-run");
+      await startRun({
+        host: "agent",
+        projectRoot: project,
+        argv: ["--watch", "--port", "4001"],
+      });
+      expect(argvOf(sink)).toEqual(["--port", "4001"]);
+      expect(
+        warn.mock.calls.filter((call) =>
+          String(call[0]).startsWith("--watch is retired"),
+        ),
+      ).toHaveLength(1);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

@@ -45,17 +45,29 @@ async function storesOf(
   return resolveStores(host, ctx);
 }
 
-/** The service migrates one database, the reactor store: `dbPath` names it.
- * Unset, the service falls back to the env as it does under `ph switchboard`. */
+/** This invocation's arguments (`--db-path`, `--yes`), as `run` reads them. */
+async function passedOf(host: SwitchboardHostParsed, ctx: RunnerContext) {
+  const { invocationArgsOf } =
+    await import("@powerhousedao/ph-run/runners/switchboard");
+  return invocationArgsOf(ctx, `hosts/${host.name}/host.js`);
+}
+
+/** The service migrates one database, the reactor store: `dbPath` names it
+ * (`--db-path` over the host's). Unset, the service falls back to the env as
+ * it does under `ph switchboard`. */
 async function runMigrations(
   host: SwitchboardHostParsed,
   ctx: RunnerContext,
   statusOnly: true | undefined,
 ): Promise<void> {
   const stores = await storesOf(host, ctx);
+  const passed = await passedOf(host, ctx);
   const { runSwitchboardMigrations } =
     await import("../services/switchboard-migrate.js");
-  await runSwitchboardMigrations({ dbPath: stores.reactor, statusOnly });
+  await runSwitchboardMigrations({
+    dbPath: passed.dbPath ?? stores.reactor,
+    statusOnly,
+  });
 }
 
 /** `ph switchboard --migrate`: run the reactor store's migrations. */
@@ -74,13 +86,6 @@ async function migrateStatus(
   await runMigrations(host, ctx, true);
 }
 export { migrateStatus as "migrate-status" };
-
-/** `--yes` of `reset`. `ph run` forwards no flags to a runner yet, so it is
- * never set: the service asks on a terminal and refuses anywhere else. Once
- * `ctx.argv` exists this returns `ctx.argv.includes("--yes") || undefined`. */
-function yesFlag(_ctx: RunnerContext): boolean | undefined {
-  return undefined;
-}
 
 const STORE_ENV = [
   "PH_REACTOR_DATABASE_URL",
@@ -117,15 +122,17 @@ async function withStoreEnv(
 }
 
 /** `ph switchboard --reset`: delete the local PGlite stores, after the
- * service's own confirmation. It refuses a Postgres store. */
+ * service's own confirmation (`--yes` skips it; without a terminal the
+ * service refuses unless it is passed). It refuses a Postgres store. */
 export async function reset(
   host: SwitchboardHostParsed,
   ctx: RunnerContext,
 ): Promise<void> {
   const stores = await storesOf(host, ctx);
+  const passed = await passedOf(host, ctx);
   const { resetSwitchboardDatabase } =
     await import("../services/switchboard-reset.js");
   await withStoreEnv(stores, () =>
-    resetSwitchboardDatabase({ dbPath: undefined, yes: yesFlag(ctx) }),
+    resetSwitchboardDatabase({ dbPath: passed.dbPath, yes: passed.yes }),
   );
 }

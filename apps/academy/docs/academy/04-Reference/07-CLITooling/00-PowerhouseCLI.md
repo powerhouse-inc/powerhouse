@@ -276,7 +276,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 
 
 ## Run
-Run a host from the project's hosts/ folder: `ph run <host> [verb]`. The host's own host.js names the runner module; the verb defaults to `run`.
+Run a host from the project's hosts/ folder: `ph run <host> [verb]`. The host's own host.js names the runner module; the verb defaults to `run`. Arguments after the verb go to the runner, which names the ones it accepts.
 
 
 
@@ -288,6 +288,8 @@ Run a host from the project's hosts/ folder: `ph run <host> [verb]`. The host's 
 **Host *[required]*** - Folder name under hosts/ (e.g. vetra, connect). - Usage: `<host>`
 
 **Verb** - Runner verb (default: run; e.g. dev, build, serve). - Usage: `[verb]`
+
+**Runner Arguments *[required]*** - Arguments for the host's runner (e.g. --port 4001); they win over the host file. - Usage: `[...runner arguments]`
 
 
 

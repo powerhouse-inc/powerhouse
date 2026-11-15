@@ -11,10 +11,18 @@ import {
   type BootIssue,
   type DriveSeederClient,
   type ResolvedDrive,
+  RunnerError,
   type ResolvedPlugin,
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
+import type { ParsedCmdResult } from "@powerhousedao/shared/clis";
+import {
+  commonServerArgs,
+  switchboardArgs,
+  vetraArgs,
+} from "@powerhousedao/shared/clis/args";
+import { command, runSafely } from "cmd-ts";
 import path from "node:path";
 import {
   memberEnvOf,
@@ -26,6 +34,7 @@ import {
   readModelAsReactorStore,
   switchboardDevMode,
 } from "./member-config.js";
+import { onlyPassed, runnerArgsSchemaOf } from "./runner-args.js";
 import { z } from "zod";
 import { classicSwitchboardArgs } from "../services/classic-args.js";
 import {
@@ -57,6 +66,8 @@ const schemas = defineHostSchemas((s) =>
         .extend({
           /** 0 binds a port the OS picks; `origin` reports it. */
           port: z.number().int().min(0).max(65535).optional(),
+          /** Fail on a taken port instead of moving to a free one. */
+          strictPort: z.boolean().optional(),
           /** Dev mode without the `dev` verb (the Vite package loader). */
           dev: z.boolean().optional(),
           /** The project package output dir `build` writes (default "dist"). */
@@ -116,6 +127,56 @@ declare global {
   }
 }
 
+/** What a switchboard accepts after `ph run <host> [verb]`: the classic
+ * `ph switchboard` and `ph vetra` definitions of the same names. */
+const invocationArgs = {
+  port: switchboardArgs.port,
+  strictPort: commonServerArgs.strictPort,
+  dbPath: switchboardArgs.dbPath,
+  https: switchboardArgs.https,
+  httpsKeyFile: switchboardArgs.httpsKeyFile,
+  httpsCertFile: switchboardArgs.httpsCertFile,
+  remoteDrives: switchboardArgs.remoteDrives,
+  remoteDrive: vetraArgs.remoteDrive,
+  // Read by the `reset` verb.
+  yes: switchboardArgs.yes,
+};
+
+const invocation = command({
+  name: "switchboard",
+  args: invocationArgs,
+  handler: (args) => args,
+});
+
+export type InvocationArgs = ParsedCmdResult<typeof invocation>;
+
+const WATCH_RETIRED = "it is no longer needed.";
+
+export const argsSchema = runnerArgsSchemaOf(invocationArgs, {
+  // `ph vetra --switchboard-port`
+  memberOptions: { "--switchboard-port": "--port" },
+  retired: {
+    "--watch": WATCH_RETIRED,
+    "-w": WATCH_RETIRED,
+    "--disable-connect": "use `ph run switchboard dev` instead.",
+  },
+});
+
+/** This invocation's arguments (`ctx.argv`), parsed by the classic
+ * definitions; only the ones passed. */
+export async function invocationArgsOf(
+  ctx: RunnerContext,
+  hostFile: string,
+): Promise<Partial<InvocationArgs>> {
+  const argv = [...(ctx.argv ?? [])];
+  if (argv.length === 0) return {};
+  const result = await runSafely(invocation, argv);
+  if (result._tag === "error") {
+    throw new RunnerError(`${hostFile}: ${result.error.config.message}`);
+  }
+  return onlyPassed(result.value, invocationArgs, argv);
+}
+
 /** The classic arg shape with the one switch a composition may leave unset. */
 export type SwitchboardRunnerArgs = Omit<SwitchboardArgs, "mcp"> & {
   mcp: boolean | undefined;
@@ -127,17 +188,22 @@ export type SwitchboardRunnerArgs = Omit<SwitchboardArgs, "mcp"> & {
  * other key — including the ones the classic command carries as `undefined`,
  * such as `dbPath` — reaches the service exactly as on the classic path. No
  * cast: a key the classic shape has and this object lacks is a type error.
+ * An argument of this invocation (`passed`) wins over the host file.
  */
 async function toSwitchboardArgs(
   host: SwitchboardHostParsed,
   devMode: boolean,
   composed: boolean,
+  passed: Partial<InvocationArgs>,
 ): Promise<SwitchboardRunnerArgs> {
   const classic = await classicSwitchboardArgs();
   const runner = host.runner;
   return {
     ...classic,
-    port: runner.port ?? classic.port,
+    port: passed.port ?? runner.port ?? classic.port,
+    dbPath: passed.dbPath ?? classic.dbPath,
+    httpsKeyFile: passed.httpsKeyFile ?? classic.httpsKeyFile,
+    httpsCertFile: passed.httpsCertFile ?? classic.httpsCertFile,
     dev: switchboardDevMode(devMode, runner) ? true : classic.dev,
     // A declared composition owns the carved switches (R2): the mcp plugin's
     // presence sets it, its absence must deactivate. Classic path: classic.
@@ -361,11 +427,17 @@ async function start(
   const { startSwitchboard } = await import("../services/switchboard.js");
   const entries = host.runner.plugins;
   const entriesDeclared = entries !== undefined;
-  const classic = await toSwitchboardArgs(host, devMode, entriesDeclared);
+  const passed = await invocationArgsOf(ctx, hostFile);
+  const classic = await toSwitchboardArgs(
+    host,
+    devMode,
+    entriesDeclared,
+    passed,
+  );
   // powerhouse.config.json `reactor.https` is a default, not a flag: it goes
-  // under the member's own config instead of over it.
+  // under the member's own config instead of over it. `--https` is a flag.
   const { https } = classic;
-  const args = { ...classic, https: undefined };
+  const args = { ...classic, https: passed.https };
   // This member's own config, under the args: nothing is written to the
   // process env, so compound members do not see each other's settings.
   const memberConfig = await memberSwitchboardConfig(host, env, {
@@ -411,9 +483,15 @@ async function start(
   );
   const planned = [...hostDrives, ...contributedDrives];
   const resolvedDrives = planned.map((p) => p.drive);
-  const remoteDrives = resolvedDrives.flatMap((d) =>
-    d.kind === "remote" && d.remoteUrl ? [d.remoteUrl] : [],
-  );
+  // `--remote-drives` and vetra's `--remote-drive` add to the declared ones.
+  const remoteDrives = [
+    ...resolvedDrives.flatMap((d) =>
+      d.kind === "remote" && d.remoteUrl ? [d.remoteUrl] : [],
+    ),
+    ...(passed.remoteDrives ?? []),
+    ...(passed.remoteDrive ? [passed.remoteDrive] : []),
+  ];
+  const strictPort = passed.strictPort ?? host.runner.strictPort;
   const serverArgs = {
     ...args,
     ...(pluginComposition ? { pluginComposition } : {}),
@@ -421,6 +499,7 @@ async function start(
     // contribution adds to whatever the host serves.
     ...(hostDrives.length > 0 ? { drive: undefined } : {}),
     ...(remoteDrives.length > 0 ? { remoteDrives } : {}),
+    ...(strictPort === undefined ? {} : { strictPort }),
     // A compound member: the compound owns SIGINT/SIGTERM and the exit, and
     // stops this reactor through the handle's shutdown().
     ...(ctx.parent ? { signalHandlers: false } : {}),

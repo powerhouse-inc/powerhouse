@@ -1,4 +1,5 @@
 import {
+  checkRunnerArgv,
   clearRunRecord,
   emptyMaps,
   getVerb,
@@ -29,6 +30,8 @@ export interface StartRunArgs {
   verb?: string;
   projectRoot?: string;
   debug?: boolean;
+  /** What follows `ph run <host> [verb]`: the runner's own arguments. */
+  argv?: string[];
 }
 
 /**
@@ -93,9 +96,28 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
     const host = validateHost(runner, specifier, loaded.host, file, {
       tokens: "allow",
     });
-    return fn(host, { projectRoot, verb, env: process.env });
+    // Unchecked here: the compound hands each member the ones it accepts.
+    const argv = args.argv ?? [];
+    return fn(host, {
+      projectRoot,
+      verb,
+      env: process.env,
+      ...(argv.length > 0 ? { argv } : {}),
+    });
   }
 
+  // Before anything starts: an argument the runner does not accept fails.
+  const argv = checkRunnerArgv(args.argv ?? [], {
+    host: args.host,
+    runner: specifier,
+    schema: runner.argsSchema,
+  });
+  const ctx = {
+    projectRoot,
+    verb,
+    env: process.env,
+    ...(argv.length > 0 ? { argv } : {}),
+  };
   const projectName = readProjectName(projectRoot);
   const producers = await loadProducers(projectRoot, outputRefsOf(loaded.host));
   validateDeclaredHost(runner, specifier, loaded.host, file, {
@@ -107,11 +129,7 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
     const host = validateHost(runner, specifier, loaded.host, file, {
       tokens: "allow",
     });
-    return fn(emptyMaps(host, loaded.host), {
-      projectRoot,
-      verb,
-      env: process.env,
-    });
+    return fn(emptyMaps(host, loaded.host), ctx);
   }
   const publishes = isSchemaLike(runner.outputsSchema);
   // Before the verb starts anything: a second live instance would take
@@ -131,7 +149,7 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
     where: `hosts/${args.host}/host.js`,
   });
   const host = validateHost(runner, specifier, resolved, file);
-  const result = await fn(host, { projectRoot, verb, env: process.env });
+  const result = await fn(host, ctx);
   if (publishes && result !== undefined && result !== null) {
     await publishOutputs(runner, result, {
       projectRoot,

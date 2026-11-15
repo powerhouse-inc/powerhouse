@@ -73,7 +73,8 @@ async function main() {
   // Host sugar: `ph <host-name> [verb]` → `ph run <host-name> [verb]` when the
   // first arg names a host in this project's hosts/ folder. Built-in commands
   // always win.
-  const { applyRunSugar } = await import("./utils/run-sugar.js");
+  const { applyRunSugar, forwardRunnerArgv } =
+    await import("./utils/run-sugar.js");
   const { phCliCommands } = await import("./commands/ph-cli-commands.js");
   const sugar = applyRunSugar(
     args,
@@ -81,7 +82,8 @@ async function main() {
     process.cwd(),
   );
   if (sugar.warning) console.warn(sugar.warning);
-  args = sugar.args;
+  // A runner's own arguments (`ph run vetra --switchboard-port 4001`).
+  args = forwardRunnerArgv(sugar.args);
   const command = args[0];
   const subcommand =
     command &&

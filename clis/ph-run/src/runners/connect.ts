@@ -23,11 +23,19 @@ import {
   unservedConnectStorage,
   refineConnectReactor,
   remoteBackendUrls,
+  RunnerError,
   type ReactorConfig,
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
+import type { ParsedCmdResult } from "@powerhousedao/shared/clis";
+import {
+  commonServerArgs,
+  connectStudioArgs,
+} from "@powerhousedao/shared/clis/args";
+import { command, runSafely } from "cmd-ts";
 import { z } from "zod";
+import { onlyPassed, runnerArgsSchemaOf } from "./runner-args.js";
 import type { ConnectPreviewArgs } from "../services/classic-args.js";
 import type { ConnectServeOverride } from "../services/connect-serve.js";
 
@@ -381,6 +389,49 @@ export function withoutBuiltImages(config: PHConnectRuntimeConfig | undefined) {
   return { ...config, branding: served };
 }
 
+/** What a Connect accepts after `ph run <host> [verb]`: the classic
+ * `ph connect studio` definitions of the same names. */
+const invocationArgs = {
+  port: connectStudioArgs.port,
+  host: commonServerArgs.host,
+  open: commonServerArgs.open,
+  cors: commonServerArgs.cors,
+  strictPort: commonServerArgs.strictPort,
+};
+
+const invocation = command({
+  name: "connect",
+  args: invocationArgs,
+  handler: (args) => args,
+});
+
+export type ConnectInvocationArgs = Partial<ParsedCmdResult<typeof invocation>>;
+
+const WATCH_RETIRED = "it is no longer needed.";
+
+export const argsSchema = runnerArgsSchemaOf(invocationArgs, {
+  // `ph vetra --connect-port`
+  memberOptions: { "--connect-port": "--port" },
+  retired: { "--watch": WATCH_RETIRED, "-w": WATCH_RETIRED },
+});
+
+/** This invocation's arguments (`ctx.argv`), parsed by the classic
+ * definitions; only the ones passed. They win over the host file. */
+export async function connectInvocationArgs(
+  host: ConnectHostParsed,
+  ctx: RunnerContext,
+): Promise<ConnectInvocationArgs> {
+  const argv = [...(ctx.argv ?? [])];
+  if (argv.length === 0) return {};
+  const result = await runSafely(invocation, argv);
+  if (result._tag === "error") {
+    throw new RunnerError(
+      `hosts/${host.name}/host.js: ${result.error.config.message}`,
+    );
+  }
+  return onlyPassed(result.value, invocationArgs, argv);
+}
+
 /** A server for a built Connect, given what to serve and how. */
 export type ConnectServerStart = (
   args: ConnectPreviewArgs,
@@ -402,14 +453,15 @@ export async function serveWith(
 ): Promise<RunnerHandle<ConnectOutputs>> {
   await validateComposition(host, ctx);
   const runner = host.runner;
-  const port = runner.port ?? DEFAULT_CONNECT_STUDIO_PORT;
-  const bind = runner.host ?? "127.0.0.1";
+  const passed = await connectInvocationArgs(host, ctx);
+  const port = passed.port ?? runner.port ?? DEFAULT_CONNECT_STUDIO_PORT;
+  const bind = passed.host ?? runner.host ?? "127.0.0.1";
   const args: Partial<ConnectPreviewArgs> = {
     port,
     outDir: runner.outDir ?? DEFAULT_CONNECT_OUTDIR,
-    open: runner.openBrowser === true,
-    strictPort: runner.strictPort === true,
-    cors: true,
+    open: passed.open ?? runner.openBrowser === true,
+    strictPort: passed.strictPort ?? runner.strictPort === true,
+    cors: passed.cors ?? true,
     printUrls: true,
     bindCLIShortcuts: false,
     // Explicit IPv4 loopback (runner.host overrides): vite's default

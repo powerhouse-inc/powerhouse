@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { phCliCommands } from "../src/commands/ph-cli-commands.js";
-import { applyRunSugar } from "../src/utils/run-sugar.js";
+import { applyRunSugar, forwardRunnerArgv } from "../src/utils/run-sugar.js";
 
 const KNOWN = new Set(["init", "vetra", "connect", "run"]);
 const temporary: string[] = [];
@@ -81,8 +81,30 @@ describe("applyRunSugar", () => {
     ]);
   });
 
-  it("keeps flagged `ph vetra --watch` classic (not representable on run yet)", () => {
+  it("routes flagged `ph vetra` through run too, flags kept", () => {
     const project = makeProject("vetra");
+    expect(applyRunSugar(["vetra", "--watch"], KNOWN, project).args).toEqual([
+      "run",
+      "vetra",
+      "--watch",
+    ]);
+    expect(
+      applyRunSugar(
+        ["vetra", "--switchboard-port", "4001", "--connect-port=3001"],
+        KNOWN,
+        project,
+      ).args,
+    ).toEqual([
+      "run",
+      "vetra",
+      "--switchboard-port",
+      "4001",
+      "--connect-port=3001",
+    ]);
+  });
+
+  it("keeps flagged `ph vetra` classic in a legacy project", () => {
+    const project = makeProject();
     expect(applyRunSugar(["vetra", "--watch"], KNOWN, project).args).toEqual([
       "vetra",
       "--watch",
@@ -99,5 +121,39 @@ describe("phCliCommands", () => {
   it("registers `run` and `host`", () => {
     expect(Object.keys(phCliCommands)).toContain("run");
     expect(Object.keys(phCliCommands)).toContain("host");
+  });
+});
+
+describe("forwardRunnerArgv", () => {
+  it("moves a runner's arguments behind `--`, with the verb spelled out", () => {
+    expect(
+      forwardRunnerArgv(["run", "vetra", "--switchboard-port", "4001"]),
+    ).toEqual(["run", "vetra", "run", "--", "--switchboard-port", "4001"]);
+    expect(
+      forwardRunnerArgv([
+        "run",
+        "switchboard",
+        "dev",
+        "--port=4001",
+        "--debug",
+      ]),
+    ).toEqual(["run", "switchboard", "dev", "--debug", "--", "--port=4001"]);
+  });
+
+  it("leaves a run without runner arguments as typed", () => {
+    for (const args of [
+      ["run", "vetra"],
+      ["run", "vetra", "dev", "--debug"],
+      ["run", "vetra", "--explain", "drives"],
+      ["run", "--help"],
+      ["run"],
+    ]) {
+      expect(forwardRunnerArgv(args)).toEqual(args);
+    }
+  });
+
+  it("leaves every other command alone", () => {
+    const args = ["vetra", "--watch"];
+    expect(forwardRunnerArgv(args)).toBe(args);
   });
 });

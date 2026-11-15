@@ -1,11 +1,13 @@
 import {
   callerOverride,
   connectHandle,
+  connectInvocationArgs,
   serve as serveBuilt,
   serveWith,
   startUnderSupervisor,
   validateComposition,
   type ConnectHostParsed,
+  type ConnectInvocationArgs,
   type ConnectOutputs,
 } from "@powerhousedao/ph-run/runners/connect";
 import {
@@ -22,15 +24,21 @@ export const verbs = ["run", "dev", "build", "serve"];
 
 /** The studio arg surface is wide (commonArgs + server args); the service only
  * reads a known subset, and the repo's own tests build these objects the same
- * way (Partial + cast — see connect-build.test.ts `mk()`). */
-function toStudioArgs(host: ConnectHostParsed): ConnectStudioArgs {
+ * way (Partial + cast — see connect-build.test.ts `mk()`). An argument of
+ * this invocation (`passed`) wins over the host file. */
+function toStudioArgs(
+  host: ConnectHostParsed,
+  passed: ConnectInvocationArgs,
+): ConnectStudioArgs {
   const runner = host.runner;
+  const bind = passed.host ?? runner.host;
   const args: Partial<ConnectStudioArgs> = {
-    port: runner.port ?? DEFAULT_CONNECT_STUDIO_PORT,
+    port: passed.port ?? runner.port ?? DEFAULT_CONNECT_STUDIO_PORT,
     // The bind address (runnerBaseSchema `host`); unset keeps vite's default.
-    ...(runner.host ? { host: runner.host } : {}),
-    open: runner.openBrowser === true,
-    strictPort: runner.strictPort === true,
+    ...(bind ? { host: bind } : {}),
+    open: passed.open ?? runner.openBrowser === true,
+    strictPort: passed.strictPort ?? runner.strictPort === true,
+    ...(passed.cors === undefined ? {} : { cors: passed.cors }),
     printUrls: true,
     bindCLIShortcuts: false,
   };
@@ -51,7 +59,7 @@ export async function dev(
 ): Promise<RunnerHandle<ConnectOutputs>> {
   await validateComposition(host, ctx);
   const { runConnectStudio } = await import("../services/connect-studio.js");
-  const args = toStudioArgs(host);
+  const args = toStudioArgs(host, await connectInvocationArgs(host, ctx));
   const server = await startUnderSupervisor(ctx, () =>
     runConnectStudio(args, undefined, callerOverride(host, ctx, ctx.verb), {
       routes: host.runner.routes,
@@ -92,10 +100,9 @@ export async function serve(
   host: ConnectHostParsed,
   ctx: RunnerContext,
 ): Promise<RunnerHandle<ConnectOutputs>> {
-  if (
-    host.runner.openBrowser !== true &&
-    process.env.PH_CONNECT_SERVER !== "vite"
-  ) {
+  const passed = await connectInvocationArgs(host, ctx);
+  const open = passed.open ?? host.runner.openBrowser === true;
+  if (!open && process.env.PH_CONNECT_SERVER !== "vite") {
     return serveBuilt(host, ctx);
   }
   const { runConnectPreview } = await import("../services/connect-preview.js");

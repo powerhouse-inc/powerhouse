@@ -1,4 +1,4 @@
-import { probeHostsFolder } from "@powerhousedao/host-core";
+import { probeHostsFolder, splitRunArgv } from "@powerhousedao/host-core";
 
 export interface RunSugarResult {
   args: string[];
@@ -13,10 +13,8 @@ export interface RunSugarResult {
  * Built-in commands win collisions by construction — the known-command check
  * runs first.
  */
-/** Classic commands that route through `ph run` in a hosts project — BARE
- * invocations only: extra flags are not representable on `ph run` yet, and
- * the classic path calls the same service, so flagged invocations stay
- * classic until the host-core compound takes over (phase 1). */
+/** Classic commands that route through `ph run` in a hosts project, flags
+ * included: the host's runner takes them as its arguments. */
 const CLASSIC_ALIASES = new Set(["vetra"]);
 
 export function applyRunSugar(
@@ -29,10 +27,10 @@ export function applyRunSugar(
     return { args };
   }
   if (knownCommands.has(first)) {
-    if (CLASSIC_ALIASES.has(first) && args.length === 1) {
+    if (CLASSIC_ALIASES.has(first)) {
       const probe = probeHostsFolder(projectRoot);
       if (probe.kind === "present" && probe.hosts.includes(first)) {
-        return { args: ["run", first] };
+        return { args: ["run", ...args] };
       }
     }
     return { args };
@@ -50,4 +48,17 @@ export function applyRunSugar(
     return { args: ["run", ...args] };
   }
   return { args };
+}
+
+/**
+ * `ph run <host> [verb] <runner arguments>`: moves the runner's arguments
+ * behind a `--`, so the `run` command takes them as they are instead of
+ * refusing the ones it does not know. The verb is spelled out: after the `--`
+ * nothing is read as one. Any other invocation is returned as it is.
+ */
+export function forwardRunnerArgv(args: string[]): string[] {
+  if (args[0] !== "run") return args;
+  const { host, verb, own, argv } = splitRunArgv(args.slice(1));
+  if (host === undefined || argv.length === 0) return args;
+  return ["run", host, verb ?? "run", ...own, "--", ...argv];
 }

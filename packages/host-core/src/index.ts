@@ -45,6 +45,16 @@ export {
   type ValidateHostOptions,
 } from "./runner-resolver.js";
 export {
+  checkRunnerArgv,
+  isRunnerArgsSchema,
+  splitCompoundArgv,
+  splitRunArgv,
+  type CompoundArgvMember,
+  type RunnerArgsSchema,
+  type RunnerArgvTarget,
+  type SplitRunArgv,
+} from "./runner-args.js";
+export {
   clearRunRecord,
   isPidAlive,
   listRunRecords,

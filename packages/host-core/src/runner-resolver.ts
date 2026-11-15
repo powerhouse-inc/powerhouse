@@ -36,6 +36,10 @@ export interface RunnerContext {
   /** Set when this runner runs as a compound member: the compound's host
    * name and verb. */
   parent?: { host: string; verb: string };
+  /** This invocation's arguments for this runner: what followed
+   * `ph run <host> [verb]`, checked against the runner's `argsSchema`. They
+   * win over the host file. A compound member gets its own share. */
+  argv?: readonly string[];
 }
 
 /** A verb receives the PARSED host (its runner's hostSchema output), so
@@ -91,6 +95,9 @@ export interface RunnerModule<O = unknown> {
   /** The verb names, when the module exports functions that are not verbs
    * (helpers). Absent: every exported function is a verb. */
   verbs?: readonly string[];
+  /** The arguments the runner accepts after `ph run <host> [verb]`
+   * (`RunnerArgsSchema`). Absent: it accepts none, and any argument fails. */
+  argsSchema?: unknown;
   /** What the verb would refuse at boot, given the parsed host and an
    * environment (`ph host check`). Starts nothing. */
   checkBoot?: (
@@ -122,6 +129,7 @@ const NON_VERB_EXPORTS = new Set([
   "declaredHostSchema",
   "outputsSchema",
   "verbs",
+  "argsSchema",
   "kind",
   "checkBoot",
   "default",

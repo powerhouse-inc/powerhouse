@@ -84,6 +84,7 @@ const sink = ${JSON.stringify(sink)};
 const log = (entry) => appendFileSync(sink, JSON.stringify(entry) + "\\n");
 export const kind = "reactor";
 export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
+export const argsSchema = { options: ["--label"], flags: ["--strictPort"] };
 export const outputsSchema = z.strictObject({
   origin: z.url(),
   tier: z.string().default("dev"),
@@ -91,6 +92,7 @@ export const outputsSchema = z.strictObject({
   drives: z.record(z.string(), z.strictObject({ id: z.string(), url: z.url() })).optional(),
 });
 export async function dev(host, ctx) {
+  if (ctx.argv) log({ event: "argv", name: host.name, argv: ctx.argv });
   log({ event: "start", name: host.name, config: host.config ?? null, reactor: host.reactor ?? null, port: host.runner.port, plugins: host.runner.plugins ?? null, runner: host.runner });
   const shutdown = async () => log({ event: "shutdown", name: host.name });
   if (host.name.includes("switchboard")) {
@@ -714,5 +716,52 @@ describe("runCompound", () => {
       members: {},
     });
     await expect(run(dir)).rejects.toThrow(/Refusing to start/);
+  });
+});
+
+describe("runCompound arguments", () => {
+  const withArgv = (dir: string, argv: string[]) =>
+    appHost(dir).then((host) =>
+      runCompound(
+        host,
+        { ...ctx(dir), argv },
+        { projectName: "lab", installSignalHandlers: false },
+      ),
+    );
+  const argvCalls = (sink: string) =>
+    (
+      calls(sink) as unknown as {
+        event: string;
+        name: string;
+        argv: string[];
+      }[]
+    )
+      .filter((c) => c.event === "argv")
+      .map(({ name, argv }) => ({ name, argv }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+  it("hands each member the arguments its runner accepts", async () => {
+    const { dir, sink } = makeProject();
+    const result = await withArgv(dir, ["--label", "x", "--strictPort"]);
+    expect(argvCalls(sink)).toEqual([
+      { name: "lab-connect", argv: ["--label", "x", "--strictPort"] },
+      { name: "lab-switchboard", argv: ["--label", "x", "--strictPort"] },
+    ]);
+    await result.shutdown();
+  });
+
+  it("passes no argv to the members of a bare run", async () => {
+    const { dir, sink } = makeProject();
+    const result = await run(dir);
+    expect(argvCalls(sink)).toEqual([]);
+    await result.shutdown();
+  });
+
+  it("fails on an argument no member accepts, before any member starts", async () => {
+    const { dir, sink } = makeProject();
+    await expect(withArgv(dir, ["--interactive"])).rejects.toThrow(
+      /hosts\/app: no member accepts --interactive\./,
+    );
+    expect(calls(sink)).toEqual([]);
   });
 });

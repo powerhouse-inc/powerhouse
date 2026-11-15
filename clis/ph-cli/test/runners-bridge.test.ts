@@ -441,6 +441,40 @@ describe("switchboard bridge runner", () => {
     }
   });
 
+  it("store verbs read --db-path and --yes from this invocation", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const { runSwitchboardMigrations } =
+      await import("../src/services/switchboard-migrate.js");
+    const { resetSwitchboardDatabase } =
+      await import("../src/services/switchboard-reset.js");
+    vi.mocked(runSwitchboardMigrations).mockClear();
+    vi.mocked(resetSwitchboardDatabase).mockClear();
+    const bare = switchboard({
+      name: "lab-switchboard",
+      runner: { module: "m", port: 7599 },
+    });
+
+    // `ph switchboard --migrate --db-path elsewhere.db`
+    await runner.migrate(bare, {
+      ...ctx,
+      verb: "migrate",
+      argv: ["--db-path", "elsewhere.db"],
+    });
+    expect(vi.mocked(runSwitchboardMigrations).mock.calls[0]).toStrictEqual([
+      { dbPath: "elsewhere.db", statusOnly: undefined },
+    ]);
+
+    // `ph switchboard --reset --yes`
+    await runner.reset(bare, { ...ctx, verb: "reset", argv: ["--yes"] });
+    expect(vi.mocked(resetSwitchboardDatabase).mock.calls[0]).toStrictEqual([
+      { dbPath: undefined, yes: true },
+    ]);
+    await runner.reset(bare, { ...ctx, verb: "reset", argv: ["-y"] });
+    expect(vi.mocked(resetSwitchboardDatabase).mock.calls[1]).toStrictEqual([
+      { dbPath: undefined, yes: true },
+    ]);
+  });
+
   it("reset refuses without confirmation and deletes nothing", async () => {
     const runner = await import("../src/runners/switchboard.js");
     const actual = await vi.importActual<typeof ResetService>(
@@ -1281,6 +1315,166 @@ describe("connect bridge runner — reactor projection (P2.5)", () => {
       reactor: { createSignaturePolicy: "legacy" },
       instance: { reactorWorker: true },
       app: { workflowsEnabled: true },
+    });
+  });
+});
+
+describe("runner arguments (ctx.argv) win over the host file", () => {
+  const withArgv = (...argv: string[]): RunnerContext => ({ ...ctx, argv });
+
+  it("the switchboard runner declares the classic flags it accepts", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    expect(runner.argsSchema).toEqual({
+      options: [
+        "--port",
+        "--db-path",
+        "--https-key-file",
+        "--https-cert-file",
+        "--remote-drives",
+        "--remote-drive",
+      ],
+      flags: ["--strictPort", "--https", "--yes", "-y"],
+      memberOptions: { "--switchboard-port": "--port" },
+      retired: {
+        "--watch": "it is no longer needed.",
+        "-w": "it is no longer needed.",
+        "--disable-connect": "use `ph run switchboard dev` instead.",
+      },
+    });
+  });
+
+  it("the connect runner declares the classic flags it accepts", async () => {
+    const runner = await import("../src/runners/connect.js");
+    expect(runner.argsSchema).toEqual({
+      options: ["--port", "--host"],
+      flags: ["--open", "--cors", "--strictPort"],
+      memberOptions: { "--connect-port": "--port" },
+      retired: {
+        "--watch": "it is no longer needed.",
+        "-w": "it is no longer needed.",
+      },
+    });
+  });
+
+  it("switchboard: --port, --db-path, --strictPort, --https and --remote-drives", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
+    const host = switchboard({
+      name: "lab-switchboard",
+      runner: {
+        module: "@powerhousedao/ph-cli/runners/switchboard",
+        port: 7599,
+        strictPort: false,
+      },
+    });
+    vi.mocked(startSwitchboard).mockClear();
+    await runner.run(
+      host,
+      withArgv(
+        "--port",
+        "4001",
+        "--db-path=./store",
+        "--strictPort",
+        "--https",
+        "--remote-drives",
+        "http://remote.test/d/one",
+      ),
+    );
+    expect(vi.mocked(startSwitchboard).mock.calls[0][0]).toMatchObject({
+      port: 4001,
+      dbPath: "./store",
+      strictPort: true,
+      https: true,
+      remoteDrives: ["http://remote.test/d/one"],
+    });
+  });
+
+  it("switchboard: runner.strictPort holds without the flag, and no flag leaves the classic call as it was", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
+    vi.mocked(startSwitchboard).mockClear();
+    await runner.run(
+      switchboard({
+        name: "lab-switchboard",
+        runner: { module: "m", port: 7599, strictPort: true },
+      }),
+      ctx,
+    );
+    await runner.run(
+      switchboard({ name: "lab-switchboard", runner: { module: "m" } }),
+      ctx,
+    );
+    const [strict, plain] = vi
+      .mocked(startSwitchboard)
+      .mock.calls.map((call) => call[0]);
+    expect(strict).toMatchObject({ port: 7599, strictPort: true });
+    expect(plain).not.toHaveProperty("strictPort");
+  });
+
+  it("switchboard: a value the classic definition refuses fails, naming the host file", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const host = switchboard({
+      name: "lab-switchboard",
+      runner: { module: "m", port: 7599 },
+    });
+    await expect(
+      runner.run(host, withArgv("--port", "not-a-number")),
+    ).rejects.toThrow(/hosts\/lab-switchboard\/host\.js: /);
+  });
+
+  it("connect dev: --port, --host, --open, --strictPort and --cors", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    vi.mocked(runConnectStudio).mockClear();
+    const handle = await runner.dev(
+      connect(connectHost()),
+      withArgv(
+        "--port",
+        "4100",
+        "--host",
+        "0.0.0.0",
+        "--open",
+        "--strictPort",
+        "--cors",
+      ),
+    );
+    expect(vi.mocked(runConnectStudio).mock.calls[0][0]).toMatchObject({
+      port: 4100,
+      host: "0.0.0.0",
+      open: true,
+      strictPort: true,
+      cors: true,
+    });
+    expect(handle.outputs.origin).toBe("http://localhost:4100");
+  });
+
+  it("connect serve: --port and --strictPort reach the built-in server, --open takes vite", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectServer } =
+      await import("@powerhousedao/ph-run/connect-server");
+    const { runConnectPreview } =
+      await import("../src/services/connect-preview.js");
+    vi.mocked(runConnectServer).mockClear();
+    vi.mocked(runConnectPreview).mockClear();
+    await runner.serve(
+      connect(connectHost()),
+      withArgv("--port=4200", "--strictPort"),
+    );
+    expect(runConnectPreview).not.toHaveBeenCalled();
+    expect(vi.mocked(runConnectServer).mock.calls[0][0]).toMatchObject({
+      port: 4200,
+      strictPort: true,
+      open: false,
+    });
+
+    await runner.serve(connect(connectHost()), withArgv("--open"));
+    expect(runConnectPreview).toHaveBeenCalledOnce();
+    expect(vi.mocked(runConnectPreview).mock.calls[0][0]).toMatchObject({
+      port: 6599,
+      open: true,
     });
   });
 });
