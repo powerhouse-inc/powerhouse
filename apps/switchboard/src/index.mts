@@ -2,7 +2,7 @@
 // Observability MUST load before any module that imports http/express/pg/graphql
 // so OpenTelemetry's require-time hooks can patch them. It also owns Sentry
 // init and the SIGINT/SIGTERM flush.
-import "./observability.mjs";
+import "./observability-bin.mjs";
 
 import { getConfig } from "@powerhousedao/config/node";
 import * as Sentry from "@sentry/node";

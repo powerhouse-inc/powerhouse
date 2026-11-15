@@ -350,6 +350,14 @@ async function start(
     hostFile,
   );
   if (legacyStore) console.warn(legacyStore.warning);
+  // Already loaded by `ph run`, before the host; here for a caller that
+  // starts the runner itself, and to reach its flush.
+  const { loadObservability } = await import("../services/observability.js");
+  const observability = await loadObservability();
+  // Standalone, a signal flushes telemetry and exits, as in the switchboard
+  // bin. A compound owns the signals and the exit: its members flush from
+  // shutdown() below.
+  if (!ctx.parent) observability?.installObservabilitySignals();
   const { startSwitchboard } = await import("../services/switchboard.js");
   const entries = host.runner.plugins;
   const entriesDeclared = entries !== undefined;
@@ -435,7 +443,11 @@ async function start(
     { ...serverArgs, readyAfter },
     undefined,
     memberConfig,
-  );
+  ).catch(async (error: unknown) => {
+    // The bin's boot failure: captured and flushed before the exit.
+    await observability?.reportBootFailure(error);
+    throw error;
+  });
   // Bars for processor and read-model catch-up, below the server's output;
   // PH_CATCH_UP_PROGRESS=false leaves the output as it was. PH_CATCH_UP_TOP
   // sets how many of the slowest processors they list; 0 hides them.
@@ -523,7 +535,15 @@ async function start(
   // read-model db, then closes the reactor database. SwitchboardReactor
   // memoizes it; standalone, SIGINT/SIGTERM run the same teardown, so a
   // shutdown() during or after a signal joins it instead of draining twice.
+  // Telemetry flushes after the drain, so the drain's own spans are sent.
   let stopping: Promise<void> | undefined;
+  const stop = async () => {
+    try {
+      await switchboard.shutdown();
+    } finally {
+      await observability?.flushObservability();
+    }
+  };
   return {
     outputs: outputsSchema.parse({
       origin,
@@ -536,7 +556,7 @@ async function start(
     ready,
     shutdown: () => {
       progress?.stop();
-      return (stopping ??= switchboard.shutdown());
+      return (stopping ??= stop());
     },
   };
 }

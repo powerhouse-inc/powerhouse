@@ -42,7 +42,8 @@ export interface StartRunArgs {
  * the producers' live run records, `$env` from this process, the
  * `${userData}` sugar), resolved validation, then the verb with the parsed
  * host. A compound runner gets its declared host: its members resolve their
- * own tokens as they start.
+ * own tokens as they start. Ahead of all of it, observability loads when the
+ * env configures it (services/observability.ts).
  *
  * A reactor runner that exports `outputsSchema` has its handle's outputs
  * published in a v2 `.ph/run/<name>.json` record once ready; this is the only
@@ -53,6 +54,13 @@ export interface StartRunArgs {
  * they address the stores `run` opens, but take no lock and write no record.
  */
 export async function startRun(args: StartRunArgs): Promise<unknown> {
+  // Before the host loads: loading it can import its runner and plugins, and
+  // OpenTelemetry only patches http/express/pg/graphql that load after it.
+  // Decided on the env, since reading the host is what must come second.
+  if (!ONE_SHOT_VERBS.has(args.verb ?? "run")) {
+    const { loadObservability } = await import("../observability.js");
+    await loadObservability();
+  }
   // Loading a host loads its plugins, and React settles on its development or
   // production build the first time it's loaded. `vite build` sets NODE_ENV only
   // after that, so a build would run one half of React with the other half's

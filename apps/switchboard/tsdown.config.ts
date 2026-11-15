@@ -11,6 +11,8 @@ export default defineConfig({
     "src/config/from-env.ts",
     "src/install-packages.mts",
     "src/migrate.mts",
+    // What `ph run` imports before it loads a host, as the bin does first.
+    "src/observability.mts",
     // R2: the built-in plugins, published as subpaths so host.js runner.plugins
     // specifiers resolve from a project's dependency tree.
     "src/plugins/mcp.mts",

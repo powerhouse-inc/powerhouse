@@ -34,6 +34,11 @@
       "types": "./dist/boot.d.mts",
       "import": "./dist/boot.mjs"
     },
+    "./observability": {
+      "source": "./src/observability.mts",
+      "types": "./dist/observability.d.mts",
+      "import": "./dist/observability.mjs"
+    },
     "./plugins/mcp": {
       "source": "./src/plugins/mcp.mts",
       "types": "./dist/plugins/mcp.d.mts",

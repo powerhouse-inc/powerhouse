@@ -1,9 +1,11 @@
 // Single observability bootstrap: Sentry + OpenTelemetry (tracing + metrics).
 //
-// MUST be imported as the very first module in apps/switchboard/src/index.mts.
+// MUST be imported as the very first module in apps/switchboard/src/index.mts
+// (through observability-bin.mts, which also installs the signal handlers).
 // OpenTelemetry instrumentations register require-time hooks at module load,
 // so http/express/pg/graphql must not be imported (transitively) before this
-// file runs.
+// file runs. `ph run` imports it the same way, as
+// `@powerhousedao/switchboard/observability`, before it loads a host.
 //
 // Replaces three legacy bootstrap sites:
 // - apps/switchboard/src/server.mts top-level Sentry.init
@@ -237,10 +239,45 @@ async function shutdown() {
   ]);
 }
 
-// Exit-code and drain coordination with fatal-shutdown.mts and the reactor
-// builder lives in observability-signals.mts; the earlier inline handlers
-// exited with a literal 0, which turned a fatal crash (exitCode = 1) into a
-// success in the supervisor's eyes and could cut the snapshot drain short.
-installObservabilitySignalHandlers(shutdown);
+let flushing: Promise<void> | undefined;
+
+/** Flushes and stops telemetry, once: a signal and a runner's shutdown may
+ * both ask. */
+export function flushObservability(): Promise<void> {
+  return (flushing ??= shutdown());
+}
+
+let signalHandlersInstalled = false;
+
+/**
+ * Installs the SIGINT/SIGTERM flush, once. The bin does it at load
+ * (observability-bin.mts). Under `ph run` the switchboard runner does it, and
+ * only when no compound owns the signals: these handlers exit the process.
+ *
+ * Exit-code and drain coordination with fatal-shutdown.mts and the reactor
+ * builder lives in observability-signals.mts; the earlier inline handlers
+ * exited with a literal 0, which turned a fatal crash (exitCode = 1) into a
+ * success in the supervisor's eyes and could cut the snapshot drain short.
+ */
+export function installObservabilitySignals(): void {
+  if (signalHandlersInstalled) return;
+  signalHandlersInstalled = true;
+  installObservabilitySignalHandlers(flushObservability);
+}
+
+/**
+ * A failed boot as the bin reports it: captured, then flushed before the
+ * caller exits. A stored-documents refusal was already reported to the
+ * operator. Matched by name: importing the error would load the reactor
+ * ahead of the hooks above.
+ */
+export async function reportBootFailure(error: unknown): Promise<void> {
+  if (
+    !(error instanceof Error && error.name === "StoredDocumentsRefusedError")
+  ) {
+    Sentry.captureException(error);
+  }
+  await Sentry.flush(2000).catch(() => undefined);
+}
 
 export { meterProvider, sdk };
