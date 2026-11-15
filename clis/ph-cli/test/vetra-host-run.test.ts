@@ -338,7 +338,8 @@ describe("the two guards see each other", () => {
     kind: "compound" as const,
     verb: "dev",
     pid,
-    startedAt: "2026-09-01T10:22:03.000Z",
+    // Written now: a live pid counts only when its process started before.
+    startedAt: new Date().toISOString(),
     members: {},
   });
 
