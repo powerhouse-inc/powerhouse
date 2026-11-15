@@ -826,7 +826,8 @@ const ROUTER_PACKAGES =
 /** One chunk for the router and the project's route configs, which the split
  * route components would otherwise spread over several shared chunks. */
 export function connectRouterChunkGroups(routesDir?: string | false) {
-  const routes = routesDir && join(routesDir, sep);
+  // Module ids use forward slashes on every platform.
+  const routes = routesDir && normalizePath(join(routesDir, sep));
   return [
     // Its own chunk: the entry imports it, and must not load the router with it.
     { name: "preload-helper", test: /vite[\\/]preload-helper/, priority: 1 },
