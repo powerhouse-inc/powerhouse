@@ -316,23 +316,28 @@ describe("ph build --release", () => {
     expect(await prepack(made.root)).toEqual(APPROVED);
   }, 240_000);
 
-  it("writes no approval for a package whose output directory is a link, which npm does not pack through", async () => {
-    const made = releaseProject();
-    mkdirSync(join(made.root, "artifacts"));
-    symlinkSync("artifacts", made.dist);
+  // An unprivileged Windows account cannot create this link.
+  it.skipIf(process.platform === "win32")(
+    "writes no approval for a package whose output directory is a link, which npm does not pack through",
+    async () => {
+      const made = releaseProject();
+      mkdirSync(join(made.root, "artifacts"));
+      symlinkSync("artifacts", made.dist);
 
-    const failure = await buildPackage(args).catch((error: unknown) => error);
+      const failure = await buildPackage(args).catch((error: unknown) => error);
 
-    expect(failure).toEqual(
-      new BuildRefusal(
-        '✘ No release approval was written: the packed package does not install and import in a scratch consumer: exports["."] names ./dist/types/index.d.ts, which the package does not contain, exports["."] names ./dist/browser/index.js, which the package does not contain, exports["."] names ./dist/node/index.mjs, which the package does not contain, exports["./document-models"] names ./dist/types/document-models/index.d.ts, which the package does not contain, exports["./document-models"] names ./dist/browser/document-models/index.js, which the package does not contain and 14 more. The new output is in place; build again with --release to approve it.',
-      ),
-    );
-    expect(existsSync(join(made.root, "artifacts", "node", "index.mjs"))).toBe(
-      true,
-    );
-    expect(existsSync(join(made.root, APPROVAL))).toBe(false);
-  }, 240_000);
+      expect(failure).toEqual(
+        new BuildRefusal(
+          '✘ No release approval was written: the packed package does not install and import in a scratch consumer: exports["."] names ./dist/types/index.d.ts, which the package does not contain, exports["."] names ./dist/browser/index.js, which the package does not contain, exports["."] names ./dist/node/index.mjs, which the package does not contain, exports["./document-models"] names ./dist/types/document-models/index.d.ts, which the package does not contain, exports["./document-models"] names ./dist/browser/document-models/index.js, which the package does not contain and 14 more. The new output is in place; build again with --release to approve it.',
+        ),
+      );
+      expect(
+        existsSync(join(made.root, "artifacts", "node", "index.mjs")),
+      ).toBe(true);
+      expect(existsSync(join(made.root, APPROVAL))).toBe(false);
+    },
+    240_000,
+  );
 
   it("writes no approval when a bundle imports a package the package declares only as a devDependency", async () => {
     const made = releaseProject();

@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { rmSync } from "node:fs";
 import { setTimeout as sleep } from "node:timers/promises";
 
@@ -16,10 +17,18 @@ export async function stopProcess(
   timeoutMs = 30_000,
 ): Promise<void> {
   if (!pid || !isAlive(pid)) return;
-  try {
-    process.kill(pid);
-  } catch {
-    return;
+  if (process.platform === "win32") {
+    // The whole tree: a signal ends only `pid`, and its children keep the
+    // project dir open.
+    spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
+      windowsHide: true,
+    });
+  } else {
+    try {
+      process.kill(pid);
+    } catch {
+      return;
+    }
   }
   const deadline = Date.now() + timeoutMs;
   while (isAlive(pid) && Date.now() < deadline) await sleep(100);
@@ -27,5 +36,10 @@ export async function stopProcess(
 
 /** Removes a project dir; Windows holds it for a moment after its processes exit. */
 export function removeDir(dir: string): void {
-  rmSync(dir, { recursive: true, force: true, maxRetries: 10 });
+  rmSync(dir, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 300,
+  });
 }

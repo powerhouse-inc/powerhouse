@@ -37,6 +37,8 @@ import {
 import { runBuild } from "../src/services/build.js";
 import type { BuildArgs } from "../src/types.js";
 
+const linkType = process.platform === "win32" ? "junction" : "dir";
+
 const fixtures = join(import.meta.dirname, "fixtures");
 const originalCwd = process.cwd();
 
@@ -557,7 +559,7 @@ describe("runBuild on a generated piece", () => {
     symlinkSync(
       framework,
       join(generated, "node_modules", "@powerhousedao", "pieces-framework"),
-      "dir",
+      linkType,
     );
 
     // One piece per auth kind, each with the parts `ph generate` adds to it.

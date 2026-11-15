@@ -18,6 +18,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { vi } from "vitest";
 
+const linkType = process.platform === "win32" ? "junction" : "dir";
+
 const packages = join(import.meta.dirname, "..", "..", "..", "packages");
 
 export async function createProject(config: object = {}): Promise<string> {
@@ -26,10 +28,12 @@ export async function createProject(config: object = {}): Promise<string> {
   symlinkSync(
     join(packages, "document-model"),
     join(dir, "node_modules", "document-model"),
+    linkType,
   );
   symlinkSync(
     join(packages, "shared"),
     join(dir, "node_modules", "@powerhousedao", "shared"),
+    linkType,
   );
   writeJson(dir, "package.json", { name: "@acme/things", type: "module" });
   writeJson(dir, "powerhouse.config.json", config);

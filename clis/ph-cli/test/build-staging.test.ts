@@ -43,6 +43,8 @@ import {
   treeDigest,
 } from "./staged-build-project.js";
 
+const linkType = process.platform === "win32" ? "junction" : "dir";
+
 // A rename, removal or hard link the test fails on purpose; and the hard
 // links made, by target.
 const injected = vi.hoisted(() => ({
@@ -384,7 +386,7 @@ describe("a staged build", () => {
     const made = project();
     const target = join(dirname(made.root), "elsewhere", "deep", "build");
     mkdirSync(target, { recursive: true });
-    symlinkSync(target, made.dist, "dir");
+    symlinkSync(target, made.dist, linkType);
 
     await buildPackage(args);
     await buildPackage(args);
@@ -419,7 +421,7 @@ describe("a staged build", () => {
   it("stages an absolute --out-dir that reaches the output through a symlink, with main's sourcemaps", async () => {
     const made = project();
     const alias = join(dirname(made.root), "alias");
-    symlinkSync(dirname(made.root), alias, "dir");
+    symlinkSync(dirname(made.root), alias, linkType);
 
     await buildPackage({ ...args, outDir: join(alias, "my package", "dist") });
 
@@ -449,38 +451,44 @@ describe("a staged build", () => {
     expect(scratchLeft(made)).toEqual([]);
   }, 120_000);
 
-  it("leaves unprotected a compiler output that holds .ph/build, directly or through a symlink, and protects the others", async () => {
-    const made = project();
-    symlinkSync(".", join(made.root, "root-alias"), "dir");
-    symlinkSync(".ph", join(made.root, "compiler-alias"), "dir");
-    made.write("lib/index.d.ts", "export declare const kept: 1;\n");
-    const session = await openBuildSession({
-      packageRoot: made.root,
-      outDir: "dist",
-      cleanedEntries: [],
-      linkCleanedEntries: false,
-    });
-
-    try {
-      await session.prepareCompiler({
-        configFile: join(made.root, "tsconfig.json"),
-        config: { options: {}, exclude: undefined, references: [] },
-        outputs: [
-          { path: join(made.root, ".ph"), kind: "directory" },
-          { path: join(made.root, "compiler-alias"), kind: "directory" },
-          { path: join(made.root, "root-alias"), kind: "directory" },
-          { path: join(made.root, "lib"), kind: "directory" },
-        ],
+  // An unprivileged Windows account cannot create this link.
+  it.skipIf(process.platform === "win32")(
+    "leaves unprotected a compiler output that holds .ph/build, directly or through a symlink, and protects the others",
+    async () => {
+      const made = project();
+      symlinkSync(".", join(made.root, "root-alias"), "dir");
+      symlinkSync(".ph", join(made.root, "compiler-alias"), "dir");
+      made.write("lib/index.d.ts", "export declare const kept: 1;\n");
+      const session = await openBuildSession({
+        packageRoot: made.root,
+        outDir: "dist",
+        cleanedEntries: [],
+        linkCleanedEntries: false,
       });
-      made.write("lib/index.d.ts", "export declare const rewritten: 1;\n");
-      session.rollback();
-    } finally {
-      session.close();
-    }
 
-    expect(made.read("lib/index.d.ts")).toBe("export declare const kept: 1;\n");
-    expect(scratchLeft(made)).toEqual([]);
-  });
+      try {
+        await session.prepareCompiler({
+          configFile: join(made.root, "tsconfig.json"),
+          config: { options: {}, exclude: undefined, references: [] },
+          outputs: [
+            { path: join(made.root, ".ph"), kind: "directory" },
+            { path: join(made.root, "compiler-alias"), kind: "directory" },
+            { path: join(made.root, "root-alias"), kind: "directory" },
+            { path: join(made.root, "lib"), kind: "directory" },
+          ],
+        });
+        made.write("lib/index.d.ts", "export declare const rewritten: 1;\n");
+        session.rollback();
+      } finally {
+        session.close();
+      }
+
+      expect(made.read("lib/index.d.ts")).toBe(
+        "export declare const kept: 1;\n",
+      );
+      expect(scratchLeft(made)).toEqual([]);
+    },
+  );
 
   it("puts back a compiler output that is the output itself, saved whole when tsc's files in it are not known", async () => {
     const made = project();

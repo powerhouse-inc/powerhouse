@@ -8,6 +8,8 @@ import {
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
+const linkType = process.platform === "win32" ? "junction" : "dir";
+
 const PH_CLI = join(import.meta.dirname, "..");
 const PACKAGES = join(PH_CLI, "..", "..", "packages");
 const REACTOR_API = join(PACKAGES, "reactor-api");
@@ -17,7 +19,7 @@ function linkPackage(root: string, name: string, from: string): void {
   const target = join(root, "node_modules", name);
   mkdirSync(dirname(target), { recursive: true });
   rmSync(target, { recursive: true, force: true });
-  symlinkSync(realpathSync.native(from), target);
+  symlinkSync(realpathSync.native(from), target, linkType);
 }
 
 const packageDir = (resolver: string, name: string) =>

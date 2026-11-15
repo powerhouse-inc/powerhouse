@@ -24,5 +24,8 @@ export default defineConfig({
   },
   test: {
     include: ["test/**/*.test.ts"],
+    // A file's first test pays for loading the runners, which takes longer
+    // than the default on Windows.
+    testTimeout: process.platform === "win32" ? 20_000 : 5_000,
   },
 });

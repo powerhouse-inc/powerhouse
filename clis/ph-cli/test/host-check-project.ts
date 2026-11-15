@@ -9,6 +9,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+const linkType = process.platform === "win32" ? "junction" : "dir";
+
 const RUNNER_SOURCE = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -50,7 +52,7 @@ export function makeProject(hosts: Record<string, unknown>): string {
   );
   const scope = path.join(dir, "node_modules", "@powerhousedao");
   mkdirSync(scope, { recursive: true });
-  symlinkSync(shim, path.join(scope, "ph-cli"), "dir");
+  symlinkSync(shim, path.join(scope, "ph-cli"), linkType);
   for (const [name, host] of Object.entries(hosts)) {
     mkdirSync(path.join(dir, "hosts", name), { recursive: true });
     writeFileSync(

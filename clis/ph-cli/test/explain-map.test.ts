@@ -12,6 +12,8 @@ import { writeRunRecord } from "@powerhousedao/host-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { explainHost } from "../src/services/run/explain.js";
 
+const linkType = process.platform === "win32" ? "junction" : "dir";
+
 /**
  * `--explain` with `$map` (typed-host-configs T4): a `$map` in
  * `reactor.drives` is named (and rendered from a running producer) in the
@@ -48,7 +50,7 @@ function makeProject(hosts: Record<string, unknown>): string {
   );
   const modules = path.join(dir, "node_modules");
   mkdirSync(path.join(modules, "fake-runners"), { recursive: true });
-  symlinkSync(ZOD_DIR, path.join(modules, "zod"), "dir");
+  symlinkSync(ZOD_DIR, path.join(modules, "zod"), linkType);
   writeFileSync(
     path.join(modules, "fake-runners", "package.json"),
     JSON.stringify({

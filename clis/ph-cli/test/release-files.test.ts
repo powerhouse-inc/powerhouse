@@ -96,36 +96,44 @@ async function prepack(root: string) {
 }
 
 describe("revisionFiles", () => {
-  it("reads every file outside the excluded ones when the package is not in a work tree", () => {
-    const root = packageWith(FILES);
-    symlinkSync("src/a file.ts", join(root, "link"));
+  // An unprivileged Windows account cannot create this link.
+  it.skipIf(process.platform === "win32")(
+    "reads every file outside the excluded ones when the package is not in a work tree",
+    () => {
+      const root = packageWith(FILES);
+      symlinkSync("src/a file.ts", join(root, "link"));
 
-    expect(revisionFiles(root, ["dist"])).toEqual([
-      { path: ".gitignore", sha256: sha("local.env\n") },
-      { path: "link", sha256: sha("src/a file.ts") },
-      { path: "local.env", sha256: sha("secret") },
-      { path: "package.json", sha256: sha(FILES["package.json"]) },
-      { path: "src/a file.ts", sha256: sha("a") },
-      { path: "src/deep/b.ts", sha256: sha("b") },
-    ]);
-  });
+      expect(revisionFiles(root, ["dist"])).toEqual([
+        { path: ".gitignore", sha256: sha("local.env\n") },
+        { path: "link", sha256: sha("src/a file.ts") },
+        { path: "local.env", sha256: sha("secret") },
+        { path: "package.json", sha256: sha(FILES["package.json"]) },
+        { path: "src/a file.ts", sha256: sha("a") },
+        { path: "src/deep/b.ts", sha256: sha("b") },
+      ]);
+    },
+  );
 
-  it("leaves out what git ignores inside a work tree, and a tracked file that is gone", () => {
-    const root = packageWith(FILES);
-    symlinkSync("src/a file.ts", join(root, "link"));
-    const git = (...args: string[]) =>
-      expect(spawnSync("git", args, { cwd: root }).status).toBe(0);
-    git("init", "--quiet");
-    git("add", "src/deep/b.ts");
-    rmSync(join(root, "src", "deep", "b.ts"));
+  // An unprivileged Windows account cannot create this link.
+  it.skipIf(process.platform === "win32")(
+    "leaves out what git ignores inside a work tree, and a tracked file that is gone",
+    () => {
+      const root = packageWith(FILES);
+      symlinkSync("src/a file.ts", join(root, "link"));
+      const git = (...args: string[]) =>
+        expect(spawnSync("git", args, { cwd: root }).status).toBe(0);
+      git("init", "--quiet");
+      git("add", "src/deep/b.ts");
+      rmSync(join(root, "src", "deep", "b.ts"));
 
-    expect(revisionFiles(root, ["dist"])).toEqual([
-      { path: ".gitignore", sha256: sha("local.env\n") },
-      { path: "link", sha256: sha("src/a file.ts") },
-      { path: "package.json", sha256: sha(FILES["package.json"]) },
-      { path: "src/a file.ts", sha256: sha("a") },
-    ]);
-  });
+      expect(revisionFiles(root, ["dist"])).toEqual([
+        { path: ".gitignore", sha256: sha("local.env\n") },
+        { path: "link", sha256: sha("src/a file.ts") },
+        { path: "package.json", sha256: sha(FILES["package.json"]) },
+        { path: "src/a file.ts", sha256: sha("a") },
+      ]);
+    },
+  );
 
   it("names a package's files from the package, inside a larger work tree", () => {
     const root = packageWith(FILES);

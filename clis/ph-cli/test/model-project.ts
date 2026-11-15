@@ -16,6 +16,8 @@ import { expect } from "vitest";
 import { runModelCheck } from "../src/services/model/check.js";
 import { runModelInspect } from "../src/services/model/inspect.js";
 
+const linkType = process.platform === "win32" ? "junction" : "dir";
+
 const FIXTURE = join(import.meta.dirname, "fixtures", "model-project");
 const DOCUMENT_MODEL = join(
   import.meta.dirname,
@@ -82,16 +84,25 @@ export function createModelProject(
     writeFileSync(join(root, path), text);
   }
   mkdirSync(join(root, "node_modules"));
-  symlinkSync(DOCUMENT_MODEL, join(root, "node_modules", "document-model"));
+  symlinkSync(
+    DOCUMENT_MODEL,
+    join(root, "node_modules", "document-model"),
+    linkType,
+  );
   const zod = dirname(
     createRequire(join(DOCUMENT_MODEL, "package.json")).resolve(
       "zod/package.json",
     ),
   );
-  symlinkSync(realpathSync.native(zod), join(root, "node_modules", "zod"));
+  symlinkSync(
+    realpathSync.native(zod),
+    join(root, "node_modules", "zod"),
+    linkType,
+  );
   return {
     root,
-    dispose: () => rmSync(root, { recursive: true, force: true }),
+    dispose: () =>
+      rmSync(root, { recursive: true, force: true, maxRetries: 10 }),
   };
 }
 

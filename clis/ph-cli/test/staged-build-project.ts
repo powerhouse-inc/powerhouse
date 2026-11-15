@@ -19,6 +19,8 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { LEDGER_SOURCE } from "./model-project.js";
 
+const linkType = process.platform === "win32" ? "junction" : "dir";
+
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const PH_CLI = join(import.meta.dirname, "..", "dist", "cli.mjs");
 
@@ -225,6 +227,7 @@ export function addCodeFirstLedger(
   symlinkSync(
     DOCUMENT_MODEL,
     join(project.root, "node_modules", "document-model"),
+    linkType,
   );
   const zod = dirname(
     createRequire(join(DOCUMENT_MODEL, "package.json")).resolve(
@@ -234,6 +237,7 @@ export function addCodeFirstLedger(
   symlinkSync(
     realpathSync.native(zod),
     join(project.root, "node_modules", "zod"),
+    linkType,
   );
   project.write(
     "tsconfig.json",

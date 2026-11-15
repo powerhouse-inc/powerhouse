@@ -15,6 +15,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { explainHost } from "../src/services/run/explain.js";
 import { startRun } from "@powerhousedao/ph-run/start-run";
 
+const linkType = process.platform === "win32" ? "junction" : "dir";
+
 /**
  * Standalone `ph run` over output tokens (typed-host-configs T3): a
  * consumer resolves `$output` from its producer's live v2 run record and
@@ -53,7 +55,7 @@ function makeProject(connect: Record<string, unknown>): {
   const sink = path.join(dir, "calls.jsonl");
   const modules = path.join(dir, "node_modules");
   mkdirSync(path.join(modules, "fake-runners"), { recursive: true });
-  symlinkSync(ZOD_DIR, path.join(modules, "zod"), "dir");
+  symlinkSync(ZOD_DIR, path.join(modules, "zod"), linkType);
   writeFileSync(
     path.join(modules, "fake-runners", "package.json"),
     JSON.stringify({
