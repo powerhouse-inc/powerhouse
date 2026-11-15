@@ -78,63 +78,133 @@ import {
 import { CODEGEN_PACKAGE, codegenSkills, syncSkills } from "./agent-skills.js";
 import {
   type JsonObject,
+  type MergedJsonArray,
   mergedJsonSettings,
   mergedVitestConfig,
   readIfExists,
-  withProjectArrayEntries,
+  withTemplateEntries,
 } from "./merge-project-config.js";
 
+const TEMPLATES_URL =
+  "https://github.com/powerhouse-inc/powerhouse/blob/main/packages/codegen/src/templates/boilerplate";
+
+const CODEGEN_BANNER = "This file is auto-generated and updated by codegen";
+
+const textLines = (text: string) =>
+  text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+
+/* The one line a file migrate leaves alone gets, when the template moved on */
+function reportKeptFile(
+  name: string,
+  existing: string,
+  contents: string,
+  templateFile: string,
+) {
+  const own = new Set(textLines(existing));
+  const lacking = textLines(contents).filter((line) => !own.has(line)).length;
+  if (lacking === 0) return;
+  console.log(
+    `  kept ${name}: the current template has ${lacking} ${lacking === 1 ? "line" : "lines"} it lacks (${TEMPLATES_URL}/${templateFile})`,
+  );
+}
+
+/** Writes a root file the project lacks. One it has is the project's: it
+ * stays as it is, with a line when the current template differs. */
+async function seedProjectFile(
+  projectDir: string,
+  name: string,
+  contents: string,
+  templateFile: string,
+) {
+  const filePath = join(projectDir, name);
+  const existing = readIfExists(filePath);
+  if (existing === undefined) {
+    await writeFileEnsuringDir(filePath, contents);
+    return;
+  }
+  reportKeptFile(name, existing, contents, templateFile);
+}
+
+/** Writes a file codegen owns. A copy without the "auto-generated" banner was
+ * taken over by the project and stays as it is. */
+async function writeCodegenOwnedFile(
+  projectDir: string,
+  name: string,
+  contents: string,
+  templateFile: string,
+) {
+  const filePath = join(projectDir, name);
+  const existing = readIfExists(filePath);
+  if (existing === undefined || existing.includes(CODEGEN_BANNER)) {
+    await writeFileEnsuringDir(filePath, contents);
+    return;
+  }
+  reportKeptFile(name, existing, contents, templateFile);
+}
+
+/** Writes a JSON config file the project lacks; one it has gains the keys and
+ * listed array entries it lacks, and keeps its own values. */
+async function writeMergedJsonConfig(
+  projectDir: string,
+  name: string,
+  template: string,
+  arrays: readonly MergedJsonArray[],
+) {
+  const filePath = join(projectDir, name);
+  const merged = withTemplateEntries(
+    name,
+    template,
+    readIfExists(filePath),
+    arrays,
+  );
+  if (merged === undefined) return;
+  await writeFileEnsuringDir(filePath, await formatSafe(merged, "json"));
+}
+
 export async function writeGeneratedProjectRootFiles(projectDir: string) {
-  // Config files keep the entries the project added to their exclude lists.
-  const tsconfigPath = join(projectDir, "tsconfig.json");
-  await writeFileEnsuringDir(
-    tsconfigPath,
-    await formatSafe(
-      withProjectArrayEntries(
-        "tsconfig.json",
-        tsConfigTemplate,
-        readIfExists(tsconfigPath),
-        [
-          { keyPath: ["include"] },
-          // .ph left the excludes so .ph/connect-routes.gen.ts is checked.
-          { keyPath: ["exclude"], dropped: [".ph"] },
-        ],
-      ),
-      "json",
-    ),
-  );
-  await writeFileEnsuringDir(
-    join(projectDir, "index.html"),
+  await writeMergedJsonConfig(projectDir, "tsconfig.json", tsConfigTemplate, [
+    { keyPath: ["include"] },
+    // .ph left the excludes so .ph/connect-routes.gen.ts is checked.
+    { keyPath: ["exclude"], dropped: [".ph"] },
+  ]);
+  await seedProjectFile(
+    projectDir,
+    "index.html",
     await formatSafe(indexHtmlTemplate, "html"),
+    "index.html.ts",
   );
-  await writeFileEnsuringDir(
-    join(projectDir, "main.tsx"),
+  await writeCodegenOwnedFile(
+    projectDir,
+    "main.tsx",
     await formatSafe(mainTsxTemplate, "tsx"),
+    "main.tsx.ts",
   );
-  const oxlintPath = join(projectDir, ".oxlintrc.json");
-  await writeFileEnsuringDir(
-    oxlintPath,
-    await formatSafe(
-      withProjectArrayEntries(
-        ".oxlintrc.json",
-        oxlintConfigTemplate,
-        readIfExists(oxlintPath),
-        [{ keyPath: ["ignorePatterns"] }],
-      ),
-      "json",
-    ),
+  await writeMergedJsonConfig(
+    projectDir,
+    ".oxlintrc.json",
+    oxlintConfigTemplate,
+    [{ keyPath: ["ignorePatterns"] }],
   );
-  await writeFileEnsuringDir(
-    join(projectDir, ".oxfmtrc.json"),
-    await formatSafe(oxfmtConfigTemplate, "json"),
+  await writeMergedJsonConfig(
+    projectDir,
+    ".oxfmtrc.json",
+    oxfmtConfigTemplate,
+    [{ keyPath: ["ignorePatterns"] }],
   );
-  await writeFileEnsuringDir(
-    join(projectDir, "index.ts"),
+  await writeCodegenOwnedFile(
+    projectDir,
+    "index.ts",
     await formatSafe(indexTsTemplate),
+    "index.ts",
   );
-  await writeFileEnsuringDir(
-    join(projectDir, "reactor/index.ts"),
+  await writeCodegenOwnedFile(
+    projectDir,
+    "reactor/index.ts",
     await formatSafe(reactorTsTemplate),
+    "reactor.ts",
   );
   // An existing style.css keeps the project's rules; only Connect's imports
   // change, and Connect's theme moves to the host's stylesheet.
@@ -600,28 +670,39 @@ export async function applyProjectCustomizations(args: {
 }
 
 export async function writeCIFiles(projectDir = process.cwd()) {
-  await writeFileEnsuringDir(
-    join(projectDir, ".github/workflows/sync-and-publish.yml"),
+  // The project's once written: a pipeline or image it adapted stays.
+  await seedProjectFile(
+    projectDir,
+    ".github/workflows/sync-and-publish.yml",
     await formatFileText(
       "sync-and-publish.yml",
       syncAndPublishWorkflowTemplate,
     ),
+    "github/sync-and-publish.yml.ts",
   );
-  await writeFileEnsuringDir(
-    join(projectDir, "Dockerfile"),
+  await seedProjectFile(
+    projectDir,
+    "Dockerfile",
     dockerfileTemplate,
+    "docker/Dockerfile.ts",
   );
-  await writeFileEnsuringDir(
-    join(projectDir, "docker/nginx.conf"),
+  await seedProjectFile(
+    projectDir,
+    "docker/nginx.conf",
     nginxConfTemplate,
+    "docker/nginx.conf.ts",
   );
-  await writeFileEnsuringDir(
-    join(projectDir, "docker/connect-entrypoint.sh"),
+  await seedProjectFile(
+    projectDir,
+    "docker/connect-entrypoint.sh",
     connectEntrypointTemplate,
+    "docker/connect-entrypoint.sh.ts",
   );
-  await writeFileEnsuringDir(
-    join(projectDir, "docker/switchboard-entrypoint.sh"),
+  await seedProjectFile(
+    projectDir,
+    "docker/switchboard-entrypoint.sh",
     switchboardEntrypointTemplate,
+    "docker/switchboard-entrypoint.sh.ts",
   );
 }
 

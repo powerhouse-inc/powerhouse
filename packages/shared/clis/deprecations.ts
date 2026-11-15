@@ -141,7 +141,8 @@ export const supersededConfigKeys: Readonly<Record<string, string>> = {
   "studio.host": "runner.host in hosts/connect/host.js",
   "studio.https": "runner.https in hosts/connect/host.js",
   "studio.openBrowser": "runner.openBrowser in hosts/connect/host.js",
-  "reactor.https": "runner.https in hosts/switchboard/host.js",
+  "reactor.https":
+    "config.switchboard.server.https in hosts/switchboard/host.js",
   "reactor.storage":
     "reactor.backends.<name>.storage in hosts/switchboard/host.js",
   "switchboard.database.url":

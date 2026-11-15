@@ -3,6 +3,7 @@ import {
   projectFiles,
 } from "@powerhousedao/shared/clis";
 import { writeGeneratedHostsFiles } from "file-builders";
+import type { HostsTemplateOptions } from "templates";
 import { basename, join, resolve } from "node:path";
 import { isPlainObject } from "remeda";
 
@@ -65,8 +66,8 @@ function hostNames(projectDir: string): string[] {
     .filter((name) => projectFiles.exists(join(hostsDir, name, "host.js")));
 }
 
-// Whether addHostsFolder adds the hosts: see there.
-function getsHostsFolder(projectDir: string): boolean {
+/** Whether addHostsFolder adds the hosts: see there. */
+export function getsHostsFolder(projectDir: string): boolean {
   return (
     hostNames(projectDir).length === 0 &&
     projectFiles.exists(join(projectDir, POWERHOUSE_CONFIG_FILE))
@@ -88,17 +89,22 @@ export function hasHostAfterMigration(
  * that has a host (a hosts/<name>/host.js) gets none added, and neither does
  * one without a powerhouse.config.json, which every host file imports; true
  * when the hosts were added. A hosts/ folder alone does not count: the theme
- * migration writes hosts/connect/style.css into every project.
+ * migration writes hosts/connect/style.css into every project. `moved` holds
+ * the settings this run took out of powerhouse.config.json for the hosts.
  */
 export async function addHostsFolder(
   projectDir: string,
   packageName: string | undefined,
+  moved: HostsTemplateOptions = {},
 ): Promise<boolean> {
   if (!getsHostsFolder(projectDir)) return false;
   await writeGeneratedHostsFiles(
     projectDir,
     hostsProjectName(projectDir, packageName),
-    { switchboardPlugins: classicSwitchboardPlugins(readConfig(projectDir)) },
+    {
+      ...moved,
+      switchboardPlugins: classicSwitchboardPlugins(readConfig(projectDir)),
+    },
   );
   return true;
 }

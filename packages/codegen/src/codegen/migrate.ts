@@ -53,9 +53,14 @@ import {
   HOSTS_TSC_SCRIPT,
   withHostsTscScript,
 } from "../file-builders/hosts/host-typing-files.js";
-import { addHostsFolder, hasHostAfterMigration } from "./migrate-hosts.js";
+import {
+  addHostsFolder,
+  getsHostsFolder,
+  hasHostAfterMigration,
+} from "./migrate-hosts.js";
 import { assertVersionedDocumentModels } from "./migrate-layout-floor.js";
 import { migratePowerhouseConfig } from "./migrate-powerhouse-config.js";
+import { migrateSupersededConfig } from "./migrate-superseded-config.js";
 import { migrateTsconfigFiles } from "./migrate-tsconfig.js";
 import { sortByKey } from "./utils.js";
 
@@ -570,7 +575,7 @@ export async function migrate(
 
     console.log("Removing legacy lint/format config files...");
     removeLegacyLintFormatFiles(projectDir);
-    console.log("Overwriting project root files...");
+    console.log("Updating project root files...");
     const agentFiles = await writeAllGeneratedProjectFiles(projectDir);
     console.log("Removing compiler options TypeScript 7 dropped...");
     for (const file of migrateTsconfigFiles(projectDir)) {
@@ -581,9 +586,19 @@ export async function migrate(
         "Removed the scaffolded connect.instance defaults from powerhouse.config.json, so Vetra Studio picks its reactor client",
       );
     }
+    // The keys the host files supersede leave powerhouse.config.json: into
+    // the host files when this run adds them, else they are reported.
+    const superseded = migrateSupersededConfig(
+      projectDir,
+      getsHostsFolder(projectDir),
+    );
+    if (superseded.lines.length > 0) {
+      console.log("Settings of powerhouse.config.json the host files take:");
+      for (const line of superseded.lines) console.log(`  ${line}`);
+    }
     // After package.json and powerhouse.config.json: the host files project
     // both, and hosts/types.d.ts follows the dependencies just written.
-    if (await addHostsFolder(projectDir, packageJson.name)) {
+    if (await addHostsFolder(projectDir, packageJson.name, superseded.moved)) {
       console.log(
         "Added hosts/ with the plugins this project runs today (review hosts/switchboard/host.js)",
       );

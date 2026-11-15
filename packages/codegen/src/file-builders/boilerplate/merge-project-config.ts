@@ -16,19 +16,11 @@ export function readIfExists(filePath: string): string | undefined {
 const normalizeEntry = (entry: string) =>
   entry.replace(/^\.\//, "").replace(/\/$/, "");
 
-function jsonValueAt(text: string, keyPath: readonly string[]): unknown {
-  const parsed = ts.parseConfigFileTextToJson("config.json", text);
-  if (parsed.error) {
-    throw new Error(
-      ts.flattenDiagnosticMessageText(parsed.error.messageText, "\n"),
-    );
-  }
-  let value: unknown = parsed.config;
-  for (const key of keyPath) {
-    if (typeof value !== "object" || value === null) return undefined;
-    value = (value as Record<string, unknown>)[key];
-  }
-  return value;
+function jsonRoot(
+  file: ts.JsonSourceFile,
+): ts.ObjectLiteralExpression | undefined {
+  const root = file.statements[0]?.expression;
+  return root && ts.isObjectLiteralExpression(root) ? root : undefined;
 }
 
 function jsonArrayNodeAt(
@@ -47,61 +39,166 @@ function jsonArrayNodeAt(
   return node && ts.isArrayLiteralExpression(node) ? node : undefined;
 }
 
-/** The template JSON(C) with the entries the project added to each listed
- * array appended; the template's comments survive. */
-export function withProjectArrayEntries(
+/** An array of a JSON config file whose entries the template adds to. */
+export type MergedJsonArray = {
+  keyPath: readonly string[];
+  // Entries earlier templates shipped and the current one removed.
+  dropped?: readonly string[];
+};
+
+type Insertion = { pos: number; text: string };
+
+/* After the last entry of an object or array, minding a trailing comma */
+function appended(list: ts.NodeArray<ts.Node>, text: string): Insertion {
+  const last = list.at(-1);
+  if (!last) return { pos: list.pos, text };
+  return list.hasTrailingComma
+    ? { pos: list.end, text: `${text},` }
+    : { pos: last.end, text: `,${text}` };
+}
+
+/* The project's text without the dropped entries of the listed arrays */
+function withoutDroppedEntries(
+  fileName: string,
+  existing: string,
+  arrays: readonly MergedJsonArray[],
+): string {
+  let text = existing;
+  for (const { keyPath, dropped = [] } of arrays) {
+    const names = dropped.map(normalizeEntry);
+    if (names.length === 0) continue;
+    // One entry a pass: a removal moves every position after it.
+    for (;;) {
+      const file = ts.parseJsonText(fileName, text);
+      const elements = jsonArrayNodeAt(file, keyPath)?.elements;
+      const index =
+        elements?.findIndex(
+          (e) =>
+            ts.isStringLiteral(e) && names.includes(normalizeEntry(e.text)),
+        ) ?? -1;
+      if (!elements || index === -1) break;
+      const entry = elements[index];
+      const next = elements.at(index + 1);
+      const previous = index > 0 ? elements[index - 1] : undefined;
+      // With its comma: the one after it, or the one before a last entry.
+      let pos = entry.getStart(file);
+      let end = entry.end;
+      if (next) end = next.getStart(file);
+      else if (previous) pos = previous.end;
+      else end = elements.end;
+      console.log(
+        `  ${fileName}: removed ${entry.getText(file)} from ${keyPath.join(".")}; the template dropped it`,
+      );
+      text = text.slice(0, pos) + text.slice(end);
+    }
+  }
+  return text;
+}
+
+function collectMissingEntries(
+  project: ts.ObjectLiteralExpression,
+  wanted: ts.ObjectLiteralExpression,
+  template: string,
+  arrays: readonly MergedJsonArray[],
+  keyPath: readonly string[],
+  insertions: Insertion[],
+) {
+  const missing: string[] = [];
+  for (const property of wanted.properties) {
+    if (!ts.isPropertyAssignment(property)) continue;
+    if (!ts.isStringLiteral(property.name)) continue;
+    const name = property.name.text;
+    const path = [...keyPath, name];
+    const own = project.properties
+      .filter(ts.isPropertyAssignment)
+      .find((p) => ts.isStringLiteral(p.name) && p.name.text === name);
+    if (!own) {
+      // From the end of the entry before it: its comment comes along.
+      missing.push(template.slice(property.pos, property.end));
+      continue;
+    }
+    const value = own.initializer;
+    const templateValue = property.initializer;
+    if (
+      ts.isObjectLiteralExpression(value) &&
+      ts.isObjectLiteralExpression(templateValue)
+    ) {
+      collectMissingEntries(
+        value,
+        templateValue,
+        template,
+        arrays,
+        path,
+        insertions,
+      );
+      continue;
+    }
+    const array = arrays.find((a) => a.keyPath.join("\n") === path.join("\n"));
+    if (
+      !array ||
+      !ts.isArrayLiteralExpression(value) ||
+      !ts.isArrayLiteralExpression(templateValue)
+    ) {
+      // The project's value stays.
+      continue;
+    }
+    const known = [
+      ...value.elements
+        .filter(ts.isStringLiteral)
+        .map((e) => normalizeEntry(e.text)),
+      ...(array.dropped ?? []).map(normalizeEntry),
+    ];
+    const entries = templateValue.elements
+      .filter(ts.isStringLiteral)
+      .map((e) => e.text)
+      .filter((entry) => !known.includes(normalizeEntry(entry)));
+    if (entries.length === 0) continue;
+    insertions.push(
+      appended(
+        value.elements,
+        entries.map((entry) => ` ${JSON.stringify(entry)}`).join(","),
+      ),
+    );
+  }
+  if (missing.length > 0) {
+    insertions.push(appended(project.properties, missing.join(",")));
+  }
+}
+
+/** The project's JSON(C) config file with what it lacks of the template: the
+ * keys it does not set, and the template's entries of each listed array. The
+ * project's own values and comments stay. The template when the project has
+ * no file; undefined when nothing changes or the file can't be read. */
+export function withTemplateEntries(
   fileName: string,
   template: string,
   existing: string | undefined,
-  arrays: readonly {
-    keyPath: readonly string[];
-    // Entries earlier templates shipped and the current one removed.
-    dropped?: readonly string[];
-  }[],
-): string {
+  arrays: readonly MergedJsonArray[] = [],
+): string | undefined {
   if (existing === undefined) return template;
-  const edits: { pos: number; text: string }[] = [];
-  const templateFile = ts.parseJsonText(fileName, template);
-  for (const { keyPath, dropped = [] } of arrays) {
-    let projectEntries: unknown;
-    try {
-      projectEntries = jsonValueAt(existing, keyPath);
-    } catch (error) {
-      console.warn(
-        `⚠ ${fileName}: could not read the project's ${keyPath.join(".")} (${String(error)}); it is reset to the template.`,
-      );
-      return template;
-    }
-    if (!Array.isArray(projectEntries)) continue;
-    const arrayNode = jsonArrayNodeAt(templateFile, keyPath);
-    if (!arrayNode) continue;
-    const known = [
-      ...arrayNode.elements
-        .filter(ts.isStringLiteral)
-        .map((e) => normalizeEntry(e.text)),
-      ...dropped.map(normalizeEntry),
-    ];
-    const extras = projectEntries.filter(
-      (entry): entry is string =>
-        typeof entry === "string" && !known.includes(normalizeEntry(entry)),
-    );
-    const unique = [...new Set(extras)];
-    if (unique.length === 0) continue;
-    const last = arrayNode.elements.at(-1);
-    const text = unique.map((e) => JSON.stringify(e)).join(", ");
-    edits.push(
-      last
-        ? { pos: last.end, text: `, ${text}` }
-        : { pos: arrayNode.elements.pos, text },
-    );
+  if (ts.parseConfigFileTextToJson(fileName, existing).error) {
+    console.warn(`⚠ ${fileName}: could not be read as JSON; left as it is.`);
+    return undefined;
   }
-  return edits
+  const text = withoutDroppedEntries(fileName, existing, arrays);
+  const project = jsonRoot(ts.parseJsonText(fileName, text));
+  const wanted = jsonRoot(ts.parseJsonText(fileName, template));
+  if (!project || !wanted) {
+    console.warn(`⚠ ${fileName}: is not a JSON object; left as it is.`);
+    return undefined;
+  }
+  const insertions: Insertion[] = [];
+  collectMissingEntries(project, wanted, template, arrays, [], insertions);
+  const merged = insertions
     .sort((a, b) => b.pos - a.pos)
     .reduce(
-      (text, edit) =>
-        text.slice(0, edit.pos) + edit.text + text.slice(edit.pos),
-      template,
+      (result, insertion) =>
+        result.slice(0, insertion.pos) +
+        insertion.text +
+        result.slice(insertion.pos),
+      text,
     );
+  return merged === existing ? undefined : merged;
 }
 
 function getTestOptions(sourceFile: SourceFile) {

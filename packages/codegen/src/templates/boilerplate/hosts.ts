@@ -38,6 +38,13 @@ export interface HostsTemplateOptions {
    * composition. Without the workflows plugin the Connect members leave
    * their workflows plugin out too (it reads that plugin's drive). */
   switchboardPlugins?: readonly string[];
+  /** Runner options of the connect host that `ph migrate` moves out of
+   * powerhouse.config.json (studio.host, studio.openBrowser). Written as
+   * values: the host file owns them from then on. */
+  connectRunner?: { host?: string; openBrowser?: boolean };
+  /** `config.switchboard.server.https` of the switchboard host, moved by
+   * `ph migrate` from reactor.https of powerhouse.config.json. */
+  switchboardHttps?: boolean | { keyPath: string; certPath: string };
 }
 
 export function buildHostsTemplates(
@@ -50,6 +57,22 @@ export function buildHostsTemplates(
     .map((module) => `      "${module}",`)
     .join("\n");
   const workflows = switchboardPlugins.includes(SWITCHBOARD_WORKFLOWS_PLUGIN);
+  const connectRunnerLines = Object.entries(options.connectRunner ?? {})
+    .filter(([, value]) => value !== undefined)
+    .map(
+      ([key, value]) =>
+        `\n    ${key}: ${JSON.stringify(value)}, // moved from powerhouse.config.json by ph migrate`,
+    )
+    .join("");
+  const switchboardConfig =
+    options.switchboardHttps === undefined
+      ? ""
+      : `
+  // Moved from reactor.https of powerhouse.config.json by \`ph migrate\`.
+  config: {
+    switchboard: { server: { https: ${JSON.stringify(options.switchboardHttps)} } },
+  },
+`;
   const connectWorkflowsPlugin = workflows
     ? `
           // Workflow Studio over the server's Workflows drive (its output).
@@ -149,7 +172,7 @@ export default {
   // emitted into the runtime config.
   runner: {
     module: "@powerhousedao/ph-cli/runners/connect",
-    port: config.studio?.port ?? 3000, // referenced — the value stays in powerhouse.config.json
+    port: config.studio?.port ?? 3000, // referenced — the value stays in powerhouse.config.json${connectRunnerLines}
 
     // THE COMPOSITION — presence is activation (no feature flags behind
     // these lines). The generic shell is Connect's chrome: sidebar, home,
@@ -241,7 +264,7 @@ ${switchboardPluginLines}
     // the drive is OWNED in exactly one place.
     drives: [{ slug: "powerhouse", name: "${projectName}" }],
   },
-};
+${switchboardConfig}};
 `;
 
   const vetraHost = `// @ts-check

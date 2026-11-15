@@ -220,33 +220,31 @@ export default defineConfig({
     await migrate(VERSION, dir, { skipInstall: true });
 
     const tsconfig = readJsonc(dir, "tsconfig.json");
+    // The project's entries stay as written; the template's follow them.
     expect(tsconfig.exclude).toEqual([
       "dist",
-      "node_modules",
+      "./node_modules",
+      "hosts/lab/routes",
       "vitest.config.ts",
       "main.tsx",
       "hosts/desktop/tauri-shell",
-      "hosts/lab/routes",
     ]);
-    // The template's settings and comments win.
-    expect(tsconfig.compilerOptions).toMatchObject({ module: "nodenext" });
+    // The project's settings and comments stay; it gains what it lacks.
+    expect(tsconfig.compilerOptions).toMatchObject({
+      strict: true,
+      module: "nodenext",
+    });
+    expect(tsconfig.include).toContain(".ph/connect-routes.gen.ts");
     expect(read(dir, "tsconfig.json")).toContain(
-      "// hosts/desktop/tauri-shell",
+      "// the lab host has its own tsconfig",
     );
 
     const oxlint = readJsonc(dir, ".oxlintrc.json");
     const ignored = oxlint.ignorePatterns as string[];
-    expect(ignored.slice(0, 6)).toEqual([
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/.ph/**",
-      "**/storybook-static/**",
-      "**/.vite/**",
-      "**/gen/**",
-    ]);
-    // What codegen writes over is left to it, and the project's entries stay.
+    expect(ignored.slice(0, 2)).toEqual(["**/dist/**", "hosts/lab/routes/**"]);
+    expect(ignored).toContain("**/node_modules/**");
+    // What codegen writes over is left to it.
     expect(ignored).toContain("editors/editors.ts");
-    expect(ignored.at(-1)).toBe("hosts/lab/routes/**");
     expect(ignored.filter((p) => p === "**/dist/**")).toHaveLength(1);
     expect(oxlint.rules).toHaveProperty("typescript/await-thenable");
 
