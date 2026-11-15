@@ -4,11 +4,12 @@ One package type; every Powerhouse application — Connect, Switchboard, Vetra,
 desktop shells, agent APIs, agent CLIs — defined as a **host** in the project's
 `hosts/` folder and started by a **runner** via `ph run <host> [verb]`.
 
-Status: all phases built on `main` but dark behind `FEATURE_UNIFORM_RUNNERS_ENABLED`
-(ph-cli-side env toggle, hand-rolled predicate — no OpenFeature in the CLI); remaining: turn it
-on, remove the flag and its gating, and delete the legacy boot paths. The `// LEGACY(uniform-runners)`
-markers were never added, so that cleanup needs a fresh inventory.
-Entry point: `ph init --uniform-runners` (or the env flag) scaffolds `hosts/`.
+Status: all phases built on `main` and always on since 6.3. The `FEATURE_UNIFORM_RUNNERS_ENABLED`
+flag and its gating are removed; set to a false value it only prints a warning (the retired-flag
+table in `packages/shared/clis/retired-flags.ts`), and 6.4 refuses to start. Remaining: delete
+the legacy boot paths. The `// LEGACY(uniform-runners)` markers were never added, so that cleanup
+needs a fresh inventory.
+Entry point: `ph init` scaffolds `hosts/` (`--uniform-runners` is accepted with a warning).
 
 ## The model
 

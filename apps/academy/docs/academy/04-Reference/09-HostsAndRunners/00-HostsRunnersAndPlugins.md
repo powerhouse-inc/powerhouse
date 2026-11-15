@@ -1,10 +1,11 @@
 # Hosts, Runners & Plugins
 
 :::info
-This reference covers the **uniform runners** system, currently behind the
-`FEATURE_UNIFORM_RUNNERS_ENABLED=1` flag. With the flag set, `ph run <host>`
-starts any host your project declares. Classic commands (`ph switchboard`,
-`ph connect`, `ph vetra`) are unaffected.
+This reference covers the **uniform runners** system. `ph run <host>` starts
+any host your project declares, and `ph init` writes the `hosts/` folder. The
+classic commands (`ph switchboard`, `ph connect`, `ph vetra`) keep working.
+Since 6.3 the `FEATURE_UNIFORM_RUNNERS_ENABLED` variable has no effect: remove
+it. Set to `false` it prints a warning, and 6.4 refuses to start.
 :::
 
 A Powerhouse project describes every way it can run in its `hosts/` folder.

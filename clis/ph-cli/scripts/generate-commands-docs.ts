@@ -7,6 +7,7 @@ import { generateAppCmd } from "../src/commands/generate-app.js";
 import { generateConnectRoutesCmd } from "../src/commands/generate-connect-routes.js";
 import { generateDocumentModelCmd } from "../src/commands/generate-document-model.js";
 import { generateEditorCmd } from "../src/commands/generate-editor.js";
+import { generateHostsCmd } from "../src/commands/generate-hosts.js";
 import { generateMigrationFileCmd } from "../src/commands/generate-migration-file.js";
 import { generatePieceActionCmd } from "../src/commands/generate-piece-action.js";
 import { generatePieceTriggerCmd } from "../src/commands/generate-piece-trigger.js";
@@ -14,6 +15,10 @@ import { generatePieceCmd } from "../src/commands/generate-piece.js";
 import { generateProcessorCmd } from "../src/commands/generate-processor.js";
 import { generateSubgraphCmd } from "../src/commands/generate-subgraph.js";
 import { generate } from "../src/commands/generate.js";
+import {
+  check as hostCheck,
+  exportCmd as hostExport,
+} from "../src/commands/host.js";
 import { inspect } from "../src/commands/inspect.js";
 import { install } from "../src/commands/install.js";
 import { keyframes } from "../src/commands/keyframes.js";
@@ -23,11 +28,15 @@ import { mcp } from "../src/commands/mcp.js";
 import { migrate } from "../src/commands/migrate.js";
 import { modelCheck, modelInspect } from "../src/commands/model.js";
 import { phCli } from "../src/commands/ph-cli.js";
+import { runHost } from "../src/commands/run.js";
 import { switchboard } from "../src/commands/switchboard.js";
 import { uninstall } from "../src/commands/uninstall.js";
 import { vetra } from "../src/commands/vetra.js";
 
 const commands = [
+  { name: "run", command: runHost },
+  { name: "host check", command: hostCheck },
+  { name: "host export", command: hostExport },
   { name: "generate", command: generate },
   { name: "all", command: generateAllCmd },
   { name: "document-model", command: generateDocumentModelCmd },
@@ -40,6 +49,7 @@ const commands = [
   { name: "piece-trigger", command: generatePieceTriggerCmd },
   { name: "migration-file", command: generateMigrationFileCmd },
   { name: "connect-routes", command: generateConnectRoutesCmd },
+  { name: "hosts", command: generateHostsCmd },
   { name: "vetra", command: vetra },
   { name: "build", command: buildCmd },
   { name: "connect", command: connect },

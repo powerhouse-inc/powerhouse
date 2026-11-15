@@ -63,7 +63,7 @@ function Inventory() {
 - **One Tailwind build.** `style.css` imports `@powerhousedao/connect/tailwind.css`, never `@powerhousedao/connect/style.css` or a package's compiled CSS.
 - **The loading screen renders in Node.** `ph connect build` renders the layout and `_app`'s `pendingComponent` at build time, with no drives. Code on that path must not touch `window` while rendering, and must handle `useDrives()` being `undefined`.
 - **Package routes can't import `@powerhousedao/connect`.** Routes a package offers to other Connects import from `@powerhousedao/connect-core`, `@tanstack/react-router`, `@powerhousedao/reactor-browser`, the design system and the package's own code. Overrides of Connect's routes and of the generic settings tabs stay the project's, so they may. `@powerhousedao/connect-core` is a project dependency (`ph migrate` adds it to older projects), and `npm run tsc` and `npm run lint` fail on an offered route that imports `@powerhousedao/connect`.
-- **`ph run` needs a flag.** `FEATURE_UNIFORM_RUNNERS_ENABLED=1 ph run <host> dev|build|serve`; see hosts-and-plugins.md for its output folder and ports.
+- **`ph run` runs a host.** `ph run <host> dev|build|serve`; see hosts-and-plugins.md for its output folder and ports.
 - **Don't edit generated files.** `.ph/connect-routes.gen.ts` is regenerated from the routes folder.
 
 ## Check your work

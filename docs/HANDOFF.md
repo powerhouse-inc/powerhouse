@@ -20,7 +20,7 @@ Each plan's Status line says what is done and what remains.
 | `docs/plans/2026-10-01-subgraph-attachments.md` | Route workflow attachment reads through `AuthorizedAttachmentService` (stage 2 as written is obsolete), refuse an expired upload-first send |
 | `docs/plans/2026-10-02-reactor-tests-on-windows.md` | Track D: reactor gate in `check-windows.yml` |
 | `docs/plans/2026-10-02-testing-policy.md`, `-rollout.md` | Proof fixes and backfills landed; phase 0 (adopt the policy, CLAUDE.md pointers, review checklist) never done |
-| `docs/plans/2026-10-13-uniform-runners.md` | Built behind `FEATURE_UNIFORM_RUNNERS_ENABLED`; flip on, remove flag, delete legacy boot paths |
+| `docs/plans/2026-10-13-uniform-runners.md` | Always on since 6.3 (flag removed; `FEATURE_UNIFORM_RUNNERS_ENABLED=false` warns); refuse the retired flag in 6.4, delete legacy boot paths |
 
 ## Open work without a plan
 
