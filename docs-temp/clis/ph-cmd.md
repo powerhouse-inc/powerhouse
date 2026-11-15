@@ -50,9 +50,6 @@ no project is found — customisable via `ph setup-globals`.
 `src/ph-cli.ts` and `src/run.ts` are the resolution and forwarding machinery;
 `src/utils/` holds version checking, caching and notification.
 
-A `legacy/` directory (`commands/`, `utils/`) holds the pre-rewrite implementations,
-matching `COMMANDS-LEGACY.md`.
-
 ### Multi-package-manager support
 
 Advertised and tested: npm, yarn and pnpm. The environment switching
@@ -64,7 +61,7 @@ for production).
 ### Generated documentation
 
 `postbuild` runs `bun generate-docs` → `scripts/generate-commands-docs.ts` →
-`COMMANDS.md` / `COMMANDS-LEGACY.md`. **Bun is required to build.** Those files feed
+`COMMANDS.md`. **Bun is required to build.** That file feeds
 `apps/academy`'s combined CLI docs.
 
 ---

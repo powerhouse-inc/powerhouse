@@ -411,7 +411,6 @@ export class ReactorBuilder {
   private documentModelSources: DocumentModelSource[] = [];
   private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
   private features: ReactorFeatures = {
-    legacyStorageEnabled: false,
     legacyProcessorIds: true,
   };
   private readModels: IReadModel[] = [];

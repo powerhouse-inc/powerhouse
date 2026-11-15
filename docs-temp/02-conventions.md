@@ -259,7 +259,7 @@ The repo is developed on Windows as well as Linux, and this shows up in conventi
 | `apps/connect/RUNTIME-CONFIG.md` | The Connect config precedence ladder — read before changing a config field |
 | `apps/switchboard/Auth.md` | The authentication tutorial |
 | `apps/switchboard-lb/ARCHITECTURE.md` | The LB design spec, including rejected alternatives |
-| `WARP.md`, `CONTRIBUTING.md`, `RELEASE.md` | Working practices |
+| `CONTRIBUTING.md`, `RELEASE.md` | Working practices |
 
 Several packages carry a `CLAUDE.md` with package-specific rules: `shared`,
 `builder-tools`, `reactor`, `reactor/test`, `apps/connect`, `test/vetra-e2e`.
@@ -273,7 +273,7 @@ Several packages carry a `CLAUDE.md` with package-specific rules: `shared`,
 | `packages/shared/clis/source-config.schema.json` | `pnpm tsx scripts/emit-schemas.ts` |
 | `packages/builder-tools/connect-utils/runtime-config.schema.json` | the same |
 | `clis/ph-cli/COMMANDS.md`, `COMMANDS-LEGACY.md` | `postbuild` → `bun generate-docs` |
-| `clis/ph-cmd/COMMANDS.md`, `COMMANDS-LEGACY.md` | the same |
+| `clis/ph-cmd/COMMANDS.md` | the same |
 | `apps/academy/static/llms.txt`, `llms-full.txt` (gitignored) | `generate:llm-docs`, run by the academy `build` |
 | `packages/reactor-api/src/graphql/reactor/gen/*` | `pnpm codegen` (graphql-codegen) |
 | `packages/reactor-browser/src/graphql/gen/*` | the same |

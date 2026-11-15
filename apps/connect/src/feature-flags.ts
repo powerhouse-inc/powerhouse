@@ -16,7 +16,7 @@ import { logger, setLogLevel, type ILogger } from "document-model";
  *   await OpenFeature.setProviderAndWait(provider);
  *
  * Query parameter format:
- *   ?FEATURE_DUAL_ACTION_CREATE_ENABLED=true&FEATURE_FOO=false
+ *   ?FEATURE_FOO=true&FEATURE_BAR=false
  */
 export class QueryParamProvider implements Provider {
   public readonly runsOn = "client" as const;

@@ -896,14 +896,10 @@ export function createEmptyConsistencyToken() {
 }
 
 /**
- * Creates mock ReactorFeatures with legacy storage enabled by default.
+ * Creates mock ReactorFeatures with no feature set.
  */
-export function createMockReactorFeatures(
-  legacyStorageEnabled = true,
-): ReactorFeatures {
-  return {
-    legacyStorageEnabled,
-  };
+export function createMockReactorFeatures(): ReactorFeatures {
+  return {};
 }
 
 /**

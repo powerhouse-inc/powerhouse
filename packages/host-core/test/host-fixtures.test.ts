@@ -49,10 +49,6 @@ import {
  * powerhouse.config.json: refresh them when the template changes.
  */
 
-// `$map` landed with T4-A, so the `$map` rows run. The guard test below
-// fails if the resolver ever stops accepting `$map`.
-const MAP_PENDING = false;
-
 const CONNECT_RUNNER = "@powerhousedao/ph-cli/runners/connect";
 
 afterAll(cleanupProjects);
@@ -455,7 +451,7 @@ interface Row {
   /** The 2.2 cells this row covers. */
   cells: string;
   expected: Expected;
-  /** Uses `$map`: runs once T4-A lands (MAP_PENDING). */
+  /** Uses `$map`. */
   map?: true;
 }
 
@@ -869,7 +865,7 @@ const ROWS: Row[] = [
 ];
 
 describe("host fixtures: the full pipeline per topology cell (2.2)", () => {
-  it("MAP_PENDING matches the resolver (flip it when $map lands)", () => {
+  it("the resolver accepts $map", () => {
     const issues = checkTokenSites({
       reactor: {
         drives: {
@@ -883,7 +879,7 @@ describe("host fixtures: the full pipeline per topology cell (2.2)", () => {
     const unsupported = issues.some((i) =>
       i.message.includes("not supported yet"),
     );
-    expect(unsupported).toBe(MAP_PENDING);
+    expect(unsupported).toBe(false);
   });
 
   const runRow = async (_label: string, row: Row) => {
@@ -895,10 +891,7 @@ describe("host fixtures: the full pipeline per topology cell (2.2)", () => {
   const labelled = (rows: Row[]) =>
     rows.map((row) => [`${row.project}/${row.host}`, row] as const);
   it.each(labelled(ROWS.filter((row) => !row.map)))("%s", runRow);
-  it.skipIf(MAP_PENDING).each(labelled(ROWS.filter((row) => row.map)))(
-    "%s ($map)",
-    runRow,
-  );
+  it.each(labelled(ROWS.filter((row) => row.map)))("%s ($map)", runRow);
 
   it("covers every fixture host of the scaffold and the matrix", () => {
     for (const projectName of ["scaffold", "matrix"] as const) {
@@ -939,20 +932,17 @@ describe("host fixtures: the full pipeline per topology cell (2.2)", () => {
     expect(studio.resolved["sb-b"].runner.port).toBe(4002);
   });
 
-  it.skipIf(MAP_PENDING)(
-    "3.4 cli: the protocol is restored next to the remote backend",
-    async () => {
-      const cli = await pipeline("matrix", "cli-map");
-      expect(cli.resolved["cli-connect"].reactor).toMatchObject({
-        protocol: { createSignaturePolicy: "v2-required" },
-      });
-      // the scaffold cli does the same (from powerhouse.config.json)
-      const scaffoldCli = await pipeline("scaffold", "cli");
-      expect(scaffoldCli.resolved["cli-connect"].reactor).toMatchObject({
-        protocol: { createSignaturePolicy: "v2-required" },
-      });
-    },
-  );
+  it("3.4 cli: the protocol is restored next to the remote backend", async () => {
+    const cli = await pipeline("matrix", "cli-map");
+    expect(cli.resolved["cli-connect"].reactor).toMatchObject({
+      protocol: { createSignaturePolicy: "v2-required" },
+    });
+    // the scaffold cli does the same (from powerhouse.config.json)
+    const scaffoldCli = await pipeline("scaffold", "cli");
+    expect(scaffoldCli.resolved["cli-connect"].reactor).toMatchObject({
+      protocol: { createSignaturePolicy: "v2-required" },
+    });
+  });
 });
 
 describe("expectHost drive plan", () => {

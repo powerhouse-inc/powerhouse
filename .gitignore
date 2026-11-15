@@ -57,3 +57,6 @@ pnpm-publish-summary.json
 .mcp.json
 
 .ui-shots/
+
+# Output of scripts/dark-mode/get-all-classes.ts
+/all-classes.json

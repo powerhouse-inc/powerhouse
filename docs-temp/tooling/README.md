@@ -93,9 +93,9 @@ light→dark class mapping; `add-classes.ts`, `remove-classes.ts`,
 `replace-classes.ts` and `make-class-names.ts` apply it; `ts-morph.ts` is the AST
 wrapper.
 
-No workspace dependencies, no tests. The repo-root `all-classes.json` and
-`packages/design-system/color-map.txt` are its data. Historical, but worth knowing
-about if a similar sweep is ever needed.
+No workspace dependencies, no tests. The repo-root `all-classes.json` (its
+output, gitignored) and `packages/design-system/color-map.txt` are its data.
+Historical, but worth knowing about if a similar sweep is ever needed.
 
 ---
 

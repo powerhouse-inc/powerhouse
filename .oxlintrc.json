@@ -481,9 +481,6 @@
         "packages/powerhouse-vetra-packages/**/*.{js,jsx,cjs,mjs,ts,tsx,mts,cts}",
         "packages/vetra/**/*.{js,jsx,cjs,mjs,ts,tsx,mts,cts}"
       ],
-      "excludeFiles": [
-        "packages/design-system/src/powerhouse/components/legacy/**"
-      ],
       "jsPlugins": [
         {
           "name": "better-tailwindcss",
@@ -1598,7 +1595,6 @@
     "apps/switchboard-lb/test/integration/*.js",
     "packages/reactor/bench/test/integration/*.js",
     "clis/ph-cli/src/commands/migrations/templates",
-    "clis/ph-cmd/legacy/**",
     "packages/builder-tools/connect-utils/service-worker/**",
     "**/playwright-report/",
     "test/package-e2e/.registry-storage/",

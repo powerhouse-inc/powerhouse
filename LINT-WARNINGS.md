@@ -380,7 +380,6 @@ packages/document-model/test/document/crypto.test.ts:195:7
 - `packages/reactor-api/test/gateway/adapter-gateway-apollo.test.ts` (2)
 - `packages/reactor-api/test/push-backfill.test.ts` (2)
 - `packages/reactor-api/test/reactor-adapters.test.ts` (1)
-- `packages/reactor-api/test/router.test.ts` (1)
 - `packages/reactor-browser/src/actions/document.ts` (2)
 - `packages/reactor-browser/src/analytics/context.tsx` (2)
 - `packages/reactor-browser/src/analytics/hooks/analytics-query.ts` (1)
@@ -433,7 +432,6 @@ packages/document-model/test/document/local.test.ts:63:59
 - `apps/switchboard/test/attachments/auth.test.ts` (8)
 - `apps/switchboard/test/attachments/index.test.ts` (2)
 - `apps/switchboard/test/attachments/service-config.test.ts` (2)
-- `clis/ph-cmd/scripts/generate-docs-legacy.ts` (1)
 - `packages/analytics-engine/browser/src/BrowserAnalyticsStore.ts` (1)
 - `packages/analytics-engine/browser/test/BrowserAnalyticsStore.test.ts` (1)
 - `packages/analytics-engine/browser/test/Integration.test.ts` (1)
@@ -550,7 +548,6 @@ packages/analytics-engine/benchmarks/src/series.ts:68:1
 
 <details><summary>All affected files</summary>
 
-- `clis/ph-cmd/scripts/generate-docs-legacy.ts` (1)
 - `packages/analytics-engine/benchmarks/src/series.ts` (1)
 - `packages/analytics-engine/browser/src/BrowserAnalyticsStore.ts` (1)
 - `packages/analytics-engine/browser/test/BrowserAnalyticsStore.test.ts` (1)
@@ -706,8 +703,6 @@ packages/design-system/src/connect/components/db-explorer/db-explorer.tsx:98:9
 - `packages/design-system/src/connect/components/drop-zone/drop-zone.tsx` (1)
 - `packages/design-system/src/connect/components/form/add-remote-drive-form.tsx` (2)
 - `packages/design-system/src/connect/components/modal/read-required-modal.tsx` (1)
-- `packages/design-system/src/powerhouse/components/legacy/textInput.tsx` (1)
-- `packages/design-system/src/powerhouse/components/legacy/textInputVariant.tsx` (1)
 - `packages/design-system/src/powerhouse/components/package-animation/package-animation.tsx` (1)
 - `packages/design-system/src/ui/components/value-transformer/value-transformer.tsx` (1)
 - `packages/design-system/src/ui/components/with-field-validation/with-field-validation.tsx` (2)

@@ -69,12 +69,6 @@ export const generateArgs = {
     long: "document-type",
     description: "Document type for the generated document editor.",
   }),
-  documentTypes: option({
-    type: optional(string),
-    long: "document-types",
-    description:
-      "[DEPRECATED] Comma separated list of document types for the generated document editor. [WARNING] Generated editor code is not set up to handle multiple document types.",
-  }),
   appName: option({
     type: optional(string),
     long: "app",
