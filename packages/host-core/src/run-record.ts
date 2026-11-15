@@ -139,7 +139,7 @@ export function processStartedAtMs(pid: number): number | undefined {
       const ticks = Number(
         stat.slice(stat.lastIndexOf(")") + 2).split(" ")[19],
       );
-      const boot = /^btime (d+)$/m.exec(fs.readFileSync("/proc/stat", "utf8"));
+      const boot = /^btime (\d+)$/m.exec(fs.readFileSync("/proc/stat", "utf8"));
       if (!boot || !Number.isFinite(ticks)) return undefined;
       return (Number(boot[1]) + ticks / 100) * 1000;
     }
