@@ -19,7 +19,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { extractDocumentModelDocuments } from "../../../codegen/schema-first/extract-document-models.js";
@@ -101,7 +101,10 @@ function files(root: string): Record<string, string> {
       )
       .map((entry): [string, string] => {
         const path = join(entry.parentPath, entry.name);
-        return [relative(root, path), readFileSync(path, "utf8")];
+        return [
+          relative(root, path).split(sep).join("/"),
+          readFileSync(path, "utf8"),
+        ];
       })
       .sort(([a], [b]) => a.localeCompare(b)),
   );

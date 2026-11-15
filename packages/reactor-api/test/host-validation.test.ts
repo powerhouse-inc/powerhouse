@@ -339,7 +339,8 @@ describe("validateDocumentModelsForHost", () => {
       documentModelSchemaSource(model);
       expect(
         warn.mock.calls.map(([line]) =>
-          String(line).replace(/^\[[\d:.]+\] /, ""),
+          // The fraction separator follows the locale, so it may be a comma.
+          String(line).replace(/^\[[\d:.,]+\] /, ""),
         ),
       ).toEqual([
         `[reactor-api][document-model-schema] Serving document model test/silent from its stored model: its definition is mismatch: ${JSON.stringify(

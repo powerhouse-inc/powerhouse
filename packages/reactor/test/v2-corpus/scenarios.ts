@@ -14,6 +14,7 @@ import {
   withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
+import { fileURLToPath } from "node:url";
 import { vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
@@ -24,10 +25,9 @@ import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 
 export const CORPUS_START = "2026-01-01T00:00:00.000Z";
 
-export const CORPUS_PATH = new URL(
-  "../fixtures/v2-corpus.json",
-  import.meta.url,
-).pathname;
+export const CORPUS_PATH = fileURLToPath(
+  new URL("../fixtures/v2-corpus.json", import.meta.url),
+);
 
 export type CorpusKind = "document-model" | "drive";
 

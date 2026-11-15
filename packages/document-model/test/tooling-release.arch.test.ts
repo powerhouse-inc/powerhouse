@@ -75,12 +75,11 @@ beforeAll(() => {
     .getProject(config)!;
   const fromDefinition = (path: string) =>
     relative(DEFINITION, path).replaceAll("\\", "/");
-  // The API reports paths case-folded on case-insensitive file systems.
+  // The API reports paths with forward slashes, case-folded on
+  // case-insensitive file systems.
+  const apiPath = (path: string) => path.toLowerCase().replaceAll("\\", "/");
   const definitionFiles = new Map(
-    sourcesIn(DEFINITION).map((path) => [
-      path.toLowerCase(),
-      fromDefinition(path),
-    ]),
+    sourcesIn(DEFINITION).map((path) => [apiPath(path), fromDefinition(path)]),
   );
   edges = sourcesIn(join(DEFINITION, "tooling")).flatMap((path) => {
     const file = project.program.getSourceFile(path)!;
@@ -91,7 +90,7 @@ beforeAll(() => {
       const local =
         resolved === undefined
           ? undefined
-          : definitionFiles.get(resolved.toLowerCase());
+          : definitionFiles.get(apiPath(resolved));
       return {
         from: fromDefinition(path),
         to: local ?? specifier.text,

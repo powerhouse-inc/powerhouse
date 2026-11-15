@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { dirname, join, sep } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -76,13 +76,21 @@ beforeAll(() => {
     });
     const [tarball] = readdirSync(tarballs);
     mkdirSync(nodeModule(name), { recursive: true });
-    execFileSync("tar", [
-      "-xzf",
-      join(tarballs, tarball),
-      "--strip-components=1",
-      "-C",
-      nodeModule(name),
-    ]);
+    // Relative POSIX paths: GNU tar reads a drive letter's colon as a remote
+    // host and a backslash as part of the name.
+    const tarPath = (path: string) =>
+      relative(scratch!, path).split(sep).join("/");
+    execFileSync(
+      "tar",
+      [
+        "-xzf",
+        tarPath(join(tarballs, tarball)),
+        "--strip-components=1",
+        "-C",
+        tarPath(nodeModule(name)),
+      ],
+      { cwd: scratch },
+    );
   }
   for (const { name, root } of WORKSPACE) {
     const manifest = JSON.parse(
