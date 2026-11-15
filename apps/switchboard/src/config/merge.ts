@@ -68,6 +68,8 @@ export function callerOverEnv(env: Layer, caller: Layer): Layer {
   if (env.features?.documentModelSubgraphs !== undefined) {
     features.documentModelSubgraphs = env.features.documentModelSubgraphs;
   }
+  // An environment false switches a capability off whatever the caller or the
+  // plugin composition says; a caller's own false still wins over an env true.
   if (env.features?.mcp === false || caller.features?.mcp === false) {
     features.mcp = false;
   }
@@ -77,10 +79,14 @@ export function callerOverEnv(env: Layer, caller: Layer): Layer {
   ) {
     inspection.enabled = false;
   }
-  // Under the plugin host a plugin's presence decides these, not their env vars,
-  // except that workflows can be switched off, for when one stops the host starting.
+  if (env.features?.workflows === false) features.workflows = false;
+  if (env.features?.privacy?.enabled === false) {
+    features.privacy = { ...(features.privacy as Section), enabled: false };
+  }
+  // Under the plugin host a plugin's presence decides mcp and workflows, not
+  // their env vars, except that an env false still switches them off.
   if (features.pluginHost === true) {
-    features.mcp = caller.features?.mcp;
+    features.mcp = env.features?.mcp === false ? false : caller.features?.mcp;
     features.workflows =
       env.features?.workflows === false ? false : caller.features?.workflows;
   }
