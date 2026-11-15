@@ -1256,6 +1256,27 @@ describe("connect bridge runner — structural multi-reactor (P4.2/P4.3)", () =>
     });
   });
 
+  it("names a remote drive only when the host does", async () => {
+    const override = await served(
+      linked({
+        backends: { main: { kind: "worker" } },
+        drives: [
+          { slug: "d", remote: { url: "http://localhost:4001/d/d" } },
+          {
+            slug: "e",
+            name: "Shared",
+            remote: { url: "http://localhost:4001/d/e" },
+          },
+        ],
+      }),
+    );
+    // Connect writes a default drive's name into the drive itself.
+    expect(override.drives?.defaultDrives?.map((d) => d.name)).toEqual([
+      undefined,
+      "Shared",
+    ]);
+  });
+
   it("serves one backend per switchboard, each drive with its own", async () => {
     const override = await served(
       linked({
@@ -1379,7 +1400,12 @@ interface PHConnectRuntimeConfigLike {
     collections?: Record<string, { backend: string; sync?: boolean }>;
   };
   drives?: {
-    defaultDrives?: { url?: string; backend?: string; sync?: boolean }[];
+    defaultDrives?: {
+      url?: string;
+      name?: string | null;
+      backend?: string;
+      sync?: boolean;
+    }[];
   };
 }
 

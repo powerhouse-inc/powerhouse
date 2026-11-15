@@ -160,7 +160,9 @@ function declaredDrivesToDefaults(
     if (drive.kind === "remote") {
       return {
         url: drive.remoteUrl!,
-        name: drive.name,
+        // Only a declared name: Connect writes a default drive's name into
+        // the drive, and the slug fallback would rename the served one.
+        ...(declaration.name ? { name: declaration.name } : {}),
         icon: drive.icon ?? null,
       };
     }
