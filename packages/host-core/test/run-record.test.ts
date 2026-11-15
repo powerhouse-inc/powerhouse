@@ -1,3 +1,4 @@
+import { spawn, type ChildProcess } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -13,6 +14,7 @@ import {
   isPidAlive,
   listRunRecords,
   probeRun,
+  processStartedAtMs,
   readRunRecord,
   writeRunRecord,
   type RunRecord,
@@ -165,6 +167,56 @@ describe("probeRun", () => {
     writeRunRecord(dir, record({ pid: 2147483646 }));
     const probe = probeRun(dir, "vetra", "lab");
     expect(probe.status).toBe("stale");
+  });
+});
+
+describe("a recorded pid that another process took over", () => {
+  const children: ChildProcess[] = [];
+  afterEach(() => {
+    for (const child of children.splice(0)) child.kill();
+  });
+
+  // Another live process, started now.
+  async function otherProcess(): Promise<number> {
+    const child = spawn(
+      process.execPath,
+      ["-e", "setTimeout(() => {}, 60000)"],
+      { stdio: "ignore", windowsHide: true },
+    );
+    children.push(child);
+    await new Promise((resolve) => child.once("spawn", resolve));
+    return child.pid!;
+  }
+
+  it("tells when a process started", () => {
+    const started = processStartedAtMs(process.pid);
+    const expected = Date.now() - process.uptime() * 1000;
+    expect(Math.abs((started ?? 0) - expected)).toBeLessThan(5_000);
+    expect(processStartedAtMs(2147483646)).toBeUndefined();
+  });
+
+  it("stale when the live pid started after the record was written", async () => {
+    const dir = makeProject();
+    const pid = await otherProcess();
+    const anHourAgo = new Date(Date.now() - 3_600_000).toISOString();
+    writeRunRecord(dir, record({ pid, startedAt: anHourAgo }));
+    expect(probeRun(dir, "vetra", "lab").status).toBe("stale");
+  });
+
+  it("live when the live pid started before the record was written", async () => {
+    const dir = makeProject();
+    const pid = await otherProcess();
+    writeRunRecord(dir, record({ pid, startedAt: new Date().toISOString() }));
+    expect(probeRun(dir, "vetra", "lab").status).toBe("live");
+    // Asked once: the same record stays live.
+    expect(probeRun(dir, "vetra", "lab").status).toBe("live");
+  });
+
+  it("live when the record's start time cannot be read", async () => {
+    const dir = makeProject();
+    const pid = await otherProcess();
+    writeRunRecord(dir, record({ pid, startedAt: "x" }));
+    expect(probeRun(dir, "vetra", "lab").status).toBe("live");
   });
 });
 
