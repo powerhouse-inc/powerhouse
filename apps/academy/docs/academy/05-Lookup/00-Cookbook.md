@@ -1124,7 +1124,7 @@ Execute the `ph generate` command, providing the path to your document model fil
 
 ```bash
 # Replace todo.phdm.zip with the actual filename/path of your model
-ph generate todo.phdm.zip
+ph generate document-model --document todo.phdm.zip
 ```
 
 ### Step 3: Integrate Generated Code
@@ -1485,7 +1485,7 @@ Run the `generate` command, specifying the editor name (usually matching the doc
 ```bash
 # Replace <ModelName> with the name of your document model (e.g., To-do List)
 # Replace <docType> with the identifier for your document (e.g., powerhouse/todo-list)
-ph generate --editor <ModelName> --document-types <docType>
+ph generate editor --name <ModelName> --document-type <docType>
 ```
 
 ### Expected outcome
@@ -1556,7 +1556,7 @@ Run the `generate` command, specifying the `--drive-editor` flag and a name for 
 
 ```bash
 # Replace <drive-app-name> with a suitable name for your Drive-app (e.g., todo-drive-app)
-ph generate --drive-editor <drive-app-name>
+ph generate app --name <drive-app-name>
 ```
 
 ### Expected outcome
@@ -3975,8 +3975,8 @@ The GraphQL subgraph exposes this data via queries like `documents`, `document(i
 
 | Generated artifact | File in this recipe |
 |---|---|
-| `ph generate --processor` | `src/processor.ts` — `CatalogProcessor extends RelationalDbProcessor<CatalogDB>` |
-| `ph generate --subgraph` | `src/subgraph.ts` — GraphQL SDL + resolvers backed by the query layer |
+| `ph generate processor` | `src/processor.ts` — `CatalogProcessor extends RelationalDbProcessor<CatalogDB>` |
+| `ph generate subgraph` | `src/subgraph.ts` — GraphQL SDL + resolvers backed by the query layer |
 | Schema types | `src/schema.ts` — Kysely DB interface |
 | Migrations | `src/migrations.ts` — `up()`/`down()` functions |
 | Query layer | `src/query.ts` — type-safe Kysely queries with joins |

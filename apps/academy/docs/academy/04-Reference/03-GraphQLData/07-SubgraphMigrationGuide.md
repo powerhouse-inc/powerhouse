@@ -583,7 +583,7 @@ export const schema: DocumentNode = gql`
 Generate the scaffolding with:
 
 ```bash
-ph generate --subgraph my-custom
+ph generate subgraph --name my-custom
 ```
 
 ### Key differences
@@ -607,4 +607,4 @@ ph generate --subgraph my-custom
 - [ ] Migrate custom subgraphs to `getResolvers(subgraph: BaseSubgraph)` pattern
 - [ ] Replace `ctx.driveServer` calls with `ctx.clients.read` (queries) and `ctx.clients.write` (mutations) methods
 - [ ] Update schema files from plain strings to `gql` tagged templates
-- [ ] Regenerate custom subgraph scaffolding with `ph generate --subgraph <name>`
+- [ ] Regenerate custom subgraph scaffolding with `ph generate subgraph --name <name>`

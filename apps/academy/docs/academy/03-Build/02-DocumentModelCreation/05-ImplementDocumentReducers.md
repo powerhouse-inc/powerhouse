@@ -16,7 +16,7 @@ Before diving into the specifics of writing reducers, let's recall the preceding
 
 1.  **State Schema Definition**: You designed the GraphQL `type` definitions for your document's data structure (e.g., `TodoListState`, `TodoItem`).
 2.  **Document Operation Specification**: You defined the GraphQL `input` types that specify the parameters for each allowed modification to your document (e.g., `AddTodoItemInput`, `UpdateTodoItemInput`). These were then associated with named operations (e.g., `ADD_TODO_ITEM`) in the Connect application.
-3.  **Code Generation**: You used `ph generate <YourModelName.phd>` to create the necessary TypeScript types, action creators, and, crucially, the skeleton file for your reducers (typically `document-models/<your-model-name>/src/reducers/todos.ts`).
+3.  **Code Generation**: You used `ph generate document-model --document <YourModelName.phd>` to create the necessary TypeScript types, action creators, and, crucially, the skeleton file for your reducers (typically `document-models/<your-model-name>/src/reducers/todos.ts`).
 
 This generated reducer file is our starting point. It will contain function stubs or an object structure expecting your reducer implementations, all typed according to your schema.
 
@@ -271,7 +271,7 @@ Now that you understand the principles, let's put them into practice by implemen
 <details>
 <summary>Tutorial: Implementing the TodoList reducers</summary>
 
-This tutorial assumes you have followed the steps in the previous chapters, especially using `ph generate TodoList.phd` to scaffold your document model's code.
+This tutorial assumes you have followed the steps in the previous chapters, especially using `ph generate document-model --document TodoList.phd` to scaffold your document model's code.
 
 ### Implement the operation reducers
 

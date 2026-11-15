@@ -39,7 +39,7 @@ When using **Vetra Studio**, Drive-app generation is automatic. Simply create a 
 If you're not using Vetra Studio, use the `generate drive editor` command to create the basic template structure:
 
 ```bash
-ph generate --drive-editor <drive-app>
+ph generate app --name <drive-app>
 ```
 
 </details>
@@ -108,7 +108,7 @@ In Vetra Studio, create an Editor specification:
 <summary>Alternatively: Manual generation</summary>
 
 ```bash
-ph generate --editor TodoList --document-types powerhouse/todo-list
+ph generate editor --name TodoList --document-type powerhouse/todo-list
 ```
 
 </details>
@@ -141,7 +141,7 @@ With Vetra Studio running (`ph vetra --watch`), create a Drive-app specification
 <summary>Alternatively: Manual generation with ph generate</summary>
 
 ```bash
-ph generate --drive-editor todo-list-drive-explorer
+ph generate app --name todo-list-drive-explorer
 ```
 
 </details>

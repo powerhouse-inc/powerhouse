@@ -26,8 +26,8 @@ Please start with the [**Manual Todo tutorial**](/academy/Build/ManualTodoTutori
 
 - `pnpm install -g ph-cmd` or `npm install -g ph-cmd`: Installs the Powerhouse CLI globally.
 - `ph init`: Initializes a new Powerhouse project or sets up the local environment.
-- `ph vetra --interactive`: Launches Vetra Studio in interactive mode for package development.
-- `ph vetra --interactive --watch`: Launches Vetra Studio with dynamic reloading for document-models and editors.
+- `ph run vetra`: Launches Vetra Studio from the project's `hosts/vetra/host.js`.
+- `ph run vetra --interactive`: Launches Vetra Studio in interactive mode for package development.
 - `ph build`: Builds the project for production.
 - `pnpm run test` or `npm test`: Runs unit tests.
 - `ph publish`: Publishes your package to the Vetra registry.
@@ -65,6 +65,20 @@ ph init my-package
 
 Replace `my-package` with your desired package name. If you run `ph init` without a name you will be prompted for one.
 
+`ph init` also writes a `hosts/` folder. Each subfolder holds one host file, which describes one way to run the project:
+
+```
+hosts/
+  connect/host.js        ph run connect
+  switchboard/host.js    ph run switchboard
+  vetra/host.js          ph run vetra
+  desktop/host.js        ph run desktop
+  assistant/host.js      ph run assistant
+  cli/host.js            ph run cli
+```
+
+`ph run <host>` starts a host. See [Hosts, Runners & Plugins](/academy/Reference/HostsAndRunners/HostsRunnersAndPlugins) for what a host file contains.
+
 <details>
 <summary> How to make use of different branches? </summary>
 
@@ -90,10 +104,14 @@ Please be aware that these versions can contain bugs and experimental features t
 
 You can launch Vetra Studio in two modes:
 
+:::info
+`ph run vetra` starts the `vetra` host from `hosts/vetra/host.js`. The classic `ph vetra` command is deprecated. If your project has no `hosts/` folder, see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
+:::
+
 #### Interactive Mode (Recommended for Development)
 
 ```bash
-ph vetra --interactive
+ph run vetra --interactive
 ```
 
 In interactive mode:
@@ -102,16 +120,7 @@ In interactive mode:
 - Changes require explicit confirmation before being processed
 - Provides better control and visibility over document changes
 
-#### Watch Mode
-
-```bash
-ph vetra --interactive --watch
-```
-
-In watch mode:
-
-- Adding `--watch` to your command enables dynamic loading for document-models and editors in Vetra studio and switchboard.
-- When enabled, the system will watch for changes in these directories and reload them dynamically.
+Vetra Studio and its Switchboard reload your document models and editors when their files change. The `--watch` flag of the classic command is no longer needed.
 
 :::warning[Be Aware]
 When you are building your document model the code can break the Vetra Studio environment.
@@ -121,7 +130,7 @@ A full overview of the Vetra Studio commands can be found in the [Powerhouse CLI
 #### Standard Mode
 
 ```bash
-ph vetra
+ph run vetra
 ```
 
 In standard mode:
@@ -136,7 +145,7 @@ In standard mode:
 Connect is your local development hub. Running it in Studio Mode spins up a local instance with a local Reactor, allowing you to define, build, and test document models.
 
 ```bash
-ph connect
+ph run connect dev
 ```
 
 This command typically opens Connect in your browser at `http://localhost:3000/`.
@@ -389,7 +398,7 @@ Test your editor in Vetra Studio by creating a new document of your defined type
 Run Connect locally to see your editor in action:
 
 ```bash
-ph connect
+ph run connect dev
 ```
 
 Create a new document of your defined type. Interact with your editor, test all functionalities, and ensure it correctly dispatches actions to the reducers and reflects state changes.
@@ -414,7 +423,7 @@ Create a new document of your defined type. Interact with your editor, test all 
 
 **Setup Requirements:**
 
-1. Run `ph vetra --interactive --watch` in one terminal first
+1. Run `ph run vetra --interactive` in one terminal first
 2. Start Claude in a separate terminal from your project directory
 3. Connect with: `claude` or `connect to the reactor mcp`
 4. Verify you see the confirmation message with your drive name
@@ -488,7 +497,7 @@ This approach catches issues early and gives you better results.
 
 ### 5. Interactive Mode Benefits
 
-Using `ph vetra --interactive` gives you confirmation prompts:
+Using `ph run vetra --interactive` gives you confirmation prompts:
 
 - Schema changes
 - Operation definitions

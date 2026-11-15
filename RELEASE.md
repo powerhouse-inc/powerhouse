@@ -16,6 +16,7 @@ You do **not** manually edit `package.json` versions or `CHANGELOG.md` files, **
 ## Table of contents
 
 - [Channels](#channels)
+- [Version numbers](#version-numbers)
 - [How `release_mode` maps to a semver bump](#how-release_mode-maps-to-a-semver-bump)
 - [Triggering a release](#triggering-a-release)
 - [Dev releases (main)](#dev-releases-main)
@@ -49,6 +50,24 @@ You do **not** manually edit `package.json` versions or `CHANGELOG.md` files, **
 The `<label>` is a human-readable hint — Nx does **not** parse it. The actual published version comes from the current workspace `package.json` plus the `release_mode` input. Pick a label that matches what you intend to ship (e.g. `release/staging/6.0.3`) so the branch is readable in the GitHub UI.
 
 Any branch name that doesn't match the three patterns above will cause the release script to throw.
+
+## Version numbers
+
+A version has three positions: `GENERATION.BREAKING.RELEASE`. This is not Semantic Versioning: the second position carries the breaking changes, not the first.
+
+| Position | `release_mode` | Use it for                                                                                                 |
+| -------- | -------------- | ---------------------------------------------------------------------------------------------------------- |
+| First    | `major`        | A new framework generation. Rare.                                                                          |
+| Second   | `minor`        | A release that may break. It needs a migration note, and a `ph migrate` step where one is possible.       |
+| Third    | `patch`        | Features and fixes. Never breaking. A deprecation ships here, with a warning that names the replacement. |
+
+Rules that follow from this:
+
+- Something deprecated in a third-position release is removed no earlier than the next second-position release.
+- A third-position release must not contain a breaking change. If the changes since the last release include one, the release is a second-position release.
+- Consumers pin exact versions or use a tilde range (`~6.4.0`). A caret range (`^6.3.0`) accepts `6.4.0` and with it the break.
+
+The tooling still uses the semver names `major`, `minor` and `patch` for the three positions, and so does the rest of this guide. What counts as breaking, how to deprecate and remove, retired flags, the migration floor and the exempt packages are in [docs/BREAKING-CHANGES-GUIDE.md](docs/BREAKING-CHANGES-GUIDE.md).
 
 ## How `release_mode` maps to a semver bump
 

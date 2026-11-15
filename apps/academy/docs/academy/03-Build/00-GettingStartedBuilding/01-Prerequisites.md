@@ -289,10 +289,13 @@ npm install -g ph-cmd
 
 Key commands include:
 
-- `ph connect` for running the Connect application locally
-- `ph switchboard` or `ph reactor` for starting the API service
 - `ph init` to start a new project and build a document model
+- `ph run vetra` for starting Vetra Studio with its local Switchboard
+- `ph run connect dev` for running the Connect application locally
+- `ph run switchboard` for starting the API service
 - `ph help` to get an overview of all the available commands
+
+`ph run <host>` starts a host from the `hosts/` folder of your project. The classic commands `ph vetra`, `ph connect`, `ph switchboard` and `ph reactor` are deprecated: see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
 
 Use it to create, build, and run Document Models.
 

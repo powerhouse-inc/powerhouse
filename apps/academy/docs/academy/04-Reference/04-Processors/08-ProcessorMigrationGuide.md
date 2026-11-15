@@ -406,7 +406,7 @@ export const myRelationalProcessorFactory =
 Generate the scaffolding with:
 
 ```bash
-ph generate --processor my-processor --processor-type relationalDb --document-types powerhouse/my-doc-type
+ph generate processor --name my-processor --type relationalDb --document-types powerhouse/my-doc-type
 ```
 
 ### Key additions in RelationalDbProcessor
@@ -417,7 +417,7 @@ ph generate --processor my-processor --processor-type relationalDb --document-ty
 | `getNamespace(driveId)`        | Static method for per-drive database isolation                           |
 | `initAndUpgrade()`             | Lifecycle hook for running migrations on startup                         |
 | `query(driveId, relationalDb)` | Static method for querying from subgraphs                                |
-| Type generation                | `ph generate --migration-file migrations.ts` generates `schema.ts` types |
+| Type generation                | `ph generate migration-file --path migrations.ts` generates `schema.ts` types |
 
 ## Migrating a plain processor
 

@@ -1,473 +1,209 @@
-# Breaking Changes Best Practices Guide
+# Breaking changes guide
+
+How this monorepo numbers its releases, what counts as a breaking change, and
+how to deprecate and remove something. It is for everyone who changes a
+published package.
+
+## Version numbers
+
+A version has three positions: `GENERATION.BREAKING.RELEASE`, for example
+`6.4.0`.
+
+| Position | Example        | What it means                                                                                             |
+| -------- | -------------- | --------------------------------------------------------------------------------------------------------- |
+| First    | `6` in `6.4.0` | The framework generation. It changes rarely.                                                              |
+| Second   | `4` in `6.4.0` | A release that may break. It ships with a migration note, and a `ph migrate` step where one is possible. |
+| Third    | `1` in `6.4.1` | Features and fixes. Never breaking.                                                                       |
+
+This is not Semantic Versioning. SemVer puts every breaking change in the first
+position; here the second position carries them.
+
+All published packages of the monorepo share one version and are released
+together. Inside the monorepo they depend on each other with `workspace:*`,
+which publishes as an exact version.
+
+### What consumers must do
+
+- Pin exact versions, or use a tilde range such as `~6.4.0`. A tilde range
+  takes third-position releases only.
+- Do not use a caret range. `^6.3.0` accepts `6.4.0`, and with it the break.
+- Configure Renovate, Dependabot and similar tools to treat a second-position
+  bump as a major update.
+
+## The rule
+
+1. **Deprecate in one release.** The deprecation ships in a third-position
+   release. The old way keeps working and prints a warning that names the
+   replacement and the release that removes the old way.
+2. **Remove in the next breaking release, or later.** The removal ships no
+   earlier than the next second-position release.
+
+A third-position release never removes or changes something a consumer relies
+on. If a fix cannot be made without a break, it waits for the next
+second-position release.
+
+Example: `ph switchboard` warns from `6.3.0` and names `ph run switchboard`.
+Its classic boot path is removed in `6.4.0`.
+
+## What counts as breaking
+
+A change is breaking when a project, deployment or stored data that worked on
+the previous release needs a change to keep working. That includes:
+
+- **Code API**: removing or renaming an export, a function, a parameter or a
+  type; changing a signature or a return type; making an optional parameter
+  required.
+- **CLI**: removing or renaming a command, a flag or an argument; changing a
+  default; changing an exit code that scripts can depend on.
+- **Configuration**: removing or renaming a key in `powerhouse.config.json` or
+  in a host file; turning an ignored or accepted value into an error; removing
+  or renaming an environment variable.
+- **Network API**: removing or renaming a GraphQL field, argument or type;
+  changing what a field returns; a change after which a client or peer on the
+  previous release can no longer talk to this one.
+- **Stored data**: a change to a database schema, a document format or a file
+  layout that the previous release cannot read, or that this release cannot
+  read without a migration.
+- **Behaviour**: the same call with the same input does something a consumer
+  can observe as different, and may depend on.
+- **Requirements**: raising the minimum Node.js version, or a peer dependency
+  range that excludes a version that worked before.
+
+These are not breaking:
+
+- Adding an export, a command, a flag, an optional parameter, an optional
+  configuration key, or a GraphQL field or argument.
+- Fixing behaviour that contradicted the documentation. Say so in the release
+  notes when consumers may depend on the old behaviour.
+- Changing anything that is not exported or documented.
+- Adding a deprecation warning.
+
+When you are not sure, treat the change as breaking.
+
+## Deprecating
+
+Do this in the third-position release that starts the deprecation.
+
+1. Ship the replacement first, in the same release or an earlier one. A
+   warning must be able to name something that works.
+2. Keep the old way working, unchanged.
+3. Warn at run time. The warning says what is deprecated, what replaces it,
+   and which release removes it. Print it once per process or invocation, on
+   stderr or through the logger, not on every call.
+4. Mark the code with `@deprecated`, naming the replacement. For a GraphQL
+   field or argument, use the `@deprecated` directive.
+5. Link to a migration page when the consumer has more to do than rename one
+   thing.
+6. List the deprecation in the release notes under what warns.
+7. Move the callers inside the monorepo to the replacement in the same change,
+   so that our own code does not print the warning.
+8. Add a test for the warning: its text, and that it prints once.
+
+For the CLI, the deprecations of the current release live in
+`packages/shared/clis/deprecations.ts`. Every warning from that file ends with
+the link in `MIGRATION_GUIDE_URL`. `DEPRECATIONS_REMOVED_IN` names the release
+that removes them.
 
-This document outlines the standards and best practices for handling breaking changes in the Powerhouse monorepo, including API changes, data structure changes, and migration strategies.
+## Removing
 
-## Table of Contents
+Do this in a second-position release.
 
-- [Overview](#overview)
-- [Semantic Versioning](#semantic-versioning)
-- [Type 1 Checklist: API Breaking Changes](#type-1-checklist-api-breaking-changes)
-- [Type 2 Checklist: Data Breaking Changes](#type-2-checklist-data-breaking-changes)
-- [Type 3 Checklist: Behavioral Breaking Changes](#type-3-checklist-behavioral-breaking-changes)
-- [Type 4 Checklist: Dependency Breaking Changes](#type-4-checklist-dependency-breaking-changes)
-- [General Strategies](#general-strategies)
-  - [Feature Flags for Gradual Rollout](#feature-flags-for-gradual-rollout)
-  - [Data Migrations](#data-migrations)
-- [Documentation Requirements](#documentation-requirements)
+1. Check that the deprecation shipped with its warning in an earlier release.
+   If it did not, deprecate now and remove in the next breaking release.
+2. Remove the old way, its warning and its tests.
+3. Where the old input can still arrive (a command, a flag, a configuration
+   key, an environment variable), fail with an error that names the
+   replacement. Do not ignore it silently.
+4. Add a `ph migrate` step when the change in a project can be made
+   mechanically.
+5. Write the migration note: what was removed, what to use instead, and the
+   steps.
+6. List the removal in the release notes.
 
----
+## Retired flags
 
-## Overview
+A feature flag that selected between an old and a new behaviour is retired
+when the new behaviour becomes the only one. This takes two releases:
 
-Breaking changes are changes that break backward compatibility with previous versions. This guide provides explicit checklists for planning, implementing, and rolling out each type of breaking change.
+1. **Retire.** The flag has no effect any more. Set to the value that asked
+   for the old behaviour, it prints a warning. Set to the value that is now
+   fixed, it passes silently.
+2. **Refuse.** In the next breaking release the process refuses to start when
+   the flag is set to the value that asked for the old behaviour. The value
+   that is now fixed still passes silently.
 
-### Types of Breaking Changes
+A removed flag must not be ignored silently: an operator who sets it to the
+old value believes the old behaviour is on.
 
-This guide covers the following types of breaking changes:
+Retired environment variables are listed in
+`packages/shared/clis/retired-flags.ts`, with the release that retired each
+one and the release that refuses it.
 
-- **Type 1**: API Breaking Changes (signature changes, removals, renames)
-- **Type 2**: Data Breaking Changes (schema changes, field modifications)
-- **Type 3**: Behavioral Breaking Changes (how APIs work without changing signatures)
-- **Type 4**: Dependency Breaking Changes (upgrading major dependencies, runtime requirements)
+Switches that turn a feature off are not feature flags in this sense, and they
+stay. An explicit `false` always wins. Examples: `MCP_ENABLED`,
+`PH_WORKFLOWS_ENABLED`, `DOCUMENT_MODEL_SUBGRAPHS_ENABLED`.
 
-Each type has a dedicated checklist covering:
+## Stored data and the migration floor
 
-1. **Planning Phase** - Evaluating necessity and impact
-2. **Implementation Phase** - Building the change with backward compatibility
-3. **Documentation Phase** - Creating migration guides and updating docs
-4. **Release Phase** - Rolling out with proper communication
-5. **Removal/Enforcement Phase** - Completing the transition in next major version
+A change to stored data ships with a migration that runs when the new release
+first opens the store. Such a one-time migration stays in the code for as long
+as a store that needs it may still exist.
 
-### General Principles
+A store records the last release that completed its one-time migrations. Each
+release has a migration floor: the oldest recorded release it can start from.
+A release refuses to start on a store below its floor, and the error names the
+release to run first. An empty store always passes.
 
-All breaking changes must follow these rules:
+When you delete a one-time migration:
 
-- ✅ **Only in major versions** - Breaking changes ONLY in `x.0.0` releases
-- ✅ **Deprecate first** - Mark old APIs as deprecated before removing
-- ✅ **Provide migration paths** - Clear instructions for users to upgrade
-- ✅ **Give adequate notice** - Minimum 3-6 months deprecation period
-- ✅ **Maintain backward compatibility** - Keep old APIs working during deprecation
-- ✅ **Document thoroughly** - Update RELEASE-NOTES.md with before/after examples
-- ✅ **Use feature flags for gradual rollout** - Use feature flags to control the rollout of breaking changes
+1. Delete it in a second-position release only.
+2. Raise `MIGRATION_FLOOR` in `packages/reactor/src/storage/migration-floor.ts`
+   to the first release that no longer needs the deleted migration.
+3. Say in the release notes which release a store must have run before this
+   one.
 
-## Semantic Versioning
+Do not raise the floor for any other reason. A release that deletes no
+migration keeps the floor it has.
 
-We follow [Semantic Versioning 2.0.0](https://semver.org/) strictly:
+## Upgrading across breaking releases
 
-- **MAJOR** version (`x.0.0`): Incompatible API changes (breaking changes)
-- **MINOR** version (`0.x.0`): Backward-compatible new features
-- **PATCH** version (`0.0.x`): Backward-compatible bug fixes
+Consumers upgrade one breaking release at a time: to the latest third-position
+release of the line they are on, clear its warnings, then to the next
+second-position release. Write migration notes for that path. A note for
+`6.4.0` may assume the project ran on `6.3` without warnings.
 
-### TLDR
+## Exempt packages
 
-1. **Breaking changes MUST only be introduced in MAJOR versions**
-   - Never introduce breaking changes in minor or patch versions
-   - This is a hard rule with no exceptions
+Experimental packages are outside this guide. They can change or break in any
+release, without a deprecation period and without a migration note.
 
-2. **Pre-release versions** can include breaking changes:
-   - `1.0.0-alpha.1`, `1.0.0-beta.2`, `1.0.0-rc.1`
-   - Use pre-release versions for testing breaking changes before the official major release
-   - Clearly label all pre-release packages with appropriate npm tags (`alpha`, `beta`, `rc`)
+| Package                            | Status       |
+| ---------------------------------- | ------------ |
+| `@powerhousedao/reactor-hypercore` | Experimental |
 
-3. **Use the automated versioning system**:
-   - Leverage `@jscutlery/semver` for version bumps
-   - Follow conventional commit messages (`feat:`, `fix:`, `feat!:`, `fix!:`)
-   - Use `!` or `BREAKING CHANGE:` in commit messages to trigger major version bumps
+A package is exempt only when it is in this table.
 
----
+## Checklist for a breaking change
 
-## Type 1 Checklist: API Breaking Changes
+Before the deprecating release:
 
-API breaking changes include:
+- [ ] The replacement is released.
+- [ ] The old way still works and warns once, naming the replacement and the
+      removing release.
+- [ ] The code is marked `@deprecated`.
+- [ ] Callers inside the monorepo use the replacement.
+- [ ] The release notes list the deprecation.
 
-- Changing function signatures (parameters or return types)
-- Removing functions, classes, or exports
-- Renaming public APIs
+Before the removing release:
 
-### Planning Phase
+- [ ] The warning shipped in an earlier release.
+- [ ] Old input fails with an error that names the replacement.
+- [ ] `ph migrate` has a step, where one is possible.
+- [ ] The migration note is written and linked from the release notes.
+- [ ] A deleted one-time migration raised the migration floor.
+- [ ] The projects we maintain ourselves run on the release without warnings.
 
-- [ ] **Evaluate necessity**: Is there a backward-compatible alternative?
-- [ ] **Assess impact**: How many users/packages are affected?
-- [ ] **Design new API**: Create clear, well-documented new interface
-- [ ] **Plan migration path**: How will users transition?
-- [ ] **Set timeline**: Minimum 3 months deprecation period
-- [ ] **Get team approval**: Review with team before proceeding
+## Related documents
 
-### Implementation Phase
-
-- [ ] **Implement new API**: Build and test the new interface
-- [ ] **Add deprecation to old API**:
-
-```typescript
-/**
- * @deprecated Since v5.0.0. Use {@link newFunction} instead.
- * This will be removed in v6.0.0.
- */
-```
-
-- [ ] **Add runtime warnings**: Use `logger.warn()` (not `console`)
-- [ ] **Delegate old to new**: If possible, have deprecated API call new API internally
-- [ ] **Write tests**: Test both old and new APIs, verify delegation
-- [ ] **Update TypeScript types**: Ensure type safety for both versions
-
-### Documentation Phase
-
-- [ ] **Document in RELEASE-NOTES.md**: Include before/after examples
-- [ ] **Create migration guide**: Step-by-step instructions with code samples
-- [ ] **Update API documentation**: Update the API documentation to reflect the new API
-- [ ] **Add to deprecation tracking table**: Add to the table
-
-### Release Phase
-
-- [ ] **Release in minor version**: Deploy with deprecation warnings (e.g., v5.1.0)
-- [ ] **Communicate to users**: Announce in release notes, blog, etc.
-- [ ] **Provide support**: Help users with migration questions
-- [ ] **Wait deprecation period**: Wait for the deprecation period to elapse
-
-### Removal Phase (Next Major Version)
-
-- [ ] **Remove deprecated API**: Delete old code entirely
-- [ ] **Update documentation**: Remove deprecated API from docs
-- [ ] **Update CHANGELOG**: List removal in breaking changes section
-- [ ] **Test thoroughly**: Ensure new API works in all scenarios
-- [ ] **Release as major version**: e.g., v6.0.0
-
----
-
-## Type 2 Checklist: Data Breaking Changes
-
-Data breaking changes include:
-
-- Modifying a storage system's data structure
-- Changing a storage system's schema (requiring an alter, create, drop, etc.)
-
-### Planning Phase
-
-- [ ] **Evaluate necessity**: Can schema be extended instead of changed?
-- [ ] **Assess data impact**: How much existing data will need migration?
-- [ ] **Design new schema**: Define clear, versioned data structure
-- [ ] **Plan migration strategy**: Forward and backward migration paths
-- [ ] **Identify rollback needs**: Can users downgrade if needed?
-- [ ] **Get team approval**: Review migration plan with team
-
-### Implementation Phase
-
-- [ ] **Add schema versioning**: Include / increment version in data structure
-
-```typescript
-{
-  header: {
-    schemaVersion: "5.0.0";
-  }
-}
-```
-
-- [ ] **Create migration function**: Implement transformation logic
-- [ ] **Make migration idempotent**: Safe to run multiple times
-- [ ] **Add validation**: Use Zod/JSON Schema to validate migrated data
-- [ ] **Build migration registry**: Central list of all migrations
-- [ ] **Implement auto-migration**: Migrate on load transparently
-- [ ] **Create/Update migration CLI tool**: `ph migrate --from 4.0.0 --to 5.0.0`
-- [ ] **Add dry-run mode**: Generally, previewing changes before applying is a good idea!
-
-### Testing Phase
-
-- [ ] **Test with production data samples**: Use real anonymized data
-- [ ] **Test migration chains**: If there are multiple migrations, test them in sequence
-- [ ] **Test backward compatibility**: Test that old code can read new data
-- [ ] **Test rollback scenarios**: Test that users can safely downgrade
-- [ ] **Validate output**: Test that all migrated data passes schema validation
-
-### Documentation Phase
-
-- [ ] **Document schema changes**: What changed and why?
-- [ ] **Document transformation logic**: How is data converted?
-- [ ] **Document edge cases**: Known issues or limitations
-- [ ] **Create migration guide**: Step-by-step with examples
-- [ ] **Document rollback procedure**: How to revert if needed
-- [ ] **Add to RELEASE-NOTES.md**: Complete migration instructions
-
-### Release Phase
-
-- [ ] **Release migration in minor version**: Allow users to migrate early, if possible
-- [ ] **Provide migration tools**: CLI and programmatic options
-- [ ] **Communicate timeline**: When will old schema be unsupported?
-- [ ] **Provide support**: Help users troubleshoot migrations
-- [ ] **Consider gradual rollout**: Prefer feature flags
-
-### Enforcement Phase (Next Major Version)
-
-- [ ] **Require new schema**: Reject old schema versions
-- [ ] **Remove old migration code**: Clean up obsolete migrations (optional)
-- [ ] **Update documentation**: Reflect current schema only
-- [ ] **Release as major version**: e.g., v6.0.0
-
----
-
-## Type 3 Checklist: Behavioral Breaking Changes
-
-Behavioral breaking changes include:
-
-- Changing how an API works without changing its signature
-- Modifying default values or behaviors
-- Changing error handling or validation rules
-- Altering side effects or execution order
-
-### Planning Phase
-
-- [ ] **Evaluate necessity**: Is the behavioral change essential?
-- [ ] **Assess impact**: What code might depend on current behavior?
-- [ ] **Document current behavior**: Clearly describe what changes
-- [ ] **Design new behavior**: Define expected outcomes precisely
-- [ ] **Plan detection strategy**: How will users know if affected?
-- [ ] **Get team approval**: Review behavior change with team
-
-### Implementation Phase
-
-- [ ] **Implement new behavior**: Build and test thoroughly
-- [ ] **Add feature flag**: Allow toggling between old and new behavior
-- [ ] **Add migration mode**: Support both behaviors during transition
-- [ ] **Log behavior changes**: Warn when behavior switches
-- [ ] **Update error messages**: Reflect new validation rules
-- [ ] **Write comprehensive tests**: Cover old and new behavior
-
-### Documentation Phase
-
-- [ ] **Document old behavior**: Describe what previously happened
-- [ ] **Document new behavior**: Describe what now happens
-- [ ] **Explain differences**: Why behavior changed, what to expect
-- [ ] **Provide examples**: Before/after code samples
-- [ ] **Update API docs**: Reflect new behavior in documentation
-- [ ] **Add to RELEASE-NOTES.md**: Highlight behavioral changes prominently
-
-### Release Phase
-
-- [ ] **Release with feature flag**: Default to old behavior initially
-- [ ] **Communicate change**: Announce in release notes clearly
-- [ ] **Provide opt-in period**: Let users test new behavior
-- [ ] **Monitor for issues**: Track problems with new behavior
-- [ ] **Gather feedback**: Understand user impact
-- [ ] **Adjust if needed**: Fix issues before making default
-
-### Transition Phase
-
-- [ ] **Switch default**: Make new behavior the default
-- [ ] **Keep opt-out available**: Allow reverting to old behavior
-- [ ] **Deprecate old behavior**: Announce old behavior will be removed
-- [ ] **Continue monitoring**: Track issues with wider rollout
-
-### Removal Phase (Next Major Version)
-
-- [ ] **Remove old behavior**: Delete legacy code path
-- [ ] **Remove feature flag**: Only new behavior remains
-- [ ] **Update documentation**: Remove references to old behavior
-- [ ] **Release as major version**: e.g., v6.0.0
-
----
-
-## Type 4 Checklist: Dependency Breaking Changes
-
-Dependency breaking changes include:
-
-- Upgrading major dependencies (e.g., React 17 → 18)
-- Removing deprecated dependencies
-- Changing peer dependency requirements
-- Updating minimum runtime versions (Node.js, browsers)
-
-### Planning Phase
-
-- [ ] **Evaluate necessity**: Why is the dependency upgrade needed?
-- [ ] **Assess compatibility**: What will break for users?
-- [ ] **Check ecosystem impact**: Are other dependencies compatible?
-- [ ] **Plan upgrade path**: How will users upgrade?
-- [ ] **Test with multiple versions**: Ensure graceful degradation if possible
-- [ ] **Get team approval**: Review dependency changes with team
-
-### Implementation Phase
-
-- [ ] **Update dependency**: Upgrade to new version
-- [ ] **Fix breaking changes**: Adapt code to new dependency API
-- [ ] **Update peer dependencies**: Reflect new requirements in package.json
-- [ ] **Add migration helpers**: Provide utilities to ease transition
-- [ ] **Update build configuration**: Adjust for new dependency needs
-- [ ] **Run full test suite**: Ensure everything works with new version
-
-### Testing Phase
-
-- [ ] **Test in isolation**: Verify new dependency works correctly
-- [ ] **Test integration**: Ensure compatibility with other packages
-- [ ] **Test user scenarios**: Simulate real-world usage
-- [ ] **Test version matrix**: Test with minimum and maximum versions
-- [ ] **Performance test**: Ensure no regressions
-- [ ] **Security scan**: Check for vulnerabilities
-
-### Documentation Phase
-
-- [ ] **Update installation docs**: Reflect new requirements
-- [ ] **Document breaking changes**: List what changed in dependency
-- [ ] **Provide upgrade guide**: Step-by-step dependency upgrade
-- [ ] **Update README**: Reflect new minimum versions
-- [ ] **Update package.json**: Correct peer dependency ranges
-- [ ] **Add to RELEASE-NOTES.md**: Document dependency changes
-
-### Release Phase
-
-- [ ] **Announce dependency change**: Give advance notice if possible
-- [ ] **Release as major version**: Dependency changes are breaking
-- [ ] **Monitor for issues**: Track dependency-related problems
-- [ ] **Provide support**: Help users with upgrade issues
-- [ ] **Consider LTS**: Support old major version if high impact
-
----
-
-## General Strategies
-
-### Feature Flags for Gradual Rollout
-
-Feature flags allow you to deploy breaking changes while controlling exposure:
-
-**When to use:**
-
-- High-risk or uncertain changes
-- Need real-world testing before full rollout
-- Want ability to quickly roll back
-- Benefit from gradual user adoption
-
-**Implementation:**
-
-We use OpenFeature with environment variable provider for feature flags:
-
-```typescript
-// feature-flags.ts
-import { EnvVarProvider } from "@openfeature/env-var-provider";
-import { OpenFeature } from "@openfeature/server-sdk";
-
-export async function initFeatureFlags() {
-  const provider = new EnvVarProvider();
-  await OpenFeature.setProviderAndWait(provider);
-  return OpenFeature.getClient();
-}
-
-// Define helper functions for each feature flag
-export async function isNewDocumentCreationEnabled(): Promise<boolean> {
-  const client = OpenFeature.getClient();
-  return await client.getBooleanValue("FEATURE_NEW_DOCUMENT_CREATION", false);
-}
-
-export async function isNewProcessorFactoryEnabled(): Promise<boolean> {
-  const client = OpenFeature.getClient();
-  return await client.getBooleanValue("FEATURE_NEW_PROCESSOR_FACTORY", false);
-}
-
-// Use in code
-if (await isNewDocumentCreationEnabled()) {
-  // New implementation
-} else {
-  // Old implementation (deprecated)
-}
-```
-
-**Environment variables:**
-
-```bash
-# .env
-FEATURE_NEW_DOCUMENT_CREATION=true
-FEATURE_NEW_PROCESSOR_FACTORY=false
-```
-
-**Lifecycle:**
-
-1. **Alpha** (v5.0.0-alpha): Add flag, default `false`, opt-in only
-2. **Beta** (v5.0.0-beta): Internal testing, gather feedback
-3. **RC** (v5.0.0-rc): Gradual rollout, increase percentage
-4. **Release** (v5.0.0): Default `true`, old behavior deprecated
-5. **Next Major** (v6.0.0): Remove flag, only new behavior remains
-
-**Best practices:**
-
-- **Keep flags short-lived**: Remove flags in next major version after feature is stable
-- **Naming convention**: Use `FEATURE_<NAME>_ENABLED` pattern for environment variables
-- **Default to false**: New breaking changes should default to `false` until proven stable
-- **Create helper functions**: Define `is<Feature>Enabled()` functions for each flag
-- **Document each flag**: Add comments explaining what the flag controls and when it will be removed
-- **Test all flag states**: Test with flag enabled and disabled in your test suite
-- **Initialize early**: Call `initFeatureFlags()` during application startup
-- **Handle async**: Remember that OpenFeature flag checks are async (return Promises)
-
-### Data Migrations
-
-TODO: Add comprehensive data migration strategies including:
-
-- Schema versioning best practices
-- Migration function patterns
-- Registry and orchestration
-- Automatic vs manual migration
-- Rollback and recovery strategies
-- Performance optimization for large datasets
-- Testing migrations thoroughly
-- Providing migration CLI tools
-
----
-
-## Documentation Requirements
-
-### 1. RELEASE-NOTES.md
-
-Every breaking change MUST be documented in RELEASE-NOTES.md with:
-
-- **Clear heading**: `### MethodName signature change`
-- **Description**: What changed and why
-- **Before/After examples**: Code showing old and new usage
-- **Migration steps**: Step-by-step guide for users
-- **Backward compatibility notes**: How long is the old API supported?
-
-See [RELEASE-NOTES.md](../RELEASE-NOTES.md) for examples.
-
-### 2. CHANGELOG.md
-
-Breaking changes should be included in the automated CHANGELOG.md via conventional commits:
-
-```bash
-git commit -m "feat!: remove OperationScope enum
-
-BREAKING CHANGE: OperationScope enum has been removed. Use string literal types instead.
-
-Before: scope: OperationScope.Global
-After: scope: 'global'
-"
-```
-
-### 3. API Documentation
-
-Update API documentation (JSDoc comments) to:
-
-- Mark old APIs as `@deprecated`
-- Include migration examples
-- Link to RELEASE-NOTES.md for detailed migration guides
-
-### 4. Migration Guides
-
-For major breaking changes, create dedicated migration guide documents:
-
-```
-docs/migrations/
-├── v4-to-v5.md
-├── v5-to-v6.md
-└── README.md
-```
-
-Include:
-
-- Overview of all breaking changes in the version
-- Detailed migration steps with code examples
-- Common pitfalls and how to avoid them
-- Troubleshooting section
-- Links to relevant PRs and issues
-
-### 5. README Updates
-
-Update package README files to:
-
-- Reflect new API usage in examples
-- Update installation instructions if needed
-- Link to migration guides for breaking changes
+- [RELEASE.md](../RELEASE.md): how to cut a release.
+- [RELEASE-NOTES.md](../RELEASE-NOTES.md): the notes of each release.

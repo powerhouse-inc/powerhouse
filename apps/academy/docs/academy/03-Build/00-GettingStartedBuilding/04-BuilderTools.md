@@ -49,11 +49,11 @@ Creates template code for document model editors: `ph generate editor --name <na
 
 ### Subgraph generator
 
-Creates GraphQL subgraph templates for data access automatically on `ph reactor`.
+Creates GraphQL subgraph templates for data access: `ph generate subgraph --name <name>`.
 
 ### Processor generator
 
-Generates processor templates for event handling automatically on `ph reactor`.
+Generates processor templates for event handling: `ph generate processor --name <name>`.
 
 ### Analytics processor generator
 

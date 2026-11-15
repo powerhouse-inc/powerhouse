@@ -65,7 +65,7 @@ A **document model** is a structured data type that defines what information you
 
 ### Configure a Vetra Drive in Your Project
 
-You can connect to a remote Vetra drive instead of using the local one auto-generated when you run `ph vetra` (where `ph` is short for "powerhouse", the CLI tool and the Organization behind Vetra).
+You can connect to a remote Vetra drive instead of using the local one auto-generated when you run `ph run vetra` (where `ph` is short for "powerhouse", the CLI tool and the Organization behind Vetra).
 
 - **Without** the `--remote-drive` option: Vetra will create a local drive for you that lives in your browser's local storage. This is useful for solo development or experimentation.
 - **With** the `--remote-drive` argument: Vetra will connect to a remote drive instead of creating a local one. The remote drive can be hosted wherever you want (e.g., on your own server or a shared team environment).
@@ -123,20 +123,20 @@ Remote drives enable collaborative development by syncing specifications across 
 **Key Commands:**
 
 - `ph init --remote-drive <url>` - Create or connect to a project using a remote drive
-- `ph vetra --watch` - Start development with a preview drive for testing local changes
+- `ph run vetra` - Start development with a preview drive for testing local changes
 
 **Workflows:**
 
-- **Project Owner**: `ph init --remote-drive` → Create GitHub repo → Push → `ph vetra --watch` to configure
-- **Collaborator**: `ph init --remote-drive <url>` → `ph vetra --watch` to start developing
+- **Project Owner**: `ph init --remote-drive` → Create GitHub repo → Push → `ph run vetra` to configure
+- **Collaborator**: `ph init --remote-drive <url>` → `ph run vetra` to start developing
 
-**Preview Drive (`--watch` mode):**
+**Preview Drive:**
 
 The preview drive allows you to safely test changes before they affect the shared remote drive.
 
 - The main **"Vetra" drive** syncs with the remote and contains the stable package configuration.
 - The **"Vetra Preview" drive** is created locally for testing document models and editors before syncing your changes to the team.
-- When restarting Vetra, always use `ph vetra --watch` so it loads your local documents and editors.
+- `ph run vetra` loads your local documents and editors. The `--watch` flag of the classic `ph vetra` command is no longer needed.
 
 → [Full Vetra Remote Drive Reference](/academy/Reference/CLITooling/VetraRemoteDrive)
 

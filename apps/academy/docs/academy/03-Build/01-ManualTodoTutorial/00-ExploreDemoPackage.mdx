@@ -77,8 +77,10 @@ You have now successfully installed `ph-cmd`, initalized a product project and a
 To run the package locally in Connect, run:
 
 ```bash
-ph connect
+ph run connect dev
 ```
+
+This starts the `connect` host that `ph init` wrote to `hosts/connect/host.js`. The classic `ph connect` command is deprecated: see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
 
 Click the returned localhost URL and you should see Connect appear in your browser.
 

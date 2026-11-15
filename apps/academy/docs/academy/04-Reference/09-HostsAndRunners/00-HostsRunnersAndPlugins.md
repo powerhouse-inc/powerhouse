@@ -3,7 +3,9 @@
 :::info
 This reference covers the **uniform runners** system. `ph run <host>` starts
 any host your project declares, and `ph init` writes the `hosts/` folder. The
-classic commands (`ph switchboard`, `ph connect`, `ph vetra`) keep working.
+classic commands (`ph switchboard`, `ph connect`, `ph vetra`) are deprecated:
+they work in 6.3 with a warning, and 6.4 removes their own boot path. To move
+an existing project, see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
 Since 6.3 the `FEATURE_UNIFORM_RUNNERS_ENABLED` variable has no effect: remove
 it. Set to `false` it prints a warning, and 6.4 refuses to start.
 :::

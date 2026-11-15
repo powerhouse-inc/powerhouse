@@ -48,7 +48,7 @@ That's it! No manual commands needed. Vetra watches your specifications and gene
 If you're using Connect or prefer manual control, you can use the `ph generate` command to create an editor template:
 
 ```bash
-ph generate --editor todo-list-editor --document-types powerhouse/todo-list
+ph generate editor --name todo-list-editor --document-type powerhouse/todo-list
 ```
 
 This will create the template in the `editors/todo-list-editor/editor.tsx` folder.
@@ -384,7 +384,7 @@ Once complete, navigate to the `editors/todo-list-editor/editor.tsx` file and op
 If you're not using Vetra Studio, run the command below to generate the editor template:
 
 ```bash
-ph generate --editor todo-list-editor --document-types powerhouse/todo-list
+ph generate editor --name todo-list-editor --document-type powerhouse/todo-list
 ```
 
 This command reads the **TodoList** document model definition from the `document-models` folder and generates the editor template in the `editors/todo-list-editor` folder as `editor.tsx`.

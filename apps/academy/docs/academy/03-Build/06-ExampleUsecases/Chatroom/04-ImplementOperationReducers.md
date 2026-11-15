@@ -95,7 +95,7 @@ To write the operation reducers of the **ChatRoom** document model, you need to 
 To do this, run the following command in the terminal:
 
 ```bash
-ph generate ChatRoom.phd
+ph generate document-model --document ChatRoom.phd
 ```
 
 You will see that this action created a range of files for you. Before diving in, let's look at this simple schema to familiarize yourself with the structure you've defined in the document model once more. It shows how each type is connected to the next one.

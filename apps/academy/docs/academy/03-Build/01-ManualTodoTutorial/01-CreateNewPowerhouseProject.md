@@ -174,14 +174,16 @@ Navigate to the newly created project directory:
 
 **Vetra Studio** is the builder's orchestration hub for assembling all specifications needed for your package. It provides a **Vetra Studio Drive** to access, manage, and share document model specifications, editors, and data integrations—all through a visual interface. For deeper coverage, see the [Vetra Studio documentation](/academy/GetStarted/VetraStudio).
 
-Once in the project directory, run the `ph vetra --watch` command to start a Vetra Studio Drive where you'll be defining your specifications. This is the preferred way to launch your development environment.
+Once in the project directory, run the `ph run vetra` command to start a Vetra Studio Drive where you'll be defining your specifications. This is the preferred way to launch your development environment.
 
 :::info[What is a Reactor?]
-You'll notice "reactor-api" in the terminal output. A **Reactor** is the Powerhouse back-end service that hosts your drives, handles document synchronization, and provides the GraphQL API. When you run `ph vetra --watch`, a local Reactor starts automatically to power your development environment.
+You'll notice "reactor-api" in the terminal output. A **Reactor** is the Powerhouse back-end service that hosts your drives, handles document synchronization, and provides the GraphQL API. When you run `ph run vetra`, a local Reactor starts automatically to power your development environment.
 :::
 
+`ph run vetra` starts the `vetra` host that `ph init` wrote to `hosts/vetra/host.js`. The classic `ph vetra` command is deprecated: see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
+
     ```bash
-    ph vetra --watch
+    ph run vetra
     ```
 
 The host application for Vetra Studio will start and you will see the following output:
@@ -227,14 +229,14 @@ Create a new document model by clicking the Document Models 'Add new specificati
 <summary>Alternatively: Develop a single document model in Connect (legacy)</summary>
 
 :::note
-The `ph connect` command is a legacy feature. We recommend using `ph vetra --watch` for all new development, as it provides better tooling and automatic code generation.
+Running Connect on its own is a legacy workflow. We recommend using `ph run vetra` for all new development, as it provides better tooling and automatic code generation.
 :::
 
-Once in the project directory, run the `ph connect` command to start a local instance of the Connect application. This allows you to start your document model specification document.
+Once in the project directory, run the `ph run connect dev` command to start a local instance of the Connect application. This allows you to start your document model specification document.
 Run the following command to start the Connect application:
 
    ```bash
-   ph connect
+   ph run connect dev
    ```
 
 The Connect application will start and you will see the following output:

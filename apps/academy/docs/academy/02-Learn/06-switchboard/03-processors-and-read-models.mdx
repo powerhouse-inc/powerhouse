@@ -39,7 +39,7 @@ export interface IProcessor {
 Generate the scaffolding with:
 
 ```bash
-ph generate --processor todo-stats --processor-apps switchboard
+ph generate processor --name todo-stats --apps switchboard
 ```
 
 This creates `processors/todo-stats/` with a class that implements `IProcessor` and a factory that registers it with the Reactor.

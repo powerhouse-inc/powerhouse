@@ -139,7 +139,7 @@ type UpgradeManifest<TVersions extends readonly number[]> = {
 Versioning is enabled by default when using the Powerhouse CLI:
 
 ```bash
-ph generate TodoList.phd
+ph generate document-model --document TodoList.phd
 ```
 
 Or when using Vetra Studio, versioning support is configured in your project settings.

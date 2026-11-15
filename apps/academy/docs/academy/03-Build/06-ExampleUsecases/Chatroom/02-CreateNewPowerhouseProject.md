@@ -114,10 +114,10 @@ cd ChatRoom
 
 **Vetra Studio** is the builder's orchestration hub for assembling all specifications needed for your package. It provides a **Vetra Studio Drive** to access, manage, and share document model specifications, editors, and data integrations—all through a visual interface. For deeper coverage, see the [Vetra Studio documentation](/academy/GetStarted/VetraStudio).
 
-Once in the project directory, run the `ph vetra --watch` command to start a Vetra Studio Drive where you'll be defining your specifications.
+Once in the project directory, run the `ph run vetra` command to start a Vetra Studio Drive where you'll be defining your specifications. It starts the `vetra` host that `ph init` wrote to `hosts/vetra/host.js`. The classic `ph vetra` command is deprecated: see [Moving to hosts and `ph run`](/academy/Reference/HostsAndRunners/MigratingToHosts).
 
 ```bash
-ph vetra --watch
+ph run vetra
 ```
 
 The host application for Vetra Studio will start and you will see the following output:
@@ -146,10 +146,10 @@ If you've followed the steps correctly, you'll have an empty `ChatRoom` document
 <details>
 <summary>Alternatively: Develop a single document model in Connect</summary>
 
-Once in the project directory, run the `ph connect` command to start a local instance of the Connect application. This allows you to start your document model specification document.
+Once in the project directory, run the `ph run connect dev` command to start a local instance of the Connect application. This allows you to start your document model specification document.
 
 ```bash
-ph connect
+ph run connect dev
 ```
 
 The Connect application will start and you will see the following output:

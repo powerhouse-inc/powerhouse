@@ -5,7 +5,7 @@
 
 This tutorial covers building the ChatRoom editor:
 
-1. **Editor Scaffolding**: Generating the editor template with `ph generate --editor`
+1. **Editor Scaffolding**: Generating the editor template with `ph generate editor`
 2. **Component Implementation**: Building a complete, interactive chat UI with components
 
 Explore the complete implementation in the `editors/chat-room-editor/` directory.
