@@ -109,7 +109,7 @@ describe("codegen processor drive scope", () => {
     const client = module.client;
     const factory = await codegenFactoryBuilder({
       config: new Map<string, unknown>(),
-      client,
+      read: client.read,
     } as unknown as IProcessorHostModule);
     await module.reactorModule!.processorManager.registerFactory(
       "vetra",

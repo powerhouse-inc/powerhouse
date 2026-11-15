@@ -1312,13 +1312,15 @@ export class WorkflowRuntimeService {
     // Revocation is a decision: a check never writes over it either.
     if (state.status === "REVOKED") return;
     if (state.status === "ERROR" && state.lastError === error.message) return;
-    await this.host.reactorClient.execute(connectionId, "main", [
-      connectionActions.recordCheckResult({
-        status: "ERROR",
-        checkedAt: new Date().toISOString(),
-        error: error.message,
-      }),
-    ]);
+    await (
+      await this.host.reactorClient.write.execute(connectionId, "main", [
+        connectionActions.recordCheckResult({
+          status: "ERROR",
+          checkedAt: new Date().toISOString(),
+          error: error.message,
+        }),
+      ])
+    ).document();
   }
 
   /** The seeding failure a restart is needed to clear, or undefined while the
@@ -4124,24 +4126,36 @@ export class WorkflowRuntimeService {
             createdBy: attempt.created_by,
           })
         ).ref;
-        await this.host.reactorClient.execute(document.header.id, "main", [
-          connectionActions.setSecretRef({
-            id: existing?.id ?? generateId(),
-            name: OAUTH_TOKEN,
-            ref,
-          }),
-        ]);
+        await (
+          await this.host.reactorClient.write.execute(
+            document.header.id,
+            "main",
+            [
+              connectionActions.setSecretRef({
+                id: existing?.id ?? generateId(),
+                name: OAUTH_TOKEN,
+                ref,
+              }),
+            ],
+          )
+        ).document();
       }
       // What this sign-in covers, so an app asking for more scopes later
       // can tell the token does not reach them and ask for a new sign-in.
       const granted = grantedScopes(tokens.scope, config);
       if (granted) {
-        await this.host.reactorClient.execute(document.header.id, "main", [
-          connectionActions.setConfigValue({
-            name: OAUTH_GRANTED_SCOPES,
-            value: granted,
-          }),
-        ]);
+        await (
+          await this.host.reactorClient.write.execute(
+            document.header.id,
+            "main",
+            [
+              connectionActions.setConfigValue({
+                name: OAUTH_GRANTED_SCOPES,
+                value: granted,
+              }),
+            ],
+          )
+        ).document();
       }
       const result = await this.checkConnectionDocument(
         await this.connectionDocument(attempt.connection_id),
@@ -4179,11 +4193,13 @@ export class WorkflowRuntimeService {
         connectionActions.setAccountLabel({ accountLabel: label }),
       );
     }
-    await this.host.reactorClient.execute(
-      document.header.id,
-      "main",
-      actionList,
-    );
+    await (
+      await this.host.reactorClient.write.execute(
+        document.header.id,
+        "main",
+        actionList,
+      )
+    ).document();
     return result;
   }
 
@@ -5014,9 +5030,11 @@ export class WorkflowRuntimeService {
     testedAt: string,
   ): Promise<void> {
     try {
-      await this.host.reactorClient.execute(workflowId, "main", [
-        workflowActions.setLastTest({ id: record.stepId, runId, testedAt }),
-      ]);
+      await (
+        await this.host.reactorClient.write.execute(workflowId, "main", [
+          workflowActions.setLastTest({ id: record.stepId, runId, testedAt }),
+        ])
+      ).document();
     } catch (error) {
       this.logger.warn(
         `Could not record the last test of "@step" on workflow ${workflowId}: @error`,

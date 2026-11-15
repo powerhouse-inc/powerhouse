@@ -11,6 +11,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import type { Action } from "document-model";
 import type { TypedReactorClient } from "./types.js";
 import type { FolderEntry, FolderOperations } from "./types.js";
 import type { Command } from "../../core/types.js";
@@ -65,14 +66,14 @@ export function createFolderOperations(
       id: string;
       name: string;
       parentFolder: string | null;
-    }) => unknown;
+    }) => Action;
     addFile: (input: {
       id: string;
       name: string;
       documentType: string;
       parentFolder: string | null;
-    }) => unknown;
-    deleteNode: (input: { id: string }) => unknown;
+    }) => Action;
+    deleteNode: (input: { id: string }) => Action;
   } | null = null;
 
   async function getDriveActions() {
@@ -128,13 +129,15 @@ export function createFolderOperations(
           `under ${parentFolderId?.slice(0, 8) ?? "root"}`,
       );
       const actions = await getDriveActions();
-      await client.execute(personalDriveId, "main", [
-        actions.addFolder({
-          id: folderId,
-          name: segment,
-          parentFolder: parentFolderId,
-        }),
-      ]);
+      await (
+        await client.write.execute(personalDriveId, "main", [
+          actions.addFolder({
+            id: folderId,
+            name: segment,
+            parentFolder: parentFolderId,
+          }),
+        ])
+      ).document();
       parentFolderId = folderId;
     }
 
@@ -169,20 +172,24 @@ export function createFolderOperations(
 
     // Add file node to drive via ADD_FILE operation
     const actions = await getDriveActions();
-    await client.execute(personalDriveId, "main", [
-      actions.addFile({
-        id: documentId,
-        name: displayName,
-        documentType,
-        parentFolder: folderId,
-      }),
-    ]);
+    await (
+      await client.write.execute(personalDriveId, "main", [
+        actions.addFile({
+          id: documentId,
+          name: displayName,
+          documentType,
+          parentFolder: folderId,
+        }),
+      ])
+    ).document();
 
     // Also establish the parent-child relationship in the document graph
-    await client.addRelationship(personalDriveId, documentId, "child");
+    await (
+      await client.write.addRelationship(personalDriveId, documentId, "child")
+    ).document();
 
     if (name) {
-      await client.rename(documentId, name);
+      await (await client.write.rename(documentId, name)).document();
     }
 
     log?.debug(
@@ -219,12 +226,20 @@ export function createFolderOperations(
   ): Promise<void> {
     // Remove the file node from the drive via DELETE_NODE
     const actions = await getDriveActions();
-    await client.execute(personalDriveId, "main", [
-      actions.deleteNode({ id: documentId }),
-    ]);
+    await (
+      await client.write.execute(personalDriveId, "main", [
+        actions.deleteNode({ id: documentId }),
+      ])
+    ).document();
 
     // Also remove the parent-child relationship
-    await client.removeRelationship(personalDriveId, documentId, "child");
+    await (
+      await client.write.removeRelationship(
+        personalDriveId,
+        documentId,
+        "child",
+      )
+    ).document();
   }
 
   async function resolveFolder(

@@ -76,7 +76,7 @@ export const codegenFactoryBuilder: ProcessorFactoryBuilder = (
       config,
       cwd,
       driveHeader.id,
-      module.client,
+      module.read,
       vetraConfig?.interactive,
     );
     const documentTypes = [

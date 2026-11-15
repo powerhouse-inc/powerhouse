@@ -293,20 +293,24 @@ const publisher: IReactorClient = await new ReactorClientBuilder()
   .build();
 
 async function create(model: DocumentModelModule, id: string) {
-  await publisher.create(
-    withSignaturePolicy(model.utils.createDocument(), "legacy", { id }),
-  );
+  await (
+    await publisher.write.create(
+      withSignaturePolicy(model.utils.createDocument(), "legacy", { id }),
+    )
+  ).document();
 }
 
 await create(Connection as never, CONN);
-await publisher.execute(CONN, "main", [
-  connectionActions.setConnectionName({ name: "bench" }),
-  connectionActions.setConnector({
-    connectorId: REACTOR_CONNECTOR_ID,
-    authType: "REACTOR",
-  }),
-  connectionActions.setConfig({ config: { endpoint: "local" } }),
-]);
+await (
+  await publisher.write.execute(CONN, "main", [
+    connectionActions.setConnectionName({ name: "bench" }),
+    connectionActions.setConnector({
+      connectorId: REACTOR_CONNECTOR_ID,
+      authType: "REACTOR",
+    }),
+    connectionActions.setConfig({ config: { endpoint: "local" } }),
+  ])
+).document();
 
 function stepFor(i: number) {
   const base = { id: `s${i}`, key: `step${i}`, name: `step${i}` };
@@ -357,39 +361,43 @@ function stepFor(i: number) {
 
 await create(Workflow as never, WORKFLOW_ID);
 const steps = Array.from({ length: STEPS }, (_, i) => stepFor(i));
-await publisher.execute(WORKFLOW_ID, "main", [
-  workflowActions.setWorkflowName({ name: "bench" }),
-  workflowActions.setTrigger({
-    id: "t1",
-    pieceName: CORE_PIECE_NAME,
-    pieceVersion: CORE_PIECE_VERSION,
-    triggerName: "manual",
-    config: {},
-  }),
-  ...steps.map((step) => workflowActions.addStep(step as never)),
-  ...steps.map((step, i) =>
-    workflowActions.addEdge({
-      id: `e${i}`,
-      from: i === 0 ? "t1" : `s${i - 1}`,
-      to: step.id,
-      port: "next",
+await (
+  await publisher.write.execute(WORKFLOW_ID, "main", [
+    workflowActions.setWorkflowName({ name: "bench" }),
+    workflowActions.setTrigger({
+      id: "t1",
+      pieceName: CORE_PIECE_NAME,
+      pieceVersion: CORE_PIECE_VERSION,
+      triggerName: "manual",
+      config: {},
     }),
-  ),
-  workflowActions.setPolicy({ concurrency: args.policy } as never),
-  workflowActions.publishWorkflow({ publishedAt: new Date().toISOString() }),
-  workflowActions.setWorkflowStatus({ status: "ENABLED" }),
-]);
+    ...steps.map((step) => workflowActions.addStep(step as never)),
+    ...steps.map((step, i) =>
+      workflowActions.addEdge({
+        id: `e${i}`,
+        from: i === 0 ? "t1" : `s${i - 1}`,
+        to: step.id,
+        port: "next",
+      }),
+    ),
+    workflowActions.setPolicy({ concurrency: args.policy } as never),
+    workflowActions.publishWorkflow({ publishedAt: new Date().toISOString() }),
+    workflowActions.setWorkflowStatus({ status: "ENABLED" }),
+  ])
+).document();
 
 // Editor churn on the workflow document, which the run-user lookup pages over.
 for (let done = 0; done < HISTORY; done += 100) {
   const count = Math.min(100, HISTORY - done);
-  await publisher.execute(
-    WORKFLOW_ID,
-    "main",
-    Array.from({ length: count }, (_, i) =>
-      workflowActions.setWorkflowName({ name: `bench-${done + i}` }),
-    ),
-  );
+  await (
+    await publisher.write.execute(
+      WORKFLOW_ID,
+      "main",
+      Array.from({ length: count }, (_, i) =>
+        workflowActions.setWorkflowName({ name: `bench-${done + i}` }),
+      ),
+    )
+  ).document();
 }
 
 // --- runtime ----------------------------------------------------------------

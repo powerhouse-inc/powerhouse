@@ -822,7 +822,9 @@ export async function addFileWithProgress(
       uploadedBefore += countOperations(segment.operations);
 
       if (segment.upgradeTo !== undefined) {
-        await reactor.upgradeDocument(documentId, segment.upgradeTo);
+        await (
+          await reactor.write.upgradeDocument(documentId, segment.upgradeTo)
+        ).document();
       }
     }
 

@@ -1,6 +1,6 @@
 import type {
   InProcessReactorModule,
-  IReactorClient,
+  IReactorReadClient,
 } from "@powerhousedao/reactor";
 import {
   AuthorizationPolicy,
@@ -123,7 +123,7 @@ export async function startPrivacy(deps: {
   authorizationService: IAuthorizationService;
   documentPermissionService: DocumentPermissionService | undefined;
   graphqlManager: GraphQLManager;
-  reactorClient: IReactorClient;
+  readClient: IReactorReadClient;
   logger: ILogger;
 }): Promise<RunningPrivacy> {
   const { config, reactorModule, authorizationService } = deps;
@@ -182,7 +182,7 @@ export async function startPrivacy(deps: {
     {
       ...subgraph,
       path: deps.graphqlManager.getBasePath(),
-      reactorClient: deps.reactorClient,
+      readClient: deps.readClient,
       relationalDb: undefined as never,
     },
     "graphql",

@@ -78,7 +78,7 @@ await graphqlManager.registerSubgraphInstance(
   {
     ...privacySubgraph,
     path: graphqlManager.getBasePath(),
-    reactorClient: client,
+    readClient: read,
     relationalDb: undefined as never,
   },
   "graphql",

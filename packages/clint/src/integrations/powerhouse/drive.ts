@@ -12,7 +12,8 @@ const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive" as const;
  *
  * The Reactor client has no `getDrives()` — drives are documents of type
  * `powerhouse/document-drive`. We use `reactor.findByType()` to locate
- * existing ones and `client.createEmpty()` + `client.rename()` to create.
+ * existing ones and `client.write.createEmpty()` + `client.write.rename()`
+ * to create.
  *
  * @param reactorModule - The full ReactorClientModule (needs .client and .reactor)
  * @param driveConfig - Optional drive name/icon configuration
@@ -61,14 +62,16 @@ export async function ensureDrive(
       wantedId ? { signaturePolicy: "legacy", id: wantedId } : undefined,
     );
     if (preferredEditor) doc.header.meta = { preferredEditor };
-    const created = await client.create(doc);
+    const handle = await client.write.create(doc);
+    const created = await handle.document();
     driveId = (created as any).header.id;
   } else {
-    const drive = await client.createEmpty(DRIVE_DOCUMENT_TYPE);
+    const handle = await client.write.createEmpty(DRIVE_DOCUMENT_TYPE);
+    const drive = await handle.document();
     driveId = drive.header.id;
   }
 
-  await client.rename(driveId, driveName);
+  await (await client.write.rename(driveId, driveName)).document();
   return { id: driveId, name: driveName };
 }
 
@@ -95,7 +98,7 @@ export async function ensureRemoteDrive(
 
   if (name) {
     try {
-      await client.rename(driveId, name);
+      await (await client.write.rename(driveId, name)).document();
     } catch {
       // Rename may fail for remote drives — non-fatal
     }

@@ -245,7 +245,9 @@ async function deleteLegacyDrives(
   logger: ConsoleLogger,
 ): Promise<void> {
   for (const id of driveIds) {
-    await client.deleteDocument(id);
+    await (
+      await client.write.deleteDocument(id)
+    ).readable;
     logger.info(`deleted legacy drive ${id}`);
   }
 }
@@ -280,7 +282,7 @@ async function rebuildAsReactorDrives(
     });
     doc.header.id = snap.id;
 
-    await client.create(doc);
+    await (await client.write.create(doc)).document();
     logger.info(`created reactor-drive ${snap.id} ("${snap.name}")`);
 
     // `reactorDriveCreateState` seeds the initial state from the input, so
@@ -296,11 +298,15 @@ async function rebuildAsReactorDrives(
       setDriveNameAction({ name: snap.name }),
       setDriveIconAction({ icon: snap.icon }),
     ];
-    await client.execute(snap.id, "main", driveScopeActions);
+    await (
+      await client.write.execute(snap.id, "main", driveScopeActions)
+    ).document();
 
     const localActions = buildPostDriveActions(snap);
     if (localActions.length > 0) {
-      await client.execute(snap.id, "main", localActions);
+      await (
+        await client.write.execute(snap.id, "main", localActions)
+      ).document();
     }
 
     const result = await migrateLegacyDriveState({

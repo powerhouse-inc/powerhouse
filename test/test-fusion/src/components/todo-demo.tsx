@@ -42,8 +42,10 @@ export function TodoDemo() {
     setCreating(true);
     setError(undefined);
     try {
-      const created = await client.create(todoModule.utils.createDocument());
-      router.replace(`/documents?id=${created.header.id}`);
+      const handle = await client.write.create(
+        todoModule.utils.createDocument(),
+      );
+      router.replace(`/documents?id=${handle.documentId}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {

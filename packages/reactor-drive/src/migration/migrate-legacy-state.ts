@@ -60,7 +60,9 @@ export async function migrateLegacyDriveState(
     return { emittedActions: 0, skippedExisting };
   }
 
-  await reactor.execute(driveId, branch, actions, signal);
+  await (
+    await reactor.write.execute(driveId, branch, actions, signal)
+  ).document();
   return { emittedActions: actions.length, skippedExisting };
 }
 

@@ -1506,7 +1506,6 @@ async function initServer(
     const WorkflowRuntimeSubgraph = composed.subgraph;
     const workflowSubgraph = new WorkflowRuntimeSubgraph({
       readClient: read,
-      reactorClient: client,
       http: graphqlManager.scopeForPackage(WORKFLOW_PACKAGE_NAME),
       relationalDb: api.relationalDb,
       analyticsStore: undefined as never,
@@ -1635,7 +1634,7 @@ async function initServer(
         authorizationService: api.authorizationService,
         documentPermissionService: api.documentPermissionService,
         graphqlManager,
-        reactorClient: client,
+        readClient: read,
         logger: logger.child(["privacy"]),
       });
     } catch (error) {
@@ -1705,7 +1704,6 @@ async function initServer(
       relationalDb: undefined as never,
       analyticsStore: undefined as never,
       readClient: read,
-      reactorClient: client,
       graphqlManager,
       syncManager: api.syncManager,
       path: graphqlManager.getBasePath(),
@@ -1748,7 +1746,6 @@ async function initServer(
       }),
       typeDefs: reactorDriveSubgraphTypeDefs,
       readClient: read,
-      reactorClient: client,
       relationalDb: undefined as never,
     };
 

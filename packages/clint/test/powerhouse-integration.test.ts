@@ -351,13 +351,20 @@ describe("ensureDrive", () => {
     createEmpty?: (...args: unknown[]) => Promise<{ header: { id: string } }>;
     rename?: (id: string, name: string) => Promise<void>;
   }): ReactorClientModule {
+    const createEmpty =
+      overrides.createEmpty ?? (async () => ({ header: { id: "fallback" } }));
+    const rename = overrides.rename ?? (async () => {});
     return {
       client: {
         get: overrides.get ?? (async () => ({})),
-        createEmpty:
-          overrides.createEmpty ??
-          (async () => ({ header: { id: "fallback" } })),
-        rename: overrides.rename ?? (async () => {}),
+        write: {
+          createEmpty: async (...args: unknown[]) => ({
+            document: () => createEmpty(...args),
+          }),
+          rename: async (id: string, name: string) => ({
+            document: () => rename(id, name),
+          }),
+        },
       },
       reactor: {
         findByType: overrides.findByType ?? (async () => ({ results: [] })),
@@ -505,12 +512,17 @@ describe("ensureRemoteDrive", () => {
     ) => Promise<{ header?: { id: string }; id?: string }>;
     rename?: (id: string, name: string) => Promise<void>;
   }): ReactorClientModule {
+    const rename = overrides.rename ?? (async () => {});
     return {
       client: {
         addRemoteDrive:
           overrides.addRemoteDrive ??
           (async () => ({ header: { id: "remote-1" } })),
-        rename: overrides.rename ?? (async () => {}),
+        write: {
+          rename: async (id: string, name: string) => ({
+            document: () => rename(id, name),
+          }),
+        },
       },
       reactor: {
         findByType: async () => ({ results: [] }),

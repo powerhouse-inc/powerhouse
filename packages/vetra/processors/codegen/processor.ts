@@ -1,6 +1,6 @@
 import type {
   IProcessor,
-  IReactorClient,
+  IReactorReadClient,
   OperationWithContext,
 } from "@powerhousedao/reactor-browser";
 import type { PowerhouseConfig } from "@powerhousedao/shared";
@@ -19,7 +19,7 @@ export class CodegenProcessor implements IProcessor {
     config: PowerhouseConfig,
     cwd: string,
     private readonly driveId: string,
-    private readonly client: IReactorClient,
+    private readonly client: IReactorReadClient,
     interactiveMode = false,
   ) {
     this.manager = DocumentCodegenFactory.createManager(

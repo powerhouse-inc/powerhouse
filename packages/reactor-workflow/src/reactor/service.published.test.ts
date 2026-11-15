@@ -77,6 +77,14 @@ class Documents {
       },
       execute: (id: string, _branch: string, list: Action[]) =>
         Promise.resolve(this.apply(id, ...list)),
+      write: {
+        execute: (id: string, _branch: string, list: Action[]) => {
+          const document = this.apply(id, ...list);
+          return Promise.resolve({
+            document: () => Promise.resolve(document),
+          });
+        },
+      },
     };
   }
 }

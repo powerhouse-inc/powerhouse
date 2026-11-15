@@ -83,7 +83,7 @@ export const privacyPlugin: HostPlugin<{
         authorizationService: api.authorizationService,
         documentPermissionService: api.documentPermissionService,
         graphqlManager: ctx.graphqlManager as never,
-        reactorClient: ctx.client as never,
+        readClient: ctx.read as never,
         logger: (ctx.logger as ILogger).child(["privacy"]),
       });
     },

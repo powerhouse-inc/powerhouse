@@ -79,7 +79,7 @@ function makeProject(
   };
   const writeRecord = `
 mkdirSync(".ph/run", { recursive: true });
-writeFileSync(".ph/run/cli-assistant.json", JSON.stringify({ ...${JSON.stringify(record)}, pid: process.pid }));
+writeFileSync(".ph/run/cli-assistant.json", JSON.stringify({ ...${JSON.stringify(record)}, startedAt: new Date().toISOString(), pid: process.pid }));
 `;
   // argv: node cli.mjs run <host>
   writeFileSync(

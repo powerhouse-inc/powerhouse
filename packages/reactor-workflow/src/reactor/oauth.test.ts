@@ -261,6 +261,14 @@ function startBroker() {
 // Documents a runtime reads and writes, reduced for real.
 function documentStore() {
   const documents = new Map<string, ConnectionDocument>();
+  const execute = (id: string, _branch: string, list: Action[]) => {
+    let document = documents.get(id)!;
+    for (const action of list) {
+      document = reducer(document, action as never);
+    }
+    documents.set(id, document);
+    return Promise.resolve(document);
+  };
   return {
     documents,
     client: {
@@ -270,13 +278,12 @@ function documentStore() {
           ? Promise.resolve(document)
           : Promise.reject(new Error(`No document ${id}`));
       },
-      execute: (id: string, _branch: string, list: Action[]) => {
-        let document = documents.get(id)!;
-        for (const action of list) {
-          document = reducer(document, action as never);
-        }
-        documents.set(id, document);
-        return Promise.resolve(document);
+      execute,
+      write: {
+        execute: async (id: string, branch: string, list: Action[]) => {
+          const document = await execute(id, branch, list);
+          return { document: () => Promise.resolve(document) };
+        },
       },
       find: () => Promise.resolve({ results: [] }),
     },

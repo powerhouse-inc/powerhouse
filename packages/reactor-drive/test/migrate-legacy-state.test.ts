@@ -30,10 +30,10 @@ import { runReactorDriveMigrations } from "../src/schema/migrations/migrator.js"
 import type { ReactorDriveDatabase } from "../src/schema/tables.js";
 
 function createReactor() {
-  const execute = vi
-    .fn()
-    .mockResolvedValue({ id: "job" } as unknown as JobInfo);
-  const reactor = { execute } as unknown as IReactorClient;
+  const execute = vi.fn().mockResolvedValue({
+    document: () => Promise.resolve({ id: "job" } as unknown as JobInfo),
+  });
+  const reactor = { write: { execute } } as unknown as IReactorClient;
   return { reactor, execute };
 }
 
@@ -250,10 +250,12 @@ describe("migrateLegacyDriveState", () => {
           return { operation: op, context };
         });
         await processor.indexOperations(ops);
-        return { id: "job" } as unknown as JobInfo;
+        return {
+          document: () => Promise.resolve({ id: "job" } as unknown as JobInfo),
+        };
       },
     );
-    const reactor = { execute } as unknown as IReactorClient;
+    const reactor = { write: { execute } } as unknown as IReactorClient;
 
     const fileNode: Node = {
       id: "file-1",

@@ -43,6 +43,14 @@ beforeAll(async () => {
         apply(...list);
         return Promise.resolve(document);
       },
+      write: {
+        execute: (_id: string, _branch: string, list: Action[]) => {
+          apply(...list);
+          return Promise.resolve({
+            document: () => Promise.resolve(document),
+          });
+        },
+      },
     },
   });
 });
