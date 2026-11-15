@@ -57,6 +57,31 @@ function readConfig(projectDir: string): unknown {
   }
 }
 
+// The project's hosts: the folders of hosts/ that hold a host.js.
+function hostNames(projectDir: string): string[] {
+  const hostsDir = join(projectDir, "hosts");
+  return projectFiles
+    .list(hostsDir)
+    .filter((name) => projectFiles.exists(join(hostsDir, name, "host.js")));
+}
+
+// Whether addHostsFolder adds the hosts: see there.
+function getsHostsFolder(projectDir: string): boolean {
+  return (
+    hostNames(projectDir).length === 0 &&
+    projectFiles.exists(join(projectDir, POWERHOUSE_CONFIG_FILE))
+  );
+}
+
+/** Whether the project has the host `name` once migrate has run: its own, or
+ * one of the hosts addHostsFolder adds. */
+export function hasHostAfterMigration(
+  projectDir: string,
+  name: string,
+): boolean {
+  return getsHostsFolder(projectDir) || hostNames(projectDir).includes(name);
+}
+
 /**
  * Adds hosts/ (and the agents/ stub) to a project that has none, through the
  * `ph init` writer, composed from what the project runs today. A project
@@ -69,14 +94,7 @@ export async function addHostsFolder(
   projectDir: string,
   packageName: string | undefined,
 ): Promise<boolean> {
-  const hostsDir = join(projectDir, "hosts");
-  const hasHost = projectFiles
-    .list(hostsDir)
-    .some((name) => projectFiles.exists(join(hostsDir, name, "host.js")));
-  if (hasHost) return false;
-  if (!projectFiles.exists(join(projectDir, POWERHOUSE_CONFIG_FILE))) {
-    return false;
-  }
+  if (!getsHostsFolder(projectDir)) return false;
   await writeGeneratedHostsFiles(
     projectDir,
     hostsProjectName(projectDir, packageName),

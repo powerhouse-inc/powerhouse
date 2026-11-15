@@ -219,7 +219,7 @@ describe("ph migrate on a project without hosts/", { timeout: 60_000 }, () => {
     );
     expect(pkg.scripts.lint).toBe("oxlint --deny-warnings");
     expect(pkg.scripts.deploy).toBe("node scripts/deploy.mjs");
-    expect(pkg.scripts.vetra).toBe("ph-cli vetra");
+    expect(pkg.scripts.vetra).toBe("ph-cli run vetra");
     expect(pkg.dependencies).toEqual({ luxon: "^3.0.0" });
     expect(pkg.devDependencies["left-pad"]).toBe("1.3.0");
     expect(pkg.devDependencies["@powerhousedao/ph-cli"]).toBe(VERSION);

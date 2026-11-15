@@ -62,9 +62,6 @@ Note the last row: generated projects ship **AI-assistant configuration** —
 that points at `reactor-mcp`. Agent-first tooling is baked into the scaffold, which
 is consistent with Vetra's "agent-first builder platform" description.
 
-There are also `.legacy` variants (`package.json.legacy.ts`,
-`index.html.legacy.ts`) for the older project layout.
-
 ### `src/templates/`
 
 `document-model/` (`actions.ts`, `hooks.ts`, `gen/`, `tests/`), `document-editor/`,

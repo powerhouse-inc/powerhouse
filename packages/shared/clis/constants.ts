@@ -313,18 +313,19 @@ export const packageScripts = {
   tsc: "ph-cli generate connect-routes && tsc",
   "tsc:watch": "tsc --watch",
   generate: "ph-cli generate",
-  connect: "ph-cli connect",
+  // The project's hosts (hosts/<name>/host.js), as `ph run <host>`.
+  connect: "ph-cli run connect",
   build: "ph-cli build",
-  reactor: "ph-cli reactor",
-  service: "ph-cli service",
-  vetra: "ph-cli vetra",
+  vetra: "ph-cli run vetra",
   // The MCP configs run it as `node --run mcp`, which needs no shell on Windows.
   mcp: "ph-cli mcp",
-  "service-startup":
-    "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
-  "service-unstartup":
-    "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh",
 } as const;
+
+// The scripts of `packageScripts` that run the host of the same name.
+export const HOST_PACKAGE_SCRIPTS: readonly (keyof typeof packageScripts)[] = [
+  "connect",
+  "vetra",
+];
 
 // The values earlier scaffolds wrote for a script of `packageScripts`. `ph
 // migrate` updates a script that still holds one of these, and keeps any
@@ -343,6 +344,9 @@ export const SUPERSEDED_PACKAGE_SCRIPTS: Partial<
   ],
   tsc: ["tsc"],
   build: ["npm run tsc && npm run tailwind"],
+  // The classic commands, before the hosts.
+  connect: ["ph-cli connect"],
+  vetra: ["ph-cli vetra"],
 };
 
 export const externalDependencies = {} as const;

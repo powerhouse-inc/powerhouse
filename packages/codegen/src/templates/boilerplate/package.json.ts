@@ -78,14 +78,10 @@ export const packageJsonTemplate = (
     "tsc:watch": "tsc --watch",
     "check-circular-imports": "npx dpdm -T ./index.ts",
     "generate": "ph-cli generate",
-    "connect": "ph-cli connect",
+    "connect": "ph-cli run connect",
     "build": "ph-cli build",
-    "reactor": "ph-cli reactor",
-    "service": "ph-cli service",
-    "vetra": "ph-cli vetra",
-    "mcp": "ph-cli mcp",
-    "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
-    "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
+    "vetra": "ph-cli run vetra",
+    "mcp": "ph-cli mcp"
   },
   "peerDependencies": {
     ${sortedJsonBody(peerDependencies)}

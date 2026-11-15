@@ -80,6 +80,31 @@ describe("the scripts migrate manages", () => {
     expect(kept).toEqual([]);
   });
 
+  it("moves the classic commands an earlier scaffold wrote to the hosts", () => {
+    const { scripts, kept } = migratedScripts({
+      connect: "ph-cli connect",
+      vetra: "ph-cli vetra",
+      reactor: "ph-cli reactor",
+    });
+    expect(scripts.connect).toBe("ph-cli run connect");
+    expect(scripts.vetra).toBe("ph-cli run vetra");
+    // No longer a script of the scaffold: the project's, so it stays.
+    expect(scripts.reactor).toBe("ph-cli reactor");
+    expect(kept).toEqual([]);
+  });
+
+  it("leaves the classic commands when the project has no such host", () => {
+    const own = { connect: "ph-cli connect" };
+    const { scripts, kept } = migratedScripts(own, (name) => name !== "vetra");
+    expect(scripts.connect).toBe("ph-cli run connect");
+    // No vetra host: none is added.
+    expect(scripts).not.toHaveProperty("vetra");
+    expect(
+      migratedScripts({ vetra: "ph-cli vetra" }, () => false).scripts.vetra,
+    ).toBe("ph-cli vetra");
+    expect(kept).toEqual([]);
+  });
+
   it("keeps a value the project wrote and names the script", () => {
     const own = {
       lint: "oxlint --deny-warnings",
@@ -203,6 +228,34 @@ describe("the lint scripts", () => {
         /^ph-cli generate connect-routes && oxlint --type-aware --type-check/,
       );
       expect(scaffolded.scripts[script]).toBe(packageScripts[script]);
+    }
+  });
+});
+
+describe("the scripts of a new project", () => {
+  const scaffolded = JSON.parse(packageJsonTemplate("new-project", {}, {})) as {
+    scripts: Record<string, string>;
+  };
+
+  it("are the ones migrate writes", () => {
+    expect(scaffolded.scripts).toMatchObject(packageScripts);
+    // Migrating a new project changes none of them.
+    expect(migratedScripts(scaffolded.scripts)).toEqual({
+      scripts: scaffolded.scripts,
+      kept: [],
+    });
+  });
+
+  it("run the project's hosts, with no classic command", () => {
+    expect(scaffolded.scripts.connect).toBe("ph-cli run connect");
+    expect(scaffolded.scripts.vetra).toBe("ph-cli run vetra");
+    for (const name of [
+      "reactor",
+      "service",
+      "service-startup",
+      "service-unstartup",
+    ]) {
+      expect(scaffolded.scripts).not.toHaveProperty(name);
     }
   });
 });

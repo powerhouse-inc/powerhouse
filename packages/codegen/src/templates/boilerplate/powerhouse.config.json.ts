@@ -29,9 +29,9 @@ type BuildPowerhouseConfigTemplateArgs = {
  *
  * The `connect` block is populated from `DEFAULT_CONNECT_CONFIG` so every
  * runtime field is present in the scaffolded file. Dev consumers that read
- * the source config directly (notably `ph vetra`, which has no dist file)
+ * the source config directly (notably `ph run vetra`, which has no dist file)
  * see fully-defined values instead of `undefined`. `connect.instance` and
- * `connect.app.cookieBanner` are the exceptions: unset, `ph vetra` picks
+ * `connect.app.cookieBanner` are the exceptions: unset, Vetra picks
  * Studio's reactor client and turns the cookie banner off for it.
  */
 // Kept `async` for callsite signature compatibility (callers already

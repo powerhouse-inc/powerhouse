@@ -15,6 +15,7 @@ import {
   projectFiles,
   recordWrites,
   runCmd,
+  HOST_PACKAGE_SCRIPTS,
   SUPERSEDED_PACKAGE_SCRIPTS,
   versionSatisfies,
   VERSIONED_DEV_DEPENDENCIES,
@@ -52,7 +53,7 @@ import {
   HOSTS_TSC_SCRIPT,
   withHostsTscScript,
 } from "../file-builders/hosts/host-typing-files.js";
-import { addHostsFolder } from "./migrate-hosts.js";
+import { addHostsFolder, hasHostAfterMigration } from "./migrate-hosts.js";
 import { assertVersionedDocumentModels } from "./migrate-layout-floor.js";
 import { migratePowerhouseConfig } from "./migrate-powerhouse-config.js";
 import { migrateTsconfigFiles } from "./migrate-tsconfig.js";
@@ -382,8 +383,13 @@ function ownsPin(ownKeys: string[], name: string) {
 // is added. One that holds a value an earlier scaffold wrote
 // (SUPERSEDED_PACKAGE_SCRIPTS) is updated. Any other value is the project's
 // own and stays; `kept` names those. The `tsc -p hosts` the hosts scaffold
-// appends to `tsc` is carried over an update.
-export function migratedScripts(existing: PackageJson["scripts"] = {}): {
+// appends to `tsc` is carried over an update. A script that runs a host
+// (HOST_PACKAGE_SCRIPTS) is managed only when the project has that host:
+// without it the script stays as it is, and none is added.
+export function migratedScripts(
+  existing: PackageJson["scripts"] = {},
+  hasHost: (name: string) => boolean = () => true,
+): {
   scripts: NonNullable<PackageJson["scripts"]>;
   kept: (keyof typeof packageScripts)[];
 } {
@@ -392,6 +398,7 @@ export function migratedScripts(existing: PackageJson["scripts"] = {}): {
   const hostsSuffix = ` && ${HOSTS_TSC_SCRIPT}`;
   for (const name of keys(packageScripts)) {
     const scaffold: string = packageScripts[name];
+    if (HOST_PACKAGE_SCRIPTS.includes(name) && !hasHost(name)) continue;
     const current = existing[name];
     if (current === undefined) {
       scripts[name] = scaffold;
@@ -434,6 +441,7 @@ export function migratedPackageJson(
     PackageJson,
     "peerDependencies" | "dependencies" | "devDependencies"
   >,
+  hasHost?: (name: string) => boolean,
 ): PackageJson {
   const updated = {
     ...packageJson,
@@ -441,7 +449,7 @@ export function migratedPackageJson(
     sideEffects: packageJson.sideEffects ?? false,
     files: packageJson.files ?? ["/dist"],
     exports: migratedExports(packageJson.exports),
-    scripts: migratedScripts(packageJson.scripts).scripts,
+    scripts: migratedScripts(packageJson.scripts, hasHost).scripts,
     peerDependencies: managed.peerDependencies,
     devDependencies: managed.devDependencies,
   } as PackageJson;
@@ -530,6 +538,14 @@ export async function migrate(
   // Every write below goes through the write layer (projectFiles), which a
   // dry run records.
   const writeProjectFiles = async () => {
+    // Read before the first write: the theme migration adds to hosts/.
+    const hosts = new Map(
+      HOST_PACKAGE_SCRIPTS.map((name) => [
+        name as string,
+        hasHostAfterMigration(projectDir, name),
+      ]),
+    );
+    const hasHost = (name: string) => hosts.get(name) ?? false;
     console.log("Updating package.json...");
     await projectFiles.writeWith(join(projectDir, "package.json"), (target) =>
       writePackage(
@@ -542,10 +558,11 @@ export async function migrate(
             fullyQualifiedVersion,
             workspacePackageNames,
           }),
+          hasHost,
         ),
       ),
     );
-    for (const name of migratedScripts(packageJson.scripts).kept) {
+    for (const name of migratedScripts(packageJson.scripts, hasHost).kept) {
       console.log(
         `  kept the project's own "${name}" script; the scaffold's is \`${packageScripts[name]}\``,
       );

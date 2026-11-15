@@ -17,6 +17,8 @@ This tutorial will guide you through the process of creating a new document mode
 - \`lint\`: Checks for errors with oxlint, including type-aware rules and TypeScript type checking.
 - \`format\`: Formats the code using oxfmt.
 - \`build\`: Builds the library project using Vite.
+- \`connect\`: Runs the project's \`connect\` host (\`ph run connect\`): Connect in Studio Mode.
+- \`vetra\`: Runs the project's \`vetra\` host (\`ph run vetra\`): Vetra Studio and a Switchboard.
 - \`storybook\`: Starts Storybook in development mode.
 - \`build-storybook\`: Builds Storybook.
 - \`test\`: Runs Jest for testing.
@@ -46,6 +48,8 @@ Now you are able to launch Connect in Studio Mode (Locally):
 ~~~bash
 npm run connect
 ~~~
+
+This runs \`ph run connect\`. The applications this project can run are its hosts, defined under \`hosts/\` and started with \`ph run <host>\` (for example \`ph run vetra\` or \`ph run switchboard\`). See \`hosts/README.md\`.
 
 Open the 'Document Model' creator at the bottom of connect to define your document mode with it's GraphQL Schema Definition.
 This schema will define the structure and fields for your document model using GraphQL.
