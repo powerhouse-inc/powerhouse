@@ -26,6 +26,8 @@ const reactRequire = createRequire(
 const pkgDir = (name: string) =>
   dirname(reactRequire.resolve(`${name}/package.json`));
 const viteDir = dirname(dirname(dirname(require.resolve("vite"))));
+// A junction needs no privilege on Windows; the type is ignored elsewhere.
+const LINK_TYPE = process.platform === "win32" ? "junction" : "dir";
 
 describe("reactSelfHostPlugin build", () => {
   let root: string;
@@ -34,9 +36,9 @@ describe("reactSelfHostPlugin build", () => {
     root = mkdtempSync(join(TMP_PARENT, ".react-self-host-e2e-"));
     mkdirSync(join(root, "node_modules"));
     for (const name of ["react", "react-dom"]) {
-      symlinkSync(pkgDir(name), join(root, "node_modules", name), "dir");
+      symlinkSync(pkgDir(name), join(root, "node_modules", name), LINK_TYPE);
     }
-    symlinkSync(viteDir, join(root, "node_modules", "vite"), "dir");
+    symlinkSync(viteDir, join(root, "node_modules", "vite"), LINK_TYPE);
     writeFileSync(
       join(root, "index.html"),
       `<!doctype html><html><head></head><body><script type="module" src="/main.js"></script></body></html>`,
@@ -68,9 +70,12 @@ describe("reactSelfHostPlugin build", () => {
     }
 
     // Static servers (nginx) read the dist as another user: the staging
-    // dir's mkdtemp 0700 must not reach the served directory.
-    const mode = statSync(join(outDir, "__react__")).mode & 0o777;
-    expect(mode & 0o005).toBe(0o005);
+    // dir's mkdtemp 0700 must not reach the served directory. Windows has no
+    // such bits; its mode is synthetic.
+    if (process.platform !== "win32") {
+      const mode = statSync(join(outDir, "__react__")).mode & 0o777;
+      expect(mode & 0o005).toBe(0o005);
+    }
     const leftover = readdirSync(join(root, "node_modules")).filter((n) =>
       n.startsWith(".ph-react-self-host-"),
     );
