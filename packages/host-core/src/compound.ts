@@ -14,7 +14,7 @@ import { processResolveEnv, runnerOutputsSchema } from "./resolve/node.js";
 import { memberForRef, planCompound } from "./resolve/plan.js";
 import { findRemovedForms } from "./resolve/removed-forms.js";
 import { isPlainObject } from "./resolve/walk.js";
-import { resolveHostOutputs } from "./resolve/resolve.js";
+import { emptyMaps, resolveHostOutputs } from "./resolve/resolve.js";
 import { compoundOutputSource } from "./resolve/sources.js";
 import {
   clearRunRecord,
@@ -312,8 +312,9 @@ export async function runCompound(
       // A one-shot member (build) needs no other member's outputs: it gets
       // its declared host with only the "${userData}"/"${projectRoot}"
       // string sugar substituted (tokens stay; its verb reads paths, never
-      // outputs). Everything else resolves against the members started
-      // before it and is validated in resolved form.
+      // outputs; a $map reaches the verb as an empty collection). Everything
+      // else resolves against the members started before it and is
+      // validated in resolved form.
       const resolved = oneShot
         ? substituteBuiltinEnv(m.draft, resolveEnv.builtins ?? {})
         : resolveHostOutputs(m.draft, {
@@ -334,7 +335,7 @@ export async function runCompound(
       const fn = getVerb(m.runner, m.specifier, memberVerb);
       const where = `${name} (${m.specifier} ${memberVerb})`;
       const handle = toStartedHandle(
-        await fn(validated, {
+        await fn(oneShot ? emptyMaps(validated, resolved) : validated, {
           projectRoot,
           env: ctx.env,
           verb: memberVerb,

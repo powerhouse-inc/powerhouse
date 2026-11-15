@@ -1,5 +1,6 @@
 import {
   clearRunRecord,
+  emptyMaps,
   getVerb,
   isSchemaLike,
   loadHost,
@@ -86,7 +87,11 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
     const host = validateHost(runner, specifier, loaded.host, file, {
       tokens: "allow",
     });
-    return fn(host, { projectRoot, verb, env: process.env });
+    return fn(emptyMaps(host, loaded.host), {
+      projectRoot,
+      verb,
+      env: process.env,
+    });
   }
   const publishes = isSchemaLike(runner.outputsSchema);
   // Before the verb starts anything: a second live instance would take

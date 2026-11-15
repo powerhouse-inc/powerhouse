@@ -215,7 +215,8 @@ export async function resolveRunnerModule(
 /** Verbs that produce something and start nothing (`build`): no outputs, no
  * record, no lock — and no token resolution, since what they read (output
  * dirs, packages) never comes from another host's outputs. Their verb gets
- * the declared host (tokens may remain in token-able fields). */
+ * the declared host (tokens may remain in token-able fields; a `$map` is
+ * the empty collection, see `emptyMaps`). */
 export const ONE_SHOT_VERBS: ReadonlySet<string> = new Set(["build"]);
 
 export function listVerbs<O>(runner: RunnerModule<O>): string[] {

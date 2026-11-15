@@ -703,6 +703,29 @@ export function resolveHostOutputs<T>(
   };
 }
 
+/**
+ * What a one-shot verb (build) gets for a `$map`: no outputs exist there, so
+ * every map in `declared` renders no elements (`[]`, or `{}` with into:
+ * "record") at its path in `host`, the declared-form parse of `declared`.
+ * Other tokens stay, as they do in token-able fields.
+ */
+export function emptyMaps<T>(host: T, declared: unknown): T {
+  const maps = collectTokenSites(declared).filter(
+    (site) =>
+      site.key === "$map" &&
+      site.scopes.length === 0 &&
+      site.position !== "concat",
+  );
+  if (maps.length === 0) return host;
+  const out: unknown = cloneWithProvenance(host);
+  for (const { path, token } of maps) {
+    const operand = token.$map;
+    const record = isPlainObject(operand) && operand.into === "record";
+    setAt(out, path, record ? {} : [], false);
+  }
+  return out as T;
+}
+
 function setAt(
   root: unknown,
   trail: Trail,

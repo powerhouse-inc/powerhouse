@@ -22,6 +22,7 @@ import {
   compoundOutputSource,
   describeMapElements,
   describeToken,
+  emptyMaps,
   outputSitesOf,
   planCompound,
   resolveHostOutputs,
@@ -958,7 +959,7 @@ function makeCliProject(): { dir: string; sink: string } {
   );
   const sink = path.join(dir, "calls.json");
   mkdirSync(path.join(dir, "node_modules"), { recursive: true });
-  symlinkSync(ZOD_DIR, path.join(dir, "node_modules", "zod"), "dir");
+  symlinkSync(ZOD_DIR, path.join(dir, "node_modules", "zod"), "junction");
   const pkgDir = path.join(dir, "node_modules", "fake-runner");
   mkdirSync(pkgDir, { recursive: true });
   writeFileSync(
@@ -1001,6 +1002,9 @@ export async function run(host) {
     };
   }
   return { outputs: { origin: "http://127.0.0.1:3064" }, shutdown };
+}
+export async function build(host) {
+  appendFileSync(sink, JSON.stringify({ name: host.name, verb: "build", reactor: host.reactor ?? null }) + "\\n");
 }
 `,
   );
@@ -1136,5 +1140,93 @@ describe("cli-style compound: $map over the switchboard's drives", () => {
       "sektar",
       "workflows",
     ]);
+  });
+
+  it("build: no member has outputs, so the mapped drives are an empty list", async () => {
+    const { dir, sink } = makeCliProject();
+    const host = (await loadHost(dir, "cli")).host;
+    const result = await runCompound(
+      host,
+      { projectRoot: dir, verb: "build", env: {} },
+      { projectName: "lab", installSignalHandlers: false },
+    );
+    const calls = readFileSync(sink, "utf8")
+      .trim()
+      .split("\n")
+      .map(
+        (l) =>
+          JSON.parse(l) as { name: string; verb: string; reactor: unknown },
+      );
+    expect(calls.map((c) => [c.name, c.verb])).toEqual([
+      ["lab-switchboard", "build"],
+      ["lab-connect", "build"],
+    ]);
+    // the plain token stays, as before; the $map is a list the verb can read
+    expect(calls[1].reactor).toEqual({
+      backends: {
+        sb: {
+          kind: "remote",
+          remote: { url: out("switchboard", ["drives", "sektar", "url"]) },
+        },
+      },
+      drives: [],
+    });
+    await result.shutdown();
+  });
+});
+
+describe("$map at a one-shot verb (emptyMaps)", () => {
+  const byUrl = {
+    $map: {
+      over: out("switchboard", ["drives"]),
+      to: { $item: ["url"] },
+      into: "record",
+    },
+  };
+
+  it('renders no elements: [] for a list, {} with into: "record"; other tokens stay', () => {
+    const host = {
+      origin: out("switchboard", ["origin"]),
+      reactor: { drives: drivesMap },
+      config: { urls: byUrl, nested: [{ drives: drivesMap }] },
+    };
+    expect(emptyMaps(host, host)).toEqual({
+      origin: out("switchboard", ["origin"]),
+      reactor: { drives: [] },
+      config: { urls: {}, nested: [{ drives: [] }] },
+    });
+    // the declared host is not mutated
+    expect(host.reactor.drives).toBe(drivesMap);
+  });
+
+  it("leaves a host without a $map as it is, an escaped literal included", () => {
+    const declared = { config: { literal: { $$: drivesMap } } };
+    // what validateHost hands the verb: the escape unwrapped
+    const parsed = { config: { literal: drivesMap } };
+    expect(emptyMaps(parsed, declared)).toBe(parsed);
+  });
+
+  it("applies to the declared-form parse of the real host schema", () => {
+    const { declaredHostSchema, hostSchema } = defineHostSchemas(
+      (s) => s.reactorHostSchema,
+    );
+    const runner: RunnerModule = {
+      kind: "reactor",
+      run: () => Promise.resolve(undefined),
+      hostSchema,
+      declaredHostSchema,
+    };
+    const member = {
+      name: "lab-connect",
+      runner: { module: "m" },
+      reactor: { drives: drivesMap },
+    };
+    const parsed = validateHost(runner, "m", member, "hosts/connect/host.js", {
+      tokens: "allow",
+    });
+    expect(emptyMaps(parsed, member)).toMatchObject({
+      name: "lab-connect",
+      reactor: { drives: [] },
+    });
   });
 });

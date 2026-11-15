@@ -40,13 +40,32 @@ export interface ConnectServer {
   close(): Promise<void>;
 }
 
-/** The hosts a browser may reach this by: a rebinding attack needs a name. */
-export function isAllowedHost(hostHeader: string | undefined): boolean {
+/** The public name a deployment serves this under, in the variable
+ * `vite preview` reads for the same purpose. */
+const ADDITIONAL_HOST_ENV = "__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS";
+
+/** The hosts a browser may reach this by: a rebinding attack needs a name.
+ * This computer's own names, and the one name the environment adds. */
+export function isAllowedHost(
+  hostHeader: string | undefined,
+  env: Record<string, string | undefined> = process.env,
+): boolean {
   if (!hostHeader) return false;
   const name = hostHeader.replace(/:\d+$/, "").replace(/^\[|\]$/g, "");
-  return (
-    name === "localhost" || name.endsWith(".localhost") || net.isIP(name) !== 0
-  );
+  if (
+    name === "localhost" ||
+    name.endsWith(".localhost") ||
+    net.isIP(name) !== 0
+  ) {
+    return true;
+  }
+  const added = env[ADDITIONAL_HOST_ENV]?.trim().toLowerCase();
+  if (!added) return false;
+  const asked = name.toLowerCase();
+  // as vite: a leading dot takes the domain and its subdomains
+  return added.startsWith(".")
+    ? asked === added.slice(1) || asked.endsWith(added)
+    : asked === added;
 }
 
 const hostCheck: ConnectMiddleware = (req, res, next) => {

@@ -28,6 +28,7 @@ export {
 } from "./plan.js";
 export {
   describeMapElements,
+  emptyMaps,
   resolveHostOutputs,
   TokenResolutionError,
   type DeferredResolution,

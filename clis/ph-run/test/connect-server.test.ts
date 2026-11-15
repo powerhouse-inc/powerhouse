@@ -7,7 +7,7 @@ import {
 import { connect, createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   isAllowedHost,
   runConnectServer,
@@ -242,6 +242,42 @@ describe("the built-in Connect server", () => {
     expect(isAllowedHost("192.168.1.20:2541")).toBe(true);
     expect(isAllowedHost("evil.example")).toBe(false);
     expect(isAllowedHost(undefined)).toBe(false);
+  });
+
+  it("knows the name a deployment adds, as vite preview does", () => {
+    const one = { __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: "app.vetra.io" };
+    expect(isAllowedHost("app.vetra.io", one)).toBe(true);
+    expect(isAllowedHost("App.Vetra.io:443", one)).toBe(true);
+    expect(isAllowedHost("other.vetra.io", one)).toBe(false);
+    expect(isAllowedHost("localhost:6540", one)).toBe(true);
+    const domain = { __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: ".vetra.io" };
+    expect(isAllowedHost("vetra.io", domain)).toBe(true);
+    expect(isAllowedHost("app.vetra.io", domain)).toBe(true);
+    expect(isAllowedHost("evilvetra.io", domain)).toBe(false);
+    expect(isAllowedHost("app.vetra.io", {})).toBe(false);
+    expect(
+      isAllowedHost("app.vetra.io", {
+        __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: "",
+      }),
+    ).toBe(false);
+  });
+
+  it("answers under the name a deployment adds", async () => {
+    vi.stubEnv("__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS", "dev.sektar.be");
+    const port = await freePort();
+    const running = await runConnectServer(argsFor(dist, port), {}, PROJECT);
+    const raw = connect(port, "127.0.0.1");
+    let text = "";
+    raw.on("data", (data) => (text += data.toString()));
+    raw.write("GET / HTTP/1.1\r\nHost: dev.sektar.be\r\n\r\n");
+    try {
+      await until(() => text.includes("\r\n"));
+      expect(text).toMatch(/^HTTP\/1\.1 200 /);
+    } finally {
+      raw.destroy();
+      await running.close();
+      vi.unstubAllEnvs();
+    }
   });
 
   it("fails on a taken port when strict, and moves on when not", async () => {
