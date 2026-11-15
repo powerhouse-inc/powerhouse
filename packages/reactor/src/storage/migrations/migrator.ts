@@ -1,5 +1,11 @@
 import { Migrator, sql } from "kysely";
 import type { MigrationProvider, Kysely } from "kysely";
+import {
+  checkMigrationFloor,
+  MIGRATION_FLOOR,
+  recordMigrationRelease,
+  type StoreMigrationState,
+} from "../migration-floor.js";
 import type { MigrationResult } from "./types.js";
 
 export const REACTOR_SCHEMA = "reactor";
@@ -34,6 +40,7 @@ import * as migration028 from "./028_create_write_identity.js";
 import * as migration029 from "./029_create_permission_tables.js";
 import * as migration030 from "./030_index_operation_retracts.js";
 import * as migration031 from "./031_index_created_model_protocol_versions.js";
+import * as migration032 from "./032_create_migration_release.js";
 
 const migrations = {
   "001_create_operation_table": migration001,
@@ -67,6 +74,7 @@ const migrations = {
   "029_create_permission_tables": migration029,
   "030_index_operation_retracts": migration030,
   "031_index_created_model_protocol_versions": migration031,
+  "032_create_migration_release": migration032,
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {
@@ -80,12 +88,31 @@ class ProgrammaticMigrationProvider implements MigrationProvider {
  *
  * The bound exists so a test can reach the schema a data migration is written
  * against, populate it, and then migrate across the migration under test.
+ *
+ * A store below `floor` is refused before anything is changed, with a
+ * `MigrationFloorError`. An empty store has nothing to migrate, so it is
+ * recorded at this release as soon as its schema exists.
  */
 export async function runMigrations(
   db: Kysely<any>,
   schema: string = REACTOR_SCHEMA,
   upTo?: string,
+  floor: string = MIGRATION_FLOOR,
 ): Promise<MigrationResult> {
+  let store: StoreMigrationState;
+  try {
+    store = await checkMigrationFloor(db, schema, floor);
+  } catch (error) {
+    return {
+      success: false,
+      migrationsExecuted: [],
+      error:
+        error instanceof Error
+          ? error
+          : new Error("Failed to check the migration floor"),
+    };
+  }
+
   try {
     await sql`CREATE SCHEMA IF NOT EXISTS ${sql.id(schema)}`.execute(db);
   } catch (error) {
@@ -126,6 +153,21 @@ export async function runMigrations(
       error:
         error instanceof Error ? error : new Error("Unknown migration error"),
     };
+  }
+
+  if (store.empty) {
+    try {
+      await recordMigrationRelease(db, schema);
+    } catch (e) {
+      return {
+        success: false,
+        migrationsExecuted,
+        error:
+          e instanceof Error
+            ? e
+            : new Error("Failed to record the migration release"),
+      };
+    }
   }
 
   return {

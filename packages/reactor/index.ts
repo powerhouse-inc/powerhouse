@@ -541,6 +541,16 @@ export {
   REACTOR_SCHEMA,
   runMigrations,
 } from "./src/storage/migrations/migrator.js";
+export {
+  checkMigrationFloor,
+  compareReleases,
+  MIGRATION_FLOOR,
+  MigrationFloorError,
+  PLATFORM_RELEASE,
+  readMigrationState,
+  recordMigrationRelease,
+  type StoreMigrationState,
+} from "./src/storage/migration-floor.js";
 
 // Synchronization
 export {

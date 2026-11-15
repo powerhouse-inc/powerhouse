@@ -19,6 +19,7 @@ import {
   parseDriveUrl,
   ProcessorTimingSettings,
   parseKeyframeSettings,
+  recordMigrationRelease,
   type Database,
   type InProcessReactorClientModule,
   type InProcessReactorModule,
@@ -872,7 +873,9 @@ async function initServer(
       .withUnsupportedStoredDocuments(unsupportedStoredDocuments)
       .withCatchUpPriority(catchUpPriority)
       .withProcessorTiming(processorTiming)
-      .withMemoryTelemetry(memoryTelemetry);
+      .withMemoryTelemetry(memoryTelemetry)
+      // The permission tables backfill below runs after the build.
+      .withHostMigrations();
 
     const keyframes = resolveKeyframes(
       config.storage.keyframes,
@@ -1110,9 +1113,10 @@ async function initServer(
     // predates the move hands over no read-model store and keeps its tables
     // there, so nothing is moved.
     const permissionsDb = baseKysely.withSchema(REACTOR_SCHEMA);
+    let permissionsBackfillRefused = false;
     try {
       if (readModelDb) {
-        await withProgressHeartbeat(
+        const outcome = await withProgressHeartbeat(
           { logger, label: "Moving the permission tables" },
           () =>
             backfillPermissionTables(
@@ -1121,6 +1125,7 @@ async function initServer(
               logger,
             ),
         );
+        permissionsBackfillRefused = outcome.status === "refused";
       }
     } catch (error) {
       logger.error(
@@ -1136,6 +1141,20 @@ async function initServer(
         );
       }
       throw error;
+    }
+
+    // Every one-shot migration of this release has now run. A refused backfill
+    // or a degraded reactor leaves the record for the next clean boot.
+    const degraded = (module.reactorModule?.degradedComponents.length ?? 0) > 0;
+    if (!permissionsBackfillRefused && !degraded) {
+      try {
+        await recordMigrationRelease(baseKysely, REACTOR_SCHEMA);
+      } catch (error) {
+        logger.warn(
+          "Could not record the store's migration release: @error",
+          error,
+        );
+      }
     }
 
     return {

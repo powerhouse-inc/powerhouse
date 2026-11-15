@@ -139,6 +139,11 @@ import {
   type PoolInstrumentation,
 } from "../storage/pool-instrumentation.js";
 import {
+  checkMigrationFloor,
+  MigrationFloorError,
+  recordMigrationRelease,
+} from "../storage/migration-floor.js";
+import {
   REACTOR_SCHEMA,
   runMigrations,
 } from "../storage/migrations/migrator.js";
@@ -417,6 +422,7 @@ export class ReactorBuilder {
   private keyframeSettings?: KeyframeSettings;
   private storeMaintenance?: IStoreMaintenance;
   private migrationStrategy: MigrationStrategy = "auto";
+  private hostRecordsMigrationRelease = false;
   private unsupportedStoredDocuments: UnsupportedStoredDocuments = "refuse";
   private syncBuilder?: SyncBuilder;
   private eventBus?: IEventBus;
@@ -570,6 +576,17 @@ export class ReactorBuilder {
 
   withMigrationStrategy(strategy: MigrationStrategy): this {
     this.migrationStrategy = strategy;
+    return this;
+  }
+
+  /**
+   * For a host that runs one-shot migrations of its own after the build. The
+   * build then leaves the store's migration release as it is, and the host
+   * calls `recordMigrationRelease` once its migrations have completed.
+   * Without this call the build records the release itself.
+   */
+  withHostMigrations(): this {
+    this.hostRecordsMigrationRelease = true;
     return this;
   }
 
@@ -1052,8 +1069,13 @@ export class ReactorBuilder {
     if (this.migrationStrategy === "auto") {
       const result = await runMigrations(baseDatabase, REACTOR_SCHEMA);
       if (!result.success && result.error) {
+        if (result.error instanceof MigrationFloorError) {
+          throw result.error;
+        }
         throw new Error(`Database migration failed: ${result.error.message}`);
       }
+    } else {
+      await checkMigrationFloor(baseDatabase, REACTOR_SCHEMA);
     }
     // The schema is no acknowledgment, but nothing would re-pull it.
     await groupCommit?.flusher.flush();
@@ -1654,6 +1676,17 @@ export class ReactorBuilder {
         degradedComponents.length,
         degradedComponents.map(({ component }) => component).join(", "),
       );
+    } else if (!this.hostRecordsMigrationRelease) {
+      // A degraded start may have skipped a one-shot migration, so only a
+      // clean one is recorded. The next clean start records it.
+      try {
+        await recordMigrationRelease(baseDatabase, REACTOR_SCHEMA);
+      } catch (error) {
+        this.logger.warn(
+          "Could not record the store's migration release: @error",
+          error,
+        );
+      }
     }
 
     if (this.signalHandlersEnabled) {
