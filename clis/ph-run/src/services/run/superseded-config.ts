@@ -1,38 +1,21 @@
+import {
+  DEPRECATIONS_REMOVED_IN,
+  formatDeprecation,
+  presentConfigKeys,
+  supersededConfigKeys,
+} from "@powerhousedao/shared/clis/deprecations";
 import fs from "node:fs";
 import path from "node:path";
 
 /**
- * P2.7 — the fixed legacy→hosts mapping table. With hosts/ active, these
- * powerhouse.config.json keys are superseded by host.js structure and the run
- * path ignores them; each present key warns ONCE per run, naming its new home.
- *
- * Keys the scaffolded host files REFERENCE (studio.port, reactor.port,
- * vetra.connectPort, assistant.port, and the WHOLE connect.* block — handed to the runtime
- * unchanged, connect.instance.* included) are expected to remain and are
- * deliberately absent from this table.
+ * P2.7: with hosts/ active, the powerhouse.config.json keys of the shared
+ * `supersededConfigKeys` table are superseded by host.js structure and the
+ * run path ignores them; each present key warns ONCE per run, naming its new
+ * home and the release that refuses it.
  */
-const SUPERSEDED: Record<string, string> = {
-  "studio.host": "hosts/connect/host.js → runner.host",
-  "studio.https": "hosts/connect/host.js → runner.https",
-  "studio.openBrowser": "hosts/connect/host.js → runner.openBrowser",
-  "reactor.https": "hosts/switchboard/host.js → runner.https",
-  "reactor.storage":
-    "hosts/switchboard/host.js → reactor.backends.<name>.storage",
-  "switchboard.database.url":
-    "hosts/switchboard/host.js → reactor.backends.<name>.storage.url",
-};
-
-function lookup(config: unknown, dottedKey: string): unknown {
-  let cursor: unknown = config;
-  for (const part of dottedKey.split(".")) {
-    if (cursor === null || typeof cursor !== "object") return undefined;
-    cursor = (cursor as Record<string, unknown>)[part];
-  }
-  return cursor;
-}
 
 /** Warn once per run for each superseded key present in the project config.
- * Returns the warned keys (for tests). Never throws — a malformed config is
+ * Returns the warned keys (for tests). Never throws: a malformed config is
  * the loader's problem, not the warner's. */
 export function warnSupersededConfigKeys(
   projectRoot: string,
@@ -46,15 +29,14 @@ export function warnSupersededConfigKeys(
   } catch {
     return [];
   }
-  const warned: string[] = [];
-  for (const [key, newHome] of Object.entries(SUPERSEDED)) {
-    if (lookup(config, key) !== undefined) {
-      warned.push(key);
-      warn(
-        `[ph run] powerhouse.config.json "${key}" is ignored in hosts projects — ` +
-          `its home is now ${newHome}.`,
-      );
-    }
+  const warned = presentConfigKeys(config, Object.keys(supersededConfigKeys));
+  for (const key of warned) {
+    warn(
+      formatDeprecation(
+        `powerhouse.config.json "${key}" is ignored by \`ph run\` and is an error in ${DEPRECATIONS_REMOVED_IN}. ` +
+          `Set ${supersededConfigKeys[key]} and remove the key.`,
+      ),
+    );
   }
   return warned;
 }

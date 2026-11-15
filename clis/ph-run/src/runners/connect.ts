@@ -34,6 +34,10 @@ import {
 } from "@powerhousedao/shared/clis/args";
 import { command, runSafely } from "cmd-ts";
 import { z } from "zod";
+import {
+  connectChromeDeprecation,
+  reactorWorkflowsDeprecation,
+} from "./host-deprecations.js";
 import { onlyPassed, runnerArgsSchemaOf } from "./runner-args.js";
 import {
   classicConnectPreviewArgs,
@@ -252,6 +256,21 @@ function callerOverrideRaw(
     `hosts/${host.name}/host.js`,
   )) {
     console.warn(warning.message);
+  }
+  // Still served, and gone in the next release.
+  for (const deprecation of [
+    connectChromeDeprecation(
+      host.config,
+      entries !== undefined,
+      `hosts/${host.name}/host.js`,
+    ),
+    reactorWorkflowsDeprecation(
+      reactor,
+      `hosts/${host.name}/host.js`,
+      "@powerhousedao/connect/plugins/workflows",
+    ),
+  ]) {
+    if (deprecation) console.warn(deprecation);
   }
   const declared = reactor?.drives;
   const declaredDefaults =

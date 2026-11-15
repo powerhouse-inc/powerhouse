@@ -187,7 +187,7 @@ describe("connect bridge runner", () => {
       expect(messages[0]).toContain('"@powerhousedao/connect/plugins/generic"');
       expect(messages[0]).toContain('verb "dev"');
 
-      // Composing the owner silences it; a classic host (no plugins) too.
+      // Composing the owner silences it.
       warn.mockClear();
       await runner.dev(
         connect(
@@ -206,11 +206,18 @@ describe("connect bridge runner", () => {
         ),
         { ...ctx, verb: "dev" },
       );
+      expect(warn).not.toHaveBeenCalled();
+
+      // A classic host (no plugins) still serves the value, until 6.4.
       await runner.dev(
         connect(connectHost({ config: { drives: { allowAddDrive: true } } })),
         { ...ctx, verb: "dev" },
       );
-      expect(warn).not.toHaveBeenCalled();
+      const deprecations = warn.mock.calls.map((call) => String(call[0]));
+      expect(deprecations).toHaveLength(1);
+      expect(deprecations[0]).toContain(
+        "hosts/lab-connect/host.js: config.drives.allowAddDrive is only read by the classic Connect boot, which 6.4 removes.",
+      );
     } finally {
       warn.mockRestore();
       log.mockRestore();

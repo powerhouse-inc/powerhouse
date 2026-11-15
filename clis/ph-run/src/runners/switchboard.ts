@@ -34,6 +34,7 @@ import {
   readModelAsReactorStore,
   switchboardDevMode,
 } from "./member-config.js";
+import { reactorWorkflowsDeprecation } from "./host-deprecations.js";
 import { onlyPassed, runnerArgsSchemaOf } from "./runner-args.js";
 import { z } from "zod";
 import { classicSwitchboardArgs } from "../services/classic-args.js";
@@ -418,6 +419,12 @@ async function start(
     hostFile,
   );
   if (legacyStore) console.warn(legacyStore.warning);
+  const workflowsBoolean = reactorWorkflowsDeprecation(
+    host.reactor,
+    hostFile,
+    "@powerhousedao/switchboard/plugins/workflows",
+  );
+  if (workflowsBoolean) console.warn(workflowsBoolean);
   // Already loaded by `ph run`, before the host; here for a caller that
   // starts the runner itself, and to reach its flush.
   const { loadObservability } = await import("../services/observability.js");

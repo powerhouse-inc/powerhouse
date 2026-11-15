@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { MIGRATION_GUIDE_URL } from "@powerhousedao/shared/clis/deprecations";
 import { warnSupersededConfigKeys } from "../src/services/run/superseded-config.js";
 
 const temporary: string[] = [];
@@ -52,8 +53,14 @@ describe("warnSupersededConfigKeys (P2.7 table)", () => {
       (m) => messages.push(m),
     );
     expect(warned).toEqual(["studio.openBrowser", "reactor.storage"]);
+    expect(messages).toHaveLength(2);
     expect(messages[0]).toContain("runner.openBrowser");
     expect(messages[1]).toContain("reactor.backends.<name>.storage");
+    expect(messages[0]).toBe(
+      'Warning: powerhouse.config.json "studio.openBrowser" is ignored by `ph run` and is an error in 6.4. ' +
+        "Set runner.openBrowser in hosts/connect/host.js and remove the key. " +
+        `See ${MIGRATION_GUIDE_URL}`,
+    );
   });
 
   it("returns empty on a missing or corrupt config", () => {

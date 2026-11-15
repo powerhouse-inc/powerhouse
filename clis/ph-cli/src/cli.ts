@@ -63,6 +63,10 @@ async function main() {
   const { checkRetiredFlags } =
     await import("@powerhousedao/shared/clis/retired-flags");
   checkRetiredFlags();
+  // Env switches that still work and go in the next release: warns only.
+  const { checkDeprecatedFlags } =
+    await import("@powerhousedao/shared/clis/deprecations");
+  checkDeprecatedFlags();
   // Initializes Sentry only if user consented (opt-out by default, asked
   // once on first interactive run). Respects PH_NO_TELEMETRY/DO_NOT_TRACK.
   sentryClient = await initCliTelemetry({
@@ -85,6 +89,17 @@ async function main() {
   // A runner's own arguments (`ph run vetra --switchboard-port 4001`).
   args = forwardRunnerArgv(sugar.args);
   const command = args[0];
+  // 6.3: a classic command says what replaces it. Not for `ph run`.
+  if (
+    command === "vetra" ||
+    command === "connect" ||
+    command === "switchboard" ||
+    command === "reactor"
+  ) {
+    const { warnClassicInvocation } =
+      await import("./utils/classic-warnings.js");
+    await warnClassicInvocation(args, process.cwd());
+  }
   const subcommand =
     command &&
     COMMANDS_WITH_SUBCOMMANDS.has(command) &&

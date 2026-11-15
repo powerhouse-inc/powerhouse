@@ -13,6 +13,10 @@ import {
   type SwitchboardConfigInput,
 } from "@powerhousedao/switchboard/config";
 import {
+  DEPRECATIONS_REMOVED_IN,
+  MIGRATION_GUIDE_URL,
+} from "@powerhousedao/shared/clis/deprecations";
+import {
   envNamesBeforeProjectEnv,
   isDotenvDisabled,
 } from "@powerhousedao/shared/clis/project-env";
@@ -171,7 +175,8 @@ export function readModelAsReactorStore(
     url,
     warning:
       `${hostFileLabel}: reactor readModel.url (${url}) also holds the reactor store, because no storage names one. ` +
-      "This is deprecated: set the backend's storage explicitly (the same Postgres url, or a path dataDir).",
+      `This is deprecated and stops working in ${DEPRECATIONS_REMOVED_IN}: set the backend's storage explicitly (the same Postgres url, or a path dataDir). ` +
+      `See ${MIGRATION_GUIDE_URL}`,
   };
 }
 

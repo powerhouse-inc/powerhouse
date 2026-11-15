@@ -5,6 +5,7 @@
 import "./observability-bin.mjs";
 
 import { getConfig } from "@powerhousedao/config/node";
+import { checkDeprecatedFlags } from "@powerhousedao/shared/clis/deprecations";
 import { checkRetiredFlags } from "@powerhousedao/shared/clis/retired-flags";
 import * as Sentry from "@sentry/node";
 import { childLogger } from "document-model";
@@ -52,6 +53,8 @@ const cliMigratePglite = process.argv.slice(2).includes("--migrate-pglite");
 try {
   // Retired env switches: warns, or refuses to start, per the shared table.
   checkRetiredFlags();
+  // Env switches that still work and go in the next release: warns only.
+  checkDeprecatedFlags();
   const config = binSwitchboardConfig(process.env, {
     filePort: getConfig().switchboard?.port,
     migratePglite: cliMigratePglite,

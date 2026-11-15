@@ -37,7 +37,13 @@ export const retiredFlags: readonly RetiredFlag[] = [
 /** Set once a process has warned, so the CLIs it spawns do not repeat it. */
 export const RETIRED_FLAGS_WARNED_ENV = "PH_RETIRED_FLAGS_WARNED";
 
-const FALSE_VALUES: ReadonlySet<string> = new Set(["false", "0", "off", "no"]);
+/** The values that switch a variable off. */
+export const FALSE_VALUES: ReadonlySet<string> = new Set([
+  "false",
+  "0",
+  "off",
+  "no",
+]);
 
 export interface RetiredFlagFinding {
   flag: RetiredFlag;

@@ -127,6 +127,10 @@
       "source": "./clis/retired-flags.ts",
       "import": "./dist/clis/retired-flags.mjs"
     },
+    "./clis/deprecations": {
+      "source": "./clis/deprecations.ts",
+      "import": "./dist/clis/deprecations.mjs"
+    },
     "./clis/telemetry": {
       "source": "./clis/services/telemetry.ts",
       "import": "./dist/clis/services/telemetry.mjs"
