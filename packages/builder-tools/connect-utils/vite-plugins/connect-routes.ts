@@ -407,6 +407,9 @@ export function connectRoutesGeneratorConfig(
       target: "react",
       routesDirectory,
       generatedRouteTree,
+      // The generator renames its temporary file into place, so it has to be
+      // written on the project's drive, not under the current directory.
+      tmpDir: join(projectRoot, ".ph", ".tanstack"),
       virtualRouteConfig: virtualRouteConfig(),
       plugins: offers ? [overrides, offered] : [overrides],
       // The project's _app layout and folder are mounted above, not again at
