@@ -94,7 +94,9 @@ function connectOutputs(origin: string) {
   return { origin, endpoints: { connect: `${origin}/` } };
 }
 
-/** What each producer FOLDER reports once started, per project. */
+/** What each producer FOLDER reports once started, per project. A compound
+ * member that declares more than its folder's host has an entry under its
+ * member key. */
 export const CANNED: Record<string, Canned> = {
   scaffold: {
     switchboard: switchboardOutputs("http://127.0.0.1:7491", {
@@ -102,6 +104,16 @@ export const CANNED: Record<string, Canned> = {
       workflows: { id: "workflows-0f1e2d3c" },
     }),
     connect: connectOutputs("http://127.0.0.1:6491"),
+    // The vetra compound's switchboard member adds the studio drives.
+    "vetra-switchboard": switchboardOutputs("http://127.0.0.1:7491", {
+      powerhouse: { id: "powerhouse" },
+      workflows: { id: "workflows-0f1e2d3c" },
+      vetra: { id: "vetra-0f1e2d3c", served: "vetra-0f1e2d3c" },
+      "vetra-preview": {
+        id: "vetra-preview-0f1e2d3c",
+        served: "vetra-preview-0f1e2d3c",
+      },
+    }),
   },
   matrix: {
     // `vetra` is projectHash: true (served under its hashed id); `shared`

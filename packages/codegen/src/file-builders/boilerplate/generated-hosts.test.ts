@@ -69,6 +69,14 @@ describe("writeGeneratedHostsFiles", () => {
     expect(connect).toContain("config.connect?.drives?.sections");
     expect(connect).toContain("config.connect?.drives?.icons");
     expect(connect).toContain("config.connect?.home?.background");
+    // a key only for what powerhouse.config.json sets (a host value is never
+    // undefined, and a sparse config leaves these out)
+    expect(connect).toContain(
+      "...(config.connect?.drives?.allowAddDrive !== undefined",
+    );
+    expect(connect).not.toContain(
+      "allowAddDrive: config.connect?.drives?.allowAddDrive,",
+    );
     // standalone Connect: its own worker reactor + a local default drive:
     expect(connect).toContain(`backends: {`);
     expect(connect).toContain(`kind: "worker"`);
@@ -90,6 +98,15 @@ describe("writeGeneratedHostsFiles", () => {
       `$output: { host: "switchboard", path: ["drives", "workflows", "url"] }`,
     );
     expect(vetra).not.toContain("from:");
+    // Studio is a remote client of the switchboard member, on its Vetra
+    // drive, with the cookie banner off (as classic `ph vetra`)
+    expect(vetra).toContain(
+      `url: { $output: { host: "switchboard", path: ["drives", "vetra", "url"] } }`,
+    );
+    expect(vetra).toContain("protocol: connect.reactor.protocol");
+    expect(vetra).toContain(
+      "app: { cookieBanner: false, ...connect.config.app }",
+    );
     // the vetra switchboard serves the switchboard host's drives too, next to
     // the studio drives
     expect(vetra).toContain("...(switchboard.reactor.drives ?? [])");

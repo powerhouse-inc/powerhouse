@@ -112,17 +112,28 @@ describe("exportHost", () => {
 
   it("projects an inheriting member like its standalone host", async () => {
     const root = project("scaffold");
+    const cli = hostExportSchema.parse(
+      roundTrip(await exportHost(root, "cli")),
+    );
+    const switchboard = hostExportSchema.parse(
+      roundTrip(await exportHost(root, "switchboard")),
+    );
+    expect(childrenOf(cli.host)["cli-switchboard"].reactor).toBeUndefined();
+    const inherited = memberReactor(cli, "cli-switchboard");
+    expect(inherited?.drives).toMatchObject([{ slug: "powerhouse" }]);
+    expect(inherited).toEqual(reactorOf(switchboard.host));
+    expect(backendsToDescriptors(inherited)).toEqual(
+      backendsToDescriptors(reactorOf(switchboard.host)),
+    );
+  });
+
+  it("projects a member's own reactor in place of its host's", async () => {
     const vetra = hostExportSchema.parse(
-      roundTrip(await exportHost(root, "vetra")),
+      roundTrip(await exportHost(project("scaffold"), "vetra")),
     );
-    const connect = hostExportSchema.parse(
-      roundTrip(await exportHost(root, "connect")),
-    );
-    const descriptors = backendsToDescriptors(
-      memberReactor(vetra, "vetra-studio"),
-    );
-    expect(descriptors).toMatchObject([{ kind: "worker", name: "main" }]);
-    expect(descriptors).toEqual(backendsToDescriptors(reactorOf(connect.host)));
+    expect(
+      backendsToDescriptors(memberReactor(vetra, "vetra-studio")),
+    ).toMatchObject([{ kind: "remote", name: "sb" }]);
   });
 
   it("follows nested compounds depth-first", async () => {

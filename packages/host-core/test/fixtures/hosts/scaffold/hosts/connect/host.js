@@ -29,11 +29,21 @@ export default {
     plugins: [
       {
         module: "@powerhousedao/connect/plugins/generic",
+        // A key only for what powerhouse.config.json sets (a host value is
+        // never undefined); the plugin has a default for the rest.
         config: {
-          allowAddDrive: config.connect?.drives?.allowAddDrive,
-          sections: config.connect?.drives?.sections,
-          icons: config.connect?.drives?.icons,
-          homeBackground: config.connect?.home?.background,
+          ...(config.connect?.drives?.allowAddDrive !== undefined
+            ? { allowAddDrive: config.connect?.drives?.allowAddDrive }
+            : {}),
+          ...(config.connect?.drives?.sections !== undefined
+            ? { sections: config.connect?.drives?.sections }
+            : {}),
+          ...(config.connect?.drives?.icons !== undefined
+            ? { icons: config.connect?.drives?.icons }
+            : {}),
+          ...(config.connect?.home?.background !== undefined
+            ? { homeBackground: config.connect?.home?.background }
+            : {}),
         },
       },
     ],

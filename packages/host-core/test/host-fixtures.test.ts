@@ -287,7 +287,12 @@ async function compoundPipeline(
         m.file,
       ),
     });
-    const hit = cannedOutputs(canned, m.member.host, m.runner, m.spec);
+    const hit = cannedOutputs(
+      canned,
+      Object.hasOwn(canned, key) ? key : m.member.host,
+      m.runner,
+      m.spec,
+    );
     live.set(key, hit.ok ? hit.outputs : {});
   }
   const expectation = expectHost({
@@ -565,7 +570,8 @@ const ROWS: Row[] = [
   {
     project: "scaffold",
     host: "vetra",
-    cells: "compound at dev · projectHash: true · verb-scoped plugins",
+    cells:
+      "compound at dev · projectHash: true · verb-scoped plugins · remote-client member on a member-declared drive",
     expected: compound("vetra", {
       verb: "dev",
       startOrder: ["vetra-switchboard", "vetra-studio"],
@@ -586,7 +592,7 @@ const ROWS: Row[] = [
         "vetra-studio": member(
           "connect",
           reactor({
-            ...scaffoldConnect,
+            name: "my-project-connect",
             verb: "dev",
             dependsOn: ["switchboard"],
             consumes: [
@@ -595,7 +601,13 @@ const ROWS: Row[] = [
                 "workflows",
                 "url",
               ]),
+              driveUrl("reactor.backends.sb.remote.url", "vetra"),
+              driveUrl("reactor.drives[0].remote.url", "vetra"),
             ],
+            clientMode: "remote",
+            backends: [{ name: "sb", kind: "remote" }],
+            remotes: [`${SCAFFOLD_SB}/d/vetra-0f1e2d3c`],
+            drives: [remote("vetra", `${SCAFFOLD_SB}/d/vetra-0f1e2d3c`)],
           }),
           ["vetra-switchboard"],
         ),

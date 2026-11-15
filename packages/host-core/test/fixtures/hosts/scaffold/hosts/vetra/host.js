@@ -5,9 +5,8 @@
 // Vite package loader + studio UI + codegen reload; `ph run vetra` (run) is
 // the same stack headless. Members spread their sibling host's composition
 // (full inclusion) and add studio.
-// Requires @powerhousedao/vetra-studio in devDependencies (private until its
-// first publish — link the workspace package meanwhile; added to the
-// versioned scaffold deps at that publish event, same as host-core/clint).
+// Requires @powerhousedao/vetra-studio in devDependencies (a versioned
+// scaffold dev dependency, same as host-core/clint).
 import config from "../../powerhouse.config.json" with { type: "json" };
 import switchboard from "../switchboard/host.js";
 import connect from "../connect/host.js";
@@ -72,6 +71,44 @@ export default {
                 $output: {
                   host: "switchboard",
                   path: ["drives", "workflows", "url"],
+                },
+              },
+            },
+          },
+        ],
+      },
+      // A first visit's cookie dialog would cover the local Studio, agents'
+      // browsers included: off, unless powerhouse.config.json sets it.
+      config: {
+        ...connect.config,
+        app: { cookieBanner: false, ...connect.config.app },
+      },
+      // Studio has no reactor of its own: it is a remote client of the
+      // switchboard member and opens on its Vetra drive. The drive's address
+      // is that member's output, so the compound starts it first.
+      reactor: {
+        protocol: connect.reactor.protocol,
+        backends: {
+          sb: {
+            kind: "remote",
+            remote: {
+              url: {
+                $output: {
+                  host: "switchboard",
+                  path: ["drives", "vetra", "url"],
+                },
+              },
+            },
+          },
+        },
+        drives: [
+          {
+            slug: "vetra",
+            remote: {
+              url: {
+                $output: {
+                  host: "switchboard",
+                  path: ["drives", "vetra", "url"],
                 },
               },
             },

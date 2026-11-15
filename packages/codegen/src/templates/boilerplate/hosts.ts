@@ -71,7 +71,7 @@ runs — one field, derived from the backend topology:
 | host | backends | reactorClient | reactor + storage |
 |---|---|---|---|
 | \`connect\` (standalone) | one \`worker\` | \`worker\` | the tab's own reactor in a SharedWorker (PGlite in-worker) |
-| \`cli\` → connect member | one \`remote\` | \`remote\` | NO local reactor — a pure client to the switchboard over GraphQL (no PGlite) |
+| \`cli\`, \`vetra\` → connect member | one \`remote\` | \`remote\` | NO local reactor — a pure client to the switchboard over GraphQL (no PGlite) |
 | \`desktop\` → connect member | one \`worker\` + \`$map\` remote drives | \`worker\` | the tab's reactor PLUS SYNCHRONIZED remote drives (local replica, keeps PGlite) |
 
 The lesson the \`cli\` vs \`desktop\` split teaches: a **remote client** proxies
@@ -129,11 +129,21 @@ export default {
     plugins: [
       {
         module: "@powerhousedao/connect/plugins/generic",
+        // A key only for what powerhouse.config.json sets (a host value is
+        // never undefined); the plugin has a default for the rest.
         config: {
-          allowAddDrive: config.connect?.drives?.allowAddDrive,
-          sections: config.connect?.drives?.sections,
-          icons: config.connect?.drives?.icons,
-          homeBackground: config.connect?.home?.background,
+          ...(config.connect?.drives?.allowAddDrive !== undefined
+            ? { allowAddDrive: config.connect?.drives?.allowAddDrive }
+            : {}),
+          ...(config.connect?.drives?.sections !== undefined
+            ? { sections: config.connect?.drives?.sections }
+            : {}),
+          ...(config.connect?.drives?.icons !== undefined
+            ? { icons: config.connect?.drives?.icons }
+            : {}),
+          ...(config.connect?.home?.background !== undefined
+            ? { homeBackground: config.connect?.home?.background }
+            : {}),
         },
       },
     ],
@@ -264,6 +274,34 @@ export default {
             module: "@powerhousedao/connect/plugins/workflows",
             config: {
               drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
+            },
+          },
+        ],
+      },
+      // A first visit's cookie dialog would cover the local Studio, agents'
+      // browsers included: off, unless powerhouse.config.json sets it.
+      config: {
+        ...connect.config,
+        app: { cookieBanner: false, ...connect.config.app },
+      },
+      // Studio has no reactor of its own: it is a remote client of the
+      // switchboard member and opens on its Vetra drive. The drive's address
+      // is that member's output, so the compound starts it first.
+      reactor: {
+        protocol: connect.reactor.protocol,
+        backends: {
+          sb: {
+            kind: "remote",
+            remote: {
+              url: { $output: { host: "switchboard", path: ["drives", "vetra", "url"] } },
+            },
+          },
+        },
+        drives: [
+          {
+            slug: "vetra",
+            remote: {
+              url: { $output: { host: "switchboard", path: ["drives", "vetra", "url"] } },
             },
           },
         ],

@@ -383,34 +383,29 @@ const DIFFERENCES: AllowedDifference[] = [
       "the runner's hooks into a config-change restart: the restarted server starts under the supervisor as the first did, and the handle stops whichever is current (runners/connect.ts dev); classic restarts in place and stops through its own exit handling",
   },
   {
+    // The drive's URL agrees: Studio opens on the switchboard's Vetra drive.
     paths: [
-      "studio.override.drives.defaultDrives.0.id",
-      "studio.override.drives.defaultDrives.0.local",
+      "studio.override.drives.defaultDrives.0.backend",
       "studio.override.drives.defaultDrives.0.name",
-      "studio.override.drives.defaultDrives.0.url",
     ],
     reason:
-      "classic points Studio at the Vetra drive on the switchboard by URL; the member's config has the connect host's local powerhouse drive and no Vetra drive",
+      "the member declares the Vetra drive by slug on a named backend (hosts/vetra reactor.drives); classic gives Studio the URL alone",
   },
   {
-    paths: ["studio.override.instance.reactorClient"],
-    classic: '"remote"',
-    hosts: '"worker"',
+    // reactorClient agrees: "remote" on both.
+    paths: [
+      "studio.override.instance.remoteBackends.0.name",
+      "studio.override.instance.remoteBackends.0.url",
+    ],
+    classic: "<absent>",
     reason:
-      "classic Studio has no reactor of its own and works on the switchboard (services/vetra.ts buildVetraStudioOverride); the member keeps the connect host's worker reactor",
+      "the member's one backend, the switchboard member by its Vetra drive (hosts/vetra reactor.backends); classic sets reactorClient alone (services/vetra.ts buildVetraStudioOverride)",
   },
   {
     paths: ["studio.override.instance.reactorWorker"],
     classic: "<absent>",
-    hosts: "true",
-    reason: "the connect host's worker reactor, as above",
-  },
-  {
-    paths: ["studio.override.app.cookieBanner"],
-    classic: "false",
-    hosts: "<absent>",
-    reason:
-      "only classic turns the cookie banner off (buildVetraStudioOverride)",
+    hosts: "false",
+    reason: "derived from the member's backends: a remote one, so no worker",
   },
   {
     paths: [
@@ -509,15 +504,21 @@ describe("ph vetra and ph run vetra", () => {
             "effects.portProbes",
             // Both hand the processor the remote drive's own URL.
             "switchboard.options.processorConfig.VetraConfig.driveUrl",
-            "studio.override.instance.reactorClient",
           ],
           added: [
             {
               paths: ["studio.override.instance.reactorClient"],
               classic: "<absent>",
-              hosts: '"worker"',
+              hosts: '"remote"',
               reason:
-                "with a remote drive classic Studio keeps its own reactor (buildVetraStudioOverride); the member's is the connect host's worker either way",
+                "with a remote drive classic Studio keeps its own reactor and syncs that drive (buildVetraStudioOverride); the member stays a client of the switchboard member, which syncs it",
+            },
+            {
+              paths: ["studio.override.drives.defaultDrives.0.url"],
+              classic: '"http://localhost:7711/d/remote-x"',
+              hosts: '"http://localhost:7711/d/vetra-<project-hash>"',
+              reason:
+                "classic Studio opens on the remote drive itself; the member opens on the switchboard member's Vetra drive, as without the flag",
             },
           ],
         }),
