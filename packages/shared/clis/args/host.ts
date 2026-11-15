@@ -1,6 +1,6 @@
 import { option, optional, positional, string } from "cmd-ts";
 
-// `ph host check` (FEATURE_UNIFORM_RUNNERS_ENABLED); ph-cli registers it, ph-cmd's help describes it.
+// `ph host check`; ph-cli registers it, ph-cmd's help describes it.
 export const hostCheckArgs = {
   host: positional({
     type: string,
@@ -21,7 +21,7 @@ export const hostCheckArgs = {
   }),
 };
 
-// `ph host export` (FEATURE_UNIFORM_RUNNERS_ENABLED).
+// `ph host export`.
 export const hostExportArgs = {
   host: positional({
     type: string,

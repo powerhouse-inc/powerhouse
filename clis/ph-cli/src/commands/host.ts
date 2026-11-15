@@ -35,7 +35,6 @@ export const exportCmd = command({
 
 export const host = subcommands({
   name: "host",
-  description:
-    "Inspect the project's hosts/ (FEATURE_UNIFORM_RUNNERS_ENABLED): `check`, `export`.",
+  description: "Inspect the project's hosts/: `check`, `export`.",
   cmds: { check, export: exportCmd },
 });

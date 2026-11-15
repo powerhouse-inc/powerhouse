@@ -12,8 +12,7 @@ export const runHost = command({
   name: "run",
   description:
     "Run a host from the project's hosts/ folder: `ph run <host> [verb]`. " +
-    "The host's own host.js names the runner module; the verb defaults to `run`. " +
-    "Part of uniform-runners (FEATURE_UNIFORM_RUNNERS_ENABLED).",
+    "The host's own host.js names the runner module; the verb defaults to `run`.",
   args: {
     host: positional({
       type: string,

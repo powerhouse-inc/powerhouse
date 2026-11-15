@@ -2,7 +2,7 @@ import { boolean, flag, option, optional, positional, string } from "cmd-ts";
 
 // Mirrors clis/ph-cli/src/commands/run.ts — the uniform-runners entry point.
 // Kept here so ph-cmd's help/dispatch (phCliHelpCommands) can describe it;
-// the command itself stays flag-gated in ph-cli (FEATURE_UNIFORM_RUNNERS_ENABLED).
+// ph-cli registers the command itself.
 export const runArgs = {
   host: positional({
     type: string,

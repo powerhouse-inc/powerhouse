@@ -400,13 +400,13 @@ async function importHost(
   if (probe.kind === "absent") {
     throw new HostLoadError(
       `No hosts/ folder found in ${projectRoot}.`,
-      "Scaffold one with `ph init --uniform-runners` (or create hosts/<name>/host.js).",
+      "New projects get one from `ph init`; in an existing project, create hosts/<name>/host.js.",
     );
   }
   if (probe.kind === "empty") {
     throw new HostLoadError(
       `hosts/ exists at ${probe.dir} but contains no <name>/host.js.`,
-      "An empty hosts/ folder does not activate the uniform-runners architecture; add a host definition or remove the folder.",
+      "An empty hosts/ folder defines no hosts; add a host definition or remove the folder.",
     );
   }
   if (!probe.hosts.includes(hostName)) {

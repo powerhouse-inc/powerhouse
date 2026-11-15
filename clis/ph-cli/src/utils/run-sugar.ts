@@ -2,7 +2,7 @@ import { probeHostsFolder } from "@powerhousedao/host-core";
 
 export interface RunSugarResult {
   args: string[];
-  /** Set when hosts/ exists but is empty — the guard state: warn loudly, stay legacy. */
+  /** Set when hosts/ exists but is empty — the guard state: warn loudly, stay classic. */
   warning?: string;
 }
 
@@ -11,7 +11,7 @@ export interface RunSugarResult {
  * command and names a host in the project's hosts/ folder, splice in `run`
  * (mirrors the connect→`connect studio` default-subcommand rewrite).
  * Built-in commands win collisions by construction — the known-command check
- * runs first. Callers only invoke this when the uniform-runners flag is on.
+ * runs first.
  */
 /** Classic commands that route through `ph run` in a hosts project — BARE
  * invocations only: extra flags are not representable on `ph run` yet, and
@@ -43,7 +43,7 @@ export function applyRunSugar(
       args,
       warning:
         `hosts/ exists at ${probe.dir} but contains no <name>/host.js — ` +
-        "uniform-runners stays inactive (legacy command handling).",
+        "no host is defined, so commands keep their classic handling.",
     };
   }
   if (probe.kind === "present" && probe.hosts.includes(first)) {
