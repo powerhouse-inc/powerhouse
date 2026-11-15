@@ -42,3 +42,16 @@ export async function classicSwitchboardArgs(
   }
   return result.value;
 }
+
+/** The classic `ph connect preview` argument shape, the same way. */
+export async function classicConnectPreviewArgs(
+  argv: string[] = [],
+): Promise<ConnectPreviewArgs> {
+  const result = await runSafely(classicConnectPreview, argv);
+  if (result._tag === "error") {
+    throw new Error(
+      `classic connect preview args did not parse: ${result.error.config.message}`,
+    );
+  }
+  return result.value;
+}

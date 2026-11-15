@@ -1,5 +1,4 @@
 import {
-  DEFAULT_CONNECT_OUTDIR,
   DEFAULT_CONNECT_STUDIO_PORT,
   type PHConnectCompositionEntry,
   type PHConnectDefaultDrive,
@@ -36,7 +35,10 @@ import {
 import { command, runSafely } from "cmd-ts";
 import { z } from "zod";
 import { onlyPassed, runnerArgsSchemaOf } from "./runner-args.js";
-import type { ConnectPreviewArgs } from "../services/classic-args.js";
+import {
+  classicConnectPreviewArgs,
+  type ConnectPreviewArgs,
+} from "../services/classic-args.js";
 import type { ConnectServeOverride } from "../services/connect-serve.js";
 
 /**
@@ -454,15 +456,20 @@ export async function serveWith(
   await validateComposition(host, ctx);
   const runner = host.runner;
   const passed = await connectInvocationArgs(host, ctx);
+  // A served Connect answers where its Studio does, not on `ph connect
+  // preview`'s own default port.
   const port = passed.port ?? runner.port ?? DEFAULT_CONNECT_STUDIO_PORT;
   const bind = passed.host ?? runner.host ?? "127.0.0.1";
-  const args: Partial<ConnectPreviewArgs> = {
+  // The classic `ph connect preview` arguments, with the keys this host and
+  // this invocation own laid over them.
+  const classic = await classicConnectPreviewArgs();
+  const args: ConnectPreviewArgs = {
+    ...classic,
     port,
-    outDir: runner.outDir ?? DEFAULT_CONNECT_OUTDIR,
+    outDir: runner.outDir ?? classic.outDir,
     open: passed.open ?? runner.openBrowser === true,
     strictPort: passed.strictPort ?? runner.strictPort === true,
     cors: passed.cors ?? true,
-    printUrls: true,
     bindCLIShortcuts: false,
     // Explicit IPv4 loopback (runner.host overrides): vite's default
     // "localhost" can bind ::1 only on Windows, and a supervising shell
@@ -472,7 +479,7 @@ export async function serveWith(
   const override = withoutBuiltImages(callerOverride(host, ctx, ctx.verb));
   const server = await startUnderSupervisor<ListeningServer>(ctx, () =>
     start(
-      args as ConnectPreviewArgs,
+      args,
       {
         connect: override,
         cspRegistrySync: runner.cspRegistrySync === true,

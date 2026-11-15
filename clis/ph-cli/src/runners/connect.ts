@@ -10,39 +10,35 @@ import {
   type ConnectInvocationArgs,
   type ConnectOutputs,
 } from "@powerhousedao/ph-run/runners/connect";
-import {
-  DEFAULT_CONNECT_OUTDIR,
-  DEFAULT_CONNECT_STUDIO_PORT,
-} from "@powerhousedao/shared/clis";
 import type { RunnerContext, RunnerHandle } from "@powerhousedao/host-core";
 import { join } from "node:path";
-import type { ConnectBuildArgs, ConnectStudioArgs } from "../types.js";
+import type { ConnectStudioArgs } from "../types.js";
 
 export * from "@powerhousedao/ph-run/runners/connect";
 
 export const verbs = ["run", "dev", "build", "serve"];
 
-/** The studio arg surface is wide (commonArgs + server args); the service only
- * reads a known subset, and the repo's own tests build these objects the same
- * way (Partial + cast — see connect-build.test.ts `mk()`). An argument of
- * this invocation (`passed`) wins over the host file. */
-function toStudioArgs(
+/** The classic `ph connect studio` arguments, with the keys this host and
+ * this invocation own laid over them. An argument of this invocation
+ * (`passed`) wins over the host file. */
+async function toStudioArgs(
   host: ConnectHostParsed,
   passed: ConnectInvocationArgs,
-): ConnectStudioArgs {
+): Promise<ConnectStudioArgs> {
+  const { classicConnectStudioArgs } =
+    await import("../services/classic-args.js");
+  const classic = await classicConnectStudioArgs();
   const runner = host.runner;
-  const bind = passed.host ?? runner.host;
-  const args: Partial<ConnectStudioArgs> = {
-    port: passed.port ?? runner.port ?? DEFAULT_CONNECT_STUDIO_PORT,
+  return {
+    ...classic,
+    port: passed.port ?? runner.port ?? classic.port,
     // The bind address (runnerBaseSchema `host`); unset keeps vite's default.
-    ...(bind ? { host: bind } : {}),
+    host: passed.host ?? runner.host ?? classic.host,
     open: passed.open ?? runner.openBrowser === true,
     strictPort: passed.strictPort ?? runner.strictPort === true,
-    ...(passed.cors === undefined ? {} : { cors: passed.cors }),
-    printUrls: true,
+    cors: passed.cors ?? classic.cors,
     bindCLIShortcuts: false,
   };
-  return args as ConnectStudioArgs;
 }
 
 // Per host: Studio and other hosts' dev servers run side by side in one project.
@@ -59,16 +55,30 @@ export async function dev(
 ): Promise<RunnerHandle<ConnectOutputs>> {
   await validateComposition(host, ctx);
   const { runConnectStudio } = await import("../services/connect-studio.js");
-  const args = toStudioArgs(host, await connectInvocationArgs(host, ctx));
+  const args = await toStudioArgs(host, await connectInvocationArgs(host, ctx));
+  const studio: { stop?: () => Promise<void> } = {};
   const server = await startUnderSupervisor(ctx, () =>
     runConnectStudio(args, undefined, callerOverride(host, ctx, ctx.verb), {
       routes: host.runner.routes,
       cacheDir: viteCacheOf(host, ctx),
       proxy: host.runner.proxy?.target,
+      // As `ph connect studio` and `ph vetra` start it.
+      reloadOnConfigChange: true,
+      // A restart's server is started as the first is.
+      restartWith: (start) => startUnderSupervisor(ctx, start),
+      exposeStop: (stop) => {
+        studio.stop = stop;
+      },
     }),
   );
+  // A config change replaces the first server: the handle stops Studio, which
+  // is its watcher and whichever server is current.
+  const current = {
+    resolvedUrls: server.resolvedUrls,
+    close: () => (studio.stop ? studio.stop() : server.close()),
+  };
   // vite's dev server binds its default host ("localhost") here.
-  return connectHandle(server, { host: "localhost", port: args.port });
+  return connectHandle(current, { host: "localhost", port: args.port });
 }
 
 /** `run` is dev-studio until the plugin phases give hosts a production
@@ -82,16 +92,18 @@ export async function build(
 ): Promise<void> {
   await validateComposition(host, ctx);
   const { runConnectBuild } = await import("../services/connect-build.js");
-  const args: Partial<ConnectBuildArgs> = {
+  const { classicConnectBuildArgs } =
+    await import("../services/classic-args.js");
+  const classic = await classicConnectBuildArgs();
+  const args = {
+    ...classic,
     // Classic `ph connect`'s default: `dist/` is the package `ph build` writes.
-    outDir: host.runner.outDir ?? DEFAULT_CONNECT_OUTDIR,
+    outDir: host.runner.outDir ?? classic.outDir,
   };
   // The host's config bakes in: its title, favicon, manifest, base path and loading shell.
-  await runConnectBuild(
-    args as ConnectBuildArgs,
-    callerOverride(host, ctx, ctx.verb),
-    { routes: host.runner.routes },
-  );
+  await runConnectBuild(args, callerOverride(host, ctx, ctx.verb), {
+    routes: host.runner.routes,
+  });
 }
 
 /** Opening a browser is a developer's convenience, and vite's to give, which

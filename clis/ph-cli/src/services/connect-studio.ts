@@ -19,6 +19,13 @@ export type ConnectStudioOptions = {
   reloadOnConfigChange?: boolean;
   /** The switchboard origin whose paths this server proxies (runner.proxy). */
   proxy?: string;
+  /** Runs each restart's server start, for a caller that started the first
+   * one inside a wrapper of its own. */
+  restartWith?: (start: () => Promise<ViteDevServer>) => Promise<ViteDevServer>;
+  /** Handed what stops Studio for good, before it resolves: the config
+   * watcher and whichever server is current. The first server's own `close`
+   * stops neither once a config change has replaced it. */
+  exposeStop?: (stop: () => Promise<void>) => void;
 };
 
 function readConfig(file: string): unknown {
@@ -37,7 +44,14 @@ export async function runConnectStudio(
   callerOverride?:
     | PHConnectRuntimeConfig
     | (() => PHConnectRuntimeConfig | undefined),
-  { routes, cacheDir, reloadOnConfigChange, proxy }: ConnectStudioOptions = {},
+  {
+    routes,
+    cacheDir,
+    reloadOnConfigChange,
+    proxy,
+    restartWith,
+    exposeStop,
+  }: ConnectStudioOptions = {},
 ): Promise<ViteDevServer> {
   const { port, host, open, cors, strictPort, printUrls, bindCLIShortcuts } =
     args;
@@ -76,13 +90,18 @@ export async function runConnectStudio(
 
   const first = await start(true);
   if (printUrls) first.printUrls();
-  if (!reloadOnConfigChange) return first;
+  if (!reloadOnConfigChange) {
+    exposeStop?.(() => first.close());
+    return first;
+  }
 
   let server = first;
   let loaded = readConfig(configFile);
   let timer: NodeJS.Timeout | undefined;
   let restarts = Promise.resolve();
+  let stopped = false;
   const restart = async () => {
+    if (stopped) return;
     const current = readConfig(configFile);
     if (current === undefined || isDeepStrictEqual(current, loaded)) return;
     loaded = current;
@@ -91,7 +110,9 @@ export async function runConnectStudio(
       { timestamp: true },
     );
     await server.close();
-    server = await start(false);
+    server = await (restartWith
+      ? restartWith(() => start(false))
+      : start(false));
   };
   // The folder, not the file: editors save by replacing it.
   const watcher = watch(dirname, (_event, file) => {
@@ -106,5 +127,13 @@ export async function runConnectStudio(
     }, RELOAD_DEBOUNCE_MS);
   });
   watcher.unref();
+  exposeStop?.(async () => {
+    stopped = true;
+    clearTimeout(timer);
+    watcher.close();
+    // A restart under way ends first: it leaves the server to close.
+    await restarts;
+    await server.close();
+  });
   return first;
 }
