@@ -92,7 +92,6 @@ await build({
     "clis/real-paths.ts",
     "clis/utils.ts",
     "clis/command-names.ts",
-    "clis/feature-flags.ts",
     "clis/services/telemetry.ts",
     "clis/build-config.mts",
     "clis/build-pieces.mts",
