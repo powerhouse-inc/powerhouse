@@ -15,6 +15,8 @@ import {
   resolveHostOutputs,
   resolveRunnerModule,
   runRecordOutputSource,
+  RunnerError,
+  STORE_VERBS,
   toStartedHandle,
   validateDeclaredHost,
   validateHost,
@@ -46,6 +48,9 @@ export interface StartRunArgs {
  * published in a v2 `.ph/run/<name>.json` record once ready; this is the only
  * standalone writer (mastra included). Compounds write their own record with
  * the members in it; one-shot verbs (`build`) return nothing and write none.
+ *
+ * Store verbs (`migrate`, `migrate-status`, `reset`) resolve like `run`, so
+ * they address the stores `run` opens, but take no lock and write no record.
  */
 export async function startRun(args: StartRunArgs): Promise<unknown> {
   // Loading a host loads its plugins, and React settles on its development or
@@ -62,6 +67,13 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   const specifier = loaded.host.runner.module;
   const runner = await resolveRunnerModule(projectRoot, specifier);
   const verb = args.verb ?? "run";
+  const storeVerb = STORE_VERBS.has(verb);
+  if (storeVerb && runner.kind === "compound") {
+    throw new RunnerError(
+      `${loaded.host.name} is a compound host, and "${verb}" works on the stores of one reactor host.`,
+      `Run it on the member that has them, e.g. \`ph run switchboard ${verb}\`.`,
+    );
+  }
   const fn = getVerb(runner, specifier, verb);
   const file = loaded.file;
   if (args.debug) {
@@ -96,7 +108,11 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   const publishes = isSchemaLike(runner.outputsSchema);
   // Before the verb starts anything: a second live instance would take
   // over the first one's record (and clear it on exit).
-  if (publishes) assertNotRunning(projectRoot, loaded.host.name, projectName);
+  // A store verb starts no instance: it neither takes nor trips the lock.
+  // Except `reset`, which would delete the stores under a live one.
+  if (publishes && (!storeVerb || verb === "reset")) {
+    assertNotRunning(projectRoot, loaded.host.name, projectName);
+  }
   const resolved = resolveHostOutputs(loaded.host, {
     outputs: runRecordOutputSource(projectRoot, {
       consumer: args.host,

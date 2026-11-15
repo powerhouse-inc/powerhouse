@@ -52,6 +52,9 @@ vi.mock("@powerhousedao/ph-run/switchboard", () => ({
 vi.mock("../src/services/build.js", () => ({
   runBuild: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../src/services/switchboard-migrate.js", () => ({
+  runSwitchboardMigrations: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@powerhousedao/switchboard/utils", () => ({
   ensureDrive: vi.fn().mockResolvedValue(undefined),
 }));
@@ -356,6 +359,85 @@ describe("standalone ph run", () => {
     ).rejects.toThrow(/already running for this project/);
     expect(await isFree(port)).toBe(true);
     expect(readRunRecord(project, "lab-switchboard")?.pid).toBe(process.ppid);
+  });
+
+  it("a store verb runs beside a live instance: no lock, no server, no record of its own", async () => {
+    const port = await ephemeralPort();
+    const project = makeProject({
+      switchboard: `export default { name: "lab-switchboard", runner: { module: ${JSON.stringify(SWITCHBOARD_SRC)}, port: ${port} } };`,
+    });
+    // the live instance `run` would refuse to start beside
+    const live = {
+      version: 2 as const,
+      host: "lab-switchboard",
+      projectName: "lab",
+      kind: "reactor" as const,
+      verb: "run",
+      pid: process.ppid,
+      startedAt: new Date().toISOString(),
+      outputs: {},
+    };
+    writeRunRecord(project, live);
+    const { startRun } = await import("@powerhousedao/ph-run/start-run");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
+    const { runSwitchboardMigrations } =
+      await import("../src/services/switchboard-migrate.js");
+    vi.mocked(startSwitchboard).mockClear();
+    vi.mocked(runSwitchboardMigrations).mockClear();
+
+    const result = await startRun({
+      host: "switchboard",
+      verb: "migrate-status",
+      projectRoot: project,
+    });
+    expect(result).toBeUndefined();
+    expect(vi.mocked(runSwitchboardMigrations)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(runSwitchboardMigrations).mock.calls[0][0]).toMatchObject({
+      statusOnly: true,
+    });
+    expect(vi.mocked(startSwitchboard)).not.toHaveBeenCalled();
+    expect(await isFree(port)).toBe(true);
+    // the live instance's record, untouched
+    expect(readRunRecord(project, "lab-switchboard")).toMatchObject(live);
+  });
+
+  it("a compound refuses a store verb and names the member command", async () => {
+    const project = makeProject({
+      stack: `export default { name: "lab-stack", runner: { module: "fake-compound" }, children: { sb: { host: "switchboard" } } };`,
+      switchboard: `export default { name: "lab-switchboard", runner: { module: ${JSON.stringify(SWITCHBOARD_SRC)} } };`,
+    });
+    const pkg = path.join(project, "node_modules", "fake-compound");
+    mkdirSync(pkg, { recursive: true });
+    writeFileSync(
+      path.join(pkg, "package.json"),
+      JSON.stringify({
+        name: "fake-compound",
+        type: "module",
+        exports: "./index.js",
+      }),
+    );
+    writeFileSync(
+      path.join(pkg, "index.js"),
+      `export const kind = "compound";
+export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
+export async function run() { throw new Error("the compound started"); }
+export const reset = run;`,
+    );
+    const { startRun } = await import("@powerhousedao/ph-run/start-run");
+    const { runSwitchboardMigrations } =
+      await import("../src/services/switchboard-migrate.js");
+    vi.mocked(runSwitchboardMigrations).mockClear();
+    for (const verb of ["migrate", "migrate-status", "reset"]) {
+      await expect(
+        startRun({ host: "stack", verb, projectRoot: project }),
+      ).rejects.toThrow(
+        new RegExp(
+          `lab-stack is a compound host, and "${verb}" works on the stores of one reactor host\\.[\\s\\S]*ph run switchboard ${verb}`,
+        ),
+      );
+    }
+    expect(vi.mocked(runSwitchboardMigrations)).not.toHaveBeenCalled();
   });
 
   it("a runner without outputsSchema keeps its own record (no overwrite)", async () => {

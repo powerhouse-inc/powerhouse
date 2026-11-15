@@ -570,6 +570,36 @@ export async function dev(
   return start(host, ctx, true);
 }
 
+/** Where a started switchboard keeps its two stores: a Postgres url or a
+ * PGlite dir each; undefined is the server's default dir under `.ph`. */
+export interface SwitchboardStores {
+  reactor: string | undefined;
+  readModel: string | undefined;
+  /** The relocated `.ph` root the default dirs sit under. */
+  userDataDir: string | undefined;
+}
+
+/** The stores `run` would open for this host: the same env split and member
+ * config as `start`, whose args name no store (`dbPath` is unset without
+ * flags). Starts nothing and creates nothing. */
+export async function resolveStores(
+  host: SwitchboardHostParsed,
+  ctx: RunnerContext,
+): Promise<SwitchboardStores> {
+  const hostFile = `hosts/${host.name}/host.js`;
+  const env = memberEnvOf(ctx.env);
+  const config = await memberSwitchboardConfig(host, env, {
+    pluginHost: host.runner.plugins !== undefined,
+  });
+  const noDatabase = missingPostgresUrl(host.reactor, config, hostFile);
+  if (noDatabase) throw new Error(noDatabase);
+  return {
+    reactor: config.storage?.reactor?.url,
+    readModel: config.storage?.readModel?.url,
+    userDataDir: config.storage?.userDataDir,
+  };
+}
+
 /** What the server would refuse at boot for this host, `ctx.verb` and `ctx.env` (`ph host check`). */
 export async function checkBoot(
   host: SwitchboardHostParsed,

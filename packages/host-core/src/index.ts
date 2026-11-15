@@ -28,6 +28,7 @@ export {
   ONE_SHOT_VERBS,
   resolveRunnerModule,
   RunnerError,
+  STORE_VERBS,
   validateDeclaredHost,
   validateHost,
   type BootCheckContext,

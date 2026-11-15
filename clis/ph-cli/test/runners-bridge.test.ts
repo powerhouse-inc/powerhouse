@@ -1,8 +1,13 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import type { RunnerContext } from "@powerhousedao/host-core";
+import {
+  getVerb,
+  type RunnerContext,
+  type RunnerModule,
+} from "@powerhousedao/host-core";
+import type * as ResetService from "../src/services/switchboard-reset.js";
 import {
   hostSchema as connectHostSchema,
   type ConnectHost,
@@ -54,6 +59,12 @@ vi.mock("@powerhousedao/ph-run/connect-server", () => ({
 }));
 vi.mock("../src/services/connect-build.js", () => ({
   runConnectBuild: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("../src/services/switchboard-migrate.js", () => ({
+  runSwitchboardMigrations: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("../src/services/switchboard-reset.js", () => ({
+  resetSwitchboardDatabase: vi.fn().mockResolvedValue(undefined),
 }));
 
 const ctx: RunnerContext = { projectRoot: "/lab", verb: "run", env: {} };
@@ -306,6 +317,191 @@ describe("switchboard bridge runner", () => {
     expect(runner.serve).toBe(runner.run);
     expect(runner.build).not.toBe(runner.run);
     expect(runner.dev).not.toBe(runner.run);
+  });
+
+  it("lists the store verbs for an unknown verb", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const spec = "@powerhousedao/ph-cli/runners/switchboard";
+    expect(() =>
+      getVerb({ ...runner } as unknown as RunnerModule, spec, "start"),
+    ).toThrow(
+      /does not support the verb "start"\. Supported verbs: build, dev, migrate, migrate-status, reset, run, serve\./,
+    );
+    for (const verb of ["migrate", "migrate-status", "reset"]) {
+      expect(
+        typeof getVerb({ ...runner } as unknown as RunnerModule, spec, verb),
+      ).toBe("function");
+    }
+  });
+
+  it("migrate and migrate-status call the classic service on the store run opens", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
+    const { runSwitchboardMigrations } =
+      await import("../src/services/switchboard-migrate.js");
+    vi.mocked(startSwitchboard).mockClear();
+    vi.mocked(runSwitchboardMigrations).mockClear();
+    const bare = switchboard({
+      name: "lab-switchboard",
+      runner: { module: "m", port: 7599 },
+    });
+
+    // `ph switchboard --migrate` calls { dbPath, statusOnly: undefined };
+    // no store named anywhere leaves dbPath unset, as without --db-path.
+    await runner.migrate(bare, { ...ctx, verb: "migrate" });
+    expect(vi.mocked(runSwitchboardMigrations)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(runSwitchboardMigrations).mock.calls[0]).toStrictEqual([
+      { dbPath: undefined, statusOnly: undefined },
+    ]);
+
+    // the env `run` reads the reactor store from
+    await runner.migrate(bare, {
+      ...ctx,
+      verb: "migrate",
+      env: { PH_SWITCHBOARD_DATABASE_URL: "postgres://host/env" },
+    });
+    expect(vi.mocked(runSwitchboardMigrations).mock.calls[1]).toStrictEqual([
+      { dbPath: "postgres://host/env", statusOnly: undefined },
+    ]);
+
+    // `ph switchboard --migrate-status` calls { dbPath, statusOnly: true }
+    vi.mocked(runSwitchboardMigrations).mockClear();
+    await runner["migrate-status"](
+      switchboard({
+        name: "lab-switchboard",
+        runner: { module: "m" },
+        reactor: {
+          backends: {
+            main: {
+              kind: "in-process",
+              storage: { kind: "postgres", url: "postgres://host/block" },
+            },
+          },
+        },
+      }),
+      { ...ctx, verb: "migrate-status" },
+    );
+    expect(vi.mocked(runSwitchboardMigrations)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(runSwitchboardMigrations).mock.calls[0]).toStrictEqual([
+      { dbPath: "postgres://host/block", statusOnly: true },
+    ]);
+
+    expect(vi.mocked(startSwitchboard)).not.toHaveBeenCalled();
+  });
+
+  it("reset calls the classic service with the host's stores as its env, and no yes", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
+    const { resetSwitchboardDatabase } =
+      await import("../src/services/switchboard-reset.js");
+    vi.mocked(startSwitchboard).mockClear();
+    vi.mocked(resetSwitchboardDatabase).mockClear();
+    const seen: Record<string, string | undefined> = {};
+    vi.mocked(resetSwitchboardDatabase).mockImplementationOnce(() => {
+      seen.reactor = process.env.PH_REACTOR_DATABASE_URL;
+      seen.readModel = process.env.DATABASE_URL;
+      seen.both = process.env.PH_SWITCHBOARD_DATABASE_URL;
+      return Promise.resolve();
+    });
+    const envBefore = { ...process.env };
+    const dataDir = mkdtempSync(join(tmpdir(), "ph-bridge-reset-"));
+    try {
+      await runner.reset(
+        switchboard({
+          name: "lab-switchboard",
+          runner: { module: "m" },
+          reactor: {
+            backends: {
+              main: {
+                kind: "in-process",
+                storage: { kind: "path", dataDir },
+                readModel: { url: "dev.db" },
+              },
+            },
+          },
+        }),
+        { ...ctx, verb: "reset" },
+      );
+      expect(vi.mocked(resetSwitchboardDatabase)).toHaveBeenCalledTimes(1);
+      // `ph switchboard --reset` without --db-path and without --yes
+      expect(vi.mocked(resetSwitchboardDatabase).mock.calls[0]).toStrictEqual([
+        { dbPath: undefined, yes: undefined },
+      ]);
+      expect(seen).toEqual({
+        reactor: dataDir,
+        readModel: "dev.db",
+        both: undefined,
+      });
+      expect(process.env).toEqual(envBefore);
+      expect(vi.mocked(startSwitchboard)).not.toHaveBeenCalled();
+    } finally {
+      rmSync(dataDir, { recursive: true, force: true });
+    }
+  });
+
+  it("reset refuses without confirmation and deletes nothing", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const actual = await vi.importActual<typeof ResetService>(
+      "../src/services/switchboard-reset.js",
+    );
+    const { resetSwitchboardDatabase } =
+      await import("../src/services/switchboard-reset.js");
+    vi.mocked(resetSwitchboardDatabase).mockClear();
+    vi.mocked(resetSwitchboardDatabase).mockImplementationOnce(
+      actual.resetSwitchboardDatabase,
+    );
+    // not a terminal a person answers on: the service has only --yes left
+    vi.stubEnv("CI", "1");
+    const exit = vi.spyOn(process, "exit").mockImplementation((code) => {
+      throw new Error(`process.exit ${String(code)}`);
+    });
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const reactorDir = mkdtempSync(join(tmpdir(), "ph-bridge-reset-reactor-"));
+    const readDir = mkdtempSync(join(tmpdir(), "ph-bridge-reset-read-"));
+    writeFileSync(join(reactorDir, "PG_VERSION"), "17");
+    writeFileSync(join(readDir, "PG_VERSION"), "17");
+    try {
+      await expect(
+        runner.reset(
+          switchboard({
+            name: "lab-switchboard",
+            runner: { module: "m" },
+            reactor: {
+              backends: {
+                main: {
+                  kind: "in-process",
+                  storage: { kind: "path", dataDir: reactorDir },
+                  readModel: { url: readDir },
+                },
+              },
+            },
+          }),
+          { ...ctx, verb: "reset" },
+        ),
+      ).rejects.toThrow("process.exit 1");
+      const printed = (spy: { mock: { calls: unknown[][] } }) =>
+        spy.mock.calls.map((call) => call.map(String).join(" ")).join("\n");
+      // it was the host's two stores it was about to delete
+      expect(printed(log)).toContain(`  - ${reactorDir}`);
+      expect(printed(log)).toContain(`  - ${readDir}`);
+      expect(printed(error)).toContain(
+        "Refusing to reset in a non-interactive context without --yes",
+      );
+      expect(existsSync(join(reactorDir, "PG_VERSION"))).toBe(true);
+      expect(existsSync(join(readDir, "PG_VERSION"))).toBe(true);
+    } finally {
+      exit.mockRestore();
+      log.mockRestore();
+      error.mockRestore();
+      vi.unstubAllEnvs();
+      rmSync(reactorDir, { recursive: true, force: true });
+      rmSync(readDir, { recursive: true, force: true });
+    }
   });
 
   it("passes the reactor block as the member's config, writing no env (P2.4)", async () => {

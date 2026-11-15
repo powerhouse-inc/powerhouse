@@ -10,6 +10,7 @@ import {
   isSchemaLike,
   ONE_SHOT_VERBS,
   resolveRunnerModule,
+  STORE_VERBS,
 } from "./runner-resolver.js";
 
 export interface SpawnHostOptions {
@@ -131,7 +132,10 @@ async function assertWritesRecord(
   host: string,
   verb: string | undefined,
 ): Promise<void> {
-  if (verb !== undefined && ONE_SHOT_VERBS.has(verb)) {
+  if (
+    verb !== undefined &&
+    (ONE_SHOT_VERBS.has(verb) || STORE_VERBS.has(verb))
+  ) {
     throw new Error(
       `spawnHost: "${verb}" is a one-shot verb; it writes no run record to wait for.`,
     );

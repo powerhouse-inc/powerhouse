@@ -219,6 +219,16 @@ export async function resolveRunnerModule(
  * the empty collection, see `emptyMaps`). */
 export const ONE_SHOT_VERBS: ReadonlySet<string> = new Set(["build"]);
 
+/** Verbs that work on a host's stores and start nothing (`migrate`,
+ * `migrate-status`, `reset`). Their host is resolved as for `run`, so they
+ * address the stores `run` opens; they take no lock and return nothing, so
+ * no record is written. A compound does not forward them. */
+export const STORE_VERBS: ReadonlySet<string> = new Set([
+  "migrate",
+  "migrate-status",
+  "reset",
+]);
+
 export function listVerbs<O>(runner: RunnerModule<O>): string[] {
   if (runner.verbs) {
     return runner.verbs
