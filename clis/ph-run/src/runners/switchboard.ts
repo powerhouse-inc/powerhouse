@@ -138,6 +138,8 @@ const invocationArgs = {
   httpsCertFile: switchboardArgs.httpsCertFile,
   remoteDrives: switchboardArgs.remoteDrives,
   remoteDrive: vetraArgs.remoteDrive,
+  // Read by the ph-cli runner, for the codegen processor of a vetra host.
+  interactive: vetraArgs.interactive,
   // Read by the `reset` verb.
   yes: switchboardArgs.yes,
 };

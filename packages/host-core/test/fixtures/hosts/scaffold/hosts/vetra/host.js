@@ -42,7 +42,16 @@ export default {
             projectHash: true,
             preferredEditor: "vetra-drive-app",
           },
-          { slug: "vetra-preview", name: "Vetra Preview", projectHash: true },
+          {
+            slug: "vetra-preview",
+            name: "Vetra Preview",
+            projectHash: true,
+            // Opens in the drive app powerhouse.config.json names
+            // (vetra.previewDrive.app), when it names one.
+            ...(config.vetra?.previewDrive?.app
+              ? { preferredEditor: config.vetra.previewDrive.app }
+              : {}),
+          },
         ],
       },
     },

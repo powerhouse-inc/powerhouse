@@ -60,6 +60,9 @@ vi.mock("@powerhousedao/ph-run/connect-server", () => ({
 vi.mock("../src/services/connect-build.js", () => ({
   runConnectBuild: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../src/services/build.js", () => ({
+  runBuild: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("../src/services/switchboard-migrate.js", () => ({
   runSwitchboardMigrations: vi.fn().mockResolvedValue(undefined),
 }));
@@ -156,7 +159,8 @@ describe("connect bridge runner", () => {
       .mocked(runConnectStudio)
       .mock.calls.map((call) => call[0]);
     expect(withHost).toMatchObject({ host: "0.0.0.0" });
-    expect(withoutHost).not.toHaveProperty("host");
+    // As `ph connect studio` without --host carries it.
+    expect(withoutHost).toHaveProperty("host", undefined);
   });
 
   it("warns at boot on config owned by a plugin the composition lacks", async () => {
@@ -1333,7 +1337,7 @@ describe("runner arguments (ctx.argv) win over the host file", () => {
         "--remote-drives",
         "--remote-drive",
       ],
-      flags: ["--strictPort", "--https", "--yes", "-y"],
+      flags: ["--strictPort", "--https", "--interactive", "--yes", "-y"],
       memberOptions: { "--switchboard-port": "--port" },
       retired: {
         "--watch": "it is no longer needed.",
@@ -1475,6 +1479,293 @@ describe("runner arguments (ctx.argv) win over the host file", () => {
     expect(vi.mocked(runConnectPreview).mock.calls[0][0]).toMatchObject({
       port: 6599,
       open: true,
+    });
+  });
+});
+
+/** THE PARITY GATE for the Connect runner and the switchboard's `build`, as
+ * the switchboard's `run` has above: the FULL argument object, key for key
+ * (strict), equals the classic command's with only the keys the host file
+ * and the invocation own laid over it. */
+describe("the runners hand the services the classic argument shape", () => {
+  const withArgv = (...argv: string[]): RunnerContext => ({ ...ctx, argv });
+
+  it("connect dev: the classic studio args, restarting on a config change", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    const { classicConnectStudioArgs } =
+      await import("../src/services/classic-args.js");
+    const classic = await classicConnectStudioArgs();
+    // sanity on the classic shape this gate compares against
+    expect(classic).toMatchObject({
+      port: 3000,
+      printUrls: true,
+      bindCLIShortcuts: true,
+    });
+    expect(classic).toHaveProperty("host", undefined);
+
+    vi.mocked(runConnectStudio).mockClear();
+    await runner.dev(connect(connectHost()), ctx);
+    const [args, , , options] = vi.mocked(runConnectStudio).mock.calls[0];
+    expect(args).toStrictEqual({
+      ...classic,
+      port: 6599,
+      open: false,
+      strictPort: false,
+      // The runner's terminal belongs to `ph run`, not to vite's shortcuts.
+      bindCLIShortcuts: false,
+    });
+    expect(options).toStrictEqual({
+      routes: undefined,
+      cacheDir: join(ctx.projectRoot, "node_modules", ".vite-lab-connect"),
+      proxy: undefined,
+      // As `ph connect studio` and `ph vetra` start Studio.
+      reloadOnConfigChange: true,
+      restartWith: expect.any(Function) as unknown,
+      exposeStop: expect.any(Function) as unknown,
+    });
+  });
+
+  it("connect dev: this invocation's arguments over the classic ones", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    const { classicConnectStudioArgs } =
+      await import("../src/services/classic-args.js");
+    vi.mocked(runConnectStudio).mockClear();
+    await runner.dev(
+      connect(connectHost()),
+      withArgv("--port", "4100", "--host", "0.0.0.0", "--cors"),
+    );
+    expect(vi.mocked(runConnectStudio).mock.calls[0][0]).toStrictEqual({
+      ...(await classicConnectStudioArgs()),
+      port: 4100,
+      host: "0.0.0.0",
+      open: false,
+      strictPort: false,
+      cors: true,
+      bindCLIShortcuts: false,
+    });
+  });
+
+  it("connect dev: the handle stops Studio, not only the first server", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    type StudioServer = Awaited<ReturnType<typeof runConnectStudio>>;
+
+    // A config change may have replaced the first server by the time the
+    // handle shuts down: Studio's own stop closes whichever is current.
+    const first = fakeVite("http://localhost:6599/");
+    const stop = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(runConnectStudio).mockImplementationOnce(
+      (_args, _logger, _override, options) => {
+        options?.exposeStop?.(stop);
+        return Promise.resolve(first as unknown as StudioServer);
+      },
+    );
+    const handle = await runner.dev(connect(connectHost()), ctx);
+    expect(handle.outputs.origin).toBe("http://localhost:6599");
+    await handle.shutdown();
+    await handle.shutdown();
+    expect(stop).toHaveBeenCalledOnce();
+    expect(first.close).not.toHaveBeenCalled();
+  });
+
+  it("connect dev: a restarted server is started as the first is, under a compound", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    type StudioServer = Awaited<ReturnType<typeof runConnectStudio>>;
+    const restarted = fakeVite(
+      "http://localhost:6599/",
+    ) as unknown as StudioServer;
+    const viteExit = () => undefined;
+    const start = () => {
+      process.once("SIGTERM", viteExit);
+      return Promise.resolve(restarted);
+    };
+    const restartWithOf = async (context: RunnerContext) => {
+      vi.mocked(runConnectStudio).mockClear();
+      await runner.dev(connect(connectHost()), context);
+      const restartWith =
+        vi.mocked(runConnectStudio).mock.calls[0][3]?.restartWith;
+      if (!restartWith) throw new Error("dev passed no restartWith");
+      return restartWith;
+    };
+
+    const underCompound = await restartWithOf({
+      ...ctx,
+      parent: { host: "desktop", verb: "run" },
+    });
+    expect(await underCompound(start)).toBe(restarted);
+    // The compound owns the exit: vite's exit-on-SIGTERM listener is dropped.
+    expect(process.listeners("SIGTERM")).not.toContain(viteExit);
+
+    const standalone = await restartWithOf(ctx);
+    expect(await standalone(start)).toBe(restarted);
+    expect(process.listeners("SIGTERM")).toContain(viteExit);
+    process.off("SIGTERM", viteExit);
+  });
+
+  it("connect build: the classic build args, with the host's outDir over them", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectBuild } =
+      await import("../src/services/connect-build.js");
+    const { classicConnectBuildArgs } =
+      await import("../src/services/classic-args.js");
+    const classic = await classicConnectBuildArgs();
+    expect(classic).toMatchObject({ outDir: ".ph/connect-build/dist/" });
+
+    vi.mocked(runConnectBuild).mockClear();
+    await runner.build(
+      connect({ name: "lab-connect", runner: { module: "m" } }),
+      ctx,
+    );
+    await runner.build(
+      connect({
+        name: "lab-connect",
+        runner: { module: "m", outDir: "build-out" },
+      }),
+      ctx,
+    );
+    const [plain, withOutDir] = vi
+      .mocked(runConnectBuild)
+      .mock.calls.map((call) => call[0]);
+    expect(plain).toStrictEqual(classic);
+    expect(withOutDir).toStrictEqual({ ...classic, outDir: "build-out" });
+  });
+
+  it("connect serve: the classic preview args, with the host's keys over them", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectServer } =
+      await import("@powerhousedao/ph-run/connect-server");
+    const { classicConnectPreviewArgs } =
+      await import("@powerhousedao/ph-run/classic-args");
+    const classic = await classicConnectPreviewArgs();
+    expect(classic).toMatchObject({
+      port: 4173,
+      outDir: ".ph/connect-build/dist/",
+      printUrls: true,
+    });
+
+    vi.mocked(runConnectServer).mockClear();
+    await runner.serve(
+      connect({ name: "lab-connect", runner: { module: "m" } }),
+      ctx,
+    );
+    await runner.serve(
+      connect({
+        name: "lab-connect",
+        runner: { module: "m", port: 8099, outDir: "build-out" },
+      }),
+      withArgv("--strictPort"),
+    );
+    const [plain, withKeys] = vi
+      .mocked(runConnectServer)
+      .mock.calls.map((call) => call[0]);
+    const served = {
+      ...classic,
+      // Where the host's Studio answers, not `ph connect preview`'s default.
+      port: 3000,
+      open: false,
+      strictPort: false,
+      cors: true,
+      bindCLIShortcuts: false,
+      host: "127.0.0.1",
+    };
+    expect(plain).toStrictEqual(served);
+    expect(withKeys).toStrictEqual({
+      ...served,
+      port: 8099,
+      outDir: "build-out",
+      strictPort: true,
+    });
+  });
+
+  it("switchboard build: the classic `ph build` args, with the host's outDir over them", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const { runBuild } = await import("../src/services/build.js");
+    const { classicBuildArgs } =
+      await import("../src/services/classic-args.js");
+    const classic = await classicBuildArgs();
+    expect(classic).toMatchObject({ outDir: "dist", release: false });
+
+    vi.mocked(runBuild).mockClear();
+    await runner.build(
+      switchboard({ name: "lab-switchboard", runner: { module: "m" } }),
+      ctx,
+    );
+    await runner.build(
+      switchboard({
+        name: "lab-switchboard",
+        runner: { module: "m", outDir: "out" },
+      }),
+      ctx,
+    );
+    // The whole call: no options, as the verb has no process to own.
+    expect(vi.mocked(runBuild).mock.calls).toStrictEqual([
+      [classic],
+      [{ ...classic, outDir: "out" }],
+    ]);
+  });
+});
+
+/** Connect has no https option on the classic path, so its runner declares
+ * none (see the `argsSchema` expectation above); `ph vetra`'s three belong
+ * to its switchboard, and reach it as they do there. */
+describe("https reaches the switchboard, from the arguments and the host file", () => {
+  it("--https-key-file and --https-cert-file are carried as `ph switchboard` carries them", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
+    vi.mocked(startSwitchboard).mockClear();
+    await runner.run(
+      switchboard({ name: "lab-switchboard", runner: { module: "m" } }),
+      {
+        ...ctx,
+        argv: [
+          "--https",
+          "--https-key-file",
+          "certs/key.pem",
+          "--https-cert-file=certs/cert.pem",
+        ],
+      },
+    );
+    expect(vi.mocked(startSwitchboard).mock.calls[0][0]).toMatchObject({
+      https: true,
+      httpsKeyFile: "certs/key.pem",
+      httpsCertFile: "certs/cert.pem",
+    });
+  });
+
+  it("the host file's form is the member's own config.switchboard.server.https", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const { startSwitchboard } =
+      await import("@powerhousedao/ph-run/switchboard");
+    vi.mocked(startSwitchboard).mockClear();
+    await runner.run(
+      switchboard({
+        name: "lab-switchboard",
+        runner: { module: "m" },
+        config: {
+          switchboard: {
+            server: {
+              https: { keyPath: "certs/key.pem", certPath: "certs/cert.pem" },
+            },
+          },
+        },
+      }),
+      ctx,
+    );
+    const [args, , member] = vi.mocked(startSwitchboard).mock.calls[0];
+    // No flag: the args carry none, and the member's config holds.
+    expect(args).toHaveProperty("https", undefined);
+    expect(member).toMatchObject({
+      server: {
+        https: { keyPath: "certs/key.pem", certPath: "certs/cert.pem" },
+      },
     });
   });
 });

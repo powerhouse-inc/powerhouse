@@ -1,8 +1,10 @@
+import { probeHostsFolder } from "@powerhousedao/host-core";
 import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
+import { VETRA_HOST } from "./vetra-instance.js";
 import {
   clearVetraRuntime,
   isPortInUse,
@@ -10,12 +12,17 @@ import {
   type VetraRuntimeRecord,
 } from "./vetra-runtime.js";
 
-export type VetraCommand = { command: string; args: string[] };
+export type VetraCommand = {
+  command: string;
+  args: string[];
+  /** How messages name it; `ph vetra` when left out. */
+  label?: string;
+};
 
 export type EnsureVetraOptions = {
   projectDir: string;
   projectName: string;
-  /** The port `ph vetra --strictPort` will bind. */
+  /** The port a strict-port Vetra will bind. */
   switchboardPort: number;
   command: VetraCommand;
   timeoutMs: number;
@@ -47,6 +54,27 @@ export function currentPhCliVetraCommand(): VetraCommand {
     command: process.execPath,
     args: [process.argv[1], "vetra", "--strictPort", "--watch"],
   };
+}
+
+/** `ph run vetra --strictPort` run by the ph-cli executing this code. */
+export function currentPhCliRunVetraCommand(): VetraCommand {
+  return {
+    command: process.execPath,
+    args: [process.argv[1], "run", VETRA_HOST, "--strictPort"],
+    label: `ph run ${VETRA_HOST}`,
+  };
+}
+
+/**
+ * What starts this project's Vetra: its `hosts/vetra` host when it has one,
+ * as `ph vetra` itself routes there (run-sugar.ts), else classic `ph vetra`.
+ * The host's own defaultVerb picks the verb; `--watch` is not a host argument.
+ */
+export function vetraCommandFor(projectDir: string): VetraCommand {
+  const probe = probeHostsFolder(projectDir);
+  return probe.kind === "present" && probe.hosts.includes(VETRA_HOST)
+    ? currentPhCliRunVetraCommand()
+    : currentPhCliVetraCommand();
 }
 
 function isPidAlive(pid: number | undefined): boolean {
@@ -196,7 +224,7 @@ export async function ensureVetra(
     if (again.status === "foreign") throw foreignError(again.record);
 
     if (again.status === "starting" || (await isPortInUse(switchboardPort))) {
-      // Maybe a `ph vetra` that bound the port but has not written its record yet.
+      // Maybe a Vetra that bound the port but has not written its record yet.
       const grace = Date.now() + PORT_GRACE_MS;
       const record = await waitForLive(
         options,
@@ -249,7 +277,10 @@ export async function ensureVetra(
         exit.signal !== null
           ? `was killed by ${exit.signal}`
           : `exited with code ${exit.code}`;
-      throw withOutput(`\`ph vetra\` ${how} before it was ready.`, projectDir);
+      throw withOutput(
+        `\`${options.command.label ?? "ph vetra"}\` ${how} before it was ready.`,
+        projectDir,
+      );
     }
     // Still booting: keep the lock on its pid so the next call waits instead of spawning.
     keepLock = true;

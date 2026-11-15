@@ -93,6 +93,12 @@ describe("writeGeneratedHostsFiles", () => {
     // the vetra switchboard serves the switchboard host's drives too, next to
     // the studio drives
     expect(vetra).toContain("...(switchboard.reactor.drives ?? [])");
+    // the preview drive opens in the app powerhouse.config.json names; no
+    // key when it names none (a host value is never undefined)
+    expect(vetra).toContain("...(config.vetra?.previewDrive?.app");
+    expect(vetra).toContain(
+      "? { preferredEditor: config.vetra.previewDrive.app }",
+    );
 
     // P2.8: single-sourced protocol — the switchboard host references the
     // SAME connect.reactor block the connect host receives via its config.

@@ -55,12 +55,20 @@ export const runHost = command({
       await explainHost({ host: args.host, topic: args.explain });
       return;
     }
-    const { startRun } = await import("@powerhousedao/ph-run/start-run");
-    await startRun({
+    const run = {
       host: args.host,
       verb: args.verb,
       debug: args.debug,
       argv: args.argv,
-    });
+    };
+    // hosts/vetra is what `ph vetra` routes to (run-sugar.ts): its stack
+    // keeps the runtime record `ph vetra` and `ph mcp` read.
+    if (args.host === "vetra") {
+      const { runVetraHost } = await import("../services/run/vetra-host.js");
+      await runVetraHost(run);
+      return;
+    }
+    const { startRun } = await import("@powerhousedao/ph-run/start-run");
+    await startRun(run);
   },
 });

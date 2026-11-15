@@ -182,7 +182,7 @@ describe("writeAiConfigFiles", () => {
 
     await writeAiConfigFiles(dir);
 
-    expect(read(dir, "AGENTS.md")).toContain("ph vetra");
+    expect(read(dir, "AGENTS.md")).toContain("ph run vetra");
     expect(read(dir, "CLAUDE.md")).toMatch(/^@AGENTS\.md\n/);
     const reactorMcp = {
       mcpServers: { "reactor-mcp": { type: "stdio", command: "node" } },

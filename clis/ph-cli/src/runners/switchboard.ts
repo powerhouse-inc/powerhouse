@@ -1,9 +1,20 @@
-import type {
-  SwitchboardHostParsed,
-  SwitchboardStores,
+import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
+import {
+  dev as startDev,
+  run as startRun,
+  type SwitchboardHandle,
+  type SwitchboardHostParsed,
+  type SwitchboardStores,
 } from "@powerhousedao/ph-run/runners/switchboard";
-import type { RunnerContext } from "@powerhousedao/host-core";
-import type { BuildArgs } from "../types.js";
+import {
+  entryActiveForVerb,
+  normalizePluginEntries,
+  normalizePluginEntry,
+  projectDriveId,
+  resolveDriveDeclaration,
+  type RunnerContext,
+} from "@powerhousedao/host-core";
+import { DEFAULT_SWITCHBOARD_PORT } from "@powerhousedao/shared/clis/constants";
 
 export * from "@powerhousedao/ph-run/runners/switchboard";
 
@@ -24,10 +35,13 @@ export async function build(
   _ctx: RunnerContext,
 ): Promise<void> {
   const { runBuild } = await import("../services/build.js");
-  const args: Partial<BuildArgs> = {
-    outDir: host.runner.outDir ?? "dist",
-  };
-  await runBuild(args as BuildArgs);
+  const { classicBuildArgs } = await import("../services/classic-args.js");
+  // The classic `ph build` arguments, with the host's output dir over them.
+  const classic = await classicBuildArgs();
+  await runBuild({
+    ...classic,
+    outDir: host.runner.outDir ?? classic.outDir,
+  });
 }
 
 // `migrate`, `migrate-status` and `reset` are the classic `ph switchboard`
@@ -136,3 +150,141 @@ export async function reset(
     resetSwitchboardDatabase({ dbPath: passed.dbPath, yes: passed.yes }),
   );
 }
+
+// A switchboard whose composition has the Vetra Studio plugin active is the
+// VETRA switchboard (`ph run vetra`): it gets what classic `ph vetra` gives
+// its switchboard, from the same code (services/vetra-switchboard.ts). Any
+// other switchboard starts exactly as the ph-run runner starts it.
+
+const STUDIO_PLUGIN = "@powerhousedao/vetra-studio/switchboard";
+/** The declared slugs of the studio drives (hosts/vetra/host.js). */
+const VETRA_DRIVE = "vetra";
+const VETRA_PREVIEW_DRIVE = "vetra-preview";
+const WORKFLOWS_DRIVE = "workflows";
+
+type StartVerb = (
+  host: SwitchboardHostParsed,
+  ctx: RunnerContext,
+) => Promise<SwitchboardHandle>;
+
+function hasStudioPlugin(
+  host: SwitchboardHostParsed,
+  ctx: RunnerContext,
+): boolean {
+  return normalizePluginEntries(
+    host.runner.plugins ?? [],
+    `hosts/${host.name}/host.js`,
+  ).some(
+    (entry) =>
+      entry.module === STUDIO_PLUGIN && entryActiveForVerb(entry, ctx.verb),
+  );
+}
+
+/** The host with `processorConfig` on its studio plugin entry: the plugin
+ * hands it to the server (vetra-studio switchboard.ts). */
+function withStudioProcessorConfig(
+  host: SwitchboardHostParsed,
+  processorConfig: Record<string, unknown>,
+): SwitchboardHostParsed {
+  return {
+    ...host,
+    runner: {
+      ...host.runner,
+      plugins: host.runner.plugins?.map((entry) => {
+        const normalized = normalizePluginEntry(entry);
+        if (normalized.module !== STUDIO_PLUGIN) return entry;
+        const authored = normalized.config.processorConfig as
+          | Record<string, unknown>
+          | undefined;
+        return {
+          ...normalized,
+          config: {
+            ...normalized.config,
+            processorConfig: { ...authored, ...processorConfig },
+          },
+        };
+      }),
+    },
+  };
+}
+
+async function startVetraSwitchboard(
+  host: SwitchboardHostParsed,
+  ctx: RunnerContext,
+  start: StartVerb,
+): Promise<SwitchboardHandle> {
+  const passed = await passedOf(host, ctx);
+  const declared = host.reactor?.drives?.find(
+    (drive) => drive.slug === VETRA_DRIVE,
+  );
+  const vetraDrive = declared
+    ? resolveDriveDeclaration(ctx.projectRoot, declared)
+    : undefined;
+  // `--remote-drive`, else a vetra drive the host declares as remote.
+  const remoteDrive =
+    passed.remoteDrive ??
+    (vetraDrive?.kind === "remote" ? vetraDrive.remoteUrl : undefined);
+  // The slug the local vetra drive is served under (its project-hashed id).
+  const localDriveId =
+    vetraDrive?.slug ?? projectDriveId(ctx.projectRoot, VETRA_DRIVE);
+  const requestedPort =
+    passed.port ?? host.runner.port ?? DEFAULT_SWITCHBOARD_PORT;
+  const {
+    configureVetraRemoteDrive,
+    printVetraSwitchboardUrls,
+    vetraProcessorConfigOf,
+  } = await import("../services/vetra-switchboard.js");
+  const vetraConfig = vetraProcessorConfigOf({
+    interactive: passed.interactive ?? false,
+    remoteDrive,
+    localDriveUrl: `http://localhost:${requestedPort}/d/${localDriveId}`,
+    localDriveId,
+  });
+
+  const handle = await start(
+    withStudioProcessorConfig(host, {
+      [VETRA_PROCESSOR_CONFIG_KEY]: vetraConfig,
+    }),
+    ctx,
+  );
+
+  const { origin, drives } = handle.outputs;
+  const port = Number(new URL(origin).port);
+  const urlOf = (slug: string): string | undefined =>
+    slug in drives ? drives[slug].url : undefined;
+  // A compound starts Connect after `ready`: the URLs print, and the remote
+  // drive's GitHub URL is settled, before it does (the classic order).
+  const ready = handle.ready.then(async () => {
+    printVetraSwitchboardUrls({
+      verbose: false,
+      remoteDrive,
+      switchboardPort: port,
+      // A remote drive is served here under its own id.
+      driveUrl: remoteDrive
+        ? `${origin}/d/${vetraConfig.driveId}`
+        : urlOf(VETRA_DRIVE),
+      previewDriveUrl: urlOf(VETRA_PREVIEW_DRIVE),
+      workflowsDriveUrl: urlOf(WORKFLOWS_DRIVE),
+    });
+    if (remoteDrive) {
+      await configureVetraRemoteDrive(port, remoteDrive, false);
+    }
+  });
+  // As the ph-run runner's own `ready`: an unsupervised caller must not die
+  // of an unhandled rejection.
+  ready.catch(() => undefined);
+  return { ...handle, ready };
+}
+
+function vetraAware(start: StartVerb): StartVerb {
+  return (host, ctx) =>
+    hasStudioPlugin(host, ctx)
+      ? startVetraSwitchboard(host, ctx, start)
+      : start(host, ctx);
+}
+
+export const run = vetraAware(startRun);
+
+export const serve = run;
+
+export const dev = vetraAware(startDev);

@@ -51,6 +51,34 @@ export function writeVetraRuntime(
   fs.writeFileSync(target, `${JSON.stringify(record, null, 2)}\n`);
 }
 
+/**
+ * The record this process publishes for the Vetra it started. `ph vetra` and
+ * `ph run vetra` both build it here, so the two write the same fields. The
+ * Switchboard's URLs follow from its port unless the caller knows them.
+ */
+export function vetraRuntimeRecord(input: {
+  projectName: string;
+  switchboardPort: number;
+  connectPort: number;
+  switchboardUrl?: string;
+  mcpUrl?: string;
+  /** Left out when no Vetra Studio runs. */
+  connectUrl?: string;
+}): VetraRuntimeRecord {
+  const { switchboardPort, connectUrl } = input;
+  return {
+    pid: process.pid,
+    projectName: input.projectName,
+    switchboardPort,
+    connectPort: input.connectPort,
+    switchboardUrl:
+      input.switchboardUrl ?? `http://localhost:${switchboardPort}/graphql`,
+    mcpUrl: input.mcpUrl ?? `http://localhost:${switchboardPort}/mcp`,
+    ...(connectUrl ? { connectUrl } : {}),
+    startedAt: new Date().toISOString(),
+  };
+}
+
 /** Deletes the record; with `pid`, only the record of that process. */
 export function clearVetraRuntime(projectDir: string, pid?: number): void {
   if (pid !== undefined && readVetraRuntime(projectDir)?.pid !== pid) return;
@@ -181,4 +209,29 @@ export function syncMcpPort(projectDir: string, port: number): string[] {
     changed.push(rel);
   }
   return changed;
+}
+
+/**
+ * {@link syncMcpPort} for a Vetra that just bound `port`, returning what to
+ * tell the user. An MCP client resolved `.mcp.json` before this process
+ * started and cannot re-read it, so a drifted literal means the agent is
+ * pointed at the wrong port — possibly another project's reactor. Correct the
+ * file and say so plainly; we cannot fix the already-open client ourselves.
+ */
+export function syncMcpPortNotices(projectDir: string, port: number): string[] {
+  const notices: string[] = [];
+  const driftedMcpFiles = syncMcpPort(projectDir, port);
+  if (driftedMcpFiles.length > 0) {
+    notices.push(
+      `Updated ${driftedMcpFiles.join(" and ")} to port ${port}. ` +
+        `Reconnect your MCP client (/mcp) to pick it up. ` +
+        `This edit is local — do not commit it.`,
+    );
+  }
+  if (legacyMcpConfigs(projectDir).length > 0) {
+    notices.push(
+      "reactor-mcp still points at a URL; run `ph migrate` to switch it to the `ph mcp` launcher.",
+    );
+  }
+  return notices;
 }

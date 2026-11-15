@@ -1,4 +1,3 @@
-import type { VetraProcessorConfigType } from "@powerhousedao/config";
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import {
@@ -19,23 +18,24 @@ import {
   POWERHOUSE_CONFIG_FILE,
 } from "../utils.js";
 import { wasFlagExplicitlyPassed } from "../utils/cli-connect-override.js";
-import {
-  configureVetraGithubUrl,
-  sleep,
-} from "../utils/configure-vetra-github-url.js";
 import { mergeDefaultDrives, rebaseDriveUrl } from "@powerhousedao/host-core";
 import { parseDefaultDrivesUrl } from "../utils/parse-default-drives.js";
 import { resolveSwitchboardPort } from "../utils/resolve-switchboard-port.js";
 import {
   clearVetraRuntime,
-  legacyMcpConfigs,
   probeVetraRuntime,
-  syncMcpPort,
+  syncMcpPortNotices,
+  vetraRuntimeRecord,
   writeVetraRuntime,
-  type VetraRuntimeRecord,
 } from "../utils/vetra-runtime.js";
 import { stopVetra } from "../utils/vetra-launch.js";
+import { runVetraRefusal } from "../utils/vetra-instance.js";
 import { runConnectStudio } from "./connect-studio.js";
+import {
+  configureVetraRemoteDrive,
+  printVetraSwitchboardUrls,
+  vetraProcessorConfigOf,
+} from "./vetra-switchboard.js";
 import {
   POWERHOUSE_DRIVE_ICON,
   seedWorkflowsDrive,
@@ -46,9 +46,6 @@ const VETRA_DRIVE_NAME = "vetra";
 
 const getDefaultVetraUrl = (port: number) =>
   `http://localhost:${port}/d/${generateProjectDriveId(VETRA_DRIVE_NAME)}`;
-
-const getDriveId = (driveUrl: string | undefined): string =>
-  driveUrl?.split("/").pop() ?? generateProjectDriveId(VETRA_DRIVE_NAME);
 
 // rebaseDriveUrl moved to @powerhousedao/host-core (uniform-runners P1.4) —
 // one implementation shared by this classic path and the generic compound.
@@ -178,16 +175,17 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
   // Convert single remote drive to array if provided
   const remoteDrives = remoteDrive ? [remoteDrive] : [];
 
-  const vetraProcessorConfig: VetraProcessorConfigType = {
+  const vetraDriveId = generateProjectDriveId(VETRA_DRIVE_NAME);
+
+  const vetraProcessorConfig = vetraProcessorConfigOf({
     interactive,
-    driveUrl: remoteDrive ?? getDefaultVetraUrl(connectPort),
-    driveId: getDriveId(remoteDrive),
-  };
+    remoteDrive,
+    localDriveUrl: getDefaultVetraUrl(connectPort),
+    localDriveId: vetraDriveId,
+  });
 
   const processorConfig = new Map<string, unknown>();
   processorConfig.set(VETRA_PROCESSOR_CONFIG_KEY, vetraProcessorConfig);
-
-  const vetraDriveId = generateProjectDriveId(VETRA_DRIVE_NAME);
 
   // When the user didn't opt into strict-port semantics, check for a port
   // conflict up front and ask for confirmation before binding a fallback.
@@ -267,28 +265,14 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
       }
     }
 
-    if (verbose) {
-      console.log(blue(`Vetra Switchboard: Started successfully`));
-      if (remoteDrive) {
-        console.log(
-          blue(`Vetra Switchboard: Syncing with remote drive: ${remoteDrive}`),
-        );
-      }
-    } else {
-      console.log();
-      console.log(
-        blue(
-          `Vetra Switchboard: http://localhost:${actualSwitchboardPort}/graphql`,
-        ),
-      );
-      console.log(blue(`   ➜ Drive URL: ${switchboard.defaultDriveUrl}`));
-      if (previewDriveUrl) {
-        console.log(blue(`   ➜ Preview Drive URL: ${previewDriveUrl}`));
-      }
-      if (workflowsDriveUrl) {
-        console.log(blue(`   ➜ Workflows Drive URL: ${workflowsDriveUrl}`));
-      }
-    }
+    printVetraSwitchboardUrls({
+      verbose,
+      remoteDrive,
+      switchboardPort: actualSwitchboardPort,
+      driveUrl: switchboard.defaultDriveUrl,
+      previewDriveUrl,
+      workflowsDriveUrl,
+    });
     return {
       driveUrl: switchboard.defaultDriveUrl || "",
       previewDriveUrl: previewDriveUrl,
@@ -380,6 +364,14 @@ export async function startVetra(args: VetraArgs) {
     process.exit(1);
   }
 
+  // The same project may be held by `ph run vetra` instead: its stack opens
+  // the same stores, and publishes this record only once it is ready.
+  const hostsRefusal = runVetraRefusal(projectDir, projectName);
+  if (hostsRefusal) {
+    console.error(red(hostsRefusal));
+    process.exit(1);
+  }
+
   try {
     // Set default log level to info if not already specified
     if (!process.env.LOG_LEVEL) {
@@ -413,18 +405,14 @@ export async function startVetra(args: VetraArgs) {
 
     // Record what we actually bound, so a second `ph vetra` can tell a live
     // instance from a stale file, and so an agent can see the real ports.
-    const runtimeRecord: VetraRuntimeRecord = {
-      pid: process.pid,
+    const runtimeRecord = vetraRuntimeRecord({
       projectName,
       switchboardPort: actualSwitchboardPort,
       connectPort,
-      switchboardUrl: `http://localhost:${actualSwitchboardPort}/graphql`,
-      mcpUrl: `http://localhost:${actualSwitchboardPort}/mcp`,
       ...(disableConnect
         ? {}
         : { connectUrl: `http://localhost:${connectPort}/` }),
-      startedAt: new Date().toISOString(),
-    };
+    });
     writeVetraRuntime(projectDir, runtimeRecord);
     // A restarted Vetra may already have written its own.
     const releaseRuntimeRecord = () =>
@@ -439,41 +427,20 @@ export async function startVetra(args: VetraArgs) {
       process.exit(143);
     });
 
-    // An MCP client resolved `.mcp.json` before this process started and
-    // cannot re-read it, so a drifted literal means the agent is pointed at
-    // the wrong port — possibly another project's reactor. Correct the file
-    // and say so plainly; we cannot fix the already-open client ourselves.
-    const driftedMcpFiles = syncMcpPort(projectDir, actualSwitchboardPort);
-    if (driftedMcpFiles.length > 0) {
-      console.log(
-        yellow(
-          `Updated ${driftedMcpFiles.join(" and ")} to port ${actualSwitchboardPort}. ` +
-            `Reconnect your MCP client (/mcp) to pick it up. ` +
-            `This edit is local — do not commit it.`,
-        ),
-      );
-    }
-    if (legacyMcpConfigs(projectDir).length > 0) {
-      console.log(
-        yellow(
-          "reactor-mcp still points at a URL; run `ph migrate` to switch it to the `ph mcp` launcher.",
-        ),
-      );
+    for (const notice of syncMcpPortNotices(
+      projectDir,
+      actualSwitchboardPort,
+    )) {
+      console.log(yellow(notice));
     }
 
     // Configure GitHub URL if remote drive is set
     if (remoteDrive) {
-      // give some time for the drive to process initial strands
-      await sleep(3000);
-
-      await configureVetraGithubUrl(
+      await configureVetraRemoteDrive(
         actualSwitchboardPort,
         remoteDrive,
         verbose,
       );
-
-      // give some time for the user to read log messages
-      await sleep(2000);
     }
 
     if (verbose) {

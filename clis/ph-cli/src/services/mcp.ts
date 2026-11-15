@@ -25,9 +25,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { getVersion } from "../get-version.js";
 import {
-  currentPhCliVetraCommand,
   ensureVetra,
   restartVetra,
+  vetraCommandFor,
   VetraStartError,
   type EnsureVetraOptions,
   type VetraCommand,
@@ -43,7 +43,7 @@ const CONFIG_FILE = "powerhouse.config.json";
 export type McpLauncherOptions = {
   projectDir?: string;
   startTimeoutSeconds: number;
-  /** Test seam: what starts Vetra; defaults to this ph-cli's `vetra`. */
+  /** Test seam: what starts Vetra; defaults to {@link vetraCommandFor}. */
   vetraCommand?: VetraCommand;
 };
 
@@ -218,7 +218,7 @@ class Upstream {
       projectDir,
       projectName: name,
       switchboardPort: resolveSwitchboardPortDefault(),
-      command: this.options.vetraCommand ?? currentPhCliVetraCommand(),
+      command: this.options.vetraCommand ?? vetraCommandFor(projectDir),
       timeoutMs: this.options.startTimeoutSeconds * 1000,
       onProgress: this.#report,
     });
