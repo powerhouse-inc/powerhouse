@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = 3110;
 export const BASE_URL = `http://localhost:${PORT}`;
 
-// A local Switchboard (`ph switchboard --dev` in ../versioned-documents) serves
+// A local Switchboard (`ph run switchboard dev` in ../versioned-documents) serves
 // the Renown auth GraphQL. See that webServer entry below.
 const SWITCHBOARD_PORT = 4001;
 export const SWITCHBOARD_URL = `http://localhost:${SWITCHBOARD_PORT}/graphql`;
@@ -47,9 +47,9 @@ export default defineConfig({
   ],
   webServer: [
     {
-      // `--dev` loads versioned-documents' local models + the renown-package
+      // `dev` loads versioned-documents' local models + the renown-package
       // (config `packages`), so the mock's signed credential verifies + stores.
-      command: `pnpm exec ph-cli switchboard --dev --port ${SWITCHBOARD_PORT}`,
+      command: `pnpm exec ph-cli run switchboard dev --port ${SWITCHBOARD_PORT}`,
       cwd: "../versioned-documents",
       url: SWITCHBOARD_URL,
       stdout: "pipe",

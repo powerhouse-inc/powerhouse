@@ -35,7 +35,7 @@ export function installConsumerDeps(): void {
  */
 export function buildConsumerConnect(): void {
   console.log("Building consumer Connect app...");
-  execSync("pnpm exec ph-cli connect build", {
+  execSync("pnpm exec ph-cli run connect build", {
     cwd: getConsumerProjectPath(),
     stdio: "pipe",
     timeout: 180_000,
@@ -51,8 +51,9 @@ export async function startConsumerPreview(): Promise<ChildProcess> {
     [
       "exec",
       "ph-cli",
+      "run",
       "connect",
-      "preview",
+      "serve",
       "--port",
       String(CONSUMER_CONNECT_PORT),
     ],

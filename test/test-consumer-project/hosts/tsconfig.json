@@ -1,0 +1,26 @@
+{
+  // Type-checks hosts/*/host.js against the runners' host types
+  // (`npm run tsc` runs `tsc -p hosts`). Generated outputs.js files are
+  // typed by their outputs.d.ts.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "declarationDir": null,
+    "emitDeclarationOnly": false,
+    "incremental": false,
+    "resolveJsonModule": true,
+    // types powerhouse.config.json imports by ../powerhouse.config.d.json.ts
+    "allowArbitraryExtensions": true,
+    "strict": true,
+    // a host value is never `undefined`: the loader's JSON gate, at compile time
+    "exactOptionalPropertyTypes": true,
+    "types": []
+  },
+  "include": ["**/*.js", "**/outputs.d.ts", "types.d.ts"],
+  "exclude": ["**/outputs.js", "desktop/tauri-shell", "**/node_modules"]
+}

@@ -27,8 +27,9 @@
   },
   "scripts": {
     "build": "ph-cli build",
-    "connect:build": "ph-cli connect build",
-    "connect:preview": "ph-cli connect preview"
+    "connect:build": "ph-cli run connect build",
+    "connect:preview": "ph-cli run connect serve",
+    "tsc": "tsc -p hosts"
   },
   "dependencies": {
     "document-model": "workspace:*",
@@ -44,6 +45,11 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/host-core": "workspace:*",
+    "@powerhousedao/clint": "workspace:*",
+    "@powerhousedao/desktop": "workspace:*",
+    "@powerhousedao/vetra-studio": "workspace:*",
+    "@powerhousedao/switchboard": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",

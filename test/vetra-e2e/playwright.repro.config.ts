@@ -28,7 +28,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "pnpm vetra --watch",
+      command: "pnpm vetra",
       url: CONNECT_URL,
       stderr: "pipe",
       stdout: "pipe",

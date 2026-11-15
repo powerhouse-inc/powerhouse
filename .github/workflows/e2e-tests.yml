@@ -51,6 +51,13 @@ jobs:
             name-suffix: " (SharedWorker reactor)"
             test-script: test:e2e:vetra:worker
             artifact-prefix: vetra-worker
+          # The classic commands smoke: one boot spec against `ph vetra --watch`
+          # started the classic way. It proves the classic commands still work
+          # in this release, and goes away with them.
+          - mode: classic
+            name-suffix: " (classic commands smoke)"
+            test-script: test:e2e:vetra:classic
+            artifact-prefix: vetra-classic
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -253,7 +260,9 @@ jobs:
         run: pnpm rebuild --recursive
 
       # The UI suite runs against Connect's production build, which bundles
-      # the workflow package's dist.
+      # the workflow package's dist. Still the classic command: --workflows
+      # has no `ph run` argument, and the fixture's connect host does not
+      # compose the workflows plugin.
       - name: Build Connect for the workflow UI tests
         if: steps.workflow-ui.outputs.run == 'true'
         run: node ../../clis/ph-cli/dist/cli.mjs connect build --workflows true

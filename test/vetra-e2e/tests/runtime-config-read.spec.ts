@@ -6,7 +6,7 @@
 //
 // Source file under test: ../powerhouse.config.json (the vetra-e2e project's
 // own powerhouse.config.json). Whatever's there gets served at
-// http://localhost:3001/powerhouse.config.json — `pnpm vetra --watch` is
+// http://localhost:3001/powerhouse.config.json — `pnpm vetra` is
 // started by playwright.config.ts's webServer.
 
 import type { Page } from "@playwright/test";

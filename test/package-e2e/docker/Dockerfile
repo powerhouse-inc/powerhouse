@@ -111,6 +111,8 @@ ARG PH_CONNECT_BASE_PATH="/"
 # overrides what gets baked into the runtime config — the browser uses this
 # URL to fetch the package from the registry at runtime.
 ARG BROWSER_REGISTRY_URL=http://localhost:8080
+# Still the classic command: `ph run connect build` takes neither --base nor
+# --packages-registry, and the scaffold's own Dockerfile builds this way in 6.3.
 RUN ph connect build --base ${PH_CONNECT_BASE_PATH} --packages-registry ${BROWSER_REGISTRY_URL}
 
 FROM nginx:alpine AS connect
@@ -139,10 +141,11 @@ FROM package-installed AS switchboard
 # `test-todo-package` from our local registry on the host.
 ARG REGISTRY_URL=http://host.docker.internal:8080
 ENV PH_REGISTRY_URL=${REGISTRY_URL}
-# `ph switchboard --port 4001` starts the server. The default drive is created
-# automatically; remote drives can also be created via GraphQL at runtime.
+# `ph run switchboard --port 4001` starts the project's switchboard host. The
+# drive it declares (`powerhouse`) is created automatically; remote drives can
+# also be created via GraphQL at runtime.
 ENV PORT=4001
 ENV NODE_ENV=production
 
 EXPOSE 4001
-CMD ["sh", "-c", "ph switchboard --port ${PORT}"]
+CMD ["sh", "-c", "ph run switchboard --port ${PORT}"]

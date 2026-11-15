@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import path from "node:path";
 import { PROJECT_DIR } from "./scripts/lib/project.js";
 
-// `ph connect studio` in the project publish-package.ts scaffolded: its
+// `ph run connect dev` in the project publish-package.ts scaffolded: its
 // @powerhousedao packages come from the registry's tarballs, not workspace
 // links, so Vite serves Connect from node_modules as it does for every
 // installed project. Point PH_PROJECT_PARENT/PH_PKG_NAME at another installed
@@ -24,7 +24,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   webServer: {
-    command: `${path.join(PROJECT_DIR, "node_modules/.bin/ph-cli")} connect studio --port ${STUDIO_PORT} --strictPort`,
+    command: `${path.join(PROJECT_DIR, "node_modules/.bin/ph-cli")} run connect dev --port ${STUDIO_PORT} --strictPort`,
     cwd: PROJECT_DIR,
     url: STUDIO_URL,
     // A cold start pre-bundles Connect's dependencies first.

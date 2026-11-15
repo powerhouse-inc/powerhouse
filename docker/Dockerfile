@@ -41,6 +41,9 @@ ARG PH_CONNECT_BASE_PATH="/"
 ARG PH_CONNECT_PACKAGES_REGISTRY="https://registry.vetra.io"
 
 WORKDIR /app/project
+# Two images in 6.3, as in the scaffold's Docker templates. The build stays
+# the classic command: `ph run connect build` takes neither --base nor
+# --packages-registry, and this file also builds tags older than 6.3.
 RUN ph connect build --base ${PH_CONNECT_BASE_PATH} --packages-registry ${PH_CONNECT_PACKAGES_REGISTRY}
 
 # ============================================================

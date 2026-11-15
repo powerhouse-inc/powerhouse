@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Runs the upgrade repro spec against an ALREADY RUNNING `ph vetra --watch`
+// Runs the upgrade repro spec against an ALREADY RUNNING `ph run vetra`
 // in another project (e.g. a clean `ph init` scaffold). Pass the project via
 // env: REPRO_PROJECT_DIR, REPRO_VETRA_DRIVE, REPRO_REACTOR_URL.
 export default defineConfig({

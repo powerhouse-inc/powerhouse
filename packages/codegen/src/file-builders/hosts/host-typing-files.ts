@@ -93,6 +93,7 @@ export const hostsTsconfigTemplate = `{
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
+    "composite": false,
     "declaration": false,
     "declarationMap": false,
     "declarationDir": null,

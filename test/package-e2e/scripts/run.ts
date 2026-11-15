@@ -173,7 +173,7 @@ async function main(): Promise<void> {
     // build below reuses it.
     //
     // The todo project installs the workspace from the registry's tarballs,
-    // so its `ph connect studio` serves Connect from node_modules, as in every
+    // so its `ph run connect dev` serves Connect from node_modules, as in every
     // installed project (the workspace links it, which Vite treats as
     // source). Booting it in a browser catches a dev server that only works
     // linked; it overlaps the scaffold build.

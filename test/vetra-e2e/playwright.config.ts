@@ -21,6 +21,9 @@ const previewWebServer = {
   // collide with `pnpm build` (= `ph-cli build`, the *package* build) that
   // todo-document.spec.ts runs into the default `dist/`. Both commands
   // write to `dist/` otherwise and the package build trashes the SPA.
+  // Still the classic commands: `ph run connect build` takes no --outDir
+  // (the host file's runner.outDir is the only place for it), and the
+  // preview specs build a second time with --packages-registry.
   command:
     "pnpm exec ph-cli connect build --outDir dist-connect && pnpm exec ph-cli connect preview --outDir dist-connect --port 4173 --strictPort",
   url: PREVIEW_URL,
@@ -68,7 +71,8 @@ export default defineConfig({
   },
 
   /* Two projects:
-   *  - vetra-dev runs the existing specs against `ph vetra --watch` (dev mode).
+   *  - vetra-dev runs the existing specs against `ph run vetra` (the vetra
+   *    host, dev mode).
    *  - connect-preview runs the runtime-config preview specs against
    *    `ph connect build && ph connect preview` (production-built dist served
    *    as static files). `dependencies: ["vetra-dev"]` forces strict ordering:
@@ -94,7 +98,9 @@ export default defineConfig({
    */
   webServer: [
     {
-      command: "pnpm vetra --watch",
+      // No --watch: the vetra host's dev verb always loads the project's
+      // models and editors and serves the preview drive.
+      command: "pnpm vetra",
       url: CONNECT_URL,
       stderr: "pipe",
       stdout: "pipe",

@@ -6,7 +6,7 @@ export const SWITCHBOARD_URL =
 
 export default defineConfig({
   testDir: "./tests",
-  // Runs on its own, against `ph connect studio`: playwright.studio.config.ts.
+  // Runs on its own, against `ph run connect dev`: playwright.studio.config.ts.
   testIgnore: "studio-boot.spec.ts",
   outputDir: "test-results",
   fullyParallel: false,

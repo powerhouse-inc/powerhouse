@@ -316,6 +316,7 @@
     "**/.tsbuild/",
     "**/ts-build/",
     "**/storybook-static/",
-    "**/.vite/"
+    "**/.vite/",
+    "/powerhouse.config.d.json.ts"
   ]
 }

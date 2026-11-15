@@ -1580,6 +1580,7 @@
     "**/build/",
     "**/.docusaurus/",
     "**/.ph/",
+    "**/powerhouse.config.d.json.ts",
     "**/routeTree.gen.ts",
     "**/.prerender/",
     "**/.hotseat/",

@@ -174,14 +174,15 @@ jobs:
             fi
           done
 
-      - name: Run ph connect build
+      # The scaffolded project's connect host, at its build verb.
+      - name: Run ph run connect build
         id: connect-build
         if: steps.ph-init.outcome == 'success'
         run: |
           cd /tmp/ph-test-${{ matrix.id }}/project
-          echo "Building Connect with ph connect build"
+          echo "Building Connect with ph run connect build"
           set -o pipefail
-          ph connect build 2>&1 | tee connect-build.log
+          ph run connect build 2>&1 | tee connect-build.log
           BUILD_EXIT_CODE=${PIPESTATUS[0]}
 
           # Check if build output contains failure indicators
@@ -197,7 +198,7 @@ jobs:
         run: |
           cd /tmp/ph-test-${{ matrix.id }}/project
           grep -iE "(warn|warning|deprecated)" connect-build.log | while IFS= read -r line; do
-            echo "::warning title=[${{ matrix.id }}] ph connect build::$line"
+            echo "::warning title=[${{ matrix.id }}] ph run connect build::$line"
           done || true
 
       - name: Generate Job Summary
@@ -267,7 +268,7 @@ jobs:
             STATUS="${{ steps.connect-build.outcome }}"
             ICON="✅"; [ "$STATUS" != "success" ] && ICON="❌"
             WARNINGS=$(grep -icE "(warn|warning|deprecated)" project/connect-build.log 2>/dev/null || echo "0")
-            echo "### $ICON ph connect build" >> $GITHUB_STEP_SUMMARY
+            echo "### $ICON ph run connect build" >> $GITHUB_STEP_SUMMARY
             echo "- **Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
             echo "- **Warnings:** $WARNINGS" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
