@@ -354,6 +354,18 @@ function vendoredFromLocal(stackDir: string): boolean {
   );
 }
 
+/** A tree the backend bundle folded: its packages are chunks under
+ * `node_modules/.stack` and stubs npm would take for the installed packages. */
+function foldedByBundle(stackDir: string): boolean {
+  return fs.existsSync(path.join(stackDir, "node_modules", ".stack"));
+}
+
+/** Whether vendoring must drop the tree it finds instead of installing over
+ * it. */
+export function vendorsAfresh(stackDir: string, local: boolean): boolean {
+  return local || vendoredFromLocal(stackDir) || foldedByBundle(stackDir);
+}
+
 /** Types and source maps, which nothing reads at runtime. */
 const UNREAD_FILE = /\.(d\.[cm]?ts|map)$/i;
 const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/;
@@ -510,8 +522,10 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     ? readLocalPackages(options.localPackagesDir)
     : undefined;
   // Switching between local and registry packages starts the tree afresh:
-  // their version numbers match, so npm would keep whichever it has.
-  if (vendor && (local || vendoredFromLocal(stackDir))) {
+  // their version numbers match, so npm would keep whichever it has. So does
+  // a folded tree, where npm would keep the stubs and the bundle find no
+  // entries.
+  if (vendor && vendorsAfresh(stackDir, local !== undefined)) {
     for (const entry of ["node_modules", "package-lock.json"]) {
       fs.rmSync(path.join(stackDir, entry), { recursive: true, force: true });
     }

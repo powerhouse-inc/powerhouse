@@ -17,6 +17,7 @@ import {
   pruneStack,
   registrySpecs,
   stackManifest,
+  vendorsAfresh,
 } from "../src/bundle-stack.js";
 import { memberProjectFiles } from "../src/member-files.js";
 import { resolveShell, shellEnv, tauriConfigPatch } from "../src/shell.js";
@@ -662,6 +663,31 @@ describe("bundle-stack local packages", () => {
     expect(stackManifest({ name: "lab", version: "dev" })).not.toHaveProperty(
       "overrides",
     );
+  });
+
+  it("vendors afresh over a local or a folded tree, and only then", () => {
+    const plain = tempDir("ph-desktop-tree-");
+    mkdirSync(path.join(plain, "node_modules", "left-pad"), {
+      recursive: true,
+    });
+    writeFileSync(
+      path.join(plain, "package-lock.json"),
+      '{"packages":{"node_modules/left-pad":{"resolved":"https://registry.npmjs.org/left-pad/-/left-pad-1.3.0.tgz"}}}',
+    );
+    expect(vendorsAfresh(plain, false)).toBe(false);
+    expect(vendorsAfresh(plain, true)).toBe(true);
+
+    const fromLocal = tempDir("ph-desktop-tree-");
+    writeFileSync(
+      path.join(fromLocal, "package-lock.json"),
+      '{"packages":{"node_modules/a":{"resolved": "file:../a.tgz"}}}',
+    );
+    expect(vendorsAfresh(fromLocal, false)).toBe(true);
+
+    // what bundle-backend leaves: chunks under .stack, stubs for the rest
+    const folded = tempDir("ph-desktop-tree-");
+    mkdirSync(path.join(folded, "node_modules", ".stack"), { recursive: true });
+    expect(vendorsAfresh(folded, false)).toBe(true);
   });
 
   it("stages the local manifest even with vendoring off", () => {
