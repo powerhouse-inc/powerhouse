@@ -65,7 +65,11 @@ describe("$map templates under exactOptionalPropertyTypes", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "ph-template-exact-"));
     temporary.push(dir);
     // The fixture's own `zod` import resolves from its folder.
-    symlinkSync(path.dirname(ZOD_DIR), path.join(dir, "node_modules"), "dir");
+    symlinkSync(
+      path.dirname(ZOD_DIR),
+      path.join(dir, "node_modules"),
+      "junction",
+    );
     const file = path.join(dir, "fixture.ts");
     writeFileSync(file, FIXTURE);
     const run = spawnSync(

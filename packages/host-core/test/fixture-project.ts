@@ -63,7 +63,7 @@ export function project(name: string): string {
     symlinkSync(
       path.join(FIXTURES, "_packages", pkg),
       path.join(scope, pkg),
-      "dir",
+      "junction",
     );
   }
   projects.set(name, dir);
