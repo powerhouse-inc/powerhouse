@@ -2,6 +2,9 @@
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
+- [Run](#run)
+- [Host Check](#host-check)
+- [Host Export](#host-export)
 - [Generate](#generate)
 - [All](#all)
 - [Document Model](#document-model)
@@ -14,6 +17,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Piece Trigger](#piece-trigger)
 - [Migration File](#migration-file)
 - [Connect Routes](#connect-routes)
+- [Hosts](#hosts)
 - [Vetra](#vetra)
 - [Build](#build)
 - [Connect](#connect)
@@ -33,6 +37,78 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Install](#install)
 - [Uninstall](#uninstall)
 <br>
+## Run
+Run a host from the project's hosts/ folder: `ph run <host> [verb]`. The host's own host.js names the runner module; the verb defaults to `run`.
+### arguments
+#### Host *[required]*<br>
+Folder name under hosts/ (e.g. vetra, connect).<br><br>
+**usage:** `<host>`<br>
+
+#### Verb <br>
+Runner verb (default: run; e.g. dev, build, serve).<br><br>
+**usage:** `[verb]`<br>
+
+
+### flags
+#### Debug <br>
+Print resolved host/runner/verb before dispatch.<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+### options
+#### Explain <br>
+Explain a resolved aspect instead of running: `--explain drives` prints the merged drive plan with provenance; `--explain outputs` prints what each host produces, the output tokens it reads and the start order they imply.<br><br>
+**usage:** `--explain <str>`<br>
+
+
+## Host Check
+Check a host the way `ph run` would, without starting it: every load, validation, resolution and boot issue, grouped by host file. Exits 1 on any issue. `--env <file>` checks against that file alone.
+### arguments
+#### Host *[required]*<br>
+the host to check (a directory under hosts/)<br><br>
+**usage:** `<host>`<br>
+
+
+### options
+#### Env <br>
+check against this env file alone instead of the project .env and the process env<br><br>
+**usage:** `--env <str>`<br>
+
+#### Verb <br>
+the verb to check at (default: run)<br><br>
+**usage:** `--verb <str>`<br>
+
+
+### flags
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Host Export
+Print a host as declared, with every member a compound names, as JSON (tokens unresolved). `--out` writes it to a file instead.
+### arguments
+#### Host *[required]*<br>
+the host to export (a directory under hosts/)<br><br>
+**usage:** `<host>`<br>
+
+
+### options
+#### Out <br>
+write the JSON to this file instead of stdout<br><br>
+**usage:** `--out <str>`<br>
+
+
+### flags
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
 ## Generate
 The generate command creates code for Powerhouse modules. It helps you create new code from scratch, or to re-generate existing code in your project.
 ## All
@@ -422,6 +498,14 @@ Generate .ph/connect-routes.gen.ts, the route tree hosts/connect/routes/ type-ch
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
 
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Hosts
+Generate hosts/<name>/outputs.js + outputs.d.ts (typed $output token trees) for every host whose runner declares outputs, and refresh hosts/types.d.ts. Rerun after changing a producer's runner or declared drives: a stale outputs.js fails the load.
+### flags
 #### Help <br>
 show help<br><br>
 **usage:** `--help, -h`<br>

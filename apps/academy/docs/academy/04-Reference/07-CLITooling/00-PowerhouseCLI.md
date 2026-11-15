@@ -86,7 +86,7 @@ Initialize a new project
 
 **Rc** - Use the `rc` release tag. - Usage: `--rc`
 
-**Uniform Runners** - Scaffold the hosts/ folder (uniform-runners architecture). Also enabled project-wide by FEATURE_UNIFORM_RUNNERS_ENABLED. - Usage: `--uniform-runners`
+**Uniform Runners** - Deprecated: no longer needed, `ph init` always scaffolds the hosts/ folder. Accepted with a warning; will be removed in a future release. - Usage: `--uniform-runners`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -202,7 +202,7 @@ Initialize a new global project
 
 **Rc** - Use the `rc` release tag. - Usage: `--rc`
 
-**Uniform Runners** - Scaffold the hosts/ folder (uniform-runners architecture). Also enabled project-wide by FEATURE_UNIFORM_RUNNERS_ENABLED. - Usage: `--uniform-runners`
+**Uniform Runners** - Deprecated: no longer needed, `ph init` always scaffolds the hosts/ folder. Accepted with a warning; will be removed in a future release. - Usage: `--uniform-runners`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -239,6 +239,9 @@ Use your local `powerhouse` monorepo dependencies the current project.
 
 ### ph-cli Commands
 
+- [Run](#run)
+- [Host Check](#host-check)
+- [Host Export](#host-export)
 - [Generate](#generate)
 - [All](#all)
 - [Document Model](#document-model)
@@ -251,6 +254,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Piece Trigger](#piece-trigger)
 - [Migration File](#migration-file)
 - [Connect Routes](#connect-routes)
+- [Hosts](#hosts)
 - [Vetra](#vetra)
 - [Build](#build)
 - [Connect](#connect)
@@ -269,6 +273,87 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Login](#login)
 - [Install](#install)
 - [Uninstall](#uninstall)
+
+
+## Run
+Run a host from the project's hosts/ folder: `ph run <host> [verb]`. The host's own host.js names the runner module; the verb defaults to `run`.
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Host *[required]*** - Folder name under hosts/ (e.g. vetra, connect). - Usage: `<host>`
+
+**Verb** - Runner verb (default: run; e.g. dev, build, serve). - Usage: `[verb]`
+
+
+
+
+### Flags
+**Debug** - Print resolved host/runner/verb before dispatch. - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+
+
+### Options
+**Explain** - Explain a resolved aspect instead of running: `--explain drives` prints the merged drive plan with provenance; `--explain outputs` prints what each host produces, the output tokens it reads and the start order they imply. - Usage: `--explain <str>`
+
+
+## Host Check
+Check a host the way `ph run` would, without starting it: every load, validation, resolution and boot issue, grouped by host file. Exits 1 on any issue. `--env <file>` checks against that file alone.
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Host *[required]*** - the host to check (a directory under hosts/) - Usage: `<host>`
+
+
+
+
+### Options
+**Env** - check against this env file alone instead of the project .env and the process env - Usage: `--env <str>`
+
+**Verb** - the verb to check at (default: run) - Usage: `--verb <str>`
+
+
+
+
+### Flags
+**Help** - show help - Usage: `--help, -h`
+
+
+## Host Export
+Print a host as declared, with every member a compound names, as JSON (tokens unresolved). `--out` writes it to a file instead.
+
+
+
+---
+
+## Parameters
+
+### Arguments
+**Host *[required]*** - the host to export (a directory under hosts/) - Usage: `<host>`
+
+
+
+
+### Options
+**Out** - write the JSON to this file instead of stdout - Usage: `--out <str>`
+
+
+
+
+### Flags
+**Help** - show help - Usage: `--help, -h`
 
 
 ## Generate
@@ -576,6 +661,15 @@ Generate .ph/connect-routes.gen.ts, the route tree hosts/connect/routes/ type-ch
 ### Flags
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
+**Help** - show help - Usage: `--help, -h`
+
+
+## Hosts
+Generate hosts/&lt;name&gt;/outputs.js + outputs.d.ts (typed $output token trees) for every host whose runner declares outputs, and refresh hosts/types.d.ts. Rerun after changing a producer's runner or declared drives: a stale outputs.js fails the load.
+
+
+
+### Flags
 **Help** - show help - Usage: `--help, -h`
 
 

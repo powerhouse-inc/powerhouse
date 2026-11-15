@@ -74,7 +74,7 @@ Use the `rc` release tag.<br><br>
 **usage:** `--rc`<br>
 
 #### Uniform Runners <br>
-Scaffold the hosts/ folder (uniform-runners architecture). Also enabled project-wide by FEATURE_UNIFORM_RUNNERS_ENABLED.<br><br>
+Deprecated: no longer needed, `ph init` always scaffolds the hosts/ folder. Accepted with a warning; will be removed in a future release.<br><br>
 **usage:** `--uniform-runners`<br>
 
 #### Debug <br>
@@ -220,7 +220,7 @@ Use the `rc` release tag.<br><br>
 **usage:** `--rc`<br>
 
 #### Uniform Runners <br>
-Scaffold the hosts/ folder (uniform-runners architecture). Also enabled project-wide by FEATURE_UNIFORM_RUNNERS_ENABLED.<br><br>
+Deprecated: no longer needed, `ph init` always scaffolds the hosts/ folder. Accepted with a warning; will be removed in a future release.<br><br>
 **usage:** `--uniform-runners`<br>
 
 #### Debug <br>
