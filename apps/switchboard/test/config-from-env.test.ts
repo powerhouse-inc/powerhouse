@@ -26,7 +26,7 @@ import { EnvVarProvider } from "@openfeature/env-var-provider";
 import { OpenFeature } from "@openfeature/server-sdk";
 import { binSwitchboardConfig } from "../src/config/bin.js";
 import { inspectionThrottleFromEnv } from "../src/inspection-throttle.mjs";
-import { isPluginHostEnabled } from "../src/plugin-host.mjs";
+import { pluginHostFromEnv } from "../src/plugin-host.mjs";
 import { resolvePrivacy } from "../src/privacy.mjs";
 import { resolveProjectionWorkerOptions } from "../src/projection-worker.mjs";
 import { resolveReactorFeatureFlags } from "../src/reactor-feature-flags.mjs";
@@ -329,7 +329,12 @@ describe("switchboardConfigFromEnv matches today's env reads", () => {
       await expect(
         featureFlags.getBooleanValue("DOCUMENT_MODEL_SUBGRAPHS_ENABLED", true),
       ).resolves.toBe(config.features.documentModelSubgraphs);
-      expect(config.features.pluginHost).toBe(isPluginHostEnabled(row));
+      // Unset stays unset: it selects the default composition, not the flag.
+      expect(config.features.pluginHost).toBe(
+        row.FEATURE_PLUGIN_HOST_ENABLED === undefined
+          ? undefined
+          : pluginHostFromEnv(row),
+      );
     });
 
     it("protocol", () => {

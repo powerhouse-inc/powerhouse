@@ -145,11 +145,14 @@ export type StartServerOptions = {
   /** Mount the MCP server at `/mcp`. On by default; `false` wins over
    * MCP_ENABLED, which can turn it off but never on. */
   mcp?: boolean;
-  /** The plugin composition to boot with (FEATURE_PLUGIN_HOST_ENABLED): the
-   * resolved host.js runner.plugins entries, supplied by the uniform-runners
-   * switchboard runner (R2 step 2) or a test. Omitted = the built-in default
-   * composition. Resolved plugins, not specifiers — resolution happens at the
-   * runner against the PROJECT dependency tree. */
+  /** The declared plugin composition to boot with: the resolved host.js
+   * runner.plugins entries, supplied by the uniform-runners switchboard
+   * runner (R2 step 2) or a test. Read only under `features.pluginHost: true`
+   * (FEATURE_PLUGIN_HOST_ENABLED=1), where omitted = every built-in plugin.
+   * Without that the default composition boots: the subsystems MCP_ENABLED,
+   * PH_WORKFLOWS_ENABLED and the config file turn on. Resolved plugins, not
+   * specifiers — resolution happens at the runner against the PROJECT
+   * dependency tree. */
   pluginComposition?: ResolvedPlugin[];
   /** Mount the read-only inspection subgraph at `/graphql/inspection`. On by
    * default; `false` wins over INSPECTION_ENABLED, which can turn it off. */
@@ -272,7 +275,8 @@ export type SwitchboardReactor = {
   reactor: IReactorClient;
   /** Switchboard-backed remote attachment service over its own `/attachments/*` API, for downstream consumers.
    * Undefined when the attachments plugin is absent from the composition
-   * (FEATURE_PLUGIN_HOST_ENABLED — presence is activation, rewire R2.3). */
+   * (a declared one that leaves it out — presence is activation, rewire
+   * R2.3; the default composition always has it). */
   attachmentService: IAttachmentService | undefined;
   /** Whether the authoritative attachment-reference projection is active. */
   attachmentReferenceProjection: AttachmentReferenceProjectionCapability;

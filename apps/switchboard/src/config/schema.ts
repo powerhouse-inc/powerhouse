@@ -246,7 +246,10 @@ const featuresSchema = z.object({
   /** Unset: the config file's `workflows.enabled`, then off. */
   workflows: z.boolean().optional(),
   documentModelSubgraphs: z.boolean().default(true),
-  pluginHost: z.boolean().default(false),
+  /** Unset: the plugin host runs the default composition, the subsystems the
+   * switches above turn on. `true`: it runs the declared composition, where a
+   * plugin's presence is the switch. `false`: the deprecated inline boot. */
+  pluginHost: z.boolean().optional(),
   privacy: privacySchema.prefault({}),
 });
 

@@ -83,8 +83,9 @@ export function callerOverEnv(env: Layer, caller: Layer): Layer {
   if (env.features?.privacy?.enabled === false) {
     features.privacy = { ...(features.privacy as Section), enabled: false };
   }
-  // Under the plugin host a plugin's presence decides mcp and workflows, not
-  // their env vars, except that an env false still switches them off.
+  // Under a declared composition a plugin's presence decides mcp and
+  // workflows, not their env vars, except that an env false still switches
+  // them off. Without one the env vars keep deciding, as on the classic boot.
   if (features.pluginHost === true) {
     features.mcp = env.features?.mcp === false ? false : caller.features?.mcp;
     features.workflows =

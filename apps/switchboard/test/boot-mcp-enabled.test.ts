@@ -30,9 +30,11 @@ async function withSwitchboard(
   const names = [
     "PH_REACTOR_DATABASE_URL",
     "MCP_ENABLED",
-    // The env-flag semantics under test are the CLASSIC path's: flag-on, the
-    // mcp plugin owns options.mcp and MCP_ENABLED is deliberately inert
-    // (presence in the composition is the switch — rewire plan R2.2).
+    // The env-flag semantics under test are those of a boot without a
+    // declared composition (the default composition keeps the classic
+    // resolution): under a declared one the mcp plugin owns options.mcp and
+    // an MCP_ENABLED true is deliberately inert (presence in the composition
+    // is the switch — rewire plan R2.2).
     "FEATURE_PLUGIN_HOST_ENABLED",
     ...Object.keys(env),
   ];

@@ -456,10 +456,11 @@ async function start(
   const noDatabase = missingPostgresUrl(host.reactor, memberConfig, hostFile);
   if (noDatabase) throw new Error(noDatabase);
 
-  // R2 step 2: a declared composition activates the plugin pipeline — the
-  // runner resolves the entries against the PROJECT dependency tree and
-  // `features.pluginHost` drives server-side activation. No plugins key =
-  // classic path.
+  // R2 step 2: a declared composition is resolved here, against the PROJECT
+  // dependency tree, and `features.pluginHost: true` tells the server to boot
+  // it. No plugins key = nothing to resolve: the server boots its default
+  // composition (the subsystems MCP_ENABLED, PH_WORKFLOWS_ENABLED and the
+  // config file turn on), which contributes no drives through this runner.
   let pluginComposition;
   if (entries !== undefined) {
     pluginComposition = await resolveHostPlugins(

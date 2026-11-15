@@ -93,7 +93,8 @@ export const deprecatedFlags: readonly DeprecatedFlag[] = [
     message:
       "It keeps Switchboard on the classic boot path, which " +
       `${DEPRECATIONS_REMOVED_IN} removes: the plugin host is then the only path. ` +
-      "List the plugins under `runner.plugins` in hosts/switchboard/host.js and remove the variable.",
+      "Remove the variable: Switchboard then starts the same subsystems through the plugin host. " +
+      "To choose them yourself, list the plugins under `runner.plugins` in hosts/switchboard/host.js.",
   },
 ];
 

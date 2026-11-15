@@ -115,6 +115,7 @@ import {
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import {
   createSwitchboardPluginHost,
+  defaultSwitchboardPlugins,
   type SwitchboardPluginHost,
 } from "./plugin-host.mjs";
 import {
@@ -556,25 +557,35 @@ async function initServer(
     logger = defaultLogger,
   } = options;
 
-  // R2 plugin pipeline (FEATURE_PLUGIN_HOST_ENABLED): flag off, the inline
-  // path below runs byte-identically; flag on, carved subsystems run as
-  // built-in plugins through the hook moments marked along this function.
-  const pluginHost: SwitchboardPluginHost | null = config.features.pluginHost
-    ? createSwitchboardPluginHost(
-        {
-          logger,
-          options: options as unknown as Record<string, unknown>,
-          config,
-          renown,
-        },
-        options.pluginComposition,
-      )
-    : null;
+  // R2 plugin pipeline: the carved subsystems run as built-in plugins through
+  // the hook moments marked along this function. `features.pluginHost: true`
+  // boots the declared composition; unset boots the default one, built from
+  // the switches startSwitchboard resolved, so the same subsystems run as on
+  // the inline path. Only an explicit false (FEATURE_PLUGIN_HOST_ENABLED=false)
+  // still runs the inline path below, which is deprecated.
+  const pluginHost: SwitchboardPluginHost | null =
+    config.features.pluginHost === false
+      ? null
+      : createSwitchboardPluginHost(
+          {
+            logger,
+            options: options as unknown as Record<string, unknown>,
+            config,
+            renown,
+          },
+          config.features.pluginHost === true
+            ? options.pluginComposition
+            : defaultSwitchboardPlugins({
+                mcp: options.mcp !== false,
+                workflows: options.workflows?.enabled === true,
+              }),
+        );
   if (pluginHost) {
     options = await pluginHost.transformOptions(options);
     // Presence is activation: whatever no plugin (or explicit option) set
     // stays OFF. The mcp/workflows plugins set these true at
-    // transformServerOptions; their absence must actually deactivate.
+    // transformServerOptions; their absence must actually deactivate. The
+    // default composition arrives with both already resolved.
     options.mcp ??= false;
     options.workflows = {
       ...options.workflows,
@@ -760,8 +771,8 @@ async function initServer(
   // only reads the answer.
   const workflowsEnabled = options.workflows?.enabled === true;
   // Resolved before the reactor is built: a bad secret fails the boot early.
-  // Flag-on, the privacy plugin owns this resolve (same fail-fast timing, in
-  // transformServerOptions above).
+  // Under the plugin host the privacy plugin owns this resolve (same
+  // fail-fast timing, in transformServerOptions above).
   const privacyConfig = pluginHost
     ? ({ enabled: false } as ResolvedPrivacy)
     : resolvePrivacy(options.privacy, {});
@@ -1413,8 +1424,8 @@ async function initServer(
     );
   }
 
-  // R2.3: flag-on, the attachments plugin owns the route mount + service
-  // creation at onHttpMounting; flag-off runs the inline path.
+  // R2.3: the attachments plugin owns the route mount + service creation at
+  // onHttpMounting; the deprecated inline boot runs them here.
   let attachmentService:
     | ReturnType<typeof createRemoteAttachmentService>
     | undefined;
@@ -1615,6 +1626,9 @@ async function initServer(
       await (
         pluginHost.ctx.workflows as ComposedWorkflowRuntime | undefined
       )?.stop();
+      // Privacy starts ahead of workflows here, so a workflows failure finds
+      // it running.
+      await (pluginHost.ctx.privacy as RunningPrivacy | undefined)?.stop();
       await abortBoot(api);
       throw error;
     }
@@ -1940,12 +1954,14 @@ export const startSwitchboard = async (
   );
 
   const options = serverOptionsOf(config, deps);
-  // CLASSIC resolution of the carved subsystems' switches — flag-on, the
-  // plugins own these (presence is activation): an ABSENT plugin can actually
-  // deactivate its subsystem (initServer normalizes unset values to off after
-  // transformServerOptions). An explicit config value always wins on both
-  // paths. The inspection switch is a core capability (not carved).
-  if (!config.features.pluginHost) {
+  // CLASSIC resolution of the carved subsystems' switches, for the inline
+  // path and for the default composition, which lists the plugins these turn
+  // on (initServer). Under a declared composition the plugins own them
+  // (presence is activation): an ABSENT plugin can actually deactivate its
+  // subsystem (initServer normalizes unset values to off after
+  // transformServerOptions). An explicit config value always wins on every
+  // path. The inspection switch is a core capability (not carved).
+  if (config.features.pluginHost !== true) {
     options.mcp = config.features.mcp ?? true;
     options.workflows = {
       enabled:

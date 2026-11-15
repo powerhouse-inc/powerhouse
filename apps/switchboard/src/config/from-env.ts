@@ -23,7 +23,7 @@ import {
 import { parseNonNegativeInt } from "../env.mjs";
 import { inspectionThrottleFromEnv } from "../inspection-throttle.mjs";
 import { parseForcePgVersion } from "../pglite-version.js";
-import { isPluginHostEnabled } from "../plugin-host-flag.mjs";
+import { pluginHostFromEnv } from "../plugin-host-flag.mjs";
 import { isPostgresUrl } from "../postgres-url.mjs";
 import { privacyTimingsFromEnv } from "../privacy.mjs";
 import { parseOnOff } from "../projection-worker.mjs";
@@ -203,10 +203,7 @@ export function switchboardConfigFromEnv(
       documentModelSubgraphs: openFeatureFlag(
         env.DOCUMENT_MODEL_SUBGRAPHS_ENABLED,
       ),
-      pluginHost:
-        env.FEATURE_PLUGIN_HOST_ENABLED === undefined
-          ? undefined
-          : isPluginHostEnabled(env),
+      pluginHost: pluginHostFromEnv(env),
       privacy: {
         enabled: privacyOn,
         deploymentSecret: env.PH_PRIVACY_DEPLOYMENT_SECRET,

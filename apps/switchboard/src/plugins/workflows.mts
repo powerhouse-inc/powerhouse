@@ -1,4 +1,5 @@
 import type { HostPlugin } from "@powerhousedao/host-core";
+import { withProgressHeartbeat } from "@powerhousedao/reactor";
 import type { ILogger } from "document-model";
 import { z } from "zod";
 import {
@@ -12,8 +13,9 @@ import type { SwitchboardHostContext } from "../plugin-host.mjs";
 /**
  * R2.5 — the workflows subsystem as a built-in plugin. Presence is activation
  * (an explicit options.workflows.enabled === false still wins, mirroring the
- * mcp carve, and PH_WORKFLOWS_ENABLED=false is one); turning workflows on from
- * the env or the config file is for the classic path only.
+ * mcp carve, and PH_WORKFLOWS_ENABLED=false is one). Turning workflows on from
+ * the env or the config file works without a declared composition only: the
+ * default composition then lists this plugin.
  *
  * The plugin also DECLARES the drive the runtime serves — the Workflows drive
  * that opens in Workflow Studio — as a drive contribution (workflow-plugins
@@ -199,7 +201,11 @@ export function createWorkflowsPlugin(
         if (workflows) {
           ctx.workflows = workflows;
           lateSubgraphs.push(orchestration.registerWorkflowSubgraph(workflows));
-          await workflows.start();
+          const runtime = workflows;
+          await withProgressHeartbeat(
+            { logger, label: "Starting the workflow runtime" },
+            () => runtime.start(),
+          );
           logger.info("Workflow runtime started");
           orchestration.setWorkflowsFact();
         }

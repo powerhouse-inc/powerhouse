@@ -16,12 +16,14 @@ import type { SwitchboardConfig } from "./config/schema.js";
 
 /**
  * R2 — SwitchboardCore's plugin pipeline (rewire plan, carve map:
- * uniform-runners-plan/rewire/r2-carve-map.md). Behind
- * FEATURE_PLUGIN_HOST_ENABLED: flag off, startSwitchboard runs the existing
- * inline path byte-identically; flag on, the five subsystems run as built-in
- * plugins through these hook moments. Subsystems carve one per commit; until
- * a subsystem is carved, its inline code runs on BOTH paths and its plugin
- * twin does not exist.
+ * uniform-runners-plan/rewire/r2-carve-map.md). Every switchboard boots
+ * through it: the carved subsystems (mcp, attachments, privacy, workflows) run
+ * as built-in plugins through these hook moments. A declared composition
+ * (`features.pluginHost: true`, FEATURE_PLUGIN_HOST_ENABLED=1) runs the
+ * plugins it lists; without one the default composition runs
+ * (defaultSwitchboardPlugins). Only an explicit `features.pluginHost: false`
+ * (FEATURE_PLUGIN_HOST_ENABLED=false) still takes startSwitchboard's inline
+ * path, which is deprecated.
  *
  * Hook vocabulary (SwitchboardHooks), anchored to the boot spine:
  * - transformServerOptions   — after option/flag resolution, before anything opens
@@ -33,7 +35,11 @@ import type { SwitchboardConfig } from "./config/schema.js";
  * - onShutdown               — first in the subsystem-ordered teardown
  */
 
-export { isPluginHostEnabled, PLUGIN_HOST_FLAG } from "./plugin-host-flag.mjs";
+export {
+  isPluginHostEnabled,
+  PLUGIN_HOST_FLAG,
+  pluginHostFromEnv,
+} from "./plugin-host-flag.mjs";
 
 /**
  * The context plugins receive. Fields are populated as the boot spine reaches
@@ -90,8 +96,8 @@ export interface SwitchboardPluginHost {
   ): Promise<void>;
 }
 
-/** Built-in plugins, pre-listed (the default composition until host.js
- * entries map in R2 step 2). Subsystems join as R2 carves them. */
+/** Built-in plugins, pre-listed: what a declared composition that names no
+ * plugins of its own boots with. Subsystems join as R2 carves them. */
 export function builtinSwitchboardPlugins(): ResolvedPlugin[] {
   const entry = { enabled: true, verbs: "*" as const, config: {} };
   return [
@@ -128,6 +134,30 @@ export function builtinSwitchboardPlugins(): ResolvedPlugin[] {
       },
     },
   ];
+}
+
+/** The classic resolution of the two switches a composition can leave out
+ * (startSwitchboard: the env, the caller, then powerhouse.config.json). */
+export interface DefaultSwitchboardSwitches {
+  /** MCP mounts: on unless MCP_ENABLED or the caller says false. */
+  mcp: boolean;
+  /** Workflows run: PH_WORKFLOWS_ENABLED, the caller or the config file. */
+  workflows: boolean;
+}
+
+/** The default composition: what a switchboard without a declared composition
+ * ran before the plugin host became the only path. Attachments always and
+ * privacy by its own config, as inline; mcp and workflows only when their
+ * classic switch is on, so the same subsystems run as before. Built-in order
+ * kept (privacy before workflows, for teardown). */
+export function defaultSwitchboardPlugins(
+  switches: DefaultSwitchboardSwitches,
+): ResolvedPlugin[] {
+  return builtinSwitchboardPlugins().filter(({ plugin }) => {
+    if (plugin.name === mcpPlugin.name) return switches.mcp;
+    if (plugin.name === workflowsPlugin.name) return switches.workflows;
+    return true;
+  });
 }
 
 export function createSwitchboardPluginHost(
@@ -173,7 +203,9 @@ export function createSwitchboardPluginHost(
     },
     observe: (hook) => {
       logHook(hook);
-      return hook === "onShutdown"
+      // One at a time where a failure must find what already started: the
+      // subsystems start in turn, as inline, so the caller can stop them.
+      return hook === "onShutdown" || hook === "onSubgraphsRegistering"
         ? runObserveHookSequential(hook, ordered, fullCtx)
         : runObserveHook(hook, ordered, fullCtx);
     },

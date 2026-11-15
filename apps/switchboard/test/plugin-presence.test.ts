@@ -105,7 +105,7 @@ async function getReservation(port: number): Promise<number> {
 }
 
 describe("plugin-host composition presence (FEATURE_PLUGIN_HOST_ENABLED)", () => {
-  it("DEFAULT composition: mcp mounted, attachments present", async () => {
+  it("NO composition passed (every built-in): mcp mounted, attachments present", async () => {
     await withPluginHostSwitchboard({}, async (switchboard) => {
       expect(switchboard.mcpEnabled).toBe(true);
       expect(await postMcp(switchboard.port)).not.toBe(404);
@@ -153,7 +153,7 @@ describe("plugin-host composition presence (FEATURE_PLUGIN_HOST_ENABLED)", () =>
     );
   }, 60_000);
 
-  it("an explicit mcp: false option still wins over the default composition", async () => {
+  it("an explicit mcp: false option still wins when no composition is passed", async () => {
     await withPluginHostSwitchboard(
       { config: { features: { mcp: false } } },
       async (switchboard) => {

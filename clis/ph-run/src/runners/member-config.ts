@@ -192,6 +192,8 @@ export async function memberSwitchboardConfig(
   member: SwitchboardMember,
   env: MemberEnv,
   options: {
+    /** The host declares `runner.plugins`. Without them the env decides:
+     * unset boots the server's default composition. */
     pluginHost: boolean;
     logger?: ILogger;
     /** Under everything else: values no flag or host file set. */
