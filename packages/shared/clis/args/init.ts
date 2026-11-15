@@ -71,7 +71,7 @@ export const initArgs = {
     type: optional(boolean),
     long: "uniform-runners",
     description:
-      "Scaffold the hosts/ folder (uniform-runners architecture). Also enabled project-wide by FEATURE_UNIFORM_RUNNERS_ENABLED.",
+      "Deprecated: no longer needed, `ph init` always scaffolds the hosts/ folder. Accepted with a warning; will be removed in a future release.",
   }),
   clone: option({
     type: optional(string),

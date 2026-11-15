@@ -10,8 +10,11 @@ import { kebabCase } from "change-case";
 import enquirer from "enquirer";
 import { clean, valid } from "semver";
 import type { InitArgs } from "../types.js";
-import { isUniformRunnersEnabled } from "../utils/feature-flags.js";
 import { setupRemoteDrive } from "../utils/validate-remote-drive.js";
+
+/** `ph init` always writes hosts/; the option is accepted until it is removed. */
+export const UNIFORM_RUNNERS_OPTION_WARNING =
+  "⚠️  --uniform-runners is no longer needed: `ph init` always scaffolds hosts/. The option will be removed in a future release.";
 
 export async function startInit(args: InitArgs) {
   const {
@@ -113,6 +116,10 @@ export async function startInit(args: InitArgs) {
     );
   }
 
+  if (args.uniformRunners) {
+    console.warn(chalk.yellow(UNIFORM_RUNNERS_OPTION_WARNING));
+  }
+
   try {
     if (remoteDrive) {
       console.log(chalk.blue("\n⏳ Setting up remote drive...\n"));
@@ -126,9 +133,6 @@ export async function startInit(args: InitArgs) {
       name,
       packageManager: parsedPackageManager,
       tag: parsedTag,
-      // explicit flag wins; otherwise the env toggle decides (codegen never
-      // sniffs env itself)
-      uniformRunners: args.uniformRunners === true || isUniformRunnersEnabled(),
     });
 
     if (remoteDrive) {

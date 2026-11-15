@@ -1,5 +1,5 @@
 /**
- * uniform-runners scaffold: the hosts/ folder (host definitions) and the
+ * Hosts scaffold: the hosts/ folder (host definitions) and the
  * agents/ stub. Host files are static PROJECTIONS of powerhouse.config.json —
  * every port is referenced, not copied, so powerhouse.config.json stays the
  * single value store and `ph install` & friends keep one file to edit.

@@ -272,7 +272,7 @@ async function seedUserOwnedFile(filePath: string, contents: string) {
   await writeFileEnsuringDir(filePath, contents);
 }
 
-/** uniform-runners scaffold (FEATURE_UNIFORM_RUNNERS_ENABLED): the hosts/
+/** Hosts scaffold, written by every `ph init`: the hosts/
  * folder plus the agents/ stub. Every file is user-owned once created
  * (preserve-on-migrate, same contract as the AI config files). Host files
  * reference powerhouse.config.json values rather than copying them, so the

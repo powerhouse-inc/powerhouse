@@ -47,9 +47,6 @@ type CreateProjectArgs = {
    * packageManager === "pnpm".
    */
   clone?: string;
-  /** uniform-runners: scaffold the hosts/ folder + agents/ stub. The caller
-   * (ph-cli) resolves the feature flag; codegen never sniffs env itself. */
-  uniformRunners?: boolean;
 };
 
 /** `initialCommit` is undefined when `ph init` did not create the repository. */
@@ -64,7 +61,6 @@ export async function createProject({
   skipGitInit,
   skipInstall,
   clone,
-  uniformRunners,
 }: CreateProjectArgs): Promise<CreateProjectResult> {
   const appPath = path.join(process.cwd(), name);
 
@@ -83,7 +79,6 @@ export async function createProject({
       skipGitInit,
       skipInstall,
       remoteDrive,
-      uniformRunners,
     });
   }
 
@@ -113,9 +108,7 @@ export async function createProject({
   await writeAllGeneratedProjectFiles();
   // Must run last: it edits files `writeAllGeneratedProjectFiles` just created.
   await applyProjectCustomizations({ name, projectDir: appPath, remoteDrive });
-  if (uniformRunners) {
-    await writeGeneratedHostsFiles(appPath, name);
-  }
+  await writeGeneratedHostsFiles(appPath, name);
   console.log(chalk.green(`✅ Project boilerplate files created\n`));
 
   if (!skipInstall) {
@@ -165,7 +158,6 @@ async function createProjectFromClone(args: {
   skipGitInit?: boolean;
   skipInstall?: boolean;
   remoteDrive?: string;
-  uniformRunners?: boolean;
 }): Promise<CreateProjectResult> {
   const {
     name,
@@ -175,7 +167,6 @@ async function createProjectFromClone(args: {
     skipGitInit,
     skipInstall,
     remoteDrive,
-    uniformRunners,
   } = args;
   // --clone needs a package manager with a hard-offline install mode that
   // refuses to hit the network on a cache miss. pnpm and npm qualify; yarn
@@ -226,11 +217,9 @@ async function createProjectFromClone(args: {
 
   console.log(chalk.blue(`▶️ Applying project customizations...\n`));
   await applyProjectCustomizations({ name, projectDir: appPath, remoteDrive });
-  if (uniformRunners) {
-    // seedUserOwnedFile semantics: adds hosts/ to clones that lack it,
-    // preserves it where the clone source already carried one.
-    await writeGeneratedHostsFiles(appPath, name);
-  }
+  // seedUserOwnedFile semantics: adds hosts/ to clones that lack it,
+  // preserves it where the clone source already carried one.
+  await writeGeneratedHostsFiles(appPath, name);
   console.log(chalk.green(`✅ Project customizations applied\n`));
 
   if (!skipInstall) {
