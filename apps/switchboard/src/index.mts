@@ -5,6 +5,7 @@
 import "./observability-bin.mjs";
 
 import { getConfig } from "@powerhousedao/config/node";
+import { checkRetiredFlags } from "@powerhousedao/shared/clis/retired-flags";
 import * as Sentry from "@sentry/node";
 import { childLogger } from "document-model";
 import { binSwitchboardConfig } from "./config/bin.js";
@@ -49,6 +50,8 @@ const cliMigratePglite = process.argv.slice(2).includes("--migrate-pglite");
 // logging and continuing hides a dead switchboard from the supervisor, which
 // would otherwise never restart it.
 try {
+  // Retired env switches: warns, or refuses to start, per the shared table.
+  checkRetiredFlags();
   const config = binSwitchboardConfig(process.env, {
     filePort: getConfig().switchboard?.port,
     migratePglite: cliMigratePglite,
