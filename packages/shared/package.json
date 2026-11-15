@@ -123,6 +123,10 @@
       "source": "./clis/command-names.ts",
       "import": "./dist/clis/command-names.mjs"
     },
+    "./clis/retired-flags": {
+      "source": "./clis/retired-flags.ts",
+      "import": "./dist/clis/retired-flags.mjs"
+    },
     "./clis/telemetry": {
       "source": "./clis/services/telemetry.ts",
       "import": "./dist/clis/services/telemetry.mjs"

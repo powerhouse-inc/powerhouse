@@ -38,6 +38,7 @@ export default defineConfig({
       "clis/project-env.test.ts",
       "clis/ph-dir.test.ts",
       "clis/real-paths.test.ts",
+      "clis/retired-flags.test.ts",
       "clis/args/vetra-ports.test.ts",
       "clis/file-system/spawn-async.test.ts",
       "clis/file-system/package-manager.test.ts",

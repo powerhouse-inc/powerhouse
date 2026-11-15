@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { checkRetiredFlags } from "@powerhousedao/shared/clis/retired-flags";
 import {
   initCliTelemetry,
   type TelemetryClient,
@@ -59,6 +60,8 @@ async function runModelCli(
 
 async function main() {
   assertNodeVersion();
+  // Retired env switches: warns, or refuses to start, per the shared table.
+  checkRetiredFlags();
   // Initializes Sentry only if user consented (opt-out by default, asked
   // once on first interactive run). Respects PH_NO_TELEMETRY/DO_NOT_TRACK.
   sentryClient = await initCliTelemetry({
