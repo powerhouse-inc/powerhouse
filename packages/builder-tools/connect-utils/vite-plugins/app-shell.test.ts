@@ -168,9 +168,10 @@ beforeAll(() => {
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 async function buildWith(composition?: { module: string }[], appName?: string) {
+  // The name may hold characters a Windows directory name cannot.
   const outDir = join(
     root,
-    `dist-${composition ? composition.length : "none"}-${appName ?? ""}`,
+    `dist-${composition ? composition.length : "none"}-${(appName ?? "").replace(/[^\w-]/g, "_")}`,
   );
   await build({
     root,

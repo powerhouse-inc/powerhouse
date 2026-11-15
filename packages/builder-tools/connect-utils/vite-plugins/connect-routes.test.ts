@@ -63,8 +63,14 @@ function writeRoute(file: string, source: string) {
   writeFileSync(target, source);
 }
 
+// Under the package, not the system temp folder: the generator mounts the
+// project's routes by a path relative to Connect's, which does not exist
+// across drives on Windows. Not node_modules, which Vite's watcher ignores.
+const TMP_PARENT = join(process.cwd(), ".cache");
+
 beforeEach(() => {
-  project = mkdtempSync(join(tmpdir(), "connect-routes-"));
+  mkdirSync(TMP_PARENT, { recursive: true });
+  project = mkdtempSync(join(TMP_PARENT, "connect-routes-"));
 });
 
 afterEach(() => {
@@ -591,9 +597,14 @@ describe("project route types", () => {
     // tsc reports on stdout; show it (e.g. TS6305: build connect first) on failure.
     let diagnostics = "";
     try {
+      // Through node: the .bin shim is a shell script on Windows.
       execFileSync(
-        join(repoRoot, "node_modules/.bin/tsc"),
-        ["-p", join(fixture, "hosts/connect/routes/tsconfig.json")],
+        process.execPath,
+        [
+          join(repoRoot, "node_modules/typescript/bin/tsc"),
+          "-p",
+          join(fixture, "hosts/connect/routes/tsconfig.json"),
+        ],
         { cwd: fixture, encoding: "utf8", stdio: "pipe" },
       );
     } catch (err) {
