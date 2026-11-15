@@ -30,13 +30,9 @@ describe("ph migrate", () => {
     Object.assign(globalThis, { WORKSPACE_PACKAGES: [] });
   });
 
-  it.each([
-    'export { SubgraphModule } from "./subgraph-module/module.js";\n',
-    'export { module as SubgraphModule } from "./subgraph-module/index.js";\n',
-    'export {};\nexport { module as SubgraphModule } from "./subgraph-module/index.js";\n',
-  ])(
-    "upgrades an unversioned schema-first layout with barrel %s",
-    async (barrel) => {
+  it.each([{ dryRun: false }, { dryRun: true }])(
+    "refuses an unversioned (5.x) layout before any write, with %o",
+    async ({ dryRun }) => {
       const state = await loadDocumentModel(copySchemaFirstSpec(dir));
       await inProject(dir, (project) => generateDocumentModel(state, project));
       const model = join(dir, "document-models/subgraph-module");
@@ -44,13 +40,19 @@ describe("ph migrate", () => {
         renameSync(join(model, "v1", name), join(model, name));
       }
       rmSync(join(model, "v1"), { recursive: true });
-      writeFileSync(join(dir, "document-models/index.ts"), barrel);
-      await migrate("6.2.3-dev.90", dir, { skipInstall: true });
-      expect(read(dir, "document-models/index.ts")).toContain(
-        "SubgraphModule as SubgraphModuleV1",
+      writeFileSync(
+        join(dir, "document-models/index.ts"),
+        'export { SubgraphModule } from "./subgraph-module/module.js";\n',
       );
-      expect(existsSync(join(model, "v1/module.ts"))).toBe(true);
-      expect(existsSync(join(model, "module.ts"))).toBe(false);
+      const before = tree(dir);
+      const refused = migrate("6.2.3-dev.90", dir, {
+        skipInstall: true,
+        dryRun,
+      });
+      await expect(refused).rejects.toThrow("subgraph-module");
+      await expect(refused).rejects.toThrow("Run the 6.2.2 `ph migrate` first");
+      expect(tree(dir)).toStrictEqual(before);
+      expect(existsSync(join(model, "v1"))).toBe(false);
     },
   );
 

@@ -1,6 +1,5 @@
-import { writeFileEnsuringDir } from "@powerhousedao/shared/clis";
+import { projectFiles, writeFileEnsuringDir } from "@powerhousedao/shared/clis";
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { agentsTemplate, claudeTemplate } from "templates";
 
@@ -49,11 +48,10 @@ export function readManagedRecord(
   projectDir: string,
 ): ManagedRecord | undefined {
   const recordPath = join(projectDir, MANAGED_RECORD_PATH);
-  if (!existsSync(recordPath)) return undefined;
+  const text = projectFiles.read(recordPath);
+  if (text === undefined) return undefined;
   try {
-    const record = JSON.parse(
-      readFileSync(recordPath, "utf-8"),
-    ) as Partial<ManagedRecord>;
+    const record = JSON.parse(text) as Partial<ManagedRecord>;
     return { files: record.files ?? [], skills: record.skills ?? [] };
   } catch {
     console.warn(
@@ -133,7 +131,8 @@ export async function writeAgentInstructionFiles(
   const results: AgentFileResult[] = [];
   for (const [path, update, fresh, wholeFileNotice] of files) {
     const filePath = join(projectDir, path);
-    if (!existsSync(filePath)) {
+    const existing = projectFiles.read(filePath);
+    if (existing === undefined) {
       if (record?.files.includes(path)) {
         results.push({ path, action: "kept deleted" });
         continue;
@@ -142,7 +141,6 @@ export async function writeAgentInstructionFiles(
       results.push({ path, action: "written" });
       continue;
     }
-    const existing = readFileSync(filePath, "utf-8");
     const contents = update(existing);
     if (contents === undefined || contents === existing) {
       results.push({ path, action: "left alone" });

@@ -30,6 +30,7 @@ export default defineConfig({
       "src/codegen/migrate-powerhouse-config.test.ts",
       "src/codegen/install-added-dependencies.test.ts",
       "src/codegen/migrate.test.ts",
+      "src/codegen/migrate-additive.test.ts",
       "src/codegen/migrate-package-json.test.ts",
       "src/codegen/kysely.test.ts",
       "src/file-builders/manifest.test.ts",

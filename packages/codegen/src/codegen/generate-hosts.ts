@@ -6,7 +6,7 @@ import {
   scanHostImports,
   type HostOutputsDescription,
 } from "@powerhousedao/host-core";
-import { writeFileEnsuringDir } from "@powerhousedao/shared/clis";
+import { projectFiles, writeFileEnsuringDir } from "@powerhousedao/shared/clis";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -75,10 +75,9 @@ async function writeOutputsFiles(
 export async function writeHostsTypesDts(
   projectRoot: string,
 ): Promise<string[]> {
-  const pkgPath = join(projectRoot, "package.json");
-  const pkg: unknown = existsSync(pkgPath)
-    ? JSON.parse(readFileSync(pkgPath, "utf8"))
-    : {};
+  // Through the write layer: `ph migrate` rewrites package.json before this.
+  const pkgText = projectFiles.read(join(projectRoot, "package.json"));
+  const pkg: unknown = pkgText === undefined ? {} : JSON.parse(pkgText);
   const dependencies = declaredDependencies(pkg);
   await writeFileEnsuringDir(
     join(projectRoot, "hosts", "types.d.ts"),

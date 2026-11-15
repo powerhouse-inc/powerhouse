@@ -30,6 +30,7 @@ export * from "./file-system/run-cmd.js";
 export * from "./file-system/spawn-async.js";
 export * from "./file-system/version-info.js";
 export * from "./file-system/write-file-ensuring-dir.js";
+export * from "./file-system/write-layer.js";
 export * from "./services/telemetry.js";
 export * from "./services/use-local.js";
 export * from "./source-config-schema.js";

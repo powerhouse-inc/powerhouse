@@ -200,20 +200,5 @@ export const generateArgs = {
     short: "sf",
     description: "Skip formatting the generated code.",
   }),
-  useVersioning: flag({
-    type: boolean,
-    long: "use-versioning",
-    description: "Allow upgrading document models with versioning.",
-    defaultValue: () => true,
-    defaultValueIsSerializable: true,
-  }),
-  migrateLegacy: flag({
-    type: boolean,
-    long: "migrate-legacy",
-    description:
-      "Migrate existing legacy document model code to versioned structure. Implies --use-versioning.",
-    defaultValue: () => false,
-    defaultValueIsSerializable: true,
-  }),
   ...debugArgs,
 };

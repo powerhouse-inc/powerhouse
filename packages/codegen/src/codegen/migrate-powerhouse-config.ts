@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "fs";
+import { projectFiles } from "@powerhousedao/shared/clis";
 import { join } from "path";
 import { isDeepStrictEqual } from "util";
 
@@ -16,7 +16,7 @@ export function migratePowerhouseConfig(projectDir: string): boolean {
   const file = join(projectDir, "powerhouse.config.json");
   let config: { connect?: { instance?: unknown } };
   try {
-    config = JSON.parse(readFileSync(file, "utf8")) as typeof config;
+    config = JSON.parse(projectFiles.read(file) ?? "") as typeof config;
   } catch {
     // Missing or hand-broken: the author's to fix.
     return false;
@@ -29,6 +29,6 @@ export function migratePowerhouseConfig(projectDir: string): boolean {
     return false;
   }
   delete connect.instance;
-  writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
+  projectFiles.writeSync(file, `${JSON.stringify(config, null, 2)}\n`);
   return true;
 }

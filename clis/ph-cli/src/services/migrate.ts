@@ -6,11 +6,13 @@ import {
 import { ALL_POWERHOUSE_DEPENDENCIES } from "@powerhousedao/shared/constants";
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { detect, resolveCommand } from "package-manager-detector";
 import { compare, minVersion, prerelease, rcompare, valid } from "semver";
 import type { MigrateArgs } from "../types.js";
+import { findNodeProjectRoot, isPowerhouseProject } from "../utils.js";
+import { unifiedDiff } from "./migrate-subgraphs.js";
 
 // Dist-tags a prerelease version can name its channel by.
 const PRERELEASE_TAGS = ["dev", "staging", "rc"];
@@ -163,13 +165,57 @@ export function assertCodegenMatchesBundled(args: {
   }
 }
 
+type FileChange = {
+  path: string;
+  before: string | undefined;
+  after: string | undefined;
+};
+
+/** What a dry run prints: one unified diff per file, paths relative to the
+ * project, a deleted file against /dev/null. */
+export function dryRunReport(
+  projectDir: string,
+  result: { changes: readonly FileChange[]; notRun: readonly string[] },
+): string {
+  const diffs = result.changes.map(({ path, before, after }) => {
+    const file = relative(projectDir, path).replaceAll("\\", "/");
+    if (after === undefined) {
+      const removed = `--- a/${file}\n+++ /dev/null\n`;
+      const diff = unifiedDiff({ path: file, before: before ?? "", after: "" });
+      // An empty file has no lines to show.
+      return diff === ""
+        ? removed
+        : diff.replace(`--- a/${file}\n+++ b/${file}\n`, removed);
+    }
+    // An added empty file has no lines either.
+    return (
+      unifiedDiff({ path: file, before: before ?? null, after }) ||
+      `--- /dev/null\n+++ b/${file}\n`
+    );
+  });
+  const notRun =
+    result.notRun.length > 0
+      ? `Not previewed; a real run would also:\n${result.notRun.map((step) => `  - ${step}\n`).join("")}`
+      : "";
+  if (diffs.length === 0) {
+    return `ph migrate would change no file.\n${notRun}`;
+  }
+  return `${diffs.join("")}ph migrate would write ${diffs.length} file(s); nothing was written.\n${notRun}`;
+}
+
 export async function startMigrate({
   versionPositional,
   version,
   force,
   debug,
+  dryRun,
 }: MigrateArgs) {
-  const packageJson = readProjectPackageJson(process.cwd());
+  // The project is where powerhouse.config.json is: the command also runs
+  // from a sub-folder, and from a package of a monorepo.
+  const projectDir =
+    findNodeProjectRoot(process.cwd(), isPowerhouseProject) ?? process.cwd();
+  if (debug) console.log(`[migrate] project directory: ${projectDir}`);
+  const packageJson = readProjectPackageJson(projectDir);
   let requested = versionPositional ?? version;
   if (requested === undefined) {
     const inferred = inferReleaseTag(packageJson);
@@ -228,16 +274,22 @@ export async function startMigrate({
     console.log(
       `Running migrate with @powerhousedao/codegen@${codegenVersion ?? "unknown"}`,
     );
-    await codegenMod.migrate(targetVersion ?? requested);
+    const result = await codegenMod.migrate(
+      targetVersion ?? requested,
+      projectDir,
+      { dryRun: Boolean(dryRun) },
+    );
+    if (dryRun) process.stdout.write(dryRunReport(projectDir, result));
     return;
   }
 
-  const agent = (await detect())?.agent ?? "npm";
+  const agent = (await detect({ cwd: projectDir }))?.agent ?? "npm";
   const resolved = resolveCommand(agent, "execute", [
     `@powerhousedao/ph-cli@${targetVersion}`,
     "migrate",
     "--version",
     targetVersion,
+    ...(dryRun ? ["--dry-run"] : []),
     ...(debug ? ["--debug"] : []),
   ]);
   if (!resolved) {
@@ -254,6 +306,7 @@ export async function startMigrate({
     console.log(`[migrate] re-executing: ${command}`);
   }
   execSync(command, {
+    cwd: projectDir,
     stdio: "inherit",
     env: { ...process.env, [VERSION_CHECKED_ENV]: "1" },
   });

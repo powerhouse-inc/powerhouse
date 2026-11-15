@@ -5,7 +5,11 @@ import {
 import type { PackageJson } from "read-pkg";
 import { packageJsonTemplate } from "templates";
 import { describe, expect, it } from "vitest";
-import { migratedPackageJson } from "./migrate.js";
+import {
+  migratedPackageJson,
+  migratedScripts,
+  resolveManagedDependencies,
+} from "./migrate.js";
 
 // A project generated before `ph build` stopped building subgraphs for the
 // browser, with the exports its package.json was given then.
@@ -23,6 +27,7 @@ const generatedBefore = {
       browser: "./dist/browser/subgraphs/index.js",
       node: "./dist/node/subgraphs/index.mjs",
     },
+    "./tools": "./dist/tools.js",
   },
   scripts: { custom: "echo custom", tsc: "tsc && tsc -p hosts" },
   dependencies: { leftover: "1.0.0" },
@@ -34,8 +39,12 @@ describe("migratedPackageJson", () => {
     devDependencies: { "@powerhousedao/ph-cli": "1.0.0" },
   });
 
-  it("drops the browser build of ./subgraphs, which ph build no longer emits", () => {
-    expect(migrated.exports).toEqual(packageJsonExports);
+  it("updates the exports it manages and keeps the project's own", () => {
+    expect(migrated.exports).toEqual({
+      "./tools": "./dist/tools.js",
+      ...packageJsonExports,
+    });
+    // The browser build of ./subgraphs, which ph build no longer emits, goes.
     expect(
       (migrated.exports as Record<string, Record<string, string>>)[
         "./subgraphs"
@@ -46,7 +55,7 @@ describe("migratedPackageJson", () => {
     });
   });
 
-  it("keeps the project's own fields and scripts and drops runtime dependencies", () => {
+  it("keeps the project's own fields, scripts and runtime dependencies", () => {
     expect(migrated).toMatchObject({
       name: "legacy-project",
       version: "1.2.3",
@@ -55,7 +64,85 @@ describe("migratedPackageJson", () => {
       devDependencies: { "@powerhousedao/ph-cli": "1.0.0" },
     });
     expect(migrated.scripts).toHaveProperty("custom", "echo custom");
-    expect(migrated).not.toHaveProperty("dependencies");
+    expect(migrated.dependencies).toEqual({ leftover: "1.0.0" });
+  });
+});
+
+describe("the scripts migrate manages", () => {
+  it("adds a missing one and updates one an earlier scaffold wrote", () => {
+    const { scripts, kept } = migratedScripts({
+      lint: "eslint --config eslint.config.js --cache",
+      build: "npm run tsc && npm run tailwind",
+    });
+    expect(scripts.lint).toBe(packageScripts.lint);
+    expect(scripts.build).toBe(packageScripts.build);
+    expect(scripts.vetra).toBe(packageScripts.vetra);
+    expect(kept).toEqual([]);
+  });
+
+  it("keeps a value the project wrote and names the script", () => {
+    const own = {
+      lint: "oxlint --deny-warnings",
+      build: "ph-cli build && node scripts/after-build.mjs",
+      deploy: "node scripts/deploy.mjs",
+    };
+    const { scripts, kept } = migratedScripts(own);
+    expect(scripts).toMatchObject(own);
+    expect(kept).toEqual(["lint", "build"]);
+  });
+
+  it("gives the same scripts on a second run", () => {
+    const first = migratedScripts({
+      tsc: "tsc && tsc -p hosts",
+      lint: "oxlint --deny-warnings",
+    }).scripts;
+    expect(migratedScripts(first).scripts).toEqual(first);
+  });
+});
+
+describe("the dependencies of a migrated project", () => {
+  const managed = resolveManagedDependencies({
+    packageJson: {
+      dependencies: {
+        luxon: "^3.0.0",
+        "@powerhousedao/reactor-browser": "6.0.0",
+        eslint: "^9.0.0",
+      },
+      devDependencies: { "left-pad": "1.3.0" },
+      peerDependencies: { "some-peer": "^1.0.0" },
+    },
+    features: [],
+    fullyQualifiedVersion: "6.3.0-dev.1",
+    workspacePackageNames: [],
+  });
+
+  it("keeps what the project added in the field it added it to", () => {
+    expect(managed.dependencies).toEqual({ luxon: "^3.0.0" });
+    expect(managed.devDependencies).toHaveProperty("left-pad", "1.3.0");
+    expect(managed.devDependencies).not.toHaveProperty("luxon");
+    expect(managed.peerDependencies).toHaveProperty("some-peer", "^1.0.0");
+  });
+
+  it("moves a managed package out of dependencies to its peer and dev pin", () => {
+    expect(managed.peerDependencies).toHaveProperty(
+      "@powerhousedao/reactor-browser",
+      "6.3.0-dev.1",
+    );
+    expect(managed.devDependencies).toHaveProperty(
+      "@powerhousedao/reactor-browser",
+      "6.3.0-dev.1",
+    );
+    expect(managed.devDependencies).not.toHaveProperty("eslint");
+  });
+
+  it("gives the same sets on a second run", () => {
+    const again = resolveManagedDependencies({
+      packageJson: managed as PackageJson,
+      features: [],
+      fullyQualifiedVersion: "6.3.0-dev.1",
+      workspacePackageNames: [],
+    });
+    expect(again).toEqual(managed);
   });
 });
 
@@ -129,7 +216,8 @@ describe("the tsc script", () => {
       scripts: Record<string, string>;
     };
 
-    expect(migrated.scripts?.tsc).toBe("ph-cli generate connect-routes && tsc");
+    // The `tsc -p hosts` the hosts scaffold appended stays.
+    expect(migrated.scripts?.tsc).toBe(`${packageScripts.tsc} && tsc -p hosts`);
     expect(scaffolded.scripts.tsc).toBe(packageScripts.tsc);
   });
 });

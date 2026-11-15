@@ -26,10 +26,6 @@ export const migrate = command({
         }),
       );
     }
-    if (args.dryRun) {
-      console.error("--dry-run applies only with --subgraphs or --subgraph.");
-      process.exit(1);
-    }
     const { startMigrate } = await import("../services/migrate.js");
     await startMigrate(args);
     process.exit(0);

@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, writeFileSync } from "fs";
+import { projectFiles } from "@powerhousedao/shared/clis";
 import { join, posix } from "path";
 import { ts } from "ts-morph";
 
@@ -89,21 +89,22 @@ export function migrateCompilerOptions(options: CompilerOptions): boolean {
 // the files it rewrote. A rewritten file loses its comments.
 export function migrateTsconfigFiles(projectDir: string): string[] {
   const changed: string[] = [];
-  const files = readdirSync(projectDir)
+  const files = projectFiles
+    .list(projectDir)
     .filter((name) => /^tsconfig(\..+)?\.json$/.test(name))
     .sort();
   for (const name of files) {
     const file = join(projectDir, name);
     const parsed = ts.parseConfigFileTextToJson(
       name,
-      readFileSync(file, "utf8"),
+      projectFiles.read(file) ?? "",
     );
     const config: unknown = parsed.config;
     if (parsed.error || typeof config !== "object" || config === null) continue;
     const options = (config as { compilerOptions?: CompilerOptions })
       .compilerOptions;
     if (!options || !migrateCompilerOptions(options)) continue;
-    writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
+    projectFiles.writeSync(file, `${JSON.stringify(config, null, 2)}\n`);
     changed.push(name);
   }
   return changed;

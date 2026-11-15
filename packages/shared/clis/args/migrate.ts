@@ -49,7 +49,7 @@ export const migrateArgs = {
     type: optional(boolean),
     long: "dry-run",
     description:
-      "With --subgraphs or --subgraph: print the diff of what would change, and write nothing.",
+      "Print the diff of every file the migration would add, change or delete, and write nothing. It installs nothing and regenerates no code; it lists those steps instead.",
   }),
   ...debugArgs,
 };

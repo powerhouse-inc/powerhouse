@@ -4,7 +4,7 @@ import {
   STYLE_IMPORT_LINES,
   TAILWIND_IMPORT,
 } from "@powerhousedao/shared/clis/package-style";
-import { existsSync, readFileSync } from "fs";
+import { projectFiles } from "@powerhousedao/shared/clis";
 import { join } from "path";
 import postcss, {
   type ChildNode,
@@ -248,5 +248,5 @@ export function connectThemeMessages({
 
 export function readStyle(projectDir: string): string | undefined {
   const file = join(projectDir, "style.css");
-  return existsSync(file) ? readFileSync(file, "utf8") : undefined;
+  return projectFiles.read(file);
 }

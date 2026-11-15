@@ -3,6 +3,7 @@ import {
   BOILERPLATE_TRANSITIVE_OVERRIDES,
   externalDevDependencies,
   FEATURE_DEPENDENCIES,
+  type FileChange,
   getPackageManagerAtPowerhouseProjectDirPath,
   getPowerhouseProjectInstallCommand,
   LEGACY_LINT_FORMAT_DEPENDENCIES,
@@ -11,7 +12,10 @@ import {
   packageJsonExports,
   packageScripts,
   PEER_EXTERNAL_DEPENDENCIES,
+  projectFiles,
+  recordWrites,
   runCmd,
+  SUPERSEDED_PACKAGE_SCRIPTS,
   versionSatisfies,
   VERSIONED_DEV_DEPENDENCIES,
   VERSIONED_PEER_DEPENDENCIES,
@@ -23,7 +27,6 @@ import {
   syncPackageSkills,
   writeAllGeneratedProjectFiles,
 } from "file-builders";
-import { cpSync, mkdirSync, readdirSync, rmSync, statSync } from "fs";
 import npmFetch from "npm-registry-fetch";
 import { join } from "path";
 import { type PackageJson, readPackage } from "read-pkg";
@@ -40,12 +43,17 @@ import {
   prop,
 } from "remeda";
 import { toYarnResolutions } from "templates";
-import type { Project } from "ts-morph";
 import { buildTsMorphProject, fixGenerateMockImports } from "utils";
 import { writePackage } from "write-package";
 import { detectFeatures, type Feature } from "./features.js";
 import { modelGeneration } from "./document-model-generation.js";
 import { assertDocumentModelAggregatesWritable } from "../file-builders/document-model/aggregates.js";
+import {
+  HOSTS_TSC_SCRIPT,
+  withHostsTscScript,
+} from "../file-builders/hosts/host-typing-files.js";
+import { addHostsFolder } from "./migrate-hosts.js";
+import { assertVersionedDocumentModels } from "./migrate-layout-floor.js";
 import { migratePowerhouseConfig } from "./migrate-powerhouse-config.js";
 import { migrateTsconfigFiles } from "./migrate-tsconfig.js";
 import { sortByKey } from "./utils.js";
@@ -94,40 +102,6 @@ export async function getFullyQualifiedWorkspacePackageVersion(
   return version;
 }
 
-export function fixLegacyImportPaths(
-  project: Project,
-  packageName: string | undefined,
-) {
-  if (!packageName) {
-    console.error("No package name found in package.json.");
-    return;
-  }
-  const sourceFiles = project.getSourceFiles();
-  for (const sourceFile of sourceFiles) {
-    const importStatements = sourceFile.getImportDeclarations();
-    for (const importStatement of importStatements) {
-      const moduleSpecifier = importStatement.getModuleSpecifier();
-      const moduleSpecifierText = moduleSpecifier.getLiteralText();
-      // remove usage of the old `package-name/` style paths
-      if (moduleSpecifierText.includes(packageName)) {
-        moduleSpecifier.setLiteralValue(
-          moduleSpecifierText.replace(`${packageName}/`, ""),
-        );
-      }
-      // attempt to fix absolute import paths for document models like `../../../document-models/model/something/something.js`
-      // these don't work anymore with the versioned document models, since the absolute file paths are different
-      const match = moduleSpecifierText.match(
-        /^(\.\.\/)+document-models\/([^/]+)(?!\/v\d+(?:\/|$))(?:\/.*)?$/,
-      );
-
-      if (match) {
-        moduleSpecifier.setLiteralValue(`document-models/${match[2]}`);
-      }
-    }
-    fixGenerateMockImports(sourceFile);
-  }
-}
-
 function isProtectedVersionSpec(value: unknown): value is string {
   return (
     typeof value === "string" &&
@@ -156,8 +130,18 @@ function preserveProtected(
   return result;
 }
 
-// The peer and dev sets migrate rewrites, as a pure function of what it read.
+// The dependency sets migrate rewrites, as a pure function of what it read.
 // Split out so the rewrite can be checked without a registry or an install.
+//
+// Managed names: the versioned Powerhouse packages (VERSIONED_PEER_DEPENDENCIES,
+// VERSIONED_DEV_DEPENDENCIES and those of the project's features), the external
+// pins (PEER_EXTERNAL_DEPENDENCIES, externalDevDependencies, a feature's
+// peerExternal), the scaffold pins (BOILERPLATE_DEPENDENCY_OVERRIDES) and the
+// removed LEGACY_LINT_FORMAT_DEPENDENCIES. A managed name is added to the peer
+// and dev sets or updated there, and leaves `dependencies` for them, as
+// syncFeatureDependencies moves it. Every other entry is the project's own and
+// stays in the field the project wrote it in; in `dependencies` only a
+// workspace package's version is updated.
 export function resolveManagedDependencies(input: {
   packageJson: PackageJson;
   features: readonly Feature[];
@@ -239,8 +223,33 @@ export function resolveManagedDependencies(input: {
     sortByKey,
   );
 
+  const leavesDependencies: readonly string[] = [
+    ...managedPeerNames,
+    ...managedDevNames,
+    ...LEGACY_LINT_FORMAT_DEPENDENCIES,
+  ];
+  const ownDependencies = Object.fromEntries(
+    Object.entries(packageJson.dependencies ?? {}).flatMap(
+      ([name, value]): [string, string][] => {
+        if (value === undefined || leavesDependencies.includes(name)) return [];
+        const updated =
+          !isProtectedVersionSpec(value) && workspacePackageNames.includes(name)
+            ? fullyQualifiedVersion
+            : value;
+        return [[name, updated]];
+      },
+    ),
+  );
+  // The block stays unless the migration moved its last entry out.
+  const dependencies =
+    packageJson.dependencies !== undefined &&
+    (keys(ownDependencies).length > 0 ||
+      keys(packageJson.dependencies).length === 0)
+      ? ownDependencies
+      : undefined;
+
   const devDependencies = pipe(
-    merge(packageJson.dependencies ?? {}, packageJson.devDependencies ?? {}),
+    packageJson.devDependencies ?? {},
     omit([...managedPeerNames, ...LEGACY_LINT_FORMAT_DEPENDENCIES]),
     merge(
       preserveProtected(
@@ -265,15 +274,25 @@ export function resolveManagedDependencies(input: {
   const pins = scaffoldPins({
     optionalDependencies: packageJson.optionalDependencies,
     peerDependencies,
+    dependencies,
     devDependencies,
     overrides: packageJson.overrides,
     resolutions: packageJson.resolutions,
     workspaces: packageJson.workspaces,
   });
 
+  // A pinned package the project keeps in `dependencies` is pinned there.
+  const pinnedInDependencies = Object.fromEntries(
+    Object.entries(pins).filter(([name]) => dependencies?.[name] !== undefined),
+  );
+
   return {
     peerDependencies,
-    devDependencies: sortByKey({ ...devDependencies, ...pins }),
+    dependencies: dependencies && { ...dependencies, ...pinnedInDependencies },
+    devDependencies: sortByKey({
+      ...devDependencies,
+      ...omit(pins, keys(pinnedInDependencies)),
+    }),
   };
 }
 
@@ -359,25 +378,79 @@ function ownsPin(ownKeys: string[], name: string) {
   return ownKeys.some((key) => key === name || key.startsWith(`${name}@`));
 }
 
-// Exports and scripts are replaced with the current ones, so an entry `ph build`
-// no longer emits (such as a browser ./subgraphs) is dropped.
+// The scripts migrate manages are the names of `packageScripts`. A missing one
+// is added. One that holds a value an earlier scaffold wrote
+// (SUPERSEDED_PACKAGE_SCRIPTS) is updated. Any other value is the project's
+// own and stays; `kept` names those. The `tsc -p hosts` the hosts scaffold
+// appends to `tsc` is carried over an update.
+export function migratedScripts(existing: PackageJson["scripts"] = {}): {
+  scripts: NonNullable<PackageJson["scripts"]>;
+  kept: (keyof typeof packageScripts)[];
+} {
+  const scripts = { ...existing };
+  const kept: (keyof typeof packageScripts)[] = [];
+  const hostsSuffix = ` && ${HOSTS_TSC_SCRIPT}`;
+  for (const name of keys(packageScripts)) {
+    const scaffold: string = packageScripts[name];
+    const current = existing[name];
+    if (current === undefined) {
+      scripts[name] = scaffold;
+      continue;
+    }
+    const withHosts = name === "tsc" && current.endsWith(hostsSuffix);
+    const base = withHosts ? current.slice(0, -hostsSuffix.length) : current;
+    if (base === scaffold) continue;
+    if (SUPERSEDED_PACKAGE_SCRIPTS[name]?.includes(base)) {
+      scripts[name] = withHosts ? withHostsTscScript(scaffold) : scaffold;
+    } else {
+      kept.push(name);
+    }
+  }
+  return { scripts, kept };
+}
+
+// The exports migrate manages are the keys of `packageJsonExports`: each is
+// added or set to the entry `ph build` emits. Every other key is the
+// project's own and stays.
+export function migratedExports(
+  existing: PackageJson["exports"],
+): PackageJson["exports"] {
+  const own =
+    typeof existing === "object" &&
+    existing !== null &&
+    !Array.isArray(existing)
+      ? existing
+      : {};
+  return { ...own, ...packageJsonExports } as PackageJson["exports"];
+}
+
+// package.json after the migration. `exports`, `scripts` and the dependency
+// fields are merged: see migratedExports, migratedScripts and
+// resolveManagedDependencies for the keys migrate manages. No key the project
+// added is deleted.
 export function migratedPackageJson(
   packageJson: PackageJson,
-  managed: Pick<PackageJson, "peerDependencies" | "devDependencies">,
+  managed: Pick<
+    PackageJson,
+    "peerDependencies" | "dependencies" | "devDependencies"
+  >,
 ): PackageJson {
   const updated = {
     ...packageJson,
     type: packageJson.type ?? "module",
     sideEffects: packageJson.sideEffects ?? false,
     files: packageJson.files ?? ["/dist"],
-    exports: packageJsonExports,
-    scripts: merge(packageJson.scripts, packageScripts),
+    exports: migratedExports(packageJson.exports),
+    scripts: migratedScripts(packageJson.scripts).scripts,
     peerDependencies: managed.peerDependencies,
     devDependencies: managed.devDependencies,
   } as PackageJson;
-  // Runtime `dependencies` block is no longer emitted — the bundled dist
-  // self-contains everything except the declared peers.
-  delete (updated as { dependencies?: unknown }).dependencies;
+  // `dependencies` holds what the project added itself; without `managed`
+  // naming it, the block is left as it is.
+  if ("dependencies" in managed) {
+    if (managed.dependencies === undefined) delete updated.dependencies;
+    else updated.dependencies = managed.dependencies;
+  }
   // The `**/` keys earlier scaffolds wrote go: pnpm 9 and 10 reject them.
   const pins = pinFields(
     scaffoldPins(updated),
@@ -410,13 +483,34 @@ export function migratedPackageJson(
   return updated;
 }
 
+export type MigrateOptions = {
+  skipInstall?: boolean;
+  /** Record what the run would write instead of writing it. */
+  dryRun?: boolean;
+};
+
+export type MigrateResult = {
+  /** The files a dry run would add, change or delete; empty after a real run. */
+  changes: FileChange[];
+  /** The steps a dry run leaves out: they change files it cannot preview. */
+  notRun: string[];
+};
+
 export async function migrate(
   version: string,
   projectDir = process.cwd(),
-  options: { skipInstall?: boolean } = {},
-) {
+  options: MigrateOptions = {},
+): Promise<MigrateResult> {
+  const dryRun = options.dryRun ?? false;
   // Before any write, so a stop leaves the project untouched.
-  assertAgentFilesCommitted(projectDir, managedAgentPaths(projectDir));
+  assertVersionedDocumentModels(projectDir);
+  try {
+    assertAgentFilesCommitted(projectDir, managedAgentPaths(projectDir));
+  } catch (error) {
+    // A dry run replaces nothing, so it only reports what the run would stop on.
+    if (!dryRun) throw error;
+    console.warn(error instanceof Error ? error.message : String(error));
+  }
   assertDocumentModelAggregatesWritable(
     buildTsMorphProject(projectDir),
     projectDir,
@@ -433,37 +527,80 @@ export async function migrate(
     isTruthy,
   );
 
-  const { peerDependencies, devDependencies } = resolveManagedDependencies({
-    packageJson,
-    features: detectFeatures(projectDir),
-    fullyQualifiedVersion,
-    workspacePackageNames,
-  });
-
-  console.log("Updating package.json...");
-  await writePackage(
-    projectDir,
-    migratedPackageJson(packageJson, { peerDependencies, devDependencies }),
-  );
-
-  console.log("Removing legacy lint/format config files...");
-  removeLegacyLintFormatFiles(projectDir);
-  console.log("Overwriting project root files...");
-  const agentFiles = await writeAllGeneratedProjectFiles(projectDir);
-  console.log("Removing compiler options TypeScript 7 dropped...");
-  for (const file of migrateTsconfigFiles(projectDir)) {
-    console.log(`  updated ${file}`);
-  }
-  if (migratePowerhouseConfig(projectDir)) {
-    console.log(
-      "Removed the scaffolded connect.instance defaults from powerhouse.config.json, so Vetra Studio picks its reactor client",
+  // Every write below goes through the write layer (projectFiles), which a
+  // dry run records.
+  const writeProjectFiles = async () => {
+    console.log("Updating package.json...");
+    await projectFiles.writeWith(join(projectDir, "package.json"), (target) =>
+      writePackage(
+        target,
+        migratedPackageJson(
+          packageJson,
+          resolveManagedDependencies({
+            packageJson,
+            features: detectFeatures(projectDir),
+            fullyQualifiedVersion,
+            workspacePackageNames,
+          }),
+        ),
+      ),
     );
+    for (const name of migratedScripts(packageJson.scripts).kept) {
+      console.log(
+        `  kept the project's own "${name}" script; the scaffold's is \`${packageScripts[name]}\``,
+      );
+    }
+
+    console.log("Removing legacy lint/format config files...");
+    removeLegacyLintFormatFiles(projectDir);
+    console.log("Overwriting project root files...");
+    const agentFiles = await writeAllGeneratedProjectFiles(projectDir);
+    console.log("Removing compiler options TypeScript 7 dropped...");
+    for (const file of migrateTsconfigFiles(projectDir)) {
+      console.log(`  updated ${file}`);
+    }
+    if (migratePowerhouseConfig(projectDir)) {
+      console.log(
+        "Removed the scaffolded connect.instance defaults from powerhouse.config.json, so Vetra Studio picks its reactor client",
+      );
+    }
+    // After package.json and powerhouse.config.json: the host files project
+    // both, and hosts/types.d.ts follows the dependencies just written.
+    if (await addHostsFolder(projectDir, packageJson.name)) {
+      console.log(
+        "Added hosts/ with the plugins this project runs today (review hosts/switchboard/host.js)",
+      );
+    }
+    const project = buildTsMorphProject(projectDir);
+    console.log("Fixing generateMock imports...");
+    for (const sourceFile of project.getSourceFiles()) {
+      fixGenerateMockImports(sourceFile);
+    }
+    return { agentFiles, project };
+  };
+
+  if (dryRun) {
+    const { changes } = await recordWrites(async () => {
+      const { project } = await writeProjectFiles();
+      for (const sourceFile of project.getSourceFiles()) {
+        if (sourceFile.isSaved()) continue;
+        projectFiles.writeSync(
+          sourceFile.getFilePath(),
+          sourceFile.getFullText(),
+        );
+      }
+    });
+    return {
+      changes,
+      notRun: [
+        ...(options.skipInstall ? [] : ["install the dependencies"]),
+        "sync the agent skills of the installed packages",
+        "re-generate the code of the document models, editors, apps, processors and subgraphs",
+      ],
+    };
   }
-  console.log("Moving unversioned document models...");
-  moveLegacyDocumentModels(projectDir);
-  const project = buildTsMorphProject(projectDir);
-  console.log("Fixing legacy import paths...");
-  fixLegacyImportPaths(project, packageJson.name);
+
+  const { agentFiles, project } = await writeProjectFiles();
   if (!options.skipInstall) {
     console.log("Installing dependencies...");
     await installProjectDependencies(projectDir);
@@ -480,11 +617,12 @@ export async function migrate(
   console.log("Re-generating code...");
   await modelGeneration.generateAll(project);
   await project.save();
+  return { changes: [], notRun: [] };
 }
 
 function removeLegacyLintFormatFiles(projectDir: string) {
   for (const name of LEGACY_LINT_FORMAT_FILES) {
-    rmSync(join(projectDir, name), { force: true });
+    projectFiles.remove(join(projectDir, name));
   }
 }
 
@@ -504,57 +642,4 @@ async function installProjectDependencies(projectDir: string) {
   const installCommand = await getPowerhouseProjectInstallCommand(agent, args);
   console.log(`Installing dependencies with \`${agent}\``);
   runCmd(installCommand, { cwd: projectDir });
-}
-
-function moveLegacyDocumentModels(projectDir: string) {
-  const fileNamesToDelete = [
-    "actions.ts",
-    "hooks.ts",
-    "module.ts",
-    "index.ts",
-    "utils.ts",
-    "schema.graphql",
-  ];
-  const dirNamesToCopy = ["src", "gen"];
-  const dirs = pipe(
-    readdirSync(join(projectDir, "document-models"), { withFileTypes: true }),
-    filter((entry) => entry.isDirectory()),
-    filter(
-      (dir) =>
-        statSync(join(dir.parentPath, dir.name, `${dir.name}.json`), {
-          throwIfNoEntry: false,
-        })?.isFile() ?? false,
-    ),
-    map((dir) => join(dir.parentPath, dir.name)),
-  );
-
-  for (const dirPath of dirs) {
-    for (const name of fileNamesToDelete) {
-      const filePath = join(dirPath, name);
-      rmSync(filePath, { force: true });
-    }
-    const versionDirPath = join(dirPath, "v1");
-    const versionDirExists =
-      statSync(versionDirPath, { throwIfNoEntry: false })?.isDirectory() ??
-      false;
-    if (!versionDirExists) {
-      mkdirSync(versionDirPath);
-    }
-    for (const dirName of dirNamesToCopy) {
-      const srcDirPath = join(dirPath, dirName);
-      const srcDirExists =
-        statSync(srcDirPath, { throwIfNoEntry: false })?.isDirectory() ?? false;
-      if (!srcDirExists) continue;
-      const destDirPath = join(versionDirPath, dirName);
-      cpSync(srcDirPath, destDirPath, {
-        recursive: true,
-        force: false,
-        errorOnExist: false,
-      });
-      rmSync(srcDirPath, {
-        force: true,
-        recursive: true,
-      });
-    }
-  }
 }

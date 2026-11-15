@@ -326,6 +326,25 @@ export const packageScripts = {
     "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh",
 } as const;
 
+// The values earlier scaffolds wrote for a script of `packageScripts`. `ph
+// migrate` updates a script that still holds one of these, and keeps any
+// other value as the project's own.
+export const SUPERSEDED_PACKAGE_SCRIPTS: Partial<
+  Record<keyof typeof packageScripts, readonly string[]>
+> = {
+  lint: [
+    "eslint --config eslint.config.js --cache",
+    "eslint --config eslint.config.js --cache --cache-strategy content",
+    "oxlint --type-aware --type-check",
+  ],
+  "lint:fix": [
+    "npm run lint -- --fix",
+    "oxlint --type-aware --type-check --fix",
+  ],
+  tsc: ["tsc"],
+  build: ["npm run tsc && npm run tailwind"],
+};
+
 export const externalDependencies = {} as const;
 
 // eslint/prettier devDependencies present in projects scaffolded before the oxc migration.

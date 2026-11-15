@@ -1,6 +1,6 @@
 /**
  * Script to create a versioned Todo document model with v1 and v2 specs.
- * This is used to test the codegen --use-versioning flag.
+ * This is used to test the codegen of versioned document models.
  *
  * Run with: npx tsx create-versioned-todo.ts
  */

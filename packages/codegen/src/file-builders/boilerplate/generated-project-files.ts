@@ -1,9 +1,9 @@
 import {
   packageScripts,
+  projectFiles,
   writeFileEnsuringDir,
 } from "@powerhousedao/shared/clis";
 import { deriveProjectPorts } from "@powerhousedao/shared/clis/project-ports";
-import { existsSync, readFileSync } from "node:fs";
 import {
   buildBoilerplatePackageJson,
   createOrUpdateManifest,
@@ -19,6 +19,7 @@ import {
 import { writeJsonFile } from "write-json-file";
 import {
   buildHostsTemplates,
+  type HostsTemplateOptions,
   buildPowerhouseConfigTemplate,
   claudeSettingsLocalTemplate,
   claudeSettingsTemplate,
@@ -140,7 +141,7 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
   const hostFile = join(projectDir, HOST_STYLESHEET);
   const theme = moveConnectTheme(
     migratedStyle(readStyle(projectDir), localPackageNames(projectDir)),
-    existsSync(hostFile) ? readFileSync(hostFile, "utf8") : undefined,
+    projectFiles.read(hostFile),
   );
   await writeFileEnsuringDir(
     join(projectDir, "style.css"),
@@ -170,7 +171,7 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
  * is still the bare "auto-generated" banner a module aggregate is seeded with,
  * before codegen (or a hand) added any export to it. */
 function hasOnlyComments(filePath: string): boolean {
-  const contents = readFileSync(filePath, "utf-8");
+  const contents = projectFiles.read(filePath) ?? "";
   return (
     contents
       .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -191,7 +192,7 @@ function hasOnlyComments(filePath: string): boolean {
  * the file is missing or still contains nothing but the banner.
  */
 async function seedModuleAggregateFile(filePath: string, contents: string) {
-  if (existsSync(filePath) && !hasOnlyComments(filePath)) return;
+  if (projectFiles.exists(filePath) && !hasOnlyComments(filePath)) return;
   await writeFileEnsuringDir(filePath, contents);
 }
 
@@ -268,20 +269,21 @@ export async function writeModuleFiles(projectDir = process.cwd()) {
  * every file; on `ph migrate` it writes only the ones the project lacks.
  */
 async function seedUserOwnedFile(filePath: string, contents: string) {
-  if (existsSync(filePath)) return;
+  if (projectFiles.exists(filePath)) return;
   await writeFileEnsuringDir(filePath, contents);
 }
 
-/** Hosts scaffold, written by every `ph init`: the hosts/
- * folder plus the agents/ stub. Every file is user-owned once created
- * (preserve-on-migrate, same contract as the AI config files). Host files
- * reference powerhouse.config.json values rather than copying them, so the
- * scaffold adds no second value store. */
+/** Hosts scaffold, written by every `ph init` and by `ph migrate` for a
+ * project that has no hosts/ folder: the hosts/ folder plus the agents/ stub.
+ * Every file is user-owned once created (preserve-on-migrate, same contract
+ * as the AI config files). Host files reference powerhouse.config.json values
+ * rather than copying them, so the scaffold adds no second value store. */
 export async function writeGeneratedHostsFiles(
   projectDir: string,
   projectName: string,
+  options: HostsTemplateOptions = {},
 ) {
-  const templates = buildHostsTemplates(projectName);
+  const templates = buildHostsTemplates(projectName, options);
   await seedUserOwnedFile(
     join(projectDir, "hosts/README.md"),
     templates.readme,
@@ -347,13 +349,23 @@ async function writeHostsTypingFiles(projectDir: string) {
   );
   await writeHostsTypesDts(projectDir);
   const pkgPath = join(projectDir, "package.json");
-  if (!existsSync(pkgPath)) return;
-  const pkg = (await loadJsonFile(pkgPath)) as Record<string, unknown>;
+  const pkg = readPackageJson(pkgPath);
+  if (!pkg) return;
   const scripts = (pkg.scripts ?? {}) as Record<string, string>;
   const tsc = withHostsTscScript(scripts.tsc);
   if (scripts.tsc === tsc) return;
   pkg.scripts = { ...scripts, tsc };
-  await writeJsonFile(pkgPath, pkg, { indent: 2 });
+  await projectFiles.writeWith(pkgPath, (target) =>
+    writeJsonFile(target, pkg, { indent: 2 }),
+  );
+}
+
+/** The project's package.json as this run left it; undefined when there is
+ * none. */
+function readPackageJson(pkgPath: string): Record<string, unknown> | undefined {
+  const text = projectFiles.read(pkgPath);
+  if (text === undefined) return undefined;
+  return JSON.parse(text.replace(/^\uFEFF/, "")) as Record<string, unknown>;
 }
 
 /** The agent guidance and settings files, and what was done to each. */
@@ -490,12 +502,14 @@ export async function migrateReactorMcpEntries(
 /** The `mcp` script `node --run mcp` runs; a project's own is kept. */
 async function addMcpScript(projectDir: string) {
   const pkgPath = join(projectDir, "package.json");
-  if (!existsSync(pkgPath)) return;
-  const pkg = (await loadJsonFile(pkgPath)) as Record<string, unknown>;
+  const pkg = readPackageJson(pkgPath);
+  if (!pkg) return;
   const scripts = (pkg.scripts ?? {}) as Record<string, string>;
   if (scripts.mcp) return;
   pkg.scripts = { ...scripts, mcp: packageScripts.mcp };
-  await writeJsonFile(pkgPath, pkg, { indent: 2 });
+  await projectFiles.writeWith(pkgPath, (target) =>
+    writeJsonFile(target, pkg, { indent: 2 }),
+  );
 }
 
 export async function writeProjectRootFiles(

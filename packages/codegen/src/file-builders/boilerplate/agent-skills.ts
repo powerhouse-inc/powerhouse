@@ -1,11 +1,5 @@
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { projectFiles } from "@powerhousedao/shared/clis";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -132,10 +126,9 @@ function sameTree(dir: string, files: Map<string, string>) {
 }
 
 function writeTree(dir: string, files: Map<string, string>) {
-  rmSync(dir, { recursive: true, force: true });
+  projectFiles.remove(dir);
   for (const [file, contents] of files) {
-    mkdirSync(dirname(join(dir, file)), { recursive: true });
-    writeFileSync(join(dir, file), contents);
+    projectFiles.writeSync(join(dir, file), contents);
   }
 }
 
@@ -205,7 +198,7 @@ export async function syncSkills(
   for (const dir of managedSkillPaths(projectDir, [], source)) {
     const name = basename(dir);
     if (shippedNames.has(name)) continue;
-    rmSync(join(projectDir, dir), { recursive: true, force: true });
+    projectFiles.remove(join(projectDir, dir));
     installed.delete(name);
     if (!results.some((result) => result.path === `skills/${name}`)) {
       results.push({ path: `skills/${name}`, action: "removed" });
@@ -213,6 +206,19 @@ export async function syncSkills(
   }
   await writeManagedRecord(projectDir, { ...record, skills: [...installed] });
   return results;
+}
+
+/** Where a dependency is installed: the project's node_modules, or that of a
+ * folder above it (a workspace root that hoists). */
+function installedPackageDir(projectDir: string, name: string) {
+  let dir = projectDir;
+  for (;;) {
+    const packageDir = join(dir, "node_modules", name);
+    if (existsSync(join(packageDir, "package.json"))) return packageDir;
+    const parent = dirname(dir);
+    if (parent === dir) return undefined;
+    dir = parent;
+  }
 }
 
 /** The installed dependencies that ship skills naming themselves as source,
@@ -225,8 +231,8 @@ function installedPackageSkills(projectDir: string) {
   const packages = new Map<string, ShippedSkill[]>();
   for (const name of Object.keys({ ...dependencies, ...devDependencies })) {
     if (name === CODEGEN_PACKAGE) continue;
-    const packageDir = join(projectDir, "node_modules", name);
-    if (!existsSync(join(packageDir, "package.json"))) continue;
+    const packageDir = installedPackageDir(projectDir, name);
+    if (!packageDir) continue;
     const skills = packageSkills(packageDir).filter(
       (skill) => skillSource(skill.dir) === name,
     );

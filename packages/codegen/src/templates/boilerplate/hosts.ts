@@ -22,7 +22,44 @@ export interface HostsTemplates {
   agentsIndex: string;
 }
 
-export function buildHostsTemplates(projectName: string): HostsTemplates {
+const SWITCHBOARD_WORKFLOWS_PLUGIN =
+  "@powerhousedao/switchboard/plugins/workflows";
+
+/** The switchboard composition `ph init` scaffolds. */
+export const DEFAULT_SWITCHBOARD_HOST_PLUGINS: readonly string[] = [
+  "@powerhousedao/switchboard/plugins/mcp",
+  "@powerhousedao/switchboard/plugins/attachments",
+  SWITCHBOARD_WORKFLOWS_PLUGIN,
+];
+
+export interface HostsTemplateOptions {
+  /** The plugin modules of the switchboard host, in order. `ph migrate`
+   * passes what the project runs today; the default is the `ph init`
+   * composition. Without the workflows plugin the Connect members leave
+   * their workflows plugin out too (it reads that plugin's drive). */
+  switchboardPlugins?: readonly string[];
+}
+
+export function buildHostsTemplates(
+  projectName: string,
+  options: HostsTemplateOptions = {},
+): HostsTemplates {
+  const switchboardPlugins =
+    options.switchboardPlugins ?? DEFAULT_SWITCHBOARD_HOST_PLUGINS;
+  const switchboardPluginLines = switchboardPlugins
+    .map((module) => `      "${module}",`)
+    .join("\n");
+  const workflows = switchboardPlugins.includes(SWITCHBOARD_WORKFLOWS_PLUGIN);
+  const connectWorkflowsPlugin = workflows
+    ? `
+          // Workflow Studio over the server's Workflows drive (its output).
+          {
+            module: "@powerhousedao/connect/plugins/workflows",
+            config: {
+              drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
+            },
+          },`
+    : "";
   const readme = `# hosts/
 
 Each subfolder defines one host: an application this project can run via
@@ -187,9 +224,7 @@ export default {
     // THE COMPOSITION — the switchboard defaults, each line removable (a
     // curated API deletes what it does not serve). Presence is activation.
     plugins: [
-      "@powerhousedao/switchboard/plugins/mcp",
-      "@powerhousedao/switchboard/plugins/attachments",
-      "@powerhousedao/switchboard/plugins/workflows",
+${switchboardPluginLines}
     ],
   },
 
@@ -266,7 +301,9 @@ export default {
         port: config.vetra?.connectPort ?? 3001,
         plugins: [
           ...connect.runner.plugins,
-          { module: "@powerhousedao/vetra-studio/connect", verbs: ["dev"] },
+          { module: "@powerhousedao/vetra-studio/connect", verbs: ["dev"] },${
+            workflows
+              ? `
           // The browser half of workflows: loads Workflow Studio and attaches
           // the Workflows drive the switchboard member serves (its output,
           // so the compound starts that member first).
@@ -275,7 +312,9 @@ export default {
             config: {
               drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
             },
-          },
+          },`
+              : ""
+          }
         ],
       },
       // A first visit's cookie dialog would cover the local Studio, agents'
@@ -397,20 +436,17 @@ export default {
         defaultVerb: "serve",
         port: config.studio?.port ?? 3000,
         plugins: [
-          ...connect.runner.plugins,
-          // Workflow Studio over the server's Workflows drive (its output).
-          {
-            module: "@powerhousedao/connect/plugins/workflows",
-            config: {
-              drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
-            },
-          },
+          ...connect.runner.plugins,${connectWorkflowsPlugin}
         ],
       },
       // Attach every drive the server member serves as a remote, by the URL
-      // it reports (key-sorted). The Workflows drive is among them; the
+      // it reports (key-sorted).${
+        workflows
+          ? ` The Workflows drive is among them; the
       // workflows plugin above names the same URL, and Connect attaches a
-      // URL once. (After \`ph generate hosts\`, \`{ $item: ["url"] }\` is
+      // URL once.`
+          : ""
+      } (After \`ph generate hosts\`, \`{ $item: ["url"] }\` is
       // switchboard.drives.$item.url from ../switchboard/outputs.js.)
       reactor: {
         ...connect.reactor,
@@ -514,14 +550,7 @@ export default {
       host: "connect",
       runner: {
         plugins: [
-          ...connect.runner.plugins,
-          // Workflow Studio over the server's Workflows drive (its output).
-          {
-            module: "@powerhousedao/connect/plugins/workflows",
-            config: {
-              drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
-            },
-          },
+          ...connect.runner.plugins,${connectWorkflowsPlugin}
         ],
       },
       // Every URL is the switchboard member's output (what it actually

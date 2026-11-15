@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { projectFiles } from "@powerhousedao/shared/clis";
 import {
   Node,
   type ObjectLiteralElementLike,
@@ -10,7 +10,7 @@ import {
 } from "ts-morph";
 
 export function readIfExists(filePath: string): string | undefined {
-  return existsSync(filePath) ? readFileSync(filePath, "utf-8") : undefined;
+  return projectFiles.read(filePath);
 }
 
 const normalizeEntry = (entry: string) =>
