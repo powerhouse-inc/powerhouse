@@ -1313,7 +1313,7 @@ Convert every schema-first subgraph under subgraphs/ into a code-first one, keep
 **usage:** `--subgraphs`<br>
 
 #### Dry Run <br>
-With --subgraphs or --subgraph: print the diff of what would change, and write nothing.<br><br>
+Print the diff of every file the migration would add, change or delete, and write nothing. It installs nothing and regenerates no code; it lists those steps instead.<br><br>
 **usage:** `--dry-run`<br>
 
 #### Debug <br>

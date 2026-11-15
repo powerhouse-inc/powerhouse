@@ -1321,7 +1321,7 @@ Run migrations
 
 **Subgraphs** - Convert every schema-first subgraph under subgraphs/ into a code-first one, keeping its schema and resolvers. Code-first subgraphs are skipped, and a subgraph that cannot keep the same schema is left as it is, with the reason. Upgrades no dependencies and regenerates nothing else. - Usage: `--subgraphs`
 
-**Dry Run** - With --subgraphs or --subgraph: print the diff of what would change, and write nothing. - Usage: `--dry-run`
+**Dry Run** - Print the diff of every file the migration would add, change or delete, and write nothing. It installs nothing and regenerates no code; it lists those steps instead. - Usage: `--dry-run`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
