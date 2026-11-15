@@ -1,4 +1,5 @@
 import { getConfig } from "@powerhousedao/config/node";
+import { defaultConnectComposition } from "@powerhousedao/host-core";
 import {
   DEFAULT_CONNECT_OUTDIR,
   type PHConnectRuntimeConfig,
@@ -38,6 +39,9 @@ export interface ConnectServeOverride {
   cspRegistrySync?: boolean;
   /** Overrides the baked top-level packageRegistryUrl in the served config. */
   packageRegistryUrl?: string;
+  /** Serve Connect's default composition when neither the build nor `connect`
+   * carries one: set for a host that declares no `runner.plugins`. */
+  defaultComposition?: boolean;
 }
 
 /**
@@ -84,12 +88,18 @@ function mergedConfigBody(
   const baked = existsSync(file)
     ? (JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>)
     : {};
-  const connect = override.connect
+  const merged = override.connect
     ? deepMerge(
         (baked.connect ?? {}) as PHConnectRuntimeConfig,
         override.connect,
       )
-    : baked.connect;
+    : (baked.connect as PHConnectRuntimeConfig | undefined);
+  // Worked out from the config as served, so it follows the build's values
+  // and a config file changed after the build.
+  const connect =
+    override.defaultComposition && !merged?.composition
+      ? { ...merged, composition: defaultConnectComposition(merged) }
+      : merged;
   return JSON.stringify({
     ...baked,
     connect,

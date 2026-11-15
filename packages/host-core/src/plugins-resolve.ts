@@ -305,6 +305,41 @@ function alreadyServed(authored: unknown, served: unknown): boolean {
 }
 
 /**
+ * The composition that serves `config` as Connect serves it with none, for a
+ * host that declares no `runner.plugins`. `config` is the connect block
+ * Connect would be served without a composition.
+ *
+ * A built-in configured through its entry is always in it, its entry holding
+ * the values `config` has at the slices it owns: composed in, the plugin
+ * serves those values again (an unset one falls back to the same default).
+ * A built-in whose presence is its switch is in it only where `config`
+ * already has that switch on, since composing it in would turn it on.
+ */
+export function defaultConnectComposition(
+  config: Record<string, unknown> | undefined,
+): { module: string; config: Record<string, unknown> }[] {
+  const composition: { module: string; config: Record<string, unknown> }[] = [];
+  for (const [module, { slices }] of Object.entries(
+    CONNECT_PLUGIN_OWNED_SLICES,
+  )) {
+    const entry: Record<string, unknown> = {};
+    let configured = false;
+    let switchedOn = false;
+    for (const { path: slicePath, absent, entryKey } of slices) {
+      const value = valueAt(config, slicePath);
+      if (entryKey === undefined) {
+        switchedOn ||= !alreadyServed(value, absent);
+        continue;
+      }
+      configured = true;
+      if (value !== undefined && value !== null) entry[entryKey] = value;
+    }
+    if (configured || switchedOn) composition.push({ module, config: entry });
+  }
+  return composition;
+}
+
+/**
  * Dead-config warnings for a Connect host (typed-host-configs 1.6): an
  * authored connect config value whose owning plugin is not in the
  * composition active for `verb`. Connect zeroes such a slice, so the value

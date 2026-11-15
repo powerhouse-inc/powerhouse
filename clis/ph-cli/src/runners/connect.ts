@@ -3,14 +3,17 @@ import {
   connectHandle,
   connectInvocationArgs,
   serve as serveBuilt,
+  servesDefaultComposition,
   serveWith,
   startUnderSupervisor,
   validateComposition,
+  withDefaultComposition,
   type ConnectHostParsed,
   type ConnectInvocationArgs,
   type ConnectOutputs,
 } from "@powerhousedao/ph-run/runners/connect";
 import type { RunnerContext, RunnerHandle } from "@powerhousedao/host-core";
+import { getConfig } from "@powerhousedao/shared/clis";
 import { join } from "node:path";
 import type { ConnectStudioArgs } from "../types.js";
 
@@ -57,8 +60,20 @@ export async function dev(
   const { runConnectStudio } = await import("../services/connect-studio.js");
   const args = await toStudioArgs(host, await connectInvocationArgs(host, ctx));
   const studio: { stop?: () => Promise<void> } = {};
+  const override = callerOverride(host, ctx, ctx.verb);
+  // Without `runner.plugins`, the default composition: worked out at each
+  // start of Studio from the powerhouse.config.json it reads, with the
+  // studio mode it always switches on.
+  const served = servesDefaultComposition(host)
+    ? () =>
+        withDefaultComposition(
+          override,
+          getConfig(join(process.cwd(), "powerhouse.config.json")),
+          { app: { studioMode: true } },
+        )
+    : override;
   const server = await startUnderSupervisor(ctx, () =>
-    runConnectStudio(args, undefined, callerOverride(host, ctx, ctx.verb), {
+    runConnectStudio(args, undefined, served, {
       routes: host.runner.routes,
       cacheDir: viteCacheOf(host, ctx),
       proxy: host.runner.proxy?.target,

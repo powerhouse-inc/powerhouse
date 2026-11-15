@@ -288,6 +288,7 @@ export {
 } from "./run-record-schema.js";
 export {
   CONNECT_PLUGIN_OWNED_SLICES,
+  defaultConnectComposition,
   findDeadConnectConfig,
   type ConnectPluginSlices,
   type DeadConfigWarning,

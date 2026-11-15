@@ -171,5 +171,92 @@ describe.each(SERVERS)(
         name("Connect"),
       );
     }, 60_000);
+
+    it("adds the default composition for a host without plugins, from the config it serves", async () => {
+      const servedConnect = async (override: ConnectServeOverride) =>
+        (
+          JSON.parse(await servedPage(override, "/powerhouse.config.json")) as {
+            connect?: {
+              composition?: { module: string; config: unknown }[];
+            };
+          }
+        ).connect;
+      const GENERIC = "@powerhousedao/connect/plugins/generic";
+      const SENTRY = "@powerhousedao/connect/plugins/sentry";
+      const OPENPANEL = "@powerhousedao/connect/plugins/openpanel";
+      const ASSISTANT = "@powerhousedao/connect/plugins/assistant";
+      writeFileSync(
+        join(dist, "powerhouse.config.json"),
+        JSON.stringify({
+          connect: {
+            drives: { allowAddDrive: false },
+            ai: { assistantEnabled: true },
+          },
+        }),
+      );
+      try {
+        // The build's values and the override's, the override's on top.
+        const served = await servedConnect({
+          connect: { sentry: { dsn: "https://k@sentry.example/1" } } as never,
+          defaultComposition: true,
+        });
+        expect(served?.composition).toEqual([
+          { module: GENERIC, config: { allowAddDrive: false } },
+          { module: SENTRY, config: { dsn: "https://k@sentry.example/1" } },
+          { module: OPENPANEL, config: {} },
+          { module: ASSISTANT, config: {} },
+        ]);
+        const off = await servedConnect({
+          connect: { ai: { assistantEnabled: false } },
+          defaultComposition: true,
+        });
+        expect(off?.composition?.map((entry) => entry.module)).toEqual([
+          GENERIC,
+          SENTRY,
+          OPENPANEL,
+        ]);
+        // No override at all: still from the build's config.
+        const bare = await servedConnect({ defaultComposition: true });
+        expect(bare?.composition?.map((entry) => entry.module)).toEqual([
+          GENERIC,
+          SENTRY,
+          OPENPANEL,
+          ASSISTANT,
+        ]);
+        // Not asked for (a host with plugins, the classic commands): none.
+        const classic = await servedConnect({ connect: {} });
+        expect(classic?.composition).toBeUndefined();
+        // A declared composition is served as declared.
+        const declared = await servedConnect({
+          connect: { composition: [] },
+          defaultComposition: true,
+        });
+        expect(declared?.composition).toEqual([]);
+        // The page keeps the shell the build baked in.
+        const html = await servedPage({ defaultComposition: true });
+        expect(appShellVariantOf(html)).toBe("generic");
+      } finally {
+        writeFileSync(join(dist, "powerhouse.config.json"), "{}");
+      }
+    }, 60_000);
+
+    it("keeps a composition the build baked in", async () => {
+      const baked = [{ module: "./mine.js", config: {} }];
+      writeFileSync(
+        join(dist, "powerhouse.config.json"),
+        JSON.stringify({ connect: { composition: baked } }),
+      );
+      try {
+        const body = JSON.parse(
+          await servedPage(
+            { defaultComposition: true },
+            "/powerhouse.config.json",
+          ),
+        ) as { connect?: { composition?: unknown } };
+        expect(body.connect?.composition).toEqual(baked);
+      } finally {
+        writeFileSync(join(dist, "powerhouse.config.json"), "{}");
+      }
+    }, 60_000);
   },
 );

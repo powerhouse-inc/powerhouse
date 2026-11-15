@@ -3,11 +3,14 @@ import {
   type PHConnectCompositionEntry,
   type PHConnectDefaultDrive,
   type PHConnectRuntimeConfig,
+  type PowerhouseConfig,
 } from "@powerhousedao/shared/clis";
+import { deepMerge, resolveSourceConnect } from "@powerhousedao/shared/connect";
 import { connectConfigSchemaWith } from "@powerhousedao/shared/connect/connect-config-schema";
 import { isPassthroughImageRef } from "@powerhousedao/shared/connect/image-ref";
 import { withOriginPlaceholders } from "@powerhousedao/shared/connect/origin-placeholder";
 import {
+  defaultConnectComposition,
   defineHostSchemas,
   entryActiveForVerb,
   findDeadConnectConfig,
@@ -305,7 +308,9 @@ function callerOverrideRaw(
     // `base` IS host.config when the host has one; a host without a config
     // block still carries its composition, drives, Renown and namespace (set
     // on `base` above). With none of them, there is no override: a classic
-    // build.
+    // build. `dev` and `serve` add the default composition to whatever this
+    // returns, so only `build` still hands a service no composition; the
+    // next release removes that.
     return host.config !== undefined ||
       composition ||
       declaredDefaults ||
@@ -344,6 +349,35 @@ function callerOverrideRaw(
     app: { ...connect.app, ...base.app },
     ...(drives ? { drives: { ...base.drives, ...drives } } : {}),
   };
+}
+
+/** Whether the host leaves its composition to Connect's default, which the
+ * terminal is told in place of a composition plan. */
+export function servesDefaultComposition(host: ConnectHostParsed): boolean {
+  if (host.runner.plugins !== undefined) return false;
+  console.log(
+    `[connect] hosts/${host.name}/host.js declares no runner.plugins: serving Connect's default composition.`,
+  );
+  return true;
+}
+
+/**
+ * `override` with Connect's default composition, for a host that declares no
+ * `runner.plugins` and is served by a build tool. The composition is worked
+ * out from the config Connect would be served without one: the project's
+ * powerhouse.config.json (`source`) under the override, under what the
+ * service lays over both (`over`: Studio's studio mode).
+ */
+export function withDefaultComposition(
+  override: PHConnectRuntimeConfig | undefined,
+  source: Pick<PowerhouseConfig, "connect" | "workflows">,
+  over: PHConnectRuntimeConfig = {},
+): PHConnectRuntimeConfig {
+  const served = deepMerge(
+    deepMerge(resolveSourceConnect(source), override ?? {}),
+    over,
+  );
+  return { ...override, composition: defaultConnectComposition(served) };
 }
 
 /**
@@ -496,12 +530,16 @@ export async function serveWith(
     host: bind,
   };
   const override = withoutBuiltImages(callerOverride(host, ctx, ctx.verb));
+  // Without `runner.plugins` the server adds the default composition to the
+  // config it serves, worked out from the build's config under this override.
+  const defaultComposition = servesDefaultComposition(host);
   const server = await startUnderSupervisor<ListeningServer>(ctx, () =>
     start(
       args,
       {
         connect: override,
         cspRegistrySync: runner.cspRegistrySync === true,
+        ...(defaultComposition ? { defaultComposition } : {}),
       },
       undefined,
       { proxy: runner.proxy?.target },

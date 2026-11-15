@@ -77,6 +77,20 @@ const connect = (host: ConnectHost) => connectHostSchema.parse(host);
 const switchboard = (host: SwitchboardHost) =>
   switchboardHostSchema.parse(host);
 
+/** The override a dev verb handed Studio. A host without `runner.plugins`
+ * hands a function: Studio calls it at each start for the override with the
+ * default composition. */
+const handed = <T>(passed: T | (() => T)): T =>
+  typeof passed === "function" ? (passed as () => T)() : passed;
+
+const GENERIC_DEFAULTS = {
+  allowAddDrive: true,
+  sections: {
+    remote: { enabled: true, allowAdd: true, allowDelete: true },
+    local: { enabled: true, allowAdd: true, allowDelete: true },
+  },
+};
+
 const connectHost = (over: Partial<ConnectHost> = {}): ConnectHost => ({
   name: "lab-connect",
   runner: { module: "@powerhousedao/ph-cli/runners/connect", port: 6599 },
@@ -97,7 +111,23 @@ describe("connect bridge runner", () => {
       vi.mocked(runConnectStudio).mock.calls[0];
     expect(args).toMatchObject({ port: 6599, open: false, printUrls: true });
     expect(logger).toBeUndefined();
-    expect(callerOverride).toEqual({ branding: { appName: "Lab" } });
+    // No plugins list: the host's config, and the default composition for a
+    // Studio (studio mode on) over the default config.
+    expect(handed(callerOverride)).toEqual({
+      branding: { appName: "Lab" },
+      composition: [
+        {
+          module: "@powerhousedao/connect/plugins/generic",
+          config: GENERIC_DEFAULTS,
+        },
+        { module: "@powerhousedao/connect/plugins/sentry", config: {} },
+        {
+          module: "@powerhousedao/connect/plugins/openpanel",
+          config: { clientId: "", trackUiEvents: true, trackOperations: true },
+        },
+        { module: "@powerhousedao/vetra-studio/connect", config: {} },
+      ],
+    });
     // Its own Vite cache: Studio and other hosts' dev servers run side by side.
     expect(vi.mocked(runConnectStudio).mock.calls[0][3]?.cacheDir).toBe(
       join(ctx.projectRoot, "node_modules", ".vite-lab-connect"),
@@ -121,8 +151,7 @@ describe("connect bridge runner", () => {
       ),
       ctx,
     );
-    const passed = vi.mocked(runConnectStudio).mock.calls[0][2];
-    const callerOverride = typeof passed === "function" ? passed() : passed;
+    const callerOverride = handed(vi.mocked(runConnectStudio).mock.calls[0][2]);
     expect(callerOverride?.instance).toMatchObject({
       reactorWorker: false,
       reactorClient: "in-process",
@@ -940,6 +969,87 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
       cors: true,
       printUrls: true,
     });
+    // No plugins list: the server is told to add the default composition
+    // to the config it serves; the override itself carries none.
+    const override = vi.mocked(runConnectServer).mock.calls[0][1];
+    expect(override?.defaultComposition).toBe(true);
+    expect(override?.connect?.composition).toBeUndefined();
+  });
+
+  it("leaves a host with a plugins list its own composition, on dev and serve", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    const { runConnectServer } =
+      await import("@powerhousedao/ph-run/connect-server");
+    vi.mocked(runConnectStudio).mockClear();
+    vi.mocked(runConnectServer).mockClear();
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const declared = connectHost({
+      runner: {
+        module: "@powerhousedao/ph-cli/runners/connect",
+        port: 6599,
+        plugins: [],
+      },
+    });
+    await runner.dev(connect(declared), ctx);
+    // An object, as before: nothing is worked out at Studio's start.
+    const studio = vi.mocked(runConnectStudio).mock.calls[0][2];
+    expect(typeof studio).toBe("object");
+    expect(studio).toMatchObject({ composition: [] });
+    await runner.serve(connect(declared), { ...ctx, verb: "serve" });
+    const served = vi.mocked(runConnectServer).mock.calls[0][1];
+    expect(served).not.toHaveProperty("defaultComposition");
+    expect(served?.connect?.composition).toEqual([]);
+    expect(log.mock.calls.flat().join("\n")).not.toContain(
+      "default composition",
+    );
+
+    // Without the list, the terminal is told at each start.
+    log.mockClear();
+    await runner.dev(connect(connectHost()), ctx);
+    expect(log.mock.calls.flat()).toContain(
+      "[connect] hosts/lab-connect/host.js declares no runner.plugins: serving Connect's default composition.",
+    );
+    log.mockRestore();
+  });
+
+  it("works the dev default composition out again at each start of Studio", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    vi.mocked(runConnectStudio).mockClear();
+    const project = mkdtempSync(join(tmpdir(), "ph-default-composition-"));
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(project);
+    const modules = () =>
+      (
+        handed(vi.mocked(runConnectStudio).mock.calls[0][2]) as {
+          composition?: { module: string }[];
+        }
+      ).composition?.map((entry) => entry.module);
+    const ASSISTANT = "@powerhousedao/connect/plugins/assistant";
+    const WORKFLOWS = "@powerhousedao/connect/plugins/workflows";
+    try {
+      await runner.dev(
+        connect(connectHost({ config: { ai: { assistantEnabled: false } } })),
+        ctx,
+      );
+      expect(modules()).not.toContain(WORKFLOWS);
+      // The project's config file switches workflows on, and the assistant:
+      // the host's config is over it, so the assistant stays off.
+      writeFileSync(
+        join(project, "powerhouse.config.json"),
+        JSON.stringify({
+          workflows: { enabled: true },
+          connect: { ai: { assistantEnabled: true } },
+        }),
+      );
+      expect(modules()).toContain(WORKFLOWS);
+      expect(modules()).not.toContain(ASSISTANT);
+    } finally {
+      cwd.mockRestore();
+      rmSync(project, { recursive: true, force: true });
+    }
   });
 
   it("build maps to the classic build service, with its default outDir", async () => {
@@ -953,7 +1063,8 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
     expect(vi.mocked(runConnectBuild).mock.calls[0][0]).toMatchObject({
       outDir: ".ph/connect-build/dist/",
     });
-    // No plugins list: a classic build, no composition passed.
+    // No plugins list: the build bakes no composition in. The verbs that
+    // serve Connect (dev, serve) add the default one.
     expect(vi.mocked(runConnectBuild).mock.calls[0][1]).toBeUndefined();
   });
 
@@ -1098,8 +1209,9 @@ describe("connect bridge runner — structural multi-reactor (P4.2/P4.3)", () =>
       }),
       ctx,
     );
-    const override = vi.mocked(runConnectStudio).mock
-      .calls[0][2] as PHConnectRuntimeConfigLike;
+    const override = handed(
+      vi.mocked(runConnectStudio).mock.calls[0][2],
+    ) as PHConnectRuntimeConfigLike;
     expect(override.instance).toMatchObject({
       reactorClient: "router", // structure beats the scaffold-default false
       reactorWorker: true, // the browser reactor's kind
@@ -1128,8 +1240,9 @@ describe("connect bridge runner — structural multi-reactor (P4.2/P4.3)", () =>
       await import("../src/services/connect-studio.js");
     vi.mocked(runConnectStudio).mockClear();
     await runner.dev(host, ctx);
-    return vi.mocked(runConnectStudio).mock
-      .calls[0][2] as PHConnectRuntimeConfigLike;
+    return handed(
+      vi.mocked(runConnectStudio).mock.calls[0][2],
+    ) as PHConnectRuntimeConfigLike;
   };
   const sb = (url: string) => ({ kind: "remote" as const, remote: { url } });
 
@@ -1249,8 +1362,9 @@ describe("connect bridge runner — structural multi-reactor (P4.2/P4.3)", () =>
       }),
       ctx,
     );
-    const override = vi.mocked(runConnectStudio).mock
-      .calls[0][2] as PHConnectRuntimeConfigLike;
+    const override = handed(
+      vi.mocked(runConnectStudio).mock.calls[0][2],
+    ) as PHConnectRuntimeConfigLike;
     expect(override.instance?.multiReactor).toBe(false);
     expect(override.drives).toBeUndefined();
   });
@@ -1279,7 +1393,7 @@ describe("connect bridge runner — reactor projection (P2.5)", () => {
       connect({ name: "lab-connect", runner: { module: "m", port: 6599 } }),
       { ...ctx, env: { RENOWN_URL: "https://renown.test" } },
     );
-    const override = vi.mocked(runConnectStudio).mock.calls[0][2];
+    const override = handed(vi.mocked(runConnectStudio).mock.calls[0][2]);
     expect(override).toMatchObject({
       renown: { url: "https://renown.test" },
     });
@@ -1298,7 +1412,7 @@ describe("connect bridge runner — reactor projection (P2.5)", () => {
       }),
       ctx,
     );
-    const override = vi.mocked(runConnectStudio).mock.calls[0][2];
+    const override = handed(vi.mocked(runConnectStudio).mock.calls[0][2]);
     expect(override).toMatchObject({ instance: { namespace: "copy-1" } });
   });
 
@@ -1320,7 +1434,7 @@ describe("connect bridge runner — reactor projection (P2.5)", () => {
       }),
       ctx,
     );
-    const override = vi.mocked(runConnectStudio).mock.calls[0][2];
+    const override = handed(vi.mocked(runConnectStudio).mock.calls[0][2]);
     expect(override).toMatchObject({
       branding: { appName: "Lab" },
       reactor: { createSignaturePolicy: "legacy" },
