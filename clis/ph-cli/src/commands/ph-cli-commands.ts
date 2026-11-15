@@ -20,9 +20,8 @@ import { switchboard } from "./switchboard.js";
 import { uninstall } from "./uninstall.js";
 import { unpublish } from "./unpublish.js";
 import { vetra } from "./vetra.js";
-import { isUniformRunnersEnabled } from "../utils/feature-flags.js";
 
-const baseCommands = {
+export const phCliCommands = {
   init,
   generate,
   vetra,
@@ -43,14 +42,6 @@ const baseCommands = {
   logout,
   install,
   uninstall,
+  run: runHost,
+  host,
 } as const;
-
-/** Exported for tests; the flag decides whether `run` and `host` are
- * registered at all, so flag-off keeps the command surface byte-identical. */
-export function buildPhCliCommands(uniformRunners: boolean) {
-  return uniformRunners
-    ? { ...baseCommands, run: runHost, host }
-    : baseCommands;
-}
-
-export const phCliCommands = buildPhCliCommands(isUniformRunnersEnabled());

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildPhCliCommands } from "../src/commands/ph-cli-commands.js";
+import { phCliCommands } from "../src/commands/ph-cli-commands.js";
 import { applyRunSugar } from "../src/utils/run-sugar.js";
 
 const KNOWN = new Set(["init", "vetra", "connect", "run"]);
@@ -95,17 +95,9 @@ describe("applyRunSugar", () => {
   });
 });
 
-describe("buildPhCliCommands", () => {
-  it("registers `run` and `host` only when uniform-runners is enabled", () => {
-    for (const name of ["run", "host"]) {
-      expect(Object.keys(buildPhCliCommands(false))).not.toContain(name);
-      expect(Object.keys(buildPhCliCommands(true))).toContain(name);
-    }
-  });
-
-  it("keeps the flag-off command surface identical to the base set", () => {
-    const off = Object.keys(buildPhCliCommands(false)).sort();
-    const on = Object.keys(buildPhCliCommands(true)).sort();
-    expect(on.filter((c) => c !== "run" && c !== "host")).toEqual(off);
+describe("phCliCommands", () => {
+  it("registers `run` and `host`", () => {
+    expect(Object.keys(phCliCommands)).toContain("run");
+    expect(Object.keys(phCliCommands)).toContain("host");
   });
 });

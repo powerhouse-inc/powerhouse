@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildGenerateCmds } from "../src/commands/generate.js";
+import { generateCmds } from "../src/commands/generate.js";
 import { startGenerateHosts } from "../src/services/generate-hosts.js";
 
 const temporary: string[] = [];
@@ -14,9 +14,8 @@ afterEach(() => {
 });
 
 describe("ph generate hosts", () => {
-  it("is registered only with uniform runners enabled", () => {
-    expect(Object.keys(buildGenerateCmds(true))).toContain("hosts");
-    expect(Object.keys(buildGenerateCmds(false))).not.toContain("hosts");
+  it("is registered", () => {
+    expect(Object.keys(generateCmds)).toContain("hosts");
   });
 
   it("is a no-op success without a hosts/ folder", async () => {

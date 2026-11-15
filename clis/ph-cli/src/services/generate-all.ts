@@ -2,7 +2,6 @@ import { modelGeneration } from "@powerhousedao/codegen";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { extractAllDocuments, saveSpec } from "@powerhousedao/vetra/codegen";
 import { probeHostsFolder } from "@powerhousedao/host-core";
-import { isUniformRunnersEnabled } from "../utils/feature-flags.js";
 import { warnSubgraphTypeConflicts } from "../utils/warn-subgraph-type-conflicts.js";
 import { startGenerateHosts } from "./generate-hosts.js";
 
@@ -29,7 +28,6 @@ export async function startGenerateAll(
   await project.save();
   await warnSubgraphTypeConflicts(projectDir);
   if (
-    isUniformRunnersEnabled() &&
     probeHostsFolder(projectDir).kind === "present" &&
     !(await startGenerateHosts(projectDir))
   ) {
