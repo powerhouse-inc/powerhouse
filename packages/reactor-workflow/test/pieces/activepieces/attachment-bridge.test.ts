@@ -753,26 +753,28 @@ describe("Files and attachments", () => {
     ]);
   });
 
-  it.each(["outside", "symlink", "hardlink", "traversal"])(
-    "refuses to ingest a %s path the step did not write",
-    async (mode) => {
-      await writeFixture("@test/forger", FORGER_FIXTURE);
-      const port = attachmentPort();
-      const executor = new ActivepiecesBlockExecutor({
-        cacheDir,
-        worker,
-        stagingRoot,
-        attachments: port,
-      });
+  // An unprivileged Windows account cannot create the file link.
+  it.each(
+    ["outside", "symlink", "hardlink", "traversal"].filter(
+      (mode) => mode !== "symlink" || process.platform !== "win32",
+    ),
+  )("refuses to ingest a %s path the step did not write", async (mode) => {
+    await writeFixture("@test/forger", FORGER_FIXTURE);
+    const port = attachmentPort();
+    const executor = new ActivepiecesBlockExecutor({
+      cacheDir,
+      worker,
+      stagingRoot,
+      attachments: port,
+    });
 
-      await expect(
-        executor.execute(
-          execution("@test/forger", "forge", { mode, target: outside }),
-        ),
-      ).rejects.toThrow("not a file the step wrote");
-      expect(port.written).toEqual([]);
-    },
-  );
+    await expect(
+      executor.execute(
+        execution("@test/forger", "forge", { mode, target: outside }),
+      ),
+    ).rejects.toThrow("not a file the step wrote");
+    expect(port.written).toEqual([]);
+  });
 
   it("reuses a cached attachment, but only after the read is authorized", async () => {
     await writeFixture("@test/reader", READER_FIXTURE);

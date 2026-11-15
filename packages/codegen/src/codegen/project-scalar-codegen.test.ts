@@ -30,6 +30,8 @@ import { buildMigrationPlan } from "../file-builders/document-model/upgrade-migr
 import { tsConfigTemplate } from "../templates/boilerplate/tsconfig.json.js";
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
 
+const linkType = process.platform === "win32" ? "junction" : "dir";
+
 const scalarsModule = `import { defineScalar } from "document-model/scalars";
 import { z } from "zod";
 
@@ -145,7 +147,7 @@ function linkDependencies(dir: string, names: string[]) {
     if (!target) throw new Error(`${name} is not installed`);
     const link = join(dir, "node_modules", name);
     mkdirSync(dirname(link), { recursive: true });
-    symlinkSync(realpathSync(target), link, "dir");
+    symlinkSync(realpathSync(target), link, linkType);
   }
 }
 

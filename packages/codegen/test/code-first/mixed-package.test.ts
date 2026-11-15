@@ -29,6 +29,8 @@ import {
   generateCodeFirstDocumentModel,
 } from "./package.js";
 
+const linkType = process.platform === "win32" ? "junction" : "dir";
+
 const AGGREGATES = [
   "document-models/index.ts",
   "document-models/document-models.ts",
@@ -238,7 +240,7 @@ describe("model discovery in generation", () => {
     symlinkSync(
       "../src/subgraph-module",
       join(dir, "document-models/subgraph-module"),
-      "dir",
+      linkType,
     );
     const spec = "src/subgraph-module/subgraph-module.json";
     writeFileSync(

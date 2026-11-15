@@ -319,19 +319,23 @@ export const proof = {
     );
   });
 
-  it("refuses a model entry that links to a generated barrel and keeps the barrels", async () => {
-    await scaffold();
-    const before = read(dir, "document-models/index.ts");
-    mkdirSync(join(dir, "document-models/alias"));
-    symlinkSync(
-      join(dir, "document-models/index.ts"),
-      join(dir, "document-models/alias/index.ts"),
-    );
-    await expect(refreshAggregates()).rejects.toThrow(
-      "./document-models/alias/index.ts resolves to a barrel codegen generates",
-    );
-    expect(read(dir, "document-models/index.ts")).toBe(before);
-  });
+  // An unprivileged Windows account cannot create this link.
+  it.skipIf(process.platform === "win32")(
+    "refuses a model entry that links to a generated barrel and keeps the barrels",
+    async () => {
+      await scaffold();
+      const before = read(dir, "document-models/index.ts");
+      mkdirSync(join(dir, "document-models/alias"));
+      symlinkSync(
+        join(dir, "document-models/index.ts"),
+        join(dir, "document-models/alias/index.ts"),
+      );
+      await expect(refreshAggregates()).rejects.toThrow(
+        "./document-models/alias/index.ts resolves to a barrel codegen generates",
+      );
+      expect(read(dir, "document-models/index.ts")).toBe(before);
+    },
+  );
 
   it("removes the code-first entries of a deleted model directory", async () => {
     await scaffold();

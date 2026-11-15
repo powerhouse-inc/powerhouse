@@ -22,6 +22,10 @@ import {
 
 const HOST_NAME = "lab-sb";
 
+// Windows has no SIGTERM: the stop ends the child at once, with exit code 1
+// and without running its handler.
+const STOP_CODE = process.platform === "win32" ? 1 : 0;
+
 // argv: node cli.mjs run <folder> [verb]. Knobs come from the child's env.
 const FAKE_CLI = `import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -228,7 +232,7 @@ describe("spawnHost", () => {
     expect(isPidAlive(host.pid)).toBe(true);
 
     const exit = await host.stop();
-    expect(exit).toEqual({ code: 0, signal: null, forced: false });
+    expect(exit).toEqual({ code: STOP_CODE, signal: null, forced: false });
     expect(existsSync(recordFile(host.dataDir))).toBe(false);
     await expect(host.stop()).resolves.toBe(exit);
     await expect(host.exited).resolves.toEqual(exit);
@@ -292,7 +296,8 @@ describe("spawnHost", () => {
     expect(error.exit?.forced).toBe(false);
     const [before, after] = error.outputTail.split(SPAWN_STOPPING_NOTE);
     expect(before).toContain("fake ph run");
-    expect(after).toContain("fake: shutting down");
+    if (process.platform !== "win32")
+      expect(after).toContain("fake: shutting down");
   });
 
   it.skipIf(process.platform === "win32")(
@@ -322,7 +327,11 @@ describe("spawnHost", () => {
       }),
     );
     expect(error.phase).toBe("aborted");
-    expect(error.exit).toEqual({ code: 0, signal: null, forced: false });
+    expect(error.exit).toEqual({
+      code: STOP_CODE,
+      signal: null,
+      forced: false,
+    });
   });
 
   it("stops on abort after ready", async () => {
@@ -330,7 +339,7 @@ describe("spawnHost", () => {
     const controller = new AbortController();
     const host = await start({ projectRoot, signal: controller.signal });
     controller.abort();
-    await expect(host.exited).resolves.toMatchObject({ code: 0 });
+    await expect(host.exited).resolves.toMatchObject({ code: STOP_CODE });
   });
 
   it("runs two instances side by side in separate data dirs", async () => {
@@ -421,7 +430,7 @@ describe("spawnHost", () => {
         throw new Error("listener bug");
       },
     });
-    await expect(host.stop()).resolves.toMatchObject({ code: 0 });
+    await expect(host.stop()).resolves.toMatchObject({ code: STOP_CODE });
   });
 
   it("forwards output to onOutput and logFile", async () => {

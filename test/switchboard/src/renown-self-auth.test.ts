@@ -14,14 +14,11 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { privateKeyToAccount } from "viem/accounts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { SWITCHBOARD_COMMAND } from "./switchboard-bin.js";
 
 // RENOWN_SOURCE=self e2e: seed a delegation credential with auth off, reboot
 // with auth on, and assert bearer checks read this switchboard's own read model.
 
-const SWITCHBOARD_BIN = resolve(
-  import.meta.dirname,
-  "../node_modules/.bin/switchboard",
-);
 const FIXTURE_DIR = resolve(import.meta.dirname, "../renown-self");
 const NOPKG_FIXTURE_DIR = resolve(import.meta.dirname, "../renown-self-nopkg");
 
@@ -45,7 +42,7 @@ function spawnSwitchboard(
   cwd: string,
   env: Record<string, string>,
 ): RunningSwitchboard {
-  const proc = spawn(SWITCHBOARD_BIN, [], {
+  const proc = spawn(...SWITCHBOARD_COMMAND, {
     cwd,
     env: { ...process.env, ...env },
     stdio: ["ignore", "pipe", "pipe"],

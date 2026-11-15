@@ -3,12 +3,15 @@
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const DOCKER = resolve(__dirname, "../../../docker");
 const HAS_ENVSUBST =
   spawnSync("sh", ["-c", "command -v envsubst"]).status === 0;
+
+/** A path as the shell script reads it: forward slashes on Windows too. */
+const inShell = (path: string) => path.split(sep).join("/");
 
 let dir: string;
 beforeAll(() => {
@@ -33,9 +36,9 @@ function render(basePath: string): string {
       envsubstLine
         .replace(
           "/etc/nginx/nginx.conf.template",
-          join(DOCKER, "nginx.conf.template"),
+          inShell(join(DOCKER, "nginx.conf.template")),
         )
-        .replace("> /etc/nginx/nginx.conf", `> ${out}`) +
+        .replace("> /etc/nginx/nginx.conf", `> ${inShell(out)}`) +
       "\n",
   );
   const res = spawnSync("sh", [script], {
@@ -43,6 +46,9 @@ function render(basePath: string): string {
       PATH: process.env.PATH,
       PORT: "8080",
       PH_CONNECT_BASE_PATH: basePath,
+      // Git's sh on Windows would rewrite the base path, and the variables the
+      // script derives from it, into Windows paths on the way to envsubst.
+      MSYS2_ENV_CONV_EXCL: "*",
     },
     encoding: "utf8",
   });

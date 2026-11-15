@@ -29,6 +29,8 @@ import { extractSubgraphsFromModule } from "../src/packages/http-loader.js";
 import { isExpectedLoaderMiss } from "../src/packages/package-manager.js";
 import { manifestDeclaredSubgraphs } from "../src/packages/util.js";
 
+const linkType = process.platform === "win32" ? "junction" : "dir";
+
 // Real subclasses: the unified extraction rule accepts a value only when it
 // passes `isSubgraphClass`, so a bare `class Foo {}` is junk by design.
 // The full accept/reject table for the shared rule lives in
@@ -226,7 +228,7 @@ describe("isExpectedLoaderMiss", () => {
       symlinkSync(
         join(root, "linked-source"),
         join(root, "node_modules", "@acme", "linked"),
-        "dir",
+        linkType,
       );
       // A child process, so Node resolves the packages as a host does and
       // vitest's resolver does not answer instead.

@@ -41,7 +41,15 @@ describe("syncTree", () => {
 
   it("skips symlinks", async () => {
     const root = await tree();
-    await fs.symlink(path.join(root, "a"), path.join(root, "link"));
+    // An unprivileged Windows account can link a directory (as a junction),
+    // not a file.
+    if (process.platform === "win32")
+      await fs.symlink(
+        path.join(root, "sub"),
+        path.join(root, "link"),
+        "junction",
+      );
+    else await fs.symlink(path.join(root, "a"), path.join(root, "link"));
     expect(syncTree(root)).toEqual({ files: 3, dirs: 3 });
   });
 

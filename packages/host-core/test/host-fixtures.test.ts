@@ -1046,7 +1046,7 @@ const NEGATIVES: Negative[] = [
     host: "undefined-value",
     invariant: "no undefined values (JSON gate)",
     error:
-      /hosts\/undefined-value\/host\.js exports a non-static value at `runner\.port \(undefined\)`/,
+      /hosts[\\/]undefined-value[\\/]host\.js exports a non-static value at `runner\.port \(undefined\)`/,
   },
   {
     host: "token-bad-path",
@@ -1076,7 +1076,7 @@ const NEGATIVES: Negative[] = [
     host: "process-env",
     invariant: "no process.env in host files",
     error:
-      /hosts\/process-env\/host\.js:5 reads `process\.`[\s\S]*Use an \$env token instead/,
+      /hosts[\\/]process-env[\\/]host\.js:5 reads `process\.`[\s\S]*Use an \$env token instead/,
   },
   {
     host: "removed-from-slug",

@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
+import { SWITCHBOARD_COMMAND } from "./src/switchboard-bin.js";
 
 // SWITCHBOARD_URL targets a running switchboard; otherwise one is started on
 // SWITCHBOARD_PORT, so worktrees can run the suite side by side.
@@ -9,11 +10,6 @@ const PORT = process.env.SWITCHBOARD_PORT ?? "4001";
 const SWITCHBOARD_URL = EXTERNAL_URL ?? `http://localhost:${PORT}/graphql`;
 
 const DRIVE_ID = process.env.SWITCHBOARD_DRIVE_ID ?? "powerhouse";
-
-const SWITCHBOARD_BIN = resolve(
-  import.meta.dirname,
-  "node_modules/.bin/switchboard",
-);
 
 let proc: ChildProcess | undefined;
 let logs = "";
@@ -65,7 +61,7 @@ export async function setup() {
     cleanStaleLocks();
     // The bin itself: a signal to `pnpm switchboard` does not reach the server
     // on Linux, so teardown would wait on it forever.
-    proc = spawn(SWITCHBOARD_BIN, [], {
+    proc = spawn(...SWITCHBOARD_COMMAND, {
       cwd: import.meta.dirname,
       env: { ...process.env, PH_SWITCHBOARD_PORT: PORT },
       stdio: ["ignore", "pipe", "pipe"],

@@ -10,11 +10,13 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { pathWithin, realPathThroughExistingParent } from "./real-paths.js";
 
+const linkType = process.platform === "win32" ? "junction" : "dir";
+
 let root: string;
 beforeEach(() => {
   root = realpathSync.native(mkdtempSync(join(tmpdir(), "ph-real-paths-")));
   mkdirSync(join(root, "real"));
-  symlinkSync(join(root, "real"), join(root, "alias"), "dir");
+  symlinkSync(join(root, "real"), join(root, "alias"), linkType);
 });
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
@@ -32,22 +34,30 @@ describe("realPathThroughExistingParent", () => {
   });
 
   it("follows a dangling symlink to where it points", () => {
-    symlinkSync(join(root, "alias", "missing"), join(root, "real", "dangling"));
+    symlinkSync(
+      join(root, "alias", "missing"),
+      join(root, "real", "dangling"),
+      linkType,
+    );
     expect(
       realPathThroughExistingParent(join(root, "alias", "dangling", "a.ts")),
     ).toBe(join(root, "real", "missing", "a.ts"));
   });
 
-  it("follows a relative dangling symlink from its own directory", () => {
-    symlinkSync("../outside/x.ts", join(root, "real", "model.ts"));
-    expect(realPathThroughExistingParent(join(root, "alias", "model.ts"))).toBe(
-      join(root, "outside", "x.ts"),
-    );
-  });
+  // An unprivileged Windows account cannot create this link.
+  it.skipIf(process.platform === "win32")(
+    "follows a relative dangling symlink from its own directory",
+    () => {
+      symlinkSync("../outside/x.ts", join(root, "real", "model.ts"));
+      expect(
+        realPathThroughExistingParent(join(root, "alias", "model.ts")),
+      ).toBe(join(root, "outside", "x.ts"));
+    },
+  );
 
   it("throws on a symlink loop", () => {
-    symlinkSync(join(root, "b"), join(root, "a"));
-    symlinkSync(join(root, "a"), join(root, "b"));
+    symlinkSync(join(root, "b"), join(root, "a"), linkType);
+    symlinkSync(join(root, "a"), join(root, "b"), linkType);
     expect(() => realPathThroughExistingParent(join(root, "a"))).toThrow(
       /ELOOP/,
     );

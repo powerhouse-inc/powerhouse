@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import type {
   DocumentChangeEvent,
   InProcessReactorClientModule,
@@ -48,6 +48,7 @@ import {
   it,
   vi,
 } from "vitest";
+import { SWITCHBOARD_COMMAND } from "./switchboard-bin.js";
 
 const SWITCHBOARD_URL =
   process.env.SWITCHBOARD_URL ?? "http://localhost:4001/graphql";
@@ -64,10 +65,6 @@ const models = () => [
 
 // A switchboard of this suite's own, to stop mid-test.
 const OWN_PORT = Number(process.env.SWITCHBOARD_ROUTER_PORT ?? 4024);
-const SWITCHBOARD_BIN = resolve(
-  import.meta.dirname,
-  "../node_modules/.bin/switchboard",
-);
 
 const createdDocumentIds: string[] = [];
 const disposables: SwitchboardBackend[] = [];
@@ -165,7 +162,7 @@ async function startOwnSwitchboard(
   port: number,
 ): Promise<{ proc: ChildProcess; dir: string }> {
   const dir = mkdtempSync(join(tmpdir(), "router-e2e-switchboard-"));
-  const proc = spawn(SWITCHBOARD_BIN, [], {
+  const proc = spawn(...SWITCHBOARD_COMMAND, {
     cwd: dir,
     env: { ...process.env, PH_SWITCHBOARD_PORT: String(port) },
     stdio: "ignore",
@@ -194,7 +191,13 @@ async function stopOwnSwitchboard(
       }, 10_000).unref();
     });
   }
-  rmSync(run.dir, { recursive: true, force: true });
+  // Windows releases the store's files a moment after the process ends.
+  rmSync(run.dir, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 300,
+  });
 }
 
 beforeAll(async () => {
