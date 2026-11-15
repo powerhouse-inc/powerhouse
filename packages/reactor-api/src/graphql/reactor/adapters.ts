@@ -348,6 +348,8 @@ function toSubmittableContext(
   }
 
   const submittable: ActionContext = {};
+  const initialAuth = fromInputMaybe(context.initialAuth);
+  if (initialAuth !== undefined) submittable.initialAuth = initialAuth;
   const prevOpIndex = fromInputMaybe(context.prevOpIndex);
   if (prevOpIndex !== undefined) {
     submittable.prevOpIndex = prevOpIndex;

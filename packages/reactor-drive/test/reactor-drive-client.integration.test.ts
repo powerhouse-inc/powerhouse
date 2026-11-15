@@ -1,6 +1,7 @@
 import { MemoryFS, PGlite } from "@electric-sql/pglite";
 import {
   ConsistencyTracker,
+  defineInitialAuthProvider,
   DriveCollectionId,
   REACTOR_SCHEMA,
   ReactorBuilder,
@@ -20,6 +21,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   createPresignedHeader,
+  authAddress,
   hasDerivedDocumentId,
   isDerivedDocumentId,
   signaturePolicyOf,
@@ -31,6 +33,7 @@ import { documentModelDocumentModelModule } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { referenceNote } from "../../reactor/test/initial-auth/reference-app.js";
 import { ReactorDriveClient } from "../src/client/reactor-drive-client.js";
 import { migrateLegacyDriveState } from "../src/migration/migrate-legacy-state.js";
 import {
@@ -54,6 +57,7 @@ describe("ReactorDriveClient Integration", () => {
 
   async function setUp(
     featureFlags: Partial<ReactorFeatureFlags> = {},
+    protectedNote = false,
   ): Promise<void> {
     pg = new PGlite({ fs: new MemoryFS() });
     baseDb = new Kysely<unknown>({ dialect: new PGliteDialect(pg) });
@@ -91,11 +95,27 @@ describe("ReactorDriveClient Integration", () => {
       .withDocumentModelSources([
         reactorDriveDocumentModelModule as unknown as DocumentModelModule,
         documentModelDocumentModelModule,
+        ...(protectedNote ? [referenceNote] : []),
       ])
       .withReadModel(nodeProcessor)
       .withKysely(baseDb as never)
       .withMigrationStrategy("manual")
       .withExecutorConfig({ featureFlags });
+
+    if (protectedNote)
+      reactorBuilder
+        .withTrustPolicy({ authorizeSigner: () => Promise.resolve(true) })
+        .withExecutorConfig({ featureFlags, signatureVerification: "enforce" })
+        .withInitialAuth({
+          providers: [
+            defineInitialAuthProvider(referenceNote, {
+              deployment: { administrator: authAddress("0xabc") },
+              authorizeCreation() {},
+              resolveInstance: () => ({ owner: authAddress("0xabc") }),
+            }),
+          ],
+          trustOrigin: () => true,
+        });
 
     // A real signer, so v2-required documents can be created at all.
     const built = await new ReactorClientBuilder()
@@ -123,6 +143,38 @@ describe("ReactorDriveClient Integration", () => {
     await baseDb.destroy();
     await pg.close();
   }
+
+  it("creates and copies a protected code-first file through the reactor-drive strategy", async () => {
+    await tearDown();
+    await setUp(
+      {
+        documentDecisions: true,
+        authEnforcement: true,
+        authGroups: true,
+        authConditions: true,
+      },
+      true,
+    );
+    const draft = referenceNote.utils.createDocument();
+    const created = await driveClient.addFile(driveId, draft);
+    expect(created.header.id).not.toBe(draft.header.id);
+    expect(created.state.auth.version).toBe(1);
+    expect((await driveClient.getNode(driveId, created.header.id)).kind).toBe(
+      "file",
+    );
+    const copiedDrive = await driveClient.copyNode(
+      driveId,
+      created.header.id,
+      undefined,
+    );
+    const copy = copiedDrive.state.global.nodes.find(
+      (node) => node.kind === "file" && node.id !== created.header.id,
+    );
+    expect(copy).toBeDefined();
+    const copied = await reactorClient.read.get(copy!.id);
+    expect(copied.state.auth).toEqual(created.state.auth);
+    expect(copied.header.initialAuth?.kind).toBe("copy");
+  });
 
   /** Replaces this test's reactor with one under `featureFlags`. */
   async function rebuild(

@@ -186,6 +186,7 @@ describe("the default check registry", () => {
       "graphql-schema",
       "retained-serialization",
       "unregistered-definitions",
+      "initial-authorization",
     ]);
   });
 

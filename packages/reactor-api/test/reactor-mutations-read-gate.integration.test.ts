@@ -189,6 +189,9 @@ describe("create resolvers return the document read as the caller", () => {
         getDocumentModelModule: vi
           .fn()
           .mockResolvedValue(documentModelDocumentModelModule),
+        getDocumentModelModuleForDocument: vi
+          .fn()
+          .mockResolvedValue(documentModelDocumentModelModule),
         newDocument: vi
           .fn()
           .mockImplementation(() =>

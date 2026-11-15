@@ -135,7 +135,7 @@ export class ReactorDriveClient implements IDriveClient {
     );
     const receipt = await handle.readable;
     return this.read.get<TDocument>(
-      document.header.id,
+      handle.documentId,
       undefined,
       signal,
       receipt.token,

@@ -140,11 +140,12 @@ const PAIRS: Pair[] = [
   },
 ];
 
-/** Every method records its call and throws, so a call shows what reached it. */
 function recorder<T extends object>(calls: Call[]): T {
   return new Proxy({} as T, {
     get: (_target, prop) => {
       if (typeof prop !== "string" || prop === "then") return undefined;
+      if (prop === "getDocumentModelModule")
+        return () => Promise.resolve(MODULE);
       return (...args: unknown[]) => {
         calls.push({ method: prop, args });
         throw new Error(`stub: ${prop}`);

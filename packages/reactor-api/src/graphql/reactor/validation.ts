@@ -155,6 +155,7 @@ export const ActionSignerDTO = z
 
 export const ActionContextDTO = z
   .object({
+    initialAuth: z.string().nullable().optional(),
     signer: ActionSignerDTO.nullable().optional(),
   })
   .strip();

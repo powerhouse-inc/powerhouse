@@ -94,7 +94,10 @@ function createMockReactor() {
     },
   } as unknown as IReactorWriteClient;
 
-  const read = { get } as unknown as IReactorReadClient;
+  const read = {
+    get,
+    getDocumentModelModuleForDocument: vi.fn().mockResolvedValue({}),
+  } as unknown as IReactorReadClient;
 
   return {
     reactor: { read, write },

@@ -30,6 +30,8 @@ describe("layer diagnostic catalogs", () => {
       "PH-SCALAR-UNKNOWN",
     ]);
     expect(own(compilerDiagnostics.codes, dslDiagnostics.codes)).toStrictEqual([
+      "PH-AUTH-DECLARATION-INVALID",
+      "PH-AUTH-GROUP-DENY",
       "PH-DM-DUPLICATE-ACTION",
       "PH-DM-DUPLICATE-NAME",
       "PH-DM-IDENTITY-INVALID",

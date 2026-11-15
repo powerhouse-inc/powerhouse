@@ -256,6 +256,9 @@ export function hasDerivedDocumentId(header: PHDocumentHeader): boolean {
         createdAtUtcIso: header.createdAtUtcIso,
         nonce: header.sig.nonce,
         protocolVersions: header.protocolVersions,
+        ...(header.initialAuth === undefined
+          ? {}
+          : { initialAuth: header.initialAuth }),
       }) === header.id
     );
   } catch {

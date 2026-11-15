@@ -1,3 +1,6 @@
+import type { InitialAuthTemplate } from "./initial-auth.js";
+import type { InitialAuthCommitment } from "./auth-bootstrap.js";
+import type { DefinitionDiagnostic } from "./definition-types.js";
 import type { Draft } from "mutative";
 import type { ProcessorFactoryBuilder } from "processors";
 import type { FC, ReactNode } from "react";
@@ -1219,6 +1222,7 @@ export type RetractAction = Action & {
 };
 
 export type CreateDocumentActionInput = {
+  initialAuth?: InitialAuthCommitment;
   model: string; // e.g., 'ph/todo'
   version: 0;
   documentId: string; // equals signature when signed; UUID when unsigned
@@ -1797,6 +1801,11 @@ export type PhAiToolDescriptor = {
 };
 
 export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
+  initialAuth?: {
+    readonly template: InitialAuthTemplate;
+    readonly diagnostics?: readonly DefinitionDiagnostic[];
+    resolve(bindings: unknown): PHBaseState["auth"];
+  };
   /** optional version field, should be made required */
   version?: number;
   reducer: Reducer<TState>;

@@ -239,7 +239,9 @@ describe("ReactorClient Unit Tests", () => {
       const view = { branch: "main" };
       const signal = new AbortController().signal;
 
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({} as PHDocument);
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
+        header: {},
+      } as PHDocument);
 
       await client.get("doc-1", view, signal);
 
@@ -1041,7 +1043,9 @@ describe("ReactorClient Unit Tests", () => {
       };
 
       vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({} as PHDocument);
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
+        header: {},
+      } as PHDocument);
 
       await client.execute(documentId, "main", actions, signal);
 
@@ -1081,7 +1085,9 @@ describe("ReactorClient Unit Tests", () => {
       };
 
       vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({} as PHDocument);
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
+        header: {},
+      } as PHDocument);
 
       await client.execute(documentId, "main", actions);
 
@@ -1114,7 +1120,9 @@ describe("ReactorClient Unit Tests", () => {
       };
 
       vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({} as PHDocument);
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
+        header: {},
+      } as PHDocument);
 
       await client.execute(documentId, branch, actions, signal);
 

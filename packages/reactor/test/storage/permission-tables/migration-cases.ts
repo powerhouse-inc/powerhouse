@@ -191,6 +191,8 @@ export function definePermissionTablesMigrationCases(
         join pg_namespace ns on ns.oid = rel.relnamespace
         where ns.nspname = ${schema}
           and rel.relname in (${sql.join(TABLES)})
+          -- PostgreSQL 18 also catalogs NOT NULL; columns() asserts it above.
+          and con.contype <> 'n'
         order by rel.relname, con.conname
       `.execute(database!.base);
       return result.rows;

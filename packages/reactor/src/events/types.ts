@@ -117,6 +117,8 @@ export type JobRunningEvent = {
  * Contains the operations directly to avoid round-trip queries.
  */
 export type JobWriteReadyEvent = {
+  /** Receipt coordinates for an identical committed bootstrap; no new operation publication. */
+  alreadyCommitted?: OperationWithContext[];
   jobId: string;
   operations: OperationWithContext[];
   jobMeta: JobMeta;

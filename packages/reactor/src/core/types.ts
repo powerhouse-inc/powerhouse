@@ -1,3 +1,4 @@
+import type { InitialAuthCoordinator } from "./initial-auth/coordinator.js";
 import type { UndoRedoTargets } from "@powerhousedao/shared/document-model";
 import type {
   Action,
@@ -624,6 +625,7 @@ export interface DegradedComponent {
 }
 
 export interface InProcessReactorModule extends ReactorModule {
+  initialAuth?: InitialAuthCoordinator;
   /**
    * The enforcement flags this reactor resolved, as plain booleans. Held on the
    * module because they select what a read enforces as well as what a write

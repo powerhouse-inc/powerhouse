@@ -20,9 +20,12 @@ export class CollectionMembershipCache implements ICollectionMembershipCache {
     return { size: this.cache.size };
   }
 
-  withScopedIndex(operationIndex: IOperationIndex): CollectionMembershipCache {
+  withScopedIndex(
+    operationIndex: IOperationIndex,
+    isolated = false,
+  ): CollectionMembershipCache {
     const scoped = new CollectionMembershipCache(operationIndex);
-    scoped.cache = this.cache;
+    if (!isolated) scoped.cache = this.cache;
     return scoped;
   }
 

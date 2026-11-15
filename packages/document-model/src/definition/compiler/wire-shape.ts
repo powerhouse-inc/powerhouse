@@ -3,6 +3,9 @@ import type {
   DefinitionPath,
   JsonValue,
 } from "@powerhousedao/shared/document-model";
+import { parseInitialAuthTemplate } from "@powerhousedao/shared/document-model";
+import type { DocumentModelDefinition } from "@powerhousedao/shared/document-model";
+import { validateInitialAuthSpecification } from "../auth/wire.js";
 import { documentModelScalars, scalarCatalog } from "../../scalars/catalog.js";
 import { DefinitionDiagnosticCollector } from "../kernel/diagnostic-collector.js";
 import {
@@ -620,6 +623,8 @@ function specification(
   check: ShapeChecker,
   value: unknown,
   path: DefinitionPath,
+  formatVersion: unknown,
+  documentType: string,
 ): void {
   const node = check.record(
     value,
@@ -631,10 +636,25 @@ function specification(
       "state",
       "modules",
       "changeLog",
+      ...(formatVersion === 2 ? ["initialAuth"] : []),
     ],
     path,
   );
   if (node === undefined) return;
+  if (node.initialAuth !== undefined) {
+    try {
+      parseInitialAuthTemplate(node.initialAuth, documentType);
+    } catch (error) {
+      check.fail(
+        [...path, "initialAuth"],
+        error instanceof Error
+          ? error.message
+          : "Invalid initial authorization template.",
+        "a valid initial authorization template",
+        node.initialAuth,
+      );
+    }
+  }
   if (
     typeof node.version !== "number" ||
     !Number.isSafeInteger(node.version) ||
@@ -747,7 +767,13 @@ export function checkDocumentModelDefinitionShape(
   );
   if (node === undefined) return check.collector.diagnostics;
   check.literal(node.kind, "powerhouse.document-model", [...path, "kind"]);
-  check.literal(node.formatVersion, 1, [...path, "formatVersion"]);
+  if (node.formatVersion !== 1 && node.formatVersion !== 2)
+    check.fail(
+      [...path, "formatVersion"],
+      "Unsupported document-model definition format.",
+      "1 | 2",
+      node.formatVersion,
+    );
 
   const compatibilityPath = [...path, "compatibility"];
   const compatibility = check.record(
@@ -824,7 +850,46 @@ export function checkDocumentModelDefinitionShape(
     );
   }
   specifications?.forEach((entry, index) =>
-    specification(check, entry, [...path, "specifications", index]),
+    specification(
+      check,
+      entry,
+      [...path, "specifications", index],
+      node.formatVersion,
+      typeof model?.documentType === "string" ? model.documentType : "",
+    ),
   );
+  if (
+    node.formatVersion === 2 &&
+    !specifications?.some(
+      (entry) =>
+        typeof entry === "object" && entry !== null && "initialAuth" in entry,
+    )
+  )
+    check.fail(
+      [...path, "formatVersion"],
+      "Format 2 requires an initial authorization template.",
+      "a template-bearing specification",
+      "absent",
+    );
+  if (check.collector.diagnostics.length === 0) {
+    const definition = value as DocumentModelDefinition;
+    definition.specifications.forEach((specification, index) => {
+      try {
+        validateInitialAuthSpecification(
+          specification,
+          definition.model.documentType,
+        );
+      } catch (error) {
+        check.fail(
+          [...path, "specifications", index, "initialAuth"],
+          error instanceof Error
+            ? error.message
+            : "Invalid authorization references.",
+          "references to this specification's fields and operations",
+          "invalid references",
+        );
+      }
+    });
+  }
   return check.collector.diagnostics;
 }

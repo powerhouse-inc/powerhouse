@@ -943,6 +943,8 @@ export const actions = { ...baseActions, ...documentModelActions };
  * The context of an action.
  */
 export type ActionContext = {
+  /** Untrusted routing hint; only a validated, signed creation commitment authorizes bootstrap. */
+  initialAuth?: string;
   /** The index of the previous operation, showing intended ordering. */
   prevOpIndex?: number;
 

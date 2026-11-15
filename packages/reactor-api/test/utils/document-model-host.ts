@@ -50,6 +50,7 @@ function memoryReactor(
         results: [],
         options: { cursor: "", limit: 0 },
       } satisfies PagedResults<PHDocument>),
+    getDocumentModelModule: () => Promise.resolve(module),
     createEmpty: () => Promise.resolve(document),
     execute,
   } as unknown as IReactorClient;

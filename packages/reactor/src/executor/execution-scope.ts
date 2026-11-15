@@ -20,9 +20,12 @@ import {
 import { KyselyDocumentPurger } from "../storage/kysely/document-purger.js";
 import { KyselyWriteIdentityStore } from "../storage/kysely/write-identity-store.js";
 import type { Database } from "../storage/kysely/types.js";
+import { KyselyInitialAuthStore } from "../storage/kysely/initial-auth-store.js";
 
 /** Per-document purge locks, held until the job's transaction ends. */
 export interface DocumentLocks {
+  /** Acquires a set in the database's common advisory-lock order. */
+  exclusiveAll?(ids: Iterable<string>): Promise<void>;
   shared(ids: Iterable<string>): Promise<void>;
   exclusive(id: string): Promise<void>;
   /** The tombstoned ids among `ids`, read in the job's transaction. */
@@ -45,6 +48,7 @@ export const NOOP_WRITE_IDENTITY_STORE: IWriteIdentityStore = {
 };
 
 export interface ExecutionStores {
+  initialAuth?: KyselyInitialAuthStore;
   operationStore: IOperationStore;
   operationIndex: IOperationIndex;
   writeCache: IWriteCache;
@@ -59,6 +63,11 @@ export interface ExecutionStores {
 
 export interface IExecutionScope {
   run<T>(
+    fn: (stores: ExecutionStores) => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T>;
+  /** Atomic stores with private caches, required by initial authorization. */
+  runIsolated?<T>(
     fn: (stores: ExecutionStores) => Promise<T>,
     signal?: AbortSignal,
   ): Promise<T>;
@@ -109,6 +118,21 @@ export class KyselyExecutionScope implements IExecutionScope {
     fn: (stores: ExecutionStores) => Promise<T>,
     signal?: AbortSignal,
   ): Promise<T> {
+    return this.runWithCaches(fn, signal, false);
+  }
+
+  async runIsolated<T>(
+    fn: (stores: ExecutionStores) => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    return this.runWithCaches(fn, signal, true);
+  }
+
+  private async runWithCaches<T>(
+    fn: (stores: ExecutionStores) => Promise<T>,
+    signal: AbortSignal | undefined,
+    isolated: boolean,
+  ): Promise<T> {
     signal?.throwIfAborted();
     return this.db.transaction().execute(async (trx: Transaction<Database>) => {
       // A shared lock keeps a live id live until commit; its re-checks are moot.
@@ -129,12 +153,20 @@ export class KyselyExecutionScope implements IExecutionScope {
         writeCache: this.writeCache.withScopedStores(
           scopedOperationStore,
           scopedKeyframeStore,
+          isolated,
         ),
-        documentMetaCache:
-          this.documentMetaCache.withScopedStore(scopedOperationStore),
+        documentMetaCache: this.documentMetaCache.withScopedStore(
+          scopedOperationStore,
+          isolated,
+        ),
         collectionMembershipCache:
-          this.collectionMembershipCache.withScopedIndex(scopedOperationIndex),
+          this.collectionMembershipCache.withScopedIndex(
+            scopedOperationIndex,
+            isolated,
+          ),
+        initialAuth: new KyselyInitialAuthStore(trx),
         documentLocks: {
+          exclusiveAll: (ids) => acquirePurgeLocks(trx, ids, "exclusive"),
           shared: async (ids) => {
             const list = [...ids];
             await acquirePurgeLocks(trx, list, "shared");

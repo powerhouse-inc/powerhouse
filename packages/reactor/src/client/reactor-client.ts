@@ -1,3 +1,4 @@
+import type { InitialAuthCoordinator } from "../core/initial-auth/coordinator.js";
 import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type {
   Action,
@@ -134,6 +135,7 @@ export class ReactorClient implements IReactorClient {
     },
     writeSide?: WriteSideParts,
     drives: DriveClientOptions = { strategies: new Map() },
+    initialAuth?: InitialAuthCoordinator,
   ) {
     const parts: ReactorClientParts = {
       logger,
@@ -149,6 +151,7 @@ export class ReactorClient implements IReactorClient {
       protocolSelection,
       writeSide,
       drives,
+      initialAuth,
     };
     this.logger = logger;
     this.reactor = reactor;

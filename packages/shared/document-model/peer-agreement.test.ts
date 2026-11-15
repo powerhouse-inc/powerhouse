@@ -32,6 +32,7 @@ describe("peer capabilities", () => {
   it("registers base-reducer [1, 2], signature [2], document-purge [1] and marker-refusal [1]", () => {
     expect(localSupports(PEER_CAPABILITIES, {})).toEqual({
       protocols: {
+        "auth-bootstrap": [],
         "base-reducer": [1, 2],
         signature: [2],
         "document-purge": [1],
@@ -130,6 +131,52 @@ describe("peer capabilities", () => {
     ).toEqual([]);
   });
 
+  it("holds protected creation from silent and incomplete authorization peers", () => {
+    const complete = {
+      documentDecisions: true,
+      authEnforcement: true,
+      authGroups: true,
+      authConditions: true,
+    };
+    const versions = { "auth-bootstrap": 1, signature: 2 };
+    const unsupported = [
+      legacySupports(PEER_CAPABILITIES),
+      ...Object.keys(complete).map((flag) =>
+        localSupports(PEER_CAPABILITIES, { ...complete, [flag]: false }),
+      ),
+    ];
+    for (const peer of unsupported) {
+      expect(holdReason(peer, versions, PEER_CAPABILITIES)).toEqual({
+        protocol: "auth-bootstrap",
+        version: 1,
+        peerSupports: [],
+      });
+    }
+    expect(
+      holdReason(
+        localSupports(PEER_CAPABILITIES, complete),
+        versions,
+        PEER_CAPABILITIES,
+      ),
+    ).toBeUndefined();
+  });
+
+  it("does not select protected initialization for ordinary documents", () => {
+    const flags = {
+      documentDecisions: true,
+      authEnforcement: true,
+      authGroups: true,
+      authConditions: true,
+    };
+    expect(
+      selectProtocolVersions({
+        capabilities: PEER_CAPABILITIES,
+        flags,
+        members: [],
+      }),
+    ).not.toHaveProperty("auth-bootstrap");
+  });
+
   it("gives a silent peer the baselines", () => {
     expect(peerSupports(null, PEER_CAPABILITIES)).toEqual(
       legacySupports(PEER_CAPABILITIES),
@@ -145,6 +192,7 @@ describe("peer capabilities", () => {
       TEST_PROTOCOL,
     ]);
     expect(merged.map((capability) => capability.name)).toEqual([
+      "auth-bootstrap",
       "signature",
       "document-purge",
       "marker-refusal",

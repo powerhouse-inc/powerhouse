@@ -1,3 +1,4 @@
+import type { CompiledInitialAuth } from "../auth/compile.js";
 import type {
   Action,
   CompiledErrorDefinition,
@@ -158,6 +159,7 @@ type DraftModule = Omit<CompiledModule, "operations"> & {
 };
 
 export type CompiledDocumentModelVersion = {
+  readonly initialAuth?: CompiledInitialAuth;
   readonly config: DocumentModelCompilationConfig;
   readonly specification: DocumentModelSpecificationDefinition;
   readonly definition: DocumentModelDefinition;

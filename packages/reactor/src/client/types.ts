@@ -1,3 +1,4 @@
+import type { InitialAuthCreationRequest } from "../core/initial-auth/provider.js";
 import type {
   UndoRedoAvailability,
   UndoRedoTargets,
@@ -483,6 +484,18 @@ export type WriteTargetDescription = {
  * `*Async` variants of the facade are this half's plain form, so it has none.
  */
 export interface IReactorWriteClient {
+  /** Trusted local host capability. Generic RPC forwarding must not expose requester impersonation. */
+  createWithInitialAuth?(
+    document: PHDocument,
+    request: InitialAuthCreationRequest,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+  /** Local capability: copies exact policy using this client's verified signer identity. */
+  copyProtectedDocument?(
+    sourceIdentifier: string,
+    options?: { name?: string; protocolVersions?: Record<string, number> },
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
   /** Drive writes. See {@link IDriveWriteClient}. */
   readonly drives: IDriveWriteClient;
 

@@ -13,6 +13,7 @@ import { packageScalarNamesCheck } from "./checks/package-scalar-names.js";
 import { retainedSerializationCheck } from "./checks/retained-serialization.js";
 import { storedMaterializationCheck } from "./checks/stored-materialization.js";
 import { unregisteredDefinitionsCheck } from "./checks/unregistered-definitions.js";
+import { initialAuthCheck } from "./checks/initial-auth.js";
 import { definitionCheckReport } from "../report/status.js";
 import type {
   DefinitionCheckInput,
@@ -33,6 +34,7 @@ export const documentModelChecks: readonly DefinitionCheck[] = Object.freeze([
   graphqlSchemaCheck,
   retainedSerializationCheck,
   unregisteredDefinitionsCheck,
+  initialAuthCheck,
 ]);
 
 /** Moves a check's normalized paths to where each source's author edits them. */

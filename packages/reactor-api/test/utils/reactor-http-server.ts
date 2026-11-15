@@ -5,6 +5,7 @@ import type {
   IReactorWriteClient,
   IRelationalDb,
   ISyncManager,
+  SyncScopeGate,
 } from "@powerhousedao/reactor";
 import type { ILogger } from "document-model";
 import type http from "node:http";
@@ -61,6 +62,8 @@ export async function startReactorHttpServer(
   authorizationService: IAuthorizationService,
   driveStore?: DriveStore,
   driveNodes?: IDriveNodeSource,
+  syncManager: ISyncManager = {} as ISyncManager,
+  syncServingGate?: SyncScopeGate,
 ): Promise<ReactorHttpServer> {
   const httpAdapter = new ExpressHttpAdapter();
   const server = (await httpAdapter.listen(
@@ -78,7 +81,8 @@ export async function startReactorHttpServer(
     writeClient: clients.write,
     relationalDb: {} as IRelationalDb,
     analyticsStore: {} as IAnalyticsStore,
-    syncManager: {} as ISyncManager,
+    syncManager,
+    syncServingGate,
     logger: silentLogger,
     httpAdapter,
     gatewayAdapter,

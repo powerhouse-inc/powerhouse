@@ -57,6 +57,19 @@ export const MARKER_REFUSAL_FEATURE = "marker-refusal";
 export const PEER_CAPABILITIES: readonly PeerCapability[] = [
   {
     kind: "protocol",
+    name: "auth-bootstrap",
+    baseline: [],
+    supported: (flags) =>
+      flags.documentDecisions &&
+      flags.authEnforcement &&
+      flags.authGroups &&
+      flags.authConditions
+        ? [1]
+        : [],
+    optional: true,
+  },
+  {
+    kind: "protocol",
     name: "base-reducer",
     baseline: [1, 2],
     supported: baseReducerVersionsFor,

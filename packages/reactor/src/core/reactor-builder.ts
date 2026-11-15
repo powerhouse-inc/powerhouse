@@ -1,3 +1,4 @@
+import type { InitialAuthConfiguration } from "./initial-auth/provider.js";
 import type {
   ISigner,
   PeerCapability,
@@ -176,6 +177,7 @@ import { resolveModelSources } from "./model-sources.js";
 import type { DocumentModelSource } from "./model-sources.js";
 import { Reactor } from "./reactor.js";
 import { CreateProtocolSelector } from "../client/create-protocol.js";
+import { InitialAuthCoordinator } from "./initial-auth/coordinator.js";
 import type {
   Database,
   DegradedComponent,
@@ -402,6 +404,12 @@ function schemeChannelDescriptor(
 }
 
 export class ReactorBuilder {
+  private initialAuthConfiguration?: InitialAuthConfiguration;
+
+  withInitialAuth(configuration: InitialAuthConfiguration): this {
+    this.initialAuthConfiguration = configuration;
+    return this;
+  }
   private logger?: ILogger;
   private documentModelSources: DocumentModelSource[] = [];
   private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
@@ -488,7 +496,14 @@ export class ReactorBuilder {
   }
 
   getPeerCapabilities(): readonly PeerCapability[] {
-    return mergePeerCapabilities(PEER_CAPABILITIES, this.extraPeerCapabilities);
+    return mergePeerCapabilities(
+      PEER_CAPABILITIES,
+      this.extraPeerCapabilities,
+    ).map((capability) =>
+      capability.name === "auth-bootstrap" && !this.initialAuthConfiguration
+        ? { ...capability, supported: () => [] }
+        : capability,
+    );
   }
 
   withUpgradeManifests(manifests: UpgradeManifest<readonly number[]>[]): this {
@@ -898,6 +913,20 @@ export class ReactorBuilder {
     }
 
     const featureFlags = resolveFeatureFlags(this.executorConfig.featureFlags);
+    if (
+      this.initialAuthConfiguration &&
+      (!featureFlags.documentDecisions ||
+        !featureFlags.authEnforcement ||
+        !featureFlags.authGroups ||
+        !featureFlags.authConditions ||
+        this.executorConfig.signatureVerification !== "enforce" ||
+        this.workerPool ||
+        this.executorManager)
+    ) {
+      throw new Error(
+        "Initial authorization requires all authorization flags, enforced signatures, and the in-process transactional executor.",
+      );
+    }
     if (this.executorConfig.protocolSupport === undefined) {
       this.executorConfig = {
         ...this.executorConfig,
@@ -1202,6 +1231,15 @@ export class ReactorBuilder {
       writeIdentityStore,
     );
 
+    const initialAuth = this.initialAuthConfiguration
+      ? new InitialAuthCoordinator(
+          this.initialAuthConfiguration,
+          documentModelRegistry,
+          database as unknown as Kysely<StorageDatabase>,
+          operationStore,
+          writeCache,
+        )
+      : undefined;
     let executorManager = this.executorManager;
     let executorStartCount = this.executorConfig.maxConcurrency ?? 1;
     if (!executorManager) {
@@ -1264,6 +1302,7 @@ export class ReactorBuilder {
               this.signer,
               this.trustPolicy,
               groupCommit?.flusher,
+              this.initialAuthConfiguration,
             ),
           eventBus,
           queue,
@@ -1598,6 +1637,7 @@ export class ReactorBuilder {
     });
 
     const module: InProcessReactorModule = {
+      initialAuth,
       eventBus,
       documentModelRegistry,
       featureFlags,

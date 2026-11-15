@@ -6,6 +6,7 @@ import type {
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
+  canReadBootstrapSnapshot,
   normalizeDocumentModelVersion,
   UnsupportedDocumentModelVersionError,
 } from "@powerhousedao/shared/document-model";
@@ -259,13 +260,22 @@ export class ReactorReadClient implements IReactorReadClient {
     // fetch carries the scopes about to be paged, not the policy alone, because
     // a conditional read grant reads the state of the scope it gates; a
     // condition can name no other scope, so the scopes not paged are not owed.
-    const gated = await this.reactor.getByIdOrSlug<PHDocument>(
+    let gated = await this.reactor.getByIdOrSlug<PHDocument>(
       documentId,
       withAuthScope(view),
       undefined,
       signal,
     );
+    if (gated.header.protocolVersions?.["auth-bootstrap"] === 1)
+      gated = await this.reactor.getByIdOrSlug<PHDocument>(
+        documentId,
+        withAllScopes(view),
+        undefined,
+        signal,
+      );
     const canRead = await this.gating.readableScopes(gated, view, signal);
+    const canReadOperation = (operation: Operation) =>
+      canReadBootstrapSnapshot(operation.action, gated.header, canRead);
 
     if (paging?.cursor && isCompositeCursor(paging.cursor)) {
       return this.getOperationsWithCompositeCursor(
@@ -275,6 +285,7 @@ export class ReactorReadClient implements IReactorReadClient {
         paging,
         signal,
         canRead,
+        canReadOperation,
       );
     }
 
@@ -290,7 +301,9 @@ export class ReactorReadClient implements IReactorReadClient {
     for (const scope of Object.keys(operationsByScope)) {
       if (!canRead(scope)) {
         delete operationsByScope[scope];
-      }
+      } else
+        operationsByScope[scope].results =
+          operationsByScope[scope].results.filter(canReadOperation);
     }
 
     const scopeEntries = Object.entries(operationsByScope);
@@ -734,6 +747,7 @@ export class ReactorReadClient implements IReactorReadClient {
     paging: PagingOptions,
     signal: AbortSignal | undefined,
     canRead: (scope: string) => boolean,
+    canReadOperation: (operation: Operation) => boolean,
   ): Promise<PagedResults<Operation>> {
     const scopeCursors = decodeCompositeCursor(paging.cursor);
     const allOperations: Operation[] = [];
@@ -756,7 +770,7 @@ export class ReactorReadClient implements IReactorReadClient {
       );
 
       const scopeResult = operationsByScope[scopeName];
-      allOperations.push(...scopeResult.results);
+      allOperations.push(...scopeResult.results.filter(canReadOperation));
       if (scopeResult.nextCursor) {
         activeCursors[scopeName] = scopeResult.nextCursor;
       }

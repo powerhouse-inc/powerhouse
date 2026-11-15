@@ -4,6 +4,7 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import type { ViewFilter } from "../shared/types.js";
+import { canReadBootstrapSnapshot } from "@powerhousedao/shared/document-model";
 
 export function authSubjectFromSigner(signer: ISigner): AuthSubject {
   return { address: signer.user?.address, key: signer.app?.key };
@@ -57,6 +58,24 @@ export function filterReadableScopes<TDocument extends PHDocument>(
       document.initialState as Record<string, unknown> | undefined,
       readable,
     ),
+    ...(document.header.protocolVersions?.["auth-bootstrap"] === 1
+      ? {
+          operations: Object.fromEntries(
+            Object.entries(document.operations).map(([scope, operations]) => [
+              scope,
+              readable(scope)
+                ? operations.filter((operation) =>
+                    canReadBootstrapSnapshot(
+                      operation.action,
+                      document.header,
+                      readable,
+                    ),
+                  )
+                : [],
+            ]),
+          ),
+        }
+      : {}),
   } as TDocument;
 }
 

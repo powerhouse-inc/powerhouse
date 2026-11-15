@@ -349,6 +349,7 @@ export class ReactorClientBuilder {
         nodes: this.driveNodeSource,
         strategies: new Map(this.driveWriteStrategies),
       },
+      reactorModule?.initialAuth,
     );
 
     return {

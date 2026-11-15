@@ -4,9 +4,9 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { DocumentNotFoundError } from "../shared/errors.js";
-import type { IDocumentView } from "../storage/interfaces.js";
+import type { IDocumentView, IOperationStore } from "../storage/interfaces.js";
 import type { IReadGate } from "./read-gate.js";
-import { ALWAYS_READABLE_SCOPES } from "./read-gate.js";
+import { ALWAYS_READABLE_SCOPES, domainScopesOf } from "./read-gate.js";
 
 /** What a subject may read of a document that is not there to be read. */
 const META_ONLY = (scope: string): boolean => ALWAYS_READABLE_SCOPES.has(scope);
@@ -23,6 +23,7 @@ export class SyncScopeGate {
     private readonly gate: IReadGate,
     private readonly documentView: IDocumentView,
     private readonly logger?: ILogger,
+    private readonly operationStore?: Pick<IOperationStore, "getSince">,
   ) {}
 
   /**
@@ -59,9 +60,38 @@ export class SyncScopeGate {
       this.logger?.verbose(
         `Withholding ${documentId} on branch ${branch}: the read side does not hold it`,
       );
+      if (this.operationStore) {
+        const creation = await this.operationStore.getSince(
+          documentId,
+          "document",
+          branch,
+          -1,
+          { actionTypes: ["CREATE_DOCUMENT"] },
+          { cursor: "0", limit: 1 },
+          signal,
+        );
+        const input: unknown = creation.results[0]?.action.input;
+        if (
+          typeof input === "object" &&
+          input !== null &&
+          "initialAuth" in input
+        )
+          return () => false;
+      }
       return META_ONLY;
     }
 
-    return this.gate.scopePredicate(document, subject, branch, signal);
+    const readable = await this.gate.scopePredicate(
+      document,
+      subject,
+      branch,
+      signal,
+    );
+    if (
+      document.header.protocolVersions?.["auth-bootstrap"] === 1 &&
+      !domainScopesOf(document).every(readable)
+    )
+      return () => false;
+    return readable;
   }
 }

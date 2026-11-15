@@ -41,6 +41,7 @@ export function buildSyncServingGate(
       new BareReadGate(),
       reactorModule.documentView,
       logger,
+      reactorModule.operationStore,
     );
   }
 
@@ -55,5 +56,6 @@ export function buildSyncServingGate(
     ),
     reactorModule.documentView,
     logger,
+    reactorModule.operationStore,
   );
 }

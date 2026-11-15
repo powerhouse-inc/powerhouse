@@ -136,6 +136,11 @@ describe.each([
 
   it.each([
     [
+      "the build before initial authorization",
+      "031_index_created_model_protocol_versions",
+      "032_create_initial_auth",
+    ],
+    [
       "the build before undo v3",
       "029_create_permission_tables",
       "030_index_operation_retracts",

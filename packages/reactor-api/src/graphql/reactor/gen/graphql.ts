@@ -65,6 +65,7 @@ export type ActionCandidateInput = {
 };
 
 export type ActionContext = {
+  readonly initialAuth?: Maybe<Scalars["String"]["output"]>;
   readonly signer?: Maybe<ReactorSigner>;
 };
 
@@ -81,6 +82,8 @@ export type ActionContext = {
  * the params carried in its own tuple, which do not include them.
  */
 export type ActionContextInput = {
+  /** Untrusted routing hint for an atomically admitted initial authorization envelope. */
+  readonly initialAuth?: InputMaybe<Scalars["String"]["input"]>;
   /** Covers replay of an operation that would otherwise be a no-op. */
   readonly nonce?: InputMaybe<Scalars["String"]["input"]>;
   /** The hash of the state the action applies to. */
@@ -1131,6 +1134,7 @@ export type GetDocumentWithOperationsQuery = {
                     readonly scope: string;
                     readonly context?:
                       | {
+                          readonly initialAuth?: string | null | undefined;
                           readonly signer?:
                             | {
                                 readonly signatures: ReadonlyArray<string>;
@@ -1331,6 +1335,7 @@ export type GetDocumentOperationsQuery = {
         readonly scope: string;
         readonly context?:
           | {
+              readonly initialAuth?: string | null | undefined;
               readonly signer?:
                 | {
                     readonly signatures: ReadonlyArray<string>;
@@ -1974,6 +1979,7 @@ export type PollSyncEnvelopesQuery = {
                 readonly scope: string;
                 readonly context?:
                   | {
+                      readonly initialAuth?: string | null | undefined;
                       readonly signer?:
                         | {
                             readonly signatures: ReadonlyArray<string>;
@@ -2367,6 +2373,11 @@ export type ActionContextResolvers<
   ParentType extends ResolversParentTypes["ActionContext"] =
     ResolversParentTypes["ActionContext"],
 > = ResolversObject<{
+  initialAuth?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
   signer?: Resolver<
     Maybe<ResolversTypes["ReactorSigner"]>,
     ParentType,
@@ -3450,6 +3461,7 @@ export function ActionContextInputSchema(): z.ZodObject<
   Properties<ActionContextInput>
 > {
   return z.object({
+    initialAuth: z.string().nullish(),
     nonce: z.string().nullish(),
     prevOpHash: z.string().nullish(),
     prevOpIndex: z.number().nullish(),
@@ -3811,6 +3823,7 @@ export const GetDocumentWithOperationsDocument = gql`
               input
               scope
               context {
+                initialAuth
                 signer {
                   user {
                     address
@@ -3966,6 +3979,7 @@ export const GetDocumentOperationsDocument = gql`
           input
           scope
           context {
+            initialAuth
             signer {
               user {
                 address
@@ -4356,6 +4370,7 @@ export const PollSyncEnvelopesDocument = gql`
               input
               scope
               context {
+                initialAuth
                 signer {
                   user {
                     address

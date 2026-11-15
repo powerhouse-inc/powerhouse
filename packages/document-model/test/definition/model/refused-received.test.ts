@@ -432,7 +432,7 @@ describe("a scopes value that is not a map of global and local", () => {
         [
           "PH-AUTH-UNSUPPORTED",
           "scopes.auth",
-          "A document model cannot declare authorization; core V1 rejects a model auth declaration.",
+          "Initial authorization belongs in the model version auth callback, not in the model configuration or state scopes.",
           "auth",
         ],
       ],
