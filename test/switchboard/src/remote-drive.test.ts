@@ -57,7 +57,7 @@ async function createDriveOnSwitchboard(name: string): Promise<string> {
 
   // Set drive name
   await client.MutateDocument({
-    documentIdentifier: driveId,
+    documentIdOrSlug: driveId,
     actions: [setDriveName({ name })].map(toTransportAction),
   });
 
@@ -146,7 +146,7 @@ describe("Remote drive sync via CONNECT channel", () => {
   afterAll(async () => {
     for (const id of createdDocumentIds) {
       try {
-        await client.DeleteDocument({ identifier: id });
+        await client.DeleteDocument({ idOrSlug: id });
       } catch {
         // Ignore cleanup errors
       }
@@ -166,14 +166,14 @@ describe("Remote drive sync via CONNECT channel", () => {
     // 4. Create a document on switchboard inside the drive
     const createResult = await client.CreateEmptyDocument({
       documentType: "powerhouse/document-model",
-      parentIdentifier: driveId,
+      parentIdOrSlug: driveId,
     });
     const documentId = createResult.createEmptyDocument.id;
     createdDocumentIds.push(documentId);
 
     // 5. Mutate the document on switchboard
     await client.MutateDocument({
-      documentIdentifier: documentId,
+      documentIdOrSlug: documentId,
       actions: [
         setModelName({ name: "SyncedModel" }),
         setModelDescription({ description: "Synced from switchboard" }),
@@ -211,7 +211,7 @@ describe("Remote drive sync via CONNECT channel", () => {
     // 4. Create a document on switchboard so it syncs locally
     const createResult = await client.CreateEmptyDocument({
       documentType: "powerhouse/document-model",
-      parentIdentifier: driveId,
+      parentIdOrSlug: driveId,
     });
     const documentId = createResult.createEmptyDocument.id;
     createdDocumentIds.push(documentId);
@@ -253,7 +253,7 @@ describe("Remote drive sync via CONNECT channel", () => {
     // 2. Create a document remotely
     const createResult = await client.CreateEmptyDocument({
       documentType: "powerhouse/document-model",
-      parentIdentifier: driveId,
+      parentIdOrSlug: driveId,
     });
     const documentId = createResult.createEmptyDocument.id;
     createdDocumentIds.push(documentId);
@@ -264,7 +264,7 @@ describe("Remote drive sync via CONNECT channel", () => {
     // 4. Apply multiple sequential mutations on switchboard
     for (let i = 1; i <= 3; i++) {
       await client.MutateDocument({
-        documentIdentifier: documentId,
+        documentIdOrSlug: documentId,
         actions: [setModelName({ name: `Iteration-${i}` })].map(
           toTransportAction,
         ),

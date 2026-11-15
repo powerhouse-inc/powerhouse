@@ -51,7 +51,7 @@ function stubSwitchboard() {
   vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
     const body = JSON.parse(init?.body as string) as GraphQLBody;
     if (body.query.includes("mutation MutateDocument(")) {
-      const id = body.variables.documentIdentifier as string;
+      const id = body.variables.documentIdOrSlug as string;
       const [action] = body.variables.actions as {
         input: { name: string };
       }[];
@@ -61,7 +61,7 @@ function stubSwitchboard() {
     if (!body.query.includes("query GetDocument(")) {
       return json({ data: null, errors: [{ message: "unexpected request" }] });
     }
-    const id = body.variables.identifier as string;
+    const id = body.variables.idOrSlug as string;
     // Read before holding, so a held answer is the state at request time.
     const name = names.get(id);
     const outage = outageNext;
@@ -250,7 +250,7 @@ describe("GraphQLClientDocumentCache under an outer Suspense boundary", () => {
 
   function rename(id: string, name: string) {
     return window.ph!.reactorGraphQLClient!.MutateDocument({
-      documentIdentifier: id,
+      documentIdOrSlug: id,
       actions: [
         {
           id: uniqueId("action"),

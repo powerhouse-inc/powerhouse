@@ -93,7 +93,7 @@ export function identifierFromMutateDocumentOperationVariables(
 ) {
   return z
     .object({
-      documentIdentifier: z.string(),
+      documentIdOrSlug: z.string(),
     })
-    .parse(variables).documentIdentifier;
+    .parse(variables).documentIdOrSlug;
 }

@@ -41,8 +41,8 @@ query GetDocumentModels($namespace: String, $paging: PagingInput) {
   }
 }
 
-query GetDocument($identifier: String!, $view: ViewFilterInput) {
-  document(identifier: $identifier, view: $view) {
+query GetDocument($idOrSlug: String!, $view: ViewFilterInput) {
+  document(idOrSlug: $idOrSlug, view: $view) {
     document {
       ...PHDocumentFields
     }
@@ -51,12 +51,12 @@ query GetDocument($identifier: String!, $view: ViewFilterInput) {
 }
 
 query GetDocumentWithOperations(
-  $identifier: String!
+  $idOrSlug: String!
   $view: ViewFilterInput
   $operationsFilter: DocumentOperationsFilterInput
   $operationsPaging: PagingInput
 ) {
-  document(identifier: $identifier, view: $view) {
+  document(idOrSlug: $idOrSlug, view: $view) {
     document {
       ...PHDocumentFields
       operations(filter: $operationsFilter, paging: $operationsPaging) {
@@ -100,13 +100,13 @@ query GetDocumentWithOperations(
 }
 
 query GetDocumentOutgoingRelationships(
-  $sourceIdentifier: String!
+  $sourceIdOrSlug: String!
   $relationshipType: String!
   $view: ViewFilterInput
   $paging: PagingInput
 ) {
   documentOutgoingRelationships(
-    sourceIdentifier: $sourceIdentifier
+    sourceIdOrSlug: $sourceIdOrSlug
     relationshipType: $relationshipType
     view: $view
     paging: $paging
@@ -121,13 +121,13 @@ query GetDocumentOutgoingRelationships(
 }
 
 query GetDocumentIncomingRelationships(
-  $targetIdentifier: String!
+  $targetIdOrSlug: String!
   $relationshipType: String!
   $view: ViewFilterInput
   $paging: PagingInput
 ) {
   documentIncomingRelationships(
-    targetIdentifier: $targetIdentifier
+    targetIdOrSlug: $targetIdOrSlug
     relationshipType: $relationshipType
     view: $view
     paging: $paging
@@ -142,13 +142,13 @@ query GetDocumentIncomingRelationships(
 }
 
 query GetDocumentOutgoingRelationshipEdges(
-  $sourceIdentifier: String!
+  $sourceIdOrSlug: String!
   $relationshipType: String
   $view: ViewFilterInput
   $paging: PagingInput
 ) {
   documentOutgoingRelationshipEdges(
-    sourceIdentifier: $sourceIdentifier
+    sourceIdOrSlug: $sourceIdOrSlug
     relationshipType: $relationshipType
     view: $view
     paging: $paging
@@ -163,13 +163,13 @@ query GetDocumentOutgoingRelationshipEdges(
 }
 
 query GetDocumentIncomingRelationshipEdges(
-  $targetIdentifier: String!
+  $targetIdOrSlug: String!
   $relationshipType: String
   $view: ViewFilterInput
   $paging: PagingInput
 ) {
   documentIncomingRelationshipEdges(
-    targetIdentifier: $targetIdentifier
+    targetIdOrSlug: $targetIdOrSlug
     relationshipType: $relationshipType
     view: $view
     paging: $paging
@@ -354,12 +354,12 @@ query GetDriveDescendants($driveId: ID!, $root: ID!) {
 }
 
 query EvaluateActions(
-  $documentIdentifier: String!
+  $documentIdOrSlug: String!
   $branch: String
   $candidates: [ActionCandidateInput!]!
 ) {
   evaluateActions(
-    documentIdentifier: $documentIdentifier
+    documentIdOrSlug: $documentIdOrSlug
     branch: $branch
     candidates: $candidates
   ) {
@@ -375,31 +375,28 @@ query EvaluateActions(
 }
 
 # Mutation operations
-mutation CreateDocument($document: JSONObject!, $parentIdentifier: String) {
-  createDocument(document: $document, parentIdentifier: $parentIdentifier) {
+mutation CreateDocument($document: JSONObject!, $parentIdOrSlug: String) {
+  createDocument(document: $document, parentIdOrSlug: $parentIdOrSlug) {
     ...PHDocumentFields
   }
 }
 
-mutation CreateEmptyDocument(
-  $documentType: String!
-  $parentIdentifier: String
-) {
+mutation CreateEmptyDocument($documentType: String!, $parentIdOrSlug: String) {
   createEmptyDocument(
     documentType: $documentType
-    parentIdentifier: $parentIdentifier
+    parentIdOrSlug: $parentIdOrSlug
   ) {
     ...PHDocumentFields
   }
 }
 
 mutation MutateDocument(
-  $documentIdentifier: String!
+  $documentIdOrSlug: String!
   $actions: [ActionInput!]!
   $branch: String
 ) {
   mutateDocument: execute(
-    documentIdentifier: $documentIdentifier
+    documentIdOrSlug: $documentIdOrSlug
     actions: $actions
     branch: $branch
   ) {
@@ -408,12 +405,12 @@ mutation MutateDocument(
 }
 
 mutation MutateDocumentAsync(
-  $documentIdentifier: String!
+  $documentIdOrSlug: String!
   $actions: [ActionInput!]!
   $branch: String
 ) {
   mutateDocumentAsync: executeAsync(
-    documentIdentifier: $documentIdentifier
+    documentIdOrSlug: $documentIdOrSlug
     actions: $actions
     branch: $branch
   ) {
@@ -433,12 +430,12 @@ mutation ExecuteBatch($jobs: [ExecutionJobInput!]!) {
 }
 
 mutation RenameDocument(
-  $documentIdentifier: String!
+  $documentIdOrSlug: String!
   $name: String!
   $branch: String
 ) {
   renameDocument(
-    documentIdentifier: $documentIdentifier
+    documentIdOrSlug: $documentIdOrSlug
     name: $name
     branch: $branch
   ) {
@@ -447,12 +444,12 @@ mutation RenameDocument(
 }
 
 mutation SetPreferredEditor(
-  $documentIdentifier: String!
+  $documentIdOrSlug: String!
   $preferredEditor: String
   $branch: String
 ) {
   setPreferredEditor(
-    documentIdentifier: $documentIdentifier
+    documentIdOrSlug: $documentIdOrSlug
     preferredEditor: $preferredEditor
     branch: $branch
   ) {
@@ -461,15 +458,15 @@ mutation SetPreferredEditor(
 }
 
 mutation AddRelationship(
-  $sourceIdentifier: String!
-  $targetIdentifier: String!
+  $sourceIdOrSlug: String!
+  $targetIdOrSlug: String!
   $relationshipType: String!
   $metadata: JSONObject
   $branch: String
 ) {
   addRelationship(
-    sourceIdentifier: $sourceIdentifier
-    targetIdentifier: $targetIdentifier
+    sourceIdOrSlug: $sourceIdOrSlug
+    targetIdOrSlug: $targetIdOrSlug
     relationshipType: $relationshipType
     metadata: $metadata
     branch: $branch
@@ -479,15 +476,15 @@ mutation AddRelationship(
 }
 
 mutation UpdateRelationship(
-  $sourceIdentifier: String!
-  $targetIdentifier: String!
+  $sourceIdOrSlug: String!
+  $targetIdOrSlug: String!
   $relationshipType: String!
   $metadata: JSONObject
   $branch: String
 ) {
   updateRelationship(
-    sourceIdentifier: $sourceIdentifier
-    targetIdentifier: $targetIdentifier
+    sourceIdOrSlug: $sourceIdOrSlug
+    targetIdOrSlug: $targetIdOrSlug
     relationshipType: $relationshipType
     metadata: $metadata
     branch: $branch
@@ -497,14 +494,14 @@ mutation UpdateRelationship(
 }
 
 mutation RemoveRelationship(
-  $sourceIdentifier: String!
-  $targetIdentifier: String!
+  $sourceIdOrSlug: String!
+  $targetIdOrSlug: String!
   $relationshipType: String!
   $branch: String
 ) {
   removeRelationship(
-    sourceIdentifier: $sourceIdentifier
-    targetIdentifier: $targetIdentifier
+    sourceIdOrSlug: $sourceIdOrSlug
+    targetIdOrSlug: $targetIdOrSlug
     relationshipType: $relationshipType
     branch: $branch
   ) {
@@ -513,16 +510,16 @@ mutation RemoveRelationship(
 }
 
 mutation MoveRelationship(
-  $sourceParentIdentifier: String!
-  $targetParentIdentifier: String!
-  $targetIdentifier: String!
+  $sourceParentIdOrSlug: String!
+  $targetParentIdOrSlug: String!
+  $targetIdOrSlug: String!
   $relationshipType: String!
   $branch: String
 ) {
   moveRelationship(
-    sourceParentIdentifier: $sourceParentIdentifier
-    targetParentIdentifier: $targetParentIdentifier
-    targetIdentifier: $targetIdentifier
+    sourceParentIdOrSlug: $sourceParentIdOrSlug
+    targetParentIdOrSlug: $targetParentIdOrSlug
+    targetIdOrSlug: $targetIdOrSlug
     relationshipType: $relationshipType
     branch: $branch
   ) {
@@ -535,15 +532,12 @@ mutation MoveRelationship(
   }
 }
 
-mutation DeleteDocument($identifier: String!, $propagate: PropagationMode) {
-  deleteDocument(identifier: $identifier, propagate: $propagate)
+mutation DeleteDocument($idOrSlug: String!, $propagate: PropagationMode) {
+  deleteDocument(idOrSlug: $idOrSlug, propagate: $propagate)
 }
 
-mutation DeleteDocuments(
-  $identifiers: [String!]!
-  $propagate: PropagationMode
-) {
-  deleteDocuments(identifiers: $identifiers, propagate: $propagate)
+mutation DeleteDocuments($idsOrSlugs: [String!]!, $propagate: PropagationMode) {
+  deleteDocuments(idsOrSlugs: $idsOrSlugs, propagate: $propagate)
 }
 
 # Subscription operations

@@ -16,7 +16,7 @@ export async function reactorGraphqlCreateDocument<
 
   const result = await client.CreateDocument({
     document,
-    parentIdentifier,
+    parentIdOrSlug: parentIdentifier,
   });
 
   return result;
@@ -32,7 +32,7 @@ export async function reactorGraphqlDeleteDocument(identifier: string) {
   }
 
   const result = await client.DeleteDocument({
-    identifier,
+    idOrSlug: identifier,
   });
 
   return result;
@@ -48,7 +48,7 @@ export async function reactorGraphqlDeleteDocuments(identifiers: string[]) {
   }
 
   const result = await client.DeleteDocuments({
-    identifiers,
+    idsOrSlugs: identifiers,
   });
 
   return result;
@@ -67,7 +67,7 @@ export async function reactorGraphqlMutateDocument(
   }
 
   const result = await client.MutateDocument({
-    documentIdentifier,
+    documentIdOrSlug: documentIdentifier,
     actions,
   });
 

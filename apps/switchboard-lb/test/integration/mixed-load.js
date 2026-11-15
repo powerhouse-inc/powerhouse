@@ -7,7 +7,7 @@
 // drive, so the wrong-shard middleware never fires.
 //
 // Steady state: 60% mutateDocument (SET_DRIVE_NAME — schema-valid, no state
-// growth), 40% document(identifier:) reads. Both pinned via Drive-Id.
+// growth), 40% document(idOrSlug:) reads. Both pinned via Drive-Id.
 //
 // Run via `./test/integration/mixed-load.sh` — that wrapper brings up the
 // real switchboard stack and the observability profile, then `docker compose
@@ -40,8 +40,8 @@ export const options = {
 };
 
 const CREATE_DOCUMENT_MUTATION = `
-  mutation CreateDocument($document: JSONObject!, $parentIdentifier: String) {
-    createDocument(document: $document, parentIdentifier: $parentIdentifier) {
+  mutation CreateDocument($document: JSONObject!, $parentIdOrSlug: String) {
+    createDocument(document: $document, parentIdOrSlug: $parentIdOrSlug) {
       id
       documentType
     }
@@ -49,9 +49,9 @@ const CREATE_DOCUMENT_MUTATION = `
 `;
 
 const MUTATE_DOCUMENT_MUTATION = `
-  mutation MutateDocument($documentIdentifier: String!, $actions: [ActionInput!]!) {
+  mutation MutateDocument($documentIdOrSlug: String!, $actions: [ActionInput!]!) {
     mutateDocument: execute(
-      documentIdentifier: $documentIdentifier
+      documentIdOrSlug: $documentIdOrSlug
       actions: $actions
     ) {
       id
@@ -61,8 +61,8 @@ const MUTATE_DOCUMENT_MUTATION = `
 `;
 
 const READ_DOCUMENT_QUERY = `
-  query GetDocument($identifier: String!) {
-    document(identifier: $identifier) {
+  query GetDocument($idOrSlug: String!) {
+    document(idOrSlug: $idOrSlug) {
       document { id name documentType }
       childIds
     }
@@ -154,7 +154,7 @@ export function setup() {
       id,
       {
         query: CREATE_DOCUMENT_MUTATION,
-        variables: { document: buildDrive(id), parentIdentifier: null },
+        variables: { document: buildDrive(id), parentIdOrSlug: null },
       },
       "create-drive",
     );
@@ -196,7 +196,7 @@ export default function (data) {
       {
         query: MUTATE_DOCUMENT_MUTATION,
         variables: {
-          documentIdentifier: driveId,
+          documentIdOrSlug: driveId,
           actions: [
             {
               id: uuid(),
@@ -215,7 +215,7 @@ export default function (data) {
       driveId,
       {
         query: READ_DOCUMENT_QUERY,
-        variables: { identifier: driveId },
+        variables: { idOrSlug: driveId },
       },
       "read-drive",
     );

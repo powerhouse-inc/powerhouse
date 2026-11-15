@@ -233,7 +233,7 @@ function getLocalStateSelection(
  * Builds a query scoped to a document type's own subgraph root field,
  * selecting the document and its full typed state. The shape mirrors what
  * the switchboard generates per model (`generateNewApiSchema` in
- * `model-schema-templates.ts`): `<Name> { document(identifier:) { document { ...
+ * `model-schema-templates.ts`): `<Name> { document(idOrSlug:) { document { ...
  * state { auth document global local } } } childIds }`.
  */
 function buildModelScopedQuery(model: DocumentModelModule): string {
@@ -251,9 +251,9 @@ function buildModelScopedQuery(model: DocumentModelModule): string {
     : null;
 
   return [
-    "query GetDocument($identifier: String!) {",
+    "query GetDocument($idOrSlug: String!) {",
     `  ${documentName} {`,
-    "    document(identifier: $identifier) {",
+    "    document(idOrSlug: $idOrSlug) {",
     "      document {",
     "        id",
     "        name",
@@ -296,7 +296,7 @@ export function buildDocumentSubgraphQuery(
   } else {
     query = getDocumentGraphqlQuery();
   }
-  const variables = { identifier };
+  const variables = { idOrSlug: identifier };
   const headers = authToken
     ? {
         Authorization: `Bearer ${authToken}`,

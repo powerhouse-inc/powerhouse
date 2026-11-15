@@ -42,7 +42,7 @@ function mockReactor() {
     } else if (body.query.includes("createEmptyDocument")) {
       data = { createEmptyDocument: { id: "doc-new" } };
     } else if (body.query.includes("mutateDocument")) {
-      data = { mutateDocument: { id: body.variables.documentIdentifier } };
+      data = { mutateDocument: { id: body.variables.documentIdOrSlug } };
     }
     return Promise.resolve(
       new Response(JSON.stringify({ data }), { status: 200 }),

@@ -34,7 +34,7 @@ describe("ReactorSDK", () => {
         { Authorization: "Bearer token123" },
       );
 
-      const variables = { identifier: "doc-123", view: { branch: "main" } };
+      const variables = { idOrSlug: "doc-123", view: { branch: "main" } };
       const result = await requester(GetDocumentDocument, variables, {});
 
       // Verify fetch was called correctly
@@ -154,7 +154,7 @@ describe("ReactorSDK", () => {
 
       const result = await requester(
         GetDocumentDocument,
-        { identifier: "doc-123" },
+        { idOrSlug: "doc-123" },
         {},
       );
 
@@ -186,7 +186,7 @@ describe("ReactorSDK", () => {
       );
 
       await expect(
-        requester(GetDocumentDocument, { identifier: "doc-123" }, {}),
+        requester(GetDocumentDocument, { idOrSlug: "doc-123" }, {}),
       ).rejects.toThrow(); // Should throw Zod validation error
     });
 
@@ -210,7 +210,7 @@ describe("ReactorSDK", () => {
 
       const result = await requester(
         GetDocumentDocument,
-        { identifier: "nonexistent" },
+        { idOrSlug: "nonexistent" },
         {},
       );
 
@@ -331,7 +331,7 @@ describe("ReactorSDK", () => {
 
       const result = await requester(
         GetDocumentWithOperationsDocument,
-        { identifier: "doc-123" },
+        { idOrSlug: "doc-123" },
         {},
       );
 
@@ -379,7 +379,7 @@ describe("ReactorSDK", () => {
       await expect(
         requester(
           GetDocumentWithOperationsDocument,
-          { identifier: "doc-123" },
+          { idOrSlug: "doc-123" },
           {},
         ),
       ).rejects.toThrow();
@@ -413,7 +413,7 @@ describe("ReactorSDK", () => {
       const result = await requester(
         EvaluateActionsDocument,
         {
-          documentIdentifier: "doc-123",
+          documentIdOrSlug: "doc-123",
           candidates: [{ scope: "global", type: "SET_NAME" }],
         },
         {},
@@ -452,7 +452,7 @@ describe("ReactorSDK", () => {
         requester(
           EvaluateActionsDocument,
           {
-            documentIdentifier: "doc-123",
+            documentIdOrSlug: "doc-123",
             candidates: [{ scope: "global", type: "SET_NAME" }],
           },
           {},
@@ -538,7 +538,7 @@ describe("ReactorSDK", () => {
 
       // Test actual call
       const result = await sdk.GetDocument({
-        identifier: "doc-123",
+        idOrSlug: "doc-123",
         view: { branch: "main" },
       });
 
@@ -569,7 +569,7 @@ describe("ReactorSDK", () => {
         mockFetch,
       );
 
-      await sdk.GetDocument({ identifier: "test" });
+      await sdk.GetDocument({ idOrSlug: "test" });
 
       expect(mockFetch).toHaveBeenCalledWith("https://api.test.com/graphql", {
         method: "POST",

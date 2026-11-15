@@ -388,7 +388,7 @@ Unresolved. Decide before the relevant milestone and record the decision here.
    **Decided (2026-05-05):** the LB does not solve this; the client + the receiving switchboard do. Clients pick a drive (whichever owns most of the work) and stamp it on the `Drive-Id` header. The receiving switchboard validates per-document ownership at resolver time; documents in foreign drives surface a structured wrong-shard error from the drive-validation middleware (or are handled instance-to-instance via reactor RPC for the small set of mutations that legitimately span drives).
 
    This applies to the historically-thorny operations:
-   - `deleteDocuments(identifiers: [ID!]!)` — client picks one drive's worth per call; cross-drive deletes are split client-side or fail at the switchboard.
+   - `deleteDocuments(idsOrSlugs: [String!]!)` — client picks one drive's worth per call; cross-drive deletes are split client-side or fail at the switchboard.
    - `moveRelationship`, `addRelationship`, `removeRelationship` — pinned on whichever drive the client claims; both endpoints validated downstream.
    - `pushSyncEnvelopes` — every batch is produced by a single `GqlRequestChannel` stamping one `channelId` on every envelope (`gql-req-channel.ts:785-843`), so the client knows which drive owns the channel and sets the header accordingly.
 

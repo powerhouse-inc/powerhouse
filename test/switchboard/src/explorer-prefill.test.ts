@@ -27,9 +27,9 @@ const DOC_ID = "0d9f1c8a-5e6b-4c2d-8f3a-1b2c3d4e5f60";
 
 /** Mirrors the payload shape of `buildDocumentSubgraphQuery`. */
 function buildExplorerUrl(): string {
-  const document = `query GetDocument($identifier: String!) {
+  const document = `query GetDocument($idOrSlug: String!) {
   TodoList {
-    document(identifier: $identifier) {
+    document(idOrSlug: $idOrSlug) {
       document {
         id
         name
@@ -41,7 +41,7 @@ function buildExplorerUrl(): string {
 }`;
   const payload = {
     document,
-    variables: JSON.stringify({ identifier: DOC_ID }, null, 2),
+    variables: JSON.stringify({ idOrSlug: DOC_ID }, null, 2),
   };
   return `${BASE_URL}/explorer?explorerURLState=${lzString.compressToEncodedURIComponent(
     JSON.stringify(payload),
@@ -55,11 +55,11 @@ describe("GraphiQL explorer prefill", () => {
     const html = await res.text();
 
     // The decoded query is embedded as the page's defaultQuery.
-    expect(html).toContain("query GetDocument($identifier: String!)");
+    expect(html).toContain("query GetDocument($idOrSlug: String!)");
     expect(html).toContain("TodoList");
     // The variables payload is embedded alongside it.
     expect(html).toContain(DOC_ID);
-    expect(html).toContain('"identifier"');
+    expect(html).toContain('"idOrSlug"');
   });
 
   it("supports an embedded Authorization header in the payload", async () => {

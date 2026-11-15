@@ -1,7 +1,7 @@
 # `@powerhousedao/lb-loadtest`
 
 Sustained-load consistency harness for `apps/switchboard-lb`. Drives a
-configurable mix of `createDocument` / `mutateDocument` / `document(identifier:)`
+configurable mix of `createDocument` / `mutateDocument` / `document(idOrSlug:)`
 calls through the LB at a target rate and concurrency for a fixed duration,
 asserts per-doc backend pinning + write/read consistency on every response,
 aggregates failures by category, and reports `PASS` / `FAIL` based on
@@ -45,7 +45,7 @@ pnpm --filter @powerhousedao/lb-loadtest verify [-- <flags>]
 ```
 
 The harness waits for `/health` 200, runs a one-shot schema preflight
-(asserts `createDocument` / `mutateDocument` / `document(identifier:)` are
+(asserts `createDocument` / `mutateDocument` / `document(idOrSlug:)` are
 present — fails fast if the image is stale), then starts `--concurrency`
 workers that emit operations sampled from the workload mix until the
 duration deadline.

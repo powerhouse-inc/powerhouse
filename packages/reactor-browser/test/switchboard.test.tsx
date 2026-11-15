@@ -99,7 +99,7 @@ describe("Switchboard hooks", () => {
     const payload = decodeExplorerState(url);
     expect(payload.document).toBe(getDocumentGraphqlQuery().trim());
     expect(JSON.parse(payload.variables)).toEqual({
-      identifier: "test-document",
+      idOrSlug: "test-document",
     });
     expect(payload.headers).toBeUndefined();
   });
@@ -133,12 +133,12 @@ describe("Switchboard hooks", () => {
     const payload = decodeExplorerState(url);
     expect(payload.document.length).toBeGreaterThan(0);
     expect(payload.document).toContain("PowerhouseInvoice {");
-    expect(payload.document).toContain("document(identifier: $identifier)");
+    expect(payload.document).toContain("document(idOrSlug: $idOrSlug)");
     expect(payload.document).toContain("state {");
     expect(payload.document).toContain("global {");
     expect(payload.document).toContain("name total");
     expect(payload.document).toContain("childIds");
-    expect(JSON.parse(payload.variables)).toEqual({ identifier: "doc-1" });
+    expect(JSON.parse(payload.variables)).toEqual({ idOrSlug: "doc-1" });
   });
 
   it("falls back to the generic document query without a model (acceptance b)", () => {
@@ -153,9 +153,9 @@ describe("Switchboard hooks", () => {
     const payload = decodeExplorerState(url);
     expect(payload.document.length).toBeGreaterThan(0);
     expect(payload.document).toBe(documentWithOperationsQuery.trim());
-    expect(payload.document).toContain("document(identifier: $identifier");
+    expect(payload.document).toContain("document(idOrSlug: $idOrSlug");
     expect(payload.document).toContain("state");
-    expect(JSON.parse(payload.variables)).toEqual({ identifier: "doc-1" });
+    expect(JSON.parse(payload.variables)).toEqual({ idOrSlug: "doc-1" });
   });
 });
 

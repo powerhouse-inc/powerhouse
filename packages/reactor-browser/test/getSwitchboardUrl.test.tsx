@@ -48,7 +48,7 @@ describe("buildDocumentSubgraphQuery", () => {
     // Verify variables contain correct documentId and driveId
     const variables = JSON.parse(decompressed.variables) as QueryVariables;
     expect(variables).toEqual({
-      identifier: mockDocumentId,
+      idOrSlug: mockDocumentId,
     });
   });
 

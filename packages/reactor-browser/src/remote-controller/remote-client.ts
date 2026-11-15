@@ -32,7 +32,7 @@ export class RemoteClient implements IRemoteClient {
     branch?: string,
   ): Promise<GetDocumentResult | null> {
     const result = await this.client.GetDocument({
-      identifier,
+      idOrSlug: identifier,
       view: branch ? { branch } : undefined,
     });
     return result.document ?? null;
@@ -68,7 +68,7 @@ export class RemoteClient implements IRemoteClient {
 
     // Standard path: GetDocumentWithOperations + paginate if needed
     const result = await this.client.GetDocumentWithOperations({
-      identifier,
+      idOrSlug: identifier,
       view: branch ? { branch } : undefined,
       operationsPaging: {
         limit: this.pageSize,
@@ -131,7 +131,7 @@ export class RemoteClient implements IRemoteClient {
   ): Promise<GetDocumentWithOperationsResult | null> {
     const view = branch ? { branch } : undefined;
     const filters = scopes.map((scope) => ({
-      documentId: identifier,
+      documentIdOrSlug: identifier,
       branch: branch ?? null,
       sinceRevision: sinceRevision?.[scope] ?? 0,
       scopes: [scope],
@@ -218,7 +218,7 @@ export class RemoteClient implements IRemoteClient {
       let pending = scopes.map((scope) => ({
         scope,
         filter: {
-          documentId,
+          documentIdOrSlug: documentId,
           branch: branch ?? null,
           sinceRevision: sinceRevision?.[scope] ?? 0,
           scopes: [scope],
@@ -294,7 +294,7 @@ export class RemoteClient implements IRemoteClient {
     while (hasNextPage) {
       const result = await this.client.GetDocumentOperations({
         filter: {
-          documentId,
+          documentIdOrSlug: documentId,
           branch: branch ?? null,
           sinceRevision: sinceRevision ?? 0,
           scopes: scope ? [scope] : null,
@@ -332,7 +332,7 @@ export class RemoteClient implements IRemoteClient {
     branch?: string,
   ): Promise<RemoteDocumentData> {
     const result = await this.client.MutateDocument({
-      documentIdentifier,
+      documentIdOrSlug: documentIdentifier,
       actions,
       branch,
     });
@@ -346,7 +346,7 @@ export class RemoteClient implements IRemoteClient {
   ): Promise<RemoteDocumentData> {
     const result = await this.client.CreateDocument({
       document,
-      parentIdentifier: parentIdentifier ?? null,
+      parentIdOrSlug: parentIdentifier ?? null,
     });
     return result.createDocument;
   }
@@ -358,7 +358,7 @@ export class RemoteClient implements IRemoteClient {
   ): Promise<RemoteDocumentData> {
     const result = await this.client.CreateEmptyDocument({
       documentType,
-      parentIdentifier: parentIdentifier ?? null,
+      parentIdOrSlug: parentIdentifier ?? null,
     });
     return result.createEmptyDocument;
   }
@@ -369,7 +369,7 @@ export class RemoteClient implements IRemoteClient {
     propagate?: PropagationMode,
   ): Promise<boolean> {
     const result = await this.client.DeleteDocument({
-      identifier,
+      idOrSlug: identifier,
       propagate,
     });
     return result.deleteDocument;

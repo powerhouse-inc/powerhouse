@@ -141,7 +141,7 @@ export function switchboard(
         });
       case "GetDocument":
       case "GetDocumentAtConsistency": {
-        const id = variables.identifier as string;
+        const id = variables.idOrSlug as string;
         if (!(id in documents)) {
           return data({ document: null });
         }
@@ -158,7 +158,7 @@ export function switchboard(
         });
       }
       case "MutateDocumentWithOperations": {
-        const id = variables.documentIdentifier as string;
+        const id = variables.documentIdOrSlug as string;
         return data({
           mutateDocument: {
             ...wireDocument(id, documents[id]),
@@ -168,9 +168,7 @@ export function switchboard(
       }
       case "MutateDocumentAsync":
         return data({
-          mutateDocumentAsync: settledJob(
-            variables.documentIdentifier as string,
-          ),
+          mutateDocumentAsync: settledJob(variables.documentIdOrSlug as string),
         });
       case "ExecuteBatch":
         return data({

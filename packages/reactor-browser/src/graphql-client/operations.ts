@@ -68,14 +68,14 @@ export const ReactorOperationFieldsFragmentDoc = gql`
  */
 export const MutateDocumentWithOperationsDocument = gql`
   mutation MutateDocumentWithOperations(
-    $documentIdentifier: String!
+    $documentIdOrSlug: String!
     $actions: [ActionInput!]!
     $sinceRevision: Int
     $scopes: [String!]
     $branch: String
   ) {
     mutateDocument: execute(
-      documentIdentifier: $documentIdentifier
+      documentIdOrSlug: $documentIdOrSlug
       actions: $actions
       branch: $branch
     ) {
@@ -98,7 +98,7 @@ export const MutateDocumentWithOperationsDocument = gql`
 `;
 
 export type MutateDocumentWithOperationsVariables = {
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug: Scalars["String"]["input"];
   actions: ReadonlyArray<ActionInput>;
   sinceRevision?: Scalars["Int"]["input"];
   scopes?: ReadonlyArray<Scalars["String"]["input"]>;
@@ -121,11 +121,11 @@ export type MutateDocumentWithOperationsResult = {
  */
 export const GetDocumentAtConsistencyDocument = gql`
   query GetDocumentAtConsistency(
-    $identifier: String!
+    $idOrSlug: String!
     $view: ViewFilterInput
     $consistency: ConsistencyTokenInput
   ) {
-    document(identifier: $identifier, view: $view, consistency: $consistency) {
+    document(idOrSlug: $idOrSlug, view: $view, consistency: $consistency) {
       document {
         ...PHDocumentFields
       }
@@ -136,7 +136,7 @@ export const GetDocumentAtConsistencyDocument = gql`
 `;
 
 export type GetDocumentAtConsistencyVariables = {
-  identifier: Scalars["String"]["input"];
+  idOrSlug: Scalars["String"]["input"];
   view?: ViewFilterInput;
   consistency: {
     version: number;

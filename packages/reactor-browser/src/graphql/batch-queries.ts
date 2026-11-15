@@ -58,7 +58,7 @@ const operationsSelectionSet = extractSelectionSet(
 
 const documentParts = extractQueryParts(
   GetDocumentDocument,
-  "document(identifier: $identifier) { document { id name documentType state revisionsList { scope revision } createdAtUtcIso lastModifiedAtUtcIso } childIds }",
+  "document(idOrSlug: $idOrSlug) { document { id name documentType state revisionsList { scope revision } createdAtUtcIso lastModifiedAtUtcIso } childIds }",
 );
 
 /**
@@ -107,7 +107,7 @@ export function buildBatchDocumentWithOperationsQuery(
   filters: OperationsFilterInput[],
   pagings: (PagingInput | undefined)[],
 ) {
-  const docVarDefs = "$identifier: String!, $view: ViewFilterInput";
+  const docVarDefs = "$idOrSlug: String!, $view: ViewFilterInput";
   const opsVarDefs = filters
     .flatMap((_, i) => [
       `$filter_${i}: OperationsFilterInput!`,
@@ -129,7 +129,7 @@ export function buildBatchDocumentWithOperationsQuery(
   ${documentParts.fragments}`;
 
   const variables: Record<string, unknown> = {
-    identifier,
+    idOrSlug: identifier,
     view: view ?? null,
   };
   for (let i = 0; i < filters.length; i++) {

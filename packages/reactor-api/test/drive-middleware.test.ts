@@ -138,18 +138,25 @@ describe("createDriveFetchMiddleware", () => {
   });
 
   const CREATE_DOCUMENT =
-    "mutation CreateDocument($d: JSONObject!, $p: String) { createDocument(document: $d, parentIdentifier: $p) { id } }";
+    "mutation CreateDocument($d: JSONObject!, $p: String) { createDocument(document: $d, parentIdOrSlug: $p) { id } }";
+
+  // The deprecated argument name, which the middleware keeps reading.
+  const CREATE_DOCUMENT_DEPRECATED = CREATE_DOCUMENT.replace(
+    "parentIdOrSlug",
+    "parentIdentifier",
+  );
 
   const createRequest = (
     driveId: string,
     header: { id: string; documentType: string },
     parent?: string,
+    query = CREATE_DOCUMENT,
   ) =>
     makeRequest({
       driveId,
       body: {
         operationName: "CreateDocument",
-        query: CREATE_DOCUMENT,
+        query,
         variables: { d: { header }, p: parent },
       },
     });
@@ -193,6 +200,22 @@ describe("createDriveFetchMiddleware", () => {
     const handler = createDriveFetchMiddleware(makeCache([]))(next);
 
     const res = await handler(createRequest("new-drive", header, parent));
+
+    expect(res.status).toBe(421);
+    expect(nextCalls).toHaveLength(0);
+  });
+
+  it("returns 421 for a child create that names its parent by the deprecated argument", async () => {
+    const handler = createDriveFetchMiddleware(makeCache([]))(next);
+
+    const res = await handler(
+      createRequest(
+        "new-drive",
+        { id: "child", documentType: "powerhouse/document-model" },
+        "new-drive",
+        CREATE_DOCUMENT_DEPRECATED,
+      ),
+    );
 
     expect(res.status).toBe(421);
     expect(nextCalls).toHaveLength(0);

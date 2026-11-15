@@ -70,9 +70,9 @@ const editorDocument = {
 };
 
 /** Answers a document read with a document whose id is the identifier asked. */
-function documentNamed({ identifier }: { identifier: string }) {
+function documentNamed({ idOrSlug }: { idOrSlug: string }) {
   return Promise.resolve({
-    document: { document: { ...parentDriveDocument, id: identifier } },
+    document: { document: { ...parentDriveDocument, id: idOrSlug } },
   });
 }
 
@@ -383,7 +383,7 @@ describe("GraphQLReactorClient.executeBatch", () => {
     });
 
     expect(sdk.GetDocument.mock.calls[0][0]).toMatchObject({
-      identifier: "my-drive",
+      idOrSlug: "my-drive",
     });
     expect(signAction.mock.calls[0][1]).toEqual({
       documentId: "drive-1",
@@ -530,7 +530,7 @@ describe("GraphQLReactorClient.executeBatch", () => {
 
     expect(sdk.GetDocument).toHaveBeenCalledTimes(1);
     expect(sdk.GetDocument.mock.calls[0][0]).toMatchObject({
-      identifier: "drive-1",
+      idOrSlug: "drive-1",
       view: { branch: "feature" },
     });
     expect(events[0].documents[0].header.branch).toBe("feature");
@@ -838,7 +838,7 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
     const options = sdk.RunDocument.mock.calls[0][0] as RunDocumentOptions;
     expect(options.operationName).toBe("MutateDocumentWithOperations");
     const variables = options.variables as {
-      documentIdentifier: string;
+      documentIdOrSlug: string;
       branch: string;
       actions: Array<{ type: string; input: unknown }>;
     };

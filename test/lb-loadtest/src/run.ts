@@ -113,9 +113,9 @@ const CREATE_DOCUMENT_MUTATION = `
 `;
 
 const MUTATE_DOCUMENT_MUTATION = `
-  mutation MutateDocument($documentIdentifier: String!, $actions: [ActionInput!]!) {
+  mutation MutateDocument($documentIdOrSlug: String!, $actions: [ActionInput!]!) {
     mutateDocument: execute(
-      documentIdentifier: $documentIdentifier
+      documentIdOrSlug: $documentIdOrSlug
       actions: $actions
     ) {
       id
@@ -126,8 +126,8 @@ const MUTATE_DOCUMENT_MUTATION = `
 `;
 
 const READ_DOCUMENT_QUERY = `
-  query ReadDocument($identifier: String!) {
-    document(identifier: $identifier) {
+  query ReadDocument($idOrSlug: String!) {
+    document(idOrSlug: $idOrSlug) {
       document {
         id
         state
@@ -521,7 +521,7 @@ async function runMutate(
     actions.push(buildSetModelNameAction(`${namePrefix}-${m}`));
   }
   const resp = await lb.post(MUTATE_DOCUMENT_MUTATION, {
-    documentIdentifier: doc.K,
+    documentIdOrSlug: doc.K,
     actions,
   });
   if (resp.transportError) {
@@ -572,7 +572,7 @@ async function runRead(
   const doc = pool.pickRandom();
   if (!doc) return runCreate(lb, pool, agg);
 
-  const resp = await lb.post(READ_DOCUMENT_QUERY, { identifier: doc.K });
+  const resp = await lb.post(READ_DOCUMENT_QUERY, { idOrSlug: doc.K });
   if (resp.transportError) {
     return agg.recordFailure(
       "read",

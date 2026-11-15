@@ -123,7 +123,7 @@ describe("a document model's abstract state types", () => {
   it("resolves interface and union members by __typename or a field unique to one", async () => {
     const result = await query(`{
       Scrapbook {
-        document(identifier: "doc-1") {
+        document(idOrSlug: "doc-1") {
           document {
             state { global { entries { ${members} } pinned { ${members} } } }
           }

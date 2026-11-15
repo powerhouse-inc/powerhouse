@@ -21,10 +21,12 @@ import {
   type ReactorHttpServer,
 } from "./utils/reactor-http-server.js";
 
-// The operations as reactor-browser's GraphQLReactorClient names and sends them.
+// The operations as reactor-browser's GraphQLReactorClient names them. The
+// write goes through `mutateDocument`, whose untyped actions these fixtures
+// rely on; the field is deprecated as a whole, its argument has no new name.
 const CREATE_DOCUMENT = /* GraphQL */ `
-  mutation CreateDocument($document: JSONObject!, $parentIdentifier: String) {
-    createDocument(document: $document, parentIdentifier: $parentIdentifier) {
+  mutation CreateDocument($document: JSONObject!, $parentIdOrSlug: String) {
+    createDocument(document: $document, parentIdOrSlug: $parentIdOrSlug) {
       id
     }
   }
@@ -88,8 +90,8 @@ function renameDrive(name: string) {
 }
 
 const GET_DOCUMENT = /* GraphQL */ `
-  query GetDocument($identifier: String!) {
-    document(identifier: $identifier) {
+  query GetDocument($idOrSlug: String!) {
+    document(idOrSlug: $idOrSlug) {
       document {
         id
       }
@@ -256,7 +258,7 @@ describe("the drive middleware in front of the reactor subgraph", () => {
       server,
       "CreateDocument",
       CREATE_DOCUMENT,
-      { document: child, parentIdentifier: "dm-elsewhere" },
+      { document: child, parentIdOrSlug: "dm-elsewhere" },
       "dm-elsewhere",
     );
 
@@ -271,7 +273,7 @@ describe("the drive middleware in front of the reactor subgraph", () => {
       server,
       "GetDocument",
       GET_DOCUMENT,
-      { identifier: owned },
+      { idOrSlug: owned },
       owned,
     );
 
@@ -283,7 +285,7 @@ describe("the drive middleware in front of the reactor subgraph", () => {
       server,
       "GetDocument",
       GET_DOCUMENT,
-      { identifier: owned },
+      { idOrSlug: owned },
       "elsewhere",
     );
 
@@ -311,7 +313,7 @@ describe("the drive middleware in front of the reactor subgraph", () => {
       server,
       "GetDocument",
       GET_DOCUMENT,
-      { identifier: "dm-created" },
+      { idOrSlug: "dm-created" },
       "dm-created",
     );
 

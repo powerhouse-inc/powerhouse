@@ -50,7 +50,7 @@ async function reactorGraphqlFetchDrive(
     );
   }
 
-  const result = await client.GetDocument({ identifier });
+  const result = await client.GetDocument({ idOrSlug: identifier });
 
   if (!result.document?.document) {
     throw new Error("Could not fetch drive with id: " + identifier);

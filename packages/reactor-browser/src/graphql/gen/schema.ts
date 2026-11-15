@@ -1051,7 +1051,7 @@ export type GetDocumentModelsQuery = {
 };
 
 export type GetDocumentQueryVariables = Exact<{
-  identifier: Scalars["String"]["input"];
+  idOrSlug: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
 }>;
 
@@ -1080,7 +1080,7 @@ export type GetDocumentQuery = {
 };
 
 export type GetDocumentWithOperationsQueryVariables = Exact<{
-  identifier: Scalars["String"]["input"];
+  idOrSlug: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
   operationsFilter?: InputMaybe<DocumentOperationsFilterInput>;
   operationsPaging?: InputMaybe<PagingInput>;
@@ -1161,7 +1161,7 @@ export type GetDocumentWithOperationsQuery = {
 };
 
 export type GetDocumentOutgoingRelationshipsQueryVariables = Exact<{
-  sourceIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug: Scalars["String"]["input"];
   relationshipType: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
   paging?: InputMaybe<PagingInput>;
@@ -1191,7 +1191,7 @@ export type GetDocumentOutgoingRelationshipsQuery = {
 };
 
 export type GetDocumentIncomingRelationshipsQueryVariables = Exact<{
-  targetIdentifier: Scalars["String"]["input"];
+  targetIdOrSlug: Scalars["String"]["input"];
   relationshipType: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
   paging?: InputMaybe<PagingInput>;
@@ -1221,7 +1221,7 @@ export type GetDocumentIncomingRelationshipsQuery = {
 };
 
 export type GetDocumentOutgoingRelationshipEdgesQueryVariables = Exact<{
-  sourceIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug: Scalars["String"]["input"];
   relationshipType?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
   paging?: InputMaybe<PagingInput>;
@@ -1244,7 +1244,7 @@ export type GetDocumentOutgoingRelationshipEdgesQuery = {
 };
 
 export type GetDocumentIncomingRelationshipEdgesQueryVariables = Exact<{
-  targetIdentifier: Scalars["String"]["input"];
+  targetIdOrSlug: Scalars["String"]["input"];
   relationshipType?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
   paging?: InputMaybe<PagingInput>;
@@ -1542,7 +1542,7 @@ export type GetDriveDescendantsQuery = {
 };
 
 export type EvaluateActionsQueryVariables = Exact<{
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug: Scalars["String"]["input"];
   branch?: InputMaybe<Scalars["String"]["input"]>;
   candidates: ReadonlyArray<ActionCandidateInput>;
 }>;
@@ -1562,7 +1562,7 @@ export type EvaluateActionsQuery = {
 
 export type CreateDocumentMutationVariables = Exact<{
   document: Scalars["JSONObject"]["input"];
-  parentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type CreateDocumentMutation = {
@@ -1585,7 +1585,7 @@ export type CreateDocumentMutation = {
 
 export type CreateEmptyDocumentMutationVariables = Exact<{
   documentType: Scalars["String"]["input"];
-  parentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type CreateEmptyDocumentMutation = {
@@ -1607,7 +1607,7 @@ export type CreateEmptyDocumentMutation = {
 };
 
 export type MutateDocumentMutationVariables = Exact<{
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug: Scalars["String"]["input"];
   actions: ReadonlyArray<ActionInput>;
   branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
@@ -1631,7 +1631,7 @@ export type MutateDocumentMutation = {
 };
 
 export type MutateDocumentAsyncMutationVariables = Exact<{
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug: Scalars["String"]["input"];
   actions: ReadonlyArray<ActionInput>;
   branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
@@ -1700,7 +1700,7 @@ export type ExecuteBatchMutation = {
 };
 
 export type RenameDocumentMutationVariables = Exact<{
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug: Scalars["String"]["input"];
   name: Scalars["String"]["input"];
   branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
@@ -1724,7 +1724,7 @@ export type RenameDocumentMutation = {
 };
 
 export type SetPreferredEditorMutationVariables = Exact<{
-  documentIdentifier: Scalars["String"]["input"];
+  documentIdOrSlug: Scalars["String"]["input"];
   preferredEditor?: InputMaybe<Scalars["String"]["input"]>;
   branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
@@ -1748,8 +1748,8 @@ export type SetPreferredEditorMutation = {
 };
 
 export type AddRelationshipMutationVariables = Exact<{
-  sourceIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug: Scalars["String"]["input"];
+  targetIdOrSlug: Scalars["String"]["input"];
   relationshipType: Scalars["String"]["input"];
   metadata?: InputMaybe<Scalars["JSONObject"]["input"]>;
   branch?: InputMaybe<Scalars["String"]["input"]>;
@@ -1774,8 +1774,8 @@ export type AddRelationshipMutation = {
 };
 
 export type UpdateRelationshipMutationVariables = Exact<{
-  sourceIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug: Scalars["String"]["input"];
+  targetIdOrSlug: Scalars["String"]["input"];
   relationshipType: Scalars["String"]["input"];
   metadata?: InputMaybe<Scalars["JSONObject"]["input"]>;
   branch?: InputMaybe<Scalars["String"]["input"]>;
@@ -1800,8 +1800,8 @@ export type UpdateRelationshipMutation = {
 };
 
 export type RemoveRelationshipMutationVariables = Exact<{
-  sourceIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  sourceIdOrSlug: Scalars["String"]["input"];
+  targetIdOrSlug: Scalars["String"]["input"];
   relationshipType: Scalars["String"]["input"];
   branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
@@ -1825,9 +1825,9 @@ export type RemoveRelationshipMutation = {
 };
 
 export type MoveRelationshipMutationVariables = Exact<{
-  sourceParentIdentifier: Scalars["String"]["input"];
-  targetParentIdentifier: Scalars["String"]["input"];
-  targetIdentifier: Scalars["String"]["input"];
+  sourceParentIdOrSlug: Scalars["String"]["input"];
+  targetParentIdOrSlug: Scalars["String"]["input"];
+  targetIdOrSlug: Scalars["String"]["input"];
   relationshipType: Scalars["String"]["input"];
   branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
@@ -1868,14 +1868,14 @@ export type MoveRelationshipMutation = {
 };
 
 export type DeleteDocumentMutationVariables = Exact<{
-  identifier: Scalars["String"]["input"];
+  idOrSlug: Scalars["String"]["input"];
   propagate?: InputMaybe<PropagationMode>;
 }>;
 
 export type DeleteDocumentMutation = { readonly deleteDocument: boolean };
 
 export type DeleteDocumentsMutationVariables = Exact<{
-  identifiers: ReadonlyArray<Scalars["String"]["input"]>;
+  idsOrSlugs: ReadonlyArray<Scalars["String"]["input"]>;
   propagate?: InputMaybe<PropagationMode>;
 }>;
 
@@ -2119,8 +2119,8 @@ export const GetDocumentModelsDocument = gql`
   }
 `;
 export const GetDocumentDocument = gql`
-  query GetDocument($identifier: String!, $view: ViewFilterInput) {
-    document(identifier: $identifier, view: $view) {
+  query GetDocument($idOrSlug: String!, $view: ViewFilterInput) {
+    document(idOrSlug: $idOrSlug, view: $view) {
       document {
         ...PHDocumentFields
       }
@@ -2131,12 +2131,12 @@ export const GetDocumentDocument = gql`
 `;
 export const GetDocumentWithOperationsDocument = gql`
   query GetDocumentWithOperations(
-    $identifier: String!
+    $idOrSlug: String!
     $view: ViewFilterInput
     $operationsFilter: DocumentOperationsFilterInput
     $operationsPaging: PagingInput
   ) {
-    document(identifier: $identifier, view: $view) {
+    document(idOrSlug: $idOrSlug, view: $view) {
       document {
         ...PHDocumentFields
         operations(filter: $operationsFilter, paging: $operationsPaging) {
@@ -2182,13 +2182,13 @@ export const GetDocumentWithOperationsDocument = gql`
 `;
 export const GetDocumentOutgoingRelationshipsDocument = gql`
   query GetDocumentOutgoingRelationships(
-    $sourceIdentifier: String!
+    $sourceIdOrSlug: String!
     $relationshipType: String!
     $view: ViewFilterInput
     $paging: PagingInput
   ) {
     documentOutgoingRelationships(
-      sourceIdentifier: $sourceIdentifier
+      sourceIdOrSlug: $sourceIdOrSlug
       relationshipType: $relationshipType
       view: $view
       paging: $paging
@@ -2205,13 +2205,13 @@ export const GetDocumentOutgoingRelationshipsDocument = gql`
 `;
 export const GetDocumentIncomingRelationshipsDocument = gql`
   query GetDocumentIncomingRelationships(
-    $targetIdentifier: String!
+    $targetIdOrSlug: String!
     $relationshipType: String!
     $view: ViewFilterInput
     $paging: PagingInput
   ) {
     documentIncomingRelationships(
-      targetIdentifier: $targetIdentifier
+      targetIdOrSlug: $targetIdOrSlug
       relationshipType: $relationshipType
       view: $view
       paging: $paging
@@ -2228,13 +2228,13 @@ export const GetDocumentIncomingRelationshipsDocument = gql`
 `;
 export const GetDocumentOutgoingRelationshipEdgesDocument = gql`
   query GetDocumentOutgoingRelationshipEdges(
-    $sourceIdentifier: String!
+    $sourceIdOrSlug: String!
     $relationshipType: String
     $view: ViewFilterInput
     $paging: PagingInput
   ) {
     documentOutgoingRelationshipEdges(
-      sourceIdentifier: $sourceIdentifier
+      sourceIdOrSlug: $sourceIdOrSlug
       relationshipType: $relationshipType
       view: $view
       paging: $paging
@@ -2251,13 +2251,13 @@ export const GetDocumentOutgoingRelationshipEdgesDocument = gql`
 `;
 export const GetDocumentIncomingRelationshipEdgesDocument = gql`
   query GetDocumentIncomingRelationshipEdges(
-    $targetIdentifier: String!
+    $targetIdOrSlug: String!
     $relationshipType: String
     $view: ViewFilterInput
     $paging: PagingInput
   ) {
     documentIncomingRelationshipEdges(
-      targetIdentifier: $targetIdentifier
+      targetIdOrSlug: $targetIdOrSlug
       relationshipType: $relationshipType
       view: $view
       paging: $paging
@@ -2421,12 +2421,12 @@ export const GetDriveDescendantsDocument = gql`
 `;
 export const EvaluateActionsDocument = gql`
   query EvaluateActions(
-    $documentIdentifier: String!
+    $documentIdOrSlug: String!
     $branch: String
     $candidates: [ActionCandidateInput!]!
   ) {
     evaluateActions(
-      documentIdentifier: $documentIdentifier
+      documentIdOrSlug: $documentIdOrSlug
       branch: $branch
       candidates: $candidates
     ) {
@@ -2442,8 +2442,8 @@ export const EvaluateActionsDocument = gql`
   }
 `;
 export const CreateDocumentDocument = gql`
-  mutation CreateDocument($document: JSONObject!, $parentIdentifier: String) {
-    createDocument(document: $document, parentIdentifier: $parentIdentifier) {
+  mutation CreateDocument($document: JSONObject!, $parentIdOrSlug: String) {
+    createDocument(document: $document, parentIdOrSlug: $parentIdOrSlug) {
       ...PHDocumentFields
     }
   }
@@ -2452,11 +2452,11 @@ export const CreateDocumentDocument = gql`
 export const CreateEmptyDocumentDocument = gql`
   mutation CreateEmptyDocument(
     $documentType: String!
-    $parentIdentifier: String
+    $parentIdOrSlug: String
   ) {
     createEmptyDocument(
       documentType: $documentType
-      parentIdentifier: $parentIdentifier
+      parentIdOrSlug: $parentIdOrSlug
     ) {
       ...PHDocumentFields
     }
@@ -2465,12 +2465,12 @@ export const CreateEmptyDocumentDocument = gql`
 `;
 export const MutateDocumentDocument = gql`
   mutation MutateDocument(
-    $documentIdentifier: String!
+    $documentIdOrSlug: String!
     $actions: [ActionInput!]!
     $branch: String
   ) {
     mutateDocument: execute(
-      documentIdentifier: $documentIdentifier
+      documentIdOrSlug: $documentIdOrSlug
       actions: $actions
       branch: $branch
     ) {
@@ -2481,12 +2481,12 @@ export const MutateDocumentDocument = gql`
 `;
 export const MutateDocumentAsyncDocument = gql`
   mutation MutateDocumentAsync(
-    $documentIdentifier: String!
+    $documentIdOrSlug: String!
     $actions: [ActionInput!]!
     $branch: String
   ) {
     mutateDocumentAsync: executeAsync(
-      documentIdentifier: $documentIdentifier
+      documentIdOrSlug: $documentIdOrSlug
       actions: $actions
       branch: $branch
     ) {
@@ -2510,12 +2510,12 @@ export const ExecuteBatchDocument = gql`
 `;
 export const RenameDocumentDocument = gql`
   mutation RenameDocument(
-    $documentIdentifier: String!
+    $documentIdOrSlug: String!
     $name: String!
     $branch: String
   ) {
     renameDocument(
-      documentIdentifier: $documentIdentifier
+      documentIdOrSlug: $documentIdOrSlug
       name: $name
       branch: $branch
     ) {
@@ -2526,12 +2526,12 @@ export const RenameDocumentDocument = gql`
 `;
 export const SetPreferredEditorDocument = gql`
   mutation SetPreferredEditor(
-    $documentIdentifier: String!
+    $documentIdOrSlug: String!
     $preferredEditor: String
     $branch: String
   ) {
     setPreferredEditor(
-      documentIdentifier: $documentIdentifier
+      documentIdOrSlug: $documentIdOrSlug
       preferredEditor: $preferredEditor
       branch: $branch
     ) {
@@ -2542,15 +2542,15 @@ export const SetPreferredEditorDocument = gql`
 `;
 export const AddRelationshipDocument = gql`
   mutation AddRelationship(
-    $sourceIdentifier: String!
-    $targetIdentifier: String!
+    $sourceIdOrSlug: String!
+    $targetIdOrSlug: String!
     $relationshipType: String!
     $metadata: JSONObject
     $branch: String
   ) {
     addRelationship(
-      sourceIdentifier: $sourceIdentifier
-      targetIdentifier: $targetIdentifier
+      sourceIdOrSlug: $sourceIdOrSlug
+      targetIdOrSlug: $targetIdOrSlug
       relationshipType: $relationshipType
       metadata: $metadata
       branch: $branch
@@ -2562,15 +2562,15 @@ export const AddRelationshipDocument = gql`
 `;
 export const UpdateRelationshipDocument = gql`
   mutation UpdateRelationship(
-    $sourceIdentifier: String!
-    $targetIdentifier: String!
+    $sourceIdOrSlug: String!
+    $targetIdOrSlug: String!
     $relationshipType: String!
     $metadata: JSONObject
     $branch: String
   ) {
     updateRelationship(
-      sourceIdentifier: $sourceIdentifier
-      targetIdentifier: $targetIdentifier
+      sourceIdOrSlug: $sourceIdOrSlug
+      targetIdOrSlug: $targetIdOrSlug
       relationshipType: $relationshipType
       metadata: $metadata
       branch: $branch
@@ -2582,14 +2582,14 @@ export const UpdateRelationshipDocument = gql`
 `;
 export const RemoveRelationshipDocument = gql`
   mutation RemoveRelationship(
-    $sourceIdentifier: String!
-    $targetIdentifier: String!
+    $sourceIdOrSlug: String!
+    $targetIdOrSlug: String!
     $relationshipType: String!
     $branch: String
   ) {
     removeRelationship(
-      sourceIdentifier: $sourceIdentifier
-      targetIdentifier: $targetIdentifier
+      sourceIdOrSlug: $sourceIdOrSlug
+      targetIdOrSlug: $targetIdOrSlug
       relationshipType: $relationshipType
       branch: $branch
     ) {
@@ -2600,16 +2600,16 @@ export const RemoveRelationshipDocument = gql`
 `;
 export const MoveRelationshipDocument = gql`
   mutation MoveRelationship(
-    $sourceParentIdentifier: String!
-    $targetParentIdentifier: String!
-    $targetIdentifier: String!
+    $sourceParentIdOrSlug: String!
+    $targetParentIdOrSlug: String!
+    $targetIdOrSlug: String!
     $relationshipType: String!
     $branch: String
   ) {
     moveRelationship(
-      sourceParentIdentifier: $sourceParentIdentifier
-      targetParentIdentifier: $targetParentIdentifier
-      targetIdentifier: $targetIdentifier
+      sourceParentIdOrSlug: $sourceParentIdOrSlug
+      targetParentIdOrSlug: $targetParentIdOrSlug
+      targetIdOrSlug: $targetIdOrSlug
       relationshipType: $relationshipType
       branch: $branch
     ) {
@@ -2624,16 +2624,16 @@ export const MoveRelationshipDocument = gql`
   ${PhDocumentFieldsFragmentDoc}
 `;
 export const DeleteDocumentDocument = gql`
-  mutation DeleteDocument($identifier: String!, $propagate: PropagationMode) {
-    deleteDocument(identifier: $identifier, propagate: $propagate)
+  mutation DeleteDocument($idOrSlug: String!, $propagate: PropagationMode) {
+    deleteDocument(idOrSlug: $idOrSlug, propagate: $propagate)
   }
 `;
 export const DeleteDocumentsDocument = gql`
   mutation DeleteDocuments(
-    $identifiers: [String!]!
+    $idsOrSlugs: [String!]!
     $propagate: PropagationMode
   ) {
-    deleteDocuments(identifiers: $identifiers, propagate: $propagate)
+    deleteDocuments(idsOrSlugs: $idsOrSlugs, propagate: $propagate)
   }
 `;
 export const DocumentChangesDocument = gql`

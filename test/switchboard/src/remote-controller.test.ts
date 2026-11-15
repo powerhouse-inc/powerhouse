@@ -27,7 +27,7 @@ describe("RemoteDocumentController e2e", () => {
     // Clean up created documents
     for (const id of createdDocumentIds) {
       try {
-        await client.DeleteDocument({ identifier: id });
+        await client.DeleteDocument({ idOrSlug: id });
       } catch {
         // Ignore cleanup errors
       }
@@ -73,14 +73,14 @@ describe("RemoteDocumentController e2e", () => {
     // First create a document to pull
     const createResult = await client.CreateEmptyDocument({
       documentType: "powerhouse/document-model",
-      parentIdentifier: DRIVE_ID,
+      parentIdOrSlug: DRIVE_ID,
     });
     const docId = createResult.createEmptyDocument.id;
     createdDocumentIds.push(docId);
 
     // Mutate it directly via GraphQL
     await client.MutateDocument({
-      documentIdentifier: docId,
+      documentIdOrSlug: docId,
       actions: [
         {
           type: "SET_NAME",

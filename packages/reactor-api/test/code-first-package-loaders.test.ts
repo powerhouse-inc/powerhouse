@@ -136,7 +136,7 @@ async function expectServes(models: DocumentModelModule[]) {
 
   const host = hostFor(counter);
   const result = await host.run(
-    `mutation { Counter { increment(docId: "doc-1", input: { by: 3 }) { state { global { count } } } } }`,
+    `mutation { Counter { increment(documentIdOrSlug: "doc-1", input: { by: 3 }) { state { global { count } } } } }`,
   );
   expect(messages(result)).toEqual([]);
   expect(result.data).toEqual({

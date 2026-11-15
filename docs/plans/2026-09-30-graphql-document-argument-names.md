@@ -1,7 +1,7 @@
 # Plan: GraphQL document argument names
 
 Date: 2026-09-30
-Status: stages 1-4 and the test-client part of 5b merged in #3150 (a03d06b941); remaining: rest of 5b (switchboard-lb, lb-loadtest), 5c-5e (reactor-api operations.graphql, reactor-browser, renown), the stage 6 ACADEMY_LLM_COMPLETE.md deletions, stage 7 (recipes) and removing the deprecated arguments.
+Status: stages 1-4 and the test-client part of 5b merged in #3150 (a03d06b941); the rest of 5b (switchboard-lb, lb-loadtest), 5c-5e (reactor-api operations.graphql, reactor-browser, renown) and the guard test from Removal item 1 (packages/reactor-api/test/deprecated-argument-names.arch.test.ts) are written for 6.3 and need both codegen runs before they pass; remaining: the stage 6 ACADEMY_LLM_COMPLETE.md deletions, stage 7 (recipes) and removing the deprecated arguments (6.5).
 
 ## Overview
 

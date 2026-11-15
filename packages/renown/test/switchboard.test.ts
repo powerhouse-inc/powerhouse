@@ -50,7 +50,7 @@ function mockReactor(
     } else if (body.query.includes("createEmptyDocument")) {
       data = { createEmptyDocument: { id: opts.createId ?? "doc-new" } };
     } else if (body.query.includes("mutateDocument")) {
-      data = { mutateDocument: { id: body.variables.documentIdentifier } };
+      data = { mutateDocument: { id: body.variables.documentIdOrSlug } };
     }
     return Promise.resolve(
       new Response(JSON.stringify({ data }), { status: 200 }),
@@ -713,7 +713,7 @@ describe("SwitchboardClient", () => {
 
       const mutations = calls.filter((c) => c.query.includes("mutateDocument"));
       expect(mutations).toHaveLength(1);
-      expect(mutations[0].variables.documentIdentifier).toBe("cred-doc-1");
+      expect(mutations[0].variables.documentIdOrSlug).toBe("cred-doc-1");
       expect(mutations[0].authorization).toBe("Bearer jwt-token");
       const [revoke] = mutateActions(calls);
       expect(revoke.type).toBe("REVOKE");

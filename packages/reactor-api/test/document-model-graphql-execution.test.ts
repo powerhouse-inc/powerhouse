@@ -32,11 +32,11 @@ describe("a code-first model executes as its schema-first twin", () => {
   it("creates, mutates and reads a document", async () => {
     const { codeFirst, schemaFirst } = await bothModels(
       `mutation { Ledger { createEmptyDocument { id documentType } } }`,
-      `mutation { Ledger { setTitle(docId: "doc-1", input: { title: "Q3" }) { id } } }`,
-      `mutation { Ledger { addEntry(docId: "doc-1", input: { id: "e1", amount: 5 }) { state { global { entries { id amount } } } } } }`,
-      `mutation { Ledger { setNoteAsync(docId: "doc-1", input: { note: "hi" }) } }`,
+      `mutation { Ledger { setTitle(documentIdOrSlug: "doc-1", input: { title: "Q3" }) { id } } }`,
+      `mutation { Ledger { addEntry(documentIdOrSlug: "doc-1", input: { id: "e1", amount: 5 }) { state { global { entries { id amount } } } } } }`,
+      `mutation { Ledger { setNoteAsync(documentIdOrSlug: "doc-1", input: { note: "hi" }) } }`,
       READ,
-      `mutation { Ledger { clear(docId: "doc-1", input: {}) { revisionsList { scope revision } } } }`,
+      `mutation { Ledger { clear(documentIdOrSlug: "doc-1", input: {}) { revisionsList { scope revision } } } }`,
     );
 
     expect(codeFirst).toEqual(schemaFirst);
@@ -88,8 +88,8 @@ describe("mutation authorization", () => {
   const forbidden =
     'Forbidden: insufficient permissions to execute operation "ADD_ENTRY" on this document';
   const twoWrites = [
-    `mutation { Ledger { addEntry(docId: "doc-1", input: { id: "a", amount: 1 }) { id } } }`,
-    `mutation { Ledger { addEntryAsync(docId: "doc-1", input: { id: "b", amount: 2 }) } }`,
+    `mutation { Ledger { addEntry(documentIdOrSlug: "doc-1", input: { id: "a", amount: 1 }) { id } } }`,
+    `mutation { Ledger { addEntryAsync(documentIdOrSlug: "doc-1", input: { id: "b", amount: 2 }) } }`,
   ];
   const styles = [
     ["schema-first", asSchemaFirst(ledgerModel())],
@@ -148,7 +148,7 @@ describe("mutation authorization before input validation", () => {
   ])(
     "answers a caller without permission Forbidden whatever the %s input",
     async (_name, module) => {
-      const write = `mutation { Ledger { addEntry(docId: "doc-1", input: { id: "a", amount: 1 }) { id } } }`;
+      const write = `mutation { Ledger { addEntry(documentIdOrSlug: "doc-1", input: { id: "a", amount: 1 }) { id } } }`;
       const denied = hostFor(
         refusingInput(module),
         recordingAuthorization("ADD_ENTRY").authorization,
@@ -183,7 +183,7 @@ describe("mutation failure messages", () => {
   ])("names a missing %s action creator", async (_name, module, message) => {
     const host = hostFor(withoutCreator(module));
     const result = await host.run(
-      `mutation { Ledger { addEntry(docId: "doc-1", input: { id: "a", amount: 1 }) { id } } }`,
+      `mutation { Ledger { addEntry(documentIdOrSlug: "doc-1", input: { id: "a", amount: 1 }) { id } } }`,
     );
     expect(messages(result)).toEqual([message]);
   });

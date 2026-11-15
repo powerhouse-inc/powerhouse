@@ -244,14 +244,14 @@ describe("GraphQLReactorClient.execute", () => {
     await createClientWith(sdk).execute("doc-1", "main", [action]);
 
     expect(sdk.GetDocument).toHaveBeenCalledWith(
-      { identifier: "doc-1", view: { branch: "main", scopes: undefined } },
+      { idOrSlug: "doc-1", view: { branch: "main", scopes: undefined } },
       undefined,
       undefined,
     );
     // One `branch`, carrying both the branch written to and the branch the
     // operations filter reads from; there is no separate `view` to keep in step.
     expect(runDocumentVariables(sdk)).toEqual({
-      documentIdentifier: "doc-1",
+      documentIdOrSlug: "doc-1",
       actions: [action],
       sinceRevision: 7,
       scopes: ["global"],
@@ -704,7 +704,7 @@ describe("GraphQLReactorClient.create", () => {
     );
 
     expect(sdk.CreateDocument).toHaveBeenCalledWith(
-      { document: { header: { id: "doc-1" } }, parentIdentifier: "parent-1" },
+      { document: { header: { id: "doc-1" } }, parentIdOrSlug: "parent-1" },
       undefined,
       undefined,
     );
@@ -717,7 +717,7 @@ describe("GraphQLReactorClient.create", () => {
     await createClientWith(sdk).create({ header: { id: "doc-1" } } as never);
 
     expect(sdk.CreateDocument).toHaveBeenCalledWith(
-      { document: { header: { id: "doc-1" } }, parentIdentifier: undefined },
+      { document: { header: { id: "doc-1" } }, parentIdOrSlug: undefined },
       undefined,
       undefined,
     );
@@ -740,7 +740,7 @@ describe("GraphQLReactorClient.deleteDocument", () => {
     await createClientWith(sdk).deleteDocument("doc-1");
 
     expect(sdk.DeleteDocument).toHaveBeenCalledWith(
-      { identifier: "doc-1", propagate: undefined },
+      { idOrSlug: "doc-1", propagate: undefined },
       undefined,
       undefined,
     );
@@ -754,11 +754,11 @@ describe("GraphQLReactorClient.deleteDocument", () => {
     await client.deleteDocument("doc-2", "none" as PropagationMode);
 
     expect(sdk.DeleteDocument.mock.calls[0][0]).toEqual({
-      identifier: "doc-1",
+      idOrSlug: "doc-1",
       propagate: "CASCADE",
     });
     expect(sdk.DeleteDocument.mock.calls[1][0]).toEqual({
-      identifier: "doc-2",
+      idOrSlug: "doc-2",
       propagate: "ORPHAN",
     });
   });

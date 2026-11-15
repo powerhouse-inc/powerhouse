@@ -53,7 +53,7 @@ describe("the subgraph of a two-version document model", () => {
       );
 
       const result = await host.run(`mutation {
-        Task { setTitle(docId: "doc-1", input: { title: "Books" }) { id } }
+        Task { setTitle(documentIdOrSlug: "doc-1", input: { title: "Books" }) { id } }
       }`);
 
       expect(messages(result)).toEqual([]);
@@ -101,7 +101,7 @@ describe("the subgraph of a one-version document model", () => {
     const host = hostFor(servedModule([ledgerModel()]));
 
     const result = await host.run(`mutation {
-      Ledger { addEntry(docId: "doc-1", input: { id: "e1", amount: 5 }) { id } }
+      Ledger { addEntry(documentIdOrSlug: "doc-1", input: { id: "e1", amount: 5 }) { id } }
     }`);
 
     expect(messages(result)).toEqual([]);

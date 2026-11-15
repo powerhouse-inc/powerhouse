@@ -208,7 +208,7 @@ describe("GraphQLReactorClient.get", () => {
     await createClientWith(sdk).get("my-doc");
 
     expect(sdk.GetDocument).toHaveBeenCalledWith(
-      { identifier: "my-doc", view: undefined },
+      { idOrSlug: "my-doc", view: undefined },
       undefined,
       undefined,
     );
@@ -222,7 +222,7 @@ describe("GraphQLReactorClient.get", () => {
     });
 
     expect(sdk.GetDocument).toHaveBeenCalledWith(
-      { identifier: "doc-1", view: { branch: "draft", scopes: ["global"] } },
+      { idOrSlug: "doc-1", view: { branch: "draft", scopes: ["global"] } },
       undefined,
       undefined,
     );
@@ -243,7 +243,7 @@ describe("GraphQLReactorClient.get", () => {
     await createClientWith(sdk).get("doc-1", undefined, controller.signal);
 
     expect(sdk.GetDocument).toHaveBeenCalledWith(
-      { identifier: "doc-1", view: undefined },
+      { idOrSlug: "doc-1", view: undefined },
       undefined,
       controller.signal,
     );
@@ -456,7 +456,7 @@ describe("GraphQLReactorClient.getOperations", () => {
     expect(sdk.GetDocumentOperations).toHaveBeenCalledWith(
       {
         filter: {
-          documentId: "doc-1",
+          documentIdOrSlug: "doc-1",
           branch: undefined,
           scopes: undefined,
           actionTypes: undefined,
@@ -524,7 +524,7 @@ describe("GraphQLReactorClient.getOperations", () => {
     expect(sdk.GetDocumentOperations).toHaveBeenCalledWith(
       {
         filter: {
-          documentId: "doc-1",
+          documentIdOrSlug: "doc-1",
           branch: "draft",
           scopes: ["global"],
           actionTypes: ["SET_NAME"],
@@ -773,7 +773,7 @@ describe("GraphQLReactorClient relationship reads", () => {
     expect(results.results[0].header.id).toBe("doc-1");
     expect(sdk.GetDocumentOutgoingRelationships).toHaveBeenCalledWith(
       {
-        sourceIdentifier: "doc-1",
+        sourceIdOrSlug: "doc-1",
         relationshipType: "cites",
         view: undefined,
         paging: undefined,
@@ -902,7 +902,7 @@ describe("GraphQLReactorClient relationship reads", () => {
 
     expect(sdk.GetDocumentOutgoingRelationshipEdges).toHaveBeenCalledWith(
       {
-        sourceIdentifier: "doc-1",
+        sourceIdOrSlug: "doc-1",
         relationshipType: undefined,
         view: undefined,
         paging: undefined,

@@ -1,6 +1,8 @@
 # 6.0.0-dev.202 is the first switchboard exposing the in-repo reactor schema
-# (createDocument / mutateDocument / document(identifier:)). Pin deliberately;
-# do not float to `dev` or `latest`.
+# (createDocument / mutateDocument / document(identifier:)). The load tests
+# send the renamed arguments (idOrSlug, documentIdOrSlug, parentIdOrSlug),
+# which 6.2.3-dev.35 is the first to accept. Pin deliberately; do not float to
+# `dev` or `latest`.
 
 services:
   sb-1:
@@ -10,7 +12,7 @@ services:
       dockerfile: docker/Dockerfile
       target: switchboard
       args:
-        TAG: "6.2.2-dev.84"
+        TAG: "6.2.3-dev.35"
     environment:
       PORT: "8080"
       LOG_LEVEL: "warn"
@@ -25,7 +27,7 @@ services:
       dockerfile: docker/Dockerfile
       target: switchboard
       args:
-        TAG: "6.2.2-dev.84"
+        TAG: "6.2.3-dev.35"
     environment:
       PORT: "8080"
       LOG_LEVEL: "warn"
@@ -40,7 +42,7 @@ services:
       dockerfile: docker/Dockerfile
       target: switchboard
       args:
-        TAG: "6.2.2-dev.84"
+        TAG: "6.2.3-dev.35"
     environment:
       PORT: "8080"
       LOG_LEVEL: "warn"

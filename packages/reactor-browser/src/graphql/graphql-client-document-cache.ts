@@ -35,7 +35,7 @@ async function fetchDocumentForRefetch(
     new Error(`Document not found: ${identifier}`, { cause });
   let result: Awaited<ReturnType<typeof client.GetDocument>>;
   try {
-    result = await client.GetDocument({ identifier });
+    result = await client.GetDocument({ idOrSlug: identifier });
   } catch (error) {
     const messages =
       error instanceof ClientError

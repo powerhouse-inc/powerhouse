@@ -440,7 +440,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
             signal,
           )
         : await this.sdk.GetDocument(
-            { identifier, view: viewInput },
+            { idOrSlug: identifier, view: viewInput },
             undefined,
             signal,
           );
@@ -530,7 +530,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     const fields = identifiers.map((identifier, i) => {
       variables[`id${i}`] = identifier;
       definitions.push(`$id${i}: String!`);
-      return `d${i}: document(identifier: $id${i}, view: $view${consistencyArgument}) { document { ...PHDocumentFields } childIds }`;
+      return `d${i}: document(idOrSlug: $id${i}, view: $view${consistencyArgument}) { document { ...PHDocumentFields } childIds }`;
     });
     const query = [
       `query GetDocuments(${definitions.join(", ")}) {`,
@@ -597,7 +597,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   ): Promise<PagedResults<Operation>> {
     const viewInput = viewFilterInputFromViewFilter(view);
     const operationsFilter: OperationsFilterInput = {
-      documentId: documentIdentifier,
+      documentIdOrSlug: documentIdentifier,
       branch: viewInput?.branch,
       scopes: viewInput?.scopes,
       actionTypes: filter?.actionTypes,
@@ -694,7 +694,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     const viewInput = viewFilterInputFromViewFilter(view);
     const result = await this.sdk.GetDocumentOutgoingRelationships(
       {
-        sourceIdentifier,
+        sourceIdOrSlug: sourceIdentifier,
         relationshipType,
         view: viewInput,
         paging: pagingInputFromPaging(paging),
@@ -728,7 +728,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     const viewInput = viewFilterInputFromViewFilter(view);
     const result = await this.sdk.GetDocumentIncomingRelationships(
       {
-        targetIdentifier,
+        targetIdOrSlug: targetIdentifier,
         relationshipType,
         view: viewInput,
         paging: pagingInputFromPaging(paging),
@@ -762,7 +762,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     const viewInput = viewFilterInputFromViewFilter(view);
     const result = await this.sdk.GetDocumentOutgoingRelationshipEdges(
       {
-        sourceIdentifier,
+        sourceIdOrSlug: sourceIdentifier,
         relationshipType,
         view: viewInput,
         paging: pagingInputFromPaging(paging),
@@ -795,7 +795,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     const viewInput = viewFilterInputFromViewFilter(view);
     const result = await this.sdk.GetDocumentIncomingRelationshipEdges(
       {
-        targetIdentifier,
+        targetIdOrSlug: targetIdentifier,
         relationshipType,
         view: viewInput,
         paging: pagingInputFromPaging(paging),
@@ -826,7 +826,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     // A new top-level drive is pinned to the backend its own id routes to;
     // under a parent it goes where the parent is, which only the hook knows.
     const result = await this.sdk.CreateDocument(
-      { document, parentIdentifier },
+      { document, parentIdOrSlug: parentIdentifier },
       this.driveIdHeaders(
         {
           method: "create",
@@ -881,7 +881,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     );
 
     const variables: MutateDocumentWithOperationsVariables = {
-      documentIdentifier,
+      documentIdOrSlug: documentIdentifier,
       // Projected onto the fields the schema declares, so a stamped or signed
       // action does not carry a field the input rejects the whole request for.
       actions: preparedActions.map(toTransportAction),
@@ -1405,7 +1405,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     }
     const result = await this.sdk.GetDocument(
       {
-        identifier: job.documentId,
+        idOrSlug: job.documentId,
         view: viewFilterInputFromViewFilter({ branch: job.branch }),
       },
       undefined,
@@ -1462,7 +1462,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     signal?: AbortSignal,
   ): Promise<void> {
     await this.sdk.DeleteDocument(
-      { identifier, propagate: propagationModeInput(propagate) },
+      { idOrSlug: identifier, propagate: propagationModeInput(propagate) },
       this.driveIdHeaders({ method: "deleteDocument", documentId: identifier }),
       signal,
     );
@@ -1660,7 +1660,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     );
     const result = await this.sdk.MutateDocumentAsync(
       {
-        documentIdentifier,
+        documentIdOrSlug: documentIdentifier,
         actions: preparedActions.map(toTransportAction),
         branch,
       },
@@ -1826,7 +1826,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   ): Promise<GetDocumentAtConsistencyResult> {
     if (!this.consistencyUnsupported) {
       const variables: GetDocumentAtConsistencyVariables = {
-        identifier,
+        idOrSlug: identifier,
         view,
         consistency: consistencyInputFromToken(token),
       };
@@ -1845,7 +1845,11 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         this.consistencyUnsupported = true;
       }
     }
-    return this.sdk.GetDocument({ identifier, view }, undefined, signal);
+    return this.sdk.GetDocument(
+      { idOrSlug: identifier, view },
+      undefined,
+      signal,
+    );
   }
 
   /**

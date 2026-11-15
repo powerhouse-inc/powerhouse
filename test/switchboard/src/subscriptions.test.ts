@@ -181,7 +181,7 @@ describe("Subscription e2e", () => {
   afterAll(async () => {
     for (const id of createdDocumentIds) {
       try {
-        await gqlClient.DeleteDocument({ identifier: id });
+        await gqlClient.DeleteDocument({ idOrSlug: id });
       } catch {
         // ignore cleanup errors
       }

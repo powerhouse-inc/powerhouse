@@ -15,7 +15,7 @@ export async function reactorGraphqlFetchDocument<
   }
   try {
     const result = await client.GetDocument({
-      identifier,
+      idOrSlug: identifier,
     });
     const document = result.document?.document;
     if (!document) return undefined;

@@ -248,9 +248,13 @@ describe("what each field will accept", () => {
   const errorsFor = (query: string) =>
     validate(schema, parse(query)).map((error) => error.message);
 
-  const call = (field: string, variableType: string) => `
+  const call = (
+    field: string,
+    variableType: string,
+    argument = "documentIdOrSlug",
+  ) => `
     mutation Send($actions: ${variableType}) {
-      ${field}(documentIdentifier: "doc-1", actions: $actions) { id }
+      ${field}(${argument}: "doc-1", actions: $actions) { id }
     }
   `;
 
@@ -269,14 +273,16 @@ describe("what each field will accept", () => {
   });
 
   it("still lets the deprecated field take untyped actions", () => {
-    expect(errorsFor(call("mutateDocument", "[JSONObject!]!"))).toEqual([]);
+    expect(
+      errorsFor(call("mutateDocument", "[JSONObject!]!", "documentIdentifier")),
+    ).toEqual([]);
   });
 
   it("refuses an action with no id given inline to execute", () => {
     const errors = errorsFor(`
       mutation Send {
         execute(
-          documentIdentifier: "doc-1"
+          documentIdOrSlug: "doc-1"
           actions: [{ type: "SET_NAME", scope: "global", input: {}, timestampUtcMs: "t" }]
         ) { id }
       }

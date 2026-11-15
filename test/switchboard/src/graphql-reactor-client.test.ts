@@ -78,7 +78,7 @@ describe("GraphQLReactorClient signed batches e2e", () => {
   afterAll(async () => {
     for (const id of createdDocumentIds) {
       try {
-        await client.DeleteDocument({ identifier: id });
+        await client.DeleteDocument({ idOrSlug: id });
       } catch {
         // Ignore cleanup errors
       }
@@ -88,7 +88,7 @@ describe("GraphQLReactorClient signed batches e2e", () => {
   it("sends three sequentially signed actions in one mutation", async () => {
     const created = await client.CreateEmptyDocument({
       documentType: "powerhouse/document-model",
-      parentIdentifier: DRIVE_ID,
+      parentIdOrSlug: DRIVE_ID,
     });
     const documentId = created.createEmptyDocument.id;
     createdDocumentIds.push(documentId);

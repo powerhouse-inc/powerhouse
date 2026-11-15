@@ -117,11 +117,11 @@ const USERS_QUERY = /* GraphQL */ `
 const CREATE_EMPTY_DOCUMENT_MUTATION = /* GraphQL */ `
   mutation CreateEmptyDocument(
     $documentType: String!
-    $parentIdentifier: String
+    $parentIdOrSlug: String
   ) {
     createEmptyDocument(
       documentType: $documentType
-      parentIdentifier: $parentIdentifier
+      parentIdOrSlug: $parentIdOrSlug
     ) {
       id
     }
@@ -130,11 +130,11 @@ const CREATE_EMPTY_DOCUMENT_MUTATION = /* GraphQL */ `
 
 const MUTATE_DOCUMENT_MUTATION = /* GraphQL */ `
   mutation MutateDocument(
-    $documentIdentifier: String!
+    $documentIdOrSlug: String!
     $actions: [ActionInput!]!
   ) {
     mutateDocument: execute(
-      documentIdentifier: $documentIdentifier
+      documentIdOrSlug: $documentIdOrSlug
       actions: $actions
     ) {
       id
@@ -143,7 +143,8 @@ const MUTATE_DOCUMENT_MUTATION = /* GraphQL */ `
 `;
 
 /* Switchboards older than 6.2.2-dev.54 have no `execute`; their `mutateDocument`
-   takes the same envelopes as untyped JSON. Same selection, so one result shape. */
+   takes the same envelopes as untyped JSON. Same selection, so one result shape.
+   They also predate `documentIdOrSlug`, so this one keeps `documentIdentifier`. */
 const LEGACY_MUTATE_DOCUMENT_MUTATION = /* GraphQL */ `
   mutation MutateDocument(
     $documentIdentifier: String!
@@ -535,7 +536,7 @@ export class SwitchboardClient {
       createEmptyDocument: { id: string };
     }>(
       CREATE_EMPTY_DOCUMENT_MUTATION,
-      { documentType, parentIdentifier },
+      { documentType, parentIdOrSlug: parentIdentifier },
       token,
     );
     return createEmptyDocument.id;
@@ -548,12 +549,15 @@ export class SwitchboardClient {
     actions: Action[],
     token?: string,
   ): Promise<string> {
-    const variables = { documentIdentifier, actions };
     if (!this.#legacyMutate) {
       try {
         const { mutateDocument } = await this.#request<{
           mutateDocument: { id: string };
-        }>(MUTATE_DOCUMENT_MUTATION, variables, token);
+        }>(
+          MUTATE_DOCUMENT_MUTATION,
+          { documentIdOrSlug: documentIdentifier, actions },
+          token,
+        );
         return mutateDocument.id;
       } catch (error) {
         if (!isUnknownExecuteField(error)) throw error;
@@ -562,7 +566,7 @@ export class SwitchboardClient {
     }
     const { mutateDocument } = await this.#request<{
       mutateDocument: { id: string };
-    }>(LEGACY_MUTATE_DOCUMENT_MUTATION, variables, token);
+    }>(LEGACY_MUTATE_DOCUMENT_MUTATION, { documentIdentifier, actions }, token);
     return mutateDocument.id;
   }
 

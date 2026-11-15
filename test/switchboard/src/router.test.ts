@@ -222,7 +222,7 @@ afterAll(async () => {
   local.reactorModule?.reactor.kill();
   for (const id of createdDocumentIds.reverse()) {
     try {
-      await sdk.DeleteDocument({ identifier: id });
+      await sdk.DeleteDocument({ idOrSlug: id });
     } catch {
       // Already gone.
     }
@@ -359,7 +359,7 @@ describe("a router over a local reactor and a real Switchboard", () => {
     const remote = switchboardAt(drive.address, recordingFetch(sent));
     const router = await routerOver(remote);
     await router.get(drive.id);
-    await sdk.DeleteDocument({ identifier: drive.id });
+    await sdk.DeleteDocument({ idOrSlug: drive.id });
     // The delete returns before every read path drops the drive.
     await vi.waitFor(
       async () => {

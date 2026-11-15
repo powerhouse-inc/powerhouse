@@ -20,7 +20,7 @@ import {
 const PACKAGE = "@acme/banking";
 
 const SET_OWNER = `mutation ($owner: Iban) {
-  Board { setOwner(docId: "doc-1", input: { owner: $owner }) { id } }
+  Board { setOwner(documentIdOrSlug: "doc-1", input: { owner: $owner }) { id } }
 }`;
 
 let shutdown: (() => Promise<void>) | undefined;
@@ -148,7 +148,7 @@ describe("a code-first model's package scalars", () => {
     expect(warnings(logger)).toEqual([["test/board", "Bic"]]);
     expect(
       await post(`mutation {
-        Board { setDraft(docId: "doc-1", input: { draft: "d", bank: "ANY" }) { id } }
+        Board { setDraft(documentIdOrSlug: "doc-1", input: { draft: "d", bank: "ANY" }) { id } }
       }`),
     ).toEqual(["not stored"]);
   });

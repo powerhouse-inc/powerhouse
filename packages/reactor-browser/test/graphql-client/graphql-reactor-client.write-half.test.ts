@@ -130,9 +130,9 @@ describe("GraphQLReactorClient.write.execute", () => {
     expect(handle.branch).toBe("main");
     expect(sdk.MutateDocumentAsync).toHaveBeenCalledTimes(1);
     const [variables] = sdk.MutateDocumentAsync.mock.calls[0] as [
-      { documentIdentifier: string; actions: Action[]; branch: string },
+      { documentIdOrSlug: string; actions: Action[]; branch: string },
     ];
-    expect(variables.documentIdentifier).toBe("my-doc");
+    expect(variables.documentIdOrSlug).toBe("my-doc");
     expect(variables.branch).toBe("main");
     expect(variables.actions.map((a) => a.id)).toEqual(["action-1"]);
     expect(sdk.GetJobStatus).not.toHaveBeenCalled();
@@ -177,7 +177,7 @@ describe("GraphQLReactorClient.write.execute", () => {
     const options = sdk.RunDocument.mock.calls[0][0] as RunDocumentOptions;
     expect(options.operationName).toBe("GetDocumentAtConsistency");
     expect(options.variables).toMatchObject({
-      identifier: "doc-1",
+      idOrSlug: "doc-1",
       view: { branch: "main" },
       consistency: { version: 1, coordinates: [coordinate] },
     });

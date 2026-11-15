@@ -438,7 +438,7 @@ function switchboard({ body }: Received): Reply {
   const data = (() => {
     switch (body.operationName) {
       case "GetDocument": {
-        const id = variables.identifier as string;
+        const id = variables.idOrSlug as string;
         return {
           document: {
             document: wireDocument(id, documentTypes[id]),
@@ -458,7 +458,7 @@ function switchboard({ body }: Received): Reply {
         };
       }
       case "MutateDocumentWithOperations": {
-        const id = variables.documentIdentifier as string;
+        const id = variables.documentIdOrSlug as string;
         return {
           mutateDocument: {
             ...wireDocument(id, documentTypes[id]),

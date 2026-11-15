@@ -361,7 +361,7 @@ describe("a registered scalar served by the host", () => {
   it("validates a model operation input", async () => {
     const { post, executed } = await bankingHost();
     const mutation = `mutation ($iban: Iban!) {
-      Ledger { setIban(docId: "doc-1", input: { iban: $iban }) { id } }
+      Ledger { setIban(documentIdOrSlug: "doc-1", input: { iban: $iban }) { id } }
     }`;
     expect(
       errorsOf(await post("/graphql/ledger", mutation, { iban: INVALID })),
@@ -398,7 +398,7 @@ describe("a registered scalar served by the host", () => {
 
 describe("a registered scalar whose schema changes values", () => {
   const mutation = `mutation ($iban: Iban!) {
-    Ledger { setIban(docId: "doc-1", input: { iban: $iban }) { id } }
+    Ledger { setIban(documentIdOrSlug: "doc-1", input: { iban: $iban }) { id } }
   }`;
 
   async function hostServing(definition: ScalarDefinition) {
@@ -667,7 +667,7 @@ describe("a scalars change whose rebuild fails", () => {
     await host.manager.init([], undefined, undefined, registryOf({}));
     await host.manager.updateRouter();
     const setIban = `mutation ($iban: Iban!) {
-      Ledger { setIban(docId: "doc-1", input: { iban: $iban }) { id } }
+      Ledger { setIban(documentIdOrSlug: "doc-1", input: { iban: $iban }) { id } }
     }`;
     const unavailable = new Error("model store unavailable");
     vi.spyOn(host.reactorClient, "getDocumentModelModules")
@@ -836,7 +836,7 @@ describe("a registered scalar named like a host subgraph's type", () => {
 
   const DRIVE_NODE = "{ driveNode { id } }";
   const SET_IBAN = `mutation ($iban: Iban!) {
-    Ledger { setIban(docId: "doc-1", input: { iban: $iban }) { id } }
+    Ledger { setIban(documentIdOrSlug: "doc-1", input: { iban: $iban }) { id } }
   }`;
 
   const scalarRefusals = (logger: ILogger) =>

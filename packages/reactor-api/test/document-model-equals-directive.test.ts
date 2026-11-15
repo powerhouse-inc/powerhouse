@@ -50,7 +50,7 @@ const styles = [
 ] as const;
 
 const setCode = (code: string) =>
-  `mutation { Code { setCode(docId: "doc-1", input: { code: "${code}" }) { id } } }`;
+  `mutation { Code { setCode(documentIdOrSlug: "doc-1", input: { code: "${code}" }) { id } } }`;
 
 describe("a model whose fields use equals", () => {
   it.each(styles)("is admitted by the host as %s", (_style, model) => {

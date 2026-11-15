@@ -117,11 +117,11 @@ function createMockClient(
         async (
           identifier: string,
           view: unknown,
-          filters: { documentId: string }[],
+          filters: { documentIdOrSlug: string }[],
           pagings: unknown[],
         ) => {
           const docResult = (await getDocument({
-            identifier,
+            idOrSlug: identifier,
             view: view as ViewFilterInput,
           })) as GetDocumentQuery;
           const operations = await Promise.all(
@@ -526,7 +526,7 @@ describe("RemoteDocumentController", () => {
       await controller.push();
 
       expect(client.GetDocument).toHaveBeenCalledWith(
-        expect.objectContaining({ identifier: "my-slug" }),
+        expect.objectContaining({ idOrSlug: "my-slug" }),
       );
       expect(mockSigner.signAction.mock.calls[0][1]).toEqual({
         documentId: "doc-1",
@@ -2004,7 +2004,7 @@ describe("RemoteDocumentController", () => {
 
       expect(client.CreateEmptyDocument).toHaveBeenCalledExactlyOnceWith({
         documentType: "powerhouse/document-model",
-        parentIdentifier: "drive-1",
+        parentIdOrSlug: "drive-1",
       });
       expect(client.CreateDocument).not.toHaveBeenCalled();
       expect(result.actionCount).toBe(1);
@@ -2147,7 +2147,7 @@ describe("RemoteDocumentController.from without a documentId", () => {
 
     expect(client.CreateEmptyDocument).toHaveBeenCalledExactlyOnceWith({
       documentType: "powerhouse/document-model",
-      parentIdentifier: "drive-1",
+      parentIdOrSlug: "drive-1",
     });
     expect(client.CreateDocument).not.toHaveBeenCalled();
     expect(controller.status.documentId).toBe("new-doc-1");

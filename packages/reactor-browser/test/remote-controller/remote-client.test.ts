@@ -82,7 +82,7 @@ describe("RemoteClient", () => {
         childIds: ["child-1"],
       });
       expect(mock.GetDocument).toHaveBeenCalledWith({
-        identifier: "doc-1",
+        idOrSlug: "doc-1",
         view: undefined,
       });
     });
@@ -103,7 +103,7 @@ describe("RemoteClient", () => {
 
       await client.getDocument("doc-1", "dev");
       expect(mock.GetDocument).toHaveBeenCalledWith({
-        identifier: "doc-1",
+        idOrSlug: "doc-1",
         view: { branch: "dev" },
       });
     });
@@ -192,7 +192,7 @@ describe("RemoteClient", () => {
       await client.pushActions("doc-1", actions);
 
       expect(mock.MutateDocument).toHaveBeenCalledWith({
-        documentIdentifier: "doc-1",
+        documentIdOrSlug: "doc-1",
         actions,
         view: undefined,
       });
@@ -208,7 +208,7 @@ describe("RemoteClient", () => {
 
       expect(mock.CreateDocument).toHaveBeenCalledWith({
         document: { type: "test" },
-        parentIdentifier: "parent-1",
+        parentIdOrSlug: "parent-1",
       });
     });
   });
@@ -222,7 +222,7 @@ describe("RemoteClient", () => {
 
       expect(mock.CreateEmptyDocument).toHaveBeenCalledWith({
         documentType: "test/type",
-        parentIdentifier: "parent-1",
+        parentIdOrSlug: "parent-1",
       });
     });
   });

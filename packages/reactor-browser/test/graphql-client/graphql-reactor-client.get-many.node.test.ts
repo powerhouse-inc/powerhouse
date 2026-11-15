@@ -131,7 +131,7 @@ describe("GraphQLReactorClient.getMany", () => {
       scopes: ["global"],
     });
     expect(received[0].body.query).toContain(
-      "d1: document(identifier: $id1, view: $view)",
+      "d1: document(idOrSlug: $id1, view: $view)",
     );
   });
 
