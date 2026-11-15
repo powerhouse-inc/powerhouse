@@ -34,7 +34,8 @@ export const oxlintConfigTemplate = json`
     "editors/*/module.ts",
     "subgraphs/index.ts",
     "processors/{index,factory,connect,switchboard}.ts",
-    "processors/*/index.ts"
+    "processors/*/index.ts",
+    "/powerhouse.config.d.json.ts"
   ],
   "rules": {
     "typescript/await-thenable": "error",
