@@ -44,7 +44,9 @@
     "dist",
     "node_modules",
     "vitest.config.ts",
-    "hosts/connect/routes"
+    "hosts/connect/routes",
+    // tsc -p hosts checks it against the built packages; here it would pull their sources in
+    "hosts/types.d.ts"
   ],
   "references": [
     {
