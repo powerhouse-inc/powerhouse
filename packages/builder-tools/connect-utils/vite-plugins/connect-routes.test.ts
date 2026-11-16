@@ -250,17 +250,21 @@ describe("connectRoutesWatcher", () => {
       ],
       server: { middlewareMode: true, ws: false },
     });
-    // Files added before the initial scan ends count as initial and fire no events.
-    const watcher = server.watcher as typeof server.watcher & {
-      _readyEmitted?: boolean;
-    };
-    const ready = watcher._readyEmitted
-      ? Promise.resolve()
-      : new Promise((resolve) => watcher.once("ready", resolve));
     const tree = join(project, CONNECT_ROUTES_GEN);
     const wait = { timeout: 15_000, interval: 100 };
     try {
-      await ready;
+      // Files added before the watcher has scanned the project fire no events, and
+      // its "ready" comes early: it also counts the .env files and public/ Vite
+      // watches, which are missing here. So wait until it reports a new file.
+      let watching = false;
+      let probes = 0;
+      server.watcher.on("add", (file) => {
+        if (file.includes(".probe-")) watching = true;
+      });
+      await vi.waitFor(() => {
+        if (!watching) writeFileSync(join(project, `.probe-${probes++}`), "");
+        expect(watching).toBe(true);
+      }, wait);
       // Connect's routes alone until the folder appears.
       await vi.waitFor(
         () => expect(readFileSync(tree, "utf8")).toContain('"/d/$driveSlug"'),
