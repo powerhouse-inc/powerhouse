@@ -427,7 +427,7 @@ describe("runtime-config loader", () => {
       expect(config.connect.composition).toContainEqual(
         expect.objectContaining({
           module: GENERIC,
-          config: expect.objectContaining({ allowAddDrive: false }),
+          config: expect.objectContaining({ allowAddDrive: false }) as unknown,
         }),
       );
       expect(modules(config)).toContain(OPENPANEL);
