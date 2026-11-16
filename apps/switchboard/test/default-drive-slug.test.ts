@@ -15,7 +15,7 @@ import {
 import { deleteDocumentAction } from "@powerhousedao/reactor";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { addDefaultDrive, ensureDrive } from "../src/utils.mjs";
+import { ensureDrive } from "../src/utils.mjs";
 
 const PORT = 4001;
 
@@ -32,7 +32,7 @@ const workflows = (id: string): DriveInput =>
     },
   }) as DriveInput;
 
-describe("addDefaultDrive with a slug another document holds", () => {
+describe("ensureDrive with a slug another document holds", () => {
   let module: InProcessReactorClientModule;
   const logger = { error: vi.fn() };
 
@@ -60,7 +60,7 @@ describe("addDefaultDrive with a slug another document holds", () => {
 
   it("creates the drive when the slug is free", async () => {
     await expect(
-      addDefaultDrive(module.client, workflows("workflows-a"), PORT, logger),
+      ensureDrive(module.client, workflows("workflows-a"), PORT, logger),
     ).resolves.toBe(`http://localhost:${PORT}/d/workflows-a`);
     await expect(module.client.resolveIdOrSlug("workflows")).resolves.toBe(
       "workflows-a",
@@ -69,14 +69,9 @@ describe("addDefaultDrive with a slug another document holds", () => {
 
   // A project moved to another folder hashes its drive ids anew.
   it("serves the drive that holds the slug instead of creating a twin", async () => {
-    await addDefaultDrive(
-      module.client,
-      workflows("workflows-a"),
-      PORT,
-      logger,
-    );
+    await ensureDrive(module.client, workflows("workflows-a"), PORT, logger);
     await expect(
-      addDefaultDrive(module.client, workflows("workflows-b"), PORT, logger),
+      ensureDrive(module.client, workflows("workflows-b"), PORT, logger),
     ).resolves.toBe(`http://localhost:${PORT}/d/workflows-a`);
     expect(await isCreated("workflows-b")).toBe(false);
     expect(logger.error).not.toHaveBeenCalled();
@@ -91,7 +86,7 @@ describe("addDefaultDrive with a slug another document holds", () => {
     await module.client.create(other);
 
     await expect(
-      addDefaultDrive(module.client, workflows("workflows-c"), PORT, logger),
+      ensureDrive(module.client, workflows("workflows-c"), PORT, logger),
     ).resolves.toBeUndefined();
     expect(await isCreated("workflows-c")).toBe(false);
     expect(logger.error).toHaveBeenCalledWith(

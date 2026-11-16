@@ -314,10 +314,7 @@ interface SlugLookupClient {
  * Adapter from the switchboard's reactor client onto the host-core seeder.
  * Seeding is SLUG-keyed: a live drive that already serves the slug — under
  * whatever id (a store from a run that hashed the project path differently,
- * or a hand-made drive) — is the drive, and nothing is created. addDefaultDrive
- * alone only knows ids: with a different id it would try to create a second
- * drive for the slug, and against a deleted document with that id the create
- * fails on every boot.
+ * or a hand-made drive) — is the drive, and nothing is created.
  */
 function seederClient(
   reactor: unknown,

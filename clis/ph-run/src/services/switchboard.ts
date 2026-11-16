@@ -5,7 +5,7 @@ import {
   type SwitchboardConfigInput,
 } from "@powerhousedao/switchboard/config";
 import { switchboardConfigFromEnv } from "@powerhousedao/switchboard/config/env";
-import { addDefaultDrive } from "@powerhousedao/switchboard/utils";
+import { ensureDrive } from "@powerhousedao/switchboard/utils";
 import {
   initSwitchboardProcess,
   startSwitchboard as startSwitchboardServer,
@@ -203,11 +203,11 @@ export function projectDriveId(name: string, projectRoot: string): string {
 
 /** The drive PH_WORKFLOWS_ENABLED seeds, the same one `ph vetra` does. */
 export async function seedWorkflowsDrive(
-  reactor: Parameters<typeof addDefaultDrive>[0],
+  reactor: Parameters<typeof ensureDrive>[0],
   port: number,
   projectRoot: string,
 ): Promise<string | null> {
-  const driveUrl = await addDefaultDrive(
+  const driveUrl = await ensureDrive(
     reactor,
     {
       id: projectDriveId("workflows", projectRoot),
