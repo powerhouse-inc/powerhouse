@@ -33,7 +33,7 @@ import { useConnectChrome } from "@powerhousedao/connect/layout";
 import { AppLayout } from "./app-layout.js";
 import { Sidebar } from "./sidebar.js";
 
-// A declared plugin composition, as `ph run connect` serves it; undefined is classic Connect.
+// A declared plugin composition, as `ph run connect` serves it; undefined is the config as primed.
 const served = vi.hoisted(() => ({
   composition: undefined as { module: string }[] | undefined,
 }));

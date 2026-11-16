@@ -143,7 +143,7 @@ export const supersededConfigKeys: Readonly<Record<string, string>> = {
 /**
  * Connect chrome keys the classic Connect reads from the top level of
  * powerhouse.config.json. Under hosts the generic plugin's config in
- * hosts/connect/host.js carries them, so only the classic path warns.
+ * hosts/connect/host.js carries them, so only a host without plugins warns.
  */
 export const connectChromeConfigKeys: readonly string[] = [
   "connect.drives.allowAddDrive",

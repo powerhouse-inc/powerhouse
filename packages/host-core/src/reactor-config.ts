@@ -135,8 +135,7 @@ export function browserBackend(
  *  - remote backend(s) only                        -> `remote`
  *  - a worker backend                              -> `worker`
  *  - anything else local                           -> `in-process`
- * `undefined` when no backends are declared — the caller then keeps the
- * legacy reactorWorker/multiReactor behaviour untouched.
+ * `undefined` when no backends are declared: Connect then runs `in-process`.
  */
 export function reactorClientMode(
   reactor: ReactorConfig | undefined,

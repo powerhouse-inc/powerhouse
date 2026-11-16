@@ -301,10 +301,9 @@ function callerOverrideRaw(
   if (!connect.reactor && !connect.instance && !structural) {
     // `base` IS host.config when the host has one; a host without a config
     // block still carries its composition, drives, Renown and namespace (set
-    // on `base` above). With none of them, there is no override: a classic
-    // build. `dev` and `serve` add the default composition to whatever this
-    // returns, so only `build` still hands a service no composition; the
-    // next release removes that.
+    // on `base` above). With none of them, there is no override. `dev` and
+    // `serve` add the default composition to whatever this returns; a build
+    // bakes none, and Connect works the same one out when it boots.
     return host.config !== undefined ||
       composition ||
       declaredDefaults ||

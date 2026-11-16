@@ -12,7 +12,7 @@ describe("host file deprecations: top-level Connect chrome keys", () => {
 
   it("warns for a host without runner.plugins", () => {
     expect(connectChromeDeprecation(config, false, CONNECT)).toBe(
-      "Warning: hosts/connect/host.js: config.drives.allowAddDrive, config.drives.sections, config.home.background are only read by the classic Connect boot, which 6.4 removes. " +
+      "Warning: hosts/connect/host.js: config.drives.allowAddDrive, config.drives.sections, config.home.background are only read while the host has no runner.plugins, by the default composition. " +
         'List "@powerhousedao/connect/plugins/generic" under runner.plugins and set allowAddDrive, sections, homeBackground in its entry config. ' +
         `See ${MIGRATION_GUIDE_URL}`,
     );

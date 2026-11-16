@@ -365,7 +365,7 @@ the plugin out.
 ### Connect settings in the host `config` {/* #connect-chrome-settings */}
 
 ```text
-Warning: <host file>: config.drives.allowAddDrive is only read by the classic Connect boot, which 6.4 removes. List "@powerhousedao/connect/plugins/generic" under runner.plugins and set allowAddDrive / sections / icons / homeBackground in its entry config.
+Warning: <host file>: config.drives.allowAddDrive is only read while the host has no runner.plugins, by the default composition. List "@powerhousedao/connect/plugins/generic" under runner.plugins and set allowAddDrive / sections / icons / homeBackground in its entry config.
 ```
 
 Move the keys into the entry of the generic Connect plugin, as shown under

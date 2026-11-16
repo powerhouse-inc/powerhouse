@@ -517,7 +517,7 @@ export async function createReactor(
     if (workerSource.kind === "unavailable") {
       store.loading = false;
       throw new Error(
-        "reactorWorker is enabled but this deployment serves no reactor worker bundle (__reactor_worker__/); rebuild with ph connect build or open with ?reactorWorker=false",
+        "reactorWorker is enabled but this deployment serves no reactor worker bundle (__reactor_worker__/); rebuild with ph connect build or open with ?reactorClient=in-process",
       );
     }
     const workerClient = createWorkerReactorClientModule({

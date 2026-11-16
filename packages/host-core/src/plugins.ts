@@ -339,3 +339,11 @@ export function mergeContributions(
   }
   return merged;
 }
+
+// The default Connect composition is worked out in the browser too.
+export {
+  CONNECT_PLUGIN_OWNED_SLICES,
+  defaultConnectComposition,
+  type ConnectPluginSlices,
+  type OwnedConfigSlice,
+} from "./connect-composition.js";

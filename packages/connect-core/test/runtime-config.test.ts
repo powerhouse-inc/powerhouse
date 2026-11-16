@@ -1,3 +1,4 @@
+import { defaultConnectComposition } from "@powerhousedao/host-core/plugins";
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -78,7 +79,11 @@ describe("runtime-config loader", () => {
     const { loadRuntimeConfig } =
       await import("../src/runtime/runtime-config.js");
     const config = await loadRuntimeConfig();
-    expect(config.connect).toEqual(DEFAULT_CONNECT_CONFIG);
+    // And the default composition, which a config served without one boots.
+    expect(config.connect).toEqual({
+      ...DEFAULT_CONNECT_CONFIG,
+      composition: defaultConnectComposition(DEFAULT_CONNECT_CONFIG),
+    });
   });
 
   it("resolves ${origin} against the page's origin, once, for every consumer", async () => {
@@ -391,28 +396,145 @@ describe("runtime-config loader", () => {
     expect(config.connect.drives?.preserveStrategy).toBe("preserve-all");
   });
 
+  describe("the composition", () => {
+    const GENERIC = "@powerhousedao/connect/plugins/generic";
+    const OPENPANEL = "@powerhousedao/connect/plugins/openpanel";
+    const STUDIO = "@powerhousedao/vetra-studio/connect";
+    const modules = (config: { connect: { composition?: unknown } }) =>
+      (config.connect.composition as { module: string }[]).map(
+        (entry) => entry.module,
+      );
+
+    it("boots the default composition when the config has none", async () => {
+      stubFetch({
+        schemaVersion: 2,
+        packages: [],
+        connect: { drives: { allowAddDrive: false } },
+      });
+      const { loadRuntimeConfig, getRuntimeConfig } =
+        await import("../src/runtime/runtime-config.js");
+      const { getActivePluginModules, isPluginActive } =
+        await import("../src/plugins/composition.js");
+      const config = await loadRuntimeConfig();
+      expect(config.connect.composition).toEqual(
+        defaultConnectComposition({
+          ...DEFAULT_CONNECT_CONFIG,
+          drives: { ...DEFAULT_CONNECT_CONFIG.drives, allowAddDrive: false },
+        }),
+      );
+      // A built-in configured through its entry is in it, with the values
+      // the config has at the top level.
+      expect(config.connect.composition).toContainEqual(
+        expect.objectContaining({
+          module: GENERIC,
+          config: expect.objectContaining({ allowAddDrive: false }),
+        }),
+      );
+      expect(modules(config)).toContain(OPENPANEL);
+      // A built-in whose presence is its switch stays out while it is off.
+      expect(modules(config)).not.toContain(STUDIO);
+      // The cached copy carries it, so presence reads agree.
+      expect(modules(getRuntimeConfig())).toEqual(modules(config));
+      expect([...getActivePluginModules()]).toEqual(modules(config));
+      expect(isPluginActive(GENERIC)).toBe(true);
+      expect(isPluginActive(STUDIO)).toBe(false);
+    });
+
+    it("composes a presence-switched built-in the config already has on", async () => {
+      stubFetch({
+        schemaVersion: 2,
+        packages: [],
+        connect: { app: { studioMode: true } },
+      });
+      const { loadRuntimeConfig } =
+        await import("../src/runtime/runtime-config.js");
+      expect(modules(await loadRuntimeConfig())).toContain(STUDIO);
+    });
+
+    it("keeps a served composition as it is, an empty one too", async () => {
+      stubFetch({
+        schemaVersion: 2,
+        packages: [],
+        connect: { composition: [] },
+      });
+      const { loadRuntimeConfig } =
+        await import("../src/runtime/runtime-config.js");
+      const { isPluginActive } = await import("../src/plugins/composition.js");
+      const config = await loadRuntimeConfig();
+      expect(config.connect.composition).toEqual([]);
+      expect(isPluginActive(GENERIC)).toBe(false);
+    });
+
+    it("applies it whatever the removed pluginRunner flag says", async () => {
+      vi.stubGlobal("window", {
+        location: { search: "?pluginRunner=0" },
+        localStorage: {
+          getItem: (key: string) =>
+            key === "ph:flag:pluginRunner" ? "false" : null,
+          setItem: () => undefined,
+          removeItem: () => undefined,
+        },
+      });
+      stubFetch({
+        schemaVersion: 2,
+        packages: [],
+        connect: {
+          branding: { appName: "Served" },
+          composition: [{ module: "@acme/branding" }],
+        },
+      });
+      const { loadRuntimeConfig } =
+        await import("../src/runtime/runtime-config.js");
+      const config = await loadRuntimeConfig({
+        plugins: () =>
+          Promise.resolve({
+            "@acme/branding": {
+              create: () =>
+                ({
+                  name: "branding",
+                  hooks: {
+                    transformConnectConfig: (cfg: {
+                      branding?: Record<string, unknown>;
+                    }) => ({
+                      ...cfg,
+                      branding: { ...cfg.branding, appName: "Composed" },
+                    }),
+                  },
+                }) as never,
+            },
+          }),
+      });
+      expect(config.connect.branding?.appName).toBe("Composed");
+    });
+  });
+
   describe("the plugins' UI", () => {
+    const GENERIC = "@powerhousedao/connect/plugins/generic";
     const plugins = () =>
       Promise.resolve({
         "@acme/chrome": {
           create: () => ({ name: "chrome" }) as never,
           ui: () => Promise.resolve({ commonEditors: true }),
         },
+        [GENERIC]: {
+          create: () => ({ name: "generic" }) as never,
+          ui: () => Promise.resolve({ consent: true }),
+        },
       });
 
-    it("loads every plugin's UI without a composition", async () => {
+    it("loads the default composition's plugins' UI when the config has none", async () => {
       stubFetch({ schemaVersion: 2, packages: [], connect: {} });
       const { loadRuntimeConfig } =
         await import("../src/runtime/runtime-config.js");
       const { getConnectPluginUi } =
         await import("../src/plugins/plugin-ui.js");
       await loadRuntimeConfig({ plugins });
-      expect(getConnectPluginUi().commonEditors).toBe(true);
+      expect(getConnectPluginUi().consent).toBe(true);
+      // A known plugin outside the composition stays unloaded.
+      expect(getConnectPluginUi().commonEditors).toBe(false);
     });
 
     it("loads only the composition's plugins' UI", async () => {
-      // The composition's runtime flag reads the URL.
-      vi.stubGlobal("window", { location: { search: "" } });
       stubFetch({
         schemaVersion: 2,
         packages: [],

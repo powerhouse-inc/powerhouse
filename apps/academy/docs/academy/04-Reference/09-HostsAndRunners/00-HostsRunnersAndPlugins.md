@@ -398,8 +398,10 @@ through its entry `config`, not top-level `connect.drives`). When a host
 declares a plugin list without `@powerhousedao/connect/plugins/generic`, those
 toggles turn OFF and Connect hides the generic chrome: the sidebar and the
 drive-list home screen. Drive and document views under `/d/` still render.
-With no declared plugin list, every plugin reads as present, so classic Connect
-is unchanged. (`branding` is NOT the generic plugin's concern. It reaches past
+With no declared plugin list, Connect boots a default one: the generic plugin
+with the top-level `connect.drives` and `connect.home` values, Sentry and
+OpenPanel, and the assistant, Studio and workflows plugins where the config
+already switches them on. (`branding` is NOT the generic plugin's concern. It reaches past
 the chrome, for example into the document title, so it stays a top-level
 `connect.branding` value that survives the plugin's absence. The switchboard
 side behaves the same way: removing `mcp` removes `/mcp`.)

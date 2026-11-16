@@ -13,8 +13,8 @@ import type {
 
 export type { ConnectPluginContext } from "./types.js";
 
-// ConnectCore's plugin pipeline (rewire plan R3). It runs only when the served
-// config carries a `composition`; presence is activation.
+// ConnectCore's plugin pipeline (rewire plan R3). It runs over the config's
+// `composition`; presence is activation.
 
 type PluginDefinitions = ConnectPluginDefinitions;
 type PluginLoader = () => Promise<PluginDefinitions>;

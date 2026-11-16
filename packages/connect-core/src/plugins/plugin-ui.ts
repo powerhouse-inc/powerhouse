@@ -57,15 +57,13 @@ export function mergeConnectPluginUi(
   return set;
 }
 
-/** Loads the UI of the plugins `composition` names, or of every known plugin
- * without one (classic Connect), and keeps it for `getConnectPluginUi`. */
+/** Loads the UI of the plugins `composition` names and keeps it for
+ * `getConnectPluginUi`. */
 export async function loadConnectPluginUi(
-  composition: readonly { module: string }[] | undefined,
+  composition: readonly { module: string }[],
 ): Promise<ConnectPluginUiSet> {
   const definitions = await knownPlugins();
-  const modules = composition
-    ? composition.map((entry) => entry.module)
-    : Object.keys(definitions);
+  const modules = composition.map((entry) => entry.module);
   const uis = await Promise.all(
     modules.map(
       (module) => definitions[module]?.ui?.() ?? Promise.resolve(undefined),

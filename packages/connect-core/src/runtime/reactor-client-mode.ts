@@ -13,8 +13,8 @@ import { logger } from "document-model";
  * Precedence: an explicit `?reactorClient=` query override (kept in
  * localStorage so it survives a reload), then a stored override, then the
  * served `connect.instance.reactorClient` (projected from the host's reactor
- * backends), then the LEGACY booleans — so a config that only sets
- * reactorWorker/multiReactor behaves exactly as before.
+ * backends), then `in-process`. The `reactorWorker`/`multiReactor` booleans
+ * no longer select a client.
  *
  * `remote` is the only mode that builds NO local reactor (no PGlite): it is a
  * pure client to a remote Switchboard. `router` keeps the local reactor and
@@ -95,9 +95,19 @@ export function resolveReactorClientMode(): ReactorClientMode {
   if (override) return override;
   const configured = instance?.reactorClient;
   if (configured && MODES.has(configured)) return configured;
-  // Legacy fallback — unchanged behaviour for configs without reactorClient.
-  if (isMultiReactorEnabled()) return "router";
-  if (isReactorWorkerEnabled()) return "worker";
+  // The booleans that selected a client before `reactorClient`: said aloud,
+  // since the reactor this boots is not the one they ask for.
+  const legacy = isMultiReactorEnabled()
+    ? "multiReactor"
+    : isReactorWorkerEnabled()
+      ? "reactorWorker"
+      : undefined;
+  if (legacy) {
+    logger.warn(
+      "@flag no longer selects the reactor client: this Connect runs its reactor in-process. Declare reactor.backends in hosts/connect/host.js, or open with ?reactorClient=",
+      legacy,
+    );
+  }
   return "in-process";
 }
 

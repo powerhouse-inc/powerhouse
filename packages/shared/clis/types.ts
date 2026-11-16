@@ -103,8 +103,7 @@ export type PHConnectOpenPanel = z.infer<typeof C.connectOpenPanelSchema>;
  *                  with NO local reactor and NO PGlite download.
  *  - `router`:     the tab's reactor (local) PLUS remote backends, routed.
  * Derived from the host's reactor backends (see reactorClientMode); when
- * unset, Connect falls back to the legacy `reactorWorker`/`multiReactor`
- * booleans.
+ * unset, Connect runs `in-process`.
  */
 export type PHReactorClientMode = z.infer<
   typeof C.connectReactorClientModeSchema
