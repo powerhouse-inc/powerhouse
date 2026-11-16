@@ -60,7 +60,10 @@ import {
   hasHostAfterMigration,
 } from "./migrate-hosts.js";
 import { assertVersionedDocumentModels } from "./migrate-layout-floor.js";
-import { migratePowerhouseConfig } from "./migrate-powerhouse-config.js";
+import {
+  migrateHomeBackground,
+  migratePowerhouseConfig,
+} from "./migrate-powerhouse-config.js";
 import { migrateSupersededConfig } from "./migrate-superseded-config.js";
 import { migrateTsconfigFiles } from "./migrate-tsconfig.js";
 import { sortByKey } from "./utils.js";
@@ -603,6 +606,8 @@ export async function migrate(
         "Removed the scaffolded connect.instance defaults from powerhouse.config.json, so Vetra Studio picks its reactor client",
       );
     }
+    const homeBackground = migrateHomeBackground(projectDir);
+    if (homeBackground) console.log(homeBackground);
     // The keys the host files supersede leave powerhouse.config.json: into
     // the host files when this run adds them, else they are reported.
     const superseded = migrateSupersededConfig(

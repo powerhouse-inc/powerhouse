@@ -3,6 +3,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  migrateHomeBackground,
   migratePowerhouseConfig,
   SCAFFOLDED_CONNECT_INSTANCE,
 } from "./migrate-powerhouse-config.js";
@@ -66,5 +67,46 @@ describe("migratePowerhouseConfig", () => {
     dirs.push(dir);
     expect(migratePowerhouseConfig(dir)).toBe(false);
     expect(migratePowerhouseConfig(project({ packages: [] }))).toBe(false);
+  });
+});
+
+describe("migrateHomeBackground", () => {
+  it("drops the null the 6.2.3 scaffold wrote", () => {
+    const dir = project({
+      connect: { branding: { appName: "App", homeBackground: null } },
+    });
+    expect(migrateHomeBackground(dir)).toMatch(/^Removed/);
+    expect(read(dir)).toEqual({ connect: { branding: { appName: "App" } } });
+    expect(migrateHomeBackground(dir)).toBeUndefined();
+  });
+
+  it("moves a value to connect.home.background", () => {
+    const dir = project({
+      connect: { branding: { homeBackground: "./home.png" } },
+    });
+    expect(migrateHomeBackground(dir)).toMatch(/^Moved/);
+    expect(read(dir)).toEqual({
+      connect: { branding: {}, home: { background: "./home.png" } },
+    });
+  });
+
+  it("keeps a connect.home.background the project already set", () => {
+    const dir = project({
+      connect: {
+        branding: { homeBackground: "./old.png" },
+        home: { background: "./new.png" },
+      },
+    });
+    expect(migrateHomeBackground(dir)).toMatch(/wins$/);
+    expect(read(dir)).toEqual({
+      connect: { branding: {}, home: { background: "./new.png" } },
+    });
+  });
+
+  it("leaves a project without the key alone", () => {
+    const config = { connect: { branding: { appName: "App" } } };
+    const dir = project(config);
+    expect(migrateHomeBackground(dir)).toBeUndefined();
+    expect(read(dir)).toEqual(config);
   });
 });
