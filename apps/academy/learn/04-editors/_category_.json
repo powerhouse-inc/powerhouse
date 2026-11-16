@@ -1,0 +1,11 @@
+{
+  "label": "Editors",
+  "link": {
+    "type": "doc",
+    "id": "editors/what-is-an-editor"
+  },
+  "customProps": {
+    "icon": "pencil-ruler",
+    "description": "React UIs that dispatch actions and render state — hooks, structure, and patterns."
+  }
+}

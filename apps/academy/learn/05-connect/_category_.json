@@ -1,0 +1,11 @@
+{
+  "label": "Connect",
+  "link": {
+    "type": "doc",
+    "id": "connect/what-is-connect"
+  },
+  "customProps": {
+    "icon": "box",
+    "description": "The host application — how it loads document models, drives, and editors at runtime."
+  }
+}

@@ -1,0 +1,72 @@
+---
+slug: /
+title: Learn the Powerhouse stack
+sidebar_label: Overview
+sidebar_position: 0
+hide_table_of_contents: true
+---
+
+import Admonition from "@theme/Admonition";
+import LearnCourseGrid from "@site/src/components/Learn/LearnCourseGrid";
+
+# Learn the Powerhouse stack
+
+Powerhouse is a framework for building applications whose state evolves through
+**operations** rather than direct mutations. Instead of storing the current
+state, it records the ordered operations that produced it — giving every
+document a complete, auditable history. If you've worked with Git, event
+sourcing, or CRDTs, much of this will feel familiar.
+
+This course explains how the stack is structured and how its pieces fit
+together. It's **explanation, not step-by-step instructions** — the goal is to
+understand _what_ the agent builds for you and _why_. To ship with the agent,
+start at [Get started](/academy/GetStarted/VetraStudio); to build by hand, see
+[Build](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject).
+
+## Why use Powerhouse?
+
+Because state is an operation log, teams get a set of hard problems solved by
+default:
+
+- **Track every change** — who did what, when, addressable by index and hash.
+- **Sync across peers** — offline edits merge deterministically, no last-write-wins.
+- **Build collaborative apps** — concurrent editing without conflict resolution code.
+- **Keep auditable histories** — the log _is_ the audit trail.
+- **Separate business logic from UI** — reducers hold the rules; editors just dispatch.
+
+That makes it well suited to operational systems, governance tools, financial
+workflows, collaborative editors, and other distributed applications.
+
+## What you'll learn
+
+By the end of this course you'll understand:
+
+- The Powerhouse mental model — documents, state, and operations
+- Actions and reducers — how state changes are described and applied
+- Editors and host applications
+- Connect and distributed synchronization
+- Switchboard, subgraphs, and read models
+- How a complete Powerhouse application fits together
+
+## The path
+
+The chapters are designed to be read in order — each builds on the last:
+
+**Foundations → Architecture → Document models → Editors → Connect → Switchboard → Sync → Going further**
+
+Each chapter is a handful of short lessons that end with a quiz to check your
+understanding.
+
+<LearnCourseGrid />
+
+After the course you'll be able to navigate the Powerhouse architecture, reason
+about how a change flows through the stack, and read what the agent generates
+with confidence.
+
+<Admonition type="tip" title="Start here">
+
+New to Powerhouse? Begin with
+[What is Powerhouse?](/learn/foundations/what-is-powerhouse) — every
+later lesson builds on the operation-log model it establishes.
+
+</Admonition>

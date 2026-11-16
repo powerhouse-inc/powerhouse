@@ -1,0 +1,11 @@
+{
+  "label": "Going further",
+  "link": {
+    "type": "doc",
+    "id": "deep-dives/reducers-in-depth"
+  },
+  "customProps": {
+    "icon": "cpu",
+    "description": "Reducer patterns under the hood, plus identity and signing on the operation log."
+  }
+}

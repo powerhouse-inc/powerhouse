@@ -268,7 +268,7 @@ build one of those the same way — with operations, in order.
 | Field | What goes in it |
 | --- | --- |
 | `connectorId` | The piece id, e.g. `@acme/piece-crm`: the piece, not one of its actions. |
-| `authType` | The `PieceAuth` kind this connection signs in with: `CUSTOM_AUTH`, `SECRET_TEXT`, `BASIC_AUTH`, `OAUTH2`, `OIDC` or `NONE`. A piece that offers several methods (its `auth` is an array) runs through the one of this type. `OAUTH2` and `OIDC` can be declared but don't run yet. `REACTOR` is a reactor connection, for a step whose block declares `requireReactor`: see [Reactor access from pieces](/academy/Learn/workflows/reactor-access). |
+| `authType` | The `PieceAuth` kind this connection signs in with: `CUSTOM_AUTH`, `SECRET_TEXT`, `BASIC_AUTH`, `OAUTH2`, `OIDC` or `NONE`. A piece that offers several methods (its `auth` is an array) runs through the one of this type. `OAUTH2` and `OIDC` can be declared but don't run yet. `REACTOR` is a reactor connection, for a step whose block declares `requireReactor`: see [Reactor access from pieces](/learn/workflows/reactor-access). |
 | `config` | The **non-secret** auth properties, keyed by property name. |
 | `secretRefs` | One entry per secret property: `{ id, name, ref }`. |
 

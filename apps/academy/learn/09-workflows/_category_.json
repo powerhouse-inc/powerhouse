@@ -1,0 +1,11 @@
+{
+  "label": "Workflows",
+  "link": {
+    "type": "doc",
+    "id": "workflows/what-are-workflows"
+  },
+  "customProps": {
+    "icon": "workflow",
+    "description": "Automation you assemble in the browser — pieces, connections, and steps that read and write documents."
+  }
+}

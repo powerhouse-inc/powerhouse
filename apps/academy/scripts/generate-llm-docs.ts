@@ -27,10 +27,14 @@ function generateLLMDocs() {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
 
-    const academyDocsDir = path.resolve(__dirname, "..", "docs");
-    const staticDir = path.resolve(__dirname, "..", "static");
+    const siteDir = path.resolve(__dirname, "..");
+    const staticDir = path.resolve(siteDir, "static");
 
-    const docFiles = collectDocFiles(academyDocsDir);
+    // Each docs plugin's folder and the route it is served under.
+    const docFiles = [
+      ...collectDocFiles(path.resolve(siteDir, "docs"), ""),
+      ...collectDocFiles(path.resolve(siteDir, "learn"), "learn", "Learn"),
+    ];
     const sortedFiles = sortFilesBySidebar(docFiles);
 
     const llmsTxt = generateLLMsIndex(sortedFiles);
@@ -67,7 +71,15 @@ function shouldExclude(relativePath: string): boolean {
   return EXCLUDE_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
-function collectDocFiles(docsDir: string): DocFile[] {
+/**
+ * Collects one docs plugin's pages. `category` names the whole folder's
+ * section; without it, the section comes from each page's folder.
+ */
+function collectDocFiles(
+  docsDir: string,
+  routeBasePath: string,
+  category?: string,
+): DocFile[] {
   const docFiles: DocFile[] = [];
 
   function collectFiles(dir: string) {
@@ -82,14 +94,17 @@ function collectDocFiles(docsDir: string): DocFile[] {
         if (!item.startsWith("_")) collectFiles(fullPath);
       } else if (item.endsWith(".md") || item.endsWith(".mdx")) {
         const content = fs.readFileSync(fullPath, "utf8");
-        const relativePath = path.relative(docsDir, fullPath);
+        const relativePath = path.join(
+          routeBasePath,
+          path.relative(docsDir, fullPath),
+        );
 
         if (shouldExclude(relativePath)) continue;
 
         const title = extractTitle(content, relativePath);
         const description = extractDescription(content);
-        const category = extractCategory(relativePath);
-        const urlPath = buildUrlPath(relativePath);
+        const section = category ?? extractCategory(relativePath);
+        const urlPath = buildUrlPath(relativePath, routeBasePath, content);
 
         docFiles.push({
           path: fullPath,
@@ -97,7 +112,7 @@ function collectDocFiles(docsDir: string): DocFile[] {
           relativePath,
           title,
           description,
-          category,
+          category: section,
           urlPath,
         });
       }
@@ -108,13 +123,26 @@ function collectDocFiles(docsDir: string): DocFile[] {
   return docFiles;
 }
 
+/** A one-line value from a doc's YAML frontmatter, without its quotes. */
+function frontmatterValue(content: string, key: string): string | undefined {
+  const frontmatter = /^---\n([\s\S]*?)\n---/.exec(content)?.[1] ?? "";
+  const value = new RegExp(`^${key}:[ \\t]*(.+)$`, "m")
+    .exec(frontmatter)?.[1]
+    .trim();
+  return value?.replace(/^(["'])(.*)\1$/, "$2");
+}
+
 function extractTitle(content: string, relativePath: string): string {
+  const frontmatterTitle = frontmatterValue(content, "title");
+  if (frontmatterTitle) return frontmatterTitle;
   const titleMatch = content.match(/^#\s+(.+)$/m);
   if (titleMatch) return titleMatch[1].trim();
   return path.basename(relativePath, path.extname(relativePath));
 }
 
 function extractDescription(content: string): string {
+  const frontmatterDescription = frontmatterValue(content, "description");
+  if (frontmatterDescription) return frontmatterDescription;
   // Strip frontmatter
   const withoutFrontmatter = content.replace(/^---[\s\S]*?---\n/, "");
   // Skip the first heading
@@ -159,7 +187,6 @@ function extractCategory(relativePath: string): string {
   // Reference and Build are parent folders that nest other sections, so match
   // them before their children (e.g. APIReferences now lives under Reference).
   if (section.includes("GetStarted")) return "Get Started";
-  if (section.includes("Learn")) return "Learn";
   if (section.includes("MasteryTrack")) return "Build";
   if (section.includes("Reference")) return "Reference";
   if (section.includes("Architecture")) return "Architecture";
@@ -173,7 +200,16 @@ function extractCategory(relativePath: string): string {
  * Convert a doc file relative path to its live URL path.
  * Docusaurus strips numeric prefixes (e.g. "01-", "02-") from path segments.
  */
-function buildUrlPath(relativePath: string): string {
+function buildUrlPath(
+  relativePath: string,
+  routeBasePath: string,
+  content: string,
+): string {
+  const slug = frontmatterValue(content, "slug");
+  if (slug?.startsWith("/")) {
+    const route = `/${routeBasePath}${slug}`.replace(/\/+/g, "/");
+    return `${SITE_URL}${route.length > 1 ? route.replace(/\/$/, "") : route}`;
+  }
   const withoutExt = relativePath.replace(/\.(md|mdx)$/, "");
   const segments = withoutExt.split(path.sep);
   const cleaned = segments.map((seg) => seg.replace(/^\d+-/, ""));

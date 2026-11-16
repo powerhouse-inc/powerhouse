@@ -1,4 +1,4 @@
-import type { PropSidebarItem } from "@docusaurus/plugin-content-docs";
+import type { PropSidebarItemCategory } from "@docusaurus/plugin-content-docs";
 import type { WrapperProps } from "@docusaurus/types";
 import Category from "@theme-original/DocSidebarItem/Category";
 import type CategoryType from "@theme/DocSidebarItem/Category";
@@ -6,36 +6,22 @@ import React from "react";
 
 type Props = WrapperProps<typeof CategoryType>;
 
-// Count only immediate children (links and categories)
-// Note: doc items are converted to 'link' type in the rendered sidebar
-function countItems(items: PropSidebarItem[]): number {
-  let count = 0;
-  for (const item of items) {
-    if (
-      // @ts-expect-error TODO: check this type
-      item.type === "doc" ||
-      item.type === "link" ||
-      item.type === "category"
-    ) {
-      count += 1;
-    }
-  }
-  return count;
+/** The entries a reader sees when the category is expanded. */
+function countEntries(category: PropSidebarItemCategory): number {
+  return category.items.filter(
+    (item) => item.type === "link" || item.type === "category",
+  ).length;
 }
 
 export default function CategoryWrapper(props: Props): React.JSX.Element {
   const { item, level } = props;
 
   // Only show count on top-level categories (level 1), except Release Notes
-  if (
-    level !== 1 ||
-    item.label === "Release Notes" ||
-    item.label === "Architecture"
-  ) {
+  if (level !== 1 || item.label === "Release Notes") {
     return <Category {...props} />;
   }
 
-  const itemCount = countItems(item.items);
+  const itemCount = countEntries(item);
 
   // Clone the item with a modified label that includes the count
   const modifiedItem = {

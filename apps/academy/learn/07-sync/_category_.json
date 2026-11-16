@@ -1,0 +1,11 @@
+{
+  "label": "Sync & collaboration",
+  "link": {
+    "type": "doc",
+    "id": "sync/sync-and-collaborate"
+  },
+  "customProps": {
+    "icon": "git-branch",
+    "description": "Replay, merge, and why conflict-free just works once your state lives in a log."
+  }
+}

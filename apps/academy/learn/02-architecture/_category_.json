@@ -1,0 +1,11 @@
+{
+  "label": "Architecture",
+  "link": {
+    "type": "doc",
+    "id": "architecture/the-big-picture"
+  },
+  "customProps": {
+    "icon": "network",
+    "description": "How the Reactor, Connect, and Switchboard fit together — and where your code lives."
+  }
+}
