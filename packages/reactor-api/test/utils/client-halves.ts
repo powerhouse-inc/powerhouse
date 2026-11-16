@@ -1,14 +1,15 @@
-import type {
-  BatchExecutionRequest,
-  BatchWriteHandle,
-  ConsistencyToken,
-  IDriveWriteClient,
-  IReactorClient,
-  IReactorReadClient,
-  IReactorWriteClient,
-  JobInfo,
-  WriteHandle,
-  WriteReceipt,
+import {
+  FacadeWriteClient,
+  type BatchExecutionRequest,
+  type BatchWriteHandle,
+  type ConsistencyToken,
+  type IDriveWriteClient,
+  type IReactorClient,
+  type IReactorReadClient,
+  type IReactorWriteClient,
+  type JobInfo,
+  type WriteHandle,
+  type WriteReceipt,
 } from "@powerhousedao/reactor";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import {
@@ -215,6 +216,31 @@ export function halvesOf(client: object): {
   return {
     read: realRead ? facade.read! : (client as IReactorReadClient),
     write: realWrite ? facade.write! : facadeWriteHalf(client as FacadeMock),
+  };
+}
+
+/**
+ * The client options of a `GraphQLManager` over a facade-shaped client: its
+ * own `read`/`write` when it has them (a real facade), else the mock itself
+ * as the read half and a `FacadeWriteClient` over it. The client is also
+ * handed on as the facade subgraphs get as `reactorClient`.
+ */
+export function managerClientsOf(client: object): {
+  readClient: IReactorReadClient;
+  writeClient: IReactorWriteClient;
+  reactorClient: IReactorClient;
+} {
+  const facade = client as IReactorClient;
+  const read = facade.read as Partial<IReactorReadClient> | undefined;
+  const write = facade.write as Partial<IReactorWriteClient> | undefined;
+  return {
+    readClient:
+      typeof read?.get === "function" ? (read as IReactorReadClient) : facade,
+    writeClient:
+      typeof write?.execute === "function"
+        ? (write as IReactorWriteClient)
+        : new FacadeWriteClient(facade),
+    reactorClient: facade,
   };
 }
 

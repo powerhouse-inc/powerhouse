@@ -57,7 +57,8 @@ describe("reactor subgraph writes resolve slugs under OPEN", () => {
       .buildModule();
     ctx = mutationContextFor(module);
     reactorDriveClient = new ReactorDriveClient({
-      reactor: module.client,
+      read: module.read,
+      write: module.write,
       readModel: {} as IDriveReadModel,
     });
     const subgraph = new ReactorSubgraph({

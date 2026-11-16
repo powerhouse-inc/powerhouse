@@ -19,6 +19,7 @@ import type {
   Processor,
   ProcessorFactoryBuilder,
 } from "../src/types.js";
+import { managerClientsOf } from "./utils/client-halves.js";
 
 const silentLogger: ILogger = {
   level: "error" as const,
@@ -62,7 +63,7 @@ function makeGraphQLManager(reactorClient: IReactorClient): GraphQLManager {
     path: "/",
     httpServer: {} as http.Server,
     wsServer: { setMaxListeners: vi.fn() } as unknown as WebSocketServer,
-    reactorClient,
+    ...managerClientsOf(reactorClient),
     logger: silentLogger,
     featureFlags: { enableDocumentModelSubgraphs: true },
   } as unknown as GraphQLManagerOptions);

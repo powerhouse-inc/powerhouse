@@ -1,9 +1,5 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type {
-  IReactorClient,
-  IRelationalDb,
-  ISyncManager,
-} from "@powerhousedao/reactor";
+import type { IRelationalDb, ISyncManager } from "@powerhousedao/reactor";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { gql } from "graphql-tag";
@@ -24,6 +20,7 @@ import {
   AuthorizationPolicy,
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
+import { managerClientsOf } from "./utils/client-halves.js";
 
 function makeLogger(): ILogger {
   const logger: ILogger = {
@@ -105,14 +102,14 @@ async function makeManager() {
       close: vi.fn((cb?: () => void) => cb?.()),
       setMaxListeners: vi.fn(),
     } as unknown as WebSocketServer,
-    reactorClient: {
+    ...managerClientsOf({
       getDocumentModelModules: vi
         .fn()
         .mockResolvedValue({ results: [DRIVE_MODEL] }),
       find: vi
         .fn()
         .mockResolvedValue({ results: [], options: { cursor: "", limit: 1 } }),
-    } as unknown as IReactorClient,
+    }),
     relationalDb: {} as IRelationalDb,
     analyticsStore: {} as IAnalyticsStore,
     syncManager: {} as ISyncManager,

@@ -1,15 +1,13 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import {
-  FacadeWriteClient,
-  warnOnce,
-  type IDriveClient,
-  type IDriveNodeSource,
-  type IReactorClient,
-  type IReactorReadClient,
-  type IReactorWriteClient,
-  type IRelationalDb,
-  type ISyncManager,
-  type SyncScopeGate,
+import type {
+  IDriveClient,
+  IDriveNodeSource,
+  IReactorClient,
+  IReactorReadClient,
+  IReactorWriteClient,
+  IRelationalDb,
+  ISyncManager,
+  SyncScopeGate,
 } from "@powerhousedao/reactor";
 import type {
   Context,
@@ -178,13 +176,13 @@ export type GraphQLManagerOptions = {
    * The read half: every query reads through it (as `ctx.clients.read`), and
    * so do setup-time lookups, drive discovery and the drive ownership cache.
    */
-  readClient?: IReactorReadClient;
+  readClient: IReactorReadClient;
   /** The write half, handed to mutation resolvers as `ctx.clients.write`. */
-  writeClient?: IReactorWriteClient;
+  writeClient: IReactorWriteClient;
   /**
-   * @deprecated Pass `readClient` and `writeClient`. Accepted for one release:
-   * the halves are taken from its `read` and `write`, and it is still handed
-   * to subgraphs as their deprecated `reactorClient`.
+   * @deprecated The facade over both halves. The manager does not read or
+   * write through it; it is only handed to subgraphs as their deprecated
+   * `reactorClient`.
    */
   reactorClient?: IReactorClient;
   relationalDb: IRelationalDb;
@@ -505,10 +503,12 @@ export class GraphQLManager {
     this.path = options.path;
     this.httpServer = options.httpServer;
     this.wsServer = options.wsServer;
-    const { read, write } = resolveClientHalves(options);
-    this.#readClient = read;
+    this.#readClient = options.readClient;
     this.#facade = options.reactorClient;
-    this.#clients = new RequestClientBinder(read, write);
+    this.#clients = new RequestClientBinder(
+      options.readClient,
+      options.writeClient,
+    );
     this.#unboundClients = this.#clients.unboundClients();
     this.relationalDb = options.relationalDb;
     this.analyticsStore = options.analyticsStore;
@@ -2568,41 +2568,5 @@ function subscriptionOwners(
       if (owner !== undefined) tags.add(owner);
     }
     return tags;
-  };
-}
-
-/**
- * The client halves a manager runs on: the ones passed, or, from a deprecated
- * facade, its own halves. A facade without halves (an older implementation)
- * is itself the read half and is adapted for writes.
- */
-function resolveClientHalves(options: GraphQLManagerOptions): {
-  read: IReactorReadClient;
-  write: IReactorWriteClient;
-} {
-  if (options.readClient && options.writeClient) {
-    return { read: options.readClient, write: options.writeClient };
-  }
-  const facade = options.reactorClient;
-  if (!facade) {
-    throw new Error(
-      "GraphQLManager needs readClient and writeClient (or a reactorClient)",
-    );
-  }
-  warnOnce(
-    "GraphQLManagerOptions.reactorClient",
-    "Pass readClient and writeClient; the facade is kept for subgraphs only.",
-  );
-  const read = facade.read as Partial<IReactorReadClient> | undefined;
-  const write = facade.write as Partial<IReactorWriteClient> | undefined;
-  return {
-    read:
-      options.readClient ??
-      (typeof read?.get === "function" ? (read as IReactorReadClient) : facade),
-    write:
-      options.writeClient ??
-      (typeof write?.execute === "function"
-        ? (write as IReactorWriteClient)
-        : new FacadeWriteClient(facade)),
   };
 }

@@ -82,8 +82,8 @@ export type SubgraphArgs = {
    */
   readClient?: IReactorReadClient;
   /**
-   * @deprecated The facade over both halves, kept for one release for
-   * subgraphs that still call it. Use `readClient` and `ctx.clients`.
+   * @deprecated The facade over both halves, for subgraphs that still call
+   * it. Use `readClient` and `ctx.clients`.
    */
   reactorClient?: IReactorClient;
   /**
