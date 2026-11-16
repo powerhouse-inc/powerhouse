@@ -412,8 +412,10 @@ test("Install Package in Consumer Project", async ({ browser }) => {
 
   try {
     // Navigate to the consumer Connect
+    // The consumer host runs its reactor in a worker, which keeps the network
+    // busy, so this and the waits below rest on elements, not on networkidle.
     await page.goto(CONSUMER_CONNECT_URL);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Wait for the app to fully load (skeleton loader disappears)
     await page
@@ -504,13 +506,13 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     await createDriveSubmit.click();
 
     // Wait for drive to be created
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(2000);
 
     // Step 10: creating a drive navigates straight into it (the URL segment
     // is the drive's slug, which for a fresh local drive is its id)
     await expect(page).toHaveURL(/\/d\/[^/?]+/, { timeout: 10_000 });
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Step 11: Create a document of the installed package type via the
     // "Create New Document" modal.
@@ -539,7 +541,7 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     await createDocButton.click();
 
     // Wait for document to be created and editor to load
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Step 12: Verify the document was created and the editor loaded
     // The URL should contain a document path
@@ -714,7 +716,7 @@ test("Change registry URL at runtime and install from new registry", async () =>
   // Step 5: Refresh — same preview server, new packageRegistryUrl
   // -------------------------------------------------------------------
   console.log("Refreshing browser to pick up new registry URL...");
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page
     .locator(".skeleton-loader")
     .waitFor({ state: "hidden", timeout: 60_000 });
@@ -764,7 +766,7 @@ test("Change registry URL at runtime and install from new registry", async () =>
     const keys = await caches.keys();
     await Promise.all(keys.map((k) => caches.delete(k)));
   });
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page
     .locator(".skeleton-loader")
     .waitFor({ state: "hidden", timeout: 60_000 });
