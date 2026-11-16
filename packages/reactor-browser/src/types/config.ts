@@ -1,14 +1,8 @@
-import type { PHConnectRenownAdapters } from "@powerhousedao/shared/clis";
-
 export type PHGlobalConfig = PHCommonGlobalConfig &
   PHAppConfig &
   PHDocumentEditorConfig &
   PHDrivesGlobalConfig &
-  PHAnalyticsGlobalConfig &
-  PHRelationalProcessorsGlobalConfig &
-  PHProcessorsGlobalConfig &
-  PHRenownGlobalConfig &
-  PHSentryGlobalConfig;
+  PHRenownGlobalConfig;
 
 export type PHGlobalConfigKey = keyof PHGlobalConfig;
 export type PHGlobalConfigSetters =
@@ -45,70 +39,21 @@ export type PHDocumentEditorConfigHooks =
 export type PHCommonGlobalConfig = {
   basePath?: string;
   routerBasename?: string;
-  version?: string;
-  requiresHardRefresh?: boolean;
   warnOutdatedApp?: boolean;
   studioMode?: boolean;
-  versionCheckInterval?: number;
-  cliVersion?: string;
-  fileUploadOperationsChunkSize?: number;
-  gaTrackingId?: string;
-  isDocumentModelSelectionSettingsEnabled?: boolean;
   isAddDriveEnabled?: boolean;
-  isPublicDrivesEnabled?: boolean;
-  isAddPublicDrivesEnabled?: boolean;
-  isDeletePublicDrivesEnabled?: boolean;
-  isCloudDrivesEnabled?: boolean;
-  isAddCloudDrivesEnabled?: boolean;
-  isDeleteCloudDrivesEnabled?: boolean;
-  isLocalDrivesEnabled?: boolean;
-  isAddLocalDrivesEnabled?: boolean;
-  isDeleteLocalDrivesEnabled?: boolean;
   allowList?: string[];
-  analyticsDatabaseName?: string;
   logLevel?: "debug" | "info" | "warn" | "error";
-  isEditorDebugModeEnabled?: boolean;
-  isEditorReadModeEnabled?: boolean;
   disabledEditors?: string[];
-  enabledEditors?: string[];
 };
 
 export type PHDrivesGlobalConfig = {
   defaultDrivesUrl?: string;
-  drivesPreserveStrategy?: string;
-};
-
-export type PHAnalyticsGlobalConfig = {
-  isAnalyticsEnabled?: boolean;
-  isAnalyticsDatabaseWorkerEnabled?: boolean;
-  isDiffAnalyticsEnabled?: boolean;
-  isDriveAnalyticsEnabled?: boolean;
-  isAnalyticsExternalProcessorsEnabled?: boolean;
-};
-
-export type PHRelationalProcessorsGlobalConfig = {
-  isRelationalProcessorsEnabled?: boolean;
-  isExternalRelationalProcessorsEnabled?: boolean;
-};
-
-export type PHProcessorsGlobalConfig = {
-  isExternalProcessorsEnabled?: boolean;
-  isExternalPackagesEnabled?: boolean;
 };
 
 export type PHRenownGlobalConfig = {
   renownUrl?: string;
-  renownNetworkId?: string;
-  renownChainId?: number;
   switchboardUrl?: string;
-  renownAdapters?: PHConnectRenownAdapters;
-};
-
-export type PHSentryGlobalConfig = {
-  sentryRelease?: string;
-  sentryDsn?: string;
-  sentryEnv?: string;
-  isSentryTracingEnabled?: boolean;
 };
 
 export type PHGlobalConfigSettersForKey<T extends PHGlobalConfigKey> = {

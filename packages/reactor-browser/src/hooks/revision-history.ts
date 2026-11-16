@@ -54,6 +54,3 @@ export function setRevisionHistoryVisible(visible: boolean | undefined) {
   if (visible) showRevisionHistory();
   else hideRevisionHistory();
 }
-
-/** @deprecated The revision history is a URL param now; there is no store value to watch. */
-export function addRevisionHistoryVisibleEventHandler() {}
