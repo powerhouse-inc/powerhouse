@@ -1,3 +1,14 @@
+## 6.3.0-dev.2 (2026-11-16)
+
+### 🩹 Fixes
+
+- **desktop:** a bundled stack keeps what the project's pieces load ([7e23e82dc5](https://github.com/powerhouse-inc/powerhouse/commit/7e23e82dc5))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.3.0-dev.1 (2026-11-16)
 
 ### 🚀 Features

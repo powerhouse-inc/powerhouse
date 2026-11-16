@@ -1,3 +1,14 @@
+## 6.3.0-dev.2 (2026-11-16)
+
+### 🩹 Fixes
+
+- **builder-tools:** the routes watcher test waits until the watcher reports files ([9775d7c50c](https://github.com/powerhouse-inc/powerhouse/commit/9775d7c50c))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.3.0-dev.1 (2026-11-16)
 
 ### 🚀 Features

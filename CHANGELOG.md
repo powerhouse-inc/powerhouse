@@ -1,3 +1,20 @@
+## 6.3.0-dev.2 (2026-11-16)
+
+### 🩹 Fixes
+
+- **builder-tools:** the routes watcher test waits until the watcher reports files ([9775d7c50c](https://github.com/powerhouse-inc/powerhouse/commit/9775d7c50c))
+- **desktop:** a bundled stack keeps what the project's pieces load ([7e23e82dc5](https://github.com/powerhouse-inc/powerhouse/commit/7e23e82dc5))
+- **desktop:** a bundled stack keeps what the project's pieces load ([#3403](https://github.com/powerhouse-inc/powerhouse/pull/3403))
+- **test:** reference the host packages from the test projects' tsconfig ([7ef05d026a](https://github.com/powerhouse-inc/powerhouse/commit/7ef05d026a))
+- **vetra-e2e:** the consumer project test waits on elements, not on networkidle ([0744ad1823](https://github.com/powerhouse-inc/powerhouse/commit/0744ad1823))
+
+### ❤️ Thank You
+
+- Claude
+- Claude Opus 5.5
+- Wouter Kampmann
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.3.0-dev.1 (2026-11-16)
 
 ### 🚀 Features

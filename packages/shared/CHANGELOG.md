@@ -1,3 +1,7 @@
+## 6.3.0-dev.2 (2026-11-16)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
 ## 6.3.0-dev.1 (2026-11-16)
 
 ### 🚀 Features
