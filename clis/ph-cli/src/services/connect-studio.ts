@@ -19,6 +19,9 @@ export type ConnectStudioOptions = {
   reloadOnConfigChange?: boolean;
   /** The switchboard origin whose paths this server proxies (runner.proxy). */
   proxy?: string;
+  /** Runs before a config change replaces the server, for a caller whose
+   * override follows the config too. When it rejects, the server stays. */
+  beforeRestart?: () => Promise<void>;
   /** Runs each restart's server start, for a caller that started the first
    * one inside a wrapper of its own. */
   restartWith?: (start: () => Promise<ViteDevServer>) => Promise<ViteDevServer>;
@@ -49,6 +52,7 @@ export async function runConnectStudio(
     cacheDir,
     reloadOnConfigChange,
     proxy,
+    beforeRestart,
     restartWith,
     exposeStop,
   }: ConnectStudioOptions = {},
@@ -109,6 +113,7 @@ export async function runConnectStudio(
       `[connect] ${CONFIG_FILE} changed; restarting Studio with it.`,
       { timestamp: true },
     );
+    await beforeRestart?.();
     await server.close();
     server = await (restartWith
       ? restartWith(() => start(false))

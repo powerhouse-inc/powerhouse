@@ -62,7 +62,11 @@ export async function dev(
   const { runConnectStudio } = await import("../services/connect-studio.js");
   const args = await toStudioArgs(host, await connectInvocationArgs(host, ctx));
   const studio: { stop?: () => Promise<void> } = {};
-  const override = callerOverride(host, ctx, ctx.verb);
+  // A host file projects powerhouse.config.json, so a change of that file
+  // changes the host: each restart of Studio serves the host as it reads
+  // then. Its port, routes and proxy stay those of the start.
+  let override = callerOverride(host, ctx, ctx.verb);
+  const { reloadHost } = ctx;
   // Without `runner.plugins`, the default composition: worked out at each
   // start of Studio from the powerhouse.config.json it reads, with the
   // studio mode it always switches on.
@@ -73,7 +77,9 @@ export async function dev(
           getConfig(join(process.cwd(), "powerhouse.config.json")),
           { app: { studioMode: true } },
         )
-    : override;
+    : reloadHost
+      ? () => override
+      : override;
   const server = await startUnderSupervisor(ctx, () =>
     runConnectStudio(args, undefined, served, {
       routes: host.runner.routes,
@@ -81,6 +87,14 @@ export async function dev(
       proxy: host.runner.proxy?.target,
       // As `ph connect studio` and `ph vetra` start it.
       reloadOnConfigChange: true,
+      ...(reloadHost
+        ? {
+            beforeRestart: async () => {
+              const reread = (await reloadHost()) as ConnectHostParsed;
+              override = callerOverride(reread, ctx, ctx.verb);
+            },
+          }
+        : {}),
       // A restart's server is started as the first is.
       restartWith: (start) => startUnderSupervisor(ctx, start),
       exposeStop: (stop) => {

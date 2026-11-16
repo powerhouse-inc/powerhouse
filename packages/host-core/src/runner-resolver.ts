@@ -40,6 +40,12 @@ export interface RunnerContext {
    * `ph run <host> [verb]`, checked against the runner's `argsSchema`. They
    * win over the host file. A compound member gets its own share. */
   argv?: readonly string[];
+  /** The host this verb received, read from disk again: loaded, resolved and
+   * validated as the first was. For a dev server that follows the project's
+   * files; a process keeps the first evaluation of a host file otherwise.
+   * Rejects when the files no longer make a valid host. Not set for a
+   * compound member. */
+  reloadHost?: () => Promise<unknown>;
 }
 
 /** A verb receives the PARSED host (its runner's hostSchema output), so

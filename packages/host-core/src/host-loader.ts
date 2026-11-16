@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { Worker } from "node:worker_threads";
 import { z } from "zod";
 import type { HostDefinition } from "./host-schemas.js";
 import type { PluginEntryData } from "./plugins.js";
@@ -407,10 +408,59 @@ export async function loadHost(
   return importHost(projectRoot, hostName, true);
 }
 
+/**
+ * `loadHost`, evaluated again: the host file and what it imports are read as
+ * they are on disk now. A process keeps the first evaluation of a module, so
+ * `loadHost` returns the host as it was when the process first loaded it; a
+ * dev server that follows powerhouse.config.json asks for this one.
+ */
+export async function loadHostFresh(
+  projectRoot: string,
+  hostName: string,
+): Promise<LoadedHost> {
+  return importHost(projectRoot, hostName, true, true);
+}
+
+const FRESH_IMPORT_WORKER = `
+const { parentPort, workerData } = require("node:worker_threads");
+import(workerData.url).then(
+  (module) => {
+    try {
+      parentPort.postMessage({ host: module.default });
+    } catch (error) {
+      parentPort.postMessage({ error: String(error) });
+    }
+  },
+  (error) => parentPort.postMessage({ error: String(error) }),
+);
+`;
+
+/** The default export of a module, evaluated in a worker: a worker has its
+ * own module graph, so the file and its imports are read again. Host files
+ * export data, which is what reaches this thread. */
+function importDefaultFresh(url: string, file: string): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(FRESH_IMPORT_WORKER, {
+      eval: true,
+      workerData: { url },
+    });
+    const fail = (reason: string) =>
+      reject(new HostLoadError(`${file} could not be read again: ${reason}`));
+    worker.once("message", (message: { host?: unknown; error?: string }) => {
+      if (message.error !== undefined) fail(message.error);
+      else resolve(message.host);
+      void worker.terminate();
+    });
+    worker.once("error", (error) => fail(String(error)));
+    worker.once("exit", () => fail("its worker exited without an answer"));
+  });
+}
+
 async function importHost(
   projectRoot: string,
   hostName: string,
   checkOutputs: boolean,
+  fresh = false,
 ): Promise<LoadedHost> {
   const probe = probeHostsFolder(projectRoot);
   if (probe.kind !== "present") {
@@ -434,10 +484,10 @@ async function importHost(
     }
   }
 
-  const module = (await import(pathToFileURL(file).href)) as {
-    default?: unknown;
-  };
-  const host = module.default;
+  const url = pathToFileURL(file).href;
+  const host = fresh
+    ? await importDefaultFresh(url, file)
+    : ((await import(url)) as { default?: unknown }).default;
   if (host === null || typeof host !== "object" || Array.isArray(host)) {
     throw new HostLoadError(
       `${file} must default-export the host object (\`export default { name, runner, ... }\`).`,

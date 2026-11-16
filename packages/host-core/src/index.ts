@@ -12,6 +12,7 @@ export {
   HostLoadError,
   lintHostImports,
   loadHost,
+  loadHostFresh,
   probeHostsFolder,
   stripComments,
   withoutHostsMessage,

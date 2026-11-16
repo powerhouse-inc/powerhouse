@@ -237,7 +237,7 @@ describe("connect bridge runner", () => {
       );
       expect(warn).not.toHaveBeenCalled();
 
-      // A classic host (no plugins) still serves the value, until 6.4.
+      // A host without plugins still serves the value, by the default composition.
       await runner.dev(
         connect(connectHost({ config: { drives: { allowAddDrive: true } } })),
         { ...ctx, verb: "dev" },
@@ -245,7 +245,7 @@ describe("connect bridge runner", () => {
       const deprecations = warn.mock.calls.map((call) => String(call[0]));
       expect(deprecations).toHaveLength(1);
       expect(deprecations[0]).toContain(
-        "hosts/lab-connect/host.js: config.drives.allowAddDrive is only read by the classic Connect boot, which 6.4 removes.",
+        "hosts/lab-connect/host.js: config.drives.allowAddDrive is only read while the host has no runner.plugins, by the default composition.",
       );
     } finally {
       warn.mockRestore();
@@ -970,6 +970,35 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
     expect(log.mock.calls.flat()).toContain(
       "[connect] hosts/lab-connect/host.js declares no runner.plugins: serving Connect's default composition.",
     );
+    log.mockRestore();
+  });
+
+  it("serves the host as it reads at each restart of Studio", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    vi.mocked(runConnectStudio).mockClear();
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const declared = (appName: string) =>
+      connect(
+        connectHost({
+          runner: {
+            module: "@powerhousedao/ph-cli/runners/connect",
+            port: 6599,
+            plugins: [],
+          },
+          config: { branding: { appName } },
+        }),
+      );
+    await runner.dev(declared("Before"), {
+      ...ctx,
+      reloadHost: () => Promise.resolve(declared("After")),
+    });
+    const [, , served, options] = vi.mocked(runConnectStudio).mock.calls[0];
+    const serving = () => (typeof served === "function" ? served() : served);
+    expect(serving()).toMatchObject({ branding: { appName: "Before" } });
+    await options?.beforeRestart?.();
+    expect(serving()).toMatchObject({ branding: { appName: "After" } });
     log.mockRestore();
   });
 
