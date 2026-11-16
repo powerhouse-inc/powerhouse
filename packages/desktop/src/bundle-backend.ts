@@ -57,8 +57,15 @@ const EXTERNAL = [
  * text: a package's comments, error messages and generated code. */
 const REQUIRE_CALL = /\b__require\(\s*["']([^"']+)["']\s*\)/g;
 
+/** A package's built workflow pieces, which the piece worker loads by path. */
+export const PIECES_DIR = path.join("dist", "node", "pieces");
+
 /** Copied into a kept package as they are, since a path reaches them. */
-const KEEP_AS_FILES = [path.join("dist", "node", "pieces")];
+const KEEP_AS_FILES = [PIECES_DIR];
+
+/** Whether the stack provides a package by name, as one bundled copy. */
+export const loadedByName = (name: string) =>
+  BY_NAME.some((pattern) => pattern.test(name));
 
 type ExportTarget = string | { [condition: string]: ExportTarget } | null;
 
@@ -167,6 +174,7 @@ export function keptManifest(
 interface LockEntry {
   dependencies?: Record<string, string>;
   optionalDependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
   version?: string;
 }
 
@@ -186,10 +194,12 @@ function resolveInLock(
   }
 }
 
-/** The install paths of `names` and everything they depend on. */
+/** The install paths of `names` and everything they depend on, and with
+ * `peers` each peer that is installed, which a package may load by name. */
 export function closureOf(
   lock: Record<string, LockEntry>,
   names: Iterable<string>,
+  { peers = false } = {},
 ): Set<string> {
   const kept = new Set<string>();
   const queue = [...names]
@@ -203,6 +213,7 @@ export function closureOf(
     for (const dependency of Object.keys({
       ...entry.dependencies,
       ...entry.optionalDependencies,
+      ...(peers ? entry.peerDependencies : {}),
     })) {
       const target = resolveInLock(lock, key, dependency);
       if (target) queue.push(target);
@@ -252,6 +263,49 @@ function licencesOf(
     ([text, labels]) => `${labels.join("\n")}\n\n${text}\n`,
   );
   return { text: sections.join(`\n${"-".repeat(72)}\n\n`), packages: count };
+}
+
+function dependenciesOf(manifest: LockEntry): string[] {
+  return Object.keys({
+    ...manifest.dependencies,
+    ...manifest.optionalDependencies,
+  });
+}
+
+/** Whether code names a package in quotes, as an import or a resolve does. */
+function namesPackage(code: string, name: string): boolean {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`["'\`]${escaped}(?:/[^"'\`]*)?["'\`]`).test(code);
+}
+
+/**
+ * What a package's pieces load, besides what the stack provides by name: what
+ * their manifests name, and those of `dependencies` their code names. A
+ * manifest names only what the piece build traced, and to that build a loader
+ * the piece resolves at run time is a string.
+ */
+export function piecesLoad(
+  packageDir: string,
+  dependencies: Iterable<string>,
+): string[] {
+  const pieces = path.join(packageDir, PIECES_DIR);
+  if (!fs.existsSync(pieces)) return [];
+  const files = fs
+    .readdirSync(pieces, { recursive: true, encoding: "utf8" })
+    .map((file) => path.join(pieces, file))
+    .filter(isFile);
+  const declared = files
+    .filter((file) => path.basename(file) === "package.json")
+    .flatMap((file) => dependenciesOf(readJson(file) as LockEntry));
+  const code = files
+    .filter((file) => /\.[cm]?js$/.test(file))
+    .map((file) => fs.readFileSync(file, "utf8"));
+  const named = [...dependencies].filter((name) =>
+    code.some((text) => namesPackage(text, name)),
+  );
+  return [...new Set([...declared, ...named])].filter(
+    (name) => !loadedByName(name),
+  );
 }
 
 function readJson(file: string): Record<string, unknown> {
@@ -332,9 +386,7 @@ export async function bundleBackend(
     }
   ).packages;
   const installed = packagesIn(modules);
-  const byName = installed.filter((name) =>
-    BY_NAME.some((pattern) => pattern.test(name)),
-  );
+  const byName = installed.filter(loadedByName);
 
   const input: Record<string, string> = {};
   const entriesOf = new Map<string, Map<string, string>>();
@@ -410,8 +462,24 @@ export async function bundleBackend(
       if (name && lock[`node_modules/${name}`]) reached.add(name);
     }
   }
+  // So does what the stack's pieces load, which Rolldown never reads: the
+  // project's, and those of each package kept by name.
+  const pieceRoots = [
+    ...piecesLoad(stackDir, dependenciesOf(lock[""])),
+    ...byName.flatMap((name) =>
+      piecesLoad(
+        path.join(modules, name),
+        dependenciesOf(kept.get(name) as LockEntry),
+      ),
+    ),
+  ];
+  for (const name of pieceRoots) reached.add(name);
   log(`  left as files: ${[...reached].sort().join(", ")}`);
-  const keepInstalled = closureOf(lock, reached);
+  // A piece's engines are often its loader's optional peers.
+  const keepInstalled = new Set([
+    ...closureOf(lock, reached),
+    ...closureOf(lock, pieceRoots, { peers: true }),
+  ]);
   const bundled = new Set(byName);
 
   const removed = installed.filter(

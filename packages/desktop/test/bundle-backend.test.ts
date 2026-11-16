@@ -1,8 +1,15 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  bundleBackend,
   closureOf,
   entryNameOf,
   exportedFiles,
@@ -183,6 +190,177 @@ describe("closureOf", () => {
 
   it("ignores what isn't installed", () => {
     expect(closureOf(lock, ["missing"]).size).toBe(0);
+  });
+
+  it("keeps an installed peer when asked, which its dependent may load", () => {
+    const peers = {
+      "node_modules/loader": {
+        peerDependencies: { engine: "1", absent: "1" },
+        peerDependenciesMeta: { engine: { optional: true } },
+      },
+      "node_modules/engine": {},
+    };
+    expect([...closureOf(peers, ["loader"], { peers: true })].sort()).toEqual([
+      "node_modules/engine",
+      "node_modules/loader",
+    ]);
+    expect([...closureOf(peers, ["loader"])]).toEqual(["node_modules/loader"]);
+  });
+});
+
+/** A staged stack: each file with its text, and a lockfile of `packages`. */
+function stackWith(
+  files: Record<string, string>,
+  packages: Record<string, object>,
+): string {
+  const dir = mkdtempSync(path.join(tmpdir(), "ph-bundle-stack-"));
+  temporary.push(dir);
+  const runtime = {
+    "node_modules/@powerhousedao/ph-run/package.json": "{}",
+    "node_modules/@powerhousedao/ph-run/dist/cli.mjs": "export {};",
+    "node_modules/@powerhousedao/reactor-api/package.json": "{}",
+    "node_modules/@powerhousedao/reactor-api/dist/src/pglite/worker/entry.mjs":
+      "export {};",
+    "node_modules/@powerhousedao/reactor-workflow/package.json": "{}",
+    "node_modules/@powerhousedao/reactor-workflow/dist/worker-entry.js":
+      "export {};",
+  };
+  for (const [file, text] of Object.entries({ ...runtime, ...files })) {
+    mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+    writeFileSync(path.join(dir, file), text);
+  }
+  writeFileSync(
+    path.join(dir, "package-lock.json"),
+    JSON.stringify({ packages }),
+  );
+  return dir;
+}
+
+describe("bundleBackend", () => {
+  it("keeps what the pieces load, which nothing in the bundle imports", async () => {
+    const manifest = (dependencies: Record<string, string>) =>
+      JSON.stringify({ dependencies });
+    const stack = stackWith(
+      {
+        "package.json": manifest({
+          "@powerhousedao/ph-run": "1",
+          "editor-lib": "1",
+          "engine-loader": "1",
+        }),
+        // Resolved at run time, so the piece's build never traced it.
+        "dist/node/pieces/convert/index.mjs":
+          'export const load = () => require.resolve("engine-loader/pdf");',
+        "dist/node/pieces/convert/package.json": manifest({}),
+        "node_modules/editor-lib/package.json": "{}",
+        "node_modules/engine-loader/package.json": "{}",
+        "node_modules/native-engine/package.json": "{}",
+        "node_modules/@powerhousedao/plugin/package.json": manifest({
+          "plugin-engine": "1",
+          "plugin-ui": "1",
+        }),
+        "node_modules/@powerhousedao/plugin/dist/node/pieces/ocr/index.mjs":
+          'export const ocr = () => import("plugin-engine");',
+        "node_modules/@powerhousedao/plugin/dist/node/pieces/ocr/package.json":
+          manifest({ "piece-engine": "1" }),
+        "node_modules/plugin-engine/package.json": "{}",
+        "node_modules/plugin-ui/package.json": "{}",
+        "node_modules/piece-engine/package.json": "{}",
+        "node_modules/unrelated/package.json": "{}",
+      },
+      {
+        "": {
+          dependencies: {
+            "@powerhousedao/ph-run": "1",
+            "editor-lib": "1",
+            "engine-loader": "1",
+          },
+        },
+        "node_modules/@powerhousedao/ph-run": {
+          dependencies: { "native-engine": "1", unrelated: "1" },
+        },
+        "node_modules/@powerhousedao/reactor-api": {},
+        "node_modules/@powerhousedao/reactor-workflow": {},
+        "node_modules/@powerhousedao/plugin": {
+          dependencies: { "plugin-engine": "1", "plugin-ui": "1" },
+        },
+        "node_modules/editor-lib": {},
+        // Loads its engine by name, so declares it as an optional peer.
+        "node_modules/engine-loader": {
+          peerDependencies: { "native-engine": "1" },
+          peerDependenciesMeta: { "native-engine": { optional: true } },
+        },
+        "node_modules/native-engine": {},
+        "node_modules/plugin-engine": {},
+        "node_modules/plugin-ui": {},
+        "node_modules/piece-engine": {},
+        "node_modules/unrelated": {},
+      },
+    );
+
+    await bundleBackend({ stackDir: stack });
+
+    const names = [
+      "engine-loader",
+      "native-engine",
+      "plugin-engine",
+      "piece-engine",
+      "editor-lib",
+      "plugin-ui",
+      "unrelated",
+    ];
+    const installed = Object.fromEntries(
+      names.map((name) => [
+        name,
+        existsSync(path.join(stack, "node_modules", name, "package.json")),
+      ]),
+    );
+    expect(installed).toEqual({
+      "engine-loader": true,
+      "native-engine": true,
+      "plugin-engine": true,
+      "piece-engine": true,
+      "editor-lib": false,
+      "plugin-ui": false,
+      unrelated: false,
+    });
+    expect(
+      existsSync(
+        path.join(
+          stack,
+          "node_modules/@powerhousedao/plugin/dist/node/pieces/ocr/package.json",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("folds a package's dependencies when it ships no pieces", async () => {
+    const stack = stackWith(
+      {
+        "package.json": JSON.stringify({
+          dependencies: { "@powerhousedao/ph-run": "1" },
+        }),
+        "node_modules/@powerhousedao/plugin/package.json": JSON.stringify({
+          dependencies: { "plugin-ui": "1" },
+        }),
+        "node_modules/plugin-ui/package.json": "{}",
+      },
+      {
+        "": { dependencies: { "@powerhousedao/ph-run": "1" } },
+        "node_modules/@powerhousedao/ph-run": {},
+        "node_modules/@powerhousedao/reactor-api": {},
+        "node_modules/@powerhousedao/reactor-workflow": {},
+        "node_modules/@powerhousedao/plugin": {
+          dependencies: { "plugin-ui": "1" },
+        },
+        "node_modules/plugin-ui": {},
+      },
+    );
+
+    await bundleBackend({ stackDir: stack });
+
+    expect(
+      existsSync(path.join(stack, "node_modules/plugin-ui/package.json")),
+    ).toBe(false);
   });
 });
 
