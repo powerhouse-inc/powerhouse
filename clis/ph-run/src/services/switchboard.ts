@@ -187,6 +187,7 @@ export function switchboardConfigOf(
   const config = callerOverEnv(
     base ?? switchboardConfigFromEnv(process.env, { logger }),
     configLayerOf(finalOptions, basePath),
+    { declaredComposition: finalOptions.pluginComposition !== undefined },
   );
   return { config, finalOptions };
 }
@@ -228,7 +229,7 @@ export function projectDriveId(name: string, projectRoot: string): string {
   return `${name}-${hash.substring(0, 8)}`;
 }
 
-/** The drive `reactor.workflows` seeds, the same one `ph vetra` does. */
+/** The drive PH_WORKFLOWS_ENABLED seeds, the same one `ph vetra` does. */
 export async function seedWorkflowsDrive(
   reactor: Parameters<typeof addDefaultDrive>[0],
   port: number,

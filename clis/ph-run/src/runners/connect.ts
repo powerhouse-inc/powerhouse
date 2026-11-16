@@ -39,7 +39,6 @@ import { command, runSafely } from "cmd-ts";
 import { z } from "zod";
 import {
   connectChromeDeprecation,
-  reactorWorkflowsDeprecation,
 } from "./host-deprecations.js";
 import { onlyPassed, runnerArgsSchemaOf } from "./runner-args.js";
 import {
@@ -269,11 +268,6 @@ function callerOverrideRaw(
       entries !== undefined,
       `hosts/${host.name}/host.js`,
     ),
-    reactorWorkflowsDeprecation(
-      reactor,
-      `hosts/${host.name}/host.js`,
-      "@powerhousedao/connect/plugins/workflows",
-    ),
   ]) {
     if (deprecation) console.warn(deprecation);
   }
@@ -306,7 +300,7 @@ function callerOverrideRaw(
   if (unserved)
     console.warn(`[connect] hosts/${host.name}/host.js: ${unserved}`);
   const structural = isStructuralMultiReactor(reactor);
-  if (!connect.reactor && !connect.instance && !connect.app && !structural) {
+  if (!connect.reactor && !connect.instance && !structural) {
     // `base` IS host.config when the host has one; a host without a config
     // block still carries its composition, drives, Renown and namespace (set
     // on `base` above). With none of them, there is no override: a classic
@@ -348,7 +342,7 @@ function callerOverrideRaw(
     ...base,
     reactor: { ...connect.reactor, ...base.reactor },
     instance: instance as never,
-    app: { ...connect.app, ...base.app },
+    app: { ...base.app },
     ...(drives ? { drives: { ...base.drives, ...drives } } : {}),
   };
 }

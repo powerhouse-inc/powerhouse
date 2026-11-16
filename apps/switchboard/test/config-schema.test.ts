@@ -62,8 +62,6 @@ describe("switchboardConfigSchema", () => {
       documentModelSubgraphs: true,
       privacy: { enabled: false },
     });
-    // Unset is its own state: the plugin host with the default composition.
-    expect(config.features.pluginHost).toBeUndefined();
     expect(config.attachments).toEqual({ storage: { kind: "filesystem" } });
     expect(config.auth.documentPermissions).toEqual({ enabled: false });
     expect(config.auth.access).toEqual({ mode: "open" });

@@ -31,10 +31,8 @@ import {
   missingPostgresUrl,
   prepareMemberStorage,
   reactorBlockConflicts,
-  readModelAsReactorStore,
   switchboardDevMode,
 } from "./member-config.js";
-import { reactorWorkflowsDeprecation } from "./host-deprecations.js";
 import { onlyPassed, runnerArgsSchemaOf } from "./runner-args.js";
 import { z } from "zod";
 import { classicSwitchboardArgs } from "../services/classic-args.js";
@@ -413,18 +411,6 @@ async function start(
   // Split before the server import loads the project .env into the env.
   const env = memberEnvOf(ctx.env);
   prepareMemberStorage(host.reactor, env.shell, hostFile);
-  const legacyStore = readModelAsReactorStore(
-    host.reactor,
-    env.shell,
-    hostFile,
-  );
-  if (legacyStore) console.warn(legacyStore.warning);
-  const workflowsBoolean = reactorWorkflowsDeprecation(
-    host.reactor,
-    hostFile,
-    "@powerhousedao/switchboard/plugins/workflows",
-  );
-  if (workflowsBoolean) console.warn(workflowsBoolean);
   // Already loaded by `ph run`, before the host; here for a caller that
   // starts the runner itself, and to reach its flush.
   const { loadObservability } = await import("../services/observability.js");
@@ -450,17 +436,16 @@ async function start(
   // This member's own config, under the args: nothing is written to the
   // process env, so compound members do not see each other's settings.
   const memberConfig = await memberSwitchboardConfig(host, env, {
-    pluginHost: entriesDeclared,
     defaults: https === undefined ? {} : { server: { https } },
   });
   const noDatabase = missingPostgresUrl(host.reactor, memberConfig, hostFile);
   if (noDatabase) throw new Error(noDatabase);
 
   // R2 step 2: a declared composition is resolved here, against the PROJECT
-  // dependency tree, and `features.pluginHost: true` tells the server to boot
-  // it. No plugins key = nothing to resolve: the server boots its default
-  // composition (the subsystems MCP_ENABLED, PH_WORKFLOWS_ENABLED and the
-  // config file turn on), which contributes no drives through this runner.
+  // dependency tree, and handing it to the server is what makes it boot. No
+  // plugins key = nothing to resolve: the server boots its default
+  // composition (the subsystems MCP_ENABLED and PH_WORKFLOWS_ENABLED turn
+  // on), which contributes no drives through this runner.
   let pluginComposition;
   if (entries !== undefined) {
     pluginComposition = await resolveHostPlugins(
@@ -583,7 +568,7 @@ async function start(
     localHostDrives.length > 0 ? localHostDrives[0].drive.slug : defaultSlug;
   const driveUrl = driveUrlOf(slug);
 
-  // No composition declared (the deprecated `reactor.workflows` switch): the
+  // No composition declared (PH_WORKFLOWS_ENABLED): the
   // workflows flag still seeds the SAME project-hashed drive the classic
   // vetra path seeds. With a composition the workflows PLUGIN declares that
   // drive (contributions.drives above), so nothing implicit happens here.
@@ -697,9 +682,7 @@ export async function resolveStores(
 ): Promise<SwitchboardStores> {
   const hostFile = `hosts/${host.name}/host.js`;
   const env = memberEnvOf(ctx.env);
-  const config = await memberSwitchboardConfig(host, env, {
-    pluginHost: host.runner.plugins !== undefined,
-  });
+  const config = await memberSwitchboardConfig(host, env);
   const noDatabase = missingPostgresUrl(host.reactor, config, hostFile);
   if (noDatabase) throw new Error(noDatabase);
   return {
@@ -721,23 +704,13 @@ export async function checkBoot(
     env.shell,
     ctx.file,
   ).map((message) => ({ path: "reactor.protocol", message }));
-  const legacyStore = readModelAsReactorStore(
-    host.reactor,
-    env.shell,
-    ctx.file,
-  );
-  if (legacyStore) {
-    issues.push({ path: "reactor.backends", message: legacyStore.warning });
-  }
   const { getConfig } = await import("@powerhousedao/config/node");
   const { switchboardBootFactsOf, switchboardBootIssues } =
     await import("@powerhousedao/switchboard/boot");
   let config;
   try {
     // As `start` builds it; an env parse error becomes the issue.
-    config = await memberSwitchboardConfig(host, env, {
-      pluginHost: host.runner.plugins !== undefined,
-    });
+    config = await memberSwitchboardConfig(host, env);
   } catch (error) {
     issues.push({
       path: "",

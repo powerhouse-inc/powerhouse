@@ -10,7 +10,6 @@ const memberConfig = (switchboard: SwitchboardConfigInput) =>
   memberSwitchboardConfig(
     { config: { switchboard } },
     { shell: {}, dotenv: {} },
-    { pluginHost: false },
   );
 
 async function configFor(argv: string[], switchboard: SwitchboardConfigInput) {
@@ -52,7 +51,7 @@ describe("switchboard config precedence", () => {
       memberSwitchboardConfig(
         { config: { switchboard } },
         { shell: {}, dotenv: {} },
-        { pluginHost: false, defaults: { server: { https: false } } },
+        { defaults: { server: { https: false } } },
       );
     const args = { ...(await classicSwitchboardArgs([])), https: undefined };
     const own = switchboardConfigOf(

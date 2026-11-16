@@ -3,7 +3,8 @@ import { callerOverEnv } from "../src/config/merge.js";
 import type { SwitchboardConfigInput } from "../src/config/schema.js";
 import { startSwitchboard, type SwitchboardDeps } from "../src/server.mjs";
 
-/** Boots the way an edge does: the caller's layer over `env`'s. */
+/** Boots the way an edge does: the caller's layer over `env`'s. A
+ * `deps.pluginComposition` is a declared composition, as the runner passes. */
 export function bootSwitchboard(
   config: SwitchboardConfigInput,
   deps: SwitchboardDeps = {},
@@ -13,6 +14,7 @@ export function bootSwitchboard(
     callerOverEnv(
       switchboardConfigFromEnv(env, { logger: deps.logger }),
       config,
+      { declaredComposition: deps.pluginComposition !== undefined },
     ),
     deps,
   );

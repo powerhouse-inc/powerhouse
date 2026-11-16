@@ -315,7 +315,7 @@ describe("switchboard runner — plugin-contributed drives", () => {
     });
   });
 
-  it("without a composition the deprecated reactor.workflows path still seeds the classic drive", async () => {
+  it("without a composition a switchboard that runs workflows still seeds the classic drive", async () => {
     const { seedWorkflowsDrive } =
       await import("@powerhousedao/ph-run/switchboard");
     vi.mocked(seedWorkflowsDrive).mockClear();
@@ -327,7 +327,6 @@ describe("switchboard runner — plugin-contributed drives", () => {
           module: "@powerhousedao/ph-cli/runners/switchboard",
           port: 7599,
         },
-        reactor: { workflows: true },
       }),
       ctx,
     );
@@ -413,7 +412,6 @@ describe("switchboard runner — readiness", () => {
           module: "@powerhousedao/ph-cli/runners/switchboard",
           port: 7599,
         },
-        reactor: { workflows: true },
       }),
       ctx,
     );

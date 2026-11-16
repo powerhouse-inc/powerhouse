@@ -452,9 +452,6 @@
                 },
                 "additionalProperties": false
               },
-              "workflows": {
-                "type": "boolean"
-              },
               "renown": {
                 "type": "object",
                 "properties": {

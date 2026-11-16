@@ -15,7 +15,7 @@ import {
   type Deprecation,
 } from "./deprecations.js";
 
-const PLUGIN_HOST = "FEATURE_PLUGIN_HOST_ENABLED";
+const GOING = "FEATURE_GOING_ENABLED";
 
 function collect(
   env: Record<string, string | undefined>,
@@ -79,21 +79,26 @@ describe("deprecations: one warning per id and invocation", () => {
   });
 });
 
-describe("deprecated flags: FEATURE_PLUGIN_HOST_ENABLED in 6.3", () => {
-  it("is in the table, for a false value", () => {
-    expect(deprecatedFlags.find((f) => f.name === PLUGIN_HOST)).toMatchObject({
-      when: "false",
-    });
+describe("deprecated flags", () => {
+  const going: DeprecatedFlag = {
+    name: GOING,
+    when: "false",
+    message: "Use `runner.plugins` in hosts/switchboard/host.js instead.",
+  };
+
+  it("FEATURE_PLUGIN_HOST_ENABLED left the table: it is retired", () => {
+    expect(
+      deprecatedFlags.find((f) => f.name === "FEATURE_PLUGIN_HOST_ENABLED"),
+    ).toBeUndefined();
+    expect(collect({ FEATURE_PLUGIN_HOST_ENABLED: "false" })).toEqual([]);
   });
 
   it.each(["false", "0", "off", "no", "FALSE", " no "])(
     "warns once for %j",
     (value) => {
-      const warnings = collect({ [PLUGIN_HOST]: value });
+      const warnings = collect({ [GOING]: value }, [going]);
       expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toContain(
-        `${PLUGIN_HOST}=${value} stops working in 6.4.`,
-      );
+      expect(warnings[0]).toContain(`${GOING}=${value} stops working in 6.4.`);
       expect(warnings[0]).toContain("`runner.plugins`");
       expect(warnings[0]).toContain("hosts/switchboard/host.js");
       expect(warnings[0]).toContain(MIGRATION_GUIDE_URL);
@@ -103,12 +108,12 @@ describe("deprecated flags: FEATURE_PLUGIN_HOST_ENABLED in 6.3", () => {
   it.each(["1", "true", "TRUE", "on", "yes", ""])(
     "stays silent for %j",
     (value) => {
-      expect(collect({ [PLUGIN_HOST]: value })).toEqual([]);
+      expect(collect({ [GOING]: value }, [going])).toEqual([]);
     },
   );
 
   it("stays silent when the variable is unset", () => {
-    expect(collect({})).toEqual([]);
+    expect(collect({}, [going])).toEqual([]);
   });
 
   it("has no entry for the switches that stay", () => {
@@ -117,9 +122,9 @@ describe("deprecated flags: FEATURE_PLUGIN_HOST_ENABLED in 6.3", () => {
   });
 
   it("warns once per invocation: a child that inherits the env is silent", () => {
-    const env: Record<string, string | undefined> = { [PLUGIN_HOST]: "false" };
-    expect(collect(env)).toHaveLength(1);
-    expect(collect({ ...env })).toEqual([]);
+    const env: Record<string, string | undefined> = { [GOING]: "false" };
+    expect(collect(env, [going])).toHaveLength(1);
+    expect(collect({ ...env }, [going])).toEqual([]);
   });
 
   it("an entry with when: set triggers on any non-empty value", () => {

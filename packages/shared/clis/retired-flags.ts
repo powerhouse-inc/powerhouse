@@ -32,6 +32,16 @@ export const retiredFlags: readonly RetiredFlag[] = [
     action: "warn",
     message: "Hosts and `ph run` are always on now.",
   },
+  {
+    name: "FEATURE_PLUGIN_HOST_ENABLED",
+    retiredIn: "6.4",
+    refusedIn: "6.4",
+    when: "false",
+    action: "refuse",
+    message:
+      "Switchboard always boots through the plugin host now, and starts the same subsystems there. " +
+      "To choose them yourself, list the plugins under `runner.plugins` in hosts/switchboard/host.js.",
+  },
 ];
 
 /** Set once a process has warned, so the CLIs it spawns do not repeat it. */

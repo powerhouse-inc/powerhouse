@@ -1,4 +1,3 @@
-import type { ReactorConfig } from "@powerhousedao/host-core";
 import {
   connectChromeConfigKeys,
   DEPRECATIONS_REMOVED_IN,
@@ -11,20 +10,6 @@ import {
  * removes. A runner prints the line when it starts, so a run warns once per
  * host file. A scaffolded host file sets none of them.
  */
-
-/** The `reactor.workflows` boolean: workflows are a listed plugin instead. */
-export function reactorWorkflowsDeprecation(
-  reactor: ReactorConfig | undefined,
-  hostFile: string,
-  plugin: string,
-): string | undefined {
-  if (reactor?.workflows === undefined) return undefined;
-  return formatDeprecation(
-    `${hostFile}: reactor.workflows is deprecated and stops working in ${DEPRECATIONS_REMOVED_IN}. ` +
-      `Workflows are a plugin: "${plugin}" under runner.plugins switches them on, leaving it out switches them off. ` +
-      "Remove the key.",
-  );
-}
 
 /** Where the generic plugin's entry config takes each chrome key. */
 const CHROME_ENTRY_KEYS: Readonly<Record<string, string>> = {

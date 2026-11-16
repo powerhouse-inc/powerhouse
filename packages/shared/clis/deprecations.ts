@@ -84,19 +84,10 @@ export interface DeprecatedFlag {
 
 /**
  * Environment variables that still switch something the next release removes.
- * `MCP_ENABLED` and `PH_WORKFLOWS_ENABLED` are not here: they stay.
+ * `MCP_ENABLED` and `PH_WORKFLOWS_ENABLED` are not here: they stay. None at
+ * the moment: `FEATURE_PLUGIN_HOST_ENABLED` moved to `retired-flags.ts`.
  */
-export const deprecatedFlags: readonly DeprecatedFlag[] = [
-  {
-    name: "FEATURE_PLUGIN_HOST_ENABLED",
-    when: "false",
-    message:
-      "It keeps Switchboard on the classic boot path, which " +
-      `${DEPRECATIONS_REMOVED_IN} removes: the plugin host is then the only path. ` +
-      "Remove the variable: Switchboard then starts the same subsystems through the plugin host. " +
-      "To choose them yourself, list the plugins under `runner.plugins` in hosts/switchboard/host.js.",
-  },
-];
+export const deprecatedFlags: readonly DeprecatedFlag[] = [];
 
 /** The deprecated variables that `env` still sets in the way their entry names. */
 export function findDeprecatedFlags(

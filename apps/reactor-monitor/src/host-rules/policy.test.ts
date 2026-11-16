@@ -225,7 +225,6 @@ describe("checkSetter", () => {
     const connect = envelope.members.connect as Record<string, unknown>;
     const block = {
       ...(connect.reactor as Record<string, unknown>),
-      workflows: true,
       renown: { url: "https://renown.example" },
       backends: {
         main: { kind: "worker", packages: { specs: ["@acme/models"] } },
@@ -237,7 +236,12 @@ describe("checkSetter", () => {
     };
     const copy = { path: "host.children.ui.reactor", value: block };
     expect(checkSetter(copy, withBlock)).toEqual({ ok: true });
-    const changed = { ...block, workflows: false };
+    const changed = {
+      ...block,
+      backends: {
+        main: { kind: "worker", packages: { specs: ["@acme/other"] } },
+      },
+    };
     expect(
       checkSetter({ ...copy, value: changed }, withBlock).ok === false,
     ).toBe(true);
@@ -292,7 +296,6 @@ describe("checkSetter", () => {
       "members.sb.reactor.backends.main.packages.dynamic",
       "document-model packages",
     ],
-    ["host.reactor.workflows", "workflows"],
     ["host.children.k.reactor.drives", "drive"],
     ["host.config.apiKey", "runner config"],
     ["host.children.k.config", "runner config"],

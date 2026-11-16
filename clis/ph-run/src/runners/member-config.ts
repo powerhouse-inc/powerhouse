@@ -13,10 +13,6 @@ import {
   type SwitchboardConfigInput,
 } from "@powerhousedao/switchboard/config";
 import {
-  DEPRECATIONS_REMOVED_IN,
-  MIGRATION_GUIDE_URL,
-} from "@powerhousedao/shared/clis/deprecations";
-import {
   envNamesBeforeProjectEnv,
   isDotenvDisabled,
 } from "@powerhousedao/shared/clis/project-env";
@@ -87,7 +83,6 @@ function blockEnvNames(reactor: ReactorConfig | undefined): string[] {
   return [
     ...Object.keys(protocolEnv(reactor?.protocol)),
     ...(block.packages?.dynamic ? ["DYNAMIC_MODEL_LOADING"] : []),
-    ...(block.features ? ["PH_WORKFLOWS_ENABLED"] : []),
   ];
 }
 
@@ -105,7 +100,6 @@ export const memberSwitchboardConfigSchema = switchboardConfigLayerSchema([
   "packages.dynamic",
   "drive",
   "remoteDrives",
-  "features.pluginHost",
   "processorConfig",
 ]);
 
@@ -152,35 +146,6 @@ export function reactorBlockConflicts(member: SwitchboardMember): string[] {
 }
 
 /**
- * The deprecation notice for a block whose `readModel.url` still names the
- * reactor store too: nothing else names the store, as it did when
- * readModel.url rode `dbPath`.
- */
-export function readModelAsReactorStore(
-  reactor: ReactorConfig | undefined,
-  env: Env,
-  hostFileLabel: string,
-): { url: string; warning: string } | undefined {
-  const storage = reactorBlockToSwitchboardConfig(reactor).storage;
-  const url = storage?.readModel?.url;
-  if (
-    !url ||
-    storage.reactor ||
-    env.PH_REACTOR_DATABASE_URL !== undefined ||
-    env.PH_SWITCHBOARD_DATABASE_URL !== undefined
-  ) {
-    return undefined;
-  }
-  return {
-    url,
-    warning:
-      `${hostFileLabel}: reactor readModel.url (${url}) also holds the reactor store, because no storage names one. ` +
-      `This is deprecated and stops working in ${DEPRECATIONS_REMOVED_IN}: set the backend's storage explicitly (the same Postgres url, or a path dataDir). ` +
-      `See ${MIGRATION_GUIDE_URL}`,
-  };
-}
-
-/**
  * The member's switchboard config under the runner's own arguments: its
  * reactor block, then `config.switchboard`, then the env over both, mapped
  * once as the server read it (the shell over the `.env`, whose values for the
@@ -192,22 +157,15 @@ export async function memberSwitchboardConfig(
   member: SwitchboardMember,
   env: MemberEnv,
   options: {
-    /** The host declares `runner.plugins`. Without them the env decides:
-     * unset boots the server's default composition. */
-    pluginHost: boolean;
     logger?: ILogger;
     /** Under everything else: values no flag or host file set. */
     defaults?: SwitchboardConfigInput;
-  },
+  } = {},
 ): Promise<SwitchboardConfigInput> {
   // Lazy: the env mapping loads reactor-api, which the runner module must not.
   const { switchboardConfigFromEnv } =
     await import("@powerhousedao/switchboard/config/env");
   const block = reactorBlockToSwitchboardConfig(member.reactor);
-  const legacy = readModelAsReactorStore(member.reactor, env.shell, "");
-  if (legacy) {
-    block.storage = { ...block.storage, reactor: { url: legacy.url } };
-  }
   // One env, as the server read it: the .env under the block's own vars,
   // the shell over both.
   const dotenvValues: Record<string, string | undefined> = { ...env.dotenv };
@@ -229,8 +187,6 @@ export async function memberSwitchboardConfig(
     block,
     member.config?.switchboard ?? {},
     { ...fromEnv, storage },
-    // A declared composition turns the plugin host on, whatever the env says.
-    options.pluginHost ? { features: { pluginHost: true } } : {},
   );
 }
 

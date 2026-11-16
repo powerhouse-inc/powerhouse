@@ -243,13 +243,9 @@ const privacySchema = z.object({
 const featuresSchema = z.object({
   /** Unset: on unless a plugin composition leaves it out. */
   mcp: z.boolean().optional(),
-  /** Unset: the config file's `workflows.enabled`, then off. */
+  /** Unset: off unless a plugin composition lists it. */
   workflows: z.boolean().optional(),
   documentModelSubgraphs: z.boolean().default(true),
-  /** Unset: the plugin host runs the default composition, the subsystems the
-   * switches above turn on. `true`: it runs the declared composition, where a
-   * plugin's presence is the switch. `false`: the deprecated inline boot. */
-  pluginHost: z.boolean().optional(),
   privacy: privacySchema.prefault({}),
 });
 

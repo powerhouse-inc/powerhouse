@@ -45,8 +45,15 @@ export function mergeSwitchboardConfig(...layers: Layer[]): Layer {
   return merged as Layer;
 }
 
-/** A caller's layer over the env's, keeping each key's pre-config precedence. */
-export function callerOverEnv(env: Layer, caller: Layer): Layer {
+/**
+ * A caller's layer over the env's, keeping each key's pre-config precedence.
+ * `declaredComposition`: the caller boots a declared plugin composition.
+ */
+export function callerOverEnv(
+  env: Layer,
+  caller: Layer,
+  options: { declaredComposition?: boolean } = {},
+): Layer {
   const merged = mergeSwitchboardConfig(env, caller);
   const features: Section = { ...merged.features };
   const inspection: Section = { ...merged.inspection };
@@ -85,8 +92,8 @@ export function callerOverEnv(env: Layer, caller: Layer): Layer {
   }
   // Under a declared composition a plugin's presence decides mcp and
   // workflows, not their env vars, except that an env false still switches
-  // them off. Without one the env vars keep deciding, as on the classic boot.
-  if (features.pluginHost === true) {
+  // them off. Without one the env vars keep deciding.
+  if (options.declaredComposition === true) {
     features.mcp = env.features?.mcp === false ? false : caller.features?.mcp;
     features.workflows =
       env.features?.workflows === false ? false : caller.features?.workflows;

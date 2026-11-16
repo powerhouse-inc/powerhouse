@@ -147,10 +147,9 @@ export type StartServerOptions = {
   mcp?: boolean;
   /** The declared plugin composition to boot with: the resolved host.js
    * runner.plugins entries, supplied by the uniform-runners switchboard
-   * runner (R2 step 2) or a test. Read only under `features.pluginHost: true`
-   * (FEATURE_PLUGIN_HOST_ENABLED=1), where omitted = every built-in plugin.
-   * Without that the default composition boots: the subsystems MCP_ENABLED,
-   * PH_WORKFLOWS_ENABLED and the config file turn on. Resolved plugins, not
+   * runner (R2 step 2) or a test. A plugin's presence is the switch. Omitted:
+   * the default composition boots, the subsystems MCP_ENABLED and
+   * PH_WORKFLOWS_ENABLED turn on. Resolved plugins, not
    * specifiers — resolution happens at the runner against the PROJECT
    * dependency tree. */
   pluginComposition?: ResolvedPlugin[];
@@ -162,7 +161,7 @@ export type StartServerOptions = {
    * decides, then PGLITE_WORKERS_DEFAULT. */
   pgliteWorkers?: boolean;
   /** Powerhouse workflows: the runtime, its subgraph, its webhooks and its
-   * document models. Wins over PH_WORKFLOWS_ENABLED and the config file. */
+   * document models. Wins over PH_WORKFLOWS_ENABLED. */
   workflows?: {
     enabled?: boolean;
     /** OAuth2 apps the publisher owns (`oauth_app` on a connection): per app,
@@ -283,7 +282,7 @@ export type SwitchboardReactor = {
   /** Whether the workflow runtime's operation intake is indexing. Undefined
    * when workflows are off; unavailable means no document trigger fires. */
   workflowTriggers?: WorkflowTriggersCapability;
-  /** Whether workflows are on, after the option, PH_WORKFLOWS_ENABLED and the config file. */
+  /** Whether workflows are on, after the option and PH_WORKFLOWS_ENABLED. */
   workflowsEnabled: boolean;
   /** The boot list of importable models workers and workflow pieces load; empty when none are resolved. */
   modelManifest(): ModelManifestEntry[];

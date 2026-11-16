@@ -8,6 +8,7 @@ import {
 } from "./retired-flags.js";
 
 const UNIFORM_RUNNERS = "FEATURE_UNIFORM_RUNNERS_ENABLED";
+const PLUGIN_HOST = "FEATURE_PLUGIN_HOST_ENABLED";
 
 function collect(
   env: Record<string, string | undefined>,
@@ -72,6 +73,53 @@ describe("retired flags: FEATURE_UNIFORM_RUNNERS_ENABLED in 6.3", () => {
       console.warn = original;
     }
     expect(calls).toHaveLength(1);
+  });
+});
+
+describe("retired flags: FEATURE_PLUGIN_HOST_ENABLED in 6.4", () => {
+  it("is in the table as a refusal", () => {
+    expect(retiredFlags.find((f) => f.name === PLUGIN_HOST)).toMatchObject({
+      retiredIn: "6.4",
+      refusedIn: "6.4",
+      when: "false",
+      action: "refuse",
+    });
+  });
+
+  it.each(["false", "0", "off", "no", "FALSE", " no "])(
+    "refuses to start for %j",
+    (value) => {
+      let message = "";
+      try {
+        collect({ [PLUGIN_HOST]: value });
+      } catch (error) {
+        message = (error as Error).message;
+      }
+      expect(message).toContain(
+        `${PLUGIN_HOST}=${value} has no effect since 6.4.`,
+      );
+      expect(message).toContain(
+        "Switchboard always boots through the plugin host now",
+      );
+      expect(message).toContain("`runner.plugins`");
+      expect(message).toContain("hosts/switchboard/host.js");
+      expect(message).toContain(
+        "since 6.4 the CLI refuses to start with it set to false.",
+      );
+    },
+  );
+
+  it.each(["1", "true", "TRUE", "on", "yes", ""])(
+    "passes silently for %j",
+    (value) => {
+      expect(collect({ [PLUGIN_HOST]: value })).toEqual([]);
+    },
+  );
+
+  it("refuses even when an earlier process already warned", () => {
+    expect(() =>
+      collect({ [PLUGIN_HOST]: "false", [RETIRED_FLAGS_WARNED_ENV]: "1" }),
+    ).toThrow(/FEATURE_PLUGIN_HOST_ENABLED=false/);
   });
 });
 

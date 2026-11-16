@@ -14,7 +14,7 @@ import type { SwitchboardHostContext } from "../plugin-host.mjs";
  * R2.5 — the workflows subsystem as a built-in plugin. Presence is activation
  * (an explicit options.workflows.enabled === false still wins, mirroring the
  * mcp carve, and PH_WORKFLOWS_ENABLED=false is one). Turning workflows on from
- * the env or the config file works without a declared composition only: the
+ * the env works without a declared composition only: the
  * default composition then lists this plugin.
  *
  * The plugin also DECLARES the drive the runtime serves — the Workflows drive

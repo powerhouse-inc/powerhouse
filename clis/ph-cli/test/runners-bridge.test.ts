@@ -664,42 +664,10 @@ describe("switchboard bridge runner", () => {
     });
   });
 
-  it("turns the plugin host on in the member's config, not the env", async () => {
-    const runner = await import("../src/runners/switchboard.js");
-    const { startSwitchboard } =
-      await import("@powerhousedao/ph-run/switchboard");
-    vi.mocked(startSwitchboard).mockClear();
-    await runner.run(
-      switchboard({
-        name: "lab-switchboard",
-        runner: { module: "m", plugins: [] },
-      }),
-      { ...ctx, env: { FEATURE_PLUGIN_HOST_ENABLED: "0" } },
-    );
-    expect(process.env.FEATURE_PLUGIN_HOST_ENABLED).toBeUndefined();
-    expect(vi.mocked(startSwitchboard).mock.calls[0][2]).toMatchObject({
-      features: { pluginHost: true },
-    });
-  });
-
-  it("refuses a config.switchboard key the reactor block sets", () => {
-    const parsed = switchboardHostSchema.safeParse({
-      name: "lab-switchboard",
-      runner: { module: "m" },
-      reactor: { workflows: true },
-      config: { switchboard: { features: { workflows: false } } },
-    });
-    expect(parsed.success).toBe(false);
-    expect(parsed.error?.issues.map((i) => i.message)).toEqual([
-      "config.switchboard.features.workflows is also set by the reactor block; set it in one place.",
-    ]);
-  });
-
   it("refuses a config.switchboard key the runner or the reactor block owns", () => {
     for (const config of [
       { server: { port: 1 } },
       { drive: {} },
-      { features: { pluginHost: true } },
       { auth: { unknown: true } },
       { protocol: { featureFlags: { authEnforcement: true } } },
       { storage: { reactor: { url: "postgres://host/db" } } },
@@ -1442,7 +1410,7 @@ describe("connect bridge runner — reactor projection (P2.5)", () => {
     expect(override).toMatchObject({ instance: { namespace: "copy-1" } });
   });
 
-  it("merges protocol → connect.reactor and workflows into the caller override", async () => {
+  it("merges protocol → connect.reactor into the caller override", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =
       await import("../src/services/connect-studio.js");
@@ -1454,7 +1422,6 @@ describe("connect bridge runner — reactor projection (P2.5)", () => {
         config: { branding: { appName: "Lab" } },
         reactor: {
           backends: { local: { kind: "worker" } },
-          workflows: true,
           protocol: { createSignaturePolicy: "legacy" },
         },
       }),
@@ -1465,7 +1432,6 @@ describe("connect bridge runner — reactor projection (P2.5)", () => {
       branding: { appName: "Lab" },
       reactor: { createSignaturePolicy: "legacy" },
       instance: { reactorWorker: true },
-      app: { workflowsEnabled: true },
     });
   });
 });

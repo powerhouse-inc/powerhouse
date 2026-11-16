@@ -34,14 +34,11 @@ function envProjectionConfig(
   const store = storage?.kind === "postgres" ? storage.url : storage?.dataDir;
   if (store) projected.PH_REACTOR_DATABASE_URL = store;
   if (backend?.packages?.dynamic) projected.DYNAMIC_MODEL_LOADING = "true";
-  if (reactor?.workflows !== undefined) {
-    projected.PH_WORKFLOWS_ENABLED = reactor.workflows ? "1" : "0";
-  }
   const layer = switchboardConfigFromEnv({ ...dotenv, ...projected, ...env });
   const dbPath = backend?.readModel?.url || undefined;
   return dbPath
     ? mergeSwitchboardConfig(layer, {
-        storage: { readModel: { url: dbPath }, reactor: { url: dbPath } },
+        storage: { readModel: { url: dbPath } },
       })
     : layer;
 }
@@ -58,7 +55,6 @@ const pathBlock: ReactorConfig = {
       packages: { dynamic: true },
     },
   },
-  workflows: true,
   protocol: {
     featureFlags: { documentDecisions: true },
     createSignaturePolicy: "legacy",
@@ -80,8 +76,6 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
     reactor: ReactorConfig | undefined;
     env: Env;
     dotenv?: Env;
-    /** The reactor store, where it differs from the removed path. */
-    reactorStore?: string;
   }[] = [
     { name: "no block, no env", reactor: undefined, env: {} },
     {
@@ -99,7 +93,6 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
       name: "block, no env",
       reactor: pathBlock,
       env: {},
-      reactorStore: "/data/reactor",
     },
     {
       name: "block under an env that sets the same keys",
@@ -113,7 +106,6 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
         CREATE_SIGNATURE_POLICY: "legacy",
         REACTOR_UNSUPPORTED_STORED_DOCUMENTS: "read-only",
       },
-      reactorStore: "/env/reactor",
     },
     {
       name: "block over a .env that sets the same keys",
@@ -127,7 +119,6 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
         REACTOR_DOCUMENT_DECISIONS: "false",
         AUTH_ENABLED: "true",
       },
-      reactorStore: "/data/reactor",
     },
     {
       name: "readModel-only block over a .env that names a store",
@@ -191,7 +182,6 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
         },
       },
       env: { PH_SWITCHBOARD_DATABASE_URL: "postgres://host/env" },
-      reactorStore: "postgres://host/env",
     },
     {
       name: "postgres block under DATABASE_URL",
@@ -209,16 +199,9 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
         await memberSwitchboardConfig(
           { reactor: row.reactor },
           { shell: row.env, dotenv: row.dotenv ?? {} },
-          { pluginHost: false },
         ),
       );
-      const expected = row.reactorStore
-        ? {
-            ...before,
-            storage: { ...before.storage, reactor: { url: row.reactorStore } },
-          }
-        : before;
-      expect(after).toEqual(expected);
+      expect(after).toEqual(before);
     });
   }
 
@@ -240,7 +223,6 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
           },
         },
         { shell: {}, dotenv: {} },
-        { pluginHost: false },
       ),
     );
     expect(config.server.host).toBe("127.0.0.1");
@@ -255,13 +237,7 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
 
   it("leaves a host that says nothing open and bound as before", async () => {
     const config = parse(
-      await memberSwitchboardConfig(
-        {},
-        { shell: {}, dotenv: {} },
-        {
-          pluginHost: false,
-        },
-      ),
+      await memberSwitchboardConfig({}, { shell: {}, dotenv: {} }),
     );
     expect(config.server.host).toBeUndefined();
     expect(config.auth.ownerClaim).toBe(false);
@@ -280,7 +256,6 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
           },
         },
         { shell: { ADMINS: "0xenv", REACTOR_WORKERS: "0" }, dotenv: {} },
-        { pluginHost: false },
       ),
     );
     expect(config.auth.admins).toEqual(["0xenv"]);
@@ -346,7 +321,6 @@ describe("missingPostgresUrl", () => {
     const config = await memberSwitchboardConfig(
       { reactor },
       { shell, dotenv },
-      { pluginHost: false },
     );
     return {
       url: config.storage?.reactor?.url,

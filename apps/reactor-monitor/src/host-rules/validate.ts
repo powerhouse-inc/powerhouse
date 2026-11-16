@@ -94,8 +94,6 @@ export const REASONS = {
   readModel:
     "With no storage folder chosen, the switchboard would keep all its data in the search data folder. Choose a storage folder, or remove the search data folder.",
   switchboardOnly: "Only a switchboard reads these settings.",
-  workflowsTwice:
-    "Workflows are turned on or off in two places, so the switchboard won't start. Remove one.",
   nested:
     "This reactor starts a group of reactors, which the monitor doesn't check yet.",
 } as const;
@@ -737,13 +735,6 @@ function configRule(members: Member[], env: HostEnv, report: Report): void {
       if (valueAt(settings, keys) !== undefined) {
         report("config", settingAt(member, keys), reason);
       }
-    }
-    const workflows = ["features", "workflows"];
-    if (
-      valueAt(settings, workflows) !== undefined &&
-      member.reactor?.workflows !== undefined
-    ) {
-      report("config", settingAt(member, workflows), REASONS.workflowsTwice);
     }
     const { count, projection } = workerSettings(member, env);
     if (!count.fromEnv && count.value === undefined) {
