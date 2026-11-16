@@ -88,8 +88,8 @@ describe("the scripts migrate manages", () => {
     });
     expect(scripts.connect).toBe("ph-cli run connect");
     expect(scripts.vetra).toBe("ph-cli run vetra");
-    // No longer a script of the scaffold: the project's, so it stays.
-    expect(scripts.reactor).toBe("ph-cli reactor");
+    // No longer a script of the scaffold, but still the value it wrote.
+    expect(scripts.reactor).toBe("ph-cli run switchboard");
     expect(kept).toEqual([]);
   });
 
@@ -257,6 +257,35 @@ describe("the scripts of a new project", () => {
     ]) {
       expect(scaffolded.scripts).not.toHaveProperty(name);
     }
+  });
+});
+
+describe("scripts under retired names", () => {
+  const startup =
+    "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh";
+
+  it("moves reactor to the switchboard host and drops the startup scripts", () => {
+    const { scripts } = migratedScripts({
+      reactor: "ph-cli reactor",
+      "service-startup": startup,
+      service: "ph-cli service",
+    });
+    expect(scripts.reactor).toBe("ph-cli run switchboard");
+    expect(scripts).not.toHaveProperty("service-startup");
+    expect(scripts.service).toBe("ph-cli service");
+    expect(migratedScripts(scripts).scripts).toEqual(scripts);
+  });
+
+  it("keeps reactor without a switchboard host, and any value the project set", () => {
+    expect(
+      migratedScripts({ reactor: "ph-cli reactor" }, () => false).scripts
+        .reactor,
+    ).toBe("ph-cli reactor");
+    const own = {
+      reactor: "ph-cli reactor --port 5000",
+      "service-startup": "bash ./startup.sh",
+    };
+    expect(migratedScripts(own).scripts).toMatchObject(own);
   });
 });
 

@@ -16,6 +16,7 @@ import {
   recordWrites,
   runCmd,
   HOST_PACKAGE_SCRIPTS,
+  RETIRED_PACKAGE_SCRIPTS,
   SUPERSEDED_PACKAGE_SCRIPTS,
   versionSatisfies,
   VERSIONED_DEV_DEPENDENCIES,
@@ -390,7 +391,10 @@ function ownsPin(ownKeys: string[], name: string) {
 // own and stays; `kept` names those. The `tsc -p hosts` the hosts scaffold
 // appends to `tsc` is carried over an update. A script that runs a host
 // (HOST_PACKAGE_SCRIPTS) is managed only when the project has that host:
-// without it the script stays as it is, and none is added.
+// without it the script stays as it is, and none is added. A script under a
+// retired name (RETIRED_PACKAGE_SCRIPTS) that still holds the scaffold's value
+// is replaced when the project has its host, or removed when nothing replaces
+// it.
 export function migratedScripts(
   existing: PackageJson["scripts"] = {},
   hasHost: (name: string) => boolean = () => true,
@@ -416,6 +420,14 @@ export function migratedScripts(
       scripts[name] = withHosts ? withHostsTscScript(scaffold) : scaffold;
     } else {
       kept.push(name);
+    }
+  }
+  for (const [name, retired] of Object.entries(RETIRED_PACKAGE_SCRIPTS)) {
+    const current = existing[name];
+    if (current === undefined || !retired.values.includes(current)) continue;
+    if (retired.replacement === undefined) delete scripts[name];
+    else if (retired.host === undefined || hasHost(retired.host)) {
+      scripts[name] = retired.replacement;
     }
   }
   return { scripts, kept };
@@ -545,7 +557,12 @@ export async function migrate(
   const writeProjectFiles = async () => {
     // Read before the first write: the theme migration adds to hosts/.
     const hosts = new Map(
-      HOST_PACKAGE_SCRIPTS.map((name) => [
+      [
+        ...HOST_PACKAGE_SCRIPTS,
+        ...Object.values(RETIRED_PACKAGE_SCRIPTS).flatMap((retired) =>
+          retired.host === undefined ? [] : [retired.host],
+        ),
+      ].map((name) => [
         name as string,
         hasHostAfterMigration(projectDir, name),
       ]),

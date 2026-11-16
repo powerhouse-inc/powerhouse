@@ -349,6 +349,32 @@ export const SUPERSEDED_PACKAGE_SCRIPTS: Partial<
   vetra: ["ph-cli vetra"],
 };
 
+// Scripts earlier scaffolds wrote under names `packageScripts` no longer has.
+// `ph migrate` handles one that still holds the scaffold's value: it sets
+// `replacement` when the project has `host`, and removes a script that has no
+// replacement, as the file it ran is gone. Any other value is the project's
+// own and stays.
+export const RETIRED_PACKAGE_SCRIPTS: Record<
+  string,
+  { values: readonly string[]; replacement?: string; host?: string }
+> = {
+  reactor: {
+    values: ["ph-cli reactor"],
+    replacement: "ph-cli run switchboard",
+    host: "switchboard",
+  },
+  "service-startup": {
+    values: [
+      "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
+    ],
+  },
+  "service-unstartup": {
+    values: [
+      "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh",
+    ],
+  },
+};
+
 export const externalDependencies = {} as const;
 
 // eslint/prettier devDependencies present in projects scaffolded before the oxc migration.
