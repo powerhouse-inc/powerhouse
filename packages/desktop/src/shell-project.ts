@@ -186,13 +186,6 @@ function builtSignInScript(): Buffer {
  * it stays sharp on HiDPI screens. Generated, like the rest of ui/. */
 export const LOADING_LOGO = "logo.png";
 
-/** The loading page's splash (app.json `splash`), copied beside it; shown
- * instead of the square logo when set. Generated, like the rest of ui/. */
-export const LOADING_SPLASH = "splash.png";
-/** Dark-scheme splash (app.json `splashDark`), beside the light one. */
-export const LOADING_SPLASH_DARK = "splash-dark.png";
-/** Corner decoration (app.json `loading.art` / `loading.artDark`). */
-export const LOADING_ART = "art";
 /** The background's layers (app.json `background`): `bg-<n>.<ext>` and
  * `bg-<n>-dark.<ext>` beside the page. */
 export const LOADING_BG = "bg";
@@ -205,12 +198,10 @@ const LOGO_CSS_PX = 128;
 type LoadingLayer = { light: string; dark?: string; style: string };
 
 /** The art the loading page shows: a layered background (app.json
- * `background`) under the centred status line; or, without one, the wide
- * splash (with an optional dark counterpart) else the square logo above the
- * status line, plus an optional corner decoration. */
+ * `background`) under the centred status line; or, without one, the square
+ * logo above the status line. */
 type LoadingArt = {
-  main: { kind: "logo" | "splash"; file: string; dark?: string } | null;
-  corner: { file: string; dark?: string } | null;
+  logo: string | null;
   background: {
     color: { light: string; dark?: string } | null;
     layers: LoadingLayer[];
@@ -300,36 +291,9 @@ function loadingHtml(app: AppJson, art: LoadingArt, signIn = false): string {
     </div>
     `
       : "";
-  // <picture> swaps the file by color scheme; a plain <img> otherwise.
-  const picture = (
-    cls: string,
-    file: string,
-    darkFile: string | undefined,
-    attrs = "",
-  ) =>
-    darkFile
-      ? `<picture>
-        <source srcset="./${darkFile}" media="(prefers-color-scheme: dark)" />
-        <img class="${cls}" src="./${file}" alt=""${attrs} />
-      </picture>
+  const logoTag = art.logo
+    ? `<img class="logo" src="./${art.logo}" alt="" width="${LOGO_CSS_PX}" height="${LOGO_CSS_PX}" />
       `
-      : `<img class="${cls}" src="./${file}" alt=""${attrs} />
-      `;
-  const main = art.main;
-  const logoTag =
-    main?.kind === "splash"
-      ? picture("splash", main.file, main.dark)
-      : main
-        ? picture(
-            "logo",
-            main.file,
-            main.dark,
-            ` width="${LOGO_CSS_PX}" height="${LOGO_CSS_PX}"`,
-          )
-        : "";
-  const cornerTag = art.corner
-    ? `<div class="corner" aria-hidden="true">${picture("art", art.corner.file, art.corner.dark)}</div>
-    `
     : "";
   return `<!doctype html>
 <html lang="en">
@@ -356,16 +320,7 @@ function loadingHtml(app: AppJson, art: LoadingArt, signIn = false): string {
         width: ${LOGO_CSS_PX}px; height: ${LOGO_CSS_PX}px;
         object-fit: contain; display: block;
       }
-      .splash {
-        width: min(720px, 80vw); max-height: 65vh;
-        object-fit: contain; display: block;
-      }
-      .corner {
-        position: fixed; right: 0; bottom: 0; z-index: 0;
-        width: clamp(220px, 30vw, 520px); line-height: 0; pointer-events: none;
-      }
       .layers { position: fixed; inset: 0; z-index: 0; }
-      .art { width: 100%; height: auto; display: block; }
       .dot {
         width: 10px; height: 10px; border-radius: 50%;
         background: var(--accent); display: inline-block; margin-right: 8px;
@@ -384,7 +339,7 @@ function loadingHtml(app: AppJson, art: LoadingArt, signIn = false): string {
       ${logoTag}<div><span class="dot"></span>${message}</div>
     </div>`
     }
-    ${layersTag}${cornerTag}</body>
+    ${layersTag}</body>
 </html>
 `;
 }
@@ -544,10 +499,6 @@ const GITIGNORE = `# Generated tauri shell — only Cargo.lock and app-icon.png 
 /gen
 /icons
 /ui/logo.png
-/ui/splash.png
-/ui/splash-dark.png
-/ui/art.*
-/ui/art-dark.*
 /ui/bg-*
 /ui/sign-in.*
 /dist-stack
@@ -581,19 +532,7 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
   const shellDir = path.join(hostDir, SHELL_DIR);
   const iconSrc = path.resolve(hostDir, app.icon);
   const iconBytes = fs.existsSync(iconSrc) ? fs.readFileSync(iconSrc) : null;
-  const readRel = (rel: string | null | undefined): Buffer | null => {
-    if (!rel) return null;
-    const abs = path.resolve(hostDir, rel);
-    return fs.existsSync(abs) ? fs.readFileSync(abs) : null;
-  };
-  const splashBytes = readRel(app.splash);
-  const splashDarkBytes = readRel(app.splashDark);
-  const artBytes = readRel(app.loading?.art);
-  const artDarkBytes = readRel(app.loading?.artDark);
-  const artExt = (rel: string | null | undefined) =>
-    rel ? path.extname(rel).toLowerCase() || ".png" : ".png";
-  const artFile = `${LOADING_ART}${artExt(app.loading?.art)}`;
-  const artDarkFile = `${LOADING_ART}-dark${artExt(app.loading?.artDark)}`;
+  const imageExt = (ref: string) => path.extname(ref).toLowerCase() || ".png";
   // The background's layers: a file beside app.json is staged beside the
   // page as bg-<n>[-dark].<ext>; a URL or data URI is used as given; a layer
   // whose light image is missing is dropped (a missing dark one falls back
@@ -604,7 +543,7 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
     if (isPassthroughImageRef(ref)) return ref;
     const abs = path.resolve(hostDir, ref);
     if (!fs.existsSync(abs)) return undefined;
-    const file = `${stem}${artExt(ref)}`;
+    const file = `${stem}${imageExt(ref)}`;
     staged.push([path.join(shellDir, "ui", file), fs.readFileSync(abs)]);
     return `./${file}`;
   };
@@ -621,24 +560,10 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
       ];
     },
   );
-  // A background replaces the splash/logo and the corner art: its layers are
-  // the page's decoration, the status line stays centred above them.
+  // A background replaces the logo: its layers are the page's decoration,
+  // the status line stays centred above them.
   const art: LoadingArt = {
-    main: background
-      ? null
-      : splashBytes
-        ? {
-            kind: "splash",
-            file: LOADING_SPLASH,
-            ...(splashDarkBytes ? { dark: LOADING_SPLASH_DARK } : {}),
-          }
-        : iconBytes
-          ? { kind: "logo", file: LOADING_LOGO }
-          : null,
-    corner:
-      !background && artBytes
-        ? { file: artFile, ...(artDarkBytes ? { dark: artDarkFile } : {}) }
-        : null,
+    logo: !background && iconBytes ? LOADING_LOGO : null,
     background: background
       ? { color: colorVariants(background.color), layers }
       : null,
@@ -677,9 +602,16 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
       }
     }
   }
+  // An earlier version staged the splash and corner art of app.json here;
+  // nothing shows them, so they leave the page's folder.
+  const uiDir = path.join(shellDir, "ui");
+  for (const file of fs.existsSync(uiDir) ? fs.readdirSync(uiDir) : []) {
+    if (!/^(splash(-dark)?\.png|art(-dark)?\.[^.]+)$/.test(file)) continue;
+    fs.rmSync(path.join(uiDir, file));
+    changed = true;
+  }
   // Stage the icon source next to the shell (tauri icon reads it at build),
-  // the same full-resolution source as the loading page's logo, and the
-  // splash when app.json names one.
+  // the same full-resolution source as the loading page's logo.
   const copies: Array<[string, Buffer | null]> = [
     [
       path.join(shellDir, "ui", SIGN_IN_SCRIPT),
@@ -687,10 +619,6 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
     ],
     [path.join(shellDir, ICON_SOURCE), iconBytes],
     [path.join(shellDir, "ui", LOADING_LOGO), iconBytes],
-    [path.join(shellDir, "ui", LOADING_SPLASH), splashBytes],
-    [path.join(shellDir, "ui", LOADING_SPLASH_DARK), splashDarkBytes],
-    [path.join(shellDir, "ui", artFile), artBytes],
-    [path.join(shellDir, "ui", artDarkFile), artDarkBytes],
     ...staged,
   ];
   for (const [dest, bytes] of copies) {

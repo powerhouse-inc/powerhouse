@@ -442,3 +442,49 @@ depend on environment variables that your own machine may not set.
   `FEATURE_PLUGIN_HOST_ENABLED` is removed: the plugin host is the only path.
 - `reactor.workflows` and the `readModel.url` fallback in host files are
   removed.
+- The `splash`, `splashDark`, `loading.art` and `loading.artDark` keys of a
+  desktop host's `app.json` are errors. 6.3 prints no warning for them.
+
+### The loading images in `hosts/desktop/app.json` {/* #desktop-loading-images */}
+
+6.4 reads one key for the images of the desktop loading page: `background`.
+`ph run desktop` stops when `app.json` still sets one of the four keys it
+replaces, with one line for each:
+
+```text
+hosts/desktop/app.json: removed key:
+  splash was removed in 6.4; use a background layer, which shows the image above the status line: background: { layers: [{ src: "<image>", position: { bottom: "calc(50% + 32px)" }, width: "min(720px, 80vw)", maxHeight: "65vh" }] }.
+```
+
+| Removed key       | In `background`                                                       |
+| ----------------- | --------------------------------------------------------------------- |
+| `splash`          | A layer with the image as `src`, placed above the status line         |
+| `splashDark`      | `dark` in that layer's `src`: `{ "light": "…", "dark": "…" }`         |
+| `loading.art`     | A layer at `{ "bottom": 0, "right": 0 }`, or the image path by itself |
+| `loading.artDark` | `dark` in that layer's `src`                                          |
+
+An `app.json` with a splash and corner art in both schemes becomes:
+
+```json
+{
+  "background": {
+    "layers": [
+      {
+        "src": { "light": "./art/splash.png", "dark": "./art/splash-dark.png" },
+        "position": { "bottom": "calc(50% + 32px)" },
+        "width": "min(720px, 80vw)",
+        "maxHeight": "65vh"
+      },
+      {
+        "src": { "light": "./art/mark.svg", "dark": "./art/mark-dark.svg" },
+        "position": { "bottom": 0, "right": 0 },
+        "width": "clamp(220px, 30vw, 520px)"
+      }
+    ]
+  }
+}
+```
+
+With a `background` the page shows its layers and no app icon. An `app.json`
+that already sets `background` did not show the four keys: remove them.
+`ph migrate` does not rewrite `app.json`.
