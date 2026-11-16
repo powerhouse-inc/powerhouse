@@ -2,7 +2,7 @@ import { probeHostsFolder, splitRunArgv } from "@powerhousedao/host-core";
 
 export interface RunSugarResult {
   args: string[];
-  /** Set when hosts/ exists but is empty — the guard state: warn loudly, stay classic. */
+  /** Set when hosts/ exists but is empty: no host is defined, so nothing is rewritten. */
   warning?: string;
 }
 
@@ -41,7 +41,7 @@ export function applyRunSugar(
       args,
       warning:
         `hosts/ exists at ${probe.dir} but contains no <name>/host.js — ` +
-        "no host is defined, so commands keep their classic handling.",
+        "no host is defined. Run `ph migrate` to add the host files.",
     };
   }
   if (probe.kind === "present" && probe.hosts.includes(first)) {

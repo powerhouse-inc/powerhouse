@@ -18,7 +18,7 @@ import path from "node:path";
  * The 6.3 warnings of a classic invocation: `ph vetra`, `ph connect`,
  * `ph switchboard` and the `ph reactor` alias, run the classic way. `ph run`
  * is not one, nor is a host name rewritten to it, so a project that runs its
- * hosts gets none of these.
+ * hosts gets none of these. A project without hosts gets an error instead.
  */
 
 /** The commands with a classic handling, as typed. */
@@ -183,10 +183,35 @@ function readProjectConfig(projectRoot: string): unknown {
 }
 
 /**
- * What a classic invocation should be told, in order: the project without
- * hosts or the command with its replacement, the alias, its flags, and the
- * config keys only the classic commands read. `args` is the command line
- * after the host sugar. Empty for anything else, and for help.
+ * 6.4: a classic invocation in a project without hosts does not run. The
+ * error it gets, naming `ph migrate`; an empty hosts/ folder counts as none.
+ * `args` is the command line after the host sugar. Undefined for anything
+ * else, for help, and for a project with a host file.
+ */
+export function classicWithoutHostsError(
+  args: readonly string[],
+  projectRoot: string,
+): string | undefined {
+  const invocation = classicInvocation(args);
+  if (!invocation) return undefined;
+  const probe = probeHostsFolder(projectRoot);
+  if (probe.kind === "present") return undefined;
+  const found =
+    probe.kind === "empty"
+      ? `hosts/ exists at ${probe.dir} but contains no <name>/host.js`
+      : "This project has no hosts/ folder";
+  return (
+    `${found}, so \`${invocation.typed}\` cannot run. ` +
+    `Run \`ph migrate\` to add the host files, then use \`${invocation.replacement}\`.`
+  );
+}
+
+/**
+ * What a classic invocation should be told, in order: the command with its
+ * replacement, the alias, its flags, and the config keys only the classic
+ * commands read. `args` is the command line after the host sugar. Empty for
+ * anything else, for help, and for a project without hosts, which gets
+ * {@link classicWithoutHostsError} instead.
  * `schemas` is only needed when the invocation passes flags.
  */
 export function classicDeprecations(
@@ -199,14 +224,8 @@ export function classicDeprecations(
   const { typed, host, replacement, alias } = invocation;
   const deprecations: Deprecation[] = [];
   const probe = probeHostsFolder(projectRoot);
-  if (probe.kind !== "present") {
-    deprecations.push({
-      id: "classic:no-hosts",
-      text:
-        `This project has no hosts/<name>/host.js, so \`${typed}\` runs the classic way, which stops working in ${DEPRECATIONS_REMOVED_IN}. ` +
-        `Run \`ph migrate\` to add the host files, then use \`${replacement}\`.`,
-    });
-  } else if (!probe.hosts.includes(host)) {
+  if (probe.kind !== "present") return [];
+  if (!probe.hosts.includes(host)) {
     deprecations.push({
       id: "classic:command",
       text:

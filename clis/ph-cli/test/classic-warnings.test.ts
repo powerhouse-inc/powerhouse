@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { phCliCommands } from "../src/commands/ph-cli-commands.js";
 import {
   classicDeprecations,
+  classicWithoutHostsError,
   warnClassicInvocation,
   type ClassicArgSchemas,
 } from "../src/utils/classic-warnings.js";
@@ -57,25 +58,81 @@ const texts = (
 ): string[] =>
   classicDeprecations(args, project, argSchemas).map((d) => d.text);
 
-describe("classic warnings: a project without hosts/", () => {
+describe("classic commands: a project without hosts/ is an error", () => {
+  const known = new Set(Object.keys(phCliCommands));
+
   it.each([
     [["vetra"], "ph vetra", "ph run vetra"],
+    [["vetra", "--watch"], "ph vetra", "ph run vetra"],
     [["connect"], "ph connect", "ph run connect dev"],
     [["connect", "studio"], "ph connect studio", "ph run connect dev"],
     [["connect", "build"], "ph connect build", "ph run connect build"],
     [["connect", "preview"], "ph connect preview", "ph run connect serve"],
     [["switchboard"], "ph switchboard", "ph run switchboard"],
+    [["reactor"], "ph reactor", "ph run switchboard"],
   ])("%j names `ph migrate`", (args, typed, replacement) => {
-    expect(texts(args, makeProject())).toEqual([
-      `This project has no hosts/<name>/host.js, so \`${typed}\` runs the classic way, which stops working in 6.4. ` +
+    const project = makeProject();
+    expect(classicWithoutHostsError(args, project)).toBe(
+      `This project has no hosts/ folder, so \`${typed}\` cannot run. ` +
         `Run \`ph migrate\` to add the host files, then use \`${replacement}\`.`,
-    ]);
+    );
+    // The error stands alone: no warnings on top of it.
+    expect(classicDeprecations(args, project)).toEqual([]);
   });
 
-  it("an empty hosts/ folder counts as none", () => {
+  it("an empty hosts/ folder is an error too, not a fallback", () => {
     const project = makeProject();
-    mkdirSync(path.join(project, "hosts"));
-    expect(texts(["switchboard"], project)[0]).toContain("Run `ph migrate`");
+    const hostsDir = path.join(project, "hosts");
+    mkdirSync(hostsDir);
+    expect(classicWithoutHostsError(["switchboard"], project)).toBe(
+      `hosts/ exists at ${hostsDir} but contains no <name>/host.js, so \`ph switchboard\` cannot run. ` +
+        "Run `ph migrate` to add the host files, then use `ph run switchboard`.",
+    );
+    // A folder without a host.js is not a host.
+    mkdirSync(path.join(hostsDir, "vetra"));
+    expect(classicWithoutHostsError(["vetra"], project)).toContain(
+      "Run `ph migrate`",
+    );
+    expect(classicDeprecations(["vetra"], project)).toEqual([]);
+  });
+
+  it("a project with a host file routes as before", () => {
+    const project = makeProject(MIGRATED);
+    for (const args of [
+      ["vetra"],
+      ["connect"],
+      ["connect", "build"],
+      ["switchboard"],
+      ["reactor"],
+    ]) {
+      expect(classicWithoutHostsError(args, project)).toBeUndefined();
+    }
+    // `ph vetra` there is `ph run vetra`.
+    expect(applyRunSugar(["vetra"], known, project).args).toEqual([
+      "run",
+      "vetra",
+    ]);
+    // Another host's file is enough: the command warns, as it did.
+    const partial = makeProject(["switchboard"]);
+    expect(classicWithoutHostsError(["vetra"], partial)).toBeUndefined();
+    expect(texts(["vetra"], partial)).toHaveLength(1);
+  });
+
+  it("leaves the commands that boot no classic stack alone", () => {
+    const project = makeProject();
+    for (const args of [
+      ["migrate"],
+      ["init"],
+      ["generate"],
+      ["build"],
+      ["run", "vetra"],
+      ["connect", "config"],
+      ["vetra", "--help"],
+      ["switchboard", "-h"],
+      [],
+    ]) {
+      expect(classicWithoutHostsError(args, project)).toBeUndefined();
+    }
   });
 });
 
@@ -109,13 +166,6 @@ describe("classic warnings: the `ph reactor` alias", () => {
     expect(texts(["reactor"], makeProject(MIGRATED))).toEqual([
       "`ph reactor` is a deprecated alias and is removed in 6.4. Use `ph run switchboard` instead.",
     ]);
-  });
-
-  it("comes after the missing hosts/ in a classic project", () => {
-    const warnings = texts(["reactor"], makeProject());
-    expect(warnings).toHaveLength(2);
-    expect(warnings[0]).toContain("Run `ph migrate`");
-    expect(warnings[1]).toContain("`ph reactor` is a deprecated alias");
   });
 });
 
@@ -167,7 +217,7 @@ describe("classic warnings: flags", () => {
   it("passes on what the runner says about a retired flag", async () => {
     const warnings = texts(
       ["vetra", "--watch", "--disable-connect"],
-      makeProject(),
+      makeProject(["switchboard"]),
       await schemas(),
     );
     expect(warnings.slice(1)).toEqual([
@@ -179,7 +229,11 @@ describe("classic warnings: flags", () => {
   it("groups the flags without a `ph run` argument", async () => {
     const argSchemas = await schemas();
     expect(
-      texts(["vetra", "--logs", "--restart"], makeProject(), argSchemas)[1],
+      texts(
+        ["vetra", "--logs", "--restart"],
+        makeProject(["switchboard"]),
+        argSchemas,
+      )[1],
     ).toBe(
       "The `ph vetra` flags --logs, --restart have no `ph run vetra` argument and stop working in 6.4. " +
         "Set what they configure in the host files under hosts/ instead.",
@@ -199,7 +253,7 @@ describe("classic warnings: flags", () => {
 
 describe("classic warnings: powerhouse.config.json", () => {
   it("lists the superseded keys with their host file homes", () => {
-    const project = makeProject([], {
+    const project = makeProject(["switchboard"], {
       studio: { port: 3000, openBrowser: true },
       reactor: { port: 4001, storage: { type: "filesystem" } },
     });
@@ -211,7 +265,7 @@ describe("classic warnings: powerhouse.config.json", () => {
   });
 
   it("says nothing about the keys the host files reference", () => {
-    const project = makeProject([], {
+    const project = makeProject(["switchboard"], {
       studio: { port: 3000 },
       reactor: { port: 4001 },
       vetra: { connectPort: 3001 },
@@ -255,17 +309,17 @@ describe("classic warnings: printing", () => {
     const env: Record<string, string | undefined> = {};
     const warnings: string[] = [];
     const warn = (text: string) => warnings.push(text);
-    const project = makeProject();
+    const project = makeProject(MIGRATED);
     await warnClassicInvocation(["reactor", "--reset"], project, env, warn);
-    expect(warnings).toHaveLength(3);
+    expect(warnings).toHaveLength(2);
     for (const warning of warnings) {
       expect(warning.startsWith("Warning: ")).toBe(true);
       expect(warning.endsWith(` See ${MIGRATION_GUIDE_URL}`)).toBe(true);
     }
-    expect(warnings[2]).toContain("Use `ph run switchboard reset` instead.");
+    expect(warnings[1]).toContain("Use `ph run switchboard reset` instead.");
     // A classic command this one spawns inherits the env.
     await warnClassicInvocation(["switchboard"], project, { ...env }, warn);
-    expect(warnings).toHaveLength(3);
+    expect(warnings).toHaveLength(2);
     expect(env[DEPRECATIONS_WARNED_ENV]?.split(",")).toContain("classic");
   });
 
@@ -287,7 +341,7 @@ describe("classic warnings: printing", () => {
     const original = console.warn;
     console.warn = (...args: unknown[]) => calls.push(args);
     try {
-      await warnClassicInvocation(["switchboard"], makeProject(), {});
+      await warnClassicInvocation(["switchboard"], makeProject(MIGRATED), {});
     } finally {
       console.warn = original;
     }

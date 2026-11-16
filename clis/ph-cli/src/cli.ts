@@ -89,15 +89,18 @@ async function main() {
   // A runner's own arguments (`ph run vetra --switchboard-port 4001`).
   args = forwardRunnerArgv(sugar.args);
   const command = args[0];
-  // 6.3: a classic command says what replaces it. Not for `ph run`.
+  // A classic command says what replaces it, and does not run in a project
+  // without hosts. Not for `ph run`.
   if (
     command === "vetra" ||
     command === "connect" ||
     command === "switchboard" ||
     command === "reactor"
   ) {
-    const { warnClassicInvocation } =
+    const { classicWithoutHostsError, warnClassicInvocation } =
       await import("./utils/classic-warnings.js");
+    const withoutHosts = classicWithoutHostsError(args, process.cwd());
+    if (withoutHosts !== undefined) throw new Error(withoutHosts);
     await warnClassicInvocation(args, process.cwd());
   }
   const subcommand =

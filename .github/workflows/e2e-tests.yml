@@ -51,13 +51,6 @@ jobs:
             name-suffix: " (SharedWorker reactor)"
             test-script: test:e2e:vetra:worker
             artifact-prefix: vetra-worker
-          # The classic commands smoke: one boot spec against `ph vetra --watch`
-          # started the classic way. It proves the classic commands still work
-          # in this release, and goes away with them.
-          - mode: classic
-            name-suffix: " (classic commands smoke)"
-            test-script: test:e2e:vetra:classic
-            artifact-prefix: vetra-classic
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6

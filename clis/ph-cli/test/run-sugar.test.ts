@@ -58,12 +58,13 @@ describe("applyRunSugar", () => {
     ]);
   });
 
-  it("warns on the empty-hosts guard state and stays legacy", () => {
+  it("warns on an empty hosts/ folder, naming `ph migrate`, and rewrites nothing", () => {
     const project = makeProject();
     mkdirSync(path.join(project, "hosts"), { recursive: true });
     const result = applyRunSugar(["anything"], KNOWN, project);
     expect(result.args).toEqual(["anything"]);
     expect(result.warning).toMatch(/contains no <name>\/host\.js/);
+    expect(result.warning).toContain("Run `ph migrate`");
   });
 
   it("does nothing in a project without hosts/", () => {
@@ -103,7 +104,8 @@ describe("applyRunSugar", () => {
     ]);
   });
 
-  it("keeps flagged `ph vetra` classic in a legacy project", () => {
+  // The CLI refuses these next: classicWithoutHostsError.
+  it("leaves flagged `ph vetra` as typed in a project without hosts/", () => {
     const project = makeProject();
     expect(applyRunSugar(["vetra", "--watch"], KNOWN, project).args).toEqual([
       "vetra",
@@ -111,7 +113,7 @@ describe("applyRunSugar", () => {
     ]);
   });
 
-  it("keeps bare `ph vetra` classic in a legacy project", () => {
+  it("leaves bare `ph vetra` as typed in a project without hosts/", () => {
     const project = makeProject();
     expect(applyRunSugar(["vetra"], KNOWN, project).args).toEqual(["vetra"]);
   });
