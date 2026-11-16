@@ -8,6 +8,7 @@ import {
   probeVetraRuntime,
   readVetraRuntime,
 } from "../src/utils/vetra-runtime.js";
+import { linkVetraStudio, writeScaffoldHosts } from "./hosts-project.js";
 import { removeDir, stopProcess } from "./processes.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -43,6 +44,9 @@ function makeProject(switchboardPort: number, connectPort: number): string {
       vetra: { connectPort },
     }),
   );
+  // `ph vetra` runs the project's vetra host.
+  writeScaffoldHosts(dir, PROJECT_NAME);
+  linkVetraStudio(dir);
   return dir;
 }
 
