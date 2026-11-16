@@ -126,7 +126,9 @@ function flagDeprecations(
   );
   const accepts = (name: string): boolean =>
     host === "vetra"
-      ? members.some(
+      ? // `ph run vetra` takes --restart itself (vetra-host.ts).
+        name === "--restart" ||
+        members.some(
           (schema) =>
             schema.memberOptions?.[name] !== undefined ||
             (!scoped.has(name) &&

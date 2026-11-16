@@ -235,8 +235,9 @@ describe("classic warnings: flags", () => {
         argSchemas,
       )[1],
     ).toBe(
-      "The `ph vetra` flags --logs, --restart have no `ph run vetra` argument and stop working in 6.4. " +
-        "Set what they configure in the host files under hosts/ instead.",
+      // `ph run vetra` takes --restart.
+      "`ph vetra --logs` has no `ph run vetra` argument and stops working in 6.4. " +
+        "Set what it configures in the host files under hosts/ instead.",
     );
     expect(
       texts(

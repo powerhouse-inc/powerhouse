@@ -7,6 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readVetraRuntime } from "../src/utils/vetra-runtime.js";
+import { linkVetraStudio, writeScaffoldHosts } from "./hosts-project.js";
 import { isAlive, removeDir, stopProcess } from "./processes.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -41,6 +42,9 @@ async function makeProject(): Promise<string> {
       vetra: { connectPort: await freePort() },
     }),
   );
+  // `ph vetra` runs the project's vetra host.
+  writeScaffoldHosts(dir, PROJECT_NAME);
+  linkVetraStudio(dir);
   cleanups.push(async () => {
     // Whatever Vetra the record names last, then the project.
     await stopProcess(readVetraRuntime(dir)?.pid);

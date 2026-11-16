@@ -288,6 +288,25 @@ describe("ph run vetra", () => {
     expect(readVetraRuntime(dir)?.pid).toBe(process.pid);
   });
 
+  it("takes --restart for itself: the runners do not get it", async () => {
+    const dir = makeProject("vetra");
+    writeVetraRuntime(dir, otherVetra({ pid: DEAD_PID }));
+    vi.mocked(startRun).mockResolvedValue(compoundResult(switchboardOutputs));
+
+    await runVetraHost({
+      host: "vetra",
+      projectRoot: dir,
+      argv: ["--restart", "--strictPort"],
+    });
+
+    expect(startRun).toHaveBeenCalledWith({
+      host: "vetra",
+      projectRoot: dir,
+      argv: ["--strictPort"],
+    });
+    expect(readVetraRuntime(dir)?.pid).toBe(process.pid);
+  });
+
   it("writes no record for build, and does not ask who is running", async () => {
     const dir = makeProject("vetra");
     writeVetraRuntime(dir, otherVetra());
