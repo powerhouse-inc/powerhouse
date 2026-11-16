@@ -99,17 +99,3 @@ export class RenownBuilder extends BaseRenownBuilder {
     return renown;
   }
 }
-
-/**
- * @deprecated Use RenownBuilder directly instead.
- * Initialize a browser-specific Renown instance.
- * @param appName - Application name used for signing context
- * @param options - Browser-specific configuration options
- * @returns Initialized Renown instance
- */
-export function initRenown(
-  appName: string,
-  options: BrowserRenownBuilderOptions = {},
-) {
-  return new RenownBuilder(appName, options).build();
-}

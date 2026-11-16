@@ -15,7 +15,7 @@ Comprehensive guide to implementing authentication with the Renown SDK.
 
 The Renown SDK provides a complete authentication system that:
 
-1. **Auto-initializes** the Renown SDK and ConnectCrypto (zero configuration!)
+1. **Auto-initializes** the Renown SDK and RenownCrypto (zero configuration!)
 2. **Manages** user sessions across page reloads
 3. **Handles** authentication redirects from Renown portal
 4. **Fetches** user profile data automatically

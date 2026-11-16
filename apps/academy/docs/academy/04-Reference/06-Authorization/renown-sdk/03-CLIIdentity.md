@@ -305,8 +305,8 @@ ph switchboard --use-identity --keypair-path ~/.shared-keypair.json
 ### Exported Functions (Switchboard)
 
 ```typescript
-// Get the ConnectCrypto instance
-function getConnectCrypto(): IConnectCrypto | null;
+// Get the RenownCrypto instance
+function getConnectCrypto(): IRenownCrypto | null;
 
 // Get the switchboard's DID
 async function getConnectDid(): Promise<string | null>;

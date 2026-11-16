@@ -27,8 +27,3 @@ export interface IRenownCrypto {
     options?: CreateBearerTokenOptions,
   ) => Promise<string>;
 }
-
-/**
- * @deprecated Use IRenownCrypto instead
- */
-export interface IConnectCrypto extends IRenownCrypto {}

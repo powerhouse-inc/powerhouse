@@ -76,7 +76,7 @@ interface RenownUserProviderProps {
 
 #### Behavior
 
-- **Automatically initializes** Renown SDK and ConnectCrypto on mount
+- **Automatically initializes** Renown SDK and RenownCrypto on mount
 - Creates global `window.renown` and `window.connectCrypto` instances
 - Checks sessionStorage for existing sessions
 - Handles Renown authentication redirects
@@ -218,7 +218,7 @@ interface RenownUserContextValue {
   login: (userDid?: string) => Promise<void>;
   logout: () => Promise<void>;
   openRenown: () => void;
-  connectCrypto: IConnectCrypto | null;
+  connectCrypto: IRenownCrypto | null;
   renown: IRenown | null;
 }
 ```
@@ -232,7 +232,7 @@ interface RenownUserContextValue {
 | `login`         | `function`               | Authenticate with optional DID                      |
 | `logout`        | `function`               | Log out current user                                |
 | `openRenown`    | `function`               | Open Renown authentication portal                   |
-| `connectCrypto` | `IConnectCrypto \| null` | ConnectCrypto instance for cryptographic operations |
+| `connectCrypto` | `IRenownCrypto \| null`  | RenownCrypto instance for cryptographic operations  |
 | `renown`        | `IRenown \| null`        | Renown SDK instance                                 |
 
 #### Example
@@ -268,46 +268,6 @@ Error: useUser must be used within a RenownUserProvider
 
 ## Functions
 
-### `initRenown()`
-
-Initialize the Renown SDK.
-
-#### Signature
-
-```typescript
-function initRenown(
-  did: string,
-  networkId: string,
-  renownUrl: string,
-): Promise<IRenown>;
-```
-
-#### Parameters
-
-| Parameter   | Type     | Description                         |
-| ----------- | -------- | ----------------------------------- |
-| `did`       | `string` | Decentralized identifier (DID)      |
-| `networkId` | `string` | Network identifier (e.g., 'eip155') |
-| `renownUrl` | `string` | Renown service URL                  |
-
-#### Returns
-
-`Promise<IRenown>` - Initialized Renown instance
-
-#### Example
-
-```typescript
-import { initRenown } from "@renown/sdk";
-
-const renown = await initRenown(
-  "did:pkh:eip155:1:0x123...",
-  "eip155",
-  "https://www.renown.id",
-);
-```
-
----
-
 ### `login()`
 
 Authenticate a user with Renown.
@@ -318,7 +278,7 @@ Authenticate a user with Renown.
 function login(
   userDid: string | undefined,
   renown: IRenown | undefined,
-  connectCrypto: IConnectCrypto | undefined,
+  connectCrypto: IRenownCrypto | undefined,
 ): Promise<User | undefined>;
 ```
 
@@ -328,7 +288,7 @@ function login(
 | --------------- | ----------------------------- | -------------------------- |
 | `userDid`       | `string \| undefined`         | User's DID to authenticate |
 | `renown`        | `IRenown \| undefined`        | Renown instance            |
-| `connectCrypto` | `IConnectCrypto \| undefined` | ConnectCrypto instance     |
+| `connectCrypto` | `IRenownCrypto \| undefined`  | RenownCrypto instance      |
 
 #### Returns
 
@@ -608,7 +568,7 @@ interface RenownUserContextValue {
   login: (userDid?: string) => Promise<void>;
   logout: () => Promise<void>;
   openRenown: () => void;
-  connectCrypto: IConnectCrypto | null;
+  connectCrypto: IRenownCrypto | null;
   renown: IRenown | null;
 }
 ```
@@ -630,12 +590,12 @@ interface IRenown {
 
 ---
 
-### `IConnectCrypto`
+### `IRenownCrypto`
 
-Interface for the ConnectCrypto instance.
+Interface for the RenownCrypto instance.
 
 ```typescript
-interface IConnectCrypto {
+interface IRenownCrypto {
   did: () => Promise<string>;
   // Additional methods...
 }
@@ -645,7 +605,7 @@ interface IConnectCrypto {
 
 ## Classes
 
-### `ConnectCrypto`
+### `RenownCrypto`
 
 Manages cryptographic operations and DID generation.
 
@@ -676,7 +636,7 @@ async did(): Promise<string>
 **Example:**
 
 ```typescript
-const connectCrypto = new ConnectCrypto(new BrowserKeyStorage());
+const connectCrypto = new RenownCrypto(new BrowserKeyStorage());
 const did = await connectCrypto.did();
 console.log(did); // 'did:pkh:eip155:1:0x...'
 ```
@@ -696,10 +656,10 @@ constructor();
 #### Usage
 
 ```typescript
-import { BrowserKeyStorage, ConnectCrypto } from "@renown/sdk";
+import { BrowserKeyStorage, RenownCrypto } from "@renown/sdk";
 
 const keyStorage = new BrowserKeyStorage();
-const connectCrypto = new ConnectCrypto(keyStorage);
+const connectCrypto = new RenownCrypto(keyStorage);
 ```
 
 ---
@@ -848,7 +808,7 @@ The SDK extends the global `Window` interface:
 declare global {
   interface Window {
     renown?: IRenown;
-    connectCrypto?: IConnectCrypto;
+    connectCrypto?: IRenownCrypto;
     reactor?: {
       setGenerateJwtHandler: (
         handler: (driveUrl: string) => Promise<string>,
@@ -873,7 +833,7 @@ if (window.renown) {
 
 ### `window.connectCrypto`
 
-Global ConnectCrypto instance after initialization.
+Global RenownCrypto instance after initialization.
 
 **Usage:**
 
@@ -915,7 +875,7 @@ if (window.connectCrypto) {
 "did:1234567890123456789012345678901234567890";
 ```
 
-#### `Renown or ConnectCrypto not available`
+#### `Renown or RenownCrypto not available`
 
 **Cause:** SDK initialization failed
 
@@ -951,7 +911,7 @@ import type {
   LoginStatus,
   RenownUserContextValue,
   IRenown,
-  IConnectCrypto,
+  IRenownCrypto,
 } from "@renown/sdk";
 ```
 

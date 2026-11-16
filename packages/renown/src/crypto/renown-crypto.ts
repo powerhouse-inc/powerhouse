@@ -94,8 +94,3 @@ export class RenownCrypto implements IRenownCrypto {
     };
   }
 }
-
-/**
- * @deprecated Use RenownCrypto instead
- */
-export class ConnectCrypto extends RenownCrypto {}
