@@ -279,6 +279,65 @@ export default defineConfig({
     expect(exclude).not.toContain("./.ph/");
   });
 
+  it("keeps the project's own vitest options outside and inside test", async () => {
+    const dir = await makeProject();
+    write(
+      dir,
+      "vitest.config.ts",
+      `import react from "@vitejs/plugin-react";
+import tsconfigPaths from "vite-tsconfig-paths";
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    globals: true,
+    coverage: {
+      provider: "v8",
+      include: ["document-models/**/src/reducers/**", "lib/**"],
+      thresholds: { lines: 80, branches: 95 },
+    },
+  },
+  // One copy of React for linked packages.
+  resolve: { dedupe: ["react", "react-dom"] },
+  plugins: [tsconfigPaths(), react()],
+});
+`,
+    );
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await migrate(VERSION, dir, { skipInstall: true });
+    const once = read(dir, "vitest.config.ts");
+    await migrate(VERSION, dir, { skipInstall: true });
+
+    const vitest = read(dir, "vitest.config.ts");
+    expect(vitest).toBe(once);
+    expect(vitest).toContain("tsconfigPaths: true");
+    expect(vitest).toContain('dedupe: ["react", "react-dom"]');
+    expect(vitest).toContain("// One copy of React for linked packages.");
+    expect(vitest).toContain("plugins: [react()]");
+    expect(vitest).toContain('import react from "@vitejs/plugin-react";');
+    expect(vitest).not.toContain("vite-tsconfig-paths");
+    // The project's threshold stays; the ones it lacks come from the template.
+    expect(vitest).toContain("lines: 80");
+    expect(vitest).toContain("functions: 95");
+    expect(vitest).toContain('"lib/**"');
+    expect(vitest).toContain('"document-models/**/v*/modules/**"');
+    expect(vitest.match(/src\/reducers/g)).toHaveLength(1);
+    expect(
+      log.mock.calls.some(([line]) =>
+        String(line).includes(
+          "kept the project's `test.coverage.thresholds.lines: 80`",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      warn.mock.calls.some(([line]) =>
+        String(line).includes("vitest.config.ts"),
+      ),
+    ).toBe(false);
+  });
+
   it("keeps a vitest.config.ts it can't read as it is", async () => {
     const dir = await makeProject();
     const custom = `import { defineConfig, mergeConfig } from "vitest/config";

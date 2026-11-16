@@ -201,17 +201,21 @@ export function withTemplateEntries(
   return merged === existing ? undefined : merged;
 }
 
-function getTestOptions(sourceFile: SourceFile) {
+function getConfigOptions(sourceFile: SourceFile) {
   const config = sourceFile
     .getDescendantsOfKind(SyntaxKind.CallExpression)
     .find((call) => call.getExpression().getText() === "defineConfig")
     ?.getArguments()
     .at(0);
-  if (!Node.isObjectLiteralExpression(config)) return undefined;
+  return Node.isObjectLiteralExpression(config) ? config : undefined;
+}
+
+function hasTestOptions(config: ObjectLiteralExpression) {
   const test = config.getProperty("test");
-  if (!Node.isPropertyAssignment(test)) return undefined;
-  const initializer = test.getInitializer();
-  return Node.isObjectLiteralExpression(initializer) ? initializer : undefined;
+  return (
+    Node.isPropertyAssignment(test) &&
+    Node.isObjectLiteralExpression(test.getInitializer())
+  );
 }
 
 type RequiredImport = {
@@ -327,26 +331,15 @@ function mergeArrayElements(
 
 const withoutSpace = (text: string) => text.replace(/\s+/g, "");
 
-function warnIfOverridden(name: string, template: Node, project: Node) {
-  const templateValue = Node.isPropertyAssignment(template)
-    ? template.getInitializer()?.getText()
-    : template.getText();
-  if (withoutSpace(templateValue ?? "") === withoutSpace(project.getText())) {
-    return;
-  }
-  console.warn(
-    `⚠ vitest.config.ts: \`test.${name}\` is set by the template; the project's \`${project.getText()}\` was replaced.`,
-  );
-}
-
 /* Right after the template's copy of the option that precedes it in the project */
 function insertionIndex(
   target: ObjectLiteralExpression,
   source: ObjectLiteralExpression,
   property: ObjectLiteralElementLike,
 ) {
+  // Insertion counts a comment on its own line as a member.
   const names = target
-    .getProperties()
+    .getPropertiesWithComments()
     .map((p) => (Node.isPropertyAssignment(p) ? p.getName() : undefined));
   const properties = source.getProperties();
   const preceding = properties
@@ -358,8 +351,121 @@ function insertionIndex(
   return preceding === undefined ? 0 : names.indexOf(preceding) + 1;
 }
 
-/** The template vitest.config.ts plus the project's own `test` options and
- * their imports; the project's file as it is when those can't be read. */
+/* Vite reads the tsconfig's paths itself (resolve.tsconfigPaths); the plugin
+   warns that it does. */
+const SUPERSEDED_PLUGINS = ["tsconfigPaths()"];
+
+/* The nodes of an option that move to the template: all of it, or for
+   `plugins` the entries the template's options don't replace. */
+function movedNodes(option: string, initializer: Node): Node[] {
+  if (option !== "plugins" || !Node.isArrayLiteralExpression(initializer)) {
+    return [initializer];
+  }
+  return initializer
+    .getElements()
+    .filter((e) => !SUPERSEDED_PLUGINS.includes(withoutSpace(e.getText())));
+}
+
+/* A property's leading comments, less those the template already carries */
+const leadingComments = (property: Node, known: string[] = []) =>
+  property
+    .getLeadingCommentRanges()
+    .map((comment) => comment.getText())
+    .filter((comment) => !known.includes(comment))
+    .map((comment) => comment + "\n")
+    .join("");
+
+/* Adds the project's options to the template's: an option the template lacks
+   moves over, arrays gain the project's entries, objects merge key by key and
+   any other value stays the project's. */
+function mergeOptions(
+  templateFile: SourceFile,
+  target: ObjectLiteralExpression,
+  source: ObjectLiteralExpression,
+  path: string[],
+  parentComments: string,
+) {
+  let comments = parentComments;
+  for (const property of source.getProperties()) {
+    if (!Node.isPropertyAssignment(property)) {
+      console.warn(
+        `⚠ vitest.config.ts: \`${property.getText()}\` in \`${path.join(".") || "defineConfig"}\` was dropped; re-add it by hand.`,
+      );
+      continue;
+    }
+    const name = property.getName();
+    const option = [...path, name].join(".");
+    const initializer = property.getInitializerOrThrow();
+    const templateProperty = target.getProperty(name);
+    const templateValue = Node.isPropertyAssignment(templateProperty)
+      ? templateProperty.getInitializer()
+      : undefined;
+    if (
+      Node.isObjectLiteralExpression(templateValue) &&
+      Node.isObjectLiteralExpression(initializer)
+    ) {
+      mergeOptions(
+        templateFile,
+        templateValue,
+        initializer,
+        [...path, name],
+        leadingComments(
+          property,
+          templateProperty
+            ?.getLeadingCommentRanges()
+            .map((comment) => comment.getText()),
+        ),
+      );
+      continue;
+    }
+    const moved = movedNodes(option, initializer);
+    if (moved.length === 0) continue;
+    const value =
+      moved[0] === initializer
+        ? initializer.getText()
+        : `[${moved.map((node) => node.getText()).join(", ")}]`;
+    const imports: RequiredImport[] = [];
+    let ownCode = false;
+    for (const node of moved) {
+      const required = requiredImports(node);
+      if (required) imports.push(...required);
+      else ownCode = true;
+    }
+    if (ownCode) {
+      console.warn(
+        `⚠ vitest.config.ts: \`${option}\` uses code declared in the file and was dropped; re-add it by hand.`,
+      );
+      continue;
+    }
+    if (templateProperty === undefined) {
+      target.insertPropertyAssignment(
+        insertionIndex(target, source, property),
+        {
+          name,
+          initializer: value,
+          leadingTrivia: comments + leadingComments(property),
+        },
+      );
+      comments = "";
+    } else if (!mergeArrayElements(target, name, initializer)) {
+      if (
+        !Node.isPropertyAssignment(templateProperty) ||
+        !templateValue ||
+        withoutSpace(templateValue.getText()) === withoutSpace(value)
+      ) {
+        continue;
+      }
+      console.log(
+        `  vitest.config.ts: kept the project's \`${option}: ${value}\`; the template has \`${templateValue.getText()}\``,
+      );
+      templateProperty.setInitializer(value);
+    }
+    for (const required of imports) addImport(templateFile, required);
+  }
+}
+
+/** The template vitest.config.ts plus the project's own options and their
+ * imports; the project's file as it is when those can't be read. */
 export function mergedVitestConfig(
   template: string,
   existing: string | undefined,
@@ -368,56 +474,20 @@ export function mergedVitestConfig(
   const project = new Project({ useInMemoryFileSystem: true });
   const templateFile = project.createSourceFile("template.ts", template);
   const existingFile = project.createSourceFile("existing.ts", existing);
-  const templateTest = getTestOptions(templateFile);
-  const existingTest = getTestOptions(existingFile);
-  if (!templateTest || !existingTest) {
+  const templateConfig = getConfigOptions(templateFile);
+  const existingConfig = getConfigOptions(existingFile);
+  if (
+    !templateConfig ||
+    !existingConfig ||
+    !hasTestOptions(templateConfig) ||
+    !hasTestOptions(existingConfig)
+  ) {
     console.warn(
       "⚠ vitest.config.ts: no `defineConfig({ test })` found; left as it is.",
     );
     return existing;
   }
-  for (const property of existingTest.getProperties()) {
-    if (!Node.isPropertyAssignment(property)) {
-      console.warn(
-        `⚠ vitest.config.ts: \`${property.getText()}\` in \`test\` was dropped; re-add it by hand.`,
-      );
-      continue;
-    }
-    const name = property.getName();
-    const initializer = property.getInitializerOrThrow();
-    const templateProperty = templateTest.getProperty(name);
-    const inTemplate = templateProperty !== undefined;
-    if (inTemplate && !Node.isArrayLiteralExpression(initializer)) {
-      warnIfOverridden(name, templateProperty, initializer);
-      continue;
-    }
-    const imports = requiredImports(initializer);
-    if (!imports) {
-      console.warn(
-        `⚠ vitest.config.ts: \`test.${name}\` uses code declared in the file and was dropped; re-add it by hand.`,
-      );
-      continue;
-    }
-    if (inTemplate) {
-      if (!mergeArrayElements(templateTest, name, initializer)) {
-        warnIfOverridden(name, templateProperty, initializer);
-        continue;
-      }
-    } else {
-      templateTest.insertPropertyAssignment(
-        insertionIndex(templateTest, existingTest, property),
-        {
-          name,
-          initializer: initializer.getText(),
-          leadingTrivia: property
-            .getLeadingCommentRanges()
-            .map((comment) => `${comment.getText()}\n`)
-            .join(""),
-        },
-      );
-    }
-    for (const required of imports) addImport(templateFile, required);
-  }
+  mergeOptions(templateFile, templateConfig, existingConfig, [], "");
   return templateFile.getFullText();
 }
 
