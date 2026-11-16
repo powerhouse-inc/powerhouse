@@ -1,3 +1,48 @@
+## 6.3.0-dev.1 (2026-11-16)
+
+### 🚀 Features
+
+- **cli:** warn about what 6.4 removes ([eedd9b5874](https://github.com/powerhouse-inc/powerhouse/commit/eedd9b5874))
+- **codegen:** new projects run their hosts from the package scripts ([801495395a](https://github.com/powerhouse-inc/powerhouse/commit/801495395a))
+- **codegen:** ph migrate moves superseded settings and keeps root files ([be9f89f8bc](https://github.com/powerhouse-inc/powerhouse/commit/be9f89f8bc))
+- **connect:** serve the default composition without runner.plugins ([ae97685e56](https://github.com/powerhouse-inc/powerhouse/commit/ae97685e56))
+- **host-core:** ph run hands its runner the arguments of the invocation ([bf12954d5d](https://github.com/powerhouse-inc/powerhouse/commit/bf12954d5d))
+- **ph-cli:** register run, host and generate hosts without the flag ([c62d74a809](https://github.com/powerhouse-inc/powerhouse/commit/c62d74a809))
+- **ph-cli:** always scaffold hosts on init, warn on --uniform-runners ([583ae4151a](https://github.com/powerhouse-inc/powerhouse/commit/583ae4151a))
+- **ph-cli:** warn when a retired flag is set to false ([30bb6fb4ab](https://github.com/powerhouse-inc/powerhouse/commit/30bb6fb4ab))
+- **ph-cli:** migrate, migrate-status and reset are verbs of the switchboard host ([77ef215fdd](https://github.com/powerhouse-inc/powerhouse/commit/77ef215fdd))
+- **ph-cli:** the connect runner starts Studio as ph connect studio does ([70a8c07732](https://github.com/powerhouse-inc/powerhouse/commit/70a8c07732))
+- **ph-cli:** ph run vetra does around its start what ph vetra does ([56a8bca352](https://github.com/powerhouse-inc/powerhouse/commit/56a8bca352))
+- **ph-cli,codegen:** ph migrate adds hosts, merges package.json and takes --dry-run ([9404ceca17](https://github.com/powerhouse-inc/powerhouse/commit/9404ceca17))
+- **ph-cmd:** list and forward run and host without the flag ([7ac7f92af5](https://github.com/powerhouse-inc/powerhouse/commit/7ac7f92af5))
+- **ph-run:** observability loads before the host, as in the switchboard bin ([b44b00d329](https://github.com/powerhouse-inc/powerhouse/commit/b44b00d329))
+- **reactor:** record the release that migrated a store and refuse one below the floor ([ae542658a6](https://github.com/powerhouse-inc/powerhouse/commit/ae542658a6))
+- **switchboard:** boot the default composition through the plugin host ([1b9abc6a28](https://github.com/powerhouse-inc/powerhouse/commit/1b9abc6a28))
+
+### 🩹 Fixes
+
+- **builder-tools:** write the route generator's temporary file on the project's drive ([91f4a0999a](https://github.com/powerhouse-inc/powerhouse/commit/91f4a0999a))
+- **builder-tools:** match project routes to the router chunk by forward-slash ids ([6e82f6d1b9](https://github.com/powerhouse-inc/powerhouse/commit/6e82f6d1b9))
+- **codegen:** the scaffold lint config ignores the generated config typing file ([87bf22c45d](https://github.com/powerhouse-inc/powerhouse/commit/87bf22c45d))
+- **codegen:** scaffold vetra host runs Studio as a client of its switchboard ([bfb61e0b39](https://github.com/powerhouse-inc/powerhouse/commit/bfb61e0b39))
+- **codegen:** ph migrate keeps the project's vitest options outside test ([1474657f2c](https://github.com/powerhouse-inc/powerhouse/commit/1474657f2c))
+- **codegen:** ph migrate moves the reactor script to the switchboard host ([a88bbd5ed1](https://github.com/powerhouse-inc/powerhouse/commit/a88bbd5ed1))
+- **codegen:** ph migrate moves connect.branding.homeBackground ([f9a55dced9](https://github.com/powerhouse-inc/powerhouse/commit/f9a55dced9))
+- **desktop:** a second build vendors afresh over a folded stack ([7354bc8d88](https://github.com/powerhouse-inc/powerhouse/commit/7354bc8d88))
+- **host-core:** a reused pid no longer blocks the next start ([913a7c2e5e](https://github.com/powerhouse-inc/powerhouse/commit/913a7c2e5e))
+- **host-core:** read the boot time on Linux when dating a process ([11f4a6d9b5](https://github.com/powerhouse-inc/powerhouse/commit/11f4a6d9b5))
+- **host-core,ph-run:** a $map at build is empty, and the Connect server knows its public name ([eb1a233928](https://github.com/powerhouse-inc/powerhouse/commit/eb1a233928))
+- **ph-run:** an unnamed remote drive is served to Connect without a name ([0b25ed0fcb](https://github.com/powerhouse-inc/powerhouse/commit/0b25ed0fcb))
+- **switchboard:** standalone bin checks retired flags ([92ffb56003](https://github.com/powerhouse-inc/powerhouse/commit/92ffb56003))
+- **switchboard:** an environment false switches a capability off on every path ([d2fea57bc4](https://github.com/powerhouse-inc/powerhouse/commit/d2fea57bc4))
+- **test:** the test projects' build leaves hosts/types.d.ts to tsc -p hosts ([6e4e9e4d5e](https://github.com/powerhouse-inc/powerhouse/commit/6e4e9e4d5e))
+
+### ❤️ Thank You
+
+- Claude
+- Claude Fable 5.1
+- Wouter Kampmann
+
 ## 6.2.3-dev.106 (2026-11-15)
 
 ### 🚀 Features

@@ -1,3 +1,16 @@
+## 6.3.0-dev.1 (2026-11-16)
+
+### 🚀 Features
+
+- **codegen:** new projects run their hosts from the package scripts ([801495395a](https://github.com/powerhouse-inc/powerhouse/commit/801495395a))
+- **ph-cli:** ph run vetra does around its start what ph vetra does ([56a8bca352](https://github.com/powerhouse-inc/powerhouse/commit/56a8bca352))
+- **host-core:** ph run hands its runner the arguments of the invocation ([bf12954d5d](https://github.com/powerhouse-inc/powerhouse/commit/bf12954d5d))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.2.3-dev.106 (2026-11-15)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.

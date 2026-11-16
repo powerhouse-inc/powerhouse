@@ -1,3 +1,20 @@
+## 6.3.0-dev.1 (2026-11-16)
+
+### 🚀 Features
+
+- **codegen:** new projects run their hosts from the package scripts ([801495395a](https://github.com/powerhouse-inc/powerhouse/commit/801495395a))
+
+### 🩹 Fixes
+
+- **builder-tools:** match project routes to the router chunk by forward-slash ids ([6e82f6d1b9](https://github.com/powerhouse-inc/powerhouse/commit/6e82f6d1b9))
+- **builder-tools:** write the route generator's temporary file on the project's drive ([91f4a0999a](https://github.com/powerhouse-inc/powerhouse/commit/91f4a0999a))
+
+### ❤️ Thank You
+
+- Claude
+- Claude Fable 5.1
+- Wouter Kampmann
+
 ## 6.2.3-dev.106 (2026-11-15)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.

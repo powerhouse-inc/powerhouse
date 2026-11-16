@@ -1,3 +1,15 @@
+## 6.3.0-dev.1 (2026-11-16)
+
+### 🚀 Features
+
+- **codegen:** new projects run their hosts from the package scripts ([801495395a](https://github.com/powerhouse-inc/powerhouse/commit/801495395a))
+- **ph-cmd:** list and forward run and host without the flag ([7ac7f92af5](https://github.com/powerhouse-inc/powerhouse/commit/7ac7f92af5))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.2.3-dev.106 (2026-11-15)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.

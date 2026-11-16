@@ -1,3 +1,23 @@
+## 6.3.0-dev.1 (2026-11-16)
+
+### 🚀 Features
+
+- **switchboard:** boot the default composition through the plugin host ([1b9abc6a28](https://github.com/powerhouse-inc/powerhouse/commit/1b9abc6a28))
+- **cli:** warn about what 6.4 removes ([eedd9b5874](https://github.com/powerhouse-inc/powerhouse/commit/eedd9b5874))
+- **codegen:** new projects run their hosts from the package scripts ([801495395a](https://github.com/powerhouse-inc/powerhouse/commit/801495395a))
+- **reactor:** record the release that migrated a store and refuse one below the floor ([ae542658a6](https://github.com/powerhouse-inc/powerhouse/commit/ae542658a6))
+- **ph-run:** observability loads before the host, as in the switchboard bin ([b44b00d329](https://github.com/powerhouse-inc/powerhouse/commit/b44b00d329))
+
+### 🩹 Fixes
+
+- **switchboard:** an environment false switches a capability off on every path ([d2fea57bc4](https://github.com/powerhouse-inc/powerhouse/commit/d2fea57bc4))
+- **switchboard:** standalone bin checks retired flags ([92ffb56003](https://github.com/powerhouse-inc/powerhouse/commit/92ffb56003))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.2.3-dev.106 (2026-11-15)
 
 ### 🚀 Features

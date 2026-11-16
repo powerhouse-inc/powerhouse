@@ -1,3 +1,15 @@
+## 6.3.0-dev.1 (2026-11-16)
+
+### 🚀 Features
+
+- **connect:** serve the default composition without runner.plugins ([ae97685e56](https://github.com/powerhouse-inc/powerhouse/commit/ae97685e56))
+- **codegen:** new projects run their hosts from the package scripts ([801495395a](https://github.com/powerhouse-inc/powerhouse/commit/801495395a))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.2.3-dev.106 (2026-11-15)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

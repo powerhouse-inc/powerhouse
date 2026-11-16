@@ -1,3 +1,30 @@
+## 6.3.0-dev.1 (2026-11-16)
+
+### 🚀 Features
+
+- **connect:** serve the default composition without runner.plugins ([ae97685e56](https://github.com/powerhouse-inc/powerhouse/commit/ae97685e56))
+- **cli:** warn about what 6.4 removes ([eedd9b5874](https://github.com/powerhouse-inc/powerhouse/commit/eedd9b5874))
+- **codegen:** new projects run their hosts from the package scripts ([801495395a](https://github.com/powerhouse-inc/powerhouse/commit/801495395a))
+- **ph-cli,codegen:** ph migrate adds hosts, merges package.json and takes --dry-run ([9404ceca17](https://github.com/powerhouse-inc/powerhouse/commit/9404ceca17))
+- **ph-cli:** ph run vetra does around its start what ph vetra does ([56a8bca352](https://github.com/powerhouse-inc/powerhouse/commit/56a8bca352))
+- **ph-cli:** the connect runner starts Studio as ph connect studio does ([70a8c07732](https://github.com/powerhouse-inc/powerhouse/commit/70a8c07732))
+- **host-core:** ph run hands its runner the arguments of the invocation ([bf12954d5d](https://github.com/powerhouse-inc/powerhouse/commit/bf12954d5d))
+- **ph-cli:** migrate, migrate-status and reset are verbs of the switchboard host ([77ef215fdd](https://github.com/powerhouse-inc/powerhouse/commit/77ef215fdd))
+- **ph-cli:** warn when a retired flag is set to false ([30bb6fb4ab](https://github.com/powerhouse-inc/powerhouse/commit/30bb6fb4ab))
+- **ph-cmd:** list and forward run and host without the flag ([7ac7f92af5](https://github.com/powerhouse-inc/powerhouse/commit/7ac7f92af5))
+- **ph-cli:** always scaffold hosts on init, warn on --uniform-runners ([583ae4151a](https://github.com/powerhouse-inc/powerhouse/commit/583ae4151a))
+- **ph-cli:** register run, host and generate hosts without the flag ([c62d74a809](https://github.com/powerhouse-inc/powerhouse/commit/c62d74a809))
+
+### 🩹 Fixes
+
+- **ph-run:** an unnamed remote drive is served to Connect without a name ([0b25ed0fcb](https://github.com/powerhouse-inc/powerhouse/commit/0b25ed0fcb))
+- **codegen:** scaffold vetra host runs Studio as a client of its switchboard ([bfb61e0b39](https://github.com/powerhouse-inc/powerhouse/commit/bfb61e0b39))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.2.3-dev.106 (2026-11-15)
 
 ### 🚀 Features

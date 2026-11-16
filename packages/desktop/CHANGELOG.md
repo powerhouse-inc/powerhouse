@@ -1,3 +1,18 @@
+## 6.3.0-dev.1 (2026-11-16)
+
+### 🚀 Features
+
+- **codegen:** new projects run their hosts from the package scripts ([801495395a](https://github.com/powerhouse-inc/powerhouse/commit/801495395a))
+
+### 🩹 Fixes
+
+- **desktop:** a second build vendors afresh over a folded stack ([7354bc8d88](https://github.com/powerhouse-inc/powerhouse/commit/7354bc8d88))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.2.3-dev.106 (2026-11-15)
 
 ### 🚀 Features

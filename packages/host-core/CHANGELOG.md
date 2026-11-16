@@ -1,3 +1,25 @@
+## 6.3.0-dev.1 (2026-11-16)
+
+### 🚀 Features
+
+- **connect:** serve the default composition without runner.plugins ([ae97685e56](https://github.com/powerhouse-inc/powerhouse/commit/ae97685e56))
+- **codegen:** new projects run their hosts from the package scripts ([801495395a](https://github.com/powerhouse-inc/powerhouse/commit/801495395a))
+- **ph-cli:** ph run vetra does around its start what ph vetra does ([56a8bca352](https://github.com/powerhouse-inc/powerhouse/commit/56a8bca352))
+- **host-core:** ph run hands its runner the arguments of the invocation ([bf12954d5d](https://github.com/powerhouse-inc/powerhouse/commit/bf12954d5d))
+- **ph-cli:** migrate, migrate-status and reset are verbs of the switchboard host ([77ef215fdd](https://github.com/powerhouse-inc/powerhouse/commit/77ef215fdd))
+
+### 🩹 Fixes
+
+- **host-core:** read the boot time on Linux when dating a process ([11f4a6d9b5](https://github.com/powerhouse-inc/powerhouse/commit/11f4a6d9b5))
+- **host-core:** a reused pid no longer blocks the next start ([913a7c2e5e](https://github.com/powerhouse-inc/powerhouse/commit/913a7c2e5e))
+- **codegen:** scaffold vetra host runs Studio as a client of its switchboard ([bfb61e0b39](https://github.com/powerhouse-inc/powerhouse/commit/bfb61e0b39))
+- **host-core,ph-run:** a $map at build is empty, and the Connect server knows its public name ([eb1a233928](https://github.com/powerhouse-inc/powerhouse/commit/eb1a233928))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.2.3-dev.106 (2026-11-15)
 
 This was a version bump only for @powerhousedao/host-core to align it with other projects, there were no code changes.

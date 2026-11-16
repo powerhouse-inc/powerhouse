@@ -1,3 +1,26 @@
+## 6.3.0-dev.1 (2026-11-16)
+
+### 🚀 Features
+
+- **codegen:** ph migrate moves superseded settings and keeps root files ([be9f89f8bc](https://github.com/powerhouse-inc/powerhouse/commit/be9f89f8bc))
+- **switchboard:** boot the default composition through the plugin host ([1b9abc6a28](https://github.com/powerhouse-inc/powerhouse/commit/1b9abc6a28))
+- **cli:** warn about what 6.4 removes ([eedd9b5874](https://github.com/powerhouse-inc/powerhouse/commit/eedd9b5874))
+- **codegen:** new projects run their hosts from the package scripts ([801495395a](https://github.com/powerhouse-inc/powerhouse/commit/801495395a))
+- **ph-cli,codegen:** ph migrate adds hosts, merges package.json and takes --dry-run ([9404ceca17](https://github.com/powerhouse-inc/powerhouse/commit/9404ceca17))
+- **host-core:** ph run hands its runner the arguments of the invocation ([bf12954d5d](https://github.com/powerhouse-inc/powerhouse/commit/bf12954d5d))
+- **ph-cli:** warn when a retired flag is set to false ([30bb6fb4ab](https://github.com/powerhouse-inc/powerhouse/commit/30bb6fb4ab))
+- **ph-cmd:** list and forward run and host without the flag ([7ac7f92af5](https://github.com/powerhouse-inc/powerhouse/commit/7ac7f92af5))
+- **ph-cli:** always scaffold hosts on init, warn on --uniform-runners ([583ae4151a](https://github.com/powerhouse-inc/powerhouse/commit/583ae4151a))
+
+### 🩹 Fixes
+
+- **codegen:** ph migrate moves the reactor script to the switchboard host ([a88bbd5ed1](https://github.com/powerhouse-inc/powerhouse/commit/a88bbd5ed1))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.2.3-dev.106 (2026-11-15)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.

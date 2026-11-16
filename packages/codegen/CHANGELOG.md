@@ -1,3 +1,26 @@
+## 6.3.0-dev.1 (2026-11-16)
+
+### 🚀 Features
+
+- **codegen:** ph migrate moves superseded settings and keeps root files ([be9f89f8bc](https://github.com/powerhouse-inc/powerhouse/commit/be9f89f8bc))
+- **codegen:** new projects run their hosts from the package scripts ([801495395a](https://github.com/powerhouse-inc/powerhouse/commit/801495395a))
+- **ph-cli,codegen:** ph migrate adds hosts, merges package.json and takes --dry-run ([9404ceca17](https://github.com/powerhouse-inc/powerhouse/commit/9404ceca17))
+- **ph-cli:** ph run vetra does around its start what ph vetra does ([56a8bca352](https://github.com/powerhouse-inc/powerhouse/commit/56a8bca352))
+- **ph-cli:** always scaffold hosts on init, warn on --uniform-runners ([583ae4151a](https://github.com/powerhouse-inc/powerhouse/commit/583ae4151a))
+
+### 🩹 Fixes
+
+- **codegen:** ph migrate moves connect.branding.homeBackground ([f9a55dced9](https://github.com/powerhouse-inc/powerhouse/commit/f9a55dced9))
+- **codegen:** ph migrate moves the reactor script to the switchboard host ([a88bbd5ed1](https://github.com/powerhouse-inc/powerhouse/commit/a88bbd5ed1))
+- **codegen:** ph migrate keeps the project's vitest options outside test ([1474657f2c](https://github.com/powerhouse-inc/powerhouse/commit/1474657f2c))
+- **codegen:** scaffold vetra host runs Studio as a client of its switchboard ([bfb61e0b39](https://github.com/powerhouse-inc/powerhouse/commit/bfb61e0b39))
+- **codegen:** the scaffold lint config ignores the generated config typing file ([87bf22c45d](https://github.com/powerhouse-inc/powerhouse/commit/87bf22c45d))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.2.3-dev.106 (2026-11-15)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
