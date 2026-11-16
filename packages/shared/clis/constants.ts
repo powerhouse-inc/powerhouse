@@ -3,7 +3,6 @@ import { join } from "node:path";
 import type { Manifest } from "../document-model/types.js";
 import type { PowerhouseConfig } from "./types.js";
 
-
 export const SECONDS_IN_DAY = 24 * 60 * 60;
 export const DEFAULT_EXPIRY_DAYS = 7;
 export const DEFAULT_EXPIRY_SECONDS = DEFAULT_EXPIRY_DAYS * SECONDS_IN_DAY;

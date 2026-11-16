@@ -1,4 +1,3 @@
-
 /**
  * Help text for the generate command
  */

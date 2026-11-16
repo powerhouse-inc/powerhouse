@@ -105,9 +105,11 @@ describe("applyRunSugar", () => {
   // The CLI refuses these first, as typed: sugar-checks.ts.
   it("routes `ph vetra` and `ph switchboard` through run in any project", () => {
     for (const project of [makeProject(), makeProject("desktop")]) {
-      expect(applyRunSugar(["vetra", "--watch"], KNOWN, project).args).toEqual(
-        ["run", "vetra", "--watch"],
-      );
+      expect(applyRunSugar(["vetra", "--watch"], KNOWN, project).args).toEqual([
+        "run",
+        "vetra",
+        "--watch",
+      ]);
       expect(applyRunSugar(["vetra"], KNOWN, project).args).toEqual([
         "run",
         "vetra",

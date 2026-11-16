@@ -2,10 +2,7 @@ import type { ArgParser } from "cmd-ts/dist/cjs/argparser.js";
 import type { z } from "zod";
 import type * as C from "../connect/connect-config-schema.js";
 import type { getPackageManagerCommand } from "./args/common.js";
-import type {
-  DRIVES_PRESERVE_STRATEGIES,
-  LOG_LEVELS,
-} from "./constants.js";
+import type { DRIVES_PRESERVE_STRATEGIES, LOG_LEVELS } from "./constants.js";
 
 export type DrivePreserveStrategies = typeof DRIVES_PRESERVE_STRATEGIES;
 export type DrivePreserveStrategy = DrivePreserveStrategies[number];

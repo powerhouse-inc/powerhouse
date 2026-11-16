@@ -65,14 +65,7 @@ type Studio = {
 function startStudio(dir: string, port: number): Studio {
   const child = spawn(
     process.execPath,
-    [
-      PH_CLI,
-      "connect",
-      "studio",
-      "--port",
-      String(port),
-      "--strictPort",
-    ],
+    [PH_CLI, "connect", "studio", "--port", String(port), "--strictPort"],
     { cwd: dir, stdio: ["ignore", "pipe", "pipe"] },
   );
   const closed = new Promise<void>((resolve) => {
