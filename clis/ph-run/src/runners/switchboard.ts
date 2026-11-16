@@ -59,24 +59,23 @@ export const kind = "reactor";
  * output tokens; types host files) and `hostSchema` (resolved; checked
  * right before the verb). */
 const schemas = defineHostSchemas((s) =>
-  s.reactorHostSchema
-    .extend({
-      runner: s.runnerBaseSchema
-        .extend({
-          /** 0 binds a port the OS picks; `origin` reports it. */
-          port: z.number().int().min(0).max(65535).optional(),
-          /** Fail on a taken port instead of moving to a free one. */
-          strictPort: z.boolean().optional(),
-          /** Dev mode without the `dev` verb (the Vite package loader). */
-          dev: z.boolean().optional(),
-          /** The project package output dir `build` writes (default "dist"). */
-          outDir: z.string().min(1).optional(),
-        })
-        .strict(),
-      config: z
-        .strictObject({ switchboard: memberSwitchboardConfigSchema.optional() })
-        .optional(),
-    }),
+  s.reactorHostSchema.extend({
+    runner: s.runnerBaseSchema
+      .extend({
+        /** 0 binds a port the OS picks; `origin` reports it. */
+        port: z.number().int().min(0).max(65535).optional(),
+        /** Fail on a taken port instead of moving to a free one. */
+        strictPort: z.boolean().optional(),
+        /** Dev mode without the `dev` verb (the Vite package loader). */
+        dev: z.boolean().optional(),
+        /** The project package output dir `build` writes (default "dist"). */
+        outDir: z.string().min(1).optional(),
+      })
+      .strict(),
+    config: z
+      .strictObject({ switchboard: memberSwitchboardConfigSchema.optional() })
+      .optional(),
+  }),
 );
 export const declaredHostSchema = schemas.declaredHostSchema;
 export const hostSchema = schemas.hostSchema;

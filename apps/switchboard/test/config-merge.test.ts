@@ -266,12 +266,8 @@ describe("an env false always wins", () => {
   it("MCP_ENABLED=false beats a caller's mcp, default and declared composition", () => {
     const caller = { features: { mcp: true } };
     expect(resolved({ MCP_ENABLED: "false" }, caller).features.mcp).toBe(false);
-    expect(
-      declared({ MCP_ENABLED: "false" }, caller).features.mcp,
-    ).toBe(false);
-    expect(declared({ MCP_ENABLED: "false" }, {}).features.mcp).toBe(
-      false,
-    );
+    expect(declared({ MCP_ENABLED: "false" }, caller).features.mcp).toBe(false);
+    expect(declared({ MCP_ENABLED: "false" }, {}).features.mcp).toBe(false);
   });
 
   it("MCP_ENABLED=false beats the bin's own features.mcp", () => {
@@ -288,9 +284,7 @@ describe("an env false always wins", () => {
     const caller = { features: { documentModelSubgraphs: true } };
     const env = { DOCUMENT_MODEL_SUBGRAPHS_ENABLED: "false" };
     expect(resolved(env, caller).features.documentModelSubgraphs).toBe(false);
-    expect(
-      declared(env, caller).features.documentModelSubgraphs,
-    ).toBe(false);
+    expect(declared(env, caller).features.documentModelSubgraphs).toBe(false);
   });
 
   it("PH_WORKFLOWS_ENABLED=false beats a caller's, default and declared composition", () => {
@@ -299,8 +293,7 @@ describe("an env false always wins", () => {
       resolved({ PH_WORKFLOWS_ENABLED: "false" }, caller).features.workflows,
     ).toBe(false);
     expect(
-      declared({ PH_WORKFLOWS_ENABLED: "false" }, caller).features
-        .workflows,
+      declared({ PH_WORKFLOWS_ENABLED: "false" }, caller).features.workflows,
     ).toBe(false);
   });
 
@@ -312,9 +305,7 @@ describe("an env false always wins", () => {
     };
     const env = { PH_PRIVACY_ENABLED: "false" };
     expect(resolved(env, caller).features.privacy.enabled).toBe(false);
-    expect(declared(env, caller).features.privacy.enabled).toBe(
-      false,
-    );
+    expect(declared(env, caller).features.privacy.enabled).toBe(false);
     expect(
       resolved({ PH_PRIVACY_ENABLED: "true" }, caller).features.privacy.enabled,
     ).toBe(true);
@@ -324,9 +315,7 @@ describe("an env false always wins", () => {
     const caller = { inspection: { enabled: true } };
     const env = { INSPECTION_ENABLED: "false" };
     expect(resolved(env, caller).inspection.enabled).toBe(false);
-    expect(declared(env, caller).inspection.enabled).toBe(
-      false,
-    );
+    expect(declared(env, caller).inspection.enabled).toBe(false);
   });
 });
 

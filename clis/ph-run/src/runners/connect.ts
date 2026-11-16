@@ -37,9 +37,7 @@ import {
 } from "@powerhousedao/shared/clis/args";
 import { command, runSafely } from "cmd-ts";
 import { z } from "zod";
-import {
-  connectChromeDeprecation,
-} from "./host-deprecations.js";
+import { connectChromeDeprecation } from "./host-deprecations.js";
 import { onlyPassed, runnerArgsSchemaOf } from "./runner-args.js";
 import {
   classicConnectPreviewArgs,

@@ -542,7 +542,9 @@ describe("declared validation", () => {
           "desktop-connect": { host: "connect", reactor: { workflows: true } },
         },
       }),
-    ).toEqual([{ path: "children.desktop-connect.reactor.workflows", message }]);
+    ).toEqual([
+      { path: "children.desktop-connect.reactor.workflows", message },
+    ]);
     expect(
       findRemovedForms({
         name: "switchboard",

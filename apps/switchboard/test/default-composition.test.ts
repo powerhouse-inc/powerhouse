@@ -132,8 +132,10 @@ describe("workflows.enabled in powerhouse.config.json", () => {
   it.each(["1", "0", "true", "false"])(
     "PH_WORKFLOWS_ENABLED=%j resolves the switch, so nothing is warned",
     (value) => {
-      const { workflows } = resolved({ PH_WORKFLOWS_ENABLED: value }, {})
-        .features;
+      const { workflows } = resolved(
+        { PH_WORKFLOWS_ENABLED: value },
+        {},
+      ).features;
       expect(workflows).not.toBe(undefined);
       expect(configFileWorkflowsNotice({ ...boot, workflows })).toBe(undefined);
     },

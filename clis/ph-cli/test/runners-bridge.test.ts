@@ -684,7 +684,7 @@ describe("switchboard bridge runner", () => {
     }
   });
 
-  it("keeps a readModel-only block's reactor store on readModel.url, with a warning", async () => {
+  it("refuses a readModel-only block: readModel.url no longer holds the reactor store", async () => {
     const runner = await import("../src/runners/switchboard.js");
     const { startSwitchboard } =
       await import("@powerhousedao/ph-run/switchboard");
@@ -703,20 +703,12 @@ describe("switchboard bridge runner", () => {
     });
     try {
       vi.mocked(startSwitchboard).mockClear();
-      await runner.run(readModelOnly, ctx);
-      expect(vi.mocked(startSwitchboard).mock.calls[0][2]).toMatchObject({
-        storage: {
-          reactor: { url: "postgres://host/db" },
-          readModel: { url: "postgres://host/db" },
-        },
-      });
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringMatching(
-          /readModel\.url .*also holds the reactor store.*deprecated/,
-        ),
+      await expect(runner.run(readModelOnly, ctx)).rejects.toThrow(
+        "readModel.url (postgres://host/db) is the only store this host names",
       );
+      expect(startSwitchboard).not.toHaveBeenCalled();
 
-      // An env var that names the store takes it, and nothing is deprecated.
+      // An env var that names the store takes it.
       warn.mockClear();
       vi.mocked(startSwitchboard).mockClear();
       await runner.run(readModelOnly, {
