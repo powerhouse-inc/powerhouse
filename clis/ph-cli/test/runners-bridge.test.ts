@@ -1454,7 +1454,7 @@ describe("runner arguments (ctx.argv) win over the host file", () => {
   it("the connect runner declares the classic flags it accepts", async () => {
     const runner = await import("../src/runners/connect.js");
     expect(runner.argsSchema).toEqual({
-      options: ["--port", "--host"],
+      options: ["--port", "--host", "--base", "--packages-registry"],
       flags: ["--open", "--cors", "--strictPort"],
       memberOptions: { "--connect-port": "--port" },
       retired: {
@@ -1584,6 +1584,39 @@ describe("runner arguments (ctx.argv) win over the host file", () => {
       port: 6599,
       open: true,
     });
+  });
+
+  it("connect build: --base and --packages-registry reach the build service", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectBuild } =
+      await import("../src/services/connect-build.js");
+    vi.mocked(runConnectBuild).mockClear();
+    await runner.build(
+      connect({ name: "lab-connect", runner: { module: "m" } }),
+      withArgv("--base", "/app", "--packages-registry=https://registry.test"),
+    );
+    const [args, override] = vi.mocked(runConnectBuild).mock.calls[0];
+    expect(args).toMatchObject({
+      connectBasePath: "/app",
+      packagesRegistry: "https://registry.test",
+      outDir: ".ph/connect-build/dist/",
+    });
+    // Over the host's config, as the flag was over powerhouse.config.json.
+    expect(override).toEqual({ app: { basePath: "/app" } });
+  });
+
+  it("each connect verb refuses the arguments of another", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const host = connect({ name: "lab-connect", runner: { module: "m" } });
+    await expect(
+      runner.build(host, withArgv("--port", "4100")),
+    ).rejects.toThrow(/hosts\/lab-connect\/host\.js: /);
+    await expect(runner.dev(host, withArgv("--base", "/app"))).rejects.toThrow(
+      /hosts\/lab-connect\/host\.js: /,
+    );
+    await expect(
+      runner.serve(host, withArgv("--packages-registry", "x")),
+    ).rejects.toThrow(/hosts\/lab-connect\/host\.js: /);
   });
 });
 

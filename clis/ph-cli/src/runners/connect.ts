@@ -1,5 +1,6 @@
 import {
   callerOverride,
+  connectBuildInvocationArgs,
   connectHandle,
   connectInvocationArgs,
   serve as serveBuilt,
@@ -14,6 +15,7 @@ import {
 } from "@powerhousedao/ph-run/runners/connect";
 import type { RunnerContext, RunnerHandle } from "@powerhousedao/host-core";
 import { getConfig } from "@powerhousedao/shared/clis";
+import { deepMerge } from "@powerhousedao/shared/connect";
 import { join } from "node:path";
 import type { ConnectStudioArgs } from "../types.js";
 
@@ -110,13 +112,27 @@ export async function build(
   const { connectBuildServiceArgs } =
     await import("../services/service-args.js");
   const classic = await connectBuildServiceArgs();
+  const passed = await connectBuildInvocationArgs(host, ctx);
   const args = {
     ...classic,
     // The default of the build arguments: `dist/` is the package `ph build` writes.
     outDir: host.runner.outDir ?? classic.outDir,
+    // `--packages-registry`: the top-level packageRegistryUrl of the build.
+    packagesRegistry: passed.packagesRegistry ?? classic.packagesRegistry,
+    connectBasePath: passed.connectBasePath ?? classic.connectBasePath,
   };
   // The host's config bakes in: its title, favicon, manifest, base path and loading shell.
-  await runConnectBuild(args, callerOverride(host, ctx, ctx.verb), {
+  const hostConfig = callerOverride(host, ctx, ctx.verb);
+  // `--base` wins over the host file, as an argument does: connect.app.basePath,
+  // where `ph connect build --base` put it. Laid over the host's config here
+  // too, as the service reads the flag off the command line of the process.
+  const override =
+    passed.connectBasePath === undefined
+      ? hostConfig
+      : deepMerge(hostConfig ?? {}, {
+          app: { basePath: passed.connectBasePath },
+        });
+  await runConnectBuild(args, override, {
     routes: host.runner.routes,
   });
 }

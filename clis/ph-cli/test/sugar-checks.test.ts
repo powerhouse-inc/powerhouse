@@ -18,13 +18,40 @@ afterEach(() => {
   }
 });
 
-function makeProject(hosts: string[] = []): string {
+// The host files of the scaffold, as far as the runner each names.
+const STOCK: Record<string, object> = {
+  connect: { runner: { module: "@powerhousedao/ph-cli/runners/connect" } },
+  switchboard: {
+    runner: { module: "@powerhousedao/ph-cli/runners/switchboard" },
+  },
+  vetra: {
+    runner: { module: "@powerhousedao/host-core/runners/compound" },
+    children: {
+      "vetra-switchboard": { host: "switchboard" },
+      "vetra-studio": { host: "connect" },
+    },
+  },
+};
+
+const OWN_RUNNER = { runner: { module: "./my-runner.js" } };
+
+function makeProject(
+  hosts: string[] = [],
+  own: Record<string, object> = {},
+): string {
   const dir = mkdtempSync(path.join(tmpdir(), "ph-sugar-checks-"));
   temporary.push(dir);
   for (const host of hosts) {
     const hostDir = path.join(dir, "hosts", host);
     mkdirSync(hostDir, { recursive: true });
-    writeFileSync(path.join(hostDir, "host.js"), "export default {};");
+    const definition = {
+      name: host,
+      ...(own[host] ?? STOCK[host] ?? OWN_RUNNER),
+    };
+    writeFileSync(
+      path.join(hostDir, "host.js"),
+      `export default ${JSON.stringify(definition)};`,
+    );
   }
   return dir;
 }
@@ -202,6 +229,40 @@ describe("sugarError", () => {
     await expect(
       sugarError(["vetra", "--strictPort"], makeProject(SCAFFOLD)),
     ).resolves.toBeUndefined();
+  });
+
+  it("leaves the flags of a host on a runner of its own to that runner", async () => {
+    await expect(
+      sugarError(
+        ["connect", "studio", "--ignore-local"],
+        makeProject(SCAFFOLD, { connect: OWN_RUNNER }),
+      ),
+    ).resolves.toBeUndefined();
+    await expect(
+      sugarError(
+        ["switchboard", "--migrate"],
+        makeProject(SCAFFOLD, { switchboard: OWN_RUNNER }),
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it("checks `ph vetra` only when it is the compound over the stock runners", async () => {
+    // A member on a runner of its own, or a compound of the project's own.
+    await expect(
+      sugarError(
+        ["vetra", "--logs"],
+        makeProject(SCAFFOLD, { connect: OWN_RUNNER }),
+      ),
+    ).resolves.toBeUndefined();
+    await expect(
+      sugarError(
+        ["vetra", "--logs"],
+        makeProject(SCAFFOLD, { vetra: OWN_RUNNER }),
+      ),
+    ).resolves.toBeUndefined();
+    await expect(
+      sugarError(["vetra", "--logs"], makeProject(SCAFFOLD)),
+    ).resolves.toContain("`ph vetra --logs` was removed in 6.4");
   });
 
   it("says `ph reactor` is gone, unless the project has a host of that name", async () => {

@@ -1,4 +1,5 @@
 import {
+  loadHost,
   probeHostsFolder,
   withoutHostsMessage,
   type RunnerArgsSchema,
@@ -14,7 +15,8 @@ import { CONNECT_VERBS, HOST_COMMANDS } from "./run-sugar.js";
  * they become `ph run <host>` (run-sugar.ts): a project without the host
  * file, and the flags of the commands they once were that `ph run` has no
  * argument for. `ph run` is not checked here, nor is any other host name: a
- * runner refuses the arguments it does not know itself.
+ * runner refuses the arguments it does not know itself. Nor are the flags of
+ * a host on a runner of its own: they are checked against the stock runners.
  */
 
 /** `ph switchboard` flags that are verbs of the host. */
@@ -190,6 +192,74 @@ export function removedFlagsError(
   return errors.length > 0 ? errors.join("\n") : undefined;
 }
 
+/** The runners the scaffold's hosts name, whose schemas the flags are
+ * checked against. ph-cli's are the ph-run ones, re-exported. */
+const STOCK_RUNNERS: Readonly<Record<string, readonly string[]>> = {
+  connect: [
+    "@powerhousedao/ph-cli/runners/connect",
+    "@powerhousedao/ph-run/runners/connect",
+  ],
+  switchboard: [
+    "@powerhousedao/ph-cli/runners/switchboard",
+    "@powerhousedao/ph-run/runners/switchboard",
+  ],
+};
+const COMPOUND_RUNNER = "@powerhousedao/host-core/runners/compound";
+
+async function runnerModuleOf(
+  projectRoot: string,
+  host: string,
+): Promise<{ module: string; children?: unknown } | undefined> {
+  try {
+    const { host: definition } = await loadHost(projectRoot, host);
+    return {
+      module: definition.runner.module,
+      children: (definition as { children?: unknown }).children,
+    };
+  } catch {
+    // `ph run` loads it next and says what is wrong with it.
+    return undefined;
+  }
+}
+
+/**
+ * Whether the host runs the stock runner of its command: the connect or
+ * switchboard runner, or for `ph vetra` the compound over members that are
+ * the project's connect and switchboard hosts, each on its stock runner.
+ * Anything else has arguments of its own, which its runner checks.
+ */
+export async function runsStockRunner(
+  projectRoot: string,
+  host: "vetra" | "connect" | "switchboard",
+): Promise<boolean> {
+  const loaded = await runnerModuleOf(projectRoot, host);
+  if (!loaded) return false;
+  if (host !== "vetra") return STOCK_RUNNERS[host].includes(loaded.module);
+  if (loaded.module !== COMPOUND_RUNNER) return false;
+  const children = loaded.children;
+  if (typeof children !== "object" || children === null) return false;
+  const members = new Set<string>();
+  for (const child of Object.values(children as Record<string, unknown>)) {
+    const { host: member, runner } = (child ?? {}) as {
+      host?: unknown;
+      runner?: { module?: unknown };
+    };
+    if (typeof member !== "string" || !Object.hasOwn(STOCK_RUNNERS, member)) {
+      return false;
+    }
+    // A member that names a runner module is not on its sibling's.
+    if (runner?.module !== undefined) return false;
+    members.add(member);
+  }
+  for (const member of members) {
+    const sibling = await runnerModuleOf(projectRoot, member);
+    if (!sibling || !STOCK_RUNNERS[member].includes(sibling.module)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 async function loadArgSchemas(): Promise<SugarArgSchemas | undefined> {
   try {
     const [switchboard, connect] = await Promise.all([
@@ -219,6 +289,8 @@ export async function sugarError(
   if (withoutHost !== undefined) return withoutHost;
   const invocation = sugarInvocation(args);
   if (!invocation || invocation.flags.length === 0) return undefined;
+  // A runner of the project's own takes the arguments it declares.
+  if (!(await runsStockRunner(projectRoot, invocation.host))) return undefined;
   // Without the schemas the runner still refuses what it does not accept.
   const schemas = await loadArgSchemas();
   return schemas ? removedFlagsError(args, schemas) : undefined;

@@ -264,7 +264,7 @@ describe("scripts under retired names", () => {
   const startup =
     "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh";
 
-  it("moves reactor to the switchboard host and drops the startup scripts", () => {
+  it("moves reactor to the switchboard host and drops the service scripts", () => {
     const { scripts } = migratedScripts({
       reactor: "ph-cli reactor",
       "service-startup": startup,
@@ -272,7 +272,7 @@ describe("scripts under retired names", () => {
     });
     expect(scripts.reactor).toBe("ph-cli run switchboard");
     expect(scripts).not.toHaveProperty("service-startup");
-    expect(scripts.service).toBe("ph-cli service");
+    expect(scripts).not.toHaveProperty("service");
     expect(migratedScripts(scripts).scripts).toEqual(scripts);
   });
 
@@ -283,6 +283,7 @@ describe("scripts under retired names", () => {
     ).toBe("ph-cli reactor");
     const own = {
       reactor: "ph-cli reactor --port 5000",
+      service: "pm2 start ecosystem.config.js",
       "service-startup": "bash ./startup.sh",
     };
     expect(migratedScripts(own).scripts).toMatchObject(own);

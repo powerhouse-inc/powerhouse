@@ -15,8 +15,8 @@ export function buildDriveDeclarationSchema(
   return z.strictObject({
     slug: z.string().min(1),
     id: z.string().min(1).optional(),
-    /** Derive the id from the project path, like generateProjectDriveId — the
-     * same ids classic `ph vetra` produces. `true` serves the drive under the
+    /** Derive the id from the project path (`<slug>-<hash of the path>`) — the
+     * same ids classic `ph vetra` produced. `true` serves the drive under the
      * hashed slug too (the vetra drive's slug IS its hashed id); `"id"` hashes
      * only the id and keeps the declared slug (the classic Workflows drive:
      * `/d/workflows`, id `workflows-<hash>`). */

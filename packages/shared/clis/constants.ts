@@ -75,8 +75,6 @@ export const PROJECT_PORT_BAND_VETRA_CONNECT = 2000 as const;
 export const DEFAULT_DRIVE_ICON =
   "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2016%2016'%3E%3Crect%20width='16'%20height='16'%20rx='3'%20fill='%23F3F5F7'/%3E%3Cpath%20fill='%23343839'%20fill-rule='evenodd'%20clip-rule='evenodd'%20d='M10.0059%200L3.41636%205.45646C2.44979%206.25682%202.3795%207.71452%203.26456%208.60418L5.54425%2010.8957C6.21311%2011.568%206.35783%2012.6012%205.89944%2013.4314L4.48126%2016H2.13333C0.955126%2016%200%2015.0449%200%2013.8667V2.13333C0%200.955126%200.955126%200%202.13333%200H10.0059ZM11.2436%200L10.0128%202.24221C9.55899%203.06891%209.70183%204.09549%2010.3641%204.7669L12.7825%207.21868C13.6656%208.11402%2013.5866%209.57512%2012.612%2010.37L5.70922%2016H13.8667C15.0449%2016%2016%2015.0449%2016%2013.8667V2.13333C16%200.955126%2015.0449%200%2013.8667%200H11.2436Z'/%3E%3C/svg%3E" as const;
 
-export const DEFAULT_VETRA_DRIVE_ID = "vetra" as const;
-
 export const MINIMUM_NODE_VERSION = "24.0.0" as const;
 export const PH_BIN = "ph-cli-legacy" as const;
 export const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json" as const;
@@ -356,6 +354,7 @@ export const RETIRED_PACKAGE_SCRIPTS: Record<
     replacement: "ph-cli run switchboard",
     host: "switchboard",
   },
+  service: { values: ["ph-cli service"] },
   "service-startup": {
     values: [
       "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",

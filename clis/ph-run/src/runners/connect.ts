@@ -33,6 +33,7 @@ import {
 import type { ParsedCmdResult } from "@powerhousedao/shared/clis";
 import {
   commonServerArgs,
+  connectBuildArgs,
   connectStudioArgs,
 } from "@powerhousedao/shared/clis/args";
 import { command, runSafely } from "cmd-ts";
@@ -455,13 +456,36 @@ const invocation = command({
 
 export type ConnectInvocationArgs = Partial<ParsedCmdResult<typeof invocation>>;
 
+/** What the `build` verb accepts instead: the `ph connect build` definitions
+ * of the same names. A container image sets these per build (its Docker
+ * build arguments), so they are arguments and not host file keys. */
+const buildInvocationArgs = {
+  connectBasePath: connectBuildArgs.connectBasePath,
+  packagesRegistry: connectBuildArgs.packagesRegistry,
+};
+
+const buildInvocation = command({
+  name: "connect build",
+  args: buildInvocationArgs,
+  handler: (args) => args,
+});
+
+export type ConnectBuildInvocationArgs = Partial<
+  ParsedCmdResult<typeof buildInvocation>
+>;
+
 const WATCH_RETIRED = "it is no longer needed.";
 
-export const argsSchema = runnerArgsSchemaOf(invocationArgs, {
-  // `ph vetra --connect-port`
-  memberOptions: { "--connect-port": "--port" },
-  retired: { "--watch": WATCH_RETIRED, "-w": WATCH_RETIRED },
-});
+// One schema for the runner: each verb parses its own arguments, and so
+// refuses the ones of another verb (`--base` on dev, `--port` on build).
+export const argsSchema = runnerArgsSchemaOf(
+  { ...invocationArgs, ...buildInvocationArgs },
+  {
+    // `ph vetra --connect-port`
+    memberOptions: { "--connect-port": "--port" },
+    retired: { "--watch": WATCH_RETIRED, "-w": WATCH_RETIRED },
+  },
+);
 
 /** This invocation's arguments (`ctx.argv`), parsed by the classic
  * definitions; only the ones passed. They win over the host file. */
@@ -478,6 +502,23 @@ export async function connectInvocationArgs(
     );
   }
   return onlyPassed(result.value, invocationArgs, argv);
+}
+
+/** The `build` verb's arguments (`ctx.argv`), parsed by the classic
+ * definitions; only the ones passed. They win over the host file. */
+export async function connectBuildInvocationArgs(
+  host: ConnectHostParsed,
+  ctx: RunnerContext,
+): Promise<ConnectBuildInvocationArgs> {
+  const argv = [...(ctx.argv ?? [])];
+  if (argv.length === 0) return {};
+  const result = await runSafely(buildInvocation, argv);
+  if (result._tag === "error") {
+    throw new RunnerError(
+      `hosts/${host.name}/host.js: ${result.error.config.message}`,
+    );
+  }
+  return onlyPassed(result.value, buildInvocationArgs, argv);
 }
 
 /** A server for a built Connect, given what to serve and how. */
