@@ -204,7 +204,7 @@ describe("create resolvers return the document read as the caller", () => {
     [
       "createDocument",
       (c: RequestClients) =>
-        resolvers.createDocument(c, { document: created }, undefined, subject),
+        resolvers.createDocument(c, { document: created }, subject),
     ],
     [
       "createEmptyDocument",
@@ -212,7 +212,6 @@ describe("create resolvers return the document read as the caller", () => {
         resolvers.createEmptyDocument(
           c,
           { documentType: created.header.documentType },
-          undefined,
           subject,
         ),
     ],
@@ -222,7 +221,6 @@ describe("create resolvers return the document read as the caller", () => {
         resolvers.createDocumentWithInitialState(
           c,
           { documentType: created.header.documentType, initialState: {} },
-          undefined,
           subject,
         ),
     ],

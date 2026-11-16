@@ -584,7 +584,6 @@ export class DocumentModelSubgraph extends BaseSubgraph {
                 preferredEditor,
                 initialState: initialState ?? {},
               },
-              this.graphqlManager.reactorDriveClient,
               this.viewSubject(ctx),
             );
           } else {
@@ -595,7 +594,6 @@ export class DocumentModelSubgraph extends BaseSubgraph {
                 parentIdOrSlug,
                 name,
               },
-              this.graphqlManager.reactorDriveClient,
               this.viewSubject(ctx),
             );
           }
@@ -652,7 +650,6 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               documentType,
               parentIdOrSlug,
             },
-            this.graphqlManager.reactorDriveClient,
             this.viewSubject(ctx),
           );
 
