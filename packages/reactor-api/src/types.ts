@@ -10,10 +10,7 @@ import type {
   AttachmentReferenceIndexBuildResult,
 } from "@powerhousedao/reactor-attachments";
 import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
-import type {
-  IRelationalDb,
-  ProcessorFactory,
-} from "@powerhousedao/shared/processors";
+import type { IRelationalDb } from "@powerhousedao/shared/processors";
 import type { IReactorInspectionSource } from "./graphql/inspection/source.js";
 import type { HttpRouteService, IHttpScope } from "./http/index.js";
 import type { IHttpAdapter } from "./graphql/gateway/types.js";
@@ -42,9 +39,6 @@ export interface IProcessorHostModule extends IReactorProcessorHostModuleBase {
   // browser too, so the surface it can rely on is the Fetch-shaped half; the
   // node-shaped additions belong to a subgraph, which only ever runs here.
 }
-
-/** @deprecated Use `IProcessorHostModule`. */
-export type IReactorProcessorHostModule = IProcessorHostModule;
 
 export type ReadinessGate = {
   isReady: () => boolean;
@@ -105,9 +99,6 @@ export type ReactorModule = {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDb;
 };
-
-/** @deprecated Use `ProcessorFactory`. */
-export type ProcessorDriveFactory = ProcessorFactory;
 
 /** Builds a per-drive factory from the host module (e.g. vetra `processorFactory`). */
 export type ProcessorFactoryBuilder =
