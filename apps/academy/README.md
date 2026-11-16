@@ -4,11 +4,11 @@ Comprehensive documentation and learning resources for the Powerhouse ecosystem.
 
 This documentation website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
 
-To contribute, edit the MDX under `docs/academy/` on a branch and open a PR against `main`. Build and serve locally before pushing — the build fails on broken links. Merging to `main` auto-deploys the **dev** site; see [Updating and deploying the docs](#updating-and-deploying-the-docs) for how changes reach staging and production.
+The site has two sections, each with its own folder and sidebar: **Docs** (`docs/academy/`, served under `/academy`) and **Learn** (`learn/`, served under `/learn`). To contribute, edit the MDX in either folder on a branch and open a PR against `main`. Build and serve locally before pushing — the build fails on broken links. Merging to `main` auto-deploys the **dev** site; see [Updating and deploying the docs](#updating-and-deploying-the-docs) for how changes reach staging and production.
 
 ## 🤖 LLM-Optimized Documentation
 
-`pnpm build` generates `static/llms.txt` and `static/llms-full.txt` from `docs/`. The site serves them at https://academy.vetra.io/llms.txt and https://academy.vetra.io/llms-full.txt.
+`pnpm build` generates `static/llms.txt` and `static/llms-full.txt` from `docs/` and `learn/`. The site serves them at https://academy.vetra.io/llms.txt and https://academy.vetra.io/llms-full.txt.
 
 The files are gitignored and not committed. To produce them locally, for example to inspect them or before `pnpm dev` (which does not generate them), run:
 

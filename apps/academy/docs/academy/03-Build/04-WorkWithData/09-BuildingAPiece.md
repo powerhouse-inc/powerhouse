@@ -1,6 +1,6 @@
 # Building a piece
 
-A piece is a connector a workflow can call: a named bundle of **actions** (things a step does) and **triggers** (things that start a run). If you haven't met workflows yet, read [What are workflows?](/academy/Learn/workflows/what-are-workflows) first — this tutorial assumes you know what a step and a block are.
+A piece is a connector a workflow can call: a named bundle of **actions** (things a step does) and **triggers** (things that start a run). If you haven't met workflows yet, read [What are workflows?](/learn/workflows/what-are-workflows) first — this tutorial assumes you know what a step and a block are.
 
 Your reactor package already ships document models, editors and processors. It can ship pieces the same way, and that's the route for anything the public connector catalogue can't cover: your internal API, your domain calculation, your service.
 
@@ -425,7 +425,7 @@ of `IReactorClient`, and `"write"` adds `write`, the client's write half:
 `ctx.reactor`. `ph generate piece-action <name> --require-reactor read|write`
 writes the declaration for you, as does `ph generate piece-trigger`. A step
 using the action needs a reactor connection, and its run acts as the user who
-last published the workflow. [Reactor access from pieces](/academy/Learn/workflows/reactor-access)
+last published the workflow. [Reactor access from pieces](/learn/workflows/reactor-access)
 covers the methods, the errors and the checks.
 
 When the input comes from an AI step, set the document action's advanced
@@ -517,7 +517,7 @@ built.
 anything on your own machine — it will not connect until the deployment widens
 the outbound address policy, which refuses private and loopback space by
 default. That's the guard described in
-[Pieces and connections](/academy/Learn/workflows/pieces-and-connections); the
+[Pieces and connections](/learn/workflows/pieces-and-connections); the
 setting that widens it is in
 [Configure environment](/academy/Build/Launch/ConfigureEnvironment#configuring-workflows).
 

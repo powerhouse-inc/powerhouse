@@ -1,6 +1,15 @@
 import React from "react";
 import type { JSX } from "react";
 import Link from "@docusaurus/Link";
+import {
+  findFirstSidebarItemLink,
+  useDocsSidebar,
+} from "@docusaurus/plugin-content-docs/client";
+import type {
+  PropSidebarItem,
+  PropSidebarItemCategory,
+  PropSidebarItemLink,
+} from "@docusaurus/plugin-content-docs";
 import styles from "./mdx.module.css";
 
 /* Canonical Lucide icon inner-SVG (lucide.dev), rendered with currentColor. */
@@ -19,6 +28,8 @@ const ICONS: Record<string, string> = {
   "git-branch":
     '<path d="M15 6a9 9 0 0 0-9 9V3"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>',
   cpu: '<path d="M12 20v2"/><path d="M12 2v2"/><path d="M17 20v2"/><path d="M17 2v2"/><path d="M2 12h2"/><path d="M2 17h2"/><path d="M2 7h2"/><path d="M20 12h2"/><path d="M20 17h2"/><path d="M20 7h2"/><path d="M7 20v2"/><path d="M7 2v2"/><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/>',
+  workflow:
+    '<rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/>',
   "arrow-right": '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
 };
 
@@ -40,109 +51,72 @@ function Icon({ name, className }: { name: string; className?: string }) {
   );
 }
 
-type Chapter = {
-  icon: string;
-  chapter: string;
-  title: string;
-  description: string;
-  href: string;
-  lessons: string;
-};
+type ChapterProps = { icon?: string; description?: string };
 
-const chapters: Chapter[] = [
-  {
-    icon: "compass",
-    chapter: "Chapter 01",
-    title: "Foundations",
-    description:
-      "The mental model — documents, actions, and operations, and why Powerhouse is built around them.",
-    href: "/academy/Learn/foundations/what-is-powerhouse",
-    lessons: "2 lessons",
-  },
-  {
-    icon: "network",
-    chapter: "Chapter 02",
-    title: "Architecture",
-    description:
-      "How the Reactor, Connect, and Switchboard fit together — and where your code lives.",
-    href: "/academy/Learn/architecture/the-big-picture",
-    lessons: "2 lessons",
-  },
-  {
-    icon: "file-code",
-    chapter: "Chapter 03",
-    title: "Document models",
-    description:
-      "The typed core: documents, drives, state scopes, actions, and reducers.",
-    href: "/academy/Learn/document-models/documents-and-drives",
-    lessons: "4 lessons",
-  },
-  {
-    icon: "pencil-ruler",
-    chapter: "Chapter 04",
-    title: "Editors",
-    description:
-      "React UIs that dispatch actions and render state — hooks, structure, and patterns.",
-    href: "/academy/Learn/editors/what-is-an-editor",
-    lessons: "3 lessons",
-  },
-  {
-    icon: "box",
-    chapter: "Chapter 05",
-    title: "Connect",
-    description:
-      "The host application — how it loads document models, drives, and editors at runtime.",
-    href: "/academy/Learn/connect/what-is-connect",
-    lessons: "2 lessons",
-  },
-  {
-    icon: "server",
-    chapter: "Chapter 06",
-    title: "Switchboard",
-    description:
-      "The server side — subgraphs that expose APIs and processors that build read models.",
-    href: "/academy/Learn/switchboard/what-is-switchboard",
-    lessons: "3 lessons",
-  },
-  {
-    icon: "git-branch",
-    chapter: "Chapter 07",
-    title: "Sync & collaboration",
-    description:
-      "Replay, merge, and why conflict-free just works once your state lives in a log.",
-    href: "/academy/Learn/sync/sync-and-collaborate",
-    lessons: "1 lesson",
-  },
-  {
-    icon: "cpu",
-    chapter: "Chapter 08",
-    title: "Going further",
-    description:
-      "Reducer patterns under the hood, plus identity and signing on the operation log.",
-    href: "/academy/Learn/deep-dives/reducers-in-depth",
-    lessons: "2 lessons",
-  },
-];
+/**
+ * A chapter is a folder in learn/. Docusaurus turns a folder whose only page
+ * is its own link into a plain link, which keeps the folder's customProps.
+ */
+type Chapter = PropSidebarItemCategory | PropSidebarItemLink;
 
-export default function LearnCourseGrid(): JSX.Element {
+function isChapter(item: PropSidebarItem): item is Chapter {
+  return (
+    item.type === "category" ||
+    (item.type === "link" && item.customProps !== undefined)
+  );
+}
+
+/** Every distinct page in a chapter, including the page its title links to. */
+function lessonCount(chapter: Chapter): number {
+  const hrefs = new Set<string>();
+  const visit = (item: PropSidebarItem) => {
+    if (item.type === "link") hrefs.add(item.href);
+    if (item.type === "category") {
+      if (item.href) hrefs.add(item.href);
+      item.items.forEach(visit);
+    }
+  };
+  visit(chapter);
+  return hrefs.size;
+}
+
+export default function LearnCourseGrid(): JSX.Element | null {
+  const sidebar = useDocsSidebar();
+  if (!sidebar) return null;
+
+  const chapters = sidebar.items.filter(isChapter);
+
   return (
     <div className={styles.courseGrid}>
-      {chapters.map((c) => (
-        <Link key={c.title} to={c.href} className={styles.courseCard}>
-          <div className={styles.courseCardTop}>
-            <span className={styles.courseIcon}>
-              <Icon name={c.icon} />
-            </span>
-            <span className={styles.courseChapter}>{c.chapter}</span>
-          </div>
-          <div className={styles.courseTitle}>{c.title}</div>
-          <p className={styles.courseDesc}>{c.description}</p>
-          <div className={styles.courseCardBottom}>
-            <span className={styles.courseLessons}>{c.lessons}</span>
-            <Icon name="arrow-right" className={styles.courseArrow} />
-          </div>
-        </Link>
-      ))}
+      {chapters.map((chapter, i) => {
+        const { icon = "compass", description } = (chapter.customProps ??
+          {}) as ChapterProps;
+        const lessons = lessonCount(chapter);
+        return (
+          <Link
+            key={chapter.label}
+            to={chapter.href ?? findFirstSidebarItemLink(chapter)}
+            className={styles.courseCard}
+          >
+            <div className={styles.courseCardTop}>
+              <span className={styles.courseIcon}>
+                <Icon name={icon} />
+              </span>
+              <span className={styles.courseChapter}>
+                Chapter {String(i + 1).padStart(2, "0")}
+              </span>
+            </div>
+            <div className={styles.courseTitle}>{chapter.label}</div>
+            <p className={styles.courseDesc}>{description}</p>
+            <div className={styles.courseCardBottom}>
+              <span className={styles.courseLessons}>
+                {lessons} {lessons === 1 ? "lesson" : "lessons"}
+              </span>
+              <Icon name="arrow-right" className={styles.courseArrow} />
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }

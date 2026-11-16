@@ -1,6 +1,6 @@
 # Academy Voice & Style
 
-The canonical voice definition for everything under `apps/academy/docs/academy`. This is the single source of truth: the doc skills (`/doc-clarity`, `/doc-voice`) reference it, and human writers should read it before touching a page. When the voice changes, edit this file — not the skills.
+The canonical voice definition for everything under `apps/academy/docs/academy` and `apps/academy/learn`. This is the single source of truth: the doc skills (`/doc-clarity`, `/doc-voice`) reference it, and human writers should read it before touching a page. When the voice changes, edit this file — not the skills.
 
 This file defines **how the academy sounds**, not what it covers. For code-correctness rules see `/doc-review`; for structure and scope see `/doc-clarity`.
 

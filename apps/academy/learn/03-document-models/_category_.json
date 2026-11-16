@@ -1,0 +1,11 @@
+{
+  "label": "Document models",
+  "link": {
+    "type": "doc",
+    "id": "document-models/documents-and-drives"
+  },
+  "customProps": {
+    "icon": "file-code",
+    "description": "The typed core: documents, drives, state scopes, actions, and reducers."
+  }
+}

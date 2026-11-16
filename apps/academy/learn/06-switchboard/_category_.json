@@ -1,0 +1,11 @@
+{
+  "label": "Switchboard",
+  "link": {
+    "type": "doc",
+    "id": "switchboard/what-is-switchboard"
+  },
+  "customProps": {
+    "icon": "server",
+    "description": "The server side — subgraphs that expose APIs and processors that build read models."
+  }
+}

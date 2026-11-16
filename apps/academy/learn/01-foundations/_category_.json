@@ -1,0 +1,11 @@
+{
+  "label": "Foundations",
+  "link": {
+    "type": "doc",
+    "id": "foundations/what-is-powerhouse"
+  },
+  "customProps": {
+    "icon": "compass",
+    "description": "The mental model — documents, actions, and operations, and why Powerhouse is built around them."
+  }
+}

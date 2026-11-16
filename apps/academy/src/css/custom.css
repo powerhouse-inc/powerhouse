@@ -60,8 +60,8 @@
   --toc-color: var(--ifm-color-emphasis-600);
   --toc-color-active: var(--foreground);
 
-  /* Green is reserved for brand/primary actions (buttons, logo, accents).
-     Sidebar, TOC and functional/navigation links stay neutral foreground. */
+  /* Green is reserved for brand/primary actions (buttons, logo, accents) and
+     the active navbar section. Sidebar, TOC and other links stay neutral. */
   --ifm-link-color: var(--foreground);
   --ifm-menu-color-active: var(--foreground);
   --ifm-navbar-link-hover-color: var(--foreground);
@@ -257,6 +257,13 @@ article > a,
 .theme-edit-this-page {
   text-decoration: none !important;
   color: var(--ifm-link-color) !important;
+}
+
+/* The navbar link of the section you're in (Docs or Learn) is the one
+   navigation link in brand green, on desktop and in the mobile menu. */
+.navbar a.navbar__link--active,
+.navbar-sidebar__item:first-child a.menu__link--active {
+  color: var(--ifm-color-primary) !important;
 }
 
 /* Keep the pencil icon black too */

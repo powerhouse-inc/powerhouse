@@ -2,6 +2,9 @@ import { themes as prismThemes } from "prism-react-renderer";
 import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 
+const EDIT_URL =
+  "https://github.com/powerhouse-inc/powerhouse/edit/main/apps/academy/";
+
 const config: Config = {
   title: "Powerhouse Academy",
   tagline: "Get started with the Powerhouse ecosystem",
@@ -66,7 +69,7 @@ const config: Config = {
         docs: {
           routeBasePath: "/",
           sidebarPath: "./sidebars.ts",
-          editUrl: "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev",
+          editUrl: EDIT_URL,
           showLastUpdateTime: false,
           showLastUpdateAuthor: false,
         },
@@ -85,6 +88,18 @@ const config: Config = {
   ],
 
   plugins: [
+    [
+      "@docusaurus/plugin-content-docs",
+      {
+        id: "learn",
+        path: "learn",
+        routeBasePath: "learn",
+        sidebarPath: "./sidebarsLearn.ts",
+        editUrl: EDIT_URL,
+        showLastUpdateTime: false,
+        showLastUpdateAuthor: false,
+      },
+    ],
     [
       "@docusaurus/plugin-client-redirects",
       {
@@ -133,6 +148,10 @@ const config: Config = {
         ],
         // Phase-2 sidebar cleanup: Reference grouping + Example use-cases folded into Build.
         createRedirects(existingPath: string) {
+          // Learn moved out of the docs into its own section at /learn.
+          if (existingPath === "/learn") return ["/academy/Learn/Overview"];
+          if (existingPath.startsWith("/learn/"))
+            return [existingPath.replace("/learn/", "/academy/Learn/")];
           if (existingPath.startsWith("/academy/Reference/APIReferences/"))
             return [
               existingPath.replace(
@@ -190,12 +209,25 @@ const config: Config = {
       },
       items: [
         {
+          type: "docSidebar",
+          sidebarId: "academySidebar",
+          label: "Docs",
+          position: "left",
+        },
+        {
+          type: "docSidebar",
+          docsPluginId: "learn",
+          sidebarId: "learnSidebar",
+          label: "Learn",
+          position: "left",
+        },
+        {
           href: "https://storybook.powerhouse.academy/",
           label: "Storybook",
           position: "right",
         },
         {
-          href: "https://github.com/powerhouse-inc/powerhouse-docs",
+          href: "https://github.com/powerhouse-inc/powerhouse",
           label: "GitHub",
           position: "right",
         },
@@ -207,6 +239,10 @@ const config: Config = {
         {
           title: "Docs",
           items: [
+            {
+              label: "Learn the Powerhouse stack",
+              to: "/learn",
+            },
             {
               label: "Powerhouse Architecture",
               to: "academy/Reference/Architecture/PowerhouseArchitecture",
