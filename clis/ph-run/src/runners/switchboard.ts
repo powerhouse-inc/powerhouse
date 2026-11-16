@@ -419,16 +419,12 @@ async function start(
     entriesDeclared,
     passed,
   );
-  // powerhouse.config.json `reactor.https` is a default, not a flag: it goes
-  // under the member's own config instead of over it. `--https` is a flag.
-  const { https } = classic;
+  // `--https` is a flag of this invocation; without it the member's own
+  // config.switchboard.server.https decides.
   const args = { ...classic, https: passed.https };
   // This member's own config, under the args: nothing is written to the
   // process env, so compound members do not see each other's settings.
-  const memberConfig = await memberSwitchboardConfig(host, env, {
-    defaults: https === undefined ? {} : { server: { https } },
-    hostFile,
-  });
+  const memberConfig = await memberSwitchboardConfig(host, env, { hostFile });
   const noDatabase = missingPostgresUrl(host.reactor, memberConfig, hostFile);
   if (noDatabase) throw new Error(noDatabase);
 

@@ -660,7 +660,6 @@ export async function applyProjectCustomizations(args: {
     connectPort: ports.vetraConnectPort,
   };
   if (remoteDrive) {
-    vetra.driveId = remoteDrive.split("/").pop() ?? "";
     vetra.driveUrl = remoteDrive;
   }
   config.vetra = vetra;

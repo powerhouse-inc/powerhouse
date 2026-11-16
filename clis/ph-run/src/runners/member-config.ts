@@ -148,8 +148,6 @@ export async function memberSwitchboardConfig(
   env: MemberEnv,
   options: {
     logger?: ILogger;
-    /** Under everything else: values no flag or host file set. */
-    defaults?: SwitchboardConfigInput;
     /** Names the host file in an error, e.g. `hosts/switchboard/host.js`. */
     hostFile?: string;
   } = {},
@@ -181,7 +179,6 @@ export async function memberSwitchboardConfig(
   }
   if (block.storage?.readModel) delete storage.readModel;
   return mergeSwitchboardConfig(
-    options.defaults ?? {},
     block,
     member.config?.switchboard ?? {},
     { ...fromEnv, storage },

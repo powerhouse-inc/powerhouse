@@ -46,25 +46,18 @@ describe("switchboard config precedence", () => {
     ).toMatchObject({ disableLocal: true });
   });
 
-  it("puts a defaulted https under the member's own server.https", async () => {
-    const withDefault = (switchboard: SwitchboardConfigInput) =>
+  it("leaves https to the member's own server.https without the flag", async () => {
+    const member = (switchboard: SwitchboardConfigInput) =>
       memberSwitchboardConfig(
         { config: { switchboard } },
         { shell: {}, dotenv: {} },
-        { defaults: { server: { https: false } } },
       );
     const args = { ...(await switchboardServiceArgs([])), https: undefined };
     const own = switchboardConfigOf(
       args,
       undefined,
-      await withDefault({ server: { https: true } }),
+      await member({ server: { https: true } }),
     ).config;
     expect(own.server?.https).toBe(true);
-    const fallback = switchboardConfigOf(
-      args,
-      undefined,
-      await withDefault({}),
-    ).config;
-    expect(fallback.server?.https).toBe(false);
   });
 });

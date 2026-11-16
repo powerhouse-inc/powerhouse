@@ -143,16 +143,13 @@ const telemetrySchema = z.object({
 
 /**
  * `ACCESS`. A string refined rather than an enum, so an unknown value is
- * refused by name, and `members` points at what replaces it.
+ * refused by name.
  */
 const accessModeSchema = z.string().superRefine((mode, ctx) => {
   if (mode === "open" || mode === "licensed") return;
   ctx.addIssue({
     code: "custom",
-    message:
-      mode === "members"
-        ? "ACCESS=members is not supported; use ACCESS=licensed with Vetra's gate"
-        : `ACCESS=${mode} is not supported: use ACCESS=open (the default) or ACCESS=licensed`,
+    message: `ACCESS=${mode} is not supported: use ACCESS=open (the default) or ACCESS=licensed`,
   });
 });
 

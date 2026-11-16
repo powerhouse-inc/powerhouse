@@ -121,16 +121,18 @@ export function checkDeprecatedFlags(
 
 /**
  * powerhouse.config.json keys the host files supersede, with their new home.
- * `ph run` ignores them; the classic commands read them until
- * DEPRECATIONS_REMOVED_IN.
+ * Since DEPRECATIONS_REMOVED_IN nothing reads them and `ph run` refuses a
+ * project that still sets one; `ph migrate` moves the ones it can. `null`: no
+ * host setting replaces the key.
  *
  * Keys the scaffolded host files reference (studio.port, reactor.port,
  * vetra.connectPort, assistant.port and the whole connect.* block) stay in a
  * migrated project and are not in this table.
  */
-export const supersededConfigKeys: Readonly<Record<string, string>> = {
+export const supersededConfigKeys: Readonly<Record<string, string | null>> = {
   "studio.host": "runner.host in hosts/connect/host.js",
-  "studio.https": "runner.https in hosts/connect/host.js",
+  // The connect runner has no https option: a Connect host serves http.
+  "studio.https": null,
   "studio.openBrowser": "runner.openBrowser in hosts/connect/host.js",
   "reactor.https":
     "config.switchboard.server.https in hosts/switchboard/host.js",
@@ -167,4 +169,25 @@ export function presentConfigKeys(
   keys: readonly string[],
 ): string[] {
   return keys.filter((key) => lookup(config, key) !== undefined);
+}
+
+/**
+ * The error for a project whose powerhouse.config.json still sets `keys` of
+ * the superseded table: one line per key with where its value lives now, then
+ * `ph migrate` and the migration page.
+ */
+export function supersededConfigKeysError(keys: readonly string[]): string {
+  const lines = keys.map((key) => {
+    const home = supersededConfigKeys[key];
+    return (
+      `powerhouse.config.json "${key}" was removed in ${DEPRECATIONS_REMOVED_IN}. ` +
+      (home
+        ? `Set ${home} and remove the key.`
+        : "No host setting replaces it: remove the key.")
+    );
+  });
+  return [
+    ...lines,
+    `\`ph migrate\` moves the keys it can and says what to do with the rest. See ${MIGRATION_GUIDE_URL}`,
+  ].join("\n");
 }

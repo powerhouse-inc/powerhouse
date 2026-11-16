@@ -80,8 +80,8 @@ describe("applyProjectCustomizations port assignment", () => {
 
     const config = JSON.parse(
       readFileSync(join(dir, "powerhouse.config.json"), "utf8"),
-    ) as { vetra: { connectPort: number; driveId: string; driveUrl: string } };
-    expect(config.vetra.driveId).toBe("vetra-abc");
+    ) as { vetra: { connectPort: number; driveId?: string; driveUrl: string } };
+    expect(config.vetra.driveId).toBeUndefined();
     expect(config.vetra.driveUrl).toBe(remoteDrive);
     expect(config.vetra.connectPort).toBe(
       deriveProjectPorts("my-package").vetraConnectPort,
@@ -125,9 +125,10 @@ describe("buildPowerhouseConfigTemplate", () => {
       remoteDrive: "http://example.test/d/vetra-abc",
     });
     const config = JSON.parse(raw) as {
-      vetra: { connectPort: number; driveId: string; driveUrl: string };
+      vetra: { connectPort: number; driveId?: string; driveUrl: string };
     };
-    expect(config.vetra.driveId).toBe("vetra-abc");
+    expect(config.vetra.driveId).toBeUndefined();
+    expect(config.vetra.driveUrl).toBe("http://example.test/d/vetra-abc");
     expect(config.vetra.connectPort).toBe(
       deriveProjectPorts("my-package").vetraConnectPort,
     );

@@ -183,18 +183,6 @@ export type PowerhouseConfig = {
   watch?: boolean;
   reactor?: {
     port?: number;
-    https?:
-      | undefined
-      | boolean
-      | {
-          keyPath: string;
-          certPath: string;
-        };
-    storage?: {
-      type: "filesystem" | "memory" | "postgres" | "browser";
-      filesystemPath?: string;
-      postgresUrl?: string;
-    };
     keyframes?: {
       default?: PHKeyframeRule;
       types?: Record<string, PHKeyframeRule>;
@@ -206,20 +194,13 @@ export type PowerhouseConfig = {
     renown?: PHReactorRenown;
   };
   switchboard?: {
-    database?: {
-      url?: string;
-    };
     port?: number;
   };
   studio?: {
     port?: number;
-    host?: string;
-    https: boolean;
-    openBrowser?: boolean;
   };
   packages?: PowerhousePackage[];
   vetra?: {
-    driveId?: string;
     driveUrl?: string;
     connectPort?: number;
     /** The Vetra Preview drive `ph vetra` creates in watch mode. */

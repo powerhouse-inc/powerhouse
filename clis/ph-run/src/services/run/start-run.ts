@@ -76,8 +76,8 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   }
   const projectRoot = args.projectRoot ?? process.cwd();
   const loaded = await loadHost(projectRoot, args.host);
-  const { warnSupersededConfigKeys } = await import("./superseded-config.js");
-  warnSupersededConfigKeys(projectRoot);
+  const { refuseSupersededConfigKeys } = await import("./superseded-config.js");
+  refuseSupersededConfigKeys(projectRoot);
   const specifier = loaded.host.runner.module;
   const runner = await resolveRunnerModule(projectRoot, specifier);
   const verb = args.verb ?? "run";

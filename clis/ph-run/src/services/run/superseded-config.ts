@@ -1,26 +1,22 @@
+import { RunnerError } from "@powerhousedao/host-core";
 import {
-  DEPRECATIONS_REMOVED_IN,
-  formatDeprecation,
   presentConfigKeys,
   supersededConfigKeys,
+  supersededConfigKeysError,
 } from "@powerhousedao/shared/clis/deprecations";
 import fs from "node:fs";
 import path from "node:path";
 
 /**
- * P2.7: with hosts/ active, the powerhouse.config.json keys of the shared
- * `supersededConfigKeys` table are superseded by host.js structure and the
- * run path ignores them; each present key warns ONCE per run, naming its new
- * home and the release that refuses it.
+ * The powerhouse.config.json keys of the shared `supersededConfigKeys` table
+ * are superseded by host.js structure and nothing reads them. A project that
+ * still sets one is refused, so a setting can't be dropped unnoticed: the
+ * error names each key, where its value lives now, and `ph migrate`.
  */
 
-/** Warn once per run for each superseded key present in the project config.
- * Returns the warned keys (for tests). Never throws: a malformed config is
- * the loader's problem, not the warner's. */
-export function warnSupersededConfigKeys(
-  projectRoot: string,
-  warn: (message: string) => void = console.warn,
-): string[] {
+/** The superseded keys the project config sets. A missing or malformed config
+ * sets none: it is the loader's problem, not this check's. */
+export function findSupersededConfigKeys(projectRoot: string): string[] {
   let config: unknown;
   try {
     config = JSON.parse(
@@ -29,14 +25,13 @@ export function warnSupersededConfigKeys(
   } catch {
     return [];
   }
-  const warned = presentConfigKeys(config, Object.keys(supersededConfigKeys));
-  for (const key of warned) {
-    warn(
-      formatDeprecation(
-        `powerhouse.config.json "${key}" is ignored by \`ph run\` and is an error in ${DEPRECATIONS_REMOVED_IN}. ` +
-          `Set ${supersededConfigKeys[key]} and remove the key.`,
-      ),
-    );
+  return presentConfigKeys(config, Object.keys(supersededConfigKeys));
+}
+
+/** Throw when the project config still sets a superseded key. */
+export function refuseSupersededConfigKeys(projectRoot: string): void {
+  const present = findSupersededConfigKeys(projectRoot);
+  if (present.length > 0) {
+    throw new RunnerError(supersededConfigKeysError(present));
   }
-  return warned;
 }

@@ -154,6 +154,9 @@ what you want.
 - Every key in [Settings](#settings), when the project already had host
   files. `ph migrate` does not edit host files it did not write.
 
+Delete every kept key before you go to 6.4: there, `ph run` stops with an
+error while one is still set.
+
 ### 6. Check the hosts
 
 ```bash
@@ -195,8 +198,9 @@ runner does not accept, `ph run` stops and lists the ones it does accept.
 
 ### Settings
 
-These `powerhouse.config.json` keys are read by the classic commands only.
-`ph run` ignores them, and 6.4 refuses them.
+In 6.3 these `powerhouse.config.json` keys are read by the classic commands
+only, and `ph run` ignores them. In 6.4 nothing reads them, they are gone from
+the config schema, and `ph run` stops with an error while one is set.
 
 | Old key in `powerhouse.config.json` | New home                                                             |
 | ----------------------------------- | -------------------------------------------------------------------- |
@@ -312,23 +316,34 @@ lists the keys.
 
 ### A `powerhouse.config.json` key that 6.4 refuses {/* #config-keys */}
 
-A classic command prints:
+In 6.3 a classic command prints:
 
 ```text
 Warning: powerhouse.config.json sets <keys>: only the classic commands read them, and 6.4 refuses them. Move <key> to <new home>.
 ```
 
-`ph run` prints, for each key:
+In 6.3 `ph run` prints, for each key:
 
 ```text
 Warning: powerhouse.config.json "<key>" is ignored by `ph run` and is an error in 6.4. Set <new home> and remove the key.
 ```
 
-Move each key to the place the warning names and delete it from
-`powerhouse.config.json`. The full list is under [Settings](#settings).
+In 6.4 `ph run` stops, with one line for each key and a closing line:
 
-Under `ph run` the old key has no effect already. If a host started with a
-different address or database than you expected, this is the reason.
+```text
+powerhouse.config.json "<key>" was removed in 6.4. Set <new home> and remove the key.
+`ph migrate` moves the keys it can and says what to do with the rest. See https://academy.vetra.io/academy/Reference/HostsAndRunners/MigratingToHosts
+```
+
+For `studio.https` the line reads `No host setting replaces it: remove the
+key.`
+
+Move each key to the place the message names and delete it from
+`powerhouse.config.json`, or run `ph migrate`. The full list is under
+[Settings](#settings).
+
+Under `ph run` the old key had no effect in 6.3 already. If a host started
+with a different address or database than you expected, this is the reason.
 
 ### `FEATURE_PLUGIN_HOST_ENABLED` {/* #feature-plugin-host-enabled */}
 

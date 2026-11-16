@@ -10,6 +10,7 @@ import {
   MIGRATION_GUIDE_URL,
   presentConfigKeys,
   supersededConfigKeys,
+  supersededConfigKeysError,
   warnDeprecations,
   type DeprecatedFlag,
   type Deprecation,
@@ -152,6 +153,28 @@ describe("deprecations: powerhouse.config.json keys", () => {
     expect(
       presentConfigKeys(config, Object.keys(supersededConfigKeys)),
     ).toEqual(["studio.openBrowser", "reactor.storage"]);
+  });
+
+  it("words the error for a project that still sets superseded keys", () => {
+    expect(
+      supersededConfigKeysError(["reactor.https", "studio.https"]).split(
+        String.fromCharCode(10),
+      ),
+    ).toEqual([
+      'powerhouse.config.json "reactor.https" was removed in 6.4. ' +
+        "Set config.switchboard.server.https in hosts/switchboard/host.js and remove the key.",
+      'powerhouse.config.json "studio.https" was removed in 6.4. ' +
+        "No host setting replaces it: remove the key.",
+      "`ph migrate` moves the keys it can and says what to do with the rest. " +
+        `See ${MIGRATION_GUIDE_URL}`,
+    ]);
+  });
+
+  it("names where every superseded key but studio.https lives now", () => {
+    for (const [key, home] of Object.entries(supersededConfigKeys)) {
+      if (key === "studio.https") expect(home).toBeNull();
+      else expect(home, key).toContain("/host.js");
+    }
   });
 
   it("finds the Connect chrome keys a config sets", () => {
