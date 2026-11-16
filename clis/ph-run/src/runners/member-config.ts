@@ -108,40 +108,29 @@ export interface SwitchboardMember {
   config?: { switchboard?: SwitchboardConfigInput };
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
+/**
+ * A block whose `readModel.url` is the only store anything names. Before 6.4
+ * that url held the reactor store too; now the host has to name its store.
+ */
+export function readModelOnlyStore(
+  reactor: ReactorConfig | undefined,
+  env: Env,
+  hostFileLabel?: string,
+): string | undefined {
+  const storage = reactorBlockToSwitchboardConfig(reactor).storage;
+  const url = storage?.readModel?.url;
+  if (
+    !url ||
+    storage.reactor ||
+    env.PH_REACTOR_DATABASE_URL !== undefined ||
+    env.PH_SWITCHBOARD_DATABASE_URL !== undefined
+  ) {
+    return undefined;
+  }
   return (
-    typeof value === "object" &&
-    value !== null &&
-    Object.getPrototypeOf(value) === Object.prototype
-  );
-}
-
-/** The dotted keys both layers set. */
-export function overlappingKeys(
-  a: Record<string, unknown>,
-  b: Record<string, unknown>,
-  path = "",
-): string[] {
-  return Object.entries(b).flatMap(([key, value]) => {
-    const other = a[key];
-    if (value === undefined || other === undefined) return [];
-    const at = path ? `${path}.${key}` : key;
-    return isPlainObject(value) && isPlainObject(other)
-      ? overlappingKeys(other, value, at)
-      : [at];
-  });
-}
-
-/** Each `config.switchboard` key the reactor block already sets. */
-export function reactorBlockConflicts(member: SwitchboardMember): string[] {
-  const own = member.config?.switchboard;
-  if (!own) return [];
-  return overlappingKeys(
-    reactorBlockToSwitchboardConfig(member.reactor) as Record<string, unknown>,
-    own as Record<string, unknown>,
-  ).map(
-    (key) =>
-      `config.switchboard.${key} is also set by the reactor block; set it in one place.`,
+    `${hostFileLabel ? `${hostFileLabel}: ` : ""}reactor readModel.url (${url}) is the only store this host names. ` +
+    "Before 6.4 it held the reactor store too; it no longer does. " +
+    "Set the backend's storage explicitly (the same Postgres url, or a path dataDir)."
   );
 }
 
@@ -152,6 +141,7 @@ export function reactorBlockConflicts(member: SwitchboardMember): string[] {
  * block's own vars are dropped). The block keeps the precedence it had as
  * set-if-absent env and `dbPath`: only a shell PH_REACTOR_DATABASE_URL
  * overrides its store, and no env var overrides its read model. Writes nothing.
+ * Throws for a block whose `readModel.url` is its only store.
  */
 export async function memberSwitchboardConfig(
   member: SwitchboardMember,
@@ -160,8 +150,16 @@ export async function memberSwitchboardConfig(
     logger?: ILogger;
     /** Under everything else: values no flag or host file set. */
     defaults?: SwitchboardConfigInput;
+    /** Names the host file in an error, e.g. `hosts/switchboard/host.js`. */
+    hostFile?: string;
   } = {},
 ): Promise<SwitchboardConfigInput> {
+  const noStore = readModelOnlyStore(
+    member.reactor,
+    env.shell,
+    options.hostFile,
+  );
+  if (noStore) throw new Error(noStore);
   // Lazy: the env mapping loads reactor-api, which the runner module must not.
   const { switchboardConfigFromEnv } =
     await import("@powerhousedao/switchboard/config/env");

@@ -30,7 +30,7 @@ import {
   memberSwitchboardConfigSchema,
   missingPostgresUrl,
   prepareMemberStorage,
-  reactorBlockConflicts,
+  readModelOnlyStore,
   switchboardDevMode,
 } from "./member-config.js";
 import { onlyPassed, runnerArgsSchemaOf } from "./runner-args.js";
@@ -76,15 +76,6 @@ const schemas = defineHostSchemas((s) =>
       config: z
         .strictObject({ switchboard: memberSwitchboardConfigSchema.optional() })
         .optional(),
-    })
-    .superRefine((host, ctx) => {
-      for (const message of reactorBlockConflicts(host)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["config", "switchboard"],
-          message,
-        });
-      }
     }),
 );
 export const declaredHostSchema = schemas.declaredHostSchema;
@@ -437,6 +428,7 @@ async function start(
   // process env, so compound members do not see each other's settings.
   const memberConfig = await memberSwitchboardConfig(host, env, {
     defaults: https === undefined ? {} : { server: { https } },
+    hostFile,
   });
   const noDatabase = missingPostgresUrl(host.reactor, memberConfig, hostFile);
   if (noDatabase) throw new Error(noDatabase);
@@ -682,7 +674,7 @@ export async function resolveStores(
 ): Promise<SwitchboardStores> {
   const hostFile = `hosts/${host.name}/host.js`;
   const env = memberEnvOf(ctx.env);
-  const config = await memberSwitchboardConfig(host, env);
+  const config = await memberSwitchboardConfig(host, env, { hostFile });
   const noDatabase = missingPostgresUrl(host.reactor, config, hostFile);
   if (noDatabase) throw new Error(noDatabase);
   return {
@@ -707,6 +699,12 @@ export async function checkBoot(
   const { getConfig } = await import("@powerhousedao/config/node");
   const { switchboardBootFactsOf, switchboardBootIssues } =
     await import("@powerhousedao/switchboard/boot");
+  // `start` refuses this before it builds the config.
+  const noStore = readModelOnlyStore(host.reactor, env.shell, ctx.file);
+  if (noStore) {
+    issues.push({ path: "reactor.backends", message: noStore });
+    return issues;
+  }
   let config;
   try {
     // As `start` builds it; an env parse error becomes the issue.

@@ -108,6 +108,7 @@ import { installFatalErrorShutdown, raiseSigterm } from "./fatal-shutdown.mjs";
 import type { RunningPrivacy } from "./privacy.mjs";
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
 import {
+  configFileWorkflowsNotice,
   createSwitchboardPluginHost,
   defaultSwitchboardPlugins,
 } from "./plugin-host.mjs";
@@ -1825,6 +1826,12 @@ export const startSwitchboard = async (
     options.mcp = config.features.mcp ?? true;
     options.workflows = { enabled: config.features.workflows ?? false };
   }
+  const workflowsNotice = configFileWorkflowsNotice({
+    declaredComposition: options.pluginComposition !== undefined,
+    workflows: config.features.workflows,
+    configFileEnabled: fileConfig.workflows?.enabled,
+  });
+  if (workflowsNotice) logger.warn(workflowsNotice);
   // This switchboard's own identity authenticates against the same Renown
   // instance it verifies incoming credentials against, unless told otherwise.
   const renownConfig = resolveRenownConfig(

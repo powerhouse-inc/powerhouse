@@ -92,7 +92,7 @@ export const REASONS = {
     "Only a switchboard has a separate thread for search data, and this host has none.",
   envNoSwitchboard: "Only a switchboard reads this, and this host has none.",
   readModel:
-    "With no storage folder chosen, the switchboard would keep all its data in the search data folder. Choose a storage folder, or remove the search data folder.",
+    "With no storage folder chosen, the switchboard refuses to start: the search data folder no longer holds the rest of its data. Choose a storage folder, or remove the search data folder.",
   switchboardOnly: "Only a switchboard reads these settings.",
   nested:
     "This reactor starts a group of reactors, which the monitor doesn't check yet.",
@@ -545,7 +545,7 @@ function storageRule(
           readModel,
         );
       } else if (readModel !== undefined && !namesStore) {
-        // With nothing else naming the store, the reactor moves there too.
+        // With nothing else naming the store, the switchboard refuses to start.
         report(
           "storage",
           `${backend.at}.readModel.url`,

@@ -13,6 +13,7 @@ import {
 } from "../src/config/schema.js";
 import {
   builtinSwitchboardPlugins,
+  configFileWorkflowsNotice,
   defaultSwitchboardPlugins,
 } from "../src/plugin-host.mjs";
 import type { startSwitchboard } from "../src/server.mjs";
@@ -88,6 +89,53 @@ describe("the retired plugin-host switch", () => {
       expect(resolved({ FEATURE_PLUGIN_HOST_ENABLED: value }, {})).toEqual(
         resolved({}, {}),
       );
+    },
+  );
+});
+
+describe("workflows.enabled in powerhouse.config.json", () => {
+  const boot = {
+    declaredComposition: false,
+    workflows: undefined,
+    configFileEnabled: true,
+  };
+
+  it("warns that the key no longer switches workflows on, and names both ways", () => {
+    expect(configFileWorkflowsNotice(boot)).toBe(
+      "powerhouse.config.json workflows.enabled no longer switches workflows on in Switchboard since 6.4, so they stay off. " +
+        'Set PH_WORKFLOWS_ENABLED=1, or list "@powerhousedao/switchboard/plugins/workflows" under runner.plugins in hosts/switchboard/host.js.',
+    );
+  });
+
+  it("stays silent under a declared composition", () => {
+    expect(
+      configFileWorkflowsNotice({ ...boot, declaredComposition: true }),
+    ).toBe(undefined);
+  });
+
+  it.each([true, false])(
+    "stays silent when the env or the caller says %j",
+    (workflows) => {
+      expect(configFileWorkflowsNotice({ ...boot, workflows })).toBe(undefined);
+    },
+  );
+
+  it.each([false, undefined])(
+    "stays silent when the key is %j",
+    (configFileEnabled) => {
+      expect(configFileWorkflowsNotice({ ...boot, configFileEnabled })).toBe(
+        undefined,
+      );
+    },
+  );
+
+  it.each(["1", "0", "true", "false"])(
+    "PH_WORKFLOWS_ENABLED=%j resolves the switch, so nothing is warned",
+    (value) => {
+      const { workflows } = resolved({ PH_WORKFLOWS_ENABLED: value }, {})
+        .features;
+      expect(workflows).not.toBe(undefined);
+      expect(configFileWorkflowsNotice({ ...boot, workflows })).toBe(undefined);
     },
   );
 });

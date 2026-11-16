@@ -3,8 +3,9 @@ import { isPlainObject } from "./walk.js";
 /**
  * The cross-host forms removed in T3 (typed-host-configs 3.7), detected
  * before schema validation so the error names the token form that replaces
- * each one instead of a bare "Unrecognized key". clint's `agents.*.host` and
- * proxy `routes.*.member` are checked by the clint runner schemas.
+ * each one instead of a bare "Unrecognized key". The `reactor.workflows`
+ * boolean, removed in 6.4, is reported the same way. clint's `agents.*.host`
+ * and proxy `routes.*.member` are checked by the clint runner schemas.
  */
 
 export interface RemovedForm {
@@ -37,7 +38,16 @@ function checkReactor(
   base: string,
   found: RemovedForm[],
 ): void {
-  if (!isPlainObject(reactor) || !isPlainObject(reactor.backends)) return;
+  if (!isPlainObject(reactor)) return;
+  if (reactor.workflows !== undefined) {
+    found.push({
+      path: `${base}reactor.workflows`,
+      message:
+        "reactor.workflows was removed in 6.4; the workflows plugin under runner.plugins decides: list it to run workflows, leave it out to run none. " +
+        "On a switchboard, PH_WORKFLOWS_ENABLED=0 still switches them off.",
+    });
+  }
+  if (!isPlainObject(reactor.backends)) return;
   for (const [name, backend] of Object.entries(reactor.backends)) {
     if (!isPlainObject(backend) || !isPlainObject(backend.remote)) continue;
     const host = backend.remote.host;

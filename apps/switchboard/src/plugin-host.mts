@@ -151,6 +151,31 @@ export function defaultSwitchboardPlugins(
   });
 }
 
+/**
+ * The notice for a boot that `workflows.enabled` in powerhouse.config.json
+ * switched workflows on before 6.4: no declared composition, and neither
+ * PH_WORKFLOWS_ENABLED nor the caller says anything. The key no longer does.
+ */
+export function configFileWorkflowsNotice(boot: {
+  declaredComposition: boolean;
+  /** `features.workflows`: what the env or the caller resolved to. */
+  workflows: boolean | undefined;
+  /** `workflows.enabled` in powerhouse.config.json. */
+  configFileEnabled: boolean | undefined;
+}): string | undefined {
+  if (
+    boot.declaredComposition ||
+    boot.workflows !== undefined ||
+    boot.configFileEnabled !== true
+  ) {
+    return undefined;
+  }
+  return (
+    "powerhouse.config.json workflows.enabled no longer switches workflows on in Switchboard since 6.4, so they stay off. " +
+    'Set PH_WORKFLOWS_ENABLED=1, or list "@powerhousedao/switchboard/plugins/workflows" under runner.plugins in hosts/switchboard/host.js.'
+  );
+}
+
 export function createSwitchboardPluginHost(
   ctx: Omit<SwitchboardHostContext, "contributions">,
   resolved?: readonly ResolvedPlugin[],
