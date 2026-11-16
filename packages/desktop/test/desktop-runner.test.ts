@@ -284,6 +284,97 @@ describe("bundle-stack staging", () => {
   });
 });
 
+describe("bundle-stack project dependencies", () => {
+  /**
+   * A project whose piece resolves `loader` at run time. `loader` names
+   * `engine` as a peer; `editor-lib` serves its editors, and the stack
+   * provides `document-model`.
+   */
+  function projectWithLoader(withPiece: boolean): string {
+    const dir = makeProject();
+    writeFileSync(
+      path.join(dir, "package.json"),
+      JSON.stringify({
+        name: "desk-lab",
+        type: "module",
+        dependencies: {
+          "document-model": "^6.0.0",
+          "editor-lib": "^4.0.0",
+          engine: "1.2.3",
+          loader: "catalog:",
+        },
+      }),
+    );
+    const loader = path.join(dir, "node_modules", "loader");
+    mkdirSync(loader, { recursive: true });
+    writeFileSync(
+      path.join(loader, "package.json"),
+      JSON.stringify({
+        name: "loader",
+        version: "2.0.0",
+        peerDependencies: { engine: "1", "document-model": "6" },
+      }),
+    );
+    const built = path.join(dir, "dist", "node", withPiece ? "pieces/x" : "");
+    mkdirSync(built, { recursive: true });
+    writeFileSync(
+      path.join(built, "index.mjs"),
+      'import "document-model";\nexport const load = () => require.resolve("loader/pdf");',
+    );
+    return dir;
+  }
+
+  const dependenciesOf = (stackDir: string) =>
+    (
+      JSON.parse(readFileSync(path.join(stackDir, "package.json"), "utf8")) as {
+        dependencies: Record<string, string>;
+      }
+    ).dependencies;
+
+  it("installs what the project's pieces load, at the versions it has", () => {
+    const { stackDir } = bundleStack({
+      projectRoot: projectWithLoader(true),
+      shellProjectDir: makeShellProject(),
+      vendor: false,
+      logger: () => undefined,
+    });
+    expect(dependenciesOf(stackDir)).toEqual({
+      engine: "1.2.3",
+      loader: "2.0.0",
+      "@powerhousedao/ph-run": "dev",
+    });
+  });
+
+  it("installs them beside local packages too", () => {
+    const packs = tempDir("ph-desktop-packs-");
+    const run = packTarball(packs, "run.tgz", "@powerhousedao/ph-run");
+    const { stackDir } = bundleStack({
+      projectRoot: projectWithLoader(true),
+      shellProjectDir: makeShellProject(),
+      vendor: false,
+      localPackagesDir: packs,
+      logger: () => undefined,
+    });
+    expect(dependenciesOf(stackDir)).toMatchObject({
+      engine: "1.2.3",
+      loader: "2.0.0",
+      "@powerhousedao/ph-run": `file:${run}`,
+    });
+  });
+
+  it("installs none of them for a project without pieces", () => {
+    const { stackDir } = bundleStack({
+      projectRoot: projectWithLoader(false),
+      shellProjectDir: makeShellProject(),
+      vendor: false,
+      logger: () => undefined,
+    });
+    expect(dependenciesOf(stackDir)).toEqual({
+      "@powerhousedao/ph-run": "dev",
+    });
+  });
+});
+
 describe("the files a stack's hosts name", () => {
   it("are the drive icons a server member declares, not URLs or Connect's", async () => {
     const dir = makeProject();

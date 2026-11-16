@@ -6,6 +6,7 @@ import {
   normalizePluginEntries,
   type PluginEntryData,
 } from "@powerhousedao/host-core";
+import { loadedByName, piecesLoad } from "./bundle-backend.js";
 
 /**
  * P6.3 — stage the shippable STACK into the shell project: everything the
@@ -166,22 +167,29 @@ function copyIfExists(from: string, to: string): boolean {
   return true;
 }
 
+/** The manifest of a package the project has installed, if it has. */
+function installedManifest(
+  projectRoot: string,
+  pkg: string,
+): { version?: string; peerDependencies?: Record<string, string> } {
+  try {
+    return JSON.parse(
+      fs.readFileSync(
+        path.join(projectRoot, "node_modules", pkg, "package.json"),
+        "utf8",
+      ),
+    ) as { version?: string; peerDependencies?: Record<string, string> };
+  } catch {
+    return {};
+  }
+}
+
 /** The version of a package the project has installed, if it has. */
 export function installedVersion(
   projectRoot: string,
   pkg: string,
 ): string | undefined {
-  try {
-    const manifest = JSON.parse(
-      fs.readFileSync(
-        path.join(projectRoot, "node_modules", pkg, "package.json"),
-        "utf8",
-      ),
-    ) as { version?: string };
-    return manifest.version;
-  } catch {
-    return undefined;
-  }
+  return installedManifest(projectRoot, pkg).version;
 }
 
 type VersionOptions = Pick<
@@ -197,6 +205,37 @@ function runVersion(options: VersionOptions): string {
     options.phCliVersion ??
     installedVersion(options.projectRoot, "@powerhousedao/ph-cli") ??
     "dev"
+  );
+}
+
+/**
+ * What the project's pieces load from its own dependencies, at the versions it
+ * has installed, with the peers each declares among them: a loader often names
+ * the engines it loads as peers. The stack provides what it loads by name.
+ */
+function pieceDependencies(
+  projectRoot: string,
+  stackDir: string,
+  declared: Record<string, string>,
+): Record<string, string> {
+  const loads = new Set(
+    piecesLoad(stackDir, Object.keys(declared)).filter(
+      (name) => name in declared,
+    ),
+  );
+  for (const name of loads) {
+    const { peerDependencies = {} } = installedManifest(projectRoot, name);
+    for (const peer of Object.keys(peerDependencies)) {
+      if (peer in declared && !loadedByName(peer)) loads.add(peer);
+    }
+  }
+  return Object.fromEntries(
+    [...loads]
+      .sort()
+      .map((name) => [
+        name,
+        installedVersion(projectRoot, name) ?? declared[name],
+      ]),
   );
 }
 
@@ -314,6 +353,8 @@ export interface StackManifestOptions {
   local?: Record<string, string>;
   /** Packages to depend on besides ph-run and host-core. */
   plugins?: readonly string[];
+  /** What the project's own build loads at run time. */
+  dependencies?: Record<string, string>;
 }
 
 /**
@@ -328,11 +369,15 @@ export function stackManifest(options: StackManifestOptions) {
     pkg,
     spec(pkg, options.version),
   ]);
+  const project = Object.entries(options.dependencies ?? {}).map(
+    ([pkg, range]): [string, string] => [pkg, spec(pkg, range)],
+  );
   return {
     name: options.name,
     private: true,
     type: "module",
     dependencies: {
+      ...Object.fromEntries(project),
       [RUN_PACKAGE]: spec(RUN_PACKAGE, options.phCliSpec ?? options.version),
       "@powerhousedao/host-core": spec(
         "@powerhousedao/host-core",
@@ -506,7 +551,12 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
   // ph-run so the vendored tree resolves exactly like a real install.
   const sourcePkg = JSON.parse(
     fs.readFileSync(path.join(options.projectRoot, "package.json"), "utf8"),
-  ) as { name?: string; version?: string; exports?: unknown };
+  ) as {
+    name?: string;
+    version?: string;
+    exports?: unknown;
+    dependencies?: Record<string, string>;
+  };
   const version = runVersion(options);
   const name = sourcePkg.name ?? "powerhouse-desktop-stack";
   // The stack is the project's own package to the reactor, which loads it by
@@ -517,6 +567,11 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     ...(sourcePkg.version ? { version: sourcePkg.version } : {}),
     ...(sourcePkg.exports ? { exports: sourcePkg.exports } : {}),
   };
+  const dependencies = pieceDependencies(
+    options.projectRoot,
+    stackDir,
+    sourcePkg.dependencies ?? {},
+  );
   const vendor = options.vendor !== false;
   const local = options.localPackagesDir
     ? readLocalPackages(options.localPackagesDir)
@@ -541,12 +596,13 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
               phCliSpec: options.phCliSpec,
               local,
               plugins: options.plugins,
+              dependencies,
             })
           : {
               name,
               private: true,
               type: "module",
-              dependencies: { [RUN_PACKAGE]: version },
+              dependencies: { ...dependencies, [RUN_PACKAGE]: version },
             }),
         ...project,
       },
