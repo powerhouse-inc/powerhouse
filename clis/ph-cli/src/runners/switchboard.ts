@@ -84,7 +84,7 @@ async function runMigrations(
   });
 }
 
-/** `ph switchboard --migrate`: run the reactor store's migrations. */
+/** `ph run switchboard migrate`: run the reactor store's migrations. */
 export async function migrate(
   host: SwitchboardHostParsed,
   ctx: RunnerContext,
@@ -92,7 +92,7 @@ export async function migrate(
   await runMigrations(host, ctx, undefined);
 }
 
-/** `ph switchboard --migrate-status`: list them, executed or pending. */
+/** `ph run switchboard migrate-status`: list them, executed or pending. */
 async function migrateStatus(
   host: SwitchboardHostParsed,
   ctx: RunnerContext,
