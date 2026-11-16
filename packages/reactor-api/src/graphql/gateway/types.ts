@@ -178,8 +178,8 @@ export interface IHttpAdapter {
 
   /**
    * Mount a Fetch API handler. Returns a handle whose `dispose()` removes it.
-   * - exact = false (default): exact path match.
-   * - exact = true: prefix match - handler also receives all sub-paths.
+   * - prefix = false (default): exact path match.
+   * - prefix = true: prefix match - handler also receives all sub-paths.
    *
    * Mounting a path that already holds a fetch mount of the same kind
    * replaces the previous one (last write wins).
@@ -187,11 +187,7 @@ export interface IHttpAdapter {
   mount(
     path: string,
     handler: FetchHandler,
-    options?: {
-      prefix?: boolean;
-      /** @deprecated Misleading name: this always meant *prefix*, not exact. */
-      exact?: boolean;
-    },
+    options?: { prefix?: boolean },
   ): AdapterRouteHandle;
 
   /**

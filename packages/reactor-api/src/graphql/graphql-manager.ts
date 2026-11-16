@@ -2504,7 +2504,7 @@ export class GraphQLManager {
     this.#disposeSSERoute(basePath);
     this.sseRouteHandles.set(
       ssePath,
-      this.httpAdapter.mount(ssePath, handler, { exact: true }),
+      this.httpAdapter.mount(ssePath, handler, { prefix: true }),
     );
   }
 

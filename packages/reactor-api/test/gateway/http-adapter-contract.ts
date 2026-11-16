@@ -256,10 +256,10 @@ export function runHttpAdapterContractTests(
 
     it("removes a prefix mount together with its sub-paths", async () => {
       const handle = h.adapter.mount("/sse", echoHandler("sse"), {
-        exact: true,
+        prefix: true,
       });
 
-      // exact: true is a prefix route: sub-paths are served too.
+      // A prefix route serves sub-paths too.
       expect((await fetch(`${h.url}/sse/child`)).status).toBe(200);
 
       handle.dispose();
