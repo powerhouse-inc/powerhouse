@@ -102,7 +102,7 @@ export function createAttachmentCommands(): Command[] {
       let result: AttachmentUploadResult;
       try {
         result = await client.reserve(pre.options, (handle) =>
-          handle.send(pre.stream()),
+          handle.send(pre.blob),
         );
       } catch (err) {
         // Dedup: client.reserve's instanceof catch can miss this across entry bundles, so recover via the deterministic ref.
