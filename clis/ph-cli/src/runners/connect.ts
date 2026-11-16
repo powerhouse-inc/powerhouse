@@ -21,16 +21,16 @@ export * from "@powerhousedao/ph-run/runners/connect";
 
 export const verbs = ["run", "dev", "build", "serve"];
 
-/** The classic `ph connect studio` arguments, with the keys this host and
+/** The Connect studio arguments, with the keys this host and
  * this invocation own laid over them. An argument of this invocation
  * (`passed`) wins over the host file. */
 async function toStudioArgs(
   host: ConnectHostParsed,
   passed: ConnectInvocationArgs,
 ): Promise<ConnectStudioArgs> {
-  const { classicConnectStudioArgs } =
-    await import("../services/classic-args.js");
-  const classic = await classicConnectStudioArgs();
+  const { connectStudioServiceArgs } =
+    await import("../services/service-args.js");
+  const classic = await connectStudioServiceArgs();
   const runner = host.runner;
   return {
     ...classic,
@@ -100,19 +100,19 @@ export async function dev(
  * runtime; `serve` (below) is the static production server. */
 export const run = dev;
 
-/** P3.3 — `build`: the SAME service as classic `ph connect build`. */
+/** `build`: the Connect build service (`ph connect build` is sugar for it). */
 export async function build(
   host: ConnectHostParsed,
   ctx: RunnerContext,
 ): Promise<void> {
   await validateComposition(host, ctx);
   const { runConnectBuild } = await import("../services/connect-build.js");
-  const { classicConnectBuildArgs } =
-    await import("../services/classic-args.js");
-  const classic = await classicConnectBuildArgs();
+  const { connectBuildServiceArgs } =
+    await import("../services/service-args.js");
+  const classic = await connectBuildServiceArgs();
   const args = {
     ...classic,
-    // Classic `ph connect`'s default: `dist/` is the package `ph build` writes.
+    // The default of the build arguments: `dist/` is the package `ph build` writes.
     outDir: host.runner.outDir ?? classic.outDir,
   };
   // The host's config bakes in: its title, favicon, manifest, base path and loading shell.

@@ -28,7 +28,7 @@ export async function runConnectPreview(
   } = {},
 ) {
   // A supervisor can drive the preview via env when no explicit override is
-  // passed (the classic `ph connect preview` command path).
+  // passed.
   serveOverride ??= overrideFromEnv();
   const {
     outDir,

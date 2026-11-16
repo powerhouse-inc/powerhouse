@@ -35,18 +35,18 @@ export async function build(
   _ctx: RunnerContext,
 ): Promise<void> {
   const { runBuild } = await import("../services/build.js");
-  const { classicBuildArgs } = await import("../services/classic-args.js");
-  // The classic `ph build` arguments, with the host's output dir over them.
-  const classic = await classicBuildArgs();
+  const { buildServiceArgs } = await import("../services/service-args.js");
+  // The `ph build` arguments, with the host's output dir over them.
+  const classic = await buildServiceArgs();
   await runBuild({
     ...classic,
     outDir: host.runner.outDir ?? classic.outDir,
   });
 }
 
-// `migrate`, `migrate-status` and `reset` are the classic `ph switchboard`
-// flags of those names as verbs: the SAME services, called with the classic
-// argument shape, against the stores `run` would open for this host. Each
+// `migrate`, `migrate-status` and `reset` were `ph switchboard` flags of
+// those names until 6.4, and are verbs now: the SAME services, called with
+// the same argument shape, against the stores `run` would open for this host. Each
 // does its work and returns nothing; no server starts.
 
 /** The stores `run` would open for this host (host file, then env). */
@@ -152,8 +152,8 @@ export async function reset(
 }
 
 // A switchboard whose composition has the Vetra Studio plugin active is the
-// VETRA switchboard (`ph run vetra`): it gets what classic `ph vetra` gives
-// its switchboard, from the same code (services/vetra-switchboard.ts). Any
+// VETRA switchboard (`ph run vetra`): it gets the vetra drive and the studio
+// wiring of services/vetra-switchboard.ts. Any
 // other switchboard starts exactly as the ph-run runner starts it.
 
 const STUDIO_PLUGIN = "@powerhousedao/vetra-studio/switchboard";

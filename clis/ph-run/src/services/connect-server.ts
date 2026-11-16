@@ -13,7 +13,7 @@ import path from "node:path";
 import type { Duplex } from "node:stream";
 import tls from "node:tls";
 import sirv from "sirv";
-import type { ConnectPreviewArgs } from "./classic-args.js";
+import type { ConnectPreviewArgs } from "./service-args.js";
 import {
   assertConnectBuild,
   cacheHeaders,

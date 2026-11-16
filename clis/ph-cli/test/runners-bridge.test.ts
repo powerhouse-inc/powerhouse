@@ -309,13 +309,12 @@ describe("switchboard bridge runner", () => {
       },
     });
 
-    const { classicSwitchboardArgs } =
-      await import("@powerhousedao/ph-run/classic-args");
-    const classic = await classicSwitchboardArgs();
+    const { switchboardServiceArgs } =
+      await import("@powerhousedao/ph-run/service-args");
+    const classic = await switchboardServiceArgs();
     // sanity on the classic shape this gate compares against
     expect(classic).toMatchObject({
       mcp: true,
-      useVetraDrive: false,
       remoteDrives: [],
     });
 
@@ -1599,9 +1598,9 @@ describe("the runners hand the services the classic argument shape", () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =
       await import("../src/services/connect-studio.js");
-    const { classicConnectStudioArgs } =
-      await import("../src/services/classic-args.js");
-    const classic = await classicConnectStudioArgs();
+    const { connectStudioServiceArgs } =
+      await import("../src/services/service-args.js");
+    const classic = await connectStudioServiceArgs();
     // sanity on the classic shape this gate compares against
     expect(classic).toMatchObject({
       port: 3000,
@@ -1636,15 +1635,15 @@ describe("the runners hand the services the classic argument shape", () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =
       await import("../src/services/connect-studio.js");
-    const { classicConnectStudioArgs } =
-      await import("../src/services/classic-args.js");
+    const { connectStudioServiceArgs } =
+      await import("../src/services/service-args.js");
     vi.mocked(runConnectStudio).mockClear();
     await runner.dev(
       connect(connectHost()),
       withArgv("--port", "4100", "--host", "0.0.0.0", "--cors"),
     );
     expect(vi.mocked(runConnectStudio).mock.calls[0][0]).toStrictEqual({
-      ...(await classicConnectStudioArgs()),
+      ...(await connectStudioServiceArgs()),
       port: 4100,
       host: "0.0.0.0",
       open: false,
@@ -1718,9 +1717,9 @@ describe("the runners hand the services the classic argument shape", () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectBuild } =
       await import("../src/services/connect-build.js");
-    const { classicConnectBuildArgs } =
-      await import("../src/services/classic-args.js");
-    const classic = await classicConnectBuildArgs();
+    const { connectBuildServiceArgs } =
+      await import("../src/services/service-args.js");
+    const classic = await connectBuildServiceArgs();
     expect(classic).toMatchObject({ outDir: ".ph/connect-build/dist/" });
 
     vi.mocked(runConnectBuild).mockClear();
@@ -1746,9 +1745,9 @@ describe("the runners hand the services the classic argument shape", () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectServer } =
       await import("@powerhousedao/ph-run/connect-server");
-    const { classicConnectPreviewArgs } =
-      await import("@powerhousedao/ph-run/classic-args");
-    const classic = await classicConnectPreviewArgs();
+    const { connectPreviewServiceArgs } =
+      await import("@powerhousedao/ph-run/service-args");
+    const classic = await connectPreviewServiceArgs();
     expect(classic).toMatchObject({
       port: 4173,
       outDir: ".ph/connect-build/dist/",
@@ -1792,9 +1791,9 @@ describe("the runners hand the services the classic argument shape", () => {
   it("switchboard build: the classic `ph build` args, with the host's outDir over them", async () => {
     const runner = await import("../src/runners/switchboard.js");
     const { runBuild } = await import("../src/services/build.js");
-    const { classicBuildArgs } =
-      await import("../src/services/classic-args.js");
-    const classic = await classicBuildArgs();
+    const { buildServiceArgs } =
+      await import("../src/services/service-args.js");
+    const classic = await buildServiceArgs();
     expect(classic).toMatchObject({ outDir: "dist", release: false });
 
     vi.mocked(runBuild).mockClear();

@@ -16,15 +16,12 @@ import { model } from "./model.js";
 import { publish } from "./publish.js";
 import { registryLogin } from "./registry-login.js";
 import { runHost } from "./run.js";
-import { switchboard } from "./switchboard.js";
 import { uninstall } from "./uninstall.js";
 import { unpublish } from "./unpublish.js";
-import { vetra } from "./vetra.js";
 
 export const phCliCommands = {
   init,
   generate,
-  vetra,
   connect,
   build,
   publish,
@@ -37,7 +34,6 @@ export const phCliCommands = {
   mcp,
   migrate,
   model,
-  switchboard,
   login,
   logout,
   install,

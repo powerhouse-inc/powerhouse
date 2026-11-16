@@ -7,16 +7,50 @@ export interface RunSugarResult {
 }
 
 /**
- * `ph <host-name> [verb]` sugar: when the first arg is not a registered
- * command and names a host in the project's hosts/ folder, splice in `run`
- * (mirrors the connect→`connect studio` default-subcommand rewrite).
- * Built-in commands win collisions by construction — the known-command check
- * runs first.
+ * The hosts every scaffold has, run by their name: `ph vetra`, `ph connect`
+ * and `ph switchboard` are `ph run <host>` and have no code of their own.
+ * They are rewritten whatever the project holds, so a project without the
+ * host gets the error of `ph run` (sugar-checks.ts says it first, as typed).
  */
-/** Classic commands that route through `ph run` in a hosts project, flags
- * included: the host's runner takes them as its arguments. */
-const CLASSIC_ALIASES = new Set(["vetra"]);
+export const HOST_COMMANDS: ReadonlySet<string> = new Set([
+  "vetra",
+  "connect",
+  "switchboard",
+]);
 
+/** `ph connect <subcommand>` and the verb of the connect host it stands for. */
+export const CONNECT_VERBS: Readonly<Record<string, string>> = {
+  studio: "dev",
+  build: "build",
+  preview: "serve",
+};
+
+const isHelp = (arg: string | undefined) => arg === "--help" || arg === "-h";
+
+/**
+ * `ph connect [studio|build|preview]` → `ph run connect <dev|build|serve>`.
+ * Without a subcommand it is `studio`, as it always was. `ph connect config`
+ * and `ph connect --help` stay the `connect` command: a tool, not a host.
+ * Any other word is a verb of the host (`ph connect serve`).
+ */
+function connectSugar(args: string[]): string[] {
+  const rest = args.slice(1);
+  if (rest[0] === "config" || isHelp(rest[0])) return args;
+  if (rest.length === 0 || rest[0].startsWith("-")) {
+    return ["run", "connect", CONNECT_VERBS.studio, ...rest];
+  }
+  if (Object.hasOwn(CONNECT_VERBS, rest[0])) {
+    return ["run", "connect", CONNECT_VERBS[rest[0]], ...rest.slice(1)];
+  }
+  return ["run", ...args];
+}
+
+/**
+ * `ph <host-name> [verb]` sugar: when the first arg is not a registered
+ * command and names a host in the project's hosts/ folder, splice in `run`.
+ * Built-in commands win collisions by construction — the known-command check
+ * runs first. {@link HOST_COMMANDS} are sugar in every project.
+ */
 export function applyRunSugar(
   args: string[],
   knownCommands: ReadonlySet<string>,
@@ -26,13 +60,13 @@ export function applyRunSugar(
   if (!first || first.startsWith("-")) {
     return { args };
   }
+  if (first === "connect") {
+    return { args: connectSugar(args) };
+  }
+  if (HOST_COMMANDS.has(first)) {
+    return { args: ["run", ...args] };
+  }
   if (knownCommands.has(first)) {
-    if (CLASSIC_ALIASES.has(first)) {
-      const probe = probeHostsFolder(projectRoot);
-      if (probe.kind === "present" && probe.hosts.includes(first)) {
-        return { args: ["run", ...args] };
-      }
-    }
     return { args };
   }
   const probe = probeHostsFolder(projectRoot);

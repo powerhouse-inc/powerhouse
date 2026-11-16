@@ -10,7 +10,7 @@ export default defineConfig({
     "runners/switchboard": "src/runners/switchboard.ts",
     // What ph-cli builds its other verbs and commands on.
     "runners/member-config": "src/runners/member-config.ts",
-    "services/classic-args": "src/services/classic-args.ts",
+    "services/service-args": "src/services/service-args.ts",
     "services/connect-serve": "src/services/connect-serve.ts",
     "services/connect-server": "src/services/connect-server.ts",
     "services/run/start-run": "src/services/run/start-run.ts",

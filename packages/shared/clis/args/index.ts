@@ -15,7 +15,6 @@ export * from "./migrate.js";
 export * from "./model.js";
 export * from "./publish.js";
 export * from "./registry.js";
-export * from "./service.js";
 export * from "./switchboard.js";
 export * from "./uninstall.js";
 export * from "./unpublish.js";

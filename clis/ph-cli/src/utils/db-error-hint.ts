@@ -52,7 +52,7 @@ export function printDbRecoveryHint(err: unknown): void {
   console.error(
     yellow("If this is a local PGlite store, you can reset it with:"),
   );
-  console.error(yellow("  ph switchboard --reset"));
+  console.error(yellow("  ph run switchboard reset"));
   console.error(
     yellow(
       "This is destructive: it wipes the local .ph/reactor-storage and .ph/read-storage directories.",

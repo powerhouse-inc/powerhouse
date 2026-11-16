@@ -43,9 +43,9 @@ export type HostsFolderStatus =
   | { kind: "empty"; dir: string }
   | { kind: "present"; dir: string; hosts: string[] };
 
-/** A `hosts/` folder with no `<name>/host.js` inside is "empty" — the guard
- * state: callers warn loudly and fall back to legacy rather than activating
- * the new architecture off a stray `mkdir hosts`. */
+/** A `hosts/` folder with no `<name>/host.js` inside is "empty": it defines
+ * no host, so nothing runs from it, as from an absent one
+ * ({@link withoutHostsMessage}). */
 export function probeHostsFolder(projectRoot: string): HostsFolderStatus {
   const dir = path.join(projectRoot, "hosts");
   if (!existsSync(dir) || !statSync(dir).isDirectory()) {
@@ -62,6 +62,22 @@ export function probeHostsFolder(projectRoot: string): HostsFolderStatus {
   return hosts.length === 0
     ? { kind: "empty", dir }
     : { kind: "present", dir, hosts };
+}
+
+/**
+ * Why `subject` cannot run in a project whose hosts/ folder is absent or
+ * empty, and what adds the host files. One wording, for `ph run <host>` and
+ * for the `ph vetra`, `ph connect` and `ph switchboard` sugar.
+ */
+export function withoutHostsMessage(
+  probe: Exclude<HostsFolderStatus, { kind: "present" }>,
+  subject: string,
+): string {
+  const found =
+    probe.kind === "empty"
+      ? `hosts/ exists at ${probe.dir} but contains no <name>/host.js`
+      : "This project has no hosts/ folder";
+  return `${found}, so ${subject} cannot run. Run \`ph migrate\` to add the host files.`;
 }
 
 /** Sibling imports: `../<host>/host.js` — source material for derived
@@ -397,16 +413,9 @@ async function importHost(
   checkOutputs: boolean,
 ): Promise<LoadedHost> {
   const probe = probeHostsFolder(projectRoot);
-  if (probe.kind === "absent") {
+  if (probe.kind !== "present") {
     throw new HostLoadError(
-      `No hosts/ folder found in ${projectRoot}.`,
-      "New projects get one from `ph init`; in an existing project, create hosts/<name>/host.js.",
-    );
-  }
-  if (probe.kind === "empty") {
-    throw new HostLoadError(
-      `hosts/ exists at ${probe.dir} but contains no <name>/host.js.`,
-      "An empty hosts/ folder defines no hosts; add a host definition or remove the folder.",
+      withoutHostsMessage(probe, `the host "${hostName}"`),
     );
   }
   if (!probe.hosts.includes(hostName)) {

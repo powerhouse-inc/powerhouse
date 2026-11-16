@@ -1,9 +1,0 @@
-{
-  "name": "@powerhousedao/ph-cli",
-  "private": true,
-  "type": "module",
-  "exports": {
-    "./runners/switchboard": "./switchboard.ts",
-    "./runners/connect": "./connect.ts"
-  }
-}

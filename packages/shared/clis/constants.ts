@@ -3,13 +3,6 @@ import { join } from "node:path";
 import type { Manifest } from "../document-model/types.js";
 import type { PowerhouseConfig } from "./types.js";
 
-export const SERVICE_ACTIONS = [
-  "start",
-  "stop",
-  "status",
-  "setup",
-  "restart",
-] as const;
 
 export const SECONDS_IN_DAY = 24 * 60 * 60;
 export const DEFAULT_EXPIRY_DAYS = 7;

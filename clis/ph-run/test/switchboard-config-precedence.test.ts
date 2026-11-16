@@ -1,7 +1,7 @@
 import type { SwitchboardConfigInput } from "@powerhousedao/switchboard/config";
 import { describe, expect, it } from "vitest";
 import { memberSwitchboardConfig } from "../src/runners/member-config.js";
-import { classicSwitchboardArgs } from "../src/services/classic-args.js";
+import { switchboardServiceArgs } from "../src/services/service-args.js";
 import { switchboardConfigOf } from "../src/services/switchboard.js";
 
 // Precedence: an explicit flag, then the member's config.switchboard, then defaults.
@@ -13,7 +13,7 @@ const memberConfig = (switchboard: SwitchboardConfigInput) =>
   );
 
 async function configFor(argv: string[], switchboard: SwitchboardConfigInput) {
-  const args = await classicSwitchboardArgs(argv);
+  const args = await switchboardServiceArgs(argv);
   return switchboardConfigOf(args, undefined, await memberConfig(switchboard))
     .config;
 }
@@ -53,7 +53,7 @@ describe("switchboard config precedence", () => {
         { shell: {}, dotenv: {} },
         { defaults: { server: { https: false } } },
       );
-    const args = { ...(await classicSwitchboardArgs([])), https: undefined };
+    const args = { ...(await switchboardServiceArgs([])), https: undefined };
     const own = switchboardConfigOf(
       args,
       undefined,

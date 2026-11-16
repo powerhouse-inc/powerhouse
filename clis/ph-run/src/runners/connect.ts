@@ -40,16 +40,16 @@ import { z } from "zod";
 import { connectChromeDeprecation } from "./host-deprecations.js";
 import { onlyPassed, runnerArgsSchemaOf } from "./runner-args.js";
 import {
-  classicConnectPreviewArgs,
+  connectPreviewServiceArgs,
   type ConnectPreviewArgs,
-} from "../services/classic-args.js";
+} from "../services/service-args.js";
 import type { ConnectServeOverride } from "../services/connect-serve.js";
 
 /**
- * BRIDGE runner for Connect hosts (uniform-runners phase 0): maps a
- * hosts/connect/host.js definition onto the SAME service the classic
- * `ph connect studio` (dev/run), `ph connect build` and `ph connect preview`
- * (serve) commands call — no forked behavior.
+ * The runner for Connect hosts: maps a hosts/connect/host.js definition
+ * onto the Connect services — the studio (dev/run), the build and the
+ * preview (serve). `ph connect studio|build|preview` are sugar for these
+ * verbs.
  */
 
 export const kind = "reactor";
@@ -508,7 +508,7 @@ export async function serveWith(
   const bind = passed.host ?? runner.host ?? "127.0.0.1";
   // The classic `ph connect preview` arguments, with the keys this host and
   // this invocation own laid over them.
-  const classic = await classicConnectPreviewArgs();
+  const classic = await connectPreviewServiceArgs();
   const args: ConnectPreviewArgs = {
     ...classic,
     port,

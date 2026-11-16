@@ -96,9 +96,10 @@ describe("loadHost", () => {
     );
   });
 
-  it("errors on an absent hosts/ folder with the scaffold hint", async () => {
+  it("errors on an absent hosts/ folder, naming `ph migrate`", async () => {
     await expect(loadHost(makeProject(), "vetra")).rejects.toThrow(
-      /No hosts\/ folder/,
+      'This project has no hosts/ folder, so the host "vetra" cannot run. ' +
+        "Run `ph migrate` to add the host files.",
     );
   });
 
@@ -106,7 +107,7 @@ describe("loadHost", () => {
     const project = makeProject();
     mkdirSync(path.join(project, "hosts"), { recursive: true });
     await expect(loadHost(project, "vetra")).rejects.toThrow(
-      /contains no <name>\/host\.js/,
+      /contains no <name>\/host\.js, so the host "vetra" cannot run\. Run `ph migrate`/,
     );
   });
 

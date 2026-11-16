@@ -31,11 +31,11 @@
       "import": "./dist/runners/switchboard.mjs",
       "default": "./dist/runners/switchboard.mjs"
     },
-    "./classic-args": {
-      "source": "./src/services/classic-args.ts",
-      "types": "./dist/services/classic-args.d.mts",
-      "import": "./dist/services/classic-args.mjs",
-      "default": "./dist/services/classic-args.mjs"
+    "./service-args": {
+      "source": "./src/services/service-args.ts",
+      "types": "./dist/services/service-args.d.mts",
+      "import": "./dist/services/service-args.mjs",
+      "default": "./dist/services/service-args.mjs"
     },
     "./connect-serve": {
       "source": "./src/services/connect-serve.ts",

@@ -6,10 +6,8 @@ import {
 } from "../utils/configure-vetra-github-url.js";
 
 /**
- * What makes a started switchboard the VETRA switchboard, shared by the two
- * ways to start one: classic `ph vetra` (services/vetra.ts) and the vetra
- * host's switchboard member (runners/switchboard.ts). One implementation, so
- * the two cannot drift.
+ * What makes a started switchboard the VETRA switchboard: used by the vetra
+ * host's switchboard member (runners/switchboard.ts).
  */
 
 export interface VetraDriveSource {

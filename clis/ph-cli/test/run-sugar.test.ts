@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { phCliCommands } from "../src/commands/ph-cli-commands.js";
 import { applyRunSugar, forwardRunnerArgv } from "../src/utils/run-sugar.js";
 
-const KNOWN = new Set(["init", "vetra", "connect", "run"]);
+const KNOWN = new Set(["init", "connect", "run"]);
 const temporary: string[] = [];
 
 afterEach(() => {
@@ -33,11 +33,9 @@ describe("applyRunSugar", () => {
     });
   });
 
-  it("built-in commands win collisions (non-alias built-ins)", () => {
-    const project = makeProject("connect"); // a host shadowing a built-in
-    expect(applyRunSugar(["connect"], KNOWN, project).args).toEqual([
-      "connect",
-    ]);
+  it("built-in commands win collisions", () => {
+    const project = makeProject("init"); // a host shadowing a built-in
+    expect(applyRunSugar(["init"], KNOWN, project).args).toEqual(["init"]);
     // ...even with arguments:
     expect(applyRunSugar(["init", "x"], KNOWN, project).args).toEqual([
       "init",
@@ -104,18 +102,61 @@ describe("applyRunSugar", () => {
     ]);
   });
 
-  // The CLI refuses these next: classicWithoutHostsError.
-  it("leaves flagged `ph vetra` as typed in a project without hosts/", () => {
-    const project = makeProject();
-    expect(applyRunSugar(["vetra", "--watch"], KNOWN, project).args).toEqual([
-      "vetra",
-      "--watch",
-    ]);
+  // The CLI refuses these first, as typed: sugar-checks.ts.
+  it("routes `ph vetra` and `ph switchboard` through run in any project", () => {
+    for (const project of [makeProject(), makeProject("desktop")]) {
+      expect(applyRunSugar(["vetra", "--watch"], KNOWN, project).args).toEqual(
+        ["run", "vetra", "--watch"],
+      );
+      expect(applyRunSugar(["vetra"], KNOWN, project).args).toEqual([
+        "run",
+        "vetra",
+      ]);
+      expect(
+        applyRunSugar(["switchboard", "migrate"], KNOWN, project).args,
+      ).toEqual(["run", "switchboard", "migrate"]);
+    }
   });
 
-  it("leaves bare `ph vetra` as typed in a project without hosts/", () => {
-    const project = makeProject();
-    expect(applyRunSugar(["vetra"], KNOWN, project).args).toEqual(["vetra"]);
+  it("routes `ph connect` and its subcommands to the verbs of the connect host", () => {
+    const project = makeProject("connect");
+    const sugar = (...args: string[]) =>
+      applyRunSugar(args, KNOWN, project).args;
+    expect(sugar("connect")).toEqual(["run", "connect", "dev"]);
+    expect(sugar("connect", "--port", "3001")).toEqual([
+      "run",
+      "connect",
+      "dev",
+      "--port",
+      "3001",
+    ]);
+    expect(sugar("connect", "studio", "--open")).toEqual([
+      "run",
+      "connect",
+      "dev",
+      "--open",
+    ]);
+    expect(sugar("connect", "build")).toEqual(["run", "connect", "build"]);
+    expect(sugar("connect", "preview", "--port=4173")).toEqual([
+      "run",
+      "connect",
+      "serve",
+      "--port=4173",
+    ]);
+    // A verb of the host, by its own name.
+    expect(sugar("connect", "serve")).toEqual(["run", "connect", "serve"]);
+  });
+
+  it("leaves `ph connect config` and `ph connect --help` to the connect command", () => {
+    const project = makeProject("connect");
+    for (const args of [
+      ["connect", "config"],
+      ["connect", "config", "connect.renown.url"],
+      ["connect", "--help"],
+      ["connect", "-h"],
+    ]) {
+      expect(applyRunSugar(args, KNOWN, project).args).toEqual(args);
+    }
   });
 });
 
@@ -123,6 +164,14 @@ describe("phCliCommands", () => {
   it("registers `run` and `host`", () => {
     expect(Object.keys(phCliCommands)).toContain("run");
     expect(Object.keys(phCliCommands)).toContain("host");
+  });
+
+  it("has no command for a host: `connect` is there for `ph connect config`", () => {
+    const names = Object.keys(phCliCommands);
+    expect(names).not.toContain("vetra");
+    expect(names).not.toContain("switchboard");
+    expect(names).not.toContain("reactor");
+    expect(names).toContain("connect");
   });
 });
 

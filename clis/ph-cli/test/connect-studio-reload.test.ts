@@ -59,6 +59,9 @@ type Studio = {
   spawnError?: Error;
 };
 
+// `ph connect studio` is `ph run connect dev`: it takes the runner's
+// arguments, which have no --ignore-local, --print-urls or
+// --bind-cli-shortcuts (the runner never binds the shortcuts).
 function startStudio(dir: string, port: number): Studio {
   const child = spawn(
     process.execPath,
@@ -69,9 +72,6 @@ function startStudio(dir: string, port: number): Studio {
       "--port",
       String(port),
       "--strictPort",
-      "--ignore-local",
-      "--print-urls=false",
-      "--bind-cli-shortcuts=false",
     ],
     { cwd: dir, stdio: ["ignore", "pipe", "pipe"] },
   );

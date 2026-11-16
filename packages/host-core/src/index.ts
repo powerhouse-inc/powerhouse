@@ -14,6 +14,7 @@ export {
   loadHost,
   probeHostsFolder,
   stripComments,
+  withoutHostsMessage,
   type HostsFolderStatus,
   type LoadedHost,
 } from "./host-loader.js";

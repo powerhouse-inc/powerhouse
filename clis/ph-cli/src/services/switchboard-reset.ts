@@ -86,7 +86,7 @@ export async function resetSwitchboardDatabase(
     );
     console.error(
       yellow(
-        "`ph switchboard --reset` only wipes the local PGlite stores. " +
+        "`ph run switchboard reset` only wipes the local PGlite stores. " +
           "To reset a Postgres-backed switchboard, drop/recreate the database manually.",
       ),
     );

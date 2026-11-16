@@ -14,7 +14,7 @@ import {
 } from "@powerhousedao/switchboard/server";
 import type { ILogger } from "document-model";
 import { createHash } from "node:crypto";
-import type { SwitchboardArgs } from "./classic-args.js";
+import type { SwitchboardArgs } from "./service-args.js";
 import { POWERHOUSE_DRIVE_ICON } from "../utils/drive-icons.js";
 
 export { POWERHOUSE_DRIVE_ICON };
@@ -59,29 +59,6 @@ export const defaultSwitchboardOptions = {
   },
   mcp: true,
 } satisfies StartServerOptions;
-
-function getDefaultVetraSwitchboardOptions(
-  vetraDriveId: string,
-): Partial<StartServerOptions> {
-  return {
-    port: 4001,
-    drive: {
-      id: vetraDriveId,
-      slug: vetraDriveId,
-      global: {
-        name: "Vetra",
-        icon: POWERHOUSE_DRIVE_ICON,
-      },
-      preferredEditor: "vetra-drive-app",
-      local: {
-        availableOffline: true,
-        listeners: [],
-        sharingType: "public",
-        triggers: [],
-      },
-    },
-  };
-}
 
 export type StartSwitchboardOptions = Omit<SwitchboardArgs, "mcp"> & {
   /** A declared composition (R2) leaves this unset: the mcp plugin's presence sets it. */
@@ -134,8 +111,6 @@ export function switchboardConfigOf(
   const {
     packages: packagesString,
     remoteDrives,
-    useVetraDrive,
-    vetraDriveId,
     useIdentity,
     keypairPath,
     requireIdentity,
@@ -143,13 +118,10 @@ export function switchboardConfigOf(
     ...serverOptions
   } = options;
 
-  // Vetra and dev mode run against local services
-  if (useVetraDrive || serverOptions.dev) allowLocalhostEgress();
+  // Dev mode runs against local services
+  if (serverOptions.dev) allowLocalhostEgress();
 
-  // Choose the appropriate default configuration
-  const defaultOptions = useVetraDrive
-    ? getDefaultVetraSwitchboardOptions(vetraDriveId)
-    : defaultSwitchboardOptions;
+  const defaultOptions: Partial<StartServerOptions> = defaultSwitchboardOptions;
 
   // Build identity options if enabled
   const identity: IdentityOptions | undefined =

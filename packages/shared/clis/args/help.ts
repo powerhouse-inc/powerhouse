@@ -2,7 +2,7 @@ import { command } from "cmd-ts";
 import type { phCliCommandNames } from "../command-names.js";
 import { accessTokenArgs } from "./access-token.js";
 import { debugArgs } from "./common.js";
-import { connectArgs } from "./connect.js";
+import { connectConfigArgs } from "./connect.js";
 import { generateArgs } from "./generate.js";
 import { hostCheckArgs } from "./host.js";
 import { inspectArgs } from "./inspect.js";
@@ -16,9 +16,7 @@ import { modelCheckArgs } from "./model.js";
 import { publishArgs } from "./publish.js";
 import { registryLoginArgs } from "./registry.js";
 import { runArgs } from "./run.js";
-import { switchboardArgs } from "./switchboard.js";
 import { uninstallArgs } from "./uninstall.js";
-import { vetraArgs } from "./vetra.js";
 
 // Thin wrapper around `command()` that preserves the literal types of
 // `name` and `aliases` on the return value.
@@ -62,15 +60,16 @@ export const phCliHelpCommands = {
   }),
   vetra: helpCommand({
     name: "vetra",
-    args: vetraArgs,
+    args: debugArgs,
     description:
-      "Starts Vetra development environment with switchboard, reactor, and connect",
+      "Run the project's vetra host (hosts/vetra): the same as `ph run vetra`",
     handler: () => {},
   }),
   connect: helpCommand({
     name: "connect",
-    args: connectArgs,
-    description: "Powerhouse Connect commands",
+    args: connectConfigArgs,
+    description:
+      "Run the project's connect host: `ph connect [studio|build|preview]` is `ph run connect dev|build|serve`. `ph connect config` reads and writes Connect's runtime configuration",
     handler: () => {},
   }),
   build: helpCommand({
@@ -141,9 +140,9 @@ export const phCliHelpCommands = {
   }),
   switchboard: helpCommand({
     name: "switchboard",
-    aliases: ["reactor"],
-    args: switchboardArgs,
-    description: "Starts local Switchboard",
+    args: debugArgs,
+    description:
+      "Run the project's switchboard host (hosts/switchboard): the same as `ph run switchboard`",
     handler: () => {},
   }),
   login: helpCommand({

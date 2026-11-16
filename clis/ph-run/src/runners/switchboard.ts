@@ -35,17 +35,17 @@ import {
 } from "./member-config.js";
 import { onlyPassed, runnerArgsSchemaOf } from "./runner-args.js";
 import { z } from "zod";
-import { classicSwitchboardArgs } from "../services/classic-args.js";
+import { switchboardServiceArgs } from "../services/service-args.js";
 import {
   inspectorProgressSource,
   startProgressDisplay,
 } from "../services/run/catch-up-progress.js";
-import type { SwitchboardArgs } from "../services/classic-args.js";
+import type { SwitchboardArgs } from "../services/service-args.js";
 
 /**
- * BRIDGE runner for Switchboard hosts (uniform-runners phase 0): maps a
- * hosts/switchboard/host.js definition onto the SAME `startSwitchboard`
- * service the classic command calls. `run` = production loaders, `dev` =
+ * The runner for Switchboard hosts: maps a hosts/switchboard/host.js
+ * definition onto the `startSwitchboard` service. `ph switchboard` is sugar
+ * for `ph run switchboard`. `run` = production loaders, `dev` =
  * Vite package loader (worker pools refused by the server, as always).
  */
 
@@ -187,7 +187,7 @@ async function toSwitchboardArgs(
   composed: boolean,
   passed: Partial<InvocationArgs>,
 ): Promise<SwitchboardRunnerArgs> {
-  const classic = await classicSwitchboardArgs();
+  const classic = await switchboardServiceArgs();
   const runner = host.runner;
   return {
     ...classic,
