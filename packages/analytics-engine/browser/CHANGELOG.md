@@ -1,3 +1,13 @@
+## 6.3.0-dev.3 (2026-11-17)
+
+### 🚀 Features
+
+- **ph-cli:** ph migrate converts schema-first document models to code-first ([054952452c](https://github.com/powerhouse-inc/powerhouse/commit/054952452c))
+
+### ❤️ Thank You
+
+- Yasiel Cabrera @YasielCabrera
+
 ## 6.3.0-dev.2 (2026-11-16)
 
 This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
