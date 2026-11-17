@@ -15,6 +15,7 @@ import type {
   AnyFieldDescriptor,
   AnyTypeDescriptor,
   InputDescriptor,
+  ObjectDescriptor,
 } from "../dsl/types.js";
 import { DefinitionDiagnosticCollector } from "../kernel/diagnostic-collector.js";
 import { describeReceived } from "../kernel/diagnostics.js";
@@ -76,7 +77,20 @@ export type EntryRecord = {
       readonly kind: "type";
       readonly type?: AnyTypeDescriptor;
     }
+  | {
+      readonly kind: "root";
+      readonly root?: RootKind;
+      readonly description?: string;
+    }
+  | {
+      readonly kind: "entity";
+      readonly type?: ObjectDescriptor;
+      readonly key?: string;
+    }
 );
+
+export type RootKind = "query" | "mutation" | "subscription";
+const ROOT_KINDS: readonly unknown[] = ["query", "mutation", "subscription"];
 
 type Collector = DefinitionDiagnosticCollector<
   keyof typeof subgraphDiagnostics.codes
@@ -349,6 +363,84 @@ function typeEntry(type: unknown): SubgraphEntry {
   });
 }
 
+function rootDescriptionEntry(kind: unknown, spec: unknown): SubgraphEntry {
+  const collector: Collector = new DefinitionDiagnosticCollector(
+    subgraphDiagnostics,
+  );
+  const root = ROOT_KINDS.includes(kind) ? (kind as RootKind) : undefined;
+  if (root === undefined) {
+    collector.add({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["kind"],
+      message: "root takes the kind of the root type's fields.",
+      expected: '"query", "mutation", or "subscription"',
+      received: describeReceived(kind),
+      repair: 'Pass "query" to describe Query, and so on.',
+    });
+  }
+  const config = snapshotSpec(collector, spec, ["description"]);
+  const description =
+    config === undefined
+      ? undefined
+      : collector.capture(() => stringOption(config, "description", ["spec"]));
+  if (config !== undefined && description === null) {
+    collector.add({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["spec", "description"],
+      message: "root declares no description.",
+      expected: "a string",
+      received: "undefined",
+      repair: "Add description, or remove the entry.",
+    });
+  }
+  return register({
+    kind: "root",
+    ...(root !== undefined && { root }),
+    ...(typeof description === "string" && { description }),
+    diagnostics: collector.diagnostics,
+  });
+}
+
+function entityEntry(type: unknown, spec: unknown): SubgraphEntry {
+  const collector: Collector = new DefinitionDiagnosticCollector(
+    subgraphDiagnostics,
+  );
+  const object =
+    isTypeDescriptor(type) && type.kind === "object"
+      ? (type as ObjectDescriptor)
+      : undefined;
+  if (object === undefined) {
+    collector.add({
+      code: "PH-SG-ENTITY-INVALID",
+      path: ["type"],
+      message: "entity takes an object type.",
+      expected: "a descriptor returned by ph.object",
+      received: isTypeDescriptor(type)
+        ? `${type.kind} ${JSON.stringify(type.name)}`
+        : describeReceived(type),
+      repair: "Pass the object type the key identifies.",
+    });
+  }
+  const config = snapshotSpec(collector, spec, ["key"]);
+  const key = config?.key;
+  if (config !== undefined && (typeof key !== "string" || key.trim() === "")) {
+    collector.add({
+      code: "PH-SG-ENTITY-INVALID",
+      path: ["spec", "key"],
+      message: "An entity's key must be a selection of its fields.",
+      expected: 'a string such as "id" or "id owner { id }"',
+      received: describeReceived(key),
+      repair: "Set key to the fields that identify the entity.",
+    });
+  }
+  return register({
+    kind: "entity",
+    ...(object !== undefined && { type: object }),
+    ...(typeof key === "string" && key.trim() !== "" && { key }),
+    diagnostics: collector.diagnostics,
+  });
+}
+
 const builders = Object.freeze({
   query: (name: unknown, spec: unknown) => rootEntry("query", name, spec),
   mutation: (name: unknown, spec: unknown) => rootEntry("mutation", name, spec),
@@ -357,6 +449,8 @@ const builders = Object.freeze({
   field: computedFieldEntry,
   resolveType: resolveTypeEntry,
   type: typeEntry,
+  root: rootDescriptionEntry,
+  entity: entityEntry,
 });
 
 /**

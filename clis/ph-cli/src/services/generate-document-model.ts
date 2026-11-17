@@ -40,7 +40,7 @@ export async function startGenerateDocumentModel(
   }
   if (codeFirst && name === undefined) {
     throw new Error(
-      "--code-first only chooses how --name creates a model. Existing models of both styles are discovered without it; drop --code-first.",
+      "--code-first only chooses how --name creates a model. Existing models of both styles are discovered without it; drop --code-first. To convert a schema-first model, run ph migrate --document-model <dir>.",
     );
   }
   const project = buildTsMorphProject(projectDir);

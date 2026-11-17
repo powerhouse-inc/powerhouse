@@ -199,10 +199,12 @@ export type Nullable<T, TRequired extends boolean> = TRequired extends true
   ? T
   : T | null | undefined;
 
+/** @experimental The value a caller passes for a descriptor, such as an action input. */
 export type InputOf<T> =
   T extends DescriptorNode<infer TInput, any, any> ? TInput : never;
 export type OutputOf<T> =
   T extends DescriptorNode<any, infer TOutput, any> ? TOutput : never;
+/** @experimental The value a descriptor holds in a document's state. */
 export type SourceOf<T> =
   T extends DescriptorNode<any, any, infer TSource> ? TSource : never;
 export type RequiredOf<T> = T extends { readonly required: infer TRequired }

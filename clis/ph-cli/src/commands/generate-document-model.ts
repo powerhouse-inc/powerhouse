@@ -43,7 +43,7 @@ export const generateDocumentModelCmd = command({
     codeFirst: flag({
       long: "code-first",
       description:
-        "Experimental. With --name, create the model code-first. Existing models of both styles are discovered without it",
+        "Experimental. With --name, create the model code-first. Existing models of both styles are discovered without it; ph migrate --document-model converts a schema-first one",
     }),
     ...debugArgs,
   },

@@ -78,7 +78,7 @@ describe("--code-first", () => {
         dir,
       ),
     ).rejects.toThrow(
-      "--code-first only chooses how --name creates a model. Existing models of both styles are discovered without it; drop --code-first.",
+      "--code-first only chooses how --name creates a model. Existing models of both styles are discovered without it; drop --code-first. To convert a schema-first model, run ph migrate --document-model <dir>.",
     );
     expect(readdirSync(dir, { recursive: true })).toEqual(before);
   });

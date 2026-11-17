@@ -88,6 +88,7 @@ export async function runConnectStudio(
     return server;
   };
 
+  let loaded = reloadOnConfigChange ? readConfig(configFile) : undefined;
   const first = await start(true);
   if (printUrls) first.printUrls();
   if (!reloadOnConfigChange) {
@@ -96,7 +97,6 @@ export async function runConnectStudio(
   }
 
   let server = first;
-  let loaded = readConfig(configFile);
   let timer: NodeJS.Timeout | undefined;
   let restarts = Promise.resolve();
   let stopped = false;
@@ -114,9 +114,7 @@ export async function runConnectStudio(
       ? restartWith(() => start(false))
       : start(false));
   };
-  // The folder, not the file: editors save by replacing it.
-  const watcher = watch(dirname, (_event, file) => {
-    if (file !== CONFIG_FILE) return;
+  const queueRestart = () => {
     clearTimeout(timer);
     timer = setTimeout(() => {
       restarts = restarts.then(restart).catch((error: unknown) => {
@@ -125,6 +123,10 @@ export async function runConnectStudio(
         );
       });
     }, RELOAD_DEBOUNCE_MS);
+  };
+  // The folder, not the file: editors save by replacing it.
+  const watcher = watch(dirname, (_event, file) => {
+    if (file === CONFIG_FILE) queueRestart();
   });
   watcher.unref();
   exposeStop?.(async () => {
@@ -135,5 +137,7 @@ export async function runConnectStudio(
     await restarts;
     await server.close();
   });
+  // Catch config edits made while the first server was starting.
+  queueRestart();
   return first;
 }

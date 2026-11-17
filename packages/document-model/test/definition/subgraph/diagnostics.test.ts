@@ -287,6 +287,109 @@ describe("compileSubgraph diagnostics", () => {
     ]);
   });
 
+  it("refuses a root description without a root of its kind, twice, or empty", () => {
+    const entries = [
+      hello,
+      schema.root("query", { description: "Queries." }),
+      schema.root("query", { description: "Again." }),
+      schema.root("mutation", { description: "No mutation entry." }),
+      schema.root("schema" as never, { description: "Not a kind." }),
+      schema.root("query", {} as never),
+    ];
+    expect(codes(compileSubgraph({ name: "shop", entries }))).toStrictEqual([
+      ["PH-SG-DUPLICATE-COORDINATE", "entries.2"],
+      ["PH-SG-ENTRY-INVALID", "entries.3.kind"],
+      ["PH-SG-ENTRY-INVALID", "entries.4.kind"],
+      ["PH-SG-ENTRY-INVALID", "entries.5.spec.description"],
+    ]);
+  });
+
+  it("refuses an entity that is not a reached object type or whose key is not a selection of its fields", () => {
+    const entries = [
+      schema.query("invoice", { type: ph.ref(Invoice), resolve: none }),
+      schema.entity(Invoice, { key: "id" }),
+      schema.entity(Invoice, { key: "id" }),
+      schema.entity(Invoice, { key: "nope" }),
+      schema.entity(Invoice, { key: "lines { nope }" }),
+      schema.entity(Invoice, { key: "id {" }),
+      schema.entity(Invoice, { key: " " }),
+      schema.entity(Node as never, { key: "id" }),
+      schema.entity(Card, { key: "id" }),
+    ];
+    const result = compileSubgraph({ name: "shop", entries });
+    expect(codes(result)).toStrictEqual([
+      ["PH-SG-DUPLICATE-COORDINATE", "entries.2"],
+      ["PH-SG-ENTITY-INVALID", "entries.3.spec.key"],
+      ["PH-SG-ENTITY-INVALID", "entries.4.spec.key"],
+      ["PH-SG-ENTITY-INVALID", "entries.5.spec.key"],
+      ["PH-SG-ENTITY-INVALID", "entries.6.spec.key"],
+      ["PH-SG-ENTITY-INVALID", "entries.7.type"],
+      ["PH-SG-ENTITY-INVALID", "entries.8.type"],
+    ]);
+    expect(result.diagnostics[1]?.message).toBe(
+      'The key "nope" is not a selection of Invoice\'s fields: Invoice has no field nope.',
+    );
+  });
+
+  it.each([
+    { key: "owner", message: "needs a selection" },
+    { key: "actor { id }", message: "has interface type" },
+    { key: "payment { last4 }", message: "has union type" },
+    { key: "id { value }", message: "has no fields" },
+  ])("refuses the uncomposable entity key $key", ({ key, message }) => {
+    const Record = ph.object("Record", {
+      fields: {
+        id: ph.ID(),
+        owner: ph.ref(Invoice),
+        actor: ph.ref(Node),
+        payment: ph.ref(Payment),
+      },
+    });
+    const entries = [
+      schema.query("record", { type: ph.ref(Record), resolve: none }),
+      schema.entity(Record, { key }),
+    ];
+    const result = compileSubgraph({ name: "shop", entries });
+    expect(codes(result)).toEqual([
+      ["PH-SG-ENTITY-INVALID", "entries.1.spec.key"],
+    ]);
+    expect(result.definition).toBeUndefined();
+    expect(result.diagnostics[0]?.message).toContain(message);
+  });
+
+  it("refuses an entity key field with arguments", () => {
+    const Record = ph.object("Record", { fields: { id: ph.ID() } });
+    const result = compileSubgraph({
+      name: "records",
+      entries: [
+        schema.query("record", { type: ph.ref(Record), resolve: none }),
+        schema.field(Record, "computed", {
+          type: ph.String(),
+          args: { format: ph.String() },
+          resolve: none,
+        }),
+        schema.entity(Record, { key: "computed" }),
+      ],
+    });
+    expect(codes(result)).toEqual([
+      ["PH-SG-ENTITY-INVALID", "entries.2.spec.key"],
+    ]);
+    expect(result.definition).toBeUndefined();
+    expect(result.diagnostics[0]?.message).toContain(
+      "Record.computed has arguments",
+    );
+  });
+
+  it("accepts a nested object entity key", () => {
+    const entries = [
+      schema.query("invoice", { type: ph.ref(Invoice), resolve: none }),
+      schema.entity(Invoice, { key: "lines { label }" }),
+    ];
+    const result = compileSubgraph({ name: "shop", entries });
+    expect(result.diagnostics).toEqual([]);
+    expect(result.definition).toBeDefined();
+  });
+
   it("refuses an object type that no entry gives a field", () => {
     const Empty = ph.object("Empty", { fields: {} });
     const entries = [

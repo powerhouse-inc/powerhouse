@@ -248,6 +248,9 @@ export function definitionNode(
             ? "ObjectTypeDefinition"
             : "InterfaceTypeDefinition",
         ...named,
+        ...(definition.kind === "object" && {
+          directives: directiveNodes(null, definition.directives),
+        }),
         interfaces: (definition.implements ?? []).map(namedType),
         fields: fieldNodes(definition.fields, inventory),
       };

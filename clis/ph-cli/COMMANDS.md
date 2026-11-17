@@ -153,7 +153,7 @@ Write a powerhouse/document-model spec for each existing document model into spe
 **usage:** `--extract, -x`<br>
 
 #### Code First <br>
-Experimental. With --name, create the model code-first. Existing models of both styles are discovered without it<br><br>
+Experimental. With --name, create the model code-first. Existing models of both styles are discovered without it; ph migrate --document-model converts a schema-first one<br><br>
 **usage:** `--code-first`<br>
 
 #### Debug <br>
@@ -1302,6 +1302,10 @@ The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `
 Convert only this directory of subgraphs/ into a code-first subgraph. Repeat it for more directories. Implies --subgraphs.<br><br>
 **usage:** `--subgraph <str>`<br>
 
+#### Document Model <br>
+Convert only this directory of the document models directory into a code-first model. Repeat it for more directories. Implies --document-models.<br><br>
+**usage:** `--document-model <str>`<br>
+
 
 ### flags
 #### Force <br>
@@ -1309,8 +1313,20 @@ Run migrate from the bundled codegen even if the target version cannot be resolv
 **usage:** `--force, -f`<br>
 
 #### Subgraphs <br>
-Convert every schema-first subgraph under subgraphs/ into a code-first one, keeping its schema and resolvers. Code-first subgraphs are skipped, and a subgraph that cannot keep the same schema is left as it is, with the reason. Upgrades no dependencies and regenerates nothing else.<br><br>
+Convert every schema-first subgraph under subgraphs/ into a code-first one, keeping its schema and resolvers. Each resolver becomes a member of the subgraph class that getSchema calls directly, and each separate resolver factory module stays loaded in its original order to preserve initialization and shared bindings. Other files that import the schema-first SDL get it from schema-sdl.ts. Code-first subgraphs are skipped, and a subgraph that cannot keep the same schema is left as it is, with the reason. The project's tsc then checks the converted resolvers against the schema they serve: each call it rejects, because the resolver's own types disagree with the schema, is cast with a ph migrate comment so it runs as before and the project compiles, and is listed to fix. Upgrades no dependencies and regenerates nothing else.<br><br>
 **usage:** `--subgraphs`<br>
+
+#### Strict Resolvers <br>
+With --subgraphs or --subgraph: leave the resolver calls tsc rejects without a cast, so the project does not compile until each resolver's types agree with the schema. They are listed either way.<br><br>
+**usage:** `--strict-resolvers`<br>
+
+#### Document Models <br>
+Convert every schema-first document model into a code-first one, keeping each version's definition and reducers. The model gets the layout ph generate document-model --code-first writes: index.ts, upgrades/index.ts, and per version definition.ts, index.ts and modules/; the custom code of src/ moves into the version's directory. The generated code, src/ and <name>.json are removed. The names the generated code exported stay available from compat/v<N>/index.ts, imports of removed files are rewritten to it, and the document-models barrels are regenerated. A model that cannot keep the same definition is left as it is, with the reason. Upgrades no dependencies.<br><br>
+**usage:** `--document-models`<br>
+
+#### Rename Conflicting Types <br>
+With --document-models or --document-model: rename a model type that has the name of a scalar, such as Address, by prefixing the model's name (InvoiceAddress), instead of refusing the model. The GraphQL type name changes; the TypeScript name the model's compat exports keeps the old name.<br><br>
+**usage:** `--rename-conflicting-types`<br>
 
 #### Dry Run <br>
 Print the diff of every file the migration would add, change or delete, and write nothing. It installs nothing and regenerates no code; it lists those steps instead.<br><br>

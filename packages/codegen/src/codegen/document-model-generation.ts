@@ -6,6 +6,7 @@ import { firstBy, isTruthy, prop, uniqueBy } from "remeda";
 import type { Project } from "ts-morph";
 import { codeFirstDeclarationFiles } from "document-model/tooling";
 import { getEditorDirNames, getEditorMetadata, projectPath } from "utils";
+import { buildTsMorphProject } from "../utils/ts-morph-project.js";
 import { generateCodeFirstDocumentEditor } from "../file-builders/code-first-editor.js";
 import {
   assertDocumentModelAggregatesWritable,
@@ -43,18 +44,26 @@ import type {
 } from "./model-generation.js";
 import { schemaFirstModelSource } from "./schema-first/model-generation.js";
 
-async function inventoryOf(project: Project) {
+async function inventoryOf(
+  project: Project,
+  formerlySchemaFirst: ReadonlySet<string> = new Set(),
+) {
   const projectDir = projectPath(project, ".");
   const inventory = await loadDocumentModelInventory(projectDir);
-  assertDocumentModelAggregatesWritable(project, projectDir);
+  assertDocumentModelAggregatesWritable(
+    project,
+    projectDir,
+    formerlySchemaFirst,
+  );
   return inventory;
 }
 
 async function finalizeModels(
   project: Project,
   inventory: DocumentModelInventory,
+  formerlySchemaFirst: ReadonlySet<string> = new Set(),
 ) {
-  await writeDocumentModelAggregates(project, inventory);
+  await writeDocumentModelAggregates(project, inventory, formerlySchemaFirst);
   const documentModels = uniqueBy(
     inventory.documentModels.map(({ documentType, name }) => ({
       id: documentType,
@@ -65,6 +74,43 @@ async function finalizeModels(
   if (documentModels.length > 0) {
     await createOrUpdateManifest({ documentModels }, inventory.projectDir);
   }
+}
+
+/**
+ * @experimental Throws, as `regenerateDocumentModelBarrels` would, when a
+ * document-models barrel holds statements codegen did not write. Writes
+ * nothing.
+ */
+export function assertDocumentModelBarrelsWritable(projectDir: string): void {
+  assertDocumentModelAggregatesWritable(
+    buildTsMorphProject(projectDir),
+    projectDir,
+  );
+}
+
+/**
+ * @experimental Rewrites the document-models barrels and the manifest's
+ * document models from the models discovery finds, as `ph generate` does, and
+ * nothing else. Returns the project-relative paths it changed. Throws before
+ * writing when a barrel holds statements codegen did not write; the
+ * statements it wrote for the `formerlySchemaFirst` model directories, before
+ * ph migrate made them code-first, count as its own.
+ */
+export async function regenerateDocumentModelBarrels(
+  projectDir: string,
+  formerlySchemaFirst: ReadonlySet<string> = new Set(),
+): Promise<string[]> {
+  const project = buildTsMorphProject(projectDir);
+  const inventory = await inventoryOf(project, formerlySchemaFirst);
+  await finalizeModels(project, inventory, formerlySchemaFirst);
+  const changed = project
+    .getSourceFiles()
+    .filter((file) => !file.isSaved())
+    .map((file) =>
+      relative(projectDir, file.getFilePath()).split(sep).join("/"),
+    );
+  await project.save();
+  return changed;
 }
 
 /** What the discovered code-first sources own, each mapped to one source. */

@@ -6,18 +6,21 @@ export { projectDocumentModelGraphQL } from "./compiler/graphql-projection.js";
 /** @experimental The GraphQL documents a host serves for a specification. */
 export type { DocumentModelGraphQLProjection } from "./compiler/graphql-projection.js";
 export { ph } from "./dsl/field.js";
+export { hostScalarFactories as hostScalars } from "./dsl/scalar-fields.js";
 export { DefinitionError } from "./kernel/diagnostics.js";
 export type { Ph } from "./dsl/field.js";
 export type {
   EnumDescriptor,
   InputDescriptor,
   InputObjectOf,
+  InputOf,
   InterfaceDescriptor,
   ListDescriptor,
   ObjectDescriptor,
   OutputObjectOf,
   ReferenceDescriptor,
   ScalarDescriptor,
+  SourceOf,
   UnionDescriptor,
 } from "./dsl/types.js";
 export { defineDocumentModel } from "./model/define-document-model.js";

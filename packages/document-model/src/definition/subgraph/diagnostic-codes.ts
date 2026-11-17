@@ -38,6 +38,12 @@ export const subgraphDiagnostics = defineDiagnosticCatalog(
       meaning:
         "resolveType names a type that is not an interface or union that the subgraph's entries reach",
     },
+    "PH-SG-ENTITY-INVALID": {
+      severity: "error",
+      phase: "definition",
+      meaning:
+        "entity names a type that is not an object type the subgraph's entries reach, or a key that is not a selection of its fields",
+    },
     "PH-SG-INTERFACE-UNIMPLEMENTED": {
       severity: "warning",
       phase: "definition",

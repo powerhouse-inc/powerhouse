@@ -391,6 +391,8 @@ export type ObjectTypeDefinition = {
   readonly description: string | null;
   readonly implements?: readonly string[];
   readonly fields: readonly FieldDefinition[];
+  /** Only a subgraph's federation entity has these: its `@key` uses. */
+  readonly directives?: readonly DirectiveUseDefinition[];
 };
 
 export type InterfaceTypeDefinition = {
@@ -689,6 +691,10 @@ export type SubgraphDefinition = SubgraphDefinitionBase &
         readonly types: readonly NamedGraphQLTypeDefinition[];
         readonly entries: readonly SubgraphEntryDefinition[];
         readonly scalars: readonly SubgraphScalarReferenceDefinition[];
+        /** The descriptions of the root types that have one. */
+        readonly rootDescriptions?: {
+          readonly [Name in "Query" | "Mutation" | "Subscription"]?: string;
+        };
         /**
          * Every emitted definition name appears once, including roots and
          * scalars. This order preserves the authored schema's print order.

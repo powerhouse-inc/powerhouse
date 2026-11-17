@@ -21,7 +21,7 @@ export const ROOT_TYPES = {
 } as const;
 
 export function subgraphRootTypes(
-  definition: Pick<TypedSubgraphDefinition, "entries">,
+  definition: Pick<TypedSubgraphDefinition, "entries" | "rootDescriptions">,
 ): readonly ObjectTypeDefinition[] {
   return (["query", "mutation", "subscription"] as const).flatMap((kind) => {
     const fields = definition.entries.flatMap((entry) =>
@@ -44,7 +44,8 @@ export function subgraphRootTypes(
           {
             kind: "object" as const,
             name: ROOT_TYPES[kind],
-            description: null,
+            description:
+              definition.rootDescriptions?.[ROOT_TYPES[kind]] ?? null,
             fields,
           },
         ];

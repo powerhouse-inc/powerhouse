@@ -112,7 +112,7 @@ export function createStagedProject(): StagedProject {
   );
   const root = join(parent, "my package");
   cpSync(join(FIXTURES, "classic-package"), root, { recursive: true });
-  // What a build in the fixture itself left (build-integration builds there).
+  // Ignore output from earlier local builds of the source fixture.
   rmSync(join(root, "dist"), { recursive: true, force: true });
   rmSync(join(root, ".ph"), { recursive: true, force: true });
   for (const entry of readdirSync(root)) {

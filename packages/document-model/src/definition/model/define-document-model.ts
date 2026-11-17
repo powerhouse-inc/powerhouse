@@ -292,7 +292,9 @@ function normalizeConfig(
   const description = requiredText(collector, config.description, [
     "description",
   ]);
-  const extension = requiredString(collector, config.extension, ["extension"]);
+  // The stored format allows an empty extension, and a model converted from
+  // it keeps that.
+  const extension = requiredText(collector, config.extension, ["extension"]);
   const version = config.version;
   const validVersion =
     typeof version === "number" && Number.isSafeInteger(version) && version > 0;

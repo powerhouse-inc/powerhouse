@@ -167,6 +167,26 @@ describe("context.module and the scope builders", () => {
     });
   });
 
+  it("types the context action's input as the reducer's mutable input", () => {
+    // Both name one object at runtime; a migrated schema-first reducer reads
+    // action.input and stores its lists in the state.
+    model.module("tagging", {
+      operations: ({ global }) => ({
+        setTags: global({
+          input: ph.input({
+            fields: {
+              tags: ph.list(ph.String({ required: true }), { required: true }),
+            },
+          }),
+          reduce(_state, input, { action }) {
+            expectTypeOf(action.input).toEqualTypeOf(input);
+            expectTypeOf(action.input.tags).toEqualTypeOf<string[]>();
+          },
+        }),
+      }),
+    });
+  });
+
   it("rejects one operation token assigned to two keys", () => {
     const diagnostics = diagnosticsOf(() =>
       model.module("repeated", {

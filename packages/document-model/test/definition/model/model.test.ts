@@ -101,6 +101,50 @@ describe("defineDocumentModel state roots", () => {
   });
 });
 
+describe("defineDocumentModel extension", () => {
+  it("keeps an empty extension, which stored schema-first models have", () => {
+    const model = defineDocumentModel({
+      id: "test/no-extension",
+      name: "NoExtension",
+      description: "",
+      extension: "",
+      version: 1,
+      author: { name: "Powerhouse" },
+      scopes: {
+        global: {
+          schema: ph.object("NoExtensionState", {
+            fields: { title: ph.String({ required: true }) },
+          }),
+          initialValue: { title: "" },
+        },
+      },
+    });
+    const module = materialize(model.version({ modules: [] }));
+    expect(module.definition.model.extension).toBe("");
+    expect(module.utils.fileExtension).toBe("");
+  });
+
+  it("still requires the extension to be a string", () => {
+    expect(
+      diagnosticsOf(() =>
+        defineDocumentModel({
+          id: "test/no-extension",
+          name: "NoExtension",
+          description: "",
+          version: 1,
+          author: { name: "Powerhouse" },
+          scopes: {
+            global: {
+              schema: ph.object("NoExtensionState", { fields: {} }),
+              initialValue: {},
+            },
+          },
+        } as never),
+      )[0],
+    ).toMatchObject({ path: ["extension"] });
+  });
+});
+
 describe("defineDocumentModel empty local state", () => {
   const emptyLocalModel = defineDocumentModel({
     id: "test/empty-local",

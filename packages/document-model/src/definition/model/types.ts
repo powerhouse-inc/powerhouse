@@ -109,7 +109,8 @@ type ModelOperationContext<
   TErrors extends ErrorDeclarations,
 > = {
   readonly errors: OperationErrorClasses<TErrors>;
-  readonly action: Action & { readonly input: InputOf<TInput> };
+  /** The action being reduced; its input is the same object as `reduce`'s input. */
+  readonly action: Action & { readonly input: Mutable<InputOf<TInput>> };
   readonly dispatch: SignalDispatch | undefined;
 };
 

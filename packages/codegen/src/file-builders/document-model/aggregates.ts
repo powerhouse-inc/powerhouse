@@ -303,6 +303,11 @@ function exportedNames(sourceFile: SourceFile) {
 export function assertDocumentModelAggregatesWritable(
   project: Project,
   projectDir: string,
+  /**
+   * Model directories `ph migrate` just made code-first, whose barrel
+   * statements codegen wrote while they were schema-first.
+   */
+  formerlySchemaFirst: ReadonlySet<string> = new Set(),
 ): void {
   const legacyEntries = new Set(
     discoverDocumentModelDirectories(
@@ -310,7 +315,10 @@ export function assertDocumentModelAggregatesWritable(
       documentModelsDirOf(projectDir).path,
     )
       .directories.filter(
-        ({ kind }) => kind === "stored" || kind === "generated",
+        ({ kind, name }) =>
+          kind === "stored" ||
+          kind === "generated" ||
+          formerlySchemaFirst.has(name),
       )
       .map(({ path }) =>
         emittedImportPath(
@@ -353,6 +361,7 @@ export function assertDocumentModelAggregatesWritable(
 export async function writeDocumentModelAggregates(
   project: Project,
   inventory: DocumentModelInventory,
+  formerlySchemaFirst: ReadonlySet<string> = new Set(),
 ): Promise<SourceFile[]> {
   const outputDir = canonicalDocumentModelsDir(inventory.projectDir);
   const paths = Object.fromEntries(
@@ -362,7 +371,11 @@ export async function writeDocumentModelAggregates(
     AGGREGATES.map((file) => [file, currentText(project, paths[file])]),
   ) as Record<Aggregate, string | undefined>;
 
-  assertDocumentModelAggregatesWritable(project, inventory.projectDir);
+  assertDocumentModelAggregatesWritable(
+    project,
+    inventory.projectDir,
+    formerlySchemaFirst,
+  );
 
   const schemaFirst = schemaFirstModules(
     project,

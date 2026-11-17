@@ -9,7 +9,10 @@ import type {
 import { getCatalogScalar } from "../../scalars/catalog.js";
 import type { ScalarDefinition } from "../../scalars/types.js";
 import { isTypeDescriptor } from "../dsl/descriptor-registry.js";
-import { builtInScalarFactories } from "../dsl/scalar-fields.js";
+import {
+  builtInScalarFactories,
+  hostOnlyScalars,
+} from "../dsl/scalar-fields.js";
 import type {
   AnyFieldDescriptor,
   AnyTypeDescriptor,
@@ -55,6 +58,11 @@ export type DescriptorWalkOptions = {
    * what is still empty with `checkObjectFields`.
    */
   readonly deferObjectFields?: boolean;
+  /**
+   * Accepts the catalog scalars only the reactor host declares, such as
+   * JSONObject. A subgraph may use them; a document model may not.
+   */
+  readonly hostScalars?: boolean;
 };
 
 export class DescriptorWalk {
@@ -63,6 +71,7 @@ export class DescriptorWalk {
   readonly packageScalars = new Map<string, ScalarDefinition>();
   readonly #collector: DefinitionDiagnosticCollector<CompilerDiagnosticCode>;
   readonly #deferObjectFields: boolean;
+  readonly #hostScalars: boolean;
   readonly #built = new Map<AnyTypeDescriptor, NamedGraphQLTypeDefinition>();
   readonly #visited = new Set<AnyTypeDescriptor>();
   readonly #claims = new Map<
@@ -76,6 +85,7 @@ export class DescriptorWalk {
   ) {
     this.#collector = collector;
     this.#deferObjectFields = options.deferObjectFields ?? false;
+    this.#hostScalars = options.hostScalars ?? false;
   }
 
   visitType(
@@ -586,6 +596,18 @@ export class DescriptorWalk {
     const definition = scalar.definition;
     if (definition === undefined) return name;
     if (getCatalogScalar(name) !== undefined) {
+      if (hostOnlyScalars.has(name) && !this.#hostScalars) {
+        this.#collector.add({
+          code: "PH-SCALAR-INTERNAL",
+          definition: { kind: "scalar", key: name },
+          path,
+          message: `${name} is internal to the reactor host. A document model cannot use it.`,
+          received: name,
+          repair:
+            "Use ph.Unknown() for an unconstrained value, or ph.object(...) for a structured one.",
+        });
+        throw new WalkAbort();
+      }
       this.catalogScalars.add(name);
       return name;
     }

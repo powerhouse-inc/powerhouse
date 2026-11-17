@@ -105,36 +105,53 @@ export const ${v.camelName}Items = ${v.camelName}Model.module("items", {
 });
 `.raw;
 
+/** A version's modules: the exported module constant and its file under `modules/`. */
+export type CodeFirstVersionModules = readonly {
+  readonly constName: string;
+  readonly file: string;
+}[];
+
+/**
+ * A version's `index.ts`. Scaffolding writes version 1 with its items
+ * module; migrating a stored model writes every version with its modules.
+ */
 export const codeFirstVersionTemplate = (
   v: CodeFirstDocumentModelTemplateArgs,
+  version = 1,
+  modules: CodeFirstVersionModules = [
+    { constName: `${v.camelName}Items`, file: "items" },
+  ],
 ) =>
   ts`
 /**
- * Version 1 of the ${v.displayName} model. To add version 2, copy this
- * directory to \`v2\`, set \`version: 2\` in its \`definition.ts\`, and list the
+ * Version ${version} of the ${v.displayName} model. To add version ${version + 1}, copy this
+ * directory to \`v${version + 1}\`, set \`version: ${version + 1}\` in its \`definition.ts\`, and list the
  * new version in \`../index.ts\` and in \`../upgrades/index.ts\`.
  */
 import { ${v.camelName}Model } from "./definition.js";
-import { ${v.camelName}Items } from "./modules/items.js";
+${modules.map(({ constName, file }) => `import { ${constName} } from "./modules/${file}.js";`).join("\n")}
 
-export const ${v.camelName}V1 = ${v.camelName}Model.version({
-  modules: [${v.camelName}Items],
+export const ${v.camelName}V${version} = ${v.camelName}Model.version({
+  modules: [${modules.map(({ constName }) => constName).join(", ")}],
 });
 `.raw;
 
+/** `upgrades/index.ts`: every version after the first imports its transition from `vN.ts`. */
 export const codeFirstUpgradesTemplate = (
   v: CodeFirstDocumentModelTemplateArgs,
-) =>
-  ts`
+  versions: readonly number[] = [1],
+) => {
+  const transitions = versions.slice(1);
+  return ts`
 /**
  * Every version the ${v.displayName} model publishes, and the upgrade into
  * each version after the first. Version N adds \`vN.ts\` beside this file with
  * the transition from version N-1, lists N in \`supportedVersions\`, and keys
  * the transition here as \`vN\`.
  */
-import { latestVersionOf, type UpgradeManifest } from "document-model";
+import { latestVersionOf, type UpgradeManifest } from "document-model";${transitions.map((version) => `\nimport { v${version} } from "./v${version}.js";`).join("")}
 
-const supportedVersions = [1] as const;
+const supportedVersions = [${versions.join(", ")}] as const;
 
 export const ${v.camelName}UpgradeManifest: UpgradeManifest<
   typeof supportedVersions
@@ -142,11 +159,16 @@ export const ${v.camelName}UpgradeManifest: UpgradeManifest<
   documentType: ${JSON.stringify(v.documentType)},
   latestVersion: latestVersionOf(supportedVersions),
   supportedVersions,
-  upgrades: {},
+  upgrades: {${transitions.length === 0 ? "" : ` ${transitions.map((version) => `v${version}`).join(", ")} `}},
 };
 `.raw;
+};
 
-export const codeFirstIndexTemplate = (v: CodeFirstDocumentModelTemplateArgs) =>
+/** The model's `index.ts`: the family of every version, the latest one, and the manifest. */
+export const codeFirstIndexTemplate = (
+  v: CodeFirstDocumentModelTemplateArgs,
+  versions: readonly number[] = [1],
+) =>
   ts`
 /**
  * The ${v.displayName} document model. Each version is a named export, and
@@ -154,18 +176,18 @@ export const codeFirstIndexTemplate = (v: CodeFirstDocumentModelTemplateArgs) =>
  */
 import { defineDocumentModelFamily, materialize } from "document-model";
 import { ${v.camelName}UpgradeManifest as declaredUpgradeManifest } from "./upgrades/index.js";
-import { ${v.camelName}V1 } from "./v1/index.js";
+${versions.map((version) => `import { ${v.camelName}V${version} } from "./v${version}/index.js";`).join("\n")}
 
 const family = materialize(
   defineDocumentModelFamily({
-    versions: [${v.camelName}V1],
+    versions: [${versions.map((version) => `${v.camelName}V${version}`).join(", ")}],
     upgradeManifest: declaredUpgradeManifest,
   }),
 );
 
-export const ${v.pascalName}V1 = family.at(1);
+${versions.map((version) => `export const ${v.pascalName}V${version} = family.at(${version});`).join("\n\n")}
 
-export const ${v.pascalName} = ${v.pascalName}V1;
+export const ${v.pascalName} = ${v.pascalName}V${versions.at(-1) ?? 1};
 
 export const ${v.camelName}UpgradeManifest = family.upgradeManifest;
 `.raw;
