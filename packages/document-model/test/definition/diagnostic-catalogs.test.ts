@@ -57,6 +57,7 @@ describe("layer diagnostic catalogs", () => {
       "PH-SG-DUPLICATE-COORDINATE",
       "PH-SG-FIELD-PARENT-INVALID",
       "PH-SG-RESOLVE-TYPE-INVALID",
+      "PH-SG-ENTITY-INVALID",
       "PH-SG-INTERFACE-UNIMPLEMENTED",
       "PH-SG-FEDERATION-UNSUPPORTED",
     ]);

@@ -83,10 +83,17 @@ function isVersionList(value: unknown): value is readonly number[] {
   );
 }
 
+/**
+ * A module keeps its stored model in `documentModel.global`. A namespace that
+ * exports a `reducer` beside the stored model itself, as a generated version
+ * barrel does, is not a module; the modules it exports are visited instead.
+ */
 function isDocumentModelModule(record: Readonly<Record<string, unknown>>) {
+  if (typeof record.reducer !== "function") return false;
+  const documentModel = snapshotRecord(record.documentModel, undefined, []);
   return (
-    typeof record.reducer === "function" &&
-    snapshotRecord(record.documentModel, undefined, []).ok
+    documentModel.ok &&
+    snapshotRecord(documentModel.value.global, undefined, []).ok
   );
 }
 

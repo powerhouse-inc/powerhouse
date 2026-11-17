@@ -2,7 +2,10 @@ import { z } from "zod";
 import { defineCatalogScalar } from "../define-catalog-scalar.js";
 import { matchesScalarPattern } from "../pattern.js";
 
-export const addressScalar = defineCatalogScalar({
+export const addressScalar = defineCatalogScalar<
+  "Address",
+  `${string}:0x${string}`
+>({
   example: "eip155:0x0000000000000000000000000000000000000000",
   name: "Address",
   typescriptType: "`${string}:0x${string}`",

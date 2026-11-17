@@ -4,7 +4,14 @@
  * subscriptions over WebSocket, and package scalars.
  */
 import { defineScalar } from "document-model/scalars";
-import { ph } from "document-model";
+import { hostScalars, ph } from "document-model";
+import {
+  buildClientSchema,
+  getIntrospectionQuery,
+  type IntrospectionQuery,
+  lexicographicSortSchema,
+  printSchema,
+} from "graphql";
 import { gql } from "graphql-tag";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -278,6 +285,104 @@ describe("type names that Object.prototype also has", () => {
     expect(Object.hasOwn(Object, "computed")).toBe(false);
     expect(Object.hasOwn(Object.prototype.toString, "__resolveType")).toBe(
       false,
+    );
+  });
+});
+
+describe("root descriptions, entities and host scalars", () => {
+  const meta = (filter: unknown) => ({ echo: filter ?? null });
+
+  class EntitiesSdl extends BaseSubgraph {
+    override name = "entities-sdl";
+    override typeDefs = gql`
+      """
+      Subgraph definition
+      """
+      type Query {
+        meta(filter: JSONObject): JSONObject!
+        profiles: [Profile!]!
+      }
+      type Profile {
+        id: ID!
+      }
+      type Builder @key(fields: "id") {
+        id: ID!
+        name: String
+      }
+    `;
+    override resolvers = {
+      Query: {
+        meta: (_: unknown, args: { filter?: unknown }) => meta(args.filter),
+        profiles: () => [],
+      },
+    };
+  }
+
+  const Profile = ph.object("Profile", {
+    fields: { id: ph.ID({ required: true }) },
+  });
+  const Builder = ph.object("Builder", {
+    fields: { id: ph.ID({ required: true }), name: ph.String() },
+  });
+
+  class EntitiesTyped extends Subgraph {
+    static override readonly subgraphName = "entities-typed";
+    static override getSchema(schema: SchemaBuilder<EntitiesTyped>) {
+      return [
+        schema.root("query", { description: "Subgraph definition" }),
+        schema.query("meta", {
+          args: { filter: hostScalars.JSONObject() },
+          type: hostScalars.JSONObject({ required: true }),
+          resolve: ({ args }) => meta(args.filter),
+        }),
+        schema.query("profiles", {
+          type: ph.list(ph.ref(Profile, { required: true }), {
+            required: true,
+          }),
+          resolve: () => [],
+        }),
+        schema.type(Builder),
+        schema.entity(Builder, { key: "id" }),
+      ];
+    }
+  }
+
+  it("serve as the schema-first subgraph with the same SDL does", async () => {
+    const current = await serve([EntitiesSdl, EntitiesTyped]);
+    const both = async (query: string) => {
+      const [sdl, typed] = await Promise.all(
+        ["entities-sdl", "entities-typed"].map((name) =>
+          current.post(`/graphql/${name}`, query),
+        ),
+      );
+      expect(typed).toEqual(sdl);
+      return typed as { data?: Record<string, unknown> };
+    };
+    const introspection = await both(getIntrospectionQuery());
+    const served = printSchema(
+      lexicographicSortSchema(
+        buildClientSchema(introspection.data as unknown as IntrospectionQuery),
+      ),
+    );
+    expect(served).toContain('"""Subgraph definition"""\ntype Query {');
+    expect(served).toContain(
+      "_entities(representations: [_Any!]!): [_Entity]!",
+    );
+    expect(served).toContain("union _Entity = Builder");
+    expect(await both('{ meta(filter: { a: [1, "b"] }) }')).toEqual({
+      data: { meta: { echo: { a: [1, "b"] } } },
+    });
+    expect(
+      await both(
+        '{ _entities(representations: [{ __typename: "Builder", id: "b1" }]) { ... on Builder { id } } }',
+      ),
+    ).toEqual({ data: { _entities: [{ id: "b1" }] } });
+    const typedSdl = (await current.post(
+      "/graphql/entities-typed",
+      "{ _service { sdl } }",
+    )) as { data: { _service: { sdl: string } } };
+    expect(typedSdl.data._service.sdl).toContain(
+      'type Builder @key(fields: "id") {',
     );
   });
 });

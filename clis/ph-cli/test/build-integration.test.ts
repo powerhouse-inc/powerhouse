@@ -1,5 +1,4 @@
-// `runBuild` end to end on the fixtures under test/fixtures, built in place
-// the way `ph build` builds a project, every step running for every one.
+// `runBuild` end to end on fixture projects, every build step running.
 
 import {
   chmodSync,
@@ -36,6 +35,7 @@ import {
 } from "vitest";
 import { runBuild } from "../src/services/build.js";
 import type { BuildArgs } from "../src/types.js";
+import { treeDigest } from "./staged-build-project.js";
 
 const linkType = process.platform === "win32" ? "junction" : "dir";
 
@@ -341,16 +341,27 @@ describe("runBuild on a mixed package", () => {
 // The common case, and the one this work must leave alone: no pieces/ at all,
 // so nothing the piece pass does may show up in the output or the manifest.
 describe("runBuild on a package with no pieces", () => {
-  const fixture = join(fixtures, "classic-package");
+  const source = join(fixtures, "classic-package");
+  const fixture = mkdtempSync(join(fixtures, ".classic-build-"));
   const dist = join(fixture, "dist");
   const sourceManifest = join(fixture, "powerhouse.manifest.json");
 
+  beforeAll(() => {
+    cpSync(source, fixture, { recursive: true });
+  });
+
+  afterAll(() => {
+    rmSync(fixture, { recursive: true, force: true });
+  });
+
   it("builds browser, node, types and the stylesheet, and copies the manifest", async () => {
     clean(fixture);
+    const templateBefore = treeDigest(source, ["."]);
     process.chdir(fixture);
 
     await runBuild(args);
 
+    expect(treeDigest(source, ["."])).toEqual(templateBefore);
     expect(existsSync(join(dist, "browser", "index.js"))).toBe(true);
     expect(
       existsSync(join(dist, "browser", "document-models", "index.js")),

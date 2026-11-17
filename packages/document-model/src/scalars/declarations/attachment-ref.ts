@@ -2,7 +2,10 @@ import { z } from "zod";
 import { defineCatalogScalar } from "../define-catalog-scalar.js";
 import { matchesScalarPattern } from "../pattern.js";
 
-export const attachmentRefScalar = defineCatalogScalar({
+export const attachmentRefScalar = defineCatalogScalar<
+  "AttachmentRef",
+  `attachment://v${number}:${string}`
+>({
   example:
     "attachment://v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   name: "AttachmentRef",

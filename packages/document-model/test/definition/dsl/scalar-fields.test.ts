@@ -5,6 +5,11 @@ import type {
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 import { ph } from "../../../src/definition/dsl/field.js";
+import {
+  defineDocumentModel,
+  hostScalars,
+  materialize,
+} from "../../../src/definition/index.js";
 import type { OutputOf } from "../../../src/definition/dsl/types.js";
 import { DefinitionError } from "../../../src/definition/kernel/diagnostics.js";
 import {
@@ -92,6 +97,13 @@ describe("catalog scalar factories", () => {
     expectTypeOf<OutputOf<ReturnType<typeof ph.Money>>>().toEqualTypeOf<
       number | null | undefined
     >();
+    // The examples are strings; the catalog's template literal types survive them.
+    expectTypeOf<
+      OutputOf<ReturnType<typeof ph.AttachmentRef<true>>>
+    >().toEqualTypeOf<`attachment://v${number}:${string}`>();
+    expectTypeOf<
+      OutputOf<ReturnType<typeof ph.Address<true>>>
+    >().toEqualTypeOf<`${string}:0x${string}`>();
   });
 
   it("validate with the catalog schema", () => {
@@ -182,6 +194,34 @@ describe("ph.scalar", () => {
       received: "JSONObject",
       repair:
         "Use ph.Unknown() for an unconstrained value, or ph.object(...) for a structured one.",
+    });
+  });
+
+  it("offers host-only scalars as hostScalars, which a document model refuses", () => {
+    const field = hostScalars.JSONObject({ required: true });
+    expect(field.scalarName).toBe("JSONObject");
+    const context = defineDocumentModel({
+      id: "test/host-scalar",
+      name: "HostScalar",
+      description: "",
+      extension: "test",
+      version: 1,
+      author: { name: "Test" },
+      scopes: {
+        global: {
+          schema: ph.object("HostScalarState", { fields: { meta: field } }),
+          initialValue: { meta: {} },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    expect(
+      rejection(() => materialize(context.version({ modules: [] }))),
+    ).toMatchObject({
+      code: "PH-SCALAR-INTERNAL",
+      definition: { kind: "scalar", key: "JSONObject" },
+      message:
+        "JSONObject is internal to the reactor host. A document model cannot use it.",
     });
   });
 

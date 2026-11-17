@@ -35,6 +35,7 @@ describe("the package entry", () => {
       "createSubgraphEntryBuilders",
       "defineDocumentModel",
       "defineDocumentModelFamily",
+      "hostScalars",
       "inspectDocumentModelDefinition",
       "materialize",
       "operationsByActionType",

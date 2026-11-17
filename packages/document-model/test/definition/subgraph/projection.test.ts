@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   compileSubgraph,
   createSubgraphEntryBuilders,
+  hostScalars,
   ph,
   projectSubgraphGraphQL,
   type SubgraphEntry,
@@ -149,6 +150,44 @@ describe("projectSubgraphGraphQL", () => {
         type TransferPayment {
           iban: Iban!
         }
+      `),
+    );
+  });
+
+  it("serves a root type's description, an entity's keys and a host scalar", () => {
+    const Owner = ph.object("Owner", { fields: { id: ph.ID() } });
+    const Builder = ph.object("Builder", {
+      fields: {
+        id: ph.PHID(),
+        owner: ph.ref(Owner),
+        contributors: ph.list(ph.ref(Owner, { required: true })),
+      },
+    });
+    expect(
+      projected([
+        schema.root("query", { description: "Subgraph definition" }),
+        schema.query("meta", {
+          type: hostScalars.JSONObject({ required: true }),
+          resolve: () => ({}),
+        }),
+        schema.mutation("touch", { type: ph.Boolean(), resolve: none }),
+        schema.type(Builder),
+        schema.entity(Builder, { key: "id" }),
+        schema.entity(Builder, { key: "owner { id }" }),
+      ]),
+    ).toStrictEqual(
+      sdl(`
+        scalar PHID
+        scalar JSONObject
+        "Subgraph definition"
+        type Query { meta: JSONObject! }
+        type Mutation { touch: Boolean }
+        type Builder @key(fields: "id") @key(fields: "owner { id }") {
+          id: PHID
+          owner: Owner
+          contributors: [Owner!]
+        }
+        type Owner { id: ID }
       `),
     );
   });

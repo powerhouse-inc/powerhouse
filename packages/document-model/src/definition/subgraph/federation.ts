@@ -7,9 +7,10 @@ import type {
 } from "@powerhousedao/shared/document-model";
 
 /**
- * The directives Apollo Federation 1 and 2 define. Entities and federation
- * composition are out of scope for typed subgraphs, so their directives are
- * refused rather than projected into a schema that composes differently.
+ * The directives Apollo Federation 1 and 2 define. A typed subgraph declares
+ * an entity's `@key` only through `schema.entity`, which puts it on the
+ * object type. Every other use is refused rather than projected into a
+ * schema that composes differently.
  */
 export const FEDERATION_DIRECTIVES: ReadonlySet<string> = new Set([
   "key",

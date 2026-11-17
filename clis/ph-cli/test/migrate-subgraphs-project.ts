@@ -13,8 +13,8 @@ import { gqlModule, installSubgraphDependencies } from "./subgraph-project.js";
  * A schema-first subgraph with an object, an input with defaults, an enum,
  * a union and an interface with __resolveType, an object type only the
  * interface leads to, a computed field, root fields without a resolver (one
- * named like an `Object.prototype` member), a field config object behind an
- * identifier, a mutation, a subscription, `this` in its inline resolvers and
+ * named like an `Object.prototype` member), const arrow references,
+ * a mutation, a subscription, `this` in its inline resolvers and
  * a protected BaseSubgraph helper.
  */
 export const TWIN_FILES: Readonly<Record<string, string>> = {
@@ -45,13 +45,12 @@ type BookRow = { id: string; title: string; status: string };
 type FilmRow = { id: string; title: string; minutes: number };
 type AuthorRow = { id: string; name: string };
 
-const motto = { resolve: () => "Read more." };
-class FieldConfig {
-  resolve() {
-    return "Read on.";
-  }
-}
-const slogan = new FieldConfig();
+const motto = () => "Read more.";
+const slogan = () => "Read on.";
+const resolveRenamed = (event: { book: BookRow }, ...rest: unknown[]) => {
+  if (rest.length !== 3) throw new Error("Subscription resolver lost arguments");
+  return event.book;
+};
 type Filter = { status: string; limit: number; tags: string[] | null };
 
 export class CatalogSubgraph extends BaseSubgraph {
@@ -108,7 +107,7 @@ export class CatalogSubgraph extends BaseSubgraph {
     Subscription: {
       renamed: {
         subscribe: () => this.#renames(),
-        resolve: (event: { book: BookRow }) => event.book,
+        resolve: resolveRenamed,
       },
     },
   };

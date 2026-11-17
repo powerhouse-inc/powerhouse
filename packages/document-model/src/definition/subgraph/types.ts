@@ -86,7 +86,9 @@ export type SubgraphEntry<
     | "subscription"
     | "computed-field"
     | "resolve-type"
-    | "type";
+    | "type"
+    | "root"
+    | "entity";
   /** Type-only; it makes an entry accept a narrower subgraph, request and info. */
   readonly __types?: (
     subgraph: TSubgraph,
@@ -216,6 +218,26 @@ export type SubgraphEntryBuilders<TSubgraph, TRequest, TInfo> = {
    * resolver.
    */
   type(type: AnyTypeDescriptor): SubgraphEntry<TSubgraph, TRequest, TInfo>;
+
+  /**
+   * Describes a root type, named by the kind of its fields: `"query"`
+   * describes `Query`. Some entry of that kind must exist.
+   */
+  root(
+    kind: "query" | "mutation" | "subscription",
+    spec: { readonly description: string },
+  ): SubgraphEntry<TSubgraph, TRequest, TInfo>;
+
+  /**
+   * Makes an object type an Apollo Federation entity with the key `key`, a
+   * selection of its fields such as `"id"`, served as `@key(fields: key)`.
+   * One entry per key. The host resolves a reference to the representation
+   * it receives.
+   */
+  entity(
+    type: ObjectDescriptor,
+    spec: { readonly key: string },
+  ): SubgraphEntry<TSubgraph, TRequest, TInfo>;
 };
 
 type BoundResolver<TSubgraph, TRequest, TInfo> = (

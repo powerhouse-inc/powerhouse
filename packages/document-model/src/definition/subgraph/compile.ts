@@ -1,16 +1,17 @@
 import type {
+  CatalogScalarName,
   DefinitionPath,
+  DirectiveUseDefinition,
   FieldDefinition,
   InputFieldDefinition,
   NamedGraphQLTypeDefinition,
-  PowerhouseScalarName,
   SubgraphDefinition,
   SubgraphEntryDefinition,
   SubgraphScalarReferenceDefinition,
   TypeReferenceDefinition,
 } from "@powerhousedao/shared/document-model";
 import type { z } from "zod";
-import { documentModelScalars } from "../../scalars/catalog.js";
+import { scalarCatalog } from "../../scalars/catalog.js";
 import { storedScalarDefinition } from "../../scalars/stored-definition.js";
 import type { ScalarDefinition } from "../../scalars/types.js";
 import { DescriptorWalk } from "../compiler/descriptor-walk.js";
@@ -42,6 +43,7 @@ import type {
 } from "./types.js";
 
 type Collector = DefinitionDiagnosticCollector<SubgraphDiagnosticCode>;
+type RootName = (typeof ROOT_TYPES)[keyof typeof ROOT_TYPES];
 type AnyBinding = SubgraphBinding<unknown, unknown, unknown>;
 
 const SUBGRAPH_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
@@ -102,7 +104,10 @@ class SubgraphWalk {
     this.#collector = collector;
     // Computed entries add fields to object types after the walk, so an
     // object may declare none of its own; compileSubgraph checks the result.
-    this.walk = new DescriptorWalk(collector, { deferObjectFields: true });
+    this.walk = new DescriptorWalk(collector, {
+      deferObjectFields: true,
+      hostScalars: true,
+    });
   }
 
   claim(coordinate: string, path: DefinitionPath): boolean {
@@ -162,8 +167,8 @@ function subgraphScalars(
   catalogScalars: ReadonlySet<string>,
   packageScalars: ReadonlyMap<string, ScalarDefinition>,
 ): readonly SubgraphScalarReferenceDefinition[] {
-  const catalog = documentModelScalars
-    .map(({ name }) => name as PowerhouseScalarName)
+  const catalog = scalarCatalog
+    .map(({ name }) => name as CatalogScalarName)
     .filter((name) => catalogScalars.has(name))
     .map(
       (name) =>
@@ -259,6 +264,94 @@ function checkInterfaceImplementers(
       repair: `Add schema.type(<Implementer>) for each object type that implements ${type.name}.`,
     });
   }
+}
+
+const KEY_NAME = /^[_A-Za-z][_0-9A-Za-z]*$/;
+
+const namedTypeOf = (type: TypeReferenceDefinition): string =>
+  type.kind === "list" ? namedTypeOf(type.item) : type.name;
+
+/** Why `key` is not a selection of `typeName`'s fields, or undefined when it is. */
+function keySelectionError(
+  key: string,
+  typeName: string,
+  types: ReadonlyMap<string, NamedGraphQLTypeDefinition>,
+): string | undefined {
+  const tokens = key.replaceAll(",", " ").match(/[_A-Za-z][_0-9A-Za-z]*|\S/g);
+  let position = 0;
+  const selection = (parent: string): string | undefined => {
+    const type = types.get(parent);
+    if (type?.kind !== "object" && type?.kind !== "interface") {
+      return `${parent} has no fields to select.`;
+    }
+    let count = 0;
+    while (tokens !== null && position < tokens.length) {
+      const name = tokens[position];
+      if (name === "}") break;
+      position++;
+      if (!KEY_NAME.test(name)) return `${name} is not a field name.`;
+      const field = type.fields.find((candidate) => candidate.name === name);
+      if (field === undefined) return `${parent} has no field ${name}.`;
+      if (field.args !== undefined && field.args.length > 0) {
+        return `${parent}.${name} has arguments, which an entity key cannot select.`;
+      }
+      count++;
+      const fieldType = types.get(namedTypeOf(field.type));
+      if (fieldType?.kind === "interface" || fieldType?.kind === "union") {
+        return `${parent}.${name} has ${fieldType.kind} type, which cannot be part of an entity key.`;
+      }
+      if (tokens[position] !== "{") {
+        if (fieldType?.kind === "object") {
+          return `${parent}.${name} needs a selection of its fields.`;
+        }
+        continue;
+      }
+      position++;
+      const error = selection(namedTypeOf(field.type));
+      if (error !== undefined) return error;
+      if (tokens[position++] !== "}") return "A { is not closed.";
+    }
+    return count === 0 ? `The selection of ${parent} is empty.` : undefined;
+  };
+  const error = selection(typeName);
+  if (error !== undefined) return error;
+  return tokens !== null && position < tokens.length
+    ? "A } has no matching {."
+    : undefined;
+}
+
+/** The types, with each entity's keys as `@key` directives. */
+function withEntityKeys(
+  collector: Collector,
+  types: readonly NamedGraphQLTypeDefinition[],
+  keys: ReadonlyMap<
+    string,
+    readonly { readonly key: string; readonly path: DefinitionPath }[]
+  >,
+): readonly NamedGraphQLTypeDefinition[] {
+  const byName = new Map(types.map((type) => [type.name, type]));
+  return types.map((type) => {
+    const uses = keys.get(type.name);
+    if (uses === undefined || type.kind !== "object") return type;
+    const directives = uses.flatMap(
+      ({ key, path }): DirectiveUseDefinition[] => {
+        const error = keySelectionError(key, type.name, byName);
+        if (error === undefined) {
+          return [{ name: "key", arguments: [{ name: "fields", value: key }] }];
+        }
+        collector.add({
+          code: "PH-SG-ENTITY-INVALID",
+          path: [...path, "spec", "key"],
+          message: `The key ${JSON.stringify(key)} is not a selection of ${type.name}'s fields: ${error}`,
+          expected: `a selection of ${type.name}'s fields, such as "id"`,
+          received: key,
+          repair: `Name fields ${type.name} declares.`,
+        });
+        return [];
+      },
+    );
+    return { ...type, directives };
+  });
 }
 
 /**
@@ -447,13 +540,74 @@ export function compileSubgraph<TSubgraph, TRequest, TInfo>(input: {
     }
   });
 
-  const { walk } = subgraph;
-  const types = walk.definitions.map((type): NamedGraphQLTypeDefinition => {
-    const fields = computed.get(type.name);
-    return fields === undefined || type.kind !== "object"
-      ? type
-      : { ...type, fields: [...type.fields, ...fields] };
+  const rootDescriptions: Partial<Record<RootName, string>> = {};
+  records.forEach((record, index) => {
+    if (
+      record?.kind !== "root" ||
+      record.root === undefined ||
+      record.description === undefined
+    ) {
+      return;
+    }
+    const path = ["entries", index];
+    const typeName = ROOT_TYPES[record.root];
+    if (!entries.some(({ kind }) => kind === record.root)) {
+      collector.add({
+        code: "PH-SG-ENTRY-INVALID",
+        path: [...path, "kind"],
+        message: `No ${record.root} entry declares a field, so the subgraph serves no ${typeName} type to describe.`,
+        received: record.root,
+        repair: `Add a ${record.root} entry, or remove the description of ${typeName}.`,
+      });
+      return;
+    }
+    if (!subgraph.claim(`${typeName} description`, path)) return;
+    rootDescriptions[typeName] = record.description;
   });
+
+  const keys = new Map<
+    string,
+    { readonly key: string; readonly path: DefinitionPath }[]
+  >();
+  records.forEach((record, index) => {
+    if (
+      record?.kind !== "entity" ||
+      record.type === undefined ||
+      record.key === undefined
+    ) {
+      return;
+    }
+    const path = ["entries", index];
+    const definition = subgraph.reached(record.type, [...path, "type"]);
+    if (definition === undefined) {
+      collector.add({
+        code: "PH-SG-ENTITY-INVALID",
+        path: [...path, "type"],
+        message: `No entry of this subgraph reaches ${record.type.name}.`,
+        received: record.type.name,
+        repair: `Return ${record.type.name} from an entry, add schema.type(${record.type.name}), or remove the entity.`,
+      });
+      return;
+    }
+    if (!subgraph.claim(`${definition.name} @key(${record.key})`, path)) {
+      return;
+    }
+    keys.set(definition.name, [
+      ...(keys.get(definition.name) ?? []),
+      { key: record.key, path },
+    ]);
+  });
+
+  const { walk } = subgraph;
+  const withFields = walk.definitions.map(
+    (type): NamedGraphQLTypeDefinition => {
+      const fields = computed.get(type.name);
+      return fields === undefined || type.kind !== "object"
+        ? type
+        : { ...type, fields: [...type.fields, ...fields] };
+    },
+  );
+  const types = withEntityKeys(collector, withFields, keys);
   walk.checkObjectFields(types);
   walk.checkInterfaceImplementations(types);
   checkInterfaceImplementers(collector, types);
@@ -477,7 +631,7 @@ export function compileSubgraph<TSubgraph, TRequest, TInfo>(input: {
       repair: `Rename the ${kind} type; the subgraph declares ${name} from its entries.`,
     });
   }
-  const roots = subgraphRootTypes({ entries });
+  const roots = subgraphRootTypes({ entries, rootDescriptions });
   for (const use of federationDirectiveUses([...roots, ...types])) {
     collector.add({
       code: "PH-SG-FEDERATION-UNSUPPORTED",
@@ -485,7 +639,7 @@ export function compileSubgraph<TSubgraph, TRequest, TInfo>(input: {
       message: `@${use.name} is an Apollo Federation directive, which a typed subgraph does not support.`,
       received: `@${use.name}`,
       repair:
-        "Remove the directive. Federation entities are not supported yet.",
+        "Remove the directive. Declare an entity's key with schema.entity(Type, { key }); typed subgraphs support no other federation directive.",
     });
   }
 
@@ -505,6 +659,7 @@ export function compileSubgraph<TSubgraph, TRequest, TInfo>(input: {
     types,
     entries,
     scalars,
+    ...(Object.keys(rootDescriptions).length > 0 && { rootDescriptions }),
     definitionOrder: [
       ...scalars.map((scalar) => scalar.name),
       ...roots.map((root) => root.name),

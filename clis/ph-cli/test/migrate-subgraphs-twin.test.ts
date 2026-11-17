@@ -5,13 +5,20 @@ import {
   lexicographicSortSchema,
   printSchema,
 } from "graphql";
-import { readFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, rmSync, symlinkSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
+import { projectTypeErrors } from "@powerhousedao/codegen";
 import { startCodeFirstHost } from "../../../packages/reactor-api/test/utils/code-first-host.js";
+import type { SubgraphClass } from "../../../packages/reactor-api/src/graphql/types.js";
 import { migrateSubgraphs } from "../src/services/migrate-subgraphs.js";
-import { TWIN_FILES, writeProject } from "./migrate-subgraphs-project.js";
+import {
+  snapshot,
+  TWIN_FILES,
+  writeProject,
+} from "./migrate-subgraphs-project.js";
 
 const OPERATIONS: readonly [string, Record<string, unknown>?, string?][] = [
   [
@@ -36,6 +43,198 @@ const OPERATIONS: readonly [string, Record<string, unknown>?, string?][] = [
 
 const SUBSCRIPTION = "subscription { renamed { id title } }";
 const RENAME = 'mutation { rename(id: "b2", title: "Emma II") { id } }';
+
+function typedProject(files: Readonly<Record<string, string>>): string {
+  const root = writeProject({
+    "tsconfig.json": JSON.stringify({
+      compilerOptions: {
+        module: "nodenext",
+        strict: true,
+        skipLibCheck: true,
+        noEmit: true,
+      },
+      include: ["subgraphs/**/*.ts"],
+    }),
+    ...files,
+  });
+  symlinkSync(
+    dirname(createRequire(import.meta.url).resolve("typescript/package.json")),
+    join(root, "node_modules/typescript"),
+    "junction",
+  );
+  return root;
+}
+
+it.each([
+  ...[
+    {
+      name: "typed prefix",
+      header:
+        "const config = { resolve(parent: number): number { void parent; return arguments.length; } };",
+      resolvers: "{ Query: { value: config } }",
+    },
+    {
+      name: "function",
+      header:
+        "let value = (): number => 0; value = function (): number { return arguments.length; };",
+      resolvers: "{ Query: { value } }",
+    },
+    {
+      name: "root",
+      header:
+        "const handlers = { value(): number { return 0; } }; handlers.value = function (): number { return arguments.length; };",
+      resolvers: "{ Query: handlers }",
+    },
+    {
+      name: "config",
+      header:
+        "const config = { resolve(): number { return 0; } }; config.resolve = function (): number { return arguments.length; };",
+      resolvers: "{ Query: { value: config } }",
+    },
+  ].map((sample) => ({ ...sample, convertible: false, typeError: false })),
+  {
+    name: "stable const arrow aliases",
+    header:
+      "const count = (...values: unknown[]) => values.length; const read = count;",
+    resolvers: "{ Query: { value: read } }",
+    convertible: true,
+    typeError: false,
+  },
+  {
+    name: "stable const arrow with a short signature",
+    header: "const read = () => 4;",
+    resolvers: "{ Query: { value: read } }",
+    convertible: true,
+    typeError: true,
+  },
+  {
+    name: "stable const arrow with a typed prefix",
+    header:
+      "const read = (parent: number, ...values: unknown[]) => { void parent; return values.length + 1; };",
+    resolvers: "{ Query: { value: read } }",
+    convertible: true,
+    typeError: true,
+  },
+])(
+  "preserves $name resolver behavior or refuses it unchanged",
+  async ({ header, resolvers, convertible, typeError }) => {
+    const files = {
+      "subgraphs/count/index.ts": `import { BaseSubgraph } from "@powerhousedao/reactor-api";
+import { gql } from "graphql-tag";
+${header}
+export class CountSubgraph extends BaseSubgraph {
+  name = "count";
+  typeDefs = gql\`type Query { value: Int }\`;
+  resolvers = ${resolvers};
+}
+`,
+    };
+    const original = typedProject(files);
+    const converted = typedProject(files);
+    const strict = typedProject(files);
+    try {
+      for (const root of [converted, strict]) {
+        let output = "";
+        const before = snapshot(root);
+        expect(
+          await migrateSubgraphs({
+            projectDir: root,
+            dirs: ["count"],
+            dryRun: false,
+            strictResolvers: root === strict,
+            out: (text) => void (output += text),
+          }),
+        ).toBe(convertible ? 0 : 1);
+        if (!convertible) {
+          expect(output).toContain("not converted");
+          expect(snapshot(root)).toEqual(before);
+          continue;
+        }
+        if (typeError) expect(output).toContain("resolver call disagrees");
+        expect(output).not.toContain("still rejected");
+        const check = projectTypeErrors(
+          root,
+          ["subgraphs/count"],
+          ["subgraphs/count/index.ts"],
+        );
+        if (check.kind !== "checked")
+          throw new Error("tsc did not check the project");
+        expect(check.errors.length).toBe(root === strict && typeError ? 1 : 0);
+      }
+      for (const root of [original, converted, strict]) {
+        const module = (await import(
+          pathToFileURL(join(root, "subgraphs/count/index.ts")).href
+        )) as { CountSubgraph: SubgraphClass };
+        const host = await startCodeFirstHost();
+        try {
+          await host.applyPackage("@acme/count", [module.CountSubgraph]);
+          expect(await host.post("/graphql/count", "{ value }")).toEqual({
+            data: { value: 4 },
+          });
+        } finally {
+          await host.close();
+        }
+      }
+    } finally {
+      for (const root of [original, converted, strict])
+        rmSync(root, { recursive: true, force: true });
+    }
+  },
+  120_000,
+);
+
+it("keeps a named generator resolver's recursive binding through migration and serving", async () => {
+  const files = {
+    "subgraphs/countdown/index.ts": `import { BaseSubgraph } from "@powerhousedao/reactor-api";
+import { gql } from "graphql-tag";
+export class CountdownSubgraph extends BaseSubgraph {
+  name = "countdown";
+  typeDefs = gql\`type Query { value(n: Int!): [Int!] }\`;
+  resolvers = { Query: {
+    value: function* recurse(_parent: unknown, { n }: { n: number }): Generator<number> {
+      yield n;
+      if (n > 0) yield* recurse(_parent, { n: n - 1 });
+    },
+  } };
+}
+`,
+  };
+  const original = typedProject(files);
+  const converted = typedProject(files);
+  try {
+    let output = "";
+    expect(
+      await migrateSubgraphs({
+        projectDir: converted,
+        dirs: ["countdown"],
+        dryRun: false,
+        out: (text) => void (output += text),
+      }),
+    ).toBe(0);
+    expect(output).toContain("converted CountdownSubgraph");
+    for (const root of [original, converted]) {
+      const module = (await import(
+        pathToFileURL(join(root, "subgraphs/countdown/index.ts")).href
+      )) as {
+        CountdownSubgraph: SubgraphClass;
+      };
+      const host = await startCodeFirstHost();
+      try {
+        await host.applyPackage("@acme/countdown", [module.CountdownSubgraph]);
+        expect(
+          await host.post("/graphql/countdown", "{ value(n: 3) }"),
+        ).toEqual({
+          data: { value: [3, 2, 1, 0] },
+        });
+      } finally {
+        await host.close();
+      }
+    }
+  } finally {
+    rmSync(original, { recursive: true, force: true });
+    rmSync(converted, { recursive: true, force: true });
+  }
+}, 120_000);
 
 async function serve(root: string) {
   const module = (await import(

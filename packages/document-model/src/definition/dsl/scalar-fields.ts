@@ -106,11 +106,40 @@ export const catalogScalarFactories = Object.fromEntries(
 const modelScalarNames = new Set(
   documentModelScalars.map((definition) => definition.name),
 );
-const hostOnlyScalars: ReadonlySet<string> = new Set(
+export const hostOnlyScalars: ReadonlySet<string> = new Set(
   scalarCatalog
     .map((definition) => definition.name)
     .filter((name) => !modelScalarNames.has(name)),
 );
+
+type HostScalarFactories = {
+  readonly [
+    S in CatalogScalarDefinition as S["name"] extends PowerhouseScalarName
+      ? never
+      : S["name"]
+  ]: ScalarFactory<ScalarValue<S>, `hostScalars.${S["name"]}`>;
+};
+
+/**
+ * @experimental Field-use factories for the catalog scalars only the reactor
+ * host declares, such as `hostScalars.JSONObject()`. A code-first subgraph
+ * may use them; a document model may not.
+ */
+export const hostScalarFactories = Object.freeze(
+  Object.fromEntries(
+    scalarCatalog
+      .filter((definition) => hostOnlyScalars.has(definition.name))
+      .map((definition) => [
+        definition.name,
+        scalarFactory(
+          `hostScalars.${definition.name}`,
+          definition.name,
+          definition.schema,
+          definition,
+        ),
+      ]),
+  ),
+) as HostScalarFactories;
 
 export function scalarField<
   TName extends string,

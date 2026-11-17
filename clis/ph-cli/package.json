@@ -83,6 +83,7 @@
     "remeda": "catalog:",
     "rolldown": "catalog:",
     "semver": "catalog:",
+    "ts-morph": "catalog:",
     "tsdown": "catalog:",
     "vite": "catalog:"
   },
@@ -91,7 +92,6 @@
     "@types/npm-registry-fetch": "^8.0.9",
     "@types/pg": "catalog:",
     "copyfiles": "catalog:",
-    "ts-morph": "catalog:",
     "write-package": "catalog:",
     "zod": "catalog:",
     "@powerhousedao/desktop": "workspace:*",

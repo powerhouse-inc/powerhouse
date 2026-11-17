@@ -7,14 +7,32 @@ export * from "./install-added-dependencies.js";
 export * from "./kysely.js";
 export * from "./migrate.js";
 export {
+  assertDocumentModelBarrelsWritable,
+  regenerateDocumentModelBarrels,
+} from "./document-model-generation.js";
+export {
+  migrateDocumentModel,
+  type DocumentModelMigration,
+  type DocumentModelMigrationFile,
+  type DocumentModelMigrationRefusal,
+  type DocumentModelMigrationReference,
+} from "./document-model-migration.js";
+export {
   generateAllSubgraphs,
   generateSubgraphDir,
 } from "./subgraph-generation.js";
 export {
+  castResolverTypeErrors,
   migrateSubgraph,
+  type ProjectTypeCheck,
+  type ProjectTypeError,
+  projectTypeErrors,
+  resolverCallErrors,
+  typeErrorMessage,
   sortedSchemaText,
   type SubgraphMigration,
   type SubgraphMigrationFile,
+  type ResolverTypeError,
   type SubgraphMigrationRefusal,
 } from "./subgraph-migration.js";
 export * from "./types.js";

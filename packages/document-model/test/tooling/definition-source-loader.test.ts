@@ -14,6 +14,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import "document-model";
 import { DefinitionSourceLoader } from "../../src/definition/tooling/definition-source-loader.js";
+import { Invoice } from "../definition/fixtures/invoice.js";
 import {
   countingImporter,
   LOADER_CONTRACT_CASES,
@@ -417,6 +418,33 @@ describe("DefinitionSourceLoader", () => {
     } finally {
       first.dispose();
       second.dispose();
+    }
+  });
+
+  it("reads the modules a version barrel exports beside its reducer and stored model", async () => {
+    // ph migrate --document-models keeps the names a generated version barrel
+    // exported: a reducer and the stored model's global state next to the module.
+    const fixture = materializeFixturePackage("control");
+    try {
+      const loader = new DefinitionSourceLoader({
+        importModule: () =>
+          Promise.resolve({
+            Invoice,
+            reducer: Invoice.reducer,
+            documentModel: Invoice.documentModel.global,
+          }),
+      });
+      const result = await loader.normalizeRequestedSources({
+        configFile: join(fixture.root, "powerhouse.config.json"),
+        packageRevision: packageRevisionOf(fixture.root),
+        sources: [{ specifier: "./src/catalog.ts" }],
+      });
+      expect(result.diagnostics).toEqual([]);
+      expect(
+        result.documentModels.map(({ source }) => source.exportPath),
+      ).toEqual([["Invoice"]]);
+    } finally {
+      fixture.dispose();
     }
   });
 
