@@ -80,6 +80,11 @@ describe("splitRunArgv", () => {
       "--explain=outputs",
       "-h",
     ]);
+    expect(splitRunArgv(["vetra", "--stop"])).toEqual({
+      host: "vetra",
+      own: ["--stop"],
+      argv: [],
+    });
   });
 
   it("hands over everything after a literal `--`", () => {

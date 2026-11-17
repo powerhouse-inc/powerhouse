@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { splitRunArgv } from "@powerhousedao/host-core";
 import { assertNodeVersion } from "@powerhousedao/shared/clis/utils";
-import { startRun } from "./services/run/start-run.js";
+import { startRun, stopRunningHost } from "./services/run/start-run.js";
 
 /**
  * `ph-run run <host> [verb] [runner arguments]`: what `ph run` does and nothing else `ph` does, so
@@ -14,8 +14,12 @@ async function main(args: string[]) {
   const { host, verb, own, argv } = splitRunArgv(args.slice(1));
   if (args[0] !== "run" || !host) {
     throw new Error(
-      "Usage: ph-run run <host> [verb] [--debug] [runner arguments]",
+      "Usage: ph-run run <host> [verb] [--debug] [--stop] [runner arguments]",
     );
+  }
+  if (own.includes("--stop")) {
+    await stopRunningHost({ host });
+    return;
   }
   await startRun({ host, verb, debug: own.includes("--debug"), argv });
 }

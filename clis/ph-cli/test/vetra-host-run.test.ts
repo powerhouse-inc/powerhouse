@@ -311,6 +311,7 @@ describe("ph run vetra", () => {
       host: "vetra",
       verb: undefined,
       debug: undefined,
+      stop: undefined,
       explain: undefined,
       argv: [],
     });
@@ -322,6 +323,7 @@ describe("ph run vetra", () => {
       host: "switchboard",
       verb: undefined,
       debug: undefined,
+      stop: undefined,
       explain: undefined,
       argv: [],
     });

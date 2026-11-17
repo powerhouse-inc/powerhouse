@@ -47,13 +47,14 @@ export function isRunnerArgsSchema(value: unknown): value is RunnerArgsSchema {
 export interface SplitRunArgv {
   host?: string;
   verb?: string;
-  /** `ph run`'s own arguments (`--debug`, `--explain <topic>`, help). */
+  /** `ph run`'s own arguments (`--debug`, `--stop`, `--explain <topic>`,
+   * help). */
   own: string[];
   /** Everything else, in order: the runner's. */
   argv: string[];
 }
 
-const OWN_FLAGS = new Set(["--debug", "--help", "-h"]);
+const OWN_FLAGS = new Set(["--debug", "--stop", "--help", "-h"]);
 
 /**
  * Splits what follows `ph run`. The host and the verb come before the

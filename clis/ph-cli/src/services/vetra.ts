@@ -18,7 +18,11 @@ import {
   POWERHOUSE_CONFIG_FILE,
 } from "../utils.js";
 import { wasFlagExplicitlyPassed } from "../utils/cli-connect-override.js";
-import { mergeDefaultDrives, rebaseDriveUrl } from "@powerhousedao/host-core";
+import {
+  installStopChannel,
+  mergeDefaultDrives,
+  rebaseDriveUrl,
+} from "@powerhousedao/host-core";
 import { parseDefaultDrivesUrl } from "../utils/parse-default-drives.js";
 import { resolveSwitchboardPort } from "../utils/resolve-switchboard-port.js";
 import {
@@ -418,6 +422,8 @@ export async function startVetra(args: VetraArgs) {
     const releaseRuntimeRecord = () =>
       clearVetraRuntime(projectDir, process.pid);
     process.on("exit", releaseRuntimeRecord);
+    // `ph vetra --restart` stops this one through it on Windows.
+    installStopChannel();
     process.on("SIGINT", () => {
       releaseRuntimeRecord();
       process.exit(130);

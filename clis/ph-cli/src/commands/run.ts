@@ -31,6 +31,14 @@ export const runHost = command({
       long: "debug",
       description: "Print resolved host/runner/verb before dispatch.",
     }),
+    stop: flag({
+      type: optional(boolean),
+      long: "stop",
+      description:
+        "Stop the project's running instance of this host instead of " +
+        "starting one: it shuts down as on Ctrl-C, and the command returns " +
+        "when it has.",
+    }),
     explain: option({
       type: optional(string),
       long: "explain",
@@ -53,6 +61,12 @@ export const runHost = command({
     if (args.explain !== undefined) {
       const { explainHost } = await import("../services/run/explain.js");
       await explainHost({ host: args.host, topic: args.explain });
+      return;
+    }
+    if (args.stop) {
+      const { stopRunningHost } =
+        await import("@powerhousedao/ph-run/start-run");
+      await stopRunningHost({ host: args.host });
       return;
     }
     const run = {

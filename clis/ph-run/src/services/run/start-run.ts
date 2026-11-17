@@ -3,6 +3,7 @@ import {
   clearRunRecord,
   emptyMaps,
   getVerb,
+  installStopChannel,
   isSchemaLike,
   loadHost,
   loadProducers,
@@ -17,6 +18,7 @@ import {
   resolveRunnerModule,
   runRecordOutputSource,
   RunnerError,
+  stopRun,
   STORE_VERBS,
   toStartedHandle,
   validateDeclaredHost,
@@ -86,6 +88,9 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
     );
   }
   const fn = getVerb(runner, specifier, verb);
+  // Before the verb starts anything: `ph run <host> --stop` reaches it from
+  // here on, on Windows too.
+  if (!ONE_SHOT_VERBS.has(verb) && !storeVerb) installStopChannel();
   const file = loaded.file;
   if (args.debug) {
     console.log({ host: loaded.host.name, runner: specifier, verb });
@@ -160,6 +165,41 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
     });
   }
   return result;
+}
+
+/**
+ * `ph run <host> --stop`: asks the project's running host to stop the way
+ * Ctrl-C in its terminal does, and waits until it has. It never kills.
+ */
+export async function stopRunningHost(args: {
+  host: string;
+  projectRoot?: string;
+}): Promise<void> {
+  const projectRoot = args.projectRoot ?? process.cwd();
+  const result = await stopRun(projectRoot, args.host);
+  switch (result.status) {
+    case "none":
+      console.log(`${args.host} is not running for this project.`);
+      return;
+    case "stopped":
+      console.log(`Stopped ${args.host} (pid ${result.pid}).`);
+      return;
+    case "foreign":
+      throw new RunnerError(
+        `.ph/run/${args.host}.json describes a live "${result.projectName}" (pid ${result.pid}), not this project.`,
+        "Stop it from its own project.",
+      );
+    case "unreachable":
+      throw new RunnerError(
+        `${args.host} (pid ${result.pid}) takes no stop request: it was started by a version without one.`,
+        "Press Ctrl-C in its terminal. Ending the process any other way leaves its stores as a crash does.",
+      );
+    case "timeout":
+      throw new RunnerError(
+        `${args.host} (pid ${result.pid}) was asked to stop and is still running.`,
+        "It may still be shutting down: run the command again to keep waiting.",
+      );
+  }
 }
 
 function assertNotRunning(

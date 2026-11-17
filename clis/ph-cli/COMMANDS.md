@@ -58,6 +58,10 @@ Arguments for the host's runner (e.g. --port 4001); they win over the host file.
 Print resolved host/runner/verb before dispatch.<br><br>
 **usage:** `--debug`<br>
 
+#### Stop <br>
+Stop the project's running instance of this host instead of starting one: it shuts down as on Ctrl-C, and the command returns when it has.<br><br>
+**usage:** `--stop`<br>
+
 #### Help <br>
 show help<br><br>
 **usage:** `--help, -h`<br>

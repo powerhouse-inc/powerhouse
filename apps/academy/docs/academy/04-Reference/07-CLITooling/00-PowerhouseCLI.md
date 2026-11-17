@@ -297,6 +297,8 @@ Run a host from the project's hosts/ folder: `ph run <host> [verb]`. The host's 
 ### Flags
 **Debug** - Print resolved host/runner/verb before dispatch. - Usage: `--debug`
 
+**Stop** - Stop the project's running instance of this host instead of starting one: it shuts down as on Ctrl-C, and the command returns when it has. - Usage: `--stop`
+
 **Help** - show help - Usage: `--help, -h`
 
 

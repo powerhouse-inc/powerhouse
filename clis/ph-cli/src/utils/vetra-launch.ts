@@ -1,4 +1,4 @@
-import { probeHostsFolder } from "@powerhousedao/host-core";
+import { probeHostsFolder, requestStop } from "@powerhousedao/host-core";
 import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
@@ -327,7 +327,9 @@ export async function stopVetra(options: {
     }
   };
   options.onProgress?.(`Stopping Vetra (pid ${record.pid})...`);
-  signal("SIGTERM");
+  // On Windows SIGTERM is a kill: ask through the stop channel, and signal
+  // only a Vetra that has none.
+  if (!(await requestStop(record.pid))) signal("SIGTERM");
   if (!(await waitForExit(record, Date.now() + timeoutMs))) {
     signal("SIGKILL");
     if (!(await waitForExit(record, Date.now() + timeoutMs))) {

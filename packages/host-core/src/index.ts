@@ -65,6 +65,17 @@ export {
   type RunProbe,
 } from "./run-record.js";
 export {
+  askToStop,
+  installStopChannel,
+  listenForStop,
+  requestStop,
+  STOP_RUN_TIMEOUT_MS,
+  stopChannelPath,
+  stopRun,
+  type StopRunOptions,
+  type StopRunResult,
+} from "./stop-channel.js";
+export {
   SPAWN_STOPPING_NOTE,
   spawnHost,
   SpawnHostError,
