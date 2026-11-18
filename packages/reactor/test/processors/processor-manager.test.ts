@@ -1262,6 +1262,17 @@ describe("ProcessorManager Standalone Tests", () => {
     await db.destroy();
   });
 
+  /**
+   * Moves the ordinal sequence to `head`, as committing that many operations
+   * would: the ops these tests deliver carry ordinals the index never handed
+   * out, and a restart lowers any cursor above the sequence's head.
+   */
+  async function setOrdinalHead(head: number): Promise<void> {
+    await sql`select setval(pg_get_serial_sequence(${`"${REACTOR_SCHEMA}"."operation_index_operations"`}, 'ordinal'), ${head})`.execute(
+      db,
+    );
+  }
+
   /** Moves the manager's cursor as a sweep does; queues follow. */
   async function confirm(
     through: number,
@@ -1735,6 +1746,7 @@ describe("ProcessorManager Standalone Tests", () => {
         .where("processorId", "=", `test-factory:${driveId}:0`)
         .executeTakeFirst();
       expect(cursor!.lastOrdinal).toBe(10);
+      await setOrdinalHead(10);
 
       // Create a fresh ProcessorManager (simulates restart)
       const consistencyTracker = new ConsistencyTracker();
@@ -1761,6 +1773,39 @@ describe("ProcessorManager Standalone Tests", () => {
 
       // The processor should NOT have received backfill since cursor is up-to-date
       expect(processor2.receivedOperations).toHaveLength(0);
+    });
+
+    it("should lower a cursor above the ordinal head on restart, so new ops reach it", async () => {
+      const driveId = generateId();
+      await insertDriveSnapshot(db, driveId);
+      const { factory } = createMockProcessorFactory();
+      await processorManager.registerFactory("test-factory", factory);
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await processorManager.indexOperations([makeOp(driveId, 10)]);
+      await confirm(10);
+      // A failover kept the cursor at 10 but the index only through 3.
+      await setOrdinalHead(3);
+
+      const restartedManager = new ProcessorManager(
+        db as unknown as Kysely<DocumentViewDatabase>,
+        operationIndex,
+        mockWriteCache,
+        new ConsistencyTracker(),
+        new ConsoleLogger(["test"]),
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+      );
+      await restartedManager.init();
+      const { factory: factory2, processor: processor2 } =
+        createMockProcessorFactory();
+      await restartedManager.registerFactory("test-factory", factory2);
+      expect(
+        restartedManager.get(`test-factory:${driveId}:0`)!.lastOrdinal,
+      ).toBe(3);
+
+      // The sequence hands out 4 again, below the old cursor.
+      await restartedManager.indexOperations([makeOp(driveId, 4)]);
+      await confirm(4, restartedManager);
+      expect(ordinalsOf(processor2)).toEqual([4]);
     });
 
     it("should support startFrom 'current'", async () => {
@@ -2825,6 +2870,7 @@ describe("ProcessorManager Standalone Tests", () => {
       await processorManager.indexOperations([makeOp(driveId, 7)]);
       await confirm(7);
       expect((await cursorRow(`f:${driveId}:0`))?.lastOrdinal).toBe(7);
+      await setOrdinalHead(7);
 
       for (const factory of [
         () => {

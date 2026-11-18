@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
-import { Kysely } from "kysely";
+import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
@@ -294,6 +294,64 @@ describe("BaseReadModel catch-up", () => {
     await sweep(model);
     expect(model.commits.flat().sort((a, b) => a - b)).toEqual([3, 4, 5, 6, 6]);
     expect(await storedCursor()).toBe(6);
+  });
+
+  describe("a cursor above the head at boot", () => {
+    /** A failover lost the index's newest rows; the cursor kept them. */
+    async function loseIndexTail(keep: number, cursor: number) {
+      await db
+        .deleteFrom("operation_index_operations")
+        .where("ordinal", ">", keep)
+        .execute();
+      await sql`select setval(pg_get_serial_sequence(${`"${REACTOR_SCHEMA}"."operation_index_operations"`}, 'ordinal'), ${keep})`.execute(
+        db,
+      );
+      await db
+        .updateTable("ViewState")
+        .set({ lastOrdinal: cursor })
+        .where("readModelId", "=", READ_MODEL_ID)
+        .execute();
+      // A restarted process probes afresh.
+      watermark = new SettledWatermark(
+        createKyselyWatermarkProbe(db as unknown as Kysely<StorageDatabase>),
+        new ConsoleLogger(["test"]),
+      );
+    }
+
+    it("is lowered to the head, so an operation after the restart applies", async () => {
+      await commit(["doc-a", 0], ["doc-b", 0], ["doc-c", 0], ["doc-d", 0]);
+      await makeModel().init();
+      await loseIndexTail(2, 4);
+
+      const restarted = makeModel();
+      await restarted.init();
+      expect(restarted.appliedThrough).toBe(2);
+      expect(await storedCursor()).toBe(2);
+
+      // The sequence hands out 3 again: at or below the old cursor.
+      const [next] = await commit(["doc-new", 0]);
+      expect(next!.context.ordinal).toBe(3);
+      await restarted.indexOperations([next!]);
+      expect(restarted.commits).toEqual([[3]]);
+      expect((await sweep(restarted)).to).toBe(3);
+      expect(await storedCursor()).toBe(3);
+    });
+
+    it("is left alone at the head", async () => {
+      await commit(["doc-a", 0], ["doc-b", 0]);
+      await makeModel().init();
+      expect(await storedCursor()).toBe(2);
+
+      const restarted = makeModel();
+      await restarted.init();
+      expect(restarted.commits).toEqual([]);
+      expect(await storedCursor()).toBe(2);
+      expect(restarted.appliedThrough).toBe(2);
+
+      const [next] = await commit(["doc-c", 0]);
+      await restarted.indexOperations([next!]);
+      expect(restarted.commits).toEqual([[3]]);
+    });
   });
 
   describe("rebuilding state", () => {
