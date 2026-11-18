@@ -129,6 +129,8 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     };
 
     mockReactorClient = {
+      // `document` and `documentOperations` first ask whether a listing would serve the document.
+      isServed: vi.fn().mockResolvedValue(true),
       resolveIdOrSlug: vi.fn((identifier: string) =>
         Promise.resolve(identifier),
       ),

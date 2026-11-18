@@ -181,6 +181,7 @@ export {
 export {
   AuthEnforcementDisabledError,
   BatchJobFailedError,
+  DocumentNotFoundError,
   InvalidSignatureError,
   JOB_NOT_FOUND_ERROR_NAME,
   RelationshipNotFoundError,
