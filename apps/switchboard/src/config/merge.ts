@@ -74,6 +74,12 @@ export function callerOverEnv(env: Layer, caller: Layer): Layer {
     features.mcp = false;
   }
   if (
+    env.features?.systemInfo === false ||
+    caller.features?.systemInfo === false
+  ) {
+    features.systemInfo = false;
+  }
+  if (
     env.inspection?.enabled === false ||
     caller.inspection?.enabled === false
   ) {
