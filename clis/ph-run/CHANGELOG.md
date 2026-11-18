@@ -1,3 +1,14 @@
+## 6.3.0-dev.4 (2026-11-18)
+
+### 🩹 Fixes
+
+- **host-core:** a running host can be asked to stop on Windows ([bd9b9fc2d1](https://github.com/powerhouse-inc/powerhouse/commit/bd9b9fc2d1))
+
+### ❤️ Thank You
+
+- Claude
+- Wouter Kampmann
+
 ## 6.3.0-dev.3 (2026-11-17)
 
 ### 🚀 Features
