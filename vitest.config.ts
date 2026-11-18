@@ -3,8 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     coverage: {
-      provider: "custom",
-      customProviderModule: "vitest-monocart-coverage",
+      provider: "v8",
     },
     projects: [
       "packages/*/vitest.config.ts",

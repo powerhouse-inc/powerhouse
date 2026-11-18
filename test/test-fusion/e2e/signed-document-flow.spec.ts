@@ -1,4 +1,8 @@
-import { expect, test, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Page,
+} from "@powerhousedao/coverage-baseline/playwright";
 import { SWITCHBOARD_URL } from "../playwright.config";
 
 // The same flow as `document-flow.spec.ts`, signed in. Proves two things the

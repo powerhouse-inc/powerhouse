@@ -54,7 +54,10 @@
     "audit:analyze": "tsx tools/registry-audit/analyze.ts",
     "audit:typecheck": "tsx tools/registry-audit/typecheck.ts",
     "audit:load": "tsx tools/registry-audit/load.ts",
-    "audit:create-query": "tsx tools/registry-audit/create-query.ts"
+    "audit:create-query": "tsx tools/registry-audit/create-query.ts",
+    "test:coverage:proof": "node --test tools/coverage-baseline/*.test.mjs",
+    "test:coverage:baseline": "node tools/coverage-baseline/run.mjs",
+    "test:coverage:compare": "node tools/coverage-baseline/compare.mjs"
   },
   "lint-staged": {
     "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": [
@@ -81,6 +84,8 @@
     "@types/node": "catalog:",
     "@types/semver": "^7.7.0",
     "@types/yargs": "^17.0.33",
+    "@vitest/coverage-istanbul": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "cross-env": "catalog:",
     "document-model": "workspace:*",
     "dpdm": "^4.2.0",

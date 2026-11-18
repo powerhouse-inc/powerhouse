@@ -25,11 +25,15 @@ const previewWebServer = {
   // (the host file's runner.outDir is the only place for it), and the
   // preview specs build a second time with --packages-registry.
   command:
+    (process.env.PH_COVERAGE_BROWSER_DIR ? "env -u NODE_V8_COVERAGE " : "") +
     "pnpm exec ph-cli connect build --outDir dist-connect && pnpm exec ph-cli connect preview --outDir dist-connect --port 4173 --strictPort",
   url: PREVIEW_URL,
   stderr: "pipe" as const,
   stdout: "pipe" as const,
   reuseExistingServer: !process.env.CI,
+  ...(process.env.PH_COVERAGE_BROWSER_DIR
+    ? { gracefulShutdown: { signal: "SIGTERM" as const, timeout: 10000 } }
+    : {}),
   timeout: 5 * 60 * 1000,
 };
 
@@ -105,6 +109,9 @@ export default defineConfig({
       stderr: "pipe",
       stdout: "pipe",
       reuseExistingServer: !process.env.CI,
+      ...(process.env.PH_COVERAGE_BROWSER_DIR
+        ? { gracefulShutdown: { signal: "SIGTERM" as const, timeout: 10000 } }
+        : {}),
     },
     ...(workerMode ? [] : [previewWebServer]),
   ],

@@ -141,6 +141,9 @@ catalogs:
     '@vitest/browser-playwright':
       specifier: 5.0.3
       version: 5.0.3
+    '@vitest/coverage-istanbul':
+      specifier: 5.0.3
+      version: 5.0.3
     '@vitest/coverage-v8':
       specifier: 5.0.3
       version: 5.0.3
@@ -444,6 +447,12 @@ importers:
       '@types/yargs':
         specifier: ^17.0.33
         version: 17.0.35
+      '@vitest/coverage-istanbul':
+        specifier: 'catalog:'
+        version: 5.0.3(vitest@5.0.3)
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
       cross-env:
         specifier: 'catalog:'
         version: 10.1.0
@@ -515,7 +524,7 @@ importers:
         version: 6.0.0
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       yargs:
         specifier: ^18.0.0
         version: 18.0.0
@@ -787,7 +796,7 @@ importers:
         version: 6.1.1(supports-color@8.1.1)(typescript@5.9.3)(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   apps/switchboard:
     dependencies:
@@ -956,7 +965,7 @@ importers:
         version: 8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@5.5.0)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@5.5.0)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   clis/ph-cli:
     dependencies:
@@ -1135,7 +1144,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   clis/ph-run:
     dependencies:
@@ -1279,7 +1288,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/analytics-engine/compat:
     dependencies:
@@ -1322,7 +1331,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/analytics-engine/core:
     dependencies:
@@ -1341,7 +1350,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/analytics-engine/graphql:
     dependencies:
@@ -1360,7 +1369,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/analytics-engine/knex:
     dependencies:
@@ -1391,7 +1400,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/analytics-engine/pg:
     dependencies:
@@ -1428,7 +1437,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/builder-tools:
     dependencies:
@@ -1501,7 +1510,7 @@ importers:
         version: 1.0.1
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       zod:
         specifier: 'catalog:'
         version: 4.6.5
@@ -1601,7 +1610,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/codegen:
     dependencies:
@@ -1827,7 +1836,7 @@ importers:
         version: 8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/design-system:
     dependencies:
@@ -2047,7 +2056,7 @@ importers:
         version: 8.3.4(@types/node@25.2.3)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/desktop:
     dependencies:
@@ -2078,7 +2087,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/document-model:
     dependencies:
@@ -2115,7 +2124,7 @@ importers:
         version: 4.23.13
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/host-core:
     dependencies:
@@ -2134,7 +2143,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/opentelemetry-instrumentation-reactor:
     dependencies:
@@ -2153,7 +2162,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/pieces-framework:
     dependencies:
@@ -2199,7 +2208,7 @@ importers:
         version: 4.23.13
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/portle:
     dependencies:
@@ -2221,7 +2230,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/powerhouse-vetra-packages:
     dependencies:
@@ -2409,7 +2418,7 @@ importers:
         version: 4.23.13
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       zod:
         specifier: 'catalog:'
         version: 4.6.5
@@ -2614,7 +2623,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/reactor-attachments:
     dependencies:
@@ -2669,7 +2678,7 @@ importers:
         version: 4.23.13
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/reactor-browser:
     dependencies:
@@ -2835,7 +2844,7 @@ importers:
         version: 8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       vitest-browser-react:
         specifier: ^2.3.0
         version: 2.3.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(vitest@5.0.3)
@@ -2878,7 +2887,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/reactor-group:
     dependencies:
@@ -2912,7 +2921,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/reactor-hypercore:
     dependencies:
@@ -2940,7 +2949,7 @@ importers:
         version: 4.23.13
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/reactor-mcp:
     dependencies:
@@ -2989,7 +2998,7 @@ importers:
         version: 8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/reactor-monitor:
     dependencies:
@@ -3047,7 +3056,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/reactor-privacy:
     dependencies:
@@ -3084,7 +3093,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/reactor-router:
     dependencies:
@@ -3103,7 +3112,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/reactor-workflow:
     dependencies:
@@ -3179,7 +3188,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/reactor/bench/host:
     dependencies:
@@ -3295,7 +3304,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/renown:
     dependencies:
@@ -3344,7 +3353,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       wagmi:
         specifier: ^2.19.5
         version: 2.19.5(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.6))(@types/react@19.2.14)(bufferutil@4.1.0)(debug@4.4.3(supports-color@8.1.1))(encoding@0.1.13)(react@19.2.6)(supports-color@8.1.1)(typescript@7.0.2)(utf-8-validate@5.0.10)(viem@2.52.0(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@5.0.10)(zod@3.25.76))(zod@3.25.76)
@@ -3459,7 +3468,7 @@ importers:
         version: 4.23.13
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/vetra:
     dependencies:
@@ -3553,7 +3562,7 @@ importers:
         version: 6.1.1(supports-color@8.1.1)(typescript@7.0.2)(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/vetra-studio:
     dependencies:
@@ -3578,7 +3587,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   packages/workflow:
     dependencies:
@@ -3640,6 +3649,9 @@ importers:
       '@playwright/test':
         specifier: ^1.60.0
         version: 1.60.0
+      '@powerhousedao/coverage-baseline':
+        specifier: workspace:*
+        version: link:../../tools/coverage-baseline
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
@@ -3696,7 +3708,7 @@ importers:
         version: 6.1.1(supports-color@8.1.1)(typescript@7.0.2)(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   scripts/dark-mode:
     devDependencies:
@@ -3911,7 +3923,7 @@ importers:
         version: 8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       write-package:
         specifier: 'catalog:'
         version: 7.2.0
@@ -3936,7 +3948,7 @@ importers:
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   test/lb-loadtest:
     dependencies:
@@ -3959,6 +3971,9 @@ importers:
       '@playwright/test':
         specifier: ^1.60.0
         version: 1.60.0
+      '@powerhousedao/coverage-baseline':
+        specifier: workspace:*
+        version: link:../../tools/coverage-baseline
       '@powerhousedao/e2e-utils':
         specifier: workspace:*
         version: link:../e2e-utils
@@ -4060,7 +4075,7 @@ importers:
         version: 2.52.0(bufferutil@4.1.0)(typescript@7.0.2)(utf-8-validate@5.0.10)(zod@4.6.5)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       ws:
         specifier: 'catalog:'
         version: 8.19.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -4091,7 +4106,7 @@ importers:
         version: 4.23.13
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   test/test-connect:
     dependencies:
@@ -4131,7 +4146,7 @@ importers:
         version: 4.23.13
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   test/test-consumer-project:
     dependencies:
@@ -4260,6 +4275,9 @@ importers:
       '@playwright/test':
         specifier: ^1.60.0
         version: 1.60.0
+      '@powerhousedao/coverage-baseline':
+        specifier: workspace:*
+        version: link:../../tools/coverage-baseline
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.3.2
@@ -4435,7 +4453,7 @@ importers:
         version: 6.1.1(supports-color@8.1.1)(typescript@7.0.2)(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       zod:
         specifier: 'catalog:'
         version: 4.6.5
@@ -4482,6 +4500,9 @@ importers:
       '@powerhousedao/clint':
         specifier: workspace:*
         version: link:../../packages/clint
+      '@powerhousedao/coverage-baseline':
+        specifier: workspace:*
+        version: link:../../tools/coverage-baseline
       '@powerhousedao/desktop':
         specifier: workspace:*
         version: link:../../packages/desktop
@@ -4521,9 +4542,6 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.2.3(@types/react@19.2.14)
-      monocart-coverage-reports:
-        specifier: ^2.12.8
-        version: 2.12.9
       tailwindcss:
         specifier: 'catalog:'
         version: 4.2.2
@@ -4532,7 +4550,7 @@ importers:
         version: 8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   test/workflow-piece-e2e:
     devDependencies:
@@ -4560,6 +4578,40 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+
+  tools/coverage-baseline:
+    dependencies:
+      '@playwright/test':
+        specifier: ^1.60.0
+        version: 1.60.0
+      chrome-remote-interface:
+        specifier: 0.34.0
+        version: 0.34.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      glob:
+        specifier: 'catalog:'
+        version: 13.0.4
+      istanbul-lib-coverage:
+        specifier: 3.2.2
+        version: 3.2.2
+      istanbul-lib-report:
+        specifier: 3.0.1
+        version: 3.0.1
+      istanbul-reports:
+        specifier: 3.2.0
+        version: 3.2.0
+      monocart-coverage-reports:
+        specifier: 3.2.0
+        version: 3.2.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      semver:
+        specifier: 'catalog:'
+        version: 7.7.4
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+    devDependencies:
+      '@swc/core':
+        specifier: ~1.11.1
+        version: 1.11.31(@swc/helpers@0.5.23)
 
   tools/doc-harness:
     dependencies:
@@ -4593,7 +4645,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
 packages:
 
@@ -12389,6 +12441,11 @@ packages:
     peerDependencies:
       vitest: 5.0.3
 
+  '@vitest/coverage-istanbul@5.0.3':
+    resolution: {integrity: sha512-ffvonoWX3hcHTBEBjbXcbLgr2nj4ZpBhK3t05HlIcIuZjd4iwVsswAYpB8TTAcqPTsofeTj2Ywva1STUUjpgRw==}
+    peerDependencies:
+      vitest: 5.0.3
+
   '@vitest/coverage-v8@5.0.3':
     resolution: {integrity: sha512-+klsyz7BvT1vCU28Zkfzms1Ia78XD0V41U3FUtRaa3S+vOr/EXvK1O6BvVD7l1RzEjm6SONR2aybOvDDf9u0mQ==}
     peerDependencies:
@@ -12405,8 +12462,16 @@ packages:
     resolution: {integrity: sha512-9J/JMwOf9AoJhAywhrn7ScKTL38hsWQP/qPG60OtaAFcQ5OXPwKsxZFlbnuCKmZ61m8/lGgHYnFpdyQZUvG/iA==}
     engines: {node: '>=22'}
 
+  '@vitest/istanbul-lib-instrument@1.0.2':
+    resolution: {integrity: sha512-KFlvK0uYxYjdNoQJR+6F1B45u0ZOmYgOZndqfwLiGBjYHACc8q1Wyuw/ZQeGP3UKc7XsSZ51NKQDKt0IIbGMQg==}
+    engines: {node: '>=22'}
+
   '@vitest/istanbul-lib-report@1.0.2':
     resolution: {integrity: sha512-gUsfXZJbzPamoIY5TvHFiMMoXESBrUMo+xqaj+rYrWI69+EnvRlYBlP96ZnHPY4vX8kyUpgAnFUCg5wZG/HkDQ==}
+    engines: {node: '>=22'}
+
+  '@vitest/istanbul-lib-source-maps@1.0.2':
+    resolution: {integrity: sha512-Ia3+9WDB5UKN940ztJ5LyhqDaS/It05Uh2VQ70KIPDWlOed2ZsJTJTyMb7x6OIW4eAwWSBFknpqJafJetTTXLw==}
     engines: {node: '>=22'}
 
   '@vitest/mocker@5.0.3':
@@ -12902,6 +12967,11 @@ packages:
 
   acorn@8.16.0:
     resolution: {integrity: sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw==}
+    engines: {node: '>=0.4.0'}
+    hasBin: true
+
+  acorn@8.19.0:
+    resolution: {integrity: sha512-oJlA3XiRm7Cyk6qFD2Jn8ak9B7jSy0qy00ADO3+8dpT0LSjFihQYv4C02LFCSYJV3Q37xYwwRy5m+IpIiUzqWw==}
     engines: {node: '>=0.4.0'}
     hasBin: true
 
@@ -13650,6 +13720,10 @@ packages:
     resolution: {integrity: sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g==}
     engines: {node: '>=18'}
 
+  chrome-remote-interface@0.34.0:
+    resolution: {integrity: sha512-rTTcTZ3zemx8I+nvBii7d8BAF0Ms8LLEroypfvwwZOwSpyNGLE28nStXyCA6VwGp2YSQfmCrQH21F/E+oBFvMw==}
+    hasBin: true
+
   chunk-data@0.1.0:
     resolution: {integrity: sha512-zFyPtyC0SZ6Zu79b9sOYtXZcgrsXe0RpePrzRyj52hYVFG1+Rk6rBqjjOEk+GNQwc3PIX+86teQMok970pod1g==}
     engines: {node: '>=20'}
@@ -13863,6 +13937,13 @@ packages:
     resolution: {integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==}
     engines: {node: '>=20'}
 
+  commander@15.1.0:
+    resolution: {integrity: sha512-cgnQ88TRrWcC7pVq46RzJVRMktu3W2RcbnoidnfBsl1bmDCBwJS/udcIZpKoCrbAYYaCqsz1yZCVIgbIaU3ddQ==}
+    engines: {node: '>=22.12.0'}
+
+  commander@2.11.0:
+    resolution: {integrity: sha512-b0553uYA5YAEGgyYIGYROzKQ7X5RAqedkfjiZxwi0kL1g3bOaBNNZfYkzt/CL0umgD5wc9Jec2FbB98CjkMRvQ==}
+
   commander@2.20.3:
     resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
 
@@ -13927,8 +14008,8 @@ packages:
   console-control-strings@1.1.0:
     resolution: {integrity: sha512-ty/fTekppD2fIwRvnZAVdeOiGd1c7YXEixbgJTNzqcxJWKQnjJ/V1bNEEE6hygpM3WjwHFUVK6HTjWSzV4a8sQ==}
 
-  console-grid@2.2.3:
-    resolution: {integrity: sha512-+mecFacaFxGl+1G31IsCx41taUXuW2FxX+4xIE0TIPhgML+Jb9JFcBWGhhWerd1/vhScubdmHqTwOhB0KCUUAg==}
+  console-grid@2.2.4:
+    resolution: {integrity: sha512-OLjCRTiHhOpTRo9lQp/2FgJDyq5uQHwkEmVJulEnQ6JVf27oKKzXHZnNOv/e72V4++UdMZCrDWtvXW5sx4lyQg==}
 
   constant-case@3.0.4:
     resolution: {integrity: sha512-I2hSBi7Vvs7BEuJDr5dDHfzb/Ruj3FyvFyh7KLilAjNQw3Be+xgqUBA2W6scVEcL0hL1dwPRtIqEPVUCKkSsyQ==}
@@ -14584,8 +14665,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  eight-colors@1.3.1:
-    resolution: {integrity: sha512-7nXPYDeKh6DgJDR/mpt2G7N/hCNSGwwoPVmoI3+4TEwOb07VFN1WMPG0DFf6nMEjrkgdj8Og7l7IaEEk3VE6Zg==}
+  eight-colors@1.3.3:
+    resolution: {integrity: sha512-4B54S2Qi4pJjeHmCbDIsveQZWQ/TSSQng4ixYJ9/SYHHpeS5nYK0pzcHvWzWUfRsvJQjwoIENhAwqg59thQceg==}
 
   ejs@3.1.10:
     resolution: {integrity: sha512-UeJmFfOrAQS8OJWPZ4qtgHyWExa088/MtK5UEyoJGFH67cDEXkZSviOiKRCZ4Xij0zxI3JECgYs3oKx+AizQBA==}
@@ -15038,6 +15119,10 @@ packages:
   eventsource@3.0.7:
     resolution: {integrity: sha512-CRT1WTyuQoD771GW56XEZFQ/ZoSfWid1alKGDYMmkt2yl8UXrVR4pspqWNEcqKvVIzg6PAltWjxcSSPrboA4iA==}
     engines: {node: '>=18.0.0'}
+
+  execa@10.2.1:
+    resolution: {integrity: sha512-/Bofl3ZBh2Q4/PG0W63qFzP5vDAypi8Zc90UWTBzaDNIYiX7apPOd0N6L8hG8CojUdq4V51adu8BObP+iVsSTw==}
+    engines: {node: '>=22'}
 
   execa@9.6.1:
     resolution: {integrity: sha512-9Be3ZoN4LmYR90tUoVu2te2BsbzHfhJyfEiAVfz7N5/zv+jduIfLrV2xdQXOHbaD6KgpGdO9PRPM1Y4Q9QkPkA==}
@@ -17186,8 +17271,8 @@ packages:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
     hasBin: true
 
-  lz-utils@2.1.0:
-    resolution: {integrity: sha512-CMkfimAypidTtWjNDxY8a1bc1mJdyEh04V2FfEQ5Zh8Nx4v7k850EYa+dOWGn9hKG5xOyHP5MkuduAZCTHRvJw==}
+  lz-utils@2.1.1:
+    resolution: {integrity: sha512-d3Thjos0PSJQAoyMj6vipSSrtrRHS7DImqUNR8x9NW3+zQIftPIbMJAWhi5nPdg5Q9zHz6lxtN8kp/VdMlhi/Q==}
 
   magic-string@0.27.0:
     resolution: {integrity: sha512-8UnnX2PeRAPZuN12svgR9j7M1uWMovg/CEnIwIG0LFkXSJJe4PdfUGiTGl8V9bsBHFUtfVINcSyYxd7q+kx9fA==}
@@ -17634,12 +17719,13 @@ packages:
   module-details-from-path@1.0.4:
     resolution: {integrity: sha512-EGWKgxALGMgzvxYF1UyGTy0HXX/2vHLkw6+NvDKW2jypWbHpjQuj4UMcqQWXHERJhVGKikolT06G3bcKe4fi7w==}
 
-  monocart-coverage-reports@2.12.9:
-    resolution: {integrity: sha512-vtFqbC3Egl4nVa1FSIrQvMPO6HZtb9lo+3IW7/crdvrLNW2IH8lUsxaK0TsKNmMO2mhFWwqQywLV2CZelqPgwA==}
+  monocart-coverage-reports@3.2.0:
+    resolution: {integrity: sha512-hF8GxLozQGJ9P2FDjTrGfo/IAvHSlPdmYiBE3qkfbWUc9Zc+I+mrShta9+cJxmZfC5d6FiaEyrhjzCNrpAflog==}
+    engines: {node: '>=22.15.0'}
     hasBin: true
 
-  monocart-locator@1.0.2:
-    resolution: {integrity: sha512-v8W5hJLcWMIxLCcSi/MHh+VeefI+ycFmGz23Froer9QzWjrbg4J3gFJBuI/T1VLNoYxF47bVPPxq8ZlNX4gVCw==}
+  monocart-locator@1.0.6:
+    resolution: {integrity: sha512-P4DCDxeOhy59KexF3yx/kD7y64HVxHO0lskxjxAML9kTOvQnD2jTpZWFQFEFyyABx32at3t77mWLKftFfk1wHQ==}
 
   mqemitter@7.1.0:
     resolution: {integrity: sha512-GnBDNz3lxmllW201ne0mrmdy5tPOTnc79jjVcsfUa2LG2pUGeyGWVeiae6ZysfC/64XrYOqCKRAQYrB7pGyBVQ==}
@@ -17847,6 +17933,10 @@ packages:
 
   node-releases@2.0.27:
     resolution: {integrity: sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==}
+
+  node-stream-zip@1.16.0:
+    resolution: {integrity: sha512-ObaRrRoR8T68wF6suxHd7R4XQNamij6ZQHrwG7Dx1D2zeHcDNLsIOBcWrIwtDm7AsCXBguaPHgXhcjxDa2szrg==}
+    engines: {node: '>=0.12.0'}
 
   nodemon@3.1.11:
     resolution: {integrity: sha512-is96t8F/1//UHAjNPHpbsNY46ELPpftGUoSVNXwUfMk/qdjSylYrWSu1XavVTBOn526kFiOR733ATgNBCQyH0g==}
@@ -18600,6 +18690,10 @@ packages:
 
   pretty-ms@9.3.0:
     resolution: {integrity: sha512-gjVS5hOP+M3wMm5nmNOucbIrqudzs9v/57bWRHQWLYklXqoXKrVfYW2W9+glfGsqtPgpiz5WwyEEB+ksXIx3gQ==}
+    engines: {node: '>=18'}
+
+  pretty-ms@9.3.1:
+    resolution: {integrity: sha512-HzMy3Geq23nVALD/M2LliU+F+M+gVNsvkQWWqeBZ8HDiCgzo6YPJ/Omrmtq24EFrIsk0a3EkQGEd7bDOo+IhGA==}
     engines: {node: '>=18'}
 
   prism-react-renderer@2.4.1:
@@ -21139,6 +21233,11 @@ packages:
     resolution: {integrity: sha512-K4jVyjnBdgvc86Y6BkaLZEN933SwYOuBFkdmBu9ZfkcAbdVbpITnDmjvZ/aQjRXQrv5EPkTnD1s39GiiqbngCw==}
     engines: {node: '>= 0.4'}
 
+  which-command@0.1.0:
+    resolution: {integrity: sha512-XZyoF5/5hZtXitIwzrU4NKK+Wtbb9aB9CezUEw2Q0wlYK8NUYQxC1rRXgNueYLtBAJwXIb+/tFVk4dozciNJMA==}
+    engines: {node: '>=22'}
+    hasBin: true
+
   which-module@2.0.1:
     resolution: {integrity: sha512-iBdZ57RDvnOR9AGBhML2vFZf7h8vmBjhoaZqODJBFWHVtKkDmKuHai3cx5PgVMrX5YDNp27AofYbAwctSS+vhQ==}
 
@@ -21428,6 +21527,9 @@ packages:
     resolution: {integrity: sha512-4UEqdc2RYGHZc7Doyqkrqiln3p9X2DZVxaGbwhn2pi7MrRagKaOcIKe8L3OxYcbhXLgLFUS3zAYuQjKBQgmuNg==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=23}
 
+  yazl@3.3.1:
+    resolution: {integrity: sha512-BbETDVWG+VcMUle37k5Fqp//7SDOK2/1+T7X8TD96M3D9G8jK5VLUdQVdVjGi8im7FGkazX7kk5hkU8X4L5Bng==}
+
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
@@ -21446,6 +21548,10 @@ packages:
 
   yoctocolors@2.1.2:
     resolution: {integrity: sha512-CzhO+pFNo8ajLM2d2IW/R93ipy99LWjtwblvC1RsoSUMZgyLbYFr221TnSNT7GjGdYui6P459mw9JH/g/zW2ug==}
+    engines: {node: '>=18'}
+
+  yoctocolors@2.2.0:
+    resolution: {integrity: sha512-xYqdZFUK/VYazNl/oCDYN+3WloWQwMfZxBoiNt6qNyk+xfOdi598muWE42rNZFp1kNOiqW936q5RhUdnpqElSg==}
     engines: {node: '>=18'}
 
   yoga-layout@3.2.1:
@@ -32612,7 +32718,7 @@ snapshots:
       '@vitest/mocker': 5.0.3(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       playwright: 1.60.0
       tinyrainbow: 3.2.0
-      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -32625,7 +32731,7 @@ snapshots:
       '@vitest/mocker': 5.0.3(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       playwright: 1.60.0
       tinyrainbow: 3.2.0
-      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -32639,7 +32745,7 @@ snapshots:
       '@vitest/mocker': 5.0.3(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       playwright: 1.60.0
       tinyrainbow: 3.2.0
-      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -32656,7 +32762,7 @@ snapshots:
       pngjs: 7.0.0
       sirv: 3.0.2
       tinyrainbow: 3.2.0
-      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       ws: 8.22.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
@@ -32674,7 +32780,7 @@ snapshots:
       pngjs: 7.0.0
       sirv: 3.0.2
       tinyrainbow: 3.2.0
-      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       ws: 8.22.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
@@ -32693,13 +32799,26 @@ snapshots:
       pngjs: 7.0.0
       sirv: 3.0.2
       tinyrainbow: 3.2.0
-      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       ws: 8.22.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
       - msw
       - utf-8-validate
       - vite
+
+  '@vitest/coverage-istanbul@5.0.3(vitest@5.0.3)':
+    dependencies:
+      '@jridgewell/gen-mapping': 0.3.13
+      '@jridgewell/trace-mapping': 0.3.31
+      '@vitest/istanbul-lib-coverage': 1.0.2
+      '@vitest/istanbul-lib-instrument': 1.0.2
+      '@vitest/istanbul-lib-report': 1.0.2
+      '@vitest/istanbul-lib-source-maps': 1.0.2
+      magicast: 0.5.5
+      obug: 2.2.1
+      tinyrainbow: 3.2.0
+      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   '@vitest/coverage-v8@5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)':
     dependencies:
@@ -32711,7 +32830,7 @@ snapshots:
       obug: 2.2.1
       std-env: 4.3.0
       tinyrainbow: 3.2.0
-      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
     optionalDependencies:
       '@vitest/browser': 5.0.3(bufferutil@4.1.0)(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(utf-8-validate@5.0.10)(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))(vitest@5.0.3)
 
@@ -32724,9 +32843,23 @@ snapshots:
 
   '@vitest/istanbul-lib-coverage@1.0.2': {}
 
+  '@vitest/istanbul-lib-instrument@1.0.2':
+    dependencies:
+      '@babel/core': 8.0.5
+      '@babel/parser': 8.0.5
+      '@istanbuljs/schema': 0.1.3
+      '@jridgewell/trace-mapping': 0.3.31
+      '@vitest/istanbul-lib-coverage': 1.0.2
+
   '@vitest/istanbul-lib-report@1.0.2':
     dependencies:
       '@vitest/istanbul-lib-coverage': 1.0.2
+
+  '@vitest/istanbul-lib-source-maps@1.0.2':
+    dependencies:
+      '@jridgewell/trace-mapping': 0.3.31
+      '@vitest/istanbul-lib-coverage': 1.0.2
+      obug: 2.2.1
 
   '@vitest/mocker@5.0.3(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))':
     dependencies:
@@ -32784,7 +32917,7 @@ snapshots:
       pathe: 2.0.3
       sirv: 3.0.2
       tinyrainbow: 3.2.0
-      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
 
   '@vitest/utils@2.0.5':
     dependencies:
@@ -34975,6 +35108,8 @@ snapshots:
 
   acorn@8.16.0: {}
 
+  acorn@8.19.0: {}
+
   address@1.2.2: {}
 
   adm-zip@0.5.18: {}
@@ -35900,6 +36035,14 @@ snapshots:
 
   chownr@3.0.0: {}
 
+  chrome-remote-interface@0.34.0(bufferutil@4.1.0)(utf-8-validate@5.0.10):
+    dependencies:
+      commander: 2.11.0
+      ws: 7.5.10(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   chunk-data@0.1.0: {}
 
   ci-info@3.9.0: {}
@@ -36101,6 +36244,10 @@ snapshots:
 
   commander@14.0.3: {}
 
+  commander@15.1.0: {}
+
+  commander@2.11.0: {}
+
   commander@2.20.3: {}
 
   commander@8.3.0: {}
@@ -36174,7 +36321,7 @@ snapshots:
   console-control-strings@1.1.0:
     optional: true
 
-  console-grid@2.2.3: {}
+  console-grid@2.2.4: {}
 
   constant-case@3.0.4:
     dependencies:
@@ -36852,7 +36999,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  eight-colors@1.3.1: {}
+  eight-colors@1.3.3: {}
 
   ejs@3.1.10:
     dependencies:
@@ -37392,6 +37539,21 @@ snapshots:
   eventsource@3.0.7:
     dependencies:
       eventsource-parser: 3.1.1
+
+  execa@10.2.1:
+    dependencies:
+      '@sindresorhus/merge-streams': 4.0.0
+      figures: 6.1.0
+      get-stream: 9.0.1
+      human-signals: 8.0.1
+      is-plain-obj: 4.1.0
+      is-stream: 4.0.1
+      npm-run-path: 6.0.0
+      pretty-ms: 9.3.1
+      signal-exit: 4.1.0
+      strip-final-newline: 4.0.0
+      which-command: 0.1.0
+      yoctocolors: 2.2.0
 
   execa@9.6.1:
     dependencies:
@@ -40067,7 +40229,7 @@ snapshots:
 
   lz-string@1.5.0: {}
 
-  lz-utils@2.1.0: {}
+  lz-utils@2.1.1: {}
 
   magic-string@0.27.0:
     dependencies:
@@ -40766,22 +40928,30 @@ snapshots:
 
   module-details-from-path@1.0.4: {}
 
-  monocart-coverage-reports@2.12.9:
+  monocart-coverage-reports@3.2.0(bufferutil@4.1.0)(utf-8-validate@5.0.10):
     dependencies:
-      acorn: 8.16.0
+      '@jridgewell/sourcemap-codec': 1.6.0
+      acorn: 8.19.0
       acorn-loose: 8.5.2
       acorn-walk: 8.3.5
-      commander: 14.0.3
-      console-grid: 2.2.3
-      eight-colors: 1.3.1
-      foreground-child: 3.3.1
+      commander: 15.1.0
+      console-grid: 2.2.4
+      convert-source-map: 2.0.0
+      eight-colors: 1.3.3
+      execa: 10.2.1
       istanbul-lib-coverage: 3.2.2
       istanbul-lib-report: 3.0.1
       istanbul-reports: 3.2.0
-      lz-utils: 2.1.0
-      monocart-locator: 1.0.2
+      lz-utils: 2.1.1
+      monocart-locator: 1.0.6
+      node-stream-zip: 1.16.0
+      ws: 8.22.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      yazl: 3.3.1
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
-  monocart-locator@1.0.2: {}
+  monocart-locator@1.0.6: {}
 
   mqemitter@7.1.0:
     dependencies:
@@ -41010,6 +41180,8 @@ snapshots:
   node-mock-http@1.0.4: {}
 
   node-releases@2.0.27: {}
+
+  node-stream-zip@1.16.0: {}
 
   nodemon@3.1.11:
     dependencies:
@@ -42142,6 +42314,10 @@ snapshots:
       react-is: 18.3.1
 
   pretty-ms@9.3.0:
+    dependencies:
+      parse-ms: 4.0.0
+
+  pretty-ms@9.3.1:
     dependencies:
       parse-ms: 4.0.0
 
@@ -44937,12 +45113,12 @@ snapshots:
     dependencies:
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
-      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+      vitest: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
 
-  vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@5.5.0)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)):
+  vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@5.5.0)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/mocker': 5.0.3(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
@@ -44962,6 +45138,7 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       '@types/node': 25.2.3
       '@vitest/browser-playwright': 5.0.3(bufferutil@4.1.0)(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(playwright@1.60.0)(utf-8-validate@5.0.10)(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))(vitest@5.0.3)
+      '@vitest/coverage-istanbul': 5.0.3(vitest@5.0.3)
       '@vitest/coverage-v8': 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
       '@vitest/ui': 5.0.3(vitest@5.0.3)
       happy-dom: 20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -44969,7 +45146,7 @@ snapshots:
     transitivePeerDependencies:
       - msw
 
-  vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)):
+  vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/mocker': 5.0.3(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
@@ -44989,6 +45166,7 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       '@types/node': 25.2.3
       '@vitest/browser-playwright': 5.0.3(bufferutil@4.1.0)(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(playwright@1.60.0)(utf-8-validate@5.0.10)(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))(vitest@5.0.3)
+      '@vitest/coverage-istanbul': 5.0.3(vitest@5.0.3)
       '@vitest/coverage-v8': 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
       '@vitest/ui': 5.0.3(vitest@5.0.3)
       happy-dom: 20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -44996,7 +45174,7 @@ snapshots:
     transitivePeerDependencies:
       - msw
 
-  vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)):
+  vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/mocker': 5.0.3(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
@@ -45016,6 +45194,7 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       '@types/node': 25.2.3
       '@vitest/browser-playwright': 5.0.3(bufferutil@4.1.0)(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(playwright@1.60.0)(utf-8-validate@5.0.10)(vite@8.3.4(@types/node@25.2.3)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))(vitest@5.0.3)
+      '@vitest/coverage-istanbul': 5.0.3(vitest@5.0.3)
       '@vitest/coverage-v8': 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
       '@vitest/ui': 5.0.3(vitest@5.0.3)
       happy-dom: 20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -45023,7 +45202,7 @@ snapshots:
     transitivePeerDependencies:
       - msw
 
-  vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)):
+  vitest@5.0.3(@opentelemetry/api@1.9.1)(@types/node@25.2.3)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-istanbul@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(jsdom@24.1.3(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@5.0.10))(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/mocker': 5.0.3(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
@@ -45043,6 +45222,7 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       '@types/node': 25.2.3
       '@vitest/browser-playwright': 5.0.3(bufferutil@4.1.0)(msw@2.12.10(@types/node@25.2.3)(typescript@7.0.2))(playwright@1.60.0)(utf-8-validate@5.0.10)(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))(vitest@5.0.3)
+      '@vitest/coverage-istanbul': 5.0.3(vitest@5.0.3)
       '@vitest/coverage-v8': 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
       '@vitest/ui': 5.0.3(vitest@5.0.3)
       happy-dom: 20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -45279,6 +45459,8 @@ snapshots:
       is-set: 2.0.3
       is-weakmap: 2.0.2
       is-weakset: 2.0.4
+
+  which-command@0.1.0: {}
 
   which-module@2.0.1: {}
 
@@ -45660,6 +45842,10 @@ snapshots:
       y18n: 5.0.8
       yargs-parser: 22.0.0
 
+  yazl@3.3.1:
+    dependencies:
+      buffer-crc32: 1.0.0
+
   yocto-queue@0.1.0: {}
 
   yocto-queue@1.2.2: {}
@@ -45671,6 +45857,8 @@ snapshots:
   yoctocolors-cjs@2.1.3: {}
 
   yoctocolors@2.1.2: {}
+
+  yoctocolors@2.2.0: {}
 
   yoga-layout@3.2.1: {}
 

@@ -1,4 +1,8 @@
-import { test as base, type Page } from "@playwright/test";
+import {
+  test as base,
+  closeContext,
+  type Page,
+} from "@powerhousedao/coverage-baseline/playwright";
 import {
   addSeededDrive,
   detachDrive,
@@ -26,7 +30,7 @@ export const test = base.extend<
     async ({ browser }, use) => {
       const connect = { current: await openConnect(browser) };
       await use(connect);
-      await connect.current.context.close();
+      await closeContext(connect.current.context);
     },
     { scope: "worker", timeout: 90_000 },
   ],
@@ -37,7 +41,7 @@ export const test = base.extend<
     async ({ browser, connect, theme, seed }, use) => {
       const own = theme !== "light";
       if (!own && !(await isHealthy(connect.current.page))) {
-        await connect.current.context.close().catch(() => {});
+        await closeContext(connect.current.context).catch(() => {});
         connect.current = await openConnect(browser);
       }
       const { context, page } = own
@@ -46,7 +50,7 @@ export const test = base.extend<
       await resetConnect(page);
       const { drive, seeded } = await addSeededDrive(page, { seed });
       await use({ context, page, drive, seeded });
-      if (own) await context.close();
+      if (own) await closeContext(context);
       else await detachDrive(page, drive).catch(() => {});
     },
     { timeout: 90_000 },
@@ -56,4 +60,4 @@ export const test = base.extend<
   },
 });
 
-export { expect } from "@playwright/test";
+export { expect } from "@powerhousedao/coverage-baseline/playwright";

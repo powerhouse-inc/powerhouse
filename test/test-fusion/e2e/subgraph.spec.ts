@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "@powerhousedao/coverage-baseline/playwright";
 import { SWITCHBOARD_URL } from "../playwright.config";
 
 // Extensibility: the same client that serves the document hooks also binds a

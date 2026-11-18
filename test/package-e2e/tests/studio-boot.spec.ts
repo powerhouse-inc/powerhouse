@@ -1,4 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import { closePage } from "@powerhousedao/coverage-baseline/playwright";
+import {
+  expect,
+  test,
+  type Page,
+} from "@powerhousedao/coverage-baseline/playwright";
 import { existsSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { STUDIO_URL } from "../playwright.studio.config.js";
@@ -81,7 +86,7 @@ test("connect studio boots in a project installed from the published packages", 
   await load(warmUp, 120_000, () => warmSidebar.isVisible()).catch(
     () => undefined,
   );
-  await warmUp.close();
+  await closePage(warmUp);
 
   const page = await context.newPage();
   const errors = collectBootErrors(page);

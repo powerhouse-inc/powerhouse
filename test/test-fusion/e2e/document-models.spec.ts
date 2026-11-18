@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "@powerhousedao/coverage-baseline/playwright";
 
 // The documentModels chain end to end: the page passes the REAL generated todo
 // modules (both versions) to `GraphQLReactorProvider`, a StaticPackageManager

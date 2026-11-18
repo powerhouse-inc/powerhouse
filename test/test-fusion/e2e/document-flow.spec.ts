@@ -1,4 +1,8 @@
-import { expect, test, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Page,
+} from "@powerhousedao/coverage-baseline/playwright";
 
 // The light GraphQL reactor client, anonymously: `GraphQLReactorProvider` fills
 // the `window.ph` slots, `useReactorClient().create` writes a new todo document

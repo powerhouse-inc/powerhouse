@@ -1,7 +1,4 @@
-import type { Page } from "@playwright/test";
-import { test as testBase } from "@playwright/test";
-import MCR from "monocart-coverage-reports";
-import coverageOptions from "../../mcr.config.js";
+import { test as testBase } from "@powerhousedao/coverage-baseline/playwright";
 
 export { expect } from "@playwright/test";
 
@@ -15,7 +12,6 @@ export function reactorWorkerModeRequested(): boolean {
 
 // fixtures
 const test = testBase.extend<{
-  autoTestFixture: string;
   reactorWorkerFlag: boolean;
 }>({
   reactorWorkerFlag: [
@@ -32,49 +28,6 @@ const test = testBase.extend<{
         );
       }
       await use(enabled);
-    },
-    {
-      scope: "test",
-      auto: true,
-    },
-  ],
-  autoTestFixture: [
-    async ({ context }, use) => {
-      const isChromium = test.info().project.name === "chromium";
-
-      const handlePageEvent = async (page: Page) => {
-        await Promise.all([
-          page.coverage.startJSCoverage({
-            resetOnNavigation: false,
-          }),
-          page.coverage.startCSSCoverage({
-            resetOnNavigation: false,
-          }),
-        ]);
-      };
-
-      // console.log('autoTestFixture setup...');
-      // coverage API is chromium only
-      if (isChromium) {
-        context.on("page", handlePageEvent);
-      }
-
-      await use("autoTestFixture");
-
-      // console.log('autoTestFixture teardown...');
-      if (isChromium) {
-        context.off("page", handlePageEvent);
-        const coverageList = await Promise.all(
-          context.pages().map(async (page) => {
-            const jsCoverage = await page.coverage.stopJSCoverage();
-            const cssCoverage = await page.coverage.stopCSSCoverage();
-            return [...jsCoverage, ...cssCoverage];
-          }),
-        );
-
-        const mcr = MCR(coverageOptions);
-        await mcr.add(coverageList.flat());
-      }
     },
     {
       scope: "test",

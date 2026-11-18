@@ -3,7 +3,7 @@ import {
   test,
   type APIRequestContext,
   type Page,
-} from "@playwright/test";
+} from "@powerhousedao/coverage-baseline/playwright";
 import { SWITCHBOARD_URL } from "../playwright.config";
 
 // Realtime: a change written by somebody else reaches the open page over the

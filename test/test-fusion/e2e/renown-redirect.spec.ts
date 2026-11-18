@@ -1,4 +1,8 @@
-import { expect, test, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Page,
+} from "@powerhousedao/coverage-baseline/playwright";
 import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { promisify } from "node:util";
