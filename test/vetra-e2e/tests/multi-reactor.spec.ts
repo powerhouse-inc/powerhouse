@@ -1,3 +1,4 @@
+import { closePage } from "@powerhousedao/coverage-baseline/playwright";
 // Connect routed to the Vetra switchboard (4002) by a rewritten served config.
 
 import type { Locator, Page } from "@playwright/test";
@@ -775,6 +776,6 @@ test.describe("Connect routed to a switchboard", () => {
         timeout: LONG_VISIBLE_TIMEOUT,
       })
       .toContain("after-reset");
-    await other.close();
+    await closePage(other);
   });
 });

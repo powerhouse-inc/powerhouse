@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "@powerhousedao/coverage-baseline/playwright";
 
 // Renown in-page sign-in e2e. The dev server runs the mock wallet adapter
 // (NEXT_PUBLIC_RENOWN_MOCK=1) against the local switchboard (playwright.config).

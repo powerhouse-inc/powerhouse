@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "@powerhousedao/coverage-baseline/playwright";
 import { CONNECT_URL, SWITCHBOARD_URL } from "../playwright.config.js";
 import {
   createRemoteDrive,

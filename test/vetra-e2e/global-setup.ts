@@ -1,6 +1,3 @@
-import MCR from "monocart-coverage-reports";
-import coverageOptions from "./mcr.config.js";
-
 interface GraphQLResponse {
   data?: {
     findDocuments?: {
@@ -117,10 +114,6 @@ async function globalSetup() {
   console.log("🚀 Running global setup for vetra-e2e...");
 
   try {
-    // Clean coverage cache
-    const mcr = MCR(coverageOptions);
-    mcr.cleanCache();
-
     // Wait for both Connect (3001) and Reactor (4002) to be ready
     // Note: webServer starts vetra, but we need to wait for both services
     await waitForPort(3001);

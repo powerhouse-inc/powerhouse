@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "@powerhousedao/coverage-baseline": "workspace:*",
     "@tailwindcss/postcss": "^4",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

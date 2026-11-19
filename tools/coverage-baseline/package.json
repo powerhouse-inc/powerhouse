@@ -1,0 +1,27 @@
+{
+  "name": "@powerhousedao/coverage-baseline",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Line coverage baseline for unit, integration and E2E tests, plus the Playwright fixture that collects Chromium coverage",
+  "type": "module",
+  "exports": {
+    "./playwright": {
+      "types": "./playwright.d.mts",
+      "default": "./playwright.mjs"
+    }
+  },
+  "dependencies": {
+    "@playwright/test": "^1.60.0",
+    "chrome-remote-interface": "0.34.0",
+    "glob": "catalog:",
+    "istanbul-lib-coverage": "3.2.2",
+    "istanbul-lib-report": "3.0.1",
+    "istanbul-reports": "3.2.0",
+    "monocart-coverage-reports": "3.2.0",
+    "semver": "catalog:",
+    "vitest": "catalog:"
+  },
+  "devDependencies": {
+    "@swc/core": "~1.11.1"
+  }
+}

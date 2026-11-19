@@ -55,6 +55,9 @@ export default defineConfig({
       stdout: "pipe",
       stderr: "pipe",
       reuseExistingServer: !process.env.CI,
+      ...(process.env.PH_COVERAGE_BROWSER_DIR
+        ? { gracefulShutdown: { signal: "SIGTERM" as const, timeout: 10000 } }
+        : {}),
       timeout: 180_000,
     },
     {
@@ -68,6 +71,9 @@ export default defineConfig({
       stdout: "pipe",
       stderr: "pipe",
       reuseExistingServer: !process.env.CI,
+      ...(process.env.PH_COVERAGE_BROWSER_DIR
+        ? { gracefulShutdown: { signal: "SIGTERM" as const, timeout: 10000 } }
+        : {}),
       timeout: 120_000,
     },
     {
@@ -83,6 +89,9 @@ export default defineConfig({
       stdout: "pipe",
       stderr: "pipe",
       reuseExistingServer: !process.env.CI,
+      ...(process.env.PH_COVERAGE_BROWSER_DIR
+        ? { gracefulShutdown: { signal: "SIGTERM" as const, timeout: 10000 } }
+        : {}),
       timeout: 120_000,
     },
   ],

@@ -248,21 +248,18 @@ export async function createDocumentAndFillBasicData(
         // Count total CodeMirror editors: 2 (schema + initial state) + number of operations created so far
         // The operation editors start after the first 2 global editors
         const operationEditorIndex = 2 + i;
-        const operationEditor = page
-          .locator(".cm-content")
+        const editorContainer = page
+          .locator(".cm-editor")
           .nth(operationEditorIndex);
+        const operationEditor = editorContainer.locator(".cm-content");
         await expect(operationEditor).toBeVisible({
           timeout: 2 * 60 * 60 * 1000,
         });
+        await expect(operationEditor).toContainText("Add your inputs here");
 
-        await operationEditor.click();
-
-        // Select all and delete existing content
-        await page.keyboard.press("ControlOrMeta+A");
-        await page.keyboard.press("Backspace");
-
-        // Insert the operation schema
-        await page.keyboard.insertText(operation.schema);
+        await operationEditor.focus();
+        await expect(editorContainer).toHaveClass(/\bcm-focused\b/);
+        await operationEditor.fill(operation.schema);
 
         // Click away to blur and commit the changes
         const globalSchemaLabel = page.getByText("Global State Schema").first();
@@ -270,6 +267,10 @@ export async function createDocumentAndFillBasicData(
           timeout: 2 * 60 * 60 * 1000,
         });
         await globalSchemaLabel.click();
+        await expect(editorContainer).not.toHaveClass(/\bcm-focused\b/);
+        await expect(operationEditor).toHaveText(operation.schema, {
+          useInnerText: true,
+        });
       }
     }
   }

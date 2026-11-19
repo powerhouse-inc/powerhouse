@@ -1,3 +1,4 @@
+import { closeContext } from "@powerhousedao/coverage-baseline/playwright";
 import type { BrowserContext, Page } from "@playwright/test";
 import type { ChildProcess } from "child_process";
 import { execSync, spawn } from "child_process";
@@ -117,7 +118,7 @@ const NEW_REGISTRY_URL = `http://localhost:${NEW_REGISTRY_PORT}`;
 test.afterAll(async () => {
   if (consumerContext) {
     try {
-      await consumerContext.close();
+      await closeContext(consumerContext);
     } catch {
       // already closed
     }
@@ -216,7 +217,9 @@ test("Create ToDoDocument Editor", async ({ page }) => {
   await editorNameInput.fill("ToDoEditor");
 
   // Select the document type from the dropdown
-  const documentTypesSelect = page.locator("select#supported-document-types");
+  const documentTypesSelect = page.getByLabel("Supported Document Types", {
+    exact: true,
+  });
   await expect(documentTypesSelect).toBeVisible({ timeout: 30_000 });
 
   // Wait for the dropdown to contain the powerhouse/todo option
@@ -558,7 +561,7 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     consumerPage = page;
   } catch (err) {
     // Only close on failure so the next test still has a working session.
-    await context.close();
+    await closeContext(context);
     throw err;
   }
 });
