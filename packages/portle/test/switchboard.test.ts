@@ -98,6 +98,35 @@ describe("portle switchboard plugin", () => {
       expect(ctx.infos.at(-1)).toMatch(/tunnel up for dev\.sektar\.be/);
     });
 
+    it.each(["0", "false", "FALSE"])(
+      "does not autostart when PORTLE_AUTOSTART is %s, and logs why",
+      async (value) => {
+        const ctx = hostContext();
+        const runner = fakeRunner(enrolledWantingStart());
+        const p = createPortlePlugin(() => runner, { PORTLE_AUTOSTART: value });
+        await p.hooks!.onSubgraphsRegistering!(ctx);
+        await p.hooks!.onDrivesReady!(ctx);
+        expect(runner.calls).toEqual([]);
+        expect(ctx.infos.filter((m) => /autostart skipped/.test(m))).toEqual([
+          `[portle] autostart skipped: PORTLE_AUTOSTART is ${value}.`,
+        ]);
+      },
+    );
+
+    it.each([undefined, "1", "true", ""])(
+      "autostarts as before when PORTLE_AUTOSTART is %j",
+      async (value) => {
+        const ctx = hostContext();
+        const runner = fakeRunner(enrolledWantingStart());
+        const p = createPortlePlugin(() => runner, {
+          ...(value === undefined ? {} : { PORTLE_AUTOSTART: value }),
+        });
+        await p.hooks!.onSubgraphsRegistering!(ctx);
+        await p.hooks!.onDrivesReady!(ctx);
+        expect(runner.calls).toEqual(["start"]);
+      },
+    );
+
     it("stays down, with a warning, when the host no longer passes the gate", async () => {
       const ctx = hostContext("OPEN");
       const runner = fakeRunner(enrolledWantingStart());

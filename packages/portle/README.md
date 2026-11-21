@@ -79,6 +79,10 @@ be Portle's build with the `rfc2136` and `acmedns` DNS modules; a stock Caddy
 starts but cannot obtain the certificate. Fetching them from the control
 plane's release endpoint is the next step.
 
+`PORTLE_AUTOSTART=0` (or `false`) in the switchboard's environment keeps the
+tunnel down at boot whatever `autostart` says; the stored setting is untouched
+and `portleStart` still works.
+
 ## For a customer zone
 
 The zone (`dev.example.com`) must be delegated to the relay's nameservers

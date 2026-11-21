@@ -73,6 +73,14 @@ export interface PortleHooks {
 
 export const PORTLE_PLUGIN_NAME = "portle";
 
+/** `PORTLE_AUTOSTART=0` (or `false`) keeps the tunnel down at boot, whatever `site.json` says. */
+const AUTOSTART_ENV = "PORTLE_AUTOSTART";
+
+function autostartDisabled(env: NodeJS.ProcessEnv): boolean {
+  const value = env[AUTOSTART_ENV]?.trim().toLowerCase();
+  return value === "0" || value === "false";
+}
+
 /** Injected by tests; the real plugin builds a PortleRunner on the project's state dir. */
 export function createPortlePlugin(
   makeRunner: (stateDir: string, log: LoggerLike) => PortleRunnerLike = (
@@ -84,6 +92,8 @@ export function createPortlePlugin(
       log: (msg, detail) =>
         log.info(`[portle] ${msg} ${detail ? JSON.stringify(detail) : ""}`),
     }),
+  /** Read at each boot, so the variable is the one the host runs with. */
+  env: NodeJS.ProcessEnv = process.env,
 ): HostPlugin<PortleHooks> {
   /** One runner per host, built by whichever hook the host reaches first. */
   const ensureRunner = (ctx: PortleHostContext): PortleRunnerLike => {
@@ -121,6 +131,14 @@ export function createPortlePlugin(
         const log = loggerOf(ctx);
         const status = runner.status();
         if (!status.enrolled || !status.settings?.autostart) return;
+        // Not the stored setting: a manual start and the next boot without
+        // the variable are unaffected.
+        if (autostartDisabled(env)) {
+          log.info(
+            `[portle] autostart skipped: ${AUTOSTART_ENV} is ${env[AUTOSTART_ENV]}.`,
+          );
+          return;
+        }
         const facts = gateFactsOf(api);
         if (!bootGatePasses(facts)) {
           log.warn(

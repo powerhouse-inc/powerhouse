@@ -49,7 +49,7 @@ const ZOD_DIR = path.dirname(
   createRequire(import.meta.url).resolve("zod/package.json"),
 );
 
-const FAKE_PH_RUN = `import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+const FAKE_PH_RUN = `import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 const [, , , folder, verb = "run", ...rest] = process.argv;
 const member = JSON.parse(process.env.${COMPOUND_MEMBER_ENV});
@@ -85,7 +85,11 @@ process.stdin.on("end", () => {
   process.exit(0);
 });
 process.stdin.resume();
-setInterval(() => {}, 1000);
+// A test ends the member on its own by writing its exit code to <runDir>/die-<member>.
+setInterval(() => {
+  const die = path.join(runDir, "die-" + member.member);
+  if (existsSync(die)) process.exit(Number(readFileSync(die, "utf8")));
+}, 50);
 `;
 
 interface ForegroundCall {
@@ -413,6 +417,111 @@ describe("own-process members", () => {
       "drives.lab.url": "http://localhost:1/d/lab",
       "list.0": "ws://x",
     });
+  });
+});
+
+/** Ends an own-process member from outside, as a crash or a quiet exit does. */
+function killMember(dir: string, member: string, code: number) {
+  write(dir, `.ph/run/die-${member}`, String(code));
+}
+
+describe("a member that dies", () => {
+  const stack = (extra: Record<string, unknown> = {}) =>
+    makeProject({
+      children: {
+        switchboard: { host: "switchboard", process: "own" },
+        connect: { host: "connect", process: "own" },
+        ...extra,
+      },
+    });
+
+  it.each([
+    ["with a failing code", 5],
+    ["with code 0", 0],
+  ])("stops the others and ends the run non-zero, %s", async (_name, code) => {
+    const dir = stack();
+    const exits: number[] = [];
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await start(dir, { exit: (c) => exits.push(c) });
+      const connect = readRunRecord(dir, "lab-connect")!.pid;
+      killMember(dir, "switchboard", code);
+      await vi.waitFor(() => expect(exits).toEqual([1]));
+      expect(isPidAlive(connect)).toBe(false);
+      expect(readRunRecord(dir, "app")).toBeUndefined();
+      expect(error).toHaveBeenCalledWith(
+        expect.stringMatching(
+          new RegExp(
+            String.raw`member "switchboard" exited \(code ${code}\) while the stack runs; its log: .*switchboard\.\d+\.log`,
+          ),
+        ),
+      );
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("does not end the run when the stack itself stops it", async () => {
+    const dir = stack();
+    const exits: number[] = [];
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const result = await start(dir, { exit: (c) => exits.push(c) });
+      const pids = ["lab-switchboard", "lab-connect"].map(
+        (name) => readRunRecord(dir, name)!.pid,
+      );
+      await result.handleSignal("SIGTERM");
+      await vi.waitFor(() => expect(exits).toEqual([143]));
+      for (const pid of pids) expect(isPidAlive(pid)).toBe(false);
+      // Let any late exit event arrive: nothing more may follow.
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(exits).toEqual([143]);
+      expect(error).not.toHaveBeenCalled();
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("stops the foreground member first and prints the message once it has", async () => {
+    const dir = makeProject({
+      children: {
+        cli: { host: "cli" },
+        switchboard: { host: "switchboard" },
+      },
+    });
+    const exits: number[] = [];
+    const order: string[] = [];
+    const error = vi.spyOn(console, "error").mockImplementation(() => {
+      order.push("message");
+    });
+    try {
+      await start(dir, { exit: (c) => exits.push(c) });
+      const [call] = foregroundCalls();
+      const pid = (call.ctx.foreground as ForegroundContext).members()[0].pid!;
+      killMember(dir, "switchboard", 0);
+      await vi.waitFor(() => expect(exits).toEqual([1]));
+      expect(call.shutdowns).toBe(1);
+      expect(isPidAlive(pid)).toBe(false);
+      expect(order).toEqual(["message"]);
+      expect(error).toHaveBeenCalledWith(
+        expect.stringContaining('member "switchboard" exited (code 0)'),
+      );
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("leaves the foreground member's own exit code alone", async () => {
+    const dir = makeProject({
+      children: {
+        cli: { host: "cli" },
+        switchboard: { host: "switchboard" },
+      },
+    });
+    const exits: number[] = [];
+    await start(dir, { exit: (c) => exits.push(c) });
+    foregroundCalls()[0].exit(3);
+    await vi.waitFor(() => expect(exits).toEqual([3]));
   });
 });
 

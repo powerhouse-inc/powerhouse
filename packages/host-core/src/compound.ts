@@ -589,8 +589,13 @@ export async function runCompound(
       if (keepsRecord) clearRunRecord(projectRoot, host.name);
     })());
 
+  // An own-process member that died on its own: what to print, and (once the
+  // stack is up) what ends it. Before that, the start fails on it.
+  const death: { message?: string; ends?: () => void } = {};
+
   try {
     for (const name of order) {
+      if (death.message) throw new Error(death.message);
       const m = byKey.get(name);
       if (!m) continue;
       const isForeground = name === foreground;
@@ -662,6 +667,8 @@ export async function runCompound(
         status.pid = own.pid;
         status.logFile = own.logFile;
         void own.exited.then((exit) => {
+          // Only an exit the compound did not ask for (it marks a member
+          // `stopping` before it stops it).
           if (status.status !== "starting" && status.status !== "ready") {
             return;
           }
@@ -671,9 +678,10 @@ export async function runCompound(
               ? `signal ${exit.signal}`
               : `code ${exit.code}`;
           status.error = `exited (${how}) while the stack runs; its log: ${own.logFile}`;
-          if (foreground === undefined) {
-            console.error(`${compoundFile}: member "${name}" ${status.error}`);
-          }
+          // A long-running member that ends, whatever its code, fails the
+          // stack.
+          death.message ??= `${compoundFile}: member "${name}" ${status.error}`;
+          death.ends?.();
         });
       } else {
         handle = toStartedHandle(
@@ -725,6 +733,7 @@ export async function runCompound(
       if (status.status === "starting") status.status = "ready";
       status.endpoints = urlEndpoints(memberOutputs);
     }
+    if (death.message) throw new Error(death.message);
   } catch (error) {
     await shutdown();
     throw error;
@@ -759,8 +768,11 @@ export async function runCompound(
   // The first end decides the code: a signal's, or the foreground member's.
   const exit = options.exit ?? ((code: number) => process.exit(code));
   let ending: Promise<void> | undefined;
-  const end = (code: number) =>
-    (ending ??= shutdown().finally(() => exit(code)));
+  const end = (code: number, afterStop?: () => void) =>
+    (ending ??= shutdown().finally(() => {
+      afterStop?.();
+      exit(code);
+    }));
   const handleSignal = (signal: "SIGINT" | "SIGTERM") =>
     end(signal === "SIGINT" ? 130 : 143);
   if (options.installSignalHandlers !== false) {
@@ -777,6 +789,13 @@ export async function runCompound(
     void handleSignal("SIGTERM");
   };
   if (stopRequested) stopFromStream();
+
+  // A member that dies on its own takes the stack down with exit code 1. The
+  // message waits until the others (the terminal's owner first) have stopped,
+  // so it does not land in a drawing.
+  death.ends = () => void end(1, () => console.error(death.message));
+  // One that died between the last check above and here.
+  if (death.message) death.ends();
 
   // The foreground member's end is the stack's: the rest stop, and the
   // process exits with its code.
