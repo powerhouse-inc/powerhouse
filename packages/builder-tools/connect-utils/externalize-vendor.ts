@@ -547,7 +547,8 @@ export function findPackageRoot(from: string, pkg: string): string | null {
 
 // Roots of the dependency-free own deps: a group also takes in its modules'
 // dependencies, so only these can get one chunk without absorbing others.
-function ownRoots(own: Record<string, string>): string[] {
+// Forward slashes, as the build's module ids have them on every platform.
+export function ownRoots(own: Record<string, string>): string[] {
   const roots = new Set<string>();
   for (const file of Object.values(own)) {
     const root = ownPackageRoot(file);
@@ -558,7 +559,7 @@ function ownRoots(own: Record<string, string>): string[] {
         dependencies?: Record<string, string>;
       };
       if (Object.keys(meta.dependencies ?? {}).length === 0)
-        roots.add(root + sep);
+        roots.add((root + sep).split(sep).join("/"));
     } catch {
       // no readable package.json: no group
     }
@@ -924,7 +925,8 @@ const [dirname, vendorDir, includeJSON, urlPrefix, externalJSON, dynamicBase, se
 const { files: own = {}, roots: ownRootList = [] } = JSON.parse(ownJSON || '{}');
 // One chunk per own-dep package: split between an entry and a shared chunk, a
 // barrel can re-export from the entry and run before the classes it extends.
-const ownGroups = ownRootList.map((root, i) => ({ name: 'own-' + i, test: (id) => id.startsWith(root) }));
+// Module ids have forward slashes on every platform; so do the roots.
+const ownGroups = ownRootList.map((root, i) => ({ name: 'own-' + i, test: (id) => id.split('\\\\').join('/').startsWith(root) }));
 // Trailing argv are optional (older callers): base defaults to the dynamic
 // placeholder behavior, nodeEnv to development. baseArg is the APP base —
 // the same string the app build uses; the build base appends the vendor
