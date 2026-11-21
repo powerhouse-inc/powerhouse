@@ -107,6 +107,7 @@ describe("orderBuildSteps", () => {
       "pieces",
       "dist-manifest",
       "offered-routes",
+      "cli-export",
       "stylesheet",
       "release-approval",
     ]);

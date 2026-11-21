@@ -104,6 +104,12 @@ describe("isRunnerArgsSchema", () => {
     expect(isRunnerArgsSchema(undefined)).toBe(false);
     expect(isRunnerArgsSchema({ options: ["--port"] })).toBe(false);
     expect(isRunnerArgsSchema({ options: [1], flags: [] })).toBe(false);
+    expect(
+      isRunnerArgsSchema({ options: [], flags: [], passthrough: true }),
+    ).toBe(true);
+    expect(
+      isRunnerArgsSchema({ options: [], flags: [], passthrough: "yes" }),
+    ).toBe(false);
   });
 });
 
@@ -150,6 +156,17 @@ describe("checkRunnerArgv", () => {
     expect(() =>
       checkRunnerArgv(["--port"], { ...target, schema: switchboard }),
     ).toThrow(/--port needs a value/);
+  });
+
+  it("hands a passthrough runner every argument as typed", () => {
+    const argv = ["hello", "--name", "Ada", "-i", "--port=1", "--", "x"];
+    expect(
+      checkRunnerArgv(argv, {
+        host: "cli",
+        runner: "cli-runner",
+        schema: { options: [], flags: [], passthrough: true },
+      }),
+    ).toEqual(argv);
   });
 
   it("accepts a retired switch with one warning and drops it", () => {

@@ -1596,6 +1596,7 @@
     "apps/switchboard-lb/test/integration/*.js",
     "packages/reactor/bench/test/integration/*.js",
     "clis/ph-cli/src/commands/migrations/templates",
+    "clis/ph-cli/test/fixtures/cli-package/",
     "packages/builder-tools/connect-utils/service-worker/**",
     "**/playwright-report/",
     "test/package-e2e/.registry-storage/",

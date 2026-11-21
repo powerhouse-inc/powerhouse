@@ -81,8 +81,14 @@ export {
   applyCompletion,
 } from "./interactive/completions.js";
 export { renderMarkdown } from "./interactive/markdown.js";
-export { buildDefaultReactor } from "./integrations/powerhouse/index.js";
-export type { BuildDefaultReactorOptions } from "./integrations/powerhouse/index.js";
+export {
+  attachDefaultReactor,
+  buildDefaultReactor,
+} from "./integrations/powerhouse/index.js";
+export type {
+  AttachDefaultReactorOptions,
+  BuildDefaultReactorOptions,
+} from "./integrations/powerhouse/index.js";
 export { startSwitchboard } from "./integrations/powerhouse/index.js";
 export {
   defaultPort,
@@ -105,6 +111,7 @@ export type {
   ReactorContext,
   ReactorSetupContext,
   ReactorConfiguration,
+  RemoteReactorConfig,
   DriveConfig,
   ReactorWrites,
   DriveEntry,
@@ -145,6 +152,7 @@ export type {
   Cli,
   CliOptions,
   RunOptions,
+  RunReactor,
   WorkdirStore,
   CommandContext,
   CoreContext,

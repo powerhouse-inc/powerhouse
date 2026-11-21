@@ -12,6 +12,8 @@ import {
   browserEntry,
   buildNodeBuildConfig,
   buildPieceBuildConfig,
+  CLI_ENTRY,
+  CLINT_EXTERNAL,
   findBundledSharedDeps,
   hostStubOf,
   IMAGE_EXTENSIONS,
@@ -154,10 +156,35 @@ describe("buildNodeBuildConfig", () => {
     expect(neverBundle).toContain("react");
   });
 
+  it("builds ./cli in node only, leaving clint and its subpaths to the host", () => {
+    const cfg = buildNodeBuildConfig();
+    expect(cfg.entry).toContain(CLI_ENTRY);
+    expect(browserEntry).not.toContain(CLI_ENTRY);
+    const neverBundle = cfg.deps!.neverBundle as (string | RegExp)[];
+    expect(neverBundle).toContain(CLINT_EXTERNAL);
+    for (const id of [
+      "@powerhousedao/clint",
+      "@powerhousedao/clint/powerhouse",
+      "@powerhousedao/clint/cli-runner",
+    ]) {
+      expect(CLINT_EXTERNAL.test(id), id).toBe(true);
+    }
+    expect(CLINT_EXTERNAL.test("@powerhousedao/clint-common")).toBe(false);
+    // The browser build has no ./cli entry, so nothing there names clint.
+    const browserNeverBundle = buildBrowserBuildConfig().deps!.neverBundle as (
+      | string
+      | RegExp
+    )[];
+    expect(browserNeverBundle).not.toContain(CLINT_EXTERNAL);
+  });
+
   it("sharedDeps: false omits the shared regexps but keeps the rest", () => {
     const cfg = buildNodeBuildConfig({ sharedDeps: false });
     const neverBundle = cfg.deps!.neverBundle as (string | RegExp)[];
-    expect(neverBundle.some((e) => e instanceof RegExp)).toBe(false);
+    // The one regexp left is the node build's own, clint's.
+    expect(neverBundle.filter((e) => e instanceof RegExp)).toEqual([
+      CLINT_EXTERNAL,
+    ]);
     expect(neverBundle).toContain("@powerhousedao/reactor-api");
   });
 

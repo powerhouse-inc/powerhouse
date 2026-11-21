@@ -88,6 +88,9 @@ export {
 } from "./spawn-host.js";
 export {
   runCompound,
+  STOP_ON_STDIN_ENV,
+  STOP_STREAM_LIMIT_MS,
+  stopStreamOf,
   type RunCompoundOptions,
   type RunCompoundResult,
 } from "./compound.js";

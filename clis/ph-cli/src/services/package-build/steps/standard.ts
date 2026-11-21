@@ -1,4 +1,5 @@
 import { browserBundleStep, nodeBundleStep } from "./bundles.js";
+import { cliExportStep } from "./cli-export.js";
 import { connectRoutesStep } from "./connect-routes.js";
 import type { StandardBuildStep } from "./context.js";
 import { definitionsStep } from "./definitions.js";
@@ -24,6 +25,7 @@ export const standardBuildSteps: readonly StandardBuildStep[] = [
   piecesStep,
   distManifestStep,
   offeredRoutesStep,
+  cliExportStep,
   stylesheetStep,
   releaseApprovalStep,
 ];

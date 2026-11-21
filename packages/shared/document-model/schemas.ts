@@ -919,4 +919,7 @@ export const ManifestSchema = z.object({
   // Set by `ph build` when the package offers routes (`./connect-routes`) to
   // the Connects that load it.
   connectRoutes: z.boolean().optional(),
+  // Set by `ph build` when the package exports a Cli (`./cli`), which a host
+  // runs with `@powerhousedao/clint/cli-runner`.
+  cli: z.boolean().optional(),
 });

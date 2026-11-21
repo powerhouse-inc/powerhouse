@@ -516,6 +516,26 @@ export interface ReactorConfiguration<
   connect?: ConnectConfig;
   /** Switchboard service configuration. */
   switchboard?: SwitchboardConfig;
+  /**
+   * What the reactor holds when a host runner attaches it to a remote
+   * switchboard instead of calling `create` (see `RunOptions.reactor`):
+   * read by `attachDefaultReactor`, never by `create`.
+   */
+  remote?: RemoteReactorConfig<R>;
+}
+
+/**
+ * What a CLI's reactor holds on a remote switchboard: the models its client
+ * signs and reduces with, the drives to find or create there, and the changes
+ * to bridge to the event bus. No drive: the drive the address names.
+ */
+export interface RemoteReactorConfig<R extends DocumentRegistry = AnyRegistry> {
+  documentModels?: DocumentModelModule[];
+  /** Single drive (sugar for drives: [{ ...drive, role: 'personal' }]). */
+  drive?: DriveConfig;
+  /** First 'personal' drive = personalDriveId = driveId. */
+  drives?: Array<DriveConfig & { role: "personal" | "watched" }>;
+  subscriptions?: SubscriptionConfig<R>;
 }
 
 /**

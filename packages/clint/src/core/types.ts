@@ -1149,7 +1149,31 @@ export interface RunOptions {
   configFile?: string;
   /** Override log verbosity. Default: 'info'. */
   logLevel?: LogLevel;
+  /**
+   * The reactor for this run, in place of the one `configureReactor` set:
+   * called lazily, like that configuration's `create`, with the setup
+   * context and that configuration (undefined when the CLI set none). The
+   * embedded switchboard and Connect the configuration enables stay off for
+   * the run, and so do `--no-api` and `--no-studio`. A host runner
+   * (`@powerhousedao/clint/cli-runner`) attaches a remote switchboard here.
+   */
+  reactor?: RunReactor;
+  /**
+   * Called once when the CLI keeps running (interactive, or serving its
+   * routine, API or proxy), before it starts anything for that; never for a
+   * one-shot command. A host runner writes its run record here. A rejection
+   * ends the run: its message on stderr, exit code 1.
+   */
+  onServe?: () => void | Promise<void>;
 }
+
+/** See `RunOptions.reactor`. */
+export type RunReactor = (
+  setup: import("../integrations/powerhouse/types.js").ReactorSetupContext,
+  configured:
+    | import("../integrations/powerhouse/types.js").ReactorConfiguration
+    | undefined,
+) => Promise<import("../integrations/powerhouse/types.js").ReactorContext>;
 
 /**
  * Environment variable mapping for a config field.

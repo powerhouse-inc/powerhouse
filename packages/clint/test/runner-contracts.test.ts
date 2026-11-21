@@ -12,6 +12,7 @@ import type {
   PHHostOutputs,
 } from "@powerhousedao/host-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
+import * as cliRunner from "../src/runners/cli-runner.js";
 import * as clintRunner from "../src/runners/clint-runner.js";
 import * as mastraRunner from "../src/runners/mastra-runner.js";
 
@@ -19,8 +20,10 @@ import * as mastraRunner from "../src/runners/mastra-runner.js";
  * shape of RunnerModule, no cast). */
 const MASTRA = "@powerhousedao/clint/mastra-runner";
 const CLINT = "@powerhousedao/clint/clint-runner";
+const CLI = "@powerhousedao/clint/cli-runner";
 const mastra = { ...mastraRunner };
 const clint = { ...clintRunner };
+const cliRun = { ...cliRunner };
 /** validateDeclaredHost takes an untyped RunnerModule; its verbs are unused. */
 const untyped = (module: {
   kind: "reactor" | "compound";
@@ -148,11 +151,53 @@ const cliHost = () => {
   };
 };
 
+/** A cli-runner host as DECLARED: a package's Cli, attached to the
+ * switchboard's drive by an `$output` token. */
+const declaredCliRunnerHost = () =>
+  ({
+    name: "tools",
+    runner: { module: CLI },
+    config: { package: "@acme/tools" },
+    reactor: {
+      backends: {
+        switchboard: {
+          kind: "remote",
+          remote: {
+            url: {
+              $output: {
+                host: "switchboard",
+                path: ["drives", "powerhouse", "url"],
+              },
+            },
+          },
+        },
+      },
+    },
+  }) satisfies PHHost;
+
+/** The same host RESOLVED. */
+const cliRunnerHost = () => {
+  const host = declaredCliRunnerHost();
+  return {
+    ...host,
+    reactor: {
+      backends: {
+        switchboard: {
+          kind: "remote",
+          remote: { url: "http://127.0.0.1:4001/d/powerhouse" },
+        },
+      },
+    },
+  };
+};
+
 const validate = {
   mastra: (host: unknown) =>
     validateHost(mastra, MASTRA, host, "hosts/assistant/host.js"),
   clint: (host: unknown) =>
     validateHost(clint, CLINT, host, "hosts/cli/host.js"),
+  cli: (host: unknown) =>
+    validateHost(cliRun, CLI, host, "hosts/tools/host.js"),
 };
 
 describe("mastra-runner host contract", () => {
@@ -432,11 +477,86 @@ describe("clint-runner host contract", () => {
   });
 });
 
+describe("cli-runner host contract", () => {
+  it("is a reactor runner whose arguments all go to the Cli", () => {
+    expect(cliRunner.kind).toBe("reactor");
+    expect(cliRunner.argsSchema).toEqual({
+      options: [],
+      flags: [],
+      passthrough: true,
+    });
+    // No outputs: start-run neither locks nor records it; the runner records
+    // a Cli that keeps running itself.
+    expect("outputsSchema" in cliRunner).toBe(false);
+  });
+
+  it("accepts a package's Cli on a switchboard drive", () => {
+    const parsed = validate.cli(cliRunnerHost());
+    expect(parsed.config?.package).toBe("@acme/tools");
+    expect(parsed.reactor?.backends?.switchboard?.remote?.url).toBe(
+      "http://127.0.0.1:4001/d/powerhouse",
+    );
+    // Without config the project's own ./cli runs; without a reactor the
+    // Cli keeps its own.
+    expect(() =>
+      validate.cli({ name: "tools", runner: { module: CLI } }),
+    ).not.toThrow();
+  });
+
+  it("declared form: remote.url takes the switchboard's output token", () => {
+    const file = "hosts/tools/host.js";
+    expect(() =>
+      validateDeclaredHost(untyped(cliRun), CLI, declaredCliRunnerHost(), file),
+    ).not.toThrow();
+    expect(() =>
+      validateHost(cliRun, CLI, declaredCliRunnerHost(), file),
+    ).toThrow(/is an unresolved output token/);
+  });
+
+  it("resolved form: remote.url must be a drive address", () => {
+    const host = cliRunnerHost();
+    expect(() =>
+      validate.cli({
+        ...host,
+        reactor: {
+          backends: {
+            switchboard: {
+              kind: "remote",
+              remote: { url: "http://127.0.0.1:4001/graphql" },
+            },
+          },
+        },
+      }),
+    ).toThrow(/must be a switchboard drive address/);
+  });
+
+  it("rejects unknown config, runner and top-level keys, and children", () => {
+    const host = cliRunnerHost();
+    expect(() =>
+      validate.cli({ ...host, config: { pakage: "@acme/tools" } }),
+    ).toThrow(/config: Unrecognized key: "pakage"/);
+    expect(() =>
+      validate.cli({ ...host, runner: { ...host.runner, proxy: {} } }),
+    ).toThrow(/runner: Unrecognized key: "proxy"/);
+    expect(() =>
+      validate.cli({ ...host, children: { sb: { host: "switchboard" } } }),
+    ).toThrow(/is a reactor runner, so the host must not declare `children`/);
+  });
+});
+
 describe("declared verbs", () => {
   const functions = (mod: Record<string, unknown>) =>
     Object.entries(mod)
       .filter(([, value]) => typeof value === "function")
       .map(([name]) => name);
+
+  it("cli lists exactly its verb functions (not runCli or loadCli)", () => {
+    expect([...cliRunner.verbs].sort()).toEqual(
+      functions(cliRun)
+        .filter((name) => name !== "runCli" && name !== "loadCli")
+        .sort(),
+    );
+  });
 
   it("mastra lists exactly its verb functions (not promptFromMessages)", () => {
     expect([...mastraRunner.verbs].sort()).toEqual(
@@ -475,6 +595,16 @@ describe("PHHostRunners augmentation", () => {
     expectTypeOf<
       PHHostOutputs<typeof CLINT>
     >().toEqualTypeOf<clintRunner.ClintOutputs>();
+    expectTypeOf<PHHostOutputs<typeof CLI>>().toEqualTypeOf<
+      Record<string, never>
+    >();
+    const cliTypo = {
+      name: "tools",
+      runner: { module: CLI },
+      // @ts-expect-error -- `pakage` is not a cli-runner config key
+      config: { pakage: "x" },
+    } satisfies PHHost;
+    expect(cliTypo.name).toBe("tools");
   });
 });
 
@@ -496,6 +626,10 @@ describe("emitted runner host schemas drift", () => {
     "host-clint-runner.schema.json": emitHostJsonSchema(
       "host-clint-runner",
       clintRunner.declaredHostSchema,
+    ),
+    "host-cli-runner.schema.json": emitHostJsonSchema(
+      "host-cli-runner",
+      cliRunner.declaredHostSchema,
     ),
   };
   for (const [file, schema] of Object.entries(emitted)) {

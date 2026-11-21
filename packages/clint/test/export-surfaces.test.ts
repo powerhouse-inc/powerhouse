@@ -16,6 +16,7 @@ const SURFACES: Record<string, { source: string; names: string[] }> = {
     names: [
       "defineCli",
       "buildDefaultReactor",
+      "attachDefaultReactor",
       "SignerNotReadyError",
       "signerReady",
       "policyOfHeader",
@@ -37,6 +38,7 @@ const SURFACES: Record<string, { source: string; names: string[] }> = {
       "ensureDrive",
       "createAttachmentCommands",
       "attachRemoteReactor",
+      "attachDefaultReactor",
       "SignerNotReadyError",
       "createGatedSigner",
       "signerReady",
@@ -47,6 +49,10 @@ const SURFACES: Record<string, { source: string; names: string[] }> = {
   "./testing": {
     source: "./src/testing/index.ts",
     names: ["createStreamingClient", "createTerminalClient"],
+  },
+  "./cli-runner": {
+    source: "./src/runners/cli-runner.ts",
+    names: ["run", "runCli", "loadCli", "hostSchema", "argsSchema"],
   },
 };
 

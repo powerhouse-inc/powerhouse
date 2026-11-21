@@ -22,6 +22,7 @@ import {
   generatePieceTrigger,
 } from "@powerhousedao/codegen";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
+import { packageJsonExports } from "@powerhousedao/shared/clis/constants";
 import type { Manifest } from "@powerhousedao/shared/document-model";
 import {
   afterAll,
@@ -334,6 +335,107 @@ describe("runBuild on a mixed package", () => {
         descriptor: "dist/node/pieces/wave/descriptor.json",
       },
     ]);
+    // No cli/index.ts, so no Cli to announce.
+    expect(manifest.cli).toBeUndefined();
+    expect(warnings).toEqual([]);
+  }, 120_000);
+});
+
+/** What a package's `./cli` export holds, as far as this test drives it. */
+type BuiltCli = {
+  name: string;
+  run(
+    argv: string[],
+    options: {
+      stdout: (message: string) => void;
+      stderr: (message: string) => void;
+      exit: (code: number) => void;
+    },
+  ): Promise<void>;
+};
+
+describe("runBuild on a package that exports a Cli", () => {
+  const fixture = join(fixtures, "cli-package");
+  const dist = join(fixture, "dist");
+  const clint = join(
+    import.meta.dirname,
+    "..",
+    "..",
+    "..",
+    "packages",
+    "clint",
+  );
+
+  beforeAll(() => {
+    if (!existsSync(join(clint, "dist", "index.mjs"))) {
+      throw new Error(
+        "Build @powerhousedao/clint first: the fixture's Cli is defined with it.",
+      );
+    }
+    // clint resolves from the package the way pnpm would link its peer.
+    rmSync(join(fixture, "node_modules"), { recursive: true, force: true });
+    mkdirSync(join(fixture, "node_modules", "@powerhousedao"), {
+      recursive: true,
+    });
+    symlinkSync(
+      clint,
+      join(fixture, "node_modules", "@powerhousedao", "clint"),
+      linkType,
+    );
+  });
+
+  afterAll(() => {
+    rmSync(join(fixture, "node_modules"), { recursive: true, force: true });
+  });
+
+  it("builds ./cli for node with clint left to the host, types it and marks the dist manifest", async () => {
+    const sourceManifest = join(fixture, "powerhouse.manifest.json");
+    const manifestBefore = readFileSync(sourceManifest);
+    clean(fixture);
+    process.chdir(fixture);
+
+    await runBuild(args);
+
+    // Where the export list points, and only in the node build.
+    expect(packageJsonExports["./cli"]).toEqual({
+      types: "./dist/types/cli/index.d.ts",
+      node: "./dist/node/cli/index.mjs",
+    });
+    const built = join(fixture, packageJsonExports["./cli"].node);
+    expect(existsSync(built)).toBe(true);
+    expect(existsSync(join(fixture, packageJsonExports["./cli"].types))).toBe(
+      true,
+    );
+    expect(existsSync(join(dist, "browser", "cli"))).toBe(false);
+
+    // clint stays a bare import: the host's copy runs the Cli.
+    const source = readFileSync(built, "utf8");
+    expect(bareImports(source)).toContain("@powerhousedao/clint");
+    expect(source).not.toContain("Unknown command:");
+
+    // The dist manifest says the package ships a Cli; the source is untouched.
+    const manifest = readJson<Manifest>(join(dist, "powerhouse.manifest.json"));
+    expect(manifest.cli).toBe(true);
+    expect(readFileSync(sourceManifest).equals(manifestBefore)).toBe(true);
+
+    // The built export is a Cli whose commands run.
+    const { cli } = (await import(pathToFileURL(built).href)) as {
+      cli: BuiltCli;
+    };
+    expect(cli.name).toBe("fixture-cli");
+    const printed: string[] = [];
+    let exitCode: number | undefined;
+    await cli.run(["node", "fixture-cli", "hello", "--name", "Ada"], {
+      stdout: (message) => printed.push(message),
+      stderr: (message) => printed.push(message),
+      exit: (code) => {
+        exitCode = code;
+      },
+    });
+    expect(printed).toEqual(["Hello, Ada!"]);
+    expect(exitCode).toBeUndefined();
+
+    // tsc found the Cli's types through the linked clint: no warning.
     expect(warnings).toEqual([]);
   }, 120_000);
 });

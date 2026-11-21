@@ -13,6 +13,7 @@ export type {
   ReactorContext,
   ReactorSetupContext,
   ReactorConfiguration,
+  RemoteReactorConfig,
   PowerhouseIntegrationOptions,
   DriveConfig,
   DriveEntry,
@@ -75,6 +76,9 @@ export {
   isAttachmentAlreadyExists,
 } from "./attachment.js";
 
+import type { IReactorClient } from "@powerhousedao/reactor";
+import type { BearerTokenProvider } from "@powerhousedao/reactor-browser/graphql-client";
+import type { ISigner } from "@powerhousedao/shared/document-model";
 import type { DocumentModelModule } from "document-model";
 import type {
   ReactorContext,
@@ -84,6 +88,7 @@ import type {
   SubscriptionConfig,
   DocumentRegistry,
   AnyRegistry,
+  RemoteReactorConfig,
   TypedReactorClient,
 } from "./types.js";
 
@@ -191,6 +196,125 @@ export async function buildDefaultReactor<
       } catch {
         // Best-effort shutdown
       }
+    },
+  };
+
+  ctx.emit?.("powerhouse:ready", { driveId });
+
+  return result;
+}
+
+/**
+ * Options for attachDefaultReactor(): where the switchboard is, how the
+ * client signs and authenticates, and what the CLI's reactor holds there.
+ */
+export interface AttachDefaultReactorOptions<
+  R extends DocumentRegistry = AnyRegistry,
+> extends RemoteReactorConfig<R> {
+  /** A switchboard drive address, `<switchboard>/d/<slug>`; its GraphQL
+   * endpoint or bare origin attach too, but name no drive. */
+  url: string;
+  /** Signs the actions the client pushes (see `createReactorWrites`);
+   * without one they go out unsigned. */
+  signer?: ISigner;
+  /** The bearer per request, for an authenticated switchboard. */
+  tokenProvider?: BearerTokenProvider;
+}
+
+/** The id of the drive a switchboard serves under `slug`. */
+async function driveOfAddress(
+  client: IReactorClient,
+  slug: string,
+  endpoint: string,
+): Promise<string> {
+  try {
+    return (await client.get(slug)).header.id;
+  } catch (cause) {
+    throw new Error(
+      `The switchboard at ${endpoint} serves no drive "${slug}": the drive address must name one of its drives.`,
+      { cause },
+    );
+  }
+}
+
+/**
+ * Build a ReactorContext on a RUNNING switchboard: the remote counterpart of
+ * buildDefaultReactor(), with the same drives and subscriptions, and no
+ * `_module`, so no embedded switchboard can start over it. The default drive
+ * is the first personal drive the options ask for, else the first, else the
+ * one the address names. `shutdown` releases only this process's side (the
+ * bridged subscriptions, the signer watch, the client) and runs once.
+ */
+export async function attachDefaultReactor<
+  R extends DocumentRegistry = AnyRegistry,
+>(
+  ctx: ReactorSetupContext<R>,
+  options: AttachDefaultReactorOptions<R>,
+): Promise<ReactorContext<R>> {
+  const { attachRemoteReactor } = await import("./remote-reactor.js");
+  const { ensureDrive } = await import("./drive.js");
+  const { createReactorWrites } = await import("./writes.js");
+  const { switchboardOfDrive } =
+    await import("@powerhousedao/shared/host-tokens");
+
+  const handle = createReactorWrites({ signer: options.signer });
+  const attachment = await attachRemoteReactor({
+    url: options.url,
+    documentModels: options.documentModels ?? [],
+    ...(handle.signer ? { signer: handle.signer } : {}),
+    ...(options.tokenProvider ? { tokenProvider: options.tokenProvider } : {}),
+  });
+  const client = attachment.client as IReactorClient & {
+    dispose?: () => void;
+  };
+
+  const driveConfigs =
+    options.drives ??
+    (options.drive ? [{ ...options.drive, role: "personal" as const }] : []);
+  const drives: DriveEntry[] = [];
+  for (const cfg of driveConfigs) {
+    const drive = await ensureDrive(client, cfg);
+    // A drive the host creates later is not listed yet.
+    if (drive.deferred) continue;
+    drives.push({ id: drive.id, name: drive.name, role: cfg.role });
+  }
+  const personal = drives.find((d) => d.role === "personal");
+  const addressed = switchboardOfDrive(options.url);
+  let driveId = personal?.id ?? drives[0]?.id ?? "";
+  let driveUrl =
+    addressed && driveId ? `${addressed.base}/d/${driveId}` : undefined;
+  if (!driveId && addressed) {
+    driveId = await driveOfAddress(client, addressed.slug, attachment.endpoint);
+    driveUrl = options.url;
+  }
+
+  let unsubscribe: (() => void) | undefined;
+  if (options.subscriptions && ctx.emit) {
+    const { bridgeSubscriptions } = await import("./subscriptions.js");
+    unsubscribe = bridgeSubscriptions<R>(
+      client,
+      options.subscriptions,
+      ctx.emit,
+    );
+  }
+
+  let stopped = false;
+  const result: ReactorContext<R> = {
+    client: client as unknown as TypedReactorClient<R>,
+    driveId,
+    personalDriveId: personal?.id,
+    drives,
+    switchboardUrl: attachment.endpoint,
+    ...(driveUrl ? { driveUrl } : {}),
+    attachments: ctx.attachments,
+    writes: handle.writes,
+    shutdown() {
+      if (stopped) return Promise.resolve();
+      stopped = true;
+      unsubscribe?.();
+      handle.stop();
+      client.dispose?.();
+      return Promise.resolve();
     },
   };
 

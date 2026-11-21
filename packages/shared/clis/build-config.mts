@@ -18,6 +18,10 @@ const entry = [
   "scalars/index.ts",
 ];
 
+// The module a package's ./cli export is built from: its `defineCli` result.
+// Node-only like ./pieces: a Cli runs in a terminal, never in Connect.
+export const CLI_ENTRY = "cli/index.ts";
+
 // ./pieces is node-only for the same reason ./reactor is browser-only: a piece
 // is loaded and run by a host process, never by the browser. Only the list of
 // pieces builds here; each piece is its own build (buildPieceBuildConfig), so
@@ -30,6 +34,7 @@ const nodeEntry = [
   "subgraphs/index.ts",
   "subgraphs/*/index.ts",
   "pieces/index.ts",
+  CLI_ENTRY,
 ];
 
 // Where a package's pieces live, one directory per piece, as the node entry
@@ -89,6 +94,12 @@ const nodeNeverBundle = [
   "@electric-sql/pglite",
   "@electric-sql/pglite-tools",
 ];
+
+// A ./cli export runs on the host's clint: the Cli runner hands the Cli its
+// reactor, and an inlined copy would bring a second runtime (ink, Mastra and
+// all). Every subpath, as a Cli imports ./powerhouse too. The browser build
+// has no ./cli entry.
+export const CLINT_EXTERNAL = /^@powerhousedao\/clint(\/.*)?$/;
 
 // The node build keeps React in neverBundle: node has createRequire, so a
 // CommonJS require of an external resolves there without the plugin.
@@ -340,6 +351,7 @@ export function buildNodeBuildConfig(
       alwaysBundle,
       neverBundle: [
         ...nodeNeverBundle,
+        CLINT_EXTERNAL,
         ...(sharedDeps ? sharedNeverBundle : []),
       ],
     },

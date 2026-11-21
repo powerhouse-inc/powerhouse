@@ -85,6 +85,8 @@ interface ResolvedRunOptions {
   resume?: string;
   interactiveInput?: AsyncIterable<string>;
   logLevel?: import("./types.js").LogLevel;
+  reactor?: RunOptions["reactor"];
+  onServe?: RunOptions["onServe"];
 }
 
 /**
@@ -757,6 +759,8 @@ export function defineCli<
     resolvedDescription: string,
     onSkillInvocation?: (invocation: SkillInvocation) => Promise<void>,
     wraps?: import("./types.js").WrapRegistry,
+    // The run's reactor configuration: RunOptions.reactor replaces this one.
+    runReactor: ReactorConfiguration | undefined = reactorConfig,
   ): Commander {
     const program = new Commander();
     program
@@ -778,11 +782,11 @@ export function defineCli<
       program.option("-R, --no-routine", "Skip routine activation");
     }
 
-    if (reactorConfig?.switchboard?.enabled) {
+    if (runReactor?.switchboard?.enabled) {
       program.option("-A, --no-api", "Skip API (switchboard) activation");
     }
 
-    if (reactorConfig?.connect?.enabled) {
+    if (runReactor?.connect?.enabled) {
       program.option("-S, --no-studio", "Skip Studio (connect) activation");
     }
 
@@ -1209,6 +1213,8 @@ export function defineCli<
       resume: runOptions?.resume,
       interactiveInput: runOptions?.interactiveInput,
       logLevel: runOptions?.logLevel,
+      reactor: runOptions?.reactor,
+      onServe: runOptions?.onServe,
     };
     return runImpl(argv, resolved);
   }
@@ -1429,6 +1435,13 @@ export function defineCli<
       ? resolveValue(options.interactive.welcome, resolvableCtx)
       : undefined;
 
+    // The run's reactor: a host runner's (RunOptions.reactor) stands in for
+    // the configured one, and brings no embedded switchboard or Connect.
+    const supplyReactor = opts.reactor;
+    const runReactor: ReactorConfiguration | undefined = supplyReactor
+      ? { create: (setup) => supplyReactor(setup, reactorConfig) }
+      : reactorConfig;
+
     // Create CLI runtime for lifecycle management (reactor, switchboard, agent, routine)
     const runtime = createCliRuntime({
       cliName: options.name,
@@ -1439,7 +1452,7 @@ export function defineCli<
       context,
       log,
       commandMap,
-      reactorConfig,
+      reactorConfig: runReactor,
       agentLoader,
       routine,
       skipRoutineStart: noRoutineFlag,
@@ -1458,7 +1471,7 @@ export function defineCli<
     });
 
     // Wire lazy accessors onto the context
-    if (reactorConfig) context.reactor = runtime.getReactor;
+    if (runReactor) context.reactor = runtime.getReactor;
     context.agent = runtime.getAgent;
 
     // Handle --meta: output metadata JSON and exit (ignoring all other args)
@@ -1528,7 +1541,7 @@ export function defineCli<
     // ── Dispatch ─────────────────────────────────────────────────────
     // --no-routine / --no-api suppress their respective keep-alive reasons
     const effectiveRoutine = noRoutineFlag ? undefined : routine;
-    const effectiveApi = !noApiFlag && reactorConfig?.switchboard?.enabled;
+    const effectiveApi = !noApiFlag && runReactor?.switchboard?.enabled;
 
     // Interaction mode: how the CLI does I/O
     // - headless: no input loop, execute and exit (or serve until killed)
@@ -1579,6 +1592,7 @@ export function defineCli<
         resolvedDescription,
         agentLoader ? handleSkillInvocation : undefined,
         lifecycle.wraps,
+        runReactor,
       );
       try {
         await program.parseAsync(argv);
@@ -1603,6 +1617,18 @@ export function defineCli<
     } else if (interactiveFlag || hasKeepAlive) {
       // ── Interactive or keep-alive: -i OR hasKeepAlive ──────────────
 
+      // 0. The run keeps going: a host runner records it before it starts.
+      if (opts.onServe) {
+        try {
+          await opts.onServe();
+        } catch (err) {
+          await runtime.teardown();
+          stderr(err instanceof Error ? err.message : String(err));
+          exit(1);
+          return;
+        }
+      }
+
       // 1. PREAMBLE — validate interactive config, build session if needed
       let session: import("../interactive/types.js").ReplSession | undefined;
       if (interactiveFlag) {
@@ -1626,7 +1652,7 @@ export function defineCli<
             return !!agentLoader;
           },
           get hasReactor() {
-            return !!reactorConfig;
+            return !!runReactor;
           },
           configureAgent,
           configureReactor,
@@ -1774,6 +1800,7 @@ export function defineCli<
         resolvedDescription,
         agentLoader ? handleSkillInvocation : undefined,
         lifecycle.wraps,
+        runReactor,
       );
       program.outputHelp();
       await runtime.teardown();

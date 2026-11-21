@@ -285,6 +285,12 @@ export const packageJsonExports = {
     types: "./dist/types/pieces/*/index.d.ts",
     node: "./dist/node/pieces/*/index.mjs",
   },
+  // Node only too: the package's `defineCli` result, which the Cli runner
+  // (`@powerhousedao/clint/cli-runner`) or a product bin runs in a terminal.
+  "./cli": {
+    types: "./dist/types/cli/index.d.ts",
+    node: "./dist/node/cli/index.mjs",
+  },
   "./manifest": "./dist/powerhouse.manifest.json",
   "./style.css": "./dist/style.css",
 } as const;

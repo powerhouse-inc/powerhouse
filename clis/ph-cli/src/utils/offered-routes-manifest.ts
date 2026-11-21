@@ -1,14 +1,16 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-// The manifest with `connectRoutes` set when the package offers routes; as it
-// is, byte for byte, when the flag is already right.
-function withOfferedRoutes(json: string, offers: boolean) {
-  const manifest = JSON.parse(json) as { connectRoutes?: boolean };
-  if (offers ? manifest.connectRoutes === true : !("connectRoutes" in manifest))
-    return json;
-  if (offers) manifest.connectRoutes = true;
-  else delete manifest.connectRoutes;
+/** The manifest flags `ph build` sets from what it built. */
+type BuildFlag = "connectRoutes" | "cli";
+
+// The manifest with `flag` set when `on`; as it is, byte for byte, when the
+// flag is already right.
+function withFlag(json: string, flag: BuildFlag, on: boolean) {
+  const manifest = JSON.parse(json) as Partial<Record<BuildFlag, boolean>>;
+  if (on ? manifest[flag] === true : !(flag in manifest)) return json;
+  if (on) manifest[flag] = true;
+  else delete manifest[flag];
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }
 
@@ -23,15 +25,27 @@ export function offeredRoutesManifest(projectRoot: string, offers: boolean) {
     name: "ph-offered-routes-manifest",
     transform(code: string, id: string) {
       if (slashes(id) !== manifestPath) return null;
-      return { code: withOfferedRoutes(code, offers), map: null };
+      return {
+        code: withFlag(code, "connectRoutes", offers),
+        map: null,
+      };
     },
   };
 }
 
-/** Sets `connectRoutes` in the dist copy of the manifest. */
-export function markOfferedRoutes(dir: string, offers: boolean) {
+function markDistManifest(dir: string, flag: BuildFlag, on: boolean) {
   const manifestPath = join(dir, "powerhouse.manifest.json");
   if (!existsSync(manifestPath)) return;
   const json = readFileSync(manifestPath, "utf-8");
-  writeFileSync(manifestPath, withOfferedRoutes(json, offers));
+  writeFileSync(manifestPath, withFlag(json, flag, on));
+}
+
+/** Sets `connectRoutes` in the dist copy of the manifest. */
+export function markOfferedRoutes(dir: string, offers: boolean) {
+  markDistManifest(dir, "connectRoutes", offers);
+}
+
+/** Sets `cli` in the dist copy of the manifest: the package exports a Cli. */
+export function markCliExport(dir: string, ships: boolean) {
+  markDistManifest(dir, "cli", ships);
 }

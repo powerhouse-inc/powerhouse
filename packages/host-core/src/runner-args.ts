@@ -21,6 +21,9 @@ export interface RunnerArgsSchema {
   /** Retired switches and what to do instead: accepted, one warning, no
    * effect. */
   retired?: Readonly<Record<string, string>>;
+  /** Every argument goes to the runner as typed, unchecked: a runner whose
+   * host parses its own (the Cli runner hands them to the Cli). */
+  passthrough?: boolean;
 }
 
 const isStrings = (value: unknown): value is readonly string[] =>
@@ -40,7 +43,9 @@ export function isRunnerArgsSchema(value: unknown): value is RunnerArgsSchema {
     isStrings(schema.flags) &&
     (schema.memberOptions === undefined ||
       isStringRecord(schema.memberOptions)) &&
-    (schema.retired === undefined || isStringRecord(schema.retired))
+    (schema.retired === undefined || isStringRecord(schema.retired)) &&
+    (schema.passthrough === undefined ||
+      typeof schema.passthrough === "boolean")
   );
 }
 
@@ -141,7 +146,8 @@ export interface RunnerArgvTarget {
  * The arguments a standalone runner receives as `ctx.argv`: `argv` checked
  * against the runner's schema, retired switches warned about and dropped.
  * Nothing is dropped silently: an argument the runner does not accept, or any
- * argument for a runner without a schema, fails.
+ * argument for a runner without a schema, fails. A `passthrough` runner gets
+ * them all, in order.
  */
 export function checkRunnerArgv(
   argv: readonly string[],
@@ -156,6 +162,7 @@ export function checkRunnerArgv(
       "Set these in the host file instead.",
     );
   }
+  if (schema.passthrough) return [...argv];
   const options = new Set(schema.options);
   const accepted = new Set(acceptedBy(schema));
   const kept: string[] = [];
