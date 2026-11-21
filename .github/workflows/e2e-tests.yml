@@ -446,6 +446,9 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: powerhouse-inc/recipes
+          # The recipes on the 6.4 host forms; back to the default branch
+          # once that branch is merged there.
+          ref: next/6.4
           path: recipes-checkout
 
       - name: Install pnpm
